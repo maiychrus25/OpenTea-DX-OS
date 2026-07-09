@@ -1,0 +1,4 @@
+# Bỏ qua các file không đưa lên mạng
+node_modules/
+.env
+.env.local

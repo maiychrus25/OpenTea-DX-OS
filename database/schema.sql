@@ -1,0 +1,1 @@
+-- Lệnh tạo các bảng (warehouse_inventory, exchange_rates...)
