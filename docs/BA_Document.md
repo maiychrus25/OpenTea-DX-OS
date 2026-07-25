@@ -67,7 +67,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 #### 2.4. Lớp [I] - Intelligence Space (Không gian Trí tuệ)
 - **Vai trò AI:** Tổng hợp liên nguồn (cross-source synthesis) — đọc đồng thời 4-5 nguồn dữ liệu và kết nối chúng thành một bức tranh liên kết mà con người không tự ghép được khi nhìn từng nguồn riêng lẻ.
 - **KHÔNG:** Ra quyết định, khuyến nghị hành động, nói "nên" hay "không nên".
-- **Công nghệ lõi:** Ollama (chạy AI Local), TTS mã nguồn mở (Piper/Coqui) cho audio bản tin.
+- **Công nghệ lõi:** Ollama (chạy AI Local), Piper TTS (MIT, voice `vi_VN-vais1000-medium`, chạy local) cho audio bản tin.
 
 ---
 
@@ -97,7 +97,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 
 **Tính năng 1.1: Bản tin Nông nghiệp Số**
 - **Mô tả:** AI tổng hợp liên nguồn (USDA, WTO, tỷ giá, thời tiết) → bản tin tóm tắt bằng tiếng Việt, cập nhật hàng ngày trên web.
-- **Audio:** Người dùng bấm nút "Nghe nhanh" → hệ thống dùng TTS mã nguồn mở (Piper/Coqui) chạy local để convert bản tin thành audio tóm tắt.
+- **Audio:** Người dùng bấm nút "Nghe nhanh" → hệ thống dùng **Piper TTS** (MIT, voice `vi_VN-vais1000-medium`) chạy local để convert bản tin thành audio tóm tắt.
 - **Vai trò AI:** Trình bày SỰ THẬT có trích dẫn nguồn. KHÔNG ra quyết định, KHÔNG nói "nên" hay "không nên".
 - **Filter:** Chỉ hiển thị thông tin liên quan đến cây trồng trong Profile HTX. Không thấy thông tin ngoài loại cây mà HTX đang trồng.
 - **Kênh:** Hiển thị trên web (chính). Có thể gửi tóm tắt qua tin nhắn như một phương án tiếp cận nhanh.
@@ -221,8 +221,10 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 - **Mô tả:** Ghi lại hoạt động canh tác theo từng thửa đất. KHÔNG theo chuẩn VietGAP — tự do ghi nhưng phải tuân thủ **bộ quy tắc tối thiểu** để đảm bảo chuyên nghiệp.
 - **Ai ghi:**
   - **Cán bộ KT/CL tự ghi:** Nhập trực tiếp vào nhật ký (ghi hộ nông dân già hoặc ghi từ thực địa). Hệ thống validate đủ các trường bắt buộc → **auto approved** (vì Cán bộ chính là người duyệt).
-  - **Nông dân trẻ ghi:** Gửi entry → trạng thái "Chờ duyệt" → Cán bộ KT/CL approve hoặc chỉnh sửa → auto-fill vào nhật ký chính thức.
+  - **Nông dân trẻ ghi:** Gửi entry bất kỳ lúc nào → trạng thái "Chờ duyệt".
   - **Nông dân già:** Báo cáo miệng/tin nhắn → Cán bộ KT/CL số hóa lên hệ thống.
+- **Chu kỳ duyệt: THEO TUẦN** — Nông dân gửi entry bất cứ lúc nào, Cán bộ KT/CL duyệt **batch 1 lần/tuần** (không cần duyệt từng entry từng ngày).
+- **Batch approve:** Cán bộ vào trang "Nhật ký chờ duyệt" → **filter theo hộ** → tick chọn nhiều entries → [Duyệt tất cả] hoặc chỉnh sửa từng entry.
 - **Thời tiết tự động:** Mỗi entry tự động gắn dữ liệu thời tiết ngày đó từ Open-Meteo (không cần nhập tay).
 - **Trường hợp không phun thuốc:** Nếu thửa đất không có entry "Phun thuốc" → hệ thống hiện "Không sử dụng thuốc BVTV" + tự động ĐẠT cách ly + QR ghi "Không sử dụng thuốc BVTV".
 
@@ -435,7 +437,7 @@ Bước 6: Sinh mã QR & Dán tem
   - 🔔 **Thông báo mới** từ HTX (inbox riêng, không bị trôi)
   - 📸 **Nút "Chẩn đoán bệnh"** — link nhanh tới tính năng 4.3
   - 🐛 **Nhật ký bệnh** — link tới danh sách nhật ký bệnh của hộ mình (read-only, xem tính năng 4.3)
-- **Accessibility:** Nút **"Nghe tóm tắt"** — TTS đọc toàn bộ dashboard cho nông dân già (Piper/Coqui — đã có)
+- **Accessibility:** Nút **"Nghe tóm tắt"** — Piper TTS (MIT, chạy local) đọc toàn bộ dashboard cho nông dân già
 - **Data:** 100% từ hệ thống đã có, chỉ cần 1 trang UI tổng hợp.
 
 **[Pain Point 5] Thông tin HTX bị trôi:**
@@ -497,8 +499,8 @@ Bước 6: Sinh mã QR & Dán tem
   1. Nông dân chọn thửa đất (chỉ thấy thửa của mình) → ghi hoạt động theo bộ quy tắc tối thiểu
   2. Bấm [Gửi] → entry chuyển trạng thái **"Chờ duyệt"** + kèm ID nông dân
   3. **Khi đang "Chờ duyệt":** Nông dân có thể bấm **[Thu hồi]** để sửa rồi gửi lại.
-  4. Cán bộ KT/CL nhận notification (web bell) → review entry
-  5. Cán bộ KT/CL **approve hoặc chỉnh sửa** → entry được **auto-fill vào nhật ký chính thức** của thửa đất đó
+  4. Cán bộ KT/CL duyệt **batch theo tuần**: vào trang "Nhật ký chờ duyệt" → filter theo hộ → tick chọn → [Duyệt tất cả] hoặc chỉnh sửa
+  5. Entry được **auto-fill vào nhật ký chính thức** của thửa đất đó
   6. Nông dân nhận notification kết quả duyệt
 - **Quyền:** Nông dân xem nhật ký thửa đất của mình = **read-only** (sau khi "Đã duyệt")
 - **Nông dân già:** Không dùng tính năng này — báo cáo miệng/tin nhắn, Cán bộ KT/CL nhập giúp.
@@ -528,10 +530,10 @@ Bước 6: Sinh mã QR & Dán tem
 | D (Climate Data) | NASA POWER API | Public Domain | Đạt (Miễn trừ bản quyền) |
 | D (Agricultural Data) | FAOSTAT API | CC BY 4.0 | Đạt |
 | I (AI Engine) | Ollama | MIT | Đạt |
-| I (TTS Audio) | Piper TTS / Coqui TTS | MIT / MPL 2.0 | Đạt |
+| I (TTS Audio) | Piper TTS (voice `vi_VN-vais1000-medium`) | MIT | Đạt |
 | I (Notification) | n8n + Mattermost connector | Faircode + MIT | Đạt |
 | D (File Storage) | MinIO | AGPL v3 | Đạt |
-| D (Satellite) | Copernicus Sentinel-2 WMS | CC BY 4.0 | Đạt |
+| D (Satellite) | Copernicus Sentinel-2 WMS | CC BY 4.0 | Đạt *(optional layer, không bắt buộc cho MVP)* |
 | H (QR Code) | qrcode.js / node-qrcode | MIT | Đạt |
 | H (Map Draw) | Leaflet.draw + Turf.js | MIT | Đạt |
 | I (Disease Model) | TensorFlow / Keras | Apache 2.0 | Đạt |
@@ -713,6 +715,10 @@ Bước 6: Sinh mã QR & Dán tem
 40. **Gửi Thông báo KT (Cán bộ)** — Tính năng 3.6, form gửi thông báo kỹ thuật xuống Nông dân (+ tuỳ chọn Trưởng HTX).
 41. **Trạng thái thửa auto-derive** — suy từ nhật ký, không cần nút chuyển tay. Reset khi vụ mới.
 42. **Nhật ký bệnh trên Dashboard Nông dân** — link trực tiếp từ Dashboard "Hôm nay" tới nhật ký bệnh hộ mình.
+43. **TTS = Piper TTS** — voice `vi_VN-vais1000-medium`, MIT, chạy local. Bỏ Coqui, bỏ Edge TTS (proprietary service), bỏ VieNeu-TTS (không license).
+44. **AI = Ollama local** — giữ chạy local, không gọi API bên ngoài.
+45. **Nhật ký duyệt batch theo tuần** — nông dân gửi entry bất cứ lúc nào, Cán bộ KT/CL duyệt batch 1 lần/tuần. Filter theo hộ + [Duyệt tất cả].
+46. **Copernicus WMS = optional** — chỉ là layer ảnh vệ tinh đẹp, không ảnh hưởng chức năng. Bỏ nếu không kịp.
 
 #### Conflict đã giải quyết:
 - Bản tin vs Chatbot: tách biệt — bản tin là push hàng ngày trên web, chatbot là pull khi cần trên web.
@@ -735,5 +741,7 @@ Bước 6: Sinh mã QR & Dán tem
 - [x] Nông dân ✅
 - [x] Duyệt conflict Trưởng HTX vs Cán bộ KT/CL ✅
 - [x] Duyệt conflict toàn bộ 3 actor ✅
-- [x] Duyệt luồng tính năng (walkthrough 14 issues) ✅
-- [ ] Kỹ thuật brainstorming tiếp theo: Six Thinking Hats, Pre-Mortem, SCAMPER
+- [x] Duyệt luồng tính năng (walkthrough 14+6 issues) ✅
+- [x] Six Thinking Hats ✅ (TTS→Piper, Ollama local, batch approve tuần, Copernicus optional)
+- [ ] Pre-Mortem
+- [ ] SCAMPER
