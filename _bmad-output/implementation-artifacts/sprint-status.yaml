@@ -1,0 +1,125 @@
+# ============================================================================
+# SPRINT STATUS — OpenTea-DX-OS
+# ============================================================================
+# Managed by: bmad-create-story, bmad-dev-story, bmad-dev-auto, bmad-sprint-status
+#
+# STATUS DEFINITIONS:
+#   backlog        → Story exists in epics.md; story file NOT yet created
+#   ready-for-dev  → Story file created; dev agent can pick up and implement
+#   in-progress    → Dev agent is actively implementing this story
+#   review         → Implementation done; awaiting code review
+#   done           → Story complete; merged to main
+#
+# EPIC STATUS DEFINITIONS:
+#   backlog        → Epic not started; no stories created yet
+#   in-progress    → At least one story is ready-for-dev / in-progress / review
+#   done           → All stories in this epic are done
+#
+# ============================================================================
+
+project: OpenTea-DX-OS
+sprint: 1
+sprint_goal: "Foundation + Market Intelligence + Farm Zone + QR Traceability by 30/08/2026 (POF)"
+last_updated: "2026-08-05T00:15:00+07:00"
+
+epics:
+  - id: 1
+    title: "Foundation — Infrastructure, Auth & Design System"
+    stories: 7
+    target_date: "2026-08-09"
+
+  - id: 2
+    title: "Market Intelligence — Bulletin, Chatbot & Partner Map"
+    stories: 8
+    target_date: "2026-08-14"
+
+  - id: 3
+    title: "Farm Zone Management & Digital Journal"
+    stories: 7
+    target_date: "2026-08-20"
+
+  - id: 4
+    title: "QR Traceability & Disease Detection Backend"
+    stories: 6
+    target_date: "2026-08-27"
+
+  - id: 5
+    title: "Farmer Experience & Full Notification System"
+    stories: 8
+    target_date: "2026-09-05"
+
+  - id: 6
+    title: "Document Store, Technical Chatbot & Public Storefront"
+    stories: 4
+    target_date: "2026-09-10"
+
+# ============================================================================
+# DEVELOPMENT STATUS
+# Key format: {epic_num}-{story_num}-{story-slug}
+# ============================================================================
+
+development_status:
+
+  # ── Epic 1: Foundation ────────────────────────────────────────────────────
+  epic-1: in-progress
+
+  1-1-monorepo-docker-compose:           ready-for-dev
+  1-2-design-system-shared-components:   ready-for-dev
+  1-3-database-schema-prisma:            ready-for-dev
+  1-4-hexagonal-architecture-scaffold:   ready-for-dev
+  1-5-keycloak-auth-role-routing:        ready-for-dev
+  1-6-htx-profile-page:                  ready-for-dev
+  1-7-n8n-market-data-pipelines:         ready-for-dev
+
+  # ── Epic 2: Market Intelligence ───────────────────────────────────────────
+  epic-2: in-progress
+
+  2-1-market-data-api-endpoint:          ready-for-dev
+  2-2-daily-bulletin-display-page:       ready-for-dev
+  2-3-bulletin-tts-listen-button:        ready-for-dev
+  2-4-n8n-bulletin-synthesis-workflow:   ready-for-dev
+  2-5-market-expert-chatbot:             ready-for-dev
+  2-6-agricultural-partner-map-crud:     ready-for-dev
+  2-7-web-bell-notification-system:      ready-for-dev
+  2-8-farm-zone-readonly-manager:        ready-for-dev
+
+  # ── Epic 3: Farm Zone & Journal ───────────────────────────────────────────
+  epic-3: in-progress
+
+  3-1-household-management-officer:      ready-for-dev
+  3-2-parcel-drawing-map-setup:          ready-for-dev
+  3-3-journal-entry-officer-self-record: ready-for-dev
+  3-4-parcel-status-auto-derivation:     ready-for-dev
+  3-5-weather-auto-attach-journal:       ready-for-dev
+  3-6-batch-journal-approval-officer:    ready-for-dev
+  3-7-technical-announcement-farmers:    ready-for-dev
+
+  # ── Epic 4: QR Traceability & Disease Backend ─────────────────────────────
+  epic-4: in-progress
+
+  4-1-pre-harvest-withdrawal-inspection: ready-for-dev
+  4-2-lot-creation-steps-1-4:            ready-for-dev
+  4-3-lot-review-qr-export-steps-5-6:   ready-for-dev
+  4-4-public-qr-scan-page:              ready-for-dev
+  4-5-lot-list-readonly-manager:         ready-for-dev
+  4-6-disease-detection-fastapi-service: ready-for-dev
+
+  # ── Epic 5: Farmer Experience & Notifications ─────────────────────────────
+  epic-5: in-progress
+
+  5-1-today-dashboard-all-roles:         ready-for-dev
+  5-2-farmer-journal-self-submission:    ready-for-dev
+  5-3-farmer-disease-diagnosis-ui:       ready-for-dev
+  5-4-pwa-offline-disease-diagnosis:     ready-for-dev
+  5-5-officer-disease-report-review:     ready-for-dev
+  5-6-broadcast-announcement-manager:    ready-for-dev
+  5-7-mattermost-push-notification:      ready-for-dev
+  5-8-n8n-weekly-officer-reminder:       ready-for-dev
+
+  # ── Epic 6: Docs, Chatbot & Storefront ───────────────────────────────────
+  epic-6: in-progress
+
+  6-1-minio-para-document-store:         ready-for-dev
+  6-2-certificate-selection-qr-lot:      ready-for-dev
+  6-3-technical-expert-chatbot-officer:  ready-for-dev
+  6-4-htx-capability-profile-page:       ready-for-dev
