@@ -1,4 +1,5 @@
 # BÀI TOÁN NGHIỆP VỤ (BUSINESS ANALYSIS DOCUMENT)
+
 ## DỰ ÁN: DX-AGRIMARKET (HỆ ĐIỀU HÀNH SỐ NÔNG NGHIỆP)
 
 > **Trạng thái:** Đang brainstorm — cập nhật liên tục theo phiên First Principles
@@ -12,6 +13,7 @@ Mục tiêu tài liệu: Tài liệu này định nghĩa tầm nhìn, kiến tr�
 ### I. TỔNG QUAN DỰ ÁN (PROJECT OVERVIEW)
 
 #### 1.1. Bối cảnh & Vấn đề (Context & Problem)
+
 - **Vấn đề cốt lõi:** Nông nghiệp Việt Nam liên tục đối mặt với điệp khúc "Được mùa mất giá, được giá mất mùa". Nguyên nhân gốc rễ là do Hợp tác xã (HTX) và Nông dân tổ chức sản xuất dựa trên **cảm tính và thông tin cục bộ**, thiếu tầm nhìn vĩ mô về chuỗi cung ứng toàn cầu và biến đổi khí hậu.
 - **Điểm nghẽn công nghệ:** Các HTX thiếu một "Hệ điều hành" thực thụ để hội tụ dữ liệu (Single Source of Truth) từ các tổ chức quốc tế nhằm ra quyết định (Data-driven decision making).
 
@@ -19,20 +21,21 @@ Mục tiêu tài liệu: Tài liệu này định nghĩa tầm nhìn, kiến tr�
 
 HTX cần **3 thứ** để không bị thiệt khi bán nông sản: biết giá đúng, biết bán cho ai, và chứng minh được chất lượng. Nông dân cần được hỗ trợ thông tin và công cụ để canh tác hiệu quả.
 
-| # | Pain Point | Actor chính | Mô tả | Giá trị |
-|---|-----------|------------|-------|---------|
-| 1 | **Giá bán như nào** | Trưởng HTX | HTX bị ép giá do bất đối xứng thông tin — thương lái biết giá thế giới, HTX thì không. | Phá thế độc quyền thông tin |
-| 2 | **Bán ở đâu** | Trưởng HTX | HTX thiếu kênh kết nối người mua — chỉ biết vài thương lái quen, bị phụ thuộc. | Mở rộng lựa chọn bán hàng |
-| 3 | **Chứng minh chất lượng** | Cán bộ KT/CL | DN thu mua hỏi nguồn gốc, quy trình canh tác → HTX không có gì để chứng minh → mất deal kênh cao cấp. | Mở cửa vào kênh cao cấp |
-| 4 | **Quản lý nhiều hộ, nhiều thửa đất** | Cán bộ KT/CL | HTX có hàng chục hộ, hàng trăm thửa đất → ghi sổ tay/Excel rời rạc, lẫn lộn. | Số hóa quản lý vùng trồng |
-| 5 | **Thông tin HTX bị trôi / đến chậm** | Nông dân | Thông báo từ HTX gửi trong nhóm chat bị trôi, nông dân bỏ lỡ thông tin quan trọng. | Thông tin đến đúng người |
-| 6 | **Sâu bệnh không biết hỏi ai ngay** | Nông dân | Thấy cây bị bệnh, gọi Cán bộ KT không được, chờ 2-3 ngày sâu lan rồng. | Phát hiện sớm, giảm thiệt hại |
-| 7 | **Thời tiết không cụ thể** | Nông dân | Đài báo chung chung "miền Tây có mưa", nông dân cần biết cụ thể thửa mình. | Ra quyết định đúng lúc |
-| 8 | **Không biết giá nông sản** | Nông dân | Trưởng HTX biết giá vì có chatbot, nông dân thì không biết gì. | Minh bạch, tạo động lực |
+| # | Pain Point                                         | Actor chính   | Mô tả                                                                                                               | Giá trị                           |
+| - | -------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| 1 | **Giá bán như nào**                      | Trưởng HTX   | HTX bị ép giá do bất đối xứng thông tin — thương lái biết giá thế giới, HTX thì không.              | Phá thế độc quyền thông tin   |
+| 2 | **Bán ở đâu**                            | Trưởng HTX   | HTX thiếu kênh kết nối người mua — chỉ biết vài thương lái quen, bị phụ thuộc.                        | Mở rộng lựa chọn bán hàng     |
+| 3 | **Chứng minh chất lượng**                | Cán bộ KT/CL | DN thu mua hỏi nguồn gốc, quy trình canh tác → HTX không có gì để chứng minh → mất deal kênh cao cấp. | Mở cửa vào kênh cao cấp        |
+| 4 | **Quản lý nhiều hộ, nhiều thửa đất** | Cán bộ KT/CL | HTX có hàng chục hộ, hàng trăm thửa đất → ghi sổ tay/Excel rời rạc, lẫn lộn.                           | Số hóa quản lý vùng trồng     |
+| 5 | **Thông tin HTX bị trôi / đến chậm**   | Nông dân     | Thông báo từ HTX gửi trong nhóm chat bị trôi, nông dân bỏ lỡ thông tin quan trọng.                       | Thông tin đến đúng người     |
+| 6 | **Sâu bệnh không biết hỏi ai ngay**     | Nông dân     | Thấy cây bị bệnh, gọi Cán bộ KT không được, chờ 2-3 ngày sâu lan rồng.                                 | Phát hiện sớm, giảm thiệt hại |
+| 7 | **Thời tiết không cụ thể**              | Nông dân     | Đài báo chung chung "miền Tây có mưa", nông dân cần biết cụ thể thửa mình.                             | Ra quyết định đúng lúc        |
+| 8 | **Không biết giá nông sản**             | Nông dân     | Trưởng HTX biết giá vì có chatbot, nông dân thì không biết gì.                                            | Minh bạch, tạo động lực        |
 
 > **Lưu ý:** Dự án KHÔNG hướng đến việc giúp HTX tự xuất khẩu (HTX VN không có năng lực này). Giá trị thực là giúp HTX **có thông tin để đàm phán tốt hơn** và **chứng minh được chất lượng** với thương lái và DN thu mua.
 
 #### 1.3. Giải pháp (Solution)
+
 Xây dựng **DX-AgriMarket** – một Hệ điều hành Nông nghiệp Số (Agri-OS) tuân thủ 100% chuẩn Nguồn Mở. Hệ thống tự động thu thập và phân tích dữ liệu thị trường, khí hậu toàn cầu (Public Domain), **trình bày sự thật có nguồn** bằng tiếng Việt cho Trưởng HTX — giúp cân bằng thông tin giữa HTX và thương lái.
 
 > **Nguyên tắc AI:** AI trong hệ thống **KHÔNG ra quyết định, KHÔNG khuyến nghị hành động**. AI chỉ **tổng hợp sự thật từ nhiều nguồn** và trình bày rõ ràng bằng tiếng Việt kèm trích dẫn nguồn. Trưởng HTX tự quyết định dựa trên thông tin được cung cấp.
@@ -44,7 +47,9 @@ Xây dựng **DX-AgriMarket** – một Hệ điều hành Nông nghiệp Số (
 Dự án áp dụng triệt để mô hình **Human - Process - Data - Intelligence (HPDI)** từ tài liệu gốc của cuộc thi.
 
 #### 2.1. Lớp [H] - Human Space (Không gian Tương tác)
+
 Nơi con người giao tiếp với hệ thống.
+
 - **Người dùng (Actors):** *(Chi tiết từng actor xem Mục III)*
   - **Trưởng HTX / Ban giám đốc:** ✅ Đã brainstorm chi tiết
   - **Cán bộ Kỹ thuật / Chất lượng:** ✅ Đã brainstorm chi tiết
@@ -52,12 +57,16 @@ Nơi con người giao tiếp với hệ thống.
 - **Công nghệ lõi:** Next.js (Web Portal responsive, tối ưu điện thoại) kết nối với Keycloak (cấu hình OTP qua SĐT — passwordless).
 
 #### 2.2. Lớp [P] - Process Space (Không gian Quy trình)
+
 Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức người trong việc tổng hợp thông tin.
+
 - **Nghiệp vụ cốt lõi:** Tự động hóa quá trình kéo API dữ liệu quốc tế, làm sạch dữ liệu, đẩy vào Data Warehouse, và tạo bản tin/notification.
 - **Công nghệ lõi:** n8n (Được DX-OS khuyên dùng) đóng vai trò là "Nhạc trưởng" (Orchestrator) kết nối các dịch vụ.
 
 #### 2.3. Lớp [D] - Data Space (Không gian Dữ liệu & Tài sản số)
+
 Áp dụng kỷ luật "Chủ quyền Dữ liệu" theo chuẩn DX-OS.
+
 - **Dữ liệu có cấu trúc (Database):** PostgreSQL lưu trữ các API thời gian thực.
   - Nguồn Cung-Cầu: USDA PSD & GATS (Bộ Nông nghiệp Hoa Kỳ - Public Domain).
   - Nguồn Sản lượng & Môi trường: FAOSTAT (CC BY 4.0).
@@ -65,6 +74,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 - **Dữ liệu nội bộ HTX:** Profile HTX, dữ liệu đối tác/kho bãi trên bản đồ, danh sách hộ thành viên & thửa đất, nhật ký canh tác, tài liệu P.A.R.A (MinIO).
 
 #### 2.4. Lớp [I] - Intelligence Space (Không gian Trí tuệ)
+
 - **Vai trò AI:** Tổng hợp liên nguồn (cross-source synthesis) — đọc đồng thời 4-5 nguồn dữ liệu và kết nối chúng thành một bức tranh liên kết mà con người không tự ghép được khi nhìn từng nguồn riêng lẻ.
 - **KHÔNG:** Ra quyết định, khuyến nghị hành động, nói "nên" hay "không nên".
 - **Công nghệ lõi:** Ollama (chạy AI Local), Piper TTS (MIT, voice `vi_VN-vais1000-medium`, chạy local) cho audio bản tin.
@@ -76,6 +86,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 #### 3.1. Trưởng HTX (Manager) — ✅ Đã brainstorm
 
 ##### Chân dung User
+
 - **Tuổi:** 40–55, được Đại hội thành viên bầu ra
 - **Học vấn:** Nông nghiệp, Quản trị kinh doanh, hoặc Kinh tế
 - **Phẩm chất:** Am hiểu nông nghiệp, tinh thần tập thể, năng động dám nghĩ dám làm
@@ -84,6 +95,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 - **Vai trò thực tế:** Lãnh đạo & định hướng HTX, đàm phán giá bán, tìm kiếm thị trường, điều hành sản xuất, làm cầu nối giữa nông dân và doanh nghiệp
 
 ##### Công việc thực tế của Trưởng HTX (Đã nghiên cứu)
+
 1. **Định kỳ:** Quản lý hành chính, điều hành sản xuất (lịch nông vụ), xây dựng thương hiệu (OCOP, VietGAP), tìm kiếm thị trường & đàm phán hợp đồng bao tiêu
 2. **Sự vụ:** Giải quyết tranh chấp nội bộ, xử lý vi phạm quy trình, phối hợp khuyến nông, thủ tục pháp lý
 3. **Sự cố:** Thiên tai/dịch bệnh, DN "bẻ kèo" hủy hợp đồng, thành viên "bán chui", hàng tồn kho ùn ứ
@@ -96,6 +108,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 **[Pain Point 1] Giá bán như nào:**
 
 **Tính năng 1.1: Bản tin Nông nghiệp Số**
+
 - **Mô tả:** AI tổng hợp liên nguồn (USDA, WTO, tỷ giá, thời tiết) → bản tin tóm tắt bằng tiếng Việt, cập nhật hàng ngày trên web.
 - **Audio:** Người dùng bấm nút "Nghe nhanh" → hệ thống dùng **Piper TTS** (MIT, voice `vi_VN-vais1000-medium`) chạy local để convert bản tin thành audio tóm tắt.
 - **Vai trò AI:** Trình bày SỰ THẬT có trích dẫn nguồn. KHÔNG ra quyết định, KHÔNG nói "nên" hay "không nên".
@@ -103,6 +116,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 - **Kênh:** Hiển thị trên web (chính). Có thể gửi tóm tắt qua tin nhắn như một phương án tiếp cận nhanh.
 
 **Tính năng 1.2: Notification thông minh**
+
 - **Mô tả:** AI đánh giá các thông tin quan trọng, liên quan trực tiếp đến HTX (thời tiết, kinh tế, thị trường) và gửi notification qua nền tảng quen thuộc của user.
 - **Trigger thị trường:** AI tự đánh giá mức độ quan trọng — biến động bất thường + ảnh hưởng tài chính trực tiếp đến HTX. KHÔNG dùng ngưỡng % cứng.
 - **Trigger cross-actor:** Cán bộ KT/CL duyệt thu hoạch hoặc xuất QR lô hàng → hệ thống tự động gửi notification đến Trưởng HTX trên web (VD: *"Cán bộ Trần Văn B đã duyệt thu hoạch Thửa A3 lúc 14:00 ngày 20/07"*).
@@ -110,6 +124,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 - **Lưu ý:** Đây là notification, không phải cảnh báo khẩn cấp. User có đọc hay không là quyền của họ.
 
 **Tính năng 1.3: Chatbot chuyên gia Thị trường**
+
 - **Mô tả:** Giao diện chat trên web. Trưởng HTX hỏi bằng tiếng Việt, AI trả lời bằng dữ liệu liên nguồn có trích dẫn.
 - **Scope:** CHỈ trả lời về giá cả, so sánh thị trường, đánh giá mức giá mua/bán.
 - **KHÔNG trả lời:** Kỹ thuật nông nghiệp, pháp lý, hành chính, hay bất kỳ chủ đề nào ngoài giá cả & thị trường.
@@ -122,6 +137,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 **[Pain Point 2] Bán ở đâu:**
 
 **Tính năng 2.1: Bản đồ Đối tác Nông nghiệp**
+
 - **Mô tả:** Bản đồ tương tác trên web, hiển thị các DN thu mua, thương lái, kho bãi. Trưởng HTX mở bản đồ → thấy ngay ai mua gì quanh mình → tự liên hệ.
 - **Công nghệ:** OpenStreetMap (bản đồ nền) + Leaflet.js / React-Leaflet (hiển thị) + Nominatim (search địa chỉ). 100% MNM, miễn phí.
 - **Thêm đối tác:** Trưởng HTX tự thêm. Gõ địa chỉ → Nominatim gợi ý → chọn → ghim lên bản đồ. KHÔNG nhập toạ độ thủ công.
@@ -131,16 +147,17 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 
 **Thông tin hiển thị trên bản đồ:**
 
-| Loại đối tác | Thông tin hiển thị |
-|-------------|-------------------|
+| Loại đối tác           | Thông tin hiển thị                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------- |
 | DN thu mua / Thương lái | Tên, loại, SĐT hoặc phương thức liên lạc khác, nông sản chủ yếu thu mua |
-| Kho bãi | Tên, SĐT hoặc phương thức liên lạc khác, diện tích (m²) |
+| Kho bãi                   | Tên, SĐT hoặc phương thức liên lạc khác, diện tích (m²)                   |
 
 > **Lưu ý:** Thông tin "nông sản chủ yếu thu mua" là tổng quát, không phải realtime. Thương lái có thể thu cái này không thu cái kia tuỳ lúc — không thể thu thập data realtime được, nên không filter theo loại cây.
 
 **[Bổ sung từ conflict resolution] Xem Vùng trồng:**
 
 **Tính năng 2.2: Xem Bản đồ Vùng trồng HTX (Read-only)**
+
 - **Mô tả:** Trưởng HTX có thể xem bản đồ vùng trồng của HTX đang quản lý — thấy toàn cảnh thửa đất, cây trồng, hộ thành viên, **trạng thái từng thửa**.
 - **Trạng thái thửa hiển trên map:** Phân biệt bằng màu sắc: 🟢 Đang gieo | 🟡 Đang chăm sóc | 🟠 Đã nghiệm thu | 🔵 Đã thu hoạch
 - **Filter:** Trưởng HTX có thể lọc theo **trạng thái** và/hoặc theo **loại cây trồng** (multi-choice — chọn nhiều loại cùng lúc).
@@ -148,23 +165,25 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 - **UX:** Menu riêng "Vùng trồng HTX", giao diện giống bản đồ Cán bộ KT/CL nhưng không có các nút CRUD. KHÔNG trộn với bản đồ đối tác.
 
 **Tính năng 2.3: Tạo Thông báo chung (Broadcast)**
+
 - **Mô tả:** Trưởng HTX tạo thông báo chung → gửi broadcast đến Cán bộ KT/CL + tất cả Nông dân.
 - **UX:** Form đơn giản: tiêu đề + nội dung + [Gửi]. Thông báo xuất hiện trên web bell của tất cả actors.
 - **Ví dụ:** "Họp tổng kết vụ ngày 28/07 lúc 14h tại nhà văn hoá".
 
 **Tính năng 2.4: Xem danh sách Lô hàng (Read-only)**
+
 - **Mô tả:** Trưởng HTX xem danh sách tất cả lô hàng của HTX — trạng thái (Nháp / Sẵn sàng / Đã xuất QR), bấm vào xem nội dung QR.
 - **Quyền:** CHỈ XEM (read-only). KHÔNG tạo/sửa/xoá lô (đó là việc của Cán bộ KT/CL).
 - **UX:** Bảng danh sách, filter theo trạng thái. Khi nhận notification "Lô hàng mới đóng gói" → bấm → dẫn thẳng vào trang chi tiết lô.
 
 ##### Nền tảng chung cho Trưởng HTX
 
-| Thành phần | Quyết định | Ghi chú |
-|-----------|-----------|---------|
-| **Profile HTX** | Tên, địa chỉ, cây trồng, diện tích, mùa vụ | Cho phép nhập tay tạm lúc đầu. Khi Cán bộ KT/CL khoanh thửa xong → **tự động tổng hợp từ Bản đồ Vùng trồng** (Turf.js). Bản tin default hiển tất cả khi chưa có data. Filter bản tin & notification theo cây trồng. KHÔNG filter bản đồ đối tác. |
-| **Xác thực** | Keycloak + OTP qua SĐT | Cấu hình passwordless trong Keycloak. Quen thuộc như đăng nhập app ngân hàng. |
-| **Giao diện** | Web responsive (Next.js) | Tối ưu điện thoại. UI riêng cho role Trưởng HTX. Chưa làm app mobile (giới hạn 2 tháng). |
-| **Tin nhắn** | Channel-agnostic | Lõi MNM (n8n notification engine). Connector Mattermost (demo). Connector khác tuỳ triển khai thực tế. |
+| Thành phần          | Quyết định                                        | Ghi chú                                                                                                                                                                                                                                                                                   |
+| --------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Profile HTX** | Tên, địa chỉ, cây trồng, diện tích, mùa vụ | Cho phép nhập tay tạm lúc đầu. Khi Cán bộ KT/CL khoanh thửa xong →**tự động tổng hợp từ Bản đồ Vùng trồng** (Turf.js). Bản tin default hiển tất cả khi chưa có data. Filter bản tin & notification theo cây trồng. KHÔNG filter bản đồ đối tác. |
+| **Xác thực**  | Keycloak + OTP qua SĐT                              | Cấu hình passwordless trong Keycloak. Quen thuộc như đăng nhập app ngân hàng.                                                                                                                                                                                                     |
+| **Giao diện**  | Web responsive (Next.js)                             | Tối ưu điện thoại. UI riêng cho role Trưởng HTX. Chưa làm app mobile (giới hạn 2 tháng).                                                                                                                                                                                      |
+| **Tin nhắn**   | Channel-agnostic                                     | Lõi MNM (n8n notification engine). Connector Mattermost (demo). Connector khác tuỳ triển khai thực tế.                                                                                                                                                                               |
 
 ---
 
@@ -173,6 +192,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 > **Thay thế:** Actor "Kỹ sư Nông nghiệp" từ BA gốc → đổi thành "Cán bộ KT/CL" vì đa số HTX không có kỹ sư chuyên trách, nhưng luôn có thành viên Ban quản trị phụ trách kỹ thuật.
 
 ##### Chân dung User
+
 - **Tuổi:** 30–50, có chuyên môn nông nghiệp hoặc kinh nghiệm canh tác lâu năm
 - **Vị trí trong HTX:** Thành viên Ban quản trị hoặc người được chỉ định chuyên trách kỹ thuật. Trong HTX nhỏ, Trưởng HTX hoặc Phó HTX kiêm luôn.
 - **Vai trò:** Người duy nhất trong HTX **đi thực địa đều đặn** — kiểm tra đồng ruộng, ghi nhận tình trạng cây trồng, phối hợp kỹ thuật với nông dân, giám sát chất lượng
@@ -181,9 +201,9 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 
 ##### Pain Point
 
-| # | Pain Point | Mô tả thực tế |
-|---|-----------|---------------|
-| PP3 | **Chứng minh chất lượng** | DN thu mua hỏi: "Lô gạo này trồng ở đâu, phun thuốc ngày nào, thu hoạch lúc nào?" → HTX lục sổ tay không tìm được → mất deal kênh cao cấp |
+| #   | Pain Point                                         | Mô tả thực tế                                                                                                                                                     |
+| --- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PP3 | **Chứng minh chất lượng**                | DN thu mua hỏi: "Lô gạo này trồng ở đâu, phun thuốc ngày nào, thu hoạch lúc nào?" → HTX lục sổ tay không tìm được → mất deal kênh cao cấp   |
 | PP4 | **Quản lý nhiều hộ, nhiều thửa đất** | HTX có 50 hộ, 120 thửa đất, mỗi thửa trồng cây khác nhau, mùa vụ khác nhau → sổ tay lẫn lộn, mỗi người 1 file Excel, không ai tổng hợp được |
 
 > PP3 và PP4 bổ trợ nhau: Không quản lý được hộ/thửa đất (PP4) → không ghi nhật ký đúng → không chứng minh được chất lượng (PP3).
@@ -193,6 +213,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 **[Pain Point 4] Quản lý nhiều hộ, nhiều thửa đất:**
 
 **Tính năng 3.1: Bản đồ Vùng trồng HTX**
+
 - **Mô tả:** Bản đồ tương tác hiển thị toàn bộ khu vực canh tác của HTX. Mỗi thửa đất được ghim trên bản đồ, hiển thị trực quan: đang trồng gì, thuộc hộ nào, diện tích bao nhiêu.
 - **Biểu diễn trực quan:** Mỗi loại cây trồng có màu sắc hoặc icon riêng trên bản đồ → Cán bộ KT/CL nhìn vào thấy ngay toàn cảnh vùng trồng HTX mình quản lý.
 - **Ảnh vệ tinh:** Có thể bật layer ảnh vệ tinh Copernicus Sentinel-2 (CC BY 4.0) làm nền bản đồ — hiển thị thực tế vùng trồng từ vệ tinh.
@@ -204,12 +225,12 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 - **Data mỗi thửa đất:** Vị trí (polygon trên bản đồ), diện tích (auto-calculate), cây trồng hiện tại, thành viên chịu trách nhiệm, mã định danh.
 - **Trạng thái thửa (auto-derive từ nhật ký):**
 
-| Điều kiện | Trạng thái | Màu |
-|----------|-----------|:---:|
-| Có entry "Gieo trồng", chưa có entry chăm sóc | 🟢 Đang gieo | Xanh lá |
-| Có entry bón phân / tưới / phun thuốc | 🟡 Đang chăm sóc | Vàng |
-| Cán bộ bấm [Duyệt thu hoạch] | 🟠 Đã nghiệm thu | Cam |
-| Có entry "Thu hoạch" hoặc Lô đã tạo từ thửa này | 🔵 Đã thu hoạch | Xanh dương |
+| Điều kiện                                              | Trạng thái        |     Màu     |
+| --------------------------------------------------------- | ------------------- | :----------: |
+| Có entry "Gieo trồng", chưa có entry chăm sóc       | 🟢 Đang gieo       |   Xanh lá   |
+| Có entry bón phân / tưới / phun thuốc               | 🟡 Đang chăm sóc |    Vàng    |
+| Cán bộ bấm [Duyệt thu hoạch]                         | 🟠 Đã nghiệm thu |     Cam     |
+| Có entry "Thu hoạch" hoặc Lô đã tạo từ thửa này | 🔵 Đã thu hoạch  | Xanh dương |
 
 > Trạng thái tự động suy từ data nhật ký — KHÔNG cần nút chuyển tay. Reset khi vụ mới (entry "Gieo trồng" mới).
 
@@ -218,6 +239,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 **[Pain Point 3] Chứng minh chất lượng:**
 
 **Tính năng 3.2: Nhật ký Canh tác Số**
+
 - **Mô tả:** Ghi lại hoạt động canh tác theo từng thửa đất. KHÔNG theo chuẩn VietGAP — tự do ghi nhưng phải tuân thủ **bộ quy tắc tối thiểu** để đảm bảo chuyên nghiệp.
 - **Ai ghi:**
   - **Cán bộ KT/CL tự ghi:** Nhập trực tiếp vào nhật ký (ghi hộ nông dân già hoặc ghi từ thực địa). Hệ thống validate đủ các trường bắt buộc → **auto approved** (vì Cán bộ chính là người duyệt).
@@ -230,18 +252,18 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 
 **Bộ quy tắc tối thiểu — Mỗi entry nhật ký BẮT BUỘC ghi:**
 
-| Trường | Bắt buộc? | Mô tả | Ví dụ |
-|--------|----------|-------|-------|
-| Ngày thực hiện | ✅ | Ngày giờ hoạt động | 2026-07-20 08:00 |
-| Thửa đất | ✅ | Chọn từ danh sách thửa đã đăng ký | Thửa A3 - Lô Đông |
-| Loại hoạt động | ✅ | Chọn từ danh sách cố định | Gieo trồng / Bón phân / Phun thuốc / Tưới nước / Thu hoạch / Khác |
-| Chi tiết hoạt động | ✅ | Mô tả cụ thể | "Bón phân NPK 20-20-15, liều 50kg/1000m²" |
-| Người thực hiện | ✅ | Ai làm | Nguyễn Văn A |
-| Tên sản phẩm sử dụng | ⚠️ Khi phun thuốc/bón phân | Tên thuốc/phân bón | Thuốc trừ sâu Regent 800WG |
-| Liều lượng | ⚠️ Khi phun thuốc/bón phân | Số lượng + đơn vị | 50ml/bình 16L |
-| Số ngày cách ly quy định | ⚠️ Khi phun thuốc | Đọc từ nhãn chai thuốc | 14 ngày |
-| Ghi chú | ❌ Tuỳ chọn | Bổ sung thông tin | "Cây có dấu hiệu vàng lá" |
-| Thời tiết | 🤖 Tự động | Hệ thống tự gắn từ Open-Meteo | Nắng, 32°C, độ ẩm 75% |
+| Trường                      | Bắt buộc?                     | Mô tả                                    | Ví dụ                                                                     |
+| ----------------------------- | ------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------- |
+| Ngày thực hiện             | ✅                              | Ngày giờ hoạt động                    | 2026-07-20 08:00                                                            |
+| Thửa đất                   | ✅                              | Chọn từ danh sách thửa đã đăng ký | Thửa A3 - Lô Đông                                                       |
+| Loại hoạt động            | ✅                              | Chọn từ danh sách cố định            | Gieo trồng / Bón phân / Phun thuốc / Tưới nước / Thu hoạch / Khác |
+| Chi tiết hoạt động        | ✅                              | Mô tả cụ thể                           | "Bón phân NPK 20-20-15, liều 50kg/1000m²"                               |
+| Người thực hiện           | ✅                              | Ai làm                                    | Nguyễn Văn A                                                              |
+| Tên sản phẩm sử dụng     | ⚠️ Khi phun thuốc/bón phân | Tên thuốc/phân bón                     | Thuốc trừ sâu Regent 800WG                                               |
+| Liều lượng                 | ⚠️ Khi phun thuốc/bón phân | Số lượng + đơn vị                    | 50ml/bình 16L                                                              |
+| Số ngày cách ly quy định | ⚠️ Khi phun thuốc            | Đọc từ nhãn chai thuốc                | 14 ngày                                                                    |
+| Ghi chú                      | ❌ Tuỳ chọn                   | Bổ sung thông tin                        | "Cây có dấu hiệu vàng lá"                                             |
+| Thời tiết                   | 🤖 Tự động                   | Hệ thống tự gắn từ Open-Meteo         | Nắng, 32°C, độ ẩm 75%                                                  |
 
 **Tính năng 3.3: QR Code Truy xuất Nguồn gốc**
 
@@ -301,7 +323,7 @@ Bước 4: Tập kết & Quy lô (SAU THU HOẠCH)
     nông sản (từ thửa đất), ngày thu hoạch (từ nhật ký)
           │
           ▼
-Bước 5: Pre-review & Hoàn thiện (KHI CÓ TRỌNG LƯỢNG)
+Bước 5: Pre-review & Hoàn thiện (KHI CÓ TRỌNG LƯỢNG & QUY CÁCH)
   Ai: Cán bộ KT/CL
   Hệ thống hiển thị PREVIEW toàn bộ nội dung QR:
   ┌─────────────────────────────────────┐
@@ -311,15 +333,16 @@ Bước 5: Pre-review & Hoàn thiện (KHI CÓ TRỌNG LƯỢNG)
   │ Nông sản: Gạo ST25             [✓]  │
   │ Ngày thu hoạch: 2026-07-20     [✓]  │
   │ Ngày đóng gói: 2026-07-21      [✓]  │
-  │ Phun thuốc cuối: 2026-07-06    [✓]  │
-  │   Loại: Regent 800WG           [✓]  │
   │ Cách ly: 15 ngày (đạt ≥ 14)    [✓]  │
   │ HTX: HTX Mỹ Đông 2             [✓]  │
-  │   SĐT: 0292.xxx.xxx            [✓]  │
+  │ Hộ nông dân: Nguyễn Văn A      [✓]  │
+  │ Thửa đất: Thửa A3              [✓]  │
   │ Người duyệt: Trần Văn B        [✓]  │
+  │ Chứng nhận: [Chọn từ P.A.R.A]  [✓]  │
   │                                     │
-  │ ⚠️ Trọng lượng: [______] kg         │
-  │    ↑ BẮT BUỘC NHẬP                  │
+  │ ⚠️ Tổng Trọng lượng: [______] kg    │
+  │ ⚠️ Quy cách đóng gói:[______]       │
+  │    (VD: Bao 50kg, Túi 5kg)          │
   │                                     │
   │ [Cho phép chỉnh sửa các field]      │
   │                                     │
@@ -328,8 +351,7 @@ Bước 5: Pre-review & Hoàn thiện (KHI CÓ TRỌNG LƯỢNG)
   └─────────────────────────────────────┘
   - Tất cả field đã auto-fill từ hệ thống
   - User có thể CHỈNH SỬA bất kỳ field nào nếu cần
-  - Trọng lượng BẮT BUỘC nhập → nếu trống → nút
-    [Xuất QR] bị disable, hiện thông báo
+  - Trọng lượng và Quy cách BẮT BUỘC nhập → nếu trống → disable [Xuất QR]
   - Bấm [Lưu nháp] → lưu lại, quay lại sau điền tiếp
   - Bấm [Xuất QR] → chuyển sang Bước 6
           │
@@ -344,32 +366,32 @@ Bước 6: Sinh mã QR & Dán tem
 
 **Trạng thái Lô hàng:**
 
-| Trạng thái | Mô tả | Chuyển tiếp |
-|-----------|-------|------------|
-| **Nháp** | Lô vừa tạo, data auto-fill, trọng lượng chưa có | → Sẵn sàng (khi nhập đủ) |
-| **Sẵn sàng** | Đủ data, đã review, trọng lượng đã nhập | → Đã xuất QR |
-| **Đã xuất QR** | QR đã sinh, không chỉnh sửa được nữa | Trạng thái cuối |
+| Trạng thái            | Mô tả                                                 | Chuyển tiếp                  |
+| ----------------------- | ------------------------------------------------------- | ------------------------------ |
+| **Nháp**         | Lô vừa tạo, data auto-fill, trọng lượng/quy cách chưa có | → Sẵn sàng (khi nhập đủ) |
+| **Sẵn sàng**    | Đủ data, đã review, trọng lượng/quy cách đã nhập       | → Đã xuất QR               |
+| **Đã xuất QR** | QR đã sinh, không chỉnh sửa được nữa           | Trạng thái cuối             |
 
-**Nội dung khi quét QR (trang public):**
+**Nội dung khi quét QR (Trang public - Cấu trúc 4 Khối & Data Lineage):**
 
-| # | Thông tin | Nguồn data |
-|---|----------|------------|
-| 1 | Mã lô hàng | Auto-generate (Bước 4) |
-| 2 | Nông sản gì | Data thửa đất → cây trồng (Bước 1) |
-| 3 | Trọng lượng (kg) | User nhập (Bước 5) |
-| 4 | Ngày thu hoạch | Nhật ký entry "Thu hoạch" (Bước 2) |
-| 5 | Ngày đóng gói | Auto = ngày tạo Lô (Bước 4) |
-| 6 | Phun thuốc lần cuối (ngày + loại thuốc) | Nhật ký entry cuối loại "Phun thuốc" (Bước 2) |
-| 7 | Số ngày cách ly + trạng thái đạt/chưa đạt | Hệ thống tự tính từ Bước 2+3 |
-| 8 | Tên & Liên hệ HTX | Profile HTX (Setup) |
-| 9 | Người duyệt (Cán bộ KT) | Auto từ Bước 3 — tài khoản đang login |
-
+| Khối | Thông tin hiển thị | Nguồn data (Data Lineage) | Tình trạng nhập tay lúc sinh QR |
+| :--- | :--- | :--- | :--- |
+| **1. SP & Lô** | Mã lô, Nông sản, Ngày đóng gói | Auto từ Thuộc tính Thửa đất & Ngày tạo lô | 0% (Auto) |
+| | Tổng trọng lượng, Quy cách đóng gói | Nhập tay ở Bước 5 (Pre-review) | **100% (Manual)** |
+| **2. Nguồn gốc** | Tên & Liên hệ HTX | Auto từ Profile HTX | 0% (Auto) |
+| | Hộ nông dân, Vị trí (Thửa đất) | Auto từ Metadata Thửa đất (Lúc setup bản đồ) | 0% (Auto) |
+| | Người duyệt (Cán bộ KT) | Auto từ tài khoản login (Bước 3) | 0% (Auto) |
+| **3. Nhật ký & An toàn**| Trạng thái an toàn (Đạt cách ly) | Auto tính toán từ entry phun thuốc cuối (Bước 3) | 0% (Auto) |
+| | Timeline Lịch sử canh tác (từ Gieo -> Thu hoạch) | Auto load từ mảng JSON Nhật ký của Thửa đất | 0% (Auto) |
+| **4. Chứng nhận** | Link xem PDF (VietGAP, OCOP, Test nước) | Trích xuất file từ MinIO (P.A.R.A) | 0% (Chỉ việc Select dropdown) |
 **Cách chọn/quy lô hàng:**
+
 - **Tiêu chí chính:** Theo **ngày thu hoạch** — tất cả nông sản thu hoạch cùng ngày (hoặc cùng đợt) từ các thửa đạt nghiệm thu được gộp thành 1 lô.
 - **Tiêu chí phụ (tuỳ chọn):** Theo loại cây trồng, theo hạng chất lượng (loại 1/2), theo khu vực vùng trồng.
 - **Mã lô:** Tự động sinh theo format: `[Mã HTX]-[Cây trồng]-[Ngày thu hoạch]-[Số thứ tự]`. VD: `MĐ2-ST25-20260720-001`
 
 **Tính năng 3.4: P.A.R.A Quản lý Tài liệu**
+
 - **Mô tả:** Upload/lưu trữ tài liệu HTX theo cấu trúc P.A.R.A (Projects - Areas - Resources - Archives).
 - **Công nghệ:** MinIO (MNM, self-hosted) + giao diện folder trên Next.js.
 - **Mục đích:**
@@ -382,6 +404,7 @@ Bước 6: Sinh mã QR & Dán tem
   - **Archives:** Lưu trữ dài hạn (VD: Báo cáo các mùa vụ đã xong)
 
 **Tính năng 3.5: Chatbot Kỹ thuật (Cán bộ KT/CL)**
+
 - **Mô tả:** Giao diện chat riêng cho Cán bộ KT/CL. AI trả lời dựa trên tài liệu HTX trong P.A.R.A.
 - **Scope:** Kỹ thuật canh tác, tài liệu HTX, quy trình nông vụ.
 - **KHÔNG trả lời:** Giá cả thị trường (đó là chatbot của Trưởng HTX).
@@ -390,6 +413,7 @@ Bước 6: Sinh mã QR & Dán tem
 - **Công nghệ:** Cùng Ollama, khác system prompt + RAG source so với chatbot Trưởng HTX.
 
 **Tính năng 3.6: Gửi Thông báo Kỹ thuật**
+
 - **Mô tả:** Cán bộ KT/CL tạo thông báo kỹ thuật → đẩy đến Nông dân (và tuỳ chọn gửi đến Trưởng HTX).
 - **UX:** Form: tiêu đề + nội dung + chọn người nhận (tất cả nông dân / chọn hộ cụ thể) + checkbox [Gửi cho Trưởng HTX] + [Gửi].
 - **Ví dụ:** "Lịch phun thuốc đồng loạt ngày 25/07 — tất cả thửa lúa ST25 khu Đông".
@@ -401,6 +425,7 @@ Bước 6: Sinh mã QR & Dán tem
 ##### Chân dung User (2 persona)
 
 **Persona 1 — Nông dân già (trên 40):**
+
 - **Tuổi:** 40–60, canh tác nhiều năm, dựa vào kinh nghiệm
 - **Thiết bị:** Smartphone rẻ, chủ yếu gọi điện và nhắn tin
 - **Khả năng công nghệ:** Rất hạn chế — không gõ được form phức tạp
@@ -408,6 +433,7 @@ Bước 6: Sinh mã QR & Dán tem
 - **Ghi nhật ký:** Báo cáo miệng/tin nhắn → Cán bộ KT/CL số hóa giúp
 
 **Persona 2 — Nông dân trẻ (dưới 35):**
+
 - **Tuổi:** 20–35, tiếp quản đất từ gia đình hoặc làm thuê cho HTX
 - **Thiết bị:** Smartphone tốt, thành thạo
 - **Khả năng công nghệ:** Thoải mái — muốn tự làm trên điện thoại
@@ -416,18 +442,19 @@ Bước 6: Sinh mã QR & Dán tem
 
 ##### Pain Point
 
-| # | Pain Point | Mô tả thực tế |
-|---|-----------|---------------|
-| PP5 | **Thông tin HTX bị trôi / đến chậm** | Thông báo HTX gửi trong nhóm chat 50 người, tin quan trọng bị trôi, nông dân bỏ lỡ lịch phún thuốc, lịch họp |
-| PP6 | **Sâu bệnh không biết hỏi ai ngay** | Thấy cây bị bệnh ngoài đồng, gọi Cán bộ KT không được (bận ở thửa khác), chờ 2-3 ngày sâu lan rộng |
-| PP7 | **Thời tiết không cụ thể** | Đài báo chung "miền Tây có mưa rào" — nông dân cần biết cụ thể thửa mình mai có mưa không để kịp phơi lúa / gặt sớm |
-| PP8 | **Không biết giá nông sản** | Trưởng HTX có chatbot biết giá, nông dân thì không biết gì, cảm giác bị động |
+| #   | Pain Point                                       | Mô tả thực tế                                                                                                                              |
+| --- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| PP5 | **Thông tin HTX bị trôi / đến chậm** | Thông báo HTX gửi trong nhóm chat 50 người, tin quan trọng bị trôi, nông dân bỏ lỡ lịch phún thuốc, lịch họp                 |
+| PP6 | **Sâu bệnh không biết hỏi ai ngay**   | Thấy cây bị bệnh ngoài đồng, gọi Cán bộ KT không được (bận ở thửa khác), chờ 2-3 ngày sâu lan rộng                       |
+| PP7 | **Thời tiết không cụ thể**            | Đài báo chung "miền Tây có mưa rào" — nông dân cần biết cụ thể thửa mình mai có mưa không để kịp phơi lúa / gặt sớm |
+| PP8 | **Không biết giá nông sản**           | Trưởng HTX có chatbot biết giá, nông dân thì không biết gì, cảm giác bị động                                                   |
 
 ##### Tính năng cho Nông dân
 
 **[Pain Point 5+7+8] Mỗi ngày ra đồng không biết gì:**
 
 **Tính năng 4.1: Dashboard "Hôm nay"**
+
 - **Mô tả:** Màn hình chính khi nông dân mở web — tổng hợp tất cả thông tin cần thiết trong 1 trang.
 - **Nhiều role dùng:** Trưởng HTX và Cán bộ KT/CL cũng có Dashboard "Hôm nay" với nội dung tương tự nhưng tuỳ role (VD: Trưởng HTX thấy thửa toàn HTX, Nông dân chỉ thấy thửa mình).
 - **Nội dung:**
@@ -443,20 +470,21 @@ Bước 6: Sinh mã QR & Dán tem
 **[Pain Point 5] Thông tin HTX bị trôi:**
 
 **Tính năng 4.2: Thông báo (n8n + Web Bell)**
+
 - **Mô tả:** Tất cả 3 actor đều nhận thông báo qua **2 kênh**: n8n (push qua connector) và Web Bell (icon chuông trên web). Nội dung khác nhau tuỳ role.
 
 **Ma trận thông báo:**
 
-| Nội dung | Trưởng HTX | Cán bộ KT/CL | Nông dân |
-|----------|:----------:|:------------:|:--------:|
-| Bản tin thị trường (giá, công-cầu) | ✅ n8n + bell | ✅ n8n + bell | ✅ n8n + bell |
-| Thông tin chung (lịch họp, thông báo HTX) | ✅ n8n + bell | ✅ n8n + bell | ✅ n8n + bell |
-| Lô hàng đóng gói / thửa được duyệt thu hoạch | ✅ n8n + bell | — (người gửi) | ❌ |
-| Chẩn đoán bệnh từ nông dân | ✅ bell | ✅ n8n + bell | — (người gửi) |
-| Phản hồi chẩn đoán từ Cán bộ KT | ❌ | — (người gửi) | ✅ bell |
-| Cảnh báo thời tiết bất thường | ✅ bell | ✅ bell | ✅ n8n + bell |
-| Nhật ký nông dân gửi chờ duyệt | ❌ | ✅ bell | — (người gửi) |
-| Kết quả duyệt nhật ký | ❌ | — (người gửi) | ✅ bell |
+| Nội dung                                               | Trưởng HTX |  Cán bộ KT/CL  |    Nông dân    |
+| ------------------------------------------------------- | :-----------: | :---------------: | :---------------: |
+| Bản tin thị trường (giá, công-cầu)               | ✅ n8n + bell |   ✅ n8n + bell   |   ✅ n8n + bell   |
+| Thông tin chung (lịch họp, thông báo HTX)          | ✅ n8n + bell |   ✅ n8n + bell   |   ✅ n8n + bell   |
+| Lô hàng đóng gói / thửa được duyệt thu hoạch | ✅ n8n + bell | — (người gửi) |        ❌        |
+| Chẩn đoán bệnh từ nông dân                       |    ✅ bell    |   ✅ n8n + bell   | — (người gửi) |
+| Phản hồi chẩn đoán từ Cán bộ KT                 |      ❌      | — (người gửi) |      ✅ bell      |
+| Cảnh báo thời tiết bất thường                    |    ✅ bell    |      ✅ bell      |   ✅ n8n + bell   |
+| Nhật ký nông dân gửi chờ duyệt                   |      ❌      |      ✅ bell      | — (người gửi) |
+| Kết quả duyệt nhật ký                              |      ❌      | — (người gửi) |      ✅ bell      |
 
 - **Web Bell:** Icon chuông trên header của tất cả actors, click vào thấy danh sách thông báo mới nhất.
 - **n8n:** Push qua connector (Mattermost demo, các nền tảng khác tuỳ triển khai).
@@ -469,6 +497,7 @@ Bước 6: Sinh mã QR & Dán tem
 **[Pain Point 6] Sâu bệnh không biết hỏi ai:**
 
 **Tính năng 4.3: Chẩn đoán bệnh cây qua ảnh (AI)**
+
 - **Mô tả:** Nông dân chụp ảnh lá/cây bị bệnh → upload lên hệ thống → model AI dự đoán tên bệnh + độ tin cậy.
 - **Model:** TensorFlow/Keras (Apache 2.0), tự train — 100% MNM hợp lệ.
 - **Deploy:** Python FastAPI wrap model, expose REST API. Next.js frontend gọi API.
@@ -485,6 +514,7 @@ Bước 6: Sinh mã QR & Dán tem
 - **Khớp nguyên tắc AI:** Model trình bày KẼT QUẢ + độ tin cậy. Luôn ghi rõ "đây là AI dự đoán". KHÔNG nói "nên làm gì". Cán bộ KT/CL là người quyết định xử lý.
 
 **Nhật ký bệnh (phần riêng):**
+
 - Lưu trữ riêng với nhật ký canh tác thông thường.
 - Mỗi entry gồm: ngày phát hiện, thửa đất, ảnh gốc, kết quả AI (tên bệnh + %), người phát hiện (nông dân), người xác nhận (Cán bộ KT), ghi chú xử lý.
 - **Quyền xem:**
@@ -494,6 +524,7 @@ Bước 6: Sinh mã QR & Dán tem
 **[Bổ sung] Ghi nhật ký (Nông dân trẻ):**
 
 **Tính năng 4.4: Ghi Nhật ký Canh tác (Nông dân trẻ)**
+
 - **Mô tả:** Nông dân trẻ tự ghi nhật ký trên web, gửi cho Cán bộ KT/CL duyệt.
 - **Luồng:**
   1. Nông dân chọn thửa đất (chỉ thấy thửa của mình) → ghi hoạt động theo bộ quy tắc tối thiểu
@@ -507,11 +538,11 @@ Bước 6: Sinh mã QR & Dán tem
 
 ##### Nền tảng chung cho Nông dân
 
-| Thành phần | Quyết định | Ghi chú |
-|-----------|-----------|---------|
-| **Xác thực** | Keycloak + OTP qua SĐT | Cùng hệ thống Keycloak, role "Farmer". Ghi chú "Mã OTP có hiệu lực trong 5 phút" trên màn hình nhập OTP. |
-| **Giao diện** | Web responsive (Next.js) | UI riêng cho role Nông dân. Chữ to, ít nút. PWA là hướng mở rộng. |
-| **Accessibility** | TTS trên mọi element | Nút "Nghe" ở dashboard, thông báo, kết quả chẩn đoán |
+| Thành phần            | Quyết định            | Ghi chú                                                                                                              |
+| ----------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **Xác thực**    | Keycloak + OTP qua SĐT  | Cùng hệ thống Keycloak, role "Farmer". Ghi chú "Mã OTP có hiệu lực trong 5 phút" trên màn hình nhập OTP. |
+| **Giao diện**    | Web responsive (Next.js) | UI riêng cho role Nông dân. Chữ to, ít nút. PWA là hướng mở rộng.                                          |
+| **Accessibility** | TTS trên mọi element   | Nút "Nghe" ở dashboard, thông báo, kết quả chẩn đoán                                                         |
 
 ---
 
@@ -519,27 +550,28 @@ Bước 6: Sinh mã QR & Dán tem
 
 > Đây là "Vũ khí bí mật" để đạt điểm tối đa từ Ban giám khảo, chứng minh đội thi am hiểu sâu sắc về Luật Bản quyền (Copyright) và Giấy phép Nguồn mở (Open Source Licensing).
 
-| Lớp kiến trúc | Thành phần | Giấy phép | Đánh giá tuân thủ OLP |
-| :--- | :--- | :--- | :--- |
-| H (Presentation) | Next.js, React | MIT | Đạt |
-| H (Security) | Keycloak | Apache License 2.0 | Đạt |
-| H (Map) | OpenStreetMap, Leaflet.js, Nominatim | ODbL, BSD-2 | Đạt |
-| P (Process) | n8n | Faircode | Đạt theo chuẩn DX-OS |
-| D (Data Storage) | PostgreSQL | PostgreSQL License | Đạt |
-| D (Market Data) | USDA PSD API, GATS API | Public Domain | Đạt (Miễn trừ bản quyền) |
-| D (Climate Data) | NASA POWER API | Public Domain | Đạt (Miễn trừ bản quyền) |
-| D (Agricultural Data) | FAOSTAT API | CC BY 4.0 | Đạt |
-| I (AI Engine) | Ollama | MIT | Đạt |
-| I (TTS Audio) | Piper TTS (voice `vi_VN-vais1000-medium`) | MIT | Đạt |
-| I (Notification) | n8n + Mattermost connector | Faircode + MIT | Đạt |
-| D (File Storage) | MinIO | AGPL v3 | Đạt |
-| D (Satellite) | Copernicus Sentinel-2 WMS | CC BY 4.0 | Đạt *(optional layer, không bắt buộc cho MVP)* |
-| H (QR Code) | qrcode.js / node-qrcode | MIT | Đạt |
-| H (Map Draw) | Leaflet.draw + Turf.js | MIT | Đạt |
-| I (Disease Model) | TensorFlow / Keras | Apache 2.0 | Đạt |
-| I (Model API) | FastAPI (Python) | MIT | Đạt |
+| Lớp kiến trúc      | Thành phần                               | Giấy phép        | Đánh giá tuân thủ OLP                           |
+| :-------------------- | :----------------------------------------- | :----------------- | :--------------------------------------------------- |
+| H (Presentation)      | Next.js, React                             | MIT                | Đạt                                                |
+| H (Security)          | Keycloak                                   | Apache License 2.0 | Đạt                                                |
+| H (Map)               | OpenStreetMap, Leaflet.js, Nominatim       | ODbL, BSD-2        | Đạt                                                |
+| P (Process)           | n8n                                        | Faircode           | Đạt theo chuẩn DX-OS                              |
+| D (Data Storage)      | PostgreSQL                                 | PostgreSQL License | Đạt                                                |
+| D (Market Data)       | USDA PSD API, GATS API                     | Public Domain      | Đạt (Miễn trừ bản quyền)                       |
+| D (Climate Data)      | NASA POWER API                             | Public Domain      | Đạt (Miễn trừ bản quyền)                       |
+| D (Agricultural Data) | FAOSTAT API                                | CC BY 4.0          | Đạt                                                |
+| I (AI Engine)         | Ollama                                     | MIT                | Đạt                                                |
+| I (TTS Audio)         | Piper TTS (voice`vi_VN-vais1000-medium`) | MIT                | Đạt                                                |
+| I (Notification)      | n8n + Mattermost connector                 | Faircode + MIT     | Đạt                                                |
+| D (File Storage)      | MinIO                                      | AGPL v3            | Đạt                                                |
+| D (Satellite)         | Copernicus Sentinel-2 WMS                  | CC BY 4.0          | Đạt*(optional layer, không bắt buộc cho MVP)* |
+| H (QR Code)           | qrcode.js / node-qrcode                    | MIT                | Đạt                                                |
+| H (Map Draw)          | Leaflet.draw + Turf.js                     | MIT                | Đạt                                                |
+| I (Disease Model)     | TensorFlow / Keras                         | Apache 2.0         | Đạt                                                |
+| I (Model API)         | FastAPI (Python)                           | MIT                | Đạt                                                |
 
 #### Các API Bổ sung:
+
 - **Thuế quan:** WTO Tariff Download Facility API, World Bank WITS API (Open Data CC BY 4.0).
 - **Tỷ giá:** ExchangeRate-API / Frankfurter (MNM).
 - **Thời tiết vi mô:** Open-Meteo (MNM, không cần API Key).
@@ -553,31 +585,35 @@ Bước 6: Sinh mã QR & Dán tem
 **Chiến lược:** "Tích hợp thay vì xây mới" (Integration over coding)
 
 #### GIAI ĐOẠN 1: THIẾT LẬP NỀN TẢNG (FOUNDATION)
+
 **Mục tiêu:** Dựng xong khung sườn hệ thống, user có thể đăng nhập, Profile HTX hoạt động, dữ liệu bắt đầu tự động chảy về.
 
 1. **Luồng Xác thực & Profile HTX - [Lớp H]**
+
    - Tích hợp Next-Auth với Keycloak OIDC (cấu hình OTP qua SĐT).
    - Trang Profile HTX: nhập tên, địa chỉ, cây trồng, diện tích, mùa vụ.
    - Web responsive, tối ưu cho điện thoại.
-
 2. **Luồng Thu thập Dữ liệu - [Lớp P & D]**
+
    - n8n Workflow: kéo API USDA, WTO, ExchangeRate, Open-Meteo → lưu PostgreSQL.
    - Không có giao diện người dùng (chỉ cấu hình trong n8n).
 
 #### GIAI ĐOẠN 2: TÍNH NĂNG CỐT LÕI (CORE VALUE - DEMO OLP)
+
 **Mục tiêu:** Đưa dữ liệu ra màn hình, AI tổng hợp bản tin, chatbot hoạt động, bản đồ đối tác lên sóng. Đây là phần mang lên sân khấu thuyết trình.
 
 3. **Bản tin Nông nghiệp Số + Audio - [Lớp H & I]**
+
    - AI tổng hợp liên nguồn → bản tin tiếng Việt hàng ngày.
    - Nút "Nghe nhanh" → TTS tạo audio tóm tắt.
    - Filter theo cây trồng từ Profile HTX.
-
 4. **Chatbot chuyên gia Thị trường - [Lớp H & I]**
+
    - Giao diện chat trên web, lưu 7 ngày.
    - Scope: giá cả & thị trường only.
    - Next.js API → PostgreSQL → Ollama → response.
-
 5. **Bản đồ Đối tác Nông nghiệp - [Lớp H & D]**
+
    - OpenStreetMap + Leaflet.js + Nominatim.
    - CRUD đối tác: thêm/sửa/xoá, search địa chỉ.
    - Seed data mẫu cho demo.
@@ -587,23 +623,25 @@ Bước 6: Sinh mã QR & Dán tem
     - Trưởng HTX xem danh sách lô hàng (read-only).
 
 #### GIAI ĐOẠN 2B: TÍNH NĂNG CÁN BỘ KT/CL (CORE VALUE)
+
 **Mục tiêu:** Quản lý vùng trồng và truy xuất nguồn gốc hoạt động.
 
 6. **Bản đồ Vùng trồng + Quản lý Hộ/Thửa đất - [Lớp H & D]**
+
    - Leaflet.js hiển thị thửa đất trực quan theo loại cây trồng.
    - Trạng thái thửa auto-derive từ nhật ký.
    - CRUD hộ thành viên + thửa đất (Hộ → Thửa → Cây).
-
 7. **Nhật ký Canh tác Số - [Lớp H & D]**
+
    - Ghi hoạt động theo bộ quy tắc tối thiểu.
    - Cán bộ auto approved, nông dân chờ duyệt.
    - Thời tiết tự động gắn từ Open-Meteo.
-
 8. **QR Code Truy xuất Nguồn gốc - [Lớp H & D]**
+
    - Luồng 6 bước: khởi tạo → ghi nhật ký → nghiệm thu → quy lô → pre-review → sinh QR.
    - Trang public quét QR xem nguồn gốc.
-
 9. **P.A.R.A Quản lý Tài liệu - [Lớp D]**
+
    - MinIO + giao diện folder Next.js.
    - Tài liệu làm RAG cho AI chatbot.
 
@@ -612,24 +650,27 @@ Bước 6: Sinh mã QR & Dán tem
     - Form gửi thông báo kỹ thuật xuống Nông dân.
 
 #### GIAI ĐOẠN 2C: TÍNH NĂNG NÔNG DÂN (CORE VALUE)
+
 **Mục tiêu:** Nông dân có công cụ riêng, giảm phụ thuộc vào thông tin miệng.
 
 10. **Dashboard "Hôm nay" - [Lớp H]**
+
     - Tổng hợp thời tiết + giá + thửa đất + thông báo trên 1 trang.
     - Nút "Nghe tóm tắt" (TTS).
-
 11. **Thông báo riêng (Inbox) - [Lớp H & P]**
+
     - Inbox cá nhân, không bị trôi.
     - n8n đẩy notification từ Trưởng HTX + Cán bộ KT.
-
 12. **Chẩn đoán bệnh cây qua ảnh - [Lớp I]**
+
     - TF/Keras model (tự train) + FastAPI.
     - Kết quả gửi notification cho Cán bộ KT xác nhận.
-
 13. **Ghi Nhật ký (Nông dân trẻ) - [Lớp H & D]**
+
     - Dùng chung backend nhật ký, UI đơn giản, chỉ thấy thửa mình.
 
 #### GIAI ĐOẠN 3: MỞ RỘNG (EXTENSIONS)
+
 **Mục tiêu:** Làm cho hệ thống hoàn thiện hơn. Chỉ làm nếu còn dư thời gian.
 
 14. **Notification thông minh - [Lớp P & I]**
@@ -643,6 +684,7 @@ Bước 6: Sinh mã QR & Dán tem
 > **Nguyên tắc demo:** AI trình bày sự thật có nguồn. KHÔNG bao giờ demo AI nói "nên" hay "không nên".
 
 **Kịch bản 1 — Pain Point 1: "Giá bán như nào"**
+
 - Trưởng HTX mở web trên điện thoại → thấy bản tin hôm nay tóm tắt tình hình thị trường gạo ST25.
 - Bấm "Nghe nhanh" → nghe audio tóm tắt 30 giây.
 - Muốn hỏi sâu → mở chatbot: *"Thương lái trả 12.000đ/kg gạo ST25, giá này thế nào?"*
@@ -650,11 +692,13 @@ Bước 6: Sinh mã QR & Dán tem
 - Trưởng HTX tự biết 12.000đ là thấp, đàm phán lại.
 
 **Kịch bản 2 — Pain Point 2: "Bán ở đâu"**
+
 - Trưởng HTX mở bản đồ → thấy 5 DN thu mua, 3 thương lái, 2 kho bãi quanh vùng.
 - Bấm vào DN "Lộc Trời" → thấy SĐT, loại nông sản chủ yếu thu mua.
 - Trưởng HTX gọi điện đàm phán trực tiếp.
 
 **Kịch bản 3 — Pain Point 3+4: "Chứng minh chất lượng"**
+
 - Cán bộ KT/CL mở bản đồ vùng trồng → thấy toàn cảnh 120 thửa đất, màu sắc phân biệt theo loại cây.
 - Bấm vào thửa A3 → xem nhật ký canh tác: 10 entries ghi đầy đủ từ gieo trồng đến phun thuốc.
 - Kiểm tra thời gian cách ly → đạt → duyệt cho phép thu hoạch.
@@ -662,6 +706,7 @@ Bước 6: Sinh mã QR & Dán tem
 - DN thu mua quét QR → thấy toàn bộ lịch sử: HTX nào, ai trồng, phun thuốc gì ngày nào, thời tiết ra sao → tin tưởng → mua giá cao.
 
 **Kịch bản 4 — Pain Point 6: "Sâu bệnh hỏi ai"**
+
 - Nông dân Minh ngoài đồng thấy lá lúa bị đốm nâu bất thường.
 - Mở web → bấm "Chẩn đoán bệnh" → chụp ảnh lá → chọn Thửa A3.
 - Model AI trả về: *"Bệnh Đạo ôn (Blast) — độ tin cậy 95%"*
@@ -673,6 +718,7 @@ Bước 6: Sinh mã QR & Dán tem
 ### VII. GHI CHÚ BRAINSTORM
 
 #### Các quyết định quan trọng đã chốt:
+
 1. **AI không ra quyết định** — chỉ trình bày sự thật có nguồn.
 2. **HTX không tự xuất khẩu** — reframe từ "chiến lược xuất khẩu" sang "chống ép giá bằng thông tin".
 3. **Bản tin dạng tin tức** — metaphor quen thuộc (bản tin VTV/đài phát thanh), không phải dashboard phân tích phức tạp.
@@ -721,6 +767,7 @@ Bước 6: Sinh mã QR & Dán tem
 46. **Copernicus WMS = optional** — chỉ là layer ảnh vệ tinh đẹp, không ảnh hưởng chức năng. Bỏ nếu không kịp.
 
 #### Conflict đã giải quyết:
+
 - Bản tin vs Chatbot: tách biệt — bản tin là push hàng ngày trên web, chatbot là pull khi cần trên web.
 - AI anomaly detection: chuyển từ "cảnh báo" sang "notification", AI tự đánh giá quan trọng.
 - Profile filter vs Bản đồ không lọc: không mâu thuẫn.
@@ -736,12 +783,65 @@ Bước 6: Sinh mã QR & Dán tem
 - AI chẩn đoán: luôn ghi "AI dự đoán", confidence < 60% → cảnh báo.
 
 #### Brainstorm hoàn tất:
-- [x] Trưởng HTX ✅
-- [x] Cán bộ KT/CL ✅
-- [x] Nông dân ✅
-- [x] Duyệt conflict Trưởng HTX vs Cán bộ KT/CL ✅
-- [x] Duyệt conflict toàn bộ 3 actor ✅
-- [x] Duyệt luồng tính năng (walkthrough 14+6 issues) ✅
-- [x] Six Thinking Hats ✅ (TTS→Piper, Ollama local, batch approve tuần, Copernicus optional)
-- [ ] Pre-Mortem
-- [ ] SCAMPER
+
+- [X] Trưởng HTX ✅
+- [X] Cán bộ KT/CL ✅
+- [X] Nông dân ✅
+- [X] Duyệt conflict Trưởng HTX vs Cán bộ KT/CL ✅
+- [X] Duyệt conflict toàn bộ 3 actor ✅
+- [X] Duyệt luồng tính năng (walkthrough 14+6 issues) ✅
+- [X] Six Thinking Hats ✅ (TTS→Piper, Ollama local, batch approve tuần, Copernicus optional)
+- [X] Pre-Mortem ✅ (Nông dân lưu offline, n8n nhắc nhở Cán bộ KT duyệt batch)
+- [X] SCAMPER ✅ (Loại bỏ nhập tọa độ thủ công, tự động từ polygon/GPS)
+
+#### Kết quả Pre-Mortem & SCAMPER đã chốt:
+
+1. **[Pre-Mortem] Chống "Rác dữ liệu" ở Nhật ký Canh tác:**
+   - **Tình huống:** Cán bộ KT lười duyệt nhật ký, dồn 1 tháng duyệt 1 lần dẫn đến quên thông tin và không xuất được QR kịp thời.
+   - **Giải pháp:** Thiết lập luồng tự động (n8n) gửi thông báo nhắc nhở Cán bộ KT vào chiều Thứ 6 hàng tuần để "Batch Approve" nhật ký. Thêm thanh tiến độ (Progress bar) cho từng thửa báo động đỏ nếu quá 14 ngày chưa cập nhật nhật ký.
+2. **[Pre-Mortem] Chống bỏ xó AI do mất mạng:**
+   - **Tình huống:** Nông dân ra đồng không có mạng để tải ảnh lên cho AI chẩn đoán bệnh.
+   - **Giải pháp:** Xây dựng tính năng "Lưu offline" trên PWA. Nông dân có thể chụp ảnh trước, hệ thống lưu cache và tự động upload gọi API khi bắt được mạng.
+3. **[SCAMPER - Eliminate] Xóa bỏ tọa độ thủ công:**
+   - **Giải pháp:** Loại bỏ hoàn toàn tính năng nhập tọa độ thủ công. Mọi tọa độ phải lấy tự động từ Leaflet (vẽ polygon) hoặc GPS của thiết bị, triệt tiêu sai số do con người nhập tay.
+
+---
+
+### VIII. QUẢN TRỊ RỦI RO & TỐI ƯU KIẾN TRÚC (Review 360 độ - Tầng Sâu)
+
+**1. Trưởng HTX & Bài toán Notification Spam**
+- **Rủi ro:** Trưởng HTX bị "dội bom" thông báo nếu Cán bộ KT duyệt hàng chục thửa đất mỗi ngày.
+- **Giải pháp:** Phân loại cảnh báo. Thông báo biến động thị trường đẩy **Realtime**. Thông báo kỹ thuật được gom thành **Daily Digest**.
+
+**2. Trưởng HTX & Thông tin đàm phán**
+- **Rủi ro:** Thiếu số liệu "Sản lượng" để đàm phán.
+- **Giải pháp:** Cán bộ KT nhập `Năng suất ước tính` lúc khoanh thửa. Tự động nhân diện tích ra Sản lượng dự kiến.
+
+**3. Trưởng HTX & Mạng lưới Bán hàng (Trang Hồ sơ Năng lực)**
+- **Rủi ro:** Gửi 10 link QR lẻ tẻ qua Zalo cho doanh nghiệp rất kém chuyên nghiệp và thủ công.
+- **Giải pháp:** Hệ thống tự động sinh **"Trang Hồ sơ Năng lực HTX" (Public Storefront)** liệt kê danh sách Lô hàng đang "Sẵn sàng / Đã xuất QR". Trưởng HTX chỉ cần gửi 1 link duy nhất cho thương lái chọn lựa.
+
+**4. Cán bộ KT & Thiết kế Mùa vụ (Luân canh)**
+- **Rủi ro:** Trồng xong vụ lúa chuyển sang vụ đậu, Nhật ký thửa đất bị trộn lẫn thông tin 2 loại cây.
+- **Giải pháp:** Bổ sung khái niệm **"Mùa vụ" (Crop Cycle)**. Khi Cán bộ bấm `[Duyệt thu hoạch]`, hệ thống tự động Đóng (Archive) chu kỳ hiện tại. Lần "Gieo trồng" tiếp theo sẽ mở Chu kỳ mới.
+
+**5. Cán bộ KT & Sai lệch lịch sử Thời tiết**
+- **Rủi ro:** Nhập nhật ký trễ làm sai lịch sử thời tiết (lấy ngày hiện tại thay vì ngày thực tế).
+- **Giải pháp:** Cho phép Cán bộ KT chọn **"Backdate"**. n8n gọi API Open-Meteo lấy *Historical Data* đúng ngày Backdate.
+
+**6. Cán bộ KT & Luồng xử lý Bệnh cây (Giới hạn Scope MVP)**
+- **Rủi ro:** Nếu xây dựng hệ thống (hoặc AI RAG) tự động gợi ý thuốc chữa bệnh sẽ rất phức tạp, tốn thời gian code và có rủi ro về chuyên môn nông nghiệp.
+- **Giải pháp (Chốt):** Giữ scope tối giản. Hệ thống AI chỉ dừng ở mức **Chẩn đoán Tên Bệnh**. Cán bộ KT xem ảnh và bấm "Xác nhận đúng bệnh". Việc tư vấn dùng thuốc gì sẽ được Cán bộ KT trao đổi ngoài luồng (gọi điện/Zalo) hoặc tự tạo một Thông báo Kỹ thuật thủ công. Tuyệt đối không phức tạp hóa luồng form để kịp tiến độ MVP.
+**7. Nông dân & Lệch tọa độ GPS khi dùng Offline PWA**
+- **Rủi ro:** App lấy Live GPS lúc có mạng tải ảnh lên (ở nhà) thay vì lúc chụp (ở ruộng).
+- **Giải pháp:** PWA phải **Khóa tĩnh tọa độ (Snapshot GPS)** lúc bấm chụp, lưu payload offline.
+
+**8. Rate Limit API & Quá tải (Tiêu chí MNM)**
+- **Giải pháp:** **Server-Side Polling**. n8n gọi API Open-Meteo mỗi giờ 1 lần lưu đè vào PostgreSQL.
+
+**9. Áp lực Tài nguyên AI Local (Ollama + TTS)**
+- **Giải pháp:** Graceful Degradation. TTS chạy cronjob 4h sáng xuất MP3. Khẩn cấp thì Admin chạy Event-driven.
+
+**10. Kinh phí SMS OTP (Tiêu chí OLP & Nguồn mở)**
+- **Rủi ro:** SMS OTP tốn tiền API (Twilio/eSMS), sinh viên đi thi OLP không có kinh phí duy trì, dễ bị giám khảo bắt bẻ tính thực tế.
+- **Giải pháp:** Thay vì dùng SMS OTP, sử dụng chuẩn **Passkeys (WebAuthn)** có sẵn trên Keycloak -> Nông dân đăng nhập cực nhanh bằng Vân tay/FaceID hoặc Mã PIN mở khóa điện thoại. Hoàn toàn 100% Nguồn mở, bảo mật cao nhất, và **Zero-cost**. Failback (Phương án 2): Đăng nhập bằng SĐT + Mã PIN 6 số tĩnh.
