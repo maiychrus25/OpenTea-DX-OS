@@ -5,6 +5,8 @@ services:
     image: postgres:16-alpine
     container_name: agrimarket-postgres
     restart: always
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-agrimarket}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_password_here}

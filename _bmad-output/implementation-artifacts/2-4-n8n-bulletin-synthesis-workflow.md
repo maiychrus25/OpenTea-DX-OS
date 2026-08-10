@@ -15,7 +15,7 @@ so that the Next.js application has fresh, AI-generated insights to display to u
 ## Acceptance Criteria
 
 1. **Given** the n8n docker service **When** I log in **Then** I see the `Bulletin_Synthesis` workflow.
-2. **Given** the workflow is triggered (e.g., daily at 6:00 AM) **When** it runs **Then** it queries the `MarketData` and `FxRate` tables for the latest records.
+2. **Given** the workflow is triggered (e.g., daily at 6:00 AM) **When** it runs **Then** it queries the `MarketData` and `FxRate` tables for the latest records (including the `rates` JSONB field for multi-currency).
 3. **Given** the raw data **When** passed to the Ollama node **Then** Ollama (using the `OLLAMA_MODEL` from env) generates a Vietnamese Markdown summary adhering to the strict prompt rules (No recommendations, cite sources, state facts only).
 4. **Given** the generated summary **When** the workflow completes **Then** it inserts a new record into the `Bulletin` table (with `is_latest = true`) and sets `is_latest = false` for the previous bulletin of that commodity.
 5. **Given** the finalized workflow **When** I export it **Then** it is saved as `workflows/bulletin_synthesis.json` and committed to the repository.
@@ -24,7 +24,7 @@ so that the Next.js application has fresh, AI-generated insights to display to u
 
 - [ ] **T1: n8n Workflow Setup** (AC: 1, 2)
   - [ ] Create workflow triggered by a daily Cron node (e.g., 6:00 AM).
-  - [ ] Add Postgres nodes to query the latest `MarketData` (e.g., Rice prices) and `FxRate`.
+  - [ ] Add Postgres nodes to query the latest `MarketData` (e.g., Rice prices) and `FxRate` (parse the `rates` JSONB field).
   - [ ] Format the queried data into a JSON string or text block to feed to the LLM.
 
 - [ ] **T2: Ollama Integration** (AC: 3)

@@ -1,0 +1,352 @@
+// apps/web/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum ParcelStatus {
+  SOWING
+  TENDING
+  HARVEST_APPROVED
+  HARVESTED
+  DRAFT
+}
+
+enum ActivityType {
+  SOWING
+  FERTILIZING
+  SPRAYING
+  IRRIGATION
+  HARVEST
+  OTHER
+}
+
+enum LotStatus {
+  DRAFT
+  READY
+  QR_EXPORTED
+}
+
+enum NotificationType {
+  ANNOUNCEMENT
+  HARVEST_APPROVED
+  DISEASE_REPORT
+  JOURNAL_SUBMITTED
+  JOURNAL_APPROVED
+  MARKET_ALERT
+  SYSTEM
+  BROADCAST
+}
+
+enum PartnerType {
+  BUYER
+  MIDDLEMAN
+  WAREHOUSE
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
+enum UserRole {
+  MANAGER
+  OFFICER
+  FARMER
+}
+
+enum DiseaseReportStatus {
+  PENDING
+  CONFIRMED
+}
+
+// ─── HTX Profile (singleton) ─────────────────────────────────────────────────
+
+model HtxProfile {
+  id            String   @id @default(cuid())
+  name          String
+  address       String
+  contact_phone String?
+  contact_email String?
+  crop_types    String[] // e.g. ["Lúa ST25", "Xoài Cát Chu"]
+  season_label  String? // e.g. "Vụ Hè Thu 2026"
+  htx_code      String   @unique // e.g. "MD2" — used in lot codes + public URL
+  total_area_ha Float    @default(0)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@map("htx_profiles")
+}
+
+// ─── Households ───────────────────────────────────────────────────────────────
+
+model Household {
+  id               String   @id @default(cuid())
+  name             String
+  phone            String   @unique
+  address          String?
+  keycloak_user_id String? // linked after farmer account created
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  parcels         Parcel[]
+  disease_reports DiseaseReport[]
+  notifications   Notification[]  @relation("RecipientHousehold")
+
+  @@map("households")
+}
+
+// ─── Farm Zone ────────────────────────────────────────────────────────────────
+
+model Parcel {
+  id                     String       @id @default(cuid())
+  parcel_code            String       @unique // auto-generated e.g. "P-HTX-MD2-001"
+  household_id           String
+  household              Household    @relation(fields: [household_id], references: [id])
+  crop_type              String
+  area_ha                Float
+  centroid_lat           Float?
+  centroid_lng           Float?
+  polygon_geojson        Json? // GeoJSON Polygon feature
+  status                 ParcelStatus @default(DRAFT)
+  estimated_yield_per_ha Float?
+  harvest_approved_by    String? // keycloak user ID of officer
+  harvest_approved_at    DateTime?
+  created_at             DateTime     @default(now())
+  updated_at             DateTime     @updatedAt
+
+  crop_cycles     ParcelCropCycle[]
+  journal_entries JournalEntry[]
+  lot_parcels     LotParcel[]
+  disease_reports DiseaseReport[]
+  weather_cache   WeatherCache[]
+
+  @@map("parcels")
+}
+
+model ParcelCropCycle {
+  id           String    @id @default(cuid())
+  parcel_id    String
+  parcel       Parcel    @relation(fields: [parcel_id], references: [id])
+  season       String? // e.g. "Vụ Hè Thu 2026"
+  sowed_at     DateTime?
+  harvested_at DateTime?
+  created_at   DateTime  @default(now())
+
+  @@map("parcel_crop_cycles")
+}
+
+// ─── Journal ──────────────────────────────────────────────────────────────────
+
+model JournalEntry {
+  id              String       @id @default(cuid())
+  parcel_id       String
+  parcel          Parcel       @relation(fields: [parcel_id], references: [id])
+  entry_date      DateTime
+  activity_type   ActivityType
+  performed_by    String // name string
+  submitted_by_id String? // keycloak user ID
+  submitted_role  UserRole
+  status          String       @default("PENDING_APPROVAL")
+  approved_by_id  String? // keycloak user ID of officer
+  approved_at     DateTime?
+  notes           String?
+
+  // Weather auto-attach
+  weather_condition     String?
+  weather_temperature   Float?
+  weather_precipitation Float?
+  weather_humidity      Float?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  activities JournalActivity[]
+
+  @@map("journal_entries")
+}
+
+model JournalActivity {
+  id               String       @id @default(cuid())
+  journal_entry_id String
+  journal_entry    JournalEntry @relation(fields: [journal_entry_id], references: [id], onDelete: Cascade)
+  activity_detail  String
+  product_name     String? // for Spraying/Fertilizing
+  dosage           String?
+  withdrawal_days  Int? // for Spraying
+  created_at       DateTime     @default(now())
+
+  @@map("journal_activities")
+}
+
+// ─── Lots & QR ───────────────────────────────────────────────────────────────
+
+model Lot {
+  id               String    @id @default(cuid())
+  lot_code         String    @unique // e.g. "MD2-ST25-20260720-001"
+  commodity        String
+  quality_grade    String? // "Grade 1" | "Grade 2" | "Ungraded"
+  packaging_date   DateTime?
+  total_weight_kg  Float?
+  packaging_spec   String?
+  status           LotStatus @default(DRAFT)
+  qr_image_url     String? // MinIO URL of generated QR PNG
+  certificate_keys String[]  @default([]) // MinIO object keys of attached certificates
+  created_by_id    String? // keycloak officer user ID
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  lot_parcels LotParcel[]
+}
+
+model LotParcel {
+  id        String @id @default(cuid())
+  lot_id    String
+  lot       Lot    @relation(fields: [lot_id], references: [id])
+  parcel_id String
+  parcel    Parcel @relation(fields: [parcel_id], references: [id])
+
+  @@unique([lot_id, parcel_id])
+  @@map("lot_parcels")
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id            String           @id @default(cuid())
+  type          NotificationType
+  title         String
+  body          String
+  recipient_id  String? // keycloak user ID (null = system broadcast)
+  household_id  String?
+  household     Household?       @relation("RecipientHousehold", fields: [household_id], references: [id])
+  sender_id     String? // keycloak user ID of sender
+  is_read       Boolean          @default(false)
+  deep_link_url String?
+  tts_text      String? // pre-generated TTS text (summary)
+  created_at    DateTime         @default(now())
+
+  @@index([recipient_id, is_read])
+  @@index([created_at])
+  @@map("notifications")
+}
+
+// ─── Disease Detection ────────────────────────────────────────────────────────
+
+model DiseaseReport {
+  id                  String              @id @default(cuid())
+  parcel_id           String
+  parcel              Parcel              @relation(fields: [parcel_id], references: [id])
+  household_id        String
+  household           Household           @relation(fields: [household_id], references: [id])
+  detected_by_id      String // farmer keycloak user ID
+  detection_date      DateTime
+  photo_url           String // MinIO pre-signed URL (stored as path key)
+  photo_minio_key     String // MinIO object key for generating new URLs
+  gps_lat             Float?
+  gps_lng             Float?
+  ai_disease_name     String
+  ai_confidence       Float
+  confirmed_diagnosis String?
+  confirmed_by_id     String? // officer keycloak user ID
+  confirmed_at        DateTime?
+  treatment_notes     String? // officer-internal only, never shown to farmer
+  status              DiseaseReportStatus @default(PENDING)
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
+
+  @@map("disease_reports")
+}
+
+// ─── Market & Economic Data (n8n writes, Next.js reads) ──────────────────────
+
+model MarketData {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  source     String // "USDA" | "WTO" | "FAOSTAT" | "NASA"
+  commodity  String
+  metric     String // "export_price" | "import_tariff" | "production_volume"
+  value      Float
+  unit       String
+  period     String // "2026-07" or "2026" or "2026-W30"
+  fetched_at DateTime @default(now())
+
+  @@unique([source, commodity, metric, period])
+  @@index([commodity, fetched_at])
+  @@map("market_data")
+}
+
+model Bulletin {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commodity    String
+  bulletin_vi  String   @db.Text
+  sources_json Json // [{source, metric, value, date}]
+  model_used   String
+  is_latest    Boolean  @default(false)
+  created_at   DateTime @default(now())
+
+  @@index([commodity, is_latest])
+  @@map("bulletins")
+}
+
+model FxRate {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rates      Json     @db.JsonB
+  fetched_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("fx_rates")
+}
+
+model WeatherCache {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  parcel_id        String
+  parcel           Parcel   @relation(fields: [parcel_id], references: [id])
+  recorded_at      DateTime // hour-truncated timestamp
+  condition        String
+  temperature_c    Float
+  precipitation_mm Float
+  humidity_pct     Float
+  source           String   @default("open-meteo")
+
+  @@unique([parcel_id, recorded_at])
+  @@map("weather_cache")
+}
+
+// ─── Partner Map ──────────────────────────────────────────────────────────────
+
+model Partner {
+  id                  String      @id @default(cuid())
+  name                String
+  partner_type        PartnerType
+  contact_phone       String?
+  primary_commodities String[]
+  lat                 Float
+  lng                 Float
+  address             String?
+  created_at          DateTime    @default(now())
+  updated_at          DateTime    @updatedAt
+
+  @@map("partners")
+}
+
+// ─── Chat History ─────────────────────────────────────────────────────────────
+
+model ChatHistory {
+  id           String   @id @default(cuid())
+  session_id   String
+  user_id      String // keycloak user ID
+  role         ChatRole
+  content      String   @db.Text
+  sources_json Json? // [{source, date, url}]
+  chat_type    String // "market" | "technical"
+  created_at   DateTime @default(now())
+
+  @@index([session_id, created_at])
+  @@index([user_id, created_at])
+  @@map("chat_history")
+}

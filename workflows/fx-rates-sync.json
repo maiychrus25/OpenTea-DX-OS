@@ -1,0 +1,134 @@
+{
+  "name": "FX Rates Sync",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "01",
+      "name": "When clicking 'Execute Workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "02",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 100]
+    },
+    {
+      "parameters": {
+        "url": "https://api.frankfurter.app/latest",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "from", "value": "USD" },
+            { "name": "to", "value": "VND" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "03",
+      "name": "Fetch Frankfurter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [360, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cf64a78c-0fc7-4589-9a74-a08ef4e223b2",
+              "name": "rates",
+              "value": "={{ $json.rates }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "04",
+      "name": "Map Columns",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [580, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "fx_rates",
+        "columns": "rates",
+        "options": {}
+      },
+      "id": "05",
+      "name": "Insert into Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [800, 300],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres_Agrimarket"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute Workflow'": {
+      "main": [
+        [
+          {
+            "node": "Fetch Frankfurter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Fetch Frankfurter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Frankfurter": {
+      "main": [
+        [
+          {
+            "node": "Map Columns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Columns": {
+      "main": [
+        [
+          {
+            "node": "Insert into Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

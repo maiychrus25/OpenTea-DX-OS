@@ -16,7 +16,7 @@ so that the frontend dashboards can render charts and display current prices wit
 
 1. **Given** the `MarketData` table is populated **When** a `GET /api/market-data?commodity=Gạo` request is made **Then** it returns the latest market data for that commodity across all metrics and sources.
 2. **Given** the `MarketData` API endpoint **When** `GET /api/market-data?commodity=Gạo&history=30` is requested **Then** it returns a time-series array of data for the last 30 days, suitable for chart rendering.
-3. **Given** the `FxRate` table **When** a `GET /api/market-data/fx?pair=USD/VND` request is made **Then** it returns the latest exchange rate.
+3. **Given** the `FxRate` table **When** a `GET /api/market-data/fx` request is made **Then** it returns the latest exchange rates JSONB object (containing multiple currency pairs).
 4. **Given** the Hexagonal Architecture **When** inspecting the implementation **Then** the logic is encapsulated in `GetMarketDataUseCase` and `GetFxRateUseCase`, with Prisma repository adapters reading the database.
 5. **Given** the Next.js API routes **When** an unauthenticated user attempts to call them **Then** they receive a 200 OK (market data is public/tenant-wide for the HTX, no role restriction needed).
 
@@ -25,7 +25,7 @@ so that the frontend dashboards can render charts and display current prices wit
 - [ ] **T1: Define Domain Interfaces & DTOs** (AC: 4)
   - [ ] Create `src/domain/repositories/IMarketDataRepository.ts`.
   - [ ] Define `getLatestMarketData(commodity: string): Promise<MarketData[]>` and `getHistoricalMarketData(commodity: string, days: number): Promise<MarketData[]>`.
-  - [ ] Create `src/domain/repositories/IFxRateRepository.ts` with `getLatestRate(pair: string): Promise<FxRate | null>`.
+  - [ ] Create `src/domain/repositories/IFxRateRepository.ts` with `getLatestRates(): Promise<FxRate | null>`.
 
 - [ ] **T2: Implement Prisma Repositories** (AC: 4)
   - [ ] Create `src/infrastructure/db/repositories/PrismaMarketDataRepository.ts`.
@@ -38,7 +38,7 @@ so that the frontend dashboards can render charts and display current prices wit
 
 - [ ] **T4: Create API Routes** (AC: 1, 2, 3, 5)
   - [ ] Create `src/app/api/market-data/route.ts`. Parse search params `commodity` and `history`. Instantiate adapter and use case. Use `withErrorHandler`.
-  - [ ] Create `src/app/api/market-data/fx/route.ts`. Parse search param `pair`.
+  - [ ] Create `src/app/api/market-data/fx/route.ts`. Parse JSONB rates and return.
 
 - [ ] **T5: Validate & Commit**
   - [ ] Ensure `npx tsc --noEmit` passes.

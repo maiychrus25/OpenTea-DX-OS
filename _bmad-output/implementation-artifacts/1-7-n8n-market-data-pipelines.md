@@ -15,7 +15,7 @@ so that the Next.js application has a populated, constantly updating source of m
 ## Acceptance Criteria
 
 1. **Given** the n8n docker service **When** I log in to the n8n UI **Then** I see 3 active workflows: `USDA_Sync`, `OpenMeteo_Sync`, and `FxRate_Sync`.
-2. **Given** the PostgreSQL database is accessible from the n8n container **When** `FxRate_Sync` runs daily **Then** it fetches the USD/VND exchange rate from the Frankfurter API and upserts it into the `FxRate` table.
+2. **Given** the PostgreSQL database is accessible from the n8n container **When** `FxRate_Sync` runs daily **Then** it fetches the exchange rates from ExchangeRate-API and upserts it into the `FxRate` table as JSONB.
 3. **Given** `USDA_Sync` **When** it runs **Then** it fetches global rice/mango export prices (mocked if USDA API requires complex auth for MVP) and upserts them into the `MarketData` table.
 4. **Given** `OpenMeteo_Sync` **When** it runs hourly **Then** it reads the centroid coordinates of all Parcels from the database, fetches current weather for each from Open-Meteo, and inserts records into the `WeatherCache` table.
 5. **Given** the workflows **When** they are finalized **Then** they are exported as JSON files and committed to the `workflows/` directory in the repository for version control.
