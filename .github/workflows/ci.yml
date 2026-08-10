@@ -40,6 +40,8 @@ jobs:
         
       - name: Build Standalone
         working-directory: apps/web
+        env:
+          AUTH_SECRET: "ci-dummy-secret-key-for-build-only"
         run: npm run build
 
   test-backend:

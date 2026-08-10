@@ -1,0 +1,92 @@
+{
+  "realm": "agrimarket",
+  "enabled": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "manager",
+        "description": "Giám đốc HTX"
+      },
+      {
+        "name": "officer",
+        "description": "Cán bộ kỹ thuật"
+      },
+      {
+        "name": "farmer",
+        "description": "Nông dân"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "manager01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Manager",
+      "lastName": "01",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "123456",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "manager"
+      ]
+    },
+    {
+      "username": "officer01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Officer",
+      "lastName": "01",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "123456",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "officer"
+      ]
+    },
+    {
+      "username": "farmer01",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Farmer",
+      "lastName": "01",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "123456",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "farmer"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "nextjs-web",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "agrimarket-secret-key",
+      "redirectUris": [
+        "http://localhost:3000/api/auth/callback/keycloak",
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true
+    }
+  ]
+}

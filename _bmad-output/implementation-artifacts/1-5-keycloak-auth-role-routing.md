@@ -1,6 +1,6 @@
-# Story 1.5: Keycloak Auth, Role Injection & Layout Routing
+# Story 1.5: Keycloak Configuration and Authentication Flow
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -26,15 +26,16 @@ so that users are securely authenticated, their session contains their role, and
 6. **Given** a successful login **When** the user lands on `/` **Then** they are automatically redirected to their role's dashboard (e.g., `/manager/dashboard`, `/officer/dashboard`, `/farmer/today`).
 7. **Given** the `AppShell` component (from Story 1.2) **When** rendered in a role's layout **Then** it correctly receives the session's role and renders the role-specific navigation items.
 
+## Tóm tắt Kế hoạch
+
+- [x] Tạo file cấu hình `docker/keycloak/realm-agrimarket.json` với 3 Roles (manager, officer, farmer).
+- [x] Sửa `docker-compose.yml` để mount volume cấu hình và kích hoạt cờ import realm lúc khởi động.
+- [x] Cài đặt `next-auth@beta` và định nghĩa `auth.ts` sử dụng Keycloak Provider, tích hợp hàm trích xuất role từ token.
+- [x] Triển khai Next.js Edge Middleware tại `middleware.ts` để block truy cập trái phép.
+- [x] Tạo các trang giao diện cơ bản (Login, Unauthorized, Dashboard 3 roles).
+
 ## Tasks / Subtasks
 
-- [ ] **T1: NextAuth.js (v5) Setup** (AC: 1, 2, 3)
-  - [ ] Install `next-auth@beta` (v5 is required for App Router support).
-  - [ ] Create `auth.config.ts` (NextAuth configuration options, Keycloak provider).
-  - [ ] Configure KeycloakProvider using env vars: `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_ISSUER`.
-  - [ ] Implement `jwt` callback to extract roles/groups from the Keycloak token. Note: Keycloak needs to be configured (manually for now) to map roles/groups into the token claims. Assume a custom claim `realm_access.roles` or a generic `groups` claim exists. Map it to a single `role` string on the NextAuth token (`'MANAGER' | 'OFFICER' | 'FARMER'`).
-  - [ ] Implement `session` callback to expose `token.role` and `token.sub` on the `session.user` object.
-  - [ ] Create `src/lib/auth.ts` exporting `auth`, `signIn`, `signOut`, `handlers`.
   - [ ] Create `app/api/auth/[...nextauth]/route.ts` using the new v5 handlers.
 
 - [ ] **T2: Middleware & RBAC Routing** (AC: 1, 5, 6)
