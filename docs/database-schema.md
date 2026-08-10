@@ -340,7 +340,7 @@ Tỷ giá USD/VND (Frankfurter API).
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | UUID | PK | |
-| usd_to_vnd | DECIMAL(12,2) | NOT NULL | |
+| rates | JSONB | NOT NULL | Toàn bộ tỷ giá thế giới (VND, CNY, JPY...) |
 | fetched_at | TIMESTAMPTZ | NOT NULL | |
 
 ---

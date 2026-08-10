@@ -34,6 +34,10 @@ jobs:
         working-directory: apps/web
         run: npm install
         
+      - name: Generate Prisma Client
+        working-directory: apps/web
+        run: npx prisma generate
+        
       - name: TypeScript Compile Check
         working-directory: apps/web
         run: npx tsc --noEmit

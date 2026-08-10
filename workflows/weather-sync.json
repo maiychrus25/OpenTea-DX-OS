@@ -1,0 +1,176 @@
+{
+  "name": "Weather Sync (Open-Meteo)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "When clicking 'Execute Workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 100]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, centroid_lat AS lat, centroid_lng AS lon FROM parcels;"
+      },
+      "id": "get-parcels",
+      "name": "Get Parcels",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [360, 300],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres_Agrimarket"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [580, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/forecast?latitude={{$json.lat}}&longitude={{$json.lon}}&current=temperature_2m,precipitation,relative_humidity_2m,weather_code",
+        "options": {}
+      },
+      "id": "fetch-weather",
+      "name": "Fetch Open-Meteo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "weather_cache"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "parcel_id": "={{ $('Split In Batches').item.json.id }}",
+            "recorded_at": "={{ $json.current.time }}",
+            "condition": "={{ $json.current.weather_code.toString() }}",
+            "temperature_c": "={{ $json.current.temperature_2m }}",
+            "precipitation_mm": "={{ $json.current.precipitation }}",
+            "humidity_pct": "={{ $json.current.relative_humidity_2m }}"
+          }
+        },
+        "updateKey": "parcel_id,recorded_at",
+        "options": {}
+      },
+      "id": "upsert-weather",
+      "name": "Upsert Weather",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1020, 300],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres_Agrimarket"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute Workflow'": {
+      "main": [
+        [
+          {
+            "node": "Get Parcels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Get Parcels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Parcels": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Fetch Open-Meteo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Open-Meteo": {
+      "main": [
+        [
+          {
+            "node": "Upsert Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Weather": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

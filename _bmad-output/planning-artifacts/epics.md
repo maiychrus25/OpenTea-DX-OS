@@ -314,7 +314,7 @@ So that the bulletin and chatbot always have fresh, cited source data available.
 **And** it fetches WTO Tariff + FAOSTAT → inserts into `market_data` with appropriate source tags
 **And** it fetches NASA POWER climate data → inserts into `market_data`
 **And** all inserts use `ON CONFLICT (source, commodity, metric, period) DO UPDATE` for idempotency
-**And** the `fx-rates-sync.json` workflow (cron: every 24h) fetches Frankfurter USD/VND rate → inserts into `fx_rates`
+**And** the `fx-rates-sync.json` workflow (cron: every 24h) fetches ExchangeRate-API rates -> inserts into `fx_rates` as JSONB
 **And** the `weather-sync.json` workflow (cron: every 1h) fetches Open-Meteo for all parcel centroid coordinates → upserts into `weather_cache` per parcel
 **And** each workflow has an Error Trigger node that logs failures to the `notifications` table with `type='system'`
 **And** all workflow JSON files are committed to `/workflows/` directory
@@ -339,7 +339,7 @@ So that bulletin and chatbot pages have a reliable, tested data layer to query f
 **And** the response includes `fetched_at` timestamp and `source` field for each record
 **And** unauthorized requests return `{ error: { code: 'UNAUTHORIZED', message: '...' } }` with HTTP 401
 **And** the route handler follows hexagonal pattern: Zod validate query params → `GetMarketDataUseCase` → `PrismaMarketDataRepository` → response
-**And** a `GET /api/market-data/fx-rate` endpoint returns the latest USD/VND rate from `fx_rates`
+**And** a `GET /api/market-data/fx-rate` endpoint returns the latest rates from `fx_rates` JSONB
 
 ---
 
@@ -400,7 +400,7 @@ So that fresh intelligence is always waiting when I start my day.
 **Given** market_data and fx_rates tables have data
 **When** the `bulletin-synthesis.json` n8n workflow triggers at 04:00 daily
 **Then** it queries PostgreSQL for market_data WHERE commodity matches HTX profile crop types AND fetched_at > NOW() - 48h
-**And** it queries fx_rates for the latest USD/VND rate
+**And** it queries fx_rates for the latest rates JSONB
 **And** it builds a RAG context string with citations (source, metric, value, unit, period)
 **And** it sends an HTTP request to Ollama `/api/chat` with: model = `{{ $env.OLLAMA_MODEL }}`, system prompt containing all 4 AI invariant rules (cite sources, no decisions, no recommendations, all numbers cited)
 **And** it saves the Ollama response to the `bulletins` table with: commodity, bulletin_vi, sources_json, model_used, is_latest=true

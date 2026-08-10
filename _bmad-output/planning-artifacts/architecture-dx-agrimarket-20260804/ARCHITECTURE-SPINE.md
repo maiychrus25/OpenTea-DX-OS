@@ -777,7 +777,7 @@ function ChatWidget() {
 |------|---------|---------|---------------|
 | `market-data-ingestion.json` | Cron: mỗi 6h | USDA PSD + GATS + WTO + FAOSTAT + NASA POWER | `market_data` |
 | `weather-sync.json` | Cron: mỗi 1h | Open-Meteo cho tất cả parcels | `weather_cache` |
-| `fx-rates-sync.json` | Cron: mỗi 24h | Frankfurter USD/VND | `fx_rates` |
+| `fx-rates-sync.json` | Cron: mỗi 24h | ExchangeRate-API | `fx_rates` |
 | `bulletin-synthesis.json` | Cron: mỗi 24h (04:00) | Query PostgreSQL → Ollama HTTP → Save | `bulletins` |
 | `officer-reminder.json` | Cron: Friday 16:00 | Notify officers về pending approvals | `notifications` |
 | `mattermost-push.json` | Webhook từ PostgreSQL trigger | Push to Mattermost (post-30/8) | — |
@@ -794,7 +794,7 @@ PostgreSQL Node
     │
     ▼
 PostgreSQL Node
-    SELECT usd_to_vnd FROM fx_rates ORDER BY fetched_at DESC LIMIT 1
+    SELECT rates->>'VND' FROM fx_rates ORDER BY fetched_at DESC LIMIT 1
     │
     ▼
 Code Node (JS)
