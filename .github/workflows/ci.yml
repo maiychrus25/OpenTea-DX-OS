@@ -32,7 +32,7 @@ jobs:
           
       - name: Install dependencies
         working-directory: apps/web
-        run: npm ci
+        run: npm install
         
       - name: TypeScript Compile Check
         working-directory: apps/web
@@ -40,6 +40,8 @@ jobs:
         
       - name: Build Standalone
         working-directory: apps/web
+        env:
+          AUTH_SECRET: "ci-dummy-secret-key-for-build-only"
         run: npm run build
 
   test-backend:
