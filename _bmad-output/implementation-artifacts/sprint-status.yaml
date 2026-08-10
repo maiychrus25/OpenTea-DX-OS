@@ -63,7 +63,7 @@ development_status:
   # ── Epic 1: Foundation ────────────────────────────────────────────────────
   epic-1: in-progress
 
-  1-1-monorepo-docker-compose:           ready-for-dev
+  1-1-monorepo-docker-compose:           review
   1-2-design-system-shared-components:   ready-for-dev
   1-3-database-schema-prisma:            ready-for-dev
   1-4-hexagonal-architecture-scaffold:   ready-for-dev

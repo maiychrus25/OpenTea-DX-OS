@@ -1,6 +1,6 @@
 # Story 1.1: Monorepo Structure & Docker Compose Stack
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -23,46 +23,46 @@ so that every team member has a reproducible, one-command development environmen
 
 ## Tasks / Subtasks
 
-- [ ] **T1: Create monorepo top-level structure** (AC: 3)
-  - [ ] Create `apps/web/` as Next.js 14 App Router project (`npx create-next-app@14 apps/web --typescript --app --no-tailwind --no-src-dir` then move to src layout per AD-18)
-  - [ ] Create `apps/disease-api/` with FastAPI skeleton (`main.py`, `requirements.txt`, `Dockerfile`)
-  - [ ] Create empty dirs: `docker/`, `workflows/`, `docs/`, `ai-models/` (gitkeep)
-  - [ ] Move existing files if any to correct locations per AD-2
+- [x] **T1: Create monorepo top-level structure** (AC: 3)
+  - [x] Create `apps/web/` as Next.js 14 App Router project (`npx create-next-app@14 apps/web --typescript --app --no-tailwind --no-src-dir` then move to src layout per AD-18)
+  - [x] Create `apps/disease-api/` with FastAPI skeleton (`main.py`, `requirements.txt`, `Dockerfile`)
+  - [x] Create empty dirs: `docker/`, `workflows/`, `docs/`, `ai-models/` (gitkeep)
+  - [x] Move existing files if any to correct locations per AD-2
 
-- [ ] **T2: Write Docker Compose** (AC: 1, 2)
-  - [ ] `docker/docker-compose.yml` — define all 8 services with correct images
-  - [ ] `postgres`: image `postgres:16-alpine`, volume `pgdata`, healthcheck `pg_isready`
-  - [ ] `keycloak`: image `quay.io/keycloak/keycloak:24.0`, depends_on postgres healthy, cmd `start-dev`
-  - [ ] `web`: build `apps/web`, depends_on postgres + keycloak healthy, env_file `.env.local`
-  - [ ] `n8n`: image `n8nio/n8n:latest`, depends_on postgres healthy, volume `n8n_data`
-  - [ ] `ollama`: image `ollama/ollama:latest`, volume `ollama_data`, healthcheck `GET /api/tags`
-  - [ ] `piper`: image `rhasspy/wyoming-piper:latest` or custom Dockerfile, port 5500
-  - [ ] `minio`: image `minio/minio:latest`, volume `minio_data`, ports 9000+9001, cmd `server /data --console-address :9001`
-  - [ ] `disease-api`: build `apps/disease-api`, depends_on nothing, healthcheck `GET /health`
-  - [ ] Define named volumes: `pgdata`, `n8n_data`, `ollama_data`, `minio_data`
-  - [ ] Define networks: `agrimarket-net` (all services on same network)
+- [x] **T2: Write Docker Compose** (AC: 1, 2)
+  - [x] `docker/docker-compose.yml` — define all 8 services with correct images
+  - [x] `postgres`: image `postgres:16-alpine`, volume `pgdata`, healthcheck `pg_isready`
+  - [x] `keycloak`: image `quay.io/keycloak/keycloak:24.0`, depends_on postgres healthy, cmd `start-dev`
+  - [x] `web`: build `apps/web`, depends_on postgres + keycloak healthy, env_file `.env.local`
+  - [x] `n8n`: image `n8nio/n8n:latest`, depends_on postgres healthy, volume `n8n_data`
+  - [x] `ollama`: image `ollama/ollama:latest`, volume `ollama_data`, healthcheck `GET /api/tags`
+  - [x] `piper`: image `rhasspy/wyoming-piper:latest` or custom Dockerfile, port 5500
+  - [x] `minio`: image `minio/minio:latest`, volume `minio_data`, ports 9000+9001, cmd `server /data --console-address :9001`
+  - [x] `disease-api`: build `apps/disease-api`, depends_on nothing, healthcheck `GET /health`
+  - [x] Define named volumes: `pgdata`, `n8n_data`, `ollama_data`, `minio_data`
+  - [x] Define networks: `agrimarket-net` (all services on same network)
 
-- [ ] **T3: Environment files** (AC: 4, 5)
-  - [ ] Create `.env.example` with all keys (no real values — use `your_value_here` placeholders)
-  - [ ] Create `docker/.env.local.example` for Docker-specific overrides (DATABASE_URL with postgres hostname)
-  - [ ] Ensure `.gitignore` excludes all real `.env` files but tracks `.env.example`
+- [x] **T3: Environment files** (AC: 4, 5)
+  - [x] Create `.env.example` with all keys (no real values — use `your_value_here` placeholders)
+  - [x] Create `docker/.env.local.example` for Docker-specific overrides (DATABASE_URL with postgres hostname)
+  - [x] Ensure `.gitignore` excludes all real `.env` files but tracks `.env.example`
 
-- [ ] **T4: Next.js app baseline config** (AC: 6)
-  - [ ] Configure `tsconfig.json`: `strict: true`, `noUnusedLocals: true`, `noUnusedParameters: true`, path aliases `@/*` → `./src/*`
-  - [ ] Configure `next.config.js`: `output: 'standalone'` for Docker builds
-  - [ ] Add Inter font import in `app/layout.tsx` (preconnect + display=swap per UX-DR2)
-  - [ ] Create `src/styles/globals.css` with placeholder comment block (actual tokens in Story 1.2)
-  - [ ] Verify `package.json` has Next.js 14.x, TypeScript 5.x, Prisma 5.x
+- [x] **T4: Next.js app baseline config** (AC: 6)
+  - [x] Configure `tsconfig.json`: `strict: true`, `noUnusedLocals: true`, `noUnusedParameters: true`, path aliases `@/*` → `./src/*`
+  - [x] Configure `next.config.js`: `output: 'standalone'` for Docker builds
+  - [x] Add Inter font import in `app/layout.tsx` (preconnect + display=swap per UX-DR2)
+  - [x] Create `src/styles/globals.css` with placeholder comment block (actual tokens in Story 1.2)
+  - [x] Verify `package.json` has Next.js 14.x, TypeScript 5.x, Prisma 5.x
 
-- [ ] **T5: FastAPI skeleton** (AC: 1)
-  - [ ] `apps/disease-api/app/main.py` — FastAPI app with `GET /health` returning `{"status": "ok"}`
-  - [ ] `apps/disease-api/requirements.txt` — fastapi, uvicorn[standard], python-multipart, Pillow, tensorflow (or tensorflow-cpu)
-  - [ ] `apps/disease-api/Dockerfile` — Python 3.11 slim, copy requirements, pip install, CMD uvicorn
+- [x] **T5: FastAPI skeleton** (AC: 1)
+  - [x] `apps/disease-api/app/main.py` — FastAPI app with `GET /health` returning `{"status": "ok"}`
+  - [x] `apps/disease-api/requirements.txt` — fastapi, uvicorn[standard], python-multipart, Pillow, tensorflow (or tensorflow-cpu)
+  - [x] `apps/disease-api/Dockerfile` — Python 3.11 slim, copy requirements, pip install, CMD uvicorn
 
-- [ ] **T6: Validate & document** (AC: 1–6)
-  - [ ] Run `docker compose up -d` and confirm all containers healthy
-  - [ ] Update `docs/dev-setup.md` with one-command setup instructions
-  - [ ] Commit with message: `chore: initialize monorepo structure and docker compose stack`
+- [x] **T6: Validate & document** (AC: 1–6)
+  - [x] Run `docker compose up -d` and confirm all containers healthy
+  - [x] Update `docs/dev-setup.md` with one-command setup instructions
+  - [x] Commit with message: `chore: initialize monorepo structure and docker compose stack`
 
 ## Dev Notes
 
@@ -195,7 +195,12 @@ _None yet_
 
 ### Completion Notes List
 
-_To be filled after implementation_
+- Cấu trúc thư mục Monorepo đã được tạo thành công với Next.js App Router (strict mode) và FastAPI (disease-api).
+- Docker Compose file đã định nghĩa đủ 8 services, thiết lập đúng thứ tự start (postgres -> keycloak -> web; postgres -> n8n).
+- .env.example có đủ 13 biến bắt buộc, và .gitignore đã loại trừ các tệp nhạy cảm.
+- Script smoke-test.sh cùng các test validate được viết đầy đủ trong thư mục `scripts/`.
+- Docs dev-setup.md đã sẵn sàng.
+- Status story đã chuyển sang 'review'.
 
 ### File List
 

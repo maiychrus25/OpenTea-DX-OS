@@ -1,1 +1,152 @@
-# [HẠ TẦNG] Nơi chứa cấu hình khởi chạy toàn bộ hệ thống (DevOps)
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: agrimarket-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agrimarket}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_password_here}
+      # The init script will create the keycloak db and user
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agrimarket"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agrimarket-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: agrimarket-keycloak
+    restart: always
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command: ["start-dev"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agrimarket-net
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    container_name: agrimarket-web
+    restart: always
+    env_file: .env.local
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      ollama:
+        condition: service_healthy
+    networks:
+      - agrimarket-net
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: agrimarket-n8n
+    restart: always
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=agrimarket
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-agrimarket}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-your_password_here}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-your_n8n_encryption_key_here}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    ports:
+      - "5678:5678"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agrimarket-net
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: agrimarket-ollama
+    restart: always
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agrimarket-net
+
+  piper:
+    image: rhasspy/wyoming-piper:latest
+    container_name: agrimarket-piper
+    restart: always
+    volumes:
+      - ../piper-voices:/data
+    command: ["--voice", "vi_VN-vais1000-medium"]
+    ports:
+      - "5500:10200"
+    networks:
+      - agrimarket-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: agrimarket-minio
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-your_minio_access_key}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-your_minio_secret_key}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - agrimarket-net
+
+  disease-api:
+    build:
+      context: ../apps/disease-api
+      dockerfile: Dockerfile
+    container_name: agrimarket-disease-api
+    restart: always
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agrimarket-net
+
+volumes:
+  pgdata:
+  n8n_data:
+  ollama_data:
+  minio_data:
+
+networks:
+  agrimarket-net:
+    driver: bridge

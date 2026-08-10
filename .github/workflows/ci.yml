@@ -1,0 +1,91 @@
+name: CI/CD Quality Gate
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  validate-infrastructure:
+    name: Validate Scripts & Structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Env and Structure
+        run: |
+          bash scripts/validate-env.sh
+          bash scripts/validate-structure.sh
+
+  test-frontend:
+    name: Lint & Build Next.js
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/web/package.json
+          
+      - name: Install dependencies
+        working-directory: apps/web
+        run: npm ci
+        
+      - name: TypeScript Compile Check
+        working-directory: apps/web
+        run: npx tsc --noEmit
+        
+      - name: Build Standalone
+        working-directory: apps/web
+        run: npm run build
+
+  test-backend:
+    name: Lint FastAPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: Install dependencies
+        working-directory: apps/disease-api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Syntax Check
+        working-directory: apps/disease-api
+        run: |
+          python -m py_compile app/main.py
+
+  smoke-test-docker:
+    name: Docker Compose Integration
+    runs-on: ubuntu-latest
+    needs: [validate-infrastructure]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Prepare Environments
+        run: |
+          cp .env.example .env.local
+          cp docker/.env.local.example docker/.env.local
+          
+      - name: Start Services
+        run: docker compose -f docker/docker-compose.yml up -d --build
+        
+      - name: Run Smoke Test
+        run: |
+          # Đợi các service up đầy đủ (Postgres/Keycloak tốn thời gian)
+          sleep 15
+          bash scripts/smoke-test.sh
+          
+      - name: Docker Logs on Failure
+        if: failure()
+        run: docker compose -f docker/docker-compose.yml logs
