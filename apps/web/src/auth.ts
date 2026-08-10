@@ -10,7 +10,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     })
   ],
   callbacks: {
-    async jwt({ token, account, profile }) {
+    async jwt({ token, profile }) {
       if (profile && profile.realm_access && Array.isArray((profile.realm_access as any).roles)) {
         const roles = (profile.realm_access as any).roles;
         if (roles.includes("manager")) token.role = "manager";
