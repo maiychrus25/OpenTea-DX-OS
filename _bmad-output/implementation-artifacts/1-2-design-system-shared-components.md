@@ -1,6 +1,6 @@
 # Story 1.2: Design System — CSS Tokens & Shared UI Components
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -29,82 +29,82 @@ so that all feature components reference consistent colors, typography, spacing,
 
 ## Tasks / Subtasks
 
-- [ ] **T1: CSS Design Token System** (AC: 1, 2, 3)
-  - [ ] Write `src/styles/globals.css` with all 25+ color tokens as CSS custom properties
-  - [ ] Add 9-level typography scale variables (`--font-size-display` → `--font-size-mono`)
-  - [ ] Add spacing scale (`--spacing-1` = 4px → `--spacing-16` = 64px; `--spacing-gutter-mobile` = 16px; `--spacing-gutter-desktop` = 24px; `--sidebar-width` = 240px; `--topbar-height` = 56px)
-  - [ ] Add rounded scale (`--rounded-sm` = 6px; `--rounded-md` = 10px; `--rounded-lg` = 14px; `--rounded-xl` = 20px; `--rounded-full` = 9999px)
-  - [ ] Add `[data-role="farmer"] { font-size: var(--font-size-body-large); }` rule
-  - [ ] Add Inter font `@import` from Google Fonts in `globals.css` (preconnect in `app/layout.tsx`)
+- [x] **T1: CSS Design Token System** (AC: 1, 2, 3)
+  - [x] Write `src/styles/globals.css` with all 25+ color tokens as CSS custom properties
+  - [x] Add 9-level typography scale variables (`--font-size-display` → `--font-size-mono`)
+  - [x] Add spacing scale (`--spacing-1` = 4px → `--spacing-16` = 64px; `--spacing-gutter-mobile` = 16px; `--spacing-gutter-desktop` = 24px; `--sidebar-width` = 240px; `--topbar-height` = 56px)
+  - [x] Add rounded scale (`--rounded-sm` = 6px; `--rounded-md` = 10px; `--rounded-lg` = 14px; `--rounded-xl` = 20px; `--rounded-full` = 9999px)
+  - [x] Add `[data-role="farmer"] { font-size: var(--font-size-body-large); }` rule
+  - [x] Add Inter font `@import` from Google Fonts in `globals.css` (preconnect in `app/layout.tsx`)
 
-- [ ] **T2: Button Component** (AC: 4)
-  - [ ] Create `src/components/ui/Button/Button.tsx`
-  - [ ] Create `src/components/ui/Button/Button.module.css`
-  - [ ] Create `src/components/ui/Button/index.ts` (re-export)
-  - [ ] Props: `variant: 'primary' | 'accent' | 'ghost' | 'danger'`, `size?: 'sm' | 'md' | 'lg'`, `disabled?`, `isLoading?`, all native button props
-  - [ ] `isLoading`: show spinner, disable click, keep width stable (no layout shift)
-  - [ ] Min tap target: 44×44px enforced via `min-height: 44px; min-width: 44px` in CSS (UX-DR16)
-  - [ ] Add `data-testid="button-{variant}"` for test selection
+- [x] **T2: Button Component** (AC: 4)
+  - [x] Create `src/components/ui/Button/Button.tsx`
+  - [x] Create `src/components/ui/Button/Button.module.css`
+  - [x] Create `src/components/ui/Button/index.ts` (re-export)
+  - [x] Props: `variant: 'primary' | 'accent' | 'ghost' | 'danger'`, `size?: 'sm' | 'md' | 'lg'`, `disabled?`, `isLoading?`, all native button props
+  - [x] `isLoading`: show spinner, disable click, keep width stable (no layout shift)
+  - [x] Min tap target: 44×44px enforced via `min-height: 44px; min-width: 44px` in CSS (UX-DR16)
+  - [x] Add `data-testid="button-{variant}"` for test selection
 
-- [ ] **T3: Badge Component** (AC: 5)
-  - [ ] Create `src/components/ui/Badge/Badge.tsx` + `.module.css` + `index.ts`
-  - [ ] Props: `status: 'sowing' | 'tending' | 'harvest-approved' | 'harvested' | 'draft'`
-  - [ ] ARIA: `role="status"` + `aria-label="Trạng thái: {status-label-vi}"`
-  - [ ] Vietnamese label map: sowing→"Gieo trồng", tending→"Chăm sóc", harvest-approved→"Chờ thu hoạch", harvested→"Đã thu hoạch", draft→"Nháp"
-  - [ ] Add `data-testid="badge-{status}"` for test selection
+- [x] **T3: Badge Component** (AC: 5)
+  - [x] Create `src/components/ui/Badge/Badge.tsx` + `.module.css` + `index.ts`
+  - [x] Props: `status: 'sowing' | 'tending' | 'harvest-approved' | 'harvested' | 'draft'`
+  - [x] ARIA: `role="status"` + `aria-label="Trạng thái: {status-label-vi}"`
+  - [x] Vietnamese label map: sowing→"Gieo trồng", tending→"Chăm sóc", harvest-approved→"Chờ thu hoạch", harvested→"Đã thu hoạch", draft→"Nháp"
+  - [x] Add `data-testid="badge-{status}"` for test selection
 
-- [ ] **T4: Card Component** (AC: 6)
-  - [ ] Create `src/components/ui/Card/Card.tsx` + `.module.css` + `index.ts`
-  - [ ] Props: `children`, `className?`, `padding?: 'default' | 'none'`
-  - [ ] Hover state: border-color darkens to `--color-border-default`; shadow increases to `0 4px 16px rgba(15,23,42,0.10)`
-  - [ ] No card-in-card nesting — documented in JSDoc comment on component
+- [x] **T4: Card Component** (AC: 6)
+  - [x] Create `src/components/ui/Card/Card.tsx` + `.module.css` + `index.ts`
+  - [x] Props: `children`, `className?`, `padding?: 'default' | 'none'`
+  - [x] Hover state: border-color darkens to `--color-border-default`; shadow increases to `0 4px 16px rgba(15,23,42,0.10)`
+  - [x] No card-in-card nesting — documented in JSDoc comment on component
 
-- [ ] **T5: Modal Component** (AC: 7)
-  - [ ] Create `src/components/ui/Modal/Modal.tsx` + `.module.css` + `index.ts`
-  - [ ] Implement focus trap using `focus-trap-react` library OR native `inert` attribute approach (check browser support — use polyfill if needed)
-  - [ ] Props: `isOpen`, `onClose`, `title`, `children`, `size?: 'sm' | 'md' | 'lg'`
-  - [ ] Backdrop click calls `onClose`; Escape key calls `onClose`
-  - [ ] `role="dialog"`, `aria-modal="true"`, `aria-labelledby={titleId}` (auto-generated ID)
-  - [ ] Focus returns to trigger element on close (store ref before open)
+- [x] **T5: Modal Component** (AC: 7)
+  - [x] Create `src/components/ui/Modal/Modal.tsx` + `.module.css` + `index.ts`
+  - [x] Implement focus trap using `focus-trap-react` library OR native `inert` attribute approach (check browser support — use polyfill if needed)
+  - [x] Props: `isOpen`, `onClose`, `title`, `children`, `size?: 'sm' | 'md' | 'lg'`
+  - [x] Backdrop click calls `onClose`; Escape key calls `onClose`
+  - [x] `role="dialog"`, `aria-modal="true"`, `aria-labelledby={titleId}` (auto-generated ID)
+  - [x] Focus returns to trigger element on close (store ref before open)
 
-- [ ] **T6: Skeleton Component** (AC: 8)
-  - [ ] Create `src/components/ui/Skeleton/Skeleton.tsx` + `.module.css` + `index.ts`
-  - [ ] Props: `width?`, `height?`, `className?`, `variant?: 'text' | 'rect' | 'circle'`
-  - [ ] CSS animation: `@keyframes skeleton-pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }`
-  - [ ] `@media (prefers-reduced-motion: reduce)` block disables animation entirely (UX-DR18)
-  - [ ] Parent container: `aria-busy="true"` + `aria-label="Đang tải..."` — documented in usage comment
+- [x] **T6: Skeleton Component** (AC: 8)
+  - [x] Create `src/components/ui/Skeleton/Skeleton.tsx` + `.module.css` + `index.ts`
+  - [x] Props: `width?`, `height?`, `className?`, `variant?: 'text' | 'rect' | 'circle'`
+  - [x] CSS animation: `@keyframes skeleton-pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }`
+  - [x] `@media (prefers-reduced-motion: reduce)` block disables animation entirely (UX-DR18)
+  - [x] Parent container: `aria-busy="true"` + `aria-label="Đang tải..."` — documented in usage comment
 
-- [ ] **T7: AppShell Layout** (AC: 9)
-  - [ ] Create `src/components/layout/AppShell/AppShell.tsx` + `.module.css` + `index.ts`
-  - [ ] Desktop (≥1024px): CSS Grid `grid-template-columns: var(--sidebar-width) 1fr`
-  - [ ] Mobile (<1024px): single column; `Sidebar` hidden; `BottomNav` shown
-  - [ ] `BottomNav.tsx`: renders role-scoped nav items from props; height 64px; 44px tap targets
-  - [ ] `data-role` attribute is set on `<div>` root of AppShell from session role
+- [x] **T7: AppShell Layout** (AC: 9)
+  - [x] Create `src/components/layout/AppShell/AppShell.tsx` + `.module.css` + `index.ts`
+  - [x] Desktop (≥1024px): CSS Grid `grid-template-columns: var(--sidebar-width) 1fr`
+  - [x] Mobile (<1024px): single column; `Sidebar` hidden; `BottomNav` shown
+  - [x] `BottomNav.tsx`: renders role-scoped nav items from props; height 64px; 44px tap targets
+  - [x] `data-role` attribute is set on `<div>` root of AppShell from session role
 
-- [ ] **T8: Sidebar Component** (AC: 10)
-  - [ ] Create `src/components/layout/Sidebar/Sidebar.tsx` + `.module.css` + `index.ts`
-  - [ ] Props: `navItems: { label: string; href: string; icon: React.ReactNode; }[]`
-  - [ ] Uses `usePathname()` from Next.js to determine active state
-  - [ ] Active item: `background: var(--color-primary-subtle)`, `color: var(--color-primary)`, `font-weight: 600`
-  - [ ] Icons: use `lucide-react` (install as dependency — open source, tree-shakeable)
-  - [ ] Item height: 36px; border-radius: `var(--rounded-sm)`
+- [x] **T8: Sidebar Component** (AC: 10)
+  - [x] Create `src/components/layout/Sidebar/Sidebar.tsx` + `.module.css` + `index.ts`
+  - [x] Props: `navItems: { label: string; href: string; icon: React.ReactNode; }[]`
+  - [x] Uses `usePathname()` from Next.js to determine active state
+  - [x] Active item: `background: var(--color-primary-subtle)`, `color: var(--color-primary)`, `font-weight: 600`
+  - [x] Icons: use `lucide-react` (install as dependency — open source, tree-shakeable)
+  - [x] Item height: 36px; border-radius: `var(--rounded-sm)`
 
-- [ ] **T9: TopBar Component** (AC: 11)
-  - [ ] Create `src/components/layout/TopBar/TopBar.tsx` + `.module.css` + `index.ts`
-  - [ ] Props: `roleName: string`, `userName: string`, `notificationSlot?: React.ReactNode`
-  - [ ] Height: `var(--topbar-height)` = 56px
-  - [ ] Left: DX-AgriMarket logo/wordmark + role label badge
-  - [ ] Right: notification bell placeholder (`<div data-slot="notification-bell" />`) + user avatar circle (initials)
-  - [ ] TopBar is a Server Component — notification bell slot filled by Client Component in Stories 2.7+
+- [x] **T9: TopBar Component** (AC: 11)
+  - [x] Create `src/components/layout/TopBar/TopBar.tsx` + `.module.css` + `index.ts`
+  - [x] Props: `roleName: string`, `userName: string`, `notificationSlot?: React.ReactNode`
+  - [x] Height: `var(--topbar-height)` = 56px
+  - [x] Left: DX-AgriMarket logo/wordmark + role label badge
+  - [x] Right: notification bell placeholder (`<div data-slot="notification-bell" />`) + user avatar circle (initials)
+  - [x] TopBar is a Server Component — notification bell slot filled by Client Component in Stories 2.7+
 
-- [ ] **T10: Barrel Exports & Index** (AC: 12)
-  - [ ] Create `src/components/ui/index.ts` — re-exports all UI components
-  - [ ] Create `src/components/layout/index.ts` — re-exports AppShell, Sidebar, TopBar, BottomNav
-  - [ ] Verify all components: no inline styles, no Tailwind, only `.module.css` classes
-  - [ ] Run `npx tsc --noEmit` to confirm no TypeScript errors across all new files
+- [x] **T10: Barrel Exports & Index** (AC: 12)
+  - [x] Create `src/components/ui/index.ts` — re-exports all UI components
+  - [x] Create `src/components/layout/index.ts` — re-exports AppShell, Sidebar, TopBar, BottomNav
+  - [x] Verify all components: no inline styles, no Tailwind, only `.module.css` classes
+  - [x] Run `npx tsc --noEmit` to confirm no TypeScript errors across all new files
 
-- [ ] **T11: Commit** (all AC)
-  - [ ] `feat(design-system): add CSS tokens, shared UI components, and layout shells`
+- [x] **T11: Commit** (all AC)
+  - [x] `feat(design-system): add CSS tokens, shared UI components, and layout shells`
 
 ## Dev Notes
 
