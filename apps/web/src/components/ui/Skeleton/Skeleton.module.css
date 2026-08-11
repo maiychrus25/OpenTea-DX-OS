@@ -1,0 +1,34 @@
+.skeleton {
+  background-color: var(--color-border-subtle);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+.text {
+  border-radius: var(--rounded-sm);
+  height: 1em;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.rect {
+  border-radius: var(--rounded-md);
+}
+
+.circle {
+  border-radius: var(--rounded-full);
+}
