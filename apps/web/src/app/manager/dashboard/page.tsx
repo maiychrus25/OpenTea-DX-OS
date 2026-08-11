@@ -1,21 +1,10 @@
-import { auth } from "../../../auth"
-import { redirect } from "next/navigation"
+import React from 'react';
 
-export default async function ManagerDashboard() {
-  const session = await auth()
-  
-  // Double check server-side in case middleware is bypassed
-  if ((session?.user as any)?.role !== "manager") {
-    redirect("/unauthorized")
-  }
-
+export default function ManagerDashboard() {
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Dashboard Giám Đốc HTX</h1>
-      <p>Xin chào, {session?.user?.name}</p>
-      <form action="/api/auth/signout" method="POST">
-        <button type="submit">Đăng xuất</button>
-      </form>
-    </div>
-  )
+    <main style={{ padding: '2rem' }}>
+      <h1>Manager Dashboard</h1>
+      <p>Welcome to the Manager Dashboard.</p>
+    </main>
+  );
 }

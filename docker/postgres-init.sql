@@ -1,6 +1,5 @@
 -- docker/postgres-init.sql
 CREATE DATABASE keycloak;
-CREATE DATABASE agrimarket;
 
 -- Keycloak requires its own db and user
 CREATE USER keycloak WITH PASSWORD 'keycloak';
