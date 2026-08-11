@@ -1,3 +1,49 @@
 {
-  "note": "File export từ n8n: Luồng cảnh báo thời tiết Open-Meteo"
+  "note": "File export t\u1eeb n8n: Lu\u1ed3ng c\u1ea3nh b\u00e1o th\u1eddi ti\u1ebft Open-Meteo",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "663df794-384b-4f61-a68d-21f8aa87d7d6",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+      },
+      "id": "dd3cb374-808a-4010-98c2-b2f38b8035d0",
+      "name": "Log Error to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        200,
+        -200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
 }

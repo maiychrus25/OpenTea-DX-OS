@@ -17,6 +17,18 @@ jobs:
           bash scripts/validate-env.sh
           bash scripts/validate-structure.sh
 
+  validate-n8n-workflows:
+    name: Lint n8n JSON
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JSON format
+        run: |
+          for file in workflows/*.json; do
+            jq . "$file" > /dev/null || (echo "❌ Invalid JSON in $file" && exit 1)
+          done
+          echo "✅ All workflows are valid JSON"
+
   test-frontend:
     name: Lint & Build Next.js
     runs-on: ubuntu-latest

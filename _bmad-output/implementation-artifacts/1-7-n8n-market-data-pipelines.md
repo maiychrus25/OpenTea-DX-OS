@@ -5,7 +5,7 @@ Status: ready-for-dev
 ## Story
 
 As a developer,
-I want the n8n workflows for ingesting USDA, Open-Meteo, and Frankfurter data established and inserting data into the PostgreSQL database,
+I want the n8n workflows for ingesting World Bank, WTO, Open-Meteo, and ExchangeRate-API data established and inserting data into the PostgreSQL database,
 so that the Next.js application has a populated, constantly updating source of market and weather data without running its own background jobs.
 
 ## Dependencies
@@ -14,9 +14,9 @@ so that the Next.js application has a populated, constantly updating source of m
 
 ## Acceptance Criteria
 
-1. **Given** the n8n docker service **When** I log in to the n8n UI **Then** I see 3 active workflows: `USDA_Sync`, `OpenMeteo_Sync`, and `FxRate_Sync`.
+1. **Given** the n8n docker service **When** I log in to the n8n UI **Then** I see active workflows: `WorldBank_Sync`, `WTOTariffs_Sync`, `OpenMeteo_Sync`, and `FxRate_Sync`.
 2. **Given** the PostgreSQL database is accessible from the n8n container **When** `FxRate_Sync` runs daily **Then** it fetches the exchange rates from ExchangeRate-API and upserts it into the `FxRate` table as JSONB.
-3. **Given** `USDA_Sync` **When** it runs **Then** it fetches global rice/mango export prices (mocked if USDA API requires complex auth for MVP) and upserts them into the `MarketData` table.
+3. **Given** `WorldBank_Sync` **When** it runs **Then** it fetches global rice/mango export prices and upserts them into the `MarketData` table.
 4. **Given** `OpenMeteo_Sync` **When** it runs hourly **Then** it reads the centroid coordinates of all Parcels from the database, fetches current weather for each from Open-Meteo, and inserts records into the `WeatherCache` table.
 5. **Given** the workflows **When** they are finalized **Then** they are exported as JSON files and committed to the `workflows/` directory in the repository for version control.
 
@@ -29,12 +29,12 @@ so that the Next.js application has a populated, constantly updating source of m
 
 - [ ] **T2: FxRate_Sync Workflow** (AC: 2)
   - [ ] Create workflow triggered by a daily Cron node.
-  - [ ] Add HTTP Request node to call Frankfurter API: `https://api.frankfurter.app/latest?from=USD&to=VND`.
+  - [ ] Add HTTP Request node to call ExchangeRate-API: `https://api.exchangerate-api.com/v4/latest/USD`.
   - [ ] Add Postgres node to `INSERT` the rate into the `FxRate` table.
 
-- [ ] **T3: USDA_Sync Workflow** (AC: 3)
-  - [ ] Create workflow triggered by a weekly Cron node.
-  - [ ] Add HTTP Request node to call a market data source (if USDA requires complex auth, use a mock REST endpoint or a simpler public API for the MVP POF).
+- [ ] **T3: WorldBank_Sync Workflow** (AC: 3)
+  - [ ] Create a new workflow for World Bank.
+  - [ ] Add HTTP Request node to call World Bank API.
   - [ ] Map the JSON response to the `MarketData` schema (`source`, `commodity`, `metric`, `value`, `unit`, `period`).
   - [ ] Add Postgres node to `INSERT ... ON CONFLICT DO UPDATE` (upsert) into `MarketData`.
 
@@ -48,7 +48,7 @@ so that the Next.js application has a populated, constantly updating source of m
 
 - [ ] **T5: Export and Commit** (AC: 5)
   - [ ] In the n8n UI, export all 3 workflows as JSON.
-  - [ ] Save them to `workflows/fxrate_sync.json`, `workflows/usda_sync.json`, and `workflows/openmeteo_sync.json`.
+  - [ ] Save them to `workflows/fx-rates-sync.json`, `workflows/worldbank_sync.json`, `workflows/wto_tariffs.json`, and `workflows/weather-sync.json`.
   - [ ] Commit these files.
 
 ## Dev Notes
@@ -88,7 +88,8 @@ _To be filled after implementation_
 
 **Files to CREATE:**
 - `workflows/fxrate_sync.json`
-- `workflows/usda_sync.json`
+- `workflows/worldbank_sync.json`
+- `workflows/wto_tariffs.json`
 - `workflows/openmeteo_sync.json`
 
 **Files to UPDATE:**

@@ -91,14 +91,13 @@ altitude: Initiative → Features
 
 | API | License | Data |
 |-----|---------|------|
-| USDA PSD API | Public Domain | Commodity supply & use |
-| USDA GATS API | Public Domain | Export/import statistics |
+| World Bank API | CC BY 4.0 | Commodity prices & supply |
 | WTO Tariff API | CC BY 4.0 | Import tariff rates (EVFTA) |
 | World Bank WITS | CC BY 4.0 | Trade statistics |
 | FAOSTAT API | CC BY 4.0 | Agricultural production stats |
 | NASA POWER API | Public Domain | Historical climate data |
 | Open-Meteo API | Open-Meteo | Real-time weather (no API key) |
-| Frankfurter API | MIT | USD/VND exchange rates |
+| ExchangeRate-API | Free/Standard | USD/VND exchange rates |
 | Nominatim API | ODbL | Geocoding (server-side proxy only) |
 
 ### 2.5 Model Switch (Environment)
@@ -131,7 +130,7 @@ Switch bằng env var `OLLAMA_MODEL` — không đổi code.
 ├────────────────────────────┴────────────────────────────────────┤
 │  [P] Process Space                                              │
 │  n8n Orchestrator                                               │
-│  ├── Data pipelines: USDA/WTO/NASA/Open-Meteo → PostgreSQL     │
+│  ├── Data pipelines: World Bank/WTO/NASA/Open-Meteo → PostgreSQL     │
 │  ├── Weekly reminder cronjob (post-30/8)                       │
 │  └── External push connector: Mattermost (post-30/8)           │
 ├─────────────────────────────────────────────────────────────────┤
@@ -278,15 +277,15 @@ const response = await ollama.chat({ model, messages: [...] })
 - Piper unavailable → nút "Nghe" ẩn, text-only fallback
 
 ### AD-9 — Data Pipeline: n8n owns ingestion
-**Binds:** n8n là điểm duy nhất gọi external data APIs (USDA, WTO, NASA, Open-Meteo, Frankfurter); n8n write vào PostgreSQL; Next.js chỉ read
-**Prevents:** Rate limit exposure; duplicate ingestion code; Next.js gọi USDA API trực tiếp
+**Binds:** n8n là điểm duy nhất gọi external data APIs (World Bank, WTO, NASA, Open-Meteo, ExchangeRate-API); n8n write vào PostgreSQL; Next.js chỉ read
+**Prevents:** Rate limit exposure; duplicate ingestion code; Next.js gọi World Bank API trực tiếp
 
 **n8n workflow schedule:**
 ```
-Every 6h:  USDA PSD + GATS → market_data table
+Every 6h:  World Bank → market_data table
 Every 1h:  Open-Meteo → weather_cache table
 Every 24h: WTO Tariff + FAOSTAT → tariff_data, fao_data tables
-Every 24h: Frankfurter → fx_rates table
+Every 24h: ExchangeRate-API → fx_rates table
 Every 24h: Ollama bulletin synthesis → bulletins table
 Friday PM: Officer batch-approve reminder (post-30/8)
 ```
@@ -359,7 +358,7 @@ MINIO_ACCESS_KEY=...
 MINIO_SECRET_KEY=...
 
 # External (read by n8n, not Next.js)
-# USDA_API_KEY, WTO_API_KEY — configured in n8n credentials
+# WORLD_BANK_API_KEY, WTO_API_KEY — configured in n8n credentials
 ```
 
 **Prevents:** Hardcoded URLs; credentials in source code; env confusion between machines
@@ -741,8 +740,8 @@ function ChatWidget() {
 ## 7. Kiến Trúc Background (n8n Pipelines)
 
 ### 7.1 AD-19 — n8n là Owner duy nhất của Data Ingestion
-**Binds:** n8n là điểm duy nhất gọi external APIs (USDA, WTO, NASA POWER, Open-Meteo, Frankfurter, FAO). n8n write vào PostgreSQL. Next.js chỉ read.
-**Prevents:** Next.js gọi USDA/WTO API trực tiếp; duplicate ingestion logic; rate limit exposure
+**Binds:** n8n là điểm duy nhất gọi external APIs (World Bank, WTO, NASA POWER, Open-Meteo, ExchangeRate-API, FAO). n8n write vào PostgreSQL. Next.js chỉ read.
+**Prevents:** Next.js gọi World Bank/WTO API trực tiếp; duplicate ingestion logic; rate limit exposure
 
 ### 7.2 Pipeline Topology
 
@@ -752,13 +751,12 @@ function ChatWidget() {
       ▼
 [n8n Orchestrator] ──── credentials stored in n8n only
       │
-      ├── HTTP Request Node (USDA PSD)    ─┐
-      ├── HTTP Request Node (USDA GATS)    │
+      ├── HTTP Request Node (World Bank)    ─┐
       ├── HTTP Request Node (WTO Tariff)   ├─ Transform → PostgreSQL Write
-      ├── HTTP Request Node (FAOSTAT)      │
       ├── HTTP Request Node (NASA POWER)   │
       ├── HTTP Request Node (Open-Meteo)   │
-      └── HTTP Request Node (Frankfurter) ─┘
+      ├── HTTP Request Node (FAOSTAT)      │
+      └── HTTP Request Node (ExchangeRate-API) ─┘
                                             │
                                             ▼
                                      [PostgreSQL]
@@ -775,7 +773,7 @@ function ChatWidget() {
 
 | File | Trigger | Tác vụ | Ghi vào bảng |
 |------|---------|---------|---------------|
-| `market-data-ingestion.json` | Cron: mỗi 6h | USDA PSD + GATS + WTO + FAOSTAT + NASA POWER | `market_data` |
+| `worldbank_sync.json` / `wto_tariffs.json` | Cron: mỗi 6h | World Bank + WTO + FAOSTAT + NASA POWER | `market_data` |
 | `weather-sync.json` | Cron: mỗi 1h | Open-Meteo cho tất cả parcels | `weather_cache` |
 | `fx-rates-sync.json` | Cron: mỗi 24h | ExchangeRate-API | `fx_rates` |
 | `bulletin-synthesis.json` | Cron: mỗi 24h (04:00) | Query PostgreSQL → Ollama HTTP → Save | `bulletins` |
@@ -825,7 +823,7 @@ Quy tắc bất biến:
 - CHỈ trình bày sự thật có trích dẫn nguồn.
 - KHÔNG ra quyết định thay HTX.
 - KHÔNG khuynến nghị hành động cụ thể.
-- Mọi số liệu phải kèm nguồn: (Nguồn: USDA, ngày DD/MM).
+- Mọi số liệu phải kèm nguồn: (Nguồn: World Bank, ngày DD/MM).
 ```
 
 ### 7.5 Weather Sync Workflow (chi tiết)

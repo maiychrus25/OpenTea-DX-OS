@@ -70,7 +70,7 @@ NFR-14: All UI in Vietnamese; all AI output in Vietnamese with international sou
 - AD-6: CSS Modules; design tokens in styles/globals.css; no Tailwind; no inline styles
 - AD-7: Keycloak OIDC middleware protects /(manager)/, /(officer)/, /(farmer)/
 - AD-8: Ollama + FastAPI called from API routes only; model switch via OLLAMA_MODEL env var
-- AD-9: n8n is sole owner of external data ingestion (USDA/WTO/NASA/Open-Meteo/Frankfurter)
+- AD-9: n8n is sole owner of external data ingestion (World Bank/WTO/NASA/Open-Meteo/ExchangeRate)
 - AD-10: All Leaflet components use dynamic import with ssr: false; Nominatim proxied via /api/geocode
 - AD-11: Notifications stored in PostgreSQL; Web Bell via SSE endpoint
 - AD-12: MinIO via pre-signed URLs only; no MinIO SDK in client components
@@ -303,14 +303,14 @@ So that the system knows which crops to focus bulletin and notification content 
 ### Story 1.7: n8n Data Pipeline — Market Data Ingestion
 
 As an HTX Manager,
-I want global market data (USDA commodity prices, WTO tariffs, exchange rates, NASA climate data) to be automatically fetched and stored daily,
+I want global market data (World Bank commodity prices, WTO tariffs, exchange rates, NASA climate data) to be automatically fetched and stored daily,
 So that the bulletin and chatbot always have fresh, cited source data available.
 
 **Acceptance Criteria:**
 
 **Given** n8n is running and workflows are imported from `/workflows/`
 **When** the `market-data-ingestion.json` workflow triggers (cron: every 6h)
-**Then** it fetches USDA PSD + GATS → inserts into `market_data` table with source, commodity, metric, value, unit, period, fetched_at
+**Then** it fetches World Bank → inserts into `market_data` table with source, commodity, metric, value, unit, period, fetched_at
 **And** it fetches WTO Tariff + FAOSTAT → inserts into `market_data` with appropriate source tags
 **And** it fetches NASA POWER climate data → inserts into `market_data`
 **And** all inserts use `ON CONFLICT (source, commodity, metric, period) DO UPDATE` for idempotency
@@ -354,7 +354,7 @@ So that I have up-to-date price and supply-demand intelligence before any negoti
 **Given** the bulletin synthesis n8n workflow has run (Story 2.3)
 **When** the Manager navigates to `/manager/bulletin`
 **Then** the page renders the latest `bulletins` record for each registered crop type
-**And** each `BulletinCard` displays: commodity name, bulletin text in Vietnamese, key data points, source citations in `mono` typeface as "(Nguồn: USDA, DD/MM/YYYY)"
+**And** each `BulletinCard` displays: commodity name, bulletin text in Vietnamese, key data points, source citations in `mono` typeface as "(Nguồn: World Bank, DD/MM/YYYY)"
 **And** the page title uses `display` typography (32px, 700 weight)
 **And** if no bulletin exists yet, a skeleton card with "Đang tổng hợp bản tin..." placeholder is shown (not a spinner)
 **And** if Ollama is unavailable, raw market data is displayed in a table with a banner: "Không thể kết nối máy chủ AI. Hiển thị dữ liệu thô."

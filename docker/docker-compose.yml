@@ -75,6 +75,9 @@ services:
       - DB_POSTGRESDB_USER=${POSTGRES_USER:-agrimarket}
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-your_password_here}
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-your_n8n_encryption_key_here}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - USDA_API_KEY=${USDA_API_KEY}
+      - WTO_API_KEY=${WTO_API_KEY}
     volumes:
       - n8n_data:/home/node/.n8n
     ports:
