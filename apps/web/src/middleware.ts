@@ -4,17 +4,20 @@ import { NextResponse } from "next/server"
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const { pathname } = req.nextUrl;
-  
+
   // Các file public không cần chặn (api/auth, _next, public assets)
   if (
-    pathname.startsWith("/api/auth") || 
-    pathname.startsWith("/_next") || 
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/_next") ||
     pathname === "/favicon.ico"
   ) {
     return NextResponse.next();
   }
 
   if (!isLoggedIn && pathname !== "/login") {
+    if (pathname.startsWith("/htx") || pathname.startsWith("/lot")) {
+      return NextResponse.next();
+    }
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
@@ -25,12 +28,12 @@ export default auth((req) => {
   if (lowerPath.startsWith("/manager") && role !== "manager") {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
-  
+
   // Protect Officer routes
   if (lowerPath.startsWith("/officer") && role !== "officer") {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
-  
+
   // Protect Farmer routes
   if (lowerPath.startsWith("/farmer") && role !== "farmer") {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
