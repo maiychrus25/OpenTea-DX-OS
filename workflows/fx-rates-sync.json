@@ -7,7 +7,10 @@
       "name": "When clicking 'Execute Workflow'",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [100, 300]
+      "position": [
+        100,
+        300
+      ]
     },
     {
       "parameters": {
@@ -24,25 +27,26 @@
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [100, 100]
+      "position": [
+        100,
+        100
+      ]
     },
     {
       "parameters": {
-        "url": "https://api.frankfurter.app/latest",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            { "name": "from", "value": "USD" },
-            { "name": "to", "value": "VND" }
-          ]
-        },
+        "url": "https://api.exchangerate-api.com/v4/latest/USD",
+        "sendQuery": false,
+        "queryParameters": {},
         "options": {}
       },
       "id": "03",
-      "name": "Fetch Frankfurter",
+      "name": "Fetch Exchange Rates",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [360, 300]
+      "position": [
+        360,
+        300
+      ]
     },
     {
       "parameters": {
@@ -62,25 +66,70 @@
       "name": "Map Columns",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [580, 300]
+      "position": [
+        580,
+        300
+      ]
     },
     {
       "parameters": {
         "operation": "insert",
         "schema": "public",
         "table": "fx_rates",
-        "columns": "rates",
+        "mappingMode": "defineBelow",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "rates",
+              "value": "={{ $json.rates }}"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "05",
       "name": "Insert into Postgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [800, 300],
+      "position": [
+        800,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "",
           "name": "Postgres_Agrimarket"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "33a49ed5-cf48-40ac-9d3e-e0b58451657d",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+      },
+      "id": "39dc0541-564d-4f8c-b19e-8d2277ccc5f6",
+      "name": "Log Error to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        200,
+        -200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
         }
       }
     }
@@ -90,7 +139,7 @@
       "main": [
         [
           {
-            "node": "Fetch Frankfurter",
+            "node": "Fetch Exchange Rates",
             "type": "main",
             "index": 0
           }
@@ -101,14 +150,14 @@
       "main": [
         [
           {
-            "node": "Fetch Frankfurter",
+            "node": "Fetch Exchange Rates",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Frankfurter": {
+    "Fetch Exchange Rates": {
       "main": [
         [
           {
@@ -124,6 +173,17 @@
         [
           {
             "node": "Insert into Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Postgres",
             "type": "main",
             "index": 0
           }

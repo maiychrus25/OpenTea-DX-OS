@@ -1,3 +1,156 @@
 {
-  "note": "File export từ n8n: Luồng kéo dữ liệu Thuế quan"
+  "name": "WTO Tariffs Sync",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "01",
+      "name": "When clicking 'Execute Workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "02",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.wto.org/timeseries/v1/data?i=TP_A_0160&r=156,840,918,392,410&fmt=json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Ocp-Apim-Subscription-Key",
+              "value": "={{ $env.WTO_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "03",
+      "name": "Fetch WTO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO market_data (source, commodity, metric, value, unit, period) VALUES ('WTO', 'Rice', 'import_tariff', 0, '%', '2026') ON CONFLICT (source, commodity, metric, period) DO UPDATE SET value = EXCLUDED.value;"
+      },
+      "id": "04",
+      "name": "Upsert into Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        580,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "7cc259d6-6ec3-4640-9ade-99c6c715081c",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+      },
+      "id": "4d4d2b6f-385d-4c6d-a4a5-de9c6dfea02a",
+      "name": "Log Error to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        200,
+        -200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute Workflow'": {
+      "main": [
+        [
+          {
+            "node": "Fetch WTO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Fetch WTO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch WTO": {
+      "main": [
+        [
+          {
+            "node": "Upsert into Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
 }

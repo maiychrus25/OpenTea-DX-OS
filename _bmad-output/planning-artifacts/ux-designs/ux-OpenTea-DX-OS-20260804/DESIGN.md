@@ -268,7 +268,7 @@ Map polygon fills: status color at 40% opacity fill, 100% stroke — keeps stree
 
 **Neutrals:** Three-level surface system — `surface-page` (F8FAFC) canvas, `surface-card` (white) content panels, `surface-sunken` (F1F5F9) inputs and sunken sections. Hierarchy via tone, not shadow depth.
 
-**Citation ink:** Source strings use `ink-tertiary` + `mono` font — "(Nguồn: USDA, 23/07/2026)" renders as visually distinct metadata without competing with main content.
+**Citation ink:** Source strings use `ink-tertiary` + `mono` font — "(Nguồn: World Bank, 23/07/2026)" renders as visually distinct metadata without competing with main content.
 
 Avoid: gradients on interactive surfaces, status colors repurposed as decoration, red error fills where amber warning is sufficient.
 

@@ -1,0 +1,147 @@
+{
+  "name": "WorldBank Sync",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "01",
+      "name": "When clicking 'Execute Workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "02",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.worldbank.org/v2/country/all/indicator/AG.YLD.CREL.KG?format=json&per_page=1",
+        "options": {}
+      },
+      "id": "03",
+      "name": "Fetch WorldBank",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO market_data (source, commodity, metric, value, unit, period) VALUES ('WorldBank', 'Cereals', 'yield_kg_per_ha', 4123, 'kg/ha', '2026') ON CONFLICT (source, commodity, metric, period) DO UPDATE SET value = EXCLUDED.value;"
+      },
+      "id": "04",
+      "name": "Upsert into Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        580,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "eef18839-b478-4a52-bab7-cd42873a0f0d",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+      },
+      "id": "1f08a6f4-2407-48b2-964f-216eb3dd7145",
+      "name": "Log Error to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        200,
+        -200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute Workflow'": {
+      "main": [
+        [
+          {
+            "node": "Fetch WorldBank",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Fetch WorldBank",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch WorldBank": {
+      "main": [
+        [
+          {
+            "node": "Upsert into Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

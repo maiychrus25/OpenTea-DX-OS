@@ -26,7 +26,7 @@ sources:
 
 **Role differentiation:** Role set at login via Keycloak OIDC token. Layout root receives `data-role="manager|officer|farmer"`. Farmer role inherits `body-large` font automatically. No shared screens between roles — each role has its own layout, navigation, and feature set.
 
-**Language:** 100% Vietnamese UI. All AI output in Vietnamese. Citation data may include English source names (USDA, WTO, NASA) as proper nouns in otherwise Vietnamese sentences — this is correct, not an i18n error.
+**Language:** 100% Vietnamese UI. All AI output in Vietnamese. Citation data may include English source names (World Bank, WTO, NASA) as proper nouns in otherwise Vietnamese sentences — this is correct, not an i18n error.
 
 ---
 
@@ -99,7 +99,7 @@ DX-AgriMarket speaks like a **trusted field advisor**, not a tech product. Direc
 
 | Context | Do | Don't |
 |---|---|---|
-| AI bulletin | "Giá lúa ST25 xuất khẩu ~20,400 đ/kg (FOB). (Nguồn: USDA, 03/08/2026)" | "Giá lúa đang tăng mạnh! Đây là cơ hội tốt!" |
+| AI bulletin | "Giá lúa ST25 xuất khẩu ~20,400 đ/kg (FOB). (Nguồn: World Bank, 03/08/2026)" | "Giá lúa đang tăng mạnh! Đây là cơ hội tốt!" |
 | AI chatbot response | "Dữ liệu WTO cho thấy thuế EVFTA hiện tại là 0%." | "Theo tôi, bạn nên bán ngay bây giờ." |
 | Withdrawal PASSED | "Đã qua thời gian cách ly (15/14 ngày). An toàn thu hoạch." | "✅ Tuyệt vời! Bạn có thể thu hoạch!" |
 | Empty state | "Chưa có thửa đất nào. Bắt đầu bằng cách vẽ thửa đất đầu tiên." | "Oops! Nothing here yet!" |
@@ -248,7 +248,7 @@ Behavioral. Visual contrast lives in `DESIGN.md`.
 2. Trang Today load — thấy tóm tắt bản tin: "Giá lúa ST25 xuất khẩu ~20,400 đ/kg. Thương lái vùng Mekong đang chào 12,000 đ/kg."
 3. Tuấn bấm [Nghe] — Piper TTS đọc bản tin 30 giây. Tuấn nghe trong lúc pha cà phê.
 4. Tuấn mở tab Chatbot. Gõ: "Thương lái hỏi mua 12k/kg lúa ST25. Họ có đang lợi dụng mình không?"
-5. **Climax:** AI trả lời: "Giá xuất khẩu FOB hiện tại ~20,400 đ/kg (USDA, 03/08). Giá chào 12,000 đ/kg thấp hơn 41%. Thuế EVFTA 0% (WTO). Không có căn cứ kỹ thuật nào cho mức chiết khấu này." Tuấn có đủ dữ liệu để đàm phán.
+5. **Climax:** AI trả lời: "Giá xuất khẩu FOB hiện tại ~20,400 đ/kg (World Bank, 03/08). Giá chào 12,000 đ/kg thấp hơn 41%. Thuế EVFTA 0% (WTO). Không có căn cứ kỹ thuật nào cho mức chiết khấu này." Tuấn có đủ dữ liệu để đàm phán.
 
 Failure path: Ollama unavailable → AI bubble shows: "Máy chủ AI tạm dừng. Đang hiển thị dữ liệu thô." → Raw market data table visible.
 

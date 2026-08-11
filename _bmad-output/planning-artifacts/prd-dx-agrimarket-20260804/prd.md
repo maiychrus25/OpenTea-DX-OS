@@ -87,7 +87,7 @@ Eight pain points were validated through First Principles brainstorming sessions
 | Age | 40-55, elected by member assembly |
 | Education | Agriculture, Business Administration, or Economics |
 | Devices | Primarily smartphone; rarely uses desktop |
-| Tech literacy | Familiar with messaging apps; does not read English charts or international terminology (USDA, EVFTA) |
+| Tech literacy | Familiar with messaging apps; does not read English charts or international terminology (World Bank, EVFTA) |
 | Core responsibility | Lead & direct HTX; negotiate sale prices; find markets; bridge farmers and buyers |
 | Pain points addressed | PP1 (price intelligence), PP2 (buyer discovery) |
 | Critical UX need | Mobile-first; Vietnamese language; audio readout option |
@@ -140,7 +140,7 @@ The system is structured on the **HPDI (Human-Process-Data-Intelligence)** frame
 |  Automated data pipelines + notification routing       |
 +---------------------------------------------------------+
 |  [D] Data Space -- PostgreSQL + MinIO                  |
-|  Market: USDA PSD/GATS + FAOSTAT + WTO Tariff          |
+|  Market: World Bank + FAOSTAT + WTO Tariff          |
 |  Climate: NASA POWER + Open-Meteo                      |
 |  HTX Internal: profiles, parcels, journals, lots, docs |
 +---------------------------------------------------------+
@@ -165,11 +165,11 @@ Features are organized by actor. Each functional requirement (FR) carries a glob
 
 **FR-A1: Digital Agriculture Market Bulletin**
 
-The system shall automatically generate a daily Vietnamese-language bulletin synthesizing data from multiple international sources (USDA PSD, WTO Tariff, exchange rates, NASA POWER climate).
+The system shall automatically generate a daily Vietnamese-language bulletin synthesizing data from multiple international sources (World Bank, WTO Tariff, exchange rates, NASA POWER climate).
 
 - FR-A1.1 -- Generated once daily via automated n8n pipeline and published to the Manager's web dashboard.
 - FR-A1.2 -- Displays only data relevant to crop types registered in the HTX Profile. Defaults to all crops when no profile data exists.
-- FR-A1.3 -- Presents all data with explicit source citations (e.g., "USDA PSD, 2026-07-23"). No editorial conclusions or recommendations.
+- FR-A1.3 -- Presents all data with explicit source citations (e.g., "World Bank, 2026-07-23"). No editorial conclusions or recommendations.
 - FR-A1.4 -- Includes a "Listen" button that triggers Piper TTS (voice: `vi_VN-vais1000-medium`, MIT license, local inference) to read a 30-second audio summary aloud.
 - FR-A1.5 -- [ASSUMPTION] Bulletin format mirrors familiar Vietnamese broadcast news metaphor (VTV bulletin) -- headline summary + supporting data points -- not an analytics dashboard with raw charts.
 
@@ -203,7 +203,7 @@ The system shall provide a web chat interface for the Manager to ask market and 
 - FR-A3.3 -- AI responses include cross-source synthesis from stored international data (PostgreSQL) and always cite the data source and date.
 - FR-A3.4 -- Example interaction:
   - *User:* "Middleman offers 12,000 VND/kg for ST25 rice. Is this reasonable?"
-  - *AI:* "Thailand rice output down 15% due to drought (USDA, 23/07). EU import tariff 0% (WTO/EVFTA). Vietnam FOB export price ~850 USD/tonne = ~20,400 VND/kg. The offered price is 41% below current export price."
+  - *AI:* "Thailand rice output down 15% due to drought (World Bank, 23/07). EU import tariff 0% (WTO/EVFTA). Vietnam FOB export price ~850 USD/tonne = ~20,400 VND/kg. The offered price is 41% below current export price."
 - FR-A3.5 -- Chat history retained for 7 days. Users can review prior sessions.
 - FR-A3.6 -- Technical stack: Next.js API route -> PostgreSQL query -> Ollama (local) -> response.
 - FR-A3.7 -- **Ollama model strategy (dual-environment):**
@@ -589,12 +589,12 @@ Young farmers shall be able to self-record journal entries for their own parcels
 | P -- Orchestration | n8n | Faircode | Pass (DX-OS approved) |
 | D -- Database | PostgreSQL | PostgreSQL License | Pass |
 | D -- File storage | MinIO | AGPL v3 | Pass *(used as-is, no source modifications — copyleft condition not triggered)* |
-| D -- Market data | USDA PSD API, GATS API | Public Domain | Pass (copyright-free) |
+| D -- Market data | World Bank API | CC BY 4.0 | Pass (open data) |
 | D -- Trade data | WTO Tariff API, World Bank WITS | CC BY 4.0 | Pass |
 | D -- Agri statistics | FAOSTAT API | CC BY 4.0 | Pass |
 | D -- Climate data | NASA POWER API | Public Domain | Pass (copyright-free) |
 | D -- Weather (micro) | Open-Meteo API | Open-Meteo License (free) | Pass |
-| D -- Exchange rates | Frankfurter API | MIT | Pass |
+| D -- Exchange rates | ExchangeRate-API | Free/Standard | Pass |
 | D -- Satellite imagery | Copernicus Sentinel-2 WMS | CC BY 4.0 | Pass (optional layer) |
 | I -- AI engine | Ollama | MIT | Pass |
 | I -- TTS engine | Piper TTS (vi_VN-vais1000-medium) | MIT | Pass |
@@ -649,7 +649,7 @@ Timeline: **2 months (04/08 – 10/09/2026)**. Strategy: **Integration over buil
 | 1a | Docker Compose full stack (Keycloak, n8n, PostgreSQL, Ollama, Piper TTS, FastAPI) | Infra | Blocker for all other phases |
 | 1b | Auth (Keycloak + Passkeys/PIN) + Role-based UI routing | H | |
 | 1c | HTX Profile (manual entry; auto-aggregate from map later) | H+D | |
-| 1d | n8n data pipeline: USDA, WTO, ExchangeRate, Open-Meteo -> PostgreSQL | P+D | |
+| 1d | n8n data pipeline: World Bank, WTO, ExchangeRate, Open-Meteo -> PostgreSQL | P+D | |
 
 #### Phase 2A -- Core Value: Manager (Days 6-12)
 
@@ -719,7 +719,7 @@ Timeline: **2 months (04/08 – 10/09/2026)**. Strategy: **Integration over buil
 > **Demo Principle:** AI always presents facts with citations. NEVER demos AI saying "you should" or "you should not."
 
 **Scenario 1 -- PP1: Price Intelligence**
-Manager opens web on phone. Sees today's bulletin on ST25 rice market. Taps "Listen" -> hears 30-second audio summary. Opens chatbot: "Middleman offers 12,000 VND/kg. Is this price fair?" AI responds: "Thailand rice output down 15% (USDA). EU tariff 0% (EVFTA). Vietnam FOB export price ~20,400 VND/kg. The offered price is 41% below current export price." Manager has the data to negotiate.
+Manager opens web on phone. Sees today's bulletin on ST25 rice market. Taps "Listen" -> hears 30-second audio summary. Opens chatbot: "Middleman offers 12,000 VND/kg. Is this price fair?" AI responds: "Thailand rice output down 15% (World Bank). EU tariff 0% (EVFTA). Vietnam FOB export price ~20,400 VND/kg. The offered price is 41% below current export price." Manager has the data to negotiate.
 
 **Scenario 2 -- PP2: Buyer Discovery**
 Manager opens partner map -> sees 5 buyer companies, 3 middlemen, 2 warehouses in the region. Taps "Loc Troi" -> sees phone number, primary crops purchased. Calls to negotiate directly.
@@ -774,8 +774,7 @@ Farmer Minh in the field spots unusual brown spots on rice leaves. Opens web -> 
 | P.A.R.A | Projects-Areas-Resources-Archives document management system |
 | RAG | Retrieval-Augmented Generation -- AI technique using documents as context |
 | FOB | Free On Board -- export pricing term |
-| USDA PSD | USDA Production, Supply and Distribution database |
-| GATS | USDA Global Agricultural Trade System |
+| World Bank | World Bank Open Data (Pink Sheet / Indicators) |
 | Turf.js | JavaScript library for geospatial analysis (area calculation from polygons) |
 | Nominatim | OpenStreetMap geocoding API (address -> coordinates) |
 | Piper TTS | Open-source text-to-speech engine (MIT license) |

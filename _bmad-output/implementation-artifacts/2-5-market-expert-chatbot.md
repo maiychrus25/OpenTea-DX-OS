@@ -17,7 +17,7 @@ so that I can get immediate answers based on the real-time data collected by the
 1. **Given** I am logged in as a Manager or Farmer **When** I click the Chatbot icon (e.g., floating action button or sidebar link) **Then** a chat window opens.
 2. **Given** the chat window **When** I type a question like "Giá lúa hôm nay bao nhiêu?" **Then** the message is sent to `/api/chat`.
 3. **Given** the `/api/chat` endpoint **When** it receives a request **Then** it queries the database (`MarketData`, `WeatherCache`, `Bulletin`) for relevant context, constructs a prompt, and streams the response back from Ollama using the Vercel AI SDK (`ai` package).
-4. **Given** the chat response **When** it is displayed **Then** it includes source citations (e.g., "Theo USDA...") and strictly follows the AI Invariants (No recommendations).
+4. **Given** the chat response **When** it is displayed **Then** it includes source citations (e.g., "Theo World Bank...") and strictly follows the AI Invariants (No recommendations).
 5. **Given** a completed chat turn **When** it finishes **Then** the entire conversation is saved to the `ChatHistory` table for audit/context retention.
 6. **Given** the chat UI **When** a response is streaming **Then** the UI updates in real-time and automatically scrolls to the bottom.
 
@@ -66,7 +66,7 @@ so that I can get immediate answers based on the real-time data collected by the
 Bạn là trợ lý ảo thị trường nông sản của HTX.
 Quy tắc BẮT BUỘC (Nếu vi phạm, hệ thống sẽ sập):
 1. CHỈ trả lời dựa trên "Dữ Liệu Ngữ Cảnh" được cung cấp. Nếu dữ liệu không có, nói "Tôi chưa có thông tin này".
-2. LUÔN LUÔN trích dẫn nguồn khi đưa ra số liệu (vd: Theo nguồn USDA...).
+2. LUÔN LUÔN trích dẫn nguồn khi đưa ra số liệu (vd: Theo nguồn World Bank...).
 3. TUYỆT ĐỐI KHÔNG đưa ra lời khuyên, khuyến nghị hành động (vd: Cấm nói "Bà con nên bán", "Nên chờ giá lên"). Chỉ cung cấp thông tin khách quan.
 4. KHÔNG tự ý đưa ra quyết định thay HTX.
 

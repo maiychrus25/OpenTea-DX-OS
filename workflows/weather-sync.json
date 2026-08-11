@@ -7,7 +7,10 @@
       "name": "When clicking 'Execute Workflow'",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [100, 300]
+      "position": [
+        100,
+        300
+      ]
     },
     {
       "parameters": {
@@ -24,18 +27,24 @@
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [100, 100]
+      "position": [
+        100,
+        100
+      ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, centroid_lat AS lat, centroid_lng AS lon FROM parcels;"
+        "query": "SELECT id, centroid_lat AS lat, centroid_lng AS lon FROM parcels WHERE centroid_lat IS NOT NULL AND centroid_lng IS NOT NULL;"
       },
       "id": "get-parcels",
       "name": "Get Parcels",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [360, 300],
+      "position": [
+        360,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "",
@@ -52,7 +61,10 @@
       "name": "Split In Batches",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [580, 300]
+      "position": [
+        580,
+        300
+      ]
     },
     {
       "parameters": {
@@ -63,7 +75,10 @@
       "name": "Fetch Open-Meteo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [800, 300]
+      "position": [
+        800,
+        300
+      ]
     },
     {
       "parameters": {
@@ -96,11 +111,45 @@
       "name": "Upsert Weather",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1020, 300],
+      "position": [
+        1020,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "",
           "name": "Postgres_Agrimarket"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "f0cdbd6e-d6ce-489b-9004-04a2aab34ce5",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+      },
+      "id": "421c3f12-76da-4a37-94c1-451d3536239c",
+      "name": "Log Error to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        200,
+        -200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
         }
       }
     }
@@ -166,6 +215,17 @@
         [
           {
             "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Postgres",
             "type": "main",
             "index": 0
           }

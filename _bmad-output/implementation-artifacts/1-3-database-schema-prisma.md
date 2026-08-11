@@ -336,7 +336,7 @@ model DiseaseReport {
 
 model MarketData {
   id          String   @id @default(cuid())
-  source      String   // "USDA" | "WTO" | "FAOSTAT" | "NASA"
+  source      String   // "World Bank" | "WTO" | "FAOSTAT" | "NASA"
   commodity   String
   metric      String   // "export_price" | "import_tariff" | "production_volume"
   value       Float
