@@ -23,11 +23,7 @@ export const TopBar: React.FC<TopBarProps> = ({ roleName, userName, notification
         <div className={styles.logo}>
           <span className={styles.brand}>DX-AgriMarket</span>
         </div>
-        <div className={styles.roleBadge}>
-          {/* We use a generic styling for role, Badge is technically for parcel status, 
-              but we can create a custom pill here or use a generic span */}
-          <span className={styles.rolePill}>{roleName}</span>
-        </div>
+        <div className={styles.rolePill}>{roleName}</div>
       </div>
       <div className={styles.right}>
         {notificationSlot ? (

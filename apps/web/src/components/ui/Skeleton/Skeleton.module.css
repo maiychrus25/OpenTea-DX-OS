@@ -1,6 +1,8 @@
 .skeleton {
   background-color: var(--color-border-subtle);
   animation: skeleton-pulse 1.5s ease-in-out infinite;
+  width: var(--skeleton-width);
+  height: var(--skeleton-height);
 }
 
 @keyframes skeleton-pulse {

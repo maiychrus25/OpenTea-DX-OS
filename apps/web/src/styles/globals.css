@@ -47,7 +47,14 @@
 
   /* Special */
   --color-map-overlay: rgba(15, 23, 42, 0.55);
+  --color-modal-overlay: rgba(15, 23, 42, 0.55);
   --color-badge-unread: #DC2626;
+  --color-danger-hover: #B91C1C;
+
+  /* Shadows */
+  --shadow-card: 0 1px 4px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 4px 16px rgba(15, 23, 42, 0.10);
+  --shadow-modal: 0 10px 25px rgba(15, 23, 42, 0.15);
 
   /* Typography Scale */
   --font-size-display: 2rem;        /* 32px */
@@ -76,8 +83,16 @@
   --spacing-16: 64px;
   --spacing-gutter-mobile: 16px;
   --spacing-gutter-desktop: 24px;
+  --spacing-gutter: var(--spacing-gutter-mobile);
   --sidebar-width: 240px;
   --topbar-height: 56px;
+
+  /* Z-Index Scale */
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-toast: 1060;
 
   /* Border Radius */
   --rounded-sm: 6px;
@@ -85,6 +100,12 @@
   --rounded-lg: 14px;
   --rounded-xl: 20px;
   --rounded-full: 9999px;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --spacing-gutter: var(--spacing-gutter-desktop);
+  }
 }
 
 /* Farmer role typography override */

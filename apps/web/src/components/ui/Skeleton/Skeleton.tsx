@@ -17,11 +17,20 @@ export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
  */
 export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
   ({ className, width, height, variant = 'text', style, ...props }, ref) => {
+    const customStyle = { ...style } as React.CSSProperties
+    if (width !== undefined) {
+      customStyle['--skeleton-width' as any] = typeof width === 'number' || /^\d+$/.test(String(width)) ? `${width}px` : width
+    }
+    if (height !== undefined) {
+      customStyle['--skeleton-height' as any] = typeof height === 'number' || /^\d+$/.test(String(height)) ? `${height}px` : height
+    }
     return (
       <div
         ref={ref}
         className={`${styles.skeleton} ${styles[variant]} ${className || ''}`}
-        style={ { width, height, ...style } }
+        style={customStyle}
+        role="presentation"
+        aria-hidden="true"
         {...props}
       />
     )

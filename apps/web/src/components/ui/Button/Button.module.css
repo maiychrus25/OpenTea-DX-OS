@@ -65,7 +65,7 @@
   color: var(--color-ink-inverse);
 }
 .danger:not(:disabled):hover {
-  background-color: #B91C1C; /* Darker danger */
+  background-color: var(--color-danger-hover);
 }
 
 /* Loading State */

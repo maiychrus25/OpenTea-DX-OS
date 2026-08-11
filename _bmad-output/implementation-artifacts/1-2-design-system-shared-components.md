@@ -1,6 +1,6 @@
 # Story 1.2: Design System — CSS Tokens & Shared UI Components
 
-Status: review
+Status: done
 
 ## Story
 
@@ -411,3 +411,14 @@ _To be filled after implementation_
 - `src/styles/globals.css` — replace stub with full token system
 - `src/app/layout.tsx` — ensure `next/font/google` pattern; add `data-role` mechanism
 - `package.json` — add `focus-trap-react`, `lucide-react` dependencies
+### Review Findings
+- [x] [Review][Decision] Skeleton component retains inline styles — Should we allow dynamic inline styles for Skeleton width/height, or refactor to use CSS custom properties?
+- [x] [Review][Patch] Modal Escape key behavior broken [Modal.tsx:430]
+- [x] [Review][Patch] Sidebar & BottomNav active styling missing on SSR [Sidebar.tsx:205]
+- [x] [Review][Patch] Skeleton CSS Dimension Type Blindness [Skeleton.tsx]
+- [x] [Review][Patch] Destructive aria-label Loading Override [Button.tsx]
+- [x] [Review][Patch] Empty Heading Element Semantic Violation [Modal.tsx]
+- [x] [Review][Patch] Fragile Modal Viewport Height Calculation [Modal.module.css]
+- [x] [Review][Patch] Farmer role typography CSS deviates from spec [globals.css:522]
+- [x] [Review][Defer] Hardcoded Locale Strings in Primitives [Modal.tsx] — deferred, pre-existing
+- [x] [Review][Defer] Duplicate Navigation DOM Accessibility Risk [BottomNav.tsx] — deferred, pre-existing

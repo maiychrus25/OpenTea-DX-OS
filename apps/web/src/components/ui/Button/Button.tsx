@@ -1,5 +1,3 @@
-'use client'
-
 import * as React from 'react'
 import styles from './Button.module.css'
 
@@ -13,11 +11,14 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading, disabled, children, ...props }, ref) => {
     return (
       <button
+        {...props}
         ref={ref}
+        type={props.type || 'button'}
         className={`${styles.button} ${styles[variant]} ${styles[size]} ${className || ''}`}
         disabled={disabled || isLoading}
         data-testid={`button-${variant}`}
-        {...props}
+        aria-busy={isLoading || props['aria-busy']}
+        aria-label={props['aria-label']}
       >
         {isLoading && (
           <span className={styles.spinner} aria-hidden="true" />
