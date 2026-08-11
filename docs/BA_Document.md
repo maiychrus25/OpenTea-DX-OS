@@ -77,7 +77,7 @@ Tự động hóa các luồng nghiệp vụ (Automation), loại bỏ sức ng�
 
 - **Vai trò AI:** Tổng hợp liên nguồn (cross-source synthesis) — đọc đồng thời 4-5 nguồn dữ liệu và kết nối chúng thành một bức tranh liên kết mà con người không tự ghép được khi nhìn từng nguồn riêng lẻ.
 - **KHÔNG:** Ra quyết định, khuyến nghị hành động, nói "nên" hay "không nên".
-- **Công nghệ lõi:** Ollama (chạy AI Local), Piper TTS (MIT, voice `vi_VN-vais1000-medium`, chạy local) cho audio bản tin.
+- **Công nghệ lõi:** Kiến trúc Pluggable Hybrid Edge-Cloud AI sử dụng Llama-3.1 (Mã Nguồn Mở) chạy qua Groq API để tối ưu tài nguyên, kết hợp Piper TTS (MIT, voice `vi_VN-vais1000-medium`, chạy local) cho audio bản tin.
 
 ---
 

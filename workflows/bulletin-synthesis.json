@@ -1,0 +1,269 @@
+{
+  "name": "Bulletin Synthesis Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-node",
+      "name": "Schedule (04:00 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT rates FROM fx_rates ORDER BY fetched_at DESC LIMIT 1;"
+      },
+      "id": "fetch-fx",
+      "name": "Fetch FX Rates",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        300,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT commodity, json_agg(row_to_json(market_data.*)) as data FROM market_data WHERE fetched_at > NOW() - INTERVAL '48 hours' GROUP BY commodity;"
+      },
+      "id": "fetch-market",
+      "name": "Fetch Market Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        500,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const fxRates = $('Fetch FX Rates').first().json.rates || {};\nconst usdToVnd = fxRates.VND || 25000;\n\nconst commodity = $input.item.json.commodity;\nconst dataArr = $input.item.json.data || [];\n\nlet rawContext = `Dữ liệu thị trường cho ${commodity} trong 48h qua:\\n`;\nlet sources = [];\n\ndataArr.forEach(row => {\n  rawContext += `- [${row.source}] ${row.metric}: ${row.value} ${row.unit} (Thời gian: ${row.period})\\n`;\n  sources.push({\n    source: row.source,\n    metric: row.metric,\n    value: row.value,\n    date: row.period\n  });\n});\n\nrawContext += `\\nTỷ giá tham chiếu: 1 USD = ${usdToVnd} VND.`;\n\nreturn {\n  commodity: commodity,\n  raw_context: rawContext,\n  sources_json: sources\n};"
+      },
+      "id": "code-rag",
+      "name": "Code (Prepare RAG Context)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "={{ $env.OLLAMA_MODEL }}"
+            },
+            {
+              "name": "stream",
+              "value": false
+            },
+            {
+              "name": "messages",
+              "value": "={{ [\n  {\n    \"role\": \"system\",\n    \"content\": \"Bạn là chuyên gia phân tích thị trường nông nghiệp. Hãy viết bản tin thị trường bằng tiếng Việt ngắn gọn, súc tích. QUY TẮC AI INVARIANT BẮT BUỘC:\\n1. CHỈ trình bày sự thật có trích dẫn nguồn.\\n2. KHÔNG ra quyết định thay HTX.\\n3. KHÔNG khuyến nghị hành động cụ thể.\\n4. Mọi số liệu phải kèm nguồn.\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": $json.raw_context\n  }\n] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ask-ollama",
+      "name": "Ask Ollama",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE bulletins SET is_latest = false WHERE commodity = '{{ $('Code (Prepare RAG Context)').item.json.commodity }}';"
+      },
+      "id": "deprecate-old",
+      "name": "Deprecate Old Bulletins",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1100,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bulletins (commodity, bulletin_vi, sources_json, model_used, is_latest) VALUES ($${{ $('Code (Prepare RAG Context)').item.json.commodity }}$$, $${{ $('Ask Ollama').item.json.choices[0].message.content }}$$, $${{ JSON.stringify($('Code (Prepare RAG Context)').item.json.sources_json) }}$$::jsonb, $${{ $env.OLLAMA_MODEL }}$$, true);"
+      },
+      "id": "insert-new",
+      "name": "Insert New Bulletin",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1300,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+      },
+      "id": "log-error",
+      "name": "Log Error to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        300,
+        100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule (04:00 AM)": {
+      "main": [
+        [
+          {
+            "node": "Fetch FX Rates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch FX Rates": {
+      "main": [
+        [
+          {
+            "node": "Fetch Market Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Market Data": {
+      "main": [
+        [
+          {
+            "node": "Code (Prepare RAG Context)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code (Prepare RAG Context)": {
+      "main": [
+        [
+          {
+            "node": "Ask Ollama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Ollama": {
+      "main": [
+        [
+          {
+            "node": "Deprecate Old Bulletins",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deprecate Old Bulletins": {
+      "main": [
+        [
+          {
+            "node": "Insert New Bulletin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

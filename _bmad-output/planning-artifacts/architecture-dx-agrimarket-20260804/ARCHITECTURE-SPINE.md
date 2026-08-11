@@ -58,7 +58,7 @@ altitude: Initiative → Features
 | Prisma Client | 5.x | Apache 2.0 | ORM, type-safe DB access |
 | Prisma CLI | 5.x | Apache 2.0 | Migration, schema introspection |
 | @auth/prisma-adapter | 1.x | ISC | NextAuth.js + Prisma session adapter |
-| ollama (npm) | 0.5.x | MIT | Ollama HTTP client wrapper |
+| openai (npm) | 4.x | Apache 2.0 | Groq API / OpenAI compatible client |
 | @aws-sdk/client-s3 | 3.x | Apache 2.0 | MinIO S3-compatible client (pre-signed URLs) |
 | sharp | 0.33.x | Apache 2.0 | Image resize trước khi upload MinIO |
 | uuid | 10.x | MIT | UUID generation cho entities |
@@ -82,7 +82,7 @@ altitude: Initiative → Features
 | Keycloak | 24.x | Apache 2.0 | Auth provider, WebAuthn/Passkeys, RBAC |
 | PostgreSQL | 16.x | PostgreSQL | Primary database |
 | n8n | 1.x | Faircode | Data pipeline orchestration |
-| Ollama | 0.3.x | MIT | Local LLM inference server |
+| Groq API | Cloud | Free Tier | Edge-Cloud LLM inference (Llama-3.1-8B) |
 | Piper TTS | 1.x | MIT | Local TTS engine (vi_VN-vais1000-medium) |
 | MinIO | RELEASE.2024 | AGPL v3 | Object storage (as-is, no modification) |
 | Docker Compose | 2.x | Apache 2.0 | Container orchestration |

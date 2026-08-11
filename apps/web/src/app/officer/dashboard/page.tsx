@@ -1,20 +1,10 @@
-import { auth } from "../../../auth"
-import { redirect } from "next/navigation"
+import React from 'react';
 
-export default async function OfficerDashboard() {
-  const session = await auth()
-  
-  if ((session?.user as any)?.role !== "officer") {
-    redirect("/unauthorized")
-  }
-
+export default function OfficerDashboard() {
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Dashboard Cán Bộ Kỹ Thuật</h1>
-      <p>Xin chào, {session?.user?.name}</p>
-      <form action="/api/auth/signout" method="POST">
-        <button type="submit">Đăng xuất</button>
-      </form>
-    </div>
-  )
+    <main style={{ padding: '2rem' }}>
+      <h1>Officer Dashboard</h1>
+      <p>Welcome to the Technical Officer Dashboard.</p>
+    </main>
+  );
 }
