@@ -1,0 +1,26 @@
+.card {
+  background-color: var(--color-surface-card);
+  border-radius: var(--rounded-md);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--color-border-default);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.padding-default {
+  padding: var(--spacing-gutter-mobile);
+}
+
+@media (min-width: 1024px) {
+  .padding-default {
+    padding: var(--spacing-gutter-desktop);
+  }
+}
+
+.padding-none {
+  padding: 0;
+}

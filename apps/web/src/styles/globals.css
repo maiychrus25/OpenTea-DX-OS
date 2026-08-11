@@ -1,20 +1,122 @@
-/* Design tokens sẽ được định nghĩa ở Story 1.2 */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primary */
+  --color-primary: #16A34A;
+  --color-primary-hover: #15803D;
+  --color-primary-subtle: #DCFCE7;
+  --color-primary-foreground: #FFFFFF;
+
+  /* Accent */
+  --color-accent: #EA580C;
+  --color-accent-hover: #C2410C;
+  --color-accent-subtle: #FFF7ED;
+  --color-accent-foreground: #FFFFFF;
+
+  /* Parcel Status (CLOSED SET — do not use for other purposes) */
+  --color-status-sowing: #16A34A;
+  --color-status-tending: #CA8A04;
+  --color-status-harvest-approved: #EA580C;
+  --color-status-harvested: #2563EB;
+  --color-status-draft: #6B7280;
+
+  /* Semantic Feedback */
+  --color-success: #16A34A;
+  --color-warning: #D97706;
+  --color-danger: #DC2626;
+  --color-info: #2563EB;
+  --color-success-subtle: #DCFCE7;
+  --color-warning-subtle: #FEF3C7;
+  --color-danger-subtle: #FEE2E2;
+  --color-info-subtle: #DBEAFE;
+
+  /* Neutral Surfaces */
+  --color-surface-page: #F8FAFC;
+  --color-surface-card: #FFFFFF;
+  --color-surface-sunken: #F1F5F9;
+  --color-surface-overlay: #FFFFFF;
+
+  /* Borders */
+  --color-border-subtle: #E2E8F0;
+  --color-border-default: #CBD5E1;
+  --color-border-focus: #16A34A;
+
+  /* Text */
+  --color-ink-primary: #0F172A;
+  --color-ink-secondary: #475569;
+  --color-ink-tertiary: #94A3B8;
+  --color-ink-inverse: #FFFFFF;
+
+  /* Special */
+  --color-map-overlay: rgba(15, 23, 42, 0.55);
+  --color-modal-overlay: rgba(15, 23, 42, 0.55);
+  --color-badge-unread: #DC2626;
+  --color-danger-hover: #B91C1C;
+
+  /* Shadows */
+  --shadow-card: 0 1px 4px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 4px 16px rgba(15, 23, 42, 0.10);
+  --shadow-modal: 0 10px 25px rgba(15, 23, 42, 0.15);
+
+  /* Typography Scale */
+  --font-size-display: 2rem;        /* 32px */
+  --font-size-h1: 1.5rem;           /* 24px */
+  --font-size-h2: 1.25rem;          /* 20px */
+  --font-size-h3: 1rem;             /* 16px */
+  --font-size-body: 0.9375rem;      /* 15px */
+  --font-size-body-large: 1.0625rem;/* 17px — farmer role */
+  --font-size-label: 0.875rem;      /* 14px */
+  --font-size-meta: 0.75rem;        /* 12px */
+  --font-size-mono: 0.8125rem;      /* 13px */
+
+  --font-family-sans: var(--font-inter, 'Inter'), system-ui, -apple-system, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Spacing Scale (4px base unit) */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-gutter-mobile: 16px;
+  --spacing-gutter-desktop: 24px;
+  --spacing-gutter: var(--spacing-gutter-mobile);
+  --sidebar-width: 240px;
+  --topbar-height: 56px;
+
+  /* Z-Index Scale */
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-toast: 1060;
+
+  /* Border Radius */
+  --rounded-sm: 6px;
+  --rounded-md: 10px;
+  --rounded-lg: 14px;
+  --rounded-xl: 20px;
+  --rounded-full: 9999px;
 }
 
-@media (prefers-color-scheme: dark) {
+@media (min-width: 1024px) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --spacing-gutter: var(--spacing-gutter-desktop);
   }
 }
 
+/* Farmer role typography override */
+[data-role="farmer"] {
+  font-size: var(--font-size-body-large);
+}
+
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--color-ink-primary);
+  background: var(--color-surface-page);
+  font-family: var(--font-family-sans);
   margin: 0;
   padding: 0;
 }
