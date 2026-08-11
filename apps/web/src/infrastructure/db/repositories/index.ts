@@ -1,0 +1,1 @@
+export { PrismaHtxProfileRepository } from './PrismaHtxProfileRepository'
