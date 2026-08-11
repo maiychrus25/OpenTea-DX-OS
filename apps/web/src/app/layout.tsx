@@ -2,7 +2,11 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import '@/styles/globals.css'
 
-const inter = Inter({ subsets: ['vietnamese'], display: 'swap' })
+const inter = Inter({
+  subsets: ['latin', 'vietnamese'],
+  display: 'swap',
+  variable: '--font-inter',
+})
 
 export const metadata: Metadata = {
   title: 'DX-AgriMarket',
@@ -15,8 +19,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="vi">
-      <body className={inter.className}>{children}</body>
+    <html lang="vi" className={inter.variable}>
+      <body style={{ fontFamily: 'var(--font-family-sans)' }}>
+        {children}
+      </body>
     </html>
   )
 }
