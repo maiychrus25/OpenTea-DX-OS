@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import { auth } from "./auth"
 import { NextResponse } from "next/server"
 
@@ -5,7 +8,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const { pathname } = req.nextUrl;
 
-  // Các file public không cần chặn (api/auth, _next, public assets)
+  // CÃ¡c file public khÃ´ng cáº§n cháº·n (api/auth, _next, public assets)
   if (
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
@@ -39,7 +42,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 
-  // Redirect từ trang chủ dựa theo role
+  // Redirect tá»« trang chá»§ dá»±a theo role
   if (pathname === "/" && isLoggedIn) {
     if (role === "manager") return NextResponse.redirect(new URL("/manager/dashboard", req.url));
     if (role === "officer") return NextResponse.redirect(new URL("/officer/dashboard", req.url));

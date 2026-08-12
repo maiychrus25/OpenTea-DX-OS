@@ -1,3 +1,5 @@
+# Copyright (c) 2026 OpenTea Developers
+# Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 services:
   postgres:
@@ -60,8 +62,13 @@ services:
     networks:
       - agrimarket-net
 
+  # NOTE: n8n is an optional, external workflow automation service.
+  # n8n uses the Sustainable Use License (source-available, not OSI-approved).
+  # DX-AgriMarket does not import, link, or bundle n8n source code.
+  # It communicates with n8n only via HTTP API. n8n can be replaced with any
+  # workflow engine without affecting the core application.
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:latest  # License: Sustainable Use License (fair-code)
     container_name: agrimarket-n8n
     restart: always
     environment:
@@ -99,8 +106,11 @@ services:
     networks:
       - agrimarket-net
 
+  # NOTE: MinIO is an S3-compatible object storage (AGPL-3.0, OSI-approved).
+  # DX-AgriMarket communicates with MinIO only via S3 HTTP protocol (pre-signed URLs).
+  # No MinIO source code is imported or bundled.
   minio:
-    image: minio/minio:latest
+    image: minio/minio:latest  # License: AGPL-3.0
     container_name: agrimarket-minio
     restart: always
     environment:

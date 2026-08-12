@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) 2026 OpenTea Developers
+# Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 REQUIRED_KEYS=(
   "OLLAMA_MODEL"
   "DATABASE_URL"
@@ -18,15 +21,15 @@ REQUIRED_KEYS=(
 MISSING=0
 for key in "${REQUIRED_KEYS[@]}"; do
   if ! grep -q "^${key}=" .env.example; then
-    echo "❌ MISSING in .env.example: $key"
+    echo "âŒ MISSING in .env.example: $key"
     MISSING=$((MISSING + 1))
   fi
 done
 
 if [ $MISSING -eq 0 ]; then
-  echo "✅ All required env vars present in .env.example"
+  echo "âœ… All required env vars present in .env.example"
   exit 0
 else
-  echo "❌ $MISSING keys missing"
+  echo "âŒ $MISSING keys missing"
   exit 1
 fi

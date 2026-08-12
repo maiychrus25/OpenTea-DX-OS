@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import * as React from 'react'
 import { render } from '@testing-library/react'
 import '@testing-library/jest-dom'
@@ -7,7 +10,7 @@ import * as path from 'path'
 it('[data-role="farmer"] applies 17px font size to children', () => {
   const { container } = render(
     <div data-role="farmer">
-      <p>Văn bản tiếng Việt</p>
+      <p>VÄƒn báº£n tiáº¿ng Viá»‡t</p>
     </div>
   )
   expect(container.firstChild).toHaveAttribute('data-role', 'farmer')

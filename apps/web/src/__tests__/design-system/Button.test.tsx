@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import * as React from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -8,8 +11,8 @@ import * as path from 'path'
 
 describe('Button', () => {
   it('renders with primary variant', () => {
-    render(<Button variant="primary">Lưu</Button>)
-    expect(screen.getByRole('button', { name: 'Lưu' })).toBeInTheDocument()
+    render(<Button variant="primary">LÆ°u</Button>)
+    expect(screen.getByRole('button', { name: 'LÆ°u' })).toBeInTheDocument()
   })
 
   it('renders all 4 variants without errors', () => {
@@ -24,7 +27,7 @@ describe('Button', () => {
   it('is disabled and not clickable when disabled prop is set', async () => {
     const user = userEvent.setup()
     const onClick = jest.fn()
-    render(<Button variant="primary" disabled onClick={onClick}>Lưu</Button>)
+    render(<Button variant="primary" disabled onClick={onClick}>LÆ°u</Button>)
     await user.click(screen.getByRole('button'))
     expect(onClick).not.toHaveBeenCalled()
   })

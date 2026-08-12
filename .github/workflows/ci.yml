@@ -1,3 +1,6 @@
+# Copyright (c) 2026 OpenTea Developers
+# Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 name: CI/CD Quality Gate
 
 on:
@@ -25,9 +28,9 @@ jobs:
       - name: Check JSON format
         run: |
           for file in workflows/*.json; do
-            jq . "$file" > /dev/null || (echo "❌ Invalid JSON in $file" && exit 1)
+            jq . "$file" > /dev/null || (echo "âŒ Invalid JSON in $file" && exit 1)
           done
-          echo "✅ All workflows are valid JSON"
+          echo "âœ… All workflows are valid JSON"
 
   test-frontend:
     name: Lint & Build Next.js
@@ -100,7 +103,7 @@ jobs:
         
       - name: Run Smoke Test
         run: |
-          # Đợi các service up đầy đủ (Postgres/Keycloak tốn thời gian)
+          # Äá»£i cÃ¡c service up Ä‘áº§y Ä‘á»§ (Postgres/Keycloak tá»‘n thá»i gian)
           sleep 15
           bash scripts/smoke-test.sh
           

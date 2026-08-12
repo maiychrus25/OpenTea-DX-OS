@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import { HtxProfileRepository } from '@/domain/profile/ports/HtxProfileRepository'
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { NotFoundError } from '@/domain/errors'

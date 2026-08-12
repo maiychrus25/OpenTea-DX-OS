@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import * as React from 'react'
 import styles from './TopBar.module.css'
 
@@ -33,7 +36,7 @@ export const TopBar: React.FC<TopBarProps> = ({ roleName, userName, notification
             {/* Empty placeholder to be wired in Story 2.7 */}
           </div>
         )}
-        <div className={styles.avatar} aria-label={`Người dùng: ${userName}`}>
+        <div className={styles.avatar} aria-label={`NgÆ°á»i dÃ¹ng: ${userName}`}>
           {initials}
         </div>
       </div>

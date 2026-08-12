@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import { PrismaClient, ParcelStatus } from '@prisma/client'
 const prisma = new PrismaClient()
 
@@ -9,9 +12,9 @@ async function main() {
     create: {
       name: 'HTX MD2 Mekong Delta',
       htx_code: 'MD2',
-      address: 'Xã Long Hòa, Huyện Châu Thành, Tỉnh Tiền Giang',
-      crop_types: ['Lúa ST25', 'Lúa OM5451'],
-      season_label: 'Vụ Hè Thu 2026',
+      address: 'XÃ£ Long HÃ²a, Huyá»‡n ChÃ¢u ThÃ nh, Tá»‰nh Tiá»n Giang',
+      crop_types: ['LÃºa ST25', 'LÃºa OM5451'],
+      season_label: 'Vá»¥ HÃ¨ Thu 2026',
       contact_phone: '02733 123 456',
     },
   })
@@ -21,9 +24,9 @@ async function main() {
     where: { phone: '0901234567' },
     update: {},
     create: {
-      name: 'Nguyễn Văn A',
+      name: 'Nguyá»…n VÄƒn A',
       phone: '0901234567',
-      address: 'Ấp 1, Xã Long Hòa',
+      address: 'áº¤p 1, XÃ£ Long HÃ²a',
     },
   })
 
@@ -31,9 +34,9 @@ async function main() {
     where: { phone: '0901234568' },
     update: {},
     create: {
-      name: 'Trần Thị B',
+      name: 'Tráº§n Thá»‹ B',
       phone: '0901234568',
-      address: 'Ấp 2, Xã Long Hòa',
+      address: 'áº¤p 2, XÃ£ Long HÃ²a',
     },
   })
 
@@ -41,9 +44,9 @@ async function main() {
     where: { phone: '0901234569' },
     update: {},
     create: {
-      name: 'Lê Văn C',
+      name: 'LÃª VÄƒn C',
       phone: '0901234569',
-      address: 'Ấp 3, Xã Long Hòa',
+      address: 'áº¤p 3, XÃ£ Long HÃ²a',
     },
   })
 
@@ -54,7 +57,7 @@ async function main() {
     create: {
       parcel_code: 'P-HTX-MD2-001',
       household_id: hh1.id,
-      crop_type: 'Lúa ST25',
+      crop_type: 'LÃºa ST25',
       area_ha: 1.5,
       centroid_lat: 10.762622,
       centroid_lng: 106.660172,
@@ -68,7 +71,7 @@ async function main() {
     create: {
       parcel_code: 'P-HTX-MD2-002',
       household_id: hh1.id,
-      crop_type: 'Lúa ST25',
+      crop_type: 'LÃºa ST25',
       area_ha: 2.0,
       status: ParcelStatus.TENDING,
     },
@@ -80,7 +83,7 @@ async function main() {
     create: {
       parcel_code: 'P-HTX-MD2-003',
       household_id: hh2.id,
-      crop_type: 'Lúa OM5451',
+      crop_type: 'LÃºa OM5451',
       area_ha: 3.2,
       status: ParcelStatus.HARVEST_APPROVED,
     },
@@ -92,7 +95,7 @@ async function main() {
     create: {
       parcel_code: 'P-HTX-MD2-004',
       household_id: hh2.id,
-      crop_type: 'Lúa OM5451',
+      crop_type: 'LÃºa OM5451',
       area_ha: 1.8,
       status: ParcelStatus.HARVESTED,
     },
@@ -104,7 +107,7 @@ async function main() {
     create: {
       parcel_code: 'P-HTX-MD2-005',
       household_id: hh3.id,
-      crop_type: 'Lúa ST25',
+      crop_type: 'LÃºa ST25',
       area_ha: 0.8,
       status: ParcelStatus.DRAFT,
     },

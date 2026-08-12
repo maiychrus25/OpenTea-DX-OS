@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import NextAuth from "next-auth"
 import Keycloak from "next-auth/providers/keycloak"
 
@@ -28,6 +31,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 8 * 60 * 60, // 8 hours (yêu cầu từ checklist)
+    maxAge: 8 * 60 * 60, // 8 hours (yÃªu cáº§u tá»« checklist)
   }
 })

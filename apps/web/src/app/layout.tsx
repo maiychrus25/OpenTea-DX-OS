@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import '@/styles/globals.css'
@@ -15,7 +18,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'DX-AgriMarket',
-  description: 'Hệ điều hành số Nông nghiệp',
+  description: 'Há»‡ Ä‘iá»u hÃ nh sá»‘ NÃ´ng nghiá»‡p',
 }
 
 export default function RootLayout({

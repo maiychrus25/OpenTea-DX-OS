@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 "use client"
 
 import { useState } from "react"
@@ -9,10 +12,10 @@ export default function CopyUrlButton() {
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(window.location.href)
-            setStatus("Đã sao chép URL")
+            setStatus("ÄÃ£ sao chÃ©p URL")
         } catch (error) {
             console.error("Copy failed", error)
-            setStatus("Không thể sao chép, vui lòng thử lại")
+            setStatus("KhÃ´ng thá»ƒ sao chÃ©p, vui lÃ²ng thá»­ láº¡i")
         }
         setTimeout(() => setStatus(""), 3000)
     }
@@ -20,7 +23,7 @@ export default function CopyUrlButton() {
     return (
         <div className={styles.wrapper}>
             <button type="button" className={styles.button} onClick={handleCopy}>
-                Sao chép URL
+                Sao chÃ©p URL
             </button>
             {status ? <span className={styles.status}>{status}</span> : null}
         </div>
