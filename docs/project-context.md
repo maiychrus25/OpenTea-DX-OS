@@ -29,7 +29,7 @@ MNM (100% open source). OLP competition + internal production use.
 | ORM | Prisma 5 | Schema at `apps/web/prisma/schema.prisma` |
 | Database | PostgreSQL 16 | Single source of truth |
 | Files | MinIO | Pre-signed URLs only, never direct client access |
-| LLM | Ollama (phi3 local / mistral prod) | `OLLAMA_MODEL` env var |
+| LLM | Groq API Free Tier (Llama-3.1-8B) | `OLLAMA_MODEL` env var, `openai` npm client |
 | TTS | Piper TTS | On-demand via `/api/tts` |
 | Pipeline | n8n | Writes market_data, weather_cache, bulletins |
 | Disease AI | FastAPI + TF/Keras | Internal: `http://disease-api:8000` |
@@ -123,15 +123,19 @@ Next.js READS these tables; it NEVER writes them.
 ## Environment Variables (Key ones)
 
 ```bash
-OLLAMA_MODEL=phi3              # local dev (4GB RAM)
-OLLAMA_MODEL=mistral           # server/demo
-OLLAMA_BASE_URL=http://ollama:11434
+OLLAMA_MODEL=llama-3.1-8b-instant  # Groq Free Tier model
+GROQ_API_KEY=your_groq_api_key     # https://console.groq.com (Free Tier, no cost)
 DATABASE_URL=postgresql://...
-NEXTAUTH_SECRET=...
+AUTH_SECRET=...
 KEYCLOAK_ISSUER=http://keycloak:8080/realms/agrimarket
 MINIO_ENDPOINT=minio:9000
 DISEASE_API_URL=http://disease-api:8000
 ```
+
+> **Note:** Dự án sử dụng Groq API Free Tier thay vì tự host Ollama.
+> Client library `openai` (npm, Apache 2.0) tương thích OpenAI/Groq.
+> Có thể switch về Ollama local bằng cách thay `GROQ_API_KEY` → `OLLAMA_BASE_URL`.
+
 Full list: `.env.example`
 
 ---
