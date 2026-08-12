@@ -1,24 +1,37 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import { signIn } from "../../../auth"
+import { Metadata } from "next"
+import { signIn } from "@/auth"
+import { Card, Button } from "@/components/ui"
+import styles from "./login-page.module.css"
+
+export const metadata: Metadata = {
+  title: "Đăng nhập | DX-AgriMarket",
+  description: "Hệ điều hành số Nông nghiệp",
+}
 
 export default function LoginPage() {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
-      <h1>ÄÄƒng nháº­p DX-AgriMarket</h1>
-      <p>Há»‡ Ä‘iá»u hÃ nh sá»‘ NÃ´ng nghiá»‡p</p>
-      
-      <form
-        action={async () => {
-          "use server"
-          await signIn("keycloak")
-        }}
-      >
-        <button type="submit" style={{ padding: '10px 20px', fontSize: '16px', cursor: 'pointer' }}>
-          ÄÄƒng nháº­p qua Keycloak
-        </button>
-      </form>
+    <div className={styles.container}>
+      <Card className={styles.card}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>Đăng nhập DX-AgriMarket</h1>
+          <p className={styles.subtitle}>Hệ điều hành số Nông nghiệp</p>
+        </div>
+        
+        <form
+          action={async () => {
+            "use server"
+            await signIn("keycloak")
+          }}
+          className={styles.form}
+        >
+          <Button type="submit" className={styles.submitButton}>
+            Đăng nhập qua Keycloak
+          </Button>
+        </form>
+      </Card>
     </div>
   )
 }
