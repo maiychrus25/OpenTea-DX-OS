@@ -18,6 +18,7 @@ describe('GetHtxProfileUseCase', () => {
 
     const mockRepo: HtxProfileRepository = {
       getProfile: jest.fn().mockResolvedValue(mockProfile),
+      updateProfile: jest.fn(),
     }
 
     const useCase = new GetHtxProfileUseCase(mockRepo)
@@ -30,6 +31,7 @@ describe('GetHtxProfileUseCase', () => {
   it('throws NotFoundError when profile is missing', async () => {
     const mockRepo: HtxProfileRepository = {
       getProfile: jest.fn().mockResolvedValue(null),
+      updateProfile: jest.fn(),
     }
 
     const useCase = new GetHtxProfileUseCase(mockRepo)

@@ -3,6 +3,7 @@ import styles from './AppShell.module.css'
 import { Sidebar, NavItem } from '../Sidebar/Sidebar'
 import { TopBar } from '../TopBar/TopBar'
 import { BottomNav } from '../BottomNav/BottomNav'
+import { Toaster } from 'sonner'
 
 // Dummy role setup until auth is integrated
 const getNavItemsForRole = (_role: string): NavItem[] => {
@@ -50,6 +51,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       </main>
 
       <BottomNav navItems={items} />
+      <Toaster position="top-right" richColors />
     </div>
   )
 }
