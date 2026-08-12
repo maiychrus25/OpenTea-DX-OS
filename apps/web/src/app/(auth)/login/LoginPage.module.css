@@ -1,0 +1,48 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--neutral-surface);
+  padding: var(--spacing-4);
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+  padding: var(--spacing-8);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.title {
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-size: var(--font-size-heading-3);
+  font-weight: 700;
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--neutral-ink-subtle);
+  font-size: var(--font-size-body);
+  margin: 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--spacing-4);
+}
+
+.submitButton {
+  width: 100%;
+}
