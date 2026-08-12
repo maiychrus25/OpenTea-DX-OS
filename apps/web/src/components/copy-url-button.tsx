@@ -4,6 +4,7 @@
 "use client"
 
 import { useState } from "react"
+import { logger } from "@/lib/logger"
 import styles from "./copy-url-button.module.css"
 
 export default function CopyUrlButton() {
@@ -14,7 +15,7 @@ export default function CopyUrlButton() {
             await navigator.clipboard.writeText(window.location.href)
             setStatus("ÄÃ£ sao chÃ©p URL")
         } catch (error) {
-            console.error("Copy failed", error)
+            logger.error("Copy failed", { error })
             setStatus("KhÃ´ng thá»ƒ sao chÃ©p, vui lÃ²ng thá»­ láº¡i")
         }
         setTimeout(() => setStatus(""), 3000)
