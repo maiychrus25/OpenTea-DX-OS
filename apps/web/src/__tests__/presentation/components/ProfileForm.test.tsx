@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ProfileForm } from '@/app/(manager)/profile/_components/ProfileForm'
+import { ProfileForm } from '@/app/manager/profile/_components/ProfileForm'
 import '@testing-library/jest-dom'
 
 // Mock fetch
