@@ -4,11 +4,11 @@
 function formatContext(context?: unknown): unknown {
   if (context instanceof Error) {
     return {
+      // @ts-ignore - Need to spread other properties from the Error object safely
+      ...context,
       name: context.name,
       message: context.message,
       stack: context.stack,
-      // @ts-ignore - Need to spread other properties from the Error object safely
-      ...context,
     }
   }
   if (context !== null && typeof context === 'object') {
