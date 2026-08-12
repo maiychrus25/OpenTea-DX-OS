@@ -4,9 +4,14 @@
 import { NextResponse } from 'next/server'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
+import { UpdateHtxProfileUseCase } from '@/application/useCases/UpdateHtxProfileUseCase'
 import { withErrorHandler } from '@/presentation/api/withErrorHandler'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { auth } from '@/auth'
+import { htxProfileUpdateSchema } from '@/domain/profile/schemas/htxProfileSchema'
+
+// Manager role value -- aligns with Domain Glossary (AGENTS.md)
+const MANAGER_ROLE = 'manager' as const
 
 // GET /api/profile -- returns HTX profile data (requires authentication)
 async function getProfileHandler(_request: Request) {
@@ -21,4 +26,23 @@ async function getProfileHandler(_request: Request) {
   return NextResponse.json({ data: profile })
 }
 
+// PUT /api/profile -- update HTX profile (Manager only)
+async function putProfileHandler(request: Request) {
+  const session = await auth()
+
+  if (!session || !session.user || (session.user as any).role !== MANAGER_ROLE) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const json = await request.json()
+  const body = htxProfileUpdateSchema.parse(json)
+
+  const profileRepo = new PrismaHtxProfileRepository(prisma)
+  const useCase = new UpdateHtxProfileUseCase(profileRepo)
+  const updatedProfile = await useCase.execute(body)
+
+  return NextResponse.json({ data: updatedProfile })
+}
+
 export const GET = withErrorHandler(getProfileHandler)
+export const PUT = withErrorHandler(putProfileHandler)
