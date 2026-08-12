@@ -1,36 +1,39 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
-import '@/styles/globals.css'
+import { prisma } from "@/infrastructure/db/prisma.client"
 
-const inter = Inter({
-  subsets: ['latin', 'vietnamese'],
-  display: 'swap',
-  variable: '--font-inter',
-})
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
+interface PageProps {
+    params: {
+        lotCode: string
+    }
 }
 
-export const metadata: Metadata = {
-  title: 'DX-AgriMarket',
-  description: 'Há»‡ Ä‘iá»u hÃ nh sá»‘ NÃ´ng nghiá»‡p',
-}
+export default async function LotPage({ params }: PageProps) {
+    const lot = await prisma.lot.findUnique({
+        where: { lot_code: params.lotCode },
+    })
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="vi" className={inter.variable}>
-      <body>
-        {children}
-      </body>
-    </html>
-  )
+    if (!lot) {
+        return (
+            <div style={{ padding: "24px" }}>
+                <h1>Lot không tìm thấy</h1>
+                <p>Xin kiểm tra lại mã lot hoặc quét lại QR.</p>
+            </div>
+        )
+    }
+
+    return (
+        <main style={{ padding: "24px", maxWidth: "720px", margin: "0 auto" }}>
+            <h1>Chi tiết Lot</h1>
+            <div style={{ marginTop: "20px", padding: "20px", border: "1px solid #e5e7eb", borderRadius: "0.75rem", background: "#f9fafb" }}>
+                <p><strong>Mã lot:</strong> {lot.lot_code}</p>
+                <p><strong>Nông sản:</strong> {lot.commodity}</p>
+                <p><strong>Trạng thái:</strong> {lot.status}</p>
+                <p><strong>Ngày đóng gói:</strong> {lot.packaging_date ? new Date(lot.packaging_date).toLocaleDateString("vi-VN") : "N/A"}</p>
+                <p><strong>Trọng lượng:</strong> {lot.total_weight_kg ?? "N/A"} kg</p>
+                <p><strong>Phân loại:</strong> {lot.quality_grade ?? "Chưa phân loại"}</p>
+            </div>
+        </main>
+    )
 }
