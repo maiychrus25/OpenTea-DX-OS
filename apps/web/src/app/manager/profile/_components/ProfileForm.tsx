@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { Card, Button } from '@/components/ui'
-import { htxProfileUpdateSchema, type HtxProfileUpdateInput } from '@/domain/profile/schemas/htxProfileSchema'
+import { htxProfileUpdateSchema, type HtxProfileUpdateInput } from '@/lib/validations/htx-profile.schema'
 import type { HtxProfile } from '@/domain/profile/entities/HtxProfile'
 import styles from './ProfileForm.module.css'
 
