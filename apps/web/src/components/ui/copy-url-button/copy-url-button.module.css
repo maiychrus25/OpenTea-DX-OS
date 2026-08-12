@@ -8,8 +8,8 @@
 }
 
 .button {
-    background: #2563eb;
-    color: white;
+    background: var(--color-info);
+    color: var(--color-ink-inverse);
     border: none;
     border-radius: 0.5rem;
     padding: 0.6rem 1rem;
@@ -18,10 +18,10 @@
 }
 
 .button:hover {
-    background: #1d4ed8;
+    opacity: 0.9;
 }
 
 .status {
-    color: #111827;
+    color: var(--color-ink-primary);
     font-size: 0.95rem;
 }
