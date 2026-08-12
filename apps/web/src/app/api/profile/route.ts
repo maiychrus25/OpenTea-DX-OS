@@ -8,7 +8,7 @@ import { UpdateHtxProfileUseCase } from '@/application/useCases/UpdateHtxProfile
 import { withErrorHandler } from '@/presentation/api/withErrorHandler'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { auth } from '@/auth'
-import { htxProfileUpdateSchema } from '@/domain/profile/schemas/htxProfileSchema'
+import { htxProfileUpdateSchema } from '@/lib/validations/htx-profile.schema'
 
 // Manager role value -- aligns with Domain Glossary (AGENTS.md)
 const MANAGER_ROLE = 'manager' as const

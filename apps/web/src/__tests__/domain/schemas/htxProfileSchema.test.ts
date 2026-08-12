@@ -1,4 +1,4 @@
-import { htxProfileUpdateSchema } from '@/domain/profile/schemas/htxProfileSchema'
+import { htxProfileUpdateSchema } from '@/lib/validations/htx-profile.schema'
 
 describe('htxProfileUpdateSchema', () => {
   it('accepts valid data', () => {
