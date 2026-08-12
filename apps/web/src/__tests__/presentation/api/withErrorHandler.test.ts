@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server'
 import { withErrorHandler } from '@/presentation/api/withErrorHandler'
 import { NotFoundError, ValidationError, DomainError } from '@/domain/errors'
+import { logger } from '@/lib/logger'
 
 jest.mock('next/server', () => ({
   NextResponse: {
@@ -66,7 +67,7 @@ describe('withErrorHandler', () => {
   })
 
   it('maps generic Error to 500 with INTERNAL_ERROR code', async () => {
-    jest.spyOn(console, 'error').mockImplementation(() => {})
+    jest.spyOn(logger, 'error').mockImplementation(() => {})
 
     const handler = withErrorHandler(async () => {
       throw new Error('Kaboom')

@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { Prisma } from '@prisma/client'
 import { DomainError, NotFoundError, ValidationError } from '@/domain/errors'
+import { logger } from '@/lib/logger'
 
 type RouteHandler = (req: Request, context: unknown) => Promise<NextResponse>
 
@@ -62,7 +63,7 @@ export function withErrorHandler(handler: RouteHandler): RouteHandler {
           { status: 422 }
         )
       }
-      console.error('Unhandled API Error:', err)
+      logger.error('Unhandled API Error', { error: err, url: req.url })
       return NextResponse.json(
         { error: { code: 'INTERNAL_ERROR', message: 'Internal Server Error' } },
         { status: 500 }
