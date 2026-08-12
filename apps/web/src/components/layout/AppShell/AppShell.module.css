@@ -27,9 +27,18 @@
     grid-template-columns: var(--sidebar-width) 1fr;
   }
   
+  .shell[data-role="farmer"] {
+    display: flex;
+    flex-direction: column;
+  }
+
   .content {
     padding-bottom: 0;
     min-width: 0; /* Fixes grid blowout issue */
+  }
+
+  .shell[data-role="farmer"] .content {
+    padding-bottom: 64px;
   }
 
   .pageContent {

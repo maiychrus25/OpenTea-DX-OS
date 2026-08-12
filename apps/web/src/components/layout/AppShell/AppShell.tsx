@@ -8,15 +8,6 @@ import { TopBar } from '../TopBar/TopBar'
 import { BottomNav } from '../BottomNav/BottomNav'
 import { Toaster } from 'sonner'
 
-// Dummy role setup until auth is integrated
-const getNavItemsForRole = (_role: string): NavItem[] => {
-  // We don't have lucide-react icons rendered here natively yet, but we will pass placeholders or real ones
-  // To avoid Client Component in Server Component if not needed, we assume icons are passed as React nodes
-  return [
-    { label: 'Tá»•ng quan', href: '/dashboard', icon: <span /> },
-    { label: 'Báº£n tin', href: '/bulletin', icon: <span /> }
-  ]
-}
 
 const getRoleLabel = (role: string): string => {
   switch (role) {
@@ -29,22 +20,23 @@ const getRoleLabel = (role: string): string => {
 
 export interface AppShellProps {
   children: React.ReactNode
-  role?: string
-  userName?: string
-  navItems?: NavItem[] // Optional override
+  role: string
+  userName: string
+  navItems: NavItem[]
+  hideSidebar?: boolean
 }
 
 export const AppShell: React.FC<AppShellProps> = ({ 
   children, 
-  role = 'farmer', 
-  userName = 'User',
-  navItems
+  role, 
+  userName,
+  navItems,
+  hideSidebar = false
 }) => {
-  const items = navItems || getNavItemsForRole(role)
-  
+
   return (
     <div className={styles.shell} data-role={role}>
-      <Sidebar navItems={items} />
+      {!hideSidebar && <Sidebar navItems={navItems} />}
       
       <main className={styles.content}>
         <TopBar roleName={getRoleLabel(role)} userName={userName} />
@@ -53,7 +45,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         </div>
       </main>
 
-      <BottomNav navItems={items} />
+      <BottomNav navItems={navItems} />
       <Toaster position="top-right" richColors />
     </div>
   )

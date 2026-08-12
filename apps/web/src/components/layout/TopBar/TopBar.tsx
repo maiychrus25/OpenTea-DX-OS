@@ -3,6 +3,8 @@
 
 import * as React from 'react'
 import styles from './TopBar.module.css'
+import { LogOut } from 'lucide-react'
+import Link from 'next/link'
 
 
 export interface TopBarProps {
@@ -36,9 +38,13 @@ export const TopBar: React.FC<TopBarProps> = ({ roleName, userName, notification
             {/* Empty placeholder to be wired in Story 2.7 */}
           </div>
         )}
-        <div className={styles.avatar} aria-label={`NgÆ°á»i dÃ¹ng: ${userName}`}>
+        <div className={styles.avatar} aria-label={`Người dùng: ${userName}`}>
           {initials}
         </div>
+        <Link href="/api/auth/signout" className={styles.signOutBtn} title="Đăng xuất">
+          <LogOut size={18} />
+          <span className={styles.signOutText}>Đăng xuất</span>
+        </Link>
       </div>
     </header>
   )
