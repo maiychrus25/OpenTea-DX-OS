@@ -8,6 +8,9 @@ import { UpdateHtxProfileUseCase } from '@/application/useCases/UpdateHtxProfile
 import { withErrorHandler } from '@/presentation/api/withErrorHandler'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { auth } from '@/auth'
+fix/94-middleware-auth-security
+
+// GET route with no request body — Zod validation not applicable.
 import { htxProfileUpdateSchema } from '@/domain/profile/schemas/htxProfileSchema'
 
 // Manager role value — aligns with Domain Glossary (AGENTS.md)
@@ -15,13 +18,20 @@ const MANAGER_ROLE = 'manager' as const
 
 chore/license-headers-changelog
 // GET route with no request body â€” Zod validation not applicable.
+ main
 // For routes with body/params: const body = SomeSchema.parse(await req.json())
 
  main
 async function getProfileHandler(_request: Request) {
+ fix/94-middleware-auth-security
+  // Defense-in-depth: verify auth even though middleware checks too
+  const session = await auth()
+  if (!session?.user) {
+
   // GET also requires authentication — profile data is HTX-internal
   const session = await auth()
   if (!session || !session.user) {
+ main
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
