@@ -7,12 +7,12 @@ import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCas
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { NotFoundError } from '@/domain/errors'
-import { getServerSession } from 'next-auth'
+import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import styles from './Dashboard.module.css'
 
 export default async function ManagerDashboard() {
-  const session = await getServerSession()
+  const session = await auth()
   if (!session || session.user?.role !== 'manager') {
     redirect('/login')
   }

@@ -1,18 +1,17 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import React from 'react'
 import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import ManagerDashboard from '../page'
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { NotFoundError } from '@/domain/errors'
-import { getServerSession } from 'next-auth'
+import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 
-// Mock next-auth
-jest.mock('next-auth', () => ({
-  getServerSession: jest.fn(),
+// Mock auth
+jest.mock('@/auth', () => ({
+  auth: jest.fn(),
 }))
 
 // Mock next/navigation
@@ -47,13 +46,13 @@ describe('ManagerDashboard', () => {
   })
 
   it('redirects to login if no session', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValueOnce(null)
+    ;(auth as jest.Mock).mockResolvedValueOnce(null)
     await ManagerDashboard()
     expect(redirect).toHaveBeenCalledWith('/login')
   })
 
   it('redirects to login if role is not manager', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+    ;(auth as jest.Mock).mockResolvedValueOnce({
       user: { role: 'farmer' },
     })
     await ManagerDashboard()
@@ -61,11 +60,11 @@ describe('ManagerDashboard', () => {
   })
 
   it('renders onboarding CTA when profile is not found', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+    ;(auth as jest.Mock).mockResolvedValueOnce({
       user: { role: 'manager' },
     })
     
-    const mockExecute = jest.fn().mockRejectedValueOnce(new NotFoundError('HtxProfile', 'id', '1'))
+    const mockExecute = jest.fn().mockRejectedValueOnce(new NotFoundError('HtxProfile not found'))
     ;(GetHtxProfileUseCase as jest.Mock).mockImplementationOnce(() => ({
       execute: mockExecute,
     }))
@@ -78,7 +77,7 @@ describe('ManagerDashboard', () => {
   })
 
   it('does not render onboarding CTA when profile exists', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+    ;(auth as jest.Mock).mockResolvedValueOnce({
       user: { role: 'manager' },
     })
     
