@@ -157,6 +157,11 @@ Kiểm tra các business rule có được implement đúng không:
 - TODO có đúng format `// TODO(issue-N): description` không?
 - Import order có đúng: Node built-ins → External packages → Internal absolute (@/) → Relative?
 - Error handling có theo pattern đúng (Zod error → 400, Domain error → 422, Internal → 500)?
+- **[LICENSE HEADER CHECK]** Mọi file MỚI (diff line `+++ b/...` là file chưa từng tồn tại) thuộc loại `.ts/.tsx/.js/.jsx/.css/.py/.yml/.sh/Dockerfile` PHẢI có dòng đầu tiên chứa `Copyright (c) 2026 OpenTea Developers` — nếu thiếu → lỗi **HIGH** (AGENTS.md §License Comment Header)
+  ```bash
+  # Kiểm tra nhanh:
+  gh pr diff <pr_number> --name-only | xargs -I{} sh -c 'head -1 {} | grep -q "Copyright" || echo "MISSING LICENSE: {}"'
+  ```
 
 ---
 
