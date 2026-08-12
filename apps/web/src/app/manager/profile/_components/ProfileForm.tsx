@@ -30,6 +30,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     reset,
     formState: { errors },
   } = useForm<ProfileFormValues>({
+    // zodResolver type inference conflicts with react-hook-form strict mode — cast needed
     resolver: zodResolver(htxProfileUpdateSchema) as any,
     defaultValues: {
       name: initialData?.name ?? '',
