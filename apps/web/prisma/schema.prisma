@@ -206,6 +206,8 @@ model Lot {
   updated_at       DateTime  @updatedAt
 
   lot_parcels LotParcel[]
+
+  @@map("lots")
 }
 
 model LotParcel {
