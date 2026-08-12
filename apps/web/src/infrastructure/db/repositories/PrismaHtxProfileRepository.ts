@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import type { PrismaClient } from '@prisma/client'
 import type { HtxProfileRepository } from '@/domain/profile/ports/HtxProfileRepository'
 import type { HtxProfile } from '@/domain/profile/entities/HtxProfile'
@@ -8,7 +11,7 @@ export class PrismaHtxProfileRepository implements HtxProfileRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async getProfile(): Promise<HtxProfile | null> {
-    // HtxProfile is a singleton table — findFirst() returns the only row
+    // HtxProfile is a singleton table â€” findFirst() returns the only row
     const profile = await this.prisma.htxProfile.findFirst({
       orderBy: { created_at: 'asc' },
     })

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import { NextResponse } from 'next/server'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
@@ -10,6 +13,11 @@ import { htxProfileUpdateSchema } from '@/domain/profile/schemas/htxProfileSchem
 // Manager role value — aligns with Domain Glossary (AGENTS.md)
 const MANAGER_ROLE = 'manager' as const
 
+chore/license-headers-changelog
+// GET route with no request body â€” Zod validation not applicable.
+// For routes with body/params: const body = SomeSchema.parse(await req.json())
+
+ main
 async function getProfileHandler(_request: Request) {
   // GET also requires authentication — profile data is HTX-internal
   const session = await auth()

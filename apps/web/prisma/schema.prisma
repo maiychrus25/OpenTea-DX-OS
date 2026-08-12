@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 // apps/web/prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
@@ -8,7 +11,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── Enums ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Enums â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 enum ParcelStatus {
   SOWING
@@ -66,7 +69,7 @@ enum DiseaseReportStatus {
   CONFIRMED
 }
 
-// ─── HTX Profile (singleton) ─────────────────────────────────────────────────
+// â”€â”€â”€ HTX Profile (singleton) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model HtxProfile {
   id            String   @id @default(cuid())
@@ -74,9 +77,9 @@ model HtxProfile {
   address       String
   contact_phone String?
   contact_email String?
-  crop_types    String[] // e.g. ["Lúa ST25", "Xoài Cát Chu"]
-  season_label  String? // e.g. "Vụ Hè Thu 2026"
-  htx_code      String   @unique // e.g. "MD2" — used in lot codes + public URL
+  crop_types    String[] // e.g. ["LÃºa ST25", "XoÃ i CÃ¡t Chu"]
+  season_label  String? // e.g. "Vá»¥ HÃ¨ Thu 2026"
+  htx_code      String   @unique // e.g. "MD2" â€” used in lot codes + public URL
   total_area_ha Float    @default(0)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
@@ -84,7 +87,7 @@ model HtxProfile {
   @@map("htx_profiles")
 }
 
-// ─── Households ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Households â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model Household {
   id               String   @id @default(cuid())
@@ -102,7 +105,7 @@ model Household {
   @@map("households")
 }
 
-// ─── Farm Zone ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Farm Zone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model Parcel {
   id                     String       @id @default(cuid())
@@ -134,7 +137,7 @@ model ParcelCropCycle {
   id           String    @id @default(cuid())
   parcel_id    String
   parcel       Parcel    @relation(fields: [parcel_id], references: [id])
-  season       String? // e.g. "Vụ Hè Thu 2026"
+  season       String? // e.g. "Vá»¥ HÃ¨ Thu 2026"
   sowed_at     DateTime?
   harvested_at DateTime?
   created_at   DateTime  @default(now())
@@ -142,7 +145,7 @@ model ParcelCropCycle {
   @@map("parcel_crop_cycles")
 }
 
-// ─── Journal ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Journal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model JournalEntry {
   id              String       @id @default(cuid())
@@ -185,7 +188,7 @@ model JournalActivity {
   @@map("journal_activities")
 }
 
-// ─── Lots & QR ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Lots & QR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model Lot {
   id               String    @id @default(cuid())
@@ -216,7 +219,7 @@ model LotParcel {
   @@map("lot_parcels")
 }
 
-// ─── Notifications ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model Notification {
   id            String           @id @default(cuid())
@@ -237,7 +240,7 @@ model Notification {
   @@map("notifications")
 }
 
-// ─── Disease Detection ────────────────────────────────────────────────────────
+// â”€â”€â”€ Disease Detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model DiseaseReport {
   id                  String              @id @default(cuid())
@@ -264,7 +267,7 @@ model DiseaseReport {
   @@map("disease_reports")
 }
 
-// ─── Market & Economic Data (n8n writes, Next.js reads) ──────────────────────
+// â”€â”€â”€ Market & Economic Data (n8n writes, Next.js reads) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model MarketData {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -317,7 +320,7 @@ model WeatherCache {
   @@map("weather_cache")
 }
 
-// ─── Partner Map ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Partner Map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model Partner {
   id                  String      @id @default(cuid())
@@ -334,7 +337,7 @@ model Partner {
   @@map("partners")
 }
 
-// ─── Chat History ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Chat History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model ChatHistory {
   id           String   @id @default(cuid())

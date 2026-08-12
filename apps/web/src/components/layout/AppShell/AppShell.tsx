@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import * as React from 'react'
 import styles from './AppShell.module.css'
 import { Sidebar, NavItem } from '../Sidebar/Sidebar'
@@ -10,16 +13,16 @@ const getNavItemsForRole = (_role: string): NavItem[] => {
   // We don't have lucide-react icons rendered here natively yet, but we will pass placeholders or real ones
   // To avoid Client Component in Server Component if not needed, we assume icons are passed as React nodes
   return [
-    { label: 'Tổng quan', href: '/dashboard', icon: <span /> },
-    { label: 'Bản tin', href: '/bulletin', icon: <span /> }
+    { label: 'Tá»•ng quan', href: '/dashboard', icon: <span /> },
+    { label: 'Báº£n tin', href: '/bulletin', icon: <span /> }
   ]
 }
 
 const getRoleLabel = (role: string): string => {
   switch (role) {
-    case 'farmer': return 'Nông dân'
-    case 'manager': return 'Trưởng HTX'
-    case 'officer': return 'Cán bộ KT'
+    case 'farmer': return 'NÃ´ng dÃ¢n'
+    case 'manager': return 'TrÆ°á»Ÿng HTX'
+    case 'officer': return 'CÃ¡n bá»™ KT'
     default: return role
   }
 }

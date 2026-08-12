@@ -1,3 +1,6 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
 :root {
   /* Primary */
   --color-primary: #16A34A;
@@ -11,7 +14,7 @@
   --color-accent-subtle: #FFF7ED;
   --color-accent-foreground: #FFFFFF;
 
-  /* Parcel Status (CLOSED SET — do not use for other purposes) */
+  /* Parcel Status (CLOSED SET â€” do not use for other purposes) */
   --color-status-sowing: #16A34A;
   --color-status-tending: #CA8A04;
   --color-status-harvest-approved: #EA580C;
@@ -62,7 +65,7 @@
   --font-size-h2: 1.25rem;          /* 20px */
   --font-size-h3: 1rem;             /* 16px */
   --font-size-body: 0.9375rem;      /* 15px */
-  --font-size-body-large: 1.0625rem;/* 17px — farmer role */
+  --font-size-body-large: 1.0625rem;/* 17px â€” farmer role */
   --font-size-label: 0.875rem;      /* 14px */
   --font-size-meta: 0.75rem;        /* 12px */
   --font-size-mono: 0.8125rem;      /* 13px */

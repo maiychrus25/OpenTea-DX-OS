@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) 2026 OpenTea Developers
+# Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 REQUIRED_DIRS=(
   "apps/web"
   "apps/disease-api"
@@ -24,11 +27,11 @@ REQUIRED_FILES=(
 
 FAIL=0
 for dir in "${REQUIRED_DIRS[@]}"; do
-  [ -d "$dir" ] || { echo "❌ Missing dir: $dir"; FAIL=1; }
+  [ -d "$dir" ] || { echo "âŒ Missing dir: $dir"; FAIL=1; }
 done
 
 for file in "${REQUIRED_FILES[@]}"; do
-  [ -f "$file" ] || { echo "❌ Missing file: $file"; FAIL=1; }
+  [ -f "$file" ] || { echo "âŒ Missing file: $file"; FAIL=1; }
 done
 
-[ $FAIL -eq 0 ] && echo "✅ Structure OK" || exit 1
+[ $FAIL -eq 0 ] && echo "âœ… Structure OK" || exit 1

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import * as React from 'react'
 import styles from './Skeleton.module.css'
 
@@ -11,7 +14,7 @@ export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
  * Skeleton Component
  * 
  * Usage:
- * <div aria-busy="true" aria-label="Đang tải...">
+ * <div aria-busy="true" aria-label="Äang táº£i...">
  *   <Skeleton variant="text" width="100%" />
  * </div>
  */
