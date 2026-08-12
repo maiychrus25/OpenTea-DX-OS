@@ -214,3 +214,98 @@ Agent PHẢI hỏi developer khi:
 | Nông dân | `farmer` (role) | user, member |
 | Thời gian cách ly | `withdrawal_days` | quarantine, wait |
 | Ngày an toàn thu hoạch | `safe_harvest_date` | harvest_safe_date |
+
+---
+
+## License Comment Header (Bắt Buộc — 100% không được bỏ sót)
+
+> **Rule:** Mọi file mới tạo ra trong project này PHẢI có license header comment ở đầu file.
+> **Không có ngoại lệ.** Dev agent bị coi là không hoàn thành task nếu bỏ sót header.
+
+### Format theo loại file
+
+```typescript
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+```
+> Áp dụng cho: `.ts` / `.tsx` / `.js` / `.jsx`
+
+```python
+# Copyright (c) 2026 OpenTea Developers
+# Licensed under the MIT License. See LICENSE file in the project root for full license information.
+```
+> Áp dụng cho: `.py`
+
+```css
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+```
+> Áp dụng cho: `.css` / `.module.css`
+
+```yaml
+# Copyright (c) 2026 OpenTea Developers
+# Licensed under the MIT License. See LICENSE file in the project root for full license information.
+```
+> Áp dụng cho: `.yml` / `.yaml` / `.sh` / `Dockerfile`
+
+### Quy tắc áp dụng
+
+```
+PHẢI thêm header khi:
+✅ Tạo file mới bất kỳ (NEW file trong task list)
+✅ Refactor/rename file (giữ nguyên hoặc thêm mới header)
+✅ File được tạo bởi agent (bao gồm cả script, config, migration)
+
+KHÔNG cần thêm header cho:
+❌ File có sẵn từ trước (chỉ MODIFY, không phải NEW)
+❌ File auto-generated (prisma migrations, .lock files, node_modules)
+❌ JSON files (không có comment syntax)
+❌ Markdown .md files
+❌ .env / .env.example (security — no copyright comment in env files)
+❌ Test fixture files (mock data, test assets)
+```
+
+### Luồng tích hợp (Agent Workflow)
+
+Mỗi khi agent tạo file mới, PHẢI làm theo thứ tự:
+1. Xác định loại file (`.ts`, `.css`, `.py`, v.v.)
+2. Thêm license header đúng format **trên cùng dòng đầu tiên**
+3. Blank line sau header
+4. Bắt đầu nội dung file thực tế
+
+**Ví dụ đúng cho `.tsx`:**
+```tsx
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
+import React from 'react'
+// ... rest of file
+```
+
+**Ví dụ đúng cho `.module.css`:**
+```css
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.container {
+  /* ... */
+}
+```
+
+### Verification (CI / Code Review)
+
+Code review agent (bmad-code-review, pr-deep-review) PHẢI kiểm tra:
+- Mọi file NEW trong diff có license header không
+- Sai format -> finding severity HIGH
+- Thiếu hoàn toàn -> finding severity CRITICAL
+
+```bash
+# CI check command (thêm vào pipeline):
+# Verify all new .ts/.tsx/.css files have license header
+git diff --name-only --diff-filter=A HEAD~1 | grep -E '\.(ts|tsx|js|jsx|css|py)$' | while read f; do
+  if ! head -1 "$f" | grep -q "Copyright"; then
+    echo "MISSING LICENSE HEADER: $f"
+    exit 1
+  fi
+done
+```

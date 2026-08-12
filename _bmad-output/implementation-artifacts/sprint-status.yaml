@@ -20,27 +20,27 @@
 project: OpenTea-DX-OS
 sprint: 1
 sprint_goal: "Foundation + Market Intelligence + Farm Zone + QR Traceability by 30/08/2026 (POF)"
-last_updated: "2026-08-12T09:00:00+07:00"
+last_updated: "2026-08-12T10:20:00+07:00"
 
 epics:
   - id: 1
     title: "Foundation — Infrastructure, Auth & Design System"
-    stories: 7
+    stories: 15  # 7 original + 8 missing stories added 2026-08-12
     target_date: "2026-08-09"
 
   - id: 2
     title: "Market Intelligence — Bulletin, Chatbot & Partner Map"
-    stories: 8
+    stories: 10  # 8 original + 2 missing BE stories added 2026-08-12
     target_date: "2026-08-14"
 
   - id: 3
     title: "Farm Zone Management & Digital Journal"
-    stories: 7
+    stories: 8   # 7 original + 1 missing BE story added 2026-08-12
     target_date: "2026-08-20"
 
   - id: 4
     title: "QR Traceability & Disease Detection Backend"
-    stories: 6
+    stories: 7   # 6 original + 1 missing BE story added 2026-08-12
     target_date: "2026-08-27"
 
   - id: 5
@@ -71,6 +71,20 @@ development_status:
   1-6-htx-profile-page:                  done
   1-7-n8n-market-data-pipelines:         done 
 
+  # ── Epic 1: Missing Stories (identified 2026-08-12) ───────────────────────
+  # These stories were missing from the original spec but are prerequisites
+  # for all role-specific features. Must be completed before Epic 2-6 work.
+  # Source: epic-1-review-findings.md + missing-stories-analysis.md
+
+  1-2a-error-boundary-loading:           ready-for-dev  # global error/loading pages
+  1-5a-login-page-ui:                    ready-for-dev  # login page CSS Modules fix
+  1-5b-role-layouts-appshell:            ready-for-dev  # CRITICAL: middleware bypass fix
+  1-5c-signout-flow:                     ready-for-dev  # sign-out button & Keycloak session
+  1-5d-unauthorized-page-ui:             ready-for-dev  # unauthorized page CSS Modules fix
+  1-5e-session-provider:                 ready-for-dev  # CRITICAL: remove any casts
+  1-5f-keycloak-realm-config:            ready-for-dev  # realm JSON auto-import
+  1-8-dashboard-placeholders:            ready-for-dev  # landing pages for all roles
+
   # ── Epic 2: Market Intelligence ───────────────────────────────────────────
   epic-2: in-progress
 
@@ -83,6 +97,12 @@ development_status:
   2-7-web-bell-notification-system:      ready-for-dev
   2-8-farm-zone-readonly-manager:        ready-for-dev
 
+  # ── Epic 2: Missing Stories (identified 2026-08-12) ───────────────────────
+  # Prerequisite BE endpoints missing from original Epic 2 spec
+
+  2-0a-geocode-proxy-api:                ready-for-dev  # required by 2-6 & 3-2 (Nominatim proxy)
+  2-3a-tts-api-endpoint:                 ready-for-dev  # required by 2-3, 2-7, 5-1 (Piper adapter)
+
   # ── Epic 3: Farm Zone & Journal ───────────────────────────────────────────
   epic-3: in-progress
 
@@ -94,6 +114,11 @@ development_status:
   3-6-batch-journal-approval-officer:    ready-for-dev
   3-7-technical-announcement-farmers:    ready-for-dev
 
+  # ── Epic 3: Missing Stories (identified 2026-08-12) ───────────────────────
+  # Weather API backend required by 3-3 and 3-5
+
+  3-5a-weather-api-endpoint:             ready-for-dev  # required by 3-3 & 3-5 (Open-Meteo + cache)
+
   # ── Epic 4: QR Traceability & Disease Backend ─────────────────────────────
   epic-4: in-progress
 
@@ -103,6 +128,11 @@ development_status:
   4-4-public-qr-scan-page:              ready-for-dev
   4-5-lot-list-readonly-manager:         ready-for-dev
   4-6-disease-detection-fastapi-service: ready-for-dev
+
+  # ── Epic 4: Missing Stories (identified 2026-08-12) ───────────────────────
+  # Diagnosis proxy required by Epic 5 Farmer UI
+
+  4-6a-diagnosis-proxy-api:              ready-for-dev  # required by 5-3 & 5-4 (AD-8 compliance)
 
   # ── Epic 5: Farmer Experience & Notifications ─────────────────────────────
   epic-5: in-progress
