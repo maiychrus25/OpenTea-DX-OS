@@ -8,7 +8,7 @@ import { withErrorHandler } from '@/presentation/api/withErrorHandler'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { auth } from '@/auth'
 
-// GET route with no request body — Zod validation not applicable.
+// GET route with no request body -- Zod validation not applicable.
 // For routes with body/params: const body = SomeSchema.parse(await req.json())
 async function getProfileHandler(_request: Request) {
   // Defense-in-depth: verify auth even though middleware checks too
