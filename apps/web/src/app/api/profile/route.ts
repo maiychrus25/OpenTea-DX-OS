@@ -6,10 +6,17 @@ import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/Pri
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { withErrorHandler } from '@/presentation/api/withErrorHandler'
 import { prisma } from '@/infrastructure/db/prisma.client'
+import { auth } from '@/auth'
 
-// GET route with no request body â€” Zod validation not applicable.
+// GET route with no request body — Zod validation not applicable.
 // For routes with body/params: const body = SomeSchema.parse(await req.json())
 async function getProfileHandler(_request: Request) {
+  // Defense-in-depth: verify auth even though middleware checks too
+  const session = await auth()
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const profileRepo = new PrismaHtxProfileRepository(prisma)
   const useCase = new GetHtxProfileUseCase(profileRepo)
   const profile = await useCase.execute()
