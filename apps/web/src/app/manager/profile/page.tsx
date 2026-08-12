@@ -2,6 +2,7 @@ import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCas
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { ProfileForm } from './_components/ProfileForm'
+import styles from './page.module.css'
 
 export default async function HtxProfilePage() {
   const profileRepo = new PrismaHtxProfileRepository(prisma)
@@ -16,10 +17,10 @@ export default async function HtxProfilePage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto w-full">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Thông tin Hợp tác xã</h1>
-        <p className="text-gray-500 text-sm mt-1">Quản lý và cập nhật thông tin chung của hợp tác xã.</p>
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Thông tin Hợp tác xã</h1>
+        <p className={styles.description}>Quản lý và cập nhật thông tin chung của hợp tác xã.</p>
       </div>
       <ProfileForm initialData={profile} />
     </div>
