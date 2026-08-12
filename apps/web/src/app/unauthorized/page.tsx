@@ -2,15 +2,33 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import Link from "next/link"
+import { auth } from "@/auth"
+import { Card } from "@/components/ui/Card"
+import { Button } from "@/components/ui/Button"
+import styles from "./Unauthorized.module.css"
 
-export default function UnauthorizedPage() {
+export default async function UnauthorizedPage() {
+  const session = await auth()
+  const role = session?.user?.role
+  
+  let redirectUrl = "/"
+  if (role === "manager") redirectUrl = "/manager"
+  else if (role === "officer") redirectUrl = "/officer"
+  else if (role === "farmer") redirectUrl = "/farmer"
+
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
-      <h1 style={{ color: 'red' }}>403 - KHÃ”NG CÃ“ QUYá»€N TRUY Cáº¬P</h1>
-      <p>Báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p vÃ o trang nÃ y dá»±a trÃªn chá»©c vá»¥ cá»§a báº¡n.</p>
-      <Link href="/" style={{ marginTop: '20px', color: 'blue', textDecoration: 'underline' }}>
-        Quay láº¡i trang chá»§
-      </Link>
+    <div className={styles.container}>
+      <Card padding="default">
+        <div className={styles.content}>
+          <h1 className={styles.title}>403 -- Không có quyền truy cập</h1>
+          <p className={styles.description}>Bạn không có quyền truy cập vào trang này dựa trên chức vụ của bạn.</p>
+          <Link href={redirectUrl}>
+            <Button variant="primary">
+              Về trang phù hợp
+            </Button>
+          </Link>
+        </div>
+      </Card>
     </div>
   )
 }
