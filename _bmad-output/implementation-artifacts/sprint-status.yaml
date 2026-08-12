@@ -20,7 +20,7 @@
 project: OpenTea-DX-OS
 sprint: 1
 sprint_goal: "Foundation + Market Intelligence + Farm Zone + QR Traceability by 30/08/2026 (POF)"
-last_updated: "2026-08-12T10:20:00+07:00"
+last_updated: "2026-08-12T14:55:00+07:00"
 
 epics:
   - id: 1
