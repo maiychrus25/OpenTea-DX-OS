@@ -1,6 +1,6 @@
 # Story 1.5a: Login Page — Full UI Implementation
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,18 +19,18 @@ so that my first interaction with the system feels professional and trustworthy.
 
 ## Tasks / Subtasks
 
-- [ ] Rewrite `apps/web/src/app/(auth)/login/page.tsx` (AC: 1, 2, 3, 4, 6)
-  - [ ] Remove ALL inline `style={{}}` attributes (currently present — violates AD-6)
-  - [ ] Import `Card`, `Button` from `@/components/ui`
-  - [ ] Import `LoginPage.module.css` (file exists but is NOT imported — fix this)
-  - [ ] Add loading state during signIn redirect
-  - [ ] Add error handling for Keycloak unavailable
-- [ ] Rewrite `apps/web/src/app/(auth)/login/LoginPage.module.css` (AC: 1, 5)
-  - [ ] Use tokens: `--color-primary`, `--color-surface-card`, `--font-size-heading-3`, `--spacing-*`
-  - [ ] Add green-gradient background for `.container`
-  - [ ] Responsive: card full-width on `< 640px`
-- [ ] Add loading state management (AC: 4)
-  - [ ] Use React `useState` + `useTransition` OR Server Action pending state
+- [x] Rewrite `apps/web/src/app/(auth)/login/page.tsx` (AC: 1, 2, 3, 4, 6)
+  - [x] Remove ALL inline `style={{}}` attributes (currently present — violates AD-6)
+  - [x] Import `Card`, `Button` from `@/components/ui`
+  - [x] Import `LoginPage.module.css` (file exists but is NOT imported — fix this)
+  - [x] Add loading state during signIn redirect
+  - [x] Add error handling for Keycloak unavailable
+- [x] Rewrite `apps/web/src/app/(auth)/login/LoginPage.module.css` (AC: 1, 5)
+  - [x] Use tokens: `--color-primary`, `--color-surface-card`, `--font-size-heading-3`, `--spacing-*`
+  - [x] Add green-gradient background for `.container`
+  - [x] Responsive: card full-width on `< 640px`
+- [x] Add loading state management (AC: 4)
+  - [x] Use React `useState` + `useTransition` OR Server Action pending state
 
 ## Dev Notes
 
@@ -72,12 +72,23 @@ so that my first interaction with the system feels professional and trustworthy.
 
 ### Agent Model Used
 
-Claude Sonnet 4.6
+Gemini 3.1 Pro (High)
 
 ### Debug Log References
+- Mocked NextAuth in Jest to prevent ESM import issues.
+- NextAuth redirects to `/api/auth/error` when Keycloak provider fetch fails on test environment.
 
 ### Completion Notes List
+- ✅ Implemented `LoginPage` and `login-form` (Client Component) utilizing CSS Modules.
+- ✅ Used `useFormState` and `useFormStatus` from `react-dom` for form submission state management and loading state on the button.
+- ✅ Corrected CSS tokens in `login-page.module.css` to match design system tokens from globals (`--color-primary`, `--color-surface-card`, etc).
+- ✅ Added `actions.ts` with correct `AuthError` check and properly rethrowing `NEXT_REDIRECT` errors.
+- ✅ Created unit tests and E2E tests matching the provided test plan artifact. All tests cover the new UI structure properly.
 
 ### File List
 - `apps/web/src/app/(auth)/login/page.tsx` (MODIFY)
-- `apps/web/src/app/(auth)/login/LoginPage.module.css` (MODIFY)
+- `apps/web/src/app/(auth)/login/login-page.module.css` (MODIFY)
+- `apps/web/src/app/(auth)/login/login-form.tsx` (NEW)
+- `apps/web/src/app/(auth)/login/actions.ts` (NEW)
+- `apps/web/__tests__/app/(auth)/login/login-page.test.tsx` (NEW)
+- `apps/web/tests/e2e/auth/login.spec.ts` (NEW)
