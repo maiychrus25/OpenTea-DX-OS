@@ -113,9 +113,12 @@ async function main() {
     },
   })
 
-  console.log('Database seeded successfully!')
+  process.stdout.write('Database seeded successfully!\n')
 }
 
 main()
-  .catch(console.error)
+  .catch((e) => {
+    process.stderr.write(String(e) + '\n')
+    process.exit(1)
+  })
   .finally(() => prisma.$disconnect())
