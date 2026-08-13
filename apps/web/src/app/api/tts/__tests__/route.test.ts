@@ -15,7 +15,7 @@ jest.mock('@/infrastructure/tts/PiperTtsAdapter', () => {
   return {
     PiperTtsAdapter: jest.fn().mockImplementation(() => {
       return {
-        synthesize: jest.fn().mockResolvedValue(new ReadableStream()),
+        synthesize: jest.fn().mockResolvedValue({}),
         checkHealth: jest.fn().mockResolvedValue(true),
       }
     }),
