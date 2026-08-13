@@ -24,7 +24,7 @@ export class NominatimGeocodingAdapter implements GeocodingPort {
       })
 
       if (!response.ok) {
-        throw new DomainError('Geocoding service unavailable', 'GEOCODING_ERROR')
+        throw new DomainError('Geocoding service unavailable')
       }
 
       const data = await response.json()
@@ -38,7 +38,7 @@ export class NominatimGeocodingAdapter implements GeocodingPort {
       }))
     } catch (error) {
       if (error instanceof DomainError) throw error
-      throw new DomainError('Geocoding failed', 'GEOCODING_ERROR')
+      throw new DomainError('Geocoding failed')
     }
   }
 }

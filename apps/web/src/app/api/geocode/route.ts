@@ -39,7 +39,7 @@ async function getGeocodeHandler(request: Request) {
 
   const parseResult = geocodeQuerySchema.safeParse({ q })
   if (!parseResult.success) {
-    throw new ValidationError('Invalid query parameters', parseResult.error.errors)
+    throw new ValidationError('Invalid query parameters: ' + parseResult.error.message)
   }
 
   // Execution
