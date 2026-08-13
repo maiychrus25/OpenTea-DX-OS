@@ -30,8 +30,8 @@ async function postTtsHandler(request: Request) {
         'Content-Type': 'audio/wav',
       },
     })
-  } catch (error: any) {
-    if (error.message === 'SERVICE_UNAVAILABLE') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'SERVICE_UNAVAILABLE') {
       return NextResponse.json(
         { error: { code: 'SERVICE_UNAVAILABLE', message: 'Dịch vụ đọc văn bản tạm ngưng.' } },
         { status: 503 }
