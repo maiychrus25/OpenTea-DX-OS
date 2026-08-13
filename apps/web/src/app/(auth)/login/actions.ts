@@ -6,7 +6,7 @@
 import { AuthError } from "next-auth"
 import { signIn } from "@/auth"
 
-export async function loginAction(prevState: { error: string } | null, formData: FormData) {
+export async function loginAction(_prevState: { error: string } | null | undefined, _formData: FormData) {
   try {
     await signIn("keycloak")
   } catch (error) {
