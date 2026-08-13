@@ -8,9 +8,9 @@ import { ProfileForm } from './ProfileForm'
 
 // Mock the UI components that might cause issues in Jest
 jest.mock('@/components/ui', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any - using any for generic mock props because exact types are complex and unnecessary for basic render test
+  // Note: using any for generic mock props because exact types are complex and unnecessary for basic render test
   Card: ({ children, className }: any) => <div data-testid="card" className={className}>{children}</div>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any - using any for generic mock props
+  // Note: using any for generic mock props
   Button: ({ children, onClick, type, isLoading, disabled }: any) => (
     <button onClick={onClick} type={type} disabled={disabled || isLoading} data-testid="button">
       {children}
