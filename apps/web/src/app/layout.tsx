@@ -11,6 +11,8 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
+import { Providers } from './providers'
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -18,7 +20,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'DX-AgriMarket',
-  description: 'Há»‡ Ä‘iá»u hÃ nh sá»‘ NÃ´ng nghiá»‡p',
+  description: 'Há»‡ Ä‘iá» u hÃ nh sá»‘ NÃ´ng nghiá»‡p',
 }
 
 export default function RootLayout({
@@ -29,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="vi" className={inter.variable}>
       <body>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   )
