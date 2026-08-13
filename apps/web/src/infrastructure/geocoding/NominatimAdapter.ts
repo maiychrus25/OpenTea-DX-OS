@@ -29,9 +29,14 @@ export class NominatimGeocodingAdapter implements GeocodingPort {
 
       const data = await response.json()
       
+      interface NominatimResponseItem {
+        display_name: string;
+        lat: string;
+        lon: string;
+      }
+
       // Map to GeocodingResult
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return data.map((item: any) => ({
+      return data.map((item: NominatimResponseItem) => ({
         display_name: item.display_name,
         lat: item.lat,
         lon: item.lon,
