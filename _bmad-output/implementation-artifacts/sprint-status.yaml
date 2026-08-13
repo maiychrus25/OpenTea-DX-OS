@@ -100,8 +100,8 @@ development_status:
   # ── Epic 2: Missing Stories (identified 2026-08-12) ───────────────────────
   # Prerequisite BE endpoints missing from original Epic 2 spec
 
-  2-0a-geocode-proxy-api:                ready-for-dev  # required by 2-6 & 3-2 (Nominatim proxy)
-  2-3a-tts-api-endpoint:                 ready-for-dev  # required by 2-3, 2-7, 5-1 (Piper adapter)
+  2-0a-geocode-proxy-api:                done           # required by 2-6 & 3-2 (Nominatim proxy)
+  2-3a-tts-api-endpoint:                 done           # required by 2-3, 2-7, 5-1 (Piper adapter)
 
   # ── Epic 3: Farm Zone & Journal ───────────────────────────────────────────
   epic-3: in-progress
