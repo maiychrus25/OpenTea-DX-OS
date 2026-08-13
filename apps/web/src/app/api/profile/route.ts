@@ -30,7 +30,7 @@ async function getProfileHandler(_request: Request) {
 async function putProfileHandler(request: Request) {
   const session = await auth()
 
-  if (!session || !session.user || (session.user as any).role !== MANAGER_ROLE) {
+  if (!session || !session.user || session.user.role !== MANAGER_ROLE) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

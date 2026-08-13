@@ -4,6 +4,12 @@
 import NextAuth from "next-auth"
 import Keycloak from "next-auth/providers/keycloak"
 
+interface KeycloakProfile {
+  realm_access?: {
+    roles: string[]
+  }
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Keycloak({
@@ -14,11 +20,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, profile }) {
-      if (profile && profile.realm_access && Array.isArray((profile.realm_access as any).roles)) {
-        const roles = (profile.realm_access as any).roles;
-        if (roles.includes("manager")) token.role = "manager";
-        else if (roles.includes("officer")) token.role = "officer";
-        else if (roles.includes("farmer")) token.role = "farmer";
+      if (profile) {
+        const kp = profile as KeycloakProfile;
+        if (kp.realm_access && Array.isArray(kp.realm_access.roles)) {
+          const roles = kp.realm_access.roles;
+          if (roles.includes("manager")) token.role = "manager";
+          else if (roles.includes("officer")) token.role = "officer";
+          else if (roles.includes("farmer")) token.role = "farmer";
+        }
       }
       return token;
     },
