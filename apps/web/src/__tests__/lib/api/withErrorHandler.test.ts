@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
-import { withErrorHandler } from '@/presentation/api/withErrorHandler'
+import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { NotFoundError, ValidationError, DomainError } from '@/domain/errors'
 import { logger } from '@/lib/logger'
 
