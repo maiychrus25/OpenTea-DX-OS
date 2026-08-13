@@ -39,13 +39,13 @@ describe('GET /api/geocode', () => {
   it('returns 401 if unauthorized', async () => {
     ;(auth as jest.Mock).mockResolvedValue(null)
     const req = createRequest('http://localhost/api/geocode?q=Hanoi')
-    const res = await GET(req)
+    const res = await GET(req, {})
     expect(res.status).toBe(401)
   })
 
   it('returns 400 if validation fails', async () => {
     const req = createRequest('http://localhost/api/geocode?q=a') // min 2 chars
-    const res = await GET(req)
+    const res = await GET(req, {})
     expect(res.status).toBe(400)
     const json = await res.json()
     expect(json.error.code).toBe('VALIDATION_ERROR')
@@ -53,7 +53,7 @@ describe('GET /api/geocode', () => {
 
   it('returns 200 and geocoding results for valid query', async () => {
     const req = createRequest('http://localhost/api/geocode?q=Hanoi', '1.1.1.1')
-    const res = await GET(req)
+    const res = await GET(req, {})
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.results).toBeDefined()
@@ -66,11 +66,11 @@ describe('GET /api/geocode', () => {
     const req2 = createRequest('http://localhost/api/geocode?q=HCMC', ip)
     
     // First request should pass
-    const res1 = await GET(req1)
+    const res1 = await GET(req1, {})
     expect(res1.status).toBe(200)
     
     // Immediate second request from same IP should fail
-    const res2 = await GET(req2)
+    const res2 = await GET(req2, {})
     expect(res2.status).toBe(429)
     const json = await res2.json()
     expect(json.error.code).toBe('RATE_LIMIT_EXCEEDED')
