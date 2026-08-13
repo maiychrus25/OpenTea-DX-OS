@@ -76,8 +76,8 @@ development_status:
   # for all role-specific features. Must be completed before Epic 2-6 work.
   # Source: epic-1-review-findings.md + missing-stories-analysis.md
 
-  1-2a-error-boundary-loading:           ready-for-dev  # global error/loading pages
-  1-5a-login-page-ui:                    ready-for-dev  # login page CSS Modules fix
+  1-2a-error-boundary-loading:           done  # global error/loading pages
+  1-5a-login-page-ui:                    review  # login page CSS Modules fix
   1-5b-role-layouts-appshell:            ready-for-dev  # CRITICAL: middleware bypass fix
   1-5c-signout-flow:                     ready-for-dev  # sign-out button & Keycloak session
   1-5d-unauthorized-page-ui:             ready-for-dev  # unauthorized page CSS Modules fix

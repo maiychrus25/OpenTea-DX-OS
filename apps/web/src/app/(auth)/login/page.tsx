@@ -2,9 +2,9 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { Metadata } from "next"
-import { signIn } from "@/auth"
-import { Card, Button } from "@/components/ui"
+import { Card } from "@/components/ui"
 import styles from "./login-page.module.css"
+import { LoginForm } from "./_components/login-form"
 
 export const metadata: Metadata = {
   title: "Đăng nhập | DX-AgriMarket",
@@ -16,21 +16,11 @@ export default function LoginPage() {
     <div className={styles.container}>
       <Card className={styles.card}>
         <div className={styles.header}>
-          <h1 className={styles.title}>Đăng nhập DX-AgriMarket</h1>
+          <h1 className={styles.title}>DX-AgriMarket</h1>
           <p className={styles.subtitle}>Hệ điều hành số Nông nghiệp</p>
         </div>
         
-        <form
-          action={async () => {
-            "use server"
-            await signIn("keycloak")
-          }}
-          className={styles.form}
-        >
-          <Button type="submit" className={styles.submitButton}>
-            Đăng nhập qua Keycloak
-          </Button>
-        </form>
+        <LoginForm />
       </Card>
     </div>
   )

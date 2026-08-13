@@ -6,8 +6,8 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: var(--neutral-surface);
-  padding: var(--spacing-4);
+  background: linear-gradient(135deg, var(--color-primary-subtle, #DCFCE7) 0%, var(--color-primary, #16A34A) 100%);
+  padding: var(--spacing-4, 16px);
 }
 
 .card {
@@ -16,35 +16,51 @@
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-6);
+  gap: var(--spacing-6, 24px);
+  background-color: var(--color-surface-card, #FFFFFF);
+}
+
+@media (max-width: 639px) {
+  .card {
+    max-width: 100%;
+  }
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: var(--spacing-2, 8px);
 }
 
 .title {
-  color: var(--primary);
-  font-family: var(--font-display);
-  font-size: var(--font-size-heading-3);
+  color: var(--color-primary, #16A34A);
+  font-size: var(--font-size-heading-3, 1rem);
   font-weight: 700;
   margin: 0;
 }
 
 .subtitle {
-  color: var(--neutral-ink-subtle);
-  font-size: var(--font-size-body);
+  color: var(--color-ink-secondary, #475569);
+  font-size: var(--font-size-body, 0.9375rem);
   margin: 0;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  margin-top: var(--spacing-4);
+  margin-top: var(--spacing-4, 16px);
+  gap: var(--spacing-4, 16px);
 }
 
 .submitButton {
   width: 100%;
+}
+
+.errorBanner {
+  background-color: var(--color-danger-subtle, #FEE2E2);
+  color: var(--color-danger, #DC2626);
+  padding: var(--spacing-3, 12px);
+  border-radius: var(--rounded-sm, 6px);
+  font-size: var(--font-size-body, 0.9375rem);
+  text-align: left;
 }
