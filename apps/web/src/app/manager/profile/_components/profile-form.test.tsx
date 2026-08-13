@@ -1,0 +1,70 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
+import React from 'react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import '@testing-library/jest-dom'
+import { ProfileForm } from './ProfileForm'
+
+// Mock the UI components that might cause issues in Jest
+jest.mock('@/components/ui', () => ({
+  // Note: using any for generic mock props because exact types are complex and unnecessary for basic render test
+  Card: ({ children, className }: any) => <div data-testid="card" className={className}>{children}</div>,
+  // Note: using any for generic mock props
+  Button: ({ children, onClick, type, isLoading, disabled }: any) => (
+    <button onClick={onClick} type={type} disabled={disabled || isLoading} data-testid="button">
+      {children}
+    </button>
+  )
+}))
+
+jest.mock('sonner', () => ({
+  toast: {
+    success: jest.fn(),
+    error: jest.fn()
+  }
+}))
+
+describe('ProfileForm', () => {
+  const mockInitialData = {
+    id: 'test-id',
+    htx_code: 'HTX-TEST-001',
+    name: 'HTX Nông Nghiệp Test',
+    address: '123 Đường Test, Xã Test',
+    contact_phone: '0901234567',
+    contact_email: 'test@example.com',
+    season_label: 'Vụ Hè Thu 2026',
+    crop_types: ['Lúa', 'Xoài'],
+    total_area_ha: 15.5,
+    created_at: new Date(),
+    updated_at: new Date(),
+    manager_id: 'manager-1'
+  }
+
+  it('renders the form with initial data', () => {
+    // @ts-ignore - mock data matches required fields for testing
+    render(<ProfileForm initialData={mockInitialData} />)
+    
+    expect(screen.getByText('Hồ sơ Hợp tác xã')).toBeInTheDocument()
+    expect(screen.getByText('HTX Nông Nghiệp Test')).toBeInTheDocument()
+    expect(screen.getByText('HTX-TEST-001')).toBeInTheDocument()
+    expect(screen.getByText('123 Đường Test, Xã Test')).toBeInTheDocument()
+    expect(screen.getByText('0901234567')).toBeInTheDocument()
+  })
+
+  it('can enter edit mode when clicking the edit button', () => {
+    // @ts-ignore - mock data matches required fields for testing
+    render(<ProfileForm initialData={mockInitialData} />)
+    
+    const editButton = screen.getByText('Sửa')
+    fireEvent.click(editButton)
+    
+    // In edit mode, there should be save and cancel buttons
+    expect(screen.getByText('Lưu')).toBeInTheDocument()
+    expect(screen.getByText('Hủy')).toBeInTheDocument()
+    
+    // The inputs should be visible instead of just text
+    const nameInput = screen.getByDisplayValue('HTX Nông Nghiệp Test')
+    expect(nameInput).toBeInTheDocument()
+  })
+})
