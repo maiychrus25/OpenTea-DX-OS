@@ -12,7 +12,7 @@ export const htxProfileUpdateSchema = z.object({
     .nullable()
     .optional()
     .refine(
-      (val) => !val || z.string().email().safeParse(val).success,
+      (val: string | null | undefined) => !val || z.string().email().safeParse(val).success,
       'Email không hợp lệ',
     ),
   crop_types: z.array(z.string()).optional().default([]),

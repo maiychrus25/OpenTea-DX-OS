@@ -24,7 +24,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const role = (req.auth?.user as any)?.role;
+  const role = req.auth?.user?.role;
   const lowerPath = pathname.toLowerCase();
 
   // Protect Manager routes
