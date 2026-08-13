@@ -1,0 +1,29 @@
+## 🤖 DX-AgriMarket AI Deep Review — PR #148
+
+**Tổng quan:** PR triển khai endpoint `/api/geocode` làm proxy cho Nominatim API, tuân thủ kiến trúc Hexagonal và các điều khoản dịch vụ (ToS) của Nominatim.
+**Vòng review:** 10/10 hoàn thành
+**Verdict:** COMMENT
+
+---
+
+### 🟡 MEDIUM — Nên sửa (không block merge nhưng tạo tech debt)
+
+#### [M1] Thiếu PR Description và sai format Title (Vòng 1 - Metadata)
+- **Vấn đề:** PR Title hiện tại là `Feat/125 geocode proxy`, không tuân thủ nghiêm ngặt Conventional Commits (ví dụ: `feat(api): geocode proxy`). Hơn nữa, PR hoàn toàn không có Description (`No description provided`), dẫn đến thiếu link tới issue gốc (`Closes #125`).
+- **Cách sửa:** Sửa Title PR thành `feat(api): add Nominatim geocode proxy endpoint` và thêm `Closes #125` vào body.
+
+#### [M2] Thiếu Unit Test / Integration Test (Vòng 10 - Testing & Coverage)
+- **Vấn đề:** Tính năng mới tạo ra API route và Nominatim Adapter nhưng không đi kèm bất kỳ file test nào trong `__tests__/` hoặc `tests/e2e/`. Mặc dù không phải core business logic cực kỳ phức tạp (để thành lỗi HIGH), nhưng vẫn cần có test cơ bản để đảm bảo Rate Limiting và Error Handling (401, 400) hoạt động đúng.
+- **Cách sửa:** Thêm file `apps/web/src/app/api/geocode/__tests__/route.test.ts` để mock `fetch` và kiểm tra logic trả về.
+
+---
+
+### ✅ Điểm tốt (Acknowledge good work)
+- **Bảo mật tốt:** Đã sử dụng `await auth()` server-side để block truy cập trái phép.
+- **Tuân thủ External ToS:** Implement chặt chẽ IP-based rate limiting (1 req/s) và truyền đúng `User-Agent`.
+- **Kiến trúc sạch:** Tách bạch rõ ràng `GeocodingPort` (Domain) và `NominatimAdapter` (Infrastructure).
+- **TypeScript an toàn:** Không sử dụng `any`, định nghĩa interface `NominatimResponseItem` rõ ràng.
+- **License Header:** Đảm bảo 100% file mới đều có Copyright header.
+
+---
+*Review bởi: DX-AgriMarket AI (pr-deep-review skill) | MIT License | Copyright (c) 2026 OpenTea Developers*
