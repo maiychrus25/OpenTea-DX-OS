@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 # SPRINT STATUS — OpenTea-DX-OS
 # ============================================================================
 # Managed by: bmad-create-story, bmad-dev-story, bmad-dev-auto, bmad-sprint-status
@@ -171,7 +171,7 @@ development_status:
 
   # ── BE Prerequisites (must go first) ─────────────────────────────────────
   7-0a-schema-htx-relations:            done           # P0: add htx_profile_id to Household+Lot; needs dev approval
-  7-9a-lot-trace-data-usecase:          ready-for-dev  # P0: GetLotTraceDataUseCase + withdrawal safety computation
+  7-9a-lot-trace-data-usecase:          done    # P0: GetLotTraceDataUseCase + withdrawal safety computation
 
   # ── Foundation & Layout ───────────────────────────────────────────────────
   7-1-tailwind-design-token-setup:       ready-for-dev  # Foundation: Tailwind v4 + Be Vietnam Pro + token merge

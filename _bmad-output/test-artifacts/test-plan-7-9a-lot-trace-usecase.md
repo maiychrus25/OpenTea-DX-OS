@@ -26,7 +26,7 @@
 **Priority:** P0
 
 ```typescript
-import { GetLotTraceDataUseCase } from '@/application/useCases/GetLotTraceDataUseCase'
+import { GetLotTraceDataUseCase } from '@/application/useCases/get-lot-trace-data-usecase'
 import { NotFoundError } from '@/domain/errors'
 
 const mockRepo = {
@@ -121,7 +121,7 @@ test('returns is_harvest_safe=false when no withdrawal activities', async () => 
 
 ```typescript
 // Test the date calculation logic directly (extract to pure function for testability)
-import { computeSafeHarvestDate } from '@/infrastructure/db/repositories/PrismaLotTraceRepository'
+import { computeSafeHarvestDate } from '@/infrastructure/db/repositories/prisma-lot-trace-repository'
 
 test('picks MAX safe_harvest_date across all activities', () => {
   const entries = [
@@ -179,15 +179,15 @@ P1:
 
 ## Definition of Done for Story 7.9a
 
-- [ ] `TC-7.9a-01` PASS: NotFoundError
-- [ ] `TC-7.9a-02` PASS: safe=true
-- [ ] `TC-7.9a-03` PASS: safe=false (future date)
-- [ ] `TC-7.9a-04` PASS: safe=false (null)
-- [ ] `TC-7.9a-05` PASS: MAX withdrawal across activities
-- [ ] `TC-7.9a-06` PASS: Full data shape
-- [ ] `npm run build` pass, strict TypeScript
-- [ ] Story 7-9 unblocked
-- [ ] Committed: `feat(trace): add GetLotTraceDataUseCase with withdrawal safety computation`
+- [x] `TC-7.9a-01` PASS: NotFoundError
+- [x] `TC-7.9a-02` PASS: safe=true
+- [x] `TC-7.9a-03` PASS: safe=false (future date)
+- [x] `TC-7.9a-04` PASS: safe=false (null)
+- [x] `TC-7.9a-05` PASS: MAX withdrawal across activities
+- [x] `TC-7.9a-06` PASS: Full data shape
+- [x] `npm run build` pass, strict TypeScript
+- [x] Story 7-9 unblocked
+- [x] Committed: `feat(trace): add GetLotTraceDataUseCase with withdrawal safety computation`
 
 ---
 
