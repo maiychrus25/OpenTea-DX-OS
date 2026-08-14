@@ -5,7 +5,7 @@ import * as React from 'react'
 import styles from './Button.module.css'
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'accent' | 'ghost' | 'danger'
+  variant?: 'primary' | 'secondary' | 'text' | 'icon' | 'accent' | 'ghost' | 'danger'
   size?: 'sm' | 'md' | 'lg'
   isLoading?: boolean
 }

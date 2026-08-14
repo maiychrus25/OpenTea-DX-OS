@@ -179,8 +179,8 @@ development_status:
   7-3-topbar-bottomnav-refactor:         done  # Layout: topbar 70px, mobile drawer trigger, bottom nav
 
   # ── Shared UI Components ──────────────────────────────────────────────────
-  7-4-shared-ui-pill-button:             ready-for-dev  # UI: Pill tones, Button variants (primary/secondary/text/icon)
-  7-5-shared-ui-metriccard-sourcebox-ainote: done  # UI: MetricCard, SourceBox (mandatory), AiNote (mandatory)
+  7-4-shared-ui-pill-button:             done           # UI: Pill tones, Button variants (primary/secondary/text/icon)
+  7-5-shared-ui-metriccard-sourcebox-ainote: done       # UI: MetricCard, SourceBox (mandatory), AiNote (mandatory)
 
   # ── Auth ──────────────────────────────────────────────────────────────────
   7-6-login-page-refactor:              done           # Auth: 2-panel login layout (Keycloak backend unchanged)
