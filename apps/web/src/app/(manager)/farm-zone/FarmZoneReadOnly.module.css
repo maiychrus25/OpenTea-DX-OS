@@ -1,0 +1,15 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 720px;
+}
+.controls {
+  display: flex;
+  gap: 16px;
+  padding: 8px 12px;
+  align-items: center;
+}
+.filterGroup { display:flex; flex-direction:column }
+.checkboxRow { display:flex; gap:8px; flex-wrap:wrap }
+.checkboxLabel { font-size:13px }
+.mapContainer { flex:1; border-radius:6px; overflow:hidden; margin:8px }
