@@ -46,7 +46,7 @@ async function getGeocodeHandler(request: Request) {
   const adapter = new NominatimGeocodingAdapter()
   const results = await adapter.search(parseResult.data.q)
 
-  return NextResponse.json({ results })
+  return NextResponse.json({ data: results })
 }
 
 export const GET = withErrorHandler(getGeocodeHandler)
