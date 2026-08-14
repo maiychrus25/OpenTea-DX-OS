@@ -56,33 +56,17 @@ app/
 ### Data Query
 
 ```typescript
-const lot = await prisma.lot.findUnique({
-  where: { lot_code },
-  include: {
-    parcel_crop_cycle: {
-      include: {
-        parcel: { include: { household: true } },
-        journal_entries: {
-          include: { activities: true, approved_by: true },
-          orderBy: { entry_date: 'asc' },
-        },
-      },
-    },
-    approved_by: true,
-    htx_profile: true,
-    lot_certificates: true,
-  },
-})
-if (!lot) notFound()
+const lotRepo = new PrismaLotTraceRepository()
+const useCase = new GetLotTraceDataUseCase(lotRepo)
+const lotTraceData = await useCase.execute(lot_code).catch(() => null)
+if (!lotTraceData) notFound()
 ```
 
 ### Withdrawal Check Logic
 
 ```typescript
-function isHarvestSafe(safeHarvestDate: Date | null): boolean {
-  if (!safeHarvestDate) return false
-  return safeHarvestDate <= new Date()
-}
+// Logic is handled by GetLotTraceDataUseCase
+// isHarvestSafe = latestSafeDate ? latestSafeDate <= new Date() : false
 ```
 
 ### Disclaimer (MANDATORY)

@@ -1,6 +1,6 @@
 # Story 7.9a: BE Use Case — GetLotTraceDataUseCase
 
-Status: backlog
+Status: done
 
 > ⚠️ **P0 PREREQUISITE** — phải done trước story 7-9 (Public QR Trace Page)
 
@@ -38,11 +38,11 @@ Cần: `GetLotTraceDataUseCase` trong application layer theo Hexagonal Architect
 
 ## Tasks / Subtasks
 
-- [ ] Tạo `src/domain/repositories/ILotTraceRepository.ts` (AC: 1)
-- [ ] Tạo `src/domain/entities/LotTraceData.ts` — type/interface (AC: 4)
-- [ ] Tạo `src/application/useCases/GetLotTraceDataUseCase.ts` (AC: 2, 3, 5)
-- [ ] Tạo `src/infrastructure/db/repositories/PrismaLotTraceRepository.ts` (AC: 6)
-- [ ] Cập nhật `7-9-public-qr-trace-page.md` — reference Use Case này
+- [x] Tạo `src/domain/repositories/lot-trace-repository.ts` (AC: 1)
+- [x] Tạo `src/domain/entities/lot-trace-data.ts` — type/interface (AC: 4)
+- [x] Tạo `src/application/useCases/get-lot-trace-data-usecase.ts` (AC: 2, 3, 5)
+- [x] Tạo `src/infrastructure/db/repositories/prisma-lot-trace-repository.ts` (AC: 6)
+- [x] Cập nhật `7-9-public-qr-trace-page.md` — reference Use Case này
 
 ## Dev Notes
 
@@ -163,10 +163,10 @@ async getLotByCode(lot_code: string): Promise<LotTraceData | null> {
 ### ILotTraceRepository
 
 ```typescript
-// domain/repositories/ILotTraceRepository.ts
-import { LotTraceData } from '../entities/LotTraceData'
+// domain/repositories/lot-trace-repository.ts
+import { LotTraceData } from '../entities/lot-trace-data'
 
-export interface ILotTraceRepository {
+export interface LotTraceRepository {
   getLotByCode(lot_code: string): Promise<LotTraceData | null>
 }
 ```
@@ -174,12 +174,12 @@ export interface ILotTraceRepository {
 ### GetLotTraceDataUseCase
 
 ```typescript
-import { ILotTraceRepository } from '../../domain/repositories/ILotTraceRepository'
-import { LotTraceData } from '../../domain/entities/LotTraceData'
+import { LotTraceRepository } from '../../domain/repositories/lot-trace-repository'
+import { LotTraceData } from '../../domain/entities/lot-trace-data'
 import { NotFoundError } from '../../domain/errors'
 
 export class GetLotTraceDataUseCase {
-  constructor(private readonly repo: ILotTraceRepository) {}
+  constructor(private readonly repo: LotTraceRepository) {}
 
   async execute(lot_code: string): Promise<LotTraceData> {
     const data = await this.repo.getLotByCode(lot_code)
@@ -191,15 +191,23 @@ export class GetLotTraceDataUseCase {
 
 ### Files
 
-- `apps/web/src/domain/repositories/ILotTraceRepository.ts` (NEW)
-- `apps/web/src/domain/entities/LotTraceData.ts` (NEW)
-- `apps/web/src/application/useCases/GetLotTraceDataUseCase.ts` (NEW)
-- `apps/web/src/infrastructure/db/repositories/PrismaLotTraceRepository.ts` (NEW)
+- `apps/web/src/domain/repositories/lot-trace-repository.ts` (NEW)
+- `apps/web/src/domain/entities/lot-trace-data.ts` (NEW)
+- `apps/web/src/application/useCases/get-lot-trace-data-usecase.ts` (NEW)
+- `apps/web/src/infrastructure/db/repositories/prisma-lot-trace-repository.ts` (NEW)
 
 ## Dev Agent Record
 
 ### Agent Model Used
-_to be filled by dev agent_
+Gemini 3.1 Pro (High)
 
 ### Completion Notes List
-_to be filled by dev agent_
+- ✅ Created `ILotTraceRepository` interface
+- ✅ Created `LotTraceData` and related interfaces
+- ✅ Created `GetLotTraceDataUseCase` with robust execution logic
+- ✅ Implemented `PrismaLotTraceRepository` with pure function `computeSafeHarvestDate` for safety check
+- ✅ Fixed falsy `0` issue on `withdrawal_days`
+- ✅ Fixed naming conventions (Files to kebab-case, Interface without I-prefix).
+- ✅ Updated `7-9-public-qr-trace-page.md` to reference the new Use Case.
+- ✅ `npm run build` ran and passed with strict TypeScript validation.
+- ✅ Committed and pushed: `feat(trace): add GetLotTraceDataUseCase with withdrawal safety computation`
