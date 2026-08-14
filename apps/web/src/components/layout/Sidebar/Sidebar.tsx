@@ -4,9 +4,9 @@
 'use client'
 
 import * as React from 'react'
-
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Leaf, X, ChevronDown } from 'lucide-react'
 import styles from './Sidebar.module.css'
 
 export interface NavItem {
@@ -17,6 +17,12 @@ export interface NavItem {
 
 export interface SidebarProps {
   navItems: NavItem[]
+  htxName?: string
+  htxLocation?: string
+  isOpen?: boolean
+  onClose?: () => void
+  userName?: string
+  role?: string
 }
 
 function isActive(pathname: string | null, href: string): boolean {
@@ -25,11 +31,60 @@ function isActive(pathname: string | null, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ navItems }) => {
+const getRoleLabel = (role?: string): string => {
+  switch (role) {
+    case 'farmer': return 'Nông dân'
+    case 'manager': return 'Trưởng HTX'
+    case 'officer': return 'Cán bộ KT'
+    default: return role || ''
+  }
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  navItems, 
+  htxName, 
+  htxLocation, 
+  isOpen = false, 
+  onClose,
+  userName = 'Unknown',
+  role
+}) => {
   const pathname = usePathname()
+  
+  const initials = userName
+    .split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'U'
 
   return (
-    <aside className={styles.sidebar} data-testid="sidebar">
+    <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''}`} data-testid="sidebar">
+      {/* Brand */}
+      <div className={styles.brand}>
+        <span className={styles.brandIcon}><Leaf size={24} /></span>
+        <div className={styles.brandText}>
+          <strong>DX AgriMarket</strong>
+          <small>Nông nghiệp minh bạch</small>
+        </div>
+        {onClose && (
+          <button className={styles.closeMenu} onClick={onClose} aria-label="Đóng menu">
+            <X size={20} />
+          </button>
+        )}
+      </div>
+
+      {/* Coop */}
+      <div className={styles.coop}>
+        <span className={styles.coopBadge}>HTX</span>
+        <div className={styles.coopText}>
+          <strong>{htxName || 'Đang tải...'}</strong>
+          <small>{htxLocation || '---'}</small>
+        </div>
+        <ChevronDown size={16} className={styles.coopIcon} />
+      </div>
+
+      {/* Nav */}
       <nav className={styles.nav}>
         {navItems.map((item) => {
           const active = isActive(pathname, item.href)
@@ -46,6 +101,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ navItems }) => {
           )
         })}
       </nav>
+
+      {/* Footer */}
+      <div className={styles.sidebarFoot}>
+        <div className={styles.roleLabel}>ĐANG XEM VỚI VAI TRÒ</div>
+        <div className={styles.roleSwitch}>
+          {getRoleLabel(role)}
+        </div>
+        <button className={styles.profile}>
+          <span className={styles.avatar}>{initials}</span>
+          <div className={styles.profileText}>
+            <strong>{userName}</strong>
+            <small>{getRoleLabel(role)}</small>
+          </div>
+        </button>
+      </div>
     </aside>
   )
 }

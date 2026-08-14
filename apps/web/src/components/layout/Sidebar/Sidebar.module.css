@@ -2,50 +2,165 @@
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
 .sidebar {
-  display: none; /* hidden on mobile by default */
-  width: var(--sidebar-width);
+  width: 276px;
   height: 100vh;
-  border-right: 1px solid var(--color-border-subtle);
-  background-color: var(--color-surface-card);
-  position: sticky;
+  background-color: var(--sidebar-bg);
+  color: #fff;
+  position: fixed;
   top: 0;
-  overflow-y: auto;
+  left: 0;
+  z-index: var(--z-index-modal);
+  transform: translateX(-100%);
+  transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar.open {
+  transform: translateX(0);
 }
 
 @media (min-width: 1024px) {
   .sidebar {
-    display: block;
+    transform: translateX(0);
   }
 }
 
+/* Brand Block */
+.brand {
+  height: 78px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--spacing-4);
+  gap: var(--spacing-3);
+  flex-shrink: 0;
+}
+
+.brandIcon {
+  background: var(--accent-lime);
+  color: var(--sidebar-bg);
+  border-radius: 11px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.brandText strong {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.brandText small {
+  font-size: 12px;
+  color: #bfd1c6;
+}
+
+.closeMenu {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: var(--spacing-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 1024px) {
+  .closeMenu {
+    display: none;
+  }
+}
+
+/* Coop Block */
+.coop {
+  padding: var(--spacing-4);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.coopBadge {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--rounded-md);
+  letter-spacing: 0.5px;
+}
+
+.coopText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.coopText strong {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.coopText small {
+  font-size: 12px;
+  color: #bfd1c6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.coopIcon {
+  color: #bfd1c6;
+}
+
+/* Nav */
 .nav {
   display: flex;
   flex-direction: column;
-  padding: var(--spacing-4);
+  padding: var(--spacing-3);
   gap: var(--spacing-1);
+  flex: 1;
+  overflow-y: auto;
 }
 
 .navItem {
   display: flex;
   align-items: center;
-  height: 36px;
+  height: 40px;
   padding: 0 var(--spacing-3);
   border-radius: var(--rounded-sm);
-  color: var(--color-ink-secondary);
+  color: #bfd1c6;
   text-decoration: none;
-  font-size: var(--font-size-body);
+  font-size: 14px;
+  font-weight: 500;
   transition: all 0.2s ease;
 }
 
 .navItem:hover {
-  background-color: var(--color-surface-sunken);
-  color: var(--color-ink-primary);
+  background-color: rgba(255, 255, 255, 0.07); /* #ffffff12 approx */
+  color: #fff;
 }
 
 .active, .active:hover {
-  background-color: var(--color-primary-subtle);
-  color: var(--color-primary);
-  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  box-shadow: inset 3px 0 var(--accent-lime);
 }
 
 .icon {
@@ -57,4 +172,72 @@
 
 .label {
   flex: 1;
+}
+
+/* Footer */
+.sidebarFoot {
+  padding: var(--spacing-4);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.roleLabel {
+  font-size: 10px;
+  color: #bfd1c6;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-2);
+}
+
+.roleSwitch {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: var(--rounded-sm);
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: 13px;
+  margin-bottom: var(--spacing-4);
+  text-align: center;
+}
+
+.profile {
+  background: transparent;
+  border: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-surface-overlay);
+  color: var(--sidebar-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profileText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.profileText strong {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.profileText small {
+  font-size: 12px;
+  color: #bfd1c6;
 }
