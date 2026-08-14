@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 # SPRINT STATUS — OpenTea-DX-OS
 # ============================================================================
 # Managed by: bmad-create-story, bmad-dev-story, bmad-dev-auto, bmad-sprint-status
@@ -20,7 +20,7 @@
 project: OpenTea-DX-OS
 sprint: 1
 sprint_goal: "Foundation + Market Intelligence + Farm Zone + QR Traceability by 30/08/2026 (POF)"
-last_updated: "2026-08-14T16:38:00+07:00"
+last_updated: "2026-08-14T18:44:00+07:00"
 
 epics:
   - id: 1
@@ -174,7 +174,7 @@ development_status:
   7-9a-lot-trace-data-usecase:          done    # P0: GetLotTraceDataUseCase + withdrawal safety computation
 
   # ── Foundation & Layout ───────────────────────────────────────────────────
-  7-1-tailwind-design-token-setup:       ready-for-dev  # Foundation: Tailwind v4 + Be Vietnam Pro + token merge
+  7-1-tailwind-design-token-setup:       done           # Foundation: Tailwind v4 + Be Vietnam Pro + token merge
   7-2-appshell-sidebar-refactor:         ready-for-dev  # Layout: dark green sidebar, brand block, lime active indicator
   7-3-topbar-bottomnav-refactor:         ready-for-dev  # Layout: topbar 70px, mobile drawer trigger, bottom nav
 
