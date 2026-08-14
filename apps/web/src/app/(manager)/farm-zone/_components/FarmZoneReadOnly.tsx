@@ -28,7 +28,7 @@ const STATUS_COLORS: Record<string, { fillColor: string; color: string }> = {
 
 export default function FarmZoneReadOnly() {
   const [parcels, setParcels] = useState<Parcel[]>([])
-  const [statuses, setStatuses] = useState<string[]>(['Sowing','Tending','Harvest-Approved','Harvested'])
+  const statuses = ['Sowing','Tending','Harvest-Approved','Harvested']
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([...statuses])
   const [cropTypes, setCropTypes] = useState<string[]>([])
   const [selectedCrop, setSelectedCrop] = useState<string>('all')
