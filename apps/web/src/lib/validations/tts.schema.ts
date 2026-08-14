@@ -5,6 +5,8 @@ import { z } from 'zod'
 
 export const ttsRequestSchema = z.object({
   text: z.string().min(1, 'Văn bản không được để trống').max(500, 'Văn bản vượt quá 500 ký tự'),
+  // Accept `lang` but default to Vietnamese when omitted for backward compatibility
+  lang: z.literal('vi').optional().default('vi'),
 })
 
 export type TtsRequest = z.infer<typeof ttsRequestSchema>
