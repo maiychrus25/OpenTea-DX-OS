@@ -26,18 +26,4 @@ export class PrismaWeatherCacheRepository implements WeatherCachePort {
       humidity_pct: record.humidity_pct,
     };
   }
-
-  async save(parcelId: string, date: Date, data: WeatherData): Promise<void> {
-    await prisma.weatherCache.create({
-      data: {
-        parcel_id: parcelId,
-        recorded_at: date,
-        condition: data.condition,
-        temperature_c: data.temperature_c,
-        precipitation_mm: data.precipitation_mm,
-        humidity_pct: data.humidity_pct,
-        source: 'open-meteo',
-      },
-    });
-  }
 }

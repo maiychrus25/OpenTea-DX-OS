@@ -7,17 +7,14 @@ import { weatherSchema } from '@/lib/validations/weather.schema';
 import { GetWeatherUseCase } from '@/application/farm/GetWeatherUseCase';
 import { PrismaWeatherCacheRepository } from '@/infrastructure/db/farm/PrismaWeatherCacheRepository';
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository';
-import { OpenMeteoAdapter } from '@/infrastructure/weather/OpenMeteoAdapter';
 import { withErrorHandler } from '@/lib/api/withErrorHandler';
 
 // Initialize dependencies
 const weatherCachePort = new PrismaWeatherCacheRepository();
 const parcelPort = new PrismaParcelRepository();
-const weatherFetchPort = new OpenMeteoAdapter();
 
 const getWeatherUseCase = new GetWeatherUseCase(
   weatherCachePort,
-  weatherFetchPort,
   parcelPort
 );
 

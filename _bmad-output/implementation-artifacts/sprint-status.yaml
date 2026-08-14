@@ -117,7 +117,7 @@ development_status:
   # ── Epic 3: Missing Stories (identified 2026-08-12) ───────────────────────
   # Weather API backend required by 3-3 and 3-5
 
-  3-5a-weather-api-endpoint:             ready-for-dev  # required by 3-3 & 3-5 (Open-Meteo + cache)
+  3-5a-weather-api-endpoint:             done           # required by 3-3 & 3-5 (Open-Meteo + cache)
 
   # ── Epic 4: QR Traceability & Disease Backend ─────────────────────────────
   epic-4: in-progress

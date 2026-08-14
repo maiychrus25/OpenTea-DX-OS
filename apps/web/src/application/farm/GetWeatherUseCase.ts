@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { WeatherCachePort } from '@/domain/farm/ports/WeatherCachePort';
-import { WeatherFetchPort } from '@/domain/farm/ports/WeatherFetchPort';
 import { ParcelPort } from '@/domain/farm/ports/ParcelPort';
 import { WeatherData } from '@/domain/farm/models/WeatherData';
 import { DomainError, ValidationError } from '@/domain/errors';
@@ -10,7 +9,6 @@ import { DomainError, ValidationError } from '@/domain/errors';
 export class GetWeatherUseCase {
   constructor(
     private readonly weatherCachePort: WeatherCachePort,
-    private readonly weatherFetchPort: WeatherFetchPort,
     private readonly parcelPort: ParcelPort
   ) {}
 
@@ -33,16 +31,6 @@ export class GetWeatherUseCase {
       return cached;
     }
 
-    // Fetch from external API
-    const weatherData = await this.weatherFetchPort.fetchHistorical(
-      parcel.centroid_lat,
-      parcel.centroid_lng,
-      date
-    );
-
-    // Save to cache
-    await this.weatherCachePort.save(parcelId, date, weatherData);
-
-    return weatherData;
+    throw new DomainError('Weather data not available in cache for this date');
   }
 }

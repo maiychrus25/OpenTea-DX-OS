@@ -5,5 +5,4 @@ import { WeatherData } from '../models/WeatherData';
 
 export interface WeatherCachePort {
   findNearest(parcelId: string, date: Date): Promise<WeatherData | null>;
-  save(parcelId: string, date: Date, data: WeatherData): Promise<void>;
 }
