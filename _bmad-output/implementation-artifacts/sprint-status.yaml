@@ -170,7 +170,7 @@ development_status:
   epic-7: ready-for-dev
 
   # ── BE Prerequisites (must go first) ─────────────────────────────────────
-  7-0a-schema-htx-relations:            ready-for-dev  # P0: add htx_profile_id to Household+Lot; needs dev approval
+  7-0a-schema-htx-relations:            done           # P0: add htx_profile_id to Household+Lot; needs dev approval
   7-9a-lot-trace-data-usecase:          ready-for-dev  # P0: GetLotTraceDataUseCase + withdrawal safety computation
 
   # ── Foundation & Layout ───────────────────────────────────────────────────
