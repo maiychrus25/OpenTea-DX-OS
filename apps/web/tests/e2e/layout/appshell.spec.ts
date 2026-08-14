@@ -45,7 +45,7 @@ test.describe('AppShell & Sidebar', () => {
     // Sidebar should be hidden initially (transformed off screen)
     // Wait, transform is not visibility, Playwright might still see it as visible if not overflow hidden?
     // Actually if it's display none or translated, it might be outside viewport.
-    const sidebar = page.locator('[data-testid="sidebar"]')
+
     
     // Click hamburger button
     await page.locator('[data-testid="menu-button"]').click()
