@@ -3,9 +3,7 @@
 
 import * as React from 'react'
 import styles from './TopBar.module.css'
-import { LogOut, Menu } from 'lucide-react'
-import Link from 'next/link'
-
+import { Menu, Search, Bell } from 'lucide-react'
 
 export interface TopBarProps {
   roleName: string
@@ -31,26 +29,28 @@ export const TopBar: React.FC<TopBarProps> = ({ roleName, userName, notification
             <Menu size={24} />
           </button>
         )}
-        <div className={styles.logo}>
-          <span className={styles.brand}>DX-AgriMarket</span>
+        <div className={styles.pageTitle}>
+          <span className={styles.brandMobile}>DX-AgriMarket</span>
         </div>
         <div className={styles.rolePill}>{roleName}</div>
       </div>
+
+      <div className={styles.searchWrap}>
+        <Search size={18} className={styles.searchIcon} />
+        <input type="text" placeholder="Tìm kiếm..." aria-label="Tìm kiếm" className={styles.searchInput} />
+      </div>
+
       <div className={styles.right}>
         {notificationSlot ? (
           notificationSlot
         ) : (
-          <div data-slot="notification-bell" className={styles.bellPlaceholder}>
-            {/* Empty placeholder to be wired in Story 2.7 */}
-          </div>
+          <button className={styles.iconButton} aria-label="Thông báo" data-slot="notification-bell">
+            <Bell size={20} />
+          </button>
         )}
         <div className={styles.avatar} aria-label={`Người dùng: ${userName}`}>
           {initials}
         </div>
-        <Link href="/api/auth/signout" className={styles.signOutBtn} title="Đăng xuất">
-          <LogOut size={18} />
-          <span className={styles.signOutText}>Đăng xuất</span>
-        </Link>
       </div>
     </header>
   )

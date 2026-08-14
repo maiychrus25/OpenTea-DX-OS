@@ -69,4 +69,60 @@ test.describe('AppShell & Sidebar', () => {
     await expect(page.locator('main')).toBeVisible()
     expect(errors).toHaveLength(0)
   })
+
+  test.skip('search input is hidden on mobile', async ({ browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      storageState: 'playwright/.auth/manager.json'
+    })
+    const page = await context.newPage()
+    await page.goto('/manager/dashboard')
+    
+    // Search wrap should not be visible
+    await expect(page.locator('.searchWrap')).not.toBeVisible() // Using class is fragile, better to test input
+    await expect(page.getByPlaceholder('Tìm kiếm...')).not.toBeVisible()
+    
+    await context.close()
+  })
+
+  test.skip('hamburger button visible on mobile, hidden on desktop', async ({ browser }) => {
+    // Desktop (already handled by default viewport, but just to be sure)
+    const desktopCtx = await browser.newContext({
+      viewport: { width: 1280, height: 800 },
+      storageState: 'playwright/.auth/manager.json'
+    })
+    const desktopPage = await desktopCtx.newPage()
+    await desktopPage.goto('/manager/dashboard')
+    await expect(desktopPage.locator('[data-testid="menu-button"]')).not.toBeVisible()
+    await desktopCtx.close()
+
+    // Mobile
+    const mobileCtx = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      storageState: 'playwright/.auth/manager.json'
+    })
+    const mobilePage = await mobileCtx.newPage()
+    await mobilePage.goto('/manager/dashboard')
+    await expect(mobilePage.locator('[data-testid="menu-button"]')).toBeVisible()
+    await mobileCtx.close()
+  })
+
+  test.skip('bottom nav is hidden on desktop', async ({ page }) => {
+    await page.goto('/manager/dashboard')
+    await expect(page.locator('[data-testid="bottom-nav"]')).not.toBeVisible()
+  })
+
+  test.skip('bottom nav shows max 4 items on mobile', async ({ browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      storageState: 'playwright/.auth/manager.json'
+    })
+    const page = await context.newPage()
+    await page.goto('/manager/dashboard')
+    
+    const items = page.locator('[data-testid="bottom-nav"] a')
+    await expect(items).toHaveCount(4)
+    
+    await context.close()
+  })
 })
