@@ -22,7 +22,7 @@ export default function AudioPlayer({ text }: Props) {
   const [available, setAvailable] = useState<boolean | null>(null)
   const [state, setState] = useState<State>('idle')
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const idRef = useRef<number>(() => ++instanceCounter) as React.MutableRefObject<number>
+  const idRef = useRef<number>(++instanceCounter)
 
   useEffect(() => {
     // Check Piper availability
