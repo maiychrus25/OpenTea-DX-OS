@@ -6,6 +6,13 @@
   flex-direction: column;
   min-height: 100vh;
   background-color: var(--color-surface-page);
+  position: relative;
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .content {
@@ -20,21 +27,38 @@
   padding: var(--spacing-gutter-mobile);
 }
 
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.55);
+  z-index: var(--z-index-modal-backdrop);
+  border: none;
+  cursor: pointer;
+}
+
 @media (min-width: 1024px) {
   .shell {
     flex-direction: row;
-    display: grid;
-    grid-template-columns: var(--sidebar-width) 1fr;
+    display: flex;
   }
   
   .shell[data-role="farmer"] {
-    display: flex;
     flex-direction: column;
+  }
+
+  .workspace {
+    width: calc(100% - 276px);
+    margin-left: 276px;
+  }
+
+  .shell[data-role="farmer"] .workspace {
+    width: 100%;
+    margin-left: 0;
   }
 
   .content {
     padding-bottom: 0;
-    min-width: 0; /* Fixes grid blowout issue */
+    min-width: 0;
   }
 
   .shell[data-role="farmer"] .content {

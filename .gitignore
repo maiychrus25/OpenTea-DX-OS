@@ -80,3 +80,5 @@ desktop.ini
 .commandcode/
 .gemini/
 .agent/
+playwright/.auth/
+apps/web/playwright/.auth/

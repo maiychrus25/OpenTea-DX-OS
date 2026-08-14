@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 # SPRINT STATUS — OpenTea-DX-OS
 # ============================================================================
 # Managed by: bmad-create-story, bmad-dev-story, bmad-dev-auto, bmad-sprint-status
@@ -175,7 +175,7 @@ development_status:
 
   # ── Foundation & Layout ───────────────────────────────────────────────────
   7-1-tailwind-design-token-setup:       done           # Foundation: Tailwind v4 + Be Vietnam Pro + token merge
-  7-2-appshell-sidebar-refactor:         ready-for-dev  # Layout: dark green sidebar, brand block, lime active indicator
+  7-2-appshell-sidebar-refactor:         done  # Layout: dark green sidebar, brand block, lime active indicator
   7-3-topbar-bottomnav-refactor:         ready-for-dev  # Layout: topbar 70px, mobile drawer trigger, bottom nav
 
   # ── Shared UI Components ──────────────────────────────────────────────────

@@ -3,7 +3,7 @@
 
 import * as React from 'react'
 import styles from './TopBar.module.css'
-import { LogOut } from 'lucide-react'
+import { LogOut, Menu } from 'lucide-react'
 import Link from 'next/link'
 
 
@@ -11,9 +11,10 @@ export interface TopBarProps {
   roleName: string
   userName: string
   notificationSlot?: React.ReactNode
+  onMenuClick?: () => void
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ roleName, userName, notificationSlot }) => {
+export const TopBar: React.FC<TopBarProps> = ({ roleName, userName, notificationSlot, onMenuClick }) => {
   // Get initials for avatar
   const initials = userName
     .split(' ')
@@ -25,6 +26,11 @@ export const TopBar: React.FC<TopBarProps> = ({ roleName, userName, notification
   return (
     <header className={styles.topBar}>
       <div className={styles.left}>
+        {onMenuClick && (
+          <button className={styles.menuButton} onClick={onMenuClick} aria-label="Mở menu" data-testid="menu-button">
+            <Menu size={24} />
+          </button>
+        )}
         <div className={styles.logo}>
           <span className={styles.brand}>DX-AgriMarket</span>
         </div>

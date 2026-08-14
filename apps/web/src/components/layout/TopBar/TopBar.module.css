@@ -20,6 +20,23 @@
   gap: var(--spacing-4);
 }
 
+.menuButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-ink-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-1);
+}
+
+@media (min-width: 1024px) {
+  .menuButton {
+    display: none;
+  }
+}
+
 .logo {
   display: flex;
   align-items: center;

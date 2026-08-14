@@ -6,10 +6,16 @@ import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landmark } from 'lucide-react'
 
+import { prisma } from '@/infrastructure/db/prisma.client'
+import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
+
 export default async function ManagerLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session) redirect('/login')
   if (session.user.role !== 'manager') redirect('/unauthorized')
+
+  const profileRepo = new PrismaHtxProfileRepository(prisma)
+  const htxProfile = await profileRepo.getProfile()
 
   const navItems = [
     { label: 'Tổng quan', href: '/manager/dashboard', icon: <Home size={20} /> },
@@ -22,7 +28,13 @@ export default async function ManagerLayout({ children }: { children: React.Reac
   ]
 
   return (
-    <AppShell role="manager" userName={session.user.name || 'Trưởng HTX'} navItems={navItems}>
+    <AppShell 
+      role="manager" 
+      userName={session.user.name || 'Trưởng HTX'} 
+      navItems={navItems}
+      htxName={htxProfile?.name || 'Chưa cập nhật'}
+      htxLocation={htxProfile?.address || ''}
+    >
       {children}
     </AppShell>
   )
