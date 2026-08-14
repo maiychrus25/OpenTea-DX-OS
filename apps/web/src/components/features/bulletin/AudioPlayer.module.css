@@ -1,0 +1,36 @@
+.playerRoot {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ttsButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hidden {
+  display: none;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.1);
+  border-top-color: rgba(0,0,0,0.6);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+}

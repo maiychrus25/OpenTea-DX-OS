@@ -1,5 +1,6 @@
 import React from 'react'
 import styles from './BulletinCard.module.css'
+import AudioPlayer from '@/components/features/bulletin/AudioPlayer'
 
 type Bulletin = {
   id?: string
@@ -25,6 +26,9 @@ export default function BulletinCard({ bulletin }: { bulletin: Bulletin }) {
     <article className={styles.card}>
       <header>
         <h2 className={styles.title}>{commodity || '—'}</h2>
+        <div style={{ float: 'right' }}>
+          <AudioPlayer text={bulletin_vi || ''} />
+        </div>
       </header>
       <div className={styles.content}>
         {paragraphs}
