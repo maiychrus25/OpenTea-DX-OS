@@ -28,7 +28,7 @@ test('TC-7.6-03: clicking login button initiates Keycloak redirect', async ({ pa
   await expect(btn).toBeVisible()
   await expect(btn).not.toBeDisabled()
   // Click and assert redirect to Keycloak (URL contains keycloak or similar)
-  const [response] = await Promise.all([
+  await Promise.all([
     page.waitForNavigation({ timeout: 5000 }).catch(() => null),
     btn.click(),
   ])
