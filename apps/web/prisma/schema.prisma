@@ -84,6 +84,9 @@ model HtxProfile {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
+  households    Household[]
+  lots          Lot[]
+
   @@map("htx_profiles")
 }
 
@@ -101,6 +104,9 @@ model Household {
   parcels         Parcel[]
   disease_reports DiseaseReport[]
   notifications   Notification[]  @relation("RecipientHousehold")
+
+  htx_profile_id  String?
+  htx_profile     HtxProfile?     @relation(fields: [htx_profile_id], references: [id])
 
   @@map("households")
 }
@@ -206,6 +212,9 @@ model Lot {
   updated_at       DateTime  @updatedAt
 
   lot_parcels LotParcel[]
+
+  htx_profile_id String?
+  htx_profile    HtxProfile? @relation(fields: [htx_profile_id], references: [id])
 
   @@map("lots")
 }
