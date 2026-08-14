@@ -36,13 +36,14 @@ export default function AudioPlayer({ text }: Props) {
 
   useEffect(() => {
     // cleanup on unmount
+    const id = idRef.current
     return () => {
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current.src = ''
         audioRef.current = null
       }
-      if (window.__TTS_CURRENT?.id === idRef.current) {
+      if (window.__TTS_CURRENT?.id === id) {
         window.__TTS_CURRENT = undefined
       }
     }

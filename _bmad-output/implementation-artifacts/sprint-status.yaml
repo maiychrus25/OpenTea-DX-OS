@@ -180,7 +180,7 @@ development_status:
 
   # ── Shared UI Components ──────────────────────────────────────────────────
   7-4-shared-ui-pill-button:             ready-for-dev  # UI: Pill tones, Button variants (primary/secondary/text/icon)
-  7-5-shared-ui-metriccard-sourcebox-ainote: ready-for-dev  # UI: MetricCard, SourceBox (mandatory), AiNote (mandatory)
+  7-5-shared-ui-metriccard-sourcebox-ainote: done  # UI: MetricCard, SourceBox (mandatory), AiNote (mandatory)
 
   # ── Auth ──────────────────────────────────────────────────────────────────
   7-6-login-page-refactor:              ready-for-dev  # Auth: 2-panel login layout (Keycloak backend unchanged)

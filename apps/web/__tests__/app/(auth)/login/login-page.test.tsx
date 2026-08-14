@@ -9,7 +9,7 @@ import LoginPage from '@/app/(auth)/login/page'
 // Mock the react-dom hooks used in client component
 jest.mock('react-dom', () => ({
   ...jest.requireActual('react-dom'),
-  useFormState: () => [null, jest.fn()],
+  useFormState: () => [null, '/dummy-action'],
   useFormStatus: () => ({ pending: false })
 }))
 
