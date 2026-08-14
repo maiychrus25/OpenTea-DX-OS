@@ -26,7 +26,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: apps/web
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Generate Prisma Client
         working-directory: apps/web
@@ -92,7 +92,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: apps/web
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Generate Prisma Client
         working-directory: apps/web
@@ -121,7 +121,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: apps/web
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Generate Prisma Client
         working-directory: apps/web
