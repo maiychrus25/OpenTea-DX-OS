@@ -3,11 +3,13 @@
 
 import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import ManagerDashboard from '../page'
+import { redirect } from 'next/navigation'
+
+import { auth } from '@/auth'
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { NotFoundError } from '@/domain/errors'
-import { auth } from '@/auth'
-import { redirect } from 'next/navigation'
+
+import ManagerDashboard from '../page'
 
 // Mock auth
 jest.mock('@/auth', () => ({
@@ -16,12 +18,30 @@ jest.mock('@/auth', () => ({
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
-  redirect: jest.fn(),
+  redirect: jest.fn().mockImplementation(() => {
+    throw new Error('NEXT_REDIRECT')
+  }),
 }))
 
 // Mock Prisma
 jest.mock('@/infrastructure/db/prisma.client', () => ({
-  prisma: {},
+  prisma: {
+    parcel: {
+      aggregate: jest.fn().mockResolvedValue({ _sum: { area_ha: 10 } }),
+      findMany: jest.fn().mockResolvedValue([{ area_ha: 5, estimated_yield_per_ha: 2000 }]),
+    },
+    lot: {
+      count: jest.fn().mockResolvedValue(5),
+    },
+    journalEntry: {
+      count: jest.fn().mockResolvedValue(3),
+    },
+    marketData: {
+      findMany: jest.fn().mockResolvedValue([
+        { commodity: 'Lúa', value: 10000, unit: 'VND', source: 'Test' }
+      ]),
+    }
+  },
 }))
 
 // Mock Repository
@@ -34,7 +54,7 @@ jest.mock('@/application/useCases/GetHtxProfileUseCase', () => {
   return {
     GetHtxProfileUseCase: jest.fn().mockImplementation(() => {
       return {
-        execute: jest.fn(),
+        execute: jest.fn().mockResolvedValue({ id: 'dummy' }),
       }
     }),
   }
@@ -47,7 +67,7 @@ describe('ManagerDashboard', () => {
 
   it('redirects to login if no session', async () => {
     ;(auth as jest.Mock).mockResolvedValueOnce(null)
-    await ManagerDashboard()
+    await expect(ManagerDashboard()).rejects.toThrow('NEXT_REDIRECT')
     expect(redirect).toHaveBeenCalledWith('/login')
   })
 
@@ -55,7 +75,7 @@ describe('ManagerDashboard', () => {
     ;(auth as jest.Mock).mockResolvedValueOnce({
       user: { role: 'farmer' },
     })
-    await ManagerDashboard()
+    await expect(ManagerDashboard()).rejects.toThrow('NEXT_REDIRECT')
     expect(redirect).toHaveBeenCalledWith('/login')
   })
 
@@ -90,6 +110,6 @@ describe('ManagerDashboard', () => {
     render(jsx)
 
     expect(screen.queryByText('Chưa thiết lập Hợp tác xã')).not.toBeInTheDocument()
-    expect(screen.getByText('Tổng quan — Trưởng HTX')).toBeInTheDocument()
+    expect(screen.getByText(/Chào buổi/)).toBeInTheDocument()
   })
 })
