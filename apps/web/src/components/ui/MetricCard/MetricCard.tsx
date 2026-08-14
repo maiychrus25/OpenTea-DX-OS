@@ -14,7 +14,7 @@ interface MetricCardProps {
 
 export function MetricCard({ icon, label, value, detail, tone = 'green' }: MetricCardProps) {
   return (
-    <article className={`${styles.card} ${styles[tone]}`}>
+    <article className={`${styles.card} ${styles[tone]}`} data-testid="metric-card">
       <div className={styles.iconWrap}>{icon}</div>
       <div className={styles.content}>
         <p className={styles.label}>{label}</p>

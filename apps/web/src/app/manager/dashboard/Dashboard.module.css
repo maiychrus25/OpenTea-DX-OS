@@ -69,3 +69,124 @@
 .ctaButton:active {
   transform: translateY(1px);
 }
+
+/* NEW DASHBOARD STYLES */
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-8);
+}
+
+.heroGreeting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.heroGreeting .heading {
+  margin-bottom: 0;
+}
+
+.pillGreen {
+  display: inline-block;
+  width: fit-content;
+  background-color: var(--color-green-100);
+  color: var(--color-green-800);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: 9999px; /* Pill shape */
+  border: 1px solid var(--color-green-300);
+}
+
+.date {
+  color: var(--color-ink-secondary);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  padding-top: var(--spacing-2);
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-8);
+}
+
+@media (max-width: 1100px) {
+  .metricGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 430px) {
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .hero {
+    flex-direction: column;
+    gap: var(--spacing-4);
+  }
+}
+
+.marketSnapshot {
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-lg);
+  padding: var(--spacing-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.eyebrow {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-ink-secondary);
+  letter-spacing: 0.05em;
+}
+
+.pricesGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.priceItem {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: var(--spacing-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.priceItem:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.priceCommodity {
+  color: var(--color-ink-primary);
+  font-weight: 600;
+}
+
+.priceValue {
+  color: var(--color-ink-primary);
+}
+
+.emptyText {
+  color: var(--color-ink-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+.aiInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-border-subtle);
+}
