@@ -2,6 +2,10 @@
 
 Status: ready-for-dev
 
+> ⚠️ **DESIGN SYNC NOTE — 2026-08-14:**
+> Nếu story này được redone hoặc refactor: route path dùng `manager/bulletin/page.tsx` (KHÔNG dùng `(manager)/bulletin/` route group). CSS tokens dùng `var(--foreground)`, `var(--card)`, `var(--border)` theo design system mới (7-1). `SourceBox` component (7-5) PHẢI được thêm vào khi hiển thị sources_json. `AiNote` (7-5) PHẢI có khi hiển thị AI-generated bulletin text.
+
+
 ## Story
 
 As a Manager, Officer, or Farmer,
@@ -30,8 +34,8 @@ so that I can quickly understand market trends and make informed decisions witho
 
 - [ ] **T2: Shared Market Data Widget** (AC: 4)
   - [ ] Create `src/components/features/market/MarketSummaryWidget.tsx`.
-  - [ ] Fetch data from `/api/market-data?commodity=Gạo` and `/api/market-data/fx?pair=USD/VND` (Client-side fetch using SWR or React Query, or fetch on the Server if it's a Server Component).
-  - [ ] Display minimal cards/stats for FX rate and primary export price.
+  - [ ] Fetch data from `/api/market-data?commodity=Gạo` and `/api/market-data/fx?pair=USD/VND`.
+  - [ ] Use `<MetricCard>` and `<SourceBox>` (from Epic 7) for FX rate and primary export price.
 
 - [ ] **T3: Backend Use Case** (AC: 1)
   - [ ] Add `getLatestBulletin(commodity: string): Promise<Bulletin | null>` to `IBulletinRepository`.
@@ -39,9 +43,9 @@ so that I can quickly understand market trends and make informed decisions witho
   - [ ] Create `src/application/useCases/GetLatestBulletinUseCase.ts`.
 
 - [ ] **T4: Role Pages Assembly** (AC: 1, 5)
-  - [ ] Create `src/app/(manager)/bulletin/page.tsx`.
-  - [ ] Create `src/app/(officer)/bulletin/page.tsx`.
-  - [ ] Create `src/app/(farmer)/bulletin/page.tsx`.
+  - [ ] Create `src/app/manager/bulletin/page.tsx`.
+  - [ ] Create `src/app/officer/bulletin/page.tsx`.
+  - [ ] Create `src/app/farmer/bulletin/page.tsx`.
   - [ ] Each page is a Server Component that executes `GetLatestBulletinUseCase` and passes data to `<BulletinView>`.
   - [ ] Place the `<MarketSummaryWidget>` alongside the bulletin text.
 
@@ -81,9 +85,9 @@ _To be filled after implementation_
 - `apps/web/src/components/features/bulletin/BulletinView.module.css`
 - `apps/web/src/components/features/market/MarketSummaryWidget.tsx`
 - `apps/web/src/components/features/market/MarketSummaryWidget.module.css`
-- `apps/web/src/app/(manager)/bulletin/page.tsx`
-- `apps/web/src/app/(officer)/bulletin/page.tsx`
-- `apps/web/src/app/(farmer)/bulletin/page.tsx`
+- `apps/web/src/app/manager/bulletin/page.tsx`
+- `apps/web/src/app/officer/bulletin/page.tsx`
+- `apps/web/src/app/farmer/bulletin/page.tsx`
 
 **Files to UPDATE:**
 - `apps/web/package.json` (Add `react-markdown`)

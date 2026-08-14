@@ -1,6 +1,10 @@
-# Story 5.2: Farmer Journal Self-Submission
+﻿# Story 5.2: Farmer Journal Self-Submission
 
 Status: ready-for-dev
+
+> [!WARNING]
+> **DESIGN SYNC - 2026-08-14 (Epic 7):** Use direct routes (officer/..., farmer/...) NOT route groups. CSS tokens: var(--primary), var(--foreground), var(--card), var(--border). Shared components: Pill, Button, MetricCard from @/components/ui (available after story 7-4/7-5). No inline styles.
+
 
 ## Story
 

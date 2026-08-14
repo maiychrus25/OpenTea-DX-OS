@@ -1,6 +1,10 @@
-# Story 2.5: Market Expert Chatbot (Manager/Farmer)
+# Story 2.5: Market Expert Chatbot
 
 Status: ready-for-dev
+
+> ⚠️ **DESIGN SYNC — 2026-08-14 (Epic 7):**
+> Route path: `manager/chat/page.tsx` (KHÔNG dùng route group `(manager)/chat/`). CSS dùng tokens mới: `var(--primary)`, `var(--card)`, `var(--border)`, `var(--muted)`. `AiNote` component (7-5) PHẢI render bên dưới mỗi AI response (AI Invariant). `SourceBox` PHẢI render khi response chứa market data. Chat bubbles: user bubble `bg: var(--primary)`, AI bubble `bg: var(--card)` với border.
+
 
 ## Story
 

@@ -2,6 +2,11 @@
 
 Status: ready-for-dev
 
+> ⚠️ **DESIGN UPDATE — 2026-08-14 (Epic 7 sync):**
+> Sau khi story 7-1 done, dùng CSS tokens mới: `var(--foreground)` (thay `--color-ink-primary`), `var(--card)` (thay `--color-surface-card`), `var(--primary)` (thay `--color-primary`), `var(--border)` (thay `--color-border-default`).
+> Button `variant="primary"` vẫn đúng. Card component vẫn dùng được.
+
+
 ## Story
 
 As a user who navigates to a page they don't have permission to access,

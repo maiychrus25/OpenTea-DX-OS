@@ -22,6 +22,8 @@ MNM (100% open source). OLP competition + internal production use.
 | Layer | Technology | Notes |
 |-------|-----------|-------|
 | Frontend | Next.js 14 App Router | Server Components default |
+| CSS | Tailwind CSS v4 + CSS Variables | `@import 'tailwindcss'` trong globals.css |
+| Font | Be Vietnam Pro (Google Fonts) | Variable: `--font-be-vietnam` |
 | Auth | Keycloak 24 + NextAuth.js 5 | OIDC, Passkeys/PIN |
 | State | Zustand 4 | Client global state |
 | Map | Leaflet.js + React-Leaflet | `'use client'` + `dynamic(ssr:false)` ALWAYS |
@@ -108,7 +110,7 @@ Next.js READS these tables; it NEVER writes them.
 
 5. **MinIO = pre-signed URLs.** Never expose MinIO endpoint to browser. Generate URLs in API routes.
 
-6. **CSS = CSS Modules.** No inline styles. No Tailwind. File: `ComponentName.module.css`
+6. **CSS = Tailwind CSS v4 + CSS Custom Properties.** No inline styles. Design tokens trong `src/styles/globals.css`. Xem chi tiet: `docs/DESIGN.md`
 
 7. **n8n owns data ingestion.** Never add USDA/WTO/Open-Meteo calls in Next.js code.
 
@@ -176,3 +178,4 @@ Full list: `.env.example`
 | API endpoints + request/response | `docs/api-contract.md` |
 | Product requirements | `_bmad-output/planning-artifacts/prd-dx-agrimarket-20260804/prd.md` |
 | Business analysis source | `docs/BA_Document.md` |
+| **UI Design System** | **`docs/DESIGN.md`** — color tokens, components, layout patterns |

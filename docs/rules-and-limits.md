@@ -264,6 +264,16 @@ Rule: Pre-signed read URL expires: 60 minutes
 ```
 **Rule:** `// @ts-ignore` và `any` type đều bị cấm trừ khi có comment giải thích.
 
+### 5.1b CSS Rules
+```
+- Dùng Tailwind CSS v4 là primary styling method
+- Design tokens khai báo trong src/styles/globals.css (CSS Custom Properties)
+- Không inline styles (không dùng style={{}})
+- CSS Modules (.module.css) được phép cho animation phức tạp hoặc override đặc biệt
+- Không hardcode màu sắc — dùng var(--primary), var(--border), v.v.
+- Tham khảo docs/DESIGN.md cho component patterns chuẩn
+```
+
 ### 5.2 Naming Conventions
 ```
 Files:        kebab-case.ts              (bulletin-service.ts)

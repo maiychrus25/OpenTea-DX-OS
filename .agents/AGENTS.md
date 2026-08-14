@@ -16,6 +16,7 @@ Trước bất kỳ task nào, agent PHẢI đọc theo thứ tự:
 3. Đọc thêm nếu cần:
    - docs/database-schema.md        ← Khi làm task liên quan DB
    - docs/api-contract.md           ← Khi làm task liên quan API/route
+   - docs/DESIGN.md                 ← Khi làm task liên quan FE/UI/CSS
    - ARCHITECTURE-SPINE.md §4 AD-N  ← Khi cần chi tiết architecture decision
 ```
 
@@ -87,10 +88,12 @@ KHÔNG ĐƯỢC:
 - DB tables: `snake_case`
 
 ### CSS
-- Mỗi component có file `.module.css` riêng
-- Không inline styles
-- Không Tailwind
-- Design tokens trong `styles/globals.css` (CSS custom properties)
+- Dùng **Tailwind CSS v4** là primary styling method
+- Design tokens (CSS Custom Properties) trong `src/styles/globals.css`
+- Không inline styles — không dùng `style={{}}`
+- CSS Modules (`.module.css`) được phép cho animation phức tạp hoặc override đặc biệt
+- Không hardcode màu sắc — dùng `var(--primary)`, `var(--border)`, v.v.
+- Tham khảo `docs/DESIGN.md` cho component patterns và design tokens chuẩn
 
 ### Không để lại
 - `console.log` trong committed code (dùng proper error handling)

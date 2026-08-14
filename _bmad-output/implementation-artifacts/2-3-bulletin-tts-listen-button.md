@@ -35,6 +35,7 @@ so that I can hear the market summary read aloud in Vietnamese without having to
   - [ ] Create `src/components/features/bulletin/AudioPlayer.tsx`.
   - [ ] Implement state: `isPlaying`, `isLoading`.
   - [ ] Use native HTML5 `<audio>` element (can be hidden if building custom UI, or just use the native `controls` for simplicity).
+  - [ ] Provide a `<Button variant="secondary" icon={...}>` (from Epic 7, Story 7-4) to toggle playback.
   - [ ] Set `src` to `/api/tts?bulletinId=${bulletin.id}`. (Do NOT pre-fetch audio on page load to save resources; only set `src` or call `play()` when the user clicks).
 
 - [ ] **T3: Integrate with BulletinView** (AC: 1)

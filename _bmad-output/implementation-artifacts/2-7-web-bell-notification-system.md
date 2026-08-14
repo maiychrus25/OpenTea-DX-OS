@@ -1,6 +1,15 @@
 # Story 2.7: Web Bell Notification System
 
-Status: ready-for-dev
+Status: partial  ⚠️ CONFLICT RESOLVED 2026-08-14
+
+> **IMPORTANT — Phân tách tasks:**
+> - **T1 + T2 (BE):** Vẫn cần làm — Domain ports, Repository, Use Cases, API routes
+> - **T3 + T4 (FE):** ❌ SUPERSEDED bởi story `7-11-notification-bell`
+>   - Component location đổi: `components/features/notification/` → `components/ui/NotificationBell/`
+>   - SWR polling vẫn được dùng (kế thừa trong 7-11)
+>   - Mark-as-read (T4) sẽ implement trong 7-11
+> - Dev làm 2-7 chỉ làm **T1 + T2**, sau đó 7-11 làm FE component
+
 
 ## Story
 
@@ -56,8 +65,10 @@ so that I am alerted to important events (e.g., new bulletins, journal approvals
 
 ### Data Model Reference
 
-The `Notification` table (from Story 1.3) looks like:
-- `id`, `user_id`, `title`, `content`, `type`, `is_read`, `link_url`, `created_at`
+The `Notification` table (Prisma model: `Notification`) có fields:
+- `id`, `recipient_id` (keycloak user ID — NOT `user_id`), `type` (NotificationType enum), `title`, `body` (NOT `content`), `is_read`, `deep_link_url`, `created_at`
+- Query bằng: `prisma.notification.findMany({ where: { recipient_id: session.user.keycloakId }, orderBy: { created_at: 'desc' } })`
+- Mark read: `prisma.notification.updateMany({ where: { recipient_id: ... }, data: { is_read: true } })`
 
 ## Dev Agent Record
 

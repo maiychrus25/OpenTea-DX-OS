@@ -2,6 +2,14 @@
 
 Status: ready-for-dev
 
+> ⚠️ **DESIGN UPDATE — 2026-08-14 (Epic 7 sync):**
+> Story 7-3 (TopBar refactor) sẽ thêm user avatar placeholder trong TopBar.
+> Story 7-2 (Sidebar refactor) thêm user profile button trong `sidebar-foot`.
+> **Khuyến nghị:** Implement `UserMenu` logic trong Sidebar-foot (`sidebar-foot .profile` button) thay vì TopBar dropdown — phù hợp với prototype design hơn.
+> CSS tokens cần dùng: `var(--card)` (thay `--color-surface-overlay`), `var(--border)` (thay `--color-border-default`), `var(--radius-md)`.
+> **Nếu 7-2/7-3 chưa done:** Vẫn có thể implement TopBar dropdown như spec cũ.
+
+
 ## Story
 
 As any authenticated user,

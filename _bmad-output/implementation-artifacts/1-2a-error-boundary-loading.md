@@ -26,7 +26,7 @@ so that unexpected situations are handled gracefully without breaking the user e
   - [ ] Import `error.module.css` (no inline styles)
   - [ ] Render error message + "Thử lại" button calling `reset()`
 - [ ] Create `apps/web/src/app/error.module.css` (AC: 4)
-  - [ ] Use CSS custom properties from globals.css: `--color-danger`, `--color-ink-primary`, `--spacing-*`
+  - [ ] Use CSS custom properties from globals.css (Epic 7): `var(--danger)`, `var(--foreground)`, `var(--card)`
 - [ ] Create `apps/web/src/app/loading.tsx` (AC: 2, 4)
   - [ ] Import `Skeleton` component from `@/components/ui`
   - [ ] Server Component (no `'use client'`)
@@ -46,11 +46,9 @@ so that unexpected situations are handled gracefully without breaking the user e
 - `loading.tsx` and `not-found.tsx` are Server Components by default
 
 ### Project Structure Notes
-- CSS custom properties: use tokens from `apps/web/src/app/globals.css`
-  - DO NOT use `--border`, `--text-primary` etc. — these DON'T EXIST
-  - USE: `--color-border-default`, `--color-ink-primary`, `--color-ink-secondary`, `--color-surface-card`
-- Shared UI components: import from `@/components/ui` (Button, Card, Skeleton)
-- **CRITICAL:** Review F2-4 finding — `ProfileForm.module.css` uses wrong token names as anti-pattern to avoid
+- CSS custom properties: use tokens from `apps/web/src/app/globals.css` (Epic 7 updated)
+  - USE: `var(--border)`, `var(--foreground)`, `var(--muted)`, `var(--card)`
+- Shared UI components: import from `@/components/ui` (Button from 7-4, Skeleton)
 
 ### References
 - [Source: docs/project-context.md — Design System section]
