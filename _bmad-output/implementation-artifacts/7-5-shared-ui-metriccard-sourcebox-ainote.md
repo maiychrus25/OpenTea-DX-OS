@@ -1,6 +1,6 @@
 # Story 7.5: Shared UI Components — MetricCard, SourceBox, AiNote
 
-Status: backlog
+Status: done
 
 ## Story
 
@@ -22,11 +22,11 @@ so that data presentation and AI safety disclaimers are consistent across all fe
 
 ## Tasks / Subtasks
 
-- [ ] Tạo `MetricCard.tsx` + `MetricCard.module.css` + `index.ts` (AC: 1, 2)
-- [ ] Tạo `SourceBox.tsx` + `SourceBox.module.css` + `index.ts` (AC: 3, 4, 5)
-- [ ] Tạo `AiNote.tsx` + `AiNote.module.css` + `index.ts` (AC: 6, 7, 8)
-- [ ] Cập nhật `components/ui/index.ts` — export 3 components mới (AC: 1, 3, 6)
-- [ ] Verify build (AC: 9)
+- [x] Tạo `MetricCard.tsx` + `MetricCard.module.css` + `index.ts` (AC: 1, 2)
+- [x] Tạo `SourceBox.tsx` + `SourceBox.module.css` + `index.ts` (AC: 3, 4, 5)
+- [x] Tạo `AiNote.tsx` + `AiNote.module.css` + `index.ts` (AC: 6, 7, 8)
+- [x] Cập nhật `components/ui/index.ts` — export 3 components mới (AC: 1, 3, 6)
+- [x] Verify build (AC: 9)
 
 ## Dev Notes
 
@@ -165,7 +165,10 @@ export function AiNote({ message = 'AI tổng hợp dữ liệu, không đưa ra
 ## Dev Agent Record
 
 ### Agent Model Used
-_to be filled by dev agent_
+Gemini 3.1 Pro (High)
 
 ### Completion Notes List
-_to be filled by dev agent_
+- Created MetricCard, SourceBox, and AiNote using CSS Modules.
+- Authored passing test suites conforming to the P0 tests outlined in the test artifact.
+- `npm run build` and `npm run test` verified.
+- The E2E test (TC-7.5-05) is deferred to story 7-8 per the test plan.

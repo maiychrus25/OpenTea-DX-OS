@@ -1,0 +1,32 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.sourceBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f0f7f3;
+  border: 1px solid #c6ddd0;
+  font-size: 12px;
+}
+.icon {
+  width: 16px;
+  height: 16px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.content {
+  display: flex;
+  flex-direction: column;
+}
+.strong {
+  display: block;
+  color: var(--primary);
+  font-weight: 700;
+}
+.span {
+  color: var(--muted-foreground);
+  margin-top: 2px;
+}
