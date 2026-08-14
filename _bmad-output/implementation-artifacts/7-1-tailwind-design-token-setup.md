@@ -1,6 +1,6 @@
 # Story 7.1: Tailwind CSS v4 Setup & Design Token Consolidation
 
-Status: backlog
+Status: done
 
 ## Story
 
@@ -22,24 +22,24 @@ so that all subsequent UI migration stories can use the correct design system fo
 
 ## Tasks / Subtasks
 
-- [ ] Install Tailwind v4 dependencies (AC: 1)
+- [x] Install Tailwind v4 dependencies (AC: 1)
   - Add to `package.json`: `tailwindcss@^4.3.3`, `tw-animate-css@^1.4.0`, `@tailwindcss/postcss@^4.3.3`, `postcss@^8.5`
-- [ ] Create `apps/web/postcss.config.mjs` (AC: 2)
+- [x] Create `apps/web/postcss.config.mjs` (AC: 2)
   - Export config with `@tailwindcss/postcss` plugin
-- [ ] Rewrite `apps/web/src/styles/globals.css` (AC: 3, 4, 5, 6)
+- [x] Rewrite `apps/web/src/styles/globals.css` (AC: 3, 4, 5, 6)
   - Add `@import 'tailwindcss'` at top
   - Add `@import 'tw-animate-css'`
   - Add `@theme inline` block mapping CSS vars to Tailwind colors/radii/fonts
   - Merge prototype tokens into `:root` (see Dev Notes for full token list)
   - Add backward-compat aliases for old `--color-*` tokens
   - Keep existing semantic tokens (status colors, shadows, spacing scale)
-- [ ] Update `apps/web/src/app/layout.tsx` (AC: 7)
+- [x] Update `apps/web/src/app/layout.tsx` (AC: 7)
   - Import `Be_Vietnam_Pro` from `next/font/google`
   - Apply `beVietnam.variable` to `<html>` className
   - Set `--font-be-vietnam` in `@theme inline`
-- [ ] Verify build passes (AC: 8)
+- [x] Verify build passes (AC: 8)
   - Run `npm run build` — fix any TypeScript/PostCSS errors
-- [ ] Visual check login page (AC: 9)
+- [x] Visual check login page (AC: 9)
   - Confirm existing `.module.css` token references still resolve correctly
 
 ## Dev Notes
@@ -139,10 +139,17 @@ export default {
 ## Dev Agent Record
 
 ### Agent Model Used
-_to be filled by dev agent_
+Gemini 3.1 Pro (High)
 
 ### Completion Notes List
-_to be filled by dev agent_
+- Installed tailwindcss v4, @tailwindcss/postcss, postcss, tw-animate-css
+- Configured postcss.config.mjs
+- Rewrote globals.css to include tailwind imports, theme inline, and new token values and backwards compat
+- Updated layout.tsx to use Be Vietnam Pro
+- Created globals.css tokens tests
+- Created postcss tests
+- Created Playwright E2E test for design tokens
+- Verified all tests and `npm run build` pass
 
 ### File List
 - `apps/web/package.json` (MODIFY)

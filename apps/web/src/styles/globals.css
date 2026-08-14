@@ -1,12 +1,46 @@
 /* Copyright (c) 2026 OpenTea Developers
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@theme inline {
+  --font-sans: var(--font-be-vietnam);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --radius-sm: .5rem;
+  --radius-md: .75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+}
+
 :root {
+  /* Prototype tokens — ADD these */
+  --background:         #f5f7f3;
+  --foreground:         #19231e;
+  --card:               #ffffff;
+  --primary:            #176c4b;
+  --primary-foreground: #ffffff;
+  --accent-lime:        #d6f05c;
+  --secondary:          #e7f0ea;
+  --muted:              #eef1ed;
+  --muted-foreground:   #66736c;
+  --border:             #dce3dd;
+  --sidebar-bg:         #143c2d;
+  --sidebar-darker:     #0d3023;
+
   /* Primary */
-  --color-primary: #16A34A;
-  --color-primary-hover: #15803D;
-  --color-primary-subtle: #DCFCE7;
-  --color-primary-foreground: #FFFFFF;
+  --color-primary: var(--primary);
+  --color-primary-hover: #125c3f;
+  --color-primary-subtle: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
 
   /* Accent */
   --color-accent: #EA580C;
@@ -32,18 +66,18 @@
   --color-info-subtle: #DBEAFE;
 
   /* Neutral Surfaces */
-  --color-surface-page: #F8FAFC;
-  --color-surface-card: #FFFFFF;
+  --color-surface-page: var(--background);
+  --color-surface-card: var(--card);
   --color-surface-sunken: #F1F5F9;
   --color-surface-overlay: #FFFFFF;
 
   /* Borders */
   --color-border-subtle: #E2E8F0;
-  --color-border-default: #CBD5E1;
-  --color-border-focus: #16A34A;
+  --color-border-default: var(--border);
+  --color-border-focus: var(--primary);
 
   /* Text */
-  --color-ink-primary: #0F172A;
+  --color-ink-primary: var(--foreground);
   --color-ink-secondary: #475569;
   --color-ink-tertiary: #94A3B8;
   --color-ink-inverse: #FFFFFF;

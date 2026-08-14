@@ -47,9 +47,9 @@ describe('Design Token Coverage', () => {
     })
   })
 
-  it('--color-primary value is #16A34A', () => {
+  it('--color-primary value is var(--primary)', () => {
     const css = fs.readFileSync(cssPath, 'utf-8')
-    expect(css).toMatch(/--color-primary:\s*#16A34A/i)
+    expect(css).toMatch(/--color-primary:\s*var\(--primary\)/i)
   })
 
   it('--color-accent value is #EA580C', () => {
