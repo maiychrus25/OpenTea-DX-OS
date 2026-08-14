@@ -29,7 +29,7 @@ function SkeletonList() {
   )
 }
 
-export default async function BulletinPage({ params }: { params?: any }) {
+export default async function BulletinPage() {
   const { status, ok, json } = await fetchBulletin()
 
   // Page title display
