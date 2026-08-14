@@ -5,19 +5,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: var(--topbar-height);
-  padding: 0 var(--spacing-gutter);
+  height: 70px;
+  padding: 0 var(--spacing-4);
   background-color: var(--color-surface-card);
   border-bottom: 1px solid var(--color-border-subtle);
   position: sticky;
   top: 0;
   z-index: var(--z-index-sticky);
+  gap: var(--spacing-4);
 }
 
 .left {
   display: flex;
   align-items: center;
   gap: var(--spacing-4);
+  flex: 1;
 }
 
 .menuButton {
@@ -25,27 +27,22 @@
   border: none;
   cursor: pointer;
   color: var(--color-ink-primary);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: var(--spacing-1);
 }
 
-@media (min-width: 1024px) {
-  .menuButton {
-    display: none;
-  }
-}
-
-.logo {
+.pageTitle {
   display: flex;
   align-items: center;
 }
 
-.brand {
+.brandMobile {
   font-weight: 700;
-  font-size: var(--font-size-h3);
+  font-size: var(--font-size-h4);
   color: var(--color-primary);
+  display: none;
 }
 
 .rolePill {
@@ -60,23 +57,72 @@
   border: 1px solid var(--color-border-subtle);
 }
 
+.searchWrap {
+  flex: 2;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  background-color: var(--color-surface-sunken);
+  border-radius: var(--rounded-lg);
+  padding: 0 var(--spacing-3);
+  height: 40px;
+  border: 1px solid var(--color-border-subtle);
+  transition: border-color 0.2s;
+}
+
+.searchWrap:focus-within {
+  border-color: var(--color-primary);
+}
+
+.searchIcon {
+  color: var(--color-ink-tertiary);
+  margin-right: var(--spacing-2);
+}
+
+.searchInput {
+  border: none;
+  background: transparent;
+  width: 100%;
+  height: 100%;
+  font-family: inherit;
+  font-size: var(--font-size-body);
+  color: var(--color-ink-primary);
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: var(--color-ink-tertiary);
+}
+
 .right {
   display: flex;
   align-items: center;
   gap: var(--spacing-4);
+  flex: 1;
+  justify-content: flex-end;
 }
 
-.bellPlaceholder {
-  width: 32px;
-  height: 32px;
+.iconButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-ink-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: var(--spacing-2);
+  border-radius: 50%;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.iconButton:hover {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-ink-primary);
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background-color: var(--color-primary-subtle);
   color: var(--color-primary-hover);
@@ -86,24 +132,27 @@
   font-size: var(--font-size-label);
   font-weight: 600;
   user-select: none;
+  cursor: pointer;
 }
 
-.signOutBtn {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  color: var(--color-ink-secondary);
-  text-decoration: none;
-  font-size: var(--font-size-body);
-  transition: color 0.2s;
-}
-
-.signOutBtn:hover {
-  color: var(--color-danger);
-}
-
-@media (max-width: 767px) {
-  .signOutText {
+@media (max-width: 800px) {
+  .menuButton {
+    display: flex;
+  }
+  
+  .searchWrap {
+    display: none;
+  }
+  
+  .brandMobile {
+    display: block;
+  }
+  
+  .rolePill {
+    display: none;
+  }
+  
+  .avatar {
     display: none;
   }
 }

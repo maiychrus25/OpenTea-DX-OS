@@ -25,7 +25,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ navItems }) => {
 
   return (
     <nav className={styles.bottomNav} data-testid="bottom-nav">
-      {navItems.map((item) => {
+      {navItems.slice(0, 4).map((item) => {
         const active = isActive(pathname, item.href)
         return (
           <Link

@@ -16,12 +16,9 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 801px) {
   .bottomNav {
     display: none;
-  }
-  :global([data-role="farmer"]) .bottomNav {
-    display: flex;
   }
 }
 
