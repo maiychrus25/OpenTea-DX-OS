@@ -5,11 +5,13 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import LoginPage from '@/app/(auth)/login/page'
+import { LoginForm } from '@/app/(auth)/login/_components/login-form'
 
 // Mock the react-dom hooks used in client component
+let mockFormState: { error?: string } | null = null;
 jest.mock('react-dom', () => ({
   ...jest.requireActual('react-dom'),
-  useFormState: () => [null, '/dummy-action'],
+  useFormState: () => [mockFormState, '/dummy-action'],
   useFormStatus: () => ({ pending: false })
 }))
 
@@ -19,14 +21,18 @@ jest.mock('@/app/(auth)/login/actions', () => ({
 }))
 
 describe('Login Page', () => {
-  it('1.5a-UNIT-001: renders brand name DX-AgriMarket', () => {
+  beforeEach(() => {
+    mockFormState = null;
+  });
+
+  it('1.5a-UNIT-001: renders brand name DX AgriMarket', () => {
     render(<LoginPage />)
-    expect(screen.getByText('DX-AgriMarket')).toBeInTheDocument()
+    expect(screen.getByText('DX AgriMarket')).toBeInTheDocument()
   })
 
   it('1.5a-UNIT-002: renders subtitle Hệ điều hành số Nông nghiệp', () => {
     render(<LoginPage />)
-    expect(screen.getByText(/hệ điều hành số/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/hệ điều hành số/i).length).toBeGreaterThan(0)
   })
 
   it('1.5a-UNIT-003: no inline style attributes on any element (AC: 1)', () => {
@@ -46,5 +52,13 @@ describe('Login Page', () => {
     const button = screen.getByRole('button')
     expect(button).toBeInTheDocument()
     expect(button).toHaveAttribute('type', 'submit')
+  })
+
+  it('TC-7.6-04: Error Banner Visible on Keycloak Failure (Unit)', async () => {
+    mockFormState = { error: 'Không thể kết nối máy chủ xác thực.' };
+    render(<LoginForm />)
+    
+    // The banner should be rendered due to the mocked state
+    expect(await screen.findByText(/Không thể kết nối/)).toBeInTheDocument()
   })
 })

@@ -13,7 +13,7 @@ function SubmitButton() {
   
   return (
     <Button type="submit" className={styles.submitButton} isLoading={pending}>
-      Đăng nhập qua Keycloak
+      Tiếp tục với Keycloak
     </Button>
   )
 }
