@@ -71,6 +71,49 @@
   background-color: var(--color-danger-hover);
 }
 
+/* Secondary */
+.secondary {
+  background-color: #fff;
+  border: 1.5px solid var(--color-border);
+  color: var(--color-foreground);
+  min-height: 42px;
+  border-radius: var(--rounded-md);
+}
+.secondary:not(:disabled):hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* Text */
+.text {
+  background-color: transparent;
+  border: none;
+  color: var(--color-primary);
+  padding: 6px 10px;
+  font-weight: 600;
+}
+.text:not(:disabled):hover {
+  text-decoration: underline;
+}
+
+/* Icon */
+.icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-sm);
+  background-color: #fff;
+}
+.icon:not(:disabled):hover {
+  background-color: var(--color-muted);
+}
+
 /* Loading State */
 .hiddenContent {
   opacity: 0;

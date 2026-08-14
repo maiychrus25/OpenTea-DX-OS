@@ -1,0 +1,45 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+/* Pill base */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Tones */
+.green {
+  background: #ddf0e7;
+  color: #176c4b;
+}
+
+.amber {
+  background: #fff0cc;
+  color: #865b00;
+}
+
+.blue {
+  background: #e0ecf5;
+  color: #285d7e;
+}
+
+.neutral {
+  background: #edf0ed;
+  color: #657069;
+}
+
+/* Sizes */
+.sm {
+  font-size: 9px;
+  padding: 4px 8px;
+}
+
+.md {
+  font-size: 11px;
+  padding: 5px 10px;
+}

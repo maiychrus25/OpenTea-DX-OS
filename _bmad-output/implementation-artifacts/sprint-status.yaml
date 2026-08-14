@@ -183,7 +183,7 @@ development_status:
   7-5-shared-ui-metriccard-sourcebox-ainote: done  # UI: MetricCard, SourceBox (mandatory), AiNote (mandatory)
 
   # ── Auth ──────────────────────────────────────────────────────────────────
-  7-6-login-page-refactor:              ready-for-dev  # Auth: 2-panel login layout (Keycloak backend unchanged)
+  7-6-login-page-refactor:              done           # Auth: 2-panel login layout (Keycloak backend unchanged)
 
   # ── Feature Pages (depend on 7-4, 7-5) ───────────────────────────────────
   7-7-manager-dashboard-today:          ready-for-dev  # Feature: Manager Today view; needs 7-0a for lot count
