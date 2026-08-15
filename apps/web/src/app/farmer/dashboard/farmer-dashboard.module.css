@@ -1,0 +1,165 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.farmerHero {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-foreground) 100%);
+  color: var(--background);
+  border-radius: 16px;
+  padding: 28px 24px;
+}
+
+.greeting {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.subGreeting {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 1rem;
+}
+
+.ctaRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.ctaButton {
+  background: var(--background);
+  color: var(--primary);
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s;
+}
+
+.ctaButton:hover {
+  opacity: 0.9;
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .dashboardGrid {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+.section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.sectionTitle {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.parcelList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.parcelCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.parcelInfo h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.parcelInfo p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.weatherWidget {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.weatherMain {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.weatherTemp {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.weatherCondition {
+  font-size: 1.125rem;
+  color: var(--muted-foreground);
+}
+
+.weatherDetails {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.weatherDetailItem {
+  display: flex;
+  flex-direction: column;
+  background: var(--muted);
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.weatherDetailLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.weatherDetailValue {
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+.iconInline {
+  display: inline;
+  margin-right: 4px;
+  vertical-align: text-bottom;
+}
