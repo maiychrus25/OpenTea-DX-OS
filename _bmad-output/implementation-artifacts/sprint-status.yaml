@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 # SPRINT STATUS — OpenTea-DX-OS
 # ============================================================================
 # Managed by: bmad-create-story, bmad-dev-story, bmad-dev-auto, bmad-sprint-status
@@ -191,7 +191,7 @@ development_status:
 
   # ── Public Pages ──────────────────────────────────────────────────────────
   7-9-public-qr-trace-page:             ready-for-dev  # Public: /lot/[lot_code]; needs 7-9a for trace data
-  7-10-public-htx-storefront:           ready-for-dev  # Public: /htx/[htx_code]; needs 7-0a for lot by HTX
+  7-10-public-htx-storefront:           done  # Public: /htx/[htx_code]; needs 7-0a for lot by HTX
 
   # ── Integration ───────────────────────────────────────────────────────────
   7-11-notification-bell:               ready-for-dev  # UI: NotificationBell; needs 2-7 T1+T2 BE done first

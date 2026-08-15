@@ -35,6 +35,7 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
       lots: {
         where: { status: 'READY' },
         orderBy: { created_at: 'desc' },
+        take: 20, // Add limit for performance
       },
       _count: {
         select: { households: true }
