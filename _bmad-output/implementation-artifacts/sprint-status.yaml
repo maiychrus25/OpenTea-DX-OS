@@ -20,7 +20,7 @@
 project: OpenTea-DX-OS
 sprint: 1
 sprint_goal: "Foundation + Market Intelligence + Farm Zone + QR Traceability by 30/08/2026 (POF)"
-last_updated: "2026-08-14T18:44:00+07:00"
+last_updated: "2026-08-16T00:28:00+07:00"
 
 epics:
   - id: 1
@@ -194,4 +194,4 @@ development_status:
   7-10-public-htx-storefront:           done  # Public: /htx/[htx_code]; needs 7-0a for lot by HTX
 
   # ── Integration ───────────────────────────────────────────────────────────
-  7-11-notification-bell:               ready-for-dev  # UI: NotificationBell; needs 2-7 T1+T2 BE done first
+  7-11-notification-bell:               done  # UI: NotificationBell; needs 2-7 T1+T2 BE done first

@@ -1,0 +1,153 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.wrap { 
+  position: relative; 
+}
+.bellBtn { 
+  position: relative; 
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+.badge { 
+  position: absolute; 
+  top: -4px; 
+  right: -4px; 
+  background: #cc4b36; 
+  color: #fff; 
+  border-radius: 999px; 
+  font-size: 9px; 
+  font-weight: 700; 
+  min-width: 16px; 
+  height: 16px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+.panel { 
+  position: absolute; 
+  right: 0; 
+  top: calc(100% + 8px); 
+  width: 320px; 
+  background: #fff; 
+  border: 1px solid var(--border); 
+  border-radius: 14px; 
+  box-shadow: var(--shadow-modal); 
+  z-index: 40; 
+  display: flex;
+  flex-direction: column;
+}
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.panelTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-main);
+}
+.markReadBtn {
+  font-size: 12px;
+  color: var(--primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.markReadBtn:hover {
+  text-decoration: underline;
+}
+.list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+.notifItem {
+  display: flex;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  text-decoration: none;
+}
+.notifItem:hover {
+  background: var(--surface-hover);
+}
+.notifItem.unread {
+  background: var(--surface-active);
+}
+.notifDotWrap {
+  padding-top: 4px;
+}
+.notifDot { 
+  width: 8px; 
+  height: 8px; 
+  border-radius: 999px; 
+  flex-shrink: 0; 
+}
+.toneGreen { background: #176c4b; }
+.toneAmber { background: #c98a12; }
+.toneBlue  { background: #285d7e; }
+.toneNeutral { background: #66736c; }
+
+.content {
+  flex: 1;
+}
+.title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+.detail {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+.time {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.footer {
+  padding: 12px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+.seeAll {
+  font-size: 13px;
+  color: var(--primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+.seeAll:hover {
+  text-decoration: underline;
+}
+
+.ttsBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+}
+.ttsBtn:hover {
+  color: var(--primary);
+}
