@@ -1,6 +1,6 @@
 # Story 7.11: NotificationBell Component & TopBar Integration
 
-Status: backlog
+Status: in-progress
 
 > **Absorbs từ 2-7 T3 + T4:** Story này implement toàn bộ FE notification component.
 > Story 2-7 chỉ làm BE (Domain + API). 7-11 depends on 2-7 T1+T2 hoàn thành trước.

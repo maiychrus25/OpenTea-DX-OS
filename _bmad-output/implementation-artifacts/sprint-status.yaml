@@ -190,7 +190,7 @@ development_status:
   7-8-officer-farmer-dashboard:         done  # Feature: Officer + Farmer Today views, updated navItems
 
   # ── Public Pages ──────────────────────────────────────────────────────────
-  7-9-public-qr-trace-page:             ready-for-dev  # Public: /lot/[lot_code]; needs 7-9a for trace data
+  7-9-public-qr-trace-page:             done  # Public: /lot/[lot_code]; needs 7-9a for trace data
   7-10-public-htx-storefront:           done  # Public: /htx/[htx_code]; needs 7-0a for lot by HTX
 
   # ── Integration ───────────────────────────────────────────────────────────
