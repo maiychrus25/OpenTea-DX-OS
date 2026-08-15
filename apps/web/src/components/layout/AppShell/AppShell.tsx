@@ -68,6 +68,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       <div className={styles.workspace}>
         <main className={styles.content}>
           <TopBar 
+            role={role}
             roleName={getRoleLabel(role)} 
             userName={userName} 
             onMenuClick={!hideSidebar ? () => setSidebarOpen(true) : undefined}

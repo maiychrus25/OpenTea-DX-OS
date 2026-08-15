@@ -3,16 +3,18 @@
 
 import * as React from 'react'
 import styles from './TopBar.module.css'
-import { Menu, Search, Bell } from 'lucide-react'
+import { Menu, Search } from 'lucide-react'
+import { NotificationBell } from '@/components/ui'
 
 export interface TopBarProps {
+  role: string
   roleName: string
   userName: string
   notificationSlot?: React.ReactNode
   onMenuClick?: () => void
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ roleName, userName, notificationSlot, onMenuClick }) => {
+export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notificationSlot, onMenuClick }) => {
   // Get initials for avatar
   const initials = userName
     .split(' ')
@@ -44,9 +46,7 @@ export const TopBar: React.FC<TopBarProps> = ({ roleName, userName, notification
         {notificationSlot ? (
           notificationSlot
         ) : (
-          <button className={styles.iconButton} aria-label="Thông báo" data-slot="notification-bell">
-            <Bell size={20} />
-          </button>
+          <NotificationBell role={role} />
         )}
         <div className={styles.avatar} aria-label={`Người dùng: ${userName}`}>
           {initials}

@@ -1,6 +1,6 @@
 # Story 7.11: NotificationBell Component & TopBar Integration
 
-Status: backlog
+Status: done
 
 > **Absorbs từ 2-7 T3 + T4:** Story này implement toàn bộ FE notification component.
 > Story 2-7 chỉ làm BE (Domain + API). 7-11 depends on 2-7 T1+T2 hoàn thành trước.
@@ -28,16 +28,16 @@ so that I can stay informed of pending approvals, announcements, and system even
 
 ## Tasks / Subtasks
 
-- [ ] Tạo `NotificationBell.tsx` + CSS + index (AC: 1–6)
+- [x] Tạo `NotificationBell.tsx` + CSS + index (AC: 1–6)
   - `'use client'` directive
   - Props: `role: string` (cho "Xem tất cả" link)
   - Fetch `/api/notifications?limit=5` on mount
   - Click-outside handler
-- [ ] Tạo `NotificationBell.module.css` (AC: 2, 3, 4)
-- [ ] Cập nhật `TopBar.tsx` (AC: 7)
+- [x] Tạo `NotificationBell.module.css` (AC: 2, 3, 4)
+- [x] Cập nhật `TopBar.tsx` (AC: 7)
   - Replace `<button aria-label="Thông báo"><Bell /></button>` placeholder → `<NotificationBell role={role} />`
   - TopBar nhận thêm prop `role: string` từ AppShell
-- [ ] Cập nhật `components/ui/index.ts` (AC: 1)
+- [x] Cập nhật `components/ui/index.ts` (AC: 1)
 
 ## Dev Notes
 
@@ -145,3 +145,7 @@ _to be filled by dev agent_
 
 ### Completion Notes List
 _to be filled by dev agent_
+
+### Review Findings
+- [x] [Review][Patch] Thiếu nút Volume2 (TTS placeholder) [NotificationBell.tsx:137]
+- [x] [Review][Patch] Sử dụng console.error thay vì xử lý lỗi chuẩn [NotificationBell.tsx:76]
