@@ -4,7 +4,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
-import { Home, Sprout, BookOpen, HeartPulse, Bell, FileText } from 'lucide-react'
+import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, Bot, User } from 'lucide-react'
 
 export default async function OfficerLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -13,11 +13,13 @@ export default async function OfficerLayout({ children }: { children: React.Reac
 
   const navItems = [
     { label: 'Tổng quan', href: '/officer/dashboard', icon: <Home size={20} /> },
-    { label: 'Vùng trồng', href: '/officer/farm-zones', icon: <Sprout size={20} /> },
-    { label: 'Nhật ký', href: '/officer/journals', icon: <BookOpen size={20} /> },
-    { label: 'Chẩn đoán bệnh', href: '/officer/diagnosis', icon: <HeartPulse size={20} /> },
-    { label: 'Thông báo', href: '/officer/notifications', icon: <Bell size={20} /> },
-    { label: 'Tài liệu', href: '/officer/documents', icon: <FileText size={20} /> },
+    { label: 'Bản đồ', href: '/officer/map', icon: <Map size={20} /> },
+    { label: 'Nhật ký', href: '/officer/journal', icon: <FileText size={20} /> },
+    { label: 'Lô hàng', href: '/officer/lots', icon: <PackageCheck size={20} /> },
+    { label: 'Nhật ký bệnh', href: '/officer/disease', icon: <Stethoscope size={20} /> },
+    { label: 'Tài liệu', href: '/officer/documents', icon: <FolderOpen size={20} /> },
+    { label: 'Trợ lý', href: '/officer/assistant', icon: <Bot size={20} /> },
+    { label: 'Tài khoản', href: '/officer/account', icon: <User size={20} /> },
   ]
 
   return (

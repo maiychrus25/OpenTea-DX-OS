@@ -1,6 +1,9 @@
+---
+baseline_commit: 06237e015c8cfe1f0ad16f05f12e744bdc88175c
+---
 # Story 7.8: Officer & Farmer Dashboard — Today Views
 
-Status: backlog
+Status: done
 
 ## Story
 

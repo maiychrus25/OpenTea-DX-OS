@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 # SPRINT STATUS — OpenTea-DX-OS
 # ============================================================================
 # Managed by: bmad-create-story, bmad-dev-story, bmad-dev-auto, bmad-sprint-status
@@ -179,15 +179,15 @@ development_status:
   7-3-topbar-bottomnav-refactor:         done  # Layout: topbar 70px, mobile drawer trigger, bottom nav
 
   # ── Shared UI Components ──────────────────────────────────────────────────
-  7-4-shared-ui-pill-button:             done           # UI: Pill tones, Button variants (primary/secondary/text/icon)
-  7-5-shared-ui-metriccard-sourcebox-ainote: done       # UI: MetricCard, SourceBox (mandatory), AiNote (mandatory)
+  7-4-shared-ui-pill-button:             done  # UI: Pill tones, Button variants (primary/secondary/text/icon)
+  7-5-shared-ui-metriccard-sourcebox-ainote: done  # UI: MetricCard, SourceBox (mandatory), AiNote (mandatory)
 
   # ── Auth ──────────────────────────────────────────────────────────────────
   7-6-login-page-refactor:              done           # Auth: 2-panel login layout (Keycloak backend unchanged)
 
   # ── Feature Pages (depend on 7-4, 7-5) ───────────────────────────────────
-  7-7-manager-dashboard-today:          ready-for-dev  # Feature: Manager Today view; needs 7-0a for lot count
-  7-8-officer-farmer-dashboard:         ready-for-dev  # Feature: Officer + Farmer Today views, updated navItems
+  7-7-manager-dashboard-today:          done  # Feature: Manager Today view; needs 7-0a for lot count
+  7-8-officer-farmer-dashboard:         done  # Feature: Officer + Farmer Today views, updated navItems
 
   # ── Public Pages ──────────────────────────────────────────────────────────
   7-9-public-qr-trace-page:             ready-for-dev  # Public: /lot/[lot_code]; needs 7-9a for trace data

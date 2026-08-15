@@ -4,7 +4,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
-import { Sun, BookOpen, HeartPulse } from 'lucide-react'
+import { Home, FileText, Stethoscope, Sprout, Newspaper, User } from 'lucide-react'
 
 export default async function FarmerLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -12,9 +12,12 @@ export default async function FarmerLayout({ children }: { children: React.React
   if (session.user.role !== 'farmer') redirect('/unauthorized')
 
   const navItems = [
-    { label: 'Hôm nay', href: '/farmer/dashboard', icon: <Sun size={20} /> },
-    { label: 'Nhật ký', href: '/farmer/journals', icon: <BookOpen size={20} /> },
-    { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <HeartPulse size={20} /> },
+    { label: 'Tổng quan', href: '/farmer/dashboard', icon: <Home size={20} /> },
+    { label: 'Nhật ký', href: '/farmer/journal', icon: <FileText size={20} /> },
+    { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <Stethoscope size={20} /> },
+    { label: 'Thửa của tôi', href: '/farmer/parcels', icon: <Sprout size={20} /> },
+    { label: 'Bản tin', href: '/farmer/bulletin', icon: <Newspaper size={20} /> },
+    { label: 'Tài khoản', href: '/farmer/account', icon: <User size={20} /> },
   ]
 
   return (
