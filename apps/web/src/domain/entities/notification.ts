@@ -3,12 +3,14 @@
 
 export interface Notification {
   id: string
-  user_id: string
   title: string
   body: string
-  deep_link_url: string | null
   type: string
   is_read: boolean
+  recipient_id: string | null
+  household_id: string | null
+  sender_id: string | null
+  deep_link_url: string | null
+  tts_text: string | null
   created_at: Date
-  deleted_at: Date | null
 }
