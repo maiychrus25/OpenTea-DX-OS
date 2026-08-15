@@ -21,10 +21,13 @@ describe('GetNotificationsUseCase', () => {
     const rawNotif: Notification = {
       id: '1',
       recipient_id: 'user1',
+      household_id: null,
+      sender_id: null,
       title: 'Hello',
       body: 'World',
       type: 'MARKET_ALERT',
       deep_link_url: '/url',
+      tts_text: null,
       is_read: false,
       created_at: new Date('2026-08-15T00:00:00.000Z')
     }
