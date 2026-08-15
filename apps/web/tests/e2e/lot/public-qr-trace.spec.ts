@@ -8,7 +8,7 @@ test.describe('Story 7.9: Public QR Trace Page', () => {
   test('TC-7.9-01: trace page accessible without login', async ({ browser }) => {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
-    const response = await page.goto('/lot/LOT-2026-001');
+    await page.goto('/lot/LOT-2026-001');
     
     // Should NOT redirect to /login
     await expect(page).not.toHaveURL(/login/);
@@ -17,7 +17,7 @@ test.describe('Story 7.9: Public QR Trace Page', () => {
   });
 
   test('TC-7.9-02: invalid lot_code returns 404 page', async ({ page }) => {
-    const response = await page.goto('/lot/INVALID-CODE-9999');
+    await page.goto('/lot/INVALID-CODE-9999');
     // Next.js not-found page text
     await expect(page.locator('body')).toContainText(/không tìm thấy|not found|404/i);
   });
