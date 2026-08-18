@@ -34,7 +34,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ data: result })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Document Download URL API]', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }

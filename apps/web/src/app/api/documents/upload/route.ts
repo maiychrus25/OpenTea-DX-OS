@@ -37,9 +37,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ data: uploadData })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Document Upload API]', error)
-    if (error.message.includes('Invalid path prefix')) {
+    if (error instanceof Error && error.message.includes('Invalid path prefix')) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

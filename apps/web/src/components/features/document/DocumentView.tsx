@@ -46,7 +46,7 @@ export function DocumentView() {
       const json = await res.json()
       if (json.data && json.data.documents) {
         // Fix string date to Date object
-        setDocuments(json.data.documents.map((d: any) => ({
+        setDocuments(json.data.documents.map((d: Omit<DocumentItem, 'uploadDate'> & { uploadDate: string }) => ({
           ...d,
           uploadDate: new Date(d.uploadDate)
         })))
@@ -130,9 +130,10 @@ export function DocumentView() {
       setUploadFile(null)
       fetchDocuments(currentPath)
       
-    } catch (error: any) {
+    } catch (error) {
       console.error(error)
-      alert(`Lỗi upload: ${error.message}`)
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Lỗi upload: ${message}`)
     } finally {
       setIsUploading(false)
     }
