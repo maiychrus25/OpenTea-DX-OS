@@ -40,7 +40,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO notifications (id, recipient_id, type, title, body, created_at, is_read) VALUES (gen_random_uuid(), '{{$json.officer_id}}'::uuid, 'SYSTEM', 'Nhắc nhở duyệt cuối tuần', 'Bạn có ' || '{{$json.pending_count}}' || ' nhật ký chờ duyệt. Vui lòng phê duyệt trước cuối tuần.', NOW(), false);"
+        "query": "INSERT INTO notifications (id, recipient_id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, '{{$json.officer_id}}', 'SYSTEM', 'Nhắc nhở duyệt cuối tuần', 'Bạn có ' || '{{$json.pending_count}}' || ' nhật ký chờ duyệt. Vui lòng phê duyệt trước cuối tuần.', NOW(), false);"
       },
       "id": "b1b2c3d4-0000-5aaa-bbbb-000000000003",
       "name": "Create Web Bell Notification",
@@ -65,7 +65,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO notifications (id, recipient_id, type, title, body, created_at, is_read) VALUES (gen_random_uuid(), NULL, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+        "query": "INSERT INTO notifications (id, recipient_id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, NULL, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
       },
       "id": "b1b2c3d4-0000-5aaa-bbbb-000000000005",
       "name": "Log Error to Postgres",
