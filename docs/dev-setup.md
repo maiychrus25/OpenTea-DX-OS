@@ -39,6 +39,15 @@ docker exec -it agrimarket-minio mc alias set local http://localhost:9000 minio 
 docker exec -it agrimarket-minio mc mb local/agrimarket-docs
 ```
 
+### Import n8n Workflows
+Để cài đặt các workflow cho n8n, chạy các lệnh sau để copy file JSON vào container và import:
+```bash
+docker cp workflows/weekly-officer-reminder.json agrimarket-n8n:/tmp/
+docker cp workflows/mattermost-push.json agrimarket-n8n:/tmp/
+docker exec -it agrimarket-n8n n8n import:workflow --input=/tmp/weekly-officer-reminder.json
+docker exec -it agrimarket-n8n n8n import:workflow --input=/tmp/mattermost-push.json
+```
+
 ## Bước 4: Kiểm tra Sức khỏe Hệ thống (Smoke Test)
 
 Chạy script kiểm thử tự động để đảm bảo môi trường đã sẵn sàng:
