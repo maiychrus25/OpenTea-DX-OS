@@ -233,21 +233,23 @@ model LotParcel {
 // â”€â”€â”€ Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model Notification {
-  id            String           @id @default(cuid())
-  type          NotificationType
-  title         String
-  body          String
-  recipient_id  String? // keycloak user ID (null = system broadcast)
-  household_id  String?
-  household     Household?       @relation("RecipientHousehold", fields: [household_id], references: [id])
-  sender_id     String? // keycloak user ID of sender
-  is_read       Boolean          @default(false)
-  deep_link_url String?
-  tts_text      String? // pre-generated TTS text (summary)
-  created_at    DateTime         @default(now())
+  id                    String           @id @default(cuid())
+  type                  NotificationType
+  title                 String
+  body                  String
+  recipient_id          String? // keycloak user ID (null = system broadcast)
+  household_id          String?
+  household             Household?       @relation("RecipientHousehold", fields: [household_id], references: [id])
+  sender_id             String? // keycloak user ID of sender
+  is_read               Boolean          @default(false)
+  pushed_to_mattermost  Boolean          @default(false) // Story 5.7: track Mattermost push status
+  deep_link_url         String?
+  tts_text              String? // pre-generated TTS text (summary)
+  created_at            DateTime         @default(now())
 
   @@index([recipient_id, is_read])
   @@index([created_at])
+  @@index([pushed_to_mattermost, type]) // n8n poll: unpushed high-priority notifications
   @@map("notifications")
 }
 
