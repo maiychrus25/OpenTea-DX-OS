@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import { Bulletin } from '../../../domain/repositories/IBulletinRepository';
 import { SourceBox } from '../../ui/SourceBox';
 import { AiNote } from '../../ui/AiNote';
+import AudioPlayer from './AudioPlayer';
 import styles from './BulletinView.module.css';
 
 interface BulletinViewProps {
@@ -30,9 +31,12 @@ export function BulletinView({ bulletin }: BulletinViewProps) {
     <article className={styles.container}>
       <header className={styles.header}>
         <h2 className={styles.title}>Bản tin thị trường: {bulletin.commodity}</h2>
-        <time className={styles.date}>
-          {new Date(bulletin.created_at).toLocaleDateString('vi-VN')}
-        </time>
+        <div className={styles.meta}>
+          <time className={styles.date}>
+            {new Date(bulletin.created_at).toLocaleDateString('vi-VN')}
+          </time>
+          <AudioPlayer bulletinId={bulletin.id} />
+        </div>
       </header>
 
       <AiNote message={`Bản tin được tổng hợp tự động bởi AI (${bulletin.model_used}).`} />

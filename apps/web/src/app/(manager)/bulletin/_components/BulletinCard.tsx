@@ -27,7 +27,7 @@ export default function BulletinCard({ bulletin }: { bulletin: Bulletin }) {
       <header>
         <h2 className={styles.title}>{commodity || '—'}</h2>
         <div style={{ float: 'right' }}>
-          <AudioPlayer text={bulletin_vi || ''} />
+          <AudioPlayer bulletinId={bulletin.id || ''} />
         </div>
       </header>
       <div className={styles.content}>
