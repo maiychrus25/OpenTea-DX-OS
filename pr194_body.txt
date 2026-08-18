@@ -1,0 +1,3 @@
+﻿Story 6.1 - MinIO PARA Document Store
+
+Closes #78
