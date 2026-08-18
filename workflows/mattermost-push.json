@@ -74,7 +74,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $credentials.value }}",
+        "url": "={{ $env.MATTERMOST_WEBHOOK_URL }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ text: $json.text }) }}",

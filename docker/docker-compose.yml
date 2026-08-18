@@ -83,6 +83,7 @@ services:
       - WTO_API_KEY=${WTO_API_KEY}
       - OLLAMA_MODEL=${OLLAMA_MODEL}
       - GROQ_API_KEY=${GROQ_API_KEY}
+      - MATTERMOST_WEBHOOK_URL=${MATTERMOST_WEBHOOK_URL}
     volumes:
       - n8n_data:/home/node/.n8n
     ports:
