@@ -2,11 +2,22 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
+import { auth } from '@/auth'
 
 const DISEASE_API_URL = process.env.DISEASE_API_URL || 'http://disease-api:8000'
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB — rules-and-limits.md §2.1
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png'])
 
 export async function POST(req: Request) {
+  // ── Auth check (server-side) — rules-and-limits.md §4 ───────────────
+  const session = await auth()
+  if (!session || !session.user) {
+    return NextResponse.json(
+      { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+      { status: 401 },
+    )
+  }
+
   try {
     // ── Parse multipart form data ─────────────────────────────────────
     const formData = await req.formData()
@@ -19,6 +30,19 @@ export async function POST(req: Request) {
       )
     }
 
+    // ── Validate content type ─────────────────────────────────────────
+    if (!ALLOWED_TYPES.has(file.type)) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Only JPEG and PNG images are accepted.',
+          },
+        },
+        { status: 400 },
+      )
+    }
+
     // ── Validate file size (max 5MB) ──────────────────────────────────
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
@@ -26,19 +50,6 @@ export async function POST(req: Request) {
           error: {
             code: 'VALIDATION_ERROR',
             message: `File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum is 5MB.`,
-          },
-        },
-        { status: 400 },
-      )
-    }
-
-    // ── Validate content type ─────────────────────────────────────────
-    if (!file.type.startsWith('image/jpeg') && !file.type.startsWith('image/png')) {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Only JPEG and PNG images are accepted.',
           },
         },
         { status: 400 },
@@ -82,8 +93,12 @@ export async function POST(req: Request) {
         top3: prediction.top3,
       },
     })
-  } catch (error) {
-    if (error instanceof TypeError && (error as TypeError).message.includes('fetch')) {
+  } catch (error: unknown) {
+    // Network errors: disease-api unreachable, timeout, DNS failure
+    if (
+      error instanceof TypeError ||
+      (error instanceof Error && error.message.includes('ECONNREFUSED'))
+    ) {
       return NextResponse.json(
         { error: { code: 'AI_UNAVAILABLE', message: 'Disease API service is not reachable' } },
         { status: 503 },
