@@ -3,10 +3,19 @@
 
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { PrismaClient } from '@prisma/client'
+import { SubmitDiagnosisUseCase } from '@/application/disease/submit-diagnosis.usecase'
+import { DiseaseApiAdapter } from '@/infrastructure/disease-api/disease-api.adapter'
+import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
+import { diagnosisSchema } from '@/lib/validations/diagnosis.schema'
 
-const DISEASE_API_URL = process.env.DISEASE_API_URL || 'http://disease-api:8000'
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB — rules-and-limits.md §2.1
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png'])
+
+// Reuse global prisma client to avoid connection exhaustion in dev
+const globalForPrisma = global as unknown as { prisma: PrismaClient }
+const prisma = globalForPrisma.prisma || new PrismaClient()
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 export async function POST(req: Request) {
   // ── Auth check (server-side) — rules-and-limits.md §4 ───────────────
@@ -18,10 +27,19 @@ export async function POST(req: Request) {
     )
   }
 
+  // Farmer role required
+  if (session.user.role !== 'farmer') {
+    return NextResponse.json(
+      { error: { code: 'FORBIDDEN', message: 'Only farmers can submit disease diagnosis' } },
+      { status: 403 },
+    )
+  }
+
   try {
     // ── Parse multipart form data ─────────────────────────────────────
     const formData = await req.formData()
     const file = formData.get('image') as File | null
+    const rawParcelId = formData.get('parcel_id') as string | null
 
     if (!file) {
       return NextResponse.json(
@@ -30,80 +48,76 @@ export async function POST(req: Request) {
       )
     }
 
-    // ── Validate content type ─────────────────────────────────────────
+    // ── Validate content type & size ──────────────────────────────────
     if (!ALLOWED_TYPES.has(file.type)) {
       return NextResponse.json(
-        {
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Only JPEG and PNG images are accepted.',
-          },
-        },
+        { error: { code: 'VALIDATION_ERROR', message: 'Only JPEG and PNG images are accepted.' } },
         { status: 400 },
       )
     }
 
-    // ── Validate file size (max 5MB) ──────────────────────────────────
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        {
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: `File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum is 5MB.`,
-          },
-        },
+        { error: { code: 'VALIDATION_ERROR', message: `File too large. Maximum is 5MB.` } },
         { status: 400 },
       )
     }
 
-    // ── Forward to disease-api (internal Docker network) ──────────────
-    // AD-8: Browser NEVER calls disease-api directly — always through this proxy
-    const proxyFormData = new FormData()
-    proxyFormData.append('file', file)
-
-    const response = await fetch(`${DISEASE_API_URL}/predict`, {
-      method: 'POST',
-      body: proxyFormData,
-    })
-
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({ detail: 'Unknown error' }))
-      const statusCode = response.status === 503 ? 503 : response.status === 400 ? 400 : 500
+    // ── Validate parcel ID with Zod ───────────────────────────────────
+    const parseResult = diagnosisSchema.safeParse({ parcel_id: rawParcelId })
+    if (!parseResult.success) {
       return NextResponse.json(
-        {
-          error: {
-            code: statusCode === 503 ? 'AI_UNAVAILABLE' : 'VALIDATION_ERROR',
-            message: errorBody.detail?.error || errorBody.detail || 'Disease API error',
-          },
-        },
-        { status: statusCode },
+        { error: { code: 'VALIDATION_ERROR', message: 'Invalid parcel ID format' } },
+        { status: 400 },
       )
     }
 
-    const prediction = await response.json()
+    const { parcel_id } = parseResult.data
 
-    // ── Return prediction result ──────────────────────────────────────
-    // AI Invariant: response contains ONLY disease name + confidence
-    // NO treatment, NO recommendation
-    return NextResponse.json({
-      data: {
-        disease_name: prediction.disease_name_vi,
-        confidence_score: prediction.confidence,
-        disease_name_en: prediction.disease_name_en,
-        top3: prediction.top3,
-      },
+    // ── Convert File to Buffer and Blob ───────────────────────────────
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    const blob = new Blob([arrayBuffer], { type: file.type })
+
+    // ── Instantiate Adapters & Use Case ───────────────────────────────
+    const diseaseAdapter = new DiseaseApiAdapter()
+    const storageAdapter = new MinioStorageAdapter()
+    const useCase = new SubmitDiagnosisUseCase(diseaseAdapter, storageAdapter, prisma)
+
+    // ── Execute Use Case ──────────────────────────────────────────────
+    const result = await useCase.execute({
+      farmerUserId: session.user.id!,
+      parcelId: parcel_id,
+      imageBlob: blob,
+      imageBuffer: buffer,
+      mimeType: file.type,
     })
+
+    return NextResponse.json({ data: result })
+
   } catch (error: unknown) {
-    // Network errors: disease-api unreachable, timeout, DNS failure
-    if (
-      error instanceof TypeError ||
-      (error instanceof Error && error.message.includes('ECONNREFUSED'))
-    ) {
-      return NextResponse.json(
-        { error: { code: 'AI_UNAVAILABLE', message: 'Disease API service is not reachable' } },
-        { status: 503 },
-      )
+    if (error instanceof Error) {
+      if (error.message === 'HOUSEHOLD_NOT_FOUND' || error.message === 'FORBIDDEN_PARCEL') {
+        return NextResponse.json(
+          { error: { code: 'FORBIDDEN', message: 'You do not have access to this parcel' } },
+          { status: 403 },
+        )
+      }
+      if (error.message === 'PARCEL_NOT_FOUND') {
+        return NextResponse.json(
+          { error: { code: 'NOT_FOUND', message: 'Parcel not found' } },
+          { status: 404 },
+        )
+      }
+      if (error.message.includes('Disease API')) {
+        return NextResponse.json(
+          { error: { code: 'AI_UNAVAILABLE', message: 'Dịch vụ chẩn đoán bệnh tạm ngưng. Vui lòng thử lại sau.' } },
+          { status: 503 },
+        )
+      }
     }
+
+    console.error('Diagnosis Error:', error)
     return NextResponse.json(
       { error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } },
       { status: 500 },
