@@ -46,8 +46,9 @@ dist/
 *.egg
 
 # ── AI Models (binary, large files) ─────────────────────────
-ai-models/
+ai-models/*
 !ai-models/.gitkeep
+!ai-models/ATTRIBUTION.md
 
 # ── Docker ───────────────────────────────────────────────────
 .docker/
