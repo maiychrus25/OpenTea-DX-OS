@@ -23,7 +23,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT recorded_by as officer_id, count(*) as pending_count FROM journal_entries WHERE status = 'pending_approval' AND created_at < NOW() - INTERVAL '7 days' GROUP BY recorded_by;"
+        "query": "SELECT submitted_by_id as officer_id, count(*) as pending_count FROM journal_entries WHERE status = 'PENDING_APPROVAL' AND created_at < NOW() - INTERVAL '7 days' GROUP BY submitted_by_id;"
       },
       "id": "b1b2c3d4-0000-5aaa-bbbb-000000000002",
       "name": "Query Pending Journals",
