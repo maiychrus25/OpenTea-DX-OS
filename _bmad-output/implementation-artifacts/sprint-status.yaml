@@ -94,7 +94,7 @@ development_status:
   epic-2: in-progress
 
   2-1-market-data-api-endpoint:          ready-for-dev
-  2-2-daily-bulletin-display-page:       ready-for-dev 
+  2-2-daily-bulletin-display-page:       done
   2-3-bulletin-tts-listen-button:        ready-for-dev
   2-4-n8n-bulletin-synthesis-workflow:   done
   2-5-market-expert-chatbot:             ready-for-dev
