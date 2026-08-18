@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { Client } from 'minio'
-import { StoragePort, UploadResult } from '@/domain/disease/ports/StoragePort'
+import { StoragePort, UploadResult } from '@/domain/disease/ports/storage.port'
 
 export class MinioStorageAdapter implements StoragePort {
   private minioClient: Client
