@@ -45,10 +45,12 @@ apps/disease-api/__pycache__/
 dist/
 *.egg
 
-# ── AI Models (binary, large files) ─────────────────────────
+# ── AI Models (ignore large/generated files, keep committed assets) ───
 ai-models/*
 !ai-models/.gitkeep
 !ai-models/ATTRIBUTION.md
+!ai-models/leaf_disease_model.keras
+!ai-models/class_names.txt
 
 # ── Docker ───────────────────────────────────────────────────
 .docker/
