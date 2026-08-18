@@ -1,4 +1,5 @@
 {
+  "id": "wkly-officer-remind",
   "name": "Weekly Officer Reminder",
   "note": "Story 5.8: Weekly Officer Reminder (Friday 16:00). Queries pending journals and disease reports, inserts Web Bell notification, and pushes to Mattermost.",
   "nodes": [
