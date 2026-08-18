@@ -150,11 +150,10 @@ services:
     image: mattermost/mattermost-team-edition:latest
     container_name: agrimarket-mattermost
     restart: always
-    ports:
-      - "8065:8065"
+
     environment:
       - MM_SQLSETTINGS_DRIVERNAME=postgres
-      - MM_SQLSETTINGS_DATASOURCE=postgres://mattermost:mattermost@postgres:5432/mattermost?sslmode=disable
+      - MM_SQLSETTINGS_DATASOURCE=postgres://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/mattermost?sslmode=disable
       - MM_SERVICESETTINGS_SITEURL=http://localhost:8065
       - MM_SERVICESETTINGS_ENABLEINCOMINGWEBHOOKS=true
     volumes:
