@@ -65,7 +65,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO notifications (id, recipient_id, type, title, body, created_at, is_read) VALUES (gen_random_uuid(), (SELECT id FROM users WHERE role = 'manager' LIMIT 1), 'system', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+        "query": "INSERT INTO notifications (id, recipient_id, type, title, body, created_at, is_read) VALUES (gen_random_uuid(), NULL, 'system', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
       },
       "id": "b1b2c3d4-0000-5aaa-bbbb-000000000005",
       "name": "Log Error to Postgres",
