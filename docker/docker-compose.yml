@@ -146,10 +146,32 @@ services:
     networks:
       - agrimarket-net
 
+  mattermost:
+    image: mattermost/mattermost-team-edition:latest
+    container_name: agrimarket-mattermost
+    restart: always
+    ports:
+      - "8065:8065"
+    environment:
+      - MM_SQLSETTINGS_DRIVERNAME=postgres
+      - MM_SQLSETTINGS_DATASOURCE=postgres://postgres:postgres@postgres:5432/mattermost?sslmode=disable
+      - MM_SERVICESETTINGS_SITEURL=http://localhost:8065
+      - MM_SERVICESETTINGS_ENABLEINCOMINGWEBHOOKS=true
+    volumes:
+      - mattermost_data:/mattermost/data
+      - mattermost_config:/mattermost/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agrimarket-net
+
 volumes:
   pgdata:
   n8n_data:
   minio_data:
+  mattermost_data:
+  mattermost_config:
 
 networks:
   agrimarket-net:
