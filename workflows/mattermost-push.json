@@ -1,4 +1,5 @@
 {
+  "name": "Mattermost Push Notifications",
   "note": "Story 5.7: Push high-priority notifications to Mattermost channel (cron mỗi 1 phút). Webhook URL from n8n credentials — KHÔNG hardcode.",
   "nodes": [
     {
