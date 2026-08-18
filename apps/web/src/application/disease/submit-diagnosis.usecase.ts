@@ -2,8 +2,8 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { PrismaClient, NotificationType } from '@prisma/client'
-import { DiseaseDetectionPort } from '@/domain/disease/ports/DiseaseDetectionPort'
-import { StoragePort } from '@/domain/disease/ports/StoragePort'
+import { DiseaseDetectionPort } from '@/domain/disease/ports/disease-detection.port'
+import { StoragePort } from '@/domain/disease/ports/storage.port'
 
 export interface SubmitDiagnosisCommand {
   farmerUserId: string;

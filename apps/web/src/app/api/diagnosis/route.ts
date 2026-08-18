@@ -4,9 +4,9 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { PrismaClient } from '@prisma/client'
-import { SubmitDiagnosisUseCase } from '@/application/disease/SubmitDiagnosisUseCase'
-import { DiseaseApiAdapter } from '@/infrastructure/disease-api/DiseaseApiAdapter'
-import { MinioStorageAdapter } from '@/infrastructure/storage/MinioStorageAdapter'
+import { SubmitDiagnosisUseCase } from '@/application/disease/submit-diagnosis.usecase'
+import { DiseaseApiAdapter } from '@/infrastructure/disease-api/disease-api.adapter'
+import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
 import { diagnosisSchema } from '@/lib/validations/diagnosis.schema'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB — rules-and-limits.md §2.1
