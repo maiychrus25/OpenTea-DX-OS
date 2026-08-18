@@ -1,0 +1,118 @@
+{
+  "id": "officer-reminder",
+  "name": "Weekly Officer Reminder",
+  "note": "Story 5.8: n8n cron job mỗi thứ Sáu 16:00 tự động nhắc Officer có pending journal entries chưa duyệt.",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 16 * * 5"
+            }
+          ]
+        }
+      },
+      "id": "b1b2c3d4-0000-5aaa-bbbb-000000000001",
+      "name": "Friday 16:00 Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT submitted_by_id as officer_id, count(*) as pending_count FROM journal_entries WHERE status = 'PENDING_APPROVAL' AND created_at < NOW() - INTERVAL '7 days' GROUP BY submitted_by_id;"
+      },
+      "id": "b1b2c3d4-0000-5aaa-bbbb-000000000002",
+      "name": "Query Pending Journals",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [250, 0],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO notifications (id, recipient_id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, '{{$json.officer_id}}', 'SYSTEM', 'Nhắc nhở duyệt cuối tuần', 'Bạn có ' || '{{$json.pending_count}}' || ' nhật ký chờ duyệt. Vui lòng phê duyệt trước cuối tuần.', NOW(), false);"
+      },
+      "id": "b1b2c3d4-0000-5aaa-bbbb-000000000003",
+      "name": "Create Web Bell Notification",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [500, 0],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "b1b2c3d4-0000-5aaa-bbbb-000000000004",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, -250]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO notifications (id, recipient_id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, NULL, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+      },
+      "id": "b1b2c3d4-0000-5aaa-bbbb-000000000005",
+      "name": "Log Error to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [250, -250],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Friday 16:00 Trigger": {
+      "main": [
+        [
+          {
+            "node": "Query Pending Journals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Pending Journals": {
+      "main": [
+        [
+          {
+            "node": "Create Web Bell Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
