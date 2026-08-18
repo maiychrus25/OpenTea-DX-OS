@@ -1,141 +1,92 @@
-"use client"
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import React, { useEffect, useRef, useState } from 'react'
-import styles from './AudioPlayer.module.css'
+'use client';
 
-type Props = {
-  text: string
+import React, { useState, useRef, useEffect } from 'react';
+import { Volume2, Square, Loader2 } from 'lucide-react';
+import { Button } from '../../ui/Button/Button';
+import styles from './AudioPlayer.module.css';
+
+interface AudioPlayerProps {
+  bulletinId: string;
 }
 
-type State = 'idle' | 'loading' | 'playing'
-
-// Use a global to coordinate playback across multiple instances
-declare global {
-  interface Window {
-    __TTS_CURRENT?: { audio: HTMLAudioElement; id: number }
-  }
-}
-
-let instanceCounter = 0
-
-export default function AudioPlayer({ text }: Props) {
-  const [available, setAvailable] = useState<boolean | null>(null)
-  const [state, setState] = useState<State>('idle')
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const idRef = useRef<number>(++instanceCounter)
+export default function AudioPlayer({ bulletinId }: AudioPlayerProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Check Piper availability
-    let mounted = true
-    fetch('/api/tts/status').then(r => r.json()).then(j => {
-      if (!mounted) return
-      setAvailable(Boolean(j?.available))
-    }).catch(() => setAvailable(false))
-    return () => { mounted = false }
-  }, [])
-
-  useEffect(() => {
-    // cleanup on unmount
-    const id = idRef.current
     return () => {
       if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current.src = ''
-        audioRef.current = null
+        audioRef.current.pause();
       }
-      if (window.__TTS_CURRENT?.id === id) {
-        window.__TTS_CURRENT = undefined
-      }
-    }
-  }, [])
+    };
+  }, []);
 
-  async function handlePlay() {
-    if (!available) return
-    if (!text || text.trim().length === 0) return
-
-    // Stop other playing audio
-    if (window.__TTS_CURRENT && window.__TTS_CURRENT.audio) {
-      try { window.__TTS_CURRENT.audio.pause() } catch {};
-      window.__TTS_CURRENT = undefined
-    }
-
-    setState('loading')
-    try {
-      const res = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, lang: 'vi' }),
-      })
-
-      if (!res.ok) {
-        setState('idle')
-        return
-      }
-
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const audio = new Audio(url)
-      audioRef.current = audio
-      window.__TTS_CURRENT = { audio, id: idRef.current }
-
+  const togglePlay = () => {
+    if (!audioRef.current) {
+      setIsLoading(true);
+      const audio = new Audio(`/api/tts?bulletinId=${bulletinId}`);
+      
       audio.onended = () => {
-        setState('idle')
-        try { URL.revokeObjectURL(url) } catch {}
-        if (window.__TTS_CURRENT?.id === idRef.current) window.__TTS_CURRENT = undefined
-      }
-
+        setIsPlaying(false);
+      };
+      
       audio.onerror = () => {
-        setState('idle')
-        try { URL.revokeObjectURL(url) } catch {}
-        if (window.__TTS_CURRENT?.id === idRef.current) window.__TTS_CURRENT = undefined
-      }
-
-      // Start playing
-      await audio.play()
-      setState('playing')
-    } catch (e) {
-      setState('idle')
+        setIsLoading(false);
+        setIsPlaying(false);
+        alert('Lỗi khi tải bản tin (có thể dịch vụ TTS đang bận).');
+      };
+      
+      audioRef.current = audio;
+      
+      audio.play().then(() => {
+        setIsLoading(false);
+        setIsPlaying(true);
+      }).catch((e) => {
+        setIsLoading(false);
+        setIsPlaying(false);
+        console.error('Audio play failed', e);
+      });
+      return;
     }
-  }
 
-  function handleStop() {
-    const audio = audioRef.current || window.__TTS_CURRENT?.audio
-    if (audio) {
-      try { audio.pause() } catch {}
-      if (audio.src) {
-        try { URL.revokeObjectURL(audio.src) } catch {}
-      }
+    if (isPlaying) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0; // act like stop
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch((e) => {
+        console.error('Audio play failed', e);
+      });
     }
-    audioRef.current = null
-    if (window.__TTS_CURRENT?.id === idRef.current) window.__TTS_CURRENT = undefined
-    setState('idle')
-  }
-
-  if (available === false) {
-    return <div className={styles.hidden} />
-  }
+  };
 
   return (
-    <div className={styles.playerRoot}>
-      {state === 'idle' && (
-        <button aria-label="Nghe tóm tắt" className={styles.ttsButton} onClick={handlePlay}>
-          <svg className={styles.icon} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M5 3v18l13-9L5 3z" />
-          </svg>
-        </button>
-      )}
-
-      {state === 'loading' && (
-        <div role="status" aria-label="Đang tải" className={styles.spinner} />
-      )}
-
-      {state === 'playing' && (
-        <button aria-label="Dừng phát" className={styles.ttsButton} onClick={handleStop}>
-          <svg className={styles.icon} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M6 6h4v12H6zM14 6h4v12h-4z" />
-          </svg>
-        </button>
-      )}
+    <div className={styles.audioPlayer}>
+      <Button 
+        variant="secondary" 
+        onClick={togglePlay} 
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <span className={styles.buttonContent}>
+            <Loader2 className={`${styles.icon} ${styles.spin}`} /> Đang tải...
+          </span>
+        ) : isPlaying ? (
+          <span className={styles.buttonContent}>
+            <Square className={styles.icon} /> Dừng bản tin
+          </span>
+        ) : (
+          <span className={styles.buttonContent}>
+            <Volume2 className={styles.icon} /> Nghe bản tin
+          </span>
+        )}
+      </Button>
     </div>
-  )
+  );
 }
