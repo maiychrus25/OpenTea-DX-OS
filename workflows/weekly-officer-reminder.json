@@ -44,7 +44,7 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json.journal_count + $json.disease_count }}",
+              "leftValue": "={{ Number($json.journal_count) + Number($json.disease_count) }}",
               "rightValue": 0,
               "operator": {
                 "type": "number",
