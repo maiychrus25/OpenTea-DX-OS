@@ -154,7 +154,7 @@ development_status:
   # ── Epic 6: Docs, Chatbot & Storefront ───────────────────────────────────
   epic-6: in-progress
 
-  6-1-minio-para-document-store:         ready-for-dev
+  6-1-minio-para-document-store:         done
   6-2-certificate-selection-qr-lot:      ready-for-dev
   6-3-technical-expert-chatbot-officer:  ready-for-dev
   6-4-htx-capability-profile-page:       ready-for-dev
