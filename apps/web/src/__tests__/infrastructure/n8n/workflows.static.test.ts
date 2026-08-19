@@ -51,7 +51,6 @@ describe('n8n Workflows Static Analysis', () => {
           // It's using credentials vault, which is safe.
         }
         
-        const nodeStr = JSON.stringify(node.parameters || {}).toLowerCase();
         sensitiveKeywords.forEach(keyword => {
           // If the keyword is in the parameter keys, the value must be an expression or empty.
           // In n8n, expressions start with =

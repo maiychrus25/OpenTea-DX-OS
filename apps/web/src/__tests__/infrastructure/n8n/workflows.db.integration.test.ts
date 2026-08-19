@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { prisma } from '../../../infrastructure/db/prisma.client';
-import { Prisma } from '@prisma/client';
 
 describe('n8n Database Integration Idempotency Tests', () => {
   // Use a transaction or clean up after tests to ensure DB state is not polluted.
