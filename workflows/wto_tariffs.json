@@ -58,7 +58,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO market_data (source, commodity, metric, value, unit, period) VALUES ('WTO', 'Rice', 'import_tariff', 0, '%', '2026') ON CONFLICT (source, commodity, metric, period) DO UPDATE SET value = EXCLUDED.value;"
+        "query": "INSERT INTO market_data (source, commodity, metric, value, unit, period) VALUES ('WTO', 'Rice', 'import_tariff', 0, '%', '2026') ON CONFLICT (source, commodity, metric, period) DO UPDATE SET value = EXCLUDED.value, fetched_at = NOW();"
       },
       "id": "04",
       "name": "Upsert into Postgres",
