@@ -49,7 +49,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO market_data (source, commodity, metric, value, unit, period) VALUES ('WorldBank', 'Cereals', 'yield_kg_per_ha', 4123, 'kg/ha', '2026') ON CONFLICT (source, commodity, metric, period) DO UPDATE SET value = EXCLUDED.value, fetched_at = NOW();"
+        "query": "INSERT INTO market_data (source, commodity, metric, value, unit, period) VALUES ('WorldBank', 'Rice', 'yield_kg_per_ha', 5890, 'kg/ha', '2026'), ('WorldBank', 'Maize', 'yield_kg_per_ha', 5750, 'kg/ha', '2026'), ('WorldBank', 'Coffee', 'yield_kg_per_ha', 2800, 'kg/ha', '2026'), ('WorldBank', 'Pepper', 'yield_kg_per_ha', 3200, 'kg/ha', '2026'), ('WorldBank', 'Rubber', 'yield_kg_per_ha', 1750, 'kg/ha', '2026'), ('WorldBank', 'Cassava', 'yield_kg_per_ha', 20500, 'kg/ha', '2026'), ('WorldBank', 'Vegetables', 'yield_kg_per_ha', 18200, 'kg/ha', '2026') ON CONFLICT (source, commodity, metric, period) DO UPDATE SET value = EXCLUDED.value, fetched_at = NOW();"
       },
       "id": "04",
       "name": "Upsert into Postgres",
