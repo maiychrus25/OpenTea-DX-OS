@@ -283,7 +283,7 @@ Dữ liệu thị trường raw từ external APIs.
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | UUID | PK | |
-| source | ENUM('usda_psd','usda_gats','wto','faostat','worldbank') | NOT NULL | |
+| source | VARCHAR(50) | NOT NULL | (NASA, COMTRADE, USDA, WTO, FAOSTAT, worldbank, etc.) |
 | commodity | VARCHAR(100) | NOT NULL | |
 | metric | VARCHAR(100) | NOT NULL | (export_volume, price_fob, tariff_rate...) |
 | value | DECIMAL(18,4) | NOT NULL | |
