@@ -93,24 +93,22 @@
   "connections": {
     "When clicking 'Execute Workflow'": {
       "main": [[
-        { "node": "Fetch Cereal Yield", "type": "main", "index": 0 },
-        { "node": "Fetch Cereal Production", "type": "main", "index": 0 }
+        { "node": "Fetch Cereal Yield", "type": "main", "index": 0 }
       ]]
     },
     "Schedule": {
       "main": [[
-        { "node": "Fetch Cereal Yield", "type": "main", "index": 0 },
-        { "node": "Fetch Cereal Production", "type": "main", "index": 0 }
+        { "node": "Fetch Cereal Yield", "type": "main", "index": 0 }
       ]]
     },
     "Fetch Cereal Yield": {
       "main": [[
-        { "node": "Parse WorldBank Response", "type": "main", "index": 0 }
+        { "node": "Fetch Cereal Production", "type": "main", "index": 0 }
       ]]
     },
     "Fetch Cereal Production": {
       "main": [[
-        { "node": "Parse WorldBank Response", "type": "main", "index": 1 }
+        { "node": "Parse WorldBank Response", "type": "main", "index": 0 }
       ]]
     },
     "Parse WorldBank Response": {

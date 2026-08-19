@@ -104,31 +104,27 @@
   "connections": {
     "When clicking 'Execute Workflow'": {
       "main": [[
-        { "node": "Fetch Crop Production Index", "type": "main", "index": 0 },
-        { "node": "Fetch Food Production Index", "type": "main", "index": 0 },
-        { "node": "Fetch Fertilizer Consumption", "type": "main", "index": 0 }
+        { "node": "Fetch Crop Production Index", "type": "main", "index": 0 }
       ]]
     },
     "Schedule": {
       "main": [[
-        { "node": "Fetch Crop Production Index", "type": "main", "index": 0 },
-        { "node": "Fetch Food Production Index", "type": "main", "index": 0 },
-        { "node": "Fetch Fertilizer Consumption", "type": "main", "index": 0 }
+        { "node": "Fetch Crop Production Index", "type": "main", "index": 0 }
       ]]
     },
     "Fetch Crop Production Index": {
       "main": [[
-        { "node": "Parse FAOSTAT Response", "type": "main", "index": 0 }
+        { "node": "Fetch Food Production Index", "type": "main", "index": 0 }
       ]]
     },
     "Fetch Food Production Index": {
       "main": [[
-        { "node": "Parse FAOSTAT Response", "type": "main", "index": 1 }
+        { "node": "Fetch Fertilizer Consumption", "type": "main", "index": 0 }
       ]]
     },
     "Fetch Fertilizer Consumption": {
       "main": [[
-        { "node": "Parse FAOSTAT Response", "type": "main", "index": 2 }
+        { "node": "Parse FAOSTAT Response", "type": "main", "index": 0 }
       ]]
     },
     "Parse FAOSTAT Response": {
