@@ -100,7 +100,7 @@
             },
             {
               "name": "messages",
-              "value": "={{ [\n  {\n    \"role\": \"system\",\n    \"content\": \"Bạn là chuyên gia phân tích thị trường nông nghiệp. Hãy viết bản tin thị trường bằng tiếng Việt ngắn gọn, súc tích. QUY TẮC AI INVARIANT BẮT BUỘC:\\n1. CHỈ trình bày sự thật có trích dẫn nguồn.\\n2. KHÔNG ra quyết định thay HTX.\\n3. KHÔNG khuyến nghị hành động cụ thể.\\n4. Mọi số liệu phải kèm nguồn.\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": $json.raw_context\n  }\n] }}"
+              "value": "={{ [\n  {\n    \"role\": \"system\",\n    \"content\": \"Bạn là chuyên gia phân tích thị trường nông nghiệp. Hãy viết bản tin thị trường bằng tiếng Việt ngắn gọn, súc tích. KHÔNG bao gồm suy luận hay giải thích quá trình suy nghĩ. Chỉ trả về bản tin hoàn chỉnh. QUY TẮC AI INVARIANT BẮT BUỘC:\\n1. CHỈ trình bày sự thật có trích dẫn nguồn.\\n2. KHÔNG ra quyết định thay HTX.\\n3. KHÔNG khuyến nghị hành động cụ thể.\\n4. Mọi số liệu phải kèm nguồn.\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": $json.raw_context\n  }\n] }}"
             }
           ]
         },
@@ -117,15 +117,28 @@
     },
     {
       "parameters": {
+        "jsCode": "// Strip <think>...</think> blocks from reasoning model output\nconst rawContent = $input.item.json.choices[0].message.content;\nconst cleanContent = rawContent.replace(/<think>[\\s\\S]*?<\\/think>/g, '').trim();\n\nreturn {\n  bulletin_text: cleanContent,\n  commodity: $('Code (Prepare RAG Context)').item.json.commodity,\n  sources_json: $('Code (Prepare RAG Context)').item.json.sources_json\n};"
+      },
+      "id": "strip-thinking",
+      "name": "Strip Thinking Block",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        300
+      ]
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE bulletins SET is_latest = false WHERE commodity = '{{ $('Code (Prepare RAG Context)').item.json.commodity }}';"
+        "query": "UPDATE bulletins SET is_latest = false WHERE commodity = '{{ $json.commodity }}';"
       },
       "id": "deprecate-old",
       "name": "Deprecate Old Bulletins",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        1100,
+        1200,
         300
       ],
       "credentials": {
@@ -138,14 +151,14 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO bulletins (commodity, bulletin_vi, sources_json, model_used, is_latest) VALUES ($${{ $('Code (Prepare RAG Context)').item.json.commodity }}$$, $${{ $('Ask Ollama').item.json.choices[0].message.content }}$$, $${{ JSON.stringify($('Code (Prepare RAG Context)').item.json.sources_json) }}$$::jsonb, $${{ $env.OLLAMA_MODEL }}$$, true);"
+        "query": "INSERT INTO bulletins (commodity, bulletin_vi, sources_json, model_used, is_latest) VALUES ($${{ $json.commodity }}$$, $${{ $json.bulletin_text }}$$, $${{ JSON.stringify($json.sources_json) }}$$::jsonb, $${{ $env.OLLAMA_MODEL }}$$, true);"
       },
       "id": "insert-new",
       "name": "Insert New Bulletin",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        1300,
+        1400,
         300
       ],
       "credentials": {
@@ -233,6 +246,17 @@
       ]
     },
     "Ask Ollama": {
+      "main": [
+        [
+          {
+            "node": "Strip Thinking Block",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Strip Thinking Block": {
       "main": [
         [
           {
