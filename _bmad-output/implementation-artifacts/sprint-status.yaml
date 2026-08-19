@@ -106,7 +106,7 @@ development_status:
 
   # ── Epic 0: E2E Contract, Data Ownership & Delivery Control ────────────────
   epic-0: in-progress
-  0-1-contract-schema-route-reconciliation: ready-for-dev
+  0-1-contract-schema-route-reconciliation: in-progress  # Jest 115/115, contract 8/8, lint/typecheck/build pass; public invalid-lot 200/loading deviation tracked by 0-3, route/schema deviations by 10-1
   0-2-n8n-workflow-verification-and-contract: ready-for-dev
   0-3-production-deviation-hardening: ready-for-dev
 

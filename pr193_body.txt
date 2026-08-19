@@ -1,4 +1,0 @@
-﻿Story 4.6a - Diagnosis Proxy API
-Epic: 4 - QR Traceability & Disease Detection
-
-Closes #128

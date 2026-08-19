@@ -3,6 +3,9 @@
 
 import { auth } from "./auth"
 import { NextResponse } from "next/server"
+import { isPublicResourcePath } from '@/lib/contracts/public-resource-path'
+
+export { isPublicResourcePath } from '@/lib/contracts/public-resource-path'
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
@@ -18,7 +21,7 @@ export default auth((req) => {
   }
 
   if (!isLoggedIn && pathname !== "/login") {
-    if (pathname.startsWith("/htx") || pathname.startsWith("/lot")) {
+    if (isPublicResourcePath(pathname)) {
       return NextResponse.next();
     }
     return NextResponse.redirect(new URL("/login", req.url));
