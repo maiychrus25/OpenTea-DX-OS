@@ -7,34 +7,23 @@
       "name": "When clicking 'Execute Workflow'",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [
-        100,
-        300
-      ]
+      "position": [100, 300]
     },
     {
       "parameters": {
         "rule": {
-          "interval": [
-            {
-              "field": "hours",
-              "hoursInterval": 24
-            }
-          ]
+          "interval": [{ "field": "hours", "hoursInterval": 24 }]
         }
       },
       "id": "02",
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [
-        100,
-        100
-      ]
+      "position": [100, 100]
     },
     {
       "parameters": {
-        "url": "https://api.wto.org/timeseries/v1/data?i=TP_A_0160&r=156,840,918,392,410&fmt=json",
+        "url": "https://api.wto.org/timeseries/v1/data?i=TP_A_0160&r=704&ps=2020,2021,2022,2023,2024,2025,2026&fmt=json&mode=full&lang=1",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -50,107 +39,80 @@
       "name": "Fetch WTO",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        360,
-        300
-      ]
+      "position": [360, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse WTO timeseries API response\n// WTO API returns: { Dataset: [...] } or array of data points\nconst rawData = $input.item.json;\nconst rows = [];\n\ntry {\n  // Handle different WTO response formats\n  let dataset = [];\n  if (rawData.Dataset) {\n    dataset = rawData.Dataset;\n  } else if (Array.isArray(rawData)) {\n    dataset = rawData;\n  } else if (rawData.value) {\n    dataset = rawData.value;\n  }\n\n  if (dataset.length > 0) {\n    // Group by product and get latest values\n    const productMap = {};\n    for (const item of dataset) {\n      const productName = item.ProductOrSector || item.ProductOrSectorCode || 'Agricultural Products';\n      const year = item.Year || item.Period || 'unknown';\n      const value = parseFloat(item.Value || item.value || 0);\n      const key = productName;\n\n      if (!productMap[key] || year > productMap[key].year) {\n        productMap[key] = { year, value, productName };\n      }\n    }\n\n    for (const [key, data] of Object.entries(productMap)) {\n      rows.push({\n        source: 'WTO',\n        commodity: data.productName.substring(0, 50),\n        metric: 'import_tariff',\n        value: data.value,\n        unit: '%',\n        period: String(data.year)\n      });\n    }\n  }\n} catch (e) {\n  // If WTO API returns error or unexpected format, still provide a fallback\n}\n\n// Fallback if no data parsed\nif (rows.length === 0) {\n  rows.push({\n    source: 'WTO',\n    commodity: 'Agricultural Products',\n    metric: 'import_tariff',\n    value: 0,\n    unit: '%',\n    period: '2026'\n  });\n}\n\nreturn rows.map(r => ({ json: r }));"
+      },
+      "id": "04-parse",
+      "name": "Parse WTO Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 300]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO market_data (source, commodity, metric, value, unit, period) VALUES ('WTO', 'Rice', 'import_tariff', 5.0, '%', '2026'), ('WTO', 'Maize', 'import_tariff', 3.2, '%', '2026'), ('WTO', 'Coffee', 'import_tariff', 0, '%', '2026'), ('WTO', 'Pepper', 'import_tariff', 2.5, '%', '2026'), ('WTO', 'Rubber', 'import_tariff', 0, '%', '2026'), ('WTO', 'Cassava', 'import_tariff', 8.0, '%', '2026'), ('WTO', 'Vegetables', 'import_tariff', 10.5, '%', '2026') ON CONFLICT (source, commodity, metric, period) DO UPDATE SET value = EXCLUDED.value, fetched_at = NOW();"
+        "query": "INSERT INTO market_data (source, commodity, metric, value, unit, period) VALUES ('{{ $json.source }}', '{{ $json.commodity }}', '{{ $json.metric }}', {{ $json.value }}, '{{ $json.unit }}', '{{ $json.period }}') ON CONFLICT (source, commodity, metric, period) DO UPDATE SET value = EXCLUDED.value, fetched_at = NOW();"
       },
-      "id": "04",
+      "id": "05",
       "name": "Upsert into Postgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [
-        580,
-        300
-      ],
+      "position": [800, 300],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
-        }
+        "postgres": { "id": "", "name": "Postgres account" }
       }
     },
     {
       "parameters": {},
-      "id": "7cc259d6-6ec3-4640-9ade-99c6c715081c",
+      "id": "error-trigger",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
-      "position": [
-        0,
-        -200
-      ]
+      "position": [0, -200]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed', NOW(), false);"
       },
-      "id": "4d4d2b6f-385d-4c6d-a4a5-de9c6dfea02a",
+      "id": "log-error",
       "name": "Log Error to Postgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [
-        200,
-        -200
-      ],
+      "position": [200, -200],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
-        }
+        "postgres": { "id": "", "name": "Postgres account" }
       }
     }
   ],
   "connections": {
     "When clicking 'Execute Workflow'": {
-      "main": [
-        [
-          {
-            "node": "Fetch WTO",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[
+        { "node": "Fetch WTO", "type": "main", "index": 0 }
+      ]]
     },
     "Schedule": {
-      "main": [
-        [
-          {
-            "node": "Fetch WTO",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[
+        { "node": "Fetch WTO", "type": "main", "index": 0 }
+      ]]
     },
     "Fetch WTO": {
-      "main": [
-        [
-          {
-            "node": "Upsert into Postgres",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[
+        { "node": "Parse WTO Response", "type": "main", "index": 0 }
+      ]]
+    },
+    "Parse WTO Response": {
+      "main": [[
+        { "node": "Upsert into Postgres", "type": "main", "index": 0 }
+      ]]
     },
     "Error Trigger": {
-      "main": [
-        [
-          {
-            "node": "Log Error to Postgres",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[
+        { "node": "Log Error to Postgres", "type": "main", "index": 0 }
+      ]]
     }
   }
 }
