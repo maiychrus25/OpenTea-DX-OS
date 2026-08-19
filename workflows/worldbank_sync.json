@@ -7,141 +7,119 @@
       "name": "When clicking 'Execute Workflow'",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [
-        100,
-        300
-      ]
+      "position": [100, 300]
     },
     {
       "parameters": {
         "rule": {
-          "interval": [
-            {
-              "field": "hours",
-              "hoursInterval": 24
-            }
-          ]
+          "interval": [{ "field": "hours", "hoursInterval": 24 }]
         }
       },
       "id": "02",
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [
-        100,
-        100
-      ]
+      "position": [100, 100]
     },
     {
       "parameters": {
-        "url": "https://api.worldbank.org/v2/country/all/indicator/AG.YLD.CREL.KG?format=json&per_page=1",
+        "url": "https://api.worldbank.org/v2/country/VNM/indicator/AG.YLD.CREL.KG?format=json&date=2018:2026&per_page=10",
         "options": {}
       },
-      "id": "03",
-      "name": "Fetch WorldBank",
+      "id": "03a",
+      "name": "Fetch Cereal Yield",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        360,
-        300
-      ]
+      "position": [360, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://api.worldbank.org/v2/country/VNM/indicator/AG.PRD.CREL.MT?format=json&date=2018:2026&per_page=10",
+        "options": {}
+      },
+      "id": "03b",
+      "name": "Fetch Cereal Production",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [360, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse WorldBank — fix: handle n8n split items\nconst rows = [];\n\n// Helper: parse WorldBank response from node robustly\nfunction extractLatestWB(nodeName) {\n  let items = [];\n  try { items = $(nodeName).all().map(i => i.json); } catch(e) { return null; }\n  \n  let dataArray = [];\n  for (const item of items) {\n    if (item.data) {\n       let inner = typeof item.data === 'string' ? JSON.parse(item.data) : item.data;\n       if (Array.isArray(inner) && Array.isArray(inner[1])) dataArray.push(...inner[1]);\n       else if (Array.isArray(inner)) dataArray.push(...inner);\n       else dataArray.push(inner);\n    } else if (Array.isArray(item)) {\n       if (Array.isArray(item[1])) dataArray.push(...item[1]);\n       else dataArray.push(...item);\n    } else {\n       dataArray.push(item);\n    }\n  }\n  return dataArray.find(r => r && r.value !== null && r.value !== undefined && r.value !== '');\n}\n\n// 1. Cereal Yield\nconst yieldLatest = extractLatestWB('Fetch Cereal Yield');\nif (yieldLatest) {\n  rows.push({ source: 'WorldBank', commodity: 'Cereals', metric: 'cereal_yield', value: Math.round(yieldLatest.value * 100) / 100, unit: 'kg/ha', period: yieldLatest.date });\n}\n\n// 2. Cereal Production\nconst prodLatest = extractLatestWB('Fetch Cereal Production');\nif (prodLatest) {\n  rows.push({ source: 'WorldBank', commodity: 'Cereals', metric: 'cereal_production', value: Math.round(prodLatest.value), unit: 'tonnes', period: prodLatest.date });\n}\n\nif (rows.length === 0) {\n  return [{ json: { source: 'WorldBank', commodity: 'Cereals', metric: 'no_data', value: 0, unit: 'N/A', period: 'N/A' } }];\n}\n\nreturn rows.map(r => ({ json: r }));"
+      },
+      "id": "04-parse",
+      "name": "Parse WorldBank Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 300]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO market_data (source, commodity, metric, value, unit, period) VALUES ('WorldBank', 'Cereals', 'yield_kg_per_ha', 4123, 'kg/ha', '2026') ON CONFLICT (source, commodity, metric, period) DO UPDATE SET value = EXCLUDED.value;"
+        "query": "INSERT INTO market_data (source, commodity, metric, value, unit, period) VALUES ('{{ $json.source }}', '{{ $json.commodity }}', '{{ $json.metric }}', {{ $json.value }}, '{{ $json.unit }}', '{{ $json.period }}') ON CONFLICT (source, commodity, metric, period) DO UPDATE SET value = EXCLUDED.value, fetched_at = NOW();"
       },
-      "id": "04",
+      "id": "05",
       "name": "Upsert into Postgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [
-        580,
-        300
-      ],
+      "position": [800, 300],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
-        }
+        "postgres": { "id": "", "name": "Postgres account" }
       }
     },
     {
       "parameters": {},
-      "id": "eef18839-b478-4a52-bab7-cd42873a0f0d",
+      "id": "error-trigger",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
-      "position": [
-        0,
-        -200
-      ]
+      "position": [0, -200]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed', NOW(), false);"
       },
-      "id": "1f08a6f4-2407-48b2-964f-216eb3dd7145",
+      "id": "log-error",
       "name": "Log Error to Postgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [
-        200,
-        -200
-      ],
+      "position": [200, -200],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
-        }
+        "postgres": { "id": "", "name": "Postgres account" }
       }
     }
   ],
   "connections": {
     "When clicking 'Execute Workflow'": {
-      "main": [
-        [
-          {
-            "node": "Fetch WorldBank",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[
+        { "node": "Fetch Cereal Yield", "type": "main", "index": 0 }
+      ]]
     },
     "Schedule": {
-      "main": [
-        [
-          {
-            "node": "Fetch WorldBank",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[
+        { "node": "Fetch Cereal Yield", "type": "main", "index": 0 }
+      ]]
     },
-    "Fetch WorldBank": {
-      "main": [
-        [
-          {
-            "node": "Upsert into Postgres",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Fetch Cereal Yield": {
+      "main": [[
+        { "node": "Fetch Cereal Production", "type": "main", "index": 0 }
+      ]]
+    },
+    "Fetch Cereal Production": {
+      "main": [[
+        { "node": "Parse WorldBank Response", "type": "main", "index": 0 }
+      ]]
+    },
+    "Parse WorldBank Response": {
+      "main": [[
+        { "node": "Upsert into Postgres", "type": "main", "index": 0 }
+      ]]
     },
     "Error Trigger": {
-      "main": [
-        [
-          {
-            "node": "Log Error to Postgres",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[
+        { "node": "Log Error to Postgres", "type": "main", "index": 0 }
+      ]]
     }
   }
 }
