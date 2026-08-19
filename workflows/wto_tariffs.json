@@ -23,7 +23,7 @@
     },
     {
       "parameters": {
-        "url": "https://api.wto.org/timeseries/v1/data?i=TP_A_0160&r=704&ps=2020,2021,2022,2023,2024,2025,2026&fmt=json&mode=full&lang=1",
+        "url": "https://api.wto.org/timeseries/v1/data?i=TP_A_0160&r=704&ps=2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026&fmt=json&mode=full&lang=1",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
