@@ -3,7 +3,9 @@
 
 import { prisma } from '../../../infrastructure/db/prisma.client';
 
-describe('n8n Database Integration Idempotency Tests', () => {
+const describeIfDb = process.env.DATABASE_URL ? describe : describe.skip;
+
+describeIfDb('n8n Database Integration Idempotency Tests', () => {
   // Use a transaction or clean up after tests to ensure DB state is not polluted.
   // In Prisma, we can't easily rollback nested tests, so we'll just insert and delete.
 
