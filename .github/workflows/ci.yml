@@ -30,10 +30,14 @@ jobs:
 
       - name: Validate Prisma Schema
         working-directory: apps/web
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
         run: npx prisma validate
 
       - name: Generate Prisma Client
         working-directory: apps/web
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
         run: npx prisma generate
 
       - name: ESLint
@@ -100,6 +104,8 @@ jobs:
 
       - name: Generate Prisma Client
         working-directory: apps/web
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
         run: npx prisma generate
 
       - name: Run Jest
@@ -158,6 +164,8 @@ jobs:
 
       - name: Generate Prisma Client
         working-directory: apps/web
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
         run: npx prisma generate
 
       - name: Build Standalone
