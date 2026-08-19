@@ -348,3 +348,33 @@ Trang nang luc cong khai: stats HTX + danh sach lo hang san sang giao thuong.
 3. **Role-based clarity** — UI khac nhau ro rang giua manager/officer/farmer.
 4. **Mobile-first** — Bottom nav va drawer sidebar cho mobile.
 5. **Trang thai tuong minh** — Moi entity (thua, lo, nhat ky) deu co Pill status.
+
+---
+
+## 15. Prototype Coverage Contract
+
+The approved prototype at `D:\FE` is a visual and interaction reference. Its client-side mock state is **not** evidence that the production API, database, authorization, n8n workflow, or persistence is complete. Production pages may use mock fixtures only in stories explicitly labelled `FE prototype`; the corresponding integration story must replace the fixture through a server-side contract.
+
+### Covered visual surfaces
+
+The reference prototype covers the authenticated shell and role switch, manager/officer/farmer Today views, bulletin cards, market and technical chat shells, farm map visualization, the household -> parcel -> crop setup wizard, farming journal form and officer approval table, diagnosis upload/result presentation, lot list/detail/6-step QR preview, PARA library, role-specific profile presentation, notification bell/full list, public HTX storefront, and public trace page.
+
+### Not completed by the prototype
+
+The reference does not provide production authentication, registration/recovery, authorization states, persistence, API calls, database writes, real Leaflet drawing/GPS, real uploads/downloads, QR generation/scanning, certificate lifecycle, journal reject/request-changes/history, diagnosis history/offline replay, chat streaming/history persistence, notification SSE/TTS/delete/preferences, global search, or reliable loading/error/empty/offline/retry behavior. These are separate FE completion and BE/integration deliverables, not implicit acceptance of the mock screens.
+
+### Production integration seam
+
+Every feature page must keep this boundary:
+
+`page/layout -> feature component -> typed client/server contract -> Next.js route -> UseCase -> domain port -> adapter/database or n8n-owned data`
+
+Browser code must not call Ollama, FastAPI, MinIO, Nominatim, or market/weather providers directly. n8n remains the sole writer for ingested market, weather, FX, and synthesized bulletin data. When SSE is unavailable, a documented polling fallback may keep the UI usable until the notification-stream story is complete; it must not be presented as real-time completion.
+
+### State and accessibility floor for all new pages
+
+Every production page defines loading skeleton, empty, API error with retry, validation, unauthorized/forbidden, and (where relevant) offline/reconnect states. Interactive controls use at least 44x44px touch targets, keyboard/focus handling, semantic labels, `aria-live` for asynchronous status, and reduced-motion behavior. Destructive actions and irreversible QR export require confirmation.
+
+### Controlled deviations
+
+Inline styles are not allowed in new production feature code. Existing inline styles are tracked as targeted cleanup work and may be retained temporarily only when the owning story records the reason and replacement plan. Notification polling is an interim transport, not a substitute for the documented SSE contract. TTS controls must use `/api/tts`; a placeholder or TODO does not satisfy the TTS acceptance criteria.

@@ -15,7 +15,21 @@ This document provides the complete epic and story breakdown for OpenTea-DX-OS (
 
 **Timeline:** 04/08 – 30/08/2026 (POF submission) · 10/09/2026 (final)
 **Team:** 3 developers, full-stack across all features
-**Strategy:** 6 epics (Option C) — large thematic epics with very small, independently completable stories inside each.
+**Strategy:** Domain epics 1–6 plus UI migration/prototype Epic 7–8 and explicit E2E control/integration Epic 0/9. A mock UI story never implies that its BE, schema, n8n or integration contract is complete.
+
+## Delivery Control and Integration Tracks
+
+The original six-epic breakdown remains the domain requirement baseline. The following tracks are maintained in implementation artifacts and `sprint-status.yaml` so the backlog is executable end to end:
+
+- **Epic 0 — E2E Contract, Data Ownership & Delivery Control:** reconciliation of routes, roles, API envelopes, Prisma schema, n8n ownership and production deviations before dependent integration work is ready.
+- **Epic 7 — UI Migration:** shared production design system and public/dashboard surfaces already migrated or being verified.
+- **Epic 8 — FE Prototype Reconstruction:** mock-only feature pages/workflows derived from `D:\FE`; visual completion does not close domain BE stories.
+- **Epic 9 — FE–BE Integration & E2E Completion:** replaces Epic 8 fixtures through canonical API/use-case contracts and proves the critical paths.
+- **Epic 10 — Platform BE, Schema & Integration Contracts:** fills missing shared APIs, use cases, migrations, notification/AI/storage/public-snapshot contracts required by FE and n8n consumers.
+
+Epic 0 keys: `0-1-contract-schema-route-reconciliation`, `0-2-n8n-workflow-verification-and-contract`, `0-3-production-deviation-hardening`.
+Epic 9 keys: `9-1-fe-be-integration-critical-path`, `9-2-fe-be-integration-market-notification`.
+Epic 10 keys: `10-1-platform-be-contract-completion`, `10-2-notification-ai-storage-be-contract`.
 
 ---
 

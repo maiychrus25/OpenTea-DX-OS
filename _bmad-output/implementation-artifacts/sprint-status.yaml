@@ -9,6 +9,10 @@
 #   in-progress    → Dev agent is actively implementing this story
 #   review         → Implementation done; awaiting code review
 #   done           → Story complete; merged to main
+#   partial        → Some scoped deliverables are complete; remaining work is tracked explicitly
+#   superseded-by-* → Replaced by a named story; retained only for historical traceability
+#   blocked        → Cannot start until a named dependency or contract is resolved
+#   deferred       → Intentionally postponed; not a prerequisite for the current milestone
 #
 # EPIC STATUS DEFINITIONS:
 #   backlog        → Epic not started; no stories created yet
@@ -20,9 +24,34 @@
 project: OpenTea-DX-OS
 sprint: 1
 sprint_goal: "Foundation + Market Intelligence + Farm Zone + QR Traceability by 30/08/2026 (POF)"
-last_updated: "2026-08-16T00:28:00+07:00"
+last_updated: "2026-08-20T00:00:00+07:00"
+
+# Delivery phases (execute in this order):
+#   0-1 contract/schema/routes → 0-2 n8n verification → 0-3 deviation baseline
+#   → foundation/data gates → Epic 7 shared UI → Epic 8 FE prototype
+#   → Epic 10 domain BE/contracts → Epic 3 farm/journal → Epic 4 QR/disease
+#   → Epic 5 farmer/notifications + Epic 6 documents/chat/storefront
+#   → Epic 9 FE-BE integration → final security/accessibility/performance hardening.
+# Epic 0 controls reconciliation; Epic 9 integrates; Epic 10 owns missing shared BE contracts. They do not replace domain epics.
+# `story-traceability-matrix.md` is the story-by-story evidence and dependency register.
+# Status is authoritative here; the Status field inside story markdown is descriptive only.
 
 epics:
+  - id: 0
+    title: "E2E Contract, Data Ownership & Delivery Control"
+    stories: 3
+    target_date: "2026-08-21"
+
+  - id: 9
+    title: "FE–BE Integration & E2E Completion"
+    stories: 2
+    target_date: "2026-09-10"
+
+  - id: 10
+    title: "Platform BE, Schema & Integration Contracts"
+    stories: 2
+    target_date: "2026-09-05"
+
   - id: 1
     title: "Foundation — Infrastructure, Auth & Design System"
     stories: 15  # 7 original + 8 missing stories added 2026-08-12
@@ -58,6 +87,11 @@ epics:
     stories: 13  # 13 stories: 2 BE prerequisites + 11 UI migration stories
     target_date: "2026-08-30"  # Extended: +2 BE prerequisite stories added 2026-08-14
 
+  - id: 8
+    title: "FE Prototype Reconstruction — Feature Pages & Workflows (Phase 2)"
+    stories: 13  # 9 video screens + 4 completion stories
+    target_date: "2026-09-20"  # Target: complete FE before BE integration
+
 # ============================================================================
 # DEVELOPMENT STATUS
 # Key format: {epic_num}-{story_num}-{story-slug}
@@ -65,16 +99,32 @@ epics:
 
 development_status:
 
+  # ── Epic 10: Platform BE, Schema & Integration Contracts ───────────────────
+  epic-10: blocked  # starts after Epic 0 contract/schema gate
+  10-1-platform-be-contract-completion: blocked
+  10-2-notification-ai-storage-be-contract: blocked
+
+  # ── Epic 0: E2E Contract, Data Ownership & Delivery Control ────────────────
+  epic-0: in-progress
+  0-1-contract-schema-route-reconciliation: ready-for-dev
+  0-2-n8n-workflow-verification-and-contract: ready-for-dev
+  0-3-production-deviation-hardening: ready-for-dev
+
+  # ── Epic 9: FE–BE Integration & E2E Completion ─────────────────────────────
+  epic-9: blocked  # blocked until Epic 0 contract and ownership gates pass
+  9-1-fe-be-integration-critical-path: blocked
+  9-2-fe-be-integration-market-notification: blocked
+
   # ── Epic 1: Foundation ────────────────────────────────────────────────────
   epic-1: in-progress
 
   1-1-monorepo-docker-compose:           done
   1-2-design-system-shared-components:   superseded-by-7-1
-  1-3-database-schema-prisma:            done 
+  1-3-database-schema-prisma:            partial  # Prisma exists; schema/migration/API contract reconciliation remains in 0-1/10-1
   1-4-hexagonal-architecture-scaffold:   done
-  1-5-keycloak-auth-role-routing:        done 
+  1-5-keycloak-auth-role-routing:        partial  # Auth works; canonical routes/recognized-role fail-closed verification remains
   1-6-htx-profile-page:                  ready-for-dev
-  1-7-n8n-market-data-pipelines:         done 
+  1-7-n8n-market-data-pipelines:         partial  # Workflows exist; source/schedule/schema/idempotency evidence is owned by 0-2
 
   # ── Epic 1: Missing Stories (identified 2026-08-12) ───────────────────────
   # These stories were missing from the original spec but are prerequisites
@@ -94,9 +144,9 @@ development_status:
   epic-2: in-progress
 
   2-1-market-data-api-endpoint:          ready-for-dev
-  2-2-daily-bulletin-display-page:       done
-  2-3-bulletin-tts-listen-button:        done
-  2-4-n8n-bulletin-synthesis-workflow:   done
+  2-2-daily-bulletin-display-page:       partial  # Visual page exists; canonical /api/bulletin and Epic 8 presentation are not fully integrated
+  2-3-bulletin-tts-listen-button:        partial  # UI/API pieces exist; playback/contract/Piper availability need verification
+  2-4-n8n-bulletin-synthesis-workflow:   partial  # Workflow exists; provider/schema/crop-filter/idempotency verification remains in 0-2
   2-5-market-expert-chatbot:             ready-for-dev
   2-6-agricultural-partner-map-crud:     ready-for-dev
   2-7-web-bell-notification-system:      partial  # T1+T2 (BE: Domain/UseCases/API) still needed; T3+T4 FE superseded-by-7-11
@@ -106,7 +156,7 @@ development_status:
   # Prerequisite BE endpoints missing from original Epic 2 spec
 
   2-0a-geocode-proxy-api:                done           # required by 2-6 & 3-2 (Nominatim proxy)
-  2-3a-tts-api-endpoint:                 done           # required by 2-3, 2-7, 5-1 (Piper adapter)
+  2-3a-tts-api-endpoint:                 partial        # Adapter/route exist; response contract, endpoint and availability evidence remain
 
   # ── Epic 3: Farm Zone & Journal ───────────────────────────────────────────
   epic-3: in-progress
@@ -122,7 +172,7 @@ development_status:
   # ── Epic 3: Missing Stories (identified 2026-08-12) ───────────────────────
   # Weather API backend required by 3-3 and 3-5
 
-  3-5a-weather-api-endpoint:             done           # required by 3-3 & 3-5 (Open-Meteo + cache)
+  3-5a-weather-api-endpoint:             partial        # Route/cache exist; scoping, historical fallback and exact-cache semantics remain
 
   # ── Epic 4: QR Traceability & Disease Backend ─────────────────────────────
   epic-4: in-progress
@@ -137,7 +187,7 @@ development_status:
   # ── Epic 4: Missing Stories (identified 2026-08-12) ───────────────────────
   # Diagnosis proxy required by Epic 5 Farmer UI
 
-  4-6a-diagnosis-proxy-api:              done           # required by 5-3 & 5-4 (AD-8 compliance)
+  4-6a-diagnosis-proxy-api:              partial        # Proxy exists; role/persistence/broadcast contract remains for 10-2
 
   # ── Epic 5: Farmer Experience & Notifications ─────────────────────────────
   epic-5: in-progress
@@ -149,12 +199,12 @@ development_status:
   5-5-officer-disease-report-review:     ready-for-dev
   5-6-broadcast-announcement-manager:    ready-for-dev
   5-7-mattermost-push-notification:      ready-for-dev
-  5-8-n8n-weekly-officer-reminder:       done
+  5-8-n8n-weekly-officer-reminder:       partial        # Workflow exists; artifact/BA behavior and recipient/dedup evidence remain in 0-2
 
   # ── Epic 6: Docs, Chatbot & Storefront ───────────────────────────────────
   epic-6: in-progress
 
-  6-1-minio-para-document-store:         done
+  6-1-minio-para-document-store:         partial        # Base storage exists; object ownership/prefix and full PARA lifecycle remain
   6-2-certificate-selection-qr-lot:      ready-for-dev
   6-3-technical-expert-chatbot-officer:  ready-for-dev
   6-4-htx-capability-profile-page:       ready-for-dev
@@ -170,7 +220,7 @@ development_status:
   epic-7: ready-for-dev
 
   # ── BE Prerequisites (must go first) ─────────────────────────────────────
-  7-0a-schema-htx-relations:            done           # P0: add htx_profile_id to Household+Lot; needs dev approval
+  7-0a-schema-htx-relations:            partial        # Relation fields exist; migration/backfill and dependent-query evidence remain
   7-9a-lot-trace-data-usecase:          done    # P0: GetLotTraceDataUseCase + withdrawal safety computation
 
   # ── Foundation & Layout ───────────────────────────────────────────────────
@@ -190,8 +240,29 @@ development_status:
   7-8-officer-farmer-dashboard:         done  # Feature: Officer + Farmer Today views, updated navItems
 
   # ── Public Pages ──────────────────────────────────────────────────────────
-  7-9-public-qr-trace-page:             done  # Public: /lot/[lot_code]; needs 7-9a for trace data
+  7-9-public-qr-trace-page:             partial  # Page/use case exist; certificate endpoint and immutable snapshot contract remain
   7-10-public-htx-storefront:           done  # Public: /htx/[htx_code]; needs 7-0a for lot by HTX
 
   # ── Integration ───────────────────────────────────────────────────────────
-  7-11-notification-bell:               done  # UI: NotificationBell; needs 2-7 T1+T2 BE done first
+  7-11-notification-bell:               partial  # UI exists; polling/response shape/TTS TODO mean full notification contract is not done
+
+  # ── Epic 8: FE Prototype Reconstruction — Feature Pages & Workflows ────────
+  # Source: Video prototype analysis 2026-08-19 (bandicam 2026-08-19 22-11-48-780.mp4)
+  # Rule: FE-first approach — mock data only, no BE integration yet
+  # Priority: implement screens observed in video, match pixel-perfect prototype
+
+  epic-8: in-progress
+
+  8-1-bulletin-page-refactor:           ready-for-dev  # Bản tin: 3-card grid, category tabs, audio button, AI disclaimer
+  8-2-officer-today-dashboard:          ready-for-dev  # Officer dashboard: 4 metrics + lịch công việc theo giờ
+  8-3-lot-list-page:                    ready-for-dev  # Lô hàng list: filter tabs, table rows, "Tạo lô hàng" CTA
+  8-4-lot-detail-6step-workflow:        ready-for-dev  # Lot detail: 6-step wizard + QR preview panel + Xuất QR
+  8-5-farm-zone-setup-wizard:           ready-for-dev  # Thiết lập vùng trồng: 3-step (Hộ → Thửa → Cây trồng)
+  8-6-chat-market-interface:            ready-for-dev  # Hỏi đáp thị trường: chat layout, mini-chart, source citation
+  8-7-journal-manager-approval:         ready-for-dev  # Nhật ký duyệt: manager approval modal + AI disease warning
+  8-8-account-profile-page:            ready-for-dev  # Hồ sơ & tài khoản: profile section + security rows + logout
+  8-9-notifications-full-page:          ready-for-dev  # FE mock only; BE/SSE/TTS integration is 9-2/10-2
+  8-10-auth-recovery-and-registration-ui: ready-for-dev  # FE states and flows; Keycloak integration remains BE
+  8-11-member-and-household-management-ui: ready-for-dev  # FE list/detail/invite surfaces
+  8-12-journal-diagnosis-qr-completion-ui: ready-for-dev  # FE edge states; persistence remains integration
+  8-13-document-partner-search-and-settings-ui: ready-for-dev  # FE operational completion surfaces
