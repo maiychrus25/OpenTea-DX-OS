@@ -1,0 +1,93 @@
+{
+  "name": "UN COMTRADE Export Sync",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "01",
+      "name": "When clicking 'Execute Workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 24 }]
+        }
+      },
+      "id": "02",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch Vietnam bilateral export data from UN COMTRADE API\n// Reporter: 704 (Vietnam), Flow: X (Export)\n// Commodities: Rice(1006), Coffee(0901), Pepper(0904), Rubber(4001), Cassava(0714)\n// Partners: World(0), China(156), USA(840), Japan(392), Korea(410), Philippines(608), Indonesia(360), Malaysia(458), Germany(276), India(356)\n\nconst API_KEY = $env.COMTRADE_API_KEY;\nconst BASE_URL = 'https://comtradeapi.un.org/data/v1/get/C/A/HS';\n\n// Partner code to name mapping\nconst PARTNERS = {\n  0: 'World', 156: 'China', 840: 'USA', 392: 'Japan',\n  410: 'Korea', 608: 'Philippines', 360: 'Indonesia',\n  458: 'Malaysia', 276: 'Germany', 356: 'India'\n};\n\n// HS code to commodity mapping\nconst COMMODITIES = {\n  '1006': 'Rice', '0901': 'Coffee', '0904': 'Pepper',\n  '4001': 'Rubber', '0714': 'Cassava'\n};\n\nconst partnerCodes = Object.keys(PARTNERS).join(',');\nconst cmdCodes = Object.keys(COMMODITIES).join(',');\nconst rows = [];\n\ntry {\n  // Fetch latest 2 years to maximize data availability\n  const url = `${BASE_URL}?reporterCode=704&flowCode=X&cmdCode=${cmdCodes}&partnerCode=${partnerCodes}&period=2023,2024,2025&subscription-key=${API_KEY}`;\n  const response = await fetch(url);\n  const result = await response.json();\n\n  if (result.data && Array.isArray(result.data)) {\n    // Filter: only motCode=0 (all modes of transport) to avoid duplicates\n    const filtered = result.data.filter(r => r.motCode === 0 || r.motCode === null);\n    \n    // Group by commodity+partner, keep latest year\n    const groupMap = {};\n    for (const item of filtered) {\n      const key = `${item.cmdCode}_${item.partnerCode}`;\n      const year = parseInt(item.period);\n      if (!groupMap[key] || year > groupMap[key].year) {\n        groupMap[key] = {\n          year,\n          cmdCode: item.cmdCode,\n          partnerCode: item.partnerCode,\n          fobValue: item.fobvalue || item.primaryValue || 0,\n          netWgt: item.netWgt || 0\n        };\n      }\n    }\n\n    for (const [key, data] of Object.entries(groupMap)) {\n      const commodity = COMMODITIES[data.cmdCode] || data.cmdCode;\n      const partner = PARTNERS[data.partnerCode] || `Country_${data.partnerCode}`;\n      const valueMillionUSD = Math.round(data.fobValue / 1000000 * 100) / 100;\n      const weightTonnes = Math.round(data.netWgt / 1000);\n\n      // Export value in million USD\n      rows.push({\n        source: 'COMTRADE',\n        commodity: commodity,\n        metric: `export_value_to_${partner.toLowerCase()}`,\n        value: valueMillionUSD,\n        unit: 'million_USD',\n        period: String(data.year)\n      });\n\n      // Export volume in tonnes (only if > 0)\n      if (weightTonnes > 0) {\n        rows.push({\n          source: 'COMTRADE',\n          commodity: commodity,\n          metric: `export_volume_to_${partner.toLowerCase()}`,\n          value: weightTonnes,\n          unit: 'tonnes',\n          period: String(data.year)\n        });\n      }\n    }\n  }\n} catch (e) {\n  // API error fallback\n}\n\nif (rows.length === 0) {\n  return [{ json: { source: 'COMTRADE', commodity: 'Rice', metric: 'no_data', value: 0, unit: 'N/A', period: 'N/A' } }];\n}\n\nreturn rows.map(r => ({ json: r }));"
+      },
+      "id": "03-fetch",
+      "name": "Fetch COMTRADE Exports",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [360, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO market_data (source, commodity, metric, value, unit, period) VALUES ('{{ $json.source }}', '{{ $json.commodity }}', '{{ $json.metric }}', {{ $json.value }}, '{{ $json.unit }}', '{{ $json.period }}') ON CONFLICT (source, commodity, metric, period) DO UPDATE SET value = EXCLUDED.value, fetched_at = NOW();"
+      },
+      "id": "04",
+      "name": "Upsert into Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [580, 300],
+      "credentials": {
+        "postgres": { "id": "", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, -200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed', NOW(), false);"
+      },
+      "id": "log-error",
+      "name": "Log Error to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [200, -200],
+      "credentials": {
+        "postgres": { "id": "", "name": "Postgres account" }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute Workflow'": {
+      "main": [[
+        { "node": "Fetch COMTRADE Exports", "type": "main", "index": 0 }
+      ]]
+    },
+    "Schedule": {
+      "main": [[
+        { "node": "Fetch COMTRADE Exports", "type": "main", "index": 0 }
+      ]]
+    },
+    "Fetch COMTRADE Exports": {
+      "main": [[
+        { "node": "Upsert into Postgres", "type": "main", "index": 0 }
+      ]]
+    },
+    "Error Trigger": {
+      "main": [[
+        { "node": "Log Error to Postgres", "type": "main", "index": 0 }
+      ]]
+    }
+  }
+}
