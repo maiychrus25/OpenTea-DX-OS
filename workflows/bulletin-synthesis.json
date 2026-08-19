@@ -131,7 +131,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE bulletins SET is_latest = false WHERE commodity = '{{ $json.commodity }}';"
+        "query": "UPDATE bulletins SET is_latest = false WHERE commodity = '{{ $('Strip Thinking Block').item.json.commodity }}';"
       },
       "id": "deprecate-old",
       "name": "Deprecate Old Bulletins",
@@ -151,7 +151,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO bulletins (commodity, bulletin_vi, sources_json, model_used, is_latest) VALUES ($${{ $json.commodity }}$$, $${{ $json.bulletin_text }}$$, $${{ JSON.stringify($json.sources_json) }}$$::jsonb, $${{ $env.OLLAMA_MODEL }}$$, true);"
+        "query": "INSERT INTO bulletins (commodity, bulletin_vi, sources_json, model_used, is_latest) VALUES ($${{ $('Strip Thinking Block').item.json.commodity }}$$, $${{ $('Strip Thinking Block').item.json.bulletin_text }}$$, $${{ JSON.stringify($('Strip Thinking Block').item.json.sources_json) }}$$::jsonb, $${{ $env.OLLAMA_MODEL }}$$, true);"
       },
       "id": "insert-new",
       "name": "Insert New Bulletin",
