@@ -122,6 +122,10 @@ export default function ManagerLotsPage() {
           <div className={styles.loadingCell}>
             Đang tải dữ liệu...
           </div>
+        ) : error ? (
+          <div className={styles.emptyCell}>
+            {error}
+          </div>
         ) : (
           <table className={styles.table}>
             <thead>
