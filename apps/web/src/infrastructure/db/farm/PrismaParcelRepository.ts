@@ -11,6 +11,11 @@ export class PrismaParcelRepository implements ParcelPort {
       select: {
         centroid_lat: true,
         centroid_lng: true,
+        household: {
+          select: {
+            keycloak_user_id: true,
+          }
+        }
       },
     });
     return parcel;

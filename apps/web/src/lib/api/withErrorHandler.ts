@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { Prisma } from '@prisma/client'
-import { DomainError, NotFoundError, ValidationError } from '@/domain/errors'
+import { DomainError, NotFoundError, ValidationError, ForbiddenError } from '@/domain/errors'
 import { logger } from '@/lib/logger'
 
 type RouteHandler = (req: Request, context: unknown) => Promise<NextResponse>
@@ -61,6 +61,12 @@ export function withErrorHandler(handler: RouteHandler): RouteHandler {
         return NextResponse.json(
           { error: { code: 'DOMAIN_ERROR', message: err.message } },
           { status: 422 }
+        )
+      }
+      if (err instanceof ForbiddenError) {
+        return NextResponse.json(
+          { error: { code: 'FORBIDDEN', message: err.message } },
+          { status: 403 }
         )
       }
       logger.error('Unhandled API Error', { error: err, url: req.url })

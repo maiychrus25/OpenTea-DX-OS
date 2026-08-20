@@ -5,19 +5,11 @@ import { GET } from '../route';
 import { auth } from '@/auth';
 import { prisma } from '@/infrastructure/db/prisma.client';
 import { GetWeatherUseCase } from '@/application/farm/GetWeatherUseCase';
-import { ValidationError } from '@/domain/errors';
+import { ValidationError, ForbiddenError } from '@/domain/errors';
 
 // Mock the dependencies
 jest.mock('@/auth', () => ({
   auth: jest.fn(),
-}));
-
-jest.mock('@/infrastructure/db/prisma.client', () => ({
-  prisma: {
-    parcel: {
-      findUnique: jest.fn(),
-    },
-  },
 }));
 
 
@@ -35,7 +27,6 @@ jest.mock('next/server', () => {
 
 describe('GET /api/weather', () => {
   const mockAuth = auth as jest.Mock;
-  const mockPrismaParcelFindUnique = prisma.parcel.findUnique as jest.Mock;
   let mockExecute: jest.SpyInstance;
 
   beforeEach(() => {
@@ -80,26 +71,19 @@ describe('GET /api/weather', () => {
   it('should return 403 if farmer accesses parcel not belonging to their household', async () => {
     mockAuth.mockResolvedValueOnce({ user: { id: 'farmer-1', role: 'farmer' } });
     
-    // Prisma returns a parcel belonging to a different keycloak_user_id
-    mockPrismaParcelFindUnique.mockResolvedValueOnce({
-      id: 'cln3qkx7p000008l41234abcd',
-      household: { keycloak_user_id: 'other-farmer-id' }
-    });
+    // Mock the usecase throwing ForbiddenError
+    mockExecute.mockRejectedValueOnce(new ForbiddenError('Forbidden: You do not have access to this parcel'));
 
     const req = createRequest('http://localhost:3000/api/weather?date=2026-08-14&parcelId=cln3qkx7p000008l41234abcd');
     const res = await GET(req, { params: {} });
 
     expect(res.status).toBe(403);
     const json = await res.json();
-    expect(json.error).toMatch(/Forbidden/);
+    expect(json.error.message).toMatch(/Forbidden/);
   });
 
   it('should return 200 and weather data on success for farmer owning the parcel', async () => {
     mockAuth.mockResolvedValueOnce({ user: { id: 'farmer-1', role: 'farmer' } });
-    mockPrismaParcelFindUnique.mockResolvedValueOnce({
-      id: 'cln3qkx7p000008l41234abcd',
-      household: { keycloak_user_id: 'farmer-1' }
-    });
     
     const mockWeatherData = {
       condition: 'Nắng',
@@ -115,12 +99,11 @@ describe('GET /api/weather', () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.data).toEqual(mockWeatherData);
-    expect(mockExecute).toHaveBeenCalledWith('cln3qkx7p000008l41234abcd', '2026-08-14');
+    expect(mockExecute).toHaveBeenCalledWith('cln3qkx7p000008l41234abcd', '2026-08-14', { id: 'farmer-1', role: 'farmer' });
   });
 
   it('should return 200 and weather data on success for manager without checking household ownership', async () => {
     mockAuth.mockResolvedValueOnce({ user: { id: 'manager-1', role: 'manager' } });
-    // Prisma should not be called for manager
     
     const mockWeatherData = {
       condition: 'Nắng',
@@ -136,8 +119,7 @@ describe('GET /api/weather', () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.data).toEqual(mockWeatherData);
-    expect(mockPrismaParcelFindUnique).not.toHaveBeenCalled();
-    expect(mockExecute).toHaveBeenCalledWith('cln3qkx7p000008l41234abcd', '2026-08-14');
+    expect(mockExecute).toHaveBeenCalledWith('cln3qkx7p000008l41234abcd', '2026-08-14', { id: 'manager-1', role: 'manager' });
   });
 
   it('should return 400 if parcel has no coordinates (DomainError/ValidationError)', async () => {
