@@ -34,7 +34,7 @@ describe('Story 1.3: Migration Safety', () => {
   test('no destructive unreplaced DROP TABLE statements', () => {
     const migrationSqls = getMigrationSqls();
 
-    for (const { name, sql } of migrationSqls) {
+    for (const { sql } of migrationSqls) {
       if (sql.includes('DROP TABLE')) {
         // If a table is dropped, we expect a corresponding CREATE TABLE in the same migration
         // In our case, the rename from "Lot" to "lots" is done via DROP then CREATE
