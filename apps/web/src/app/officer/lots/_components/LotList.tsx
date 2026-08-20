@@ -20,16 +20,16 @@ interface LotSummary {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  DRAFT: 'Bản nháp',
-  READY: 'Sẵn sàng',
-  QR_EXPORTED: 'Đã xuất QR',
+  draft: 'Bản nháp',
+  ready: 'Sẵn sàng',
+  qr_exported: 'Đã xuất QR',
 }
 
 function statusTone(status: string): 'amber' | 'green' | 'neutral' {
   switch (status) {
-    case 'DRAFT': return 'neutral'
-    case 'READY': return 'amber'
-    case 'QR_EXPORTED': return 'green'
+    case 'draft': return 'neutral'
+    case 'ready': return 'amber'
+    case 'qr_exported': return 'green'
     default: return 'neutral'
   }
 }
@@ -45,7 +45,7 @@ export function LotList() {
     setLoading(true)
     fetch('/api/lots')
       .then(r => r.ok ? r.json() : Promise.reject(r))
-      .then(j => setLots(j.data || []))
+      .then(j => setLots((j.data || []).map((l: any) => ({ ...l, status: (l.status || '').toLowerCase() }))))
       .catch(() => setLots([]))
       .finally(() => setLoading(false))
   }, [])
@@ -106,7 +106,7 @@ export function LotList() {
                 <span>Ngày tạo: {new Date(lot.created_at).toLocaleDateString('vi-VN')}</span>
               </div>
               <div className={styles.cardActions}>
-                {lot.status !== 'QR_EXPORTED' && (
+                {lot.status !== 'qr_exported' && (
                   <button
                     className={styles.qrBtn}
                     onClick={() => handleExportQr(lot.id)}
@@ -115,7 +115,7 @@ export function LotList() {
                     {exporting === lot.id ? 'Đang xuất...' : '📱 Xuất QR'}
                   </button>
                 )}
-                {lot.status === 'QR_EXPORTED' && (
+                {lot.status === 'qr_exported' && (
                   <a href={`/lot/${lot.lot_code}`} target="_blank" rel="noopener noreferrer" className={styles.viewBtn}>
                     Xem trang QR
                   </a>

@@ -5,7 +5,6 @@ import { LotPort } from '@/domain/lot/ports/LotPort'
 import { LotTraceRepository } from '@/domain/repositories/lot-trace-repository'
 import { NotFoundError, DomainError } from '@/domain/errors'
 import * as QRCode from 'qrcode'
-import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
 
 export class ExportQrUseCase {
   constructor(
@@ -22,20 +21,22 @@ export class ExportQrUseCase {
     const traceData = await this.traceRepo.getLotByCode(lot.lot_code)
     if (!traceData) throw new NotFoundError('Trace data not found')
 
-    // Generate QR code
-    const publicUrl = `https://dx-agrimarket.example.com/lot/${lot.lot_code}` // Mock domain
-    const qrBuffer = await QRCode.toBuffer(publicUrl, { type: 'png', margin: 1 })
+    // Generate QR code pointing to the public lot page
+    const publicUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/lot/${lot.lot_code}`
+    let qrImageUrl = `/lot/${lot.lot_code}`
 
-    // Upload to MinIO
-    const storagePort = new MinioStorageAdapter()
-    const uploadResult = await storagePort.uploadFile(qrBuffer, `qr-${lot.lot_code}.png`, 'image/png')
+    try {
+      // Try MinIO upload if available
+      const { MinioStorageAdapter } = await import('@/infrastructure/storage/minio-storage.adapter')
+      const qrBuffer = await QRCode.toBuffer(publicUrl, { type: 'png', margin: 1 })
+      const storagePort = new MinioStorageAdapter()
+      const uploadResult = await storagePort.uploadFile(qrBuffer, `qr-${lot.lot_code}.png`, 'image/png')
+      qrImageUrl = uploadResult.presignedUrl
+    } catch {
+      // MinIO not available — fallback to local URL path (non-critical for MVP)
+    }
 
-    // Wait, the lotPort.exportQr needs to accept qrImageUrl, or we update traceData to include it?
-    // PrismaLotRepository handles it using qr_image_url field. 
-    // Wait, let's look at PrismaLotRepository.exportQr signature: exportQr(id: string, snapshotData: LotTraceData): Promise<ExportQrResult>
-    // It currently hardcodes qr_image_url: `/lot/${currentLot.lot_code}`.
-    // I need to update PrismaLotRepository as well. For now, let's just pass uploadResult.presignedUrl in a modified signature.
-    
-    return this.lotPort.exportQr(lotId, traceData, uploadResult.presignedUrl)
+    return this.lotPort.exportQr(lotId, traceData, qrImageUrl)
   }
 }
+

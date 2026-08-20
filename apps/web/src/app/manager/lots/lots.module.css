@@ -161,3 +161,27 @@
 .tableRow:hover .qrIcon {
   color: var(--color-primary);
 }
+
+.loadingCell {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-muted);
+}
+
+.emptyCell {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-muted);
+}
+
+.lotCode {
+  font-weight: 500;
+}
+
+.actionCol {
+  width: 60px;
+}
+
+.actionCell {
+  text-align: center;
+}

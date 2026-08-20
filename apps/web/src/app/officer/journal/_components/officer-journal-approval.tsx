@@ -3,33 +3,59 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Pill } from '@/components/ui'
 import styles from '../journal.module.css'
+import { JournalForm } from './JournalForm'
 
-interface JournalEntryMock {
+interface JournalEntry {
   id: string
-  parcelCode: string
-  cropActivity: string
-  date: string
+  parcel_code?: string
+  parcel_id?: string
+  activity_type?: string
+  entry_date?: string
   status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'REQUEST_CHANGES'
   hasDiseaseWarning?: boolean
 }
 
-const INITIAL_MOCK_DATA: JournalEntryMock[] = [
-  { id: '1', parcelCode: 'TP-014', cropActivity: 'Cải ngọt - Phun thuốc BVTV', date: '10/08/2026', status: 'PENDING_APPROVAL', hasDiseaseWarning: true },
-  { id: '2', parcelCode: 'TP-021', cropActivity: 'Xà lách - Bón phân hữu cơ', date: '11/08/2026', status: 'APPROVED' },
-  { id: '3', parcelCode: 'TP-008', cropActivity: 'Dưa leo - Thu hoạch', date: '12/08/2026', status: 'PENDING_APPROVAL' },
-]
-
 export function OfficerJournalApproval() {
-  const [entries, setEntries] = useState<JournalEntryMock[]>(INITIAL_MOCK_DATA)
+  const [entries, setEntries] = useState<JournalEntry[]>([])
   const [rejectEntryId, setRejectEntryId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [rejectType, setRejectType] = useState<'REJECTED' | 'REQUEST_CHANGES'>('REJECTED')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isCreating, setIsCreating] = useState(false)
 
-  const handleApprove = (id: string) => {
-    setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'APPROVED' } : e))
+  const load = async () => {
+      try {
+        const res = await fetch('/api/journal')
+        if (res.ok) {
+          const data = await res.json()
+          setEntries(data.data || [])
+        }
+      } catch {
+        // Error loading journal entries — handled silently
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  useEffect(() => {
+    load()
+  }, [])
+
+  const handleApprove = async (id: string) => {
+    try {
+      const res = await fetch('/api/journal/batch-approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entry_ids: [id], isApproved: true })
+      })
+      if (res.ok) {
+        setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'APPROVED' } : e))
+      }
+    } catch {
+      // Error approving journal entry — handled silently
+    }
   }
 
   const handleReject = (id: string) => {
@@ -44,10 +70,21 @@ export function OfficerJournalApproval() {
     setRejectType('REQUEST_CHANGES')
   }
 
-  const confirmReject = () => {
+  const confirmReject = async () => {
     if (!rejectEntryId || !rejectReason.trim()) return
-    setEntries(prev => prev.map(e => e.id === rejectEntryId ? { ...e, status: rejectType } : e))
-    setRejectEntryId(null)
+    try {
+      const res = await fetch('/api/journal/batch-approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entry_ids: [rejectEntryId], isApproved: false, rejectionReason: rejectReason })
+      })
+      if (res.ok) {
+        setEntries(prev => prev.map(e => e.id === rejectEntryId ? { ...e, status: rejectType } : e))
+        setRejectEntryId(null)
+      }
+    } catch {
+      // Error rejecting journal entry — handled silently
+    }
   }
 
   const hasWarning = entries.some(e => e.hasDiseaseWarning && e.status === 'PENDING_APPROVAL')
@@ -61,7 +98,7 @@ export function OfficerJournalApproval() {
           </span>
           <h1 className={styles.title}>Kiểm tra và phê duyệt nhật ký</h1>
         </div>
-        <button className={styles.createBtn}>+ Tạo nhật ký</button>
+        <button className={styles.createBtn} onClick={() => setIsCreating(true)}>+ Tạo nhật ký</button>
       </div>
 
       {hasWarning && (
@@ -81,27 +118,41 @@ export function OfficerJournalApproval() {
           </tr>
         </thead>
         <tbody>
-          {entries.map(e => (
-            <tr key={e.id}>
-              <td>{e.parcelCode}</td>
-              <td>{e.cropActivity}</td>
-              <td>{e.date}</td>
-              <td>
-                <Pill tone={e.status === 'PENDING_APPROVAL' ? 'amber' : e.status === 'APPROVED' ? 'green' : e.status === 'REJECTED' ? 'neutral' : 'blue'}>
-                  {e.status === 'PENDING_APPROVAL' ? 'Chờ duyệt' : e.status === 'APPROVED' ? 'Đã duyệt' : e.status === 'REQUEST_CHANGES' ? 'Cần sửa' : 'Từ chối'}
-                </Pill>
-              </td>
-              <td>
-                {e.status === 'PENDING_APPROVAL' && (
-                  <div className={styles.flexActions}>
-                    <button className={styles.approveBtn} onClick={() => handleApprove(e.id)}>Duyệt</button>
-                    <button className={styles.rejectBtn} onClick={() => handleRequestChanges(e.id)}>Yêu cầu sửa</button>
-                    <button className={styles.rejectBtn} onClick={() => handleReject(e.id)}>Từ chối</button>
-                  </div>
-                )}
+          {isLoading ? (
+            <tr>
+              <td colSpan={5} className={styles.emptyCell}>
+                Đang tải dữ liệu...
               </td>
             </tr>
-          ))}
+          ) : entries.length === 0 ? (
+            <tr>
+              <td colSpan={5} className={styles.emptyCell}>
+                Chưa có nhật ký nào cần duyệt.
+              </td>
+            </tr>
+          ) : (
+            entries.map(e => (
+              <tr key={e.id}>
+                <td>{e.parcel_code || e.parcel_id || e.id.substring(0, 8)}</td>
+                <td>{e.activity_type || 'Không có'}</td>
+                <td>{e.entry_date ? new Date(e.entry_date).toLocaleDateString('vi-VN') : ''}</td>
+                <td>
+                  <Pill tone={e.status === 'PENDING_APPROVAL' ? 'amber' : e.status === 'APPROVED' ? 'green' : e.status === 'REJECTED' ? 'neutral' : 'blue'}>
+                    {e.status === 'PENDING_APPROVAL' ? 'Chờ duyệt' : e.status === 'APPROVED' ? 'Đã duyệt' : e.status === 'REQUEST_CHANGES' ? 'Cần sửa' : 'Từ chối'}
+                  </Pill>
+                </td>
+                <td>
+                  {e.status === 'PENDING_APPROVAL' && (
+                    <div className={styles.flexActions}>
+                      <button className={styles.approveBtn} onClick={() => handleApprove(e.id)}>Duyệt</button>
+                      <button className={styles.rejectBtn} onClick={() => handleRequestChanges(e.id)}>Yêu cầu sửa</button>
+                      <button className={styles.rejectBtn} onClick={() => handleReject(e.id)}>Từ chối</button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
 
@@ -127,6 +178,20 @@ export function OfficerJournalApproval() {
                 Xác nhận
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isCreating && (
+        <div className={styles.overlay} onClick={() => setIsCreating(false)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <JournalForm 
+              onSuccess={() => {
+                setIsCreating(false)
+                load()
+              }} 
+              onCancel={() => setIsCreating(false)} 
+            />
           </div>
         </div>
       )}

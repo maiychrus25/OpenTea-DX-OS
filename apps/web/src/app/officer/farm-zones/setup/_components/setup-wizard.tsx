@@ -45,12 +45,13 @@ export function SetupWizard() {
       case 3:
         return (
           <Step3CropAssign
+            householdId={householdId!}
             householdName={householdName}
             area={area || 0}
             onPrev={() => setStep(2)}
             onComplete={() => {
-              alert('Đã thiết lập vùng trồng thành công (Mock)!')
-              router.push('/officer/farm-zones')
+              alert('Đã thiết lập vùng trồng thành công!')
+              router.push('/officer/dashboard')
             }}
           />
         )
@@ -60,7 +61,7 @@ export function SetupWizard() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <a href="/officer/farm-zones" className={styles.backLink}>← Quay lại bản đồ</a>
+        <a href="/officer/dashboard" className={styles.backLink}>← Quay lại trang chủ</a>
         <span className={styles.eyebrow}>THIẾT LẬP VÙNG TRỒNG</span>
         <h1 className={styles.title}>Hộ → Thửa đất → Cây trồng</h1>
         <p className={styles.subtitle}>Thực hiện tuần tự: thêm hộ, khoanh thửa trên bản đồ, sau đó gán cây trồng.</p>

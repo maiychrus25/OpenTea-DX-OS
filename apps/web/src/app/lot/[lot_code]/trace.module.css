@@ -158,3 +158,26 @@
   color: var(--primary);
   text-decoration: underline;
 }
+
+.qrSection {
+  text-align: center;
+}
+
+.qrImage {
+  width: 200px;
+  height: 200px;
+  margin: 0 auto;
+}
+
+.qrCaption {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #666);
+}
+
+.qrUrl {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #999);
+  word-break: break-all;
+}
