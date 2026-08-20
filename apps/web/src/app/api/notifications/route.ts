@@ -2,11 +2,11 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { auth } from '@/auth'
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository'
 import { GetNotificationsUseCase } from '@/application/notification/get-notifications-usecase'
 import { MarkNotificationReadUseCase } from '@/application/notification/mark-notification-read-usecase'
-import { z } from 'zod'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
 const notificationRepo = new PrismaNotificationRepository()
@@ -21,7 +21,7 @@ const getQuerySchema = z.object({
 const putBodySchema = z.object({
   id: z.string().optional(),
   action: z.enum(['mark-read', 'mark-all-read', 'update-preferences']).default('mark-read'),
-  preferences: z.any().optional()
+  preferences: z.record(z.unknown()).optional()
 })
 
 async function getNotifications(req: Request) {

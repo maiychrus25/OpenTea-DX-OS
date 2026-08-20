@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { GetNotificationsUseCase } from '@/application/notification/get-notifications-usecase'
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -23,6 +24,7 @@ export async function GET(req: Request) {
       // Send initial connection event
       controller.enqueue(encoder.encode(`event: connected\ndata: ${JSON.stringify({ message: 'SSE connection established' })}\n\n`))
 
+      // TODO(issue-202): Implement Redis Pub/Sub for SSE to avoid DB polling per connection
       // Simulate sending new notifications every 10 seconds for the contract
       const intervalId = setInterval(async () => {
         try {
@@ -31,7 +33,7 @@ export async function GET(req: Request) {
             controller.enqueue(encoder.encode(`event: notification\ndata: ${JSON.stringify(result.notifications[0])}\n\n`))
           }
         } catch (error) {
-          console.error('SSE Error:', error)
+          logger.error('SSE Error:', { error })
         }
       }, 10000)
 
