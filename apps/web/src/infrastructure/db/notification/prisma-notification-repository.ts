@@ -4,6 +4,7 @@
 import { prisma } from '../prisma.client';
 import { NotificationPort } from '@/domain/ports/notification-port';
 import { Notification } from '@/domain/entities/notification';
+import { NotificationType } from '@prisma/client';
 
 export class PrismaNotificationRepository implements NotificationPort {
   async getRecentByUserId(userId: string, limit: number): Promise<Notification[]> {
@@ -26,5 +27,16 @@ export class PrismaNotificationRepository implements NotificationPort {
         data: { is_read: true },
       });
     }
+  }
+
+  async broadcastDiseaseReport(householdName: string, diseaseName: string, parcelCode: string): Promise<void> {
+    await prisma.notification.create({
+      data: {
+        type: NotificationType.DISEASE_REPORT,
+        title: 'Báo cáo sâu bệnh mới',
+        body: `Nông hộ ${householdName} vừa báo cáo bệnh ${diseaseName} tại thửa đất ${parcelCode}.`,
+        recipient_id: null,
+      },
+    });
   }
 }

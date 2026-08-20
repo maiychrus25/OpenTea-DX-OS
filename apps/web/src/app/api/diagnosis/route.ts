@@ -3,19 +3,17 @@
 
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { PrismaClient } from '@prisma/client'
 import { SubmitDiagnosisUseCase } from '@/application/disease/submit-diagnosis.usecase'
 import { DiseaseApiAdapter } from '@/infrastructure/disease-api/disease-api.adapter'
 import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
+import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
+import { PrismaDiseaseReportRepository } from '@/infrastructure/db/farm/PrismaDiseaseReportRepository'
+import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository'
 import { diagnosisSchema } from '@/lib/validations/diagnosis.schema'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB — rules-and-limits.md §2.1
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png'])
 
-// Reuse global prisma client to avoid connection exhaustion in dev
-const globalForPrisma = global as unknown as { prisma: PrismaClient }
-const prisma = globalForPrisma.prisma || new PrismaClient()
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 export async function POST(req: Request) {
   // ── Auth check (server-side) — rules-and-limits.md §4 ───────────────
@@ -82,7 +80,16 @@ export async function POST(req: Request) {
     // ── Instantiate Adapters & Use Case ───────────────────────────────
     const diseaseAdapter = new DiseaseApiAdapter()
     const storageAdapter = new MinioStorageAdapter()
-    const useCase = new SubmitDiagnosisUseCase(diseaseAdapter, storageAdapter, prisma)
+    const parcelPort = new PrismaParcelRepository()
+    const diseaseReportPort = new PrismaDiseaseReportRepository()
+    const notificationPort = new PrismaNotificationRepository()
+    const useCase = new SubmitDiagnosisUseCase(
+      diseaseAdapter, 
+      storageAdapter, 
+      parcelPort, 
+      diseaseReportPort, 
+      notificationPort
+    )
 
     // ── Execute Use Case ──────────────────────────────────────────────
     const result = await useCase.execute({

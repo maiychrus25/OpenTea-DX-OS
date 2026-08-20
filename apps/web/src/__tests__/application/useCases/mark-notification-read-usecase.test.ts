@@ -12,6 +12,7 @@ describe('MarkNotificationReadUseCase', () => {
     mockPort = {
       getRecentByUserId: jest.fn(),
       markAsRead: jest.fn(),
+      broadcastDiseaseReport: jest.fn(),
     }
     useCase = new MarkNotificationReadUseCase(mockPort)
   })
