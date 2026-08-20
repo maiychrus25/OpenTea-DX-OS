@@ -5,7 +5,7 @@ import { GET } from '../route';
 import { auth } from '@/auth';
 import { prisma } from '@/infrastructure/db/prisma.client';
 import { GetWeatherUseCase } from '@/application/farm/GetWeatherUseCase';
-import { ValidationError, DomainError } from '@/domain/errors';
+import { ValidationError } from '@/domain/errors';
 
 // Mock the dependencies
 jest.mock('@/auth', () => ({
