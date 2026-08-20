@@ -259,7 +259,7 @@ development_status:
   8-4-lot-detail-6step-workflow:        ready-for-dev  # Lot detail: 6-step wizard + QR preview panel + Xuất QR
   8-5-farm-zone-setup-wizard:           done           # Thiết lập vùng trồng: 3-step (Hộ → Thửa → Cây trồng)
   8-6-chat-market-interface:            ready-for-dev  # Hỏi đáp thị trường: chat layout, mini-chart, source citation
-  8-7-journal-manager-approval:         ready-for-dev  # Nhật ký duyệt: manager approval modal + AI disease warning
+  8-7-journal-manager-approval:         done           # Nhật ký duyệt: manager approval modal + AI disease warning
   8-8-account-profile-page:            ready-for-dev  # Hồ sơ & tài khoản: profile section + security rows + logout
   8-9-notifications-full-page:          ready-for-dev  # FE mock only; BE/SSE/TTS integration is 9-2/10-2
   8-10-auth-recovery-and-registration-ui: ready-for-dev  # FE states and flows; Keycloak integration remains BE
