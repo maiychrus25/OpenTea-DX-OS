@@ -1,0 +1,163 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 0.5rem 0;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.createBtn {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.createBtn:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.filterRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.filterTabs {
+  display: flex;
+  gap: 1rem;
+}
+
+.filter {
+  background: transparent;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.filter:hover {
+  color: var(--color-text-primary);
+}
+
+.filterActive {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.filterCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+  border-radius: 12px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  margin-left: 0.5rem;
+}
+
+.filterActive .filterCount {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.searchbox {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  width: 300px;
+  outline: none;
+}
+
+.searchbox:focus {
+  border-color: var(--color-primary);
+}
+
+.tableContainer {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 700px;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 1rem;
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-weight: 500;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.tableRow {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tableRow:hover {
+  background-color: #f4f9f5;
+}
+
+.qrIcon {
+  color: var(--color-text-muted);
+  transition: color 0.2s;
+}
+
+.tableRow:hover .qrIcon {
+  color: var(--color-primary);
+}
