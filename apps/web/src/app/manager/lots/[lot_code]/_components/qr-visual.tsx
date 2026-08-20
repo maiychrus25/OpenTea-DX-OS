@@ -7,7 +7,7 @@ import React from 'react'
 import styles from '../lot-detail.module.css'
 
 export function QrVisual() {
-  // Generate a random-looking 11x11 grid pattern for the placeholder
+  // Generate a pseudo-random 11x11 grid pattern for the placeholder using a static seed to avoid hydration mismatch
   const dots = Array.from({ length: 121 }).map((_, i) => {
     // Make corners look like QR markers
     const isMarker = 
@@ -15,7 +15,8 @@ export function QrVisual() {
       (i % 11 > 7 && Math.floor(i / 11) < 3) || // top-right
       (i % 11 < 3 && Math.floor(i / 11) > 7)    // bottom-left
 
-    const isDot = isMarker || Math.random() > 0.5
+    // pseudo-random using index
+    const isDot = isMarker || ((i * 17) % 10) > 4
     return isDot
   })
 
