@@ -23,3 +23,9 @@ if (typeof Response === 'undefined') {
     }
   }
 }
+
+// Mock Server Actions that import ESM-only libraries (e.g. next-auth)
+// This prevents "Cannot use import statement outside a module" in Jest.
+jest.mock('@/app/actions/signout-action', () => ({
+  signOutAction: jest.fn()
+}))
