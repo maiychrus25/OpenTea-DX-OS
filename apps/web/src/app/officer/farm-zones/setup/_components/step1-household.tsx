@@ -23,6 +23,7 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
   const [newPhone, setNewPhone] = useState('')
   const [households, setHouseholds] = useState<Household[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [htxProfileId, setHtxProfileId] = useState<string | null>(null)
 
   useEffect(() => {
     // We should fetch HTX Profile ID from context/session in real app
@@ -33,16 +34,17 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
         const htxRes = await fetch('/api/profile')
         const htxData = await htxRes.json()
         if (htxData.data?.id) {
+          setHtxProfileId(htxData.data.id)
           const res = await fetch(`/api/farm/households?htxProfileId=${htxData.data.id}`)
           const data = await res.json()
-          setHouseholds(data.data.map((h: any) => ({
+          setHouseholds(data.data.map((h: Household) => ({
             id: h.id,
             name: h.name,
-            parcelCount: h.parcels?.length || 0
+            parcelCount: h.parcelCount || 0
           })))
         }
-      } catch (e) {
-        console.error(e)
+      } catch {
+        // Failed to load households — handled silently
       } finally {
         setIsLoading(false)
       }
@@ -102,14 +104,12 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
             if (newOwner) {
               setIsLoading(true)
               try {
-                const htxRes = await fetch('/api/profile')
-                const htxData = await htxRes.json()
-                if (htxData.data?.id) {
+                if (htxProfileId) {
                   const res = await fetch('/api/farm/households', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                      household_code: 'HD-' + Math.floor(Math.random() * 1000).toString().padStart(3, '0'),
+                      household_code: 'HD-' + crypto.randomUUID().substring(0, 6).toUpperCase(),
                       owner_name: newOwner,
                       phone: newPhone
                     })
@@ -126,8 +126,8 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
                     alert('Lỗi tạo nông hộ: ' + (err?.error?.message || 'Không rõ'))
                   }
                 }
-              } catch (e) {
-                console.error(e)
+              } catch {
+                // Failed to create household — handled silently
               } finally {
                 setIsLoading(false)
               }

@@ -37,14 +37,14 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
 
       {/* QR Code Section */}
       {qrDataUri && (
-        <section className={styles.section} style={{ textAlign: 'center' }}>
+        <section className={`${styles.section} ${styles.qrSection}`}>
           <h2 className={styles.sectionTitle}>Mã QR lô hàng</h2>
-          <img src={qrDataUri} alt={`QR Code — ${lot_code}`} style={{ width: 200, height: 200, margin: '0 auto' }} />
-          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-text-muted, #666)' }}>
+          <img src={qrDataUri} alt={`QR Code — ${lot_code}`} className={styles.qrImage} />
+          <p className={styles.qrCaption}>
             Quét mã QR để xem thông tin truy xuất
           </p>
           {pageUrl && (
-            <p style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--color-text-muted, #999)', wordBreak: 'break-all' }}>
+            <p className={styles.qrUrl}>
               {pageUrl}
             </p>
           )}

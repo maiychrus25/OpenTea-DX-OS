@@ -8,8 +8,18 @@ import { Pill } from '@/components/ui'
 import styles from '../journal.module.css'
 import { JournalForm } from './JournalForm'
 
+interface JournalEntry {
+  id: string
+  parcel_code?: string
+  parcel_id?: string
+  activity_type?: string
+  entry_date?: string
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'REQUEST_CHANGES'
+  hasDiseaseWarning?: boolean
+}
+
 export function OfficerJournalApproval() {
-  const [entries, setEntries] = useState<any[]>([])
+  const [entries, setEntries] = useState<JournalEntry[]>([])
   const [rejectEntryId, setRejectEntryId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [rejectType, setRejectType] = useState<'REJECTED' | 'REQUEST_CHANGES'>('REJECTED')
@@ -23,8 +33,8 @@ export function OfficerJournalApproval() {
           const data = await res.json()
           setEntries(data.data || [])
         }
-      } catch (e) {
-        console.error(e)
+      } catch {
+        // Error loading journal entries — handled silently
       } finally {
         setIsLoading(false)
       }
@@ -43,8 +53,8 @@ export function OfficerJournalApproval() {
       if (res.ok) {
         setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'APPROVED' } : e))
       }
-    } catch (e) {
-      console.error(e)
+    } catch {
+      // Error approving journal entry — handled silently
     }
   }
 
@@ -72,8 +82,8 @@ export function OfficerJournalApproval() {
         setEntries(prev => prev.map(e => e.id === rejectEntryId ? { ...e, status: rejectType } : e))
         setRejectEntryId(null)
       }
-    } catch (e) {
-      console.error(e)
+    } catch {
+      // Error rejecting journal entry — handled silently
     }
   }
 
@@ -110,13 +120,13 @@ export function OfficerJournalApproval() {
         <tbody>
           {isLoading ? (
             <tr>
-              <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+              <td colSpan={5} className={styles.emptyCell}>
                 Đang tải dữ liệu...
               </td>
             </tr>
           ) : entries.length === 0 ? (
             <tr>
-              <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+              <td colSpan={5} className={styles.emptyCell}>
                 Chưa có nhật ký nào cần duyệt.
               </td>
             </tr>

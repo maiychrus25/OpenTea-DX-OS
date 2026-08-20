@@ -30,7 +30,10 @@ export async function GET(request: Request) {
   }
 
   const now = Math.floor(Date.now() / 1000)
-  const secret = process.env.AUTH_SECRET || process.env.KEYCLOAK_CLIENT_SECRET || 'agrimarket-secret-key'
+  const secret = process.env.AUTH_SECRET || process.env.KEYCLOAK_CLIENT_SECRET
+  if (!secret) {
+    return NextResponse.json({ error: 'AUTH_SECRET not configured' }, { status: 500 })
+  }
 
   const token = await encode({
     token: {

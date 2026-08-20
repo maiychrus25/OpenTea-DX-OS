@@ -9,22 +9,32 @@ import { QrCode } from 'lucide-react'
 import { Pill } from '@/components/ui'
 import styles from './lots.module.css'
 
+interface LotSummary {
+  id: string
+  lot_code: string
+  commodity: string
+  status: string
+  estimated_weight_kg?: number
+  created_at: string
+}
+
 type FilterTab = 'ALL' | 'READY' | 'QR_EXPORTED'
 
 export default function ManagerLotsPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
-  const [lots, setLots] = useState<any[]>([])
+  const [lots, setLots] = useState<LotSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/lots')
       .then(r => r.json())
       .then(d => {
-        setLots((d.data || []).map((l: any) => ({ ...l, status: (l.status || '').toLowerCase() })))
+        setLots((d.data || []).map((l: LotSummary) => ({ ...l, status: (l.status || '').toLowerCase() })))
       })
-      .catch(e => console.error(e))
+      .catch(() => setError('Không thể tải danh sách lô hàng.'))
       .finally(() => setIsLoading(false))
   }, [])
 
@@ -109,7 +119,7 @@ export default function ManagerLotsPage() {
 
       <div className={styles.tableContainer}>
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+          <div className={styles.loadingCell}>
             Đang tải dữ liệu...
           </div>
         ) : (
@@ -120,25 +130,25 @@ export default function ManagerLotsPage() {
                 <th>Sản phẩm & nguồn</th>
                 <th>Sản lượng</th>
                 <th>Trạng thái</th>
-                <th style={{ width: '60px' }}></th>
+                <th className={styles.actionCol}></th>
               </tr>
             </thead>
             <tbody>
               {filteredLots.length > 0 ? (
                 filteredLots.map(lot => (
                   <tr key={lot.id} className={styles.tableRow} onClick={() => handleRowClick(lot.id)}>
-                    <td style={{ fontWeight: 500 }}>{lot.lot_code || lot.id.substring(0,8)}</td>
+                    <td className={styles.lotCode}>{lot.lot_code || lot.id.substring(0,8)}</td>
                     <td>{lot.commodity}</td>
                     <td>{lot.estimated_weight_kg ? `${lot.estimated_weight_kg} kg` : '-'}</td>
                     <td>{renderStatus(lot.status)}</td>
-                    <td style={{ textAlign: 'center' }}>
+                    <td className={styles.actionCell}>
                       <QrCode size={20} className={styles.qrIcon} aria-label="QR Code Icon" />
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+                  <td colSpan={5} className={styles.emptyCell}>
                     Không tìm thấy lô hàng nào.
                   </td>
                 </tr>

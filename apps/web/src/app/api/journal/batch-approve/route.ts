@@ -14,6 +14,7 @@ async function postBatchApprove(request: Request) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
   const role = (session.user as any).role
+  // AC #2: Both manager and officer can approve journals (Story 9.1, rules-and-limits.md §4.2)
   if (role !== 'manager' && role !== 'officer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Only manager or officer can batch approve' } }, { status: 403 })
   }

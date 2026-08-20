@@ -100,7 +100,7 @@ export function Step3CropAssign({ householdId, householdName, area, onPrev, onCo
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       household_id: householdId,
-                      parcel_code: 'TP-' + Math.floor(Math.random() * 1000).toString().padStart(3, '0'),
+                      parcel_code: 'TP-' + crypto.randomUUID().substring(0, 6).toUpperCase(),
                       geojson: { type: "Polygon", coordinates: [] }, // Mock geojson for now
                       area_ha: area / 10000,
                       centroid_lat: 10.0,
@@ -114,8 +114,8 @@ export function Step3CropAssign({ householdId, householdName, area, onPrev, onCo
                   } else {
                     alert('Lỗi khi thiết lập thửa đất')
                   }
-                } catch (e) {
-                  console.error(e)
+                } catch {
+                  // Failed to create parcel — handled silently
                 } finally {
                   setIsLoading(false)
                 }

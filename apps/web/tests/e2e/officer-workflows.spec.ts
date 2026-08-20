@@ -1,15 +1,9 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import fs from 'fs'
+import 'dotenv/config'
 import { test, expect, Page } from '@playwright/test'
 import { encode } from 'next-auth/jwt'
-
-try {
-  const envContent = fs.readFileSync('.env', 'utf-8')
-  const match = envContent.match(/AUTH_SECRET=["']?([^"'\n]+)["']?/)
-  if (match) process.env.AUTH_SECRET = match[1]
-} catch (e) {}
 
 async function mockSessionCookie(page: Page, role: string, name: string, id: string) {
   const now = Math.floor(Date.now() / 1000)
