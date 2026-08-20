@@ -56,7 +56,7 @@ export class PrismaNotificationRepository implements NotificationPort {
     });
   }
 
-  async updatePreferences(userId: string, preferences: any): Promise<void> {
+  async updatePreferences(_userId: string, _preferences: any): Promise<void> {
     // In a real application, this would update a user_preferences table
     // For Epic 10.2 contract, we mock this success
     return Promise.resolve();

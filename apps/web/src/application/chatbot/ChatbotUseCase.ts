@@ -13,7 +13,7 @@ export interface ChatbotResponse {
 }
 
 export class ChatbotUseCase {
-  async execute(message: string, history: ChatMessage[]): Promise<ReadableStream> {
+  async execute(message: string, _history: ChatMessage[]): Promise<ReadableStream> {
     // TODO(issue-202): Tích hợp thực tế với backend Ollama/FastAPI
     // Hiện tại mock data stream để thoả mãn BE contract 10.2
 

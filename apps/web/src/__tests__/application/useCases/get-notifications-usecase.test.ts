@@ -14,6 +14,8 @@ describe('GetNotificationsUseCase', () => {
       getRecentByUserId: jest.fn(),
       markAsRead: jest.fn(),
       broadcastDiseaseReport: jest.fn(),
+      delete: jest.fn(),
+      updatePreferences: jest.fn(),
     }
     useCase = new GetNotificationsUseCase(mockPort)
   })
