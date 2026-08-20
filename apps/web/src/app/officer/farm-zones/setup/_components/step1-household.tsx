@@ -3,7 +3,7 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import styles from '../wizard.module.css'
 
 interface Household {
@@ -11,12 +11,6 @@ interface Household {
   name: string
   parcelCount: number
 }
-
-const MOCK_HOUSEHOLDS: Household[] = [
-  { id: 'hd1', name: 'Nguyễn Văn Bình', parcelCount: 3 },
-  { id: 'hd2', name: 'Trần Thị Hà', parcelCount: 1 },
-  { id: 'hd3', name: 'Lê Văn Tám', parcelCount: 0 },
-]
 
 interface Props {
   selectedHouseholdId: string | null
@@ -27,6 +21,34 @@ interface Props {
 export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props) {
   const [newOwner, setNewOwner] = useState('')
   const [newPhone, setNewPhone] = useState('')
+  const [households, setHouseholds] = useState<Household[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // We should fetch HTX Profile ID from context/session in real app
+    // For now we pass a placeholder or get it from an endpoint
+    // We can fetch '/api/profile' to get the current manager/officer HTX
+    async function load() {
+      try {
+        const htxRes = await fetch('/api/profile')
+        const htxData = await htxRes.json()
+        if (htxData.data?.id) {
+          const res = await fetch(`/api/farm/households?htxProfileId=${htxData.data.id}`)
+          const data = await res.json()
+          setHouseholds(data.data.map((h: any) => ({
+            id: h.id,
+            name: h.name,
+            parcelCount: h.parcels?.length || 0
+          })))
+        }
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   return (
     <div className={styles.layout}>
@@ -34,7 +56,7 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
       <div className={styles.leftPanel}>
         <h2 className={styles.panelTitle}>Danh sách nông hộ</h2>
         <div className={styles.householdList}>
-          {MOCK_HOUSEHOLDS.map((h) => (
+          {households.map((h) => (
             <button
               key={h.id}
               type="button"
@@ -75,17 +97,44 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
         <button
           type="button"
           className={`${styles.btnSecondary} ${styles.btnFull}`}
-          onClick={() => {
+          disabled={!newOwner || isLoading}
+          onClick={async () => {
             if (newOwner) {
-              const newH = { id: `hd_${Date.now()}`, name: newOwner, parcelCount: 0 }
-              MOCK_HOUSEHOLDS.unshift(newH)
-              onSelect(newH)
-              setNewOwner('')
-              setNewPhone('')
+              setIsLoading(true)
+              try {
+                const htxRes = await fetch('/api/profile')
+                const htxData = await htxRes.json()
+                if (htxData.data?.id) {
+                  const res = await fetch('/api/farm/households', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      household_code: 'HD-' + Math.floor(Math.random() * 1000).toString().padStart(3, '0'),
+                      owner_name: newOwner,
+                      phone: newPhone
+                    })
+                  })
+                  if (res.ok) {
+                    const data = await res.json()
+                    const newH = { id: data.data.id, name: data.data.name || data.data.owner_name, parcelCount: 0 }
+                    setHouseholds([newH, ...households])
+                    onSelect(newH)
+                    setNewOwner('')
+                    setNewPhone('')
+                  } else {
+                    const err = await res.json().catch(()=>({}))
+                    alert('Lỗi tạo nông hộ: ' + (err?.error?.message || 'Không rõ'))
+                  }
+                }
+              } catch (e) {
+                console.error(e)
+              } finally {
+                setIsLoading(false)
+              }
             }
           }}
         >
-          Thêm hộ
+          {isLoading ? 'Đang thêm...' : 'Thêm hộ'}
         </button>
 
         <div className={styles.actions}>

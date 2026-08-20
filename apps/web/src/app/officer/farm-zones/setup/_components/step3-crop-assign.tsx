@@ -8,6 +8,7 @@ import { Pill } from '@/components/ui'
 import styles from '../wizard.module.css'
 
 interface Props {
+  householdId: string
   householdName: string
   area: number
   onPrev: () => void
@@ -22,10 +23,11 @@ const CROP_OPTIONS = [
   'Xà lách',
 ]
 
-export function Step3CropAssign({ householdName, area, onPrev, onComplete }: Props) {
+export function Step3CropAssign({ householdId, householdName, area, onPrev, onComplete }: Props) {
   const [crop, setCrop] = useState(CROP_OPTIONS[3]) // Default: Cải ngọt
   const [season, setSeason] = useState('Hè Thu 2026')
   const [yieldEst, setYieldEst] = useState('4.5')
+  const [isLoading, setIsLoading] = useState(false)
   
   return (
     <div className={styles.layout}>
@@ -89,9 +91,37 @@ export function Step3CropAssign({ householdName, area, onPrev, onComplete }: Pro
             <button
               type="button"
               className={styles.btnPrimary}
-              onClick={onComplete}
+              disabled={isLoading}
+              onClick={async () => {
+                setIsLoading(true)
+                try {
+                  const res = await fetch('/api/farm/parcels', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      household_id: householdId,
+                      parcel_code: 'TP-' + Math.floor(Math.random() * 1000).toString().padStart(3, '0'),
+                      geojson: { type: "Polygon", coordinates: [] }, // Mock geojson for now
+                      area_ha: area / 10000,
+                      centroid_lat: 10.0,
+                      centroid_lng: 106.0,
+                      current_crop: crop,
+                      season: season
+                    })
+                  })
+                  if (res.ok) {
+                    onComplete()
+                  } else {
+                    alert('Lỗi khi thiết lập thửa đất')
+                  }
+                } catch (e) {
+                  console.error(e)
+                } finally {
+                  setIsLoading(false)
+                }
+              }}
             >
-              ✓ Hoàn tất thiết lập
+              {isLoading ? 'Đang lưu...' : '✓ Hoàn tất thiết lập'}
             </button>
           </div>
         </div>

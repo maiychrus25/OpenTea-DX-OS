@@ -3,24 +3,11 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { QrCode } from 'lucide-react'
 import { Pill } from '@/components/ui'
 import styles from './lots.module.css'
-
-interface LotMock {
-  id: string
-  product: string
-  volume: string
-  status: 'DRAFT' | 'READY' | 'QR_EXPORTED'
-}
-
-const MOCK_LOTS: LotMock[] = [
-  { id: 'LH-260813', product: 'Cải ngọt - 4 thửa', volume: '2.450 kg', status: 'READY' },
-  { id: 'LH-260810', product: 'Xà lách - 3 thửa', volume: '1.820 kg', status: 'QR_EXPORTED' },
-  { id: 'LH-260806', product: 'Dưa leo - 5 thửa', volume: '3.100 kg', status: 'DRAFT' }
-]
 
 type FilterTab = 'ALL' | 'READY' | 'QR_EXPORTED'
 
@@ -28,6 +15,18 @@ export default function ManagerLotsPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
+  const [lots, setLots] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/lots')
+      .then(r => r.json())
+      .then(d => {
+        setLots((d.data || []).map((l: any) => ({ ...l, status: (l.status || '').toLowerCase() })))
+      })
+      .catch(e => console.error(e))
+      .finally(() => setIsLoading(false))
+  }, [])
 
   const handleCreateCTA = () => {
     alert('Tính năng Tạo lô hàng thuộc thẩm quyền của Cán bộ Kỹ thuật. Giao diện này chỉ dùng để chuyển hướng sâu (deep-link).')
@@ -38,27 +37,28 @@ export default function ManagerLotsPage() {
   }
 
   // Lọc data theo tab và search
-  const filteredLots = MOCK_LOTS.filter(lot => {
+  const filteredLots = lots.filter(lot => {
     const matchSearch = lot.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        lot.product.toLowerCase().includes(searchQuery.toLowerCase())
+                        (lot.commodity && lot.commodity.toLowerCase().includes(searchQuery.toLowerCase()))
     if (!matchSearch) return false
 
-    if (activeTab === 'READY') return lot.status === 'READY'
-    if (activeTab === 'QR_EXPORTED') return lot.status === 'QR_EXPORTED'
+    if (activeTab === 'READY') return lot.status === 'ready'
+    if (activeTab === 'QR_EXPORTED') return lot.status === 'qr_exported'
     return true
   })
 
   // Đếm số lượng cho các tab
-  const countReady = MOCK_LOTS.filter(l => l.status === 'READY').length
-  const countQrExported = MOCK_LOTS.filter(l => l.status === 'QR_EXPORTED').length
+  const countReady = lots.filter(l => l.status === 'ready').length
+  const countQrExported = lots.filter(l => l.status === 'qr_exported').length
 
-  const renderStatus = (status: LotMock['status']) => {
+  const renderStatus = (status: string) => {
     switch (status) {
-      case 'READY':
+      case 'ready':
         return <Pill tone="green">Sẵn sàng</Pill>
-      case 'QR_EXPORTED':
+      case 'qr_exported':
         return <Pill tone="blue">Đã xuất QR</Pill>
-      case 'DRAFT':
+      case 'draft':
+      default:
         return <Pill tone="amber">Nháp</Pill>
     }
   }
@@ -90,7 +90,7 @@ export default function ManagerLotsPage() {
             className={`${styles.filter} ${activeTab === 'ALL' ? styles.filterActive : ''}`}
             onClick={() => setActiveTab('ALL')}
           >
-            Tất cả <span className={styles.filterCount}>{MOCK_LOTS.length}</span>
+            Tất cả <span className={styles.filterCount}>{lots.length}</span>
           </button>
           <button 
             className={`${styles.filter} ${activeTab === 'READY' ? styles.filterActive : ''}`}
@@ -108,38 +108,44 @@ export default function ManagerLotsPage() {
       </div>
 
       <div className={styles.tableContainer}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Mã lô</th>
-              <th>Sản phẩm & nguồn</th>
-              <th>Sản lượng</th>
-              <th>Trạng thái</th>
-              <th style={{ width: '60px' }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredLots.length > 0 ? (
-              filteredLots.map(lot => (
-                <tr key={lot.id} className={styles.tableRow} onClick={() => handleRowClick(lot.id)}>
-                  <td style={{ fontWeight: 500 }}>{lot.id}</td>
-                  <td>{lot.product}</td>
-                  <td>{lot.volume}</td>
-                  <td>{renderStatus(lot.status)}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <QrCode size={20} className={styles.qrIcon} aria-label="QR Code Icon" />
+        {isLoading ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+            Đang tải dữ liệu...
+          </div>
+        ) : (
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Mã lô</th>
+                <th>Sản phẩm & nguồn</th>
+                <th>Sản lượng</th>
+                <th>Trạng thái</th>
+                <th style={{ width: '60px' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLots.length > 0 ? (
+                filteredLots.map(lot => (
+                  <tr key={lot.id} className={styles.tableRow} onClick={() => handleRowClick(lot.id)}>
+                    <td style={{ fontWeight: 500 }}>{lot.lot_code || lot.id.substring(0,8)}</td>
+                    <td>{lot.commodity}</td>
+                    <td>{lot.estimated_weight_kg ? `${lot.estimated_weight_kg} kg` : '-'}</td>
+                    <td>{renderStatus(lot.status)}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <QrCode size={20} className={styles.qrIcon} aria-label="QR Code Icon" />
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+                    Không tìm thấy lô hàng nào.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
-                  Không tìm thấy lô hàng nào.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )

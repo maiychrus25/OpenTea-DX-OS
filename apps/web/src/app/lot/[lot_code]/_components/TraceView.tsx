@@ -9,9 +9,11 @@ import styles from '../trace.module.css';
 
 interface TraceViewProps {
   data: LotTraceData;
+  qrDataUri?: string;
+  pageUrl?: string;
 }
 
-export function TraceView({ data }: TraceViewProps) {
+export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
   const {
     lot_code,
     commodity,
@@ -32,6 +34,22 @@ export function TraceView({ data }: TraceViewProps) {
         <h1>Truy xuất nguồn gốc</h1>
         <p>DX AgriMarket</p>
       </header>
+
+      {/* QR Code Section */}
+      {qrDataUri && (
+        <section className={styles.section} style={{ textAlign: 'center' }}>
+          <h2 className={styles.sectionTitle}>Mã QR lô hàng</h2>
+          <img src={qrDataUri} alt={`QR Code — ${lot_code}`} style={{ width: 200, height: 200, margin: '0 auto' }} />
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-text-muted, #666)' }}>
+            Quét mã QR để xem thông tin truy xuất
+          </p>
+          {pageUrl && (
+            <p style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--color-text-muted, #999)', wordBreak: 'break-all' }}>
+              {pageUrl}
+            </p>
+          )}
+        </section>
+      )}
 
       {/* Section 1: Product & Lot info */}
       <section className={styles.section}>

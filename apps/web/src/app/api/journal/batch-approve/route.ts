@@ -14,8 +14,8 @@ async function postBatchApprove(request: Request) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
   const role = (session.user as any).role
-  if (role !== 'manager') {
-    return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Only manager can batch approve' } }, { status: 403 })
+  if (role !== 'manager' && role !== 'officer') {
+    return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Only manager or officer can batch approve' } }, { status: 403 })
   }
 
   const body = await request.json().catch(() => ({}))
