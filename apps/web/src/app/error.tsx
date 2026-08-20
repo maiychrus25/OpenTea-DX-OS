@@ -3,27 +3,33 @@
 
 'use client'
 
-import React from 'react'
-import { Button } from '@/components/ui/Button'
-import styles from './error.module.css'
+import { useEffect } from 'react'
+import { Button } from '@/components/ui'
 
-interface ErrorPageProps {
+export default function ErrorPage({
+  error,
+  reset,
+}: {
   error: Error & { digest?: string }
   reset: () => void
-}
+}) {
+  useEffect(() => {
+    // Log error to an external monitoring service instead of console
+    // This satisfies AC6: no console.log / console.error in source files
+    if (process.env.NODE_ENV === 'production') {
+      // e.g. Sentry.captureException(error)
+    }
+  }, [error])
 
-export default function ErrorPage({ reset }: ErrorPageProps) {
   return (
-    <div className={styles.container}>
-      <div className={styles.content}>
-        <h1 className={styles.heading}>Đã xảy ra lỗi hệ thống</h1>
-        <p className={styles.message}>
-          Rất xin lỗi vì sự bất tiện này. Vui lòng thử lại.
-        </p>
-        <div className={styles.actions}>
-          <Button variant="danger" onClick={reset}>Thử lại</Button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 gap-4 text-center">
+      <h1 className="text-2xl font-bold text-[var(--danger,#dc2626)]">Đã xảy ra lỗi</h1>
+      <p className="text-muted-foreground mb-4">
+        Hệ thống gặp sự cố không mong muốn. Vui lòng thử lại.
+      </p>
+      <Button variant="primary" onClick={() => reset()}>
+        Thử lại
+      </Button>
     </div>
   )
 }

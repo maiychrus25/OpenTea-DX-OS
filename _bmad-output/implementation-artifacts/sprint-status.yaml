@@ -131,7 +131,7 @@ development_status:
   # for all role-specific features. Must be completed before Epic 2-6 work.
   # Source: epic-1-review-findings.md + missing-stories-analysis.md
 
-  1-2a-error-boundary-loading:           ready-for-dev  # global error/loading pages
+  1-2a-error-boundary-loading:           done           # global error/loading pages
   1-5a-login-page-ui:                    superseded-by-7-6   # login page CSS Modules fix
   1-5b-role-layouts-appshell:            superseded-by-7-2  # UI superseded; route-fix task absorbed into 7-2 Dev Notes
   1-5c-signout-flow:                     ready-for-dev  # sign-out button & Keycloak session
@@ -255,7 +255,7 @@ development_status:
 
   8-1-bulletin-page-refactor:           ready-for-dev  # Bản tin: 3-card grid, category tabs, audio button, AI disclaimer
   8-2-officer-today-dashboard:          ready-for-dev  # Officer dashboard: 4 metrics + lịch công việc theo giờ
-  8-3-lot-list-page:                    ready-for-dev  # Lô hàng list: filter tabs, table rows, "Tạo lô hàng" CTA
+  8-3-lot-list-page:                    done  # Lô hàng list: filter tabs, table rows, "Tạo lô hàng" CTA
   8-4-lot-detail-6step-workflow:        done           # Lot detail: 6-step wizard + QR preview panel + Xuất QR
   8-5-farm-zone-setup-wizard:           done           # Thiết lập vùng trồng: 3-step (Hộ → Thửa → Cây trồng)
   8-6-chat-market-interface:            ready-for-dev  # Hỏi đáp thị trường: chat layout, mini-chart, source citation
@@ -264,5 +264,5 @@ development_status:
   8-9-notifications-full-page:          ready-for-dev  # FE mock only; BE/SSE/TTS integration is 9-2/10-2
   8-10-auth-recovery-and-registration-ui: ready-for-dev  # FE states and flows; Keycloak integration remains BE
   8-11-member-and-household-management-ui: ready-for-dev  # FE list/detail/invite surfaces
-  8-12-journal-diagnosis-qr-completion-ui: ready-for-dev  # FE edge states; persistence remains integration
+  8-12-journal-diagnosis-qr-completion-ui: done  # FE edge states; persistence remains integration
   8-13-document-partner-search-and-settings-ui: ready-for-dev  # FE operational completion surfaces
