@@ -26,7 +26,7 @@ export function OfficerJournalApproval() {
   const [entries, setEntries] = useState<JournalEntryMock[]>(INITIAL_MOCK_DATA)
   const [rejectEntryId, setRejectEntryId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
-  const [rejectType, setRejectType] = useState<'REJECT' | 'REQUEST_CHANGES'>('REJECT')
+  const [rejectType, setRejectType] = useState<'REJECTED' | 'REQUEST_CHANGES'>('REJECTED')
 
   const handleApprove = (id: string) => {
     setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'APPROVED' } : e))
@@ -35,7 +35,7 @@ export function OfficerJournalApproval() {
   const handleReject = (id: string) => {
     setRejectEntryId(id)
     setRejectReason('')
-    setRejectType('REJECT')
+    setRejectType('REJECTED')
   }
 
   const handleRequestChanges = (id: string) => {
@@ -109,7 +109,7 @@ export function OfficerJournalApproval() {
         <div className={styles.overlay} onClick={() => setRejectEntryId(null)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
             <h2 className={styles.modalTitle}>
-              {rejectType === 'REJECT' ? 'Từ chối nhật ký' : 'Yêu cầu sửa nhật ký'}
+              {rejectType === 'REJECTED' ? 'Từ chối nhật ký' : 'Yêu cầu sửa nhật ký'}
             </h2>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Lý do</label>
@@ -123,7 +123,7 @@ export function OfficerJournalApproval() {
             </div>
             <div className={styles.formActions}>
               <button type="button" className={styles.cancelBtn} onClick={() => setRejectEntryId(null)}>Hủy</button>
-              <button type="button" className={styles.submitBtn} style={rejectType === 'REJECT' ? { backgroundColor: 'var(--color-error)' } : {}} onClick={confirmReject}>
+              <button type="button" className={styles.submitBtn} style={rejectType === 'REJECTED' ? { backgroundColor: 'var(--color-error)' } : {}} onClick={confirmReject}>
                 Xác nhận
               </button>
             </div>
