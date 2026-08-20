@@ -21,7 +21,7 @@ const getWeatherUseCase = new GetWeatherUseCase(
 export const GET = withErrorHandler(async (req: Request) => {
   const session = await auth();
   
-  if (!session) {
+  if (!session || !session.user) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -48,7 +48,10 @@ export const GET = withErrorHandler(async (req: Request) => {
   const { date, parcelId: validatedParcelId } = validationResult.data;
 
   // Execute use case
-  const weatherData = await getWeatherUseCase.execute(validatedParcelId, date);
+  const weatherData = await getWeatherUseCase.execute(validatedParcelId, date, {
+    id: session.user.id as string,
+    role: session.user.role as string,
+  });
 
   return NextResponse.json(
     { data: weatherData },

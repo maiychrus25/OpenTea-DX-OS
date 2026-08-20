@@ -4,7 +4,7 @@
 import { WeatherCachePort } from '@/domain/farm/ports/WeatherCachePort';
 import { ParcelPort } from '@/domain/farm/ports/ParcelPort';
 import { WeatherData } from '@/domain/farm/models/WeatherData';
-import { DomainError, ValidationError } from '@/domain/errors';
+import { DomainError, ValidationError, ForbiddenError } from '@/domain/errors';
 
 export class GetWeatherUseCase {
   constructor(
@@ -12,10 +12,16 @@ export class GetWeatherUseCase {
     private readonly parcelPort: ParcelPort
   ) {}
 
-  async execute(parcelId: string, dateStr: string): Promise<WeatherData> {
+  async execute(parcelId: string, dateStr: string, userContext?: { id: string, role: string }): Promise<WeatherData | null> {
     const parcel = await this.parcelPort.findById(parcelId);
     if (!parcel) {
       throw new DomainError('Parcel not found');
+    }
+
+    if (userContext && userContext.role === 'farmer') {
+      if (parcel.household?.keycloak_user_id !== userContext.id) {
+        throw new ForbiddenError('Forbidden: You do not have access to this parcel');
+      }
     }
 
     if (parcel.centroid_lat === null || parcel.centroid_lng === null) {
@@ -31,6 +37,6 @@ export class GetWeatherUseCase {
       return cached;
     }
 
-    throw new DomainError('Weather data not available in cache for this date');
+    return null;
   }
 }
