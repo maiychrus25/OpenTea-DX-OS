@@ -33,6 +33,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ role }) => {
   const ref = useRef<HTMLDivElement>(null)
 
   const { data, mutate } = useSWR<{ notifications: Notification[] }>('/api/notifications?limit=5', fetcher, {
+    // DEV-003: Interim fallback using polling. Target contract is SSE. 
+    // Do not remove polling until SSE parity is fully established.
     refreshInterval: 60000,
   })
 
@@ -141,10 +143,31 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ role }) => {
                     </div>
                     <button 
                       className={styles.ttsBtn}
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        // TODO: Implement TTS playback
+                        try {
+                          const res = await fetch('/api/tts', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: `${n.title}. ${n.detail}` })
+                          });
+                          if (res.ok) {
+                            const blob = await res.blob();
+                            const url = URL.createObjectURL(blob);
+                            const audio = new Audio(url);
+                            audio.onended = () => URL.revokeObjectURL(url);
+                            audio.play().catch(err => {
+                              console.error('Audio play failed:', err);
+                            });
+                          } else {
+                            console.error('TTS service unavailable');
+                            alert('Dịch vụ đọc văn bản (TTS) hiện không khả dụng. Vui lòng thử lại sau.');
+                          }
+                        } catch (err) {
+                          console.error('TTS error', err);
+                          alert('Lỗi kết nối dịch vụ TTS. Vui lòng kiểm tra lại mạng.');
+                        }
                       }}
                       aria-label="Đọc thông báo"
                     >

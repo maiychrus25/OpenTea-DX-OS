@@ -21,15 +21,15 @@ export default async function ManagerBulletinPage({
   const bulletin = await useCase.execute(commodity);
 
   return (
-    <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-      <div style={{ flex: '1 1 60%' }}>
+    <div className="flex gap-8 flex-wrap items-start">
+      <div className="flex-[1_1_60%]">
         {bulletin ? (
           <BulletinView bulletin={bulletin} />
         ) : (
           <p>Chưa có bản tin nào cho nông sản: {commodity}</p>
         )}
       </div>
-      <div style={{ flex: '1 1 30%', minWidth: '300px' }}>
+      <div className="flex-[1_1_30%] min-w-[300px]">
         <MarketSummaryWidget />
       </div>
     </div>
