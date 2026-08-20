@@ -21,7 +21,7 @@ jest.mock('next/server', () => {
 describe('Notifications API', () => {
   it('TC-7.11-07: GET /api/notifications returns 401 without auth', async () => {
     const req = new Request('http://localhost/api/notifications')
-    const res = await GET(req)
+    const res = await GET(req, {})
     
     expect(res.status).toBe(401)
   })
@@ -36,7 +36,7 @@ describe('Notifications API', () => {
     })
     
     const { PUT } = require('@/app/api/notifications/route')
-    const res = await PUT(req)
+    const res = await PUT(req, {})
     
     expect(res.status).toBe(400)
   })

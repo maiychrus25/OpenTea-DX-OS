@@ -42,5 +42,5 @@ export interface LotPort {
   findAll(filters: LotFilters): Promise<LotSummary[]>
   findById(id: string): Promise<LotSummary | null>
   create(data: CreateLotData): Promise<LotSummary>
-  exportQr(id: string, snapshotData: LotTraceData): Promise<ExportQrResult>
+  exportQr(id: string, snapshotData: LotTraceData, qrImageUrl?: string): Promise<ExportQrResult>
 }

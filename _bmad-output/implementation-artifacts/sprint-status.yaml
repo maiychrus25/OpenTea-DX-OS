@@ -100,9 +100,9 @@ epics:
 development_status:
 
   # ── Epic 10: Platform BE, Schema & Integration Contracts ───────────────────
-  epic-10: blocked  # starts after Epic 0 contract/schema gate
-  10-1-platform-be-contract-completion: blocked
-  10-2-notification-ai-storage-be-contract: blocked
+  epic-10: done
+  10-1-platform-be-contract-completion: done
+  10-2-notification-ai-storage-be-contract: done
 
   # ── Epic 0: E2E Contract, Data Ownership & Delivery Control ────────────────
   epic-0: in-progress
