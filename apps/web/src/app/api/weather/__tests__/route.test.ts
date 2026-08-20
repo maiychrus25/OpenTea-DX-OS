@@ -3,7 +3,6 @@
 
 import { GET } from '../route';
 import { auth } from '@/auth';
-import { prisma } from '@/infrastructure/db/prisma.client';
 import { GetWeatherUseCase } from '@/application/farm/GetWeatherUseCase';
 import { ValidationError, ForbiddenError } from '@/domain/errors';
 

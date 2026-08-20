@@ -49,8 +49,8 @@ export const GET = withErrorHandler(async (req: Request) => {
 
   // Execute use case
   const weatherData = await getWeatherUseCase.execute(validatedParcelId, date, {
-    id: session.user.id,
-    role: session.user.role,
+    id: session.user.id as string,
+    role: session.user.role as string,
   });
 
   return NextResponse.json(
