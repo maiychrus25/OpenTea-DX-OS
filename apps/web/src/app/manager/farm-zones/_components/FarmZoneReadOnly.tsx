@@ -34,7 +34,7 @@ export default function FarmZoneReadOnly() {
   const [selectedCrop, setSelectedCrop] = useState<string>('all')
 
   useEffect(() => {
-    fetch('/api/parcels')
+    fetch('/api/farm/parcels')
       .then(r => r.ok ? r.json() : Promise.reject(r))
       .then(j => setParcels(j.data || []))
       .catch(() => setParcels([]))

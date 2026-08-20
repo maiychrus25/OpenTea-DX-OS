@@ -51,6 +51,7 @@ export const GET = withErrorHandler(async (req: Request) => {
   const weatherData = await getWeatherUseCase.execute(validatedParcelId, date, {
     id: session.user.id as string,
     role: session.user.role as string,
+    householdId: (session.user as any).household_id,
   });
 
   return NextResponse.json(

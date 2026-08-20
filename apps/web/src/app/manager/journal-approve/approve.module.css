@@ -1,0 +1,117 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.approveBtn {
+  padding: 0.625rem 1.5rem;
+  background: var(--color-success);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: opacity 0.2s;
+}
+
+.approveBtn:hover {
+  opacity: 0.9;
+}
+
+.approveBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.selectAll {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.table th,
+.table td {
+  padding: 0.875rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--muted-foreground);
+  background: var(--muted);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tr:hover td {
+  background: var(--secondary);
+}
+
+.empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--muted-foreground);
+}
+
+.successBanner {
+  background: var(--color-success);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.errorBanner {
+  background: var(--color-error, #dc2626);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.selectedCount {
+  font-size: 0.875rem;
+  color: var(--primary);
+  font-weight: 600;
+}
