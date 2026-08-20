@@ -50,6 +50,21 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
 
     if (!lot) return null
 
+    // If already exported, return the immutable snapshot
+    if (lot.status === 'QR_EXPORTED' && lot.public_page_data) {
+      const parsed = lot.public_page_data as any
+      return {
+        ...parsed,
+        packaging_date: parsed.packaging_date ? new Date(parsed.packaging_date) : null,
+        created_at: new Date(parsed.created_at),
+        latest_safe_harvest_date: parsed.latest_safe_harvest_date ? new Date(parsed.latest_safe_harvest_date) : null,
+        journal_summaries: (parsed.journal_summaries || []).map((s: any) => ({
+          ...s,
+          entry_date: new Date(s.entry_date)
+        }))
+      } as LotTraceData
+    }
+
     const allEntries = lot.lot_parcels.flatMap(lp => lp.parcel.journal_entries)
     const latestSafeDate = computeSafeHarvestDate(allEntries)
     
@@ -60,9 +75,11 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
       lot_code: lot.lot_code,
       commodity: lot.commodity,
       quality_grade: lot.quality_grade,
-      status: lot.status,
+      status: lot.status as "DRAFT" | "READY" | "QR_EXPORTED",
       packaging_date: lot.packaging_date,
+      packaging_spec: lot.packaging_spec,
       total_weight_kg: lot.total_weight_kg,
+      qr_image_url: lot.qr_image_url,
       created_at: lot.created_at,
       is_harvest_safe: isHarvestSafe,
       latest_safe_harvest_date: latestSafeDate,
@@ -73,13 +90,30 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
         crop_type: lp.parcel.crop_type,
       })),
       journal_summaries: lot.lot_parcels.flatMap(lp =>
-        lp.parcel.journal_entries.map(e => ({
-          entry_date: e.entry_date,
-          activity_type: e.activity_type,
-          performed_by: e.performed_by,
-          approved_by_id: e.approved_by_id,
-          withdrawal_days: e.activities[0]?.withdrawal_days ?? null,
-        }))
+        lp.parcel.journal_entries.flatMap(e => {
+          if (e.activities.length === 0) {
+            return [{
+              entry_date: e.entry_date,
+              activity_type: e.activity_type,
+              performed_by: e.performed_by,
+              approved_by_id: e.approved_by_id,
+              activity_detail: 'Không có chi tiết',
+              product_name: null,
+              dosage: null,
+              withdrawal_days: null,
+            }]
+          }
+          return e.activities.map(act => ({
+            entry_date: e.entry_date,
+            activity_type: e.activity_type,
+            performed_by: e.performed_by,
+            approved_by_id: e.approved_by_id,
+            activity_detail: act.activity_detail,
+            product_name: act.product_name,
+            dosage: act.dosage,
+            withdrawal_days: act.withdrawal_days,
+          }))
+        })
       ),
       certificate_keys: lot.certificate_keys,
       htx_name: lot.htx_profile?.name ?? null,
