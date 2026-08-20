@@ -257,7 +257,7 @@ development_status:
   8-2-officer-today-dashboard:          ready-for-dev  # Officer dashboard: 4 metrics + lịch công việc theo giờ
   8-3-lot-list-page:                    ready-for-dev  # Lô hàng list: filter tabs, table rows, "Tạo lô hàng" CTA
   8-4-lot-detail-6step-workflow:        ready-for-dev  # Lot detail: 6-step wizard + QR preview panel + Xuất QR
-  8-5-farm-zone-setup-wizard:           ready-for-dev  # Thiết lập vùng trồng: 3-step (Hộ → Thửa → Cây trồng)
+  8-5-farm-zone-setup-wizard:           done           # Thiết lập vùng trồng: 3-step (Hộ → Thửa → Cây trồng)
   8-6-chat-market-interface:            ready-for-dev  # Hỏi đáp thị trường: chat layout, mini-chart, source citation
   8-7-journal-manager-approval:         ready-for-dev  # Nhật ký duyệt: manager approval modal + AI disease warning
   8-8-account-profile-page:            ready-for-dev  # Hồ sơ & tài khoản: profile section + security rows + logout

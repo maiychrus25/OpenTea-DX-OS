@@ -1,0 +1,329 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--color-ink-primary);
+}
+
+.subtitle {
+  color: var(--color-ink-secondary);
+  font-size: 1rem;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-ink-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  transition: color 0.2s;
+}
+
+.backLink:hover {
+  color: var(--color-primary);
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: 1rem;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--rounded-md);
+  background: transparent;
+  color: var(--color-ink-tertiary);
+  font-weight: 500;
+}
+
+.tabNumber {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-border-subtle);
+  color: var(--color-ink-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tab.active {
+  background: var(--color-surface-card);
+  color: var(--color-ink-primary);
+  border: 1px solid var(--color-primary);
+  box-shadow: var(--shadow-card);
+}
+
+.tab.active .tabNumber {
+  background: var(--color-primary);
+  color: white;
+}
+
+.tab.done {
+  color: var(--color-ink-primary);
+}
+
+.tab.done .tabNumber {
+  background: var(--color-success);
+  color: white;
+}
+
+/* 2-Column Layout */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 2rem;
+  min-height: 500px;
+}
+
+.leftPanel {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.rightPanel {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.panelTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+/* Household List */
+.householdList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow-y: auto;
+  max-height: 400px;
+}
+
+.householdCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-md);
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  text-align: left;
+}
+
+.householdCard:hover {
+  border-color: var(--color-primary);
+}
+
+.householdCard.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.householdIcon {
+  font-size: 1.5rem;
+}
+
+.householdName {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.householdMeta {
+  color: var(--color-ink-secondary);
+  font-size: 0.875rem;
+}
+
+/* Form Styles */
+.formGroup {
+  margin-bottom: 1.25rem;
+}
+
+.formLabel {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--color-ink-primary);
+}
+
+.formInput, .formSelect {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-md);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  background: var(--color-surface-page);
+}
+
+.formInput:focus, .formSelect:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 2rem;
+}
+
+.actionsRight {
+  margin-left: auto;
+  display: flex;
+  gap: 1rem;
+}
+
+.btnSecondary {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-card);
+  color: var(--color-ink-primary);
+  font-weight: 500;
+  border-radius: var(--rounded-md);
+  cursor: pointer;
+}
+
+.btnPrimary {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary);
+  color: white;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--rounded-md);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnFull {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Map Mock */
+.mapMock {
+  flex: 1;
+  background: #e2e8f0;
+  border-radius: var(--rounded-md);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.mapImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+}
+
+.drawHint {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 99px;
+  box-shadow: var(--shadow-card);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-primary);
+  white-space: nowrap;
+}
+
+.polygonMock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150px;
+  height: 100px;
+  background: rgba(22, 163, 74, 0.2);
+  border: 2px solid #16A34A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #125c3f;
+  font-weight: 600;
+  text-shadow: 0 1px 2px white;
+}
+
+/* Summary Card */
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.summaryRow:last-child {
+  border-bottom: none;
+}
+
+.summaryLabel {
+  color: var(--color-ink-secondary);
+}
+
+.summaryValue {
+  font-weight: 600;
+}
