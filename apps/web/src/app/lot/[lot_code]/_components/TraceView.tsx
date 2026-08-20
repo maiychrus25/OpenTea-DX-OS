@@ -18,6 +18,7 @@ export function TraceView({ data }: TraceViewProps) {
     status,
     htx_name,
     packaging_date,
+    packaging_spec,
     total_weight_kg,
     is_harvest_safe,
     parcels,
@@ -68,6 +69,12 @@ export function TraceView({ data }: TraceViewProps) {
               <span className={styles.infoValue}>{total_weight_kg} kg</span>
             </div>
           )}
+          {packaging_spec && (
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Quy cách đóng gói</span>
+              <span className={styles.infoValue}>{packaging_spec}</span>
+            </div>
+          )}
         </div>
       </section>
 
@@ -116,6 +123,12 @@ export function TraceView({ data }: TraceViewProps) {
                 <div className={styles.timelineContent}>
                   <span className={styles.timelineDate}>{new Date(journal.entry_date).toLocaleDateString('vi-VN')}</span>
                   <span className={styles.timelineActivity}>{journal.activity_type}</span>
+                  {journal.product_name && (
+                    <span className={styles.timelineDetail}>Sản phẩm: {journal.product_name}{journal.dosage ? ` — ${journal.dosage}` : ''}</span>
+                  )}
+                  {journal.withdrawal_days !== null && journal.withdrawal_days > 0 && (
+                    <span className={styles.timelineDetail}>⏳ Thời gian cách ly: {journal.withdrawal_days} ngày</span>
+                  )}
                   <span className={styles.timelinePerson}>Thực hiện bởi: {journal.performed_by}</span>
                 </div>
               </div>

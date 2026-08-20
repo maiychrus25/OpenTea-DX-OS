@@ -12,14 +12,14 @@ export class GetWeatherUseCase {
     private readonly parcelPort: ParcelPort
   ) {}
 
-  async execute(parcelId: string, dateStr: string, userContext?: { id: string, role: string }): Promise<WeatherData | null> {
+  async execute(parcelId: string, dateStr: string, userContext?: { id: string, role: string, householdId?: string }): Promise<WeatherData | null> {
     const parcel = await this.parcelPort.findById(parcelId);
     if (!parcel) {
       throw new DomainError('Parcel not found');
     }
 
     if (userContext && userContext.role === 'farmer') {
-      if (parcel.household?.keycloak_user_id !== userContext.id) {
+      if (parcel.household_id !== userContext.householdId) {
         throw new ForbiddenError('Forbidden: You do not have access to this parcel');
       }
     }

@@ -4,7 +4,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
-import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landmark } from 'lucide-react'
+import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landmark, CheckSquare } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
@@ -20,6 +20,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
   const navItems = [
     { label: 'Tổng quan', href: '/manager/dashboard', icon: <Home size={20} /> },
     { label: 'Bản tin', href: '/manager/bulletin', icon: <Newspaper size={20} /> },
+    { label: 'Duyệt nhật ký', href: '/manager/journal-approve', icon: <CheckSquare size={20} /> },
     { label: 'Chatbot', href: '/manager/chat', icon: <MessageCircle size={20} /> },
     { label: 'Bản đồ đối tác', href: '/manager/partner-map', icon: <MapIcon size={20} /> },
     { label: 'Vùng trồng', href: '/manager/farm-zones', icon: <Sprout size={20} /> },

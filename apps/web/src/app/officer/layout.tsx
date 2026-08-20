@@ -4,7 +4,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
-import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, Bot, User } from 'lucide-react'
+import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, Bot, User, Users } from 'lucide-react'
 
 export default async function OfficerLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -14,6 +14,7 @@ export default async function OfficerLayout({ children }: { children: React.Reac
   const navItems = [
     { label: 'Tổng quan', href: '/officer/dashboard', icon: <Home size={20} /> },
     { label: 'Bản đồ', href: '/officer/map', icon: <Map size={20} /> },
+    { label: 'Nông hộ', href: '/officer/households', icon: <Users size={20} /> },
     { label: 'Nhật ký', href: '/officer/journal', icon: <FileText size={20} /> },
     { label: 'Lô hàng', href: '/officer/lots', icon: <PackageCheck size={20} /> },
     { label: 'Nhật ký bệnh', href: '/officer/disease', icon: <Stethoscope size={20} /> },
