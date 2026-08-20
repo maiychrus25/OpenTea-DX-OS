@@ -6,6 +6,9 @@ export interface LotJournalSummary {
   activity_type: string
   performed_by: string
   approved_by_id: string | null
+  activity_detail: string
+  product_name: string | null
+  dosage: string | null
   withdrawal_days: number | null
 }
 
@@ -20,9 +23,11 @@ export interface LotTraceData {
   lot_code: string
   commodity: string
   quality_grade: string | null
-  status: string
+  status: "DRAFT" | "READY" | "QR_EXPORTED"
   packaging_date: Date | null
+  packaging_spec: string | null
   total_weight_kg: number | null
+  qr_image_url: string | null
   created_at: Date
   // Computed safety
   is_harvest_safe: boolean

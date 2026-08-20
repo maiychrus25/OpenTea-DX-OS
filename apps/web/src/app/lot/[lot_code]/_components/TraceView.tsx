@@ -51,7 +51,7 @@ export function TraceView({ data }: TraceViewProps) {
           <div className={styles.infoItem}>
             <span className={styles.infoLabel}>Trạng thái</span>
             <span className={styles.infoValue}>
-              <Pill tone={status === 'published' ? 'green' : 'neutral'}>
+              <Pill tone={status === 'QR_EXPORTED' ? 'green' : 'neutral'}>
                 {status}
               </Pill>
             </span>

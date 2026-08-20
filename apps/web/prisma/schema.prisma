@@ -207,6 +207,7 @@ model Lot {
   status           LotStatus @default(DRAFT)
   qr_image_url     String? // MinIO URL of generated QR PNG
   certificate_keys String[]  @default([]) // MinIO object keys of attached certificates
+  public_page_data Json? // JSONB snapshot of trace data for public QR page
   created_by_id    String? // keycloak officer user ID
   created_at       DateTime  @default(now())
   updated_at       DateTime  @updatedAt
