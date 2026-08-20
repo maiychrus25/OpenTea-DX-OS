@@ -12,7 +12,7 @@ export class GetWeatherUseCase {
     private readonly parcelPort: ParcelPort
   ) {}
 
-  async execute(parcelId: string, dateStr: string): Promise<WeatherData> {
+  async execute(parcelId: string, dateStr: string): Promise<WeatherData | null> {
     const parcel = await this.parcelPort.findById(parcelId);
     if (!parcel) {
       throw new DomainError('Parcel not found');
@@ -31,6 +31,6 @@ export class GetWeatherUseCase {
       return cached;
     }
 
-    throw new DomainError('Weather data not available in cache for this date');
+    return null;
   }
 }

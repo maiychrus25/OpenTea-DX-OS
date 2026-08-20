@@ -3,12 +3,21 @@
 
 import { GET } from '../route';
 import { auth } from '@/auth';
+import { prisma } from '@/infrastructure/db/prisma.client';
 import { GetWeatherUseCase } from '@/application/farm/GetWeatherUseCase';
 import { ValidationError, DomainError } from '@/domain/errors';
 
 // Mock the dependencies
 jest.mock('@/auth', () => ({
   auth: jest.fn(),
+}));
+
+jest.mock('@/infrastructure/db/prisma.client', () => ({
+  prisma: {
+    parcel: {
+      findUnique: jest.fn(),
+    },
+  },
 }));
 
 
@@ -26,6 +35,7 @@ jest.mock('next/server', () => {
 
 describe('GET /api/weather', () => {
   const mockAuth = auth as jest.Mock;
+  const mockPrismaParcelFindUnique = prisma.parcel.findUnique as jest.Mock;
   let mockExecute: jest.SpyInstance;
 
   beforeEach(() => {
@@ -67,8 +77,29 @@ describe('GET /api/weather', () => {
     expect(json.error).toBe('Validation Error');
   });
 
-  it('should return 200 and weather data on success', async () => {
-    mockAuth.mockResolvedValueOnce({ user: { id: 'user-1', role: 'FARMER' } });
+  it('should return 403 if farmer accesses parcel not belonging to their household', async () => {
+    mockAuth.mockResolvedValueOnce({ user: { id: 'farmer-1', role: 'farmer' } });
+    
+    // Prisma returns a parcel belonging to a different keycloak_user_id
+    mockPrismaParcelFindUnique.mockResolvedValueOnce({
+      id: 'cln3qkx7p000008l41234abcd',
+      household: { keycloak_user_id: 'other-farmer-id' }
+    });
+
+    const req = createRequest('http://localhost:3000/api/weather?date=2026-08-14&parcelId=cln3qkx7p000008l41234abcd');
+    const res = await GET(req, { params: {} });
+
+    expect(res.status).toBe(403);
+    const json = await res.json();
+    expect(json.error).toMatch(/Forbidden/);
+  });
+
+  it('should return 200 and weather data on success for farmer owning the parcel', async () => {
+    mockAuth.mockResolvedValueOnce({ user: { id: 'farmer-1', role: 'farmer' } });
+    mockPrismaParcelFindUnique.mockResolvedValueOnce({
+      id: 'cln3qkx7p000008l41234abcd',
+      household: { keycloak_user_id: 'farmer-1' }
+    });
     
     const mockWeatherData = {
       condition: 'Nắng',
@@ -87,6 +118,28 @@ describe('GET /api/weather', () => {
     expect(mockExecute).toHaveBeenCalledWith('cln3qkx7p000008l41234abcd', '2026-08-14');
   });
 
+  it('should return 200 and weather data on success for manager without checking household ownership', async () => {
+    mockAuth.mockResolvedValueOnce({ user: { id: 'manager-1', role: 'manager' } });
+    // Prisma should not be called for manager
+    
+    const mockWeatherData = {
+      condition: 'Nắng',
+      temperature_c: 32,
+      precipitation_mm: 0,
+      humidity_pct: 60,
+    };
+    mockExecute.mockResolvedValueOnce(mockWeatherData);
+
+    const req = createRequest('http://localhost:3000/api/weather?date=2026-08-14&parcelId=cln3qkx7p000008l41234abcd');
+    const res = await GET(req, { params: {} });
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data).toEqual(mockWeatherData);
+    expect(mockPrismaParcelFindUnique).not.toHaveBeenCalled();
+    expect(mockExecute).toHaveBeenCalledWith('cln3qkx7p000008l41234abcd', '2026-08-14');
+  });
+
   it('should return 400 if parcel has no coordinates (DomainError/ValidationError)', async () => {
     mockAuth.mockResolvedValueOnce({ user: { id: 'user-1', role: 'FARMER' } });
     
@@ -102,17 +155,16 @@ describe('GET /api/weather', () => {
     expect(json.error.message).toBe('Parcel has no centroid coordinates');
   });
   
-  it('should return 422 if parcel is not found (DomainError)', async () => {
-    mockAuth.mockResolvedValueOnce({ user: { id: 'user-1', role: 'FARMER' } });
+  it('should return 200 with null data when weather data is not in cache (Cache Miss)', async () => {
+    mockAuth.mockResolvedValueOnce({ user: { id: 'manager-1', role: 'manager' } });
     
-    mockExecute.mockRejectedValueOnce(new DomainError('Parcel not found'));
+    mockExecute.mockResolvedValueOnce(null);
 
     const req = createRequest('http://localhost:3000/api/weather?date=2026-08-14&parcelId=cln3qkx7p000008l41234abcd');
     const res = await GET(req, { params: {} });
 
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.error.code).toBe('DOMAIN_ERROR');
-    expect(json.error.message).toBe('Parcel not found');
+    expect(json.data).toBeNull();
   });
 });

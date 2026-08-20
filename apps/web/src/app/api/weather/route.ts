@@ -3,6 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { prisma } from '@/infrastructure/db/prisma.client';
 import { weatherSchema } from '@/lib/validations/weather.schema';
 import { GetWeatherUseCase } from '@/application/farm/GetWeatherUseCase';
 import { PrismaWeatherCacheRepository } from '@/infrastructure/db/farm/PrismaWeatherCacheRepository';
@@ -21,7 +22,7 @@ const getWeatherUseCase = new GetWeatherUseCase(
 export const GET = withErrorHandler(async (req: Request) => {
   const session = await auth();
   
-  if (!session) {
+  if (!session || !session.user) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -46,6 +47,21 @@ export const GET = withErrorHandler(async (req: Request) => {
   }
 
   const { date, parcelId: validatedParcelId } = validationResult.data;
+
+  // Parcel Authorization Check
+  if (session.user.role === 'farmer') {
+    const parcel = await prisma.parcel.findUnique({
+      where: { id: validatedParcelId },
+      include: { household: true },
+    });
+    
+    if (!parcel || parcel.household?.keycloak_user_id !== session.user.id) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have access to this parcel' },
+        { status: 403 }
+      );
+    }
+  }
 
   // Execute use case
   const weatherData = await getWeatherUseCase.execute(validatedParcelId, date);
