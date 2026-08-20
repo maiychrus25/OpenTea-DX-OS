@@ -33,9 +33,15 @@ async function postChatbot(request: Request) {
 
   const useCase = new ChatbotUseCase()
   
-  const data = await useCase.execute(parse.data.message, parse.data.history)
+  const stream = await useCase.execute(parse.data.message, parse.data.history)
   
-  return NextResponse.json({ data })
+  return new NextResponse(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+    },
+  })
 }
 
 export const POST = withErrorHandler(postChatbot)

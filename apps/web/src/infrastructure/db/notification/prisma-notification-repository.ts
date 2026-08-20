@@ -7,9 +7,19 @@ import { Notification } from '@/domain/entities/notification';
 import { NotificationType } from '@prisma/client';
 
 export class PrismaNotificationRepository implements NotificationPort {
-  async getRecentByUserId(userId: string, limit: number): Promise<Notification[]> {
+  async getRecentByUserId(userId: string, limit: number, filter?: string): Promise<Notification[]> {
+    const where: any = {
+      OR: [
+        { recipient_id: userId },
+        { recipient_id: null }
+      ]
+    };
+    if (filter === 'unread') {
+      where.is_read = false;
+    }
+
     return await prisma.notification.findMany({
-      where: { recipient_id: userId },
+      where,
       orderBy: { created_at: 'desc' },
       take: limit,
     });
@@ -38,5 +48,17 @@ export class PrismaNotificationRepository implements NotificationPort {
         recipient_id: null,
       },
     });
+  }
+
+  async delete(userId: string, id: string): Promise<void> {
+    await prisma.notification.deleteMany({
+      where: { id, recipient_id: userId }
+    });
+  }
+
+  async updatePreferences(userId: string, preferences: any): Promise<void> {
+    // In a real application, this would update a user_preferences table
+    // For Epic 10.2 contract, we mock this success
+    return Promise.resolve();
   }
 }

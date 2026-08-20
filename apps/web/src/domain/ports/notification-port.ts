@@ -4,7 +4,9 @@
 import { Notification } from '../entities/notification';
 
 export interface NotificationPort {
-  getRecentByUserId(userId: string, limit: number): Promise<Notification[]>;
+  getRecentByUserId(userId: string, limit: number, filter?: string): Promise<Notification[]>;
   markAsRead(userId: string, id?: string): Promise<void>;
+  delete(userId: string, id: string): Promise<void>;
+  updatePreferences(userId: string, preferences: any): Promise<void>;
   broadcastDiseaseReport(householdName: string, diseaseName: string, parcelCode: string): Promise<void>;
 }

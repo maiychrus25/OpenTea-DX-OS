@@ -37,8 +37,8 @@ describe('GetNotificationsUseCase', () => {
 
     const result = await useCase.execute('user1', 5)
     
-    expect(result).toHaveLength(1)
-    expect(result[0]).toEqual({
+    expect(result.notifications).toHaveLength(1)
+    expect(result.notifications[0]).toEqual({
       id: '1',
       title: 'Hello',
       detail: 'World',
@@ -47,5 +47,6 @@ describe('GetNotificationsUseCase', () => {
       read: false,
       link_url: '/url'
     })
+    expect(result.unreadCount).toBe(1)
   })
 })

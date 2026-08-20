@@ -94,7 +94,7 @@ export class PrismaLotRepository implements LotPort {
     }
   }
 
-  async exportQr(id: string, snapshotData: LotTraceData): Promise<ExportQrResult> {
+  async exportQr(id: string, snapshotData: LotTraceData, qrImageUrl?: string): Promise<ExportQrResult> {
     // Transaction: write public_page_data + set status = QR_EXPORTED
     const lot = await prisma.$transaction(async (tx) => {
       const currentLot = await tx.lot.findUnique({ where: { id } })
@@ -106,8 +106,7 @@ export class PrismaLotRepository implements LotPort {
         data: {
           status: 'QR_EXPORTED',
           public_page_data: JSON.parse(JSON.stringify(snapshotData)),
-          // qr_image_url would be set by MinIO integration in a real scenario
-          qr_image_url: `/lot/${currentLot.lot_code}`,
+          qr_image_url: qrImageUrl ?? `/lot/${currentLot.lot_code}`,
         },
       })
     })
