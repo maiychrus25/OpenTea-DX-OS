@@ -3,7 +3,7 @@
 
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
-import { JournalList } from './_components/JournalList'
+import { OfficerJournalApproval } from './_components/officer-journal-approval'
 
 export default async function OfficerJournalPage() {
   const session = await auth()
@@ -11,5 +11,5 @@ export default async function OfficerJournalPage() {
     redirect('/login')
   }
 
-  return <JournalList />
+  return <OfficerJournalApproval />
 }
