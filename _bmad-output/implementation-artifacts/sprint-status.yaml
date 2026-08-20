@@ -120,7 +120,7 @@ development_status:
 
   1-1-monorepo-docker-compose:           done
   1-2-design-system-shared-components:   superseded-by-7-1
-  1-3-database-schema-prisma:            partial  # Prisma exists; schema/migration/API contract reconciliation remains in 0-1/10-1
+  1-3-database-schema-prisma:            done  # Prisma exists + static/migration tests added; schema/migration/API contract reconciliation remains in 0-1/10-1
   1-4-hexagonal-architecture-scaffold:   done
   1-5-keycloak-auth-role-routing:        partial  # Auth works; canonical routes/recognized-role fail-closed verification remains
   1-6-htx-profile-page:                  ready-for-dev
