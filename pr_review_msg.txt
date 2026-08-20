@@ -1,0 +1,31 @@
+## 🤖 DX-AgriMarket AI Deep Review — PR #229
+
+**Tổng quan:** Thêm tính năng Lot Detail (Story 8.4) với giao diện 6-step progress tracker và QR preview panel.
+**Vòng review:** 10/10 hoàn thành
+**Verdict:** COMMENT
+
+---
+
+### 🟡 MEDIUM — Nên sửa (không block merge nhưng tạo tech debt)
+
+#### [M1] Hydration Mismatch tiềm năng với `Math.random()` trong `use client` component
+- **File:** `apps/web/src/app/manager/lots/[lot_code]/_components/qr-visual.tsx` | **Line:** 15
+- **Vấn đề:** Component `QrVisual` được mark là `'use client'` nhưng vẫn chạy SSR. Việc dùng `Math.random()` trực tiếp trong render cycle sẽ tạo ra output khác nhau giữa Server và Client, dẫn đến lỗi React Hydration Mismatch cảnh báo ở console.
+- **Code lỗi:**
+  ```typescript
+  const isDot = isMarker || Math.random() > 0.5
+  ```
+- **Cách sửa:** Sử dụng `useEffect` để render ngẫu nhiên chỉ ở client-side, hoặc fix seed ngẫu nhiên tĩnh (ví dụ: dùng chỉ số index để giả lập random).
+  ```typescript
+  const isDot = isMarker || (i * 17 % 10) > 5 // Giả lập random tĩnh theo index
+  ```
+
+---
+
+### ✅ Điểm tốt (Acknowledge good work)
+- Thiết lập đúng cấu trúc File và Component theo Hexagonal và Feature-based Architecture (component nằm trong `_components/`).
+- Đã tuân thủ nghiêm ngặt Rule 6 CSS: Dùng CSS Module, không inline style, dùng đúng Design Tokens `var(--color-...)`.
+- Code sạch, 100% file có chứa đầy đủ License Header.
+
+---
+*Review bởi: DX-AgriMarket AI (pr-deep-review skill) | MIT License | Copyright (c) 2026 OpenTea Developers*

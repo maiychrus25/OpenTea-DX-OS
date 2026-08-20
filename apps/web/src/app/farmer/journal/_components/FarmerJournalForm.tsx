@@ -32,6 +32,10 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10))
   const [activityType, setActivityType] = useState('OTHER')
   const [productName, setProductName] = useState('')
+  const [hasChemicals, setHasChemicals] = useState(true)
+  const [dosage, setDosage] = useState('')
+  const [performer, setPerformer] = useState('')
+  const [withdrawalDays, setWithdrawalDays] = useState(14)
   const [observation, setObservation] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -58,7 +62,10 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
       observation,
       activities: [{
         activity_type: activityType,
-        product_name: productName || undefined,
+        product_name: hasChemicals ? (productName || undefined) : undefined,
+        dosage: (hasChemicals && activityType === 'SPRAYING') ? dosage : undefined,
+        performer: (hasChemicals && activityType === 'SPRAYING') ? performer : undefined,
+        withdrawal_days: (hasChemicals && activityType === 'SPRAYING') ? withdrawalDays : undefined,
       }],
     }
 
@@ -107,10 +114,41 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
         </select>
       </div>
 
-      <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Sản phẩm sử dụng</label>
-        <input className={styles.formInput} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />
+      <div className={styles.formGroup} style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+        <input type="checkbox" id="noChem" checked={!hasChemicals} onChange={e => setHasChemicals(!e.target.checked)} />
+        <label htmlFor="noChem" style={{ cursor: 'pointer', margin: 0, fontWeight: 500 }}>Không sử dụng thuốc / phân bón trong lần ghi này</label>
       </div>
+
+      {hasChemicals && (
+        <>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Sản phẩm sử dụng</label>
+            <input className={styles.formInput} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />
+          </div>
+
+          {activityType === 'SPRAYING' && (
+            <>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Liều lượng (Dosage)</label>
+                <input className={styles.formInput} value={dosage} onChange={e => setDosage(e.target.value)} placeholder="VD: 50ml/bình 16L" />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Người thực hiện (Performer)</label>
+                <input className={styles.formInput} value={performer} onChange={e => setPerformer(e.target.value)} placeholder="VD: Nguyễn Văn A" />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Thời gian cách ly (ngày)</label>
+                <input className={styles.formInput} type="number" value={withdrawalDays} onChange={e => setWithdrawalDays(Number(e.target.value))} />
+              </div>
+              {withdrawalDays < 14 && (
+                <div style={{ color: 'var(--color-error)', fontSize: '0.875rem', marginTop: '-0.5rem', marginBottom: '1rem', padding: '0.5rem', background: '#ffebee', borderRadius: '4px' }}>
+                  ⚠️ Cảnh báo vi phạm: Thời gian cách ly tiêu chuẩn là &gt;= 14 ngày. Hãy đảm bảo an toàn!
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
 
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>Ghi chú</label>

@@ -12,7 +12,7 @@ interface JournalEntryMock {
   parcelCode: string
   cropActivity: string
   date: string
-  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED'
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'REQUEST_CHANGES'
   hasDiseaseWarning?: boolean
 }
 
@@ -24,13 +24,30 @@ const INITIAL_MOCK_DATA: JournalEntryMock[] = [
 
 export function OfficerJournalApproval() {
   const [entries, setEntries] = useState<JournalEntryMock[]>(INITIAL_MOCK_DATA)
+  const [rejectEntryId, setRejectEntryId] = useState<string | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  const [rejectType, setRejectType] = useState<'REJECT' | 'REQUEST_CHANGES'>('REJECT')
 
   const handleApprove = (id: string) => {
     setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'APPROVED' } : e))
   }
 
   const handleReject = (id: string) => {
-    setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'REJECTED' } : e))
+    setRejectEntryId(id)
+    setRejectReason('')
+    setRejectType('REJECT')
+  }
+
+  const handleRequestChanges = (id: string) => {
+    setRejectEntryId(id)
+    setRejectReason('')
+    setRejectType('REQUEST_CHANGES')
+  }
+
+  const confirmReject = () => {
+    if (!rejectEntryId || !rejectReason.trim()) return
+    setEntries(prev => prev.map(e => e.id === rejectEntryId ? { ...e, status: rejectType } : e))
+    setRejectEntryId(null)
   }
 
   const hasWarning = entries.some(e => e.hasDiseaseWarning && e.status === 'PENDING_APPROVAL')
@@ -70,14 +87,15 @@ export function OfficerJournalApproval() {
               <td>{e.cropActivity}</td>
               <td>{e.date}</td>
               <td>
-                <Pill tone={e.status === 'PENDING_APPROVAL' ? 'amber' : e.status === 'APPROVED' ? 'green' : 'neutral'}>
-                  {e.status === 'PENDING_APPROVAL' ? 'Chờ duyệt' : e.status === 'APPROVED' ? 'Đã duyệt' : 'Cần xử lý'}
+                <Pill tone={e.status === 'PENDING_APPROVAL' ? 'amber' : e.status === 'APPROVED' ? 'green' : e.status === 'REJECTED' ? 'neutral' : 'blue'}>
+                  {e.status === 'PENDING_APPROVAL' ? 'Chờ duyệt' : e.status === 'APPROVED' ? 'Đã duyệt' : e.status === 'REQUEST_CHANGES' ? 'Cần sửa' : 'Từ chối'}
                 </Pill>
               </td>
               <td>
                 {e.status === 'PENDING_APPROVAL' && (
                   <div className={styles.flexActions}>
                     <button className={styles.approveBtn} onClick={() => handleApprove(e.id)}>Duyệt</button>
+                    <button className={styles.rejectBtn} onClick={() => handleRequestChanges(e.id)}>Yêu cầu sửa</button>
                     <button className={styles.rejectBtn} onClick={() => handleReject(e.id)}>Từ chối</button>
                   </div>
                 )}
@@ -86,6 +104,32 @@ export function OfficerJournalApproval() {
           ))}
         </tbody>
       </table>
+
+      {rejectEntryId && (
+        <div className={styles.overlay} onClick={() => setRejectEntryId(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <h2 className={styles.modalTitle}>
+              {rejectType === 'REJECT' ? 'Từ chối nhật ký' : 'Yêu cầu sửa nhật ký'}
+            </h2>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Lý do</label>
+              <textarea 
+                className={styles.formTextarea} 
+                value={rejectReason} 
+                onChange={e => setRejectReason(e.target.value)} 
+                placeholder="Nhập lý do để nông dân biết..." 
+                rows={4}
+              />
+            </div>
+            <div className={styles.formActions}>
+              <button type="button" className={styles.cancelBtn} onClick={() => setRejectEntryId(null)}>Hủy</button>
+              <button type="button" className={styles.submitBtn} style={rejectType === 'REJECT' ? { backgroundColor: 'var(--color-error)' } : {}} onClick={confirmReject}>
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

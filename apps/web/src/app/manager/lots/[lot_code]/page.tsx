@@ -7,6 +7,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { StepTrack } from './_components/step-track'
 import { QrVisual } from './_components/qr-visual'
+import { LotActions } from './_components/lot-actions'
 import styles from './lot-detail.module.css'
 
 interface PageProps {
@@ -86,12 +87,7 @@ export default async function LotDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          <div className={styles.actionRow}>
-            <button className={styles.btnSecondary}>Lưu nháp</button>
-            <button className={styles.btnPrimary}>
-              <span>Xuất QR</span>
-            </button>
-          </div>
+          <LotActions lotCode={lot_code} />
         </div>
 
         {/* QR Preview Side (Right) */}
