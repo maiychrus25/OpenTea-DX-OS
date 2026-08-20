@@ -9,7 +9,7 @@ import { GetHouseholdUseCase } from '@/application/farm/GetHouseholdUseCase'
 import { UpdateHouseholdUseCase } from '@/application/farm/UpdateHouseholdUseCase'
 import { householdUpdateSchema } from '@/lib/validations/household.schema'
 
-async function getHousehold(request: Request, props: { params: Promise<{ id: string }> }) {
+async function getHousehold(_request: Request, context: unknown) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
@@ -17,7 +17,8 @@ async function getHousehold(request: Request, props: { params: Promise<{ id: str
   const role = (session.user as any).role
   const userHouseholdId = role === 'farmer' ? (session.user as any).household_id : undefined
 
-  const { id } = await props.params
+  const { params } = context as { params: Promise<{ id: string }> }
+  const { id } = await params
 
   const repo = new PrismaHouseholdRepository()
   const useCase = new GetHouseholdUseCase(repo)
@@ -27,7 +28,7 @@ async function getHousehold(request: Request, props: { params: Promise<{ id: str
   return NextResponse.json({ data })
 }
 
-async function updateHousehold(request: Request, props: { params: Promise<{ id: string }> }) {
+async function updateHousehold(request: Request, context: unknown) {
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
@@ -35,7 +36,8 @@ async function updateHousehold(request: Request, props: { params: Promise<{ id: 
   const role = (session.user as any).role
   const userHouseholdId = role === 'farmer' ? (session.user as any).household_id : undefined
 
-  const { id } = await props.params
+  const { params } = context as { params: Promise<{ id: string }> }
+  const { id } = await params
 
   const body = await request.json().catch(() => ({}))
   const parse = householdUpdateSchema.safeParse(body)

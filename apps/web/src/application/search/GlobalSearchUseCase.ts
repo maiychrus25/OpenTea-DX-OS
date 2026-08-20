@@ -43,7 +43,7 @@ export class GlobalSearchUseCase {
         household: { htx_profile_id: htxProfileId },
         OR: [
           { parcel_code: { contains: query, mode: 'insensitive' } },
-          { name: { contains: query, mode: 'insensitive' } },
+          { household: { name: { contains: query, mode: 'insensitive' } } },
         ]
       },
       take: 5,
@@ -54,7 +54,7 @@ export class GlobalSearchUseCase {
       results.push({
         type: 'PARCEL',
         id: p.id,
-        title: p.name ?? p.parcel_code,
+        title: p.parcel_code,
         subtitle: `Hộ: ${p.household.name}`
       })
     })

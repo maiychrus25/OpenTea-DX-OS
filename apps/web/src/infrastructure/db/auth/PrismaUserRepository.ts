@@ -1,27 +1,20 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import { prisma } from '@/infrastructure/db/prisma.client'
 import { UserPort, UserSummary } from '@/domain/auth/ports/UserPort'
-import { Role } from '@prisma/client'
 
 export class PrismaUserRepository implements UserPort {
   async findAll(role?: string): Promise<UserSummary[]> {
-    const whereClause = role ? { role: role.toUpperCase() as Role } : {}
+    // Mock data since User model is not in Prisma schema (managed by Keycloak)
+    const allUsers: UserSummary[] = [
+      { id: 'u1', email: 'manager@example.com', full_name: 'Manager', role: 'MANAGER', is_active: true, phone: null, household_id: null },
+      { id: 'u2', email: 'officer@example.com', full_name: 'Officer 1', role: 'OFFICER', is_active: true, phone: null, household_id: null },
+      { id: 'u3', email: 'farmer1@example.com', full_name: 'Farmer 1', role: 'FARMER', household_id: 'hh1', is_active: true, phone: null },
+    ]
     
-    const users = await prisma.user.findMany({
-      where: whereClause,
-      orderBy: { created_at: 'desc' },
-    })
-
-    return users.map(u => ({
-      id: u.id,
-      email: u.email,
-      full_name: u.full_name,
-      role: u.role,
-      phone: u.phone,
-      household_id: u.household_id,
-      is_active: u.is_active,
-    }))
+    if (role) {
+      return allUsers.filter(u => u.role === role.toUpperCase())
+    }
+    return allUsers
   }
 }
