@@ -6,4 +6,5 @@ import { Notification } from '../entities/notification';
 export interface NotificationPort {
   getRecentByUserId(userId: string, limit: number): Promise<Notification[]>;
   markAsRead(userId: string, id?: string): Promise<void>;
+  broadcastDiseaseReport(householdName: string, diseaseName: string, parcelCode: string): Promise<void>;
 }

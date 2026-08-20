@@ -13,6 +13,7 @@ describe('GetNotificationsUseCase', () => {
     mockPort = {
       getRecentByUserId: jest.fn(),
       markAsRead: jest.fn(),
+      broadcastDiseaseReport: jest.fn(),
     }
     useCase = new GetNotificationsUseCase(mockPort)
   })

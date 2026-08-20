@@ -5,6 +5,8 @@ export interface ParcelPort {
   findById(id: string): Promise<{ 
     centroid_lat: number | null; 
     centroid_lng: number | null;
-    household?: { keycloak_user_id: string | null } | null;
+    parcel_code: string;
+    household_id: string;
+    household?: { id: string; name: string; keycloak_user_id: string | null } | null;
   } | null>;
 }
