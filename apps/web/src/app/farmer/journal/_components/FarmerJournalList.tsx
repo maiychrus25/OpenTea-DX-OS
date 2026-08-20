@@ -62,7 +62,7 @@ export function FarmerJournalList() {
     }
   }
 
-  function handleDraftEdit(entry: JournalEntry) {
+  function handleDraftEdit() {
     // Mock edit by showing form
     setSelectedEntry(null)
     setShowForm(true)
@@ -180,7 +180,7 @@ export function FarmerJournalList() {
                   <button type="button" className={styles.cancelBtn} style={{ color: 'var(--color-error)' }} onClick={() => handleDraftDelete(selectedEntry.id)} disabled={isDeleting}>
                     {isDeleting ? 'Đang xóa...' : 'Xóa bản nháp'}
                   </button>
-                  <button type="button" className={styles.submitBtn} onClick={() => handleDraftEdit(selectedEntry)}>Sửa</button>
+                  <button type="button" className={styles.submitBtn} onClick={() => handleDraftEdit()}>Sửa</button>
                 </>
               )}
             </div>
