@@ -40,6 +40,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 8 * 60 * 60, // 8 hours (yÃªu cáº§u tá»« checklist)
+    maxAge: 8 * 60 * 60, // 8 hours (yêu cầu từ checklist)
+  },
+  events: {
+    async signOut(message) {
+      if ('token' in message && message.token?.idToken) {
+        const issuer = process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket"
+        const logoutUrl = `${issuer}/protocol/openid-connect/logout`
+        const redirectUri = encodeURIComponent(
+          `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/login`
+        )
+        await fetch(`${logoutUrl}?id_token_hint=${message.token.idToken}&post_logout_redirect_uri=${redirectUri}`)
+          .catch(() => {}) // best-effort, don't throw if Keycloak is unreachable
+      }
+    }
   }
 })

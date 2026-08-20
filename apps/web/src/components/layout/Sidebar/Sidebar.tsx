@@ -4,10 +4,12 @@
 'use client'
 
 import * as React from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Leaf, X, ChevronDown } from 'lucide-react'
 import styles from './Sidebar.module.css'
+import { signOutAction } from '@/app/actions/signout-action'
 
 export interface NavItem {
   label: string
@@ -50,6 +52,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   role
 }) => {
   const pathname = usePathname()
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   
   const initials = userName
     .split(' ')
@@ -108,13 +124,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className={styles.roleSwitch}>
           {getRoleLabel(role)}
         </div>
-        <button className={styles.profile}>
-          <span className={styles.avatar}>{initials}</span>
-          <div className={styles.profileText}>
-            <strong>{userName}</strong>
-            <small>{getRoleLabel(role)}</small>
-          </div>
-        </button>
+        <div className={styles.profileWrapper} ref={profileRef}>
+          {profileOpen && (
+            <div className={styles.profilePopup}>
+              <div className={styles.popupRoleLabel}>ĐĂNG NHẬP VỚI VAI TRÒ: {getRoleLabel(role).toUpperCase()}</div>
+              <Link href={`/${role || 'farmer'}/profile`} className={styles.profilePopupLink} onClick={() => setProfileOpen(false)}>
+                Hồ sơ tài khoản
+              </Link>
+              <button
+                className={styles.signOutBtn}
+                disabled={isPending}
+                onClick={() => startTransition(() => signOutAction())}
+              >
+                {isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
+              </button>
+            </div>
+          )}
+          <button className={styles.profile} onClick={() => setProfileOpen(prev => !prev)}>
+            <span className={styles.avatar}>{initials}</span>
+            <div className={styles.profileText}>
+              <strong>{userName}</strong>
+              <small>{getRoleLabel(role)}</small>
+            </div>
+          </button>
+        </div>
       </div>
     </aside>
   )
