@@ -3,7 +3,7 @@
 
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
-import { SetupWizard } from './_components/SetupWizard'
+import { SetupWizard } from './_components/setup-wizard'
 
 export default async function FarmZoneSetupPage() {
   const session = await auth()

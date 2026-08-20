@@ -5,9 +5,9 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Step1Household } from './Step1Household'
-import { Step2MapDraw } from './Step2MapDraw'
-import { Step3CropAssign } from './Step3CropAssign'
+import { Step1Household } from './step1-household'
+import { Step2MapDraw } from './step2-map-draw'
+import { Step3CropAssign } from './step3-crop-assign'
 import styles from '../wizard.module.css'
 
 export function SetupWizard() {

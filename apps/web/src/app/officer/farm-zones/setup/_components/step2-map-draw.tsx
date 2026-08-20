@@ -18,7 +18,7 @@ export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
   return (
     <div className={styles.layout}>
       {/* Left Panel: Map Canvas Mock */}
-      <div className={styles.leftPanel} style={{ padding: 0, position: 'relative' }}>
+      <div className={`${styles.leftPanel} ${styles.mapPanel}`}>
         <div className={styles.mapMock}>
           <img 
             src="https://a.tile.openstreetmap.org/10/815/487.png" 
@@ -52,7 +52,7 @@ export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
         
         <div className={styles.formGroup}>
           <label className={styles.formLabel}>Diện tích (m2)</label>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className={styles.flexGap}>
             <input 
               className={styles.formInput} 
               value={isDrawn ? "2.400" : ""} 

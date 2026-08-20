@@ -74,8 +74,7 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
         </div>
         <button
           type="button"
-          className={styles.btnSecondary}
-          style={{ width: '100%' }}
+          className={`${styles.btnSecondary} ${styles.btnFull}`}
           onClick={() => {
             if (newOwner) {
               const newH = { id: `hd_${Date.now()}`, name: newOwner, parcelCount: 0 }
