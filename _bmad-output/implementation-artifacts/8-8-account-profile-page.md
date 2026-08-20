@@ -44,22 +44,51 @@ SECTION B -- Personal Account:
 - Ma PIN 6 so | Doi PIN button
 - Thiet bi dang nhap | Quan ly button
 
-### AC-5: Logout = router.push to /login (NOT GET with token)
+### AC-5: Logout — dùng `signOutAction` từ Story 1-5c (KHÔNG mock router.push)
+
+> ⚠️ **INTEGRATION NOTE — 2026-08-21 (Story 1-5c sync):**
+> Story 1-5c đã tạo sẵn Server Action tại `apps/web/src/app/actions/signout-action.ts`.
+> **Nút Đăng xuất trong story này PHẢI dùng action đó** — không tự viết `router.push('/login')` hay gọi `signOut()` riêng.
+> Lý do: `signOutAction` đã tích hợp Keycloak end_session_endpoint để terminate server-side session thật.
+>
+> ```tsx
+> // Cách dùng đúng trong AccountSection component:
+> import { signOutAction } from '@/app/actions/signout-action'
+> import { useTransition } from 'react'
+>
+> const [isPending, startTransition] = useTransition()
+>
+> <button
+>   className={styles.logoutBtn}
+>   disabled={isPending}
+>   onClick={() => startTransition(async () => { await signOutAction() })}
+> >
+>   {isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
+> </button>
+> ```
+>
+> **Dependency:** Story 1-5c phải done trước khi dev story này (để `signout-action.ts` đã tồn tại).
 
 ### AC-6: Avatar Guard -- empty name shows U, no crash
 
 ### AC-7: License Header + No Inline Styles
 
 ## Tasks
+- [ ] **Prerequisite check:** Confirm `apps/web/src/app/actions/signout-action.ts` tồn tại (do Story 1-5c tạo). Nếu chưa có → dừng lại, báo blocked.
 - [ ] Create (manager)/profile/page.tsx [NEW] -- 2 sections
 - [ ] Create (officer)/profile/page.tsx [NEW] -- 1 section
 - [ ] Create (farmer)/profile/page.tsx [NEW] -- 1 section
-- [ ] Shared AccountSection component (security rows + logout)
+- [ ] Shared `AccountSection` component (security rows + logout)
+  - [ ] Import `signOutAction` từ `@/app/actions/signout-action`
+  - [ ] Dùng `useTransition` để wrap call (disable button khi pending)
+  - [ ] Nút Đăng xuất: red (`#ef4444`), disabled khi `isPending`
 - [ ] npm run build passes
 
 ## Scope Boundary
 
-This is FE prototype work only. Save, logout/session invalidation, PIN/passkey changes, avatar/phone/preferences and HTX profile persistence require the profile/auth integration stories.
+This is FE prototype work only. Save, PIN/passkey changes, avatar/phone/preferences and HTX profile persistence require the profile/auth integration stories.
+
+**Exception — Logout:** Tuy là story FE, nút Đăng xuất phải dùng `signOutAction` thật (không mock) vì Story 1-5c đã implement và action này đã sẵn sàng. Đây là exception có chủ đích để tránh regressions.
 
 ## Dev Notes
 
@@ -68,4 +97,4 @@ This is FE prototype work only. Save, logout/session invalidation, PIN/passkey c
 - **JSX/Mock data**: Copy trực tiếp function `ProfileView()` dòng 258-308 trong `D:\FE\components\agri-app.tsx`. 
 - **Tách Role**: Extract phần JSX của Manager / Officer / Farmer vào các route tương ứng (thay vì dùng if else như FE mẫu).
 - **CSS**: Copy các class `.security-row`, `.logout-link`, `.metric-grid.three` từ `D:\FE\app\globals.css`.
-- **Rule Check**: Không dùng thẻ `<Link>` cho việc Đăng xuất vì liên quan đến clear token/session. Phải dùng action Server-side hoặc onClick client.
+- **Rule Check**: Không dùng thẻ `<Link>` cho việc Đăng xuất. PHẢI dùng `signOutAction` từ `@/app/actions/signout-action` (xem AC-5 ở trên).

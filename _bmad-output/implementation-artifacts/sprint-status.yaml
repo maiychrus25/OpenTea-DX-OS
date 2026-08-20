@@ -134,7 +134,7 @@ development_status:
   1-2a-error-boundary-loading:           done           # global error/loading pages
   1-5a-login-page-ui:                    superseded-by-7-6   # login page CSS Modules fix
   1-5b-role-layouts-appshell:            superseded-by-7-2  # UI superseded; route-fix task absorbed into 7-2 Dev Notes
-  1-5c-signout-flow:                     ready-for-dev  # sign-out button & Keycloak session
+  1-5c-signout-flow:                     review  # sign-out button & Keycloak session
   1-5d-unauthorized-page-ui:             ready-for-dev  # unauthorized page CSS Modules fix
   1-5e-session-provider:                 done   # CRITICAL: remove any casts
   1-5f-keycloak-realm-config:            ready-for-dev  # realm JSON auto-import

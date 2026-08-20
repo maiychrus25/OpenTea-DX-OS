@@ -2,12 +2,12 @@
 
 Status: ready-for-dev
 
-> ⚠️ **DESIGN UPDATE — 2026-08-14 (Epic 7 sync):**
-> Story 7-3 (TopBar refactor) sẽ thêm user avatar placeholder trong TopBar.
-> Story 7-2 (Sidebar refactor) thêm user profile button trong `sidebar-foot`.
-> **Khuyến nghị:** Implement `UserMenu` logic trong Sidebar-foot (`sidebar-foot .profile` button) thay vì TopBar dropdown — phù hợp với prototype design hơn.
-> CSS tokens cần dùng: `var(--card)` (thay `--color-surface-overlay`), `var(--border)` (thay `--color-border-default`), `var(--radius-md)`.
-> **Nếu 7-2/7-3 chưa done:** Vẫn có thể implement TopBar dropdown như spec cũ.
+> ✅ **CONFLICT RESOLVED — 2026-08-21 (Post Epic 7 sync):**
+> Story ban đầu yêu cầu tạo `TopBar/UserMenu.tsx` dropdown — **đã bị xóa bỏ**.
+> **Lý do:** TopBar hiện là Server Component (7-3 done). Sidebar (7-2 done) đã có `.profile` button sẵn ở `sidebar-foot` nhưng `onClick` đang trống.
+> **Hướng mới:** Gắn sign-out vào `.profile` button trong `Sidebar.tsx` + tạo shared `signout-action.ts` Server Action.
+> **Ảnh hưởng Epic 8:** Story 8-8 (Profile page) sẽ dùng chung `signout-action.ts` — không conflict.
+> CSS tokens: `var(--card)` (thay `--color-surface-overlay`), `var(--border)`, `var(--radius-md)`.
 
 
 ## Story
@@ -18,83 +18,148 @@ so that my session is terminated and no one can access my data on a shared devic
 
 ## Acceptance Criteria
 
-1. **Given** any authenticated user is on any page → TopBar avatar click opens dropdown with role label (read-only) and "Đăng xuất" button
+1. **Given** any authenticated user is on any page → Click vào `.profile` button trong Sidebar-foot opens popup nhỏ với role label (read-only) và hai action: "Hồ sơ tài khoản" (link) + "Đăng xuất" button
 2. Clicking "Đăng xuất" calls NextAuth `signOut()` + terminates Keycloak session (OIDC end_session_endpoint)
 3. After sign-out → user redirected to `/login`
-4. **Given** JWT expires (after 8h) → middleware auto-redirects to `/login`
+4. **Given** JWT expires (after 8h) → middleware auto-redirects to `/login` *(đã pass — middleware hiện tại xử lý đúng, không cần thay đổi)*
 
 ## Tasks / Subtasks
 
-- [ ] Create `apps/web/src/components/layout/TopBar/UserMenu.tsx` (AC: 1, 2, 3)
-  - [ ] `'use client'` directive (needs click handlers + state)
-  - [ ] Avatar button: shows initials; click toggles dropdown
-  - [ ] Dropdown: role label (read-only) + "Đăng xuất" button
-  - [ ] Click outside to close (use `useRef` + `useEffect` click listener)
-  - [ ] Sign-out action calls `signOut({ callbackUrl: '/login' })`
-- [ ] Create `apps/web/src/components/layout/TopBar/UserMenu.module.css` (AC: 1)
-  - [ ] Dropdown positioned `absolute`, right-aligned, `z-index` above content
-  - [ ] Uses design tokens: `--color-surface-overlay`, `--color-border-default`, `--rounded-md`
-- [ ] Update `apps/web/src/components/layout/TopBar/TopBar.tsx` (AC: 1)
-  - [ ] Replace static avatar div with `<UserMenu role={role} userName={userName} />`
-  - [ ] Pass `role` prop down from layout
-- [ ] Configure Keycloak session termination (AC: 2)
-  - [ ] In `auth.ts` → add NextAuth `events.signOut` callback
-  - [ ] Call Keycloak logout endpoint: `${KEYCLOAK_ISSUER}/protocol/openid-connect/logout`
+- [ ] Thêm `events.signOut` vào `apps/web/src/auth.ts` (AC: 2)
+  - [ ] Trong callback `events`, gọi Keycloak `end_session_endpoint` với `id_token_hint`
+  - [ ] Dùng `process.env.KEYCLOAK_ISSUER` + `process.env.NEXTAUTH_URL`
+  - [ ] Best-effort: `.catch(() => {})` — không throw nếu Keycloak down
+- [ ] Create `apps/web/src/app/actions/signout-action.ts` (AC: 2, 3) [NEW]
+  - [ ] `'use server'` directive
+  - [ ] Export `async function signOutAction()` gọi `signOut({ redirectTo: '/login' })` từ `@/auth`
+- [ ] Modify `apps/web/src/components/layout/Sidebar/Sidebar.tsx` (AC: 1, 2, 3)
+  - [ ] Import `signOutAction` từ `@/app/actions/signout-action`
+  - [ ] Thêm state `profileOpen: boolean` (dùng `useState`)
+  - [ ] Gắn `onClick={() => setProfileOpen(prev => !prev)}` vào `<button className={styles.profile}>`
+  - [ ] Thêm click-outside handler dùng `useRef` + `useEffect`
+  - [ ] Render popup `<div>` khi `profileOpen === true`:
+    - Role label (read-only)
+    - Link "Hồ sơ tài khoản" → `/${role}/profile`
+    - Button "Đăng xuất" → gọi `signOutAction()` via `startTransition` + `useTransition`
+- [ ] Modify `apps/web/src/components/layout/Sidebar/Sidebar.module.css` (AC: 1)
+  - [ ] `.profileWrapper`: `position: relative` (wrap button + popup)
+  - [ ] `.profilePopup`: `position: absolute; bottom: calc(100% + 8px); left: 0; right: 0;`
+  - [ ] Background `var(--card)` (dark context: fallback `#1f4d38`), border `var(--border)`, border-radius `var(--radius-md)`, `box-shadow: var(--shadow-md)`
+  - [ ] `.profilePopupLink`: hover state, padding, text màu `#fff`
+  - [ ] `.signOutBtn`: color `#ef4444` (red), hover `#dc2626`
 - [ ] Verify middleware handles expired JWT (AC: 4)
-  - [ ] Existing middleware should handle this — verify no changes needed
+  - [ ] ✅ Đã pass — `middleware.ts` line 23-27 handle đúng — không cần thay đổi
 
 ## Dev Notes
 
-### Keycloak End-Session Pattern
+### Keycloak End-Session Pattern (auth.ts)
+
 ```typescript
-// In auth.ts events handler:
+// THÊM vào NextAuth({...}) config object:
 events: {
   async signOut(message) {
-    // Clear Keycloak session
-    if ('token' in message && message.token?.id_token) {
-      const logoutUrl = `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/logout`
-      await fetch(`${logoutUrl}?id_token_hint=${message.token.id_token}&post_logout_redirect_uri=${process.env.NEXTAUTH_URL}/login`)
+    if ('token' in message && message.token?.idToken) {
+      const issuer = process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket"
+      const logoutUrl = `${issuer}/protocol/openid-connect/logout`
+      const redirectUri = encodeURIComponent(
+        `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/login`
+      )
+      await fetch(`${logoutUrl}?id_token_hint=${message.token.idToken}&post_logout_redirect_uri=${redirectUri}`)
+        .catch(() => {}) // best-effort
     }
   }
 }
 ```
 
-### UserMenu Dropdown Pattern
+> **NextAuth v5 note:** `id_token` được lưu dưới key `idToken` (camelCase) trong token object.
+
+### Server Action Pattern
+
+```typescript
+// apps/web/src/app/actions/signout-action.ts
+'use server'
+import { signOut } from '@/auth'
+
+export async function signOutAction() {
+  await signOut({ redirectTo: '/login' })
+}
+```
+
+### Sidebar Profile Popup Pattern
+
 ```tsx
-// Click outside handler:
+// Thêm vào Sidebar.tsx — wrapper quanh profile button:
+const [profileOpen, setProfileOpen] = useState(false)
+const [isPending, startTransition] = useTransition()
+const profileRef = useRef<HTMLDivElement>(null)
+
+// Click-outside:
 useEffect(() => {
   const handleClickOutside = (e: MouseEvent) => {
-    if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-      setOpen(false)
+    if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+      setProfileOpen(false)
     }
   }
   document.addEventListener('mousedown', handleClickOutside)
   return () => document.removeEventListener('mousedown', handleClickOutside)
 }, [])
+
+// JSX (wrap profile button):
+<div className={styles.profileWrapper} ref={profileRef}>
+  {profileOpen && (
+    <div className={styles.profilePopup}>
+      <div className={styles.roleLabel}>ĐĂNG NHẬP VỚI VAI TRÒ: {getRoleLabel(role)}</div>
+      <Link href={`/${role}/profile`} className={styles.profilePopupLink} onClick={() => setProfileOpen(false)}>
+        Hồ sơ tài khoản
+      </Link>
+      <button
+        className={styles.signOutBtn}
+        disabled={isPending}
+        onClick={() => startTransition(async () => { await signOutAction() })}
+      >
+        {isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
+      </button>
+    </div>
+  )}
+  <button className={styles.profile} onClick={() => setProfileOpen(prev => !prev)}>
+    {/* ...existing avatar content... */}
+  </button>
+</div>
 ```
 
+### DO NOT
+
+- KHÔNG tạo `TopBar/UserMenu.tsx` (đã bị xóa khỏi scope)
+- KHÔNG thêm `'use client'` vào `TopBar.tsx`
+- KHÔNG thay đổi `middleware.ts` (AC-4 pass sẵn)
+- KHÔNG thay đổi `SidebarProps` interface — popup xây dựng từ `role` prop sẵn có
+
 ### Project Structure Notes
-- `UserMenu` goes in same folder as `TopBar`: `components/layout/TopBar/`
-- TopBar currently has a static avatar `<div>` — replace with `<UserMenu />`
-- TopBar is currently a Server Component — UserMenu must be imported as a Client Component
+
+- `signout-action.ts` đặt trong `app/actions/` — folder có thể cần tạo mới nếu chưa có
+- Sidebar đã là `'use client'` → không cần thêm directive
+- `useTransition` để disable button trong lúc sign-out pending (UX)
+- Story 8-8 (Profile page) cũng sẽ import `signOutAction` từ cùng file — **shared, không duplicate**
 
 ### References
-- [Source: apps/web/src/components/layout/TopBar/TopBar.tsx — current avatar implementation]
-- [Source: apps/web/src/auth.ts — NextAuth config, signOut function]
-- [Source: apps/web/src/middleware.ts — JWT expiry handling]
+
+- [Sidebar.tsx](file:///d:/MNM/OpenTea-DX-OS/apps/web/src/components/layout/Sidebar/Sidebar.tsx) — `.profile` button line 111–118
+- [auth.ts](file:///d:/MNM/OpenTea-DX-OS/apps/web/src/auth.ts) — events section cần thêm
+- [middleware.ts](file:///d:/MNM/OpenTea-DX-OS/apps/web/src/middleware.ts) — JWT expiry đã handled
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
-Claude Sonnet 4.6
+_To be filled by dev agent_
 
 ### Debug Log References
 
 ### Completion Notes List
 
 ### File List
-- `apps/web/src/components/layout/TopBar/UserMenu.tsx` (NEW)
-- `apps/web/src/components/layout/TopBar/UserMenu.module.css` (NEW)
-- `apps/web/src/components/layout/TopBar/TopBar.tsx` (MODIFY)
-- `apps/web/src/auth.ts` (MODIFY)
+
+- `apps/web/src/auth.ts` (MODIFY — thêm events.signOut)
+- `apps/web/src/app/actions/signout-action.ts` (NEW)
+- `apps/web/src/components/layout/Sidebar/Sidebar.tsx` (MODIFY — gắn popup + signout)
+- `apps/web/src/components/layout/Sidebar/Sidebar.module.css` (MODIFY — style popup)

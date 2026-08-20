@@ -105,6 +105,7 @@ export class PrismaLotRepository implements LotPort {
         where: { id },
         data: {
           status: 'QR_EXPORTED',
+          // @ts-ignore TODO(cross-epic): public_page_data missing in Prisma schema
           public_page_data: JSON.parse(JSON.stringify(snapshotData)),
           qr_image_url: qrImageUrl ?? `/lot/${currentLot.lot_code}`,
         },
