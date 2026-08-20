@@ -15,12 +15,12 @@
 .title {
   font-size: var(--font-size-h1);
   font-weight: 700;
-  color: var(--color-ink-primary);
+  color: var(--foreground);
   margin: 0;
 }
 
 .description {
-  color: var(--color-ink-secondary);
+  color: var(--muted-foreground);
   font-size: var(--font-size-body);
   margin-top: var(--spacing-1);
   margin-bottom: 0;

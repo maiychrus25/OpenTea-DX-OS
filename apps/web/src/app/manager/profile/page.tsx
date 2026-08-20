@@ -21,11 +21,19 @@ export default async function HtxProfilePage() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Thông tin Hợp tác xã</h1>
-        <p className={styles.description}>Quản lý và cập nhật thông tin chung của hợp tác xã.</p>
-      </div>
-      <ProfileForm initialData={profile} />
+      <section aria-label="Hồ sơ HTX">
+        <div className={styles.header}>
+          <h1 className={styles.title}>Thông tin Hợp tác xã</h1>
+          <p className={styles.description}>Quản lý và cập nhật thông tin chung của hợp tác xã.</p>
+        </div>
+        <ProfileForm initialData={profile} />
+      </section>
+      
+      {/* 
+        NOTE FOR STORY 8.8:
+        Do not modify the "Hồ sơ HTX" section above.
+        Append your "Tài khoản cá nhân" section below this comment.
+      */}
     </div>
   )
 }

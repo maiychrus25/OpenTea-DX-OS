@@ -6,8 +6,7 @@ test.describe('Profile Page (Manager View)', () => {
 
   test('Read -> Edit -> Save flow', async ({ page }) => {
     // 1. Navigate to profile page
-    // NOTE: (manager) is a Next.js route GROUP, it does NOT create a URL segment
-    await page.goto('/profile')
+    await page.goto('/manager/profile')
 
     // 2. Assert page is in read-only mode (Edit button is visible)
     const editButton = page.getByRole('button', { name: 'Sửa' })

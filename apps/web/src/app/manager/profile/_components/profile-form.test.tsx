@@ -67,4 +67,30 @@ describe('ProfileForm', () => {
     const nameInput = screen.getByDisplayValue('HTX Nông Nghiệp Test')
     expect(nameInput).toBeInTheDocument()
   })
+
+  // TC-1.6-02: ProfileForm Client Validation (Unit)
+  it('prevents submission when required fields are empty (client validation)', async () => {
+    // Setup fetch mock
+    global.fetch = jest.fn()
+
+    // @ts-ignore - mock data matches required fields for testing
+    render(<ProfileForm initialData={mockInitialData} />)
+    
+    // Enter edit mode
+    fireEvent.click(screen.getByText('Sửa'))
+    
+    // Clear the name field
+    const nameInput = screen.getByDisplayValue('HTX Nông Nghiệp Test')
+    fireEvent.change(nameInput, { target: { value: '' } })
+    
+    // Submit form
+    fireEvent.click(screen.getByText('Lưu'))
+    
+    // Validation message should appear (handled asynchronously by react-hook-form + zod)
+    const errorMessage = await screen.findByText(/tên htx không được để trống/i)
+    expect(errorMessage).toBeInTheDocument()
+    
+    // fetch should not have been called
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
 })
