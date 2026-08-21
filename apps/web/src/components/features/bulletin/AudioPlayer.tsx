@@ -45,10 +45,10 @@ export default function AudioPlayer({ bulletinId }: AudioPlayerProps) {
       audio.play().then(() => {
         setIsLoading(false);
         setIsPlaying(true);
-      }).catch((e) => {
+      }).catch(() => {
         setIsLoading(false);
         setIsPlaying(false);
-        console.error('Audio play failed', e);
+        // Audio play may be blocked by browser autoplay policy
       });
       return;
     }
@@ -60,8 +60,8 @@ export default function AudioPlayer({ bulletinId }: AudioPlayerProps) {
     } else {
       audioRef.current.play().then(() => {
         setIsPlaying(true);
-      }).catch((e) => {
-        console.error('Audio play failed', e);
+      }).catch(() => {
+        // Audio play may be blocked by browser autoplay policy
       });
     }
   };

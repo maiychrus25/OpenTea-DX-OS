@@ -4,7 +4,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
-import { Home, FileText, Stethoscope, Sprout, Newspaper, User } from 'lucide-react'
+import { Home, FileText, Stethoscope, Sprout, Newspaper, User, Bell } from 'lucide-react'
 
 export default async function FarmerLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -17,6 +17,7 @@ export default async function FarmerLayout({ children }: { children: React.React
     { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <Stethoscope size={20} /> },
     { label: 'Thửa của tôi', href: '/farmer/parcels', icon: <Sprout size={20} /> },
     { label: 'Bản tin', href: '/farmer/bulletin', icon: <Newspaper size={20} /> },
+    { label: 'Thông báo', href: '/farmer/notifications', icon: <Bell size={20} /> },
     { label: 'Tài khoản', href: '/farmer/account', icon: <User size={20} /> },
   ]
 

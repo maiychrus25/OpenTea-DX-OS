@@ -23,8 +23,8 @@ export function BulletinView({ bulletin }: BulletinViewProps) {
     if (Array.isArray(sources)) {
       sourcesList = sources.map((s) => `${s.source || s.url || 'Nguồn'}`);
     }
-  } catch (e) {
-    console.error('Failed to parse sources', e);
+  } catch {
+    // Failed to parse sources_json — fallback to empty
   }
 
   return (
