@@ -29,3 +29,10 @@ if (typeof Response === 'undefined') {
 jest.mock('@/app/actions/signout-action', () => ({
   signOutAction: jest.fn()
 }))
+
+// Mock next-auth/react globally to prevent ESM import syntax error in Jest
+jest.mock('next-auth/react', () => ({
+  signIn: jest.fn(),
+  signOut: jest.fn(),
+  useSession: jest.fn(() => ({ data: null, status: 'unauthenticated' }))
+}))
