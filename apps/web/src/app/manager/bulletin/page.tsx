@@ -12,6 +12,8 @@ import { CommodityTabs } from '@/components/features/bulletin/CommodityTabs';
 
 import { toEnglishCommodity, toVietnameseCommodity } from '@/lib/translations';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ManagerBulletinPage({
   searchParams,
 }: {

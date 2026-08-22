@@ -140,6 +140,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ role }) => {
                     key={n.id}
                     href={n.link_url || '#'} 
                     className={`${styles.notifItem} ${!n.read ? styles.unread : ''}`}
+                    data-testid={`notif-item-${n.id}`}
                     onClick={(e) => {
                       if (!n.link_url) e.preventDefault()
                       handleNotificationClick(n)

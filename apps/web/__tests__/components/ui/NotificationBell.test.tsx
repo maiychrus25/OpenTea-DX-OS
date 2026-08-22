@@ -122,7 +122,7 @@ describe('NotificationBell Component', () => {
     const user = userEvent.setup()
     await user.click(bell)
     
-    const notifItem = await screen.findByText('Test')
+    const notifItem = await screen.findByTestId('notif-item-1')
     
     // clear prior fetches
     ;(global.fetch as jest.Mock).mockClear()
