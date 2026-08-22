@@ -146,7 +146,7 @@ development_status:
   2-1-market-data-api-endpoint:          done
   2-2-daily-bulletin-display-page:       done
   2-3-bulletin-tts-listen-button:        done
-  2-4-n8n-bulletin-synthesis-workflow:   partial  # Workflow exists; provider/schema/crop-filter/idempotency verification remains in 0-2
+  2-4-n8n-bulletin-synthesis-workflow:   done
   2-5-market-expert-chatbot:             ready-for-dev
   2-6-agricultural-partner-map-crud:     ready-for-dev
   2-7-web-bell-notification-system:      partial  # T1+T2 (BE: Domain/UseCases/API) still needed; T3+T4 FE superseded-by-7-11

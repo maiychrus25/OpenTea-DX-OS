@@ -64,7 +64,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const fxRates = $('Fetch FX Rates').first().json.rates || {};\nconst usdToVnd = fxRates.VND || 25000;\n\nconst commodity = $input.item.json.commodity;\nconst dataArr = $input.item.json.data || [];\n\nlet rawContext = `Dữ liệu thị trường cho ${commodity} trong 48h qua:\\n`;\nlet sources = [];\n\ndataArr.forEach(row => {\n  rawContext += `- [${row.source}] ${row.metric}: ${row.value} ${row.unit} (Thời gian: ${row.period})\\n`;\n  sources.push({\n    source: row.source,\n    metric: row.metric,\n    value: row.value,\n    date: row.period\n  });\n});\n\nrawContext += `\\nTỷ giá tham chiếu: 1 USD = ${usdToVnd} VND.`;\n\nreturn {\n  commodity: commodity,\n  raw_context: rawContext,\n  sources_json: sources\n};"
+        "jsCode": "const fxRates = $('Fetch FX Rates').first().json.rates || {};\n\nconst commodity = $input.item.json.commodity;\nconst dataArr = $input.item.json.data || [];\n\nlet rawContext = `Dữ liệu thị trường cho ${commodity} trong 48h qua:\\n`;\nlet sources = [];\n\ndataArr.forEach(row => {\n  rawContext += `- [${row.source}] ${row.metric}: ${row.value} ${row.unit} (Thời gian: ${row.period})\\n`;\n  sources.push({\n    source: row.source,\n    metric: row.metric,\n    value: row.value,\n    date: row.period\n  });\n});\n\nrawContext += `\\nTỷ giá ngoại tệ tham chiếu (so với USD): ${JSON.stringify(fxRates)}`;\n\nreturn {\n  commodity: commodity,\n  raw_context: rawContext,\n  sources_json: sources\n};"
       },
       "id": "code-rag",
       "name": "Code (Prepare RAG Context)",
