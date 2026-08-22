@@ -144,7 +144,7 @@ development_status:
   epic-2: in-progress
 
   2-1-market-data-api-endpoint:          done
-  2-2-daily-bulletin-display-page:       partial  # Visual page exists; canonical /api/bulletin and Epic 8 presentation are not fully integrated
+  2-2-daily-bulletin-display-page:       done
   2-3-bulletin-tts-listen-button:        partial  # UI/API pieces exist; playback/contract/Piper availability need verification
   2-4-n8n-bulletin-synthesis-workflow:   partial  # Workflow exists; provider/schema/crop-filter/idempotency verification remains in 0-2
   2-5-market-expert-chatbot:             ready-for-dev
@@ -253,7 +253,7 @@ development_status:
 
   epic-8: in-progress
 
-  8-1-bulletin-page-refactor:           ready-for-dev  # Bản tin: 3-card grid, category tabs, audio button, AI disclaimer
+  8-1-bulletin-page-refactor:           done
   8-2-officer-today-dashboard:          ready-for-dev  # Officer dashboard: 4 metrics + lịch công việc theo giờ
   8-3-lot-list-page:                    done  # Lô hàng list: filter tabs, table rows, "Tạo lô hàng" CTA
   8-4-lot-detail-6step-workflow:        done           # Lot detail: 6-step wizard + QR preview panel + Xuất QR
