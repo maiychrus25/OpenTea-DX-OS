@@ -118,8 +118,20 @@ export class PrismaJournalRepository implements JournalPort {
       condition: null,
     }
 
+    const startOfDay = new Date(data.entry_date)
+    startOfDay.setUTCHours(0, 0, 0, 0)
+    
+    const endOfDay = new Date(data.entry_date)
+    endOfDay.setUTCHours(23, 59, 59, 999)
+
     const weatherCache = await prisma.weatherCache.findFirst({
-      where: { parcel_id: data.parcel_id },
+      where: { 
+        parcel_id: data.parcel_id,
+        recorded_at: {
+          gte: startOfDay,
+          lte: endOfDay
+        }
+      },
       orderBy: { recorded_at: 'desc' },
     })
 
