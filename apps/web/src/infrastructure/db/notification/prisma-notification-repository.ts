@@ -50,6 +50,18 @@ export class PrismaNotificationRepository implements NotificationPort {
     });
   }
 
+  async broadcastAnnouncement(title: string, body: string, senderId: string): Promise<void> {
+    await prisma.notification.create({
+      data: {
+        type: NotificationType.ANNOUNCEMENT,
+        title,
+        body,
+        recipient_id: null,
+        sender_id: senderId,
+      },
+    });
+  }
+
   async delete(userId: string, id: string): Promise<void> {
     await prisma.notification.deleteMany({
       where: { id, recipient_id: userId }

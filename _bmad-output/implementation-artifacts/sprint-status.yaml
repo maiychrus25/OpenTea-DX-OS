@@ -167,7 +167,7 @@ development_status:
   3-4-parcel-status-auto-derivation:     done
   3-5-weather-auto-attach-journal:       done
   3-6-batch-journal-approval-officer:    done
-  3-7-technical-announcement-farmers:    ready-for-dev
+  3-7-technical-announcement-farmers:    done
 
   # ── Epic 3: Missing Stories (identified 2026-08-12) ───────────────────────
   # Weather API backend required by 3-3 and 3-5
