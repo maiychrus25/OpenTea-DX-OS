@@ -150,7 +150,7 @@ development_status:
   2-5-market-expert-chatbot:             done
   2-6-agricultural-partner-map-crud:     ready-for-dev
   2-7-web-bell-notification-system:      done
-  2-8-farm-zone-readonly-manager:        ready-for-dev 
+  2-8-farm-zone-readonly-manager:        done 
 
   # ── Epic 2: Missing Stories (identified 2026-08-12) ───────────────────────
   # Prerequisite BE endpoints missing from original Epic 2 spec
