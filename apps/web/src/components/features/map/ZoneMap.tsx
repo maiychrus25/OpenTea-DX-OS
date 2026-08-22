@@ -38,8 +38,22 @@ export default function ZoneMap({ parcels }: ZoneMapProps) {
     center = [validParcels[0].centroid_lat!, validParcels[0].centroid_lng!]
   }
 
+  // Khóa vùng kéo bản đồ (Giới hạn trong lãnh thổ đất liền/gần bờ Việt Nam)
+  // Tránh kéo ra vùng biển có label quốc tế nhạy cảm
+  const VIETNAM_BOUNDS: import('leaflet').LatLngBoundsLiteral = [
+    [8.0, 102.0], // Tây Nam
+    [23.5, 109.5] // Đông Bắc
+  ];
+
   return (
-    <MapContainer center={center} zoom={13} style={mapStyle}>
+    <MapContainer 
+      center={center} 
+      zoom={13} 
+      minZoom={6}
+      maxBounds={VIETNAM_BOUNDS}
+      maxBoundsViscosity={1.0}
+      style={mapStyle}
+    >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
