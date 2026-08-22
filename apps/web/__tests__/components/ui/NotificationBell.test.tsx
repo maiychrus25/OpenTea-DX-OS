@@ -107,16 +107,30 @@ describe('NotificationBell Component', () => {
   })
 
   it('TC-7.11-08: clicking a notification marks it as read via PUT /api/notifications', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        notifications: [
-          { id: '1', title: 'Test', detail: 'Detail', tone: 'green', created_at: new Date().toISOString(), read: false },
-        ],
-      }),
+    // Use mockImplementation so SWR refetches (focus, dedup) don't exhaust the mock
+    ;(global.fetch as jest.Mock).mockImplementation((url: string, opts?: RequestInit) => {
+      if (opts?.method === 'PUT') {
+        return Promise.resolve({ ok: true, json: async () => ({}) })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          notifications: [
+            { id: '1', title: 'Test', detail: 'Detail', tone: 'green', created_at: new Date().toISOString(), read: false },
+          ],
+        }),
+      })
     })
 
     render(<NotificationBell role="manager" />, { wrapper })
+
+    // Wait for SWR to load data before clicking
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/notifications'),
+        expect.anything()
+      )
+    })
     
     const bell = await screen.findByTestId('bell-button')
     const user = userEvent.setup()
@@ -124,15 +138,15 @@ describe('NotificationBell Component', () => {
     
     const notifItem = await screen.findByTestId('notif-item-1')
     
-    // clear prior fetches
     ;(global.fetch as jest.Mock).mockClear()
-    ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true })
     
     await user.click(notifItem)
     
-    expect(global.fetch).toHaveBeenCalledWith('/api/notifications', expect.objectContaining({
-      method: 'PUT',
-      body: JSON.stringify({ id: '1' })
-    }))
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/notifications', expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ id: '1' })
+      }))
+    })
   })
 })

@@ -5,6 +5,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/infrastructure/db/prisma.client';
 import { toEnglishCommodity } from '@/lib/translations';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const commodityVi = url.searchParams.get('commodity') || 'Gạo';
