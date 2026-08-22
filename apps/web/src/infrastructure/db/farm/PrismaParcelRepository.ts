@@ -62,6 +62,9 @@ export class PrismaParcelRepository implements ParcelPort {
   }
 
   async create(data: CreateParcelData): Promise<ParcelSummary> {
+    const htx = await prisma.htxProfile.findFirst()
+    const season = htx?.season_label ?? 'Vụ mùa mới'
+
     const parcel = await prisma.parcel.create({
       data: {
         household_id: data.household_id,
@@ -71,6 +74,12 @@ export class PrismaParcelRepository implements ParcelPort {
         centroid_lat: data.centroid_lat,
         centroid_lng: data.centroid_lng,
         polygon_geojson: data.geojson as any,
+        crop_cycles: data.current_crop ? {
+          create: [{
+            season: season,
+            sowed_at: new Date()
+          }]
+        } : undefined
       },
       include: {
         household: {
