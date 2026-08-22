@@ -9,6 +9,8 @@ import { AiNote } from '../../ui/AiNote';
 import AudioPlayer from './AudioPlayer';
 import styles from './BulletinView.module.css';
 
+import { toVietnameseCommodity } from '@/lib/translations';
+
 interface BulletinViewProps {
   bulletin: Bulletin;
 }
@@ -30,7 +32,7 @@ export function BulletinView({ bulletin }: BulletinViewProps) {
   return (
     <article className={styles.container}>
       <header className={styles.header}>
-        <h2 className={styles.title}>Bản tin thị trường: {bulletin.commodity}</h2>
+        <h2 className={styles.title}>Bản tin thị trường: {toVietnameseCommodity(bulletin.commodity)}</h2>
         <div className={styles.meta}>
           <time className={styles.date}>
             {new Date(bulletin.created_at).toLocaleDateString('vi-VN')}

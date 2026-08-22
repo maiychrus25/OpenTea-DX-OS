@@ -30,4 +30,39 @@ export class PrismaBulletinRepository implements IBulletinRepository {
       created_at: record.created_at,
     };
   }
+
+  async getAllLatestBulletins(): Promise<Bulletin[]> {
+    const records = await this.prisma.bulletin.findMany({
+      where: {
+        is_latest: true,
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+
+    return records.map((record) => ({
+      id: record.id,
+      commodity: record.commodity,
+      bulletin_vi: record.bulletin_vi,
+      sources_json: record.sources_json,
+      model_used: record.model_used,
+      is_latest: record.is_latest,
+      created_at: record.created_at,
+    }));
+  }
+
+  async getAvailableCommodities(): Promise<string[]> {
+    const records = await this.prisma.bulletin.findMany({
+      where: {
+        is_latest: true,
+      },
+      select: {
+        commodity: true,
+      },
+      distinct: ['commodity'],
+    });
+    
+    return records.map((r) => r.commodity);
+  }
 }

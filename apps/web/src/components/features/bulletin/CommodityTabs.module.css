@@ -1,0 +1,38 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.tabsContainer {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.tabList {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  gap: 1rem;
+}
+
+.tabItem {
+  margin-bottom: -1px;
+}
+
+.tabLink {
+  display: inline-block;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 2px solid transparent;
+  color: #6b7280;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.tabLink:hover {
+  color: var(--primary, #059669);
+}
+
+.tabLink.active {
+  color: var(--primary, #059669);
+  border-bottom-color: var(--primary, #059669);
+}

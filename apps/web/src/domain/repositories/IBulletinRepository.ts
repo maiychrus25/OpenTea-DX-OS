@@ -13,4 +13,6 @@ export interface Bulletin {
 
 export interface IBulletinRepository {
   getLatestBulletin(commodity: string): Promise<Bulletin | null>;
+  getAllLatestBulletins(): Promise<Bulletin[]>;
+  getAvailableCommodities(): Promise<string[]>;
 }
