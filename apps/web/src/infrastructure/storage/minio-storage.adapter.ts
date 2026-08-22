@@ -36,4 +36,8 @@ export class MinioStorageAdapter implements StoragePort {
       presignedUrl,
     }
   }
+
+  async getPresignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
+    return this.minioClient.presignedGetObject(this.bucketName, key, expiresIn)
+  }
 }

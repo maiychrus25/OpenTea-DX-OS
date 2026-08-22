@@ -2,57 +2,35 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
-import { prisma } from '@/infrastructure/db/prisma.client'
-import { Client } from 'minio'
+import { auth } from '@/auth'
+import { GetParcelPhotoUseCase } from '@/application/farm/GetParcelPhotoUseCase'
+import { PrismaDiseaseReportRepository } from '@/infrastructure/db/farm/PrismaDiseaseReportRepository'
+import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
 
 export async function GET(
   _req: Request,
   { params }: { params: { id: string } }
 ) {
+  // Security Check (HIGH bug fix)
+  const session = await auth()
+  if (!session || !session.user) {
+    return NextResponse.json(
+      { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+      { status: 401 }
+    )
+  }
+
   try {
     const parcelId = params.id
 
-    // Find the latest disease report with a photo for this parcel
-    // Since JournalEntry doesn't have photos in the current schema,
-    // we use DiseaseReport photos as the "Ground Truth" Farm View.
-    const report = await prisma.diseaseReport.findFirst({
-      where: {
-        parcel_id: parcelId
-      },
-      orderBy: {
-        detection_date: 'desc'
-      },
-      select: {
-        photo_minio_key: true,
-        detection_date: true
-      }
-    })
+    // Hexagonal Architecture (HIGH bug fix)
+    const diseaseReportRepo = new PrismaDiseaseReportRepository()
+    const storageRepo = new MinioStorageAdapter()
+    const useCase = new GetParcelPhotoUseCase(diseaseReportRepo, storageRepo)
 
-    if (!report || !report.photo_minio_key) {
-      return NextResponse.json({ photoUrl: null, date: null })
-    }
+    const result = await useCase.execute(parcelId)
 
-    const minioClient = new Client({
-      endPoint: process.env.MINIO_ENDPOINT || 'minio',
-      port: 9000,
-      useSSL: process.env.MINIO_USE_SSL === 'true',
-      accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-      secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
-    })
-    
-    const bucketName = process.env.MINIO_BUCKET_NAME || 'agrimarket-private'
-
-    // Generate pre-signed URL (60 mins expiry per rules-and-limits)
-    const url = await minioClient.presignedGetObject(
-      bucketName,
-      report.photo_minio_key,
-      3600
-    )
-
-    return NextResponse.json({ 
-      photoUrl: url,
-      date: report.detection_date
-    })
+    return NextResponse.json(result)
   } catch (error) {
     console.error('[GET /api/parcels/[id]/latest-photo]', error)
     return NextResponse.json(

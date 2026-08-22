@@ -8,6 +8,7 @@ import { MapContainer, TileLayer, GeoJSON, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ParcelSummary } from '@/domain/farm/ports/ParcelPort'
 import Image from 'next/image'
+import styles from './ZoneMap.module.css'
 
 interface ZoneMapProps {
   parcels: ParcelSummary[]
@@ -46,21 +47,21 @@ function ParcelPopupContent({ parcel }: { parcel: ParcelSummary }) {
   }, [parcel.id])
 
   return (
-    <div style={{ minWidth: '200px' }}>
-      <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 'bold' }}>Thông tin thửa đất</h3>
-      <p style={{ margin: '4px 0' }}><strong>Mã vùng:</strong> {parcel.parcel_code}</p>
-      <p style={{ margin: '4px 0' }}><strong>Nông hộ:</strong> {parcel.household?.name || 'N/A'}</p>
-      <p style={{ margin: '4px 0' }}><strong>Cây trồng:</strong> {parcel.crop_type || 'Chưa có'}</p>
-      <p style={{ margin: '4px 0' }}><strong>Diện tích:</strong> {parcel.area_ha} ha</p>
-      <p style={{ margin: '4px 0' }}><strong>Trạng thái:</strong> {parcel.status}</p>
+    <div className={styles.popupContainer}>
+      <h3 className={styles.popupTitle}>Thông tin thửa đất</h3>
+      <p className={styles.popupRow}><strong>Mã vùng:</strong> {parcel.parcel_code}</p>
+      <p className={styles.popupRow}><strong>Nông hộ:</strong> {parcel.household?.name || 'N/A'}</p>
+      <p className={styles.popupRow}><strong>Cây trồng:</strong> {parcel.crop_type || 'Chưa có'}</p>
+      <p className={styles.popupRow}><strong>Diện tích:</strong> {parcel.area_ha} ha</p>
+      <p className={styles.popupRow}><strong>Trạng thái:</strong> {parcel.status}</p>
       
-      <div style={{ marginTop: '12px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-        <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold' }}>📸 Thực địa (Farm View)</h4>
+      <div className={styles.farmViewSection}>
+        <h4 className={styles.farmViewTitle}>📸 Thực địa (Farm View)</h4>
         {loading ? (
-          <p style={{ fontSize: '12px', color: 'gray', margin: 0 }}>Đang tải ảnh thực địa...</p>
+          <p className={styles.loadingText}>Đang tải ảnh thực địa...</p>
         ) : photoUrl ? (
           <div>
-            <div style={{ position: 'relative', width: '100%', height: '150px', borderRadius: '4px', overflow: 'hidden' }}>
+            <div className={styles.imageWrapper}>
               <Image 
                 src={photoUrl} 
                 alt={`Farm View ${parcel.parcel_code}`} 
@@ -68,11 +69,11 @@ function ParcelPopupContent({ parcel }: { parcel: ParcelSummary }) {
                 style={{ objectFit: 'cover' }} 
               />
             </div>
-            {photoDate && <p style={{ fontSize: '11px', color: 'gray', marginTop: '4px', marginBottom: 0 }}>Chụp ngày: {photoDate}</p>}
+            {photoDate && <p className={styles.imageDate}>Chụp ngày: {photoDate}</p>}
           </div>
         ) : (
-          <div style={{ width: '100%', height: '100px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' }}>
-            <p style={{ fontSize: '12px', color: 'gray', margin: 0 }}>Chưa có ảnh nhật ký</p>
+          <div className={styles.placeholder}>
+            <p className={styles.loadingText}>Chưa có ảnh nhật ký</p>
           </div>
         )}
       </div>
@@ -87,7 +88,8 @@ export default function ZoneMap({ parcels }: ZoneMapProps) {
     setIsMounted(true)
     // Leaflet icon fix for Next.js
     import('leaflet').then(L => {
-      delete (L.Icon.Default.prototype as any)._getIconUrl
+      // @ts-ignore - Leaflet hack required for Next.js SSR workaround
+      delete L.Icon.Default.prototype._getIconUrl
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -128,7 +130,8 @@ export default function ZoneMap({ parcels }: ZoneMapProps) {
         parcel.polygon_geojson ? (
           <GeoJSON 
             key={parcel.id} 
-            data={parcel.polygon_geojson as any}
+            // @ts-ignore - GeoJSON type mismatch between DB JSON and leaflet format
+            data={parcel.polygon_geojson}
             pathOptions={{ color: '#00ff00', weight: 3, fillColor: '#00ff00', fillOpacity: 0.2 }}
           >
             <Popup>

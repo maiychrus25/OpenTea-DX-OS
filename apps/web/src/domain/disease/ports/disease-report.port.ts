@@ -20,4 +20,5 @@ export interface DiseaseReportPort {
     photo_url: string;
     created_at: Date;
   }>;
+  findLatestByParcelId(parcelId: string): Promise<{ photo_minio_key: string; detection_date: Date } | null>;
 }
