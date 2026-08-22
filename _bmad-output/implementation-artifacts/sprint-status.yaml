@@ -164,7 +164,7 @@ development_status:
   3-1-household-management-officer:      done
   3-2-parcel-drawing-map-setup:          done
   3-3-journal-entry-officer-self-record: done
-  3-4-parcel-status-auto-derivation:     ready-for-dev
+  3-4-parcel-status-auto-derivation:     done
   3-5-weather-auto-attach-journal:       ready-for-dev
   3-6-batch-journal-approval-officer:    ready-for-dev
   3-7-technical-announcement-farmers:    ready-for-dev

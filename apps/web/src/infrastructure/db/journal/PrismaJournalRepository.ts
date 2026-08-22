@@ -8,6 +8,7 @@ import {
   CreateJournalData,
   JournalFilters,
 } from '@/domain/journal/ports/JournalPort'
+import { ActivityType, ParcelStatus } from '@prisma/client'
 
 function mapEntry(e: any): JournalEntryData {
   return {
@@ -34,6 +35,41 @@ function mapEntry(e: any): JournalEntryData {
       dosage: a.dosage,
       withdrawal_days: a.withdrawal_days,
     })),
+  }
+}
+
+async function applyParcelStatus(tx: any, parcelId: string, activityType: string, entryDate: Date) {
+  let newStatus: ParcelStatus | undefined = undefined
+  if (activityType === ActivityType.SOWING) newStatus = ParcelStatus.SOWING
+  else if (activityType === ActivityType.HARVEST) newStatus = ParcelStatus.HARVESTED
+  else if ([ActivityType.FERTILIZING, ActivityType.SPRAYING, ActivityType.IRRIGATION, ActivityType.OTHER].includes(activityType as ActivityType)) {
+    newStatus = ParcelStatus.TENDING
+  }
+
+  if (newStatus) {
+    await tx.parcel.update({
+      where: { id: parcelId },
+      data: { status: newStatus }
+    })
+  }
+
+  const activeCycle = await tx.parcelCropCycle.findFirst({
+    where: { parcel_id: parcelId },
+    orderBy: { created_at: 'desc' }
+  })
+
+  if (activeCycle) {
+    if (activityType === ActivityType.SOWING && !activeCycle.sowed_at) {
+      await tx.parcelCropCycle.update({
+        where: { id: activeCycle.id },
+        data: { sowed_at: entryDate }
+      })
+    } else if (activityType === ActivityType.HARVEST) {
+      await tx.parcelCropCycle.update({
+        where: { id: activeCycle.id },
+        data: { harvested_at: entryDate }
+      })
+    }
   }
 }
 
@@ -95,32 +131,40 @@ export class PrismaJournalRepository implements JournalPort {
       }
     }
 
-    const e = await prisma.journalEntry.create({
-      data: {
-        parcel_id: data.parcel_id,
-        entry_date: data.entry_date,
-        activity_type: data.activity_type as any,
-        performed_by: data.performed_by,
-        submitted_by_id: data.submitted_by_id,
-        submitted_role: data.submitted_role as any,
-        status: data.submitted_role === 'FARMER' ? 'PENDING_APPROVAL' : 'APPROVED',
-        approved_by_id: data.submitted_role === 'OFFICER' ? data.submitted_by_id : null,
-        approved_at: data.submitted_role === 'OFFICER' ? new Date() : null,
-        notes: data.observation ?? null,
-        weather_temperature: weatherData.temperature,
-        weather_precipitation: weatherData.precipitation,
-        weather_humidity: weatherData.humidity,
-        weather_condition: weatherData.condition,
-        activities: {
-          create: data.activities.map(a => ({
-            activity_detail: a.product_name ? `${a.activity_type}: ${a.product_name}` : a.activity_type,
-            product_name: a.product_name ?? null,
-            dosage: a.dosage ?? null,
-            withdrawal_days: a.withdrawal_days ?? null,
-          })),
+    const e = await prisma.$transaction(async (tx) => {
+      const entry = await tx.journalEntry.create({
+        data: {
+          parcel_id: data.parcel_id,
+          entry_date: data.entry_date,
+          activity_type: data.activity_type as any,
+          performed_by: data.performed_by,
+          submitted_by_id: data.submitted_by_id,
+          submitted_role: data.submitted_role as any,
+          status: data.submitted_role === 'FARMER' ? 'PENDING_APPROVAL' : 'APPROVED',
+          approved_by_id: data.submitted_role === 'OFFICER' ? data.submitted_by_id : null,
+          approved_at: data.submitted_role === 'OFFICER' ? new Date() : null,
+          notes: data.observation ?? null,
+          weather_temperature: weatherData.temperature,
+          weather_precipitation: weatherData.precipitation,
+          weather_humidity: weatherData.humidity,
+          weather_condition: weatherData.condition,
+          activities: {
+            create: data.activities.map((a: any) => ({
+              activity_detail: a.product_name ? `${a.activity_type}: ${a.product_name}` : a.activity_type,
+              product_name: a.product_name ?? null,
+              dosage: a.dosage ?? null,
+              withdrawal_days: a.withdrawal_days ?? null,
+            })),
+          },
         },
-      },
-      include: { activities: true },
+        include: { activities: true },
+      })
+      
+      if (data.submitted_role === 'OFFICER') {
+        await applyParcelStatus(tx, data.parcel_id, data.activity_type, data.entry_date)
+      }
+      
+      return entry
     })
 
     return mapEntry(e)
@@ -148,23 +192,27 @@ export class PrismaJournalRepository implements JournalPort {
     const failed: string[] = []
     let approved = 0
 
-    for (const entryId of entryIds) {
-      const entry = await prisma.journalEntry.findUnique({ where: { id: entryId } })
-      if (!entry || entry.status !== 'PENDING_APPROVAL') {
-        failed.push(entryId)
-        continue
-      }
+    await prisma.$transaction(async (tx) => {
+      for (const entryId of entryIds) {
+        const entry = await tx.journalEntry.findUnique({ where: { id: entryId } })
+        if (!entry || entry.status !== 'PENDING_APPROVAL') {
+          failed.push(entryId)
+          continue
+        }
 
-      await prisma.journalEntry.update({
-        where: { id: entryId },
-        data: {
-          status: 'APPROVED',
-          approved_by_id: approvedById,
-          approved_at: new Date(),
-        },
-      })
-      approved++
-    }
+        await tx.journalEntry.update({
+          where: { id: entryId },
+          data: {
+            status: 'APPROVED',
+            approved_by_id: approvedById,
+            approved_at: new Date(),
+          },
+        })
+        
+        await applyParcelStatus(tx, entry.parcel_id, entry.activity_type, entry.entry_date)
+        approved++
+      }
+    })
 
     return { approved, failed }
   }
