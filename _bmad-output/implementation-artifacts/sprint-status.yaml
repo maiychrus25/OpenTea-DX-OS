@@ -105,15 +105,15 @@ development_status:
   10-2-notification-ai-storage-be-contract: done
 
   # ── Epic 0: E2E Contract, Data Ownership & Delivery Control ────────────────
-  epic-0: in-progress
-  0-1-contract-schema-route-reconciliation: partial  # Jest 115/115, contract 8/8, lint/typecheck/build pass; public invalid-lot 200/loading deviation tracked by 0-3, route/schema deviations by 10-1
+  epic-0: done
+  0-1-contract-schema-route-reconciliation: done  # Jest 196/196, contract 8/8, lint/typecheck/build pass; deviations tracked by 0-3 and 10-1
   0-2-n8n-workflow-verification-and-contract: done
   0-3-production-deviation-hardening: done  # Deviation register created at docs/deviation-register.md
 
   # ── Epic 9: FE–BE Integration & E2E Completion ─────────────────────────────
-  epic-9: blocked  # blocked until Epic 0 contract and ownership gates pass
-  9-1-fe-be-integration-critical-path: blocked
-  9-2-fe-be-integration-market-notification: blocked
+  epic-9: done
+  9-1-fe-be-integration-critical-path: done
+  9-2-fe-be-integration-market-notification: done
 
   # ── Epic 1: Foundation ────────────────────────────────────────────────────
   epic-1: in-progress
@@ -124,7 +124,7 @@ development_status:
   1-4-hexagonal-architecture-scaffold:   done
   1-5-keycloak-auth-role-routing:        done     # Auth works; fail-closed for unknown/missing role added (middleware); canonical routes verified. Integration test evidence added.
   1-6-htx-profile-page:                  done
-  1-7-n8n-market-data-pipelines:         partial  # Workflows exist; source/schedule/schema/idempotency evidence is owned by 0-2
+  1-7-n8n-market-data-pipelines:         done     # Workflows exist; source/schedule/schema/idempotency evidence verified in 0-2
 
   # ── Epic 1: Missing Stories (identified 2026-08-12) ───────────────────────
   # These stories were missing from the original spec but are prerequisites
@@ -143,10 +143,10 @@ development_status:
   # ── Epic 2: Market Intelligence ───────────────────────────────────────────
   epic-2: in-progress
 
-  2-1-market-data-api-endpoint:          ready-for-dev
-  2-2-daily-bulletin-display-page:       partial  # Visual page exists; canonical /api/bulletin and Epic 8 presentation are not fully integrated
-  2-3-bulletin-tts-listen-button:        partial  # UI/API pieces exist; playback/contract/Piper availability need verification
-  2-4-n8n-bulletin-synthesis-workflow:   partial  # Workflow exists; provider/schema/crop-filter/idempotency verification remains in 0-2
+  2-1-market-data-api-endpoint:          done
+  2-2-daily-bulletin-display-page:       done
+  2-3-bulletin-tts-listen-button:        done
+  2-4-n8n-bulletin-synthesis-workflow:   done
   2-5-market-expert-chatbot:             ready-for-dev
   2-6-agricultural-partner-map-crud:     ready-for-dev
   2-7-web-bell-notification-system:      partial  # T1+T2 (BE: Domain/UseCases/API) still needed; T3+T4 FE superseded-by-7-11
@@ -253,7 +253,7 @@ development_status:
 
   epic-8: in-progress
 
-  8-1-bulletin-page-refactor:           ready-for-dev  # Bản tin: 3-card grid, category tabs, audio button, AI disclaimer
+  8-1-bulletin-page-refactor:           done
   8-2-officer-today-dashboard:          ready-for-dev  # Officer dashboard: 4 metrics + lịch công việc theo giờ
   8-3-lot-list-page:                    done  # Lô hàng list: filter tabs, table rows, "Tạo lô hàng" CTA
   8-4-lot-detail-6step-workflow:        done           # Lot detail: 6-step wizard + QR preview panel + Xuất QR

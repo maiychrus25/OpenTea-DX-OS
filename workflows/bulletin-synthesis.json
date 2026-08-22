@@ -64,7 +64,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const fxRates = $('Fetch FX Rates').first().json.rates || {};\nconst usdToVnd = fxRates.VND || 25000;\n\nconst commodity = $input.item.json.commodity;\nconst dataArr = $input.item.json.data || [];\n\nlet rawContext = `Dữ liệu thị trường cho ${commodity} trong 48h qua:\\n`;\nlet sources = [];\n\ndataArr.forEach(row => {\n  rawContext += `- [${row.source}] ${row.metric}: ${row.value} ${row.unit} (Thời gian: ${row.period})\\n`;\n  sources.push({\n    source: row.source,\n    metric: row.metric,\n    value: row.value,\n    date: row.period\n  });\n});\n\nrawContext += `\\nTỷ giá tham chiếu: 1 USD = ${usdToVnd} VND.`;\n\nreturn {\n  commodity: commodity,\n  raw_context: rawContext,\n  sources_json: sources\n};"
+        "jsCode": "const fxRates = $('Fetch FX Rates').first().json.rates || {};\n\nconst commodity = $input.item.json.commodity;\nconst dataArr = $input.item.json.data || [];\n\nlet rawContext = `Dữ liệu thị trường cho ${commodity} trong 48h qua:\\n`;\nlet sources = [];\n\ndataArr.forEach(row => {\n  rawContext += `- [${row.source}] ${row.metric}: ${row.value} ${row.unit} (Thời gian: ${row.period})\\n`;\n  sources.push({\n    source: row.source,\n    metric: row.metric,\n    value: row.value,\n    date: row.period\n  });\n});\n\nrawContext += `\\nTỷ giá ngoại tệ tham chiếu (so với USD): ${JSON.stringify(fxRates)}`;\n\nreturn {\n  commodity: commodity,\n  raw_context: rawContext,\n  sources_json: sources\n};"
       },
       "id": "code-rag",
       "name": "Code (Prepare RAG Context)",
@@ -105,7 +105,14 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 29000
+            }
+          }
+        }
       },
       "id": "ask-ollama",
       "name": "Ask Ollama",
@@ -135,32 +142,12 @@
         "operation": "executeQuery",
         "query": "UPDATE bulletins SET is_latest = false WHERE commodity = '{{ $json.commodity }}';\nINSERT INTO bulletins (commodity, bulletin_vi, sources_json, model_used, is_latest) VALUES ($${{ $json.commodity }}$$, $${{ $json.bulletin_text }}$$, $${{ JSON.stringify($json.sources_json) }}$$::jsonb, $${{ $env.OLLAMA_MODEL }}$$, true);"
       },
-      "id": "deprecate-old",
-      "name": "Deprecate Old Bulletins",
+      "id": "save-to-database",
+      "name": "Save to Database",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
         1200,
-        300
-      ],
-      "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO bulletins (commodity, bulletin_vi, sources_json, model_used, is_latest) VALUES ($${{ $('Strip Thinking Block').item.json.commodity }}$$, $${{ $('Strip Thinking Block').item.json.bulletin_text }}$$, $${{ JSON.stringify($('Strip Thinking Block').item.json.sources_json) }}$$::jsonb, $${{ $env.OLLAMA_MODEL }}$$, true);"
-      },
-      "id": "insert-new",
-      "name": "Insert New Bulletin",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
-      "position": [
-        1400,
         300
       ],
       "credentials": {
@@ -262,18 +249,7 @@
       "main": [
         [
           {
-            "node": "Deprecate Old Bulletins",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Deprecate Old Bulletins": {
-      "main": [
-        [
-          {
-            "node": "Insert New Bulletin",
+            "node": "Save to Database",
             "type": "main",
             "index": 0
           }
