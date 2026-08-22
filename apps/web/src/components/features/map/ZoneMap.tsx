@@ -7,12 +7,78 @@ import React, { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, GeoJSON, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ParcelSummary } from '@/domain/farm/ports/ParcelPort'
+import Image from 'next/image'
 
 interface ZoneMapProps {
   parcels: ParcelSummary[]
 }
 
 const mapStyle = { height: '100%', width: '100%', borderRadius: '0.5rem' }
+
+// Component con để fetch ảnh Farm View khi Popup được mở
+function ParcelPopupContent({ parcel }: { parcel: ParcelSummary }) {
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoDate, setPhotoDate] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let isMounted = true
+    const fetchPhoto = async () => {
+      try {
+        const res = await fetch(`/api/parcels/${parcel.id}/latest-photo`)
+        if (res.ok) {
+          const data = await res.json()
+          if (isMounted) {
+            setPhotoUrl(data.photoUrl)
+            if (data.date) {
+              setPhotoDate(new Date(data.date).toLocaleDateString('vi-VN'))
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch farm view photo:', err)
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+    fetchPhoto()
+    return () => { isMounted = false }
+  }, [parcel.id])
+
+  return (
+    <div style={{ minWidth: '200px' }}>
+      <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 'bold' }}>Thông tin thửa đất</h3>
+      <p style={{ margin: '4px 0' }}><strong>Mã vùng:</strong> {parcel.parcel_code}</p>
+      <p style={{ margin: '4px 0' }}><strong>Nông hộ:</strong> {parcel.household?.name || 'N/A'}</p>
+      <p style={{ margin: '4px 0' }}><strong>Cây trồng:</strong> {parcel.crop_type || 'Chưa có'}</p>
+      <p style={{ margin: '4px 0' }}><strong>Diện tích:</strong> {parcel.area_ha} ha</p>
+      <p style={{ margin: '4px 0' }}><strong>Trạng thái:</strong> {parcel.status}</p>
+      
+      <div style={{ marginTop: '12px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+        <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 'bold' }}>📸 Thực địa (Farm View)</h4>
+        {loading ? (
+          <p style={{ fontSize: '12px', color: 'gray', margin: 0 }}>Đang tải ảnh thực địa...</p>
+        ) : photoUrl ? (
+          <div>
+            <div style={{ position: 'relative', width: '100%', height: '150px', borderRadius: '4px', overflow: 'hidden' }}>
+              <Image 
+                src={photoUrl} 
+                alt={`Farm View ${parcel.parcel_code}`} 
+                fill 
+                style={{ objectFit: 'cover' }} 
+              />
+            </div>
+            {photoDate && <p style={{ fontSize: '11px', color: 'gray', marginTop: '4px', marginBottom: 0 }}>Chụp ngày: {photoDate}</p>}
+          </div>
+        ) : (
+          <div style={{ width: '100%', height: '100px', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' }}>
+            <p style={{ fontSize: '12px', color: 'gray', margin: 0 }}>Chưa có ảnh nhật ký</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function ZoneMap({ parcels }: ZoneMapProps) {
   const [isMounted, setIsMounted] = useState(false)
@@ -55,24 +121,18 @@ export default function ZoneMap({ parcels }: ZoneMapProps) {
       style={mapStyle}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
       />
       {parcels.map(parcel => (
         parcel.polygon_geojson ? (
           <GeoJSON 
             key={parcel.id} 
             data={parcel.polygon_geojson as any}
-            pathOptions={{ color: 'var(--primary)', weight: 2, fillColor: 'var(--primary)', fillOpacity: 0.2 }}
+            pathOptions={{ color: '#00ff00', weight: 3, fillColor: '#00ff00', fillOpacity: 0.2 }}
           >
             <Popup>
-              <div>
-                <p><strong>Mã vùng:</strong> {parcel.parcel_code}</p>
-                <p><strong>Nông hộ:</strong> {parcel.household?.name || 'N/A'}</p>
-                <p><strong>Cây trồng:</strong> {parcel.crop_type || 'Chưa có'}</p>
-                <p><strong>Diện tích:</strong> {parcel.area_ha} ha</p>
-                <p><strong>Trạng thái:</strong> {parcel.status}</p>
-              </div>
+              <ParcelPopupContent parcel={parcel} />
             </Popup>
           </GeoJSON>
         ) : null
