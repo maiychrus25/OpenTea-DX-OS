@@ -148,7 +148,7 @@ describe('NotificationBell Component', () => {
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/notifications', expect.objectContaining({
         method: 'PUT',
-        body: JSON.stringify({ id: '1' })
+        body: JSON.stringify({ id: '1', action: 'mark-read' })
       }))
     })
   })
