@@ -24,7 +24,7 @@ describe('NotificationBell Component', () => {
   it('TC-7.11-01: badge not visible when no unread notifications', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ notifications: [] }),
+      json: async () => ({ data: { notifications: [], unreadCount: 0 } }),
     })
 
     render(<NotificationBell role="manager" />, { wrapper })
@@ -40,12 +40,15 @@ describe('NotificationBell Component', () => {
   it('TC-7.11-02: badge shows unread count', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({
-        notifications: [
-          { id: '1', title: 'Test', detail: 'Detail', tone: 'green', created_at: new Date().toISOString(), read: false },
-          { id: '2', title: 'Test2', detail: 'Detail2', tone: 'amber', created_at: new Date().toISOString(), read: false },
-        ],
-      }),
+        json: async () => ({
+          data: {
+            notifications: [
+              { id: '1', title: 'Test', detail: 'Detail', tone: 'green', created_at: new Date().toISOString(), read: false },
+              { id: '2', title: 'Test2', detail: 'Detail2', tone: 'amber', created_at: new Date().toISOString(), read: false },
+            ],
+            unreadCount: 2,
+          },
+        }),
     })
 
     render(<NotificationBell role="manager" />, { wrapper })
@@ -115,9 +118,12 @@ describe('NotificationBell Component', () => {
       return Promise.resolve({
         ok: true,
         json: async () => ({
-          notifications: [
-            { id: '1', title: 'Test', detail: 'Detail', tone: 'green', created_at: new Date().toISOString(), read: false },
-          ],
+          data: {
+            notifications: [
+              { id: '1', title: 'Test', detail: 'Detail', tone: 'green', created_at: new Date().toISOString(), read: false },
+            ],
+            unreadCount: 1,
+          },
         }),
       })
     })
