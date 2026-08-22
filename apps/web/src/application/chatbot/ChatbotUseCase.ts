@@ -59,9 +59,38 @@ export class ChatbotUseCase {
       await this.persistMessage(sessionId, userId, 'user', message)
     }
 
+    // Fetch RAG context
+    let ragContextStr = ''
+    try {
+      const twoDaysAgo = new Date()
+      twoDaysAgo.setHours(twoDaysAgo.getHours() - 48)
+
+      const recentMarketData = await prisma.marketData.findMany({
+        where: { fetched_at: { gte: twoDaysAgo } },
+        orderBy: { fetched_at: 'desc' },
+        take: 50,
+      })
+      const latestFx = await prisma.fxRate.findFirst({
+        orderBy: { fetched_at: 'desc' },
+      })
+
+      if (recentMarketData.length > 0 || latestFx) {
+        ragContextStr += `\n\n--- DỮ LIỆU THỊ TRƯỜNG THỰC TẾ TRONG 48H QUA (DÙNG ĐỂ TRẢ LỜI): ---\n`
+        if (latestFx) {
+          ragContextStr += `Tỷ giá ngoại tệ tham chiếu (so với USD, định dạng JSON): ${JSON.stringify(latestFx.rates)}\n`
+        }
+        recentMarketData.forEach(r => {
+          ragContextStr += `- [${r.source}] ${r.commodity} - ${r.metric}: ${r.value} ${r.unit} (Thời gian: ${r.period})\n`
+        })
+        ragContextStr += `--- KẾT THÚC DỮ LIỆU THỊ TRƯỜNG ---\n`
+      }
+    } catch (e) {
+      logger.error("Failed to fetch RAG context", { error: e })
+    }
+
     try {
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: SYSTEM_PROMPT + ragContextStr },
         ...history.slice(-10).map(m => ({
           role: m.role as 'user' | 'assistant',
           content: m.content,
