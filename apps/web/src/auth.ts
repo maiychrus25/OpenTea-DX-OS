@@ -3,6 +3,7 @@
 
 import NextAuth from "next-auth"
 import Keycloak from "next-auth/providers/keycloak"
+import { logger } from "@/lib/logger"
 
 interface KeycloakProfile {
   realm_access?: {
@@ -43,7 +44,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             else if (roles.includes("farmer")) token.role = "farmer";
           }
         } catch (e) {
-          console.error("Failed to decode access token", e);
+          logger.error("Failed to decode access token", { error: e });
         }
       }
       return token;

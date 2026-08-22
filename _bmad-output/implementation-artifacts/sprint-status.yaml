@@ -122,7 +122,7 @@ development_status:
   1-2-design-system-shared-components:   superseded-by-7-1
   1-3-database-schema-prisma:            done  # Prisma exists + static/migration tests added; schema/migration/API contract reconciliation remains in 0-1/10-1
   1-4-hexagonal-architecture-scaffold:   done
-  1-5-keycloak-auth-role-routing:        partial  # Auth works; fail-closed for unknown/missing role added (middleware); canonical routes verified. Integration test evidence remains for full done.
+  1-5-keycloak-auth-role-routing:        done     # Auth works; fail-closed for unknown/missing role added (middleware); canonical routes verified. Integration test evidence added.
   1-6-htx-profile-page:                  done
   1-7-n8n-market-data-pipelines:         partial  # Workflows exist; source/schedule/schema/idempotency evidence is owned by 0-2
 
