@@ -42,7 +42,7 @@ async function applyParcelStatus(tx: any, parcelId: string, activityType: string
   let newStatus: ParcelStatus | undefined = undefined
   if (activityType === ActivityType.SOWING) newStatus = ParcelStatus.SOWING
   else if (activityType === ActivityType.HARVEST) newStatus = ParcelStatus.HARVESTED
-  else if ([ActivityType.FERTILIZING, ActivityType.SPRAYING, ActivityType.IRRIGATION, ActivityType.OTHER].includes(activityType as ActivityType)) {
+  else if (([ActivityType.FERTILIZING, ActivityType.SPRAYING, ActivityType.IRRIGATION, ActivityType.OTHER] as ActivityType[]).includes(activityType as ActivityType)) {
     newStatus = ParcelStatus.TENDING
   }
 
