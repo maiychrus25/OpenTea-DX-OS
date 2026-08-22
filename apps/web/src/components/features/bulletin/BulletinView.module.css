@@ -55,6 +55,20 @@
   padding-left: 1.5em;
 }
 
+.content li {
+  margin-bottom: 0.25em;
+  list-style-type: disc;
+}
+
+.content hr {
+  margin: 1.5rem 0;
+  border-top: 1px dashed var(--border, #e5e7eb);
+}
+
+.content strong {
+  font-weight: 700;
+}
+
 .footer {
   margin-top: 1rem;
   padding-top: 1rem;

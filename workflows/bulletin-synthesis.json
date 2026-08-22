@@ -63,6 +63,7 @@
     },
     {
       "parameters": {
+        "mode": "runOnceForEachItem",
         "jsCode": "const fxRates = $('Fetch FX Rates').first().json.rates || {};\nconst usdToVnd = fxRates.VND || 25000;\n\nconst commodity = $input.item.json.commodity;\nconst dataArr = $input.item.json.data || [];\n\nlet rawContext = `Dữ liệu thị trường cho ${commodity} trong 48h qua:\\n`;\nlet sources = [];\n\ndataArr.forEach(row => {\n  rawContext += `- [${row.source}] ${row.metric}: ${row.value} ${row.unit} (Thời gian: ${row.period})\\n`;\n  sources.push({\n    source: row.source,\n    metric: row.metric,\n    value: row.value,\n    date: row.period\n  });\n});\n\nrawContext += `\\nTỷ giá tham chiếu: 1 USD = ${usdToVnd} VND.`;\n\nreturn {\n  commodity: commodity,\n  raw_context: rawContext,\n  sources_json: sources\n};"
       },
       "id": "code-rag",
@@ -100,7 +101,7 @@
             },
             {
               "name": "messages",
-              "value": "={{ [\n  {\n    \"role\": \"system\",\n    \"content\": \"Bạn là chuyên gia phân tích thị trường nông nghiệp. Hãy viết bản tin thị trường bằng tiếng Việt ngắn gọn, súc tích. KHÔNG bao gồm suy luận hay giải thích quá trình suy nghĩ. Chỉ trả về bản tin hoàn chỉnh. QUY TẮC AI INVARIANT BẮT BUỘC:\\n1. CHỈ trình bày sự thật có trích dẫn nguồn.\\n2. KHÔNG ra quyết định thay HTX.\\n3. KHÔNG khuyến nghị hành động cụ thể.\\n4. Mọi số liệu phải kèm nguồn.\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": $json.raw_context\n  }\n] }}"
+              "value": "={{ [\n  {\n    \"role\": \"system\",\n    \"content\": \"Bạn là chuyên gia phân tích thị trường nông nghiệp Việt Nam. TOÀN BỘ bản tin PHẢI viết bằng tiếng Việt - tuyệt đối không dùng tiếng Anh kể cả tên chỉ số.\\n\\nBẢNG DỊCH THUẬT BẮT BUỘC (dùng tên tiếng Việt thay cho tiếng Anh):\\n- cereal_yield / Cereal yield → Năng suất ngũ cốc\\n- cereal_production / Cereal production → Sản lượng ngũ cốc\\n- Cereal Yield → Năng suất ngũ cốc\\n- Cereal Production → Sản lượng ngũ cốc\\n- export_value → Giá trị xuất khẩu\\n- export_volume → Khối lượng xuất khẩu\\n- yield_kg_per_ha → Năng suất (kg/ha)\\n- tonnes → tấn\\n- million_USD → triệu USD\\n- kg/ha → kg/ha\\n\\nBẮT BUỘC TRÌNH BÀY THEO FORMAT MARKDOWN SAU - ĐẦY ĐỦ 4 MỤC, KHÔNG ĐƯỢC BỎ SÓT:\\n\\n### Tổng quan thị trường\\n- [Tóm tắt xu hướng chính bằng 1-2 câu ngắn gọn]\\n\\n### Chi tiết theo phân khúc\\n- **[Thị trường/chỉ số bằng tiếng Việt]**: [Giá trị + nguồn]\\n\\n---\\n*Tỷ giá tham chiếu: 1 USD = ... VND*\\n\\n### Ý nghĩa với hợp tác xã Việt Nam\\n> Phần này giải thích các con số KHỔNG LỒ ở trên thành thông tin THIẾT THỰC cho nông dân/HTX nhỏ:\\n- **Xu hướng thị trường**: [Cầu đang tăng/giảm/ổn định vì lý do gì — giải thích đơn giản]\\n- **Tín hiệu giá**: [Dựa trên khối lượng xuất khẩu, giá nội địa có thể tăng/giảm/giữ nguyên — trình bày như một nhận xét khách quan có trích dẫn]\\n- **Thị trường chú ý**: [Quốc gia nào đang mua nhiều — điều này cho thấy gì về nhu cầu]\\n\\nQUY TẮC AI INVARIANT BẮT BUỘC:\\n1. CHỈ trình bày sự thật có trích dẫn nguồn.\\n2. KHÔNG ra quyết định thay HTX (không nói 'nên bán' hay 'nên giữ').\\n3. KHÔNG khuyến nghị hành động cụ thể.\\n4. Mọi số liệu phải kèm nguồn.\\n5. KHÔNG bao gồm suy luận hay giải thích quá trình suy nghĩ.\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": $json.raw_context\n  }\n] }}"
             }
           ]
         },
@@ -117,7 +118,8 @@
     },
     {
       "parameters": {
-        "jsCode": "// Strip <think>...</think> blocks from reasoning model output\nconst rawContent = $input.item.json.choices[0].message.content;\nconst cleanContent = rawContent.replace(/<think>[\\s\\S]*?<\\/think>/g, '').trim();\n\nreturn {\n  bulletin_text: cleanContent,\n  commodity: $('Code (Prepare RAG Context)').item.json.commodity,\n  sources_json: $('Code (Prepare RAG Context)').item.json.sources_json\n};"
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Strip <think>...</think> blocks from reasoning model output\nconst rawContent = $input.item.json.choices[0].message.content;\n// Match <think> up to </think> OR end of string if cut off\nconst cleanContent = rawContent.replace(/<think>[\\s\\S]*?(<\\/think>|$)/gi, '').trim();\n\nreturn {\n  bulletin_text: cleanContent,\n  commodity: $('Code (Prepare RAG Context)').item.json.commodity,\n  sources_json: $('Code (Prepare RAG Context)').item.json.sources_json\n};"
       },
       "id": "strip-thinking",
       "name": "Strip Thinking Block",
@@ -131,7 +133,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE bulletins SET is_latest = false WHERE commodity = '{{ $('Strip Thinking Block').item.json.commodity }}';"
+        "query": "UPDATE bulletins SET is_latest = false WHERE commodity = '{{ $json.commodity }}';\nINSERT INTO bulletins (commodity, bulletin_vi, sources_json, model_used, is_latest) VALUES ($${{ $json.commodity }}$$, $${{ $json.bulletin_text }}$$, $${{ JSON.stringify($json.sources_json) }}$$::jsonb, $${{ $env.OLLAMA_MODEL }}$$, true);"
       },
       "id": "deprecate-old",
       "name": "Deprecate Old Bulletins",

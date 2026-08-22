@@ -12,13 +12,100 @@ import styles from './MarketSummaryWidget.module.css';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-export function MarketSummaryWidget() {
+/**
+ * Format a value + unit pair into a human-friendly Vietnamese string.
+ * USD values are converted to VND using the live exchange rate.
+ */
+function formatMetricValue(
+  rawValue: number | string,
+  unit: string,
+  usdToVnd: number | string,
+): { displayValue: string; displayUnit: string } {
+  if (typeof rawValue !== 'number') return { displayValue: String(rawValue), displayUnit: unit };
+
+  const rate = typeof usdToVnd === 'number' ? usdToVnd : 26000;
+
+  if (unit === 'million_USD') {
+    // Convert million USD → VND
+    const vndTotal = rawValue * 1_000_000 * rate; // total VND
+    if (vndTotal >= 1_000_000_000_000) {
+      return {
+        displayValue: (vndTotal / 1_000_000_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 1 }),
+        displayUnit: 'nghìn tỷ đồng',
+      };
+    }
+    return {
+      displayValue: (vndTotal / 1_000_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 0 }),
+      displayUnit: 'tỷ đồng',
+    };
+  }
+
+  if (unit === 'tonnes') {
+    if (rawValue >= 1_000_000) {
+      return {
+        displayValue: (rawValue / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 2 }),
+        displayUnit: 'triệu tấn',
+      };
+    }
+    return {
+      displayValue: rawValue.toLocaleString('vi-VN'),
+      displayUnit: 'tấn',
+    };
+  }
+
+  if (unit === 'kg/ha') {
+    return {
+      displayValue: rawValue.toLocaleString('vi-VN', { maximumFractionDigits: 1 }),
+      displayUnit: 'kg/ha',
+    };
+  }
+
+  return {
+    displayValue: rawValue.toLocaleString('vi-VN'),
+    displayUnit: unit,
+  };
+}
+
+export function MarketSummaryWidget({ commodity = 'Gạo' }: { commodity?: string }) {
   const { data: fxData } = useSWR('/api/market-data/fx?pair=USD/VND', fetcher);
-  const { data: marketData } = useSWR('/api/market-data?commodity=Gạo', fetcher);
+  const { data: marketData } = useSWR(`/api/market-data?commodity=${encodeURIComponent(commodity)}`, fetcher);
 
   const fxValue = fxData?.data?.[0]?.rates?.VND || 'N/A'; 
-  const ricePrice = marketData?.data?.[0]?.value || 'N/A';
-  const unit = marketData?.data?.[0]?.unit || 'USD/MT';
+  const marketRow = marketData?.data?.[0];
+  const metricValue = marketRow?.value ?? 'N/A';
+  const unit = marketRow?.unit || '';
+  const metric = marketRow?.metric || '';
+
+  const { displayValue, displayUnit } = formatMetricValue(metricValue, unit, fxValue);
+
+  // Map metric name -> Vietnamese label
+  function getMetricLabel(metricKey: string, commodityName: string): string {
+    if (metricKey.startsWith('export_value_to_world'))  return `Giá trị XK ${commodityName}`;
+    if (metricKey.startsWith('export_volume_to_world')) return `Khối lượng XK ${commodityName}`;
+    if (metricKey === 'cereal_production')              return `Sản lượng ${commodityName}`;
+    if (metricKey === 'cereal_yield')                   return `Năng suất ${commodityName}`;
+    if (metricKey === 'yield_kg_per_ha')                return `Năng suất kg/ha`;
+    return `Chỉ số ${commodityName}`;
+  }
+
+  // Generate a plain-language signal for cooperative farmers
+  function getMarketSignal(metricKey: string, value: number | string, unitKey: string): string | null {
+    if (typeof value !== 'number') return null;
+    if (metricKey.startsWith('export_value_to_world') || metricKey.startsWith('export_volume_to_world')) {
+      if (unitKey === 'million_USD' && value > 1000)
+        return '📈 Kim ngạch xuất khẩu lớn — nhu cầu thế giới đang cao, có thể hỗ trợ giá nội địa.';
+      if (unitKey === 'tonnes' && value > 5_000_000)
+        return '📦 Khối lượng xuất khẩu lớn — thị trường quốc tế đang tiêu thụ mạnh.';
+      return '📊 Dữ liệu xuất khẩu phản ánh xu hướng cầu thế giới đối với mặt hàng này.';
+    }
+    if (metricKey === 'cereal_production')
+      return `🌾 Sản lượng toàn quốc lớn — nguồn cung dồi dào, HTX cần theo dõi giá thu mua địa phương.`;
+    if (metricKey === 'cereal_yield' || metricKey === 'yield_kg_per_ha')
+      return `🌱 Chỉ số năng suất bình quân cả nước — so sánh với năng suất thực tế của HTX để đánh giá hiệu quả.`;
+    return null;
+  }
+
+  const marketSignal = getMarketSignal(metric, metricValue, unit);
   
   return (
     <aside className={styles.widget}>
@@ -33,12 +120,15 @@ export function MarketSummaryWidget() {
         />
         <MetricCard
           icon={<TrendingUp size={20} />}
-          label="Giá xuất khẩu Gạo"
-          value={typeof ricePrice === 'number' ? ricePrice.toLocaleString('vi-VN') : ricePrice}
-          detail={unit}
+          label={getMetricLabel(metric, commodity)}
+          value={displayValue}
+          detail={displayUnit}
           tone="green"
         />
       </div>
+      {marketSignal && (
+        <p className={styles.signal}>{marketSignal}</p>
+      )}
       <div className={styles.sources}>
         <SourceBox count={2} sources={['Frankfurter', 'USDA']} />
       </div>

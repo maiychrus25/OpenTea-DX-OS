@@ -7,6 +7,7 @@ import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Bell, Volume2 } from 'lucide-react'
 import useSWR from 'swr'
+import { useNotificationSSE } from '@/hooks/useNotificationSSE'
 import styles from './NotificationBell.module.css'
 
 export interface NotificationBellProps {
@@ -32,11 +33,19 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ role }) => {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  const { data, mutate } = useSWR<{ notifications: Notification[] }>('/api/notifications?limit=5', fetcher, {
-    // DEV-003: Interim fallback using polling. Target contract is SSE. 
-    // Do not remove polling until SSE parity is fully established.
+  const { data, mutate } = useSWR<{ data: { notifications: Notification[], unreadCount: number } }>('/api/notifications?limit=5', fetcher, {
+    // DEV-003: Interim fallback using polling. Target contract is SSE.
+    // SSE integration below triggers revalidation. Do not remove polling until SSE parity is fully established.
     refreshInterval: 60000,
   })
+
+  // SSE integration: when new notification arrives via SSE, revalidate SWR data
+  const { latestNotification } = useNotificationSSE(true)
+  useEffect(() => {
+    if (latestNotification) {
+      mutate()
+    }
+  }, [latestNotification, mutate])
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -48,8 +57,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ role }) => {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const notifications = data?.notifications || []
-  const unreadCount = notifications.filter(n => !n.read).length
+  const notifications = data?.data?.notifications || []
+  const unreadCount = data?.data?.unreadCount || 0
 
   const handleMarkAsRead = async (id?: string) => {
     try {
@@ -57,9 +66,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ role }) => {
       if (data) {
         mutate(
           {
-            notifications: data.notifications.map((n) =>
-              id ? (n.id === id ? { ...n, read: true } : n) : { ...n, read: true }
-            ),
+            data: {
+              notifications: data.data.notifications.map((n) =>
+                id ? (n.id === id ? { ...n, read: true } : n) : { ...n, read: true }
+              ),
+              unreadCount: id ? Math.max(0, (data.data.unreadCount || 0) - 1) : 0,
+            },
           },
           false
         )
@@ -70,7 +82,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ role }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(id ? { id } : {}),
+        body: JSON.stringify(id ? { id, action: 'mark-read' } : { action: 'mark-all-read' }),
       })
       
       mutate() // Revalidate
@@ -128,6 +140,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ role }) => {
                     key={n.id}
                     href={n.link_url || '#'} 
                     className={`${styles.notifItem} ${!n.read ? styles.unread : ''}`}
+                    data-testid={`notif-item-${n.id}`}
                     onClick={(e) => {
                       if (!n.link_url) e.preventDefault()
                       handleNotificationClick(n)
@@ -157,15 +170,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ role }) => {
                             const url = URL.createObjectURL(blob);
                             const audio = new Audio(url);
                             audio.onended = () => URL.revokeObjectURL(url);
-                            audio.play().catch(err => {
-                              console.error('Audio play failed:', err);
+                            audio.play().catch(() => {
+                              // Audio autoplay may be blocked by browser
                             });
                           } else {
-                            console.error('TTS service unavailable');
                             alert('Dịch vụ đọc văn bản (TTS) hiện không khả dụng. Vui lòng thử lại sau.');
                           }
-                        } catch (err) {
-                          console.error('TTS error', err);
+                        } catch {
                           alert('Lỗi kết nối dịch vụ TTS. Vui lòng kiểm tra lại mạng.');
                         }
                       }}
