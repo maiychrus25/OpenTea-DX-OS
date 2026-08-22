@@ -4,6 +4,7 @@
 import { Metadata } from "next"
 import { CheckCircle, Leaf, Lock } from "lucide-react"
 import styles from "./login-page.module.css"
+import { Suspense } from "react"
 import { LoginForm } from "./_components/login-form"
 
 export const metadata: Metadata = {
@@ -46,7 +47,9 @@ export default function LoginPage() {
             <p className={styles.cardDesc}>Tiếp tục thông qua hệ thống định danh Keycloak của Hợp tác xã.</p>
           </div>
           
-          <LoginForm />
+          <Suspense fallback={<div className={styles.form}>Đang tải...</div>}>
+            <LoginForm />
+          </Suspense>
           
           <div className={styles.cardFooterNote}>
             <Lock size={14} className={styles.lockIcon} />

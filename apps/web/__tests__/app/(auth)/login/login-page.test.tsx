@@ -7,12 +7,10 @@ import '@testing-library/jest-dom'
 import LoginPage from '@/app/(auth)/login/page'
 import { LoginForm } from '@/app/(auth)/login/_components/login-form'
 
-// Mock the react-dom hooks used in client component
-let mockFormState: { error?: string } | null = null;
-jest.mock('react-dom', () => ({
-  ...jest.requireActual('react-dom'),
-  useFormState: () => [mockFormState, '/dummy-action'],
-  useFormStatus: () => ({ pending: false })
+// Mock the next/navigation hooks used in client component
+let mockSearchParams = new URLSearchParams();
+jest.mock('next/navigation', () => ({
+  useSearchParams: () => mockSearchParams
 }))
 
 // Mock the action to avoid ESM import issues with next-auth in Jest
@@ -22,7 +20,7 @@ jest.mock('@/app/(auth)/login/actions', () => ({
 
 describe('Login Page', () => {
   beforeEach(() => {
-    mockFormState = null;
+    mockSearchParams = new URLSearchParams();
   });
 
   it('1.5a-UNIT-001: renders brand name DX AgriMarket', () => {
@@ -51,11 +49,11 @@ describe('Login Page', () => {
     render(<LoginPage />)
     const button = screen.getByRole('button')
     expect(button).toBeInTheDocument()
-    expect(button).toHaveAttribute('type', 'submit')
+    expect(button).toHaveAttribute('type', 'button')
   })
 
   it('TC-7.6-04: Error Banner Visible on Keycloak Failure (Unit)', async () => {
-    mockFormState = { error: 'Không thể kết nối máy chủ xác thực.' };
+    mockSearchParams = new URLSearchParams('?error=Configuration');
     render(<LoginForm />)
     
     // The banner should be rendered due to the mocked state

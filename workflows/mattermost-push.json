@@ -18,7 +18,10 @@
       "name": "Cron Every 1 Minute",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
@@ -29,7 +32,10 @@
       "name": "Poll Unpushed Notifications",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [250, 0],
+      "position": [
+        250,
+        0
+      ],
       "credentials": {
         "postgres": {
           "id": "",
@@ -50,7 +56,7 @@
               "rightValue": "",
               "operator": {
                 "type": "string",
-                "operation": "isNotEmpty"
+                "operation": "notEmpty"
               }
             }
           ],
@@ -61,7 +67,10 @@
       "name": "Has Notifications?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [500, 0]
+      "position": [
+        500,
+        0
+      ]
     },
     {
       "parameters": {
@@ -71,7 +80,10 @@
       "name": "Format Mattermost Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [750, -100]
+      "position": [
+        750,
+        -100
+      ]
     },
     {
       "parameters": {
@@ -86,7 +98,10 @@
       "name": "POST to Mattermost Webhook",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1000, -100],
+      "position": [
+        1000,
+        -100
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "",
@@ -97,13 +112,16 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE notifications SET pushed_to_mattermost = true WHERE id = '{{ $json.id }}';"
+        "query": "UPDATE notifications SET pushed_to_mattermost = true WHERE id = '{{ $('Format Mattermost Message').item.json.id }}';"
       },
       "id": "a1b2c3d4-6666-4aaa-bbbb-000000000006",
       "name": "Mark as Pushed",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [1250, -100],
+      "position": [
+        1250,
+        -100
+      ],
       "credentials": {
         "postgres": {
           "id": "",
@@ -117,7 +135,10 @@
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
-      "position": [0, -300]
+      "position": [
+        0,
+        -300
+      ]
     },
     {
       "parameters": {
@@ -128,7 +149,10 @@
       "name": "Log Error to Postgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [250, -300],
+      "position": [
+        250,
+        -300
+      ],
       "credentials": {
         "postgres": {
           "id": "",

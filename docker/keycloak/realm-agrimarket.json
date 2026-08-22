@@ -1,11 +1,18 @@
 {
   "realm": "agrimarket",
+  "displayName": "DX AgriMarket",
   "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
   "roles": {
     "realm": [
       {
         "name": "manager",
-        "description": "Giám đốc HTX"
+        "description": "Trưởng HTX (Giám đốc Hợp tác xã)"
       },
       {
         "name": "officer",
@@ -19,15 +26,16 @@
   },
   "users": [
     {
-      "username": "manager01",
+      "username": "manager1",
       "enabled": true,
       "emailVerified": true,
       "firstName": "Manager",
-      "lastName": "01",
+      "lastName": "HTX",
+      "email": "manager1@agrimarket.local",
       "credentials": [
         {
           "type": "password",
-          "value": "123456",
+          "value": "Test1234!",
           "temporary": false
         }
       ],
@@ -36,15 +44,16 @@
       ]
     },
     {
-      "username": "officer01",
+      "username": "officer1",
       "enabled": true,
       "emailVerified": true,
       "firstName": "Officer",
-      "lastName": "01",
+      "lastName": "KT",
+      "email": "officer1@agrimarket.local",
       "credentials": [
         {
           "type": "password",
-          "value": "123456",
+          "value": "Test1234!",
           "temporary": false
         }
       ],
@@ -53,15 +62,16 @@
       ]
     },
     {
-      "username": "farmer01",
+      "username": "farmer1",
       "enabled": true,
       "emailVerified": true,
       "firstName": "Farmer",
-      "lastName": "01",
+      "lastName": "ND",
+      "email": "farmer1@agrimarket.local",
       "credentials": [
         {
           "type": "password",
-          "value": "123456",
+          "value": "Test1234!",
           "temporary": false
         }
       ],
@@ -86,7 +96,10 @@
       "publicClient": false,
       "protocol": "openid-connect",
       "directAccessGrantsEnabled": true,
-      "standardFlowEnabled": true
+      "standardFlowEnabled": true,
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3000/login"
+      }
     }
   ]
 }

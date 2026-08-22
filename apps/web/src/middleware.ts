@@ -7,54 +7,70 @@ import { isPublicResourcePath } from '@/lib/contracts/public-resource-path'
 
 export { isPublicResourcePath } from '@/lib/contracts/public-resource-path'
 
-export default auth((req) => {
-  const isLoggedIn = !!req.auth;
-  const { pathname } = req.nextUrl;
+const RECOGNIZED_ROLES = ['manager', 'officer', 'farmer'] as const
+type RecognizedRole = (typeof RECOGNIZED_ROLES)[number]
 
-  // CÃ¡c file public khÃ´ng cáº§n cháº·n (api/auth, _next, public assets)
+/**
+ * Pure function — extracts route-decision logic for testability.
+ * Returns a redirect path string, or null if the request should proceed.
+ */
+export function resolveAuthRedirect(
+  pathname: string,
+  isLoggedIn: boolean,
+  role: string | undefined,
+): string | null {
+  const lowerPath = pathname.toLowerCase()
+
+  // Static assets and auth endpoints — always allow
   if (
-    pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico"
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/_next') ||
+    pathname === '/favicon.ico'
   ) {
-    return NextResponse.next();
+    return null
   }
 
-  if (!isLoggedIn && pathname !== "/login") {
-    if (isPublicResourcePath(pathname)) {
-      return NextResponse.next();
-    }
-    return NextResponse.redirect(new URL("/login", req.url));
+  // Unauthenticated — allow public paths and /login, block everything else
+  if (!isLoggedIn) {
+    if (pathname === '/login' || isPublicResourcePath(pathname)) return null
+    return '/login'
   }
 
-  const role = req.auth?.user?.role;
-  const lowerPath = pathname.toLowerCase();
+  const isRecognized = RECOGNIZED_ROLES.includes(role as RecognizedRole)
 
-  // Protect Manager routes
-  if (lowerPath.startsWith("/manager") && role !== "manager") {
-    return NextResponse.redirect(new URL("/unauthorized", req.url));
+  // Fail-closed: authenticated but unknown/missing role → /unauthorized
+  // Guard: don't redirect /unauthorized or /login themselves (prevent infinite loop)
+  if (!isRecognized && pathname !== '/unauthorized' && pathname !== '/login') {
+    return '/unauthorized'
   }
 
-  // Protect Officer routes
-  if (lowerPath.startsWith("/officer") && role !== "officer") {
-    return NextResponse.redirect(new URL("/unauthorized", req.url));
+  // RBAC: protect role-specific routes
+  if (lowerPath.startsWith('/manager') && role !== 'manager') return '/unauthorized'
+  if (lowerPath.startsWith('/officer') && role !== 'officer') return '/unauthorized'
+  if (lowerPath.startsWith('/farmer')  && role !== 'farmer')  return '/unauthorized'
+
+  // Root redirect based on role
+  if (pathname === '/') {
+    if (role === 'manager') return '/manager/dashboard'
+    if (role === 'officer') return '/officer/dashboard'
+    if (role === 'farmer')  return '/farmer/dashboard'
+    // Fail-closed guard (belt-and-suspenders after isRecognized check)
+    return '/unauthorized'
   }
 
-  // Protect Farmer routes
-  if (lowerPath.startsWith("/farmer") && role !== "farmer") {
-    return NextResponse.redirect(new URL("/unauthorized", req.url));
-  }
+  return null // allow
+}
 
-  // Redirect tá»« trang chá»§ dá»±a theo role
-  if (pathname === "/" && isLoggedIn) {
-    if (role === "manager") return NextResponse.redirect(new URL("/manager/dashboard", req.url));
-    if (role === "officer") return NextResponse.redirect(new URL("/officer/dashboard", req.url));
-    if (role === "farmer") return NextResponse.redirect(new URL("/farmer/dashboard", req.url));
-  }
+export default auth((req) => {
+  const isLoggedIn = !!req.auth
+  const { pathname } = req.nextUrl
+  const role = req.auth?.user?.role
 
-  return NextResponse.next();
+  const redirect = resolveAuthRedirect(pathname, isLoggedIn, role)
+  if (redirect) return NextResponse.redirect(new URL(redirect, req.url))
+  return NextResponse.next()
 })
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/auth|api/health|api/dev-login).*)"],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/auth|api/health|api/dev-login).*)'],
 }

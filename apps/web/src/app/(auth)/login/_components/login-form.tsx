@@ -3,32 +3,37 @@
 
 'use client'
 
-import { useFormState, useFormStatus } from 'react-dom'
+import { useState } from 'react'
+import { signIn } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui"
 import styles from "../login-page.module.css"
-import { loginAction } from '../actions'
-
-function SubmitButton() {
-  const { pending } = useFormStatus()
-  
-  return (
-    <Button type="submit" className={styles.submitButton} isLoading={pending}>
-      Tiếp tục với Keycloak
-    </Button>
-  )
-}
 
 export function LoginForm() {
-  const [state, formAction] = useFormState(loginAction, null)
+  const [isLoading, setIsLoading] = useState(false)
+  const searchParams = useSearchParams()
+  const error = searchParams?.get('error')
+
+  const handleLogin = async () => {
+    setIsLoading(true)
+    await signIn("keycloak", { callbackUrl: "/" })
+  }
 
   return (
-    <form action={formAction} className={styles.form}>
-      {state?.error && (
+    <div className={styles.form}>
+      {error && (
         <div className={styles.errorBanner} role="alert">
-          {state.error}
+          {error === 'Configuration' ? 'Không thể kết nối máy chủ xác thực.' : 'Đăng nhập thất bại. Vui lòng thử lại.'}
         </div>
       )}
-      <SubmitButton />
-    </form>
+      <Button 
+        type="button" 
+        onClick={handleLogin} 
+        className={styles.submitButton} 
+        isLoading={isLoading}
+      >
+        Tiếp tục với Keycloak
+      </Button>
+    </div>
   )
 }
