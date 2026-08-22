@@ -21,7 +21,7 @@ export const journalCreateSchema = z.object({
 export const journalUpdateSchema = journalCreateSchema.partial()
 
 export const journalBatchApproveSchema = z.object({
-  entry_ids: z.array(z.string().min(1)).min(1, 'Cần ít nhất 1 mục'),
+  entry_ids: z.array(z.string().min(1)).min(1, 'Cần ít nhất 1 mục').max(50, 'Tối đa 50 mục mỗi lần duyệt'),
 })
 
 export type JournalCreateInput = z.infer<typeof journalCreateSchema>
