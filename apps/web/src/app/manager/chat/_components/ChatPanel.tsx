@@ -209,7 +209,7 @@ export function ChatPanel({ userId, userName }: ChatPanelProps) {
             </div>
             <div className={styles.messageContent}>
               <div className={styles.messageText}>
-                {msg.content || (msg.isStreaming && <Loader2 size={16} className={styles.spin} />)}
+                {msg.content ? msg.content.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').trim() : (msg.isStreaming && <Loader2 size={16} className={styles.spin} />)}
               </div>
               {msg.isStreaming && msg.content && (
                 <span className={styles.cursor}>▊</span>

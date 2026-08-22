@@ -11,6 +11,7 @@ interface KeycloakProfile {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   providers: [
     Keycloak({
       clientId: process.env.KEYCLOAK_CLIENT_ID || "nextjs-web",
