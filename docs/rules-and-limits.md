@@ -146,7 +146,7 @@ States: draft → pending_approval → approved | rejected
 Rules:
 - Only officer/farmer can CREATE (status = draft)
 - Only officer can SUBMIT for approval (draft → pending_approval)
-- Only manager can APPROVE or REJECT (pending_approval → approved/rejected)
+- Officer and manager can APPROVE or REJECT (pending_approval → approved/rejected)
 - APPROVED entry cannot be edited or deleted
 - REJECTED entry can be edited and re-submitted
 - Batch approve: max 50 entries per request
@@ -217,7 +217,7 @@ When journal entry is created:
 | View farm zone map | ✅ (read) | ✅ (write) | ❌ |
 | CRUD households + parcels | ❌ | ✅ | ❌ |
 | Create journal entries | ❌ | ✅ | ✅ (own) |
-| Approve journal entries | ✅ | ❌ | ❌ |
+| Approve journal entries | ✅ | ✅ | ❌ |
 | Create + export lots | ❌ | ✅ | ❌ |
 | View lots | ✅ | ✅ | ❌ |
 | Submit disease diagnosis | ❌ | ✅ | ✅ |
