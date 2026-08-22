@@ -2,6 +2,9 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import OpenAI from 'openai'
+// TODO(issue-239): Refactor to inject IChatHistoryRepository port via constructor
+// Currently imports prisma directly for chat history persistence (AD-15 violation, tech debt).
+// Plan: create IChatHistoryRepository in domain/repositories + PrismaChatHistoryRepository in infrastructure.
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { logger } from '@/lib/logger'
 
@@ -70,7 +73,7 @@ export class ChatbotUseCase {
         model: this.model,
         messages,
         stream: true,
-        max_tokens: 2048,
+        max_tokens: 6000,
         temperature: 0.3,
       })
 
@@ -87,8 +90,11 @@ export class ChatbotUseCase {
               }
             }
 
+            // Remove <think> blocks before extracting sources and saving to DB
+            const cleanReply = fullReply.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').trim()
+
             // Extract sources from reply (lines starting with "Nguồn:")
-            const sources = ChatbotUseCase.extractSources(fullReply)
+            const sources = ChatbotUseCase.extractSources(cleanReply)
 
             // Send metadata at end
             controller.enqueue(encoder.encode(JSON.stringify({
@@ -106,7 +112,7 @@ export class ChatbotUseCase {
                   session_id: sessionId,
                   user_id: userId,
                   role: 'ASSISTANT',
-                  content: fullReply,
+                  content: cleanReply,
                   sources_json: sources,
                   chat_type: 'market',
                 },
@@ -121,7 +127,8 @@ export class ChatbotUseCase {
           }
         },
       })
-    } catch {
+    } catch (error) {
+      console.error("GROQ API ERROR:", error)
       return this.unavailableStream()
     }
   }

@@ -33,6 +33,7 @@ export function NotificationInbox({ role }: NotificationInboxProps) {
   const [filter, setFilter] = useState<FilterType>('all')
   const [limit, setLimit] = useState(20)
   const [playingId, setPlayingId] = useState<string | null>(null)
+  const [ttsError, setTtsError] = useState<string | null>(null)
 
   const queryFilter = filter === 'unread' ? '&filter=unread' : ''
   const { data, mutate, isLoading } = useSWR<{ data: { notifications: Notification[], unreadCount: number } }>(
@@ -109,12 +110,14 @@ export function NotificationInbox({ role }: NotificationInboxProps) {
           setPlayingId(null)
         })
       } else {
-        alert('Dịch vụ TTS hiện không khả dụng.')
+        setTtsError('Dịch vụ TTS hiện không khả dụng.')
         setPlayingId(null)
+        setTimeout(() => setTtsError(null), 4000)
       }
     } catch {
-      alert('Lỗi kết nối dịch vụ TTS.')
+      setTtsError('Lỗi kết nối dịch vụ TTS. Vui lòng kiểm tra lại mạng.')
       setPlayingId(null)
+      setTimeout(() => setTtsError(null), 4000)
     }
   }
 
@@ -131,6 +134,11 @@ export function NotificationInbox({ role }: NotificationInboxProps) {
 
   return (
     <div className={styles.container}>
+      {ttsError && (
+        <div className={styles.ttsErrorBanner} role="alert">
+          {ttsError}
+        </div>
+      )}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <Bell size={24} className={styles.bellIcon} />

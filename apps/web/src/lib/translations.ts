@@ -18,8 +18,9 @@ const reverseCommodityMap: Record<string, string> = Object.fromEntries(
 );
 
 export function toEnglishCommodity(viName: string): string {
-  // If it's already an English name (e.g. Rice), return it.
-  if (reverseCommodityMap[viName]) return viName; 
+  // If the input exists as a key in reverseCommodityMap, it IS already an English name (e.g. 'Rice').
+  // reverseCommodityMap maps English → Vietnamese, so if viName is found there, it's English — return as-is.
+  if (reverseCommodityMap[viName]) return viName;
   return commodityMap[viName] || viName;
 }
 
