@@ -108,7 +108,7 @@ describe('NotificationBell Component', () => {
 
   it('TC-7.11-08: clicking a notification marks it as read via PUT /api/notifications', async () => {
     // Use mockImplementation so SWR refetches (focus, dedup) don't exhaust the mock
-    ;(global.fetch as jest.Mock).mockImplementation((url: string, opts?: RequestInit) => {
+    ;(global.fetch as jest.Mock).mockImplementation((_url: string, opts?: RequestInit) => {
       if (opts?.method === 'PUT') {
         return Promise.resolve({ ok: true, json: async () => ({}) })
       }
