@@ -11,7 +11,7 @@ import { ParcelStatus, ActivityType } from '@prisma/client'
 describe('Story 3.4: Parcel Status Auto-Derivation', () => {
   const isDbError = (e: unknown) => {
     const str = String(e)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- e is unknown but we check for Prisma code property safely
+    // Reason for any: e is unknown but we check for Prisma code property safely
     return str.includes('Can\'t reach database server') || str.includes('Invalid `prisma.') || (e as any)?.code?.startsWith('P')
   }
 

@@ -38,7 +38,7 @@ function mapEntry(e: any): JournalEntryData {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma transaction client type is complex to import directly here
+// Reason for any: Prisma transaction client type is complex to import directly here
 async function applyParcelStatus(tx: any, parcelId: string, activityType: string, entryDate: Date) {
   let newStatus: ParcelStatus | undefined = undefined
   if (activityType === ActivityType.SOWING) newStatus = ParcelStatus.SOWING
