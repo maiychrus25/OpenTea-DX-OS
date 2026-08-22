@@ -19,8 +19,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     })
   ],
   callbacks: {
-    async jwt({ token, profile }) {
+    async jwt({ token, profile, account }) {
       if (profile) {
+        // Extract role from Keycloak realm_access (UserInfo endpoint)
         const kp = profile as KeycloakProfile;
         if (kp.realm_access && Array.isArray(kp.realm_access.roles)) {
           const roles = kp.realm_access.roles;
@@ -29,11 +30,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           else if (roles.includes("farmer")) token.role = "farmer";
         }
       }
+      
+      // Fallback: Decode access_token (which usually contains realm_access)
+      if (!token.role && account?.access_token) {
+        try {
+          const decoded = JSON.parse(Buffer.from(account.access_token.split('.')[1], 'base64').toString('utf8'));
+          if (decoded.realm_access && Array.isArray(decoded.realm_access.roles)) {
+            const roles = decoded.realm_access.roles;
+            if (roles.includes("manager")) token.role = "manager";
+            else if (roles.includes("officer")) token.role = "officer";
+            else if (roles.includes("farmer")) token.role = "farmer";
+          }
+        } catch (e) {
+          console.error("Failed to decode access token", e);
+        }
+      }
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token.role) {
-        session.user.role = token.role as 'manager' | 'officer' | 'farmer';
+      if (session.user) {
+        if (token.role) {
+          session.user.role = token.role as 'manager' | 'officer' | 'farmer';
+        }
+        if (token.sub) {
+          session.user.id = token.sub;
+        }
       }
       return session;
     }
