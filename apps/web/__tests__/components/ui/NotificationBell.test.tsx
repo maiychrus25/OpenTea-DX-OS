@@ -124,10 +124,10 @@ describe('NotificationBell Component', () => {
 
     render(<NotificationBell role="manager" />, { wrapper })
 
-    // Wait for SWR to load data before clicking
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalled()
-    })
+    // Wait for SWR to load AND component to re-render with data
+    // Badge appearing is the reliable signal that data is loaded and rendered
+    const badge = await screen.findByTestId('notif-badge')
+    expect(badge).toHaveTextContent('1')
     
     const bell = await screen.findByTestId('bell-button')
     const user = userEvent.setup()
