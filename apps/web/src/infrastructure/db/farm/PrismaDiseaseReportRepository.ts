@@ -27,4 +27,13 @@ export class PrismaDiseaseReportRepository implements DiseaseReportPort {
       created_at: report.created_at,
     };
   }
+
+  async findLatestByParcelId(parcelId: string): Promise<{ photo_minio_key: string; detection_date: Date } | null> {
+    const report = await prisma.diseaseReport.findFirst({
+      where: { parcel_id: parcelId },
+      orderBy: { detection_date: 'desc' },
+      select: { photo_minio_key: true, detection_date: true }
+    });
+    return report;
+  }
 }

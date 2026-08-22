@@ -1,0 +1,59 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.popupContainer {
+  min-width: 200px;
+}
+
+.popupTitle {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.popupRow {
+  margin: 4px 0;
+}
+
+.farmViewSection {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.farmViewTitle {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.loadingText {
+  font-size: 12px;
+  color: gray;
+  margin: 0;
+}
+
+.imageWrapper {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.imageDate {
+  font-size: 11px;
+  color: gray;
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.placeholder {
+  width: 100%;
+  height: 100px;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
