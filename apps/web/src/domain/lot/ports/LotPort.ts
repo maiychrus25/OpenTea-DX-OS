@@ -7,8 +7,9 @@ export interface LotSummary {
   id: string
   lot_code: string
   commodity: string
-  packaging_date: Date | null
-  total_weight_kg: number | null
+  harvest_date: Date
+  estimated_weight_kg: number | null
+  actual_weight_kg: number | null
   status: string
   parcel_count: number
   created_at: Date

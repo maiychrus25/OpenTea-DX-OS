@@ -9,6 +9,8 @@ import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository
 import { ListLotsUseCase } from '@/application/lot/ListLotsUseCase'
 import { CreateLotUseCase } from '@/application/lot/CreateLotUseCase'
 import { prisma } from '@/infrastructure/db/prisma.client'
+import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
+import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 
 async function getLots(request: Request) {
   const session = await auth()
@@ -50,8 +52,11 @@ async function postLot(request: Request) {
     return NextResponse.json({ error: { code: 'DOMAIN_ERROR', message: 'HTX Profile not found' } }, { status: 422 })
   }
 
-  const repo = new PrismaLotRepository()
-  const useCase = new CreateLotUseCase(repo)
+  const lotRepo = new PrismaLotRepository()
+  const parcelRepo = new PrismaParcelRepository()
+  const journalRepo = new PrismaJournalRepository()
+  
+  const useCase = new CreateLotUseCase(lotRepo, parcelRepo, journalRepo)
   const data = await useCase.execute({
     commodity: parse.data.crop,
     harvest_date: new Date(parse.data.harvest_date),

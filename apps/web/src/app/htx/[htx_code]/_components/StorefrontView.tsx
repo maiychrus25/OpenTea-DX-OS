@@ -74,7 +74,7 @@ export function StorefrontView({ htx }: StorefrontViewProps) {
                 <div className={styles.lotInfo}>
                   <div className={styles.lotName}>{lot.commodity}</div>
                   <div className={styles.lotDetail}>
-                    Mã lô: {lot.lot_code} &bull; Số lượng: {lot.total_weight_kg ? `${lot.total_weight_kg} kg` : 'Chưa cập nhật'}
+                    Mã lô: {lot.lot_code} &bull; Số lượng: {lot.estimated_weight_kg ? `${lot.estimated_weight_kg} kg` : 'Chưa cập nhật'}
                   </div>
                 </div>
                 <div className={styles.lotActions}>
