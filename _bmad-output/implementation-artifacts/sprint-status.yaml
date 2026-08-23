@@ -199,7 +199,7 @@ development_status:
   5-5-officer-disease-report-review:     ready-for-dev
   5-6-broadcast-announcement-manager:    ready-for-dev
   5-7-mattermost-push-notification:      ready-for-dev
-  5-8-n8n-weekly-officer-reminder:       partial        # Workflow exists; artifact/BA behavior and recipient/dedup evidence remain in 0-2
+  5-8-n8n-weekly-officer-reminder:       done
 
   # ── Epic 6: Docs, Chatbot & Storefront ───────────────────────────────────
   epic-6: in-progress

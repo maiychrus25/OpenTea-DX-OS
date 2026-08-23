@@ -1,7 +1,7 @@
 {
   "id": "officer-reminder",
   "name": "Weekly Officer Reminder",
-  "note": "Story 5.8: n8n cron job mỗi thứ Sáu 16:00 tự động nhắc Officer có pending journal entries chưa duyệt.",
+  "note": "Story 5.8: n8n cron job mỗi thứ Sáu 16:00 tự động nhắc Officer có pending journal entries và disease reports chưa duyệt.",
   "nodes": [
     {
       "parameters": {
@@ -23,10 +23,10 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT submitted_by_id as officer_id, count(*) as pending_count FROM journal_entries WHERE status = 'PENDING_APPROVAL' AND created_at < NOW() - INTERVAL '7 days' GROUP BY submitted_by_id;"
+        "query": "SELECT (SELECT count(*)::int FROM journal_entries WHERE status = 'PENDING_APPROVAL') as pending_journals, (SELECT count(*)::int FROM disease_reports WHERE status = 'PENDING') as pending_diseases;"
       },
       "id": "b1b2c3d4-0000-5aaa-bbbb-000000000002",
-      "name": "Query Pending Journals",
+      "name": "Query Pending Counts",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [250, 0],
@@ -39,24 +39,74 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO notifications (id, recipient_id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, '{{$json.officer_id}}', 'SYSTEM', 'Nhắc nhở duyệt cuối tuần', 'Bạn có ' || '{{$json.pending_count}}' || ' nhật ký chờ duyệt. Vui lòng phê duyệt trước cuối tuần.', NOW(), false);"
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "7bf36f90-1c66-41b1-b962-cf0a9ff3d854",
+              "leftValue": "={{ $json.pending_journals }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "larger"
+              }
+            },
+            {
+              "id": "8bf36f90-1c66-41b1-b962-cf0a9ff3d855",
+              "leftValue": "={{ $json.pending_diseases }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "larger"
+              }
+            }
+          ],
+          "combinator": "or"
+        }
       },
       "id": "b1b2c3d4-0000-5aaa-bbbb-000000000003",
-      "name": "Create Web Bell Notification",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
-      "position": [500, 0],
+      "name": "Has Pending Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [500, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const journals = $json.pending_journals;\nconst diseases = $json.pending_diseases;\nconst text = `🚨 **Nhắc nhở công việc cuối tuần**\\nHiện tại đang có:\\n- **${journals}** nhật ký chờ duyệt\\n- **${diseases}** báo cáo bệnh chưa xử lý\\n\\nCán bộ Kỹ thuật vui lòng kiểm tra và xử lý trước cuối tuần nhé!`;\nreturn { json: { text } };"
+      },
+      "id": "b1b2c3d4-0000-5aaa-bbbb-000000000004",
+      "name": "Format Mattermost Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, -50]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MATTERMOST_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.text }) }}",
+        "options": {}
+      },
+      "id": "b1b2c3d4-0000-5aaa-bbbb-000000000005",
+      "name": "POST to Mattermost Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, -50],
       "credentials": {
-        "postgres": {
+        "httpHeaderAuth": {
           "id": "",
-          "name": "Postgres account"
+          "name": "Mattermost Webhook"
         }
       }
     },
     {
       "parameters": {},
-      "id": "b1b2c3d4-0000-5aaa-bbbb-000000000004",
+      "id": "b1b2c3d4-0000-5aaa-bbbb-000000000006",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
@@ -65,9 +115,9 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO notifications (id, recipient_id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, NULL, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
+        "query": "INSERT INTO notifications (id, type, title, body, created_at, is_read) VALUES (gen_random_uuid()::text, 'SYSTEM', 'n8n Workflow Error', 'Workflow ' || '{{$workflow.name}}' || ' failed (Execution ID: ' || '{{$json.execution.id}}' || ')', NOW(), false);"
       },
-      "id": "b1b2c3d4-0000-5aaa-bbbb-000000000005",
+      "id": "b1b2c3d4-0000-5aaa-bbbb-000000000007",
       "name": "Log Error to Postgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
@@ -85,18 +135,40 @@
       "main": [
         [
           {
-            "node": "Query Pending Journals",
+            "node": "Query Pending Counts",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Query Pending Journals": {
+    "Query Pending Counts": {
       "main": [
         [
           {
-            "node": "Create Web Bell Notification",
+            "node": "Has Pending Items?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Pending Items?": {
+      "main": [
+        [
+          {
+            "node": "Format Mattermost Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Mattermost Message": {
+      "main": [
+        [
+          {
+            "node": "POST to Mattermost Webhook",
             "type": "main",
             "index": 0
           }
