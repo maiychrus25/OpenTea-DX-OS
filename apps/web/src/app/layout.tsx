@@ -20,6 +20,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'DX-AgriMarket',
   description: 'Há»‡ Ä‘iá» u hÃ nh sá»‘ NÃ´ng nghiá»‡p',
+  manifest: '/manifest.json',
 }
 
 export default function RootLayout({

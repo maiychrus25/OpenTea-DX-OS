@@ -8,6 +8,7 @@ import { Pill } from '@/components/ui'
 import styles from '../diagnosis.module.css'
 import { getDiagnosisHistory } from '../actions'
 import { DiagnosisHistoryItem } from '@/domain/disease/ports/disease-report.port'
+import { useOfflineSync } from '@/lib/hooks/useOfflineSync'
 
 interface DiagnosisClientProps {
   initialParcels: { id: string; parcel_code: string; name: string }[]
@@ -21,8 +22,11 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<{ disease: string; confidence: number } | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
   
   const [history, setHistory] = useState<DiagnosisHistoryItem[]>(initialHistory)
+
+  const { isOnline, queueCount, isSyncing, saveToQueue } = useOfflineSync()
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -40,7 +44,21 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
 
     setIsAnalyzing(true)
     setErrorMsg(null)
+    setSuccessMsg(null)
     
+    if (!isOnline) {
+      const saved = await saveToQueue(selectedParcelId, selectedFile)
+      if (saved) {
+        setSuccessMsg('Đang ngoại tuyến. Đã lưu ảnh vào hàng đợi chờ đồng bộ.')
+        setSelectedFile(null)
+        setResult(null)
+      } else {
+        setErrorMsg('Không thể lưu ảnh vào bộ nhớ tạm.')
+      }
+      setIsAnalyzing(false)
+      return
+    }
+
     try {
       const formData = new FormData()
       formData.append('image', selectedFile)
@@ -77,6 +95,7 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
     setSelectedFile(null)
     setResult(null)
     setErrorMsg(null)
+    setSuccessMsg(null)
   }
 
   return (
@@ -84,6 +103,17 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
       <div className={styles.header}>
         <h1 className={styles.title}>Chẩn đoán bệnh tự động</h1>
         <p className={styles.subtitle}>Tải ảnh lá bệnh lên để AI hỗ trợ nhận diện. Kết quả sẽ tự động được lưu và thông báo cho Cán bộ Kỹ thuật.</p>
+        
+        {!isOnline && (
+          <div className={styles.offlineBanner}>
+            ⚠️ Bạn đang ngoại tuyến. Hình ảnh sẽ được lưu vào máy và tự động tải lên khi có mạng (Đang chờ: {queueCount}).
+          </div>
+        )}
+        {isOnline && queueCount > 0 && (
+          <div className={styles.syncBanner}>
+            🔄 Đang đồng bộ {queueCount} hình ảnh từ bộ nhớ tạm... {isSyncing ? '(Đang xử lý)' : ''}
+          </div>
+        )}
       </div>
 
       <div className={styles.layout}>
@@ -115,6 +145,11 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
             {errorMsg && (
               <div className={styles.errorBox}>
                 {errorMsg}
+              </div>
+            )}
+            {successMsg && (
+              <div className={styles.successBox} style={{ backgroundColor: '#ecfdf5', color: '#065f46', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+                {successMsg}
               </div>
             )}
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2026 OpenTea Developers
+﻿/* Copyright (c) 2026 OpenTea Developers
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
 .container {
@@ -299,4 +299,25 @@
   font-size: 0.75rem;
   margin-bottom: 0.5rem;
 }
+
+
+.offlineBanner {
+  background-color: #fff3e0;
+  color: #e65100;
+  padding: 1rem;
+  border-radius: var(--rounded-md);
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+.syncBanner {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  padding: 1rem;
+  border-radius: var(--rounded-md);
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+
 
