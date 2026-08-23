@@ -189,6 +189,7 @@ model JournalActivity {
   product_name     String? // for Spraying/Fertilizing
   dosage           String?
   withdrawal_days  Int? // for Spraying
+  safe_harvest_date DateTime? // entry_date + withdrawal_days
   created_at       DateTime     @default(now())
 
   @@map("journal_activities")

@@ -31,6 +31,7 @@ export interface JournalEntryData {
     product_name: string | null
     dosage: string | null
     withdrawal_days: number | null
+    safe_harvest_date: Date | null
   }[]
 }
 

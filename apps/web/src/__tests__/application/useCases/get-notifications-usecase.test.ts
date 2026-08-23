@@ -17,6 +17,7 @@ describe('GetNotificationsUseCase', () => {
       delete: jest.fn(),
       updatePreferences: jest.fn(),
       broadcastAnnouncement: jest.fn(),
+      broadcastHarvestApproved: jest.fn(),
     }
     useCase = new GetNotificationsUseCase(mockPort)
   })
