@@ -36,4 +36,28 @@ export class PrismaDiseaseReportRepository implements DiseaseReportPort {
     });
     return report;
   }
+
+  async findHistoryByFarmer(farmerId: string) {
+    const reports = await prisma.diseaseReport.findMany({
+      where: { detected_by_id: farmerId },
+      orderBy: { detection_date: 'desc' },
+      include: {
+        parcel: {
+          select: {
+            parcel_code: true
+          }
+        }
+      }
+    });
+
+    return reports.map(r => ({
+      id: r.id,
+      detection_date: r.detection_date,
+      photo_minio_key: r.photo_minio_key,
+      ai_disease_name: r.ai_disease_name,
+      ai_confidence: r.ai_confidence,
+      status: r.status,
+      parcel_code: r.parcel.parcel_code
+    }));
+  }
 }

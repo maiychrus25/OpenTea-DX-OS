@@ -230,3 +230,73 @@
   color: white;
   border: none;
 }
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 400px;
+  text-align: left;
+}
+
+.label {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.select {
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rounded-md);
+  background-color: var(--color-surface);
+  font-size: 1rem;
+}
+
+.errorBox {
+  padding: 1rem;
+  background: #ffebee;
+  color: #c62828;
+  border-radius: var(--rounded-md);
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  width: 100%;
+}
+
+.emptyHistory {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.historyDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.historyParcel {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.historyImage {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: var(--rounded-sm);
+  margin-bottom: 0.5rem;
+}
+
+.historyImagePlaceholder {
+  width: 100%;
+  height: 120px;
+  background: var(--color-border-subtle);
+  border-radius: var(--rounded-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
