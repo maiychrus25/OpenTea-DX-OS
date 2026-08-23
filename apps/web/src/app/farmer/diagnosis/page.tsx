@@ -3,125 +3,173 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Pill } from '@/components/ui'
 import styles from './diagnosis.module.css'
-
-interface DiagnosisResult {
-  disease: string
-  confidence: number
-}
-
-interface DiagnosisHistory {
-  id: string
-  date: string
-  image: string
-  result: DiagnosisResult[]
-  status: 'PENDING' | 'SENT_TO_OFFICER' | 'RESOLVED'
-}
-
-const MOCK_HISTORY: DiagnosisHistory[] = [
-  {
-    id: '1',
-    date: '15/08/2026',
-    image: 'IMG_20260815.jpg',
-    result: [{ disease: 'Sâu khoang', confidence: 92 }],
-    status: 'RESOLVED'
-  }
-]
+import { getFarmerParcels, getDiagnosisHistory } from './actions'
+import { DiagnosisHistoryItem } from '@/domain/disease/ports/disease-report.port'
 
 export default function DiagnosisPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [parcels, setParcels] = useState<{ id: string; parcel_code: string; name: string }[]>([])
+  const [selectedParcelId, setSelectedParcelId] = useState<string>('')
+  
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [results, setResults] = useState<DiagnosisResult[] | null>(null)
-  const [history, setHistory] = useState<DiagnosisHistory[]>(MOCK_HISTORY)
-  const [showSendConfirm, setShowSendConfirm] = useState(false)
+  const [result, setResult] = useState<{ disease: string; confidence: number } | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  
+  const [history, setHistory] = useState<DiagnosisHistoryItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      const [parcelsData, historyData] = await Promise.all([
+        getFarmerParcels(),
+        getDiagnosisHistory()
+      ])
+      setParcels(parcelsData)
+      setHistory(historyData)
+      if (parcelsData.length > 0) {
+        setSelectedParcelId(parcelsData[0].id)
+      }
+    } catch (error) {
+      console.error('Failed to load data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFile(e.target.files[0])
-      setResults(null)
+      setResult(null)
+      setErrorMsg(null)
     }
   }
 
-  const handleAnalyze = () => {
-    if (!selectedFile) return
+  const handleAnalyze = async () => {
+    if (!selectedFile || !selectedParcelId) {
+      setErrorMsg('Vui lòng chọn thửa đất và hình ảnh.')
+      return
+    }
+
     setIsAnalyzing(true)
-    setTimeout(() => {
-      // Mock AI response with multiple candidates and low confidence
-      setResults([
-        { disease: 'Đốm lá vi khuẩn', confidence: 65 },
-        { disease: 'Đạo ôn', confidence: 15 },
-      ])
+    setErrorMsg(null)
+    
+    try {
+      const formData = new FormData()
+      formData.append('image', selectedFile)
+      formData.append('parcel_id', selectedParcelId)
+
+      const response = await fetch('/api/diagnosis', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const json = await response.json()
+
+      if (!response.ok) {
+        throw new Error(json.error?.message || 'Có lỗi xảy ra khi chẩn đoán')
+      }
+
+      setResult({
+        disease: json.data.disease_name,
+        confidence: json.data.confidence_score,
+      })
+
+      // Refresh history
+      const updatedHistory = await getDiagnosisHistory()
+      setHistory(updatedHistory)
+      
+    } catch (error: any) {
+      setErrorMsg(error.message)
+    } finally {
       setIsAnalyzing(false)
-    }, 1500)
+    }
   }
 
-  const handleSendToOfficer = () => {
-    setShowSendConfirm(false)
-    setHistory(prev => [{
-      id: Date.now().toString(),
-      date: new Date().toLocaleDateString('vi-VN'),
-      image: selectedFile?.name || 'unknown.jpg',
-      result: results || [],
-      status: 'SENT_TO_OFFICER'
-    }, ...prev])
+  const resetForm = () => {
     setSelectedFile(null)
-    setResults(null)
+    setResult(null)
+    setErrorMsg(null)
   }
 
-  const highestConfidence = results ? Math.max(...results.map(r => r.confidence)) : 0
+  if (isLoading) {
+    return <div className={styles.container}>Đang tải dữ liệu...</div>
+  }
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>Chẩn đoán bệnh tự động</h1>
-        <p className={styles.subtitle}>Tải ảnh lá bệnh lên để AI hỗ trợ nhận diện (độ chính xác tùy thuộc chất lượng ảnh).</p>
+        <p className={styles.subtitle}>Tải ảnh lá bệnh lên để AI hỗ trợ nhận diện. Kết quả sẽ tự động được lưu và thông báo cho Cán bộ Kỹ thuật.</p>
       </div>
 
       <div className={styles.layout}>
         {/* Left Column: Upload & Result */}
         <div className={styles.mainPanel}>
           <div className={styles.uploadArea}>
-            <input type="file" id="fileInput" accept="image/*" className={styles.fileInput} onChange={handleFileSelect} />
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Chọn thửa đất:</label>
+              <select 
+                className={styles.select}
+                value={selectedParcelId}
+                onChange={(e) => setSelectedParcelId(e.target.value)}
+              >
+                {parcels.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.parcel_code})</option>
+                ))}
+              </select>
+            </div>
+
+            <input type="file" id="fileInput" accept="image/jpeg, image/png" className={styles.fileInput} onChange={handleFileSelect} />
             <label htmlFor="fileInput" className={styles.uploadLabel}>
               {selectedFile ? (
                 <span>Đã chọn: <strong>{selectedFile.name}</strong></span>
               ) : (
-                <span>Nhấn để chọn ảnh từ thư viện hoặc chụp mới</span>
+                <span>Nhấn để chọn ảnh (JPEG, PNG. Tối đa 5MB)</span>
               )}
             </label>
-            {selectedFile && (
+
+            {errorMsg && (
+              <div className={styles.errorBox}>
+                {errorMsg}
+              </div>
+            )}
+
+            {selectedFile && !result && (
               <button className={styles.analyzeBtn} onClick={handleAnalyze} disabled={isAnalyzing}>
-                {isAnalyzing ? 'Đang phân tích...' : 'Bắt đầu chẩn đoán'}
+                {isAnalyzing ? 'Đang phân tích và gửi cho CBKT...' : 'Bắt đầu chẩn đoán'}
               </button>
             )}
           </div>
 
-          {results && (
+          {result && (
             <div className={styles.resultArea}>
               <h3>Kết quả chẩn đoán:</h3>
-              {highestConfidence < 70 && (
+              {result.confidence < 70 && (
                 <div className={styles.warningBox}>
-                  ⚠️ <strong>Độ tự tin thấp:</strong> Hình ảnh có thể mờ hoặc không rõ triệu chứng. Vui lòng gửi cho Cán bộ Kỹ thuật để kiểm tra thêm.
+                  ⚠️ <strong>Độ tự tin thấp:</strong> Hình ảnh có thể mờ hoặc không rõ triệu chứng. Cán bộ Kỹ thuật đã nhận được thông báo và sẽ kiểm tra thêm.
                 </div>
               )}
               
               <ul className={styles.resultList}>
-                {results.map((r, i) => (
-                  <li key={i} className={styles.resultItem}>
-                    <span className={styles.diseaseName}>{r.disease}</span>
-                    <span className={styles.confidenceScore} style={{ color: r.confidence >= 70 ? 'var(--color-success)' : 'var(--color-warning)' }}>
-                      {r.confidence}%
-                    </span>
-                  </li>
-                ))}
+                <li className={styles.resultItem}>
+                  <span className={styles.diseaseName}>{result.disease}</span>
+                  <span className={styles.confidenceScore} style={{ color: result.confidence >= 70 ? 'var(--color-success)' : 'var(--color-warning)' }}>
+                    {result.confidence.toFixed(1)}%
+                  </span>
+                </li>
               </ul>
               
-              <p className={styles.aiNote}>* AI không đưa ra khuyến nghị điều trị. Hãy tham khảo ý kiến chuyên gia.</p>
+              <p className={styles.aiNote}>* AI không đưa ra khuyến nghị điều trị. Hãy tham khảo ý kiến chuyên gia. CBKT đã nhận được kết quả này.</p>
 
-              <button className={styles.sendBtn} onClick={() => setShowSendConfirm(true)}>
-                Gửi cho Cán bộ Kỹ thuật
+              <button className={styles.analyzeBtn} onClick={resetForm}>
+                Chẩn đoán hình ảnh khác
               </button>
             </div>
           )}
@@ -130,39 +178,33 @@ export default function DiagnosisPage() {
         {/* Right Column: History */}
         <div className={styles.sidePanel}>
           <h3>Lịch sử chẩn đoán</h3>
-          {history.map(h => (
-            <div key={h.id} className={styles.historyCard}>
-              <div className={styles.historyHeader}>
-                <span className={styles.historyDate}>{h.date}</span>
-                <Pill tone={h.status === 'SENT_TO_OFFICER' ? 'amber' : h.status === 'RESOLVED' ? 'green' : 'neutral'}>
-                  {h.status === 'SENT_TO_OFFICER' ? 'Chờ CBKT xem' : h.status === 'RESOLVED' ? 'Đã xử lý' : 'Nháp'}
-                </Pill>
+          {history.length === 0 ? (
+            <p className={styles.emptyHistory}>Chưa có lịch sử chẩn đoán.</p>
+          ) : (
+            history.map(h => (
+              <div key={h.id} className={styles.historyCard}>
+                <div className={styles.historyHeader}>
+                  <span className={styles.historyDate}>{new Date(h.detection_date).toLocaleDateString('vi-VN')}</span>
+                  <Pill tone={h.status === 'SENT_TO_OFFICER' || h.status === 'PENDING' ? 'amber' : h.status === 'RESOLVED' ? 'green' : 'neutral'}>
+                    {h.status === 'SENT_TO_OFFICER' || h.status === 'PENDING' ? 'Chờ CBKT xem' : h.status === 'RESOLVED' ? 'Đã xử lý' : h.status}
+                  </Pill>
+                </div>
+                <div className={styles.historyBody}>
+                  {h.photo_url ? (
+                    <img src={h.photo_url} alt="Disease" className={styles.historyImage} />
+                  ) : (
+                    <div className={styles.historyImagePlaceholder}>Ảnh không khả dụng</div>
+                  )}
+                  <div className={styles.historyDetails}>
+                    <div className={styles.historyParcel}>Thửa: {h.parcel_code}</div>
+                    <span className={styles.historyDisease}>{h.ai_disease_name} ({h.ai_confidence.toFixed(1)}%)</span>
+                  </div>
+                </div>
               </div>
-              <div className={styles.historyBody}>
-                <span>{h.image}</span>
-                <span className={styles.historyDisease}>{h.result[0]?.disease} ({h.result[0]?.confidence}%)</span>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
-
-      {showSendConfirm && (
-        <div className={styles.overlay} onClick={() => setShowSendConfirm(false)}>
-          <div className={styles.modal} onClick={e => e.stopPropagation()}>
-            <h2 className={styles.modalTitle}>Xác nhận gửi</h2>
-            <p style={{ marginBottom: '1.5rem', color: 'var(--color-text-muted)' }}>
-              Kết quả chẩn đoán và hình ảnh sẽ được gửi đến Cán bộ Kỹ thuật HTX để phân tích chuyên sâu. Bạn có chắc chắn muốn gửi?
-            </p>
-            <div className={styles.formActions}>
-              <button type="button" className={styles.cancelBtn} onClick={() => setShowSendConfirm(false)}>Hủy</button>
-              <button type="button" className={styles.submitBtn} onClick={handleSendToOfficer}>
-                Xác nhận gửi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

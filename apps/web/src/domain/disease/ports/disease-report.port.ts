@@ -21,4 +21,16 @@ export interface DiseaseReportPort {
     created_at: Date;
   }>;
   findLatestByParcelId(parcelId: string): Promise<{ photo_minio_key: string; detection_date: Date } | null>;
+  findHistoryByFarmer(farmerId: string): Promise<DiagnosisHistoryItem[]>;
+}
+
+export interface DiagnosisHistoryItem {
+  id: string;
+  detection_date: Date;
+  photo_minio_key: string;
+  ai_disease_name: string;
+  ai_confidence: number;
+  status: string;
+  parcel_code: string;
+  photo_url?: string;
 }
