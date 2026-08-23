@@ -1,210 +1,29 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-'use client'
-
-import React, { useState, useEffect } from 'react'
-import { Pill } from '@/components/ui'
-import styles from './diagnosis.module.css'
+import React from 'react'
 import { getFarmerParcels, getDiagnosisHistory } from './actions'
-import { DiagnosisHistoryItem } from '@/domain/disease/ports/disease-report.port'
+import { DiagnosisClient } from './_components/DiagnosisClient'
+import { redirect } from 'next/navigation'
 
-export default function DiagnosisPage() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [parcels, setParcels] = useState<{ id: string; parcel_code: string; name: string }[]>([])
-  const [selectedParcelId, setSelectedParcelId] = useState<string>('')
-  
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [result, setResult] = useState<{ disease: string; confidence: number } | null>(null)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  
-  const [history, setHistory] = useState<DiagnosisHistoryItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+export const metadata = {
+  title: 'Chẩn đoán bệnh | Nông dân',
+}
 
-  useEffect(() => {
-    loadData()
-  }, [])
+export default async function DiagnosisPage() {
+  try {
+    const [parcels, history] = await Promise.all([
+      getFarmerParcels(),
+      getDiagnosisHistory()
+    ])
 
-  const loadData = async () => {
-    try {
-      const [parcelsData, historyData] = await Promise.all([
-        getFarmerParcels(),
-        getDiagnosisHistory()
-      ])
-      setParcels(parcelsData)
-      setHistory(historyData)
-      if (parcelsData.length > 0) {
-        setSelectedParcelId(parcelsData[0].id)
-      }
-    } catch (error) {
-      console.error('Failed to load data:', error)
-    } finally {
-      setIsLoading(false)
+    return (
+      <DiagnosisClient initialParcels={parcels} initialHistory={history} />
+    )
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') {
+      redirect('/login')
     }
+    return <div>Có lỗi xảy ra khi tải dữ liệu: {error.message}</div>
   }
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0])
-      setResult(null)
-      setErrorMsg(null)
-    }
-  }
-
-  const handleAnalyze = async () => {
-    if (!selectedFile || !selectedParcelId) {
-      setErrorMsg('Vui lòng chọn thửa đất và hình ảnh.')
-      return
-    }
-
-    setIsAnalyzing(true)
-    setErrorMsg(null)
-    
-    try {
-      const formData = new FormData()
-      formData.append('image', selectedFile)
-      formData.append('parcel_id', selectedParcelId)
-
-      const response = await fetch('/api/diagnosis', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const json = await response.json()
-
-      if (!response.ok) {
-        throw new Error(json.error?.message || 'Có lỗi xảy ra khi chẩn đoán')
-      }
-
-      setResult({
-        disease: json.data.disease_name,
-        confidence: json.data.confidence_score,
-      })
-
-      // Refresh history
-      const updatedHistory = await getDiagnosisHistory()
-      setHistory(updatedHistory)
-      
-    } catch (error: any) {
-      setErrorMsg(error.message)
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
-  const resetForm = () => {
-    setSelectedFile(null)
-    setResult(null)
-    setErrorMsg(null)
-  }
-
-  if (isLoading) {
-    return <div className={styles.container}>Đang tải dữ liệu...</div>
-  }
-
-  return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Chẩn đoán bệnh tự động</h1>
-        <p className={styles.subtitle}>Tải ảnh lá bệnh lên để AI hỗ trợ nhận diện. Kết quả sẽ tự động được lưu và thông báo cho Cán bộ Kỹ thuật.</p>
-      </div>
-
-      <div className={styles.layout}>
-        {/* Left Column: Upload & Result */}
-        <div className={styles.mainPanel}>
-          <div className={styles.uploadArea}>
-            <div className={styles.inputGroup}>
-              <label className={styles.label}>Chọn thửa đất:</label>
-              <select 
-                className={styles.select}
-                value={selectedParcelId}
-                onChange={(e) => setSelectedParcelId(e.target.value)}
-              >
-                {parcels.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.parcel_code})</option>
-                ))}
-              </select>
-            </div>
-
-            <input type="file" id="fileInput" accept="image/jpeg, image/png" className={styles.fileInput} onChange={handleFileSelect} />
-            <label htmlFor="fileInput" className={styles.uploadLabel}>
-              {selectedFile ? (
-                <span>Đã chọn: <strong>{selectedFile.name}</strong></span>
-              ) : (
-                <span>Nhấn để chọn ảnh (JPEG, PNG. Tối đa 5MB)</span>
-              )}
-            </label>
-
-            {errorMsg && (
-              <div className={styles.errorBox}>
-                {errorMsg}
-              </div>
-            )}
-
-            {selectedFile && !result && (
-              <button className={styles.analyzeBtn} onClick={handleAnalyze} disabled={isAnalyzing}>
-                {isAnalyzing ? 'Đang phân tích và gửi cho CBKT...' : 'Bắt đầu chẩn đoán'}
-              </button>
-            )}
-          </div>
-
-          {result && (
-            <div className={styles.resultArea}>
-              <h3>Kết quả chẩn đoán:</h3>
-              {result.confidence < 70 && (
-                <div className={styles.warningBox}>
-                  ⚠️ <strong>Độ tự tin thấp:</strong> Hình ảnh có thể mờ hoặc không rõ triệu chứng. Cán bộ Kỹ thuật đã nhận được thông báo và sẽ kiểm tra thêm.
-                </div>
-              )}
-              
-              <ul className={styles.resultList}>
-                <li className={styles.resultItem}>
-                  <span className={styles.diseaseName}>{result.disease}</span>
-                  <span className={styles.confidenceScore} style={{ color: result.confidence >= 70 ? 'var(--color-success)' : 'var(--color-warning)' }}>
-                    {result.confidence.toFixed(1)}%
-                  </span>
-                </li>
-              </ul>
-              
-              <p className={styles.aiNote}>* AI không đưa ra khuyến nghị điều trị. Hãy tham khảo ý kiến chuyên gia. CBKT đã nhận được kết quả này.</p>
-
-              <button className={styles.analyzeBtn} onClick={resetForm}>
-                Chẩn đoán hình ảnh khác
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: History */}
-        <div className={styles.sidePanel}>
-          <h3>Lịch sử chẩn đoán</h3>
-          {history.length === 0 ? (
-            <p className={styles.emptyHistory}>Chưa có lịch sử chẩn đoán.</p>
-          ) : (
-            history.map(h => (
-              <div key={h.id} className={styles.historyCard}>
-                <div className={styles.historyHeader}>
-                  <span className={styles.historyDate}>{new Date(h.detection_date).toLocaleDateString('vi-VN')}</span>
-                  <Pill tone={h.status === 'SENT_TO_OFFICER' || h.status === 'PENDING' ? 'amber' : h.status === 'RESOLVED' ? 'green' : 'neutral'}>
-                    {h.status === 'SENT_TO_OFFICER' || h.status === 'PENDING' ? 'Chờ CBKT xem' : h.status === 'RESOLVED' ? 'Đã xử lý' : h.status}
-                  </Pill>
-                </div>
-                <div className={styles.historyBody}>
-                  {h.photo_url ? (
-                    <img src={h.photo_url} alt="Disease" className={styles.historyImage} />
-                  ) : (
-                    <div className={styles.historyImagePlaceholder}>Ảnh không khả dụng</div>
-                  )}
-                  <div className={styles.historyDetails}>
-                    <div className={styles.historyParcel}>Thửa: {h.parcel_code}</div>
-                    <span className={styles.historyDisease}>{h.ai_disease_name} ({h.ai_confidence.toFixed(1)}%)</span>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  )
 }
