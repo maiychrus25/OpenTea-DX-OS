@@ -89,6 +89,7 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
         area_ha: lp.parcel.area_ha,
         household_name: lp.parcel.household.name,
         crop_type: lp.parcel.crop_type,
+        status: lp.parcel.status
       })),
       journal_summaries: lot.lot_parcels.flatMap(lp =>
         lp.parcel.journal_entries.flatMap(e => {

@@ -17,6 +17,7 @@ export interface LotParcelInfo {
   area_ha: number
   household_name: string
   crop_type: string
+  status: string
 }
 
 export interface LotTraceData {

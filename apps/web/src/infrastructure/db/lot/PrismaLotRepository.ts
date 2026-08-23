@@ -100,7 +100,7 @@ export class PrismaLotRepository implements LotPort {
     }
   }
 
-  async exportQr(id: string, snapshotData: LotTraceData, qrImageUrl?: string): Promise<ExportQrResult> {
+  async exportQr(id: string, snapshotData: LotTraceData, qrImageUrl?: string, certificateKeys?: string[]): Promise<ExportQrResult> {
     // Transaction: write public_page_data + set status = QR_EXPORTED
     const lot = await prisma.$transaction(async (tx) => {
       const currentLot = await tx.lot.findUnique({ where: { id } })
@@ -111,9 +111,9 @@ export class PrismaLotRepository implements LotPort {
         where: { id },
         data: {
           status: 'QR_EXPORTED',
-          // @ts-ignore TODO(cross-epic): public_page_data missing in Prisma schema
           public_page_data: JSON.parse(JSON.stringify(snapshotData)),
           qr_image_url: qrImageUrl ?? `/lot/${currentLot.lot_code}`,
+          ...(certificateKeys ? { certificate_keys: certificateKeys } : {}),
         },
       })
     })
