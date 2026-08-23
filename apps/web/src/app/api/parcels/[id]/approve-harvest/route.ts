@@ -3,7 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { ApproveHarvestUseCase } from '@/application/farm/ApproveHarvestUseCase';
+import { ApproveHarvestUseCase } from '@/application/farm/approve-harvest-usecase';
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository';
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository';
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository';
@@ -34,7 +34,7 @@ export async function POST(
     const parcel = await useCase.execute(id, userId, role);
 
     return NextResponse.json({ parcel }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof DomainError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import { ApproveHarvestUseCase } from '@/application/farm/ApproveHarvestUseCase'
+import { ApproveHarvestUseCase } from '@/application/farm/approve-harvest-usecase'
 import { ParcelPort } from '@/domain/farm/ports/ParcelPort'
 import { JournalPort } from '@/domain/journal/ports/JournalPort'
 import { NotificationPort } from '@/domain/ports/notification-port'
