@@ -21,16 +21,16 @@ jest.mock('@/infrastructure/storage/minio-storage.adapter', () => {
 })
 
 class MockLotPort implements LotPort {
-  async findAll(filters: LotFilters): Promise<LotSummary[]> {
+  async findAll(_filters: LotFilters): Promise<LotSummary[]> {
     return []
   }
-  async findById(id: string): Promise<LotSummary | null> {
+  async findById(_id: string): Promise<LotSummary | null> {
     return null
   }
-  async create(data: CreateLotData): Promise<LotSummary> {
+  async create(_data: CreateLotData): Promise<LotSummary> {
     return {} as LotSummary
   }
-  async exportQr(id: string, snapshotData: LotTraceData, qrImageUrl?: string, certificateKeys?: string[]): Promise<ExportQrResult> {
+  async exportQr(_id: string, snapshotData: LotTraceData, qrImageUrl?: string, _certificateKeys?: string[]): Promise<ExportQrResult> {
     return {
       lot_code: snapshotData.lot_code,
       qr_image_url: qrImageUrl ?? '',
@@ -40,7 +40,7 @@ class MockLotPort implements LotPort {
 }
 
 class MockLotTraceRepo implements LotTraceRepository {
-  async getLotByCode(code: string): Promise<LotTraceData | null> {
+  async getLotByCode(_code: string): Promise<LotTraceData | null> {
     return null
   }
 }
