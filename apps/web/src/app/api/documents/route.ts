@@ -32,6 +32,9 @@ export async function GET(req: Request) {
 
   } catch (error) {
     console.error('[Document List API]', error)
+    if (error instanceof Error && error.message.includes('Invalid path prefix')) {
+      return NextResponse.json({ error: error.message }, { status: 403 })
+    }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
