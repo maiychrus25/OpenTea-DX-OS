@@ -49,9 +49,10 @@ describe('Story 7.0a: Schema Migration — htx_profile_id', () => {
 
       const lot = await prisma.lot.create({ 
         data: { 
-          lot_code: 'TLOT' + Date.now().toString().slice(-8), 
-          commodity: 'Rice',
-          htx_profile_id: htx.id 
+          lot_code: 'TEST-LOT-01',
+          commodity: 'Mango',
+          harvest_date: new Date(),
+          htx_profile_id: htx.id, 
         } 
       })
       lotId = lot.id

@@ -12,8 +12,9 @@ interface LotSummary {
   id: string
   lot_code: string
   commodity: string
-  packaging_date: string | null
-  total_weight_kg: number | null
+  harvest_date: string | null
+  estimated_weight_kg: number | null
+  actual_weight_kg: number | null
   status: string
   parcel_count: number
   created_at: string
@@ -102,7 +103,7 @@ export function LotList() {
               <div className={styles.cardBody}>
                 <span>Nông sản: {lot.commodity}</span>
                 <span>Số thửa: {lot.parcel_count}</span>
-                {lot.total_weight_kg && <span>Khối lượng: {lot.total_weight_kg} kg</span>}
+                {lot.estimated_weight_kg && <span>Khối lượng: {lot.estimated_weight_kg} kg</span>}
                 <span>Ngày tạo: {new Date(lot.created_at).toLocaleDateString('vi-VN')}</span>
               </div>
               <div className={styles.cardActions}>

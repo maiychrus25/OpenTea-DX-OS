@@ -202,9 +202,12 @@ model Lot {
   lot_code         String    @unique // e.g. "MD2-ST25-20260720-001"
   commodity        String
   quality_grade    String? // "Grade 1" | "Grade 2" | "Ungraded"
-  packaging_date   DateTime?
-  total_weight_kg  Float?
-  packaging_spec   String?
+  harvest_date     DateTime
+  estimated_weight_kg Float?
+  actual_weight_kg Float?
+  packaging_type   String?
+  destination      String? // Nơi giao hàng
+  buyer_name       String? // Tên người mua
   status           LotStatus @default(DRAFT)
   qr_image_url     String? // MinIO URL of generated QR PNG
   certificate_keys String[]  @default([]) // MinIO object keys of attached certificates
