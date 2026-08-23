@@ -34,6 +34,7 @@ function mapEntry(e: any): JournalEntryData {
       product_name: a.product_name,
       dosage: a.dosage,
       withdrawal_days: a.withdrawal_days,
+      safe_harvest_date: a.safe_harvest_date,
     })),
   }
 }
@@ -167,6 +168,7 @@ export class PrismaJournalRepository implements JournalPort {
               product_name: a.product_name ?? null,
               dosage: a.dosage ?? null,
               withdrawal_days: a.withdrawal_days ?? null,
+              safe_harvest_date: a.withdrawal_days ? new Date(new Date(data.entry_date).getTime() + a.withdrawal_days * 24 * 60 * 60 * 1000) : null,
             })),
           },
         },

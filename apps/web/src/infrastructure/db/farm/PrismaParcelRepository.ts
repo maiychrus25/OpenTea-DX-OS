@@ -140,4 +140,34 @@ export class PrismaParcelRepository implements ParcelPort {
   async delete(id: string): Promise<void> {
     await prisma.parcel.delete({ where: { id } })
   }
+
+  async approveHarvest(id: string, officerId: string): Promise<ParcelSummary> {
+    const parcel = await prisma.parcel.update({
+      where: { id },
+      data: {
+        status: 'HARVEST_APPROVED',
+        harvest_approved_by: officerId,
+        harvest_approved_at: new Date(),
+      },
+      include: {
+        household: {
+          select: { id: true, name: true, keycloak_user_id: true },
+        },
+      },
+    })
+
+    return {
+      id: parcel.id,
+      parcel_code: parcel.parcel_code,
+      household_id: parcel.household_id,
+      name: parcel.parcel_code,
+      area_ha: parcel.area_ha,
+      centroid_lat: parcel.centroid_lat,
+      centroid_lng: parcel.centroid_lng,
+      polygon_geojson: parcel.polygon_geojson,
+      status: parcel.status,
+      crop_type: parcel.crop_type,
+      household: parcel.household,
+    }
+  }
 }

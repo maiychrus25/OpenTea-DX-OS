@@ -50,6 +50,18 @@ export class PrismaNotificationRepository implements NotificationPort {
     });
   }
 
+  async broadcastHarvestApproved(parcelCode: string, officerId: string): Promise<void> {
+    await prisma.notification.create({
+      data: {
+        type: NotificationType.HARVEST_APPROVED,
+        title: 'Phê duyệt thu hoạch',
+        body: `Thửa đất ${parcelCode} đã được cán bộ phê duyệt đủ điều kiện thu hoạch.`,
+        recipient_id: null,
+        sender_id: officerId,
+      }
+    });
+  }
+
   async broadcastAnnouncement(title: string, body: string, senderId: string): Promise<void> {
     await prisma.notification.create({
       data: {

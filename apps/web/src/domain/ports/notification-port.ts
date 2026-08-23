@@ -9,5 +9,6 @@ export interface NotificationPort {
   delete(userId: string, id: string): Promise<void>;
   updatePreferences(userId: string, preferences: any): Promise<void>;
   broadcastDiseaseReport(householdName: string, diseaseName: string, parcelCode: string): Promise<void>;
+  broadcastHarvestApproved(parcelCode: string, officerId: string): Promise<void>;
   broadcastAnnouncement(title: string, body: string, senderId: string): Promise<void>;
 }

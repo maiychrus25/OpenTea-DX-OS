@@ -39,4 +39,5 @@ export interface ParcelPort {
   create(data: CreateParcelData): Promise<ParcelSummary>
   update(id: string, data: Partial<CreateParcelData>): Promise<ParcelSummary>
   delete(id: string): Promise<void>
+  approveHarvest(id: string, officerId: string): Promise<ParcelSummary>
 }
