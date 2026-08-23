@@ -3,7 +3,7 @@
 
 import { CreateLotUseCase } from '@/application/lot/CreateLotUseCase'
 import { LotPort } from '@/domain/lot/ports/LotPort'
-import { ParcelPort } from '@/domain/farm/ports/ParcelPort'
+import { ParcelPort, ParcelSummary } from '@/domain/farm/ports/ParcelPort'
 import { JournalPort } from '@/domain/journal/ports/JournalPort'
 import { DomainError } from '@/domain/errors/DomainError'
 
@@ -61,7 +61,7 @@ describe('CreateLotUseCase', () => {
   })
 
   it('throws if parcel status is invalid', async () => {
-    parcelPort.findById.mockResolvedValue({ status: 'PLANTING', parcel_code: 'P01' } as any)
+    parcelPort.findById.mockResolvedValue({ status: 'PLANTING', parcel_code: 'P01' } as Partial<ParcelSummary> as any)
     await expect(useCase.execute({
       commodity: 'Rice',
       harvest_date: new Date(),
@@ -72,7 +72,7 @@ describe('CreateLotUseCase', () => {
   })
 
   it('throws if withdrawal period not passed', async () => {
-    parcelPort.findById.mockResolvedValue({ status: 'HARVESTED', parcel_code: 'P01' } as any)
+    parcelPort.findById.mockResolvedValue({ status: 'HARVESTED', parcel_code: 'P01' } as Partial<ParcelSummary> as any)
     
     // safe harvest date is 2026-08-30
     journalPort.findAll.mockResolvedValue({
@@ -95,7 +95,7 @@ describe('CreateLotUseCase', () => {
   })
 
   it('creates lot if all valid', async () => {
-    parcelPort.findById.mockResolvedValue({ status: 'HARVEST_APPROVED', parcel_code: 'P01' } as any)
+    parcelPort.findById.mockResolvedValue({ status: 'HARVEST_APPROVED', parcel_code: 'P01' } as Partial<ParcelSummary> as any)
     
     // safe harvest date is 2026-08-20
     journalPort.findAll.mockResolvedValue({
