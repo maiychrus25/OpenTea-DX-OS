@@ -28,9 +28,17 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
 
   const { isOnline, queueCount, isSyncing, saveToQueue } = useOfflineSync()
 
+  // [M2] Validate file size ≤ 5MB trước khi accept
+  const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0])
+      const file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        setErrorMsg('Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.')
+        return;
+      }
+      setSelectedFile(file)
       setResult(null)
       setErrorMsg(null)
     }
@@ -148,7 +156,7 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
               </div>
             )}
             {successMsg && (
-              <div className={styles.successBox} style={{ backgroundColor: '#ecfdf5', color: '#065f46', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+              <div className={styles.successBox}>
                 {successMsg}
               </div>
             )}

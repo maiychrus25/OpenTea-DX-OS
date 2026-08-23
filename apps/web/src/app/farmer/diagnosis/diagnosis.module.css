@@ -1,4 +1,4 @@
-﻿/* Copyright (c) 2026 OpenTea Developers
+/* Copyright (c) 2026 OpenTea Developers
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
 .container {
@@ -319,5 +319,13 @@
   font-weight: 500;
 }
 
-
-
+/* [M1] successBox — dùng design tokens thay vì inline style */
+.successBox {
+  padding: 1rem;
+  background: #ecfdf5; /* TODO(issue-73): thêm --color-success-subtle vào globals.css */
+  color: #065f46;
+  border-radius: var(--rounded-md);
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  width: 100%;
+}
