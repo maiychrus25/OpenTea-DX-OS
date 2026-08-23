@@ -16,6 +16,11 @@ export class GenerateDocumentDownloadUrlUseCase {
       throw new Error('key is required')
     }
 
+    // Ensure key starts with para/ to prevent exposing private objects
+    if (!command.key.startsWith('para/')) {
+      throw new Error('Invalid key. Access denied to non-PARA documents.')
+    }
+
     // Expire in 60 mins (3600s)
     const url = await this.storagePort.generateDownloadUrl(command.key, command.download, 3600)
     

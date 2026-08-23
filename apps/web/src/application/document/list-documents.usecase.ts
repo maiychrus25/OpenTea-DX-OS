@@ -11,8 +11,13 @@ export class ListDocumentsUseCase {
   constructor(private readonly storagePort: DocumentStoragePort) {}
 
   async execute(command: ListDocumentsCommand) {
-    let prefix = command.pathPrefix || ''
+    let prefix = command.pathPrefix || 'para/'
     
+    // Ensure prefix starts with para/ to prevent exposing private objects
+    if (!prefix.startsWith('para/')) {
+      throw new Error('Invalid path prefix. Access denied to non-PARA directories.')
+    }
+
     // Ensure prefix ends with / if it's not empty and doesn't already
     if (prefix && !prefix.endsWith('/')) {
       prefix = `${prefix}/`
