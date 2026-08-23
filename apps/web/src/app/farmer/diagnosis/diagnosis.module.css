@@ -300,3 +300,32 @@
   margin-bottom: 0.5rem;
 }
 
+
+.offlineBanner {
+  background-color: #fff3e0;
+  color: #e65100;
+  padding: 1rem;
+  border-radius: var(--rounded-md);
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+.syncBanner {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  padding: 1rem;
+  border-radius: var(--rounded-md);
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+/* [M1] successBox — dùng design tokens thay vì inline style */
+.successBox {
+  padding: 1rem;
+  background: #ecfdf5; /* TODO(issue-73): thêm --color-success-subtle vào globals.css */
+  color: #065f46;
+  border-radius: var(--rounded-md);
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  width: 100%;
+}
