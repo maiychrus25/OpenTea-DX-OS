@@ -156,7 +156,7 @@ development_status:
   # Prerequisite BE endpoints missing from original Epic 2 spec
 
   2-0a-geocode-proxy-api:                done           # required by 2-6 & 3-2 (Nominatim proxy)
-  2-3a-tts-api-endpoint:                 partial        # Adapter/route exist; response contract, endpoint and availability evidence remain
+  2-3a-tts-api-endpoint:                 done           # Adapter/route exist; response contract, endpoint and availability evidence verified
 
   # ── Epic 3: Farm Zone & Journal ───────────────────────────────────────────
   epic-3: in-progress
