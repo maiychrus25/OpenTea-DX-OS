@@ -8,6 +8,15 @@ import { parcelCreateSchema } from '@/lib/validations/parcel.schema'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
 import { ListParcelsUseCase } from '@/application/farm/ListParcelsUseCase'
 import { CreateParcelUseCase } from '@/application/farm/CreateParcelUseCase'
+import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHouseholdUseCase'
+import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
+
+async function getFarmerHouseholdId(userId?: string) {
+  if (!userId) return undefined
+  const useCase = new GetFarmerHouseholdUseCase(new PrismaHouseholdRepository())
+  const household = await useCase.execute(userId)
+  return household?.id
+}
 
 async function getParcels(request: Request) {
   const session = await auth()
@@ -20,7 +29,7 @@ async function getParcels(request: Request) {
   const status = url.searchParams.get('status') ?? undefined
 
   const role = (session.user as any).role
-  const userHouseholdId = role === 'farmer' ? (session.user as any).household_id : undefined
+  const userHouseholdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined
 
   const repo = new PrismaParcelRepository()
   const useCase = new ListParcelsUseCase(repo)

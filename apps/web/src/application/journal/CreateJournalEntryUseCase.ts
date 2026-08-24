@@ -14,6 +14,9 @@ export class CreateJournalEntryUseCase {
 
   async execute(data: CreateJournalData, userRole: string, userHouseholdId?: string) {
     if (userRole === 'FARMER') {
+      if (!userHouseholdId) {
+        throw new ForbiddenError('Tài khoản nông dân chưa được liên kết với nông hộ')
+      }
       const parcel = await this.parcelPort.findById(data.parcel_id)
       if (!parcel) {
         throw new NotFoundError('Không tìm thấy thửa đất')

@@ -91,11 +91,12 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
     <form onSubmit={handleSubmit}>
       <h2 className={styles.modalTitle}>Ghi nhật ký</h2>
 
-      {error && <p style={{ color: 'var(--color-error)', marginBottom: '0.75rem' }}>{error}</p>}
+      {error && <p className={styles.errorText}>{error}</p>}
 
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>Thửa đất</label>
-        <select className={styles.formSelect} value={parcelId} onChange={e => setParcelId(e.target.value)}>
+        <select className={styles.formSelect} value={parcelId} onChange={e => setParcelId(e.target.value)} disabled={parcels.length === 0}>
+          {parcels.length === 0 && <option value="">Chưa có thửa đất được phân công</option>}
           {parcels.map(p => (
             <option key={p.id} value={p.id}>{p.parcel_code} — {p.crop_type}</option>
           ))}
@@ -114,9 +115,9 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
         </select>
       </div>
 
-      <div className={styles.formGroup} style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+      <div className={styles.checkboxRow}>
         <input type="checkbox" id="noChem" checked={!hasChemicals} onChange={e => setHasChemicals(!e.target.checked)} />
-        <label htmlFor="noChem" style={{ cursor: 'pointer', margin: 0, fontWeight: 500 }}>Không sử dụng thuốc / phân bón trong lần ghi này</label>
+        <label htmlFor="noChem">Không sử dụng thuốc / phân bón trong lần ghi này</label>
       </div>
 
       {hasChemicals && (
@@ -141,8 +142,8 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
                 <input className={styles.formInput} type="number" value={withdrawalDays} onChange={e => setWithdrawalDays(Number(e.target.value))} />
               </div>
               {withdrawalDays < 14 && (
-                <div style={{ color: 'var(--color-error)', fontSize: '0.875rem', marginTop: '-0.5rem', marginBottom: '1rem', padding: '0.5rem', background: '#ffebee', borderRadius: '4px' }}>
-                  ⚠️ Cảnh báo vi phạm: Thời gian cách ly tiêu chuẩn là &gt;= 14 ngày. Hãy đảm bảo an toàn!
+                <div className={styles.warningBox}>
+                  Cảnh báo vi phạm: Thời gian cách ly tiêu chuẩn là &gt;= 14 ngày. Hãy đảm bảo an toàn!
                 </div>
               )}
             </>
@@ -157,8 +158,8 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
 
       <div className={styles.formActions}>
         <button type="button" className={styles.cancelBtn} onClick={onCancel}>Hủy</button>
-        <button type="submit" className={styles.submitBtn} disabled={submitting}>
-          {submitting ? 'Đang lưu...' : 'Lưu'}
+        <button type="submit" className={styles.submitBtn} disabled={submitting || !parcelId}>
+          {submitting ? 'Đang gửi...' : 'Gửi chờ duyệt'}
         </button>
       </div>
     </form>

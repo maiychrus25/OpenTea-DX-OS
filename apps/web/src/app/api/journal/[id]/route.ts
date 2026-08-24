@@ -8,6 +8,15 @@ import { journalUpdateSchema } from '@/lib/validations/journal.schema'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { UpdateJournalEntryUseCase } from '@/application/journal/UpdateJournalEntryUseCase'
 import { DeleteJournalEntryUseCase } from '@/application/journal/DeleteJournalEntryUseCase'
+import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHouseholdUseCase'
+import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
+
+async function getFarmerHouseholdId(userId?: string) {
+  if (!userId) return undefined
+  const useCase = new GetFarmerHouseholdUseCase(new PrismaHouseholdRepository())
+  const household = await useCase.execute(userId)
+  return household?.id
+}
 
 async function putJournalEntry(request: Request, context: unknown) {
   const session = await auth()
@@ -30,7 +39,8 @@ async function putJournalEntry(request: Request, context: unknown) {
 
   const repo = new PrismaJournalRepository()
   const useCase = new UpdateJournalEntryUseCase(repo)
-  const data = await useCase.execute(id, parse.data)
+  const householdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined
+  const data = await useCase.execute(id, parse.data, role.toUpperCase(), householdId)
   return NextResponse.json({ data })
 }
 
@@ -49,8 +59,9 @@ async function deleteJournalEntry(_request: Request, context: unknown) {
 
   const repo = new PrismaJournalRepository()
   const useCase = new DeleteJournalEntryUseCase(repo)
-  await useCase.execute(id)
-  return NextResponse.json({ data: { deleted: true } })
+  const householdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined
+  await useCase.execute(id, role.toUpperCase(), householdId)
+  return NextResponse.json({ data: { deleted: true, withdrawn: role === 'farmer' } })
 }
 
 export const PUT = withErrorHandler(putJournalEntry)

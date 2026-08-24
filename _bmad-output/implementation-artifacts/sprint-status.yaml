@@ -24,7 +24,7 @@
 project: OpenTea-DX-OS
 sprint: 1
 sprint_goal: "Foundation + Market Intelligence + Farm Zone + QR Traceability by 30/08/2026 (POF)"
-last_updated: "2026-08-22T13:17:00+07:00"
+last_updated: "2026-08-24T10:45:00+07:00"
 
 # Delivery phases (execute in this order):
 #   0-1 contract/schema/routes → 0-2 n8n verification → 0-3 deviation baseline
@@ -193,7 +193,7 @@ development_status:
   epic-5: in-progress
 
   5-1-today-dashboard-all-roles:         superseded-by-7-7  # Epic 7 implements role dashboards with prototype design; route groups pattern also wrong
-  5-2-farmer-journal-self-submission:    ready-for-dev
+  5-2-farmer-journal-self-submission:    review         # Farmer journal production flow implemented: household-bound parcel isolation, /farmer/journal/new submit, pending withdraw, weather cache attach retained, submit/withdraw/approve notifications wired. Epic 8-7/8-12 remain mock/UI surfaces only.
   5-3-farmer-disease-diagnosis-ui:       ready-for-dev
   5-4-pwa-offline-disease-diagnosis:     ready-for-dev
   5-5-officer-disease-report-review:     ready-for-dev

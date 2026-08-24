@@ -22,6 +22,7 @@ export class PrismaHouseholdRepository implements HouseholdPort {
       address: h.address,
       parcel_count: h.parcels.length,
       total_area_ha: h.parcels.reduce((sum, p) => sum + p.area_ha, 0),
+      keycloak_user_id: h.keycloak_user_id,
     }))
   }
 
@@ -42,6 +43,28 @@ export class PrismaHouseholdRepository implements HouseholdPort {
       address: h.address,
       parcel_count: h.parcels.length,
       total_area_ha: h.parcels.reduce((sum, p) => sum + p.area_ha, 0),
+      keycloak_user_id: h.keycloak_user_id,
+    }
+  }
+
+  async findByKeycloakUserId(userId: string): Promise<HouseholdSummary | null> {
+    const h = await prisma.household.findFirst({
+      where: { keycloak_user_id: userId },
+      include: {
+        parcels: { select: { area_ha: true } },
+      },
+    })
+    if (!h) return null
+
+    return {
+      id: h.id,
+      household_code: h.phone,
+      name: h.name,
+      phone: h.phone,
+      address: h.address,
+      parcel_count: h.parcels.length,
+      total_area_ha: h.parcels.reduce((sum, p) => sum + p.area_ha, 0),
+      keycloak_user_id: h.keycloak_user_id,
     }
   }
 
@@ -66,6 +89,7 @@ export class PrismaHouseholdRepository implements HouseholdPort {
       address: h.address,
       parcel_count: h.parcels.length,
       total_area_ha: 0,
+      keycloak_user_id: h.keycloak_user_id,
     }
   }
   async update(id: string, data: UpdateHouseholdData): Promise<HouseholdSummary> {
@@ -89,6 +113,7 @@ export class PrismaHouseholdRepository implements HouseholdPort {
       address: h.address,
       parcel_count: h.parcels.length,
       total_area_ha: h.parcels.reduce((sum, p) => sum + p.area_ha, 0),
+      keycloak_user_id: h.keycloak_user_id,
     }
   }
 }

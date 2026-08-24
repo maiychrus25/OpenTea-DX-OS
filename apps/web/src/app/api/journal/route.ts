@@ -9,6 +9,15 @@ import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJourn
 import { ListJournalEntriesUseCase } from '@/application/journal/ListJournalEntriesUseCase'
 import { CreateJournalEntryUseCase } from '@/application/journal/CreateJournalEntryUseCase'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
+import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHouseholdUseCase'
+import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
+
+async function getFarmerHouseholdId(userId?: string) {
+  if (!userId) return undefined
+  const useCase = new GetFarmerHouseholdUseCase(new PrismaHouseholdRepository())
+  const household = await useCase.execute(userId)
+  return household?.id
+}
 
 async function getJournalEntries(request: Request) {
   const session = await auth()
@@ -24,7 +33,7 @@ async function getJournalEntries(request: Request) {
 
   const role = (session.user as any).role
   // Farmer can only see their own household's entries
-  const householdId = role === 'farmer' ? (session.user as any).household_id : undefined
+  const householdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined
 
   const repo = new PrismaJournalRepository()
   const useCase = new ListJournalEntriesUseCase(repo)
@@ -66,7 +75,7 @@ async function postJournalEntry(request: Request) {
     submitted_role: role.toUpperCase() as 'OFFICER' | 'FARMER',
     activities: parse.data.activities,
     observation: parse.data.observation,
-  }, role.toUpperCase(), role === 'farmer' ? (session.user as any).household_id : undefined)
+  }, role.toUpperCase(), role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined)
   
   return NextResponse.json({ data }, { status: 201 })
 }
