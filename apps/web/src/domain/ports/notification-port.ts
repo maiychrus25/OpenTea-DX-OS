@@ -11,4 +11,5 @@ export interface NotificationPort {
   broadcastDiseaseReport(householdName: string, diseaseName: string, parcelCode: string): Promise<void>;
   broadcastHarvestApproved(parcelCode: string, officerId: string): Promise<void>;
   broadcastAnnouncement(title: string, body: string, senderId: string): Promise<void>;
+  sendDirectNotification(userId: string, type: any, title: string, body: string, relatedId?: string): Promise<void>;
 }

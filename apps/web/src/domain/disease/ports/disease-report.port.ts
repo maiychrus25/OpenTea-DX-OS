@@ -22,6 +22,33 @@ export interface DiseaseReportPort {
   }>;
   findLatestByParcelId(parcelId: string): Promise<{ photo_minio_key: string; detection_date: Date } | null>;
   findHistoryByFarmer(farmerId: string): Promise<DiagnosisHistoryItem[]>;
+  findPendingReports(): Promise<OfficerPendingReportItem[]>;
+  findById(id: string): Promise<DiseaseReportDetails | null>;
+  updateStatus(id: string, status: string, treatment: string, officerId: string): Promise<void>;
+}
+
+export interface OfficerPendingReportItem {
+  id: string;
+  detection_date: Date;
+  photo_minio_key: string;
+  ai_disease_name: string;
+  ai_confidence: number;
+  farmer_name: string;
+  parcel_code: string;
+  photo_url?: string;
+}
+
+export interface DiseaseReportDetails {
+  id: string;
+  detection_date: Date;
+  photo_minio_key: string;
+  ai_disease_name: string;
+  ai_confidence: number;
+  status: string;
+  treatment_recommendation?: string | null;
+  farmer_id: string;
+  farmer_name: string;
+  parcel_code: string;
 }
 
 export interface DiagnosisHistoryItem {
@@ -33,4 +60,5 @@ export interface DiagnosisHistoryItem {
   status: string;
   parcel_code: string;
   photo_url?: string;
+  treatment_recommendation?: string | null;
 }

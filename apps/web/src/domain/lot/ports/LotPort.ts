@@ -29,6 +29,7 @@ export interface CreateLotData {
 
 export interface LotFilters {
   status?: string
+  statuses?: string[]
   page?: number
   limit?: number
 }

@@ -1,0 +1,42 @@
+## 🤖 DX-AgriMarket AI Deep Review — PR #257
+
+**Tổng quan:** PR implement tính năng duyệt báo cáo bệnh cho cán bộ (Story 5.5).
+**Vòng review:** 10/10 hoàn thành
+**Verdict:** REQUEST CHANGES
+
+---
+
+### 🔴 HIGH — Phải sửa trước khi merge
+
+#### [H1] Thiếu License Header (AGENTS.md §License Comment Header)
+- **File:** `apps/web/src/application/disease/review-disease-report.usecase.ts` (và 7 files mới khác)
+- **Vấn đề:** Các file tạo mới chưa có license header bắt buộc của dự án.
+- **Code lỗi:** (File bắt đầu bằng code thay vì comment)
+- **Cách sửa:** Thêm nội dung sau vào dòng đầu tiên của TẤT CẢ các file `.ts`, `.tsx`, `.css` mới:
+  ```typescript
+  // Copyright (c) 2026 OpenTea Developers
+  // Licensed under the MIT License. See LICENSE file in the project root for full license information.
+  ```
+
+#### [H2] Thiếu Meta data PR (Conventional Commits)
+- **Vấn đề:** PR Description đang để trống, không link với Issue #74.
+- **Cách sửa:** Update PR description thêm `Closes #74` hoặc `Fixes #74` để tự động link với Github Issue.
+
+---
+
+### 🟡 MEDIUM — Nên sửa (không block merge nhưng tạo tech debt)
+
+#### [M1] Sử dụng `any` không có comment giải thích
+- **File:** `apps/web/src/app/officer/diseases/[id]/page.tsx` | **Line:** 15
+- **Vấn đề:** Sử dụng `useState<any>(null)` cho biến `report` làm mất type safety của TypeScript (vi phạm rules-and-limits.md §5).
+- **Cách sửa:** Import và sử dụng Interface `DiseaseReportDetails` hoặc định nghĩa type tường minh cho state thay vì dùng `any`.
+
+---
+
+### ✅ Điểm tốt (Acknowledge good work)
+- Đã tuân thủ Hexagonal Architecture (không gọi Prisma trong Domain/UseCase).
+- Đã fix toàn bộ các lỗi liên quan đến CI `Lint & Type Check` (như sửa Badge -> Pill).
+- Viết Unit Test cho UseCase đạt 100% pass với các case error handling chuẩn chỉnh.
+
+---
+*Review bởi: DX-AgriMarket AI (pr-deep-review skill) | MIT License | Copyright (c) 2026 OpenTea Developers*

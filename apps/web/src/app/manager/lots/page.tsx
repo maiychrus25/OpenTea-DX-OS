@@ -29,7 +29,7 @@ export default function ManagerLotsPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/lots')
+    fetch('/api/lots?visibility=published')
       .then(r => r.json())
       .then(d => {
         setLots((d.data || []).map((l: LotSummary) => ({ ...l, status: (l.status || '').toLowerCase() })))
@@ -39,7 +39,7 @@ export default function ManagerLotsPage() {
   }, [])
 
   const handleCreateCTA = () => {
-    alert('Tính năng Tạo lô hàng thuộc thẩm quyền của Cán bộ Kỹ thuật. Giao diện này chỉ dùng để chuyển hướng sâu (deep-link).')
+    router.push('/officer/lots')
   }
 
   const handleRowClick = (lotId: string) => {
@@ -49,6 +49,7 @@ export default function ManagerLotsPage() {
   // Lọc data theo tab và search
   const filteredLots = lots.filter(lot => {
     const matchSearch = lot.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        (lot.lot_code && lot.lot_code.toLowerCase().includes(searchQuery.toLowerCase())) ||
                         (lot.commodity && lot.commodity.toLowerCase().includes(searchQuery.toLowerCase()))
     if (!matchSearch) return false
 

@@ -8,7 +8,8 @@ import { LotTraceData } from '@/domain/entities/lot-trace-data'
 export class PrismaLotRepository implements LotPort {
   async findAll(filters: LotFilters): Promise<LotSummary[]> {
     const where: Record<string, unknown> = {}
-    if (filters.status) where.status = filters.status
+    if (filters.statuses?.length) where.status = { in: filters.statuses }
+    else if (filters.status) where.status = filters.status
 
     const lots = await prisma.lot.findMany({
       where,
