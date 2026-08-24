@@ -6,6 +6,7 @@ import { auth } from '@/auth'
 import { GetNotificationsUseCase } from '@/application/notification/get-notifications-usecase'
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository'
 import { logger } from '@/lib/logger'
+import { sseEmitter, SSE_EVENTS } from '@/lib/sse-emitter'
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -24,9 +25,7 @@ export async function GET(req: Request) {
       // Send initial connection event
       controller.enqueue(encoder.encode(`event: connected\ndata: ${JSON.stringify({ message: 'SSE connection established' })}\n\n`))
 
-      // TODO(issue-202): Implement Redis Pub/Sub for SSE to avoid DB polling per connection
-      // Simulate sending new notifications every 10 seconds for the contract
-      const intervalId = setInterval(async () => {
+      const sendLatestNotification = async () => {
         try {
           const result = await getNotificationsUseCase.execute(userId, 1, 'unread')
           if (result.notifications.length > 0) {
@@ -35,11 +34,24 @@ export async function GET(req: Request) {
         } catch (error) {
           logger.error('SSE Error:', { error })
         }
-      }, 10000)
+      };
+
+      type NotificationPayload = { broadcast?: boolean; userId?: string };
+      const handleNewNotification = (data: NotificationPayload) => {
+        if (data.broadcast || data.userId === userId) {
+          sendLatestNotification();
+        }
+      };
+
+      sseEmitter.on(SSE_EVENTS.NEW_NOTIFICATION, handleNewNotification);
+
+      // Keep a fallback polling interval for resilience
+      const intervalId = setInterval(sendLatestNotification, 30000);
 
       req.signal.addEventListener('abort', () => {
-        clearInterval(intervalId)
-        controller.close()
+        sseEmitter.off(SSE_EVENTS.NEW_NOTIFICATION, handleNewNotification);
+        clearInterval(intervalId);
+        controller.close();
       })
     }
   })
