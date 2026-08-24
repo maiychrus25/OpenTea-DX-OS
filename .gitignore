@@ -85,3 +85,10 @@ desktop.ini
 .agent/
 playwright/.auth/
 apps/web/playwright/.auth/
+
+# ── Next PWA Generated ────────────────────────────────────────
+apps/web/public/sw.js
+apps/web/public/sw.js.map
+apps/web/public/workbox-*.js
+apps/web/public/fallback-*.js
+apps/web/public/swe-worker-*.js

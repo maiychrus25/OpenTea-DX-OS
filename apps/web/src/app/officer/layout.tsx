@@ -12,7 +12,7 @@ export default async function OfficerLayout({ children }: { children: React.Reac
   if (session.user.role !== 'officer') redirect('/unauthorized')
 
   const navItems = [
-    { label: 'Tổng quan', href: '/officer/dashboard', icon: <Home size={20} /> },
+    { label: 'Tổng quan', href: '/officer/dashboard', icon: <Home size={20} />, badge: 5 },
     { label: 'Bản đồ', href: '/officer/map', icon: <Map size={20} /> },
     { label: 'Nông hộ', href: '/officer/households', icon: <Users size={20} /> },
     { label: 'Nhật ký', href: '/officer/journal', icon: <FileText size={20} /> },

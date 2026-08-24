@@ -24,7 +24,7 @@
 project: OpenTea-DX-OS
 sprint: 1
 sprint_goal: "Foundation + Market Intelligence + Farm Zone + QR Traceability by 30/08/2026 (POF)"
-last_updated: "2026-08-24T10:45:00+07:00"
+last_updated: "2026-08-24T22:27:00+07:00"
 
 # Delivery phases (execute in this order):
 #   0-1 contract/schema/routes → 0-2 n8n verification → 0-3 deviation baseline
@@ -254,7 +254,7 @@ development_status:
   epic-8: in-progress
 
   8-1-bulletin-page-refactor:           done           # 3-card grid + audio CTA + AiNote footer, mock data only (Epic 8 FE prototype)
-  8-2-officer-today-dashboard:          ready-for-dev  # Officer dashboard: 4 metrics + lịch công việc theo giờ
+  8-2-officer-today-dashboard:          in-progress    # Officer dashboard: 4 metrics + lịch công việc theo giờ
   8-3-lot-list-page:                    done  # Lô hàng list: filter tabs, table rows, "Tạo lô hàng" CTA
   8-4-lot-detail-6step-workflow:        done           # Lot detail: 6-step wizard + QR preview panel + Xuất QR
   8-5-farm-zone-setup-wizard:           done           # Thiết lập vùng trồng: 3-step (Hộ → Thửa → Cây trồng)

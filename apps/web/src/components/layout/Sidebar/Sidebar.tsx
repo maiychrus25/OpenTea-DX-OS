@@ -15,6 +15,7 @@ export interface NavItem {
   label: string
   href: string
   icon: React.ReactNode
+  badge?: number | string
 }
 
 export interface SidebarProps {
@@ -113,6 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <span className={styles.icon}>{item.icon}</span>
               <span className={styles.label}>{item.label}</span>
+              {item.badge != null && <span className={styles.navBadge}>{item.badge}</span>}
             </Link>
           )
         })}
