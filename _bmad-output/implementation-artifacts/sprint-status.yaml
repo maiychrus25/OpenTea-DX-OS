@@ -181,7 +181,7 @@ development_status:
   4-2-lot-creation-steps-1-4:            done
   4-3-lot-review-qr-export-steps-5-6:   ready-for-dev
   4-4-public-qr-scan-page:              superseded-by-7-9  # 7-9 implements full trace page with disclaimer + withdrawal check
-  4-5-lot-list-readonly-manager:         ready-for-dev
+  4-5-lot-list-readonly-manager:         review         # Manager /manager/lots reads published lots from BE (READY/QR_EXPORTED), filters/search/deep-link detail preserved, mutation controls removed; unit/type/lint/build/contract/schema pass. E2E blocked by missing Chromium system lib libnspr4.so.
   4-6-disease-detection-fastapi-service: ready-for-dev
 
   # ── Epic 4: Missing Stories (identified 2026-08-12) ───────────────────────
