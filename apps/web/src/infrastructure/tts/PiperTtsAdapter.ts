@@ -41,6 +41,13 @@ export class PiperTtsAdapter implements TtsPort {
         client.on('data', (chunk: Buffer) => {
           buffer = Buffer.concat([buffer, chunk])
 
+          // M2 Fix: Prevent infinite buffer growth (max 5MB)
+          if (buffer.length > 5 * 1024 * 1024) {
+            client.destroy()
+            controller.error(new Error('SERVICE_UNAVAILABLE'))
+            return
+          }
+
           let processing = true
           while (processing && buffer.length > 0) {
             if (state === 'JSON') {
