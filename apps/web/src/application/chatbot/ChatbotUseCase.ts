@@ -42,11 +42,13 @@ QUY TẮC BẮT BUỘC:
 Trả lời bằng tiếng Việt. Cuối mỗi câu trả lời, liệt kê nguồn tham khảo trong dòng riêng với prefix "Nguồn:".
 Nếu không có dữ liệu trong tài liệu, nói rõ "Tài liệu kỹ thuật hiện tại không đề cập đến vấn đề này."`
 
+import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
+
 export class ChatbotUseCase {
   private client: OpenAI | null = null
   private model: string
 
-  constructor() {
+  constructor(private documentStorage?: DocumentStoragePort) {
     this.model = process.env.OLLAMA_MODEL || 'llama-3.1-8b-instant'
 
     const apiKey = process.env.GROQ_API_KEY
@@ -104,19 +106,21 @@ export class ChatbotUseCase {
         }
       } else {
         // Fetch from MinIO (Technical Chatbot)
-        const { MinioDocumentAdapter } = await import('@/infrastructure/storage/minio-document.adapter')
-        const adapter = new MinioDocumentAdapter()
-        const docs = await adapter.listDocuments('para/')
+        if (!this.documentStorage) {
+          throw new Error('DocumentStoragePort is required for technical chatbot')
+        }
+        const docs = await this.documentStorage.listDocuments('para/')
         const textDocs = docs.filter(d => !d.isDir && (d.name.endsWith('.txt') || d.name.endsWith('.md')))
         
         // Limit to 5 most recent to avoid blowing up context window
         const latestDocs = textDocs.sort((a, b) => b.uploadDate.getTime() - a.uploadDate.getTime()).slice(0, 5)
         
+        const storage = this.documentStorage
         if (latestDocs.length > 0) {
           ragContextStr += `\n\n--- TÀI LIỆU KỸ THUẬT NỘI BỘ TỪ P.A.R.A (DÙNG ĐỂ TRẢ LỜI): ---\n`
           await Promise.all(latestDocs.map(async doc => {
             try {
-              const content = await adapter.getDocumentContent(doc.key)
+              const content = await storage.getDocumentContent(doc.key)
               ragContextStr += `\n[Tài liệu: ${doc.name}]\n${content.substring(0, 2000)}\n`
             } catch (err) {
               logger.error(`Failed to read doc content ${doc.key}`, { error: err })

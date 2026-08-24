@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { ChatbotUseCase } from '@/application/chatbot/ChatbotUseCase'
+import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 import { z } from 'zod'
 
 const chatbotSchema = z.object({
@@ -34,7 +35,8 @@ async function postChatbot(request: Request) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
 
-  const useCase = new ChatbotUseCase()
+  const documentAdapter = new MinioDocumentAdapter()
+  const useCase = new ChatbotUseCase(documentAdapter)
   const userId = session.user.id
   const sessionId = parse.data.session_id || `chat-${userId}-${Date.now()}`
 
