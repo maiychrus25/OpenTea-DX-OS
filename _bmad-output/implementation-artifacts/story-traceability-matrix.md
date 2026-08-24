@@ -126,7 +126,7 @@
 | `4-2` | Officer lot creation/draft | Sau 4.1 + eligible parcels |
 | `6-2` | Certificate lifecycle | Trước QR export; có thể chạy song song 4.2 |
 | `4-3` | Review/export QR | Sau 4.2 + 6.2; immutable snapshot |
-| `4-5` | Manager read-only lot list | Sau lot API/4.2 |
+| `4-5` | Manager read-only lot list | Sau lot API/4.2; implementation in review as of 2026-08-24: `/manager/lots` reads published `READY`/`QR_EXPORTED` lots via BE, preserves filters/search/detail deep-link, and renders no Manager mutation controls. E2E browser run remains environment-blocked by missing `libnspr4.so`. |
 | `4-6` | FastAPI disease service | Có thể chạy song song từ sau infra |
 | `4-6a` | Diagnosis proxy | Sau 4.6 + storage/notification contract |
 | `4-4` | Public QR page cũ | `superseded-by-7-9`; behavior tiếp tục ở 9.1/10.2 |

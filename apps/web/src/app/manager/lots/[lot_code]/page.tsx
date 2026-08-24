@@ -4,10 +4,12 @@
 import React from 'react'
 import Link from 'next/link'
 import { auth } from '@/auth'
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { Pill } from '@/components/ui'
+import { GetLotUseCase } from '@/application/lot/GetLotUseCase'
+import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
 import { StepTrack } from './_components/step-track'
 import { QrVisual } from './_components/qr-visual'
-import { LotActions } from './_components/lot-actions'
 import styles from './lot-detail.module.css'
 
 interface PageProps {
@@ -20,7 +22,16 @@ export default async function LotDetailPage({ params }: PageProps) {
     redirect('/login')
   }
 
-  const { lot_code } = params
+  const { lot_code: lotId } = params
+  const lot = await new GetLotUseCase(new PrismaLotRepository()).execute(lotId)
+
+  if (!lot || (lot.status !== 'READY' && lot.status !== 'QR_EXPORTED')) {
+    notFound()
+  }
+
+  const weight = lot.actual_weight_kg ?? lot.estimated_weight_kg
+  const statusLabel = lot.status === 'QR_EXPORTED' ? 'Đã xuất QR' : 'Sẵn sàng'
+  const statusTone = lot.status === 'QR_EXPORTED' ? 'blue' : 'green'
 
   return (
     <div className={styles.container}>
@@ -32,7 +43,8 @@ export default async function LotDetailPage({ params }: PageProps) {
         {/* Main Content (Left) */}
         <div className={styles.mainPanel}>
           <div className={styles.header}>
-            <h1 className={styles.title}>Lô hàng {lot_code}</h1>
+            <h1 className={styles.title}>Lô hàng {lot.lot_code}</h1>
+            <Pill tone={statusTone}>{statusLabel}</Pill>
           </div>
 
           <StepTrack />
@@ -42,58 +54,51 @@ export default async function LotDetailPage({ params }: PageProps) {
             <div className={styles.reviewGrid}>
               <div className={styles.reviewItem}>
                 <span className={styles.reviewLabel}>Mã lô</span>
-                <span className={styles.reviewValue}>{lot_code} <span className={styles.checkIcon}>✓</span></span>
+                <span className={styles.reviewValue}>{lot.lot_code} <span className={styles.checkIcon}>✓</span></span>
               </div>
               <div className={styles.reviewItem}>
                 <span className={styles.reviewLabel}>Nông sản</span>
-                <span className={styles.reviewValue}>Cải ngọt <span className={styles.checkIcon}>✓</span></span>
+                <span className={styles.reviewValue}>{lot.commodity} <span className={styles.checkIcon}>✓</span></span>
               </div>
               <div className={styles.reviewItem}>
                 <span className={styles.reviewLabel}>Ngày thu hoạch</span>
-                <span className={styles.reviewValue}>12/08/2026 <span className={styles.checkIcon}>✓</span></span>
+                <span className={styles.reviewValue}>{lot.harvest_date.toLocaleDateString('vi-VN')} <span className={styles.checkIcon}>✓</span></span>
               </div>
               <div className={styles.reviewItem}>
-                <span className={styles.reviewLabel}>Ngày đóng gói</span>
-                <span className={styles.reviewValue}>13/08/2026 <span className={styles.checkIcon}>✓</span></span>
+                <span className={styles.reviewLabel}>Ngày tạo</span>
+                <span className={styles.reviewValue}>{lot.created_at.toLocaleDateString('vi-VN')} <span className={styles.checkIcon}>✓</span></span>
               </div>
               <div className={styles.reviewItem}>
-                <span className={styles.reviewLabel}>Cách ly</span>
-                <span className={styles.reviewValue}>15 ngày (đạt &gt;= 14) <span className={styles.checkIcon}>✓</span></span>
-              </div>
-              <div className={styles.reviewItem}>
-                <span className={styles.reviewLabel}>HTX</span>
-                <span className={styles.reviewValue}>HTX Rau an toàn Tân Phú <span className={styles.checkIcon}>✓</span></span>
-              </div>
-              <div className={styles.reviewItem}>
-                <span className={styles.reviewLabel}>Hộ nông dân</span>
-                <span className={styles.reviewValue}>Nguyễn Văn Bình <span className={styles.checkIcon}>✓</span></span>
-              </div>
-              <div className={styles.reviewItem}>
-                <span className={styles.reviewLabel}>Thửa đất</span>
-                <span className={styles.reviewValue}>TP-014, TP-016, TP-019, TP-022 <span className={styles.checkIcon}>✓</span></span>
-              </div>
-              <div className={styles.reviewItem}>
-                <span className={styles.reviewLabel}>Người duyệt</span>
-                <span className={styles.reviewValue}>Trần Văn B <span className={styles.checkIcon}>✓</span></span>
+                <span className={styles.reviewLabel}>Số thửa nguồn</span>
+                <span className={styles.reviewValue}>{lot.parcel_count} thửa <span className={styles.checkIcon}>✓</span></span>
               </div>
               <div className={styles.reviewItem}>
                 <span className={styles.reviewLabel}>Tổng trọng lượng</span>
-                <span className={styles.reviewValue}>2.450 kg</span>
+                <span className={styles.reviewValue}>{weight ? `${weight.toLocaleString('vi-VN')} kg` : 'Chưa ghi nhận'}</span>
               </div>
               <div className={styles.reviewItem}>
-                <span className={styles.reviewLabel}>Quy cách đóng gói</span>
-                <span className={styles.reviewValue}>Bao 25kg</span>
+                <span className={styles.reviewLabel}>Trạng thái công bố</span>
+                <span className={styles.reviewValue}>{statusLabel}</span>
               </div>
             </div>
           </div>
 
-          <LotActions lotCode={lot_code} />
+          <div className={styles.readOnlyNotice}>
+            Manager chỉ có quyền xem lô hàng. Tạo, sửa, lưu nháp và xuất QR thuộc luồng Officer.
+          </div>
         </div>
 
         {/* QR Preview Side (Right) */}
         <div className={styles.sidePanel}>
           <QrVisual />
-          <span className={styles.qrCaption}>Mã QR sẽ được sinh sau khi xuất</span>
+          <span className={styles.qrCaption}>
+            {lot.status === 'QR_EXPORTED' ? 'QR đã sẵn sàng trên trang truy xuất công khai' : 'QR sẽ được sinh sau khi Officer xuất'}
+          </span>
+          {lot.status === 'QR_EXPORTED' && (
+            <Link href={`/lot/${lot.lot_code}`} className={styles.publicLink}>
+              Mở trang QR
+            </Link>
+          )}
         </div>
       </div>
     </div>
