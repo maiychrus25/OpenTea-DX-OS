@@ -11,6 +11,7 @@ export const lotCreateSchema = z.object({
   packaging_type: z.string().max(100).optional(),
   destination: z.string().max(200).optional(),
   buyer_name: z.string().max(200).optional(),
+  certificate_keys: z.array(z.string()).optional(),
 })
 
 export type LotCreateInput = z.infer<typeof lotCreateSchema>
