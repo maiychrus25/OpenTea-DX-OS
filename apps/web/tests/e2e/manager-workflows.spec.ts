@@ -1,7 +1,6 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import 'dotenv/config'
 import { test, expect, Page } from '@playwright/test'
 import { encode } from 'next-auth/jwt'
 
@@ -30,16 +29,12 @@ test.describe('Manager Workflows', () => {
     // Mock API for /api/lots
     await page.route('/api/lots*', async route => {
       const url = new URL(route.request().url())
-      const status = url.searchParams.get('status')
+      expect(url.searchParams.get('visibility')).toBe('published')
       
-      let data = [
-        { id: '1', lot_code: 'L01', commodity: 'Gạo', status: 'ready', total_weight_kg: 500, created_at: '2026-08-20' },
-        { id: '2', lot_code: 'L02', commodity: 'Gạo ST25', status: 'qr_exported', total_weight_kg: 1000, created_at: '2026-08-21' }
+      const data = [
+        { id: '1', lot_code: 'L01', commodity: 'Gạo', status: 'READY', estimated_weight_kg: 500, created_at: '2026-08-20' },
+        { id: '2', lot_code: 'L02', commodity: 'Gạo ST25', status: 'QR_EXPORTED', estimated_weight_kg: 1000, created_at: '2026-08-21' }
       ]
-
-      if (status) {
-        data = data.filter(d => d.status === status)
-      }
 
       await route.fulfill({ status: 200, json: { data } })
     })
@@ -49,6 +44,9 @@ test.describe('Manager Workflows', () => {
     // Expecting to see both lots on the 'Tất cả' tab
     await expect(page.getByText('L01')).toBeVisible()
     await expect(page.getByText('L02')).toBeVisible()
+
+    await expect(page.getByRole('button', { name: /Tạo lô hàng/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Sửa|Xóa|Lưu nháp|Xuất QR/ })).toHaveCount(0)
 
     // Click 'Sẵn sàng' tab
     await page.getByRole('button', { name: /Sẵn sàng/ }).click()

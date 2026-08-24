@@ -24,10 +24,12 @@ async function getLots(request: Request) {
 
   const url = new URL(request.url)
   const status = url.searchParams.get('status') ?? undefined
+  const visibility = url.searchParams.get('visibility') ?? undefined
+  const statuses = visibility === 'published' ? ['READY', 'QR_EXPORTED'] : undefined
 
   const repo = new PrismaLotRepository()
   const useCase = new ListLotsUseCase(repo)
-  const data = await useCase.execute({ status })
+  const data = await useCase.execute({ status, statuses })
   return NextResponse.json({ data })
 }
 
