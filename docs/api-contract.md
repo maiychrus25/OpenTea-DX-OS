@@ -64,21 +64,23 @@ Or stream binary audio directly (Content-Type: audio/wav).
 
 ---
 
-## Market Chatbot (Manager)
+## Chatbot (Manager & Officer)
 
 ### `POST /api/chatbot`
-Send a message to the Market Expert Chatbot (Ollama RAG).
+Send a message to the Chatbot (Ollama/Groq RAG).
 
 **Request:**
 ```json
 {
   "message": "Giá xuất khẩu gạo tháng 8 so với tháng 7 thế nào?",
+  "type": "market",
   "history": [
     { "role": "user", "content": "..." },
     { "role": "assistant", "content": "..." }
   ]
 }
 ```
+*Note: `type` can be `"market"` (Manager) or `"technical"` (Officer). Default is `"market"`.*
 
 **Response:**
 ```json
@@ -93,7 +95,12 @@ Send a message to the Market Expert Chatbot (Ollama RAG).
 
 **Roles:** manager, officer
 
-> **AI Invariant:** Reply MUST cite sources. MUST NOT recommend actions or decisions.
+> **AI Invariant:** Reply MUST cite sources. MUST NOT recommend actions or decisions. For Technical chatbot, MUST NOT answer market price questions.
+
+### `GET /api/chatbot`
+Retrieve chat history.
+
+**Query:** `?session_id=chat-uuid&type=market`
 
 ---
 
