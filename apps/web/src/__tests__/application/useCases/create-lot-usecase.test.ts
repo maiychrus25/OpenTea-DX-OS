@@ -112,6 +112,7 @@ describe('CreateLotUseCase', () => {
       commodity: 'Rice',
       harvest_date: new Date('2026-08-25'),
       parcel_ids: ['p1'],
+      certificate_keys: ['cert/123.pdf'],
       htx_profile_id: 'htx1',
       created_by_id: 'user1'
     }

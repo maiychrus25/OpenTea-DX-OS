@@ -23,6 +23,7 @@ export interface CreateLotData {
   packaging_type?: string
   destination?: string
   buyer_name?: string
+  certificate_keys?: string[]
   htx_profile_id: string
   created_by_id: string
 }

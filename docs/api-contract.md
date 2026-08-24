@@ -363,7 +363,8 @@ Create new lot.
   "parcel_ids": ["uuid1", "uuid2"],
   "packaging_type": "Túi 25kg",
   "destination": "Cty TNHH Lúa Gạo Bình An",
-  "buyer_name": "Nguyễn Văn Mua"
+  "buyer_name": "Nguyễn Văn Mua",
+  "certificate_keys": ["cert/uuid.pdf"]
 }
 ```
 *`lot_code` auto-generated: `{htx_code}-{CROP}-{YYYYMMDD}-{NNN}`*

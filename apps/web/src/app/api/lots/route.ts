@@ -65,6 +65,7 @@ async function postLot(request: Request) {
     packaging_type: parse.data.packaging_type,
     destination: parse.data.destination,
     buyer_name: parse.data.buyer_name,
+    certificate_keys: parse.data.certificate_keys,
     htx_profile_id: htx.id,
     created_by_id: (session.user as any).id ?? '',
   })
