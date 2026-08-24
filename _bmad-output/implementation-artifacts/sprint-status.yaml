@@ -205,8 +205,8 @@ development_status:
   epic-6: in-progress
 
   6-1-minio-para-document-store:         done
-  6-2-certificate-selection-qr-lot:      ready-for-dev
-  6-3-technical-expert-chatbot-officer:  ready-for-dev
+  6-2-certificate-selection-qr-lot:      done
+  6-3-technical-expert-chatbot-officer:  done
   6-4-htx-capability-profile-page:       ready-for-dev
 
   # ── Epic 7: UI Migration — Prototype Design System ────────────────────────

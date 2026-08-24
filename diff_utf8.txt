@@ -1,0 +1,332 @@
+﻿diff --git a/_bmad-output/implementation-artifacts/sprint-status.yaml b/_bmad-output/implementation-artifacts/sprint-status.yaml
+index 236f72a..b9c04fd 100644
+--- a/_bmad-output/implementation-artifacts/sprint-status.yaml
++++ b/_bmad-output/implementation-artifacts/sprint-status.yaml
+@@ -205,8 +205,8 @@ development_status:
+   epic-6: in-progress
+ 
+   6-1-minio-para-document-store:         done
+-  6-2-certificate-selection-qr-lot:      ready-for-dev
+-  6-3-technical-expert-chatbot-officer:  ready-for-dev
++  6-2-certificate-selection-qr-lot:      done
++  6-3-technical-expert-chatbot-officer:  done
+   6-4-htx-capability-profile-page:       ready-for-dev
+ 
+   # ΓöÇΓöÇ Epic 7: UI Migration ΓÇö Prototype Design System ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+diff --git a/apps/web/public/sw.js b/apps/web/public/sw.js
+index 726c74c..37a81bf 100644
+--- a/apps/web/public/sw.js
++++ b/apps/web/public/sw.js
+@@ -1 +1 @@
+-if(!self.define){let e,s={};const a=(a,c)=>(a=new URL(a+".js",c).href,s[a]||new Promise(s=>{if("document"in self){const e=document.createElement("script");e.src=a,e.onload=s,document.head.appendChild(e)}else e=a,importScripts(a),s()}).then(()=>{let e=s[a];if(!e)throw new Error(`Module ${a} didnΓÇÖt register its module`);return e}));self.define=(c,i)=>{const n=e||("document"in self?document.currentScript.src:"")||location.href;if(s[n])return;let t={};const r=e=>a(e,n),o={module:{uri:n},exports:t,require:r};s[n]=Promise.all(c.map(e=>o[e]||r(e))).then(e=>(i(...e),t))}}define(["./workbox-f1770938"],function(e){"use strict";importScripts(),self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"/_next/static/DsEBY40-2NFoCU5wrc9Jl/_buildManifest.js",revision:"b222cbf4d8e1f47e27a8925222733e53"},{url:"/_next/static/DsEBY40-2NFoCU5wrc9Jl/_ssgManifest.js",revision:"b6652df95db52feb4daf4eca35380933"},{url:"/_next/static/chunks/1609-cc1d1c742047521b.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/231-c530e17ee1929063.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/3130-201928e8372f9516.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/3611-21f12be3f170c9f8.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/504-a703f016c56c8af2.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/5190-be7461ac1042b663.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/5775.40b065ba15da2fea.js",revision:"40b065ba15da2fea"},{url:"/_next/static/chunks/5866-859c862b35629b5a.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/6085-b585e2796ebc72c2.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/8173-382496375a7ef48f.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/8174-1c0cd5bb4a807f7b.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/8724-4ee6920c02dcac6b.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/935-a27560ebdbcb2c2f.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/(auth)/login/page-67843a436a3266fb.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/_not-found/page-51be0aebc8b74c08.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/error-b63e527727f77fdd.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/farmer/bulletin/page-bc14f01db12cb14c.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/farmer/dashboard/page-fb723101c9f1724b.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/farmer/diagnosis/page-4896905e872d6851.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/farmer/journal/page-5deb3f3ce4d24c90.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/farmer/layout-86035c806b67e8d7.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/farmer/notifications/page-5a474274d7d6d2c5.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/htx/%5Bhtx_code%5D/page-3dd551f5df374e99.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/layout-afa6f4205e253391.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/loading-e61df3def1f31644.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/lot/%5Blot_code%5D/page-ca5cfcd7a0526fd4.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/bulletin/page-624f765a8594f32b.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/chat/page-5c59c9c68c7b2a80.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/dashboard/error-f2323f69789edcc2.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/dashboard/page-5edeaee402dc574e.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/farm-zones/page-80a71a83fbc0dead.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/journal-approve/page-4a3cf9fd5c7e4c59.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/layout-1c7dd63160f966a8.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/lots/%5Blot_code%5D/page-3577ff843819abcb.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/lots/page-18fb4d3e9e56fa62.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/notifications/page-a9b5b6445b6dd345.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/partner-map/page-7ab7fb0a61e5d5c1.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/profile/page-df227e8aa1bc799a.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/manager/zones/page-99a1337917430226.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/not-found-44e084357394ce9b.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/assistant/page-ead8ec2b71879913.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/bulletin/page-c67a0f2b8ecac0fa.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/dashboard/page-37e00148dc160083.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/diseases/%5Bid%5D/page-6ff2cfadd8eb72cb.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/diseases/page-314eeb152db88685.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/documents/page-d16dc390a727af29.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/farm-zones/setup/page-81235b67a8749da5.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/households/page-c9fbb800e58d4a8c.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/journal/page-ea48cacde78c7c0f.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/layout-06dc47ab7022dc40.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/lots/page-18fbec5bc8150fed.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/officer/notifications/page-44dc208ada2913b3.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/page-463bc4ad6637a094.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/q/%5Blot_code%5D/page-64b9a5a47a0ea882.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/app/unauthorized/page-be177160a4bec050.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/d0deef33-f4bfbbc3696bfdde.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/fd9d1056-47f3a1af3086f6e1.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/framework-a63c59c368572696.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/main-9da69d2429db7165.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/main-app-44f369fc236a6949.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/pages/_app-00b74eae5e8dab51.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/pages/_error-c72a1f77a3c0be1b.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/chunks/polyfills-78c92fac7aa8fdd8.js",revision:"79330112775102f91e1010318bae2bd3"},{url:"/_next/static/chunks/webpack-71513c7db25c6bb5.js",revision:"DsEBY40-2NFoCU5wrc9Jl"},{url:"/_next/static/css/00e79fcfd9402334.css",revision:"00e79fcfd9402334"},{url:"/_next/static/css/098953e52310840e.css",revision:"098953e52310840e"},{url:"/_next/static/css/0ba28cfe8d8ee325.css",revision:"0ba28cfe8d8ee325"},{url:"/_next/static/css/1e10dba602ee2b71.css",revision:"1e10dba602ee2b71"},{url:"/_next/static/css/3089947ab31ee8d1.css",revision:"3089947ab31ee8d1"},{url:"/_next/static/css/5ed7e89afdf48c12.css",revision:"5ed7e89afdf48c12"},{url:"/_next/static/css/65a42cf95868a847.css",revision:"65a42cf95868a847"},{url:"/_next/static/css/96e90ee838129331.css",revision:"96e90ee838129331"},{url:"/_next/static/css/a71fc98b0fbfbb29.css",revision:"a71fc98b0fbfbb29"},{url:"/_next/static/css/ab3d3e31d9c2afdf.css",revision:"ab3d3e31d9c2afdf"},{url:"/_next/static/css/b27c782fdfa79673.css",revision:"b27c782fdfa79673"},{url:"/_next/static/css/c43a34744eee3e8e.css",revision:"c43a34744eee3e8e"},{url:"/_next/static/css/c7f78ded01599073.css",revision:"c7f78ded01599073"},{url:"/_next/static/css/e7eff52495643af7.css",revision:"e7eff52495643af7"},{url:"/_next/static/css/ed3299a022a54dd6.css",revision:"ed3299a022a54dd6"},{url:"/_next/static/media/00f4982f357db61e-s.p.woff2",revision:"8bddb56152be79c4a6f3da7f4d737f8b"},{url:"/_next/static/media/2173e4bb28c315da-s.p.woff2",revision:"9b259ee8dd20976ce1e1f8f1a81b5658"},{url:"/_next/static/media/25ab8995c98996d7-s.p.woff2",revision:"67469fa9f9c4da0bc3cc9c91d9dcf44e"},{url:"/_next/static/media/62a3c74fa0e47362-s.woff2",revision:"2a98d7d0b630d459b8b7f3ffc37aebc9"},{url:"/_next/static/media/8201559e247ad180-s.p.woff2",revision:"aee0d471b1f666a438ea1bb173ddd6b5"},{url:"/_next/static/media/8247d8d2a376ae43-s.woff2",revision:"3388b10411bec0a10049fe1d231a9163"},{url:"/_next/static/media/89362aa296165c6d-s.woff2",revision:"0ee30d9d8a666afbd0e9f2476140dc14"},{url:"/_next/static/media/9ddf1512dbee9c99-s.p.woff2",revision:"aec71369a346acde530e0e30b251c13f"},{url:"/_next/static/media/c6f81e539d11fc99-s.woff2",revision:"b0126114324bebe005a350a87951d935"},{url:"/_next/static/media/cd79e1ff94fa521b-s.p.woff2",revision:"d6e77878340198efcaebfda4ee7df589"},{url:"/_next/static/media/e11f95d95ac59fa4-s.p.woff2",revision:"25db3a2db9083240f9b7988b4db2a99a"},{url:"/_next/static/media/e270c9fc4fe96f5a-s.p.woff2",revision:"31e9a4d2fa4d7326dfafe06a699a8e5c"},{url:"/_next/static/media/layers-2x.9859cd12.png",revision:"9859cd12"},{url:"/_next/static/media/layers.ef6db872.png",revision:"ef6db872"},{url:"/_next/static/media/marker-icon.d577052a.png",revision:"d577052a"},{url:"/icon-192x192.png",revision:"91e42db1c66c0b276abf6234dc50b2eb"},{url:"/icon-512x512.png",revision:"91e42db1c66c0b276abf6234dc50b2eb"},{url:"/manifest.json",revision:"8368aa5cf51e1d7ac237715371beff22"},{url:"/robots.txt",revision:"94c42d567e1c061c31acac8c0f1ec2cb"}],{ignoreURLParametersMatching:[/^utm_/,/^fbclid$/]}),e.cleanupOutdatedCaches(),e.registerRoute("/",new e.NetworkFirst({cacheName:"start-url",plugins:[{cacheWillUpdate:async({response:e})=>e&&"opaqueredirect"===e.type?new Response(e.body,{status:200,statusText:"OK",headers:e.headers}):e}]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,new e.CacheFirst({cacheName:"google-fonts-webfonts",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:31536e3})]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:googleapis)\.com\/.*/i,new e.StaleWhileRevalidate({cacheName:"google-fonts-stylesheets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,new e.StaleWhileRevalidate({cacheName:"static-font-assets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,new e.StaleWhileRevalidate({cacheName:"static-image-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:2592e3})]}),"GET"),e.registerRoute(/\/_next\/static.+\.js$/i,new e.CacheFirst({cacheName:"next-static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/image\?url=.+$/i,new e.StaleWhileRevalidate({cacheName:"next-image",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp3|wav|ogg)$/i,new e.CacheFirst({cacheName:"static-audio-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp4|webm)$/i,new e.CacheFirst({cacheName:"static-video-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:js)$/i,new e.StaleWhileRevalidate({cacheName:"static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:48,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:css|less)$/i,new e.StaleWhileRevalidate({cacheName:"static-style-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/data\/.+\/.+\.json$/i,new e.StaleWhileRevalidate({cacheName:"next-data",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:json|xml|csv)$/i,new e.NetworkFirst({cacheName:"static-data-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({sameOrigin:e,url:{pathname:s}})=>!(!e||s.startsWith("/api/auth/callback")||!s.startsWith("/api/")),new e.NetworkFirst({cacheName:"apis",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:16,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({request:e,url:{pathname:s},sameOrigin:a})=>"1"===e.headers.get("RSC")&&"1"===e.headers.get("Next-Router-Prefetch")&&a&&!s.startsWith("/api/"),new e.NetworkFirst({cacheName:"pages-rsc-prefetch",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({request:e,url:{pathname:s},sameOrigin:a})=>"1"===e.headers.get("RSC")&&a&&!s.startsWith("/api/"),new e.NetworkFirst({cacheName:"pages-rsc",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({url:{pathname:e},sameOrigin:s})=>s&&!e.startsWith("/api/"),new e.NetworkFirst({cacheName:"pages",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({sameOrigin:e})=>!e,new e.NetworkFirst({cacheName:"cross-origin",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:3600})]}),"GET")});
++if(!self.define){let e,s={};const a=(a,i)=>(a=new URL(a+".js",i).href,s[a]||new Promise(s=>{if("document"in self){const e=document.createElement("script");e.src=a,e.onload=s,document.head.appendChild(e)}else e=a,importScripts(a),s()}).then(()=>{let e=s[a];if(!e)throw new Error(`Module ${a} didnΓÇÖt register its module`);return e}));self.define=(i,n)=>{const t=e||("document"in self?document.currentScript.src:"")||location.href;if(s[t])return;let c={};const r=e=>a(e,t),o={module:{uri:t},exports:c,require:r};s[t]=Promise.all(i.map(e=>o[e]||r(e))).then(e=>(n(...e),c))}}define(["./workbox-f1770938"],function(e){"use strict";importScripts(),self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"/_next/static/_-ikK_VJntKE1GT94ZxJe/_buildManifest.js",revision:"b222cbf4d8e1f47e27a8925222733e53"},{url:"/_next/static/_-ikK_VJntKE1GT94ZxJe/_ssgManifest.js",revision:"b6652df95db52feb4daf4eca35380933"},{url:"/_next/static/chunks/1609-cc1d1c742047521b.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/231-c530e17ee1929063.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/3130-201928e8372f9516.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/3611-21f12be3f170c9f8.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/504-a703f016c56c8af2.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/5190-be7461ac1042b663.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/5775.40b065ba15da2fea.js",revision:"40b065ba15da2fea"},{url:"/_next/static/chunks/5866-859c862b35629b5a.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/6085-b585e2796ebc72c2.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/8173-382496375a7ef48f.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/8174-1c0cd5bb4a807f7b.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/8724-4ee6920c02dcac6b.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/935-a27560ebdbcb2c2f.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/(auth)/login/page-67843a436a3266fb.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/_not-found/page-51be0aebc8b74c08.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/error-b63e527727f77fdd.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/farmer/bulletin/page-bc14f01db12cb14c.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/farmer/dashboard/page-fb723101c9f1724b.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/farmer/diagnosis/page-4896905e872d6851.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/farmer/journal/page-5deb3f3ce4d24c90.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/farmer/layout-86035c806b67e8d7.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/farmer/notifications/page-5a474274d7d6d2c5.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/htx/%5Bhtx_code%5D/page-3dd551f5df374e99.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/layout-afa6f4205e253391.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/loading-e61df3def1f31644.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/lot/%5Blot_code%5D/page-ca5cfcd7a0526fd4.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/bulletin/page-624f765a8594f32b.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/chat/page-5c59c9c68c7b2a80.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/dashboard/error-f2323f69789edcc2.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/dashboard/page-5edeaee402dc574e.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/farm-zones/page-80a71a83fbc0dead.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/journal-approve/page-4a3cf9fd5c7e4c59.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/layout-1c7dd63160f966a8.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/lots/%5Blot_code%5D/page-3577ff843819abcb.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/lots/page-18fb4d3e9e56fa62.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/notifications/page-a9b5b6445b6dd345.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/partner-map/page-7ab7fb0a61e5d5c1.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/profile/page-df227e8aa1bc799a.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/manager/zones/page-99a1337917430226.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/not-found-44e084357394ce9b.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/assistant/page-ead8ec2b71879913.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/bulletin/page-c67a0f2b8ecac0fa.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/dashboard/page-37e00148dc160083.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/diseases/%5Bid%5D/page-6ff2cfadd8eb72cb.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/diseases/page-314eeb152db88685.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/documents/page-d16dc390a727af29.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/farm-zones/setup/page-81235b67a8749da5.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/households/page-c9fbb800e58d4a8c.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/journal/page-ea48cacde78c7c0f.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/layout-06dc47ab7022dc40.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/lots/page-18fbec5bc8150fed.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/officer/notifications/page-44dc208ada2913b3.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/page-463bc4ad6637a094.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/q/%5Blot_code%5D/page-64b9a5a47a0ea882.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/app/unauthorized/page-be177160a4bec050.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/d0deef33-f4bfbbc3696bfdde.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/fd9d1056-47f3a1af3086f6e1.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/framework-a63c59c368572696.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/main-9da69d2429db7165.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/main-app-44f369fc236a6949.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/pages/_app-00b74eae5e8dab51.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/pages/_error-c72a1f77a3c0be1b.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/chunks/polyfills-78c92fac7aa8fdd8.js",revision:"79330112775102f91e1010318bae2bd3"},{url:"/_next/static/chunks/webpack-4a67b1d5f9e2045e.js",revision:"_-ikK_VJntKE1GT94ZxJe"},{url:"/_next/static/css/00e79fcfd9402334.css",revision:"00e79fcfd9402334"},{url:"/_next/static/css/098953e52310840e.css",revision:"098953e52310840e"},{url:"/_next/static/css/0ba28cfe8d8ee325.css",revision:"0ba28cfe8d8ee325"},{url:"/_next/static/css/1e10dba602ee2b71.css",revision:"1e10dba602ee2b71"},{url:"/_next/static/css/3089947ab31ee8d1.css",revision:"3089947ab31ee8d1"},{url:"/_next/static/css/65a42cf95868a847.css",revision:"65a42cf95868a847"},{url:"/_next/static/css/96e90ee838129331.css",revision:"96e90ee838129331"},{url:"/_next/static/css/a71fc98b0fbfbb29.css",revision:"a71fc98b0fbfbb29"},{url:"/_next/static/css/ab3d3e31d9c2afdf.css",revision:"ab3d3e31d9c2afdf"},{url:"/_next/static/css/b27c782fdfa79673.css",revision:"b27c782fdfa79673"},{url:"/_next/static/css/c43a34744eee3e8e.css",revision:"c43a34744eee3e8e"},{url:"/_next/static/css/c7f78ded01599073.css",revision:"c7f78ded01599073"},{url:"/_next/static/css/d92dd34fe93ad581.css",revision:"d92dd34fe93ad581"},{url:"/_next/static/css/e7eff52495643af7.css",revision:"e7eff52495643af7"},{url:"/_next/static/css/ed3299a022a54dd6.css",revision:"ed3299a022a54dd6"},{url:"/_next/static/media/00f4982f357db61e-s.p.woff2",revision:"8bddb56152be79c4a6f3da7f4d737f8b"},{url:"/_next/static/media/2173e4bb28c315da-s.p.woff2",revision:"9b259ee8dd20976ce1e1f8f1a81b5658"},{url:"/_next/static/media/25ab8995c98996d7-s.p.woff2",revision:"67469fa9f9c4da0bc3cc9c91d9dcf44e"},{url:"/_next/static/media/62a3c74fa0e47362-s.woff2",revision:"2a98d7d0b630d459b8b7f3ffc37aebc9"},{url:"/_next/static/media/8201559e247ad180-s.p.woff2",revision:"aee0d471b1f666a438ea1bb173ddd6b5"},{url:"/_next/static/media/8247d8d2a376ae43-s.woff2",revision:"3388b10411bec0a10049fe1d231a9163"},{url:"/_next/static/media/89362aa296165c6d-s.woff2",revision:"0ee30d9d8a666afbd0e9f2476140dc14"},{url:"/_next/static/media/9ddf1512dbee9c99-s.p.woff2",revision:"aec71369a346acde530e0e30b251c13f"},{url:"/_next/static/media/c6f81e539d11fc99-s.woff2",revision:"b0126114324bebe005a350a87951d935"},{url:"/_next/static/media/cd79e1ff94fa521b-s.p.woff2",revision:"d6e77878340198efcaebfda4ee7df589"},{url:"/_next/static/media/e11f95d95ac59fa4-s.p.woff2",revision:"25db3a2db9083240f9b7988b4db2a99a"},{url:"/_next/static/media/e270c9fc4fe96f5a-s.p.woff2",revision:"31e9a4d2fa4d7326dfafe06a699a8e5c"},{url:"/_next/static/media/layers-2x.9859cd12.png",revision:"9859cd12"},{url:"/_next/static/media/layers.ef6db872.png",revision:"ef6db872"},{url:"/_next/static/media/marker-icon.d577052a.png",revision:"d577052a"},{url:"/icon-192x192.png",revision:"91e42db1c66c0b276abf6234dc50b2eb"},{url:"/icon-512x512.png",revision:"91e42db1c66c0b276abf6234dc50b2eb"},{url:"/manifest.json",revision:"8368aa5cf51e1d7ac237715371beff22"},{url:"/robots.txt",revision:"94c42d567e1c061c31acac8c0f1ec2cb"}],{ignoreURLParametersMatching:[/^utm_/,/^fbclid$/]}),e.cleanupOutdatedCaches(),e.registerRoute("/",new e.NetworkFirst({cacheName:"start-url",plugins:[{cacheWillUpdate:async({response:e})=>e&&"opaqueredirect"===e.type?new Response(e.body,{status:200,statusText:"OK",headers:e.headers}):e}]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,new e.CacheFirst({cacheName:"google-fonts-webfonts",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:31536e3})]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:googleapis)\.com\/.*/i,new e.StaleWhileRevalidate({cacheName:"google-fonts-stylesheets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,new e.StaleWhileRevalidate({cacheName:"static-font-assets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,new e.StaleWhileRevalidate({cacheName:"static-image-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:2592e3})]}),"GET"),e.registerRoute(/\/_next\/static.+\.js$/i,new e.CacheFirst({cacheName:"next-static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/image\?url=.+$/i,new e.StaleWhileRevalidate({cacheName:"next-image",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp3|wav|ogg)$/i,new e.CacheFirst({cacheName:"static-audio-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp4|webm)$/i,new e.CacheFirst({cacheName:"static-video-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:js)$/i,new e.StaleWhileRevalidate({cacheName:"static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:48,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:css|less)$/i,new e.StaleWhileRevalidate({cacheName:"static-style-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/data\/.+\/.+\.json$/i,new e.StaleWhileRevalidate({cacheName:"next-data",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:json|xml|csv)$/i,new e.NetworkFirst({cacheName:"static-data-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({sameOrigin:e,url:{pathname:s}})=>!(!e||s.startsWith("/api/auth/callback")||!s.startsWith("/api/")),new e.NetworkFirst({cacheName:"apis",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:16,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({request:e,url:{pathname:s},sameOrigin:a})=>"1"===e.headers.get("RSC")&&"1"===e.headers.get("Next-Router-Prefetch")&&a&&!s.startsWith("/api/"),new e.NetworkFirst({cacheName:"pages-rsc-prefetch",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({request:e,url:{pathname:s},sameOrigin:a})=>"1"===e.headers.get("RSC")&&a&&!s.startsWith("/api/"),new e.NetworkFirst({cacheName:"pages-rsc",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({url:{pathname:e},sameOrigin:s})=>s&&!e.startsWith("/api/"),new e.NetworkFirst({cacheName:"pages",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(({sameOrigin:e})=>!e,new e.NetworkFirst({cacheName:"cross-origin",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:3600})]}),"GET")});
+diff --git a/apps/web/src/__tests__/application/useCases/generate-document-download-url.usecase.test.ts b/apps/web/src/__tests__/application/useCases/generate-document-download-url.usecase.test.ts
+index 53b40e0..a76cdc6 100644
+--- a/apps/web/src/__tests__/application/useCases/generate-document-download-url.usecase.test.ts
++++ b/apps/web/src/__tests__/application/useCases/generate-document-download-url.usecase.test.ts
+@@ -13,6 +13,7 @@ describe('GenerateDocumentDownloadUrlUseCase', () => {
+       generateUploadUrl: jest.fn(),
+       generateDownloadUrl: jest.fn(),
+       listDocuments: jest.fn(),
++      getDocumentContent: jest.fn(),
+     }
+     useCase = new GenerateDocumentDownloadUrlUseCase(mockStoragePort)
+   })
+diff --git a/apps/web/src/__tests__/application/useCases/list-documents.usecase.test.ts b/apps/web/src/__tests__/application/useCases/list-documents.usecase.test.ts
+index ba8ff3f..087cc03 100644
+--- a/apps/web/src/__tests__/application/useCases/list-documents.usecase.test.ts
++++ b/apps/web/src/__tests__/application/useCases/list-documents.usecase.test.ts
+@@ -13,6 +13,7 @@ describe('ListDocumentsUseCase', () => {
+       generateUploadUrl: jest.fn(),
+       generateDownloadUrl: jest.fn(),
+       listDocuments: jest.fn(),
++      getDocumentContent: jest.fn(),
+     }
+     useCase = new ListDocumentsUseCase(mockStoragePort)
+   })
+diff --git a/apps/web/src/app/api/chatbot/route.ts b/apps/web/src/app/api/chatbot/route.ts
+index 6afc734..2c4cfcd 100644
+--- a/apps/web/src/app/api/chatbot/route.ts
++++ b/apps/web/src/app/api/chatbot/route.ts
+@@ -9,6 +9,7 @@ import { z } from 'zod'
+ 
+ const chatbotSchema = z.object({
+   message: z.string().min(1),
++  type: z.enum(['market', 'technical']).default('market'),
+   session_id: z.string().optional(),
+   history: z.array(z.object({
+     role: z.enum(['user', 'assistant']),
+@@ -42,6 +43,7 @@ async function postChatbot(request: Request) {
+     parse.data.history,
+     userId,
+     sessionId,
++    parse.data.type
+   )
+ 
+   return new NextResponse(stream, {
+@@ -71,8 +73,10 @@ async function getChatHistory(request: Request) {
+     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'session_id required' } }, { status: 400 })
+   }
+ 
++  const chatType = (searchParams.get('type') as 'market' | 'technical') || 'market'
++
+   const useCase = new ChatbotUseCase()
+-  const history = await useCase.getHistory(session.user.id!, sessionId)
++  const history = await useCase.getHistory(session.user.id!, sessionId, chatType)
+ 
+   return NextResponse.json({ data: { history, session_id: sessionId } })
+ }
+diff --git a/apps/web/src/application/chatbot/ChatbotUseCase.ts b/apps/web/src/application/chatbot/ChatbotUseCase.ts
+index 7415b00..71170db 100644
+--- a/apps/web/src/application/chatbot/ChatbotUseCase.ts
++++ b/apps/web/src/application/chatbot/ChatbotUseCase.ts
+@@ -31,6 +31,17 @@ QUY Tß║«C Bß║«T BUß╗ÿC:
+ Trß║ú lß╗¥i bß║▒ng tiß║┐ng Viß╗çt. Cuß╗æi mß╗ùi c├óu trß║ú lß╗¥i, liß╗çt k├¬ nguß╗ôn tham khß║úo trong d├▓ng ri├¬ng vß╗¢i prefix "Nguß╗ôn:".
+ Nß║┐u kh├┤ng c├│ dß╗» liß╗çu ch├¡nh x├íc, n├│i r├╡ "T├┤i kh├┤ng c├│ dß╗» liß╗çu cß║¡p nhß║¡t cho c├óu hß╗Åi n├áy."`
+ 
++const TECHNICAL_SYSTEM_PROMPT = `Bß║ín l├á chuy├¬n gia kß╗╣ thuß║¡t canh t├íc n├┤ng nghiß╗çp cß╗ºa Hß╗úp t├íc x├ú.
++
++QUY Tß║«C Bß║«T BUß╗ÿC:
++1. CHß╗ê tr├¼nh b├áy sß╗▒ thß║¡t dß╗▒a tr├¬n t├ái liß╗çu nß╗Öi bß╗Ö cß╗ºa HTX hoß║╖c c├íc nguß╗ôn ch├¡nh thß╗æng (Bß╗Ö NN&PTNT, v.v.)
++2. KH├öNG trß║ú lß╗¥i c├íc c├óu hß╗Åi vß╗ü gi├í cß║ú thß╗ï tr╞░ß╗¥ng (nß║┐u ─æ╞░ß╗úc hß╗Åi, h├úy h╞░ß╗¢ng dß║½n ng╞░ß╗¥i d├╣ng hß╗Åi chatbot thß╗ï tr╞░ß╗¥ng).
++3. KH├öNG khuyß║┐n nghß╗ï sß╗¡ dß╗Ñng c├íc loß║íi thuß╗æc bß║úo vß╗ç thß╗▒c vß║¡t ngo├ái danh mß╗Ñc hoß║╖c kh├┤ng an to├án.
++4. Mß╗ìi th├┤ng tin kß╗╣ thuß║¡t (nh╞░ liß╗üu l╞░ß╗úng, thß╗¥i gian c├ích ly) phß║úi tr├¡ch dß║½n r├╡ nguß╗ôn t├ái liß╗çu.
++
++Trß║ú lß╗¥i bß║▒ng tiß║┐ng Viß╗çt. Cuß╗æi mß╗ùi c├óu trß║ú lß╗¥i, liß╗çt k├¬ nguß╗ôn tham khß║úo trong d├▓ng ri├¬ng vß╗¢i prefix "Nguß╗ôn:".
++Nß║┐u kh├┤ng c├│ dß╗» liß╗çu trong t├ái liß╗çu, n├│i r├╡ "T├ái liß╗çu kß╗╣ thuß║¡t hiß╗çn tß║íi kh├┤ng ─æß╗ü cß║¡p ─æß║┐n vß║Ñn ─æß╗ü n├áy."`
++
+ export class ChatbotUseCase {
+   private client: OpenAI | null = null
+   private model: string
+@@ -47,7 +58,13 @@ export class ChatbotUseCase {
+     }
+   }
+ 
+-  async execute(message: string, history: ChatMessage[], userId?: string, sessionId?: string): Promise<ReadableStream> {
++  async execute(
++    message: string,
++    history: ChatMessage[],
++    userId?: string,
++    sessionId?: string,
++    chatType: 'market' | 'technical' = 'market'
++  ): Promise<ReadableStream> {
+     if (!this.client) {
+       return this.unavailableStream()
+     }
+@@ -56,41 +73,66 @@ export class ChatbotUseCase {
+ 
+     // Persist user message
+     if (userId && sessionId) {
+-      await this.persistMessage(sessionId, userId, 'user', message)
++      await this.persistMessage(sessionId, userId, 'user', message, chatType)
+     }
+ 
+     // Fetch RAG context
+     let ragContextStr = ''
+     try {
+-      const twoDaysAgo = new Date()
+-      twoDaysAgo.setHours(twoDaysAgo.getHours() - 48)
++      if (chatType === 'market') {
++        const twoDaysAgo = new Date()
++        twoDaysAgo.setHours(twoDaysAgo.getHours() - 48)
+ 
+-      const recentMarketData = await prisma.marketData.findMany({
+-        where: { fetched_at: { gte: twoDaysAgo } },
+-        orderBy: { fetched_at: 'desc' },
+-        take: 50,
+-      })
+-      const latestFx = await prisma.fxRate.findFirst({
+-        orderBy: { fetched_at: 'desc' },
+-      })
++        const recentMarketData = await prisma.marketData.findMany({
++          where: { fetched_at: { gte: twoDaysAgo } },
++          orderBy: { fetched_at: 'desc' },
++          take: 50,
++        })
++        const latestFx = await prisma.fxRate.findFirst({
++          orderBy: { fetched_at: 'desc' },
++        })
+ 
+-      if (recentMarketData.length > 0 || latestFx) {
+-        ragContextStr += `\n\n--- Dß╗« LIß╗åU THß╗è TR╞»ß╗£NG THß╗░C Tß║╛ TRONG 48H QUA (D├ÖNG ─Éß╗é TRß║ó Lß╗£I): ---\n`
+-        if (latestFx) {
+-          ragContextStr += `Tß╗╖ gi├í ngoß║íi tß╗ç tham chiß║┐u (so vß╗¢i USD, ─æß╗ïnh dß║íng JSON): ${JSON.stringify(latestFx.rates)}\n`
++        if (recentMarketData.length > 0 || latestFx) {
++          ragContextStr += `\n\n--- Dß╗« LIß╗åU THß╗è TR╞»ß╗£NG THß╗░C Tß║╛ TRONG 48H QUA (D├ÖNG ─Éß╗é TRß║ó Lß╗£I): ---\n`
++          if (latestFx) {
++            ragContextStr += `Tß╗╖ gi├í ngoß║íi tß╗ç tham chiß║┐u (so vß╗¢i USD, ─æß╗ïnh dß║íng JSON): ${JSON.stringify(latestFx.rates)}\n`
++          }
++          recentMarketData.forEach(r => {
++            ragContextStr += `- [${r.source}] ${r.commodity} - ${r.metric}: ${r.value} ${r.unit} (Thß╗¥i gian: ${r.period})\n`
++          })
++          ragContextStr += `--- Kß║╛T TH├ÜC Dß╗« LIß╗åU THß╗è TR╞»ß╗£NG ---\n`
++        }
++      } else {
++        // Fetch from MinIO (Technical Chatbot)
++        const { MinioDocumentAdapter } = await import('@/infrastructure/storage/minio-document.adapter')
++        const adapter = new MinioDocumentAdapter()
++        const docs = await adapter.listDocuments('para/')
++        const textDocs = docs.filter(d => !d.isDir && (d.name.endsWith('.txt') || d.name.endsWith('.md')))
++        
++        // Limit to 5 most recent to avoid blowing up context window
++        const latestDocs = textDocs.sort((a, b) => b.uploadDate.getTime() - a.uploadDate.getTime()).slice(0, 5)
++        
++        if (latestDocs.length > 0) {
++          ragContextStr += `\n\n--- T├ÇI LIß╗åU Kß╗╕ THUß║¼T Nß╗ÿI Bß╗ÿ Tß╗¬ P.A.R.A (D├ÖNG ─Éß╗é TRß║ó Lß╗£I): ---\n`
++          await Promise.all(latestDocs.map(async doc => {
++            try {
++              const content = await adapter.getDocumentContent(doc.key)
++              ragContextStr += `\n[T├ái liß╗çu: ${doc.name}]\n${content.substring(0, 2000)}\n`
++            } catch (err) {
++              logger.error(`Failed to read doc content ${doc.key}`, { error: err })
++            }
++          }))
++          ragContextStr += `\n--- Kß║╛T TH├ÜC T├ÇI LIß╗åU Kß╗╕ THUß║¼T ---\n`
+         }
+-        recentMarketData.forEach(r => {
+-          ragContextStr += `- [${r.source}] ${r.commodity} - ${r.metric}: ${r.value} ${r.unit} (Thß╗¥i gian: ${r.period})\n`
+-        })
+-        ragContextStr += `--- Kß║╛T TH├ÜC Dß╗« LIß╗åU THß╗è TR╞»ß╗£NG ---\n`
+       }
+     } catch (e) {
+       logger.error("Failed to fetch RAG context", { error: e })
+     }
+ 
+     try {
++      const promptToUse = chatType === 'market' ? SYSTEM_PROMPT : TECHNICAL_SYSTEM_PROMPT
+       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+-        { role: 'system', content: SYSTEM_PROMPT + ragContextStr },
++        { role: 'system', content: promptToUse + ragContextStr },
+         ...history.slice(-10).map(m => ({
+           role: m.role as 'user' | 'assistant',
+           content: m.content,
+@@ -143,7 +185,7 @@ export class ChatbotUseCase {
+                   role: 'ASSISTANT',
+                   content: cleanReply,
+                   sources_json: sources,
+-                  chat_type: 'market',
++                  chat_type: chatType,
+                 },
+               }).catch(err => logger.error('Failed to persist chat reply', { error: err }))
+             }
+@@ -184,7 +226,7 @@ export class ChatbotUseCase {
+     return sourceLines.map(l => l.replace(/^[-*]\s*/, '').replace(/^nguß╗ôn:\s*/i, '').trim()).filter(Boolean)
+   }
+ 
+-  async getHistory(userId: string, sessionId: string): Promise<ChatMessage[]> {
++  async getHistory(userId: string, sessionId: string, chatType: 'market' | 'technical' = 'market'): Promise<ChatMessage[]> {
+     const sevenDaysAgo = new Date()
+     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+ 
+@@ -192,6 +234,7 @@ export class ChatbotUseCase {
+       where: {
+         user_id: userId,
+         session_id: sessionId,
++        chat_type: chatType,
+         created_at: { gte: sevenDaysAgo },
+       },
+       orderBy: { created_at: 'asc' },
+@@ -204,7 +247,7 @@ export class ChatbotUseCase {
+     }))
+   }
+ 
+-  private async persistMessage(sessionId: string, userId: string, role: 'user' | 'assistant', content: string): Promise<void> {
++  private async persistMessage(sessionId: string, userId: string, role: 'user' | 'assistant', content: string, chatType: 'market' | 'technical'): Promise<void> {
+     try {
+       await prisma.chatHistory.create({
+         data: {
+@@ -212,7 +255,7 @@ export class ChatbotUseCase {
+           user_id: userId,
+           role: role === 'user' ? 'USER' : 'ASSISTANT',
+           content,
+-          chat_type: 'market',
++          chat_type: chatType,
+         },
+       })
+     } catch (err) {
+diff --git a/apps/web/src/domain/document/ports/document-storage.port.ts b/apps/web/src/domain/document/ports/document-storage.port.ts
+index e96c76e..3b953fa 100644
+--- a/apps/web/src/domain/document/ports/document-storage.port.ts
++++ b/apps/web/src/domain/document/ports/document-storage.port.ts
+@@ -30,4 +30,10 @@ export interface DocumentStoragePort {
+    * @param prefix The path prefix to list documents from
+    */
+   listDocuments(prefix?: string): Promise<DocumentItem[]>
++
++  /**
++   * Fetch the text content of a document from storage
++   * @param key The key of the document in storage
++   */
++  getDocumentContent(key: string): Promise<string>
+ }
+diff --git a/apps/web/src/infrastructure/storage/minio-document.adapter.ts b/apps/web/src/infrastructure/storage/minio-document.adapter.ts
+index 7414b56..49291cb 100644
+--- a/apps/web/src/infrastructure/storage/minio-document.adapter.ts
++++ b/apps/web/src/infrastructure/storage/minio-document.adapter.ts
+@@ -86,4 +86,22 @@ export class MinioDocumentAdapter implements DocumentStoragePort {
+       stream.on('error', (err) => reject(err))
+     })
+   }
++
++  async getDocumentContent(key: string): Promise<string> {
++    await this.ensureBucketExists()
++    
++    return new Promise(async (resolve, reject) => {
++      try {
++        const stream = await this.minioClient.getObject(this.bucketName, key)
++        let content = ''
++        stream.on('data', (chunk) => {
++          content += chunk.toString()
++        })
++        stream.on('end', () => resolve(content))
++        stream.on('error', (err) => reject(err))
++      } catch (err) {
++        reject(err)
++      }
++    })
++  }
+ }
+diff --git a/docs/api-contract.md b/docs/api-contract.md
+index a8e9e20..766d8f3 100644
+--- a/docs/api-contract.md
++++ b/docs/api-contract.md
+@@ -64,21 +64,23 @@ Or stream binary audio directly (Content-Type: audio/wav).
+ 
+ ---
+ 
+-## Market Chatbot (Manager)
++## Chatbot (Manager & Officer)
+ 
+ ### `POST /api/chatbot`
+-Send a message to the Market Expert Chatbot (Ollama RAG).
++Send a message to the Chatbot (Ollama/Groq RAG).
+ 
+ **Request:**
+ ```json
+ {
+   "message": "Gi├í xuß║Ñt khß║⌐u gß║ío th├íng 8 so vß╗¢i th├íng 7 thß║┐ n├áo?",
++  "type": "market",
+   "history": [
+     { "role": "user", "content": "..." },
+     { "role": "assistant", "content": "..." }
+   ]
+ }
+ ```
++*Note: `type` can be `"market"` (Manager) or `"technical"` (Officer). Default is `"market"`.*
+ 
+ **Response:**
+ ```json
+@@ -93,7 +95,12 @@ Send a message to the Market Expert Chatbot (Ollama RAG).
+ 
+ **Roles:** manager, officer
+ 
+-> **AI Invariant:** Reply MUST cite sources. MUST NOT recommend actions or decisions.
++> **AI Invariant:** Reply MUST cite sources. MUST NOT recommend actions or decisions. For Technical chatbot, MUST NOT answer market price questions.
++
++### `GET /api/chatbot`
++Retrieve chat history.
++
++**Query:** `?session_id=chat-uuid&type=market`
+ 
+ ---
+ 

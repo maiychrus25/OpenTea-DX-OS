@@ -86,4 +86,22 @@ export class MinioDocumentAdapter implements DocumentStoragePort {
       stream.on('error', (err) => reject(err))
     })
   }
+
+  async getDocumentContent(key: string): Promise<string> {
+    await this.ensureBucketExists()
+    
+    return new Promise(async (resolve, reject) => {
+      try {
+        const stream = await this.minioClient.getObject(this.bucketName, key)
+        let content = ''
+        stream.on('data', (chunk) => {
+          content += chunk.toString()
+        })
+        stream.on('end', () => resolve(content))
+        stream.on('error', (err) => reject(err))
+      } catch (err) {
+        reject(err)
+      }
+    })
+  }
 }

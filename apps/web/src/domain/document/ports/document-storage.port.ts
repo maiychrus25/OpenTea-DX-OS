@@ -30,4 +30,10 @@ export interface DocumentStoragePort {
    * @param prefix The path prefix to list documents from
    */
   listDocuments(prefix?: string): Promise<DocumentItem[]>
+
+  /**
+   * Fetch the text content of a document from storage
+   * @param key The key of the document in storage
+   */
+  getDocumentContent(key: string): Promise<string>
 }
