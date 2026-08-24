@@ -1,51 +1,49 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import React from 'react';
-import { prisma } from '@/infrastructure/db/prisma.client';
-import { PrismaBulletinRepository } from '@/infrastructure/db/repositories/PrismaBulletinRepository';
-import { GetLatestBulletinUseCase } from '@/application/useCases/GetLatestBulletinUseCase';
-import { GetAvailableCommoditiesUseCase } from '@/application/useCases/GetAvailableCommoditiesUseCase';
-import { BulletinView } from '@/components/features/bulletin/BulletinView';
-import { MarketSummaryWidget } from '@/components/features/market/MarketSummaryWidget';
-import { CommodityTabs } from '@/components/features/bulletin/CommodityTabs';
+import React from 'react'
+import { Volume2 } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { AiNote } from '@/components/ui/AiNote'
+import { BulletinCard } from '@/components/features/bulletin/BulletinCard'
+import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
+import styles from '@/components/features/bulletin/bulletin.module.css'
 
-import { toEnglishCommodity, toVietnameseCommodity } from '@/lib/translations';
+export const dynamic = 'force-dynamic'
 
-export const dynamic = 'force-dynamic';
-
-export default async function OfficerBulletinPage({
-  searchParams,
-}: {
-  searchParams: { commodity?: string };
-}) {
-  const repo = new PrismaBulletinRepository(prisma);
-  const getCommodities = new GetAvailableCommoditiesUseCase(repo);
-  const getBulletin = new GetLatestBulletinUseCase(repo);
-  
-  const availableCommodities = await getCommodities.execute();
-  
-  const commodityVi = searchParams.commodity || (availableCommodities.length > 0 ? toVietnameseCommodity(availableCommodities[0]) : 'Gạo');
-  const dbCommodity = toEnglishCommodity(commodityVi);
-  
-  const bulletin = await getBulletin.execute(dbCommodity);
-
+export default function OfficerBulletinPage() {
   return (
-    <div className="flex flex-col gap-6">
-      <CommodityTabs availableCommodities={availableCommodities} basePath="/officer/bulletin" />
-      
-      <div className="flex gap-8 flex-wrap items-start">
-        <div className="flex-[1_1_60%]">
-          {bulletin ? (
-            <BulletinView bulletin={bulletin} />
-          ) : (
-            <p>Chưa có bản tin nào cho nông sản: {commodityVi}</p>
-          )}
+    <div className={styles.pageContainer}>
+      <div className={styles.pageHeader}>
+        <div className={styles.headerContent}>
+          <p className={styles.eyebrow}>BẢN TIN NÔNG NGHIỆP SỐ</p>
+          <h1 className={styles.pageTitle}>Thông tin có nguồn, dễ hiểu</h1>
+          <p className={styles.pageSubtitle}>Cập nhật thị trường, thời tiết và kỹ thuật liên quan vùng trồng HTX.</p>
         </div>
-        <div className="flex-[1_1_30%] min-w-[300px]">
-          <MarketSummaryWidget commodity={commodityVi} />
+        <div className={styles.headerActions}>
+          <Button variant="secondary" className={styles.audioButton}>
+            <Volume2 size={18} />
+            Nghe bản tin sáng
+          </Button>
         </div>
       </div>
+
+      <div className={styles.newsGrid}>
+        {MOCK_BULLETINS.map(b => (
+          <BulletinCard
+            key={b.id}
+            category={b.category}
+            headline={b.headline}
+            summary={b.summary}
+            date={b.date}
+            sourceCount={b.sourceCount}
+          />
+        ))}
+      </div>
+
+      <div className={styles.footerNote}>
+        <AiNote message="Nội dung do AI tổng hợp từ nguồn được duyệt, không phải khuyến nghị sản xuất hoặc đầu tư." />
+      </div>
     </div>
-  );
+  )
 }
