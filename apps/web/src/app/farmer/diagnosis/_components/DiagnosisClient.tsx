@@ -219,6 +219,11 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
                   <div className={styles.historyDetails}>
                     <div className={styles.historyParcel}>Thửa: {h.parcel_code}</div>
                     <span className={styles.historyDisease}>{h.ai_disease_name} ({h.ai_confidence.toFixed(1)}%)</span>
+                    {h.treatment_recommendation && (
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', backgroundColor: '#f0f9ff', padding: '0.5rem', borderRadius: '4px', border: '1px solid #bae6fd' }}>
+                        <strong>Hướng dẫn CBKT:</strong> {h.treatment_recommendation}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
