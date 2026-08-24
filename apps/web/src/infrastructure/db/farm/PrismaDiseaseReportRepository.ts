@@ -57,7 +57,67 @@ export class PrismaDiseaseReportRepository implements DiseaseReportPort {
       ai_disease_name: r.ai_disease_name,
       ai_confidence: r.ai_confidence,
       status: r.status,
-      parcel_code: r.parcel.parcel_code
+      parcel_code: r.parcel.parcel_code,
+      treatment_recommendation: r.treatment_recommendation
     }));
+  }
+
+  async findPendingReports() {
+    const reports = await prisma.diseaseReport.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { detection_date: 'asc' },
+      include: {
+        parcel: { select: { parcel_code: true } },
+        household: { select: { name: true } }
+      }
+    });
+
+    return reports.map(r => ({
+      id: r.id,
+      detection_date: r.detection_date,
+      photo_minio_key: r.photo_minio_key,
+      ai_disease_name: r.ai_disease_name,
+      ai_confidence: r.ai_confidence,
+      farmer_name: r.household.name,
+      parcel_code: r.parcel.parcel_code,
+      photo_url: r.photo_url
+    }));
+  }
+
+  async findById(id: string) {
+    const report = await prisma.diseaseReport.findUnique({
+      where: { id },
+      include: {
+        parcel: { select: { parcel_code: true } },
+        household: { select: { name: true } }
+      }
+    });
+
+    if (!report) return null;
+
+    return {
+      id: report.id,
+      detection_date: report.detection_date,
+      photo_minio_key: report.photo_minio_key,
+      ai_disease_name: report.ai_disease_name,
+      ai_confidence: report.ai_confidence,
+      status: report.status,
+      treatment_recommendation: report.treatment_recommendation,
+      farmer_id: report.detected_by_id,
+      farmer_name: report.household.name,
+      parcel_code: report.parcel.parcel_code
+    };
+  }
+
+  async updateStatus(id: string, status: any, treatment: string, officerId: string): Promise<void> {
+    await prisma.diseaseReport.update({
+      where: { id },
+      data: {
+        status: status,
+        treatment_recommendation: treatment,
+        confirmed_by_id: officerId,
+        confirmed_at: new Date()
+      }
+    });
   }
 }

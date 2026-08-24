@@ -74,6 +74,17 @@ export class PrismaNotificationRepository implements NotificationPort {
     });
   }
 
+  async sendDirectNotification(userId: string, type: any, title: string, body: string, _relatedId?: string): Promise<void> {
+    await prisma.notification.create({
+      data: {
+        type: type,
+        title,
+        body,
+        recipient_id: userId
+      }
+    });
+  }
+
   async delete(userId: string, id: string): Promise<void> {
     await prisma.notification.deleteMany({
       where: { id, recipient_id: userId }

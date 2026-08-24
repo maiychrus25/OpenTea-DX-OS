@@ -278,6 +278,7 @@ model DiseaseReport {
   confirmed_by_id     String? // officer keycloak user ID
   confirmed_at        DateTime?
   treatment_notes     String? // officer-internal only, never shown to farmer
+  treatment_recommendation String? // farmer-visible treatment advice
   status              DiseaseReportStatus @default(PENDING)
   created_at          DateTime            @default(now())
   updated_at          DateTime            @updatedAt
