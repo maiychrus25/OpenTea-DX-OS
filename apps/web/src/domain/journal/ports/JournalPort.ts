@@ -11,6 +11,9 @@ export interface JournalActivityData {
 export interface JournalEntryData {
   id: string
   parcel_id: string
+  household_id?: string
+  parcel_code?: string
+  household_keycloak_user_id?: string | null
   entry_date: Date
   activity_type: string
   performed_by: string

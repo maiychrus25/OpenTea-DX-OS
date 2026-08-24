@@ -141,7 +141,7 @@
 
 | Story | Layer | Dependency / thứ tự |
 |---|---|---|
-| `5-2` | Farmer journal | Sau 3.3/3.6 + Farmer isolation |
+| `5-2` | Farmer journal | Sau 3.3/3.6 + Farmer isolation; implementation in review as of 2026-08-24: Farmer routes resolve household by `keycloak_user_id`, list/create/update/delete are household-scoped, `/farmer/journal/new` submits production entries as pending, pending withdraw is real API delete, and submit/withdraw/approve notifications are persisted. Epic 8-7/8-12 stay Officer/UI mock surfaces only. |
 | `5-3` | Farmer diagnosis UI/flow | Sau 4.6/4.6a |
 | `5-4` | PWA offline diagnosis | Sau 5.3 + storage/offline contract |
 | `5-5` | Officer disease review | Sau 5.3 + notification |

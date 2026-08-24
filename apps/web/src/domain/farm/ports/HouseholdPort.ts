@@ -9,6 +9,7 @@ export interface HouseholdSummary {
   address: string | null
   parcel_count: number
   total_area_ha: number
+  keycloak_user_id?: string | null
 }
 
 export interface CreateHouseholdData {
@@ -28,6 +29,7 @@ export interface UpdateHouseholdData {
 export interface HouseholdPort {
   findAll(htxProfileId: string): Promise<HouseholdSummary[]>
   findById(id: string): Promise<HouseholdSummary | null>
+  findByKeycloakUserId(userId: string): Promise<HouseholdSummary | null>
   create(data: CreateHouseholdData): Promise<HouseholdSummary>
   update(id: string, data: UpdateHouseholdData): Promise<HouseholdSummary>
 }

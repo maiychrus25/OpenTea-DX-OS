@@ -8,12 +8,15 @@ import {
   CreateJournalData,
   JournalFilters,
 } from '@/domain/journal/ports/JournalPort'
-import { ActivityType, ParcelStatus } from '@prisma/client'
+import { ActivityType, NotificationType, ParcelStatus } from '@prisma/client'
 
 function mapEntry(e: any): JournalEntryData {
   return {
     id: e.id,
     parcel_id: e.parcel_id,
+    household_id: e.parcel?.household_id,
+    parcel_code: e.parcel?.parcel_code,
+    household_keycloak_user_id: e.parcel?.household?.keycloak_user_id,
     entry_date: e.entry_date,
     activity_type: e.activity_type,
     performed_by: e.performed_by,
@@ -90,7 +93,16 @@ export class PrismaJournalRepository implements JournalPort {
     const [entries, total] = await Promise.all([
       prisma.journalEntry.findMany({
         where,
-        include: { activities: true },
+        include: {
+          activities: true,
+          parcel: {
+            select: {
+              household_id: true,
+              parcel_code: true,
+              household: { select: { keycloak_user_id: true } },
+            },
+          },
+        },
         orderBy: { entry_date: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -104,7 +116,16 @@ export class PrismaJournalRepository implements JournalPort {
   async findById(id: string): Promise<JournalEntryData | null> {
     const e = await prisma.journalEntry.findUnique({
       where: { id },
-      include: { activities: true },
+      include: {
+        activities: true,
+        parcel: {
+          select: {
+            household_id: true,
+            parcel_code: true,
+            household: { select: { keycloak_user_id: true } },
+          },
+        },
+      },
     })
     if (!e) return null
     return mapEntry(e)
@@ -172,8 +193,35 @@ export class PrismaJournalRepository implements JournalPort {
             })),
           },
         },
-        include: { activities: true },
+        include: {
+          activities: true,
+          parcel: {
+            select: {
+              household_id: true,
+              parcel_code: true,
+              household: { select: { keycloak_user_id: true } },
+            },
+          },
+        },
       })
+
+      if (data.submitted_role === 'FARMER') {
+        const parcel = await tx.parcel.findUnique({
+          where: { id: data.parcel_id },
+          select: { parcel_code: true, household_id: true },
+        })
+
+        await tx.notification.create({
+          data: {
+            type: NotificationType.JOURNAL_SUBMITTED,
+            title: 'Nhật ký mới cần duyệt',
+            body: `${data.performed_by} vừa gửi nhật ký ${data.activity_type} cho thửa ${parcel?.parcel_code ?? data.parcel_id}.`,
+            sender_id: data.submitted_by_id,
+            household_id: parcel?.household_id ?? null,
+            deep_link_url: '/officer/journal',
+          },
+        })
+      }
       
       if (data.submitted_role === 'OFFICER') {
         await applyParcelStatus(tx, data.parcel_id, data.activity_type, data.entry_date)
@@ -193,14 +241,50 @@ export class PrismaJournalRepository implements JournalPort {
     const e = await prisma.journalEntry.update({
       where: { id },
       data: updateData,
-      include: { activities: true },
+      include: {
+        activities: true,
+        parcel: {
+          select: {
+            household_id: true,
+            parcel_code: true,
+            household: { select: { keycloak_user_id: true } },
+          },
+        },
+      },
     })
 
     return mapEntry(e)
   }
 
   async delete(id: string): Promise<void> {
-    await prisma.journalEntry.delete({ where: { id } })
+    await prisma.$transaction(async (tx) => {
+      const entry = await tx.journalEntry.findUnique({
+        where: { id },
+        include: {
+          parcel: {
+            select: {
+              parcel_code: true,
+              household_id: true,
+            },
+          },
+        },
+      })
+
+      await tx.journalEntry.delete({ where: { id } })
+
+      if (entry?.submitted_role === 'FARMER' && entry.status === 'PENDING_APPROVAL') {
+        await tx.notification.create({
+          data: {
+            type: NotificationType.SYSTEM,
+            title: 'Nhật ký đã được rút lại',
+            body: `Nông dân đã rút nhật ký ${entry.activity_type} cho thửa ${entry.parcel.parcel_code}.`,
+            sender_id: entry.submitted_by_id,
+            household_id: entry.parcel.household_id,
+            deep_link_url: '/officer/journal',
+          },
+        })
+      }
+    })
   }
 
   async batchApprove(entryIds: string[], approvedById: string): Promise<{ approved: number; failed: string[] }> {
@@ -209,7 +293,18 @@ export class PrismaJournalRepository implements JournalPort {
 
     await prisma.$transaction(async (tx) => {
       for (const entryId of entryIds) {
-        const entry = await tx.journalEntry.findUnique({ where: { id: entryId } })
+        const entry = await tx.journalEntry.findUnique({
+          where: { id: entryId },
+          include: {
+            parcel: {
+              select: {
+                parcel_code: true,
+                household_id: true,
+                household: { select: { keycloak_user_id: true } },
+              },
+            },
+          },
+        })
         if (!entry || entry.status !== 'PENDING_APPROVAL') {
           failed.push(entryId)
           continue
@@ -225,6 +320,19 @@ export class PrismaJournalRepository implements JournalPort {
         })
         
         await applyParcelStatus(tx, entry.parcel_id, entry.activity_type, entry.entry_date)
+        if (entry.submitted_role === 'FARMER' && entry.parcel.household.keycloak_user_id) {
+          await tx.notification.create({
+            data: {
+              type: NotificationType.JOURNAL_APPROVED,
+              title: 'Nhật ký đã được duyệt',
+              body: `Nhật ký ${entry.activity_type} cho thửa ${entry.parcel.parcel_code} đã được duyệt.`,
+              recipient_id: entry.parcel.household.keycloak_user_id,
+              household_id: entry.parcel.household_id,
+              sender_id: approvedById,
+              deep_link_url: '/farmer/journal',
+            },
+          })
+        }
         approved++
       }
     })
