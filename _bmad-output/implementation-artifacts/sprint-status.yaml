@@ -24,7 +24,7 @@
 project: OpenTea-DX-OS
 sprint: 1
 sprint_goal: "Foundation + Market Intelligence + Farm Zone + QR Traceability by 30/08/2026 (POF)"
-last_updated: "2026-08-27T17:06:00+07:00"
+last_updated: "2026-08-27T18:20:00+07:00"
 
 # Delivery phases (execute in this order):
 #   0-1 contract/schema/routes → 0-2 n8n verification → 0-3 deviation baseline
@@ -262,7 +262,7 @@ development_status:
   8-7-journal-manager-approval:         done           # Nhật ký duyệt: manager approval modal + AI disease warning
   8-8-account-profile-page:            done  # Hồ sơ & tài khoản: profile section + security rows + logout
   8-9-notifications-full-page:          done  # FE mock only; BE/SSE/TTS integration is 9-2/10-2
-  8-10-auth-recovery-and-registration-ui: ready-for-dev  # FE states and flows; Keycloak integration remains BE
+  8-10-auth-recovery-and-registration-ui: done  # Registration/forgot-PIN/login-states/unauthorized-states FE mock; unit 30/30, build pass; Keycloak BE integration remains 9.x
   8-11-member-and-household-management-ui: ready-for-dev  # FE list/detail/invite surfaces
   8-12-journal-diagnosis-qr-completion-ui: done  # FE edge states; persistence remains integration
   8-13-document-partner-search-and-settings-ui: ready-for-dev  # FE operational completion surfaces
