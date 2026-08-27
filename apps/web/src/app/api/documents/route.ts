@@ -6,6 +6,8 @@ import { auth } from '@/auth'
 import { ListDocumentsUseCase } from '@/application/document/list-documents.usecase'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     const session = await auth()

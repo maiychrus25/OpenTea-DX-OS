@@ -39,6 +39,7 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
       {qrDataUri && (
         <section className={`${styles.section} ${styles.qrSection}`}>
           <h2 className={styles.sectionTitle}>Mã QR lô hàng</h2>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qrDataUri} alt={`QR Code — ${lot_code}`} className={styles.qrImage} />
           <p className={styles.qrCaption}>
             Quét mã QR để xem thông tin truy xuất
