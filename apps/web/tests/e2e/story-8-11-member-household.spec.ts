@@ -61,7 +61,7 @@ test.describe('Story 8.11 - Member & Household Management', () => {
     await mockSessionCookie(page, 'farmer', 'Farmer', 'farmer-1');
     
     // In a real implementation this should redirect to unauthorized
-    const response = await page.goto('/manager/members');
+    await page.goto('/manager/members');
     
     // We check if it is redirected or blocked. If middleware works, it goes to /unauthorized or /login
     // Depending on setup, it might just return an unauthorized page. We assert that we don't see the members list
