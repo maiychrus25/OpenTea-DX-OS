@@ -263,6 +263,6 @@ development_status:
   8-8-account-profile-page:            done  # Hồ sơ & tài khoản: profile section + security rows + logout
   8-9-notifications-full-page:          done  # FE mock only; BE/SSE/TTS integration is 9-2/10-2
   8-10-auth-recovery-and-registration-ui: done  # Registration/forgot-PIN/login-states/unauthorized-states FE mock; unit 30/30, build pass; Keycloak BE integration remains 9.x
-  8-11-member-and-household-management-ui: ready-for-dev  # FE list/detail/invite surfaces
+  8-11-member-and-household-management-ui: done  # FE list/detail/invite surfaces
   8-12-journal-diagnosis-qr-completion-ui: done  # FE edge states; persistence remains integration
   8-13-document-partner-search-and-settings-ui: ready-for-dev  # FE operational completion surfaces

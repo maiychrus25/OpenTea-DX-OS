@@ -20,6 +20,7 @@ export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
       {/* Left Panel: Map Canvas Mock */}
       <div className={`${styles.leftPanel} ${styles.mapPanel}`}>
         <div className={styles.mapMock}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
             src="https://a.tile.openstreetmap.org/10/815/487.png" 
             alt="Map background" 
