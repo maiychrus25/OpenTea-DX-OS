@@ -22,6 +22,7 @@ type FilterType = 'all' | 'unread'
 
 interface NotificationInboxProps {
   role: string
+  showPageHeader?: boolean
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => {
@@ -29,7 +30,7 @@ const fetcher = (url: string) => fetch(url).then((res) => {
   return res.json()
 })
 
-export function NotificationInbox({ role }: NotificationInboxProps) {
+export function NotificationInbox({ role, showPageHeader = true }: NotificationInboxProps) {
   const [filter, setFilter] = useState<FilterType>('all')
   const [limit, setLimit] = useState(20)
   const [playingId, setPlayingId] = useState<string | null>(null)
@@ -139,21 +140,24 @@ export function NotificationInbox({ role }: NotificationInboxProps) {
           {ttsError}
         </div>
       )}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Bell size={24} className={styles.bellIcon} />
-          <div>
-            <h1 className={styles.title}>Thông báo</h1>
-            <p className={styles.subtitle}>Quản lý thông báo của {roleLabel}</p>
+      {showPageHeader && (
+        <header className={styles.header}>
+          <div className={styles.headerLeft}>
+            <Bell size={24} className={styles.bellIcon} />
+            <div>
+              <span className={styles.eyebrow}>THÔNG BÁO</span>
+              <h1 className={styles.title}>Tất cả thông báo</h1>
+              <p className={styles.subtitle}>Quản lý thông báo của {roleLabel}</p>
+            </div>
           </div>
-        </div>
-        {unreadCount > 0 && (
-          <button className={styles.markAllBtn} onClick={handleMarkAllRead}>
-            <CheckCheck size={16} />
-            Đánh dấu tất cả đã đọc ({unreadCount})
-          </button>
-        )}
-      </header>
+          {unreadCount > 0 && (
+            <button className={styles.markAllBtn} onClick={handleMarkAllRead}>
+              <CheckCheck size={16} />
+              Đánh dấu tất cả đã đọc ({unreadCount})
+            </button>
+          )}
+        </header>
+      )}
 
       <div className={styles.filterRow}>
         <button
