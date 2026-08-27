@@ -21,8 +21,10 @@ interface ProfileFormProps {
 export function ProfileForm({ initialData }: ProfileFormProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  // profileData reflects latest saved state (updated from API response after save)
   const [profileData, setProfileData] = useState<HtxProfile | null>(initialData)
+  
+  // Mock avatar
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   const {
     control,
@@ -41,6 +43,18 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       season_label: initialData?.season_label ?? '',
     },
   })
+  
+  // Dirty state checking
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isEditing && Object.keys(errors).length === 0) { // Or we can use formState.isDirty
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isEditing, errors])
 
   const onSubmit = async (data: ProfileFormValues) => {
     try {
@@ -101,6 +115,41 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
+        
+        {/* Avatar Upload Mock */}
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>Ảnh đại diện</label>
+          <div className="flex items-center gap-4 mt-2">
+            <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center border border-gray-300">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-gray-400 text-xl font-bold">{profileData.name?.charAt(0) || 'H'}</span>
+              )}
+            </div>
+            {isEditing && (
+              <div>
+                <input 
+                  type="file" 
+                  id="avatar-upload" 
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setAvatarUrl(URL.createObjectURL(file))
+                    }
+                  }}
+                />
+                <label htmlFor="avatar-upload" className="cursor-pointer text-sm font-medium text-primary hover:underline bg-primary-50 px-3 py-1 rounded-md border border-primary-200">
+                  Tải ảnh lên
+                </label>
+                <p className="text-xs text-gray-500 mt-1">JPG, PNG tối đa 2MB.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Tên HTX</label>
           <Controller

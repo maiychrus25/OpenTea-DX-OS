@@ -10,6 +10,7 @@ import { GetLotUseCase } from '@/application/lot/GetLotUseCase'
 import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
 import { StepTrack } from './_components/step-track'
 import { QrVisual } from './_components/qr-visual'
+import { CertificateManager } from '@/components/features/certificate/CertificateManager'
 import styles from './lot-detail.module.css'
 
 interface PageProps {
@@ -81,6 +82,10 @@ export default async function LotDetailPage({ params }: PageProps) {
                 <span className={styles.reviewValue}>{statusLabel}</span>
               </div>
             </div>
+          </div>
+          
+          <div className={styles.reviewSection} style={{ marginTop: 'var(--spacing-6)' }}>
+            <CertificateManager mode="select" />
           </div>
 
           <div className={styles.readOnlyNotice}>

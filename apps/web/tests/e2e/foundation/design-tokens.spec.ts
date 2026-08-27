@@ -25,7 +25,7 @@ test.describe('Foundation Design Tokens', () => {
   test('login page renders without visual regression', async ({ page }) => {
     await page.goto('/login')
     
-    await expect(page.locator('form')).toBeVisible()
+    await expect(page.getByTestId('auth-panel')).toBeVisible()
     await expect(page.getByRole('button', { name: /keycloak/i })).toBeVisible()
     
     // No console errors

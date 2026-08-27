@@ -3,8 +3,9 @@
 
 import * as React from 'react'
 import styles from './TopBar.module.css'
-import { Menu, Search } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { NotificationBell } from '@/components/ui'
+import { GlobalSearchInput } from '@/components/ui/GlobalSearch/GlobalSearchInput'
 
 export interface TopBarProps {
   role: string
@@ -37,10 +38,7 @@ export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notifi
         <div className={styles.rolePill}>{roleName}</div>
       </div>
 
-      <div className={styles.searchWrap}>
-        <Search size={18} className={styles.searchIcon} />
-        <input type="text" placeholder="Tìm kiếm..." aria-label="Tìm kiếm" className={styles.searchInput} />
-      </div>
+      <GlobalSearchInput />
 
       <div className={styles.right}>
         {notificationSlot ? (
