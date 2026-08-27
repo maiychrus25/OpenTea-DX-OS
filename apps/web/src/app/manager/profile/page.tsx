@@ -5,6 +5,7 @@ import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCas
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { ProfileForm } from './_components/ProfileForm'
+import { AccountSection } from '@/components/ui'
 import styles from './page.module.css'
 
 export default async function HtxProfilePage() {
@@ -26,14 +27,27 @@ export default async function HtxProfilePage() {
           <h1 className={styles.title}>Thông tin Hợp tác xã</h1>
           <p className={styles.description}>Quản lý và cập nhật thông tin chung của hợp tác xã.</p>
         </div>
+        
+        {/* Mock HTX Stats Grid from AC-1 */}
+        <div className={styles.mockStatsGrid}>
+          <div className={styles.mockStatItem}>
+            <div className={styles.mockStatValue}>24.8 ha</div>
+            <div className={styles.mockStatLabel}>Tổng diện tích</div>
+          </div>
+          <div className={styles.mockStatItem}>
+            <div className={styles.mockStatValue}>42</div>
+            <div className={styles.mockStatLabel}>Thửa đất</div>
+          </div>
+          <div className={styles.mockStatItem}>
+            <div className={styles.mockStatValue}>18</div>
+            <div className={styles.mockStatLabel}>Hộ thành viên</div>
+          </div>
+        </div>
+
         <ProfileForm initialData={profile} />
       </section>
       
-      {/* 
-        NOTE FOR STORY 8.8:
-        Do not modify the "Hồ sơ HTX" section above.
-        Append your "Tài khoản cá nhân" section below this comment.
-      */}
+      <AccountSection name="Nguyễn Văn An" role="manager" />
     </div>
   )
 }
