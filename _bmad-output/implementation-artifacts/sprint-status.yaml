@@ -265,4 +265,4 @@ development_status:
   8-10-auth-recovery-and-registration-ui: done  # Registration/forgot-PIN/login-states/unauthorized-states FE mock; unit 30/30, build pass; Keycloak BE integration remains 9.x
   8-11-member-and-household-management-ui: done  # FE list/detail/invite surfaces
   8-12-journal-diagnosis-qr-completion-ui: done  # FE edge states; persistence remains integration
-  8-13-document-partner-search-and-settings-ui: ready-for-dev  # FE operational completion surfaces
+  8-13-document-partner-search-and-settings-ui: done  # FE operational completion surfaces

@@ -6,6 +6,7 @@ import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/Pri
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { ProfileForm } from './_components/ProfileForm'
 import { AccountSection } from '@/components/ui'
+import { CertificateManager } from '@/components/features/certificate/CertificateManager'
 import styles from './page.module.css'
 
 export default async function HtxProfilePage() {
@@ -45,6 +46,10 @@ export default async function HtxProfilePage() {
         </div>
 
         <ProfileForm initialData={profile} />
+      </section>
+      
+      <section aria-label="Chứng nhận HTX">
+        <CertificateManager mode="manage" />
       </section>
       
       <AccountSection name="Nguyễn Văn An" role="manager" />
