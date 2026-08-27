@@ -173,4 +173,42 @@
   border-radius: var(--rounded-sm, 6px);
   font-size: var(--font-size-body, 0.9375rem);
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.errorBannerLocked {
+  background-color: #FEF3C7;
+  color: #92400E;
+}
+
+.recoveryLink {
+  color: var(--sidebar-bg);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  align-self: flex-start;
+}
+
+.recoveryLink:hover {
+  text-decoration: underline;
+}
+
+.authLinks {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.authLink {
+  font-size: 0.875rem;
+  color: var(--color-ink-secondary);
+  text-decoration: none;
+}
+
+.authLink:hover {
+  color: var(--sidebar-bg);
+  text-decoration: underline;
 }
