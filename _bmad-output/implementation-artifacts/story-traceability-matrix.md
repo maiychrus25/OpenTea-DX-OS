@@ -175,7 +175,7 @@
 
 | Story | Thứ tự |
 |---|---|
-| `7-0a` | Schema prerequisite; verify before data consumers |
+| `7-0a` | Schema prerequisite — `Household.htx_profile_id` + `Lot.htx_profile_id` + `HtxProfile` relations. **Status: partial.** Evidence: (✅) `schema.prisma` L87–109, L200–225; (✅) migration `20260814102205_add_htx_relations/migration.sql` ADD COLUMN + FK; (✅) 10+ consumers in `PrismaHouseholdRepository`, `PrismaLotRepository`, dashboard pages, `GlobalSearchUseCase`; (⚠️) `prisma migrate deploy` not confirmed against live DB (Docker P1001 at dev time); (❌) backfill script for existing rows not created — `WHERE htx_profile_id = ?` returns 0 rows for pre-migration data; (❌) migration drops table `Lot` (capitalized) — verify no prod data loss before re-run. Blocked by Docker/DB availability. |
 | `7-1` | Tailwind v4/Be Vietnam Pro/tokens |
 | `7-2` | AppShell/sidebar |
 | `7-3` | TopBar/bottom navigation |
