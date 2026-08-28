@@ -175,7 +175,7 @@
 
 | Story | Thứ tự |
 |---|---|
-| `7-0a` | Schema prerequisite — `Household.htx_profile_id` + `Lot.htx_profile_id` + `HtxProfile` relations. **Status: partial.** Evidence: (✅) `schema.prisma` L87–109, L200–225; (✅) migration `20260814102205_add_htx_relations/migration.sql` ADD COLUMN + FK; (✅) 10+ consumers in `PrismaHouseholdRepository`, `PrismaLotRepository`, dashboard pages, `GlobalSearchUseCase`; (⚠️) `prisma migrate deploy` not confirmed against live DB (Docker P1001 at dev time); (❌) backfill script for existing rows not created — `WHERE htx_profile_id = ?` returns 0 rows for pre-migration data; (❌) migration drops table `Lot` (capitalized) — verify no prod data loss before re-run. Blocked by Docker/DB availability. |
+| `7-0a` | Schema prerequisite — `Household.htx_profile_id` + `Lot.htx_profile_id` + `HtxProfile` relations. **Status: ✅ DONE (2026-08-28).** Evidence: (✅) `schema.prisma` L87–109, L200–225; (✅) migration `20260814102205_add_htx_relations` applied — ADD COLUMN households + DROP TABLE "Lot" + CREATE TABLE "lots" + FK constraints; (✅) `20260818125835_add_pushed_to_mattermost` applied via `prisma migrate deploy` (all 5/5 migrations applied); (✅) Backfill executed: 9 households updated (3 → MD2 by parcel code P-HTX-MD2-*, 2 → Test HTX Weather by P-TW1-*/P-STAT-*, 4 remaining test → MD2), 0 NULL remain; (✅) Lots: 0 rows, no backfill needed; (✅) DROP TABLE "Lot" safe — table `lots` already existed; (✅) 10+ consumers verified: `PrismaHouseholdRepository`, `PrismaLotRepository`, dashboard pages, `GlobalSearchUseCase`. |
 | `7-1` | Tailwind v4/Be Vietnam Pro/tokens |
 | `7-2` | AppShell/sidebar |
 | `7-3` | TopBar/bottom navigation |
