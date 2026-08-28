@@ -31,6 +31,7 @@ export interface CreateLotData {
 export interface LotFilters {
   status?: string
   statuses?: string[]
+  htx_profile_id?: string
   page?: number
   limit?: number
 }
