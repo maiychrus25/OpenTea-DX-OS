@@ -220,7 +220,7 @@ development_status:
   epic-7: ready-for-dev
 
   # ── BE Prerequisites (must go first) ─────────────────────────────────────
-  7-0a-schema-htx-relations:            done           # Relation fields + LotFilters HTX scope + migration SQL fix + backfill + test evidence (AC1-11). Apply migration when Docker available.
+  7-0a-schema-htx-relations:            done           # 2026-08-28: schema fields ✅ migration 20260814102205 applied ✅ backfill executed (9 households → htx_profile_id set, 0 NULL remain) ✅ prisma migrate deploy all 5 migrations applied ✅ DROP TABLE "Lot" safe (table was already recreated as "lots") ✅ 10+ consumers verified ✅
   7-9a-lot-trace-data-usecase:          done    # P0: GetLotTraceDataUseCase + withdrawal safety computation
 
   # ── Foundation & Layout ───────────────────────────────────────────────────
