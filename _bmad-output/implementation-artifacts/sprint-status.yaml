@@ -24,7 +24,7 @@
 project: OpenTea-DX-OS
 sprint: 1
 sprint_goal: "Foundation + Market Intelligence + Farm Zone + QR Traceability by 30/08/2026 (POF)"
-last_updated: "2026-08-27T18:20:00+07:00"
+last_updated: "2026-08-28T20:50:00+07:00"
 
 # Delivery phases (execute in this order):
 #   0-1 contract/schema/routes → 0-2 n8n verification → 0-3 deviation baseline
@@ -220,7 +220,7 @@ development_status:
   epic-7: ready-for-dev
 
   # ── BE Prerequisites (must go first) ─────────────────────────────────────
-  7-0a-schema-htx-relations:            partial        # Relation fields exist; migration/backfill and dependent-query evidence remain
+  7-0a-schema-htx-relations:            done           # Relation fields + LotFilters HTX scope + migration SQL fix + backfill + test evidence (AC1-11). Apply migration when Docker available.
   7-9a-lot-trace-data-usecase:          done    # P0: GetLotTraceDataUseCase + withdrawal safety computation
 
   # ── Foundation & Layout ───────────────────────────────────────────────────

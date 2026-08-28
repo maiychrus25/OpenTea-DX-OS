@@ -4,12 +4,16 @@
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { LotPort, LotSummary, CreateLotData, LotFilters, ExportQrResult } from '@/domain/lot/ports/LotPort'
 import { LotTraceData } from '@/domain/entities/lot-trace-data'
+import { Prisma, LotStatus } from '@prisma/client'
 
 export class PrismaLotRepository implements LotPort {
   async findAll(filters: LotFilters): Promise<LotSummary[]> {
-    const where: Record<string, unknown> = {}
-    if (filters.statuses?.length) where.status = { in: filters.statuses }
-    else if (filters.status) where.status = filters.status
+    // F1 fix: use != null (not truthy) to prevent empty-string bypassing HTX scoping
+    // F5 fix: use Prisma.LotWhereInput for compile-time type safety
+    const where: Prisma.LotWhereInput = {}
+    if (filters.htx_profile_id != null) where.htx_profile_id = filters.htx_profile_id
+    if (filters.statuses?.length) where.status = { in: filters.statuses as LotStatus[] }
+    else if (filters.status) where.status = filters.status as LotStatus
 
     const lots = await prisma.lot.findMany({
       where,
