@@ -24,7 +24,7 @@
 project: OpenTea-DX-OS
 sprint: 1
 sprint_goal: "Foundation + Market Intelligence + Farm Zone + QR Traceability by 30/08/2026 (POF)"
-last_updated: "2026-08-28T20:50:00+07:00"
+last_updated: "2026-08-29T18:02:00+07:00"
 
 # Delivery phases (execute in this order):
 #   0-1 contract/schema/routes → 0-2 n8n verification → 0-3 deviation baseline
@@ -102,7 +102,7 @@ development_status:
   # ── Epic 10: Platform BE, Schema & Integration Contracts ───────────────────
   epic-10: done
   10-1-platform-be-contract-completion: done
-  10-2-notification-ai-storage-be-contract: done
+  10-2-notification-ai-storage-be-contract: done  # 2026-08-29: AC1-4,6-8 verified; AC5 (diagnosis farmer isolation) resolved via 4-6a tests; immutable QR snapshot (7-9 fix + ExportQrUseCase transaction)
 
   # ── Epic 0: E2E Contract, Data Ownership & Delivery Control ────────────────
   epic-0: done
@@ -112,7 +112,7 @@ development_status:
 
   # ── Epic 9: FE–BE Integration & E2E Completion ─────────────────────────────
   epic-9: done
-  9-1-fe-be-integration-critical-path: done
+  9-1-fe-be-integration-critical-path: done  # 2026-08-29: BE contracts complete; E2E spec added (story-9-1-critical-path.spec.ts — household→journal→lot→QR→public scan + 3 negative tests); immutable snapshot Jest tests (lot-immutable-snapshot.test.ts); submit-diagnosis use case tests
   9-2-fe-be-integration-market-notification: done
 
   # ── Epic 1: Foundation ────────────────────────────────────────────────────
@@ -187,7 +187,7 @@ development_status:
   # ── Epic 4: Missing Stories (identified 2026-08-12) ───────────────────────
   # Diagnosis proxy required by Epic 5 Farmer UI
 
-  4-6a-diagnosis-proxy-api:              partial        # Proxy exists; role/persistence/broadcast contract remains for 10-2
+  4-6a-diagnosis-proxy-api:              done  # 2026-08-29: farmer isolation verified (submit-diagnosis.usecase.test.ts + diagnosis-farmer-isolation.test.ts); FORBIDDEN_PARCEL, HOUSEHOLD_NOT_FOUND, AI invariant, broadcastDiseaseReport args all tested
 
   # ── Epic 5: Farmer Experience & Notifications ─────────────────────────────
   epic-5: in-progress
@@ -240,7 +240,7 @@ development_status:
   7-8-officer-farmer-dashboard:         done  # Feature: Officer + Farmer Today views, updated navItems
 
   # ── Public Pages ──────────────────────────────────────────────────────────
-  7-9-public-qr-trace-page:             partial  # Page/use case exist; certificate endpoint and immutable snapshot contract remain
+  7-9-public-qr-trace-page:             done  # 2026-08-29: certificate endpoint /api/lot/[lot_code]/certificate ✅ @ts-ignore removed (prisma generate) ✅ locked QR banner added ✅
   7-10-public-htx-storefront:           done  # Public: /htx/[htx_code]; needs 7-0a for lot by HTX
 
   # ── Integration ───────────────────────────────────────────────────────────
