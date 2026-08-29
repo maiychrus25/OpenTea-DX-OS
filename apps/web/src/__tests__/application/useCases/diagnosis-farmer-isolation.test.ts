@@ -28,10 +28,9 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({
   },
 }))
 
-const mockFindMany  = prisma.diseaseReport.findMany  as jest.Mock
+const mockFindMany   = prisma.diseaseReport.findMany   as jest.Mock
 const mockFindUnique = prisma.diseaseReport.findUnique as jest.Mock
-const mockCreate    = prisma.diseaseReport.create    as jest.Mock
-const mockUpdate    = prisma.diseaseReport.update    as jest.Mock
+const mockCreate     = prisma.diseaseReport.create     as jest.Mock
 
 // ── Shared test data ───────────────────────────────────────────────────────────
 

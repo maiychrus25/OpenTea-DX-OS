@@ -16,7 +16,7 @@ import { SubmitDiagnosisUseCase } from '@/application/disease/submit-diagnosis.u
 import { DiseaseDetectionPort } from '@/domain/disease/ports/disease-detection.port'
 import { StoragePort, UploadResult } from '@/domain/disease/ports/storage.port'
 import { ParcelPort, ParcelSummary } from '@/domain/farm/ports/ParcelPort'
-import { DiseaseReportPort, DiseaseReportData } from '@/domain/disease/ports/disease-report.port'
+import { DiseaseReportPort } from '@/domain/disease/ports/disease-report.port'
 import { NotificationPort } from '@/domain/ports/notification-port'
 
 // ── Mock helpers ───────────────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ const mockParcelOfFarmerA: ParcelSummary = {
   },
 }
 
-function makeMockPorts(parcel: ParcelData | null = mockParcelOfFarmerA) {
+function makeMockPorts(parcel: ParcelSummary | null = mockParcelOfFarmerA) {
   const diseasePort: jest.Mocked<DiseaseDetectionPort> = {
     predict: jest.fn().mockResolvedValue({ disease_name: 'Leaf blight', confidence_score: 0.87 }),
   }
