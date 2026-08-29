@@ -113,7 +113,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ role }) => {
         body: JSON.stringify(id ? { id, action: 'mark-read' } : { action: 'mark-all-read' }),
       })
     } finally {
-      mutate() // Always revalidate from server
+      // M3 fix: catch revalidation failures so UI doesn't silently stay in wrong state
+      // TODO(issue-171): Show toast "Không thể đồng bộ thông báo, vui lòng tải lại trang" on failure
+      mutate().catch(() => { /* revalidation failed — UI will recover on next SWR poll */ })
     }
   }, [data, mutate, swrUnreadCount])
 

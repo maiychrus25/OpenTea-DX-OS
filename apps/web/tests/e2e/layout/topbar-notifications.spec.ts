@@ -8,10 +8,12 @@ import type { Notification } from '@/components/ui/NotificationBell/Notification
 // ── Session mock helper ──────────────────────────────────────────────────────
 
 async function mockSessionCookie(page: Page, role: string) {
+  const secret = process.env.AUTH_SECRET ?? process.env.KEYCLOAK_CLIENT_SECRET
+  if (!secret) throw new Error('AUTH_SECRET or KEYCLOAK_CLIENT_SECRET must be set for E2E tests')
   const now = Math.floor(Date.now() / 1000)
   const token = await encode({
     token: { id: `${role}-user-id`, name: `${role} User`, email: `${role}@example.com`, role, iat: now, exp: now + 60 * 60 * 8, jti: `mock-${role}-${now}` },
-    secret: process.env.AUTH_SECRET || process.env.KEYCLOAK_CLIENT_SECRET || 'agrimarket-secret-key',
+    secret,
     salt: 'authjs.session-token',
   })
   await page.context().addCookies([{
@@ -206,27 +208,34 @@ test.describe('Story 7.11: NotificationBell Component', () => {
     await expect(ttsBtn).toHaveAttribute('data-tts-state', 'idle', { timeout: 4000 })
   })
 
-  // TC-7.11-08: SSE stream headers correct
-  test('TC-7.11-08: SSE /api/notifications/stream returns text/event-stream', async ({ page }) => {
+  // TC-7.11-08: SSE stream request is made on page load
+  test('TC-7.11-08: SSE /api/notifications/stream is requested with text/event-stream', async ({ page }) => {
     await mockSessionCookie(page, 'officer')
 
-    let streamResponseType: string | null = null
+    // Register REST route first
+    await page.route('**/api/notifications', async route => {
+      await route.fulfill({ status: 200, json: makeNotifApiResponse([], 0) })
+    })
 
-    await page.route('**/api/notifications*', async route => {
-      if (route.request().url().includes('stream')) {
-        streamResponseType = 'intercepted'
-        await route.fulfill({
-          status: 200,
-          headers: { 'Content-Type': 'text/event-stream' },
-          body: 'event: connected\ndata: {"message":"SSE connection established"}\n\n',
-        })
-      } else {
-        await route.fulfill({ status: 200, json: makeNotifApiResponse([], 0) })
-      }
+    // waitForRequest BEFORE goto to capture SSE request without race condition (M2 fix)
+    const sseRequestPromise = page.waitForRequest(
+      req => req.url().includes('/api/notifications/stream'),
+      { timeout: 6000 }
+    ).catch(() => null)
+
+    // Route SSE stream separately
+    await page.route('**/api/notifications/stream*', async route => {
+      await route.fulfill({
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+        body: 'event: connected\ndata: {"message":"SSE connection established"}\n\n',
+      })
     })
 
     await page.goto('/officer/dashboard')
-    // SSE route was hit
-    expect(streamResponseType).toBe('intercepted')
+
+    // Wait for the SSE request to be made (async EventSource connect after mount)
+    const sseRequest = await sseRequestPromise
+    expect(sseRequest).not.toBeNull()
   })
 })
