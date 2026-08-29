@@ -244,7 +244,7 @@ development_status:
   7-10-public-htx-storefront:           done  # Public: /htx/[htx_code]; needs 7-0a for lot by HTX
 
   # ── Integration ───────────────────────────────────────────────────────────
-  7-11-notification-bell:               partial  # UI exists; polling/response shape/TTS TODO mean full notification contract is not done
+  7-11-notification-bell:               done  # 2026-08-29: unreadCount shape fix ✅ alert()→TTS state machine ✅ Piper health-check ✅ SSE unread reconcile ✅ 8 Playwright tests added
 
   # ── Epic 8: FE Prototype Reconstruction — Feature Pages & Workflows ────────
   # Source: Video prototype analysis 2026-08-19 (bandicam 2026-08-19 22-11-48-780.mp4)
