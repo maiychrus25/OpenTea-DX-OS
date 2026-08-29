@@ -181,3 +181,43 @@
   color: var(--text-secondary, #999);
   word-break: break-all;
 }
+
+/* ── Locked QR Banner ───────────────────────────────────────────────── */
+
+.lockedBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1.5px solid #86efac;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.lockedIcon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: #16a34a;
+  margin-top: 1px;
+}
+
+.lockedBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lockedTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.lockedSubtitle {
+  font-size: 12px;
+  color: #166534;
+  opacity: 0.85;
+}

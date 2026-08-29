@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react';
-import { Info } from 'lucide-react';
+import { Info, Lock } from 'lucide-react';
 import { LotTraceData } from '@/domain/entities/lot-trace-data';
 import { Pill } from '@/components/ui/Pill/Pill';
 import styles from '../trace.module.css';
@@ -30,6 +30,18 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
 
   return (
     <div className={styles.traceShell}>
+      {/* Locked QR Banner — only shown when lot is immutably exported */}
+      {status === 'QR_EXPORTED' && (
+        <div className={styles.lockedBanner}>
+          <Lock className={styles.lockedIcon} aria-hidden />
+          <div className={styles.lockedBody}>
+            <span className={styles.lockedTitle}>Thông tin đã được xác nhận và khóa</span>
+            <span className={styles.lockedSubtitle}>
+              Dữ liệu bất biến kể từ khi lô hàng xuất QR. Mọi thay đổi sau thời điểm này không ảnh hưởng đến nội dung hiển thị.
+            </span>
+          </div>
+        </div>
+      )}
       <header className={styles.traceHeader}>
         <h1>Truy xuất nguồn gốc</h1>
         <p>DX AgriMarket</p>

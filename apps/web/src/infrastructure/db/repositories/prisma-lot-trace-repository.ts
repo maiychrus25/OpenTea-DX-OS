@@ -50,18 +50,18 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
 
     if (!lot) return null
 
-    // If already exported, return the immutable snapshot
-    // @ts-ignore TODO(cross-epic): public_page_data missing in Prisma schema
-    if (lot.status === 'QR_EXPORTED' && (lot as any).public_page_data) {
-      const parsed = (lot as any).public_page_data as any
+    // If already exported, return the immutable snapshot.
+    // public_page_data is typed as Prisma.JsonValue (Json? field) — safe cast via unknown.
+    if (lot.status === 'QR_EXPORTED' && lot.public_page_data) {
+      const parsed = lot.public_page_data as unknown as Record<string, unknown>
       return {
         ...parsed,
-        packaging_date: parsed.packaging_date ? new Date(parsed.packaging_date) : null,
-        created_at: new Date(parsed.created_at),
-        latest_safe_harvest_date: parsed.latest_safe_harvest_date ? new Date(parsed.latest_safe_harvest_date) : null,
-        journal_summaries: (parsed.journal_summaries || []).map((s: any) => ({
+        packaging_date: parsed.packaging_date ? new Date(parsed.packaging_date as string) : null,
+        created_at: new Date(parsed.created_at as string),
+        latest_safe_harvest_date: parsed.latest_safe_harvest_date ? new Date(parsed.latest_safe_harvest_date as string) : null,
+        journal_summaries: ((parsed.journal_summaries as Array<Record<string, unknown>>) || []).map((s) => ({
           ...s,
-          entry_date: new Date(s.entry_date)
+          entry_date: new Date(s.entry_date as string)
         }))
       } as LotTraceData
     }
