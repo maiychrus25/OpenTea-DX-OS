@@ -92,3 +92,6 @@ apps/web/public/sw.js.map
 apps/web/public/workbox-*.js
 apps/web/public/fallback-*.js
 apps/web/public/swe-worker-*.js
+
+# ── Prisma auto-generated migrations ─────────────────────────
+apps/web/prisma/migrations/**/migration.sql
