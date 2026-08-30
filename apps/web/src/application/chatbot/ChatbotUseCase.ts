@@ -49,14 +49,27 @@ export class ChatbotUseCase {
   private model: string
 
   constructor(private documentStorage?: DocumentStoragePort) {
-    this.model = process.env.OLLAMA_MODEL || 'llama-3.1-8b-instant'
+    this.model = process.env.OLLAMA_MODEL || 'phi3:mini'
 
-    const apiKey = process.env.GROQ_API_KEY
-    if (apiKey) {
+    const groqApiKey = process.env.GROQ_API_KEY
+    const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://ollama:11434'
+
+    if (groqApiKey && groqApiKey !== 'your_groq_api_key_here') {
+      // Primary: Groq cloud API (faster, requires API key)
+      this.model = process.env.OLLAMA_MODEL || 'llama-3.1-8b-instant'
       this.client = new OpenAI({
-        apiKey,
+        apiKey: groqApiKey,
         baseURL: 'https://api.groq.com/openai/v1',
       })
+      logger.info('ChatbotUseCase: using Groq API', { model: this.model })
+    } else {
+      // Fallback: Ollama local (OpenAI-compatible endpoint)
+      this.model = process.env.OLLAMA_MODEL || 'phi3:mini'
+      this.client = new OpenAI({
+        apiKey: 'ollama',  // Required by openai client but ignored by Ollama
+        baseURL: `${ollamaBaseUrl}/v1`,
+      })
+      logger.info('ChatbotUseCase: using Ollama local fallback', { model: this.model, baseURL: ollamaBaseUrl })
     }
   }
 
@@ -203,7 +216,7 @@ export class ChatbotUseCase {
         },
       })
     } catch (error) {
-      console.error("GROQ API ERROR:", error)
+      logger.error('Groq/Ollama API error', { error })
       return this.unavailableStream()
     }
   }

@@ -148,6 +148,26 @@ services:
     networks:
       - agrimarket-net
 
+  # Ollama — Local LLM inference (MIT License)
+  # Next.js connects via OLLAMA_BASE_URL=http://ollama:11434
+  # After first start: docker exec agrimarket-ollama ollama pull phi3:mini
+  ollama:
+    image: ollama/ollama:latest  # License: MIT
+    container_name: agrimarket-ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - agrimarket-net
+
   mattermost:
     image: mattermost/mattermost-team-edition:latest
     container_name: agrimarket-mattermost
@@ -171,6 +191,7 @@ volumes:
   pgdata:
   n8n_data:
   minio_data:
+  ollama_data:
   mattermost_data:
   mattermost_config:
 
