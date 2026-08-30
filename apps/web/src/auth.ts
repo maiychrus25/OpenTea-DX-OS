@@ -22,6 +22,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, profile, account }) {
+      // Lưu idToken để dùng cho Keycloak logout (xóa SSO session)
+      if (account?.id_token) {
+        token.idToken = account.id_token
+      }
+
       if (profile) {
         // Extract role from Keycloak realm_access (UserInfo endpoint)
         const kp = profile as KeycloakProfile;
