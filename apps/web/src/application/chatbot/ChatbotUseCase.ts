@@ -49,7 +49,7 @@ export class ChatbotUseCase {
   private model: string
 
   constructor(private documentStorage?: DocumentStoragePort) {
-    this.model = process.env.OLLAMA_MODEL || 'phi3:mini'
+    this.model = process.env.OLLAMA_MODEL || 'qwen2:0.5b'
 
     const groqApiKey = process.env.GROQ_API_KEY
     const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://ollama:11434'
@@ -64,7 +64,9 @@ export class ChatbotUseCase {
       logger.info('ChatbotUseCase: using Groq API', { model: this.model })
     } else {
       // Fallback: Ollama local (OpenAI-compatible endpoint)
-      this.model = process.env.OLLAMA_MODEL || 'phi3:mini'
+      // NOTE: CPU-only mode requires a small model (<=500MB). qwen2:0.5b is the
+      // minimum viable option — quality is limited. For production, set GROQ_API_KEY.
+      this.model = process.env.OLLAMA_MODEL || 'qwen2:0.5b'
       this.client = new OpenAI({
         apiKey: 'ollama',  // Required by openai client but ignored by Ollama
         baseURL: `${ollamaBaseUrl}/v1`,
@@ -166,6 +168,9 @@ export class ChatbotUseCase {
       })
 
       let fullReply = ''
+      // Capture model name before entering ReadableStream callback
+      // (inside start(), 'this' refers to UnderlyingDefaultSource, not class instance)
+      const modelName = this.model
 
       return new ReadableStream({
         async start(controller) {
@@ -188,7 +193,7 @@ export class ChatbotUseCase {
             controller.enqueue(encoder.encode(JSON.stringify({
               done: true,
               sources: sources.length > 0 ? sources : ['Dữ liệu hệ thống'],
-              model: process.env.OLLAMA_MODEL || 'llama-3.1-8b-instant',
+              model: modelName,
             }) + '\n'))
 
             controller.close()
