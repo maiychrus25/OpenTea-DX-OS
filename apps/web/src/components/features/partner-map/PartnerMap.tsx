@@ -1,7 +1,11 @@
 "use client"
 
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import React, { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+import 'leaflet/dist/leaflet.css'
 import styles from './PartnerMap.module.css'
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
@@ -25,6 +29,19 @@ export default function PartnerMap() {
   const [suggests, setSuggests] = useState<any[]>([])
   const [selected, setSelected] = useState<{lat:number,lng:number}|null>(null)
   const [form, setForm] = useState<any>({ name: '', partner_type: 'buyer', contact_phone: '', address: '' })
+
+  // Leaflet icon fix for Next.js (webpack replaces _getIconUrl)
+  useEffect(() => {
+    import('leaflet').then(L => {
+      // @ts-ignore — Leaflet webpack workaround (AD-18)
+      delete L.Icon.Default.prototype._getIconUrl
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      })
+    })
+  }, [])
 
   useEffect(() => { fetch('/api/partners').then(r=>r.json()).then(j=>setPartners(j.data||[])) }, [])
 

@@ -1,7 +1,11 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 "use client"
 
 import React, { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+import 'leaflet/dist/leaflet.css'
 import styles from './FarmZoneReadOnly.module.css'
 
 // Dynamic imports for react-leaflet to ensure ssr:false behavior per requirement
@@ -32,6 +36,19 @@ export default function FarmZoneReadOnly() {
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([...statuses])
   const [cropTypes, setCropTypes] = useState<string[]>([])
   const [selectedCrop, setSelectedCrop] = useState<string>('all')
+
+  // Leaflet icon fix for Next.js (webpack replaces _getIconUrl)
+  useEffect(() => {
+    import('leaflet').then(L => {
+      // @ts-ignore — Leaflet webpack workaround (AD-18)
+      delete L.Icon.Default.prototype._getIconUrl
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      })
+    })
+  }, [])
 
   useEffect(() => {
     fetch('/api/farm/parcels')

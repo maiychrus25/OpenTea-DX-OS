@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
@@ -19,6 +20,7 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ initialData }: ProfileFormProps) {
+  const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [profileData, setProfileData] = useState<HtxProfile | null>(initialData)
@@ -88,6 +90,8 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
       toast.success('Cập nhật thông tin HTX thành công')
       setIsEditing(false)
+      // Revalidate Server Component cache so UI reflects new data without full reload
+      router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Có lỗi xảy ra khi cập nhật thông tin'
       toast.error(message)

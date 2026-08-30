@@ -221,3 +221,9 @@
 .suggestions span:hover {
   background: var(--primary-100);
 }
+
+.idleIcon {
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
