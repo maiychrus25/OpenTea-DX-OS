@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import NextAuth from "next-auth"
-import Keycloak from "next-auth/providers/keycloak"
 import { logger } from "@/lib/logger"
 
 interface KeycloakProfile {
@@ -11,14 +10,41 @@ interface KeycloakProfile {
   }
 }
 
+// Internal Keycloak URL (container-to-container) dùng cho token/userinfo
+const KEYCLOAK_INTERNAL = process.env.KEYCLOAK_INTERNAL_URL || "http://keycloak:8080/realms/agrimarket"
+// External Keycloak URL (browser redirect) dùng cho authorization
+const KEYCLOAK_EXTERNAL = process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket"
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   providers: [
-    Keycloak({
+    {
+      id: "keycloak",
+      name: "Keycloak",
+      type: "oauth",
+      // issuer = external URL (host.docker.internal:8080)
+      // Keycloak được config KC_HOSTNAME để phát JWT với iss = URL này
+      // → khớp hoàn toàn, không còn mismatch
+      issuer: KEYCLOAK_EXTERNAL,
+      checks: ["state"] as any,
       clientId: process.env.KEYCLOAK_CLIENT_ID || "nextjs-web",
       clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || "agrimarket-secret-key",
-      issuer: process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket",
-    })
+      authorization: {
+        url: `${KEYCLOAK_EXTERNAL}/protocol/openid-connect/auth`,
+        params: { scope: "openid profile email" }
+      },
+      // token/userinfo dùng internal URL (container-to-container, nhanh hơn)
+      token: `${KEYCLOAK_INTERNAL}/protocol/openid-connect/token`,
+      userinfo: `${KEYCLOAK_INTERNAL}/protocol/openid-connect/userinfo`,
+      profile(profile: any) {
+        return {
+          id: profile.sub,
+          name: profile.name ?? profile.preferred_username,
+          email: profile.email,
+          image: profile.picture,
+        }
+      }
+    }
   ],
   callbacks: {
     async jwt({ token, profile, account }) {
@@ -73,7 +99,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   events: {
     async signOut(message) {
       if ('token' in message && message.token?.idToken) {
-        const issuer = process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket"
+        const issuer = process.env.KEYCLOAK_INTERNAL_URL || process.env.KEYCLOAK_ISSUER || "http://keycloak:8080/realms/agrimarket"
         const logoutUrl = `${issuer}/protocol/openid-connect/logout`
         const redirectUri = encodeURIComponent(
           `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/login`

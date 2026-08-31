@@ -54,7 +54,18 @@ export function CertificateManager({ mode, initialCertificates = MOCK_CERTIFICAT
   const [certName, setCertName] = useState('')
   const [certType, setCertType] = useState('VietGAP')
   const [expiryDate, setExpiryDate] = useState('')
-  
+  const [previewCert, setPreviewCert] = useState<Certificate | null>(null)
+
+  const handlePreview = (cert: Certificate) => {
+    // If fileUrl is a real URL (not '#' placeholder), open inline PDF modal
+    if (cert.fileUrl && cert.fileUrl !== '#') {
+      setPreviewCert(cert)
+    } else {
+      // Fallback: open in new tab when URL not yet available
+      window.open(cert.fileUrl, '_blank', 'noopener,noreferrer')
+    }
+  }
+
   const handleToggleSelect = (id: string) => {
     if (mode !== 'select') return
     const updated = certificates.map(c => c.id === id ? { ...c, selected: !c.selected } : c)
@@ -142,7 +153,7 @@ export function CertificateManager({ mode, initialCertificates = MOCK_CERTIFICAT
 
             {mode === 'manage' && (
               <div className={styles.cardActions}>
-                <button className={styles.actionBtn} title="Xem PDF" onClick={(e) => { e.stopPropagation(); alert('Mock: Mở PDF Preview') }}>
+                <button className={styles.actionBtn} title="Xem PDF" onClick={(e) => { e.stopPropagation(); handlePreview(cert) }}>
                   <Eye size={16} />
                 </button>
                 <button className={styles.actionBtn} title="Cập nhật mới" onClick={(e) => { e.stopPropagation(); setIsUploadModalOpen(true) }}>
@@ -191,6 +202,31 @@ export function CertificateManager({ mode, initialCertificates = MOCK_CERTIFICAT
           </div>
         </form>
       </Modal>
+
+      {/* PDF Preview Modal */}
+      {previewCert && (
+        <Modal
+          isOpen={!!previewCert}
+          onClose={() => setPreviewCert(null)}
+          title={`Xem chứng nhận: ${previewCert.name}`}
+        >
+          <div className={styles.pdfPreviewContainer}>
+            <iframe
+              src={previewCert.fileUrl}
+              title={previewCert.name}
+              className={styles.pdfIframe}
+              loading="lazy"
+            >
+              <p>
+                Trình duyệt không hỗ trợ xem PDF trực tiếp.{' '}
+                <a href={previewCert.fileUrl} target="_blank" rel="noopener noreferrer">
+                  Tải xuống file
+                </a>
+              </p>
+            </iframe>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

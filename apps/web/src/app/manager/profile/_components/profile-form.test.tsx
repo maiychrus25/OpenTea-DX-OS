@@ -25,6 +25,20 @@ jest.mock('sonner', () => ({
   }
 }))
 
+// Mock next/navigation — required because ProfileForm uses useRouter()
+// Without this Jest throws "Invariant expected app router to be mounted"
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(() => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    refresh: jest.fn(),
+    prefetch: jest.fn(),
+  })),
+  usePathname: jest.fn(() => '/manager/profile'),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+}))
+
 describe('ProfileForm', () => {
   const mockInitialData = {
     id: 'test-id',

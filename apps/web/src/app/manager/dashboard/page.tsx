@@ -34,6 +34,73 @@ function formatDate(date: Date): string {
   }).format(date)
 }
 
+// Dịch tên mặt hàng từ tiếng Anh → tiếng Việt gần gũi với nông dân
+const COMMODITY_VN: Record<string, string> = {
+  'Agricultural Products':    'Nông nghiệp',
+  'Rice':                     'Lúa gạo',
+  'Maize':                    'Ngô',
+  'Wheat':                    'Lúa mì',
+  'Vegetable':                'Rau củ',
+  'Vegetables':               'Rau củ',
+  'Fruit':                    'Trái cây',
+  'Fruits':                   'Trái cây',
+  'Meat':                     'Thịt',
+  'Dairy':                    'Sữa',
+  'Sugar':                    'Đường',
+  'Coffee':                   'Cà phê',
+  'Rubber':                   'Cao su',
+  'Cassava':                  'Sắn',
+  'Pepper':                   'Tiêu',
+  'Cereals':                  'Ngũ cốc',
+}
+
+// Dịch tên metric (loại chỉ số) sang tiếng Việt
+const METRIC_VN: Record<string, string> = {
+  'crop_production_index':     'Chỉ số SX nông nghiệp',
+  'food_production_index':     'Chỉ số SX lương thực',
+  'fertilizer_consumption':    'Tiêu thụ phân bón',
+  'cereal_production':         'Sản lượng ngũ cốc',
+  'cereal_yield':              'Năng suất ngũ cốc',
+  'producer_price_index':      'Chỉ số giá sản xuất',
+  'consumer_price_index':      'Chỉ số giá tiêu dùng',
+}
+
+function toMetricVN(metric: string | undefined | null): string {
+  if (!metric) return ''
+  return METRIC_VN[metric] ?? metric.replace(/_/g, ' ')
+}
+
+function toCommodityVN(raw: string | undefined | null): string {
+  if (!raw) return ''
+  return COMMODITY_VN[raw] ?? raw
+}
+
+// Chuyển FAO index → mức độ dễ hiểu với nông dân (không dùng chỉ số kỹ thuật 2014-2016)
+function formatIndexValue(value: number, unit: string): { badge: string; color: string; numericLabel: string } {
+  const isIndex = unit.toLowerCase().includes('index')
+
+  if (!isIndex) {
+    // Giá trị thực (kg/ha, tấn...) → hiển thị số thực
+    const unitVN = unit
+      .replace('kg/ha arable land', 'kg/ha đất canh tác')
+      .replace('tonnes', 'tấn')
+      .replace('kg/ha', 'kg/ha')
+    return {
+      badge: '',
+      color: '#374151',
+      numericLabel: `${value.toLocaleString('vi-VN')} ${unitVN}`,
+    }
+  }
+
+  // FAO index: 100 = mức trung bình lịch sử
+  const numericLabel = `(chỉ số: ${value.toFixed(1)})`
+  if (value >= 120) return { badge: '🔴 Rất cao', color: '#dc2626', numericLabel }
+  if (value >= 110) return { badge: '🟠 Cao hơn bình thường', color: '#d97706', numericLabel }
+  if (value >= 100) return { badge: '🟢 Ổn định', color: '#16a34a', numericLabel }
+  if (value >= 90)  return { badge: '🟡 Thấp hơn bình thường', color: '#ca8a04', numericLabel }
+  return { badge: '🔵 Thấp', color: '#2563eb', numericLabel }
+}
+
 export default async function ManagerDashboard() {
   const session = await auth()
   if (!session || session.user?.role !== 'manager') {
@@ -155,16 +222,47 @@ export default async function ManagerDashboard() {
 
           {/* Market Snapshot */}
           <section className={styles.marketSnapshot}>
-            <span className={styles.eyebrow}>GIÁ THỊ TRƯỜNG HÔM NAY</span>
-            
+            <span className={styles.eyebrow}>CHỈ SỐ GIÁ NÔNG SẢN</span>
+
             <div className={styles.pricesGrid}>
-              {prices.map((price, idx) => (
-                <div key={idx} className={styles.priceItem}>
-                  <strong className={styles.priceCommodity}>{price.commodity}</strong>
-                  <span className={styles.priceValue}>{price.value.toLocaleString('vi-VN')} {price.unit}</span>
+              {prices.length > 0 ? prices.map((price, idx) => {
+                const { badge, color, numericLabel } = formatIndexValue(price.value, price.unit)
+                const isIndex = price.unit.toLowerCase().includes('index')
+                return (
+                  <div key={idx} className={styles.priceItem}>
+                    <div>
+                      <strong className={styles.priceCommodity}>
+                        {toCommodityVN(price.commodity)}
+                      </strong>
+                      <span className={styles.priceMetric}>
+                        {toMetricVN(price.metric)}
+                      </span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      {isIndex ? (
+                        <>
+                          <span style={{ fontWeight: 600, color }}>{badge}</span>
+                          <span style={{ fontSize: '0.8rem', color: '#6b7280', marginLeft: '0.4rem' }}>
+                            {numericLabel}
+                          </span>
+                        </>
+                      ) : (
+                        <span style={{ fontWeight: 600, color }}>{numericLabel}</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              }) : (
+                <div className={styles.emptyMarket}>
+                  <span style={{ fontSize: '2rem' }}>📊</span>
+                  <p style={{ margin: '0.5rem 0 0.25rem', fontWeight: 600, color: '#374151' }}>
+                    Chưa có dữ liệu giá hôm nay
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
+                    Hệ thống cập nhật tự động mỗi ngày. Vui lòng quay lại sau.
+                  </p>
                 </div>
-              ))}
-              {prices.length === 0 && <p className={styles.emptyText}>Chưa có dữ liệu thị trường</p>}
+              )}
             </div>
 
             <div className={styles.aiInfo}>

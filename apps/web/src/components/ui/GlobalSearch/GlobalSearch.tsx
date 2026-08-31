@@ -121,7 +121,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
             ref={inputRef}
             type="text"
             className={styles.searchInput}
-            placeholder="Tìm kiếm thành viên, lô hàng, tài liệu... (gõ 'error' để test lỗi)"
+            placeholder="Tìm kiếm thành viên, lô hàng, tài liệu..."
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
@@ -184,7 +184,8 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
 
           {!query && (
             <div className={styles.idleState}>
-              <p>Gõ từ khóa để bắt đầu tìm kiếm toàn cục.</p>
+              <Search size={28} className={styles.idleIcon} />
+              <p>Gõ từ khóa để tìm kiếm thành viên, lô hàng, tài liệu...</p>
               <div className={styles.suggestions}>
                 <span onClick={() => setQuery('Nguyễn')}>Nguyễn</span>
                 <span onClick={() => setQuery('Lô')}>Lô hàng</span>

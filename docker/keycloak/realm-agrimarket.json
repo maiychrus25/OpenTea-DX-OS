@@ -1,6 +1,7 @@
 {
   "realm": "agrimarket",
   "displayName": "DX AgriMarket",
+  "loginTheme": "agrimarket",
   "enabled": true,
   "sslRequired": "external",
   "registrationAllowed": false,

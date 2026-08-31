@@ -38,7 +38,7 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({
     },
     marketData: {
       findMany: jest.fn().mockResolvedValue([
-        { commodity: 'Lúa', value: 10000, unit: 'VND', source: 'Test' }
+        { commodity: 'Lúa', metric: 'producer_price_index', value: 105.5, unit: 'Index', source: 'Test' }
       ]),
     }
   },

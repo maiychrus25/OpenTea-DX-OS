@@ -1,0 +1,7 @@
+node_modules
+.next
+.swc
+playwright-report
+test-results
+coverage
+.env.local
