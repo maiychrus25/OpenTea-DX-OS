@@ -34,9 +34,17 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # KC_HOSTNAME_URL: full URL để Keycloak biết đúng issuer
+      # KHÔNG dùng KC_HOSTNAME (hostname only) vì sẽ bị double port: localhost:8080:8080
+      KC_HOSTNAME_URL: "http://localhost:8080"
+      KC_HOSTNAME_ADMIN_URL: "http://localhost:8080"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
     command: ["start-dev", "--import-realm"]
     volumes:
       - ./keycloak:/opt/keycloak/data/import
+      - ./keycloak/themes:/opt/keycloak/themes
     ports:
       - "8080:8080"
     depends_on:
@@ -52,6 +60,9 @@ services:
     container_name: agrimarket-web
     restart: always
     env_file: .env.local
+    environment:
+      # Internal URL cho token/userinfo exchange (container-to-container)
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/realms/agrimarket
     ports:
       - "3000:3000"
     depends_on:
