@@ -65,11 +65,13 @@ const METRIC_VN: Record<string, string> = {
   'consumer_price_index':      'Chỉ số giá tiêu dùng',
 }
 
-function toMetricVN(metric: string): string {
+function toMetricVN(metric: string | undefined | null): string {
+  if (!metric) return ''
   return METRIC_VN[metric] ?? metric.replace(/_/g, ' ')
 }
 
-function toCommodityVN(raw: string): string {
+function toCommodityVN(raw: string | undefined | null): string {
+  if (!raw) return ''
   return COMMODITY_VN[raw] ?? raw
 }
 
