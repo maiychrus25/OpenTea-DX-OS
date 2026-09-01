@@ -60,7 +60,7 @@ function GeomanInit({ onAreaCalculated }: Props) {
       },
     }, 'en')
 
-    map.on('pm:create', (e) => {
+    map.on('pm:create', (e: any) => {
       const layer = e.layer as L.Polygon
       const geojson = layer.toGeoJSON()
       
@@ -70,7 +70,7 @@ function GeomanInit({ onAreaCalculated }: Props) {
       }
       
       // Listen to edit
-      layer.on('pm:edit', (editEvent) => {
+      layer.on('pm:edit', (editEvent: any) => {
         const editedGeojson = (editEvent.target as L.Polygon).toGeoJSON()
         if (editedGeojson.geometry.type === 'Polygon') {
           const editedSqm = area(turfPolygon(editedGeojson.geometry.coordinates))
