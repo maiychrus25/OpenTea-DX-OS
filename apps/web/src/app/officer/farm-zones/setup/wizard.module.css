@@ -266,27 +266,18 @@
   justify-content: center;
 }
 
-/* Map Mock */
-.mapMock {
+/* Real Map */
+.mapContainer {
   flex: 1;
-  background: #e2e8f0;
   border-radius: var(--rounded-md);
   position: relative;
   overflow: hidden;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
+  min-height: 400px;
+  z-index: 0;
 }
 
-.mapImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.6;
-}
-
-.drawHint {
+.drawHintOverlay {
   position: absolute;
   bottom: 1rem;
   left: 50%;
@@ -299,23 +290,8 @@
   font-weight: 500;
   color: var(--color-ink-primary);
   white-space: nowrap;
-}
-
-.polygonMock {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 150px;
-  height: 100px;
-  background: rgba(22, 163, 74, 0.2);
-  border: 2px solid #16A34A;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #125c3f;
-  font-weight: 600;
-  text-shadow: 0 1px 2px white;
+  z-index: 1000;
+  pointer-events: none;
 }
 
 /* Summary Card */
