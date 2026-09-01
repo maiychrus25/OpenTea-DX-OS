@@ -11,6 +11,8 @@ interface Props {
   householdId: string
   householdName: string
   area: number
+  geojson?: object | null
+  center?: { lat: number, lng: number } | null
   onPrev: () => void
   onComplete: () => void
 }
@@ -23,7 +25,7 @@ const CROP_OPTIONS = [
   'Xà lách',
 ]
 
-export function Step3CropAssign({ householdId, householdName, area, onPrev, onComplete }: Props) {
+export function Step3CropAssign({ householdId, householdName, area, geojson, center, onPrev, onComplete }: Props) {
   const [crop, setCrop] = useState(CROP_OPTIONS[3]) // Default: Cải ngọt
   const [season, setSeason] = useState('Hè Thu 2026')
   const [yieldEst, setYieldEst] = useState('4.5')
@@ -101,10 +103,10 @@ export function Step3CropAssign({ householdId, householdName, area, onPrev, onCo
                     body: JSON.stringify({
                       household_id: householdId,
                       parcel_code: 'TP-' + crypto.randomUUID().substring(0, 6).toUpperCase(),
-                      geojson: { type: "Polygon", coordinates: [] }, // Mock geojson for now
+                      geojson: geojson ? (geojson as any).geometry : { type: "Polygon", coordinates: [] },
                       area_ha: area / 10000,
-                      centroid_lat: 10.0,
-                      centroid_lng: 106.0,
+                      centroid_lat: center?.lat || 10.0,
+                      centroid_lng: center?.lng || 106.0,
                       current_crop: crop,
                       season: season
                     })

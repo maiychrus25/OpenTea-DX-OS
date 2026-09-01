@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Step1Household } from './step1-household'
 import { Step2MapDraw } from './step2-map-draw'
 import { Step3CropAssign } from './step3-crop-assign'
@@ -17,6 +18,8 @@ export function SetupWizard() {
   const [householdId, setHouseholdId] = useState<string | null>(null)
   const [householdName, setHouseholdName] = useState<string>('')
   const [area, setArea] = useState<number | null>(null)
+  const [geojson, setGeojson] = useState<object | null>(null)
+  const [center, setCenter] = useState<{ lat: number, lng: number } | null>(null)
 
   function renderStep() {
     switch (step) {
@@ -36,8 +39,10 @@ export function SetupWizard() {
           <Step2MapDraw
             householdName={householdName}
             onPrev={() => setStep(1)}
-            onNext={(a) => {
+            onNext={(a, geo, cen) => {
               setArea(a)
+              if (geo) setGeojson(geo)
+              if (cen) setCenter(cen)
               setStep(3)
             }}
           />
@@ -48,9 +53,11 @@ export function SetupWizard() {
             householdId={householdId!}
             householdName={householdName}
             area={area || 0}
+            geojson={geojson}
+            center={center}
             onPrev={() => setStep(2)}
             onComplete={() => {
-              alert('Đã thiết lập vùng trồng thành công!')
+              toast.success('Đã thiết lập vùng trồng thành công!')
               router.push('/officer/dashboard')
             }}
           />

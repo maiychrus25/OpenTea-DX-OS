@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react'
 import { FileText, Trash2, RefreshCcw, Eye, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui'
 import { Modal } from '@/components/ui/Modal/Modal'
 import styles from './CertificateManager.module.css'
@@ -57,12 +58,12 @@ export function CertificateManager({ mode, initialCertificates = MOCK_CERTIFICAT
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null)
 
   const handlePreview = (cert: Certificate) => {
-    // If fileUrl is a real URL (not '#' placeholder), open inline PDF modal
     if (cert.fileUrl && cert.fileUrl !== '#') {
+      // Có URL thực → hiển thị inline PDF modal
       setPreviewCert(cert)
     } else {
-      // Fallback: open in new tab when URL not yet available
-      window.open(cert.fileUrl, '_blank', 'noopener,noreferrer')
+      // fileUrl = '#' placeholder — file chưa được tải lên MinIO
+      toast.error('File chứng nhận chưa được tải lên. Hãy dùng nút Cập nhật để đính kèm file.')
     }
   }
 
@@ -153,13 +154,13 @@ export function CertificateManager({ mode, initialCertificates = MOCK_CERTIFICAT
 
             {mode === 'manage' && (
               <div className={styles.cardActions}>
-                <button className={styles.actionBtn} title="Xem PDF" onClick={(e) => { e.stopPropagation(); handlePreview(cert) }}>
+                <button type="button" className={styles.actionBtn} title="Xem PDF" onClick={(e) => { e.stopPropagation(); handlePreview(cert) }}>
                   <Eye size={16} />
                 </button>
-                <button className={styles.actionBtn} title="Cập nhật mới" onClick={(e) => { e.stopPropagation(); setIsUploadModalOpen(true) }}>
+                <button type="button" className={styles.actionBtn} title="Cập nhật mới" onClick={(e) => { e.stopPropagation(); setIsUploadModalOpen(true) }}>
                   <RefreshCcw size={16} />
                 </button>
-                <button className={`${styles.actionBtn} ${styles.danger}`} title="Xóa" onClick={(e) => { e.stopPropagation(); handleDelete(cert.id) }}>
+                <button type="button" className={`${styles.actionBtn} ${styles.danger}`} title="Xóa" onClick={(e) => { e.stopPropagation(); handleDelete(cert.id) }}>
                   <Trash2 size={16} />
                 </button>
               </div>

@@ -4,6 +4,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  optimizeFonts: false,
 }
 
 const withPWA = require("@ducanh2912/next-pwa").default({

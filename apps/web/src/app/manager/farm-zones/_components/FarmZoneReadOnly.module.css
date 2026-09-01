@@ -1,3 +1,6 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
 .root {
   display: flex;
   flex-direction: column;
@@ -13,3 +16,13 @@
 .checkboxRow { display:flex; gap:8px; flex-wrap:wrap }
 .checkboxLabel { font-size:13px }
 .mapContainer { flex:1; border-radius:6px; overflow:hidden; margin:8px }
+.parcelTooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.parcelTooltip::before {
+  display: none !important;
+}

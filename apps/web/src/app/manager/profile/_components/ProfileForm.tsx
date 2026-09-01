@@ -290,7 +290,11 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Tổng diện tích (ha)</label>
           {/* total_area_ha is auto-calculated, not directly editable */}
-          <div className={styles.value}>{profileData.total_area_ha}</div>
+          <div className={styles.value}>
+            {profileData.total_area_ha
+              ? `${profileData.total_area_ha.toLocaleString('vi-VN')} ha`
+              : '-'}
+          </div>
         </div>
 
         {isEditing && (

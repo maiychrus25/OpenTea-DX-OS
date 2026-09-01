@@ -4,35 +4,35 @@
 'use client'
 
 import React, { useState } from 'react'
+import dynamic from 'next/dynamic'
 import styles from '../wizard.module.css'
+
+const SetupMapClient = dynamic(() => import('./SetupMapClient'), { ssr: false })
 
 interface Props {
   householdName: string
   onPrev: () => void
-  onNext: (area: number) => void
+  onNext: (area: number, geojson?: object, center?: { lat: number, lng: number }) => void
 }
 
 export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
-  const [isDrawn, setIsDrawn] = useState(false)
+  const [areaSqm, setAreaSqm] = useState(0)
+  const [geojson, setGeojson] = useState<object | undefined>()
+  const [center, setCenter] = useState<{ lat: number, lng: number } | undefined>()
+  const isDrawn = areaSqm > 0
 
   return (
     <div className={styles.layout}>
-      {/* Left Panel: Map Canvas Mock */}
+      {/* Left Panel: Real Leaflet Map */}
       <div className={`${styles.leftPanel} ${styles.mapPanel}`}>
-        <div className={styles.mapMock}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img 
-            src="https://a.tile.openstreetmap.org/10/815/487.png" 
-            alt="Map background" 
-            className={styles.mapImg}
-          />
-          {isDrawn && (
-            <div className={styles.polygonMock}>
-              Đang vẽ...
-            </div>
-          )}
-          <div className={styles.drawHint}>
-            Vẽ polygon quanh khu vực canh tác của {householdName} - diện tích sẽ tự tính
+        <div className={styles.mapContainer}>
+          <SetupMapClient onAreaCalculated={(sqm, geo, cen) => {
+            setAreaSqm(sqm)
+            setGeojson(geo)
+            setCenter(cen)
+          }} />
+          <div className={styles.drawHintOverlay}>
+            Sử dụng thanh công cụ để vẽ vùng trồng. Diện tích sẽ tự động tính toán.
           </div>
         </div>
       </div>
@@ -56,19 +56,10 @@ export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
           <div className={styles.flexGap}>
             <input 
               className={styles.formInput} 
-              value={isDrawn ? "2.400" : ""} 
+              value={areaSqm > 0 ? areaSqm.toLocaleString('vi-VN') : ""} 
               placeholder="0" 
               disabled 
             />
-            {!isDrawn && (
-              <button 
-                type="button"
-                className={styles.btnSecondary} 
-                onClick={() => setIsDrawn(true)}
-              >
-                Giả lập vẽ
-              </button>
-            )}
           </div>
         </div>
 
@@ -81,7 +72,7 @@ export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
               type="button"
               className={styles.btnPrimary}
               disabled={!isDrawn}
-              onClick={() => onNext(2400)}
+              onClick={() => onNext(areaSqm, geojson, center)}
             >
               Tiếp theo →
             </button>

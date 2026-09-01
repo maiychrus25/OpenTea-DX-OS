@@ -37,10 +37,10 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
           setHtxProfileId(htxData.data.id)
           const res = await fetch(`/api/farm/households?htxProfileId=${htxData.data.id}`)
           const data = await res.json()
-          setHouseholds(data.data.map((h: Household) => ({
+          setHouseholds(data.data.map((h: any) => ({
             id: h.id,
             name: h.name,
-            parcelCount: h.parcelCount || 0
+            parcelCount: h.parcel_count || 0
           })))
         }
       } catch {
