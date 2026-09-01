@@ -7,7 +7,7 @@ import React, { useEffect } from 'react'
 import { MapContainer, TileLayer, useMap, LayersControl } from 'react-leaflet'
 import '@geoman-io/leaflet-geoman-free'
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css'
-// @ts-ignore
+// @ts-ignore: leaflet-geosearch thiếu type definitions chuẩn cho TypeScript
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch'
 import 'leaflet-geosearch/dist/geosearch.css'
 import area from '@turf/area'
@@ -31,7 +31,7 @@ function SearchAndLocateInit() {
       }
     })
     
-    // @ts-ignore
+    // @ts-ignore: Khởi tạo GeoSearchControl bị báo lỗi type do thiếu interface khai báo chuẩn
     const searchControl = new GeoSearchControl({
       provider,
       style: 'bar',
@@ -46,7 +46,7 @@ function SearchAndLocateInit() {
     map.addControl(searchControl)
 
     // 2. Locate Control (Custom Button for My Location)
-    // @ts-ignore
+    // @ts-ignore: L.Control.extend không được support sẵn trong @types/leaflet
     const LocateControl = L.Control.extend({
       options: { position: 'topleft' },
       onAdd: function () {

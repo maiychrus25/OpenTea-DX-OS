@@ -15,6 +15,7 @@ const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), 
 const GeoJSON = dynamic(() => import('react-leaflet').then(m => m.GeoJSON), { ssr: false })
 const LayersControl = dynamic(() => import('react-leaflet').then(m => m.LayersControl), { ssr: false })
 const BaseLayer = dynamic(() => import('react-leaflet').then(m => m.LayersControl.BaseLayer), { ssr: false })
+// Sử dụng "any" ở đây vì TypeScript config hiện tại không nhận diện được "Tooltip" export từ react-leaflet v4 trong ngữ cảnh next/dynamic
 const Tooltip = dynamic<any>(() => import('react-leaflet').then(m => (m as any).Tooltip), { ssr: false })
 
 // Dùng đúng field name từ API (polygon_geojson, không phải geometry)
@@ -191,7 +192,7 @@ const AutoBounds = dynamic(() => import('./AutoBounds'), { ssr: false })
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
               />
             </BaseLayer>
-            {/* @ts-ignore */}
+            {/* @ts-ignore: react-leaflet BaseLayer gặp lỗi type với React 18 / Next.js */}
             <BaseLayer name="Bản đồ đường phố (OSM)">
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
