@@ -53,8 +53,7 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
         }
 
         const hhData = await hhRes.json()
-        const parcelsData = await parcelsRes.json()
-        
+        const parcelsData = parcelsRes.ok ? await parcelsRes.json() : { data: [] }
         const h = hhData.data
         const parcels = parcelsData.data || []
         
