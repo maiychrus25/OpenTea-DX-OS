@@ -125,6 +125,7 @@ function GeomanInit({ onAreaCalculated }: Props) {
       },
     }, 'en')
 
+    // @ts-ignore: leaflet-geoman chưa export event type chính xác
     map.on('pm:create', (e: any) => {
       const layer = e.layer as L.Polygon
       const geojson = layer.toGeoJSON()
@@ -135,6 +136,7 @@ function GeomanInit({ onAreaCalculated }: Props) {
       }
       
       // Listen to edit
+      // @ts-ignore: leaflet-geoman chưa export event type chính xác
       layer.on('pm:edit', (editEvent: any) => {
         const editedLayer = editEvent.target as L.Polygon
         const editedGeojson = editedLayer.toGeoJSON()

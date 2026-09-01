@@ -1,4 +1,5 @@
 declare module 'react-leaflet' {
+  // @ts-ignore: Dùng any tạm thời do thư viện react-leaflet thiếu type definition chuẩn hoặc không tương thích Next.js SSR
   import * as React from 'react'
   export const MapContainer: React.ComponentType<any>
   export const TileLayer: React.ComponentType<any>
