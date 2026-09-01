@@ -4,6 +4,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 import styles from './FarmZoneReadOnly.module.css'
@@ -12,6 +13,9 @@ import styles from './FarmZoneReadOnly.module.css'
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false })
 const GeoJSON = dynamic(() => import('react-leaflet').then(m => m.GeoJSON), { ssr: false })
+const LayersControl = dynamic(() => import('react-leaflet').then(m => m.LayersControl), { ssr: false })
+const BaseLayer = dynamic(() => import('react-leaflet').then(m => m.LayersControl.BaseLayer), { ssr: false })
+const Tooltip = dynamic<any>(() => import('react-leaflet').then(m => (m as any).Tooltip), { ssr: false })
 
 // Dùng đúng field name từ API (polygon_geojson, không phải geometry)
 type Parcel = {
@@ -25,6 +29,7 @@ type Parcel = {
   centroid_lng?: number | null
   household?: { name?: string } | null
   area_ha?: number | null
+  crop_cycles?: { crop_name?: string }[]
 }
 
 // Map DB status → màu sắc + nhãn tiếng Việt
@@ -52,6 +57,9 @@ export default function FarmZoneReadOnly() {
   const [cropTypes, setCropTypes] = useState<string[]>([])
   const [selectedCrop, setSelectedCrop] = useState<string>('all')
 
+  const searchParams = useSearchParams()
+  const householdId = searchParams.get('householdId')
+
   // Leaflet icon fix for Next.js (webpack replaces _getIconUrl)
   useEffect(() => {
     import('leaflet').then(L => {
@@ -66,11 +74,12 @@ export default function FarmZoneReadOnly() {
   }, [])
 
   useEffect(() => {
-    fetch('/api/farm/parcels')
+    const url = householdId ? `/api/farm/parcels?household_id=${householdId}` : '/api/farm/parcels'
+    fetch(url)
       .then(r => r.ok ? r.json() : Promise.reject(r))
       .then(j => setParcels(j.data || []))
       .catch(() => setParcels([]))
-  }, [])
+  }, [householdId])
 
   useEffect(() => {
     const types = Array.from(new Set(parcels.map(p => p.crop_type).filter(Boolean))) as string[]
@@ -135,6 +144,10 @@ export default function FarmZoneReadOnly() {
     }
   }
 
+
+// Để đơn giản, ta sẽ gọi useMap() bên trong component con.
+const AutoBounds = dynamic(() => import('./AutoBounds'), { ssr: false })
+
   return (
     <div className={styles.root}>
       <div className={styles.controls}>
@@ -169,32 +182,64 @@ export default function FarmZoneReadOnly() {
 
       <div className={styles.mapContainer}>
         <MapContainer center={[10.0, 106.0]} zoom={9} style={{ height: '100%', width: '100%' }}>
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="© OpenStreetMap contributors"
-          />
-          {filtered.map(p => (
-            <GeoJSON
-              key={p.id}
-              data={toGeoJSONFeature(p) as any}
-              style={styleForFeature}
-              onEachFeature={onEachFeature}
-            />
-          ))}
+          {/* @ts-ignore */}
+          <LayersControl position="topright">
+            {/* @ts-ignore */}
+            <BaseLayer checked name="Bản đồ Vệ tinh (Esri)">
+              <TileLayer
+                attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              />
+            </BaseLayer>
+            {/* @ts-ignore */}
+            <BaseLayer name="Bản đồ đường phố (OSM)">
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="© OpenStreetMap contributors"
+              />
+            </BaseLayer>
+          </LayersControl>
+          <AutoBounds parcels={filtered} />
+          {filtered.map(p => {
+
+            return (
+              <GeoJSON
+                key={p.id}
+                data={toGeoJSONFeature(p) as any}
+                style={styleForFeature}
+                onEachFeature={onEachFeature}
+              >
+                <Tooltip permanent direction="center" className={styles.parcelTooltip}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '20px', textShadow: '0 0 4px rgba(0,0,0,0.5)' }}>🌱</span>
+                  </div>
+                </Tooltip>
+              </GeoJSON>
+            )
+          })}
         </MapContainer>
         {drawnParcels === 0 && (
           <div style={{
             position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-            background:'white', borderRadius:8, padding:'1rem 1.5rem', textAlign:'center',
-            boxShadow:'0 2px 8px rgba(0,0,0,0.15)', zIndex:1000, pointerEvents:'none'
+            background:'white', borderRadius:8, padding:'1.5rem', textAlign:'center',
+            boxShadow:'0 4px 12px rgba(0,0,0,0.15)', zIndex:1000, pointerEvents:'auto'
           }}>
-            <div style={{ fontSize:'1.5rem' }}>🗺️</div>
-            <p style={{ margin:'0.5rem 0 0', fontSize:'0.9rem', color:'#374151' }}>
-              <strong>Chưa có thửa đất nào được vẽ ranh giới</strong>
+            <div style={{ fontSize:'2rem', marginBottom:'0.5rem' }}>🗺️</div>
+            <p style={{ margin:'0', fontSize:'1rem', color:'#111827' }}>
+              <strong>Chưa có ranh giới thửa đất nào</strong>
             </p>
-            <p style={{ margin:'0.25rem 0 0', fontSize:'0.8rem', color:'#6b7280' }}>
-              Cán bộ kỹ thuật cần vẽ ranh giới từng thửa trong tính năng Thiết lập Vùng Trồng
+            <p style={{ margin:'0.5rem 0 1rem', fontSize:'0.85rem', color:'#6b7280', maxWidth: '300px' }}>
+              Các thửa đất của {householdId ? 'nông hộ này' : 'hợp tác xã'} hiện chưa được vẽ ranh giới trên bản đồ. Bạn cần thiết lập vùng trồng để hiển thị.
             </p>
+            <a 
+              href={householdId ? `/officer/farm-zones/setup?householdId=${householdId}` : "/officer/farm-zones/setup"}
+              style={{
+                display: 'inline-block', padding: '8px 16px', backgroundColor: '#16A34A', 
+                color: 'white', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none'
+              }}
+            >
+              Vẽ ranh giới ngay
+            </a>
           </div>
         )}
       </div>

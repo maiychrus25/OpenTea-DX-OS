@@ -16,7 +16,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 interface Props {
-  onAreaCalculated: (areaSqm: number) => void
+  onAreaCalculated: (areaSqm: number, geojson?: object, center?: { lat: number, lng: number }) => void
 }
 
 function SearchAndLocateInit() {
@@ -131,15 +131,16 @@ function GeomanInit({ onAreaCalculated }: Props) {
       
       if (geojson.geometry.type === 'Polygon') {
         const sqm = area(turfPolygon(geojson.geometry.coordinates))
-        onAreaCalculated(Math.round(sqm))
+        onAreaCalculated(Math.round(sqm), geojson, layer.getBounds().getCenter())
       }
       
       // Listen to edit
       layer.on('pm:edit', (editEvent: any) => {
-        const editedGeojson = (editEvent.target as L.Polygon).toGeoJSON()
+        const editedLayer = editEvent.target as L.Polygon
+        const editedGeojson = editedLayer.toGeoJSON()
         if (editedGeojson.geometry.type === 'Polygon') {
           const editedSqm = area(turfPolygon(editedGeojson.geometry.coordinates))
-          onAreaCalculated(Math.round(editedSqm))
+          onAreaCalculated(Math.round(editedSqm), editedGeojson, editedLayer.getBounds().getCenter())
         }
       })
     })

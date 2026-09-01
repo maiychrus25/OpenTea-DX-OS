@@ -12,11 +12,13 @@ const SetupMapClient = dynamic(() => import('./SetupMapClient'), { ssr: false })
 interface Props {
   householdName: string
   onPrev: () => void
-  onNext: (area: number) => void
+  onNext: (area: number, geojson?: object, center?: { lat: number, lng: number }) => void
 }
 
 export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
   const [areaSqm, setAreaSqm] = useState(0)
+  const [geojson, setGeojson] = useState<object | undefined>()
+  const [center, setCenter] = useState<{ lat: number, lng: number } | undefined>()
   const isDrawn = areaSqm > 0
 
   return (
@@ -24,7 +26,11 @@ export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
       {/* Left Panel: Real Leaflet Map */}
       <div className={`${styles.leftPanel} ${styles.mapPanel}`}>
         <div className={styles.mapContainer}>
-          <SetupMapClient onAreaCalculated={setAreaSqm} />
+          <SetupMapClient onAreaCalculated={(sqm, geo, cen) => {
+            setAreaSqm(sqm)
+            setGeojson(geo)
+            setCenter(cen)
+          }} />
           <div className={styles.drawHintOverlay}>
             Sử dụng thanh công cụ để vẽ vùng trồng. Diện tích sẽ tự động tính toán.
           </div>
@@ -66,7 +72,7 @@ export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
               type="button"
               className={styles.btnPrimary}
               disabled={!isDrawn}
-              onClick={() => onNext(areaSqm)}
+              onClick={() => onNext(areaSqm, geojson, center)}
             >
               Tiếp theo →
             </button>

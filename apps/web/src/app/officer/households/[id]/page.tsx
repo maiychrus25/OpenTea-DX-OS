@@ -17,10 +17,10 @@ export default async function OfficerHouseholdProfilePage(
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
           Chi tiết Nông hộ
         </h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-sm text-gray-600">
           Thông tin chi tiết, danh sách thửa đất và lịch sử sản xuất của nông hộ.
         </p>
       </header>

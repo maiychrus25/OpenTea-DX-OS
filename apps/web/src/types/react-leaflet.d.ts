@@ -5,6 +5,10 @@ declare module 'react-leaflet' {
   export const Marker: React.ComponentType<any>
   export const Popup: React.ComponentType<any>
   export const GeoJSON: React.ComponentType<any>
+  export const LayersControl: React.ComponentType<any> & {
+    BaseLayer: React.ComponentType<any>;
+    Overlay: React.ComponentType<any>;
+  }
   export const useMap: () => any
   export default {} as any
 }
