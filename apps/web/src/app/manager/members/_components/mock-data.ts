@@ -7,6 +7,7 @@ export type MemberRole = 'FARMER' | 'OFFICER' | 'MANAGER';
 export interface Member {
   id: string;
   name: string;
+  full_name?: string;
   email: string;
   phone: string;
   role: MemberRole;

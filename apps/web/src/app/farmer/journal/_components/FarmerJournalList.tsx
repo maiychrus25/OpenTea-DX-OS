@@ -27,6 +27,15 @@ const STATUS_MAP: Record<string, { label: string; tone: 'amber' | 'green' | 'neu
   REJECTED: { label: 'Từ chối', tone: 'blue' },
 }
 
+const ACTIVITY_MAP: Record<string, string> = {
+  IRRIGATION: 'Tưới tiêu',
+  FERTILIZING: 'Bón phân',
+  SPRAYING: 'Phun thuốc',
+  HARVEST: 'Thu hoạch',
+  SOWING: 'Gieo sạ',
+  OTHER: 'Khác'
+}
+
 export function FarmerJournalList() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -63,6 +72,7 @@ export function FarmerJournalList() {
 
   return (
     <div className={styles.container}>
+      <Link className={styles.backBtn} href="/farmer/dashboard">← Quay lại Dashboard</Link>
       <div className={styles.header}>
         <h1 className={styles.title}>Nhật ký của tôi</h1>
         <Link className={styles.createBtn} href="/farmer/journal/new">+ Ghi nhật ký</Link>
@@ -82,7 +92,7 @@ export function FarmerJournalList() {
                   <span className={styles.cardDate}>{new Date(e.entry_date).toLocaleDateString('vi-VN')}</span>
                   <Pill tone={statusInfo.tone}>{statusInfo.label}</Pill>
                 </div>
-                <span className={styles.cardActivity}>{e.activity_type}</span>
+                <span className={styles.cardActivity}>{ACTIVITY_MAP[e.activity_type] || e.activity_type}</span>
                 {e.activities?.[0] && (
                   <span className={styles.cardDetail}>{e.activities[0].activity_detail}</span>
                 )}
@@ -105,7 +115,7 @@ export function FarmerJournalList() {
               </div>
               <div className={styles.detailRow}>
                 <strong>Hoạt động:</strong>
-                <span>{selectedEntry.activity_type}</span>
+                <span>{ACTIVITY_MAP[selectedEntry.activity_type] || selectedEntry.activity_type}</span>
               </div>
               <div className={styles.detailRow}>
                 <strong>Sản phẩm:</strong>
