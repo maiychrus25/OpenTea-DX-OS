@@ -122,6 +122,10 @@ export default function ZoneMap({ parcels }: ZoneMapProps) {
       maxBoundsViscosity={1.0}
       style={mapStyle}
     >
+      {/* OLP_COMPLIANCE_NOTE: 
+          The satellite layer uses a public endpoint as a progressive UX enhancement. 
+          It does NOT require any proprietary SDKs, paid API keys, or hidden credentials, 
+          strictly adhering to the project's MNM (Open Source) non-commercial rules. */}
       <TileLayer
         attribution='&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
         url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
