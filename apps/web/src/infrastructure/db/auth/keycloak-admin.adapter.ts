@@ -1,8 +1,24 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import { AuthManagementPort, RegisterData } from '@/domain/auth/ports/AuthManagementPort'
+import { AuthManagementPort, RegisterData, MemberData } from '@/domain/auth/ports/auth-management.port'
 import { logger } from '@/lib/logger'
+
+export interface KeycloakUserResponse {
+  id: string;
+  email?: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  enabled?: boolean;
+  createdTimestamp?: number;
+  attributes?: {
+    fullName?: string[];
+    phone?: string[];
+    htxId?: string[];
+    [key: string]: any;
+  };
+}
 
 export class KeycloakAdminAdapter implements AuthManagementPort {
   private readonly baseUrl: string;
@@ -124,7 +140,7 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
     }
   }
 
-  async listUsersByRole(role: string): Promise<any[]> {
+  async listUsersByRole(role: string): Promise<MemberData[]> {
     const token = await this.getAdminToken();
     const usersUrl = `${this.baseUrl}/admin/realms/${this.realm}/roles/${role}/users`;
 
@@ -138,7 +154,7 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
     }
 
     const users = await res.json();
-    return users.map((u: any) => ({
+    return users.map((u: KeycloakUserResponse) => ({
       id: u.id,
       email: u.email || u.username,
       full_name: u.attributes?.fullName?.[0] || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Chưa cập nhật',

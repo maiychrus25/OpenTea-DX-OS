@@ -3,7 +3,8 @@
 
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/KeycloakAdminAdapter'
+import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter'
+import { DeleteMemberUseCase } from '@/application/auth/delete-member.use-case'
 
 export async function DELETE(
   _request: Request,
@@ -19,7 +20,8 @@ export async function DELETE(
 
   try {
     const adapter = new KeycloakAdminAdapter()
-    await adapter.deleteUser(params.id)
+    const useCase = new DeleteMemberUseCase(adapter)
+    await useCase.execute(params.id)
     return NextResponse.json({ success: true })
   } catch (error: any) {
     return NextResponse.json({ error: { message: error.message } }, { status: 500 })

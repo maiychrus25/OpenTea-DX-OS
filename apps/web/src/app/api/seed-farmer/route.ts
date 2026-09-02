@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import { NextResponse } from 'next/server'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { auth } from '@/auth'
@@ -61,3 +64,4 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+

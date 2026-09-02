@@ -106,15 +106,14 @@ export function MemberList() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center space-x-2">
-          <label htmlFor="statusFilter" className="text-sm font-medium" style={{ color: 'var(--color-ink-primary)' }}>
+          <label htmlFor="statusFilter" className="text-sm font-medium text-[var(--color-ink-primary)]">
             Lọc theo trạng thái:
           </label>
           <select
             id="statusFilter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="block w-32 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-            style={{ color: 'var(--color-ink-primary)' }}
+            className="block w-32 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm text-[var(--color-ink-primary)]"
           >
             <option value="ALL">Tất cả</option>
             <option value="ACTIVE">Hoạt động</option>
@@ -131,18 +130,18 @@ export function MemberList() {
       <Card>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead style={{ background: 'var(--color-surface-sunken)', borderBottom: '1px solid var(--border)' }}>
+            <thead className="bg-[var(--color-surface-sunken)] border-b border-[var(--border)]">
               <tr>
-                <th scope="col" style={{ padding: '10px 24px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--color-ink-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th scope="col" className="px-6 py-2.5 text-left text-xs font-semibold text-[var(--color-ink-secondary)] uppercase tracking-wider">
                   Thành viên
                 </th>
-                <th scope="col" style={{ padding: '10px 24px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--color-ink-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th scope="col" className="px-6 py-2.5 text-left text-xs font-semibold text-[var(--color-ink-secondary)] uppercase tracking-wider">
                   Vai trò
                 </th>
-                <th scope="col" style={{ padding: '10px 24px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--color-ink-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th scope="col" className="px-6 py-2.5 text-left text-xs font-semibold text-[var(--color-ink-secondary)] uppercase tracking-wider">
                   Trạng thái
                 </th>
-                <th scope="col" style={{ padding: '10px 24px', textAlign: 'right', fontSize: 12, fontWeight: 600, color: 'var(--color-ink-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th scope="col" className="px-6 py-2.5 text-right text-xs font-semibold text-[var(--color-ink-secondary)] uppercase tracking-wider">
                   Thao tác
                 </th>
               </tr>
@@ -166,16 +165,16 @@ export function MemberList() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="ml-4">
-                          <div className="text-sm font-medium" style={{ color: 'var(--color-ink-primary)' }}>
+                          <div className="text-sm font-medium text-[var(--color-ink-primary)]">
                             {member.full_name || member.name}
                           </div>
-                          <div className="text-sm mt-1" style={{ color: 'var(--color-ink-secondary)' }}>
+                          <div className="text-sm mt-1 text-[var(--color-ink-secondary)]">
                             {member.email} • {member.phone}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: 'var(--color-ink-secondary)' }}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-ink-secondary)]">
                       {member.role === 'FARMER' && 'Nông dân'}
                       {member.role === 'OFFICER' && 'Cán bộ kỹ thuật'}
                       {member.role === 'MANAGER' && 'Trưởng HTX'}
@@ -224,12 +223,12 @@ export function MemberList() {
         size="sm"
       >
         <div className="space-y-4">
-          <p style={{ color: 'var(--color-ink-secondary)' }}>
+          <p className="text-[var(--color-ink-secondary)]">
             {confirmModal.action === 'APPROVE' 
               ? 'Bạn có chắc chắn muốn duyệt thành viên này? Họ sẽ có thể đăng nhập vào hệ thống.'
               : 'Bạn có chắc chắn muốn xóa thành viên này? Hành động này không thể hoàn tác.'}
           </p>
-          <div className="flex justify-end space-x-3 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="flex justify-end space-x-3 pt-4 border-t border-[var(--border)]">
             <Button 
               variant="secondary" 
               onClick={() => setConfirmModal({ isOpen: false, action: null, memberId: null })}

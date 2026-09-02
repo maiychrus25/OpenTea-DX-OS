@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
-import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/KeycloakAdminAdapter'
+import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter'
 
 async function listMembers(request: Request) {
   const session = await auth()

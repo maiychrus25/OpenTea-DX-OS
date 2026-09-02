@@ -8,6 +8,17 @@ export interface RegisterData {
   htxId: string;
 }
 
+export interface MemberData {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  is_active: boolean;
+  phone: string;
+  household_id: string | null;
+  createdTimestamp: number | undefined;
+}
+
 export interface AuthManagementPort {
   /**
    * Register a new farmer (with 'farmer' role).
@@ -18,7 +29,7 @@ export interface AuthManagementPort {
    */
   registerFarmer(data: RegisterData, enabled: boolean): Promise<string>;
   
-  listUsersByRole(role: string): Promise<any[]>;
+  listUsersByRole(role: string): Promise<MemberData[]>;
   updateUserStatus(userId: string, enabled: boolean): Promise<void>;
   deleteUser(userId: string): Promise<void>;
 }

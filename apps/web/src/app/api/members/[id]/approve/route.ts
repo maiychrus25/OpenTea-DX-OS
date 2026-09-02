@@ -3,7 +3,8 @@
 
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/KeycloakAdminAdapter'
+import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter'
+import { ApproveMemberUseCase } from '@/application/auth/approve-member.use-case'
 
 export async function POST(
   _request: Request,
@@ -19,7 +20,8 @@ export async function POST(
 
   try {
     const adapter = new KeycloakAdminAdapter()
-    await adapter.updateUserStatus(params.id, true)
+    const useCase = new ApproveMemberUseCase(adapter)
+    await useCase.execute(params.id)
     return NextResponse.json({ success: true })
   } catch (error: any) {
     return NextResponse.json({ error: { message: error.message } }, { status: 500 })

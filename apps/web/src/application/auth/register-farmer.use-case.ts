@@ -1,7 +1,7 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import { AuthManagementPort, RegisterData } from '@/domain/auth/ports/AuthManagementPort'
+import { AuthManagementPort, RegisterData } from '@/domain/auth/ports/auth-management.port'
 
 export class RegisterFarmerUseCase {
   constructor(private readonly authPort: AuthManagementPort) {}

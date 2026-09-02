@@ -3,8 +3,8 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/KeycloakAdminAdapter';
-import { RegisterFarmerUseCase } from '@/application/auth/RegisterFarmerUseCase';
+import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter';
+import { RegisterFarmerUseCase } from '@/application/auth/register-farmer.use-case';
 import { withErrorHandler } from '@/lib/api/withErrorHandler';
 import { logger } from '@/lib/logger';
 
