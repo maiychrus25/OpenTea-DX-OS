@@ -14,6 +14,8 @@ export const metadata: Metadata = {
 
 import { prisma } from '@/infrastructure/db/prisma.client';
 
+export const dynamic = 'force-dynamic';
+
 export default async function RegisterPage() {
   const htxList = await prisma.htxProfile.findMany({
     select: { id: true, name: true },

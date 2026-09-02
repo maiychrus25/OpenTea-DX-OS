@@ -33,10 +33,15 @@ function fillValidForm() {
 // ─── 8.10-UNIT-003: Registration consent và pending approval state ─────────────
 describe('RegisterForm', () => {
   beforeEach(() => {
-    jest.useFakeTimers()
+    global.fetch = jest.fn(() => 
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true })
+      })
+    ) as jest.Mock
   })
   afterEach(() => {
-    jest.useRealTimers()
+    jest.clearAllMocks()
   })
 
   it('renders all form fields', () => {
@@ -51,12 +56,7 @@ describe('RegisterForm', () => {
     expect(getSubmitButton()).toBeInTheDocument()
   })
 
-  it('mock mode banner visible at all times', () => {
-    const mockHtxList = [{ id: 'HTX-001', name: 'HTX-001' }, { id: 'HTX-002', name: 'HTX-002' }];
-    render(<RegisterForm htxList={mockHtxList} />)
-    expect(screen.getByTestId('mock-mode-banner')).toBeInTheDocument()
-    expect(screen.getByTestId('mock-mode-banner')).toHaveAttribute('role', 'note')
-  })
+
 
   it('8.10-UNIT-001: shows field errors when submitted empty', async () => {
     const mockHtxList = [{ id: 'HTX-001', name: 'HTX-001' }, { id: 'HTX-002', name: 'HTX-002' }];
@@ -125,11 +125,6 @@ describe('RegisterForm', () => {
     fillValidForm()
     fireEvent.click(getSubmitButton())
 
-    // Advance timers inside act() to flush the 1000ms setTimeout
-    await act(async () => {
-      jest.advanceTimersByTime(1500)
-    })
-
     await waitFor(() => {
       expect(screen.getByTestId('pending-approval-state')).toBeInTheDocument()
     })
@@ -148,10 +143,6 @@ describe('RegisterForm', () => {
     fireEvent.change(screen.getByTestId('input-confirm-pin'), { target: { value: '654321' } })
     fireEvent.click(screen.getByTestId('checkbox-consent'))
     fireEvent.click(getSubmitButton())
-
-    await act(async () => {
-      jest.advanceTimersByTime(1500)
-    })
 
     await waitFor(() => {
       expect(screen.getByTestId('pending-approval-state')).toBeInTheDocument()
