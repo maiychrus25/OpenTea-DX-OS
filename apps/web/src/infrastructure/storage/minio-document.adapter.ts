@@ -6,18 +6,53 @@ import { DocumentStoragePort, DocumentItem } from '@/domain/document/ports/docum
 
 export class MinioDocumentAdapter implements DocumentStoragePort {
   private minioClient: Client
+  private minioPublicClient: Client
   private bucketName: string
   private bucketCreated: boolean = false
 
   constructor() {
     this.bucketName = 'agrimarket-private'
     
+    // Internal client
     this.minioClient = new Client({
       endPoint: process.env.MINIO_ENDPOINT || 'minio',
       port: 9000,
       useSSL: process.env.MINIO_USE_SSL === 'true',
       accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
       secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+      region: 'us-east-1',
+    })
+
+    // Public client for URLs
+    let publicEndpoint = process.env.MINIO_PUBLIC_ENDPOINT;
+    let publicHost = 'localhost';
+    let publicPort = 9000;
+    let publicSsl = false;
+    
+    if (publicEndpoint) {
+      try {
+        const parsed = new URL(publicEndpoint);
+        publicHost = parsed.hostname;
+        publicPort = parsed.port ? parseInt(parsed.port) : (parsed.protocol === 'https:' ? 443 : 80);
+        publicSsl = parsed.protocol === 'https:';
+      } catch (e) {}
+    } else if (process.env.MINIO_ENDPOINT === 'minio' || !process.env.MINIO_ENDPOINT) {
+      publicHost = 'localhost';
+      publicPort = 9000;
+      publicSsl = false;
+    } else {
+      publicHost = process.env.MINIO_ENDPOINT as string;
+      publicPort = 9000;
+      publicSsl = process.env.MINIO_USE_SSL === 'true';
+    }
+
+    this.minioPublicClient = new Client({
+      endPoint: publicHost,
+      port: publicPort,
+      useSSL: publicSsl,
+      accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
+      secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+      region: 'us-east-1',
     })
   }
 
@@ -33,7 +68,7 @@ export class MinioDocumentAdapter implements DocumentStoragePort {
 
   async generateUploadUrl(path: string, expiresIn: number = 900): Promise<{ url: string; key: string }> {
     await this.ensureBucketExists()
-    const presignedUrl = await this.minioClient.presignedPutObject(this.bucketName, path, expiresIn)
+    const presignedUrl = await this.minioPublicClient.presignedPutObject(this.bucketName, path, expiresIn)
     return {
       url: presignedUrl,
       key: path,
@@ -49,8 +84,8 @@ export class MinioDocumentAdapter implements DocumentStoragePort {
       reqParams['response-content-disposition'] = `attachment; filename="${fileName}"`
     }
 
-    const presignedUrl = await this.minioClient.presignedGetObject(this.bucketName, key, expiresIn, reqParams)
-    return presignedUrl
+    const url = await this.minioPublicClient.presignedGetObject(this.bucketName, key, expiresIn, reqParams)
+    return url;
   }
 
   async listDocuments(prefix: string = ''): Promise<DocumentItem[]> {

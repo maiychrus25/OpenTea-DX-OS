@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { Metadata } from 'next'
+import Link from 'next/link'
 import { Leaf } from 'lucide-react'
 import styles from './register.module.css'
 import { RegisterForm } from './_components/register-form'
@@ -11,7 +12,16 @@ export const metadata: Metadata = {
   description: 'Đăng ký tham gia hệ thống quản lý HTX nông nghiệp DX-AgriMarket',
 }
 
-export default function RegisterPage() {
+import { prisma } from '@/infrastructure/db/prisma.client';
+
+export const dynamic = 'force-dynamic';
+
+export default async function RegisterPage() {
+  const htxList = await prisma.htxProfile.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' }
+  })
+
   return (
     <div className={styles.authShell} data-testid="register-shell">
       {/* Left panel — desktop only */}
@@ -42,6 +52,9 @@ export default function RegisterPage() {
       <main className={styles.authPanel} data-testid="register-panel">
         <div className={styles.authCard}>
           <div className={styles.cardHeader}>
+            <Link href="/login" className="inline-flex items-center text-sm text-[var(--primary)] hover:underline mb-2 font-medium">
+              ← Quay lại
+            </Link>
             <p className={styles.cardPretitle}>Đăng ký</p>
             <h2 className={styles.cardTitle}>Tạo tài khoản nông hộ</h2>
             <p className={styles.cardDesc}>
@@ -49,7 +62,7 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          <RegisterForm />
+          <RegisterForm htxList={htxList} />
         </div>
       </main>
     </div>

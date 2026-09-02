@@ -14,10 +14,10 @@ export default function ManagerMembersPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink-primary)]">
           Thành viên hợp tác xã
         </h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-sm text-[var(--color-ink-secondary)]">
           Quản lý danh sách thành viên, trạng thái hoạt động và mời thành viên mới.
         </p>
       </header>

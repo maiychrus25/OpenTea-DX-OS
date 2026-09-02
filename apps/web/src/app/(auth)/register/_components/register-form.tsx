@@ -14,13 +14,10 @@ import {
   validatePinMatch,
 } from '@/lib/auth-validation'
 
-// Mock HTX list — FE prototype only, no real API call
-const MOCK_HTX_LIST = [
-  { id: 'HTX-001', name: 'HTX Nông nghiệp Đồng Tháp' },
-  { id: 'HTX-002', name: 'HTX Lúa Gạo Sóc Trăng' },
-  { id: 'HTX-003', name: 'HTX Trái Cây Tiền Giang' },
-  { id: 'HTX-004', name: 'HTX Rau Sạch Lâm Đồng' },
-]
+export interface HtxOption {
+  id: string
+  name: string
+}
 
 interface FormErrors {
   fullName?: string
@@ -33,7 +30,7 @@ interface FormErrors {
 
 type FormState = 'idle' | 'loading' | 'pending-approval'
 
-export function RegisterForm() {
+export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
   const [state, setState] = useState<FormState>('idle')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
@@ -71,11 +68,26 @@ export function RegisterForm() {
 
     if (!validate()) return
 
-    // AC-5: Mock-only — không tạo session, không gọi BE
     setState('loading')
-    // Giả lập network delay
-    await new Promise((r) => setTimeout(r, 1000))
-    setState('pending-approval')
+    
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, phone, htxId, pin })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error?.message || 'Đã có lỗi xảy ra khi đăng ký')
+      }
+
+      setState('pending-approval')
+    } catch (err: any) {
+      setErrors(prev => ({ ...prev, phone: err.message }))
+      setState('idle')
+    }
   }
 
   // ── Pending Approval State (AC-1) ───────────────────────────────────────────
@@ -101,10 +113,7 @@ export function RegisterForm() {
   // ── Registration Form ────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit} noValidate data-testid="register-form">
-      {/* AC-5: Mock mode banner */}
-      <div className={styles.mockBanner} data-testid="mock-mode-banner" role="note">
-        ⚠ Chế độ demo — chưa kết nối BE Keycloak
-      </div>
+      {/* Real connection to Keycloak enabled */}
 
       <div className={styles.form}>
         {/* Họ tên */}
@@ -171,7 +180,7 @@ export function RegisterForm() {
             aria-invalid={!!errors.htxId}
           >
             <option value="">-- Chọn HTX của bạn --</option>
-            {MOCK_HTX_LIST.map((htx) => (
+            {htxList.map((htx) => (
               <option key={htx.id} value={htx.id}>
                 {htx.name}
               </option>

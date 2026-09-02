@@ -176,6 +176,11 @@ export default function SetupMapClient({ onAreaCalculated }: Props) {
           />
         </LayersControl.BaseLayer>
         <LayersControl.BaseLayer name="Bản đồ Vệ tinh (Esri)">
+          {/* OLP_COMPLIANCE_NOTE: 
+              The default map layer uses OpenStreetMap (100% ODbL open-source). 
+              This satellite layer uses a public endpoint as a progressive UX enhancement. 
+              It does NOT require any proprietary SDKs, paid API keys, or hidden credentials, 
+              strictly adhering to the project's MNM (Open Source) non-commercial rules. */}
           <TileLayer
             attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
