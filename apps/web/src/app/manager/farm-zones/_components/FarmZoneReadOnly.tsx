@@ -18,7 +18,7 @@ const BaseLayer = dynamic(() => import('react-leaflet').then(m => m.LayersContro
 const Tooltip = dynamic<any>(() => import('react-leaflet').then(m => (m as any).Tooltip), { ssr: false })
 
 const MapUpdater = dynamic(() => import('react-leaflet').then(m => {
-  return function MapUpdaterComponent({ selectedParcel }: { selectedParcel: any }) {
+  return function MapUpdaterComponent({ selectedParcel }: { selectedParcel: Parcel | null }) {
     const map = m.useMap()
     React.useEffect(() => {
       if (!selectedParcel) return
