@@ -25,7 +25,7 @@ const MapUpdater = dynamic(() => import('react-leaflet').then(m => {
       import('leaflet').then(L => {
         try {
           if (selectedParcel.polygon_geojson) {
-            const geojsonLayer = L.geoJSON(selectedParcel.polygon_geojson)
+            const geojsonLayer = L.geoJSON(selectedParcel.polygon_geojson as any)
             const bounds = geojsonLayer.getBounds()
             if (bounds.isValid()) {
               map.flyToBounds(bounds, { padding: [50, 50], duration: 1.5, maxZoom: 18 })
