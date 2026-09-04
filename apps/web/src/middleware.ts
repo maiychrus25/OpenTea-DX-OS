@@ -32,7 +32,13 @@ export function resolveAuthRedirect(
 
   // Unauthenticated — allow public paths and /login, block everything else
   if (!isLoggedIn) {
-    if (pathname === '/login' || isPublicResourcePath(pathname)) return null
+    if (
+      pathname === '/login' ||
+      pathname === '/register' ||
+      pathname === '/forgot-pin' ||
+      pathname === '/unauthorized' ||
+      isPublicResourcePath(pathname)
+    ) return null
     return '/login'
   }
 
@@ -72,5 +78,5 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/auth|api/health|api/dev-login).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sw\\.js|workbox-.*\\.js|manifest\\.json|api/auth|api/health|api/dev-login).*)'],
 }
