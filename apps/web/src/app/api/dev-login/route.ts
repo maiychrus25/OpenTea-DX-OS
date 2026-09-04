@@ -35,10 +35,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'AUTH_SECRET not configured' }, { status: 500 })
   }
 
+  const displayName = url.searchParams.get('name') || ROLE_NAMES[role]
+  const userId = url.searchParams.get('id') || `dev-${role}-id`
+
   const token = await encode({
     token: {
-      sub: `dev-${role}-id`,
-      name: ROLE_NAMES[role],
+      sub: userId,
+      name: displayName,
       email: `${role}@dev.local`,
       role,
       iat: now,

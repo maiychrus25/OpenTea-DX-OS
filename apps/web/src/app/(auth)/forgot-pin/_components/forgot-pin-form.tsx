@@ -155,7 +155,7 @@ export function ForgotPinForm() {
         {STEP_ORDER.map((s, i) => (
           <div
             key={s}
-            className={`${styles.stepDot} ${i === currentStepIndex ? styles.active : ''} ${i < currentStepIndex ? styles.completed : ''}`}
+            className={`${styles.stepDot} ${i === currentStepIndex ? `${styles.active} active` : ''} ${i < currentStepIndex ? styles.completed : ''}`}
             aria-hidden="true"
             data-testid={`step-dot-${i + 1}`}
           />
