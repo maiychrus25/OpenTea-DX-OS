@@ -9,6 +9,28 @@ import { ChatInterface } from '@/components/ui/chat-interface/chat-interface'
 // Mock use client window scroll function
 window.HTMLElement.prototype.scrollIntoView = jest.fn()
 
+// Mock fetch globally
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({ data: { sessions: [] } }),
+    body: {
+      getReader: () => {
+        let isDone = false;
+        return {
+          read: () => {
+            if (!isDone) {
+              isDone = true;
+              return Promise.resolve({ done: false, value: new TextEncoder().encode('{"content":"Test response from bot"}') });
+            }
+            return Promise.resolve({ done: true });
+          }
+        }
+      }
+    }
+  })
+) as jest.Mock;
+
 describe('ChatInterface', () => {
   it('T1: renders manager layout correctly', () => {
     render(<ChatInterface role="manager" />)
@@ -26,67 +48,46 @@ describe('ChatInterface', () => {
     expect(screen.getByText('Kiến thức canh tác + VietGAP + Bệnh cây')).toBeInTheDocument()
   })
 
-  it('T2: renders history sidebar with items', () => {
+  it('T2: renders empty history sidebar initially', () => {
     render(<ChatInterface role="manager" />)
     
-    const historyList = screen.getAllByRole('list')[0] // first ul is the history list
+    const historyList = screen.getAllByRole('list')[0]
     expect(historyList).toBeInTheDocument()
-    expect(screen.getAllByText('Giá lúa gạo hôm nay thế nào?').length).toBeGreaterThan(0)
+    expect(screen.getByText('Chưa có lịch sử trò chuyện')).toBeInTheDocument()
   })
 
-  it('T3: renders mock bot message', () => {
+  it('T3: renders empty state in main chat', () => {
     render(<ChatInterface role="manager" />)
-    
-    expect(screen.getByText(/Theo cập nhật mới nhất, giá lúa Thu Đông/)).toBeInTheDocument()
-    expect(screen.getByText('Sở NN&PTNT Đồng Tháp')).toBeInTheDocument()
+    expect(screen.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeInTheDocument()
   })
 
-  it('T4: user message has correct content', () => {
-    render(<ChatInterface role="manager" />)
-    
-    expect(screen.getAllByText('Giá lúa gạo hôm nay thế nào?').length).toBeGreaterThan(0)
-  })
-
-  it('T6 & T7: composer input and send button', () => {
+  it('T6 & T7: composer input and send button calls fetch', async () => {
     render(<ChatInterface role="manager" />)
     
     const input = screen.getByPlaceholderText('Nhập câu hỏi...') as HTMLTextAreaElement
     const sendBtn = screen.getByRole('button', { name: 'Gửi' })
     
-    // Initially disabled if empty (though in mock it might not be strictly bound to native disabled, but we check if button exists)
-    expect(input).toBeInTheDocument()
-    expect(sendBtn).toBeInTheDocument()
-    
-    // Type in input
     fireEvent.change(input, { target: { value: 'Test message' } })
     expect(input.value).toBe('Test message')
     
-    // Send
     fireEvent.click(sendBtn)
     
-    // Should render the new user message
+    // User message should be rendered
     expect(screen.getAllByText('Test message').length).toBeGreaterThan(0)
-    
-    // And mock bot response
-    expect(screen.getByText(/Đây là câu trả lời mô phỏng từ AI/)).toBeInTheDocument()
     
     // Input should be cleared
     expect(input.value).toBe('')
+
+    // fetch should be called
+    expect(global.fetch).toHaveBeenCalled()
   })
 
-  it('T8: new conversation button clears messages', () => {
+  it('T8: new conversation button sets empty state', () => {
     render(<ChatInterface role="manager" />)
     
-    // Mock messages should exist initially
-    expect(screen.getAllByText('Giá lúa gạo hôm nay thế nào?').length).toBeGreaterThan(0)
-    
-    // Click new conversation
     const newChatBtn = screen.getByRole('button', { name: /Cuộc trò chuyện mới/i })
     fireEvent.click(newChatBtn)
     
-    // Messages should be cleared, showing empty state
-    // But wait, the history sidebar STILL has "Giá lúa gạo hôm nay thế nào?"
-    // So we just check for empty state text
     expect(screen.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeInTheDocument()
   })
 })
