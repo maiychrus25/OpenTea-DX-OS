@@ -1,4 +1,5 @@
 {
+  "id": "weather-sync-id",
   "name": "Weather Sync (Open-Meteo)",
   "nodes": [
     {
@@ -68,7 +69,7 @@
     },
     {
       "parameters": {
-        "url": "=https://api.open-meteo.com/v1/forecast?latitude={{$json.lat}}&longitude={{$json.lon}}&current=temperature_2m,precipitation,relative_humidity_2m,weather_code",
+        "url": "=https://api.open-meteo.com/v1/forecast?latitude={{$json.lat}}&longitude={{$json.lon}}&current=temperature_2m,precipitation,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto",
         "options": {}
       },
       "id": "fetch-weather",
@@ -101,7 +102,8 @@
             "condition": "={{ $json.current.weather_code.toString() }}",
             "temperature_c": "={{ $json.current.temperature_2m }}",
             "precipitation_mm": "={{ $json.current.precipitation }}",
-            "humidity_pct": "={{ $json.current.relative_humidity_2m }}"
+            "humidity_pct": "={{ $json.current.relative_humidity_2m }}",
+            "forecast_json": "={{ JSON.stringify($json.daily) }}"
           }
         },
         "updateKey": "parcel_id,recorded_at",

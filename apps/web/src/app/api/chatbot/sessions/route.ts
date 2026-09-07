@@ -5,6 +5,8 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { ChatbotUseCase } from '@/application/chatbot/ChatbotUseCase'
+import { PrismaChatHistoryRepository } from '@/infrastructure/db/chat/prisma-chat-history-repository'
+import { PrismaMarketDataRepository } from '@/infrastructure/db/market/prisma-market-data-repository'
 
 async function getChatSessions(request: Request) {
   const session = await auth()
@@ -19,7 +21,9 @@ async function getChatSessions(request: Request) {
   const { searchParams } = new URL(request.url)
   const chatType = (searchParams.get('type') as 'market' | 'technical') || 'market'
 
-  const useCase = new ChatbotUseCase()
+  const chatHistoryRepo = new PrismaChatHistoryRepository()
+  const marketDataRepo = new PrismaMarketDataRepository()
+  const useCase = new ChatbotUseCase(undefined, chatHistoryRepo, marketDataRepo)
   const sessions = await useCase.getSessions(session.user.id!, chatType)
 
   return NextResponse.json({ data: { sessions } })
