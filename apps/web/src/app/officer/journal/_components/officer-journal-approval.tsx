@@ -16,6 +16,16 @@ interface JournalEntry {
   entry_date?: string
   status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'REQUEST_CHANGES'
   hasDiseaseWarning?: boolean
+  activities: { activity_detail: string; product_name: string | null }[]
+}
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  SOWING: 'Gieo sạ',
+  FERTILIZING: 'Bón phân',
+  SPRAYING: 'Phun thuốc',
+  IRRIGATION: 'Tưới tiêu',
+  HARVEST: 'Thu hoạch',
+  OTHER: 'Khác',
 }
 
 export function OfficerJournalApproval() {
@@ -134,7 +144,7 @@ export function OfficerJournalApproval() {
             entries.map(e => (
               <tr key={e.id}>
                 <td>{e.parcel_code || e.parcel_id || e.id.substring(0, 8)}</td>
-                <td>{e.activity_type || 'Không có'}</td>
+                <td>{e.activity_type ? (ACTIVITY_LABELS[e.activity_type] || e.activity_type) : 'Không có'}</td>
                 <td>{e.entry_date ? new Date(e.entry_date).toLocaleDateString('vi-VN') : ''}</td>
                 <td>
                   <Pill tone={e.status === 'PENDING_APPROVAL' ? 'amber' : e.status === 'APPROVED' ? 'green' : e.status === 'REJECTED' ? 'neutral' : 'blue'}>

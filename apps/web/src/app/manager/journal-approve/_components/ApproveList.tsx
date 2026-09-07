@@ -15,6 +15,15 @@ interface JournalEntry {
   activities: { activity_detail: string; product_name: string | null }[]
 }
 
+const ACTIVITY_LABELS: Record<string, string> = {
+  SOWING: 'Gieo sạ',
+  FERTILIZING: 'Bón phân',
+  SPRAYING: 'Phun thuốc',
+  IRRIGATION: 'Tưới tiêu',
+  HARVEST: 'Thu hoạch',
+  OTHER: 'Khác',
+}
+
 export function ApproveList() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -140,7 +149,7 @@ export function ApproveList() {
                     />
                   </td>
                   <td>{new Date(e.entry_date).toLocaleDateString('vi-VN')}</td>
-                  <td>{e.activity_type}</td>
+                  <td>{ACTIVITY_LABELS[e.activity_type] || e.activity_type}</td>
                   <td>{e.performed_by}</td>
                   <td>{e.activities?.[0]?.activity_detail ?? e.notes ?? '—'}</td>
                 </tr>

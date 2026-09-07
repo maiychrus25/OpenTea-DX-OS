@@ -26,6 +26,15 @@ const STATUS_LABELS: Record<string, string> = {
   REJECTED: 'Từ chối',
 }
 
+const ACTIVITY_LABELS: Record<string, string> = {
+  SOWING: 'Gieo sạ',
+  FERTILIZING: 'Bón phân',
+  SPRAYING: 'Phun thuốc',
+  IRRIGATION: 'Tưới tiêu',
+  HARVEST: 'Thu hoạch',
+  OTHER: 'Khác',
+}
+
 function statusTone(status: string): 'amber' | 'green' | 'neutral' | 'blue' {
   switch (status) {
     case 'PENDING_APPROVAL': return 'amber'
@@ -103,7 +112,7 @@ export function JournalList() {
             {entries.map(e => (
               <tr key={e.id}>
                 <td>{new Date(e.entry_date).toLocaleDateString('vi-VN')}</td>
-                <td>{e.activity_type}</td>
+                <td>{ACTIVITY_LABELS[e.activity_type] || e.activity_type}</td>
                 <td>{e.performed_by}</td>
                 <td>{e.activities?.[0]?.activity_detail ?? e.notes ?? '—'}</td>
                 <td>

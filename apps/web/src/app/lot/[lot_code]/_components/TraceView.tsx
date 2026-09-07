@@ -13,6 +13,15 @@ interface TraceViewProps {
   pageUrl?: string;
 }
 
+const ACTIVITY_LABELS: Record<string, string> = {
+  SOWING: 'Gieo sạ',
+  FERTILIZING: 'Bón phân',
+  SPRAYING: 'Phun thuốc',
+  IRRIGATION: 'Tưới tiêu',
+  HARVEST: 'Thu hoạch',
+  OTHER: 'Khác',
+};
+
 export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
   const {
     lot_code,
@@ -153,7 +162,7 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
                 <div className={styles.timelineDot}></div>
                 <div className={styles.timelineContent}>
                   <span className={styles.timelineDate}>{new Date(journal.entry_date).toLocaleDateString('vi-VN')}</span>
-                  <span className={styles.timelineActivity}>{journal.activity_type}</span>
+                  <span className={styles.timelineActivity}>{ACTIVITY_LABELS[journal.activity_type] || journal.activity_type}</span>
                   {journal.product_name && (
                     <span className={styles.timelineDetail}>Sản phẩm: {journal.product_name}{journal.dosage ? ` — ${journal.dosage}` : ''}</span>
                   )}
