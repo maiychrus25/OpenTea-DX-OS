@@ -13,7 +13,8 @@ async function getSearch(request: Request) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
   const role = (session.user as any).role
-  if (role !== 'manager' && role !== 'officer') {
+  // Support all three active roles: manager, officer, farmer
+  if (role !== 'manager' && role !== 'officer' && role !== 'farmer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
 
@@ -30,7 +31,6 @@ async function getSearch(request: Request) {
   }
 
   const useCase = new GlobalSearchUseCase()
-  
   const data = await useCase.execute(query, htx.id)
   
   return NextResponse.json({ data })
