@@ -97,11 +97,11 @@ export class ChatbotUseCase {
     let ragContextStr = ''
     try {
       if (chatType === 'market') {
-        const twoDaysAgo = new Date()
-        twoDaysAgo.setHours(twoDaysAgo.getHours() - 48)
+        const timeWindow = new Date()
+        timeWindow.setDate(timeWindow.getDate() - 30) // Nới lỏng thành 30 ngày cho môi trường prototype
 
         const recentMarketData = await prisma.marketData.findMany({
-          where: { fetched_at: { gte: twoDaysAgo } },
+          where: { fetched_at: { gte: timeWindow } },
           orderBy: { fetched_at: 'desc' },
           take: 50,
         })
@@ -240,12 +240,13 @@ export class ChatbotUseCase {
   }
 
   static extractSources(text: string): string[] {
-    const sourceLines = text.split('\n').filter(line =>
-      line.trim().toLowerCase().startsWith('nguồn:') ||
-      line.trim().toLowerCase().startsWith('- nguồn:') ||
-      line.trim().startsWith('- ') && line.includes('(') && line.includes(')')
-    )
-    return sourceLines.map(l => l.replace(/^[-*]\s*/, '').replace(/^nguồn:\s*/i, '').trim()).filter(Boolean)
+    const sourceLines = text.split('\n').filter(line => {
+      const l = line.trim().toLowerCase();
+      if (l.startsWith('nguồn:') || l.startsWith('- nguồn:')) return true;
+      if (l.startsWith('- ') && (l.includes('[comtrade]') || l.includes('[wto]') || l.includes('[faostat]') || l.includes('bộ nn') || l.includes('vfa'))) return true;
+      return false;
+    })
+    return sourceLines.map(l => l.replace(/^[-*]\s*/, '').replace(/^nguồn( tham khảo)?:\s*/i, '').trim()).filter(Boolean)
   }
 
   async getHistory(userId: string, sessionId: string, chatType: 'market' | 'technical' = 'market'): Promise<ChatMessage[]> {
@@ -266,6 +267,36 @@ export class ChatbotUseCase {
     return records.map(r => ({
       role: r.role === 'USER' ? 'user' as const : 'assistant' as const,
       content: r.content,
+    }))
+  }
+
+  async getSessions(userId: string, chatType: 'market' | 'technical' = 'market') {
+    // Get unique sessions. We fetch all user messages in the last 30 days and group them
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const records = await prisma.chatHistory.findMany({
+      where: {
+        user_id: userId,
+        chat_type: chatType,
+        role: 'USER',
+        created_at: { gte: thirtyDaysAgo },
+      },
+      distinct: ['session_id'],
+      orderBy: { created_at: 'desc' },
+      select: {
+        session_id: true,
+        content: true,
+        created_at: true,
+      },
+      take: 20,
+    })
+
+    return records.map(r => ({
+      session_id: r.session_id,
+      // Truncate content for title (max 40 chars)
+      title: r.content.length > 40 ? r.content.substring(0, 40) + '...' : r.content,
+      updated_at: r.created_at,
     }))
   }
 

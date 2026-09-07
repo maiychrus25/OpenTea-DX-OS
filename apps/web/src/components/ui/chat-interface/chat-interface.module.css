@@ -290,3 +290,85 @@
   margin-top: 2rem;
   color: var(--color-text-secondary);
 }
+
+@keyframes chatSpin {
+  to { transform: rotate(360deg); }
+}
+
+.loadingSpinner {
+  animation: chatSpin 1s linear infinite;
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Markdown formatting */
+.markdownContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.markdownContent p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.markdownContent ul {
+  margin: 0.25rem 0;
+  padding-left: 1.5rem;
+  list-style-type: disc !important;
+}
+
+.markdownContent ol {
+  margin: 0.25rem 0;
+  padding-left: 1.5rem;
+  list-style-type: decimal !important;
+}
+
+.markdownContent li {
+  margin-bottom: 0.25rem;
+  display: list-item !important;
+}
+
+.markdownContent table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.markdownContent th,
+.markdownContent td {
+  border: 1px solid var(--color-border);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.markdownContent th {
+  background-color: var(--color-background-alt, #f3f4f6);
+  font-weight: 600;
+}
+
+.markdownContent strong,
+.markdownContent b {
+  font-weight: 700 !important;
+  color: var(--color-text-primary) !important;
+}
+
+.markdownContent em,
+.markdownContent i {
+  font-style: italic;
+}
+
+.markdownContent h1,
+.markdownContent h2,
+.markdownContent h3,
+.markdownContent h4 {
+  margin: 1rem 0 0.5rem 0;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.markdownContent h3 { font-size: 1.1rem; }
+.markdownContent h4 { font-size: 1rem; }

@@ -2,10 +2,10 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react'
-import { Volume2 } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
 import { AiNote } from '@/components/ui/AiNote'
 import { BulletinCard } from '@/components/features/bulletin/BulletinCard'
+import { WeatherSection } from '@/components/features/bulletin/WeatherSection'
+import { ListenBulletinButton } from '@/components/features/bulletin/ListenBulletinButton'
 import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
 import styles from '@/components/features/bulletin/bulletin.module.css'
 
@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic'
 export default function ManagerBulletinPage() {
   return (
     <div className={styles.pageContainer}>
+      {/* Hero Header */}
       <div className={styles.pageHeader}>
         <div className={styles.headerContent}>
           <p className={styles.eyebrow}>BẢN TIN NÔNG NGHIỆP SỐ</p>
@@ -21,11 +22,19 @@ export default function ManagerBulletinPage() {
           <p className={styles.pageSubtitle}>Cập nhật thị trường, thời tiết và kỹ thuật liên quan vùng trồng HTX.</p>
         </div>
         <div className={styles.headerActions}>
-          <Button variant="secondary" className={styles.audioButton}>
-            <Volume2 size={18} />
-            Nghe bản tin sáng
-          </Button>
+          <ListenBulletinButton
+            bulletinTexts={MOCK_BULLETINS.map(b => `${b.headline}. ${b.summary}`)}
+          />
         </div>
+      </div>
+
+      {/* Weather — Real data from Open-Meteo */}
+      <WeatherSection />
+
+      {/* Bulletins Grid */}
+      <div className={styles.sectionHeader}>
+        <h2 className={styles.sectionTitle}>Bản tin gần đây</h2>
+        <span className={styles.sectionAction}>Xem tất cả →</span>
       </div>
 
       <div className={styles.newsGrid}>
