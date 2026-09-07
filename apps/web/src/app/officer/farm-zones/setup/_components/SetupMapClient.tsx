@@ -8,7 +8,7 @@ import { MapContainer, TileLayer, useMap, LayersControl } from 'react-leaflet'
 import '@geoman-io/leaflet-geoman-free'
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css'
 // @ts-ignore: leaflet-geosearch thiếu type definitions chuẩn cho TypeScript
-import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch'
+import { GeoSearchControl, EsriProvider } from 'leaflet-geosearch'
 import 'leaflet-geosearch/dist/geosearch.css'
 import area from '@turf/area'
 import { polygon as turfPolygon } from '@turf/helpers'
@@ -24,12 +24,7 @@ function SearchAndLocateInit() {
 
   useEffect(() => {
     // 1. Search Control
-    const provider = new OpenStreetMapProvider({
-      params: {
-        'accept-language': 'vi',
-        countrycodes: 'vn',
-      }
-    })
+    const provider = new EsriProvider()
 
     // Catch unhandled promise rejections when Nominatim blocks the request (e.g. VPN)
     const originalSearch = provider.search.bind(provider)
