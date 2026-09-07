@@ -1,0 +1,26 @@
+[
+  {
+    "id": "creds_pg_account",
+    "name": "Postgres account",
+    "type": "postgres",
+    "data": {
+      "host": "postgres",
+      "port": 5432,
+      "database": "agrimarket",
+      "user": "agrimarket",
+      "password": "your_password_here"
+    }
+  },
+  {
+    "id": "creds_pg_agrimrkt",
+    "name": "Postgres_Agrimarket",
+    "type": "postgres",
+    "data": {
+      "host": "postgres",
+      "port": 5432,
+      "database": "agrimarket",
+      "user": "agrimarket",
+      "password": "your_password_here"
+    }
+  }
+]

@@ -96,7 +96,7 @@ function SearchAndLocateInit() {
       ;(window as any)._myLocationMarker = marker
     }
 
-    const onLocationError = (e: L.ErrorEvent) => {
+    const onLocationError = (_e: L.ErrorEvent) => {
       alert('Không thể định vị. Vui lòng kiểm tra xem trình duyệt đã được cấp quyền vị trí chưa.')
     }
 

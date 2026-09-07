@@ -73,7 +73,7 @@ export class PrismaNotificationRepository implements NotificationPort {
   }
 
   async sendDirectNotification(recipientId: string, type: string, title: string, body: string, referenceId?: string): Promise<void> {
-    await prisma.notification.create({
+    const notif = await prisma.notification.create({
       data: {
         type: type as any,
         title,
@@ -87,7 +87,6 @@ export class PrismaNotificationRepository implements NotificationPort {
     } else {
       sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { broadcast: true });
     }
-    return notif;
   }
 
   async broadcastAnnouncement(title: string, body: string, senderId: string): Promise<void> {

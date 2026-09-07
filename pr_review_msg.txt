@@ -1,0 +1,74 @@
+## 🤖 DX-AgriMarket AI Deep Review — PR #282
+
+**Tổng quan:** PR implement chatbot history & weather caching nhưng vi phạm nhiều nguyên tắc cốt lõi của Hexagonal Architecture và Data Pipeline.
+**Vòng review:** 10/10 hoàn thành
+**Verdict:** REQUEST CHANGES
+
+---
+
+### 🔴 HIGH — Phải sửa trước khi merge
+
+#### [H1] Gọi External API (Open-Meteo) trực tiếp từ Next.js
+- **File:** `apps/web/src/app/api/weather/forecast/route.ts` | **Line:** 44
+- **Vấn đề:** Vi phạm Data Pipeline Rules (AGENTS.md §Background). Next.js code không được phép gọi trực tiếp các API như Open-Meteo/USDA. Trách nhiệm này thuộc về n8n background workers.
+- **Code lỗi:**
+  ```typescript
+  const forecast = await fetchOpenMeteoForecast(defaultLat, defaultLng, days)
+  ```
+- **Cách sửa:** Xóa logic fetch Open-Meteo khỏi route. Cập nhật dữ liệu thông qua n8n và cho Next.js đọc từ bảng `weather_cache`.
+
+#### [H2] Ghi dữ liệu vào `weather_cache` từ Next.js
+- **File:** `apps/web/src/app/api/weather/forecast/route.ts` | **Line:** 105
+- **Vấn đề:** Vi phạm Data Pipeline Rules (AGENTS.md §Background). Không có route Next.js nào được phép WRITE vào bảng `weather_cache`.
+- **Code lỗi:**
+  ```typescript
+  await prisma.weatherCache.upsert({ ... })
+  ```
+- **Cách sửa:** Xóa logic ghi DB. `weather_cache` chỉ được phép READ từ phía Next.js.
+
+#### [H3] Route Handler chứa Business Logic & Gọi Prisma trực tiếp
+- **File:** `apps/web/src/app/api/weather/forecast/route.ts` | **Line:** 24
+- **Vấn đề:** Vi phạm Route Handler Pattern (AGENTS.md §Architecture). Route handler không được chứa business logic (`prisma.parcel.findMany`) mà phải delegate cho UseCase (Zod -> Adapter -> UseCase).
+- **Code lỗi:**
+  ```typescript
+  const parcels = await prisma.parcel.findMany({ ... })
+  ```
+- **Cách sửa:** Chuyển logic truy vấn `weatherCache` (chỉ đọc) vào một `GetWeatherForecastUseCase` và gọi UseCase từ route.
+
+#### [H4] Domain/Application Layer gọi Prisma trực tiếp
+- **File:** `apps/web/src/application/chatbot/ChatbotUseCase.ts` | **Line:** 185
+- **Vấn đề:** Vi phạm Dependency Rule của Hexagonal Architecture (AGENTS.md §Architecture). `ChatbotUseCase` nhận dependency trực tiếp qua việc import `prisma` thay vì qua Constructor Injection với interface Port.
+- **Code lỗi:**
+  ```typescript
+  const records = await prisma.chatHistory.findMany({ ... })
+  ```
+- **Cách sửa:** Khai báo `ChatHistoryPort` (hoặc tương tự), inject vào `ChatbotUseCase` constructor, và viết PrismaAdapter implement port đó.
+
+#### [H5] Thiếu License Header
+- **File:** `apps/web/__tests__/__mocks__/react-markdown.tsx` và `apps/web/__tests__/__mocks__/remark-plugin.ts`
+- **Vấn đề:** Các file mới tạo bắt buộc phải có License Comment Header (AGENTS.md §License Comment Header).
+- **Code lỗi:** (File bắt đầu bằng `import React from 'react'`)
+- **Cách sửa:** Thêm header:
+  ```typescript
+  // Copyright (c) 2026 OpenTea Developers
+  // Licensed under the MIT License. See LICENSE file in the project root for full license information.
+  ```
+
+---
+
+### 🟡 MEDIUM — Nên sửa (không block merge nhưng tạo tech debt)
+
+#### [M1] PR thiếu Issue Link
+- **File:** PR Description
+- **Vấn đề:** Mô tả PR trống hoặc không link đến Issue.
+- **Cách sửa:** Thêm `Closes #<issue_number>` vào description.
+
+---
+
+### ✅ Điểm tốt (Acknowledge good work)
+- Component `ChatPanel` đã dùng `ssr: false` tốt khi cần thiết và giao diện sạch.
+- API Route đã dùng `withErrorHandler` rất chuẩn chỉ.
+- CI Test đã hoàn toàn xanh, test coverage tốt cho các bug fix.
+
+---
+*Review bởi: DX-AgriMarket AI (pr-deep-review skill) | MIT License | Copyright (c) 2026 OpenTea Developers*

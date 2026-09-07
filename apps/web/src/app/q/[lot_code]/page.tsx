@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react'
-import { notFound } from 'next/navigation'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { Pill } from '@/components/ui'
 import { XCircle, AlertTriangle, Clock } from 'lucide-react'
@@ -85,7 +84,7 @@ export default async function QrTracePage({ params, searchParams }: PageProps & 
         include: {
           parcel: {
             include: {
-              household: { select: { owner_name: true, phone: true, address: true } },
+              household: { select: { name: true, phone: true, address: true } },
               journal_entries: {
                 orderBy: { entry_date: 'asc' },
                 where: { status: 'APPROVED' },
@@ -202,7 +201,7 @@ export default async function QrTracePage({ params, searchParams }: PageProps & 
           <strong>Nguồn gốc</strong>
           <p>Hợp tác xã: {lot.htx_profile?.name || '—'}</p>
           {lot.htx_profile?.address && <p>Địa chỉ: {lot.htx_profile.address}</p>}
-          {household && <p>Nông hộ: {household.owner_name}</p>}
+          {household && <p>Nông hộ: {household.name}</p>}
           {firstParcel && <p>Mã thửa: {firstParcel.parcel_code} • Diện tích: {firstParcel.area_ha} ha</p>}
         </div>
 
