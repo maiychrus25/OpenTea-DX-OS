@@ -14,7 +14,6 @@ export interface MarketDataEntity {
 
 export interface FxRateEntity {
   id: string
-  base_currency: string
   rates: any
   fetched_at: Date
 }

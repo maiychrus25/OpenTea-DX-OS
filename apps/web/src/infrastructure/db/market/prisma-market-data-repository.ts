@@ -33,7 +33,6 @@ export class PrismaMarketDataRepository implements MarketDataPort {
     
     return {
       id: fx.id,
-      base_currency: fx.base_currency,
       rates: fx.rates,
       fetched_at: fx.fetched_at,
     }
