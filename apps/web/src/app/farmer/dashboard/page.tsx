@@ -86,7 +86,10 @@ export default async function FarmerDashboard() {
         
         <div className={styles.ctaRow}>
           <Link href="/farmer/journal/new" className={styles.ctaButton}>
-            Ghi nhật ký
+            Ghi nhật ký mới
+          </Link>
+          <Link href="/farmer/journal" className={`${styles.ctaButton} bg-white text-green-700 border border-green-700 hover:bg-green-50`}>
+            Xem lịch sử
           </Link>
           <Link href="/farmer/diagnosis" className={styles.ctaButton}>
             Chẩn đoán bệnh

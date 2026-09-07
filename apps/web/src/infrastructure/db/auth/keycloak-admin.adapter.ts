@@ -58,6 +58,10 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
   }
 
   async registerFarmer(data: RegisterData, enabled: boolean): Promise<string> {
+    return this.registerUser(data, 'farmer', enabled);
+  }
+
+  async registerUser(data: RegisterData, role: string, enabled: boolean): Promise<string> {
     const token = await this.getAdminToken();
     const usersUrl = `${this.baseUrl}/admin/realms/${this.realm}/users`;
 
@@ -65,6 +69,8 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
     const userPayload = {
       username: data.phone,
       enabled: enabled,
+      firstName: data.fullName.split(' ').slice(0, -1).join(' ') || data.fullName,
+      lastName: data.fullName.split(' ').slice(-1)[0] || '',
       attributes: {
         fullName: [data.fullName],
         htxId: [data.htxId],
@@ -104,8 +110,8 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
     }
     const userId = location.substring(location.lastIndexOf('/') + 1);
 
-    // 3. Assign 'farmer' role
-    await this.assignRealmRole(userId, 'farmer', token);
+    // 3. Assign role
+    await this.assignRealmRole(userId, role, token);
 
     return userId;
   }

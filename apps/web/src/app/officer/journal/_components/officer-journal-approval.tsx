@@ -40,7 +40,11 @@ function formatDetail(detail: string | null | undefined): string {
   return detail
 }
 
-export function OfficerJournalApproval() {
+interface OfficerJournalApprovalProps {
+  householdId?: string
+}
+
+export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalProps) {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [rejectEntryId, setRejectEntryId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
@@ -50,7 +54,10 @@ export function OfficerJournalApproval() {
 
   const load = async () => {
       try {
-        const res = await fetch('/api/journal')
+        const url = householdId
+          ? `/api/journal?householdId=${householdId}`
+          : '/api/journal'
+        const res = await fetch(url)
         if (res.ok) {
           const data = await res.json()
           setEntries(data.data || [])
@@ -63,7 +70,7 @@ export function OfficerJournalApproval() {
     }
   useEffect(() => {
     load()
-  }, [])
+  }, [householdId])
 
   const handleApprove = async (id: string) => {
     try {

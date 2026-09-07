@@ -61,6 +61,10 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       setIsSubmitting(true)
+      
+      // Clean up empty strings from crop_types array before submitting
+      data.crop_types = data.crop_types.map(s => s.trim()).filter(Boolean)
+
       const res = await fetch('/api/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -270,8 +274,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                       onChange(
                         e.target.value
                           .split(',')
-                          .map((s) => s.trim())
-                          .filter(Boolean),
+                          .map((s) => s.trimStart())
                       )
                     }
                     placeholder="VD: Lúa, Xoài, Bưởi"

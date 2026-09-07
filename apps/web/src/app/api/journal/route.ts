@@ -33,7 +33,13 @@ async function getJournalEntries(request: Request) {
 
   const role = (session.user as any).role
   // Farmer can only see their own household's entries
-  const householdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined
+  // Officer/Manager can optionally filter by householdId query param
+  let householdId: string | undefined
+  if (role === 'farmer') {
+    householdId = await getFarmerHouseholdId((session.user as any).id)
+  } else {
+    householdId = url.searchParams.get('householdId') ?? undefined
+  }
 
   const repo = new PrismaJournalRepository()
   const useCase = new ListJournalEntriesUseCase(repo)

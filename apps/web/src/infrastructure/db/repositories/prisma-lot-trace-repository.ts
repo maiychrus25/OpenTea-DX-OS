@@ -69,8 +69,8 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
     const allEntries = lot.lot_parcels.flatMap(lp => lp.parcel.journal_entries)
     const latestSafeDate = computeSafeHarvestDate(allEntries)
     
-    // Set hours to 0 to compare dates properly without time components
-    const isHarvestSafe = latestSafeDate ? latestSafeDate <= new Date() : false
+    // If there is no latestSafeDate (no chemicals applied), it is safe to harvest by default.
+    const isHarvestSafe = latestSafeDate ? latestSafeDate <= new Date() : true
 
     return {
       lot_code: lot.lot_code,

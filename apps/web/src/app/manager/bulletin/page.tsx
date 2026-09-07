@@ -7,11 +7,45 @@ import { BulletinCard } from '@/components/features/bulletin/BulletinCard'
 import { WeatherSection } from '@/components/features/bulletin/WeatherSection'
 import { ListenBulletinButton } from '@/components/features/bulletin/ListenBulletinButton'
 import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
+import { prisma } from '@/infrastructure/db/prisma.client'
 import styles from '@/components/features/bulletin/bulletin.module.css'
 
 export const dynamic = 'force-dynamic'
 
-export default function ManagerBulletinPage() {
+function timeAgo(date: Date): string {
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  if (hours < 1) return 'Vừa xong'
+  if (hours < 24) return `${hours} giờ trước`
+  const days = Math.floor(hours / 24)
+  if (days === 1) return 'Hôm qua'
+  return `${days} ngày trước`
+}
+
+export default async function ManagerBulletinPage() {
+  // Try to load real bulletins from DB
+  const dbBulletins = await prisma.bulletin.findMany({
+    orderBy: { created_at: 'desc' },
+    take: 10,
+  })
+
+  // Map DB bulletins to the BulletinCard format
+  const realBulletins = dbBulletins.map((b) => {
+    const sourcesArr = Array.isArray(b.sources_json) ? b.sources_json : []
+    return {
+      id: b.id,
+      category: 'market' as const,
+      headline: b.commodity,
+      summary: b.bulletin_vi,
+      date: timeAgo(b.created_at),
+      sourceCount: sourcesArr.length || 1,
+    }
+  })
+
+  // Use real data if available, fallback to mock
+  const bulletins = realBulletins.length > 0 ? realBulletins : MOCK_BULLETINS
+
   return (
     <div className={styles.pageContainer}>
       {/* Hero Header */}
@@ -23,7 +57,7 @@ export default function ManagerBulletinPage() {
         </div>
         <div className={styles.headerActions}>
           <ListenBulletinButton
-            bulletinTexts={MOCK_BULLETINS.map(b => `${b.headline}. ${b.summary}`)}
+            bulletinTexts={bulletins.map(b => `${b.headline}. ${b.summary}`)}
           />
         </div>
       </div>
@@ -34,11 +68,15 @@ export default function ManagerBulletinPage() {
       {/* Bulletins Grid */}
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Bản tin gần đây</h2>
-        <span className={styles.sectionAction}>Xem tất cả →</span>
+        {realBulletins.length > 0 && (
+          <span className={styles.sectionAction} style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
+            {realBulletins.length} bản tin từ AI
+          </span>
+        )}
       </div>
 
       <div className={styles.newsGrid}>
-        {MOCK_BULLETINS.map(b => (
+        {bulletins.map(b => (
           <BulletinCard
             key={b.id}
             category={b.category}

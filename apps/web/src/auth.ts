@@ -39,9 +39,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       profile(profile: any) {
         return {
           id: profile.sub,
-          name: profile.name ?? profile.preferred_username,
-          email: profile.email,
-          image: profile.picture,
+          name: profile.name || profile.preferred_username || "Unknown",
+          email: profile.email || `${profile.preferred_username}@agrimarket.local`,
+          image: profile.picture || null,
         }
       }
     }

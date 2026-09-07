@@ -81,7 +81,7 @@ export class PrismaLotRepository implements LotPort {
         destination: data.destination ?? null,
         buyer_name: data.buyer_name ?? null,
         certificate_keys: data.certificate_keys ?? [],
-        status: 'DRAFT',
+        status: 'READY',
         created_by_id: data.created_by_id,
         htx_profile_id: data.htx_profile_id,
         lot_parcels: {

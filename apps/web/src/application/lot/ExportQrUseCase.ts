@@ -26,7 +26,7 @@ export class ExportQrUseCase {
       throw new DomainError('WITHDRAWAL_NOT_PASSED: Lô hàng chưa an toàn để thu hoạch hoặc chứa thửa đất vi phạm thời gian cách ly')
     }
 
-    const hasInvalidParcel = traceData.parcels.some(p => p.status !== 'HARVESTED' && p.status !== 'GROWING' && p.status !== 'HARVEST_APPROVED')
+    const hasInvalidParcel = traceData.parcels.some(p => p.status !== 'HARVESTED' && p.status !== 'TENDING' && p.status !== 'HARVEST_APPROVED')
     if (hasInvalidParcel) {
       throw new DomainError('Một hoặc nhiều thửa đất không ở trạng thái hợp lệ để xuất QR')
     }

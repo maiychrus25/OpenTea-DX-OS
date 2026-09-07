@@ -7,11 +7,43 @@ import { Button } from '@/components/ui/Button'
 import { AiNote } from '@/components/ui/AiNote'
 import { BulletinCard } from '@/components/features/bulletin/BulletinCard'
 import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
+import { prisma } from '@/infrastructure/db/prisma.client'
 import styles from '@/components/features/bulletin/bulletin.module.css'
 
 export const dynamic = 'force-dynamic'
 
-export default function OfficerBulletinPage() {
+function timeAgo(date: Date): string {
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  if (hours < 1) return 'Vừa xong'
+  if (hours < 24) return `${hours} giờ trước`
+  const days = Math.floor(hours / 24)
+  if (days === 1) return 'Hôm qua'
+  return `${days} ngày trước`
+}
+
+export default async function OfficerBulletinPage() {
+  // Try to load real bulletins from DB
+  const dbBulletins = await prisma.bulletin.findMany({
+    orderBy: { created_at: 'desc' },
+    take: 10,
+  })
+
+  const realBulletins = dbBulletins.map((b) => {
+    const sourcesArr = Array.isArray(b.sources_json) ? b.sources_json : []
+    return {
+      id: b.id,
+      category: 'market' as const,
+      headline: b.commodity,
+      summary: b.bulletin_vi,
+      date: timeAgo(b.created_at),
+      sourceCount: sourcesArr.length || 1,
+    }
+  })
+
+  const bulletins = realBulletins.length > 0 ? realBulletins : MOCK_BULLETINS
+
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
@@ -29,7 +61,7 @@ export default function OfficerBulletinPage() {
       </div>
 
       <div className={styles.newsGrid}>
-        {MOCK_BULLETINS.map(b => (
+        {bulletins.map(b => (
           <BulletinCard
             key={b.id}
             category={b.category}

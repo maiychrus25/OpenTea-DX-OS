@@ -36,7 +36,7 @@ export function withErrorHandler(handler: RouteHandler): RouteHandler {
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         if (err.code === 'P2002') {
           return NextResponse.json(
-            { error: { code: 'CONFLICT', message: 'Unique constraint failed' } },
+            { error: { code: 'CONFLICT', message: 'Dữ liệu này đã tồn tại (bị trùng lặp)' } },
             { status: 409 }
           )
         }
