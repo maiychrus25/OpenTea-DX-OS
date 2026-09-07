@@ -116,9 +116,9 @@ export async function POST(req: Request) {
           { status: 404 },
         )
       }
-      if (error.message.includes('Disease API')) {
+      if (error.message.includes('Disease API') || error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED')) {
         return NextResponse.json(
-          { error: { code: 'AI_UNAVAILABLE', message: 'Dịch vụ chẩn đoán bệnh tạm ngưng. Vui lòng thử lại sau.' } },
+          { error: { code: 'AI_UNAVAILABLE', message: 'Dịch vụ AI chẩn đoán bệnh đang tạm bảo trì. Vui lòng thử lại sau.' } },
           { status: 503 },
         )
       }

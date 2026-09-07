@@ -29,7 +29,7 @@ const mockParcelOfFarmerA: ParcelSummary = {
   parcel_code: 'P-A-001',
   area_ha: 1.0,
   crop_type: 'Lúa ST25',
-  status: 'GROWING',
+  status: 'TENDING',
   polygon_geojson: null,
   household_id: 'household-a',
   name: null,

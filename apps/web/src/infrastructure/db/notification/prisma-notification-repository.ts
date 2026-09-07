@@ -5,6 +5,7 @@ import { prisma } from '../prisma.client';
 import { NotificationPort } from '@/domain/ports/notification-port';
 import { Notification } from '@/domain/entities/notification';
 import { NotificationType } from '@prisma/client';
+import { sseEmitter, SSE_EVENTS } from '@/lib/sse-emitter';
 
 export class PrismaNotificationRepository implements NotificationPort {
   async getRecentByUserId(userId: string, limit: number, filter?: string): Promise<Notification[]> {
@@ -72,7 +73,7 @@ export class PrismaNotificationRepository implements NotificationPort {
   }
 
   async sendDirectNotification(recipientId: string, type: string, title: string, body: string, referenceId?: string): Promise<void> {
-    await prisma.notification.create({
+    const notif = await prisma.notification.create({
       data: {
         type: type as any,
         title,
@@ -81,6 +82,11 @@ export class PrismaNotificationRepository implements NotificationPort {
         deep_link_url: referenceId ? `/officer/disease-reports/${referenceId}` : undefined,
       },
     });
+    if (notif.recipient_id) {
+      sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { userId: notif.recipient_id });
+    } else {
+      sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { broadcast: true });
+    }
   }
 
   async broadcastAnnouncement(title: string, body: string, senderId: string): Promise<void> {

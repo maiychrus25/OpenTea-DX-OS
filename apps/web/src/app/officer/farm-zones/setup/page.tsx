@@ -4,6 +4,9 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { SetupWizard } from './_components/setup-wizard'
+import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
+import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
+import { prisma } from '@/infrastructure/db/prisma.client'
 
 export default async function FarmZoneSetupPage() {
   const session = await auth()
@@ -13,5 +16,21 @@ export default async function FarmZoneSetupPage() {
     redirect('/login')
   }
 
-  return <SetupWizard />
+  const profileRepo = new PrismaHtxProfileRepository(prisma)
+  const useCase = new GetHtxProfileUseCase(profileRepo)
+
+  let cropTypes: string[] = []
+  try {
+    const profile = await useCase.execute()
+    cropTypes = profile.crop_types ?? []
+  } catch {
+    // If no profile, we pass empty array or fallback
+  }
+
+  // Fallback to something if empty, or just pass it down
+  if (cropTypes.length === 0) {
+    cropTypes = ['Lúa', 'Rau màu'] // Fallback if HTX hasn't configured crops yet
+  }
+
+  return <SetupWizard cropOptions={cropTypes} />
 }

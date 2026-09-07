@@ -12,7 +12,11 @@ import { Step2MapDraw } from './step2-map-draw'
 import { Step3CropAssign } from './step3-crop-assign'
 import styles from '../wizard.module.css'
 
-export function SetupWizard() {
+interface Props {
+  cropOptions: string[]
+}
+
+export function SetupWizard({ cropOptions }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<1 | 2 | 3>(1)
   
@@ -53,13 +57,14 @@ export function SetupWizard() {
           <Step3CropAssign
             householdId={householdId!}
             householdName={householdName}
-            area={area || 0}
+            area={area!}
             geojson={geojson}
             center={center}
+            cropOptions={cropOptions}
             onPrev={() => setStep(2)}
             onComplete={() => {
-              toast.success('Đã thiết lập vùng trồng thành công!')
-              router.push('/officer/dashboard')
+              toast.success('Thiết lập vùng trồng thành công')
+              router.push('/officer/farm-zones')
             }}
           />
         )

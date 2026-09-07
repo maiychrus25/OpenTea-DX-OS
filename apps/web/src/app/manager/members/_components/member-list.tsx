@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pill } from '@/components/ui/Pill';
 import { Modal } from '@/components/ui/Modal';
-import { Member, MemberRole } from './mock-data';
+import { Member } from './mock-data';
 import { InvitationModal } from './invitation-modal';
 
 export function MemberList() {
@@ -41,22 +41,7 @@ export function MemberList() {
     fetchMembers();
   }, [fetchMembers]);
 
-  const handleInvite = async (email: string, role: string) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    
-    const newMember: Member = {
-      id: `m${Date.now()}`,
-      name: 'Chưa cập nhật',
-      email,
-      phone: 'Chưa cập nhật',
-      role: role as MemberRole,
-      status: 'PENDING',
-      invitedAt: new Date().toISOString(),
-    };
-    
-    setMembers((prev) => [newMember, ...prev]);
-  };
+
 
   const handleApprove = (id: string) => {
     setConfirmModal({ isOpen: true, action: 'APPROVE', memberId: id });
@@ -123,7 +108,7 @@ export function MemberList() {
         </div>
 
         <Button onClick={() => setIsInviteModalOpen(true)} variant="primary">
-          Mời thành viên
+          + Thêm thành viên
         </Button>
       </div>
 
@@ -210,11 +195,7 @@ export function MemberList() {
         </div>
       </Card>
 
-      <InvitationModal
-        isOpen={isInviteModalOpen}
-        onClose={() => setIsInviteModalOpen(false)}
-        onInvite={handleInvite}
-      />
+
 
       <Modal
         isOpen={confirmModal.isOpen}
@@ -246,6 +227,13 @@ export function MemberList() {
           </div>
         </div>
       </Modal>
+
+      {/* Invitation Modal */}
+      <InvitationModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        onSuccess={() => fetchMembers()}
+      />
     </div>
   );
 }

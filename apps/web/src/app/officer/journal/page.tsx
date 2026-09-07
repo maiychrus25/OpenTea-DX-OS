@@ -5,11 +5,16 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { OfficerJournalApproval } from './_components/officer-journal-approval'
 
-export default async function OfficerJournalPage() {
+interface PageProps {
+  searchParams: Promise<{ householdId?: string }>
+}
+
+export default async function OfficerJournalPage({ searchParams }: PageProps) {
   const session = await auth()
   if (!session || session.user?.role !== 'officer') {
     redirect('/login')
   }
 
-  return <OfficerJournalApproval />
+  const params = await searchParams
+  return <OfficerJournalApproval householdId={params.householdId} />
 }

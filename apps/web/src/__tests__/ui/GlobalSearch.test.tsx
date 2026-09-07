@@ -12,6 +12,13 @@ describe('GlobalSearch Component', () => {
     // Reset body style
     document.body.style.overflow = ''
     jest.clearAllMocks()
+    
+    global.fetch = jest.fn(() => 
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ data: [] }) // we can return empty array from api, component will merge with STATIC_SUGGESTIONS
+      })
+    ) as jest.Mock
   })
 
   it('renders nothing when isOpen is false', () => {

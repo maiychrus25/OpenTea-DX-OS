@@ -3,12 +3,13 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Folder, FileText, Download, Eye, Upload, ChevronRight, Search, Plus, Tag, Shield, FolderInput } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { Modal } from '@/components/ui/Modal/Modal'
 import styles from './DocumentView.module.css'
-import { MOCK_DOCUMENTS, DocumentItem } from './mock-data'
+import { DocumentItem } from './mock-data'
+import { MOCK_DOCUMENTS } from './mock-data'
 
 const CATEGORIES = [
   { id: 'para/Projects/', name: 'Projects', description: 'Các dự án ngắn hạn' },
@@ -37,38 +38,57 @@ export function DocumentView() {
   // New folder state
   const [newFolderName, setNewFolderName] = useState('')
 
-  useEffect(() => {
-    fetchDocuments(currentPath)
-  }, [currentPath])
 
-  const fetchDocuments = async (path: string) => {
+  const fetchDocuments = useCallback(async (path: string) => {
     setIsLoading(true)
-    // Mock network delay
-    setTimeout(() => {
-      // Filter mock documents by path
-      let filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(path) && doc.key !== path)
-      // Basic mock logic to only show direct children
-      filtered = filtered.filter(doc => {
-        const remainingPath = doc.key.replace(path, '')
-        if (doc.isDir) {
-          return remainingPath.split('/').length === 2 // e.g. "Ca-phe-huu-co-2026/"
+    try {
+      const res = await fetch(`/api/documents?path=${encodeURIComponent(path)}`)
+      if (res.ok) {
+        const json = await res.json()
+        const items: DocumentItem[] = (json.data || []).map((item: any) => ({
+          id: item.key || item.name,
+          name: item.name,
+          size: item.size || 0,
+          uploadDate: item.lastModified ? new Date(item.lastModified) : new Date(),
+          key: item.key,
+          isDir: item.isDir || item.key?.endsWith('/') || false,
+          tags: [],
+          privacy: 'N\u1ed9i b\u1ed9 HTX' as const,
+        }))
+        
+        let filtered = items
+        if (searchQuery) {
+          filtered = items.filter(doc => doc.name.toLowerCase().includes(searchQuery.toLowerCase()))
         }
-        return !remainingPath.includes('/')
-      })
-      
-      if (searchQuery) {
-        filtered = MOCK_DOCUMENTS.filter(doc => doc.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        setDocuments(filtered)
+      } else {
+        // API failed, fallback to mock for categories that have mock data
+        const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(path) && doc.key !== path)
+          .filter(doc => {
+            const remainingPath = doc.key.replace(path, '')
+            if (doc.isDir) return remainingPath.split('/').length === 2
+            return !remainingPath.includes('/')
+          })
+        setDocuments(filtered)
       }
-      
+    } catch {
+      // On error, fallback to mock data
+      const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(path) && doc.key !== path)
+        .filter(doc => {
+          const remainingPath = doc.key.replace(path, '')
+          if (doc.isDir) return remainingPath.split('/').length === 2
+          return !remainingPath.includes('/')
+        })
       setDocuments(filtered)
+    } finally {
       setIsLoading(false)
-    }, 400)
-  }
+    }
+  }, [searchQuery])
 
-  // Refetch when search query changes
+  // Fetch documents on load, when path changes, or when search query changes
   useEffect(() => {
     fetchDocuments(currentPath)
-  }, [searchQuery])
+  }, [currentPath, fetchDocuments])
 
   const handleCategorySelect = (categoryId: string) => {
     setActiveCategory(categoryId)
@@ -87,11 +107,24 @@ export function DocumentView() {
   }
 
   const handleAction = async (key: string, download: boolean) => {
-    alert(`Mock action: ${download ? 'Download' : 'View'} ${key}`)
+    try {
+      const res = await fetch(`/api/documents/url?key=${encodeURIComponent(key)}&download=${download}`)
+      if (res.ok) {
+        const json = await res.json()
+        const url = json.data?.url
+        if (url) {
+          window.open(url, '_blank')
+        }
+      } else {
+        alert('Không thể truy cập tài liệu. MinIO có thể chưa khởi động.')
+      }
+    } catch {
+      alert('Lỗi kết nối. Vui lòng thử lại.')
+    }
   }
   
   const handleMoveAction = (key: string) => {
-    alert(`Mock action: Move document ${key}`)
+    alert(`Tính năng di chuyển tài liệu đang phát triển: ${key}`)
   }
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -102,64 +135,80 @@ export function DocumentView() {
     setUploadProgress(0)
     setUploadError(null)
     
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(interval)
-          return 90
-        }
-        return prev + 10
+    try {
+      // Step 1: Get pre-signed upload URL from API
+      setUploadProgress(10)
+      const res = await fetch('/api/documents/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: uploadFile.name,
+          pathPrefix: currentPath,
+        }),
       })
-    }, 200)
-
-    // Simulate random failure (1 in 3 chance) to demonstrate retry state
-    setTimeout(() => {
-      clearInterval(interval)
-      if (Math.random() < 0.3) {
-        setUploadError('Lỗi mạng khi tải lên. Vui lòng thử lại.')
-        setIsUploading(false)
-      } else {
-        setUploadProgress(100)
-        setTimeout(() => {
-          setIsUploadModalOpen(false)
-          setUploadFile(null)
-          setIsUploading(false)
-          setUploadProgress(0)
-          
-          // Add to mock state
-          const newDoc: DocumentItem = {
-            id: Date.now().toString(),
-            name: uploadFile.name,
-            size: uploadFile.size,
-            uploadDate: new Date(),
-            key: currentPath + uploadFile.name,
-            isDir: false,
-            tags: ['mới'],
-            privacy: 'Nội bộ HTX'
-          }
-          MOCK_DOCUMENTS.push(newDoc)
-          fetchDocuments(currentPath)
-        }, 500)
+      
+      if (!res.ok) {
+        throw new Error('Không thể tạo URL tải lên')
       }
-    }, 2000)
+      
+      const json = await res.json()
+      const uploadUrl = json.data?.url
+      if (!uploadUrl) throw new Error('Không nhận được URL tải lên')
+      
+      // Step 2: Upload file directly to MinIO via pre-signed URL
+      setUploadProgress(30)
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: uploadFile,
+        headers: { 'Content-Type': uploadFile.type || 'application/octet-stream' },
+      })
+      
+      if (!putRes.ok) throw new Error('Tải lên thất bại')
+      
+      setUploadProgress(100)
+      setTimeout(() => {
+        setIsUploadModalOpen(false)
+        setUploadFile(null)
+        setIsUploading(false)
+        setUploadProgress(0)
+        fetchDocuments(currentPath)
+      }, 500)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Lỗi khi tải lên. Vui lòng thử lại.')
+      setIsUploading(false)
+    }
   }
   
-  const handleCreateFolder = (e: React.FormEvent) => {
+  const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newFolderName.trim()) return
     
-    const newDir: DocumentItem = {
-      id: Date.now().toString(),
-      name: newFolderName,
-      size: 0,
-      uploadDate: new Date(),
-      key: `${currentPath}${newFolderName}/`,
-      isDir: true,
-      tags: [],
-      privacy: 'Nội bộ HTX'
+    try {
+      // Create a folder by uploading a placeholder object with trailing slash
+      const folderKey = `${currentPath}${newFolderName.trim()}/`
+      const res = await fetch('/api/documents/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: '.folder',
+          pathPrefix: folderKey,
+        }),
+      })
+      
+      if (res.ok) {
+        const json = await res.json()
+        const uploadUrl = json.data?.url
+        if (uploadUrl) {
+          await fetch(uploadUrl, {
+            method: 'PUT',
+            body: '',
+            headers: { 'Content-Type': 'application/x-directory' },
+          })
+        }
+      }
+    } catch {
+      // Folder creation failed silently, still refresh
     }
-    MOCK_DOCUMENTS.push(newDir)
     
     setNewFolderName('')
     setIsNewFolderModalOpen(false)
