@@ -16,7 +16,7 @@ const customJestConfig = {
     '^remark-gfm$': '<rootDir>/__tests__/__mocks__/remark-plugin.ts',
     '^remark-breaks$': '<rootDir>/__tests__/__mocks__/remark-plugin.ts',
   },
-  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/', '<rootDir>/tests/e2e/', '<rootDir>/e2e/'],
+  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/', '<rootDir>/tests/e2e/', '<rootDir>/e2e/', '<rootDir>/__tests__/__mocks__/'],
   modulePathIgnorePatterns: ['<rootDir>/.next/']
 };
 
