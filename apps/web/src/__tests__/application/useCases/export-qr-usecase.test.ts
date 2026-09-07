@@ -116,7 +116,7 @@ describe('ExportQrUseCase', () => {
     const traceData = {
       lot_code: 'LOT-123',
       is_harvest_safe: true,
-      parcels: [{ status: 'HARVESTED' }, { status: 'GROWING' }],
+      parcels: [{ status: 'HARVESTED' }, { status: 'TENDING' }],
       certificate_keys: ['cert1.pdf'],
     } as LotTraceData
 
