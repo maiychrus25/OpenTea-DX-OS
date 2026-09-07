@@ -3,7 +3,7 @@
 
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { Leaf } from 'lucide-react'
+import { Leaf, ArrowLeft } from 'lucide-react'
 import styles from './register.module.css'
 import { RegisterForm } from './_components/register-form'
 
@@ -53,7 +53,8 @@ export default async function RegisterPage() {
         <div className={styles.authCard}>
           <div className={styles.cardHeader}>
             <Link href="/login" className="inline-flex items-center text-sm text-[var(--primary)] hover:underline mb-2 font-medium">
-              ← Quay lại
+              <ArrowLeft size={15} className="mr-1" />
+              Quay lại
             </Link>
             <p className={styles.cardPretitle}>Đăng ký</p>
             <h2 className={styles.cardTitle}>Tạo tài khoản nông hộ</h2>

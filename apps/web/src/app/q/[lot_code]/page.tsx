@@ -3,6 +3,7 @@
 
 import React from 'react'
 import { Pill } from '@/components/ui'
+import { XCircle, AlertTriangle, Clock } from 'lucide-react'
 import styles from './qr.module.css'
 
 interface PageProps {
@@ -18,7 +19,7 @@ export default function QrTracePage({ params, searchParams }: PageProps) {
       <div className={styles.container}>
         <div className={styles.errorCard}>
           <div className={styles.iconWrapper} style={{ backgroundColor: '#ffebee', color: '#d32f2f' }}>
-            ✕
+            <XCircle size={32} />
           </div>
           <h1 className={styles.errorTitle}>Không tìm thấy dữ liệu</h1>
           <p className={styles.errorDesc}>
@@ -34,7 +35,7 @@ export default function QrTracePage({ params, searchParams }: PageProps) {
       <div className={styles.container}>
         <div className={styles.errorCard}>
           <div className={styles.iconWrapper} style={{ backgroundColor: '#fff3e0', color: '#f57c00' }}>
-            ⚠️
+            <AlertTriangle size={32} />
           </div>
           <h1 className={styles.errorTitle}>Lô hàng đã bị thu hồi</h1>
           <p className={styles.errorDesc}>
@@ -50,7 +51,7 @@ export default function QrTracePage({ params, searchParams }: PageProps) {
       <div className={styles.container}>
         <div className={styles.errorCard}>
           <div className={styles.iconWrapper} style={{ backgroundColor: '#eceff1', color: '#546e7a' }}>
-            ⌛
+            <Clock size={32} />
           </div>
           <h1 className={styles.errorTitle}>Lô hàng đã hết hạn</h1>
           <p className={styles.errorDesc}>

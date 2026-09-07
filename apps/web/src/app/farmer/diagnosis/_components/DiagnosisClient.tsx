@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react'
 import { Pill } from '@/components/ui'
+import { WifiOff, RefreshCw, AlertTriangle } from 'lucide-react'
 import styles from '../diagnosis.module.css'
 import { getDiagnosisHistory } from '../actions'
 import { DiagnosisHistoryItem } from '@/domain/disease/ports/disease-report.port'
@@ -114,12 +115,14 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
         
         {!isOnline && (
           <div className={styles.offlineBanner}>
-            ⚠️ Bạn đang ngoại tuyến. Hình ảnh sẽ được lưu vào máy và tự động tải lên khi có mạng (Đang chờ: {queueCount}).
+            <WifiOff size={16} className="inline-block mr-1.5 text-amber-600 align-text-bottom" />
+            Bạn đang ngoại tuyến. Hình ảnh sẽ được lưu vào máy và tự động tải lên khi có mạng (Đang chờ: {queueCount}).
           </div>
         )}
         {isOnline && queueCount > 0 && (
           <div className={styles.syncBanner}>
-            🔄 Đang đồng bộ {queueCount} hình ảnh từ bộ nhớ tạm... {isSyncing ? '(Đang xử lý)' : ''}
+            <RefreshCw size={16} className="inline-block mr-1.5 animate-spin text-blue-600 align-text-bottom" />
+            Đang đồng bộ {queueCount} hình ảnh từ bộ nhớ tạm... {isSyncing ? '(Đang xử lý)' : ''}
           </div>
         )}
       </div>
@@ -173,7 +176,8 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
               <h3>Kết quả chẩn đoán:</h3>
               {result.confidence < 70 && (
                 <div className={styles.warningBox}>
-                  ⚠️ <strong>Độ tự tin thấp:</strong> Hình ảnh có thể mờ hoặc không rõ triệu chứng. Cán bộ Kỹ thuật đã nhận được thông báo và sẽ kiểm tra thêm.
+                  <AlertTriangle size={16} className="inline-block mr-1.5 text-amber-600 align-text-bottom" />
+                  <strong>Độ tự tin thấp:</strong> Hình ảnh có thể mờ hoặc không rõ triệu chứng. Cán bộ Kỹ thuật đã nhận được thông báo và sẽ kiểm tra thêm.
                 </div>
               )}
               

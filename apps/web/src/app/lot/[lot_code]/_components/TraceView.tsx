@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react';
-import { Info, Lock } from 'lucide-react';
+import { Info, Lock, Hourglass } from 'lucide-react';
 import { LotTraceData } from '@/domain/entities/lot-trace-data';
 import { Pill } from '@/components/ui/Pill/Pill';
 import styles from '../trace.module.css';
@@ -158,7 +158,10 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
                     <span className={styles.timelineDetail}>Sản phẩm: {journal.product_name}{journal.dosage ? ` — ${journal.dosage}` : ''}</span>
                   )}
                   {journal.withdrawal_days !== null && journal.withdrawal_days > 0 && (
-                    <span className={styles.timelineDetail}>⏳ Thời gian cách ly: {journal.withdrawal_days} ngày</span>
+                    <span className={styles.timelineDetail}>
+                      <Hourglass size={14} className="inline mr-1 text-amber-600 align-text-bottom" />
+                      Thời gian cách ly: {journal.withdrawal_days} ngày
+                    </span>
                   )}
                   <span className={styles.timelinePerson}>Thực hiện bởi: {journal.performed_by}</span>
                 </div>

@@ -4,6 +4,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
+import { Check, CheckCircle2 } from 'lucide-react'
 import styles from '../approve.module.css'
 
 interface JournalEntry {
@@ -93,7 +94,12 @@ export function ApproveList() {
             disabled={selected.size === 0 || approving}
             onClick={handleApprove}
           >
-            {approving ? 'Đang duyệt...' : `✓ Duyệt (${selected.size})`}
+            {approving ? 'Đang duyệt...' : (
+              <>
+                <Check size={16} className="inline mr-1 align-text-bottom" />
+                Duyệt ({selected.size})
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -107,7 +113,10 @@ export function ApproveList() {
       {loading ? (
         <div className={styles.empty}>Đang tải...</div>
       ) : entries.length === 0 ? (
-        <div className={styles.empty}>🎉 Không có nhật ký nào đang chờ duyệt!</div>
+        <div className={styles.empty}>
+          <CheckCircle2 size={36} className="text-emerald-600 mb-2 mx-auto block" />
+          Không có nhật ký nào đang chờ duyệt!
+        </div>
       ) : (
         <>
           <label className={styles.selectAll}>

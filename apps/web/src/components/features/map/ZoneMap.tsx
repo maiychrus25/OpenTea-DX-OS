@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, GeoJSON, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ParcelSummary } from '@/domain/farm/ports/ParcelPort'
+import { Camera } from 'lucide-react'
 import Image from 'next/image'
 import styles from './ZoneMap.module.css'
 
@@ -56,7 +57,9 @@ function ParcelPopupContent({ parcel }: { parcel: ParcelSummary }) {
       <p className={styles.popupRow}><strong>Trạng thái:</strong> {parcel.status}</p>
       
       <div className={styles.farmViewSection}>
-        <h4 className={styles.farmViewTitle}>📸 Thực địa (Farm View)</h4>
+        <h4 className={styles.farmViewTitle}>
+          <Camera size={16} className="inline mr-1 text-emerald-700 align-text-bottom" /> Thực địa (Farm View)
+        </h4>
         {loading ? (
           <p className={styles.loadingText}>Đang tải ảnh thực địa...</p>
         ) : photoUrl ? (
