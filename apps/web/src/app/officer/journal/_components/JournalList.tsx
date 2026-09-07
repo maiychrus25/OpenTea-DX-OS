@@ -35,6 +35,20 @@ const ACTIVITY_LABELS: Record<string, string> = {
   OTHER: 'Khác',
 }
 
+function formatDetail(detail: string | null | undefined, notes: string | null): string {
+  const text = detail || notes
+  if (!text) return '—'
+  
+  if (ACTIVITY_LABELS[text]) return ACTIVITY_LABELS[text]
+  
+  for (const [key, label] of Object.entries(ACTIVITY_LABELS)) {
+    if (text.startsWith(`${key}: `)) {
+      return text.replace(`${key}: `, `${label}: `)
+    }
+  }
+  return text
+}
+
 function statusTone(status: string): 'amber' | 'green' | 'neutral' | 'blue' {
   switch (status) {
     case 'PENDING_APPROVAL': return 'amber'
@@ -114,7 +128,7 @@ export function JournalList() {
                 <td>{new Date(e.entry_date).toLocaleDateString('vi-VN')}</td>
                 <td>{ACTIVITY_LABELS[e.activity_type] || e.activity_type}</td>
                 <td>{e.performed_by}</td>
-                <td>{e.activities?.[0]?.activity_detail ?? e.notes ?? '—'}</td>
+                <td>{formatDetail(e.activities?.[0]?.activity_detail, e.notes)}</td>
                 <td>
                   <Pill tone={statusTone(e.status)}>
                     {STATUS_LABELS[e.status] ?? e.status}

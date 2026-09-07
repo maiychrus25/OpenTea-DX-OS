@@ -28,6 +28,18 @@ const ACTIVITY_LABELS: Record<string, string> = {
   OTHER: 'Khác',
 }
 
+function formatDetail(detail: string | null | undefined): string {
+  if (!detail) return '—'
+  if (ACTIVITY_LABELS[detail]) return ACTIVITY_LABELS[detail]
+  
+  for (const [key, label] of Object.entries(ACTIVITY_LABELS)) {
+    if (detail.startsWith(`${key}: `)) {
+      return detail.replace(`${key}: `, `${label}: `)
+    }
+  }
+  return detail
+}
+
 export function OfficerJournalApproval() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [rejectEntryId, setRejectEntryId] = useState<string | null>(null)
@@ -144,7 +156,7 @@ export function OfficerJournalApproval() {
             entries.map(e => (
               <tr key={e.id}>
                 <td>{e.parcel_code || e.parcel_id || e.id.substring(0, 8)}</td>
-                <td>{e.activity_type ? (ACTIVITY_LABELS[e.activity_type] || e.activity_type) : 'Không có'}</td>
+                <td>{formatDetail(e.activities?.[0]?.activity_detail)}</td>
                 <td>{e.entry_date ? new Date(e.entry_date).toLocaleDateString('vi-VN') : ''}</td>
                 <td>
                   <Pill tone={e.status === 'PENDING_APPROVAL' ? 'amber' : e.status === 'APPROVED' ? 'green' : e.status === 'REJECTED' ? 'neutral' : 'blue'}>
