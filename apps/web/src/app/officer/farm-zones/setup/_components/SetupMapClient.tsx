@@ -64,7 +64,7 @@ function SearchAndLocateInit() {
         container.onclick = (e) => {
           e.preventDefault()
           e.stopPropagation()
-          map.locate({ setView: true, maxZoom: 16 })
+          map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true })
         }
         return container
       }
@@ -72,9 +72,27 @@ function SearchAndLocateInit() {
     const locateControl = new LocateControl()
     map.addControl(locateControl)
 
+    const onLocationFound = (e: L.LocationEvent) => {
+      if ((window as any)._myLocationMarker) {
+        map.removeLayer((window as any)._myLocationMarker)
+      }
+      const marker = L.marker(e.latlng).addTo(map)
+        .bindPopup('Vị trí hiện tại của bạn').openPopup()
+      ;(window as any)._myLocationMarker = marker
+    }
+
+    const onLocationError = (e: L.ErrorEvent) => {
+      alert('Không thể định vị. Vui lòng kiểm tra xem trình duyệt đã được cấp quyền vị trí chưa.')
+    }
+
+    map.on('locationfound', onLocationFound)
+    map.on('locationerror', onLocationError)
+
     return () => {
       map.removeControl(searchControl)
       map.removeControl(locateControl)
+      map.off('locationfound', onLocationFound)
+      map.off('locationerror', onLocationError)
     }
   }, [map])
 
