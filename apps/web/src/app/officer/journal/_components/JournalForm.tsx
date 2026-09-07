@@ -4,6 +4,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { X, Plus } from 'lucide-react'
 import styles from '../journal.module.css'
 
 interface Parcel {
@@ -137,11 +138,15 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
             <input className={styles.formInput} placeholder="Tên sản phẩm" value={a.product_name} onChange={e => updateActivity(idx, 'product_name', e.target.value)} />
             <input className={styles.formInput} placeholder="Liều lượng" value={a.dosage} onChange={e => updateActivity(idx, 'dosage', e.target.value)} />
             {activities.length > 1 && (
-              <button type="button" className={styles.removeBtn} onClick={() => removeActivity(idx)}>✕</button>
+              <button type="button" className={styles.removeBtn} onClick={() => removeActivity(idx)} aria-label="Xóa hoạt động">
+                <X size={16} />
+              </button>
             )}
           </div>
         ))}
-        <button type="button" className={styles.addActivityBtn} onClick={addActivity}>+ Thêm hoạt động</button>
+        <button type="button" className={styles.addActivityBtn} onClick={addActivity}>
+          <Plus size={16} className="inline mr-1 align-text-bottom" /> Thêm hoạt động
+        </button>
       </div>
 
       <div className={styles.formActions}>

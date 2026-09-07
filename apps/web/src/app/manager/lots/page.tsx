@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { QrCode } from 'lucide-react'
+import { QrCode, Info } from 'lucide-react'
 import { Pill } from '@/components/ui'
 import styles from './lots.module.css'
 
@@ -85,7 +85,7 @@ export default function ManagerLotsPage() {
           borderRadius: '0.5rem', padding: '0.5rem 1rem',
           fontSize: '0.85rem', color: '#166534',
         }}>
-          <span>ℹ️</span>
+          <Info className="w-4 h-4 shrink-0 text-emerald-700" aria-hidden="true" />
           <span>Cán bộ kỹ thuật tạo lô hàng. Trưởng HTX duyệt & xuất QR.</span>
         </div>
       </div>

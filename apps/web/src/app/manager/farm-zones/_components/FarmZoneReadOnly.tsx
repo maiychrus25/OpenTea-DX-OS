@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
-import { MapPin, Target } from 'lucide-react'
+import { MapPin, Target, Sprout, Map } from 'lucide-react'
 
 // Dynamic imports for react-leaflet to ensure ssr:false behavior per requirement
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
@@ -147,11 +147,11 @@ export default function FarmZoneReadOnly() {
     const area = props.area_ha != null ? `${props.area_ha} ha` : '—'
     const html = `<div style="min-width:180px;font-family:sans-serif">
       <strong style="font-size:1rem">${name}</strong>
-      <div style="margin-top:6px;font-size:0.85rem">
-        <div>📍 Trạng thái: <b>${statusLabel}</b></div>
-        <div>🌾 Cây trồng: ${crop}</div>
-        <div>👤 Nông hộ: ${owner}</div>
-        <div>📐 Diện tích: ${area}</div>
+      <div style="margin-top:6px;font-size:0.85rem;line-height:1.5">
+        <div><span style="color:#64748b">Trạng thái:</span> <b>${statusLabel}</b></div>
+        <div><span style="color:#64748b">Cây trồng:</span> ${crop}</div>
+        <div><span style="color:#64748b">Nông hộ:</span> ${owner}</div>
+        <div><span style="color:#64748b">Diện tích:</span> ${area}</div>
       </div>
     </div>`
     layer.bindPopup(html)
@@ -318,7 +318,7 @@ export default function FarmZoneReadOnly() {
             >
               <Tooltip permanent direction="center" className="transparent-tooltip">
                 <div className="flex items-center justify-center">
-                  <span className="text-[20px] drop-shadow-md">🌱</span>
+                  <Sprout className="w-5 h-5 text-emerald-600 drop-shadow-md" />
                 </div>
               </Tooltip>
             </GeoJSON>
@@ -327,7 +327,7 @@ export default function FarmZoneReadOnly() {
 
         {drawnParcels === 0 && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl p-6 text-center shadow-xl z-[1000] pointer-events-auto">
-            <div className="text-4xl mb-2">🗺️</div>
+            <Map className="w-10 h-10 mx-auto mb-2 text-slate-400" />
             <p className="m-0 text-base text-[var(--color-ink-primary)]">
               <strong>Chưa có ranh giới thửa đất nào</strong>
             </p>

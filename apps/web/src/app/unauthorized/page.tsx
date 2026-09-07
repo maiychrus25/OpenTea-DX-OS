@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { auth } from '@/auth'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Clock, Lock } from 'lucide-react'
 import styles from './Unauthorized.module.css'
 
 interface UnauthorizedPageProps {
@@ -27,7 +28,9 @@ export default async function UnauthorizedPage({ searchParams }: UnauthorizedPag
       <div className={styles.container} data-testid="state-pending">
         <Card padding="default">
           <div className={styles.content}>
-            <div className={styles.stateIcon} aria-hidden="true">⏳</div>
+            <div className={styles.stateIcon} aria-hidden="true">
+              <Clock size={48} className="text-amber-500 mx-auto" />
+            </div>
             <h1 className={styles.stateTitlePending}>Tài khoản chờ phê duyệt</h1>
             <p className={styles.description}>
               Tài khoản của bạn đã được tạo nhưng đang chờ Trưởng HTX phê duyệt.
@@ -50,7 +53,9 @@ export default async function UnauthorizedPage({ searchParams }: UnauthorizedPag
       <div className={styles.container} data-testid="state-locked">
         <Card padding="default">
           <div className={styles.content}>
-            <div className={styles.stateIcon} aria-hidden="true">🔒</div>
+            <div className={styles.stateIcon} aria-hidden="true">
+              <Lock size={48} className="text-rose-500 mx-auto" />
+            </div>
             <h1 className={styles.stateTitleLocked}>Tài khoản bị khóa</h1>
             <p className={styles.description}>
               Tài khoản của bạn đã bị khóa do nhập sai PIN quá nhiều lần.

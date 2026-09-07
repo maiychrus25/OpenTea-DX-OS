@@ -6,6 +6,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Pill } from '@/components/ui'
+import { ArrowLeft, Plus } from 'lucide-react'
 import styles from '../journal.module.css'
 
 interface JournalEntry {
@@ -72,10 +73,16 @@ export function FarmerJournalList() {
 
   return (
     <div className={styles.container}>
-      <Link className={styles.backBtn} href="/farmer/dashboard">← Quay lại Dashboard</Link>
+      <Link className={styles.backBtn} href="/farmer/dashboard">
+        <ArrowLeft size={16} className="inline mr-1 align-text-bottom" />
+        Quay lại Dashboard
+      </Link>
       <div className={styles.header}>
         <h1 className={styles.title}>Nhật ký của tôi</h1>
-        <Link className={styles.createBtn} href="/farmer/journal/new">+ Ghi nhật ký</Link>
+        <Link className={styles.createBtn} href="/farmer/journal/new">
+          <Plus size={16} className="inline mr-1 align-text-bottom" />
+          Ghi nhật ký
+        </Link>
       </div>
 
       {loading ? (
