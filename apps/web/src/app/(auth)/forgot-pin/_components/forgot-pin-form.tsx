@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui'
+import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft } from 'lucide-react'
 import styles from '../forgot-pin.module.css'
 import { validatePhone, validatePin, validatePinMatch } from '@/lib/auth-validation'
 
@@ -102,14 +103,16 @@ export function ForgotPinForm() {
   if (step === 'success') {
     return (
       <div className={styles.successState} data-testid="forgot-pin-success">
-        <div className={styles.successIcon} aria-hidden="true">✓</div>
+        <div className={styles.successIcon} aria-hidden="true">
+          <CheckCircle2 size={40} className="text-emerald-600 mx-auto" />
+        </div>
         <h3 className={styles.successTitle}>Đổi PIN thành công!</h3>
         <p className={styles.successDesc}>
           Mã PIN mới đã được cập nhật. Vui lòng đăng nhập lại bằng PIN mới.
         </p>
         {/* AC-5: Mock banner — no actual session created */}
         <div className={styles.mockBanner} data-testid="mock-mode-banner" role="note">
-          ⚠ Chế độ demo — PIN chưa thực sự được thay đổi
+          <AlertTriangle size={15} className="inline mr-1 text-amber-600 align-text-bottom" /> Chế độ demo — PIN chưa thực sự được thay đổi
         </div>
         <Link href="/login">
           <Button className={styles.loginButton} data-testid="go-to-login-btn">
@@ -124,7 +127,9 @@ export function ForgotPinForm() {
   if (step === 'failure') {
     return (
       <div className={styles.failureState} data-testid="forgot-pin-failure">
-        <div className={styles.failureIcon} aria-hidden="true">✗</div>
+        <div className={styles.failureIcon} aria-hidden="true">
+          <XCircle size={40} className="text-red-500 mx-auto" />
+        </div>
         <h3 className={styles.failureTitle}>Khôi phục thất bại</h3>
         <p className={styles.failureDesc}>
           Không thể xác minh danh tính. Vui lòng liên hệ Trưởng HTX để được hỗ trợ.
@@ -146,7 +151,7 @@ export function ForgotPinForm() {
     <div>
       {/* Mock mode banner */}
       <div className={styles.mockBanner} data-testid="mock-mode-banner" role="note">
-        ⚠ Chế độ demo — chưa kết nối BE Keycloak
+        <AlertTriangle size={15} className="inline mr-1 text-amber-600 align-text-bottom" /> Chế độ demo — chưa kết nối BE Keycloak
       </div>
 
       {/* Step indicator */}
@@ -205,7 +210,10 @@ export function ForgotPinForm() {
               Gửi mã OTP
             </Button>
             <p className={styles.backLink}>
-              <Link href="/login">← Quay về đăng nhập</Link>
+              <Link href="/login">
+                <ArrowLeft size={14} className="inline mr-1 align-text-bottom" />
+                Quay về đăng nhập
+              </Link>
             </p>
           </div>
         </form>

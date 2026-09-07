@@ -43,16 +43,16 @@ describe('Story 1.3: Migration Safety', () => {
     }
   });
 
-  // TC-1.3-15: Latest migration SQL là non-destructive
-  test('latest migration is non-destructive', () => {
+  // TC-1.3-15: Migration add_pushed_to_mattermost là non-destructive
+  test('add_pushed_to_mattermost migration is non-destructive', () => {
     const migrationSqls = getMigrationSqls();
-    if (migrationSqls.length > 0) {
-      const latestMigration = migrationSqls[migrationSqls.length - 1];
-      
-      // Ensure the latest migration (add pushed_to_mattermost) only adds column/index
-      expect(latestMigration.sql).not.toMatch(/DROP/i);
-      expect(latestMigration.sql).toMatch(/ALTER TABLE/i);
-      expect(latestMigration.sql).toMatch(/ADD COLUMN/i);
+    const mattermostMigration = migrationSqls.find(m => m.name.includes('add_pushed_to_mattermost'));
+    
+    if (mattermostMigration) {
+      // Ensure the migration (add pushed_to_mattermost) only adds column/index
+      expect(mattermostMigration.sql).not.toMatch(/DROP/i);
+      expect(mattermostMigration.sql).toMatch(/ALTER TABLE/i);
+      expect(mattermostMigration.sql).toMatch(/ADD COLUMN/i);
     }
   });
 

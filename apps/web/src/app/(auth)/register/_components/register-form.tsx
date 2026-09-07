@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui'
+import { Clock, ArrowLeft } from 'lucide-react'
 import styles from '../register.module.css'
 import {
   validateFullName,
@@ -94,7 +95,9 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
   if (state === 'pending-approval') {
     return (
       <div className={styles.pendingState} data-testid="pending-approval-state">
-        <div className={styles.pendingIcon} aria-hidden="true">⏳</div>
+        <div className={styles.pendingIcon} aria-hidden="true">
+          <Clock size={48} className="text-amber-500 mx-auto" />
+        </div>
         <h3 className={styles.pendingTitle}>Đang chờ phê duyệt</h3>
         <p className={styles.pendingDesc}>
           Yêu cầu đăng ký của <strong>{fullName}</strong> đã được ghi nhận.
@@ -104,7 +107,7 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
           Sau khi được phê duyệt, bạn sẽ nhận được thông báo qua số điện thoại đã đăng ký.
         </p>
         <Link href="/login" className={styles.pendingBackLink} data-testid="back-to-login-link">
-          ← Quay về trang đăng nhập
+          <ArrowLeft size={16} className="inline mr-1 align-text-bottom" /> Quay về trang đăng nhập
         </Link>
       </div>
     )

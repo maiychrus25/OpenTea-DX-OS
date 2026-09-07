@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react'
 import dynamic from 'next/dynamic'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import styles from '../wizard.module.css'
 
 const SetupMapClient = dynamic(() => import('./SetupMapClient'), { ssr: false })
@@ -65,7 +66,8 @@ export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
 
         <div className={styles.actions}>
           <button type="button" className={styles.btnSecondary} onClick={onPrev}>
-            ← Trước
+            <ArrowLeft size={16} className="inline mr-1 align-text-bottom" />
+            Trước
           </button>
           <div className={styles.actionsRight}>
             <button
@@ -74,7 +76,7 @@ export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
               disabled={!isDrawn}
               onClick={() => onNext(areaSqm, geojson, center)}
             >
-              Tiếp theo →
+              Tiếp theo <ArrowRight size={16} className="inline ml-1 align-text-bottom" />
             </button>
           </div>
         </div>

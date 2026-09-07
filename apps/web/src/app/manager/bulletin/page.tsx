@@ -8,6 +8,7 @@ import { WeatherSection } from '@/components/features/bulletin/WeatherSection'
 import { ListenBulletinButton } from '@/components/features/bulletin/ListenBulletinButton'
 import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
 import { prisma } from '@/infrastructure/db/prisma.client'
+import { ArrowRight } from 'lucide-react'
 import styles from '@/components/features/bulletin/bulletin.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -68,11 +69,16 @@ export default async function ManagerBulletinPage() {
       {/* Bulletins Grid */}
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Bản tin gần đây</h2>
-        {realBulletins.length > 0 && (
-          <span className={styles.sectionAction} style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
-            {realBulletins.length} bản tin từ AI
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {realBulletins.length > 0 && (
+            <span style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
+              {realBulletins.length} bản tin từ AI
+            </span>
+          )}
+          <span className={styles.sectionAction}>
+            Xem tất cả <ArrowRight size={14} className="inline ml-1 align-text-bottom" />
           </span>
-        )}
+        </div>
       </div>
 
       <div className={styles.newsGrid}>

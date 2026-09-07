@@ -5,7 +5,7 @@
 
 import React from 'react';
 import useSWR from 'swr';
-import { DollarSign, TrendingUp } from 'lucide-react';
+import { DollarSign, TrendingUp, Package, BarChart3, Sprout } from 'lucide-react';
 import { MetricCard } from '../../ui/MetricCard/MetricCard';
 import { SourceBox } from '../../ui/SourceBox/SourceBox';
 import styles from './MarketSummaryWidget.module.css';
@@ -89,19 +89,19 @@ export function MarketSummaryWidget({ commodity = 'Gạo' }: { commodity?: strin
   }
 
   // Generate a plain-language signal for cooperative farmers
-  function getMarketSignal(metricKey: string, value: number | string, unitKey: string): string | null {
+  function getMarketSignal(metricKey: string, value: number | string, unitKey: string): { icon: React.ReactNode; text: string } | null {
     if (typeof value !== 'number') return null;
     if (metricKey.startsWith('export_value_to_world') || metricKey.startsWith('export_volume_to_world')) {
       if (unitKey === 'million_USD' && value > 1000)
-        return '📈 Kim ngạch xuất khẩu lớn — nhu cầu thế giới đang cao, có thể hỗ trợ giá nội địa.';
+        return { icon: <TrendingUp size={16} className="inline mr-1.5 text-emerald-600 align-text-bottom" />, text: 'Kim ngạch xuất khẩu lớn — nhu cầu thế giới đang cao, có thể hỗ trợ giá nội địa.' };
       if (unitKey === 'tonnes' && value > 5_000_000)
-        return '📦 Khối lượng xuất khẩu lớn — thị trường quốc tế đang tiêu thụ mạnh.';
-      return '📊 Dữ liệu xuất khẩu phản ánh xu hướng cầu thế giới đối với mặt hàng này.';
+        return { icon: <Package size={16} className="inline mr-1.5 text-blue-600 align-text-bottom" />, text: 'Khối lượng xuất khẩu lớn — thị trường quốc tế đang tiêu thụ mạnh.' };
+      return { icon: <BarChart3 size={16} className="inline mr-1.5 text-emerald-600 align-text-bottom" />, text: 'Dữ liệu xuất khẩu phản ánh xu hướng cầu thế giới đối với mặt hàng này.' };
     }
     if (metricKey === 'cereal_production')
-      return `🌾 Sản lượng toàn quốc lớn — nguồn cung dồi dào, HTX cần theo dõi giá thu mua địa phương.`;
+      return { icon: <Sprout size={16} className="inline mr-1.5 text-emerald-600 align-text-bottom" />, text: 'Sản lượng toàn quốc lớn — nguồn cung dồi dào, HTX cần theo dõi giá thu mua địa phương.' };
     if (metricKey === 'cereal_yield' || metricKey === 'yield_kg_per_ha')
-      return `🌱 Chỉ số năng suất bình quân cả nước — so sánh với năng suất thực tế của HTX để đánh giá hiệu quả.`;
+      return { icon: <Sprout size={16} className="inline mr-1.5 text-emerald-600 align-text-bottom" />, text: 'Chỉ số năng suất bình quân cả nước — so sánh với năng suất thực tế của HTX để đánh giá hiệu quả.' };
     return null;
   }
 
@@ -127,7 +127,10 @@ export function MarketSummaryWidget({ commodity = 'Gạo' }: { commodity?: strin
         />
       </div>
       {marketSignal && (
-        <p className={styles.signal}>{marketSignal}</p>
+        <p className={styles.signal}>
+          {marketSignal.icon}
+          {marketSignal.text}
+        </p>
       )}
       <div className={styles.sources}>
         <SourceBox count={2} sources={['Frankfurter', 'USDA']} />

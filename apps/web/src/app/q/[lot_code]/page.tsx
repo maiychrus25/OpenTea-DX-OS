@@ -5,6 +5,7 @@ import React from 'react'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { Pill } from '@/components/ui'
+import { XCircle, AlertTriangle, Clock } from 'lucide-react'
 import styles from './qr.module.css'
 
 interface PageProps {
@@ -20,9 +21,60 @@ const ACTIVITY_VN: Record<string, string> = {
   OTHER: 'Khác',
 }
 
-export default async function QrTracePage({ params }: PageProps) {
+export default async function QrTracePage({ params, searchParams }: PageProps & { searchParams: Promise<{ status?: string }> }) {
   const { lot_code } = await params
   const decodedCode = decodeURIComponent(lot_code)
+  
+  // Allow overriding status via query param for testing error pages
+  const { status: overrideStatus } = await (searchParams || Promise.resolve({}))
+  
+  if (overrideStatus === 'invalid' || overrideStatus === 'not-found') {
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorCard}>
+          <div className={styles.iconWrapper} style={{ backgroundColor: '#ffebee', color: '#d32f2f' }}>
+            <XCircle size={32} />
+          </div>
+          <h1 className={styles.errorTitle}>Không tìm thấy dữ liệu</h1>
+          <p className={styles.errorDesc}>
+            Mã QR này không tồn tại trong hệ thống hoặc đã bị xóa. Vui lòng kiểm tra lại tem dán.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (overrideStatus === 'revoked') {
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorCard}>
+          <div className={styles.iconWrapper} style={{ backgroundColor: '#fff3e0', color: '#f57c00' }}>
+            <AlertTriangle size={32} />
+          </div>
+          <h1 className={styles.errorTitle}>Lô hàng đã bị thu hồi</h1>
+          <p className={styles.errorDesc}>
+            Mã QR này thuộc về lô hàng <strong>{decodedCode}</strong> nhưng đã bị thu hồi bởi Cán bộ Kỹ thuật do không đạt tiêu chuẩn an toàn. Không sử dụng sản phẩm này.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (overrideStatus === 'expired') {
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorCard}>
+          <div className={styles.iconWrapper} style={{ backgroundColor: '#eceff1', color: '#546e7a' }}>
+            <Clock size={32} />
+          </div>
+          <h1 className={styles.errorTitle}>Lô hàng đã hết hạn</h1>
+          <p className={styles.errorDesc}>
+            Thời hạn sử dụng của lô hàng <strong>{decodedCode}</strong> đã kết thúc. Vui lòng xem kỹ hạn sử dụng trên bao bì thực tế.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   // Query lot from database
   const lot = await prisma.lot.findUnique({
@@ -50,7 +102,19 @@ export default async function QrTracePage({ params }: PageProps) {
   })
 
   if (!lot) {
-    notFound()
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorCard}>
+          <div className={styles.iconWrapper} style={{ backgroundColor: '#ffebee', color: '#d32f2f' }}>
+            <XCircle size={32} />
+          </div>
+          <h1 className={styles.errorTitle}>Không tìm thấy dữ liệu</h1>
+          <p className={styles.errorDesc}>
+            Mã QR này không tồn tại trong hệ thống hoặc đã bị xóa. Vui lòng kiểm tra lại tem dán.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   // Gather data from parcels

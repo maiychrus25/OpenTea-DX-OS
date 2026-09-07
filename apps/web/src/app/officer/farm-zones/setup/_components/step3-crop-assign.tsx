@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react'
 import { Pill } from '@/components/ui'
+import { Check, ArrowLeft } from 'lucide-react'
 import styles from '../wizard.module.css'
 
 interface Props {
@@ -81,7 +82,8 @@ export function Step3CropAssign({ householdId, householdName, area, geojson, cen
 
         <div className={styles.actions}>
           <button type="button" className={styles.btnSecondary} onClick={onPrev}>
-            ← Trước
+            <ArrowLeft size={16} className="inline mr-1 align-text-bottom" />
+            Trước
           </button>
           <div className={styles.actionsRight}>
             <button
@@ -117,7 +119,12 @@ export function Step3CropAssign({ householdId, householdName, area, geojson, cen
                 }
               }}
             >
-              {isLoading ? 'Đang lưu...' : '✓ Hoàn tất thiết lập'}
+              {isLoading ? 'Đang lưu...' : (
+                <>
+                  <Check size={16} className="inline-block mr-1.5 align-text-bottom" />
+                  Hoàn tất thiết lập
+                </>
+              )}
             </button>
           </div>
         </div>

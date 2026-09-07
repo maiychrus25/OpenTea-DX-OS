@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { Phone, MapPin } from 'lucide-react'
 import styles from '../households.module.css'
 
 interface HouseholdSummary {
@@ -120,8 +121,8 @@ export function HouseholdManager() {
             <div key={h.id} className={styles.card}>
               <span className={styles.cardName}>{h.name}</span>
               <div className={styles.cardMeta}>
-                <span>📞 {h.phone}</span>
-                {h.address && <span>📍 {h.address}</span>}
+                <span className="inline-flex items-center gap-1"><Phone size={13} className="text-slate-500" /> {h.phone}</span>
+                {h.address && <span className="inline-flex items-center gap-1"><MapPin size={13} className="text-slate-500" /> {h.address}</span>}
               </div>
               <div className={styles.statRow}>
                 <span className={styles.stat}>Thửa: <span className={styles.statValue}>{h.parcel_count}</span></span>

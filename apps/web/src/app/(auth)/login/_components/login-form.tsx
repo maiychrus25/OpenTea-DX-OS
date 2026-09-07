@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui'
+import { ArrowRight } from 'lucide-react'
 import styles from '../login-page.module.css'
 import { getAuthErrorMessage, isAccountLocked } from '@/lib/auth-validation'
 
@@ -40,7 +41,7 @@ export function LoginForm() {
               className={styles.recoveryLink}
               data-testid="locked-recovery-link"
             >
-              Khôi phục PIN →
+              Khôi phục PIN <ArrowRight size={13} className="inline ml-1 align-text-bottom" />
             </Link>
           )}
         </div>
