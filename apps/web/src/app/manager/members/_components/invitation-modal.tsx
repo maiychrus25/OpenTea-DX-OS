@@ -4,6 +4,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { X, Check } from 'lucide-react';
 
 interface InvitationModalProps {
   isOpen: boolean;
@@ -93,11 +94,9 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
             onClick={() => { if (!isSubmitting) { resetForm(); onClose(); } }}
             className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+            <X size={24} />
           </button>
+
         </div>
 
         {/* Form Body - Trắng sáng */}
@@ -111,9 +110,10 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
 
             {successMsg && (
               <div className="p-3 text-sm text-[#0e5a3a] bg-[#e6f4ea] rounded-lg border border-[#cce8d6] font-medium">
-                ✅ {successMsg}
+                <Check size={16} className="inline-block mr-1" /> {successMsg}
               </div>
             )}
+
 
             {/* Role */}
             <div>

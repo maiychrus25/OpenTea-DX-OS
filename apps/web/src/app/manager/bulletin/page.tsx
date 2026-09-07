@@ -69,9 +69,9 @@ export default async function ManagerBulletinPage() {
       {/* Bulletins Grid */}
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Bản tin gần đây</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="flex items-center gap-4">
           {realBulletins.length > 0 && (
-            <span style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
+            <span className="text-muted-foreground text-[0.85rem]">
               {realBulletins.length} bản tin từ AI
             </span>
           )}

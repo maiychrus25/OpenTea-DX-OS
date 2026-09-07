@@ -29,6 +29,7 @@ async function inviteMember(request: Request) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Lấy tạm role do NextAuth type chưa extend
   const currentRole = (session.user as any).role
   if (currentRole !== 'manager') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Chỉ Trưởng HTX mới được mời thành viên' } }, { status: 403 })

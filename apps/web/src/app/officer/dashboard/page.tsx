@@ -5,7 +5,7 @@ import React from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
-import { FileText, Map, PackageCheck, AlertCircle } from 'lucide-react'
+import { FileText, Map, PackageCheck, AlertCircle, ArrowRight } from 'lucide-react'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { MetricCard, Pill } from '@/components/ui'
 import styles from './officer-dashboard.module.css'
@@ -174,11 +174,11 @@ export default async function OfficerDashboard() {
             href="/officer/journal"
             className="text-sm text-green-600 hover:text-green-700 font-medium"
           >
-            Xem tất cả →
+            Xem tất cả <ArrowRight size={16} className="inline-block ml-1" />
           </Link>
         </div>
         {recentEntries.length === 0 ? (
-          <p style={{ color: 'var(--muted-foreground)', padding: '1rem' }}>
+          <p className="text-muted-foreground p-4">
             Chưa có nhật ký nào. Hãy tạo nhật ký canh tác đầu tiên!
           </p>
         ) : (
