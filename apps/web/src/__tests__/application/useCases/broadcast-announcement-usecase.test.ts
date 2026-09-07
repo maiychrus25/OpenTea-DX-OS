@@ -14,6 +14,8 @@ describe('Story 3.7: BroadcastAnnouncementUseCase', () => {
       markAsRead: jest.fn(),
       delete: jest.fn(),
       updatePreferences: jest.fn(),
+      broadcastDiseaseReport: jest.fn(),
+      broadcastAnnouncement: jest.fn(),
       broadcastHarvestApproved: jest.fn(),
       createNotification: jest.fn(),
       sendDirectNotification: jest.fn(),
