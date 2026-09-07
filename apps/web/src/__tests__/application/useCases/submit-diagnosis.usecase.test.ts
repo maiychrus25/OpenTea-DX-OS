@@ -83,6 +83,7 @@ function makeMockPorts(parcel: ParcelSummary | null = mockParcelOfFarmerA) {
     broadcastDiseaseReport: jest.fn(),
     broadcastHarvestApproved: jest.fn(),
     broadcastAnnouncement: jest.fn(),
+    createNotification: jest.fn(),
     sendDirectNotification: jest.fn(),
   }
 

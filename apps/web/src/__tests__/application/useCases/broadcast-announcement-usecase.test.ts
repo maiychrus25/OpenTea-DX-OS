@@ -16,6 +16,9 @@ describe('Story 3.7: BroadcastAnnouncementUseCase', () => {
       updatePreferences: jest.fn(),
       broadcastDiseaseReport: jest.fn(),
       broadcastAnnouncement: jest.fn(),
+      broadcastHarvestApproved: jest.fn(),
+      createNotification: jest.fn(),
+      sendDirectNotification: jest.fn(),
     } as unknown as jest.Mocked<NotificationPort>;
 
     useCase = new BroadcastAnnouncementUseCase(mockNotificationRepo);
