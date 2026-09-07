@@ -30,6 +30,18 @@ function SearchAndLocateInit() {
         countrycodes: 'vn',
       }
     })
+
+    // Catch unhandled promise rejections when Nominatim blocks the request (e.g. VPN)
+    const originalSearch = provider.search.bind(provider)
+    provider.search = async (options: any) => {
+      try {
+        return await originalSearch(options)
+      } catch (error) {
+        console.error('GeoSearch Error:', error)
+        alert('Không thể tìm kiếm địa chỉ do kết nối mạng bị chặn (VPN/Proxy) hoặc máy chủ bản đồ quá tải. Vui lòng tắt VPN hoặc tự kéo thả bản đồ.')
+        return []
+      }
+    }
     
     // @ts-ignore: Khởi tạo GeoSearchControl bị báo lỗi type do thiếu interface khai báo chuẩn
     const searchControl = new GeoSearchControl({
