@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -130,7 +131,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
           <div className="flex items-center gap-4 mt-2">
             <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center border border-gray-300">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                <Image src={avatarUrl} alt="Avatar" width={64} height={64} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-gray-400 text-xl font-bold">{profileData.name?.charAt(0) || 'H'}</span>
               )}

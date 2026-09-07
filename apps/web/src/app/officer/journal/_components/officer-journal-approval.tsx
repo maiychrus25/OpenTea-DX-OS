@@ -52,7 +52,8 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
 
-  const load = async () => {
+  useEffect(() => {
+    const load = async () => {
       try {
         const url = householdId
           ? `/api/journal?householdId=${householdId}`
@@ -68,7 +69,6 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
         setIsLoading(false)
       }
     }
-  useEffect(() => {
     load()
   }, [householdId])
 

@@ -31,7 +31,7 @@ async function getJournalEntries(request: Request) {
   const page = parseInt(url.searchParams.get('page') ?? '1', 10)
   const limit = parseInt(url.searchParams.get('limit') ?? '20', 10)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Lấy tạm role do NextAuth type chưa extend
+  // Lấy tạm role do NextAuth type chưa extend
   const role = (session.user as any).role
   // Farmer can only see their own household's entries
   // Officer/Manager can optionally filter by householdId query param
@@ -59,7 +59,7 @@ async function postJournalEntry(request: Request) {
   if (!session?.user) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Lấy tạm role do NextAuth type chưa extend
+  // Lấy tạm role do NextAuth type chưa extend
   const role = (session.user as any).role
   if (role !== 'officer' && role !== 'farmer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Only officer/farmer can create journal entries' } }, { status: 403 })

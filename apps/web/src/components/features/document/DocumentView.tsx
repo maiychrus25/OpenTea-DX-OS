@@ -38,9 +38,6 @@ export function DocumentView() {
   // New folder state
   const [newFolderName, setNewFolderName] = useState('')
 
-  useEffect(() => {
-    fetchDocuments(currentPath)
-  }, [currentPath])
 
   const fetchDocuments = useCallback(async (path: string) => {
     setIsLoading(true)
@@ -88,10 +85,10 @@ export function DocumentView() {
     }
   }, [searchQuery])
 
-  // Refetch when search query changes
+  // Fetch documents on load, when path changes, or when search query changes
   useEffect(() => {
     fetchDocuments(currentPath)
-  }, [searchQuery])
+  }, [currentPath, fetchDocuments])
 
   const handleCategorySelect = (categoryId: string) => {
     setActiveCategory(categoryId)
