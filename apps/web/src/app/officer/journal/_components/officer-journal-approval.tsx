@@ -3,7 +3,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import styles from '../journal.module.css'
 import { JournalForm } from './JournalForm'
@@ -52,25 +52,26 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const url = householdId
-          ? `/api/journal?householdId=${householdId}`
-          : '/api/journal'
-        const res = await fetch(url)
-        if (res.ok) {
-          const data = await res.json()
-          setEntries(data.data || [])
-        }
-      } catch {
-        // Error loading journal entries — handled silently
-      } finally {
-        setIsLoading(false)
+  const load = useCallback(async () => {
+    try {
+      const url = householdId
+        ? `/api/journal?householdId=${householdId}`
+        : '/api/journal'
+      const res = await fetch(url)
+      if (res.ok) {
+        const data = await res.json()
+        setEntries(data.data || [])
       }
+    } catch {
+      // Error loading journal entries — handled silently
+    } finally {
+      setIsLoading(false)
     }
-    load()
   }, [householdId])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   const handleApprove = async (id: string) => {
     try {
