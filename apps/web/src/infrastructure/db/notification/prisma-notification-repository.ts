@@ -14,7 +14,7 @@ export class PrismaNotificationRepository implements NotificationPort {
           { recipient_id: userId },
           { recipient_id: null }, // Broadcast notifications (gửi cho tất cả)
         ],
-        ...(filter ? { type: filter as any } : {}),
+        ...(filter === 'unread' ? { is_read: false } : filter ? { type: filter as any } : {}),
       },
       orderBy: { created_at: 'desc' },
       take: limit,
