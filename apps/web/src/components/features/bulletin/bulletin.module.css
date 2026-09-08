@@ -722,3 +722,72 @@
 .spinner {
   animation: spin 1s linear infinite;
 }
+
+/* ===== Section Action (Xem tất cả / Thu gọn) ===== */
+.sectionAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-meta, 0.875rem);
+  font-weight: 600;
+  color: var(--primary, #16a34a);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.sectionAction:hover {
+  color: var(--primary-hover, #15803d);
+  transform: translateX(2px);
+}
+
+/* ===== Filter Bar & Tabs ===== */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.filterTab {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: var(--rounded-full, 9999px);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground, #64748b);
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.filterTab:hover {
+  border-color: var(--primary, #16a34a);
+  color: var(--primary, #16a34a);
+}
+
+.filterTabActive {
+  background: var(--primary, #16a34a);
+  color: #ffffff;
+  border-color: var(--primary, #16a34a);
+}
+
+.filterTabActive:hover {
+  background: var(--primary-hover, #15803d);
+  color: #ffffff;
+}
+
+.emptyNotice {
+  padding: 2.5rem;
+  text-align: center;
+  background: var(--card, #ffffff);
+  border: 1px dashed var(--border, #e2e8f0);
+  border-radius: var(--rounded-lg, 0.5rem);
+  color: var(--muted-foreground, #64748b);
+  font-size: var(--font-size-label, 0.9375rem);
+}
