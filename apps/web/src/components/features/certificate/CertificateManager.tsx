@@ -112,8 +112,15 @@ export function CertificateManager({ mode, initialCertificates = MOCK_CERTIFICAT
           </p>
         </div>
         {mode === 'manage' && (
-          <Button onClick={() => setIsUploadModalOpen(true)} className="flex items-center gap-2">
-            <Plus size={16} /> Thêm chứng nhận
+          <Button 
+            type="button" 
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsUploadModalOpen(true)
+            }} 
+            className="flex items-center gap-2"
+          >
+            <Plus size={16} aria-hidden="true" /> Thêm chứng nhận
           </Button>
         )}
       </div>
@@ -137,7 +144,7 @@ export function CertificateManager({ mode, initialCertificates = MOCK_CERTIFICAT
             )}
             
             <div className={styles.cardIcon}>
-              <FileText size={24} className={cert.isExpired ? 'text-red-500' : 'text-primary'} />
+              <FileText size={24} className={cert.isExpired ? 'text-red-500' : 'text-primary'} aria-hidden="true" />
             </div>
             
             <div className={styles.cardContent}>
@@ -154,14 +161,14 @@ export function CertificateManager({ mode, initialCertificates = MOCK_CERTIFICAT
 
             {mode === 'manage' && (
               <div className={styles.cardActions}>
-                <button type="button" className={styles.actionBtn} title="Xem PDF" onClick={(e) => { e.stopPropagation(); handlePreview(cert) }}>
-                  <Eye size={16} />
+                <button type="button" className={styles.actionBtn} title="Xem PDF" aria-label="Xem PDF" onClick={(e) => { e.stopPropagation(); handlePreview(cert) }}>
+                  <Eye size={16} aria-hidden="true" />
                 </button>
-                <button type="button" className={styles.actionBtn} title="Cập nhật mới" onClick={(e) => { e.stopPropagation(); setIsUploadModalOpen(true) }}>
-                  <RefreshCcw size={16} />
+                <button type="button" className={styles.actionBtn} title="Cập nhật mới" aria-label="Cập nhật mới" onClick={(e) => { e.stopPropagation(); setIsUploadModalOpen(true) }}>
+                  <RefreshCcw size={16} aria-hidden="true" />
                 </button>
-                <button type="button" className={`${styles.actionBtn} ${styles.danger}`} title="Xóa" onClick={(e) => { e.stopPropagation(); handleDelete(cert.id) }}>
-                  <Trash2 size={16} />
+                <button type="button" className={`${styles.actionBtn} ${styles.danger}`} title="Xóa" aria-label="Xóa chứng nhận" onClick={(e) => { e.stopPropagation(); handleDelete(cert.id) }}>
+                  <Trash2 size={16} aria-hidden="true" />
                 </button>
               </div>
             )}

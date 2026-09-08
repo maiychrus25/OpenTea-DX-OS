@@ -45,15 +45,15 @@ export class PrismaWeatherRepository implements WeatherPort {
 
       // Handle both raw codes (from n8n) and translated text (from old Next.js route)
       let conditionText = latestWeather.condition
-      let iconText = '☁️'
+      let iconText = 'cloud'
       const code = parseInt(latestWeather.condition, 10)
       if (!isNaN(code)) {
         conditionText = weatherCodeToCondition(code)
         iconText = weatherCodeToIcon(code)
       } else {
         // Fallback for old data
-        if (conditionText.includes('quang')) iconText = '☀️'
-        else if (conditionText.includes('mưa')) iconText = '🌧️'
+        if (conditionText.includes('quang')) iconText = 'sun'
+        else if (conditionText.includes('mưa')) iconText = 'cloud-rain'
       }
 
       // Parse forecast JSON

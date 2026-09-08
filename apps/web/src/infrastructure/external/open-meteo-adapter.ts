@@ -44,14 +44,14 @@ export function weatherCodeToCondition(code: number): string {
 }
 
 export function weatherCodeToIcon(code: number): string {
-  if (code === 0) return '☀️'
-  if (code <= 3) return '⛅'
-  if (code <= 48) return '🌫️'
-  if (code <= 55) return '🌦️'
-  if (code <= 65) return '🌧️'
-  if (code <= 75) return '❄️'
-  if (code <= 82) return '🌧️'
-  return '⛈️'
+  if (code === 0) return 'sun'
+  if (code <= 3) return 'cloud-sun'
+  if (code <= 48) return 'cloud'
+  if (code <= 55) return 'cloud-rain'
+  if (code <= 65) return 'cloud-rain'
+  if (code <= 75) return 'snowflake'
+  if (code <= 82) return 'cloud-rain'
+  return 'cloud-lightning'
 }
 
 export async function fetchOpenMeteoForecast(
