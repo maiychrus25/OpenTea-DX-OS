@@ -26,7 +26,7 @@ export function MemberList() {
   const fetchMembers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/members?role=farmer');
+      const res = await fetch('/api/members');
       if (!res.ok) throw new Error('Failed to fetch members');
       const json = await res.json();
       setMembers(json.data || []);
@@ -160,9 +160,9 @@ export function MemberList() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-ink-secondary)]">
-                      {member.role === 'FARMER' && 'Nông dân'}
-                      {member.role === 'OFFICER' && 'Cán bộ kỹ thuật'}
-                      {member.role === 'MANAGER' && 'Trưởng HTX'}
+                      {member.role?.toUpperCase() === 'FARMER' && 'Nông dân'}
+                      {member.role?.toUpperCase() === 'OFFICER' && 'Cán bộ kỹ thuật'}
+                      {member.role?.toUpperCase() === 'MANAGER' && 'Trưởng HTX'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Pill tone={getStatusBadgeVariant(member.status)}>

@@ -13,13 +13,21 @@ async function listMembers(request: Request) {
   }
 
   const url = new URL(request.url)
-  const filterRole = url.searchParams.get('role') ?? 'farmer' // Default to fetching farmers for now
-
-  // Use Keycloak directly instead of Prisma
+  const filterRole = url.searchParams.get('role')
   const adapter = new KeycloakAdminAdapter()
   
   try {
-    let data = await adapter.listUsersByRole(filterRole)
+    let data: any[] = []
+    if (filterRole) {
+      data = await adapter.listUsersByRole(filterRole)
+    } else {
+      const farmers = await adapter.listUsersByRole('farmer')
+      const officers = await adapter.listUsersByRole('officer')
+      // Map roles so the UI knows
+      const farmersWithRole = farmers.map(f => ({ ...f, role: 'farmer' }))
+      const officersWithRole = officers.map(o => ({ ...o, role: 'officer' }))
+      data = [...farmersWithRole, ...officersWithRole]
+    }
     // Filter by HTX ID if the manager has one
     // But since manager doesn't have an HTX ID easily available in session right now, we return all for MVP
     

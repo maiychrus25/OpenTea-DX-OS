@@ -341,6 +341,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
       </div>
     </div>
   )
+  if (!mounted || !isOpen) return null
 
   return createPortal(modalContent, document.body)
 }
