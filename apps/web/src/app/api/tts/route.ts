@@ -30,6 +30,7 @@ async function postTtsHandler(request: Request) {
     return new NextResponse(stream, {
       headers: {
         'Content-Type': 'audio/wav',
+        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=3600',
       },
     })
   } catch (error: unknown) {
@@ -75,6 +76,7 @@ async function getTtsHandler(request: Request) {
     return new NextResponse(stream, {
       headers: {
         'Content-Type': 'audio/wav',
+        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=3600',
       },
     })
   } catch (error: unknown) {
