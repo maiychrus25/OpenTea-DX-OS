@@ -4,7 +4,19 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { CloudRain, Thermometer, Wind, Droplets, Loader2 } from 'lucide-react'
+import { 
+  CloudRain, 
+  Thermometer, 
+  Wind, 
+  Droplets, 
+  Loader2, 
+  Sun, 
+  CloudSun, 
+  Cloud, 
+  CloudLightning, 
+  Snowflake, 
+  AlertCircle 
+} from 'lucide-react'
 import styles from './bulletin.module.css'
 
 interface ForecastDay {
@@ -29,6 +41,26 @@ interface WeatherZone {
     icon: string
   }
   forecast_7d: ForecastDay[]
+}
+
+function RenderWeatherIcon({ iconKey, size = 20, className = '' }: { iconKey: string; size?: number; className?: string }) {
+  const key = iconKey.toLowerCase()
+  if (key.includes('sun') && !key.includes('cloud')) {
+    return <Sun size={size} className={`text-amber-500 ${className}`} aria-hidden="true" />
+  }
+  if (key.includes('cloud-sun')) {
+    return <CloudSun size={size} className={`text-amber-400 ${className}`} aria-hidden="true" />
+  }
+  if (key.includes('rain')) {
+    return <CloudRain size={size} className={`text-blue-500 ${className}`} aria-hidden="true" />
+  }
+  if (key.includes('lightning')) {
+    return <CloudLightning size={size} className={`text-purple-500 ${className}`} aria-hidden="true" />
+  }
+  if (key.includes('snow')) {
+    return <Snowflake size={size} className={`text-cyan-400 ${className}`} aria-hidden="true" />
+  }
+  return <Cloud size={size} className={`text-slate-400 ${className}`} aria-hidden="true" />
 }
 
 function RainfallChart({ data }: { data: ForecastDay[] }) {
@@ -110,14 +142,15 @@ function RainfallChart({ data }: { data: ForecastDay[] }) {
               >
                 {isToday ? 'H.nay' : dayLabel}
               </text>
-              {/* Weather icon */}
+              {/* Temperature max label */}
               <text
                 x={x + barWidth / 2}
-                y={chartHeight + 34}
+                y={chartHeight + 32}
                 textAnchor="middle"
-                fontSize="14"
+                fontSize="10"
+                fill="var(--muted-foreground)"
               >
-                {d.icon}
+                {Math.round(d.temp_max)}°C
               </text>
             </g>
           )
@@ -156,21 +189,48 @@ export function WeatherSection() {
   if (loading) {
     return (
       <div className={styles.weatherLoading}>
-        <Loader2 size={24} className={styles.spinner} />
+        <Loader2 size={24} className={styles.spinner} aria-hidden="true" />
         <span>Đang tải dữ liệu thời tiết từ Open-Meteo...</span>
       </div>
     )
   }
 
-  if (error || zones.length === 0) {
-    return null
+  if (error) {
+    return (
+      <div className={styles.weatherSection}>
+        <div className="p-6 text-center bg-amber-50 rounded-lg border border-amber-200">
+          <AlertCircle size={32} className="text-amber-600 mx-auto mb-2" aria-hidden="true" />
+          <p className="font-semibold text-gray-800">Không thể tải dữ liệu thời tiết</p>
+          <p className="text-sm text-gray-600 mt-1">Hệ thống đang kết nối với máy chủ dự báo Open-Meteo. Vui lòng thử lại sau.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (zones.length === 0) {
+    return (
+      <div className={styles.weatherSection}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>
+            <CloudRain size={20} aria-hidden="true" />
+            Thời tiết vùng trồng
+          </h2>
+          <span className={styles.weatherSource}>Nguồn: Open-Meteo (cập nhật mỗi giờ)</span>
+        </div>
+        <div className="p-8 text-center bg-white rounded-lg border border-dashed border-gray-300">
+          <CloudSun size={40} className="text-gray-400 mx-auto mb-3" aria-hidden="true" />
+          <p className="font-medium text-gray-700">Chưa có dữ liệu thời tiết cho các thửa đất hiện tại</p>
+          <p className="text-sm text-gray-500 mt-1">Dữ liệu dự báo 7 ngày sẽ tự động được cập nhật khi hệ thống đồng bộ từ Open-Meteo.</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className={styles.weatherSection}>
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>
-          <CloudRain size={20} />
+          <CloudRain size={20} aria-hidden="true" />
           Thời tiết vùng trồng
         </h2>
         <span className={styles.weatherSource}>Nguồn: Open-Meteo (cập nhật mỗi giờ)</span>
@@ -185,23 +245,25 @@ export function WeatherSection() {
                 <span className={styles.weatherZoneName}>{zone.parcel_name}</span>
                 <span className={styles.weatherCrop}>{zone.crop_type}</span>
               </div>
-              <span className={styles.weatherCurrentIcon}>{zone.current.icon}</span>
+              <span className={styles.weatherCurrentIcon}>
+                <RenderWeatherIcon iconKey={zone.current.icon} size={28} />
+              </span>
             </div>
 
             {/* Current Stats */}
             <div className={styles.weatherStats}>
               <div className={styles.weatherStat}>
-                <Thermometer size={16} />
+                <Thermometer size={16} aria-hidden="true" />
                 <span className={styles.weatherStatValue}>{zone.current.temperature}°C</span>
                 <span className={styles.weatherStatLabel}>Nhiệt độ</span>
               </div>
               <div className={styles.weatherStat}>
-                <Wind size={16} />
+                <Wind size={16} aria-hidden="true" />
                 <span className={styles.weatherStatValue}>{zone.current.windspeed} km/h</span>
                 <span className={styles.weatherStatLabel}>Gió</span>
               </div>
               <div className={styles.weatherStat}>
-                <Droplets size={16} />
+                <Droplets size={16} aria-hidden="true" />
                 <span className={styles.weatherStatValue}>
                   {zone.forecast_7d[0]?.precipitation_mm.toFixed(1) ?? '0'} mm
                 </span>
