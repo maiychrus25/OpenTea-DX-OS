@@ -184,14 +184,14 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
                 <td>
                   {e.status === 'PENDING_APPROVAL' && (
                     <div className={styles.flexActions}>
-                      <button className={styles.viewBtn} style={{ backgroundColor: 'var(--color-blue)', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '4px', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }} onClick={() => setViewEntryId(e.id)}>Xem</button>
+                      <button className={`${styles.viewBtn} ${styles.viewBtnPrimary}`} onClick={() => setViewEntryId(e.id)}>Xem</button>
                       <button className={styles.approveBtn} onClick={() => handleApprove(e.id)}>Duyệt</button>
                       <button className={styles.rejectBtn} onClick={() => handleRequestChanges(e.id)}>Yêu cầu sửa</button>
                       <button className={styles.rejectBtn} onClick={() => handleReject(e.id)}>Từ chối</button>
                     </div>
                   )}
                   {e.status !== 'PENDING_APPROVAL' && (
-                    <button className={styles.viewBtn} style={{ backgroundColor: 'transparent', color: 'var(--color-blue)', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--color-blue)', cursor: 'pointer', fontSize: '0.875rem' }} onClick={() => setViewEntryId(e.id)}>Xem</button>
+                    <button className={`${styles.viewBtn} ${styles.viewBtnSecondary}`} onClick={() => setViewEntryId(e.id)}>Xem</button>
                   )}
                 </td>
               </tr>
@@ -242,10 +242,10 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
 
       {viewEntryId && (
         <div className={styles.overlay} onClick={() => setViewEntryId(null)}>
-          <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-            <div className={styles.modalHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '1rem' }}>
-              <h2 className={styles.modalTitle} style={{ margin: 0 }}>Chi tiết Nhật ký</h2>
-              <button onClick={() => setViewEntryId(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--color-text-light)' }}>&times;</button>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 className={`${styles.modalTitle} ${styles.modalTitleMargin0}`}>Chi tiết Nhật ký</h2>
+              <button onClick={() => setViewEntryId(null)} className={styles.closeBtn}>&times;</button>
             </div>
             
             {(() => {
@@ -253,71 +253,71 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
               if (!entry) return null
               
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className={styles.detailContainer}>
+                  <div className={styles.detailGrid}>
                     <div>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-light)', display: 'block' }}>Mã thửa</span>
-                      <strong style={{ fontSize: '1rem' }}>{entry.parcel_code || entry.parcel_id || 'N/A'}</strong>
+                      <span className={styles.detailLabel}>Mã thửa</span>
+                      <strong className={styles.detailValue}>{entry.parcel_code || entry.parcel_id || 'N/A'}</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-light)', display: 'block' }}>Ngày thực hiện</span>
-                      <strong style={{ fontSize: '1rem' }}>{entry.entry_date ? new Date(entry.entry_date).toLocaleDateString('vi-VN') : 'N/A'}</strong>
+                      <span className={styles.detailLabel}>Ngày thực hiện</span>
+                      <strong className={styles.detailValue}>{entry.entry_date ? new Date(entry.entry_date).toLocaleDateString('vi-VN') : 'N/A'}</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-light)', display: 'block' }}>Người thực hiện</span>
-                      <strong style={{ fontSize: '1rem' }}>{entry.performed_by || 'N/A'}</strong>
+                      <span className={styles.detailLabel}>Người thực hiện</span>
+                      <strong className={styles.detailValue}>{entry.performed_by || 'N/A'}</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-light)', display: 'block' }}>Thời tiết</span>
-                      <strong style={{ fontSize: '1rem' }}>
+                      <span className={styles.detailLabel}>Thời tiết</span>
+                      <strong className={styles.detailValue}>
                         {entry.weather_temperature ? `${entry.weather_temperature}°C` : 'N/A'} 
                         {entry.weather_condition ? ` - ${entry.weather_condition}` : ''}
                       </strong>
                     </div>
                   </div>
 
-                  <div style={{ marginTop: '1rem' }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>Ghi chú / Quan sát</h3>
-                    <p style={{ whiteSpace: 'pre-wrap', color: 'var(--color-text)', fontSize: '0.9rem', backgroundColor: 'var(--color-surface-dim)', padding: '0.75rem', borderRadius: '4px' }}>
+                  <div className={styles.sectionContainer}>
+                    <h3 className={styles.sectionTitle}>Ghi chú / Quan sát</h3>
+                    <p className={styles.notesContent}>
                       {entry.notes || 'Không có ghi chú.'}
                     </p>
                   </div>
 
-                  <div style={{ marginTop: '1rem' }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>Các hoạt động</h3>
+                  <div className={styles.sectionContainer}>
+                    <h3 className={styles.sectionTitle}>Các hoạt động</h3>
                     {entry.activities && entry.activities.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div className={styles.activityList}>
                         {entry.activities.map((act, idx) => (
-                          <div key={idx} style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '4px', padding: '0.75rem' }}>
-                            <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: 'var(--color-primary)' }}>{formatDetail(act.activity_detail)}</div>
-                            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem', color: 'var(--color-text-light)' }}>
+                          <div key={idx} className={styles.activityCard}>
+                            <div className={styles.activityDetailName}>{formatDetail(act.activity_detail)}</div>
+                            <div className={styles.activityMeta}>
                               {act.product_name && <span><strong>Sản phẩm:</strong> {act.product_name}</span>}
                               {act.dosage && <span><strong>Liều lượng:</strong> {act.dosage}</span>}
                               {act.withdrawal_days !== null && act.withdrawal_days !== undefined && (
-                                <span><strong>Cách ly:</strong> <span style={{ color: 'var(--color-error)' }}>{act.withdrawal_days} ngày</span></span>
+                                <span><strong>Cách ly:</strong> <span className={styles.activityWithdrawal}>{act.withdrawal_days} ngày</span></span>
                               )}
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p style={{ fontSize: '0.9rem', color: 'var(--color-text-light)' }}>Không có chi tiết hoạt động.</p>
+                      <p className={styles.noActivityText}>Không có chi tiết hoạt động.</p>
                     )}
                   </div>
 
                   {entry.status === 'PENDING_APPROVAL' && (
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>
+                    <div className={styles.actionFooter}>
                       <button 
                         onClick={() => { setViewEntryId(null); handleReject(entry.id); }} 
-                        style={{ padding: '0.5rem 1rem', border: '1px solid var(--color-error)', color: 'var(--color-error)', backgroundColor: 'transparent', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
+                        className={styles.rejectActionBtn}
                       >Từ chối</button>
                       <button 
                         onClick={() => { setViewEntryId(null); handleRequestChanges(entry.id); }} 
-                        style={{ padding: '0.5rem 1rem', border: '1px solid #f39c12', color: '#f39c12', backgroundColor: 'transparent', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
+                        className={styles.requestChangeActionBtn}
                       >Yêu cầu sửa</button>
                       <button 
                         onClick={() => { setViewEntryId(null); handleApprove(entry.id); }} 
-                        style={{ padding: '0.5rem 1.5rem', border: 'none', color: 'white', backgroundColor: 'var(--color-primary)', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
+                        className={styles.approveActionBtn}
                       >Phê duyệt</button>
                     </div>
                   )}
