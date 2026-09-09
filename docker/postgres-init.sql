@@ -8,6 +8,11 @@ CREATE DATABASE keycloak;
 CREATE USER keycloak WITH PASSWORD 'keycloak';
 GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
 
+\connect keycloak
+GRANT USAGE, CREATE ON SCHEMA public TO keycloak;
+
+\connect postgres
+
 -- agrimarket db and user
 -- The default user from POSTGRES_USER will have access to agrimarket, 
 -- but we can explicitly create it if needed.

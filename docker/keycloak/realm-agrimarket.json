@@ -1,6 +1,7 @@
 {
   "realm": "agrimarket",
   "displayName": "DX AgriMarket",
+  "loginTheme": "agrimarket",
   "enabled": true,
   "sslRequired": "external",
   "registrationAllowed": false,
@@ -88,10 +89,16 @@
       "secret": "agrimarket-secret-key",
       "redirectUris": [
         "http://localhost:3000/api/auth/callback/keycloak",
-        "http://localhost:3000/*"
+        "http://localhost:3000/*",
+        "http://localhost:3002/api/auth/callback/keycloak",
+        "http://localhost:3002/*",
+        "http://localhost:3001/api/auth/callback/keycloak",
+        "http://localhost:3001/*"
       ],
       "webOrigins": [
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:3002",
+        "http://localhost:3001"
       ],
       "publicClient": false,
       "protocol": "openid-connect",
