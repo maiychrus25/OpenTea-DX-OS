@@ -11,10 +11,6 @@ const nextConfig = {
         protocol: 'http',
         hostname: 'minio',
         port: '9000',
-      {
-        protocol: 'http',
-        hostname: 'minio',
-        port: '9000',
         pathname: '/**',
       },
       {
