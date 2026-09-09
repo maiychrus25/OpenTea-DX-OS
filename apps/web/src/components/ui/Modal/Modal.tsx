@@ -6,6 +6,7 @@
 import * as React from 'react'
 import { useEffect, useId, useRef } from 'react'
 import FocusTrap from 'focus-trap-react'
+import { X } from 'lucide-react'
 import styles from './Modal.module.css'
 
 export interface ModalProps {
@@ -73,16 +74,38 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose()
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation()
+      onClose()
+    }
+  }
+
   return (
     <FocusTrap
       active={isOpen}
       focusTrapOptions={{
         allowOutsideClick: true,
         clickOutsideDeactivates: false,
-        escapeDeactivates: false, // Handled manually above
+        fallbackFocus: () => (typeof document !== 'undefined' ? document.body : undefined) as any,
+        tabbableOptions: {
+          displayCheck: 'none',
+        },
+        escapeDeactivates: false, // Handled manually via useEffect to avoid StrictMode double-fire
       }}
     >
-      <div className={styles.overlay} onClick={onClose}>
+      <div
+        className={styles.overlay}
+        onClick={handleBackdropClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={-1}
+      >
         <div
           className={`${styles.modal} ${styles[size]}`}
           role="dialog"
@@ -97,11 +120,8 @@ export const Modal: React.FC<ModalProps> = ({
                 {title}
               </Heading>
             )}
-            <button className={styles.closeButton} onClick={onClose} aria-label="Đóng">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
+            <button className={styles.closeButton} onClick={onClose} aria-label="Đóng" type="button">
+              <X size={20} aria-hidden="true" />
             </button>
           </div>
           <div className={styles.content}>{children}</div>

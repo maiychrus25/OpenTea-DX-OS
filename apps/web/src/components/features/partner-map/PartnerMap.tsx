@@ -1,12 +1,17 @@
-"use client"
-
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import React, { useEffect, useMemo, useState } from 'react'
+"use client"
+
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import 'leaflet/dist/leaflet.css'
-import { MapPin, Search, Plus, Trash2, Edit2 } from 'lucide-react'
+import { MapPin, Search, Plus, Trash2, Edit2, List, Loader2, X } from 'lucide-react'
+import { toast } from 'sonner'
+import { Modal } from '@/components/ui/Modal/Modal'
+import { Button } from '@/components/ui'
+import styles from './partner-map.module.css'
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false })
@@ -14,7 +19,7 @@ const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr:
 const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false })
 
 const MapUpdater = dynamic(() => import('react-leaflet').then(m => {
-  return function MapUpdaterComponent({ selected }: { selected: {lat:number,lng:number}|null }) {
+  return function MapUpdaterComponent({ selected }: { selected: { lat: number; lng: number } | null }) {
     const map = m.useMap()
     React.useEffect(() => {
       if (selected) {
@@ -25,14 +30,34 @@ const MapUpdater = dynamic(() => import('react-leaflet').then(m => {
   }
 }), { ssr: false })
 
+const MapClickHandler = dynamic(() => import('react-leaflet').then(m => {
+  return function MapClickHandlerComponent({ onSelect }: { onSelect: (coords: { lat: number; lng: number }) => void }) {
+    const map = m.useMap()
+    React.useEffect(() => {
+      if (!map) return
+      const onClick = (e: any) => {
+        if (e && e.latlng) {
+          onSelect({ lat: e.latlng.lat, lng: e.latlng.lng })
+        }
+      }
+      map.on('click', onClick)
+      return () => {
+        map.off('click', onClick)
+      }
+    }, [map, onSelect])
+    return null
+  }
+}), { ssr: false })
+
 type Partner = {
   id: string
   name: string
   partner_type: string
-  contact_phone?: string
+  contact_phone?: string | null
   lat: number
   lng: number
-  address?: string
+  address?: string | null
+  primary_commodities?: string[]
 }
 
 const PARTNER_TYPE_MAP: Record<string, string> = {
@@ -43,11 +68,35 @@ const PARTNER_TYPE_MAP: Record<string, string> = {
 
 export default function PartnerMap() {
   const [partners, setPartners] = useState<Partner[]>([])
+  const [isLoadingList, setIsLoadingList] = useState(true)
   const [query, setQuery] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
   const [suggests, setSuggests] = useState<any[]>([])
-  const [selected, setSelected] = useState<{lat:number,lng:number}|null>(null)
-  const [flyToLocation, setFlyToLocation] = useState<{lat:number,lng:number}|null>(null)
-  const [form, setForm] = useState<any>({ name: '', partner_type: 'BUYER', contact_phone: '', address: '' })
+  const [selected, setSelected] = useState<{ lat: number; lng: number } | null>(null)
+  const [flyToLocation, setFlyToLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [form, setForm] = useState<{ name: string; partner_type: string; contact_phone: string; address: string }>({
+    name: '',
+    partner_type: 'BUYER',
+    contact_phone: '',
+    address: ''
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Edit State
+  const [editingPartner, setEditingPartner] = useState<Partner | null>(null)
+  const [editForm, setEditForm] = useState<{ name: string; partner_type: string; contact_phone: string; address: string }>({
+    name: '',
+    partner_type: 'BUYER',
+    contact_phone: '',
+    address: ''
+  })
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  // Delete State
+  const [deletingPartner, setDeletingPartner] = useState<Partner | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Leaflet icon fix for Next.js (webpack replaces _getIconUrl)
   useEffect(() => {
@@ -62,49 +111,214 @@ export default function PartnerMap() {
     })
   }, [])
 
-  useEffect(() => { fetch('/api/partners').then(r=>r.json()).then(j=>setPartners(j.data||[])) }, [])
-
-  // Lightweight debounce
+  // Load partners from API
   useEffect(() => {
+    setIsLoadingList(true)
+    fetch('/api/partners')
+      .then(r => r.json())
+      .then(j => {
+        setPartners(j.data || [])
+      })
+      .catch(() => {
+        toast.error('Không thể tải danh sách đối tác')
+      })
+      .finally(() => {
+        setIsLoadingList(false)
+      })
+  }, [])
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setSuggests([])
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Debounced search with loading indicator
+  useEffect(() => {
+    if (!query || query.trim().length < 2) {
+      setSuggests([])
+      setIsSearching(false)
+      return
+    }
+
+    setIsSearching(true)
     const t = setTimeout(() => {
-      if (!query) return setSuggests([])
-      fetch(`/api/geocode?q=${encodeURIComponent(query)}`).then(r=>r.json()).then(j=>setSuggests(j.data||[]))
-    }, 300)
+      fetch(`/api/geocode?q=${encodeURIComponent(query.trim())}`)
+        .then(r => r.json())
+        .then(j => {
+          setSuggests(j.data || j.results || [])
+        })
+        .catch(() => {
+          setSuggests([])
+        })
+        .finally(() => {
+          setIsSearching(false)
+        })
+    }, 400)
+
     return () => clearTimeout(t)
   }, [query])
+
+  // Handle map click-to-pick
+  const handleMapClick = (coords: { lat: number; lng: number }) => {
+    setSelected(coords)
+    setFlyToLocation(coords)
+    toast.info(`Đã chấm tọa độ: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`)
+  }
+
+  // Handle open edit
+  const handleOpenEdit = (p: Partner) => {
+    setEditingPartner(p)
+    setEditForm({
+      name: p.name,
+      partner_type: p.partner_type,
+      contact_phone: p.contact_phone || '',
+      address: p.address || ''
+    })
+  }
+
+  // Handle update partner
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingPartner) return
+    setIsUpdating(true)
+    try {
+      const res = await fetch(`/api/partners/${editingPartner.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      })
+      const j = await res.json()
+      if (res.ok && j.data) {
+        setPartners(prev => prev.map(item => (item.id === editingPartner.id ? j.data : item)))
+        toast.success(`Cập nhật thông tin đối tác ${j.data.name} thành công!`)
+        setEditingPartner(null)
+      } else {
+        toast.error(j.error?.message || 'Có lỗi xảy ra khi cập nhật đối tác')
+      }
+    } catch {
+      toast.error('Lỗi kết nối khi cập nhật đối tác')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  // Handle delete partner
+  const handleConfirmDelete = async () => {
+    if (!deletingPartner) return
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`/api/partners/${deletingPartner.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setPartners(prev => prev.filter(p => p.id !== deletingPartner.id))
+        toast.success(`Đã xóa đối tác ${deletingPartner.name} thành công!`)
+        setDeletingPartner(null)
+      } else {
+        const j = await res.json().catch(() => ({}))
+        toast.error(j.error?.message || 'Không thể xóa đối tác này')
+      }
+    } catch {
+      toast.error('Lỗi kết nối khi xóa đối tác')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Handle create partner
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.name.trim()) {
+      toast.error('Vui lòng nhập tên đối tác')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const payload: any = {
+        name: form.name.trim(),
+        partner_type: form.partner_type,
+        contact_phone: form.contact_phone.trim() || undefined,
+        address: form.address.trim() || undefined
+      }
+
+      if (selected) {
+        payload.lat = selected.lat
+        payload.lng = selected.lng
+      }
+
+      const res = await fetch('/api/partners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      const j = await res.json()
+      if (res.ok && j.data) {
+        setPartners(prev => [j.data, ...prev])
+        setForm({ name: '', partner_type: 'BUYER', contact_phone: '', address: '' })
+        setSelected(null)
+        setFlyToLocation({ lat: j.data.lat, lng: j.data.lng })
+        setQuery('')
+        toast.success(`Đã thêm đối tác ${j.data.name} thành công!`)
+      } else {
+        toast.error(j.error?.message || 'Có lỗi xảy ra khi lưu đối tác')
+      }
+    } catch {
+      toast.error('Lỗi kết nối máy chủ khi tạo đối tác')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const markers = useMemo(() => partners.map(p => (
     <Marker key={p.id} position={[p.lat, p.lng] as any}>
       <Popup>
-        <div className="flex flex-col gap-1 p-1">
-          <strong className="text-[var(--color-ink-primary)]">{p.name}</strong>
-          <span className="text-sm font-medium px-2 py-0.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] w-fit capitalize">{PARTNER_TYPE_MAP[p.partner_type] || p.partner_type}</span>
-          <span className="text-sm text-[var(--color-ink-secondary)]">{p.contact_phone}</span>
+        <div className={styles.popupContent}>
+          <div className={styles.popupTitle}>{p.name}</div>
+          <span className={styles.popupBadge}>
+            {PARTNER_TYPE_MAP[p.partner_type] || p.partner_type}
+          </span>
+          {p.contact_phone && (
+            <div className={styles.popupInfo}>
+              SĐT: <strong>{p.contact_phone}</strong>
+            </div>
+          )}
+          {p.address && (
+            <div className={styles.popupInfo}>
+              Đ/c: {p.address}
+            </div>
+          )}
+          <div className={styles.popupActions}>
+            <button
+              type="button"
+              onClick={() => handleOpenEdit(p)}
+              className={styles.popupBtnEdit}
+              title="Chỉnh sửa thông tin"
+            >
+              <Edit2 size={12} aria-hidden="true" />
+              Sửa
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeletingPartner(p)}
+              className={styles.popupBtnDelete}
+              title="Xóa đối tác"
+            >
+              <Trash2 size={12} aria-hidden="true" />
+              Xóa
+            </button>
+          </div>
         </div>
       </Popup>
     </Marker>
   )), [partners])
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault()
-    const payload = { ...form }
-    if (selected) { payload.lat = selected.lat; payload.lng = selected.lng }
-    const res = await fetch('/api/partners', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(payload) })
-    const j = await res.json()
-    if (j.data) {
-      setPartners(prev => [j.data, ...prev])
-      setForm({ name: '', partner_type: 'BUYER', contact_phone: '', address: '' })
-      setSelected(null)
-      setFlyToLocation(null)
-      setQuery('')
-    }
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm('Xác nhận xóa partner này?')) return
-    const res = await fetch(`/api/partners/${id}`, { method: 'DELETE' })
-    if (res.ok) setPartners(prev => prev.filter(p => p.id !== id))
-  }
+  // Can submit if name is present AND (coordinates are selected OR address text is provided)
+  const canSubmit = form.name.trim().length > 0 && (selected !== null || form.address.trim().length > 0)
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
@@ -116,33 +330,57 @@ export default function PartnerMap() {
         <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-surface-border)] overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b border-[var(--color-surface-border)] bg-[var(--color-surface-base)]">
             <h2 className="font-semibold text-[var(--color-ink-primary)]">Thêm Đối Tác Mới</h2>
+            <p className="text-xs text-[var(--color-ink-secondary)] mt-0.5">Tìm kiếm địa điểm hoặc nhấp trực tiếp lên bản đồ</p>
           </div>
           <div className="p-5">
             <form onSubmit={handleCreate} className="flex flex-col gap-4">
               
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-ink-tertiary)]" />
+              {/* Location Search Field */}
+              <div className="relative" ref={dropdownRef}>
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-ink-tertiary)]" aria-hidden="true" />
                 <input 
                   type="text"
                   placeholder="Tìm kiếm vị trí trên bản đồ..." 
                   value={query} 
-                  onChange={e=>setQuery(e.target.value)} 
-                  className="w-full pl-9 pr-4 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] placeholder-[var(--color-ink-tertiary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+                  onChange={e => setQuery(e.target.value)} 
+                  className="w-full pl-9 pr-9 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] placeholder-[var(--color-ink-tertiary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
                 />
+                {isSearching && (
+                  <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-[var(--color-primary)]" aria-hidden="true" />
+                )}
+                {!isSearching && query && (
+                  <button
+                    type="button"
+                    onClick={() => { setQuery(''); setSuggests([]); }}
+                    className="absolute right-3 top-2.5 text-[var(--color-ink-tertiary)] hover:text-[var(--color-ink-primary)]"
+                    aria-label="Xóa từ khóa tìm kiếm"
+                  >
+                    <X size={14} aria-hidden="true" />
+                  </button>
+                )}
                 
-                {/* Search Suggestion Dropdown */}
+                {/* Search Suggestion Dropdown with Opaque CSS */}
                 {suggests.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg shadow-lg max-h-60 overflow-y-auto z-10">
-                    {suggests.map((s,i)=> (
+                  <div className={styles.suggestDropdown}>
+                    {suggests.map((s, i) => (
                       <button 
                         type="button"
                         key={i} 
-                        className="w-full text-left px-4 py-2 text-sm text-[var(--color-ink-primary)] hover:bg-[var(--color-surface-sunken)] border-b border-[var(--color-surface-border)] last:border-0 transition-colors"
-                        onClick={()=>{ setSelected({lat:parseFloat(s.lat),lng:parseFloat(s.lon || s.lng)}); setFlyToLocation(null); setForm({...form,address:s.display_name}); setSuggests([]); setQuery('') }}
+                        className={styles.suggestItem}
+                        onClick={() => {
+                          const lat = parseFloat(s.lat)
+                          const lng = parseFloat(s.lon || s.lng)
+                          setSelected({ lat, lng })
+                          setFlyToLocation({ lat, lng })
+                          setForm({ ...form, address: s.display_name })
+                          setSuggests([])
+                          setQuery('')
+                          toast.success('Đã chọn vị trí từ gợi ý!')
+                        }}
                       >
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-[var(--color-ink-tertiary)] shrink-0 mt-0.5" />
-                          <span className="line-clamp-2">{s.display_name}</span>
+                        <div className={styles.suggestContent}>
+                          <MapPin className={styles.suggestIcon} aria-hidden="true" />
+                          <span className={styles.suggestText}>{s.display_name}</span>
                         </div>
                       </button>
                     ))}
@@ -150,22 +388,51 @@ export default function PartnerMap() {
                 )}
               </div>
 
-              {selected && (
-                <div className="text-xs text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-2 rounded-lg flex items-center gap-2">
-                  <MapPin className="h-3.5 w-3.5" />
-                  Đã chọn tọa độ: {selected.lat.toFixed(4)}, {selected.lng.toFixed(4)}
+              {/* Selected Coordinates Badge */}
+              {selected ? (
+                <div className="text-xs text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-2 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span>Tọa độ: {selected.lat.toFixed(4)}, {selected.lng.toFixed(4)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(null)}
+                    className="text-[var(--color-ink-tertiary)] hover:text-red-600 ml-2"
+                    title="Hủy chọn tọa độ"
+                    aria-label="Hủy chọn tọa độ"
+                  >
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                </div>
+              ) : (
+                <div className="text-xs text-[var(--color-ink-tertiary)] bg-[var(--color-surface-base)] px-3 py-2 rounded-lg border border-dashed border-[var(--color-surface-border)] flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span>Mẹo: Nhấp chuột vào điểm bất kỳ trên bản đồ để ghim</span>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5 col-span-2">
-                  <label className="text-xs font-medium text-[var(--color-ink-secondary)]">Tên đối tác</label>
-                  <input required placeholder="Nhập tên đối tác" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" />
+                  <label className="text-xs font-medium text-[var(--color-ink-secondary)]">
+                    Tên đối tác <span className="text-red-500">*</span>
+                  </label>
+                  <input 
+                    required 
+                    placeholder="Nhập tên đối tác" 
+                    value={form.name} 
+                    onChange={e => setForm({ ...form, name: e.target.value })} 
+                    className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" 
+                  />
                 </div>
                 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-[var(--color-ink-secondary)]">Loại đối tác</label>
-                  <select value={form.partner_type} onChange={e=>setForm({...form,partner_type:e.target.value})} className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors">
+                  <select 
+                    value={form.partner_type} 
+                    onChange={e => setForm({ ...form, partner_type: e.target.value })} 
+                    className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+                  >
                     <option value="BUYER">Người mua</option>
                     <option value="MIDDLEMAN">Thương lái</option>
                     <option value="WAREHOUSE">Nhà kho</option>
@@ -174,18 +441,41 @@ export default function PartnerMap() {
                 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-[var(--color-ink-secondary)]">Số điện thoại</label>
-                  <input placeholder="VD: 0987654321" value={form.contact_phone} onChange={e=>setForm({...form,contact_phone:e.target.value})} className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" />
+                  <input 
+                    placeholder="VD: 0987654321" 
+                    value={form.contact_phone} 
+                    onChange={e => setForm({ ...form, contact_phone: e.target.value })} 
+                    className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" 
+                  />
                 </div>
 
                 <div className="space-y-1.5 col-span-2">
                   <label className="text-xs font-medium text-[var(--color-ink-secondary)]">Địa chỉ chi tiết</label>
-                  <input required placeholder="Nhập địa chỉ" value={form.address} onChange={e=>setForm({...form,address:e.target.value})} className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" />
+                  <input 
+                    placeholder="Nhập địa chỉ hoặc chọn từ gợi ý..." 
+                    value={form.address} 
+                    onChange={e => setForm({ ...form, address: e.target.value })} 
+                    className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" 
+                  />
                 </div>
               </div>
 
-              <button type="submit" disabled={!selected} className="mt-2 w-full flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                <Plus className="h-4 w-4" />
-                Thêm Đối Tác
+              <button 
+                type="submit" 
+                disabled={!canSubmit || isSubmitting} 
+                className="mt-2 w-full flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    Đang lưu đối tác...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    Thêm Đối Tác
+                  </>
+                )}
               </button>
             </form>
           </div>
@@ -195,31 +485,68 @@ export default function PartnerMap() {
         <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-surface-border)] overflow-hidden shadow-sm flex flex-col h-[400px]">
           <div className="px-5 py-4 border-b border-[var(--color-surface-border)] bg-[var(--color-surface-base)] flex items-center justify-between">
             <h2 className="font-semibold text-[var(--color-ink-primary)]">Danh Sách Đối Tác</h2>
-            <span className="text-xs font-medium bg-[var(--color-surface-sunken)] px-2.5 py-1 rounded-full text-[var(--color-ink-secondary)]">{partners.length} đối tác</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium bg-[var(--color-surface-sunken)] px-2.5 py-1 rounded-full text-[var(--color-ink-secondary)]">
+                {partners.length} đối tác
+              </span>
+              <Link 
+                href="/manager/partners" 
+                className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-primary)] hover:underline bg-[var(--color-primary)]/10 px-2.5 py-1 rounded-full transition-colors"
+                title="Chuyển sang xem dạng bảng danh bạ"
+              >
+                <List size={13} aria-hidden="true" />
+                Xem dạng bảng
+              </Link>
+            </div>
           </div>
           
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {partners.length === 0 ? (
+            {isLoadingList ? (
+              <div className="text-center py-12 text-[var(--color-ink-tertiary)] flex flex-col items-center gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-[var(--color-primary)]" aria-hidden="true" />
+                <p className="text-xs">Đang tải danh sách đối tác...</p>
+              </div>
+            ) : partners.length === 0 ? (
               <div className="text-center py-12 text-[var(--color-ink-tertiary)] flex flex-col items-center gap-3">
                 <div className="h-12 w-12 rounded-full bg-[var(--color-surface-base)] flex items-center justify-center">
-                  <MapPin className="h-5 w-5" />
+                  <MapPin className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <p className="text-sm">Chưa có đối tác nào</p>
               </div>
             ) : (
               partners.map(p => (
-                <div key={p.id} onClick={() => setFlyToLocation({lat: p.lat, lng: p.lng})} className="cursor-pointer bg-[var(--color-surface-base)] p-4 rounded-lg border border-[var(--color-surface-border)] hover:border-[var(--color-primary)] hover:shadow-md transition-all group">
+                <div 
+                  key={p.id} 
+                  onClick={() => setFlyToLocation({ lat: p.lat, lng: p.lng })} 
+                  className="cursor-pointer bg-[var(--color-surface-base)] p-4 rounded-lg border border-[var(--color-surface-border)] hover:border-[var(--color-primary)] hover:shadow-md transition-all group"
+                >
                   <div className="flex justify-between items-start gap-4 mb-2">
                     <div>
-                      <h3 className="font-medium text-[var(--color-ink-primary)] line-clamp-1 group-hover:text-[var(--color-primary)] transition-colors" title={p.name}>{p.name}</h3>
-                      <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] capitalize">{PARTNER_TYPE_MAP[p.partner_type] || p.partner_type}</span>
+                      <h3 className="font-medium text-[var(--color-ink-primary)] line-clamp-1 group-hover:text-[var(--color-primary)] transition-colors" title={p.name}>
+                        {p.name}
+                      </h3>
+                      <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] capitalize">
+                        {PARTNER_TYPE_MAP[p.partner_type] || p.partner_type}
+                      </span>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={()=>{}} className="p-1.5 text-[var(--color-ink-tertiary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 rounded-md transition-colors" title="Chỉnh sửa">
-                        <Edit2 className="h-3.5 w-3.5" />
+                      <button 
+                        type="button"
+                        onClick={e => { e.stopPropagation(); handleOpenEdit(p); }} 
+                        className="p-1.5 text-[var(--color-ink-tertiary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 rounded-md transition-colors" 
+                        title="Chỉnh sửa thông tin"
+                        aria-label="Chỉnh sửa đối tác"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
-                      <button onClick={()=>handleDelete(p.id)} className="p-1.5 text-[var(--color-ink-tertiary)] hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Xóa">
-                        <Trash2 className="h-3.5 w-3.5" />
+                      <button 
+                        type="button"
+                        onClick={e => { e.stopPropagation(); setDeletingPartner(p); }} 
+                        className="p-1.5 text-[var(--color-ink-tertiary)] hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" 
+                        title="Xóa đối tác"
+                        aria-label="Xóa đối tác"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -248,8 +575,8 @@ export default function PartnerMap() {
       {/* Right Content: Map */}
       <div className="flex-1 bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-surface-border)] overflow-hidden shadow-sm h-[800px] lg:h-auto lg:min-h-[600px] relative">
         <MapContainer 
-          center={[10.762622, 106.660172]} 
-          zoom={6} 
+          center={[10.0452, 105.7469]} 
+          zoom={8} 
           minZoom={6}
           maxBounds={[
             [8.0, 102.0], // Tây Nam
@@ -267,9 +594,103 @@ export default function PartnerMap() {
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" 
           />
           <MapUpdater selected={flyToLocation || selected} />
+          <MapClickHandler onSelect={handleMapClick} />
           {markers}
+          {selected && (
+            <Marker position={[selected.lat, selected.lng]} opacity={0.9}>
+              <Popup>
+                <div className="text-xs p-1 font-sans">
+                  <strong className="text-[var(--color-primary)] block mb-1">Vị trí đang chấm ghim</strong>
+                  <div>Tọa độ: {selected.lat.toFixed(4)}, {selected.lng.toFixed(4)}</div>
+                </div>
+              </Popup>
+            </Marker>
+          )}
         </MapContainer>
       </div>
+
+      {/* Edit Partner Modal */}
+      <Modal
+        isOpen={!!editingPartner}
+        onClose={() => setEditingPartner(null)}
+        title="Chỉnh sửa thông tin đối tác"
+      >
+        <form onSubmit={handleUpdate} className="p-4 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[var(--color-ink-secondary)]">Tên đối tác</label>
+            <input
+              required
+              value={editForm.name}
+              onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+              className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-[var(--color-ink-secondary)]">Loại đối tác</label>
+              <select
+                value={editForm.partner_type}
+                onChange={e => setEditForm({ ...editForm, partner_type: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+              >
+                <option value="BUYER">Người mua</option>
+                <option value="MIDDLEMAN">Thương lái</option>
+                <option value="WAREHOUSE">Nhà kho</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-[var(--color-ink-secondary)]">Số điện thoại</label>
+              <input
+                value={editForm.contact_phone}
+                onChange={e => setEditForm({ ...editForm, contact_phone: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[var(--color-ink-secondary)]">Địa chỉ</label>
+            <input
+              value={editForm.address}
+              onChange={e => setEditForm({ ...editForm, address: e.target.value })}
+              className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setEditingPartner(null)} disabled={isUpdating}>
+              Hủy
+            </Button>
+            <Button type="submit" variant="primary" disabled={isUpdating}>
+              {isUpdating ? 'Đang lưu...' : 'Lưu thay đổi'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deletingPartner}
+        onClose={() => setDeletingPartner(null)}
+        title="Xác nhận xóa đối tác"
+      >
+        <div className="p-4 space-y-4">
+          <p className="text-sm text-[var(--color-ink-secondary)]">
+            Bạn có chắc chắn muốn xóa đối tác <strong>{deletingPartner?.name}</strong> khỏi hệ thống? Thao tác này không thể hoàn tác.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setDeletingPartner(null)} disabled={isDeleting}>
+              Hủy
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? 'Đang xóa...' : 'Xác nhận xóa'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
     </div>
   )

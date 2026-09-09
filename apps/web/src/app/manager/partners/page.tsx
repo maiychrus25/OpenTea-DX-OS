@@ -14,24 +14,26 @@ export const metadata: Metadata = {
 export default function PartnersPage() {
   return (
     <div className="h-full flex flex-col gap-6 p-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Danh bạ đối tác</h1>
           <p className="text-sm text-gray-500 mt-1">Quản lý danh sách đối tác mua bán, nhà cung cấp vật tư</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
           <Link href="/manager/partner-map">
             <Button variant="secondary" className="flex items-center gap-2">
-              <Map size={18} /> Bản đồ
+              <Map size={18} aria-hidden="true" /> Bản đồ
             </Button>
           </Link>
-          <Button className="flex items-center gap-2">
-            <Plus size={18} /> Thêm đối tác
-          </Button>
+          <Link href="/manager/partner-map">
+            <Button className="flex items-center gap-2">
+              <Plus size={18} aria-hidden="true" /> Thêm đối tác
+            </Button>
+          </Link>
         </div>
       </div>
       
-      <div className="flex-1 min-h-0 bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="flex-1 min-h-0 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <PartnerList />
       </div>
     </div>

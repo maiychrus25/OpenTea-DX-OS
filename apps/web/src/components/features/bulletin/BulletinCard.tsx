@@ -5,6 +5,7 @@
 
 import React, { useState, useRef, useCallback } from 'react'
 import { CheckCircle2, Volume2, Square, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Pill } from '@/components/ui/Pill'
 import styles from './bulletin.module.css'
 
@@ -28,6 +29,7 @@ export function BulletinCard({ category, headline, summary, date, sourceCount }:
   const meta = CATEGORY_MAP[category]
   const [ttsState, setTtsState] = useState<'idle' | 'loading' | 'playing'>('idle')
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const currentUrlRef = useRef<string | null>(null)
 
   const stop = useCallback(() => {
     if (audioRef.current) {
@@ -35,7 +37,11 @@ export function BulletinCard({ category, headline, summary, date, sourceCount }:
       audioRef.current.src = ''
       audioRef.current = null
     }
-    if (window.speechSynthesis) {
+    if (currentUrlRef.current) {
+      URL.revokeObjectURL(currentUrlRef.current)
+      currentUrlRef.current = null
+    }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel()
     }
     setTtsState('idle')
@@ -44,6 +50,9 @@ export function BulletinCard({ category, headline, summary, date, sourceCount }:
   const handleListen = useCallback(async () => {
     if (ttsState === 'playing') {
       stop()
+      return
+    }
+    if (ttsState === 'loading') {
       return
     }
 
@@ -60,11 +69,27 @@ export function BulletinCard({ category, headline, summary, date, sourceCount }:
 
       if (res.ok && res.headers.get('Content-Type')?.includes('audio')) {
         const blob = await res.blob()
+        if (currentUrlRef.current) {
+          URL.revokeObjectURL(currentUrlRef.current)
+        }
         const url = URL.createObjectURL(blob)
+        currentUrlRef.current = url
         const audio = new Audio(url)
         audioRef.current = audio
-        audio.onended = () => { URL.revokeObjectURL(url); setTtsState('idle') }
-        audio.onerror = () => { URL.revokeObjectURL(url); setTtsState('idle') }
+        audio.onended = () => { 
+          if (currentUrlRef.current === url) {
+            URL.revokeObjectURL(url)
+            currentUrlRef.current = null
+          }
+          setTtsState('idle') 
+        }
+        audio.onerror = () => { 
+          if (currentUrlRef.current === url) {
+            URL.revokeObjectURL(url)
+            currentUrlRef.current = null
+          }
+          setTtsState('idle') 
+        }
         setTtsState('playing')
         await audio.play()
         return
@@ -73,16 +98,26 @@ export function BulletinCard({ category, headline, summary, date, sourceCount }:
       // Piper not available
     }
 
-    // Fallback: Web Speech API
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = 'vi-VN'
-      utterance.rate = 0.9
-      utterance.onend = () => setTtsState('idle')
-      utterance.onerror = () => setTtsState('idle')
-      setTtsState('playing')
-      window.speechSynthesis.speak(utterance)
+    // Fallback: Web Speech API (check for authentic Vietnamese voice)
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const voices = window.speechSynthesis.getVoices()
+      const viVoice = voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi'))
+
+      if (viVoice) {
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.voice = viVoice
+        utterance.lang = viVoice.lang
+        utterance.rate = 0.9
+        utterance.onend = () => setTtsState('idle')
+        utterance.onerror = () => setTtsState('idle')
+        setTtsState('playing')
+        window.speechSynthesis.speak(utterance)
+      } else {
+        toast.error('Dịch vụ đọc văn bản (Piper TTS) đang tạm gián đoạn và thiết bị chưa có gói giọng đọc Tiếng Việt.')
+        setTtsState('idle')
+      }
     } else {
+      toast.error('Trình duyệt không hỗ trợ đọc văn bản.')
       setTtsState('idle')
     }
   }, [ttsState, headline, summary, stop])

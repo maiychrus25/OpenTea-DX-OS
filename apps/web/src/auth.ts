@@ -11,7 +11,7 @@ interface KeycloakProfile {
 }
 
 // Internal Keycloak URL (container-to-container) dùng cho token/userinfo
-const KEYCLOAK_INTERNAL = process.env.KEYCLOAK_INTERNAL_URL || "http://keycloak:8080/realms/agrimarket"
+const KEYCLOAK_INTERNAL = process.env.KEYCLOAK_INTERNAL_URL || process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket"
 // External Keycloak URL (browser redirect) dùng cho authorization
 const KEYCLOAK_EXTERNAL = process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket"
 
