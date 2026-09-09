@@ -245,6 +245,45 @@ async function main() {
     })
   }
 
+  // ─── Partner Baseline Seed ───────────────────────────────────────────
+  const existingPartner = await prisma.partner.findFirst({
+    where: { name: 'Công ty Thu mua Nông sản Xanh' },
+  })
+
+  if (!existingPartner) {
+    await prisma.partner.createMany({
+      data: [
+        {
+          name: 'Công ty Thu mua Nông sản Xanh',
+          partner_type: 'BUYER',
+          contact_phone: '0987654321',
+          address: 'Ninh Kiều, Cần Thơ',
+          lat: 10.0452,
+          lng: 105.7469,
+          primary_commodities: ['Lúa ST25', 'Lúa OM5451'],
+        },
+        {
+          name: 'Đại lý Phân bón An Phát',
+          partner_type: 'WAREHOUSE',
+          contact_phone: '0912345678',
+          address: 'Châu Thành, Tiền Giang',
+          lat: 10.36,
+          lng: 106.36,
+          primary_commodities: ['Phân bón NPK', 'Ure'],
+        },
+        {
+          name: 'Hệ thống Siêu thị Co-op',
+          partner_type: 'BUYER',
+          contact_phone: '0909090909',
+          address: 'Quận 1, TP. Hồ Chí Minh',
+          lat: 10.7769,
+          lng: 106.7009,
+          primary_commodities: ['Nông sản sạch VietGAP'],
+        },
+      ],
+    })
+  }
+
   process.stdout.write('Database seeded successfully!\n')
 }
 
