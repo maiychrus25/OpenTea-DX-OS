@@ -5,6 +5,28 @@
 const nextConfig = {
   output: 'standalone',
   optimizeFonts: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'minio',
+        port: '9000',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '9000',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        port: '9000',
+        pathname: '/**',
+      }
+    ],
+  },
 }
 
 const withPWA = require("@ducanh2912/next-pwa").default({

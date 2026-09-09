@@ -68,6 +68,7 @@ enum UserRole {
 enum DiseaseReportStatus {
   PENDING
   CONFIRMED
+  REJECTED
 }
 
 // â”€â”€â”€ HTX Profile (singleton) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

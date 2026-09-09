@@ -86,4 +86,20 @@ export class MinioStorageAdapter implements StoragePort {
     const url = await this.minioPublicClient.presignedGetObject(this.bucketName, key, expiresIn)
     return url;
   }
+
+  async getFileBuffer(key: string): Promise<Buffer> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const stream = await this.minioClient.getObject(this.bucketName, key)
+        const chunks: Buffer[] = []
+        stream.on('data', (chunk) => {
+          chunks.push(Buffer.from(chunk))
+        })
+        stream.on('end', () => resolve(Buffer.concat(chunks)))
+        stream.on('error', (err) => reject(err))
+      } catch (err) {
+        reject(err)
+      }
+    })
+  }
 }

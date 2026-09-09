@@ -36,4 +36,12 @@ export interface DocumentStoragePort {
    * @param key The key of the document in storage
    */
   getDocumentContent(key: string): Promise<string>
+
+  /**
+   * Directly uploads a document to storage
+   * @param key The key of the document in storage
+   * @param content The content of the document
+   * @param mimeType The MIME type of the document
+   */
+  uploadDocument(key: string, content: Buffer | string, mimeType?: string): Promise<void>
 }

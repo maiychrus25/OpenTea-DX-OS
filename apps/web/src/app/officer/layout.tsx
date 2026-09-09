@@ -17,7 +17,7 @@ export default async function OfficerLayout({ children }: { children: React.Reac
     { label: 'Nông hộ', href: '/officer/households', icon: <Users size={20} /> },
     { label: 'Nhật ký', href: '/officer/journal', icon: <FileText size={20} /> },
     { label: 'Lô hàng', href: '/officer/lots', icon: <PackageCheck size={20} /> },
-    { label: 'Nhật ký bệnh', href: '/officer/disease', icon: <Stethoscope size={20} /> },
+    { label: 'Nhật ký bệnh', href: '/officer/diseases', icon: <Stethoscope size={20} /> },
     { label: 'Tài liệu', href: '/officer/documents', icon: <FolderOpen size={20} /> },
     { label: 'Trợ lý', href: '/officer/assistant', icon: <Bot size={20} /> },
     { label: 'Thông báo', href: '/officer/notifications', icon: <Bell size={20} /> },

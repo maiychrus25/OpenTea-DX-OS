@@ -43,26 +43,33 @@ export function DocumentView() {
 
   const fetchDocuments = async (path: string) => {
     setIsLoading(true)
-    // Mock network delay
-    setTimeout(() => {
-      // Filter mock documents by path
-      let filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(path) && doc.key !== path)
-      // Basic mock logic to only show direct children
-      filtered = filtered.filter(doc => {
-        const remainingPath = doc.key.replace(path, '')
-        if (doc.isDir) {
-          return remainingPath.split('/').length === 2 // e.g. "Ca-phe-huu-co-2026/"
-        }
-        return !remainingPath.includes('/')
-      })
+    try {
+      const res = await fetch(`/api/documents?path=${encodeURIComponent(path)}`)
+      if (!res.ok) throw new Error('Failed to fetch')
+      
+      const json = await res.json()
+      let fetchedDocs: DocumentItem[] = json.data?.documents || []
+      
+      // Map to add missing frontend-only fields
+      fetchedDocs = fetchedDocs.map(doc => ({
+        ...doc,
+        id: doc.key,
+        uploadDate: new Date(doc.uploadDate),
+        tags: doc.isDir ? [] : ['hệ thống'],
+        privacy: 'Nội bộ HTX'
+      }))
       
       if (searchQuery) {
-        filtered = MOCK_DOCUMENTS.filter(doc => doc.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        fetchedDocs = fetchedDocs.filter(doc => doc.name.toLowerCase().includes(searchQuery.toLowerCase()))
       }
       
-      setDocuments(filtered)
+      setDocuments(fetchedDocs)
+    } catch (err) {
+      console.error(err)
+      setDocuments([])
+    } finally {
       setIsLoading(false)
-    }, 400)
+    }
   }
 
   // Refetch when search query changes

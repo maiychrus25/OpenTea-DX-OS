@@ -6,10 +6,12 @@ import { auth } from '@/auth';
 import { PrismaDiseaseReportRepository } from '@/infrastructure/db/farm/PrismaDiseaseReportRepository';
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository';
 import { ReviewDiseaseReportUseCase } from '@/application/disease/review-disease-report.usecase';
+import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter';
+import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter';
 import { z } from 'zod';
 
 const reviewSchema = z.object({
-  status: z.enum(['APPROVED', 'REJECTED']),
+  status: z.enum(['CONFIRMED', 'REJECTED']),
   treatment_recommendation: z.string().optional()
 });
 
@@ -37,7 +39,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     const useCase = new ReviewDiseaseReportUseCase(
       new PrismaDiseaseReportRepository(),
-      new PrismaNotificationRepository()
+      new PrismaNotificationRepository(),
+      new MinioStorageAdapter(),
+      new MinioDocumentAdapter()
     );
 
     await useCase.execute({
