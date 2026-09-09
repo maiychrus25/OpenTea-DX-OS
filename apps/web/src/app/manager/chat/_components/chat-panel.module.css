@@ -179,8 +179,81 @@
 }
 
 .messageText {
-  white-space: pre-wrap;
+  white-space: normal;
   word-break: break-word;
+}
+
+.markdownContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.markdownContent p {
+  margin: 0;
+}
+
+.markdownContent ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+  list-style-type: disc !important;
+}
+
+.markdownContent ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+  list-style-type: decimal !important;
+}
+
+.markdownContent li {
+  margin-bottom: 0.25rem;
+  display: list-item !important;
+}
+
+.markdownContent table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+}
+
+.markdownContent th,
+.markdownContent td {
+  border: 1px solid var(--color-border);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.markdownContent th {
+  background-color: var(--color-bg);
+  font-weight: 600;
+}
+
+.markdownContent strong,
+.markdownContent b {
+  font-weight: 700 !important;
+  color: var(--color-text-primary) !important;
+}
+
+.markdownContent em,
+.markdownContent i {
+  font-style: italic;
+}
+
+.markdownContent h1,
+.markdownContent h2,
+.markdownContent h3,
+.markdownContent h4,
+.markdownContent h5,
+.markdownContent h6 {
+  font-weight: 700;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-text-primary);
+}
+
+.markdownContent h3 {
+  font-size: 1.1rem;
 }
 
 .cursor {

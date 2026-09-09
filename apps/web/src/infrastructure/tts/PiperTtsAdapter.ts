@@ -5,20 +5,52 @@ import { TtsPort } from '@/domain/shared/ports/TtsPort'
 import net from 'net'
 
 export class PiperTtsAdapter implements TtsPort {
-  private readonly piperHost = 'piper'
-  private readonly piperPort = 10200
+  private readonly piperHost: string
+  private readonly piperPort: number
+
+  constructor(host?: string, port?: number) {
+    this.piperHost = host || process.env.PIPER_HOST || (process.env.NODE_ENV === 'production' ? 'piper' : '127.0.0.1')
+    this.piperPort = port || Number(process.env.PIPER_PORT) || (process.env.NODE_ENV === 'production' ? 10200 : 5500)
+  }
+
+  private createWavHeader(dataLength: number, sampleRate = 22050, numChannels = 1, bitsPerSample = 16): Buffer {
+    const header = Buffer.alloc(44)
+    header.write('RIFF', 0)
+    header.writeUInt32LE(36 + dataLength, 4)
+    header.write('WAVE', 8)
+    header.write('fmt ', 12)
+    header.writeUInt32LE(16, 16) // Subchunk1Size (16 for standard PCM)
+    header.writeUInt16LE(1, 20)  // AudioFormat (1 for PCM)
+    header.writeUInt16LE(numChannels, 22)
+    header.writeUInt32LE(sampleRate, 24)
+    const byteRate = (sampleRate * numChannels * bitsPerSample) / 8
+    header.writeUInt32LE(byteRate, 28)
+    const blockAlign = (numChannels * bitsPerSample) / 8
+    header.writeUInt16LE(blockAlign, 32)
+    header.writeUInt16LE(bitsPerSample, 34)
+    header.write('data', 36)
+    header.writeUInt32LE(dataLength, 40)
+    return header
+  }
 
   async synthesize(text: string): Promise<ReadableStream> {
+    let socketRef: net.Socket | null = null
+
     return new ReadableStream({
       start: (controller) => {
         const client = new net.Socket()
+        socketRef = client
 
-        // Implement 30s timeout
+        // 30s timeout per rules-and-limits.md §2.3
         client.setTimeout(30000)
 
-        let state: 'JSON' | 'PAYLOAD' = 'JSON'
+        let state: 'HEADER' | 'DATA' | 'PAYLOAD' = 'HEADER'
+        let currentEvent: { type?: string; data_length?: number; payload_length?: number } = {}
+        let dataLength = 0
         let payloadLength = 0
         let buffer = Buffer.alloc(0)
+        const pcmChunks: Buffer[] = []
+        let sampleRate = 22050
 
         client.on('timeout', () => {
           client.destroy()
@@ -41,8 +73,8 @@ export class PiperTtsAdapter implements TtsPort {
         client.on('data', (chunk: Buffer) => {
           buffer = Buffer.concat([buffer, chunk])
 
-          // M2 Fix: Prevent infinite buffer growth (max 5MB)
-          if (buffer.length > 5 * 1024 * 1024) {
+          // Prevent excessive buffer growth (max 10MB)
+          if (buffer.length > 10 * 1024 * 1024) {
             client.destroy()
             controller.error(new Error('SERVICE_UNAVAILABLE'))
             return
@@ -50,50 +82,76 @@ export class PiperTtsAdapter implements TtsPort {
 
           let processing = true
           while (processing && buffer.length > 0) {
-            if (state === 'JSON') {
+            if (state === 'HEADER') {
               const nlIdx = buffer.indexOf('\n')
               if (nlIdx === -1) {
-                // Not a full JSON line yet
                 processing = false
                 break
               }
 
-              const jsonStr = buffer.subarray(0, nlIdx).toString('utf-8')
+              const line = buffer.subarray(0, nlIdx).toString('utf-8')
               buffer = buffer.subarray(nlIdx + 1)
 
-              if (!jsonStr.trim()) continue
+              if (!line.trim()) continue
 
               try {
-                const event = JSON.parse(jsonStr)
-                if (event.type === 'audio-chunk') {
-                  payloadLength = event.payload_length || 0
-                  if (payloadLength > 0) {
-                    state = 'PAYLOAD'
-                  }
-                } else if (event.type === 'audio-stop') {
-                  controller.close()
-                  client.end()
+                currentEvent = JSON.parse(line)
+                dataLength = currentEvent.data_length || 0
+                payloadLength = currentEvent.payload_length || 0
+                state = dataLength > 0 ? 'DATA' : (payloadLength > 0 ? 'PAYLOAD' : 'HEADER')
+
+                if (currentEvent.type === 'audio-stop') {
                   processing = false
+                  client.end()
+                  break
                 }
-              } catch (err) {
-                // Ignore parsing errors for unexpected lines
+              } catch {
+                // If header is malformed, skip
+                state = 'HEADER'
               }
+            } else if (state === 'DATA') {
+              if (buffer.length < dataLength) {
+                processing = false
+                break
+              }
+
+              const dataBytes = buffer.subarray(0, dataLength)
+              buffer = buffer.subarray(dataLength)
+
+              try {
+                const dataObj = JSON.parse(dataBytes.toString('utf-8'))
+                if (dataObj.rate) sampleRate = dataObj.rate
+              } catch {
+                // Ignore data payload parse errors
+              }
+
+              state = payloadLength > 0 ? 'PAYLOAD' : 'HEADER'
             } else if (state === 'PAYLOAD') {
               if (buffer.length < payloadLength) {
-                // Wait for the full payload
                 processing = false
                 break
               }
 
               const payload = buffer.subarray(0, payloadLength)
               buffer = buffer.subarray(payloadLength)
-
-              // Enqueue audio payload chunk to the ReadableStream
-              controller.enqueue(new Uint8Array(payload))
-              state = 'JSON'
+              pcmChunks.push(payload)
+              state = 'HEADER'
             }
           }
         })
+
+        client.on('end', () => {
+          const totalPcm = Buffer.concat(pcmChunks)
+          const wavHeader = this.createWavHeader(totalPcm.length, sampleRate)
+          controller.enqueue(new Uint8Array(wavHeader))
+          if (totalPcm.length > 0) {
+            controller.enqueue(new Uint8Array(totalPcm))
+          }
+          controller.close()
+        })
+      },
+      cancel: () => {
+        socketRef?.destroy()
       }
     })
   }

@@ -6,12 +6,17 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { Check, ArrowLeft, ChevronRight } from 'lucide-react'
 import { Step1Household } from './step1-household'
 import { Step2MapDraw } from './step2-map-draw'
 import { Step3CropAssign } from './step3-crop-assign'
 import styles from '../wizard.module.css'
 
-export function SetupWizard() {
+interface Props {
+  cropOptions: string[]
+}
+
+export function SetupWizard({ cropOptions }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<1 | 2 | 3>(1)
   
@@ -52,13 +57,14 @@ export function SetupWizard() {
           <Step3CropAssign
             householdId={householdId!}
             householdName={householdName}
-            area={area || 0}
+            area={area!}
             geojson={geojson}
             center={center}
+            cropOptions={cropOptions}
             onPrev={() => setStep(2)}
             onComplete={() => {
-              toast.success('Đã thiết lập vùng trồng thành công!')
-              router.push('/officer/dashboard')
+              toast.success('Thiết lập vùng trồng thành công')
+              router.push('/officer/farm-zones')
             }}
           />
         )
@@ -68,19 +74,25 @@ export function SetupWizard() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <a href="/officer/dashboard" className={styles.backLink}>← Quay lại trang chủ</a>
+        <a href="/officer/dashboard" className={styles.backLink}>
+          <ArrowLeft size={16} className="inline mr-1 align-text-bottom" /> Quay lại trang chủ
+        </a>
         <span className={styles.eyebrow}>THIẾT LẬP VÙNG TRỒNG</span>
-        <h1 className={styles.title}>Hộ → Thửa đất → Cây trồng</h1>
+        <h1 className={styles.title}>
+          Hộ <ChevronRight size={22} className="inline text-slate-400 align-text-bottom mx-1" />
+          Thửa đất <ChevronRight size={22} className="inline text-slate-400 align-text-bottom mx-1" />
+          Cây trồng
+        </h1>
         <p className={styles.subtitle}>Thực hiện tuần tự: thêm hộ, khoanh thửa trên bản đồ, sau đó gán cây trồng.</p>
       </div>
 
       <div className={styles.tabs}>
         <div className={`${styles.tab} ${step === 1 ? styles.active : step > 1 ? styles.done : ''}`}>
-          <div className={styles.tabNumber}>{step > 1 ? '✓' : '1'}</div>
+          <div className={styles.tabNumber}>{step > 1 ? <Check size={14} className="stroke-[3]" /> : '1'}</div>
           Chọn / thêm hộ
         </div>
         <div className={`${styles.tab} ${step === 2 ? styles.active : step > 2 ? styles.done : ''}`}>
-          <div className={styles.tabNumber}>{step > 2 ? '✓' : '2'}</div>
+          <div className={styles.tabNumber}>{step > 2 ? <Check size={14} className="stroke-[3]" /> : '2'}</div>
           Vẽ thửa đất
         </div>
         <div className={`${styles.tab} ${step === 3 ? styles.active : ''}`}>

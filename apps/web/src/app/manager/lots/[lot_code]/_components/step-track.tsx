@@ -4,6 +4,7 @@
 'use client'
 
 import React from 'react'
+import { Check } from 'lucide-react'
 import styles from '../lot-detail.module.css'
 
 const STEPS = [
@@ -29,7 +30,7 @@ export function StepTrack() {
         return (
           <div key={stepNum} className={stepClass}>
             <div className={styles.stepIcon}>
-              {stepNum < currentStep ? '✓' : stepNum}
+              {stepNum < currentStep ? <Check size={14} className="stroke-[3]" /> : stepNum}
             </div>
             <span>{stepNum}. {label}</span>
           </div>

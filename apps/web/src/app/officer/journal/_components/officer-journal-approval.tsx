@@ -3,7 +3,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import styles from '../journal.module.css'
 import { JournalForm } from './JournalForm'
@@ -28,16 +28,32 @@ interface JournalEntry {
   }[]
 }
 
-const ACTIVITY_MAP: Record<string, string> = {
-  IRRIGATION: 'Tưới tiêu',
+const ACTIVITY_LABELS: Record<string, string> = {
+  SOWING: 'Gieo sạ',
   FERTILIZING: 'Bón phân',
   SPRAYING: 'Phun thuốc',
+  IRRIGATION: 'Tưới tiêu',
   HARVEST: 'Thu hoạch',
-  SOWING: 'Gieo sạ',
-  OTHER: 'Khác'
+  OTHER: 'Khác',
 }
 
-export function OfficerJournalApproval() {
+function formatDetail(detail: string | null | undefined): string {
+  if (!detail) return '—'
+  if (ACTIVITY_LABELS[detail]) return ACTIVITY_LABELS[detail]
+  
+  for (const [key, label] of Object.entries(ACTIVITY_LABELS)) {
+    if (detail.startsWith(`${key}: `)) {
+      return detail.replace(`${key}: `, `${label}: `)
+    }
+  }
+  return detail
+}
+
+interface OfficerJournalApprovalProps {
+  householdId?: string
+}
+
+export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalProps) {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [rejectEntryId, setRejectEntryId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
@@ -46,22 +62,26 @@ export function OfficerJournalApproval() {
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
 
-  const load = async () => {
-      try {
-        const res = await fetch('/api/journal')
-        if (res.ok) {
-          const data = await res.json()
-          setEntries(data.data || [])
-        }
-      } catch {
-        // Error loading journal entries — handled silently
-      } finally {
-        setIsLoading(false)
+  const load = useCallback(async () => {
+    try {
+      const url = householdId
+        ? `/api/journal?householdId=${householdId}`
+        : '/api/journal'
+      const res = await fetch(url)
+      if (res.ok) {
+        const data = await res.json()
+        setEntries(data.data || [])
       }
+    } catch {
+      // Error loading journal entries — handled silently
+    } finally {
+      setIsLoading(false)
     }
+  }, [householdId])
+
   useEffect(() => {
     load()
-  }, [])
+  }, [load])
 
   const handleApprove = async (id: string) => {
     try {
@@ -154,7 +174,7 @@ export function OfficerJournalApproval() {
             entries.map(e => (
               <tr key={e.id}>
                 <td>{e.parcel_code || e.parcel_id || e.id.substring(0, 8)}</td>
-                <td>{e.activity_type ? (ACTIVITY_MAP[e.activity_type] || e.activity_type) : 'Không có'}</td>
+                <td>{formatDetail(e.activities?.[0]?.activity_detail)}</td>
                 <td>{e.entry_date ? new Date(e.entry_date).toLocaleDateString('vi-VN') : ''}</td>
                 <td>
                   <Pill tone={e.status === 'PENDING_APPROVAL' ? 'amber' : e.status === 'APPROVED' ? 'green' : e.status === 'REJECTED' ? 'neutral' : 'blue'}>
@@ -269,7 +289,7 @@ export function OfficerJournalApproval() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         {entry.activities.map((act, idx) => (
                           <div key={idx} style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '4px', padding: '0.75rem' }}>
-                            <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: 'var(--color-primary)' }}>{ACTIVITY_MAP[act.activity_detail] || act.activity_detail}</div>
+                            <div style={{ fontWeight: 600, marginBottom: '0.25rem', color: 'var(--color-primary)' }}>{formatDetail(act.activity_detail)}</div>
                             <div style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem', color: 'var(--color-text-light)' }}>
                               {act.product_name && <span><strong>Sản phẩm:</strong> {act.product_name}</span>}
                               {act.dosage && <span><strong>Liều lượng:</strong> {act.dosage}</span>}

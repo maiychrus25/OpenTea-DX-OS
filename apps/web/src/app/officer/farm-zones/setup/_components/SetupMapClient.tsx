@@ -8,12 +8,20 @@ import { MapContainer, TileLayer, useMap, LayersControl } from 'react-leaflet'
 import '@geoman-io/leaflet-geoman-free'
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css'
 // @ts-ignore: leaflet-geosearch thiếu type definitions chuẩn cho TypeScript
-import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch'
+import { GeoSearchControl, EsriProvider } from 'leaflet-geosearch'
 import 'leaflet-geosearch/dist/geosearch.css'
 import area from '@turf/area'
 import { polygon as turfPolygon } from '@turf/helpers'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+
+// Fix Leaflet's default icon path issues in Next.js
+delete (L.Icon.Default.prototype as any)._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+})
 
 interface Props {
   onAreaCalculated: (areaSqm: number, geojson?: object, center?: { lat: number, lng: number }) => void
@@ -24,12 +32,19 @@ function SearchAndLocateInit() {
 
   useEffect(() => {
     // 1. Search Control
-    const provider = new OpenStreetMapProvider({
-      params: {
-        'accept-language': 'vi',
-        countrycodes: 'vn',
+    const provider = new EsriProvider()
+
+    // Catch unhandled promise rejections when Nominatim blocks the request (e.g. VPN)
+    const originalSearch = provider.search.bind(provider)
+    provider.search = async (options: any) => {
+      try {
+        return await originalSearch(options)
+      } catch (error) {
+        console.error('GeoSearch Error:', error)
+        alert('Không thể tìm kiếm địa chỉ do kết nối mạng bị chặn (VPN/Proxy) hoặc máy chủ bản đồ quá tải. Vui lòng tắt VPN hoặc tự kéo thả bản đồ.')
+        return []
       }
-    })
+    }
     
     // @ts-ignore: Khởi tạo GeoSearchControl bị báo lỗi type do thiếu interface khai báo chuẩn
     const searchControl = new GeoSearchControl({
@@ -64,7 +79,7 @@ function SearchAndLocateInit() {
         container.onclick = (e) => {
           e.preventDefault()
           e.stopPropagation()
-          map.locate({ setView: true, maxZoom: 16 })
+          map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true })
         }
         return container
       }
@@ -72,9 +87,27 @@ function SearchAndLocateInit() {
     const locateControl = new LocateControl()
     map.addControl(locateControl)
 
+    const onLocationFound = (e: L.LocationEvent) => {
+      if ((window as any)._myLocationMarker) {
+        map.removeLayer((window as any)._myLocationMarker)
+      }
+      const marker = L.marker(e.latlng).addTo(map)
+        .bindPopup('Vị trí hiện tại của bạn').openPopup()
+      ;(window as any)._myLocationMarker = marker
+    }
+
+    const onLocationError = (_e: L.ErrorEvent) => {
+      alert('Không thể định vị. Vui lòng kiểm tra xem trình duyệt đã được cấp quyền vị trí chưa.')
+    }
+
+    map.on('locationfound', onLocationFound)
+    map.on('locationerror', onLocationError)
+
     return () => {
       map.removeControl(searchControl)
       map.removeControl(locateControl)
+      map.off('locationfound', onLocationFound)
+      map.off('locationerror', onLocationError)
     }
   }, [map])
 

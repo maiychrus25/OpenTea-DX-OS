@@ -11,7 +11,7 @@ interface KeycloakProfile {
 }
 
 // Internal Keycloak URL (container-to-container) dùng cho token/userinfo
-const KEYCLOAK_INTERNAL = process.env.KEYCLOAK_INTERNAL_URL || "http://keycloak:8080/realms/agrimarket"
+const KEYCLOAK_INTERNAL = process.env.KEYCLOAK_INTERNAL_URL || process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket"
 // External Keycloak URL (browser redirect) dùng cho authorization
 const KEYCLOAK_EXTERNAL = process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket"
 
@@ -39,9 +39,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       profile(profile: any) {
         return {
           id: profile.sub,
-          name: profile.name ?? profile.preferred_username,
-          email: profile.email,
-          image: profile.picture,
+          name: profile.name || profile.preferred_username || "Unknown",
+          email: profile.email || `${profile.preferred_username}@agrimarket.local`,
+          image: profile.picture || null,
         }
       }
     }
@@ -51,6 +51,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Lưu idToken để dùng cho Keycloak logout (xóa SSO session)
       if (account?.id_token) {
         token.idToken = account.id_token
+      }
+
+      // CRITICAL: Ghi đè token.sub bằng Keycloak user ID thực
+      // NextAuth v5 có thể tự tạo internal sub khác với OIDC sub claim
+      // providerAccountId chính là giá trị "sub" từ Keycloak ID token
+      if (account?.providerAccountId) {
+        token.sub = account.providerAccountId
       }
 
       if (profile) {

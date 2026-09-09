@@ -74,7 +74,7 @@ describe('TTS API Routes', () => {
     })
 
     it('returns 400 if validation fails (too long)', async () => {
-      const longText = 'a'.repeat(501)
+      const longText = 'a'.repeat(2001)
       const req = createPostRequest({ text: longText })
       const res = await POST(req, {}) as any
       expect(res.status).toBe(400)

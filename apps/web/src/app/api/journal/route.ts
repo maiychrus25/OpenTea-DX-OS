@@ -31,9 +31,16 @@ async function getJournalEntries(request: Request) {
   const page = parseInt(url.searchParams.get('page') ?? '1', 10)
   const limit = parseInt(url.searchParams.get('limit') ?? '20', 10)
 
+  // Lấy tạm role do NextAuth type chưa extend
   const role = (session.user as any).role
   // Farmer can only see their own household's entries
-  const householdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined
+  // Officer/Manager can optionally filter by householdId query param
+  let householdId: string | undefined
+  if (role === 'farmer') {
+    householdId = await getFarmerHouseholdId((session.user as any).id)
+  } else {
+    householdId = url.searchParams.get('householdId') ?? undefined
+  }
 
   const repo = new PrismaJournalRepository()
   const useCase = new ListJournalEntriesUseCase(repo)
@@ -52,6 +59,7 @@ async function postJournalEntry(request: Request) {
   if (!session?.user) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
+  // Lấy tạm role do NextAuth type chưa extend
   const role = (session.user as any).role
   if (role !== 'officer' && role !== 'farmer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Only officer/farmer can create journal entries' } }, { status: 403 })

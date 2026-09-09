@@ -28,6 +28,7 @@ describe('ReviewDiseaseReportUseCase', () => {
       broadcastDiseaseReport: jest.fn(),
       broadcastHarvestApproved: jest.fn(),
       broadcastAnnouncement: jest.fn(),
+      createNotification: jest.fn(),
       sendDirectNotification: jest.fn(),
     };
     useCase = new ReviewDiseaseReportUseCase(mockDiseasePort, mockNotificationPort);

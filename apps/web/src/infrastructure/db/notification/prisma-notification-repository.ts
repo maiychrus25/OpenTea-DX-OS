@@ -9,18 +9,14 @@ import { sseEmitter, SSE_EVENTS } from '@/lib/sse-emitter';
 
 export class PrismaNotificationRepository implements NotificationPort {
   async getRecentByUserId(userId: string, limit: number, filter?: string): Promise<Notification[]> {
-    const where: any = {
-      OR: [
-        { recipient_id: userId },
-        { recipient_id: null }
-      ]
-    };
-    if (filter === 'unread') {
-      where.is_read = false;
-    }
-
     return await prisma.notification.findMany({
-      where,
+      where: {
+        OR: [
+          { recipient_id: userId },
+          { recipient_id: null }, // Broadcast notifications (gửi cho tất cả)
+        ],
+        ...(filter === 'unread' ? { is_read: false } : filter ? { type: filter as any } : {}),
+      },
       orderBy: { created_at: 'desc' },
       take: limit,
     });
@@ -40,86 +36,81 @@ export class PrismaNotificationRepository implements NotificationPort {
     }
   }
 
-  async broadcastDiseaseReport(householdName: string, diseaseName: string, parcelCode: string): Promise<void> {
-    const households = await prisma.household.findMany({
-      where: { keycloak_user_id: { not: null } },
-      select: { keycloak_user_id: true },
+  async createNotification(data: Omit<Notification, 'id' | 'created_at' | 'is_read'>): Promise<Notification> {
+    return await prisma.notification.create({
+      data: {
+        recipient_id: data.recipient_id,
+        type: data.type as any,
+        title: data.title,
+        body: data.body,
+        deep_link_url: data.deep_link_url,
+      }
     });
-    
-    if (households.length > 0) {
-      await prisma.notification.createMany({
-        data: households.map(h => ({
-          type: NotificationType.DISEASE_REPORT,
-          title: 'Báo cáo sâu bệnh mới',
-          body: `Nông hộ ${householdName} vừa báo cáo bệnh ${diseaseName} tại thửa đất ${parcelCode}.`,
-          recipient_id: h.keycloak_user_id,
-        }))
-      });
-      sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { broadcast: true });
-    }
+  }
+
+  async broadcastDiseaseReport(householdName: string, diseaseName: string, parcelCode: string): Promise<void> {
+    await prisma.notification.create({
+      data: {
+        type: NotificationType.DISEASE_REPORT,
+        title: 'Báo cáo sâu bệnh mới',
+        body: `Nông hộ ${householdName} vừa báo cáo bệnh ${diseaseName} tại thửa đất ${parcelCode}.`,
+        recipient_id: null,
+      },
+    });
   }
 
   async broadcastHarvestApproved(parcelCode: string, officerId: string): Promise<void> {
-    const households = await prisma.household.findMany({
-      where: { keycloak_user_id: { not: null } },
-      select: { keycloak_user_id: true },
+    await prisma.notification.create({
+      data: {
+        type: NotificationType.HARVEST_APPROVED,
+        title: 'Thu hoạch được duyệt',
+        body: `Thửa đất ${parcelCode} đã được duyệt thu hoạch bởi cán bộ.`,
+        recipient_id: null,
+        deep_link_url: `/officer/farm-zones?parcel=${parcelCode}`,
+      },
     });
-    
-    if (households.length > 0) {
-      await prisma.notification.createMany({
-        data: households.map(h => ({
-          type: NotificationType.HARVEST_APPROVED,
-          title: 'Phê duyệt thu hoạch',
-          body: `Thửa đất ${parcelCode} đã được cán bộ phê duyệt đủ điều kiện thu hoạch.`,
-          recipient_id: h.keycloak_user_id,
-          sender_id: officerId,
-        }))
-      });
+    void officerId;
+  }
+
+  async sendDirectNotification(recipientId: string, type: string, title: string, body: string, referenceId?: string): Promise<void> {
+    const notif = await prisma.notification.create({
+      data: {
+        type: type as any,
+        title,
+        body,
+        recipient_id: recipientId,
+        deep_link_url: referenceId ? `/officer/disease-reports/${referenceId}` : undefined,
+      },
+    });
+    if (notif.recipient_id) {
+      sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { userId: notif.recipient_id });
+    } else {
       sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { broadcast: true });
     }
   }
 
   async broadcastAnnouncement(title: string, body: string, senderId: string): Promise<void> {
-    const households = await prisma.household.findMany({
-      where: { keycloak_user_id: { not: null } },
-      select: { keycloak_user_id: true },
-    });
-    
-    if (households.length > 0) {
-      await prisma.notification.createMany({
-        data: households.map(h => ({
-          type: NotificationType.ANNOUNCEMENT,
-          title,
-          body,
-          recipient_id: h.keycloak_user_id,
-          sender_id: senderId,
-        }))
-      });
-      sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { broadcast: true });
-    }
-  }
-
-  async sendDirectNotification(userId: string, type: any, title: string, body: string, _relatedId?: string): Promise<void> {
     await prisma.notification.create({
       data: {
-        type: type,
+        type: NotificationType.BROADCAST,
         title,
         body,
-        recipient_id: userId
-      }
+        recipient_id: null,
+        deep_link_url: `/manager/announcements`,
+      },
     });
-    sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { userId });
+    void senderId;
+  }
+
+  async updatePreferences(userId: string, preferences?: Record<string, unknown>): Promise<void> {
+    // Notification preferences — MVP placeholder
+    void userId;
+    void preferences;
   }
 
   async delete(userId: string, id: string): Promise<void> {
     await prisma.notification.deleteMany({
-      where: { id, recipient_id: userId }
+      where: { id, recipient_id: userId },
     });
-  }
-
-  async updatePreferences(_userId: string, _preferences: any): Promise<void> {
-    // In a real application, this would update a user_preferences table
-    // For Epic 10.2 contract, we mock this success
-    return Promise.resolve();
   }
 }

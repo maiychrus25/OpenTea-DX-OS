@@ -44,7 +44,7 @@ describe('HouseholdProfile UI', () => {
                 id: 'p1',
                 crop_type: 'Cà phê',
                 season: 'Mùa khô 2026',
-                status: 'GROWING'
+                status: 'TENDING'
               }
             ]
           })

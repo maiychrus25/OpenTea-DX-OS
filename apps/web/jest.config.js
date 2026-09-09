@@ -12,8 +12,11 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^react-markdown$': '<rootDir>/__tests__/__mocks__/react-markdown.tsx',
+    '^remark-gfm$': '<rootDir>/__tests__/__mocks__/remark-plugin.ts',
+    '^remark-breaks$': '<rootDir>/__tests__/__mocks__/remark-plugin.ts',
   },
-  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/', '<rootDir>/tests/e2e/', '<rootDir>/e2e/'],
+  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/', '<rootDir>/tests/e2e/', '<rootDir>/e2e/', '<rootDir>/__tests__/__mocks__/'],
   modulePathIgnorePatterns: ['<rootDir>/.next/']
 };
 

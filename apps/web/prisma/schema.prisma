@@ -3,8 +3,8 @@
 
 // apps/web/prisma/schema.prisma
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "windows", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -336,6 +336,7 @@ model WeatherCache {
   precipitation_mm Float
   humidity_pct     Float
   source           String   @default("open-meteo")
+  forecast_json    Json?
 
   @@unique([parcel_id, recorded_at])
   @@map("weather_cache")

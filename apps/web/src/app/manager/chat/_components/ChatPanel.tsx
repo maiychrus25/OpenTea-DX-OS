@@ -5,6 +5,9 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, Bot, User, Loader2, AlertCircle, BookOpen } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
 import styles from './chat-panel.module.css'
 
 interface ChatMessage {
@@ -96,15 +99,18 @@ export function ChatPanel({ userId, userName }: ChatPanelProps) {
       const decoder = new TextDecoder()
       let fullText = ''
       let sources: string[] = []
+      let buffer = ''
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
-        const text = decoder.decode(value, { stream: true })
-        const lines = text.split('\n').filter(Boolean)
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
 
         for (const line of lines) {
+          if (!line.trim()) continue
           try {
             const data = JSON.parse(line)
 
@@ -209,7 +215,18 @@ export function ChatPanel({ userId, userName }: ChatPanelProps) {
             </div>
             <div className={styles.messageContent}>
               <div className={styles.messageText}>
-                {msg.content ? msg.content.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').trim() : (msg.isStreaming && <Loader2 size={16} className={styles.spin} />)}
+                {msg.content ? (
+                  <div className={styles.markdownContent}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                      {msg.content.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').trim()}
+                    </ReactMarkdown>
+                    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '11px', color: 'var(--color-primary)' }}>
+                      DEBUG: {JSON.stringify(msg.content)}
+                    </pre>
+                  </div>
+                ) : (
+                  msg.isStreaming && <Loader2 size={16} className={styles.spin} />
+                )}
               </div>
               {msg.isStreaming && msg.content && (
                 <span className={styles.cursor}>▊</span>

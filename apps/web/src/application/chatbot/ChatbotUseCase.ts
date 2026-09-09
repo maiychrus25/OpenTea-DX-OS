@@ -2,10 +2,9 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import OpenAI from 'openai'
-// TODO(issue-239): Refactor to inject IChatHistoryRepository port via constructor
-// Currently imports prisma directly for chat history persistence (AD-15 violation, tech debt).
-// Plan: create IChatHistoryRepository in domain/repositories + PrismaChatHistoryRepository in infrastructure.
-import { prisma } from '@/infrastructure/db/prisma.client'
+// TODO(issue-239): Done replacing Prisma with Ports
+import { MarketDataPort } from '@/domain/ports/market-data-port'
+import { ChatHistoryPort } from '@/domain/ports/chat-history-port'
 import { logger } from '@/lib/logger'
 
 export interface ChatMessage {
@@ -48,7 +47,11 @@ export class ChatbotUseCase {
   private client: OpenAI | null = null
   private model: string
 
-  constructor(private documentStorage?: DocumentStoragePort) {
+  constructor(
+    private documentStorage?: DocumentStoragePort,
+    private chatHistory?: ChatHistoryPort,
+    private marketData?: MarketDataPort
+  ) {
     this.model = process.env.OLLAMA_MODEL || 'qwen2:0.5b'
 
     const groqApiKey = process.env.GROQ_API_KEY
@@ -89,25 +92,24 @@ export class ChatbotUseCase {
     const encoder = new TextEncoder()
 
     // Persist user message
-    if (userId && sessionId) {
-      await this.persistMessage(sessionId, userId, 'user', message, chatType)
+    if (userId && sessionId && this.chatHistory) {
+      await this.chatHistory.persistMessage(sessionId, userId, 'user', message, chatType)
     }
 
     // Fetch RAG context
     let ragContextStr = ''
     try {
       if (chatType === 'market') {
-        const twoDaysAgo = new Date()
-        twoDaysAgo.setHours(twoDaysAgo.getHours() - 48)
+        const timeWindow = new Date()
+        timeWindow.setDate(timeWindow.getDate() - 30) // Nới lỏng thành 30 ngày cho môi trường prototype
 
-        const recentMarketData = await prisma.marketData.findMany({
-          where: { fetched_at: { gte: twoDaysAgo } },
-          orderBy: { fetched_at: 'desc' },
-          take: 50,
-        })
-        const latestFx = await prisma.fxRate.findFirst({
-          orderBy: { fetched_at: 'desc' },
-        })
+        let recentMarketData: any[] = []
+        let latestFx: any = null
+        
+        if (this.marketData) {
+          recentMarketData = await this.marketData.getRecentMarketData(timeWindow, 50)
+          latestFx = await this.marketData.getLatestFxRate()
+        }
 
         if (recentMarketData.length > 0 || latestFx) {
           ragContextStr += `\n\n--- DỮ LIỆU THỊ TRƯỜNG THỰC TẾ TRONG 48H QUA (DÙNG ĐỂ TRẢ LỜI): ---\n`
@@ -124,7 +126,11 @@ export class ChatbotUseCase {
         if (!this.documentStorage) {
           throw new Error('DocumentStoragePort is required for technical chatbot')
         }
-        const docs = await this.documentStorage.listDocuments('para/')
+        const [resourceDocs, areaDocs] = await Promise.all([
+          this.documentStorage.listDocuments('para/Resources/'),
+          this.documentStorage.listDocuments('para/Areas/')
+        ])
+        const docs = [...resourceDocs, ...areaDocs]
         const textDocs = docs.filter(d => !d.isDir && (d.name.endsWith('.txt') || d.name.endsWith('.md')))
         
         // Limit to 5 most recent to avoid blowing up context window
@@ -168,9 +174,10 @@ export class ChatbotUseCase {
       })
 
       let fullReply = ''
-      // Capture model name before entering ReadableStream callback
+      // Capture model name and chatHistory before entering ReadableStream callback
       // (inside start(), 'this' refers to UnderlyingDefaultSource, not class instance)
       const modelName = this.model
+      const chatHistoryRepo = this.chatHistory
 
       return new ReadableStream({
         async start(controller) {
@@ -199,17 +206,15 @@ export class ChatbotUseCase {
             controller.close()
 
             // Persist assistant reply (fire-and-forget)
-            if (userId && sessionId) {
-              prisma.chatHistory.create({
-                data: {
-                  session_id: sessionId,
-                  user_id: userId,
-                  role: 'ASSISTANT',
-                  content: cleanReply,
-                  sources_json: sources,
-                  chat_type: chatType,
-                },
-              }).catch(err => logger.error('Failed to persist chat reply', { error: err }))
+            if (userId && sessionId && chatHistoryRepo) {
+              chatHistoryRepo.persistMessage(
+                sessionId,
+                userId,
+                'assistant',
+                cleanReply,
+                chatType,
+                sources
+              ).catch((err: unknown) => logger.error('Failed to persist chat reply', { error: err }))
             }
           } catch {
             controller.enqueue(encoder.encode(JSON.stringify({
@@ -240,48 +245,26 @@ export class ChatbotUseCase {
   }
 
   static extractSources(text: string): string[] {
-    const sourceLines = text.split('\n').filter(line =>
-      line.trim().toLowerCase().startsWith('nguồn:') ||
-      line.trim().toLowerCase().startsWith('- nguồn:') ||
-      line.trim().startsWith('- ') && line.includes('(') && line.includes(')')
-    )
-    return sourceLines.map(l => l.replace(/^[-*]\s*/, '').replace(/^nguồn:\s*/i, '').trim()).filter(Boolean)
+    const sourceLines = text.split('\n').filter(line => {
+      const l = line.trim().toLowerCase();
+      if (l.startsWith('nguồn:') || l.startsWith('- nguồn:')) return true;
+      if (l.startsWith('- ') && (l.includes('[comtrade]') || l.includes('[wto]') || l.includes('[faostat]') || l.includes('bộ nn') || l.includes('vfa'))) return true;
+      return false;
+    })
+    return sourceLines.map(l => l.replace(/^[-*]\s*/, '').replace(/^nguồn( tham khảo)?:\s*/i, '').trim()).filter(Boolean)
   }
 
   async getHistory(userId: string, sessionId: string, chatType: 'market' | 'technical' = 'market'): Promise<ChatMessage[]> {
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    const records = await prisma.chatHistory.findMany({
-      where: {
-        user_id: userId,
-        session_id: sessionId,
-        chat_type: chatType,
-        created_at: { gte: sevenDaysAgo },
-      },
-      orderBy: { created_at: 'asc' },
-      take: 50,
-    })
-
-    return records.map(r => ({
-      role: r.role === 'USER' ? 'user' as const : 'assistant' as const,
-      content: r.content,
-    }))
+    if (this.chatHistory) {
+      return this.chatHistory.getHistory(userId, sessionId, chatType)
+    }
+    return []
   }
 
-  private async persistMessage(sessionId: string, userId: string, role: 'user' | 'assistant', content: string, chatType: 'market' | 'technical'): Promise<void> {
-    try {
-      await prisma.chatHistory.create({
-        data: {
-          session_id: sessionId,
-          user_id: userId,
-          role: role === 'user' ? 'USER' : 'ASSISTANT',
-          content,
-          chat_type: chatType,
-        },
-      })
-    } catch (err) {
-      logger.error('Failed to persist chat message', { error: err })
+  async getSessions(userId: string, chatType: 'market' | 'technical' = 'market') {
+    if (this.chatHistory) {
+      return this.chatHistory.getSessions(userId, chatType)
     }
+    return []
   }
 }

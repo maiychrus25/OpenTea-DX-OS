@@ -95,6 +95,29 @@ KHÔNG ĐƯỢC:
 - Không hardcode màu sắc — dùng `var(--primary)`, `var(--border)`, v.v.
 - Tham khảo `docs/DESIGN.md` cho component patterns và design tokens chuẩn
 
+### Icons & UI Design Invariant (Tuyệt Đối Cấm Dùng Emoji)
+
+> **Quy tắc tuyệt đối:** Tuyệt đối **KHÔNG ĐƯỢC PHÉP** sử dụng emoji thô hoặc các ký tự biểu tượng Unicode rời rạc (như `⚠️`, `✓`, `✕`, `✗`, `⌛`, `⏳`, `🔒`, `📱`, `📞`, `📍`, `📊`, `🔴`, `🟢`, `ℹ️`, `🎉`, `🧑‍🌾`, `🌾`, `🌱`, v.v.) trong bất kỳ giao diện người dùng (UI), JSX/TSX, CSS Modules hay string templates nào.
+> Mọi biểu tượng trực quan **BẮT BUỘC** phải sử dụng icon chuẩn từ thư viện **`lucide-react`**.
+
+```
+PHẢI:
+✅ Dùng Lucide React vector icons (lucide-react đã cài sẵn trong dự án)
+✅ Dùng named imports: import { Check, AlertTriangle, ArrowRight, Clock } from 'lucide-react'
+✅ Tuân thủ Accessible Rich Internet Applications (ARIA / a11y):
+   - Icon trang trí đi kèm văn bản: thêm aria-hidden="true" (hoặc aria-hidden)
+   - Nút bấm / liên kết chỉ chứa icon (icon-only): BẮT BUỘC có aria-label (e.g. aria-label="Đóng", aria-label="Xóa ảnh")
+✅ Quy định kích thước rõ ràng qua prop size={16}/size={20} hoặc class Tailwind CSS (w-4 h-4, w-5 h-5)
+✅ Điều hướng phân trang/bước/quay lại: dùng <ArrowLeft />, <ArrowRight />, <ChevronRight />, KHÔNG dùng ký tự '←', '→'
+✅ Pseudo-elements trong CSS (::before, ::after): Dùng SVG Data URI hoặc styled component, KHÔNG dùng content: '✓' hay content: '⚠️'
+
+KHÔNG ĐƯỢC:
+❌ Tuyệt đối KHÔNG viết trực tiếp emoji Unicode vào JSX, component text hay title/heading
+❌ Tuyệt đối KHÔNG chèn emoji vào chuỗi template dữ liệu động hiển thị cho người dùng
+❌ KHÔNG cài đặt thêm thư viện icon bên thứ ba khác (e.g. font-awesome, react-icons) — chỉ dùng lucide-react
+❌ KHÔNG dùng inline CSS để chỉnh icon — dùng Tailwind classes hoặc CSS Modules
+```
+
 ### Không để lại
 - `console.log` trong committed code (dùng proper error handling)
 - `TODO` không có issue number (format: `// TODO(issue-42): description`)

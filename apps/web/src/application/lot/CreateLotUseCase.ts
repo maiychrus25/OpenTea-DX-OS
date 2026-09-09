@@ -27,7 +27,7 @@ export class CreateLotUseCase {
         }
 
         // 2. Validate Parcel Status
-        if (!['GROWING', 'HARVEST_APPROVED', 'HARVESTED'].includes(parcel.status)) {
+        if (!['TENDING', 'HARVEST_APPROVED', 'HARVESTED'].includes(parcel.status)) {
           throw new DomainError(`Thửa đất ${parcel.parcel_code} không ở trạng thái hợp lệ để thu hoạch. Status: ${parcel.status}`)
         }
 

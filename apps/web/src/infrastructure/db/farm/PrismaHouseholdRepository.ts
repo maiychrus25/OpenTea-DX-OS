@@ -116,4 +116,41 @@ export class PrismaHouseholdRepository implements HouseholdPort {
       keycloak_user_id: h.keycloak_user_id,
     }
   }
+  async findOrphanedByPhone(phone: string): Promise<HouseholdSummary | null> {
+    const h = await prisma.household.findFirst({
+      where: {
+        phone: phone,
+        keycloak_user_id: null,
+      },
+      include: {
+        parcels: { select: { area_ha: true } },
+      },
+    })
+    if (!h) return null
+
+    return {
+      id: h.id,
+      household_code: h.phone,
+      name: h.name,
+      phone: h.phone,
+      address: h.address,
+      parcel_count: h.parcels.length,
+      total_area_ha: h.parcels.reduce((sum, p) => sum + p.area_ha, 0),
+      keycloak_user_id: h.keycloak_user_id,
+    }
+  }
+
+  async linkToKeycloak(id: string, keycloakUserId: string): Promise<void> {
+    await prisma.household.update({
+      where: { id },
+      data: { keycloak_user_id: keycloakUserId },
+    })
+  }
+
+  async unlinkFromKeycloak(keycloakUserId: string): Promise<void> {
+    await prisma.household.updateMany({
+      where: { keycloak_user_id: keycloakUserId },
+      data: { keycloak_user_id: null },
+    })
+  }
 }

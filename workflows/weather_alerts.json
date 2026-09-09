@@ -1,5 +1,6 @@
 {
-  "note": "File export t\u1eeb n8n: Lu\u1ed3ng c\u1ea3nh b\u00e1o th\u1eddi ti\u1ebft Open-Meteo",
+  "name": "Weather Alerts",
+  "note": "File export từ n8n: Luồng cảnh báo thời tiết Open-Meteo",
   "nodes": [
     {
       "parameters": {},

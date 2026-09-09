@@ -8,8 +8,9 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pill } from '@/components/ui/Pill';
 import { Modal } from '@/components/ui/Modal';
-import { Member, MemberRole } from './mock-data';
+import { Member } from './mock-data';
 import { InvitationModal } from './invitation-modal';
+import { toast } from 'sonner';
 
 export function MemberList() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -26,7 +27,7 @@ export function MemberList() {
   const fetchMembers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/members?role=farmer');
+      const res = await fetch('/api/members');
       if (!res.ok) throw new Error('Failed to fetch members');
       const json = await res.json();
       setMembers(json.data || []);
@@ -41,22 +42,7 @@ export function MemberList() {
     fetchMembers();
   }, [fetchMembers]);
 
-  const handleInvite = async (email: string, role: string) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    
-    const newMember: Member = {
-      id: `m${Date.now()}`,
-      name: 'Chưa cập nhật',
-      email,
-      phone: 'Chưa cập nhật',
-      role: role as MemberRole,
-      status: 'PENDING',
-      invitedAt: new Date().toISOString(),
-    };
-    
-    setMembers((prev) => [newMember, ...prev]);
-  };
+
 
   const handleApprove = (id: string) => {
     setConfirmModal({ isOpen: true, action: 'APPROVE', memberId: id });
@@ -74,15 +60,25 @@ export function MemberList() {
     try {
       if (action === 'APPROVE') {
         const res = await fetch(`/api/members/${memberId}/approve`, { method: 'POST' });
-        if (!res.ok) throw new Error('Failed to approve member');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error?.message || 'Failed to approve member');
+        }
         await fetchMembers();
+        toast.success('Đã duyệt thành viên thành công!');
       } else if (action === 'DELETE') {
         const res = await fetch(`/api/members/${memberId}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Failed to delete member');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error?.message || 'Failed to delete member');
+        }
         setMembers((prev) => prev.filter((m) => m.id !== memberId));
+        toast.success('Đã xóa thành viên thành công!');
       }
-    } catch (error) {
-      alert(`Đã xảy ra lỗi khi ${action === 'APPROVE' ? 'duyệt' : 'xóa'} thành viên.`);
+    } catch (error: unknown) {
+      console.error(error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
+      toast.error(errorMessage || `Đã xảy ra lỗi khi ${action === 'APPROVE' ? 'duyệt' : 'xóa'} thành viên.`);
     } finally {
       setIsProcessing(false);
       setConfirmModal({ isOpen: false, action: null, memberId: null });
@@ -123,7 +119,7 @@ export function MemberList() {
         </div>
 
         <Button onClick={() => setIsInviteModalOpen(true)} variant="primary">
-          Mời thành viên
+          + Thêm thành viên
         </Button>
       </div>
 
@@ -175,9 +171,9 @@ export function MemberList() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-ink-secondary)]">
-                      {member.role === 'FARMER' && 'Nông dân'}
-                      {member.role === 'OFFICER' && 'Cán bộ kỹ thuật'}
-                      {member.role === 'MANAGER' && 'Trưởng HTX'}
+                      {member.role?.toUpperCase() === 'FARMER' && 'Nông dân'}
+                      {member.role?.toUpperCase() === 'OFFICER' && 'Cán bộ kỹ thuật'}
+                      {member.role?.toUpperCase() === 'MANAGER' && 'Trưởng HTX'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Pill tone={getStatusBadgeVariant(member.status)}>
@@ -210,11 +206,7 @@ export function MemberList() {
         </div>
       </Card>
 
-      <InvitationModal
-        isOpen={isInviteModalOpen}
-        onClose={() => setIsInviteModalOpen(false)}
-        onInvite={handleInvite}
-      />
+
 
       <Modal
         isOpen={confirmModal.isOpen}
@@ -246,6 +238,13 @@ export function MemberList() {
           </div>
         </div>
       </Modal>
+
+      {/* Invitation Modal */}
+      <InvitationModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        onSuccess={() => fetchMembers()}
+      />
     </div>
   );
 }

@@ -17,6 +17,7 @@ describe('MarkNotificationReadUseCase', () => {
       updatePreferences: jest.fn(),
       broadcastAnnouncement: jest.fn(),
       broadcastHarvestApproved: jest.fn(),
+      createNotification: jest.fn(),
       sendDirectNotification: jest.fn(),
     }
     useCase = new MarkNotificationReadUseCase(mockPort)

@@ -10,7 +10,7 @@ export class MinioStorageAdapter implements StoragePort {
   private bucketName: string
 
   constructor() {
-    this.bucketName = process.env.MINIO_BUCKET_NAME || 'agrimarket-docs'
+    this.bucketName = process.env.MINIO_BUCKET_NAME || 'agrimarket-private'
     
     // Internal client for server-to-minio communication (e.g., minio:9000)
     this.minioClient = new Client({
@@ -60,7 +60,7 @@ export class MinioStorageAdapter implements StoragePort {
   }
 
   async uploadFile(fileBuffer: Buffer, fileName: string, mimeType: string): Promise<UploadResult> {
-    const key = `disease-reports/${Date.now()}-${fileName}`
+    const key = `para/Archives/Disease_Photos/${Date.now()}-${fileName}`
 
     // Ensure bucket exists
     const exists = await this.minioClient.bucketExists(this.bucketName)

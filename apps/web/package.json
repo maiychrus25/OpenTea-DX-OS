@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first next dev",
+    "dev": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first next dev -p 3000",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -36,6 +36,8 @@
     "react-hook-form": "^7.85.0",
     "react-leaflet": "^4.2.1",
     "react-markdown": "^10.1.0",
+    "remark-breaks": "^4.0.0",
+    "remark-gfm": "^4.0.1",
     "remove-markdown": "^0.6.4",
     "sonner": "^2.0.8",
     "swr": "^2.5.1",
