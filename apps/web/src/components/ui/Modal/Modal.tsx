@@ -61,16 +61,25 @@ export const Modal: React.FC<ModalProps> = ({
     }
   }, [isOpen])
 
+  // Handle Escape key manually to avoid StrictMode issues with FocusTrap onDeactivate
+  useEffect(() => {
+    if (!isOpen) return
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   return (
     <FocusTrap
       active={isOpen}
       focusTrapOptions={{
-        onDeactivate: onClose,
         allowOutsideClick: true,
         clickOutsideDeactivates: false,
-        escapeDeactivates: true,
+        escapeDeactivates: false, // Handled manually above
       }}
     >
       <div className={styles.overlay} onClick={onClose}>

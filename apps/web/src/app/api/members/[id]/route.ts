@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter'
 import { DeleteMemberUseCase } from '@/application/auth/delete-member.use-case'
+import { prisma } from '@/infrastructure/db/prisma.client'
 
 export async function DELETE(
   _request: Request,
@@ -22,8 +23,16 @@ export async function DELETE(
     const adapter = new KeycloakAdminAdapter()
     const useCase = new DeleteMemberUseCase(adapter)
     await useCase.execute(params.id)
+
+    // Unlink from PostgreSQL Household so it becomes orphaned again
+    await prisma.household.updateMany({
+      where: { keycloak_user_id: params.id },
+      data: { keycloak_user_id: null }
+    })
+
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    return NextResponse.json({ error: { message: error.message } }, { status: 500 })
+    console.error('Delete Member Error:', error);
+    return NextResponse.json({ error: { message: error.message || 'Unknown error' } }, { status: 500 })
   }
 }

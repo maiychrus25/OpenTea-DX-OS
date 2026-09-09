@@ -47,12 +47,13 @@ export default async function OfficerDiseasesPage() {
               </div>
 
               {report.photo_url && (
-                <div style={{ position: 'relative', width: '100%', height: '200px' }}>
+                <div className={styles.imageWrapper}>
                   <Image 
                     src={report.photo_url} 
                     alt="Ảnh bệnh" 
                     fill 
-                    style={{ objectFit: 'cover', borderRadius: '4px' }} 
+                    unoptimized
+                    className={styles.reportImage}
                   />
                 </div>
               )}

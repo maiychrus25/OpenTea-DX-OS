@@ -45,11 +45,11 @@ export function DocumentView() {
       const res = await fetch(`/api/documents?path=${encodeURIComponent(path)}`)
       if (res.ok) {
         const json = await res.json()
-        const items: DocumentItem[] = (json.data || []).map((item: any) => ({
+        const items: DocumentItem[] = (json.data?.documents || []).map((item: any) => ({
           id: item.key || item.name,
           name: item.name,
           size: item.size || 0,
-          uploadDate: item.lastModified ? new Date(item.lastModified) : new Date(),
+          uploadDate: item.uploadDate ? new Date(item.uploadDate) : new Date(),
           key: item.key,
           isDir: item.isDir || item.key?.endsWith('/') || false,
           tags: [],

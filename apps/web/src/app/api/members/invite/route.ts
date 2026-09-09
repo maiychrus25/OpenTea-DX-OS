@@ -58,19 +58,36 @@ async function inviteMember(request: Request) {
     htxId: htx.id,
   }, role, true) // enabled = true, login được ngay
 
-  // Step 2: Create Household in DB (only for farmer)
+  // Step 2: Create or Update Household in DB (only for farmer)
   let householdId: string | null = null
   if (role === 'farmer') {
-    const household = await prisma.household.create({
-      data: {
-        name: fullName,
-        phone,
-        address: address || null,
-        keycloak_user_id: keycloakUserId,
-        htx_profile_id: htx.id,
-      },
+    const orphanedHousehold = await prisma.household.findFirst({
+      where: {
+        phone: phone,
+        keycloak_user_id: null,
+      }
     })
-    householdId = household.id
+
+    if (orphanedHousehold) {
+      const updatedHousehold = await prisma.household.update({
+        where: { id: orphanedHousehold.id },
+        data: {
+          keycloak_user_id: keycloakUserId,
+        }
+      })
+      householdId = updatedHousehold.id
+    } else {
+      const household = await prisma.household.create({
+        data: {
+          name: fullName,
+          phone,
+          address: address || null,
+          keycloak_user_id: keycloakUserId,
+          htx_profile_id: htx.id,
+        },
+      })
+      householdId = household.id
+    }
   }
 
   const roleLabel = ROLE_LABELS[role] || role

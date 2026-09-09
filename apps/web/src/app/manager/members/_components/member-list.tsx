@@ -10,6 +10,7 @@ import { Pill } from '@/components/ui/Pill';
 import { Modal } from '@/components/ui/Modal';
 import { Member } from './mock-data';
 import { InvitationModal } from './invitation-modal';
+import { toast } from 'sonner';
 
 export function MemberList() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -59,15 +60,24 @@ export function MemberList() {
     try {
       if (action === 'APPROVE') {
         const res = await fetch(`/api/members/${memberId}/approve`, { method: 'POST' });
-        if (!res.ok) throw new Error('Failed to approve member');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error?.message || 'Failed to approve member');
+        }
         await fetchMembers();
+        toast.success('Đã duyệt thành viên thành công!');
       } else if (action === 'DELETE') {
         const res = await fetch(`/api/members/${memberId}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Failed to delete member');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error?.message || 'Failed to delete member');
+        }
         setMembers((prev) => prev.filter((m) => m.id !== memberId));
+        toast.success('Đã xóa thành viên thành công!');
       }
-    } catch (error) {
-      alert(`Đã xảy ra lỗi khi ${action === 'APPROVE' ? 'duyệt' : 'xóa'} thành viên.`);
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || `Đã xảy ra lỗi khi ${action === 'APPROVE' ? 'duyệt' : 'xóa'} thành viên.`);
     } finally {
       setIsProcessing(false);
       setConfirmModal({ isOpen: false, action: null, memberId: null });

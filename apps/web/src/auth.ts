@@ -53,6 +53,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.idToken = account.id_token
       }
 
+      // CRITICAL: Ghi đè token.sub bằng Keycloak user ID thực
+      // NextAuth v5 có thể tự tạo internal sub khác với OIDC sub claim
+      // providerAccountId chính là giá trị "sub" từ Keycloak ID token
+      if (account?.providerAccountId) {
+        token.sub = account.providerAccountId
+      }
+
       if (profile) {
         // Extract role from Keycloak realm_access (UserInfo endpoint)
         const kp = profile as KeycloakProfile;
