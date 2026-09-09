@@ -12,4 +12,5 @@ export interface StoragePort {
    */
   uploadFile(file: Buffer, fileName: string, mimeType: string): Promise<UploadResult>;
   getPresignedUrl(key: string, expiresIn?: number): Promise<string>;
+  getFileBuffer(key: string): Promise<Buffer>;
 }

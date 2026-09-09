@@ -14,6 +14,7 @@ describe('ListDocumentsUseCase', () => {
       generateDownloadUrl: jest.fn(),
       listDocuments: jest.fn(),
       getDocumentContent: jest.fn(),
+      uploadDocument: jest.fn(),
     }
     useCase = new ListDocumentsUseCase(mockStoragePort)
   })

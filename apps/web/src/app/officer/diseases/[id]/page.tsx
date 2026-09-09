@@ -51,8 +51,8 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
       .finally(() => setLoading(false));
   }, [params.id]);
 
-  const handleReview = async (status: 'APPROVED' | 'REJECTED') => {
-    if (status === 'APPROVED' && !treatment.trim()) {
+  const handleReview = async (status: 'CONFIRMED' | 'REJECTED') => {
+    if (status === 'CONFIRMED' && !treatment.trim()) {
       setError('Vui lòng nhập Hướng dẫn điều trị trước khi duyệt.');
       return;
     }
@@ -164,7 +164,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
             </Button>
             <Button 
               variant="primary" 
-              onClick={() => handleReview('APPROVED')}
+              onClick={() => handleReview('CONFIRMED')}
               disabled={submitting}
             >
               Phê duyệt

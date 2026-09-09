@@ -16,7 +16,16 @@ interface JournalEntry {
   entry_date?: string
   status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'REQUEST_CHANGES'
   hasDiseaseWarning?: boolean
-  activities: { activity_detail: string; product_name: string | null }[]
+  performed_by?: string
+  notes?: string
+  weather_temperature?: number
+  weather_condition?: string
+  activities?: {
+    activity_detail: string
+    product_name: string | null
+    dosage: string | null
+    withdrawal_days: number | null
+  }[]
 }
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -49,6 +58,7 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
   const [rejectEntryId, setRejectEntryId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [rejectType, setRejectType] = useState<'REJECTED' | 'REQUEST_CHANGES'>('REJECTED')
+  const [viewEntryId, setViewEntryId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
 
@@ -174,10 +184,14 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
                 <td>
                   {e.status === 'PENDING_APPROVAL' && (
                     <div className={styles.flexActions}>
+                      <button className={`${styles.viewBtn} ${styles.viewBtnPrimary}`} onClick={() => setViewEntryId(e.id)}>Xem</button>
                       <button className={styles.approveBtn} onClick={() => handleApprove(e.id)}>Duyệt</button>
                       <button className={styles.rejectBtn} onClick={() => handleRequestChanges(e.id)}>Yêu cầu sửa</button>
                       <button className={styles.rejectBtn} onClick={() => handleReject(e.id)}>Từ chối</button>
                     </div>
+                  )}
+                  {e.status !== 'PENDING_APPROVAL' && (
+                    <button className={`${styles.viewBtn} ${styles.viewBtnSecondary}`} onClick={() => setViewEntryId(e.id)}>Xem</button>
                   )}
                 </td>
               </tr>
@@ -222,6 +236,94 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
               }} 
               onCancel={() => setIsCreating(false)} 
             />
+          </div>
+        </div>
+      )}
+
+      {viewEntryId && (
+        <div className={styles.overlay} onClick={() => setViewEntryId(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 className={`${styles.modalTitle} ${styles.modalTitleMargin0}`}>Chi tiết Nhật ký</h2>
+              <button onClick={() => setViewEntryId(null)} className={styles.closeBtn}>&times;</button>
+            </div>
+            
+            {(() => {
+              const entry = entries.find(e => e.id === viewEntryId)
+              if (!entry) return null
+              
+              return (
+                <div className={styles.detailContainer}>
+                  <div className={styles.detailGrid}>
+                    <div>
+                      <span className={styles.detailLabel}>Mã thửa</span>
+                      <strong className={styles.detailValue}>{entry.parcel_code || entry.parcel_id || 'N/A'}</strong>
+                    </div>
+                    <div>
+                      <span className={styles.detailLabel}>Ngày thực hiện</span>
+                      <strong className={styles.detailValue}>{entry.entry_date ? new Date(entry.entry_date).toLocaleDateString('vi-VN') : 'N/A'}</strong>
+                    </div>
+                    <div>
+                      <span className={styles.detailLabel}>Người thực hiện</span>
+                      <strong className={styles.detailValue}>{entry.performed_by || 'N/A'}</strong>
+                    </div>
+                    <div>
+                      <span className={styles.detailLabel}>Thời tiết</span>
+                      <strong className={styles.detailValue}>
+                        {entry.weather_temperature ? `${entry.weather_temperature}°C` : 'N/A'} 
+                        {entry.weather_condition ? ` - ${entry.weather_condition}` : ''}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className={styles.sectionContainer}>
+                    <h3 className={styles.sectionTitle}>Ghi chú / Quan sát</h3>
+                    <p className={styles.notesContent}>
+                      {entry.notes || 'Không có ghi chú.'}
+                    </p>
+                  </div>
+
+                  <div className={styles.sectionContainer}>
+                    <h3 className={styles.sectionTitle}>Các hoạt động</h3>
+                    {entry.activities && entry.activities.length > 0 ? (
+                      <div className={styles.activityList}>
+                        {entry.activities.map((act, idx) => (
+                          <div key={idx} className={styles.activityCard}>
+                            <div className={styles.activityDetailName}>{formatDetail(act.activity_detail)}</div>
+                            <div className={styles.activityMeta}>
+                              {act.product_name && <span><strong>Sản phẩm:</strong> {act.product_name}</span>}
+                              {act.dosage && <span><strong>Liều lượng:</strong> {act.dosage}</span>}
+                              {act.withdrawal_days !== null && act.withdrawal_days !== undefined && (
+                                <span><strong>Cách ly:</strong> <span className={styles.activityWithdrawal}>{act.withdrawal_days} ngày</span></span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className={styles.noActivityText}>Không có chi tiết hoạt động.</p>
+                    )}
+                  </div>
+
+                  {entry.status === 'PENDING_APPROVAL' && (
+                    <div className={styles.actionFooter}>
+                      <button 
+                        onClick={() => { setViewEntryId(null); handleReject(entry.id); }} 
+                        className={styles.rejectActionBtn}
+                      >Từ chối</button>
+                      <button 
+                        onClick={() => { setViewEntryId(null); handleRequestChanges(entry.id); }} 
+                        className={styles.requestChangeActionBtn}
+                      >Yêu cầu sửa</button>
+                      <button 
+                        onClick={() => { setViewEntryId(null); handleApprove(entry.id); }} 
+                        className={styles.approveActionBtn}
+                      >Phê duyệt</button>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}

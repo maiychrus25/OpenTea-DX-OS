@@ -43,6 +43,7 @@ export function DocumentView() {
     setIsLoading(true)
     try {
       const res = await fetch(`/api/documents?path=${encodeURIComponent(path)}`)
+
       if (res.ok) {
         const json = await res.json()
         const items: DocumentItem[] = (json.data?.documents || []).map((item: any) => ({

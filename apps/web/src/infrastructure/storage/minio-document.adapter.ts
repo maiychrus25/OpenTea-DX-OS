@@ -139,4 +139,20 @@ export class MinioDocumentAdapter implements DocumentStoragePort {
       }
     })
   }
+
+  async uploadDocument(key: string, content: Buffer | string, mimeType?: string): Promise<void> {
+    await this.ensureBucketExists()
+    
+    const buffer = typeof content === 'string' ? Buffer.from(content, 'utf-8') : content
+    const metaData: { [key: string]: string } = {}
+    if (mimeType) {
+      metaData['Content-Type'] = mimeType
+    } else if (key.endsWith('.txt')) {
+      metaData['Content-Type'] = 'text/plain'
+    } else if (key.endsWith('.json')) {
+      metaData['Content-Type'] = 'application/json'
+    }
+
+    await this.minioClient.putObject(this.bucketName, key, buffer, buffer.length, metaData)
+  }
 }

@@ -52,6 +52,7 @@ function makeMockPorts(parcel: ParcelSummary | null = mockParcelOfFarmerA) {
       presignedUrl: 'https://minio.test/disease-reports/test.jpg',
     } satisfies UploadResult),
     getPresignedUrl: jest.fn().mockResolvedValue('https://minio.test/presigned'),
+    getFileBuffer: jest.fn(),
   }
   const parcelPort: jest.Mocked<ParcelPort> = {
     findById: jest.fn().mockResolvedValue(parcel),
