@@ -1,7 +1,0 @@
-.root { display: flex; flex-direction: column; gap: 12px; }
-.mapContainer { height: 600px; width: 100%; }
-.controls { display:flex; gap:8px; align-items:center }
-.list { max-height: 240px; overflow:auto }
-.card { padding:8px; border:1px solid #eee; margin-bottom:6px; }
-.btn { padding:6px 8px; border-radius:4px; cursor:pointer }
-.btnDanger { background:#ff4d4f; color:white }

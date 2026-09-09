@@ -3,7 +3,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import styles from '../journal.module.css'
 import { JournalForm } from './JournalForm'
@@ -16,9 +16,35 @@ interface JournalEntry {
   entry_date?: string
   status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'REQUEST_CHANGES'
   hasDiseaseWarning?: boolean
+  activities: { activity_detail: string; product_name: string | null }[]
 }
 
-export function OfficerJournalApproval() {
+const ACTIVITY_LABELS: Record<string, string> = {
+  SOWING: 'Gieo sạ',
+  FERTILIZING: 'Bón phân',
+  SPRAYING: 'Phun thuốc',
+  IRRIGATION: 'Tưới tiêu',
+  HARVEST: 'Thu hoạch',
+  OTHER: 'Khác',
+}
+
+function formatDetail(detail: string | null | undefined): string {
+  if (!detail) return '—'
+  if (ACTIVITY_LABELS[detail]) return ACTIVITY_LABELS[detail]
+  
+  for (const [key, label] of Object.entries(ACTIVITY_LABELS)) {
+    if (detail.startsWith(`${key}: `)) {
+      return detail.replace(`${key}: `, `${label}: `)
+    }
+  }
+  return detail
+}
+
+interface OfficerJournalApprovalProps {
+  householdId?: string
+}
+
+export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalProps) {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [rejectEntryId, setRejectEntryId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
@@ -26,22 +52,26 @@ export function OfficerJournalApproval() {
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
 
-  const load = async () => {
-      try {
-        const res = await fetch('/api/journal')
-        if (res.ok) {
-          const data = await res.json()
-          setEntries(data.data || [])
-        }
-      } catch {
-        // Error loading journal entries — handled silently
-      } finally {
-        setIsLoading(false)
+  const load = useCallback(async () => {
+    try {
+      const url = householdId
+        ? `/api/journal?householdId=${householdId}`
+        : '/api/journal'
+      const res = await fetch(url)
+      if (res.ok) {
+        const data = await res.json()
+        setEntries(data.data || [])
       }
+    } catch {
+      // Error loading journal entries — handled silently
+    } finally {
+      setIsLoading(false)
     }
+  }, [householdId])
+
   useEffect(() => {
     load()
-  }, [])
+  }, [load])
 
   const handleApprove = async (id: string) => {
     try {
@@ -134,7 +164,7 @@ export function OfficerJournalApproval() {
             entries.map(e => (
               <tr key={e.id}>
                 <td>{e.parcel_code || e.parcel_id || e.id.substring(0, 8)}</td>
-                <td>{e.activity_type || 'Không có'}</td>
+                <td>{formatDetail(e.activities?.[0]?.activity_detail)}</td>
                 <td>{e.entry_date ? new Date(e.entry_date).toLocaleDateString('vi-VN') : ''}</td>
                 <td>
                   <Pill tone={e.status === 'PENDING_APPROVAL' ? 'amber' : e.status === 'APPROVED' ? 'green' : e.status === 'REJECTED' ? 'neutral' : 'blue'}>

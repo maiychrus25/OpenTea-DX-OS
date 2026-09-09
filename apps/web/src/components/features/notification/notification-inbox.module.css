@@ -42,6 +42,16 @@
   color: var(--color-primary);
 }
 
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
 .title {
   font-size: 1.5rem;
   font-weight: 700;

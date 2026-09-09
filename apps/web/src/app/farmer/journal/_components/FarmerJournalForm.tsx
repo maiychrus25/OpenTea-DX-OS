@@ -20,7 +20,7 @@ interface FarmerJournalFormProps {
 const ACTIVITY_TYPES = [
   { value: 'SPRAYING', label: 'Phun thuốc' },
   { value: 'FERTILIZING', label: 'Bón phân' },
-  { value: 'IRRIGATION', label: 'Tưới nước' },
+  { value: 'IRRIGATION', label: 'Tưới tiêu' },
   { value: 'HARVEST', label: 'Thu hoạch' },
   { value: 'SOWING', label: 'Gieo sạ' },
   { value: 'OTHER', label: 'Khác' },
@@ -130,11 +130,11 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
           {activityType === 'SPRAYING' && (
             <>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Liều lượng (Dosage)</label>
+                <label className={styles.formLabel}>Liều lượng</label>
                 <input className={styles.formInput} value={dosage} onChange={e => setDosage(e.target.value)} placeholder="VD: 50ml/bình 16L" />
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Người thực hiện (Performer)</label>
+                <label className={styles.formLabel}>Người thực hiện</label>
                 <input className={styles.formInput} value={performer} onChange={e => setPerformer(e.target.value)} placeholder="VD: Nguyễn Văn A" />
               </div>
               <div className={styles.formGroup}>

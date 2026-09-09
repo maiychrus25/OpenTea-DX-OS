@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { QrCode } from 'lucide-react'
+import { QrCode, Info } from 'lucide-react'
 import { Pill } from '@/components/ui'
 import styles from './lots.module.css'
 
@@ -37,10 +37,6 @@ export default function ManagerLotsPage() {
       .catch(() => setError('Không thể tải danh sách lô hàng.'))
       .finally(() => setIsLoading(false))
   }, [])
-
-  const handleCreateCTA = () => {
-    router.push('/officer/lots')
-  }
 
   const handleRowClick = (lotId: string) => {
     router.push(`/manager/lots/${lotId}`)
@@ -82,9 +78,16 @@ export default function ManagerLotsPage() {
           <h1 className={styles.title}>Sẵn sàng giao thương</h1>
           <p className={styles.subtitle}>Kiểm soát nghiệm thu, hồ sơ và mã QR trước khi xuất hàng.</p>
         </div>
-        <button className={styles.createBtn} onClick={handleCreateCTA}>
-          + Tạo lô hàng
-        </button>
+        {/* Manager chỉ xem + export QR — việc tạo lô hàng do Cán bộ kỹ thuật thực hiện (api-contract.md) */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+          background: '#f0fdf4', border: '1px solid #bbf7d0',
+          borderRadius: '0.5rem', padding: '0.5rem 1rem',
+          fontSize: '0.85rem', color: '#166534',
+        }}>
+          <Info className="w-4 h-4 shrink-0 text-emerald-700" aria-hidden="true" />
+          <span>Cán bộ kỹ thuật tạo lô hàng. Trưởng HTX duyệt & xuất QR.</span>
+        </div>
       </div>
 
       <div className={styles.filterRow}>

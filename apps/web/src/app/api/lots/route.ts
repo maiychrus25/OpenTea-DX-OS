@@ -22,6 +22,13 @@ async function getLots(request: Request) {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
 
+  // F3 fix: resolve HTX for scoped query — prevents cross-HTX data leakage (AC10)
+  const htx = await prisma.htxProfile.findFirst()
+  if (!htx) {
+    // No HTX configured — return empty list rather than leaking all lots
+    return NextResponse.json({ data: [] })
+  }
+
   const url = new URL(request.url)
   const status = url.searchParams.get('status') ?? undefined
   const visibility = url.searchParams.get('visibility') ?? undefined
@@ -29,7 +36,7 @@ async function getLots(request: Request) {
 
   const repo = new PrismaLotRepository()
   const useCase = new ListLotsUseCase(repo)
-  const data = await useCase.execute({ status, statuses })
+  const data = await useCase.execute({ status, statuses, htx_profile_id: htx.id })
   return NextResponse.json({ data })
 }
 

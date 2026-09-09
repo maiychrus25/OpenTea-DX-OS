@@ -9,6 +9,7 @@ import {
   JournalFilters,
 } from '@/domain/journal/ports/JournalPort'
 import { ActivityType, NotificationType, ParcelStatus } from '@prisma/client'
+import { sseEmitter, SSE_EVENTS } from '@/lib/sse-emitter'
 
 function mapEntry(e: any): JournalEntryData {
   return {
@@ -211,7 +212,7 @@ export class PrismaJournalRepository implements JournalPort {
           select: { parcel_code: true, household_id: true },
         })
 
-        await tx.notification.create({
+        const notif = await tx.notification.create({
           data: {
             type: NotificationType.JOURNAL_SUBMITTED,
             title: 'Nhật ký mới cần duyệt',
@@ -221,6 +222,11 @@ export class PrismaJournalRepository implements JournalPort {
             deep_link_url: '/officer/journal',
           },
         })
+        if (notif.recipient_id) {
+          sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { userId: notif.recipient_id })
+        } else {
+          sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { broadcast: true })
+        }
       }
       
       if (data.submitted_role === 'OFFICER') {
@@ -273,7 +279,7 @@ export class PrismaJournalRepository implements JournalPort {
       await tx.journalEntry.delete({ where: { id } })
 
       if (entry?.submitted_role === 'FARMER' && entry.status === 'PENDING_APPROVAL') {
-        await tx.notification.create({
+        const notif = await tx.notification.create({
           data: {
             type: NotificationType.SYSTEM,
             title: 'Nhật ký đã được rút lại',
@@ -283,6 +289,11 @@ export class PrismaJournalRepository implements JournalPort {
             deep_link_url: '/officer/journal',
           },
         })
+        if (notif.recipient_id) {
+          sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { userId: notif.recipient_id })
+        } else {
+          sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { broadcast: true })
+        }
       }
     })
   }
@@ -321,7 +332,7 @@ export class PrismaJournalRepository implements JournalPort {
         
         await applyParcelStatus(tx, entry.parcel_id, entry.activity_type, entry.entry_date)
         if (entry.submitted_role === 'FARMER' && entry.parcel.household.keycloak_user_id) {
-          await tx.notification.create({
+          const notif = await tx.notification.create({
             data: {
               type: NotificationType.JOURNAL_APPROVED,
               title: 'Nhật ký đã được duyệt',
@@ -332,6 +343,11 @@ export class PrismaJournalRepository implements JournalPort {
               deep_link_url: '/farmer/journal',
             },
           })
+          if (notif.recipient_id) {
+            sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { userId: notif.recipient_id })
+          } else {
+            sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { broadcast: true })
+          }
         }
         approved++
       }

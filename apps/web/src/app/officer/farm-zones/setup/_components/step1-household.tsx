@@ -4,6 +4,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { Users, ArrowRight } from 'lucide-react'
 import styles from '../wizard.module.css'
 
 interface Household {
@@ -37,10 +38,10 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
           setHtxProfileId(htxData.data.id)
           const res = await fetch(`/api/farm/households?htxProfileId=${htxData.data.id}`)
           const data = await res.json()
-          setHouseholds(data.data.map((h: Household) => ({
+          setHouseholds(data.data.map((h: any) => ({
             id: h.id,
             name: h.name,
-            parcelCount: h.parcelCount || 0
+            parcelCount: h.parcel_count || 0
           })))
         }
       } catch {
@@ -65,7 +66,9 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
               className={`${styles.householdCard} ${selectedHouseholdId === h.id ? styles.selected : ''}`}
               onClick={() => onSelect(h)}
             >
-              <div className={styles.householdIcon}>🧑‍🌾</div>
+              <div className={styles.householdIcon}>
+                <Users size={22} className="text-emerald-700" />
+              </div>
               <div>
                 <span className={styles.householdName}>{h.name}</span>
                 <span className={styles.householdMeta}>{h.parcelCount} thửa</span>
@@ -145,7 +148,7 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
               disabled={!selectedHouseholdId}
               onClick={onNext}
             >
-              Tiếp theo →
+              Tiếp theo <ArrowRight size={16} className="inline ml-1 align-text-bottom" />
             </button>
           </div>
         </div>

@@ -6,10 +6,12 @@ import Link from 'next/link'
 import { auth } from '@/auth'
 import { notFound, redirect } from 'next/navigation'
 import { Pill } from '@/components/ui'
+import { Check } from 'lucide-react'
 import { GetLotUseCase } from '@/application/lot/GetLotUseCase'
 import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
 import { StepTrack } from './_components/step-track'
 import { QrVisual } from './_components/qr-visual'
+import { CertificateManager } from '@/components/features/certificate/CertificateManager'
 import styles from './lot-detail.module.css'
 
 interface PageProps {
@@ -54,23 +56,23 @@ export default async function LotDetailPage({ params }: PageProps) {
             <div className={styles.reviewGrid}>
               <div className={styles.reviewItem}>
                 <span className={styles.reviewLabel}>Mã lô</span>
-                <span className={styles.reviewValue}>{lot.lot_code} <span className={styles.checkIcon}>✓</span></span>
+                <span className={styles.reviewValue}>{lot.lot_code} <Check size={14} className={styles.checkIcon} /></span>
               </div>
               <div className={styles.reviewItem}>
                 <span className={styles.reviewLabel}>Nông sản</span>
-                <span className={styles.reviewValue}>{lot.commodity} <span className={styles.checkIcon}>✓</span></span>
+                <span className={styles.reviewValue}>{lot.commodity} <Check size={14} className={styles.checkIcon} /></span>
               </div>
               <div className={styles.reviewItem}>
                 <span className={styles.reviewLabel}>Ngày thu hoạch</span>
-                <span className={styles.reviewValue}>{lot.harvest_date.toLocaleDateString('vi-VN')} <span className={styles.checkIcon}>✓</span></span>
+                <span className={styles.reviewValue}>{lot.harvest_date.toLocaleDateString('vi-VN')} <Check size={14} className={styles.checkIcon} /></span>
               </div>
               <div className={styles.reviewItem}>
                 <span className={styles.reviewLabel}>Ngày tạo</span>
-                <span className={styles.reviewValue}>{lot.created_at.toLocaleDateString('vi-VN')} <span className={styles.checkIcon}>✓</span></span>
+                <span className={styles.reviewValue}>{lot.created_at.toLocaleDateString('vi-VN')} <Check size={14} className={styles.checkIcon} /></span>
               </div>
               <div className={styles.reviewItem}>
                 <span className={styles.reviewLabel}>Số thửa nguồn</span>
-                <span className={styles.reviewValue}>{lot.parcel_count} thửa <span className={styles.checkIcon}>✓</span></span>
+                <span className={styles.reviewValue}>{lot.parcel_count} thửa <Check size={14} className={styles.checkIcon} /></span>
               </div>
               <div className={styles.reviewItem}>
                 <span className={styles.reviewLabel}>Tổng trọng lượng</span>
@@ -81,6 +83,10 @@ export default async function LotDetailPage({ params }: PageProps) {
                 <span className={styles.reviewValue}>{statusLabel}</span>
               </div>
             </div>
+          </div>
+          
+          <div className={styles.reviewSection} style={{ marginTop: 'var(--spacing-6)' }}>
+            <CertificateManager mode="select" />
           </div>
 
           <div className={styles.readOnlyNotice}>

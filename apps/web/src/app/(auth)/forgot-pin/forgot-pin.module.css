@@ -1,0 +1,342 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+/* ── Auth Shell Layout ── */
+.authShell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.authSide {
+  background: var(--sidebar-bg);
+  color: var(--color-ink-inverse);
+  padding: 48px 64px;
+  display: flex;
+  flex-direction: column;
+}
+
+.authSideBrand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 1.25rem;
+}
+
+.brandIcon {
+  width: 48px;
+  height: 48px;
+  background: var(--accent-lime);
+  color: var(--sidebar-bg);
+  border-radius: var(--radius-lg, 14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.authSideContent {
+  margin-top: auto;
+  margin-bottom: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.authSideTitle {
+  font-size: 2.5rem;
+  line-height: 1.2;
+  font-weight: 600;
+  margin: 0;
+}
+
+.authSideDesc {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.authSideFooter {
+  font-size: 0.875rem;
+  opacity: 0.6;
+}
+
+.authPanel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  background: var(--background, #f8fafc);
+}
+
+.authCard {
+  width: 100%;
+  max-width: 440px;
+  background: var(--color-surface-card);
+  border-radius: var(--radius-xl, 16px);
+  padding: 48px 40px;
+  box-shadow: var(--shadow-card, 0 4px 6px -1px rgb(0 0 0 / 0.1));
+  display: flex;
+  flex-direction: column;
+}
+
+.cardHeader {
+  margin-bottom: 24px;
+}
+
+.cardPretitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-secondary);
+  margin: 0 0 8px 0;
+}
+
+.cardTitle {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-ink-primary);
+}
+
+/* ── Step Indicator ── */
+.stepIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.stepDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.stepDot.active {
+  background: var(--sidebar-bg);
+  transform: scale(1.3);
+}
+
+.stepDot.completed {
+  background: var(--accent-lime);
+}
+
+.stepLabel {
+  font-size: 0.8125rem;
+  color: var(--color-ink-secondary);
+  margin-left: 4px;
+}
+
+/* ── Mock Mode Banner ── */
+.mockBanner {
+  background: var(--color-warning-subtle, #FEF9C3);
+  color: var(--color-warning-text, #854D0E);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Form ── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stepTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-ink-primary);
+  margin: 0 0 4px 0;
+}
+
+.stepDesc {
+  font-size: 0.875rem;
+  color: var(--color-ink-secondary);
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-primary);
+}
+
+.input {
+  height: 44px;
+  padding: 0 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  color: var(--color-ink-primary);
+  background: var(--color-surface-card);
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.input:focus {
+  border-color: var(--sidebar-bg);
+  box-shadow: 0 0 0 3px rgba(15, 74, 44, 0.08);
+}
+
+.input.inputError {
+  border-color: var(--color-danger, #DC2626);
+}
+
+.fieldError {
+  font-size: 0.8125rem;
+  color: var(--color-danger, #DC2626);
+  margin: 0;
+}
+
+.submitButton {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+}
+
+.backLink {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-ink-secondary);
+  margin-top: 8px;
+}
+
+.backLink a {
+  color: var(--sidebar-bg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.backLink a:hover {
+  text-decoration: underline;
+}
+
+/* ── OTP hint (mock) ── */
+.otpHint {
+  background: var(--color-surface-card);
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.8125rem;
+  color: var(--color-ink-secondary);
+}
+
+.otpHintCode {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--sidebar-bg);
+  letter-spacing: 0.1em;
+}
+
+/* ── Success State ── */
+.successState {
+  text-align: center;
+  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.successIcon {
+  width: 64px;
+  height: 64px;
+  background: #DCFCE7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.successTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-ink-primary);
+  margin: 0;
+}
+
+.successDesc {
+  font-size: 0.9375rem;
+  color: var(--color-ink-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.loginButton {
+  width: 100%;
+  min-height: 44px;
+}
+
+/* ── Failure State ── */
+.failureState {
+  text-align: center;
+  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.failureIcon {
+  width: 64px;
+  height: 64px;
+  background: var(--color-danger-subtle, #FEE2E2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.failureTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-ink-primary);
+  margin: 0;
+}
+
+.failureDesc {
+  font-size: 0.9375rem;
+  color: var(--color-ink-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.retryButton {
+  width: 100%;
+  min-height: 44px;
+}
+
+@media (max-width: 900px) {
+  .authShell {
+    grid-template-columns: 1fr;
+  }
+
+  .authSide {
+    display: none;
+  }
+
+  .authCard {
+    padding: 32px 24px;
+  }
+}

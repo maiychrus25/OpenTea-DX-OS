@@ -1,0 +1,33 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.searchPlaceholder {
+  flex: 1;
+  font-size: var(--font-size-body, 0.9375rem);
+  color: var(--color-ink-tertiary, #64748b);
+  text-align: left;
+}
+
+.shortcutBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--color-ink-tertiary, #64748b);
+  background-color: var(--color-surface-sunken, #f1f5f9);
+  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  border-radius: var(--rounded-sm, 0.25rem);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  margin-left: var(--space-2, 0.5rem);
+}

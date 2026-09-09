@@ -4,6 +4,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
+import { Check, CheckCircle2 } from 'lucide-react'
 import styles from '../approve.module.css'
 
 interface JournalEntry {
@@ -13,6 +14,29 @@ interface JournalEntry {
   performed_by: string
   notes: string | null
   activities: { activity_detail: string; product_name: string | null }[]
+}
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  SOWING: 'Gieo sạ',
+  FERTILIZING: 'Bón phân',
+  SPRAYING: 'Phun thuốc',
+  IRRIGATION: 'Tưới tiêu',
+  HARVEST: 'Thu hoạch',
+  OTHER: 'Khác',
+}
+
+function formatDetail(detail: string | null | undefined, notes: string | null): string {
+  const text = detail || notes
+  if (!text) return '—'
+  
+  if (ACTIVITY_LABELS[text]) return ACTIVITY_LABELS[text]
+  
+  for (const [key, label] of Object.entries(ACTIVITY_LABELS)) {
+    if (text.startsWith(`${key}: `)) {
+      return text.replace(`${key}: `, `${label}: `)
+    }
+  }
+  return text
 }
 
 export function ApproveList() {
@@ -93,7 +117,12 @@ export function ApproveList() {
             disabled={selected.size === 0 || approving}
             onClick={handleApprove}
           >
-            {approving ? 'Đang duyệt...' : `✓ Duyệt (${selected.size})`}
+            {approving ? 'Đang duyệt...' : (
+              <>
+                <Check size={16} className="inline mr-1 align-text-bottom" />
+                Duyệt ({selected.size})
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -107,7 +136,10 @@ export function ApproveList() {
       {loading ? (
         <div className={styles.empty}>Đang tải...</div>
       ) : entries.length === 0 ? (
-        <div className={styles.empty}>🎉 Không có nhật ký nào đang chờ duyệt!</div>
+        <div className={styles.empty}>
+          <CheckCircle2 size={36} className="text-emerald-600 mb-2 mx-auto block" />
+          Không có nhật ký nào đang chờ duyệt!
+        </div>
       ) : (
         <>
           <label className={styles.selectAll}>
@@ -140,9 +172,9 @@ export function ApproveList() {
                     />
                   </td>
                   <td>{new Date(e.entry_date).toLocaleDateString('vi-VN')}</td>
-                  <td>{e.activity_type}</td>
+                  <td>{ACTIVITY_LABELS[e.activity_type] || e.activity_type}</td>
                   <td>{e.performed_by}</td>
-                  <td>{e.activities?.[0]?.activity_detail ?? e.notes ?? '—'}</td>
+                  <td>{formatDetail(e.activities?.[0]?.activity_detail, e.notes)}</td>
                 </tr>
               ))}
             </tbody>

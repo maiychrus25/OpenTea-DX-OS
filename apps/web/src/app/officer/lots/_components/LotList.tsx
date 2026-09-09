@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { Pill } from '@/components/ui'
+import { QrCode } from 'lucide-react'
 import { LotCreateForm } from './LotCreateForm'
 import styles from '../lots.module.css'
 
@@ -113,7 +114,12 @@ export function LotList() {
                     onClick={() => handleExportQr(lot.id)}
                     disabled={exporting === lot.id}
                   >
-                    {exporting === lot.id ? 'Đang xuất...' : '📱 Xuất QR'}
+                    {exporting === lot.id ? 'Đang xuất...' : (
+                      <>
+                        <QrCode size={15} className="inline-block mr-1.5 align-text-bottom" />
+                        Xuất QR
+                      </>
+                    )}
                   </button>
                 )}
                 {lot.status === 'qr_exported' && (

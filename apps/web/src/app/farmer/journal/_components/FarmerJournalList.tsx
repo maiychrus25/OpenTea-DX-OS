@@ -6,6 +6,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Pill } from '@/components/ui'
+import { ArrowLeft, Plus } from 'lucide-react'
 import styles from '../journal.module.css'
 
 interface JournalEntry {
@@ -25,6 +26,15 @@ const STATUS_MAP: Record<string, { label: string; tone: 'amber' | 'green' | 'neu
   APPROVED: { label: 'Đã duyệt', tone: 'green' },
   DRAFT: { label: 'Bản nháp', tone: 'neutral' },
   REJECTED: { label: 'Từ chối', tone: 'blue' },
+}
+
+const ACTIVITY_MAP: Record<string, string> = {
+  IRRIGATION: 'Tưới tiêu',
+  FERTILIZING: 'Bón phân',
+  SPRAYING: 'Phun thuốc',
+  HARVEST: 'Thu hoạch',
+  SOWING: 'Gieo sạ',
+  OTHER: 'Khác'
 }
 
 export function FarmerJournalList() {
@@ -63,9 +73,16 @@ export function FarmerJournalList() {
 
   return (
     <div className={styles.container}>
+      <Link className={styles.backBtn} href="/farmer/dashboard">
+        <ArrowLeft size={16} className="inline mr-1 align-text-bottom" />
+        Quay lại Dashboard
+      </Link>
       <div className={styles.header}>
         <h1 className={styles.title}>Nhật ký của tôi</h1>
-        <Link className={styles.createBtn} href="/farmer/journal/new">+ Ghi nhật ký</Link>
+        <Link className={styles.createBtn} href="/farmer/journal/new">
+          <Plus size={16} className="inline mr-1 align-text-bottom" />
+          Ghi nhật ký
+        </Link>
       </div>
 
       {loading ? (
@@ -82,7 +99,7 @@ export function FarmerJournalList() {
                   <span className={styles.cardDate}>{new Date(e.entry_date).toLocaleDateString('vi-VN')}</span>
                   <Pill tone={statusInfo.tone}>{statusInfo.label}</Pill>
                 </div>
-                <span className={styles.cardActivity}>{e.activity_type}</span>
+                <span className={styles.cardActivity}>{ACTIVITY_MAP[e.activity_type] || e.activity_type}</span>
                 {e.activities?.[0] && (
                   <span className={styles.cardDetail}>{e.activities[0].activity_detail}</span>
                 )}
@@ -105,7 +122,7 @@ export function FarmerJournalList() {
               </div>
               <div className={styles.detailRow}>
                 <strong>Hoạt động:</strong>
-                <span>{selectedEntry.activity_type}</span>
+                <span>{ACTIVITY_MAP[selectedEntry.activity_type] || selectedEntry.activity_type}</span>
               </div>
               <div className={styles.detailRow}>
                 <strong>Sản phẩm:</strong>

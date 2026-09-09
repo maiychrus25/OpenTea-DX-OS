@@ -4,6 +4,8 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
+import { Phone, MapPin } from 'lucide-react'
 import styles from '../households.module.css'
 
 interface HouseholdSummary {
@@ -85,7 +87,7 @@ export function HouseholdManager() {
       {showForm && (
         <form className={styles.formCard} onSubmit={handleCreate}>
           <h3 className={styles.formTitle}>Thêm nông hộ mới</h3>
-          {error && <p style={{ color: 'var(--color-error)', marginBottom: '0.75rem', fontSize: '0.875rem' }}>{error}</p>}
+          {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Tên chủ hộ *</label>
@@ -119,12 +121,17 @@ export function HouseholdManager() {
             <div key={h.id} className={styles.card}>
               <span className={styles.cardName}>{h.name}</span>
               <div className={styles.cardMeta}>
-                <span>📞 {h.phone}</span>
-                {h.address && <span>📍 {h.address}</span>}
+                <span className="inline-flex items-center gap-1"><Phone size={13} className="text-slate-500" /> {h.phone}</span>
+                {h.address && <span className="inline-flex items-center gap-1"><MapPin size={13} className="text-slate-500" /> {h.address}</span>}
               </div>
               <div className={styles.statRow}>
                 <span className={styles.stat}>Thửa: <span className={styles.statValue}>{h.parcel_count}</span></span>
                 <span className={styles.stat}>Diện tích: <span className={styles.statValue}>{h.total_area_ha.toFixed(2)} ha</span></span>
+              </div>
+              <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <Link href={`/officer/households/${h.id}`} className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-500 flex items-center justify-center w-full">
+                  Xem chi tiết &rarr;
+                </Link>
               </div>
             </div>
           ))}

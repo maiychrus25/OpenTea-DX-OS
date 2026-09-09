@@ -2,23 +2,37 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react'
+import { prisma } from '@/infrastructure/db/prisma.client'
 import { Pill } from '@/components/ui'
+import { XCircle, AlertTriangle, Clock } from 'lucide-react'
 import styles from './qr.module.css'
 
 interface PageProps {
-  params: { lot_code: string }
-  searchParams: { status?: string }
+  params: Promise<{ lot_code: string }>
 }
 
-export default function QrTracePage({ params, searchParams }: PageProps) {
-  const status = searchParams.status || 'valid' // valid, invalid, expired, revoked
+const ACTIVITY_VN: Record<string, string> = {
+  SOWING: 'Gieo sạ',
+  FERTILIZING: 'Bón phân',
+  SPRAYING: 'Phun thuốc',
+  IRRIGATION: 'Tưới tiêu',
+  HARVEST: 'Thu hoạch',
+  OTHER: 'Khác',
+}
 
-  if (status === 'invalid' || status === 'not-found') {
+export default async function QrTracePage({ params, searchParams }: PageProps & { searchParams: Promise<{ status?: string }> }) {
+  const { lot_code } = await params
+  const decodedCode = decodeURIComponent(lot_code)
+  
+  // Allow overriding status via query param for testing error pages
+  const { status: overrideStatus } = await (searchParams || Promise.resolve({}))
+  
+  if (overrideStatus === 'invalid' || overrideStatus === 'not-found') {
     return (
       <div className={styles.container}>
         <div className={styles.errorCard}>
           <div className={styles.iconWrapper} style={{ backgroundColor: '#ffebee', color: '#d32f2f' }}>
-            ✕
+            <XCircle size={32} />
           </div>
           <h1 className={styles.errorTitle}>Không tìm thấy dữ liệu</h1>
           <p className={styles.errorDesc}>
@@ -29,84 +43,216 @@ export default function QrTracePage({ params, searchParams }: PageProps) {
     )
   }
 
-  if (status === 'revoked') {
+  if (overrideStatus === 'revoked') {
     return (
       <div className={styles.container}>
         <div className={styles.errorCard}>
           <div className={styles.iconWrapper} style={{ backgroundColor: '#fff3e0', color: '#f57c00' }}>
-            ⚠️
+            <AlertTriangle size={32} />
           </div>
           <h1 className={styles.errorTitle}>Lô hàng đã bị thu hồi</h1>
           <p className={styles.errorDesc}>
-            Mã QR này thuộc về lô hàng <strong>{params.lot_code}</strong> nhưng đã bị thu hồi bởi Cán bộ Kỹ thuật do không đạt tiêu chuẩn an toàn. Không sử dụng sản phẩm này.
+            Mã QR này thuộc về lô hàng <strong>{decodedCode}</strong> nhưng đã bị thu hồi bởi Cán bộ Kỹ thuật do không đạt tiêu chuẩn an toàn. Không sử dụng sản phẩm này.
           </p>
         </div>
       </div>
     )
   }
 
-  if (status === 'expired') {
+  if (overrideStatus === 'expired') {
     return (
       <div className={styles.container}>
         <div className={styles.errorCard}>
           <div className={styles.iconWrapper} style={{ backgroundColor: '#eceff1', color: '#546e7a' }}>
-            ⌛
+            <Clock size={32} />
           </div>
           <h1 className={styles.errorTitle}>Lô hàng đã hết hạn</h1>
           <p className={styles.errorDesc}>
-            Thời hạn sử dụng của lô hàng <strong>{params.lot_code}</strong> đã kết thúc. Vui lòng xem kỹ hạn sử dụng trên bao bì thực tế.
+            Thời hạn sử dụng của lô hàng <strong>{decodedCode}</strong> đã kết thúc. Vui lòng xem kỹ hạn sử dụng trên bao bì thực tế.
           </p>
         </div>
       </div>
     )
   }
 
+  // Query lot from database
+  const lot = await prisma.lot.findUnique({
+    where: { lot_code: decodedCode },
+    include: {
+      htx_profile: { select: { name: true, address: true, contact_phone: true } },
+      lot_parcels: {
+        include: {
+          parcel: {
+            include: {
+              household: { select: { name: true, phone: true, address: true } },
+              journal_entries: {
+                orderBy: { entry_date: 'asc' },
+                where: { status: 'APPROVED' },
+                take: 20,
+                include: {
+                  activities: { select: { activity_detail: true, product_name: true, dosage: true, withdrawal_days: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (!lot) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorCard}>
+          <div className={styles.iconWrapper} style={{ backgroundColor: '#ffebee', color: '#d32f2f' }}>
+            <XCircle size={32} />
+          </div>
+          <h1 className={styles.errorTitle}>Không tìm thấy dữ liệu</h1>
+          <p className={styles.errorDesc}>
+            Mã QR này không tồn tại trong hệ thống hoặc đã bị xóa. Vui lòng kiểm tra lại tem dán.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Gather data from parcels
+  const parcels = lot.lot_parcels.map((lp) => lp.parcel)
+  const firstParcel = parcels[0]
+  const household = firstParcel?.household
+  const journalEntries = parcels.flatMap((p) => p.journal_entries).sort(
+    (a, b) => new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime()
+  )
+
+  // Withdrawal calculation
+  const sprayEntries = journalEntries.filter((e) => e.activity_type === 'SPRAYING')
+  const lastSpray = sprayEntries.length > 0 ? sprayEntries[sprayEntries.length - 1] : null
+  let withdrawalStatus = 'NO_PESTICIDE'
+  let withdrawalDays = 0
+  let requiredDays = 0
+  let daysElapsed = 0
+
+  if (lastSpray) {
+    const lastActivity = lastSpray.activities[0]
+    requiredDays = lastActivity?.withdrawal_days || 14
+    daysElapsed = Math.floor(
+      (new Date(lot.harvest_date).getTime() - new Date(lastSpray.entry_date).getTime()) /
+      (1000 * 60 * 60 * 24)
+    )
+    withdrawalDays = daysElapsed
+    withdrawalStatus = daysElapsed >= requiredDays ? 'PASSED' : 'FAILED'
+  }
+
+  const statusTone = withdrawalStatus === 'PASSED' || withdrawalStatus === 'NO_PESTICIDE' ? 'green' : 'neutral'
+  const statusLabel =
+    withdrawalStatus === 'NO_PESTICIDE'
+      ? 'Không sử dụng thuốc BVTV'
+      : withdrawalStatus === 'PASSED'
+        ? 'Đạt chuẩn An Toàn'
+        : 'Chưa đủ thời gian cách ly'
+
   return (
     <div className={styles.container}>
+      {/* Header */}
       <div className={styles.mockHeader}>
         <h1>DX-AgriMarket</h1>
         <p>Truy xuất Nguồn gốc Nông sản</p>
       </div>
 
+      {/* Block 1: Product & Lot */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2 className={styles.lotName}>Cải ngọt VietGAP</h2>
-          <Pill tone="green">Đạt chuẩn An Toàn</Pill>
+          <h2 className={styles.lotName}>{lot.commodity}</h2>
+          <Pill tone={statusTone}>{statusLabel}</Pill>
         </div>
         <div className={styles.detailList}>
           <div className={styles.detailItem}>
             <span className={styles.label}>Mã lô:</span>
-            <span className={styles.value}>{params.lot_code}</span>
+            <span className={styles.value}>{lot.lot_code}</span>
           </div>
-          <div className={styles.detailItem}>
-            <span className={styles.label}>Nông hộ:</span>
-            <span className={styles.value}>Nguyễn Văn Bình</span>
-          </div>
-          <div className={styles.detailItem}>
-            <span className={styles.label}>Hợp tác xã:</span>
-            <span className={styles.value}>HTX Rau an toàn Tân Phú</span>
-          </div>
+          {lot.actual_weight_kg && (
+            <div className={styles.detailItem}>
+              <span className={styles.label}>Khối lượng:</span>
+              <span className={styles.value}>{lot.actual_weight_kg} kg</span>
+            </div>
+          )}
+          {lot.quality_grade && (
+            <div className={styles.detailItem}>
+              <span className={styles.label}>Phân loại:</span>
+              <span className={styles.value}>{lot.quality_grade}</span>
+            </div>
+          )}
+          {lot.packaging_type && (
+            <div className={styles.detailItem}>
+              <span className={styles.label}>Quy cách:</span>
+              <span className={styles.value}>{lot.packaging_type}</span>
+            </div>
+          )}
           <div className={styles.detailItem}>
             <span className={styles.label}>Ngày thu hoạch:</span>
-            <span className={styles.value}>12/08/2026</span>
+            <span className={styles.value}>
+              {new Date(lot.harvest_date).toLocaleDateString('vi-VN')}
+            </span>
           </div>
         </div>
 
+        {/* Block 2: Origin */}
+        <div className={styles.certBox} style={{ background: '#e3f2fd', color: '#1565c0', marginBottom: '1rem' }}>
+          <strong>Nguồn gốc</strong>
+          <p>Hợp tác xã: {lot.htx_profile?.name || '—'}</p>
+          {lot.htx_profile?.address && <p>Địa chỉ: {lot.htx_profile.address}</p>}
+          {household && <p>Nông hộ: {household.name}</p>}
+          {firstParcel && <p>Mã thửa: {firstParcel.parcel_code} • Diện tích: {firstParcel.area_ha} ha</p>}
+        </div>
+
+        {/* Block 3: Withdrawal Safety */}
         <div className={styles.certBox}>
-          <strong>Chứng nhận:</strong>
-          <p>Lô hàng này đã trải qua 15 ngày cách ly thuốc BVTV, vượt chuẩn an toàn (14 ngày).</p>
+          <strong>An toàn thuốc BVTV</strong>
+          {withdrawalStatus === 'NO_PESTICIDE' ? (
+            <p>Không sử dụng thuốc bảo vệ thực vật trong quá trình canh tác.</p>
+          ) : (
+            <p>
+              Thuốc cuối cùng: {lastSpray?.activities[0]?.product_name || '—'}.
+              Thời gian cách ly: {withdrawalDays} ngày / yêu cầu {requiredDays} ngày.
+              {withdrawalStatus === 'PASSED' ? ' ✅ ĐẠT' : ' ❌ CHƯA ĐẠT'}
+            </p>
+          )}
         </div>
       </div>
 
-      <div className={styles.testNav}>
-        <h4>(Mock Test Controls)</h4>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <a href={`/q/${params.lot_code}?status=invalid`} className={styles.testLink}>Test Invalid</a>
-          <a href={`/q/${params.lot_code}?status=revoked`} className={styles.testLink}>Test Revoked</a>
-          <a href={`/q/${params.lot_code}?status=expired`} className={styles.testLink}>Test Expired</a>
-          <a href={`/q/${params.lot_code}?status=valid`} className={styles.testLink}>Test Valid</a>
+      {/* Block 4: Timeline */}
+      {journalEntries.length > 0 && (
+        <div className={styles.card} style={{ marginTop: '1rem' }}>
+          <h3 style={{ margin: '0 0 1rem', fontSize: '1.1rem', fontWeight: 600 }}>
+            Nhật ký canh tác ({journalEntries.length} hoạt động)
+          </h3>
+          <div className={styles.detailList}>
+            {journalEntries.map((entry) => (
+              <div key={entry.id} className={styles.detailItem} style={{ flexDirection: 'column', gap: '0.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontWeight: 500 }}>
+                    {ACTIVITY_VN[entry.activity_type] || entry.activity_type}
+                  </span>
+                  <span className={styles.label}>
+                    {new Date(entry.entry_date).toLocaleDateString('vi-VN')}
+                  </span>
+                </div>
+                {entry.activities[0]?.activity_detail && (
+                  <span style={{ fontSize: '0.85rem', color: 'var(--muted-foreground, #6b7280)' }}>
+                    {entry.activities[0].activity_detail}
+                    {entry.activities[0].product_name && ` • ${entry.activities[0].product_name}`}
+                    {entry.activities[0].dosage && ` (${entry.activities[0].dosage})`}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--muted-foreground, #6b7280)', marginTop: '1.5rem' }}>
+        Dữ liệu truy xuất từ hệ thống DX-AgriMarket. Ngày tạo lô: {new Date(lot.created_at).toLocaleDateString('vi-VN')}
+      </p>
     </div>
   )
 }

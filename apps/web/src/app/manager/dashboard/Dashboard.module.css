@@ -1,6 +1,23 @@
 /* Copyright (c) 2026 OpenTea Developers
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
+.emptyMarket {
+  text-align: center;
+  padding: var(--spacing-6) var(--spacing-4);
+  background: var(--color-surface-sunken, #f9fafb);
+  border-radius: var(--rounded-lg, 0.75rem);
+  border: 1px dashed var(--color-border-subtle, #e5e7eb);
+  width: 100%;
+}
+
+.priceMetric {
+  display: block;
+  font-size: 0.78rem;
+  color: #6b7280;
+  font-weight: 400;
+  margin-top: 0.1rem;
+}
+
 .container {
   padding: var(--spacing-6);
   max-width: 56rem;

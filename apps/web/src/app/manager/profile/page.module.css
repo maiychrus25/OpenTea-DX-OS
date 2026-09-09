@@ -25,3 +25,30 @@
   margin-top: var(--spacing-1);
   margin-bottom: 0;
 }
+
+.mockStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+}
+
+.mockStatItem {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+  text-align: center;
+}
+
+.mockStatValue {
+  font-size: var(--font-size-h3);
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: var(--spacing-1);
+}
+
+.mockStatLabel {
+  font-size: var(--font-size-small);
+  color: var(--muted-foreground);
+}

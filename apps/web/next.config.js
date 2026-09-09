@@ -4,6 +4,26 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  optimizeFonts: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'minio',
+        port: '9000',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '9000',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '9001',
+      },
+    ],
+  },
 }
 
 const withPWA = require("@ducanh2912/next-pwa").default({

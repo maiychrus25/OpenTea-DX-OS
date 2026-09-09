@@ -5,26 +5,23 @@
 
 import React, { useState } from 'react'
 import { Pill } from '@/components/ui'
+import { Check, ArrowLeft } from 'lucide-react'
 import styles from '../wizard.module.css'
 
 interface Props {
   householdId: string
   householdName: string
   area: number
+  geojson?: object | null
+  center?: { lat: number, lng: number } | null
+  cropOptions: string[]
   onPrev: () => void
   onComplete: () => void
 }
 
-const CROP_OPTIONS = [
-  'Lúa ST25',
-  'Lúa OM18',
-  'Lúa Đài Thơm 8',
-  'Cải ngọt',
-  'Xà lách',
-]
-
-export function Step3CropAssign({ householdId, householdName, area, onPrev, onComplete }: Props) {
-  const [crop, setCrop] = useState(CROP_OPTIONS[3]) // Default: Cải ngọt
+export function Step3CropAssign({ householdId, householdName, area, geojson, center, cropOptions, onPrev, onComplete }: Props) {
+  // Default to the first option, fallback to empty string if array is empty
+  const [crop, setCrop] = useState(cropOptions.length > 0 ? cropOptions[0] : '') 
   const [season, setSeason] = useState('Hè Thu 2026')
   const [yieldEst, setYieldEst] = useState('4.5')
   const [isLoading, setIsLoading] = useState(false)
@@ -38,7 +35,7 @@ export function Step3CropAssign({ householdId, householdName, area, onPrev, onCo
         <div className={styles.formGroup}>
           <label className={styles.formLabel}>Cây trồng</label>
           <select className={styles.formSelect} value={crop} onChange={(e) => setCrop(e.target.value)}>
-            {CROP_OPTIONS.map(c => (
+            {cropOptions.map(c => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
@@ -85,7 +82,8 @@ export function Step3CropAssign({ householdId, householdName, area, onPrev, onCo
 
         <div className={styles.actions}>
           <button type="button" className={styles.btnSecondary} onClick={onPrev}>
-            ← Trước
+            <ArrowLeft size={16} className="inline mr-1 align-text-bottom" />
+            Trước
           </button>
           <div className={styles.actionsRight}>
             <button
@@ -101,10 +99,10 @@ export function Step3CropAssign({ householdId, householdName, area, onPrev, onCo
                     body: JSON.stringify({
                       household_id: householdId,
                       parcel_code: 'TP-' + crypto.randomUUID().substring(0, 6).toUpperCase(),
-                      geojson: { type: "Polygon", coordinates: [] }, // Mock geojson for now
+                      geojson: geojson ? (geojson as any).geometry : { type: "Polygon", coordinates: [] },
                       area_ha: area / 10000,
-                      centroid_lat: 10.0,
-                      centroid_lng: 106.0,
+                      centroid_lat: center?.lat || 10.0,
+                      centroid_lng: center?.lng || 106.0,
                       current_crop: crop,
                       season: season
                     })
@@ -121,7 +119,12 @@ export function Step3CropAssign({ householdId, householdName, area, onPrev, onCo
                 }
               }}
             >
-              {isLoading ? 'Đang lưu...' : '✓ Hoàn tất thiết lập'}
+              {isLoading ? 'Đang lưu...' : (
+                <>
+                  <Check size={16} className="inline-block mr-1.5 align-text-bottom" />
+                  Hoàn tất thiết lập
+                </>
+              )}
             </button>
           </div>
         </div>

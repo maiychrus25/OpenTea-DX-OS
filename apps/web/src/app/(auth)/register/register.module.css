@@ -1,0 +1,343 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+/* ── Auth Shell Layout (giống login, không dùng composé để tránh coupling) ── */
+.authShell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.authSide {
+  background: var(--sidebar-bg);
+  color: var(--color-ink-inverse);
+  padding: 48px 64px;
+  display: flex;
+  flex-direction: column;
+}
+
+.authSideBrand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 1.25rem;
+}
+
+.brandIcon {
+  width: 48px;
+  height: 48px;
+  background: var(--accent-lime);
+  color: var(--sidebar-bg);
+  border-radius: var(--radius-lg, 14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.authSideContent {
+  margin-top: auto;
+  margin-bottom: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.authSideTitle {
+  font-size: 2.5rem;
+  line-height: 1.2;
+  font-weight: 600;
+  margin: 0;
+  max-width: 480px;
+}
+
+.authSideDesc {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  opacity: 0.9;
+  margin: 0;
+  max-width: 480px;
+}
+
+.featureList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.featureList li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9375rem;
+  opacity: 0.85;
+}
+
+.featureList li::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2384cc16' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+.authSideFooter {
+  font-size: 0.875rem;
+  opacity: 0.6;
+}
+
+.authPanel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 32px;
+  background: var(--background, #f8fafc);
+  overflow-y: auto;
+}
+
+.authCard {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-surface-card);
+  border-radius: var(--radius-xl, 16px);
+  padding: 40px 36px;
+  box-shadow: var(--shadow-card, 0 4px 6px -1px rgb(0 0 0 / 0.1));
+  display: flex;
+  flex-direction: column;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.cardHeader {
+  margin-bottom: 24px;
+}
+
+.cardPretitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-secondary);
+  margin: 0 0 8px 0;
+}
+
+.cardTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--color-ink-primary);
+}
+
+.cardDesc {
+  font-size: 0.9375rem;
+  color: var(--color-ink-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Mock Mode Banner ── */
+.mockBanner {
+  background: var(--color-warning-subtle, #FEF9C3);
+  color: var(--color-warning-text, #854D0E);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Form ── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink-primary);
+}
+
+.input {
+  height: 44px; /* AC-6: 44px touch target */
+  padding: 0 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  color: var(--color-ink-primary);
+  background: var(--color-surface-card);
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.input:focus {
+  border-color: var(--sidebar-bg);
+  box-shadow: 0 0 0 3px rgba(15, 74, 44, 0.08);
+}
+
+.input.inputError {
+  border-color: var(--color-danger, #DC2626);
+}
+
+.select {
+  height: 44px;
+  padding: 0 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  color: var(--color-ink-primary);
+  background: var(--color-surface-card);
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.select:focus {
+  border-color: var(--sidebar-bg);
+}
+
+.fieldError {
+  font-size: 0.8125rem;
+  color: var(--color-danger, #DC2626);
+  margin: 0;
+}
+
+/* ── Consent Checkbox ── */
+.consentRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  min-width: 20px; /* 44px được handle bởi hit area wrapper */
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: var(--sidebar-bg);
+}
+
+.consentLabel {
+  font-size: 0.875rem;
+  color: var(--color-ink-secondary);
+  line-height: 1.5;
+  cursor: pointer;
+  /* Tăng touch target theo AC-6 */
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Submit button (full-width) ── */
+.submitButton {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+}
+
+/* ── Login link ── */
+.loginLink {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.875rem;
+  color: var(--color-ink-secondary);
+}
+
+.loginLink a {
+  color: var(--sidebar-bg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.loginLink a:hover {
+  text-decoration: underline;
+}
+
+/* ── Pending Approval State ── */
+.pendingState {
+  text-align: center;
+  padding: 32px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.pendingIcon {
+  width: 64px;
+  height: 64px;
+  background: var(--color-warning-subtle, #FEF9C3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.pendingTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-ink-primary);
+  margin: 0;
+}
+
+.pendingDesc {
+  font-size: 0.9375rem;
+  color: var(--color-ink-secondary);
+  margin: 0;
+  line-height: 1.6;
+  max-width: 320px;
+}
+
+.pendingBackLink {
+  font-size: 0.875rem;
+  color: var(--sidebar-bg);
+  font-weight: 600;
+  text-decoration: none;
+  margin-top: 8px;
+}
+
+.pendingBackLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .authShell {
+    grid-template-columns: 1fr;
+  }
+
+  .authSide {
+    display: none;
+  }
+
+  .authCard {
+    padding: 32px 24px;
+  }
+
+  .authPanel {
+    align-items: flex-start;
+    padding: 24px 16px;
+  }
+}

@@ -5,10 +5,14 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { ChatbotUseCase } from '@/application/chatbot/ChatbotUseCase'
+import { PrismaChatHistoryRepository } from '@/infrastructure/db/chat/prisma-chat-history-repository'
+import { PrismaMarketDataRepository } from '@/infrastructure/db/market/prisma-market-data-repository'
+import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 import { z } from 'zod'
 
 const chatbotSchema = z.object({
   message: z.string().min(1),
+  type: z.enum(['market', 'technical']).default('market'),
   session_id: z.string().optional(),
   history: z.array(z.object({
     role: z.enum(['user', 'assistant']),
@@ -33,7 +37,10 @@ async function postChatbot(request: Request) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
 
-  const useCase = new ChatbotUseCase()
+  const documentAdapter = new MinioDocumentAdapter()
+  const chatHistoryRepo = new PrismaChatHistoryRepository()
+  const marketDataRepo = new PrismaMarketDataRepository()
+  const useCase = new ChatbotUseCase(documentAdapter, chatHistoryRepo, marketDataRepo)
   const userId = session.user.id
   const sessionId = parse.data.session_id || `chat-${userId}-${Date.now()}`
 
@@ -42,6 +49,7 @@ async function postChatbot(request: Request) {
     parse.data.history,
     userId,
     sessionId,
+    parse.data.type
   )
 
   return new NextResponse(stream, {
@@ -71,8 +79,12 @@ async function getChatHistory(request: Request) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'session_id required' } }, { status: 400 })
   }
 
-  const useCase = new ChatbotUseCase()
-  const history = await useCase.getHistory(session.user.id!, sessionId)
+  const chatType = (searchParams.get('type') as 'market' | 'technical') || 'market'
+
+  const chatHistoryRepo = new PrismaChatHistoryRepository()
+  const marketDataRepo = new PrismaMarketDataRepository()
+  const useCase = new ChatbotUseCase(undefined, chatHistoryRepo, marketDataRepo)
+  const history = await useCase.getHistory(session.user.id!, sessionId, chatType)
 
   return NextResponse.json({ data: { history, session_id: sessionId } })
 }

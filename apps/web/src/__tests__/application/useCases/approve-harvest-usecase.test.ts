@@ -41,6 +41,8 @@ describe('ApproveHarvestUseCase', () => {
       broadcastDiseaseReport: jest.fn(),
       broadcastAnnouncement: jest.fn(),
       broadcastHarvestApproved: jest.fn(),
+      createNotification: jest.fn(),
+      sendDirectNotification: jest.fn(),
     } as any
 
     useCase = new ApproveHarvestUseCase(mockParcelPort, mockJournalPort, mockNotificationPort)

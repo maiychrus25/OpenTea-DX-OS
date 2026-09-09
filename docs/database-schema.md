@@ -76,17 +76,18 @@ Keycloak-linked user records. Synced on first login.
 ### `households`
 Nông hộ thành viên HTX.
 
+> ⚠️ **Schema Divergence (Story 7.0a):** `htx_profile_id` được thêm qua migration `20260814102205_add_htx_relations`. Field là `nullable` (`String?`) trong Prisma thực tế, không phải NOT NULL như spec gốc. Existing rows cần backfill (`scripts/backfill-htx-profile-id.sql`).
+
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | UUID | PK | |
-| htx_profile_id | UUID | FK → htx_profiles, NOT NULL | |
-| household_code | VARCHAR(50) | UNIQUE, NOT NULL | Mã nông hộ |
-| owner_name | VARCHAR(200) | NOT NULL | Tên chủ hộ |
-| phone | VARCHAR(20) | | |
-| address | TEXT | | |
-| total_area_ha | DECIMAL(10,2) | | Auto-calc từ parcels của hộ |
+| id | TEXT (cuid) | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles, **nullable** | Added by Story 7.0a migration |
+| name | VARCHAR(200) | NOT NULL | Tên chủ hộ (`owner_name` trong spec gốc) |
+| phone | VARCHAR(20) | UNIQUE, NOT NULL | Dùng làm household_code |
+| address | TEXT | nullable | |
+| keycloak_user_id | TEXT | nullable | Linked after farmer account created |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
 
 ---
 
@@ -180,28 +181,32 @@ Chi tiết hoạt động trong một nhật ký (phun thuốc, bón phân...).
 ### `lots`
 Lô hàng — đơn vị QR truy xuất nguồn gốc.
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | UUID | PK | |
-| lot_code | VARCHAR(100) | UNIQUE, NOT NULL | Format: HTX-CROP-YYYYMMDD-NNN |
-| htx_profile_id | UUID | FK → htx_profiles, NOT NULL | |
-| created_by | UUID | FK → users, NOT NULL | Officer ID |
-| crop | VARCHAR(100) | NOT NULL | |
-| harvest_date | DATE | NOT NULL | |
-| estimated_weight_kg | DECIMAL(10,2) | | |
-| actual_weight_kg | DECIMAL(10,2) | | |
-| packaging_type | VARCHAR(100) | | |
-| destination | VARCHAR(200) | | Nơi giao hàng |
-| buyer_name | VARCHAR(200) | | Tên người mua |
-| status | ENUM('draft','qr_exported','sold') | NOT NULL, DEFAULT 'draft' | |
-| qr_minio_key | VARCHAR(500) | | MinIO key cho QR image |
-| certificate_minio_keys | TEXT[] | | VietGAP/organic certificates |
-| public_page_data | JSONB | | Snapshot data cho QR public page |
-| qr_exported_at | TIMESTAMPTZ | | |
-| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+> ⚠️ **Schema Divergence (Story 7.0a):** Table được recreate qua migration `20260814102205_add_htx_relations` (DROP TABLE `Lot` + CREATE TABLE `lots`). Một số fields thực tế khác với spec gốc — xem cột "Thực tế" bên dưới.
 
-**Indexes:** `lot_code`, `status`, `harvest_date`, `htx_profile_id`
+| Column | Type | Constraints | Thực tế trong Prisma | Description |
+|--------|------|-------------|---------------------|-------------|
+| id | TEXT (cuid) | PK | `id String @id @default(cuid())` | |
+| lot_code | VARCHAR(100) | UNIQUE, NOT NULL | ✅ | Format: HTX-CROP-YYYYMMDD-NNN |
+| htx_profile_id | TEXT | **nullable** FK → htx_profiles | ✅ Added Story 7.0a | HTX scoping |
+| commodity | VARCHAR(100) | NOT NULL | ✅ (`commodity`) | Loại nông sản |
+| quality_grade | TEXT | nullable | ✅ (không có trong spec gốc) | "Grade 1" / "Grade 2" / "Ungraded" |
+| harvest_date | DATE | NOT NULL | ✅ `DateTime` | |
+| estimated_weight_kg | DECIMAL(10,2) | nullable | ✅ | |
+| actual_weight_kg | DECIMAL(10,2) | nullable | ✅ | |
+| packaging_type | VARCHAR(100) | nullable | ✅ | |
+| destination | VARCHAR(200) | nullable | ✅ | Nơi giao hàng |
+| buyer_name | VARCHAR(200) | nullable | ✅ | Tên người mua |
+| status | ENUM | NOT NULL, DEFAULT 'DRAFT' | `LotStatus` enum: DRAFT/READY/QR_EXPORTED | |
+| qr_image_url | TEXT | nullable | `qr_image_url` (không phải `qr_minio_key`) | MinIO URL |
+| certificate_keys | TEXT[] | DEFAULT [] | ✅ | MinIO object keys |
+| public_page_data | JSONB | nullable | ✅ | Snapshot for QR public page |
+| created_by_id | TEXT | nullable | keycloak officer user ID | |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | ✅ | |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | ✅ | |
+
+**Indexes:** `lot_code` (unique), `status`, `htx_profile_id`
+
+> **Note:** Fields `packaging_date`, `total_weight_kg`, `packaging_spec` xuất hiện trong migration SQL nhưng **không có trong schema.prisma hiện tại** — đây là migration artefact từ intermediate schema version, không dùng trong application code.
 
 ---
 

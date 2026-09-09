@@ -6,6 +6,8 @@ import { auth } from '@/auth'
 import { GenerateDocumentDownloadUrlUseCase } from '@/application/document/generate-document-download-url.usecase'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     const session = await auth()

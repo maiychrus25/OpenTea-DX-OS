@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
@@ -19,10 +21,13 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ initialData }: ProfileFormProps) {
+  const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  // profileData reflects latest saved state (updated from API response after save)
   const [profileData, setProfileData] = useState<HtxProfile | null>(initialData)
+  
+  // Mock avatar
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   const {
     control,
@@ -41,10 +46,26 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       season_label: initialData?.season_label ?? '',
     },
   })
+  
+  // Dirty state checking
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isEditing && Object.keys(errors).length === 0) { // Or we can use formState.isDirty
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isEditing, errors])
 
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       setIsSubmitting(true)
+      
+      // Clean up empty strings from crop_types array before submitting
+      data.crop_types = data.crop_types.map(s => s.trim()).filter(Boolean)
+
       const res = await fetch('/api/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -74,6 +95,8 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
       toast.success('Cập nhật thông tin HTX thành công')
       setIsEditing(false)
+      // Revalidate Server Component cache so UI reflects new data without full reload
+      router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Có lỗi xảy ra khi cập nhật thông tin'
       toast.error(message)
@@ -101,6 +124,41 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
+        
+        {/* Avatar Upload Mock */}
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>Ảnh đại diện</label>
+          <div className="flex items-center gap-4 mt-2">
+            <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center border border-gray-300">
+              {avatarUrl ? (
+                <Image src={avatarUrl} alt="Avatar" width={64} height={64} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-gray-400 text-xl font-bold">{profileData.name?.charAt(0) || 'H'}</span>
+              )}
+            </div>
+            {isEditing && (
+              <div>
+                <input 
+                  type="file" 
+                  id="avatar-upload" 
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setAvatarUrl(URL.createObjectURL(file))
+                    }
+                  }}
+                />
+                <label htmlFor="avatar-upload" className="cursor-pointer text-sm font-medium text-primary hover:underline bg-primary-50 px-3 py-1 rounded-md border border-primary-200">
+                  Tải ảnh lên
+                </label>
+                <p className="text-xs text-gray-500 mt-1">JPG, PNG tối đa 2MB.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Tên HTX</label>
           <Controller
@@ -217,8 +275,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                       onChange(
                         e.target.value
                           .split(',')
-                          .map((s) => s.trim())
-                          .filter(Boolean),
+                          .map((s) => s.trimStart())
                       )
                     }
                     placeholder="VD: Lúa, Xoài, Bưởi"
@@ -237,7 +294,11 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Tổng diện tích (ha)</label>
           {/* total_area_ha is auto-calculated, not directly editable */}
-          <div className={styles.value}>{profileData.total_area_ha}</div>
+          <div className={styles.value}>
+            {profileData.total_area_ha
+              ? `${profileData.total_area_ha.toLocaleString('vi-VN')} ha`
+              : '-'}
+          </div>
         </div>
 
         {isEditing && (

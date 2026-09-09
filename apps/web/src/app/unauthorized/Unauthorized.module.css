@@ -30,4 +30,38 @@
   color: var(--color-ink-secondary);
   font-size: var(--font-size-body);
   margin-bottom: var(--spacing-4);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+/* AC-4: State-specific styles */
+.stateIcon {
+  font-size: 3rem;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.stateTitlePending {
+  color: #92400E;
+  font-size: var(--font-size-h1, 1.5rem);
+  font-weight: 600;
+  margin: 0;
+}
+
+.stateTitleLocked {
+  color: var(--color-danger, #DC2626);
+  font-size: var(--font-size-h1, 1.5rem);
+  font-weight: 600;
+  margin: 0;
+}
+
+.secondaryLink {
+  font-size: 0.875rem;
+  color: var(--color-ink-secondary);
+  text-decoration: none;
+  margin-top: 4px;
+}
+
+.secondaryLink:hover {
+  text-decoration: underline;
 }

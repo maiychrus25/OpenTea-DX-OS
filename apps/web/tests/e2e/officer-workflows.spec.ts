@@ -87,7 +87,7 @@ test.describe('Officer Workflows', () => {
     
     // Intercept alert
     page.on('dialog', dialog => dialog.accept())
-    await page.getByRole('button', { name: '✓ Hoàn tất thiết lập' }).click()
+    await page.getByRole('button', { name: /Hoàn tất thiết lập/ }).click()
 
     // Verify redirection
     await page.waitForURL('**/officer/dashboard')

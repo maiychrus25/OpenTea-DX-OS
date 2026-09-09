@@ -41,28 +41,15 @@
     flex-direction: row;
     display: flex;
   }
-  
-  .shell[data-role="farmer"] {
-    flex-direction: column;
-  }
 
   .workspace {
     width: calc(100% - 276px);
     margin-left: 276px;
   }
 
-  .shell[data-role="farmer"] .workspace {
-    width: 100%;
-    margin-left: 0;
-  }
-
   .content {
     padding-bottom: 0;
     min-width: 0;
-  }
-
-  .shell[data-role="farmer"] .content {
-    padding-bottom: 64px;
   }
 
   .pageContent {
