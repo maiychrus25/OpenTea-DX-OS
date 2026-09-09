@@ -5,11 +5,14 @@ import { ReviewDiseaseReportUseCase } from '@/application/disease/review-disease
 import { DiseaseReportPort } from '@/domain/disease/ports/disease-report.port';
 import { NotificationPort } from '@/domain/ports/notification-port';
 import { NotificationType } from '@prisma/client';
-
+import { StoragePort } from '@/domain/disease/ports/storage.port';
+import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port';
 describe('ReviewDiseaseReportUseCase', () => {
   let useCase: ReviewDiseaseReportUseCase;
   let mockDiseasePort: jest.Mocked<DiseaseReportPort>;
   let mockNotificationPort: jest.Mocked<NotificationPort>;
+  let mockStoragePort: jest.Mocked<StoragePort>;
+  let mockDocumentStoragePort: jest.Mocked<DocumentStoragePort>;
 
   beforeEach(() => {
     mockDiseasePort = {
@@ -31,7 +34,19 @@ describe('ReviewDiseaseReportUseCase', () => {
       createNotification: jest.fn(),
       sendDirectNotification: jest.fn(),
     };
-    useCase = new ReviewDiseaseReportUseCase(mockDiseasePort, mockNotificationPort);
+    mockStoragePort = {
+      uploadFile: jest.fn(),
+      getPresignedUrl: jest.fn(),
+      getFileBuffer: jest.fn(),
+    };
+    mockDocumentStoragePort = {
+      generateUploadUrl: jest.fn(),
+      generateDownloadUrl: jest.fn(),
+      listDocuments: jest.fn(),
+      getDocumentContent: jest.fn(),
+      uploadDocument: jest.fn(),
+    };
+    useCase = new ReviewDiseaseReportUseCase(mockDiseasePort, mockNotificationPort, mockStoragePort, mockDocumentStoragePort);
   });
 
   it('throws error if report not found', async () => {
@@ -40,7 +55,7 @@ describe('ReviewDiseaseReportUseCase', () => {
     await expect(useCase.execute({
       reportId: '123',
       officerId: 'off1',
-      status: 'APPROVED',
+      status: 'CONFIRMED',
       treatment_recommendation: 'Spray'
     })).rejects.toThrow('REPORT_NOT_FOUND');
   });
@@ -48,7 +63,7 @@ describe('ReviewDiseaseReportUseCase', () => {
   it('throws error if status is not PENDING', async () => {
     mockDiseasePort.findById.mockResolvedValue({
       id: '123',
-      status: 'APPROVED',
+      status: 'CONFIRMED',
       // @ts-ignore
       detection_date: new Date(),
       photo_minio_key: 'key',
@@ -62,7 +77,7 @@ describe('ReviewDiseaseReportUseCase', () => {
     await expect(useCase.execute({
       reportId: '123',
       officerId: 'off1',
-      status: 'APPROVED',
+      status: 'CONFIRMED',
       treatment_recommendation: 'Spray'
     })).rejects.toThrow('INVALID_STATUS_TRANSITION');
   });
@@ -84,7 +99,7 @@ describe('ReviewDiseaseReportUseCase', () => {
     await expect(useCase.execute({
       reportId: '123',
       officerId: 'off1',
-      status: 'APPROVED',
+      status: 'CONFIRMED',
       treatment_recommendation: '  ' // empty
     })).rejects.toThrow('TREATMENT_REQUIRED');
   });
@@ -106,11 +121,11 @@ describe('ReviewDiseaseReportUseCase', () => {
     await useCase.execute({
       reportId: '123',
       officerId: 'off1',
-      status: 'APPROVED',
+      status: 'CONFIRMED',
       treatment_recommendation: 'Spray fungicide'
     });
 
-    expect(mockDiseasePort.updateStatus).toHaveBeenCalledWith('123', 'APPROVED', 'Spray fungicide', 'off1');
+    expect(mockDiseasePort.updateStatus).toHaveBeenCalledWith('123', 'CONFIRMED', 'Spray fungicide', 'off1');
     expect(mockNotificationPort.sendDirectNotification).toHaveBeenCalledWith(
       'farm1',
       NotificationType.DISEASE_REPORT,
