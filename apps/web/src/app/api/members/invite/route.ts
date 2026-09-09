@@ -5,7 +5,9 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter'
-import { prisma } from '@/infrastructure/db/prisma.client'
+import { InviteMemberUseCase } from '@/application/auth/invite-member.use-case'
+import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
+import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
 import { z } from 'zod'
 
 const ALLOWED_ROLES = ['farmer', 'officer'] as const
@@ -41,49 +43,31 @@ async function inviteMember(request: Request) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message || 'Dữ liệu không hợp lệ' } }, { status: 400 })
   }
 
-  const { fullName, phone, pin, role, address } = parse.data
+  const { fullName, phone, role } = parse.data
 
-  // Get HTX profile for linking
-  const htx = await prisma.htxProfile.findFirst()
-  if (!htx) {
-    return NextResponse.json({ error: { code: 'HTX_NOT_FOUND', message: 'Chưa có hồ sơ HTX' } }, { status: 400 })
-  }
+  try {
+    const keycloakAdapter = new KeycloakAdminAdapter()
+    const householdRepo = new PrismaHouseholdRepository()
+    const htxRepo = new PrismaHtxProfileRepository()
+    
+    const useCase = new InviteMemberUseCase(keycloakAdapter, householdRepo, htxRepo)
+    const result = await useCase.execute(parse.data)
 
-  // Step 1: Create Keycloak user with specified role
-  const keycloakAdapter = new KeycloakAdminAdapter()
-  const keycloakUserId = await keycloakAdapter.registerUser({
-    fullName,
-    phone,
-    pin,
-    htxId: htx.id,
-  }, role, true) // enabled = true, login được ngay
+    const roleLabel = ROLE_LABELS[role] || role
 
-  // Step 2: Create Household in DB (only for farmer)
-  let householdId: string | null = null
-  if (role === 'farmer') {
-    const household = await prisma.household.create({
+    return NextResponse.json({
       data: {
-        name: fullName,
-        phone,
-        address: address || null,
-        keycloak_user_id: keycloakUserId,
-        htx_profile_id: htx.id,
-      },
-    })
-    householdId = household.id
+        ...result,
+        username: phone,
+        role,
+        message: `Đã tạo tài khoản ${roleLabel} "${fullName}". Đăng nhập bằng SĐT: ${phone}`,
+      }
+    }, { status: 201 })
+  } catch (error: unknown) {
+    console.error('Invite Member Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: { message: errorMessage } }, { status: 500 })
   }
-
-  const roleLabel = ROLE_LABELS[role] || role
-
-  return NextResponse.json({
-    data: {
-      keycloakUserId,
-      householdId,
-      username: phone,
-      role,
-      message: `Đã tạo tài khoản ${roleLabel} "${fullName}". Đăng nhập bằng SĐT: ${phone}`,
-    }
-  }, { status: 201 })
 }
 
 export const POST = withErrorHandler(inviteMember)

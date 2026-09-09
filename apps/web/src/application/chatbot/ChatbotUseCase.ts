@@ -126,7 +126,11 @@ export class ChatbotUseCase {
         if (!this.documentStorage) {
           throw new Error('DocumentStoragePort is required for technical chatbot')
         }
-        const docs = await this.documentStorage.listDocuments('para/')
+        const [resourceDocs, areaDocs] = await Promise.all([
+          this.documentStorage.listDocuments('para/Resources/'),
+          this.documentStorage.listDocuments('para/Areas/')
+        ])
+        const docs = [...resourceDocs, ...areaDocs]
         const textDocs = docs.filter(d => !d.isDir && (d.name.endsWith('.txt') || d.name.endsWith('.md')))
         
         // Limit to 5 most recent to avoid blowing up context window

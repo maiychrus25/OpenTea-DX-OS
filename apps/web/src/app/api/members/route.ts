@@ -21,8 +21,10 @@ async function listMembers(request: Request) {
     if (filterRole) {
       data = await adapter.listUsersByRole(filterRole)
     } else {
-      const farmers = await adapter.listUsersByRole('farmer')
-      const officers = await adapter.listUsersByRole('officer')
+      const [farmers, officers] = await Promise.all([
+        adapter.listUsersByRole('farmer'),
+        adapter.listUsersByRole('officer')
+      ])
       // Map roles so the UI knows
       const farmersWithRole = farmers.map(f => ({ ...f, role: 'farmer' }))
       const officersWithRole = officers.map(o => ({ ...o, role: 'officer' }))

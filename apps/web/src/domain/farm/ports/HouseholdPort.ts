@@ -30,6 +30,9 @@ export interface HouseholdPort {
   findAll(htxProfileId: string): Promise<HouseholdSummary[]>
   findById(id: string): Promise<HouseholdSummary | null>
   findByKeycloakUserId(userId: string): Promise<HouseholdSummary | null>
+  findOrphanedByPhone(phone: string): Promise<HouseholdSummary | null>
   create(data: CreateHouseholdData): Promise<HouseholdSummary>
   update(id: string, data: UpdateHouseholdData): Promise<HouseholdSummary>
+  linkToKeycloak(id: string, keycloakUserId: string): Promise<void>
+  unlinkFromKeycloak(keycloakUserId: string): Promise<void>
 }

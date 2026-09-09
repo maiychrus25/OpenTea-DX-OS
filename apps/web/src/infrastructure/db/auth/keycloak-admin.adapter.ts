@@ -20,6 +20,9 @@ export interface KeycloakUserResponse {
   };
 }
 
+let cachedAdminToken: string | null = null;
+let adminTokenExpiry: number = 0;
+
 export class KeycloakAdminAdapter implements AuthManagementPort {
   private readonly baseUrl: string;
   private readonly realm: string;
@@ -34,6 +37,12 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
   }
 
   private async getAdminToken(): Promise<string> {
+    const now = Date.now();
+    // Cache valid? Return immediately. Buffer of 5 seconds to prevent race conditions.
+    if (cachedAdminToken && adminTokenExpiry > now + 5000) {
+      return cachedAdminToken;
+    }
+
     const params = new URLSearchParams();
     params.append('client_id', 'admin-cli');
     params.append('username', this.adminUser);
@@ -54,6 +63,10 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
     }
 
     const data = await res.json();
+    cachedAdminToken = data.access_token;
+    // data.expires_in is usually in seconds (e.g. 60).
+    adminTokenExpiry = now + (data.expires_in * 1000);
+
     return data.access_token;
   }
 

@@ -62,6 +62,16 @@ export const Modal: React.FC<ModalProps> = ({
     }
   }, [isOpen])
 
+  // Handle Escape key manually to avoid StrictMode issues with FocusTrap onDeactivate
+  useEffect(() => {
+    if (!isOpen) return
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -87,10 +97,7 @@ export const Modal: React.FC<ModalProps> = ({
         tabbableOptions: {
           displayCheck: 'none',
         },
-        escapeDeactivates: () => {
-          onClose()
-          return true
-        },
+        escapeDeactivates: false, // Handled manually via useEffect to avoid StrictMode double-fire
       }}
     >
       <div

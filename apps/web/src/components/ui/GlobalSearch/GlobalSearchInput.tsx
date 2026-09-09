@@ -10,10 +10,12 @@ import topBarStyles from '../../layout/TopBar/TopBar.module.css'
 import inputStyles from './GlobalSearchInput.module.css'
 
 export function GlobalSearchInput() {
+  const [mounted, setMounted] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [isMac, setIsMac] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     if (typeof window !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)) {
       setIsMac(true)
     }
@@ -28,6 +30,15 @@ export function GlobalSearchInput() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  if (!mounted) {
+    return (
+      <div className={`${topBarStyles.searchWrap} ${inputStyles.clickable}`}>
+        <Search size={18} className={topBarStyles.searchIcon} aria-hidden="true" />
+        <span className={inputStyles.searchPlaceholder}>Tìm kiếm...</span>
+      </div>
+    )
+  }
 
   return (
     <>

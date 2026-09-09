@@ -64,7 +64,7 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "",
+          "id": "creds_postgres_new",
           "name": "Postgres account"
         }
       }
@@ -95,7 +95,7 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "",
+          "id": "creds_postgres_new",
           "name": "Postgres account"
         }
       }
@@ -115,8 +115,43 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "",
+          "id": "creds_postgres_new",
           "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  const jsonString = JSON.stringify(item.json);\n  item.binary = {\n    data: {\n      data: Buffer.from(jsonString).toString('base64'),\n      mimeType: 'application/json',\n      fileName: 'market_summary_' + new Date().toISOString().split('T')[0] + '.json'\n    }\n  };\n}\nreturn $input.all();"
+      },
+      "id": "json_to_binary",
+      "name": "Chuyển Thành File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucketName": "agrimarket-private",
+        "objectName": "={{'para/Archives/Market_Reports/' + $binary.data.fileName}}",
+        "binaryPropertyName": "data"
+      },
+      "id": "upload_minio",
+      "name": "Lưu File PARA (MinIO)",
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        300
+      ],
+      "credentials": {
+        "s3": {
+          "id": "creds_minio_new",
+          "name": "MinIO S3 account"
         }
       }
     }
@@ -155,6 +190,17 @@
         ]
       ]
     },
+    "Lưu Database": {
+      "main": [
+        [
+          {
+            "node": "Chuyển Thành File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Error Trigger (Khi Web Sập)": {
       "main": [
         [
@@ -171,6 +217,17 @@
         [
           {
             "node": "Gửi Thông Báo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chuyển Thành File": {
+      "main": [
+        [
+          {
+            "node": "Lưu File PARA (MinIO)",
             "type": "main",
             "index": 0
           }
