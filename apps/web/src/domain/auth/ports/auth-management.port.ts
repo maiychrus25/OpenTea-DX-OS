@@ -28,6 +28,7 @@ export interface AuthManagementPort {
    * @throws Error if phone is already taken
    */
   registerFarmer(data: RegisterData, enabled: boolean): Promise<string>;
+  registerUser(data: RegisterData, role: string, enabled: boolean): Promise<string>;
   
   listUsersByRole(role: string): Promise<MemberData[]>;
   updateUserStatus(userId: string, enabled: boolean): Promise<void>;

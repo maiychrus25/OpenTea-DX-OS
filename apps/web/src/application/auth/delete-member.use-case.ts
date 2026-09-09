@@ -3,13 +3,19 @@
 
 import { AuthManagementPort } from '@/domain/auth/ports/auth-management.port'
 
+import { HouseholdPort } from '@/domain/farm/ports/HouseholdPort'
+
 export class DeleteMemberUseCase {
-  constructor(private readonly authPort: AuthManagementPort) {}
+  constructor(
+    private readonly authPort: AuthManagementPort,
+    private readonly householdPort: HouseholdPort
+  ) {}
 
   async execute(userId: string): Promise<void> {
     if (!userId) {
       throw new Error('User ID is required')
     }
     await this.authPort.deleteUser(userId)
+    await this.householdPort.unlinkFromKeycloak(userId)
   }
 }

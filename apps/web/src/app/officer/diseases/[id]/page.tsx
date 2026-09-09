@@ -108,7 +108,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
                 alt="Ảnh bệnh" 
                 fill 
                 unoptimized
-                style={{ objectFit: 'contain' }} 
+                className={styles.reportImage}
               />
             </div>
           )}

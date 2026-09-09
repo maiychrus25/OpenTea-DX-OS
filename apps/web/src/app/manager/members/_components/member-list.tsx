@@ -75,9 +75,10 @@ export function MemberList() {
         setMembers((prev) => prev.filter((m) => m.id !== memberId));
         toast.success('Đã xóa thành viên thành công!');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      toast.error(error.message || `Đã xảy ra lỗi khi ${action === 'APPROVE' ? 'duyệt' : 'xóa'} thành viên.`);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
+      toast.error(errorMessage || `Đã xảy ra lỗi khi ${action === 'APPROVE' ? 'duyệt' : 'xóa'} thành viên.`);
     } finally {
       setIsProcessing(false);
       setConfirmModal({ isOpen: false, action: null, memberId: null });

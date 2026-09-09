@@ -62,6 +62,10 @@
   margin-bottom: 1rem;
 }
 
+.reportImage {
+  object-fit: contain;
+}
+
 .gridInfo {
   display: grid;
   grid-template-columns: 1fr 1fr;
