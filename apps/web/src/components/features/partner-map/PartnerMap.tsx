@@ -3,51 +3,16 @@
 
 "use client"
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import dynamic from 'next/dynamic'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
+import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { MapPin, Search, Plus, Trash2, Edit2, List, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Modal } from '@/components/ui/Modal/Modal'
 import { Button } from '@/components/ui'
+import { escapeHtml } from '@/lib/sanitize'
 import styles from './partner-map.module.css'
-
-const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
-const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false })
-const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false })
-const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false })
-
-const MapUpdater = dynamic(() => import('react-leaflet').then(m => {
-  return function MapUpdaterComponent({ selected }: { selected: { lat: number; lng: number } | null }) {
-    const map = m.useMap()
-    React.useEffect(() => {
-      if (selected) {
-        map.flyTo([selected.lat, selected.lng], 15, { duration: 1.5 })
-      }
-    }, [selected, map])
-    return null
-  }
-}), { ssr: false })
-
-const MapClickHandler = dynamic(() => import('react-leaflet').then(m => {
-  return function MapClickHandlerComponent({ onSelect }: { onSelect: (coords: { lat: number; lng: number }) => void }) {
-    const map = m.useMap()
-    React.useEffect(() => {
-      if (!map) return
-      const onClick = (e: any) => {
-        if (e && e.latlng) {
-          onSelect({ lat: e.latlng.lat, lng: e.latlng.lng })
-        }
-      }
-      map.on('click', onClick)
-      return () => {
-        map.off('click', onClick)
-      }
-    }, [map, onSelect])
-    return null
-  }
-}), { ssr: false })
 
 type Partner = {
   id: string
@@ -165,11 +130,11 @@ export default function PartnerMap() {
   }, [query])
 
   // Handle map click-to-pick
-  const handleMapClick = (coords: { lat: number; lng: number }) => {
+  const handleMapClick = useCallback((coords: { lat: number; lng: number }) => {
     setSelected(coords)
     setFlyToLocation(coords)
     toast.info(`Đã chấm tọa độ: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`)
-  }
+  }, [])
 
   // Handle open edit
   const handleOpenEdit = (p: Partner) => {
@@ -274,48 +239,143 @@ export default function PartnerMap() {
     }
   }
 
-  const markers = useMemo(() => partners.map(p => (
-    <Marker key={p.id} position={[p.lat, p.lng] as any}>
-      <Popup>
-        <div className={styles.popupContent}>
-          <div className={styles.popupTitle}>{p.name}</div>
-          <span className={styles.popupBadge}>
-            {PARTNER_TYPE_MAP[p.partner_type] || p.partner_type}
-          </span>
-          {p.contact_phone && (
-            <div className={styles.popupInfo}>
-              SĐT: <strong>{p.contact_phone}</strong>
-            </div>
-          )}
-          {p.address && (
-            <div className={styles.popupInfo}>
-              Đ/c: {p.address}
-            </div>
-          )}
-          <div className={styles.popupActions}>
-            <button
-              type="button"
-              onClick={() => handleOpenEdit(p)}
-              className={styles.popupBtnEdit}
-              title="Chỉnh sửa thông tin"
-            >
-              <Edit2 size={12} aria-hidden="true" />
-              Sửa
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeletingPartner(p)}
-              className={styles.popupBtnDelete}
-              title="Xóa đối tác"
-            >
-              <Trash2 size={12} aria-hidden="true" />
-              Xóa
-            </button>
-          </div>
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<L.Map | null>(null)
+  const markersLayerRef = useRef<L.LayerGroup | null>(null)
+  const selectedMarkerRef = useRef<L.Marker | null>(null)
+
+  // Initialize pure Leaflet map
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return
+
+    delete (L.Icon.Default.prototype as any)._getIconUrl
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    })
+
+    const map = L.map(mapContainerRef.current, {
+      center: [10.0452, 105.7469],
+      zoom: 8,
+      minZoom: 6,
+      maxBounds: [
+        [8.0, 102.0],
+        [23.5, 109.5]
+      ],
+      maxBoundsViscosity: 1.0,
+    })
+
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    }).addTo(map)
+
+    const markersLayer = L.layerGroup().addTo(map)
+    markersLayerRef.current = markersLayer
+
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      if (e && e.latlng) {
+        handleMapClick({ lat: e.latlng.lat, lng: e.latlng.lng })
+      }
+    })
+
+    mapRef.current = map
+    const resizeTimer = setTimeout(() => {
+      map.invalidateSize()
+    }, 250)
+
+    const handleWindowResize = () => {
+      map.invalidateSize()
+    }
+    window.addEventListener('resize', handleWindowResize)
+
+    return () => {
+      clearTimeout(resizeTimer)
+      window.removeEventListener('resize', handleWindowResize)
+      map.remove()
+      mapRef.current = null
+      markersLayerRef.current = null
+      selectedMarkerRef.current = null
+    }
+  }, [handleMapClick])
+
+  // Sync partners markers
+  useEffect(() => {
+    if (!mapRef.current || !markersLayerRef.current) return
+    markersLayerRef.current.clearLayers()
+
+    partners.forEach(p => {
+      const marker = L.marker([p.lat, p.lng])
+      
+      const safeName = escapeHtml(p.name)
+      const safeType = escapeHtml(PARTNER_TYPE_MAP[p.partner_type] || p.partner_type)
+      const safePhone = escapeHtml(p.contact_phone)
+      const safeAddress = escapeHtml(p.address)
+
+      const popupDiv = document.createElement('div')
+      popupDiv.className = styles.popupContent
+      popupDiv.innerHTML = `
+        <div class="${styles.popupTitle}">${safeName}</div>
+        <span class="${styles.popupBadge}">${safeType}</span>
+        ${safePhone ? `<div class="${styles.popupInfo}">SĐT: <strong>${safePhone}</strong></div>` : ''}
+        ${safeAddress ? `<div class="${styles.popupInfo}">Đ/c: ${safeAddress}</div>` : ''}
+        <div class="${styles.popupActions}">
+          <button type="button" class="${styles.popupBtnEdit}" id="edit-partner-${p.id}" title="Chỉnh sửa thông tin">
+            Sửa
+          </button>
+          <button type="button" class="${styles.popupBtnDelete}" id="del-partner-${p.id}" title="Xóa đối tác">
+            Xóa
+          </button>
         </div>
-      </Popup>
-    </Marker>
-  )), [partners])
+      `
+
+      popupDiv.querySelector(`#edit-partner-${p.id}`)?.addEventListener('click', (ev) => {
+        ev.stopPropagation()
+        handleOpenEdit(p)
+      })
+
+      popupDiv.querySelector(`#del-partner-${p.id}`)?.addEventListener('click', (ev) => {
+        ev.stopPropagation()
+        setDeletingPartner(p)
+      })
+
+      marker.bindPopup(popupDiv)
+      markersLayerRef.current?.addLayer(marker)
+    })
+  }, [partners])
+
+  // Sync selected coordinate marker
+  useEffect(() => {
+    if (!mapRef.current) return
+    if (selected) {
+      if (!selectedMarkerRef.current) {
+        const marker = L.marker([selected.lat, selected.lng], { opacity: 0.9 })
+        const popupDiv = document.createElement('div')
+        popupDiv.className = 'text-xs p-1 font-sans'
+        popupDiv.innerHTML = `
+          <strong class="text-[var(--color-primary)] block mb-1">Vị trí đang chấm ghim</strong>
+          <div>Tọa độ: ${selected.lat.toFixed(4)}, ${selected.lng.toFixed(4)}</div>
+        `
+        marker.bindPopup(popupDiv)
+        marker.addTo(mapRef.current)
+        selectedMarkerRef.current = marker
+      } else {
+        selectedMarkerRef.current.setLatLng([selected.lat, selected.lng])
+      }
+    } else {
+      if (selectedMarkerRef.current) {
+        selectedMarkerRef.current.remove()
+        selectedMarkerRef.current = null
+      }
+    }
+  }, [selected])
+
+  // Sync flyTo location
+  useEffect(() => {
+    if (flyToLocation && mapRef.current) {
+      mapRef.current.flyTo([flyToLocation.lat, flyToLocation.lng], 15, { duration: 1.5 })
+    }
+  }, [flyToLocation])
 
   // Can submit if name is present AND (coordinates are selected OR address text is provided)
   const canSubmit = form.name.trim().length > 0 && (selected !== null || form.address.trim().length > 0)
@@ -574,39 +634,7 @@ export default function PartnerMap() {
 
       {/* Right Content: Map */}
       <div className="flex-1 bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-surface-border)] overflow-hidden shadow-sm h-[800px] lg:h-auto lg:min-h-[600px] relative">
-        <MapContainer 
-          center={[10.0452, 105.7469]} 
-          zoom={8} 
-          minZoom={6}
-          maxBounds={[
-            [8.0, 102.0], // Tây Nam
-            [23.5, 109.5] // Đông Bắc
-          ]}
-          maxBoundsViscosity={1.0}
-          className="h-full w-full absolute inset-0 z-0"
-        >
-          {/* OLP_COMPLIANCE_NOTE: 
-              The satellite layer uses a public endpoint as a progressive UX enhancement. 
-              It does NOT require any proprietary SDKs, paid API keys, or hidden credentials, 
-              strictly adhering to the project's MNM (Open Source) non-commercial rules. */}
-          <TileLayer 
-            attribution='&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" 
-          />
-          <MapUpdater selected={flyToLocation || selected} />
-          <MapClickHandler onSelect={handleMapClick} />
-          {markers}
-          {selected && (
-            <Marker position={[selected.lat, selected.lng]} opacity={0.9}>
-              <Popup>
-                <div className="text-xs p-1 font-sans">
-                  <strong className="text-[var(--color-primary)] block mb-1">Vị trí đang chấm ghim</strong>
-                  <div>Tọa độ: {selected.lat.toFixed(4)}, {selected.lng.toFixed(4)}</div>
-                </div>
-              </Popup>
-            </Marker>
-          )}
-        </MapContainer>
+        <div ref={mapContainerRef} className="h-full w-full absolute inset-0 z-0" />
       </div>
 
       {/* Edit Partner Modal */}

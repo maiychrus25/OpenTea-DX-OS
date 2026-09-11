@@ -27,11 +27,11 @@ REQUIRED_FILES=(
 
 FAIL=0
 for dir in "${REQUIRED_DIRS[@]}"; do
-  [ -d "$dir" ] || { echo "âŒ Missing dir: $dir"; FAIL=1; }
+  [ -d "$dir" ] || { echo "[ERROR] Missing dir: $dir"; FAIL=1; }
 done
 
 for file in "${REQUIRED_FILES[@]}"; do
-  [ -f "$file" ] || { echo "âŒ Missing file: $file"; FAIL=1; }
+  [ -f "$file" ] || { echo "[ERROR] Missing file: $file"; FAIL=1; }
 done
 
-[ $FAIL -eq 0 ] && echo "âœ… Structure OK" || exit 1
+[ $FAIL -eq 0 ] && echo "[OK] Structure OK" || exit 1

@@ -3,46 +3,12 @@
 
 "use client"
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import dynamic from 'next/dynamic'
+import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { MapPin, Target, Sprout, Map } from 'lucide-react'
-
-// Dynamic imports for react-leaflet to ensure ssr:false behavior per requirement
-const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
-const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false })
-const GeoJSON = dynamic(() => import('react-leaflet').then(m => m.GeoJSON), { ssr: false })
-const LayersControl = dynamic(() => import('react-leaflet').then(m => m.LayersControl), { ssr: false })
-const BaseLayer = dynamic(() => import('react-leaflet').then(m => m.LayersControl.BaseLayer), { ssr: false })
-const Tooltip = dynamic<any>(() => import('react-leaflet').then(m => (m as any).Tooltip), { ssr: false })
-
-const MapUpdater = dynamic(() => import('react-leaflet').then(m => {
-  return function MapUpdaterComponent({ selectedParcel }: { selectedParcel: Parcel | null }) {
-    const map = m.useMap()
-    React.useEffect(() => {
-      if (!selectedParcel) return
-      import('leaflet').then(L => {
-        try {
-          if (selectedParcel.polygon_geojson) {
-            const geojsonLayer = L.geoJSON(selectedParcel.polygon_geojson as any)
-            const bounds = geojsonLayer.getBounds()
-            if (bounds.isValid()) {
-              map.flyToBounds(bounds, { padding: [50, 50], duration: 1.5, maxZoom: 18 })
-            }
-          } else if (selectedParcel.centroid_lat && selectedParcel.centroid_lng) {
-            map.flyTo([selectedParcel.centroid_lat, selectedParcel.centroid_lng], 16, { duration: 1.5 })
-          }
-        } catch (e) {
-          console.error('Map fly to error', e)
-        }
-      })
-    }, [selectedParcel, map])
-    return null
-  }
-}), { ssr: false })
-
-const AutoBounds = dynamic(() => import('./AutoBounds'), { ssr: false })
+import { MapPin, Target, Map } from 'lucide-react'
+import { escapeHtml } from '@/lib/sanitize'
 
 // Dùng đúng field name từ API (polygon_geojson, không phải geometry)
 type Parcel = {
@@ -88,17 +54,60 @@ export default function FarmZoneReadOnly() {
   const searchParams = useSearchParams()
   const householdId = searchParams.get('householdId')
 
-  // Leaflet icon fix for Next.js (webpack replaces _getIconUrl)
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<L.Map | null>(null)
+  const geoJsonLayerRef = useRef<L.GeoJSON | null>(null)
+
+  // Initialize pure Leaflet map
   useEffect(() => {
-    import('leaflet').then(L => {
-      // @ts-ignore
-      delete L.Icon.Default.prototype._getIconUrl
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-      })
+    if (!mapContainerRef.current || mapRef.current) return
+
+    delete (L.Icon.Default.prototype as any)._getIconUrl
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
     })
+
+    const map = L.map(mapContainerRef.current, {
+      center: [10.0, 106.0],
+      zoom: 9,
+      minZoom: 6,
+      maxBounds: [
+        [8.0, 102.0],
+        [23.5, 109.5]
+      ],
+      maxBoundsViscosity: 1.0,
+    })
+
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map)
+
+    const esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri'
+    })
+
+    L.control.layers({
+      'Bản đồ đường phố (OSM)': osmLayer,
+      'Bản đồ Vệ tinh (Esri)': esriLayer
+    }, undefined, { position: 'topright' }).addTo(map)
+
+    mapRef.current = map
+    const timer = setTimeout(() => map.invalidateSize(), 250)
+
+    const handleResize = () => {
+      map.invalidateSize()
+    }
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', handleResize)
+      map.remove()
+      mapRef.current = null
+      geoJsonLayerRef.current = null
+    }
   }, [])
 
   useEffect(() => {
@@ -124,6 +133,57 @@ export default function FarmZoneReadOnly() {
     })
   }, [parcels, selectedStatuses, selectedCrop])
 
+  // Sync GeoJSON polygons on filtered parcels change
+  useEffect(() => {
+    if (!mapRef.current) return
+
+    if (geoJsonLayerRef.current) {
+      geoJsonLayerRef.current.remove()
+      geoJsonLayerRef.current = null
+    }
+
+    if (filtered.length === 0) return
+
+    try {
+      const geojsonFeatures = filtered.map(toGeoJSONFeature)
+      const geoLayer = L.geoJSON(geojsonFeatures as any, {
+        style: styleForFeature,
+        onEachFeature: (feature, layer) => {
+          onEachFeature(feature, layer)
+          const tooltipContent = `<div style="display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg></div>`
+          layer.bindTooltip(tooltipContent, { permanent: true, direction: 'center', className: 'transparent-tooltip' })
+        }
+      }).addTo(mapRef.current)
+
+      geoJsonLayerRef.current = geoLayer
+
+      const bounds = geoLayer.getBounds()
+      if (bounds.isValid()) {
+        mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 19 })
+      }
+    } catch (e) {
+      console.error('Error rendering parcels GeoJSON layer:', e)
+    }
+  }, [filtered])
+
+  // Sync selected parcel focus
+  useEffect(() => {
+    if (!selectedParcel || !mapRef.current) return
+    try {
+      if (selectedParcel.polygon_geojson) {
+        const geojsonLayer = L.geoJSON(selectedParcel.polygon_geojson as any)
+        const bounds = geojsonLayer.getBounds()
+        if (bounds.isValid()) {
+          mapRef.current.flyToBounds(bounds, { padding: [50, 50], duration: 1.5, maxZoom: 18 })
+        }
+      } else if (selectedParcel.centroid_lat && selectedParcel.centroid_lng) {
+        mapRef.current.flyTo([selectedParcel.centroid_lat, selectedParcel.centroid_lng], 16, { duration: 1.5 })
+      }
+    } catch (e) {
+      console.error('Map fly to error', e)
+    }
+  }, [selectedParcel])
+
   const totalParcels = parcels.length
   const drawnParcels = parcels.filter(p => hasValidGeometry(p.polygon_geojson)).length
 
@@ -139,12 +199,12 @@ export default function FarmZoneReadOnly() {
 
   function onEachFeature(feature: any, layer: any) {
     const props = feature.properties || {}
-    const name = props.parcel_code || props.name || 'Thửa đất'
+    const name = escapeHtml(props.parcel_code || props.name || 'Thửa đất')
     const statusCfg = STATUS_CONFIG[props.status]
-    const statusLabel = statusCfg?.label || props.status || '—'
-    const crop = props.crop_type || '—'
-    const owner = props.household?.name || '—'
-    const area = props.area_ha != null ? `${props.area_ha} ha` : '—'
+    const statusLabel = escapeHtml(statusCfg?.label || props.status || '—')
+    const crop = escapeHtml(props.crop_type || '—')
+    const owner = escapeHtml(props.household?.name || '—')
+    const area = escapeHtml(props.area_ha != null ? `${props.area_ha} ha` : '—')
     const html = `<div style="min-width:180px;font-family:sans-serif">
       <strong style="font-size:1rem">${name}</strong>
       <div style="margin-top:6px;font-size:0.85rem;line-height:1.5">
@@ -287,43 +347,7 @@ export default function FarmZoneReadOnly() {
           }
         `}</style>
 
-        <MapContainer center={[10.0, 106.0]} zoom={9} className="h-full w-full absolute inset-0 z-0">
-          {/* @ts-ignore */}
-          <LayersControl position="topright">
-            {/* @ts-ignore */}
-            <BaseLayer checked name="Bản đồ đường phố (OSM)">
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution="&copy; OpenStreetMap contributors"
-              />
-            </BaseLayer>
-            {/* @ts-ignore */}
-            <BaseLayer name="Bản đồ Vệ tinh (Esri)">
-              <TileLayer
-                attribution='Tiles &copy; Esri'
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              />
-            </BaseLayer>
-          </LayersControl>
-          
-          <AutoBounds parcels={filtered} />
-          <MapUpdater selectedParcel={selectedParcel} />
-
-          {filtered.map(p => (
-            <GeoJSON
-              key={p.id}
-              data={toGeoJSONFeature(p) as any}
-              style={styleForFeature}
-              onEachFeature={onEachFeature}
-            >
-              <Tooltip permanent direction="center" className="transparent-tooltip">
-                <div className="flex items-center justify-center">
-                  <Sprout className="w-5 h-5 text-emerald-600 drop-shadow-md" />
-                </div>
-              </Tooltip>
-            </GeoJSON>
-          ))}
-        </MapContainer>
+        <div ref={mapContainerRef} className="h-full w-full absolute inset-0 z-0" />
 
         {drawnParcels === 0 && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl p-6 text-center shadow-xl z-[1000] pointer-events-auto">

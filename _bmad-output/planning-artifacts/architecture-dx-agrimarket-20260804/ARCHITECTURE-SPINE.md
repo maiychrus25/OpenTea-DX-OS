@@ -41,9 +41,8 @@ altitude: Initiative → Features
 | React | 18.x | MIT | UI rendering, Server Components |
 | NextAuth.js (Auth.js) | 5.x | ISC | Keycloak OIDC adapter, session management |
 | Zustand | 4.x | MIT | Client-side global state management |
-| Leaflet.js | 1.9.x | BSD-2 | Map rendering (client-only, dynamic import) |
-| React-Leaflet | 4.x | MIT | React wrapper cho Leaflet |
-| Leaflet.draw | 1.0.x | MIT | Polygon drawing tool cho Farm Zone |
+| Leaflet.js | 1.9.x | BSD-2 | Map rendering (pure client-only, 100% OSI-approved) |
+| @geoman-io/leaflet-geoman-free | 2.x | MIT | Polygon drawing tool cho Farm Zone |
 | Turf.js | 7.x | MIT | Polygon area calculation (ha), client-side |
 | node-qrcode | 1.5.x | MIT | QR code generation (server-side trong API route) |
 | Zod | 3.x | MIT | Request body validation tại API routes |

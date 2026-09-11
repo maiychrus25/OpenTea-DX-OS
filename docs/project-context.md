@@ -26,7 +26,7 @@ MNM (100% open source). OLP competition + internal production use.
 | Font | Be Vietnam Pro (Google Fonts) | Variable: `--font-be-vietnam` |
 | Auth | Keycloak 24 + NextAuth.js 5 | OIDC, Passkeys/PIN |
 | State | Zustand 4 | Client global state |
-| Map | Leaflet.js + React-Leaflet | `'use client'` + `dynamic(ssr:false)` ALWAYS |
+| Map | Leaflet.js (pure) | `'use client'` + `dynamic(ssr:false)` ALWAYS |
 | Validation | Zod 3 | At route handler, before UseCase |
 | ORM | Prisma 5 | Schema at `apps/web/prisma/schema.prisma` |
 | Database | PostgreSQL 16 | Single source of truth |
