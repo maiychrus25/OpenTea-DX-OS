@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { PrismaDiseaseReportRepository } from '@/infrastructure/db/farm/PrismaDiseaseReportRepository';
+import { logger } from '@/lib/logger';
 import { Pill } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import styles from './diseases.module.css';
@@ -32,7 +33,7 @@ export default async function OfficerDiseasesPage() {
       try {
         r.photo_url = await storageAdapter.getPresignedUrl(r.photo_minio_key);
       } catch (e) {
-        console.error('Failed to generate presigned URL for', r.photo_minio_key, e);
+        logger.error('Failed to generate presigned URL', { key: r.photo_minio_key, error: e });
       }
     }
     return r;
