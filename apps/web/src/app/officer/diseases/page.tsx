@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { PrismaDiseaseReportRepository } from '@/infrastructure/db/farm/PrismaDiseaseReportRepository';
+import { logger } from '@/lib/logger';
 import { Pill } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import styles from './diseases.module.css';
@@ -22,7 +23,21 @@ export default async function OfficerDiseasesPage() {
   }
 
   const repository = new PrismaDiseaseReportRepository();
-  const reports = await repository.findPendingReports();
+  const rawReports = await repository.findPendingReports();
+
+  const { MinioStorageAdapter } = await import('@/infrastructure/storage/minio-storage.adapter');
+  const storageAdapter = new MinioStorageAdapter();
+  
+  const reports = await Promise.all(rawReports.map(async (r) => {
+    if (r.photo_minio_key) {
+      try {
+        r.photo_url = await storageAdapter.getPresignedUrl(r.photo_minio_key);
+      } catch (e) {
+        logger.error('Failed to generate presigned URL', { key: r.photo_minio_key, error: e });
+      }
+    }
+    return r;
+  }));
 
   return (
     <div className={styles.container}>

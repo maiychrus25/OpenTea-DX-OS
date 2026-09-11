@@ -220,9 +220,6 @@ export function ChatPanel({ userId, userName }: ChatPanelProps) {
                     <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                       {msg.content.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').trim()}
                     </ReactMarkdown>
-                    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '11px', color: 'var(--color-primary)' }}>
-                      DEBUG: {JSON.stringify(msg.content)}
-                    </pre>
                   </div>
                 ) : (
                   msg.isStreaming && <Loader2 size={16} className={styles.spin} />

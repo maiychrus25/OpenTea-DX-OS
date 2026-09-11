@@ -80,18 +80,9 @@ export default function FarmZoneReadOnly() {
       maxBoundsViscosity: 1.0,
     })
 
-    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map)
-
-    const esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles &copy; Esri'
-    })
-
-    L.control.layers({
-      'Bản đồ đường phố (OSM)': osmLayer,
-      'Bản đồ Vệ tinh (Esri)': esriLayer
-    }, undefined, { position: 'topright' }).addTo(map)
+    }).addTo(map)
 
     mapRef.current = map
     const timer = setTimeout(() => map.invalidateSize(), 250)
