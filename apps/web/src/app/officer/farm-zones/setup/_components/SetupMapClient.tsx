@@ -22,6 +22,11 @@ interface Props {
 export default function SetupMapClient({ onAreaCalculated }: Props) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
+  
+  const onAreaCalculatedRef = useRef(onAreaCalculated)
+  useEffect(() => {
+    onAreaCalculatedRef.current = onAreaCalculated
+  }, [onAreaCalculated])
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
@@ -39,19 +44,10 @@ export default function SetupMapClient({ onAreaCalculated }: Props) {
       zoom: 13,
     })
 
-    // Base Layers
-    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map)
-
-    const esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    // Base Layers - Satellite ONLY
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-    })
-
-    L.control.layers({
-      'Bản đồ đường phố (OSM)': osmLayer,
-      'Bản đồ Vệ tinh (Esri)': esriLayer
-    }, undefined, { position: 'topright' }).addTo(map)
+    }).addTo(map)
 
     // 1. Search Control (GeoSearch)
     const provider = new EsriProvider()
@@ -177,7 +173,7 @@ export default function SetupMapClient({ onAreaCalculated }: Props) {
       try {
         if (geojson.geometry.type === 'Polygon') {
           const sqm = area(turfPolygon(geojson.geometry.coordinates))
-          onAreaCalculated(Math.round(sqm), geojson, layer.getBounds().getCenter())
+          onAreaCalculatedRef.current(Math.round(sqm), geojson, layer.getBounds().getCenter())
         }
       } catch {
         // Ignore invalid geometry error
@@ -191,7 +187,7 @@ export default function SetupMapClient({ onAreaCalculated }: Props) {
         try {
           if (editedGeojson.geometry.type === 'Polygon') {
             const editedSqm = area(turfPolygon(editedGeojson.geometry.coordinates))
-            onAreaCalculated(Math.round(editedSqm), editedGeojson, editedLayer.getBounds().getCenter())
+            onAreaCalculatedRef.current(Math.round(editedSqm), editedGeojson, editedLayer.getBounds().getCenter())
           }
         } catch {
           // Ignore invalid geometry error
@@ -200,7 +196,7 @@ export default function SetupMapClient({ onAreaCalculated }: Props) {
     })
 
     map.on('pm:remove', () => {
-      onAreaCalculated(0)
+      onAreaCalculatedRef.current(0)
     })
 
     mapRef.current = map
@@ -227,7 +223,7 @@ export default function SetupMapClient({ onAreaCalculated }: Props) {
       map.remove()
       mapRef.current = null
     }
-  }, [onAreaCalculated])
+  }, []) // Remove onAreaCalculated from dependencies to avoid re-init
 
   return (
     <div 

@@ -22,7 +22,21 @@ export default async function OfficerDiseasesPage() {
   }
 
   const repository = new PrismaDiseaseReportRepository();
-  const reports = await repository.findPendingReports();
+  const rawReports = await repository.findPendingReports();
+
+  const { MinioStorageAdapter } = await import('@/infrastructure/storage/minio-storage.adapter');
+  const storageAdapter = new MinioStorageAdapter();
+  
+  const reports = await Promise.all(rawReports.map(async (r) => {
+    if (r.photo_minio_key) {
+      try {
+        r.photo_url = await storageAdapter.getPresignedUrl(r.photo_minio_key);
+      } catch (e) {
+        console.error('Failed to generate presigned URL for', r.photo_minio_key, e);
+      }
+    }
+    return r;
+  }));
 
   return (
     <div className={styles.container}>

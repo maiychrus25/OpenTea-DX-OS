@@ -107,7 +107,7 @@ export class ChatbotUseCase {
         let latestFx: any = null
         
         if (this.marketData) {
-          recentMarketData = await this.marketData.getRecentMarketData(timeWindow, 50)
+          recentMarketData = await this.marketData.getRecentMarketData(timeWindow, 200)
           latestFx = await this.marketData.getLatestFxRate()
         }
 
