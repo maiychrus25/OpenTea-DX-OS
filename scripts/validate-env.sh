@@ -21,15 +21,15 @@ REQUIRED_KEYS=(
 MISSING=0
 for key in "${REQUIRED_KEYS[@]}"; do
   if ! grep -q "^${key}=" .env.example; then
-    echo "âŒ MISSING in .env.example: $key"
+    echo "[ERROR] MISSING in .env.example: $key"
     MISSING=$((MISSING + 1))
   fi
 done
 
 if [ $MISSING -eq 0 ]; then
-  echo "âœ… All required env vars present in .env.example"
+  echo "[OK] All required env vars present in .env.example"
   exit 0
 else
-  echo "âŒ $MISSING keys missing"
+  echo "[ERROR] $MISSING keys missing"
   exit 1
 fi
