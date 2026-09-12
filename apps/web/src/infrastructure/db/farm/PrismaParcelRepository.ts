@@ -4,6 +4,13 @@
 import { ParcelPort, ParcelSummary, CreateParcelData, ParcelFilters } from '@/domain/farm/ports/ParcelPort'
 import { prisma } from '@/infrastructure/db/prisma.client'
 
+const CROP_CYCLE_INCLUDE = {
+  crop_cycles: {
+    orderBy: { created_at: 'desc' as const },
+    take: 1,
+  },
+}
+
 export class PrismaParcelRepository implements ParcelPort {
   async findById(id: string): Promise<ParcelSummary | null> {
     const parcel = await prisma.parcel.findUnique({
@@ -12,10 +19,12 @@ export class PrismaParcelRepository implements ParcelPort {
         household: {
           select: { id: true, name: true, keycloak_user_id: true },
         },
+        ...CROP_CYCLE_INCLUDE,
       },
     })
     if (!parcel) return null
 
+    const latestCycle = (parcel as any).crop_cycles?.[0]
     return {
       id: parcel.id,
       parcel_code: parcel.parcel_code,
@@ -28,6 +37,9 @@ export class PrismaParcelRepository implements ParcelPort {
       status: parcel.status,
       crop_type: parcel.crop_type,
       household: parcel.household,
+      season: latestCycle?.season ?? null,
+      sowed_at: latestCycle?.sowed_at?.toISOString() ?? null,
+      harvested_at: latestCycle?.harvested_at?.toISOString() ?? null,
     }
   }
 
@@ -42,23 +54,30 @@ export class PrismaParcelRepository implements ParcelPort {
         household: {
           select: { id: true, name: true, keycloak_user_id: true },
         },
+        ...CROP_CYCLE_INCLUDE,
       },
       orderBy: { created_at: 'desc' },
     })
 
-    return parcels.map(p => ({
-      id: p.id,
-      parcel_code: p.parcel_code,
-      household_id: p.household_id,
-      name: p.parcel_code,
-      area_ha: p.area_ha,
-      centroid_lat: p.centroid_lat,
-      centroid_lng: p.centroid_lng,
-      polygon_geojson: p.polygon_geojson,
-      status: p.status,
-      crop_type: p.crop_type,
-      household: p.household,
-    }))
+    return parcels.map(p => {
+      const latestCycle = (p as any).crop_cycles?.[0]
+      return {
+        id: p.id,
+        parcel_code: p.parcel_code,
+        household_id: p.household_id,
+        name: p.parcel_code,
+        area_ha: p.area_ha,
+        centroid_lat: p.centroid_lat,
+        centroid_lng: p.centroid_lng,
+        polygon_geojson: p.polygon_geojson,
+        status: p.status,
+        crop_type: p.crop_type,
+        household: p.household,
+        season: latestCycle?.season ?? null,
+        sowed_at: latestCycle?.sowed_at?.toISOString() ?? null,
+        harvested_at: latestCycle?.harvested_at?.toISOString() ?? null,
+      }
+    })
   }
 
   async create(data: CreateParcelData): Promise<ParcelSummary> {

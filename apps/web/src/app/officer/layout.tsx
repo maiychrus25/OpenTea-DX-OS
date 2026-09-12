@@ -5,11 +5,16 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, Bot, MessageCircle, User, Users, Bell } from 'lucide-react'
+import { prisma } from '@/infrastructure/db/prisma.client'
+import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 
 export default async function OfficerLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session) redirect('/login')
   if (session.user.role !== 'officer') redirect('/unauthorized')
+
+  const profileRepo = new PrismaHtxProfileRepository(prisma)
+  const htxProfile = await profileRepo.getProfile()
 
   const navItems = [
     { label: 'Tổng quan', href: '/officer/dashboard', icon: <Home size={20} /> },
@@ -26,8 +31,15 @@ export default async function OfficerLayout({ children }: { children: React.Reac
   ]
 
   return (
-    <AppShell role="officer" userName={session.user.name || 'Cán bộ Kỹ thuật'} navItems={navItems}>
+    <AppShell 
+      role="officer" 
+      userName={session.user.name || 'Cán bộ Kỹ thuật'} 
+      navItems={navItems}
+      htxName={htxProfile?.name || 'Chưa cập nhật'}
+      htxLocation={htxProfile?.address || ''}
+    >
       {children}
     </AppShell>
   )
 }
+

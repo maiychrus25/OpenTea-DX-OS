@@ -38,7 +38,7 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "",
+          "id": "creds_postgres_new",
           "name": "Postgres account"
         }
       }
@@ -104,7 +104,7 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "",
+          "id": "creds_mm_webhook",
           "name": "Mattermost Webhook"
         }
       }
@@ -124,7 +124,7 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "",
+          "id": "creds_postgres_new",
           "name": "Postgres account"
         }
       }
@@ -155,7 +155,7 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "",
+          "id": "creds_postgres_new",
           "name": "Postgres account"
         }
       }
