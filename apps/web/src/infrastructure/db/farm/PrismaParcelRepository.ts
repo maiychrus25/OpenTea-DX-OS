@@ -4,6 +4,15 @@
 import { ParcelPort, ParcelSummary, CreateParcelData, ParcelFilters } from '@/domain/farm/ports/ParcelPort'
 import { prisma } from '@/infrastructure/db/prisma.client'
 
+// Type for the crop_cycles relation included via CROP_CYCLE_INCLUDE
+interface CropCycleRow {
+  id: string
+  season: string | null
+  sowed_at: Date | null
+  harvested_at: Date | null
+  created_at: Date
+}
+
 const CROP_CYCLE_INCLUDE = {
   crop_cycles: {
     orderBy: { created_at: 'desc' as const },
@@ -24,7 +33,7 @@ export class PrismaParcelRepository implements ParcelPort {
     })
     if (!parcel) return null
 
-    const latestCycle = (parcel as any).crop_cycles?.[0]
+    const latestCycle = (parcel as unknown as { crop_cycles: CropCycleRow[] }).crop_cycles?.[0]
     return {
       id: parcel.id,
       parcel_code: parcel.parcel_code,
@@ -60,7 +69,7 @@ export class PrismaParcelRepository implements ParcelPort {
     })
 
     return parcels.map(p => {
-      const latestCycle = (p as any).crop_cycles?.[0]
+      const latestCycle = (p as unknown as { crop_cycles: CropCycleRow[] }).crop_cycles?.[0]
       return {
         id: p.id,
         parcel_code: p.parcel_code,
