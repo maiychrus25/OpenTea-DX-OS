@@ -201,13 +201,13 @@ jobs:
       - name: Start Services
         run: |
           # Only start core infrastructure services for smoke test.
-          # Optional services (n8n, mattermost, piper) require credentials
-          # or large images that are unavailable in CI.
-          docker compose -f docker/docker-compose.yml up -d postgres keycloak minio
+          # Docker Hub rate limits prevent pulling optional images in CI.
+          # postgres (postgres:16-alpine) and keycloak (quay.io) are reliable.
+          docker compose -f docker/docker-compose.yml up -d postgres keycloak
 
       - name: Run Smoke Test
         run: |
-          sleep 15
+          sleep 20
           bash scripts/smoke-test.sh
 
       - name: Docker Logs on Failure
