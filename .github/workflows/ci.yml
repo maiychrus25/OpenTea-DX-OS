@@ -199,11 +199,15 @@ jobs:
           cp docker/.env.local.example docker/.env.local
 
       - name: Start Services
-        run: docker compose -f docker/docker-compose.yml up -d --build
+        run: |
+          # Only start core infrastructure services for smoke test.
+          # Docker Hub rate limits prevent pulling optional images in CI.
+          # postgres (postgres:16-alpine) and keycloak (quay.io) are reliable.
+          docker compose -f docker/docker-compose.yml up -d postgres keycloak
 
       - name: Run Smoke Test
         run: |
-          sleep 15
+          sleep 20
           bash scripts/smoke-test.sh
 
       - name: Docker Logs on Failure

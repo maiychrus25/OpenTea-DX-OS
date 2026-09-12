@@ -60,11 +60,15 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
         const history = parcels.map((p: any) => ({
           id: p.id,
           crop: p.crop_type || 'Chưa gán',
-          season: p.season || 'N/A',
-          yield: 'N/A',
-          status: p.status === 'GROWING' ? 'Đang sinh trưởng' : 
+          season: p.season || 'Chưa gán vụ',
+          yield: p.harvested_at 
+            ? (p.estimated_yield_per_ha 
+              ? `${(p.area_ha * p.estimated_yield_per_ha).toLocaleString('vi-VN')} kg`
+              : 'Đã thu hoạch')
+            : 'Chưa thu hoạch',
+          status: p.status === 'GROWING' || p.status === 'TENDING' || p.status === 'SOWING' ? 'Đang sinh trưởng' : 
                  (p.status === 'HARVEST_READY' ? 'Sắp thu hoạch' : 
-                 (p.status === 'HARVEST_APPROVED' ? 'Đã thu hoạch' : p.status))
+                 (p.status === 'HARVESTED' || p.status === 'HARVEST_APPROVED' ? 'Đã thu hoạch' : p.status))
         }))
 
         setData({

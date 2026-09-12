@@ -13,6 +13,9 @@ export interface ParcelSummary {
   status: string
   crop_type: string
   household?: { id: string; name: string; keycloak_user_id: string | null } | null
+  season?: string | null
+  sowed_at?: string | null
+  harvested_at?: string | null
 }
 
 export interface CreateParcelData {
