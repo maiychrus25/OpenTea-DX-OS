@@ -199,7 +199,11 @@ jobs:
           cp docker/.env.local.example docker/.env.local
 
       - name: Start Services
-        run: docker compose -f docker/docker-compose.yml up -d --build
+        run: |
+          # Only start core infrastructure services for smoke test.
+          # Optional services (n8n, mattermost, piper) require credentials
+          # or large images that are unavailable in CI.
+          docker compose -f docker/docker-compose.yml up -d postgres keycloak minio
 
       - name: Run Smoke Test
         run: |
