@@ -1,4 +1,5 @@
 {
+  "id": "hl57LgKrtSMdJIDj",
   "name": "NASA POWER Sync",
   "nodes": [
     {
@@ -60,9 +61,7 @@
         300
       ],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     },
@@ -91,9 +90,7 @@
         -200
       ],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     }

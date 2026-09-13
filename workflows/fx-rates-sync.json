@@ -1,4 +1,5 @@
 {
+  "id": "Z0c6xDK26I2t5CUO",
   "name": "FX Rates Sync",
   "nodes": [
     {
@@ -96,9 +97,7 @@
         300
       ],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres_Agrimarket"
+        "postgres": { "id": "creds_pg_agrimrkt", "name": "Postgres_Agrimarket"
         }
       }
     },
@@ -127,9 +126,7 @@
         -200
       ],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     }
