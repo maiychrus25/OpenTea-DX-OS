@@ -61,7 +61,7 @@ export default async function OfficerBulletinPage({ searchParams }: OfficerBulle
       date: timeAgo(b.created_at),
       sourceCount: sourcesArr.length || 1,
     }
-  })
+  }).filter(b => b.summary.length > 0)
 
   const rawBulletins = realBulletins.length > 0 ? realBulletins : MOCK_BULLETINS
 
