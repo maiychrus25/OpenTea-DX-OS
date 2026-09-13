@@ -74,19 +74,8 @@
     },
     {
       "parameters": {
-        "operation": "insert",
-        "schema": "public",
-        "table": "fx_rates",
-        "mappingMode": "defineBelow",
-        "valuesToSend": {
-          "values": [
-            {
-              "column": "rates",
-              "value": "={{ $json.rates }}"
-            }
-          ]
-        },
-        "options": {}
+        "operation": "executeQuery",
+        "query": "INSERT INTO fx_rates (rates) VALUES ('{{ JSON.stringify($json.rates) }}'::jsonb);"
       },
       "id": "05",
       "name": "Insert into Postgres",
