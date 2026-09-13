@@ -32,6 +32,17 @@ interface ManagerBulletinPageProps {
   }
 }
 
+/**
+ * Strip LLM thinking blocks (e.g. <think>...</think>) from AI-generated text.
+ * Qwen 3 and similar reasoning models emit these traces in responses.
+ */
+function stripThinkingBlocks(text: string): string {
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<think>[\s\S]*/gi, '') // unclosed thinking block
+    .trim()
+}
+
 export default async function ManagerBulletinPage({ searchParams }: ManagerBulletinPageProps) {
   const isViewAll = searchParams?.view === 'all'
   const selectedCategory = searchParams?.category || 'all'
@@ -45,11 +56,12 @@ export default async function ManagerBulletinPage({ searchParams }: ManagerBulle
   // Map DB bulletins to the BulletinCard format
   const realBulletins = dbBulletins.map((b) => {
     const sourcesArr = Array.isArray(b.sources_json) ? b.sources_json : []
+    const cleanSummary = stripThinkingBlocks(b.bulletin_vi)
     return {
       id: b.id,
       category: 'market' as const,
       headline: b.commodity,
-      summary: b.bulletin_vi,
+      summary: cleanSummary,
       date: timeAgo(b.created_at),
       sourceCount: sourcesArr.length || 1,
     }
