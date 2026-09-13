@@ -338,12 +338,38 @@
   color: var(--muted-foreground);
   margin: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.6;
   flex: 1;
+}
+
+/* Markdown content rendered inside bulletin summary */
+.articleSummary h3 {
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0 0 4px 0;
+}
+
+.articleSummary p {
+  margin: 0 0 4px 0;
+}
+
+.articleSummary ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.articleSummary li {
+  margin: 0;
+}
+
+.articleSummary strong {
+  color: var(--foreground);
+  font-weight: 600;
 }
 
 .articleMeta {

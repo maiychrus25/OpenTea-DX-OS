@@ -1,4 +1,5 @@
 {
+  "id": "Z0c6xDK26I2t5CUO",
   "name": "FX Rates Sync",
   "nodes": [
     {
@@ -73,19 +74,8 @@
     },
     {
       "parameters": {
-        "operation": "insert",
-        "schema": "public",
-        "table": "fx_rates",
-        "mappingMode": "defineBelow",
-        "valuesToSend": {
-          "values": [
-            {
-              "column": "rates",
-              "value": "={{ $json.rates }}"
-            }
-          ]
-        },
-        "options": {}
+        "operation": "executeQuery",
+        "query": "INSERT INTO fx_rates (rates) VALUES ('{{ JSON.stringify($json.rates) }}'::jsonb);"
       },
       "id": "05",
       "name": "Insert into Postgres",
@@ -96,9 +86,7 @@
         300
       ],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres_Agrimarket"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     },
@@ -127,9 +115,7 @@
         -200
       ],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     }

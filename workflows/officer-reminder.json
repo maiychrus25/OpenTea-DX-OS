@@ -31,9 +31,7 @@
       "typeVersion": 2.4,
       "position": [250, 0],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     },
@@ -98,9 +96,7 @@
       "typeVersion": 4.2,
       "position": [1000, -50],
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "",
-          "name": "Mattermost Webhook"
+        "httpHeaderAuth": { "id": "creds_mm_webhook", "name": "Mattermost Webhook"
         }
       }
     },
@@ -123,9 +119,7 @@
       "typeVersion": 2.4,
       "position": [250, -250],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     }

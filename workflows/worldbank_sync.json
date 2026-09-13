@@ -1,4 +1,5 @@
 {
+  "id": "wLV6jyxZwHWmaEL3",
   "name": "WorldBank Sync",
   "nodes": [
     {
@@ -64,7 +65,7 @@
       "typeVersion": 2.4,
       "position": [800, 300],
       "credentials": {
-        "postgres": { "id": "", "name": "Postgres account" }
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account" }
       }
     },
     {
@@ -86,7 +87,7 @@
       "typeVersion": 2.4,
       "position": [200, -200],
       "credentials": {
-        "postgres": { "id": "", "name": "Postgres account" }
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account" }
       }
     }
   ],

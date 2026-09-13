@@ -1,4 +1,5 @@
 {
+  "id": "J6JxYBKfZZgJSAem",
   "name": "Weather Alerts",
   "note": "File export từ n8n: Luồng cảnh báo thời tiết Open-Meteo",
   "nodes": [
@@ -27,9 +28,7 @@
         -200
       ],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     }

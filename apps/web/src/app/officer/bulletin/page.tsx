@@ -31,6 +31,16 @@ interface OfficerBulletinPageProps {
   }
 }
 
+/**
+ * Strip LLM thinking blocks from AI-generated text.
+ */
+function stripThinkingBlocks(text: string): string {
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<think>[\s\S]*/gi, '')
+    .trim()
+}
+
 export default async function OfficerBulletinPage({ searchParams }: OfficerBulletinPageProps) {
   const isViewAll = searchParams?.view === 'all'
   const selectedCategory = searchParams?.category || 'all'
@@ -47,11 +57,11 @@ export default async function OfficerBulletinPage({ searchParams }: OfficerBulle
       id: b.id,
       category: 'market' as const,
       headline: b.commodity,
-      summary: b.bulletin_vi,
+      summary: stripThinkingBlocks(b.bulletin_vi),
       date: timeAgo(b.created_at),
       sourceCount: sourcesArr.length || 1,
     }
-  })
+  }).filter(b => b.summary.length > 0)
 
   const rawBulletins = realBulletins.length > 0 ? realBulletins : MOCK_BULLETINS
 

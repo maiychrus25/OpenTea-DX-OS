@@ -6,6 +6,7 @@
 import React, { useState, useRef, useCallback } from 'react'
 import { CheckCircle2, Volume2, Square, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import ReactMarkdown from 'react-markdown'
 import { Pill } from '@/components/ui/Pill'
 import styles from './bulletin.module.css'
 
@@ -129,7 +130,9 @@ export function BulletinCard({ category, headline, summary, date, sourceCount }:
       </div>
       
       <h2 className={styles.articleTitle}>{headline}</h2>
-      <p className={styles.articleSummary}>{summary}</p>
+      <div className={styles.articleSummary}>
+        <ReactMarkdown>{summary}</ReactMarkdown>
+      </div>
       
       <div className={styles.sourceRow}>
         <CheckCircle2 size={16} />

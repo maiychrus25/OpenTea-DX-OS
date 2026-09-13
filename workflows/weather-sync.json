@@ -47,9 +47,7 @@
         300
       ],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres_Agrimarket"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     },
@@ -118,9 +116,7 @@
         300
       ],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres_Agrimarket"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     },
@@ -149,9 +145,7 @@
         -200
       ],
       "credentials": {
-        "postgres": {
-          "id": "",
-          "name": "Postgres account"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     }

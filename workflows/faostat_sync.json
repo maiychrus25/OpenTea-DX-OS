@@ -1,4 +1,5 @@
 {
+  "id": "9WsvMjl7WdQcBTrz",
   "name": "FAOSTAT Sync",
   "nodes": [
     {
@@ -75,7 +76,7 @@
       "typeVersion": 2.4,
       "position": [800, 350],
       "credentials": {
-        "postgres": { "id": "", "name": "Postgres account" }
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account" }
       }
     },
     {
@@ -97,7 +98,7 @@
       "typeVersion": 2.4,
       "position": [200, -200],
       "credentials": {
-        "postgres": { "id": "", "name": "Postgres account" }
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account" }
       }
     }
   ],
