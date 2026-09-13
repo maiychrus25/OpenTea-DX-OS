@@ -86,7 +86,7 @@
         300
       ],
       "credentials": {
-        "postgres": { "id": "creds_pg_agrimrkt", "name": "Postgres_Agrimarket"
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account"
         }
       }
     },
