@@ -38,7 +38,10 @@ async function postExportQr(request: Request, context: unknown) {
   const lotRepo = new PrismaLotRepository()
   const traceRepo = new PrismaLotTraceRepository()
   const useCase = new ExportQrUseCase(lotRepo, traceRepo)
-  const data = await useCase.execute(id, certificateKeys)
+  // Hexagonal: baseUrl injected from request headers via validated helper (Host injection guard)
+  const { resolveBaseUrlFromHeaders } = await import('@/lib/url-helpers')
+  const baseUrl = resolveBaseUrlFromHeaders(request.headers, process.env.NEXT_PUBLIC_BASE_URL)
+  const data = await useCase.execute(id, certificateKeys, baseUrl)
   return NextResponse.json({ data })
 }
 

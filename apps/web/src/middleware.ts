@@ -3,9 +3,9 @@
 
 import { auth } from "./auth"
 import { NextResponse } from "next/server"
-import { isPublicResourcePath } from '@/lib/contracts/public-resource-path'
+import { isPublicResourcePath, isPublicApiPath } from '@/lib/contracts/public-resource-path'
 
-export { isPublicResourcePath } from '@/lib/contracts/public-resource-path'
+export { isPublicResourcePath, isPublicApiPath } from '@/lib/contracts/public-resource-path'
 
 const RECOGNIZED_ROLES = ['manager', 'officer', 'farmer'] as const
 type RecognizedRole = (typeof RECOGNIZED_ROLES)[number]
@@ -21,10 +21,11 @@ export function resolveAuthRedirect(
 ): string | null {
   const lowerPath = pathname.toLowerCase()
 
-  // Static assets and auth endpoints — always allow
+  // Static assets and auth endpoints — always allow (case-insensitive, exact prefix with slash)
   if (
-    pathname.startsWith('/api/auth') ||
-    pathname.startsWith('/_next') ||
+    lowerPath.startsWith('/api/auth/') ||
+    lowerPath === '/api/auth' ||
+    lowerPath.startsWith('/_next') ||
     pathname === '/favicon.ico'
   ) {
     return null
@@ -32,13 +33,26 @@ export function resolveAuthRedirect(
 
   // Unauthenticated — allow public paths and /login, block everything else
   if (!isLoggedIn) {
+    if (lowerPath.startsWith('/api/')) {
+      if (
+        lowerPath.startsWith('/api/auth/') ||
+        lowerPath === '/api/auth' ||
+        lowerPath.startsWith('/api/health') ||
+        lowerPath === '/api/health/' ||
+        lowerPath.startsWith('/api/dev-login') ||
+        isPublicApiPath(pathname)
+      )
+        return null
+      return 'UNAUTHORIZED_API'
+    }
     if (
       pathname === '/login' ||
       pathname === '/register' ||
       pathname === '/forgot-pin' ||
       pathname === '/unauthorized' ||
       isPublicResourcePath(pathname)
-    ) return null
+    )
+      return null
     return '/login'
   }
 
@@ -73,6 +87,9 @@ export default auth((req) => {
   const role = req.auth?.user?.role
 
   const redirect = resolveAuthRedirect(pathname, isLoggedIn, role)
+  if (redirect === 'UNAUTHORIZED_API') {
+    return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized access' } }, { status: 401 })
+  }
   if (redirect) return NextResponse.redirect(new URL(redirect, req.url))
   return NextResponse.next()
 })

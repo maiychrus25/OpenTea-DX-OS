@@ -37,6 +37,7 @@ describe('Farmer journal production flow', () => {
       update: jest.fn(),
       delete: jest.fn(),
       approveHarvest: jest.fn(),
+      countActiveLotLinks: jest.fn().mockResolvedValue(0),
     }
   })
 

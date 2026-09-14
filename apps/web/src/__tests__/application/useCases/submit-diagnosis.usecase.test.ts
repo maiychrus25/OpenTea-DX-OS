@@ -61,6 +61,7 @@ function makeMockPorts(parcel: ParcelSummary | null = mockParcelOfFarmerA) {
     update: jest.fn(),
     delete: jest.fn(),
     approveHarvest: jest.fn(),
+    countActiveLotLinks: jest.fn().mockResolvedValue(0),
   }
   const diseaseReportPort: jest.Mocked<DiseaseReportPort> = {
     save: jest.fn().mockResolvedValue({

@@ -12,14 +12,21 @@ export class ExportQrUseCase {
     private readonly traceRepo: LotTraceRepository,
   ) {}
 
-  async execute(lotId: string, certificateKeys?: string[]) {
+  async execute(lotId: string, certificateKeys?: string[], baseUrl?: string) {
     const lot = await this.lotPort.findById(lotId)
     if (!lot) throw new NotFoundError('Lot not found')
     if (lot.status === 'QR_EXPORTED') throw new DomainError('Lot already exported')
+    // Guard: only READY lots can be exported (prevent DRAFT export, EC-S01)
+    if (lot.status !== 'READY') throw new DomainError('Chỉ lô hàng ở trạng thái READY mới được xuất QR')
 
     // Get trace data snapshot
     const traceData = await this.traceRepo.getLotByCode(lot.lot_code)
     if (!traceData) throw new NotFoundError('Trace data not found')
+
+    // Guard: lot must have at least 1 parcel (EC-S02)
+    if (!traceData.parcels || traceData.parcels.length === 0) {
+      throw new DomainError('Lô hàng phải có ít nhất 1 thửa đất liên kết')
+    }
 
     // Check withdrawal period and parcel status
     if (!traceData.is_harvest_safe) {
@@ -37,9 +44,11 @@ export class ExportQrUseCase {
       traceData.certificate_keys = certificateKeys
     }
 
-    // Generate QR code pointing to the public lot page
-    const publicUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'}/lot/${lot.lot_code}`
-    let qrImageUrl = `/lot/${lot.lot_code}`
+    // Generate QR code pointing to the public lot page — baseUrl injected from route handler (headers.host) to keep hexagonal purity
+    const rawBaseUrl = baseUrl || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+    const resolvedBaseUrl = rawBaseUrl.replace(/\/+$/, '')
+    const publicUrl = `${resolvedBaseUrl}/lot/${encodeURIComponent(lot.lot_code)}`
+    let qrImageUrl: string
 
     try {
       // Try MinIO upload if available
@@ -49,7 +58,13 @@ export class ExportQrUseCase {
       const uploadResult = await storagePort.uploadFile(qrBuffer, `qr-${lot.lot_code}.png`, 'image/png')
       qrImageUrl = uploadResult.presignedUrl
     } catch {
-      // MinIO not available — fallback to local URL path (non-critical for MVP)
+      // MinIO not available — fallback to Data URI so <img> never breaks (BUG-03)
+      // Nested try to handle DataURI failure separately (Blind #9)
+      try {
+        qrImageUrl = await QRCode.toDataURL(publicUrl, { margin: 1 })
+      } catch (e) {
+        throw new DomainError(`Không thể tạo mã QR: ${e instanceof Error ? e.message : String(e)}`)
+      }
     }
 
     return this.lotPort.exportQr(lotId, traceData, qrImageUrl, certificateKeys)

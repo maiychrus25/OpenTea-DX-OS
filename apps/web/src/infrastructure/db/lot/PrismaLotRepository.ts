@@ -118,7 +118,8 @@ export class PrismaLotRepository implements LotPort {
         data: {
           status: 'QR_EXPORTED',
           public_page_data: JSON.parse(JSON.stringify(snapshotData)),
-          qr_image_url: qrImageUrl ?? `/lot/${currentLot.lot_code}`,
+          // BUG-03 fix: never fallback to page URL (/lot/{code}) — UseCase guarantees Data URI or MinIO URL
+          qr_image_url: qrImageUrl ?? '',
           ...(certificateKeys ? { certificate_keys: certificateKeys } : {}),
         },
       })

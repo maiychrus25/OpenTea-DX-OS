@@ -37,9 +37,10 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
                 household: true,
                 journal_entries: {
                   include: { activities: true },
-                  where: { status: { not: 'PENDING_APPROVAL' } },
+                  // R5 optimal: only APPROVED journals are official trace (exclude REJECTED)
+                  where: { status: 'APPROVED' },
                   orderBy: { entry_date: 'asc' },
-                  take: 20,
+                  take: 100,
                 }
               }
             }

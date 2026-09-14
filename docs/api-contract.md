@@ -411,7 +411,7 @@ Data served from `lots.public_page_data` (JSONB snapshot, populated at QR export
 5. Certifications (linked MinIO documents)
 6. Disease Reports (if any, confidence ≥ 50%)
 
-**robots.txt:** `Disallow: /lot/`
+**robots.txt:** `Allow: /lot/, /q/, /htx/` + `Disallow: /manager/, /officer/, /farmer/, /api/` (updated from `Disallow: /lot/` — see BUG-07)
 
 ---
 

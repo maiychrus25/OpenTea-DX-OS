@@ -165,6 +165,15 @@ export class PrismaParcelRepository implements ParcelPort {
     }
   }
 
+  async countActiveLotLinks(parcelId: string): Promise<number> {
+    return prisma.lotParcel.count({
+      where: {
+        parcel_id: parcelId,
+        lot: { status: { in: ['READY', 'QR_EXPORTED'] as const } },
+      },
+    })
+  }
+
   async delete(id: string): Promise<void> {
     await prisma.parcel.delete({ where: { id } })
   }

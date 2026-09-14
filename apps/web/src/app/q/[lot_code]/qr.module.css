@@ -136,3 +136,90 @@
 .testLink:hover {
   background: var(--color-border-subtle);
 }
+
+/* Icon variants replacing inline style={{backgroundColor}} — BUG-06 fix */
+.iconWrapperError {
+  background-color: #ffebee;
+  color: #d32f2f;
+}
+
+.iconWrapperRevoked {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+.iconWrapperExpired {
+  background-color: #eceff1;
+  color: #546e7a;
+}
+
+/* Origin box variant — replaces inline style background:#e3f2fd */
+.originBox {
+  background: #e3f2fd;
+  color: #1565c0;
+  margin-bottom: 1rem;
+}
+
+.cardSpacing {
+  margin-top: 1rem;
+}
+
+.timelineTitle {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.detailItemColumn {
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.timelineRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+.timelineActivity {
+  font-weight: 500;
+}
+
+.timelineDetail {
+  font-size: 0.85rem;
+  color: var(--muted-foreground, #6b7280);
+}
+
+.footerNote {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted-foreground, #6b7280);
+  margin-top: 1.5rem;
+}
+
+.badgePass {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.badgeFail {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.mutedText {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.withdrawalRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
