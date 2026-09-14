@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pill } from '@/components/ui/Pill';
+import { Sprout } from 'lucide-react';
 
 interface HouseholdProfileProps {
   id: string;
@@ -167,7 +168,7 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link href={`/officer/farm-zones?householdId=${id}`} className="block h-full">
           <Card className="h-full hover:border-green-500 transition-all hover:shadow-md cursor-pointer group">
             <div className="p-5 flex flex-col items-center justify-center text-center">
@@ -203,6 +204,18 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
             </div>
           </Card>
         </Link>
+
+        <Link href={`/officer/households/${id}/soil-health`} className="block h-full">
+          <Card className="h-full hover:border-teal-500 transition-all hover:shadow-md cursor-pointer group">
+            <div className="p-5 flex flex-col items-center justify-center text-center">
+              <div className="h-12 w-12 bg-teal-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-teal-100 transition-colors">
+                <Sprout className="w-6 h-6 text-teal-600" aria-hidden="true" />
+              </div>
+              <h3 className="font-semibold text-gray-900">Sức khỏe đất</h3>
+              <p className="text-sm text-gray-500 mt-1">Độ ẩm, nhiệt độ thổ nhưỡng</p>
+            </div>
+          </Card>
+        </Link>
       </div>
 
       <Card>
@@ -217,12 +230,13 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vụ mùa</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sản lượng</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sức khỏe đất</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {data.history.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                     Chưa có thửa đất nào được gán cho nông hộ này.
                   </td>
                 </tr>
@@ -242,6 +256,16 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
                       >
                         {h.status}
                       </Pill>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Link
+                        href={`/officer/households/${id}/soil-health`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors border border-teal-200"
+                        aria-label={`Xem sức khỏe đất cho ${h.crop}`}
+                      >
+                        <Sprout size={14} aria-hidden="true" />
+                        Xem
+                      </Link>
                     </td>
                   </tr>
                 ))
