@@ -4,8 +4,8 @@
 /* ==========================================================================
    DX-AgriMarket — Keycloak Sign In Frame Theme (World-Class AgTech UI)
    Inspired by: Stripe, Linear, John Deere Operations Center, Trimble Ag
-   Preserves 100% the original dark polygonal background while delivering
-   an ultra-polished, modern, elegant & professional login frame.
+  Uses a calm, layered surface that keeps the login frame focused
+  without relying on a legacy background image.
    ========================================================================== */
 
 /* ── Google Font: Be Vietnam Pro (Project Standard) ── */
@@ -31,19 +31,38 @@
   --agri-radius-control: 12px;
 }
 
-/* ── Original Keycloak Dark Polygonal Background Preservation ── */
+/* ── Layered login background ───────────────────────────────── */
 .login-pf {
   background: none !important;
 }
 
 .login-pf body,
 body {
-  background: url("../img/keycloak-bg.png") no-repeat center center fixed !important;
-  background-size: cover !important;
+  position: relative !important;
+  isolation: isolate !important;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(214, 240, 92, 0.25), transparent 28%),
+    radial-gradient(circle at 88% 84%, rgba(16, 185, 129, 0.2), transparent 30%),
+    linear-gradient(135deg, #123d31 0%, #175b46 48%, #e8f3e5 48.2%, #f7faf4 100%) !important;
   height: 100% !important;
   font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
+}
+
+.login-pf body::before,
+body::before {
+  content: '' !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  opacity: 0.32 !important;
+  background-image:
+    linear-gradient(30deg, rgba(255, 255, 255, 0.12) 12%, transparent 12.5%, transparent 87%, rgba(255, 255, 255, 0.12) 87.5%, rgba(255, 255, 255, 0.12)),
+    linear-gradient(150deg, rgba(255, 255, 255, 0.08) 12%, transparent 12.5%, transparent 87%, rgba(255, 255, 255, 0.08) 87.5%, rgba(255, 255, 255, 0.08));
+  background-size: 76px 132px;
+  background-position: 0 0, 38px 66px;
 }
 
 /* Center content vertically and nicely on page */
