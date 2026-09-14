@@ -43,4 +43,5 @@ export interface ParcelPort {
   update(id: string, data: Partial<CreateParcelData>): Promise<ParcelSummary>
   delete(id: string): Promise<void>
   approveHarvest(id: string, officerId: string): Promise<ParcelSummary>
+  countActiveLotLinks(parcelId: string): Promise<number>
 }

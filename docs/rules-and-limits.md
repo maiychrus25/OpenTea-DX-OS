@@ -231,7 +231,7 @@ When journal entry is created:
 - Disease photos stored in private MinIO bucket — pre-signed URL expires in 1h
 - QR public page: contains NO personal data — only crop/lot/process info
 - Notification content: recipient sees only their own notifications
-- robots.txt: Disallow /lot/ (QR pages not indexed by search engines)
+- robots.txt: Allow /lot/, /q/, /htx/ (public traceability pages indexed) + Disallow /manager/, /officer/, /farmer/, /api/ (private areas not indexed)
 ```
 
 ### 4.4 MinIO Bucket Policy

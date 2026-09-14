@@ -1,3 +1,8 @@
 User-agent: *
+Allow: /lot/
+Allow: /q/
 Allow: /htx/
-Disallow: /lot/
+Disallow: /manager/
+Disallow: /officer/
+Disallow: /farmer/
+Disallow: /api/
