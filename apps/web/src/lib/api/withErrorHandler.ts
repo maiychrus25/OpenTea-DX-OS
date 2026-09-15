@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client'
 import { DomainError, NotFoundError, ValidationError, ForbiddenError } from '@/domain/errors'
 import { logger } from '@/lib/logger'
 
-type RouteHandler = (req: Request, context: unknown) => Promise<NextResponse>
+type RouteHandler<TContext = any> = (req: Request, context: TContext) => Promise<NextResponse>
 
 function isNextInternalError(err: unknown): boolean {
   return (
@@ -18,8 +18,8 @@ function isNextInternalError(err: unknown): boolean {
   )
 }
 
-export function withErrorHandler(handler: RouteHandler): RouteHandler {
-  return async (req: Request, context: unknown) => {
+export function withErrorHandler<TContext = any>(handler: RouteHandler<TContext>): RouteHandler<TContext> {
+  return async (req: Request, context: TContext) => {
     try {
       return await handler(req, context)
     } catch (err: unknown) {
