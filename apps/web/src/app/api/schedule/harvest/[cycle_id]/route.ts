@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { auth } from '@/auth'
 import { PrismaClient } from '@prisma/client'
 import { PrismaCropCycleRepository } from '@/infrastructure/db/farm/PrismaCropCycleRepository'
-import { UpdateHarvestDateUseCase } from '@/application/farm/UpdateHarvestDateUseCase'
+import { UpdateHarvestDateUseCase } from '@/application/farm/update-harvest-date-use-case'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
 const prisma = new PrismaClient()
@@ -17,7 +17,7 @@ const patchBodySchema = z.object({
   estimated_harvest_date: z.string().datetime({ message: "Invalid date format, must be ISO string" })
 })
 
-async function patchHarvestDate(req: Request, context: any) {
+async function patchHarvestDate(req: Request, context: { params: { cycle_id: string } }) {
   const session = await auth()
   if (!session || !session.user || !session.user.id) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })

@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { PrismaClient } from '@prisma/client'
 import { PrismaCropCycleRepository } from '@/infrastructure/db/farm/PrismaCropCycleRepository'
-import { GetUnscheduledCyclesUseCase } from '@/application/farm/GetUnscheduledCyclesUseCase'
+import { GetUnscheduledCyclesUseCase } from '@/application/farm/get-unscheduled-cycles-use-case'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
 const prisma = new PrismaClient()

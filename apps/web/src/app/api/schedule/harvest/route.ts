@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { auth } from '@/auth'
 import { PrismaClient } from '@prisma/client'
 import { PrismaCropCycleRepository } from '@/infrastructure/db/farm/PrismaCropCycleRepository'
-import { GetHarvestScheduleUseCase } from '@/application/farm/GetHarvestScheduleUseCase'
+import { GetHarvestScheduleUseCase } from '@/application/farm/get-harvest-schedule-use-case'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
 const prisma = new PrismaClient()
