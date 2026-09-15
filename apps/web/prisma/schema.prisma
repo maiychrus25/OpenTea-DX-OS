@@ -146,9 +146,10 @@ model ParcelCropCycle {
   parcel_id    String
   parcel       Parcel    @relation(fields: [parcel_id], references: [id])
   season       String? // e.g. "Vá»¥ HÃ¨ Thu 2026"
-  sowed_at     DateTime?
-  harvested_at DateTime?
-  created_at   DateTime  @default(now())
+  sowed_at               DateTime?
+  harvested_at           DateTime?
+  estimated_harvest_date DateTime?
+  created_at             DateTime  @default(now())
 
   @@map("parcel_crop_cycles")
 }
