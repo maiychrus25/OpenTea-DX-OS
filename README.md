@@ -85,6 +85,37 @@ Dự án hỗ trợ chạy toàn bộ môi trường (Full-stack + Infra) qua Do
 
 *(Tham khảo `docs/project-context.md` để lấy tài khoản đăng nhập mặc định)*
 
+## 🔨 Dịch từ Mã nguồn (Build from Source)
+
+Bạn có thể biên dịch và chạy dự án **hoàn toàn từ mã nguồn** mà không cần Docker:
+
+**Yêu cầu:** Node.js >= 20, Python >= 3.11, PostgreSQL >= 16.
+
+### Web Application (`apps/web`)
+
+```bash
+cd apps/web
+cp ../../.env.example ../../.env          # Cấu hình biến môi trường
+npm install                               # Cài đặt thư viện
+npx prisma generate                       # Sinh Prisma Client
+npx prisma migrate deploy                 # Áp dụng schema vào database
+npm run build                             # Biên dịch production bundle
+npm run start                             # Chạy ứng dụng (http://localhost:3000)
+```
+
+### Disease Detection API (`apps/disease-api`)
+
+```bash
+cd apps/disease-api
+python -m venv venv                       # Tạo môi trường ảo
+source venv/bin/activate                  # Linux/Mac
+# venv\Scripts\activate                   # Windows
+pip install -r requirements.txt           # Cài đặt thư viện
+uvicorn app.main:app --host 0.0.0.0 --port 8000   # Chạy API
+```
+
+> **Lưu ý:** Tất cả công cụ dịch đều là phần mềm nguồn mở: Node.js (MIT), npm (Artistic-2.0), Python (PSF), pip (MIT), PostgreSQL (PostgreSQL License — OSI-approved).
+
 ## 📂 Cấu trúc Thư mục
 
 ```bash
