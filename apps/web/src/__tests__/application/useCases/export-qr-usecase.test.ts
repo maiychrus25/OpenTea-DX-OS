@@ -1,3 +1,6 @@
+// Copyright (c) 2026 OpenTea Developers
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
 import { ExportQrUseCase } from '@/application/lot/ExportQrUseCase'
 import { LotPort } from '@/domain/lot/ports/LotPort'
 import { LotTraceRepository } from '@/domain/repositories/lot-trace-repository'
