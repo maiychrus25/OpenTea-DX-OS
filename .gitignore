@@ -95,3 +95,19 @@ apps/web/public/swe-worker-*.js
 
 # ── Prisma auto-generated migrations ─────────────────────────
 apps/web/prisma/migrations/**/migration.sql
+
+# ── Scratch / debug files (never commit) ─────────────────────
+*.sql
+!database/*.sql
+!scripts/*.sql
+!docker/*.sql
+error.html
+execution.json
+market_error*.json
+market_execution.json
+full_diff*.txt
+pr_diff.txt
+pr_review_msg.txt
+pr_view.txt
+test-results.json
+release_v*.md

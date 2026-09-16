@@ -7,12 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.1.0] - 2026-09-15
+
 ### Added
-- MIT license headers to all source files for OLP compliance
-- Inline license comments for third-party Docker services (n8n, MinIO)
-- CHANGELOG.md following Keep a Changelog format
+- **Harvest Schedule Calendar**: Interactive calendar for scheduling and viewing expected harvest dates
+- **Vietnamese Localization (Auth)**: Translated Keycloak login interface labels to Vietnamese for farmers
+- **Soil Health Dashboard**: Soil analysis and pest risk visualization with interactive charts
+- **Docker Publish CI**: Automated Docker image publishing to GitHub Container Registry (GHCR)
+
+### Changed
+- Streamlined user onboarding: removed mandatory email requirement for agricultural profiles
+- Improved QR traceability public page with snapshot immutability and safety guards
+
+### Fixed
+- NextAuth TypeScript compilation issues with generic Route Handlers
+- Leaflet SSR hydration mismatches in Map components
 
 ---
+
+## [1.0.0] - 2026-09-15
+
+### Added
+- **Farm Zone Map**: GIS mapping with Leaflet.js for digitizing agricultural parcels
+- **Smart Journal**: Farming log tracking with approval workflow and withdrawal days calculation
+- **QR Lot Traceability**: Full lifecycle tracking from seed to harvest with public QR pages
+- **Disease AI Assistant**: Computer vision for crop disease diagnosis via FastAPI
+- **Audio Bulletin**: Automated agricultural news synthesis via n8n and Piper TTS
+- **Market Chatbot**: LLM-powered market intelligence assistant (Groq Llama-3.1)
+- **Keycloak SSO**: Role-based authentication (Manager/Officer/Farmer)
+- **n8n Data Pipelines**: Automated FAOSTAT, Open-Meteo, Frankfurter FX, NASA POWER data sync
+- **CI/CD Pipeline**: GitHub Actions with lint, test, build, Docker smoke test
+- **DEPENDENCIES.md**: Full third-party library listing with license information
+- **CODE_OF_CONDUCT.md** and **CONTRIBUTING.md** for open-source community
+
+### Security
+- All API routes protected with server-side auth checks (getServerSession)
+- MinIO access via pre-signed URLs only (no client-side SDK exposure)
+
+---
+
 
 ## [0.1.0-alpha] - 2026-08-11
 
@@ -97,7 +132,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v0.1.0-alpha...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v0.1.0-alpha...v1.0.0
 [0.1.0-alpha]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v0.0.4-alpha...v0.1.0-alpha
 [0.0.4-alpha]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v0.0.3-alpha...v0.0.4-alpha
 [0.0.3-alpha]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v0.0.2-alpha...v0.0.3-alpha
