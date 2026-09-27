@@ -2,9 +2,13 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { JournalPort } from '@/domain/journal/ports/JournalPort'
+import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
 
 export class BatchApproveJournalUseCase {
-  constructor(private readonly journalPort: JournalPort) {}
+  constructor(
+    private readonly journalPort: JournalPort,
+    private readonly documentStoragePort: DocumentStoragePort
+  ) {}
 
   async execute(entryIds: string[], approvedById: string) {
     const result = await this.journalPort.batchApprove(entryIds, approvedById)
@@ -12,10 +16,6 @@ export class BatchApproveJournalUseCase {
     // Generate PARA HTML document for each approved entry
     // Doing this outside DB transaction to avoid blocking
     if (result.approved > 0) {
-      // Dynamic import to avoid next.js edge issues if any, though it's server side
-      const { MinioDocumentAdapter } = await import('@/infrastructure/storage/minio-document.adapter')
-      const storage = new MinioDocumentAdapter()
-      
       for (const id of entryIds) {
         if (!result.failed.includes(id)) {
           const entry = await this.journalPort.findById(id)
@@ -82,7 +82,7 @@ export class BatchApproveJournalUseCase {
 </html>`
             
             const key = `para/Archives/Journals/Records/${id}.html`
-            await storage.uploadDocument(key, htmlContent, 'text/html')
+            await this.documentStoragePort.uploadDocument(key, htmlContent, 'text/html')
           }
         }
       }

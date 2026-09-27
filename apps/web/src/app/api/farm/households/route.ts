@@ -21,6 +21,7 @@ async function getHouseholds() {
   }
 
   // Resolve HTX from the authenticated user's Keycloak ID
+  // @ts-ignore: next-auth session user type missing id and sub in default definition
   const keycloakId = (session.user as any).id ?? (session.user as any).sub
   const htx = await prisma.htxProfile.findFirst({
     where: {
@@ -56,6 +57,7 @@ async function postHousehold(request: Request) {
 
   // Resolve HTX from session — tìm HTX theo officer đang đăng nhập
   // Fallback về HTX đầu tiên (theo created_at) nếu chưa map được
+  // @ts-ignore: next-auth session user type missing id and sub in default definition
   const keycloakId = (session.user as any).id ?? (session.user as any).sub
   const htx = await prisma.htxProfile.findFirst({
     where: {

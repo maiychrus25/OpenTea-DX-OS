@@ -7,10 +7,15 @@ import { NotFoundError, DomainError } from '@/domain/errors'
 import * as QRCode from 'qrcode'
 import { LotTraceData } from '@/domain/entities/lot-trace-data'
 
+import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
+import { StoragePort } from '@/domain/disease/ports/storage.port'
+
 export class ExportQrUseCase {
   constructor(
     private readonly lotPort: LotPort,
     private readonly traceRepo: LotTraceRepository,
+    private readonly storagePort: StoragePort,
+    private readonly docStoragePort: DocumentStoragePort,
   ) {}
 
   async execute(lotId: string, certificateKeys?: string[], baseUrl?: string) {
@@ -52,11 +57,9 @@ export class ExportQrUseCase {
     let qrImageUrl: string
 
     try {
-      // Try MinIO upload if available
-      const { MinioStorageAdapter } = await import('@/infrastructure/storage/minio-storage.adapter')
+      // Try upload via injected StoragePort
       const qrBuffer = await QRCode.toBuffer(publicUrl, { type: 'png', margin: 1 })
-      const storagePort = new MinioStorageAdapter()
-      const uploadResult = await storagePort.uploadFile(qrBuffer, `qr-${lot.lot_code}.png`, 'image/png')
+      const uploadResult = await this.storagePort.uploadFile(qrBuffer, `qr-${lot.lot_code}.png`, 'image/png')
       qrImageUrl = uploadResult.presignedUrl
     } catch {
       // MinIO not available — fallback to Data URI so <img> never breaks (BUG-03)
@@ -80,12 +83,9 @@ export class ExportQrUseCase {
 
   private async archiveToPara(lotCode: string, publicUrl: string, traceData: LotTraceData) {
     try {
-      const { MinioDocumentAdapter } = await import('@/infrastructure/storage/minio-document.adapter')
-      const docStorage = new MinioDocumentAdapter()
-      
       // 1. Upload QR Code image
       const qrBuffer = await QRCode.toBuffer(publicUrl, { type: 'png', margin: 1 })
-      await docStorage.uploadDocument(`para/Archives/Lô hàng đã xuất/Mã_QR_Lô_${lotCode}.png`, qrBuffer, 'image/png')
+      await this.docStoragePort.uploadDocument(`para/Archives/Lô hàng đã xuất/Mã_QR_Lô_${lotCode}.png`, qrBuffer, 'image/png')
       
       // 2. Upload Traceability text summary
       const summary = `HỒ SƠ TRUY XUẤT LÔ HÀNG
@@ -101,7 +101,7 @@ Nguồn gốc thửa đất: ${traceData.parcels?.map((p) => p.parcel_code).join
 Chi tiết truy xuất có thể xem tại: ${publicUrl}
 Dữ liệu được xuất tại: ${new Date().toISOString()}
 `;
-      await docStorage.uploadDocument(`para/Archives/Lô hàng đã xuất/Hồ_sơ_truy_xuất_Lô_${lotCode}.txt`, summary, 'text/plain')
+      await this.docStoragePort.uploadDocument(`para/Archives/Lô hàng đã xuất/Hồ_sơ_truy_xuất_Lô_${lotCode}.txt`, summary, 'text/plain')
     } catch (e) {
       throw e
     }

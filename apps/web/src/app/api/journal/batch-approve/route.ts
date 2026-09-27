@@ -6,6 +6,7 @@ import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { journalBatchApproveSchema } from '@/lib/validations/journal.schema'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
+import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 import { BatchApproveJournalUseCase } from '@/application/journal/BatchApproveJournalUseCase'
 
 async function postBatchApprove(request: Request) {
@@ -26,7 +27,8 @@ async function postBatchApprove(request: Request) {
   }
 
   const repo = new PrismaJournalRepository()
-  const useCase = new BatchApproveJournalUseCase(repo)
+  const docStorageRepo = new MinioDocumentAdapter()
+  const useCase = new BatchApproveJournalUseCase(repo, docStorageRepo)
   const userId = (session.user as any).id ?? ''
   const data = await useCase.execute(parse.data.entry_ids, userId)
   return NextResponse.json({ data: { approved_count: data.approved, failed_ids: data.failed } })
