@@ -51,6 +51,16 @@ async function getJournalEntries(request: Request) {
     limit,
     household_id: householdId,
   })
+
+  // Attach presigned url for photos
+  const { MinioDocumentAdapter } = await import('@/infrastructure/storage/minio-document.adapter')
+  const storage = new MinioDocumentAdapter()
+  for (const entry of result.entries) {
+    if (entry.photo_minio_key) {
+      entry.photo_url = await storage.generateDownloadUrl(entry.photo_minio_key)
+    }
+  }
+
   return NextResponse.json({ data: result.entries, meta: { page, total: result.total } })
 }
 
@@ -83,6 +93,8 @@ async function postJournalEntry(request: Request) {
     submitted_role: role.toUpperCase() as 'OFFICER' | 'FARMER',
     activities: parse.data.activities,
     observation: parse.data.observation,
+    photo_url: parse.data.photo_url,
+    photo_minio_key: parse.data.photo_minio_key,
   }, role.toUpperCase(), role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined)
   
   return NextResponse.json({ data }, { status: 201 })

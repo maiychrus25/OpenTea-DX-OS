@@ -3,8 +3,13 @@
 
 import { AuthManagementPort, RegisterData } from '@/domain/auth/ports/auth-management.port'
 
+import { HouseholdPort } from '@/domain/farm/ports/HouseholdPort'
+
 export class RegisterFarmerUseCase {
-  constructor(private readonly authPort: AuthManagementPort) {}
+  constructor(
+    private readonly authPort: AuthManagementPort,
+    private readonly householdPort: HouseholdPort
+  ) {}
 
   async execute(data: RegisterData): Promise<{ userId: string }> {
     // Basic validations
@@ -23,6 +28,21 @@ export class RegisterFarmerUseCase {
 
     // Call adapter to create user in Keycloak with enabled: false (Pending Approval)
     const userId = await this.authPort.registerFarmer(data, false)
+
+    // Step 2: Create or Update Household in DB (only for farmer)
+    const orphanedHousehold = await this.householdPort.findOrphanedByPhone(data.phone)
+    if (orphanedHousehold) {
+      await this.householdPort.linkToKeycloak(orphanedHousehold.id, userId)
+    } else {
+      const household = await this.householdPort.create({
+        household_code: data.phone,
+        owner_name: data.fullName,
+        phone: data.phone,
+        address: undefined, // Farmer sets this later or we can add to register form
+        htx_profile_id: data.htxId,
+      })
+      await this.householdPort.linkToKeycloak(household.id, userId)
+    }
 
     return { userId }
   }

@@ -5,6 +5,7 @@ import { LotPort } from '@/domain/lot/ports/LotPort'
 import { LotTraceRepository } from '@/domain/repositories/lot-trace-repository'
 import { NotFoundError, DomainError } from '@/domain/errors'
 import * as QRCode from 'qrcode'
+import { LotTraceData } from '@/domain/entities/lot-trace-data'
 
 export class ExportQrUseCase {
   constructor(
@@ -67,7 +68,43 @@ export class ExportQrUseCase {
       }
     }
 
-    return this.lotPort.exportQr(lotId, traceData, qrImageUrl, certificateKeys)
+    const result = await this.lotPort.exportQr(lotId, traceData, qrImageUrl, certificateKeys)
+
+    // Background task: Auto-archive to P.A.R.A
+    this.archiveToPara(lot.lot_code, publicUrl, traceData).catch((e) => {
+      console.error('[ExportQrUseCase] Failed to auto-archive to P.A.R.A:', e)
+    })
+
+    return result
+  }
+
+  private async archiveToPara(lotCode: string, publicUrl: string, traceData: LotTraceData) {
+    try {
+      const { MinioDocumentAdapter } = await import('@/infrastructure/storage/minio-document.adapter')
+      const docStorage = new MinioDocumentAdapter()
+      
+      // 1. Upload QR Code image
+      const qrBuffer = await QRCode.toBuffer(publicUrl, { type: 'png', margin: 1 })
+      await docStorage.uploadDocument(`para/Archives/Lô hàng đã xuất/Mã_QR_Lô_${lotCode}.png`, qrBuffer, 'image/png')
+      
+      // 2. Upload Traceability text summary
+      const summary = `HỒ SƠ TRUY XUẤT LÔ HÀNG
+-------------------------
+Mã lô: ${lotCode}
+Sản phẩm: ${traceData.commodity}
+HTX: ${traceData.htx_name || 'Đang cập nhật'}
+Ngày đóng gói: ${traceData.packaging_date ? new Date(traceData.packaging_date).toLocaleDateString('vi-VN') : 'N/A'}
+Tổng khối lượng: ${traceData.total_weight_kg || 'N/A'} kg
+Trạng thái an toàn: ${traceData.is_harvest_safe ? 'An toàn' : 'Cần kiểm tra'}
+Nguồn gốc thửa đất: ${traceData.parcels?.map((p) => p.parcel_code).join(', ')}
+
+Chi tiết truy xuất có thể xem tại: ${publicUrl}
+Dữ liệu được xuất tại: ${new Date().toISOString()}
+`;
+      await docStorage.uploadDocument(`para/Archives/Lô hàng đã xuất/Hồ_sơ_truy_xuất_Lô_${lotCode}.txt`, summary, 'text/plain')
+    } catch (e) {
+      throw e
+    }
   }
 }
 

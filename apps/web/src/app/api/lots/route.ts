@@ -23,7 +23,7 @@ async function getLots(request: Request) {
   }
 
   // F3 fix: resolve HTX for scoped query — prevents cross-HTX data leakage (AC10)
-  const htx = await prisma.htxProfile.findFirst()
+  const htx = await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
   if (!htx) {
     // No HTX configured — return empty list rather than leaking all lots
     return NextResponse.json({ data: [] })
@@ -56,7 +56,7 @@ async function postLot(request: Request) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
 
-  const htx = await prisma.htxProfile.findFirst()
+  const htx = await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
   if (!htx) {
     return NextResponse.json({ error: { code: 'DOMAIN_ERROR', message: 'HTX Profile not found' } }, { status: 422 })
   }

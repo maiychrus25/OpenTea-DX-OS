@@ -42,11 +42,14 @@ export default function SetupMapClient({ onAreaCalculated }: Props) {
     const map = L.map(mapContainerRef.current, {
       center: [10.762622, 106.660172],
       zoom: 13,
+      maxZoom: 24, // Cho phép zoom thật sâu
     })
 
     // Base Layers - Satellite ONLY
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+      maxNativeZoom: 19, // Mức zoom tối đa mà vệ tinh Esri cung cấp ảnh thực
+      maxZoom: 24 // Trình duyệt sẽ tự phóng to ảnh (digital zoom) để vẽ chi tiết
     }).addTo(map)
 
     // 1. Search Control (GeoSearch)

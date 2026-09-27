@@ -26,6 +26,7 @@ interface JournalEntry {
     dosage: string | null
     withdrawal_days: number | null
   }[]
+  photo_url?: string
 }
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -282,6 +283,16 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
                       {entry.notes || 'Không có ghi chú.'}
                     </p>
                   </div>
+                  
+                  {entry.photo_url && (
+                    <div className={styles.sectionContainer}>
+                      <h3 className={styles.sectionTitle}>Hình ảnh thực tế</h3>
+                      <div className="mt-2 w-full rounded-md overflow-hidden bg-gray-100 flex justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={entry.photo_url} alt="Journal attachment" className="max-w-full max-h-[300px] object-contain" />
+                      </div>
+                    </div>
+                  )}
 
                   <div className={styles.sectionContainer}>
                     <h3 className={styles.sectionTitle}>Các hoạt động</h3>

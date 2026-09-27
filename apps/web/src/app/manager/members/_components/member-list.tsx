@@ -165,7 +165,10 @@ export function MemberList() {
                             {member.full_name || member.name}
                           </div>
                           <div className="text-sm mt-1 text-[var(--color-ink-secondary)]">
-                            {member.email} • {member.phone}
+                            {[member.email, member.phone]
+                              .filter((v) => v && v !== 'Chưa cập nhật')
+                              .filter((v, i, a) => a.indexOf(v) === i)
+                              .join(' • ') || 'Chưa cập nhật'}
                           </div>
                         </div>
                       </div>

@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter';
+import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository';
 import { RegisterFarmerUseCase } from '@/application/auth/register-farmer.use-case';
 import { withErrorHandler } from '@/lib/api/withErrorHandler';
 import { logger } from '@/lib/logger';
@@ -27,7 +28,8 @@ async function postRegister(req: Request) {
   }
 
   const adapter = new KeycloakAdminAdapter();
-  const useCase = new RegisterFarmerUseCase(adapter);
+  const householdRepo = new PrismaHouseholdRepository();
+  const useCase = new RegisterFarmerUseCase(adapter, householdRepo);
 
   try {
     const result = await useCase.execute(parsed.data);

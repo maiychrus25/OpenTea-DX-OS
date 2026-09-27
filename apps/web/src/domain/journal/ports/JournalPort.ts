@@ -27,6 +27,8 @@ export interface JournalEntryData {
   weather_precipitation: number | null
   weather_humidity: number | null
   weather_condition: string | null
+  photo_url: string | null
+  photo_minio_key: string | null
   created_at: Date
   activities: {
     id: string
@@ -47,6 +49,8 @@ export interface CreateJournalData {
   submitted_role: 'OFFICER' | 'FARMER'
   activities: JournalActivityData[]
   observation?: string
+  photo_url?: string
+  photo_minio_key?: string
 }
 
 export interface JournalFilters {

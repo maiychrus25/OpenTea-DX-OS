@@ -123,14 +123,21 @@ export function BulletinCard({ category, headline, summary, date, sourceCount }:
     }
   }, [ttsState, headline, summary, stop])
 
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  const toggleExpand = () => setIsExpanded(!isExpanded)
+
   return (
-    <article className={styles.newsArticle}>
+    <article 
+      className={`${styles.newsArticle} ${isExpanded ? styles.expanded : ''}`}
+      onClick={toggleExpand}
+    >
       <div className={styles.articleHeader}>
         <Pill tone={meta.tone}>{meta.label}</Pill>
       </div>
       
       <h2 className={styles.articleTitle}>{headline}</h2>
-      <div className={styles.articleSummary}>
+      <div className={`${styles.articleSummary} ${isExpanded ? styles.articleSummaryExpanded : ''}`}>
         <ReactMarkdown>{summary}</ReactMarkdown>
       </div>
       
@@ -145,7 +152,10 @@ export function BulletinCard({ category, headline, summary, date, sourceCount }:
           className={`${styles.audioBtn} ${ttsState === 'playing' ? styles.audioBtnActive : ''}`}
           aria-label={ttsState === 'playing' ? 'Dừng phát' : 'Nghe bản tin'}
           type="button"
-          onClick={handleListen}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleListen()
+          }}
         >
           {ttsState === 'loading' && <Loader2 size={16} className={styles.spinner} />}
           {ttsState === 'playing' && <Square size={14} />}

@@ -19,6 +19,7 @@ interface JournalEntry {
   activities: { activity_detail: string; product_name: string | null; dosage?: string; performer?: string; withdrawal_days?: number }[]
   history?: { date: string, action: string, note?: string }[]
   rejectReason?: string
+  photo_url?: string
 }
 
 const STATUS_MAP: Record<string, { label: string; tone: 'amber' | 'green' | 'neutral' | 'blue' }> = {
@@ -35,6 +36,18 @@ const ACTIVITY_MAP: Record<string, string> = {
   HARVEST: 'Thu hoạch',
   SOWING: 'Gieo sạ',
   OTHER: 'Khác'
+}
+
+function formatDetail(detail: string | null | undefined): string {
+  if (!detail) return ''
+  if (ACTIVITY_MAP[detail]) return ACTIVITY_MAP[detail]
+  
+  for (const [key, label] of Object.entries(ACTIVITY_MAP)) {
+    if (detail.startsWith(`${key}: `)) {
+      return detail.replace(`${key}: `, `${label}: `)
+    }
+  }
+  return detail
 }
 
 export function FarmerJournalList() {
@@ -101,7 +114,7 @@ export function FarmerJournalList() {
                 </div>
                 <span className={styles.cardActivity}>{ACTIVITY_MAP[e.activity_type] || e.activity_type}</span>
                 {e.activities?.[0] && (
-                  <span className={styles.cardDetail}>{e.activities[0].activity_detail}</span>
+                  <span className={styles.cardDetail}>{formatDetail(e.activities[0].activity_detail)}</span>
                 )}
                 {e.notes && <span className={styles.cardDetail}>{e.notes}</span>}
               </button>
@@ -150,6 +163,16 @@ export function FarmerJournalList() {
                 <strong>Ghi chú:</strong>
                 <span>{selectedEntry.notes || 'Không có'}</span>
               </div>
+              
+              {selectedEntry.photo_url && (
+                <div className={styles.detailRow}>
+                  <strong>Hình ảnh:</strong>
+                  <div className="mt-2 w-full rounded-md overflow-hidden bg-gray-100 flex justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={selectedEntry.photo_url} alt="Journal attachment" className="max-w-full max-h-[300px] object-contain" />
+                  </div>
+                </div>
+              )}
 
               {selectedEntry.rejectReason && (
                 <div className={styles.rejectBox}>

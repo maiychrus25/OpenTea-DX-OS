@@ -173,7 +173,7 @@ export function WeatherSection() {
   useEffect(() => {
     async function fetchWeather() {
       try {
-        const res = await fetch('/api/weather/forecast?days=7')
+        const res = await fetch(`/api/weather/forecast?days=7&_t=${Date.now()}`, { cache: 'no-store' })
         if (!res.ok) throw new Error('Failed to fetch weather')
         const json = await res.json()
         setZones(json.data || [])

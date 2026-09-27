@@ -346,6 +346,16 @@
   flex: 1;
 }
 
+.articleSummaryExpanded {
+  display: block;
+  -webkit-line-clamp: none;
+  overflow: visible;
+}
+
+.expanded {
+  grid-row: span 2; /* Optional: Make the card take more space in the grid if needed, though it might break layout. Better to just let it grow. */
+}
+
 /* Markdown content rendered inside bulletin summary */
 .articleSummary h3 {
   font-size: var(--font-size-label);

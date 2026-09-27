@@ -31,6 +31,8 @@ function mapEntry(e: any): JournalEntryData {
     weather_precipitation: e.weather_precipitation,
     weather_humidity: e.weather_humidity,
     weather_condition: e.weather_condition,
+    photo_url: e.photo_url,
+    photo_minio_key: e.photo_minio_key,
     created_at: e.created_at,
     activities: (e.activities || []).map((a: any) => ({
       id: a.id,
@@ -184,6 +186,8 @@ export class PrismaJournalRepository implements JournalPort {
           weather_precipitation: weatherData.precipitation,
           weather_humidity: weatherData.humidity,
           weather_condition: weatherData.condition,
+          photo_url: data.photo_url ?? null,
+          photo_minio_key: data.photo_minio_key ?? null,
           activities: {
             create: data.activities.map((a: any) => ({
               activity_detail: a.product_name ? `${a.activity_type}: ${a.product_name}` : a.activity_type,

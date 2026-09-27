@@ -6,7 +6,9 @@ import { HtxProfilePort, HtxProfile } from '@/domain/farm/ports/HtxProfilePort'
 
 export class PrismaHtxProfileRepository implements HtxProfilePort {
   async findFirst(): Promise<HtxProfile | null> {
-    const htx = await prisma.htxProfile.findFirst()
+    const htx = await prisma.htxProfile.findFirst({
+      orderBy: { created_at: 'asc' }
+    })
     if (!htx) return null
     return {
       id: htx.id,
