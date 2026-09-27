@@ -25,7 +25,7 @@ async function getSearch(request: Request) {
     return NextResponse.json({ data: [] })
   }
 
-  const htx = await prisma.htxProfile.findFirst()
+  const htx = await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
   if (!htx) {
     return NextResponse.json({ data: [] })
   }

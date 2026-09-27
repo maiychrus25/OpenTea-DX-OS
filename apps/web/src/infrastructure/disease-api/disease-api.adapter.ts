@@ -18,7 +18,7 @@ export class DiseaseApiAdapter implements DiseaseDetectionPort {
       const response = await fetch(`${this.apiUrl}/predict`, {
         method: 'POST',
         body: form,
-        signal: AbortSignal.timeout(10000), // 10s timeout
+        signal: AbortSignal.timeout(60000), // 60s timeout for slow CPU inference
       })
 
       if (!response.ok) {

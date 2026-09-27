@@ -24,7 +24,7 @@ async function getBulletin(request: Request) {
   if (!commodity) {
     // Default to HTX primary crop
     // Assuming there is only one HTX profile per deployment as per schema
-    const htx = await prisma.htxProfile.findFirst()
+    const htx = await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
     commodity = htx?.crop_types?.[0] ?? 'rice'
   }
 

@@ -25,7 +25,7 @@ export class PrismaWeatherRepository implements WeatherPort {
           },
         },
       },
-      take: 10,
+      orderBy: { created_at: 'desc' },
     })
 
     if (parcels.length === 0) {

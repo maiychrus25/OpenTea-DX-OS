@@ -37,6 +37,8 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
   const [performer, setPerformer] = useState('')
   const [withdrawalDays, setWithdrawalDays] = useState(14)
   const [observation, setObservation] = useState('')
+  const [photo, setPhoto] = useState<File | null>(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -70,6 +72,40 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
     }
 
     try {
+      let photo_url: string | undefined
+      let photo_minio_key: string | undefined
+
+      if (photo) {
+        setUploadingPhoto(true)
+        const ext = photo.name.split('.').pop() || 'jpg'
+        const filename = `journal-${Date.now()}.${ext}`
+        
+        // Get presigned URL
+        const presignRes = await fetch('/api/journal/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename, contentType: photo.type })
+        })
+        if (!presignRes.ok) throw new Error('Không thể lấy đường dẫn tải ảnh')
+        const { data: { uploadUrl, key } } = await presignRes.json()
+
+        // Upload directly to MinIO
+        const uploadRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': photo.type },
+          body: photo
+        })
+        if (!uploadRes.ok) throw new Error('Lỗi tải ảnh lên hệ thống')
+
+        photo_minio_key = key
+        // Need the final URL (without presign params) for simple storage if needed, but minio_key is primary.
+        // Actually the backend will generate public URL. We just pass minio_key.
+        photo_url = key // Temporary, backend should construct real URL or use presigned later
+      }
+
+      // Add photo to body
+      Object.assign(body, { photo_url, photo_minio_key })
+
       const res = await fetch('/api/journal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,6 +120,7 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
       setError(err instanceof Error ? err.message : 'Lỗi không xác định')
     } finally {
       setSubmitting(false)
+      setUploadingPhoto(false)
     }
   }
 
@@ -156,10 +193,21 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
         <textarea className={styles.formTextarea} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Lúa đang xanh tốt..." />
       </div>
 
+      <div className={styles.formGroup}>
+        <label className={styles.formLabel}>Hình ảnh thực tế (Tùy chọn)</label>
+        <input 
+          type="file" 
+          accept="image/jpeg, image/png"
+          className={styles.formInput} 
+          onChange={e => e.target.files && setPhoto(e.target.files[0])} 
+        />
+        {photo && <p className={styles.formDetail}>Đã chọn: {photo.name}</p>}
+      </div>
+
       <div className={styles.formActions}>
         <button type="button" className={styles.cancelBtn} onClick={onCancel}>Hủy</button>
-        <button type="submit" className={styles.submitBtn} disabled={submitting || !parcelId}>
-          {submitting ? 'Đang gửi...' : 'Gửi chờ duyệt'}
+        <button type="submit" className={styles.submitBtn} disabled={submitting || uploadingPhoto || !parcelId}>
+          {submitting || uploadingPhoto ? 'Đang gửi...' : 'Gửi chờ duyệt'}
         </button>
       </div>
     </form>

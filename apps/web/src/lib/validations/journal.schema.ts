@@ -16,6 +16,8 @@ export const journalCreateSchema = z.object({
   growth_stage: z.string().max(100).optional(),
   observation: z.string().max(2000).optional(),
   activities: z.array(journalActivitySchema).min(1, 'Cần ít nhất 1 hoạt động'),
+  photo_url: z.string().optional(),
+  photo_minio_key: z.string().optional(),
 })
 
 export const journalUpdateSchema = journalCreateSchema.partial()

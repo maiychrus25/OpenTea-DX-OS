@@ -176,6 +176,10 @@ model JournalEntry {
   weather_precipitation Float?
   weather_humidity      Float?
 
+  // Image attachment
+  photo_url             String?
+  photo_minio_key       String?
+
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 

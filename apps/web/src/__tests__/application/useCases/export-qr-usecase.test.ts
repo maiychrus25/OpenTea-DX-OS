@@ -7,6 +7,8 @@ import { LotTraceRepository } from '@/domain/repositories/lot-trace-repository'
 import { NotFoundError, DomainError } from '@/domain/errors'
 import { LotSummary, LotFilters, CreateLotData, ExportQrResult } from '@/domain/lot/ports/LotPort'
 import { LotTraceData } from '@/domain/entities/lot-trace-data'
+import { StoragePort } from '@/domain/disease/ports/storage.port'
+import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
 
 jest.mock('qrcode', () => ({
   toBuffer: jest.fn().mockResolvedValue(Buffer.from('mock-qr-code')),
@@ -51,12 +53,16 @@ class MockLotTraceRepo implements LotTraceRepository {
 describe('ExportQrUseCase', () => {
   let lotPort: MockLotPort
   let traceRepo: MockLotTraceRepo
+  let storagePort: jest.Mocked<StoragePort>
+  let docStoragePort: jest.Mocked<DocumentStoragePort>
   let useCase: ExportQrUseCase
 
   beforeEach(() => {
     lotPort = new MockLotPort()
     traceRepo = new MockLotTraceRepo()
-    useCase = new ExportQrUseCase(lotPort, traceRepo)
+    storagePort = { uploadFile: jest.fn().mockResolvedValue({ presignedUrl: 'https://minio.example.com/qr.png', key: 'qr-lot-123.png' }) } as any
+    docStoragePort = { uploadDocument: jest.fn().mockResolvedValue(undefined) } as any
+    useCase = new ExportQrUseCase(lotPort, traceRepo, storagePort, docStoragePort)
   })
 
   it('throws if lot not found', async () => {

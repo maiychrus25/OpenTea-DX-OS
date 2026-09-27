@@ -27,11 +27,11 @@ type Parcel = {
 
 // Map DB status → màu sắc + nhãn tiếng Việt
 const STATUS_CONFIG: Record<string, { fillColor: string; color: string; label: string }> = {
-  ACTIVE:            { fillColor: '#16A34A', color: '#15803D', label: 'Đang canh tác' },
+  SOWING:            { fillColor: '#16A34A', color: '#15803D', label: 'Đang gieo sạ' },
+  TENDING:           { fillColor: '#059669', color: '#047857', label: 'Đang chăm sóc' },
   DRAFT:             { fillColor: '#9CA3AF', color: '#6B7280', label: 'Khởi tạo' },
   HARVEST_APPROVED:  { fillColor: '#EA580C', color: '#C2410C', label: 'Đã duyệt thu hoạch' },
   HARVESTED:         { fillColor: '#2563EB', color: '#1D4ED8', label: 'Đã thu hoạch' },
-  PENDING_APPROVAL:  { fillColor: '#CA8A04', color: '#A16207', label: 'Chờ duyệt' },
 }
 
 // Kiểm tra GeoJSON có tọa độ hợp lệ không
@@ -73,6 +73,7 @@ export default function FarmZoneReadOnly() {
       center: [10.0, 106.0],
       zoom: 9,
       minZoom: 6,
+      maxZoom: 24,
       maxBounds: [
         [8.0, 102.0],
         [23.5, 109.5]
@@ -81,7 +82,9 @@ export default function FarmZoneReadOnly() {
     })
 
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri'
+      attribution: 'Tiles &copy; Esri',
+      maxNativeZoom: 19,
+      maxZoom: 24
     }).addTo(map)
 
     mapRef.current = map

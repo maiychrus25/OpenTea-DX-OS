@@ -6,6 +6,8 @@ import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
 import { PrismaLotTraceRepository } from '@/infrastructure/db/repositories/prisma-lot-trace-repository'
+import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
+import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 import { ExportQrUseCase } from '@/application/lot/ExportQrUseCase'
 import { z } from 'zod'
 
@@ -37,7 +39,9 @@ async function postExportQr(request: Request, context: unknown) {
 
   const lotRepo = new PrismaLotRepository()
   const traceRepo = new PrismaLotTraceRepository()
-  const useCase = new ExportQrUseCase(lotRepo, traceRepo)
+  const storageRepo = new MinioStorageAdapter()
+  const docStorageRepo = new MinioDocumentAdapter()
+  const useCase = new ExportQrUseCase(lotRepo, traceRepo, storageRepo, docStorageRepo)
   // Hexagonal: baseUrl injected from request headers via validated helper (Host injection guard)
   const { resolveBaseUrlFromHeaders } = await import('@/lib/url-helpers')
   const baseUrl = resolveBaseUrlFromHeaders(request.headers, process.env.NEXT_PUBLIC_BASE_URL)

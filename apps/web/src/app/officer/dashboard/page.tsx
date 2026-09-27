@@ -54,7 +54,7 @@ export default async function OfficerDashboard() {
   }
 
   // Get HTX profile for scoping queries
-  const htx = await prisma.htxProfile.findFirst()
+  const htx = await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
 
   let pendingJournals = 0
   let activeParcels = 0

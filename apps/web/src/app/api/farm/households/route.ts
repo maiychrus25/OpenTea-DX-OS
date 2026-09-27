@@ -20,8 +20,15 @@ async function getHouseholds() {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
 
-  // Get HTX profile ID (singleton — first record)
-  const htx = await prisma.htxProfile.findFirst()
+  // Resolve HTX from the authenticated user's Keycloak ID
+  // @ts-ignore: next-auth session user type missing id and sub in default definition
+  const keycloakId = (session.user as any).id ?? (session.user as any).sub
+  const htx = await prisma.htxProfile.findFirst({
+    where: {
+      households: { some: { keycloak_user_id: keycloakId } },
+    },
+  }) ?? await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
+
   if (!htx) {
     return NextResponse.json({ data: [] })
   }
@@ -48,7 +55,16 @@ async function postHousehold(request: Request) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
 
-  const htx = await prisma.htxProfile.findFirst()
+  // Resolve HTX from session — tìm HTX theo officer đang đăng nhập
+  // Fallback về HTX đầu tiên (theo created_at) nếu chưa map được
+  // @ts-ignore: next-auth session user type missing id and sub in default definition
+  const keycloakId = (session.user as any).id ?? (session.user as any).sub
+  const htx = await prisma.htxProfile.findFirst({
+    where: {
+      households: { some: { keycloak_user_id: keycloakId } },
+    },
+  }) ?? await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
+
   if (!htx) {
     return NextResponse.json({ error: { code: 'DOMAIN_ERROR', message: 'HTX Profile not found' } }, { status: 422 })
   }
