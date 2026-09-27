@@ -7,6 +7,7 @@ import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRep
 import { CreateJournalEntryUseCase } from '@/application/journal/CreateJournalEntryUseCase'
 import { BatchApproveJournalUseCase } from '@/application/journal/BatchApproveJournalUseCase'
 import { ParcelStatus, ActivityType } from '@prisma/client'
+import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
 
 describe('Story 3.4: Parcel Status Auto-Derivation', () => {
   const isDbError = (e: unknown) => {
@@ -108,7 +109,8 @@ describe('Story 3.4: Parcel Status Auto-Derivation', () => {
     expect(parcel?.status).toBe(ParcelStatus.SOWING)
 
     // Now batch approve
-    const batchApproveUseCase = new BatchApproveJournalUseCase(journalRepo)
+    const mockDocStorage = { uploadDocument: jest.fn() } as unknown as DocumentStoragePort
+    const batchApproveUseCase = new BatchApproveJournalUseCase(journalRepo, mockDocStorage)
     await batchApproveUseCase.execute([entry.id], 'officer-1')
 
     // Status should now be TENDING
@@ -134,7 +136,8 @@ describe('Story 3.4: Parcel Status Auto-Derivation', () => {
       activities: [{ activity_type: ActivityType.HARVEST }]
     }, 'FARMER', householdId)
 
-    const batchApproveUseCase = new BatchApproveJournalUseCase(journalRepo)
+    const mockDocStorage = { uploadDocument: jest.fn() } as unknown as DocumentStoragePort
+    const batchApproveUseCase = new BatchApproveJournalUseCase(journalRepo, mockDocStorage)
     await batchApproveUseCase.execute([entry.id], 'officer-1')
 
     const parcel = await prisma.parcel.findUnique({ where: { id: parcelId }, include: { crop_cycles: true } })
