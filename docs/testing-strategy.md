@@ -1,4 +1,4 @@
-# Testing Strategy — OpenTea-DX-OS
+# Testing Strategy — OpenTea DX-OS
 
 This document outlines the testing stack and strategy for the project. All AI agents (specifically `bmad-tea` or developer agents) MUST adhere to these choices when writing test plans or implementing test code.
 

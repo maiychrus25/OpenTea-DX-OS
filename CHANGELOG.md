@@ -52,8 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0-alpha] - 2026-08-11
 
 ### Added
-- **Hexagonal Architecture scaffold** — Domain / Application / Infrastructure / Presentation layers with sample profile slice ([#91](https://github.com/maiychrus25/OpenTea-DX-OS/pull/91))
-- **Hybrid AI architecture** — Migration to Groq cloud API with Ollama local fallback ([#52](https://github.com/maiychrus25/OpenTea-DX-OS/issues/52))
+- **Hexagonal Architecture scaffold** — Domain / Application / Infrastructure / Presentation layers with sample profile slice (#91)
+- **Hybrid AI architecture** — Migration to Groq cloud API with Ollama local fallback (#52)
 - **PR Deep Review skill** — Adversarial code review automation for CI
 
 ### Fixed
@@ -66,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.4-alpha] - 2026-08-10
 
 ### Added
-- **Design System** — CSS custom properties (design tokens), Google Fonts integration ([#89](https://github.com/maiychrus25/OpenTea-DX-OS/pull/89))
+- **Design System** — CSS custom properties (design tokens), Google Fonts integration (#89)
 - **Shared UI components** — Button, Badge, Card, Modal, Skeleton with CSS Modules
 - **Layout shell** — AppShell, Sidebar, TopBar, BottomNav responsive components
 - **Unit tests** — Jest config + tests for tokens, Button, Badge, Skeleton, Sidebar
@@ -82,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.3-alpha] - 2026-08-08
 
 ### Added
-- **n8n data pipelines** — FAOSTAT commodity sync, Open-Meteo weather cache, Frankfurter FX rates, market bulletin generation ([#87](https://github.com/maiychrus25/OpenTea-DX-OS/pull/87))
+- **n8n data pipelines** — FAOSTAT commodity sync, Open-Meteo weather cache, Frankfurter FX rates, market bulletin generation (#87)
 - CI/CD workflow for n8n JSON linting
 - HTX profile and Lot public pages
 
@@ -91,8 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.2-alpha] - 2026-08-06
 
 ### Added
-- **Full Prisma schema** — All 15+ tables with JSONB multi-currency support ([#86](https://github.com/maiychrus25/OpenTea-DX-OS/pull/86))
-- **Keycloak SSO integration** — NextAuth.js v5 + Keycloak OIDC with role-based routing (Manager/Officer/Farmer) ([#84](https://github.com/maiychrus25/OpenTea-DX-OS/pull/84))
+- **Full Prisma schema** — All 15+ tables with JSONB multi-currency support (#86)
+- **Keycloak SSO integration** — NextAuth.js v5 + Keycloak OIDC with role-based routing (Manager/Officer/Farmer) (#84)
 
 ### Fixed
 - Auth: correct relative import paths, remove unused variables

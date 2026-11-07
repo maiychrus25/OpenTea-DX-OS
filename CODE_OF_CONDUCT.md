@@ -50,7 +50,7 @@ Tiêu chuẩn Đạo đức này áp dụng trong tất cả các không gian c�
 
 Các trường hợp vi phạm Tiêu chuẩn Đạo đức có thể được báo cáo bằng cách liên hệ người quản lý dự án qua:
 
-- **Email**: ninhkhuongpl7@gmail.com
+- **Nhóm phụ trách**: OpenTea Developers
 - **GitHub Issue**: Tạo issue với label `conduct-report` (sẽ được xử lý bảo mật).
 
 Tất cả các báo cáo sẽ được xem xét và điều tra kịp thời, công bằng. Người quản lý dự án cam kết bảo mật danh tính của người báo cáo.

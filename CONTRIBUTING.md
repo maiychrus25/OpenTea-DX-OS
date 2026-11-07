@@ -238,7 +238,6 @@ Tất cả checks phải **PASS** trước khi PR được review.
 ## 9. Liên hệ
 
 - **Maintainer**: OpenTea Developers
-- **Email**: ninhkhuongpl7@gmail.com
 - **GitHub Issues**: [OpenTea-DX-OS/issues](https://github.com/maiychrus25/OpenTea-DX-OS/issues)
 
 ---

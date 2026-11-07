@@ -1,4 +1,4 @@
-# GitHub Issues Creation Script for OpenTea-DX-OS
+# GitHub Issues Creation Script for OpenTea DX-OS
 # Avoids UTF-8 encoding issues by using ASCII-only body text in CLI args
 # and writing body to temp files with explicit UTF-8 encoding
 
