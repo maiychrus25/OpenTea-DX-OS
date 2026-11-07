@@ -14,7 +14,7 @@ Trước khi code, hãy chắc chắn bạn đã đọc qua các tài liệu c�
 |-----------|---------------|
 | **[project-context.md](./docs/project-context.md)** | Nắm rõ tầm nhìn, tech stack, kiến trúc tổng quan (~200 dòng) |
 | **[rules-and-limits.md](./docs/rules-and-limits.md)** | Invariants, business rules, coding standards — bắt buộc |
-| **[AGENTS.md](./.agents/AGENTS.md)** | Rules cho AI agents và developers — architecture, naming, security |
+| **[AGENTS.md](./AGENTS.md)** | Rules cho AI agents và developers — architecture, naming, security |
 | **[database-schema.md](./docs/database-schema.md)** | Cấu trúc database (khi làm task liên quan DB) |
 | **[api-contract.md](./docs/api-contract.md)** | API endpoint specs (khi làm task liên quan API) |
 | **[DESIGN.md](./docs/DESIGN.md)** | Design tokens, component patterns (khi làm task FE/UI) |

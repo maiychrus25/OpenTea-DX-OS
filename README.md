@@ -55,7 +55,7 @@ Toàn bộ tài liệu đặc tả, thiết kế kiến trúc và quy tắc kinh
 - 🏛️ **[Rules and Limits](./docs/rules-and-limits.md)** — Các ràng buộc Nghiệp vụ (Business Rules) và Tiêu chuẩn Code (Quality Rules).
 - 🎨 **[Design System](./docs/DESIGN.md)** — Tokens màu sắc, typography và UI Patterns.
 - 🗄️ **[Database Schema](./docs/database-schema.md)** — Cấu trúc dữ liệu PostgreSQL.
-- 🤖 **[AI Agents Scope](./.agents/AGENTS.md)** — Bộ luật dành riêng cho các AI Agents đóng góp vào dự án.
+- 🤖 **[AI Agents Scope](./AGENTS.md)** — Bộ luật dành riêng cho các AI Agents đóng góp vào dự án.
 
 ## 🚀 Bắt đầu Nhanh (Quick Start)
 
