@@ -1,0 +1,18 @@
+# Copyright (c) 2026 OpenTea Developers
+# Licensed under the MIT License. See LICENSE file in the project root for full license information.
+#
+# Release override: run web and disease-api from prebuilt GHCR images instead of building from source.
+# Usage (from the release bundle root):
+#   export OPENTEA_VERSION=1.2.0
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --no-build
+# Requires Docker Compose >= 2.24 for the !reset tag.
+
+services:
+  web:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-web:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+    build: !reset null
+
+  disease-api:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-api:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+    build: !reset null

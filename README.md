@@ -190,7 +190,7 @@ OpenTea-DX-OS/
 ├── docs/                   # Tài liệu nghiệp vụ, kiến trúc và kiểm thử
 ├── workflows/              # n8n pipelines (thời tiết, FAOSTAT, tỷ giá, bản tin, nhắc việc…)
 ├── scripts/                # Script kiểm tra môi trường, cấu trúc và smoke test
-└── .github/workflows/      # CI Quality Gate & Docker Publish
+└── .github/workflows/      # CI Quality Gate, Docker Publish (edge) & Release
 ```
 
 ## 📚 Hệ thống Tài liệu (Documentation)
@@ -217,7 +217,34 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 ## 📦 Bản phát hành (Releases)
 
 - Phiên bản được đánh số theo [Semantic Versioning](https://semver.org/) và ghi nhận trong [CHANGELOG.md](./CHANGELOG.md) theo chuẩn [Keep a Changelog](https://keepachangelog.com/).
-- Các bản phát hành chính thức được công bố tại [GitHub Releases](https://github.com/maiychrus25/OpenTea-DX-OS/releases).
+- Các bản phát hành chính thức được công bố tại [GitHub Releases](https://github.com/maiychrus25/OpenTea-DX-OS/releases), mỗi bản gồm ghi chú phát hành, gói triển khai `opentea-dx-os-X.Y.Z.tar.gz` (kèm `SHA256SUMS`) và image trên GHCR:
+  `ghcr.io/maiychrus25/opentea-dx-os-web:X.Y.Z`, `ghcr.io/maiychrus25/opentea-dx-os-api:X.Y.Z`.
+
+**Phát hành phiên bản mới (maintainer):**
+
+1. Chuyển nội dung mục `[Unreleased]` trong `CHANGELOG.md` sang mục mới `## [X.Y.Z] - YYYY-MM-DD`.
+2. Cập nhật `version` trong `apps/web/package.json` thành `X.Y.Z` (`npm version X.Y.Z --no-git-tag-version` trong `apps/web`).
+3. Commit, sau đó gắn tag và đẩy lên:
+   ```bash
+   git tag vX.Y.Z && git push origin vX.Y.Z
+   ```
+   Workflow **Release** sẽ kiểm tra phiên bản, chạy toàn bộ CI Quality Gate, đẩy image lên GHCR và tạo GitHub Release. Tag dạng `vX.Y.Z-rc.N` tạo bản pre-release (không gắn tag `latest`).
+
+**Triển khai một bản phát hành:**
+
+```bash
+tar -xzf opentea-dx-os-X.Y.Z.tar.gz && cd opentea-dx-os-X.Y.Z
+cp .env.example .env.local && cp docker/.env.local.example docker/.env.local   # rồi điền secret production
+export OPENTEA_VERSION=X.Y.Z
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --wait postgres
+DATABASE_URL="postgresql://<user>:<password>@localhost:5432/<db>" \
+  npx prisma@5.22.0 migrate deploy --schema apps/web/prisma/schema.prisma
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --no-build
+```
+
+> [!IMPORTANT]
+> Production chỉ chạy image dựng sẵn từ GHCR (`--no-build`). Để quay lại bản trước, đặt `OPENTEA_VERSION` về phiên bản cũ và chạy lại `up -d --no-build`; migration database không tự đảo ngược, hãy sao lưu database trước khi nâng cấp. Yêu cầu Docker Compose ≥ 2.24.
 
 ## 📜 Giấy phép & Bản quyền
 

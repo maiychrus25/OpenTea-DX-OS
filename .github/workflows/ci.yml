@@ -8,6 +8,8 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  # Reused by release.yml so a tag is only published after the full quality gate passes.
+  workflow_call:
 
 jobs:
   # ─── Stage 1: Fast checks (lint) ────────────────────────────────────
