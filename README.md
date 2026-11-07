@@ -1,135 +1,231 @@
 <div align="center">
 
-  <h1>🌾 OPEN DX-AGRIMARKET</h1>
+  <h1>🍃 OpenTea DX-OS</h1>
 
-  <p><strong>Nền tảng Chuyển đổi Số và Vận hành Đa năng cho Hợp tác xã Nông nghiệp</strong></p>
+  <p><strong>Nền tảng Chuyển đổi Số và Vận hành cho Hợp tác xã Nông nghiệp</strong></p>
 
-  <p><em>"Kết nối Nông hộ - Tối ưu Sản xuất - Minh bạch Thị trường"</em></p>
+  <p><em>"Kết nối Nông hộ — Tối ưu Sản xuất — Minh bạch Thị trường"</em></p>
 
   <br>
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](./LICENSE)
   [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen.svg?style=for-the-badge&logo=github)](./CONTRIBUTING.md)
   [![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](./docker/docker-compose.yml)
-  [![Next.js](https://img.shields.io/badge/Frontend-Next.js_14-000000?style=for-the-badge&logo=next.js&logoColor=white)](./apps/web)
-  [![FastAPI](https://img.shields.io/badge/AI_Core-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](./apps/disease-api)
-  [![Keycloak](https://img.shields.io/badge/Auth-Keycloak-4D4D4D?style=for-the-badge&logo=keycloak&logoColor=white)](https://www.keycloak.org)
-  [![n8n](https://img.shields.io/badge/Workflow-n8n-FF6D5A?style=for-the-badge&logo=n8n&logoColor=white)](./workflows)
+  [![Next.js](https://img.shields.io/badge/Web-Next.js_14-000000?style=for-the-badge&logo=next.js&logoColor=white)](./apps/web)
+  [![FastAPI](https://img.shields.io/badge/AI_Service-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](./apps/disease-api)
+  [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](./apps/web/prisma/schema.prisma)
+  [![Keycloak](https://img.shields.io/badge/Auth-Keycloak-4D4D4D?style=for-the-badge&logo=keycloak&logoColor=white)](./docker/keycloak)
+  [![n8n](https://img.shields.io/badge/Workflow-n8n-EA4B71?style=for-the-badge&logo=n8n&logoColor=white)](./workflows)
 
   <br>
 
+  [Tầm nhìn](#-tầm-nhìn--sứ-mệnh) •
+  [Tính năng](#-tính-năng-chính) •
+  [Kiến trúc](#-kiến-trúc-hệ-thống) •
+  [Cài đặt](#-bắt-đầu-nhanh-quick-start) •
+  [Tài liệu](#-hệ-thống-tài-liệu-documentation) •
+  [Đóng góp](#-báo-lỗi--đóng-góp) •
+  [Giấy phép](#-giấy-phép--bản-quyền)
+
 </div>
 
 ---
-
-<div align="center">
-  <p><em>Sơ đồ Kiến trúc & Luồng Dữ liệu — Hexagonal Architecture & Feature-based Design</em></p>
-</div>
 
 ## 🌟 Tầm nhìn & Sứ mệnh
 
-**OPEN DX-AGRIMARKET** là một Hệ điều hành Nông nghiệp Số toàn diện (Agricultural Digital Operating System) dành riêng cho các Hợp tác xã (HTX) tại Việt Nam. Hệ thống đập bỏ rào cản thông tin giữa Ban quản trị HTX, Cán bộ Kỹ thuật và Nông dân, đồng thời nhúng Trí tuệ Nhân tạo (AI) vào mọi khâu của quá trình sản xuất.
+**OpenTea DX-OS** là hệ điều hành nông nghiệp số dành cho các Hợp tác xã (HTX) tại Việt Nam. Hệ thống xoá bỏ rào cản thông tin giữa **Ban quản trị HTX**, **Cán bộ kỹ thuật** và **Nông hộ**, số hoá toàn bộ vòng đời sản xuất — từ thửa đất, nhật ký canh tác đến lô hàng truy xuất nguồn gốc — và đưa Trí tuệ Nhân tạo vào từng khâu ra quyết định.
 
-Dự án được xây dựng hoàn toàn mã nguồn mở (100% Open Source), kết hợp kiến trúc **Hexagonal Architecture** mạnh mẽ ở Backend và thiết kế **Feature-based** linh hoạt ở Frontend.
+Dự án được xây dựng **100% trên nền tảng mã nguồn mở**, với kiến trúc **Hexagonal (Ports & Adapters)** ở tầng nghiệp vụ và thiết kế **Feature-based** ở tầng giao diện.
 
-### Tính năng cốt lõi:
-- 🗺️ **Bản đồ Vùng trồng (Farm Zone Map):** Số hóa thửa đất nông hộ bằng công nghệ GIS (Leaflet.js).
-- 📝 **Nhật ký Đồng ruộng Thông minh (Journal):** Theo dõi quy trình canh tác, phê duyệt nghiêm ngặt và tự động tính toán thời gian cách ly (Withdrawal Days).
-- 🏷️ **Truy xuất Nguồn gốc (QR Lot):** Minh bạch toàn bộ vòng đời sản phẩm từ gieo trồng đến thu hoạch.
-- 🤖 **Trợ lý AI & Nhận diện Bệnh hại (Disease AI):** Chuẩn đoán bệnh cây trồng bằng Computer Vision (FastAPI) và Chatbot thị trường bằng LLM (Groq Llama-3.1).
-- 📰 **Bản tin Âm thanh (Audio Bulletin):** Tổng hợp tin tức nông sản tự động bằng n8n và phát qua Piper TTS.
+## ✨ Tính năng chính
 
-## 🔬 Đột phá Công nghệ & Kiến trúc
+| Phân hệ | Mô tả |
+| --- | --- |
+| 🗺️ **Bản đồ vùng trồng** | Số hoá thửa đất nông hộ trên nền GIS (Leaflet), theo dõi sức khoẻ đất theo từng thửa. |
+| 📝 **Nhật ký đồng ruộng** | Ghi nhận quy trình canh tác, phê duyệt theo vai trò và tự động tính thời gian cách ly (withdrawal days). |
+| 🏷️ **Truy xuất nguồn gốc** | Quản lý lô hàng, xuất mã QR và chứng nhận cho từng lô sản phẩm. |
+| 🤖 **Nhận diện bệnh hại** | Chẩn đoán bệnh cây trồng qua ảnh bằng dịch vụ Computer Vision (FastAPI + TensorFlow). |
+| 💬 **Trợ lý thị trường** | Chatbot LLM (Groq, dự phòng Ollama) trả lời dựa trên dữ liệu có trích dẫn nguồn. |
+| 📰 **Bản tin âm thanh** | Tổng hợp tin tức nông sản tự động bằng n8n và đọc bằng Piper TTS. |
+| 🔔 **Thông báo & nhắc việc** | Thông báo thời gian thực trong ứng dụng và đẩy nhắc việc qua Mattermost. |
 
-Hệ thống được thiết kế theo tiêu chuẩn công nghiệp với các ràng buộc kỹ thuật khắt khe (Invariants):
+Hệ thống phân quyền theo ba vai trò: **Ban quản trị (`manager`)**, **Cán bộ kỹ thuật (`officer`)** và **Nông hộ (`farmer`)**, đăng nhập một lần (SSO) qua Keycloak.
 
-1. **Hexagonal Architecture (Ports & Adapters):** Đảm bảo Domain Logic hoàn toàn độc lập với Framework (Next.js/Prisma). API Route chỉ làm nhiệm vụ giao tiếp HTTP (Inbound Adapter).
-2. **AI Invariant (Zero-Hallucination Guard):** Trợ lý AI bị ràng buộc tuyệt đối: *Chỉ trình bày sự thật có trích dẫn nguồn, KHÔNG tự ra quyết định thay HTX, KHÔNG đưa ra khuyến nghị cảm tính.*
-3. **Automated Data Pipelines (n8n):** Tự động hóa hoàn toàn việc cào dữ liệu thời tiết (Open-Meteo), giá nông sản và tin tức thị trường mà không làm nặng tải Next.js Core.
+## 🧭 Kiến trúc Hệ thống
 
-## 📚 Hệ thống Tài liệu (Documentation)
+```mermaid
+flowchart TB
+    U["👥 Người dùng<br/>Ban quản trị HTX · Cán bộ kỹ thuật · Nông hộ"]
+    KC["🔐 Keycloak SSO"]
+    WEB["🌐 Web App<br/>Next.js 14 · Hexagonal Architecture"]
 
-Toàn bộ tài liệu đặc tả, thiết kế kiến trúc và quy tắc kinh doanh (Business Rules) được lưu trữ công khai. Vui lòng đọc kỹ trước khi đóng góp:
+    subgraph AI["🤖 Dịch vụ AI"]
+        API["Disease API<br/>FastAPI · TensorFlow"]
+        LLM["LLM<br/>Groq / Ollama"]
+    end
 
-- 📖 **[Project Context & Core Rules](./docs/project-context.md)** — Công nghệ, Thuật ngữ (Domain Glossary) và 10 Luật sống còn.
-- 🏛️ **[Rules and Limits](./docs/rules-and-limits.md)** — Các ràng buộc Nghiệp vụ (Business Rules) và Tiêu chuẩn Code (Quality Rules).
-- 🎨 **[Design System](./docs/DESIGN.md)** — Tokens màu sắc, typography và UI Patterns.
-- 🗄️ **[Database Schema](./docs/database-schema.md)** — Cấu trúc dữ liệu PostgreSQL.
-- 🤖 **[AI Agents Scope](./AGENTS.md)** — Bộ luật dành riêng cho các AI Agents đóng góp vào dự án.
+    subgraph Store["🗄️ Lưu trữ"]
+        PG[("PostgreSQL 16")]
+        S3[("MinIO")]
+    end
+
+    subgraph Auto["⚙️ Tự động hoá"]
+        N8N["n8n Pipelines"]
+        TTS["Piper TTS"]
+        MM["Mattermost"]
+    end
+
+    EXT["🌍 Dữ liệu mở<br/>Open-Meteo · FAOSTAT · UN Comtrade · NASA POWER · Frankfurter"]
+
+    U --> WEB
+    WEB <-->|OIDC| KC
+    WEB --> AI
+    WEB --> Store
+    EXT --> N8N
+    N8N --> PG
+    N8N --> TTS
+    N8N --> MM
+```
+
+**Nguyên tắc thiết kế (Invariants):**
+
+1. **Hexagonal Architecture** — Domain logic độc lập hoàn toàn với framework (Next.js, Prisma). API Route chỉ đóng vai trò Inbound Adapter cho giao tiếp HTTP.
+2. **AI Invariant** — Trợ lý AI chỉ trình bày sự thật có trích dẫn nguồn, **không** ra quyết định thay HTX và **không** đưa khuyến nghị cảm tính.
+3. **Data Pipelines tách biệt** — Việc thu thập thời tiết, giá nông sản, tỷ giá và tin thị trường chạy trên n8n, không làm tăng tải cho Web App.
+
+## 🧰 Ngăn xếp Công nghệ (Tech Stack)
+
+| Tầng | Công nghệ |
+| --- | --- |
+| **Web App** | Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS 4, Zod, Leaflet |
+| **Xác thực** | Keycloak 24 (OIDC), NextAuth.js v5 |
+| **Dữ liệu** | PostgreSQL 16, Prisma ORM 5, MinIO (S3-compatible) |
+| **AI** | FastAPI + TensorFlow (Computer Vision), Groq LLM, Ollama (tuỳ chọn) |
+| **Tự động hoá** | n8n, Piper TTS, Mattermost |
+| **Kiểm thử** | Jest, Playwright |
+| **Hạ tầng** | Docker Compose, GitHub Actions, GitHub Container Registry |
 
 ## 🚀 Bắt đầu Nhanh (Quick Start)
 
-Dự án hỗ trợ chạy toàn bộ môi trường (Full-stack + Infra) qua Docker Compose.
+**Yêu cầu:** Docker và Docker Compose v2.
 
-**Yêu cầu:** Docker & Docker Compose.
-
-1. **Clone dự án & Cấu hình biến môi trường:**
+1. **Clone mã nguồn:**
    ```bash
    git clone https://github.com/maiychrus25/OpenTea-DX-OS.git
    cd OpenTea-DX-OS
-   cp .env.example .env
    ```
-   *(Cấu hình `GROQ_API_KEY` trong file `.env` nếu bạn muốn dùng LLM)*
 
-2. **Khởi chạy hệ thống:**
+2. **Tạo file cấu hình môi trường:**
    ```bash
-   cd docker
-   docker-compose up -d
+   cp .env.example .env.local
+   cp docker/.env.local.example docker/.env.local
+   ```
+   > [!NOTE]
+   > Điền `GROQ_API_KEY` trong `.env.local` để bật trợ lý LLM. Với môi trường production, hãy thay toàn bộ mật khẩu và secret mặc định.
+
+3. **Khởi chạy hệ thống:**
+   ```bash
+   docker compose -f docker/docker-compose.yml up -d
+   bash scripts/smoke-test.sh   # kiểm tra sức khoẻ các dịch vụ
    ```
 
-3. **Truy cập các dịch vụ:**
-   - 🌐 Web App: `http://localhost:3000`
-   - 🔐 Keycloak Admin: `http://localhost:8080`
-   - ⚙️ n8n Automation: `http://localhost:5678`
-   - 🗄️ MinIO Console: `http://localhost:9001`
+4. **Truy cập dịch vụ:**
 
-*(Tham khảo `docs/project-context.md` để lấy tài khoản đăng nhập mặc định)*
+   | Dịch vụ | Địa chỉ |
+   | --- | --- |
+   | 🌐 Web App | http://localhost:3000 |
+   | 🔐 Keycloak Admin | http://localhost:8080 |
+   | ⚙️ n8n | http://localhost:5678 |
+   | 🗄️ MinIO Console | http://localhost:9001 |
 
-## 🔨 Dịch từ Mã nguồn (Build from Source)
+Các bước thiết lập bổ sung (MinIO bucket, import n8n workflows, Ollama model) và tài khoản mặc định xem tại **[Hướng dẫn cài đặt môi trường phát triển](./docs/dev-setup.md)**.
 
-Bạn có thể biên dịch và chạy dự án **hoàn toàn từ mã nguồn** mà không cần Docker:
+## 🔨 Biên dịch từ Mã nguồn (Build from Source)
 
-**Yêu cầu:** Node.js >= 20, Python >= 3.11, PostgreSQL >= 16.
+**Yêu cầu:** Node.js ≥ 20, Python ≥ 3.11, PostgreSQL ≥ 16.
 
-### Web Application (`apps/web`)
+**Web App (`apps/web`)**
 
 ```bash
 cd apps/web
-cp ../../.env.example ../../.env          # Cấu hình biến môi trường
-npm install                               # Cài đặt thư viện
-npx prisma generate                       # Sinh Prisma Client
-npx prisma migrate deploy                 # Áp dụng schema vào database
-npm run build                             # Biên dịch production bundle
-npm run start                             # Chạy ứng dụng (http://localhost:3000)
+npm ci                          # Cài đặt thư viện theo package-lock.json
+npx prisma generate             # Sinh Prisma Client
+npx prisma migrate deploy       # Áp dụng migration vào database
+npm run build                   # Biên dịch production bundle
+npm run start                   # Chạy tại http://localhost:3000
 ```
 
-### Disease Detection API (`apps/disease-api`)
+**Disease API (`apps/disease-api`)**
 
 ```bash
 cd apps/disease-api
-python -m venv venv                       # Tạo môi trường ảo
-source venv/bin/activate                  # Linux/Mac
-# venv\Scripts\activate                   # Windows
-pip install -r requirements.txt           # Cài đặt thư viện
-uvicorn app.main:app --host 0.0.0.0 --port 8000   # Chạy API
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-> **Lưu ý:** Tất cả công cụ dịch đều là phần mềm nguồn mở: Node.js (MIT), npm (Artistic-2.0), Python (PSF), pip (MIT), PostgreSQL (PostgreSQL License — OSI-approved).
+> Toàn bộ công cụ biên dịch đều là phần mềm nguồn mở: Node.js (MIT), npm (Artistic-2.0), Python (PSF), pip (MIT), PostgreSQL (PostgreSQL License).
+
+## 🧪 Kiểm thử & Chất lượng
+
+```bash
+cd apps/web
+npm run check        # Validate schema → ESLint → TypeScript → Contract tests → Build
+npm test             # Unit tests (Jest)
+npm run test:e2e     # End-to-end tests (Playwright)
+```
+
+Mọi Pull Request vào `main` đều phải qua **CI Quality Gate** trên GitHub Actions: lint, type-check, unit test, browser smoke test, production build và Docker Compose smoke test. Chiến lược kiểm thử chi tiết tại [docs/testing-strategy.md](./docs/testing-strategy.md).
 
 ## 📂 Cấu trúc Thư mục
 
-```bash
+```text
 OpenTea-DX-OS/
 ├── apps/
-│   ├── web/               # Next.js 14 Core Engine (Frontend + Backend)
-│   └── disease-api/       # FastAPI Computer Vision Service
-├── docs/                  # Hệ thống tài liệu kiến trúc & nghiệp vụ
-├── docker/                # Cấu hình hạ tầng (Docker Compose)
-├── workflows/             # File export cấu hình n8n Pipelines
-└── prisma/                # Database Schema & Migrations
+│   ├── web/                # Next.js 14 — giao diện, API routes, Prisma schema & migrations
+│   └── disease-api/        # FastAPI — dịch vụ nhận diện bệnh hại cây trồng
+├── ai-models/              # Script thiết lập mô hình AI
+├── database/               # Schema & dữ liệu mẫu PostgreSQL
+├── docker/                 # Docker Compose, Keycloak realm & theme, cấu hình hạ tầng
+├── docs/                   # Tài liệu nghiệp vụ, kiến trúc và kiểm thử
+├── workflows/              # n8n pipelines (thời tiết, FAOSTAT, tỷ giá, bản tin, nhắc việc…)
+├── scripts/                # Script kiểm tra môi trường, cấu trúc và smoke test
+└── .github/workflows/      # CI Quality Gate & Docker Publish
 ```
 
+## 📚 Hệ thống Tài liệu (Documentation)
+
+Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
+
+- 📖 **[Project Context](./docs/project-context.md)** — Công nghệ, thuật ngữ nghiệp vụ (Domain Glossary) và các luật cốt lõi.
+- 📋 **[Tài liệu Phân tích Nghiệp vụ (BA)](./docs/BA_Document.md)** — Yêu cầu nghiệp vụ và luồng xử lý của HTX.
+- 🏛️ **[Rules and Limits](./docs/rules-and-limits.md)** — Ràng buộc nghiệp vụ (Business Rules) và tiêu chuẩn mã nguồn.
+- 🔌 **[API Contract](./docs/api-contract.md)** — Đặc tả các endpoint của Web App.
+- 🗄️ **[Database Schema](./docs/database-schema.md)** — Cấu trúc dữ liệu PostgreSQL.
+- 🧪 **[Testing Strategy](./docs/testing-strategy.md)** — Công cụ và chiến lược kiểm thử.
+- 🛠️ **[Dev Setup](./docs/dev-setup.md)** — Hướng dẫn cài đặt môi trường phát triển.
+- 📝 **[Deviation Register](./docs/deviation-register.md)** — Sổ ghi nhận các điểm sai lệch so với đặc tả.
+- 📦 **[Dependencies](./DEPENDENCIES.md)** — Danh mục thư viện và giấy phép phụ thuộc.
+- 🤖 **[AGENTS.md](./AGENTS.md)** — Quy tắc làm việc cho AI agents và developers.
+
+## 🐛 Báo lỗi & Đóng góp
+
+- **Báo lỗi & đề xuất tính năng:** tạo issue tại [GitHub Issues](https://github.com/maiychrus25/OpenTea-DX-OS/issues).
+- **Quy chuẩn đóng góp:** đọc [CONTRIBUTING.md](./CONTRIBUTING.md) và [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) trước khi gửi Pull Request.
+- **Quy ước commit:** [Conventional Commits](https://www.conventionalcommits.org/) bằng tiếng Anh, ví dụ `feat(journal): add withdrawal-day validation`.
+
+## 📦 Bản phát hành (Releases)
+
+- Phiên bản được đánh số theo [Semantic Versioning](https://semver.org/) và ghi nhận trong [CHANGELOG.md](./CHANGELOG.md) theo chuẩn [Keep a Changelog](https://keepachangelog.com/).
+- Các bản phát hành chính thức được công bố tại [GitHub Releases](https://github.com/maiychrus25/OpenTea-DX-OS/releases).
+
+## 📜 Giấy phép & Bản quyền
+
+- Dự án được phân phối theo giấy phép **[MIT License](./LICENSE)**.
+- Một số dịch vụ bên thứ ba chạy kèm có giấy phép riêng (ví dụ n8n — Sustainable Use License, MinIO — AGPL-3.0). Xem chi tiết tại [DEPENDENCIES.md](./DEPENDENCIES.md).
+
 ---
+
 <div align="center">
-  <p>Được phát triển với 💚 bởi đội ngũ OPEN DX-AGRIMARKET.</p>
+  <p>Phát triển bởi <strong>OpenTea Developers</strong> 🍃</p>
 </div>
