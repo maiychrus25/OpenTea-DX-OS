@@ -8,7 +8,7 @@ from typing import Callable
 from minio.commonconfig import CopySource
 
 from .clamd import ScanResult, scan_stream
-from .config import MAX_SCAN_BYTES, Config
+from .config import Config
 from .decision import Action, decide
 
 log = logging.getLogger("dxos_scanner")
@@ -41,14 +41,16 @@ def _process(s3, db, cfg: Config, scan, bucket: str, obj) -> int:
     key = obj.object_name
     etag = (obj.etag or "").strip('"')
     row = db.execute(
-        "select status, signature from audit.file_scans where bucket = %s and key = %s and etag = %s", (bucket, key, etag)
+        "select status, signature, uploaded_at from audit.file_scans where bucket = %s and key = %s and etag = %s", (bucket, key, etag)
     ).fetchone()
     flagged = row is not None and row[0] != "clean"
-    if row is not None and not flagged:
+    # A clean row only counts while the object's LastModified is unchanged: an MD5 (etag) collision
+    # cannot hide a replaced object, since the replacement has a new LastModified.
+    if row is not None and not flagged and row[2] == obj.last_modified:
         return 0
     if flagged:  # known-bad content still (or again) in the source bucket: quarantine without re-scanning
         result = ScanResult(row[0], row[1])
-    elif obj.size > MAX_SCAN_BYTES:  # clamd would drop the stream at StreamMaxLength; never scannable
+    elif obj.size > cfg.max_scan_bytes:  # clamd would drop the stream at StreamMaxLength; never scannable
         result = ScanResult("unscannable", "INSTREAM size limit exceeded")
     else:
         # If-Match pins the read to the listed etag, so the recorded etag is the one actually scanned.
@@ -68,7 +70,9 @@ def _process(s3, db, cfg: Config, scan, bucket: str, obj) -> int:
         if not flagged:
             db.execute(
                 "insert into audit.file_scans (bucket, key, etag, status, signature, size_bytes, uploaded_at) "
-                "values (%s, %s, %s, %s, %s, %s, %s) on conflict do nothing",
+                "values (%s, %s, %s, %s, %s, %s, %s) on conflict (bucket, key, etag) do update set "
+                "status = excluded.status, signature = excluded.signature, size_bytes = excluded.size_bytes, "
+                "uploaded_at = excluded.uploaded_at, scanned_at = now()",
                 (bucket, key, etag, result.status, result.signature, obj.size, obj.last_modified),
             )
         if quarantine:
@@ -80,6 +84,11 @@ def _process(s3, db, cfg: Config, scan, bucket: str, obj) -> int:
                 (f"{bucket}/{key}", json.dumps(details)),
             )
     if quarantine:
+        # Narrows (does not close) the copy->remove race: S3 has no conditional DELETE.
+        current = (s3.stat_object(bucket, key).etag or "").strip('"')
+        if current != etag:
+            log.warning("not removing %s/%s: replaced after scan; the new object is scanned next round", bucket, key)
+            return 1
         s3.remove_object(bucket, key)
         log.warning("quarantined %s/%s (%s)", bucket, key, result.signature or result.status)
     return 1

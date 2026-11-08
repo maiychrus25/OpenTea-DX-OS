@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 
 
-# Must match clamd StreamMaxLength (CLAMD_CONF_StreamMaxLength=50M in docker-compose.yml).
+# Default; must match clamd StreamMaxLength (compose sets both CLAMD_CONF_StreamMaxLength and DXOS_MAX_SCAN_BYTES).
 MAX_SCAN_BYTES = 52428800
 
 
@@ -20,6 +20,7 @@ class Config:
     clamd_port: int
     db_url: str
     heartbeat_path: str
+    max_scan_bytes: int = MAX_SCAN_BYTES
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -36,4 +37,5 @@ class Config:
             clamd_port=int(env.get("DXOS_CLAMD_PORT", "3310")),
             db_url=env["DXOS_DB_URL"],
             heartbeat_path=env.get("DXOS_HEARTBEAT_PATH", "/tmp/dxos-scanner.heartbeat"),
+            max_scan_bytes=int(env.get("DXOS_MAX_SCAN_BYTES", str(MAX_SCAN_BYTES))),
         )

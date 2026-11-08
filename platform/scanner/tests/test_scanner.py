@@ -38,6 +38,7 @@ class FakeS3:
         self.responses = []
         self.get_headers = []
         self.precondition_failed = False
+        self.replace_on_stat = {}  # key -> etag it is swapped to right before the remove-time stat
 
     def put(self, bucket, key, data=b"x", etag='"e1"'):
         self.buckets[bucket][key] = (etag, data)
@@ -71,6 +72,11 @@ class FakeS3:
         self.log.append(("copy", dst_bucket, dst_key, source.bucket_name, source.object_name))
         self.buckets.setdefault(dst_bucket, {})[dst_key] = self.buckets[source.bucket_name][source.object_name]
 
+    def stat_object(self, bucket, key):
+        if key in self.replace_on_stat:
+            self.buckets[bucket][key] = (self.replace_on_stat[key], b"new")
+        return SimpleNamespace(etag=self.buckets[bucket][key][0])
+
     def remove_object(self, bucket, key):
         self.log.append(("remove", bucket, key))
         del self.buckets[bucket][key]
@@ -80,6 +86,7 @@ class FakeDb:
     def __init__(self, log):
         self.log = log
         self.seen = set()
+        self.seen_at = {}  # (bucket, key, etag) -> uploaded_at of a pre-seeded clean row (default WHEN)
         self.flagged = {}  # (bucket, key, etag) -> (status, signature) rows pre-seeded as non-clean
         self.statements = []
         self.pending = []
@@ -96,7 +103,7 @@ class FakeDb:
         self.statements.append((sql, params))
         if "select" in sql.lower() and "file_scans" in sql:
             p = tuple(params)
-            self._row = (self.flagged[p][0], self.flagged[p][1]) if p in self.flagged else (("clean", None) if p in self.seen else None)
+            self._row = (self.flagged[p][0], self.flagged[p][1], WHEN) if p in self.flagged else (("clean", None, self.seen_at.get(p, WHEN)) if p in self.seen else None)
         elif "insert into audit.file_scans" in sql.lower():
             self.pending.append(("scan", tuple(params)))
         elif "record_event" in sql:
@@ -324,3 +331,34 @@ def test_skip_path_leaves_no_open_transaction():
     db.seen.add(("agrimarket-docs", "a.txt", "e1"))
     assert run_once(s3, db, cfg, scan=pytest.fail) == 0
     assert db.txn_count == 0 and not db.in_txn and db.pending == []
+
+
+def test_clean_row_with_same_last_modified_is_skipped():
+    s3, db, cfg, log = make()
+    s3.put("agrimarket-docs", "a.txt")
+    db.seen.add(("agrimarket-docs", "a.txt", "e1"))
+    db.seen_at[("agrimarket-docs", "a.txt", "e1")] = WHEN
+    assert run_once(s3, db, cfg, scan=pytest.fail) == 0
+
+
+def test_clean_row_with_new_last_modified_is_rescanned():
+    s3, db, cfg, log = make()
+    s3.put("agrimarket-docs", "a.txt")
+    db.seen.add(("agrimarket-docs", "a.txt", "e1"))
+    db.seen_at[("agrimarket-docs", "a.txt", "e1")] = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    assert run_once(s3, db, cfg, scan=infected) == 1  # same etag, newer LastModified: scanned, now infected
+    assert "a.txt" not in s3.buckets["agrimarket-docs"]
+    assert any("do update set" in s.lower() for s, _ in db.statements)
+
+
+def test_remove_skipped_when_source_etag_changed_after_scan():
+    s3, db, cfg, log = make()
+    s3.put("agrimarket-docs", "a.txt")
+    s3.replace_on_stat["a.txt"] = '"e2"'
+    assert run_once(s3, db, cfg, scan=infected) == 1
+    assert ops(log, "remove") == []
+    assert "a.txt" in s3.buckets["agrimarket-docs"]
+    # next round the replacement (new etag, new content) is scanned on its own
+    s3.replace_on_stat.clear()
+    assert run_once(s3, db, cfg, scan=clean) == 1
+    assert ("agrimarket-docs", "a.txt", "e2") in db.seen
