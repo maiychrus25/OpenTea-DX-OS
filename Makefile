@@ -5,7 +5,7 @@ COMPOSE := docker compose -f docker/docker-compose.yml
 .PHONY: platform-up platform-smoke platform-down up down build test lint
 
 platform-up:
-	$(COMPOSE) up -d --build --wait postgres keycloak
+	$(COMPOSE) up -d --build --wait postgres keycloak seaweedfs
 	$(COMPOSE) run --rm platform-init
 
 platform-smoke:

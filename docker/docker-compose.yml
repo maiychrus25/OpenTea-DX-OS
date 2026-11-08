@@ -134,23 +134,30 @@ services:
       - agrimarket-net
 
   # NOTE: MinIO is an S3-compatible object storage (AGPL-3.0, OSI-approved).
-  # DX-AgriMarket communicates with MinIO only via S3 HTTP protocol (pre-signed URLs).
-  # No MinIO source code is imported or bundled.
-  minio:
-    image: minio/minio:latest  # License: AGPL-3.0
-    container_name: agrimarket-minio
+  # S3-compatible object storage (SeaweedFS, Apache-2.0). Serves S3 on 9000 under the
+  # network alias "minio" so apps/web (minio client, port 9000) works unchanged.
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.50
+    container_name: agrimarket-seaweedfs
     restart: always
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-your_minio_access_key}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-your_minio_secret_key}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-your_minio_access_key}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-your_minio_secret_key}
     volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
+      - seaweedfs_data:/data
+      - ../platform/seaweedfs/entrypoint.sh:/entrypoint.sh:ro
     ports:
       - "9000:9000"
-      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9000"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
-      - agrimarket-net
+      agrimarket-net:
+        aliases:
+          - minio
 
   disease-api:
     build:
@@ -215,7 +222,7 @@ services:
 volumes:
   pgdata:
   n8n_data:
-  minio_data:
+  seaweedfs_data:
   ollama_data:
   mattermost_data:
   mattermost_config:
