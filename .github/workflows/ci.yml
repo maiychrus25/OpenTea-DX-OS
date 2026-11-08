@@ -220,6 +220,7 @@ jobs:
   platform-smoke:
     name: Platform Smoke Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [lint]
     steps:
       - uses: actions/checkout@v4

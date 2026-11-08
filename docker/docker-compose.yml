@@ -103,7 +103,7 @@ services:
       HASURA_GRAPHQL_ENABLE_CONSOLE: "false"
       HASURA_GRAPHQL_DEV_MODE: "false"
       HASURA_GRAPHQL_ENABLE_TELEMETRY: "false"
-      HASURA_GRAPHQL_JWT_SECRET: '{"jwk_url":"http://keycloak:8080/realms/agrimarket/protocol/openid-connect/certs","issuer":"http://localhost:8080/realms/agrimarket","audience":"dx-os-core","claims_map":{"x-hasura-user-id":{"path":"$$.sub"},"x-hasura-allowed-roles":{"path":"$$.realm_access.roles"},"x-hasura-default-role":{"path":"$$.dxos_default_role","default":"farmer"},"x-hasura-htx-code":{"path":"$$.htx_code","default":""}}}'
+      HASURA_GRAPHQL_JWT_SECRET: '{"jwk_url":"http://keycloak:8080/realms/agrimarket/protocol/openid-connect/certs","issuer":"${KC_PUBLIC_ISSUER:-http://localhost:8080/realms/agrimarket}","audience":"dx-os-core","claims_map":{"x-hasura-user-id":{"path":"$$.sub"},"x-hasura-allowed-roles":{"path":"$$.realm_access.roles"},"x-hasura-default-role":{"path":"$$.dxos_default_role","default":"farmer"},"x-hasura-htx-code":{"path":"$$.htx_code","default":""}}}'
     volumes:
       - ../platform/hasura/metadata:/hasura-metadata:ro
     expose:

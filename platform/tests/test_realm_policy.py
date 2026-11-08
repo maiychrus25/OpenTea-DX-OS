@@ -46,6 +46,11 @@ class RealmPolicyTest(unittest.TestCase):
         farmer = by_key(REALM["users"], "username", "farmer1")
         self.assertNotIn("CONFIGURE_TOTP", farmer.get("requiredActions", []))
 
+    def test_no_realm_role_maps_to_hasura_superuser(self):
+        # Hasura treats the role name "admin" as superuser and takes allowed roles from realm_access.roles.
+        names = {role["name"].lower() for role in REALM["roles"]["realm"]}
+        self.assertFalse(names & {"admin", "hasura-admin"}, names)
+
     def test_otp_policy(self):
         self.assertEqual(REALM.get("otpPolicyType"), "totp")
         self.assertEqual(REALM.get("otpPolicyDigits"), 6)
