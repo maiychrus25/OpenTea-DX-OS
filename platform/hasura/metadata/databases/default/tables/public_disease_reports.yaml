@@ -15,8 +15,8 @@ select_permissions:
   - role: manager
     permission:
       columns: '*'
-      filter: {household: {htx_profile: {htx_code: {_eq: X-Hasura-Htx-Code}}}}
+      filter: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}
   - role: officer
     permission:
       columns: '*'
-      filter: {household: {htx_profile: {htx_code: {_eq: X-Hasura-Htx-Code}}}}
+      filter: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}

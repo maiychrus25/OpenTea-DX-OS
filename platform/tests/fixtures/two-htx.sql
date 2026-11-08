@@ -1,6 +1,8 @@
 -- SPDX-License-Identifier: MIT
 -- SPDX-FileCopyrightText: 2026 OpenTea Developers
 -- Two HTXs (TC, LB) for row-level permission tests. Re-runnable: removes its own rows first.
+delete from households where id='hh_none_1';
+delete from htx_profiles where id='htx_none';
 delete from lot_parcels where id in ('lp_tc_1','lp_lb_1');
 delete from lots where id in ('lot_tc_1','lot_lb_1');
 delete from parcels where id in ('pc_tc_1','pc_tc_2','pc_lb_1');
@@ -24,3 +26,6 @@ insert into lots (id, lot_code, commodity, harvest_date, htx_profile_id, updated
 insert into lot_parcels (id, lot_id, parcel_id) values
   ('lp_tc_1', 'lot_tc_1', 'pc_tc_1'),
   ('lp_lb_1', 'lot_lb_1', 'pc_lb_1');
+-- Empty-code HTX: must never match a manager whose token has no htx_code.
+insert into htx_profiles (id, name, address, crop_types, htx_code, updated_at) values ('htx_none', 'HTX No Code', 'Nowhere', '{}', '', now());
+insert into households (id, name, phone, htx_profile_id, updated_at) values ('hh_none_1', 'Household None 1', '0900000004', 'htx_none', now());

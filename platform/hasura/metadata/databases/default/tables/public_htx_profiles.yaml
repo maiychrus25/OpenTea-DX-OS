@@ -26,8 +26,8 @@ select_permissions:
   - role: manager
     permission:
       columns: '*'
-      filter: {htx_code: {_eq: X-Hasura-Htx-Code}}
+      filter: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}
   - role: officer
     permission:
       columns: '*'
-      filter: {htx_code: {_eq: X-Hasura-Htx-Code}}
+      filter: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}
