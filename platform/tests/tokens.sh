@@ -22,9 +22,18 @@ kc_admin_token() {
     "$KC/realms/master/protocol/openid-connect/token" | jq -r .access_token
 }
 
-_kc() { # method path [json body]; uses $ADMIN_T
-  curl -s -X "$1" -H "Authorization: Bearer $ADMIN_T" -H 'Content-Type: application/json' \
-    ${3:+-d "$3"} "$KC_ADMIN_API$2"
+# _kc method path [json body]; uses $ADMIN_T. Fails loudly on non-2xx; ALLOW_409=1 accepts 409 (already exists).
+_kc() {
+  local args=(-sS -X "$1" -H "Authorization: Bearer $ADMIN_T" -H 'Content-Type: application/json' -w $'\n%{http_code}')
+  [ -n "${3:-}" ] && args+=(-d "$3")
+  local out code body
+  out="$(curl "${args[@]}" "$KC_ADMIN_API$2")" || fail "keycloak admin $1 $2: curl failed"
+  code="${out##*$'\n'}"; body="${out%$'\n'*}"
+  case "$code" in
+    2??) printf '%s' "$body" ;;
+    409) if [ "${ALLOW_409:-}" = 1 ]; then printf '%s' "$body"; else echo "keycloak admin $1 $2 -> 409: $body" >&2; fail "keycloak admin $1 $2 failed"; fi ;;
+    *) echo "keycloak admin $1 $2 -> $code: $body" >&2; fail "keycloak admin $1 $2 failed" ;;
+  esac
 }
 
 # ensure_client <client_id> <default_scopes_csv>
@@ -33,7 +42,7 @@ ensure_client() {
   ADMIN_T="$(kc_admin_token)"
   uuid="$(_kc GET "/clients?clientId=$cid" | jq -r '.[0].id // empty')"
   if [ -z "$uuid" ]; then
-    _kc POST /clients "{\"clientId\":\"$cid\",\"publicClient\":true,\"directAccessGrantsEnabled\":true,\"standardFlowEnabled\":false}" >/dev/null
+    ALLOW_409=1 _kc POST /clients "{\"clientId\":\"$cid\",\"publicClient\":true,\"directAccessGrantsEnabled\":true,\"standardFlowEnabled\":false}" >/dev/null
     uuid="$(_kc GET "/clients?clientId=$cid" | jq -r '.[0].id')"
   fi
   for s in $(echo "$scopes" | tr , ' '); do
@@ -52,13 +61,15 @@ ensure_user() {
   [ -n "$htx" ] && attrs="{\"htx_code\":[\"$htx\"]}"
   id="$(_kc GET "/users?username=$u&exact=true" | jq -r '.[0].id // empty')"
   if [ -z "$id" ]; then
-    _kc POST /users "{\"username\":\"$u\",\"email\":\"$u@example.test\",\"firstName\":\"$u\",\"lastName\":\"Smoke\",\"enabled\":true,\"emailVerified\":true,\"requiredActions\":[],\"attributes\":$attrs}" >/dev/null
+    ALLOW_409=1 _kc POST /users "{\"username\":\"$u\",\"email\":\"$u@example.test\",\"firstName\":\"$u\",\"lastName\":\"Smoke\",\"enabled\":true,\"emailVerified\":true,\"requiredActions\":[],\"attributes\":$attrs}" >/dev/null
     id="$(_kc GET "/users?username=$u&exact=true" | jq -r '.[0].id')"
   else
     _kc PUT "/users/$id" "{\"enabled\":true,\"emailVerified\":true,\"requiredActions\":[],\"attributes\":$attrs}" >/dev/null
   fi
   _kc PUT "/users/$id/reset-password" "{\"type\":\"password\",\"value\":\"$SMOKE_PASSWORD\",\"temporary\":false}" >/dev/null
-  _kc POST "/users/$id/role-mappings/realm" "[$(_kc GET "/roles/$role")]" >/dev/null
+  local role_json; role_json="$(_kc GET "/roles/$role")"
+  [ "$(printf '%s' "$role_json" | jq -r .name)" = "$role" ] || fail "role $role lookup did not return a role object: $role_json"
+  _kc POST "/users/$id/role-mappings/realm" "[$role_json]" >/dev/null
 }
 
 # user_token <username> [client_id]

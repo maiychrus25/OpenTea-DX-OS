@@ -31,6 +31,6 @@ T=$(user_token manager_tc)
 SIG="${T##*.}"; FIRST="${SIG:0:1}"; SWAP=A; [ "$FIRST" = A ] && SWAP=B
 assert_http 401 "tampered token -> 401" -- -X POST -H "Authorization: Bearer ${T%.*}.${SWAP}${SIG:1}" "$GATEWAY/api/data/graphql"
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $T" -H 'Content-Type: application/json' -d '{"query":"{__typename}"}' "$GATEWAY/api/data/graphql")
-[ "$code" != 401 ] && pass "valid token passes gateway ($code)" || fail "valid token rejected"
+[[ "$code" =~ ^[1-5][0-9]{2}$ && "$code" != 401 ]] && pass "valid token passes gateway ($code)" || fail "valid token rejected or gateway down ($code)"
 assert_http "200 204" "CORS preflight without token" -- -X OPTIONS -H 'Origin: http://localhost:3000' -H 'Access-Control-Request-Method: POST' "$GATEWAY/api/data/graphql"
 curl -s -D - -o /dev/null -X POST "$GATEWAY/api/data/graphql" | grep -qi '^x-request-id:' && pass "X-Request-Id present" || fail "X-Request-Id missing"
