@@ -8,7 +8,7 @@
 
 Đề thi bắt buộc một **nền tảng dịch vụ lõi chạy ngầm (headless)** ở Tầng 1, *"hoàn toàn không cung cấp giao diện UI mà chỉ hoạt động như một PaaS"*, cung cấp tối thiểu 4 dịch vụ: **Định danh/SSO**, **API Gateway**, **Quản trị dữ liệu có cấu trúc và phi cấu trúc**, **Workflow**.
 
-Hiện trạng repo: Keycloak, PostgreSQL, MinIO, n8n đã chạy nhưng **chưa có API Gateway**, logic dữ liệu nằm trong 50 API route của ứng dụng Next.js (Tầng 2), không có API dữ liệu tự sinh, không có phân quyền cấp dòng và ứng dụng chỉ phục vụ một HTX (`prisma.htxProfile.findFirst()`).
+Hiện trạng repo: Keycloak, PostgreSQL, MinIO (image đã bị gỡ khỏi Docker Hub), n8n đã chạy nhưng **chưa có API Gateway**, logic dữ liệu nằm trong 50 API route của ứng dụng Next.js (Tầng 2), không có API dữ liệu tự sinh, không có phân quyền cấp dòng và ứng dụng chỉ phục vụ một HTX (`prisma.htxProfile.findFirst()`).
 
 **Mục tiêu:** hoàn thiện Tầng 1 thành một nền tảng lõi headless, tổng quát (dùng lại được cho tổ chức khác ngoài HTX chè), được chứng minh bằng kiểm thử tự động — trước khi chuyển sang Tầng 2.
 
@@ -23,7 +23,7 @@ Hiện trạng repo: Keycloak, PostgreSQL, MinIO, n8n đã chạy nhưng **chưa
 | API dữ liệu tự sinh | Hasura GraphQL Engine v2 CE (Apache-2.0) | Chỉ đọc ở Tầng 1 |
 | Định danh | Keycloak (Apache-2.0) | Bổ sung MFA, audience, claim `htx_code` |
 | CSDL | PostgreSQL 16 + PostGIS + pgvector | Một CSDL cho nghiệp vụ, bản đồ, vector |
-| Dữ liệu phi cấu trúc | MinIO (AGPL-3.0, OSI), ghim phiên bản | Giao tiếp qua mạng, không liên kết mã |
+| Dữ liệu phi cấu trúc | SeaweedFS (Apache-2.0), API S3 | Thay MinIO: image community `minio/minio` đã bị gỡ khỏi Docker Hub (HTTP 404, kiểm tra 2026-11-08), không dựng được trên máy sạch |
 | Workflow | n8n, ghim phiên bản | Sustainable Use License (không phải OSI) — quyết định của chủ dự án; ghi rõ trong ADR và THIRD_PARTY_LICENSES, có lối thoát sang Kestra |
 | Frontend Tầng 2 | Giữ Next.js | Ngoài phạm vi đặc tả này |
 
@@ -37,7 +37,7 @@ Hiện trạng repo: Keycloak, PostgreSQL, MinIO, n8n đã chạy nhưng **chưa
 │   /api/data/graphql   → Hasura :8080        (JWT bắt buộc)  → PostgreSQL            │
 │   /api/workflow/*     → n8n :5678/webhook/* (JWT bắt buộc)                          │
 │   /api/ai/disease/*   → disease-api :8000   (JWT bắt buộc)                          │
-│   /storage/*          → MinIO :9000         (presigned URL, MinIO tự kiểm chữ ký)   │
+│   /storage/*          → SeaweedFS S3 :9000  (presigned URL, S3 tự kiểm chữ ký)      │
 │ Keycloak :8080 (SSO + MFA) — giữ truy cập trực tiếp ở giai đoạn 1a (mục 7)          │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -52,7 +52,7 @@ platform/
 ├── hasura/
 │   └── metadata/            # tables, relationships, select permissions (định dạng metadata v3)
 ├── postgres/
-│   ├── Dockerfile           # FROM postgis/postgis:16-<ver> + gói postgresql-16-pgvector
+│   ├── Dockerfile           # FROM postgis/postgis:16-3.5 + gói postgresql-16-pgvector
 │   └── init/01-extensions.sql
 ├── keycloak/                # tài liệu và script cấu hình bổ sung cho realm (nếu cần)
 └── tests/
@@ -75,7 +75,7 @@ Các service mới (`apisix`, `hasura`, `platform-init`) được thêm vào `do
 
 ### 4.2. API Gateway (APISIX)
 
-- Image: `apache/apisix:<3.11.x>-debian` (ghim tag cụ thể, xác minh tồn tại khi triển khai).
+- Image: `apache/apisix:3.19.0-debian` (đã xác minh tồn tại 2026-11-08).
 - Plugin toàn cục: `request-id` (header `X-Request-Id`), `limit-count` (giới hạn theo IP), `cors` (origin cấu hình qua biến môi trường).
 - Route có `openid-connect` với `bearer_only: true`, `use_jwks: true`, `discovery` trỏ tới Keycloak nội bộ: kiểm **chữ ký, hạn và issuer**. **Audience** `dx-os-core` được kiểm tại Hasura (mục 4.3); với route n8n và disease-api, kiểm audience bằng `claim_validator` nếu phiên bản APISIX hỗ trợ, nếu không thì ghi nhận là giới hạn đã biết.
 - Không có token / token sai → `401` tại gateway; upstream lỗi → `502`/`503` kèm `X-Request-Id`.
@@ -83,9 +83,9 @@ Các service mới (`apisix`, `hasura`, `platform-init`) được thêm vào `do
 
 ### 4.3. Dữ liệu có cấu trúc (PostgreSQL + Hasura)
 
-- **PostgreSQL:** image tự build `platform/postgres` từ `postgis/postgis:16-<ver>` (Debian) + `postgresql-16-pgvector`. Extension `postgis`, `vector` được tạo bởi `init/01-extensions.sql` (volume mới) và bởi service một-lần `platform-init` (`CREATE EXTENSION IF NOT EXISTS`, idempotent) cho volume đang có.
+- **PostgreSQL:** image tự build `platform/postgres` từ `postgis/postgis:16-3.5` (Debian) + `postgresql-16-pgvector`. Extension `postgis`, `vector` được tạo bởi `init/01-extensions.sql` (volume mới) và bởi service một-lần `platform-init` (`CREATE EXTENSION IF NOT EXISTS`, idempotent) cho volume đang có.
   - **Rủi ro collation:** chuyển từ `postgres:16-alpine` (musl) sang Debian (glibc) có thể làm lệch thứ tự sắp xếp text trên volume cũ. Hướng dẫn: với dev, khuyến nghị tạo lại volume; nếu giữ dữ liệu thì chạy `REINDEX DATABASE agrimarket;`. CI luôn dùng volume mới.
-- **Hasura:** image `hasura/graphql-engine:<v2.44.x>.cli-migrations-v3`, tự áp metadata từ `platform/hasura/metadata` khi khởi động.
+- **Hasura:** image `hasura/graphql-engine:v2.51.4.cli-migrations-v3`, tự áp metadata từ `platform/hasura/metadata` khi khởi động.
   - Metadata lưu trong schema `hdb_catalog` của CSDL `agrimarket` (Prisma chỉ quản lý schema `public`, không xung đột).
   - `HASURA_GRAPHQL_ENABLE_CONSOLE=false` (headless), `HASURA_GRAPHQL_DEV_MODE=false`, `HASURA_GRAPHQL_ADMIN_SECRET` bắt buộc (lấy từ `.env.local`), không đặt `UNAUTHORIZED_ROLE` (người chưa xác thực không có quyền).
   - **Prisma vẫn sở hữu schema và migration.** Hasura chỉ track bảng; không dùng Hasura migrations.
@@ -113,21 +113,24 @@ Các service mới (`apisix`, `hasura`, `platform-init`) được thêm vào `do
 
     Không expose: `partners` (chưa có cột tổ chức), các bảng hệ thống của Prisma.
 
-### 4.4. Dữ liệu phi cấu trúc (MinIO)
+### 4.4. Dữ liệu phi cấu trúc (SeaweedFS)
 
-- Ghim tag `minio/minio:RELEASE.<...>` đúng phiên bản đang chạy (không hạ phiên bản để tránh lỗi định dạng dữ liệu).
-- Route `/storage/*` qua APISIX chỉ chuyển tiếp presigned URL (MinIO tự kiểm chữ ký); không mở MinIO Console qua gateway.
+- Service `seaweedfs` dùng image `chrislusf/seaweedfs:4.50` (trùng digest `latest`, phát hành 2026-10-25), chạy `weed server` với S3 API ở **cổng 9000** và **alias mạng `minio`**, để ứng dụng Tầng 2 (adapter S3 đang cố định `port: 9000`, host mặc định `minio`) và các workflow n8n chạy **không cần sửa mã**.
+- Danh tính S3 sinh từ biến môi trường hiện có `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` (giữ tên biến để không đổi cấu hình Tầng 2).
+- Dữ liệu trong volume MinIO cũ không được chuyển tự động (chỉ là dữ liệu dev); bucket được ứng dụng tự tạo (`makeBucket`) như hiện tại.
+- Route `/storage/*` qua APISIX chỉ chuyển tiếp presigned URL (S3 tự kiểm chữ ký SigV4). Không còn MinIO Console `:9001`.
+- `scripts/smoke-test.sh` đổi kiểm tra sức khoẻ MinIO sang SeaweedFS.
 
 ### 4.5. Workflow (n8n)
 
-- Ghim tag `n8nio/n8n:<x.y.z>` đúng phiên bản đang chạy (n8n không hỗ trợ hạ phiên bản CSDL).
+- Ghim `n8nio/n8n:2.47.2` (≥ `latest` hiện tại; n8n không hỗ trợ hạ phiên bản CSDL).
 - Route `/api/workflow/*` → `n8n:5678/webhook/*`, bắt buộc JWT. Giao diện editor n8n không đi qua gateway.
 - `docs/adr/0001-n8n-workflow-engine.md`: lý do chọn n8n (có trong giải pháp tham chiếu của đề, 10 workflow đang chạy), giấy phép Sustainable Use License, ranh giới (chạy độc lập qua HTTP, không nhúng mã), lối thoát sang Kestra.
 
 ### 4.6. Vận hành
 
 - `Makefile` ở gốc: `make platform-up`, `make platform-smoke`, `make up`, `make down`, `make build`, `make test`, `make lint` (bọc các lệnh hiện có: `docker compose build`, Jest, `npm run lint`, `actionlint`).
-- Ghim mọi image còn dùng `latest` trong compose (`n8n`, `piper`, `minio`, `mattermost`) theo nguyên tắc "đúng phiên bản đang chạy".
+- Ghim mọi image còn dùng `latest` trong compose theo nguyên tắc "tag mới nhất ≥ phiên bản `latest` hiện tại" để chỉ nâng cấp, không hạ phiên bản dữ liệu: `n8nio/n8n:2.47.2`, `rhasspy/wyoming-piper:2.5.2` (trùng digest `latest`), `mattermost/mattermost-team-edition:12.1.0`.
 - File mới có header SPDX (`SPDX-License-Identifier: MIT`, `SPDX-FileCopyrightText: 2026 OpenTea Developers`).
 
 ## 5. Xử lý lỗi
@@ -160,13 +163,13 @@ Script dùng Keycloak Admin API (thông tin admin từ biến môi trường CI)
 ## 7. Phát hành
 
 - Gói triển khai bổ sung thư mục `platform/` (config gateway, metadata Hasura, Dockerfile postgres, script kiểm thử).
-- `docker/docker-compose.release.yml`: đóng cổng host của `postgres`, `n8n`, `minio`, `piper` (`ports: !reset []`); chỉ mở `apisix:9080`, `web:3000` và **tạm giữ** `keycloak:8080` vì trình duyệt cần truy cập trực tiếp để đăng nhập cho tới khi Keycloak được đặt sau gateway (đổi issuer — làm cùng đợt triển khai VPS).
+- `docker/docker-compose.release.yml`: đóng cổng host của `postgres`, `n8n`, `seaweedfs`, `piper` (`ports: !reset []`); chỉ mở `apisix:9080`, `web:3000` và **tạm giữ** `keycloak:8080` vì trình duyệt cần truy cập trực tiếp để đăng nhập cho tới khi Keycloak được đặt sau gateway (đổi issuer — làm cùng đợt triển khai VPS).
 - Thêm service một-lần `migrate` (profile `tools`) chạy `prisma migrate deploy` bên trong mạng nội bộ; README chuyển bước migration sang `docker compose run --rm migrate`.
 - Image mới (`apisix`, `hasura`) và image `platform/postgres` được ghim phiên bản; `platform/postgres` build từ mã nguồn trong repo.
 
 ## 8. Giai đoạn 1b — Zero-Trust tại biên (khung)
 
-- **ClamAV** (GPL-2.0, chạy qua mạng): quét file trước khi ghi vào MinIO; file nhiễm bị từ chối và ghi nhật ký.
+- **ClamAV** (GPL-2.0, chạy qua mạng): quét file trước khi ghi vào kho đối tượng; file nhiễm bị từ chối và ghi nhật ký.
 - **OpenBao** (MPL-2.0): quản lý secret của các service lõi thay cho giá trị trong `.env`.
 - **Nhật ký kiểm toán bất biến:** bảng append-only (trigger chặn `UPDATE/DELETE`) ghi thay đổi trên các bảng nghiệp vụ chính, có `request_id`, `actor`, thời điểm.
 - **Che PII:** quyền cột Hasura ẩn số điện thoại/địa chỉ với vai trò không cần thiết.
@@ -174,7 +177,7 @@ Script dùng Keycloak Admin API (thông tin admin từ biến môi trường CI)
 ## 9. Giai đoạn 1c — Dữ liệu và sự kiện (khung)
 
 - **Mosquitto** (EPL-2.0): broker MQTT nhận dữ liệu cảm biến; topic theo `htx/<code>/plot/<id>/<sensor>`.
-- **Vòng đời dữ liệu:** job định kỳ chuyển dữ liệu quá N ngày sang Parquet trên MinIO, truy vấn bằng DuckDB; mỗi lần chạy ghi bản ghi phả hệ (nguồn → đích, số bản ghi, checksum) và báo cáo chất lượng.
+- **Vòng đời dữ liệu:** job định kỳ chuyển dữ liệu quá N ngày sang Parquet trên kho đối tượng S3 (SeaweedFS), truy vấn bằng DuckDB; mỗi lần chạy ghi bản ghi phả hệ (nguồn → đích, số bản ghi, checksum) và báo cáo chất lượng.
 - **Ollama** (MIT) + model giấy phép mở: route `/api/ai/llm/*` qua gateway, không gửi dữ liệu ra ngoài.
 
 ## 10. Ngoài phạm vi Tầng 1
@@ -191,7 +194,8 @@ Script dùng Keycloak Admin API (thông tin admin từ biến môi trường CI)
 | Tài liệu discovery của Keycloak trả `jwks_uri` theo `KC_HOSTNAME_URL` (`localhost`) mà APISIX không gọi được | Kiểm chứng ở bước đầu; xử lý bằng `KC_HOSTNAME_STRICT_BACKCHANNEL=false` hoặc cấu hình JWKS tĩnh |
 | Đổi image PostgreSQL làm lệch collation volume dev | Hướng dẫn tạo lại volume / `REINDEX` |
 | Realm đã tồn tại không nhận cấu hình mới | Hướng dẫn xoá realm/volume Keycloak dev |
-| Hạ phiên bản n8n/MinIO khi ghim | Ghim đúng phiên bản đang chạy |
+| Hạ phiên bản n8n/Mattermost khi ghim | Ghim tag mới nhất ≥ `latest` hiện tại |
+| Tương thích S3 của SeaweedFS với thư viện `minio` (presigned PUT/GET, `bucketExists`, `makeBucket`) | Kiểm thử tự động trong smoke Tầng 1 bằng chính các thao tác này |
 | Tầng 1 kéo dài quá 16/11 | 1a là mốc bắt buộc; 1b/1c cắt theo thứ tự: OpenBao → che PII → lifecycle |
 
 ## 12. Tiêu chí hoàn thành giai đoạn 1a
