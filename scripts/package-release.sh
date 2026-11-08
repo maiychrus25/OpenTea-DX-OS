@@ -27,6 +27,7 @@ BUNDLE_PATHS=(
   ai-models
   piper-voices
   workflows
+  platform
   apps/web/prisma
 )
 

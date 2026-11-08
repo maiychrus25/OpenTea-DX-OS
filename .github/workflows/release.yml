@@ -57,6 +57,8 @@ jobs:
             context: ./apps/web
           - service: api
             context: ./apps/disease-api
+          - service: postgres
+            context: ./platform/postgres
     steps:
       - uses: actions/checkout@v4
 
@@ -121,11 +123,12 @@ jobs:
 
           - \`${prefix}-web:${VERSION}\`
           - \`${prefix}-api:${VERSION}\`
+          - \`${prefix}-postgres:${VERSION}\`
 
           ## Deploy
 
           Download \`opentea-dx-os-${VERSION}.tar.gz\`, verify it with \`SHA256SUMS\`, then follow the
-          [release deployment guide](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/README.md#-bản-phát-hành-releases).
+          [release deployment guide (4-step order: postgres, platform-init, migrate, rest)](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/README.md#-bản-phát-hành-releases).
           EOF
           } > dist/notes.md
 

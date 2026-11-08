@@ -1,10 +1,11 @@
 # Copyright (c) 2026 OpenTea Developers
 # Licensed under the MIT License. See LICENSE file in the project root for full license information.
 #
-# Release override: run web and disease-api from prebuilt GHCR images instead of building from source.
+# Release override: run web, disease-api and postgres from prebuilt GHCR images instead of building from source.
 # Usage (from the release bundle root):
 #   export OPENTEA_VERSION=1.2.0
-#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres
+#   (see README "Bản phát hành" for the 4-step order: postgres, platform-init, migrate, rest)
 #   docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --no-build
 # Requires Docker Compose >= 2.24 for the !reset tag.
 
@@ -16,3 +17,38 @@ services:
   disease-api:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-api:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
     build: !reset null
+
+  # Platform images are prebuilt and published to GHCR like web/api (production never builds).
+  postgres:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-postgres:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+    build: !reset null
+    ports: !reset []
+
+  platform-init:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-postgres:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+
+  # Only apisix:9080, web:3000 and keycloak:8080 stay published on the host.
+  n8n:
+    ports: !reset []
+
+  seaweedfs:
+    ports: !reset []
+
+  piper:
+    ports: !reset []
+
+  # One-shot: apply Prisma migrations inside the compose network (run before starting hasura).
+  migrate:
+    image: node:20.19.5-bookworm-slim
+    profiles: ["tools"]
+    working_dir: /tmp
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
+    volumes:
+      - ../apps/web/prisma:/prisma:ro
+    command: ["npx", "--yes", "prisma@5.22.0", "migrate", "deploy", "--schema", "/prisma/schema.prisma"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agrimarket-net

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Tier 1 API gateway**: APISIX on `:9080` with JWT validation for `/api/data/graphql`, `/api/workflow/*` and `/api/ai/disease/*`
+- **Hasura data API**: read-only GraphQL with row-level permissions scoped by the `htx_code` claim
+- **PostGIS and pgvector**: the Postgres image now ships both extensions and is published to GHCR as `opentea-dx-os-postgres`
+- **Platform smoke CI job**: `make platform-up` + `make platform-smoke` run in CI (`platform-smoke`)
+- **Release `migrate` service**: `--profile tools run --rm migrate` applies Prisma migrations inside the compose network
+
+### Changed
+- **Object storage**: MinIO replaced by SeaweedFS S3 on `:9000` (network alias `minio` kept)
+- **Keycloak**: TOTP required for staff, tokens carry the `dx-os-core` audience and the admin-only `htx_code` claim; the `nextjs-web` password grant is disabled
+- **n8n**: tables moved to the Postgres schema `n8n`
+- **Images**: all service images are pinned to exact tags
+- **Release override**: only `apisix:9080`, `web:3000` and `keycloak:8080` publish host ports; deploy order is postgres, `platform-init`, `migrate`, then the rest
+
+### Upgrade notes
+- Dev environments: recreate the Postgres volume (or run `REINDEX DATABASE agrimarket;` after the alpine to bookworm switch), recreate the Keycloak realm (it is imported only on a fresh database), and run `docker compose down -v` once for n8n. MinIO data is not migrated to SeaweedFS.
+
 ---
 
 ## [1.2.0] - 2026-11-08
