@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+table:
+  name: parcel_crop_cycles
+  schema: public
+object_relationships:
+  - name: parcel
+    using:
+      foreign_key_constraint_on: parcel_id
+select_permissions:
+  - role: farmer
+    permission:
+      columns: '*'
+      filter: {parcel: {household: {keycloak_user_id: {_eq: X-Hasura-User-Id}}}}
+  - role: manager
+    permission:
+      columns: '*'
+      filter: {parcel: {household: {htx_profile: {htx_code: {_eq: X-Hasura-Htx-Code}}}}}
+  - role: officer
+    permission:
+      columns: '*'
+      filter: {parcel: {household: {htx_profile: {htx_code: {_eq: X-Hasura-Htx-Code}}}}}

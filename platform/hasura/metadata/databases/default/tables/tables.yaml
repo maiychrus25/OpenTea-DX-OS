@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+- "!include public_htx_profiles.yaml"
+- "!include public_households.yaml"
+- "!include public_parcels.yaml"
+- "!include public_parcel_crop_cycles.yaml"
+- "!include public_journal_entries.yaml"
+- "!include public_journal_activities.yaml"
+- "!include public_disease_reports.yaml"
+- "!include public_weather_cache.yaml"
+- "!include public_lots.yaml"
+- "!include public_lot_parcels.yaml"
+- "!include public_notifications.yaml"
+- "!include public_chat_history.yaml"
+- "!include public_market_data.yaml"
+- "!include public_bulletins.yaml"
+- "!include public_fx_rates.yaml"

@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+table:
+  name: households
+  schema: public
+object_relationships:
+  - name: htx_profile
+    using:
+      foreign_key_constraint_on: htx_profile_id
+select_permissions:
+  - role: farmer
+    permission:
+      columns: '*'
+      filter: {keycloak_user_id: {_eq: X-Hasura-User-Id}}
+  - role: manager
+    permission:
+      columns: '*'
+      filter: {htx_profile: {htx_code: {_eq: X-Hasura-Htx-Code}}}
+  - role: officer
+    permission:
+      columns: '*'
+      filter: {htx_profile: {htx_code: {_eq: X-Hasura-Htx-Code}}}

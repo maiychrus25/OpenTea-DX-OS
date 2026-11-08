@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+table:
+  name: fx_rates
+  schema: public
+select_permissions:
+  - role: farmer
+    permission:
+      columns: '*'
+      filter: {}
+  - role: manager
+    permission:
+      columns: '*'
+      filter: {}
+  - role: officer
+    permission:
+      columns: '*'
+      filter: {}

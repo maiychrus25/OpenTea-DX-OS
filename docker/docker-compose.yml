@@ -85,6 +85,34 @@ services:
     depends_on:
       keycloak:
         condition: service_started
+      hasura:
+        condition: service_started
+    networks:
+      - agrimarket-net
+
+  # Read-only GraphQL data API over the Prisma-owned schema (metadata only, no migrations).
+  # No host port: reachable only through the APISIX gateway (/api/data/graphql).
+  hasura:
+    image: hasura/graphql-engine:v2.51.4.cli-migrations-v3
+    container_name: agrimarket-hasura
+    restart: always
+    # Supplies HASURA_GRAPHQL_ADMIN_SECRET; Hasura refuses to start with a JWT secret but no admin secret.
+    env_file: .env.local
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "false"
+      HASURA_GRAPHQL_DEV_MODE: "false"
+      HASURA_GRAPHQL_ENABLE_TELEMETRY: "false"
+      HASURA_GRAPHQL_JWT_SECRET: '{"jwk_url":"http://keycloak:8080/realms/agrimarket/protocol/openid-connect/certs","issuer":"http://localhost:8080/realms/agrimarket","audience":"dx-os-core","claims_map":{"x-hasura-user-id":{"path":"$$.sub"},"x-hasura-allowed-roles":{"path":"$$.realm_access.roles"},"x-hasura-default-role":{"path":"$$.dxos_default_role","default":"farmer"},"x-hasura-htx-code":{"path":"$$.htx_code","default":""}}}'
+    volumes:
+      - ../platform/hasura/metadata:/hasura-metadata:ro
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
     networks:
       - agrimarket-net
 
