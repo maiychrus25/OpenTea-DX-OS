@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Tầng 1b: Zero-Trust tại biên (kiểm dịch file, nhật ký kiểm toán bất biến)
 
-> **Trạng thái:** Bản nháp chờ duyệt — 2026-11-08
+> **Trạng thái:** Giai đoạn 1b đã triển khai trên nhánh `feat/tier1b-zero-trust-edge` (2026-11-09); thân tài liệu giữ nguyên bản thiết kế 2026-11-08, xem "Ghi chú sau triển khai 1b" ở cuối.
 > **Phạm vi:** Giai đoạn 1b của Tầng 1 (milestone `v1.4.0`, issue #10). Thu hẹp so với khung trong đặc tả Tầng 1 (§8): chỉ gồm **kiểm dịch file** và **nhật ký kiểm toán bất biến**. OpenBao và che PII được hoãn (ghi ở §9).
 > **Căn cứ:** Đề thi OLP 2026 mục 2 ("Trạm kiểm dịch đám mây xử lý an toàn tệp tin", "nhật ký truy vết… kiểm toán hành vi bất biến") và mục 4 nguyên lý (iv) "thực thi kiểm dịch mã độc nghiêm ngặt"; đặc tả `docs/specs/2026-11-08-tier1-core-platform-design.md`.
 
@@ -129,3 +129,18 @@ Quy mô mục tiêu: vài nghìn object (liệt kê toàn bộ mỗi vòng là c
 - Quét đồng bộ tại gateway (cần upload đi qua gateway — Tầng 2, xem #12).
 - Gắn người thực hiện thật vào `actor` (ứng dụng đặt `dxos.actor`) và hiển thị trạng thái quét — Tầng 2.
 - Lưu trữ dài hạn nhật ký sang hồ dữ liệu — giai đoạn 1c.
+
+## Ghi chú sau triển khai 1b
+
+Khác biệt/bổ sung so với thiết kế:
+
+- `audit.chain_head`: bảng một dòng, khóa khi ghi (an toàn dưới Repeatable Read) và cho phép phát hiện xóa đuôi chuỗi.
+- Hàm hỗ trợ `audit.event_hash`, `audit.reject_change`, `audit.reject_head_change`.
+- Cổng kích thước: object > 50 MiB (`CLAMD_CONF_StreamMaxLength=50M`) bị cách ly như `unscannable` mà không đọc.
+- Ghim phiên bản: GET với `If-Match` và sao chép cách ly với `match_etag` theo etag đã liệt kê; lệch etag thì thử lại vòng sau.
+- Tái cách ly object đã bị gắn cờ (infected/unscannable) xuất hiện lại hoặc chưa được xóa.
+- Kết nối DB autocommit; heartbeat ghi theo từng object và từng vòng.
+- SeaweedFS chạy với `-volume.max=100` (mặc định 8 volume, mỗi bucket chiếm 7 nên PUT vào bucket thứ hai trả HTTP 500).
+- Thứ tự triển khai: `postgres` -> `platform-init` -> `migrate` -> `platform-init` -> phần còn lại.
+
+Giới hạn đã biết: cửa sổ lộ file ngắn trước vòng quét; race giữa sao chép và xóa (SeaweedFS không có DELETE có điều kiện); phiên bản nhiễm sau cùng key ghi đè bản cách ly trước (sự kiện kiểm toán giữ etag/signature); ghi có kiểm toán bị tuần tự hóa bởi một khóa chuỗi (giữ transaction ngắn, thử lại khi `40P01`/`40001`); superuser ghi lại toàn bộ chuỗi với hash tính lại thì không phát hiện được nếu không neo hash đầu chuỗi ra ngoài.

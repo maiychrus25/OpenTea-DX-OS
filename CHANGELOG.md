@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **File quarantine**: ClamAV (`clamav`) and the `dxos-scanner` service scan new objects in `agrimarket-docs` and `agrimarket-private`; infected or unscannable (> 50 MiB) objects are copied to `dxos-quarantine/<bucket>/<key>` and removed, with verdicts in `audit.file_scans`. The scanner image is published to GHCR as `opentea-dx-os-scanner`
+- **Audit log**: hash-chained, append-only `audit.events` fed by row triggers on 9 business tables; verify with `select * from audit.verify_chain()`
+
+### Changed
+- **Deploy order**: `postgres` -> `platform-init` -> `migrate` -> `platform-init` (attaches audit triggers to the migrated tables) -> the rest
+- **SeaweedFS** starts with `-volume.max=100`
+
+### Fixed
+- **SeaweedFS**: a PUT to a second bucket returned HTTP 500 (default limit of 8 volumes, 7 per bucket)
+
+### Upgrade notes
+- Rebuild the postgres image and re-run `platform-init` after `prisma migrate deploy`; recreate the `seaweedfs` container.
+
 ---
 
 ## [1.3.0] - 2026-11-08

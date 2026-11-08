@@ -22,6 +22,12 @@ class FakeStop:
     def set(self):
         self._set = True
 
+    def guard(self):
+        # BaseException-based fail: main() swallows Exception, so a removed stop.wait must not loop forever.
+        self.calls = getattr(self, "calls", 0) + 1
+        if self.calls > 10:
+            pytest.fail("loop never waited")
+
     def wait(self, timeout):
         self.waits.append(timeout)
         if len(self.waits) >= self.rounds:
@@ -43,7 +49,7 @@ def env(monkeypatch, tmp_path):
 def test_waits_interval_between_rounds_and_touches_heartbeat(monkeypatch, env):
     rounds = []
     monkeypatch.setattr(scanner_main.psycopg, "connect", lambda *a, **k: SimpleNamespace(closed=False, close=lambda: None))
-    monkeypatch.setattr(scanner_main, "run_once", lambda *a, **k: rounds.append(1) or 0)
+    monkeypatch.setattr(scanner_main, "run_once", lambda *a, **k: (stop.guard(), rounds.append(1), 0)[2])
     stop = FakeStop(rounds=3)
     scanner_main.main(stop)
     assert stop.waits == [5.0, 5.0, 5.0]
@@ -56,6 +62,7 @@ def test_db_connect_failure_waits_before_retrying(monkeypatch, env):
 
     def boom(*a, **k):
         attempts.append(1)
+        stop.guard()
         raise OSError("db down")
 
     monkeypatch.setattr(scanner_main.psycopg, "connect", boom)

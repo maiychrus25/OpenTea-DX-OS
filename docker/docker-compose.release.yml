@@ -4,8 +4,8 @@
 # Release override: run web, disease-api and postgres from prebuilt GHCR images instead of building from source.
 # Usage (from the release bundle root):
 #   export OPENTEA_VERSION=1.2.0
-#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres
-#   (see README "Bản phát hành" for the 4-step order: postgres, platform-init, migrate, rest)
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres dxos-scanner
+#   (see README "Bản phát hành" for the order: postgres, platform-init, migrate, platform-init again, rest)
 #   docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --no-build
 # Requires Docker Compose >= 2.24 for the !reset tag.
 
@@ -23,6 +23,10 @@ services:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-postgres:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
     build: !reset null
     ports: !reset []
+
+  dxos-scanner:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-scanner:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+    build: !reset null
 
   platform-init:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-postgres:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}

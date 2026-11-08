@@ -91,9 +91,19 @@ along with their licenses, to ensure full transparency and license compliance.
 | APISIX | `apache/apisix:3.19.0-debian` | Apache-2.0 | API gateway |
 | Hasura | `hasura/graphql-engine:v2.51.4.cli-migrations-v3` | Apache-2.0 | Read-only GraphQL data API |
 | n8n | `n8nio/n8n:2.47.2` | Sustainable Use License* | Workflow automation |
-| SeaweedFS | `chrislusf/seaweedfs:4.50` | Apache-2.0 | S3-compatible object storage (replaces MinIO) |
+| SeaweedFS | `chrislusf/seaweedfs:4.50` | Apache-2.0 | S3-compatible object storage (replaces MinIO); started with `-volume.max=100` so more than one bucket fits |
+| ClamAV | `clamav/clamav-debian:1.4.6` | GPL-2.0 | Antivirus daemon (network service, not linked) |
+| Python | `python:3.12.15-slim-bookworm` | PSF | Base image of `dxos-scanner` |
 | Piper TTS | `rhasspy/wyoming-piper:2.5.2` | MIT | Text-to-Speech engine |
 | Mattermost | `mattermost/mattermost-team-edition:12.1.0` | MIT (Team Edition) | Team communication |
+
+### File scanner (`platform/scanner`)
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| [minio](https://github.com/minio/minio-py) | 7.2.20 | Apache-2.0 | S3 client |
+| [psycopg[binary]](https://github.com/psycopg/psycopg) | 3.3.6 | LGPL-3.0 | PostgreSQL driver (dynamically linked, unmodified) |
+| [pytest](https://github.com/pytest-dev/pytest) | 9.1.1 | MIT | Unit tests (dev only) |
 
 > **\* n8n License Note:** n8n uses the Sustainable Use License (fair-code, source-available,
 > not OSI-approved). DX-AgriMarket does NOT import, link, or bundle n8n source code.
