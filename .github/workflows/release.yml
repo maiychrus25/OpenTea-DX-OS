@@ -126,11 +126,12 @@ jobs:
           - \`${prefix}-web:${VERSION}\`
           - \`${prefix}-api:${VERSION}\`
           - \`${prefix}-postgres:${VERSION}\`
+          - \`${prefix}-scanner:${VERSION}\`
 
           ## Deploy
 
           Download \`opentea-dx-os-${VERSION}.tar.gz\`, verify it with \`SHA256SUMS\`, then follow the
-          [release deployment guide (4-step order: postgres, platform-init, migrate, rest)](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/README.md#-bản-phát-hành-releases).
+          [release deployment guide (5-step order: postgres, platform-init, migrate, platform-init again, rest)](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/README.md#-bản-phát-hành-releases).
           EOF
           } > dist/notes.md
 

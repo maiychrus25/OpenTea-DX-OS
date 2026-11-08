@@ -1,7 +1,7 @@
 # Copyright (c) 2026 OpenTea Developers
 # Licensed under the MIT License. See LICENSE file in the project root for full license information.
 #
-# Release override: run web, disease-api and postgres from prebuilt GHCR images instead of building from source.
+# Release override: run web, disease-api, postgres and dxos-scanner from prebuilt GHCR images instead of building from source.
 # Usage (from the release bundle root):
 #   export OPENTEA_VERSION=1.2.0
 #   docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres dxos-scanner

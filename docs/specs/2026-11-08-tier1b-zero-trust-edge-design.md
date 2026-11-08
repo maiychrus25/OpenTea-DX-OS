@@ -142,5 +142,11 @@ Khác biệt/bổ sung so với thiết kế:
 - Kết nối DB autocommit; heartbeat ghi theo từng object và từng vòng.
 - SeaweedFS chạy với `-volume.max=100` (mặc định 8 volume, mỗi bucket chiếm 7 nên PUT vào bucket thứ hai trả HTTP 500).
 - Thứ tự triển khai: `postgres` -> `platform-init` -> `migrate` -> `platform-init` -> phần còn lại.
+- Healthcheck `dxos-scanner`: heartbeat phải trẻ hơn `max(3 x interval, 60 s)`.
+- clamd (fail-closed với archive): `AlertEncryptedArchive=yes` và `AlertExceedsMax=yes` (archive đặt mật khẩu hoặc vượt `MaxRecursion`/`MaxFiles`/kích thước trả `Heuristics.* FOUND` nên bị cách ly); `MaxScanTime=25000` ms, thấp hơn ngân sách 30 s của client để quét chậm thành kết luận chứ không bị thử lại mãi. `AlertEncryptedDoc` cố ý không bật (PDF đặt mật khẩu hợp lệ trong tài liệu PARA); tài liệu mã hóa không bị gắn cờ.
+- `DXOS_MAX_SCAN_BYTES` (mặc định 52428800) đi cùng `CLAMD_CONF_StreamMaxLength`; đổi cả hai cùng lúc.
+- Dòng `clean` trong `audit.file_scans` chỉ được tin khi `uploaded_at` bằng `last_modified` của object; khác thì quét lại và upsert (etag là MD5 nên không đủ chống va chạm). Trước khi xóa, scanner `stat_object` và chỉ xóa nếu etag nguồn vẫn là etag đã quét.
+- `audit.chain_head` chỉ cho `last_id` tăng (trigger `dxos_audit_head_advance_only`); `verify_chain()` chứng minh toàn vẹn chuỗi, không chứng minh phạm vi ghi nhận (superuser có thể tắt trigger); vai trò CSDL đặc quyền tối thiểu thuộc Tầng 2.
+- Giới hạn sao chép object > 5 GiB: minio-py chuyển sang `compose_object`, chưa kiểm thử trên SeaweedFS.
 
 Giới hạn đã biết: cửa sổ lộ file ngắn trước vòng quét; race giữa sao chép và xóa (SeaweedFS không có DELETE có điều kiện); phiên bản nhiễm sau cùng key ghi đè bản cách ly trước (sự kiện kiểm toán giữ etag/signature); ghi có kiểm toán bị tuần tự hóa bởi một khóa chuỗi (giữ transaction ngắn, thử lại khi `40P01`/`40001`); superuser ghi lại toàn bộ chuỗi với hash tính lại thì không phát hiện được nếu không neo hash đầu chuỗi ra ngoài.
