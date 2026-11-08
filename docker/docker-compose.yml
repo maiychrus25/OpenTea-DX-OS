@@ -3,7 +3,9 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    build: ../platform/postgres
+    image: opentea-dx-os/postgres:local
+    platform: linux/amd64  # postgis/postgis has no arm64 image
     container_name: agrimarket-postgres
     restart: always
     ports:
@@ -15,11 +17,28 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../platform/postgres/init/01-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrimarket"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - agrimarket-net
+
+  # One-shot: applies extensions to an already-initialised database (idempotent).
+  platform-init:
+    image: opentea-dx-os/postgres:local
+    platform: linux/amd64  # postgis/postgis has no arm64 image
+    restart: "no"
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-your_password_here}
+    command: ["psql", "-h", "postgres", "-U", "agrimarket", "-d", "agrimarket", "-v", "ON_ERROR_STOP=1", "-f", "/init/01-extensions.sql"]
+    volumes:
+      - ../platform/postgres/init/01-extensions.sql:/init/01-extensions.sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - agrimarket-net
 
