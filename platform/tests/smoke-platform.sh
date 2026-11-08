@@ -90,6 +90,18 @@ R=$(curl -s -X POST "$GATEWAY/api/data/graphql" -H "Authorization: Bearer $TF" -
 printf '%s' "$R" | jq -e '.data.__schema.mutationType == null' >/dev/null && pass "admin secret header stripped (no mutation_root)" || fail "admin secret header honoured: $R"
 assert_eq "$(ids "$R" '.data.households[].id')" "hh_tc_1" "farmer_tc with admin secret header still sees only own household"
 
+echo "[audit]"
+AID=$(psql_app "select audit.record_event('smoke','PING','smoke/ping','{\"n\":1}'::jsonb)")
+[ -n "$AID" ] && pass "record_event returned id $AID" || fail "record_event returned no id"
+assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact"
+for stmt in "update audit.events set actor='x' where id=$AID" "delete from audit.events where id=$AID" "truncate audit.events"; do
+  out=$(psql_app "$stmt" 2>&1) || true
+  case "$out" in *append-only*) pass "append-only blocks: $stmt";; *) fail "not blocked: $stmt ($out)";; esac
+done
+assert_eq "$(printf "BEGIN;\nALTER TABLE audit.events DISABLE TRIGGER dxos_audit_append_only;\nUPDATE audit.events SET actor='tampered' WHERE id=$AID;\nSELECT first_bad_id FROM audit.verify_chain();\nROLLBACK;\n" | $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tA -q | grep -v '^$')" "$AID" "tamper detected at the modified row"
+assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after rollback"
+for _ in 1 2; do $COMPOSE run --rm platform-init >/dev/null 2>&1 && pass "platform-init re-run ok" || fail "platform-init re-run failed"; done
+
 echo "[pins]"
 unpinned=$(grep -nE '^\s*image:\s*(\S+:latest|[^:[:space:]#]+)(\s|$)' docker/docker-compose.yml || true)
 [ -z "$unpinned" ] && pass "no unpinned images" || fail "unpinned images: $unpinned"

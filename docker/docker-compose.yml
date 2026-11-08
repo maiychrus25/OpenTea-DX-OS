@@ -17,6 +17,7 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
       - ../platform/postgres/init/01-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql
+      - ../platform/postgres/init/02-audit.sql:/docker-entrypoint-initdb.d/02-audit.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrimarket"]
       interval: 5s
@@ -31,9 +32,9 @@ services:
     restart: "no"
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD:-your_password_here}
-    command: ["psql", "-h", "postgres", "-U", "agrimarket", "-d", "agrimarket", "-v", "ON_ERROR_STOP=1", "-f", "/init/01-extensions.sql"]
+    command: ["sh", "-c", "for f in /init/*.sql; do psql -h postgres -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -f \"$$f\" || exit 1; done"]
     volumes:
-      - ../platform/postgres/init/01-extensions.sql:/init/01-extensions.sql:ro
+      - ../platform/postgres/init:/init:ro
     depends_on:
       postgres:
         condition: service_healthy
