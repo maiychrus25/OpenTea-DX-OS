@@ -5,7 +5,6 @@ services:
   postgres:
     build: ../platform/postgres
     image: opentea-dx-os/postgres:local
-    platform: linux/amd64  # postgis/postgis has no arm64 image
     container_name: agrimarket-postgres
     restart: always
     ports:
@@ -29,7 +28,6 @@ services:
   # One-shot: applies extensions to an already-initialised database (idempotent).
   platform-init:
     image: opentea-dx-os/postgres:local
-    platform: linux/amd64  # postgis/postgis has no arm64 image
     restart: "no"
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD:-your_password_here}
