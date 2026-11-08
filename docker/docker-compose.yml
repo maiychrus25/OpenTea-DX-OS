@@ -245,7 +245,7 @@ services:
       DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
     healthcheck:
       # Healthy while the heartbeat (touched per object and per round) is younger than max(3 x interval, 60s).
-      test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime('/tmp/dxos-scanner.heartbeat') < max(3*float(os.environ['DXOS_SCAN_INTERVAL_SECONDS']),60) else 1)"]
+      test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime(os.environ.get('DXOS_HEARTBEAT_PATH','/tmp/dxos-scanner.heartbeat')) < max(3*float(os.environ.get('DXOS_SCAN_INTERVAL_SECONDS','5')),60) else 1)"]
       interval: 10s
       timeout: 5s
       retries: 3

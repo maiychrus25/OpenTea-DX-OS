@@ -29,14 +29,16 @@ const [cmd, bucket, key, file, dstKey] = process.argv.slice(2);
   } else if (cmd === 'rm') {
     await client.removeObject(bucket, key);
   } else if (cmd === 'copy-mismatch') {
-    // exit 0 if the copy with a wrong match_etag was rejected, 1 if it (wrongly) succeeded
+    // exit 0 only if rejected with PreconditionFailed; 1 if the copy succeeded; 2 on any other error
     const { CopyConditions } = require('minio');
     const cond = new CopyConditions();
     cond.setMatchETag('00000000000000000000000000000000');
     try {
       await client.copyObject(file, dstKey, `/${bucket}/${key}`, cond);
     } catch (err) {
-      process.exit(0);
+      if (err.code === 'PreconditionFailed') process.exit(0);
+      console.error(`copy-mismatch unexpected error: ${err.code || err.message}`);
+      process.exit(2);
     }
     process.exit(1);
   } else {

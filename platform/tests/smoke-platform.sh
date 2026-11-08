@@ -195,8 +195,8 @@ $S3T exists dxos-quarantine "agrimarket-docs/$EICAR_KEY" && pass "quarantine cop
 assert_eq "$(psql_app "select count(*) from audit.events where op='QUARANTINE' and row_id='agrimarket-docs/$EICAR_KEY'")" "$((Q_BEFORE + 2))" "second QUARANTINE audit event recorded"
 assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after quarantine"
 assert_eq "$(psql_app "select count(*) from pg_stat_activity where application_name='dxos-scanner' and state='idle in transaction'")" "0" "scanner holds no idle-in-transaction session"
-# SeaweedFS must reject a copy whose copy-source-if-match etag is wrong (informational record of the limitation).
-$S3T copy-mismatch agrimarket-docs "$CLEAN_KEY" dxos-quarantine "smoke-mismatch-$RUN" && pass "copy with wrong match_etag rejected (copy-source-if-match honoured)" || echo "NOTE: SeaweedFS ignored copy-source-if-match (wrong etag copy succeeded)"
+# SeaweedFS must reject (PreconditionFailed) a copy whose copy-source-if-match etag is wrong.
+$S3T copy-mismatch agrimarket-docs "$CLEAN_KEY" dxos-quarantine "smoke-mismatch-$RUN" && pass "copy with wrong match_etag rejected (copy-source-if-match honoured)" || fail "copy-source-if-match not honoured or unexpected error"
 $S3T rm dxos-quarantine "smoke-mismatch-$RUN" 2>/dev/null || true
 q_cleanup; trap - EXIT
 
