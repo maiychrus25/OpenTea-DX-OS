@@ -181,6 +181,15 @@ done
 assert_eq "$(psql_app "select status from audit.file_scans where bucket='agrimarket-docs' and key='$CLEAN_KEY' order by scanned_at desc limit 1")" "clean" "file_scans: clean file recorded clean"
 $S3T exists agrimarket-docs "$CLEAN_KEY" && pass "clean file still present" || fail "clean file was removed"
 assert_eq "$(psql_app "select count(*) from audit.events where op='QUARANTINE' and row_id='agrimarket-docs/$EICAR_KEY'")" "$((Q_BEFORE + 1))" "QUARANTINE audit event recorded"
+# Identical bytes under the same key (same etag as the infected row) must be quarantined again.
+$S3T put agrimarket-docs "$EICAR_KEY" "$QDIR/eicar.txt" || fail "re-upload EICAR"
+requarantined=0
+for _ in $(seq 1 60); do
+  if ! $S3T exists agrimarket-docs "$EICAR_KEY"; then requarantined=1; break; fi
+  sleep 0.5
+done
+assert_eq "$requarantined" "1" "identical re-upload quarantined again within 30s"
+assert_eq "$(psql_app "select count(*) from audit.events where op='QUARANTINE' and row_id='agrimarket-docs/$EICAR_KEY'")" "$((Q_BEFORE + 2))" "second QUARANTINE audit event recorded"
 assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after quarantine"
 q_cleanup; trap - EXIT
 

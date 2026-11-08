@@ -75,6 +75,7 @@ class FakeDb:
     def __init__(self, log):
         self.log = log
         self.seen = set()
+        self.flagged = {}  # (bucket, key, etag) -> (status, signature) rows pre-seeded as non-clean
         self.statements = []
         self.pending = []
         self._row = None
@@ -82,7 +83,8 @@ class FakeDb:
     def execute(self, sql, params=()):
         self.statements.append((sql, params))
         if "select" in sql.lower() and "file_scans" in sql:
-            self._row = (1,) if tuple(params) in self.seen else None
+            p = tuple(params)
+            self._row = (self.flagged[p][0], self.flagged[p][1]) if p in self.flagged else (("clean", None) if p in self.seen else None)
         elif "insert into audit.file_scans" in sql.lower():
             self.pending.append(("scan", tuple(params)))
         elif "record_event" in sql:
@@ -224,3 +226,34 @@ def test_file_scan_row_has_size_and_uploaded_at():
     inserts = [p for s, p in db.statements if "insert into audit.file_scans" in s.lower()]
     assert len(inserts) == 1
     assert 5 in inserts[0] and WHEN in inserts[0]
+
+
+def test_flagged_object_still_present_is_removed_again():
+    s3, db, cfg, log = make()
+    s3.put("agrimarket-docs", "a/b.txt")
+    db.flagged[("agrimarket-docs", "a/b.txt", "e1")] = ("infected", "Eicar-Test-Signature")
+    assert run_once(s3, db, cfg, scan=pytest.fail) == 1
+    steps = [e[0] for e in log if e[0] in ("copy", "record", "remove")]
+    assert steps == ["copy", "record", "remove"]
+    assert ops(log, "record")[0][1] == ["event"]
+    assert any("already_flagged" in str(p) for _, p in db.statements)
+    assert "a/b.txt" not in s3.buckets["agrimarket-docs"]
+
+
+def test_identical_reupload_of_flagged_content_is_quarantined():
+    s3, db, cfg, log = make()
+    s3.put("agrimarket-docs", "a.txt")
+    assert run_once(s3, db, cfg, scan=infected) == 1
+    db.flagged[("agrimarket-docs", "a.txt", "e1")] = ("infected", "Eicar-Test-Signature")
+    s3.put("agrimarket-docs", "a.txt")  # same key, same etag
+    assert run_once(s3, db, cfg, scan=pytest.fail) == 1
+    assert "a.txt" not in s3.buckets["agrimarket-docs"]
+    assert len(ops(log, "remove")) == 2
+
+
+def test_clean_row_still_skips():
+    s3, db, cfg, log = make()
+    s3.put("agrimarket-docs", "a.txt")
+    db.seen.add(("agrimarket-docs", "a.txt", "e1"))
+    assert run_once(s3, db, cfg, scan=pytest.fail) == 0
+    assert ops(log, "copy") == [] and ops(log, "remove") == [] and ops(log, "record") == []
