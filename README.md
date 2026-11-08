@@ -66,7 +66,7 @@ flowchart TB
 
     subgraph Store["🗄️ Lưu trữ"]
         PG[("PostgreSQL 16")]
-        S3[("MinIO")]
+        S3[("SeaweedFS")]
     end
 
     subgraph Auto["⚙️ Tự động hoá"]
@@ -99,7 +99,7 @@ flowchart TB
 | --- | --- |
 | **Web App** | Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS 4, Zod, Leaflet |
 | **Xác thực** | Keycloak 24 (OIDC), NextAuth.js v5 |
-| **Dữ liệu** | PostgreSQL 16, Prisma ORM 5, MinIO (S3-compatible) |
+| **Dữ liệu** | PostgreSQL 16 (PostGIS, pgvector), Prisma ORM 5, SeaweedFS (S3-compatible), Hasura |
 | **AI** | FastAPI + TensorFlow (Computer Vision), Groq LLM, Ollama (tuỳ chọn) |
 | **Tự động hoá** | n8n, Piper TTS, Mattermost |
 | **Kiểm thử** | Jest, Playwright |
@@ -136,9 +136,46 @@ flowchart TB
    | 🌐 Web App | http://localhost:3000 |
    | 🔐 Keycloak Admin | http://localhost:8080 |
    | ⚙️ n8n | http://localhost:5678 |
-   | 🗄️ MinIO Console | http://localhost:9001 |
+   | 🚪 API Gateway (APISIX) | http://localhost:9080 |
+   | 🗄️ SeaweedFS S3 | http://localhost:9000 |
 
-Các bước thiết lập bổ sung (MinIO bucket, import n8n workflows, Ollama model) và tài khoản mặc định xem tại **[Hướng dẫn cài đặt môi trường phát triển](./docs/dev-setup.md)**.
+Các bước thiết lập bổ sung (bucket S3, import n8n workflows, Ollama model) và tài khoản mặc định xem tại **[Hướng dẫn cài đặt môi trường phát triển](./docs/dev-setup.md)**.
+
+## 🧱 Tier 1: Nền tảng lõi (Headless Core)
+
+Tier 1 gồm PostgreSQL (PostGIS, pgvector), SeaweedFS S3, Keycloak, Hasura (chỉ đọc, phân quyền theo `htx_code`), n8n và cổng API APISIX.
+
+**Yêu cầu:** Docker + Compose ≥ 2.24, GNU make, bash, Node ≥ 20 (kèm npm), `jq`, `curl`, Python 3.
+
+```bash
+(cd apps/web && npm install --no-audit --no-fund)   # thư viện `minio` cho bước kiểm thử S3
+make platform-up      # dựng và chờ các dịch vụ nền tảng, chạy platform-init
+make platform-smoke   # kiểm tra postgres, storage, identity, gateway, data, pins
+make platform-down
+python3 platform/tests/test_realm_policy.py   # kiểm tra chính sách realm Keycloak
+```
+
+Mọi truy cập API đi qua gateway `http://localhost:9080`:
+
+| Route | Đích | Xác thực |
+| --- | --- | --- |
+| `/api/data/graphql` | Hasura GraphQL (chỉ đọc) | JWT Keycloak |
+| `/api/workflow/*` | n8n webhook (`/webhook/*`) | JWT Keycloak |
+| `/api/ai/disease/*` | disease-api | JWT Keycloak |
+| `/storage/*` | SeaweedFS S3 | Không (pass-through) |
+
+> [!WARNING]
+> Hasura coi vai trò tên `admin` là siêu quản trị và lấy danh sách vai trò từ `realm_access.roles`: không bao giờ tạo realm role tên `admin` (hoặc `hasura-admin`) trong Keycloak. Gateway luôn gỡ header `x-hasura-admin-secret` do client gửi.
+
+> [!NOTE]
+> Giới hạn đã biết: route `/storage/*` chưa xác thực được chữ ký SigV4 của S3 (chờ Tầng 2). `/api/workflow/*` và `/api/ai/disease/*` yêu cầu audience `dx-os-core` ngay tại gateway (`claim_schema` của plugin `openid-connect`).
+
+**Nâng cấp môi trường dev cũ:**
+
+- Postgres đổi từ alpine sang bookworm (collation khác): tạo lại volume Postgres, hoặc chạy `REINDEX DATABASE agrimarket;`.
+- Keycloak chỉ import realm khi database mới: tạo lại realm (xoá volume) để nhận chính sách TOTP, audience `dx-os-core` và claim `htx_code`.
+- Dữ liệu MinIO cũ không được chuyển sang SeaweedFS; container `agrimarket-minio` cũ còn chiếm cổng 9000, hãy chạy `docker compose -f docker/docker-compose.yml down --remove-orphans` trước khi dựng lại.
+- Bảng n8n trước đây nằm ở schema `public`; n8n nay dùng schema `n8n` nên cần chạy `docker compose down -v` một lần (hoặc chuyển bảng thủ công). Lệnh `down -v` chỉ dành cho **môi trường dev**, tuyệt đối không chạy trên dữ liệu production.
 
 ## 🔨 Biên dịch từ Mã nguồn (Build from Source)
 
@@ -211,14 +248,15 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 ## 🐛 Báo lỗi & Đóng góp
 
 - **Báo lỗi & đề xuất tính năng:** tạo issue tại [GitHub Issues](https://github.com/maiychrus25/OpenTea-DX-OS/issues).
-- **Quy chuẩn đóng góp:** đọc [CONTRIBUTING.md](./CONTRIBUTING.md) và [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) trước khi gửi Pull Request.
+- **Quy chuẩn đóng góp:** đọc [CONTRIBUTING.md](./CONTRIBUTING.md) và [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) trước khi gửi Pull Request (có sẵn mẫu issue và PR).
+- **Báo lỗ hổng bảo mật:** không dùng issue công khai — xem [SECURITY.md](./SECURITY.md).
 - **Quy ước commit:** [Conventional Commits](https://www.conventionalcommits.org/) bằng tiếng Anh, ví dụ `feat(journal): add withdrawal-day validation`.
 
 ## 📦 Bản phát hành (Releases)
 
 - Phiên bản được đánh số theo [Semantic Versioning](https://semver.org/) và ghi nhận trong [CHANGELOG.md](./CHANGELOG.md) theo chuẩn [Keep a Changelog](https://keepachangelog.com/).
 - Các bản phát hành chính thức được công bố tại [GitHub Releases](https://github.com/maiychrus25/OpenTea-DX-OS/releases), mỗi bản gồm ghi chú phát hành, gói triển khai `opentea-dx-os-X.Y.Z.tar.gz` (kèm `SHA256SUMS`) và image trên GHCR:
-  `ghcr.io/maiychrus25/opentea-dx-os-web:X.Y.Z`, `ghcr.io/maiychrus25/opentea-dx-os-api:X.Y.Z`.
+  `ghcr.io/maiychrus25/opentea-dx-os-web:X.Y.Z`, `ghcr.io/maiychrus25/opentea-dx-os-api:X.Y.Z`, `ghcr.io/maiychrus25/opentea-dx-os-postgres:X.Y.Z`.
 
 **Phát hành phiên bản mới (maintainer):**
 
@@ -236,12 +274,19 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 tar -xzf opentea-dx-os-X.Y.Z.tar.gz && cd opentea-dx-os-X.Y.Z
 cp .env.example .env.local && cp docker/.env.local.example docker/.env.local   # rồi điền secret production
 export OPENTEA_VERSION=X.Y.Z
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres
+# Thứ tự bắt buộc: (1) postgres  (2) platform-init  (3) migrate  (4) phần còn lại
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --wait postgres
-DATABASE_URL="postgresql://<user>:<password>@localhost:5432/<db>" \
-  npx prisma@5.22.0 migrate deploy --schema apps/web/prisma/schema.prisma
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml run --rm platform-init
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml --profile tools run --rm migrate
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --no-build
 ```
+
+> [!NOTE]
+> Hasura phải khởi động sau migration (thiếu bảng thì không phục vụ dữ liệu). Cổng mở ra host: `apisix:9080`, `web:3000`, `keycloak:8080` và `seaweedfs:9000` (trình duyệt tải/xem file qua presigned URL trên cổng 9000 nên chưa thể đóng cho tới khi Tầng 2 đưa storage ra sau gateway).
+
+> [!WARNING]
+> Bắt buộc đặt `HASURA_GRAPHQL_ADMIN_SECRET` mạnh trong `docker/.env.local` trước khi triển khai: override release khiến Hasura từ chối khởi động nếu giá trị rỗng hoặc còn là placeholder `change_me*`.
 
 > [!IMPORTANT]
 > Production chỉ chạy image dựng sẵn từ GHCR (`--no-build`). Để quay lại bản trước, đặt `OPENTEA_VERSION` về phiên bản cũ và chạy lại `up -d --no-build`; migration database không tự đảo ngược, hãy sao lưu database trước khi nâng cấp. Yêu cầu Docker Compose ≥ 2.24.
@@ -249,7 +294,7 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml
 ## 📜 Giấy phép & Bản quyền
 
 - Dự án được phân phối theo giấy phép **[MIT License](./LICENSE)**.
-- Một số dịch vụ bên thứ ba chạy kèm có giấy phép riêng (ví dụ n8n — Sustainable Use License, MinIO — AGPL-3.0). Xem chi tiết tại [DEPENDENCIES.md](./DEPENDENCIES.md).
+- Một số dịch vụ bên thứ ba chạy kèm có giấy phép riêng (ví dụ n8n — Sustainable Use License, SeaweedFS — Apache-2.0). Xem chi tiết tại [DEPENDENCIES.md](./DEPENDENCIES.md).
 
 ---
 

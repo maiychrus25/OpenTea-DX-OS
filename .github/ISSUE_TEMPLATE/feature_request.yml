@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+name: Đề xuất tính năng / Feature request
+description: Đề xuất tính năng hoặc mini-app mới / Propose a feature or a new mini-app
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: space
+    attributes:
+      label: Không gian H-P-D-I / H-P-D-I space
+      options:
+        - "[H] Con người số / Human"
+        - "[P] Quy trình số / Process"
+        - "[D] Dữ liệu số / Data"
+        - "[I] Trí tuệ số / Intelligence"
+        - "Nền tảng lõi (Tầng 1) / Core platform"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Vấn đề cần giải quyết / Problem
+      description: Ai gặp vấn đề này (Ban quản trị HTX, cán bộ kỹ thuật, nông hộ…) và vì sao? / Who has this problem and why?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Giải pháp đề xuất / Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Tiêu chí hoàn thành / Acceptance criteria
+      placeholder: "- [ ] ..."

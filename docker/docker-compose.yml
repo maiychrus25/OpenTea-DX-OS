@@ -3,7 +3,8 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    build: ../platform/postgres
+    image: opentea-dx-os/postgres:local
     container_name: agrimarket-postgres
     restart: always
     ports:
@@ -15,6 +16,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../platform/postgres/init/01-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrimarket"]
       interval: 5s
@@ -23,8 +25,23 @@ services:
     networks:
       - agrimarket-net
 
+  # One-shot: applies extensions to an already-initialised database (idempotent).
+  platform-init:
+    image: opentea-dx-os/postgres:local
+    restart: "no"
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-your_password_here}
+    command: ["psql", "-h", "postgres", "-U", "agrimarket", "-d", "agrimarket", "-v", "ON_ERROR_STOP=1", "-f", "/init/01-extensions.sql"]
+    volumes:
+      - ../platform/postgres/init/01-extensions.sql:/init/01-extensions.sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agrimarket-net
+
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0
+    image: quay.io/keycloak/keycloak:24.0.5
     container_name: agrimarket-keycloak
     restart: always
     environment:
@@ -50,6 +67,52 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - agrimarket-net
+
+  apisix:
+    image: apache/apisix:3.19.0-debian
+    container_name: agrimarket-apisix
+    restart: always
+    environment:
+      DXOS_CORS_ORIGIN: ${DXOS_CORS_ORIGIN:-http://localhost:3000}
+      DXOS_GATEWAY_CLIENT_SECRET: ${DXOS_GATEWAY_CLIENT_SECRET:-dev-gateway-secret}
+    volumes:
+      - ../platform/gateway/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - ../platform/gateway/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+    ports:
+      - "9080:9080"
+    depends_on:
+      keycloak:
+        condition: service_started
+      hasura:
+        condition: service_started
+    networks:
+      - agrimarket-net
+
+  # Read-only GraphQL data API over the Prisma-owned schema (metadata only, no migrations).
+  # No host port: reachable only through the APISIX gateway (/api/data/graphql).
+  hasura:
+    image: hasura/graphql-engine:v2.51.4.cli-migrations-v3
+    container_name: agrimarket-hasura
+    restart: always
+    # Supplies HASURA_GRAPHQL_ADMIN_SECRET; Hasura refuses to start with a JWT secret but no admin secret.
+    env_file: .env.local
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "false"
+      HASURA_GRAPHQL_DEV_MODE: "false"
+      HASURA_GRAPHQL_ENABLE_TELEMETRY: "false"
+      HASURA_GRAPHQL_JWT_SECRET: '{"jwk_url":"http://keycloak:8080/realms/agrimarket/protocol/openid-connect/certs","issuer":"${KC_PUBLIC_ISSUER:-http://localhost:8080/realms/agrimarket}","audience":"dx-os-core","claims_map":{"x-hasura-user-id":{"path":"$$.sub"},"x-hasura-allowed-roles":{"path":"$$.realm_access.roles"},"x-hasura-default-role":{"path":"$$.dxos_default_role","default":"farmer"},"x-hasura-htx-code":{"path":"$$.htx_code","default":""}}}'
+    volumes:
+      - ../platform/hasura/metadata:/hasura-metadata:ro
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
     networks:
       - agrimarket-net
 
@@ -80,7 +143,7 @@ services:
   # It communicates with n8n only via HTTP API. n8n can be replaced with any
   # workflow engine without affecting the core application.
   n8n:
-    image: n8nio/n8n:latest  # License: Sustainable Use License (fair-code)
+    image: n8nio/n8n:2.47.2  # License: Sustainable Use License (fair-code)
     container_name: agrimarket-n8n
     restart: always
     env_file: .env.local
@@ -89,6 +152,7 @@ services:
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_DATABASE=agrimarket
+      - DB_POSTGRESDB_SCHEMA=n8n
       - DB_POSTGRESDB_USER=${POSTGRES_USER:-agrimarket}
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-your_password_here}
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-your_n8n_encryption_key_here}
@@ -105,7 +169,7 @@ services:
 
 
   piper:
-    image: rhasspy/wyoming-piper:latest
+    image: rhasspy/wyoming-piper:2.5.2
     container_name: agrimarket-piper
     restart: always
     volumes:
@@ -117,23 +181,30 @@ services:
       - agrimarket-net
 
   # NOTE: MinIO is an S3-compatible object storage (AGPL-3.0, OSI-approved).
-  # DX-AgriMarket communicates with MinIO only via S3 HTTP protocol (pre-signed URLs).
-  # No MinIO source code is imported or bundled.
-  minio:
-    image: minio/minio:latest  # License: AGPL-3.0
-    container_name: agrimarket-minio
+  # S3-compatible object storage (SeaweedFS, Apache-2.0). Serves S3 on 9000 under the
+  # network alias "minio" so apps/web (minio client, port 9000) works unchanged.
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.50
+    container_name: agrimarket-seaweedfs
     restart: always
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-your_minio_access_key}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-your_minio_secret_key}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-your_minio_access_key}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-your_minio_secret_key}
     volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
+      - seaweedfs_data:/data
+      - ../platform/seaweedfs/entrypoint.sh:/entrypoint.sh:ro
     ports:
       - "9000:9000"
-      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9000"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
-      - agrimarket-net
+      agrimarket-net:
+        aliases:
+          - minio
 
   disease-api:
     build:
@@ -177,7 +248,7 @@ services:
 #      - agrimarket-net
 
   mattermost:
-    image: mattermost/mattermost-team-edition:latest
+    image: mattermost/mattermost-team-edition:12.1.0
     container_name: agrimarket-mattermost
     restart: always
 
@@ -198,7 +269,7 @@ services:
 volumes:
   pgdata:
   n8n_data:
-  minio_data:
+  seaweedfs_data:
   ollama_data:
   mattermost_data:
   mattermost_config:

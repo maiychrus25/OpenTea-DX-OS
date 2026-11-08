@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+table:
+  name: chat_history
+  schema: public
+select_permissions:
+  - role: farmer
+    permission:
+      columns: '*'
+      filter: {user_id: {_eq: X-Hasura-User-Id}}
+  - role: manager
+    permission:
+      columns: '*'
+      filter: {user_id: {_eq: X-Hasura-User-Id}}
+  - role: officer
+    permission:
+      columns: '*'
+      filter: {user_id: {_eq: X-Hasura-User-Id}}

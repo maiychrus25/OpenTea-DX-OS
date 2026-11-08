@@ -27,6 +27,8 @@ jobs:
             context: ./apps/web
           - service: api
             context: ./apps/disease-api
+          - service: postgres
+            context: ./platform/postgres
 
     steps:
       - name: Checkout the commit that passed CI

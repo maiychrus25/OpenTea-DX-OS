@@ -84,16 +84,21 @@ along with their licenses, to ensure full transparency and license compliance.
 
 | Service | Image | License | Purpose |
 |---------|-------|---------|---------|
-| PostgreSQL | `postgres:16-alpine` | PostgreSQL License (OSI) | Relational database |
-| Keycloak | `quay.io/keycloak/keycloak:24.0` | Apache-2.0 | Identity & Access Management |
-| n8n | `n8nio/n8n:latest` | Sustainable Use License* | Workflow automation |
-| MinIO | `minio/minio:latest` | AGPL-3.0 (OSI) | S3-compatible object storage |
-| Piper TTS | `rhasspy/wyoming-piper:latest` | MIT | Text-to-Speech engine |
-| Mattermost | `mattermost/mattermost-team-edition` | MIT (Team Edition) | Team communication |
+| PostgreSQL | `postgres:16.14-bookworm` (built in `platform/postgres`) | PostgreSQL License (OSI) | Relational database |
+| PostGIS | 3.7.0, installed in the PostgreSQL image (PGDG) | GPL-2.0-or-later | Geospatial extension |
+| pgvector | 0.8.7, installed in the PostgreSQL image (PGDG) | PostgreSQL License (OSI) | Vector similarity extension |
+| Keycloak | `quay.io/keycloak/keycloak:24.0.5` | Apache-2.0 | Identity & Access Management |
+| APISIX | `apache/apisix:3.19.0-debian` | Apache-2.0 | API gateway |
+| Hasura | `hasura/graphql-engine:v2.51.4.cli-migrations-v3` | Apache-2.0 | Read-only GraphQL data API |
+| n8n | `n8nio/n8n:2.47.2` | Sustainable Use License* | Workflow automation |
+| SeaweedFS | `chrislusf/seaweedfs:4.50` | Apache-2.0 | S3-compatible object storage (replaces MinIO) |
+| Piper TTS | `rhasspy/wyoming-piper:2.5.2` | MIT | Text-to-Speech engine |
+| Mattermost | `mattermost/mattermost-team-edition:12.1.0` | MIT (Team Edition) | Team communication |
 
 > **\* n8n License Note:** n8n uses the Sustainable Use License (fair-code, source-available,
 > not OSI-approved). DX-AgriMarket does NOT import, link, or bundle n8n source code.
 > Communication is exclusively via HTTP API. n8n is an optional, replaceable component.
+> See [ADR 0001](./docs/adr/0001-n8n-workflow-engine.md).
 
 ---
 

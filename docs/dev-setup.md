@@ -21,7 +21,7 @@ Tại thư mục gốc của dự án, chạy lệnh:
 ```bash
 docker compose -f docker/docker-compose.yml up -d
 ```
-Lệnh này sẽ khởi chạy 8 services: `web`, `postgres`, `keycloak`, `n8n`, `ollama`, `piper`, `minio`, `disease-api`.
+Lệnh này sẽ khởi chạy 8 services: `web`, `postgres`, `keycloak`, `n8n`, `ollama`, `piper`, `seaweedfs` (S3 tương thích, cổng 9000), `disease-api`.
 
 ## Bước 3: Cài đặt Thủ công (Manual Setup)
 
@@ -32,12 +32,8 @@ docker exec -it agrimarket-ollama ollama pull phi3:mini
 ```
 *Lưu ý: Tên model phải khớp với biến `OLLAMA_MODEL` trong `.env.local`.*
 
-### Khởi tạo MinIO Bucket
-MinIO cần được khởi tạo bucket lưu trữ tài liệu:
-```bash
-docker exec -it agrimarket-minio mc alias set local http://localhost:9000 minio minio123
-docker exec -it agrimarket-minio mc mb local/agrimarket-docs
-```
+### Lưu trữ S3 (SeaweedFS)
+SeaweedFS cung cấp S3 tại `http://localhost:9000` (không có console web). Bucket `agrimarket-docs` được ứng dụng web tự tạo ở lần dùng đầu tiên, không cần khởi tạo thủ công; khoá truy cập lấy từ `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` trong `docker/.env.local`.
 
 ### Import n8n Workflows
 Để cài đặt các workflow cho n8n, chạy các lệnh sau để copy file JSON vào container và import:

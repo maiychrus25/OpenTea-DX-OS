@@ -10,7 +10,7 @@ bash scripts/validate-structure.sh
 echo "--- Checking service health ---"
 # Core services (required)
 curl -sf http://localhost:8080/health/ready > /dev/null && echo "OK keycloak" || echo "WARN keycloak"
-curl -sf http://localhost:9000/minio/health/live > /dev/null && echo "OK minio" || echo "WARN minio"
+curl -s -o /dev/null http://localhost:9000/ && echo "OK seaweedfs" || echo "WARN seaweedfs"
 # Optional services (may not be running in CI)
 curl -sf http://localhost:3000 > /dev/null && echo "OK web" || echo "SKIP web (not started)"
 curl -sf http://localhost:11434/api/tags > /dev/null && echo "OK ollama" || echo "SKIP ollama (not started)"
