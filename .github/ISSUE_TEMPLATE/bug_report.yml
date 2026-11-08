@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+name: Báo lỗi / Bug report
+description: Báo một lỗi của OpenTea DX-OS / Report a defect in OpenTea DX-OS
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Tầng / Tier
+      options:
+        - "Tầng 1 — Nền tảng lõi (gateway, Keycloak, Hasura, lưu trữ, n8n)"
+        - "Tầng 2 — Ứng dụng HTX (apps/web, disease-api)"
+        - "Tầng 3 — Mini-app / App Manifest"
+        - "CI/CD, phát hành / CI/CD, release"
+        - "Tài liệu / Documentation"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Mô tả lỗi / What happened?
+      description: Hiện tượng quan sát được và điều anh/chị mong đợi. / Observed vs expected behaviour.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Các bước tái hiện / Steps to reproduce
+      placeholder: |
+        1. make platform-up
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Phiên bản / Version
+      description: Tag phát hành hoặc commit (git rev-parse --short HEAD).
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log liên quan / Relevant logs
+      description: Ví dụ `docker compose -f docker/docker-compose.yml logs <service>`. Không dán mật khẩu hay token. / Never paste secrets or tokens.
+      render: shell
+  - type: textarea
+    id: environment
+    attributes:
+      label: Môi trường / Environment
+      placeholder: "OS, Docker/Compose version, CPU arch (amd64/arm64)"

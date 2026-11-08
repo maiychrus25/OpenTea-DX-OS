@@ -248,7 +248,8 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 ## 🐛 Báo lỗi & Đóng góp
 
 - **Báo lỗi & đề xuất tính năng:** tạo issue tại [GitHub Issues](https://github.com/maiychrus25/OpenTea-DX-OS/issues).
-- **Quy chuẩn đóng góp:** đọc [CONTRIBUTING.md](./CONTRIBUTING.md) và [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) trước khi gửi Pull Request.
+- **Quy chuẩn đóng góp:** đọc [CONTRIBUTING.md](./CONTRIBUTING.md) và [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) trước khi gửi Pull Request (có sẵn mẫu issue và PR).
+- **Báo lỗ hổng bảo mật:** không dùng issue công khai — xem [SECURITY.md](./SECURITY.md).
 - **Quy ước commit:** [Conventional Commits](https://www.conventionalcommits.org/) bằng tiếng Anh, ví dụ `feat(journal): add withdrawal-day validation`.
 
 ## 📦 Bản phát hành (Releases)

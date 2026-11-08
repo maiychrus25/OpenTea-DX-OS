@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Contribution tooling**: Bilingual issue templates (bug report, feature request), pull request template and `SECURITY.md` with a private vulnerability reporting policy
 - **Tier 1 API gateway**: APISIX on `:9080` with JWT validation for `/api/data/graphql`, `/api/workflow/*` and `/api/ai/disease/*`
 - **Hasura data API**: read-only GraphQL with row-level permissions scoped by the `htx_code` claim
 - **PostGIS and pgvector**: the Postgres image now ships both extensions and is published to GHCR as `opentea-dx-os-postgres`

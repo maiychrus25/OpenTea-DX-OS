@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+blank_issues_enabled: false
+contact_links:
+  - name: Báo lỗ hổng bảo mật / Report a security vulnerability
+    url: https://github.com/maiychrus25/OpenTea-DX-OS/security/policy
+    about: Không báo lỗ hổng bảo mật qua issue công khai — xem SECURITY.md. / Do not report vulnerabilities in public issues.
