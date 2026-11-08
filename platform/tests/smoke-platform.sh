@@ -51,6 +51,8 @@ done
 echo "[data]"
 PRISMA_URL="postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@localhost:5432/agrimarket"
 (cd apps/web && DATABASE_URL="$PRISMA_URL" npx prisma migrate deploy >/dev/null) && pass "prisma migrate deploy" || fail "prisma migrate deploy"
+# Triggers must exist before the fixture rows are inserted (tables only exist after migrate).
+$COMPOSE run --rm platform-init >/dev/null 2>&1 && pass "platform-init after migrate" || fail "platform-init after migrate"
 # Hasura loads its metadata at start; on a fresh DB the tables only exist after migrate, so restart it and wait until it serves them.
 $COMPOSE restart hasura >/dev/null
 $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -q < platform/tests/fixtures/two-htx.sql >/dev/null && pass "fixture loaded" || fail "fixture load"
@@ -125,9 +127,32 @@ for _ in $(seq 1 60); do kill -0 "$RRPID" 2>/dev/null || break; sleep 0.5; done
 grep -q 'could not serialize access' "$RROUT" && pass "repeatable-read append raises serialization error" || fail "repeatable-read append did not fail: $(cat "$RROUT")"
 rr_cleanup; RRPID=""; trap - EXIT
 assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after repeatable-read race"
+# Row triggers on business tables (task 2)
+assert_eq "$(psql_app "select count(*)>=1 from audit.events where table_name='households' and op='INSERT' and row_id='hh_tc_1'")" "t" "fixture insert audited"
+UM=$(psql_app "select coalesce(max(id),0) from audit.events")
+psql_app "update households set address='Smoke street' where id='hh_tc_2'" >/dev/null
+assert_eq "$(psql_app "select count(*) from audit.events where id>$UM and table_name='households' and op='UPDATE' and row_id='hh_tc_2' and new_data->>'address'='Smoke street'")" "1" "update audited exactly once with new_data"
+CM=$(psql_app "select coalesce(max(id),0) from audit.events")
+CPIDS=""
+for w in 1 2; do
+  ( for i in $(seq 1 20); do echo "update households set address='conc-$w-$i' where id='hh_tc_1';"; done | $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -q >/dev/null ) &
+  CPIDS="$CPIDS $!"
+done
+( sleep 60; kill $CPIDS 2>/dev/null ) & WD=$!
+CFAIL=0; for p in $CPIDS; do wait "$p" || CFAIL=1; done
+pkill -P "$WD" 2>/dev/null; kill "$WD" 2>/dev/null; wait "$WD" 2>/dev/null || true
+assert_eq "$CFAIL" "0" "concurrent writer sessions finished cleanly"
+assert_eq "$(psql_app "select count(*) from audit.events where id>$CM and table_name='households' and row_id='hh_tc_1' and op='UPDATE'")" "40" "40 concurrent updates audited"
+assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after concurrent writers"
+# Non-audited table: rolled back so no row persists.
+MD=$(printf "BEGIN;\nSELECT coalesce(max(id),0) FROM audit.events;\nINSERT INTO market_data(id,source,commodity,metric,value,unit,period) VALUES (gen_random_uuid(),'SMOKE','smoke','smoke',1,'u','smoke');\nSELECT count(*) FROM audit.events WHERE table_name='market_data';\nROLLBACK;\n" | $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tA -q | grep -v '^$' | tail -1)
+assert_eq "$MD" "0" "non-audited table market_data creates no event"
 for _ in 1 2; do $COMPOSE run --rm platform-init >/dev/null 2>&1 && pass "platform-init re-run ok" || fail "platform-init re-run failed"; done
 assert_eq "$(psql_app "select count(*) from pg_trigger where tgrelid='audit.events'::regclass and not tgisinternal and tgenabled='O'")" "2" "exactly 2 enabled triggers on audit.events"
 assert_eq "$(psql_app "select count(*) from pg_trigger where tgrelid='audit.chain_head'::regclass and not tgisinternal and tgenabled='O'")" "2" "chain_head guard triggers present"
+for t in htx_profiles households parcels parcel_crop_cycles journal_entries journal_activities lots lot_parcels disease_reports; do
+  assert_eq "$(psql_app "select count(*) from pg_trigger where tgname='dxos_audit_row' and tgrelid='public.$t'::regclass")" "1" "audit row trigger on $t"
+done
 
 echo "[pins]"
 unpinned=$(grep -nE '^\s*image:\s*(\S+:latest|[^:[:space:]#]+)(\s|$)' docker/docker-compose.yml || true)

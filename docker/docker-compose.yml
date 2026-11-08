@@ -18,6 +18,7 @@ services:
       - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
       - ../platform/postgres/init/01-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql
       - ../platform/postgres/init/02-audit.sql:/docker-entrypoint-initdb.d/02-audit.sql
+      - ../platform/postgres/init/03-audit-triggers.sql:/docker-entrypoint-initdb.d/03-audit-triggers.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrimarket"]
       interval: 5s
