@@ -41,7 +41,7 @@ services:
       - agrimarket-net
 
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0
+    image: quay.io/keycloak/keycloak:24.0.5
     container_name: agrimarket-keycloak
     restart: always
     environment:
@@ -143,7 +143,7 @@ services:
   # It communicates with n8n only via HTTP API. n8n can be replaced with any
   # workflow engine without affecting the core application.
   n8n:
-    image: n8nio/n8n:latest  # License: Sustainable Use License (fair-code)
+    image: n8nio/n8n:2.47.2  # License: Sustainable Use License (fair-code)
     container_name: agrimarket-n8n
     restart: always
     env_file: .env.local
@@ -169,7 +169,7 @@ services:
 
 
   piper:
-    image: rhasspy/wyoming-piper:latest
+    image: rhasspy/wyoming-piper:2.5.2
     container_name: agrimarket-piper
     restart: always
     volumes:
@@ -248,7 +248,7 @@ services:
 #      - agrimarket-net
 
   mattermost:
-    image: mattermost/mattermost-team-edition:latest
+    image: mattermost/mattermost-team-edition:12.1.0
     container_name: agrimarket-mattermost
     restart: always
 

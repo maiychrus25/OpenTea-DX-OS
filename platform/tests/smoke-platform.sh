@@ -75,3 +75,8 @@ assert_eq "$(ids "$(gql "$TX" '{htx_profiles{id}}' manager)" '.data.htx_profiles
 gql "$TM" 'mutation{insert_households_one(object:{id:"x",name:"x",phone:"1"}){id}}' manager | jq -e 'has("errors")' >/dev/null && pass "mutation rejected" || fail "mutation not rejected"
 gql "$TM" '{__schema{types{name}}}' manager | jq -e '[.data.__schema.types[].name]|map(select(.=="partners"))|length==0' >/dev/null && pass "partners not exposed" || fail "partners exposed"
 gql "$TN" "$Q" | jq -e '.errors[0].message|test("JWT|audience";"i")' >/dev/null && pass "token without dx-os-core audience rejected" || fail "no-audience token not rejected"
+
+echo "[pins]"
+unpinned=$(grep -nE '^\s*image:\s*(\S+:latest|[^:[:space:]#]+)(\s|$)' docker/docker-compose.yml || true)
+[ -z "$unpinned" ] && pass "no unpinned images" || fail "unpinned images: $unpinned"
+grep -qE '^\s*image:\s*quay\.io/keycloak/keycloak:24\.0\.[0-9]+\s*(#.*)?$' docker/docker-compose.yml && pass "keycloak pinned to patch tag" || fail "keycloak not pinned to 24.0.x"
