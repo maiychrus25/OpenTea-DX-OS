@@ -85,8 +85,8 @@ along with their licenses, to ensure full transparency and license compliance.
 | Service | Image | License | Purpose |
 |---------|-------|---------|---------|
 | PostgreSQL | `postgres:16.14-bookworm` (built in `platform/postgres`) | PostgreSQL License (OSI) | Relational database |
-| PostGIS | installed in the PostgreSQL image | GPL-2.0-or-later | Geospatial extension |
-| pgvector | installed in the PostgreSQL image | PostgreSQL License (OSI) | Vector similarity extension |
+| PostGIS | 3.7.0, installed in the PostgreSQL image (PGDG) | GPL-2.0-or-later | Geospatial extension |
+| pgvector | 0.8.7, installed in the PostgreSQL image (PGDG) | PostgreSQL License (OSI) | Vector similarity extension |
 | Keycloak | `quay.io/keycloak/keycloak:24.0.5` | Apache-2.0 | Identity & Access Management |
 | APISIX | `apache/apisix:3.19.0-debian` | Apache-2.0 | API gateway |
 | Hasura | `hasura/graphql-engine:v2.51.4.cli-migrations-v3` | Apache-2.0 | Read-only GraphQL data API |

@@ -145,10 +145,14 @@ Các bước thiết lập bổ sung (bucket S3, import n8n workflows, Ollama mo
 
 Tier 1 gồm PostgreSQL (PostGIS, pgvector), SeaweedFS S3, Keycloak, Hasura (chỉ đọc, phân quyền theo `htx_code`), n8n và cổng API APISIX.
 
+**Yêu cầu:** Docker + Compose ≥ 2.24, GNU make, bash, Node ≥ 20 (kèm npm), `jq`, `curl`, Python 3.
+
 ```bash
+(cd apps/web && npm install --no-audit --no-fund)   # thư viện `minio` cho bước kiểm thử S3
 make platform-up      # dựng và chờ các dịch vụ nền tảng, chạy platform-init
 make platform-smoke   # kiểm tra postgres, storage, identity, gateway, data, pins
 make platform-down
+python3 platform/tests/test_realm_policy.py   # kiểm tra chính sách realm Keycloak
 ```
 
 Mọi truy cập API đi qua gateway `http://localhost:9080`:
@@ -160,12 +164,18 @@ Mọi truy cập API đi qua gateway `http://localhost:9080`:
 | `/api/ai/disease/*` | disease-api | JWT Keycloak |
 | `/storage/*` | SeaweedFS S3 | Không (pass-through) |
 
+> [!WARNING]
+> Hasura coi vai trò tên `admin` là siêu quản trị và lấy danh sách vai trò từ `realm_access.roles`: không bao giờ tạo realm role tên `admin` (hoặc `hasura-admin`) trong Keycloak. Gateway luôn gỡ header `x-hasura-admin-secret` do client gửi.
+
+> [!NOTE]
+> Giới hạn đã biết: route `/storage/*` chưa xác thực được chữ ký SigV4 của S3 (chờ Tầng 2). `/api/workflow/*` và `/api/ai/disease/*` yêu cầu audience `dx-os-core` ngay tại gateway (`claim_schema` của plugin `openid-connect`).
+
 **Nâng cấp môi trường dev cũ:**
 
 - Postgres đổi từ alpine sang bookworm (collation khác): tạo lại volume Postgres, hoặc chạy `REINDEX DATABASE agrimarket;`.
 - Keycloak chỉ import realm khi database mới: tạo lại realm (xoá volume) để nhận chính sách TOTP, audience `dx-os-core` và claim `htx_code`.
-- Dữ liệu MinIO cũ không được chuyển sang SeaweedFS.
-- Bảng n8n trước đây nằm ở schema `public`; n8n nay dùng schema `n8n` nên cần chạy `docker compose down -v` một lần (hoặc chuyển bảng thủ công).
+- Dữ liệu MinIO cũ không được chuyển sang SeaweedFS; container `agrimarket-minio` cũ còn chiếm cổng 9000, hãy chạy `docker compose -f docker/docker-compose.yml down --remove-orphans` trước khi dựng lại.
+- Bảng n8n trước đây nằm ở schema `public`; n8n nay dùng schema `n8n` nên cần chạy `docker compose down -v` một lần (hoặc chuyển bảng thủ công). Lệnh `down -v` chỉ dành cho **môi trường dev**, tuyệt đối không chạy trên dữ liệu production.
 
 ## 🔨 Biên dịch từ Mã nguồn (Build from Source)
 
@@ -272,7 +282,10 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml
 ```
 
 > [!NOTE]
-> Hasura phải khởi động sau migration (thiếu bảng thì không phục vụ dữ liệu). Chỉ `apisix:9080`, `web:3000` và `keycloak:8080` mở cổng ra host.
+> Hasura phải khởi động sau migration (thiếu bảng thì không phục vụ dữ liệu). Cổng mở ra host: `apisix:9080`, `web:3000`, `keycloak:8080` và `seaweedfs:9000` (trình duyệt tải/xem file qua presigned URL trên cổng 9000 nên chưa thể đóng cho tới khi Tầng 2 đưa storage ra sau gateway).
+
+> [!WARNING]
+> Bắt buộc đặt `HASURA_GRAPHQL_ADMIN_SECRET` mạnh trong `docker/.env.local` trước khi triển khai: override release khiến Hasura từ chối khởi động nếu giá trị rỗng hoặc còn là placeholder `change_me*`.
 
 > [!IMPORTANT]
 > Production chỉ chạy image dựng sẵn từ GHCR (`--no-build`). Để quay lại bản trước, đặt `OPENTEA_VERSION` về phiên bản cũ và chạy lại `up -d --no-build`; migration database không tự đảo ngược, hãy sao lưu database trước khi nâng cấp. Yêu cầu Docker Compose ≥ 2.24.

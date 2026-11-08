@@ -1,6 +1,6 @@
 # Đặc tả thiết kế — Tầng 1: Nền tảng Dịch vụ Lõi (DX-OS Open-Core)
 
-> **Trạng thái:** Bản nháp chờ duyệt — 2026-11-08
+> **Trạng thái:** Đã duyệt — giai đoạn 1a đã triển khai trên nhánh feat/tier1a-core-services (2026-11-08)
 > **Phạm vi:** Toàn bộ Tầng 1 của OpenTea DX-OS. Giai đoạn **1a** đặc tả chi tiết; **1b**, **1c** ở mức khung và sẽ được chi tiết hoá trước khi triển khai.
 > **Căn cứ:** Đề thi OLP 2026 "Xây dựng Hệ điều hành Chuyển đổi số bằng Công nghệ Lõi nguồn mở (DX-OS Open-Core)", mục 2–4; kế hoạch dự thi ngày 2026-11-06.
 
@@ -205,3 +205,14 @@ Script dùng Keycloak Admin API (thông tin admin từ biến môi trường CI)
 3. Không còn image `latest` trong compose; image mới được ghim.
 4. ADR n8n được viết; README cập nhật cách chạy Tầng 1 và cổng gateway.
 5. Phát hành `v1.3.0` qua pipeline Release hiện có.
+
+## Ghi chú sau triển khai 1a
+
+Các điểm triển khai khác với nội dung đặc tả ở trên:
+
+- **Postgres:** dùng `postgres:16.14-bookworm` cộng PostGIS 3.7.0 và pgvector (PGDG) thay cho `postgis/postgis:16-3.5` (hết hỗ trợ, chỉ có amd64). Image được dựng sẵn và đăng lên GHCR (`opentea-dx-os-postgres`).
+- **Workflow n8n:** 12 workflow (không phải 10); danh sách thành phần bên thứ ba nằm ở `DEPENDENCIES.md`. n8n dùng schema Postgres riêng `n8n`.
+- **Vai trò mặc định Hasura:** vai trò mặc định là `farmer`; nhân viên (manager/officer) phải gửi header `x-hasura-role`.
+- **SeaweedFS:** cổng S3 9000 vẫn mở ra host trong bản phát hành vì trình duyệt dùng presigned URL; route `/storage/*` của gateway chưa xác thực được SigV4 (hạn chế, chờ Tầng 2).
+- **Audience:** `/api/workflow/*` và `/api/ai/disease/*` kiểm tra audience `dx-os-core` tại gateway bằng `claim_schema` của plugin `openid-connect` (APISIX 3.19; `claim_validator.audience` chỉ so với `client_id` nên không dùng được). Hasura tự kiểm tra audience cho route dữ liệu.
+- **Admin secret:** gateway gỡ header `x-hasura-admin-secret` do client gửi (nếu không, người dùng đã xác thực có thể leo thang thành admin Hasura); override release từ chối khởi động Hasura với secret placeholder.

@@ -14,7 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Platform smoke CI job**: `make platform-up` + `make platform-smoke` run in CI (`platform-smoke`)
 - **Release `migrate` service**: `--profile tools run --rm migrate` applies Prisma migrations inside the compose network
 
+### Security
+- **Gateway**: strips the client-supplied `x-hasura-admin-secret` header on the GraphQL route (it previously let any authenticated user act as Hasura admin); `/api/workflow/*` and `/api/ai/disease/*` now require the `dx-os-core` audience
+- **Release override**: Hasura refuses to start while `HASURA_GRAPHQL_ADMIN_SECRET` is empty or a `change_me*` placeholder
+
 ### Changed
+- **Gateway CORS**: allows the `x-hasura-role` request header and exposes `X-Request-Id`
+- **Release ports**: SeaweedFS S3 `:9000` stays published (browsers use presigned URLs on it) until storage moves behind the gateway
+- **Hasura JWT issuer** is configurable through `KC_PUBLIC_ISSUER`
 - **Object storage**: MinIO replaced by SeaweedFS S3 on `:9000` (network alias `minio` kept)
 - **Keycloak**: TOTP required for staff, tokens carry the `dx-os-core` audience and the admin-only `htx_code` claim; the `nextjs-web` password grant is disabled
 - **n8n**: tables moved to the Postgres schema `n8n`
