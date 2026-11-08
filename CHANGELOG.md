@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.4.0] - 2026-11-09
+
 ### Added
 - **File quarantine**: ClamAV (`clamav`) and the `dxos-scanner` service scan new objects in `agrimarket-docs` and `agrimarket-private`; infected or unscannable (> 50 MiB) objects are copied to `dxos-quarantine/<bucket>/<key>` and removed, with verdicts in `audit.file_scans`. The scanner image is published to GHCR as `opentea-dx-os-scanner`
 - **Audit log**: hash-chained, append-only `audit.events` fed by row triggers on 9 business tables; verify with `select * from audit.verify_chain()`
@@ -205,7 +209,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.4.0
 [1.3.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.3.0
 [1.2.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.2.0
 [1.1.0]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.0.0...v1.1.0
