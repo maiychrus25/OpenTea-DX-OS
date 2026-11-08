@@ -29,6 +29,21 @@ CREATE TABLE IF NOT EXISTS audit.file_scans (
   PRIMARY KEY (bucket, key, etag)
 );
 
+-- Single-row chain head: locked by append_event so concurrent appends cannot fork the chain,
+-- even under REPEATABLE READ / SERIALIZABLE (a stale snapshot then raises a serialization error).
+CREATE TABLE IF NOT EXISTS audit.chain_head (
+  id        boolean PRIMARY KEY DEFAULT true CHECK (id),
+  last_id   bigint,
+  last_hash bytea NOT NULL
+);
+-- Seed from the existing last event (re-run on an existing database), else the genesis head.
+INSERT INTO audit.chain_head (id, last_id, last_hash)
+  SELECT true, id, hash FROM audit.events ORDER BY id DESC LIMIT 1
+  ON CONFLICT DO NOTHING;
+INSERT INTO audit.chain_head (id, last_id, last_hash)
+  VALUES (true, NULL, decode(repeat('00', 32), 'hex'))
+  ON CONFLICT DO NOTHING;
+
 CREATE OR REPLACE FUNCTION audit.current_actor() RETURNS text
 LANGUAGE sql STABLE AS $$
   SELECT coalesce(nullif(current_setting('dxos.actor', true), ''), session_user)::text
@@ -54,15 +69,16 @@ LANGUAGE plpgsql AS $$
 DECLARE
   v_prev bytea;
   v_id   bigint;
+  v_hash bytea;
   v_at   timestamptz := clock_timestamp();
 BEGIN
   PERFORM pg_advisory_xact_lock(hashtext('audit.events'));
-  SELECT hash INTO v_prev FROM audit.events ORDER BY id DESC LIMIT 1;
-  v_prev := coalesce(v_prev, decode(repeat('00', 32), 'hex'));
+  SELECT last_hash INTO v_prev FROM audit.chain_head WHERE id FOR UPDATE;
   v_id := nextval(pg_get_serial_sequence('audit.events', 'id'));
+  v_hash := audit.event_hash(v_prev, v_id, v_at, p_source, p_table, p_op, p_row_id, p_actor, p_old, p_new);
   INSERT INTO audit.events (id, occurred_at, source, table_name, op, row_id, actor, old_data, new_data, prev_hash, hash)
-  VALUES (v_id, v_at, p_source, p_table, p_op, p_row_id, p_actor, p_old, p_new, v_prev,
-    audit.event_hash(v_prev, v_id, v_at, p_source, p_table, p_op, p_row_id, p_actor, p_old, p_new));
+  VALUES (v_id, v_at, p_source, p_table, p_op, p_row_id, p_actor, p_old, p_new, v_prev, v_hash);
+  UPDATE audit.chain_head SET last_id = v_id, last_hash = v_hash WHERE id;
   RETURN v_id;
 END $$;
 
@@ -79,6 +95,7 @@ DECLARE
   r      audit.events;
   v_prev bytea := decode(repeat('00', 32), 'hex');
   v_n    bigint := 0;
+  v_head audit.chain_head;
 BEGIN
   FOR r IN SELECT * FROM audit.events ORDER BY id LOOP
     v_n := v_n + 1;
@@ -90,13 +107,19 @@ BEGIN
     END IF;
     v_prev := r.hash;
   END LOOP;
+  -- Tail deletion: the last event must be the recorded head.
+  SELECT * INTO v_head FROM audit.chain_head WHERE id;
+  IF v_head.last_hash IS DISTINCT FROM v_prev THEN
+    RETURN QUERY SELECT v_n, coalesce(v_head.last_id, r.id);
+    RETURN;
+  END IF;
   RETURN QUERY SELECT v_n, NULL::bigint;
 END $$;
 
 CREATE OR REPLACE FUNCTION audit.reject_change() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-  RAISE EXCEPTION 'audit.events is append-only';
+  RAISE EXCEPTION 'audit.% is append-only', TG_TABLE_NAME;
 END $$;
 
 CREATE OR REPLACE TRIGGER dxos_audit_append_only
@@ -104,4 +127,11 @@ CREATE OR REPLACE TRIGGER dxos_audit_append_only
   FOR EACH ROW EXECUTE FUNCTION audit.reject_change();
 CREATE OR REPLACE TRIGGER dxos_audit_no_truncate
   BEFORE TRUNCATE ON audit.events
+  FOR EACH STATEMENT EXECUTE FUNCTION audit.reject_change();
+
+CREATE OR REPLACE TRIGGER dxos_audit_head_no_delete
+  BEFORE DELETE ON audit.chain_head
+  FOR EACH ROW EXECUTE FUNCTION audit.reject_change();
+CREATE OR REPLACE TRIGGER dxos_audit_head_no_truncate
+  BEFORE TRUNCATE ON audit.chain_head
   FOR EACH STATEMENT EXECUTE FUNCTION audit.reject_change();

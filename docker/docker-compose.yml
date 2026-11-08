@@ -26,7 +26,7 @@ services:
     networks:
       - agrimarket-net
 
-  # One-shot: applies extensions to an already-initialised database (idempotent).
+  # One-shot: applies every init script (extensions, audit schema) to an already-initialised database (idempotent).
   platform-init:
     image: opentea-dx-os/postgres:local
     restart: "no"

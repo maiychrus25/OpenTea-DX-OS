@@ -95,7 +95,7 @@ AID=$(psql_app "select audit.record_event('smoke','PING','smoke/ping','{\"n\":1}
 [ -n "$AID" ] && pass "record_event returned id $AID" || fail "record_event returned no id"
 assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact"
 for stmt in "update audit.events set actor='x' where id=$AID" "delete from audit.events where id=$AID" "truncate audit.events"; do
-  out=$(psql_app "$stmt" 2>&1) || true
+  out=$(psql_app "BEGIN; $stmt; ROLLBACK;" 2>&1) || true
   case "$out" in *append-only*) pass "append-only blocks: $stmt";; *) fail "not blocked: $stmt ($out)";; esac
 done
 assert_eq "$(printf "BEGIN;\nALTER TABLE audit.events DISABLE TRIGGER dxos_audit_append_only;\nUPDATE audit.events SET actor='tampered' WHERE id=$AID;\nSELECT first_bad_id FROM audit.verify_chain();\nROLLBACK;\n" | $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tA -q | grep -v '^$')" "$AID" "tamper detected at the modified row"
@@ -105,7 +105,24 @@ MID=$(psql_app "select id from (select id from audit.events order by id desc lim
 NEXT=$(psql_app "select min(id) from audit.events where id > $MID")
 assert_eq "$(printf "BEGIN;\nALTER TABLE audit.events DISABLE TRIGGER dxos_audit_append_only;\nDELETE FROM audit.events WHERE id=$MID;\nSELECT first_bad_id FROM audit.verify_chain();\nROLLBACK;\n" | $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tA -q | grep -v '^$')" "$NEXT" "deleted middle row detected at the following row"
 assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after delete rollback"
+MAXID=$(psql_app "select max(id) from audit.events")
+assert_eq "$(printf "BEGIN;\nALTER TABLE audit.events DISABLE TRIGGER dxos_audit_append_only;\nDELETE FROM audit.events WHERE id=$MAXID;\nSELECT first_bad_id FROM audit.verify_chain();\nROLLBACK;\n" | $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tA -q | grep -v '^$')" "$MAXID" "deleted tail row detected via chain head"
+assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after tail rollback"
+# Repeatable-read session A with a stale snapshot must not fork the chain after B commits.
+FIFO=$(mktemp -u); mkfifo "$FIFO"; RROUT=$(mktemp)
+$COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tA < "$FIFO" > "$RROUT" 2>&1 &
+RRPID=$!
+exec 3> "$FIFO"
+echo "BEGIN ISOLATION LEVEL REPEATABLE READ; SELECT 1;" >&3; sleep 2
+psql_app "select audit.record_event('smoke','PING','smoke/rr-b','{}'::jsonb)" >/dev/null
+echo "select audit.record_event('smoke','PING','smoke/rr-a','{}'::jsonb);" >&3
+echo "ROLLBACK;" >&3; exec 3>&-; wait $RRPID; rm -f "$FIFO"
+grep -q 'could not serialize access' "$RROUT" && pass "repeatable-read append raises serialization error" || fail "repeatable-read append did not fail: $(cat "$RROUT")"
+rm -f "$RROUT"
+assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after repeatable-read race"
 for _ in 1 2; do $COMPOSE run --rm platform-init >/dev/null 2>&1 && pass "platform-init re-run ok" || fail "platform-init re-run failed"; done
+assert_eq "$(psql_app "select count(*) from pg_trigger where tgrelid='audit.events'::regclass and not tgisinternal and tgenabled='O'")" "2" "exactly 2 enabled triggers on audit.events"
+assert_eq "$(psql_app "select count(*) from pg_trigger where tgrelid='audit.chain_head'::regclass and not tgisinternal and tgenabled='O'")" "2" "chain_head guard triggers present"
 
 echo "[pins]"
 unpinned=$(grep -nE '^\s*image:\s*(\S+:latest|[^:[:space:]#]+)(\s|$)' docker/docker-compose.yml || true)
