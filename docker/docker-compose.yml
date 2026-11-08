@@ -215,7 +215,15 @@ services:
     container_name: agrimarket-clamav
     restart: always
     environment:
+      # StreamMaxLength and the scanner's DXOS_MAX_SCAN_BYTES (52428800) must change together.
       CLAMD_CONF_StreamMaxLength: 50M
+      # Fail closed: clamd answers "<heuristic> FOUND" (-> quarantine) instead of "OK" for encrypted
+      # archives and for archives over a scan limit (nesting depth, size, time). Encrypted documents
+      # (AlertEncryptedDoc, e.g. password-protected PDFs) stay allowed on purpose.
+      CLAMD_CONF_AlertEncryptedArchive: "yes"
+      CLAMD_CONF_AlertExceedsMax: "yes"
+      # Must stay below the scanner's 30 s client budget (scan_stream) so a slow scan is a verdict, not a retry loop.
+      CLAMD_CONF_MaxScanTime: "25000"
     volumes:
       - clamav_db:/var/lib/clamav
     healthcheck:
@@ -240,6 +248,7 @@ services:
       DXOS_S3_ENDPOINT: minio:9000
       DXOS_CLAMD_HOST: clamav
       DXOS_CLAMD_PORT: "3310"
+      DXOS_MAX_SCAN_BYTES: "52428800"  # = CLAMD_CONF_StreamMaxLength (50M); change both together
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-your_minio_access_key}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-your_minio_secret_key}
       DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket

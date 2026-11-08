@@ -110,6 +110,8 @@ assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" 
 MAXID=$(psql_app "select max(id) from audit.events")
 assert_eq "$(printf "BEGIN;\nALTER TABLE audit.events DISABLE TRIGGER dxos_audit_append_only;\nDELETE FROM audit.events WHERE id=$MAXID;\nSELECT first_bad_id FROM audit.verify_chain();\nROLLBACK;\n" | $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tA -q | grep -v '^$')" "$MAXID" "deleted tail row detected via chain head"
 assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after tail rollback"
+out=$(psql_app "BEGIN; UPDATE audit.chain_head SET last_id = last_id - 1; ROLLBACK;" 2>&1) || true
+case "$out" in *"can only advance"*) pass "chain_head cannot move backwards";; *) fail "chain_head rewind not blocked ($out)";; esac
 # Repeatable-read session A with a stale snapshot must not fork the chain after B commits.
 FIFO=$(mktemp -u); mkfifo "$FIFO"; RROUT=$(mktemp); RRPID=""
 rr_cleanup() { exec 3>&-; if [ -n "$RRPID" ]; then kill "$RRPID" 2>/dev/null || true; fi; rm -f "$FIFO" "$RROUT"; }
@@ -149,7 +151,7 @@ MD=$(printf "BEGIN;\nSELECT coalesce(max(id),0) FROM audit.events;\nINSERT INTO 
 assert_eq "$MD" "0" "non-audited table market_data creates no event"
 for _ in 1 2; do $COMPOSE run --rm platform-init >/dev/null 2>&1 && pass "platform-init re-run ok" || fail "platform-init re-run failed"; done
 assert_eq "$(psql_app "select count(*) from pg_trigger where tgrelid='audit.events'::regclass and not tgisinternal and tgenabled='O'")" "2" "exactly 2 enabled triggers on audit.events"
-assert_eq "$(psql_app "select count(*) from pg_trigger where tgrelid='audit.chain_head'::regclass and not tgisinternal and tgenabled='O'")" "2" "chain_head guard triggers present"
+assert_eq "$(psql_app "select count(*) from pg_trigger where tgrelid='audit.chain_head'::regclass and not tgisinternal and tgenabled='O'")" "3" "chain_head guard triggers present"
 for t in htx_profiles households parcels parcel_crop_cycles journal_entries journal_activities lots lot_parcels disease_reports; do
   assert_eq "$(psql_app "select count(*) from pg_trigger where tgname='dxos_audit_row' and tgrelid='public.$t'::regclass")" "1" "audit row trigger on $t"
 done
@@ -198,6 +200,29 @@ assert_eq "$(psql_app "select count(*) from pg_stat_activity where application_n
 # SeaweedFS must reject (PreconditionFailed) a copy whose copy-source-if-match etag is wrong.
 $S3T copy-mismatch agrimarket-docs "$CLEAN_KEY" dxos-quarantine "smoke-mismatch-$RUN" && pass "copy with wrong match_etag rejected (copy-source-if-match honoured)" || fail "copy-source-if-match not honoured or unexpected error"
 $S3T rm dxos-quarantine "smoke-mismatch-$RUN" 2>/dev/null || true
+# Archives clamd can only judge by heuristics: nested deeper than MaxRecursion and encrypted must be quarantined (fail closed).
+python3 - "$QDIR/eicar.txt" "$QDIR/nested.zip" <<'PYEOF'
+import sys, zipfile
+data = open(sys.argv[1], 'rb').read()
+name = 'eicar.txt'
+for _ in range(21):  # MaxRecursion is 17
+    path = sys.argv[2]
+    with zipfile.ZipFile(path, 'w') as z:
+        z.writestr(name, data)
+    data, name = open(path, 'rb').read(), 'inner.zip'
+PYEOF
+(cd "$QDIR" && zip -q -P smoke-pass encrypted.zip eicar.txt)   # zip is preinstalled on macOS and ubuntu runners
+NESTED_KEY="smoke/nested $RUN.zip"; ENC_KEY="smoke/encrypted $RUN.zip"
+q_cleanup() { for k in "$EICAR_KEY" "$NESTED_KEY" "$ENC_KEY"; do $S3T rm dxos-quarantine "agrimarket-docs/$k" 2>/dev/null || true; $S3T rm agrimarket-docs "$k" 2>/dev/null || true; done; rm -rf "$QDIR"; }
+$S3T put agrimarket-docs "$NESTED_KEY" "$QDIR/nested.zip" && $S3T put agrimarket-docs "$ENC_KEY" "$QDIR/encrypted.zip" || fail "upload archive test files"
+for pair in "nested (21 levels):$NESTED_KEY" "encrypted:$ENC_KEY"; do
+  label=${pair%%:*}; key=${pair#*:}; moved=0
+  for _ in $(seq 1 60); do
+    if ! $S3T exists agrimarket-docs "$key" && $S3T exists dxos-quarantine "agrimarket-docs/$key"; then moved=1; break; fi
+    sleep 0.5
+  done
+  assert_eq "$moved" "1" "$label EICAR zip quarantined within 30s"
+done
 q_cleanup; trap - EXIT
 
 echo "[pins]"
