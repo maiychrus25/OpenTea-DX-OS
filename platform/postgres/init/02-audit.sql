@@ -141,3 +141,17 @@ CREATE OR REPLACE TRIGGER dxos_audit_head_no_delete
 CREATE OR REPLACE TRIGGER dxos_audit_head_no_truncate
   BEFORE TRUNCATE ON audit.chain_head
   FOR EACH STATEMENT EXECUTE FUNCTION audit.reject_head_change();
+
+-- The head may only advance: moving it back would hide deleted tail rows from verify_chain().
+CREATE OR REPLACE FUNCTION audit.reject_head_rewind() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.last_id IS NOT NULL AND (NEW.last_id IS NULL OR NEW.last_id <= OLD.last_id) THEN
+    RAISE EXCEPTION 'audit.chain_head can only advance';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE TRIGGER dxos_audit_head_advance_only
+  BEFORE UPDATE ON audit.chain_head
+  FOR EACH ROW EXECUTE FUNCTION audit.reject_head_rewind();
