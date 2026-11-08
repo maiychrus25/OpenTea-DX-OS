@@ -39,7 +39,7 @@ services:
 
   # One-shot: apply Prisma migrations inside the compose network (run before starting hasura).
   migrate:
-    image: node:20.19.5-bookworm-slim
+    image: node:20.19.5-bookworm  # non-slim: Prisma engines need OpenSSL
     profiles: ["tools"]
     working_dir: /tmp
     environment:
