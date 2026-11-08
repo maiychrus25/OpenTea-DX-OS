@@ -109,16 +109,21 @@ MAXID=$(psql_app "select max(id) from audit.events")
 assert_eq "$(printf "BEGIN;\nALTER TABLE audit.events DISABLE TRIGGER dxos_audit_append_only;\nDELETE FROM audit.events WHERE id=$MAXID;\nSELECT first_bad_id FROM audit.verify_chain();\nROLLBACK;\n" | $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tA -q | grep -v '^$')" "$MAXID" "deleted tail row detected via chain head"
 assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after tail rollback"
 # Repeatable-read session A with a stale snapshot must not fork the chain after B commits.
-FIFO=$(mktemp -u); mkfifo "$FIFO"; RROUT=$(mktemp)
+FIFO=$(mktemp -u); mkfifo "$FIFO"; RROUT=$(mktemp); RRPID=""
+rr_cleanup() { exec 3>&-; if [ -n "$RRPID" ]; then kill "$RRPID" 2>/dev/null || true; fi; rm -f "$FIFO" "$RROUT"; }
+trap rr_cleanup EXIT
 $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tA < "$FIFO" > "$RROUT" 2>&1 &
 RRPID=$!
 exec 3> "$FIFO"
-echo "BEGIN ISOLATION LEVEL REPEATABLE READ; SELECT 1;" >&3; sleep 2
+echo "BEGIN ISOLATION LEVEL REPEATABLE READ; SELECT 'RR_READY';" >&3
+for _ in $(seq 1 60); do grep -q RR_READY "$RROUT" && break; sleep 0.5; done
+grep -q RR_READY "$RROUT" || fail "RR session A never started"
 psql_app "select audit.record_event('smoke','PING','smoke/rr-b','{}'::jsonb)" >/dev/null
 echo "select audit.record_event('smoke','PING','smoke/rr-a','{}'::jsonb);" >&3
-echo "ROLLBACK;" >&3; exec 3>&-; wait $RRPID; rm -f "$FIFO"
+echo "ROLLBACK;" >&3; exec 3>&-
+for _ in $(seq 1 60); do kill -0 "$RRPID" 2>/dev/null || break; sleep 0.5; done
 grep -q 'could not serialize access' "$RROUT" && pass "repeatable-read append raises serialization error" || fail "repeatable-read append did not fail: $(cat "$RROUT")"
-rm -f "$RROUT"
+rr_cleanup; RRPID=""; trap - EXIT
 assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after repeatable-read race"
 for _ in 1 2; do $COMPOSE run --rm platform-init >/dev/null 2>&1 && pass "platform-init re-run ok" || fail "platform-init re-run failed"; done
 assert_eq "$(psql_app "select count(*) from pg_trigger where tgrelid='audit.events'::regclass and not tgisinternal and tgenabled='O'")" "2" "exactly 2 enabled triggers on audit.events"

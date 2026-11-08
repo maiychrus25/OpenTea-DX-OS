@@ -119,7 +119,7 @@ END $$;
 CREATE OR REPLACE FUNCTION audit.reject_change() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-  RAISE EXCEPTION 'audit.% is append-only', TG_TABLE_NAME;
+  RAISE EXCEPTION 'audit.events is append-only';
 END $$;
 
 CREATE OR REPLACE TRIGGER dxos_audit_append_only
@@ -129,9 +129,15 @@ CREATE OR REPLACE TRIGGER dxos_audit_no_truncate
   BEFORE TRUNCATE ON audit.events
   FOR EACH STATEMENT EXECUTE FUNCTION audit.reject_change();
 
+CREATE OR REPLACE FUNCTION audit.reject_head_change() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'audit.chain_head cannot be deleted or truncated';
+END $$;
+
 CREATE OR REPLACE TRIGGER dxos_audit_head_no_delete
   BEFORE DELETE ON audit.chain_head
-  FOR EACH ROW EXECUTE FUNCTION audit.reject_change();
+  FOR EACH ROW EXECUTE FUNCTION audit.reject_head_change();
 CREATE OR REPLACE TRIGGER dxos_audit_head_no_truncate
   BEFORE TRUNCATE ON audit.chain_head
-  FOR EACH STATEMENT EXECUTE FUNCTION audit.reject_change();
+  FOR EACH STATEMENT EXECUTE FUNCTION audit.reject_head_change();
