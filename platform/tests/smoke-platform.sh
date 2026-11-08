@@ -159,7 +159,7 @@ S3T="node platform/tests/s3-tool.cjs"
 export NODE_PATH=apps/web/node_modules
 QDIR=$(mktemp -d); RUN="$(date +%s)-$$"
 # EICAR key is unique per run: identical bytes under an old key would reuse a previous (key, etag) scan row.
-EICAR_KEY="smoke/Lô thử nghiệm/eicar test $RUN.txt"; CLEAN_KEY="smoke/clean.txt"
+EICAR_KEY="smoke/Lô thử nghiệm/eicar test $RUN.txt"; CLEAN_KEY="smoke/clean $RUN.txt"
 EICAR_P1='X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR'; EICAR_P2='-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
 printf '%s%s' "$EICAR_P1" "$EICAR_P2" > "$QDIR/eicar.txt"   # assembled at runtime, never stored whole
 printf 'clean smoke file %s\n' "$RUN" > "$QDIR/clean.txt"
@@ -174,11 +174,13 @@ for _ in $(seq 1 60); do
 done
 assert_eq "$quarantined" "1" "infected file moved to dxos-quarantine within 30s"
 assert_eq "$(psql_app "select status || ':' || (coalesce(signature,'') <> '')::text from audit.file_scans where bucket='agrimarket-docs' and key='$EICAR_KEY' order by scanned_at desc limit 1")" "infected:true" "file_scans: infected with signature"
-for _ in $(seq 1 20); do
-  [ "$(psql_app "select status from audit.file_scans where bucket='agrimarket-docs' and key='$CLEAN_KEY' order by scanned_at desc limit 1")" = "clean" ] && break
+CLEAN_COUNT=0
+for _ in $(seq 1 60); do
+  CLEAN_COUNT=$(psql_app "select count(*) from audit.file_scans where bucket='agrimarket-docs' and key='$CLEAN_KEY' and status='clean'")
+  [ "$CLEAN_COUNT" = "1" ] && break
   sleep 0.5
 done
-assert_eq "$(psql_app "select status from audit.file_scans where bucket='agrimarket-docs' and key='$CLEAN_KEY' order by scanned_at desc limit 1")" "clean" "file_scans: clean file recorded clean"
+assert_eq "$CLEAN_COUNT" "1" "file_scans: clean file recorded clean (unique key per run)"
 $S3T exists agrimarket-docs "$CLEAN_KEY" && pass "clean file still present" || fail "clean file was removed"
 assert_eq "$(psql_app "select count(*) from audit.events where op='QUARANTINE' and row_id='agrimarket-docs/$EICAR_KEY'")" "$((Q_BEFORE + 1))" "QUARANTINE audit event recorded"
 # Identical bytes under the same key (same etag as the infected row) must be quarantined again.
@@ -189,8 +191,13 @@ for _ in $(seq 1 60); do
   sleep 0.5
 done
 assert_eq "$requarantined" "1" "identical re-upload quarantined again within 30s"
+$S3T exists dxos-quarantine "agrimarket-docs/$EICAR_KEY" && pass "quarantine copy exists after re-quarantine" || fail "quarantine copy missing after re-quarantine"
 assert_eq "$(psql_app "select count(*) from audit.events where op='QUARANTINE' and row_id='agrimarket-docs/$EICAR_KEY'")" "$((Q_BEFORE + 2))" "second QUARANTINE audit event recorded"
 assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after quarantine"
+assert_eq "$(psql_app "select count(*) from pg_stat_activity where application_name='dxos-scanner' and state='idle in transaction'")" "0" "scanner holds no idle-in-transaction session"
+# SeaweedFS must reject a copy whose copy-source-if-match etag is wrong (informational record of the limitation).
+$S3T copy-mismatch agrimarket-docs "$CLEAN_KEY" dxos-quarantine "smoke-mismatch-$RUN" && pass "copy with wrong match_etag rejected (copy-source-if-match honoured)" || echo "NOTE: SeaweedFS ignored copy-source-if-match (wrong etag copy succeeded)"
+$S3T rm dxos-quarantine "smoke-mismatch-$RUN" 2>/dev/null || true
 q_cleanup; trap - EXIT
 
 echo "[pins]"

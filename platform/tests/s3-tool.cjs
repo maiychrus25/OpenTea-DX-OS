@@ -12,7 +12,7 @@ const client = new Client({
   secretKey: process.env.MINIO_SECRET_KEY || 'your_minio_secret_key',
 });
 
-const [cmd, bucket, key, file] = process.argv.slice(2);
+const [cmd, bucket, key, file, dstKey] = process.argv.slice(2);
 
 (async () => {
   if (cmd === 'put') {
@@ -28,6 +28,17 @@ const [cmd, bucket, key, file] = process.argv.slice(2);
     }
   } else if (cmd === 'rm') {
     await client.removeObject(bucket, key);
+  } else if (cmd === 'copy-mismatch') {
+    // exit 0 if the copy with a wrong match_etag was rejected, 1 if it (wrongly) succeeded
+    const { CopyConditions } = require('minio');
+    const cond = new CopyConditions();
+    cond.setMatchETag('00000000000000000000000000000000');
+    try {
+      await client.copyObject(file, dstKey, `/${bucket}/${key}`, cond);
+    } catch (err) {
+      process.exit(0);
+    }
+    process.exit(1);
   } else {
     console.error('usage: put|exists|rm <bucket> <key> [file]');
     process.exit(2);

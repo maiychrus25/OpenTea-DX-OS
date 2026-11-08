@@ -4,6 +4,10 @@ import os
 from dataclasses import dataclass
 
 
+# Must match clamd StreamMaxLength (CLAMD_CONF_StreamMaxLength=50M in docker-compose.yml).
+MAX_SCAN_BYTES = 52428800
+
+
 @dataclass(frozen=True)
 class Config:
     buckets: list[str]

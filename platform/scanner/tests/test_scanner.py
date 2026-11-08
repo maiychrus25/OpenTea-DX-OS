@@ -7,7 +7,7 @@ import pytest
 from minio.error import S3Error
 
 from dxos_scanner.clamd import ClamdUnavailable, ScanResult
-from dxos_scanner.config import Config
+from dxos_scanner.config import MAX_SCAN_BYTES, Config
 from dxos_scanner.scanner import run_once
 
 WHEN = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
@@ -36,6 +36,8 @@ class FakeS3:
         self.fail_copy = False
         self.vanish = set()
         self.responses = []
+        self.get_headers = []
+        self.precondition_failed = False
 
     def put(self, bucket, key, data=b"x", etag='"e1"'):
         self.buckets[bucket][key] = (etag, data)
@@ -53,7 +55,10 @@ class FakeS3:
         for key, (etag, data) in list(self.buckets[bucket].items()):
             yield SimpleNamespace(object_name=key, etag=etag, size=len(data), last_modified=WHEN)
 
-    def get_object(self, bucket, key):
+    def get_object(self, bucket, key, request_headers=None):
+        self.get_headers.append(request_headers)
+        if self.precondition_failed:
+            raise S3Error("PreconditionFailed", "etag mismatch", key, "rid", "hid", None)
         if key in self.vanish:
             raise S3Error("NoSuchKey", "gone", key, "rid", "hid", None)
         resp = FakeResponse(self.buckets[bucket][key][1])
@@ -79,8 +84,15 @@ class FakeDb:
         self.statements = []
         self.pending = []
         self._row = None
+        self.in_txn = False
+        self.txn_count = 0
+
+    def transaction(self):
+        return FakeTxn(self)
 
     def execute(self, sql, params=()):
+        if ("insert into" in sql.lower() or "record_event" in sql) and not self.in_txn:
+            raise AssertionError("write outside transaction")
         self.statements.append((sql, params))
         if "select" in sql.lower() and "file_scans" in sql:
             p = tuple(params)
@@ -94,15 +106,29 @@ class FakeDb:
     def fetchone(self):
         return self._row
 
-    def commit(self):
+    def _commit(self):
         for kind, params in self.pending:
             if kind == "scan":
                 self.seen.add(params[:3])
         self.log.append(("record", [k for k, _ in self.pending]))
         self.pending = []
 
-    def rollback(self):
+    def _rollback(self):
         self.pending = []
+
+
+class FakeTxn:
+    def __init__(self, db):
+        self.db = db
+
+    def __enter__(self):
+        self.db.in_txn = True
+        self.db.txn_count += 1
+
+    def __exit__(self, exc_type, exc, tb):
+        self.db.in_txn = False
+        (self.db._rollback if exc_type else self.db._commit)()
+        return False
 
 
 def make(buckets=("agrimarket-docs",), scan_buckets=None):
@@ -257,3 +283,44 @@ def test_clean_row_still_skips():
     db.seen.add(("agrimarket-docs", "a.txt", "e1"))
     assert run_once(s3, db, cfg, scan=pytest.fail) == 0
     assert ops(log, "copy") == [] and ops(log, "remove") == [] and ops(log, "record") == []
+
+
+def test_oversized_object_quarantined_without_scan():
+    s3, db, cfg, log = make()
+    s3.put("agrimarket-docs", "big.bin", data=b"x" * 10)
+    original = s3.list_objects
+
+    def big_list(bucket, recursive=False):
+        for o in original(bucket, recursive):
+            o.size = MAX_SCAN_BYTES + 1
+            yield o
+
+    s3.list_objects = big_list
+    assert run_once(s3, db, cfg, scan=pytest.fail) == 1
+    assert s3.get_headers == []
+    assert "big.bin" not in s3.buckets["agrimarket-docs"]
+    assert "agrimarket-docs/big.bin" in s3.buckets["dxos-quarantine"]
+    assert any("INSTREAM size limit exceeded" in str(p) for _, p in db.statements)
+
+
+def test_get_uses_if_match_on_listed_etag():
+    s3, db, cfg, log = make()
+    s3.put("agrimarket-docs", "a.txt", etag='"abc"')
+    run_once(s3, db, cfg, scan=clean)
+    assert s3.get_headers == [{"If-Match": '"abc"'}]
+
+
+def test_precondition_failed_records_nothing():
+    s3, db, cfg, log = make()
+    s3.put("agrimarket-docs", "a.txt")
+    s3.precondition_failed = True
+    assert run_once(s3, db, cfg, scan=pytest.fail) == 0
+    assert db.seen == set() and ops(log, "record") == [] and ops(log, "remove") == []
+
+
+def test_skip_path_leaves_no_open_transaction():
+    s3, db, cfg, log = make()
+    s3.put("agrimarket-docs", "a.txt")
+    db.seen.add(("agrimarket-docs", "a.txt", "e1"))
+    assert run_once(s3, db, cfg, scan=pytest.fail) == 0
+    assert db.txn_count == 0 and not db.in_txn and db.pending == []
