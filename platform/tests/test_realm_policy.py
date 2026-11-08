@@ -51,6 +51,19 @@ class RealmPolicyTest(unittest.TestCase):
         self.assertEqual(REALM.get("otpPolicyDigits"), 6)
         self.assertEqual(REALM.get("otpPolicyPeriod"), 30)
 
+    def test_htx_code_declared_admin_only(self):
+        components = REALM["components"]["org.keycloak.userprofile.UserProfileProvider"]
+        profile = json.loads(components[0]["config"]["kc.user.profile.config"][0])
+        self.assertNotIn("unmanagedAttributePolicy", profile)
+        names = [a["name"] for a in profile["attributes"]]
+        for default in ("username", "email", "firstName", "lastName"):
+            self.assertIn(default, names)
+        attr = by_key(profile["attributes"], "name", "htx_code")
+        self.assertEqual(attr["permissions"]["edit"], ["admin"])
+        self.assertEqual(attr["permissions"]["view"], ["admin"])
+        self.assertFalse(attr.get("multivalued", False))
+        self.assertFalse(attr.get("required"))
+
 
 if __name__ == "__main__":
     unittest.main()
