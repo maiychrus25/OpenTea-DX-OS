@@ -7,6 +7,9 @@ cd "$(dirname "$0")/../.."
 source platform/tests/lib.sh
 source platform/tests/tokens.sh
 
+command -v jq >/dev/null || { echo "jq is required (brew/apt install jq)"; exit 1; }
+[ -d apps/web/node_modules/minio ] || { echo "Run: (cd apps/web && npm install --no-audit --no-fund)"; exit 1; }
+
 echo "[postgres]"
 assert_eq "$(psql_app "select string_agg(extname, ',' order by extname) from pg_extension where extname in ('postgis','vector')")" "postgis,vector" "postgis and vector extensions installed"
 
@@ -37,7 +40,13 @@ assert_http 401 "tampered token -> 401" -- -X POST -H "Authorization: Bearer ${T
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $T" -H 'Content-Type: application/json' -d '{"query":"{__typename}"}' "$GATEWAY/api/data/graphql")
 [[ "$code" =~ ^[1-5][0-9]{2}$ && "$code" != 401 ]] && pass "valid token passes gateway ($code)" || fail "valid token rejected or gateway down ($code)"
 assert_http "200 204" "CORS preflight without token" -- -X OPTIONS -H 'Origin: http://localhost:3000' -H 'Access-Control-Request-Method: POST' "$GATEWAY/api/data/graphql"
-curl -s -D - -o /dev/null -X POST "$GATEWAY/api/data/graphql" | grep -qi '^x-request-id:' && pass "X-Request-Id present" || fail "X-Request-Id missing"
+HDRS=$(curl -s -D - -o /dev/null -X POST "$GATEWAY/api/data/graphql")
+grep -qi '^x-request-id:' <<<"$HDRS" && pass "X-Request-Id present" || fail "X-Request-Id missing"
+PREFLIGHT=$(curl -s -D - -o /dev/null -X OPTIONS -H 'Origin: http://localhost:3000' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: authorization,content-type,x-hasura-role' "$GATEWAY/api/data/graphql")
+grep -i '^access-control-allow-headers:' <<<"$PREFLIGHT" | grep -qi 'x-hasura-role' && pass "CORS preflight allows x-hasura-role" || fail "CORS preflight does not allow x-hasura-role"
+for p in /api/workflow/ping /api/ai/disease/health; do
+  assert_http 401 "token without dx-os-core audience -> 401 on $p" -- -X POST -H "Authorization: Bearer $(user_token manager_tc dxos-noaud)" "$GATEWAY$p"
+done
 
 echo "[data]"
 PRISMA_URL="postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@localhost:5432/agrimarket"
@@ -74,7 +83,12 @@ assert_eq "$(ids "$(gql "$TX" "$Q" manager)" '.data.households[].id')" "" "manag
 assert_eq "$(ids "$(gql "$TX" '{htx_profiles{id}}' manager)" '.data.htx_profiles[].id')" "" "manager without htx_code sees no htx_profiles"
 gql "$TM" 'mutation{insert_households_one(object:{id:"x",name:"x",phone:"1"}){id}}' manager | jq -e 'has("errors")' >/dev/null && pass "mutation rejected" || fail "mutation not rejected"
 gql "$TM" '{__schema{types{name}}}' manager | jq -e '[.data.__schema.types[].name]|map(select(.=="partners"))|length==0' >/dev/null && pass "partners not exposed" || fail "partners exposed"
-gql "$TN" "$Q" | jq -e '.errors[0].message|test("JWT|audience";"i")' >/dev/null && pass "token without dx-os-core audience rejected" || fail "no-audience token not rejected"
+gql "$TN" "$Q" | jq -e '.errors[0] | (.extensions.code == "invalid-jwt") and (.message | contains("JWTNotInAudience"))' >/dev/null && pass "token without dx-os-core audience rejected" || fail "no-audience token not rejected"
+
+# A client-supplied Hasura admin secret must be stripped at the edge (never escalate to admin).
+R=$(curl -s -X POST "$GATEWAY/api/data/graphql" -H "Authorization: Bearer $TF" -H "x-hasura-admin-secret: $HASURA_GRAPHQL_ADMIN_SECRET" -H 'Content-Type: application/json' -d '{"query":"{__schema{mutationType{name}} households{id}}"}')
+printf '%s' "$R" | jq -e '.data.__schema.mutationType == null' >/dev/null && pass "admin secret header stripped (no mutation_root)" || fail "admin secret header honoured: $R"
+assert_eq "$(ids "$R" '.data.households[].id')" "hh_tc_1" "farmer_tc with admin secret header still sees only own household"
 
 echo "[pins]"
 unpinned=$(grep -nE '^\s*image:\s*(\S+:latest|[^:[:space:]#]+)(\s|$)' docker/docker-compose.yml || true)

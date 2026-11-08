@@ -27,11 +27,21 @@ services:
   platform-init:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-postgres:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
 
-  # Only apisix:9080, web:3000 and keycloak:8080 stay published on the host.
-  n8n:
-    ports: !reset []
+  # Refuse to start with a placeholder admin secret (the gateway also strips the header, defence in depth).
+  hasura:
+    command:
+      - /bin/sh
+      - -c
+      - |
+        case "$$HASURA_GRAPHQL_ADMIN_SECRET" in
+          ""|change_me*) echo "Refusing to start: set a strong HASURA_GRAPHQL_ADMIN_SECRET in docker/.env.local" >&2; exit 1;;
+        esac
+        exec $$HGE_BINARY serve
 
-  seaweedfs:
+  # Published on the host: apisix:9080, web:3000, keycloak:8080 and seaweedfs:9000.
+  # SeaweedFS 9000 stays public because the web app hands browsers presigned URLs on it
+  # (the /storage gateway route cannot validate SigV4); close it when Tier 2 moves storage behind the gateway.
+  n8n:
     ports: !reset []
 
   piper:

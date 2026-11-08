@@ -8,7 +8,8 @@ global_rules:
       cors:
         allow_origins: "${{DXOS_CORS_ORIGIN:=http://localhost:3000}}"
         allow_methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-        allow_headers: "Authorization,Content-Type"
+        allow_headers: "Authorization,Content-Type,x-hasura-role"
+        expose_headers: "X-Request-Id"
       limit-count:
         count: 300
         time_window: 60
@@ -38,18 +39,30 @@ routes:
         client_secret: "${{DXOS_GATEWAY_CLIENT_SECRET:=dev-gateway-secret}}"
       proxy-rewrite:
         uri: /v1/graphql
+        # Never let a client supply the Hasura admin secret through the gateway.
+        headers:
+          remove: ["x-hasura-admin-secret"]
   - id: workflow
     uri: /api/workflow/*
     upstream_id: n8n
     plugins:
-      openid-connect: *oidc
+      openid-connect: &oidc_aud
+        <<: *oidc
+        # Hasura checks the audience itself; n8n and disease-api do not, so require dx-os-core here.
+        claim_schema:
+          required: [aud]
+          properties:
+            aud:
+              anyOf:
+                - { enum: ["dx-os-core"] }
+                - { type: array, contains: { enum: ["dx-os-core"] } }
       proxy-rewrite:
         regex_uri: ["^/api/workflow/(.*)", "/webhook/$1"]
   - id: disease
     uri: /api/ai/disease/*
     upstream_id: disease
     plugins:
-      openid-connect: *oidc
+      openid-connect: *oidc_aud
       proxy-rewrite:
         regex_uri: ["^/api/ai/disease/(.*)", "/$1"]
   - id: storage
