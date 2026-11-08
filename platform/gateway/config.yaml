@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml
+apisix:
+  node_listen: 9080
+  enable_admin: false
+plugins:
+  - request-id
+  - cors
+  - limit-count
+  - openid-connect
+  - proxy-rewrite

@@ -70,6 +70,24 @@ services:
     networks:
       - agrimarket-net
 
+  apisix:
+    image: apache/apisix:3.19.0-debian
+    container_name: agrimarket-apisix
+    restart: always
+    environment:
+      DXOS_CORS_ORIGIN: ${DXOS_CORS_ORIGIN:-http://localhost:3000}
+      DXOS_GATEWAY_CLIENT_SECRET: ${DXOS_GATEWAY_CLIENT_SECRET:-dev-gateway-secret}
+    volumes:
+      - ../platform/gateway/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - ../platform/gateway/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+    ports:
+      - "9080:9080"
+    depends_on:
+      keycloak:
+        condition: service_started
+    networks:
+      - agrimarket-net
+
   web:
     build:
       context: ../apps/web

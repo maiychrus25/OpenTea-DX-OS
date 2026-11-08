@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+global_rules:
+  - id: 1
+    plugins:
+      request-id:
+        include_in_response: true
+      cors:
+        allow_origins: "${{DXOS_CORS_ORIGIN:=http://localhost:3000}}"
+        allow_methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+        allow_headers: "Authorization,Content-Type"
+      limit-count:
+        count: 300
+        time_window: 60
+        key: remote_addr
+        rejected_code: 429
+
+upstreams:
+  - id: hasura
+    nodes: { "hasura:8080": 1 }
+  - id: n8n
+    nodes: { "n8n:5678": 1 }
+  - id: disease
+    nodes: { "disease-api:8000": 1 }
+  - id: storage
+    nodes: { "minio:9000": 1 }
+
+routes:
+  - id: data-graphql
+    uri: /api/data/graphql
+    upstream_id: hasura
+    plugins:
+      openid-connect: &oidc
+        bearer_only: true
+        use_jwks: true
+        discovery: http://keycloak:8080/realms/agrimarket/.well-known/openid-configuration
+        client_id: dxos-gateway
+        client_secret: "${{DXOS_GATEWAY_CLIENT_SECRET:=dev-gateway-secret}}"
+      proxy-rewrite:
+        uri: /v1/graphql
+  - id: workflow
+    uri: /api/workflow/*
+    upstream_id: n8n
+    plugins:
+      openid-connect: *oidc
+      proxy-rewrite:
+        regex_uri: ["^/api/workflow/(.*)", "/webhook/$1"]
+  - id: disease
+    uri: /api/ai/disease/*
+    upstream_id: disease
+    plugins:
+      openid-connect: *oidc
+      proxy-rewrite:
+        regex_uri: ["^/api/ai/disease/(.*)", "/$1"]
+  - id: storage
+    uri: /storage/*
+    upstream_id: storage
+    plugins:
+      proxy-rewrite:
+        regex_uri: ["^/storage/(.*)", "/$1"]
+#END
