@@ -100,6 +100,11 @@ for stmt in "update audit.events set actor='x' where id=$AID" "delete from audit
 done
 assert_eq "$(printf "BEGIN;\nALTER TABLE audit.events DISABLE TRIGGER dxos_audit_append_only;\nUPDATE audit.events SET actor='tampered' WHERE id=$AID;\nSELECT first_bad_id FROM audit.verify_chain();\nROLLBACK;\n" | $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tA -q | grep -v '^$')" "$AID" "tamper detected at the modified row"
 assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after rollback"
+for _ in 1 2 3; do psql_app "select audit.record_event('smoke','PING','smoke/mid','{}'::jsonb)" >/dev/null; done
+MID=$(psql_app "select id from (select id from audit.events order by id desc limit 3) t order by id limit 1 offset 1")
+NEXT=$(psql_app "select min(id) from audit.events where id > $MID")
+assert_eq "$(printf "BEGIN;\nALTER TABLE audit.events DISABLE TRIGGER dxos_audit_append_only;\nDELETE FROM audit.events WHERE id=$MID;\nSELECT first_bad_id FROM audit.verify_chain();\nROLLBACK;\n" | $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tA -q | grep -v '^$')" "$NEXT" "deleted middle row detected at the following row"
+assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after delete rollback"
 for _ in 1 2; do $COMPOSE run --rm platform-init >/dev/null 2>&1 && pass "platform-init re-run ok" || fail "platform-init re-run failed"; done
 
 echo "[pins]"
