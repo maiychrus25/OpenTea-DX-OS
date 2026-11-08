@@ -3,10 +3,12 @@
 """Minimal clamd INSTREAM client."""
 import socket
 import struct
+import time
 from dataclasses import dataclass
 from typing import Iterable, Literal
 
 MAX_FRAME = 65536
+MAX_REPLY_BYTES = 4096
 
 
 @dataclass(frozen=True)
@@ -42,11 +44,21 @@ def scan_stream(host: str, port: int, chunks: Iterable[bytes], timeout: float = 
                     sock.sendall(struct.pack(">I", len(part)) + part)
             sock.sendall(b"\0\0\0\0")
             reply = b""
+            deadline = time.monotonic() + timeout  # total budget for the reply phase
             while not reply.endswith(b"\0"):
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise ClamdUnavailable("timed out waiting for clamd reply")
+                sock.settimeout(remaining)
                 data = sock.recv(4096)
                 if not data:
                     raise ClamdUnavailable("clamd closed the connection before replying")
                 reply += data
+                if len(reply) > MAX_REPLY_BYTES:
+                    raise ClamdUnavailable("oversized clamd reply")
     except OSError as exc:  # includes timeouts and connection resets
         raise ClamdUnavailable(str(exc)) from exc
-    return parse_response(reply)
+    try:
+        return parse_response(reply)
+    except ValueError as exc:
+        raise ClamdUnavailable(str(exc)) from exc
