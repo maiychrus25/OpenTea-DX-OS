@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **File quarantine**: ClamAV (`clamav`) and the `dxos-scanner` service scan new objects in `agrimarket-docs` and `agrimarket-private`; infected or unscannable (> 50 MiB) objects are copied to `dxos-quarantine/<bucket>/<key>` and removed, with verdicts in `audit.file_scans`. The scanner image is published to GHCR as `opentea-dx-os-scanner`
+- **Audit log**: hash-chained, append-only `audit.events` fed by row triggers on 9 business tables; verify with `select * from audit.verify_chain()`
+
+### Security
+- **ClamAV fails closed on archives**: encrypted archives and archives exceeding a scan limit (nesting depth, size, scan time 25 s) are reported as `FOUND` and quarantined instead of `OK`. Encrypted documents (for example password-protected PDFs) are still allowed
+- **Scanner re-scans replaced objects**: a `clean` row is only trusted while the object's `LastModified` is unchanged, so an MD5 (etag) collision cannot hide a replacement; the source object is removed only if its etag still equals the scanned one
+- **Audit chain head** can only advance; `verify_chain()` proves chain integrity, not capture coverage (a superuser can disable triggers)
+
+### Changed
+- **Deploy order**: `postgres` -> `platform-init` -> `migrate` -> `platform-init` (attaches audit triggers to the migrated tables) -> the rest
+- **SeaweedFS** starts with `-volume.max=100`
+
+### Fixed
+- **SeaweedFS**: a PUT to a second bucket returned HTTP 500 (default limit of 8 volumes, 7 per bucket)
+
+### Upgrade notes
+- Re-run `platform-init` after `prisma migrate deploy` (the postgres image did not change); recreate the `seaweedfs`, `clamav` and `dxos-scanner` containers.
+- On an upgraded stack, existing objects over 50 MiB in the watched buckets are moved to `dxos-quarantine` during the first scan rounds.
+
 ---
 
 ## [1.3.0] - 2026-11-08

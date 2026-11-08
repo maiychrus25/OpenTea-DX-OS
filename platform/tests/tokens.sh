@@ -16,19 +16,31 @@ kc_wait() {
   fail "keycloak realm not ready after 120s"
 }
 
+# Bounded retry (3 x 2s): Keycloak admin occasionally answers a transient 400/5xx right after startup.
 kc_admin_token() {
-  curl -sf -d client_id=admin-cli -d grant_type=password \
-    -d "username=${KEYCLOAK_ADMIN:-admin}" -d "password=${KEYCLOAK_ADMIN_PASSWORD:-admin}" \
-    "$KC/realms/master/protocol/openid-connect/token" | jq -r .access_token
+  local i t
+  for i in 1 2 3; do
+    t="$(curl -sf -d client_id=admin-cli -d grant_type=password \
+      -d "username=${KEYCLOAK_ADMIN:-admin}" -d "password=${KEYCLOAK_ADMIN_PASSWORD:-admin}" \
+      "$KC/realms/master/protocol/openid-connect/token" | jq -r '.access_token // empty')" || t=""
+    if [ -n "$t" ] && [ "$t" != null ]; then printf '%s' "$t"; return 0; fi
+    sleep 2
+  done
+  fail "keycloak admin token empty after 3 attempts"
 }
 
 # _kc method path [json body]; uses $ADMIN_T. Fails loudly on non-2xx; ALLOW_409=1 accepts 409 (already exists).
 _kc() {
   local args=(-sS -X "$1" -H "Authorization: Bearer $ADMIN_T" -H 'Content-Type: application/json' -w $'\n%{http_code}')
   [ -n "${3:-}" ] && args+=(-d "$3")
-  local out code body
-  out="$(curl "${args[@]}" "$KC_ADMIN_API$2")" || fail "keycloak admin $1 $2: curl failed"
-  code="${out##*$'\n'}"; body="${out%$'\n'*}"
+  local out code body i
+  for i in 1 2 3; do
+    out="$(curl "${args[@]}" "$KC_ADMIN_API$2")" || fail "keycloak admin $1 $2: curl failed"
+    code="${out##*$'\n'}"; body="${out%$'\n'*}"
+    # Retry only idempotent reads on a transient 400/5xx.
+    case "$1:$code" in GET:400|GET:5??) [ "$i" -lt 3 ] && { sleep 2; continue; } ;; esac
+    break
+  done
   case "$code" in
     2??) printf '%s' "$body" ;;
     409) if [ "${ALLOW_409:-}" = 1 ]; then printf '%s' "$body"; else echo "keycloak admin $1 $2 -> 409: $body" >&2; fail "keycloak admin $1 $2 failed"; fi ;;

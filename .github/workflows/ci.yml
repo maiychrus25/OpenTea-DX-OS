@@ -241,6 +241,14 @@ jobs:
           cp .env.example .env.local
           cp docker/.env.local.example docker/.env.local
 
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Scanner Unit Tests
+        run: cd platform/scanner && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
+
       - name: Start Platform
         run: make platform-up
 

@@ -17,6 +17,8 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
       - ../platform/postgres/init/01-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql
+      - ../platform/postgres/init/02-audit.sql:/docker-entrypoint-initdb.d/02-audit.sql
+      - ../platform/postgres/init/03-audit-triggers.sql:/docker-entrypoint-initdb.d/03-audit-triggers.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrimarket"]
       interval: 5s
@@ -25,15 +27,15 @@ services:
     networks:
       - agrimarket-net
 
-  # One-shot: applies extensions to an already-initialised database (idempotent).
+  # One-shot: applies every init script (extensions, audit schema) to an already-initialised database (idempotent).
   platform-init:
     image: opentea-dx-os/postgres:local
     restart: "no"
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD:-your_password_here}
-    command: ["psql", "-h", "postgres", "-U", "agrimarket", "-d", "agrimarket", "-v", "ON_ERROR_STOP=1", "-f", "/init/01-extensions.sql"]
+    command: ["sh", "-c", "for f in /init/*.sql; do psql -h postgres -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -f \"$$f\" || exit 1; done"]
     volumes:
-      - ../platform/postgres/init/01-extensions.sql:/init/01-extensions.sql:ro
+      - ../platform/postgres/init:/init:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -206,6 +208,67 @@ services:
         aliases:
           - minio
 
+  # Antivirus daemon for upload scanning (clamd INSTREAM on 3310, internal only).
+  # CLAMD_CONF_* is the image's documented clamd.conf override mechanism.
+  clamav:
+    image: clamav/clamav-debian:1.4.6
+    container_name: agrimarket-clamav
+    restart: always
+    environment:
+      # StreamMaxLength and the scanner's DXOS_MAX_SCAN_BYTES (52428800) must change together.
+      CLAMD_CONF_StreamMaxLength: 50M
+      # Fail closed: clamd answers "<heuristic> FOUND" (-> quarantine) instead of "OK" for encrypted
+      # archives and for archives over a scan limit (nesting depth, size, time). Encrypted documents
+      # (AlertEncryptedDoc, e.g. password-protected PDFs) stay allowed on purpose.
+      CLAMD_CONF_AlertEncryptedArchive: "yes"
+      CLAMD_CONF_AlertExceedsMax: "yes"
+      # Must stay below the scanner's 30 s client budget (scan_stream) so a slow scan is a verdict, not a retry loop.
+      CLAMD_CONF_MaxScanTime: "25000"
+    volumes:
+      - clamav_db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - agrimarket-net
+
+  # Polls S3 buckets, scans new objects with clamd, quarantines infected ones (no host port).
+  dxos-scanner:
+    build: ../platform/scanner
+    image: opentea-dx-os/scanner:local
+    container_name: agrimarket-scanner
+    restart: always
+    environment:
+      DXOS_SCAN_BUCKETS: agrimarket-docs,agrimarket-private
+      DXOS_QUARANTINE_BUCKET: dxos-quarantine
+      DXOS_SCAN_INTERVAL_SECONDS: "5"
+      DXOS_S3_ENDPOINT: minio:9000
+      DXOS_CLAMD_HOST: clamav
+      DXOS_CLAMD_PORT: "3310"
+      DXOS_MAX_SCAN_BYTES: "52428800"  # = CLAMD_CONF_StreamMaxLength (50M); change both together
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-your_minio_access_key}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-your_minio_secret_key}
+      DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
+    healthcheck:
+      # Healthy while the heartbeat (touched per object and per round) is younger than max(3 x interval, 60s).
+      test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime(os.environ.get('DXOS_HEARTBEAT_PATH','/tmp/dxos-scanner.heartbeat')) < max(3*float(os.environ.get('DXOS_SCAN_INTERVAL_SECONDS','5')),60) else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+    networks:
+      - agrimarket-net
+
   disease-api:
     build:
       context: ../apps/disease-api
@@ -270,6 +333,7 @@ volumes:
   pgdata:
   n8n_data:
   seaweedfs_data:
+  clamav_db:
   ollama_data:
   mattermost_data:
   mattermost_config:

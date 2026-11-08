@@ -143,14 +143,14 @@ Các bước thiết lập bổ sung (bucket S3, import n8n workflows, Ollama mo
 
 ## 🧱 Tier 1: Nền tảng lõi (Headless Core)
 
-Tier 1 gồm PostgreSQL (PostGIS, pgvector), SeaweedFS S3, Keycloak, Hasura (chỉ đọc, phân quyền theo `htx_code`), n8n và cổng API APISIX.
+Tier 1 gồm PostgreSQL (PostGIS, pgvector), SeaweedFS S3, Keycloak, Hasura (chỉ đọc, phân quyền theo `htx_code`), n8n, cổng API APISIX, ClamAV và `dxos-scanner` (kiểm dịch file).
 
 **Yêu cầu:** Docker + Compose ≥ 2.24, GNU make, bash, Node ≥ 20 (kèm npm), `jq`, `curl`, Python 3.
 
 ```bash
 (cd apps/web && npm install --no-audit --no-fund)   # thư viện `minio` cho bước kiểm thử S3
 make platform-up      # dựng và chờ các dịch vụ nền tảng, chạy platform-init
-make platform-smoke   # kiểm tra postgres, storage, identity, gateway, data, pins
+make platform-smoke   # kiểm tra postgres, storage, identity, gateway, data, audit, quarantine, pins
 make platform-down
 python3 platform/tests/test_realm_policy.py   # kiểm tra chính sách realm Keycloak
 ```
@@ -170,9 +170,18 @@ Mọi truy cập API đi qua gateway `http://localhost:9080`:
 > [!NOTE]
 > Giới hạn đã biết: route `/storage/*` chưa xác thực được chữ ký SigV4 của S3 (chờ Tầng 2). `/api/workflow/*` và `/api/ai/disease/*` yêu cầu audience `dx-os-core` ngay tại gateway (`claim_schema` của plugin `openid-connect`).
 
+### Kiểm dịch file và nhật ký kiểm toán
+
+- **Kiểm dịch:** `dxos-scanner` quét các bucket `agrimarket-docs` và `agrimarket-private` mỗi 5 giây bằng ClamAV (`clamav`, không mở cổng ra host). File nhiễm được sao chép sang `dxos-quarantine/<bucket>/<key>` rồi xóa khỏi bucket gốc. File lớn hơn 50 MiB (`CLAMD_CONF_StreamMaxLength=50M`) không quét được nên bị cách ly như `unscannable` mà không đọc nội dung. Archive đặt mật khẩu hoặc vượt giới hạn quét (độ sâu lồng, kích thước, thời gian 25 giây) bị ClamAV báo `FOUND` nên cũng bị cách ly; tài liệu đặt mật khẩu (không phải archive, ví dụ PDF) vẫn được chấp nhận. Mọi kết luận ghi vào bảng `audit.file_scans`.
+- **Nhật ký kiểm toán:** 9 bảng nghiệp vụ có trigger `dxos_audit_row` ghi vào `audit.events`, một chuỗi băm chỉ-thêm (append-only; UPDATE/DELETE bị chặn). Kiểm tra toàn vẹn: `select * from audit.verify_chain();` (phát hiện dòng bị sửa, xóa giữa chuỗi hoặc xóa đuôi).
+
+> [!NOTE]
+> Giới hạn đã biết: (1) file có thể truy cập được trong khoảng ngắn trước vòng quét kế tiếp; (2) giữa bước sao chép và xóa có cửa sổ race (SeaweedFS không có DELETE có điều kiện); (3) phiên bản nhiễm mới cùng key ghi đè bản sao cách ly trước đó (sự kiện kiểm toán vẫn giữ etag/signature); (4) mọi thao tác ghi có kiểm toán được tuần tự hóa bởi một khóa chuỗi: giữ transaction ngắn, ứng dụng nên thử lại khi gặp SQLSTATE `40P01`/`40001`; (5) superuser ghi lại toàn bộ chuỗi với hash tính lại thì không phát hiện được nếu không neo hash đầu chuỗi ra bên ngoài; (6) `verify_chain()` chứng minh toàn vẹn của chuỗi, không chứng minh mọi thay đổi đều được ghi: superuser (`agrimarket`, dùng chung cho ứng dụng và scanner) có thể tắt trigger `dxos_audit_row`; `audit.chain_head` chỉ cho tiến lên, không lùi. Vai trò CSDL đặc quyền tối thiểu là hạng mục Tầng 2.
+
 **Nâng cấp môi trường dev cũ:**
 
 - Postgres đổi từ alpine sang bookworm (collation khác): tạo lại volume Postgres, hoặc chạy `REINDEX DATABASE agrimarket;`.
+- Tier 1b: chạy lại `platform-init` sau `prisma migrate deploy` để gắn trigger kiểm toán (image postgres không đổi); tạo lại các container `seaweedfs` (`-volume.max=100`, cần khi có hơn một bucket), `clamav` và `dxos-scanner`. Trên stack nâng cấp, object lớn hơn 50 MiB đang nằm trong bucket được theo dõi sẽ bị chuyển sang `dxos-quarantine` ở các vòng quét đầu tiên.
 - Keycloak chỉ import realm khi database mới: tạo lại realm (xoá volume) để nhận chính sách TOTP, audience `dx-os-core` và claim `htx_code`.
 - Dữ liệu MinIO cũ không được chuyển sang SeaweedFS; container `agrimarket-minio` cũ còn chiếm cổng 9000, hãy chạy `docker compose -f docker/docker-compose.yml down --remove-orphans` trước khi dựng lại.
 - Bảng n8n trước đây nằm ở schema `public`; n8n nay dùng schema `n8n` nên cần chạy `docker compose down -v` một lần (hoặc chuyển bảng thủ công). Lệnh `down -v` chỉ dành cho **môi trường dev**, tuyệt đối không chạy trên dữ liệu production.
@@ -274,11 +283,12 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 tar -xzf opentea-dx-os-X.Y.Z.tar.gz && cd opentea-dx-os-X.Y.Z
 cp .env.example .env.local && cp docker/.env.local.example docker/.env.local   # rồi điền secret production
 export OPENTEA_VERSION=X.Y.Z
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres
-# Thứ tự bắt buộc: (1) postgres  (2) platform-init  (3) migrate  (4) phần còn lại
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres dxos-scanner
+# Thứ tự bắt buộc: (1) postgres  (2) platform-init  (3) migrate  (4) platform-init lần nữa (gắn trigger kiểm toán vào các bảng vừa migrate)  (5) phần còn lại
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --wait postgres
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml run --rm platform-init
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml --profile tools run --rm migrate
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml run --rm platform-init
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --no-build
 ```
 
