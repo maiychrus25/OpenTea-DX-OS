@@ -154,6 +154,36 @@ for t in htx_profiles households parcels parcel_crop_cycles journal_entries jour
   assert_eq "$(psql_app "select count(*) from pg_trigger where tgname='dxos_audit_row' and tgrelid='public.$t'::regclass")" "1" "audit row trigger on $t"
 done
 
+echo "[quarantine]"
+S3T="node platform/tests/s3-tool.cjs"
+export NODE_PATH=apps/web/node_modules
+QDIR=$(mktemp -d); RUN="$(date +%s)-$$"
+# EICAR key is unique per run: identical bytes under an old key would reuse a previous (key, etag) scan row.
+EICAR_KEY="smoke/Lô thử nghiệm/eicar test $RUN.txt"; CLEAN_KEY="smoke/clean.txt"
+EICAR_P1='X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR'; EICAR_P2='-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
+printf '%s%s' "$EICAR_P1" "$EICAR_P2" > "$QDIR/eicar.txt"   # assembled at runtime, never stored whole
+printf 'clean smoke file %s\n' "$RUN" > "$QDIR/clean.txt"
+q_cleanup() { $S3T rm dxos-quarantine "agrimarket-docs/$EICAR_KEY" 2>/dev/null || true; $S3T rm agrimarket-docs "$CLEAN_KEY" 2>/dev/null || true; rm -rf "$QDIR"; }
+trap q_cleanup EXIT
+Q_BEFORE=$(psql_app "select count(*) from audit.events where op='QUARANTINE' and row_id='agrimarket-docs/$EICAR_KEY'")
+$S3T put agrimarket-docs "$EICAR_KEY" "$QDIR/eicar.txt" && $S3T put agrimarket-docs "$CLEAN_KEY" "$QDIR/clean.txt" && pass "uploaded EICAR and clean test files" || fail "upload test files"
+quarantined=0
+for _ in $(seq 1 60); do
+  if ! $S3T exists agrimarket-docs "$EICAR_KEY" && $S3T exists dxos-quarantine "agrimarket-docs/$EICAR_KEY"; then quarantined=1; break; fi
+  sleep 0.5
+done
+assert_eq "$quarantined" "1" "infected file moved to dxos-quarantine within 30s"
+assert_eq "$(psql_app "select status || ':' || (coalesce(signature,'') <> '')::text from audit.file_scans where bucket='agrimarket-docs' and key='$EICAR_KEY' order by scanned_at desc limit 1")" "infected:true" "file_scans: infected with signature"
+for _ in $(seq 1 20); do
+  [ "$(psql_app "select status from audit.file_scans where bucket='agrimarket-docs' and key='$CLEAN_KEY' order by scanned_at desc limit 1")" = "clean" ] && break
+  sleep 0.5
+done
+assert_eq "$(psql_app "select status from audit.file_scans where bucket='agrimarket-docs' and key='$CLEAN_KEY' order by scanned_at desc limit 1")" "clean" "file_scans: clean file recorded clean"
+$S3T exists agrimarket-docs "$CLEAN_KEY" && pass "clean file still present" || fail "clean file was removed"
+assert_eq "$(psql_app "select count(*) from audit.events where op='QUARANTINE' and row_id='agrimarket-docs/$EICAR_KEY'")" "$((Q_BEFORE + 1))" "QUARANTINE audit event recorded"
+assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain intact after quarantine"
+q_cleanup; trap - EXIT
+
 echo "[pins]"
 unpinned=$(grep -nE '^\s*image:\s*(\S+:latest|[^:[:space:]#]+)(\s|$)' docker/docker-compose.yml || true)
 [ -z "$unpinned" ] && pass "no unpinned images" || fail "unpinned images: $unpinned"

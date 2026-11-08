@@ -208,6 +208,58 @@ services:
         aliases:
           - minio
 
+  # Antivirus daemon for upload scanning (clamd INSTREAM on 3310, internal only).
+  # CLAMD_CONF_* is the image's documented clamd.conf override mechanism.
+  clamav:
+    image: clamav/clamav-debian:1.4.6
+    container_name: agrimarket-clamav
+    restart: always
+    environment:
+      CLAMD_CONF_StreamMaxLength: 50M
+    volumes:
+      - clamav_db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - agrimarket-net
+
+  # Polls S3 buckets, scans new objects with clamd, quarantines infected ones (no host port).
+  dxos-scanner:
+    build: ../platform/scanner
+    image: opentea-dx-os/scanner:local
+    container_name: agrimarket-scanner
+    restart: always
+    environment:
+      DXOS_SCAN_BUCKETS: agrimarket-docs,agrimarket-private
+      DXOS_QUARANTINE_BUCKET: dxos-quarantine
+      DXOS_SCAN_INTERVAL_SECONDS: "5"
+      DXOS_S3_ENDPOINT: minio:9000
+      DXOS_CLAMD_HOST: clamav
+      DXOS_CLAMD_PORT: "3310"
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-your_minio_access_key}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-your_minio_secret_key}
+      DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
+    healthcheck:
+      # Healthy while the heartbeat file is younger than 3 x the 5s scan interval.
+      test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime('/tmp/dxos-scanner.heartbeat') < 15 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+    networks:
+      - agrimarket-net
+
   disease-api:
     build:
       context: ../apps/disease-api
@@ -272,6 +324,7 @@ volumes:
   pgdata:
   n8n_data:
   seaweedfs_data:
+  clamav_db:
   ollama_data:
   mattermost_data:
   mattermost_config:
