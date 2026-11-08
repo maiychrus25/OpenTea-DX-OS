@@ -8,7 +8,7 @@
 ## Context
 
 The exam requires a Workflow engine in the platform. The exam's own reference
-stack lists n8n. Ten workflows already exist in `workflows/` and are authored
+stack lists n8n. Twelve workflows already exist in `workflows/` and are authored
 as n8n exports.
 
 ## Decision
@@ -46,7 +46,7 @@ available, not OSI-approved.
 Replace n8n with Kestra (Apache-2.0), where flows are YAML:
 
 1. Add a Kestra service and point the gateway route `/api/workflow/*` at it.
-2. Port each of the 10 workflows in `workflows/` to a Kestra flow (webhook
+2. Port each of the 12 workflows in `workflows/` to a Kestra flow (webhook
    trigger, HTTP and database tasks map directly).
 3. Run both engines in parallel, compare outputs, then cut over.
 4. Drop the `n8n` schema and container, and remove n8n from the third-party
