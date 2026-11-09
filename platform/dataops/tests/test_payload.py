@@ -98,3 +98,8 @@ def test_inclusive_bounds(value):
 
 def test_check_order_ts_before_sensor():
     assert reason("htx/TC/plot/P1/ph", b'{"value":1}') == "bad_ts"
+
+
+def test_deeply_nested_json_is_bad_json():
+    # The broker's 1 KiB limit still allows ~1000 nested brackets, which exhaust json's recursion limit.
+    assert reason(T, b"[" * 1024) == "bad_json"

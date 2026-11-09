@@ -41,7 +41,7 @@ def parse_message(topic: str, payload: bytes, now: datetime) -> Reading:
 
     try:
         body = json.loads(payload)
-    except ValueError:  # includes UnicodeDecodeError
+    except (ValueError, RecursionError):  # ValueError includes UnicodeDecodeError; RecursionError is deeply nested input
         raise Rejected("bad_json", htx) from None
     value = body.get("value") if isinstance(body, dict) else None
     if isinstance(value, bool) or not isinstance(value, (int, float)):
