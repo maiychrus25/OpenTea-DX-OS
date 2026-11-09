@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+
+paho-mqtt==2.2.0
+duckdb==2.0.0
+minio==7.2.20
+psycopg[binary]==3.3.6
