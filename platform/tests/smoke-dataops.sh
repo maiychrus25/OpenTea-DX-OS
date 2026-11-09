@@ -141,7 +141,7 @@ assert_eq "$LLM_429" "1" "llm route rate limit returns 429"
 # The budget is per bearer: another user must not be throttled by the first one's burst.
 LT2=$(user_token farmer_tc); [ -n "$LT2" ] || fail "second llm token empty"
 LLM_OTHER=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H "Authorization: Bearer $LT2" -H 'Content-Type: application/json' -d '{"model":"missing","messages":[]}' "$LLM_URL")
-[ "$LLM_OTHER" != 429 ] && [ "$LLM_OTHER" != 401 ] && pass "llm rate limit is per user (second user got $LLM_OTHER)" || fail "second user throttled or rejected ($LLM_OTHER)"
+assert_eq "$LLM_OTHER" "400" "llm rate limit is per user (upstream answers the unknown model with 400)"
 
 echo "[release guards]"
 # `--version` makes kc.sh exit at once, so only the guard decides the exit code.

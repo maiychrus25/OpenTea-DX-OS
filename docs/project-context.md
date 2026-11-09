@@ -131,12 +131,11 @@ DATABASE_URL=postgresql://...
 AUTH_SECRET=...
 KEYCLOAK_ISSUER=http://keycloak:8080/realms/agrimarket
 MINIO_ENDPOINT=minio:9000
-DISEASE_API_URL=http://disease-api:8000
 ```
 
 > **Note:** Dự án sử dụng Groq API Free Tier thay vì tự host Ollama.
 > Client library `openai` (npm, Apache 2.0) tương thích OpenAI/Groq.
-> Có thể switch về Ollama local bằng cách thay `GROQ_API_KEY` → `OLLAMA_BASE_URL`.
+> Không đặt `GROQ_API_KEY` thì chatbot dùng LLM nội bộ qua gateway (`CORE_GATEWAY_URL`).
 
 Full list: `.env.example`
 

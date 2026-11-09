@@ -198,6 +198,39 @@ Mọi truy cập API đi qua gateway `http://localhost:9080`:
 - Dữ liệu MinIO cũ không được chuyển sang SeaweedFS; container `agrimarket-minio` cũ còn chiếm cổng 9000, hãy chạy `docker compose -f docker/docker-compose.yml down --remove-orphans` trước khi dựng lại.
 - Bảng n8n trước đây nằm ở schema `public`; n8n nay dùng schema `n8n` nên cần chạy `docker compose down -v` một lần (hoặc chuyển bảng thủ công). Lệnh `down -v` chỉ dành cho **môi trường dev**, tuyệt đối không chạy trên dữ liệu production.
 
+## 🌱 Tier 2: Ứng dụng dùng lõi
+
+Đợt 2a nối `apps/web` vào nền tảng lõi bằng danh tính của từng người dùng; mỗi người chỉ thấy và chỉ sửa được dữ liệu của HTX mình.
+
+- **Phiên đăng nhập:** `access_token` và `refresh_token` của Keycloak chỉ nằm trong cookie phiên đã mã hóa, phía server đọc qua `getCoreToken()`; `/api/auth/session` không trả về token. Token còn dưới 30 giây thì middleware tự làm mới và ghi lại cookie; làm mới thất bại thì người dùng được đưa về `/login`. Phiên ứng dụng và phiên SSO đều dài 8 giờ.
+- **HTX của người dùng:** lấy từ thuộc tính `htx_code` của tài khoản Keycloak (claim `htx_code` trong token). Tài khoản thiếu mã, hoặc mã không có trong `htx_profiles`, nhận lỗi `NO_HTX` và thấy thông báo liên hệ quản trị.
+- **Đọc và ghi:** đọc parcel, nông hộ, lô, nhật ký, báo cáo bệnh đi qua gateway tới Hasura bằng token của người dùng. Ghi vẫn dùng Prisma, trước đó `TenantGuard` kiểm tra bản ghi thuộc HTX của người gọi; khác HTX trả **404**. Khi lõi lỗi, trang báo lỗi tiếng Việt và không quay về đọc Prisma. Dashboard vẫn đọc Prisma, có lọc theo HTX.
+- **Cổng nội bộ:** container `web` gọi gateway qua `http://apisix:9081` (`CORE_GATEWAY_URL`), cổng này không chịu giới hạn theo IP vì mọi yêu cầu từ server có chung một IP; JWT và phân quyền vẫn áp dụng như trên `9080`. Chẩn đoán bệnh và chatbot (khi không có khóa Groq) cũng đi qua đây.
+- **URL công khai:** đặt `AUTH_URL` trong `docker/.env.local` khi web không chạy ở `http://localhost:3000`, và thêm URL đó vào Redirect URIs của client `nextjs-web`; luồng release đọc biến này qua `--env-file`.
+
+> [!WARNING]
+> Không publish cổng `9081` ra ngoài mạng Docker. Cổng này không có giới hạn tần suất theo IP, chỉ an toàn khi chỉ có container `web` gọi được.
+
+Kiểm thử trên trình duyệt với stack thật (cần `make platform-up`, `make platform-smoke` và container `web` đang chạy):
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build --wait web
+cd apps/web && npx playwright install chromium
+E2E_CORE=1 E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/tenant/core-tenant.spec.ts --project=chromium --no-deps --reporter=list
+```
+
+Test này tạm đổi `accessTokenLifespan` của realm và tạm dừng Hasura rồi khôi phục, nên chỉ chạy trên môi trường dev.
+
+> [!NOTE]
+> Giới hạn đã biết: (1) `workflows/mattermost-push.json` đẩy sự kiện bệnh và thu hoạch của mọi HTX vào cùng một webhook; (2) `/api/dev-login` và cookie tạo trước khi nâng cấp không có access token nên mọi đọc qua lõi đều bị từ chối (đăng nhập lại để có cookie mới); (3) đường ghi được bảo vệ ở tầng ứng dụng, không phải ở database.
+
+**Nâng cấp lên Tier 2a:**
+
+- Chạy `migrate` (hai migration mới: `20261109120000_sync_schema_drift`, `20261109130000_notifications_htx`), đã nằm trong `make platform-up`.
+- Realm đang chạy không tự cập nhật: trong Keycloak Admin Console, đặt **SSO Session Idle** và **SSO Session Max** của realm `agrimarket` là 8 giờ (Realm settings > Sessions), và khai báo các thuộc tính `fullName`, `phone`, `htxId` chỉ cho admin xem và sửa (Realm settings > User profile); nếu thiếu, Keycloak 24 âm thầm bỏ các thuộc tính này khi tạo tài khoản.
+- Gán thuộc tính `htx_code` cho các tài khoản cũ, nếu không họ nhận `NO_HTX`.
+- Thông báo cũ không có người nhận và không có HTX sẽ không còn hiển thị; cảnh báo hệ thống của n8n vẫn hiển thị.
+
 ## 🔨 Biên dịch từ Mã nguồn (Build from Source)
 
 **Yêu cầu:** Node.js ≥ 20, Python ≥ 3.11, PostgreSQL ≥ 16.

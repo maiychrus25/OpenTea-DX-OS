@@ -14,7 +14,8 @@ try {
 async function mockSessionCookie(page: Page, role: string, name: string, id: string) {
   const now = Math.floor(Date.now() / 1000);
   const token = await encode({
-    token: { id, name, email: `${role}@example.com`, role, iat: now, exp: now + 60 * 60 * 8, jti: 'mock-jti-' + now },
+    // htxCode must exist in htx_profiles (the platform smoke fixture), or the layout shows the NO_HTX notice.
+    token: { id, name, email: `${role}@example.com`, role, htxCode: 'TC', iat: now, exp: now + 60 * 60 * 8, jti: 'mock-jti-' + now },
     secret: process.env.AUTH_SECRET || process.env.KEYCLOAK_CLIENT_SECRET || 'agrimarket-secret-key',
     salt: 'authjs.session-token',
   });
@@ -51,6 +52,11 @@ test.describe('Story 8.11 - Member & Household Management', () => {
   });
 
   test('8.11-E2E-001: Officer sees error state for missing household', async ({ page }) => {
+    // The forged cookie carries no access token, so the real routes would answer 401 and redirect to /login.
+    await page.route('**/api/farm/households/error-mock', r =>
+      r.fulfill({ status: 404, json: { error: { code: 'NOT_FOUND', message: 'Not found' } } })
+    );
+    await page.route('**/api/farm/parcels?household_id=error-mock', r => r.fulfill({ status: 200, json: { data: [] } }));
     await page.goto('/officer/households/error-mock');
     await page.waitForSelector('text=Lỗi truy cập');
     await expect(page.locator('text=Không tìm thấy nông hộ này hoặc bạn không có quyền truy cập.')).toBeVisible();

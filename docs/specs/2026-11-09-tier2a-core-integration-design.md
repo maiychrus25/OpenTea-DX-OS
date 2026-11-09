@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Tầng 2a: Nối ứng dụng vào lõi (định danh, đa thuê bao, đọc qua gateway)
 
-> **Trạng thái:** Chờ duyệt (2026-11-09).
+> **Trạng thái:** Đợt 2a đã triển khai trên nhánh `feat/tier2a-core-integration` (2026-11-09), chưa phát hành; thân tài liệu giữ nguyên bản thiết kế, xem "Ghi chú sau triển khai 2a" ở cuối.
 > **Phạm vi:** Đợt 2a của Tầng 2 (milestone `v1.6.0`), gồm issue #7 và #18. Đợt 2b (chuyển sang HTX chè, #19) có đặc tả riêng.
 > **Căn cứ:** Đề thi OLP 2026 mục 2 và 4 (ứng dụng Tầng 2 tiêu thụ nền tảng lõi); đặc tả `docs/specs/2026-11-08-tier1-core-platform-design.md` §10.
 
@@ -145,3 +145,38 @@ Một migration mới, chạy được trên database đang có:
 | Cookie phiên lớn hơn do chứa thêm token | next-auth chia cookie; đo kích thước trong kiểm thử trình duyệt |
 | Định dạng dữ liệu Hasura khác Prisma (ngày, quan hệ) | Test so sánh adapter với bản Prisma |
 | Bỏ sót route ghi khi gắn `TenantGuard` | Plan liệt kê từng route; test route chạy trên toàn bộ danh sách |
+
+## Ghi chú sau triển khai 2a
+
+Khác biệt/bổ sung so với thiết kế:
+
+- `_meta.filter` theo `server_port` hoạt động đúng như dự kiến: `9081` không bị giới hạn, `9080` vẫn trả 429. Yêu cầu không có token bị `openid-connect` từ chối 401 trước khi tới `limit-count`, nên kiểm tra giới hạn trong smoke dùng token hợp lệ.
+- Route `llm-chat` giới hạn theo `$remote_addr $http_authorization`: qua `9081` mọi người dùng chung một IP là container `web`, giới hạn theo IP sẽ dồn chung ngân sách.
+- Migration có hai file thay vì một: `20261109130000_notifications_htx` thêm `notifications.htx_profile_id`, vì thông báo gửi chung (`recipient_id` rỗng) trước đó hiện cho mọi HTX. Thông báo cũ không có người nhận và không có HTX không còn hiển thị; cảnh báo hệ thống của n8n (không có người gửi) vẫn hiển thị.
+- Việc làm mới token nằm ở cả hai nơi: middleware ghi cookie, và `getCoreToken()` cũng làm mới, vì yêu cầu kích hoạt làm mới vẫn mang cookie cũ vào server component. Token làm mới ở `getCoreToken()` không được lưu; middleware đã lưu.
+- `readHtxCode` dùng `atob` vì chạy trong Edge middleware.
+- `TenantGuard` có thêm `cropCycle(id)`, và được gắn thêm vào các route `POST` nhận `household_id`/`parcel_id` trong body, `soil-health`, `latest-photo`, `schedule/harvest/[cycle_id]`. `soil-health` trước đây không yêu cầu đăng nhập.
+- Realm khai báo thêm `fullName`, `phone`, `htxId` là thuộc tính chỉ admin xem và sửa, vì Keycloak 24 bỏ các thuộc tính chưa khai báo khi tạo tài khoản.
+- Hasura ngoài các relationship dạng mảng còn có object relationship `disease_reports.parcel` (adapter cần `parcel_code`) và `allow_aggregations` trên `journal_entries` (đếm trang); không đổi bộ lọc quyền. Dashboard vẫn dùng Prisma như thiết kế.
+- `api/weather` và `getFarmerParcels` cũng đọc qua adapter, ngoài danh sách ban đầu. Hasura trả `timestamp` không có múi giờ, nên `parseCoreTimestamp` đọc theo UTC để khớp Prisma.
+- Lỗi tìm thấy bởi kiểm thử trình duyệt: container `web` có `HOSTNAME=0.0.0.0` và không có `AUTH_URL`, nên `redirect_uri` thành `http://0.0.0.0:3000/...` và Keycloak từ chối (`Invalid parameter: redirect_uri`). Compose nay đặt `AUTH_URL` (mặc định `http://localhost:3000`). Unit test và smoke không phát hiện được lỗi này.
+- Kiểm thử trình duyệt đăng nhập thật qua form Keycloak. Test token hết hạn hạ `accessTokenLifespan` của realm xuống 40 giây rồi khôi phục trong `finally`, chờ token hết hạn thật và chặn `/api/auth/session`, nên chỉ middleware có thể ghi token mới; cookie sau đó được giải mã để so sánh token và thời điểm hết hạn. Test Hasura dừng và khởi động lại Hasura trong `finally`.
+- `error.tsx` nhận đúng digest `CORE_UNAVAILABLE` trên trình duyệt thật ở bản production.
+- `DISEASE_API_URL` và `OLLAMA_BASE_URL` bị bỏ khỏi các file env mẫu vì không service nào đọc; `scripts/validate-env.sh` bỏ khóa tương ứng. `KEYCLOAK_ISSUER` bỏ khỏi `docker/.env.local.example` vì compose ghi đè.
+- Test e2e `8.11-E2E-001` (trạng thái lỗi) nay mock hai route và cookie giả có `htxCode`, vì cookie không có token bị chuyển về `/login` và layout hiện `NO_HTX` khi thiếu mã HTX.
+
+Đo thực tế (máy arm64, database sạch, image và lớp build đã có cache; model được kéo lại vì volume mới):
+
+| Bước | Vòng 1 | Vòng 2 |
+| --- | --- | --- |
+| `make platform-up` | 52 giây | 49 giây |
+| `make platform-smoke` | 65 giây | 65 giây |
+| Dựng và chờ `web` | 66 giây | 5 giây (dùng cache) |
+| 5 test trình duyệt | 68 giây | 69 giây |
+
+- Smoke: 122 khẳng định PASS, 0 FAIL ở mỗi vòng (115 khẳng định cũ cộng 7 khẳng định mới).
+- Unit web: 754 test PASS, 3 skipped (405 test ban đầu vẫn còn); dataops 78; scanner 38; realm 9.
+- Cookie phiên, tính cả tên và giá trị: 5407 byte trong 2 cookie trên realm mới; 5023 byte trong 2 cookie trên realm đã chạy từ trước. next-auth tự chia cookie nên không vượt giới hạn 4 KB mỗi cookie.
+- Chưa đo thời gian toàn job Platform Smoke trên CI sau khi thêm `web` và Chromium.
+
+Giới hạn đã biết: cổng `9081` chỉ an toàn khi nằm trong mạng Docker; đường ghi được bảo vệ ở tầng ứng dụng, không phải ở database; `workflows/mattermost-push.json` đẩy sự kiện bệnh và thu hoạch của mọi HTX vào một webhook; `/api/dev-login` và cookie trước nâng cấp không có access token nên đọc qua lõi bị từ chối; lỗi làm mới trong Edge middleware không được ghi log vì `logger` dùng `process.stderr`; `disease-api` không dựng được trên máy arm64 (thiếu `tensorflow-cpu`), nên đường chẩn đoán bệnh qua gateway chỉ được kiểm thử bằng unit test.
