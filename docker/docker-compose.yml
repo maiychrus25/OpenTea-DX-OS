@@ -19,6 +19,7 @@ services:
       - ../platform/postgres/init/01-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql
       - ../platform/postgres/init/02-audit.sql:/docker-entrypoint-initdb.d/02-audit.sql
       - ../platform/postgres/init/03-audit-triggers.sql:/docker-entrypoint-initdb.d/03-audit-triggers.sql
+      - ../platform/postgres/init/04-telemetry.sql:/docker-entrypoint-initdb.d/04-telemetry.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrimarket"]
       interval: 5s
@@ -284,6 +285,73 @@ services:
     networks:
       - agrimarket-net
 
+  # MQTT broker for sensor telemetry. No host port: only reachable inside agrimarket-net.
+  # Accounts come from DXOS_MQTT_* in .env.local; entrypoint.sh builds the password file at start.
+  mosquitto:
+    image: eclipse-mosquitto:2.1.2-alpine
+    container_name: agrimarket-mosquitto
+    restart: always
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    env_file: .env.local
+    volumes:
+      - ../platform/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ../platform/mosquitto/acl:/mosquitto/config/acl:ro
+      - ../platform/mosquitto/entrypoint.sh:/entrypoint.sh:ro
+      - mosquitto_data:/mosquitto/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "1883"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - agrimarket-net
+
+  # Consumes MQTT sensor readings into telemetry.sensor_readings (acks after commit; no host port).
+  dxos-ingest:
+    build: ../platform/dataops
+    image: opentea-dx-os/dataops:local
+    container_name: agrimarket-ingest
+    restart: always
+    command: ["python", "-m", "dxos_dataops", "ingest"]
+    env_file: .env.local
+    environment:
+      DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-your_minio_access_key}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-your_minio_secret_key}
+    healthcheck:
+      # Healthy while the heartbeat (touched per message and every 30 s while connected) is younger than 90 s.
+      test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime(os.environ.get('DXOS_HEARTBEAT_PATH','/tmp/dxos-dataops.heartbeat')) < 90 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    networks:
+      - agrimarket-net
+
+  # Demo only (profile "demo"): publishes simulated readings for the parcels of the HTXs in DXOS_MQTT_DEVICES.
+  dxos-simulator:
+    build: ../platform/dataops
+    image: opentea-dx-os/dataops:local
+    container_name: agrimarket-simulator
+    profiles: ["demo"]
+    restart: unless-stopped
+    command: ["python", "-m", "dxos_dataops", "simulate"]
+    env_file: .env.local
+    environment:
+      DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    networks:
+      - agrimarket-net
+
   disease-api:
     build:
       context: ../apps/disease-api
@@ -349,6 +417,7 @@ volumes:
   n8n_data:
   seaweedfs_data:
   clamav_db:
+  mosquitto_data:
   ollama_data:
   mattermost_data:
   mattermost_config:

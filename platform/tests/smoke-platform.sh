@@ -230,6 +230,8 @@ for pair in "nested (21 levels):$NESTED_KEY" "encrypted:$ENC_KEY"; do
 done
 q_cleanup; trap - EXIT
 
+source platform/tests/smoke-dataops.sh
+
 echo "[pins]"
 unpinned=$(grep -nE '^\s*image:\s*(\S+:latest|[^:[:space:]#]+)(\s|$)' docker/docker-compose.yml || true)
 [ -z "$unpinned" ] && pass "no unpinned images" || fail "unpinned images: $unpinned"
