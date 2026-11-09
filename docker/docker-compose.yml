@@ -42,6 +42,21 @@ services:
     networks:
       - agrimarket-net
 
+  # One-shot: applies Prisma migrations (run after postgres, before hasura starts).
+  migrate:
+    build: ../apps/web/prisma
+    image: opentea-dx-os/migrate:local
+    profiles: ["tools"]
+    restart: "no"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agrimarket}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_password_here}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agrimarket-net
+
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.5
     container_name: agrimarket-keycloak

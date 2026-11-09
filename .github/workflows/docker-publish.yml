@@ -31,6 +31,8 @@ jobs:
             context: ./platform/postgres
           - service: scanner
             context: ./platform/scanner
+          - service: migrate
+            context: ./apps/web/prisma
 
     steps:
       - name: Checkout the commit that passed CI

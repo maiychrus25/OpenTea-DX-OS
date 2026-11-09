@@ -61,6 +61,8 @@ jobs:
             context: ./platform/postgres
           - service: scanner
             context: ./platform/scanner
+          - service: migrate
+            context: ./apps/web/prisma
     steps:
       - uses: actions/checkout@v4
 
@@ -127,6 +129,7 @@ jobs:
           - \`${prefix}-api:${VERSION}\`
           - \`${prefix}-postgres:${VERSION}\`
           - \`${prefix}-scanner:${VERSION}\`
+          - \`${prefix}-migrate:${VERSION}\`
 
           ## Deploy
 

@@ -49,12 +49,17 @@ for p in /api/workflow/ping /api/ai/disease/health; do
 done
 
 echo "[data]"
-PRISMA_URL="postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@localhost:5432/agrimarket"
-(cd apps/web && DATABASE_URL="$PRISMA_URL" npx prisma migrate deploy >/dev/null) && pass "prisma migrate deploy" || fail "prisma migrate deploy"
-# Triggers must exist before the fixture rows are inserted (tables only exist after migrate).
-$COMPOSE run --rm platform-init >/dev/null 2>&1 && pass "platform-init after migrate" || fail "platform-init after migrate"
-# Hasura loads its metadata at start; on a fresh DB the tables only exist after migrate, so restart it and wait until it serves them.
-$COMPOSE restart hasura >/dev/null
+# make platform-up already ran migrate + platform-init before Hasura started; Hasura must serve the tables with no restart.
+got=$($COMPOSE --profile tools run --rm -e POSTGRES_USER=agrimarket -e 'POSTGRES_PASSWORD=p@ss/w:rd' -e POSTGRES_DB=agrimarket --entrypoint node migrate /app/database-url.js)
+assert_eq "$got" "postgresql://agrimarket:p%40ss%2Fw%3Ard@postgres:5432/agrimarket" "migrate URL-encodes the password"
+TM0=$(user_token manager_tc); [ -n "$TM0" ] || fail "manager_tc token empty"
+hasura_ok=fail
+for _ in $(seq 1 15); do
+  R=$(curl -s -X POST "$GATEWAY/api/data/graphql" -H "Authorization: Bearer $TM0" -H 'x-hasura-role: manager' -H 'Content-Type: application/json' -d '{"query":"{htx_profiles(limit:1){id}}"}')
+  printf '%s' "$R" | jq -e 'has("data") and (has("errors")|not)' >/dev/null 2>&1 && { hasura_ok=pass; break; }
+  sleep 2
+done
+[ "$hasura_ok" = pass ] && pass "Hasura serves htx_profiles after migrate (no restart)" || fail "Hasura does not serve htx_profiles: $R"
 $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -q < platform/tests/fixtures/two-htx.sql >/dev/null && pass "fixture loaded" || fail "fixture load"
 FARMER_ID=$(user_id farmer_tc); [ -n "$FARMER_ID" ] || fail "farmer_tc id empty"
 psql_app "update households set keycloak_user_id='$FARMER_ID' where id='hh_tc_1'" >/dev/null

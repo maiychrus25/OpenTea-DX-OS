@@ -283,7 +283,7 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 tar -xzf opentea-dx-os-X.Y.Z.tar.gz && cd opentea-dx-os-X.Y.Z
 cp .env.example .env.local && cp docker/.env.local.example docker/.env.local   # rồi điền secret production
 export OPENTEA_VERSION=X.Y.Z
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres dxos-scanner
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner
 # Thứ tự bắt buộc: (1) postgres  (2) platform-init  (3) migrate  (4) platform-init lần nữa (gắn trigger kiểm toán vào các bảng vừa migrate)  (5) phần còn lại
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --wait postgres
 docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml run --rm platform-init
