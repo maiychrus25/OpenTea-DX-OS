@@ -252,6 +252,13 @@ jobs:
       - name: Dataops Unit Tests
         run: cd platform/dataops && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
 
+      # The Ollama image alone unpacks to several GB; the runner's preinstalled SDKs leave too little disk for the full stack.
+      - name: Free Runner Disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
       - name: Start Platform
         run: make platform-up
 
@@ -263,4 +270,6 @@ jobs:
 
       - name: Docker Logs on Failure
         if: failure()
-        run: docker compose -f docker/docker-compose.yml logs
+        run: |
+          df -h /
+          docker compose -f docker/docker-compose.yml logs
