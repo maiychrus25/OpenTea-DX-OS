@@ -89,15 +89,16 @@ export class PrismaNotificationRepository implements NotificationPort {
     }
   }
 
-  async broadcastAnnouncement(title: string, body: string, senderId: string): Promise<void> {
-    await prisma.notification.create({
-      data: {
+  async broadcastAnnouncement(title: string, body: string, senderId: string, recipientIds: string[]): Promise<void> {
+    // One row per recipient: a null recipient_id would reach every HTX.
+    await prisma.notification.createMany({
+      data: recipientIds.map((recipient_id) => ({
         type: NotificationType.BROADCAST,
         title,
         body,
-        recipient_id: null,
+        recipient_id,
         deep_link_url: `/manager/announcements`,
-      },
+      })),
     });
     void senderId;
   }

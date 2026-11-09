@@ -2,15 +2,12 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter'
 
 async function listMembers(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
-  }
+  const { htxCode } = await requireTenant()
 
   const url = new URL(request.url)
   const filterRole = url.searchParams.get('role')
@@ -19,20 +16,17 @@ async function listMembers(request: Request) {
   try {
     let data: any[] = []
     if (filterRole) {
-      data = await adapter.listUsersByRole(filterRole)
+      data = await adapter.listUsersByRole(filterRole, htxCode)
     } else {
       const [farmers, officers] = await Promise.all([
-        adapter.listUsersByRole('farmer'),
-        adapter.listUsersByRole('officer')
+        adapter.listUsersByRole('farmer', htxCode),
+        adapter.listUsersByRole('officer', htxCode)
       ])
       // Map roles so the UI knows
       const farmersWithRole = farmers.map(f => ({ ...f, role: 'farmer' }))
       const officersWithRole = officers.map(o => ({ ...o, role: 'officer' }))
       data = [...farmersWithRole, ...officersWithRole]
     }
-    // Filter by HTX ID if the manager has one
-    // But since manager doesn't have an HTX ID easily available in session right now, we return all for MVP
-    
     // Sort so newest users (createdTimestamp) appear first
     data.sort((a, b) => (b.createdTimestamp || 0) - (a.createdTimestamp || 0))
     

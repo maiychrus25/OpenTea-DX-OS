@@ -2,18 +2,15 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
+import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { PrismaBulletinRepository } from '@/infrastructure/db/repositories/PrismaBulletinRepository'
 import { GetLatestBulletinUseCase } from '@/application/bulletin/GetLatestBulletinUseCase'
 import { prisma } from '@/infrastructure/db/prisma.client'
 
 async function getBulletin(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
-  }
-  const role = (session.user as any).role
+  const { role, htxCode } = await requireTenant()
   if (role !== 'manager' && role !== 'officer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
@@ -23,8 +20,7 @@ async function getBulletin(request: Request) {
 
   if (!commodity) {
     // Default to HTX primary crop
-    // Assuming there is only one HTX profile per deployment as per schema
-    const htx = await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
+    const htx = await new PrismaHtxProfileRepository(prisma).getProfile(htxCode)
     commodity = htx?.crop_types?.[0] ?? 'rice'
   }
 

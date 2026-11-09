@@ -10,7 +10,7 @@ export interface NotificationPort {
   broadcastDiseaseReport(householdName: string, diseaseName: string, parcelCode: string): Promise<void>;
   broadcastHarvestApproved(parcelCode: string, officerId: string): Promise<void>;
   sendDirectNotification(recipientId: string, type: string, title: string, body: string, referenceId?: string): Promise<void>;
-  broadcastAnnouncement(title: string, body: string, senderId: string): Promise<void>;
+  broadcastAnnouncement(title: string, body: string, senderId: string, recipientIds: string[]): Promise<void>;
   updatePreferences(userId: string, preferences?: Record<string, unknown>): Promise<void>;
   delete(userId: string, id: string): Promise<void>;
 }

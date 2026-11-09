@@ -25,8 +25,8 @@ export class InviteMemberUseCase {
     private readonly htxProfilePort: HtxProfilePort // assuming we need this to fetch the HTX Profile
   ) {}
 
-  async execute(request: InviteMemberRequest): Promise<InviteMemberResponse> {
-    const htx = await this.htxProfilePort.findFirst()
+  async execute(request: InviteMemberRequest, inviterHtxCode: string): Promise<InviteMemberResponse> {
+    const htx = await this.htxProfilePort.findByCode(inviterHtxCode)
     if (!htx) {
       throw new Error('HTX_NOT_FOUND')
     }
@@ -37,6 +37,7 @@ export class InviteMemberUseCase {
       phone: request.phone,
       pin: request.pin,
       htxId: htx.id,
+      htxCode: inviterHtxCode,
     }, request.role, true) // enabled = true, login được ngay
 
     // Step 2: Create or Update Household in DB (only for farmer)

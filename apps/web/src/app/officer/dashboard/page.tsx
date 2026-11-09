@@ -5,6 +5,7 @@ import React from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
 import { FileText, Map, PackageCheck, AlertCircle, ArrowRight } from 'lucide-react'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { MetricCard, Pill } from '@/components/ui'
@@ -53,68 +54,48 @@ export default async function OfficerDashboard() {
     redirect('/login')
   }
 
-  // Get HTX profile for scoping queries
-  const htx = await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
+  const { htxProfileId } = await requireTenant()
 
-  let pendingJournals = 0
-  let activeParcels = 0
-  let readyLots = 0
-  let totalHouseholds = 0
-  let recentEntries: {
-    id: string
-    parcel_code: string
-    activity_type: string
-    entry_date: Date
-    status: string
-    crop_type: string
-  }[] = []
+  const [pendingJournals, activeParcels, readyLots, totalHouseholds, entries] = await Promise.all([
+    prisma.journalEntry.count({
+      where: {
+        parcel: { household: { htx_profile_id: htxProfileId } },
+        status: 'PENDING_APPROVAL',
+      },
+    }),
+    prisma.parcel.count({
+      where: {
+        household: { htx_profile_id: htxProfileId },
+        status: { notIn: ['HARVESTED', 'DRAFT'] },
+      },
+    }),
+    prisma.lot.count({
+      where: { htx_profile_id: htxProfileId, status: 'READY' },
+    }),
+    prisma.household.count({
+      where: { htx_profile_id: htxProfileId },
+    }),
+    prisma.journalEntry.findMany({
+      where: {
+        parcel: { household: { htx_profile_id: htxProfileId } },
+      },
+      orderBy: { entry_date: 'desc' },
+      take: 8,
+      include: {
+        parcel: { select: { parcel_code: true, crop_type: true } },
+        activities: { select: { activity_detail: true, product_name: true }, take: 1 },
+      },
+    }),
+  ])
 
-  if (htx) {
-    const [pending, parcels, lots, households, entries] = await Promise.all([
-      prisma.journalEntry.count({
-        where: {
-          parcel: { household: { htx_profile_id: htx.id } },
-          status: 'PENDING_APPROVAL',
-        },
-      }),
-      prisma.parcel.count({
-        where: {
-          household: { htx_profile_id: htx.id },
-          status: { notIn: ['HARVESTED', 'DRAFT'] },
-        },
-      }),
-      prisma.lot.count({
-        where: { htx_profile_id: htx.id, status: 'READY' },
-      }),
-      prisma.household.count({
-        where: { htx_profile_id: htx.id },
-      }),
-      prisma.journalEntry.findMany({
-        where: {
-          parcel: { household: { htx_profile_id: htx.id } },
-        },
-        orderBy: { entry_date: 'desc' },
-        take: 8,
-        include: {
-          parcel: { select: { parcel_code: true, crop_type: true } },
-          activities: { select: { activity_detail: true, product_name: true }, take: 1 },
-        },
-      }),
-    ])
-
-    pendingJournals = pending
-    activeParcels = parcels
-    readyLots = lots
-    totalHouseholds = households
-    recentEntries = entries.map((e) => ({
-      id: e.id,
-      parcel_code: e.parcel?.parcel_code || '—',
-      activity_type: e.activity_type,
-      entry_date: e.entry_date,
-      status: e.status,
-      crop_type: e.parcel?.crop_type || '—',
-    }))
-  }
+  const recentEntries = entries.map((e) => ({
+    id: e.id,
+    parcel_code: e.parcel?.parcel_code || '—',
+    activity_type: e.activity_type,
+    entry_date: e.entry_date,
+    status: e.status,
+    crop_type: e.parcel?.crop_type || '—',
+  }))
 
   return (
     <main className={styles.container}>

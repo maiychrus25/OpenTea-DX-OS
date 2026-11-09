@@ -8,6 +8,7 @@ import { Cloud, Droplets } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
 import { Pill } from '@/components/ui'
 
 import styles from './farmer-dashboard.module.css'
@@ -57,7 +58,7 @@ export default async function FarmerDashboard() {
     redirect('/login')
   }
 
-  const userId = session.user.id
+  const { userId } = await requireTenant()
 
   const household = await prisma.household.findFirst({
     where: { keycloak_user_id: userId },

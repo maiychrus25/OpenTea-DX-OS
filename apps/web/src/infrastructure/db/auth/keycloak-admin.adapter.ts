@@ -16,6 +16,7 @@ export interface KeycloakUserResponse {
     fullName?: string[];
     phone?: string[];
     htxId?: string[];
+    htx_code?: string[];
     [key: string]: any;
   };
 }
@@ -87,8 +88,10 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
       attributes: {
         fullName: [data.fullName],
         htxId: [data.htxId],
+        htx_code: [data.htxCode],
         phone: [data.phone]
       },
+      ...(role === 'farmer' ? {} : { requiredActions: ['CONFIGURE_TOTP'] }),
       credentials: [
         {
           type: 'password',
@@ -159,9 +162,10 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
     }
   }
 
-  async listUsersByRole(role: string): Promise<MemberData[]> {
+  async listUsersByRole(role: string, htxCode: string): Promise<MemberData[]> {
     const token = await this.getAdminToken();
-    const usersUrl = `${this.baseUrl}/admin/realms/${this.realm}/roles/${role}/users`;
+    // shortcut: one large page covers the realm because filtering is client-side; page with first/max past 10000 users per role.
+    const usersUrl = `${this.baseUrl}/admin/realms/${this.realm}/roles/${role}/users?max=10000`;
 
     const res = await fetch(usersUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -173,7 +177,7 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
     }
 
     const users = await res.json();
-    return users.map((u: KeycloakUserResponse) => ({
+    return users.filter((u: KeycloakUserResponse) => u.attributes?.htx_code?.[0] === htxCode).map((u: KeycloakUserResponse) => ({
       id: u.id,
       email: u.email || u.username,
       full_name: u.attributes?.fullName?.[0] || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Chưa cập nhật',
@@ -183,6 +187,22 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
       household_id: u.attributes?.htxId?.[0] || null, // we repurpose household_id in UI as htxId for now
       createdTimestamp: u.createdTimestamp,
     }));
+  }
+
+  async getUserHtxCode(userId: string): Promise<string | null> {
+    const token = await this.getAdminToken();
+    const res = await fetch(`${this.baseUrl}/admin/realms/${this.realm}/users/${userId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      logger.error('Failed to read user', { status: res.status, userId });
+      throw new Error('Could not read user');
+    }
+
+    const user: KeycloakUserResponse = await res.json();
+    return user.attributes?.htx_code?.[0] ?? null;
   }
 
   async updateUserStatus(userId: string, enabled: boolean): Promise<void> {

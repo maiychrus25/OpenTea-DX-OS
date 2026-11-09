@@ -173,6 +173,11 @@
           "temporary": false
         }
       ],
+      "attributes": {
+        "htx_code": [
+          "MD2"
+        ]
+      },
       "realmRoles": [
         "farmer"
       ]

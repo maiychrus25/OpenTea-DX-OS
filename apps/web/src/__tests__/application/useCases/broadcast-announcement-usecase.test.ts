@@ -25,21 +25,22 @@ describe('Story 3.7: BroadcastAnnouncementUseCase', () => {
   });
 
   it('should throw an error if title is empty', async () => {
-    await expect(useCase.execute('', 'Body', 'sender-1')).rejects.toThrow('Title is required');
+    await expect(useCase.execute('', 'Body', 'sender-1', ['user-1'])).rejects.toThrow('Title is required');
     expect(mockNotificationRepo.broadcastAnnouncement).not.toHaveBeenCalled();
   });
 
   it('should throw an error if body is empty', async () => {
-    await expect(useCase.execute('Title', '  ', 'sender-1')).rejects.toThrow('Body is required');
+    await expect(useCase.execute('Title', '  ', 'sender-1', ['user-1'])).rejects.toThrow('Body is required');
     expect(mockNotificationRepo.broadcastAnnouncement).not.toHaveBeenCalled();
   });
 
   it('should call repository to broadcast announcement', async () => {
-    await useCase.execute('Khẩn cấp: Bão sắp đến', 'Xin chào bà con, bão Yagi sắp đổ bộ, xin chú ý.', 'officer-1');
+    await useCase.execute('Khẩn cấp: Bão sắp đến', 'Xin chào bà con, bão Yagi sắp đổ bộ, xin chú ý.', 'officer-1', ['user-1']);
     expect(mockNotificationRepo.broadcastAnnouncement).toHaveBeenCalledWith(
       'Khẩn cấp: Bão sắp đến',
       'Xin chào bà con, bão Yagi sắp đổ bộ, xin chú ý.',
-      'officer-1'
+      'officer-1',
+      ['user-1']
     );
   });
 });

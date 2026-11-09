@@ -7,6 +7,7 @@ import { SetupWizard } from './_components/setup-wizard'
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { prisma } from '@/infrastructure/db/prisma.client'
+import { requireTenant } from '@/lib/api/tenant'
 
 export default async function FarmZoneSetupPage() {
   const session = await auth()
@@ -16,12 +17,13 @@ export default async function FarmZoneSetupPage() {
     redirect('/login')
   }
 
+  const { htxCode } = await requireTenant()
   const profileRepo = new PrismaHtxProfileRepository(prisma)
   const useCase = new GetHtxProfileUseCase(profileRepo)
 
   let cropTypes: string[] = []
   try {
-    const profile = await useCase.execute()
+    const profile = await useCase.execute(htxCode)
     cropTypes = profile.crop_types ?? []
   } catch {
     // If no profile, we pass empty array or fallback

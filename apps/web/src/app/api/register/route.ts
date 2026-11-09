@@ -8,6 +8,7 @@ import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseh
 import { RegisterFarmerUseCase } from '@/application/auth/register-farmer.use-case';
 import { withErrorHandler } from '@/lib/api/withErrorHandler';
 import { logger } from '@/lib/logger';
+import { prisma } from '@/infrastructure/db/prisma.client';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Họ và tên quá ngắn'),
@@ -27,12 +28,23 @@ async function postRegister(req: Request) {
     );
   }
 
+  const htx = await prisma.htxProfile.findUnique({
+    where: { id: parsed.data.htxId },
+    select: { htx_code: true },
+  });
+  if (!htx) {
+    return NextResponse.json(
+      { error: { code: 'VALIDATION_ERROR', message: 'Hợp tác xã không tồn tại' } },
+      { status: 400 }
+    );
+  }
+
   const adapter = new KeycloakAdminAdapter();
   const householdRepo = new PrismaHouseholdRepository();
   const useCase = new RegisterFarmerUseCase(adapter, householdRepo);
 
   try {
-    const result = await useCase.execute(parsed.data);
+    const result = await useCase.execute({ ...parsed.data, htxCode: htx.htx_code });
     return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
     logger.error('Registration failed', { message: error.message });

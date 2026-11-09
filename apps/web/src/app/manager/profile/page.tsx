@@ -4,19 +4,21 @@
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { prisma } from '@/infrastructure/db/prisma.client'
+import { requireTenant } from '@/lib/api/tenant'
 import { ProfileForm } from './_components/ProfileForm'
 import { AccountSection } from '@/components/ui'
 import { CertificateManager } from '@/components/features/certificate/CertificateManager'
 import styles from './page.module.css'
 
 export default async function HtxProfilePage() {
+  const { htxCode } = await requireTenant()
   const profileRepo = new PrismaHtxProfileRepository(prisma)
   const useCase = new GetHtxProfileUseCase(profileRepo)
 
   // F4: Handle NotFoundError gracefully — do not crash the page
   let profile = null
   try {
-    profile = await useCase.execute()
+    profile = await useCase.execute(htxCode)
   } catch {
     // Profile not found or DB unavailable — render empty state
   }

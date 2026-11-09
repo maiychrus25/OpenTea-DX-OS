@@ -23,6 +23,11 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
+// Mock tenant resolution
+jest.mock('@/lib/api/tenant', () => ({
+  requireTenant: jest.fn().mockResolvedValue({ userId: 'u1', role: 'manager', htxCode: 'MD2', htxProfileId: 'dummy' }),
+}))
+
 // Mock Prisma
 jest.mock('@/infrastructure/db/prisma.client', () => ({
   prisma: {

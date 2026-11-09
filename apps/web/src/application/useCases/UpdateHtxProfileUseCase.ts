@@ -8,8 +8,8 @@ import type { HtxProfileUpdateInput } from '@/lib/validations/htx-profile.schema
 export class UpdateHtxProfileUseCase {
   constructor(private readonly htxProfileRepo: HtxProfileRepository) {}
 
-  async execute(data: HtxProfileUpdateInput): Promise<HtxProfile> {
-    const updatedProfile = await this.htxProfileRepo.updateProfile(data)
+  async execute(htxCode: string, data: HtxProfileUpdateInput): Promise<HtxProfile> {
+    const updatedProfile = await this.htxProfileRepo.updateProfile(htxCode, data)
     return updatedProfile
   }
 }

@@ -90,8 +90,11 @@ export class PrismaParcelRepository implements ParcelPort {
   }
 
   async create(data: CreateParcelData): Promise<ParcelSummary> {
-    const htx = await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
-    const season = htx?.season_label ?? 'Vụ mùa mới'
+    const household = await prisma.household.findUnique({
+      where: { id: data.household_id },
+      select: { htx_profile: { select: { season_label: true } } },
+    })
+    const season = household?.htx_profile?.season_label ?? 'Vụ mùa mới'
 
     const parcel = await prisma.parcel.create({
       data: {

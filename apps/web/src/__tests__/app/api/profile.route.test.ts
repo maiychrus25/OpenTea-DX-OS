@@ -26,7 +26,7 @@ jest.mock('@/auth', () => ({
 jest.mock('@/application/useCases/UpdateHtxProfileUseCase')
 jest.mock('@/infrastructure/db/repositories/PrismaHtxProfileRepository')
 jest.mock('@/infrastructure/db/prisma.client', () => ({
-  prisma: {}
+  prisma: { htxProfile: { findUnique: jest.fn().mockResolvedValue({ id: 'htx-md2', name: 'HTX MD2' }) } }
 }))
 
 describe('/api/profile API Route', () => {
@@ -37,7 +37,7 @@ describe('/api/profile API Route', () => {
   // TC-1.6-03a: OFFICER session → PUT /api/profile → 403 Forbidden
   it('rejects PUT requests from non-MANAGER roles with 403 Forbidden', async () => {
     ;(auth as jest.Mock).mockResolvedValue({
-      user: { id: 'user-1', role: 'officer' }
+      user: { id: 'user-1', role: 'officer', htxCode: 'MD2' }
     })
 
     const request = {
@@ -55,7 +55,7 @@ describe('/api/profile API Route', () => {
   // TC-1.6-03b: MANAGER + payload invalid → 400 Bad Request
   it('rejects PUT requests with invalid payload with 400 Bad Request', async () => {
     ;(auth as jest.Mock).mockResolvedValue({
-      user: { id: 'manager-1', role: 'manager' }
+      user: { id: 'manager-1', role: 'manager', htxCode: 'MD2' }
     })
 
     const request = {
@@ -77,7 +77,7 @@ describe('/api/profile API Route', () => {
   // TC-1.6-03c: MANAGER + payload valid → 200 OK + use case executed
   it('accepts valid PUT requests from MANAGER and returns 200 OK', async () => {
     ;(auth as jest.Mock).mockResolvedValue({
-      user: { id: 'manager-1', role: 'manager' }
+      user: { id: 'manager-1', role: 'manager', htxCode: 'MD2' }
     })
 
     const mockUpdatedProfile = { id: 'profile-1', name: 'HTX MD2' }
@@ -103,6 +103,6 @@ describe('/api/profile API Route', () => {
     
     const json = await response.json()
     expect(json.data).toEqual(mockUpdatedProfile)
-    expect(executeMock).toHaveBeenCalledWith(validPayload)
+    expect(executeMock).toHaveBeenCalledWith('MD2', validPayload)
   })
 })

@@ -45,6 +45,7 @@ class RealmPolicyTest(unittest.TestCase):
             self.assertEqual(user.get("attributes", {}).get("htx_code"), ["MD2"], name)
         farmer = by_key(REALM["users"], "username", "farmer1")
         self.assertNotIn("CONFIGURE_TOTP", farmer.get("requiredActions", []))
+        self.assertEqual(farmer.get("attributes", {}).get("htx_code"), ["MD2"], "farmer1")
 
     def test_no_realm_role_maps_to_hasura_superuser(self):
         # Hasura treats the role name "admin" as superuser and takes allowed roles from realm_access.roles.

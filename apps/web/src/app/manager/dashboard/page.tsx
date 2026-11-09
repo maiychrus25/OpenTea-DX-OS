@@ -11,6 +11,7 @@ import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/Pri
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { NotFoundError } from '@/domain/errors'
 import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
 import { MetricCard, AiNote, SourceBox } from '@/components/ui'
 
 import styles from './Dashboard.module.css'
@@ -107,6 +108,8 @@ export default async function ManagerDashboard() {
     redirect('/login')
   }
 
+  const { htxCode } = await requireTenant()
+
   const profileRepo = new PrismaHtxProfileRepository(prisma)
   const useCase = new GetHtxProfileUseCase(profileRepo)
 
@@ -114,7 +117,7 @@ export default async function ManagerDashboard() {
   let profileId = ''
   
   try {
-    const profile = await useCase.execute()
+    const profile = await useCase.execute(htxCode)
     hasProfile = true
     profileId = profile.id
   } catch (error) {

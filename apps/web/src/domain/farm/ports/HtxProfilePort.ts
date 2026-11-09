@@ -8,5 +8,5 @@ export interface HtxProfile {
 }
 
 export interface HtxProfilePort {
-  findFirst(): Promise<HtxProfile | null>
+  findByCode(htxCode: string): Promise<HtxProfile | null>
 }

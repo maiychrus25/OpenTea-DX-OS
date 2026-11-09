@@ -25,10 +25,11 @@ describe('GetHtxProfileUseCase', () => {
     }
 
     const useCase = new GetHtxProfileUseCase(mockRepo)
-    const result = await useCase.execute()
+    const result = await useCase.execute('TEST')
 
     expect(result).toEqual(mockProfile)
     expect(mockRepo.getProfile).toHaveBeenCalledTimes(1)
+    expect(mockRepo.getProfile).toHaveBeenCalledWith('TEST')
   })
 
   it('throws NotFoundError when profile is missing', async () => {
@@ -39,6 +40,6 @@ describe('GetHtxProfileUseCase', () => {
 
     const useCase = new GetHtxProfileUseCase(mockRepo)
 
-    await expect(useCase.execute()).rejects.toThrow(NotFoundError)
+    await expect(useCase.execute('TEST')).rejects.toThrow(NotFoundError)
   })
 })
