@@ -110,6 +110,7 @@ model Household {
   htx_profile_id  String?
   htx_profile     HtxProfile?     @relation(fields: [htx_profile_id], references: [id])
 
+  @@index([htx_profile_id])
   @@map("households")
 }
 
@@ -215,6 +216,9 @@ model Lot {
   packaging_type   String?
   destination      String? // Nơi giao hàng
   buyer_name       String? // Tên người mua
+  packaging_date   DateTime?
+  total_weight_kg  Float?
+  packaging_spec   String?
   status           LotStatus @default(DRAFT)
   qr_image_url     String? // MinIO URL of generated QR PNG
   certificate_keys String[]  @default([]) // MinIO object keys of attached certificates
@@ -228,6 +232,7 @@ model Lot {
   htx_profile_id String?
   htx_profile    HtxProfile? @relation(fields: [htx_profile_id], references: [id])
 
+  @@index([htx_profile_id, status])
   @@map("lots")
 }
 

@@ -147,6 +147,15 @@ for weak in "" admin ADMIN change_me_x CHANGE_ME_Y; do
 done
 kc_guard "a-Strong-Pass-1" && pass "release keycloak starts with a strong admin password" || fail "release keycloak refused a strong admin password"
 
+echo "[migrations]"
+# The migration history must produce the schema the app uses: replaying it into a shadow database must match schema.prisma.
+$COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tAc "select 1 from pg_database where datname='prisma_shadow'" | grep -q 1 \
+  || $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -c "create database prisma_shadow" >/dev/null || fail "cannot create prisma_shadow"
+SHADOW_URL=$(PGU=agrimarket PGP="$POSTGRES_PASSWORD" node -e 'process.stdout.write("postgresql://"+encodeURIComponent(process.env.PGU)+":"+encodeURIComponent(process.env.PGP)+"@localhost:5432/prisma_shadow")')
+DIFF_RC=0
+DIFF_OUT=$(cd apps/web && npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url "$SHADOW_URL" --exit-code 2>&1) || DIFF_RC=$?
+[ "$DIFF_RC" = 0 ] && pass "migrations match schema.prisma (migrate diff is empty)" || fail "migrate diff exit $DIFF_RC: $DIFF_OUT"
+
 echo "[internal gateway port]"
 # The web server calls from one container IP, so port 9081 (compose network only) skips the per-IP limit.
 # Requests need a valid token: openid-connect rejects anonymous ones before limit-count counts them.
