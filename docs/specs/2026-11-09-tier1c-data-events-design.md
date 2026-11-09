@@ -144,7 +144,7 @@ Theo từng cụm: số dòng, min/max/trung bình theo `sensor`; số bản tin
 ## 6. LLM nội bộ
 
 - Service `ollama`: không publish cổng, `mem_limit: 2g`, `OLLAMA_NUM_PARALLEL=1`, `OLLAMA_MAX_QUEUE=8`.
-- `ollama-init` (một lần): kéo `DXOS_LLM_MODEL` (mặc định `qwen2.5:0.5b`), so mã từ `ollama list` với `DXOS_LLM_MODEL_ID` (mặc định `a8b0c5157701`, xác nhận lại khi triển khai); lệch thì thoát với lỗi. Đổi model phải đổi cả hai biến.
+- `ollama-init` (chạy một lần, profile `tools`, không tự chạy theo `up`): kéo `DXOS_LLM_MODEL` (mặc định `qwen2.5:0.5b`), so mã từ `ollama list` với `DXOS_LLM_MODEL_ID` (mặc định `a8b0c5157701`, xác nhận lại khi triển khai); lệch thì thoát với lỗi. Đổi model phải đổi cả hai biến.
 - Route gateway duy nhất: `POST /api/ai/llm/v1/chat/completions` → `/v1/chat/completions`. JWT có audience `dx-os-core` (cấu hình `oidc_aud`), giới hạn 30 yêu cầu/phút, timeout 120 giây.
 - Chatbot của `apps/web` không đổi. Khi không có Groq key, app nhận lỗi model không tồn tại thay vì lỗi kết nối; cả hai vào cùng nhánh xử lý lỗi. Chuyển chatbot sang Ollama thuộc Tầng 2.
 
@@ -168,7 +168,7 @@ Image `dxos-migrate`, Dockerfile đặt tại `apps/web/prisma/` để dùng th�
 
 ## 8. Kiểm thử
 
-**Unit (`platform/dataops/tests`):** phân tích topic, kiểm tra bản tin cho từng lý do từ chối; lifecycle lỗi ở từng bước thì không xoá dữ liệu nóng; dọn dòng `running`; số dòng xoá lệch thì rollback; tính `quality`; URL-encode mật khẩu.
+**Unit (`platform/dataops/tests`):** phân tích topic, kiểm tra bản tin cho từng lý do từ chối; lifecycle lỗi ở từng bước thì không xoá dữ liệu nóng; dọn dòng `running`; số dòng xoá lệch thì rollback; tính `quality`.
 
 **Smoke (`make platform-smoke`):**
 
@@ -178,7 +178,7 @@ Image `dxos-migrate`, Dockerfile đặt tại `apps/web/prisma/` để dùng th�
 | Vòng đời | Backfill rồi `lifecycle --once`: dòng nóng quá hạn biến mất, dòng còn hạn giữ nguyên; `query` đếm đúng số dòng; lineage `done` có `sha256` khớp sự kiện kiểm toán; `audit.verify_chain()` sạch; dòng đến muộn đi vào file khác |
 | Hasura | Manager `TC` chỉ thấy dữ liệu `TC`; `farmer` không truy cập được |
 | LLM | Không JWT hoặc sai audience bị 401; `/api/ai/llm/api/pull` không tới được Ollama; chat trả nội dung |
-| Khởi động | Trên database mới, Hasura phục vụ được mà không cần restart |
+| Khởi động | Trên database mới, Hasura phục vụ được mà không cần restart; image migrate URL-encode mật khẩu |
 
 **Chống hồi quy:** 79 khẳng định smoke, 38 test scanner, 7 test realm, 405 test web và toàn bộ job CI hiện có phải xanh.
 
