@@ -21,6 +21,9 @@ mosquitto_passwd -b "$PASSWD" dxos-ingest "$DXOS_MQTT_INGEST_PASSWORD"
 OLD_IFS=$IFS; IFS=,
 for entry in $DXOS_MQTT_DEVICES; do
   IFS=$OLD_IFS
+  # Same trim as Config.from_env, so the broker and the simulator agree on the account and password.
+  entry=$(printf %s "$entry" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  [ -n "$entry" ] || continue
   htx=${entry%%:*}; pw=${entry#*:}
   [ -n "$htx" ] && [ "$htx" != "$entry" ] || die "bad DXOS_MQTT_DEVICES entry (want CODE:password)"
   check "$htx" "$pw"

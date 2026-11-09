@@ -316,8 +316,6 @@ services:
     env_file: .env.local
     environment:
       DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-your_minio_access_key}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-your_minio_secret_key}
     healthcheck:
       # Healthy while the heartbeat (touched per message and every 30 s while connected) is younger than 90 s.
       test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime(os.environ.get('DXOS_HEARTBEAT_PATH','/tmp/dxos-dataops.heartbeat')) < 90 else 1)"]

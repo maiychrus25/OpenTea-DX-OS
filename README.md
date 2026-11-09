@@ -182,12 +182,12 @@ Mọi truy cập API đi qua gateway `http://localhost:9080`:
 ### Dữ liệu cảm biến, kho lạnh và LLM nội bộ
 
 - **MQTT:** broker `mosquitto` không mở cổng ra host, chỉ nhận kết nối có mật khẩu. Mỗi HTX có một tài khoản thiết bị (`DXOS_MQTT_DEVICES=TC:mật_khẩu,LB:mật_khẩu`) chỉ được ghi vào topic của HTX mình; `dxos-ingest` (`DXOS_MQTT_INGEST_PASSWORD`) kiểm tra từng bản tin rồi ghi vào `telemetry.sensor_readings`, bản tin bị từ chối được lưu kèm lý do trong `telemetry.ingest_rejects`.
-- **Kho lạnh:** `dxos-lifecycle` chạy mỗi giờ, chuyển bản ghi cũ hơn 30 ngày sang Parquet (ZSTD) trong bucket `dxos-lake`, kiểm tra lại SHA-256 và số dòng rồi mới xóa bản nóng; mỗi lần chuyển ghi vào `telemetry.lifecycle_runs` và `audit.events` (phả hệ). Truy vấn cả kho lạnh: `docker compose -f docker/docker-compose.yml exec dxos-lifecycle python -m dxos_dataops query "SELECT ..."` (view `sensor_readings_cold`).
+- **Kho lạnh:** `dxos-lifecycle` chạy mỗi giờ, chuyển bản ghi cũ hơn 30 ngày sang Parquet (ZSTD) trong bucket `dxos-lake` theo nguyên ngày UTC (mốc cắt làm tròn xuống 00:00 UTC nên bản ghi có thể nằm ở kho nóng thêm tối đa khoảng một ngày), kiểm tra lại SHA-256 và số dòng rồi mới xóa bản nóng; mỗi lần chuyển ghi vào `telemetry.lifecycle_runs` và `audit.events` (phả hệ). Truy vấn cả kho lạnh: `docker compose -f docker/docker-compose.yml exec dxos-lifecycle python -m dxos_dataops query "SELECT ..."` (view `sensor_readings_cold`).
 - **LLM nội bộ:** Ollama chạy `qwen2.5:0.5b` (Apache-2.0), không mở cổng ra host; chỉ đường chat đi qua gateway (route ở bảng trên, API quản trị của Ollama không được route).
 - **Demo:** `docker compose -f docker/docker-compose.yml --profile demo up -d dxos-simulator` bật bộ mô phỏng cảm biến cho các thửa mẫu.
 
 > [!NOTE]
-> Giới hạn đã biết: (1) truy vấn kho lạnh có thể đếm trùng một bản ghi đến muộn sau khi phân vùng của nó đã được xuất (bản ghi nằm cả ở bảng nóng lẫn file Parquet cũ cho tới vòng kế tiếp); (2) cấu hình autosave mặc định của Mosquitto có thể làm mất bản tin đang xếp hàng nếu broker sập; (3) `make platform-up` lần đầu trên máy sạch rất chậm vì phải kéo image Ollama và model (397 MB), các lần sau dùng volume `ollama_data`; (4) `ollama-init` cần mạng ra ngoài một lần; (5) `dxos-ingest` và `dxos-lifecycle` dùng chung tài khoản database `agrimarket` như `dxos-scanner` (tách vai trò thuộc Tầng 2).
+> Giới hạn đã biết: (1) view kho lạnh chỉ giữ bản được ghi nhận sớm nhất của một khóa bị xuất trùng; (2) Mosquitto ghi trạng thái xuống đĩa mỗi 60 giây (`autosave_interval 60`) nên bản tin đang xếp hàng trong tối đa 60 giây cuối có thể mất nếu broker sập; (3) `make platform-up` lần đầu trên máy sạch rất chậm vì phải kéo image Ollama và model (397 MB), các lần sau dùng volume `ollama_data`; (4) `ollama-init` cần mạng ra ngoài một lần; (5) `dxos-ingest` và `dxos-lifecycle` dùng chung tài khoản database `agrimarket` như `dxos-scanner` (tách vai trò thuộc Tầng 2); (6) mật khẩu database chứa ký tự dành riêng của URL (ví dụ `@`) làm hỏng `DXOS_DB_URL` của `dxos-ingest`, `dxos-lifecycle`, `dxos-scanner` và URL database của Hasura, vì chỉ `migrate` mã hóa mật khẩu.
 
 **Nâng cấp môi trường dev cũ:**
 
@@ -295,22 +295,27 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 tar -xzf opentea-dx-os-X.Y.Z.tar.gz && cd opentea-dx-os-X.Y.Z
 cp .env.example .env.local && cp docker/.env.local.example docker/.env.local   # rồi điền secret production
 export OPENTEA_VERSION=X.Y.Z
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner dxos-ingest dxos-lifecycle
+docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner dxos-ingest dxos-lifecycle
 # Điền DXOS_MQTT_DEVICES và DXOS_MQTT_INGEST_PASSWORD (không để change_me*) trong docker/.env.local: broker từ chối khởi động nếu còn placeholder
+# Điền MINIO_ACCESS_KEY và MINIO_SECRET_KEY: SeaweedFS từ chối khởi động nếu còn rỗng hoặc placeholder (your_minio*, change_me*)
+# Mọi lệnh đều cần --env-file docker/.env.local: thiếu cờ này Compose dùng giá trị mặc định công khai trong repo thay vì secret của anh
 # Thứ tự bắt buộc: (1) postgres  (2) platform-init  (3) migrate  (4) platform-init lần nữa (gắn trigger kiểm toán vào các bảng vừa migrate)  (5) phần còn lại  (6) ollama-init (kéo model, cần mạng ra ngoài)
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --wait postgres
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml run --rm platform-init
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml --profile tools run --rm migrate
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml run --rm platform-init
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --no-build
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml --profile tools run --rm ollama-init
+docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --wait postgres
+docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml run --rm platform-init
+docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml --profile tools run --rm migrate
+docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml run --rm platform-init
+docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --no-build
+docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml --profile tools run --rm ollama-init
 ```
 
 > [!NOTE]
 > Hasura phải khởi động sau migration (thiếu bảng thì không phục vụ dữ liệu). Cổng mở ra host: `apisix:9080`, `web:3000`, `keycloak:8080` và `seaweedfs:9000` (trình duyệt tải/xem file qua presigned URL trên cổng 9000 nên chưa thể đóng cho tới khi Tầng 2 đưa storage ra sau gateway).
 
 > [!WARNING]
-> Bắt buộc đặt `HASURA_GRAPHQL_ADMIN_SECRET` mạnh trong `docker/.env.local` trước khi triển khai: override release khiến Hasura từ chối khởi động nếu giá trị rỗng hoặc còn là placeholder `change_me*`.
+> Bắt buộc đặt `HASURA_GRAPHQL_ADMIN_SECRET` mạnh trong `docker/.env.local` trước khi triển khai: override release khiến Hasura từ chối khởi động nếu giá trị rỗng hoặc còn là placeholder `change_me*`. Cũng phải đổi `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` (SeaweedFS từ chối khởi động nếu còn placeholder, cổng 9000 mở công khai) và `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD` (cổng 8080 mở công khai, Keycloak chỉ đọc hai biến này khi database còn mới, và không có bước chặn tự động).
+
+> [!IMPORTANT]
+> Nâng cấp một bản đang chạy lên Tier 1c: (1) chạy `docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml restart hasura apisix` sau `up -d --no-build`, vì Hasura chỉ nạp metadata lúc khởi động và APISIX giữ inode cũ của file route; (2) `--env-file` khiến các giá trị trong `docker/.env.local` lần đầu có hiệu lực cho `POSTGRES_PASSWORD`, `KEYCLOAK_DB_PASSWORD` và `N8N_ENCRYPTION_KEY`: chúng phải khớp với giá trị mà volume hiện có đã được khởi tạo (trước đây là mặc định trong `docker-compose.yml`), nếu không dịch vụ sẽ không kết nối được hoặc không giải mã được dữ liệu.
 
 > [!IMPORTANT]
 > Production chỉ chạy image dựng sẵn từ GHCR (`--no-build`). Để quay lại bản trước, đặt `OPENTEA_VERSION` về phiên bản cũ và chạy lại `up -d --no-build`; migration database không tự đảo ngược, hãy sao lưu database trước khi nâng cấp. Yêu cầu Docker Compose ≥ 2.24.

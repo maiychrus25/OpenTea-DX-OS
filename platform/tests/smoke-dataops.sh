@@ -86,17 +86,22 @@ PARCELS=$(psql_app "select count(*) from public.parcels p join public.households
 $COMPOSE run --rm -T dxos-simulator python -m dxos_dataops simulate --backfill-days 45 --step-minutes 720 >/dev/null 2>&1 || fail "backfill simulate failed"
 # now-45d .. now-1d in 12-hour steps is 89 ticks of 5 sensors per parcel.
 wait_count "select count(*) from telemetry.sensor_readings where ts < now() - interval '12 hours'" "$((89 * 5 * PARCELS))" "backfill rows arrived"
-KEPT_SQL="select count(*) from telemetry.sensor_readings where ts >= now() - interval '30 days' and ts < now() - interval '12 hours'"
+# Lifecycle floors its cutoff to UTC midnight, so the partly expired day stays hot as a whole.
+CUTOFF=$(psql_app "select date_trunc('day', now() at time zone 'UTC' - interval '30 days')")
+KEPT_SQL="select count(*) from telemetry.sensor_readings where ts >= '$CUTOFF+00' and ts < now() - interval '12 hours'"
 KEPT=$(psql_app "$KEPT_SQL")
 [ "$KEPT" -gt 0 ] || fail "backfill left no in-retention rows"
 lifecycle_once() { $COMPOSE exec -T dxos-lifecycle python -m dxos_dataops lifecycle --once || fail "lifecycle --once failed"; }
+cold_count() { $COMPOSE exec -T dxos-lifecycle python -m dxos_dataops query "select count(*) from sensor_readings_cold"; }
+exported_sum() { psql_app "select coalesce(sum(row_count), 0) from telemetry.lifecycle_runs where status='done'"; }
+# Baselines, because a re-used dev lake may hold a key twice (earlier late-arrival rows) and the view counts it once.
+COLD0=$(cold_count); EXPORTED0=$(exported_sum)
 lifecycle_once
-assert_eq "$(psql_app "select count(*) from telemetry.sensor_readings where ts < now() - interval '30 days'")" "0" "no row older than 30 days remains"
+assert_eq "$(psql_app "select count(*) from telemetry.sensor_readings where ts < '$CUTOFF+00'")" "0" "no row older than the floored cutoff remains"
 assert_eq "$(psql_app "$KEPT_SQL")" "$KEPT" "rows inside retention unchanged"
-assert_eq "$($COMPOSE exec -T dxos-lifecycle python -m dxos_dataops query "select count(*) from sensor_readings_cold")" \
-  "$(psql_app "select sum(row_count) from telemetry.lifecycle_runs where status='done'")" "cold query counts every exported row"
+assert_eq "$(( $(cold_count) - COLD0 ))" "$(( $(exported_sum) - EXPORTED0 ))" "cold query counts every exported row once"
 assert_eq "$(psql_app "select count(*) from telemetry.lifecycle_runs r where status='done' and not exists (select 1 from audit.events e where e.op='lake_export' and e.source='dxos-lifecycle' and e.row_id=r.target and e.new_data->>'sha256'=r.sha256 and (e.new_data->>'rows')::bigint=r.row_count)")" "0" "every done run matches its lake_export audit event"
-assert_eq "$(psql_app "select first_bad_id from audit.verify_chain()")" "" "audit chain verifies"
+assert_eq "$(psql_app "select first_bad_id is null from audit.verify_chain()")" "t" "audit chain verifies"
 LATE=$(psql_app "select htx_code || '|' || partition_date from telemetry.lifecycle_runs where status='done' order by partition_date limit 1")
 LATE_HTX=${LATE%|*}; LATE_DATE=${LATE#*|}
 LATE_FILES="select count(*) from telemetry.lifecycle_runs where status='done' and htx_code='$LATE_HTX' and partition_date='$LATE_DATE'"
@@ -108,7 +113,7 @@ assert_eq "$(psql_app "select count(*) from telemetry.sensor_readings where parc
 
 echo "[llm]"
 LLM_URL="$GATEWAY/api/ai/llm/v1/chat/completions"
-LLM_MODEL=${DXOS_LLM_MODEL:-qwen2.5:0.5b}
+LLM_MODEL=$($COMPOSE --profile tools config --format json | jq -r '.services["ollama-init"].environment.DXOS_LLM_MODEL')  # what ollama-init pulled, not the sourced .env.local
 LLM_BODY="{\"model\":\"$LLM_MODEL\",\"max_tokens\":8,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello.\"}]}"
 LT=$(user_token manager_tc); LTN=$(user_token manager_tc dxos-noaud)
 [ -n "$LT" ] && [ -n "$LTN" ] || fail "llm tokens empty"
