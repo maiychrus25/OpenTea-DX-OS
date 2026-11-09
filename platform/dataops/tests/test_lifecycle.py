@@ -17,7 +17,7 @@ from dxos_dataops.config import Config
 
 NOW = datetime(2026, 11, 9, 8, 0, tzinfo=timezone.utc)
 UTC = timezone.utc
-OLD = datetime(2026, 10, 1, 6, 0, tzinfo=UTC)  # older than the 30-day cutoff of 2026-10-10 08:00
+OLD = datetime(2026, 10, 1, 6, 0, tzinfo=UTC)  # older than the 30-day cutoff, floored to 2026-10-10 00:00
 INGESTED = datetime(2026, 10, 1, 6, 0, 1, tzinfo=UTC)
 RUN_ID = UUID("00000000-0000-0000-0000-000000000001")
 
@@ -39,7 +39,7 @@ class FakeS3:
         self.log = log
         self.objects = {}
         self.buckets = set()
-        self.fail = None  # "upload" or "download"
+        self.fail = None  # "upload", "download" or "remove"
         self.fail_key = ""  # with fail: only keys containing this text
         self.corrupt = False
         self.fail_remove = False
@@ -71,7 +71,7 @@ class FakeS3:
 
     def remove_object(self, bucket, key):
         self.log.append("remove")
-        if self.fail_remove:
+        if self.fail_remove or self._failing("remove", key):
             raise RuntimeError("remove failed")
         self.objects.pop((bucket, key), None)
 
@@ -393,6 +393,18 @@ def test_recover_removes_object_and_marks_failed(env):
     assert env.db.runs["done"]["status"] == "done"
 
 
+def test_failed_recovery_does_not_block_others_or_partitions(env):
+    bad, good = UUID(int=2), UUID(int=3)
+    env.db.runs[bad] = dict(id=bad, target="s3://dxos-lake/bad-object", status="running", error=None)
+    env.db.runs[good] = dict(id=good, target="s3://dxos-lake/good-object", status="running", error=None)
+    env.db.add()
+    env.s3.fail, env.s3.fail_key = "remove", "bad-object"
+    assert env.run() == 0
+    assert env.db.runs[bad]["status"] == "running"  # kept for the next round
+    assert env.db.runs[good]["status"] == "failed"
+    assert not env.db.readings and len(env.db.by_status("done")) == 1
+
+
 def test_run_recovers_only_while_holding_lock(env):
     key = lifecycle.object_key("TC", date(2026, 10, 1), RUN_ID)
     env.db.runs[RUN_ID] = dict(id=RUN_ID, target=f"s3://dxos-lake/{key}", status="running", error=None)
@@ -439,17 +451,40 @@ def test_partition_rejects_deleted_in_final_transaction(env):
     assert sorted(r["htx_code"] for r in env.db.rejects) == ["LB", "TC"]
 
 
-def test_rows_inside_retention_stay_in_a_partly_expired_day(env):
-    cutoff = NOW - timedelta(days=30)  # 2026-10-10 08:00 UTC
-    expired, fresh = cutoff - timedelta(hours=1), cutoff + timedelta(hours=1)
+def test_cutoff_day_stays_hot_as_a_whole(env):
+    cutoff = datetime(2026, 10, 10, tzinfo=UTC)  # NOW - 30 days is 2026-10-10 08:00 UTC, floored to midnight
+    expired, past_retention, fresh = cutoff - timedelta(hours=1), cutoff + timedelta(hours=7), cutoff + timedelta(hours=9)
     env.db.add(ts=expired)
+    env.db.add(ts=past_retention)
     env.db.add(ts=fresh)
     env.db.add_reject("TC", expired, "bad_json")
-    env.db.add_reject("TC", fresh, "bad_json")
+    env.db.add_reject("TC", past_retention, "bad_json")
     assert env.run() == 0
-    assert [k[3] for k in env.db.readings] == [fresh]
-    assert [r["received_at"] for r in env.db.rejects] == [fresh]
+    assert sorted(k[3] for k in env.db.readings) == [past_retention, fresh]
+    assert [r["received_at"] for r in env.db.rejects] == [past_retention]
     assert env.db.run()["row_count"] == 1
+    assert env.db.read_windows == [(datetime(2026, 10, 9, tzinfo=UTC), cutoff)]
+
+
+def test_later_run_on_the_same_day_adds_no_partition(env):
+    same_day = datetime(2026, 10, 10, 7, 0, tzinfo=UTC)
+    env.db.add(ts=datetime(2026, 10, 9, 20, 0, tzinfo=UTC))
+    env.db.add(ts=same_day)
+    run_at = lambda now: lifecycle.run_once(env.s3, env.db, env.cfg, now, lambda: False, connect_lock=lambda _: env.lock)  # noqa: E731
+    assert run_at(NOW) == 0
+    assert len(env.db.by_status("done")) == 1
+    assert run_at(NOW + timedelta(hours=15)) == 0  # 23:00, the unfloored cutoff has passed same_day
+    assert len(env.db.by_status("done")) == 1 and [k[3] for k in env.db.readings] == [same_day]
+    assert run_at(NOW + timedelta(days=1)) == 0
+    assert len(env.db.by_status("done")) == 2 and not env.db.readings
+
+
+def test_cutoff_is_floored_in_utc_whatever_the_offset_of_now(env):
+    # 23:00 at UTC+7 is 16:00 UTC; flooring in local time would give a cutoff of 2026-10-09 17:00 UTC and keep this row.
+    env.db.add(ts=datetime(2026, 10, 9, 20, 0, tzinfo=UTC))
+    now = datetime(2026, 11, 9, 23, 0, tzinfo=timezone(timedelta(hours=7)))
+    assert lifecycle.run_once(env.s3, env.db, env.cfg, now, lambda: False, connect_lock=lambda _: env.lock) == 0
+    assert not env.db.readings
 
 
 def test_rejects_without_partition_deleted_after_twice_retention(env):

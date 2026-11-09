@@ -117,14 +117,14 @@ def _abandon(s3, db, bucket: str, key: str, run_id: uuid.UUID, error: str) -> No
     db.execute(MARK_FAILED_SQL, (error, run_id))
 
 
-def _export_partition(s3, db, lock_db, cfg: Config, htx: str, day: date, cutoff: datetime) -> None:
+def _export_partition(s3, db, lock_db, cfg: Config, htx: str, day: date) -> None:
     run_id = uuid.uuid4()
     key = object_key(htx, day, run_id)
     target = f"s3://{cfg.lake_bucket}/{key}"
     db.execute(INSERT_RUN_SQL, (run_id, target, htx, day))  # before the upload, so a crash leaves something to clean up
     try:
         start = datetime(day.year, day.month, day.day, tzinfo=UTC)
-        end = min(start + timedelta(days=1), cutoff)  # the cutoff day is exported in pieces, in-retention rows stay hot
+        end = start + timedelta(days=1)
         rows = db.execute(READ_ROWS_SQL, (htx, start, end)).fetchall()
         rejects = dict(db.execute(COUNT_REJECTS_SQL, (htx, start, end)).fetchall())
         quality = build_quality([(r[2], r[4]) for r in rows], rejects)
@@ -140,6 +140,7 @@ def _export_partition(s3, db, lock_db, cfg: Config, htx: str, day: date, cutoff:
             if parquet_row_count(copy) != len(rows):
                 raise ValueError("stored object has the wrong row count")
         lock_db.execute("select 1")  # a lost lock means another run may be recovering this very object
+        # Residual race: if the session dies right after this ping, a recovery can remove the object before MARK_DONE lands.
         with db.transaction():
             _delete_exported(db, rows)
             db.execute(DELETE_PARTITION_REJECTS_SQL, (htx, start, end))
@@ -161,11 +162,16 @@ def _export_partition(s3, db, lock_db, cfg: Config, htx: str, day: date, cutoff:
 def recover_interrupted(s3, db) -> int:
     """Clean up runs left `running` by a crash. Only call while holding the advisory lock."""
     running = db.execute("select id, target from telemetry.lifecycle_runs where status = 'running'").fetchall()
+    recovered = 0
     for run_id, target in running:
         bucket, _, key = target.removeprefix("s3://").partition("/")
-        s3.remove_object(bucket, key)  # removing first: a crash before the update only repeats this step
-        db.execute(MARK_FAILED_SQL, ("interrupted before completion", run_id))
-    return len(running)
+        try:
+            s3.remove_object(bucket, key)  # removing first: a crash before the update only repeats this step
+            db.execute(MARK_FAILED_SQL, ("interrupted before completion", run_id))
+            recovered += 1
+        except Exception:
+            log.exception("recovery of run %s failed, it stays running for the next round", run_id)
+    return recovered
 
 
 def run_once(s3, db, cfg: Config, now: datetime, should_stop: Callable[[], bool], connect_lock=connect_lock) -> int:
@@ -181,13 +187,14 @@ def run_once(s3, db, cfg: Config, now: datetime, should_stop: Callable[[], bool]
         recovered = recover_interrupted(s3, db)
         if recovered:
             log.warning("cleaned up %d interrupted runs", recovered)
-        cutoff = now - timedelta(days=cfg.hot_retention_days)
+        # Whole UTC days only: an exact cutoff moves hourly and would split every HTX-day into about 24 files.
+        cutoff = (now - timedelta(days=cfg.hot_retention_days)).astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
         failed = 0
         for htx, day in db.execute(PARTITIONS_SQL, (cutoff, MAX_PARTITIONS)).fetchall():
             if should_stop():
                 break
             try:
-                _export_partition(s3, db, lock_db, cfg, htx, day, cutoff)
+                _export_partition(s3, db, lock_db, cfg, htx, day)
             except Exception:
                 failed += 1
                 log.exception("export of %s %s failed, hot rows kept", htx, day)

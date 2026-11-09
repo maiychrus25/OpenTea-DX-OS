@@ -24,7 +24,11 @@ def _quote(value: str) -> str:
 
 
 def _create_view(con, glob: str) -> None:
-    con.execute(f"create or replace view sensor_readings_cold as select * from read_parquet({_quote(glob)}, hive_partitioning = true)")
+    # A key exported twice (a late reading after its partition left) keeps the first-ingested copy.
+    con.execute(
+        f"create or replace view sensor_readings_cold as select * from read_parquet({_quote(glob)}, hive_partitioning = true) "
+        "qualify row_number() over (partition by htx_code, parcel_code, sensor, ts order by ingested_at) = 1"
+    )
 
 
 def _attach_httpfs(con, cfg: Config) -> None:

@@ -37,12 +37,12 @@ def cfg():
     )
 
 
-def parquet_bytes(tmp_path):
+def parquet_bytes(tmp_path, sensor="rainfall", value=1.5, ingested_at="2026-10-01 06:00:01"):
     path = tmp_path / "x.parquet"
     con = duckdb.connect(":memory:")
     con.execute(
-        "create table r as select 'TC' htx_code, 'P-TC-001' parcel_code, 'rainfall' sensor, "
-        "timestamp '2026-10-01 06:00:00' ts, 1.5::double value, timestamp '2026-10-01 06:00:01' ingested_at"
+        f"create table r as select 'TC' htx_code, 'P-TC-001' parcel_code, '{sensor}' sensor, "
+        f"timestamp '2026-10-01 06:00:00' ts, {value}::double value, timestamp '{ingested_at}' ingested_at"
     )
     con.execute(f"copy r to '{path}' (format parquet, compression zstd)")
     con.close()
@@ -92,3 +92,18 @@ def test_timestamps_read_back_naive_utc(tmp_path, monkeypatch):
     monkeypatch.setattr(query, "_attach_httpfs", fail)
     rows = query.run_query(FakeS3({KEY: parquet_bytes(tmp_path)}), cfg(), "select ts from sensor_readings_cold")
     assert rows == [(datetime(2026, 10, 1, 6, 0),)]
+
+
+def test_key_exported_to_two_files_counts_once(tmp_path, monkeypatch):
+    def fail(*_):
+        raise duckdb.IOException("x")
+
+    monkeypatch.setattr(query, "_attach_httpfs", fail)
+    prefix = "telemetry/sensor_readings/htx=TC/date=2026-10-01/"
+    s3 = FakeS3({
+        prefix + "a.parquet": parquet_bytes(tmp_path, value=9.9, ingested_at="2026-10-02 00:00:00"),  # the late copy
+        prefix + "b.parquet": parquet_bytes(tmp_path),
+        prefix + "c.parquet": parquet_bytes(tmp_path, sensor="air_humidity", value=70.0),
+    })
+    rows = query.run_query(s3, cfg(), "select sensor, value from sensor_readings_cold order by sensor")
+    assert rows == [("air_humidity", 70.0), ("rainfall", 1.5)]
