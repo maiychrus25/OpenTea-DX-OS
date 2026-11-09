@@ -6,6 +6,7 @@ import OpenAI from 'openai'
 import { MarketDataPort } from '@/domain/ports/market-data-port'
 import { ChatHistoryPort } from '@/domain/ports/chat-history-port'
 import { logger } from '@/lib/logger'
+import { CoreUnauthorizedError } from '@/domain/errors'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -47,15 +48,15 @@ export class ChatbotUseCase {
   private client: OpenAI | null = null
   private model: string
 
+  /** getToken is only called without a Groq key: the local LLM sits behind the core gateway. */
   constructor(
     private documentStorage?: DocumentStoragePort,
     private chatHistory?: ChatHistoryPort,
-    private marketData?: MarketDataPort
+    private marketData?: MarketDataPort,
+    private getToken?: () => Promise<string>
   ) {
-    this.model = process.env.OLLAMA_MODEL || 'qwen2:0.5b'
-
     const groqApiKey = process.env.GROQ_API_KEY
-    const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://ollama:11434'
+    this.model = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b'
 
     if (groqApiKey && groqApiKey !== 'your_groq_api_key_here') {
       // Primary: Groq cloud API (faster, requires API key)
@@ -65,17 +66,19 @@ export class ChatbotUseCase {
         baseURL: 'https://api.groq.com/openai/v1',
       })
       logger.info('ChatbotUseCase: using Groq API', { model: this.model })
-    } else {
-      // Fallback: Ollama local (OpenAI-compatible endpoint)
-      // NOTE: CPU-only mode requires a small model (<=500MB). qwen2:0.5b is the
-      // minimum viable option — quality is limited. For production, set GROQ_API_KEY.
-      this.model = process.env.OLLAMA_MODEL || 'qwen2:0.5b'
-      this.client = new OpenAI({
-        apiKey: 'ollama',  // Required by openai client but ignored by Ollama
-        baseURL: `${ollamaBaseUrl}/v1`,
-      })
-      logger.info('ChatbotUseCase: using Ollama local fallback', { model: this.model, baseURL: ollamaBaseUrl })
     }
+  }
+
+  /** Groq client, or the gateway's local LLM authenticated as the caller. Throws when there is no token. */
+  private async resolveClient(): Promise<OpenAI> {
+    if (this.client) return this.client
+    if (!this.getToken) throw new CoreUnauthorizedError()
+    // NOTE: CPU-only mode requires a small model (<=500MB). qwen2.5:0.5b is the
+    // minimum viable option — quality is limited. For production, set GROQ_API_KEY.
+    return new OpenAI({
+      apiKey: await this.getToken(),
+      baseURL: `${process.env.CORE_GATEWAY_URL}/api/ai/llm/v1`,
+    })
   }
 
   async execute(
@@ -85,10 +88,7 @@ export class ChatbotUseCase {
     sessionId?: string,
     chatType: 'market' | 'technical' = 'market'
   ): Promise<ReadableStream> {
-    if (!this.client) {
-      return this.unavailableStream()
-    }
-
+    const client = await this.resolveClient()
     const encoder = new TextEncoder()
 
     // Persist user message
@@ -165,7 +165,7 @@ export class ChatbotUseCase {
         { role: 'user', content: message },
       ]
 
-      const stream = await this.client.chat.completions.create({
+      const stream = await client.chat.completions.create({
         model: this.model,
         messages,
         stream: true,

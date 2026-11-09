@@ -5,13 +5,14 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
-import { NoHtxError, NotFoundError } from '@/domain/errors'
+import { CoreUnauthorizedError, CoreUnavailableError, ForbiddenError, NoHtxError, NotFoundError } from '@/domain/errors'
 import { SubmitDiagnosisUseCase } from '@/application/disease/submit-diagnosis.usecase'
 import { DiseaseApiAdapter } from '@/infrastructure/disease-api/disease-api.adapter'
 import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
 import { PrismaDiseaseReportRepository } from '@/infrastructure/db/farm/PrismaDiseaseReportRepository'
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository'
+import { getCoreToken } from '@/lib/auth/core-token'
 import { diagnosisSchema } from '@/lib/validations/diagnosis.schema'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB — rules-and-limits.md §2.1
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
     const blob = new Blob([arrayBuffer], { type: file.type })
 
     // ── Instantiate Adapters & Use Case ───────────────────────────────
-    const diseaseAdapter = new DiseaseApiAdapter()
+    const diseaseAdapter = new DiseaseApiAdapter(await getCoreToken())
     const storageAdapter = new MinioStorageAdapter()
     const parcelPort = new PrismaParcelRepository()
     const diseaseReportPort = new PrismaDiseaseReportRepository()
@@ -109,6 +110,18 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     if (error instanceof NoHtxError) {
       return NextResponse.json({ error: { code: 'NO_HTX', message: error.message } }, { status: 403 })
+    }
+    if (error instanceof CoreUnauthorizedError) {
+      return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: error.message } }, { status: 401 })
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ error: { code: 'FORBIDDEN', message: error.message } }, { status: 403 })
+    }
+    if (error instanceof CoreUnavailableError) {
+      return NextResponse.json(
+        { error: { code: 'AI_UNAVAILABLE', message: 'Dịch vụ AI chẩn đoán bệnh đang tạm bảo trì. Vui lòng thử lại sau.' } },
+        { status: 503 },
+      )
     }
     if (error instanceof NotFoundError) {
       return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Parcel not found' } }, { status: 404 })

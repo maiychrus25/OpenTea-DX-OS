@@ -8,6 +8,7 @@ import { ChatbotUseCase } from '@/application/chatbot/ChatbotUseCase'
 import { PrismaChatHistoryRepository } from '@/infrastructure/db/chat/prisma-chat-history-repository'
 import { PrismaMarketDataRepository } from '@/infrastructure/db/market/prisma-market-data-repository'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
+import { getCoreToken } from '@/lib/auth/core-token'
 import { z } from 'zod'
 
 const chatbotSchema = z.object({
@@ -40,7 +41,7 @@ async function postChatbot(request: Request) {
   const documentAdapter = new MinioDocumentAdapter()
   const chatHistoryRepo = new PrismaChatHistoryRepository()
   const marketDataRepo = new PrismaMarketDataRepository()
-  const useCase = new ChatbotUseCase(documentAdapter, chatHistoryRepo, marketDataRepo)
+  const useCase = new ChatbotUseCase(documentAdapter, chatHistoryRepo, marketDataRepo, getCoreToken)
   const userId = session.user.id
   const sessionId = parse.data.session_id || `chat-${userId}-${Date.now()}`
 
