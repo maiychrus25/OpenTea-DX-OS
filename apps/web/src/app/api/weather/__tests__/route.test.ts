@@ -10,6 +10,7 @@ import { ValidationError, ForbiddenError } from '@/domain/errors';
 jest.mock('@/auth', () => ({
   auth: jest.fn(),
 }));
+jest.mock('@/lib/auth/core-token', () => ({ getCoreToken: jest.fn() }));
 
 
 

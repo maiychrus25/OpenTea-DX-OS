@@ -8,6 +8,8 @@ import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
 import { parcelCreateSchema } from '@/lib/validations/parcel.schema'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
+import { GatewayParcelReader } from '@/infrastructure/core/gateway-parcel-reader'
 import { ListParcelsUseCase } from '@/application/farm/ListParcelsUseCase'
 import { CreateParcelUseCase } from '@/application/farm/CreateParcelUseCase'
 import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHouseholdUseCase'
@@ -33,8 +35,7 @@ async function getParcels(request: Request) {
   const role = (session.user as any).role
   const userHouseholdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined
 
-  const repo = new PrismaParcelRepository()
-  const useCase = new ListParcelsUseCase(repo)
+  const useCase = new ListParcelsUseCase(new GatewayParcelReader(new CoreGatewayClient(role)))
   const data = await useCase.execute({ household_id: householdId, status }, role.toUpperCase(), userHouseholdId)
   return NextResponse.json({ data })
 }

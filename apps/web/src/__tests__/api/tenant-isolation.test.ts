@@ -21,6 +21,7 @@ import * as diagnosis from '@/app/api/diagnosis/route'
 
 // Every model method is a jest.fn created on first use, so any write the routes attempt is recorded.
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
+jest.mock('@/lib/auth/core-token', () => ({ getCoreToken: jest.fn() }))
 jest.mock('@/infrastructure/db/prisma.client', () => {
   const fns = new Map<string, jest.Mock>()
   const method = (model: string, name: string) => {

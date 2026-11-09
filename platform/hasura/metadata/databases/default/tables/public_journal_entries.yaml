@@ -7,16 +7,27 @@ object_relationships:
   - name: parcel
     using:
       foreign_key_constraint_on: parcel_id
+array_relationships:
+  - name: activities
+    using:
+      foreign_key_constraint_on:
+        column: journal_entry_id
+        table:
+          name: journal_activities
+          schema: public
 select_permissions:
   - role: farmer
     permission:
       columns: '*'
+      allow_aggregations: true
       filter: {parcel: {household: {keycloak_user_id: {_eq: X-Hasura-User-Id}}}}
   - role: manager
     permission:
       columns: '*'
+      allow_aggregations: true
       filter: {parcel: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}}
   - role: officer
     permission:
       columns: '*'
+      allow_aggregations: true
       filter: {parcel: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}}

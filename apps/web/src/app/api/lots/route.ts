@@ -7,13 +7,15 @@ import { TenantGuard } from '@/lib/api/tenant-guard'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { lotCreateSchema } from '@/lib/validations/lot.schema'
 import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
+import { GatewayLotReader } from '@/infrastructure/core/gateway-lot-reader'
 import { ListLotsUseCase } from '@/application/lot/ListLotsUseCase'
 import { CreateLotUseCase } from '@/application/lot/CreateLotUseCase'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 
 async function getLots(request: Request) {
-  const { role, htxProfileId } = await requireTenant()
+  const { role } = await requireTenant()
   if (role !== 'officer' && role !== 'manager') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
@@ -23,9 +25,8 @@ async function getLots(request: Request) {
   const visibility = url.searchParams.get('visibility') ?? undefined
   const statuses = visibility === 'published' ? ['READY', 'QR_EXPORTED'] : undefined
 
-  const repo = new PrismaLotRepository()
-  const useCase = new ListLotsUseCase(repo)
-  const data = await useCase.execute({ status, statuses, htx_profile_id: htxProfileId })
+  const useCase = new ListLotsUseCase(new GatewayLotReader(new CoreGatewayClient(role)))
+  const data = await useCase.execute({ status, statuses })
   return NextResponse.json({ data })
 }
 

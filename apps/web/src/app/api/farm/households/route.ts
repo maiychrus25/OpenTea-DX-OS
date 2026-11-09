@@ -6,6 +6,8 @@ import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { householdCreateSchema } from '@/lib/validations/household.schema'
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
+import { GatewayHouseholdReader } from '@/infrastructure/core/gateway-household-reader'
 import { ListHouseholdsUseCase } from '@/application/farm/ListHouseholdsUseCase'
 import { CreateHouseholdUseCase } from '@/application/farm/CreateHouseholdUseCase'
 
@@ -15,8 +17,7 @@ async function getHouseholds() {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
 
-  const repo = new PrismaHouseholdRepository()
-  const useCase = new ListHouseholdsUseCase(repo)
+  const useCase = new ListHouseholdsUseCase(new GatewayHouseholdReader(new CoreGatewayClient(role)))
   const data = await useCase.execute(htxProfileId)
   return NextResponse.json({ data })
 }

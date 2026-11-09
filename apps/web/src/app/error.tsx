@@ -26,11 +26,15 @@ export default function ErrorPage({
     return <NoHtxNotice />
   }
 
+  const coreDown = error.digest === 'CORE_UNAVAILABLE'
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 gap-4 text-center">
-      <h1 className="text-2xl font-bold text-[var(--danger,#dc2626)]">Đã xảy ra lỗi</h1>
+      <h1 className="text-2xl font-bold text-[var(--danger,#dc2626)]">
+        {coreDown ? 'Dịch vụ dữ liệu đang tạm gián đoạn' : 'Đã xảy ra lỗi'}
+      </h1>
       <p className="text-muted-foreground mb-4">
-        Hệ thống gặp sự cố không mong muốn. Vui lòng thử lại.
+        {coreDown ? 'Không thể tải dữ liệu lúc này. Vui lòng thử lại sau ít phút.' : 'Hệ thống gặp sự cố không mong muốn. Vui lòng thử lại.'}
       </p>
       <Button variant="primary" onClick={() => reset()}>
         Thử lại

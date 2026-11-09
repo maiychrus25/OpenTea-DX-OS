@@ -7,6 +7,14 @@ object_relationships:
   - name: household
     using:
       foreign_key_constraint_on: household_id
+array_relationships:
+  - name: crop_cycles
+    using:
+      foreign_key_constraint_on:
+        column: parcel_id
+        table:
+          name: parcel_crop_cycles
+          schema: public
 select_permissions:
   - role: farmer
     permission:

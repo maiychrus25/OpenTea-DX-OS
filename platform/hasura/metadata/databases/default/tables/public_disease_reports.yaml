@@ -7,6 +7,9 @@ object_relationships:
   - name: household
     using:
       foreign_key_constraint_on: household_id
+  - name: parcel
+    using:
+      foreign_key_constraint_on: parcel_id
 select_permissions:
   - role: farmer
     permission:

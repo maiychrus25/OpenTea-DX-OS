@@ -9,7 +9,7 @@ import { DomainError, ValidationError, ForbiddenError } from '@/domain/errors';
 export class GetWeatherUseCase {
   constructor(
     private readonly weatherCachePort: WeatherCachePort,
-    private readonly parcelPort: ParcelPort
+    private readonly parcelPort: Pick<ParcelPort, 'findById'>
   ) {}
 
   async execute(parcelId: string, dateStr: string, userContext?: { id: string, role: string, householdId?: string }): Promise<WeatherData | null> {

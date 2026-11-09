@@ -30,7 +30,7 @@ export default function ManagerLotsPage() {
 
   useEffect(() => {
     fetch('/api/lots?visibility=published')
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : Promise.reject(r))
       .then(d => {
         setLots((d.data || []).map((l: LotSummary) => ({ ...l, status: (l.status || '').toLowerCase() })))
       })

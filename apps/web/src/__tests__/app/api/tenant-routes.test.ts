@@ -13,6 +13,7 @@ import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/Pri
 import type { PrismaClient } from '@prisma/client'
 
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
+jest.mock('@/lib/auth/core-token', () => ({ getCoreToken: jest.fn().mockResolvedValue('tok') }))
 jest.mock('@/infrastructure/db/prisma.client', () => ({
   prisma: {
     htxProfile: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
@@ -33,6 +34,12 @@ function signIn(role: string, htxCode: string | null) {
 const get = (path: string) => new Request(`http://localhost${path}`)
 const post = (path: string) => new Request(`http://localhost${path}`, { method: 'POST', body: '{}' })
 
+const coreFetch = jest.fn()
+const coreRequest = () => {
+  const [, init] = coreFetch.mock.calls[0]
+  return { role: init.headers['x-hasura-role'], body: init.body as string }
+}
+
 beforeEach(() => {
   jest.clearAllMocks()
   mock(prisma.htxProfile.findUnique).mockImplementation(async ({ where }) => (where.htx_code === 'TC' ? tc : null))
@@ -41,6 +48,8 @@ beforeEach(() => {
   mock(prisma.household.findMany).mockResolvedValue([])
   mock(prisma.parcel.findMany).mockResolvedValue([])
   mock(prisma.lot.findMany).mockResolvedValue([])
+  coreFetch.mockImplementation(async () => new Response(JSON.stringify({ data: { households: [], lots: [] } })))
+  global.fetch = coreFetch as unknown as typeof fetch
 })
 
 const routes: [string, () => Promise<Response>][] = [
@@ -74,20 +83,21 @@ describe.each(routes)('%s', (_name, call) => {
 })
 
 describe('routes read the caller HTX', () => {
-  test('households are listed for the caller HTX', async () => {
+  // The list reads go through Hasura now, which applies the caller's HTX from the token.
+  test('households are listed through the core as the caller role', async () => {
     signIn('officer', 'TC')
     expect((await households.GET(get('/api/farm/households'), {})).status).toBe(200)
-    expect(prisma.household.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { htx_profile_id: 'htx-tc' } })
-    )
+    expect(coreRequest().role).toBe('officer')
+    expect(coreRequest().body).not.toContain('htx-tc')
+    expect(prisma.household.findMany).not.toHaveBeenCalled()
   })
 
-  test('lots are listed for the caller HTX', async () => {
+  test('lots are listed through the core as the caller role', async () => {
     signIn('manager', 'TC')
     expect((await lots.GET(get('/api/lots'), {})).status).toBe(200)
-    expect(prisma.lot.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ htx_profile_id: 'htx-tc' }) })
-    )
+    expect(coreRequest().role).toBe('manager')
+    expect(coreRequest().body).not.toContain('htx-tc')
+    expect(prisma.lot.findMany).not.toHaveBeenCalled()
   })
 
   test('search stays inside the caller HTX', async () => {
@@ -106,6 +116,7 @@ describe('routes read the caller HTX', () => {
   test('role checks still apply after the HTX is known', async () => {
     signIn('farmer', 'TC')
     expect((await households.GET(get('/api/farm/households'), {})).status).toBe(403)
+    expect(coreFetch).not.toHaveBeenCalled()
     expect(prisma.household.findMany).not.toHaveBeenCalled()
   })
 })

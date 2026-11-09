@@ -27,3 +27,17 @@ describe.each([
     expect(screen.queryByText('Tài khoản chưa được gán Hợp tác xã')).not.toBeInTheDocument()
   })
 })
+
+describe.each([
+  ['manager', ManagerError],
+  ['officer', OfficerError],
+  ['farmer', FarmerError],
+])('%s error page when the core is down', (_name, Page) => {
+  const coreDown = Object.assign(new Error('An error occurred in the Server Components render'), { digest: 'CORE_UNAVAILABLE' })
+
+  test('says in Vietnamese that the service is unavailable', () => {
+    render(<Page error={coreDown} reset={jest.fn()} />)
+    expect(screen.getByText('Dịch vụ dữ liệu đang tạm gián đoạn')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Thử lại' })).toBeInTheDocument()
+  })
+})

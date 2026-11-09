@@ -4,7 +4,7 @@
 import { LotPort, LotFilters } from '@/domain/lot/ports/LotPort'
 
 export class ListLotsUseCase {
-  constructor(private readonly lotPort: LotPort) {}
+  constructor(private readonly lotPort: Pick<LotPort, 'findAll'>) {}
 
   async execute(filters: LotFilters) {
     return this.lotPort.findAll(filters)

@@ -6,7 +6,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { PrismaDiseaseReportRepository } from '@/infrastructure/db/farm/PrismaDiseaseReportRepository';
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client';
+import { GatewayDiseaseReportReader } from '@/infrastructure/core/gateway-disease-report-reader';
 import { logger } from '@/lib/logger';
 import { Pill } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
@@ -22,8 +23,8 @@ export default async function OfficerDiseasesPage() {
     redirect('/auth/signin');
   }
 
-  const repository = new PrismaDiseaseReportRepository();
-  const rawReports = await repository.findPendingReports();
+  const reader = new GatewayDiseaseReportReader(new CoreGatewayClient(session.user.role));
+  const rawReports = await reader.findPendingReports();
 
   const { MinioStorageAdapter } = await import('@/infrastructure/storage/minio-storage.adapter');
   const storageAdapter = new MinioStorageAdapter();

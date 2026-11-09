@@ -8,6 +8,8 @@ import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
 import { journalCreateSchema } from '@/lib/validations/journal.schema'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
+import { GatewayJournalReader } from '@/infrastructure/core/gateway-journal-reader'
 import { ListJournalEntriesUseCase } from '@/application/journal/ListJournalEntriesUseCase'
 import { CreateJournalEntryUseCase } from '@/application/journal/CreateJournalEntryUseCase'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
@@ -44,8 +46,7 @@ async function getJournalEntries(request: Request) {
     householdId = url.searchParams.get('householdId') ?? undefined
   }
 
-  const repo = new PrismaJournalRepository()
-  const useCase = new ListJournalEntriesUseCase(repo)
+  const useCase = new ListJournalEntriesUseCase(new GatewayJournalReader(new CoreGatewayClient(role)))
   const result = await useCase.execute({
     parcel_id: parcelId,
     status,

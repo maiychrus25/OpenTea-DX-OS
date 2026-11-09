@@ -4,8 +4,9 @@
 'use server'
 
 import { auth } from '@/auth'
-import { PrismaDiseaseReportRepository } from '@/infrastructure/db/farm/PrismaDiseaseReportRepository'
-import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
+import { GatewayDiseaseReportReader } from '@/infrastructure/core/gateway-disease-report-reader'
+import { GatewayParcelReader } from '@/infrastructure/core/gateway-parcel-reader'
 import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
 
 export async function getFarmerParcels() {
@@ -14,9 +15,9 @@ export async function getFarmerParcels() {
     throw new Error('Unauthorized')
   }
 
-  const parcelRepo = new PrismaParcelRepository()
+  const parcelRepo = new GatewayParcelReader(new CoreGatewayClient(session.user.role))
   // We need to fetch parcels for this household
-  // The PrismaParcelRepository.findAll supports filtering by household_id, but we need the household_id first.
+  // The reader's findAll supports filtering by household_id, but we need the household_id first.
   // Wait, I can just use prisma directly here to avoid extra boilerplate if ParcelPort lacks findHouseholdIdByUserId.
   // Let's import prisma and get it.
   const { prisma } = await import('@/infrastructure/db/prisma.client')
@@ -44,7 +45,7 @@ export async function getDiagnosisHistory() {
     throw new Error('Unauthorized')
   }
 
-  const reportRepo = new PrismaDiseaseReportRepository()
+  const reportRepo = new GatewayDiseaseReportReader(new CoreGatewayClient(session.user.role))
   const storageAdapter = new MinioStorageAdapter()
   
   const history = await reportRepo.findHistoryByFarmer(session.user.id!)

@@ -5,6 +5,7 @@ import React from 'react'
 import { getFarmerParcels, getDiagnosisHistory } from './actions'
 import { DiagnosisClient } from './_components/DiagnosisClient'
 import { redirect } from 'next/navigation'
+import { CoreUnauthorizedError } from '@/domain/errors'
 
 export const metadata = {
   title: 'Chẩn đoán bệnh | Nông dân',
@@ -21,7 +22,7 @@ export default async function DiagnosisPage() {
       <DiagnosisClient initialParcels={parcels} initialHistory={history} />
     )
   } catch (error: any) {
-    if (error.message === 'Unauthorized') {
+    if (error.message === 'Unauthorized' || error instanceof CoreUnauthorizedError) {
       redirect('/login')
     }
     return <div>Có lỗi xảy ra khi tải dữ liệu: {error.message}</div>
