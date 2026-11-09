@@ -63,6 +63,8 @@ jobs:
             context: ./platform/scanner
           - service: migrate
             context: ./apps/web/prisma
+          - service: dataops
+            context: ./platform/dataops
     steps:
       - uses: actions/checkout@v4
 
@@ -130,11 +132,13 @@ jobs:
           - \`${prefix}-postgres:${VERSION}\`
           - \`${prefix}-scanner:${VERSION}\`
           - \`${prefix}-migrate:${VERSION}\`
+          - \`${prefix}-dataops:${VERSION}\`
 
           ## Deploy
 
           Download \`opentea-dx-os-${VERSION}.tar.gz\`, verify it with \`SHA256SUMS\`, then follow the
-          [release deployment guide (5-step order: postgres, platform-init, migrate, platform-init again, rest)](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/README.md#-bản-phát-hành-releases).
+          [release deployment guide (6-step order: postgres, platform-init, migrate, platform-init again, rest, then \`--profile tools run --rm ollama-init\` to pull the pinned LLM model)](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/README.md#-bản-phát-hành-releases).
+          Set \`DXOS_MQTT_DEVICES\` and \`DXOS_MQTT_INGEST_PASSWORD\` in \`docker/.env.local\` first: the broker refuses to start while any MQTT password begins with \`change_me\`.
           EOF
           } > dist/notes.md
 

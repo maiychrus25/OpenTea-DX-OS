@@ -1,11 +1,13 @@
 # Copyright (c) 2026 OpenTea Developers
 # Licensed under the MIT License. See LICENSE file in the project root for full license information.
 #
-# Release override: run web, disease-api, postgres, migrate, dxos-scanner, dxos-ingest, dxos-lifecycle and dxos-simulator from prebuilt GHCR images instead of building from source.
+# Release override: run web, disease-api, postgres, migrate, dxos-scanner and the dataops services (dxos-ingest, dxos-lifecycle, dxos-simulator) from prebuilt GHCR images instead of building from source.
 # Usage (from the release bundle root):
 #   export OPENTEA_VERSION=1.2.0
 #   docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner dxos-ingest dxos-lifecycle
-#   (see README "Bản phát hành" for the order: postgres, platform-init, migrate, platform-init again, rest, then ollama-init)
+#   (dxos-simulator, profile demo, shares the dataops image; add it to pull only when running the demo)
+#   (see README "Bản phát hành" for the order: postgres, platform-init, migrate, platform-init again, rest, then `--profile tools run --rm ollama-init`;
+#   set the DXOS_MQTT_* secrets in docker/.env.local first, the broker refuses change_me* passwords)
 #   ollama and ollama-init use the public pinned ollama/ollama image, so they need no override here.
 #   docker compose -f docker/docker-compose.yml -f docker/docker-compose.release.yml up -d --no-build
 # Requires Docker Compose >= 2.24 for the !reset tag.

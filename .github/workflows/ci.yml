@@ -249,6 +249,9 @@ jobs:
       - name: Scanner Unit Tests
         run: cd platform/scanner && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
 
+      - name: Dataops Unit Tests
+        run: cd platform/dataops && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
+
       - name: Start Platform
         run: make platform-up
 

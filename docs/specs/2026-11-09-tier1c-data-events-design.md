@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Tầng 1c: Dữ liệu và sự kiện (MQTT, vòng đời dữ liệu, lineage, LLM nội bộ)
 
-> **Trạng thái:** Chờ duyệt (2026-11-09).
+> **Trạng thái:** Giai đoạn 1c đã triển khai trên nhánh `feat/tier1c-data-events` (2026-11-09); thân tài liệu giữ nguyên bản thiết kế, xem "Ghi chú sau triển khai 1c" ở cuối.
 > **Phạm vi:** Giai đoạn 1c của Tầng 1 (milestone `v1.5.0`, issue #11), chi tiết hoá §9 của đặc tả Tầng 1; kèm sửa #15 và #17.
 > **Căn cứ:** Đề thi OLP 2026 mục 4, các nguyên lý về vòng đời dữ liệu (nóng → lake), IT/OT (cảm biến → bản sao số), phả hệ và chất lượng dữ liệu; đặc tả `docs/specs/2026-11-08-tier1-core-platform-design.md`.
 
@@ -208,3 +208,29 @@ Image `dxos-migrate`, Dockerfile đặt tại `apps/web/prisma/` để dùng th�
 | `ACL pattern` của Mosquitto 2.1 khác kỳ vọng | Kiểm chứng ở bước đầu bằng khẳng định smoke `TC` ghi vào topic `LB` |
 | Ollama làm CI chậm hoặc thiếu RAM | Đo thời gian; thêm cache model nếu đáng kể; cắt LLM nếu không xử lý được trước 16/11 |
 | Chuyển `migrate` làm đổi luồng cũ | Smoke trên database mới; giữ thứ tự 5 bước trong README |
+
+## Ghi chú sau triển khai 1c
+
+Khác biệt/bổ sung so với thiết kế:
+
+- `lifecycle.run_once` có tham số từ khoá `connect_lock=` (mặc định là kết nối thật) làm điểm tiêm cho kiểm thử, giống `scan=` của scanner; năm tham số vị trí đầu giữ nguyên.
+- Kiểm tra URL-encode mật khẩu của `migrate` nằm trong smoke ("migrate URL-encodes the password"), không có kiểm thử riêng cho entrypoint.
+- Ngày cắt (cutoff) chỉ nằm một phần trong hạn lưu nóng nên đọc, đếm reject và xóa reject đều bị chặn bởi `min(day_end, cutoff)`; phần còn lại giữ nóng. Hệ quả: một HTX-ngày có thể có nhiều file Parquet nhỏ (tối đa khoảng 24 file nếu chạy mỗi giờ); chưa có compaction.
+- Reject mồ côi chỉ bị xóa khi HTX-ngày đó không còn dòng nóng, để cụm đang chờ sau giới hạn 100 vẫn báo được reject.
+- `httpfs` đã được xác nhận hoạt động với SeaweedFS (đọc trực tiếp `s3://`); nhánh tải về thư mục tạm vẫn giữ, chỉ dùng khi `httpfs` lỗi `duckdb.IOException`, và đã kiểm chứng trên kho thật.
+- Chống mất dữ liệu khi kết quả COMMIT không rõ: `_abandon` đọc trạng thái dòng chạy trước khi xóa object; nếu không đọc được thì không đụng gì và để `recover_interrupted` quyết định. Nếu xóa object lỗi, dòng giữ `running` thay vì `failed`.
+- Trước bước cuối, phiên giữ khóa được ping và cập nhật `done` có điều kiện `status='running'` (kiểm tra rowcount), để lần chạy mất khóa không xóa dòng nóng của object đang được lần khác phục hồi.
+- Bucket `dxos-lake` được tạo trước bước phục hồi.
+- `lifecycle --once` thoát mã 1 khi có cụm lỗi; bộ giả lập báo lỗi khi publish không hoàn tất và không dùng `client_id` cố định.
+- `ingest`: lỗi DB thì đóng kết nối, ngắt client và vòng chạy dựng lại client; khởi động lỗi DB/broker thử lại mỗi 5 giây; `ingest_rejects.payload` là `bytea` (payload không phải UTF-8 vẫn lưu được); JSON lồng sâu được xử lý như `bad_json`.
+- Entrypoint Mosquitto từ chối mật khẩu rỗng; với `DXOS_MQTT_REQUIRE_STRONG=1` (override release) từ chối mọi mật khẩu bắt đầu bằng `change_me` không phân biệt hoa thường.
+- Smoke: truy vấn telemetry giới hạn ở hai thửa fixture để bộ giả lập demo không làm lệch số đếm; bước chat LLM thử lại khi HTTP 429 (tối đa 65 giây) và `fail` hoạt động dưới `set -euo pipefail`; `ollama-init` so khớp chính xác cả tên model lẫn ID.
+- Digest xác nhận: `qwen2.5:0.5b` có ID `a8b0c5157701` (397 MB).
+- Phạm vi smoke: 109 khẳng định PASS, 0 FAIL ở mỗi vòng trên database sạch (gồm 79 khẳng định cũ).
+
+Đo thực tế (máy arm64, mạng chậm):
+
+- `make platform-up` trên database sạch (volume mới, image Ollama và model đã có cache sau lần đầu): 205 giây ở vòng 1 và 194 giây ở vòng 2. Lần dựng đầu tiên trên máy chưa có image Ollama/model mất 1338 giây, chủ yếu do kéo image và model 397 MB.
+- Platform Smoke (`make platform-smoke`): 50 giây ở vòng 1 và 49 giây ở vòng 2. Thời gian trên CI chưa biết; sẽ đo ở lần chạy CI đầu tiên và bổ sung tại đây.
+
+Giới hạn đã biết: truy vấn kho lạnh có thể đếm trùng một bản ghi đến muộn sau khi phân vùng của nó đã được xuất (bản ghi nằm ở cả bảng nóng lẫn file Parquet cũ cho tới vòng kế tiếp); autosave mặc định của Mosquitto có thể làm mất bản tin đang xếp hàng nếu broker sập; `make platform-up` lần đầu chậm vì phải kéo image Ollama và model; `ollama-init` cần mạng ra ngoài một lần; một cửa sổ hiếm còn lại nếu phiên giữ khóa chết ngay sau lần ping trong khi lần chạy khác phục hồi cùng object; `executemany` nạp từng dòng nên một HTX-ngày rất lớn sẽ chậm chứ không mất dữ liệu; `dxos-ingest` và `dxos-lifecycle` dùng tài khoản `agrimarket` (tách vai trò thuộc Tầng 2).
