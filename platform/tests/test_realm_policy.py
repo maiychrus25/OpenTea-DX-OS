@@ -56,6 +56,10 @@ class RealmPolicyTest(unittest.TestCase):
         self.assertEqual(REALM.get("ssoSessionIdleTimeout"), 28800)
         self.assertEqual(REALM.get("ssoSessionMaxLifespan"), 28800)
 
+    def test_refresh_tokens_are_not_single_use(self):
+        # Concurrent requests refresh with the same token; a rotated token would end the session of the loser.
+        self.assertFalse(REALM.get("revokeRefreshToken", False))
+
     def test_otp_policy(self):
         self.assertEqual(REALM.get("otpPolicyType"), "totp")
         self.assertEqual(REALM.get("otpPolicyDigits"), 6)

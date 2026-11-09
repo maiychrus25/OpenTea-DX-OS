@@ -9,6 +9,7 @@ import {
   KEYCLOAK_INTERNAL,
   readHtxCode,
   refreshAccessToken,
+  roleFromRealmRoles,
 } from "@/lib/auth/token-refresh"
 
 interface KeycloakProfile {
@@ -67,25 +68,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       if (profile) {
         // Extract role from Keycloak realm_access (UserInfo endpoint)
-        const kp = profile as KeycloakProfile;
-        if (kp.realm_access && Array.isArray(kp.realm_access.roles)) {
-          const roles = kp.realm_access.roles;
-          if (roles.includes("manager")) token.role = "manager";
-          else if (roles.includes("officer")) token.role = "officer";
-          else if (roles.includes("farmer")) token.role = "farmer";
-        }
+        const role = roleFromRealmRoles((profile as KeycloakProfile).realm_access?.roles);
+        if (role) token.role = role;
       }
       
       // Fallback: Decode access_token (which usually contains realm_access)
       if (!token.role && account?.access_token) {
         try {
           const decoded = JSON.parse(Buffer.from(account.access_token.split('.')[1], 'base64').toString('utf8'));
-          if (decoded.realm_access && Array.isArray(decoded.realm_access.roles)) {
-            const roles = decoded.realm_access.roles;
-            if (roles.includes("manager")) token.role = "manager";
-            else if (roles.includes("officer")) token.role = "officer";
-            else if (roles.includes("farmer")) token.role = "farmer";
-          }
+          const role = roleFromRealmRoles(decoded.realm_access?.roles);
+          if (role) token.role = role;
         } catch (e) {
           logger.error("Failed to decode access token", { error: e });
         }

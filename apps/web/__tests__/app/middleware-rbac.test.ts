@@ -19,6 +19,7 @@ jest.mock('@/auth', () => ({
 // Mock public-resource-path
 jest.mock('@/lib/contracts/public-resource-path', () => ({
   isPublicResourcePath: (pathname: string) => /^\/(?:lot|htx)\/[^/]+$/.test(pathname),
+  isPublicApiPath: jest.requireActual('@/lib/contracts/public-resource-path').isPublicApiPath,
 }))
 
 // Import pure function — không import middleware handler (Edge Runtime incompatible)
@@ -50,6 +51,14 @@ describe('resolveAuthRedirect — unauthenticated', () => {
 
   it('allows public /htx/[code] path', () => {
     expect(resolveAuthRedirect('/htx/HTX001', false, undefined)).toBe(allow)
+  })
+
+  it('allows anonymous self-registration on /api/register', () => {
+    expect(resolveAuthRedirect('/api/register', false, undefined)).toBe(allow)
+  })
+
+  it('still refuses anonymous access to paths under /api/register', () => {
+    expect(resolveAuthRedirect('/api/register/admin', false, undefined)).toBe('UNAUTHORIZED_API')
   })
 })
 

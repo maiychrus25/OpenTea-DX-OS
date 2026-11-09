@@ -12,19 +12,31 @@ export const KEYCLOAK_CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET || 'agr
 const REFRESH_WINDOW_SECONDS = 30
 const REFRESH_TIMEOUT_MS = 5000
 
-export function readHtxCode(accessToken: string): string | null {
+function readClaims(accessToken: string): Record<string, any> | null {
   try {
-    // atob, not Buffer: this runs in the Edge middleware. Only the ASCII htx_code claim is read, so UTF-8 can stay undecoded.
+    // atob, not Buffer: this runs in the Edge middleware. Only ASCII claims are read, so UTF-8 can stay undecoded.
     const payload = accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-    return JSON.parse(atob(payload)).htx_code || null
+    return JSON.parse(atob(payload))
   } catch {
     return null
   }
 }
 
+export function readHtxCode(accessToken: string): string | null {
+  return readClaims(accessToken)?.htx_code || null
+}
+
+/** The strongest role in Keycloak's realm_access.roles, or undefined when none is recognised. */
+export function roleFromRealmRoles(roles: unknown): 'manager' | 'officer' | 'farmer' | undefined {
+  if (!Array.isArray(roles)) return undefined
+  return (['manager', 'officer', 'farmer'] as const).find((role) => roles.includes(role))
+}
+
 export async function refreshAccessToken(token: JWT, fetchImpl: typeof fetch = fetch): Promise<JWT> {
   // No refresh token: a dev-login or pre-upgrade cookie, or a refresh that already failed.
-  if (!token.refreshToken) return token
+  if (!token.refreshToken) {
+    return process.env.NODE_ENV === 'production' ? { ...token, accessToken: undefined, error: 'RefreshFailed' } : token
+  }
 
   const now = Math.floor(Date.now() / 1000)
   const expiresAt = token.accessTokenExpiresAt ?? 0
@@ -51,6 +63,7 @@ export async function refreshAccessToken(token: JWT, fetchImpl: typeof fetch = f
         refreshToken: data.refresh_token ?? token.refreshToken,
         accessTokenExpiresAt: now + data.expires_in,
         htxCode: readHtxCode(data.access_token),
+        role: roleFromRealmRoles(readClaims(data.access_token)?.realm_access?.roles),
       }
     }
     logger.error('Keycloak token refresh failed', { status: response.status })
@@ -59,7 +72,7 @@ export async function refreshAccessToken(token: JWT, fetchImpl: typeof fetch = f
     logger.error('Keycloak token refresh failed', { status: 'unreachable' })
   }
 
-  // A parallel request may have won the refresh; a token that still works must not end the session.
+  // Keycloak being down or slow must not end a session whose access token still works.
   if (expiresAt > now) return token
   return { ...token, accessToken: undefined, refreshToken: undefined, error: 'RefreshFailed' }
 }

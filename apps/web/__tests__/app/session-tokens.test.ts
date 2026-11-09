@@ -153,6 +153,49 @@ describe('refreshAccessToken', () => {
   })
 })
 
+describe('refreshAccessToken role and missing refresh token', () => {
+  const refreshedWith = async (claims: Record<string, unknown>, role: JWT['role'] = 'officer') => {
+    const access = accessTokenWith(claims)
+    const fetchImpl = jest.fn().mockResolvedValue(keycloakAnswers({ access_token: access, expires_in: 300 }))
+    return refreshAccessToken({ ...tokenExpiringIn(10), role }, fetchImpl)
+  }
+
+  it('updates the role when Keycloak changed it', async () => {
+    const result = await refreshedWith({ htx_code: 'TC', realm_access: { roles: ['offline_access', 'manager'] } })
+    expect(result.role).toBe('manager')
+  })
+
+  it('clears the role when the refreshed token has no recognised role', async () => {
+    const result = await refreshedWith({ htx_code: 'TC', realm_access: { roles: ['offline_access'] } })
+    expect(result.role).toBeUndefined()
+  })
+
+  it('clears the role when the refreshed token has no realm_access', async () => {
+    const result = await refreshedWith({ htx_code: 'TC' })
+    expect(result.role).toBeUndefined()
+  })
+
+  it('applies the same role order as sign-in', async () => {
+    const result = await refreshedWith({ realm_access: { roles: ['farmer', 'officer'] } }, 'farmer')
+    expect(result.role).toBe('officer')
+  })
+
+  describe('in production', () => {
+    const env = process.env as Record<string, string | undefined>
+    const original = env.NODE_ENV
+    beforeEach(() => { env.NODE_ENV = 'production' })
+    afterEach(() => { env.NODE_ENV = original })
+
+    it('sends a session without a refresh token to login', async () => {
+      const fetchImpl = jest.fn()
+      const result = await refreshAccessToken({ sub: 'user-1', accessToken: 'stale', htxCode: 'TC' }, fetchImpl)
+      expect(result.error).toBe('RefreshFailed')
+      expect(result.accessToken).toBeUndefined()
+      expect(fetchImpl).not.toHaveBeenCalled()
+    })
+  })
+})
+
 describe('auth callbacks', () => {
   it('stores the Keycloak tokens in the JWT at sign-in', async () => {
     const access = accessTokenWith({ htx_code: 'MD2', realm_access: { roles: ['manager'] } })

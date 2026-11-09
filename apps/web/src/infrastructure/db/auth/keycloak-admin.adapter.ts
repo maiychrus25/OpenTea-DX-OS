@@ -33,8 +33,13 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
   constructor() {
     this.baseUrl = process.env.KEYCLOAK_INTERNAL_URL?.replace('/realms/agrimarket', '') || 'http://keycloak:8080';
     this.realm = 'agrimarket';
-    this.adminUser = process.env.KC_BOOTSTRAP_ADMIN_USERNAME || 'admin';
-    this.adminPass = process.env.KC_BOOTSTRAP_ADMIN_PASSWORD || 'admin';
+    const adminUser = process.env.KC_BOOTSTRAP_ADMIN_USERNAME || process.env.KEYCLOAK_ADMIN;
+    const adminPass = process.env.KC_BOOTSTRAP_ADMIN_PASSWORD || process.env.KEYCLOAK_ADMIN_PASSWORD;
+    if (process.env.NODE_ENV === 'production' && !(adminUser && adminPass)) {
+      throw new Error('Keycloak admin credentials are not configured: set KEYCLOAK_ADMIN and KEYCLOAK_ADMIN_PASSWORD');
+    }
+    this.adminUser = adminUser || 'admin';
+    this.adminPass = adminPass || 'admin';
   }
 
   private async getAdminToken(): Promise<string> {
