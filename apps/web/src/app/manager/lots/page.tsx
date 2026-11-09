@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { QrCode, Info } from 'lucide-react'
 import { Pill } from '@/components/ui'
 import styles from './lots.module.css'
+import { fetchJson } from '@/lib/api/fetch-json'
 
 interface LotSummary {
   id: string
@@ -29,8 +30,7 @@ export default function ManagerLotsPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/lots?visibility=published')
-      .then(r => r.ok ? r.json() : Promise.reject(r))
+    fetchJson<{ data?: LotSummary[] }>('/api/lots?visibility=published')
       .then(d => {
         setLots((d.data || []).map((l: LotSummary) => ({ ...l, status: (l.status || '').toLowerCase() })))
       })

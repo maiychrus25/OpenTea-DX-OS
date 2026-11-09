@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from 'react'
 import styles from '../lots.module.css'
+import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface Parcel {
   id: string
@@ -30,10 +31,9 @@ export function LotCreateForm({ onSuccess, onCancel }: LotCreateFormProps) {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetch('/api/farm/parcels')
-      .then(r => r.ok ? r.json() : Promise.reject(r))
+    fetchJson<{ data?: Parcel[] }>('/api/farm/parcels')
       .then(j => setParcels(j.data || []))
-      .catch(() => setParcels([]))
+      .catch(() => { setParcels([]); setError(LOAD_FAILED_MESSAGE) })
   }, [])
 
   function toggleParcel(id: string) {

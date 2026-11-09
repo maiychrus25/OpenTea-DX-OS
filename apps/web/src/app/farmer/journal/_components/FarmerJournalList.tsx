@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { Pill } from '@/components/ui'
 import { ArrowLeft, Plus } from 'lucide-react'
 import styles from '../journal.module.css'
+import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface JournalEntry {
   id: string
@@ -53,15 +54,15 @@ function formatDetail(detail: string | null | undefined): string {
 export function FarmerJournalList() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const fetchEntries = useCallback(() => {
     setLoading(true)
-    fetch('/api/journal')
-      .then(r => r.ok ? r.json() : Promise.reject(r))
-      .then(j => setEntries(j.data || []))
-      .catch(() => setEntries([]))
+    fetchJson<{ data?: JournalEntry[] }>('/api/journal')
+      .then(j => { setEntries(j.data || []); setLoadFailed(false) })
+      .catch(() => { setEntries([]); setLoadFailed(true) })
       .finally(() => setLoading(false))
   }, [])
 
@@ -100,6 +101,8 @@ export function FarmerJournalList() {
 
       {loading ? (
         <div className={styles.empty}>Đang tải...</div>
+      ) : loadFailed ? (
+        <div className={styles.empty}>{LOAD_FAILED_MESSAGE}</div>
       ) : entries.length === 0 ? (
         <div className={styles.empty}>Bạn chưa ghi nhật ký nào.</div>
       ) : (

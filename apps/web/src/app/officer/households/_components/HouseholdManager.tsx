@@ -7,6 +7,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Phone, MapPin } from 'lucide-react'
 import styles from '../households.module.css'
+import { fetchJson } from '@/lib/api/fetch-json'
 
 interface HouseholdSummary {
   id: string
@@ -33,8 +34,7 @@ export function HouseholdManager() {
 
   const fetchHouseholds = useCallback(() => {
     setLoading(true)
-    fetch('/api/farm/households')
-      .then(r => r.ok ? r.json() : Promise.reject(r))
+    fetchJson<{ data?: HouseholdSummary[] }>('/api/farm/households')
       .then(j => { setHouseholds(j.data || []); setLoadFailed(false) })
       .catch(() => { setHouseholds([]); setLoadFailed(true) })
       .finally(() => setLoading(false))

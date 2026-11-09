@@ -6,6 +6,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { Check, CheckCircle2 } from 'lucide-react'
 import styles from '../approve.module.css'
+import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface JournalEntry {
   id: string
@@ -43,15 +44,15 @@ export function ApproveList() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [approving, setApproving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const fetchEntries = useCallback(() => {
     setLoading(true)
-    fetch('/api/journal?status=PENDING_APPROVAL')
-      .then(r => r.ok ? r.json() : Promise.reject(r))
-      .then(j => setEntries(j.data || []))
-      .catch(() => setEntries([]))
+    fetchJson<{ data?: JournalEntry[] }>('/api/journal?status=PENDING_APPROVAL')
+      .then(j => { setEntries(j.data || []); setLoadFailed(false) })
+      .catch(() => { setEntries([]); setLoadFailed(true) })
       .finally(() => setLoading(false))
   }, [])
 
@@ -135,6 +136,8 @@ export function ApproveList() {
 
       {loading ? (
         <div className={styles.empty}>Đang tải...</div>
+      ) : loadFailed ? (
+        <div className={styles.empty}>{LOAD_FAILED_MESSAGE}</div>
       ) : entries.length === 0 ? (
         <div className={styles.empty}>
           <CheckCircle2 size={36} className="text-emerald-600 mb-2 mx-auto block" />

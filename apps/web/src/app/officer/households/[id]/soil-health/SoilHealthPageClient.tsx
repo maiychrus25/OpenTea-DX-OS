@@ -30,6 +30,7 @@ import {
   Activity,
 } from 'lucide-react'
 import styles from './soil-health-page.module.css'
+import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 // ─── Types ───────────────────────────────────────
 interface Parcel {
@@ -140,6 +141,7 @@ export default function SoilHealthPageClient({
   // ─ State ─
   const [parcels, setParcels] = useState<Parcel[]>([])
   const [parcelsLoading, setParcelsLoading] = useState(true)
+  const [parcelsLoadFailed, setParcelsLoadFailed] = useState(false)
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null)
   const [soilData, setSoilData] = useState<SoilHealthDataPoint[]>([])
   const [soilLoading, setSoilLoading] = useState(false)
@@ -150,9 +152,7 @@ export default function SoilHealthPageClient({
   useEffect(() => {
     async function loadParcels() {
       try {
-        const res = await fetch(`/api/farm/parcels?household_id=${householdId}`)
-        if (!res.ok) throw new Error('Failed to load parcels')
-        const json = await res.json()
+        const json = await fetchJson<{ data?: Parcel[] }>(`/api/farm/parcels?household_id=${householdId}`)
         const list: Parcel[] = json.data || []
         setParcels(list)
         // Auto-select first parcel that has coordinates
@@ -164,6 +164,7 @@ export default function SoilHealthPageClient({
         }
       } catch {
         setParcels([])
+        setParcelsLoadFailed(true)
       } finally {
         setParcelsLoading(false)
       }
@@ -262,6 +263,10 @@ export default function SoilHealthPageClient({
             <div className={styles.loadingState}>
               <div className={styles.spinner} />
               <p className={styles.loadingText}>Đang tải...</p>
+            </div>
+          ) : parcelsLoadFailed ? (
+            <div className={styles.emptyState}>
+              <p className={styles.emptyText}>{LOAD_FAILED_MESSAGE}</p>
             </div>
           ) : parcels.length === 0 ? (
             <div className={styles.emptyState}>

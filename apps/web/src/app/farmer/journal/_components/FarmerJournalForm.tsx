@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from 'react'
 import styles from '../journal.module.css'
+import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface Parcel {
   id: string
@@ -43,14 +44,13 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetch('/api/farm/parcels')
-      .then(r => r.ok ? r.json() : Promise.reject(r))
+    fetchJson<{ data?: Parcel[] }>('/api/farm/parcels')
       .then(j => {
         const list = j.data || []
         setParcels(list)
         if (list.length > 0) setParcelId(list[0].id)
       })
-      .catch(() => setParcels([]))
+      .catch(() => { setParcels([]); setError(LOAD_FAILED_MESSAGE) })
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {

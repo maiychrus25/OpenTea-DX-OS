@@ -6,6 +6,7 @@
 import { useEffect } from 'react'
 import { Button } from '@/components/ui'
 import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
+import { redirectToLogin } from '@/lib/api/redirect-to-login'
 
 export default function ErrorPage({
   error,
@@ -14,6 +15,12 @@ export default function ErrorPage({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const tokenRefused = error.digest === 'CORE_UNAUTHORIZED'
+
+  useEffect(() => {
+    if (tokenRefused) redirectToLogin()
+  }, [tokenRefused])
+
   useEffect(() => {
     // Log error to an external monitoring service instead of console
     // This satisfies AC6: no console.log / console.error in source files
@@ -24,6 +31,14 @@ export default function ErrorPage({
 
   if (error.digest === 'NO_HTX') {
     return <NoHtxNotice />
+  }
+
+  if (tokenRefused) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <p className="text-muted-foreground">Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...</p>
+      </div>
+    )
   }
 
   const coreDown = error.digest === 'CORE_UNAVAILABLE'

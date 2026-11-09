@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react'
 import { Users, ArrowRight } from 'lucide-react'
 import styles from '../wizard.module.css'
+import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface Household {
   id: string
@@ -24,6 +25,7 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
   const [newPhone, setNewPhone] = useState('')
   const [households, setHouseholds] = useState<Household[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [htxProfileId, setHtxProfileId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -36,8 +38,7 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
         const htxData = await htxRes.json()
         if (htxData.data?.id) {
           setHtxProfileId(htxData.data.id)
-          const res = await fetch(`/api/farm/households?htxProfileId=${htxData.data.id}`)
-          const data = await res.json()
+          const data = await fetchJson<{ data: any[] }>(`/api/farm/households?htxProfileId=${htxData.data.id}`)
           setHouseholds(data.data.map((h: any) => ({
             id: h.id,
             name: h.name,
@@ -45,7 +46,7 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
           })))
         }
       } catch {
-        // Failed to load households — handled silently
+        setLoadFailed(true)
       } finally {
         setIsLoading(false)
       }
@@ -58,6 +59,7 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
       {/* Left Panel: Household List */}
       <div className={styles.leftPanel}>
         <h2 className={styles.panelTitle}>Danh sách nông hộ</h2>
+        {loadFailed && <p className="text-red-500 text-sm mb-3">{LOAD_FAILED_MESSAGE}</p>}
         <div className={styles.householdList}>
           {households.map((h) => (
             <button
