@@ -4,6 +4,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
+import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
 import { Home, FileText, Stethoscope, User, Bell, Calendar } from 'lucide-react'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
@@ -14,7 +15,7 @@ export default async function FarmerLayout({ children }: { children: React.React
   if (session.user.role !== 'farmer') redirect('/unauthorized')
 
   const profileRepo = new PrismaHtxProfileRepository(prisma)
-  // A missing code shows the empty header; the page below answers NO_HTX and this layout keeps sign-out reachable.
+  // Without an HTX the pages would only show empty data; the shell stays so sign-out is reachable.
   const htxProfile = session.user.htxCode ? await profileRepo.getProfile(session.user.htxCode) : null
 
   const navItems = [
@@ -34,7 +35,7 @@ export default async function FarmerLayout({ children }: { children: React.React
       htxName={htxProfile?.name || 'Chưa cập nhật'}
       htxLocation={htxProfile?.address || ''}
     >
-      {children}
+      {htxProfile ? children : <NoHtxNotice />}
     </AppShell>
   )
 }
