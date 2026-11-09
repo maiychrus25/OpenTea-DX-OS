@@ -6,7 +6,7 @@ import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
-import { journalCreateSchema } from '@/lib/validations/journal.schema'
+import { journalCreateSchema, journalListQuerySchema } from '@/lib/validations/journal.schema'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
 import { GatewayJournalReader } from '@/infrastructure/core/gateway-journal-reader'
@@ -31,9 +31,11 @@ async function getJournalEntries(request: Request) {
 
   const url = new URL(request.url)
   const parcelId = url.searchParams.get('parcel_id') ?? undefined
-  const status = url.searchParams.get('status') ?? undefined
-  const page = parseInt(url.searchParams.get('page') ?? '1', 10)
-  const limit = parseInt(url.searchParams.get('limit') ?? '20', 10)
+  const { status, page, limit } = journalListQuerySchema.parse({
+    status: url.searchParams.get('status') || undefined,
+    page: url.searchParams.get('page') || undefined,
+    limit: url.searchParams.get('limit') || undefined,
+  })
 
   // Lấy tạm role do NextAuth type chưa extend
   const role = (session.user as any).role

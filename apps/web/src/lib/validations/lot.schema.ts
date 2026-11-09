@@ -14,4 +14,8 @@ export const lotCreateSchema = z.object({
   certificate_keys: z.array(z.string()).optional(),
 })
 
+export const lotListQuerySchema = z.object({
+  status: z.enum(['DRAFT', 'READY', 'QR_EXPORTED']).optional(),
+})
+
 export type LotCreateInput = z.infer<typeof lotCreateSchema>

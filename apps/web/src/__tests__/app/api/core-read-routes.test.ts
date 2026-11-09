@@ -4,6 +4,7 @@
 
 import { auth } from '@/auth'
 import { prisma } from '@/infrastructure/db/prisma.client'
+import { logger } from '@/lib/logger'
 import * as parcels from '@/app/api/farm/parcels/route'
 import * as households from '@/app/api/farm/households/route'
 import * as household from '@/app/api/farm/households/[id]/route'
@@ -17,6 +18,9 @@ import LotDetailPage from '@/app/manager/lots/[lot_code]/page'
 import OfficerDiseasesPage from '@/app/officer/diseases/page'
 import DiagnosisPage from '@/app/farmer/diagnosis/page'
 import { getDiagnosisHistory, getFarmerParcels } from '@/app/farmer/diagnosis/actions'
+import { LotStatus, ParcelStatus } from '@prisma/client'
+import { parcelListQuerySchema } from '@/lib/validations/parcel.schema'
+import { lotListQuerySchema } from '@/lib/validations/lot.schema'
 
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 jest.mock('@/lib/auth/core-token', () => ({ getCoreToken: jest.fn().mockResolvedValue('tok') }))
@@ -133,6 +137,7 @@ beforeAll(() => {
 beforeEach(() => {
   jest.clearAllMocks()
   jest.spyOn(console, 'error').mockImplementation(() => undefined)
+  jest.spyOn(logger, 'error').mockImplementation(() => undefined)
   mock(prisma.htxProfile.findUnique).mockResolvedValue({ id: 'htx-tc', htx_code: 'TC' })
   coreFetch.mockImplementation(async () => new Response(JSON.stringify({ data: coreData })))
   global.fetch = coreFetch as unknown as typeof fetch
@@ -160,6 +165,14 @@ describe.each(routes)('%s', (_name, role, call) => {
     expect(response.status).toBe(401)
     expect((await response.json()).error.code).toBe('UNAUTHORIZED')
   })
+
+  test('answers 403 FORBIDDEN when the gateway forbids the request', async () => {
+    signIn(role)
+    coreFetch.mockImplementation(async () => new Response('{}', { status: 403 }))
+    const response = await call()
+    expect(response.status).toBe(403)
+    expect((await response.json()).error.code).toBe('FORBIDDEN')
+  })
 })
 
 describe.each(pages)('%s', (_name, role, call) => {
@@ -173,6 +186,12 @@ describe.each(pages)('%s', (_name, role, call) => {
     signIn(role)
     coreFetch.mockRejectedValue(new TypeError('fetch failed'))
     await expect(call()).rejects.toMatchObject({ digest: 'CORE_UNAVAILABLE' })
+  })
+
+  test('lets a refused token reach error.tsx with its digest', async () => {
+    signIn(role)
+    coreFetch.mockImplementation(async () => new Response('{}', { status: 401 }))
+    await expect(call()).rejects.toMatchObject({ digest: 'CORE_UNAUTHORIZED' })
   })
 })
 
@@ -188,4 +207,46 @@ test('the diagnosis page sends the user to login when the gateway refuses the to
   mock(prisma.household.findFirst).mockResolvedValue({ id: 'h1' })
   coreFetch.mockImplementation(async () => new Response('{}', { status: 401 }))
   await expect(DiagnosisPage()).rejects.toMatchObject({ digest: expect.stringContaining('/login') })
+})
+
+describe('list routes refuse bad query input before reaching the core', () => {
+  const badQueries: [string, string, (url: string) => Promise<Response>, string][] = [
+    ['parcels status', 'officer', (url) => parcels.GET(get(url), {}), '/api/farm/parcels?status=BOGUS'],
+    ['lots status', 'manager', (url) => lots.GET(get(url), {}), '/api/lots?status=BOGUS'],
+    ['journal status', 'officer', (url) => journal.GET(get(url), {}), '/api/journal?status=BOGUS'],
+    ['journal limit text', 'officer', (url) => journal.GET(get(url), {}), '/api/journal?limit=abc'],
+    ['journal negative limit', 'officer', (url) => journal.GET(get(url), {}), '/api/journal?limit=-1'],
+    ['journal zero limit', 'officer', (url) => journal.GET(get(url), {}), '/api/journal?limit=0'],
+    ['journal fractional limit', 'officer', (url) => journal.GET(get(url), {}), '/api/journal?limit=1.5'],
+    ['journal limit beyond a GraphQL Int', 'officer', (url) => journal.GET(get(url), {}), '/api/journal?limit=1e30'],
+    ['journal page text', 'officer', (url) => journal.GET(get(url), {}), '/api/journal?page=abc'],
+    ['journal page zero', 'officer', (url) => journal.GET(get(url), {}), '/api/journal?page=0'],
+  ]
+
+  test.each(badQueries)('%s answers 400', async (_name, role, call, url) => {
+    signIn(role)
+    const response = await call(url)
+    expect(response.status).toBe(400)
+    expect((await response.json()).error.code).toBe('VALIDATION_ERROR')
+    expect(coreFetch).not.toHaveBeenCalled()
+  })
+
+  const goodQueries: [string, string, (url: string) => Promise<Response>, string][] = [
+    ['parcels with a status', 'officer', (url) => parcels.GET(get(url), {}), '/api/farm/parcels?status=TENDING'],
+    ['parcels with an empty status', 'officer', (url) => parcels.GET(get(url), {}), '/api/farm/parcels?status='],
+    ['lots with a status', 'manager', (url) => lots.GET(get(url), {}), '/api/lots?status=READY'],
+    ['journal approved', 'officer', (url) => journal.GET(get(url), {}), '/api/journal?status=APPROVED'],
+    ['journal pending', 'officer', (url) => journal.GET(get(url), {}), '/api/journal?status=PENDING_APPROVAL&page=2&limit=50'],
+  ]
+
+  test.each(goodQueries)('%s still reaches the core', async (_name, role, call, url) => {
+    signIn(role)
+    expect((await call(url)).status).toBe(200)
+    expect(coreFetch).toHaveBeenCalled()
+  })
+
+  test('the status lists match the database enums', () => {
+    for (const status of Object.values(ParcelStatus)) expect(parcelListQuerySchema.safeParse({ status }).success).toBe(true)
+    for (const status of Object.values(LotStatus)) expect(lotListQuerySchema.safeParse({ status }).success).toBe(true)
+  })
 })

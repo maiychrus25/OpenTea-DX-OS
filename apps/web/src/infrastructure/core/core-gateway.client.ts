@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { CoreUnauthorizedError, CoreUnavailableError } from '@/domain/errors'
+import { CoreUnauthorizedError, CoreUnavailableError, ForbiddenError } from '@/domain/errors'
 import { getCoreToken } from '@/lib/auth/core-token'
+import { logger } from '@/lib/logger'
 
 const TIMEOUT_MS = 10_000
 
@@ -36,15 +37,24 @@ export class CoreGatewayClient {
         cache: 'no-store',
         signal: AbortSignal.timeout(TIMEOUT_MS),
       })
-    } catch {
+    } catch (cause) {
+      logger.error('Core gateway request failed', { cause })
       throw new CoreUnavailableError()
     }
 
-    if (response.status === 401) throw new CoreUnauthorizedError()
-    if (!response.ok) throw new CoreUnavailableError()
+    // Log only the status and Hasura's errors: the request carries the token and the variables.
+    if (!response.ok) {
+      logger.error('Core gateway refused the request', { status: response.status })
+      if (response.status === 401) throw new CoreUnauthorizedError()
+      if (response.status === 403) throw new ForbiddenError('Bạn không có quyền truy cập dữ liệu này')
+      throw new CoreUnavailableError()
+    }
 
     const body = (await response.json().catch(() => null)) as { data?: T; errors?: unknown[] } | null
-    if (!body?.data || body.errors?.length) throw new CoreUnavailableError()
+    if (!body?.data || body.errors?.length) {
+      logger.error('Core gateway returned no usable data', { status: response.status, errors: body?.errors })
+      throw new CoreUnavailableError()
+    }
     return body.data
   }
 }

@@ -6,7 +6,7 @@ import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
-import { parcelCreateSchema } from '@/lib/validations/parcel.schema'
+import { parcelCreateSchema, parcelListQuerySchema } from '@/lib/validations/parcel.schema'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
 import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
 import { GatewayParcelReader } from '@/infrastructure/core/gateway-parcel-reader'
@@ -30,7 +30,7 @@ async function getParcels(request: Request) {
 
   const url = new URL(request.url)
   const householdId = url.searchParams.get('household_id') ?? undefined
-  const status = url.searchParams.get('status') ?? undefined
+  const { status } = parcelListQuerySchema.parse({ status: url.searchParams.get('status') || undefined })
 
   const role = (session.user as any).role
   const userHouseholdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined

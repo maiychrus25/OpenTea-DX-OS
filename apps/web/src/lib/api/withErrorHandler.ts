@@ -36,6 +36,12 @@ export function withErrorHandler<TContext = any>(handler: RouteHandler<TContext>
           { status: 503 }
         )
       }
+      if (err instanceof CoreUnauthorizedError) {
+        return NextResponse.json(
+          { error: { code: 'UNAUTHORIZED', message: err.message } },
+          { status: 401 }
+        )
+      }
       if (isNextInternalError(err)) {
         throw err
       }
@@ -58,7 +64,7 @@ export function withErrorHandler<TContext = any>(handler: RouteHandler<TContext>
           { status: 400 }
         )
       }
-      if (err instanceof UnauthorizedError || err instanceof CoreUnauthorizedError) {
+      if (err instanceof UnauthorizedError) {
         return NextResponse.json(
           { error: { code: 'UNAUTHORIZED', message: err.message } },
           { status: 401 }

@@ -4,8 +4,9 @@
 
 import { NextResponse } from 'next/server'
 import { CoreGatewayClient, parseCoreTimestamp } from '@/infrastructure/core/core-gateway.client'
-import { CoreUnauthorizedError, CoreUnavailableError } from '@/domain/errors'
+import { CoreUnauthorizedError, CoreUnavailableError, ForbiddenError } from '@/domain/errors'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { logger } from '@/lib/logger'
 
 jest.mock('@/lib/auth/core-token', () => ({ getCoreToken: jest.fn() }))
 
@@ -15,6 +16,12 @@ const clientWith = (fetchImpl: jest.Mock) => new CoreGatewayClient('manager', as
 beforeAll(() => {
   process.env.CORE_GATEWAY_URL = 'http://gateway:9081'
 })
+
+let logError: jest.SpyInstance
+beforeEach(() => {
+  logError = jest.spyOn(logger, 'error').mockImplementation(() => undefined)
+})
+afterEach(() => logError.mockRestore())
 
 describe('CoreGatewayClient', () => {
   test('graphql sends Authorization and x-hasura-role to CORE_GATEWAY_URL/api/data/graphql', async () => {
@@ -47,7 +54,7 @@ describe('CoreGatewayClient', () => {
     ['a network error', () => Promise.reject(new TypeError('fetch failed'))],
     ['a timeout', () => Promise.reject(new DOMException('timed out', 'TimeoutError'))],
     ['a 5xx', () => Promise.resolve(reply({}, 502))],
-    ['an unexpected status', () => Promise.resolve(reply({}, 403))],
+    ['an unexpected status', () => Promise.resolve(reply({}, 429))],
     ['a body that is not JSON', () => Promise.resolve(new Response('<html>', { status: 200 }))],
     ['a body with errors', () => Promise.resolve(reply({ errors: [{ message: 'field not found' }] }))],
   ])('graphql throws CoreUnavailableError on %s', async (_name, respond) => {
@@ -57,6 +64,13 @@ describe('CoreGatewayClient', () => {
   test('graphql throws CoreUnauthorizedError on 401', async () => {
     const fetchImpl = jest.fn().mockResolvedValue(reply({}, 401))
     await expect(clientWith(fetchImpl).graphql('{ a }')).rejects.toBeInstanceOf(CoreUnauthorizedError)
+  })
+
+  test('graphql throws ForbiddenError on 403, which does not claim the core is down', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue(reply({}, 403))
+    const failure = clientWith(fetchImpl).graphql('{ a }')
+    await expect(failure).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(failure).rejects.not.toBeInstanceOf(CoreUnavailableError)
   })
 
   test('graphql never returns partial data when errors is present', async () => {
@@ -69,6 +83,45 @@ describe('CoreGatewayClient', () => {
       throw new CoreUnauthorizedError()
     }, jest.fn() as unknown as typeof fetch)
     await expect(client.graphql('{ a }')).rejects.toBeInstanceOf(CoreUnauthorizedError)
+  })
+})
+
+describe('CoreGatewayClient logging', () => {
+  const failingRequest = (respond: () => Promise<Response>) =>
+    clientWith(jest.fn(respond)).graphql('query ($id: String!) { a(id: $id) }', { id: 'secret-variable-value' }).catch(() => undefined)
+  const logged = () => JSON.stringify(logError.mock.calls)
+
+  test('logs the HTTP status of a failed response', async () => {
+    await failingRequest(() => Promise.resolve(reply({}, 502)))
+    expect(logError).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ status: 502 }))
+  })
+
+  test.each([401, 403])('logs a %i from the gateway', async (status) => {
+    await failingRequest(() => Promise.resolve(reply({}, status)))
+    expect(logError).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ status }))
+  })
+
+  test('logs the errors of a GraphQL failure', async () => {
+    const errors = [{ message: 'field not found', extensions: { code: 'validation-failed' } }]
+    await failingRequest(() => Promise.resolve(reply({ errors })))
+    expect(logError).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ status: 200, errors }))
+  })
+
+  test('logs the cause of a network failure', async () => {
+    const cause = new TypeError('fetch failed')
+    await failingRequest(() => Promise.reject(cause))
+    expect(logError).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ cause }))
+  })
+
+  test.each([
+    ['a failed response', () => Promise.resolve(reply({}, 502))],
+    ['a GraphQL failure', () => Promise.resolve(reply({ errors: [{ message: 'x' }] }))],
+    ['a network failure', () => Promise.reject(new TypeError('fetch failed'))],
+  ])('never logs the token or the variable values on %s', async (_name, respond) => {
+    await failingRequest(respond)
+    expect(logError).toHaveBeenCalled()
+    expect(logged()).not.toContain('tok')
+    expect(logged()).not.toContain('secret-variable-value')
   })
 })
 
@@ -104,5 +157,9 @@ describe('withErrorHandler', () => {
 
   test('CoreUnavailableError carries the digest that reaches error.tsx', () => {
     expect(new CoreUnavailableError().digest).toBe('CORE_UNAVAILABLE')
+  })
+
+  test('CoreUnauthorizedError carries the digest that reaches error.tsx', () => {
+    expect(new CoreUnauthorizedError().digest).toBe('CORE_UNAUTHORIZED')
   })
 })

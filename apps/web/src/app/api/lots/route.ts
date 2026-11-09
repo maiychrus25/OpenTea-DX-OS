@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
-import { lotCreateSchema } from '@/lib/validations/lot.schema'
+import { lotCreateSchema, lotListQuerySchema } from '@/lib/validations/lot.schema'
 import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
 import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
 import { GatewayLotReader } from '@/infrastructure/core/gateway-lot-reader'
@@ -21,7 +21,7 @@ async function getLots(request: Request) {
   }
 
   const url = new URL(request.url)
-  const status = url.searchParams.get('status') ?? undefined
+  const { status } = lotListQuerySchema.parse({ status: url.searchParams.get('status') || undefined })
   const visibility = url.searchParams.get('visibility') ?? undefined
   const statuses = visibility === 'published' ? ['READY', 'QR_EXPORTED'] : undefined
 
