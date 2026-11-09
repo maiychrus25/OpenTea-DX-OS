@@ -9,6 +9,7 @@ import { NotificationPort } from '@/domain/ports/notification-port'
 
 export interface SubmitDiagnosisCommand {
   farmerUserId: string;
+  htxCode: string;
   parcelId: string;
   imageBlob: Blob;
   imageBuffer: Buffer;
@@ -41,7 +42,8 @@ export class SubmitDiagnosisUseCase {
     const uploadResult = await this.storagePort.uploadFile(
       command.imageBuffer,
       'diagnosis.jpg',
-      command.mimeType
+      command.mimeType,
+      command.htxCode
     )
 
     // 3. Call AI Service (Disease API)

@@ -3,28 +3,33 @@
 
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
+import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { assertInDocumentRoot } from '@/domain/document/document-namespace'
 import { GenerateDocumentDownloadUrlUseCase } from '@/application/document/generate-document-download-url.usecase'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
+async function getDocumentUrl(req: Request) {
+  const session = await auth()
+  if (!session?.user || (session.user.role !== 'officer' && session.user.role !== 'manager')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const { htxCode } = await requireTenant()
+
+  const { searchParams } = new URL(req.url)
+  const key = searchParams.get('key')
+  const downloadParam = searchParams.get('download')
+
+  if (!key) {
+    return NextResponse.json({ error: 'key query parameter is required' }, { status: 400 })
+  }
+  assertInDocumentRoot(key, htxCode)
+
+  const download = downloadParam === 'true'
+
   try {
-    const session = await auth()
-    if (!session?.user || (session.user.role !== 'officer' && session.user.role !== 'manager')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { searchParams } = new URL(req.url)
-    const key = searchParams.get('key')
-    const downloadParam = searchParams.get('download')
-
-    if (!key) {
-      return NextResponse.json({ error: 'key query parameter is required' }, { status: 400 })
-    }
-
-    const download = downloadParam === 'true'
-
     // Dependency Injection
     const storagePort = new MinioDocumentAdapter()
     const useCase = new GenerateDocumentDownloadUrlUseCase(storagePort)
@@ -44,3 +49,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
+
+export const GET = withErrorHandler(getDocumentUrl)

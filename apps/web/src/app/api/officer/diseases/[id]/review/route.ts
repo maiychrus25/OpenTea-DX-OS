@@ -40,7 +40,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     const { status, treatment_recommendation } = parsed.data;
 
-    await new TenantGuard(await requireTenant()).diseaseReport(params.id);
+    const tenant = await requireTenant();
+    await new TenantGuard(tenant).diseaseReport(params.id);
 
     const useCase = new ReviewDiseaseReportUseCase(
       new PrismaDiseaseReportRepository(),
@@ -52,6 +53,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     await useCase.execute({
       reportId: params.id,
       officerId: session.user.id!,
+      htxCode: tenant.htxCode,
       status,
       treatment_recommendation: treatment_recommendation || ''
     });

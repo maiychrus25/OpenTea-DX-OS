@@ -41,7 +41,7 @@ async function postChatbot(request: Request) {
   const documentAdapter = new MinioDocumentAdapter()
   const chatHistoryRepo = new PrismaChatHistoryRepository()
   const marketDataRepo = new PrismaMarketDataRepository()
-  const useCase = new ChatbotUseCase(documentAdapter, chatHistoryRepo, marketDataRepo, getCoreToken)
+  const useCase = new ChatbotUseCase(documentAdapter, chatHistoryRepo, marketDataRepo, getCoreToken, session.user.htxCode ?? undefined)
   const userId = session.user.id
   const sessionId = parse.data.session_id || `chat-${userId}-${Date.now()}`
 

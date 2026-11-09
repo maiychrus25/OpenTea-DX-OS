@@ -43,6 +43,7 @@ Trả lời bằng tiếng Việt. Cuối mỗi câu trả lời, liệt kê ngu
 Nếu không có dữ liệu trong tài liệu, nói rõ "Tài liệu kỹ thuật hiện tại không đề cập đến vấn đề này."`
 
 import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
+import { documentRoot } from '@/domain/document/document-namespace'
 
 export class ChatbotUseCase {
   private client: OpenAI | null = null
@@ -53,7 +54,8 @@ export class ChatbotUseCase {
     private documentStorage?: DocumentStoragePort,
     private chatHistory?: ChatHistoryPort,
     private marketData?: MarketDataPort,
-    private getToken?: () => Promise<string>
+    private getToken?: () => Promise<string>,
+    private htxCode?: string
   ) {
     const groqApiKey = process.env.GROQ_API_KEY
     this.model = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b'
@@ -126,9 +128,13 @@ export class ChatbotUseCase {
         if (!this.documentStorage) {
           throw new Error('DocumentStoragePort is required for technical chatbot')
         }
+        if (!this.htxCode) {
+          throw new Error('An HTX is required for the technical chatbot documents')
+        }
+        const root = documentRoot(this.htxCode)
         const [resourceDocs, areaDocs] = await Promise.all([
-          this.documentStorage.listDocuments('para/Resources/'),
-          this.documentStorage.listDocuments('para/Areas/')
+          this.documentStorage.listDocuments(`${root}Resources/`),
+          this.documentStorage.listDocuments(`${root}Areas/`)
         ])
         const docs = [...resourceDocs, ...areaDocs]
         const textDocs = docs.filter(d => !d.isDir && (d.name.endsWith('.txt') || d.name.endsWith('.md')))

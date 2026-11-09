@@ -181,6 +181,14 @@ def test_clean_object_recorded_and_kept():
     assert all(r.closed and r.released for r in s3.responses)
 
 
+def test_htx_namespaced_documents_are_scanned():
+    s3, db, cfg, log = make()
+    key = "para/TC/Archives/Lô hàng đã xuất/Hồ_sơ.txt"
+    s3.put("agrimarket-docs", key)
+    assert run_once(s3, db, cfg, scan=clean) == 1
+    assert ("agrimarket-docs", key, "e1") in db.seen
+
+
 def test_infected_object_copied_then_removed():
     s3, db, cfg, log = make()
     s3.put("agrimarket-docs", "a/b.txt")

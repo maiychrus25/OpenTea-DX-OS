@@ -112,11 +112,13 @@ describe('SubmitDiagnosisUseCase — farmer isolation + AI invariant', () => {
       imageBlob: DUMMY_BLOB,
       imageBuffer: DUMMY_BUFFER,
       mimeType: 'image/jpeg',
+      htxCode: 'TC',
     })
 
     expect(result.report_id).toBeDefined()
     expect(result.disease_name).toBe('Leaf blight')
     expect(result.confidence_score).toBe(0.87)
+    expect(mocks.storagePort.uploadFile).toHaveBeenCalledWith(DUMMY_BUFFER, 'diagnosis.jpg', 'image/jpeg', 'TC')
   })
 
   it('TC-10.2-AC5-2: throws FORBIDDEN_PARCEL when farmer submits for another household\'s parcel', async () => {
@@ -133,6 +135,7 @@ describe('SubmitDiagnosisUseCase — farmer isolation + AI invariant', () => {
       imageBlob: DUMMY_BLOB,
       imageBuffer: DUMMY_BUFFER,
       mimeType: 'image/jpeg',
+      htxCode: 'TC',
     })).rejects.toThrow('FORBIDDEN_PARCEL')
   })
 
@@ -149,6 +152,7 @@ describe('SubmitDiagnosisUseCase — farmer isolation + AI invariant', () => {
       imageBlob: DUMMY_BLOB,
       imageBuffer: DUMMY_BUFFER,
       mimeType: 'image/jpeg',
+      htxCode: 'TC',
     })).rejects.toThrow('PARCEL_NOT_FOUND')
   })
 
@@ -166,6 +170,7 @@ describe('SubmitDiagnosisUseCase — farmer isolation + AI invariant', () => {
       imageBlob: DUMMY_BLOB,
       imageBuffer: DUMMY_BUFFER,
       mimeType: 'image/jpeg',
+      htxCode: 'TC',
     })).rejects.toThrow('HOUSEHOLD_NOT_FOUND')
   })
 
@@ -182,6 +187,7 @@ describe('SubmitDiagnosisUseCase — farmer isolation + AI invariant', () => {
       imageBlob: DUMMY_BLOB,
       imageBuffer: DUMMY_BUFFER,
       mimeType: 'image/jpeg',
+      htxCode: 'TC',
     })
 
     // AI Invariant: never return treatment recommendations directly to farmer
@@ -204,6 +210,7 @@ describe('SubmitDiagnosisUseCase — farmer isolation + AI invariant', () => {
       imageBlob: DUMMY_BLOB,
       imageBuffer: DUMMY_BUFFER,
       mimeType: 'image/jpeg',
+      htxCode: 'TC',
     })
 
     expect(mocks.notificationPort.broadcastDiseaseReport).toHaveBeenCalledWith(
@@ -228,6 +235,7 @@ describe('SubmitDiagnosisUseCase — farmer isolation + AI invariant', () => {
       imageBlob: DUMMY_BLOB,
       imageBuffer: DUMMY_BUFFER,
       mimeType: 'image/jpeg',
+      htxCode: 'TC',
     })).rejects.toThrow('Disease API connection refused')
   })
 })

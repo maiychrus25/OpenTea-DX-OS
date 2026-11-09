@@ -29,14 +29,15 @@ async function postBatchApprove(request: Request) {
   }
 
   // Check every entry first so one foreign id approves nothing.
-  const guard = new TenantGuard(await requireTenant())
+  const tenant = await requireTenant()
+  const guard = new TenantGuard(tenant)
   for (const entryId of parse.data.entry_ids) await guard.journalEntry(entryId)
 
   const repo = new PrismaJournalRepository()
   const docStorageRepo = new MinioDocumentAdapter()
   const useCase = new BatchApproveJournalUseCase(repo, docStorageRepo)
   const userId = (session.user as any).id ?? ''
-  const data = await useCase.execute(parse.data.entry_ids, userId)
+  const data = await useCase.execute(parse.data.entry_ids, userId, tenant.htxCode)
   return NextResponse.json({ data: { approved_count: data.approved, failed_ids: data.failed } })
 }
 

@@ -75,7 +75,8 @@ export async function POST(req: Request) {
     }
 
     const { parcel_id } = parseResult.data
-    await new TenantGuard(await requireTenant()).parcel(parcel_id)
+    const tenant = await requireTenant()
+    await new TenantGuard(tenant).parcel(parcel_id)
 
     // ── Convert File to Buffer and Blob ───────────────────────────────
     const arrayBuffer = await file.arrayBuffer()
@@ -99,6 +100,7 @@ export async function POST(req: Request) {
     // ── Execute Use Case ──────────────────────────────────────────────
     const result = await useCase.execute({
       farmerUserId: session.user.id!,
+      htxCode: tenant.htxCode,
       parcelId: parcel_id,
       imageBlob: blob,
       imageBuffer: buffer,

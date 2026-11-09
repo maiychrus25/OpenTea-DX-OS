@@ -111,7 +111,7 @@ describe('Story 3.4: Parcel Status Auto-Derivation', () => {
     // Now batch approve
     const mockDocStorage = { uploadDocument: jest.fn() } as unknown as DocumentStoragePort
     const batchApproveUseCase = new BatchApproveJournalUseCase(journalRepo, mockDocStorage)
-    await batchApproveUseCase.execute([entry.id], 'officer-1')
+    await batchApproveUseCase.execute([entry.id], 'officer-1', 'TC')
 
     // Status should now be TENDING
     const updatedParcel = await prisma.parcel.findUnique({ where: { id: parcelId } })
@@ -138,7 +138,7 @@ describe('Story 3.4: Parcel Status Auto-Derivation', () => {
 
     const mockDocStorage = { uploadDocument: jest.fn() } as unknown as DocumentStoragePort
     const batchApproveUseCase = new BatchApproveJournalUseCase(journalRepo, mockDocStorage)
-    await batchApproveUseCase.execute([entry.id], 'officer-1')
+    await batchApproveUseCase.execute([entry.id], 'officer-1', 'TC')
 
     const parcel = await prisma.parcel.findUnique({ where: { id: parcelId }, include: { crop_cycles: true } })
     expect(parcel?.status).toBe(ParcelStatus.HARVESTED)

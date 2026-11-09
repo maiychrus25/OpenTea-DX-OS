@@ -13,6 +13,7 @@ import { ListLotsUseCase } from '@/application/lot/ListLotsUseCase'
 import { CreateLotUseCase } from '@/application/lot/CreateLotUseCase'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
+import { assertCertificateKeys } from '@/domain/document/document-namespace'
 
 async function getLots(request: Request) {
   const { role } = await requireTenant()
@@ -32,7 +33,7 @@ async function getLots(request: Request) {
 
 async function postLot(request: Request) {
   const tenant = await requireTenant()
-  const { role, htxProfileId, userId } = tenant
+  const { role, htxProfileId, htxCode, userId } = tenant
   if (role !== 'officer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Only officer can create lots' } }, { status: 403 })
   }
@@ -42,6 +43,8 @@ async function postLot(request: Request) {
   if (!parse.success) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
+
+  assertCertificateKeys(parse.data.certificate_keys, htxCode)
 
   const guard = new TenantGuard(tenant)
   for (const parcelId of parse.data.parcel_ids) await guard.parcel(parcelId)

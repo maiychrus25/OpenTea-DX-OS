@@ -12,15 +12,17 @@ import { DocumentItem } from './mock-data'
 import { MOCK_DOCUMENTS } from './mock-data'
 
 const CATEGORIES = [
-  { id: 'para/Projects/', name: 'Projects', description: 'Các dự án ngắn hạn' },
-  { id: 'para/Areas/', name: 'Areas', description: 'Khu vực quản lý dài hạn' },
-  { id: 'para/Resources/', name: 'Resources', description: 'Tài liệu tham khảo chung' },
-  { id: 'para/Archives/', name: 'Archives', description: 'Lưu trữ cũ' }
+  { id: 'Projects/', name: 'Projects', description: 'Các dự án ngắn hạn' },
+  { id: 'Areas/', name: 'Areas', description: 'Khu vực quản lý dài hạn' },
+  { id: 'Resources/', name: 'Resources', description: 'Tài liệu tham khảo chung' },
+  { id: 'Archives/', name: 'Archives', description: 'Lưu trữ cũ' }
 ]
 
-export function DocumentView() {
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id)
-  const [currentPath, setCurrentPath] = useState(CATEGORIES[0].id)
+export function DocumentView({ htxCode }: { htxCode: string }) {
+  const root = `para/${htxCode}/`
+  const categories = CATEGORIES.map(cat => ({ ...cat, id: `${root}${cat.id}` }))
+  const [activeCategory, setActiveCategory] = useState(categories[0].id)
+  const [currentPath, setCurrentPath] = useState(categories[0].id)
   const [documents, setDocuments] = useState<DocumentItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -40,6 +42,8 @@ export function DocumentView() {
 
 
   const fetchDocuments = useCallback(async (path: string) => {
+    // The mock tree has no HTX level.
+    const mockPath = path.replace(root, 'para/')
     setIsLoading(true)
     try {
       const res = await fetch(`/api/documents?path=${encodeURIComponent(path)}`)
@@ -64,9 +68,9 @@ export function DocumentView() {
         setDocuments(filtered)
       } else {
         // API failed, fallback to mock for categories that have mock data
-        const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(path) && doc.key !== path)
+        const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(mockPath) && doc.key !== mockPath)
           .filter(doc => {
-            const remainingPath = doc.key.replace(path, '')
+            const remainingPath = doc.key.replace(mockPath, '')
             if (doc.isDir) return remainingPath.split('/').length === 2
             return !remainingPath.includes('/')
           })
@@ -74,9 +78,9 @@ export function DocumentView() {
       }
     } catch {
       // On error, fallback to mock data
-      const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(path) && doc.key !== path)
+      const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(mockPath) && doc.key !== mockPath)
         .filter(doc => {
-          const remainingPath = doc.key.replace(path, '')
+          const remainingPath = doc.key.replace(mockPath, '')
           if (doc.isDir) return remainingPath.split('/').length === 2
           return !remainingPath.includes('/')
         })
@@ -84,7 +88,7 @@ export function DocumentView() {
     } finally {
       setIsLoading(false)
     }
-  }, [searchQuery])
+  }, [searchQuery, root])
 
   // Fetch documents on load, when path changes, or when search query changes
   useEffect(() => {
@@ -246,7 +250,7 @@ export function DocumentView() {
 
       <div className={styles.content}>
         <div className={styles.sidebar}>
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <button
               key={cat.id}
               className={`${styles.categoryBtn} ${activeCategory === cat.id ? styles.active : ''}`}
@@ -265,7 +269,7 @@ export function DocumentView() {
                 onClick={handleBreadcrumbClick}
                 className="text-primary font-medium hover:underline cursor-pointer"
               >
-                {CATEGORIES.find(c => c.id === activeCategory)?.name}
+                {categories.find(c => c.id === activeCategory)?.name}
               </button>
               {currentPath !== activeCategory && (
                 <>

@@ -110,3 +110,21 @@ describe('ChatbotUseCase gateway failures', () => {
     expect(await readAll(await run(new ChatbotUseCase()))).toContain('không khả dụng')
   })
 })
+
+describe('ChatbotUseCase technical documents', () => {
+  const storage = () => ({ listDocuments: jest.fn().mockResolvedValue([]), getDocumentContent: jest.fn() })
+
+  test('reads only the Resources and Areas of the HTX', async () => {
+    const documents = storage()
+    const useCase = new ChatbotUseCase(documents as never, undefined, undefined, async () => 'tok-1', 'TC')
+    await useCase.execute('hi', [], undefined, undefined, 'technical')
+    expect(documents.listDocuments.mock.calls.map(c => c[0])).toEqual(['para/TC/Resources/', 'para/TC/Areas/'])
+  })
+
+  test('reads no document without an HTX', async () => {
+    const documents = storage()
+    const useCase = new ChatbotUseCase(documents as never, undefined, undefined, async () => 'tok-1')
+    await useCase.execute('hi', [], undefined, undefined, 'technical')
+    expect(documents.listDocuments).not.toHaveBeenCalled()
+  })
+})
