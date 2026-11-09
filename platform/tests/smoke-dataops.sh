@@ -105,3 +105,24 @@ psql_app "insert into telemetry.sensor_readings (htx_code, parcel_code, sensor, 
 lifecycle_once
 assert_eq "$(psql_app "$LATE_FILES")" "$((FILES + 1))" "late row exported to a second file for the same date"
 assert_eq "$(psql_app "select count(*) from telemetry.sensor_readings where parcel_code='late-arrival'")" "0" "late row left the hot table"
+
+echo "[llm]"
+LLM_URL="$GATEWAY/api/ai/llm/v1/chat/completions"
+LLM_MODEL=${DXOS_LLM_MODEL:-qwen2.5:0.5b}
+LLM_BODY="{\"model\":\"$LLM_MODEL\",\"max_tokens\":8,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello.\"}]}"
+LT=$(user_token manager_tc); LTN=$(user_token manager_tc dxos-noaud)
+[ -n "$LT" ] && [ -n "$LTN" ] || fail "llm tokens empty"
+assert_http "401" "llm chat without a token is 401" -- -X POST -H 'Content-Type: application/json' -d "$LLM_BODY" "$LLM_URL"
+assert_http "401" "llm chat with a token lacking the audience is 401" -- -X POST -H "Authorization: Bearer $LTN" -H 'Content-Type: application/json' -d "$LLM_BODY" "$LLM_URL"
+assert_http "404" "llm management API (pull) is not routed" -- -X POST -H "Authorization: Bearer $LT" -H 'Content-Type: application/json' -d '{"name":"x"}' "$GATEWAY/api/ai/llm/api/pull"
+assert_http "404" "llm chat route rejects GET" -- -H "Authorization: Bearer $LT" "$LLM_URL"
+LLM_T0=$(date +%s)
+LLM_REPLY=$(curl -s --max-time 120 -X POST -H "Authorization: Bearer $LT" -H 'Content-Type: application/json' -d "$LLM_BODY" "$LLM_URL" | jq -r '.choices[0].message.content // empty')
+echo "llm chat took $(( $(date +%s) - LLM_T0 ))s"
+[ -n "$LLM_REPLY" ] && pass "llm chat returns content" || fail "llm chat returned no content"
+# Last: this burns the route's 30/60 s budget.
+LLM_429=0
+for _ in $(seq 1 31); do
+  [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H "Authorization: Bearer $LT" -H 'Content-Type: application/json' -d '{"model":"missing","messages":[]}' "$LLM_URL")" = 429 ] && LLM_429=1
+done
+assert_eq "$LLM_429" "1" "llm route rate limit returns 429"

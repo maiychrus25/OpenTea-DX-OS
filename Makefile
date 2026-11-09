@@ -9,7 +9,8 @@ platform-up:
 	$(COMPOSE) run --rm platform-init
 	$(COMPOSE) --profile tools run --rm --build migrate
 	$(COMPOSE) run --rm platform-init
-	$(COMPOSE) up -d --build --wait postgres keycloak seaweedfs n8n hasura apisix clamav dxos-scanner mosquitto dxos-ingest dxos-lifecycle
+	$(COMPOSE) up -d --build --wait postgres keycloak seaweedfs n8n hasura apisix clamav dxos-scanner mosquitto dxos-ingest dxos-lifecycle ollama
+	$(COMPOSE) --profile tools run --rm ollama-init
 
 platform-smoke:
 	bash platform/tests/smoke-platform.sh

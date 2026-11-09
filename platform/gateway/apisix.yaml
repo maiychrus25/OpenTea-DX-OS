@@ -25,6 +25,8 @@ upstreams:
     nodes: { "disease-api:8000": 1 }
   - id: storage
     nodes: { "minio:9000": 1 }
+  - id: ollama
+    nodes: { "ollama:11434": 1 }
 
 routes:
   - id: data-graphql
@@ -65,6 +67,21 @@ routes:
       openid-connect: *oidc_aud
       proxy-rewrite:
         regex_uri: ["^/api/ai/disease/(.*)", "/$1"]
+  # The only route to Ollama: its management APIs (/api/pull, /api/delete, /api/create) stay unreachable.
+  - id: llm-chat
+    uri: /api/ai/llm/v1/chat/completions
+    methods: [POST]
+    upstream_id: ollama
+    timeout: { connect: 5, send: 120, read: 120 }
+    plugins:
+      openid-connect: *oidc_aud
+      limit-count:
+        count: 30
+        time_window: 60
+        key: remote_addr
+        rejected_code: 429
+      proxy-rewrite:
+        uri: /v1/chat/completions
   - id: storage
     uri: /storage/*
     upstream_id: storage
