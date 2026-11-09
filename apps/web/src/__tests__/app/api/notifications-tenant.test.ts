@@ -27,7 +27,7 @@ const scoped = {
   OR: [
     { recipient_id: 'u1' },
     { recipient_id: null, htx_profile_id: 'htx-md2' },
-    { recipient_id: null, htx_profile_id: null, type: 'SYSTEM' },
+    { recipient_id: null, htx_profile_id: null, type: 'SYSTEM', sender_id: null },
   ],
 }
 
@@ -94,9 +94,15 @@ describe('reading notifications', () => {
 })
 
 describe('which null-recipient rows a user can see', () => {
-  type Row = { id: string; type: string; recipient_id: null; htx_profile_id: string | null }
+  type Row = { id: string; type: string; recipient_id: null; htx_profile_id: string | null; sender_id: string | null }
   type Where = { OR: Record<string, unknown>[] }
-  const notice = (id: string, type: string, htx_profile_id: string | null): Row => ({ id, type, recipient_id: null, htx_profile_id })
+  const notice = (id: string, type: string, htx_profile_id: string | null, sender_id: string | null = null): Row => ({
+    id,
+    type,
+    recipient_id: null,
+    htx_profile_id,
+    sender_id,
+  })
 
   // Applies the real where clause, so these assert who sees a row rather than the shape of the query.
   function store(rows: Row[]) {
@@ -118,6 +124,12 @@ describe('which null-recipient rows a user can see', () => {
     store([notice('n8n', 'SYSTEM', null)])
     await expect(seenBy('MD2')).resolves.toEqual({ ids: ['n8n'], unreadCount: 1 })
     await expect(seenBy('LB')).resolves.toEqual({ ids: ['n8n'], unreadCount: 1 })
+  })
+
+  test('an old journal withdrawal, SYSTEM with a sender and no HTX, is visible to nobody', async () => {
+    store([notice('old-withdrawal', 'SYSTEM', null, 'farmer-1')])
+    await expect(seenBy('MD2')).resolves.toEqual({ ids: [], unreadCount: 0 })
+    await expect(seenBy('LB')).resolves.toEqual({ ids: [], unreadCount: 0 })
   })
 
   test.each(['DISEASE_REPORT', 'HARVEST_APPROVED', 'JOURNAL_SUBMITTED', 'BROADCAST'])(

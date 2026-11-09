@@ -14,7 +14,8 @@ export class PrismaNotificationRepository implements NotificationPort {
         OR: [
           { recipient_id: userId },
           { recipient_id: null, htx_profile_id: htxProfileId }, // Broadcast trong HTX của người gọi
-          { recipient_id: null, htx_profile_id: null, type: NotificationType.SYSTEM }, // Cảnh báo vận hành từ n8n, không chứa dữ liệu HTX
+          // Cảnh báo vận hành từ n8n: không có người gửi, không chứa dữ liệu HTX
+          { recipient_id: null, htx_profile_id: null, type: NotificationType.SYSTEM, sender_id: null },
         ],
         ...(filter === 'unread' ? { is_read: false } : filter ? { type: filter as any } : {}),
       },
