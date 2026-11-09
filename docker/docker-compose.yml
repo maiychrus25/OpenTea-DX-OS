@@ -435,7 +435,7 @@ services:
       - /bin/sh
       - -c
       - |
-        ollama pull "$$DXOS_LLM_MODEL" && ollama list | grep -q "$$DXOS_LLM_MODEL_ID" || { echo "Model $$DXOS_LLM_MODEL does not match ID $$DXOS_LLM_MODEL_ID" >&2; ollama list >&2; exit 1; }
+        ollama pull "$$DXOS_LLM_MODEL" && ollama list | awk -v m="$$DXOS_LLM_MODEL" -v id="$$DXOS_LLM_MODEL_ID" '$$1==m && $$2==id {found=1} END {exit !found}' || { echo "Model $$DXOS_LLM_MODEL does not match ID $$DXOS_LLM_MODEL_ID" >&2; ollama list >&2; exit 1; }
     depends_on:
       ollama:
         condition: service_healthy
