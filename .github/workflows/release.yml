@@ -139,6 +139,7 @@ jobs:
           Download \`opentea-dx-os-${VERSION}.tar.gz\`, verify it with \`SHA256SUMS\`, then follow the
           [release deployment guide (6-step order: postgres, platform-init, migrate, platform-init again, rest, then \`--profile tools run --rm ollama-init\` to pull the pinned LLM model)](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/README.md#-bản-phát-hành-releases).
           Set \`DXOS_MQTT_DEVICES\` and \`DXOS_MQTT_INGEST_PASSWORD\` in \`docker/.env.local\` first: the broker refuses to start while any MQTT password begins with \`change_me\`.
+          Also set \`MINIO_ACCESS_KEY\`, \`MINIO_SECRET_KEY\` (SeaweedFS refuses placeholders), \`KEYCLOAK_ADMIN\` and \`KEYCLOAK_ADMIN_PASSWORD\`, and run every command as \`docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml ...\`, otherwise Compose ignores those values.
           EOF
           } > dist/notes.md
 
