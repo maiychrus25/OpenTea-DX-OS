@@ -8,12 +8,13 @@ import { HarvestEvent } from '../../../domain/farm/entities/HarvestEvent'
 export class PrismaCropCycleRepository implements CropCyclePort {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async getHarvestSchedule(startDate: string, endDate: string): Promise<HarvestEvent[]> {
+  async getHarvestSchedule(htxProfileId: string, startDate: string, endDate: string): Promise<HarvestEvent[]> {
     const start = new Date(startDate)
     const end = new Date(endDate)
 
     const cycles = await this.prisma.parcelCropCycle.findMany({
       where: {
+        parcel: { household: { htx_profile_id: htxProfileId } },
         estimated_harvest_date: {
           gte: start,
           lte: end,
@@ -86,9 +87,10 @@ export class PrismaCropCycleRepository implements CropCyclePort {
     })
   }
 
-  async getUnscheduledActiveCycles(): Promise<HarvestEvent[]> {
+  async getUnscheduledActiveCycles(htxProfileId: string): Promise<HarvestEvent[]> {
     const cycles = await this.prisma.parcelCropCycle.findMany({
       where: {
+        parcel: { household: { htx_profile_id: htxProfileId } },
         harvested_at: null,
         estimated_harvest_date: null,
       },

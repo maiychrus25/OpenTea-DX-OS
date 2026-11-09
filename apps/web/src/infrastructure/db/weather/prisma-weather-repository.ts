@@ -6,10 +6,11 @@ import { WeatherPort, WeatherZoneEntity } from '@/domain/ports/weather-port'
 import { weatherCodeToCondition, weatherCodeToIcon } from '@/infrastructure/external/open-meteo-adapter'
 
 export class PrismaWeatherRepository implements WeatherPort {
-  async getWeatherForParcels(): Promise<WeatherZoneEntity[]> {
-    // Get all parcels with coordinates
+  async getWeatherForParcels(htxProfileId: string): Promise<WeatherZoneEntity[]> {
+    // Get the HTX's parcels with coordinates
     const parcels = await prisma.parcel.findMany({
       where: {
+        household: { htx_profile_id: htxProfileId },
         centroid_lat: { not: null },
         centroid_lng: { not: null },
       },

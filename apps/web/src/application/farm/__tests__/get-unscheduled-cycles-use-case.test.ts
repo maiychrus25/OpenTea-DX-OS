@@ -33,9 +33,9 @@ describe('GetUnscheduledCyclesUseCase', () => {
     ]
     mockPort.getUnscheduledActiveCycles.mockResolvedValue(mockEvents)
 
-    const result = await useCase.execute()
+    const result = await useCase.execute('htx-1')
 
-    expect(mockPort.getUnscheduledActiveCycles).toHaveBeenCalledTimes(1)
+    expect(mockPort.getUnscheduledActiveCycles).toHaveBeenCalledWith('htx-1')
     expect(result).toEqual(mockEvents)
   })
 })

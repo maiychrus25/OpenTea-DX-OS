@@ -18,6 +18,10 @@ import * as lots from '@/app/api/lots/route'
 import * as diseaseReview from '@/app/api/officer/diseases/[id]/review/route'
 import * as harvest from '@/app/api/schedule/harvest/[cycle_id]/route'
 import * as diagnosis from '@/app/api/diagnosis/route'
+import * as harvestSchedule from '@/app/api/schedule/harvest/route'
+import * as unscheduled from '@/app/api/schedule/unscheduled/route'
+import * as forecast from '@/app/api/weather/forecast/route'
+import SoilHealthPage from '@/app/officer/households/[id]/soil-health/page'
 
 // Every model method is a jest.fn created on first use, so any write the routes attempt is recorded.
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
@@ -152,5 +156,52 @@ describe('POST journal/batch-approve', () => {
     expect(response.status).toBe(404)
     expect(writes()).toEqual([])
     expect(mock(prisma.journalEntry.findUnique)).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign' } }))
+  })
+})
+
+describe('read routes return only the HTX of the caller', () => {
+  const ownHousehold = { household: { htx_profile_id: 'htx-tc' } }
+  const noHtx = () => mock(auth).mockResolvedValue({ user: { id: 'u1', role: 'manager', htxCode: null, name: 'U' } })
+  const range = 'start_date=2026-01-01T00:00:00.000Z&end_date=2026-02-01T00:00:00.000Z'
+  const harvestRequest = () => new Request(`http://localhost/api/schedule/harvest?${range}`)
+
+  test('GET schedule/harvest filters the cycles by HTX', async () => {
+    signIn('officer')
+    mock(prisma.parcelCropCycle.findMany).mockResolvedValue([])
+    expect((await harvestSchedule.GET(harvestRequest(), {})).status).toBe(200)
+    expect(mock(prisma.parcelCropCycle.findMany).mock.calls[0][0].where.parcel).toEqual(ownHousehold)
+  })
+
+  test('GET schedule/unscheduled filters the cycles by HTX', async () => {
+    signIn('manager')
+    mock(prisma.parcelCropCycle.findMany).mockResolvedValue([])
+    expect((await unscheduled.GET(new Request('http://localhost/api/schedule/unscheduled'), {})).status).toBe(200)
+    expect(mock(prisma.parcelCropCycle.findMany).mock.calls[0][0].where.parcel).toEqual(ownHousehold)
+  })
+
+  test('GET weather/forecast filters the parcels by HTX', async () => {
+    signIn('farmer')
+    mock(prisma.parcel.findMany).mockResolvedValue([])
+    expect((await forecast.GET(new Request('http://localhost/api/weather/forecast'), {})).status).toBe(200)
+    expect(mock(prisma.parcel.findMany).mock.calls[0][0].where.household).toEqual({ htx_profile_id: 'htx-tc' })
+  })
+
+  test.each([
+    ['schedule/harvest', () => harvestSchedule.GET(harvestRequest(), {})],
+    ['schedule/unscheduled', () => unscheduled.GET(new Request('http://localhost/api/schedule/unscheduled'), {})],
+    ['weather/forecast', () => forecast.GET(new Request('http://localhost/api/weather/forecast'), {})],
+  ])('GET %s answers NO_HTX for a user without an HTX and reads nothing', async (_name, call) => {
+    noHtx()
+    expect((await call()).status).toBe(403)
+    expect(mock(prisma.parcelCropCycle.findMany)).not.toHaveBeenCalled()
+    expect(mock(prisma.parcel.findMany)).not.toHaveBeenCalled()
+  })
+
+  test('the officer soil-health page reads the household name inside the HTX', async () => {
+    signIn('officer')
+    mock(prisma.household.findFirst).mockResolvedValue(null)
+    await SoilHealthPage({ params: Promise.resolve({ id: 'r1' }) })
+    expect(mock(prisma.household.findFirst).mock.calls[0][0].where).toEqual({ id: 'r1', htx_profile_id: 'htx-tc' })
+    expect(mock(prisma.household.findUnique)).not.toHaveBeenCalled()
   })
 })
