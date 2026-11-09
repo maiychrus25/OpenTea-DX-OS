@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **MQTT sensor ingest**: `mosquitto` (no host port, per-HTX device accounts restricted to their own topics) and `dxos-ingest` validate every message and store it in `telemetry.sensor_readings`; rejected messages are kept with a reason in `telemetry.ingest_rejects`. `dxos-simulator` (profile `demo`) publishes demo readings
+- **Data lifecycle and lineage**: `dxos-lifecycle` moves readings older than 30 days to Parquet (ZSTD) in the `dxos-lake` bucket in whole UTC days (the cutoff is floored to midnight UTC, so a row can stay hot for up to about one extra day), verifies SHA-256 and row count before deleting the hot rows, and records each export in `telemetry.lifecycle_runs` and `audit.events`. `python -m dxos_dataops query` reads the cold data through the `sensor_readings_cold` view. Hasura exposes both telemetry tables to managers and officers (scoped by `htx_code`)
+- **In-house LLM**: `ollama` serves `qwen2.5:0.5b` (Apache-2.0) behind the gateway at `POST /api/ai/llm/v1/chat/completions` (JWT with the `dx-os-core` audience, 30 requests per minute); the Ollama management API is not routed. `ollama-init` pulls the model and checks its ID
+- **Dataops image**: published to GHCR as `opentea-dx-os-dataops` (6 images per release with `migrate`); CI runs the dataops unit tests
+- **Dependencies**: Mosquitto (EPL-2.0), Ollama (MIT), `paho-mqtt` (EPL-2.0 OR BSD-3-Clause), `duckdb` (MIT)
+
+### Changed
+- **Deploy order**: `postgres` -> `platform-init` -> `migrate` -> `platform-init` -> the rest -> `ollama-init`. `make platform-up` runs it end to end, and the release flow is identical (`--profile tools run --rm ollama-init` last)
+- **`migrate`** moved into `docker/docker-compose.yml` (profile `tools`), so the same service is used in dev and release
+
+### Fixed
+- **Hasura started before migrations** (#17): it is no longer restarted by the smoke test; `platform-up` migrates first
+- **Prebuilt `migrate` image** (#15): `apps/web/prisma/Dockerfile` ships `prisma@5.22.0`, the schema and the migrations; the entrypoint URL-encodes `POSTGRES_PASSWORD` when it builds `DATABASE_URL`
+- **LLM smoke check** retries on HTTP 429 and reports failures instead of exiting silently
+
+### Upgrade notes
+- Add `DXOS_MQTT_DEVICES` (comma list of `HTX_CODE:password`) and `DXOS_MQTT_INGEST_PASSWORD` to `docker/.env.local` (see `docker/.env.local.example`). The release override makes the broker refuse to start while any of these passwords begins with `change_me`.
+- Re-run `migrate` and `platform-init` (the postgres image gains `04-telemetry.sql`); create the `mosquitto`, `dxos-ingest`, `dxos-lifecycle` and `ollama` containers, then run `--profile tools run --rm ollama-init`.
+- Release flow: every `docker compose` command now takes `--env-file docker/.env.local` before `-f`; without it Compose used the defaults published in this repo. SeaweedFS refuses to start while `MINIO_ACCESS_KEY` or `MINIO_SECRET_KEY` is empty or a placeholder, and Keycloak refuses to start while `KEYCLOAK_ADMIN_PASSWORD` is empty, `admin` or begins with `change_me`. Keycloak reads that value only on a new database, so on a running system also change the admin password inside Keycloak. On existing volumes, `POSTGRES_PASSWORD`, `KEYCLOAK_DB_PASSWORD` and `N8N_ENCRYPTION_KEY` in that file must match the values the volumes were initialised with (until now the `docker-compose.yml` defaults).
+- On a running release stack, restart `hasura` and `apisix` after `up -d --no-build` (`docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml restart hasura apisix`): Hasura loads metadata only at start and APISIX keeps the old inode of its route file. `make platform-up` does this in dev when the stack is already running.
+- Known limits: the cold view keeps the first-ingested copy of a duplicated key; Mosquitto saves its state every 60 seconds (`autosave_interval 60`), so messages queued in the last 60 seconds can be lost if the broker crashes; a cold `make platform-up` is slow because of the Ollama image and the 397 MB model pull; `dxos-ingest` and `dxos-lifecycle` share the `agrimarket` database account (a least-privilege role is Tier 2).
+
 ---
 
 ## [1.4.0] - 2026-11-09
