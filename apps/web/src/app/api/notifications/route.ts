@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository'
 import { GetNotificationsUseCase } from '@/application/notification/get-notifications-usecase'
 import { MarkNotificationReadUseCase } from '@/application/notification/mark-notification-read-usecase'
@@ -25,17 +26,14 @@ const putBodySchema = z.object({
 })
 
 async function getNotifications(req: Request) {
-  const session = await auth()
-  if (!session || !session.user || !session.user.id) {
-    return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
-  }
+  const { userId, htxProfileId } = await requireTenant()
 
   const { searchParams } = new URL(req.url)
   const validationResult = getQuerySchema.safeParse({ limit: searchParams.get('limit'), filter: searchParams.get('filter') })
   const limit = validationResult.success ? validationResult.data.limit : 5
   const filter = validationResult.success ? validationResult.data.filter : undefined
 
-  const result = await getNotificationsUseCase.execute(session.user.id, limit, filter)
+  const result = await getNotificationsUseCase.execute(userId, htxProfileId, limit, filter)
   return NextResponse.json({ data: result }, { status: 200 })
 }
 

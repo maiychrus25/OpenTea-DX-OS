@@ -4,7 +4,7 @@
 import { Notification } from '../entities/notification';
 
 export interface NotificationPort {
-  getRecentByUserId(userId: string, limit: number, filter?: string): Promise<Notification[]>;
+  getRecentByUserId(userId: string, htxProfileId: string, limit: number, filter?: string): Promise<Notification[]>;
   markAsRead(userId: string, id?: string): Promise<void>;
   createNotification(data: Omit<Notification, 'id' | 'created_at' | 'is_read'>): Promise<Notification>;
   broadcastDiseaseReport(householdName: string, diseaseName: string, parcelCode: string): Promise<void>;

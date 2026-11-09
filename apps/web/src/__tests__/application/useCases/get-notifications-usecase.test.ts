@@ -41,7 +41,7 @@ describe('GetNotificationsUseCase', () => {
 
     mockPort.getRecentByUserId.mockResolvedValue([rawNotif])
 
-    const result = await useCase.execute('user1', 5)
+    const result = await useCase.execute('user1', 'htx-1', 5)
     
     expect(result.notifications).toHaveLength(1)
     expect(result.notifications[0]).toEqual({

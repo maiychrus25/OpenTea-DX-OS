@@ -8,12 +8,12 @@ import { NotificationType } from '@prisma/client';
 import { sseEmitter, SSE_EVENTS } from '@/lib/sse-emitter';
 
 export class PrismaNotificationRepository implements NotificationPort {
-  async getRecentByUserId(userId: string, limit: number, filter?: string): Promise<Notification[]> {
+  async getRecentByUserId(userId: string, htxProfileId: string, limit: number, filter?: string): Promise<Notification[]> {
     return await prisma.notification.findMany({
       where: {
         OR: [
           { recipient_id: userId },
-          { recipient_id: null }, // Broadcast notifications (gửi cho tất cả)
+          { recipient_id: null, htx_profile_id: htxProfileId }, // Broadcast trong HTX của người gọi
         ],
         ...(filter === 'unread' ? { is_read: false } : filter ? { type: filter as any } : {}),
       },
@@ -48,24 +48,36 @@ export class PrismaNotificationRepository implements NotificationPort {
     });
   }
 
+  private async htxProfileIdOfParcel(parcelCode: string): Promise<string | null> {
+    const parcel = await prisma.parcel.findUnique({
+      where: { parcel_code: parcelCode },
+      select: { household: { select: { htx_profile_id: true } } },
+    });
+    return parcel?.household.htx_profile_id ?? null;
+  }
+
   async broadcastDiseaseReport(householdName: string, diseaseName: string, parcelCode: string): Promise<void> {
+    const htxProfileId = await this.htxProfileIdOfParcel(parcelCode);
     await prisma.notification.create({
       data: {
         type: NotificationType.DISEASE_REPORT,
         title: 'Báo cáo sâu bệnh mới',
         body: `Nông hộ ${householdName} vừa báo cáo bệnh ${diseaseName} tại thửa đất ${parcelCode}.`,
         recipient_id: null,
+        htx_profile_id: htxProfileId,
       },
     });
   }
 
   async broadcastHarvestApproved(parcelCode: string, officerId: string): Promise<void> {
+    const htxProfileId = await this.htxProfileIdOfParcel(parcelCode);
     await prisma.notification.create({
       data: {
         type: NotificationType.HARVEST_APPROVED,
         title: 'Thu hoạch được duyệt',
         body: `Thửa đất ${parcelCode} đã được duyệt thu hoạch bởi cán bộ.`,
         recipient_id: null,
+        htx_profile_id: htxProfileId,
         deep_link_url: `/officer/farm-zones?parcel=${parcelCode}`,
       },
     });

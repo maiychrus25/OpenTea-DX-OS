@@ -33,13 +33,13 @@ describe('Notification Contract Tests', () => {
     const mockFindMany = jest.fn().mockResolvedValue([])
     ;(prisma.notification.findMany as jest.Mock) = mockFindMany
 
-    await notificationRepo.getRecentByUserId('user123', 5, 'unread')
+    await notificationRepo.getRecentByUserId('user123', 'htx-1', 5, 'unread')
 
     expect(mockFindMany).toHaveBeenCalledWith({
       where: {
         OR: [
           { recipient_id: 'user123' },
-          { recipient_id: null }
+          { recipient_id: null, htx_profile_id: 'htx-1' }
         ],
         is_read: false
       },
