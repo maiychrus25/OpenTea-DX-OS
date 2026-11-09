@@ -333,6 +333,35 @@ services:
     networks:
       - agrimarket-net
 
+  # Archives sensor readings past the hot retention to Parquet in dxos-lake, with lineage (no host port).
+  dxos-lifecycle:
+    build: ../platform/dataops
+    image: opentea-dx-os/dataops:local
+    container_name: agrimarket-lifecycle
+    restart: always
+    command: ["python", "-m", "dxos_dataops", "lifecycle"]
+    environment:
+      DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
+      DXOS_S3_ENDPOINT: minio:9000
+      DXOS_HOT_RETENTION_DAYS: ${DXOS_HOT_RETENTION_DAYS:-30}
+      DXOS_LIFECYCLE_INTERVAL_SECONDS: ${DXOS_LIFECYCLE_INTERVAL_SECONDS:-3600}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-your_minio_access_key}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-your_minio_secret_key}
+    healthcheck:
+      # Healthy while the heartbeat (touched per partition and per round) is younger than max(3 x interval, 60s).
+      test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime(os.environ.get('DXOS_HEARTBEAT_PATH','/tmp/dxos-dataops.heartbeat')) < max(3*float(os.environ.get('DXOS_LIFECYCLE_INTERVAL_SECONDS','3600')),60) else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+    networks:
+      - agrimarket-net
+
   # Demo only (profile "demo"): publishes simulated readings for the parcels of the HTXs in DXOS_MQTT_DEVICES.
   dxos-simulator:
     build: ../platform/dataops

@@ -177,3 +177,40 @@ def test_simulated_values_pass_validation():
         for sensor in SENSORS:
             body = f'{{"ts":"{ts.isoformat()}","value":{reading_value(sensor, ts)}}}'.encode()
             assert parse_message(f"htx/TC/plot/P-TC-001/{sensor}", body, NOW).sensor == sensor
+
+
+class FakePublishInfo:
+    def __init__(self, published):
+        self.published = published
+
+    def wait_for_publish(self, timeout=None):  # paho returns normally on timeout
+        pass
+
+    def is_published(self):
+        return self.published
+
+
+class FakePublisher:
+    def __init__(self, published):
+        self.published = published
+        self.sent = []
+
+    def publish(self, topic, body, qos=0):
+        self.sent.append((topic, qos))
+        return FakePublishInfo(self.published)
+
+
+def test_publish_timeout_raises():
+    from dxos_dataops.simulate import publish_all
+
+    with pytest.raises(RuntimeError, match="not completed"):
+        publish_all({"TC": FakePublisher(False)}, [("TC", "P-TC-001")], NOW)
+
+
+def test_completed_publish_does_not_raise():
+    from dxos_dataops.payload import SENSORS
+    from dxos_dataops.simulate import publish_all
+
+    client = FakePublisher(True)
+    publish_all({"TC": client}, [("TC", "P-TC-001")], NOW)
+    assert len(client.sent) == len(SENSORS) and all(qos == 1 for _, qos in client.sent)

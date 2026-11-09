@@ -43,6 +43,8 @@ def publish_all(clients, parcels, ts: datetime) -> None:
             body = json.dumps({"ts": ts.strftime("%Y-%m-%dT%H:%M:%SZ"), "value": reading_value(sensor, ts)})
             info = clients[htx].publish(f"htx/{htx}/plot/{parcel}/{sensor}", body, qos=1)
             info.wait_for_publish(timeout=10)
+            if not info.is_published():  # wait_for_publish returns normally on timeout
+                raise RuntimeError(f"publish to htx/{htx}/plot/{parcel}/{sensor} not completed")
 
 
 def run(cfg: Config, connect_db, stop: threading.Event, backfill_days: int | None = None, step_minutes: int = 60) -> None:
@@ -53,7 +55,7 @@ def run(cfg: Config, connect_db, stop: threading.Event, backfill_days: int | Non
         parcels = [tuple(r) for r in db.execute(PARCELS_SQL, (htxs,)).fetchall()]
     clients = {}
     for htx in htxs:
-        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"dxos-sim-{htx}", protocol=mqtt.MQTTv311)
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv311)
         client.username_pw_set(htx, cfg.devices[htx])
         client.connect(cfg.mqtt_host, cfg.mqtt_port, keepalive=30)
         client.loop_start()

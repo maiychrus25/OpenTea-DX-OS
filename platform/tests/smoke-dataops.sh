@@ -65,3 +65,43 @@ assert_eq "$(ids "$(gql "$TM" "$TQ" manager)" '.data.telemetry_sensor_readings|l
 assert_eq "$(ids "$(gql "$TL" "$TQ" manager)" '.data.telemetry_sensor_readings[].htx_code')" "LB" "manager LB sees only the LB reading"
 gql "$TM" '{telemetry_lifecycle_runs{id}}' manager | jq -e 'has("errors")|not' >/dev/null && pass "manager can query telemetry_lifecycle_runs" || fail "manager cannot query telemetry_lifecycle_runs"
 gql "$TF" "$TQ" farmer | jq -e 'has("errors")' >/dev/null && pass "farmer gets an error on telemetry_sensor_readings" || fail "farmer can query telemetry_sensor_readings"
+
+echo "[ingest db error]"
+DBERR_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+readings_restore() { psql_app "alter table if exists telemetry.sensor_readings_held rename to sensor_readings" >/dev/null 2>&1 || true; }
+trap readings_restore EXIT
+psql_app "delete from telemetry.sensor_readings where parcel_code='P-TC-001' and sensor='soil_temperature'" >/dev/null
+psql_app "alter table telemetry.sensor_readings rename to sensor_readings_held" >/dev/null
+pub TC "$TC_PW" htx/TC/plot/P-TC-001/soil_temperature "{\"ts\":\"$DBERR_TS\",\"value\":21.5}" || fail "TC publish failed"
+sleep 3  # the worker fails the insert, drops its session and keeps retrying the unacked message
+readings_restore
+wait_count "select count(*) from telemetry.sensor_readings where parcel_code='P-TC-001' and sensor='soil_temperature' and ts='$DBERR_TS'" 1 "message unacked during a database error is redelivered and stored once"
+trap - EXIT
+
+echo "[lifecycle]"
+# Deleting the hot table is fine here: the section owns it from now on, a demo simulator only adds rows at "now".
+psql_app "delete from telemetry.sensor_readings" >/dev/null
+DEVICE_HTXS=$(printf '%s' "$DXOS_MQTT_DEVICES" | tr ',' '\n' | cut -d: -f1 | sed "s/.*/'&'/" | paste -sd, -)
+PARCELS=$(psql_app "select count(*) from public.parcels p join public.households h on h.id=p.household_id join public.htx_profiles x on x.id=h.htx_profile_id where x.htx_code in ($DEVICE_HTXS)")
+$COMPOSE run --rm -T dxos-simulator python -m dxos_dataops simulate --backfill-days 45 --step-minutes 720 >/dev/null 2>&1 || fail "backfill simulate failed"
+# now-45d .. now-1d in 12-hour steps is 89 ticks of 5 sensors per parcel.
+wait_count "select count(*) from telemetry.sensor_readings where ts < now() - interval '12 hours'" "$((89 * 5 * PARCELS))" "backfill rows arrived"
+KEPT_SQL="select count(*) from telemetry.sensor_readings where ts >= now() - interval '30 days' and ts < now() - interval '12 hours'"
+KEPT=$(psql_app "$KEPT_SQL")
+[ "$KEPT" -gt 0 ] || fail "backfill left no in-retention rows"
+lifecycle_once() { $COMPOSE exec -T dxos-lifecycle python -m dxos_dataops lifecycle --once || fail "lifecycle --once failed"; }
+lifecycle_once
+assert_eq "$(psql_app "select count(*) from telemetry.sensor_readings where ts < now() - interval '30 days'")" "0" "no row older than 30 days remains"
+assert_eq "$(psql_app "$KEPT_SQL")" "$KEPT" "rows inside retention unchanged"
+assert_eq "$($COMPOSE exec -T dxos-lifecycle python -m dxos_dataops query "select count(*) from sensor_readings_cold")" \
+  "$(psql_app "select sum(row_count) from telemetry.lifecycle_runs where status='done'")" "cold query counts every exported row"
+assert_eq "$(psql_app "select count(*) from telemetry.lifecycle_runs r where status='done' and not exists (select 1 from audit.events e where e.op='lake_export' and e.source='dxos-lifecycle' and e.row_id=r.target and e.new_data->>'sha256'=r.sha256 and (e.new_data->>'rows')::bigint=r.row_count)")" "0" "every done run matches its lake_export audit event"
+assert_eq "$(psql_app "select first_bad_id from audit.verify_chain()")" "" "audit chain verifies"
+LATE=$(psql_app "select htx_code || '|' || partition_date from telemetry.lifecycle_runs where status='done' order by partition_date limit 1")
+LATE_HTX=${LATE%|*}; LATE_DATE=${LATE#*|}
+LATE_FILES="select count(*) from telemetry.lifecycle_runs where status='done' and htx_code='$LATE_HTX' and partition_date='$LATE_DATE'"
+FILES=$(psql_app "$LATE_FILES")
+psql_app "insert into telemetry.sensor_readings (htx_code, parcel_code, sensor, ts, value) values ('$LATE_HTX', 'late-arrival', 'rainfall', '$LATE_DATE 12:34:56+00', 1.0)" >/dev/null
+lifecycle_once
+assert_eq "$(psql_app "$LATE_FILES")" "$((FILES + 1))" "late row exported to a second file for the same date"
+assert_eq "$(psql_app "select count(*) from telemetry.sensor_readings where parcel_code='late-arrival'")" "0" "late row left the hot table"
