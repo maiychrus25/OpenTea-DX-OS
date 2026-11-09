@@ -61,6 +61,15 @@ class RealmPolicyTest(unittest.TestCase):
         self.assertEqual(REALM.get("otpPolicyDigits"), 6)
         self.assertEqual(REALM.get("otpPolicyPeriod"), 30)
 
+    def test_account_attributes_declared_admin_only(self):
+        # Keycloak drops undeclared attributes on Admin API writes, and the web app writes these on every new account.
+        components = REALM["components"]["org.keycloak.userprofile.UserProfileProvider"]
+        profile = json.loads(components[0]["config"]["kc.user.profile.config"][0])
+        for name in ("fullName", "htxId", "phone"):
+            attr = by_key(profile["attributes"], "name", name)
+            self.assertEqual(attr["permissions"], {"view": ["admin"], "edit": ["admin"]}, name)
+            self.assertNotIn("required", attr, name)
+
     def test_htx_code_declared_admin_only(self):
         components = REALM["components"]["org.keycloak.userprofile.UserProfileProvider"]
         profile = json.loads(components[0]["config"]["kc.user.profile.config"][0])
