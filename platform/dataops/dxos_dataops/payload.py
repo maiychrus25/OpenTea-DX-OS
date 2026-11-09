@@ -50,11 +50,11 @@ def parse_message(topic: str, payload: bytes, now: datetime) -> Reading:
     raw_ts = body.get("ts")
     try:
         ts = datetime.fromisoformat(raw_ts)
-    except (TypeError, ValueError):
+        if ts.tzinfo is None:
+            raise ValueError("naive timestamp")
+        ts = ts.astimezone(timezone.utc)
+    except (TypeError, ValueError, OverflowError):  # OverflowError: UTC result outside datetime range
         raise Rejected("bad_ts", htx) from None
-    if ts.tzinfo is None:
-        raise Rejected("bad_ts", htx)
-    ts = ts.astimezone(timezone.utc)
     if ts - now > MAX_FUTURE:
         raise Rejected("future_ts", htx)
 

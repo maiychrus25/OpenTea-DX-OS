@@ -60,6 +60,8 @@ def test_bad_json(body):
         b'{"ts":123,"value":1}',
         b'{"ts":"2026-11-09T08:00:00","value":1}',
         b'{"ts":"garbage","value":1}',
+        b'{"ts":"0001-01-01T00:00:00+05:00","value":1}',
+        b'{"ts":"9999-12-31T23:59:59-05:00","value":1}',
     ],
 )
 def test_bad_ts(body):
