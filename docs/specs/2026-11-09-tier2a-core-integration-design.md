@@ -164,6 +164,10 @@ Khác biệt/bổ sung so với thiết kế:
 - `error.tsx` nhận đúng digest `CORE_UNAVAILABLE` trên trình duyệt thật ở bản production.
 - `DISEASE_API_URL` và `OLLAMA_BASE_URL` bị bỏ khỏi các file env mẫu vì không service nào đọc; `scripts/validate-env.sh` bỏ khóa tương ứng. `KEYCLOAK_ISSUER` bỏ khỏi `docker/.env.local.example` vì compose ghi đè.
 - Test e2e `8.11-E2E-001` (trạng thái lỗi) nay mock hai route và cookie giả có `htxCode`, vì cookie không có token bị chuyển về `/login` và layout hiện `NO_HTX` khi thiếu mã HTX.
+- Rà soát cuối nhánh phát hiện `schedule/harvest`, `schedule/unscheduled`, `weather/forecast` và trang soil-health của cán bộ đọc Prisma không lọc HTX; nay các route này dùng `requireTenant()` và lọc theo `household.htx_profile_id`.
+- Tài liệu được tách theo HTX: mọi key là `para/<htxCode>/...`, ba route tài liệu lấy mã HTX từ phiên, key ngoài thư mục (kể cả `..`) trả 404; `certificate_keys` ngoài thư mục trả 400 ở cả xuất QR và tạo lô. Object cũ không còn được liệt kê và không tự chuyển. Chatbot kỹ thuật chỉ đọc `Resources` và `Areas` của HTX.
+- `refreshAccessToken` đọc lại vai trò từ access token mới bằng hàm dùng chung với `auth.ts`; không còn vai trò hợp lệ thì xóa vai trò. Ở production, phiên không có refresh token được coi là `RefreshFailed`.
+- `KeycloakAdminAdapter` đọc `KC_BOOTSTRAP_ADMIN_*` rồi `KEYCLOAK_ADMIN*`, và không dùng `admin/admin` ở production. `/api/register` nằm trong danh sách API công khai của middleware.
 
 Đo thực tế (máy arm64, database sạch, image và lớp build đã có cache; model được kéo lại vì volume mới):
 
