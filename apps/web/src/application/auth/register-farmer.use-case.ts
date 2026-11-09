@@ -4,6 +4,7 @@
 import { AuthManagementPort, RegisterData } from '@/domain/auth/ports/auth-management.port'
 
 import { HouseholdPort } from '@/domain/farm/ports/HouseholdPort'
+import { ValidationError } from '@/domain/errors'
 
 export class RegisterFarmerUseCase {
   constructor(
@@ -26,11 +27,16 @@ export class RegisterFarmerUseCase {
       throw new Error('Hợp tác xã không được để trống')
     }
 
+    // The phone is globally unique: refuse here, before the Keycloak user exists.
+    if (await this.householdPort.isPhoneTaken(data.phone, data.htxId)) {
+      throw new ValidationError('Số điện thoại này đã được đăng ký!')
+    }
+
     // Call adapter to create user in Keycloak with enabled: false (Pending Approval)
     const userId = await this.authPort.registerFarmer(data, false)
 
     // Step 2: Create or Update Household in DB (only for farmer)
-    const orphanedHousehold = await this.householdPort.findOrphanedByPhone(data.phone)
+    const orphanedHousehold = await this.householdPort.findOrphanedByPhone(data.phone, data.htxId)
     if (orphanedHousehold) {
       await this.householdPort.linkToKeycloak(orphanedHousehold.id, userId)
     } else {

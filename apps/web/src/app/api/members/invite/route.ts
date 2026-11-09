@@ -9,6 +9,7 @@ import { InviteMemberUseCase } from '@/application/auth/invite-member.use-case'
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
 import { z } from 'zod'
+import { ValidationError } from '@/domain/errors'
 
 const ALLOWED_ROLES = ['farmer', 'officer'] as const
 
@@ -58,6 +59,7 @@ async function inviteMember(request: Request) {
       }
     }, { status: 201 })
   } catch (error: unknown) {
+    if (error instanceof ValidationError) throw error
     console.error('Invite Member Error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json({ error: { message: errorMessage } }, { status: 500 })

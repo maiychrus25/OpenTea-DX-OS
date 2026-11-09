@@ -116,11 +116,20 @@ export class PrismaHouseholdRepository implements HouseholdPort {
       keycloak_user_id: h.keycloak_user_id,
     }
   }
-  async findOrphanedByPhone(phone: string): Promise<HouseholdSummary | null> {
+  async isPhoneTaken(phone: string, htxProfileId: string): Promise<boolean> {
+    const h = await prisma.household.findUnique({
+      where: { phone },
+      select: { htx_profile_id: true, keycloak_user_id: true },
+    })
+    return h != null && (h.htx_profile_id !== htxProfileId || h.keycloak_user_id !== null)
+  }
+
+  async findOrphanedByPhone(phone: string, htxProfileId: string): Promise<HouseholdSummary | null> {
     const h = await prisma.household.findFirst({
       where: {
         phone: phone,
         keycloak_user_id: null,
+        htx_profile_id: htxProfileId,
       },
       include: {
         parcels: { select: { area_ha: true } },

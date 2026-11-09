@@ -30,7 +30,9 @@ export interface HouseholdPort {
   findAll(htxProfileId: string): Promise<HouseholdSummary[]>
   findById(id: string): Promise<HouseholdSummary | null>
   findByKeycloakUserId(userId: string): Promise<HouseholdSummary | null>
-  findOrphanedByPhone(phone: string): Promise<HouseholdSummary | null>
+  findOrphanedByPhone(phone: string, htxProfileId: string): Promise<HouseholdSummary | null>
+  /** True when a household holds this phone and is not an unlinked household of this HTX. */
+  isPhoneTaken(phone: string, htxProfileId: string): Promise<boolean>
   create(data: CreateHouseholdData): Promise<HouseholdSummary>
   update(id: string, data: UpdateHouseholdData): Promise<HouseholdSummary>
   linkToKeycloak(id: string, keycloakUserId: string): Promise<void>

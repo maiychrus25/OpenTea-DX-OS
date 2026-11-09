@@ -17,7 +17,7 @@ jest.mock('@/auth', () => ({ auth: jest.fn() }))
 jest.mock('@/infrastructure/db/prisma.client', () => ({
   prisma: {
     htxProfile: { findUnique: jest.fn(), findFirst: jest.fn() },
-    household: { create: jest.fn(), update: jest.fn(), updateMany: jest.fn(), findFirst: jest.fn() },
+    household: { create: jest.fn(), update: jest.fn(), updateMany: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn() },
     notification: { create: jest.fn(), createMany: jest.fn() },
   },
 }))
@@ -82,6 +82,7 @@ describe('account creation', () => {
   describe('invite uses the inviter HTX and adds CONFIGURE_TOTP for manager and officer, not farmer', () => {
     function useCase() {
       const householdPort = {
+        isPhoneTaken: jest.fn().mockResolvedValue(false),
         findOrphanedByPhone: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({ id: 'household-1' }),
         linkToKeycloak: jest.fn(),
@@ -140,6 +141,84 @@ describe('account creation', () => {
     expect(response.status).toBe(200)
     expect(prisma.htxProfile.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'htx-md2' } }))
     expect(createdUser().attributes).toMatchObject({ htx_code: ['MD2'], htxId: ['htx-md2'] })
+  })
+
+  describe('a phone already held by a household', () => {
+    const invite = (role = 'farmer') =>
+      inviteMember(
+        new Request('http://localhost/api/members/invite', {
+          method: 'POST',
+          body: JSON.stringify({ ...inviteRequest, role }),
+        }),
+        {}
+      )
+    const selfRegister = () =>
+      register(
+        new Request('http://localhost/api/register', {
+          method: 'POST',
+          body: JSON.stringify({ fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '123456', htxId: 'htx-md2' }),
+        }),
+        {}
+      )
+    const holdBy = (household: { htx_profile_id: string | null; keycloak_user_id: string | null }) =>
+      (prisma.household.findUnique as jest.Mock).mockResolvedValue(household)
+
+    const refusals: [string, { htx_profile_id: string | null; keycloak_user_id: string | null }][] = [
+      ['an orphan of another HTX', { htx_profile_id: 'htx-lb', keycloak_user_id: null }],
+      ['a linked household of another HTX', { htx_profile_id: 'htx-lb', keycloak_user_id: 'someone' }],
+      ['an orphan with no HTX', { htx_profile_id: null, keycloak_user_id: null }],
+      ['a linked household of the same HTX', { htx_profile_id: 'htx-md2', keycloak_user_id: 'someone' }],
+    ]
+
+    test.each(refusals)('invite refuses %s before creating a Keycloak user', async (_name, household) => {
+      signInAs('manager')
+      holdBy(household)
+      const response = await invite()
+      expect(response.status).toBe(400)
+      expect(requestsTo('POST', /\/users$/)).toHaveLength(0)
+      expect(prisma.household.update).not.toHaveBeenCalled()
+    })
+
+    test.each(refusals)('self-registration refuses %s before creating a Keycloak user', async (_name, household) => {
+      holdBy(household)
+      const response = await selfRegister()
+      expect(response.status).toBe(400)
+      expect(requestsTo('POST', /\/users$/)).toHaveLength(0)
+      expect(prisma.household.update).not.toHaveBeenCalled()
+    })
+
+    const orphan = { id: 'household-md2', name: 'A', phone: '0901234567', address: null, parcels: [], keycloak_user_id: null }
+
+    test('invite links an orphan of the caller HTX, looked up inside that HTX', async () => {
+      signInAs('manager')
+      holdBy({ htx_profile_id: 'htx-md2', keycloak_user_id: null })
+      ;(prisma.household.findFirst as jest.Mock).mockResolvedValue(orphan)
+      expect((await invite()).status).toBe(201)
+      expect((prisma.household.findFirst as jest.Mock).mock.calls[0][0].where).toEqual({
+        phone: '0901234567',
+        keycloak_user_id: null,
+        htx_profile_id: 'htx-md2',
+      })
+      expect(prisma.household.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'household-md2' }, data: { keycloak_user_id: 'new-user' } })
+      )
+      expect(prisma.household.create).not.toHaveBeenCalled()
+    })
+
+    test('self-registration links an orphan of the chosen HTX, looked up inside that HTX', async () => {
+      holdBy({ htx_profile_id: 'htx-md2', keycloak_user_id: null })
+      ;(prisma.household.findFirst as jest.Mock).mockResolvedValue(orphan)
+      expect((await selfRegister()).status).toBe(200)
+      expect((prisma.household.findFirst as jest.Mock).mock.calls[0][0].where.htx_profile_id).toBe('htx-md2')
+      expect(prisma.household.create).not.toHaveBeenCalled()
+    })
+
+    test('inviting an officer does not touch households', async () => {
+      signInAs('manager')
+      holdBy({ htx_profile_id: 'htx-lb', keycloak_user_id: null })
+      expect((await invite('officer')).status).toBe(201)
+      expect(prisma.household.update).not.toHaveBeenCalled()
+    })
   })
 
   test('self-registration refuses an HTX that does not exist', async () => {
