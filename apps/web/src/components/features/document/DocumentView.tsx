@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/Modal/Modal'
 import styles from './DocumentView.module.css'
 import { DocumentItem } from './mock-data'
 import { MOCK_DOCUMENTS } from './mock-data'
+import { documentRoot } from '@/domain/document/document-namespace'
 
 const CATEGORIES = [
   { id: 'Projects/', name: 'Projects', description: 'Các dự án ngắn hạn' },
@@ -19,7 +20,7 @@ const CATEGORIES = [
 ]
 
 export function DocumentView({ htxCode }: { htxCode: string }) {
-  const root = `para/${htxCode}/`
+  const root = documentRoot(htxCode)
   const categories = CATEGORIES.map(cat => ({ ...cat, id: `${root}${cat.id}` }))
   const [activeCategory, setActiveCategory] = useState(categories[0].id)
   const [currentPath, setCurrentPath] = useState(categories[0].id)
