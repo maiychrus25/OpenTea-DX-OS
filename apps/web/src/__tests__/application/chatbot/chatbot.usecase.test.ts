@@ -4,18 +4,27 @@
 
 import { ChatbotUseCase } from '@/application/chatbot/ChatbotUseCase'
 import { CoreUnauthorizedError } from '@/domain/errors'
+import OpenAI from 'openai'
 
 const create = jest.fn()
 const ctor = jest.fn()
-jest.mock('openai', () => ({
+jest.mock('openai', () => {
+  class APIError extends Error {
+    constructor(readonly status: number) {
+      super(`status ${status}`)
+    }
+  }
+  return {
   __esModule: true,
   default: class {
+    static APIError = APIError
     chat = { completions: { create: (...a: unknown[]) => create(...a) } }
     constructor(opts: unknown) {
       ctor(opts)
     }
   },
-}))
+  }
+})
 
 const env = { ...process.env }
 beforeEach(() => {
@@ -62,5 +71,42 @@ describe('ChatbotUseCase client selection', () => {
     expect(getToken).not.toHaveBeenCalled()
     expect(ctor).toHaveBeenCalledWith({ apiKey: 'gsk_real', baseURL: 'https://api.groq.com/openai/v1' })
     expect(create.mock.calls[0][0].model).toBe('llama-3.1-8b-instant')
+  })
+})
+
+describe('ChatbotUseCase gateway failures', () => {
+  const readAll = async (stream: ReadableStream) => {
+    const reader = stream.getReader()
+    let out = ''
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) return out
+      out += new TextDecoder().decode(value)
+    }
+  }
+  const gateway = () => new ChatbotUseCase(undefined, undefined, undefined, async () => 'tok-1')
+  const failWith = (status: number) => create.mockRejectedValue(new (OpenAI as any).APIError(status))
+
+  test('a 401 from the gateway becomes CoreUnauthorizedError', async () => {
+    failWith(401)
+    await expect(run(gateway())).rejects.toBeInstanceOf(CoreUnauthorizedError)
+  })
+
+  test('a 429 from the gateway streams a busy message', async () => {
+    failWith(429)
+    const out = await readAll(await run(gateway()))
+    expect(out).toContain('bận')
+    expect(out).not.toContain('không khả dụng')
+  })
+
+  test('a 503 from the gateway keeps the unavailable message', async () => {
+    failWith(503)
+    expect(await readAll(await run(gateway()))).toContain('không khả dụng')
+  })
+
+  test('the Groq path keeps the unavailable message even on 401', async () => {
+    process.env.GROQ_API_KEY = 'gsk_real'
+    failWith(401)
+    expect(await readAll(await run(new ChatbotUseCase()))).toContain('không khả dụng')
   })
 })

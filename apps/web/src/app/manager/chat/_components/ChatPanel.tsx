@@ -3,6 +3,7 @@
 
 'use client'
 
+import { redirectToLogin } from '@/lib/api/redirect-to-login'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, Bot, User, Loader2, AlertCircle, BookOpen } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -75,6 +76,11 @@ export function ChatPanel({ userId, userName }: ChatPanelProps) {
           history: history.slice(-10),
         }),
       })
+
+      if (res.status === 401) {
+        redirectToLogin()
+        return
+      }
 
       if (!res.ok) {
         const errorCode = res.status === 503 ? 'AI_UNAVAILABLE' : 'ERROR'

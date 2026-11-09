@@ -226,18 +226,23 @@ export class ChatbotUseCase {
         },
       })
     } catch (error) {
-      logger.error('Groq/Ollama API error', { error })
+      logger.error('LLM API error', { error: error instanceof OpenAI.APIError ? error.status : error })
+      // Only the gateway path: a refused token must send the client to login. Groq keeps its generic message.
+      if (!this.client && error instanceof OpenAI.APIError) {
+        if (error.status === 401) throw new CoreUnauthorizedError()
+        if (error.status === 429) return this.unavailableStream('Trợ lý AI đang bận. Vui lòng thử lại sau ít phút.')
+      }
       return this.unavailableStream()
     }
   }
 
-  private unavailableStream(): ReadableStream {
+  private unavailableStream(message = 'Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau hoặc xem bản tin thị trường.'): ReadableStream {
     const encoder = new TextEncoder()
     return new ReadableStream({
       start(controller) {
         controller.enqueue(encoder.encode(JSON.stringify({
           error: true,
-          message: 'Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau hoặc xem bản tin thị trường.',
+          message,
         }) + '\n'))
         controller.close()
       },
