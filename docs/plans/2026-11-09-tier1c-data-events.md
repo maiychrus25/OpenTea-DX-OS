@@ -24,7 +24,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 - `DXOS_MQTT_DEVICES` and `DXOS_MQTT_INGEST_PASSWORD` reach containers through `env_file: .env.local`, not compose interpolation (issue #8). Same exposure as Hasura today, tracked by #16.
 - New smoke assertions live in `platform/tests/smoke-dataops.sh`, sourced from `smoke-platform.sh` immediately before `echo "[pins]"`. Existing smoke sections stay, except the one Hasura restart removed in Task 1.
 - Reject reasons, sensor names and ranges, paths and defaults are exactly those in spec §4 and §5.
-- The clean-volume commands below delete local Docker volumes (`docker_pgdata`, `docker_seaweedfs_data`, `docker_mosquitto_data`). Run them only after the owner has confirmed the local dev data may be discarded; otherwise rely on the clean-database run in CI.
+- Never delete the owner's Docker volumes (`docker_*`). A clean-database run is: `make platform-down; COMPOSE_PROJECT_NAME=dxos-clean make platform-up && COMPOSE_PROJECT_NAME=dxos-clean make platform-smoke`, then `COMPOSE_PROJECT_NAME=dxos-clean docker compose -f docker/docker-compose.yml down -v`. Only the `dxos-clean_*` volumes may be removed.
 
 ## Review Focus
 
@@ -56,7 +56,7 @@ assert_eq "$got" "postgresql://agrimarket:p%40ss%2Fw%3Ard@postgres:5432/agrimark
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `make platform-down && docker volume rm docker_pgdata; make platform-up && make platform-smoke`
+Run the clean-database sequence from Global Constraints.
 Expected: FAIL at the Hasura assertion or the missing `migrate` service.
 
 - [ ] **Step 3: Build the migrate image**
@@ -69,7 +69,7 @@ Base compose gets `migrate` with `build: ../apps/web/prisma`, profile `tools`, `
 
 - [ ] **Step 5: Verify and commit**
 
-Run: `make platform-down && docker volume rm docker_pgdata; make platform-up && make platform-smoke`
+Run the clean-database sequence from Global Constraints.
 Expected: all assertions PASS, Hasura without restart.
 
 ```bash
@@ -303,7 +303,7 @@ git commit -m "feat(platform): serve an in-house LLM through the gateway"
 
 - [ ] **Step 4: Full verification, two rounds**
 
-Run twice, from a clean volume: `make platform-down && docker volume rm docker_pgdata docker_seaweedfs_data docker_mosquitto_data; make platform-up && make platform-smoke`. Then `make test`, `make lint`, the dataops and scanner unit tests, `python3 platform/tests/test_realm_policy.py`. Expected: all PASS, with all 79 pre-existing smoke assertions still present and green.
+Run the clean-database sequence from Global Constraints twice. Then `make test`, `make lint`, the dataops and scanner unit tests, `python3 platform/tests/test_realm_policy.py`. Expected: all PASS, with all 79 pre-existing smoke assertions still present and green.
 
 - [ ] **Step 5: Commit**
 
