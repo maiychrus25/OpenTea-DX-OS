@@ -155,7 +155,8 @@ IT=$(user_token manager_tc); [ -n "$IT" ] || fail "internal port token empty"
 INT_NOTOKEN=$($COMPOSE exec -T hasura curl -s -o /dev/null -w '%{http_code}' -X POST "$INT_URL") || INT_NOTOKEN=000
 assert_eq "$INT_NOTOKEN" "401" "internal port without a token is 401"
 INT_CODES=$($COMPOSE exec -T hasura sh -c "for i in \$(seq 1 310); do curl -s -o /dev/null -w '%{http_code}\n' --max-time 10 -X POST -H 'Authorization: Bearer $IT' $INT_URL; done") || fail "internal gateway port requests failed to run"
-assert_eq "$(echo "$INT_CODES" | grep -c 429 || true)" "0" "310 authenticated requests on the internal port are never rate limited"
+# Pin the whole set: 000/401 never reach limit-count, so "no 429" alone could pass vacuously.
+assert_eq "$(echo "$INT_CODES" | sort | uniq -c | tr -s ' ' | tr '\n' ';')" " 310 200;" "310 authenticated requests on the internal port all reached Hasura (200) and none was rate limited"
 curl -s -o /dev/null --max-time 3 http://localhost:9081/ && fail "internal gateway port 9081 is reachable from the host" || pass "internal gateway port 9081 is not published to the host"
 # Last: this exhausts the per-IP window on 9080, so wait for it to clear for the next smoke run.
 EXT_429=0
