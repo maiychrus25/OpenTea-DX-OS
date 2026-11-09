@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+-- SPDX-FileCopyrightText: 2026 OpenTea Developers
 -- Migration: sync_schema_drift
 -- Brings the migration history in line with schema.prisma. Additive and idempotent, plus one safe backfill.
 
