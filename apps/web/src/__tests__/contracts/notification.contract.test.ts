@@ -39,7 +39,8 @@ describe('Notification Contract Tests', () => {
       where: {
         OR: [
           { recipient_id: 'user123' },
-          { recipient_id: null, htx_profile_id: 'htx-1' }
+          { recipient_id: null, htx_profile_id: 'htx-1' },
+          { recipient_id: null, htx_profile_id: null, type: 'SYSTEM' }
         ],
         is_read: false
       },

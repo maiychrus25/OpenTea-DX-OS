@@ -23,7 +23,13 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({
 }))
 
 const mock = (fn: unknown) => fn as jest.Mock
-const scoped = { OR: [{ recipient_id: 'u1' }, { recipient_id: null, htx_profile_id: 'htx-md2' }] }
+const scoped = {
+  OR: [
+    { recipient_id: 'u1' },
+    { recipient_id: null, htx_profile_id: 'htx-md2' },
+    { recipient_id: null, htx_profile_id: null, type: 'SYSTEM' },
+  ],
+}
 
 function signIn(htxCode: string | null) {
   mock(auth).mockResolvedValue({ user: { id: 'u1', role: 'officer', htxCode } })
@@ -87,6 +93,49 @@ describe('reading notifications', () => {
   })
 })
 
+describe('which null-recipient rows a user can see', () => {
+  type Row = { id: string; type: string; recipient_id: null; htx_profile_id: string | null }
+  type Where = { OR: Record<string, unknown>[] }
+  const notice = (id: string, type: string, htx_profile_id: string | null): Row => ({ id, type, recipient_id: null, htx_profile_id })
+
+  // Applies the real where clause, so these assert who sees a row rather than the shape of the query.
+  function store(rows: Row[]) {
+    mock(prisma.htxProfile.findUnique).mockImplementation(async ({ where }) => ({ id: `htx-${where.htx_code.toLowerCase()}`, name: 'x' }))
+    mock(prisma.notification.findMany).mockImplementation(async ({ where }: { where: Where }) =>
+      rows
+        .filter((row) => where.OR.some((clause) => Object.entries(clause).every(([key, value]) => row[key as keyof Row] === value)))
+        .map((row) => ({ ...row, title: 't', body: 'b', is_read: false, created_at: new Date() }))
+    )
+  }
+
+  async function seenBy(htxCode: string) {
+    signIn(htxCode)
+    const { data } = await (await list()).json()
+    return { ids: data.notifications.map((n: { id: string }) => n.id), unreadCount: data.unreadCount }
+  }
+
+  test('an n8n SYSTEM row with no HTX is visible to users of two different HTXs', async () => {
+    store([notice('n8n', 'SYSTEM', null)])
+    await expect(seenBy('MD2')).resolves.toEqual({ ids: ['n8n'], unreadCount: 1 })
+    await expect(seenBy('LB')).resolves.toEqual({ ids: ['n8n'], unreadCount: 1 })
+  })
+
+  test.each(['DISEASE_REPORT', 'HARVEST_APPROVED', 'JOURNAL_SUBMITTED', 'BROADCAST'])(
+    'a %s row with neither recipient nor HTX is visible to nobody',
+    async (type) => {
+      store([notice('old', type, null)])
+      await expect(seenBy('MD2')).resolves.toEqual({ ids: [], unreadCount: 0 })
+      await expect(seenBy('LB')).resolves.toEqual({ ids: [], unreadCount: 0 })
+    }
+  )
+
+  test('a SYSTEM broadcast of one HTX is visible only inside that HTX', async () => {
+    store([notice('withdrawn', 'SYSTEM', 'htx-md2')])
+    await expect(seenBy('MD2')).resolves.toEqual({ ids: ['withdrawn'], unreadCount: 1 })
+    await expect(seenBy('LB')).resolves.toEqual({ ids: [], unreadCount: 0 })
+  })
+})
+
 describe('writing broadcasts', () => {
   const repo = new PrismaNotificationRepository()
   const written = () => mock(prisma.notification.create).mock.calls[0][0].data
@@ -124,6 +173,19 @@ describe('writing broadcasts', () => {
       activities: [],
     })
     expect(written()).toMatchObject({ type: 'JOURNAL_SUBMITTED', htx_profile_id: 'htx-lb' })
+  })
+
+  test('a withdrawn journal of a household without an HTX writes no SYSTEM row, which every HTX would see', async () => {
+    mock(prisma.journalEntry.findUnique).mockResolvedValue({
+      submitted_role: 'FARMER',
+      status: 'PENDING_APPROVAL',
+      activity_type: 'OTHER',
+      submitted_by_id: 'u1',
+      parcel: { parcel_code: 'P1', household_id: 'h1', household: { htx_profile_id: null } },
+    })
+    await new PrismaJournalRepository().delete('j1')
+    expect(prisma.journalEntry.delete).toHaveBeenCalled()
+    expect(prisma.notification.create).not.toHaveBeenCalled()
   })
 
   test('a withdrawn farmer journal broadcasts to the HTX of the parcel', async () => {

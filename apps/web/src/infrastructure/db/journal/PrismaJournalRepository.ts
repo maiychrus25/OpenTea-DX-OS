@@ -284,7 +284,8 @@ export class PrismaJournalRepository implements JournalPort {
 
       await tx.journalEntry.delete({ where: { id } })
 
-      if (entry?.submitted_role === 'FARMER' && entry.status === 'PENDING_APPROVAL') {
+      // SYSTEM with no recipient and no HTX is shown to every HTX, so a household without an HTX writes nothing.
+      if (entry?.submitted_role === 'FARMER' && entry.status === 'PENDING_APPROVAL' && entry.parcel.household.htx_profile_id) {
         const notif = await tx.notification.create({
           data: {
             type: NotificationType.SYSTEM,
