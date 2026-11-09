@@ -68,6 +68,18 @@ services:
         esac
         exec $$HGE_BINARY serve
 
+  # Port 8080 is public, so refuse the default admin password published in this repo.
+  keycloak:
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        case "$$KEYCLOAK_ADMIN_PASSWORD" in
+          ""|[aA][dD][mM][iI][nN]|[cC][hH][aA][nN][gG][eE]_[mM][eE]*) echo "Refusing to start: set a strong KEYCLOAK_ADMIN_PASSWORD in docker/.env.local" >&2; exit 1;;
+        esac
+        exec /opt/keycloak/bin/kc.sh "$$@"
+      - kc.sh
+
   # Published on the host: apisix:9080, web:3000, keycloak:8080 and seaweedfs:9000.
   # SeaweedFS 9000 stays public because the web app hands browsers presigned URLs on it
   # (the /storage gateway route cannot validate SigV4); close it when Tier 2 moves storage behind the gateway.

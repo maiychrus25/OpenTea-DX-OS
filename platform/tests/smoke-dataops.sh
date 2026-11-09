@@ -138,3 +138,11 @@ for _ in $(seq 1 31); do
   [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H "Authorization: Bearer $LT" -H 'Content-Type: application/json' -d '{"model":"missing","messages":[]}' "$LLM_URL")" = 429 ] && LLM_429=1
 done
 assert_eq "$LLM_429" "1" "llm route rate limit returns 429"
+
+echo "[release guards]"
+# `--version` makes kc.sh exit at once, so only the guard decides the exit code.
+kc_guard() { OPENTEA_VERSION=0.0.0 $COMPOSE -f docker/docker-compose.release.yml run --rm --no-deps -e "KEYCLOAK_ADMIN_PASSWORD=$1" keycloak --version >/dev/null 2>&1; }
+for weak in "" admin ADMIN change_me_x CHANGE_ME_Y; do
+  kc_guard "$weak" && fail "release keycloak accepted weak admin password '$weak'" || pass "release keycloak refuses admin password '$weak'"
+done
+kc_guard "a-Strong-Pass-1" && pass "release keycloak starts with a strong admin password" || fail "release keycloak refused a strong admin password"

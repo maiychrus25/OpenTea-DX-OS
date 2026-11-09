@@ -218,8 +218,9 @@ Khác biệt/bổ sung so với thiết kế:
 - Mốc cắt (cutoff) được làm tròn xuống 00:00 UTC, dùng chung cho chọn cụm, đọc dòng và reject: chỉ xuất nguyên ngày UTC, ngày chứa mốc cắt giữ nóng toàn bộ (dữ liệu nằm ở kho nóng thêm tối đa khoảng một ngày). Nhờ vậy mỗi HTX-ngày chỉ có một file Parquet, trừ khi có bản ghi đến muộn; chưa có compaction.
 - View `sensor_readings_cold` giữ bản được ghi nhận sớm nhất của một khóa bị xuất trùng (`qualify row_number() ... order by ingested_at`).
 - `recover_interrupted` tách lỗi theo từng dòng: một object không xóa được chỉ để dòng đó ở `running` cho vòng sau, các dòng khác và các cụm vẫn chạy.
-- `make platform-up` khởi động lại `hasura` và `apisix` sau `up` rồi chờ cả hai phục vụ, vì Hasura chỉ nạp metadata lúc khởi động và bind mount một file giữ inode cũ.
-- Luồng release dùng `--env-file docker/.env.local` trên mọi lệnh `docker compose`; `DXOS_S3_REQUIRE_STRONG=1` khiến SeaweedFS từ chối khóa S3 rỗng hoặc placeholder. Dev không đổi (issue #8 vẫn mở cho dev).
+- Khi stack đang chạy, `make platform-up` khởi động lại `hasura` và `apisix` sau `up` rồi chờ cả hai phục vụ, vì Hasura chỉ nạp metadata lúc khởi động và bind mount một file giữ inode cũ. Khi khởi động mới thì không restart, để smoke vẫn phát hiện được thứ tự migrate sai.
+- Luồng release dùng `--env-file docker/.env.local` trên mọi lệnh `docker compose`; `DXOS_S3_REQUIRE_STRONG=1` khiến SeaweedFS từ chối khóa S3 rỗng hoặc placeholder, và Keycloak từ chối mật khẩu admin rỗng, `admin` hoặc `change_me*`. Dev không đổi (issue #8 vẫn mở cho dev).
+- CI: job Platform Smoke cần dọn SDK cài sẵn của runner trước khi dựng stack (dung lượng trống từ 14 GB lên 32 GB), vì khi chưa dọn job thất bại ở `make platform-up` và GitHub không lưu được log.
 - Reject mồ côi chỉ bị xóa khi HTX-ngày đó không còn dòng nóng, để cụm đang chờ sau giới hạn 100 vẫn báo được reject.
 - `httpfs` đã được xác nhận hoạt động với SeaweedFS (đọc trực tiếp `s3://`); nhánh tải về thư mục tạm vẫn giữ, chỉ dùng khi `httpfs` lỗi `duckdb.IOException`, và đã kiểm chứng trên kho thật.
 - Chống mất dữ liệu khi kết quả COMMIT không rõ: `_abandon` đọc trạng thái dòng chạy trước khi xóa object; nếu không đọc được thì không đụng gì và để `recover_interrupted` quyết định. Nếu xóa object lỗi, dòng giữ `running` thay vì `failed`.
@@ -235,6 +236,6 @@ Khác biệt/bổ sung so với thiết kế:
 Đo thực tế (máy arm64, mạng chậm):
 
 - `make platform-up` trên database sạch (volume mới, image Ollama và model đã có cache sau lần đầu): 205 giây ở vòng 1 và 194 giây ở vòng 2. Lần dựng đầu tiên trên máy chưa có image Ollama/model mất 1338 giây, chủ yếu do kéo image và model 397 MB.
-- Platform Smoke (`make platform-smoke`): 50 giây ở vòng 1 và 49 giây ở vòng 2. Thời gian trên CI chưa biết; sẽ đo ở lần chạy CI đầu tiên và bổ sung tại đây.
+- Platform Smoke (`make platform-smoke`): 50 giây ở vòng 1 và 49 giây ở vòng 2. Trên CI, cả job Platform Smoke (gồm kéo image, model và dựng stack) mất 10 phút 53 giây (commit `8d11a93`).
 
 Giới hạn đã biết: view kho lạnh chỉ giữ bản được ghi nhận sớm nhất của một khóa bị xuất trùng; Mosquitto ghi trạng thái mỗi 60 giây (`autosave_interval 60`) nên bản tin xếp hàng trong tối đa 60 giây cuối có thể mất nếu broker sập; `make platform-up` lần đầu chậm vì phải kéo image Ollama và model; `ollama-init` cần mạng ra ngoài một lần; một cửa sổ hiếm còn lại nếu phiên giữ khóa chết ngay sau lần ping trong khi lần chạy khác phục hồi cùng object; `executemany` nạp từng dòng nên một HTX-ngày rất lớn sẽ chậm chứ không mất dữ liệu; `dxos-ingest` và `dxos-lifecycle` dùng tài khoản `agrimarket` (tách vai trò thuộc Tầng 2); mật khẩu database chứa ký tự dành riêng của URL (ví dụ `@`) làm hỏng `DXOS_DB_URL` của `dxos-ingest`, `dxos-lifecycle`, `dxos-scanner` và URL database của Hasura, vì chỉ `migrate` mã hóa mật khẩu.
