@@ -10,6 +10,8 @@
   "resetPasswordAllowed": false,
   "editUsernameAllowed": false,
   "verifyEmail": false,
+  "ssoSessionIdleTimeout": 28800,
+  "ssoSessionMaxLifespan": 28800,
   "otpPolicyType": "totp",
   "otpPolicyAlgorithm": "HmacSHA1",
   "otpPolicyDigits": 6,

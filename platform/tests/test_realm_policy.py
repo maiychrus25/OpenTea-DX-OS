@@ -51,6 +51,10 @@ class RealmPolicyTest(unittest.TestCase):
         names = {role["name"].lower() for role in REALM["roles"]["realm"]}
         self.assertFalse(names & {"admin", "hasura-admin"}, names)
 
+    def test_sso_session_matches_app_session(self):
+        self.assertEqual(REALM.get("ssoSessionIdleTimeout"), 28800)
+        self.assertEqual(REALM.get("ssoSessionMaxLifespan"), 28800)
+
     def test_otp_policy(self):
         self.assertEqual(REALM.get("otpPolicyType"), "totp")
         self.assertEqual(REALM.get("otpPolicyDigits"), 6)
