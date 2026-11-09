@@ -3,6 +3,7 @@
 
 import { NextResponse } from 'next/server'
 import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { lotCreateSchema } from '@/lib/validations/lot.schema'
 import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
@@ -29,7 +30,8 @@ async function getLots(request: Request) {
 }
 
 async function postLot(request: Request) {
-  const { role, htxProfileId, userId } = await requireTenant()
+  const tenant = await requireTenant()
+  const { role, htxProfileId, userId } = tenant
   if (role !== 'officer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Only officer can create lots' } }, { status: 403 })
   }
@@ -39,6 +41,9 @@ async function postLot(request: Request) {
   if (!parse.success) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
+
+  const guard = new TenantGuard(tenant)
+  for (const parcelId of parse.data.parcel_ids) await guard.parcel(parcelId)
 
   const lotRepo = new PrismaLotRepository()
   const parcelRepo = new PrismaParcelRepository()

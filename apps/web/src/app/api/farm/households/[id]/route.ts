@@ -4,6 +4,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
 import { GetHouseholdUseCase } from '@/application/farm/GetHouseholdUseCase'
 import { UpdateHouseholdUseCase } from '@/application/farm/UpdateHouseholdUseCase'
@@ -38,6 +40,7 @@ async function updateHousehold(request: Request, context: unknown) {
 
   const { params } = context as { params: Promise<{ id: string }> }
   const { id } = await params
+  await new TenantGuard(await requireTenant()).household(id)
 
   const body = await request.json().catch(() => ({}))
   const parse = householdUpdateSchema.safeParse(body)

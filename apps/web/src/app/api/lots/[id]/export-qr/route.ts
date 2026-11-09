@@ -4,6 +4,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
 import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
 import { PrismaLotTraceRepository } from '@/infrastructure/db/repositories/prisma-lot-trace-repository'
 import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
@@ -27,6 +29,7 @@ async function postExportQr(request: Request, context: unknown) {
 
   const { params } = context as { params: Promise<{ id: string }> }
   const { id } = await params
+  await new TenantGuard(await requireTenant()).lot(id)
 
   let certificateKeys: string[] | undefined
   try {

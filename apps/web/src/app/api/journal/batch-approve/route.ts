@@ -4,6 +4,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
 import { journalBatchApproveSchema } from '@/lib/validations/journal.schema'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
@@ -25,6 +27,10 @@ async function postBatchApprove(request: Request) {
   if (!parse.success) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
+
+  // Check every entry first so one foreign id approves nothing.
+  const guard = new TenantGuard(await requireTenant())
+  for (const entryId of parse.data.entry_ids) await guard.journalEntry(entryId)
 
   const repo = new PrismaJournalRepository()
   const docStorageRepo = new MinioDocumentAdapter()

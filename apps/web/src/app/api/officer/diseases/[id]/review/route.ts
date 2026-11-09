@@ -3,6 +3,9 @@
 
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { requireTenant } from '@/lib/api/tenant';
+import { TenantGuard } from '@/lib/api/tenant-guard';
+import { NoHtxError, NotFoundError } from '@/domain/errors';
 import { PrismaDiseaseReportRepository } from '@/infrastructure/db/farm/PrismaDiseaseReportRepository';
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository';
 import { ReviewDiseaseReportUseCase } from '@/application/disease/review-disease-report.usecase';
@@ -37,6 +40,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     const { status, treatment_recommendation } = parsed.data;
 
+    await new TenantGuard(await requireTenant()).diseaseReport(params.id);
+
     const useCase = new ReviewDiseaseReportUseCase(
       new PrismaDiseaseReportRepository(),
       new PrismaNotificationRepository(),
@@ -53,6 +58,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    if (error instanceof NoHtxError) {
+      return NextResponse.json({ error: { code: 'NO_HTX', message: error.message } }, { status: 403 });
+    }
+    if (error instanceof NotFoundError) {
+      return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Report not found' } }, { status: 404 });
+    }
     console.error('[Officer Review Disease API]', error);
 
     if (error.message === 'REPORT_NOT_FOUND') {

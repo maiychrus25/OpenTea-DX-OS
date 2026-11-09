@@ -4,6 +4,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
 import { parcelCreateSchema } from '@/lib/validations/parcel.schema'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
 import { ListParcelsUseCase } from '@/application/farm/ListParcelsUseCase'
@@ -52,6 +54,8 @@ async function postParcel(request: Request) {
   if (!parse.success) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
+
+  await new TenantGuard(await requireTenant()).household(parse.data.household_id)
 
   const repo = new PrismaParcelRepository()
   const useCase = new CreateParcelUseCase(repo)

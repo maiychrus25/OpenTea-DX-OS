@@ -3,6 +3,9 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/infrastructure/db/prisma.client'
+import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
+import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
 const OPEN_METEO_BASE = 'https://api.open-meteo.com/v1/forecast'
 
@@ -22,12 +25,14 @@ interface DiseaseRecord {
   treatment_notes: string | null
 }
 
-export async function GET(
+async function getSoilHealth(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+  await new TenantGuard(await requireTenant()).parcel(id)
+
   try {
-    const { id } = await params
 
     const parcel = await prisma.parcel.findUnique({
       where: { id },
@@ -179,3 +184,5 @@ export async function GET(
     return NextResponse.json({ error: 'Lỗi hệ thống khi truy vấn dữ liệu sức khỏe đất' }, { status: 500 })
   }
 }
+
+export const GET = withErrorHandler(getSoilHealth)

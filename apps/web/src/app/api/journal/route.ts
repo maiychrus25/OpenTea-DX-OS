@@ -4,6 +4,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
 import { journalCreateSchema } from '@/lib/validations/journal.schema'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { ListJournalEntriesUseCase } from '@/application/journal/ListJournalEntriesUseCase'
@@ -80,6 +82,8 @@ async function postJournalEntry(request: Request) {
   if (!parse.success) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
+
+  await new TenantGuard(await requireTenant()).parcel(parse.data.parcel_id)
 
   const repo = new PrismaJournalRepository()
   const parcelRepo = new PrismaParcelRepository()

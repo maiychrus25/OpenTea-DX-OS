@@ -4,6 +4,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
 import { journalUpdateSchema } from '@/lib/validations/journal.schema'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { UpdateJournalEntryUseCase } from '@/application/journal/UpdateJournalEntryUseCase'
@@ -30,6 +32,7 @@ async function putJournalEntry(request: Request, context: unknown) {
 
   const { params } = context as { params: Promise<{ id: string }> }
   const { id } = await params
+  await new TenantGuard(await requireTenant()).journalEntry(id)
 
   const body = await request.json().catch(() => ({}))
   const parse = journalUpdateSchema.safeParse(body)
@@ -56,6 +59,7 @@ async function deleteJournalEntry(_request: Request, context: unknown) {
 
   const { params } = context as { params: Promise<{ id: string }> }
   const { id } = await params
+  await new TenantGuard(await requireTenant()).journalEntry(id)
 
   const repo = new PrismaJournalRepository()
   const useCase = new DeleteJournalEntryUseCase(repo)
