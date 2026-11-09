@@ -146,3 +146,27 @@ for weak in "" admin ADMIN change_me_x CHANGE_ME_Y; do
   kc_guard "$weak" && fail "release keycloak accepted weak admin password '$weak'" || pass "release keycloak refuses admin password '$weak'"
 done
 kc_guard "a-Strong-Pass-1" && pass "release keycloak starts with a strong admin password" || fail "release keycloak refused a strong admin password"
+
+echo "[internal gateway port]"
+# The web server calls from one container IP, so port 9081 (compose network only) skips the per-IP limit.
+# Requests need a valid token: openid-connect rejects anonymous ones before limit-count counts them.
+INT_URL="http://apisix:9081/api/data/graphql"
+IT=$(user_token manager_tc); [ -n "$IT" ] || fail "internal port token empty"
+INT_NOTOKEN=$($COMPOSE exec -T hasura curl -s -o /dev/null -w '%{http_code}' -X POST "$INT_URL") || INT_NOTOKEN=000
+assert_eq "$INT_NOTOKEN" "401" "internal port without a token is 401"
+INT_CODES=$($COMPOSE exec -T hasura sh -c "for i in \$(seq 1 310); do curl -s -o /dev/null -w '%{http_code}\n' --max-time 10 -X POST -H 'Authorization: Bearer $IT' $INT_URL; done") || fail "internal gateway port requests failed to run"
+assert_eq "$(echo "$INT_CODES" | grep -c 429 || true)" "0" "310 authenticated requests on the internal port are never rate limited"
+curl -s -o /dev/null --max-time 3 http://localhost:9081/ && fail "internal gateway port 9081 is reachable from the host" || pass "internal gateway port 9081 is not published to the host"
+# Last: this exhausts the per-IP window on 9080, so wait for it to clear for the next smoke run.
+EXT_429=0
+# Up to 650 requests: a fixed 60 s window can reset mid-loop, so 310 alone could straddle two windows.
+for _ in $(seq 1 650); do
+  [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -X POST -H "Authorization: Bearer $IT" "$GATEWAY/api/data/graphql")" != 429 ] || { EXT_429=1; break; }
+done
+assert_eq "$EXT_429" "1" "authenticated requests on the public port hit the rate limit"
+INT_T0=$(date +%s)
+while [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -X POST -H "Authorization: Bearer $IT" "$GATEWAY/api/data/graphql" || true)" = 429 ]; do
+  [ $(( $(date +%s) - INT_T0 )) -lt 65 ] || fail "public port still answers 429 after 65 s"
+  sleep 2
+done
+pass "public port rate limit window cleared"

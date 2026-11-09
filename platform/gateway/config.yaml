@@ -5,7 +5,7 @@ deployment:
   role_data_plane:
     config_provider: yaml
 apisix:
-  node_listen: 9080
+  node_listen: [9080, 9081]  # 9081 is for the compose network only, never published
   enable_admin: false
 plugins:
   - request-id
