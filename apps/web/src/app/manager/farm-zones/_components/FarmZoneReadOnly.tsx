@@ -9,6 +9,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { MapPin, Target, Map } from 'lucide-react'
 import { escapeHtml } from '@/lib/sanitize'
+import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 // Dùng đúng field name từ API (polygon_geojson, không phải geometry)
 type Parcel = {
@@ -45,6 +46,7 @@ function hasValidGeometry(geojson?: { type: string; coordinates: unknown[] } | n
 
 export default function FarmZoneReadOnly() {
   const [parcels, setParcels] = useState<Parcel[]>([])
+  const [loadFailed, setLoadFailed] = useState(false)
   const dbStatuses = Object.keys(STATUS_CONFIG)
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([...dbStatuses])
   const [cropTypes, setCropTypes] = useState<string[]>([])
@@ -106,10 +108,15 @@ export default function FarmZoneReadOnly() {
 
   useEffect(() => {
     const url = householdId ? `/api/farm/parcels?household_id=${householdId}` : '/api/farm/parcels'
-    fetch(url)
-      .then(r => r.ok ? r.json() : Promise.reject(r))
-      .then(j => setParcels(j.data || []))
-      .catch(() => setParcels([]))
+    fetchJson<{ data?: Parcel[] }>(url)
+      .then(j => {
+        setParcels(j.data || [])
+        setLoadFailed(false)
+      })
+      .catch(() => {
+        setParcels([])
+        setLoadFailed(true)
+      })
   }, [householdId])
 
   useEffect(() => {
@@ -274,7 +281,7 @@ export default function FarmZoneReadOnly() {
                 <div className="h-12 w-12 rounded-full bg-[var(--color-surface-base)] flex items-center justify-center">
                   <MapPin className="h-5 w-5" />
                 </div>
-                <p className="text-sm">Không tìm thấy thửa đất nào</p>
+                <p className="text-sm">{loadFailed ? LOAD_FAILED_MESSAGE : 'Không tìm thấy thửa đất nào'}</p>
               </div>
             ) : (
               filtered.map(p => {

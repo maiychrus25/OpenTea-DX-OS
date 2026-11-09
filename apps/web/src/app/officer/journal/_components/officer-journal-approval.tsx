@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import styles from '../journal.module.css'
 import { JournalForm } from './JournalForm'
+import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface JournalEntry {
   id: string
@@ -61,6 +62,7 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
   const [rejectType, setRejectType] = useState<'REJECTED' | 'REQUEST_CHANGES'>('REJECTED')
   const [viewEntryId, setViewEntryId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
 
   const load = useCallback(async () => {
@@ -68,13 +70,11 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
       const url = householdId
         ? `/api/journal?householdId=${householdId}`
         : '/api/journal'
-      const res = await fetch(url)
-      if (res.ok) {
-        const data = await res.json()
-        setEntries(data.data || [])
-      }
+      const data = await fetchJson<{ data?: JournalEntry[] }>(url)
+      setEntries(data.data || [])
+      setLoadFailed(false)
     } catch {
-      // Error loading journal entries — handled silently
+      setLoadFailed(true)
     } finally {
       setIsLoading(false)
     }
@@ -163,6 +163,12 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
             <tr>
               <td colSpan={5} className={styles.emptyCell}>
                 Đang tải dữ liệu...
+              </td>
+            </tr>
+          ) : loadFailed ? (
+            <tr>
+              <td colSpan={5} className={styles.emptyCell}>
+                {LOAD_FAILED_MESSAGE}
               </td>
             </tr>
           ) : entries.length === 0 ? (

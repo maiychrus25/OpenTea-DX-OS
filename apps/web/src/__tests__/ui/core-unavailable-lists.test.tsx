@@ -17,9 +17,14 @@ import { HouseholdProfile } from '@/app/officer/households/[id]/_components/hous
 import OfficerDiseaseDetailPage from '@/app/officer/diseases/[id]/page'
 import SoilHealthPageClient from '@/app/officer/households/[id]/soil-health/SoilHealthPageClient'
 import { Step1Household } from '@/app/officer/farm-zones/setup/_components/step1-household'
+import { OfficerJournalApproval } from '@/app/officer/journal/_components/officer-journal-approval'
+import FarmZoneReadOnly from '@/app/manager/farm-zones/_components/FarmZoneReadOnly'
 import { redirectToLogin } from '@/lib/api/redirect-to-login'
 
-jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }) }))
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}))
 jest.mock('@/lib/api/redirect-to-login', () => ({ redirectToLogin: jest.fn() }))
 jest.mock('recharts', () => new Proxy({}, { get: () => () => null }))
 
@@ -43,6 +48,8 @@ const screens: [string, () => React.ReactElement, string, RegExp | null][] = [
   ['HouseholdManager', () => <HouseholdManager />, 'Không thể tải danh sách nông hộ. Vui lòng thử lại sau.', /Chưa có nông hộ nào/],
   ['OfficerDiseaseDetailPage', () => <OfficerDiseaseDetailPage params={{ id: 'd1' }} />, 'Lỗi khi tải dữ liệu.', null],
   ['SoilHealthPageClient', () => <SoilHealthPageClient householdId="h1" householdName="Hộ A" />, LOAD_FAILED, /Chưa có thửa đất/],
+  ['OfficerJournalApproval', () => <OfficerJournalApproval />, LOAD_FAILED, /Chưa có nhật ký nào cần duyệt/],
+  ['FarmZoneReadOnly', () => <FarmZoneReadOnly />, LOAD_FAILED, /Không tìm thấy thửa đất nào/],
 ]
 
 beforeEach(() => jest.clearAllMocks())
@@ -70,6 +77,8 @@ describe('empty results stay empty', () => {
     ['LotList', () => <LotList />, /Chưa có lô hàng nào/],
     ['ApproveList', () => <ApproveList />, /Không có nhật ký nào đang chờ duyệt/],
     ['FarmerJournalList', () => <FarmerJournalList />, /Bạn chưa ghi nhật ký nào/],
+    ['OfficerJournalApproval', () => <OfficerJournalApproval />, /Chưa có nhật ký nào cần duyệt/],
+    ['FarmZoneReadOnly', () => <FarmZoneReadOnly />, /Không tìm thấy thửa đất nào/],
   ])('%s shows its empty state', async (_name, element, emptyState) => {
     global.fetch = answer(200, { data: [] })
     render(element())
