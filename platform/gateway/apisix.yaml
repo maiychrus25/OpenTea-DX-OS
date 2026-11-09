@@ -81,7 +81,9 @@ routes:
       limit-count:
         count: 30
         time_window: 60
-        key: remote_addr
+        # The web server is the only caller on :9081, so remote_addr would share one budget across users.
+        key_type: var_combination
+        key: "$remote_addr $http_authorization"
         rejected_code: 429
       proxy-rewrite:
         uri: /v1/chat/completions
