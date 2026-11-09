@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.5.0] - 2026-11-09
+
 ### Added
 - **MQTT sensor ingest**: `mosquitto` (no host port, per-HTX device accounts restricted to their own topics) and `dxos-ingest` validate every message and store it in `telemetry.sensor_readings`; rejected messages are kept with a reason in `telemetry.ingest_rejects`. `dxos-simulator` (profile `demo`) publishes demo readings
 - **Data lifecycle and lineage**: `dxos-lifecycle` moves readings older than 30 days to Parquet (ZSTD) in the `dxos-lake` bucket in whole UTC days (the cutoff is floored to midnight UTC, so a row can stay hot for up to about one extra day), verifies SHA-256 and row count before deleting the hot rows, and records each export in `telemetry.lifecycle_runs` and `audit.events`. `python -m dxos_dataops query` reads the cold data through the `sensor_readings_cold` view. Hasura exposes both telemetry tables to managers and officers (scoped by `htx_code`)
@@ -232,7 +236,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.5.0
 [1.4.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.4.0
 [1.3.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.3.0
 [1.2.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.2.0
