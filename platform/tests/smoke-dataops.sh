@@ -120,11 +120,11 @@ LLM_T0=$(date +%s)
 # A previous smoke run may have used up the route's 30/60 s window, so retry on 429 for up to 65 s.
 LLM_REPLY=""; LLM_CODE=""
 while :; do
-  LLM_CODE=$(curl -s -o "${TMPDIR:-/tmp}/dxos-llm.json" -w '%{http_code}' --max-time 120 -X POST -H "Authorization: Bearer $LT" -H 'Content-Type: application/json' -d "$LLM_BODY" "$LLM_URL")
+  LLM_CODE=$(curl -s -o "${TMPDIR:-/tmp}/dxos-llm.json" -w '%{http_code}' --max-time 120 -X POST -H "Authorization: Bearer $LT" -H 'Content-Type: application/json' -d "$LLM_BODY" "$LLM_URL") || LLM_CODE=000
   [ "$LLM_CODE" = 429 ] && [ $(( $(date +%s) - LLM_T0 )) -lt 65 ] || break
   sleep 2
 done
-LLM_REPLY=$(jq -r '.choices[0].message.content // empty' "${TMPDIR:-/tmp}/dxos-llm.json" 2>/dev/null); rm -f "${TMPDIR:-/tmp}/dxos-llm.json"
+LLM_REPLY=$(jq -r '.choices[0].message.content // empty' "${TMPDIR:-/tmp}/dxos-llm.json" 2>/dev/null) || true; rm -f "${TMPDIR:-/tmp}/dxos-llm.json"
 echo "llm chat took $(( $(date +%s) - LLM_T0 ))s"
 [ -n "$LLM_REPLY" ] && pass "llm chat returns content" || fail "llm chat returned no content (last HTTP status $LLM_CODE)"
 # Last: this burns the route's 30/60 s budget.
