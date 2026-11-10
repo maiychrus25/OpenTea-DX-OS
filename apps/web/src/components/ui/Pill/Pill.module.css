@@ -14,23 +14,23 @@
 
 /* Tones */
 .green {
-  background: #ddf0e7;
-  color: #176c4b;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
 }
 
 .amber {
-  background: #fff0cc;
-  color: #865b00;
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
 }
 
 .blue {
-  background: #e0ecf5;
-  color: #285d7e;
+  background: var(--color-info-subtle);
+  color: var(--color-info);
 }
 
 .neutral {
-  background: #edf0ed;
-  color: #657069;
+  background: var(--muted);
+  color: var(--muted-foreground);
 }
 
 /* Sizes */

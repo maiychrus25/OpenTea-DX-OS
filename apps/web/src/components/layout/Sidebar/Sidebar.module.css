@@ -5,7 +5,7 @@
   width: 276px;
   height: 100vh;
   background-color: var(--sidebar-bg);
-  color: #fff;
+  color: var(--sidebar-foreground);
   position: fixed;
   top: 0;
   left: 0;
@@ -29,7 +29,7 @@
 /* Brand Block */
 .brand {
   height: 78px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid color-mix(in srgb, var(--sidebar-foreground) 10%, transparent);
   display: flex;
   align-items: center;
   padding: 0 var(--spacing-4);
@@ -62,13 +62,13 @@
 
 .brandText small {
   font-size: 12px;
-  color: #bfd1c6;
+  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
 }
 
 .closeMenu {
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--sidebar-foreground);
   cursor: pointer;
   padding: var(--spacing-1);
   display: flex;
@@ -89,12 +89,12 @@
   align-items: center;
   gap: var(--spacing-3);
   cursor: pointer;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid color-mix(in srgb, var(--sidebar-foreground) 5%, transparent);
 }
 
 .coopBadge {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: color-mix(in srgb, var(--sidebar-foreground) 10%, transparent);
+  color: var(--sidebar-foreground);
   font-size: 10px;
   font-weight: 700;
   padding: 4px 8px;
@@ -119,14 +119,14 @@
 
 .coopText small {
   font-size: 12px;
-  color: #bfd1c6;
+  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .coopIcon {
-  color: #bfd1c6;
+  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
 }
 
 /* Nav */
@@ -145,7 +145,7 @@
   height: 40px;
   padding: 0 var(--spacing-3);
   border-radius: var(--rounded-sm);
-  color: #bfd1c6;
+  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -153,8 +153,8 @@
 }
 
 .navItem:hover {
-  background-color: rgba(255, 255, 255, 0.07); /* #ffffff12 approx */
-  color: #fff;
+  background-color: color-mix(in srgb, var(--sidebar-foreground) 7%, transparent);
+  color: var(--sidebar-foreground);
 }
 
 .navBadge {
@@ -173,8 +173,8 @@
 }
 
 .active, .active:hover {
-  background-color: rgba(255, 255, 255, 0.07);
-  color: #fff;
+  background-color: color-mix(in srgb, var(--sidebar-foreground) 7%, transparent);
+  color: var(--sidebar-foreground);
   box-shadow: inset 3px 0 var(--accent-lime);
 }
 
@@ -192,22 +192,22 @@
 /* Footer */
 .sidebarFoot {
   padding: var(--spacing-4);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid color-mix(in srgb, var(--sidebar-foreground) 10%, transparent);
   flex-shrink: 0;
 }
 
 .roleLabel {
   font-size: 10px;
-  color: #bfd1c6;
+  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
   font-weight: 600;
   letter-spacing: 0.5px;
   margin-bottom: var(--spacing-2);
 }
 
 .roleSwitch {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: color-mix(in srgb, var(--sidebar-foreground) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 10%, transparent);
+  color: var(--sidebar-foreground);
   border-radius: var(--rounded-sm);
   padding: var(--spacing-2) var(--spacing-3);
   font-size: 13px;
@@ -231,7 +231,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--color-surface-overlay);
+  background: var(--sidebar-foreground);
   color: var(--sidebar-bg);
   display: flex;
   align-items: center;
@@ -248,13 +248,13 @@
 
 .profileText strong {
   font-size: 14px;
-  color: #fff;
+  color: var(--sidebar-foreground);
   font-weight: 600;
 }
 
 .profileText small {
   font-size: 12px;
-  color: #bfd1c6;
+  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
 }
 
 /* Profile Popup */
@@ -268,10 +268,10 @@
   bottom: calc(100% + 8px);
   left: 0;
   right: 0;
-  background-color: var(--card, #1f4d38);
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  background-color: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-default);
   border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
+  box-shadow: var(--shadow-card-hover);
   padding: var(--spacing-2);
   display: flex;
   flex-direction: column;
@@ -281,11 +281,11 @@
 
 .popupRoleLabel {
   font-size: 10px;
-  color: #bfd1c6;
+  color: var(--color-ink-tertiary);
   font-weight: 600;
   letter-spacing: 0.5px;
   padding: var(--spacing-2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--color-border-subtle);
   margin-bottom: 4px;
 }
 
@@ -305,20 +305,20 @@
 }
 
 .profilePopupLink {
-  color: #fff;
+  color: var(--color-ink-primary);
 }
 
 .profilePopupLink:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--color-surface-sunken);
 }
 
 .signOutBtn {
-  color: #ef4444; /* red-500 */
+  color: var(--color-danger);
 }
 
 .signOutBtn:hover:not(:disabled) {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #f87171; /* red-400 */
+  background-color: var(--color-danger-subtle);
+  color: var(--color-danger);
 }
 
 .signOutBtn:disabled {
