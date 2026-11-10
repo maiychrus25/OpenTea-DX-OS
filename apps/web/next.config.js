@@ -40,6 +40,15 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
+  // The default "apis" rule (NetworkFirst, cached) never finishes caching the notification event stream, so each page
+  // leaves an open connection behind; after a few pages the browser's 6 connections per host are taken and requests hang.
+  extendDefaultRuntimeCaching: true,
+  workboxOptions: {
+    runtimeCaching: [{
+      urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname === "/api/notifications/stream",
+      handler: "NetworkOnly",
+    }],
+  },
 });
 
 module.exports = withPWA(nextConfig)
