@@ -232,7 +232,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="DX-AgriMarket Disease API",
+    title="OpenTea DX-OS Disease API",
     description="Crop disease detection via TF/Keras inference. "
     "AI Invariant: returns disease name + confidence ONLY — NO treatment.",
     version="1.0.0",

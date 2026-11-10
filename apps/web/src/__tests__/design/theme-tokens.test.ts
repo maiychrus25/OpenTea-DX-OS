@@ -95,6 +95,14 @@ const TEXT_PAIRS: Array<[string, string]> = [
   ['--color-warning', '--color-surface-card'],
   ['--color-danger', '--color-surface-card'],
   ['--color-info', '--color-surface-card'],
+  ['--color-ink-inverse', '--color-success'],
+  ['--color-ink-inverse', '--color-warning'],
+  ['--color-ink-inverse', '--color-primary'],
+  ['--color-ink-inverse', '--color-accent'],
+  ['--color-ink-primary', '--muted'],
+  ['--muted-foreground', '--secondary'],
+  ['--color-ink-tertiary', '--color-surface-sunken'],
+  ['--sidebar-foreground', '--sidebar-darker'],
 ]
 
 const THEMES: Array<[string, Decls]> = [

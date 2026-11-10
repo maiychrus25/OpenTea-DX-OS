@@ -1,4 +1,6 @@
 ---
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
 version: alpha
 name: OpenTea DX-OS
 description: Hệ điều hành số cho hợp tác xã chè. Giao diện sáng và tối dùng chung một bộ token; nguồn sự thật là apps/web/src/styles/globals.css.
