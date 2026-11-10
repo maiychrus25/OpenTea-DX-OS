@@ -154,9 +154,24 @@ describe('journal photo keys stay inside the namespace of the caller', () => {
     expect((await journal.POST(post({ ...entry, photo_minio_key }), {})).status).toBe(400)
     expect(journalCreate).not.toHaveBeenCalled()
   })
-  test('POST stores a key of the caller', async () => {
-    expect((await journal.POST(post({ ...entry, photo_minio_key: 'para/TC/Archives/x.jpg' }), {})).status).toBe(201)
-    expect(journalCreate.mock.calls[0][0].photo_minio_key).toBe('para/TC/Archives/x.jpg')
+  // Other folders of the HTX hold documents a farmer may not read, and GET /api/journal signs the stored key.
+  test.each([
+    'para/TC/Projects/contract.pdf',
+    'para/TC/Archives/x.jpg',
+    'para/TC/Areas/x.jpg',
+    'para/TC/Areas/JournalX/x.jpg',
+    'para/TC/Areas/Journal/',
+    'para/TC/Areas/Journal/2026/',
+    'para/TC/Areas/Journal/../Projects/x.pdf',
+    'para/LB/Areas/Journal/2026/x.jpg',
+  ])('POST refuses the HTX key %p outside the journal photo folder', async (photo_minio_key) => {
+    expect((await journal.POST(post({ ...entry, photo_minio_key }), {})).status).toBe(400)
+    expect(journalCreate).not.toHaveBeenCalled()
+  })
+  test('POST stores a journal photo key of the caller', async () => {
+    const key = 'para/TC/Areas/Journal/2026/0b0e8f8e-2f4a-4c1e-9d3b-6a1f2e3d4c5b-x.jpg'
+    expect((await journal.POST(post({ ...entry, photo_minio_key: key }), {})).status).toBe(201)
+    expect(journalCreate.mock.calls[0][0].photo_minio_key).toBe(key)
   })
   test('POST without a photo still works', async () => {
     expect((await journal.POST(post(entry), {})).status).toBe(201)

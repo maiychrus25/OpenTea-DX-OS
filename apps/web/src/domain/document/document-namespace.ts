@@ -36,9 +36,15 @@ export function assertReadableDocument(key: string, htxCode: string): void {
   }
 }
 
+/** The folder that holds the journal photos of one HTX. */
+export function journalPhotoRoot(htxCode: string): string {
+  return `${documentRoot(htxCode)}Areas/Journal/`
+}
+
+/** Write check only: GET /api/journal signs a stored key, so a key elsewhere in the HTX would expose that document. */
 export function assertJournalPhotoKey(key: string | undefined, htxCode: string): void {
-  if (key !== undefined && !isInDocumentRoot(key, htxCode)) {
-    throw new ValidationError('photo_minio_key must belong to your HTX')
+  if (key !== undefined && !(key.startsWith(journalPhotoRoot(htxCode)) && !key.endsWith('/') && isInDocumentRoot(key, htxCode))) {
+    throw new ValidationError('photo_minio_key must be a journal photo of your HTX')
   }
 }
 

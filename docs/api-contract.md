@@ -338,7 +338,7 @@ Presigned upload URL for a journal photo. **Roles:** farmer, officer.
 { "data": { "uploadUrl": "https://…", "key": "para/TC/Areas/Journal/2026/<uuid>-la_che.jpg" } }
 ```
 
-`contentType` is `image/jpeg`, `image/png` or `image/webp`. The URL is a presigned `PUT` valid for 900 seconds; it does not bind the content type. The key's year is the year in Vietnam time. The file name keeps only its last path segment, loses Vietnamese marks (`đ` → `d`), collapses `..` to `.`, turns any character outside `A-Z a-z 0-9 . - _` into `_` and keeps its last 100 characters; a name with no letter or digit left becomes `photo.<jpg|png|webp>`. Send the key as `photo_minio_key` to `POST /api/journal`.
+`contentType` is `image/jpeg`, `image/png` or `image/webp`. The URL is a presigned `PUT` valid for 900 seconds; it does not bind the content type. The key's year is the year in Vietnam time. The file name keeps only its last path segment, loses Vietnamese marks (`đ` → `d`), collapses `..` to `.`, turns any character outside `A-Z a-z 0-9 . - _` into `_` and keeps its last 100 characters; a name with no letter or digit left becomes `photo.<jpg|png|webp>`. Send the key as `photo_minio_key` to `POST /api/journal`, which accepts only a file key under `para/<htxCode>/Areas/Journal/` (400 `VALIDATION_ERROR` otherwise).
 
 **Errors:** 400 `VALIDATION_ERROR` for another content type or a missing or over-255-character `filename`; 401 not signed in; 403 `FORBIDDEN` for a manager, `NO_HTX` without an HTX.
 

@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { ForbiddenError } from '@/domain/errors'
-import { assertJournalPhotoKey, documentRoot } from '@/domain/document/document-namespace'
+import { assertJournalPhotoKey, journalPhotoRoot } from '@/domain/document/document-namespace'
 import { localDay } from '@/domain/shared/local-day'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 
@@ -23,7 +23,7 @@ const uploadSchema = z.object({
 function safeFileName(filename: string, contentType: keyof typeof EXTENSIONS): string {
   const safe = (filename.split(/[\\/]/).pop() ?? '')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/đ/g, 'd')
     .replace(/Đ/g, 'D')
     .replace(/\.{2,}/g, '.')
@@ -43,7 +43,7 @@ async function createUploadUrl(req: Request) {
   }
 
   const year = localDay(new Date()).slice(0, 4)
-  const key = `${documentRoot(htxCode)}Areas/Journal/${year}/${randomUUID()}-${safeFileName(parse.data.filename, parse.data.contentType)}`
+  const key = `${journalPhotoRoot(htxCode)}${year}/${randomUUID()}-${safeFileName(parse.data.filename, parse.data.contentType)}`
   // POST /api/journal accepts only keys that pass this check, so a key that would fail it is never signed.
   assertJournalPhotoKey(key, htxCode)
 
