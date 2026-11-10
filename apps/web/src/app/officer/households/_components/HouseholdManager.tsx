@@ -132,7 +132,7 @@ export function HouseholdManager() {
                 <span className={styles.stat}>Diện tích: <span className={styles.statValue}>{h.total_area_ha.toFixed(2)} ha</span></span>
               </div>
               <div className="mt-4 pt-3 border-t border-border-subtle">
-                <Link href={`/officer/households/${h.id}`} className="text-sm font-medium text-success hover:text-success flex items-center justify-center w-full">
+                <Link href={`/officer/households/${h.id}`} className="text-sm font-medium text-success hover:underline flex items-center justify-center w-full">
                   Xem chi tiết &rarr;
                 </Link>
               </div>

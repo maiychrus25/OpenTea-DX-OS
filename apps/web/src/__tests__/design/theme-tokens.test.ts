@@ -94,6 +94,8 @@ const TEXT_PAIRS: Array<[string, string]> = [
   ['--color-success', '--color-surface-card'],
   ['--color-warning', '--color-surface-card'],
   ['--color-danger', '--color-surface-card'],
+  ['--color-danger-hover', '--color-danger-subtle'],
+  ['--color-danger-hover', '--color-surface-card'],
   ['--color-info', '--color-surface-card'],
   ['--color-ink-inverse', '--color-success'],
   ['--color-ink-inverse', '--color-warning'],

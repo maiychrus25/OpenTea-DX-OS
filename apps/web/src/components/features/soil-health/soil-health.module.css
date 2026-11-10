@@ -42,11 +42,11 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--color-success), var(--color-success));
+  background: var(--color-success);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-primary-foreground);
+  color: var(--color-ink-inverse);
 }
 
 .headerTitle {

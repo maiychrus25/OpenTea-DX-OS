@@ -9,43 +9,47 @@ import { join, relative } from 'path'
 // a file listed here must still offend, so the list can only shrink.
 const baseline: string[] = []
 
-// Colours that must stay fixed whatever the theme. `allow` lists the exact snippets permitted in that file;
-// any other colour in it still fails. Keep this short.
-const exceptions: Record<string, { allow: string[]; reason: string }> = {
-  'src/app/manager/lots/[lot_code]/lot-detail.module.css': {
-    allow: ['background: white'],
-    reason: 'The QR code needs a white quiet zone in both themes, or phone scanners cannot read it.',
-  },
+// Colours that must stay fixed whatever the theme. `allow` maps each exact snippet permitted in that file to the
+// number of times it occurs, so an extra copy fails; any other colour in the file still fails. Keep this short.
+const exceptions: Record<string, { allow: Record<string, number>; reason: string }> = {
   'src/components/features/map/ZoneMap.tsx': {
-    allow: ["color: '#00ff00'", "fillColor: '#00ff00'"],
+    allow: { "color: '#00ff00'": 1, "fillColor: '#00ff00'": 1 },
     reason: 'Parcel outlines are drawn on the satellite tiles, which look the same in both themes.',
   },
   'src/components/features/map/ZoneMap.module.css': {
-    allow: ['color: gray', 'background-color: #f0f0f0'],
+    allow: { 'color: gray': 2, 'background-color: #f0f0f0': 1 },
     reason: 'These style the content of a Leaflet popup, which leaflet.css keeps white in both themes.',
   },
   'src/app/manager/farm-zones/_components/FarmZoneReadOnly.tsx': {
-    allow: [
-      "fillColor: '#16A34A', color: '#15803D'",
-      "fillColor: '#059669', color: '#047857'",
-      "fillColor: '#9CA3AF', color: '#6B7280'",
-      "fillColor: '#EA580C', color: '#C2410C'",
-      "fillColor: '#2563EB', color: '#1D4ED8'",
-      'stroke="#059669"',
-      'style="color:#64748b"',
-    ],
+    allow: {
+      "fillColor: '#16A34A', color: '#15803D'": 1,
+      "fillColor: '#059669', color: '#047857'": 1,
+      "fillColor: '#9CA3AF', color: '#6B7280'": 2,
+      "fillColor: '#EA580C', color: '#C2410C'": 1,
+      "fillColor: '#2563EB', color: '#1D4ED8'": 1,
+      'stroke="#059669"': 1,
+      'style="color:#64748b"': 4,
+    },
     reason:
       'Parcel fills and the tooltip icon sit on map tiles that look the same in both themes, and the popup text sits in a Leaflet popup that leaflet.css keeps white.',
   },
   'src/app/officer/farm-zones/setup/_components/SetupMapClient.tsx': {
-    allow: ["container.style.backgroundColor = 'white'"],
+    allow: { "container.style.backgroundColor = 'white'": 1 },
     reason: "The locate button must match Leaflet's own controls, which leaflet.css keeps white in both themes.",
   },
 }
 
 // The source with the exception's allowed snippets removed.
 function withoutAllowed(file: string, source: string): string {
-  return (exceptions[file]?.allow ?? []).reduce((s, snippet) => s.split(snippet).join(''), source)
+  return Object.keys(exceptions[file]?.allow ?? {}).reduce((s, snippet) => s.split(snippet).join(''), source)
+}
+
+// Allowed snippets whose number of occurrences differs from the listed count, as `snippet: found/expected`.
+function countMismatches(file: string, source: string): string[] {
+  return Object.entries(exceptions[file]?.allow ?? {})
+    .map(([snippet, count]) => [snippet, source.split(snippet).length - 1, count] as const)
+    .filter(([, found, count]) => found !== count)
+    .map(([snippet, found, count]) => `${snippet}: ${found}/${count}`)
 }
 
 const SRC = join(process.cwd(), 'src')
@@ -125,11 +129,19 @@ describe('no hard-coded colours', () => {
     expect(baseline.filter((f) => !offenders.includes(f))).toEqual([])
   })
 
-  it('gives every exception a reason and only snippets the file still has', () => {
-    for (const [file, { allow, reason }] of Object.entries(exceptions)) {
+  it('gives every exception a reason and the exact number of each allowed snippet', () => {
+    for (const [file, { reason }] of Object.entries(exceptions)) {
       expect([file, reason.trim().length > 10]).toEqual([file, true])
-      expect([file, allow.filter((snippet) => !read(file).includes(snippet))]).toEqual([file, []])
+      expect([file, countMismatches(file, read(file))]).toEqual([file, []])
     }
+  })
+
+  it('catches an extra or a missing copy of an allowed snippet', () => {
+    const file = 'src/components/features/map/ZoneMap.tsx'
+    const once = "color: '#00ff00' fillColor: '#00ff00'"
+    expect(countMismatches(file, once)).toEqual([])
+    expect(countMismatches(file, once + " color: '#00ff00'")).toEqual(["color: '#00ff00': 2/1"])
+    expect(countMismatches(file, "fillColor: '#00ff00'")).toEqual(["color: '#00ff00': 0/1"])
   })
 
   it('still flags other colours in an exception file', () => {
@@ -209,5 +221,11 @@ describe('CSS variables', () => {
 
   it('lists only runtime variables that globals.css does not declare', () => {
     expect(Object.keys(RUNTIME_VARIABLES).filter((name) => declared.has(name))).toEqual([])
+  })
+
+  it('lists only runtime variables that some var() still reads', () => {
+    const sources = [readFileSync(join(SRC, 'styles/globals.css'), 'utf-8'), ...files.map(read)]
+    const used = new Set(sources.flatMap((s) => Array.from(s.matchAll(/var\(\s*(--[\w-]+)/g), (m) => m[1])))
+    expect(Object.keys(RUNTIME_VARIABLES).filter((name) => !used.has(name))).toEqual([])
   })
 })

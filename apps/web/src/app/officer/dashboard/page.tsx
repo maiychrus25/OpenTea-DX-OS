@@ -153,7 +153,7 @@ export default async function OfficerDashboard() {
           <h2 className={styles.sectionTitle}>Nhật ký gần đây</h2>
           <Link
             href="/officer/journal"
-            className="text-sm text-success hover:text-success font-medium"
+            className="text-sm text-success hover:underline font-medium"
           >
             Xem tất cả <ArrowRight size={16} className="inline-block ml-1" />
           </Link>

@@ -318,7 +318,7 @@
 
 .signOutBtn:hover:not(:disabled) {
   background-color: var(--color-danger-subtle);
-  color: var(--color-danger);
+  color: var(--color-danger-hover);
 }
 
 .signOutBtn:disabled {

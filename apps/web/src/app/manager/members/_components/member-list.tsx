@@ -189,14 +189,14 @@ export function MemberList() {
                       {member.status === 'PENDING' && (
                         <button 
                           onClick={() => handleApprove(member.id)}
-                          className="text-success hover:text-success ml-4 font-bold"
+                          className="text-success hover:underline ml-4 font-bold"
                         >
                           Duyệt
                         </button>
                       )}
                       <button 
                         onClick={() => handleDelete(member.id)}
-                        className="text-danger hover:text-danger ml-4"
+                        className="text-danger hover:text-[var(--color-danger-hover)] hover:underline ml-4"
                       >
                         Xóa
                       </button>
