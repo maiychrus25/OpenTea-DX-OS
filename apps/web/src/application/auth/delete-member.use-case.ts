@@ -15,7 +15,8 @@ export class DeleteMemberUseCase {
     if (!userId) {
       throw new Error('User ID is required')
     }
-    await this.authPort.deleteUser(userId)
+    // Unlink first: once the account is gone the manager cannot retry, and the phone would stay taken.
     await this.householdPort.unlinkFromKeycloak(userId)
+    await this.authPort.deleteUser(userId)
   }
 }

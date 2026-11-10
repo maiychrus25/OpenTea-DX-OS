@@ -36,6 +36,10 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 let fetchMock: jest.Mock
 
+// The register route limits requests per IP, so each test is a different client.
+let clientCount = 0
+const nextClientIp = () => `198.51.100.${++clientCount}`
+
 function requestsTo(method: string, pattern: RegExp) {
   return fetchMock.mock.calls.filter(([url, init]) => (init?.method ?? 'GET') === method && pattern.test(url))
 }
@@ -134,6 +138,7 @@ describe('account creation', () => {
     const response = await register(
       new Request('http://localhost/api/register', {
         method: 'POST',
+        headers: { 'x-forwarded-for': nextClientIp() },
         body: JSON.stringify({ fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '123456', htxId: 'htx-md2' }),
       }),
       {}
@@ -156,6 +161,7 @@ describe('account creation', () => {
       register(
         new Request('http://localhost/api/register', {
           method: 'POST',
+          headers: { 'x-forwarded-for': nextClientIp() },
           body: JSON.stringify({ fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '123456', htxId: 'htx-md2' }),
         }),
         {}
@@ -226,6 +232,7 @@ describe('account creation', () => {
     const response = await register(
       new Request('http://localhost/api/register', {
         method: 'POST',
+        headers: { 'x-forwarded-for': nextClientIp() },
         body: JSON.stringify({ fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '123456', htxId: 'missing' }),
       }),
       {}

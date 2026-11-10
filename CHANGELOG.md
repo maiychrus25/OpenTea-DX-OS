@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Self-registration**: the middleware no longer answers 401 to the anonymous `POST /api/register`; new accounts stay disabled until a manager approves them
 - **Pre-upgrade sessions**: in production a session without a refresh token goes to login instead of showing the no-HTX notice
 - **Silent load failures**: the officer journal approval and manager farm-zone screens now say when loading failed
+- **Anonymous `POST /api/register`**: limited to 5 requests per IP per 10 minutes (429), and anything other than a validation error answers a generic message instead of the raw error text
+- **Rejected registrations**: the household is unlinked before the Keycloak account is deleted, so a failed unlink can be retried and never leaves the phone taken
 - **Object keys from clients**: `POST /api/journal` answers 400 for a `photo_minio_key` outside the caller's document root, and the journal list signs a stored key only when it is inside that root; other entries come back without a photo. The public certificate route signs a key only inside the document root of the lot's HTX
 
 ### Upgrade notes
@@ -44,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documents written before this release stay under `para/Projects/`, `para/Areas/`, `para/Resources/` and `para/Archives/`. They are no longer listed and are not moved automatically; copy them to `para/<htxCode>/...` to use them again.
 - Certificates of exported lots whose keys are outside `para/<htxCode>/` of the lot's HTX now answer 403 on the public page, and such journal photos stop showing. Copy the object into that folder and update the key to use it again.
 - Set `AUTH_URL` in `docker/.env.local` when the web app is not served from `http://localhost:3000`, and add that URL to the redirect URIs of the `nextjs-web` client.
-- Known limits: `9081` must stay unpublished, because it is not rate limited per IP; `workflows/mattermost-push.json` posts disease and harvest events of all HTXs to one webhook; `/api/dev-login` and pre-upgrade cookies carry no access token, so core reads fail closed until the user signs in again; the write path is protected in the application, not in the database.
+- Known limits: `9081` must stay unpublished, because it is not rate limited per IP; `workflows/mattermost-push.json` posts disease and harvest events of all HTXs to one webhook; `/api/dev-login` and pre-upgrade cookies carry no access token, so core reads fail closed until the user signs in again; the write path is protected in the application, not in the database; the `POST /api/register` limit is per process and trusts `X-Forwarded-For`, so it must move to the gateway or a shared store when `web` runs more than one instance.
 
 ---
 

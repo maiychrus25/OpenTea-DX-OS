@@ -3,6 +3,7 @@
 
 import { AuthManagementPort, RegisterData, MemberData } from '@/domain/auth/ports/auth-management.port'
 import { logger } from '@/lib/logger'
+import { ValidationError } from '@/domain/errors'
 
 export interface KeycloakUserResponse {
   id: string;
@@ -119,7 +120,7 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
       const errorText = await createRes.text();
       logger.error('Failed to create Keycloak user', { status: createRes.status, errorText });
       if (createRes.status === 409) {
-        throw new Error('Số điện thoại này đã được đăng ký!');
+        throw new ValidationError('Số điện thoại này đã được đăng ký!');
       }
       throw new Error('Lỗi hệ thống khi tạo tài khoản');
     }
