@@ -105,7 +105,7 @@
 
 .step.done .stepIcon {
   background: var(--color-success);
-  color: white;
+  color: var(--color-ink-inverse);
 }
 
 .step.active {
@@ -116,7 +116,7 @@
 
 .step.active .stepIcon {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-foreground);
 }
 
 /* Review Grid */
@@ -228,7 +228,7 @@
 .btnPrimary {
   padding: 0.75rem 1.5rem;
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-foreground);
   border: none;
   border-radius: var(--rounded-md);
   font-weight: 500;

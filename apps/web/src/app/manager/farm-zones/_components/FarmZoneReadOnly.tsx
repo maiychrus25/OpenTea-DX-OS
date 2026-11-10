@@ -351,8 +351,8 @@ export default function FarmZoneReadOnly() {
         <div ref={mapContainerRef} className="h-full w-full absolute inset-0 z-0" />
 
         {drawnParcels === 0 && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl p-6 text-center shadow-xl z-[1000] pointer-events-auto">
-            <Map className="w-10 h-10 mx-auto mb-2 text-slate-400" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card rounded-xl p-6 text-center shadow-xl z-[1000] pointer-events-auto">
+            <Map className="w-10 h-10 mx-auto mb-2 text-ink-tertiary" />
             <p className="m-0 text-base text-[var(--color-ink-primary)]">
               <strong>Chưa có ranh giới thửa đất nào</strong>
             </p>
@@ -361,7 +361,7 @@ export default function FarmZoneReadOnly() {
             </p>
             <a 
               href={householdId ? `/officer/farm-zones/setup?householdId=${householdId}` : "/officer/farm-zones/setup"}
-              className="inline-block px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] transition-colors text-decoration-none"
+              className="inline-block px-4 py-2 bg-[var(--color-primary)] text-primary-foreground rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] transition-colors text-decoration-none"
             >
               Vẽ ranh giới ngay
             </a>

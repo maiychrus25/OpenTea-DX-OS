@@ -9,10 +9,8 @@ import { join, relative } from 'path'
 // A file leaves the baseline as soon as it is clean: the test fails if a listed file no longer offends.
 const baseline: string[] = [
   'src/app/farmer/bulletin-notifications/page.tsx',
-  'src/app/manager/farm-zones/_components/FarmZoneReadOnly.tsx',
   'src/app/manager/journal-approve/_components/ApproveList.tsx',
   'src/app/manager/lots/[lot_code]/_components/lot-actions.tsx',
-  'src/app/manager/lots/[lot_code]/lot-detail.module.css',
   'src/app/manager/lots/page.tsx',
   'src/app/manager/members/_components/invitation-modal.tsx',
   'src/app/manager/members/_components/member-list.tsx',
@@ -21,7 +19,6 @@ const baseline: string[] = [
   'src/app/manager/profile/_components/ProfileForm.tsx',
   'src/app/officer/dashboard/page.tsx',
   'src/app/officer/farm-zones/page.tsx',
-  'src/app/officer/farm-zones/setup/_components/SetupMapClient.tsx',
   'src/app/officer/farm-zones/setup/_components/setup-wizard.tsx',
   'src/app/officer/farm-zones/setup/_components/step1-household.tsx',
   'src/app/officer/households/[id]/_components/household-profile.tsx',
@@ -33,8 +30,6 @@ const baseline: string[] = [
   'src/components/features/bulletin/WeatherSection.tsx',
   'src/components/features/certificate/CertificateManager.tsx',
   'src/components/features/document/DocumentView.tsx',
-  'src/components/features/map/ZoneMap.module.css',
-  'src/components/features/map/ZoneMap.tsx',
   'src/components/features/market/MarketSummaryWidget.tsx',
   'src/components/features/partner-map/PartnerMap.tsx',
   'src/components/features/partner-map/partner-map.module.css',
@@ -46,8 +41,44 @@ const baseline: string[] = [
   'src/components/ui/SourceBox/SourceBox.module.css',
 ]
 
-// Files that must keep a fixed colour, with the reason. Keep this short.
-const exceptions: Record<string, string> = {}
+// Colours that must stay fixed whatever the theme. `allow` lists the exact snippets permitted in that file;
+// any other colour in it still fails. Keep this short.
+const exceptions: Record<string, { allow: string[]; reason: string }> = {
+  'src/app/manager/lots/[lot_code]/lot-detail.module.css': {
+    allow: ['background: white'],
+    reason: 'The QR code needs a white quiet zone in both themes, or phone scanners cannot read it.',
+  },
+  'src/components/features/map/ZoneMap.tsx': {
+    allow: ["color: '#00ff00'", "fillColor: '#00ff00'"],
+    reason: 'Parcel outlines are drawn on the satellite tiles, which look the same in both themes.',
+  },
+  'src/components/features/map/ZoneMap.module.css': {
+    allow: ['color: gray', 'background-color: #f0f0f0'],
+    reason: 'These style the content of a Leaflet popup, which leaflet.css keeps white in both themes.',
+  },
+  'src/app/manager/farm-zones/_components/FarmZoneReadOnly.tsx': {
+    allow: [
+      "fillColor: '#16A34A', color: '#15803D'",
+      "fillColor: '#059669', color: '#047857'",
+      "fillColor: '#9CA3AF', color: '#6B7280'",
+      "fillColor: '#EA580C', color: '#C2410C'",
+      "fillColor: '#2563EB', color: '#1D4ED8'",
+      'stroke="#059669"',
+      'style="color:#64748b"',
+    ],
+    reason:
+      'Parcel fills and the tooltip icon sit on map tiles that look the same in both themes, and the popup text sits in a Leaflet popup that leaflet.css keeps white.',
+  },
+  'src/app/officer/farm-zones/setup/_components/SetupMapClient.tsx': {
+    allow: ["container.style.backgroundColor = 'white'"],
+    reason: "The locate button must match Leaflet's own controls, which leaflet.css keeps white in both themes.",
+  },
+}
+
+// The source with the exception's allowed snippets removed.
+function withoutAllowed(file: string, source: string): string {
+  return (exceptions[file]?.allow ?? []).reduce((s, snippet) => s.split(snippet).join(''), source)
+}
 
 const SRC = join(process.cwd(), 'src')
 
@@ -109,7 +140,8 @@ function offends(file: string, source: string): boolean {
 }
 
 const files = walk(SRC).filter(isScanned).map((f) => relative(process.cwd(), f).split('\\').join('/'))
-const offenders = files.filter((f) => offends(f, readFileSync(join(process.cwd(), f), 'utf-8')))
+const read = (f: string) => readFileSync(join(process.cwd(), f), 'utf-8')
+const offenders = files.filter((f) => offends(f, withoutAllowed(f, read(f))))
 
 describe('no hard-coded colours', () => {
   it('scans the source tree', () => {
@@ -117,7 +149,7 @@ describe('no hard-coded colours', () => {
   })
 
   it('finds no hard-coded colours outside the baseline and exceptions', () => {
-    const unexpected = offenders.filter((f) => !baseline.includes(f) && !(f in exceptions))
+    const unexpected = offenders.filter((f) => !baseline.includes(f))
     expect(unexpected).toEqual([])
   })
 
@@ -125,10 +157,17 @@ describe('no hard-coded colours', () => {
     expect(baseline.filter((f) => !offenders.includes(f))).toEqual([])
   })
 
-  it('gives every exception a reason', () => {
-    for (const [file, reason] of Object.entries(exceptions)) {
+  it('gives every exception a reason and only snippets the file still has', () => {
+    for (const [file, { allow, reason }] of Object.entries(exceptions)) {
       expect([file, reason.trim().length > 10]).toEqual([file, true])
+      expect([file, allow.filter((snippet) => !read(file).includes(snippet))]).toEqual([file, []])
     }
+  })
+
+  it('still flags other colours in an exception file', () => {
+    const file = 'src/components/features/map/ZoneMap.tsx'
+    expect(offends(file, withoutAllowed(file, "color: '#00ff00', fill: '#fff'"))).toBe(true)
+    expect(offends(file, withoutAllowed(file, "color: '#00ff00'"))).toBe(false)
   })
 
   it.each([
@@ -193,7 +232,7 @@ const declared = new Set(Array.from(tokenCss.matchAll(/(--[\w-]+)\s*:/g), (m) =>
 describe('CSS variables', () => {
   it('uses only variables that globals.css declares or that are set at runtime', () => {
     const undefinedUses = files.flatMap((f) =>
-      Array.from(readFileSync(join(process.cwd(), f), 'utf-8').matchAll(/var\(\s*(--[\w-]+)/g), (m) => m[1])
+      Array.from(read(f).matchAll(/var\(\s*(--[\w-]+)/g), (m) => m[1])
         .filter((name) => !declared.has(name) && !(name in RUNTIME_VARIABLES))
         .map((name) => `${f}: ${name}`),
     )
