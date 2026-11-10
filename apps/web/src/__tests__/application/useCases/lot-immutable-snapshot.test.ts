@@ -22,8 +22,8 @@ import { computeSafeHarvestDate } from '@/infrastructure/db/repositories/prisma-
 // ── Mock repository ────────────────────────────────────────────────────────────
 
 const SNAPSHOT_DATA: LotTraceData = {
-  lot_code: 'MD2-ST25-20260801-001',
-  commodity: 'Lúa ST25',
+  lot_code: 'TC-CHE-20260801-001',
+  commodity: 'Chè Trung du',
   quality_grade: 'Grade 1',
   status: 'QR_EXPORTED',
   packaging_date: new Date('2026-08-01'),
@@ -35,7 +35,7 @@ const SNAPSHOT_DATA: LotTraceData = {
   latest_safe_harvest_date: new Date('2026-07-28'),
   htx_name: 'HTX Mekong Delta 2',
   parcels: [
-    { parcel_code: 'P-MD2-001', area_ha: 1.5, household_name: 'Nguyễn Văn An', crop_type: 'Lúa ST25', status: 'HARVESTED' },
+    { parcel_code: 'P-TC-001', area_ha: 1.5, household_name: 'Nguyễn Văn An', crop_type: 'Chè Trung du', status: 'HARVESTED' },
   ],
   journal_summaries: [
     {
@@ -78,10 +78,10 @@ describe('GetLotTraceDataUseCase — immutable snapshot contract', () => {
   })
 
   it('returns data from repo unchanged (pass-through contract)', async () => {
-    const result = await useCase.execute('MD2-ST25-20260801-001')
+    const result = await useCase.execute('TC-CHE-20260801-001')
 
     expect(result).toEqual(SNAPSHOT_DATA)
-    expect(result.lot_code).toBe('MD2-ST25-20260801-001')
+    expect(result.lot_code).toBe('TC-CHE-20260801-001')
     expect(result.status).toBe('QR_EXPORTED')
   })
 
@@ -91,10 +91,10 @@ describe('GetLotTraceDataUseCase — immutable snapshot contract', () => {
   })
 
   it('snapshot data structure is preserved — parcels + journal_summaries unchanged', async () => {
-    const result = await useCase.execute('MD2-ST25-20260801-001')
+    const result = await useCase.execute('TC-CHE-20260801-001')
 
     expect(result.parcels).toHaveLength(1)
-    expect(result.parcels[0].parcel_code).toBe('P-MD2-001')
+    expect(result.parcels[0].parcel_code).toBe('P-TC-001')
     expect(result.journal_summaries).toHaveLength(1)
     expect(result.journal_summaries[0].withdrawal_days).toBe(14)
     expect(result.certificate_keys).toContain('certs/vietgap-2026.pdf')
@@ -103,7 +103,7 @@ describe('GetLotTraceDataUseCase — immutable snapshot contract', () => {
   it('snapshot returned for QR_EXPORTED must not include live mutation fields', async () => {
     // The snapshot is the final, locked representation.
     // Verify status is locked and is_harvest_safe matches snapshot (not re-computed).
-    const result = await useCase.execute('MD2-ST25-20260801-001')
+    const result = await useCase.execute('TC-CHE-20260801-001')
 
     expect(result.status).toBe('QR_EXPORTED')
     // is_harvest_safe in snapshot was set at export time — use case does NOT re-derive it
@@ -111,11 +111,11 @@ describe('GetLotTraceDataUseCase — immutable snapshot contract', () => {
   })
 
   it('snapshot from different lot_code returns that lot\'s data unchanged', async () => {
-    const anotherLot: LotTraceData = { ...SNAPSHOT_DATA, lot_code: 'MD2-ST25-20260810-002', status: 'DRAFT' }
+    const anotherLot: LotTraceData = { ...SNAPSHOT_DATA, lot_code: 'TC-CHE-20260810-002', status: 'DRAFT' }
     repo.setReturnValue(anotherLot)
 
-    const result = await useCase.execute('MD2-ST25-20260810-002')
-    expect(result.lot_code).toBe('MD2-ST25-20260810-002')
+    const result = await useCase.execute('TC-CHE-20260810-002')
+    expect(result.lot_code).toBe('TC-CHE-20260810-002')
     expect(result.status).toBe('DRAFT')
   })
 })

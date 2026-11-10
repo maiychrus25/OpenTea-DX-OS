@@ -56,7 +56,7 @@ test.describe('Story 8.6: Chat Market Interface', () => {
     await page.goto('/manager/chat')
     
     const userMsg = page.locator('div[class*="userMessage"]').first()
-    await expect(userMsg).toContainText('Giá lúa gạo hôm nay thế nào?')
+    await expect(userMsg).toContainText('Giá chè búp khô hôm nay thế nào?')
     
     // Verify computed background color is #176c4b (rgb(23, 108, 75))
     await expect(userMsg).toHaveCSS('background-color', 'rgb(23, 108, 75)')

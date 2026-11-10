@@ -13,7 +13,7 @@ describe('GetHtxProfileUseCase', () => {
       address: 'Test Address',
       contact_phone: null,
       contact_email: null,
-      crop_types: ['Rice'],
+      crop_types: ['Chè'],
       season_label: null,
       htx_code: 'TEST',
       total_area_ha: 0,

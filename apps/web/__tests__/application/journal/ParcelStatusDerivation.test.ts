@@ -35,7 +35,7 @@ describe('Story 3.4: Parcel Status Auto-Derivation', () => {
           centroid_lat: 10,
           centroid_lng: 105,
           polygon_geojson: {},
-          crop_type: 'Lúa',
+          crop_type: 'Chè',
           status: ParcelStatus.DRAFT,
           crop_cycles: {
             create: [{ season: 'Vụ test' }]

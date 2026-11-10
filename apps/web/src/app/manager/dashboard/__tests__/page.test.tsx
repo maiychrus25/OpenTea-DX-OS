@@ -9,6 +9,9 @@ import { auth } from '@/auth'
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { NotFoundError } from '@/domain/errors'
 
+import { prisma } from '@/infrastructure/db/prisma.client'
+import { SIMULATED_MARKET_SOURCE } from '@/domain/market/simulated-price'
+
 import ManagerDashboard from '../page'
 
 // Mock auth
@@ -25,7 +28,7 @@ jest.mock('next/navigation', () => ({
 
 // Mock tenant resolution
 jest.mock('@/lib/api/tenant', () => ({
-  requireTenant: jest.fn().mockResolvedValue({ userId: 'u1', role: 'manager', htxCode: 'MD2', htxProfileId: 'dummy' }),
+  requireTenant: jest.fn().mockResolvedValue({ userId: 'u1', role: 'manager', htxCode: 'TC', htxProfileId: 'dummy' }),
 }))
 
 // Mock Prisma
@@ -43,7 +46,7 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({
     },
     marketData: {
       findMany: jest.fn().mockResolvedValue([
-        { commodity: 'Lúa', metric: 'producer_price_index', value: 105.5, unit: 'Index', source: 'Test' }
+        { commodity: 'Tea', metric: 'producer_price_index', value: 105.5, unit: 'Index', source: 'Test' }
       ]),
     }
   },
@@ -116,5 +119,18 @@ describe('ManagerDashboard', () => {
 
     expect(screen.queryByText('Chưa thiết lập Hợp tác xã')).not.toBeInTheDocument()
     expect(screen.getByText(/Chào buổi/)).toBeInTheDocument()
+  })
+
+  it('labels only the simulated price as giá mô phỏng', async () => {
+    ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
+    ;(prisma.marketData.findMany as jest.Mock).mockResolvedValueOnce([
+      { commodity: 'Tea', metric: 'Giá chè búp khô', value: 200000, unit: 'VND/kg', source: SIMULATED_MARKET_SOURCE },
+      { commodity: 'Tea', metric: 'export_value_to_world', value: 250, unit: 'million_USD', source: 'COMTRADE' },
+    ])
+
+    render(await ManagerDashboard())
+
+    expect(screen.getAllByText('Chè')).toHaveLength(2)
+    expect(screen.getAllByText('giá mô phỏng')).toHaveLength(1)
   })
 })

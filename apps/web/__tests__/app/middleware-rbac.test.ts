@@ -46,7 +46,7 @@ describe('resolveAuthRedirect — unauthenticated', () => {
   })
 
   it('allows public /lot/[code] path', () => {
-    expect(resolveAuthRedirect('/lot/HTX-RICE-20260801-001', false, undefined)).toBe(allow)
+    expect(resolveAuthRedirect('/lot/TC-CHE-20260801-001', false, undefined)).toBe(allow)
   })
 
   it('allows public /htx/[code] path', () => {

@@ -26,7 +26,7 @@ jest.mock('@/auth', () => ({
 jest.mock('@/application/useCases/UpdateHtxProfileUseCase')
 jest.mock('@/infrastructure/db/repositories/PrismaHtxProfileRepository')
 jest.mock('@/infrastructure/db/prisma.client', () => ({
-  prisma: { htxProfile: { findUnique: jest.fn().mockResolvedValue({ id: 'htx-md2', name: 'HTX MD2' }) } }
+  prisma: { htxProfile: { findUnique: jest.fn().mockResolvedValue({ id: 'htx-tc', name: 'HTX Tân Cương' }) } }
 }))
 
 describe('/api/profile API Route', () => {
@@ -37,12 +37,12 @@ describe('/api/profile API Route', () => {
   // TC-1.6-03a: OFFICER session → PUT /api/profile → 403 Forbidden
   it('rejects PUT requests from non-MANAGER roles with 403 Forbidden', async () => {
     ;(auth as jest.Mock).mockResolvedValue({
-      user: { id: 'user-1', role: 'officer', htxCode: 'MD2' }
+      user: { id: 'user-1', role: 'officer', htxCode: 'TC' }
     })
 
     const request = {
       method: 'PUT',
-      json: async () => ({ name: 'HTX MD2' })
+      json: async () => ({ name: 'HTX Tân Cương' })
     } as any /* mock cast */ as NextRequest
 
     const response = await PUT(request, { params: {} } as any /* mock context */)
@@ -55,7 +55,7 @@ describe('/api/profile API Route', () => {
   // TC-1.6-03b: MANAGER + payload invalid → 400 Bad Request
   it('rejects PUT requests with invalid payload with 400 Bad Request', async () => {
     ;(auth as jest.Mock).mockResolvedValue({
-      user: { id: 'manager-1', role: 'manager', htxCode: 'MD2' }
+      user: { id: 'manager-1', role: 'manager', htxCode: 'TC' }
     })
 
     const request = {
@@ -77,19 +77,19 @@ describe('/api/profile API Route', () => {
   // TC-1.6-03c: MANAGER + payload valid → 200 OK + use case executed
   it('accepts valid PUT requests from MANAGER and returns 200 OK', async () => {
     ;(auth as jest.Mock).mockResolvedValue({
-      user: { id: 'manager-1', role: 'manager', htxCode: 'MD2' }
+      user: { id: 'manager-1', role: 'manager', htxCode: 'TC' }
     })
 
-    const mockUpdatedProfile = { id: 'profile-1', name: 'HTX MD2' }
+    const mockUpdatedProfile = { id: 'profile-1', name: 'HTX Tân Cương' }
     const executeMock = jest.fn().mockResolvedValue(mockUpdatedProfile)
     ;(UpdateHtxProfileUseCase as jest.Mock).mockImplementation(() => ({
       execute: executeMock
     }))
 
     const validPayload = {
-      name: 'HTX MD2',
+      name: 'HTX Tân Cương',
       address: '123 Test',
-      crop_types: ['Lúa'],
+      crop_types: ['Chè'],
       contact_phone: '0901234567'
     }
 
@@ -103,6 +103,6 @@ describe('/api/profile API Route', () => {
     
     const json = await response.json()
     expect(json.data).toEqual(mockUpdatedProfile)
-    expect(executeMock).toHaveBeenCalledWith('MD2', validPayload)
+    expect(executeMock).toHaveBeenCalledWith('TC', validPayload)
   })
 })

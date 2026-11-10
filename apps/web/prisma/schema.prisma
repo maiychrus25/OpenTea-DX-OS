@@ -79,9 +79,9 @@ model HtxProfile {
   address       String
   contact_phone String?
   contact_email String?
-  crop_types    String[] // e.g. ["LÃºa ST25", "XoÃ i CÃ¡t Chu"]
-  season_label  String? // e.g. "Vá»¥ HÃ¨ Thu 2026"
-  htx_code      String   @unique // e.g. "MD2" â€” used in lot codes + public URL
+  crop_types    String[] // e.g. ["Chè Trung du", "Chè Kim Tuyên"]
+  season_label  String? // e.g. "Lứa 1/2026"
+  htx_code      String   @unique // e.g. "TC" — used in lot codes + public URL
   total_area_ha Float    @default(0)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
@@ -147,7 +147,7 @@ model ParcelCropCycle {
   id           String    @id @default(cuid())
   parcel_id    String
   parcel       Parcel    @relation(fields: [parcel_id], references: [id])
-  season       String? // e.g. "Vá»¥ HÃ¨ Thu 2026"
+  season       String? // e.g. "Lứa 1/2026"
   sowed_at               DateTime?
   harvested_at           DateTime?
   estimated_harvest_date DateTime?
@@ -208,7 +208,7 @@ model JournalActivity {
 
 model Lot {
   id               String    @id @default(cuid())
-  lot_code         String    @unique // e.g. "MD2-ST25-20260720-001"
+  lot_code         String    @unique // e.g. "TC-CHE-20261110-001"
   commodity        String
   quality_grade    String? // "Grade 1" | "Grade 2" | "Ungraded"
   harvest_date     DateTime

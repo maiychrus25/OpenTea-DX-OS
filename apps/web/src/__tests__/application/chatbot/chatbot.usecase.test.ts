@@ -4,6 +4,7 @@
 
 import { ChatbotUseCase } from '@/application/chatbot/ChatbotUseCase'
 import { CoreUnauthorizedError } from '@/domain/errors'
+import { SIMULATED_MARKET_SOURCE } from '@/domain/market/simulated-price'
 import OpenAI from 'openai'
 
 const create = jest.fn()
@@ -126,5 +127,25 @@ describe('ChatbotUseCase technical documents', () => {
     const useCase = new ChatbotUseCase(documents as never, undefined, undefined, async () => 'tok-1')
     await useCase.execute('hi', [], undefined, undefined, 'technical')
     expect(documents.listDocuments).not.toHaveBeenCalled()
+  })
+})
+
+describe('ChatbotUseCase market context', () => {
+  const row = (source: string) => ({
+    id: source, source, commodity: 'Tea', metric: 'Giá chè búp khô', value: 200000, unit: 'VND/kg', period: '2026-11-10', fetched_at: new Date(),
+  })
+  const market = {
+    getRecentMarketData: jest.fn().mockResolvedValue([row(SIMULATED_MARKET_SOURCE), row('COMTRADE')]),
+    getLatestFxRate: jest.fn().mockResolvedValue(null),
+  }
+
+  test('marks simulated prices as giá mô phỏng and tells the model to say so', async () => {
+    await run(new ChatbotUseCase(undefined, undefined, market, async () => 'tok-1'))
+    const system: string = create.mock.calls[0][0].messages[0].content
+    const lines = system.split('\n')
+
+    expect(lines.find(l => l.startsWith(`- [${SIMULATED_MARKET_SOURCE}]`))).toContain('giá mô phỏng')
+    expect(lines.find(l => l.startsWith('- [COMTRADE]'))).not.toContain('giá mô phỏng')
+    expect(system).toMatch(/ghi rõ "giá mô phỏng"/)
   })
 })

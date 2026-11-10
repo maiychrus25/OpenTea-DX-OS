@@ -20,7 +20,7 @@ export default async function FarmerLayout({ children }: { children: React.React
 
   const navItems = [
     { label: 'Tổng quan', href: '/farmer/dashboard', icon: <Home size={20} /> },
-    { label: 'Lịch vụ mùa', href: '/farmer/schedule', icon: <Calendar size={20} /> },
+    { label: 'Lịch thu hái', href: '/farmer/schedule', icon: <Calendar size={20} /> },
     { label: 'Nhật ký', href: '/farmer/journal', icon: <FileText size={20} /> },
     { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <Stethoscope size={20} /> },
     { label: 'Bản tin & thông báo', href: '/farmer/bulletin-notifications', icon: <Bell size={20} /> },

@@ -168,7 +168,7 @@ async function getSoilHealth(
 
     if (avgMoistureLastWeek > 0.4) riskFactors.push('Độ ẩm đất cao — rủi ro thối rễ, nấm đất')
     if (avgTempLastWeek > 30) riskFactors.push('Nhiệt độ đất cao — stress nhiệt cho rễ cây')
-    if (avgRisk >= 35) riskFactors.push('Điều kiện ẩm nóng — thuận lợi cho bệnh nấm lá, đạo ôn')
+    if (avgRisk >= 35) riskFactors.push('Điều kiện ẩm nóng — thuận lợi cho bệnh nấm lá chè, chấm xám')
     if (riskFactors.length === 0) riskFactors.push('Điều kiện thời tiết ổn định — rủi ro sâu bệnh thấp')
 
     return NextResponse.json({

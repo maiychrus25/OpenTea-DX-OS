@@ -36,7 +36,7 @@ export async function GET() {
       data: {
         household_id: household.id,
         parcel_code: `P-TEST-${Math.floor(Math.random() * 10000)}`,
-        crop_type: 'Lúa ST25',
+        crop_type: 'Chè Trung du',
         area_ha: 2.5,
         status: 'TENDING'
       }

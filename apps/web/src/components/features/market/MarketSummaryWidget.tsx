@@ -8,6 +8,7 @@ import useSWR from 'swr';
 import { DollarSign, TrendingUp, Package, BarChart3, Sprout } from 'lucide-react';
 import { MetricCard } from '../../ui/MetricCard/MetricCard';
 import { SourceBox } from '../../ui/SourceBox/SourceBox';
+import { isSimulatedPrice, SIMULATED_PRICE_LABEL } from '@/domain/market/simulated-price';
 import styles from './MarketSummaryWidget.module.css';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -66,7 +67,7 @@ function formatMetricValue(
   };
 }
 
-export function MarketSummaryWidget({ commodity = 'Gạo' }: { commodity?: string }) {
+export function MarketSummaryWidget({ commodity = 'Chè' }: { commodity?: string }) {
   const { data: fxData } = useSWR('/api/market-data/fx?pair=USD/VND', fetcher);
   const { data: marketData } = useSWR(`/api/market-data?commodity=${encodeURIComponent(commodity)}`, fetcher);
 
@@ -75,6 +76,7 @@ export function MarketSummaryWidget({ commodity = 'Gạo' }: { commodity?: strin
   const metricValue = marketRow?.value ?? 'N/A';
   const unit = marketRow?.unit || '';
   const metric = marketRow?.metric || '';
+  const isSimulated = isSimulatedPrice(marketRow?.source ?? '');
 
   const { displayValue, displayUnit } = formatMetricValue(metricValue, unit, fxValue);
 
@@ -122,7 +124,7 @@ export function MarketSummaryWidget({ commodity = 'Gạo' }: { commodity?: strin
           icon={<TrendingUp size={20} />}
           label={getMetricLabel(metric, commodity)}
           value={displayValue}
-          detail={displayUnit}
+          detail={isSimulated ? `${displayUnit} · ${SIMULATED_PRICE_LABEL}` : displayUnit}
           tone="green"
         />
       </div>
@@ -133,7 +135,7 @@ export function MarketSummaryWidget({ commodity = 'Gạo' }: { commodity?: strin
         </p>
       )}
       <div className={styles.sources}>
-        <SourceBox count={2} sources={['Frankfurter', 'USDA']} />
+        <SourceBox count={2} sources={['Frankfurter', marketRow?.source ?? 'USDA']} />
       </div>
     </aside>
   );

@@ -34,12 +34,12 @@ describe('Story 3.3: Journal Entry Officer Self-Record', () => {
 
       // 2. Create two parcels
       const p1 = await prisma.parcel.create({
-        data: { household_id: hh1.id, parcel_code: 'P1-J', area_ha: 1, centroid_lat: 10, centroid_lng: 105, polygon_geojson: {}, crop_type: 'Lúa' }
+        data: { household_id: hh1.id, parcel_code: 'P1-J', area_ha: 1, centroid_lat: 10, centroid_lng: 105, polygon_geojson: {}, crop_type: 'Chè' }
       })
       parcelId1 = p1.id
 
       const p2 = await prisma.parcel.create({
-        data: { household_id: hh2.id, parcel_code: 'P2-J', area_ha: 1, centroid_lat: 10, centroid_lng: 105, polygon_geojson: {}, crop_type: 'Lúa' }
+        data: { household_id: hh2.id, parcel_code: 'P2-J', area_ha: 1, centroid_lat: 10, centroid_lng: 105, polygon_geojson: {}, crop_type: 'Chè' }
       })
       parcelId2 = p2.id
 

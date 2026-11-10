@@ -13,6 +13,7 @@ import { NotFoundError } from '@/domain/errors'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { MetricCard, AiNote, SourceBox } from '@/components/ui'
+import { isSimulatedPrice, SIMULATED_PRICE_LABEL } from '@/domain/market/simulated-price'
 
 import styles from './Dashboard.module.css'
 
@@ -38,6 +39,7 @@ function formatDate(date: Date): string {
 // Dịch tên mặt hàng từ tiếng Anh → tiếng Việt gần gũi với nông dân
 const COMMODITY_VN: Record<string, string> = {
   'Agricultural Products':    'Nông nghiệp',
+  'Tea':                      'Chè',
   'Rice':                     'Lúa gạo',
   'Maize':                    'Ngô',
   'Wheat':                    'Lúa mì',
@@ -240,6 +242,9 @@ export default async function ManagerDashboard() {
                       <span className={styles.priceMetric}>
                         {toMetricVN(price.metric)}
                       </span>
+                      {isSimulatedPrice(price.source) && (
+                        <span className={styles.priceMetric}>{SIMULATED_PRICE_LABEL}</span>
+                      )}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       {isIndex ? (

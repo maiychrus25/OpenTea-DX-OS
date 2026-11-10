@@ -15,11 +15,12 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const commodityVi = url.searchParams.get('commodity') || 'Gạo';
+  const commodityVi = url.searchParams.get('commodity') || 'Chè';
   const dbCommodity = toEnglishCommodity(commodityVi);
 
   // Priority: export_value_to_world > cereal_production > cereal_yield > first available
   const PRIORITY_METRICS: Record<string, string[]> = {
+    'Tea':                    ['export_value_to_world', 'export_volume_to_world'],
     'Rice':                   ['export_value_to_world', 'export_volume_to_world'],
     'Coffee':                 ['export_value_to_world', 'export_volume_to_world'],
     'Pepper':                 ['export_value_to_world', 'export_volume_to_world'],

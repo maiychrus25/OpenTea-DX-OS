@@ -81,7 +81,7 @@ describe('Story 7.9a: GetLotTraceDataUseCase', () => {
   test('LotTraceData has all required fields', async () => {
     const mockFullLotTraceData = {
       lot_code: 'FULL-001',
-      commodity: 'Rice',
+      commodity: 'Chè',
       quality_grade: null,
       status: 'READY',
       packaging_date: new Date(),

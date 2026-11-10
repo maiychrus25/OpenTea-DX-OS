@@ -109,7 +109,7 @@ test.describe('Story 8.9: Notifications Full Page & Farmer Combined', () => {
       await expect(notifTab).toBeVisible()
       
       // Default should be bulletin tab, check content
-      await expect(page.getByText('Giá lúa Đông Xuân 2026 duy trì mức cao kỷ lục')).toBeVisible()
+      await expect(page.getByText('Nhu cầu chè búp khô Thái Nguyên tăng dịp cuối năm')).toBeVisible()
       
       // Switch to notifications tab
       await notifTab.click()

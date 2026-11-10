@@ -26,7 +26,7 @@ const mock = (fn: unknown) => fn as jest.Mock
 const scoped = {
   OR: [
     { recipient_id: 'u1' },
-    { recipient_id: null, htx_profile_id: 'htx-md2' },
+    { recipient_id: null, htx_profile_id: 'htx-tc' },
     { recipient_id: null, htx_profile_id: null, type: 'SYSTEM', sender_id: null },
   ],
 }
@@ -38,7 +38,7 @@ function signIn(htxCode: string | null) {
 beforeEach(() => {
   jest.clearAllMocks()
   mock(prisma.htxProfile.findUnique).mockImplementation(async ({ where }) =>
-    where.htx_code === 'MD2' ? { id: 'htx-md2', name: 'HTX MD2' } : null
+    where.htx_code === 'TC' ? { id: 'htx-tc', name: 'HTX Tân Cương' } : null
   )
   mock(prisma.notification.findMany).mockResolvedValue([])
   mock(prisma.notification.create).mockResolvedValue({ recipient_id: null })
@@ -49,13 +49,13 @@ const list = () => getNotifications(new Request('http://localhost/api/notificati
 
 describe('reading notifications', () => {
   test('the list holds the user rows and the broadcasts of the caller HTX only', async () => {
-    signIn('MD2')
+    signIn('TC')
     expect((await list()).status).toBe(200)
     expect(mock(prisma.notification.findMany).mock.calls[0][0].where).toEqual(scoped)
   })
 
   test('the unread count comes from the scoped rows', async () => {
-    signIn('MD2')
+    signIn('TC')
     mock(prisma.notification.findMany).mockResolvedValue([
       { id: 'n1', title: 't', body: 'b', type: 'SYSTEM', is_read: false, created_at: new Date() },
       { id: 'n2', title: 't', body: 'b', type: 'SYSTEM', is_read: true, created_at: new Date() },
@@ -72,7 +72,7 @@ describe('reading notifications', () => {
   })
 
   test('the stream re-reads only the rows the caller may see', async () => {
-    signIn('MD2')
+    signIn('TC')
     const abort = new AbortController()
     const response = await stream(new Request('http://localhost/api/notifications/stream', { signal: abort.signal }), {})
     try {
@@ -122,13 +122,13 @@ describe('which null-recipient rows a user can see', () => {
 
   test('an n8n SYSTEM row with no HTX is visible to users of two different HTXs', async () => {
     store([notice('n8n', 'SYSTEM', null)])
-    await expect(seenBy('MD2')).resolves.toEqual({ ids: ['n8n'], unreadCount: 1 })
+    await expect(seenBy('TC')).resolves.toEqual({ ids: ['n8n'], unreadCount: 1 })
     await expect(seenBy('LB')).resolves.toEqual({ ids: ['n8n'], unreadCount: 1 })
   })
 
   test('an old journal withdrawal, SYSTEM with a sender and no HTX, is visible to nobody', async () => {
     store([notice('old-withdrawal', 'SYSTEM', null, 'farmer-1')])
-    await expect(seenBy('MD2')).resolves.toEqual({ ids: [], unreadCount: 0 })
+    await expect(seenBy('TC')).resolves.toEqual({ ids: [], unreadCount: 0 })
     await expect(seenBy('LB')).resolves.toEqual({ ids: [], unreadCount: 0 })
   })
 
@@ -136,14 +136,14 @@ describe('which null-recipient rows a user can see', () => {
     'a %s row with neither recipient nor HTX is visible to nobody',
     async (type) => {
       store([notice('old', type, null)])
-      await expect(seenBy('MD2')).resolves.toEqual({ ids: [], unreadCount: 0 })
+      await expect(seenBy('TC')).resolves.toEqual({ ids: [], unreadCount: 0 })
       await expect(seenBy('LB')).resolves.toEqual({ ids: [], unreadCount: 0 })
     }
   )
 
   test('a SYSTEM broadcast of one HTX is visible only inside that HTX', async () => {
-    store([notice('withdrawn', 'SYSTEM', 'htx-md2')])
-    await expect(seenBy('MD2')).resolves.toEqual({ ids: ['withdrawn'], unreadCount: 1 })
+    store([notice('withdrawn', 'SYSTEM', 'htx-tc')])
+    await expect(seenBy('TC')).resolves.toEqual({ ids: ['withdrawn'], unreadCount: 1 })
     await expect(seenBy('LB')).resolves.toEqual({ ids: [], unreadCount: 0 })
   })
 })

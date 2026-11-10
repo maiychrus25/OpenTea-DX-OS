@@ -44,7 +44,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   mock(prisma.htxProfile.findUnique).mockImplementation(async ({ where }) => (where.htx_code === 'TC' ? tc : null))
   // Whatever a stray findFirst would pick, it must never be used.
-  mock(prisma.htxProfile.findFirst).mockResolvedValue({ id: 'htx-oldest', crop_types: ['Lúa'], season_label: 'Sai' })
+  mock(prisma.htxProfile.findFirst).mockResolvedValue({ id: 'htx-oldest', crop_types: ['Chè'], season_label: 'Sai' })
   mock(prisma.household.findMany).mockResolvedValue([])
   mock(prisma.parcel.findMany).mockResolvedValue([])
   mock(prisma.lot.findMany).mockResolvedValue([])

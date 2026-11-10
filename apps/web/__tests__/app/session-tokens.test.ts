@@ -34,7 +34,7 @@ const tokenExpiringIn = (seconds: number): JWT => ({
   accessToken: 'old-access',
   refreshToken: 'old-refresh',
   accessTokenExpiresAt: nowSeconds() + seconds,
-  htxCode: 'MD2',
+  htxCode: 'LB',
 })
 
 const keycloakAnswers = (body: Record<string, unknown>, status = 200) =>
@@ -128,7 +128,7 @@ describe('refreshAccessToken', () => {
 
   it('two concurrent refreshes both return a usable token', async () => {
     const logged = jest.spyOn(logger, 'error').mockImplementation(() => undefined)
-    const access = accessTokenWith({ htx_code: 'MD2' })
+    const access = accessTokenWith({ htx_code: 'LB' })
     const fetchImpl = jest
       .fn()
       .mockResolvedValueOnce(keycloakAnswers({ access_token: access, refresh_token: 'new-refresh', expires_in: 300 }))
@@ -198,7 +198,7 @@ describe('refreshAccessToken role and missing refresh token', () => {
 
 describe('auth callbacks', () => {
   it('stores the Keycloak tokens in the JWT at sign-in', async () => {
-    const access = accessTokenWith({ htx_code: 'MD2', realm_access: { roles: ['manager'] } })
+    const access = accessTokenWith({ htx_code: 'LB', realm_access: { roles: ['manager'] } })
     const expiresAt = nowSeconds() + 300
 
     const token = await jwtCallback({
@@ -210,7 +210,7 @@ describe('auth callbacks', () => {
       accessToken: access,
       refreshToken: 'refresh',
       accessTokenExpiresAt: expiresAt,
-      htxCode: 'MD2',
+      htxCode: 'LB',
       sub: 'kc-1',
       role: 'manager',
     })
@@ -222,7 +222,7 @@ describe('auth callbacks', () => {
       token: { ...tokenExpiringIn(120), idToken: 'id-token', role: 'manager', error: 'RefreshFailed' },
     })
 
-    expect(session.user.htxCode).toBe('MD2')
+    expect(session.user.htxCode).toBe('LB')
     expect(session.error).toBe('RefreshFailed')
     expect(JSON.stringify(session)).not.toMatch(/old-access|old-refresh|id-token/)
     expect(Object.keys(session).sort()).toEqual(['error', 'expires', 'user'])
@@ -304,7 +304,7 @@ describe('getCoreToken', () => {
   })
 
   it('refreshes when the request still carries the cookie from before the middleware refresh', async () => {
-    const access = accessTokenWith({ htx_code: 'MD2' })
+    const access = accessTokenWith({ htx_code: 'LB' })
     const originalFetch = global.fetch
     global.fetch = jest.fn().mockResolvedValue(keycloakAnswers({ access_token: access, expires_in: 300 }))
     mockGetToken.mockResolvedValue(tokenExpiringIn(-5))

@@ -21,7 +21,7 @@ async function getBulletin(request: Request) {
   if (!commodity) {
     // Default to HTX primary crop
     const htx = await new PrismaHtxProfileRepository(prisma).getProfile(htxCode)
-    commodity = htx?.crop_types?.[0] ?? 'rice'
+    commodity = htx?.crop_types?.[0] ?? 'Tea'
   }
 
   const repo = new PrismaBulletinRepository(prisma)

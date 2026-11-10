@@ -281,7 +281,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                           .map((s) => s.trimStart())
                       )
                     }
-                    placeholder="VD: Lúa, Xoài, Bưởi"
+                    placeholder="VD: Chè Trung du, Chè LDP1, Chè Kim Tuyên"
                   />
                 ) : (
                   <div className={styles.value}>

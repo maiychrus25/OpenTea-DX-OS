@@ -6,6 +6,8 @@
 // Names, phones and coordinates are made up; coordinates fall inside the two tea areas but are not real plots.
 import { PrismaClient, ParcelStatus, Prisma } from '@prisma/client'
 import QRCode from 'qrcode'
+// Same value as SIMULATED_MARKET_SOURCE in src/domain/market/simulated-price.ts (ts-node cannot import it here).
+const SIMULATED_MARKET_SOURCE = 'Mô phỏng (Toàn quốc)'
 
 const prisma = new PrismaClient()
 
@@ -354,12 +356,13 @@ async function main() {
   // --- Market Data Baseline Seed ---------------------------------------------
   const marketSeeds = [
     {
-      source: 'USDA',
-      commodity: 'Rice',
-      metric: 'export_price',
-      value: 580,
-      unit: 'USD/tấn',
-      period: '2026-09',
+      // A made-up demo price, so it carries the simulated source and the UI labels it.
+      source: SIMULATED_MARKET_SOURCE,
+      commodity: 'Tea',
+      metric: 'Giá chè búp khô Thái Nguyên',
+      value: 200000,
+      unit: 'VND/kg',
+      period: '2026-11',
     },
     {
       source: 'FAOSTAT',
@@ -403,18 +406,18 @@ async function main() {
 
   // ─── Bulletin Baseline Seed ───────────────────────────────────────────
   const existingBulletin = await prisma.bulletin.findFirst({
-    where: { commodity: 'Lúa gạo', is_latest: true },
+    where: { commodity: 'Tea', is_latest: true },
   })
 
   if (!existingBulletin) {
     await prisma.bulletin.create({
       data: {
-        commodity: 'Lúa gạo',
-        bulletin_vi: 'Bản tin thị trường lúa gạo ĐBSCL: Nhu cầu xuất khẩu gạo duy trì ổn định. Giá gạo xuất khẩu 5% tấm dao động quanh mức 580 USD/tấn. HTX cần tuân thủ lịch thu hoạch và đảm bảo thời gian cách ly theo tiêu chuẩn VietGAP.',
+        commodity: 'Tea',
+        bulletin_vi: 'Bản tin thị trường chè Thái Nguyên: Nhu cầu chè búp khô duy trì ổn định. Giá chè búp khô quanh mức 200.000 đ/kg (giá mô phỏng). HTX cần tuân thủ lịch thu hái và đảm bảo thời gian cách ly theo tiêu chuẩn VietGAP.',
         sources_json: [
-          { source: 'USDA', metric: 'export_price', value: 580, date: '2026-09-01' },
+          { source: SIMULATED_MARKET_SOURCE, metric: 'Giá chè búp khô Thái Nguyên', value: 200000, date: '2026-11-01' },
           { source: 'WTO', metric: 'import_tariff', value: 35, date: '2026-08-15' },
-          { source: 'Sở NN&PTNT', metric: 'production_volume', value: 1500000, date: '2026-08-30' },
+          { source: 'Sở NN&PTNT', metric: 'production_volume', value: 260000, date: '2026-08-30' },
         ],
         model_used: 'gemini-1.5-pro',
         is_latest: true,
@@ -424,28 +427,28 @@ async function main() {
 
   // ─── Partner Baseline Seed ───────────────────────────────────────────
   const existingPartner = await prisma.partner.findFirst({
-    where: { name: 'Công ty Thu mua Nông sản Xanh' },
+    where: { name: 'Công ty Thu mua Chè Tân Cương' },
   })
 
   if (!existingPartner) {
     await prisma.partner.createMany({
       data: [
         {
-          name: 'Công ty Thu mua Nông sản Xanh',
+          name: 'Công ty Thu mua Chè Tân Cương',
           partner_type: 'BUYER',
           contact_phone: '0987654321',
-          address: 'Ninh Kiều, Cần Thơ',
-          lat: 10.0452,
-          lng: 105.7469,
-          primary_commodities: ['Lúa ST25', 'Lúa OM5451'],
+          address: 'Tân Cương, TP. Thái Nguyên',
+          lat: 21.5650,
+          lng: 105.7700,
+          primary_commodities: ['Chè Trung du', 'Chè Kim Tuyên'],
         },
         {
           name: 'Đại lý Phân bón An Phát',
           partner_type: 'WAREHOUSE',
           contact_phone: '0912345678',
-          address: 'Châu Thành, Tiền Giang',
-          lat: 10.36,
-          lng: 106.36,
+          address: 'Đại Từ, Thái Nguyên',
+          lat: 21.6300,
+          lng: 105.6400,
           primary_commodities: ['Phân bón NPK', 'Ure'],
         },
         {

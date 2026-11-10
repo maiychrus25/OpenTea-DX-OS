@@ -125,7 +125,7 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
 
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>Ghi chú quan sát</label>
-        <textarea className={styles.formTextarea} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Lúa sinh trưởng tốt, không sâu bệnh..." />
+        <textarea className={styles.formTextarea} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Chè sinh trưởng tốt, không sâu bệnh..." />
       </div>
 
       <div className={styles.formGroup}>

@@ -32,8 +32,8 @@ test.describe('Manager Workflows', () => {
       expect(url.searchParams.get('visibility')).toBe('published')
       
       const data = [
-        { id: '1', lot_code: 'L01', commodity: 'Gạo', status: 'READY', estimated_weight_kg: 500, created_at: '2026-08-20' },
-        { id: '2', lot_code: 'L02', commodity: 'Gạo ST25', status: 'QR_EXPORTED', estimated_weight_kg: 1000, created_at: '2026-08-21' }
+        { id: '1', lot_code: 'L01', commodity: 'Chè', status: 'READY', estimated_weight_kg: 500, created_at: '2026-08-20' },
+        { id: '2', lot_code: 'L02', commodity: 'Chè Kim Tuyên', status: 'QR_EXPORTED', estimated_weight_kg: 1000, created_at: '2026-08-21' }
       ]
 
       await route.fulfill({ status: 200, json: { data } })

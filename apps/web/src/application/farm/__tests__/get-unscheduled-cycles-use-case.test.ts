@@ -25,7 +25,7 @@ describe('GetUnscheduledCyclesUseCase', () => {
         parcelId: 'p1',
         parcelName: 'Thửa 1',
         householdName: 'Hộ A',
-        cropType: 'Lúa',
+        cropType: 'Chè',
         estimatedYieldKg: 1000,
         estimatedHarvestDate: null,
         safeHarvestDate: null,

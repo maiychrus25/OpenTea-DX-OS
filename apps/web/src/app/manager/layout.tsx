@@ -21,7 +21,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
 
   const navItems = [
     { label: 'Tổng quan', href: '/manager/dashboard', icon: <Home size={20} /> },
-    { label: 'Lịch vụ mùa', href: '/manager/schedule', icon: <Calendar size={20} /> },
+    { label: 'Lịch thu hái', href: '/manager/schedule', icon: <Calendar size={20} /> },
     { label: 'Quản lý thành viên', href: '/manager/members', icon: <Users size={20} /> },
     { label: 'Bản tin', href: '/manager/bulletin', icon: <Newspaper size={20} /> },
     { label: 'Duyệt nhật ký', href: '/manager/journal-approve', icon: <CheckSquare size={20} /> },

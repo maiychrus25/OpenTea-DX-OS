@@ -34,9 +34,9 @@ async function loginAsManager(page: Page) {
 
 const MOCK_HTX   = { id: 'htx-001', name: 'HTX Mekong Delta 2' }
 const MOCK_HH    = { id: 'hh-001', name: 'Nguyễn Văn An', phone: '0901234567', htx_profile_id: 'htx-001' }
-const MOCK_PARCEL = { id: 'parcel-001', parcel_code: 'P-MD2-001', crop_type: 'Lúa ST25', area_ha: 1.5, status: 'GROWING' }
-const MOCK_LOT   = { id: 'lot-001', lot_code: 'MD2-ST25-20260829-001', commodity: 'Lúa ST25', status: 'DRAFT', created_at: new Date().toISOString() }
-const MOCK_JOURNAL = { id: 'j-001', parcel_code: 'P-MD2-001', activity_type: 'FERTILIZING', entry_date: '2026-08-20', status: 'PENDING_APPROVAL' }
+const MOCK_PARCEL = { id: 'parcel-001', parcel_code: 'P-TC-001', crop_type: 'Chè Trung du', area_ha: 1.5, status: 'GROWING' }
+const MOCK_LOT   = { id: 'lot-001', lot_code: 'TC-CHE-20260829-001', commodity: 'Chè Trung du', status: 'DRAFT', created_at: new Date().toISOString() }
+const MOCK_JOURNAL = { id: 'j-001', parcel_code: 'P-TC-001', activity_type: 'FERTILIZING', entry_date: '2026-08-20', status: 'PENDING_APPROVAL' }
 
 // ── TC-9.1-01: Household creation + parcel persistence ────────────────────────
 
@@ -95,11 +95,11 @@ test.describe('Story 9-1: FE–BE Integration Critical Path', () => {
       r.fulfill({ status: 200, json: { data: { approved_count: 1, failed_ids: [] } } })
     )
     await page.route('**/api/farm/parcels*', r =>
-      r.fulfill({ status: 200, json: { data: [{ id: 'p1', parcel_code: 'P-MD2-001', crop_type: 'Lúa ST25' }] } })
+      r.fulfill({ status: 200, json: { data: [{ id: 'p1', parcel_code: 'P-TC-001', crop_type: 'Chè Trung du' }] } })
     )
 
     await page.goto('/officer/journal')
-    await expect(page.getByText('P-MD2-001')).toBeVisible()
+    await expect(page.getByText('P-TC-001')).toBeVisible()
     await expect(page.getByText(/Chờ duyệt/)).toBeVisible()
 
     // Approve
@@ -133,13 +133,13 @@ test.describe('Story 9-1: FE–BE Integration Critical Path', () => {
     await expect(page.getByText(/Tạo Lô hàng/i)).toBeVisible()
 
     // Parcel list shows HARVEST_APPROVED parcel
-    await expect(page.getByText('P-MD2-001')).toBeVisible()
-    await page.getByText('P-MD2-001').click()
+    await expect(page.getByText('P-TC-001')).toBeVisible()
+    await page.getByText('P-TC-001').click()
 
     page.on('dialog', d => d.accept())
     await page.getByRole('button', { name: 'Tạo lô hàng' }).click()
     await expect(page.getByText(/Tạo Lô hàng/i)).not.toBeVisible()
-    await expect(page.getByText('MD2-ST25-20260829-001')).toBeVisible()
+    await expect(page.getByText('TC-CHE-20260829-001')).toBeVisible()
   })
 
   // ── TC-9.1-04: Export QR → public page reachable without auth ────────────
@@ -147,7 +147,7 @@ test.describe('Story 9-1: FE–BE Integration Critical Path', () => {
   test('TC-9.1-04: Export QR API call and public page accessible without login', async ({ page, browser }) => {
     await loginAsOfficer(page)
 
-    const lotCode = 'MD2-ST25-20260829-001'
+    const lotCode = 'TC-CHE-20260829-001'
     const exportResult = { lot_code: lotCode, qr_image_url: `/lot/${lotCode}`, public_page_url: `/lot/${lotCode}` }
 
     await page.route(`**/api/lots/lot-001/export-qr`, async route => {
@@ -243,7 +243,7 @@ test.describe('Story 9-1: FE–BE Integration Critical Path', () => {
     )
 
     const res = await page.request.post('/api/lots', {
-      data: { commodity: 'Lúa', parcel_ids: ['p1'], harvest_date: '2026-09-01' },
+      data: { commodity: 'Chè', parcel_ids: ['p1'], harvest_date: '2026-09-01' },
     })
     expect([403, 401]).toContain(res.status())
   })

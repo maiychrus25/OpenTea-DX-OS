@@ -4,6 +4,7 @@
 import OpenAI from 'openai'
 // TODO(issue-239): Done replacing Prisma with Ports
 import { MarketDataPort } from '@/domain/ports/market-data-port'
+import { isSimulatedPrice, SIMULATED_PRICE_LABEL } from '@/domain/market/simulated-price'
 import { ChatHistoryPort } from '@/domain/ports/chat-history-port'
 import { logger } from '@/lib/logger'
 import { CoreUnauthorizedError } from '@/domain/errors'
@@ -27,6 +28,7 @@ QUY TẮC BẮT BUỘC:
 2. KHÔNG ra quyết định thay HTX
 3. KHÔNG khuyến nghị hành động cụ thể (không nói "nên mua", "nên bán", "nên chờ")
 4. Mọi số liệu phải kèm nguồn và ngày cập nhật
+5. Số liệu được đánh dấu giá mô phỏng phải ghi rõ "giá mô phỏng" khi nhắc tới
 
 Trả lời bằng tiếng Việt. Cuối mỗi câu trả lời, liệt kê nguồn tham khảo trong dòng riêng với prefix "Nguồn:".
 Nếu không có dữ liệu chính xác, nói rõ "Tôi không có dữ liệu cập nhật cho câu hỏi này."`
@@ -119,7 +121,8 @@ export class ChatbotUseCase {
             ragContextStr += `Tỷ giá ngoại tệ tham chiếu (so với USD, định dạng JSON): ${JSON.stringify(latestFx.rates)}\n`
           }
           recentMarketData.forEach(r => {
-            ragContextStr += `- [${r.source}] ${r.commodity} - ${r.metric}: ${r.value} ${r.unit} (Thời gian: ${r.period})\n`
+            const simulated = isSimulatedPrice(r.source) ? ` (${SIMULATED_PRICE_LABEL})` : ''
+            ragContextStr += `- [${r.source}] ${r.commodity} - ${r.metric}: ${r.value} ${r.unit}${simulated} (Thời gian: ${r.period})\n`
           })
           ragContextStr += `--- KẾT THÚC DỮ LIỆU THỊ TRƯỜNG ---\n`
         }

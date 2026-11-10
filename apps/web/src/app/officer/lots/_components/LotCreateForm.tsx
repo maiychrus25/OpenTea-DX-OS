@@ -87,7 +87,7 @@ export function LotCreateForm({ onSuccess, onCancel }: LotCreateFormProps) {
 
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>Loại nông sản *</label>
-        <input className={styles.formInput} value={crop} onChange={e => setCrop(e.target.value)} placeholder="VD: Lúa ST25" required />
+        <input className={styles.formInput} value={crop} onChange={e => setCrop(e.target.value)} placeholder="VD: Chè Trung du" required />
       </div>
 
       <div className={styles.formGroup}>
