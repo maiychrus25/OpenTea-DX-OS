@@ -169,7 +169,7 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
                   )}
                   {journal.withdrawal_days !== null && journal.withdrawal_days > 0 && (
                     <span className={styles.timelineDetail}>
-                      <Hourglass size={14} className="inline mr-1 text-amber-600 align-text-bottom" />
+                      <Hourglass size={14} className="inline mr-1 text-warning align-text-bottom" />
                       Thời gian cách ly: {journal.withdrawal_days} ngày
                     </span>
                   )}

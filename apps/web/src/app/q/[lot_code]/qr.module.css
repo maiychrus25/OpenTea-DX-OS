@@ -20,7 +20,7 @@
 }
 
 .mockHeader p {
-  color: var(--color-text-muted);
+  color: var(--color-ink-tertiary);
   margin: 0;
 }
 
@@ -29,7 +29,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--rounded-lg);
   padding: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-card);
 }
 
 .cardHeader {
@@ -60,7 +60,7 @@
 }
 
 .label {
-  color: var(--color-text-muted);
+  color: var(--color-ink-tertiary);
 }
 
 .value {
@@ -69,10 +69,10 @@
 }
 
 .certBox {
-  background: #e8f5e9;
+  background: var(--color-success-subtle);
   padding: 1rem;
   border-radius: var(--rounded-md);
-  color: #2e7d32;
+  color: var(--color-success);
   font-size: 0.875rem;
 }
 
@@ -106,7 +106,7 @@
 }
 
 .errorDesc {
-  color: var(--color-text-muted);
+  color: var(--color-ink-tertiary);
   margin: 0;
   line-height: 1.5;
 }
@@ -120,7 +120,7 @@
 
 .testNav h4 {
   margin-top: 0;
-  color: var(--color-text-muted);
+  color: var(--color-ink-tertiary);
 }
 
 .testLink {
@@ -129,7 +129,7 @@
   border: 1px solid var(--color-border);
   border-radius: 999px;
   font-size: 0.875rem;
-  color: var(--color-text);
+  color: var(--color-ink-primary);
   text-decoration: none;
 }
 
@@ -139,24 +139,24 @@
 
 /* Icon variants replacing inline style={{backgroundColor}} — BUG-06 fix */
 .iconWrapperError {
-  background-color: #ffebee;
-  color: #d32f2f;
+  background-color: var(--color-danger-subtle);
+  color: var(--color-danger);
 }
 
 .iconWrapperRevoked {
-  background-color: #fff3e0;
-  color: #f57c00;
+  background-color: var(--color-warning-subtle);
+  color: var(--color-warning);
 }
 
 .iconWrapperExpired {
-  background-color: #eceff1;
-  color: #546e7a;
+  background-color: var(--muted);
+  color: var(--muted-foreground);
 }
 
-/* Origin box variant — replaces inline style background:#e3f2fd */
+/* Origin box variant: replaces an inline background style */
 .originBox {
-  background: #e3f2fd;
-  color: #1565c0;
+  background: var(--color-info-subtle);
+  color: var(--color-info);
   margin-bottom: 1rem;
 }
 
@@ -186,13 +186,13 @@
 
 .timelineDetail {
   font-size: 0.85rem;
-  color: var(--muted-foreground, #6b7280);
+  color: var(--muted-foreground);
 }
 
 .footerNote {
   text-align: center;
   font-size: 0.8rem;
-  color: var(--muted-foreground, #6b7280);
+  color: var(--muted-foreground);
   margin-top: 1.5rem;
 }
 
@@ -200,7 +200,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: #16a34a;
+  color: var(--color-success);
   font-weight: 600;
 }
 
@@ -208,7 +208,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: #dc2626;
+  color: var(--color-danger);
   font-weight: 600;
 }
 

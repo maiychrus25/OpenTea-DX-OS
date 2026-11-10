@@ -8,10 +8,6 @@ import { join, relative } from 'path'
 // `baseline` lists files that still hard-code colours; Task 10 of the Tier 2b plan empties it.
 // A file leaves the baseline as soon as it is clean: the test fails if a listed file no longer offends.
 const baseline: string[] = [
-  'src/app/(auth)/forgot-pin/_components/forgot-pin-form.tsx',
-  'src/app/(auth)/forgot-pin/forgot-pin.module.css',
-  'src/app/(auth)/register/_components/register-form.tsx',
-  'src/app/(auth)/register/register.module.css',
   'src/app/error.tsx',
   'src/app/farmer/bulletin-notifications/page.tsx',
   'src/app/farmer/dashboard/page.tsx',
@@ -19,8 +15,6 @@ const baseline: string[] = [
   'src/app/farmer/diagnosis/diagnosis.module.css',
   'src/app/farmer/journal/_components/FarmerJournalList.tsx',
   'src/app/farmer/journal/journal.module.css',
-  'src/app/lot/[lot_code]/_components/TraceView.tsx',
-  'src/app/lot/[lot_code]/trace.module.css',
   'src/app/manager/chat/_components/chat-panel.module.css',
   'src/app/manager/dashboard/Dashboard.module.css',
   'src/app/manager/dashboard/page.tsx',
@@ -54,9 +48,6 @@ const baseline: string[] = [
   'src/app/officer/journal/_components/officer-journal-approval.tsx',
   'src/app/officer/journal/journal.module.css',
   'src/app/officer/lots/lots.module.css',
-  'src/app/q/[lot_code]/qr.module.css',
-  'src/app/unauthorized/Unauthorized.module.css',
-  'src/app/unauthorized/page.tsx',
   'src/components/features/bulletin/BulletinView.module.css',
   'src/components/features/bulletin/CommodityTabs.module.css',
   'src/components/features/bulletin/WeatherSection.tsx',

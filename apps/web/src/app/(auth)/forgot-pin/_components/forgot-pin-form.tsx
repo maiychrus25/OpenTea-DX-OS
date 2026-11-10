@@ -104,7 +104,7 @@ export function ForgotPinForm() {
     return (
       <div className={styles.successState} data-testid="forgot-pin-success">
         <div className={styles.successIcon} aria-hidden="true">
-          <CheckCircle2 size={40} className="text-emerald-600 mx-auto" />
+          <CheckCircle2 size={40} className="text-success mx-auto" />
         </div>
         <h3 className={styles.successTitle}>Đổi PIN thành công!</h3>
         <p className={styles.successDesc}>
@@ -112,7 +112,7 @@ export function ForgotPinForm() {
         </p>
         {/* AC-5: Mock banner — no actual session created */}
         <div className={styles.mockBanner} data-testid="mock-mode-banner" role="note">
-          <AlertTriangle size={15} className="inline mr-1 text-amber-600 align-text-bottom" /> Chế độ demo — PIN chưa thực sự được thay đổi
+          <AlertTriangle size={15} className="inline mr-1 text-warning align-text-bottom" /> Chế độ demo — PIN chưa thực sự được thay đổi
         </div>
         <Link href="/login">
           <Button className={styles.loginButton} data-testid="go-to-login-btn">
@@ -128,7 +128,7 @@ export function ForgotPinForm() {
     return (
       <div className={styles.failureState} data-testid="forgot-pin-failure">
         <div className={styles.failureIcon} aria-hidden="true">
-          <XCircle size={40} className="text-red-500 mx-auto" />
+          <XCircle size={40} className="text-danger mx-auto" />
         </div>
         <h3 className={styles.failureTitle}>Khôi phục thất bại</h3>
         <p className={styles.failureDesc}>
@@ -151,7 +151,7 @@ export function ForgotPinForm() {
     <div>
       {/* Mock mode banner */}
       <div className={styles.mockBanner} data-testid="mock-mode-banner" role="note">
-        <AlertTriangle size={15} className="inline mr-1 text-amber-600 align-text-bottom" /> Chế độ demo — chưa kết nối BE Keycloak
+        <AlertTriangle size={15} className="inline mr-1 text-warning align-text-bottom" /> Chế độ demo — chưa kết nối BE Keycloak
       </div>
 
       {/* Step indicator */}

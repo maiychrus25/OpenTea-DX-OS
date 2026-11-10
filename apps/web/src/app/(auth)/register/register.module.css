@@ -28,7 +28,7 @@
   height: 48px;
   background: var(--accent-lime);
   color: var(--sidebar-bg);
-  border-radius: var(--radius-lg, 14px);
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -97,7 +97,7 @@
   align-items: flex-start;
   justify-content: center;
   padding: 40px 32px;
-  background: var(--background, #f8fafc);
+  background: var(--background);
   overflow-y: auto;
 }
 
@@ -105,9 +105,9 @@
   width: 100%;
   max-width: 480px;
   background: var(--color-surface-card);
-  border-radius: var(--radius-xl, 16px);
+  border-radius: var(--radius-xl);
   padding: 40px 36px;
-  box-shadow: var(--shadow-card, 0 4px 6px -1px rgb(0 0 0 / 0.1));
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   margin-top: 24px;
@@ -143,8 +143,8 @@
 
 /* ── Mock Mode Banner ── */
 .mockBanner {
-  background: var(--color-warning-subtle, #FEF9C3);
-  color: var(--color-warning-text, #854D0E);
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
   padding: 10px 12px;
   border-radius: 8px;
   font-size: 0.8125rem;
@@ -189,12 +189,12 @@
 }
 
 .input:focus {
-  border-color: var(--sidebar-bg);
-  box-shadow: 0 0 0 3px rgba(15, 74, 44, 0.08);
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
 .input.inputError {
-  border-color: var(--color-danger, #DC2626);
+  border-color: var(--color-danger);
 }
 
 .select {
@@ -213,12 +213,12 @@
 }
 
 .select:focus {
-  border-color: var(--sidebar-bg);
+  border-color: var(--color-border-focus);
 }
 
 .fieldError {
   font-size: 0.8125rem;
-  color: var(--color-danger, #DC2626);
+  color: var(--color-danger);
   margin: 0;
 }
 
@@ -236,7 +236,7 @@
   min-width: 20px; /* 44px được handle bởi hit area wrapper */
   margin-top: 2px;
   cursor: pointer;
-  accent-color: var(--sidebar-bg);
+  accent-color: var(--color-primary);
 }
 
 .consentLabel {
@@ -266,7 +266,7 @@
 }
 
 .loginLink a {
-  color: var(--sidebar-bg);
+  color: var(--color-primary);
   font-weight: 600;
   text-decoration: none;
 }
@@ -288,7 +288,7 @@
 .pendingIcon {
   width: 64px;
   height: 64px;
-  background: var(--color-warning-subtle, #FEF9C3);
+  background: var(--color-warning-subtle);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -313,7 +313,7 @@
 
 .pendingBackLink {
   font-size: 0.875rem;
-  color: var(--sidebar-bg);
+  color: var(--color-primary);
   font-weight: 600;
   text-decoration: none;
   margin-top: 8px;
