@@ -489,13 +489,14 @@ parcel_id: UUID (optional)
 ### `GET /health`
 Health check.
 ```json
-{ "status": "ok", "model_loaded": true }
+{ "status": "ok", "model_loaded": true, "models": { "general": true, "tea": true } }
 ```
+`model_loaded` is the general model, as before; `models` lists each model.
 
 ### `POST /predict`
 Classify crop disease from image.
 
-**Request:** `multipart/form-data`
+**Request:** `multipart/form-data`, optional query `model=general|tea` (default `general`; any other value → 400)
 ```
 file: UploadFile (JPEG/PNG)
 ```
@@ -510,9 +511,13 @@ file: UploadFile (JPEG/PNG)
     { "label": "leaf_blast", "confidence": 0.923 },
     { "label": "brown_spot", "confidence": 0.051 },
     { "label": "healthy", "confidence": 0.026 }
-  ]
+  ],
+  "model": "general",
+  "uncertain": false
 }
 ```
+
+`model=tea` uses the tea leaf model (`ai-models/tea_leaf_model.keras`, 8 classes): `disease_name_en` is the readable class id (`brown_blight` → `Brown blight`), `disease_name_vi` comes from `tea_class_names_vi.json`, and `top3` labels are class ids. When the top confidence is below `TEA_CONFIDENCE_THRESHOLD` (default `0.60`, see `ai-models/tea/MODEL_CARD.md`; a value outside (0, 1] stops startup), `uncertain` is `true`, both names are `null` and `top3` is kept. The general model is never `uncertain`. Every tea result, `healthy` included, still needs an officer's review.
 
 ---
 

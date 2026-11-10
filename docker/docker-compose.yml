@@ -398,6 +398,8 @@ services:
       - ../ai-models:/models:ro
     environment:
       - MODEL_DIR=/models
+      # Tea results below this confidence are returned as uncertain (default from ai-models/tea/MODEL_CARD.md).
+      - TEA_CONFIDENCE_THRESHOLD=${TEA_CONFIDENCE_THRESHOLD:-0.60}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s

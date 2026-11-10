@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Tea disease model served**: `POST /predict?model=tea` on `disease-api` uses the tea leaf model next to the general one (still the default; any other model name answers 400). Responses gain `model` and `uncertain`; a tea result below `TEA_CONFIDENCE_THRESHOLD` (default `0.60`, rejected at startup outside (0, 1]) has null names and keeps `top3`. `/health` adds `models` with each model's state
+
 ---
 
 ## [1.6.0] - 2026-11-10
