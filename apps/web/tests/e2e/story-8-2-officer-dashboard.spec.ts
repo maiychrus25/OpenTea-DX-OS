@@ -1,28 +1,8 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import { test, expect, Page } from '@playwright/test'
-import { encode } from 'next-auth/jwt'
-import fs from 'fs'
-
-try {
-  const envContent = fs.readFileSync('.env', 'utf-8')
-  const match = envContent.match(/AUTH_SECRET=["']?([^"'\n]+)["']?/)
-  if (match) process.env.AUTH_SECRET = match[1]
-} catch (e) {}
-
-async function mockSessionCookie(page: Page, role: string, name: string, id: string) {
-  const now = Math.floor(Date.now() / 1000)
-  const token = await encode({
-    token: { id, name, email: `${role}@example.com`, role, iat: now, exp: now + 60 * 60 * 8, jti: 'mock-jti-' + now },
-    secret: process.env.AUTH_SECRET || process.env.KEYCLOAK_CLIENT_SECRET || 'agrimarket-secret-key',
-    salt: 'authjs.session-token',
-  })
-  await page.context().addCookies([{
-    name: 'authjs.session-token', value: token, domain: 'localhost', path: '/',
-    httpOnly: true, sameSite: 'Lax', expires: now + 60 * 60 * 8,
-  }])
-}
+import { test, expect } from '@playwright/test'
+import { mockSessionCookie } from './helpers/forged-session'
 
 test.describe('Story 8.2: Officer Today Dashboard', () => {
   test.beforeEach(async ({ page }) => {

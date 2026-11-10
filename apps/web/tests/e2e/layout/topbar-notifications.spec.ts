@@ -1,26 +1,9 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import { test, expect, Page } from '@playwright/test'
-import { encode } from 'next-auth/jwt'
+import { test, expect } from '@playwright/test'
+import { mockSessionCookie } from '../helpers/forged-session'
 import type { Notification } from '@/components/ui/NotificationBell/NotificationBell'
-
-// ── Session mock helper ──────────────────────────────────────────────────────
-
-async function mockSessionCookie(page: Page, role: string) {
-  const secret = process.env.AUTH_SECRET ?? process.env.KEYCLOAK_CLIENT_SECRET
-  if (!secret) throw new Error('AUTH_SECRET or KEYCLOAK_CLIENT_SECRET must be set for E2E tests')
-  const now = Math.floor(Date.now() / 1000)
-  const token = await encode({
-    token: { id: `${role}-user-id`, name: `${role} User`, email: `${role}@example.com`, role, iat: now, exp: now + 60 * 60 * 8, jti: `mock-${role}-${now}` },
-    secret,
-    salt: 'authjs.session-token',
-  })
-  await page.context().addCookies([{
-    name: 'authjs.session-token', value: token, domain: 'localhost', path: '/',
-    httpOnly: true, sameSite: 'Lax', expires: now + 60 * 60 * 8,
-  }])
-}
 
 // ── Mock notification responses ───────────────────────────────────────────────
 

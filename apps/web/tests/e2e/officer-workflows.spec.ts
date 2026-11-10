@@ -3,20 +3,7 @@
 
 import 'dotenv/config'
 import { test, expect, Page } from '@playwright/test'
-import { encode } from 'next-auth/jwt'
-
-async function mockSessionCookie(page: Page, role: string, name: string, id: string) {
-  const now = Math.floor(Date.now() / 1000)
-  const token = await encode({
-    token: { id, name, email: `${role}@example.com`, role, iat: now, exp: now + 60 * 60 * 8, jti: 'mock-jti-' + now },
-    secret: process.env.AUTH_SECRET || process.env.KEYCLOAK_CLIENT_SECRET || 'agrimarket-secret-key',
-    salt: 'authjs.session-token',
-  })
-  await page.context().addCookies([{
-    name: 'authjs.session-token', value: token, domain: 'localhost', path: '/',
-    httpOnly: true, sameSite: 'Lax', expires: now + 60 * 60 * 8,
-  }])
-}
+import { mockSessionCookie } from './helpers/forged-session'
 
 async function loginAsOfficer(page: Page) {
   await mockSessionCookie(page, 'officer', 'Officer User', 'officer-id-1')
