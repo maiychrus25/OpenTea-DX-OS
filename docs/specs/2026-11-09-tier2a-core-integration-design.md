@@ -171,6 +171,7 @@ Khác biệt/bổ sung so với thiết kế:
 - Key ảnh nhật ký do client gửi: `POST /api/journal` trả 400 nếu `photo_minio_key` ngoài thư mục HTX (dùng `isInDocumentRoot`, vì `assertInDocumentRoot` trả 404 mà quyết định yêu cầu 400). Danh sách nhật ký chỉ ký key trong thư mục HTX của người gọi. Route chứng nhận công khai cũng kiểm tra key thuộc thư mục HTX của lô, vì `certificate_keys` là cột do client ghi.
 - `workflows/vietnam_market_sync.json` ghi `para/Archives/Market_Reports/` không có HTX, nên thêm một tiền tố dùng chung chỉ đọc, chỉ route liệt kê và route URL chấp nhận, cùng kiểm tra phân đoạn và mã hóa. Tải lên và `certificate_keys` vẫn chỉ nhận thư mục HTX.
 - `POST /api/register` công khai và `web:3000` không đi qua APISIX, nên giới hạn 5 yêu cầu mỗi IP mỗi 10 phút nằm ngay trong route (theo tiến trình). Lỗi không phải `ValidationError` trả thông báo chung; lỗi trùng số điện thoại từ Keycloak (409) đổi sang `ValidationError` để nông dân vẫn thấy thông báo, và nhờ đó `POST /api/members/invite` trả 400 thay vì 500 cho trường hợp này. Từ chối đăng ký gỡ liên kết nông hộ trước khi xóa tài khoản Keycloak, để thao tác lỗi giữa chừng có thể thử lại.
+- Bản phát hành cần đặt cả `KEYCLOAK_ADMIN` lẫn mật khẩu trong `docker/.env.local`, nếu không các route quản trị trả 500.
 
 Đo thực tế (máy arm64, database sạch, image và lớp build đã có cache; model được kéo lại vì volume mới):
 

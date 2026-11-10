@@ -222,13 +222,14 @@ E2E_CORE=1 E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/tena
 Test này tạm đổi `accessTokenLifespan` của realm và tạm dừng Hasura rồi khôi phục, nên chỉ chạy trên môi trường dev.
 
 > [!NOTE]
-> Giới hạn đã biết: (1) `workflows/mattermost-push.json` đẩy sự kiện bệnh và thu hoạch của mọi HTX vào cùng một webhook; (2) `/api/dev-login` và cookie tạo trước khi nâng cấp không có access token nên mọi đọc qua lõi đều bị từ chối (đăng nhập lại để có cookie mới); (3) đường ghi được bảo vệ ở tầng ứng dụng, không phải ở database.
+> Giới hạn đã biết: (1) `workflows/mattermost-push.json` đẩy sự kiện bệnh và thu hoạch của mọi HTX vào cùng một webhook; (2) ở production, cookie tạo trước khi nâng cấp bị chuyển về trang đăng nhập; cookie của `/api/dev-login` không có access token nên mọi đọc qua lõi đều bị từ chối; (3) đường ghi được bảo vệ ở tầng ứng dụng, không phải ở database.
 
 **Nâng cấp lên Tier 2a:**
 
 - Chạy `migrate` (hai migration mới: `20261109120000_sync_schema_drift`, `20261109130000_notifications_htx`) rồi `platform-init` như ở mục triển khai; `make platform-up` đã gồm cả hai.
 - Với bản release đang chạy, sau `up -d --no-build` phải chạy `docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml restart hasura apisix`: cấu hình compose của hai dịch vụ này không đổi nên chúng không được tạo lại, APISIX vẫn chỉ nghe cổng 9080 và Hasura thiếu các relationship mới, khiến mọi danh sách trả 503.
 - Realm đang chạy không tự cập nhật: trong Keycloak Admin Console, đặt **SSO Session Idle** và **SSO Session Max** của realm `agrimarket` là 8 giờ (Realm settings > Sessions), và khai báo các thuộc tính `fullName`, `phone`, `htxId` chỉ cho admin xem và sửa (Realm settings > User profile); nếu thiếu, Keycloak 24 âm thầm bỏ các thuộc tính này khi tạo tài khoản.
+- Đặt cả `KEYCLOAK_ADMIN` lẫn `KEYCLOAK_ADMIN_PASSWORD` trong `docker/.env.local`, nếu thiếu thì các route quản trị trả 500 ở production.
 - Gán thuộc tính `htx_code` cho các tài khoản cũ, nếu không họ nhận `NO_HTX`.
 - Thông báo cũ không có người nhận và không có HTX sẽ không còn hiển thị; cảnh báo hệ thống của n8n vẫn hiển thị.
 - Các hàng có `htx_profile_id` rỗng (nông hộ, lô hàng) trở nên không xem và không ghi được; phải gán chúng cho một HTX (tham khảo `scripts/backfill-htx-profile-id.sql`).
