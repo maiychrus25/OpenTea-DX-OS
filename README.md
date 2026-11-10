@@ -211,6 +211,33 @@ Mọi truy cập API đi qua gateway `http://localhost:9080`:
 > [!WARNING]
 > Không publish cổng `9081` ra ngoài mạng Docker. Cổng này không có giới hạn tần suất theo IP, chỉ an toàn khi chỉ có container `web` gọi được.
 
+### Dữ liệu demo chè và tài khoản
+
+`npm run seed` tạo hai HTX chè Thái Nguyên: Tân Cương (`TC`) và La Bằng (`LB`), mỗi HTX vài nông hộ và thửa giống Trung du, LDP1, Kim Tuyên. Tên, số điện thoại và toạ độ đều là dữ liệu giả (toạ độ nằm trong vùng chè, không phải ranh giới đất thật). Thửa `TC-A3` có lịch sử tính theo ngày chạy seed: bón phân, phun thuốc còn 4 ngày cách ly (cách ly 7 ngày), lứa trước đã thu hoạch và lô `TC-CHE-A3-001` đã xuất QR (trang công khai `/q/TC-CHE-A3-001`), một ảnh bệnh chè chờ cán bộ duyệt.
+
+```bash
+cd apps/web && DATABASE_URL="postgresql://agrimarket:<POSTGRES_PASSWORD>@localhost:5432/agrimarket" npm run seed
+bash platform/tests/seed-test.sh   # seed hai lần trên database tạm, kiểm tra dữ liệu TC/LB và dữ liệu HTX khác không đổi
+```
+
+Chạy lại seed được nhiều lần và chỉ đổi dữ liệu của `TC`, `LB` (cùng bảng thị trường, bản tin, đối tác dùng chung): lịch sử của các thửa do seed tạo (nhật ký, lứa, lô, báo cáo bệnh, thời tiết) được xoá rồi tạo lại theo ngày mới, nên chỉ chạy trên database demo.
+
+| Tài khoản | Vai trò | HTX | Mật khẩu | TOTP |
+| --- | --- | --- | --- | --- |
+| `manager_tc` | Quản lý | TC | `Test1234!` | Bắt buộc |
+| `officer_tc` | Cán bộ kỹ thuật | TC | `Test1234!` | Bắt buộc |
+| `farmer_tc` | Nông hộ (Hoàng Văn Tâm, chủ thửa `TC-A3`) | TC | `Test1234!` | Không |
+| `manager_lb` | Quản lý | LB | `Test1234!` | Bắt buộc |
+| `officer_lb` | Cán bộ kỹ thuật | LB | `Test1234!` | Bắt buộc |
+| `farmer_lb` | Nông hộ (Ma Văn Thắng) | LB | `Test1234!` | Không |
+
+**Cài TOTP trước buổi demo:** đăng nhập lần đầu bằng từng tài khoản quản lý và cán bộ, Keycloak hiện mã QR; quét bằng ứng dụng xác thực (Google Authenticator, Microsoft Authenticator hoặc FreeOTP), nhập mã 6 số để hoàn tất. Các lần sau Keycloak hỏi mã 6 số trên điện thoại đó, nên mang theo điện thoại đã cài khi demo. Muốn cài lại: Keycloak Admin Console > realm `agrimarket` > Users > tài khoản > Credentials, xoá OTP rồi thêm lại Required action **Configure OTP**.
+
+Smoke test và test trình duyệt chỉ dùng tài khoản riêng tiền tố `smoke_` (`smoke_manager_tc`, `smoke_manager_lb`, `smoke_manager_none`, `smoke_farmer_tc`): chúng đặt lại mật khẩu và bỏ TOTP của tài khoản mình dùng, nên không bao giờ đụng vào tài khoản demo.
+
+> [!NOTE]
+> Keycloak chỉ import realm khi database mới. Trên stack cũ, realm vẫn còn `manager1`, `officer1`, `farmer1` và các tài khoản `manager_tc`, `manager_lb`, `farmer_tc` do smoke cũ tạo (mật khẩu smoke, không TOTP): xoá chúng rồi tạo lại realm (xoá volume Keycloak) hoặc tạo sáu tài khoản demo trong Admin Console. `farmer_tc` và `farmer_lb` phải giữ đúng `id` trong `docker/keycloak/realm-agrimarket.json` thì mới gắn với nông hộ do seed tạo.
+
 Kiểm thử trên trình duyệt với stack thật (cần `make platform-up`, `make platform-smoke` và container `web` đang chạy):
 
 ```bash

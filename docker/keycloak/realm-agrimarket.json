@@ -108,12 +108,12 @@
   },
   "users": [
     {
-      "username": "manager1",
+      "username": "manager_tc",
       "enabled": true,
       "emailVerified": true,
-      "firstName": "Manager",
-      "lastName": "HTX",
-      "email": "manager1@agrimarket.local",
+      "firstName": "Quản lý",
+      "lastName": "HTX Tân Cương",
+      "email": "manager_tc@agrimarket.local",
       "credentials": [
         {
           "type": "password",
@@ -123,7 +123,7 @@
       ],
       "attributes": {
         "htx_code": [
-          "MD2"
+          "TC"
         ]
       },
       "requiredActions": [
@@ -134,12 +134,13 @@
       ]
     },
     {
-      "username": "officer1",
+      "id": "6f2c9a10-1b3d-4e5f-8a01-0000000000a2",
+      "username": "officer_tc",
       "enabled": true,
       "emailVerified": true,
-      "firstName": "Officer",
-      "lastName": "KT",
-      "email": "officer1@agrimarket.local",
+      "firstName": "Cán bộ kỹ thuật",
+      "lastName": "Tân Cương",
+      "email": "officer_tc@agrimarket.local",
       "credentials": [
         {
           "type": "password",
@@ -149,7 +150,7 @@
       ],
       "attributes": {
         "htx_code": [
-          "MD2"
+          "TC"
         ]
       },
       "requiredActions": [
@@ -160,12 +161,13 @@
       ]
     },
     {
-      "username": "farmer1",
+      "id": "6f2c9a10-1b3d-4e5f-8a01-0000000000a1",
+      "username": "farmer_tc",
       "enabled": true,
       "emailVerified": true,
-      "firstName": "Farmer",
-      "lastName": "ND",
-      "email": "farmer1@agrimarket.local",
+      "firstName": "Hoàng Văn",
+      "lastName": "Tâm",
+      "email": "farmer_tc@agrimarket.local",
       "credentials": [
         {
           "type": "password",
@@ -175,7 +177,84 @@
       ],
       "attributes": {
         "htx_code": [
-          "MD2"
+          "TC"
+        ]
+      },
+      "realmRoles": [
+        "farmer"
+      ]
+    },
+    {
+      "username": "manager_lb",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Quản lý",
+      "lastName": "HTX La Bằng",
+      "email": "manager_lb@agrimarket.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Test1234!",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "htx_code": [
+          "LB"
+        ]
+      },
+      "requiredActions": [
+        "CONFIGURE_TOTP"
+      ],
+      "realmRoles": [
+        "manager"
+      ]
+    },
+    {
+      "id": "6f2c9a10-1b3d-4e5f-8a01-0000000000b2",
+      "username": "officer_lb",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Cán bộ kỹ thuật",
+      "lastName": "La Bằng",
+      "email": "officer_lb@agrimarket.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Test1234!",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "htx_code": [
+          "LB"
+        ]
+      },
+      "requiredActions": [
+        "CONFIGURE_TOTP"
+      ],
+      "realmRoles": [
+        "officer"
+      ]
+    },
+    {
+      "id": "6f2c9a10-1b3d-4e5f-8a01-0000000000b1",
+      "username": "farmer_lb",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Ma Văn",
+      "lastName": "Thắng",
+      "email": "farmer_lb@agrimarket.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Test1234!",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "htx_code": [
+          "LB"
         ]
       },
       "realmRoles": [
