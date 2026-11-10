@@ -10,6 +10,7 @@ import * as parcels from '@/app/api/farm/parcels/route'
 import * as soilHealth from '@/app/api/farm/parcels/[id]/soil-health/route'
 import * as approveHarvest from '@/app/api/parcels/[id]/approve-harvest/route'
 import * as latestPhoto from '@/app/api/parcels/[id]/latest-photo/route'
+import * as startRound from '@/app/api/parcels/[id]/start-round/route'
 import * as journalById from '@/app/api/journal/[id]/route'
 import * as journal from '@/app/api/journal/route'
 import * as batchApprove from '@/app/api/journal/batch-approve/route'
@@ -91,6 +92,7 @@ const rows: Row[] = [
   { name: 'GET farm/parcels/[id]/soil-health', role: 'officer', call: () => soilHealth.GET(json('GET'), ctx('r1')) },
   { name: 'POST parcels/[id]/approve-harvest', role: 'officer', call: () => approveHarvest.POST(json('POST'), ctx('r1')) },
   { name: 'GET parcels/[id]/latest-photo', role: 'officer', call: () => latestPhoto.GET(json('GET'), ctx('r1')) },
+  { name: 'POST parcels/[id]/start-round', role: 'officer', call: () => startRound.POST(json('POST'), ctx('r1')) },
   { name: 'PUT journal/[id]', role: 'officer', call: () => journalById.PUT(json('PUT', { observation: 'x' }), ctx('r1')) },
   { name: 'DELETE journal/[id]', role: 'officer', call: () => journalById.DELETE(json('DELETE'), ctx('r1')) },
   {

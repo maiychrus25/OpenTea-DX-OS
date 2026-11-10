@@ -10,6 +10,7 @@ import { LotTraceData } from '@/domain/entities/lot-trace-data'
 import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
 import { StoragePort } from '@/domain/disease/ports/storage.port'
 import { documentRoot } from '@/domain/document/document-namespace'
+import { localDay } from '@/domain/shared/local-day'
 
 export class ExportQrUseCase {
   constructor(
@@ -41,9 +42,13 @@ export class ExportQrUseCase {
       throw new DomainError('WITHDRAWAL_NOT_PASSED: Lô hàng chưa an toàn để thu hoạch hoặc chứa thửa đất vi phạm thời gian cách ly')
     }
 
-    const hasInvalidParcel = traceData.parcels.some(p => p.status !== 'HARVESTED' && p.status !== 'TENDING' && p.status !== 'HARVEST_APPROVED')
-    if (hasInvalidParcel) {
-      throw new DomainError('Một hoặc nhiều thửa đất không ở trạng thái hợp lệ để xuất QR')
+    // Every parcel needs a round harvested on or before the lot's day; a new round may already be open (TENDING).
+    // Compared by local day: harvest_date is a date-only value, a harvest later that same day still counts.
+    const lotDay = localDay(lot.harvest_date)
+    const harvests = await this.traceRepo.getParcelHarvests(lot.lot_code)
+    const unharvested = harvests.filter(p => !p.harvested_at.some(at => localDay(at) <= lotDay)).map(p => p.parcel_code)
+    if (unharvested.length > 0) {
+      throw new DomainError(`Thửa ${unharvested.join(', ')} chưa có lứa thu hoạch đến ngày thu hoạch của lô`)
     }
 
     if (traceData.certificate_keys && certificateKeys) {

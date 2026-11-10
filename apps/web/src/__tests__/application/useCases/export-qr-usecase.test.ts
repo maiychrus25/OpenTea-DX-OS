@@ -3,7 +3,7 @@
 
 import { ExportQrUseCase } from '@/application/lot/ExportQrUseCase'
 import { LotPort } from '@/domain/lot/ports/LotPort'
-import { LotTraceRepository } from '@/domain/repositories/lot-trace-repository'
+import { LotTraceRepository, ParcelHarvests } from '@/domain/repositories/lot-trace-repository'
 import { NotFoundError, DomainError } from '@/domain/errors'
 import { LotSummary, LotFilters, CreateLotData, ExportQrResult } from '@/domain/lot/ports/LotPort'
 import { LotTraceData } from '@/domain/entities/lot-trace-data'
@@ -48,7 +48,13 @@ class MockLotTraceRepo implements LotTraceRepository {
   async getLotByCode(_code: string): Promise<LotTraceData | null> {
     return null
   }
+  async getParcelHarvests(_code: string): Promise<ParcelHarvests[]> {
+    return [{ parcel_code: 'P1', harvested_at: [new Date('2026-11-01T00:00:00Z')] }]
+  }
 }
+
+// The lot was harvested on 2 November 2026 (a date-only field, stored at midnight UTC).
+const READY_LOT = { status: 'READY', lot_code: 'LOT-123', harvest_date: new Date('2026-11-02T00:00:00Z') } as LotSummary
 
 describe('ExportQrUseCase', () => {
   let lotPort: MockLotPort
@@ -102,25 +108,71 @@ describe('ExportQrUseCase', () => {
     await expect(useCase.execute('lot-1')).rejects.toThrow('WITHDRAWAL_NOT_PASSED')
   })
 
-  it('throws if a parcel has invalid status', async () => {
-    jest.spyOn(lotPort, 'findById').mockResolvedValue({
-      status: 'READY',
-      lot_code: 'LOT-123',
-    } as LotSummary)
+  it('throws if a parcel of the lot has no harvested round', async () => {
+    jest.spyOn(lotPort, 'findById').mockResolvedValue(READY_LOT)
     jest.spyOn(traceRepo, 'getLotByCode').mockResolvedValue({
       is_harvest_safe: true,
-      parcels: [{ status: 'DRAFT' }], // VIOLATION
+      parcels: [{ parcel_code: 'P1', status: 'TENDING' }],
     } as LotTraceData)
-    
+    jest.spyOn(traceRepo, 'getParcelHarvests').mockResolvedValue([{ parcel_code: 'P1', harvested_at: [] }])
+    const spyExportQr = jest.spyOn(lotPort, 'exportQr')
+
     await expect(useCase.execute('lot-1')).rejects.toThrow(DomainError)
-    await expect(useCase.execute('lot-1')).rejects.toThrow('không ở trạng thái hợp lệ để xuất QR')
+    await expect(useCase.execute('lot-1')).rejects.toThrow('Thửa P1 chưa có lứa thu hoạch')
+    expect(spyExportQr).not.toHaveBeenCalled()
+  })
+
+  it('throws if one parcel was harvested only after the harvest date of the lot', async () => {
+    jest.spyOn(lotPort, 'findById').mockResolvedValue(READY_LOT)
+    jest.spyOn(traceRepo, 'getLotByCode').mockResolvedValue({
+      is_harvest_safe: true,
+      parcels: [{ parcel_code: 'P1', status: 'TENDING' }, { parcel_code: 'P2', status: 'HARVESTED' }],
+    } as LotTraceData)
+    jest.spyOn(traceRepo, 'getParcelHarvests').mockResolvedValue([
+      { parcel_code: 'P1', harvested_at: [new Date('2026-11-01T00:00:00Z')] },
+      { parcel_code: 'P2', harvested_at: [new Date('2026-11-05T00:00:00Z')] },
+    ])
+    const spyExportQr = jest.spyOn(lotPort, 'exportQr')
+
+    await expect(useCase.execute('lot-1')).rejects.toThrow('Thửa P2 chưa có lứa thu hoạch')
+    expect(spyExportQr).not.toHaveBeenCalled()
+  })
+
+  it('exports a lot of an earlier round while the parcels are in a new round', async () => {
+    jest.spyOn(lotPort, 'findById').mockResolvedValue(READY_LOT)
+    const traceData = {
+      lot_code: 'LOT-123',
+      is_harvest_safe: true,
+      parcels: [{ parcel_code: 'P1', status: 'TENDING' }, { parcel_code: 'P2', status: 'TENDING' }],
+      certificate_keys: [],
+    } as unknown as LotTraceData
+    jest.spyOn(traceRepo, 'getLotByCode').mockResolvedValue(traceData)
+    jest.spyOn(traceRepo, 'getParcelHarvests').mockResolvedValue([
+      // P1: an earlier round qualifies, the open round has no harvest yet
+      { parcel_code: 'P1', harvested_at: [new Date('2026-10-20T00:00:00Z'), new Date('2026-11-09T00:00:00Z')] },
+      // P2: harvested at 15:00 in Vietnam on the day of the lot, later than the stored midnight UTC
+      { parcel_code: 'P2', harvested_at: [new Date('2026-11-02T08:00:00Z')] },
+    ])
+    const spyExportQr = jest.spyOn(lotPort, 'exportQr')
+
+    await useCase.execute('lot-1')
+    expect(spyExportQr).toHaveBeenCalledWith('lot-1', traceData, 'https://minio.example.com/qr.png', undefined)
+  })
+
+  it('still blocks the export during the withdrawal period when every parcel was harvested', async () => {
+    jest.spyOn(lotPort, 'findById').mockResolvedValue(READY_LOT)
+    jest.spyOn(traceRepo, 'getLotByCode').mockResolvedValue({
+      is_harvest_safe: false,
+      parcels: [{ parcel_code: 'P1', status: 'HARVESTED' }],
+    } as LotTraceData)
+    const spyExportQr = jest.spyOn(lotPort, 'exportQr')
+
+    await expect(useCase.execute('lot-1')).rejects.toThrow('WITHDRAWAL_NOT_PASSED')
+    expect(spyExportQr).not.toHaveBeenCalled()
   })
 
   it('exports successfully without extra certificate_keys', async () => {
-    jest.spyOn(lotPort, 'findById').mockResolvedValue({
-      status: 'READY',
-      lot_code: 'LOT-123',
-    } as LotSummary)
+    jest.spyOn(lotPort, 'findById').mockResolvedValue(READY_LOT)
     
     const traceData = {
       lot_code: 'LOT-123',
@@ -146,10 +198,7 @@ describe('ExportQrUseCase', () => {
   })
 
   it('exports successfully and merges certificate_keys', async () => {
-    jest.spyOn(lotPort, 'findById').mockResolvedValue({
-      status: 'READY',
-      lot_code: 'LOT-123',
-    } as LotSummary)
+    jest.spyOn(lotPort, 'findById').mockResolvedValue(READY_LOT)
     
     const traceData = {
       lot_code: 'LOT-123',
@@ -175,7 +224,7 @@ describe('ExportQrUseCase', () => {
   })
 
   it('archives the export and stores the QR under the namespace of the HTX', async () => {
-    jest.spyOn(lotPort, 'findById').mockResolvedValue({ status: 'READY', lot_code: 'LOT-123' } as LotSummary)
+    jest.spyOn(lotPort, 'findById').mockResolvedValue(READY_LOT)
     jest.spyOn(traceRepo, 'getLotByCode').mockResolvedValue({
       lot_code: 'LOT-123',
       is_harvest_safe: true,

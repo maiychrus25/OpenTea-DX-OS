@@ -252,6 +252,18 @@ Update parcel. Partial body accepted.
 ### `DELETE /api/farm/parcels/[id]`
 Delete parcel. **Roles:** officer, manager.
 
+### `POST /api/parcels/[id]/start-round`
+Start the next tea harvest round on a parcel in `HARVESTED`. **Roles:** officer only (`farmer` and `manager` get 403). No request body.
+
+Atomically moves the parcel to `TENDING` and creates a crop cycle with `season` `Lứa <n>/<year>`, where `n` is the number of cycles of that parcel created in the same calendar year in Asia/Ho_Chi_Minh, plus 1.
+
+**Response:**
+```json
+{ "data": { "cycleId": "cuid", "season": "Lứa 2/2026" } }
+```
+
+**Errors:** 401 not signed in; 403 `FORBIDDEN` or `NO_HTX`; 404 `NOT_FOUND` for a parcel of another HTX (`TenantGuard.parcel`); 422 `DOMAIN_ERROR` `Chỉ bắt đầu lứa mới khi thửa đã thu hoạch` when the parcel is not `HARVESTED`, including a second start, and no cycle is created.
+
 ---
 
 ## Journal Entries (Officer)
@@ -381,6 +393,8 @@ Get lot detail with traceability data (all linked journal entries, parcels, weat
 
 ### `POST /api/lots/[id]/export-qr`
 Generate QR code + snapshot public page data. **Roles:** officer, manager.
+
+Refused with 422 `DOMAIN_ERROR` unless the lot is `READY`, its withdrawal period has passed (`WITHDRAWAL_NOT_PASSED`), and every parcel of the lot has a crop cycle with `harvested_at` set on or before the lot's `harvest_date`, compared by calendar day in Asia/Ho_Chi_Minh. The parcel status no longer matters, so a lot of an earlier round stays exportable while a new round is `TENDING`.
 
 **Response:**
 ```json

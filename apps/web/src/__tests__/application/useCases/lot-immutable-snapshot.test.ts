@@ -60,6 +60,10 @@ class MockLotTraceRepo implements LotTraceRepository {
   async getLotByCode(_code: string): Promise<LotTraceData | null> {
     return this.returnValue
   }
+
+  async getParcelHarvests(_code: string) {
+    return []
+  }
 }
 
 // ── Use case tests ─────────────────────────────────────────────────────────────

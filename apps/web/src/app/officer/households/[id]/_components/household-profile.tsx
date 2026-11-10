@@ -22,6 +22,7 @@ interface HouseholdHistory {
   season: string;
   yield: string;
   status: string;
+  parcelStatus: string;
 }
 
 interface HouseholdProfileData {
@@ -40,6 +41,34 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<HouseholdProfileData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [startingId, setStartingId] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
+
+  async function startRound(parcelId: string) {
+    if (!confirm('Bắt đầu lứa hái mới cho thửa này? Thửa sẽ chuyển sang trạng thái đang chăm sóc.')) return
+    setStartingId(parcelId)
+    setStartError(null)
+    try {
+      const res = await fetch(`/api/parcels/${parcelId}/start-round`, { method: 'POST' })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) {
+        // Only the business refusal carries a Vietnamese message; other errors get a generic one.
+        setStartError(res.status === 422 && body?.error?.message ? body.error.message : 'Không bắt đầu được lứa mới. Vui lòng thử lại.')
+        return
+      }
+      const season: string = body.data.season
+      setData((d) => d && {
+        ...d,
+        history: d.history.map((h) =>
+          h.id === parcelId ? { ...h, season, yield: 'Chưa thu hoạch', status: 'Đang sinh trưởng', parcelStatus: 'TENDING' } : h,
+        ),
+      })
+    } catch {
+      setStartError('Lỗi kết nối máy chủ.')
+    } finally {
+      setStartingId(null)
+    }
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -87,7 +116,8 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
             : 'Chưa thu hoạch',
           status: p.status === 'GROWING' || p.status === 'TENDING' || p.status === 'SOWING' ? 'Đang sinh trưởng' : 
                  (p.status === 'HARVEST_READY' ? 'Sắp thu hoạch' : 
-                 (p.status === 'HARVESTED' || p.status === 'HARVEST_APPROVED' ? 'Đã thu hoạch' : p.status))
+                 (p.status === 'HARVESTED' || p.status === 'HARVEST_APPROVED' ? 'Đã thu hoạch' : p.status)),
+          parcelStatus: p.status
         }))
 
         setData({
@@ -239,6 +269,9 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
       <Card>
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-900">Lịch sử sản xuất</h3>
+          {startError && (
+            <p role="alert" className="mt-2 text-sm" style={{ color: 'var(--color-danger)' }}>{startError}</p>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -274,6 +307,18 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
                       >
                         {h.status}
                       </Pill>
+                      {h.parcelStatus === 'HARVESTED' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="ml-2"
+                          isLoading={startingId === h.id}
+                          disabled={startingId !== null}
+                          onClick={() => startRound(h.id)}
+                        >
+                          Bắt đầu lứa mới
+                        </Button>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Link

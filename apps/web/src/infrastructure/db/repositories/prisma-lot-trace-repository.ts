@@ -1,7 +1,7 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import { LotTraceRepository } from '@/domain/repositories/lot-trace-repository'
+import { LotTraceRepository, ParcelHarvests } from '@/domain/repositories/lot-trace-repository'
 import { LotTraceData } from '@/domain/entities/lot-trace-data'
 import { prisma } from '@/infrastructure/db/prisma.client'
 
@@ -121,5 +121,23 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
       certificate_keys: lot.certificate_keys,
       htx_name: lot.htx_profile?.name ?? null,
     }
+  }
+
+  async getParcelHarvests(lot_code: string): Promise<ParcelHarvests[]> {
+    const links = await prisma.lotParcel.findMany({
+      where: { lot: { lot_code } },
+      select: {
+        parcel: {
+          select: {
+            parcel_code: true,
+            crop_cycles: { where: { harvested_at: { not: null } }, select: { harvested_at: true } },
+          },
+        },
+      },
+    })
+    return links.map(({ parcel }) => ({
+      parcel_code: parcel.parcel_code,
+      harvested_at: parcel.crop_cycles.flatMap((c) => (c.harvested_at ? [c.harvested_at] : [])),
+    }))
   }
 }

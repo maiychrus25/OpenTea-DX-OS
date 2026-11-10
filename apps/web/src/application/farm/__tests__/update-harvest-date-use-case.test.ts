@@ -13,6 +13,7 @@ describe('UpdateHarvestDateUseCase', () => {
       getHarvestSchedule: jest.fn(),
       updateEstimatedHarvestDate: jest.fn(),
       getUnscheduledActiveCycles: jest.fn(),
+      startNextRound: jest.fn(),
     }
     useCase = new UpdateHarvestDateUseCase(mockPort)
   })
