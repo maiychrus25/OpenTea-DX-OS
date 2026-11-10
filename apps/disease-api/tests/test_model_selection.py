@@ -3,6 +3,7 @@
 
 import io
 import json
+import shutil
 import warnings
 
 import keras
@@ -131,6 +132,35 @@ def test_health_reports_both_models(start_client):
     with start_client() as client:
         body = client.get("/health").json()
     assert body == {"status": "ok", "model_loaded": True, "models": {"general": True, "tea": True}}
+
+
+def test_general_keeps_serving_without_tea_files(start_client, model_dir, tmp_path, monkeypatch):
+    general_only = tmp_path / "models"
+    general_only.mkdir()
+    for name in ("leaf_disease_model.keras", "class_names.txt"):
+        shutil.copy(model_dir / name, general_only / name)
+    monkeypatch.setattr(main, "MODEL_DIR", general_only)
+    with start_client() as client:
+        health = client.get("/health").json()
+        tea_status = _post(client, "?model=tea").status_code
+        default_status = _post(client).status_code
+    assert health["models"] == {"general": True, "tea": False}
+    assert tea_status == 503
+    assert default_status == 200
+
+
+def test_tea_disabled_when_a_vietnamese_name_is_missing(start_client, model_dir, tmp_path, monkeypatch, caplog):
+    incomplete = tmp_path / "models"
+    shutil.copytree(model_dir, incomplete)
+    names_vi = {key: value for key, value in TEA_NAMES_VI.items() if key != "brown_blight"}
+    (incomplete / "tea_class_names_vi.json").write_text(json.dumps(names_vi, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(main, "MODEL_DIR", incomplete)
+    with start_client() as client:
+        health = client.get("/health").json()
+        tea_status = _post(client, "?model=tea").status_code
+    assert health["models"] == {"general": True, "tea": False}
+    assert tea_status == 503
+    assert "['brown_blight']" in caplog.text
 
 
 @pytest.mark.parametrize("value", ["abc", "0", "-0.1", "1.5", "nan", ""])

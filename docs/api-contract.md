@@ -491,7 +491,7 @@ Health check.
 ```json
 { "status": "ok", "model_loaded": true, "models": { "general": true, "tea": true } }
 ```
-`model_loaded` is the general model, as before; `models` lists each model.
+`model_loaded` is the general model, as before; `models` lists each model. Tea is `false` (and `model=tea` answers 503) when its files are missing or `tea_class_names_vi.json` lacks a class id.
 
 ### `POST /predict`
 Classify crop disease from image.

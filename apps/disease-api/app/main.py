@@ -220,7 +220,10 @@ async def lifespan(app: FastAPI):
         if loaded is not None:
             _models[name] = loaded
     names_vi = _load_tea_names_vi() if "tea" in _models else None
-    if names_vi is None:
+    missing = [] if names_vi is None else [i for i in _models["tea"][1] if i not in names_vi]
+    if missing:
+        logger.error("Tea model disabled: %s lacks Vietnamese names for %s", TEA_NAMES_VI_FILE, missing)
+    if names_vi is None or missing:
         _models.pop("tea", None)
     else:
         _tea_names_vi = names_vi
@@ -337,7 +340,7 @@ async def predict(file: UploadFile = File(...), model: str = "general"):
         # Faithful to the model, `healthy` included; the web app sends every tea result to an officer.
         uncertain = confidence < _tea_threshold
         disease_name_en = None if uncertain else label.replace("_", " ").capitalize()
-        disease_name_vi = None if uncertain else _tea_names_vi.get(label, disease_name_en)
+        disease_name_vi = None if uncertain else _tea_names_vi[label]
     else:
         disease_name_en = label
         disease_name_vi = VIETNAMESE_NAMES.get(disease_name_en, disease_name_en)
