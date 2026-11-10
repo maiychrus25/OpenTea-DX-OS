@@ -116,7 +116,7 @@ export class ChatbotUseCase {
         }
 
         if (recentMarketData.length > 0 || latestFx) {
-          ragContextStr += `\n\n--- DỮ LIỆU THỊ TRƯỜNG TRONG 48H QUA (DÙNG ĐỂ TRẢ LỜI): ---\n`
+          ragContextStr += `\n\n--- DỮ LIỆU THỊ TRƯỜNG TRONG 30 NGÀY QUA (DÙNG ĐỂ TRẢ LỜI): ---\n`
           if (latestFx) {
             ragContextStr += `Tỷ giá ngoại tệ tham chiếu (so với USD, định dạng JSON): ${JSON.stringify(latestFx.rates)}\n`
           }

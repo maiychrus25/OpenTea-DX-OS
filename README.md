@@ -233,7 +233,7 @@ Chạy lại seed được nhiều lần và chỉ đổi dữ liệu của `TC`
 
 **Cài TOTP trước buổi demo:** đăng nhập lần đầu bằng từng tài khoản quản lý và cán bộ, Keycloak hiện mã QR; quét bằng ứng dụng xác thực (Google Authenticator, Microsoft Authenticator hoặc FreeOTP), nhập mã 6 số để hoàn tất. Các lần sau Keycloak hỏi mã 6 số trên điện thoại đó, nên mang theo điện thoại đã cài khi demo. Muốn cài lại: Keycloak Admin Console > realm `agrimarket` > Users > tài khoản > tab **Credentials**, xoá OTP; tab **Details** > **Required user actions**, thêm **Configure OTP**.
 
-Smoke test và test trình duyệt chỉ dùng tài khoản riêng tiền tố `smoke_` (`smoke_manager_tc`, `smoke_manager_lb`, `smoke_manager_none`, `smoke_farmer_tc`): chúng đặt lại mật khẩu và bỏ TOTP của tài khoản mình dùng, nên không bao giờ đụng vào tài khoản demo.
+Smoke test và test trình duyệt chỉ tạo và sửa tài khoản riêng tiền tố `smoke_` (`smoke_manager_tc`, `smoke_manager_lb`, `smoke_manager_none`, `smoke_farmer_tc`, `smoke_officer_tc`): chúng đặt lại mật khẩu và bỏ TOTP của tài khoản mình dùng, nên không bao giờ đổi tài khoản demo. Riêng câu chuyện A3 và test ảnh chụp màn hình đăng nhập bằng `farmer_tc` (chủ thửa `TC-A3`, không có bước TOTP); đăng nhập không làm thay đổi tài khoản.
 
 > [!NOTE]
 > Keycloak chỉ import realm khi realm chưa có. Trên stack cũ, realm vẫn còn `manager1`, `officer1`, `farmer1` và các tài khoản `manager_tc`, `manager_lb`, `farmer_tc` do smoke cũ tạo (mật khẩu smoke, không TOTP). `farmer_tc` và `farmer_lb` phải có đúng `id` trong `docker/keycloak/realm-agrimarket.json` thì mới gắn với nông hộ do seed tạo; form tạo tài khoản của Admin Console không đặt được `id`, nên hãy dùng một trong hai cách sau:
@@ -246,15 +246,30 @@ Smoke test và test trình duyệt chỉ dùng tài khoản riêng tiền tố `
 Kiểm thử trên trình duyệt với stack thật (cần `make platform-up`, `make platform-smoke` và container `web` đang chạy):
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build --wait web
+docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
 cd apps/web && npx playwright install chromium
 E2E_CORE=1 E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/tenant/core-tenant.spec.ts --project=chromium --no-deps --reporter=list
+# Sau npm run seed: câu chuyện "Một ngày của lô chè A3" và ảnh chụp các màn hình ưu tiên (lưu ở apps/web/test-results/screens/)
+E2E_CORE=1 E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/story/tea-a3.spec.ts tests/e2e/visual/screens.spec.ts --project=chromium --no-deps --reporter=list
 ```
 
-Test này tạm đổi `accessTokenLifespan` của realm và tạm dừng Hasura rồi khôi phục, nên chỉ chạy trên môi trường dev.
+Test `core-tenant` tạm đổi `accessTokenLifespan` của realm và tạm dừng Hasura rồi khôi phục; câu chuyện A3 ghi nhật ký, gửi ảnh chẩn đoán, duyệt bệnh và xuất QR một lô mới. Cả hai chỉ chạy trên môi trường dev, rồi chạy lại `npm run seed` trước buổi demo.
+
+Các spec còn lại trong `tests/e2e/` chạy với dev server do Playwright tự bật (`npx playwright test --project=chromium --no-deps`): chúng dùng cookie phiên giả (`tests/e2e/helpers/forged-session.ts`, HTX `TC`) và giả lập các route API, nên cần `DATABASE_URL` trỏ tới database có HTX `TC`. `playwright.config.ts` đặt sẵn một `AUTH_SECRET` chỉ dùng cho e2e.
 
 > [!NOTE]
 > Giới hạn đã biết: (1) `workflows/mattermost-push.json` đẩy sự kiện bệnh và thu hoạch của mọi HTX vào cùng một webhook; (2) ở production, cookie tạo trước khi nâng cấp bị chuyển về trang đăng nhập; cookie của `/api/dev-login` không có access token nên mọi đọc qua lõi đều bị từ chối; (3) đường ghi được bảo vệ ở tầng ứng dụng, không phải ở database.
+
+### Nhận diện bệnh lá chè
+
+Thửa có loại cây chứa "chè" hoặc "tea" (không phân biệt hoa thường) được chẩn đoán bằng mô hình chè (`ai-models/tea_leaf_model.keras`, MobileNetV2 học chuyển tiếp trên ba bộ ảnh CC BY 4.0 từ Kenya và Bangladesh); thửa khác dùng mô hình 46 lớp cũ. Giới hạn cần biết trước khi demo:
+
+- Độ chính xác trên tập kiểm tra cùng nguồn là **0,87**, nhưng khi kiểm tra chéo giữa các nguồn chỉ còn **0,12 đến 0,35**: mô hình học cả phông nền và cách chụp của từng bộ ảnh, nên với ảnh chè Thái Nguyên độ chính xác thực tế chưa đo được và có thể thấp hơn nhiều.
+- Kết quả dưới ngưỡng tin cậy **0,60** hiện **"Không xác định"**. Ảnh không phải lá chè vẫn có thể nhận độ tin cậy cao: một ảnh nhiễu ngẫu nhiên được trả `healthy` với 0,988.
+- Vì vậy **mọi kết quả, kể cả lá khoẻ, đều vào hàng chờ cán bộ**; nông hộ thấy "Đã gửi cán bộ kỹ thuật xem". Cán bộ nhập **tên bệnh đã xác nhận** khi duyệt, và tên này thay tên của AI ở mọi nơi hiển thị.
+- Khi mô hình chè không nạp được, chẩn đoán cho thửa chè trả lỗi dịch vụ tạm gián đoạn (503) và không tạo báo cáo; không tự chuyển sang mô hình cũ.
+
+Số liệu chi tiết ở [ai-models/tea/MODEL_CARD.md](./ai-models/tea/MODEL_CARD.md). **Huấn luyện lại:** làm theo [ai-models/tea/README.md](./ai-models/tea/README.md) (tải dữ liệu có kiểm SHA-256, chạy `train.py` trong container Python 3.12 với `tensorflow==2.21.0`), rồi cập nhật model card và ngưỡng `TEA_CONFIDENCE_THRESHOLD` theo kết quả mới. Không commit ảnh dữ liệu.
 
 **Nâng cấp lên Tier 2a:**
 

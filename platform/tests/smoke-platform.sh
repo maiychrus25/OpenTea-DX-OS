@@ -27,6 +27,8 @@ ensure_user smoke_manager_tc manager TC
 ensure_user smoke_manager_lb manager LB
 ensure_user smoke_manager_none manager
 ensure_user smoke_farmer_tc farmer TC
+# For the browser story (tests/e2e/story/tea-a3.spec.ts): the demo officers must set up TOTP first.
+ensure_user smoke_officer_tc officer TC
 pass "smoke client and user ready"
 
 echo "[gateway]"

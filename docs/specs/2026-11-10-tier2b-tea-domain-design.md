@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Tầng 2b: Chuyển sang HTX chè (nghiệp vụ, mô hình bệnh chè, giao diện)
 
-> **Trạng thái:** Chờ duyệt (2026-11-10).
+> **Trạng thái:** Đã triển khai trên nhánh `feat/tier2b-tea-domain` (2026-11-10), chờ chủ dự án duyệt PR và phát hành `v1.7.0`. Xem "Ghi chú sau triển khai 2b" ở cuối.
 > **Phạm vi:** Đợt 2b của Tầng 2 (milestone `v1.7.0`, issue #19). Tiếp nối đợt 2a (`docs/specs/2026-11-09-tier2a-core-integration-design.md`).
 > **Căn cứ:** Kế hoạch dự thi OLP 2026 (HTX chè Thái Nguyên, câu chuyện demo "Một ngày của lô chè A3"); tiêu chí chấm trải nghiệm người dùng và trình diễn trực tiếp.
 
@@ -166,3 +166,33 @@ Nông hộ (điện thoại): bảng điều khiển, nhật ký, chẩn đoán.
 | Tải dữ liệu 0,9 GB chậm hoặc link thay đổi | SHA-256 trong `datasets.json`; báo lỗi rõ; không commit ảnh |
 | Chuyển màu sang token làm lệch giao diện | Ảnh chụp trước và sau; test chặn mã màu cứng |
 | Đổi tài khoản Keycloak làm hỏng hướng dẫn và test cũ | Cập nhật README, test e2e và smoke cùng lúc |
+
+## Ghi chú sau triển khai 2b
+
+Phần này ghi chỗ code khác đặc tả và các số đo được khi hoàn tất đợt 2b (nhánh `feat/tier2b-tea-domain`, 2026-11-10). Thân đặc tả ở trên giữ nguyên.
+
+**Mô hình bệnh chè (§4).**
+- Độ chính xác trên tập kiểm tra **0,8683** (1.025 ảnh), qua ngưỡng dừng 0,80. Ngưỡng tin cậy **0,60** (giá trị sàn đã cho precision ≥ 0,90 trên tập kiểm định). File mô hình 9,2 MB.
+- Kiểm tra chéo giữa các nguồn (huấn luyện hai nguồn, kiểm tra nguồn thứ ba) chỉ đạt **0,12 đến 0,35**; một ảnh nhiễu ngẫu nhiên được trả `healthy` với độ tin cậy 0,988. Vì vậy **mọi kết quả, kể cả `healthy`, đều vào hàng chờ cán bộ**, không chỉ kết quả dưới ngưỡng như §4.5 viết. Chi tiết ở `ai-models/tea/MODEL_CARD.md`.
+- `brown_blight` giữ tên "Brown blight" trong `tea_class_names_vi.json` (không tự đặt tên tiếng Việt khi chưa chắc, theo §4.3).
+- Thiếu mô hình chè thì `disease-api` vẫn khởi động, `model=tea` trả **503**; web coi đó là dịch vụ tạm gián đoạn (`AI_UNAVAILABLE`), không tạo báo cáo và không tự chuyển sang mô hình 46 lớp.
+
+**Nghiệp vụ và dữ liệu (§5).**
+- **R4:** image `web` không build được trên arm64 (thiếu `@next/swc-linux-arm64-musl` trong lớp npm cache của BuildKit), lỗi có từ trước; đã sửa trong Dockerfile để đạt tiêu chí 4 (`make build` trên arm64).
+- **R5 (chờ chủ dự án quyết):** kiểm tra cách ly khi xuất QR tính mọi nhật ký đã duyệt của thửa so với hôm nay, nên khi lứa mới đang cách ly thì không xuất được lô của lứa trước. Giữ nguyên như §5.2. Lô `TC-CHE-A3-001` được seed sẵn ở trạng thái đã xuất; câu chuyện trên trình duyệt xuất một lô mới của thửa `TC-A2` (không có thuốc trong thời gian cách ly).
+- **R6:** snapshot lưu khi xuất QR từng giữ `status: 'READY'`, nên trang công khai không hiện trạng thái đã xuất; nay lưu `QR_EXPORTED` và ảnh QR vừa tạo. Snapshot cũ không được ghi lại.
+- **Khoá ảnh nhật ký:** `POST /api/journal` chỉ nhận key dưới `para/<htxCode>/Areas/Journal/` (hẹp hơn "trong đúng HTX" ở §7), và danh sách nhật ký chỉ ký URL cho các key đó, để nông hộ không gắn được tài liệu khác của HTX vào nhật ký.
+- Duyệt thu hoạch chưa có nút trên giao diện, chỉ có `POST /api/parcels/[id]/approve-harvest`; câu chuyện kiểm tra lời từ chối qua route này, và lời từ chối hiện trên form tạo lô.
+- `MINIO_ENDPOINT` trong `.env.local.example` có dạng `minio:9000` trong khi adapter lưu trữ của web chỉ nhận tên máy, nên mọi thao tác lưu trữ của web (tải ảnh nhật ký, chẩn đoán, màn hình bệnh của cán bộ, tài liệu, xuất QR) đều lỗi `Invalid endPoint`. Nay nhận cả `host` và `host:port`. CORS của SeaweedFS đã cho phép `PUT` từ `http://localhost:3000`, không cần đổi cấu hình nền tảng.
+- Báo cáo bệnh có ảnh không còn trong kho (báo cáo seed của A3, hoặc ảnh bị bộ quét cách ly) hiện thông báo "Không tải được ảnh" thay cho ảnh vỡ, ở hàng chờ và trang duyệt của cán bộ và lịch sử chẩn đoán của nông hộ.
+- Service worker của PWA lưu đệm mọi `GET /api/` bằng NetworkFirst, kể cả luồng sự kiện `/api/notifications/stream` vốn không bao giờ kết thúc; mỗi trang để lại một kết nối mở, sau vài trang trình duyệt hết 6 kết nối cho mỗi máy chủ và các yêu cầu bị treo. Câu chuyện A3 hỏng khoảng một lần trong sáu lần chạy vì lỗi này; luồng sự kiện nay đi thẳng ra mạng (NetworkOnly) và 25 lần chạy liên tiếp đều qua.
+- Tài khoản `smoke_officer_tc` (do smoke tạo) dùng cho câu chuyện, vì cán bộ demo phải cài TOTP; nông hộ trong câu chuyện là `farmer_tc` (không có bước TOTP, đăng nhập không đổi tài khoản).
+
+**Kiểm thử (§7).**
+- **R7:** 20 test e2e cũ (không chạy trong CI) hỏng vì dev server của Playwright không có `AUTH_SECRET` và cookie giả thiếu `htxCode`. `playwright.config.ts` đặt sẵn một `AUTH_SECRET` chỉ dùng cho e2e; một helper chung `tests/e2e/helpers/forged-session.ts` (HTX `TC`) thay các bản chép. Kết quả: không spec nào còn bị đưa về `/login` hay gặp thông báo NO_HTX. Trên toàn bộ các spec dùng dev server, số test qua tăng từ 24 lên 54; các test còn hỏng là do khẳng định cũ không còn khớp giao diện hoặc dữ liệu giả (không sửa, không nới khẳng định). Ba test của story 9-1 (`TC-9.1-04`, `N1`, `N2`) trước đây chỉ qua nhờ nhận 401 khi phiên không hợp lệ; nay phiên hợp lệ nên `page.request` gọi thẳng API thật (không đi qua `page.route`) và nhận 404/400/403. Danh sách chi tiết trong báo cáo Task 11.
+- Số đo khi hoàn tất (hai vòng database sạch, `COMPOSE_PROJECT_NAME=dxos-clean`):
+  - `make test`: 1.287 test web qua, 3 bỏ qua (1.290); `disease-api` 17; `scanner` 39; `dataops` 78; realm 13; `seed-test.sh` 19 PASS.
+  - `make platform-smoke`: 124 PASS, 0 FAIL.
+  - Trình duyệt: `core-tenant` 5, câu chuyện A3 1, ảnh chụp 36.
+  - Ảnh lá chè tổng hợp trong câu chuyện được mô hình chè trả về qua gateway (`POST /predict?model=tea` trong log của `disease-api`) và vào hàng chờ cán bộ.
+- Ảnh chụp 8 màn hình ưu tiên của §6.4 (duyệt bệnh tách thành hàng chờ và trang duyệt, nên 9 màn hình) ở 1280×800 và 390×844, sáng và tối: 36 ảnh, không tràn ngang, không chữ đè. CI chạy câu chuyện A3 và ảnh chụp trong job `platform-smoke` và tải ảnh lên thành artifact `priority-screens`.

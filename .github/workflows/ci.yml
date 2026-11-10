@@ -224,7 +224,8 @@ jobs:
   platform-smoke:
     name: Platform Smoke Test
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # About 16 min before the A3 story; disease-api's image, the seed and the two browser specs add roughly 10.
+    timeout-minutes: 45
     needs: [lint]
     steps:
       - uses: actions/checkout@v4
@@ -269,11 +270,20 @@ jobs:
       - name: Realm Policy Test
         run: python3 platform/tests/test_realm_policy.py
 
+      # Demo data for the A3 story and the screens; the smoke test passes with or without it.
+      - name: Seed Demo Data
+        working-directory: apps/web
+        env:
+          DATABASE_URL: postgresql://agrimarket:your_password_here@localhost:5432/agrimarket
+        run: |
+          npx prisma generate
+          npm run seed
+
       - name: Platform Smoke Test
         run: make platform-smoke
 
       - name: Start Web
-        run: docker compose -f docker/docker-compose.yml up -d --build --wait web
+        run: docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
 
       - name: Install Chromium
         working-directory: apps/web
@@ -287,6 +297,29 @@ jobs:
         run: |
           curl -sf --retry 30 --retry-delay 2 --retry-all-errors -o /dev/null "$E2E_BASE_URL/login"
           npx playwright test tests/e2e/tenant/core-tenant.spec.ts --project=chromium --no-deps --reporter=list
+
+      - name: A3 Story Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/story/tea-a3.spec.ts --project=chromium --no-deps --reporter=list
+
+      - name: Priority Screens Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/visual/screens.spec.ts --project=chromium --no-deps --reporter=list
+
+      - name: Upload Screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: priority-screens
+          path: apps/web/test-results/screens/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Docker Logs on Failure
         if: failure()

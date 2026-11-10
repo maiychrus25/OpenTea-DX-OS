@@ -117,7 +117,7 @@ List all partners with map coordinates.
   "data": [
     {
       "id": "uuid",
-      "name": "Cty TNHH Lúa Gạo Bình An",
+      "name": "Cty TNHH Trà Xanh Thái Nguyên",
       "type": "buyer",
       "lat": 10.4567,
       "lng": 107.1234,
@@ -221,7 +221,7 @@ List all parcels with GeoJSON.
       "centroid_lat": 10.456,
       "centroid_lng": 107.123,
       "status": "growing",
-      "current_crop": "Lúa Hè Thu"
+      "current_crop": "Chè Kim Tuyên"
     }
   ]
 }
@@ -240,7 +240,7 @@ Create parcel with GeoJSON polygon from Leaflet.draw.
   "area_ha": 0.45,
   "centroid_lat": 10.456,
   "centroid_lng": 107.123,
-  "current_crop": "Lúa Hè Thu",
+  "current_crop": "Chè Kim Tuyên",
   "soil_type": "Đất phù sa",
   "irrigation_type": "Tưới tràn"
 }
@@ -281,8 +281,8 @@ List journal entries.
       "id": "uuid",
       "parcel_crop_cycle_id": "uuid",
       "entry_date": "2026-08-04",
-      "growth_stage": "Đẻ nhánh",
-      "observation": "Lúa sinh trưởng tốt",
+      "growth_stage": "Ra búp",
+      "observation": "Chè ra búp đều",
       "temperature_c": 32.5,
       "rainfall_mm": 0,
       "status": "pending_approval",
@@ -311,8 +311,8 @@ Create new journal entry.
 {
   "parcel_crop_cycle_id": "uuid",
   "entry_date": "2026-08-04",
-  "growth_stage": "Đẻ nhánh",
-  "observation": "Lúa sinh trưởng tốt",
+  "growth_stage": "Ra búp",
+  "observation": "Chè ra búp đều",
   "activities": [
     {
       "activity_type": "pesticide",
@@ -376,8 +376,8 @@ List lots.
   "data": [
     {
       "id": "uuid",
-      "lot_code": "HTXA-RICE-20260804-001",
-      "crop": "Lúa Hè Thu",
+      "lot_code": "TC-CHÈKIM-20260804-001",
+      "crop": "Chè Kim Tuyên",
       "harvest_date": "2026-08-04",
       "estimated_weight_kg": 2500,
       "status": "draft",
@@ -393,12 +393,12 @@ Create new lot.
 **Request:**
 ```json
 {
-  "crop": "Lúa Hè Thu",
+  "crop": "Chè Kim Tuyên",
   "harvest_date": "2026-08-04",
   "estimated_weight_kg": 2500,
   "parcel_ids": ["uuid1", "uuid2"],
   "packaging_type": "Túi 25kg",
-  "destination": "Cty TNHH Lúa Gạo Bình An",
+  "destination": "Cty TNHH Trà Xanh Thái Nguyên",
   "buyer_name": "Nguyễn Văn Mua",
   "certificate_keys": ["cert/uuid.pdf"]
 }
@@ -417,9 +417,9 @@ Refused with 422 `DOMAIN_ERROR` unless the lot is `READY`, its withdrawal period
 ```json
 {
   "data": {
-    "lot_code": "HTXA-RICE-20260804-001",
-    "qr_image_url": "https://minio.../qr/HTXA-RICE-20260804-001.png",
-    "public_page_url": "https://domain/lot/HTXA-RICE-20260804-001"
+    "lot_code": "TC-CHÈKIM-20260804-001",
+    "qr_image_url": "https://minio.../qr/TC-CHÈKIM-20260804-001.png",
+    "public_page_url": "https://domain/lot/TC-CHÈKIM-20260804-001"
   }
 }
 ```
