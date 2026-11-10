@@ -111,18 +111,18 @@ function formatIndexValue(value: number, unit: string): { badge: string; color: 
       .replace('kg/ha', 'kg/ha')
     return {
       badge: '',
-      color: '#374151',
+      color: 'var(--color-ink-secondary)',
       numericLabel: `${value.toLocaleString('vi-VN')} ${unitVN}`,
     }
   }
 
   // FAO index: 100 = mức trung bình lịch sử
   const numericLabel = `(chỉ số: ${value.toFixed(1)})`
-  if (value >= 120) return { badge: 'Rất cao', color: '#dc2626', numericLabel }
-  if (value >= 110) return { badge: 'Cao hơn bình thường', color: '#d97706', numericLabel }
-  if (value >= 100) return { badge: 'Ổn định', color: '#16a34a', numericLabel }
-  if (value >= 90)  return { badge: 'Thấp hơn bình thường', color: '#ca8a04', numericLabel }
-  return { badge: 'Thấp', color: '#2563eb', numericLabel }
+  if (value >= 120) return { badge: 'Rất cao', color: 'var(--color-danger)', numericLabel }
+  if (value >= 110) return { badge: 'Cao hơn bình thường', color: 'var(--color-accent)', numericLabel }
+  if (value >= 100) return { badge: 'Ổn định', color: 'var(--color-success)', numericLabel }
+  if (value >= 90)  return { badge: 'Thấp hơn bình thường', color: 'var(--color-warning)', numericLabel }
+  return { badge: 'Thấp', color: 'var(--color-info)', numericLabel }
 }
 
 export default async function ManagerDashboard() {
@@ -270,7 +270,7 @@ export default async function ManagerDashboard() {
                             <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                             {badge}
                           </span>
-                          <span style={{ fontSize: '0.8rem', color: '#6b7280', marginLeft: '0.4rem' }}>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--color-ink-tertiary)', marginLeft: '0.4rem' }}>
                             {numericLabel}
                           </span>
                         </>
@@ -282,11 +282,11 @@ export default async function ManagerDashboard() {
                 )
               }) : (
                 <div className={styles.emptyMarket}>
-                  <BarChart3 size={36} className="text-emerald-700 mx-auto" />
-                  <p style={{ margin: '0.5rem 0 0.25rem', fontWeight: 600, color: '#374151' }}>
+                  <BarChart3 size={36} className="text-primary mx-auto" />
+                  <p style={{ margin: '0.5rem 0 0.25rem', fontWeight: 600, color: 'var(--color-ink-secondary)' }}>
                     Chưa có dữ liệu giá hôm nay
                   </p>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-ink-tertiary)' }}>
                     Hệ thống cập nhật tự động mỗi ngày. Vui lòng quay lại sau.
                   </p>
                 </div>

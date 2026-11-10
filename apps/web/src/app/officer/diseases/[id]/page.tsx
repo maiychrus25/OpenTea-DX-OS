@@ -106,7 +106,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
         <h1 className={styles.title}>Chi tiết Báo cáo bệnh</h1>
       </header>
 
-      {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
+      {error && <div style={{ color: 'var(--color-danger)', marginBottom: '1rem' }}>{error}</div>}
 
       <div className={styles.content}>
         <div className={styles.card}>

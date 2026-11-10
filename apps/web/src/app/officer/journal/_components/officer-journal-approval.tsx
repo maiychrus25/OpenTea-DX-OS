@@ -225,7 +225,7 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
             </div>
             <div className={styles.formActions}>
               <button type="button" className={styles.cancelBtn} onClick={() => setRejectEntryId(null)}>Hủy</button>
-              <button type="button" className={styles.submitBtn} style={rejectType === 'REJECTED' ? { backgroundColor: 'var(--color-error)' } : {}} onClick={confirmReject}>
+              <button type="button" className={styles.submitBtn} style={rejectType === 'REJECTED' ? { backgroundColor: 'var(--color-danger)' } : {}} onClick={confirmReject}>
                 Xác nhận
               </button>
             </div>
@@ -293,7 +293,7 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
                   {entry.photo_url && (
                     <div className={styles.sectionContainer}>
                       <h3 className={styles.sectionTitle}>Hình ảnh thực tế</h3>
-                      <div className="mt-2 w-full rounded-md overflow-hidden bg-gray-100 flex justify-center">
+                      <div className="mt-2 w-full rounded-md overflow-hidden bg-muted flex justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={entry.photo_url} alt="Journal attachment" className="max-w-full max-h-[300px] object-contain" />
                       </div>

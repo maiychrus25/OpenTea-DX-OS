@@ -117,13 +117,13 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
         
         {!isOnline && (
           <div className={styles.offlineBanner}>
-            <WifiOff size={16} className="inline-block mr-1.5 text-amber-600 align-text-bottom" />
+            <WifiOff size={16} className="inline-block mr-1.5 text-warning align-text-bottom" />
             Bạn đang ngoại tuyến. Hình ảnh sẽ được lưu vào máy và tự động tải lên khi có mạng (Đang chờ: {queueCount}).
           </div>
         )}
         {isOnline && queueCount > 0 && (
           <div className={styles.syncBanner}>
-            <RefreshCw size={16} className="inline-block mr-1.5 animate-spin text-blue-600 align-text-bottom" />
+            <RefreshCw size={16} className="inline-block mr-1.5 animate-spin text-info align-text-bottom" />
             Đang đồng bộ {queueCount} hình ảnh từ bộ nhớ tạm... {isSyncing ? '(Đang xử lý)' : ''}
           </div>
         )}
@@ -178,7 +178,7 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
               <h3>Kết quả AI gợi ý (chưa phải chẩn đoán cuối cùng):</h3>
               {result.confidence * 100 < 70 && (
                 <div className={styles.warningBox}>
-                  <AlertTriangle size={16} className="inline-block mr-1.5 text-amber-600 align-text-bottom" />
+                  <AlertTriangle size={16} className="inline-block mr-1.5 text-warning align-text-bottom" />
                   <strong>Độ tự tin thấp:</strong> Hình ảnh có thể mờ hoặc không rõ triệu chứng. Cán bộ Kỹ thuật đã nhận được thông báo và sẽ kiểm tra thêm.
                 </div>
               )}
@@ -229,7 +229,7 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
                     <div className={styles.historyParcel}>Thửa: {h.parcel_code}</div>
                     <span className={styles.historyDisease}>{displayDiseaseName(h)} ({(h.ai_confidence * 100).toFixed(1)}%)</span>
                     {h.treatment_recommendation && (
-                      <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', backgroundColor: '#f0f9ff', padding: '0.5rem', borderRadius: '4px', border: '1px solid #bae6fd' }}>
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', backgroundColor: 'var(--color-info-subtle)', padding: '0.5rem', borderRadius: '4px', border: '1px solid color-mix(in srgb, var(--color-info) 30%, transparent)' }}>
                         <strong>Hướng dẫn CBKT:</strong> {h.treatment_recommendation}
                       </div>
                     )}

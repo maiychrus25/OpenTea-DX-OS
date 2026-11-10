@@ -80,7 +80,7 @@
 
 .infoLabel {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-ink-tertiary);
 }
 
 .infoValue {
@@ -114,7 +114,7 @@
 .textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.2);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .input {
