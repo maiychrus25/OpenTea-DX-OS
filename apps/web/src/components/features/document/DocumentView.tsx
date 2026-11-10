@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal/Modal'
 import styles from './DocumentView.module.css'
 import { DocumentItem } from './mock-data'
 import { MOCK_DOCUMENTS } from './mock-data'
-import { documentRoot } from '@/domain/document/document-namespace'
+import { documentRoot, MARKET_REPORTS_ROOT } from '@/domain/document/document-namespace'
 
 const CATEGORIES = [
   { id: 'Projects/', name: 'Projects', description: 'Các dự án ngắn hạn' },
@@ -21,8 +21,12 @@ const CATEGORIES = [
 
 export function DocumentView({ htxCode }: { htxCode: string }) {
   const root = documentRoot(htxCode)
-  const categories = CATEGORIES.map(cat => ({ ...cat, id: `${root}${cat.id}` }))
+  const categories = [
+    ...CATEGORIES.map(cat => ({ ...cat, id: `${root}${cat.id}` })),
+    { id: MARKET_REPORTS_ROOT, name: 'Báo cáo thị trường', description: 'Báo cáo dùng chung, chỉ đọc' },
+  ]
   const [activeCategory, setActiveCategory] = useState(categories[0].id)
+  const isReadOnly = activeCategory === MARKET_REPORTS_ROOT
   const [currentPath, setCurrentPath] = useState(categories[0].id)
   const [documents, setDocuments] = useState<DocumentItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -233,20 +237,22 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>Kho tài liệu P.A.R.A</h1>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsNewFolderModalOpen(true)} variant="secondary" className="flex items-center gap-2">
-            <Plus size={18} />
-            Thư mục mới
-          </Button>
-          <Button onClick={() => {
-             setUploadError(null)
-             setUploadProgress(0)
-             setIsUploadModalOpen(true)
-          }} className="flex items-center gap-2">
-            <Upload size={18} />
-            Tải tài liệu lên
-          </Button>
-        </div>
+        {!isReadOnly && (
+          <div className="flex gap-2">
+            <Button onClick={() => setIsNewFolderModalOpen(true)} variant="secondary" className="flex items-center gap-2">
+              <Plus size={18} />
+              Thư mục mới
+            </Button>
+            <Button onClick={() => {
+               setUploadError(null)
+               setUploadProgress(0)
+               setIsUploadModalOpen(true)
+            }} className="flex items-center gap-2">
+              <Upload size={18} />
+              Tải tài liệu lên
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className={styles.content}>
@@ -354,9 +360,11 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
                               </Button>
                             </>
                           )}
-                          <Button variant="text" onClick={() => handleMoveAction(doc.key)} title="Di chuyển">
-                            <FolderInput size={18} />
-                          </Button>
+                          {!isReadOnly && (
+                            <Button variant="text" onClick={() => handleMoveAction(doc.key)} title="Di chuyển">
+                              <FolderInput size={18} />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>

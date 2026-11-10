@@ -169,6 +169,7 @@ Khác biệt/bổ sung so với thiết kế:
 - `refreshAccessToken` đọc lại vai trò từ access token mới bằng hàm dùng chung với `auth.ts`; không còn vai trò hợp lệ thì xóa vai trò. Ở production, phiên không có refresh token được coi là `RefreshFailed`.
 - `KeycloakAdminAdapter` đọc `KC_BOOTSTRAP_ADMIN_*` rồi `KEYCLOAK_ADMIN*`, và không dùng `admin/admin` ở production. `/api/register` nằm trong danh sách API công khai của middleware.
 - Key ảnh nhật ký do client gửi: `POST /api/journal` trả 400 nếu `photo_minio_key` ngoài thư mục HTX (dùng `isInDocumentRoot`, vì `assertInDocumentRoot` trả 404 mà quyết định yêu cầu 400). Danh sách nhật ký chỉ ký key trong thư mục HTX của người gọi. Route chứng nhận công khai cũng kiểm tra key thuộc thư mục HTX của lô, vì `certificate_keys` là cột do client ghi.
+- `workflows/vietnam_market_sync.json` ghi `para/Archives/Market_Reports/` không có HTX, nên thêm một tiền tố dùng chung chỉ đọc, chỉ route liệt kê và route URL chấp nhận, cùng kiểm tra phân đoạn và mã hóa. Tải lên và `certificate_keys` vẫn chỉ nhận thư mục HTX.
 
 Đo thực tế (máy arm64, database sạch, image và lớp build đã có cache; model được kéo lại vì volume mới):
 

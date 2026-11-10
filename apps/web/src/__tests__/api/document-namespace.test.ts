@@ -204,6 +204,36 @@ describe('the public certificate route signs only keys of the owning HTX', () =>
   })
 })
 
+describe('market reports are one read-only folder shared by every HTX', () => {
+  const SHARED = 'para/Archives/Market_Reports/'
+  const OUTSIDE_SHARED = [`${SHARED}../x`, 'para/Archives/Market_ReportsX/', `${SHARED}%2e%2e/x`, `${SHARED}/x`, 'para/Archives/']
+
+  test('list accepts the shared folder', async () => {
+    expect((await list.GET(listRequest(SHARED), {})).status).toBe(200)
+    expect(storage.listDocuments).toHaveBeenCalledWith(SHARED)
+  })
+  test('url signs a shared report', async () => {
+    expect((await url.GET(urlRequest(`${SHARED}a.json`), {})).status).toBe(200)
+    expect(storage.generateDownloadUrl).toHaveBeenCalledWith(`${SHARED}a.json`, false, 3600)
+  })
+  test('upload refuses it', async () => {
+    expect((await upload.POST(uploadRequest(SHARED), {})).status).toBe(404)
+    expect(storage.generateUploadUrl).not.toHaveBeenCalled()
+  })
+  test('certificate keys refuse it', async () => {
+    expect((await exportQr.POST(post({ certificate_keys: [`${SHARED}a.json`] }), ctx)).status).toBe(400)
+    expect(exportExecute).not.toHaveBeenCalled()
+  })
+  test.each(OUTSIDE_SHARED)('list refuses %s', async (path) => {
+    expect((await list.GET(listRequest(path), {})).status).toBe(404)
+    expect(storage.listDocuments).not.toHaveBeenCalled()
+  })
+  test.each(OUTSIDE_SHARED)('url refuses %s', async (key) => {
+    expect((await url.GET(urlRequest(key), {})).status).toBe(404)
+    expect(storage.generateDownloadUrl).not.toHaveBeenCalled()
+  })
+})
+
 describe('server-side writers use the namespace of the owning HTX', () => {
   test('batch approval archives journals under the HTX', async () => {
     const journal = {

@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
-import { assertInDocumentRoot } from '@/domain/document/document-namespace'
+import { assertReadableDocument } from '@/domain/document/document-namespace'
 import { GenerateDocumentDownloadUrlUseCase } from '@/application/document/generate-document-download-url.usecase'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 
@@ -25,7 +25,7 @@ async function getDocumentUrl(req: Request) {
   if (!key) {
     return NextResponse.json({ error: 'key query parameter is required' }, { status: 400 })
   }
-  assertInDocumentRoot(key, htxCode)
+  assertReadableDocument(key, htxCode)
 
   const download = downloadParam === 'true'
 

@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sessions**: `ssoSessionIdleTimeout` and `ssoSessionMaxLifespan` are 8 hours, matching the app session
 - **Accounts**: registration and invitations write `htx_code`; invited managers and officers must set up TOTP (#18)
 - **`docker/.env.local.example`, `.env.example`**: removed `DISEASE_API_URL` and `OLLAMA_BASE_URL`, which no service reads. `docker/.env.local.example` also drops the `KEYCLOAK_ISSUER` that Compose overrides and adds `AUTH_URL`; `.env.example` has no `AUTH_URL`
-- **Documents are namespaced by HTX**: every key is `para/<htxCode>/...`. The list, URL and upload routes derive the namespace from the session and answer 404 for anything outside it, including `..` traversal; `certificate_keys` outside it answer 400
+- **Documents are namespaced by HTX**: keys are `para/<htxCode>/...`. The list, URL and upload routes derive the namespace from the session and answer 404 for anything outside it, including `..` traversal; `certificate_keys` outside it answer 400. The one exception is `para/Archives/Market_Reports/`, written by the n8n workflow and holding no tenant data: the list and URL routes may read it, and the document screen shows it without upload
 
 ### Fixed
 - **Migration drift** (#7): migrations now produce the database described by `schema.prisma`, without dropping any column

@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
-import { assertInDocumentRoot } from '@/domain/document/document-namespace'
+import { assertReadableDocument } from '@/domain/document/document-namespace'
 import { ListDocumentsUseCase } from '@/application/document/list-documents.usecase'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 
@@ -24,7 +24,7 @@ async function listDocuments(req: Request) {
   if (!path) {
     return NextResponse.json({ error: 'path query parameter is required (e.g., para/<htx>/Projects/)' }, { status: 400 })
   }
-  assertInDocumentRoot(path, htxCode)
+  assertReadableDocument(path, htxCode)
 
   try {
     // Dependency Injection
