@@ -1,0 +1,8 @@
+algal_leaf_spot
+birds_eye_spot
+brown_blight
+gray_blight
+healthy
+helopeltis
+red_leaf_spot
+white_spot
