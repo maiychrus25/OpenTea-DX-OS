@@ -18,7 +18,7 @@
 .title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--color-ink-primary);
 }
 
 .content {
@@ -30,9 +30,9 @@
 
 .sidebar {
   width: 250px;
-  background: var(--surface-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-lg);
   padding: var(--spacing-4);
   display: flex;
   flex-direction: column;
@@ -44,10 +44,10 @@
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--rounded-md);
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--color-ink-secondary);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -55,20 +55,20 @@
 }
 
 .categoryBtn:hover {
-  background: var(--surface-hover);
-  color: var(--text-primary);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-primary);
 }
 
 .categoryBtn.active {
-  background: var(--primary-light);
-  color: var(--primary-dark);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary-hover);
 }
 
 .mainPanel {
   flex: 1;
-  background: var(--surface-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -76,11 +76,11 @@
 
 .panelHeader {
   padding: var(--spacing-4);
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  background: var(--surface-secondary);
+  background: var(--color-surface-sunken);
 }
 
 .fileList {
@@ -96,42 +96,42 @@
 .table th {
   text-align: left;
   padding: var(--spacing-3) var(--spacing-4);
-  color: var(--text-tertiary);
+  color: var(--color-ink-tertiary);
   font-size: 0.875rem;
   font-weight: 500;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--color-border-subtle);
   position: sticky;
   top: 0;
-  background: var(--surface-primary);
+  background: var(--color-surface-card);
 }
 
 .table td {
   padding: var(--spacing-3) var(--spacing-4);
-  border-bottom: 1px solid var(--border-light);
-  color: var(--text-secondary);
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-ink-secondary);
   font-size: 0.875rem;
 }
 
 .table tr:hover td {
-  background: var(--surface-hover);
+  background: var(--color-surface-sunken);
 }
 
 .fileNameCell {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  color: var(--text-primary);
+  color: var(--color-ink-primary);
   font-weight: 500;
 }
 
 .icon {
   width: 20px;
   height: 20px;
-  color: var(--text-tertiary);
+  color: var(--color-ink-tertiary);
 }
 
 .isDir .icon {
-  color: var(--warning-main);
+  color: var(--color-warning);
 }
 
 .actions {
@@ -146,7 +146,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--text-tertiary);
+  color: var(--color-ink-tertiary);
   gap: var(--spacing-4);
 }
 
@@ -177,7 +177,7 @@
 .title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--color-ink-primary);
 }
 
 .content {
@@ -189,9 +189,9 @@
 
 .sidebar {
   width: 250px;
-  background: var(--surface-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-lg);
   padding: var(--spacing-4);
   display: flex;
   flex-direction: column;
@@ -203,10 +203,10 @@
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--rounded-md);
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--color-ink-secondary);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -214,20 +214,20 @@
 }
 
 .categoryBtn:hover {
-  background: var(--surface-hover);
-  color: var(--text-primary);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-primary);
 }
 
 .categoryBtn.active {
-  background: var(--primary-light);
-  color: var(--primary-dark);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary-hover);
 }
 
 .mainPanel {
   flex: 1;
-  background: var(--surface-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -235,11 +235,11 @@
 
 .panelHeader {
   padding: var(--spacing-4);
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  background: var(--surface-secondary);
+  background: var(--color-surface-sunken);
 }
 
 .fileList {
@@ -255,42 +255,42 @@
 .table th {
   text-align: left;
   padding: var(--spacing-3) var(--spacing-4);
-  color: var(--text-tertiary);
+  color: var(--color-ink-tertiary);
   font-size: 0.875rem;
   font-weight: 500;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--color-border-subtle);
   position: sticky;
   top: 0;
-  background: var(--surface-primary);
+  background: var(--color-surface-card);
 }
 
 .table td {
   padding: var(--spacing-3) var(--spacing-4);
-  border-bottom: 1px solid var(--border-light);
-  color: var(--text-secondary);
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-ink-secondary);
   font-size: 0.875rem;
 }
 
 .table tr:hover td {
-  background: var(--surface-hover);
+  background: var(--color-surface-sunken);
 }
 
 .fileNameCell {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  color: var(--text-primary);
+  color: var(--color-ink-primary);
   font-weight: 500;
 }
 
 .icon {
   width: 20px;
   height: 20px;
-  color: var(--text-tertiary);
+  color: var(--color-ink-tertiary);
 }
 
 .isDir .icon {
-  color: var(--warning-main);
+  color: var(--color-warning);
 }
 
 .actions {
@@ -305,7 +305,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--text-tertiary);
+  color: var(--color-ink-tertiary);
   gap: var(--spacing-4);
 }
 
@@ -319,14 +319,14 @@
 
 .formGroup label {
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--color-ink-primary);
 }
 
 .formGroup select,
 .formGroup input {
   padding: var(--spacing-2);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-md);
   outline: none;
 }
 
@@ -334,9 +334,9 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
-  background: var(--surface-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-full);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-full);
   padding: var(--spacing-2) var(--spacing-3);
   width: 250px;
 }
@@ -360,36 +360,36 @@
   align-items: center;
   gap: var(--spacing-1);
   padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--rounded-sm);
   font-size: 0.75rem;
   font-weight: 500;
   width: fit-content;
 }
 
 .privacyBadge[data-privacy="Chỉ mình tôi"] {
-  background: var(--danger-light);
-  color: var(--danger-dark);
+  background: var(--color-danger-subtle);
+  color: var(--color-danger-hover);
 }
 
 .privacyBadge[data-privacy="Nội bộ HTX"] {
-  background: var(--warning-light);
-  color: var(--warning-dark);
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
 }
 
 .privacyBadge[data-privacy="Công khai"] {
-  background: var(--success-light);
-  color: var(--success-dark);
+  background: var(--color-success-subtle);
+  color: var(--color-success);
 }
 
 .tag {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  background: var(--surface-secondary);
-  color: var(--text-secondary);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-secondary);
   font-size: 0.7rem;
   padding: 2px 4px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--rounded-sm);
   width: fit-content;
 }
 
@@ -399,22 +399,22 @@
 
 .progressBarBg {
   height: 6px;
-  background: var(--surface-secondary);
-  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  border-radius: var(--rounded-full);
   overflow: hidden;
 }
 
 .progressBarFill {
   height: 100%;
-  background: var(--primary-main);
+  background: var(--color-primary);
   transition: width 0.2s ease;
 }
 
 .errorAlert {
   margin-top: var(--spacing-4);
   padding: var(--spacing-3);
-  background: var(--danger-light);
-  color: var(--danger-dark);
-  border-radius: var(--radius-md);
+  background: var(--color-danger-subtle);
+  color: var(--color-danger-hover);
+  border-radius: var(--rounded-md);
   font-size: 0.875rem;
 }

@@ -63,7 +63,7 @@
 .uploadLabel {
   padding: 1rem 2rem;
   background: var(--color-surface-sunken);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-default);
   border-radius: var(--rounded-md);
   cursor: pointer;
   font-weight: 500;
@@ -222,7 +222,7 @@
 
 .cancelBtn {
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-default);
 }
 
 .submitBtn {
@@ -247,7 +247,7 @@
 
 .select {
   padding: 0.75rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-default);
   border-radius: var(--rounded-md);
   background-color: var(--color-surface-card);
   font-size: 1rem;

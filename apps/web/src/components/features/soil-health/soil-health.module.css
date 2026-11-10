@@ -14,7 +14,7 @@
 }
 
 .modal {
-  background: var(--color-surface-base, #ffffff);
+  background: var(--color-surface-card);
   border-radius: 16px;
   width: 90vw;
   max-width: 900px;
@@ -29,7 +29,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid var(--color-surface-border, #e5e7eb);
+  border-bottom: 1px solid var(--color-border-default);
 }
 
 .headerLeft {
@@ -52,13 +52,13 @@
 .headerTitle {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--color-ink-primary, #111827);
+  color: var(--color-ink-primary);
   margin: 0;
 }
 
 .headerSubtitle {
   font-size: 0.8125rem;
-  color: var(--color-ink-secondary, #6b7280);
+  color: var(--color-ink-secondary);
   margin: 0;
 }
 
@@ -66,19 +66,19 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  border: 1px solid var(--color-surface-border, #e5e7eb);
+  border: 1px solid var(--color-border-default);
   background: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-ink-secondary, #6b7280);
+  color: var(--color-ink-secondary);
   transition: all 0.15s ease;
 }
 
 .closeBtn:hover {
-  background: var(--color-surface-sunken, #f9fafb);
-  color: var(--color-ink-primary, #111827);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-primary);
 }
 
 .body {
@@ -98,15 +98,15 @@
   gap: 6px;
   padding: 6px 12px;
   border-radius: 8px;
-  background: var(--color-surface-sunken, #f9fafb);
-  border: 1px solid var(--color-surface-border, #e5e7eb);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-default);
   font-size: 0.8125rem;
-  color: var(--color-ink-secondary, #6b7280);
+  color: var(--color-ink-secondary);
 }
 
 .metaChipValue {
   font-weight: 600;
-  color: var(--color-ink-primary, #111827);
+  color: var(--color-ink-primary);
 }
 
 .chartSection {
@@ -116,7 +116,7 @@
 .chartTitle {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-ink-primary, #111827);
+  color: var(--color-ink-primary);
   margin: 0 0 12px 0;
   display: flex;
   align-items: center;
@@ -130,8 +130,8 @@
 }
 
 .chartContainer {
-  background: var(--color-surface-sunken, #f9fafb);
-  border: 1px solid var(--color-surface-border, #e5e7eb);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-default);
   border-radius: 12px;
   padding: 16px 8px 8px 0;
 }
@@ -141,18 +141,18 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
-  border-top: 1px solid var(--color-surface-border, #e5e7eb);
-  background: var(--color-surface-sunken, #f9fafb);
+  border-top: 1px solid var(--color-border-default);
+  background: var(--color-surface-sunken);
   border-radius: 0 0 16px 16px;
 }
 
 .sourceText {
   font-size: 0.75rem;
-  color: var(--color-ink-tertiary, #9ca3af);
+  color: var(--color-ink-tertiary);
 }
 
 .sourceLink {
-  color: var(--color-primary, #059669);
+  color: var(--color-primary);
   text-decoration: none;
   font-weight: 500;
 }
@@ -173,15 +173,15 @@
 .loadingSpinner {
   width: 40px;
   height: 40px;
-  border: 3px solid var(--color-surface-border, #e5e7eb);
-  border-top-color: var(--color-primary, #059669);
+  border: 3px solid var(--color-border-default);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 .loadingText {
   font-size: 0.875rem;
-  color: var(--color-ink-secondary, #6b7280);
+  color: var(--color-ink-secondary);
 }
 
 .errorContainer {
@@ -197,20 +197,20 @@
 .errorTitle {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--color-ink-primary, #111827);
+  color: var(--color-ink-primary);
   margin: 0;
 }
 
 .errorMessage {
   font-size: 0.875rem;
-  color: var(--color-ink-secondary, #6b7280);
+  color: var(--color-ink-secondary);
   margin: 0;
   max-width: 400px;
 }
 
 .customTooltip {
-  background: var(--color-surface-base, #ffffff);
-  border: 1px solid var(--color-surface-border, #e5e7eb);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-default);
   border-radius: 10px;
   padding: 12px 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -219,7 +219,7 @@
 .tooltipDate {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-ink-primary, #111827);
+  color: var(--color-ink-primary);
   margin: 0 0 8px 0;
 }
 
@@ -228,7 +228,7 @@
   align-items: center;
   gap: 8px;
   font-size: 0.8125rem;
-  color: var(--color-ink-secondary, #6b7280);
+  color: var(--color-ink-secondary);
   margin-bottom: 4px;
 }
 
@@ -241,7 +241,7 @@
 
 .tooltipValue {
   font-weight: 600;
-  color: var(--color-ink-primary, #111827);
+  color: var(--color-ink-primary);
 }
 
 @keyframes fadeIn {

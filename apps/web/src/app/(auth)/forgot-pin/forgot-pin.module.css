@@ -28,7 +28,7 @@
   height: 48px;
   background: var(--accent-lime);
   color: var(--sidebar-bg);
-  border-radius: var(--radius-lg);
+  border-radius: var(--rounded-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -73,7 +73,7 @@
   width: 100%;
   max-width: 440px;
   background: var(--color-surface-card);
-  border-radius: var(--radius-xl);
+  border-radius: var(--rounded-xl);
   padding: 48px 40px;
   box-shadow: var(--shadow-card);
   display: flex;

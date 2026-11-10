@@ -238,8 +238,8 @@ export default function FarmZoneReadOnly() {
       <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col gap-4">
         
         {/* Filter Card */}
-        <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-surface-border)] overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-[var(--color-surface-border)] bg-[var(--color-surface-base)] flex items-center justify-between">
+        <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-border-default)] overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-[var(--color-border-default)] bg-[var(--color-surface-card)] flex items-center justify-between">
             <h2 className="font-semibold text-[var(--color-ink-primary)]">Bộ lọc hiển thị</h2>
           </div>
           <div className="p-5 space-y-4">
@@ -258,7 +258,7 @@ export default function FarmZoneReadOnly() {
 
             <div className="space-y-2">
               <label className="text-xs font-medium text-[var(--color-ink-secondary)]">Cây trồng</label>
-              <select value={selectedCrop} onChange={e => setSelectedCrop(e.target.value)} className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors">
+              <select value={selectedCrop} onChange={e => setSelectedCrop(e.target.value)} className="w-full px-3 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border-default)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors">
                 <option value="all">Tất cả cây trồng</option>
                 {cropTypes.map(ct => <option key={ct} value={ct}>{ct}</option>)}
               </select>
@@ -267,8 +267,8 @@ export default function FarmZoneReadOnly() {
         </div>
 
         {/* Parcels List Card */}
-        <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-surface-border)] overflow-hidden shadow-sm flex flex-col h-[450px]">
-          <div className="px-5 py-4 border-b border-[var(--color-surface-border)] bg-[var(--color-surface-base)] flex items-center justify-between">
+        <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-border-default)] overflow-hidden shadow-sm flex flex-col h-[450px]">
+          <div className="px-5 py-4 border-b border-[var(--color-border-default)] bg-[var(--color-surface-card)] flex items-center justify-between">
             <h2 className="font-semibold text-[var(--color-ink-primary)]">Danh Sách Thửa Đất</h2>
             <span className="text-xs font-medium bg-[var(--color-surface-sunken)] px-2.5 py-1 rounded-full text-[var(--color-ink-secondary)]">
               {drawnParcels}/{totalParcels} đã vẽ
@@ -278,7 +278,7 @@ export default function FarmZoneReadOnly() {
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
             {filtered.length === 0 ? (
               <div className="text-center py-12 text-[var(--color-ink-tertiary)] flex flex-col items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-[var(--color-surface-base)] flex items-center justify-center">
+                <div className="h-12 w-12 rounded-full bg-[var(--color-surface-card)] flex items-center justify-center">
                   <MapPin className="h-5 w-5" />
                 </div>
                 <p className="text-sm">{loadFailed ? LOAD_FAILED_MESSAGE : 'Không tìm thấy thửa đất nào'}</p>
@@ -292,7 +292,7 @@ export default function FarmZoneReadOnly() {
                   <div 
                     key={p.id} 
                     onClick={() => setSelectedParcel(p)}
-                    className="cursor-pointer bg-[var(--color-surface-base)] p-4 rounded-lg border border-[var(--color-surface-border)] hover:border-[var(--color-primary)] hover:shadow-md transition-all group"
+                    className="cursor-pointer bg-[var(--color-surface-card)] p-4 rounded-lg border border-[var(--color-border-default)] hover:border-[var(--color-primary)] hover:shadow-md transition-all group"
                   >
                     <div className="flex justify-between items-start gap-4 mb-2">
                       <div>
@@ -334,7 +334,7 @@ export default function FarmZoneReadOnly() {
       </div>
 
       {/* Right Panel: Map */}
-      <div className="flex-1 bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-surface-border)] overflow-hidden shadow-sm relative h-[600px] lg:h-auto">
+      <div className="flex-1 bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-border-default)] overflow-hidden shadow-sm relative h-[600px] lg:h-auto">
         {/* We add a style tag to fix Leaflet tooltips globally within this block to avoid module.css */}
         <style>{`
           .leaflet-tooltip.transparent-tooltip {

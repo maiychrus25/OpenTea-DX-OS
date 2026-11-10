@@ -6,12 +6,12 @@
   grid-template-columns: 250px 1fr;
   height: calc(100vh - 80px); /* 80px is topbar height */
   background: var(--color-surface-page);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-default);
 }
 
 .chatHistory {
   background: var(--color-surface-card);
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border-default);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -19,7 +19,7 @@
 
 .historyHeader {
   padding: 1rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-default);
 }
 
 .newChatBtn {
@@ -82,7 +82,7 @@
 
 .chatHeader {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-default);
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -151,7 +151,7 @@
   border-radius: 4px 14px 14px 14px; /* Mandatory spec radius */
   font-size: 0.95rem;
   line-height: 1.5;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-default);
 }
 
 .miniChart {
@@ -163,7 +163,7 @@
   padding: 0.5rem;
   background: var(--color-surface-card);
   border-radius: 8px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-default);
 }
 
 .miniChartBar {
@@ -177,7 +177,7 @@
 .sourcesWrap {
   margin-top: 1rem;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-default);
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -209,7 +209,7 @@
 
 .composer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-default);
   background: var(--color-surface-page);
 }
 
@@ -217,7 +217,7 @@
   display: flex;
   align-items: flex-end;
   background: var(--color-surface-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-default);
   border-radius: 24px;
   padding: 0.5rem 1rem;
 }
@@ -340,7 +340,7 @@
 
 .markdownContent th,
 .markdownContent td {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-default);
   padding: 0.5rem;
   text-align: left;
 }

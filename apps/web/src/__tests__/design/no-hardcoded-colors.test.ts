@@ -8,7 +8,6 @@ import { join, relative } from 'path'
 // `baseline` lists files that still hard-code colours; Task 10 of the Tier 2b plan empties it.
 // A file leaves the baseline as soon as it is clean: the test fails if a listed file no longer offends.
 const baseline: string[] = [
-  'src/app/error.tsx',
   'src/app/farmer/bulletin-notifications/page.tsx',
   'src/app/manager/farm-zones/_components/FarmZoneReadOnly.tsx',
   'src/app/manager/journal-approve/_components/ApproveList.tsx',
@@ -30,14 +29,12 @@ const baseline: string[] = [
   'src/app/officer/households/[id]/soil-health/SoilHealthPageClient.tsx',
   'src/app/officer/households/_components/HouseholdManager.tsx',
   'src/app/officer/households/households.module.css',
-  'src/components/features/bulletin/BulletinView.module.css',
   'src/components/features/bulletin/CommodityTabs.module.css',
   'src/components/features/bulletin/WeatherSection.tsx',
   'src/components/features/certificate/CertificateManager.tsx',
   'src/components/features/document/DocumentView.tsx',
   'src/components/features/map/ZoneMap.module.css',
   'src/components/features/map/ZoneMap.tsx',
-  'src/components/features/market/MarketSummaryWidget.module.css',
   'src/components/features/market/MarketSummaryWidget.tsx',
   'src/components/features/partner-map/PartnerMap.tsx',
   'src/components/features/partner-map/partner-map.module.css',
@@ -45,7 +42,6 @@ const baseline: string[] = [
   'src/components/features/schedule/HarvestCalendar.tsx',
   'src/components/features/soil-health/SoilHealthChart.tsx',
   'src/components/features/soil-health/soil-health.module.css',
-  'src/components/layout/NoHtxNotice.tsx',
   'src/components/ui/AiNote/AiNote.module.css',
   'src/components/ui/SourceBox/SourceBox.module.css',
 ]
@@ -179,5 +175,32 @@ describe('no hard-coded colours', () => {
     ['a.tsx', "<div style={{ whiteSpace: 'nowrap', color: 'var(--color-danger)' }} />"],
   ])('allows %s: %s', (file, source) => {
     expect(offends(file, source)).toBe(false)
+  })
+})
+
+// Variables that globals.css does not declare because they are set at runtime, with where.
+const RUNTIME_VARIABLES: Record<string, string> = {
+  '--font-be-vietnam': 'next/font sets it on <html> in app/layout.tsx',
+  '--skeleton-width': 'Skeleton.tsx sets it inline from the width prop',
+  '--skeleton-height': 'Skeleton.tsx sets it inline from the height prop',
+  '--bar-height': 'chat-interface.tsx sets it inline for each chart bar',
+}
+
+// Only :root and the dark blocks count: Tailwind emits an `@theme inline` name only when a utility needs it.
+const tokenCss = readFileSync(join(SRC, 'styles/globals.css'), 'utf-8').replace(/@theme\s+inline\s*\{[^}]*\}/, '')
+const declared = new Set(Array.from(tokenCss.matchAll(/(--[\w-]+)\s*:/g), (m) => m[1]))
+
+describe('CSS variables', () => {
+  it('uses only variables that globals.css declares or that are set at runtime', () => {
+    const undefinedUses = files.flatMap((f) =>
+      Array.from(readFileSync(join(process.cwd(), f), 'utf-8').matchAll(/var\(\s*(--[\w-]+)/g), (m) => m[1])
+        .filter((name) => !declared.has(name) && !(name in RUNTIME_VARIABLES))
+        .map((name) => `${f}: ${name}`),
+    )
+    expect(Array.from(new Set(undefinedUses))).toEqual([])
+  })
+
+  it('lists only runtime variables that globals.css does not declare', () => {
+    expect(Object.keys(RUNTIME_VARIABLES).filter((name) => declared.has(name))).toEqual([])
   })
 })

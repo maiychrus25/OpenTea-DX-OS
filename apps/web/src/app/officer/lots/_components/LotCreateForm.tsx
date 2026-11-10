@@ -83,7 +83,7 @@ export function LotCreateForm({ onSuccess, onCancel }: LotCreateFormProps) {
     <form onSubmit={handleSubmit}>
       <h2 className={styles.modalTitle}>Tạo Lô hàng mới</h2>
 
-      {error && <p style={{ color: 'var(--color-error)', marginBottom: '1rem' }}>{error}</p>}
+      {error && <p style={{ color: 'var(--color-danger)', marginBottom: '1rem' }}>{error}</p>}
 
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>Loại nông sản *</label>

@@ -3,7 +3,7 @@
 
 .tabsContainer {
   margin-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border, #e5e7eb);
+  border-bottom: 1px solid var(--border);
 }
 
 .tabList {
@@ -29,10 +29,10 @@
 }
 
 .tabLink:hover {
-  color: var(--primary, #059669);
+  color: var(--primary);
 }
 
 .tabLink.active {
-  color: var(--primary, #059669);
-  border-bottom-color: var(--primary, #059669);
+  color: var(--primary);
+  border-bottom-color: var(--primary);
 }

@@ -2,11 +2,11 @@
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
 .container {
-  background-color: var(--card, #ffffff);
-  border: 1px solid var(--border, #e5e7eb);
+  background-color: var(--card);
+  border: 1px solid var(--border);
   border-radius: 0.5rem;
   padding: 1.5rem;
-  color: var(--foreground, #111827);
+  color: var(--foreground);
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -62,7 +62,7 @@
 
 .content hr {
   margin: 1.5rem 0;
-  border-top: 1px dashed var(--border, #e5e7eb);
+  border-top: 1px dashed var(--border);
 }
 
 .content strong {
@@ -72,5 +72,5 @@
 .footer {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--border, #e5e7eb);
+  border-top: 1px solid var(--border);
 }

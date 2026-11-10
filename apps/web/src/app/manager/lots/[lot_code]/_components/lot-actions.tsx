@@ -45,7 +45,7 @@ export function LotActions({ lotCode }: { lotCode: string }) {
         <div className={styles.overlay} onClick={() => setShowConfirm(false)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <h2 className={styles.modalTitle}>Xác nhận Xuất QR</h2>
-            <p style={{ marginBottom: '1.5rem', color: 'var(--color-text-muted)' }}>
+            <p style={{ marginBottom: '1.5rem', color: 'var(--color-ink-tertiary)' }}>
               Bạn đang chuẩn bị xuất mã QR truy xuất nguồn gốc cho lô hàng <strong>{lotCode}</strong>.
               Hành động này không thể hoàn tác và dữ liệu lô hàng sẽ bị đóng băng.
             </p>
@@ -72,7 +72,7 @@ export function LotActions({ lotCode }: { lotCode: string }) {
                 type="number" 
                 value={labelQuantity} 
                 onChange={e => setLabelQuantity(Number(e.target.value))}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border-default)' }}
               />
             </div>
             <div className={styles.formActions}>

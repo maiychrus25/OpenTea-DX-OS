@@ -220,7 +220,7 @@ export function ChatInterface({ role }: ChatInterfaceProps) {
         </div>
         <ul className={styles.historyList}>
           {sessions.length === 0 ? (
-            <li className={styles.historyItem} style={{ color: 'var(--color-text-secondary)', fontStyle: 'italic', textAlign: 'center', marginTop: '1rem' }}>
+            <li className={styles.historyItem} style={{ color: 'var(--color-ink-secondary)', fontStyle: 'italic', textAlign: 'center', marginTop: '1rem' }}>
               Chưa có lịch sử trò chuyện
             </li>
           ) : (

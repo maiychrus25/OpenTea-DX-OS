@@ -40,7 +40,7 @@
 
 .brandMobile {
   font-weight: 700;
-  font-size: var(--font-size-h4);
+  font-size: var(--font-size-h3);
   color: var(--color-primary);
   display: none;
 }

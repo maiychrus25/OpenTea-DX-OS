@@ -57,7 +57,7 @@
   gap: var(--spacing-4);
   background-color: var(--card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--rounded-lg);
   padding: var(--spacing-4);
 }
 
@@ -88,7 +88,7 @@
 .statusBadge {
   font-size: var(--font-size-label);
   padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--rounded-md);
   font-weight: 500;
 }
 

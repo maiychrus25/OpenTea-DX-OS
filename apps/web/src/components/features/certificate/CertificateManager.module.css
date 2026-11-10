@@ -38,7 +38,7 @@
   padding: var(--spacing-4);
   background: var(--color-surface-card);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--rounded-lg);
   position: relative;
   transition: all 0.2s ease;
   cursor: pointer;
@@ -117,7 +117,7 @@
   background: var(--color-danger);
   color: var(--color-ink-inverse);
   padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--rounded-sm);
   font-size: 0.7rem;
   font-weight: 600;
 }
@@ -134,7 +134,7 @@
   color: var(--color-ink-secondary);
   padding: var(--spacing-1);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--rounded-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -157,7 +157,7 @@
   padding: var(--spacing-8);
   color: var(--color-ink-tertiary);
   background: var(--color-surface-sunken);
-  border-radius: var(--radius-lg);
+  border-radius: var(--rounded-lg);
   border: 1px dashed var(--color-border-subtle);
 }
 
@@ -178,7 +178,7 @@
 .formGroup select {
   padding: var(--spacing-2) var(--spacing-3);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--rounded-md);
   font-size: 0.95rem;
   outline: none;
 }
@@ -208,14 +208,14 @@
   overflow: auto;
   padding: var(--spacing-4);
   background: var(--color-surface-sunken);
-  border-radius: var(--radius-md);
+  border-radius: var(--rounded-md);
 }
 
 .imagePreview {
   max-width: 100%;
   max-height: 65vh;
   object-fit: contain;
-  border-radius: var(--radius-sm);
+  border-radius: var(--rounded-sm);
   box-shadow: var(--shadow-card);
 }
 
