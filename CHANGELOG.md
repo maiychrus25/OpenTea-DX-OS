@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **QR export rule**: every parcel of the lot needs a crop cycle harvested on or before the lot's harvest date (same day counts, in Vietnam time) instead of being in `HARVESTED`, `TENDING` or `HARVEST_APPROVED`. A lot of the previous round can be exported while the next round runs, and a parcel harvested only after the lot date is refused. The withdrawal block is unchanged
 
 ### Fixed
-- **Journal photo keys**: `POST /api/journal` accepted any `photo_minio_key` inside `para/<htxCode>/`, so a farmer could attach any document of their HTX, a manager-only one for example, and receive a signed download URL for it from `GET /api/journal`. It now accepts only a file key under `para/<htxCode>/Areas/Journal/` (400 otherwise). Reads are unchanged: rows already stored with another key inside the HTX folder are still signed
+- **Journal photo keys**: `POST /api/journal` accepted any `photo_minio_key` inside `para/<htxCode>/`, so a farmer could attach any document of their HTX, a manager-only one for example, and receive a signed download URL for it from `GET /api/journal`. It now accepts only a file key under `para/<htxCode>/Areas/Journal/` (400 otherwise), and the journal list signs only such keys; a row stored with another key comes back without a photo. No legitimate photo is lost: the upload route did not exist before this release
 - **Farmer diagnosis confidence**: the result and history showed the 0–1 confidence as a percentage without scaling (`0.988` as `1.0%`), and the low-confidence warning always showed. They now show `98.8%` and warn only below 70%
 
 ---

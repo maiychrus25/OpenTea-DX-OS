@@ -176,14 +176,19 @@ describe('journal photo keys stay inside the namespace of the caller', () => {
   test('POST without a photo still works', async () => {
     expect((await journal.POST(post(entry), {})).status).toBe(201)
   })
-  test('a stored key of another HTX is not signed and the list still loads', async () => {
-    journalList.mockResolvedValue({ entries: [stored('para/LB/Archives/x.jpg'), stored('para/TC/Archives/y.jpg')], total: 2 })
+  test('only a stored journal photo of the caller is signed and the list still loads', async () => {
+    const photo = 'para/TC/Areas/Journal/2026/0b0e8f8e-2f4a-4c1e-9d3b-6a1f2e3d4c5b-y.jpg'
+    journalList.mockResolvedValue({
+      entries: [stored('para/LB/Areas/Journal/2026/x.jpg'), stored('para/TC/Projects/contract.pdf'), stored(photo)],
+      total: 3,
+    })
     const response = await listJournal()
     expect(response.status).toBe(200)
     const { data } = await response.json()
     expect(data[0].photo_url).toBeNull()
-    expect(data[1].photo_url).toBe('https://signed')
-    expect(storage.generateDownloadUrl.mock.calls).toEqual([['para/TC/Archives/y.jpg']])
+    expect(data[1].photo_url).toBeNull()
+    expect(data[2].photo_url).toBe('https://signed')
+    expect(storage.generateDownloadUrl.mock.calls).toEqual([[photo]])
   })
   test('a caller without an HTX signs nothing', async () => {
     mock(auth).mockResolvedValue({ user: { id: 'u1', role: 'officer', htxCode: null, name: 'U' } })

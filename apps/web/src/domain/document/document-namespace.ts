@@ -41,9 +41,13 @@ export function journalPhotoRoot(htxCode: string): string {
   return `${documentRoot(htxCode)}Areas/Journal/`
 }
 
-/** Write check only: GET /api/journal signs a stored key, so a key elsewhere in the HTX would expose that document. */
+/** GET /api/journal signs a stored key, so a key elsewhere in the HTX would expose that document. */
+export function isJournalPhotoKey(key: string, htxCode: string): boolean {
+  return key.startsWith(journalPhotoRoot(htxCode)) && !key.endsWith('/') && isInDocumentRoot(key, htxCode)
+}
+
 export function assertJournalPhotoKey(key: string | undefined, htxCode: string): void {
-  if (key !== undefined && !(key.startsWith(journalPhotoRoot(htxCode)) && !key.endsWith('/') && isInDocumentRoot(key, htxCode))) {
+  if (key !== undefined && !isJournalPhotoKey(key, htxCode)) {
     throw new ValidationError('photo_minio_key must be a journal photo of your HTX')
   }
 }
