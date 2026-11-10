@@ -23,7 +23,7 @@ describe('Sidebar Component', () => {
 
   it('renders brand block and coop block', () => {
     render(<Sidebar navItems={mockItems} htxName="HTX Tân Cương" htxLocation="Thái Nguyên" onClose={() => {}} />)
-    expect(screen.getByText('DX AgriMarket')).toBeInTheDocument()
+    expect(screen.getByText('OpenTea DX-OS')).toBeInTheDocument()
     expect(screen.getByText('HTX Tân Cương')).toBeInTheDocument()
   })
 

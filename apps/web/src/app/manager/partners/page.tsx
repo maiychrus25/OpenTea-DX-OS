@@ -8,7 +8,7 @@ import { Map, Plus } from 'lucide-react'
 import { Button } from '@/components/ui'
 
 export const metadata: Metadata = {
-  title: 'Danh bạ đối tác | DX-AgriMarket',
+  title: 'Danh bạ đối tác',
 }
 
 export default function PartnersPage() {

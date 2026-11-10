@@ -10,7 +10,7 @@
 
 .authSide {
   background: var(--sidebar-bg);
-  color: var(--color-ink-inverse);
+  color: var(--sidebar-foreground);
   padding: 48px 64px;
   display: flex;
   flex-direction: column;

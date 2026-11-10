@@ -6,7 +6,7 @@ import { Metadata } from 'next';
 import { HouseholdProfile } from './_components/household-profile';
 
 export const metadata: Metadata = {
-  title: 'Household Profile | DX-AgriMarket',
+  title: 'Household Profile',
   description: 'View household details and production history.',
 };
 

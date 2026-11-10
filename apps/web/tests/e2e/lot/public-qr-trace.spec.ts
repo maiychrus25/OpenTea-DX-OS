@@ -30,7 +30,7 @@ test.describe('Story 7.9: Public QR Trace Page', () => {
     // In a real test environment, LOT-2026-001 should be seeded.
     const isNotFound = await page.locator('body').textContent();
     if (!isNotFound?.match(/không tìm thấy|not found|404/i)) {
-      await expect(page.getByText(/DX AgriMarket không chỉnh sửa/)).toBeVisible();
+      await expect(page.getByText(/OpenTea DX-OS không chỉnh sửa/)).toBeVisible();
     }
   });
 
@@ -40,7 +40,7 @@ test.describe('Story 7.9: Public QR Trace Page', () => {
     const isNotFound = await page.locator('body').textContent();
     if (!isNotFound?.match(/không tìm thấy|not found|404/i)) {
       expect(title).toContain('Truy xuất');
-      expect(title).toContain('DX AgriMarket');
+      expect(title).toContain('OpenTea DX-OS');
     }
   });
 });

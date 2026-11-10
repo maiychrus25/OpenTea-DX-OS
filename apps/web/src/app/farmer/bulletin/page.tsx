@@ -9,7 +9,7 @@ import { BulletinView } from '@/components/features/bulletin/BulletinView';
 import { toEnglishCommodity } from '@/lib/translations';
 
 export const metadata = {
-  title: 'Bản tin Thị trường | DX-AgriMarket',
+  title: 'Bản tin Thị trường',
   description: 'Thông tin thị trường nông sản cho nông dân',
 }
 

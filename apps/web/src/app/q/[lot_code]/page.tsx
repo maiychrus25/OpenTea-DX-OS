@@ -7,6 +7,7 @@ import { XCircle, AlertTriangle, Clock, Check, X } from 'lucide-react'
 import styles from './qr.module.css'
 import { GetLotTraceDataUseCase } from '@/application/useCases/get-lot-trace-data-usecase'
 import { PrismaLotTraceRepository } from '@/infrastructure/db/repositories/prisma-lot-trace-repository'
+import { BRAND_NAME } from '@/lib/brand'
 
 export const runtime = 'nodejs'
 
@@ -159,7 +160,7 @@ export default async function QrTracePage({ params, searchParams }: PageProps & 
     <div className={styles.container}>
       {/* Header */}
       <div className={styles.mockHeader}>
-        <h1>DX-AgriMarket</h1>
+        <h1>{BRAND_NAME}</h1>
         <p>Truy xuất Nguồn gốc Nông sản</p>
       </div>
 
@@ -254,7 +255,7 @@ export default async function QrTracePage({ params, searchParams }: PageProps & 
         </div>
       )}
 
-      <p className={styles.footerNote}>Dữ liệu truy xuất từ hệ thống DX-AgriMarket. Ngày tạo lô: {new Date(trace.created_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</p>
+      <p className={styles.footerNote}>Dữ liệu truy xuất từ hệ thống {BRAND_NAME}. Ngày tạo lô: {new Date(trace.created_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</p>
     </div>
   )
 }

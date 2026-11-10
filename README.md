@@ -334,6 +334,7 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 - 🧪 **[Testing Strategy](./docs/testing-strategy.md)** — Công cụ và chiến lược kiểm thử.
 - 🛠️ **[Dev Setup](./docs/dev-setup.md)** — Hướng dẫn cài đặt môi trường phát triển.
 - 📝 **[Deviation Register](./docs/deviation-register.md)** — Sổ ghi nhận các điểm sai lệch so với đặc tả.
+- 🎨 **[DESIGN.md](./DESIGN.md)** — Hệ thống thiết kế: token màu sáng/tối, chữ, khoảng cách và quy tắc tương phản.
 - 📦 **[Dependencies](./DEPENDENCIES.md)** — Danh mục thư viện và giấy phép phụ thuộc.
 - 🤖 **[AGENTS.md](./AGENTS.md)** — Quy tắc làm việc cho AI agents và developers.
 

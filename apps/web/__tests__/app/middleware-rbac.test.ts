@@ -29,8 +29,8 @@ import { resolveAuthRedirect } from '@/middleware'
 const allow = null // resolveAuthRedirect returns null → allow request
 
 describe('resolveAuthRedirect — unauthenticated', () => {
-  it('redirects / to /login', () => {
-    expect(resolveAuthRedirect('/', false, undefined)).toBe('/login')
+  it('allows the public home page /', () => {
+    expect(resolveAuthRedirect('/', false, undefined)).toBe(allow)
   })
 
   it('redirects /manager/dashboard to /login', () => {

@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { ChatPanel } from '../../manager/chat/_components/ChatPanel'
 
 export const metadata = {
-  title: 'Trợ lý Thị trường | DX-AgriMarket',
+  title: 'Trợ lý Thị trường',
   description: 'Hỏi đáp thông tin thị trường nông sản với trợ lý AI',
 }
 

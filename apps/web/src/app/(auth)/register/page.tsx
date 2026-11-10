@@ -8,11 +8,12 @@ import styles from './register.module.css'
 import { RegisterForm } from './_components/register-form'
 
 export const metadata: Metadata = {
-  title: 'Đăng ký tài khoản | DX-AgriMarket',
-  description: 'Đăng ký tham gia hệ thống quản lý HTX nông nghiệp DX-AgriMarket',
+  title: 'Đăng ký tài khoản',
+  description: `Đăng ký tham gia hệ thống quản lý HTX chè ${BRAND_NAME}`,
 }
 
 import { prisma } from '@/infrastructure/db/prisma.client';
+import { BRAND_NAME } from '@/lib/brand'
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,7 @@ export default async function RegisterPage() {
       <aside className={styles.authSide} data-testid="register-side">
         <div className={styles.authSideBrand}>
           <span className={styles.brandIcon}><Leaf size={24} /></span>
-          <strong>DX AgriMarket</strong>
+          <strong>{BRAND_NAME}</strong>
         </div>
 
         <div className={styles.authSideContent}>

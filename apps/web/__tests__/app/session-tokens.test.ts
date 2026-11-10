@@ -241,7 +241,12 @@ describe('middleware with a failed refresh', () => {
 
   it('middleware redirects to /login when session.error is RefreshFailed, including from a page request', () => {
     expectRedirectToLogin(handler(pageRequest('/manager/dashboard', failedSession), {}))
-    expectRedirectToLogin(handler(pageRequest('/', failedSession), {}))
+  })
+
+  it('serves the public home page (with its sign-in button) instead of the dashboard redirect', () => {
+    const response = handler(pageRequest('/', failedSession), {})
+    expect(response.status).toBe(200)
+    expect(response.headers.get('location')).toBeNull()
   })
 
   it('answers 401 on an API route', () => {

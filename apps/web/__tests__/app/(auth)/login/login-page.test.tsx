@@ -23,9 +23,14 @@ describe('Login Page', () => {
     mockSearchParams = new URLSearchParams();
   });
 
-  it('1.5a-UNIT-001: renders brand name DX AgriMarket', () => {
+  it('1.5a-UNIT-001: renders brand name OpenTea DX-OS', () => {
     render(<LoginPage />)
-    expect(screen.getByText('DX AgriMarket')).toBeInTheDocument()
+    expect(screen.getByText('OpenTea DX-OS')).toBeInTheDocument()
+  })
+
+  it('has a theme toggle', () => {
+    render(<LoginPage />)
+    expect(screen.getByRole('button', { name: /giao diện/i })).toBeInTheDocument()
   })
 
   it('1.5a-UNIT-002: renders subtitle Hệ điều hành số Nông nghiệp', () => {
@@ -47,7 +52,7 @@ describe('Login Page', () => {
 
   it('1.5a-UNIT-005: login button present with type submit', () => {
     render(<LoginPage />)
-    const button = screen.getByRole('button')
+    const button = screen.getByRole('button', { name: 'Tiếp tục với Keycloak' })
     expect(button).toBeInTheDocument()
     expect(button).toHaveAttribute('type', 'button')
   })

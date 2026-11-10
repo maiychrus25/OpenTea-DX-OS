@@ -5,9 +5,10 @@ import { Metadata } from 'next'
 import { Leaf } from 'lucide-react'
 import styles from './forgot-pin.module.css'
 import { ForgotPinForm } from './_components/forgot-pin-form'
+import { BRAND_NAME } from '@/lib/brand'
 
 export const metadata: Metadata = {
-  title: 'Quên mã PIN | DX-AgriMarket',
+  title: 'Quên mã PIN',
   description: 'Khôi phục mã PIN đăng nhập hệ thống HTX nông nghiệp',
 }
 
@@ -18,7 +19,7 @@ export default function ForgotPinPage() {
       <aside className={styles.authSide} data-testid="forgot-pin-side">
         <div className={styles.authSideBrand}>
           <span className={styles.brandIcon}><Leaf size={24} /></span>
-          <strong>DX AgriMarket</strong>
+          <strong>{BRAND_NAME}</strong>
         </div>
 
         <div className={styles.authSideContent}>

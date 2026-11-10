@@ -6,7 +6,7 @@ import { auth } from '@/auth'
 import { ChatInterface } from '@/components/ui/chat-interface/chat-interface'
 
 export const metadata = {
-  title: 'Trợ lý Kỹ thuật | DX-AgriMarket',
+  title: 'Trợ lý Kỹ thuật',
   description: 'Hỏi đáp thông tin kỹ thuật canh tác với trợ lý AI',
 }
 

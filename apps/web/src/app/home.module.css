@@ -1,0 +1,197 @@
+/* SPDX-License-Identifier: MIT
+   SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-gutter);
+  background:
+    radial-gradient(circle at 10% 0%, var(--secondary), transparent 40%),
+    radial-gradient(circle at 100% 100%, var(--color-accent-subtle), transparent 35%),
+    var(--color-surface-page);
+  color: var(--color-ink-primary);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  max-width: 1040px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.brandIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--rounded-lg);
+  background: var(--sidebar-bg);
+  color: var(--accent-lime);
+}
+
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  gap: var(--spacing-8);
+  max-width: 1040px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--spacing-10) 0;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3rem);
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-primary);
+}
+
+.lead {
+  margin: 0;
+  max-width: 34rem;
+  font-size: var(--font-size-body-large);
+  line-height: 1.6;
+  color: var(--color-ink-secondary);
+}
+
+.signIn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  min-height: 44px;
+  padding: var(--spacing-3) var(--spacing-6);
+  border-radius: var(--rounded-md);
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.signIn:hover {
+  background: var(--color-primary-hover);
+}
+
+.signIn:focus-visible,
+.lotButton:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.lookup {
+  background: var(--color-surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--spacing-6);
+}
+
+.lookupTitle {
+  margin: 0 0 var(--spacing-4);
+  font-size: var(--font-size-h2);
+  font-weight: 600;
+}
+
+.lotForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.lotLabel {
+  font-size: var(--font-size-label);
+  font-weight: 600;
+}
+
+.lotRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.lotInput {
+  flex: 1 1 12rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 var(--spacing-4);
+  border: 1.5px solid var(--border);
+  border-radius: var(--rounded-md);
+  background: var(--color-surface-card);
+  color: var(--color-ink-primary);
+  font: inherit;
+  font-family: var(--font-family-mono);
+}
+
+.lotInput::placeholder {
+  color: var(--color-ink-tertiary);
+}
+
+.lotInput:focus-visible {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px var(--secondary);
+}
+
+.lotInput[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.lotButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  min-height: 44px;
+  padding: 0 var(--spacing-5);
+  border: none;
+  border-radius: var(--rounded-md);
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.lotButton:hover {
+  background: var(--color-accent-hover);
+}
+
+.lotHint,
+.lotError {
+  margin: 0;
+  font-size: var(--font-size-label);
+}
+
+.lotHint {
+  color: var(--color-ink-tertiary);
+}
+
+.lotError {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+@media (min-width: 1024px) {
+  .main {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    align-items: center;
+  }
+}

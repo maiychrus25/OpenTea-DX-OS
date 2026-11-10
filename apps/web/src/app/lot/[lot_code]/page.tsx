@@ -30,14 +30,14 @@ export async function generateMetadata({ params }: { params: Promise<{ lot_code:
     decoded = decodeURIComponent(lot_code).normalize('NFC')
   } catch {
     return {
-      title: `Không tìm thấy lô hàng | DX AgriMarket`,
+      title: `Không tìm thấy lô hàng`,
       description: `Mã lô không hợp lệ`,
       robots: { index: false, follow: false },
     }
   }
   if (!decoded || decoded.length > 100 || /[\/\r\n?#]/.test(decoded)) {
     return {
-      title: `Không tìm thấy lô hàng | DX AgriMarket`,
+      title: `Không tìm thấy lô hàng`,
       description: `Mã lô không hợp lệ`,
       robots: { index: false, follow: false },
     }
@@ -45,13 +45,13 @@ export async function generateMetadata({ params }: { params: Promise<{ lot_code:
   const data = await getCachedTrace(decoded)
   if (!data) {
     return {
-      title: `Không tìm thấy lô hàng | DX AgriMarket`,
+      title: `Không tìm thấy lô hàng`,
       description: `Lô hàng ${decoded} không tồn tại`,
       robots: { index: false, follow: false },
     }
   }
   return {
-    title: `Truy xuất ${decoded} | DX AgriMarket`,
+    title: `Truy xuất ${decoded}`,
     description: `Xem thông tin truy xuất nguồn gốc lô hàng ${decoded}`,
   }
 }

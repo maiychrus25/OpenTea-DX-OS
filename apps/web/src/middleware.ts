@@ -46,6 +46,7 @@ export function resolveAuthRedirect(
       return 'UNAUTHORIZED_API'
     }
     if (
+      pathname === '/' ||
       pathname === '/login' ||
       pathname === '/register' ||
       pathname === '/forgot-pin' ||
@@ -95,5 +96,5 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|sw\\.js|workbox-.*\\.js|manifest\\.json|api/auth|api/health|api/dev-login|sample-certificate\\.pdf).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sw\\.js|workbox-.*\\.js|manifest\\.json|icon-\\d+x\\d+\\.png|api/auth|api/health|api/dev-login|sample-certificate\\.pdf).*)'],
 }

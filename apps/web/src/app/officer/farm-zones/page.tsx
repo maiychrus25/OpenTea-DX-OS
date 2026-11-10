@@ -9,7 +9,7 @@ import Link from 'next/link'
 const FarmZoneReadOnly = dynamic(() => import('@/app/manager/farm-zones/_components/FarmZoneReadOnly'), { ssr: false })
 
 export const metadata: Metadata = {
-  title: 'Bản đồ Vùng trồng | DX-AgriMarket',
+  title: 'Bản đồ Vùng trồng',
 }
 
 export default function OfficerFarmZonesPage() {

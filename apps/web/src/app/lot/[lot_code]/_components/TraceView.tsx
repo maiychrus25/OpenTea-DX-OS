@@ -6,6 +6,7 @@ import { Info, Lock, Hourglass } from 'lucide-react';
 import { LotTraceData } from '@/domain/entities/lot-trace-data';
 import { Pill } from '@/components/ui/Pill/Pill';
 import styles from '../trace.module.css';
+import { BRAND_NAME } from '@/lib/brand'
 
 interface TraceViewProps {
   data: LotTraceData;
@@ -53,7 +54,7 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
       )}
       <header className={styles.traceHeader}>
         <h1>Truy xuất nguồn gốc</h1>
-        <p>DX AgriMarket</p>
+        <p>{BRAND_NAME}</p>
       </header>
 
       {/* QR Code Section */}
@@ -208,7 +209,7 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
       {/* Mandatory disclaimer */}
       <div className={styles.disclaimer}>
         <Info className={styles.disclaimerIcon} />
-        <p>DX AgriMarket không chỉnh sửa hoặc xác nhận thay cho cán bộ kỹ thuật. Thông tin hiển thị được ghi nhận bởi cán bộ kỹ thuật được phân công.</p>
+        <p>{BRAND_NAME} không chỉnh sửa hoặc xác nhận thay cho cán bộ kỹ thuật. Thông tin hiển thị được ghi nhận bởi cán bộ kỹ thuật được phân công.</p>
       </div>
     </div>
   );

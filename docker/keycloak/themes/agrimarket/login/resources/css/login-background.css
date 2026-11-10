@@ -5,7 +5,7 @@
 .login-pf body,
 body {
   background-image:
-    radial-gradient(circle at 12% 16%, rgba(214, 240, 92, 0.25), transparent 28%),
+    radial-gradient(circle at 12% 16%, rgba(242, 181, 68, 0.22), transparent 28%),
     radial-gradient(circle at 88% 84%, rgba(16, 185, 129, 0.2), transparent 30%),
     linear-gradient(135deg, #123d31 0%, #175b46 48%, #e8f3e5 48.2%, #f7faf4 100%) !important;
   background-color: #f7faf4 !important;

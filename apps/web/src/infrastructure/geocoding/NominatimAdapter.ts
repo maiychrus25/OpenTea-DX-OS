@@ -4,7 +4,7 @@
 import { GeocodingPort, GeocodingResult } from '@/domain/shared/ports/GeocodingPort'
 import { DomainError } from '@/domain/errors'
 
-const NOMINATIM_USER_AGENT = 'DX-AgriMarket/1.0 (contact@htx-md2.vn)'
+const NOMINATIM_USER_AGENT = 'OpenTea-DX-OS/1.0 (contact@htx-md2.vn)'
 
 export class NominatimGeocodingAdapter implements GeocodingPort {
   async search(query: string): Promise<GeocodingResult[]> {

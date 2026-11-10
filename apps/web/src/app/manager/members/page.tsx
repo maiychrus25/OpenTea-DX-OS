@@ -6,7 +6,7 @@ import { Metadata } from 'next';
 import { MemberList } from './_components/member-list';
 
 export const metadata: Metadata = {
-  title: 'Member Management | DX-AgriMarket',
+  title: 'Member Management',
   description: 'Manage cooperative members and invitations.',
 };
 
