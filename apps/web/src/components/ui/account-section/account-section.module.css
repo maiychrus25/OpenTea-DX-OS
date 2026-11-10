@@ -41,13 +41,13 @@
 }
 
 .name {
-  font-size: var(--font-size-large);
+  font-size: var(--font-size-body-large);
   font-weight: 600;
   color: var(--foreground);
 }
 
 .roleBadge {
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-label);
   color: var(--muted-foreground);
 }
 
@@ -86,7 +86,7 @@
 }
 
 .statusBadge {
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-label);
   padding: 0.25rem 0.5rem;
   border-radius: var(--radius-md);
   font-weight: 500;
@@ -114,7 +114,7 @@
 .logoutBtn {
   margin-top: var(--spacing-4);
   background-color: var(--color-danger);
-  color: white;
+  color: var(--color-ink-inverse);
   width: 100%;
 }
 

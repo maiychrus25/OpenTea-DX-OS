@@ -28,7 +28,7 @@
 .approveBtn {
   padding: 0.625rem 1.5rem;
   background: var(--color-success);
-  color: white;
+  color: var(--color-ink-inverse);
   border: none;
   border-radius: 8px;
   font-weight: 600;
@@ -94,7 +94,7 @@
 
 .successBanner {
   background: var(--color-success);
-  color: white;
+  color: var(--color-ink-inverse);
   padding: 1rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;
@@ -102,8 +102,8 @@
 }
 
 .errorBanner {
-  background: var(--color-error, #dc2626);
-  color: white;
+  background: var(--color-danger);
+  color: var(--color-ink-inverse);
   padding: 1rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;

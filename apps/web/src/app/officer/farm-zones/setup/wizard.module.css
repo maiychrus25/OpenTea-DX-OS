@@ -89,7 +89,7 @@
 
 .tab.active .tabNumber {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-foreground);
 }
 
 .tab.done {
@@ -98,7 +98,7 @@
 
 .tab.done .tabNumber {
   background: var(--color-success);
-  color: white;
+  color: var(--color-ink-inverse);
 }
 
 /* 2-Column Layout */
@@ -246,7 +246,7 @@
 .btnPrimary {
   padding: 0.75rem 1.5rem;
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-foreground);
   font-weight: 500;
   border: none;
   border-radius: var(--rounded-md);
@@ -282,7 +282,7 @@
   bottom: 1rem;
   left: 50%;
   transform: translateX(-50%);
-  background: white;
+  background: var(--color-surface-card);
   padding: 0.75rem 1.5rem;
   border-radius: 99px;
   box-shadow: var(--shadow-card);
