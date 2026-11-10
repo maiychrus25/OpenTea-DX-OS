@@ -6,6 +6,7 @@ export interface RegisterData {
   phone: string;
   pin: string;
   htxId: string;
+  htxCode: string;
 }
 
 export interface MemberData {
@@ -30,7 +31,10 @@ export interface AuthManagementPort {
   registerFarmer(data: RegisterData, enabled: boolean): Promise<string>;
   registerUser(data: RegisterData, role: string, enabled: boolean): Promise<string>;
   
-  listUsersByRole(role: string): Promise<MemberData[]>;
+  /** Users holding `role` whose htx_code attribute equals `htxCode`. */
+  listUsersByRole(role: string, htxCode: string): Promise<MemberData[]>;
+  /** The user's htx_code, or null when the user or the attribute is missing. */
+  getUserHtxCode(userId: string): Promise<string | null>;
   updateUserStatus(userId: string, enabled: boolean): Promise<void>;
   deleteUser(userId: string): Promise<void>;
 }

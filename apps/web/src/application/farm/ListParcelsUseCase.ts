@@ -5,7 +5,7 @@ import { ParcelPort, ParcelFilters } from '@/domain/farm/ports/ParcelPort'
 import { ForbiddenError } from '@/domain/errors'
 
 export class ListParcelsUseCase {
-  constructor(private readonly parcelPort: ParcelPort) {}
+  constructor(private readonly parcelPort: Pick<ParcelPort, 'findAll'>) {}
 
   async execute(filters: ParcelFilters, userRole: string, userHouseholdId?: string) {
     if (userRole === 'FARMER') {

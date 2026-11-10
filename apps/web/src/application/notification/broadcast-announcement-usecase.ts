@@ -6,7 +6,7 @@ import { NotificationPort } from '@/domain/ports/notification-port';
 export class BroadcastAnnouncementUseCase {
   constructor(private readonly notificationRepo: NotificationPort) {}
 
-  async execute(title: string, body: string, senderId: string): Promise<void> {
+  async execute(title: string, body: string, senderId: string, recipientIds: string[]): Promise<void> {
     if (!title || title.trim() === '') {
       throw new Error('Title is required');
     }
@@ -14,6 +14,6 @@ export class BroadcastAnnouncementUseCase {
       throw new Error('Body is required');
     }
 
-    await this.notificationRepo.broadcastAnnouncement(title, body, senderId);
+    await this.notificationRepo.broadcastAnnouncement(title, body, senderId, recipientIds);
   }
 }

@@ -4,8 +4,12 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
-import { parcelCreateSchema } from '@/lib/validations/parcel.schema'
+import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
+import { parcelCreateSchema, parcelListQuerySchema } from '@/lib/validations/parcel.schema'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
+import { GatewayParcelReader } from '@/infrastructure/core/gateway-parcel-reader'
 import { ListParcelsUseCase } from '@/application/farm/ListParcelsUseCase'
 import { CreateParcelUseCase } from '@/application/farm/CreateParcelUseCase'
 import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHouseholdUseCase'
@@ -26,13 +30,12 @@ async function getParcels(request: Request) {
 
   const url = new URL(request.url)
   const householdId = url.searchParams.get('household_id') ?? undefined
-  const status = url.searchParams.get('status') ?? undefined
+  const { status } = parcelListQuerySchema.parse({ status: url.searchParams.get('status') || undefined })
 
   const role = (session.user as any).role
   const userHouseholdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined
 
-  const repo = new PrismaParcelRepository()
-  const useCase = new ListParcelsUseCase(repo)
+  const useCase = new ListParcelsUseCase(new GatewayParcelReader(new CoreGatewayClient(role)))
   const data = await useCase.execute({ household_id: householdId, status }, role.toUpperCase(), userHouseholdId)
   return NextResponse.json({ data })
 }
@@ -52,6 +55,8 @@ async function postParcel(request: Request) {
   if (!parse.success) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
+
+  await new TenantGuard(await requireTenant()).household(parse.data.household_id)
 
   const repo = new PrismaParcelRepository()
   const useCase = new CreateParcelUseCase(repo)

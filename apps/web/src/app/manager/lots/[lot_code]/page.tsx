@@ -8,7 +8,8 @@ import { notFound, redirect } from 'next/navigation'
 import { Pill } from '@/components/ui'
 import { Check } from 'lucide-react'
 import { GetLotUseCase } from '@/application/lot/GetLotUseCase'
-import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
+import { GatewayLotReader } from '@/infrastructure/core/gateway-lot-reader'
 import { StepTrack } from './_components/step-track'
 import { QrVisual } from './_components/qr-visual'
 import { CertificateManager } from '@/components/features/certificate/CertificateManager'
@@ -25,7 +26,7 @@ export default async function LotDetailPage({ params }: PageProps) {
   }
 
   const { lot_code: lotId } = params
-  const lot = await new GetLotUseCase(new PrismaLotRepository()).execute(lotId)
+  const lot = await new GetLotUseCase(new GatewayLotReader(new CoreGatewayClient('manager'))).execute(lotId)
 
   if (!lot || (lot.status !== 'READY' && lot.status !== 'QR_EXPORTED')) {
     notFound()

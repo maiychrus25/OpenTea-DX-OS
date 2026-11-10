@@ -10,6 +10,7 @@ import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import styles from './chat-interface.module.css'
 import { ChatMessage } from './mock-data'
+import { redirectToLogin } from '@/lib/api/redirect-to-login'
 
 interface ChatInterfaceProps {
   role: 'manager' | 'officer'
@@ -84,6 +85,11 @@ export function ChatInterface({ role }: ChatInterfaceProps) {
           history,
         }),
       })
+
+      if (res.status === 401) {
+        redirectToLogin()
+        return
+      }
 
       if (!res.ok) {
         throw new Error(`API error: ${res.status}`)

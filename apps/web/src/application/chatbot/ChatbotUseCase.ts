@@ -6,6 +6,7 @@ import OpenAI from 'openai'
 import { MarketDataPort } from '@/domain/ports/market-data-port'
 import { ChatHistoryPort } from '@/domain/ports/chat-history-port'
 import { logger } from '@/lib/logger'
+import { CoreUnauthorizedError } from '@/domain/errors'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -42,20 +43,22 @@ Trả lời bằng tiếng Việt. Cuối mỗi câu trả lời, liệt kê ngu
 Nếu không có dữ liệu trong tài liệu, nói rõ "Tài liệu kỹ thuật hiện tại không đề cập đến vấn đề này."`
 
 import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
+import { documentRoot } from '@/domain/document/document-namespace'
 
 export class ChatbotUseCase {
   private client: OpenAI | null = null
   private model: string
 
+  /** getToken is only called without a Groq key: the local LLM sits behind the core gateway. */
   constructor(
     private documentStorage?: DocumentStoragePort,
     private chatHistory?: ChatHistoryPort,
-    private marketData?: MarketDataPort
+    private marketData?: MarketDataPort,
+    private getToken?: () => Promise<string>,
+    private htxCode?: string
   ) {
-    this.model = process.env.OLLAMA_MODEL || 'qwen2:0.5b'
-
     const groqApiKey = process.env.GROQ_API_KEY
-    const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://ollama:11434'
+    this.model = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b'
 
     if (groqApiKey && groqApiKey !== 'your_groq_api_key_here') {
       // Primary: Groq cloud API (faster, requires API key)
@@ -65,17 +68,19 @@ export class ChatbotUseCase {
         baseURL: 'https://api.groq.com/openai/v1',
       })
       logger.info('ChatbotUseCase: using Groq API', { model: this.model })
-    } else {
-      // Fallback: Ollama local (OpenAI-compatible endpoint)
-      // NOTE: CPU-only mode requires a small model (<=500MB). qwen2:0.5b is the
-      // minimum viable option — quality is limited. For production, set GROQ_API_KEY.
-      this.model = process.env.OLLAMA_MODEL || 'qwen2:0.5b'
-      this.client = new OpenAI({
-        apiKey: 'ollama',  // Required by openai client but ignored by Ollama
-        baseURL: `${ollamaBaseUrl}/v1`,
-      })
-      logger.info('ChatbotUseCase: using Ollama local fallback', { model: this.model, baseURL: ollamaBaseUrl })
     }
+  }
+
+  /** Groq client, or the gateway's local LLM authenticated as the caller. Throws when there is no token. */
+  private async resolveClient(): Promise<OpenAI> {
+    if (this.client) return this.client
+    if (!this.getToken) throw new CoreUnauthorizedError()
+    // NOTE: CPU-only mode requires a small model (<=500MB). qwen2.5:0.5b is the
+    // minimum viable option — quality is limited. For production, set GROQ_API_KEY.
+    return new OpenAI({
+      apiKey: await this.getToken(),
+      baseURL: `${process.env.CORE_GATEWAY_URL}/api/ai/llm/v1`,
+    })
   }
 
   async execute(
@@ -85,10 +90,7 @@ export class ChatbotUseCase {
     sessionId?: string,
     chatType: 'market' | 'technical' = 'market'
   ): Promise<ReadableStream> {
-    if (!this.client) {
-      return this.unavailableStream()
-    }
-
+    const client = await this.resolveClient()
     const encoder = new TextEncoder()
 
     // Persist user message
@@ -126,9 +128,13 @@ export class ChatbotUseCase {
         if (!this.documentStorage) {
           throw new Error('DocumentStoragePort is required for technical chatbot')
         }
+        if (!this.htxCode) {
+          throw new Error('An HTX is required for the technical chatbot documents')
+        }
+        const root = documentRoot(this.htxCode)
         const [resourceDocs, areaDocs] = await Promise.all([
-          this.documentStorage.listDocuments('para/Resources/'),
-          this.documentStorage.listDocuments('para/Areas/')
+          this.documentStorage.listDocuments(`${root}Resources/`),
+          this.documentStorage.listDocuments(`${root}Areas/`)
         ])
         const docs = [...resourceDocs, ...areaDocs]
         const textDocs = docs.filter(d => !d.isDir && (d.name.endsWith('.txt') || d.name.endsWith('.md')))
@@ -165,7 +171,7 @@ export class ChatbotUseCase {
         { role: 'user', content: message },
       ]
 
-      const stream = await this.client.chat.completions.create({
+      const stream = await client.chat.completions.create({
         model: this.model,
         messages,
         stream: true,
@@ -226,18 +232,23 @@ export class ChatbotUseCase {
         },
       })
     } catch (error) {
-      logger.error('Groq/Ollama API error', { error })
+      logger.error('LLM API error', { error: error instanceof OpenAI.APIError ? error.status : error })
+      // Only the gateway path: a refused token must send the client to login. Groq keeps its generic message.
+      if (!this.client && error instanceof OpenAI.APIError) {
+        if (error.status === 401) throw new CoreUnauthorizedError()
+        if (error.status === 429) return this.unavailableStream('Trợ lý AI đang bận. Vui lòng thử lại sau ít phút.')
+      }
       return this.unavailableStream()
     }
   }
 
-  private unavailableStream(): ReadableStream {
+  private unavailableStream(message = 'Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau hoặc xem bản tin thị trường.'): ReadableStream {
     const encoder = new TextEncoder()
     return new ReadableStream({
       start(controller) {
         controller.enqueue(encoder.encode(JSON.stringify({
           error: true,
-          message: 'Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau hoặc xem bản tin thị trường.',
+          message,
         }) + '\n'))
         controller.close()
       },

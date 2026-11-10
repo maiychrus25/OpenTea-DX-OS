@@ -3,6 +3,7 @@
 
 import { AuthManagementPort, RegisterData, MemberData } from '@/domain/auth/ports/auth-management.port'
 import { logger } from '@/lib/logger'
+import { ValidationError } from '@/domain/errors'
 
 export interface KeycloakUserResponse {
   id: string;
@@ -16,6 +17,7 @@ export interface KeycloakUserResponse {
     fullName?: string[];
     phone?: string[];
     htxId?: string[];
+    htx_code?: string[];
     [key: string]: any;
   };
 }
@@ -32,8 +34,13 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
   constructor() {
     this.baseUrl = process.env.KEYCLOAK_INTERNAL_URL?.replace('/realms/agrimarket', '') || 'http://keycloak:8080';
     this.realm = 'agrimarket';
-    this.adminUser = process.env.KC_BOOTSTRAP_ADMIN_USERNAME || 'admin';
-    this.adminPass = process.env.KC_BOOTSTRAP_ADMIN_PASSWORD || 'admin';
+    const adminUser = process.env.KC_BOOTSTRAP_ADMIN_USERNAME || process.env.KEYCLOAK_ADMIN;
+    const adminPass = process.env.KC_BOOTSTRAP_ADMIN_PASSWORD || process.env.KEYCLOAK_ADMIN_PASSWORD;
+    if (process.env.NODE_ENV === 'production' && !(adminUser && adminPass)) {
+      throw new Error('Keycloak admin credentials are not configured: set KEYCLOAK_ADMIN and KEYCLOAK_ADMIN_PASSWORD');
+    }
+    this.adminUser = adminUser || 'admin';
+    this.adminPass = adminPass || 'admin';
   }
 
   private async getAdminToken(): Promise<string> {
@@ -87,8 +94,10 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
       attributes: {
         fullName: [data.fullName],
         htxId: [data.htxId],
+        htx_code: [data.htxCode],
         phone: [data.phone]
       },
+      ...(role === 'farmer' ? {} : { requiredActions: ['CONFIGURE_TOTP'] }),
       credentials: [
         {
           type: 'password',
@@ -111,7 +120,7 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
       const errorText = await createRes.text();
       logger.error('Failed to create Keycloak user', { status: createRes.status, errorText });
       if (createRes.status === 409) {
-        throw new Error('Số điện thoại này đã được đăng ký!');
+        throw new ValidationError('Số điện thoại này đã được đăng ký!');
       }
       throw new Error('Lỗi hệ thống khi tạo tài khoản');
     }
@@ -159,9 +168,10 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
     }
   }
 
-  async listUsersByRole(role: string): Promise<MemberData[]> {
+  async listUsersByRole(role: string, htxCode: string): Promise<MemberData[]> {
     const token = await this.getAdminToken();
-    const usersUrl = `${this.baseUrl}/admin/realms/${this.realm}/roles/${role}/users`;
+    // shortcut: one large page covers the realm because filtering is client-side; page with first/max past 10000 users per role.
+    const usersUrl = `${this.baseUrl}/admin/realms/${this.realm}/roles/${role}/users?max=10000`;
 
     const res = await fetch(usersUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -173,7 +183,7 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
     }
 
     const users = await res.json();
-    return users.map((u: KeycloakUserResponse) => ({
+    return users.filter((u: KeycloakUserResponse) => u.attributes?.htx_code?.[0] === htxCode).map((u: KeycloakUserResponse) => ({
       id: u.id,
       email: u.email || u.username,
       full_name: u.attributes?.fullName?.[0] || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Chưa cập nhật',
@@ -183,6 +193,22 @@ export class KeycloakAdminAdapter implements AuthManagementPort {
       household_id: u.attributes?.htxId?.[0] || null, // we repurpose household_id in UI as htxId for now
       createdTimestamp: u.createdTimestamp,
     }));
+  }
+
+  async getUserHtxCode(userId: string): Promise<string | null> {
+    const token = await this.getAdminToken();
+    const res = await fetch(`${this.baseUrl}/admin/realms/${this.realm}/users/${userId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      logger.error('Failed to read user', { status: res.status, userId });
+      throw new Error('Could not read user');
+    }
+
+    const user: KeycloakUserResponse = await res.json();
+    return user.attributes?.htx_code?.[0] ?? null;
   }
 
   async updateUserStatus(userId: string, enabled: boolean): Promise<void> {

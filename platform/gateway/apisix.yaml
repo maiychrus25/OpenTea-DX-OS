@@ -11,6 +11,9 @@ global_rules:
         allow_headers: "Authorization,Content-Type,x-hasura-role"
         expose_headers: "X-Request-Id"
       limit-count:
+        # Skip the per-IP limit on the internal port: the web server calls from one container IP.
+        _meta:
+          filter: [["server_port", "~=", "9081"]]
         count: 300
         time_window: 60
         key: remote_addr
@@ -78,7 +81,9 @@ routes:
       limit-count:
         count: 30
         time_window: 60
-        key: remote_addr
+        # The web server is the only caller on :9081, so remote_addr would share one budget across users.
+        key_type: var_combination
+        key: "$remote_addr $http_authorization"
         rejected_code: 429
       proxy-rewrite:
         uri: /v1/chat/completions

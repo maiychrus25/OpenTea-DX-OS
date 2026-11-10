@@ -8,8 +8,8 @@ import { NotFoundError } from '@/domain/errors'
 export class GetHtxProfileUseCase {
   constructor(private readonly profileRepo: HtxProfileRepository) {}
 
-  async execute(): Promise<HtxProfile> {
-    const profile = await this.profileRepo.getProfile()
+  async execute(htxCode: string): Promise<HtxProfile> {
+    const profile = await this.profileRepo.getProfile(htxCode)
     if (!profile) {
       throw new NotFoundError('HTX Profile not found')
     }

@@ -27,5 +27,5 @@ export interface WeatherPort {
   /**
    * Retrieves the latest weather cache and 7-day forecast for 10 representative parcels
    */
-  getWeatherForParcels(): Promise<WeatherZoneEntity[]>
+  getWeatherForParcels(htxProfileId: string): Promise<WeatherZoneEntity[]>
 }

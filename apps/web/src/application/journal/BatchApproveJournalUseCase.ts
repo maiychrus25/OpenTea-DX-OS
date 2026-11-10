@@ -3,6 +3,7 @@
 
 import { JournalPort } from '@/domain/journal/ports/JournalPort'
 import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
+import { documentRoot } from '@/domain/document/document-namespace'
 
 export class BatchApproveJournalUseCase {
   constructor(
@@ -10,7 +11,7 @@ export class BatchApproveJournalUseCase {
     private readonly documentStoragePort: DocumentStoragePort
   ) {}
 
-  async execute(entryIds: string[], approvedById: string) {
+  async execute(entryIds: string[], approvedById: string, htxCode: string) {
     const result = await this.journalPort.batchApprove(entryIds, approvedById)
 
     // Generate PARA HTML document for each approved entry
@@ -81,7 +82,7 @@ export class BatchApproveJournalUseCase {
 </body>
 </html>`
             
-            const key = `para/Archives/Journals/Records/${id}.html`
+            const key = `${documentRoot(htxCode)}Archives/Journals/Records/${id}.html`
             await this.documentStoragePort.uploadDocument(key, htmlContent, 'text/html')
           }
         }

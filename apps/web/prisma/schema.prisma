@@ -88,6 +88,7 @@ model HtxProfile {
 
   households    Household[]
   lots          Lot[]
+  notifications Notification[]
 
   @@map("htx_profiles")
 }
@@ -110,6 +111,7 @@ model Household {
   htx_profile_id  String?
   htx_profile     HtxProfile?     @relation(fields: [htx_profile_id], references: [id])
 
+  @@index([htx_profile_id])
   @@map("households")
 }
 
@@ -215,6 +217,9 @@ model Lot {
   packaging_type   String?
   destination      String? // Nơi giao hàng
   buyer_name       String? // Tên người mua
+  packaging_date   DateTime?
+  total_weight_kg  Float?
+  packaging_spec   String?
   status           LotStatus @default(DRAFT)
   qr_image_url     String? // MinIO URL of generated QR PNG
   certificate_keys String[]  @default([]) // MinIO object keys of attached certificates
@@ -228,6 +233,7 @@ model Lot {
   htx_profile_id String?
   htx_profile    HtxProfile? @relation(fields: [htx_profile_id], references: [id])
 
+  @@index([htx_profile_id, status])
   @@map("lots")
 }
 
@@ -252,6 +258,8 @@ model Notification {
   recipient_id          String? // keycloak user ID (null = system broadcast)
   household_id          String?
   household             Household?       @relation("RecipientHousehold", fields: [household_id], references: [id])
+  htx_profile_id        String? // owning HTX of a broadcast (recipient_id is null)
+  htx_profile           HtxProfile?      @relation(fields: [htx_profile_id], references: [id])
   sender_id             String? // keycloak user ID of sender
   is_read               Boolean          @default(false)
   pushed_to_mattermost  Boolean          @default(false) // Story 5.7: track Mattermost push status
@@ -260,6 +268,7 @@ model Notification {
   created_at            DateTime         @default(now())
 
   @@index([recipient_id, is_read])
+  @@index([htx_profile_id])
   @@index([created_at])
   @@index([pushed_to_mattermost, type]) // n8n poll: unpushed high-priority notifications
   @@map("notifications")

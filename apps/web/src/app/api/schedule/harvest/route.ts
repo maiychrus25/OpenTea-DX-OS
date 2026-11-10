@@ -3,7 +3,7 @@
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
 import { PrismaClient } from '@prisma/client'
 import { PrismaCropCycleRepository } from '@/infrastructure/db/farm/PrismaCropCycleRepository'
 import { GetHarvestScheduleUseCase } from '@/application/farm/get-harvest-schedule-use-case'
@@ -19,10 +19,7 @@ const getQuerySchema = z.object({
 })
 
 async function getHarvestSchedule(req: Request) {
-  const session = await auth()
-  if (!session || !session.user || !session.user.id) {
-    return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
-  }
+  const { htxProfileId } = await requireTenant()
 
   const { searchParams } = new URL(req.url)
   const startDateStr = searchParams.get('start_date')
@@ -39,6 +36,7 @@ async function getHarvestSchedule(req: Request) {
   }
 
   const result = await getHarvestScheduleUseCase.execute(
+    htxProfileId,
     validationResult.data.start_date,
     validationResult.data.end_date
   )

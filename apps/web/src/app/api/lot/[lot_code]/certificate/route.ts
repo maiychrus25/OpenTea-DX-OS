@@ -3,6 +3,7 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/infrastructure/db/prisma.client'
+import { isInDocumentRoot } from '@/domain/document/document-namespace'
 
 /**
  * GET /api/lot/[lot_code]/certificate?key=<minio-key>
@@ -11,7 +12,7 @@ import { prisma } from '@/infrastructure/db/prisma.client'
  * Returns a 302 redirect to a short-lived MinIO presigned URL for the
  * requested certificate document.
  *
- * Authorization: the `key` must be present in lot.certificate_keys[].
+ * Authorization: the `key` must be present in lot.certificate_keys[] and sit in the owning HTX's document root.
  * Knowing the key == having implicit read permission (public trace page).
  *
  * Scope: Story 7.9 / Issue #169 — certificate endpoint gap fix.
@@ -36,7 +37,7 @@ export async function GET(
   // Look up the lot — only QR_EXPORTED lots have public certificates
   const lot = await prisma.lot.findUnique({
     where: { lot_code: decoded },
-    select: { status: true, certificate_keys: true },
+    select: { status: true, certificate_keys: true, htx_profile: { select: { htx_code: true } } },
   })
 
   if (!lot) {
@@ -53,8 +54,9 @@ export async function GET(
     )
   }
 
-  // Authorization by inclusion — key must be one of the lot's registered certificates
-  if (!lot.certificate_keys.includes(key)) {
+  // Authorization by inclusion — key must be one of the lot's registered certificates.
+  // The namespace check also covers rows written before certificate keys were validated.
+  if (!lot.certificate_keys.includes(key) || !lot.htx_profile || !isInDocumentRoot(key, lot.htx_profile.htx_code)) {
     return NextResponse.json(
       { error: { code: 'FORBIDDEN', message: 'Chứng nhận không thuộc lô hàng này.' } },
       { status: 403 },

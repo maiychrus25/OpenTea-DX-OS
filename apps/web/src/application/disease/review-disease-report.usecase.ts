@@ -6,10 +6,12 @@ import { NotificationPort } from '@/domain/ports/notification-port';
 import { StoragePort } from '@/domain/disease/ports/storage.port';
 import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port';
 import { NotificationType } from '@prisma/client';
+import { documentRoot } from '@/domain/document/document-namespace';
 
 export interface ReviewDiseaseReportCommand {
   reportId: string;
   officerId: string;
+  htxCode: string;
   status: 'CONFIRMED' | 'REJECTED';
   treatment_recommendation: string;
 }
@@ -61,7 +63,7 @@ export class ReviewDiseaseReportUseCase {
 - Hướng dẫn điều trị: ${command.treatment_recommendation}
 `;
         await this.documentStoragePort.uploadDocument(
-          `para/Archives/disease-report-${report.id}.md`,
+          `${documentRoot(command.htxCode)}Archives/disease-report-${report.id}.md`,
           reportContent,
           'text/markdown'
         );
@@ -70,7 +72,7 @@ export class ReviewDiseaseReportUseCase {
         if (report.photo_minio_key) {
           const imageBuffer = await this.storagePort.getFileBuffer(report.photo_minio_key);
           await this.documentStoragePort.uploadDocument(
-            `para/Archives/disease-report-${report.id}.jpg`,
+            `${documentRoot(command.htxCode)}Archives/disease-report-${report.id}.jpg`,
             imageBuffer,
             'image/jpeg'
           );

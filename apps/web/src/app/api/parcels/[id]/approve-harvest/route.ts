@@ -3,6 +3,8 @@
 
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { requireTenant } from '@/lib/api/tenant';
+import { TenantGuard } from '@/lib/api/tenant-guard';
 import { ApproveHarvestUseCase } from '@/application/farm/approve-harvest-usecase';
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository';
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository';
@@ -23,6 +25,7 @@ export async function POST(
 
     const { id } = params;
     const role = session.user.role?.toLowerCase() || '';
+    await new TenantGuard(await requireTenant()).parcel(id);
 
     const useCase = new ApproveHarvestUseCase(
       new PrismaParcelRepository(),
@@ -35,14 +38,14 @@ export async function POST(
 
     return NextResponse.json({ parcel }, { status: 200 });
   } catch (error: unknown) {
+    if (error instanceof NotFoundError) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
     if (error instanceof DomainError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     if (error instanceof ForbiddenError) {
       return NextResponse.json({ error: error.message }, { status: 403 });
-    }
-    if (error instanceof NotFoundError) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
     }
     console.error('ApproveHarvest error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

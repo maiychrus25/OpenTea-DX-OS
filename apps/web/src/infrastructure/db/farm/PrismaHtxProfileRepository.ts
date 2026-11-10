@@ -5,10 +5,8 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { HtxProfilePort, HtxProfile } from '@/domain/farm/ports/HtxProfilePort'
 
 export class PrismaHtxProfileRepository implements HtxProfilePort {
-  async findFirst(): Promise<HtxProfile | null> {
-    const htx = await prisma.htxProfile.findFirst({
-      orderBy: { created_at: 'asc' }
-    })
+  async findByCode(htxCode: string): Promise<HtxProfile | null> {
+    const htx = await prisma.htxProfile.findUnique({ where: { htx_code: htxCode } })
     if (!htx) return null
     return {
       id: htx.id,

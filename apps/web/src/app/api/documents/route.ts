@@ -3,25 +3,30 @@
 
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
+import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { assertReadableDocument } from '@/domain/document/document-namespace'
 import { ListDocumentsUseCase } from '@/application/document/list-documents.usecase'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
+async function listDocuments(req: Request) {
+  const session = await auth()
+  if (!session?.user || (session.user.role !== 'officer' && session.user.role !== 'manager')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const { htxCode } = await requireTenant()
+
+  const { searchParams } = new URL(req.url)
+  const path = searchParams.get('path')
+
+  if (!path) {
+    return NextResponse.json({ error: 'path query parameter is required (e.g., para/<htx>/Projects/)' }, { status: 400 })
+  }
+  assertReadableDocument(path, htxCode)
+
   try {
-    const session = await auth()
-    if (!session?.user || (session.user.role !== 'officer' && session.user.role !== 'manager')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { searchParams } = new URL(req.url)
-    const path = searchParams.get('path')
-
-    if (!path) {
-      return NextResponse.json({ error: 'path query parameter is required (e.g., para/Projects/)' }, { status: 400 })
-    }
-
     // Dependency Injection
     const storagePort = new MinioDocumentAdapter()
     const useCase = new ListDocumentsUseCase(storagePort)
@@ -40,3 +45,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
+
+export const GET = withErrorHandler(listDocuments)

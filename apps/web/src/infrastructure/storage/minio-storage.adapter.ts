@@ -3,6 +3,7 @@
 
 import { Client } from 'minio'
 import { StoragePort, UploadResult } from '@/domain/disease/ports/storage.port'
+import { documentRoot } from '@/domain/document/document-namespace'
 
 export class MinioStorageAdapter implements StoragePort {
   private minioClient: Client
@@ -59,8 +60,8 @@ export class MinioStorageAdapter implements StoragePort {
     })
   }
 
-  async uploadFile(fileBuffer: Buffer, fileName: string, mimeType: string): Promise<UploadResult> {
-    const key = `para/Archives/Disease_Photos/${Date.now()}-${fileName}`
+  async uploadFile(fileBuffer: Buffer, fileName: string, mimeType: string, htxCode: string): Promise<UploadResult> {
+    const key = `${documentRoot(htxCode)}Archives/Disease_Photos/${Date.now()}-${fileName}`
 
     // Ensure bucket exists
     const exists = await this.minioClient.bucketExists(this.bucketName)

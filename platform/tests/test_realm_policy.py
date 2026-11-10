@@ -45,16 +45,34 @@ class RealmPolicyTest(unittest.TestCase):
             self.assertEqual(user.get("attributes", {}).get("htx_code"), ["MD2"], name)
         farmer = by_key(REALM["users"], "username", "farmer1")
         self.assertNotIn("CONFIGURE_TOTP", farmer.get("requiredActions", []))
+        self.assertEqual(farmer.get("attributes", {}).get("htx_code"), ["MD2"], "farmer1")
 
     def test_no_realm_role_maps_to_hasura_superuser(self):
         # Hasura treats the role name "admin" as superuser and takes allowed roles from realm_access.roles.
         names = {role["name"].lower() for role in REALM["roles"]["realm"]}
         self.assertFalse(names & {"admin", "hasura-admin"}, names)
 
+    def test_sso_session_matches_app_session(self):
+        self.assertEqual(REALM.get("ssoSessionIdleTimeout"), 28800)
+        self.assertEqual(REALM.get("ssoSessionMaxLifespan"), 28800)
+
+    def test_refresh_tokens_are_not_single_use(self):
+        # Concurrent requests refresh with the same token; a rotated token would end the session of the loser.
+        self.assertFalse(REALM.get("revokeRefreshToken", False))
+
     def test_otp_policy(self):
         self.assertEqual(REALM.get("otpPolicyType"), "totp")
         self.assertEqual(REALM.get("otpPolicyDigits"), 6)
         self.assertEqual(REALM.get("otpPolicyPeriod"), 30)
+
+    def test_account_attributes_declared_admin_only(self):
+        # Keycloak drops undeclared attributes on Admin API writes, and the web app writes these on every new account.
+        components = REALM["components"]["org.keycloak.userprofile.UserProfileProvider"]
+        profile = json.loads(components[0]["config"]["kc.user.profile.config"][0])
+        for name in ("fullName", "htxId", "phone"):
+            attr = by_key(profile["attributes"], "name", name)
+            self.assertEqual(attr["permissions"], {"view": ["admin"], "edit": ["admin"]}, name)
+            self.assertNotIn("required", attr, name)
 
     def test_htx_code_declared_admin_only(self):
         components = REALM["components"]["org.keycloak.userprofile.UserProfileProvider"]

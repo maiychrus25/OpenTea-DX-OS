@@ -34,8 +34,8 @@ export class GetNotificationsUseCase {
     }
   }
 
-  async execute(userId: string, limit: number, filter?: string): Promise<{ notifications: NotificationDTO[], unreadCount: number }> {
-    const rawNotifications = await this.notificationPort.getRecentByUserId(userId, limit, filter);
+  async execute(userId: string, htxProfileId: string, limit: number, filter?: string): Promise<{ notifications: NotificationDTO[], unreadCount: number }> {
+    const rawNotifications = await this.notificationPort.getRecentByUserId(userId, htxProfileId, limit, filter);
     const notifications = rawNotifications.map((n) => ({
       id: n.id,
       title: n.title,

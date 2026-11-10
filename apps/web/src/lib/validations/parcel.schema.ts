@@ -18,5 +18,9 @@ export const parcelCreateSchema = z.object({
 
 export const parcelUpdateSchema = parcelCreateSchema.partial().omit({ household_id: true, parcel_code: true })
 
+export const parcelListQuerySchema = z.object({
+  status: z.enum(['SOWING', 'TENDING', 'HARVEST_APPROVED', 'HARVESTED', 'DRAFT']).optional(),
+})
+
 export type ParcelCreateInput = z.infer<typeof parcelCreateSchema>
 export type ParcelUpdateInput = z.infer<typeof parcelUpdateSchema>

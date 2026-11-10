@@ -4,7 +4,7 @@
 import { HouseholdPort } from '@/domain/farm/ports/HouseholdPort'
 
 export class ListHouseholdsUseCase {
-  constructor(private readonly householdPort: HouseholdPort) {}
+  constructor(private readonly householdPort: Pick<HouseholdPort, 'findAll'>) {}
 
   async execute(htxProfileId: string) {
     return this.householdPort.findAll(htxProfileId)

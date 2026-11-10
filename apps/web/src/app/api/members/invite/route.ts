@@ -2,13 +2,14 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter'
 import { InviteMemberUseCase } from '@/application/auth/invite-member.use-case'
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
 import { z } from 'zod'
+import { ValidationError } from '@/domain/errors'
 
 const ALLOWED_ROLES = ['farmer', 'officer'] as const
 
@@ -26,14 +27,8 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 async function inviteMember(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
-  }
-
-  // Lấy tạm role do NextAuth type chưa extend
-  const currentRole = (session.user as any).role
-  if (currentRole !== 'manager') {
+  const tenant = await requireTenant()
+  if (tenant.role !== 'manager') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Chỉ Trưởng HTX mới được mời thành viên' } }, { status: 403 })
   }
 
@@ -51,7 +46,7 @@ async function inviteMember(request: Request) {
     const htxRepo = new PrismaHtxProfileRepository()
     
     const useCase = new InviteMemberUseCase(keycloakAdapter, householdRepo, htxRepo)
-    const result = await useCase.execute(parse.data)
+    const result = await useCase.execute(parse.data, tenant.htxCode)
 
     const roleLabel = ROLE_LABELS[role] || role
 
@@ -64,6 +59,7 @@ async function inviteMember(request: Request) {
       }
     }, { status: 201 })
   } catch (error: unknown) {
+    if (error instanceof ValidationError) throw error
     console.error('Invite Member Error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json({ error: { message: errorMessage } }, { status: 500 })

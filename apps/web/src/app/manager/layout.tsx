@@ -4,6 +4,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
+import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
 import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landmark, CheckSquare, Bell, Users, Calendar } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
@@ -15,7 +16,8 @@ export default async function ManagerLayout({ children }: { children: React.Reac
   if (session.user.role !== 'manager') redirect('/unauthorized')
 
   const profileRepo = new PrismaHtxProfileRepository(prisma)
-  const htxProfile = await profileRepo.getProfile()
+  // Without an HTX the pages would only show empty data; the shell stays so sign-out is reachable.
+  const htxProfile = session.user.htxCode ? await profileRepo.getProfile(session.user.htxCode) : null
 
   const navItems = [
     { label: 'Tổng quan', href: '/manager/dashboard', icon: <Home size={20} /> },
@@ -39,7 +41,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
       htxName={htxProfile?.name || 'Chưa cập nhật'}
       htxLocation={htxProfile?.address || ''}
     >
-      {children}
+      {htxProfile ? children : <NoHtxNotice />}
     </AppShell>
   )
 }

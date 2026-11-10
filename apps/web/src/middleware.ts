@@ -82,7 +82,7 @@ export function resolveAuthRedirect(
 }
 
 export default auth((req) => {
-  const isLoggedIn = !!req.auth
+  const isLoggedIn = !!req.auth && req.auth.error !== 'RefreshFailed'
   const { pathname } = req.nextUrl
   const role = req.auth?.user?.role
 

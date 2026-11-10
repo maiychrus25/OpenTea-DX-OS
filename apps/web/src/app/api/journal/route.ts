@@ -4,8 +4,13 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
-import { journalCreateSchema } from '@/lib/validations/journal.schema'
+import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
+import { assertJournalPhotoKey, isInDocumentRoot } from '@/domain/document/document-namespace'
+import { journalCreateSchema, journalListQuerySchema } from '@/lib/validations/journal.schema'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
+import { GatewayJournalReader } from '@/infrastructure/core/gateway-journal-reader'
 import { ListJournalEntriesUseCase } from '@/application/journal/ListJournalEntriesUseCase'
 import { CreateJournalEntryUseCase } from '@/application/journal/CreateJournalEntryUseCase'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
@@ -27,9 +32,11 @@ async function getJournalEntries(request: Request) {
 
   const url = new URL(request.url)
   const parcelId = url.searchParams.get('parcel_id') ?? undefined
-  const status = url.searchParams.get('status') ?? undefined
-  const page = parseInt(url.searchParams.get('page') ?? '1', 10)
-  const limit = parseInt(url.searchParams.get('limit') ?? '20', 10)
+  const { status, page, limit } = journalListQuerySchema.parse({
+    status: url.searchParams.get('status') || undefined,
+    page: url.searchParams.get('page') || undefined,
+    limit: url.searchParams.get('limit') || undefined,
+  })
 
   // Lấy tạm role do NextAuth type chưa extend
   const role = (session.user as any).role
@@ -42,8 +49,7 @@ async function getJournalEntries(request: Request) {
     householdId = url.searchParams.get('householdId') ?? undefined
   }
 
-  const repo = new PrismaJournalRepository()
-  const useCase = new ListJournalEntriesUseCase(repo)
+  const useCase = new ListJournalEntriesUseCase(new GatewayJournalReader(new CoreGatewayClient(role)))
   const result = await useCase.execute({
     parcel_id: parcelId,
     status,
@@ -55,9 +61,13 @@ async function getJournalEntries(request: Request) {
   // Attach presigned url for photos
   const { MinioDocumentAdapter } = await import('@/infrastructure/storage/minio-document.adapter')
   const storage = new MinioDocumentAdapter()
+  const htxCode = session.user.htxCode
   for (const entry of result.entries) {
     if (entry.photo_minio_key) {
-      entry.photo_url = await storage.generateDownloadUrl(entry.photo_minio_key)
+      // Older rows may hold a key posted by a client, so only a key of the caller's HTX is signed.
+      entry.photo_url = htxCode && isInDocumentRoot(entry.photo_minio_key, htxCode)
+        ? await storage.generateDownloadUrl(entry.photo_minio_key)
+        : null
     }
   }
 
@@ -80,6 +90,10 @@ async function postJournalEntry(request: Request) {
   if (!parse.success) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
+
+  const tenant = await requireTenant()
+  await new TenantGuard(tenant).parcel(parse.data.parcel_id)
+  assertJournalPhotoKey(parse.data.photo_minio_key, tenant.htxCode)
 
   const repo = new PrismaJournalRepository()
   const parcelRepo = new PrismaParcelRepository()

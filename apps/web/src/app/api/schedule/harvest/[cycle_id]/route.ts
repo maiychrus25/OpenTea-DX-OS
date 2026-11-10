@@ -8,6 +8,8 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaCropCycleRepository } from '@/infrastructure/db/farm/PrismaCropCycleRepository'
 import { UpdateHarvestDateUseCase } from '@/application/farm/update-harvest-date-use-case'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
 
 const prisma = new PrismaClient()
 const cropCycleRepo = new PrismaCropCycleRepository(prisma)
@@ -36,6 +38,7 @@ async function patchHarvestDate(req: Request, context: { params: { cycle_id: str
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: validationResult.error.errors[0].message } }, { status: 400 })
   }
 
+  await new TenantGuard(await requireTenant()).cropCycle(context.params.cycle_id)
   await updateHarvestDateUseCase.execute(context.params.cycle_id, validationResult.data.estimated_harvest_date)
 
   return NextResponse.json({ data: { success: true } }, { status: 200 })

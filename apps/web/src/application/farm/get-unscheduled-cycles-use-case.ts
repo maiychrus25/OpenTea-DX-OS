@@ -7,7 +7,7 @@ import { HarvestEvent } from '../../domain/farm/entities/HarvestEvent'
 export class GetUnscheduledCyclesUseCase {
   constructor(private readonly cropCyclePort: CropCyclePort) {}
 
-  async execute(): Promise<HarvestEvent[]> {
-    return this.cropCyclePort.getUnscheduledActiveCycles()
+  async execute(htxProfileId: string): Promise<HarvestEvent[]> {
+    return this.cropCyclePort.getUnscheduledActiveCycles(htxProfileId)
   }
 }

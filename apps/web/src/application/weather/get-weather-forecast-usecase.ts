@@ -6,7 +6,7 @@ import { WeatherPort, WeatherZoneEntity } from '@/domain/ports/weather-port'
 export class GetWeatherForecastUseCase {
   constructor(private weatherPort: WeatherPort) {}
 
-  async execute(): Promise<WeatherZoneEntity[]> {
-    return this.weatherPort.getWeatherForParcels()
+  async execute(htxProfileId: string): Promise<WeatherZoneEntity[]> {
+    return this.weatherPort.getWeatherForParcels(htxProfileId)
   }
 }

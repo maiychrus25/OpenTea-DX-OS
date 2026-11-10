@@ -3,16 +3,18 @@
 
 import { Metadata } from 'next'
 import { DocumentView } from '@/components/features/document/DocumentView'
+import { requireTenant } from '@/lib/api/tenant'
 
 export const metadata: Metadata = {
   title: 'Quản lý tài liệu P.A.R.A | Officer',
   description: 'Quản lý tài liệu canh tác theo cấu trúc P.A.R.A',
 }
 
-export default function DocumentPage() {
+export default async function DocumentPage() {
+  const { htxCode } = await requireTenant()
   return (
     <div className="h-full">
-      <DocumentView />
+      <DocumentView htxCode={htxCode} />
     </div>
   )
 }

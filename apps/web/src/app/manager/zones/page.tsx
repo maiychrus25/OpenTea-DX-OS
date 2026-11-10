@@ -6,7 +6,8 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { ListParcelsUseCase } from '@/application/farm/ListParcelsUseCase'
-import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
+import { GatewayParcelReader } from '@/infrastructure/core/gateway-parcel-reader'
 import { MetricCard } from '@/components/ui/MetricCard'
 import { Pill } from '@/components/ui/Pill'
 import { Map } from 'lucide-react'
@@ -25,8 +26,7 @@ export default async function ManagerZonesPage() {
     redirect('/unauthorized')
   }
 
-  const repo = new PrismaParcelRepository()
-  const useCase = new ListParcelsUseCase(repo)
+  const useCase = new ListParcelsUseCase(new GatewayParcelReader(new CoreGatewayClient(role)))
   
   // Manager sees all parcels
   const parcels = await useCase.execute({}, role)

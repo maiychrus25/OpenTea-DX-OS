@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Pill } from '@/components/ui/Pill';
 import { Sprout } from 'lucide-react';
+import { LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
+import { redirectToLogin } from '@/lib/api/redirect-to-login'
 
 interface HouseholdProfileProps {
   id: string;
@@ -47,14 +49,30 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
           fetch(`/api/farm/parcels?household_id=${id}`)
         ])
         
+        if (hhRes.status === 401 || parcelsRes.status === 401) {
+          setError('Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...')
+          redirectToLogin()
+          return
+        }
+
+        if (hhRes.status >= 500) {
+          setError(LOAD_FAILED_MESSAGE)
+          return
+        }
+
         if (!hhRes.ok) {
           setError('Không tìm thấy nông hộ này hoặc bạn không có quyền truy cập.')
           setLoading(false)
           return
         }
 
+        if (!parcelsRes.ok) {
+          setError(LOAD_FAILED_MESSAGE)
+          return
+        }
+
         const hhData = await hhRes.json()
-        const parcelsData = parcelsRes.ok ? await parcelsRes.json() : { data: [] }
+        const parcelsData = await parcelsRes.json()
         const h = hhData.data
         const parcels = parcelsData.data || []
         

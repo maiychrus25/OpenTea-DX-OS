@@ -2,19 +2,15 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
+import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { GetNotificationsUseCase } from '@/application/notification/get-notifications-usecase'
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository'
 import { logger } from '@/lib/logger'
 import { sseEmitter, SSE_EVENTS } from '@/lib/sse-emitter'
 
-export async function GET(req: Request) {
-  const session = await auth()
-  if (!session || !session.user || !session.user.id) {
-    return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
-  }
-
-  const userId = session.user.id
+async function streamNotifications(req: Request) {
+  const { userId, htxProfileId } = await requireTenant()
 
   const encoder = new TextEncoder()
   const customReadable = new ReadableStream({
@@ -27,7 +23,7 @@ export async function GET(req: Request) {
 
       const sendLatestNotification = async () => {
         try {
-          const result = await getNotificationsUseCase.execute(userId, 1, 'unread')
+          const result = await getNotificationsUseCase.execute(userId, htxProfileId, 1, 'unread')
           if (result.notifications.length > 0) {
             controller.enqueue(encoder.encode(`event: notification\ndata: ${JSON.stringify(result.notifications[0])}\n\n`))
           }
@@ -64,3 +60,5 @@ export async function GET(req: Request) {
     },
   })
 }
+
+export const GET = withErrorHandler(streamNotifications)

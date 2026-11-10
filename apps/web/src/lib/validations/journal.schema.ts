@@ -26,6 +26,13 @@ export const journalBatchApproveSchema = z.object({
   entry_ids: z.array(z.string().min(1)).min(1, 'Cần ít nhất 1 mục').max(50, 'Tối đa 50 mục mỗi lần duyệt'),
 })
 
+export const journalListQuerySchema = z.object({
+  status: z.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'REQUEST_CHANGES']).optional(),
+  // The upper bounds keep limit and offset inside a GraphQL Int.
+  page: z.coerce.number().int().min(1).max(1_000_000).default(1),
+  limit: z.coerce.number().int().min(1).max(1000).default(20),
+})
+
 export type JournalCreateInput = z.infer<typeof journalCreateSchema>
 export type JournalUpdateInput = z.infer<typeof journalUpdateSchema>
 export type JournalBatchApproveInput = z.infer<typeof journalBatchApproveSchema>

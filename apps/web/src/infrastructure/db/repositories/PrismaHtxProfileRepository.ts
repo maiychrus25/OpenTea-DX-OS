@@ -10,11 +10,8 @@ import { NotFoundError } from '@/domain/errors'
 export class PrismaHtxProfileRepository implements HtxProfileRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async getProfile(): Promise<HtxProfile | null> {
-    // HtxProfile is a singleton table â€” findFirst() returns the only row
-    const profile = await this.prisma.htxProfile.findFirst({
-      orderBy: { created_at: 'asc' },
-    })
+  async getProfile(htxCode: string): Promise<HtxProfile | null> {
+    const profile = await this.prisma.htxProfile.findUnique({ where: { htx_code: htxCode } })
     if (!profile) return null
     return {
       id: profile.id,
@@ -29,10 +26,9 @@ export class PrismaHtxProfileRepository implements HtxProfileRepository {
     }
   }
 
-  async updateProfile(data: HtxProfileUpdateInput): Promise<HtxProfile> {
-    // HTX Profile is singleton — find the only record first
-    const existing = await this.prisma.htxProfile.findFirst({
-      orderBy: { created_at: 'asc' },
+  async updateProfile(htxCode: string, data: HtxProfileUpdateInput): Promise<HtxProfile> {
+    const existing = await this.prisma.htxProfile.findUnique({
+      where: { htx_code: htxCode },
       select: { id: true },
     })
 

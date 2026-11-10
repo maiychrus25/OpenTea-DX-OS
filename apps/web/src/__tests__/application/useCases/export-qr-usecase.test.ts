@@ -62,7 +62,7 @@ describe('ExportQrUseCase', () => {
     traceRepo = new MockLotTraceRepo()
     storagePort = { uploadFile: jest.fn().mockResolvedValue({ presignedUrl: 'https://minio.example.com/qr.png', key: 'qr-lot-123.png' }) } as any
     docStoragePort = { uploadDocument: jest.fn().mockResolvedValue(undefined) } as any
-    useCase = new ExportQrUseCase(lotPort, traceRepo, storagePort, docStoragePort)
+    useCase = new ExportQrUseCase(lotPort, traceRepo, storagePort, docStoragePort, 'TC')
   })
 
   it('throws if lot not found', async () => {
@@ -172,5 +172,25 @@ describe('ExportQrUseCase', () => {
       ['cert2.pdf', 'cert1.pdf']
     )
     expect(traceData.certificate_keys).toEqual(['cert1.pdf', 'cert2.pdf'])
+  })
+
+  it('archives the export and stores the QR under the namespace of the HTX', async () => {
+    jest.spyOn(lotPort, 'findById').mockResolvedValue({ status: 'READY', lot_code: 'LOT-123' } as LotSummary)
+    jest.spyOn(traceRepo, 'getLotByCode').mockResolvedValue({
+      lot_code: 'LOT-123',
+      is_harvest_safe: true,
+      parcels: [{ status: 'HARVESTED' }],
+      certificate_keys: [],
+    } as unknown as LotTraceData)
+
+    await useCase.execute('lot-1')
+    const uploads = docStoragePort.uploadDocument as jest.Mock
+    for (let i = 0; i < 100 && uploads.mock.calls.length < 2; i++) await new Promise(r => setTimeout(r, 10))
+
+    expect(uploads.mock.calls.map(c => c[0])).toEqual([
+      'para/TC/Archives/Lô hàng đã xuất/Mã_QR_Lô_LOT-123.png',
+      'para/TC/Archives/Lô hàng đã xuất/Hồ_sơ_truy_xuất_Lô_LOT-123.txt',
+    ])
+    expect((storagePort.uploadFile as jest.Mock).mock.calls[0][3]).toBe('TC')
   })
 })

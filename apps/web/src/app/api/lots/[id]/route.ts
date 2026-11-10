@@ -5,7 +5,8 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { PrismaLotTraceRepository } from '@/infrastructure/db/repositories/prisma-lot-trace-repository'
-import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
+import { GatewayLotReader } from '@/infrastructure/core/gateway-lot-reader'
 import { GetLotTraceDataUseCase } from '@/application/useCases/get-lot-trace-data-usecase'
 
 async function getLotDetail(_request: Request, context: unknown) {
@@ -22,8 +23,7 @@ async function getLotDetail(_request: Request, context: unknown) {
   const { id } = await params
 
   // First get lot summary to get lot_code
-  const lotRepo = new PrismaLotRepository()
-  const lot = await lotRepo.findById(id)
+  const lot = await new GatewayLotReader(new CoreGatewayClient(role)).findById(id)
   if (!lot) {
     return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Lot not found' } }, { status: 404 })
   }

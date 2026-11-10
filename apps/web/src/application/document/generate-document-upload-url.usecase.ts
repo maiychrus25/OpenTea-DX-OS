@@ -2,10 +2,12 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
+import { documentRoot, isInDocumentRoot } from '@/domain/document/document-namespace'
 
 export interface GenerateDocumentUploadUrlCommand {
   fileName: string
-  pathPrefix: string // e.g., 'para/Projects/'
+  pathPrefix: string // e.g., 'para/TC/Projects/'
+  htxCode: string
 }
 
 export class GenerateDocumentUploadUrlUseCase {
@@ -22,12 +24,16 @@ export class GenerateDocumentUploadUrlUseCase {
     const prefix = command.pathPrefix.endsWith('/') ? command.pathPrefix : `${command.pathPrefix}/`
     
     // Valid prefixes according to PARA
-    const validPrefixes = ['para/Projects/', 'para/Areas/', 'para/Resources/', 'para/Archives/']
+    const root = documentRoot(command.htxCode)
+    const validPrefixes = [`${root}Projects/`, `${root}Areas/`, `${root}Resources/`, `${root}Archives/`]
     if (!validPrefixes.some(vp => prefix.startsWith(vp))) {
       throw new Error('Invalid path prefix. Must be one of the P.A.R.A categories.')
     }
 
     const path = `${prefix}${safeFileName}`
+    if (!isInDocumentRoot(path, command.htxCode)) {
+      throw new Error('Invalid path prefix. Must stay inside the HTX folder.')
+    }
     
     // Expire in 15 mins (900s)
     const result = await this.storagePort.generateUploadUrl(path, 900)

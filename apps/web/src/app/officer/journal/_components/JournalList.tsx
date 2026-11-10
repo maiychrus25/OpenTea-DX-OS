@@ -7,6 +7,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import { JournalForm } from './JournalForm'
 import styles from '../journal.module.css'
+import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface JournalEntry {
   id: string
@@ -63,15 +64,15 @@ export function JournalList() {
   const [filter, setFilter] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const fetchEntries = useCallback(() => {
     setLoading(true)
     const params = new URLSearchParams()
     if (filter !== 'all') params.set('status', filter)
-    fetch(`/api/journal?${params.toString()}`)
-      .then(r => r.ok ? r.json() : Promise.reject(r))
-      .then(j => setEntries(j.data || []))
-      .catch(() => setEntries([]))
+    fetchJson<{ data?: JournalEntry[] }>(`/api/journal?${params.toString()}`)
+      .then(j => { setEntries(j.data || []); setLoadFailed(false) })
+      .catch(() => { setEntries([]); setLoadFailed(true) })
       .finally(() => setLoading(false))
   }, [filter])
 
@@ -109,6 +110,8 @@ export function JournalList() {
 
       {loading ? (
         <div className={styles.empty}>Đang tải...</div>
+      ) : loadFailed ? (
+        <div className={styles.empty}>{LOAD_FAILED_MESSAGE}</div>
       ) : entries.length === 0 ? (
         <div className={styles.empty}>Chưa có nhật ký nào.</div>
       ) : (

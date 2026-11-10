@@ -3,7 +3,8 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/auth';
+import { requireTenant } from '@/lib/api/tenant';
+import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter';
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository';
 import { BroadcastAnnouncementUseCase } from '@/application/notification/broadcast-announcement-usecase';
 import { withErrorHandler } from '@/lib/api/withErrorHandler';
@@ -17,12 +18,9 @@ const announceSchema = z.object({
 });
 
 async function postAnnounce(req: Request) {
-  const session = await auth();
-  if (!session || !session.user || !session.user.id) {
-    return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 });
-  }
+  const tenant = await requireTenant();
 
-  if (session.user.role !== 'officer' && session.user.role !== 'manager') {
+  if (tenant.role !== 'officer' && tenant.role !== 'manager') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 });
   }
 
@@ -35,7 +33,13 @@ async function postAnnounce(req: Request) {
   
   const { title, body: announcementBody } = validationResult.data;
 
-  await broadcastAnnouncementUseCase.execute(title, announcementBody, session.user.id);
+  const adapter = new KeycloakAdminAdapter();
+  const members = await Promise.all(
+    ['farmer', 'officer', 'manager'].map((role) => adapter.listUsersByRole(role, tenant.htxCode))
+  );
+  const recipientIds = Array.from(new Set(members.flat().map((member) => member.id)));
+
+  await broadcastAnnouncementUseCase.execute(title, announcementBody, tenant.userId, recipientIds);
 
   return NextResponse.json({ data: { success: true } }, { status: 201 });
 }

@@ -8,6 +8,7 @@ import { Pill } from '@/components/ui'
 import { QrCode } from 'lucide-react'
 import { LotCreateForm } from './LotCreateForm'
 import styles from '../lots.module.css'
+import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface LotSummary {
   id: string
@@ -39,16 +40,16 @@ function statusTone(status: string): 'amber' | 'green' | 'neutral' {
 export function LotList() {
   const [lots, setLots] = useState<LotSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState('')
 
   const fetchLots = useCallback(() => {
     setLoading(true)
-    fetch('/api/lots')
-      .then(r => r.ok ? r.json() : Promise.reject(r))
-      .then(j => setLots((j.data || []).map((l: any) => ({ ...l, status: (l.status || '').toLowerCase() }))))
-      .catch(() => setLots([]))
+    fetchJson<{ data?: LotSummary[] }>('/api/lots')
+      .then(j => { setLots((j.data || []).map((l: any) => ({ ...l, status: (l.status || '').toLowerCase() }))); setLoadFailed(false) })
+      .catch(() => { setLots([]); setLoadFailed(true) })
       .finally(() => setLoading(false))
   }, [])
 
@@ -89,6 +90,8 @@ export function LotList() {
 
       {loading ? (
         <div className={styles.empty}>Đang tải...</div>
+      ) : loadFailed ? (
+        <div className={styles.empty}>{LOAD_FAILED_MESSAGE}</div>
       ) : lots.length === 0 ? (
         <div className={styles.empty}>Chưa có lô hàng nào.</div>
       ) : (

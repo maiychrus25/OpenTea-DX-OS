@@ -5,6 +5,7 @@ import React from 'react'
 import { Metadata } from 'next'
 import dynamic from 'next/dynamic'
 import { prisma } from '@/infrastructure/db/prisma.client'
+import { requireTenant } from '@/lib/api/tenant'
 
 const SoilHealthPageClient = dynamic(
   () => import('./SoilHealthPageClient'),
@@ -24,8 +25,9 @@ export default async function SoilHealthPage({ params }: PageProps) {
   const { id } = await params
 
   // Server-side: fetch household name
-  const household = await prisma.household.findUnique({
-    where: { id },
+  const { htxProfileId } = await requireTenant()
+  const household = await prisma.household.findFirst({
+    where: { id, htx_profile_id: htxProfileId },
     select: { name: true },
   })
 

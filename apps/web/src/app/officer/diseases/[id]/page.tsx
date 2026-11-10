@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Pill } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import styles from './detail.module.css';
+import { fetchJson } from '@/lib/api/fetch-json';
 
 interface ReportData {
   id: string;
@@ -33,16 +34,13 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
     // For this story, since there's no GET /api/officer/diseases/[id], we'll fetch all and filter,
     // or we can just fetch all pending and find the one. 
     // Ideally, we should have added findById API, but we'll implement a quick fetch here.
-    fetch('/api/officer/diseases')
-      .then(res => res.json())
+    fetchJson<{ data?: ReportData[] }>('/api/officer/diseases')
       .then(data => {
-        if (data.data) {
-          const found = data.data.find((r: ReportData) => r.id === params.id);
-          if (found) {
-            setReport(found);
-          } else {
-            setError('Không tìm thấy báo cáo bệnh (hoặc đã duyệt).');
-          }
+        const found = (data.data || []).find((r: ReportData) => r.id === params.id);
+        if (found) {
+          setReport(found);
+        } else {
+          setError('Không tìm thấy báo cáo bệnh (hoặc đã duyệt).');
         }
       })
       .catch(() => {

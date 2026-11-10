@@ -29,7 +29,8 @@ export default defineConfig({
       dependencies: ['setup'],
     },
   ],
-  webServer: {
+  // E2E_BASE_URL points at an app that is already running.
+  webServer: process.env.E2E_BASE_URL ? undefined : {
     command: `npm run dev -- --port ${port}`,
     port,
     reuseExistingServer: !process.env.CI,

@@ -3,6 +3,14 @@
 
 import NextAuth from "next-auth"
 import { logger } from "@/lib/logger"
+import {
+  KEYCLOAK_CLIENT_ID,
+  KEYCLOAK_CLIENT_SECRET,
+  KEYCLOAK_INTERNAL,
+  readHtxCode,
+  refreshAccessToken,
+  roleFromRealmRoles,
+} from "@/lib/auth/token-refresh"
 
 interface KeycloakProfile {
   realm_access?: {
@@ -10,8 +18,6 @@ interface KeycloakProfile {
   }
 }
 
-// Internal Keycloak URL (container-to-container) dùng cho token/userinfo
-const KEYCLOAK_INTERNAL = process.env.KEYCLOAK_INTERNAL_URL || process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket"
 // External Keycloak URL (browser redirect) dùng cho authorization
 const KEYCLOAK_EXTERNAL = process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/agrimarket"
 
@@ -27,8 +33,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // → khớp hoàn toàn, không còn mismatch
       issuer: KEYCLOAK_EXTERNAL,
       checks: ["state"] as any,
-      clientId: process.env.KEYCLOAK_CLIENT_ID || "nextjs-web",
-      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || "agrimarket-secret-key",
+      clientId: KEYCLOAK_CLIENT_ID,
+      clientSecret: KEYCLOAK_CLIENT_SECRET,
       authorization: {
         url: `${KEYCLOAK_EXTERNAL}/protocol/openid-connect/auth`,
         params: { scope: "openid profile email" }
@@ -62,30 +68,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       if (profile) {
         // Extract role from Keycloak realm_access (UserInfo endpoint)
-        const kp = profile as KeycloakProfile;
-        if (kp.realm_access && Array.isArray(kp.realm_access.roles)) {
-          const roles = kp.realm_access.roles;
-          if (roles.includes("manager")) token.role = "manager";
-          else if (roles.includes("officer")) token.role = "officer";
-          else if (roles.includes("farmer")) token.role = "farmer";
-        }
+        const role = roleFromRealmRoles((profile as KeycloakProfile).realm_access?.roles);
+        if (role) token.role = role;
       }
       
       // Fallback: Decode access_token (which usually contains realm_access)
       if (!token.role && account?.access_token) {
         try {
           const decoded = JSON.parse(Buffer.from(account.access_token.split('.')[1], 'base64').toString('utf8'));
-          if (decoded.realm_access && Array.isArray(decoded.realm_access.roles)) {
-            const roles = decoded.realm_access.roles;
-            if (roles.includes("manager")) token.role = "manager";
-            else if (roles.includes("officer")) token.role = "officer";
-            else if (roles.includes("farmer")) token.role = "farmer";
-          }
+          const role = roleFromRealmRoles(decoded.realm_access?.roles);
+          if (role) token.role = role;
         } catch (e) {
           logger.error("Failed to decode access token", { error: e });
         }
       }
-      return token;
+
+      if (account?.access_token) {
+        token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token;
+        token.accessTokenExpiresAt = account.expires_at;
+        token.htxCode = readHtxCode(account.access_token);
+        return token;
+      }
+      return refreshAccessToken(token);
     },
     async session({ session, token }) {
       if (session.user) {
@@ -95,6 +100,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (token.sub) {
           session.user.id = token.sub;
         }
+        session.user.htxCode = token.htxCode ?? null;
+      }
+      if (token.error) {
+        session.error = token.error;
       }
       return session;
     }

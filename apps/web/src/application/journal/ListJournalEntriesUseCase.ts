@@ -4,7 +4,7 @@
 import { JournalPort, JournalFilters } from '@/domain/journal/ports/JournalPort'
 
 export class ListJournalEntriesUseCase {
-  constructor(private readonly journalPort: JournalPort) {}
+  constructor(private readonly journalPort: Pick<JournalPort, 'findAll'>) {}
 
   async execute(filters: JournalFilters) {
     return this.journalPort.findAll(filters)

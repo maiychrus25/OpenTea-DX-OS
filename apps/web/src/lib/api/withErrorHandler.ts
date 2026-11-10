@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { Prisma } from '@prisma/client'
-import { DomainError, NotFoundError, ValidationError, ForbiddenError } from '@/domain/errors'
+import { DomainError, NotFoundError, ValidationError, ForbiddenError, NoHtxError, UnauthorizedError, CoreUnauthorizedError, CoreUnavailableError } from '@/domain/errors'
 import { logger } from '@/lib/logger'
 
 type RouteHandler<TContext = any> = (req: Request, context: TContext) => Promise<NextResponse>
@@ -23,6 +23,25 @@ export function withErrorHandler<TContext = any>(handler: RouteHandler<TContext>
     try {
       return await handler(req, context)
     } catch (err: unknown) {
+      // These carry a digest for error.tsx, so they must be answered before the Next.js internal check.
+      if (err instanceof NoHtxError) {
+        return NextResponse.json(
+          { error: { code: 'NO_HTX', message: err.message } },
+          { status: 403 }
+        )
+      }
+      if (err instanceof CoreUnavailableError) {
+        return NextResponse.json(
+          { error: { code: 'CORE_UNAVAILABLE', message: err.message } },
+          { status: 503 }
+        )
+      }
+      if (err instanceof CoreUnauthorizedError) {
+        return NextResponse.json(
+          { error: { code: 'UNAUTHORIZED', message: err.message } },
+          { status: 401 }
+        )
+      }
       if (isNextInternalError(err)) {
         throw err
       }
@@ -43,6 +62,12 @@ export function withErrorHandler<TContext = any>(handler: RouteHandler<TContext>
         return NextResponse.json(
           { error: { code: 'DATABASE_ERROR', message: 'Database Error' } },
           { status: 400 }
+        )
+      }
+      if (err instanceof UnauthorizedError) {
+        return NextResponse.json(
+          { error: { code: 'UNAUTHORIZED', message: err.message } },
+          { status: 401 }
         )
       }
       if (err instanceof NotFoundError) {

@@ -43,6 +43,7 @@ Trước khi code, hãy chắc chắn bạn đã đọc qua các tài liệu c�
    cd docker && docker compose up -d
    cd ../apps/web && npm run dev
    ```
+   Khi chạy `npm run dev` trên máy (ngoài Docker), đặt `CORE_GATEWAY_URL=http://localhost:9080`, vì `apisix:9081` chỉ truy cập được bên trong mạng Docker.
 
 ### 2.2 Tạo Branch
 

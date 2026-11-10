@@ -7,6 +7,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Phone, MapPin } from 'lucide-react'
 import styles from '../households.module.css'
+import { fetchJson } from '@/lib/api/fetch-json'
 
 interface HouseholdSummary {
   id: string
@@ -29,13 +30,13 @@ export function HouseholdManager() {
   const [address, setAddress] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const fetchHouseholds = useCallback(() => {
     setLoading(true)
-    fetch('/api/farm/households')
-      .then(r => r.ok ? r.json() : Promise.reject(r))
-      .then(j => setHouseholds(j.data || []))
-      .catch(() => setHouseholds([]))
+    fetchJson<{ data?: HouseholdSummary[] }>('/api/farm/households')
+      .then(j => { setHouseholds(j.data || []); setLoadFailed(false) })
+      .catch(() => { setHouseholds([]); setLoadFailed(true) })
       .finally(() => setLoading(false))
   }, [])
 
@@ -113,6 +114,8 @@ export function HouseholdManager() {
 
       {loading ? (
         <div className={styles.empty}>Đang tải...</div>
+      ) : loadFailed ? (
+        <div className={styles.empty}>Không thể tải danh sách nông hộ. Vui lòng thử lại sau.</div>
       ) : households.length === 0 ? (
         <div className={styles.empty}>Chưa có nông hộ nào. Hãy thêm nông hộ đầu tiên!</div>
       ) : (

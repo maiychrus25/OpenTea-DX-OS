@@ -2,49 +2,28 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { householdCreateSchema } from '@/lib/validations/household.schema'
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
+import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
+import { GatewayHouseholdReader } from '@/infrastructure/core/gateway-household-reader'
 import { ListHouseholdsUseCase } from '@/application/farm/ListHouseholdsUseCase'
 import { CreateHouseholdUseCase } from '@/application/farm/CreateHouseholdUseCase'
-import { prisma } from '@/infrastructure/db/prisma.client'
 
 async function getHouseholds() {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
-  }
-  const role = (session.user as any).role
+  const { role, htxProfileId } = await requireTenant()
   if (role !== 'officer' && role !== 'manager') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
 
-  // Resolve HTX from the authenticated user's Keycloak ID
-  // @ts-ignore: next-auth session user type missing id and sub in default definition
-  const keycloakId = (session.user as any).id ?? (session.user as any).sub
-  const htx = await prisma.htxProfile.findFirst({
-    where: {
-      households: { some: { keycloak_user_id: keycloakId } },
-    },
-  }) ?? await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
-
-  if (!htx) {
-    return NextResponse.json({ data: [] })
-  }
-
-  const repo = new PrismaHouseholdRepository()
-  const useCase = new ListHouseholdsUseCase(repo)
-  const data = await useCase.execute(htx.id)
+  const useCase = new ListHouseholdsUseCase(new GatewayHouseholdReader(new CoreGatewayClient(role)))
+  const data = await useCase.execute(htxProfileId)
   return NextResponse.json({ data })
 }
 
 async function postHousehold(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
-  }
-  const role = (session.user as any).role
+  const { role, htxProfileId } = await requireTenant()
   if (role !== 'officer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Only officer can create households' } }, { status: 403 })
   }
@@ -55,25 +34,11 @@ async function postHousehold(request: Request) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
 
-  // Resolve HTX from session — tìm HTX theo officer đang đăng nhập
-  // Fallback về HTX đầu tiên (theo created_at) nếu chưa map được
-  // @ts-ignore: next-auth session user type missing id and sub in default definition
-  const keycloakId = (session.user as any).id ?? (session.user as any).sub
-  const htx = await prisma.htxProfile.findFirst({
-    where: {
-      households: { some: { keycloak_user_id: keycloakId } },
-    },
-  }) ?? await prisma.htxProfile.findFirst({ orderBy: { created_at: 'asc' } })
-
-  if (!htx) {
-    return NextResponse.json({ error: { code: 'DOMAIN_ERROR', message: 'HTX Profile not found' } }, { status: 422 })
-  }
-
   const repo = new PrismaHouseholdRepository()
   const useCase = new CreateHouseholdUseCase(repo)
   const data = await useCase.execute({
     ...parse.data,
-    htx_profile_id: htx.id,
+    htx_profile_id: htxProfileId,
   })
   return NextResponse.json({ data }, { status: 201 })
 }

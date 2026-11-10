@@ -7,6 +7,14 @@ object_relationships:
   - name: htx_profile
     using:
       foreign_key_constraint_on: htx_profile_id
+array_relationships:
+  - name: parcels
+    using:
+      foreign_key_constraint_on:
+        column: household_id
+        table:
+          name: parcels
+          schema: public
 select_permissions:
   - role: farmer
     permission:

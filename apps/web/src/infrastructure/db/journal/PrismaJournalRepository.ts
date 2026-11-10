@@ -213,7 +213,7 @@ export class PrismaJournalRepository implements JournalPort {
       if (data.submitted_role === 'FARMER') {
         const parcel = await tx.parcel.findUnique({
           where: { id: data.parcel_id },
-          select: { parcel_code: true, household_id: true },
+          select: { parcel_code: true, household_id: true, household: { select: { htx_profile_id: true } } },
         })
 
         const notif = await tx.notification.create({
@@ -223,6 +223,7 @@ export class PrismaJournalRepository implements JournalPort {
             body: `${data.performed_by} vừa gửi nhật ký ${data.activity_type} cho thửa ${parcel?.parcel_code ?? data.parcel_id}.`,
             sender_id: data.submitted_by_id,
             household_id: parcel?.household_id ?? null,
+            htx_profile_id: parcel?.household.htx_profile_id ?? null,
             deep_link_url: '/officer/journal',
           },
         })
@@ -275,6 +276,7 @@ export class PrismaJournalRepository implements JournalPort {
             select: {
               parcel_code: true,
               household_id: true,
+              household: { select: { htx_profile_id: true } },
             },
           },
         },
@@ -282,7 +284,8 @@ export class PrismaJournalRepository implements JournalPort {
 
       await tx.journalEntry.delete({ where: { id } })
 
-      if (entry?.submitted_role === 'FARMER' && entry.status === 'PENDING_APPROVAL') {
+      // SYSTEM with no recipient and no HTX is shown to every HTX, so a household without an HTX writes nothing.
+      if (entry?.submitted_role === 'FARMER' && entry.status === 'PENDING_APPROVAL' && entry.parcel.household.htx_profile_id) {
         const notif = await tx.notification.create({
           data: {
             type: NotificationType.SYSTEM,
@@ -290,6 +293,7 @@ export class PrismaJournalRepository implements JournalPort {
             body: `Nông dân đã rút nhật ký ${entry.activity_type} cho thửa ${entry.parcel.parcel_code}.`,
             sender_id: entry.submitted_by_id,
             household_id: entry.parcel.household_id,
+            htx_profile_id: entry.parcel.household.htx_profile_id,
             deep_link_url: '/officer/journal',
           },
         })

@@ -4,6 +4,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { requireTenant } from '@/lib/api/tenant'
+import { TenantGuard } from '@/lib/api/tenant-guard'
 import { parcelUpdateSchema } from '@/lib/validations/parcel.schema'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
 import { UpdateParcelUseCase } from '@/application/farm/UpdateParcelUseCase'
@@ -21,6 +23,7 @@ async function putParcel(request: Request, context: unknown) {
 
   const { params } = context as { params: Promise<{ id: string }> }
   const { id } = await params
+  await new TenantGuard(await requireTenant()).parcel(id)
 
   const body = await request.json().catch(() => ({}))
   const parse = parcelUpdateSchema.safeParse(body)
@@ -46,6 +49,7 @@ async function deleteParcel(_request: Request, context: unknown) {
 
   const { params } = context as { params: Promise<{ id: string }> }
   const { id } = await params
+  await new TenantGuard(await requireTenant()).parcel(id)
 
   const repo = new PrismaParcelRepository()
   const useCase = new DeleteParcelUseCase(repo)

@@ -5,6 +5,6 @@ import { type HtxProfile } from '@/domain/profile/entities/HtxProfile'
 import { type HtxProfileUpdateInput } from '@/lib/validations/htx-profile.schema'
 
 export interface HtxProfileRepository {
-  getProfile(): Promise<HtxProfile | null>
-  updateProfile(data: HtxProfileUpdateInput): Promise<HtxProfile>
+  getProfile(htxCode: string): Promise<HtxProfile | null>
+  updateProfile(htxCode: string, data: HtxProfileUpdateInput): Promise<HtxProfile>
 }

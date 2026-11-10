@@ -9,6 +9,7 @@ import { LotTraceData } from '@/domain/entities/lot-trace-data'
 
 import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
 import { StoragePort } from '@/domain/disease/ports/storage.port'
+import { documentRoot } from '@/domain/document/document-namespace'
 
 export class ExportQrUseCase {
   constructor(
@@ -16,6 +17,7 @@ export class ExportQrUseCase {
     private readonly traceRepo: LotTraceRepository,
     private readonly storagePort: StoragePort,
     private readonly docStoragePort: DocumentStoragePort,
+    private readonly htxCode: string,
   ) {}
 
   async execute(lotId: string, certificateKeys?: string[], baseUrl?: string) {
@@ -59,7 +61,7 @@ export class ExportQrUseCase {
     try {
       // Try upload via injected StoragePort
       const qrBuffer = await QRCode.toBuffer(publicUrl, { type: 'png', margin: 1 })
-      const uploadResult = await this.storagePort.uploadFile(qrBuffer, `qr-${lot.lot_code}.png`, 'image/png')
+      const uploadResult = await this.storagePort.uploadFile(qrBuffer, `qr-${lot.lot_code}.png`, 'image/png', this.htxCode)
       qrImageUrl = uploadResult.presignedUrl
     } catch {
       // MinIO not available — fallback to Data URI so <img> never breaks (BUG-03)
@@ -85,7 +87,7 @@ export class ExportQrUseCase {
     try {
       // 1. Upload QR Code image
       const qrBuffer = await QRCode.toBuffer(publicUrl, { type: 'png', margin: 1 })
-      await this.docStoragePort.uploadDocument(`para/Archives/Lô hàng đã xuất/Mã_QR_Lô_${lotCode}.png`, qrBuffer, 'image/png')
+      await this.docStoragePort.uploadDocument(`${documentRoot(this.htxCode)}Archives/Lô hàng đã xuất/Mã_QR_Lô_${lotCode}.png`, qrBuffer, 'image/png')
       
       // 2. Upload Traceability text summary
       const summary = `HỒ SƠ TRUY XUẤT LÔ HÀNG
@@ -101,7 +103,7 @@ Nguồn gốc thửa đất: ${traceData.parcels?.map((p) => p.parcel_code).join
 Chi tiết truy xuất có thể xem tại: ${publicUrl}
 Dữ liệu được xuất tại: ${new Date().toISOString()}
 `;
-      await this.docStoragePort.uploadDocument(`para/Archives/Lô hàng đã xuất/Hồ_sơ_truy_xuất_Lô_${lotCode}.txt`, summary, 'text/plain')
+      await this.docStoragePort.uploadDocument(`${documentRoot(this.htxCode)}Archives/Lô hàng đã xuất/Hồ_sơ_truy_xuất_Lô_${lotCode}.txt`, summary, 'text/plain')
     } catch (e) {
       throw e
     }

@@ -4,6 +4,7 @@
 import { AuthManagementPort } from '@/domain/auth/ports/auth-management.port'
 import { HouseholdPort } from '@/domain/farm/ports/HouseholdPort'
 import { HtxProfilePort } from '@/domain/farm/ports/HtxProfilePort'
+import { ValidationError } from '@/domain/errors'
 
 export interface InviteMemberRequest {
   fullName: string
@@ -25,10 +26,15 @@ export class InviteMemberUseCase {
     private readonly htxProfilePort: HtxProfilePort // assuming we need this to fetch the HTX Profile
   ) {}
 
-  async execute(request: InviteMemberRequest): Promise<InviteMemberResponse> {
-    const htx = await this.htxProfilePort.findFirst()
+  async execute(request: InviteMemberRequest, inviterHtxCode: string): Promise<InviteMemberResponse> {
+    const htx = await this.htxProfilePort.findByCode(inviterHtxCode)
     if (!htx) {
       throw new Error('HTX_NOT_FOUND')
+    }
+
+    // The phone is globally unique: refuse here, before the Keycloak user exists.
+    if (request.role === 'farmer' && await this.householdPort.isPhoneTaken(request.phone, htx.id)) {
+      throw new ValidationError('Số điện thoại này đã được đăng ký!')
     }
 
     // Step 1: Create Keycloak user with specified role
@@ -37,12 +43,13 @@ export class InviteMemberUseCase {
       phone: request.phone,
       pin: request.pin,
       htxId: htx.id,
+      htxCode: inviterHtxCode,
     }, request.role, true) // enabled = true, login được ngay
 
     // Step 2: Create or Update Household in DB (only for farmer)
     let householdId: string | null = null
     if (request.role === 'farmer') {
-      const orphanedHousehold = await this.householdPort.findOrphanedByPhone(request.phone)
+      const orphanedHousehold = await this.householdPort.findOrphanedByPhone(request.phone, htx.id)
 
       if (orphanedHousehold) {
         await this.householdPort.linkToKeycloak(orphanedHousehold.id, keycloakUserId)

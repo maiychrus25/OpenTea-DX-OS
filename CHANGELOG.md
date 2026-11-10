@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Identity-aware core access**: the web app keeps the Keycloak access and refresh tokens server-side in the encrypted session cookie and refreshes them in the middleware when under 30 seconds remain; a failed refresh sends the user to `/login`. `/api/auth/session` exposes neither token
+- **Tenant isolation**: `requireTenant()` resolves the caller's HTX from the `htx_code` claim, answering 403 `NO_HTX` when it is missing or unknown; `TenantGuard` answers 404 before any write by ID on a record of another HTX. Notifications sent to a whole HTX now carry `htx_profile_id`
+- **Gateway read adapters**: parcels, households, lots, journal entries and disease reports are read through Hasura with the user's token. A core outage gives 503 `CORE_UNAVAILABLE` and a Vietnamese error page, never a fallback to Prisma
+- **Internal gateway port `9081`** for the `web` container: not limited per IP, JWT and permissions as on `9080`
+- **Browser test** `tests/e2e/tenant/core-tenant.spec.ts` (`E2E_CORE=1`), run in the `platform-smoke` CI job against a real `web` container and real Keycloak: isolation between two HTXs, no token in the session endpoint, a live refresh of an expired token, and a Hasura outage
+
+### Changed
+- **Disease detection and the local LLM** go through the gateway with the user's token; the Groq path is unchanged when a key is set. The LLM route is limited per bearer token
+- **Sessions**: `ssoSessionIdleTimeout` and `ssoSessionMaxLifespan` are 8 hours, matching the app session
+- **Accounts**: registration and invitations write `htx_code`; invited managers and officers must set up TOTP (#18)
+- **`docker/.env.local.example`, `.env.example`**: removed `DISEASE_API_URL` and `OLLAMA_BASE_URL`, which no service reads. `docker/.env.local.example` also drops the `KEYCLOAK_ISSUER` that Compose overrides and adds `AUTH_URL`; `.env.example` has no `AUTH_URL`
+- **Documents are namespaced by HTX**: keys are `para/<htxCode>/...`. The list, URL and upload routes derive the namespace from the session and answer 404 for anything outside it, including `..` traversal; `certificate_keys` outside it answer 400. The one exception is `para/Archives/Market_Reports/`, written by the n8n workflow and holding no tenant data: the list and URL routes may read it, and the document screen shows it without upload
+
+### Fixed
+- **Migration drift** (#7): migrations now produce the database described by `schema.prisma`, without dropping any column
+- **Login from the Docker image**: `web` built the `redirect_uri` from `HOSTNAME` (`0.0.0.0`) and Keycloak refused it; Compose now sets `AUTH_URL`
+- **Account attributes**: Keycloak 24 silently dropped `fullName`, `phone` and `htxId`; the realm now declares them as admin-only
+- **HTX assumed to be the first one**: every `htxProfile.findFirst()` now reads the caller's HTX
+- **Cross-HTX reads**: `schedule/harvest`, `schedule/unscheduled`, `weather/forecast` and the officer soil-health page returned data of every HTX; they now filter by the caller's HTX
+- **Role frozen at sign-in**: the role is read again from each refreshed access token, and is cleared when no recognised role remains
+- **Keycloak admin credentials on a release**: the web app also reads `KEYCLOAK_ADMIN` and `KEYCLOAK_ADMIN_PASSWORD`, and refuses to fall back to `admin/admin` in production
+- **Self-registration**: the middleware no longer answers 401 to the anonymous `POST /api/register`; new accounts stay disabled until a manager approves them
+- **Pre-upgrade sessions**: in production a session without a refresh token goes to login instead of showing the no-HTX notice
+- **Silent load failures**: the officer journal approval and manager farm-zone screens now say when loading failed
+- **Anonymous `POST /api/register`**: limited to 5 requests per IP per 10 minutes (429), and anything other than a validation error answers a generic message instead of the raw error text
+- **Rejected registrations**: the household is unlinked before the Keycloak account is deleted, so a failed unlink can be retried and never leaves the phone taken
+- **Object keys from clients**: `POST /api/journal` answers 400 for a `photo_minio_key` outside the caller's document root, and the journal list signs a stored key only when it is inside that root; other entries come back without a photo. The public certificate route signs a key only inside the document root of the lot's HTX
+
+### Upgrade notes
+- Run `migrate` (two new migrations: `20261109120000_sync_schema_drift` and `20261109130000_notifications_htx`), then `platform-init`, as in the deploy section.
+- On a running release, after `up -d --no-build` run `docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml restart hasura apisix`. Their compose config is unchanged, so they are not recreated: APISIX keeps listening on 9080 only and Hasura lacks the new relationships, and every list answers 503.
+- Keycloak imports the realm only on a new database. On a running realm, set **SSO Session Idle** and **SSO Session Max** to 8 hours (Realm settings > Sessions) and declare `fullName`, `phone` and `htxId` as admin-only attributes (Realm settings > User profile).
+- Assign the `htx_code` attribute to existing accounts in Keycloak, or they receive `NO_HTX`.
+- Old notifications with neither a recipient nor an HTX are no longer shown; n8n system alerts remain visible.
+- Rows with a null `htx_profile_id` (households, lots) become invisible and unwritable and must be assigned to an HTX (see `scripts/backfill-htx-profile-id.sql`).
+- Documents written before this release stay under `para/Projects/`, `para/Areas/`, `para/Resources/` and `para/Archives/`. They are no longer listed and are not moved automatically; copy them to `para/<htxCode>/...` to use them again.
+- Certificates of exported lots whose keys are outside `para/<htxCode>/` of the lot's HTX now answer 403 on the public page, and such journal photos stop showing. Copy the object into that folder and update the key to use it again.
+- Set `KEYCLOAK_ADMIN` as well as `KEYCLOAK_ADMIN_PASSWORD` in `docker/.env.local`, or the admin routes answer 500 in production.
+- Set `AUTH_URL` in `docker/.env.local` when the web app is not served from `http://localhost:3000`, and add that URL to the redirect URIs of the `nextjs-web` client.
+- Known limits: `9081` must stay unpublished, because it is not rate limited per IP; `workflows/mattermost-push.json` posts disease and harvest events of all HTXs to one webhook; in production, pre-upgrade cookies go to login; `/api/dev-login` cookies carry no access token, so core reads fail closed; the write path is protected in the application, not in the database; the `POST /api/register` limit is per process and trusts `X-Forwarded-For`, clients behind one proxy or NAT share it and a value that is not a valid IP goes to one shared `unknown` bucket, so it must move to the gateway or a shared store when `web` runs more than one instance.
+
 ---
 
 ## [1.5.0] - 2026-11-09

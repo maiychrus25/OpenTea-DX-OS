@@ -2,9 +2,12 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
+import { redirectToLogin } from '@/lib/api/redirect-to-login'
 import { ChatInterface } from '@/components/ui/chat-interface/chat-interface'
+
+jest.mock('@/lib/api/redirect-to-login', () => ({ redirectToLogin: jest.fn() }))
 
 // Mock use client window scroll function
 window.HTMLElement.prototype.scrollIntoView = jest.fn()
@@ -89,5 +92,19 @@ describe('ChatInterface', () => {
     fireEvent.click(newChatBtn)
     
     expect(screen.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeInTheDocument()
+  })
+
+  it('sends the user to login when the chat call answers 401', async () => {
+    ;(global.fetch as jest.Mock).mockImplementation((_url: string, init?: { method?: string }) =>
+      Promise.resolve(
+        init?.method === 'POST'
+          ? { ok: false, status: 401, json: () => Promise.resolve({}) }
+          : { ok: true, json: () => Promise.resolve({ data: { sessions: [] } }) }
+      )
+    )
+    render(<ChatInterface role="manager" />)
+    fireEvent.change(screen.getByPlaceholderText('Nhập câu hỏi...'), { target: { value: 'hi' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }))
+    await waitFor(() => expect(redirectToLogin).toHaveBeenCalled())
   })
 })

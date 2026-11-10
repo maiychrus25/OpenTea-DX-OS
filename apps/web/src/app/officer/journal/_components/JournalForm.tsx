@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react'
 import { X, Plus } from 'lucide-react'
 import styles from '../journal.module.css'
+import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface Parcel {
   id: string
@@ -46,14 +47,13 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetch('/api/farm/parcels')
-      .then(r => r.ok ? r.json() : Promise.reject(r))
+    fetchJson<{ data?: Parcel[] }>('/api/farm/parcels')
       .then(j => {
         const list = j.data || []
         setParcels(list)
         if (list.length > 0) setParcelId(list[0].id)
       })
-      .catch(() => setParcels([]))
+      .catch(() => { setParcels([]); setError(LOAD_FAILED_MESSAGE) })
   }, [])
 
   function updateActivity(idx: number, field: keyof Activity, value: string) {

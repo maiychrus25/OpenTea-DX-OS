@@ -5,6 +5,7 @@
 
 import React, { useEffect } from 'react'
 import styles from './Dashboard.module.css'
+import ErrorPage from '@/app/error'
 
 export default function DashboardError({
   error,
@@ -17,6 +18,10 @@ export default function DashboardError({
     // Log the error to an error reporting service
     console.error(error)
   }, [error])
+
+  if (error.digest === 'NO_HTX') {
+    return <ErrorPage error={error} reset={reset} />
+  }
 
   return (
     <main className={styles.container}>

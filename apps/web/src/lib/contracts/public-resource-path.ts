@@ -21,5 +21,5 @@ export function isPublicApiPath(pathname: string): boolean {
   }
   const normalized = pathname.split('?')[0].replace(/\/+$/, '')
   if (!normalized || normalized.length > 300) return false
-  return /^\/api\/lot\/[^/]+\/certificate$/i.test(normalized)
+  return /^\/api\/lot\/[^/]+\/certificate$/i.test(normalized) || /^\/api\/register$/i.test(normalized)
 }

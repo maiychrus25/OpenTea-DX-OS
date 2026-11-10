@@ -6,7 +6,7 @@ import { ForbiddenError } from '@/domain/errors/ForbiddenError'
 import { NotFoundError } from '@/domain/errors/NotFoundError'
 
 export class GetHouseholdUseCase {
-  constructor(private readonly householdRepo: HouseholdPort) {}
+  constructor(private readonly householdRepo: Pick<HouseholdPort, 'findById'>) {}
 
   async execute(id: string, userRole: string, userHouseholdId?: string): Promise<HouseholdSummary> {
     const household = await this.householdRepo.findById(id)

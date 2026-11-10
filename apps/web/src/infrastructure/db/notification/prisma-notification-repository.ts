@@ -8,12 +8,14 @@ import { NotificationType } from '@prisma/client';
 import { sseEmitter, SSE_EVENTS } from '@/lib/sse-emitter';
 
 export class PrismaNotificationRepository implements NotificationPort {
-  async getRecentByUserId(userId: string, limit: number, filter?: string): Promise<Notification[]> {
+  async getRecentByUserId(userId: string, htxProfileId: string, limit: number, filter?: string): Promise<Notification[]> {
     return await prisma.notification.findMany({
       where: {
         OR: [
           { recipient_id: userId },
-          { recipient_id: null }, // Broadcast notifications (gửi cho tất cả)
+          { recipient_id: null, htx_profile_id: htxProfileId }, // Broadcast trong HTX của người gọi
+          // Cảnh báo vận hành từ n8n: không có người gửi, không chứa dữ liệu HTX
+          { recipient_id: null, htx_profile_id: null, type: NotificationType.SYSTEM, sender_id: null },
         ],
         ...(filter === 'unread' ? { is_read: false } : filter ? { type: filter as any } : {}),
       },
@@ -48,24 +50,36 @@ export class PrismaNotificationRepository implements NotificationPort {
     });
   }
 
+  private async htxProfileIdOfParcel(parcelCode: string): Promise<string | null> {
+    const parcel = await prisma.parcel.findUnique({
+      where: { parcel_code: parcelCode },
+      select: { household: { select: { htx_profile_id: true } } },
+    });
+    return parcel?.household.htx_profile_id ?? null;
+  }
+
   async broadcastDiseaseReport(householdName: string, diseaseName: string, parcelCode: string): Promise<void> {
+    const htxProfileId = await this.htxProfileIdOfParcel(parcelCode);
     await prisma.notification.create({
       data: {
         type: NotificationType.DISEASE_REPORT,
         title: 'Báo cáo sâu bệnh mới',
         body: `Nông hộ ${householdName} vừa báo cáo bệnh ${diseaseName} tại thửa đất ${parcelCode}.`,
         recipient_id: null,
+        htx_profile_id: htxProfileId,
       },
     });
   }
 
   async broadcastHarvestApproved(parcelCode: string, officerId: string): Promise<void> {
+    const htxProfileId = await this.htxProfileIdOfParcel(parcelCode);
     await prisma.notification.create({
       data: {
         type: NotificationType.HARVEST_APPROVED,
         title: 'Thu hoạch được duyệt',
         body: `Thửa đất ${parcelCode} đã được duyệt thu hoạch bởi cán bộ.`,
         recipient_id: null,
+        htx_profile_id: htxProfileId,
         deep_link_url: `/officer/farm-zones?parcel=${parcelCode}`,
       },
     });
@@ -89,15 +103,16 @@ export class PrismaNotificationRepository implements NotificationPort {
     }
   }
 
-  async broadcastAnnouncement(title: string, body: string, senderId: string): Promise<void> {
-    await prisma.notification.create({
-      data: {
+  async broadcastAnnouncement(title: string, body: string, senderId: string, recipientIds: string[]): Promise<void> {
+    // One row per recipient: a null recipient_id would reach every HTX.
+    await prisma.notification.createMany({
+      data: recipientIds.map((recipient_id) => ({
         type: NotificationType.BROADCAST,
         title,
         body,
-        recipient_id: null,
+        recipient_id,
         deep_link_url: `/manager/announcements`,
-      },
+      })),
     });
     void senderId;
   }

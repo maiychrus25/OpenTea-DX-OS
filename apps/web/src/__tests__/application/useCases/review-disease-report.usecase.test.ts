@@ -55,6 +55,7 @@ describe('ReviewDiseaseReportUseCase', () => {
     await expect(useCase.execute({
       reportId: '123',
       officerId: 'off1',
+      htxCode: 'TC',
       status: 'CONFIRMED',
       treatment_recommendation: 'Spray'
     })).rejects.toThrow('REPORT_NOT_FOUND');
@@ -77,6 +78,7 @@ describe('ReviewDiseaseReportUseCase', () => {
     await expect(useCase.execute({
       reportId: '123',
       officerId: 'off1',
+      htxCode: 'TC',
       status: 'CONFIRMED',
       treatment_recommendation: 'Spray'
     })).rejects.toThrow('INVALID_STATUS_TRANSITION');
@@ -99,6 +101,7 @@ describe('ReviewDiseaseReportUseCase', () => {
     await expect(useCase.execute({
       reportId: '123',
       officerId: 'off1',
+      htxCode: 'TC',
       status: 'CONFIRMED',
       treatment_recommendation: '  ' // empty
     })).rejects.toThrow('TREATMENT_REQUIRED');
@@ -121,10 +124,15 @@ describe('ReviewDiseaseReportUseCase', () => {
     await useCase.execute({
       reportId: '123',
       officerId: 'off1',
+      htxCode: 'TC',
       status: 'CONFIRMED',
       treatment_recommendation: 'Spray fungicide'
     });
 
+    expect(mockDocumentStoragePort.uploadDocument.mock.calls.map(c => c[0])).toEqual([
+      'para/TC/Archives/disease-report-123.md',
+      'para/TC/Archives/disease-report-123.jpg',
+    ]);
     expect(mockDiseasePort.updateStatus).toHaveBeenCalledWith('123', 'CONFIRMED', 'Spray fungicide', 'off1');
     expect(mockNotificationPort.sendDirectNotification).toHaveBeenCalledWith(
       'farm1',
