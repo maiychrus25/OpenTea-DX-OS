@@ -179,7 +179,7 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
             <h3 className="text-lg font-bold">Điều chỉnh ngày thu hoạch</h3>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-ink-tertiary">
               Thửa: {selectedEvent.parcelName} - Hộ: {selectedEvent.householdName}
             </p>
             <div className="flex flex-col gap-2">
@@ -191,7 +191,7 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
                 className="border p-2 rounded-md"
               />
               {selectedEvent.safeHarvestDate && (
-                <p className="text-xs text-orange-600 flex items-center gap-1 mt-1">
+                <p className="text-xs text-accent flex items-center gap-1 mt-1">
                   <AlertTriangle size={12} aria-hidden="true" /> Ngày an toàn: {new Date(selectedEvent.safeHarvestDate).toLocaleDateString()}
                 </p>
               )}

@@ -109,7 +109,7 @@ export function MemberList() {
             id="statusFilter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="block w-32 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm text-[var(--color-ink-primary)]"
+            className="block w-32 rounded-md border-border shadow-sm focus:border-primary focus:ring-primary sm:text-sm text-[var(--color-ink-primary)]"
           >
             <option value="ALL">Tất cả</option>
             <option value="ACTIVE">Hoạt động</option>
@@ -125,7 +125,7 @@ export function MemberList() {
 
       <Card>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-border-subtle">
             <thead className="bg-[var(--color-surface-sunken)] border-b border-[var(--border)]">
               <tr>
                 <th scope="col" className="px-6 py-2.5 text-left text-xs font-semibold text-[var(--color-ink-secondary)] uppercase tracking-wider">
@@ -142,16 +142,16 @@ export function MemberList() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border-subtle">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-ink-tertiary">
                     Đang tải danh sách...
                   </td>
                 </tr>
               ) : filteredMembers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-ink-tertiary">
                     Không tìm thấy thành viên nào.
                   </td>
                 </tr>
@@ -189,14 +189,14 @@ export function MemberList() {
                       {member.status === 'PENDING' && (
                         <button 
                           onClick={() => handleApprove(member.id)}
-                          className="text-green-600 hover:text-green-900 ml-4 font-bold"
+                          className="text-success hover:text-success ml-4 font-bold"
                         >
                           Duyệt
                         </button>
                       )}
                       <button 
                         onClick={() => handleDelete(member.id)}
-                        className="text-red-600 hover:text-red-900 ml-4"
+                        className="text-danger hover:text-danger ml-4"
                       >
                         Xóa
                       </button>

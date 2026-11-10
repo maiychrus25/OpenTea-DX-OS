@@ -140,7 +140,7 @@ export function ApproveList() {
         <div className={styles.empty}>{LOAD_FAILED_MESSAGE}</div>
       ) : entries.length === 0 ? (
         <div className={styles.empty}>
-          <CheckCircle2 size={36} className="text-emerald-600 mb-2 mx-auto block" />
+          <CheckCircle2 size={36} className="text-success mb-2 mx-auto block" />
           Không có nhật ký nào đang chờ duyệt!
         </div>
       ) : (

@@ -458,7 +458,7 @@ export default function PartnerMap() {
                   <button
                     type="button"
                     onClick={() => setSelected(null)}
-                    className="text-[var(--color-ink-tertiary)] hover:text-red-600 ml-2"
+                    className="text-[var(--color-ink-tertiary)] hover:text-danger ml-2"
                     title="Hủy chọn tọa độ"
                     aria-label="Hủy chọn tọa độ"
                   >
@@ -475,7 +475,7 @@ export default function PartnerMap() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5 col-span-2">
                   <label className="text-xs font-medium text-[var(--color-ink-secondary)]">
-                    Tên đối tác <span className="text-red-500">*</span>
+                    Tên đối tác <span className="text-danger">*</span>
                   </label>
                   <input 
                     required 
@@ -523,7 +523,7 @@ export default function PartnerMap() {
               <button 
                 type="submit" 
                 disabled={!canSubmit || isSubmitting} 
-                className="mt-2 w-full flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-2 w-full flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <>
@@ -602,7 +602,7 @@ export default function PartnerMap() {
                       <button 
                         type="button"
                         onClick={e => { e.stopPropagation(); setDeletingPartner(p); }} 
-                        className="p-1.5 text-[var(--color-ink-tertiary)] hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" 
+                        className="p-1.5 text-[var(--color-ink-tertiary)] hover:text-danger hover:bg-danger-subtle rounded-md transition-colors" 
                         title="Xóa đối tác"
                         aria-label="Xóa đối tác"
                       >
@@ -712,7 +712,7 @@ export default function PartnerMap() {
               variant="primary"
               onClick={handleConfirmDelete}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-danger hover:bg-[var(--color-danger-hover)] text-ink-inverse"
             >
               {isDeleting ? 'Đang xóa...' : 'Xác nhận xóa'}
             </Button>

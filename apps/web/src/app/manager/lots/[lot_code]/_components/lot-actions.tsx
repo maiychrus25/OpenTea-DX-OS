@@ -87,8 +87,8 @@ export function LotActions({ lotCode }: { lotCode: string }) {
 
       {showScanner && (
         <div className={styles.overlay}>
-          <div style={{ background: '#000', padding: '2rem', borderRadius: '16px', textAlign: 'center', color: 'white' }}>
-            <div style={{ width: '250px', height: '250px', border: '4px dashed rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
+          <div style={{ background: 'var(--sidebar-darker)', padding: '2rem', borderRadius: '16px', textAlign: 'center', color: 'var(--sidebar-foreground)' }}>
+            <div style={{ width: '250px', height: '250px', border: '4px dashed color-mix(in srgb, var(--sidebar-foreground) 50%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
               <span style={{ animation: 'pulse 1s infinite' }}>[Đang quét...]</span>
             </div>
             <p>Mô phỏng quét QR Camera</p>

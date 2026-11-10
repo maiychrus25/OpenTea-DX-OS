@@ -15,17 +15,17 @@ export default function FarmerBulletinNotificationsPage() {
   return (
     <div className="max-w-[1000px] mx-auto p-6">
       <header className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Bản tin & Thông báo</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Cập nhật thông tin thị trường và thông báo cá nhân của bạn</p>
+        <h1 className="text-2xl font-bold text-foreground mb-2">Bản tin & Thông báo</h1>
+        <p className="text-sm text-ink-tertiary">Cập nhật thông tin thị trường và thông báo cá nhân của bạn</p>
       </header>
 
       <div className="flex flex-col">
-        <div className="flex gap-4 border-b border-gray-200 dark:border-gray-800 mb-6">
+        <div className="flex gap-4 border-b border-border-subtle mb-6">
           <button
             className={`flex items-center justify-center sm:justify-start gap-2 px-6 py-3 text-base font-medium transition-colors border-b-2 flex-1 sm:flex-none ${
               activeTab === 'bulletin'
-                ? 'text-green-600 border-green-600'
-                : 'text-gray-500 border-transparent hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                ? 'text-success border-primary'
+                : 'text-ink-tertiary border-transparent hover:text-foreground hover:bg-surface-sunken'
             }`}
             onClick={() => setActiveTab('bulletin')}
           >
@@ -35,8 +35,8 @@ export default function FarmerBulletinNotificationsPage() {
           <button
             className={`flex items-center justify-center sm:justify-start gap-2 px-6 py-3 text-base font-medium transition-colors border-b-2 flex-1 sm:flex-none ${
               activeTab === 'notifications'
-                ? 'text-green-600 border-green-600'
-                : 'text-gray-500 border-transparent hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                ? 'text-success border-primary'
+                : 'text-ink-tertiary border-transparent hover:text-foreground hover:bg-surface-sunken'
             }`}
             onClick={() => setActiveTab('notifications')}
           >

@@ -7,18 +7,13 @@
   left: 0;
   right: 0;
   margin-top: 4px;
-  background-color: #ffffff;
+  background-color: var(--color-surface-card);
   border: 1px solid var(--color-border-default);
   border-radius: var(--rounded-lg);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-card);
   max-height: 240px;
   overflow-y: auto;
   z-index: 50;
-}
-
-:global(.dark) .suggestDropdown {
-  background-color: #1f2937;
-  border-color: #374151;
 }
 
 .suggestItem {
@@ -34,21 +29,12 @@
   transition: background-color 0.15s ease;
 }
 
-:global(.dark) .suggestItem {
-  border-bottom-color: #374151;
-  color: #f9fafb;
-}
-
 .suggestItem:last-child {
   border-bottom: none;
 }
 
 .suggestItem:hover {
   background-color: var(--color-surface-sunken);
-}
-
-:global(.dark) .suggestItem:hover {
-  background-color: #374151;
 }
 
 .suggestContent {
@@ -86,7 +72,7 @@
 .popupTitle {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--color-ink-primary);
   margin-bottom: 2px;
 }
 
@@ -96,14 +82,14 @@
   font-weight: 500;
   padding: 2px 8px;
   border-radius: 9999px;
-  background-color: rgba(34, 197, 94, 0.1);
-  color: #15803d;
+  background-color: color-mix(in srgb, var(--color-success) 10%, transparent);
+  color: var(--color-success);
   width: fit-content;
 }
 
 .popupInfo {
   font-size: 0.75rem;
-  color: #4b5563;
+  color: var(--color-ink-secondary);
 }
 
 .popupActions {
@@ -112,7 +98,7 @@
   gap: 8px;
   margin-top: 6px;
   padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .popupBtnEdit {
@@ -124,16 +110,16 @@
   padding: 5px 8px;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #15803d;
+  color: var(--color-success);
   background: transparent;
-  border: 1px solid #bbf7d0;
+  border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
   border-radius: 0.375rem;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .popupBtnEdit:hover {
-  background-color: #f0fdf4;
+  background-color: var(--color-success-subtle);
 }
 
 .popupBtnDelete {
@@ -145,14 +131,14 @@
   padding: 5px 8px;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #dc2626;
+  color: var(--color-danger);
   background: transparent;
-  border: 1px solid #fecaca;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
   border-radius: 0.375rem;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .popupBtnDelete:hover {
-  background-color: #fef2f2;
+  background-color: var(--color-danger-subtle);
 }

@@ -345,7 +345,7 @@ export default function SoilHealthPageClient({
             </div>
           ) : soilError ? (
             <div className={styles.errorState}>
-              <AlertTriangle size={40} className="text-amber-500" aria-hidden="true" />
+              <AlertTriangle size={40} className="text-warning" aria-hidden="true" />
               <h3 className={styles.emptyTitle}>Không thể tải dữ liệu</h3>
               <p className={styles.emptyText}>{soilError}</p>
             </div>
@@ -395,7 +395,7 @@ export default function SoilHealthPageClient({
               <div className={styles.chartCard}>
                 <div className={styles.chartHeader}>
                   <h3 className={styles.chartTitle}>
-                    <span className={styles.chartDot} style={{ backgroundColor: '#3b82f6' }} />
+                    <span className={styles.chartDot} style={{ backgroundColor: 'var(--color-info)' }} />
                     <Droplets size={18} aria-hidden="true" />
                     Độ ẩm đất
                   </h3>
@@ -406,34 +406,34 @@ export default function SoilHealthPageClient({
                     <AreaChart data={soilData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                       <defs>
                         <linearGradient id="moistureGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.01} />
+                          <stop offset="5%" stopColor="var(--color-info)" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="var(--color-info)" stopOpacity={0.01} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
                       <XAxis
                         dataKey="date"
                         tickFormatter={formatXAxisDate}
                         fontSize={11}
-                        tick={{ fill: '#9ca3af' }}
-                        axisLine={{ stroke: '#e5e7eb' }}
+                        tick={{ fill: 'var(--color-ink-tertiary)' }}
+                        axisLine={{ stroke: 'var(--color-border-subtle)' }}
                       />
                       <YAxis
                         fontSize={11}
-                        tick={{ fill: '#9ca3af' }}
+                        tick={{ fill: 'var(--color-ink-tertiary)' }}
                         tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
                         domain={['auto', 'auto']}
-                        axisLine={{ stroke: '#e5e7eb' }}
+                        axisLine={{ stroke: 'var(--color-border-subtle)' }}
                       />
                       <Tooltip content={<ChartTooltip />} />
                       <Area
                         type="monotone"
                         dataKey="soil_moisture"
-                        stroke="#3b82f6"
+                        stroke="var(--color-info)"
                         strokeWidth={2.5}
                         fill="url(#moistureGrad)"
                         dot={false}
-                        activeDot={{ r: 5, strokeWidth: 2, fill: '#fff', stroke: '#3b82f6' }}
+                        activeDot={{ r: 5, strokeWidth: 2, fill: 'var(--color-surface-card)', stroke: 'var(--color-info)' }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -444,7 +444,7 @@ export default function SoilHealthPageClient({
               <div className={styles.chartCard}>
                 <div className={styles.chartHeader}>
                   <h3 className={styles.chartTitle}>
-                    <span className={styles.chartDot} style={{ backgroundColor: '#ef4444' }} />
+                    <span className={styles.chartDot} style={{ backgroundColor: 'var(--color-danger)' }} />
                     <Thermometer size={18} aria-hidden="true" />
                     Nhiệt độ đất
                   </h3>
@@ -455,34 +455,34 @@ export default function SoilHealthPageClient({
                     <AreaChart data={soilData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                       <defs>
                         <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0.01} />
+                          <stop offset="5%" stopColor="var(--color-danger)" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="var(--color-danger)" stopOpacity={0.01} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
                       <XAxis
                         dataKey="date"
                         tickFormatter={formatXAxisDate}
                         fontSize={11}
-                        tick={{ fill: '#9ca3af' }}
-                        axisLine={{ stroke: '#e5e7eb' }}
+                        tick={{ fill: 'var(--color-ink-tertiary)' }}
+                        axisLine={{ stroke: 'var(--color-border-subtle)' }}
                       />
                       <YAxis
                         fontSize={11}
-                        tick={{ fill: '#9ca3af' }}
+                        tick={{ fill: 'var(--color-ink-tertiary)' }}
                         tickFormatter={(v: number) => `${v}°C`}
                         domain={['auto', 'auto']}
-                        axisLine={{ stroke: '#e5e7eb' }}
+                        axisLine={{ stroke: 'var(--color-border-subtle)' }}
                       />
                       <Tooltip content={<ChartTooltip />} />
                       <Area
                         type="monotone"
                         dataKey="soil_temperature"
-                        stroke="#ef4444"
+                        stroke="var(--color-danger)"
                         strokeWidth={2.5}
                         fill="url(#tempGrad)"
                         dot={false}
-                        activeDot={{ r: 5, strokeWidth: 2, fill: '#fff', stroke: '#ef4444' }}
+                        activeDot={{ r: 5, strokeWidth: 2, fill: 'var(--color-surface-card)', stroke: 'var(--color-danger)' }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -513,17 +513,17 @@ export default function SoilHealthPageClient({
                           className={styles.riskGauge}
                           style={{
                             background: `conic-gradient(
-                              ${parcelMeta.pest_risk.level === 'LOW' ? '#22c55e' :
-                                parcelMeta.pest_risk.level === 'MEDIUM' ? '#f59e0b' : '#ef4444'}
+                              ${parcelMeta.pest_risk.level === 'LOW' ? 'var(--color-success)' :
+                                parcelMeta.pest_risk.level === 'MEDIUM' ? 'var(--color-warning)' : 'var(--color-danger)'}
                               ${parcelMeta.pest_risk.average_score * 3.6}deg,
-                              #f3f4f6 ${parcelMeta.pest_risk.average_score * 3.6}deg
+                              var(--color-surface-sunken) ${parcelMeta.pest_risk.average_score * 3.6}deg
                             )`,
                           }}
                         >
                           <div className={styles.riskGaugeInner}>
                             <p className={styles.riskGaugeValue} style={{
-                              color: parcelMeta.pest_risk.level === 'LOW' ? '#22c55e' :
-                                     parcelMeta.pest_risk.level === 'MEDIUM' ? '#f59e0b' : '#ef4444'
+                              color: parcelMeta.pest_risk.level === 'LOW' ? 'var(--color-success)' :
+                                     parcelMeta.pest_risk.level === 'MEDIUM' ? 'var(--color-warning)' : 'var(--color-danger)'
                             }}>
                               {parcelMeta.pest_risk.average_score}
                             </p>

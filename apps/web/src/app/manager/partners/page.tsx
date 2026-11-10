@@ -16,8 +16,8 @@ export default function PartnersPage() {
     <div className="h-full flex flex-col gap-6 p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Danh bạ đối tác</h1>
-          <p className="text-sm text-gray-500 mt-1">Quản lý danh sách đối tác mua bán, nhà cung cấp vật tư</p>
+          <h1 className="text-2xl font-bold text-foreground">Danh bạ đối tác</h1>
+          <p className="text-sm text-ink-tertiary mt-1">Quản lý danh sách đối tác mua bán, nhà cung cấp vật tư</p>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/manager/partner-map">
@@ -33,7 +33,7 @@ export default function PartnersPage() {
         </div>
       </div>
       
-      <div className="flex-1 min-h-0 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="flex-1 min-h-0 bg-card border border-border-subtle rounded-xl overflow-hidden shadow-sm">
         <PartnerList />
       </div>
     </div>

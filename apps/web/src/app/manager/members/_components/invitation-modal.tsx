@@ -78,21 +78,21 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--color-modal-overlay)] backdrop-blur-sm p-4 animate-in fade-in duration-200"
       onClick={() => { if (!isSubmitting) { resetForm(); onClose(); } }}
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-card rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
         {/* Header - Xanh chủ đạo */}
-        <div className="flex justify-between items-center px-6 py-4 bg-[#0e5a3a] text-white">
+        <div className="flex justify-between items-center px-6 py-4 bg-primary text-primary-foreground">
           <h2 className="text-xl font-bold">
             Thêm thành viên mới
           </h2>
           <button
             onClick={() => { if (!isSubmitting) { resetForm(); onClose(); } }}
-            className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+            className="text-primary-foreground/80 hover:text-primary-foreground transition-colors p-1 rounded-full hover:bg-primary-foreground/10"
           >
             <X size={24} />
           </button>
@@ -100,16 +100,16 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
         </div>
 
         {/* Form Body - Trắng sáng */}
-        <div className="overflow-y-auto p-6 bg-white">
+        <div className="overflow-y-auto p-6 bg-card">
           <form onSubmit={handleSubmit} className="space-y-5">
             {errorMsg && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-100">
+              <div className="p-3 text-sm text-danger bg-danger-subtle rounded-lg border border-danger/30">
                 {errorMsg}
               </div>
             )}
 
             {successMsg && (
-              <div className="p-3 text-sm text-[#0e5a3a] bg-[#e6f4ea] rounded-lg border border-[#cce8d6] font-medium">
+              <div className="p-3 text-sm text-primary bg-secondary rounded-lg border border-primary/30 font-medium">
                 <Check size={16} className="inline-block mr-1" /> {successMsg}
               </div>
             )}
@@ -117,65 +117,65 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
 
             {/* Role */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Vai trò <span className="text-red-500">*</span>
+              <label className="block text-sm font-semibold text-ink-secondary mb-1.5">
+                Vai trò <span className="text-danger">*</span>
               </label>
               <select
                 value={role}
                 onChange={e => setRole(e.target.value)}
                 disabled={isSubmitting || !!successMsg}
-                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 shadow-sm focus:ring-2 focus:ring-[#0e5a3a] focus:border-[#0e5a3a] disabled:bg-gray-50 transition-colors outline-none"
+                className="w-full px-3 py-2.5 bg-card border border-border rounded-lg text-sm text-foreground shadow-sm focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-surface-sunken transition-colors outline-none"
               >
                 {ROLE_OPTIONS.map(r => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
               </select>
               {selectedRole && (
-                <p className="mt-1.5 text-xs text-gray-500">{selectedRole.description}</p>
+                <p className="mt-1.5 text-xs text-ink-tertiary">{selectedRole.description}</p>
               )}
             </div>
 
             {/* Full Name */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Họ và tên <span className="text-red-500">*</span>
+              <label className="block text-sm font-semibold text-ink-secondary mb-1.5">
+                Họ và tên <span className="text-danger">*</span>
               </label>
               <input
                 type="text" required value={fullName}
                 onChange={e => setFullName(e.target.value)}
                 placeholder="VD: Nguyễn Văn A"
                 disabled={isSubmitting || !!successMsg}
-                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 shadow-sm focus:ring-2 focus:ring-[#0e5a3a] focus:border-[#0e5a3a] disabled:bg-gray-50 transition-colors outline-none"
+                className="w-full px-3 py-2.5 bg-card border border-border rounded-lg text-sm text-foreground shadow-sm focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-surface-sunken transition-colors outline-none"
               />
             </div>
 
             {/* Phone */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Số điện thoại <span className="text-gray-500 font-normal">(tên đăng nhập)</span> <span className="text-red-500">*</span>
+              <label className="block text-sm font-semibold text-ink-secondary mb-1.5">
+                Số điện thoại <span className="text-ink-tertiary font-normal">(tên đăng nhập)</span> <span className="text-danger">*</span>
               </label>
               <input
                 type="tel" required value={phone}
                 onChange={e => setPhone(e.target.value)}
                 placeholder="VD: 0912345678"
                 disabled={isSubmitting || !!successMsg}
-                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 shadow-sm focus:ring-2 focus:ring-[#0e5a3a] focus:border-[#0e5a3a] disabled:bg-gray-50 transition-colors outline-none"
+                className="w-full px-3 py-2.5 bg-card border border-border rounded-lg text-sm text-foreground shadow-sm focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-surface-sunken transition-colors outline-none"
               />
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Mật khẩu <span className="text-red-500">*</span>
+              <label className="block text-sm font-semibold text-ink-secondary mb-1.5">
+                Mật khẩu <span className="text-danger">*</span>
               </label>
               <input
                 type="text" required minLength={6} value={pin}
                 onChange={e => setPin(e.target.value)}
                 placeholder="Ít nhất 6 ký tự"
                 disabled={isSubmitting || !!successMsg}
-                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 shadow-sm focus:ring-2 focus:ring-[#0e5a3a] focus:border-[#0e5a3a] disabled:bg-gray-50 transition-colors outline-none"
+                className="w-full px-3 py-2.5 bg-card border border-border rounded-lg text-sm text-foreground shadow-sm focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-surface-sunken transition-colors outline-none"
               />
-              <p className="mt-1.5 text-xs text-gray-500">
+              <p className="mt-1.5 text-xs text-ink-tertiary">
                 Thành viên dùng SĐT + mật khẩu này để đăng nhập
               </p>
             </div>
@@ -183,7 +183,7 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
             {/* Address (farmer only) */}
             {role === 'farmer' && (
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                <label className="block text-sm font-semibold text-ink-secondary mb-1.5">
                   Địa chỉ nông hộ
                 </label>
                 <input
@@ -191,26 +191,26 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
                   onChange={e => setAddress(e.target.value)}
                   placeholder="VD: Ấp 3, Xã Long Hòa"
                   disabled={isSubmitting || !!successMsg}
-                  className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 shadow-sm focus:ring-2 focus:ring-[#0e5a3a] focus:border-[#0e5a3a] disabled:bg-gray-50 transition-colors outline-none"
+                  className="w-full px-3 py-2.5 bg-card border border-border rounded-lg text-sm text-foreground shadow-sm focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-surface-sunken transition-colors outline-none"
                 />
               </div>
             )}
 
             {/* Actions */}
             {!successMsg && (
-              <div className="pt-6 mt-6 border-t border-gray-100 flex justify-end gap-3">
+              <div className="pt-6 mt-6 border-t border-border-subtle flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => { resetForm(); onClose(); }}
                   disabled={isSubmitting}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-muted text-ink-secondary rounded-lg font-medium hover:bg-border transition-colors disabled:opacity-50"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting || !fullName || !phone || !pin}
-                  className="px-4 py-2 bg-[#0e5a3a] text-white rounded-lg font-medium hover:bg-[#0b462d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                 >
                   {isSubmitting ? 'Đang tạo...' : `Tạo tài khoản ${selectedRole?.label || ''}`}
                 </button>

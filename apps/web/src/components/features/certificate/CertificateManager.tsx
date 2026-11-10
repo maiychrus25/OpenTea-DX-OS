@@ -256,7 +256,7 @@ export function CertificateManager({ mode, initialCertificates = MOCK_CERTIFICAT
             )}
             
             <div className={styles.cardIcon}>
-              <FileText size={24} className={cert.isExpired ? 'text-red-500' : 'text-primary'} aria-hidden="true" />
+              <FileText size={24} className={cert.isExpired ? 'text-danger' : 'text-primary'} aria-hidden="true" />
             </div>
             
             <div className={styles.cardContent}>

@@ -46,21 +46,21 @@ interface WeatherZone {
 function RenderWeatherIcon({ iconKey, size = 20, className = '' }: { iconKey: string; size?: number; className?: string }) {
   const key = iconKey.toLowerCase()
   if (key.includes('sun') && !key.includes('cloud')) {
-    return <Sun size={size} className={`text-amber-500 ${className}`} aria-hidden="true" />
+    return <Sun size={size} className={`text-warning ${className}`} aria-hidden="true" />
   }
   if (key.includes('cloud-sun')) {
-    return <CloudSun size={size} className={`text-amber-400 ${className}`} aria-hidden="true" />
+    return <CloudSun size={size} className={`text-warning ${className}`} aria-hidden="true" />
   }
   if (key.includes('rain')) {
-    return <CloudRain size={size} className={`text-blue-500 ${className}`} aria-hidden="true" />
+    return <CloudRain size={size} className={`text-info ${className}`} aria-hidden="true" />
   }
   if (key.includes('lightning')) {
-    return <CloudLightning size={size} className={`text-purple-500 ${className}`} aria-hidden="true" />
+    return <CloudLightning size={size} className={`text-accent ${className}`} aria-hidden="true" />
   }
   if (key.includes('snow')) {
-    return <Snowflake size={size} className={`text-cyan-400 ${className}`} aria-hidden="true" />
+    return <Snowflake size={size} className={`text-info ${className}`} aria-hidden="true" />
   }
-  return <Cloud size={size} className={`text-slate-400 ${className}`} aria-hidden="true" />
+  return <Cloud size={size} className={`text-ink-tertiary ${className}`} aria-hidden="true" />
 }
 
 function RainfallChart({ data }: { data: ForecastDay[] }) {
@@ -106,7 +106,7 @@ function RainfallChart({ data }: { data: ForecastDay[] }) {
               <defs>
                 <linearGradient id={`rain-grad-${i}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={isToday ? 'var(--primary)' : 'var(--color-info)'} />
-                  <stop offset="100%" stopColor={isToday ? '#1a8a5e' : '#60a5fa'} />
+                  <stop offset="100%" stopColor={isToday ? 'var(--color-primary)' : 'var(--color-info)'} />
                 </linearGradient>
               </defs>
               <rect
@@ -198,10 +198,10 @@ export function WeatherSection() {
   if (error) {
     return (
       <div className={styles.weatherSection}>
-        <div className="p-6 text-center bg-amber-50 rounded-lg border border-amber-200">
-          <AlertCircle size={32} className="text-amber-600 mx-auto mb-2" aria-hidden="true" />
-          <p className="font-semibold text-gray-800">Không thể tải dữ liệu thời tiết</p>
-          <p className="text-sm text-gray-600 mt-1">Hệ thống đang kết nối với máy chủ dự báo Open-Meteo. Vui lòng thử lại sau.</p>
+        <div className="p-6 text-center bg-warning-subtle rounded-lg border border-warning/30">
+          <AlertCircle size={32} className="text-warning mx-auto mb-2" aria-hidden="true" />
+          <p className="font-semibold text-foreground">Không thể tải dữ liệu thời tiết</p>
+          <p className="text-sm text-ink-secondary mt-1">Hệ thống đang kết nối với máy chủ dự báo Open-Meteo. Vui lòng thử lại sau.</p>
         </div>
       </div>
     )
@@ -217,10 +217,10 @@ export function WeatherSection() {
           </h2>
           <span className={styles.weatherSource}>Nguồn: Open-Meteo (cập nhật mỗi giờ)</span>
         </div>
-        <div className="p-8 text-center bg-white rounded-lg border border-dashed border-gray-300">
-          <CloudSun size={40} className="text-gray-400 mx-auto mb-3" aria-hidden="true" />
-          <p className="font-medium text-gray-700">Chưa có dữ liệu thời tiết cho các thửa đất hiện tại</p>
-          <p className="text-sm text-gray-500 mt-1">Dữ liệu dự báo 7 ngày sẽ tự động được cập nhật khi hệ thống đồng bộ từ Open-Meteo.</p>
+        <div className="p-8 text-center bg-card rounded-lg border border-dashed border-border">
+          <CloudSun size={40} className="text-ink-tertiary mx-auto mb-3" aria-hidden="true" />
+          <p className="font-medium text-ink-secondary">Chưa có dữ liệu thời tiết cho các thửa đất hiện tại</p>
+          <p className="text-sm text-ink-tertiary mt-1">Dữ liệu dự báo 7 ngày sẽ tự động được cập nhật khi hệ thống đồng bộ từ Open-Meteo.</p>
         </div>
       </div>
     )

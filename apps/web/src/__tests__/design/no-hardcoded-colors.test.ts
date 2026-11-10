@@ -5,41 +5,9 @@ import { readdirSync, readFileSync } from 'fs'
 import { join, relative } from 'path'
 
 // Every colour must come from a token in src/styles/globals.css (see DESIGN.md).
-// `baseline` lists files that still hard-code colours; Task 10 of the Tier 2b plan empties it.
-// A file leaves the baseline as soon as it is clean: the test fails if a listed file no longer offends.
-const baseline: string[] = [
-  'src/app/farmer/bulletin-notifications/page.tsx',
-  'src/app/manager/journal-approve/_components/ApproveList.tsx',
-  'src/app/manager/lots/[lot_code]/_components/lot-actions.tsx',
-  'src/app/manager/lots/page.tsx',
-  'src/app/manager/members/_components/invitation-modal.tsx',
-  'src/app/manager/members/_components/member-list.tsx',
-  'src/app/manager/partners/_components/PartnerList.tsx',
-  'src/app/manager/partners/page.tsx',
-  'src/app/manager/profile/_components/ProfileForm.tsx',
-  'src/app/officer/dashboard/page.tsx',
-  'src/app/officer/farm-zones/page.tsx',
-  'src/app/officer/farm-zones/setup/_components/setup-wizard.tsx',
-  'src/app/officer/farm-zones/setup/_components/step1-household.tsx',
-  'src/app/officer/households/[id]/_components/household-profile.tsx',
-  'src/app/officer/households/[id]/page.tsx',
-  'src/app/officer/households/[id]/soil-health/SoilHealthPageClient.tsx',
-  'src/app/officer/households/_components/HouseholdManager.tsx',
-  'src/app/officer/households/households.module.css',
-  'src/components/features/bulletin/CommodityTabs.module.css',
-  'src/components/features/bulletin/WeatherSection.tsx',
-  'src/components/features/certificate/CertificateManager.tsx',
-  'src/components/features/document/DocumentView.tsx',
-  'src/components/features/market/MarketSummaryWidget.tsx',
-  'src/components/features/partner-map/PartnerMap.tsx',
-  'src/components/features/partner-map/partner-map.module.css',
-  'src/components/features/schedule/HarvestCalendar.module.css',
-  'src/components/features/schedule/HarvestCalendar.tsx',
-  'src/components/features/soil-health/SoilHealthChart.tsx',
-  'src/components/features/soil-health/soil-health.module.css',
-  'src/components/ui/AiNote/AiNote.module.css',
-  'src/components/ui/SourceBox/SourceBox.module.css',
-]
+// `baseline` listed files that still hard-coded colours; Task 10 of the Tier 2b plan emptied it. Keep it empty:
+// a file listed here must still offend, so the list can only shrink.
+const baseline: string[] = []
 
 // Colours that must stay fixed whatever the theme. `allow` lists the exact snippets permitted in that file;
 // any other colour in it still fails. Keep this short.

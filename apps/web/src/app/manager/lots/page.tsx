@@ -81,11 +81,11 @@ export default function ManagerLotsPage() {
         {/* Manager chỉ xem + export QR — việc tạo lô hàng do Cán bộ kỹ thuật thực hiện (api-contract.md) */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: '0.5rem',
-          background: '#f0fdf4', border: '1px solid #bbf7d0',
+          background: 'var(--color-success-subtle)', border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
           borderRadius: '0.5rem', padding: '0.5rem 1rem',
-          fontSize: '0.85rem', color: '#166534',
+          fontSize: '0.85rem', color: 'var(--color-success)',
         }}>
-          <Info className="w-4 h-4 shrink-0 text-emerald-700" aria-hidden="true" />
+          <Info className="w-4 h-4 shrink-0 text-success" aria-hidden="true" />
           <span>Cán bộ kỹ thuật tạo lô hàng. Trưởng HTX duyệt & xuất QR.</span>
         </div>
       </div>

@@ -59,7 +59,7 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
       {/* Left Panel: Household List */}
       <div className={styles.leftPanel}>
         <h2 className={styles.panelTitle}>Danh sách nông hộ</h2>
-        {loadFailed && <p className="text-red-500 text-sm mb-3">{LOAD_FAILED_MESSAGE}</p>}
+        {loadFailed && <p className="text-danger text-sm mb-3">{LOAD_FAILED_MESSAGE}</p>}
         <div className={styles.householdList}>
           {households.map((h) => (
             <button
@@ -69,7 +69,7 @@ export function Step1Household({ selectedHouseholdId, onSelect, onNext }: Props)
               onClick={() => onSelect(h)}
             >
               <div className={styles.householdIcon}>
-                <Users size={22} className="text-emerald-700" />
+                <Users size={22} className="text-success" />
               </div>
               <div>
                 <span className={styles.householdName}>{h.name}</span>

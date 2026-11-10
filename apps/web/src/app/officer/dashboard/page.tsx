@@ -114,7 +114,7 @@ export default async function OfficerDashboard() {
         <div className={styles.headerActions}>
           <Link
             href="/officer/journal"
-            className="inline-flex items-center justify-center px-4 py-2 border border-transparent font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors shadow-sm text-sm"
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent font-medium rounded-md text-primary-foreground bg-primary hover:bg-primary-hover transition-colors shadow-sm text-sm"
           >
             + Tạo nhật ký
           </Link>
@@ -153,7 +153,7 @@ export default async function OfficerDashboard() {
           <h2 className={styles.sectionTitle}>Nhật ký gần đây</h2>
           <Link
             href="/officer/journal"
-            className="text-sm text-green-600 hover:text-green-700 font-medium"
+            className="text-sm text-success hover:text-success font-medium"
           >
             Xem tất cả <ArrowRight size={16} className="inline-block ml-1" />
           </Link>

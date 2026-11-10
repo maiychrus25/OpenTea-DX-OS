@@ -79,8 +79,8 @@ export function SetupWizard({ cropOptions }: Props) {
         </a>
         <span className={styles.eyebrow}>THIẾT LẬP VÙNG TRỒNG</span>
         <h1 className={styles.title}>
-          Hộ <ChevronRight size={22} className="inline text-slate-400 align-text-bottom mx-1" />
-          Thửa đất <ChevronRight size={22} className="inline text-slate-400 align-text-bottom mx-1" />
+          Hộ <ChevronRight size={22} className="inline text-ink-tertiary align-text-bottom mx-1" />
+          Thửa đất <ChevronRight size={22} className="inline text-ink-tertiary align-text-bottom mx-1" />
           Cây trồng
         </h1>
         <p className={styles.subtitle}>Thực hiện tuần tự: thêm hộ, khoanh thửa trên bản đồ, sau đó gán cây trồng.</p>
