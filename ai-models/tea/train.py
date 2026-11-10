@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import io
 import json
+import shutil
 import sys
 import urllib.request
 import zipfile
@@ -39,6 +40,7 @@ HEAD_EPOCHS, HEAD_LR = 15, 1e-3
 FINE_TUNE_EPOCHS, FINE_TUNE_LR, FINE_TUNE_LAYERS = 10, 5e-5, 30
 PATIENCE = 3
 THRESHOLD_FLOOR, THRESHOLD_PRECISION = 0.60, 0.90
+ACCURACY_GATE = 0.80  # spec §4.3: below this test accuracy the model must not ship
 
 
 def load_config():
@@ -164,6 +166,9 @@ def cmd_prepare(args):
     if MANIFEST.exists() and IMAGES.exists() and not args.force:
         print(f"{MANIFEST} exists; use --force to rebuild")
         return
+    # A new split invalidates every model trained on the old one.
+    MODEL.unlink(missing_ok=True)
+    shutil.rmtree(WORK / "loso", ignore_errors=True)
     config = load_config()
     raw_counts, records, pixels = {}, [], []
     for source in config["sources"]:
@@ -435,6 +440,10 @@ def cmd_evaluate(_args):
     }
     METRICS.write_text(json.dumps(metrics, indent=1), encoding="utf-8")
     print(json.dumps({k: v for k, v in metrics.items() if k != "test"} | {"test": {k: v for k, v in test.items() if k != "confusion"}}, indent=1))
+    if test["accuracy"] < ACCURACY_GATE:
+        sys.exit(f"BLOCKED: test accuracy {test['accuracy']} < {ACCURACY_GATE}; do not ship this model")
+    if threshold is None:
+        sys.exit(f"BLOCKED: no threshold >= {THRESHOLD_FLOOR} reaches {THRESHOLD_PRECISION} precision on val")
 
 
 def main():

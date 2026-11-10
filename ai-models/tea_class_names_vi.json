@@ -1,7 +1,7 @@
 {
   "algal_leaf_spot": { "vi": "Bệnh đốm tảo", "needs_officer_review": true },
   "birds_eye_spot": { "vi": "Bệnh đốm mắt chim (bird's eye spot)", "needs_officer_review": true },
-  "brown_blight": { "vi": "(brown blight)", "needs_officer_review": true },
+  "brown_blight": { "vi": "Brown blight", "needs_officer_review": true },
   "gray_blight": { "vi": "Bệnh chấm xám", "needs_officer_review": true },
   "healthy": { "vi": "Lá khoẻ", "needs_officer_review": true },
   "helopeltis": { "vi": "Bọ xít muỗi", "needs_officer_review": true },

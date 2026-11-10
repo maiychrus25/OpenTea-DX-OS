@@ -31,7 +31,8 @@
 | Field | Value |
 |-------|-------|
 | **Authors** | OpenTea Developers (trained with `ai-models/tea/train.py`) |
-| **License** | MIT for the code and class files; the model is trained on the CC BY 4.0 datasets below |
+| **License** | MIT (the repository licence, `LICENSE`, Copyright (c) 2026 OpenTea Developers) for the code, the class files and the model weights file `tea_leaf_model.keras` |
+| **Derived from** | The weights are derived from the CC BY 4.0 datasets and the Apache-2.0 MobileNetV2 ImageNet weights credited below; keep those attributions when redistributing the model |
 | **Framework** | TensorFlow 2.21.0 / Keras 3.15.1, MobileNetV2 transfer learning |
 | **Model card** | `ai-models/tea/MODEL_CARD.md` |
 | **Trained** | 2026-11-10 |

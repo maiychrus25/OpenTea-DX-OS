@@ -30,6 +30,7 @@ Bảng gộp tên lớp nằm trong `datasets.json`. Xử lý trong bước `pre
 - Ảnh gần trùng (cùng mã băm trung bình 8×8) và các bản lật của cùng một ảnh Roboflow (`<tên>.rf.<mã>`) được xếp chung một nhóm. Mỗi nhóm chỉ nằm trong một tập (huấn luyện, kiểm định hoặc kiểm tra). Bộ chia sẵn của Roboflow bị rò rỉ (101 ảnh gốc nằm ở nhiều tập) nên không dùng.
 - Lớp dưới 100 ảnh bị bỏ. Lần này không lớp nào bị bỏ; `birds_eye_spot` có đúng 100 ảnh.
 - Chia 70/15/15 theo từng lớp và theo nhóm, seed `20261110`.
+- Còn sót một ít ảnh gần trùng giữa tập huấn luyện và tập kiểm tra, vì mã băm 8×8 không bắt được mọi khung hình chụp liên tiếp. Ví dụ: ảnh Islam `UNADJUSTEDNONRAW_thumb_237` (huấn luyện) và `thumb_238` (kiểm tra) là hai khung liên tiếp của cùng một lá. Khi bỏ khỏi tập kiểm tra các ảnh có ảnh gần giống trong tập huấn luyện, độ chính xác là 0,875 đến 0,896, tuỳ mức loại bỏ. Như vậy con số 0,8683 không bị thổi phồng. Chưa đổi cách nhóm, vì đổi sẽ phải huấn luyện lại.
 
 Số ảnh từng lớp sau khi lọc:
 
@@ -118,4 +119,5 @@ Xem `ai-models/tea/README.md`. Tóm tắt: trong `ai-models/tea`, chạy `python
 - Kiểm tra chéo giữa các nguồn chỉ đạt 0,12 đến 0,35 (xem trên). Ngưỡng 0,60 được chọn trên dữ liệu cùng nguồn nên không bảo đảm precision 0,90 với ảnh mới.
 - Tên tiếng Việt trong `ai-models/tea_class_names_vi.json` đều cần cán bộ xác nhận (`needs_officer_review: true`). Nông dân thường gọi cả **brown blight** và **anthracnose** là "thán thư" nên rất dễ nhầm; tên `brown_blight` vì vậy được để nguyên tiếng Anh.
 - Bọ xít muỗi (`helopeltis`) là côn trùng gây hại, không phải bệnh do nấm.
+- Ảnh không phải lá chè (ảnh lạc đề hoặc ảnh nhiễu) vẫn có thể nhận độ tin cậy cao. Ví dụ: một ảnh nhiễu ngẫu nhiên được trả `healthy` với độ tin cậy 0,988. Ngưỡng 0,60 không lọc được những ảnh này. Mọi kết quả, kể cả `healthy` (lá khoẻ), đều cần cán bộ xác nhận.
 - Mô hình chỉ trả tên lớp và độ tin cậy, không đưa khuyến nghị điều trị.

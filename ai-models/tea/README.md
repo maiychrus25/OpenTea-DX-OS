@@ -26,9 +26,12 @@ cd ai-models/tea
 docker run --rm -v "$PWD:/tea" -w /tea python:3.12.15-slim-bookworm sh -c '
   pip install --no-cache-dir -r requirements.txt &&
   python -I train.py download && python -I train.py prepare &&
-  python -I train.py train && python -I train.py evaluate'
-cp .work/tea_leaf_model.keras .work/tea_class_names.txt ..
+  python -I train.py train && python -I train.py evaluate' &&
+  cp .work/tea_leaf_model.keras .work/tea_class_names.txt ..
 ```
+
+`evaluate` exits non-zero with `BLOCKED: ...` when test accuracy is below 0.80 or no confidence threshold reaches 0.90
+precision on validation, so the `cp` above never ships a failing model.
 
 `prepare` crops the bounding boxes of the Roboflow (YOLO) dataset, removes exact duplicates, keeps near-duplicates and
 Roboflow's flipped copies in the same split group, drops classes with fewer than 100 images, and splits 70/15/15 per
