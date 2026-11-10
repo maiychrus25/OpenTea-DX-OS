@@ -6,6 +6,8 @@ import { StoragePort } from '@/domain/disease/ports/storage.port'
 import { ParcelPort } from '@/domain/farm/ports/ParcelPort'
 import { DiseaseReportPort } from '@/domain/disease/ports/disease-report.port'
 import { NotificationPort } from '@/domain/ports/notification-port'
+import { selectDiseaseModel } from '@/domain/disease/select-disease-model'
+import { UNCERTAIN_DISEASE_NAME } from '@/domain/disease/display-disease-name'
 
 export interface SubmitDiagnosisCommand {
   farmerUserId: string;
@@ -46,8 +48,9 @@ export class SubmitDiagnosisUseCase {
       command.htxCode
     )
 
-    // 3. Call AI Service (Disease API)
-    const aiResult = await this.diseasePort.predict(command.imageBlob)
+    // 3. Call AI Service (Disease API) with the model for this parcel's crop
+    const aiResult = await this.diseasePort.predict(command.imageBlob, selectDiseaseModel(parcel.crop_type))
+    const diseaseName = aiResult.uncertain || !aiResult.disease_name ? UNCERTAIN_DISEASE_NAME : aiResult.disease_name
 
     // 4. Save DiseaseReport to DB
     const report = await this.diseaseReportPort.save({
@@ -57,14 +60,14 @@ export class SubmitDiagnosisUseCase {
       detection_date: new Date(),
       photo_url: uploadResult.presignedUrl,
       photo_minio_key: uploadResult.minioKey,
-      ai_disease_name: aiResult.disease_name,
+      ai_disease_name: diseaseName,
       ai_confidence: aiResult.confidence_score,
     })
 
-    // 5. Create Officer Notification (Broadcast)
+    // 5. Create Officer Notification (Broadcast) for every result: the tea model is not reliable enough to skip one
     await this.notificationPort.broadcastDiseaseReport(
       parcel.household.name,
-      aiResult.disease_name,
+      diseaseName,
       parcel.parcel_code
     )
 
@@ -75,6 +78,7 @@ export class SubmitDiagnosisUseCase {
       confidence_score: report.ai_confidence,
       image_url: report.photo_url,
       submitted_at: report.created_at,
+      uncertain: aiResult.uncertain,
     }
   }
 }

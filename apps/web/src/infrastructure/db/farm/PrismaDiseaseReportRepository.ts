@@ -56,6 +56,7 @@ export class PrismaDiseaseReportRepository implements DiseaseReportPort {
       photo_minio_key: r.photo_minio_key,
       ai_disease_name: r.ai_disease_name,
       ai_confidence: r.ai_confidence,
+      confirmed_diagnosis: r.confirmed_diagnosis,
       status: r.status,
       parcel_code: r.parcel.parcel_code,
       treatment_recommendation: r.treatment_recommendation
@@ -78,6 +79,7 @@ export class PrismaDiseaseReportRepository implements DiseaseReportPort {
       photo_minio_key: r.photo_minio_key,
       ai_disease_name: r.ai_disease_name,
       ai_confidence: r.ai_confidence,
+      confirmed_diagnosis: r.confirmed_diagnosis,
       farmer_name: r.household.name,
       parcel_code: r.parcel.parcel_code,
       photo_url: r.photo_url
@@ -101,6 +103,7 @@ export class PrismaDiseaseReportRepository implements DiseaseReportPort {
       photo_minio_key: report.photo_minio_key,
       ai_disease_name: report.ai_disease_name,
       ai_confidence: report.ai_confidence,
+      confirmed_diagnosis: report.confirmed_diagnosis,
       status: report.status,
       treatment_recommendation: report.treatment_recommendation,
       farmer_id: report.detected_by_id,
@@ -109,12 +112,13 @@ export class PrismaDiseaseReportRepository implements DiseaseReportPort {
     };
   }
 
-  async updateStatus(id: string, status: any, treatment: string, officerId: string): Promise<void> {
+  async updateStatus(id: string, status: any, treatment: string, officerId: string, confirmedDiagnosis: string | null): Promise<void> {
     await prisma.diseaseReport.update({
       where: { id },
       data: {
         status: status,
         treatment_recommendation: treatment,
+        confirmed_diagnosis: confirmedDiagnosis,
         confirmed_by_id: officerId,
         confirmed_at: new Date()
       }

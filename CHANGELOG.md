@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Tea disease model served**: `POST /predict?model=tea` on `disease-api` uses the tea leaf model next to the general one (still the default; any other model name answers 400). Responses gain `model` and `uncertain`; a tea result below `TEA_CONFIDENCE_THRESHOLD` (default `0.60`, rejected at startup outside (0, 1]) has null names and keeps `top3`. `/health` adds `models` with each model's state
+- **Tea disease flow in the web app**: a parcel whose crop names `chè`/`tea` is diagnosed with the tea model, any other with the general one. An uncertain result is stored as `Không xác định`, and every result still goes to the officers; the farmer screen says `Đã gửi cán bộ kỹ thuật xem` instead of presenting a final diagnosis. A 503 from the tea model is an outage (503 `AI_UNAVAILABLE`), never a fallback to the general model
+- **Officer's confirmed diagnosis**: the review form has a **Tên bệnh đã xác nhận** field, pre-filled with the AI name (empty when uncertain). `PUT /api/officer/diseases/[id]/review` takes `confirmed_diagnosis`, required when approving, and stores it in `confirmed_diagnosis`; the farmer history, officer lists, soil-health screen, notification and archived report show it over the AI name
 
 ---
 

@@ -470,14 +470,35 @@ parcel_id: UUID (optional)
     "disease_name": "Đạo ôn lá (Blast)",
     "confidence_score": 0.923,
     "image_url": "https://minio.../disease/uuid.jpg",
-    "submitted_at": "2026-08-04T14:00:00Z"
+    "submitted_at": "2026-08-04T14:00:00Z",
+    "uncertain": false
   }
 }
 ```
 
 > **AI Invariant:** Response contains disease NAME + CONFIDENCE only. No treatment recommendation.
 
+The route asks disease-api for `model=tea` when the parcel's `crop_type` names `chè`/`tea` as a word (any case, with or without diacritics, e.g. `Che shan tuyet`), otherwise `model=general`. When the result is `uncertain`, `disease_name` is `Không xác định`. Every result, uncertain or not, is stored as a `PENDING` report and broadcast to the HTX's officers; the farmer screen says `Đã gửi cán bộ kỹ thuật xem`. A 503 from the tea model is not retried on the general model: the route answers 503 `AI_UNAVAILABLE` and no report is stored.
+
 **Roles:** farmer, officer
+
+### `PUT /api/officer/diseases/[id]/review`
+Officer approves or rejects a pending disease report of their HTX (another HTX's report answers 404).
+
+**Request:**
+```json
+{
+  "status": "CONFIRMED",
+  "treatment_recommendation": "Cắt bỏ lá bệnh, phun thuốc theo hướng dẫn",
+  "confirmed_diagnosis": "Đốm nâu"
+}
+```
+
+`status` is `CONFIRMED` or `REJECTED`. For `CONFIRMED`, `treatment_recommendation` and `confirmed_diagnosis` (max 200 characters, trimmed) are required and non-empty; a missing `confirmed_diagnosis` answers 400 `VALIDATION_ERROR` "Vui lòng nhập tên bệnh đã xác nhận trước khi duyệt.". For `REJECTED` both are optional and no confirmed name is stored. Screens show `confirmed_diagnosis` instead of the AI name once it is set.
+
+**Response:** `{ "success": true }`
+
+**Roles:** officer
 
 ---
 

@@ -12,6 +12,7 @@ import { logger } from '@/lib/logger';
 import { Pill } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import styles from './diseases.module.css';
+import { displayDiseaseName } from '@/domain/disease/display-disease-name';
 
 export const metadata = {
   title: 'Duyệt Báo cáo Bệnh | Officer',
@@ -56,7 +57,7 @@ export default async function OfficerDiseasesPage() {
             <div key={report.id} className={styles.card}>
               <div className={styles.cardHeader}>
                 <div>
-                  <h3 className={styles.diseaseName}>{report.ai_disease_name}</h3>
+                  <h3 className={styles.diseaseName}>{displayDiseaseName(report)}</h3>
                   <p className={styles.meta}>Nông hộ: {report.farmer_name}</p>
                 </div>
                 <Pill tone="amber">PENDING</Pill>

@@ -24,7 +24,8 @@ export interface DiseaseReportPort {
   findHistoryByFarmer(farmerId: string): Promise<DiagnosisHistoryItem[]>;
   findPendingReports(): Promise<OfficerPendingReportItem[]>;
   findById(id: string): Promise<DiseaseReportDetails | null>;
-  updateStatus(id: string, status: string, treatment: string, officerId: string): Promise<void>;
+  /** `confirmedDiagnosis` is the officer's disease name; null when the report is rejected. */
+  updateStatus(id: string, status: string, treatment: string, officerId: string, confirmedDiagnosis: string | null): Promise<void>;
 }
 
 export interface OfficerPendingReportItem {
@@ -33,6 +34,7 @@ export interface OfficerPendingReportItem {
   photo_minio_key: string;
   ai_disease_name: string;
   ai_confidence: number;
+  confirmed_diagnosis: string | null;
   farmer_name: string;
   parcel_code: string;
   photo_url?: string;
@@ -44,6 +46,7 @@ export interface DiseaseReportDetails {
   photo_minio_key: string;
   ai_disease_name: string;
   ai_confidence: number;
+  confirmed_diagnosis: string | null;
   status: string;
   treatment_recommendation?: string | null;
   farmer_id: string;
@@ -57,6 +60,7 @@ export interface DiagnosisHistoryItem {
   photo_minio_key: string;
   ai_disease_name: string;
   ai_confidence: number;
+  confirmed_diagnosis: string | null;
   status: string;
   parcel_code: string;
   photo_url?: string;

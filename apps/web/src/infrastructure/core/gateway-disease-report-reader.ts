@@ -14,6 +14,7 @@ interface ReportRowBase {
   photo_minio_key: string
   ai_disease_name: string
   ai_confidence: number
+  confirmed_diagnosis: string | null
   parcel: { parcel_code: string } | null
 }
 
@@ -35,6 +36,7 @@ function toPendingReport(row: PendingRow): OfficerPendingReportItem {
     photo_minio_key: row.photo_minio_key,
     ai_disease_name: row.ai_disease_name,
     ai_confidence: row.ai_confidence,
+    confirmed_diagnosis: row.confirmed_diagnosis,
     farmer_name: row.household?.name ?? '',
     parcel_code: row.parcel?.parcel_code ?? '',
     photo_url: row.photo_url,
@@ -48,6 +50,7 @@ function toHistoryItem(row: HistoryRow): DiagnosisHistoryItem {
     photo_minio_key: row.photo_minio_key,
     ai_disease_name: row.ai_disease_name,
     ai_confidence: row.ai_confidence,
+    confirmed_diagnosis: row.confirmed_diagnosis,
     status: row.status,
     parcel_code: row.parcel?.parcel_code ?? '',
     treatment_recommendation: row.treatment_recommendation,
@@ -61,7 +64,7 @@ export class GatewayDiseaseReportReader implements Pick<DiseaseReportPort, 'find
     const data = await this.client.graphql<{ disease_reports: PendingRow[] }>(
       `query {
         disease_reports(where: { status: { _eq: "PENDING" } }, order_by: { detection_date: asc }) {
-          id detection_date photo_minio_key ai_disease_name ai_confidence photo_url
+          id detection_date photo_minio_key ai_disease_name ai_confidence confirmed_diagnosis photo_url
           parcel { parcel_code }
           household { name }
         }
@@ -74,7 +77,7 @@ export class GatewayDiseaseReportReader implements Pick<DiseaseReportPort, 'find
     const data = await this.client.graphql<{ disease_reports: HistoryRow[] }>(
       `query ($farmerId: String!) {
         disease_reports(where: { detected_by_id: { _eq: $farmerId } }, order_by: { detection_date: desc }) {
-          id detection_date photo_minio_key ai_disease_name ai_confidence status treatment_recommendation
+          id detection_date photo_minio_key ai_disease_name ai_confidence confirmed_diagnosis status treatment_recommendation
           parcel { parcel_code }
         }
       }`,

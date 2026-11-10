@@ -4,6 +4,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
+import { displayDiseaseName } from '@/domain/disease/display-disease-name'
 import { useRouter } from 'next/navigation'
 import {
   AreaChart,
@@ -582,7 +583,7 @@ export default function SoilHealthPageClient({
                             </div>
                             <div className={styles.diseaseContent}>
                               <h4 className={styles.diseaseName}>
-                                {d.confirmed_diagnosis || d.ai_disease_name}
+                                {displayDiseaseName(d)}
                               </h4>
                               <p className={styles.diseaseDate}>
                                 <Clock size={11} aria-hidden="true" />{' '}
