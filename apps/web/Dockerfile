@@ -6,7 +6,8 @@ WORKDIR /app
 # Prisma cần openssl ở cả builder stage (next build generate static pages gọi Prisma)
 RUN apk add --no-cache openssl
 COPY package*.json ./
-RUN npm install
+# npm silently skips an optional package whose download fails; fail here so that layer is never cached without SWC.
+RUN npm install && node -e "require('@next/swc-linux-' + process.arch + '-musl')"
 COPY . .
 # Generate Prisma Client với đúng binary target cho Alpine
 RUN npx prisma generate

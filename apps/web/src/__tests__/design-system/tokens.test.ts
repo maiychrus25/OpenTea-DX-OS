@@ -52,9 +52,9 @@ describe('Design Token Coverage', () => {
     expect(css).toMatch(/--color-primary:\s*var\(--primary\)/i)
   })
 
-  it('--color-accent value is #EA580C', () => {
+  it('--color-accent value is the amber #b45309', () => {
     const css = fs.readFileSync(cssPath, 'utf-8')
-    expect(css).toMatch(/--color-accent:\s*#EA580C/i)
+    expect(css).toMatch(/--color-accent:\s*#b45309/i)
   })
 
   it('--font-size-body-large value is 1.0625rem', () => {

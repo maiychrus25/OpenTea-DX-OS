@@ -23,19 +23,19 @@ Returns current session (NextAuth built-in).
 ### `GET /api/bulletin`
 Returns the latest bulletin per commodity.
 
-**Query:** `?commodity=rice` (optional, defaults to HTX primary crop)
+**Query:** `?commodity=Tea` (optional; defaults to the HTX's first crop: `Tea` for any tea variety such as `Chè Trung du`, otherwise its English commodity name)
 
 **Response:**
 ```json
 {
   "data": {
     "id": "uuid",
-    "commodity": "rice",
-    "bulletin_vi": "Thị trường lúa gạo tuần này...",
+    "commodity": "Tea",
+    "bulletin_vi": "Thị trường chè Thái Nguyên tuần này...",
     "sources_json": [
-      { "source": "USDA", "metric": "export_volume", "value": 850, "unit": "USD/tonne", "date": "2026-08-01" }
+      { "source": "COMTRADE", "metric": "export_value_to_world", "value": 250, "date": "2025" }
     ],
-    "audio_minio_key": "bulletins/rice-2026-08-04.mp3",
+    "audio_minio_key": "bulletins/tea-2026-08-04.mp3",
     "generated_at": "2026-08-04T10:00:00Z",
     "model_used": "mistral"
   }
@@ -51,12 +51,12 @@ Generate TTS audio for given text (on-demand, Piper).
 
 **Request:**
 ```json
-{ "text": "Thị trường lúa gạo tuần này...", "lang": "vi" }
+{ "text": "Thị trường chè Thái Nguyên tuần này...", "lang": "vi" }
 ```
 
 **Response:**
 ```json
-{ "data": { "audio_url": "/api/tts/stream?key=bulletins/rice-2026-08-04.mp3" } }
+{ "data": { "audio_url": "/api/tts/stream?key=bulletins/tea-2026-08-04.mp3" } }
 ```
 Or stream binary audio directly (Content-Type: audio/wav).
 
@@ -72,7 +72,7 @@ Send a message to the Chatbot (Ollama/Groq RAG).
 **Request:**
 ```json
 {
-  "message": "Giá xuất khẩu gạo tháng 8 so với tháng 7 thế nào?",
+  "message": "Xuất khẩu chè Việt Nam năm nay thế nào?",
   "type": "market",
   "history": [
     { "role": "user", "content": "..." },
@@ -86,8 +86,8 @@ Send a message to the Chatbot (Ollama/Groq RAG).
 ```json
 {
   "data": {
-    "reply": "Theo dữ liệu USDA ngày 01/08, giá FOB xuất khẩu gạo Việt Nam...",
-    "sources": ["USDA PSD 2026-08-01", "Frankfurter 2026-08-04"],
+    "reply": "Theo UN Comtrade (HS 0902), kim ngạch xuất khẩu chè Việt Nam năm 2025...",
+    "sources": ["COMTRADE 2025", "Frankfurter 2026-08-04"],
     "model": "mistral"
   }
 }
@@ -117,7 +117,7 @@ List all partners with map coordinates.
   "data": [
     {
       "id": "uuid",
-      "name": "Cty TNHH Lúa Gạo Bình An",
+      "name": "Cty TNHH Trà Xanh Thái Nguyên",
       "type": "buyer",
       "lat": 10.4567,
       "lng": 107.1234,
@@ -221,7 +221,7 @@ List all parcels with GeoJSON.
       "centroid_lat": 10.456,
       "centroid_lng": 107.123,
       "status": "growing",
-      "current_crop": "Lúa Hè Thu"
+      "current_crop": "Chè Kim Tuyên"
     }
   ]
 }
@@ -240,7 +240,7 @@ Create parcel with GeoJSON polygon from Leaflet.draw.
   "area_ha": 0.45,
   "centroid_lat": 10.456,
   "centroid_lng": 107.123,
-  "current_crop": "Lúa Hè Thu",
+  "current_crop": "Chè Kim Tuyên",
   "soil_type": "Đất phù sa",
   "irrigation_type": "Tưới tràn"
 }
@@ -251,6 +251,18 @@ Update parcel. Partial body accepted.
 
 ### `DELETE /api/farm/parcels/[id]`
 Delete parcel. **Roles:** officer, manager.
+
+### `POST /api/parcels/[id]/start-round`
+Start the next tea harvest round on a parcel in `HARVESTED`. **Roles:** officer only (`farmer` and `manager` get 403). No request body.
+
+Atomically moves the parcel to `TENDING` and creates a crop cycle with `season` `Lứa <n>/<year>`, where `n` is the number of cycles of that parcel created in the same calendar year in Asia/Ho_Chi_Minh, plus 1.
+
+**Response:**
+```json
+{ "data": { "cycleId": "cuid", "season": "Lứa 2/2026" } }
+```
+
+**Errors:** 401 not signed in; 403 `FORBIDDEN` or `NO_HTX`; 404 `NOT_FOUND` for a parcel of another HTX (`TenantGuard.parcel`); 422 `DOMAIN_ERROR` `Chỉ bắt đầu lứa mới khi thửa đã thu hoạch` when the parcel is not `HARVESTED`, including a second start, and no cycle is created.
 
 ---
 
@@ -269,8 +281,8 @@ List journal entries.
       "id": "uuid",
       "parcel_crop_cycle_id": "uuid",
       "entry_date": "2026-08-04",
-      "growth_stage": "Đẻ nhánh",
-      "observation": "Lúa sinh trưởng tốt",
+      "growth_stage": "Ra búp",
+      "observation": "Chè ra búp đều",
       "temperature_c": 32.5,
       "rainfall_mm": 0,
       "status": "pending_approval",
@@ -299,8 +311,8 @@ Create new journal entry.
 {
   "parcel_crop_cycle_id": "uuid",
   "entry_date": "2026-08-04",
-  "growth_stage": "Đẻ nhánh",
-  "observation": "Lúa sinh trưởng tốt",
+  "growth_stage": "Ra búp",
+  "observation": "Chè ra búp đều",
   "activities": [
     {
       "activity_type": "pesticide",
@@ -312,6 +324,23 @@ Create new journal entry.
 }
 ```
 *Weather (temperature, rainfall) auto-attached from `weather_cache` server-side.*
+
+### `POST /api/journal/upload`
+Presigned upload URL for a journal photo. **Roles:** farmer, officer.
+
+**Request:**
+```json
+{ "filename": "lá chè.jpg", "contentType": "image/jpeg" }
+```
+
+**Response:**
+```json
+{ "data": { "uploadUrl": "https://…", "key": "para/TC/Areas/Journal/2026/<uuid>-la_che.jpg" } }
+```
+
+`contentType` is `image/jpeg`, `image/png` or `image/webp`. The URL is a presigned `PUT` valid for 900 seconds; it does not bind the content type. The key's year is the year in Vietnam time. The file name keeps only its last path segment, loses Vietnamese marks (`đ` → `d`), collapses `..` to `.`, turns any character outside `A-Z a-z 0-9 . - _` into `_` and keeps its last 100 characters; a name with no letter or digit left becomes `photo.<jpg|png|webp>`. Send the key as `photo_minio_key` to `POST /api/journal`, which accepts only a file key under `para/<htxCode>/Areas/Journal/` (400 `VALIDATION_ERROR` otherwise).
+
+**Errors:** 400 `VALIDATION_ERROR` for another content type or a missing or over-255-character `filename`; 401 not signed in; 403 `FORBIDDEN` for a manager, `NO_HTX` without an HTX.
 
 ### `PUT /api/journal/[id]`
 Update entry. Only allowed when status = draft.
@@ -347,8 +376,8 @@ List lots.
   "data": [
     {
       "id": "uuid",
-      "lot_code": "HTXA-RICE-20260804-001",
-      "crop": "Lúa Hè Thu",
+      "lot_code": "TC-CHÈKIM-20260804-001",
+      "crop": "Chè Kim Tuyên",
       "harvest_date": "2026-08-04",
       "estimated_weight_kg": 2500,
       "status": "draft",
@@ -364,12 +393,12 @@ Create new lot.
 **Request:**
 ```json
 {
-  "crop": "Lúa Hè Thu",
+  "crop": "Chè Kim Tuyên",
   "harvest_date": "2026-08-04",
   "estimated_weight_kg": 2500,
   "parcel_ids": ["uuid1", "uuid2"],
   "packaging_type": "Túi 25kg",
-  "destination": "Cty TNHH Lúa Gạo Bình An",
+  "destination": "Cty TNHH Trà Xanh Thái Nguyên",
   "buyer_name": "Nguyễn Văn Mua",
   "certificate_keys": ["cert/uuid.pdf"]
 }
@@ -382,13 +411,15 @@ Get lot detail with traceability data (all linked journal entries, parcels, weat
 ### `POST /api/lots/[id]/export-qr`
 Generate QR code + snapshot public page data. **Roles:** officer, manager.
 
+Refused with 422 `DOMAIN_ERROR` unless the lot is `READY`, its withdrawal period has passed (`WITHDRAWAL_NOT_PASSED`), and every parcel of the lot has a crop cycle with `harvested_at` set on or before the lot's `harvest_date`, compared by calendar day in Asia/Ho_Chi_Minh. The parcel status no longer matters, so a lot of an earlier round stays exportable while a new round is `TENDING`.
+
 **Response:**
 ```json
 {
   "data": {
-    "lot_code": "HTXA-RICE-20260804-001",
-    "qr_image_url": "https://minio.../qr/HTXA-RICE-20260804-001.png",
-    "public_page_url": "https://domain/lot/HTXA-RICE-20260804-001"
+    "lot_code": "TC-CHÈKIM-20260804-001",
+    "qr_image_url": "https://minio.../qr/TC-CHÈKIM-20260804-001.png",
+    "public_page_url": "https://domain/lot/TC-CHÈKIM-20260804-001"
   }
 }
 ```
@@ -470,14 +501,35 @@ parcel_id: UUID (optional)
     "disease_name": "Đạo ôn lá (Blast)",
     "confidence_score": 0.923,
     "image_url": "https://minio.../disease/uuid.jpg",
-    "submitted_at": "2026-08-04T14:00:00Z"
+    "submitted_at": "2026-08-04T14:00:00Z",
+    "uncertain": false
   }
 }
 ```
 
 > **AI Invariant:** Response contains disease NAME + CONFIDENCE only. No treatment recommendation.
 
+The route asks disease-api for `model=tea` when the parcel's `crop_type` names `chè`/`tea` as a word (any case; `che` without the grave accent also counts, e.g. `Che shan tuyet`, but `chế`/`chẻ`/`chê` do not; `_` and `-` separate words), otherwise `model=general`. When the result is `uncertain`, `disease_name` is `Không xác định`. Every result, uncertain or not, is stored as a `PENDING` report and broadcast to the HTX's officers; the farmer screen says `Đã gửi cán bộ kỹ thuật xem`. A 503 from the tea model is not retried on the general model: the route answers 503 `AI_UNAVAILABLE` and no report is stored.
+
 **Roles:** farmer, officer
+
+### `PUT /api/officer/diseases/[id]/review`
+Officer approves or rejects a pending disease report of their HTX (another HTX's report answers 404).
+
+**Request:**
+```json
+{
+  "status": "CONFIRMED",
+  "treatment_recommendation": "Cắt bỏ lá bệnh, phun thuốc theo hướng dẫn",
+  "confirmed_diagnosis": "Đốm nâu"
+}
+```
+
+`status` is `CONFIRMED` or `REJECTED`. For `CONFIRMED`, `treatment_recommendation` and `confirmed_diagnosis` (trimmed, then at most 200 characters; longer answers 400 "Tên bệnh tối đa 200 ký tự.") are required and non-empty; a missing `confirmed_diagnosis` answers 400 `VALIDATION_ERROR` "Vui lòng nhập tên bệnh đã xác nhận trước khi duyệt.". For `REJECTED` both are optional and no confirmed name is stored. Screens show `confirmed_diagnosis` instead of the AI name once it is set.
+
+**Response:** `{ "success": true }`
+
+**Roles:** officer
 
 ---
 
@@ -489,13 +541,14 @@ parcel_id: UUID (optional)
 ### `GET /health`
 Health check.
 ```json
-{ "status": "ok", "model_loaded": true }
+{ "status": "ok", "model_loaded": true, "models": { "general": true, "tea": true } }
 ```
+`model_loaded` is the general model, as before; `models` lists each model. Tea is `false` (and `model=tea` answers 503) when its files are missing or `tea_class_names_vi.json` lacks a class id.
 
 ### `POST /predict`
 Classify crop disease from image.
 
-**Request:** `multipart/form-data`
+**Request:** `multipart/form-data`, optional query `model=general|tea` (default `general`; any other value → 400)
 ```
 file: UploadFile (JPEG/PNG)
 ```
@@ -510,9 +563,13 @@ file: UploadFile (JPEG/PNG)
     { "label": "leaf_blast", "confidence": 0.923 },
     { "label": "brown_spot", "confidence": 0.051 },
     { "label": "healthy", "confidence": 0.026 }
-  ]
+  ],
+  "model": "general",
+  "uncertain": false
 }
 ```
+
+`model=tea` uses the tea leaf model (`ai-models/tea_leaf_model.keras`, 8 classes): `disease_name_en` is the readable class id (`brown_blight` → `Brown blight`), `disease_name_vi` comes from `tea_class_names_vi.json`, and `top3` labels are class ids. When the top confidence is below `TEA_CONFIDENCE_THRESHOLD` (default `0.60`, see `ai-models/tea/MODEL_CARD.md`; a value outside (0, 1] stops startup), `uncertain` is `true`, both names are `null` and `top3` is kept. The general model is never `uncertain`. Every tea result, `healthy` included, still needs an officer's review.
 
 ---
 

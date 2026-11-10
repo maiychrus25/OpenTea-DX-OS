@@ -4,12 +4,19 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Pill } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import styles from './detail.module.css';
+import { ReportPhoto } from '@/components/features/disease/ReportPhoto';
+import { diseaseStatusLabel } from '@/domain/disease/disease-status-label';
+
+// Only pending reports can be opened for review.
+const PENDING = diseaseStatusLabel('PENDING');
 import { fetchJson } from '@/lib/api/fetch-json';
+import { UNCERTAIN_DISEASE_NAME } from '@/domain/disease/display-disease-name';
+
+const DIAGNOSIS_REQUIRED_MESSAGE = 'Vui lòng nhập tên bệnh đã xác nhận trước khi duyệt.';
 
 interface ReportData {
   id: string;
@@ -25,6 +32,8 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
   const router = useRouter();
   const [report, setReport] = useState<ReportData | null>(null);
   const [treatment, setTreatment] = useState('');
+  const [confirmedName, setConfirmedName] = useState('');
+  const [diagnosisError, setDiagnosisError] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -39,6 +48,8 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
         const found = (data.data || []).find((r: ReportData) => r.id === params.id);
         if (found) {
           setReport(found);
+          // An uncertain AI result gives the officer nothing to confirm, so the name starts empty.
+          setConfirmedName(found.ai_disease_name === UNCERTAIN_DISEASE_NAME ? '' : found.ai_disease_name);
         } else {
           setError('Không tìm thấy báo cáo bệnh (hoặc đã duyệt).');
         }
@@ -50,6 +61,11 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
   }, [params.id]);
 
   const handleReview = async (status: 'CONFIRMED' | 'REJECTED') => {
+    if (status === 'CONFIRMED' && !confirmedName.trim()) {
+      setDiagnosisError(DIAGNOSIS_REQUIRED_MESSAGE);
+      return;
+    }
+    setDiagnosisError('');
     if (status === 'CONFIRMED' && !treatment.trim()) {
       setError('Vui lòng nhập Hướng dẫn điều trị trước khi duyệt.');
       return;
@@ -64,7 +80,8 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status,
-          treatment_recommendation: treatment
+          treatment_recommendation: treatment,
+          confirmed_diagnosis: confirmedName.trim()
         })
       });
 
@@ -93,7 +110,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
         <h1 className={styles.title}>Chi tiết Báo cáo bệnh</h1>
       </header>
 
-      {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
+      {error && <div style={{ color: 'var(--color-danger)', marginBottom: '1rem' }}>{error}</div>}
 
       <div className={styles.content}>
         <div className={styles.card}>
@@ -101,13 +118,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
           
           {report.photo_url && (
             <div className={styles.imageWrapper}>
-              <Image 
-                src={report.photo_url} 
-                alt="Ảnh bệnh" 
-                fill 
-                unoptimized
-                className={styles.reportImage}
-              />
+              <ReportPhoto src={report.photo_url} className={styles.reportImage} />
             </div>
           )}
 
@@ -134,7 +145,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>Trạng thái</span>
-              <Pill tone="amber">PENDING</Pill>
+              <Pill tone={PENDING.tone}>{PENDING.label}</Pill>
             </div>
           </div>
         </div>
@@ -142,8 +153,26 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
         <div className={styles.card}>
           <div className={styles.sectionTitle}>Phản hồi & Hướng dẫn điều trị</div>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Nhập hướng dẫn (Bắt buộc khi Duyệt):</label>
+            <label className={styles.label} htmlFor="confirmed-diagnosis">Tên bệnh đã xác nhận (Bắt buộc khi Duyệt)</label>
+            <input
+              id="confirmed-diagnosis"
+              type="text"
+              className={styles.input}
+              value={confirmedName}
+              onChange={(e) => setConfirmedName(e.target.value)}
+              maxLength={200}
+              aria-invalid={diagnosisError ? true : undefined}
+              aria-describedby={diagnosisError ? 'confirmed-diagnosis-error' : undefined}
+              disabled={submitting}
+            />
+            {diagnosisError && (
+              <p id="confirmed-diagnosis-error" role="alert" className={styles.fieldError}>{diagnosisError}</p>
+            )}
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="treatment-recommendation">Nhập hướng dẫn (Bắt buộc khi Duyệt):</label>
             <textarea 
+              id="treatment-recommendation"
               className={styles.textarea}
               placeholder="VD: Sử dụng thuốc A liều lượng B, phun cách ly 7 ngày..."
               value={treatment}

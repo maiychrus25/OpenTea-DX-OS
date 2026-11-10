@@ -36,7 +36,7 @@ export function isValidHost(host: string): boolean {
 }
 
 export function normalizeLotCode(code: string): string {
-  // NFC normalize to handle LÚAJAS vs LÚAJAS, trim, limit length
+  // NFC normalize to handle CHÈ vs CHÈ (precomposed vs decomposed), trim, limit length
   try {
     return code.normalize('NFC').trim()
   } catch {

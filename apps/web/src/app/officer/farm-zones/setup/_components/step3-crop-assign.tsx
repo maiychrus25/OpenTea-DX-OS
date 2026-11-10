@@ -22,7 +22,7 @@ interface Props {
 export function Step3CropAssign({ householdId, householdName, area, geojson, center, cropOptions, onPrev, onComplete }: Props) {
   // Default to the first option, fallback to empty string if array is empty
   const [crop, setCrop] = useState(cropOptions.length > 0 ? cropOptions[0] : '') 
-  const [season, setSeason] = useState('Hè Thu 2026')
+  const [season, setSeason] = useState(`Lứa 1/${new Date().getFullYear()}`)
   const [yieldEst, setYieldEst] = useState('4.5')
   const [isLoading, setIsLoading] = useState(false)
   

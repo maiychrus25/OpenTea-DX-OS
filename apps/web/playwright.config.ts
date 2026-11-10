@@ -3,6 +3,9 @@
 
 import { defineConfig, devices } from '@playwright/test';
 
+// One secret for the dev server below and the forged cookies (tests/e2e/helpers/forged-session.ts); never used in production.
+process.env.AUTH_SECRET ??= 'e2e-only-auth-secret-not-for-production';
+
 const port = Number(process.env.E2E_PORT ?? 3100);
 const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${port}`;
 

@@ -6,6 +6,8 @@ import { Info, Lock, Hourglass } from 'lucide-react';
 import { LotTraceData } from '@/domain/entities/lot-trace-data';
 import { Pill } from '@/components/ui/Pill/Pill';
 import styles from '../trace.module.css';
+import { BRAND_NAME } from '@/lib/brand'
+import { lotStatusLabel } from '@/domain/lot/lot-status-label'
 
 interface TraceViewProps {
   data: LotTraceData;
@@ -53,7 +55,7 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
       )}
       <header className={styles.traceHeader}>
         <h1>Truy xuất nguồn gốc</h1>
-        <p>DX AgriMarket</p>
+        <p>{BRAND_NAME}</p>
       </header>
 
       {/* QR Code Section */}
@@ -93,7 +95,7 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
             <span className={styles.infoLabel}>Trạng thái</span>
             <span className={styles.infoValue}>
               <Pill tone={status === 'QR_EXPORTED' ? 'green' : 'neutral'}>
-                {status}
+                {lotStatusLabel(status)}
               </Pill>
             </span>
           </div>
@@ -168,7 +170,7 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
                   )}
                   {journal.withdrawal_days !== null && journal.withdrawal_days > 0 && (
                     <span className={styles.timelineDetail}>
-                      <Hourglass size={14} className="inline mr-1 text-amber-600 align-text-bottom" />
+                      <Hourglass size={14} className="inline mr-1 text-warning align-text-bottom" />
                       Thời gian cách ly: {journal.withdrawal_days} ngày
                     </span>
                   )}
@@ -208,7 +210,7 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
       {/* Mandatory disclaimer */}
       <div className={styles.disclaimer}>
         <Info className={styles.disclaimerIcon} />
-        <p>DX AgriMarket không chỉnh sửa hoặc xác nhận thay cho cán bộ kỹ thuật. Thông tin hiển thị được ghi nhận bởi cán bộ kỹ thuật được phân công.</p>
+        <p>{BRAND_NAME} không chỉnh sửa hoặc xác nhận thay cho cán bộ kỹ thuật. Thông tin hiển thị được ghi nhận bởi cán bộ kỹ thuật được phân công.</p>
       </div>
     </div>
   );

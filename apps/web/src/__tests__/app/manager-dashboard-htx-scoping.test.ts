@@ -201,7 +201,7 @@ describe('Story 7-0a: HTX Scoping — Dependent-Query Evidence', () => {
       mockPrisma.lot.findMany.mockResolvedValue([])
 
       const useCase = new GlobalSearchUseCase()
-      await useCase.execute('MD2-ST', TEST_HTX_ID)
+      await useCase.execute('TC-CHE', TEST_HTX_ID)
 
       expect(mockPrisma.lot.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

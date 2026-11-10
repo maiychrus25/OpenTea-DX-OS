@@ -6,7 +6,7 @@ import { DocumentView } from '@/components/features/document/DocumentView'
 import { requireTenant } from '@/lib/api/tenant'
 
 export const metadata: Metadata = {
-  title: 'Kho tài liệu P.A.R.A | DX-AgriMarket',
+  title: 'Kho tài liệu P.A.R.A',
 }
 
 export default async function DocumentsPage() {

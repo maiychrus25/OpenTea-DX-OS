@@ -6,12 +6,12 @@ import { htxProfileUpdateSchema } from '@/lib/validations/htx-profile.schema'
 describe('htxProfileUpdateSchema', () => {
   it('accepts valid data', () => {
     const validData = {
-      name: 'HTX MD2',
+      name: 'HTX Tân Cương',
       address: '123 Test St',
       contact_email: 'test@example.com',
       contact_phone: '0901234567',
-      crop_types: ['Xoài', 'Lúa'],
-      season_label: 'Hè Thu 2026',
+      crop_types: ['Chè Trung du', 'Chè LDP1'],
+      season_label: 'Lứa 1/2026',
     }
     expect(htxProfileUpdateSchema.safeParse(validData).success).toBe(true)
   })
@@ -39,7 +39,7 @@ describe('htxProfileUpdateSchema', () => {
 
   it('accepts empty email (optional)', () => {
     const validData = {
-      name: 'HTX MD2',
+      name: 'HTX Tân Cương',
       address: '123 Test St',
       contact_email: '', // allowed
       crop_types: []
@@ -48,7 +48,7 @@ describe('htxProfileUpdateSchema', () => {
   })
 
   it('defaults crop_types to [] when omitted', () => {
-    const validData = { name: 'HTX MD2', address: '123 Test St' }
+    const validData = { name: 'HTX Tân Cương', address: '123 Test St' }
     const result = htxProfileUpdateSchema.safeParse(validData)
     expect(result.success).toBe(true)
     expect(result.data?.crop_types).toEqual([])

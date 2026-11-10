@@ -280,8 +280,8 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
               </button>
               {currentPath !== activeCategory && (
                 <>
-                  <ChevronRight size={16} className="text-gray-400" />
-                  <span className="text-gray-600 font-medium">
+                  <ChevronRight size={16} className="text-ink-tertiary" />
+                  <span className="text-ink-secondary font-medium">
                     {currentPath.replace(activeCategory, '').replace(/\/$/, '')}
                   </span>
                 </>
@@ -289,7 +289,7 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
             </div>
             
             <div className={styles.searchBox}>
-              <Search size={16} className="text-gray-400" />
+              <Search size={16} className="text-ink-tertiary" />
               <input 
                 type="text" 
                 placeholder="Tìm tài liệu, thư mục..." 
@@ -385,7 +385,7 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
         <form onSubmit={handleUpload}>
           <div className={styles.formGroup}>
             <label>Thư mục đích</label>
-            <input type="text" value={currentPath} disabled className="bg-gray-100" />
+            <input type="text" value={currentPath} disabled className="bg-muted" />
           </div>
           <div className={styles.formGroup}>
             <label>Chọn file</label>

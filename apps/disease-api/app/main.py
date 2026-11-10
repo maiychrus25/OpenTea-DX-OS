@@ -8,12 +8,14 @@
 
 import asyncio
 import io
+import json
 import logging
+import math
 import os
 from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -25,8 +27,14 @@ logger = logging.getLogger(__name__)
 # ── Configuration ────────────────────────────────────────────────────────────
 
 MODEL_DIR = Path(os.getenv("MODEL_DIR", "/models"))
-MODEL_FILE = "leaf_disease_model.keras"
-CLASS_NAMES_FILE = "class_names.txt"
+# Model name -> (model file, class names file); "general" stays the default for existing callers.
+MODEL_FILES = {
+    "general": ("leaf_disease_model.keras", "class_names.txt"),
+    "tea": ("tea_leaf_model.keras", "tea_class_names.txt"),
+}
+TEA_NAMES_VI_FILE = "tea_class_names_vi.json"
+# From ai-models/tea/MODEL_CARD.md; override with TEA_CONFIDENCE_THRESHOLD.
+DEFAULT_TEA_CONFIDENCE_THRESHOLD = 0.60
 IMAGE_SIZE = (224, 224)
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png"}
 
@@ -97,15 +105,19 @@ class Top3Item(BaseModel):
 
 
 class PredictResponse(BaseModel):
-    disease_name_vi: str
-    disease_name_en: str
+    # Null when uncertain: the tea model's top confidence is below the threshold.
+    disease_name_vi: Optional[str]
+    disease_name_en: Optional[str]
     confidence: float
     top3: List[Top3Item]
+    model: str
+    uncertain: bool
 
 
 class HealthResponse(BaseModel):
     status: str
-    model_loaded: bool
+    model_loaded: bool  # the general model, as before
+    models: Dict[str, bool]
 
 
 class ErrorResponse(BaseModel):
@@ -114,44 +126,67 @@ class ErrorResponse(BaseModel):
 
 # ── Model loading ────────────────────────────────────────────────────────────
 
-_model = None
-_class_names: Optional[List[str]] = None
-_model_loaded = False
+# Model name -> (Keras model, class names); a model missing here answers 503.
+_models: Dict[str, tuple] = {}
+_tea_names_vi: Dict[str, str] = {}
+_tea_threshold = DEFAULT_TEA_CONFIDENCE_THRESHOLD
 
 
-def _load_model_sync():
-    """Load TF/Keras model and class names from disk. Called once at startup."""
-    global _model, _class_names, _model_loaded
+def _read_tea_threshold() -> float:
+    """TEA_CONFIDENCE_THRESHOLD as a float in (0, 1]; anything else stops startup."""
+    raw = os.getenv("TEA_CONFIDENCE_THRESHOLD")
+    if raw is None:
+        return DEFAULT_TEA_CONFIDENCE_THRESHOLD
+    try:
+        value = float(raw)
+    except ValueError:
+        value = math.nan
+    if not 0.0 < value <= 1.0:
+        raise ValueError(f"TEA_CONFIDENCE_THRESHOLD must be a number in (0, 1], got {raw!r}")
+    return value
 
-    model_path = MODEL_DIR / MODEL_FILE
-    class_names_path = MODEL_DIR / CLASS_NAMES_FILE
+
+def _load_model_sync(model_file: str, class_names_file: str) -> Optional[tuple]:
+    """Load one TF/Keras model and its class names from disk; None when missing or broken."""
+    model_path = MODEL_DIR / model_file
+    class_names_path = MODEL_DIR / class_names_file
 
     # Load class names
     if not class_names_path.exists():
         logger.error("Class names file not found: %s", class_names_path)
-        return
-    _class_names = [
+        return None
+    class_names = [
         line.strip()
         for line in class_names_path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    logger.info("Loaded %d class names", len(_class_names))
+    logger.info("Loaded %d class names from %s", len(class_names), class_names_path)
 
     # Load Keras model
     if not model_path.exists():
         logger.error("Model file not found: %s", model_path)
-        return
+        return None
 
     try:
         # Lazy import to avoid slow startup if TF not needed for health-only mode
         import tensorflow as tf
 
-        _model = tf.keras.models.load_model(str(model_path))
-        _model_loaded = True
+        model = tf.keras.models.load_model(str(model_path))
         logger.info("Model loaded successfully from %s", model_path)
+        return model, class_names
     except Exception as exc:
-        logger.error("Failed to load model: %s", exc)
-        _model_loaded = False
+        logger.error("Failed to load model %s: %s", model_path, exc)
+        return None
+
+
+def _load_tea_names_vi() -> Optional[Dict[str, str]]:
+    """Vietnamese tea class names (AI labels an officer must confirm); None when missing or broken."""
+    path = MODEL_DIR / TEA_NAMES_VI_FILE
+    try:
+        return {class_id: entry["vi"] for class_id, entry in json.loads(path.read_text(encoding="utf-8")).items()}
+    except Exception as exc:
+        logger.error("Failed to load tea Vietnamese names %s: %s", path, exc)
+        return None
 
 
 # ── Image preprocessing ──────────────────────────────────────────────────────
@@ -165,9 +200,9 @@ def _preprocess_image(image_bytes: bytes) -> np.ndarray:
     return np.expand_dims(img_array, axis=0)  # batch dimension
 
 
-def _run_inference(img_array: np.ndarray) -> np.ndarray:
+def _run_inference(model, img_array: np.ndarray) -> np.ndarray:
     """Run model prediction (blocking — call in executor)."""
-    return _model.predict(img_array, verbose=0)
+    return model.predict(img_array, verbose=0)
 
 
 # ── Application lifecycle ────────────────────────────────────────────────────
@@ -175,15 +210,29 @@ def _run_inference(img_array: np.ndarray) -> np.ndarray:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load model on startup, cleanup on shutdown."""
-    logger.info("Starting Disease API — loading model...")
-    _load_model_sync()
+    """Load both models on startup, cleanup on shutdown."""
+    global _tea_threshold, _tea_names_vi
+    _tea_threshold = _read_tea_threshold()
+    logger.info("Starting Disease API — loading models...")
+    _models.clear()
+    for name, (model_file, class_names_file) in MODEL_FILES.items():
+        loaded = _load_model_sync(model_file, class_names_file)
+        if loaded is not None:
+            _models[name] = loaded
+    names_vi = _load_tea_names_vi() if "tea" in _models else None
+    missing = [] if names_vi is None else [i for i in _models["tea"][1] if i not in names_vi]
+    if missing:
+        logger.error("Tea model disabled: %s lacks Vietnamese names for %s", TEA_NAMES_VI_FILE, missing)
+    if names_vi is None or missing:
+        _models.pop("tea", None)
+    else:
+        _tea_names_vi = names_vi
     yield
     logger.info("Disease API shutting down")
 
 
 app = FastAPI(
-    title="DX-AgriMarket Disease API",
+    title="OpenTea DX-OS Disease API",
     description="Crop disease detection via TF/Keras inference. "
     "AI Invariant: returns disease name + confidence ONLY — NO treatment.",
     version="1.0.0",
@@ -196,8 +245,12 @@ app = FastAPI(
 
 @app.get("/health", response_model=HealthResponse)
 def health_check():
-    """Health check — reports whether the TF model is loaded and ready."""
-    return {"status": "ok", "model_loaded": _model_loaded}
+    """Health check — reports which TF models are loaded and ready."""
+    return {
+        "status": "ok",
+        "model_loaded": "general" in _models,
+        "models": {name: name in _models for name in MODEL_FILES},
+    }
 
 
 @app.post(
@@ -205,13 +258,20 @@ def health_check():
     response_model=PredictResponse,
     responses={400: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
 )
-async def predict(file: UploadFile = File(...)):
+async def predict(file: UploadFile = File(...), model: str = "general"):
     """
-    Classify crop disease from a leaf image.
+    Classify crop disease from a leaf image with the `general` (default) or `tea` model.
 
-    Accepts JPEG/PNG. Returns disease name (vi + en) and confidence.
+    Accepts JPEG/PNG. Returns disease name (vi + en) and confidence; a tea result
+    below the confidence threshold is `uncertain` with null names and top3 kept.
     AI Invariant: response NEVER contains treatment recommendations.
     """
+    if model not in MODEL_FILES:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": f"Unknown model: {model}. Use one of: {', '.join(MODEL_FILES)}."},
+        )
+
     # ── Validate content type ────────────────────────────────────────────
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(
@@ -220,11 +280,12 @@ async def predict(file: UploadFile = File(...)):
         )
 
     # ── Check model availability ─────────────────────────────────────────
-    if not _model_loaded or _model is None or _class_names is None:
+    if model not in _models:
         raise HTTPException(
             status_code=503,
             detail={"error": "Model not loaded. Check /health endpoint."},
         )
+    keras_model, class_names = _models[model]
 
     # ── Read and validate image ──────────────────────────────────────────
     try:
@@ -258,7 +319,7 @@ async def predict(file: UploadFile = File(...)):
     # ── Inference (run in thread pool to not block event loop) ────────────
     loop = asyncio.get_running_loop()
     try:
-        predictions = await loop.run_in_executor(_executor, _run_inference, img_array)
+        predictions = await loop.run_in_executor(_executor, _run_inference, keras_model, img_array)
     except Exception as exc:
         logger.error("Model inference failed: %s", exc)
         raise HTTPException(
@@ -271,12 +332,21 @@ async def predict(file: UploadFile = File(...)):
     top3_indices = np.argsort(scores)[-3:][::-1]
 
     top_idx = top3_indices[0]
-    disease_name_en = _class_names[top_idx]
-    disease_name_vi = VIETNAMESE_NAMES.get(disease_name_en, disease_name_en)
+    label = class_names[top_idx]
     confidence = float(scores[top_idx])
+    uncertain = False
+
+    if model == "tea":
+        # Faithful to the model, `healthy` included; the web app sends every tea result to an officer.
+        uncertain = confidence < _tea_threshold
+        disease_name_en = None if uncertain else label.replace("_", " ").capitalize()
+        disease_name_vi = None if uncertain else _tea_names_vi[label]
+    else:
+        disease_name_en = label
+        disease_name_vi = VIETNAMESE_NAMES.get(disease_name_en, disease_name_en)
 
     top3 = [
-        Top3Item(label=_class_names[i], confidence=float(scores[i]))
+        Top3Item(label=class_names[i], confidence=float(scores[i]))
         for i in top3_indices
     ]
 
@@ -287,4 +357,6 @@ async def predict(file: UploadFile = File(...)):
         disease_name_en=disease_name_en,
         confidence=confidence,
         top3=top3,
+        model=model,
+        uncertain=uncertain,
     )

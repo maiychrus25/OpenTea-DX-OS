@@ -2,20 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { test, expect, Page } from '@playwright/test'
-import { encode } from 'next-auth/jwt'
-
-async function mockSessionCookie(page: Page, role: string, name: string, id: string) {
-  const now = Math.floor(Date.now() / 1000)
-  const token = await encode({
-    token: { id, name, email: `${role}@example.com`, role, iat: now, exp: now + 60 * 60 * 8, jti: 'mock-jti-' + now },
-    secret: process.env.AUTH_SECRET || process.env.KEYCLOAK_CLIENT_SECRET || 'agrimarket-secret-key',
-    salt: 'authjs.session-token',
-  })
-  await page.context().addCookies([{
-    name: 'authjs.session-token', value: token, domain: 'localhost', path: '/',
-    httpOnly: true, sameSite: 'Lax', expires: now + 60 * 60 * 8,
-  }])
-}
+import { mockSessionCookie } from './helpers/forged-session'
 
 async function loginAsManager(page: Page) {
   await mockSessionCookie(page, 'manager', 'Manager User', 'manager-id-1')
@@ -32,8 +19,8 @@ test.describe('Manager Workflows', () => {
       expect(url.searchParams.get('visibility')).toBe('published')
       
       const data = [
-        { id: '1', lot_code: 'L01', commodity: 'Gạo', status: 'READY', estimated_weight_kg: 500, created_at: '2026-08-20' },
-        { id: '2', lot_code: 'L02', commodity: 'Gạo ST25', status: 'QR_EXPORTED', estimated_weight_kg: 1000, created_at: '2026-08-21' }
+        { id: '1', lot_code: 'L01', commodity: 'Chè', status: 'READY', estimated_weight_kg: 500, created_at: '2026-08-20' },
+        { id: '2', lot_code: 'L02', commodity: 'Chè Kim Tuyên', status: 'QR_EXPORTED', estimated_weight_kg: 1000, created_at: '2026-08-21' }
       ]
 
       await route.fulfill({ status: 200, json: { data } })

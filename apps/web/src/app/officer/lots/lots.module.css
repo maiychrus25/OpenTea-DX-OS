@@ -59,7 +59,7 @@
 }
 
 .card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .cardHeader {
@@ -131,7 +131,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-modal-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,7 +152,7 @@
   max-width: 560px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-modal);
 }
 
 .modalTitle {
@@ -245,7 +245,7 @@
 
 .successBanner {
   background: var(--color-success);
-  color: white;
+  color: var(--color-ink-inverse);
   padding: 1rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;

@@ -170,7 +170,7 @@ export function FarmerJournalList() {
               {selectedEntry.photo_url && (
                 <div className={styles.detailRow}>
                   <strong>Hình ảnh:</strong>
-                  <div className="mt-2 w-full rounded-md overflow-hidden bg-gray-100 flex justify-center">
+                  <div className="mt-2 w-full rounded-md overflow-hidden bg-muted flex justify-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={selectedEntry.photo_url} alt="Journal attachment" className="max-w-full max-h-[300px] object-contain" />
                   </div>

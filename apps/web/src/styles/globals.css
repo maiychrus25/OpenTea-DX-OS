@@ -4,6 +4,18 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Tailwind `dark:` follows the same rule as the tokens: the toggle's choice, else the system setting. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
 @theme inline {
   --font-sans: var(--font-be-vietnam);
   --color-background: var(--background);
@@ -15,14 +27,39 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-card: var(--card);
+  /* Semantic tokens for Tailwind utilities (bg-danger-subtle, text-ink-secondary, ...), so dark mode reaches them. */
+  --color-primary-hover: var(--color-primary-hover);
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-subtle: var(--color-accent-subtle);
+  --color-accent-foreground: var(--color-accent-foreground);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
+  --color-success-subtle: var(--color-success-subtle);
+  --color-warning-subtle: var(--color-warning-subtle);
+  --color-danger-subtle: var(--color-danger-subtle);
+  --color-info-subtle: var(--color-info-subtle);
+  --color-surface-sunken: var(--color-surface-sunken);
+  --color-surface-overlay: var(--color-surface-overlay);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-ink-secondary: var(--color-ink-secondary);
+  --color-ink-tertiary: var(--color-ink-tertiary);
+  --color-ink-inverse: var(--color-ink-inverse);
+  --color-sidebar: var(--sidebar-bg);
+  --color-sidebar-foreground: var(--sidebar-foreground);
   --radius-sm: .5rem;
   --radius-md: .75rem;
   --radius-lg: 1rem;
   --radius-xl: 1.25rem;
 }
 
+/* Light theme. Every literal colour here has a dark value in the two dark blocks below (DESIGN.md lists both). */
 :root {
-  /* Prototype tokens — ADD these */
+  color-scheme: light;
+
+  /* Base palette */
   --background:         #f5f7f3;
   --foreground:         #19231e;
   --card:               #ffffff;
@@ -31,10 +68,11 @@
   --accent-lime:        #d6f05c;
   --secondary:          #e7f0ea;
   --muted:              #eef1ed;
-  --muted-foreground:   #66736c;
+  --muted-foreground:   #5d6a63;
   --border:             #dce3dd;
   --sidebar-bg:         #143c2d;
   --sidebar-darker:     #0d3023;
+  --sidebar-foreground: #ffffff;
 
   /* Primary */
   --color-primary: var(--primary);
@@ -42,56 +80,61 @@
   --color-primary-subtle: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
 
-  /* Accent */
-  --color-accent: #EA580C;
-  --color-accent-hover: #C2410C;
-  --color-accent-subtle: #FFF7ED;
-  --color-accent-foreground: #FFFFFF;
+  /* Accent: tea-bud amber, used sparingly for highlights */
+  --color-accent: #b45309;
+  --color-accent-hover: #92400e;
+  --color-accent-subtle: #fef3c7;
+  --color-accent-foreground: #ffffff;
 
-  /* Parcel Status (CLOSED SET â€” do not use for other purposes) */
-  --color-status-sowing: #16A34A;
-  --color-status-tending: #CA8A04;
-  --color-status-harvest-approved: #EA580C;
-  --color-status-harvested: #2563EB;
-  --color-status-draft: #6B7280;
+  /* Parcel Status (CLOSED SET: do not use for other purposes) */
+  --color-status-sowing: #15803d;
+  --color-status-tending: #a16207;
+  --color-status-harvest-approved: #c2410c;
+  --color-status-harvested: #2563eb;
+  --color-status-draft: #6b7280;
 
   /* Semantic Feedback */
-  --color-success: #16A34A;
-  --color-warning: #D97706;
-  --color-danger: #DC2626;
-  --color-info: #2563EB;
-  --color-success-subtle: #DCFCE7;
-  --color-warning-subtle: #FEF3C7;
-  --color-danger-subtle: #FEE2E2;
-  --color-info-subtle: #DBEAFE;
+  --color-success: #15803d;
+  --color-warning: #854d0e;
+  --color-danger: #b91c1c;
+  --color-info: #1d4ed8;
+  --color-success-subtle: #dcfce7;
+  --color-warning-subtle: #fef3c7;
+  --color-danger-subtle: #fee2e2;
+  --color-info-subtle: #dbeafe;
 
   /* Neutral Surfaces */
   --color-surface-page: var(--background);
   --color-surface-card: var(--card);
-  --color-surface-sunken: #F1F5F9;
-  --color-surface-overlay: #FFFFFF;
+  --color-surface-sunken: #f1f5f9;
+  --color-surface-overlay: #ffffff;
 
   /* Borders */
-  --color-border-subtle: #E2E8F0;
+  --color-border-subtle: #e2e8f0;
   --color-border-default: var(--border);
   --color-border-focus: var(--primary);
 
   /* Text */
   --color-ink-primary: var(--foreground);
   --color-ink-secondary: #475569;
-  --color-ink-tertiary: #94A3B8;
-  --color-ink-inverse: #FFFFFF;
+  --color-ink-tertiary: #5f6b7a;
+  --color-ink-inverse: #ffffff;
 
   /* Special */
   --color-map-overlay: rgba(15, 23, 42, 0.55);
   --color-modal-overlay: rgba(15, 23, 42, 0.55);
-  --color-badge-unread: #DC2626;
-  --color-danger-hover: #B91C1C;
+  --color-badge-unread: #dc2626;
+  --color-danger-hover: #991b1b;
 
   /* Shadows */
   --shadow-card: 0 1px 4px rgba(15, 23, 42, 0.06);
   --shadow-card-hover: 0 4px 16px rgba(15, 23, 42, 0.10);
   --shadow-modal: 0 10px 25px rgba(15, 23, 42, 0.15);
+
+  /* Motion */
+  --motion-duration-fast: 150ms;
+  --motion-duration-base: 200ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
   /* Typography Scale */
   --font-size-display: 2rem;        /* 32px */
@@ -99,12 +142,12 @@
   --font-size-h2: 1.25rem;          /* 20px */
   --font-size-h3: 1rem;             /* 16px */
   --font-size-body: 0.9375rem;      /* 15px */
-  --font-size-body-large: 1.0625rem;/* 17px â€” farmer role */
+  --font-size-body-large: 1.0625rem;/* 17px, farmer role */
   --font-size-label: 0.875rem;      /* 14px */
   --font-size-meta: 0.75rem;        /* 12px */
   --font-size-mono: 0.8125rem;      /* 13px */
 
-  --font-family-sans: var(--font-inter, 'Inter'), system-ui, -apple-system, sans-serif;
+  --font-family-sans: var(--font-be-vietnam), system-ui, -apple-system, sans-serif;
   --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   /* Spacing Scale (4px base unit) */
@@ -137,6 +180,106 @@
   --rounded-lg: 14px;
   --rounded-xl: 20px;
   --rounded-full: 9999px;
+}
+
+/* Dark theme: follows the system unless the viewer picked light; the toggle can also force it.
+   Both blocks must stay identical (theme-tokens.test.ts checks this). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --background:         #0b1712;
+    --foreground:         #e3ece6;
+    --card:               #112219;
+    --primary:            #4cc38a;
+    --primary-foreground: #04140c;
+    --accent-lime:        #c9e157;
+    --secondary:          #173328;
+    --muted:              #162a20;
+    --muted-foreground:   #9fb4a8;
+    --border:             #2a4034;
+    --sidebar-bg:         #0e271d;
+    --sidebar-darker:     #081a13;
+    --sidebar-foreground: #e8f1eb;
+    --color-primary-hover: #6dd3a2;
+    --color-accent: #f2b544;
+    --color-accent-hover: #f6c76a;
+    --color-accent-subtle: #2e2410;
+    --color-accent-foreground: #1d1405;
+    --color-status-sowing: #4ade80;
+    --color-status-tending: #facc15;
+    --color-status-harvest-approved: #fb923c;
+    --color-status-harvested: #60a5fa;
+    --color-status-draft: #a3b1a9;
+    --color-success: #4ade80;
+    --color-warning: #fbbf24;
+    --color-danger: #f87171;
+    --color-info: #60a5fa;
+    --color-success-subtle: #12301f;
+    --color-warning-subtle: #2f250c;
+    --color-danger-subtle: #3a1414;
+    --color-info-subtle: #132640;
+    --color-surface-sunken: #0e1d16;
+    --color-surface-overlay: #152a20;
+    --color-border-subtle: #1f3229;
+    --color-ink-secondary: #b4c4bb;
+    --color-ink-tertiary: #8ea398;
+    --color-ink-inverse: #08130e;
+    --color-map-overlay: rgba(0, 0, 0, 0.6);
+    --color-modal-overlay: rgba(0, 0, 0, 0.6);
+    --color-badge-unread: #f87171;
+    --color-danger-hover: #fca5a5;
+    --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.4);
+    --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-modal: 0 10px 25px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background:         #0b1712;
+  --foreground:         #e3ece6;
+  --card:               #112219;
+  --primary:            #4cc38a;
+  --primary-foreground: #04140c;
+  --accent-lime:        #c9e157;
+  --secondary:          #173328;
+  --muted:              #162a20;
+  --muted-foreground:   #9fb4a8;
+  --border:             #2a4034;
+  --sidebar-bg:         #0e271d;
+  --sidebar-darker:     #081a13;
+  --sidebar-foreground: #e8f1eb;
+  --color-primary-hover: #6dd3a2;
+  --color-accent: #f2b544;
+  --color-accent-hover: #f6c76a;
+  --color-accent-subtle: #2e2410;
+  --color-accent-foreground: #1d1405;
+  --color-status-sowing: #4ade80;
+  --color-status-tending: #facc15;
+  --color-status-harvest-approved: #fb923c;
+  --color-status-harvested: #60a5fa;
+  --color-status-draft: #a3b1a9;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #60a5fa;
+  --color-success-subtle: #12301f;
+  --color-warning-subtle: #2f250c;
+  --color-danger-subtle: #3a1414;
+  --color-info-subtle: #132640;
+  --color-surface-sunken: #0e1d16;
+  --color-surface-overlay: #152a20;
+  --color-border-subtle: #1f3229;
+  --color-ink-secondary: #b4c4bb;
+  --color-ink-tertiary: #8ea398;
+  --color-ink-inverse: #08130e;
+  --color-map-overlay: rgba(0, 0, 0, 0.6);
+  --color-modal-overlay: rgba(0, 0, 0, 0.6);
+  --color-badge-unread: #f87171;
+  --color-danger-hover: #fca5a5;
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 10px 25px rgba(0, 0, 0, 0.6);
 }
 
 @media (min-width: 1024px) {

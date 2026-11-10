@@ -1,29 +1,8 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import fs from 'fs';
-import { test, expect, Page } from '@playwright/test';
-import { encode } from 'next-auth/jwt';
-
-try {
-  const envContent = fs.readFileSync('.env', 'utf-8');
-  const match = envContent.match(/AUTH_SECRET=["']?([^"'\n]+)["']?/);
-  if (match) process.env.AUTH_SECRET = match[1];
-} catch (e) {}
-
-async function mockSessionCookie(page: Page, role: string, name: string, id: string) {
-  const now = Math.floor(Date.now() / 1000);
-  const token = await encode({
-    // htxCode must exist in htx_profiles (the platform smoke fixture), or the layout shows the NO_HTX notice.
-    token: { id, name, email: `${role}@example.com`, role, htxCode: 'TC', iat: now, exp: now + 60 * 60 * 8, jti: 'mock-jti-' + now },
-    secret: process.env.AUTH_SECRET || process.env.KEYCLOAK_CLIENT_SECRET || 'agrimarket-secret-key',
-    salt: 'authjs.session-token',
-  });
-  await page.context().addCookies([{
-    name: 'authjs.session-token', value: token, domain: 'localhost', path: '/',
-    httpOnly: true, sameSite: 'Lax', expires: now + 60 * 60 * 8,
-  }]);
-}
+import { test, expect } from '@playwright/test';
+import { mockSessionCookie } from './helpers/forged-session';
 
 test.describe('Story 8.11 - Member & Household Management', () => {
   test.beforeEach(async ({ page }) => {
@@ -31,14 +10,23 @@ test.describe('Story 8.11 - Member & Household Management', () => {
   });
 
   test('8.11-E2E-001: Officer sees household details and links', async ({ page }) => {
-    // Navigating to the household list page (we use direct link to profile for this test)
-    await page.goto('/officer/households/123');
+    // The forged cookie carries no access token, so the routes are mocked with data modelled on the seeded TC household
+    // (prisma/seed.ts); one parcel is shown harvested to cover the yield column. The layout still needs HTX TC in the database.
+    await page.route('**/api/farm/households/hh-tc-tam', r => r.fulfill({
+      status: 200,
+      json: { data: { id: 'hh-tc-tam', name: 'Hoàng Văn Tâm', phone: '0900100001', address: 'Xóm 1, xã Tân Cương', parcel_count: 2, total_area_ha: 0.77 } },
+    }));
+    await page.route('**/api/farm/parcels?household_id=hh-tc-tam', r => r.fulfill({
+      status: 200,
+      json: { data: [
+        { id: 'pc-tc-a1', crop_type: 'Chè Trung du', season: 'Lứa 1/2026', area_ha: 0.45, status: 'TENDING', harvested_at: null, estimated_yield_per_ha: 1800 },
+        { id: 'pc-tc-a3', crop_type: 'Chè Kim Tuyên', season: 'Lứa 2/2026', area_ha: 0.32, status: 'HARVESTED', harvested_at: '2026-10-11T02:00:00.000Z', estimated_yield_per_ha: 1800 },
+      ] },
+    }));
+    await page.goto('/officer/households/hh-tc-tam');
 
-    // Wait for the mock delay
     await page.waitForSelector('h2');
-
-    // Check if household name is rendered
-    await expect(page.locator('h2')).toContainText('Hộ ông B');
+    await expect(page.locator('h2')).toContainText('Hoàng Văn Tâm');
 
     // Check if the 3 linking cards are present
     const links = page.locator('a[href^="/officer/"]');
@@ -46,9 +34,10 @@ test.describe('Story 8.11 - Member & Household Management', () => {
     await expect(links.filter({ hasText: 'Nhật ký canh tác' })).toBeVisible();
     await expect(links.filter({ hasText: 'Lịch sử dịch hại' })).toBeVisible();
 
-    // Check production history table
-    await expect(page.locator('text=Cà phê')).toBeVisible();
-    await expect(page.locator('text=12 tấn')).toBeVisible();
+    // Production history: tea varieties, harvest rounds and the yield of the harvested parcel (0.32 ha x 1800 kg/ha).
+    await expect(page.getByRole('cell', { name: 'Chè Kim Tuyên', exact: true })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Lứa 2/2026', exact: true })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '576 kg', exact: true })).toBeVisible();
   });
 
   test('8.11-E2E-001: Officer sees error state for missing household', async ({ page }) => {

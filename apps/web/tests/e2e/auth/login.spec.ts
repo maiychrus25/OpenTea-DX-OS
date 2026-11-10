@@ -10,7 +10,7 @@ test('TC-7.6-01: login page shows 2-panel layout on desktop', async ({ page }) =
   // Right panel with form visible
   await expect(page.locator('[data-testid="auth-panel"]')).toBeVisible()
   // Brand visible
-  await expect(page.getByText('DX AgriMarket')).toBeVisible()
+  await expect(page.getByText('OpenTea DX-OS')).toBeVisible()
 })
 
 test('TC-7.6-02: auth-side panel hidden on mobile', async ({ browser }) => {

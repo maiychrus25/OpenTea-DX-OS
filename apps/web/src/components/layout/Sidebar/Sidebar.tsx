@@ -10,6 +10,7 @@ import { usePathname } from 'next/navigation'
 import { Leaf, X, ChevronDown } from 'lucide-react'
 import styles from './Sidebar.module.css'
 import { signOutAction } from '@/app/actions/signout-action'
+import { BRAND_NAME } from '@/lib/brand'
 
 export interface NavItem {
   label: string
@@ -81,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className={styles.brand}>
         <span className={styles.brandIcon}><Leaf size={24} /></span>
         <div className={styles.brandText}>
-          <strong>DX AgriMarket</strong>
+          <strong>{BRAND_NAME}</strong>
           <small>Nông nghiệp minh bạch</small>
         </div>
         {onClose && (

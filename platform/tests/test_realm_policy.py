@@ -7,6 +7,14 @@ from pathlib import Path
 
 REALM_PATH = Path(__file__).resolve().parents[2] / "docker/keycloak/realm-agrimarket.json"
 REALM = json.loads(REALM_PATH.read_text(encoding="utf-8"))
+DEMO_USERS = {
+    "manager_tc": ("manager", "TC"),
+    "officer_tc": ("officer", "TC"),
+    "farmer_tc": ("farmer", "TC"),
+    "manager_lb": ("manager", "LB"),
+    "officer_lb": ("officer", "LB"),
+    "farmer_lb": ("farmer", "LB"),
+}
 
 
 def by_key(items, key, value):
@@ -38,14 +46,28 @@ class RealmPolicyTest(unittest.TestCase):
         client = by_key(REALM["clients"], "clientId", "nextjs-web")
         self.assertIn("dx-os-core", client.get("defaultClientScopes", []))
 
-    def test_staff_require_totp(self):
-        for name in ("manager1", "officer1"):
+    def test_demo_users_belong_to_their_cooperative(self):
+        for name, (role, code) in DEMO_USERS.items():
             user = by_key(REALM["users"], "username", name)
-            self.assertIn("CONFIGURE_TOTP", user.get("requiredActions", []), name)
-            self.assertEqual(user.get("attributes", {}).get("htx_code"), ["MD2"], name)
-        farmer = by_key(REALM["users"], "username", "farmer1")
-        self.assertNotIn("CONFIGURE_TOTP", farmer.get("requiredActions", []))
-        self.assertEqual(farmer.get("attributes", {}).get("htx_code"), ["MD2"], "farmer1")
+            self.assertEqual(user.get("realmRoles"), [role], name)
+            self.assertEqual(user.get("attributes", {}).get("htx_code"), [code], name)
+
+    def test_staff_require_totp(self):
+        for name, (role, _) in DEMO_USERS.items():
+            user = by_key(REALM["users"], "username", name)
+            if role == "farmer":
+                self.assertNotIn("CONFIGURE_TOTP", user.get("requiredActions", []), name)
+            else:
+                self.assertIn("CONFIGURE_TOTP", user.get("requiredActions", []), name)
+
+    def test_rice_demo_users_removed(self):
+        names = {user["username"] for user in REALM["users"]}
+        self.assertFalse(names & {"manager1", "officer1", "farmer1"}, names)
+
+    def test_no_realm_user_takes_a_smoke_name(self):
+        # Smoke tests reset the password and required actions of the smoke_ users they own.
+        names = [user["username"] for user in REALM["users"] if user["username"].startswith("smoke_")]
+        self.assertEqual(names, [])
 
     def test_no_realm_role_maps_to_hasura_superuser(self):
         # Hasura treats the role name "admin" as superuser and takes allowed roles from realm_access.roles.

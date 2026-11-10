@@ -51,6 +51,12 @@ ai-models/*
 !ai-models/ATTRIBUTION.md
 !ai-models/leaf_disease_model.keras
 !ai-models/class_names.txt
+!ai-models/tea_leaf_model.keras
+!ai-models/tea_class_names.txt
+!ai-models/tea_class_names_vi.json
+!ai-models/tea/
+# Tea training downloads, prepared images and checkpoints (never commit)
+ai-models/tea/.work/
 
 # ── Docker ───────────────────────────────────────────────────
 .docker/

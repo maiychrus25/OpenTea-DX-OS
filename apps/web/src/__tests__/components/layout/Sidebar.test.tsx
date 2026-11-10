@@ -22,9 +22,9 @@ describe('Sidebar Component', () => {
   })
 
   it('renders brand block and coop block', () => {
-    render(<Sidebar navItems={mockItems} htxName="HTX MD2" htxLocation="Tiền Giang" onClose={() => {}} />)
-    expect(screen.getByText('DX AgriMarket')).toBeInTheDocument()
-    expect(screen.getByText('HTX MD2')).toBeInTheDocument()
+    render(<Sidebar navItems={mockItems} htxName="HTX Tân Cương" htxLocation="Thái Nguyên" onClose={() => {}} />)
+    expect(screen.getByText('OpenTea DX-OS')).toBeInTheDocument()
+    expect(screen.getByText('HTX Tân Cương')).toBeInTheDocument()
   })
 
   it('renders nav items', () => {

@@ -45,7 +45,7 @@ export default function ErrorPage({
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 gap-4 text-center">
-      <h1 className="text-2xl font-bold text-[var(--danger,#dc2626)]">
+      <h1 className="text-2xl font-bold text-[var(--color-danger)]">
         {coreDown ? 'Dịch vụ dữ liệu đang tạm gián đoạn' : 'Đã xảy ra lỗi'}
       </h1>
       <p className="text-muted-foreground mb-4">

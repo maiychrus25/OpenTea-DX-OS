@@ -13,6 +13,7 @@ describe('GetUnscheduledCyclesUseCase', () => {
       getHarvestSchedule: jest.fn(),
       updateEstimatedHarvestDate: jest.fn(),
       getUnscheduledActiveCycles: jest.fn(),
+      startNextRound: jest.fn(),
     }
     useCase = new GetUnscheduledCyclesUseCase(mockPort)
   })
@@ -24,7 +25,7 @@ describe('GetUnscheduledCyclesUseCase', () => {
         parcelId: 'p1',
         parcelName: 'Thửa 1',
         householdName: 'Hộ A',
-        cropType: 'Lúa',
+        cropType: 'Chè',
         estimatedYieldKg: 1000,
         estimatedHarvestDate: null,
         safeHarvestDate: null,

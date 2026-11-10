@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react'
 import styles from '../lots.module.css'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
+import { withoutErrorCode } from '@/lib/api/error-message'
 
 interface Parcel {
   id: string
@@ -69,7 +70,7 @@ export function LotCreateForm({ onSuccess, onCancel }: LotCreateFormProps) {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error?.message || 'Lỗi tạo lô hàng')
+        throw new Error(withoutErrorCode(err?.error?.message || 'Lỗi tạo lô hàng'))
       }
       onSuccess()
     } catch (err: unknown) {
@@ -83,11 +84,11 @@ export function LotCreateForm({ onSuccess, onCancel }: LotCreateFormProps) {
     <form onSubmit={handleSubmit}>
       <h2 className={styles.modalTitle}>Tạo Lô hàng mới</h2>
 
-      {error && <p style={{ color: 'var(--color-error)', marginBottom: '1rem' }}>{error}</p>}
+      {error && <p style={{ color: 'var(--color-danger)', marginBottom: '1rem' }}>{error}</p>}
 
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>Loại nông sản *</label>
-        <input className={styles.formInput} value={crop} onChange={e => setCrop(e.target.value)} placeholder="VD: Lúa ST25" required />
+        <input className={styles.formInput} value={crop} onChange={e => setCrop(e.target.value)} placeholder="VD: Chè Trung du" required />
       </div>
 
       <div className={styles.formGroup}>

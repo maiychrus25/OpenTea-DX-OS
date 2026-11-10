@@ -1,0 +1,84 @@
+{
+  "classes": [
+    "algal_leaf_spot",
+    "brown_blight",
+    "gray_blight",
+    "red_leaf_spot",
+    "helopeltis",
+    "birds_eye_spot",
+    "white_spot",
+    "healthy"
+  ],
+  "sources": [
+    {
+      "id": "kimutai",
+      "title": "tea sickness dataset",
+      "authors": ["Gibson Kimutai", "Anna Förster"],
+      "doi": "10.17632/j32xdt2ff5.2",
+      "licence": "CC BY 4.0",
+      "region": "Kenya",
+      "file": "tea sickness dataset.zip",
+      "url": "https://data.mendeley.com/public-files/datasets/j32xdt2ff5/files/62d4458e-0e09-4eba-9c11-e12c5f35b650/file_downloaded",
+      "size": 776527082,
+      "sha256": "4a8b9f70d513a6c65c10a9be49bde92e2ff39774765389c8fb54ed37e6e3b5e8",
+      "format": "folders",
+      "root": "tea sickness dataset/",
+      "labels": {
+        "algal leaf": "algal_leaf_spot",
+        "Anthracnose": null,
+        "bird eye spot": "birds_eye_spot",
+        "brown blight": "brown_blight",
+        "gray light": "gray_blight",
+        "healthy": "healthy",
+        "red leaf spot": "red_leaf_spot",
+        "white spot": "white_spot"
+      }
+    },
+    {
+      "id": "islam",
+      "title": "Tea leaf disease Dataset",
+      "authors": ["Md Samiul Islam"],
+      "doi": "10.17632/mz598gxfw9.1",
+      "licence": "CC BY 4.0",
+      "region": "Bangladesh",
+      "file": "Tea Leaf Diseases.zip",
+      "url": "https://data.mendeley.com/public-files/datasets/mz598gxfw9/files/1ee6a2a7-64e8-41c8-a5ac-4a759e29bbdc/file_downloaded",
+      "size": 107706468,
+      "sha256": "c152d8dda08ccec874ef23958511bee49d971299a36146db43e7b8aed1da92c9",
+      "format": "yolo",
+      "yolo_names": ["Algal Leaf Spot", "Brown Blight", "Gray Blight", "Healthy", "Helopeltis", "Red Leaf Spot"],
+      "labels": {
+        "Algal Leaf Spot": "algal_leaf_spot",
+        "Brown Blight": "brown_blight",
+        "Gray Blight": "gray_blight",
+        "Healthy": "healthy",
+        "Helopeltis": "helopeltis",
+        "Red Leaf Spot": "red_leaf_spot"
+      }
+    },
+    {
+      "id": "billah",
+      "title": "Real-Life Dataset of Tea Plant Leaf Disease Classification (Tea Compressed Dataset)",
+      "authors": ["Md Masum Billah", "Saifuddin Sagor", "Azmery Sultana", "Mohammad Shorif Uddin"],
+      "doi": "10.17632/rrff4vb35m.2",
+      "licence": "CC BY 4.0",
+      "region": "Bangladesh",
+      "file": "Tea Compressed Dataset.zip",
+      "url": "https://data.mendeley.com/public-files/datasets/rrff4vb35m/files/db2e8fe7-0f9f-419e-b1c7-6eaf3564a518/file_downloaded",
+      "size": 47666799,
+      "sha256": "90e694b5eb3d0ad22ea018d578f39775a94ea9ab919172e8ea627bc12d49215b",
+      "format": "folders",
+      "root": "Tea Compressed Dataset/",
+      "labels": {
+        "Tea Algal Spot": "algal_leaf_spot",
+        "Tea Brown Blight": "brown_blight",
+        "Tea Grey Blight": "gray_blight",
+        "Tea Healthy": "healthy",
+        "Tea Red Spot": "red_leaf_spot"
+      }
+    }
+  ],
+  "dropped_labels": [
+    {"source": "kimutai", "label": "Anthracnose", "reason": "matches no unified class id"}
+  ]
+}

@@ -16,11 +16,11 @@ interface CommodityTabsProps {
 
 export function CommodityTabs({ availableCommodities, basePath }: CommodityTabsProps) {
   const searchParams = useSearchParams();
-  const currentCommodityVi = searchParams.get('commodity') || 'Gạo';
+  const currentCommodityVi = searchParams.get('commodity') || 'Chè';
   const currentCommodityEn = toEnglishCommodity(currentCommodityVi);
 
-  // Default to Rice if empty
-  const commodities = availableCommodities.length > 0 ? availableCommodities : ['Rice'];
+  // Default to Tea if empty
+  const commodities = availableCommodities.length > 0 ? availableCommodities : ['Tea'];
 
   return (
     <div className={styles.tabsContainer}>

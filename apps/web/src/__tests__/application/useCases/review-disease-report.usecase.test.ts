@@ -57,7 +57,8 @@ describe('ReviewDiseaseReportUseCase', () => {
       officerId: 'off1',
       htxCode: 'TC',
       status: 'CONFIRMED',
-      treatment_recommendation: 'Spray'
+      treatment_recommendation: 'Spray',
+      confirmed_diagnosis: 'Leaf blight'
     })).rejects.toThrow('REPORT_NOT_FOUND');
   });
 
@@ -71,6 +72,7 @@ describe('ReviewDiseaseReportUseCase', () => {
       ai_disease_name: 'test',
       ai_confidence: 90,
       farmer_id: 'farm1',
+      confirmed_diagnosis: null,
       farmer_name: 'Test',
       parcel_code: 'P01'
     });
@@ -80,7 +82,8 @@ describe('ReviewDiseaseReportUseCase', () => {
       officerId: 'off1',
       htxCode: 'TC',
       status: 'CONFIRMED',
-      treatment_recommendation: 'Spray'
+      treatment_recommendation: 'Spray',
+      confirmed_diagnosis: 'Leaf blight'
     })).rejects.toThrow('INVALID_STATUS_TRANSITION');
   });
 
@@ -94,6 +97,7 @@ describe('ReviewDiseaseReportUseCase', () => {
       ai_disease_name: 'test',
       ai_confidence: 90,
       farmer_id: 'farm1',
+      confirmed_diagnosis: null,
       farmer_name: 'Test',
       parcel_code: 'P01'
     });
@@ -103,7 +107,8 @@ describe('ReviewDiseaseReportUseCase', () => {
       officerId: 'off1',
       htxCode: 'TC',
       status: 'CONFIRMED',
-      treatment_recommendation: '  ' // empty
+      treatment_recommendation: '  ', // empty
+      confirmed_diagnosis: 'Leaf blight'
     })).rejects.toThrow('TREATMENT_REQUIRED');
   });
 
@@ -112,6 +117,7 @@ describe('ReviewDiseaseReportUseCase', () => {
       id: '123',
       status: 'PENDING',
       farmer_id: 'farm1',
+      confirmed_diagnosis: null,
       ai_disease_name: 'Leaf blight',
       parcel_code: 'P01',
       // @ts-ignore
@@ -126,14 +132,15 @@ describe('ReviewDiseaseReportUseCase', () => {
       officerId: 'off1',
       htxCode: 'TC',
       status: 'CONFIRMED',
-      treatment_recommendation: 'Spray fungicide'
+      treatment_recommendation: 'Spray fungicide',
+      confirmed_diagnosis: 'Leaf blight'
     });
 
     expect(mockDocumentStoragePort.uploadDocument.mock.calls.map(c => c[0])).toEqual([
       'para/TC/Archives/disease-report-123.md',
       'para/TC/Archives/disease-report-123.jpg',
     ]);
-    expect(mockDiseasePort.updateStatus).toHaveBeenCalledWith('123', 'CONFIRMED', 'Spray fungicide', 'off1');
+    expect(mockDiseasePort.updateStatus).toHaveBeenCalledWith('123', 'CONFIRMED', 'Spray fungicide', 'off1', 'Leaf blight');
     expect(mockNotificationPort.sendDirectNotification).toHaveBeenCalledWith(
       'farm1',
       NotificationType.DISEASE_REPORT,
@@ -142,5 +149,58 @@ describe('ReviewDiseaseReportUseCase', () => {
       '123'
     );
   });
-});
 
+  describe('confirmed diagnosis', () => {
+    const pending = {
+      id: '123',
+      status: 'PENDING',
+      farmer_id: 'farm1',
+      confirmed_diagnosis: null,
+      ai_disease_name: 'Không xác định',
+      parcel_code: 'P01',
+      detection_date: new Date('2026-11-10T00:00:00Z'),
+      photo_minio_key: 'key',
+      ai_confidence: 0.41,
+      farmer_name: 'Test',
+    };
+    const base = { reportId: '123', officerId: 'off1', htxCode: 'TC', treatment_recommendation: 'Cắt bỏ lá bệnh' };
+
+    beforeEach(() => mockDiseasePort.findById.mockResolvedValue(pending));
+
+    it.each(['', '   '])('CONFIRMED with confirmed_diagnosis %j is a validation error and stores nothing', async (name) => {
+      await expect(useCase.execute({ ...base, status: 'CONFIRMED', confirmed_diagnosis: name })).rejects.toThrow('DIAGNOSIS_REQUIRED');
+      expect(mockDiseasePort.updateStatus).not.toHaveBeenCalled();
+      expect(mockNotificationPort.sendDirectNotification).not.toHaveBeenCalled();
+    });
+
+    it('CONFIRMED stores the confirmed name and tells the farmer that name', async () => {
+      await useCase.execute({ ...base, status: 'CONFIRMED', confirmed_diagnosis: '  Đốm nâu  ' });
+
+      expect(mockDiseasePort.updateStatus).toHaveBeenCalledWith('123', 'CONFIRMED', 'Cắt bỏ lá bệnh', 'off1', 'Đốm nâu');
+      expect(mockNotificationPort.sendDirectNotification).toHaveBeenCalledWith(
+        'farm1',
+        NotificationType.DISEASE_REPORT,
+        'Báo cáo bệnh đã duyệt',
+        'Báo cáo bệnh Đốm nâu tại thửa P01 đã được cán bộ phản hồi. Hướng dẫn: Cắt bỏ lá bệnh',
+        '123'
+      );
+      const archive = String(mockDocumentStoragePort.uploadDocument.mock.calls[0][1]);
+      expect(archive).toContain('Bệnh cán bộ xác nhận: Đốm nâu');
+      expect(archive).toContain('Bệnh AI chẩn đoán: Không xác định');
+    });
+
+    it('REJECTED needs no confirmed name, stores none and still notifies the farmer', async () => {
+      await useCase.execute({ ...base, status: 'REJECTED', treatment_recommendation: '', confirmed_diagnosis: '' });
+
+      expect(mockDiseasePort.updateStatus).toHaveBeenCalledWith('123', 'REJECTED', '', 'off1', null);
+      expect(mockDocumentStoragePort.uploadDocument).not.toHaveBeenCalled();
+      expect(mockNotificationPort.sendDirectNotification).toHaveBeenCalledWith(
+        'farm1',
+        NotificationType.DISEASE_REPORT,
+        'Báo cáo bệnh bị từ chối',
+        'Báo cáo bệnh Không xác định tại thửa P01 đã được cán bộ phản hồi.',
+        '123'
+      );
+    });
+  });
+});

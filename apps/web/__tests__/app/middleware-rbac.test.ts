@@ -29,8 +29,8 @@ import { resolveAuthRedirect } from '@/middleware'
 const allow = null // resolveAuthRedirect returns null → allow request
 
 describe('resolveAuthRedirect — unauthenticated', () => {
-  it('redirects / to /login', () => {
-    expect(resolveAuthRedirect('/', false, undefined)).toBe('/login')
+  it('allows the public home page /', () => {
+    expect(resolveAuthRedirect('/', false, undefined)).toBe(allow)
   })
 
   it('redirects /manager/dashboard to /login', () => {
@@ -46,7 +46,7 @@ describe('resolveAuthRedirect — unauthenticated', () => {
   })
 
   it('allows public /lot/[code] path', () => {
-    expect(resolveAuthRedirect('/lot/HTX-RICE-20260801-001', false, undefined)).toBe(allow)
+    expect(resolveAuthRedirect('/lot/TC-CHE-20260801-001', false, undefined)).toBe(allow)
   })
 
   it('allows public /htx/[code] path', () => {

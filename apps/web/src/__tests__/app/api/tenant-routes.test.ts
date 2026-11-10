@@ -44,7 +44,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   mock(prisma.htxProfile.findUnique).mockImplementation(async ({ where }) => (where.htx_code === 'TC' ? tc : null))
   // Whatever a stray findFirst would pick, it must never be used.
-  mock(prisma.htxProfile.findFirst).mockResolvedValue({ id: 'htx-oldest', crop_types: ['Lúa'], season_label: 'Sai' })
+  mock(prisma.htxProfile.findFirst).mockResolvedValue({ id: 'htx-oldest', crop_types: ['Chè'], season_label: 'Sai' })
   mock(prisma.household.findMany).mockResolvedValue([])
   mock(prisma.parcel.findMany).mockResolvedValue([])
   mock(prisma.lot.findMany).mockResolvedValue([])
@@ -106,11 +106,17 @@ describe('routes read the caller HTX', () => {
     expect(mock(prisma.household.findMany).mock.calls[0][0].where.htx_profile_id).toBe('htx-tc')
   })
 
-  test('bulletin defaults to the crop of the caller HTX', async () => {
+  test.each([
+    [['Chè'], 'Tea'],
+    [['Chè Trung du', 'Chè LDP1'], 'Tea'],
+    [['Cà phê'], 'Coffee'],
+    [[], 'Tea'],
+  ])('bulletin defaults to the crop of the caller HTX: %j -> %s', async (crops, commodity) => {
     signIn('manager', 'TC')
-    mock(prisma.bulletin.findFirst).mockResolvedValue({ id: 'b1', commodity: 'Chè' })
+    mock(prisma.htxProfile.findUnique).mockImplementation(async ({ where }) => (where.htx_code === 'TC' ? { ...tc, crop_types: crops } : null))
+    mock(prisma.bulletin.findFirst).mockResolvedValue({ id: 'b1', commodity })
     expect((await bulletin.GET(get('/api/bulletin'), {})).status).toBe(200)
-    expect(mock(prisma.bulletin.findFirst).mock.calls[0][0].where.commodity).toBe('Chè')
+    expect(mock(prisma.bulletin.findFirst).mock.calls[0][0].where.commodity).toBe(commodity)
   })
 
   test('role checks still apply after the HTX is known', async () => {

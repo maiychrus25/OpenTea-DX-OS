@@ -19,7 +19,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 2rem 2.5rem;
-  background: linear-gradient(135deg, var(--sidebar-bg) 0%, #1a5c3e 50%, #176c4b 100%);
+  background: linear-gradient(135deg, var(--sidebar-bg) 0%, color-mix(in srgb, var(--sidebar-bg) 70%, var(--primary)) 100%);
   border-radius: var(--rounded-xl);
   position: relative;
   overflow: hidden;
@@ -32,7 +32,7 @@
   right: -10%;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(214, 240, 92, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-lime) 12%, transparent) 0%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -44,7 +44,7 @@
   left: 20%;
   width: 200px;
   height: 200px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--sidebar-foreground) 5%, transparent) 0%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -80,14 +80,14 @@
 .pageTitle {
   font-size: clamp(1.5rem, 3vw, 2rem);
   font-weight: 700;
-  color: #ffffff;
+  color: var(--sidebar-foreground);
   margin: 0;
   line-height: 1.2;
 }
 
 .pageSubtitle {
   font-size: var(--font-size-body);
-  color: rgba(255, 255, 255, 0.7);
+  color: color-mix(in srgb, var(--sidebar-foreground) 80%, transparent);
   margin: 0;
   max-width: 480px;
 }
@@ -102,15 +102,15 @@
 
 .audioButton {
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
-  color: #ffffff !important;
+  background: color-mix(in srgb, var(--sidebar-foreground) 15%, transparent) !important;
+  border-color: color-mix(in srgb, var(--sidebar-foreground) 25%, transparent) !important;
+  color: var(--sidebar-foreground) !important;
   backdrop-filter: blur(8px);
   transition: all 0.25s ease;
 }
 
 .audioButton:hover {
-  background: rgba(255, 255, 255, 0.25) !important;
+  background: color-mix(in srgb, var(--sidebar-foreground) 25%, transparent) !important;
   transform: translateY(-1px);
 }
 
@@ -163,13 +163,13 @@
   height: 20px;
   padding: 0 6px;
   border-radius: var(--rounded-full);
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-ink-primary) 8%, transparent);
   font-size: var(--font-size-meta);
   font-weight: 600;
 }
 
 .filterTabActive .filterCount {
-  background: rgba(255, 255, 255, 0.25);
+  background: color-mix(in srgb, var(--color-primary-foreground) 25%, transparent);
 }
 
 /* ===== News Grid ===== */
@@ -222,7 +222,7 @@
 }
 
 .featuredCardVisual {
-  background: linear-gradient(135deg, var(--secondary) 0%, #d4e8dc 100%);
+  background: linear-gradient(135deg, var(--secondary) 0%, var(--color-primary-subtle) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -236,7 +236,7 @@
   position: absolute;
   width: 150%;
   height: 150%;
-  background: radial-gradient(circle at 30% 70%, rgba(23, 108, 75, 0.08), transparent 50%);
+  background: radial-gradient(circle at 30% 70%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 50%);
 }
 
 .featuredBadge {
@@ -654,7 +654,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem 0.75rem;
-  background: linear-gradient(135deg, var(--color-info-subtle) 0%, #e8f4fd 100%);
+  background: var(--color-info-subtle);
 }
 
 .weatherCardInfo {
@@ -764,16 +764,16 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: var(--font-size-meta, 0.875rem);
+  font-size: var(--font-size-meta);
   font-weight: 600;
-  color: var(--primary, #16a34a);
+  color: var(--primary);
   cursor: pointer;
   text-decoration: none;
   transition: color 0.15s ease, transform 0.15s ease;
 }
 
 .sectionAction:hover {
-  color: var(--primary-hover, #15803d);
+  color: var(--color-primary-hover);
   transform: translateX(2px);
 }
 
@@ -791,39 +791,39 @@
   display: inline-flex;
   align-items: center;
   padding: 6px 14px;
-  border-radius: var(--rounded-full, 9999px);
+  border-radius: var(--rounded-full);
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--muted-foreground, #64748b);
-  background: var(--card, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  color: var(--muted-foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
   cursor: pointer;
   text-decoration: none;
   transition: all 0.15s ease;
 }
 
 .filterTab:hover {
-  border-color: var(--primary, #16a34a);
-  color: var(--primary, #16a34a);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .filterTabActive {
-  background: var(--primary, #16a34a);
-  color: #ffffff;
-  border-color: var(--primary, #16a34a);
+  background: var(--primary);
+  color: var(--color-primary-foreground);
+  border-color: var(--primary);
 }
 
 .filterTabActive:hover {
-  background: var(--primary-hover, #15803d);
-  color: #ffffff;
+  background: var(--color-primary-hover);
+  color: var(--color-primary-foreground);
 }
 
 .emptyNotice {
   padding: 2.5rem;
   text-align: center;
-  background: var(--card, #ffffff);
-  border: 1px dashed var(--border, #e2e8f0);
-  border-radius: var(--rounded-lg, 0.5rem);
-  color: var(--muted-foreground, #64748b);
-  font-size: var(--font-size-label, 0.9375rem);
+  background: var(--card);
+  border: 1px dashed var(--border);
+  border-radius: var(--rounded-lg);
+  color: var(--muted-foreground);
+  font-size: var(--font-size-label);
 }

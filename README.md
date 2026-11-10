@@ -191,12 +191,12 @@ Mọi truy cập API đi qua gateway `http://localhost:9080`:
 
 **Nâng cấp môi trường dev cũ:**
 
-- Postgres đổi từ alpine sang bookworm (collation khác): tạo lại volume Postgres, hoặc chạy `REINDEX DATABASE agrimarket;`.
+- Postgres đổi từ alpine sang bookworm (collation khác): chạy `REINDEX DATABASE agrimarket;` khi nối vào database `agrimarket`, và `REINDEX DATABASE keycloak;` khi nối vào database `keycloak`. Không xoá volume `docker_pgdata`.
 - Tier 1b: `make platform-up` nay tự chạy `migrate` (image dựng sẵn, không cần `npx prisma migrate deploy` trên máy chủ) rồi `platform-init` lần nữa để gắn trigger kiểm toán; tạo lại các container `seaweedfs` (`-volume.max=100`, cần khi có hơn một bucket), `clamav` và `dxos-scanner`. Trên stack nâng cấp, object lớn hơn 50 MiB đang nằm trong bucket được theo dõi sẽ bị chuyển sang `dxos-quarantine` ở các vòng quét đầu tiên.
 - Tier 1c: thêm `DXOS_MQTT_DEVICES` và `DXOS_MQTT_INGEST_PASSWORD` vào `docker/.env.local` (xem `docker/.env.local.example`); chạy `migrate` và `platform-init` (đã nằm trong `make platform-up`) để tạo bảng `telemetry.*`; tạo các container mới `mosquitto`, `dxos-ingest`, `dxos-lifecycle`, `ollama`, rồi chạy `ollama-init`.
-- Keycloak chỉ import realm khi database mới: tạo lại realm (xoá volume) để nhận chính sách TOTP, audience `dx-os-core` và claim `htx_code`.
+- Keycloak chỉ import realm khi realm chưa có: để nhận chính sách TOTP, audience `dx-os-core` và claim `htx_code`, xoá riêng realm `agrimarket` trong Admin Console rồi restart `keycloak` (cách (a) ở mục [Dữ liệu demo chè và tài khoản](#dữ-liệu-demo-chè-và-tài-khoản)). Không xoá volume.
 - Dữ liệu MinIO cũ không được chuyển sang SeaweedFS; container `agrimarket-minio` cũ còn chiếm cổng 9000, hãy chạy `docker compose -f docker/docker-compose.yml down --remove-orphans` trước khi dựng lại.
-- Bảng n8n trước đây nằm ở schema `public`; n8n nay dùng schema `n8n` nên cần chạy `docker compose down -v` một lần (hoặc chuyển bảng thủ công). Lệnh `down -v` chỉ dành cho **môi trường dev**, tuyệt đối không chạy trên dữ liệu production.
+- Bảng n8n trước đây nằm ở schema `public`; n8n nay dùng schema `n8n` và tự tạo bảng mới ở đó khi khởi động, bảng cũ ở `public` để nguyên không ảnh hưởng ứng dụng. Nhập lại workflow theo [docs/dev-setup.md](./docs/dev-setup.md) (`n8n import:workflow`) và tạo lại credential của n8n. **Không chạy `docker compose down -v`** trên stack chính: lệnh này xoá mọi volume, kể cả `docker_pgdata` (realm Keycloak và toàn bộ dữ liệu ứng dụng).
 
 ## 🌱 Tier 2: Ứng dụng dùng lõi
 
@@ -211,18 +211,65 @@ Mọi truy cập API đi qua gateway `http://localhost:9080`:
 > [!WARNING]
 > Không publish cổng `9081` ra ngoài mạng Docker. Cổng này không có giới hạn tần suất theo IP, chỉ an toàn khi chỉ có container `web` gọi được.
 
+### Dữ liệu demo chè và tài khoản
+
+`npm run seed` tạo hai HTX chè Thái Nguyên: Tân Cương (`TC`) và La Bằng (`LB`), mỗi HTX vài nông hộ và thửa giống Trung du, LDP1, Kim Tuyên. Tên, số điện thoại và toạ độ đều là dữ liệu giả (toạ độ nằm trong vùng chè, không phải ranh giới đất thật). Thửa `TC-A3` có lịch sử tính theo ngày chạy seed: bón phân, phun thuốc còn 4 ngày cách ly (cách ly 7 ngày), lứa trước đã thu hoạch và lô `TC-CHE-A3-001` đã xuất QR (trang công khai `/q/TC-CHE-A3-001`), một ảnh bệnh chè chờ cán bộ duyệt.
+
+```bash
+cd apps/web && DATABASE_URL="postgresql://agrimarket:<POSTGRES_PASSWORD>@localhost:5432/agrimarket" npm run seed
+bash platform/tests/seed-test.sh   # seed hai lần trên database tạm, kiểm tra dữ liệu TC/LB và dữ liệu HTX khác không đổi
+```
+
+Chạy lại seed được nhiều lần và chỉ đổi dữ liệu của `TC`, `LB` (cùng bảng thị trường, bản tin, đối tác dùng chung): lịch sử của các thửa do seed tạo (nhật ký, lứa, lô, báo cáo bệnh, thời tiết) được xoá rồi tạo lại theo ngày mới, nên chỉ chạy trên database demo.
+
+| Tài khoản | Vai trò | HTX | Mật khẩu | TOTP |
+| --- | --- | --- | --- | --- |
+| `manager_tc` | Quản lý | TC | `Test1234!` | Bắt buộc |
+| `officer_tc` | Cán bộ kỹ thuật | TC | `Test1234!` | Bắt buộc |
+| `farmer_tc` | Nông hộ (Hoàng Văn Tâm, chủ thửa `TC-A3`) | TC | `Test1234!` | Không |
+| `manager_lb` | Quản lý | LB | `Test1234!` | Bắt buộc |
+| `officer_lb` | Cán bộ kỹ thuật | LB | `Test1234!` | Bắt buộc |
+| `farmer_lb` | Nông hộ (Ma Văn Thắng) | LB | `Test1234!` | Không |
+
+**Cài TOTP trước buổi demo:** đăng nhập lần đầu bằng từng tài khoản quản lý và cán bộ, Keycloak hiện mã QR; quét bằng ứng dụng xác thực (Google Authenticator, Microsoft Authenticator hoặc FreeOTP), nhập mã 6 số để hoàn tất. Các lần sau Keycloak hỏi mã 6 số trên điện thoại đó, nên mang theo điện thoại đã cài khi demo. Muốn cài lại: Keycloak Admin Console > realm `agrimarket` > Users > tài khoản > tab **Credentials**, xoá OTP; tab **Details** > **Required user actions**, thêm **Configure OTP**.
+
+Smoke test và test trình duyệt chỉ tạo và sửa tài khoản riêng tiền tố `smoke_` (`smoke_manager_tc`, `smoke_manager_lb`, `smoke_manager_none`, `smoke_farmer_tc`, `smoke_officer_tc`): chúng đặt lại mật khẩu và bỏ TOTP của tài khoản mình dùng, nên không bao giờ đổi tài khoản demo. Riêng câu chuyện A3 và test ảnh chụp màn hình đăng nhập bằng `farmer_tc` (chủ thửa `TC-A3`, không có bước TOTP); đăng nhập không làm thay đổi tài khoản.
+
+> [!NOTE]
+> Keycloak chỉ import realm khi realm chưa có. Trên stack cũ, realm vẫn còn `manager1`, `officer1`, `farmer1` và các tài khoản `manager_tc`, `manager_lb`, `farmer_tc` do smoke cũ tạo (mật khẩu smoke, không TOTP). `farmer_tc` và `farmer_lb` phải có đúng `id` trong `docker/keycloak/realm-agrimarket.json` thì mới gắn với nông hộ do seed tạo; form tạo tài khoản của Admin Console không đặt được `id`, nên hãy dùng một trong hai cách sau:
+>
+> - **(a) Tạo lại realm:** Admin Console > realm `agrimarket` > Realm settings > **Action** > **Delete**, rồi `docker compose -f docker/docker-compose.yml restart keycloak`; lệnh khởi động có `--import-realm` nên realm thiếu sẽ được import lại từ file. Cách này xoá luôn mọi tài khoản tạo lúc chạy (thành viên được mời, tài khoản `smoke_`).
+> - **(b) Chỉ nhập tài khoản:** xoá tay `manager1`, `officer1`, `farmer1`; rồi Realm settings > **Action** > **Partial import**, chọn file `docker/keycloak/realm-agrimarket.json`, chỉ đánh dấu **Users**, chọn **Overwrite** khi tài khoản đã tồn tại (ghi đè `manager_tc`, `manager_lb`, `farmer_tc` cũ). Partial import giữ `id` cố định, mật khẩu demo và TOTP bắt buộc. **Overwrite** ghi đè cả sáu tài khoản demo: mật khẩu và TOTP đã cài của chúng bị đặt lại, nên chạy bước này trước khi cài TOTP cho buổi demo.
+>
+> Dữ liệu Keycloak nằm trong database `keycloak` của volume Postgres dùng chung: **không bao giờ xoá `docker_pgdata`**, xoá volume này là mất toàn bộ dữ liệu ứng dụng.
+
 Kiểm thử trên trình duyệt với stack thật (cần `make platform-up`, `make platform-smoke` và container `web` đang chạy):
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build --wait web
+docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
 cd apps/web && npx playwright install chromium
 E2E_CORE=1 E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/tenant/core-tenant.spec.ts --project=chromium --no-deps --reporter=list
+# Sau npm run seed: câu chuyện "Một ngày của lô chè A3" và ảnh chụp các màn hình ưu tiên (lưu ở apps/web/test-results/screens/)
+E2E_CORE=1 E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/story/tea-a3.spec.ts tests/e2e/visual/screens.spec.ts --project=chromium --no-deps --reporter=list
 ```
 
-Test này tạm đổi `accessTokenLifespan` của realm và tạm dừng Hasura rồi khôi phục, nên chỉ chạy trên môi trường dev.
+Test `core-tenant` tạm đổi `accessTokenLifespan` của realm và tạm dừng Hasura rồi khôi phục; câu chuyện A3 ghi nhật ký, gửi ảnh chẩn đoán, duyệt bệnh và xuất QR một lô mới. Cả hai chỉ chạy trên môi trường dev, rồi chạy lại `npm run seed` trước buổi demo.
+
+Các spec còn lại trong `tests/e2e/` chạy với dev server do Playwright tự bật (`npx playwright test --project=chromium --no-deps`): chúng dùng cookie phiên giả (`tests/e2e/helpers/forged-session.ts`, HTX `TC`) và giả lập các route API, nên cần `DATABASE_URL` trỏ tới database có HTX `TC`. `playwright.config.ts` đặt sẵn một `AUTH_SECRET` chỉ dùng cho e2e.
 
 > [!NOTE]
 > Giới hạn đã biết: (1) `workflows/mattermost-push.json` đẩy sự kiện bệnh và thu hoạch của mọi HTX vào cùng một webhook; (2) ở production, cookie tạo trước khi nâng cấp bị chuyển về trang đăng nhập; cookie của `/api/dev-login` không có access token nên mọi đọc qua lõi đều bị từ chối; (3) đường ghi được bảo vệ ở tầng ứng dụng, không phải ở database.
+
+### Nhận diện bệnh lá chè
+
+Thửa có loại cây chứa "chè" hoặc "tea" (không phân biệt hoa thường) được chẩn đoán bằng mô hình chè (`ai-models/tea_leaf_model.keras`, MobileNetV2 học chuyển tiếp trên ba bộ ảnh CC BY 4.0 từ Kenya và Bangladesh); thửa khác dùng mô hình 46 lớp cũ. Giới hạn cần biết trước khi demo:
+
+- Độ chính xác trên tập kiểm tra cùng nguồn là **0,87**, nhưng khi kiểm tra chéo giữa các nguồn chỉ còn **0,12 đến 0,35**: mô hình học cả phông nền và cách chụp của từng bộ ảnh, nên với ảnh chè Thái Nguyên độ chính xác thực tế chưa đo được và có thể thấp hơn nhiều.
+- Kết quả dưới ngưỡng tin cậy **0,60** hiện **"Không xác định"**. Ảnh không phải lá chè vẫn có thể nhận độ tin cậy cao: một ảnh nhiễu ngẫu nhiên được trả `healthy` với 0,988.
+- Vì vậy **mọi kết quả, kể cả lá khoẻ, đều vào hàng chờ cán bộ**; nông hộ thấy "Đã gửi cán bộ kỹ thuật xem". Cán bộ nhập **tên bệnh đã xác nhận** khi duyệt, và tên này thay tên của AI ở mọi nơi hiển thị.
+- Khi mô hình chè không nạp được, chẩn đoán cho thửa chè trả lỗi dịch vụ tạm gián đoạn (503) và không tạo báo cáo; không tự chuyển sang mô hình cũ.
+
+Số liệu chi tiết ở [ai-models/tea/MODEL_CARD.md](./ai-models/tea/MODEL_CARD.md). **Huấn luyện lại:** làm theo [ai-models/tea/README.md](./ai-models/tea/README.md) (tải dữ liệu có kiểm SHA-256, chạy `train.py` trong container Python 3.12 với `tensorflow==2.21.0`), rồi cập nhật model card và ngưỡng `TEA_CONFIDENCE_THRESHOLD` theo kết quả mới. Không commit ảnh dữ liệu.
 
 **Nâng cấp lên Tier 2a:**
 
@@ -302,6 +349,7 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 - 🧪 **[Testing Strategy](./docs/testing-strategy.md)** — Công cụ và chiến lược kiểm thử.
 - 🛠️ **[Dev Setup](./docs/dev-setup.md)** — Hướng dẫn cài đặt môi trường phát triển.
 - 📝 **[Deviation Register](./docs/deviation-register.md)** — Sổ ghi nhận các điểm sai lệch so với đặc tả.
+- 🎨 **[DESIGN.md](./DESIGN.md)** — Hệ thống thiết kế: token màu sáng/tối, chữ, khoảng cách và quy tắc tương phản.
 - 📦 **[Dependencies](./DEPENDENCIES.md)** — Danh mục thư viện và giấy phép phụ thuộc.
 - 🤖 **[AGENTS.md](./AGENTS.md)** — Quy tắc làm việc cho AI agents và developers.
 

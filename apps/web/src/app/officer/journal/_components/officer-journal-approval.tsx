@@ -148,64 +148,66 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
         </div>
       )}
 
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Mã thửa</th>
-            <th>Cây trồng - Hoạt động</th>
-            <th>Ngày</th>
-            <th>Trạng thái</th>
-            <th>Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          {isLoading ? (
+      <div className={styles.tableScroll}>
+        <table className={styles.table}>
+          <thead>
             <tr>
-              <td colSpan={5} className={styles.emptyCell}>
-                Đang tải dữ liệu...
-              </td>
+              <th>Mã thửa</th>
+              <th>Cây trồng - Hoạt động</th>
+              <th>Ngày</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
             </tr>
-          ) : loadFailed ? (
-            <tr>
-              <td colSpan={5} className={styles.emptyCell}>
-                {LOAD_FAILED_MESSAGE}
-              </td>
-            </tr>
-          ) : entries.length === 0 ? (
-            <tr>
-              <td colSpan={5} className={styles.emptyCell}>
-                Chưa có nhật ký nào cần duyệt.
-              </td>
-            </tr>
-          ) : (
-            entries.map(e => (
-              <tr key={e.id}>
-                <td>{e.parcel_code || e.parcel_id || e.id.substring(0, 8)}</td>
-                <td>{formatDetail(e.activities?.[0]?.activity_detail)}</td>
-                <td>{e.entry_date ? new Date(e.entry_date).toLocaleDateString('vi-VN') : ''}</td>
-                <td>
-                  <Pill tone={e.status === 'PENDING_APPROVAL' ? 'amber' : e.status === 'APPROVED' ? 'green' : e.status === 'REJECTED' ? 'neutral' : 'blue'}>
-                    {e.status === 'PENDING_APPROVAL' ? 'Chờ duyệt' : e.status === 'APPROVED' ? 'Đã duyệt' : e.status === 'REQUEST_CHANGES' ? 'Cần sửa' : 'Từ chối'}
-                  </Pill>
-                </td>
-                <td>
-                  {e.status === 'PENDING_APPROVAL' && (
-                    <div className={styles.flexActions}>
-                      <button className={`${styles.viewBtn} ${styles.viewBtnPrimary}`} onClick={() => setViewEntryId(e.id)}>Xem</button>
-                      <button className={styles.approveBtn} onClick={() => handleApprove(e.id)}>Duyệt</button>
-                      <button className={styles.rejectBtn} onClick={() => handleRequestChanges(e.id)}>Yêu cầu sửa</button>
-                      <button className={styles.rejectBtn} onClick={() => handleReject(e.id)}>Từ chối</button>
-                    </div>
-                  )}
-                  {e.status !== 'PENDING_APPROVAL' && (
-                    <button className={`${styles.viewBtn} ${styles.viewBtnSecondary}`} onClick={() => setViewEntryId(e.id)}>Xem</button>
-                  )}
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={5} className={styles.emptyCell}>
+                  Đang tải dữ liệu...
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : loadFailed ? (
+              <tr>
+                <td colSpan={5} className={styles.emptyCell}>
+                  {LOAD_FAILED_MESSAGE}
+                </td>
+              </tr>
+            ) : entries.length === 0 ? (
+              <tr>
+                <td colSpan={5} className={styles.emptyCell}>
+                  Chưa có nhật ký nào cần duyệt.
+                </td>
+              </tr>
+            ) : (
+              entries.map(e => (
+                <tr key={e.id}>
+                  <td>{e.parcel_code || e.parcel_id || e.id.substring(0, 8)}</td>
+                  <td>{formatDetail(e.activities?.[0]?.activity_detail)}</td>
+                  <td>{e.entry_date ? new Date(e.entry_date).toLocaleDateString('vi-VN') : ''}</td>
+                  <td>
+                    <Pill tone={e.status === 'PENDING_APPROVAL' ? 'amber' : e.status === 'APPROVED' ? 'green' : e.status === 'REJECTED' ? 'neutral' : 'blue'}>
+                      {e.status === 'PENDING_APPROVAL' ? 'Chờ duyệt' : e.status === 'APPROVED' ? 'Đã duyệt' : e.status === 'REQUEST_CHANGES' ? 'Cần sửa' : 'Từ chối'}
+                    </Pill>
+                  </td>
+                  <td>
+                    {e.status === 'PENDING_APPROVAL' && (
+                      <div className={styles.flexActions}>
+                        <button className={`${styles.viewBtn} ${styles.viewBtnPrimary}`} onClick={() => setViewEntryId(e.id)}>Xem</button>
+                        <button className={styles.approveBtn} onClick={() => handleApprove(e.id)}>Duyệt</button>
+                        <button className={styles.rejectBtn} onClick={() => handleRequestChanges(e.id)}>Yêu cầu sửa</button>
+                        <button className={styles.rejectBtn} onClick={() => handleReject(e.id)}>Từ chối</button>
+                      </div>
+                    )}
+                    {e.status !== 'PENDING_APPROVAL' && (
+                      <button className={`${styles.viewBtn} ${styles.viewBtnSecondary}`} onClick={() => setViewEntryId(e.id)}>Xem</button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {rejectEntryId && (
         <div className={styles.overlay} onClick={() => setRejectEntryId(null)}>
@@ -225,7 +227,7 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
             </div>
             <div className={styles.formActions}>
               <button type="button" className={styles.cancelBtn} onClick={() => setRejectEntryId(null)}>Hủy</button>
-              <button type="button" className={styles.submitBtn} style={rejectType === 'REJECTED' ? { backgroundColor: 'var(--color-error)' } : {}} onClick={confirmReject}>
+              <button type="button" className={styles.submitBtn} style={rejectType === 'REJECTED' ? { backgroundColor: 'var(--color-danger)', color: 'var(--color-ink-inverse)' } : {}} onClick={confirmReject}>
                 Xác nhận
               </button>
             </div>
@@ -293,7 +295,7 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
                   {entry.photo_url && (
                     <div className={styles.sectionContainer}>
                       <h3 className={styles.sectionTitle}>Hình ảnh thực tế</h3>
-                      <div className="mt-2 w-full rounded-md overflow-hidden bg-gray-100 flex justify-center">
+                      <div className="mt-2 w-full rounded-md overflow-hidden bg-muted flex justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={entry.photo_url} alt="Journal attachment" className="max-w-full max-h-[300px] object-contain" />
                       </div>

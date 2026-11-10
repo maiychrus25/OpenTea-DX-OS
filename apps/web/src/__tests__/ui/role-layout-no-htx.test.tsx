@@ -55,8 +55,8 @@ describe.each([
   })
 
   test('renders the page for a known HTX', async () => {
-    getProfile.mockResolvedValue({ name: 'HTX MD2', address: 'A' })
-    await renderLayout('MD2')
+    getProfile.mockResolvedValue({ name: 'HTX Tân Cương', address: 'A' })
+    await renderLayout('TC')
     expect(screen.getByText('page content')).toBeInTheDocument()
     expect(screen.queryByText(NOTICE)).not.toBeInTheDocument()
   })

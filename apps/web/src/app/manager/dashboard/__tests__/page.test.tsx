@@ -9,6 +9,9 @@ import { auth } from '@/auth'
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { NotFoundError } from '@/domain/errors'
 
+import { prisma } from '@/infrastructure/db/prisma.client'
+import { SIMULATED_MARKET_SOURCE } from '@/domain/market/simulated-price'
+
 import ManagerDashboard from '../page'
 
 // Mock auth
@@ -25,7 +28,7 @@ jest.mock('next/navigation', () => ({
 
 // Mock tenant resolution
 jest.mock('@/lib/api/tenant', () => ({
-  requireTenant: jest.fn().mockResolvedValue({ userId: 'u1', role: 'manager', htxCode: 'MD2', htxProfileId: 'dummy' }),
+  requireTenant: jest.fn().mockResolvedValue({ userId: 'u1', role: 'manager', htxCode: 'TC', htxProfileId: 'dummy' }),
 }))
 
 // Mock Prisma
@@ -43,7 +46,7 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({
     },
     marketData: {
       findMany: jest.fn().mockResolvedValue([
-        { commodity: 'Lúa', metric: 'producer_price_index', value: 105.5, unit: 'Index', source: 'Test' }
+        { commodity: 'Tea', metric: 'producer_price_index', value: 105.5, unit: 'Index', source: 'Test' }
       ]),
     }
   },
@@ -116,5 +119,86 @@ describe('ManagerDashboard', () => {
 
     expect(screen.queryByText('Chưa thiết lập Hợp tác xã')).not.toBeInTheDocument()
     expect(screen.getByText(/Chào buổi/)).toBeInTheDocument()
+  })
+
+  type MarketRow = { commodity: string; metric: string; value: number; unit: string; source: string; fetched_at: Date }
+  // A tiny stand-in for market_data: honours where.commodity (equals or { not }), newest first, and take.
+  function serveMarket(rows: MarketRow[]) {
+    ;(prisma.marketData.findMany as jest.Mock).mockImplementation(async ({ where, take }) =>
+      rows
+        .filter((r) => {
+          const c = where?.commodity
+          if (c === undefined) return true
+          return typeof c === 'string' ? r.commodity === c : r.commodity !== c.not
+        })
+        .sort((a, b) => b.fetched_at.getTime() - a.fetched_at.getTime())
+        .slice(0, take),
+    )
+  }
+  const at = (minute: number) => new Date(Date.UTC(2026, 10, 10, 6, minute))
+  const row = (commodity: string, minute: number, source = 'COMTRADE'): MarketRow =>
+    ({ commodity, metric: `metric_${minute}`, value: 100 + minute, unit: 'tonnes', source, fetched_at: at(minute) })
+  const shownCommodities = () => screen.getAllByText(/^(Chè|Lúa gạo|Cà phê)$/).map((el) => el.textContent)
+
+  it('labels only the simulated price as giá mô phỏng', async () => {
+    ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
+    serveMarket([
+      { commodity: 'Tea', metric: 'Giá chè búp khô', value: 200000, unit: 'VND/kg', source: SIMULATED_MARKET_SOURCE, fetched_at: at(1) },
+      { commodity: 'Tea', metric: 'export_value_to_world', value: 250, unit: 'million_USD', source: 'COMTRADE', fetched_at: at(2) },
+    ])
+
+    render(await ManagerDashboard())
+
+    expect(screen.getAllByText('Chè')).toHaveLength(2)
+    expect(screen.getAllByText('giá mô phỏng')).toHaveLength(1)
+  })
+
+  it('shows tea prices even when rice rows are newer', async () => {
+    ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
+    serveMarket([row('Tea', 1), row('Tea', 2), row('Tea', 3), row('Rice', 10), row('Rice', 11), row('Coffee', 12)])
+
+    render(await ManagerDashboard())
+
+    expect(shownCommodities()).toEqual(['Chè', 'Chè', 'Chè'])
+  })
+
+  it('tops up with the newest other commodities when there are fewer than 3 tea prices', async () => {
+    ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
+    serveMarket([row('Tea', 1), row('Rice', 10), row('Coffee', 12), row('Rice', 5)])
+
+    render(await ManagerDashboard())
+
+    expect(shownCommodities()).toEqual(['Chè', 'Cà phê', 'Lúa gạo'])
+  })
+
+  it('counts distinct real sources, not price rows, and never calls a simulated price verified', async () => {
+    ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
+    serveMarket([row('Tea', 1), row('Tea', 2), row('Tea', 3, SIMULATED_MARKET_SOURCE)])
+
+    render(await ManagerDashboard())
+
+    expect(screen.getByText('1 nguồn đã kiểm chứng')).toBeInTheDocument()
+    expect(screen.getByText('COMTRADE')).toBeInTheDocument()
+    expect(screen.getByText(`Nguồn mô phỏng: ${SIMULATED_MARKET_SOURCE}`)).toBeInTheDocument()
+  })
+
+  it('shows no verified-source box when every price is simulated', async () => {
+    ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
+    serveMarket([{ commodity: 'Tea', metric: 'Giá chè búp khô', value: 200000, unit: 'VND/kg', source: SIMULATED_MARKET_SOURCE, fetched_at: at(1) }])
+
+    render(await ManagerDashboard())
+
+    expect(screen.queryByText(/nguồn đã kiểm chứng/)).not.toBeInTheDocument()
+    expect(screen.getByText(`Nguồn mô phỏng: ${SIMULATED_MARKET_SOURCE}`)).toBeInTheDocument()
+  })
+
+  it('names no source when there is no market data', async () => {
+    ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
+    serveMarket([])
+
+    render(await ManagerDashboard())
+
+    expect(screen.queryByText(/nguồn đã kiểm chứng/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/USDA|WTO|Sở NN&PTNT/)).not.toBeInTheDocument()
   })
 })

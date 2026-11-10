@@ -58,7 +58,7 @@ echo "[telemetry permissions]"
 pub LB "$LB_PW" htx/LB/plot/P-LB-001/soil_moisture "$MSG" || fail "LB publish failed"
 wait_count "select count(*) from telemetry.sensor_readings where htx_code='LB'" 1 "valid LB reading stored"
 TQ='{telemetry_sensor_readings(where:{parcel_code:{_in:["P-TC-001","P-LB-001"]}}){htx_code}}'  # scoped: a demo simulator may have written other parcels
-TM=$(user_token manager_tc); TL=$(user_token manager_lb); TF=$(user_token farmer_tc)
+TM=$(user_token smoke_manager_tc); TL=$(user_token smoke_manager_lb); TF=$(user_token smoke_farmer_tc)
 [ -n "$TM" ] && [ -n "$TL" ] && [ -n "$TF" ] || fail "telemetry tokens empty"
 assert_eq "$(ids "$(gql "$TM" "$TQ" manager)" '.data.telemetry_sensor_readings[].htx_code | select(. != "TC")')" "" "manager TC sees no non-TC readings"
 assert_eq "$(ids "$(gql "$TM" "$TQ" manager)" '.data.telemetry_sensor_readings|length')" "3" "manager TC sees its 3 readings"
@@ -115,7 +115,7 @@ echo "[llm]"
 LLM_URL="$GATEWAY/api/ai/llm/v1/chat/completions"
 LLM_MODEL=$($COMPOSE --profile tools config --format json | jq -r '.services["ollama-init"].environment.DXOS_LLM_MODEL')  # what ollama-init pulled, not the sourced .env.local
 LLM_BODY="{\"model\":\"$LLM_MODEL\",\"max_tokens\":8,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello.\"}]}"
-LT=$(user_token manager_tc); LTN=$(user_token manager_tc dxos-noaud)
+LT=$(user_token smoke_manager_tc); LTN=$(user_token smoke_manager_tc dxos-noaud)
 [ -n "$LT" ] && [ -n "$LTN" ] || fail "llm tokens empty"
 assert_http "401" "llm chat without a token is 401" -- -X POST -H 'Content-Type: application/json' -d "$LLM_BODY" "$LLM_URL"
 assert_http "401" "llm chat with a token lacking the audience is 401" -- -X POST -H "Authorization: Bearer $LTN" -H 'Content-Type: application/json' -d "$LLM_BODY" "$LLM_URL"
@@ -139,7 +139,7 @@ for _ in $(seq 1 31); do
 done
 assert_eq "$LLM_429" "1" "llm route rate limit returns 429"
 # The budget is per bearer: another user must not be throttled by the first one's burst.
-LT2=$(user_token farmer_tc); [ -n "$LT2" ] || fail "second llm token empty"
+LT2=$(user_token smoke_farmer_tc); [ -n "$LT2" ] || fail "second llm token empty"
 LLM_OTHER=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST -H "Authorization: Bearer $LT2" -H 'Content-Type: application/json' -d '{"model":"missing","messages":[]}' "$LLM_URL")
 assert_eq "$LLM_OTHER" "400" "llm rate limit is per user (upstream answers the unknown model with 400)"
 
@@ -164,7 +164,7 @@ echo "[internal gateway port]"
 # The web server calls from one container IP, so port 9081 (compose network only) skips the per-IP limit.
 # Requests need a valid token: openid-connect rejects anonymous ones before limit-count counts them.
 INT_URL="http://apisix:9081/api/data/graphql"
-IT=$(user_token manager_tc); [ -n "$IT" ] || fail "internal port token empty"
+IT=$(user_token smoke_manager_tc); [ -n "$IT" ] || fail "internal port token empty"
 INT_NOTOKEN=$($COMPOSE exec -T hasura curl -s -o /dev/null -w '%{http_code}' -X POST "$INT_URL") || INT_NOTOKEN=000
 assert_eq "$INT_NOTOKEN" "401" "internal port without a token is 401"
 INT_CODES=$($COMPOSE exec -T hasura sh -c "for i in \$(seq 1 310); do curl -s -o /dev/null -w '%{http_code}\n' --max-time 10 -X POST -H 'Authorization: Bearer $IT' $INT_URL; done") || fail "internal gateway port requests failed to run"

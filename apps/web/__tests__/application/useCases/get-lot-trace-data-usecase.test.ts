@@ -10,6 +10,7 @@ describe('Story 7.9a: GetLotTraceDataUseCase', () => {
   // TC-7.9a-01: NotFoundError
   test('throws NotFoundError when lot not found', async () => {
     const mockRepo = {
+      getParcelHarvests: jest.fn(),
       getLotByCode: jest.fn().mockResolvedValue(null),
     }
     const useCase = new GetLotTraceDataUseCase(mockRepo)
@@ -20,6 +21,7 @@ describe('Story 7.9a: GetLotTraceDataUseCase', () => {
   test('returns is_harvest_safe=true when latest_safe_harvest_date is past', async () => {
     const pastDate = new Date('2020-01-01')
     const mockRepo = {
+      getParcelHarvests: jest.fn(),
       getLotByCode: jest.fn().mockResolvedValue({
         lot_code: 'SAFE-001',
         is_harvest_safe: true,
@@ -36,6 +38,7 @@ describe('Story 7.9a: GetLotTraceDataUseCase', () => {
   test('returns is_harvest_safe=false when latest_safe_harvest_date is future', async () => {
     const futureDate = new Date(Date.now() + 86400000 * 30) // 30 days ahead
     const mockRepo = {
+      getParcelHarvests: jest.fn(),
       getLotByCode: jest.fn().mockResolvedValue({
         lot_code: 'UNSAFE-001',
         is_harvest_safe: false,
@@ -50,6 +53,7 @@ describe('Story 7.9a: GetLotTraceDataUseCase', () => {
   // TC-7.9a-04: is_harvest_safe = false when no withdrawal
   test('returns is_harvest_safe=false when no withdrawal activities', async () => {
     const mockRepo = {
+      getParcelHarvests: jest.fn(),
       getLotByCode: jest.fn().mockResolvedValue({
         lot_code: 'NO-WITHDRAWAL-001',
         is_harvest_safe: false,
@@ -77,7 +81,7 @@ describe('Story 7.9a: GetLotTraceDataUseCase', () => {
   test('LotTraceData has all required fields', async () => {
     const mockFullLotTraceData = {
       lot_code: 'FULL-001',
-      commodity: 'Rice',
+      commodity: 'Chè',
       quality_grade: null,
       status: 'READY',
       packaging_date: new Date(),
@@ -90,7 +94,7 @@ describe('Story 7.9a: GetLotTraceDataUseCase', () => {
       certificate_keys: [],
       htx_name: 'Test HTX'
     }
-    const mockRepo = { getLotByCode: jest.fn().mockResolvedValue(mockFullLotTraceData) }
+    const mockRepo = { getLotByCode: jest.fn().mockResolvedValue(mockFullLotTraceData), getParcelHarvests: jest.fn() }
     const useCase = new GetLotTraceDataUseCase(mockRepo)
     const result = await useCase.execute('FULL-001')
     

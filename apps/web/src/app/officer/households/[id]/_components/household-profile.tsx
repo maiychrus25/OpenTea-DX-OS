@@ -22,6 +22,7 @@ interface HouseholdHistory {
   season: string;
   yield: string;
   status: string;
+  parcelStatus: string;
 }
 
 interface HouseholdProfileData {
@@ -40,6 +41,34 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<HouseholdProfileData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [startingId, setStartingId] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
+
+  async function startRound(parcelId: string) {
+    if (!confirm('Bắt đầu lứa hái mới cho thửa này? Thửa sẽ chuyển sang trạng thái đang chăm sóc.')) return
+    setStartingId(parcelId)
+    setStartError(null)
+    try {
+      const res = await fetch(`/api/parcels/${parcelId}/start-round`, { method: 'POST' })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) {
+        // Only the business refusal carries a Vietnamese message; other errors get a generic one.
+        setStartError(res.status === 422 && body?.error?.message ? body.error.message : 'Không bắt đầu được lứa mới. Vui lòng thử lại.')
+        return
+      }
+      const season: string = body.data.season
+      setData((d) => d && {
+        ...d,
+        history: d.history.map((h) =>
+          h.id === parcelId ? { ...h, season, yield: 'Chưa thu hoạch', status: 'Đang sinh trưởng', parcelStatus: 'TENDING' } : h,
+        ),
+      })
+    } catch {
+      setStartError('Lỗi kết nối máy chủ.')
+    } finally {
+      setStartingId(null)
+    }
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -87,7 +116,8 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
             : 'Chưa thu hoạch',
           status: p.status === 'GROWING' || p.status === 'TENDING' || p.status === 'SOWING' ? 'Đang sinh trưởng' : 
                  (p.status === 'HARVEST_READY' ? 'Sắp thu hoạch' : 
-                 (p.status === 'HARVESTED' || p.status === 'HARVEST_APPROVED' ? 'Đã thu hoạch' : p.status))
+                 (p.status === 'HARVESTED' || p.status === 'HARVEST_APPROVED' ? 'Đã thu hoạch' : p.status)),
+          parcelStatus: p.status
         }))
 
         setData({
@@ -114,16 +144,16 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
   if (loading) {
     return (
       <div className="flex justify-center p-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="text-center p-12 bg-white rounded-lg shadow-sm border border-red-200">
-        <h3 className="text-lg font-medium text-red-800 mb-2">Lỗi truy cập</h3>
-        <p className="text-gray-600 mb-4">{error || 'Đã có lỗi xảy ra.'}</p>
+      <div className="text-center p-12 bg-card rounded-lg shadow-sm border border-danger/30">
+        <h3 className="text-lg font-medium text-danger mb-2">Lỗi truy cập</h3>
+        <p className="text-ink-secondary mb-4">{error || 'Đã có lỗi xảy ra.'}</p>
         <Link href="/officer/households">
           <Button variant="primary">Quay lại danh sách</Button>
         </Link>
@@ -137,16 +167,16 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
         <div className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-start gap-4">
             <div className="flex items-start gap-4">
-              <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center shrink-0 border-2 border-green-200">
-                <svg className="w-8 h-8 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="h-16 w-16 bg-success-subtle rounded-full flex items-center justify-center shrink-0 border-2 border-success/30">
+                <svg className="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 leading-tight">{data.name}</h2>
+                <h2 className="text-2xl font-bold text-foreground leading-tight">{data.name}</h2>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   <Pill tone="blue" size="sm">Mã: {data.household_code}</Pill>
-                  <span className="text-sm text-gray-500">Tham gia: {new Date(data.joinedAt).toLocaleDateString('vi-VN')}</span>
+                  <span className="text-sm text-ink-tertiary">Tham gia: {new Date(data.joinedAt).toLocaleDateString('vi-VN')}</span>
                 </div>
               </div>
             </div>
@@ -155,29 +185,29 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
             </Link>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 rounded-xl p-5 border border-gray-100">
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-sunken rounded-xl p-5 border border-border-subtle">
             <div>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Thông tin liên hệ</h3>
+              <h3 className="text-xs font-semibold text-ink-tertiary uppercase tracking-wider mb-3">Thông tin liên hệ</h3>
               <div className="space-y-2">
-                <div className="flex items-center text-sm text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                <div className="flex items-center text-sm text-ink-secondary">
+                  <svg className="w-4 h-4 mr-2 text-ink-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                   {data.phone}
                 </div>
-                <div className="flex items-start text-sm text-gray-700">
-                  <svg className="w-4 h-4 mr-2 mt-0.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                <div className="flex items-start text-sm text-ink-secondary">
+                  <svg className="w-4 h-4 mr-2 mt-0.5 text-ink-tertiary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                   {data.address}
                 </div>
               </div>
             </div>
             <div>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Quy mô sản xuất</h3>
+              <h3 className="text-xs font-semibold text-ink-tertiary uppercase tracking-wider mb-3">Quy mô sản xuất</h3>
               <div className="space-y-2">
-                <div className="flex items-center text-sm text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                <div className="flex items-center text-sm text-ink-secondary">
+                  <svg className="w-4 h-4 mr-2 text-ink-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
                   <span className="font-medium mr-1">{data.parcel_count}</span> thửa đất
                 </div>
-                <div className="flex items-center text-sm text-gray-700">
-                  <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+                <div className="flex items-center text-sm text-ink-secondary">
+                  <svg className="w-4 h-4 mr-2 text-ink-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
                   Tổng diện tích: <span className="font-medium ml-1">{data.total_area_ha} ha</span>
                 </div>
               </div>
@@ -188,82 +218,85 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link href={`/officer/farm-zones?householdId=${id}`} className="block h-full">
-          <Card className="h-full hover:border-green-500 transition-all hover:shadow-md cursor-pointer group">
+          <Card className="h-full hover:border-primary transition-all hover:shadow-md cursor-pointer group">
             <div className="p-5 flex flex-col items-center justify-center text-center">
-              <div className="h-12 w-12 bg-green-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-green-100 transition-colors">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+              <div className="h-12 w-12 bg-success-subtle rounded-full flex items-center justify-center mb-3 group-hover:bg-success/20 transition-colors">
+                <svg className="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
               </div>
-              <h3 className="font-semibold text-gray-900">Bản đồ thửa đất</h3>
-              <p className="text-sm text-gray-500 mt-1">Xem {data.parcel_count} thửa đất của nông hộ</p>
+              <h3 className="font-semibold text-foreground">Bản đồ thửa đất</h3>
+              <p className="text-sm text-ink-tertiary mt-1">Xem {data.parcel_count} thửa đất của nông hộ</p>
             </div>
           </Card>
         </Link>
         
         <Link href={`/officer/journal?householdId=${id}`} className="block h-full">
-          <Card className="h-full hover:border-blue-500 transition-all hover:shadow-md cursor-pointer group">
+          <Card className="h-full hover:border-info transition-all hover:shadow-md cursor-pointer group">
             <div className="p-5 flex flex-col items-center justify-center text-center">
-              <div className="h-12 w-12 bg-blue-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-100 transition-colors">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+              <div className="h-12 w-12 bg-info-subtle rounded-full flex items-center justify-center mb-3 group-hover:bg-info/20 transition-colors">
+                <svg className="w-6 h-6 text-info" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
               </div>
-              <h3 className="font-semibold text-gray-900">Nhật ký canh tác</h3>
-              <p className="text-sm text-gray-500 mt-1">Lịch sử hoạt động, vật tư</p>
+              <h3 className="font-semibold text-foreground">Nhật ký canh tác</h3>
+              <p className="text-sm text-ink-tertiary mt-1">Lịch sử hoạt động, vật tư</p>
             </div>
           </Card>
         </Link>
         
         <Link href={`/officer/diseases?householdId=${id}`} className="block h-full">
-          <Card className="h-full hover:border-amber-500 transition-all hover:shadow-md cursor-pointer group">
+          <Card className="h-full hover:border-warning transition-all hover:shadow-md cursor-pointer group">
             <div className="p-5 flex flex-col items-center justify-center text-center">
-              <div className="h-12 w-12 bg-amber-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-amber-100 transition-colors">
-                <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+              <div className="h-12 w-12 bg-warning-subtle rounded-full flex items-center justify-center mb-3 group-hover:bg-warning/20 transition-colors">
+                <svg className="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
               </div>
-              <h3 className="font-semibold text-gray-900">Lịch sử dịch hại</h3>
-              <p className="text-sm text-gray-500 mt-1">Các báo cáo và chẩn đoán AI</p>
+              <h3 className="font-semibold text-foreground">Lịch sử dịch hại</h3>
+              <p className="text-sm text-ink-tertiary mt-1">Các báo cáo và chẩn đoán AI</p>
             </div>
           </Card>
         </Link>
 
         <Link href={`/officer/households/${id}/soil-health`} className="block h-full">
-          <Card className="h-full hover:border-teal-500 transition-all hover:shadow-md cursor-pointer group">
+          <Card className="h-full hover:border-success transition-all hover:shadow-md cursor-pointer group">
             <div className="p-5 flex flex-col items-center justify-center text-center">
-              <div className="h-12 w-12 bg-teal-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-teal-100 transition-colors">
-                <Sprout className="w-6 h-6 text-teal-600" aria-hidden="true" />
+              <div className="h-12 w-12 bg-success-subtle rounded-full flex items-center justify-center mb-3 group-hover:bg-success/20 transition-colors">
+                <Sprout className="w-6 h-6 text-success" aria-hidden="true" />
               </div>
-              <h3 className="font-semibold text-gray-900">Sức khỏe đất</h3>
-              <p className="text-sm text-gray-500 mt-1">Độ ẩm, nhiệt độ thổ nhưỡng</p>
+              <h3 className="font-semibold text-foreground">Sức khỏe đất</h3>
+              <p className="text-sm text-ink-tertiary mt-1">Độ ẩm, nhiệt độ thổ nhưỡng</p>
             </div>
           </Card>
         </Link>
       </div>
 
       <Card>
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Lịch sử sản xuất</h3>
+        <div className="px-6 py-4 border-b border-border-subtle">
+          <h3 className="text-lg font-medium text-foreground">Lịch sử sản xuất</h3>
+          {startError && (
+            <p role="alert" className="mt-2 text-sm" style={{ color: 'var(--color-danger)' }}>{startError}</p>
+          )}
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-border-subtle">
+            <thead className="bg-surface-sunken">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cây trồng</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vụ mùa</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sản lượng</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sức khỏe đất</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-tertiary uppercase">Cây trồng</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-tertiary uppercase">Vụ mùa</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-tertiary uppercase">Sản lượng</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-tertiary uppercase">Trạng thái</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-tertiary uppercase">Sức khỏe đất</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border-subtle">
               {data.history.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-ink-tertiary">
                     Chưa có thửa đất nào được gán cho nông hộ này.
                   </td>
                 </tr>
               ) : (
                 data.history.map((h: HouseholdHistory) => (
-                  <tr key={h.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{h.crop}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{h.season}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{h.yield}</td>
+                  <tr key={h.id} className="hover:bg-surface-sunken/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{h.crop}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-ink-tertiary">{h.season}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-ink-tertiary">{h.yield}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <Pill 
                         tone={
@@ -274,11 +307,23 @@ export function HouseholdProfile({ id }: HouseholdProfileProps) {
                       >
                         {h.status}
                       </Pill>
+                      {h.parcelStatus === 'HARVESTED' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="ml-2"
+                          isLoading={startingId === h.id}
+                          disabled={startingId !== null}
+                          onClick={() => startRound(h.id)}
+                        >
+                          Bắt đầu lứa mới
+                        </Button>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Link
                         href={`/officer/households/${id}/soil-health`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors border border-teal-200"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-success bg-success-subtle rounded-lg hover:bg-success hover:text-ink-inverse transition-colors border border-success/30"
                         aria-label={`Xem sức khỏe đất cho ${h.crop}`}
                       >
                         <Sprout size={14} aria-hidden="true" />

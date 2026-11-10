@@ -17,12 +17,12 @@
 .title {
   font-size: 1.125rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--color-ink-primary);
 }
 
 .subtitle {
   font-size: 0.875rem;
-  color: var(--text-tertiary);
+  color: var(--color-ink-tertiary);
   margin-top: var(--spacing-1);
 }
 
@@ -36,27 +36,27 @@
   display: flex;
   gap: var(--spacing-3);
   padding: var(--spacing-4);
-  background: var(--surface-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-lg);
   position: relative;
   transition: all 0.2s ease;
   cursor: pointer;
 }
 
 .card:hover {
-  border-color: var(--primary-light);
-  box-shadow: var(--shadow-sm);
+  border-color: var(--color-primary-subtle);
+  box-shadow: var(--shadow-card);
 }
 
 .card.selected {
-  border-color: var(--primary-main);
-  background: var(--primary-50);
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
 }
 
 .card.expiredCard {
-  border-color: var(--danger-light);
-  background: var(--danger-50);
+  border-color: var(--color-danger-subtle);
+  background: var(--color-danger-subtle);
 }
 
 .checkboxWrapper {
@@ -68,7 +68,7 @@
 .checkbox {
   width: 18px;
   height: 18px;
-  accent-color: var(--primary-main);
+  accent-color: var(--color-primary);
 }
 
 .cardIcon {
@@ -88,7 +88,7 @@
 .certName {
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--color-ink-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -96,7 +96,7 @@
 
 .certType {
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: var(--color-ink-secondary);
 }
 
 .certMeta {
@@ -104,20 +104,20 @@
   align-items: center;
   gap: var(--spacing-2);
   font-size: 0.8rem;
-  color: var(--text-tertiary);
+  color: var(--color-ink-tertiary);
   margin-top: var(--spacing-2);
 }
 
 .expiredText {
-  color: var(--danger-main);
+  color: var(--color-danger);
   font-weight: 500;
 }
 
 .expiredBadge {
-  background: var(--danger-main);
-  color: white;
+  background: var(--color-danger);
+  color: var(--color-ink-inverse);
   padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--rounded-sm);
   font-size: 0.7rem;
   font-weight: 600;
 }
@@ -131,10 +131,10 @@
 .actionBtn {
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: var(--color-ink-secondary);
   padding: var(--spacing-1);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--rounded-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -142,23 +142,23 @@
 }
 
 .actionBtn:hover {
-  background: var(--surface-hover);
-  color: var(--primary-main);
+  background: var(--color-surface-sunken);
+  color: var(--color-primary);
 }
 
 .actionBtn.danger:hover {
-  color: var(--danger-main);
-  background: var(--danger-light);
+  color: var(--color-danger);
+  background: var(--color-danger-subtle);
 }
 
 .empty {
   grid-column: 1 / -1;
   text-align: center;
   padding: var(--spacing-8);
-  color: var(--text-tertiary);
-  background: var(--surface-secondary);
-  border-radius: var(--radius-lg);
-  border: 1px dashed var(--border-light);
+  color: var(--color-ink-tertiary);
+  background: var(--color-surface-sunken);
+  border-radius: var(--rounded-lg);
+  border: 1px dashed var(--color-border-subtle);
 }
 
 .formGroup {
@@ -171,21 +171,21 @@
 .formGroup label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--color-ink-secondary);
 }
 
 .formGroup input,
 .formGroup select {
   padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-md);
   font-size: 0.95rem;
   outline: none;
 }
 
 .formGroup input:focus,
 .formGroup select:focus {
-  border-color: var(--primary-main);
+  border-color: var(--color-primary);
 }
 
 .pdfPreviewContainer {
@@ -207,20 +207,20 @@
   max-height: 70vh;
   overflow: auto;
   padding: var(--spacing-4);
-  background: var(--surface-secondary);
-  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  border-radius: var(--rounded-md);
 }
 
 .imagePreview {
   max-width: 100%;
   max-height: 65vh;
   object-fit: contain;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--rounded-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .fileHint {
   font-size: 0.8rem;
-  color: var(--text-tertiary);
+  color: var(--color-ink-tertiary);
   margin-top: 2px;
 }

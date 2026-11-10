@@ -96,7 +96,7 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
     return (
       <div className={styles.pendingState} data-testid="pending-approval-state">
         <div className={styles.pendingIcon} aria-hidden="true">
-          <Clock size={48} className="text-amber-500 mx-auto" />
+          <Clock size={48} className="text-warning mx-auto" />
         </div>
         <h3 className={styles.pendingTitle}>Đang chờ phê duyệt</h3>
         <p className={styles.pendingDesc}>

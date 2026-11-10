@@ -13,7 +13,7 @@ const SoilHealthPageClient = dynamic(
 )
 
 export const metadata: Metadata = {
-  title: 'Sức khỏe đất | DX-AgriMarket',
+  title: 'Sức khỏe đất',
   description: 'Lịch sử độ ẩm và nhiệt độ thổ nhưỡng của vùng trồng',
 }
 

@@ -6,9 +6,11 @@ import { CheckCircle, Leaf, Lock } from "lucide-react"
 import styles from "./login-page.module.css"
 import { Suspense } from "react"
 import { LoginForm } from "./_components/login-form"
+import { ThemeToggle } from "@/components/ui/ThemeToggle"
+import { BRAND_NAME } from "@/lib/brand"
 
 export const metadata: Metadata = {
-  title: "Đăng nhập | DX-AgriMarket",
+  title: "Đăng nhập",
   description: "Hệ điều hành số Nông nghiệp",
 }
 
@@ -19,7 +21,7 @@ export default function LoginPage() {
       <aside className={styles.authSide} data-testid="auth-side">
         <div className={styles.authSideBrand}>
           <span className={styles.brandIcon}><Leaf size={24} /></span>
-          <strong>DX AgriMarket</strong>
+          <strong>{BRAND_NAME}</strong>
         </div>
         
         <div className={styles.authSideContent}>
@@ -40,6 +42,7 @@ export default function LoginPage() {
       
       {/* Right panel — form */}
       <main className={styles.authPanel} data-testid="auth-panel">
+        <ThemeToggle className={styles.themeToggle} />
         <div className={styles.authCard}>
           <div className={styles.cardHeader}>
             <p className={styles.cardPretitle}>Đăng nhập</p>

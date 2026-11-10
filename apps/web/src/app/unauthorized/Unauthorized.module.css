@@ -42,15 +42,15 @@
 }
 
 .stateTitlePending {
-  color: #92400E;
-  font-size: var(--font-size-h1, 1.5rem);
+  color: var(--color-warning);
+  font-size: var(--font-size-h1);
   font-weight: 600;
   margin: 0;
 }
 
 .stateTitleLocked {
-  color: var(--color-danger, #DC2626);
-  font-size: var(--font-size-h1, 1.5rem);
+  color: var(--color-danger);
+  font-size: var(--font-size-h1);
   font-weight: 600;
   margin: 0;
 }

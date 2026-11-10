@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { NotificationInbox } from '@/components/features/notification/NotificationInbox'
 
 export const metadata = {
-  title: 'Thông báo | DX-AgriMarket',
+  title: 'Thông báo',
   description: 'Quản lý thông báo',
 }
 

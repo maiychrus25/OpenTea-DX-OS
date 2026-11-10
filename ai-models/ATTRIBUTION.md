@@ -24,6 +24,40 @@
 
 ---
 
+## Tea Leaf Disease Model
+
+### `tea_leaf_model.keras`, `tea_class_names.txt`, `tea_class_names_vi.json`
+
+| Field | Value |
+|-------|-------|
+| **Authors** | OpenTea Developers (trained with `ai-models/tea/train.py`) |
+| **License** | MIT (the repository licence, `LICENSE`, Copyright (c) 2026 OpenTea Developers) for the code, the class files and the model weights file `tea_leaf_model.keras` |
+| **Derived from** | The weights are derived from the CC BY 4.0 datasets and the Apache-2.0 MobileNetV2 ImageNet weights credited below; keep those attributions when redistributing the model |
+| **Framework** | TensorFlow 2.21.0 / Keras 3.15.1, MobileNetV2 transfer learning |
+| **Model card** | `ai-models/tea/MODEL_CARD.md` |
+| **Trained** | 2026-11-10 |
+
+### Training data (all CC BY 4.0, https://creativecommons.org/licenses/by/4.0/)
+
+| Dataset | Authors | DOI | Use |
+|---------|---------|-----|-----|
+| tea sickness dataset (version 2) | Gibson Kimutai, Anna Förster | [10.17632/j32xdt2ff5.2](https://doi.org/10.17632/j32xdt2ff5.2) | All classes except `Anthracnose`; images resized to 224x224 |
+| Tea leaf disease Dataset (version 1) | Md Samiul Islam | [10.17632/mz598gxfw9.1](https://doi.org/10.17632/mz598gxfw9.1) | `Tea Leaf Diseases.zip`, bounding boxes cropped and resized to 224x224 |
+| Real-Life Dataset of Tea Plant Leaf Disease Classification (version 2) | Md Masum Billah, Saifuddin Sagor, Azmery Sultana, Mohammad Shorif Uddin | [10.17632/rrff4vb35m.2](https://doi.org/10.17632/rrff4vb35m.2) | `Tea Compressed Dataset.zip` only; images resized to 224x224 |
+
+Changes: labels merged into one set of class ids (`ai-models/tea/datasets.json`), exact duplicates removed, images
+cropped/resized for training. No images are redistributed in this repository.
+
+### Pretrained weights
+
+| Field | Value |
+|-------|-------|
+| **Weights** | MobileNetV2 ImageNet weights, `mobilenet_v2_weights_tf_dim_ordering_tf_kernels_1.0_224_no_top.h5` |
+| **Source** | Downloaded by `keras.applications.MobileNetV2` from `https://storage.googleapis.com/tensorflow/keras-applications/mobilenet_v2/` |
+| **License** | Apache License 2.0 (Keras Applications); trained on ImageNet ILSVRC-2012 |
+
+---
+
 ## MIT License Notice (ICTU-OpenAgri)
 
 ```

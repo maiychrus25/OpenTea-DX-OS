@@ -231,7 +231,7 @@ export default function SetupMapClient({ onAreaCalculated }: Props) {
   return (
     <div 
       ref={mapContainerRef} 
-      style={{ height: '100%', width: '100%', borderRadius: 'var(--radius-lg)', zIndex: 1 }} 
+      style={{ height: '100%', width: '100%', borderRadius: 'var(--rounded-lg)', zIndex: 1 }} 
     />
   )
 }

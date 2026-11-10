@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-// Runs against the real stack: E2E_CORE=1 E2E_BASE_URL=http://localhost:3000, after `make platform-smoke` created the users and fixtures.
+// Runs against the real stack: E2E_CORE=1 E2E_BASE_URL=http://localhost:3000, after `make platform-smoke` created the smoke_ users and fixtures.
+// TC and LB may also hold the demo seed: own rows are fixture rows, foreign ones include a seeded parcel (absent unseeded).
 import { execFileSync } from 'child_process';
 import fs from 'fs';
 import { test, expect, Page } from '@playwright/test';
@@ -78,26 +79,26 @@ async function expectOnlyHouseholds(page: Page, own: string[], foreign: string[]
   for (const name of foreign) await expect(page.getByRole('cell', { name })).toHaveCount(0);
 }
 
-test('manager_tc sees household fixtures of TC and none of LB', async ({ page }) => {
-  await login(page, 'manager_tc');
+test('smoke_manager_tc sees household fixtures of TC and none of LB', async ({ page }) => {
+  await login(page, 'smoke_manager_tc');
   await expectOnlyHouseholds(
     page,
     ['Household TC 1', 'P-TC-001', 'Household TC 2', 'P-TC-002'],
-    ['Household LB 1', 'P-LB-001'],
+    ['Household LB 1', 'P-LB-001', 'LB-A1'],
   );
 });
 
-test('manager_lb sees household fixtures of LB and none of TC', async ({ page }) => {
-  await login(page, 'manager_lb');
+test('smoke_manager_lb sees household fixtures of LB and none of TC', async ({ page }) => {
+  await login(page, 'smoke_manager_lb');
   await expectOnlyHouseholds(
     page,
     ['Household LB 1', 'P-LB-001'],
-    ['Household TC 1', 'P-TC-001', 'Household TC 2', 'P-TC-002'],
+    ['Household TC 1', 'P-TC-001', 'Household TC 2', 'P-TC-002', 'TC-A3'],
   );
 });
 
 test('/api/auth/session contains no accessToken or refreshToken', async ({ page }) => {
-  await login(page, 'manager_tc');
+  await login(page, 'smoke_manager_tc');
   const session = await readSession(page);
   console.log(`session cookie: ${session.bytes} bytes in ${session.chunks} chunk(s)`);
 
@@ -115,7 +116,7 @@ test('a session cookie survives an expired access token and the page still loads
   // Longer than the 30 s refresh window, so the first token is left alone until it really expires.
   const originalLifespan = await setAccessTokenLifespan(40);
   try {
-    await login(page, 'manager_tc');
+    await login(page, 'smoke_manager_tc');
     const before = await readSession(page);
     // Away from the app, so that no background call refreshes the token during the wait.
     await page.goto('about:blank');
@@ -139,7 +140,7 @@ test('a session cookie survives an expired access token and the page still loads
 });
 
 test('with Hasura stopped the list page shows the Vietnamese error and no rows', async ({ page }) => {
-  await login(page, 'manager_tc');
+  await login(page, 'smoke_manager_tc');
   try {
     compose('stop', 'hasura');
     await page.goto('/manager/zones');

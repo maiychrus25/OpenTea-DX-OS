@@ -5,6 +5,8 @@ import type { Metadata, Viewport } from 'next'
 import { Be_Vietnam_Pro } from 'next/font/google'
 import '@/styles/globals.css'
 import { Providers } from './providers'
+import { BRAND_NAME } from '@/lib/brand'
+import { themeInitScript } from '@/components/ui/ThemeToggle/theme'
 
 const beVietnam = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
@@ -18,8 +20,8 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'DX-AgriMarket',
-  description: 'Há»‡ Ä‘iá» u hÃ nh sá»‘ NÃ´ng nghiá»‡p',
+  title: { default: BRAND_NAME, template: `%s | ${BRAND_NAME}` },
+  description: 'Hệ điều hành số cho hợp tác xã chè',
   manifest: '/manifest.json',
 }
 
@@ -29,7 +31,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="vi" className={`${beVietnam.variable}`}>
+    // suppressHydrationWarning: the inline script may set data-theme before React hydrates.
+    <html lang="vi" className={`${beVietnam.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>
         <Providers>{children}</Providers>
       </body>

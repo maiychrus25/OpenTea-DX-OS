@@ -10,6 +10,8 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { Pill } from '@/components/ui'
+import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
+import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 
 import styles from './farmer-dashboard.module.css'
 
@@ -58,7 +60,7 @@ export default async function FarmerDashboard() {
     redirect('/login')
   }
 
-  const { userId } = await requireTenant()
+  const { userId, htxProfileId } = await requireTenant()
 
   const household = await prisma.household.findFirst({
     where: { keycloak_user_id: userId },
@@ -68,6 +70,21 @@ export default async function FarmerDashboard() {
       }
     }
   })
+
+  // Rejected entries are left out, as when a lot is created; pending ones still warn the farmer.
+  const now = new Date()
+  const withdrawals = household
+    ? activeWithdrawals(
+        (await prisma.journalActivity.findMany({
+          where: {
+            safe_harvest_date: { gt: now },
+            journal_entry: { status: { not: 'REJECTED' }, parcel: { household: { id: household.id, htx_profile_id: htxProfileId } } },
+          },
+          select: { safe_harvest_date: true, journal_entry: { select: { parcel: { select: { parcel_code: true } } } } },
+        })).map((a) => ({ parcel_code: a.journal_entry.parcel.parcel_code, safe_harvest_date: a.safe_harvest_date! })),
+        now,
+      )
+    : []
 
   let weather = null
   if (household && household.parcels.length > 0) {
@@ -89,7 +106,7 @@ export default async function FarmerDashboard() {
           <Link href="/farmer/journal/new" className={styles.ctaButton}>
             Ghi nhật ký mới
           </Link>
-          <Link href="/farmer/journal" className={`${styles.ctaButton} bg-white text-green-700 border border-green-700 hover:bg-green-50`}>
+          <Link href="/farmer/journal" className={`${styles.ctaButton} bg-card text-primary border border-primary hover:bg-secondary`}>
             Xem lịch sử
           </Link>
           <Link href="/farmer/diagnosis" className={styles.ctaButton}>
@@ -101,7 +118,17 @@ export default async function FarmerDashboard() {
       <div className={styles.dashboardGrid}>
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Tình trạng thửa đất</h2>
-          
+
+          {withdrawals.length > 0 && (
+            <ul className={`${styles.parcelList} mb-4`} aria-label="Thời gian cách ly">
+              {withdrawals.map(w => (
+                <li key={w.parcel_code}>
+                  <Pill tone="amber" size="md">{`Thửa ${w.parcel_code} còn ${w.days} ngày cách ly`}</Pill>
+                </li>
+              ))}
+            </ul>
+          )}
+
           {!household || household.parcels.length === 0 ? (
             <p>Bạn chưa có thửa đất nào được phân công.</p>
           ) : (
@@ -134,7 +161,7 @@ export default async function FarmerDashboard() {
                 <Cloud size={48} color="var(--primary)" />
                 <div>
                   <div className={styles.weatherTemp}>{weather.temperature_c}°C</div>
-                  <div className={styles.weatherCondition}>{weather.condition}</div>
+                  <div className={styles.weatherCondition}>{/^\d+$/.test(weather.condition) ? weatherCodeToCondition(Number(weather.condition)) : weather.condition}</div>
                 </div>
               </div>
               

@@ -6,6 +6,8 @@ import styles from './TopBar.module.css'
 import { Menu } from 'lucide-react'
 import { NotificationBell } from '@/components/ui'
 import { GlobalSearchInput } from '@/components/ui/GlobalSearch/GlobalSearchInput'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { BRAND_NAME } from '@/lib/brand'
 
 export interface TopBarProps {
   role: string
@@ -33,7 +35,7 @@ export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notifi
           </button>
         )}
         <div className={styles.pageTitle}>
-          <span className={styles.brandMobile}>DX-AgriMarket</span>
+          <span className={styles.brandMobile}>{BRAND_NAME}</span>
         </div>
         <div className={styles.rolePill}>{roleName}</div>
       </div>
@@ -41,6 +43,7 @@ export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notifi
       <GlobalSearchInput />
 
       <div className={styles.right}>
+        <ThemeToggle />
         {notificationSlot ? (
           notificationSlot
         ) : (

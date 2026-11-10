@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { Client } from 'minio'
+import { minioEndpoint } from './minio-endpoint'
 import { DocumentStoragePort, DocumentItem } from '@/domain/document/ports/document-storage.port'
 
 export class MinioDocumentAdapter implements DocumentStoragePort {
@@ -13,10 +14,12 @@ export class MinioDocumentAdapter implements DocumentStoragePort {
   constructor() {
     this.bucketName = 'agrimarket-private'
     
+    const internal = minioEndpoint()
+    
     // Internal client
     this.minioClient = new Client({
-      endPoint: process.env.MINIO_ENDPOINT || 'minio',
-      port: 9000,
+      endPoint: internal.host,
+      port: internal.port,
       useSSL: process.env.MINIO_USE_SSL === 'true',
       accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
       secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
@@ -36,13 +39,13 @@ export class MinioDocumentAdapter implements DocumentStoragePort {
         publicPort = parsed.port ? parseInt(parsed.port) : (parsed.protocol === 'https:' ? 443 : 80);
         publicSsl = parsed.protocol === 'https:';
       } catch (e) {}
-    } else if (process.env.MINIO_ENDPOINT === 'minio' || !process.env.MINIO_ENDPOINT) {
+    } else if (internal.host === 'minio') {
       publicHost = 'localhost';
       publicPort = 9000;
       publicSsl = false;
     } else {
-      publicHost = process.env.MINIO_ENDPOINT as string;
-      publicPort = 9000;
+      publicHost = internal.host;
+      publicPort = internal.port;
       publicSsl = process.env.MINIO_USE_SSL === 'true';
     }
 

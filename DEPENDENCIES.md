@@ -71,12 +71,28 @@ along with their licenses, to ensure full transparency and license compliance.
 
 | Package | Version | License | Purpose |
 |---------|---------|---------|---------|
-| [fastapi](https://github.com/tiangolo/fastapi) | latest | MIT | Python web framework |
-| [uvicorn](https://github.com/encode/uvicorn) | latest | BSD-3-Clause | ASGI server |
-| [python-multipart](https://github.com/andrew-d/python-multipart) | latest | Apache-2.0 | File upload support |
-| [Pillow](https://github.com/python-pillow/Pillow) | latest | MIT-CMU | Image processing |
-| [numpy](https://github.com/numpy/numpy) | latest | BSD-3-Clause | Numerical computation |
-| [tensorflow-cpu](https://github.com/tensorflow/tensorflow) | latest | Apache-2.0 | Machine learning inference |
+| [fastapi](https://github.com/tiangolo/fastapi) | 0.162.2 | MIT | Python web framework |
+| [uvicorn](https://github.com/encode/uvicorn) | 0.54.0 | BSD-3-Clause | ASGI server |
+| [python-multipart](https://github.com/andrew-d/python-multipart) | 0.0.33 | Apache-2.0 | File upload support |
+| [Pillow](https://github.com/python-pillow/Pillow) | 13.0.0 | MIT-CMU | Image processing |
+| [numpy](https://github.com/numpy/numpy) | 2.4.6 | BSD-3-Clause | Numerical computation |
+| [tensorflow](https://github.com/tensorflow/tensorflow) | 2.21.0 | Apache-2.0 | Machine learning inference (wheels for Linux arm64 and x86_64) |
+| [keras](https://github.com/keras-team/keras) | 3.15.1 | Apache-2.0 | Model loading (pulled by tensorflow, pinned) |
+| pytest, httpx2 (`requirements-dev.txt`; httpx2 is the test client Starlette 1.10 requires) | 9.1.1, 2.16.0 | MIT, BSD-3-Clause | Disease API tests |
+
+---
+
+## Tea model training (`ai-models/tea`, not shipped)
+
+Pinned in `ai-models/tea/requirements.txt`; used only to retrain `ai-models/tea_leaf_model.keras`. The MobileNetV2
+ImageNet weights it downloads are credited in `ai-models/ATTRIBUTION.md`.
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| [tensorflow](https://github.com/tensorflow/tensorflow) | 2.21.0 | Apache-2.0 | Model training (same version as the disease API) |
+| [keras](https://github.com/keras-team/keras) | 3.15.1 | Apache-2.0 | Model definition, MobileNetV2 transfer learning |
+| [numpy](https://github.com/numpy/numpy) | 2.4.6 | BSD-3-Clause | Numerical computation |
+| [Pillow](https://github.com/python-pillow/Pillow) | 13.0.0 | MIT-CMU | Image decoding and resizing (same as the disease API) |
 
 ---
 
@@ -93,7 +109,7 @@ along with their licenses, to ensure full transparency and license compliance.
 | n8n | `n8nio/n8n:2.47.2` | Sustainable Use License* | Workflow automation |
 | SeaweedFS | `chrislusf/seaweedfs:4.50` | Apache-2.0 | S3-compatible object storage (replaces MinIO); started with `-volume.max=100` so more than one bucket fits |
 | ClamAV | `clamav/clamav-debian:1.4.6` | GPL-2.0 | Antivirus daemon (network service, not linked) |
-| Python | `python:3.12.15-slim-bookworm` | PSF | Base image of `dxos-scanner` and `dxos-dataops` |
+| Python | `python:3.12.15-slim-bookworm` | PSF | Base image of `dxos-scanner` and `dxos-dataops`, and of `ai-models/tea` training (not a Compose service) |
 | Mosquitto | `eclipse-mosquitto:2.1.2-alpine` | EPL-2.0 | MQTT broker (network service, not linked) |
 | Ollama | `ollama/ollama:0.40.15` | MIT | Local LLM runtime (network service, no host port) |
 | qwen2.5:0.5b | pulled by `ollama-init`, pinned by digest ID | Apache-2.0 | Default in-house LLM (model weights, not bundled in any image) |

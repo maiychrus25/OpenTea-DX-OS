@@ -11,8 +11,8 @@ describe('BulletinCard', () => {
     render(
       <BulletinCard
         category="market"
-        headline="Thị trường lúa gạo"
-        summary="Giá lúa tăng mạnh"
+        headline="Thị trường chè"
+        summary="Giá chè tăng mạnh"
         date="Hôm nay"
         sourceCount={2}
       />

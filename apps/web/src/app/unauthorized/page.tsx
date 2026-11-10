@@ -29,7 +29,7 @@ export default async function UnauthorizedPage({ searchParams }: UnauthorizedPag
         <Card padding="default">
           <div className={styles.content}>
             <div className={styles.stateIcon} aria-hidden="true">
-              <Clock size={48} className="text-amber-500 mx-auto" />
+              <Clock size={48} className="text-warning mx-auto" />
             </div>
             <h1 className={styles.stateTitlePending}>Tài khoản chờ phê duyệt</h1>
             <p className={styles.description}>
@@ -54,7 +54,7 @@ export default async function UnauthorizedPage({ searchParams }: UnauthorizedPag
         <Card padding="default">
           <div className={styles.content}>
             <div className={styles.stateIcon} aria-hidden="true">
-              <Lock size={48} className="text-rose-500 mx-auto" />
+              <Lock size={48} className="text-danger mx-auto" />
             </div>
             <h1 className={styles.stateTitleLocked}>Tài khoản bị khóa</h1>
             <p className={styles.description}>

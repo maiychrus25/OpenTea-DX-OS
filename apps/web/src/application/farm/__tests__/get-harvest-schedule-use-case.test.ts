@@ -13,6 +13,7 @@ describe('GetHarvestScheduleUseCase', () => {
       getHarvestSchedule: jest.fn(),
       updateEstimatedHarvestDate: jest.fn(),
       getUnscheduledActiveCycles: jest.fn(),
+      startNextRound: jest.fn(),
     }
     useCase = new GetHarvestScheduleUseCase(mockPort)
   })
@@ -24,7 +25,7 @@ describe('GetHarvestScheduleUseCase', () => {
         parcelId: 'p1',
         parcelName: 'Thửa 1',
         householdName: 'Hộ A',
-        cropType: 'Lúa',
+        cropType: 'Chè',
         estimatedYieldKg: 1000,
         estimatedHarvestDate: '2026-10-10T00:00:00.000Z',
         safeHarvestDate: null,

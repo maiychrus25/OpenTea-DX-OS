@@ -13,6 +13,7 @@ import { NotFoundError } from '@/domain/errors'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { MetricCard, AiNote, SourceBox } from '@/components/ui'
+import { isSimulatedPrice, SIMULATED_PRICE_LABEL } from '@/domain/market/simulated-price'
 
 import styles from './Dashboard.module.css'
 
@@ -38,6 +39,7 @@ function formatDate(date: Date): string {
 // Dịch tên mặt hàng từ tiếng Anh → tiếng Việt gần gũi với nông dân
 const COMMODITY_VN: Record<string, string> = {
   'Agricultural Products':    'Nông nghiệp',
+  'Tea':                      'Chè',
   'Rice':                     'Lúa gạo',
   'Maize':                    'Ngô',
   'Wheat':                    'Lúa mì',
@@ -66,6 +68,27 @@ const METRIC_VN: Record<string, string> = {
   'consumer_price_index':      'Chỉ số giá tiêu dùng',
 }
 
+const PRICE_SELECT = { commodity: true, metric: true, value: true, unit: true, source: true, fetched_at: true } as const
+const PRICE_COUNT = 3
+
+// Tea first, topped up with the newest other commodities when fewer than PRICE_COUNT tea rows exist.
+async function latestPrices() {
+  const tea = await prisma.marketData.findMany({
+    where: { commodity: 'Tea' },
+    orderBy: { fetched_at: 'desc' },
+    take: PRICE_COUNT,
+    select: PRICE_SELECT,
+  })
+  if (tea.length >= PRICE_COUNT) return tea
+  const others = await prisma.marketData.findMany({
+    where: { commodity: { not: 'Tea' } },
+    orderBy: { fetched_at: 'desc' },
+    take: PRICE_COUNT - tea.length,
+    select: PRICE_SELECT,
+  })
+  return [...tea, ...others]
+}
+
 function toMetricVN(metric: string | undefined | null): string {
   if (!metric) return ''
   return METRIC_VN[metric] ?? metric.replace(/_/g, ' ')
@@ -88,18 +111,18 @@ function formatIndexValue(value: number, unit: string): { badge: string; color: 
       .replace('kg/ha', 'kg/ha')
     return {
       badge: '',
-      color: '#374151',
+      color: 'var(--color-ink-secondary)',
       numericLabel: `${value.toLocaleString('vi-VN')} ${unitVN}`,
     }
   }
 
   // FAO index: 100 = mức trung bình lịch sử
   const numericLabel = `(chỉ số: ${value.toFixed(1)})`
-  if (value >= 120) return { badge: 'Rất cao', color: '#dc2626', numericLabel }
-  if (value >= 110) return { badge: 'Cao hơn bình thường', color: '#d97706', numericLabel }
-  if (value >= 100) return { badge: 'Ổn định', color: '#16a34a', numericLabel }
-  if (value >= 90)  return { badge: 'Thấp hơn bình thường', color: '#ca8a04', numericLabel }
-  return { badge: 'Thấp', color: '#2563eb', numericLabel }
+  if (value >= 120) return { badge: 'Rất cao', color: 'var(--color-danger)', numericLabel }
+  if (value >= 110) return { badge: 'Cao hơn bình thường', color: 'var(--color-accent)', numericLabel }
+  if (value >= 100) return { badge: 'Ổn định', color: 'var(--color-success)', numericLabel }
+  if (value >= 90)  return { badge: 'Thấp hơn bình thường', color: 'var(--color-warning)', numericLabel }
+  return { badge: 'Thấp', color: 'var(--color-info)', numericLabel }
 }
 
 export default async function ManagerDashboard() {
@@ -162,11 +185,7 @@ export default async function ManagerDashboard() {
       prisma.lot.count({
         where: { htx_profile_id: profileId, status: 'DRAFT' }
       }),
-      prisma.marketData.findMany({
-        orderBy: { fetched_at: 'desc' },
-        take: 3,
-        select: { commodity: true, metric: true, value: true, unit: true, source: true, fetched_at: true }
-      })
+      latestPrices()
     ])
 
     stats.totalHa = areaAgg._sum.area_ha || 0
@@ -180,6 +199,9 @@ export default async function ManagerDashboard() {
   }
 
   const uniqueSources = Array.from(new Set(prices.map(p => p.source)))
+  // Only real sources count as verified; a simulated price is named as such, and no data names no source.
+  const verifiedSources = uniqueSources.filter(source => !isSimulatedPrice(source))
+  const simulatedSources = uniqueSources.filter(source => isSimulatedPrice(source))
 
   return (
     <main className={styles.container}>
@@ -240,6 +262,9 @@ export default async function ManagerDashboard() {
                       <span className={styles.priceMetric}>
                         {toMetricVN(price.metric)}
                       </span>
+                      {isSimulatedPrice(price.source) && (
+                        <span className={styles.priceMetric}>{SIMULATED_PRICE_LABEL}</span>
+                      )}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       {isIndex ? (
@@ -248,7 +273,7 @@ export default async function ManagerDashboard() {
                             <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                             {badge}
                           </span>
-                          <span style={{ fontSize: '0.8rem', color: '#6b7280', marginLeft: '0.4rem' }}>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--color-ink-tertiary)', marginLeft: '0.4rem' }}>
                             {numericLabel}
                           </span>
                         </>
@@ -260,11 +285,11 @@ export default async function ManagerDashboard() {
                 )
               }) : (
                 <div className={styles.emptyMarket}>
-                  <BarChart3 size={36} className="text-emerald-700 mx-auto" />
-                  <p style={{ margin: '0.5rem 0 0.25rem', fontWeight: 600, color: '#374151' }}>
+                  <BarChart3 size={36} className="text-primary mx-auto" />
+                  <p style={{ margin: '0.5rem 0 0.25rem', fontWeight: 600, color: 'var(--color-ink-secondary)' }}>
                     Chưa có dữ liệu giá hôm nay
                   </p>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-ink-tertiary)' }}>
                     Hệ thống cập nhật tự động mỗi ngày. Vui lòng quay lại sau.
                   </p>
                 </div>
@@ -273,7 +298,10 @@ export default async function ManagerDashboard() {
 
             <div className={styles.aiInfo}>
               <AiNote />
-              <SourceBox count={prices.length || 3} sources={uniqueSources.length > 0 ? uniqueSources : ['USDA', 'WTO', 'Sở NN&PTNT']} />
+              {verifiedSources.length > 0 && <SourceBox count={verifiedSources.length} sources={verifiedSources} />}
+              {simulatedSources.length > 0 && (
+                <p className={styles.simulatedSource}>{`Nguồn mô phỏng: ${simulatedSources.join(' · ')}`}</p>
+              )}
             </div>
           </section>
         </>

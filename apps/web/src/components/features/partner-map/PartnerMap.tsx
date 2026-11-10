@@ -387,8 +387,8 @@ export default function PartnerMap() {
       <div className="w-full lg:w-[400px] flex flex-col gap-6 shrink-0">
         
         {/* Add Partner Form */}
-        <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-surface-border)] overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-[var(--color-surface-border)] bg-[var(--color-surface-base)]">
+        <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-border-default)] overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-[var(--color-border-default)] bg-[var(--color-surface-card)]">
             <h2 className="font-semibold text-[var(--color-ink-primary)]">Thêm Đối Tác Mới</h2>
             <p className="text-xs text-[var(--color-ink-secondary)] mt-0.5">Tìm kiếm địa điểm hoặc nhấp trực tiếp lên bản đồ</p>
           </div>
@@ -403,7 +403,7 @@ export default function PartnerMap() {
                   placeholder="Tìm kiếm vị trí trên bản đồ..." 
                   value={query} 
                   onChange={e => setQuery(e.target.value)} 
-                  className="w-full pl-9 pr-9 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] placeholder-[var(--color-ink-tertiary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+                  className="w-full pl-9 pr-9 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border-default)] rounded-lg text-sm text-[var(--color-ink-primary)] placeholder-[var(--color-ink-tertiary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
                 />
                 {isSearching && (
                   <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-[var(--color-primary)]" aria-hidden="true" />
@@ -458,7 +458,7 @@ export default function PartnerMap() {
                   <button
                     type="button"
                     onClick={() => setSelected(null)}
-                    className="text-[var(--color-ink-tertiary)] hover:text-red-600 ml-2"
+                    className="text-[var(--color-ink-tertiary)] hover:text-danger ml-2"
                     title="Hủy chọn tọa độ"
                     aria-label="Hủy chọn tọa độ"
                   >
@@ -466,7 +466,7 @@ export default function PartnerMap() {
                   </button>
                 </div>
               ) : (
-                <div className="text-xs text-[var(--color-ink-tertiary)] bg-[var(--color-surface-base)] px-3 py-2 rounded-lg border border-dashed border-[var(--color-surface-border)] flex items-center gap-2">
+                <div className="text-xs text-[var(--color-ink-tertiary)] bg-[var(--color-surface-card)] px-3 py-2 rounded-lg border border-dashed border-[var(--color-border-default)] flex items-center gap-2">
                   <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <span>Mẹo: Nhấp chuột vào điểm bất kỳ trên bản đồ để ghim</span>
                 </div>
@@ -475,14 +475,14 @@ export default function PartnerMap() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5 col-span-2">
                   <label className="text-xs font-medium text-[var(--color-ink-secondary)]">
-                    Tên đối tác <span className="text-red-500">*</span>
+                    Tên đối tác <span className="text-danger">*</span>
                   </label>
                   <input 
                     required 
                     placeholder="Nhập tên đối tác" 
                     value={form.name} 
                     onChange={e => setForm({ ...form, name: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" 
+                    className="w-full px-3 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border-default)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" 
                   />
                 </div>
                 
@@ -491,7 +491,7 @@ export default function PartnerMap() {
                   <select 
                     value={form.partner_type} 
                     onChange={e => setForm({ ...form, partner_type: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+                    className="w-full px-3 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border-default)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
                   >
                     <option value="BUYER">Người mua</option>
                     <option value="MIDDLEMAN">Thương lái</option>
@@ -505,7 +505,7 @@ export default function PartnerMap() {
                     placeholder="VD: 0987654321" 
                     value={form.contact_phone} 
                     onChange={e => setForm({ ...form, contact_phone: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" 
+                    className="w-full px-3 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border-default)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" 
                   />
                 </div>
 
@@ -515,7 +515,7 @@ export default function PartnerMap() {
                     placeholder="Nhập địa chỉ hoặc chọn từ gợi ý..." 
                     value={form.address} 
                     onChange={e => setForm({ ...form, address: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" 
+                    className="w-full px-3 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border-default)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors" 
                   />
                 </div>
               </div>
@@ -523,7 +523,7 @@ export default function PartnerMap() {
               <button 
                 type="submit" 
                 disabled={!canSubmit || isSubmitting} 
-                className="mt-2 w-full flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-2 w-full flex items-center justify-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <>
@@ -542,8 +542,8 @@ export default function PartnerMap() {
         </div>
 
         {/* Partners List */}
-        <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-surface-border)] overflow-hidden shadow-sm flex flex-col h-[400px]">
-          <div className="px-5 py-4 border-b border-[var(--color-surface-border)] bg-[var(--color-surface-base)] flex items-center justify-between">
+        <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-border-default)] overflow-hidden shadow-sm flex flex-col h-[400px]">
+          <div className="px-5 py-4 border-b border-[var(--color-border-default)] bg-[var(--color-surface-card)] flex items-center justify-between">
             <h2 className="font-semibold text-[var(--color-ink-primary)]">Danh Sách Đối Tác</h2>
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium bg-[var(--color-surface-sunken)] px-2.5 py-1 rounded-full text-[var(--color-ink-secondary)]">
@@ -568,7 +568,7 @@ export default function PartnerMap() {
               </div>
             ) : partners.length === 0 ? (
               <div className="text-center py-12 text-[var(--color-ink-tertiary)] flex flex-col items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-[var(--color-surface-base)] flex items-center justify-center">
+                <div className="h-12 w-12 rounded-full bg-[var(--color-surface-card)] flex items-center justify-center">
                   <MapPin className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <p className="text-sm">Chưa có đối tác nào</p>
@@ -578,7 +578,7 @@ export default function PartnerMap() {
                 <div 
                   key={p.id} 
                   onClick={() => setFlyToLocation({ lat: p.lat, lng: p.lng })} 
-                  className="cursor-pointer bg-[var(--color-surface-base)] p-4 rounded-lg border border-[var(--color-surface-border)] hover:border-[var(--color-primary)] hover:shadow-md transition-all group"
+                  className="cursor-pointer bg-[var(--color-surface-card)] p-4 rounded-lg border border-[var(--color-border-default)] hover:border-[var(--color-primary)] hover:shadow-md transition-all group"
                 >
                   <div className="flex justify-between items-start gap-4 mb-2">
                     <div>
@@ -602,7 +602,7 @@ export default function PartnerMap() {
                       <button 
                         type="button"
                         onClick={e => { e.stopPropagation(); setDeletingPartner(p); }} 
-                        className="p-1.5 text-[var(--color-ink-tertiary)] hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" 
+                        className="p-1.5 text-[var(--color-ink-tertiary)] hover:text-danger hover:bg-danger-subtle rounded-md transition-colors" 
                         title="Xóa đối tác"
                         aria-label="Xóa đối tác"
                       >
@@ -633,7 +633,7 @@ export default function PartnerMap() {
       </div>
 
       {/* Right Content: Map */}
-      <div className="flex-1 bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-surface-border)] overflow-hidden shadow-sm h-[800px] lg:h-auto lg:min-h-[600px] relative">
+      <div className="flex-1 bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-border-default)] overflow-hidden shadow-sm h-[800px] lg:h-auto lg:min-h-[600px] relative">
         <div ref={mapContainerRef} className="h-full w-full absolute inset-0 z-0" />
       </div>
 
@@ -650,7 +650,7 @@ export default function PartnerMap() {
               required
               value={editForm.name}
               onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-              className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+              className="w-full px-3 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border-default)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -659,7 +659,7 @@ export default function PartnerMap() {
               <select
                 value={editForm.partner_type}
                 onChange={e => setEditForm({ ...editForm, partner_type: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+                className="w-full px-3 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border-default)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
               >
                 <option value="BUYER">Người mua</option>
                 <option value="MIDDLEMAN">Thương lái</option>
@@ -671,7 +671,7 @@ export default function PartnerMap() {
               <input
                 value={editForm.contact_phone}
                 onChange={e => setEditForm({ ...editForm, contact_phone: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+                className="w-full px-3 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border-default)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
               />
             </div>
           </div>
@@ -680,7 +680,7 @@ export default function PartnerMap() {
             <input
               value={editForm.address}
               onChange={e => setEditForm({ ...editForm, address: e.target.value })}
-              className="w-full px-3 py-2 bg-[var(--color-surface-base)] border border-[var(--color-surface-border)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
+              className="w-full px-3 py-2 bg-[var(--color-surface-card)] border border-[var(--color-border-default)] rounded-lg text-sm text-[var(--color-ink-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
@@ -712,7 +712,7 @@ export default function PartnerMap() {
               variant="primary"
               onClick={handleConfirmDelete}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-danger hover:bg-[var(--color-danger-hover)] text-ink-inverse"
             >
               {isDeleting ? 'Đang xóa...' : 'Xác nhận xóa'}
             </Button>

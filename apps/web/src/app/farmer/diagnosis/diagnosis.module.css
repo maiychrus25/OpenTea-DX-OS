@@ -21,7 +21,7 @@
 }
 
 .subtitle {
-  color: var(--color-text-muted);
+  color: var(--color-ink-tertiary);
   margin: 0;
 }
 
@@ -63,7 +63,7 @@
 .uploadLabel {
   padding: 1rem 2rem;
   background: var(--color-surface-sunken);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-default);
   border-radius: var(--rounded-md);
   cursor: pointer;
   font-weight: 500;
@@ -77,7 +77,7 @@
 .analyzeBtn {
   padding: 0.75rem 2rem;
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-foreground);
   border: none;
   border-radius: var(--rounded-md);
   font-weight: 600;
@@ -96,8 +96,8 @@
 
 .warningBox {
   padding: 1rem;
-  background: #fff3e0;
-  color: #e65100;
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
   border-radius: var(--rounded-md);
   margin-bottom: 1.5rem;
   font-size: 0.875rem;
@@ -116,7 +116,7 @@
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--rounded-md);
   margin-bottom: 0.5rem;
-  background: var(--color-surface);
+  background: var(--color-surface-card);
 }
 
 .diseaseName {
@@ -129,7 +129,7 @@
 
 .aiNote {
   font-size: 0.875rem;
-  color: var(--color-text-muted);
+  color: var(--color-ink-tertiary);
   font-style: italic;
   margin-bottom: 1.5rem;
 }
@@ -168,7 +168,7 @@
 
 .historyDate {
   font-size: 0.875rem;
-  color: var(--color-text-muted);
+  color: var(--color-ink-tertiary);
 }
 
 .historyBody {
@@ -186,7 +186,7 @@
 .overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: var(--color-modal-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -222,12 +222,12 @@
 
 .cancelBtn {
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-default);
 }
 
 .submitBtn {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-primary-foreground);
   border: none;
 }
 
@@ -247,16 +247,16 @@
 
 .select {
   padding: 0.75rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-default);
   border-radius: var(--rounded-md);
-  background-color: var(--color-surface);
+  background-color: var(--color-surface-card);
   font-size: 1rem;
 }
 
 .errorBox {
   padding: 1rem;
-  background: #ffebee;
-  color: #c62828;
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
   border-radius: var(--rounded-md);
   margin-top: 1rem;
   font-size: 0.875rem;
@@ -264,7 +264,7 @@
 }
 
 .emptyHistory {
-  color: var(--color-text-muted);
+  color: var(--color-ink-tertiary);
   font-style: italic;
 }
 
@@ -276,15 +276,19 @@
 
 .historyParcel {
   font-size: 0.75rem;
-  color: var(--color-text-muted);
+  color: var(--color-ink-tertiary);
+}
+
+.historyPhoto {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  margin-bottom: 0.5rem;
 }
 
 .historyImage {
-  width: 100%;
-  height: 120px;
   object-fit: cover;
   border-radius: var(--rounded-sm);
-  margin-bottom: 0.5rem;
 }
 
 .historyImagePlaceholder {
@@ -295,15 +299,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-muted);
+  color: var(--color-ink-tertiary);
   font-size: 0.75rem;
   margin-bottom: 0.5rem;
 }
 
 
 .offlineBanner {
-  background-color: #fff3e0;
-  color: #e65100;
+  background-color: var(--color-warning-subtle);
+  color: var(--color-warning);
   padding: 1rem;
   border-radius: var(--rounded-md);
   margin-top: 1rem;
@@ -311,8 +315,8 @@
 }
 
 .syncBanner {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--color-info-subtle);
+  color: var(--color-info);
   padding: 1rem;
   border-radius: var(--rounded-md);
   margin-top: 1rem;
@@ -322,8 +326,8 @@
 /* [M1] successBox — dùng design tokens thay vì inline style */
 .successBox {
   padding: 1rem;
-  background: #ecfdf5; /* TODO(issue-73): thêm --color-success-subtle vào globals.css */
-  color: #065f46;
+  background: var(--color-success-subtle);
+  color: var(--color-success);
   border-radius: var(--rounded-md);
   margin-top: 1rem;
   font-size: 0.875rem;

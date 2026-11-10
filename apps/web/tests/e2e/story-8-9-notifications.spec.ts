@@ -3,56 +3,13 @@
 
 import { test, expect } from '@playwright/test'
 
-import { encode } from 'next-auth/jwt'
-import fs from 'fs'
-
-try {
-  const envContent = fs.readFileSync('.env', 'utf-8')
-  const match = envContent.match(/AUTH_SECRET=["']?([^"'\n]+)["']?/)
-  if (match) {
-    process.env.AUTH_SECRET = match[1]
-  }
-} catch (e) {
-  // ignore
-}
-
-// Helper to generate valid Auth.js session token
-async function generateToken(role: 'manager' | 'officer' | 'farmer') {
-  const now = Math.floor(Date.now() / 1000)
-  return await encode({
-    token: {
-      name: `${role} User`,
-      email: `${role}@example.com`,
-      role: role,
-      iat: now,
-      exp: now + 60 * 60 * 8, // 8 hours
-      jti: 'mock-jti-' + now,
-    },
-    secret: process.env.AUTH_SECRET || process.env.KEYCLOAK_CLIENT_SECRET || 'agrimarket-secret-key',
-    salt: 'authjs.session-token',
-  })
-}
-
-async function setSessionCookie(context: any, role: 'manager' | 'officer' | 'farmer') {
-  const token = await generateToken(role)
-  await context.addCookies([
-    {
-      name: 'authjs.session-token',
-      value: token,
-      domain: 'localhost',
-      path: '/',
-      httpOnly: true,
-      sameSite: 'Lax',
-      expires: Math.floor(Date.now() / 1000) + 60 * 60 * 8,
-    },
-  ])
-}
+import { mockSessionCookie } from './helpers/forged-session'
 
 test.describe('Story 8.9: Notifications Full Page & Farmer Combined', () => {
   
   test.describe('Manager Notifications', () => {
     test.beforeEach(async ({ context }) => {
-      await setSessionCookie(context, 'manager')
+      await mockSessionCookie(context, 'manager')
     })
 
     test('should show eyebrow, title, and mark-all button for manager', async ({ page }) => {
@@ -72,7 +29,7 @@ test.describe('Story 8.9: Notifications Full Page & Farmer Combined', () => {
 
   test.describe('Officer Notifications', () => {
     test.beforeEach(async ({ context }) => {
-      await setSessionCookie(context, 'officer')
+      await mockSessionCookie(context, 'officer')
     })
 
     test('should show eyebrow, title for officer', async ({ page }) => {
@@ -85,7 +42,7 @@ test.describe('Story 8.9: Notifications Full Page & Farmer Combined', () => {
 
   test.describe('Farmer Combined Page', () => {
     test.beforeEach(async ({ context }) => {
-      await setSessionCookie(context, 'farmer')
+      await mockSessionCookie(context, 'farmer')
     })
 
     test('should display combined page with 2 tabs and navigate via sidebar', async ({ page }) => {
@@ -109,7 +66,7 @@ test.describe('Story 8.9: Notifications Full Page & Farmer Combined', () => {
       await expect(notifTab).toBeVisible()
       
       // Default should be bulletin tab, check content
-      await expect(page.getByText('Giá lúa Đông Xuân 2026 duy trì mức cao kỷ lục')).toBeVisible()
+      await expect(page.getByText('Nhu cầu chè búp khô Thái Nguyên tăng dịp cuối năm')).toBeVisible()
       
       // Switch to notifications tab
       await notifTab.click()
@@ -126,7 +83,7 @@ test.describe('Story 8.9: Notifications Full Page & Farmer Combined', () => {
 
   test.describe('Role Guard', () => {
     test('farmer cannot access manager notifications', async ({ page, context }) => {
-      await setSessionCookie(context, 'farmer')
+      await mockSessionCookie(context, 'farmer')
       
       await page.goto('/manager/notifications')
       // Should redirect to unauthorized

@@ -73,9 +73,9 @@
 
 /* Secondary */
 .secondary {
-  background-color: #fff;
-  border: 1.5px solid var(--color-border);
-  color: var(--color-foreground);
+  background-color: var(--color-surface-card);
+  border: 1.5px solid var(--color-border-default);
+  color: var(--color-ink-primary);
   min-height: 42px;
   border-radius: var(--rounded-md);
 }
@@ -106,12 +106,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-default);
   border-radius: var(--rounded-sm);
-  background-color: #fff;
+  background-color: var(--color-surface-card);
 }
 .icon:not(:disabled):hover {
-  background-color: var(--color-muted);
+  background-color: var(--muted);
 }
 
 /* Loading State */
@@ -127,14 +127,14 @@
   transform: translate(-50%, -50%);
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
   border-radius: 50%;
   border-top-color: currentColor;
   animation: spin 1s linear infinite;
 }
 
 .ghost .spinner {
-  border: 2px solid rgba(0, 0, 0, 0.1);
+  border: 2px solid color-mix(in srgb, currentColor 15%, transparent);
   border-top-color: currentColor;
 }
 

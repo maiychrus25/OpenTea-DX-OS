@@ -26,9 +26,9 @@ type KeycloakUser = { id: string; attributes?: Record<string, string[]> }
 
 const inHtx = (id: string, code: string): KeycloakUser => ({ id, attributes: { htx_code: [code] } })
 const usersByRole: Record<string, KeycloakUser[]> = {
-  farmer: [inHtx('farmer-md2', 'MD2'), inHtx('farmer-lb', 'LB'), { id: 'farmer-none' }],
-  officer: [inHtx('officer-md2', 'MD2'), inHtx('officer-lb', 'LB')],
-  manager: [inHtx('manager-md2', 'MD2'), inHtx('manager-lb', 'LB')],
+  farmer: [inHtx('farmer-tc', 'TC'), inHtx('farmer-lb', 'LB'), { id: 'farmer-none' }],
+  officer: [inHtx('officer-tc', 'TC'), inHtx('officer-lb', 'LB')],
+  manager: [inHtx('manager-tc', 'TC'), inHtx('manager-lb', 'LB')],
 }
 const allUsers = Object.values(usersByRole).flat()
 
@@ -67,20 +67,20 @@ beforeEach(() => {
     return new Response(null, { status: 204 })
   })
   global.fetch = fetchMock as unknown as typeof fetch
-  ;(prisma.htxProfile.findUnique as jest.Mock).mockResolvedValue({ id: 'htx-md2', name: 'HTX MD2', htx_code: 'MD2' })
+  ;(prisma.htxProfile.findUnique as jest.Mock).mockResolvedValue({ id: 'htx-tc', name: 'HTX Tân Cương', htx_code: 'TC' })
 })
 
-function signInAs(role: string, htxCode: string | null = 'MD2') {
-  ;(auth as jest.Mock).mockResolvedValue({ user: { id: `${role}-md2`, role, htxCode } })
+function signInAs(role: string, htxCode: string | null = 'TC') {
+  ;(auth as jest.Mock).mockResolvedValue({ user: { id: `${role}-tc`, role, htxCode } })
 }
 
-const registerData = { fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '123456', htxId: 'htx-md2', htxCode: 'MD2' }
+const registerData = { fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '123456', htxId: 'htx-tc', htxCode: 'TC' }
 const inviteRequest = { fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '123456' }
 
 describe('account creation', () => {
   test('registerUser writes the htx_code attribute and keeps htxId', async () => {
     await new KeycloakAdminAdapter().registerUser(registerData, 'farmer', true)
-    expect(createdUser().attributes).toMatchObject({ htx_code: ['MD2'], htxId: ['htx-md2'] })
+    expect(createdUser().attributes).toMatchObject({ htx_code: ['TC'], htxId: ['htx-tc'] })
   })
 
   describe('invite uses the inviter HTX and adds CONFIGURE_TOTP for manager and officer, not farmer', () => {
@@ -91,24 +91,24 @@ describe('account creation', () => {
         create: jest.fn().mockResolvedValue({ id: 'household-1' }),
         linkToKeycloak: jest.fn(),
       }
-      const htxPort = { findByCode: jest.fn().mockResolvedValue({ id: 'htx-md2', name: 'HTX MD2' }) }
+      const htxPort = { findByCode: jest.fn().mockResolvedValue({ id: 'htx-tc', name: 'HTX Tân Cương' }) }
       return { htxPort, householdPort, invite: new InviteMemberUseCase(new KeycloakAdminAdapter(), householdPort as never, htxPort) }
     }
 
     test.each(['manager', 'officer'])('%s must configure TOTP', async (role) => {
       const { htxPort, invite } = useCase()
-      await invite.execute({ ...inviteRequest, role }, 'MD2')
-      expect(htxPort.findByCode).toHaveBeenCalledWith('MD2')
-      expect(createdUser().attributes).toMatchObject({ htx_code: ['MD2'], htxId: ['htx-md2'] })
+      await invite.execute({ ...inviteRequest, role }, 'TC')
+      expect(htxPort.findByCode).toHaveBeenCalledWith('TC')
+      expect(createdUser().attributes).toMatchObject({ htx_code: ['TC'], htxId: ['htx-tc'] })
       expect(createdUser().requiredActions).toEqual(['CONFIGURE_TOTP'])
     })
 
     test('farmer does not configure TOTP and lands in the inviter HTX', async () => {
       const { invite, householdPort } = useCase()
-      await invite.execute({ ...inviteRequest, role: 'farmer' }, 'MD2')
-      expect(createdUser().attributes).toMatchObject({ htx_code: ['MD2'], htxId: ['htx-md2'] })
+      await invite.execute({ ...inviteRequest, role: 'farmer' }, 'TC')
+      expect(createdUser().attributes).toMatchObject({ htx_code: ['TC'], htxId: ['htx-tc'] })
       expect(createdUser().requiredActions ?? []).not.toContain('CONFIGURE_TOTP')
-      expect(householdPort.create).toHaveBeenCalledWith(expect.objectContaining({ htx_profile_id: 'htx-md2' }))
+      expect(householdPort.create).toHaveBeenCalledWith(expect.objectContaining({ htx_profile_id: 'htx-tc' }))
     })
 
     test('an unknown inviter HTX creates no account', async () => {
@@ -129,7 +129,7 @@ describe('account creation', () => {
       {}
     )
     expect(response.status).toBe(201)
-    expect(createdUser().attributes.htx_code).toEqual(['MD2'])
+    expect(createdUser().attributes.htx_code).toEqual(['TC'])
   })
 
   test('self-registration takes the code from the chosen HTX', async () => {
@@ -139,13 +139,13 @@ describe('account creation', () => {
       new Request('http://localhost/api/register', {
         method: 'POST',
         headers: { 'x-forwarded-for': nextClientIp() },
-        body: JSON.stringify({ fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '123456', htxId: 'htx-md2' }),
+        body: JSON.stringify({ fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '123456', htxId: 'htx-tc' }),
       }),
       {}
     )
     expect(response.status).toBe(200)
-    expect(prisma.htxProfile.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'htx-md2' } }))
-    expect(createdUser().attributes).toMatchObject({ htx_code: ['MD2'], htxId: ['htx-md2'] })
+    expect(prisma.htxProfile.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'htx-tc' } }))
+    expect(createdUser().attributes).toMatchObject({ htx_code: ['TC'], htxId: ['htx-tc'] })
   })
 
   describe('a phone already held by a household', () => {
@@ -162,7 +162,7 @@ describe('account creation', () => {
         new Request('http://localhost/api/register', {
           method: 'POST',
           headers: { 'x-forwarded-for': nextClientIp() },
-          body: JSON.stringify({ fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '123456', htxId: 'htx-md2' }),
+          body: JSON.stringify({ fullName: 'Nguyễn Văn A', phone: '0901234567', pin: '123456', htxId: 'htx-tc' }),
         }),
         {}
       )
@@ -173,7 +173,7 @@ describe('account creation', () => {
       ['an orphan of another HTX', { htx_profile_id: 'htx-lb', keycloak_user_id: null }],
       ['a linked household of another HTX', { htx_profile_id: 'htx-lb', keycloak_user_id: 'someone' }],
       ['an orphan with no HTX', { htx_profile_id: null, keycloak_user_id: null }],
-      ['a linked household of the same HTX', { htx_profile_id: 'htx-md2', keycloak_user_id: 'someone' }],
+      ['a linked household of the same HTX', { htx_profile_id: 'htx-tc', keycloak_user_id: 'someone' }],
     ]
 
     test.each(refusals)('invite refuses %s before creating a Keycloak user', async (_name, household) => {
@@ -193,29 +193,29 @@ describe('account creation', () => {
       expect(prisma.household.update).not.toHaveBeenCalled()
     })
 
-    const orphan = { id: 'household-md2', name: 'A', phone: '0901234567', address: null, parcels: [], keycloak_user_id: null }
+    const orphan = { id: 'household-tc', name: 'A', phone: '0901234567', address: null, parcels: [], keycloak_user_id: null }
 
     test('invite links an orphan of the caller HTX, looked up inside that HTX', async () => {
       signInAs('manager')
-      holdBy({ htx_profile_id: 'htx-md2', keycloak_user_id: null })
+      holdBy({ htx_profile_id: 'htx-tc', keycloak_user_id: null })
       ;(prisma.household.findFirst as jest.Mock).mockResolvedValue(orphan)
       expect((await invite()).status).toBe(201)
       expect((prisma.household.findFirst as jest.Mock).mock.calls[0][0].where).toEqual({
         phone: '0901234567',
         keycloak_user_id: null,
-        htx_profile_id: 'htx-md2',
+        htx_profile_id: 'htx-tc',
       })
       expect(prisma.household.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'household-md2' }, data: { keycloak_user_id: 'new-user' } })
+        expect.objectContaining({ where: { id: 'household-tc' }, data: { keycloak_user_id: 'new-user' } })
       )
       expect(prisma.household.create).not.toHaveBeenCalled()
     })
 
     test('self-registration links an orphan of the chosen HTX, looked up inside that HTX', async () => {
-      holdBy({ htx_profile_id: 'htx-md2', keycloak_user_id: null })
+      holdBy({ htx_profile_id: 'htx-tc', keycloak_user_id: null })
       ;(prisma.household.findFirst as jest.Mock).mockResolvedValue(orphan)
       expect((await selfRegister()).status).toBe(200)
-      expect((prisma.household.findFirst as jest.Mock).mock.calls[0][0].where.htx_profile_id).toBe('htx-md2')
+      expect((prisma.household.findFirst as jest.Mock).mock.calls[0][0].where.htx_profile_id).toBe('htx-tc')
       expect(prisma.household.create).not.toHaveBeenCalled()
     })
 
@@ -248,7 +248,7 @@ describe('members are scoped to the caller HTX', () => {
     const response = await listMembers(new Request('http://localhost/api/members'), {})
     const body = await response.json()
     expect(response.status).toBe(200)
-    expect(body.data.map((m: { id: string }) => m.id).sort()).toEqual(['farmer-md2', 'officer-md2'])
+    expect(body.data.map((m: { id: string }) => m.id).sort()).toEqual(['farmer-tc', 'officer-tc'])
   })
 
   test('members list asks Keycloak for more than its default page of 100', async () => {
@@ -285,25 +285,25 @@ describe('members are scoped to the caller HTX', () => {
 
     test('approve still works inside the caller HTX', async () => {
       signInAs('manager')
-      expect((await approve('farmer-md2')).status).toBe(200)
-      expect(requestsTo('PUT', /\/users\/farmer-md2$/)).toHaveLength(1)
+      expect((await approve('farmer-tc')).status).toBe(200)
+      expect(requestsTo('PUT', /\/users\/farmer-tc$/)).toHaveLength(1)
     })
 
     test('delete still works inside the caller HTX', async () => {
       signInAs('manager')
-      expect((await remove('farmer-md2')).status).toBe(200)
-      expect(requestsTo('DELETE', /\/users\/farmer-md2$/)).toHaveLength(1)
+      expect((await remove('farmer-tc')).status).toBe(200)
+      expect(requestsTo('DELETE', /\/users\/farmer-tc$/)).toHaveLength(1)
     })
 
     test('an officer still may not approve', async () => {
       signInAs('officer')
-      expect((await approve('farmer-md2')).status).toBe(403)
+      expect((await approve('farmer-tc')).status).toBe(403)
       expect(requestsTo('PUT', /\/users\//)).toHaveLength(0)
     })
 
     test('an officer still may not delete', async () => {
       signInAs('officer')
-      expect((await remove('farmer-md2')).status).toBe(401)
+      expect((await remove('farmer-tc')).status).toBe(401)
       expect(requestsTo('DELETE', /\/users\//)).toHaveLength(0)
     })
   })
@@ -323,9 +323,9 @@ describe('announcements', () => {
     expect(prisma.notification.create).not.toHaveBeenCalled()
     const { data } = (prisma.notification.createMany as jest.Mock).mock.calls[0][0]
     expect(data.map((row: { recipient_id: string }) => row.recipient_id).sort()).toEqual([
-      'farmer-md2',
-      'manager-md2',
-      'officer-md2',
+      'farmer-tc',
+      'manager-tc',
+      'officer-tc',
     ])
     expect(data[0]).toMatchObject({ title: 'Bão', body: 'Chú ý', type: 'BROADCAST' })
   })

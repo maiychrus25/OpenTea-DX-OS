@@ -4,6 +4,7 @@
 import { PrismaClient } from '@prisma/client'
 import { CropCyclePort } from '../../../domain/farm/ports/CropCyclePort'
 import { HarvestEvent } from '../../../domain/farm/entities/HarvestEvent'
+import { nextHarvestRoundSeason } from '../../../domain/farm/harvest-round'
 
 export class PrismaCropCycleRepository implements CropCyclePort {
   constructor(private readonly prisma: PrismaClient) {}
@@ -114,5 +115,19 @@ export class PrismaCropCycleRepository implements CropCyclePort {
       safeHarvestDate: null,
       status: 'SAFE', // default for unscheduled
     }))
+  }
+
+  async startNextRound(parcelId: string): Promise<{ cycleId: string; season: string } | null> {
+    return this.prisma.$transaction(async (tx) => {
+      // The conditional update locks the parcel row, so a second start waits and then finds it TENDING.
+      const { count } = await tx.parcel.updateMany({ where: { id: parcelId, status: 'HARVESTED' }, data: { status: 'TENDING' } })
+      if (count !== 1) return null
+
+      const now = new Date()
+      const cycles = await tx.parcelCropCycle.findMany({ where: { parcel_id: parcelId }, select: { created_at: true } })
+      const season = nextHarvestRoundSeason(cycles.map((c) => c.created_at), now)
+      const cycle = await tx.parcelCropCycle.create({ data: { parcel_id: parcelId, season, created_at: now }, select: { id: true } })
+      return { cycleId: cycle.id, season }
+    })
   }
 }

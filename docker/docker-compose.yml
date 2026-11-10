@@ -398,11 +398,15 @@ services:
       - ../ai-models:/models:ro
     environment:
       - MODEL_DIR=/models
+      # Tea results below this confidence are returned as uncertain (default from ai-models/tea/MODEL_CARD.md).
+      - TEA_CONFIDENCE_THRESHOLD=${TEA_CONFIDENCE_THRESHOLD:-0.60}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       timeout: 5s
       retries: 5
+      # Loading both TensorFlow models takes a while on a cold machine; failed checks in this window do not count.
+      start_period: 60s
     networks:
       - agrimarket-net
 

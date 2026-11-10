@@ -45,7 +45,7 @@ export function LotActions({ lotCode }: { lotCode: string }) {
         <div className={styles.overlay} onClick={() => setShowConfirm(false)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <h2 className={styles.modalTitle}>Xác nhận Xuất QR</h2>
-            <p style={{ marginBottom: '1.5rem', color: 'var(--color-text-muted)' }}>
+            <p style={{ marginBottom: '1.5rem', color: 'var(--color-ink-tertiary)' }}>
               Bạn đang chuẩn bị xuất mã QR truy xuất nguồn gốc cho lô hàng <strong>{lotCode}</strong>.
               Hành động này không thể hoàn tác và dữ liệu lô hàng sẽ bị đóng băng.
             </p>
@@ -72,7 +72,7 @@ export function LotActions({ lotCode }: { lotCode: string }) {
                 type="number" 
                 value={labelQuantity} 
                 onChange={e => setLabelQuantity(Number(e.target.value))}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border-default)' }}
               />
             </div>
             <div className={styles.formActions}>
@@ -87,8 +87,8 @@ export function LotActions({ lotCode }: { lotCode: string }) {
 
       {showScanner && (
         <div className={styles.overlay}>
-          <div style={{ background: '#000', padding: '2rem', borderRadius: '16px', textAlign: 'center', color: 'white' }}>
-            <div style={{ width: '250px', height: '250px', border: '4px dashed rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
+          <div style={{ background: 'var(--sidebar-darker)', padding: '2rem', borderRadius: '16px', textAlign: 'center', color: 'var(--sidebar-foreground)' }}>
+            <div style={{ width: '250px', height: '250px', border: '4px dashed color-mix(in srgb, var(--sidebar-foreground) 50%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
               <span style={{ animation: 'pulse 1s infinite' }}>[Đang quét...]</span>
             </div>
             <p>Mô phỏng quét QR Camera</p>

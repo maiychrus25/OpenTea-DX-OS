@@ -66,9 +66,10 @@ ensure_client() {
 
 user_id() { ADMIN_T="$(kc_admin_token)"; _kc GET "/users?username=$1&exact=true" | jq -r '.[0].id // empty'; }
 
-# ensure_user <username> <role> [htx_code]
+# ensure_user <username> <role> [htx_code]: resets the password and required actions, so only smoke_ users.
 ensure_user() {
   local u="$1" role="$2" htx="${3:-}" ADMIN_T id attrs='{}'
+  case "$u" in smoke_*) ;; *) fail "ensure_user manages only smoke_ users, not $u (demo users keep their password and TOTP)" ;; esac
   ADMIN_T="$(kc_admin_token)"
   [ -n "$htx" ] && attrs="{\"htx_code\":[\"$htx\"]}"
   id="$(_kc GET "/users?username=$u&exact=true" | jq -r '.[0].id // empty')"

@@ -161,7 +161,7 @@ export function SoilHealthChart({ parcelId, parcelName, onClose }: SoilHealthCha
           </div>
         ) : error ? (
           <div className={styles.errorContainer}>
-            <AlertTriangle size={40} className="text-amber-500" aria-hidden="true" />
+            <AlertTriangle size={40} className="text-warning" aria-hidden="true" />
             <h3 className={styles.errorTitle}>Không thể tải dữ liệu</h3>
             <p className={styles.errorMessage}>{error}</p>
           </div>
@@ -196,7 +196,7 @@ export function SoilHealthChart({ parcelId, parcelName, onClose }: SoilHealthCha
               {/* Soil Moisture Chart */}
               <div className={styles.chartSection}>
                 <h3 className={styles.chartTitle}>
-                  <span className={styles.chartTitleDot} style={{ backgroundColor: '#3b82f6' }} />
+                  <span className={styles.chartTitleDot} style={{ backgroundColor: 'var(--color-info)' }} />
                   <Droplets size={16} aria-hidden="true" /> Độ ẩm đất (%)
                 </h3>
                 <div className={styles.chartContainer}>
@@ -204,20 +204,20 @@ export function SoilHealthChart({ parcelId, parcelName, onClose }: SoilHealthCha
                     <AreaChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                       <defs>
                         <linearGradient id="moistureGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+                          <stop offset="5%" stopColor="var(--color-info)" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="var(--color-info)" stopOpacity={0.02} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
                       <XAxis
                         dataKey="date"
                         tickFormatter={formatXAxisDate}
                         fontSize={11}
-                        tick={{ fill: '#9ca3af' }}
+                        tick={{ fill: 'var(--color-ink-tertiary)' }}
                       />
                       <YAxis
                         fontSize={11}
-                        tick={{ fill: '#9ca3af' }}
+                        tick={{ fill: 'var(--color-ink-tertiary)' }}
                         tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
                         domain={['auto', 'auto']}
                       />
@@ -225,7 +225,7 @@ export function SoilHealthChart({ parcelId, parcelName, onClose }: SoilHealthCha
                       <Area
                         type="monotone"
                         dataKey="soil_moisture"
-                        stroke="#3b82f6"
+                        stroke="var(--color-info)"
                         strokeWidth={2}
                         fill="url(#moistureGradient)"
                         dot={false}
@@ -239,7 +239,7 @@ export function SoilHealthChart({ parcelId, parcelName, onClose }: SoilHealthCha
               {/* Soil Temperature Chart */}
               <div className={styles.chartSection}>
                 <h3 className={styles.chartTitle}>
-                  <span className={styles.chartTitleDot} style={{ backgroundColor: '#ef4444' }} />
+                  <span className={styles.chartTitleDot} style={{ backgroundColor: 'var(--color-danger)' }} />
                   <Thermometer size={16} aria-hidden="true" /> Nhiệt độ đất (°C)
                 </h3>
                 <div className={styles.chartContainer}>
@@ -247,20 +247,20 @@ export function SoilHealthChart({ parcelId, parcelName, onClose }: SoilHealthCha
                     <AreaChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                       <defs>
                         <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0.02} />
+                          <stop offset="5%" stopColor="var(--color-danger)" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="var(--color-danger)" stopOpacity={0.02} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
                       <XAxis
                         dataKey="date"
                         tickFormatter={formatXAxisDate}
                         fontSize={11}
-                        tick={{ fill: '#9ca3af' }}
+                        tick={{ fill: 'var(--color-ink-tertiary)' }}
                       />
                       <YAxis
                         fontSize={11}
-                        tick={{ fill: '#9ca3af' }}
+                        tick={{ fill: 'var(--color-ink-tertiary)' }}
                         tickFormatter={(v: number) => `${v}°C`}
                         domain={['auto', 'auto']}
                       />
@@ -268,7 +268,7 @@ export function SoilHealthChart({ parcelId, parcelName, onClose }: SoilHealthCha
                       <Area
                         type="monotone"
                         dataKey="soil_temperature"
-                        stroke="#ef4444"
+                        stroke="var(--color-danger)"
                         strokeWidth={2}
                         fill="url(#tempGradient)"
                         dot={false}

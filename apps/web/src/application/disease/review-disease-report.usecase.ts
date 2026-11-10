@@ -14,6 +14,8 @@ export interface ReviewDiseaseReportCommand {
   htxCode: string;
   status: 'CONFIRMED' | 'REJECTED';
   treatment_recommendation: string;
+  /** The officer's disease name; required and non-empty when CONFIRMED, ignored when REJECTED. */
+  confirmed_diagnosis: string;
 }
 
 export class ReviewDiseaseReportUseCase {
@@ -39,15 +41,21 @@ export class ReviewDiseaseReportUseCase {
       throw new Error('TREATMENT_REQUIRED');
     }
 
+    const confirmedDiagnosis = command.status === 'CONFIRMED' ? (command.confirmed_diagnosis ?? '').trim() : null;
+    if (confirmedDiagnosis === '') {
+      throw new Error('DIAGNOSIS_REQUIRED');
+    }
+
     await this.diseaseReportPort.updateStatus(
       command.reportId,
       command.status,
       command.treatment_recommendation,
-      command.officerId
+      command.officerId,
+      confirmedDiagnosis
     );
 
     const title = command.status === 'CONFIRMED' ? 'Báo cáo bệnh đã duyệt' : 'Báo cáo bệnh bị từ chối';
-    let body = `Báo cáo bệnh ${report.ai_disease_name} tại thửa ${report.parcel_code} đã được cán bộ phản hồi.`;
+    let body = `Báo cáo bệnh ${confirmedDiagnosis ?? report.ai_disease_name} tại thửa ${report.parcel_code} đã được cán bộ phản hồi.`;
     
     if (command.status === 'CONFIRMED') {
       body += ` Hướng dẫn: ${command.treatment_recommendation}`;
@@ -60,6 +68,7 @@ export class ReviewDiseaseReportUseCase {
 - Nông hộ: ${report.farmer_name}
 - Ngày phát hiện: ${report.detection_date.toLocaleDateString('vi-VN')}
 - Bệnh AI chẩn đoán: ${report.ai_disease_name} (Độ tin cậy: ${(report.ai_confidence * 100).toFixed(1)}%)
+- Bệnh cán bộ xác nhận: ${confirmedDiagnosis}
 - Hướng dẫn điều trị: ${command.treatment_recommendation}
 `;
         await this.documentStoragePort.uploadDocument(

@@ -3,7 +3,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client';
@@ -12,6 +11,12 @@ import { logger } from '@/lib/logger';
 import { Pill } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import styles from './diseases.module.css';
+import { ReportPhoto } from '@/components/features/disease/ReportPhoto';
+import { diseaseStatusLabel } from '@/domain/disease/disease-status-label';
+
+// The queue lists pending reports only.
+const PENDING = diseaseStatusLabel('PENDING');
+import { displayDiseaseName } from '@/domain/disease/display-disease-name';
 
 export const metadata = {
   title: 'Duyệt Báo cáo Bệnh | Officer',
@@ -56,21 +61,15 @@ export default async function OfficerDiseasesPage() {
             <div key={report.id} className={styles.card}>
               <div className={styles.cardHeader}>
                 <div>
-                  <h3 className={styles.diseaseName}>{report.ai_disease_name}</h3>
+                  <h3 className={styles.diseaseName}>{displayDiseaseName(report)}</h3>
                   <p className={styles.meta}>Nông hộ: {report.farmer_name}</p>
                 </div>
-                <Pill tone="amber">PENDING</Pill>
+                <Pill tone={PENDING.tone}>{PENDING.label}</Pill>
               </div>
 
               {report.photo_url && (
                 <div className={styles.imageWrapper}>
-                  <Image 
-                    src={report.photo_url} 
-                    alt="Ảnh bệnh" 
-                    fill 
-                    unoptimized
-                    className={styles.reportImage}
-                  />
+                  <ReportPhoto src={report.photo_url} className={styles.reportImage} />
                 </div>
               )}
 

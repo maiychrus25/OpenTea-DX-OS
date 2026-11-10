@@ -31,7 +31,7 @@ export default async function FarmZoneSetupPage() {
 
   // Fallback to something if empty, or just pass it down
   if (cropTypes.length === 0) {
-    cropTypes = ['Lúa', 'Rau màu'] // Fallback if HTX hasn't configured crops yet
+    cropTypes = ['Chè', 'Rau màu'] // Fallback if HTX hasn't configured crops yet
   }
 
   return <SetupWizard cropOptions={cropTypes} />

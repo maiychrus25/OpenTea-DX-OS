@@ -11,7 +11,7 @@ import { Button } from '@/components/ui'
 const PartnerMap = dynamic(() => import('@/components/features/partner-map/PartnerMap'), { ssr: false })
 
 export const metadata: Metadata = {
-  title: 'Bản đồ Đối tác | DX-AgriMarket',
+  title: 'Bản đồ Đối tác',
   description: 'Quản lý bản đồ đối tác, người mua, nhà kho, đại lý.',
 }
 

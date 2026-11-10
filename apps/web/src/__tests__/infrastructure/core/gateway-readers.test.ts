@@ -93,6 +93,7 @@ const pendingReportRow = {
   photo_minio_key: 'k1',
   ai_disease_name: 'Rầy',
   ai_confidence: 0.91,
+  confirmed_diagnosis: null,
   photo_url: 'http://x/k1',
   parcel: { parcel_code: 'P-1' },
   household: { name: 'Hộ A' },
@@ -104,6 +105,7 @@ const historyReportRow = {
   ai_disease_name: 'Rầy',
   ai_confidence: 0.91,
   status: 'CONFIRMED',
+  confirmed_diagnosis: 'Rầy nâu',
   treatment_recommendation: 'Phun thuốc',
   parcel: { parcel_code: 'P-1' },
 }
@@ -259,7 +261,7 @@ const cases: [string, Case][] = [
       row: pendingReportRow,
       empty: { ...pendingReportRow, parcel: null, household: null },
       // The port types these as string, so a row Hasura hides the relation of must still satisfy it.
-      expectedForEmpty: [expect.objectContaining({ farmer_name: '', parcel_code: '' })],
+      expectedForEmpty: [expect.objectContaining({ farmer_name: '', parcel_code: '', confirmed_diagnosis: null })],
     },
   ],
   [
@@ -272,7 +274,7 @@ const cases: [string, Case][] = [
       many: true,
       row: historyReportRow,
       empty: { ...historyReportRow, parcel: null, treatment_recommendation: null },
-      expectedForEmpty: [expect.objectContaining({ parcel_code: '', treatment_recommendation: null })],
+      expectedForEmpty: [expect.objectContaining({ parcel_code: '', treatment_recommendation: null, confirmed_diagnosis: 'Rầy nâu' })],
     },
   ],
 ]
@@ -336,6 +338,16 @@ describe('filters', () => {
     const { client, graphql } = fakeCore({ journal_entries: [], ...journalAggregate(0) })
     await new GatewayJournalReader(client).findAll({})
     expect(graphql.mock.calls[0][1]).toEqual({ where: {}, limit: 20, offset: 0 })
+  })
+
+  test('disease reads ask Hasura for the confirmed diagnosis', async () => {
+    const { client, graphql } = fakeCore({ disease_reports: [] })
+    await new GatewayDiseaseReportReader(client).findHistoryByFarmer('kc1')
+    await new GatewayDiseaseReportReader(client).findPendingReports()
+    expect(graphql.mock.calls.map((c) => c[0])).toEqual([
+      expect.stringContaining('confirmed_diagnosis'),
+      expect.stringContaining('confirmed_diagnosis'),
+    ])
   })
 
   test('disease history asks for the farmer only', async () => {

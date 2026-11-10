@@ -190,7 +190,7 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
 
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>Ghi chú</label>
-        <textarea className={styles.formTextarea} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Lúa đang xanh tốt..." />
+        <textarea className={styles.formTextarea} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Chè đang ra búp đều..." />
       </div>
 
       <div className={styles.formGroup}>

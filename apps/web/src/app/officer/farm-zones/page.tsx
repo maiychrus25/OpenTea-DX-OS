@@ -9,7 +9,7 @@ import Link from 'next/link'
 const FarmZoneReadOnly = dynamic(() => import('@/app/manager/farm-zones/_components/FarmZoneReadOnly'), { ssr: false })
 
 export const metadata: Metadata = {
-  title: 'Bản đồ Vùng trồng | DX-AgriMarket',
+  title: 'Bản đồ Vùng trồng',
 }
 
 export default function OfficerFarmZonesPage() {
@@ -17,14 +17,14 @@ export default function OfficerFarmZonesPage() {
     <div style={{ padding: 12, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <header className="mb-4 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Bản đồ vùng trồng
           </h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-ink-secondary">
             Xem và quản lý không gian các thửa đất trong Hợp tác xã.
           </p>
         </div>
-        <Link href="/officer/farm-zones/setup" className="inline-flex items-center justify-center px-4 py-2 border border-transparent font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors shadow-sm text-sm">
+        <Link href="/officer/farm-zones/setup" className="inline-flex items-center justify-center px-4 py-2 border border-transparent font-medium rounded-md text-primary-foreground bg-primary hover:bg-primary-hover transition-colors shadow-sm text-sm">
           Thiết lập Vùng trồng mới
         </Link>
       </header>

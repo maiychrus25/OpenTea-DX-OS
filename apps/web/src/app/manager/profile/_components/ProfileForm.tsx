@@ -132,11 +132,11 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Ảnh đại diện</label>
           <div className="flex items-center gap-4 mt-2">
-            <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center border border-gray-300">
+            <div className="w-16 h-16 rounded-full bg-border overflow-hidden flex items-center justify-center border border-border">
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="Avatar" width={64} height={64} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-gray-400 text-xl font-bold">{profileData.name?.charAt(0) || 'H'}</span>
+                <span className="text-ink-tertiary text-xl font-bold">{profileData.name?.charAt(0) || 'H'}</span>
               )}
             </div>
             {isEditing && (
@@ -156,7 +156,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                 <label htmlFor="avatar-upload" className="cursor-pointer text-sm font-medium text-primary hover:underline bg-primary-50 px-3 py-1 rounded-md border border-primary-200">
                   Tải ảnh lên
                 </label>
-                <p className="text-xs text-gray-500 mt-1">JPG, PNG tối đa 2MB.</p>
+                <p className="text-xs text-ink-tertiary mt-1">JPG, PNG tối đa 2MB.</p>
               </div>
             )}
           </div>
@@ -281,7 +281,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                           .map((s) => s.trimStart())
                       )
                     }
-                    placeholder="VD: Lúa, Xoài, Bưởi"
+                    placeholder="VD: Chè Trung du, Chè LDP1, Chè Kim Tuyên"
                   />
                 ) : (
                   <div className={styles.value}>

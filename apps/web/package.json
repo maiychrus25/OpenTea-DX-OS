@@ -1,11 +1,12 @@
 {
   "name": "agrimarket-web",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first next dev -p 3000",
     "build": "next build",
     "start": "next start",
+    "seed": "prisma db seed",
     "lint": "next lint",
     "test": "jest",
     "test:contract": "jest src/__tests__/contracts --runInBand",
@@ -72,6 +73,6 @@
     "typescript": "^5"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\",\"moduleResolution\":\"node\"} prisma/seed.ts"
   }
 }

@@ -195,8 +195,8 @@ export function ChatPanel({ userId, userName }: ChatPanelProps) {
             </p>
             <div className={styles.suggestions}>
               {[
-                'Giá gạo xuất khẩu tuần này thế nào?',
-                'So sánh giá lúa tháng 7 và tháng 8',
+                'Giá chè búp khô tuần này thế nào?',
+                'Xuất khẩu chè Việt Nam năm nay ra sao?',
                 'Thị trường nông sản Đông Nam Á có gì đáng chú ý?',
               ].map((s, i) => (
                 <button

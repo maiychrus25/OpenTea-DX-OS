@@ -246,7 +246,7 @@ export function PartnerList() {
         title="Xác nhận xóa đối tác"
       >
         <div className="p-2">
-          <p className="text-gray-600 mb-6">
+          <p className="text-ink-secondary mb-6">
             Bạn có chắc chắn muốn xóa đối tác <strong>{partnerToDelete?.name}</strong> khỏi danh bạ?
             Hành động này không thể hoàn tác.
           </p>
@@ -258,7 +258,7 @@ export function PartnerList() {
               variant="primary" 
               onClick={handleDelete} 
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-danger hover:bg-[var(--color-danger-hover)] text-ink-inverse"
             >
               {isDeleting ? 'Đang xóa...' : 'Xóa đối tác'}
             </Button>
@@ -274,21 +274,21 @@ export function PartnerList() {
       >
         <form onSubmit={handleUpdate} className="p-2 space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-700">Tên đối tác</label>
+            <label className="text-xs font-medium text-ink-secondary">Tên đối tác</label>
             <input
               required
               value={editForm.name}
               onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-700">Phân loại</label>
+              <label className="text-xs font-medium text-ink-secondary">Phân loại</label>
               <select
                 value={editForm.partner_type}
                 onChange={e => setEditForm({ ...editForm, partner_type: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               >
                 <option value="BUYER">Người mua</option>
                 <option value="MIDDLEMAN">Thương lái</option>
@@ -296,20 +296,20 @@ export function PartnerList() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-700">Số điện thoại</label>
+              <label className="text-xs font-medium text-ink-secondary">Số điện thoại</label>
               <input
                 value={editForm.contact_phone}
                 onChange={e => setEditForm({ ...editForm, contact_phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-700">Địa chỉ</label>
+            <label className="text-xs font-medium text-ink-secondary">Địa chỉ</label>
             <input
               value={editForm.address}
               onChange={e => setEditForm({ ...editForm, address: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">

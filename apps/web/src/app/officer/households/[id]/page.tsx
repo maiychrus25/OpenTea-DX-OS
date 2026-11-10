@@ -6,7 +6,7 @@ import { Metadata } from 'next';
 import { HouseholdProfile } from './_components/household-profile';
 
 export const metadata: Metadata = {
-  title: 'Household Profile | DX-AgriMarket',
+  title: 'Household Profile',
   description: 'View household details and production history.',
 };
 
@@ -17,10 +17,10 @@ export default async function OfficerHouseholdProfilePage(
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Chi tiết Nông hộ
         </h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-ink-secondary">
           Thông tin chi tiết, danh sách thửa đất và lịch sử sản xuất của nông hộ.
         </p>
       </header>

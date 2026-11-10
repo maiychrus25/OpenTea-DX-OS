@@ -48,18 +48,18 @@ describe('requireTenant', () => {
   })
 
   test('requireTenant rejects a signed-in user without a role', async () => {
-    signIn({ id: 'u1', htxCode: 'MD2' })
+    signIn({ id: 'u1', htxCode: 'TC' })
     await expect(requireTenant()).rejects.toBeInstanceOf(ForbiddenError)
   })
 
   test('requireTenant returns the HTX of the signed-in user', async () => {
-    signIn({ id: 'u1', role: 'farmer', htxCode: 'MD2' })
-    findUnique.mockResolvedValue({ id: 'htx-md2', name: 'HTX MD2' })
+    signIn({ id: 'u1', role: 'farmer', htxCode: 'TC' })
+    findUnique.mockResolvedValue({ id: 'htx-tc', name: 'HTX Tân Cương' })
     await expect(requireTenant()).resolves.toEqual({
       userId: 'u1',
       role: 'farmer',
-      htxCode: 'MD2',
-      htxProfileId: 'htx-md2',
+      htxCode: 'TC',
+      htxProfileId: 'htx-tc',
     })
   })
 })

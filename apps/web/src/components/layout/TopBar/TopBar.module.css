@@ -40,9 +40,11 @@
 
 .brandMobile {
   font-weight: 700;
-  font-size: var(--font-size-h4);
+  font-size: var(--font-size-h3);
   color: var(--color-primary);
   display: none;
+  /* The hyphen in "DX-OS" is a break opportunity; the name stays on one line. */
+  white-space: nowrap;
 }
 
 .rolePill {
@@ -154,5 +156,11 @@
   
   .avatar {
     display: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .brandMobile {
+    font-size: var(--font-size-body-large);
   }
 }

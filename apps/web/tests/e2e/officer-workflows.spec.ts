@@ -3,20 +3,7 @@
 
 import 'dotenv/config'
 import { test, expect, Page } from '@playwright/test'
-import { encode } from 'next-auth/jwt'
-
-async function mockSessionCookie(page: Page, role: string, name: string, id: string) {
-  const now = Math.floor(Date.now() / 1000)
-  const token = await encode({
-    token: { id, name, email: `${role}@example.com`, role, iat: now, exp: now + 60 * 60 * 8, jti: 'mock-jti-' + now },
-    secret: process.env.AUTH_SECRET || process.env.KEYCLOAK_CLIENT_SECRET || 'agrimarket-secret-key',
-    salt: 'authjs.session-token',
-  })
-  await page.context().addCookies([{
-    name: 'authjs.session-token', value: token, domain: 'localhost', path: '/',
-    httpOnly: true, sameSite: 'Lax', expires: now + 60 * 60 * 8,
-  }])
-}
+import { mockSessionCookie } from './helpers/forged-session'
 
 async function loginAsOfficer(page: Page) {
   await mockSessionCookie(page, 'officer', 'Officer User', 'officer-id-1')
@@ -122,7 +109,7 @@ test.describe('Officer Workflows', () => {
     })
 
     await page.route('**/api/farm/parcels*', async route => {
-      await route.fulfill({ status: 200, json: { data: [{ id: 'p1', parcel_code: 'P-001', crop_type: 'Lúa' }] } })
+      await route.fulfill({ status: 200, json: { data: [{ id: 'p1', parcel_code: 'P-001', crop_type: 'Chè' }] } })
     })
 
     await page.goto('/officer/journal')
@@ -149,7 +136,7 @@ test.describe('Officer Workflows', () => {
 
     await page.route('**/api/lots*', async route => {
       if (route.request().method() === 'GET') {
-        await route.fulfill({ status: 200, json: { data: [{ id: '1', lot_code: 'L01', commodity: 'Gạo', status: 'ready', created_at: '2026-08-20' }] } })
+        await route.fulfill({ status: 200, json: { data: [{ id: '1', lot_code: 'L01', commodity: 'Chè', status: 'ready', created_at: '2026-08-20' }] } })
       } else if (route.request().method() === 'POST') {
         await route.fulfill({ status: 201, json: { data: { lot_code: 'L01' } } })
       } else {
@@ -158,14 +145,14 @@ test.describe('Officer Workflows', () => {
     })
 
     await page.route('**/api/farm/parcels*', async route => {
-      await route.fulfill({ status: 200, json: { data: [{ id: 'p1', parcel_code: 'P-001', crop_type: 'Lúa ST25' }] } })
+      await route.fulfill({ status: 200, json: { data: [{ id: 'p1', parcel_code: 'P-001', crop_type: 'Chè Trung du' }] } })
     })
 
     await page.goto('/officer/lots')
     
     await page.getByRole('button', { name: '+ Tạo lô mới' }).click()
     await expect(page.getByText('Tạo Lô hàng mới')).toBeVisible()
-    await page.getByPlaceholder('VD: Lúa ST25').fill('Gạo lứt')
+    await page.getByPlaceholder('VD: Chè Trung du').fill('Chè Kim Tuyên')
     
     // Select parcel
     await page.getByText('P-001').click()

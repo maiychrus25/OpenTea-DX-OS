@@ -2,7 +2,7 @@
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
 /* ==========================================================================
-   DX-AgriMarket — Keycloak Sign In Frame Theme (World-Class AgTech UI)
+   OpenTea DX-OS — Keycloak Sign In Frame Theme
    Inspired by: Stripe, Linear, John Deere Operations Center, Trimble Ag
   Uses a calm, layered surface that keeps the login frame focused
   without relying on a legacy background image.
@@ -18,7 +18,7 @@
   --agri-primary-active: #0d4630;
   --agri-emerald: #10b981;
   --agri-lime: #22c55e;
-  --agri-accent: #d6f05c;
+  --agri-accent: #b45309;
   --agri-surface: #ffffff;
   --agri-text-main: #0f172a;
   --agri-text-sub: #475569;
@@ -41,7 +41,7 @@ body {
   position: relative !important;
   isolation: isolate !important;
   background:
-    radial-gradient(circle at 12% 16%, rgba(214, 240, 92, 0.25), transparent 28%),
+    radial-gradient(circle at 12% 16%, rgba(242, 181, 68, 0.22), transparent 28%),
     radial-gradient(circle at 88% 84%, rgba(16, 185, 129, 0.2), transparent 30%),
     linear-gradient(135deg, #123d31 0%, #175b46 48%, #e8f3e5 48.2%, #f7faf4 100%) !important;
   height: 100% !important;
@@ -71,7 +71,7 @@ body::before {
   padding-bottom: 5vh !important;
 }
 
-/* ── Header Title (DX AGRIMARKET above the card) ── */
+/* ── Header Title (OPENTEA DX-OS above the card) ── */
 .login-pf-page-header,
 #kc-header {
   margin-bottom: 24px !important;
@@ -127,7 +127,7 @@ body::before {
   left: 0 !important;
   right: 0 !important;
   height: 5px !important;
-  background: linear-gradient(90deg, #176c4b 0%, #10b981 50%, #d6f05c 100%) !important;
+  background: linear-gradient(90deg, #176c4b 0%, #176c4b 60%, #b45309 100%) !important;
   z-index: 10 !important;
 }
 
@@ -168,7 +168,7 @@ body::before {
 
 /* Sub-heading subtitle */
 .login-pf-header::after {
-  content: 'Hệ thống vận hành số cho Hợp tác xã Nông nghiệp' !important;
+  content: 'Hệ điều hành số cho hợp tác xã chè' !important;
   display: block !important;
   font-family: 'Be Vietnam Pro', sans-serif !important;
   font-size: 0.8125rem !important;

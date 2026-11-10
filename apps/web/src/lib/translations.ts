@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 const commodityMap: Record<string, string> = {
+  'Chè': 'Tea',
   'Gạo': 'Rice',
   'Cà phê': 'Coffee',
   'Hạt tiêu': 'Pepper',

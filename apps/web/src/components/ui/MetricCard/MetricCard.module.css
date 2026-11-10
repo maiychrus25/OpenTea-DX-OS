@@ -8,12 +8,12 @@
   padding: 18px 20px;
   border-radius: 14px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--color-surface-card);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-card-hover);
 }
 .iconWrap {
   width: 44px;
@@ -24,20 +24,20 @@
   justify-content: center;
 }
 .green .iconWrap {
-  background: #ddf0e7;
+  background: var(--color-primary-subtle);
   color: var(--primary);
 }
 .amber .iconWrap {
-  background: #fff0cc;
-  color: #865b00;
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
 }
 .blue .iconWrap {
-  background: #e0ecf5;
-  color: #285d7e;
+  background: var(--color-info-subtle);
+  color: var(--color-info);
 }
 .neutral .iconWrap {
-  background: #edf0ed;
-  color: #657069;
+  background: var(--muted);
+  color: var(--muted-foreground);
 }
 .content {
   display: flex;

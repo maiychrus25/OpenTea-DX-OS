@@ -36,7 +36,7 @@
 .mockStatItem {
   background-color: var(--card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--rounded-lg);
   padding: var(--spacing-4);
   text-align: center;
 }
@@ -49,6 +49,6 @@
 }
 
 .mockStatLabel {
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-label);
   color: var(--muted-foreground);
 }

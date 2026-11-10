@@ -107,7 +107,7 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
     <form onSubmit={handleSubmit}>
       <h2 className={styles.modalTitle}>Ghi nhật ký mới</h2>
 
-      {error && <p style={{ color: 'var(--color-error)', marginBottom: '1rem' }}>{error}</p>}
+      {error && <p style={{ color: 'var(--color-danger)', marginBottom: '1rem' }}>{error}</p>}
 
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>Thửa đất</label>
@@ -125,7 +125,7 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
 
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>Ghi chú quan sát</label>
-        <textarea className={styles.formTextarea} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Lúa sinh trưởng tốt, không sâu bệnh..." />
+        <textarea className={styles.formTextarea} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Chè sinh trưởng tốt, không sâu bệnh..." />
       </div>
 
       <div className={styles.formGroup}>

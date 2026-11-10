@@ -53,7 +53,7 @@ describe('Story 3.2: Parcel Drawing Map Setup Leaflet Draw Officer', () => {
       area_ha: 1.5,
       centroid_lat: 10.15,
       centroid_lng: 105.15,
-      current_crop: 'Lúa Đài Thơm'
+      current_crop: 'Chè Trung du'
     }
 
     const parcel = await useCase.execute(data)
@@ -69,7 +69,7 @@ describe('Story 3.2: Parcel Drawing Map Setup Leaflet Draw Officer', () => {
     })
     
     expect(dbParcel?.crop_cycles.length).toBe(1)
-    expect(dbParcel?.crop_type).toBe('Lúa Đài Thơm')
+    expect(dbParcel?.crop_type).toBe('Chè Trung du')
     expect(dbParcel?.polygon_geojson).toBeDefined()
   })
 

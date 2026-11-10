@@ -10,6 +10,9 @@ import styles from '../diagnosis.module.css'
 import { getDiagnosisHistory } from '../actions'
 import { DiagnosisHistoryItem } from '@/domain/disease/ports/disease-report.port'
 import { useOfflineSync } from '@/lib/hooks/useOfflineSync'
+import { displayDiseaseName } from '@/domain/disease/display-disease-name'
+import { ReportPhoto } from '@/components/features/disease/ReportPhoto'
+import { diseaseStatusLabel } from '@/domain/disease/disease-status-label'
 
 interface DiagnosisClientProps {
   initialParcels: { id: string; parcel_code: string; name: string }[]
@@ -21,7 +24,7 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
   const [selectedParcelId, setSelectedParcelId] = useState<string>(initialParcels[0]?.id || '')
   
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [result, setResult] = useState<{ disease: string; confidence: number } | null>(null)
+  const [result, setResult] = useState<{ disease: string; confidence: number; uncertain: boolean } | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   
@@ -87,6 +90,7 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
       setResult({
         disease: json.data.disease_name,
         confidence: json.data.confidence_score,
+        uncertain: json.data.uncertain === true,
       })
 
       // Refresh history
@@ -115,13 +119,13 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
         
         {!isOnline && (
           <div className={styles.offlineBanner}>
-            <WifiOff size={16} className="inline-block mr-1.5 text-amber-600 align-text-bottom" />
+            <WifiOff size={16} className="inline-block mr-1.5 text-warning align-text-bottom" />
             Bạn đang ngoại tuyến. Hình ảnh sẽ được lưu vào máy và tự động tải lên khi có mạng (Đang chờ: {queueCount}).
           </div>
         )}
         {isOnline && queueCount > 0 && (
           <div className={styles.syncBanner}>
-            <RefreshCw size={16} className="inline-block mr-1.5 animate-spin text-blue-600 align-text-bottom" />
+            <RefreshCw size={16} className="inline-block mr-1.5 animate-spin text-info align-text-bottom" />
             Đang đồng bộ {queueCount} hình ảnh từ bộ nhớ tạm... {isSyncing ? '(Đang xử lý)' : ''}
           </div>
         )}
@@ -173,10 +177,10 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
 
           {result && (
             <div className={styles.resultArea}>
-              <h3>Kết quả chẩn đoán:</h3>
-              {result.confidence < 70 && (
+              <h3>Kết quả AI gợi ý (chưa phải chẩn đoán cuối cùng):</h3>
+              {result.confidence * 100 < 70 && (
                 <div className={styles.warningBox}>
-                  <AlertTriangle size={16} className="inline-block mr-1.5 text-amber-600 align-text-bottom" />
+                  <AlertTriangle size={16} className="inline-block mr-1.5 text-warning align-text-bottom" />
                   <strong>Độ tự tin thấp:</strong> Hình ảnh có thể mờ hoặc không rõ triệu chứng. Cán bộ Kỹ thuật đã nhận được thông báo và sẽ kiểm tra thêm.
                 </div>
               )}
@@ -184,12 +188,15 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
               <ul className={styles.resultList}>
                 <li className={styles.resultItem}>
                   <span className={styles.diseaseName}>{result.disease}</span>
-                  <span className={styles.confidenceScore} style={{ color: result.confidence >= 70 ? 'var(--color-success)' : 'var(--color-warning)' }}>
-                    {result.confidence.toFixed(1)}%
-                  </span>
+                  {!result.uncertain && (
+                    <span className={styles.confidenceScore} style={{ color: result.confidence * 100 >= 70 ? 'var(--color-success)' : 'var(--color-warning)' }}>
+                      {(result.confidence * 100).toFixed(1)}%
+                    </span>
+                  )}
                 </li>
               </ul>
-              
+
+              <p className={styles.successBox} role="status">Đã gửi cán bộ kỹ thuật xem</p>
               <p className={styles.aiNote}>* AI không đưa ra khuyến nghị điều trị. Hãy tham khảo ý kiến chuyên gia. CBKT đã nhận được kết quả này.</p>
 
               <button className={styles.analyzeBtn} onClick={resetForm}>
@@ -209,22 +216,21 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
               <div key={h.id} className={styles.historyCard}>
                 <div className={styles.historyHeader}>
                   <span className={styles.historyDate}>{new Date(h.detection_date).toLocaleDateString('vi-VN')}</span>
-                  <Pill tone={h.status === 'SENT_TO_OFFICER' || h.status === 'PENDING' ? 'amber' : h.status === 'RESOLVED' ? 'green' : 'neutral'}>
-                    {h.status === 'SENT_TO_OFFICER' || h.status === 'PENDING' ? 'Chờ CBKT xem' : h.status === 'RESOLVED' ? 'Đã xử lý' : h.status}
-                  </Pill>
+                  <Pill tone={diseaseStatusLabel(h.status).tone}>{diseaseStatusLabel(h.status).label}</Pill>
                 </div>
                 <div className={styles.historyBody}>
                   {h.photo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={h.photo_url} alt="Disease" className={styles.historyImage} />
+                    <div className={styles.historyPhoto}>
+                      <ReportPhoto src={h.photo_url} alt="Disease" className={styles.historyImage} />
+                    </div>
                   ) : (
                     <div className={styles.historyImagePlaceholder}>Ảnh không khả dụng</div>
                   )}
                   <div className={styles.historyDetails}>
                     <div className={styles.historyParcel}>Thửa: {h.parcel_code}</div>
-                    <span className={styles.historyDisease}>{h.ai_disease_name} ({h.ai_confidence.toFixed(1)}%)</span>
+                    <span className={styles.historyDisease}>{displayDiseaseName(h)} ({(h.ai_confidence * 100).toFixed(1)}%)</span>
                     {h.treatment_recommendation && (
-                      <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', backgroundColor: '#f0f9ff', padding: '0.5rem', borderRadius: '4px', border: '1px solid #bae6fd' }}>
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', backgroundColor: 'var(--color-info-subtle)', padding: '0.5rem', borderRadius: '4px', border: '1px solid color-mix(in srgb, var(--color-info) 30%, transparent)' }}>
                         <strong>Hướng dẫn CBKT:</strong> {h.treatment_recommendation}
                       </div>
                     )}

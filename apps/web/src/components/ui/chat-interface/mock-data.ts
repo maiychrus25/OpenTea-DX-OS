@@ -13,13 +13,13 @@ export const mockConversations: ChatMessage[] = [
   {
     id: 'msg-1',
     role: 'user',
-    content: 'Giá lúa gạo hôm nay thế nào?',
+    content: 'Giá chè búp khô hôm nay thế nào?',
   },
   {
     id: 'msg-2',
     role: 'assistant',
-    content: 'Theo cập nhật mới nhất, giá lúa Thu Đông đang có xu hướng tăng nhẹ. Lúa IR50404 đạt mức 8.200 - 8.400 đ/kg. Lúa OM18 đạt mức 8.500 - 8.700 đ/kg.\n\nBiểu đồ giá lúa 5 ngày qua:',
-    sources: ['Sở NN&PTNT Đồng Tháp', 'Hiệp hội Lương thực VN (VFA)'],
-    chartData: [8200, 8250, 8300, 8350, 8400],
+    content: 'Theo cập nhật mới nhất, giá chè búp khô Thái Nguyên (giá mô phỏng) có xu hướng tăng nhẹ, khoảng 196.000 - 204.000 đ/kg.\n\nBiểu đồ giá mô phỏng 5 ngày qua:',
+    sources: ['Mô phỏng (Toàn quốc)'],
+    chartData: [196000, 198000, 200000, 202000, 204000],
   },
 ]

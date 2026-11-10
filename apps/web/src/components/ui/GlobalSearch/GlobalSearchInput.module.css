@@ -8,8 +8,8 @@
 
 .searchPlaceholder {
   flex: 1;
-  font-size: var(--font-size-body, 0.9375rem);
-  color: var(--color-ink-tertiary, #64748b);
+  font-size: var(--font-size-body);
+  color: var(--color-ink-tertiary);
   text-align: left;
 }
 
@@ -21,13 +21,13 @@
   font-size: 0.7rem;
   font-weight: 600;
   font-family: inherit;
-  color: var(--color-ink-tertiary, #64748b);
-  background-color: var(--color-surface-sunken, #f1f5f9);
-  border: 1px solid var(--color-border-subtle, #e2e8f0);
-  border-radius: var(--rounded-sm, 0.25rem);
+  color: var(--color-ink-tertiary);
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-sm);
   line-height: 1;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
-  margin-left: var(--space-2, 0.5rem);
+  margin-left: var(--spacing-2);
 }

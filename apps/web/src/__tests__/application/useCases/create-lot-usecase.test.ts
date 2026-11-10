@@ -42,7 +42,7 @@ describe('CreateLotUseCase', () => {
 
   it('throws if no parcel provided', async () => {
     await expect(useCase.execute({
-      commodity: 'Rice',
+      commodity: 'Chè',
       harvest_date: new Date(),
       parcel_ids: [],
       htx_profile_id: 'htx1',
@@ -53,7 +53,7 @@ describe('CreateLotUseCase', () => {
   it('throws if parcel not found', async () => {
     parcelPort.findById.mockResolvedValue(null)
     await expect(useCase.execute({
-      commodity: 'Rice',
+      commodity: 'Chè',
       harvest_date: new Date(),
       parcel_ids: ['p1'],
       htx_profile_id: 'htx1',
@@ -64,7 +64,7 @@ describe('CreateLotUseCase', () => {
   it('throws if parcel status is invalid', async () => {
     parcelPort.findById.mockResolvedValue({ status: 'PLANTING', parcel_code: 'P01' } as Partial<ParcelSummary> as any)
     await expect(useCase.execute({
-      commodity: 'Rice',
+      commodity: 'Chè',
       harvest_date: new Date(),
       parcel_ids: ['p1'],
       htx_profile_id: 'htx1',
@@ -87,7 +87,7 @@ describe('CreateLotUseCase', () => {
     })
 
     await expect(useCase.execute({
-      commodity: 'Rice',
+      commodity: 'Chè',
       harvest_date: new Date('2026-08-25'), // harvest before safe date
       parcel_ids: ['p1'],
       htx_profile_id: 'htx1',
@@ -110,7 +110,7 @@ describe('CreateLotUseCase', () => {
     })
 
     const payload = {
-      commodity: 'Rice',
+      commodity: 'Chè',
       harvest_date: new Date('2026-08-25'),
       parcel_ids: ['p1'],
       certificate_keys: ['cert/123.pdf'],

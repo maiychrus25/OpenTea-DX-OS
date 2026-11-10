@@ -15,7 +15,8 @@ import { z } from 'zod';
 
 const reviewSchema = z.object({
   status: z.enum(['CONFIRMED', 'REJECTED']),
-  treatment_recommendation: z.string().optional()
+  treatment_recommendation: z.string().optional(),
+  confirmed_diagnosis: z.string().trim().max(200, 'Tên bệnh tối đa 200 ký tự.').optional()
 });
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
@@ -32,13 +33,14 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const parsed = reviewSchema.safeParse(body);
     
     if (!parsed.success) {
+      const nameIssue = parsed.error.issues.find((issue) => issue.path[0] === 'confirmed_diagnosis');
       return NextResponse.json(
-        { error: { code: 'VALIDATION_ERROR', message: 'Invalid input data' } },
+        { error: { code: 'VALIDATION_ERROR', message: nameIssue?.message ?? 'Invalid input data' } },
         { status: 400 }
       );
     }
 
-    const { status, treatment_recommendation } = parsed.data;
+    const { status, treatment_recommendation, confirmed_diagnosis } = parsed.data;
 
     const tenant = await requireTenant();
     await new TenantGuard(tenant).diseaseReport(params.id);
@@ -55,7 +57,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       officerId: session.user.id!,
       htxCode: tenant.htxCode,
       status,
-      treatment_recommendation: treatment_recommendation || ''
+      treatment_recommendation: treatment_recommendation || '',
+      confirmed_diagnosis: confirmed_diagnosis ?? ''
     });
 
     return NextResponse.json({ success: true });
@@ -76,6 +79,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
     if (error.message === 'TREATMENT_REQUIRED') {
       return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'Treatment recommendation is required for approval' } }, { status: 400 });
+    }
+    if (error.message === 'DIAGNOSIS_REQUIRED') {
+      return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'Vui lòng nhập tên bệnh đã xác nhận trước khi duyệt.' } }, { status: 400 });
     }
 
     return NextResponse.json(

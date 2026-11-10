@@ -18,6 +18,7 @@ import { StoragePort, UploadResult } from '@/domain/disease/ports/storage.port'
 import { ParcelPort, ParcelSummary } from '@/domain/farm/ports/ParcelPort'
 import { DiseaseReportPort } from '@/domain/disease/ports/disease-report.port'
 import { NotificationPort } from '@/domain/ports/notification-port'
+import { CoreUnavailableError } from '@/domain/errors'
 
 // ── Mock helpers ───────────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ const mockParcelOfFarmerA: ParcelSummary = {
 
 function makeMockPorts(parcel: ParcelSummary | null = mockParcelOfFarmerA) {
   const diseasePort: jest.Mocked<DiseaseDetectionPort> = {
-    predict: jest.fn().mockResolvedValue({ disease_name: 'Leaf blight', confidence_score: 0.87 }),
+    predict: jest.fn().mockResolvedValue({ disease_name: 'Leaf blight', confidence_score: 0.87, uncertain: false }),
   }
   const storagePort: jest.Mocked<StoragePort> = {
     uploadFile: jest.fn().mockResolvedValue({
@@ -194,7 +195,7 @@ describe('SubmitDiagnosisUseCase — farmer isolation + AI invariant', () => {
     expect(result).not.toHaveProperty('treatment_recommendation')
     expect(result).not.toHaveProperty('recommendation')
     // Only these fields are permitted in the response
-    expect(Object.keys(result).sort()).toEqual(['confidence_score', 'disease_name', 'image_url', 'report_id', 'submitted_at'].sort())
+    expect(Object.keys(result).sort()).toEqual(['confidence_score', 'disease_name', 'image_url', 'report_id', 'submitted_at', 'uncertain'].sort())
   })
 
   it('TC-10.2-AC5-5: broadcastDiseaseReport called with correct household name + parcel code', async () => {
@@ -237,5 +238,85 @@ describe('SubmitDiagnosisUseCase — farmer isolation + AI invariant', () => {
       mimeType: 'image/jpeg',
       htxCode: 'TC',
     })).rejects.toThrow('Disease API connection refused')
+  })
+})
+
+describe('SubmitDiagnosisUseCase — tea model', () => {
+  const teaParcel: ParcelSummary = { ...mockParcelOfFarmerA, crop_type: 'Chè Trung du' }
+  const command = {
+    farmerUserId: FARMER_A_ID,
+    parcelId: 'parcel-a-001',
+    imageBlob: DUMMY_BLOB,
+    imageBuffer: DUMMY_BUFFER,
+    mimeType: 'image/jpeg',
+    htxCode: 'TC',
+  }
+
+  function teaMocks(prediction: { disease_name: string | null; confidence_score: number; uncertain: boolean }) {
+    const mocks = makeMockPorts(teaParcel)
+    mocks.diseasePort.predict.mockResolvedValue(prediction)
+    // Echo what was stored, as the repository does.
+    mocks.diseaseReportPort.save.mockImplementation(async (data) => ({
+      id: 'report-tea',
+      ai_disease_name: data.ai_disease_name,
+      ai_confidence: data.ai_confidence,
+      photo_url: data.photo_url,
+      created_at: new Date(),
+    }))
+    const useCase = new SubmitDiagnosisUseCase(
+      mocks.diseasePort, mocks.storagePort, mocks.parcelPort,
+      mocks.diseaseReportPort, mocks.notificationPort,
+    )
+    return { mocks, useCase }
+  }
+
+  it('asks the tea model for a tea parcel', async () => {
+    const { mocks, useCase } = teaMocks({ disease_name: 'Thán thư', confidence_score: 0.8, uncertain: false })
+    await useCase.execute(command)
+    expect(mocks.diseasePort.predict).toHaveBeenCalledWith(DUMMY_BLOB, 'tea')
+  })
+
+  it('asks the general model for a non-tea parcel', async () => {
+    const mocks = makeMockPorts()
+    const useCase = new SubmitDiagnosisUseCase(
+      mocks.diseasePort, mocks.storagePort, mocks.parcelPort,
+      mocks.diseaseReportPort, mocks.notificationPort,
+    )
+    await useCase.execute(command)
+    expect(mocks.diseasePort.predict).toHaveBeenCalledWith(DUMMY_BLOB, 'general')
+  })
+
+  it('stores an uncertain result as "Không xác định" and still sends it to the officers', async () => {
+    const { mocks, useCase } = teaMocks({ disease_name: null, confidence_score: 0.41, uncertain: true })
+
+    const result = await useCase.execute(command)
+
+    expect(mocks.diseaseReportPort.save).toHaveBeenCalledWith(
+      expect.objectContaining({ ai_disease_name: 'Không xác định', ai_confidence: 0.41 })
+    )
+    expect(mocks.notificationPort.broadcastDiseaseReport).toHaveBeenCalledWith('Nguyễn Văn An', 'Không xác định', 'P-A-001')
+    expect(result).toEqual(expect.objectContaining({ disease_name: 'Không xác định', uncertain: true }))
+  })
+
+  it('a tea model outage stores no report, sends no broadcast and never retries on the general model', async () => {
+    const { mocks, useCase } = teaMocks({ disease_name: null, confidence_score: 0, uncertain: false })
+    mocks.diseasePort.predict.mockRejectedValue(new CoreUnavailableError())
+
+    await expect(useCase.execute(command)).rejects.toBeInstanceOf(CoreUnavailableError)
+
+    expect(mocks.diseasePort.predict).toHaveBeenCalledTimes(1)
+    expect(mocks.diseasePort.predict).toHaveBeenCalledWith(DUMMY_BLOB, 'tea')
+    expect(mocks.diseaseReportPort.save).not.toHaveBeenCalled()
+    expect(mocks.notificationPort.broadcastDiseaseReport).not.toHaveBeenCalled()
+  })
+
+  it('sends a confident "healthy" tea result to the officers too', async () => {
+    const { mocks, useCase } = teaMocks({ disease_name: 'Lá khoẻ', confidence_score: 0.988, uncertain: false })
+
+    const result = await useCase.execute(command)
+
+    expect(mocks.diseaseReportPort.save).toHaveBeenCalledWith(expect.objectContaining({ ai_disease_name: 'Lá khoẻ' }))
+    expect(mocks.notificationPort.broadcastDiseaseReport).toHaveBeenCalledWith('Nguyễn Văn An', 'Lá khoẻ', 'P-A-001')
+    expect(result.uncertain).toBe(false)
   })
 })

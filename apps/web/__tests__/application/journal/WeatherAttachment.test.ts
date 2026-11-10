@@ -46,7 +46,7 @@ describe('Story 3.5: Weather Auto-Attach to Journal Entries', () => {
         data: {
           household_id: householdId,
           parcel_code: 'P-TW1-001',
-          crop_type: 'Rice',
+          crop_type: 'Chè',
           area_ha: 1,
           status: 'SOWING'
         }
