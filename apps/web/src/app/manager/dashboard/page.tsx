@@ -199,6 +199,9 @@ export default async function ManagerDashboard() {
   }
 
   const uniqueSources = Array.from(new Set(prices.map(p => p.source)))
+  // Only real sources count as verified; a simulated price is named as such, and no data names no source.
+  const verifiedSources = uniqueSources.filter(source => !isSimulatedPrice(source))
+  const simulatedSources = uniqueSources.filter(source => isSimulatedPrice(source))
 
   return (
     <main className={styles.container}>
@@ -295,7 +298,10 @@ export default async function ManagerDashboard() {
 
             <div className={styles.aiInfo}>
               <AiNote />
-              <SourceBox count={prices.length || 3} sources={uniqueSources.length > 0 ? uniqueSources : ['USDA', 'WTO', 'Sở NN&PTNT']} />
+              {verifiedSources.length > 0 && <SourceBox count={verifiedSources.length} sources={verifiedSources} />}
+              {simulatedSources.length > 0 && (
+                <p className={styles.simulatedSource}>{`Nguồn mô phỏng: ${simulatedSources.join(' · ')}`}</p>
+              )}
             </div>
           </section>
         </>

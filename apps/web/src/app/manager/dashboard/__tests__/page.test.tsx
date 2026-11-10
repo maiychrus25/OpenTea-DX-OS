@@ -170,4 +170,35 @@ describe('ManagerDashboard', () => {
 
     expect(shownCommodities()).toEqual(['Chè', 'Cà phê', 'Lúa gạo'])
   })
+
+  it('counts distinct real sources, not price rows, and never calls a simulated price verified', async () => {
+    ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
+    serveMarket([row('Tea', 1), row('Tea', 2), row('Tea', 3, SIMULATED_MARKET_SOURCE)])
+
+    render(await ManagerDashboard())
+
+    expect(screen.getByText('1 nguồn đã kiểm chứng')).toBeInTheDocument()
+    expect(screen.getByText('COMTRADE')).toBeInTheDocument()
+    expect(screen.getByText(`Nguồn mô phỏng: ${SIMULATED_MARKET_SOURCE}`)).toBeInTheDocument()
+  })
+
+  it('shows no verified-source box when every price is simulated', async () => {
+    ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
+    serveMarket([{ commodity: 'Tea', metric: 'Giá chè búp khô', value: 200000, unit: 'VND/kg', source: SIMULATED_MARKET_SOURCE, fetched_at: at(1) }])
+
+    render(await ManagerDashboard())
+
+    expect(screen.queryByText(/nguồn đã kiểm chứng/)).not.toBeInTheDocument()
+    expect(screen.getByText(`Nguồn mô phỏng: ${SIMULATED_MARKET_SOURCE}`)).toBeInTheDocument()
+  })
+
+  it('names no source when there is no market data', async () => {
+    ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
+    serveMarket([])
+
+    render(await ManagerDashboard())
+
+    expect(screen.queryByText(/nguồn đã kiểm chứng/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/USDA|WTO|Sở NN&PTNT/)).not.toBeInTheDocument()
+  })
 })
