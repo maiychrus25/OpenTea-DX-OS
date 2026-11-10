@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Tầng 2b: Chuyển sang HTX chè (nghiệp vụ, mô hình bệnh chè, giao diện)
 
-> **Trạng thái:** Đã triển khai trên nhánh `feat/tier2b-tea-domain` (2026-11-10), chờ chủ dự án duyệt PR và phát hành `v1.7.0`. Xem "Ghi chú sau triển khai 2b" ở cuối.
+> **Trạng thái:** Đã phát hành `v1.7.0` (2026-11-11). Xem "Ghi chú sau triển khai 2b" ở cuối.
 > **Phạm vi:** Đợt 2b của Tầng 2 (milestone `v1.7.0`, issue #19). Tiếp nối đợt 2a (`docs/specs/2026-11-09-tier2a-core-integration-design.md`).
 > **Căn cứ:** Kế hoạch dự thi OLP 2026 (HTX chè Thái Nguyên, câu chuyện demo "Một ngày của lô chè A3"); tiêu chí chấm trải nghiệm người dùng và trình diễn trực tiếp.
 

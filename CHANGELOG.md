@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.7.0] - 2026-11-11
+
 ### Added
 - **Tea leaf disease model**: `ai-models/tea_leaf_model.keras` (MobileNetV2 transfer learning, 224×224, 8 classes listed in `ai-models/tea_class_names.txt`, 9.2 MB) with Vietnamese labels in `tea_class_names_vi.json`, each marked for officer review. `ai-models/tea/` holds the reproducible pipeline (`train.py`, `datasets.json` with DOIs, download URLs and SHA-256, pinned `requirements.txt`) that runs in `python:3.12.15-slim-bookworm`. It is trained on three CC BY 4.0 Mendeley datasets (Kimutai and Förster, Kenya; Islam, Bangladesh; Billah et al., Bangladesh), credited in `ai-models/ATTRIBUTION.md`; no image is committed. `ai-models/tea/MODEL_CARD.md` reports the measured numbers: test accuracy 0.8683 on 1,025 images and confidence threshold 0.60, but only 0.12 to 0.35 when one source is held out, and a random-noise image is called `healthy` at 0.988. Accuracy on Thái Nguyên photos is not measured; every result goes to an officer
 - **Tea disease model served**: `POST /predict?model=tea` on `disease-api` uses the tea leaf model next to the general one (still the default; any other model name answers 400). Responses gain `model` and `uncertain`; a tea result below `TEA_CONFIDENCE_THRESHOLD` (default `0.60`, rejected at startup outside (0, 1]) has null names and keeps `top3`. `/health` adds `models` with each model's state
@@ -334,7 +338,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.7.0
 [1.6.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.6.0
 [1.5.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.5.0
 [1.4.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.4.0
