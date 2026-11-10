@@ -233,6 +233,7 @@ Test này tạm đổi `accessTokenLifespan` của realm và tạm dừng Hasura
 - Thông báo cũ không có người nhận và không có HTX sẽ không còn hiển thị; cảnh báo hệ thống của n8n vẫn hiển thị.
 - Các hàng có `htx_profile_id` rỗng (nông hộ, lô hàng) trở nên không xem và không ghi được; phải gán chúng cho một HTX (tham khảo `scripts/backfill-htx-profile-id.sql`).
 - Tài liệu nay nằm dưới `para/<mã HTX>/...`. Object cũ dưới `para/Projects/`, `para/Areas/`, `para/Resources/`, `para/Archives/` không còn được liệt kê và không được tự động chuyển; muốn dùng lại phải tự chép sang thư mục của HTX tương ứng. `certificate_keys` khi tạo lô hoặc xuất QR phải thuộc thư mục của HTX, nếu không trả 400.
+- Chứng nhận của lô đã xuất QR có key ngoài `para/<mã HTX>/` của HTX sở hữu lô nay trả 403 trên trang công khai, và ảnh nhật ký có key như vậy không còn hiển thị; muốn dùng lại phải chép object vào thư mục đó và cập nhật key.
 
 ## 🔨 Biên dịch từ Mã nguồn (Build from Source)
 

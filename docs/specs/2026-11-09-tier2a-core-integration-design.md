@@ -168,6 +168,7 @@ Khác biệt/bổ sung so với thiết kế:
 - Tài liệu được tách theo HTX: mọi key là `para/<htxCode>/...`, ba route tài liệu lấy mã HTX từ phiên, key ngoài thư mục (kể cả `..`) trả 404; `certificate_keys` ngoài thư mục trả 400 ở cả xuất QR và tạo lô. Object cũ không còn được liệt kê và không tự chuyển. Chatbot kỹ thuật chỉ đọc `Resources` và `Areas` của HTX.
 - `refreshAccessToken` đọc lại vai trò từ access token mới bằng hàm dùng chung với `auth.ts`; không còn vai trò hợp lệ thì xóa vai trò. Ở production, phiên không có refresh token được coi là `RefreshFailed`.
 - `KeycloakAdminAdapter` đọc `KC_BOOTSTRAP_ADMIN_*` rồi `KEYCLOAK_ADMIN*`, và không dùng `admin/admin` ở production. `/api/register` nằm trong danh sách API công khai của middleware.
+- Key ảnh nhật ký do client gửi: `POST /api/journal` trả 400 nếu `photo_minio_key` ngoài thư mục HTX (dùng `isInDocumentRoot`, vì `assertInDocumentRoot` trả 404 mà quyết định yêu cầu 400). Danh sách nhật ký chỉ ký key trong thư mục HTX của người gọi. Route chứng nhận công khai cũng kiểm tra key thuộc thư mục HTX của lô, vì `certificate_keys` là cột do client ghi.
 
 Đo thực tế (máy arm64, database sạch, image và lớp build đã có cache; model được kéo lại vì volume mới):
 

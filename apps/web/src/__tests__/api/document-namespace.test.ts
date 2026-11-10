@@ -8,12 +8,17 @@ import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.ad
 import { ExportQrUseCase } from '@/application/lot/ExportQrUseCase'
 import { CreateLotUseCase } from '@/application/lot/CreateLotUseCase'
 import { BatchApproveJournalUseCase } from '@/application/journal/BatchApproveJournalUseCase'
+import { CreateJournalEntryUseCase } from '@/application/journal/CreateJournalEntryUseCase'
+import { ListJournalEntriesUseCase } from '@/application/journal/ListJournalEntriesUseCase'
+import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
 import { isInDocumentRoot } from '@/domain/document/document-namespace'
 import * as list from '@/app/api/documents/route'
 import * as url from '@/app/api/documents/url/route'
 import * as upload from '@/app/api/documents/upload/route'
 import * as exportQr from '@/app/api/lots/[id]/export-qr/route'
 import * as lots from '@/app/api/lots/route'
+import * as journal from '@/app/api/journal/route'
+import * as certificate from '@/app/api/lot/[lot_code]/certificate/route'
 
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 jest.mock('@/lib/auth/core-token', () => ({ getCoreToken: jest.fn() }))
@@ -28,11 +33,16 @@ jest.mock('@/infrastructure/storage/minio-document.adapter', () => ({ MinioDocum
 jest.mock('@/infrastructure/storage/minio-storage.adapter', () => ({ MinioStorageAdapter: jest.fn() }))
 jest.mock('@/application/lot/ExportQrUseCase', () => ({ ExportQrUseCase: jest.fn() }))
 jest.mock('@/application/lot/CreateLotUseCase', () => ({ CreateLotUseCase: jest.fn() }))
+jest.mock('@/application/journal/CreateJournalEntryUseCase', () => ({ CreateJournalEntryUseCase: jest.fn() }))
+jest.mock('@/application/journal/ListJournalEntriesUseCase', () => ({ ListJournalEntriesUseCase: jest.fn() }))
 
 const mock = (fn: unknown) => fn as jest.Mock
 const storage = { listDocuments: jest.fn(), generateDownloadUrl: jest.fn(), generateUploadUrl: jest.fn() }
 const exportExecute = jest.fn()
 const createExecute = jest.fn()
+const journalCreate = jest.fn()
+const journalList = jest.fn()
+const signCertificate = jest.fn()
 
 const OUTSIDE = ['para/LB/Projects/', 'para/Projects/', 'para/TC/../LB/Projects/', 'para/TC/%2e%2e/LB/', 'other/TC/Projects/', 'para/TCX/Projects/']
 
@@ -53,6 +63,11 @@ beforeEach(() => {
   mock(MinioDocumentAdapter).mockImplementation(() => storage)
   mock(ExportQrUseCase).mockImplementation(() => ({ execute: exportExecute }))
   mock(CreateLotUseCase).mockImplementation(() => ({ execute: createExecute }))
+  mock(CreateJournalEntryUseCase).mockImplementation(() => ({ execute: journalCreate }))
+  mock(ListJournalEntriesUseCase).mockImplementation(() => ({ execute: journalList }))
+  mock(MinioStorageAdapter).mockImplementation(() => ({ getPresignedUrl: signCertificate }))
+  signCertificate.mockResolvedValue('https://signed/cert')
+  journalCreate.mockResolvedValue({ id: 'e1' })
   storage.listDocuments.mockResolvedValue([])
   storage.generateDownloadUrl.mockResolvedValue('https://signed')
   storage.generateUploadUrl.mockImplementation(async (key: string) => ({ url: 'https://signed', key }))
@@ -127,6 +142,65 @@ describe('certificate keys stay inside the namespace of the caller', () => {
     const body = { crop: 'Chè', harvest_date: '2026-01-01', parcel_ids: ['p1'], certificate_keys: ['para/LB/x.pdf'] }
     expect((await lots.POST(post(body), {})).status).toBe(400)
     expect(createExecute).not.toHaveBeenCalled()
+  })
+})
+
+describe('journal photo keys stay inside the namespace of the caller', () => {
+  const entry = { parcel_id: 'p1', entry_date: '2026-01-01', activities: [{ activity_type: 'OTHER' }] }
+  const listJournal = () => journal.GET(new Request('http://localhost/api/journal'), {})
+  const stored = (photo_minio_key: string) => ({ id: 'e1', photo_minio_key, photo_url: photo_minio_key })
+
+  test.each(['para/LB/Archives/x.jpg', 'para/TC/../LB/x.jpg', 'other/x.jpg', ''])('POST refuses the key %p', async (photo_minio_key) => {
+    expect((await journal.POST(post({ ...entry, photo_minio_key }), {})).status).toBe(400)
+    expect(journalCreate).not.toHaveBeenCalled()
+  })
+  test('POST stores a key of the caller', async () => {
+    expect((await journal.POST(post({ ...entry, photo_minio_key: 'para/TC/Archives/x.jpg' }), {})).status).toBe(201)
+    expect(journalCreate.mock.calls[0][0].photo_minio_key).toBe('para/TC/Archives/x.jpg')
+  })
+  test('POST without a photo still works', async () => {
+    expect((await journal.POST(post(entry), {})).status).toBe(201)
+  })
+  test('a stored key of another HTX is not signed and the list still loads', async () => {
+    journalList.mockResolvedValue({ entries: [stored('para/LB/Archives/x.jpg'), stored('para/TC/Archives/y.jpg')], total: 2 })
+    const response = await listJournal()
+    expect(response.status).toBe(200)
+    const { data } = await response.json()
+    expect(data[0].photo_url).toBeNull()
+    expect(data[1].photo_url).toBe('https://signed')
+    expect(storage.generateDownloadUrl.mock.calls).toEqual([['para/TC/Archives/y.jpg']])
+  })
+  test('a caller without an HTX signs nothing', async () => {
+    mock(auth).mockResolvedValue({ user: { id: 'u1', role: 'officer', htxCode: null, name: 'U' } })
+    journalList.mockResolvedValue({ entries: [stored('para/undefined/x.jpg')], total: 1 })
+    await listJournal()
+    expect(storage.generateDownloadUrl).not.toHaveBeenCalled()
+  })
+})
+
+describe('the public certificate route signs only keys of the owning HTX', () => {
+  const lot = (certificate_keys: string[], htx_code: string | null = 'TC') => ({
+    status: 'QR_EXPORTED',
+    certificate_keys,
+    htx_profile: htx_code ? { htx_code } : null,
+  })
+  const get = (key: string) =>
+    certificate.GET(new Request(`http://localhost/api/lot/L1/certificate?key=${encodeURIComponent(key)}`), { params: Promise.resolve({ lot_code: 'L1' }) })
+
+  test('a stored key of another HTX is refused', async () => {
+    mock(prisma.lot.findUnique).mockResolvedValue(lot(['para/LB/x.pdf']))
+    expect((await get('para/LB/x.pdf')).status).toBe(403)
+    expect(signCertificate).not.toHaveBeenCalled()
+  })
+  test('a lot without an HTX signs nothing', async () => {
+    mock(prisma.lot.findUnique).mockResolvedValue(lot(['para/TC/x.pdf'], null))
+    expect((await get('para/TC/x.pdf')).status).toBe(403)
+    expect(signCertificate).not.toHaveBeenCalled()
+  })
+  test('a key of the owning HTX redirects to the signed URL', async () => {
+    mock(prisma.lot.findUnique).mockResolvedValue(lot(['para/TC/x.pdf']))
+    expect((await get('para/TC/x.pdf')).status).toBe(302)
+    expect(signCertificate).toHaveBeenCalledWith('para/TC/x.pdf', 3600)
   })
 })
 

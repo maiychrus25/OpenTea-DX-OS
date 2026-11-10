@@ -6,6 +6,7 @@ import { auth } from '@/auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
+import { assertJournalPhotoKey, isInDocumentRoot } from '@/domain/document/document-namespace'
 import { journalCreateSchema, journalListQuerySchema } from '@/lib/validations/journal.schema'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
@@ -60,9 +61,13 @@ async function getJournalEntries(request: Request) {
   // Attach presigned url for photos
   const { MinioDocumentAdapter } = await import('@/infrastructure/storage/minio-document.adapter')
   const storage = new MinioDocumentAdapter()
+  const htxCode = session.user.htxCode
   for (const entry of result.entries) {
     if (entry.photo_minio_key) {
-      entry.photo_url = await storage.generateDownloadUrl(entry.photo_minio_key)
+      // Older rows may hold a key posted by a client, so only a key of the caller's HTX is signed.
+      entry.photo_url = htxCode && isInDocumentRoot(entry.photo_minio_key, htxCode)
+        ? await storage.generateDownloadUrl(entry.photo_minio_key)
+        : null
     }
   }
 
@@ -86,7 +91,9 @@ async function postJournalEntry(request: Request) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
 
-  await new TenantGuard(await requireTenant()).parcel(parse.data.parcel_id)
+  const tenant = await requireTenant()
+  await new TenantGuard(tenant).parcel(parse.data.parcel_id)
+  assertJournalPhotoKey(parse.data.photo_minio_key, tenant.htxCode)
 
   const repo = new PrismaJournalRepository()
   const parcelRepo = new PrismaParcelRepository()

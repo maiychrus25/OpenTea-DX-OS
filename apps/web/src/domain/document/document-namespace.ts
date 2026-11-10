@@ -22,6 +22,12 @@ export function assertInDocumentRoot(key: string, htxCode: string): void {
   if (!isInDocumentRoot(key, htxCode)) throw new NotFoundError('Document not found')
 }
 
+export function assertJournalPhotoKey(key: string | undefined, htxCode: string): void {
+  if (key !== undefined && !isInDocumentRoot(key, htxCode)) {
+    throw new ValidationError('photo_minio_key must belong to your HTX')
+  }
+}
+
 export function assertCertificateKeys(keys: string[] | undefined, htxCode: string): void {
   if (keys?.some((key) => !isInDocumentRoot(key, htxCode))) {
     throw new ValidationError('certificate_keys must belong to your HTX')

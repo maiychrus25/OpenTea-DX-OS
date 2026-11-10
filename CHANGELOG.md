@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Self-registration**: the middleware no longer answers 401 to the anonymous `POST /api/register`; new accounts stay disabled until a manager approves them
 - **Pre-upgrade sessions**: in production a session without a refresh token goes to login instead of showing the no-HTX notice
 - **Silent load failures**: the officer journal approval and manager farm-zone screens now say when loading failed
+- **Object keys from clients**: `POST /api/journal` answers 400 for a `photo_minio_key` outside the caller's document root, and the journal list signs a stored key only when it is inside that root; other entries come back without a photo. The public certificate route signs a key only inside the document root of the lot's HTX
 
 ### Upgrade notes
 - Run `migrate` (two new migrations: `20261109120000_sync_schema_drift` and `20261109130000_notifications_htx`), then `platform-init`, as in the deploy section.
@@ -41,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Old notifications with neither a recipient nor an HTX are no longer shown; n8n system alerts remain visible.
 - Rows with a null `htx_profile_id` (households, lots) become invisible and unwritable and must be assigned to an HTX (see `scripts/backfill-htx-profile-id.sql`).
 - Documents written before this release stay under `para/Projects/`, `para/Areas/`, `para/Resources/` and `para/Archives/`. They are no longer listed and are not moved automatically; copy them to `para/<htxCode>/...` to use them again.
+- Certificates of exported lots whose keys are outside `para/<htxCode>/` of the lot's HTX now answer 403 on the public page, and such journal photos stop showing. Copy the object into that folder and update the key to use it again.
 - Set `AUTH_URL` in `docker/.env.local` when the web app is not served from `http://localhost:3000`, and add that URL to the redirect URIs of the `nextjs-web` client.
 - Known limits: `9081` must stay unpublished, because it is not rate limited per IP; `workflows/mattermost-push.json` posts disease and harvest events of all HTXs to one webhook; `/api/dev-login` and pre-upgrade cookies carry no access token, so core reads fail closed until the user signs in again; the write path is protected in the application, not in the database.
 
