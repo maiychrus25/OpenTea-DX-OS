@@ -191,12 +191,12 @@ Mọi truy cập API đi qua gateway `http://localhost:9080`:
 
 **Nâng cấp môi trường dev cũ:**
 
-- Postgres đổi từ alpine sang bookworm (collation khác): tạo lại volume Postgres, hoặc chạy `REINDEX DATABASE agrimarket;`.
+- Postgres đổi từ alpine sang bookworm (collation khác): chạy `REINDEX DATABASE agrimarket;` khi nối vào database `agrimarket`, và `REINDEX DATABASE keycloak;` khi nối vào database `keycloak`. Không xoá volume `docker_pgdata`.
 - Tier 1b: `make platform-up` nay tự chạy `migrate` (image dựng sẵn, không cần `npx prisma migrate deploy` trên máy chủ) rồi `platform-init` lần nữa để gắn trigger kiểm toán; tạo lại các container `seaweedfs` (`-volume.max=100`, cần khi có hơn một bucket), `clamav` và `dxos-scanner`. Trên stack nâng cấp, object lớn hơn 50 MiB đang nằm trong bucket được theo dõi sẽ bị chuyển sang `dxos-quarantine` ở các vòng quét đầu tiên.
 - Tier 1c: thêm `DXOS_MQTT_DEVICES` và `DXOS_MQTT_INGEST_PASSWORD` vào `docker/.env.local` (xem `docker/.env.local.example`); chạy `migrate` và `platform-init` (đã nằm trong `make platform-up`) để tạo bảng `telemetry.*`; tạo các container mới `mosquitto`, `dxos-ingest`, `dxos-lifecycle`, `ollama`, rồi chạy `ollama-init`.
-- Keycloak chỉ import realm khi database mới: tạo lại realm (xoá volume) để nhận chính sách TOTP, audience `dx-os-core` và claim `htx_code`.
+- Keycloak chỉ import realm khi realm chưa có: để nhận chính sách TOTP, audience `dx-os-core` và claim `htx_code`, xoá riêng realm `agrimarket` trong Admin Console rồi restart `keycloak` (cách (a) ở mục [Dữ liệu demo chè và tài khoản](#dữ-liệu-demo-chè-và-tài-khoản)). Không xoá volume.
 - Dữ liệu MinIO cũ không được chuyển sang SeaweedFS; container `agrimarket-minio` cũ còn chiếm cổng 9000, hãy chạy `docker compose -f docker/docker-compose.yml down --remove-orphans` trước khi dựng lại.
-- Bảng n8n trước đây nằm ở schema `public`; n8n nay dùng schema `n8n` nên cần chạy `docker compose down -v` một lần (hoặc chuyển bảng thủ công). Lệnh `down -v` chỉ dành cho **môi trường dev**, tuyệt đối không chạy trên dữ liệu production.
+- Bảng n8n trước đây nằm ở schema `public`; n8n nay dùng schema `n8n` và tự tạo bảng mới ở đó khi khởi động, bảng cũ ở `public` để nguyên không ảnh hưởng ứng dụng. Nhập lại workflow theo [docs/dev-setup.md](./docs/dev-setup.md) (`n8n import:workflow`) và tạo lại credential của n8n. **Không chạy `docker compose down -v`** trên stack chính: lệnh này xoá mọi volume, kể cả `docker_pgdata` (realm Keycloak và toàn bộ dữ liệu ứng dụng).
 
 ## 🌱 Tier 2: Ứng dụng dùng lõi
 
