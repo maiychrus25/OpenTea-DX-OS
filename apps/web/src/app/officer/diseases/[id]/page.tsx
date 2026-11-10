@@ -9,6 +9,10 @@ import { Pill } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import styles from './detail.module.css';
 import { ReportPhoto } from '@/components/features/disease/ReportPhoto';
+import { diseaseStatusLabel } from '@/domain/disease/disease-status-label';
+
+// Only pending reports can be opened for review.
+const PENDING = diseaseStatusLabel('PENDING');
 import { fetchJson } from '@/lib/api/fetch-json';
 import { UNCERTAIN_DISEASE_NAME } from '@/domain/disease/display-disease-name';
 
@@ -141,7 +145,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>Trạng thái</span>
-              <Pill tone="amber">PENDING</Pill>
+              <Pill tone={PENDING.tone}>{PENDING.label}</Pill>
             </div>
           </div>
         </div>

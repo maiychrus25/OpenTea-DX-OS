@@ -222,7 +222,7 @@ async function seedA3(tx: Tx, htx: { id: string; name: string }, a3: { id: strin
   const snapshot = {
     lot_code: A3_LOT_CODE,
     commodity: 'Chè',
-    quality_grade: 'Grade 1',
+    quality_grade: 'Loại 1',
     status: 'QR_EXPORTED',
     packaging_date: harvestDate,
     packaging_spec: 'Túi hút chân không 500 g',
@@ -249,7 +249,7 @@ async function seedA3(tx: Tx, htx: { id: string; name: string }, a3: { id: strin
     data: {
       lot_code: A3_LOT_CODE,
       commodity: 'Chè',
-      quality_grade: 'Grade 1',
+      quality_grade: 'Loại 1',
       harvest_date: harvestDate,
       estimated_weight_kg: 25,
       actual_weight_kg: 24,

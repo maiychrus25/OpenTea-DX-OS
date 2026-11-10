@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react'
 import styles from '../lots.module.css'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
+import { withoutErrorCode } from '@/lib/api/error-message'
 
 interface Parcel {
   id: string
@@ -69,7 +70,7 @@ export function LotCreateForm({ onSuccess, onCancel }: LotCreateFormProps) {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error?.message || 'Lỗi tạo lô hàng')
+        throw new Error(withoutErrorCode(err?.error?.message || 'Lỗi tạo lô hàng'))
       }
       onSuccess()
     } catch (err: unknown) {

@@ -12,6 +12,7 @@ import { DiagnosisHistoryItem } from '@/domain/disease/ports/disease-report.port
 import { useOfflineSync } from '@/lib/hooks/useOfflineSync'
 import { displayDiseaseName } from '@/domain/disease/display-disease-name'
 import { ReportPhoto } from '@/components/features/disease/ReportPhoto'
+import { diseaseStatusLabel } from '@/domain/disease/disease-status-label'
 
 interface DiagnosisClientProps {
   initialParcels: { id: string; parcel_code: string; name: string }[]
@@ -215,9 +216,7 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
               <div key={h.id} className={styles.historyCard}>
                 <div className={styles.historyHeader}>
                   <span className={styles.historyDate}>{new Date(h.detection_date).toLocaleDateString('vi-VN')}</span>
-                  <Pill tone={h.status === 'SENT_TO_OFFICER' || h.status === 'PENDING' ? 'amber' : h.status === 'RESOLVED' ? 'green' : 'neutral'}>
-                    {h.status === 'SENT_TO_OFFICER' || h.status === 'PENDING' ? 'Chờ CBKT xem' : h.status === 'RESOLVED' ? 'Đã xử lý' : h.status}
-                  </Pill>
+                  <Pill tone={diseaseStatusLabel(h.status).tone}>{diseaseStatusLabel(h.status).label}</Pill>
                 </div>
                 <div className={styles.historyBody}>
                   {h.photo_url ? (

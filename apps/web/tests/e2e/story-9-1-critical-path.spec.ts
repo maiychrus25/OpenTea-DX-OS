@@ -171,8 +171,8 @@ test.describe('Story 9-1: FE–BE Integration Critical Path', () => {
     if (!is404) {
       // If a QR_EXPORTED lot exists, locked banner must show
       const banner = page.getByText(/đã được xác nhận và khóa/i)
-      // Only assert presence if status shown is QR_EXPORTED
-      const statusPill = page.getByText('QR_EXPORTED')
+      // Only assert presence if the status shown is the exported one ('Đã xuất QR', QR_EXPORTED)
+      const statusPill = page.getByText('Đã xuất QR', { exact: true })
       if (await statusPill.count() > 0) {
         await expect(banner).toBeVisible()
       }

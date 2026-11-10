@@ -50,6 +50,8 @@ const SCREENS: Screen[] = [
   },
   { name: 'manager-dashboard', role: 'manager', open: p => visit(p, '/manager/dashboard', /./) },
   { name: 'public-qr-trace', open: p => visit(p, '/q/TC-CHE-A3-001', 'Chè') },
+  // The page the printed QR code opens (ExportQrUseCase encodes /lot/<code>).
+  { name: 'public-lot-trace', open: p => visit(p, '/lot/TC-CHE-A3-001', 'Truy xuất nguồn gốc') },
 ]
 
 const VIEWPORTS = [
@@ -155,6 +157,13 @@ for (const screen of SCREENS) {
             }
           })
           expect(crossing).toEqual({ inside: true, crossing: 0 })
+          // The brand stays on one line ("OpenTea DX-OS" used to break after the hyphen).
+          const brandLines = await page.locator('header span', { hasText: 'OpenTea DX-OS' }).first().evaluate((span) => {
+            const range = document.createRange()
+            range.selectNodeContents(span)
+            return new Set(Array.from(range.getClientRects()).map(r => Math.round(r.top))).size
+          })
+          expect(brandLines).toBe(1)
         }
         await context.close()
       })

@@ -12,6 +12,10 @@ import { Pill } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import styles from './diseases.module.css';
 import { ReportPhoto } from '@/components/features/disease/ReportPhoto';
+import { diseaseStatusLabel } from '@/domain/disease/disease-status-label';
+
+// The queue lists pending reports only.
+const PENDING = diseaseStatusLabel('PENDING');
 import { displayDiseaseName } from '@/domain/disease/display-disease-name';
 
 export const metadata = {
@@ -60,7 +64,7 @@ export default async function OfficerDiseasesPage() {
                   <h3 className={styles.diseaseName}>{displayDiseaseName(report)}</h3>
                   <p className={styles.meta}>Nông hộ: {report.farmer_name}</p>
                 </div>
-                <Pill tone="amber">PENDING</Pill>
+                <Pill tone={PENDING.tone}>{PENDING.label}</Pill>
               </div>
 
               {report.photo_url && (

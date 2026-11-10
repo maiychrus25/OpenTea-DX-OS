@@ -64,3 +64,20 @@ test('reads no withdrawal when the farmer has no household', async () => {
   expect(db.journalActivity.findMany).not.toHaveBeenCalled()
   expect(screen.queryByText(/ngày cách ly/)).not.toBeInTheDocument()
 })
+
+test('names the weather in Vietnamese instead of printing its WMO code', async () => {
+  db.journalActivity.findMany.mockResolvedValue([])
+  db.weatherCache.findFirst.mockResolvedValue({ temperature_c: 24.5, condition: '3', humidity_pct: 80, rainfall_mm: 0 })
+  render(await FarmerDashboard())
+
+  expect(screen.getByText('U ám')).toBeInTheDocument()
+  expect(screen.queryByText('3')).not.toBeInTheDocument()
+})
+
+test('keeps a weather condition that is already text', async () => {
+  db.journalActivity.findMany.mockResolvedValue([])
+  db.weatherCache.findFirst.mockResolvedValue({ temperature_c: 24.5, condition: 'Trời nắng', humidity_pct: 80, rainfall_mm: 0 })
+  render(await FarmerDashboard())
+
+  expect(screen.getByText('Trời nắng')).toBeInTheDocument()
+})

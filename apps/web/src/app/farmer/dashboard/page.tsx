@@ -11,6 +11,7 @@ import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { Pill } from '@/components/ui'
 import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
+import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 
 import styles from './farmer-dashboard.module.css'
 
@@ -160,7 +161,7 @@ export default async function FarmerDashboard() {
                 <Cloud size={48} color="var(--primary)" />
                 <div>
                   <div className={styles.weatherTemp}>{weather.temperature_c}°C</div>
-                  <div className={styles.weatherCondition}>{weather.condition}</div>
+                  <div className={styles.weatherCondition}>{/^\d+$/.test(weather.condition) ? weatherCodeToCondition(Number(weather.condition)) : weather.condition}</div>
                 </div>
               </div>
               

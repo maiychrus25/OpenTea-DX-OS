@@ -130,13 +130,16 @@ test('một ngày của lô chè A3', async ({ browser }) => {
     await officer.getByPlaceholder('VD: Chè Trung du').fill('Chè Kim Tuyên')
     await officer.getByLabel('TC-A3 — Chè Kim Tuyên').check()
     await officer.getByRole('button', { name: 'Tạo lô hàng' }).click()
-    await expect(officer.getByText(/Thửa đất TC-A3 chưa qua thời gian cách ly\. An toàn thu hoạch từ ngày /)).toBeVisible()
+    await expect(officer.getByText(/^Thửa đất TC-A3 chưa qua thời gian cách ly\. An toàn thu hoạch từ ngày /)).toBeVisible()
+    await expect(officer.getByText(/WITHDRAWAL_NOT_PASSED/)).toHaveCount(0)
     await officer.getByRole('button', { name: 'Hủy' }).click()
   })
 
   await test.step('the diagnosis reaches the officer queue and the officer confirms it with a name', async () => {
     await officer.goto('/officer/diseases')
     await expect(officer.locator(`a[href="/officer/diseases/${reportId}"]`)).toBeVisible()
+    await expect(officer.getByText('Chờ duyệt').first()).toBeVisible()
+    await expect(officer.getByText('PENDING', { exact: true })).toHaveCount(0)
     // The seeded A3 report points at an object that is not in storage: a notice, not a broken image.
     await expect(officer.getByRole('img', { name: PHOTO_UNAVAILABLE }).first()).toBeVisible()
 
@@ -152,6 +155,7 @@ test('một ngày của lô chè A3', async ({ browser }) => {
     // The farmer now sees the officer's name in place of the AI's on the newest report, this one.
     await farmer.goto('/farmer/diagnosis')
     await expect(farmer.locator('[class*="historyCard"]').first()).toContainText(`${CONFIRMED_NAME} (`)
+    await expect(farmer.locator('[class*="historyCard"]').first()).toContainText('Đã xác nhận')
   })
 
   await test.step('the officer creates a lot of TC-A2, which has no active withdrawal, and exports its QR', async () => {
@@ -184,6 +188,14 @@ test('một ngày của lô chè A3', async ({ browser }) => {
     await expect(visitor.getByText(lotCode, { exact: true })).toBeVisible()
     await expect(visitor.getByText('Mã thửa: TC-A2', { exact: false })).toBeVisible()
     await expect(visitor.getByText('Không sử dụng thuốc BVTV').first()).toBeVisible()
+  })
+
+  await test.step('the page the printed QR opens (/lot/<code>) shows the exported lot in Vietnamese', async () => {
+    await visitor.goto(`/lot/${encodeURIComponent(lotCode)}`)
+    await expect(visitor.getByText(lotCode, { exact: true })).toBeVisible()
+    await expect(visitor.getByText('Đã xuất QR', { exact: true })).toBeVisible()
+    await expect(visitor.getByText('QR_EXPORTED')).toHaveCount(0)
+    await expect(visitor.getByText(/đã được xác nhận và khóa/i)).toBeVisible()
   })
 
   await test.step('the public trace page of the previous A3 round shows the passed withdrawal', async () => {

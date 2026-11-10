@@ -9,6 +9,7 @@ import { QrCode } from 'lucide-react'
 import { LotCreateForm } from './LotCreateForm'
 import styles from '../lots.module.css'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
+import { withoutErrorCode } from '@/lib/api/error-message'
 
 interface LotSummary {
   id: string
@@ -67,7 +68,7 @@ export function LotList() {
       const res = await fetch(`/api/lots/${lotId}/export-qr`, { method: 'POST' })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error?.message || 'Lỗi xuất QR')
+        throw new Error(withoutErrorCode(err?.error?.message || 'Lỗi xuất QR'))
       }
       const data = await res.json()
       setSuccessMsg(`Đã xuất QR thành công! Mã: ${data.data.lot_code}`)

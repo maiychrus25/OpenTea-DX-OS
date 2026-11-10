@@ -7,6 +7,7 @@ import { LotTraceData } from '@/domain/entities/lot-trace-data';
 import { Pill } from '@/components/ui/Pill/Pill';
 import styles from '../trace.module.css';
 import { BRAND_NAME } from '@/lib/brand'
+import { lotStatusLabel } from '@/domain/lot/lot-status-label'
 
 interface TraceViewProps {
   data: LotTraceData;
@@ -94,7 +95,7 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
             <span className={styles.infoLabel}>Trạng thái</span>
             <span className={styles.infoValue}>
               <Pill tone={status === 'QR_EXPORTED' ? 'green' : 'neutral'}>
-                {status}
+                {lotStatusLabel(status)}
               </Pill>
             </span>
           </div>
