@@ -279,12 +279,16 @@
   color: var(--color-ink-tertiary);
 }
 
-.historyImage {
+.historyPhoto {
+  position: relative;
   width: 100%;
   height: 120px;
+  margin-bottom: 0.5rem;
+}
+
+.historyImage {
   object-fit: cover;
   border-radius: var(--rounded-sm);
-  margin-bottom: 0.5rem;
 }
 
 .historyImagePlaceholder {

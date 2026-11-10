@@ -11,6 +11,7 @@ import { getDiagnosisHistory } from '../actions'
 import { DiagnosisHistoryItem } from '@/domain/disease/ports/disease-report.port'
 import { useOfflineSync } from '@/lib/hooks/useOfflineSync'
 import { displayDiseaseName } from '@/domain/disease/display-disease-name'
+import { ReportPhoto } from '@/components/features/disease/ReportPhoto'
 
 interface DiagnosisClientProps {
   initialParcels: { id: string; parcel_code: string; name: string }[]
@@ -220,8 +221,9 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
                 </div>
                 <div className={styles.historyBody}>
                   {h.photo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={h.photo_url} alt="Disease" className={styles.historyImage} />
+                    <div className={styles.historyPhoto}>
+                      <ReportPhoto src={h.photo_url} alt="Disease" className={styles.historyImage} />
+                    </div>
                   ) : (
                     <div className={styles.historyImagePlaceholder}>Ảnh không khả dụng</div>
                   )}

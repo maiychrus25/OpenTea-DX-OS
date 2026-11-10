@@ -3,7 +3,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client';
@@ -12,6 +11,7 @@ import { logger } from '@/lib/logger';
 import { Pill } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import styles from './diseases.module.css';
+import { ReportPhoto } from '@/components/features/disease/ReportPhoto';
 import { displayDiseaseName } from '@/domain/disease/display-disease-name';
 
 export const metadata = {
@@ -65,13 +65,7 @@ export default async function OfficerDiseasesPage() {
 
               {report.photo_url && (
                 <div className={styles.imageWrapper}>
-                  <Image 
-                    src={report.photo_url} 
-                    alt="Ảnh bệnh" 
-                    fill 
-                    unoptimized
-                    className={styles.reportImage}
-                  />
+                  <ReportPhoto src={report.photo_url} className={styles.reportImage} />
                 </div>
               )}
 

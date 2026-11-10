@@ -4,11 +4,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Pill } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import styles from './detail.module.css';
+import { ReportPhoto } from '@/components/features/disease/ReportPhoto';
 import { fetchJson } from '@/lib/api/fetch-json';
 import { UNCERTAIN_DISEASE_NAME } from '@/domain/disease/display-disease-name';
 
@@ -114,13 +114,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
           
           {report.photo_url && (
             <div className={styles.imageWrapper}>
-              <Image 
-                src={report.photo_url} 
-                alt="Ảnh bệnh" 
-                fill 
-                unoptimized
-                className={styles.reportImage}
-              />
+              <ReportPhoto src={report.photo_url} className={styles.reportImage} />
             </div>
           )}
 
