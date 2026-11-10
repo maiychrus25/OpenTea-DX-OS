@@ -1,6 +1,7 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
+import { isIP } from 'net';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter';
@@ -20,11 +21,14 @@ const registerSchema = z.object({
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const MAX_IP_LENGTH = 45; // the longest textual IPv6 address
 // shortcut: per-process and trusts the forwarded IP, move to the gateway or a shared store when web runs more than one instance
 const attemptsByIp = new Map<string, { count: number; resetAt: number }>();
 
 function isRateLimited(req: Request): boolean {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
+  const forwarded = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? '';
+  // The length check is needed because isIP accepts an IPv6 zone of any length, and the key lives for the whole window.
+  const ip = isIP(forwarded) && forwarded.length <= MAX_IP_LENGTH ? forwarded : 'unknown';
   const now = Date.now();
   // The map is in expiry order, so only expired entries at its head are visited.
   let oldest = attemptsByIp.entries().next().value;

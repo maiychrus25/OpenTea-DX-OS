@@ -55,6 +55,38 @@ describe('POST /api/register throttle', () => {
   })
 })
 
+describe('POST /api/register throttle key', () => {
+  const junk = (i: number) => `${i}-${'x'.repeat(16 * 1024)}`
+
+  test('16 KB values that are not an IP share the unknown bucket instead of creating keys', async () => {
+    keycloak(409)
+    for (let i = 0; i < 5; i++) expect((await post(junk(i))).status).toBe(400)
+    expect((await post(junk(5))).status).toBe(429)
+  })
+  test('a 16 KB IPv6 zone, which net.isIP accepts, shares the unknown bucket too', async () => {
+    keycloak(409)
+    for (let i = 0; i < 6; i++) await post(`zone-${i}`)
+    expect((await post(`fe80::1%${junk(99)}`)).status).toBe(429)
+  })
+  test('a valid IPv4 keeps its own bucket', async () => {
+    keycloak(409)
+    for (let i = 0; i < 5; i++) expect((await post('203.0.113.7')).status).toBe(400)
+    expect((await post('203.0.113.7')).status).toBe(429)
+    expect((await post('203.0.113.8')).status).toBe(400)
+  })
+  test('a valid IPv6 keeps its own bucket', async () => {
+    keycloak(409)
+    for (let i = 0; i < 5; i++) expect((await post('2001:db8::1')).status).toBe(400)
+    expect((await post('2001:db8::1')).status).toBe(429)
+    expect((await post('2001:db8::2')).status).toBe(400)
+  })
+  test('only the first forwarded element is read, after trimming', async () => {
+    keycloak(409)
+    for (let i = 0; i < 5; i++) expect((await post(' 203.0.113.9 , 10.0.0.1')).status).toBe(400)
+    expect((await post('203.0.113.9')).status).toBe(429)
+  })
+})
+
 describe('POST /api/register errors', () => {
   test('a failure that is not a ValidationError answers the generic message and never the raw text', async () => {
     global.fetch = jest.fn(async (url: string) => {
