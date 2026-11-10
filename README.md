@@ -231,12 +231,17 @@ Chạy lại seed được nhiều lần và chỉ đổi dữ liệu của `TC`
 | `officer_lb` | Cán bộ kỹ thuật | LB | `Test1234!` | Bắt buộc |
 | `farmer_lb` | Nông hộ (Ma Văn Thắng) | LB | `Test1234!` | Không |
 
-**Cài TOTP trước buổi demo:** đăng nhập lần đầu bằng từng tài khoản quản lý và cán bộ, Keycloak hiện mã QR; quét bằng ứng dụng xác thực (Google Authenticator, Microsoft Authenticator hoặc FreeOTP), nhập mã 6 số để hoàn tất. Các lần sau Keycloak hỏi mã 6 số trên điện thoại đó, nên mang theo điện thoại đã cài khi demo. Muốn cài lại: Keycloak Admin Console > realm `agrimarket` > Users > tài khoản > Credentials, xoá OTP rồi thêm lại Required action **Configure OTP**.
+**Cài TOTP trước buổi demo:** đăng nhập lần đầu bằng từng tài khoản quản lý và cán bộ, Keycloak hiện mã QR; quét bằng ứng dụng xác thực (Google Authenticator, Microsoft Authenticator hoặc FreeOTP), nhập mã 6 số để hoàn tất. Các lần sau Keycloak hỏi mã 6 số trên điện thoại đó, nên mang theo điện thoại đã cài khi demo. Muốn cài lại: Keycloak Admin Console > realm `agrimarket` > Users > tài khoản > tab **Credentials**, xoá OTP; tab **Details** > **Required user actions**, thêm **Configure OTP**.
 
 Smoke test và test trình duyệt chỉ dùng tài khoản riêng tiền tố `smoke_` (`smoke_manager_tc`, `smoke_manager_lb`, `smoke_manager_none`, `smoke_farmer_tc`): chúng đặt lại mật khẩu và bỏ TOTP của tài khoản mình dùng, nên không bao giờ đụng vào tài khoản demo.
 
 > [!NOTE]
-> Keycloak chỉ import realm khi database mới. Trên stack cũ, realm vẫn còn `manager1`, `officer1`, `farmer1` và các tài khoản `manager_tc`, `manager_lb`, `farmer_tc` do smoke cũ tạo (mật khẩu smoke, không TOTP): xoá chúng rồi tạo lại realm (xoá volume Keycloak) hoặc tạo sáu tài khoản demo trong Admin Console. `farmer_tc` và `farmer_lb` phải giữ đúng `id` trong `docker/keycloak/realm-agrimarket.json` thì mới gắn với nông hộ do seed tạo.
+> Keycloak chỉ import realm khi realm chưa có. Trên stack cũ, realm vẫn còn `manager1`, `officer1`, `farmer1` và các tài khoản `manager_tc`, `manager_lb`, `farmer_tc` do smoke cũ tạo (mật khẩu smoke, không TOTP). `farmer_tc` và `farmer_lb` phải có đúng `id` trong `docker/keycloak/realm-agrimarket.json` thì mới gắn với nông hộ do seed tạo; form tạo tài khoản của Admin Console không đặt được `id`, nên hãy dùng một trong hai cách sau:
+>
+> - **(a) Tạo lại realm:** Admin Console > realm `agrimarket` > Realm settings > **Action** > **Delete**, rồi `docker compose -f docker/docker-compose.yml restart keycloak`; lệnh khởi động có `--import-realm` nên realm thiếu sẽ được import lại từ file. Cách này xoá luôn mọi tài khoản tạo lúc chạy (thành viên được mời, tài khoản `smoke_`).
+> - **(b) Chỉ nhập tài khoản:** xoá tay `manager1`, `officer1`, `farmer1`; rồi Realm settings > **Action** > **Partial import**, chọn file `docker/keycloak/realm-agrimarket.json`, chỉ đánh dấu **Users**, chọn **Overwrite** khi tài khoản đã tồn tại (ghi đè `manager_tc`, `manager_lb`, `farmer_tc` cũ). Partial import giữ `id` cố định, mật khẩu demo và TOTP bắt buộc.
+>
+> Dữ liệu Keycloak nằm trong database `keycloak` của volume Postgres dùng chung: **không bao giờ xoá `docker_pgdata`**, xoá volume này là mất toàn bộ dữ liệu ứng dụng.
 
 Kiểm thử trên trình duyệt với stack thật (cần `make platform-up`, `make platform-smoke` và container `web` đang chạy):
 

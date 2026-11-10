@@ -77,13 +77,14 @@ TM=$(user_token smoke_manager_tc); TL=$(user_token smoke_manager_lb); TF=$(user_
 [ -n "$TM" ] && [ -n "$TL" ] && [ -n "$TF" ] && [ -n "$TN" ] && [ -n "$TX" ] || fail "data tokens empty"
 Q='{households{id}}'
 for _ in $(seq 1 60); do gql "$TM" "$Q" manager | jq -e '.data.households' >/dev/null 2>&1 && break; sleep 2; done
-# TC and LB may also hold the demo seed: exact sets are scoped to the fixture rows, the HTX check covers every row.
+# TC and LB may also hold the demo seed: exact sets are scoped to the fixture rows, the HTX check covers every row
+# (a row without an HTX shows as NULL, so it fails too).
 QF='{households(where:{id:{_in:["hh_tc_1","hh_tc_2","hh_lb_1","hh_none_1"]}}){id}}'
 TC_ID=$(psql_app "select id from htx_profiles where htx_code='TC'"); LB_ID=$(psql_app "select id from htx_profiles where htx_code='LB'")
 assert_eq "$(ids "$(gql "$TM" "$QF" manager)" '.data.households[].id')" "hh_tc_1,hh_tc_2" "smoke_manager_tc sees only TC fixture households"
 assert_eq "$(ids "$(gql "$TL" "$QF" manager)" '.data.households[].id')" "hh_lb_1" "smoke_manager_lb sees only LB fixture households"
-assert_eq "$(ids "$(gql "$TM" '{households{htx_profile_id}}' manager)" ".data.households[].htx_profile_id | select(. != \"$TC_ID\")")" "" "smoke_manager_tc sees no household of another HTX"
-assert_eq "$(ids "$(gql "$TL" '{households{htx_profile_id}}' manager)" ".data.households[].htx_profile_id | select(. != \"$LB_ID\")")" "" "smoke_manager_lb sees no household of another HTX"
+assert_eq "$(ids "$(gql "$TM" '{households{htx_profile_id}}' manager)" ".data.households[] | select(.htx_profile_id != \"$TC_ID\") | (.htx_profile_id // \"NULL\")")" "" "smoke_manager_tc sees no household of another HTX"
+assert_eq "$(ids "$(gql "$TL" '{households{htx_profile_id}}' manager)" ".data.households[] | select(.htx_profile_id != \"$LB_ID\") | (.htx_profile_id // \"NULL\")")" "" "smoke_manager_lb sees no household of another HTX"
 R=$(gql "$TF" '{households{id} parcels{household_id} lots{htx_profile_id}}')
 assert_eq "$(ids "$R" '.data.households[].id')" "hh_tc_1" "smoke_farmer_tc sees only own household"
 assert_eq "$(ids "$R" '.data.parcels[].household_id')" "hh_tc_1" "smoke_farmer_tc sees only own parcels"

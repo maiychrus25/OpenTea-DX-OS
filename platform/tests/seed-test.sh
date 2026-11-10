@@ -36,6 +36,12 @@ insert into households (id, name, phone, htx_profile_id, updated_at) values
 insert into parcels (id, parcel_code, household_id, crop_type, area_ha, status, updated_at) values ('pc_other_1', 'P-OT-001', 'hh_other_1', 'Chè Trung du', 0.5, 'TENDING', now());
 insert into lots (id, lot_code, commodity, harvest_date, htx_profile_id, updated_at) values ('lot_other_1', 'OT-LOT-001', 'Chè', now(), 'htx_other', now());
 insert into lot_parcels (id, lot_id, parcel_id) values ('lp_other_1', 'lot_other_1', 'pc_other_1');
+-- History rows of the kinds the seed deletes for its own parcels.
+insert into parcel_crop_cycles (id, parcel_id, season) values ('cc_other_1', 'pc_other_1', 'Lứa 1/2026');
+insert into journal_entries (id, parcel_id, entry_date, activity_type, performed_by, submitted_role, updated_at) values ('je_other_1', 'pc_other_1', now(), 'SPRAYING', 'Household OT 1', 'FARMER', now());
+insert into journal_activities (id, journal_entry_id, activity_detail, withdrawal_days, safe_harvest_date) values ('ja_other_1', 'je_other_1', 'Phun thuốc', 7, now() + interval '7 days');
+insert into disease_reports (id, parcel_id, household_id, detected_by_id, detection_date, photo_url, photo_minio_key, ai_disease_name, ai_confidence, updated_at)
+  values ('dr_other_1', 'pc_other_1', 'hh_other_1', 'farmer-ot', now(), 'para/OT/x.jpg', 'para/OT/x.jpg', 'Bệnh chấm xám', 0.8, now());
 SQL
 OTHER_SQL="select md5(string_agg(r, '|' order by r)) from (
   select to_jsonb(t)::text r from htx_profiles t where id = 'htx_other'
@@ -43,7 +49,11 @@ OTHER_SQL="select md5(string_agg(r, '|' order by r)) from (
   union all select to_jsonb(t)::text from parcels t where id = 'pc_other_1'
   union all select to_jsonb(t)::text from lots t where id = 'lot_other_1'
   union all select to_jsonb(t)::text from lot_parcels t where id = 'lp_other_1'
-  union all select to_jsonb(t)::text from weather_cache t where parcel_id = 'pc_other_1') s"
+  union all select to_jsonb(t)::text from weather_cache t where parcel_id = 'pc_other_1'
+  union all select to_jsonb(t)::text from parcel_crop_cycles t where id = 'cc_other_1'
+  union all select to_jsonb(t)::text from journal_entries t where id = 'je_other_1'
+  union all select to_jsonb(t)::text from journal_activities t where id = 'ja_other_1'
+  union all select to_jsonb(t)::text from disease_reports t where id = 'dr_other_1') s"
 OTHER_BEFORE=$(sql -c "$OTHER_SQL")
 
 echo "[seed: run twice]"
@@ -86,10 +96,12 @@ assert_eq "$(a3 "(select count(*) from journal_entries j where j.parcel_id = x.i
 assert_eq "$(a3 "(select count(*) from journal_entries j join journal_activities a on a.journal_entry_id = j.id
   where j.parcel_id = x.id and j.activity_type = 'SPRAYING' and j.status = 'APPROVED' and a.withdrawal_days = 7
   and a.safe_harvest_date > now() and a.safe_harvest_date <= now() + interval '7 days')")" "1" "A3 has a spraying entry whose 7-day withdrawal is still active"
-assert_eq "$(a3 "(select l.status || ',' || (l.public_page_data->>'lot_code' = l.lot_code) || ',' || (l.public_page_data->>'is_harvest_safe') || ',' || (l.qr_image_url like 'data:image/png;base64,%')
-  || ',' || (l.harvest_date >= (select max(harvested_at) from parcel_crop_cycles c where c.parcel_id = x.id) - interval '1 day')
-  from lots l join lot_parcels lp on lp.lot_id = l.id where lp.parcel_id = x.id)")" "QR_EXPORTED,true,true,true,true" \
-  "the previous round's lot is exported with a public trace snapshot and a QR image"
+assert_eq "$(a3 "(select l.status || ',' || (l.public_page_data->>'status') || ',' || (l.public_page_data->>'lot_code' = l.lot_code) || ',' || (l.public_page_data->>'is_harvest_safe')
+  || ',' || (l.qr_image_url like 'data:image/png;base64,%' and l.public_page_data->>'qr_image_url' = l.qr_image_url)
+  || ',' || (((select max(harvested_at) from parcel_crop_cycles c where c.parcel_id = x.id) at time zone 'UTC' at time zone 'Asia/Ho_Chi_Minh')::date
+     <= (l.harvest_date at time zone 'UTC' at time zone 'Asia/Ho_Chi_Minh')::date)
+  from lots l join lot_parcels lp on lp.lot_id = l.id where lp.parcel_id = x.id)")" "QR_EXPORTED,QR_EXPORTED,true,true,true,true" \
+  "the previous round's lot is exported, harvested by its lot day (Vietnam time), with an exported snapshot and its QR image"
 assert_eq "$(a3 "(select count(*) from disease_reports d where d.parcel_id = x.id and d.status = 'PENDING' and d.household_id = x.household_id)")" "1" \
   "A3 has one pending disease report"
 [ -n "$FARMER_TC_ID" ] || fail "farmer_tc has no fixed id in the realm"

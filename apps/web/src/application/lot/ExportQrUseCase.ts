@@ -78,6 +78,10 @@ export class ExportQrUseCase {
       }
     }
 
+    // The snapshot was read before the export: store the values the public page shows for an exported lot.
+    traceData.status = 'QR_EXPORTED'
+    traceData.qr_image_url = qrImageUrl
+
     const result = await this.lotPort.exportQr(lotId, traceData, qrImageUrl, certificateKeys)
 
     // Background task: Auto-archive to P.A.R.A

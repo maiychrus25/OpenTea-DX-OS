@@ -216,7 +216,7 @@ async function seedA3(tx: Tx, htx: { id: string; name: string }, a3: { id: strin
   const exportedAt = ago(29)
   const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '')
   const qrImageUrl = await QRCode.toDataURL(`${baseUrl}/lot/${encodeURIComponent(A3_LOT_CODE)}`, { margin: 1 })
-  // Same shape as the snapshot ExportQrUseCase stores (LotTraceData).
+  // Same shape as the snapshot ExportQrUseCase stores (LotTraceData); status and qr_image_url hold the exported values the trace page expects.
   const snapshot = {
     lot_code: A3_LOT_CODE,
     commodity: 'Chè',

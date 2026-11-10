@@ -197,6 +197,26 @@ describe('ExportQrUseCase', () => {
     expect(traceData.certificate_keys).toEqual(['cert1.pdf'])
   })
 
+  it('stores the snapshot with the exported status and the generated QR image', async () => {
+    jest.spyOn(lotPort, 'findById').mockResolvedValue(READY_LOT)
+    // The trace repository reads the lot before the export, so its status is still READY and it has no QR yet.
+    jest.spyOn(traceRepo, 'getLotByCode').mockResolvedValue({
+      lot_code: 'LOT-123',
+      status: 'READY',
+      qr_image_url: null,
+      is_harvest_safe: true,
+      parcels: [{ parcel_code: 'P1', status: 'HARVESTED' }],
+      certificate_keys: [],
+    } as unknown as LotTraceData)
+    const spyExportQr = jest.spyOn(lotPort, 'exportQr')
+
+    await useCase.execute('lot-1')
+
+    const snapshot = spyExportQr.mock.calls[0][1]
+    expect(snapshot.status).toBe('QR_EXPORTED')
+    expect(snapshot.qr_image_url).toBe('https://minio.example.com/qr.png')
+  })
+
   it('exports successfully and merges certificate_keys', async () => {
     jest.spyOn(lotPort, 'findById').mockResolvedValue(READY_LOT)
     
