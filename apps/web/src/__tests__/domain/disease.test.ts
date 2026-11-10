@@ -5,11 +5,11 @@ import { selectDiseaseModel } from '@/domain/disease/select-disease-model'
 import { displayDiseaseName, UNCERTAIN_DISEASE_NAME } from '@/domain/disease/display-disease-name'
 
 describe('selectDiseaseModel', () => {
-  test.each(['Chè Trung du', 'CHÈ', 'Tea', 'Che shan tuyet', 'chè', 'Green tea'])('%s selects the tea model', (crop) => {
+  test.each(['Chè Trung du', 'CHÈ', 'Tea', 'Che shan tuyet', 'chè', 'Green tea', 'Chè_Shan', 'chè-tuyết'])('%s selects the tea model', (crop) => {
     expect(selectDiseaseModel(crop)).toBe('tea')
   })
 
-  test.each(['Lúa', 'Rau', 'Lúa ST25', 'Cherry', 'Steak', '', '   '])('%j selects the general model', (crop) => {
+  test.each(['Lúa', 'Rau', 'Lúa ST25', 'Cherry', 'Steak', '', '   ', 'Chế phẩm', 'Chẻ tre', 'Chê', 'CHẾ PHẨM'])('%j selects the general model', (crop) => {
     expect(selectDiseaseModel(crop)).toBe('general')
   })
 

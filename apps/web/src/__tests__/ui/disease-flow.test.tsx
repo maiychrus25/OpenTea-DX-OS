@@ -35,19 +35,24 @@ describe('officer review form', () => {
     return fetchMock
   }
 
+  test('labels the confirmed name as required to approve', async () => {
+    renderWith('Thán thư')
+    expect(await screen.findByLabelText('Tên bệnh đã xác nhận (Bắt buộc khi Duyệt)')).toBeInTheDocument()
+  })
+
   test('pre-fills the confirmed name with the AI name', async () => {
     renderWith('Thán thư')
-    expect(await screen.findByLabelText('Tên bệnh đã xác nhận')).toHaveValue('Thán thư')
+    expect(await screen.findByLabelText(/^Tên bệnh đã xác nhận/)).toHaveValue('Thán thư')
   })
 
   test('leaves the confirmed name empty when the AI was uncertain', async () => {
     renderWith('Không xác định')
-    expect(await screen.findByLabelText('Tên bệnh đã xác nhận')).toHaveValue('')
+    expect(await screen.findByLabelText(/^Tên bệnh đã xác nhận/)).toHaveValue('')
   })
 
   test('refuses to approve without a confirmed name, in Vietnamese, and sends nothing', async () => {
     const fetchMock = renderWith('Không xác định')
-    const input = await screen.findByLabelText('Tên bệnh đã xác nhận')
+    const input = await screen.findByLabelText(/^Tên bệnh đã xác nhận/)
     fireEvent.change(screen.getByLabelText(/Nhập hướng dẫn/), { target: { value: 'Cắt lá bệnh' } })
 
     fireEvent.click(screen.getByRole('button', { name: 'Phê duyệt' }))
@@ -59,7 +64,7 @@ describe('officer review form', () => {
 
   test('sends the confirmed name with the approval', async () => {
     const fetchMock = renderWith('Thán thư')
-    const input = await screen.findByLabelText('Tên bệnh đã xác nhận')
+    const input = await screen.findByLabelText(/^Tên bệnh đã xác nhận/)
     fireEvent.change(input, { target: { value: 'Đốm nâu' } })
     fireEvent.change(screen.getByLabelText(/Nhập hướng dẫn/), { target: { value: 'Cắt lá bệnh' } })
     fetchMock.mockResolvedValueOnce(respond({ success: true }))
@@ -102,6 +107,20 @@ describe('farmer diagnosis screen', () => {
     expect(screen.getByText('Đã gửi cán bộ kỹ thuật xem')).toBeInTheDocument()
   })
 
+  test('a confident result shows its confidence as a percentage and no low-confidence warning', async () => {
+    await diagnose({ report_id: 'r1', disease_name: 'Lá khoẻ', confidence_score: 0.988, uncertain: false })
+
+    expect(await screen.findByText('98.8%')).toBeInTheDocument()
+    expect(screen.queryByText(/Độ tự tin thấp/)).not.toBeInTheDocument()
+  })
+
+  test('a low-confidence result shows the warning', async () => {
+    await diagnose({ report_id: 'r1', disease_name: 'Thán thư', confidence_score: 0.41, uncertain: false })
+
+    expect(await screen.findByText('41.0%')).toBeInTheDocument()
+    expect(screen.getByText(/Độ tự tin thấp/)).toBeInTheDocument()
+  })
+
   test('history shows the confirmed name over the AI name', () => {
     const history: DiagnosisHistoryItem[] = [
       {
@@ -117,7 +136,7 @@ describe('farmer diagnosis screen', () => {
     ]
     render(<DiagnosisClient initialParcels={parcels} initialHistory={history} />)
 
-    expect(screen.getByText(/Đốm nâu/)).toBeInTheDocument()
+    expect(screen.getByText('Đốm nâu (80.0%)')).toBeInTheDocument()
     expect(screen.queryByText(/Thán thư/)).not.toBeInTheDocument()
   })
 })

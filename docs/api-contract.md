@@ -478,7 +478,7 @@ parcel_id: UUID (optional)
 
 > **AI Invariant:** Response contains disease NAME + CONFIDENCE only. No treatment recommendation.
 
-The route asks disease-api for `model=tea` when the parcel's `crop_type` names `chè`/`tea` as a word (any case, with or without diacritics, e.g. `Che shan tuyet`), otherwise `model=general`. When the result is `uncertain`, `disease_name` is `Không xác định`. Every result, uncertain or not, is stored as a `PENDING` report and broadcast to the HTX's officers; the farmer screen says `Đã gửi cán bộ kỹ thuật xem`. A 503 from the tea model is not retried on the general model: the route answers 503 `AI_UNAVAILABLE` and no report is stored.
+The route asks disease-api for `model=tea` when the parcel's `crop_type` names `chè`/`tea` as a word (any case; `che` without the grave accent also counts, e.g. `Che shan tuyet`, but `chế`/`chẻ`/`chê` do not; `_` and `-` separate words), otherwise `model=general`. When the result is `uncertain`, `disease_name` is `Không xác định`. Every result, uncertain or not, is stored as a `PENDING` report and broadcast to the HTX's officers; the farmer screen says `Đã gửi cán bộ kỹ thuật xem`. A 503 from the tea model is not retried on the general model: the route answers 503 `AI_UNAVAILABLE` and no report is stored.
 
 **Roles:** farmer, officer
 
@@ -494,7 +494,7 @@ Officer approves or rejects a pending disease report of their HTX (another HTX's
 }
 ```
 
-`status` is `CONFIRMED` or `REJECTED`. For `CONFIRMED`, `treatment_recommendation` and `confirmed_diagnosis` (max 200 characters, trimmed) are required and non-empty; a missing `confirmed_diagnosis` answers 400 `VALIDATION_ERROR` "Vui lòng nhập tên bệnh đã xác nhận trước khi duyệt.". For `REJECTED` both are optional and no confirmed name is stored. Screens show `confirmed_diagnosis` instead of the AI name once it is set.
+`status` is `CONFIRMED` or `REJECTED`. For `CONFIRMED`, `treatment_recommendation` and `confirmed_diagnosis` (trimmed, then at most 200 characters; longer answers 400 "Tên bệnh tối đa 200 ký tự.") are required and non-empty; a missing `confirmed_diagnosis` answers 400 `VALIDATION_ERROR` "Vui lòng nhập tên bệnh đã xác nhận trước khi duyệt.". For `REJECTED` both are optional and no confirmed name is stored. Screens show `confirmed_diagnosis` instead of the AI name once it is set.
 
 **Response:** `{ "success": true }`
 

@@ -16,7 +16,7 @@ import { z } from 'zod';
 const reviewSchema = z.object({
   status: z.enum(['CONFIRMED', 'REJECTED']),
   treatment_recommendation: z.string().optional(),
-  confirmed_diagnosis: z.string().max(200).optional()
+  confirmed_diagnosis: z.string().trim().max(200, 'Tên bệnh tối đa 200 ký tự.').optional()
 });
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
@@ -33,8 +33,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const parsed = reviewSchema.safeParse(body);
     
     if (!parsed.success) {
+      const nameIssue = parsed.error.issues.find((issue) => issue.path[0] === 'confirmed_diagnosis');
       return NextResponse.json(
-        { error: { code: 'VALIDATION_ERROR', message: 'Invalid input data' } },
+        { error: { code: 'VALIDATION_ERROR', message: nameIssue?.message ?? 'Invalid input data' } },
         { status: 400 }
       );
     }

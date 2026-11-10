@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tea disease flow in the web app**: a parcel whose crop names `chè`/`tea` is diagnosed with the tea model, any other with the general one. An uncertain result is stored as `Không xác định`, and every result still goes to the officers; the farmer screen says `Đã gửi cán bộ kỹ thuật xem` instead of presenting a final diagnosis. A 503 from the tea model is an outage (503 `AI_UNAVAILABLE`), never a fallback to the general model
 - **Officer's confirmed diagnosis**: the review form has a **Tên bệnh đã xác nhận** field, pre-filled with the AI name (empty when uncertain). `PUT /api/officer/diseases/[id]/review` takes `confirmed_diagnosis`, required when approving, and stores it in `confirmed_diagnosis`; the farmer history, officer lists, soil-health screen, notification and archived report show it over the AI name
 
+### Fixed
+- **Farmer diagnosis confidence**: the result and history showed the 0–1 confidence as a percentage without scaling (`0.988` as `1.0%`), and the low-confidence warning always showed. They now show `98.8%` and warn only below 70%
+
 ---
 
 ## [1.6.0] - 2026-11-10

@@ -56,11 +56,20 @@ describe('PUT /api/officer/diseases/[id]/review', () => {
     })
   })
 
-  test('a confirmed diagnosis over 200 characters answers 400 before the use case runs', async () => {
+  test('a confirmed diagnosis over 200 characters answers 400 in Vietnamese before the use case runs', async () => {
     const res = await put({ status: 'CONFIRMED', treatment_recommendation: 'Cắt lá', confirmed_diagnosis: 'x'.repeat(201) })
 
     expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({ error: { code: 'VALIDATION_ERROR', message: 'Tên bệnh tối đa 200 ký tự.' } })
     expect(execute).not.toHaveBeenCalled()
+  })
+
+  test('the 200-character limit applies after trimming', async () => {
+    const name = 'x'.repeat(200)
+    const res = await put({ status: 'CONFIRMED', treatment_recommendation: 'Cắt lá', confirmed_diagnosis: `   ${name}   ` })
+
+    expect(res.status).toBe(200)
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({ confirmed_diagnosis: name }))
   })
 
   test('a farmer cannot review', async () => {

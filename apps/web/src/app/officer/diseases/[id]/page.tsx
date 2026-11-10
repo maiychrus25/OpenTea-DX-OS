@@ -155,7 +155,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
         <div className={styles.card}>
           <div className={styles.sectionTitle}>Phản hồi & Hướng dẫn điều trị</div>
           <div className={styles.formGroup}>
-            <label className={styles.label} htmlFor="confirmed-diagnosis">Tên bệnh đã xác nhận</label>
+            <label className={styles.label} htmlFor="confirmed-diagnosis">Tên bệnh đã xác nhận (Bắt buộc khi Duyệt)</label>
             <input
               id="confirmed-diagnosis"
               type="text"

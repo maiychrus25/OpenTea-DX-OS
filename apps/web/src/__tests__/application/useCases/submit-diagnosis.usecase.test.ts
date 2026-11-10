@@ -18,6 +18,7 @@ import { StoragePort, UploadResult } from '@/domain/disease/ports/storage.port'
 import { ParcelPort, ParcelSummary } from '@/domain/farm/ports/ParcelPort'
 import { DiseaseReportPort } from '@/domain/disease/ports/disease-report.port'
 import { NotificationPort } from '@/domain/ports/notification-port'
+import { CoreUnavailableError } from '@/domain/errors'
 
 // ── Mock helpers ───────────────────────────────────────────────────────────────
 
@@ -295,6 +296,18 @@ describe('SubmitDiagnosisUseCase — tea model', () => {
     )
     expect(mocks.notificationPort.broadcastDiseaseReport).toHaveBeenCalledWith('Nguyễn Văn An', 'Không xác định', 'P-A-001')
     expect(result).toEqual(expect.objectContaining({ disease_name: 'Không xác định', uncertain: true }))
+  })
+
+  it('a tea model outage stores no report, sends no broadcast and never retries on the general model', async () => {
+    const { mocks, useCase } = teaMocks({ disease_name: null, confidence_score: 0, uncertain: false })
+    mocks.diseasePort.predict.mockRejectedValue(new CoreUnavailableError())
+
+    await expect(useCase.execute(command)).rejects.toBeInstanceOf(CoreUnavailableError)
+
+    expect(mocks.diseasePort.predict).toHaveBeenCalledTimes(1)
+    expect(mocks.diseasePort.predict).toHaveBeenCalledWith(DUMMY_BLOB, 'tea')
+    expect(mocks.diseaseReportPort.save).not.toHaveBeenCalled()
+    expect(mocks.notificationPort.broadcastDiseaseReport).not.toHaveBeenCalled()
   })
 
   it('sends a confident "healthy" tea result to the officers too', async () => {
