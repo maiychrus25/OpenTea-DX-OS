@@ -71,12 +71,14 @@ along with their licenses, to ensure full transparency and license compliance.
 
 | Package | Version | License | Purpose |
 |---------|---------|---------|---------|
-| [fastapi](https://github.com/tiangolo/fastapi) | latest | MIT | Python web framework |
-| [uvicorn](https://github.com/encode/uvicorn) | latest | BSD-3-Clause | ASGI server |
-| [python-multipart](https://github.com/andrew-d/python-multipart) | latest | Apache-2.0 | File upload support |
-| [Pillow](https://github.com/python-pillow/Pillow) | latest | MIT-CMU | Image processing |
-| [numpy](https://github.com/numpy/numpy) | latest | BSD-3-Clause | Numerical computation |
-| [tensorflow-cpu](https://github.com/tensorflow/tensorflow) | latest | Apache-2.0 | Machine learning inference |
+| [fastapi](https://github.com/tiangolo/fastapi) | 0.162.2 | MIT | Python web framework |
+| [uvicorn](https://github.com/encode/uvicorn) | 0.54.0 | BSD-3-Clause | ASGI server |
+| [python-multipart](https://github.com/andrew-d/python-multipart) | 0.0.33 | Apache-2.0 | File upload support |
+| [Pillow](https://github.com/python-pillow/Pillow) | 13.0.0 | MIT-CMU | Image processing |
+| [numpy](https://github.com/numpy/numpy) | 2.4.6 | BSD-3-Clause | Numerical computation |
+| [tensorflow](https://github.com/tensorflow/tensorflow) | 2.21.0 | Apache-2.0 | Machine learning inference (wheels for Linux arm64 and x86_64) |
+| [keras](https://github.com/keras-team/keras) | 3.15.1 | Apache-2.0 | Model loading (pulled by tensorflow, pinned) |
+| pytest, httpx2 (`requirements-dev.txt`; httpx2 is the test client Starlette 1.10 requires) | 9.1.1, 2.16.0 | MIT, BSD-3-Clause | Disease API tests |
 
 ---
 
