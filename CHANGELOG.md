@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.6.0] - 2026-11-10
+
 ### Added
 - **Identity-aware core access**: the web app keeps the Keycloak access and refresh tokens server-side in the encrypted session cookie and refreshes them in the middleware when under 30 seconds remain; a failed refresh sends the user to `/login`. `/api/auth/session` exposes neither token
 - **Tenant isolation**: `requireTenant()` resolves the caller's HTX from the `htx_code` claim, answering 403 `NO_HTX` when it is missing or unknown; `TenantGuard` answers 404 before any write by ID on a record of another HTX. Notifications sent to a whole HTX now carry `htx_profile_id`
@@ -278,7 +282,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.6.0
 [1.5.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.5.0
 [1.4.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.4.0
 [1.3.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.3.0
