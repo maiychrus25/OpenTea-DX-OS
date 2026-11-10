@@ -135,7 +135,7 @@ export function MarketSummaryWidget({ commodity = 'Chè' }: { commodity?: string
         </p>
       )}
       <div className={styles.sources}>
-        <SourceBox count={2} sources={['Frankfurter', marketRow?.source ?? 'USDA']} />
+        <SourceBox count={2} sources={['Frankfurter', marketRow?.source ?? 'Chưa có dữ liệu']} />
       </div>
     </aside>
   );

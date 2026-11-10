@@ -31,6 +31,12 @@ describe('MarketSummaryWidget', () => {
     expect(screen.getByText(/giá mô phỏng/)).toBeInTheDocument()
   })
 
+  it('names no source it has no data from', () => {
+    ;(useSWR as jest.Mock).mockReturnValue({ data: { data: [] } })
+    render(<MarketSummaryWidget />)
+    expect(screen.queryByText(/USDA/)).not.toBeInTheDocument()
+  })
+
   it('does not label a price from a real source', () => {
     serve({ source: 'COMTRADE', commodity: 'Tea', metric: 'export_value_to_world', value: 250, unit: 'million_USD' })
     render(<MarketSummaryWidget />)

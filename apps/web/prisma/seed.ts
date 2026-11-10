@@ -356,29 +356,13 @@ async function main() {
   // --- Market Data Baseline Seed ---------------------------------------------
   const marketSeeds = [
     {
-      // A made-up demo price, so it carries the simulated source and the UI labels it.
+      // Made-up demo figures carry only the simulated source (labelled in the UI), never a real agency's name.
       source: SIMULATED_MARKET_SOURCE,
       commodity: 'Tea',
       metric: 'Giá chè búp khô Thái Nguyên',
       value: 200000,
       unit: 'VND/kg',
       period: '2026-11',
-    },
-    {
-      source: 'FAOSTAT',
-      commodity: 'Agricultural Products',
-      metric: 'crop_production_index',
-      value: 104.5,
-      unit: 'index',
-      period: '2026',
-    },
-    {
-      source: 'FAOSTAT',
-      commodity: 'Fertilizer',
-      metric: 'fertilizer_consumption',
-      value: 320,
-      unit: 'kg/ha arable land',
-      period: '2026',
     },
   ]
 
@@ -416,8 +400,6 @@ async function main() {
         bulletin_vi: 'Bản tin thị trường chè Thái Nguyên: Nhu cầu chè búp khô duy trì ổn định. Giá chè búp khô quanh mức 200.000 đ/kg (giá mô phỏng). HTX cần tuân thủ lịch thu hái và đảm bảo thời gian cách ly theo tiêu chuẩn VietGAP.',
         sources_json: [
           { source: SIMULATED_MARKET_SOURCE, metric: 'Giá chè búp khô Thái Nguyên', value: 200000, date: '2026-11-01' },
-          { source: 'WTO', metric: 'import_tariff', value: 35, date: '2026-08-15' },
-          { source: 'Sở NN&PTNT', metric: 'production_volume', value: 260000, date: '2026-08-30' },
         ],
         model_used: 'gemini-1.5-pro',
         is_latest: true,

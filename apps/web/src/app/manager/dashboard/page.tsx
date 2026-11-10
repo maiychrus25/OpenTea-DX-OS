@@ -68,6 +68,27 @@ const METRIC_VN: Record<string, string> = {
   'consumer_price_index':      'Chỉ số giá tiêu dùng',
 }
 
+const PRICE_SELECT = { commodity: true, metric: true, value: true, unit: true, source: true, fetched_at: true } as const
+const PRICE_COUNT = 3
+
+// Tea first, topped up with the newest other commodities when fewer than PRICE_COUNT tea rows exist.
+async function latestPrices() {
+  const tea = await prisma.marketData.findMany({
+    where: { commodity: 'Tea' },
+    orderBy: { fetched_at: 'desc' },
+    take: PRICE_COUNT,
+    select: PRICE_SELECT,
+  })
+  if (tea.length >= PRICE_COUNT) return tea
+  const others = await prisma.marketData.findMany({
+    where: { commodity: { not: 'Tea' } },
+    orderBy: { fetched_at: 'desc' },
+    take: PRICE_COUNT - tea.length,
+    select: PRICE_SELECT,
+  })
+  return [...tea, ...others]
+}
+
 function toMetricVN(metric: string | undefined | null): string {
   if (!metric) return ''
   return METRIC_VN[metric] ?? metric.replace(/_/g, ' ')
@@ -164,11 +185,7 @@ export default async function ManagerDashboard() {
       prisma.lot.count({
         where: { htx_profile_id: profileId, status: 'DRAFT' }
       }),
-      prisma.marketData.findMany({
-        orderBy: { fetched_at: 'desc' },
-        take: 3,
-        select: { commodity: true, metric: true, value: true, unit: true, source: true, fetched_at: true }
-      })
+      latestPrices()
     ])
 
     stats.totalHa = areaAgg._sum.area_ha || 0

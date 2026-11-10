@@ -119,7 +119,7 @@ model Household {
 
 model Parcel {
   id                     String       @id @default(cuid())
-  parcel_code            String       @unique // auto-generated e.g. "P-HTX-MD2-001"
+  parcel_code            String       @unique // auto-generated e.g. "P-TC-001"
   household_id           String
   household              Household    @relation(fields: [household_id], references: [id])
   crop_type              String

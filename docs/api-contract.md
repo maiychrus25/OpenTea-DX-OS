@@ -23,19 +23,19 @@ Returns current session (NextAuth built-in).
 ### `GET /api/bulletin`
 Returns the latest bulletin per commodity.
 
-**Query:** `?commodity=rice` (optional, defaults to HTX primary crop)
+**Query:** `?commodity=Tea` (optional; defaults to the HTX's first crop: `Tea` for any tea variety such as `Chè Trung du`, otherwise its English commodity name)
 
 **Response:**
 ```json
 {
   "data": {
     "id": "uuid",
-    "commodity": "rice",
-    "bulletin_vi": "Thị trường lúa gạo tuần này...",
+    "commodity": "Tea",
+    "bulletin_vi": "Thị trường chè Thái Nguyên tuần này...",
     "sources_json": [
-      { "source": "USDA", "metric": "export_volume", "value": 850, "unit": "USD/tonne", "date": "2026-08-01" }
+      { "source": "COMTRADE", "metric": "export_value_to_world", "value": 250, "date": "2025" }
     ],
-    "audio_minio_key": "bulletins/rice-2026-08-04.mp3",
+    "audio_minio_key": "bulletins/tea-2026-08-04.mp3",
     "generated_at": "2026-08-04T10:00:00Z",
     "model_used": "mistral"
   }
@@ -51,12 +51,12 @@ Generate TTS audio for given text (on-demand, Piper).
 
 **Request:**
 ```json
-{ "text": "Thị trường lúa gạo tuần này...", "lang": "vi" }
+{ "text": "Thị trường chè Thái Nguyên tuần này...", "lang": "vi" }
 ```
 
 **Response:**
 ```json
-{ "data": { "audio_url": "/api/tts/stream?key=bulletins/rice-2026-08-04.mp3" } }
+{ "data": { "audio_url": "/api/tts/stream?key=bulletins/tea-2026-08-04.mp3" } }
 ```
 Or stream binary audio directly (Content-Type: audio/wav).
 
@@ -72,7 +72,7 @@ Send a message to the Chatbot (Ollama/Groq RAG).
 **Request:**
 ```json
 {
-  "message": "Giá xuất khẩu gạo tháng 8 so với tháng 7 thế nào?",
+  "message": "Xuất khẩu chè Việt Nam năm nay thế nào?",
   "type": "market",
   "history": [
     { "role": "user", "content": "..." },
@@ -86,8 +86,8 @@ Send a message to the Chatbot (Ollama/Groq RAG).
 ```json
 {
   "data": {
-    "reply": "Theo dữ liệu USDA ngày 01/08, giá FOB xuất khẩu gạo Việt Nam...",
-    "sources": ["USDA PSD 2026-08-01", "Frankfurter 2026-08-04"],
+    "reply": "Theo UN Comtrade (HS 0902), kim ngạch xuất khẩu chè Việt Nam năm 2025...",
+    "sources": ["COMTRADE 2025", "Frankfurter 2026-08-04"],
     "model": "mistral"
   }
 }

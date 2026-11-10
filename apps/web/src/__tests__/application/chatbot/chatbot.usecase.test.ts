@@ -147,5 +147,7 @@ describe('ChatbotUseCase market context', () => {
     expect(lines.find(l => l.startsWith(`- [${SIMULATED_MARKET_SOURCE}]`))).toContain('giá mô phỏng')
     expect(lines.find(l => l.startsWith('- [COMTRADE]'))).not.toContain('giá mô phỏng')
     expect(system).toMatch(/ghi rõ "giá mô phỏng"/)
+    expect(system).toContain('--- DỮ LIỆU THỊ TRƯỜNG')
+    expect(system).not.toContain('THỰC TẾ')
   })
 })

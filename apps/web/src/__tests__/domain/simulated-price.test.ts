@@ -35,6 +35,10 @@ describe('simulated market prices', () => {
     expect(tea?.json.value).toBeGreaterThan(0)
   })
 
+  it('bulletin-synthesis tells the model which source is simulated', () => {
+    expect(JSON.stringify(nodeOf('bulletin-synthesis.json', 'Ask Ollama'))).toContain(SIMULATED_MARKET_SOURCE)
+  })
+
   it('the seed uses the same simulated source', () => {
     const seed = fs.readFileSync(path.resolve(__dirname, '../../../prisma/seed.ts'), 'utf8')
     expect(seed).toContain(`const SIMULATED_MARKET_SOURCE = '${SIMULATED_MARKET_SOURCE}'`)
