@@ -6,7 +6,7 @@
 //   E2E_CORE=1 E2E_TEA_TOUR=installed E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/story/tea-tour.spec.ts --project=chromium --no-deps
 // After `./dxos remove tea-tour`, the same command with E2E_TEA_TOUR=removed checks that the app is gone. The spec never
 // installs or removes the app itself: CI and the operator run ./dxos between the two runs.
-import { test, expect, Page } from '@playwright/test'
+import { test, expect, Browser, BrowserContext, BrowserContextOptions, Page } from '@playwright/test'
 import { SMOKE_PASSWORD, keycloakLogin } from '../helpers/keycloak-login'
 
 test.skip(!process.env.E2E_CORE, 'Needs the real stack: set E2E_CORE=1')
@@ -24,11 +24,22 @@ const inTwoDays = () => `${new Date(Date.now() + 7 * 3600e3 + 2 * 86400e3).toISO
 test.describe('tea-tour installed', () => {
   test.skip(process.env.E2E_TEA_TOUR !== 'installed', 'Needs ./dxos install miniapps/tea-tour and E2E_TEA_TOUR=installed')
 
+  // Each role gets its own context; all are closed after the test, also when it fails.
+  const contexts: BrowserContext[] = []
+  const newPage = async (browser: Browser, options: BrowserContextOptions) => {
+    const context = await browser.newContext(options)
+    contexts.push(context)
+    return context.newPage()
+  }
+  test.afterEach(async () => {
+    await Promise.all(contexts.splice(0).map(context => context.close()))
+  })
+
   test('manager creates a tour, a guest books on a phone, the manager confirms, the guide sees 2 guests', async ({ browser }) => {
     const title = `Tour hái chè sáng sớm ${Date.now()}`
 
     // The manager opens the app from the menu and creates a tour with a TC household as guide.
-    const manager = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage()
+    const manager = await newPage(browser, { viewport: { width: 1280, height: 800 } })
     await keycloakLogin(manager, 'smoke_manager_tc', SMOKE_PASSWORD, 'manager')
     await menuLink(manager, MENU_ITEM).first().click()
     await manager.waitForURL('**/manager/apps/tea-tour')
@@ -43,7 +54,7 @@ test.describe('tea-tour installed', () => {
     await expect(managerApp.locator('h1')).toContainText(title)
 
     // A guest on a phone books 2 seats on the public page, with no account, and sees the booking code.
-    const guest = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })).newPage()
+    const guest = await newPage(browser, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
     await guest.goto('/apps/tea-tour/public/TC')
     const tour = guest.getByRole('form', { name: `Đặt chỗ ${title}` })
     await tour.locator('input[name=guest_name]').fill('Nguyễn Thị Hoa')
@@ -66,7 +77,7 @@ test.describe('tea-tour installed', () => {
     await expect(managerApp.locator('main')).toContainText('Đã xác nhận 2 khách')
 
     // The guide farmer sees the tour with its 2 confirmed guests.
-    const farmer = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage()
+    const farmer = await newPage(browser, { viewport: { width: 1280, height: 800 } })
     await keycloakLogin(farmer, 'smoke_farmer_tc', SMOKE_PASSWORD, 'farmer')
     await menuLink(farmer, GUIDE_MENU_ITEM).first().click()
     await farmer.waitForURL('**/farmer/apps/tea-tour/guide')
