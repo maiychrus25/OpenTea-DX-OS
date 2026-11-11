@@ -300,21 +300,6 @@ table {
   border-radius: var(--rounded-md);
 }
 
-/* Narrow screens: the table scrolls inside its own box instead of squeezing every column. Cells wrap only
-   between words here; with body's overflow-wrap: anywhere the table would shrink to the box, breaking words. */
-@media (max-width: 640px) {
-  table {
-    display: block;
-    max-width: 100%;
-    overflow-x: auto;
-  }
-
-  th,
-  td {
-    overflow-wrap: normal;
-  }
-}
-
 th,
 td {
   padding: var(--spacing-2) var(--spacing-3);
@@ -340,6 +325,56 @@ th {
   font-size: var(--font-size-label);
   font-weight: 600;
   background: var(--color-surface-sunken);
+}
+
+/* Narrow screens: each row becomes a card and each cell shows its column name, so no column hides beyond a
+   scroll edge (a scriptless frame gives no hint). Give every cell its header text: <td data-label="Trạng thái">.
+   The header row stays in the page, visually hidden, for screen readers. After the rules above, which it overrides. */
+@media (max-width: 640px) {
+  table,
+  tbody,
+  tr,
+  td {
+    display: block;
+  }
+
+  table {
+    background: none;
+    border: 0;
+  }
+
+  thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  tr {
+    margin: 0 0 var(--spacing-3);
+    padding: var(--spacing-2) 0;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--rounded-md);
+  }
+
+  td {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    justify-items: start;
+    gap: var(--spacing-3);
+    padding: var(--spacing-1) var(--spacing-3);
+    border-bottom: 0;
+  }
+
+  td[data-label]::before {
+    content: attr(data-label);
+    color: var(--color-ink-secondary);
+    font-size: var(--font-size-label);
+    font-weight: 600;
+  }
 }
 
 form {

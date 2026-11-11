@@ -75,8 +75,18 @@ def test_farmer_guide_sees_only_assigned_tours(client, db):
     assert page.status_code == 200
     assert "Tour tôi dẫn" in page.text
     assert "Tour người khác dẫn" not in page.text and "Tour HTX khác" not in page.text
-    assert re.search(r"<td>2</td>", page.text)  # confirmed guests only
+    assert '<td data-label="Khách đã xác nhận">2</td>' in page.text  # confirmed guests only
     assert "0987654321" not in page.text and "0912345678" not in page.text
+
+
+def test_table_cells_carry_their_column_label(client, db, households):
+    """/dxos-app.css stacks table rows as cards on phones and labels each cell from data-label."""
+    add_tour(db, guide_user_id="kc-farmer-1", guide_name="Hộ ông Ba")
+    for path, headers in (("/", MANAGER), ("/guide", FARMER)):
+        html = client.get(path, headers=headers).text
+        heads = re.findall(r"<th>(.*?)</th>", html)
+        assert len(heads) == 5 and re.findall(r'<td data-label="(.*?)">', html) == heads, path
+        assert "<td>" not in html, path
 
 
 def test_roles_are_checked_by_the_app_too(client, db, households):

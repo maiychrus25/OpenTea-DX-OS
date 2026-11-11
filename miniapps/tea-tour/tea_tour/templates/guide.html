@@ -10,11 +10,11 @@
   <tbody>
   {% for t in tours %}
     <tr>
-      <td>{{ t.title }}</td>
-      <td>{{ t.starts_at | vn_time }}</td>
-      <td>{{ t.meeting_point }}</td>
-      <td>{{ t.confirmed_guests }}</td>
-      <td><span class="pill">{{ tour_status(t) }}</span></td>
+      <td data-label="Tour">{{ t.title }}</td>
+      <td data-label="Thời gian">{{ t.starts_at | vn_time }}</td>
+      <td data-label="Điểm hẹn">{{ t.meeting_point }}</td>
+      <td data-label="Khách đã xác nhận">{{ t.confirmed_guests }}</td>
+      <td data-label="Trạng thái"><span class="pill">{{ tour_status(t) }}</span></td>
     </tr>
   {% endfor %}
   </tbody>

@@ -13,11 +13,11 @@
   <tbody>
   {% for t in tours %}
     <tr>
-      <td><a href="{{ href('/tours/' ~ t.id, theme) }}">{{ t.title }}</a></td>
-      <td>{{ t.starts_at | vn_time }}</td>
-      <td>{{ t.guide_name or "Chưa có" }}</td>
-      <td>{{ t.seats_used }} / {{ t.seats }}</td>
-      <td><span class="pill">{{ tour_status(t) }}</span></td>
+      <td data-label="Tour"><a href="{{ href('/tours/' ~ t.id, theme) }}">{{ t.title }}</a></td>
+      <td data-label="Thời gian">{{ t.starts_at | vn_time }}</td>
+      <td data-label="Người dẫn">{{ t.guide_name or "Chưa có" }}</td>
+      <td data-label="Đã đặt / số chỗ">{{ t.seats_used }} / {{ t.seats }}</td>
+      <td data-label="Trạng thái"><span class="pill">{{ tour_status(t) }}</span></td>
     </tr>
   {% endfor %}
   </tbody>
