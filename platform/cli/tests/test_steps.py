@@ -62,3 +62,26 @@ def test_undo_from_journal_after_process_exit(tmp_path):
     assert log == ["undo b", "undo a"]
     assert not journal.exists()
     undo_from_journal(journal, {})  # nothing pending: a second abort is a no-op
+
+
+def test_failed_undo_names_both_errors(tmp_path):
+    class BadUndo(Recorder):
+        def undo(self):
+            raise RuntimeError("undo broke")
+
+    journal = tmp_path / "demo.pending.json"
+    with pytest.raises(InstallError, match="boom.*undo broke") as info:
+        run_steps([BadUndo("a", []), Recorder("b", [], fail=True)], journal)
+    assert str(info.value.__cause__) == "boom"
+    assert journal.exists()  # kept, so abort can retry
+
+
+@pytest.mark.parametrize("text", ["{not json", "[1, 2]", '{"completed": "a"}', '{"completed": ["a", "zzz"]}',
+                                  '{"completed": [{"x": 1}]}'])
+def test_bad_journal_raises_install_error(tmp_path, text):
+    journal = tmp_path / "demo.pending.json"
+    journal.write_text(text)
+    with pytest.raises(InstallError, match="Nhật ký"):
+        undo_from_journal(journal, {"a": Recorder("a", [])})
+    with pytest.raises(InstallError, match="Nhật ký"):
+        run_steps([Recorder("a", [], fail=True)], journal)

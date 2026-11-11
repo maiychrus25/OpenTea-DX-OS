@@ -4,7 +4,7 @@ COMPOSE := docker compose -f docker/docker-compose.yml
 # apisix reads the generated route file (base + installed apps); relative to docker/, like every compose path.
 export DXOS_GATEWAY_FILE := ../docker/runtime/gateway/apisix.yaml
 
-.PHONY: gateway-sync platform-up platform-smoke platform-down up down build test lint
+.PHONY: gateway-sync platform-up platform-smoke apps-smoke platform-down up down build test lint
 
 # APISIX mounts docker/runtime/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
 gateway-sync:
@@ -31,6 +31,10 @@ platform-up: gateway-sync
 
 platform-smoke:
 	bash platform/tests/smoke-platform.sh
+
+# Needs a seeded stack (platform-up + seed); installs hello, re-runs platform-up, removes it, then runs platform-smoke.
+apps-smoke:
+	bash platform/tests/smoke-apps.sh
 
 platform-down:
 	$(COMPOSE) down

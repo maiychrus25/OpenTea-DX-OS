@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+# dxos: install, remove and list mini-apps (spec §5). The dxos-cli container does the manifest, gateway, journal
+# and registry work; this script only starts and stops app containers, so no docker socket goes into a container.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+# Same as the Makefile: apisix reads the generated route file; relative to docker/, like every compose path.
+export DXOS_GATEWAY_FILE=../docker/runtime/gateway/apisix.yaml
+ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.json
+
+usage() {
+  echo "Dùng: ./dxos install <dir> | remove <id> [--purge] | list | validate <dir>..." >&2
+  exit 2
+}
+
+compose() { docker compose -f docker/docker-compose.yml "$@"; }
+# APISIX mounts docker/runtime/gateway/apisix.yaml; create the dirs before any container starts, as the Makefile does.
+cli() {
+  mkdir -p docker/runtime/gateway/apps docker/runtime/apps
+  # Build first, quietly: `run --build` prints the build log on stdout, which install and list parse.
+  compose --profile tools build --quiet dxos-cli >&2
+  compose --profile tools run --rm -T --user "$(id -u):$(id -g)" dxos-cli "$@"
+}
+app() { local id="$1"; shift; compose -f "docker/runtime/apps/$id.compose.yml" "$@"; }
+
+# Host directory (relative to the caller's cwd) -> the same directory inside dxos-cli, where the repo is /repo.
+to_container() {
+  local abs
+  abs="$(cd "$1" 2>/dev/null && pwd -P)" || { echo "Không tìm thấy thư mục $1" >&2; exit 1; }
+  case "$abs/" in
+    "$ROOT/"*) printf '/repo%s\n' "${abs#"$ROOT"}" ;;
+    *) echo "Thư mục app $1 phải nằm trong repo $ROOT" >&2; exit 1 ;;
+  esac
+}
+
+# shortcut: reads only a plain `id: <id>` line; dxos-cli prepare still validates the full manifest.
+manifest_id() { sed -nE "s/^id:[[:space:]]*[\"']?([a-z][a-z0-9-]{1,30})[\"']?[[:space:]]*(#.*)?$/\1/p" "$1/app.yaml" | head -n 1; }
+
+install() {
+  local dir="$1" id listing
+  id="$(manifest_id "$ROOT${dir#/repo}")"
+  [ -n "$id" ] || { echo "app.yaml trong $dir phải có dòng 'id: <id>'" >&2; exit 1; }
+  listing="$(cli list)"  # captured, not piped: grep -q closing the pipe early would fail it under pipefail
+  if grep -qxF "$id" <<<"$(cut -f1 <<<"$listing")"; then
+    echo "$id đã được cài; chỉ bảo đảm container đang chạy"
+    app "$id" up -d --build --wait "app-$id"
+    return
+  fi
+  # prepare undoes its own steps when it fails; abort only retries an undo that failed (no-op otherwise).
+  cli prepare "$dir" || { cli abort "$id" || true; exit 1; }
+  if app "$id" up -d --build --wait "app-$id" && cli commit "$id"; then
+    echo "Đã cài $id"
+    return
+  fi
+  echo "Cài $id hỏng; đang hoàn tác" >&2
+  app "$id" rm -sf "app-$id" || true
+  cli abort "$id" || true
+  exit 1
+}
+
+remove() {
+  local id="$1"; shift
+  [[ "$id" =~ $ID_RE ]] || { echo "id '$id' không hợp lệ" >&2; exit 1; }
+  if [ -f "docker/runtime/apps/$id.compose.yml" ]; then
+    app "$id" rm -sf "app-$id"
+  fi
+  cli remove "$id" "$@"
+}
+
+list() {
+  local out line id status
+  out="$(cli list)"
+  while IFS= read -r line; do
+    if [[ "$line" == *$'\t'* ]]; then
+      id="${line%%$'\t'*}" status=""
+      if [ -f "docker/runtime/apps/$id.compose.yml" ]; then
+        status="$(app "$id" ps -a --format '{{.Status}}' "app-$id")"
+      fi
+      line+=$'\t'"${status:-không có container}"
+    fi
+    printf '%s\n' "$line"
+  done <<<"$out"
+}
+
+[ $# -ge 1 ] || usage
+cmd="$1"; shift
+case "$cmd" in
+  install)
+    [ $# -eq 1 ] || usage
+    dir="$(to_container "$1")"; cd "$ROOT"; install "$dir" ;;
+  remove)
+    [ $# -ge 1 ] || usage
+    cd "$ROOT"; remove "$@" ;;
+  list)
+    [ $# -eq 0 ] || usage
+    cd "$ROOT"; list ;;
+  validate)
+    [ $# -ge 1 ] || usage
+    dirs=(); for d in "$@"; do c="$(to_container "$d")"; dirs+=("$c"); done
+    cd "$ROOT"; cli validate "${dirs[@]}" ;;
+  *) usage ;;
+esac

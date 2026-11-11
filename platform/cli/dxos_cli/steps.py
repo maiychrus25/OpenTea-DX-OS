@@ -19,7 +19,15 @@ class Step(Protocol):
 
 
 def read_journal(journal: Path) -> dict:
-    return json.loads(journal.read_text(encoding="utf-8")) if journal.exists() else {}
+    if not journal.exists():
+        return {}
+    try:
+        state = json.loads(journal.read_text(encoding="utf-8"))
+    except ValueError as exc:  # JSONDecodeError and UnicodeDecodeError
+        raise InstallError(f"Nhật ký {journal} hỏng, không đọc được: {exc}") from exc
+    if not isinstance(state, dict) or not isinstance(state.get("completed", []), list):
+        raise InstallError(f"Nhật ký {journal} hỏng: cần một đối tượng có 'completed' là danh sách")
+    return state
 
 
 def write_journal(journal: Path, state: dict) -> None:
@@ -30,6 +38,9 @@ def write_journal(journal: Path, state: dict) -> None:
 
 
 def _undo(journal: Path, names: list[str], steps_by_name: dict[str, Step]) -> None:
+    unknown = [name for name in names if not isinstance(name, str) or name not in steps_by_name]
+    if unknown:
+        raise InstallError(f"Nhật ký {journal} có bước không biết: {unknown}")
     for name in reversed(names):
         steps_by_name[name].undo()
     # Only after every undo succeeded: a failed undo keeps the journal so `abort` can retry (undo is idempotent).
@@ -44,7 +55,11 @@ def run_steps(steps: list[Step], journal: Path) -> None:
         try:
             step.apply()
         except Exception as exc:
-            _undo(journal, done, {s.name: s for s in steps})
+            try:
+                _undo(journal, done, {s.name: s for s in steps})
+            except Exception as undo_exc:
+                raise InstallError(f"Bước '{step.name}' hỏng: {exc}; hoàn tác cũng hỏng: {undo_exc} "
+                                   "(nhật ký được giữ, chạy abort để thử lại)") from exc
             raise InstallError(f"Bước '{step.name}' hỏng, đã hoàn tác các bước trước: {exc}") from exc
         if step.name not in done:
             done.append(step.name)
