@@ -11,7 +11,7 @@ from pathlib import Path
 import psycopg
 import yaml
 
-from dxos_cli import registry
+from dxos_cli import database, registry
 from dxos_cli.compose import render_app_compose
 from dxos_cli.gateway import app_routes, sync_gateway
 from dxos_cli.manifest import load_manifest, read_core_version, validate_manifest
@@ -31,6 +31,10 @@ def journal_path(root: Path, app_id: str) -> Path:
 
 def compose_path(root: Path, app_id: str) -> Path:
     return apps_dir(root) / f"{app_id}.compose.yml"
+
+
+def env_path(root: Path, app_id: str) -> Path:
+    return apps_dir(root) / f"{app_id}.env"
 
 
 def fragment_path(root: Path, app_id: str) -> Path:
@@ -53,20 +57,44 @@ class ValidateStep:
 
 
 class DatabaseStep:
-    """Placeholder for spec §5 step 2 (schema, role, migrations, env file): does nothing yet."""
+    """Spec §5 step 2: schema, role, migrations and the env file, written before the compose step needs it.
+
+    Undo reads what existed before this install from the journal ("database"), which prepare writes before any step
+    runs, so a replay after a crash drops only the schema and role this install created.
+    """
     name = "database"
 
-    def __init__(self, root: Path, app_id: str, manifest: dict | None = None):
-        self.root, self.app_id, self.manifest = root, app_id, manifest
+    def __init__(self, root: Path, app_id: str, manifest: dict | None = None, app_dir: Path | None = None):
+        self.root, self.app_id, self.manifest, self.app_dir = root, app_id, manifest, app_dir
 
     def apply(self) -> None:
-        pass
+        if "database" not in self.manifest:
+            return
+        env = env_path(self.root, self.app_id)
+        migrations = self.root / self.app_dir / self.manifest["database"]["migrations"]
+        try:
+            with _connect(autocommit=True) as conn:
+                password = database.ensure_app_database(conn, self.app_id, migrations, database.read_env_password(env))
+            database.write_env_file(env, self.app_id, password)
+        except Exception:
+            # This step is not journaled yet, so clean it here, like GatewayStep.
+            self.undo()
+            raise
 
     def undo(self) -> None:
-        pass
+        existed = read_journal(journal_path(self.root, self.app_id)).get("database")
+        if not existed:
+            return
+        with _connect(autocommit=True) as conn:
+            database.drop_app_database(conn, self.app_id, schema=not existed["schema_existed"],
+                                       role=not existed["role_existed"])
+        if not existed["role_existed"]:
+            env_path(self.root, self.app_id).unlink(missing_ok=True)  # its password belongs to the dropped role
 
     def purge(self) -> None:
-        pass
+        with _connect(autocommit=True) as conn:
+            database.drop_app_database(conn, self.app_id)
+        env_path(self.root, self.app_id).unlink(missing_ok=True)
 
 
 class GatewayStep:
@@ -111,7 +139,7 @@ class ComposeStep:
 def _steps(root: Path, app_id: str, manifest: dict | None = None, app_dir: Path | None = None,
            installed: set[str] = frozenset()) -> list:
     # Undo needs only the id, so abort and remove build the same steps without a manifest.
-    return [ValidateStep(root, manifest, installed), DatabaseStep(root, app_id, manifest),
+    return [ValidateStep(root, manifest, installed), DatabaseStep(root, app_id, manifest, app_dir),
             GatewayStep(root, app_id, manifest), ComposeStep(root, app_id, manifest, app_dir)]
 
 
@@ -121,11 +149,11 @@ def _check_id(app_id) -> str:
     return app_id
 
 
-def _connect() -> psycopg.Connection:
+def _connect(autocommit: bool = False) -> psycopg.Connection:
     url = os.environ.get("DXOS_DB_URL")
     if not url:
         raise InstallError("Thiếu biến môi trường DXOS_DB_URL")
-    return psycopg.connect(url)
+    return psycopg.connect(url, autocommit=autocommit)
 
 
 def prepare(root: Path, app_dir: Path) -> str:
@@ -136,10 +164,14 @@ def prepare(root: Path, app_dir: Path) -> str:
         rel_dir = app_dir.resolve().relative_to(root.resolve())
     except ValueError:
         raise InstallError(f"Thư mục app {app_dir} phải nằm trong repo {root}") from None
+    journal = journal_path(root, app_id)
+    state = {**read_journal(journal), "manifest": manifest}
     with _connect() as conn:
         installed = registry.installed_ids(conn)
-    journal = journal_path(root, app_id)
-    write_journal(journal, {**read_journal(journal), "manifest": manifest})
+        if "database" in manifest and "database" not in state:
+            # Durable before anything is created; a re-run keeps the first run's answer (it now sees its own schema).
+            state["database"] = database.database_state(conn, app_id)
+    write_journal(journal, state)
     run_steps(_steps(root, app_id, manifest, rel_dir, installed), journal)
     return app_id
 
@@ -155,16 +187,24 @@ def commit(root: Path, app_id: str) -> None:
 
 
 def abort(root: Path, app_id: str) -> None:
-    undo_from_journal(journal_path(root, _check_id(app_id)), {s.name: s for s in _steps(root, app_id)})
+    with _connect() as conn:
+        registered = _check_id(app_id) in registry.installed_ids(conn)
+    if registered:
+        # Commit wrote the row but may have failed to delete the journal: undoing now would drop a live app's data.
+        raise InstallError(f"App '{app_id}' đã được đăng ký, không hoàn tác được; dùng remove để gỡ")
+    undo_from_journal(journal_path(root, app_id), {s.name: s for s in _steps(root, app_id)})
 
 
 def remove(root: Path, app_id: str, purge: bool) -> None:
     _check_id(app_id)
     with _connect() as conn:
+        registered = app_id in registry.installed_ids(conn)
         registry.unregister(conn, app_id)
     steps = {s.name: s for s in _steps(root, app_id)}
     steps["gateway"].undo()
     steps["compose"].undo()
+    if not registered and not purge:
+        steps["database"].undo()  # a prepared, uncommitted install must not orphan its schema and role
     if purge:
         steps["database"].purge()
     journal_path(root, app_id).unlink(missing_ok=True)  # a stale pending install must not be committed later

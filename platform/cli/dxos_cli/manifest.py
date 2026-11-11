@@ -97,8 +97,13 @@ def validate_manifest(data: dict, core_version: str, installed_ids: set[str]) ->
         errors.append(f"'license': giấy phép '{lic}' không thuộc danh sách OSI được chấp nhận")
     routes = data.get("routes")
     if isinstance(routes, dict) and isinstance(routes.get("public"), list) and isinstance(routes.get("protected"), dict):
-        for prefix in sorted({p for p in routes["public"] if isinstance(p, str)} & set(routes["protected"])):
+        public = {p for p in routes["public"] if isinstance(p, str)}
+        for prefix in sorted(public & set(routes["protected"])):
             errors.append(f"'routes': đường dẫn '{prefix}' không được vừa công khai vừa cần đăng nhập")
+        # The web proxy calls a path public when it starts with a public prefix, so it would never send a token here.
+        for prefix, parent in sorted((p, q) for p in routes["protected"] for q in public if p != q and p.startswith(q)):
+            errors.append(f"'routes': đường dẫn cần đăng nhập '{prefix}' nằm dưới đường dẫn công khai '{parent}', "
+                          "web sẽ không gửi token nên không vào được")
     requires = data.get("requires")
     core = requires.get("core") if isinstance(requires, dict) else None
     match = _CORE_RE.match(core) if isinstance(core, str) else None

@@ -11,7 +11,7 @@ source platform/tests/tokens.sh
 command -v jq >/dev/null || { echo "jq is required (brew/apt install jq)"; exit 1; }
 
 # Whatever fails, leave no app behind (the registry, docker/runtime/<project> and the containers outlive this script).
-trap 'rc=$?; ./dxos remove broken-health >/dev/null 2>&1 || true; ./dxos remove hello >/dev/null 2>&1 || true; exit $rc' EXIT
+trap 'rc=$?; ./dxos remove db-app --purge >/dev/null 2>&1 || true; ./dxos remove broken-health >/dev/null 2>&1 || true; ./dxos remove hello >/dev/null 2>&1 || true; exit $rc' EXIT
 
 RUNTIME="docker/runtime/${COMPOSE_PROJECT_NAME:-docker}"  # per compose project (R13), as in the Makefile
 GW_FILE="$RUNTIME/gateway/apisix.yaml"
@@ -31,6 +31,7 @@ sha() { if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 
 # Fixed container names are not used for apps, so filter by this project (compose's default is the docker/ dir name).
 app_containers() { docker ps -aq --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-docker}" --filter "label=com.docker.compose.service=app-$1" | wc -l | tr -d ' '; }
 hello_container() { $HELLO ps -q --status running app-hello; }
+perm() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1"; }  # GNU, then BSD stat
 
 echo "[identity setup]"
 kc_wait
@@ -84,6 +85,21 @@ assert_eq "$(psql_app "select count(*) from platform.installed_apps where id='br
 assert_eq "$(find "$RUNTIME" -name 'broken-health*' | wc -l | tr -d ' ')" 0 "no broken-health runtime file left"
 assert_eq "$(app_containers broken-health)" 0 "no app-broken-health container left"
 assert_http 200 "hello unaffected by the failed install" -- -H "Authorization: Bearer $TM" "$GATEWAY/apps/hello/"
+
+echo "[database app]"
+DB_ENV="$RUNTIME/apps/db-app.env"
+./dxos install platform/cli/tests/fixtures/db-app && pass "./dxos install db-app exits 0" || fail "./dxos install db-app"
+assert_eq "$(psql_app "select count(*) from pg_namespace where nspname='app_db_app'")" 1 "schema app_db_app exists"
+assert_eq "$(psql_app "select count(*) from pg_roles where rolname='app_db_app'")" 1 "role app_db_app exists"
+assert_eq "$(perm "$DB_ENV")" 600 "db-app env file has mode 600"
+URL=$(sed -n 's/^DXOS_APP_DB_URL=//p' "$DB_ENV")  # holds the password: compared, never printed
+[ "$($COMPOSE -f "$RUNTIME/apps/db-app.compose.yml" exec -T app-db-app printenv DXOS_APP_DB_URL)" = "$URL" ] \
+  && pass "app container gets DXOS_APP_DB_URL from the env file" || fail "app container DXOS_APP_DB_URL differs from the env file"
+assert_eq "$($COMPOSE exec -T postgres psql "$URL" -tAc 'select count(*) from notes')" 0 "app role logs in with that URL and reads its own table"
+./dxos remove db-app --purge && pass "./dxos remove db-app --purge exits 0" || fail "./dxos remove db-app --purge"
+assert_eq "$(psql_app "select count(*) from pg_namespace where nspname='app_db_app'")" 0 "--purge dropped schema app_db_app"
+assert_eq "$(psql_app "select count(*) from pg_roles where rolname='app_db_app'")" 0 "--purge dropped role app_db_app"
+[ ! -e "$DB_ENV" ] && pass "--purge deleted the db-app env file" || fail "db-app env file left after --purge"
 
 echo "[platform-up with hello installed]"
 CID=$(hello_container); [ -n "$CID" ] || fail "app-hello not running before platform-up"

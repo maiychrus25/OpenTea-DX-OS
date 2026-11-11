@@ -8,7 +8,9 @@ import time
 import uuid
 from pathlib import Path
 
+import psycopg
 import pytest
+from psycopg import sql
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -16,6 +18,9 @@ os.environ.setdefault("DXOS_REPO_ROOT", str(Path(__file__).resolve().parents[3])
 
 PG_IMAGE = "opentea-dx-os/postgres:local"
 INIT_DIR = Path(__file__).resolve().parents[2] / "postgres" / "init"
+REPO = Path(__file__).resolve().parents[3]
+FIXTURES = Path(__file__).parent / "fixtures"
+COPIED = ["platform/gateway/apisix.yaml", "platform/apps/manifest.schema.json", "apps/web/package.json"]
 
 
 def _docker(*args: str, stdin: str | None = None) -> subprocess.CompletedProcess:
@@ -57,3 +62,22 @@ def pg_url():
         yield f"postgresql://agrimarket:test@127.0.0.1:{port}/agrimarket"
     finally:
         _docker("rm", "-f", name)
+
+
+@pytest.fixture
+def root(tmp_path, monkeypatch, pg_url):
+    """A repo copy with the valid fixture as miniapps/tea-tour, and a database with no app installed."""
+    for rel in COPIED:
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(REPO / rel, tmp_path / rel)
+    shutil.copytree(FIXTURES / "valid", tmp_path / "miniapps" / "tea-tour")
+    monkeypatch.setenv("DXOS_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("DXOS_DB_URL", pg_url)
+    with psycopg.connect(pg_url) as conn:
+        conn.execute("TRUNCATE platform.installed_apps")
+        for (name,) in conn.execute(r"SELECT rolname FROM pg_roles WHERE rolname LIKE 'app\_%'").fetchall():
+            conn.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(name)))
+            conn.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(name)))
+        for (name,) in conn.execute(r"SELECT nspname FROM pg_namespace WHERE nspname LIKE 'app\_%'").fetchall():
+            conn.execute(sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(name)))
+    return tmp_path

@@ -95,6 +95,16 @@ def test_rejects_prefix_both_public_and_protected(valid):
     assert len(errs) == 1 and "routes" in errs[0] and "'/guide'" in errs[0]
 
 
+def test_rejects_protected_prefix_under_public_prefix(valid):
+    # The web proxy treats a path as public by prefix, so a protected path under a public prefix gets no token.
+    routes = {"public": ["/"], "protected": {"/admin/": ["manager"]}}
+    errs = errors(mutated(valid, routes=routes), core="1.8.0")
+    assert len(errs) == 1 and "routes" in errs[0] and "'/admin/'" in errs[0] and "'/'" in errs[0]
+    # tea-tour's shape: the protected '/' is the parent of the public prefix, not under it.
+    routes = {"public": ["/public/"], "protected": {"/": ["manager"], "/guide": ["farmer"]}}
+    assert errors(mutated(valid, routes=routes), core="1.8.0") == []
+
+
 def test_rejects_ports_field(valid):
     errs = errors(mutated(valid, ports=["8080:8080"]), core="1.8.0")
     assert len(errs) == 1 and "ports" in errs[0]
