@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Tầng 3: App Manifest, CLI `dxos` và mini-app
 
-> **Trạng thái:** Bản thiết kế, chờ chủ dự án duyệt (2026-11-11).
+> **Trạng thái:** Đã triển khai trên nhánh `feat/tier3-miniapps` (2026-11-11), chờ chủ dự án duyệt PR và phát hành `v1.8.0`. Xem "Ghi chú sau triển khai 3" ở cuối.
 > **Phạm vi:** Tầng 3 (milestone `v1.8.0`). Tiếp nối Tầng 2b (`docs/specs/2026-11-10-tier2b-tea-domain-design.md`, đã phát hành `v1.7.0`).
 > **Căn cứ:** Kế hoạch dự thi OLP 2026 (DX-OS Open-Core): mô hình cắm thêm mini-app qua App Manifest và CLI là điểm độc đáo chính của bài dự thi.
 
@@ -234,3 +234,77 @@ Nối tiếp câu chuyện A3, khoảng 3 phút:
 | APISIX chế độ khai báo không nạp lại khi tệp ghép thay đổi | Kiểm trong task đầu; nếu không nạp, CLI gọi `apisix reload` trong container |
 | Thời gian build image `tea-tour` làm lệnh cài chậm khi demo | Build sẵn trước buổi demo; manifest hỗ trợ `image` ghim digest |
 | Dữ liệu cá nhân của khách (họ tên, số điện thoại) | Chỉ ban quản trị đúng HTX xem; `--purge` xoá toàn bộ; ghi rõ trong README |
+
+## Ghi chú sau triển khai 3
+
+Phần này ghi chỗ code khác đặc tả và các số đo được khi hoàn tất Tầng 3 (nhánh `feat/tier3-miniapps`, 2026-11-11). Thân đặc tả ở trên giữ nguyên. Hướng dẫn cho người viết app nằm ở `docs/miniapps.md`, quyết định kiến trúc ở `docs/adr/0002-miniapp-architecture.md`.
+
+**Các ruling (R1–R22).**
+- **R1:** web đọc `platform.installed_apps` bằng Prisma `$queryRaw`, không thêm metadata Hasura, vì request công khai không có token và bảng là dữ liệu nền tảng, không thuộc HTX nào.
+- **R2:** giới hạn 10 request/phút/IP của route công khai nằm ở web proxy, không ở APISIX, vì APISIX chỉ thấy IP của container web trên cổng `9081`. Bộ đếm theo IP của `/api/register` được tách ra `apps/web/src/lib/ip-rate-limit.ts` để dùng chung.
+- **R3:** APISIX kiểm vai trò bằng `openid-connect.claim_schema` trên `realm_access.roles`. `tea-tour` chỉ cấp `/` cho `manager` và `/guide` cho `farmer` (ít quyền nhất), không cấp cả ba vai trò như ví dụ ở §4.
+- **R4:** rủi ro §14 được kiểm ở Task 2 (APISIX nạp lại tệp route) và Task 5 (proxy), cả hai trước phần database và `tea-tour`.
+- **R5:** tệp gateway được ghép bằng văn bản. Không có app thì giữ nguyên từng byte của tệp gốc. Có app thì route được nối vào khoá `routes:` cuối và dùng `<<: *oidc`, để không chép secret.
+- **R6:** `dxos-cli` chạy bằng user của máy chủ (`--user "$(id -u):$(id -g)"`), để ghi được `docker/runtime` trên Linux. Image vẫn mặc định chạy user không phải root.
+- **R7:** `version` của web được nâng lên `1.8.0` từ Task 4, task đầu tiên cài một app cần `requires.core: ">=1.8.0"`. Commit phát hành chỉ còn thêm tiêu đề CHANGELOG.
+- **R8:** Makefile và `./dxos` tạo trước các thư mục runtime, để Docker không tạo chúng với chủ root.
+- **R9:** `dxos-apps-net` là mạng `internal: true`, nên app không ra được internet.
+- **R10:** apisix mount `${DXOS_GATEWAY_FILE:-../platform/gateway/apisix.yaml}`, và make cùng `./dxos` đặt biến này. Bản phát hành và `docker compose up` trần dùng tệp gốc, không có route app nào. v1.8.0 chưa cài được mini-app từ bản phát hành.
+- **R11:** tệp gateway được ghi đè an toàn (cắt rỗng trước khi ghi). Manifest bị từ chối khi một tiền tố vừa công khai vừa cần đăng nhập. `gateway-sync` từ chối route nằm ngoài `/apps/<id>/` hoặc có id sai mẫu.
+- **R12:** `build.context` của compose app lấy theo thư mục của app (tương đối với repo), không cố định `../miniapps/<id>`.
+- **R13:** trạng thái runtime tách theo compose project: `docker/runtime/${COMPOSE_PROJECT_NAME:-docker}/`, sau khi một vòng sạch `dxos-clean` từng để lọt route vào stack của chủ dự án.
+- **R14:** IP của client đọc giống hệt `/api/register`, chỉ từ `X-Forwarded-For`.
+- **R15:** trang khung `/<role>/apps/<id không có>` hiện trang 404 với HTTP 200 (soft 404), giống các trang `/lot`, `/q`, `/htx` hiện có. Proxy `/apps/<id>` trả 404 thật.
+- **R16:** migration chạy trên một kết nối đăng nhập bằng role của app, không chạy trên kết nối superuser với `SET LOCAL ROLE`, vốn để lọt `RESET ROLE` hay `COMMIT`.
+- **R17:** `PUBLIC` vẫn giữ quyền `CONNECT` vào các database khác (`keycloak`, `postgres`, `template1`) trong v1.8.0.
+- **R18:** web proxy trả 403 cho form gửi chéo trang tới mini-app: `Origin` khác origin của web, hoặc không có `Origin` mà có `Sec-Fetch-Site: cross-site`.
+- **R19:** có thêm chức năng sửa tour, vì §7 ghi "Tạo, sửa, huỷ tour" trong khi plan bỏ sót. Số chỗ không giảm được dưới số đã đặt.
+- **R20:** `tea-tour` giữ tối đa 8 kết nối DB đồng thời bằng `threading.BoundedSemaphore`, dưới `CONNECTION LIMIT 10` của role. Khi bận, app trả trang 503 tiếng Việt thay cho lỗi 500.
+- **R21:** thứ tự trong CI là cài `tea-tour`, câu chuyện, ảnh chụp, gỡ, kiểm tra sau khi gỡ, rồi `apps-smoke`, để `apps-smoke` kết thúc bằng `platform-smoke` trên stack không có app.
+- **R22:** `screens.spec` vẫn đăng nhập bằng tài khoản demo `farmer_tc` như từ Tầng 2b; spec chỉ đăng nhập, không đổi mật khẩu hay TOTP.
+
+**Khác với đặc tả.**
+- **§9, không dùng Hasura cho `installed_apps` (R1).** Không có quyền Hasura nào trên bảng này. Menu và proxy đọc bằng Prisma mỗi lần tải trang hoặc mỗi request.
+- **§6.5, giới hạn tần suất nằm ở web proxy (R2).**
+  - Giới hạn tính trong từng tiến trình web và tin vào `X-Forwarded-For`.
+  - Biến `DXOS_APP_PUBLIC_LIMIT` (mặc định 10) đổi được giới hạn; chỉ CI nâng nó lên 1000.
+- **§5, runtime theo từng compose project (R13).** Các đường dẫn `docker/runtime/gateway/...` và `docker/runtime/apps/...` ở §5 nay nằm dưới `docker/runtime/<project>/`. Bên trong `dxos-cli`, thư mục của project được mount tại `/repo/docker/runtime`.
+- **`DXOS_GATEWAY_FILE` (R10).** APISIX chỉ đọc tệp ghép khi stack được bật bằng `make platform-up` hoặc `make up`. `docker compose up` trần chạy lõi không có route app (đóng an toàn).
+- **Kiểm Origin (R18).** Đây là ràng buộc bảo mật thêm, không có trong §6.
+- **Sửa tour (R19).** Có trong §7 nhưng plan bỏ sót; đã được thêm.
+- **Giới hạn kết nối.**
+  - Role của app có `CONNECTION LIMIT 10`.
+  - `tea-tour` giữ tối đa 8 kết nối (R20).
+  - Role chỉ nhận SCRAM verifier, không bao giờ nhận mật khẩu dạng rõ.
+  - Migration chạy bằng role của app (R16).
+- **Gateway trả 401 khi sai vai trò, không phải 403.** Token hợp lệ nhưng không có vai trò khai trong manifest bị APISIX trả 401, và request không tới app. App vẫn tự kiểm vai trò và trả 403.
+- **§6.6, CSP đầy đủ.** CSP là `default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'`, kèm `X-Content-Type-Options: nosniff`. Phản hồi chỉ giữ header `content-type` và `location`; `location` phải nằm trong chính app, nếu không web trả 502.
+- **§4, thêm luật về tiền tố.** Manifest bị từ chối khi một tiền tố vừa công khai vừa cần đăng nhập, hoặc khi một tiền tố cần đăng nhập nằm dưới một tiền tố công khai.
+- **§8, kích thước `hello`.** `hello` khoảng 80 dòng chứ không phải 50, vì có thêm form lời nhắn và tham số `?theme=`.
+- **Bảng trên điện thoại.** Dưới 640 px, `/dxos-app.css` xếp mỗi dòng bảng thành một thẻ có nhãn cột (`data-label`). Bảng của `tea-tour` có thêm vai trò ARIA.
+- **Re-run `platform-smoke`.** `apps-smoke` chạy lại `platform-smoke` trên stack đã seed, nên hai phép kiểm LB trong `smoke-dataops.sh` được giới hạn vào thửa fixture `P-LB-001` (lỗi có từ trước, lộ ra ở Task 9).
+- **Các giới hạn còn lại** được ghi trong CHANGELOG ("Known limits"):
+  - phép kiểm phụ thuộc trước khi `--purge` chỉ xét bảng, kiểu và hàm;
+  - migration chỉ ghi tên tệp, không có checksum;
+  - `/apps/<id>` không có dấu `/` cuối trả 404 ở gateway.
+
+**Số đo khi hoàn tất** (hai vòng sạch trên `COMPOSE_PROJECT_NAME=dxos-clean`, HEAD gồm các sửa lỗi của Task 10):
+- `make test`: 1.413 test web qua, 3 bỏ qua (1.416 test, 130 bộ).
+- pytest:
+  - CLI 77;
+  - `tea-tour` 44;
+  - `disease-api` 17;
+  - `scanner` 39;
+  - `dataops` 78.
+- `hello`: 7 test (`unittest`).
+- realm 13; `seed-test.sh` 19 PASS.
+- `make platform-smoke`: 124 PASS, 0 FAIL.
+- `make apps-smoke`: 60 PASS, 0 FAIL, khoảng 290 giây. Lần chạy này gồm `platform-smoke` 124 PASS sau khi gỡ hết app.
+- Trình duyệt:
+  - `core-tenant` 5;
+  - câu chuyện A3 1;
+  - câu chuyện tour 1;
+  - kiểm tra sau khi gỡ 1;
+  - ảnh chụp 52: 40 ảnh cũ, cộng 12 ảnh `tea-tour` (danh sách tour của ban quản trị, trang công khai, lịch dẫn tour, ở 1280 và 390 px, sáng và tối).
+- `./dxos install miniapps/tea-tour` với image đã build: 11 giây (dưới mức 30 giây của §12).
+- Sau mỗi vòng, `remove --purge` để lại 0 schema app, 0 role app, 0 dòng đăng ký và 0 tệp runtime của app.

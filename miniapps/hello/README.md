@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Mini-app `hello`: viết mini-app đầu tiên
 
-`hello` là mini-app nhỏ nhất của DX-OS: khoảng 50 dòng Python, chỉ dùng thư viện chuẩn, không có database. Trang chào người dùng bằng tên, mã HTX và vai trò lấy từ access token. Đặc tả đầy đủ ở `docs/specs/2026-11-11-tier3-miniapps-design.md`.
+`hello` là mini-app nhỏ nhất của DX-OS: khoảng 80 dòng Python, chỉ dùng thư viện chuẩn, không có database. Trang chào người dùng bằng tên, mã HTX và vai trò lấy từ access token. Đặc tả đầy đủ ở `docs/specs/2026-11-11-tier3-miniapps-design.md`.
 
 ## 1. Cấu trúc thư mục
 

@@ -1,0 +1,278 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+# Hướng dẫn viết mini-app cho DX-OS
+
+Mini-app là một dịch vụ riêng (container, schema Postgres, route gateway) được cắm vào DX-OS bằng một manifest `app.yaml` và lệnh `./dxos`, không sửa và không build lại lõi. Tài liệu này dành cho người viết mini-app. Thiết kế và lý do nằm ở [đặc tả Tầng 3](./specs/2026-11-11-tier3-miniapps-design.md) (kèm "Ghi chú sau triển khai 3") và [ADR 0002](./adr/0002-miniapp-architecture.md).
+
+Hai app mẫu trong repo:
+- [`miniapps/hello`](../miniapps/hello/README.md): khoảng 80 dòng Python, chỉ dùng thư viện chuẩn, không có database. Nên đọc trước.
+- [`miniapps/tea-tour`](../miniapps/tea-tour/): FastAPI và Jinja2, có database, route công khai và route theo vai trò.
+
+## 1. Đường đi của một request
+
+```
+trình duyệt ──▶ web  /apps/<id>/<path>?<query>
+                 │  chỉ id có trong platform.installed_apps (đọc mỗi request)
+                 │  bỏ cookie, authorization, x-hasura-* của trình duyệt
+                 │  route cần đăng nhập: gắn access token của người dùng
+                 ▼
+               APISIX :9081  /apps/<id>/<path>?<query>
+                 │  route cần đăng nhập: openid-connect bearer_only + kiểm vai trò
+                 │  cắt tiền tố /apps/<id>
+                 ▼
+               app-<id>:<runtime.port>  /<path>?<query>
+```
+
+- App nhận đường dẫn **đã cắt tiền tố**: `/apps/tea-tour/tours/abc` tới app thành `/tours/abc`, còn `/apps/tea-tour/` thành `/`.
+- Trình duyệt luôn đi qua web và gateway, nên **mọi link, form và chuyển hướng trong trang phải ghi đầy đủ tiền tố `/apps/<id>`**.
+  - `hello` dùng hằng `PREFIX = "/apps/hello"`.
+  - Với FastAPI/Starlette, chạy uvicorn với `--root-path /apps/<id>` để app biết tiền tố của chính nó (xem `miniapps/tea-tour/Dockerfile`).
+- Gateway chỉ có route cho các tiền tố khai trong manifest. Đường dẫn ngoài mọi tiền tố trả 404 từ gateway. `/apps/<id>` không có dấu `/` cuối cũng trả 404 ở gateway, nhưng web proxy luôn gửi `/apps/<id>/...`.
+- Header request tới app chỉ gồm `content-type`, `accept`, `content-length`, và `authorization` trên route cần đăng nhập. App không nhận cookie.
+- Header phản hồi về trình duyệt chỉ giữ `content-type` và `location`. `set-cookie` và CSP riêng của app bị bỏ, nên **app không dùng được cookie hay session**; trạng thái nằm trong URL, form và database.
+- Chuyển hướng (`location`) chỉ được trỏ tới một trang khác của chính app (cùng origin, dưới `/apps/<id>`). Nếu không, web trả 502.
+- App không trả lời trong 10 giây thì web trả 503.
+
+## 2. Manifest `app.yaml`
+
+Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform/apps/manifest.schema.json). Mọi đối tượng có `additionalProperties: false`, nên trường lạ (cổng ra máy chủ, volume, quyền container, ...) làm manifest bị từ chối.
+
+| Trường | Bắt buộc | Quy tắc |
+| --- | --- | --- |
+| `apiVersion` | có | đúng `dxos/v1` |
+| `id` | có | `^[a-z][a-z0-9-]{1,30}$`, duy nhất trong các app đã cài. Schema và role DB tên `app_<id>`, với `-` đổi thành `_` |
+| `name` | có | 1–80 ký tự, tên hiện cho người dùng (cũng là `title` của khung iframe) |
+| `version` | có | SemVer, ví dụ `0.1.0` |
+| `license` | có | thuộc danh sách OSI của CLI: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `LGPL-3.0-or-later`, `GPL-2.0-only`, `GPL-3.0-only`, `GPL-3.0-or-later`, `AGPL-3.0-only`, `AGPL-3.0-or-later` |
+| `publisher` | có | 1–80 ký tự |
+| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.8.0`) |
+| `runtime.build` / `runtime.image` | đúng một trong hai | `build`: thư mục tương đối trong thư mục app (thường là `.`). `image`: phải ghim digest, dạng `<ref>@sha256:<64 ký tự hex>` |
+| `runtime.port` | có | 1–65535, cổng app nghe trong container |
+| `runtime.health` | có | đường dẫn health check (đã cắt tiền tố), ví dụ `/healthz`, phải trả 2xx |
+| `database.migrations` | không | thư mục migration. Không khai thì app không có database (§5) |
+| `routes` | có | ít nhất một trong `public` và `protected` |
+| `routes.public` | không | danh sách tiền tố không cần đăng nhập, ví dụ `[/public/]` |
+| `routes.protected` | không | ánh xạ tiền tố → danh sách vai trò (`farmer`, `officer`, `manager`, ít nhất một) |
+| `menu[]` | không | `label` (1–60 ký tự), `path` (đường dẫn trong app), `roles` (ít nhất một) |
+
+**Đường dẫn** (route, menu, `health`) phải khớp `^/([a-z0-9_-]+(/[a-z0-9_-]+)*/?)?$`: bắt đầu bằng `/`, chỉ gồm `[a-z0-9/_-]`, không có `..` hay `//`. Mọi route nằm dưới `/apps/<id>/`; trong manifest chỉ ghi phần sau tiền tố đó.
+
+**Luật về tiền tố**, CLI từ chối khi:
+- một tiền tố vừa nằm trong `public` vừa là khoá của `protected`;
+- một tiền tố cần đăng nhập nằm dưới một tiền tố công khai, ví dụ `public: [/public/]` cùng `protected: {/public/admin: [manager]}`. Web coi mọi đường dẫn bắt đầu bằng một tiền tố công khai là công khai và không gắn token, nên route đó không bao giờ vào được.
+
+Gateway chọn tiền tố khớp dài nhất. Trong `tea-tour`, `/guide` (chỉ `farmer`) thắng `/` (chỉ `manager`).
+
+**Vai trò:**
+- Gateway kiểm vai trò trong `realm_access.roles` của token. Sai vai trò thì gateway trả **401** (không phải 403) và request không tới app.
+- Menu hiện mục theo `menu[].roles`. Khung ứng dụng `/<role>/apps/<id>/...` chỉ mở được khi manifest có ít nhất một mục menu cho vai trò đó; nếu không thì trả 404.
+- Nên cấp ít quyền nhất: `tea-tour` cho `/` riêng `manager` và `/guide` riêng `farmer`.
+
+Ví dụ đầy đủ là `miniapps/tea-tour/app.yaml`. Kiểm tra manifest mà không cài: `./dxos validate miniapps/<thư mục>` (nhận nhiều thư mục; CI chạy nó cho mọi thư mục trong `miniapps/`).
+
+## 3. Đăng nhập, claim và ranh giới tin cậy
+
+Trên route cần đăng nhập, app nhận `Authorization: Bearer <access token>` của người dùng. Token đã được APISIX kiểm chữ ký, hạn dùng, `aud` và vai trò. Phần payload (JWT, base64url) có các claim:
+
+| Claim | Ý nghĩa |
+| --- | --- |
+| `sub` | id người dùng Keycloak |
+| `name`, hoặc `preferred_username` khi thiếu `name` | tên hiển thị |
+| `htx_code` | mã HTX của người dùng (ví dụ `TC`) |
+| `realm_access.roles` | vai trò; chỉ dùng `farmer`, `officer`, `manager` |
+
+**Ranh giới tin cậy:**
+- App **không** kiểm chữ ký token. Chỉ APISIX với tới được container của app (mạng `dxos-apps-net`, §7), và APISIX chỉ chuyển request sau khi đã kiểm token.
+- Vì vậy app phải coi claim là dữ liệu đã kiểm, nhưng vẫn đọc cẩn thận: claim lạ hoặc thiếu thì coi như không có vai trò, không được làm app lỗi. Xem `read_claims` trong `miniapps/tea-tour/tea_tour/claims.py` và `claims` trong `miniapps/hello/app.py`.
+- App vẫn tự kiểm vai trò cho từng trang (phòng thủ nhiều lớp). `tea-tour` trả 403 khi vai trò không khớp.
+- **Mọi truy vấn lọc theo `htx_code` lấy từ token**, không bao giờ theo giá trị từ URL hay form.
+- Trên route công khai, app không nhận header `Authorization` (web bỏ header của trình duyệt), nên phải tự validate mọi dữ liệu vào.
+
+**Đọc dữ liệu lõi:** gọi `http://apisix:9081/api/data/graphql` và chuyển tiếp nguyên header `Authorization` của người dùng (xem `miniapps/tea-tour/tea_tour/core_client.py`). Hasura áp quyền theo dòng bằng `htx_code` của chính token, nên app chỉ thấy dữ liệu của HTX người dùng. App không đọc bảng lõi trực tiếp.
+
+## 4. Giao diện: HTML không script
+
+- Trang render phía server, chỉ HTML và form, không JavaScript.
+- Web gắn cho mọi phản hồi dưới `/apps/` hai header:
+  - `Content-Security-Policy: default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'`
+  - `X-Content-Type-Options: nosniff`
+- Vì CSP đó:
+  - không có `<style>` nội tuyến hay thuộc tính `style`; dùng stylesheet chung;
+  - ảnh chỉ lấy từ cùng origin hoặc `data:`;
+  - form chỉ gửi về cùng origin.
+- Trang cần đăng nhập hiện trong khung ứng dụng `/<role>/apps/<id>/<path>`, bên trong `<iframe sandbox="allow-forms allow-same-origin allow-top-navigation-by-user-activation">`. Khung không có `allow-scripts` nên app không đọc được cookie hay DOM của ứng dụng chính. Link ra ngoài app cần `target="_top"`.
+- Trang công khai mở thẳng toàn màn hình, ví dụ `/apps/tea-tour/public/TC`.
+- Thoát HTML mọi dữ liệu người dùng gửi (Jinja2 bật autoescape; với thư viện chuẩn dùng `html.escape`).
+- Sau một POST, chuyển hướng 303 về trang GET (mẫu POST/redirect/GET).
+
+**Chế độ sáng/tối (`?theme=`):**
+- Khung ứng dụng thêm `?theme=light` hoặc `?theme=dark` vào URL của iframe theo lựa chọn đã lưu của người dùng. Khi người dùng chọn "Theo hệ thống" thì không có tham số.
+- App đặt `data-theme="light|dark"` trên `<html>` **chỉ khi** giá trị đúng là `light` hoặc `dark`.
+- App giữ `theme` qua mọi link, form (trường ẩn) và chuyển hướng của nó. Xem `href()` trong `tea_tour/main.py` và `theme_input` trong `hello/app.py`.
+- Không có `data-theme` thì `/dxos-app.css` theo cài đặt hệ thống (`prefers-color-scheme`).
+
+### Stylesheet chung `/dxos-app.css`
+
+Thêm `<link rel="stylesheet" href="/dxos-app.css">` vào mọi trang. Tệp do web phục vụ, không cần phiên đăng nhập, chạy được không cần script (nguồn: `apps/web/public/dxos-app.css`).
+
+- **Token:** màu, cỡ chữ, bo góc, khoảng cách (`--color-*`, `--font-size-*`, `--rounded-*`, `--spacing-*`). Giá trị giống hệt `apps/web/src/styles/globals.css`, có test kiểm tra (`theme-tokens.test.ts`). Có bộ giá trị cho sáng, tối theo hệ thống, và `data-theme`. Khi tự viết CSS thì chỉ dùng token, không dùng mã màu cứng.
+- **Phần tử có sẵn kiểu:** `body`, `main`, `a`, `h1`–`h3`, `p`, `table`/`th`/`td`, `form`, `label`, `input`, `select`, `textarea`, `button`, kèm trạng thái focus và chuyển động giảm.
+- **Lớp:**
+  - `button.secondary`: nút phụ;
+  - `.notice`: thông báo thông tin;
+  - `.error`: thông báo lỗi;
+  - `.pill`: nhãn trạng thái nhỏ.
+- **Bảng xếp chồng trên điện thoại:**
+  - Dưới 640 px, mỗi dòng bảng thành một thẻ để không cột nào bị khuất sau mép cuộn (khung không script không có gợi ý cuộn).
+  - Gắn `data-label="<tên cột>"` cho mỗi ô `<td>`: ô có nhãn hiện tên cột bên trái và giá trị bên phải; ô không có nhãn (ví dụ một nút) chiếm cả chiều ngang thẻ.
+  - Hàng tiêu đề được ẩn bằng hình ảnh nhưng vẫn còn cho trình đọc màn hình.
+  - Vì các phần của bảng chuyển sang `display: block`, một số trình đọc màn hình bỏ ngữ nghĩa bảng. Nên thêm `role="table"`, `role="rowgroup"` (cho `thead` và `tbody`), `role="row"`, `role="columnheader"` và `role="cell"`, như `tea_tour/templates/manager.html`.
+
+## 5. Database: `DXOS_APP_DB_URL` và migration
+
+Khi manifest khai `database`, `dxos install`:
+1. Tạo role `app_<id>`: `LOGIN`, không superuser, không tạo database hay role, không replication, không bỏ qua RLS, `CONNECTION LIMIT 10`. Mật khẩu sinh ngẫu nhiên; server chỉ nhận SCRAM verifier, không bao giờ nhận mật khẩu dạng rõ.
+2. Tạo schema `app_<id>` do role đó sở hữu. Role không có quyền trên bảng lõi; test `tea-tour` chứng minh điều này.
+3. Chạy migration (bên dưới), rồi ghi tệp env `docker/runtime/<project>/apps/<id>.env` (quyền 600, git-ignored) chứa một dòng:
+
+   ```
+   DXOS_APP_DB_URL=postgresql://app_<id>:<mật khẩu>@postgres:5432/agrimarket
+   ```
+
+   Compose của app nạp tệp này, nên app đọc biến môi trường `DXOS_APP_DB_URL`.
+
+**Khi kết nối:**
+- Đặt `search_path` về schema của app, ví dụ `options="-c search_path=app_tea_tour"` với psycopg.
+- Giữ số kết nối đồng thời dưới 10, vì quá giới hạn thì Postgres từ chối. `tea-tour` dùng `threading.BoundedSemaphore(8)` và trả trang 503 "Hệ thống đang bận" khi không có chỗ trong 2 giây.
+- Không giữ kết nối trong lúc chờ lõi.
+
+**Migration:**
+- Là các tệp `*.sql` trong `database.migrations`, chạy **theo thứ tự tên tệp** (nên đặt tên `001_init.sql`, `002_...`).
+- Chạy trên một kết nối **đăng nhập bằng chính role của app**, với `search_path` là schema của app; không chạy bằng superuser. Migration chỉ làm được những gì role app làm được: không tạo extension, không đụng schema khác. `gen_random_uuid()` có sẵn.
+- Mỗi tệp chạy trong một transaction. `COMMIT` viết trong tệp sẽ phá tính "một tệp một transaction", nhưng chỉ ảnh hưởng schema của app; đừng viết.
+- Tệp đã chạy được ghi vào `app_<id>.schema_migrations(file, applied_at)` **chỉ theo tên tệp, không có checksum**. Sửa một tệp đã chạy không có tác dụng với bản cài hiện có; luôn thêm tệp mới. Một bản cài dev chưa `--purge` vẫn giữ tệp cũ.
+- **Mọi bảng** của schema (trừ `schema_migrations`) phải có cột `htx_code text NOT NULL`. CLI kiểm sau mỗi tệp và một lần nữa trên phiên mới khi xong; thiếu thì cài thất bại và được hoàn tác.
+- Không dùng `ALTER DEFAULT PRIVILEGES` hay cấp quyền ở database khác: role còn quyền `CONNECT` vào các database khác qua `PUBLIC` (ruling R17), và quyền để lại ở đó làm `--purge` báo lỗi (tệp env được giữ, cần admin chạy `DROP OWNED BY app_<id>` ở database đó).
+
+**Gỡ:**
+- `./dxos remove <id>` giữ schema, role và tệp env, nên cài lại thì thấy lại dữ liệu cũ.
+- `./dxos remove <id> --purge` xoá cả ba:
+  - `DROP SCHEMA ... CASCADE`;
+  - `DROP OWNED BY` rồi `DROP ROLE`;
+  - xoá tệp env.
+- CLI từ chối xoá schema (không xoá gì) khi có đối tượng ngoài schema phụ thuộc vào nó. Phép kiểm này chỉ xét phụ thuộc vào bảng, kiểu và hàm của schema.
+
+## 6. Origin, CSRF và giới hạn tần suất công khai
+
+- **Chống gửi form chéo trang (R18):** web gắn token của người dùng vào route cần đăng nhập, nên một request không phải `GET`/`HEAD` dưới `/apps/` bị trả **403** và không được chuyển tiếp khi:
+  - header `Origin` có mặt và khác cả `<scheme>://<Host>` của request lẫn origin của `AUTH_URL` (kể cả `Origin: null`);
+  - hoặc không có `Origin` nhưng trình duyệt gửi `Sec-Fetch-Site: cross-site`.
+
+  Form của app gửi từ chính trang của app nên luôn qua được. Đặt `AUTH_URL` đúng URL công khai khi web chạy sau một reverse proxy TLS.
+- **Giới hạn route công khai:** **10 request mỗi phút cho mỗi IP**, tính chung cho mọi app, quá thì trả **429** kèm thông báo tiếng Việt.
+  - IP là phần tử đầu của `X-Forwarded-For`, như `/api/register`.
+  - Giới hạn tính trong từng tiến trình web.
+  - Bảng đếm giữ tối đa 10.000 IP; khi đầy, IP mới dùng chung một nhóm.
+  - Route cần đăng nhập không bị tính.
+- **Biến `DXOS_APP_PUBLIC_LIMIT`** (container `web`, đọc qua Compose interpolation, mặc định `10`) đổi giới hạn. Chỉ CI nâng nó, cho các spec trình duyệt cùng chạy từ một IP; production và compose giữ `10`. Giá trị không phải số nguyên dương thì dùng `10`.
+
+## 7. Container được khoá chặt
+
+`dxos install` sinh `docker/runtime/<project>/apps/<id>.compose.yml` cho service `app-<id>` với các thiết lập cố định; manifest không thay đổi được chúng:
+
+| Thiết lập | Giá trị |
+| --- | --- |
+| Mạng | chỉ `dxos-apps-net`: `internal: true`, nên không ra internet; chỉ có `apisix` và `postgres` |
+| Cổng ra máy chủ | không có |
+| User | `10001:10001`, bất kể `USER` của image |
+| Hệ thống tệp | `read_only: true`; chỉ `/tmp` (tmpfs) ghi được |
+| Quyền | `cap_drop: [ALL]`, `security_opt: [no-new-privileges:true]` |
+| Tài nguyên | `mem_limit: 256m`, `cpus: 0.5` |
+| Khởi động lại | `unless-stopped` |
+| Health check | `python -c "urllib.request.urlopen('http://127.0.0.1:<port><health>')"` mỗi 10 giây |
+
+Hệ quả cho người viết app:
+- Image phải có `python` (cho health check) và mọi tệp phải đọc được bởi uid 10001.
+- Cài thư viện **lúc build**; lúc chạy không có mạng ra ngoài.
+- App chỉ gọi được gateway (`apisix:9081`) và Postgres (`postgres:5432`), không gọi được dịch vụ lõi nào khác. Không dịch vụ nào ngoài gateway gửi request tới app.
+
+## 8. Lệnh `./dxos`
+
+`./dxos` ở gốc repo gọi container `dxos-cli` (profile `tools`) để làm phần manifest, database, gateway, nhật ký cài và đăng ký. Script tự bật hoặc tắt container của app bằng `docker compose`. Không mount docker socket vào container nào và không mở thêm cổng. Cần stack đang chạy (ít nhất `postgres` và `apisix`).
+
+| Lệnh | Việc làm |
+| --- | --- |
+| `./dxos validate <dir>...` | Chỉ kiểm tra manifest; in "hợp lệ" hoặc từng lỗi; mã thoát 1 khi có lỗi |
+| `./dxos install <dir>` | Kiểm manifest, database, sinh route gateway, sinh compose, chạy `up -d --build --wait`, rồi ghi `platform.installed_apps`. Bước nào hỏng (kể cả health check, Ctrl-C hoặc TERM) thì mọi bước trước được hoàn tác. Cài lại một app đã cài chỉ bảo đảm container đang chạy |
+| `./dxos remove <id> [--purge]` | Tắt container, gỡ route, xoá đăng ký; mặc định giữ dữ liệu (§5) |
+| `./dxos list` | Mỗi app đã cài một dòng: id, phiên bản, thời điểm cài, trạng thái container; hoặc "Chưa cài app nào" |
+
+`<dir>` phải nằm trong repo, vì `dxos-cli` chỉ thấy repo.
+
+**Trạng thái runtime theo từng compose project (R13):**
+- Mọi tệp sinh ra nằm dưới `docker/runtime/<project>/` (git-ignored). `<project>` là biến môi trường `COMPOSE_PROJECT_NAME`, mặc định `docker`.
+- Đặt project bằng biến môi trường. Cờ `-p` hay `docker/.env` không được `./dxos` và Makefile đọc.
+
+| Tệp | Nội dung |
+| --- | --- |
+| `gateway/apisix.yaml` | tệp route APISIX thực sự đọc: tệp gốc `platform/gateway/apisix.yaml` ghép thêm route của các app. Không app nào thì giống hệt tệp gốc |
+| `gateway/apps/<id>.yaml` | route của một app |
+| `apps/<id>.compose.yml` | compose của app |
+| `apps/<id>.env` | `DXOS_APP_DB_URL`, quyền 600 |
+| `apps/<id>.pending.json` | nhật ký của bản cài đang dở, dùng để hoàn tác |
+
+Tệp đang được git theo dõi không bao giờ bị sửa lúc chạy. `make platform-up` (và `make up`) chạy `gateway-sync` trước, rồi đặt `DXOS_GATEWAY_FILE` để APISIX mount tệp ghép.
+
+**Khởi động stack:**
+- Một `docker compose up` trần không đặt `DXOS_GATEWAY_FILE`, nên APISIX dùng tệp gốc và **không có route app nào** (đóng an toàn).
+- Khi bật riêng `web`, đặt cùng biến để APISIX không bị tạo lại với tệp gốc:
+
+  ```bash
+  DXOS_GATEWAY_FILE=../docker/runtime/docker/gateway/apisix.yaml \
+    docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
+  ```
+
+**Kiểm thử tích hợp:** `make apps-smoke` (sau `npm run seed` và `make platform-smoke`) cài và gỡ `hello`, `tea-tour` và các fixture của CLI, kiểm route, quyền, rollback, idempotent và `--purge`, rồi chạy lại `make platform-smoke` trên stack không có app.
+
+## 9. Mười phút với `hello`
+
+1. **Khởi động lõi** (một lần): `make platform-up`, rồi bật web như trên. Đăng nhập được tại http://localhost:3000.
+2. **Kiểm tra manifest:**
+   ```bash
+   ./dxos validate miniapps/hello      # /repo/miniapps/hello: hợp lệ (đường dẫn trong dxos-cli)
+   ```
+3. **Cài và xem:**
+   ```bash
+   ./dxos install miniapps/hello       # ... Đã cài hello
+   ./dxos list                         # hello  0.1.0  <thời điểm>  Up ... (healthy)
+   ```
+4. **Mở trong ứng dụng:**
+   - Đăng nhập bằng bất kỳ vai trò nào và bấm mục **Xin chào** trong menu.
+   - Trang hiện "Xin chào <tên>, HTX <mã>, vai trò <vai trò>".
+   - Gửi một lời nhắn: form đi qua web, gateway, tới app, rồi app chuyển hướng 303 về trang có lời nhắn.
+   - Đổi giao diện sáng/tối ở thanh trên rồi mở lại trang: khung nhận `?theme=`.
+5. **Chạy test của app:** `cd miniapps/hello && python3 -m unittest`.
+6. **Viết app của anh:**
+   ```bash
+   cp -R miniapps/hello miniapps/my-app
+   ```
+   - Trong `app.yaml`, đổi `id: my-app`, `name` và `label` của menu.
+   - Trong `app.py`, đổi `PREFIX = "/apps/my-app"`.
+   - Chạy `./dxos validate miniapps/my-app`, rồi `./dxos install miniapps/my-app`. Sửa code rồi cài lại: `./dxos remove my-app && ./dxos install miniapps/my-app`.
+7. **Thêm database** (khi cần):
+   - Thêm `database: { migrations: migrations/ }` và `migrations/001_init.sql`; mọi bảng có `htx_code text NOT NULL`.
+   - Đọc `DXOS_APP_DB_URL` từ môi trường.
+   - Lọc mọi truy vấn theo `htx_code` của token.
+8. **Gỡ:**
+   ```bash
+   ./dxos remove hello                 # Đã gỡ hello
+   ./dxos list                         # Chưa cài app nào
+   ```
+   Mục menu biến mất ở lần tải trang sau, và `/apps/hello/` trả 404 ngay.
+
+Trước khi gửi PR cho một mini-app mới:
+- thêm header SPDX vào mọi tệp;
+- ghim chính xác phiên bản mọi thư viện;
+- ghi thư viện mới và giấy phép vào `DEPENDENCIES.md`.

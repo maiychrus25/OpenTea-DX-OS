@@ -285,6 +285,56 @@ Số liệu chi tiết ở [ai-models/tea/MODEL_CARD.md](./ai-models/tea/MODEL_C
 - Chứng nhận của lô đã xuất QR có key ngoài `para/<mã HTX>/` của HTX sở hữu lô nay trả 403 trên trang công khai, và ảnh nhật ký có key như vậy không còn hiển thị; muốn dùng lại phải chép object vào thư mục đó và cập nhật key.
 - Giới hạn đã biết: giới hạn 5 yêu cầu mỗi IP trong 10 phút của `POST /api/register` chỉ tính trong từng tiến trình và tin vào `X-Forwarded-For`, các máy sau cùng một proxy hoặc NAT dùng chung hạn mức, và giá trị không phải IP hợp lệ dùng chung một nhóm `unknown`; khi `web` chạy nhiều hơn một instance phải chuyển sang gateway hoặc kho dùng chung.
 
+## 🧩 Tier 3: Mini-app
+
+Mini-app là một dịch vụ riêng (container, schema Postgres, route gateway) cắm vào DX-OS bằng manifest `app.yaml` và lệnh `./dxos`, không sửa và không build lại lõi. Hướng dẫn viết app: **[docs/miniapps.md](./docs/miniapps.md)**. Quyết định kiến trúc: [ADR 0002](./docs/adr/0002-miniapp-architecture.md).
+
+Repo có hai app:
+- `miniapps/tea-tour` ("Đặt tour đồi chè"): ban quản trị tạo, sửa, huỷ tour và xác nhận lượt đặt; khách đặt chỗ không cần tài khoản tại `/apps/tea-tour/public/<mã HTX>`; nông hộ dẫn tour xem lịch dẫn của mình.
+- `miniapps/hello`: app mẫu tối giản để bắt đầu.
+
+```bash
+make platform-up                        # bắt buộc: chỉ khi đó gateway mới nạp route của các app đã cài
+DXOS_GATEWAY_FILE=../docker/runtime/docker/gateway/apisix.yaml \
+  docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
+./dxos validate miniapps/tea-tour       # chỉ kiểm tra manifest
+./dxos install miniapps/tea-tour        # cài; hỏng ở bước nào thì hoàn tác mọi bước trước
+./dxos list                             # app đã cài, phiên bản, trạng thái container
+./dxos remove tea-tour                  # gỡ, giữ dữ liệu (schema, role, tệp env)
+./dxos remove tea-tour --purge          # gỡ và xoá toàn bộ dữ liệu của app
+make apps-smoke                         # kiểm thử tích hợp (sau npm run seed và make platform-smoke)
+```
+
+- Mục "Tour đồi chè" hiện trong menu của quản lý, "Lịch dẫn tour" trong menu của nông hộ. Gỡ app thì mục menu biến mất ở lần tải trang sau và `/apps/tea-tour/...` trả 404 ngay.
+- Tệp sinh ra nằm dưới `docker/runtime/<project>/` (git-ignored). `<project>` lấy từ biến môi trường `COMPOSE_PROJECT_NAME`, mặc định `docker`. Hãy đặt project bằng biến này, không dùng cờ `-p`.
+- Một `docker compose up` trần chạy lõi mà không có route app nào. Khi bật riêng `web`, đặt `DXOS_GATEWAY_FILE` như trên, nếu không APISIX bị tạo lại với tệp route gốc.
+
+> [!IMPORTANT]
+> **Dữ liệu cá nhân của khách tour:** họ tên, số điện thoại và ghi chú của khách nằm trong schema `app_tea_tour`.
+> - Số điện thoại chỉ ban quản trị (`manager`) của đúng HTX xem được.
+> - Trang công khai không bao giờ hiện tên hay số điện thoại của khách khác. Tra cứu lượt đặt cần cả mã đặt chỗ lẫn số điện thoại.
+> - `./dxos remove tea-tour` giữ dữ liệu này. `./dxos remove tea-tour --purge` xoá toàn bộ tour và lượt đặt, kèm schema, role và tệp env của app.
+
+**Chuẩn bị demo** (spec §12, cài dưới 30 giây):
+- Build image `tea-tour` trước buổi demo: chạy `./dxos install miniapps/tea-tour` một lần rồi `./dxos remove tea-tour --purge`. Image vẫn nằm trong cache Docker.
+- Khi app đang cài, có thể build lại image bằng:
+  ```bash
+  docker compose -f docker/docker-compose.yml -f docker/runtime/docker/apps/tea-tour.compose.yml build app-tea-tour
+  ```
+- Với image đã build, `./dxos install miniapps/tea-tour` mất khoảng 11–12 giây.
+- Câu chuyện tour trên trình duyệt (sau `npm run seed`, `make platform-smoke` và `./dxos install miniapps/tea-tour`):
+  ```bash
+  cd apps/web && E2E_CORE=1 E2E_TEA_TOUR=installed E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/story/tea-tour.spec.ts --project=chromium --no-deps
+  ```
+  Spec tạo tour và lượt đặt thật trong HTX `TC`; chạy `./dxos remove tea-tour --purge` rồi cài lại trước buổi demo.
+
+> [!NOTE]
+> Giới hạn đã biết của mini-app trong v1.8.0:
+> 1. Bản phát hành chưa cài được mini-app (xem mục Bản phát hành).
+> 2. Giới hạn 10 request mỗi phút cho mỗi IP trên route công khai tính trong từng tiến trình web và tin vào `X-Forwarded-For`, giống `/api/register`.
+> 3. Role của app vẫn có quyền `CONNECT` vào các database khác qua `PUBLIC`.
+> 4. Chi tiết và cách nâng cấp: mục `[Unreleased]` của [CHANGELOG.md](./CHANGELOG.md).
+
 ## 🔨 Biên dịch từ Mã nguồn (Build from Source)
 
 **Yêu cầu:** Node.js ≥ 20, Python ≥ 3.11, PostgreSQL ≥ 16.
@@ -329,6 +379,7 @@ OpenTea-DX-OS/
 ├── apps/
 │   ├── web/                # Next.js 14 — giao diện, API routes, Prisma schema & migrations
 │   └── disease-api/        # FastAPI — dịch vụ nhận diện bệnh hại cây trồng
+├── miniapps/               # Mini-app cắm thêm qua app.yaml và ./dxos (tea-tour, hello)
 ├── ai-models/              # Script thiết lập mô hình AI
 ├── database/               # Schema & dữ liệu mẫu PostgreSQL
 ├── docker/                 # Docker Compose, Keycloak realm & theme, cấu hình hạ tầng
@@ -350,6 +401,7 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 - 🧪 **[Testing Strategy](./docs/testing-strategy.md)** — Công cụ và chiến lược kiểm thử.
 - 🛠️ **[Dev Setup](./docs/dev-setup.md)** — Hướng dẫn cài đặt môi trường phát triển.
 - 📝 **[Deviation Register](./docs/deviation-register.md)** — Sổ ghi nhận các điểm sai lệch so với đặc tả.
+- 🧩 **[Mini-app](./docs/miniapps.md)** — Hướng dẫn viết mini-app: manifest, bảo mật, database, giao diện và lệnh `./dxos`.
 - 🎨 **[DESIGN.md](./DESIGN.md)** — Hệ thống thiết kế: token màu sáng/tối, chữ, khoảng cách và quy tắc tương phản.
 - 📦 **[Dependencies](./DEPENDENCIES.md)** — Danh mục thư viện và giấy phép phụ thuộc.
 - 🤖 **[AGENTS.md](./AGENTS.md)** — Quy tắc làm việc cho AI agents và developers.
