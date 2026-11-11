@@ -5,6 +5,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ErrorPage from '@/app/error'
+import { CoreUnavailableError } from '@/domain/errors/CoreUnavailableError'
 
 describe('error.tsx', () => {
   it('1.2a-UNIT-001: renders error message with design system heading', () => {
@@ -24,5 +25,10 @@ describe('error.tsx', () => {
     const { container } = render(<ErrorPage error={new Error('x')} reset={() => {}} />)
     const allElements = container.querySelectorAll('[style]')
     expect(allElements).toHaveLength(0) // AC: 4
+  })
+
+  it('shows the Vietnamese service notice for CORE_UNAVAILABLE (a mini-app lookup that failed, for one)', () => {
+    render(<ErrorPage error={new CoreUnavailableError()} reset={() => {}} />)
+    expect(screen.getByRole('heading', { name: 'Dịch vụ dữ liệu đang tạm gián đoạn' })).toBeInTheDocument()
   })
 })

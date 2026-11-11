@@ -12,8 +12,9 @@ const CSP = "default-src 'self'; script-src 'none'; style-src 'self'; img-src 's
 const FORWARDED_REQUEST_HEADERS = ['content-type', 'accept', 'content-length']
 // An allowlist too: set-cookie and the app's own CSP are dropped.
 const KEPT_RESPONSE_HEADERS = ['content-type', 'location']
-// One segment Next.js already decoded: a dot segment, a separator, or a second encoding of either.
-const UNSAFE_SEGMENT = /^\.{1,2}$|[/\\]|%(2e|2f|5c)/i
+// One segment Next.js already decoded: empty, a dot segment, a separator, or a second encoding of either.
+// Shared with the shell's frame src (miniAppSrc), so both refuse the same paths.
+export const UNSAFE_SEGMENT = /^\.{0,2}$|[/\\]|%(2e|2f|5c)/i
 const SIGNED_OUT_PAGE = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Cần đăng nhập</title></head>
 <body><p>Phiên đăng nhập đã hết hạn. <a href="/login" target="_top">Đăng nhập lại</a> để tiếp tục.</p></body></html>`
 
@@ -70,7 +71,7 @@ export function appResponse(body: BodyInit | null, status: number, headers: Head
 
 /** Sends a browser request for `/apps/<id>/<path>` to the gateway, with the user's token on protected paths (spec §6.7). */
 export async function forwardToApp(req: Request, app: InstalledApp, path: string[], deps: ForwardToAppDeps): Promise<Response> {
-  if (path.some(segment => segment === '' || UNSAFE_SEGMENT.test(segment))) return appResponse('Đường dẫn không hợp lệ', 400)
+  if (path.some(segment => UNSAFE_SEGMENT.test(segment))) return appResponse('Đường dẫn không hợp lệ', 400)
   if (isCrossSiteWrite(req)) return appResponse('Yêu cầu bị từ chối vì được gửi từ trang khác.', 403)
 
   const headers = new Headers()

@@ -65,4 +65,11 @@ describe('miniAppSrc', () => {
   test('is null when the app has no menu entry for the role', () => {
     expect(miniAppSrc(tour, 'officer', [], {})).toBeNull()
   })
+
+  test.each([[['']], [['tours', '']], [['..']], [['.']], [['a/b']], [['a\\b']], [['%2e%2e']], [['x%2Fy']], [['%5c']]])(
+    'is null for an empty or unsafe segment: %j',
+    path => {
+      expect(miniAppSrc(tour, 'manager', path, {})).toBeNull()
+    },
+  )
 })

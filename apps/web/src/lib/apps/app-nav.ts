@@ -3,6 +3,7 @@
 
 import { createElement } from 'react'
 import { LayoutGrid } from 'lucide-react'
+import { UNSAFE_SEGMENT } from '@/application/apps/forward-to-app'
 import type { NavItem } from '@/components/layout/Sidebar/Sidebar'
 import type { InstalledApp } from '@/domain/entities/installed-app'
 import { logger } from '@/lib/logger'
@@ -35,7 +36,10 @@ export async function loadAppNavItems(repository: { list: () => Promise<Installe
   }
 }
 
-/** The proxy URL the shell frames for `/<role>/apps/<id>/<path>?<query>`, or null when the role has no menu entry. */
+/**
+ * The proxy URL the shell frames for `/<role>/apps/<id>/<path>?<query>`, or null when the role has no menu entry or a
+ * segment is empty or unsafe (the proxy refuses those too; this keeps them out of the frame's src).
+ */
 export function miniAppSrc(
   app: InstalledApp,
   role: AppRole,
@@ -43,6 +47,7 @@ export function miniAppSrc(
   searchParams: Record<string, string | string[] | undefined>,
 ): string | null {
   if (!app.menu.some(entry => entry.roles.includes(role))) return null
+  if (path.some(segment => UNSAFE_SEGMENT.test(segment))) return null
   const query = new URLSearchParams()
   for (const [name, value] of Object.entries(searchParams)) {
     for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(name, item)

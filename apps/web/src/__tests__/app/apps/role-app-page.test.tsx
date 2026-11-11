@@ -6,6 +6,7 @@ import '@testing-library/jest-dom'
 import ManagerAppPage, { dynamic } from '@/app/manager/apps/[id]/[[...path]]/page'
 import OfficerAppPage from '@/app/officer/apps/[id]/[[...path]]/page'
 import FarmerAppPage from '@/app/farmer/apps/[id]/[[...path]]/page'
+import { logger } from '@/lib/logger'
 
 const find = jest.fn()
 
@@ -49,6 +50,18 @@ describe('/<role>/apps/[id]/[[...path]]', () => {
   ])('%s: answers notFound when the app has no menu entry for the role', async (_role, Page) => {
     find.mockResolvedValue(managerOnly)
     await expect(Page({ params: { id: 'tea-tour' }, searchParams: {} })).rejects.toThrow('NEXT_NOT_FOUND')
+  })
+
+  test.each([
+    ['manager', ManagerAppPage],
+    ['officer', OfficerAppPage],
+    ['farmer', FarmerAppPage],
+  ])('%s: a failing app lookup raises CORE_UNAVAILABLE, which error.tsx shows as a Vietnamese notice', async (_role, Page) => {
+    const logError = jest.spyOn(logger, 'error').mockImplementation(() => undefined)
+    find.mockRejectedValue(new Error('db down'))
+    await expect(Page({ params: { id: 'tea-tour' }, searchParams: {} })).rejects.toMatchObject({ digest: 'CORE_UNAVAILABLE' })
+    expect(logError).toHaveBeenCalledWith('Mini-app lookup failed', expect.objectContaining({ app: 'tea-tour' }))
+    logError.mockRestore()
   })
 
   test('renders the frame on the proxy path with the shell query', async () => {
