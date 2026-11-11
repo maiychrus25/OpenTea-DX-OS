@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
-# Mini-app smoke tests: ./dxos install/remove with the hello app. Run from the repo root via `make apps-smoke`
-# on a seeded stack (make platform-up + seed), because the last check runs the full platform smoke.
+# Mini-app smoke tests: ./dxos install/remove with the hello app, and the gateway's role check on tea-tour. Run
+# from the repo root via `make apps-smoke` on a seeded stack (make platform-up + seed), because the last check runs
+# the full platform smoke.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source platform/tests/lib.sh
@@ -11,7 +12,7 @@ source platform/tests/tokens.sh
 command -v jq >/dev/null || { echo "jq is required (brew/apt install jq)"; exit 1; }
 
 # Whatever fails, leave no app behind (the registry, docker/runtime/<project> and the containers outlive this script).
-trap 'rc=$?; ./dxos remove db-app --purge >/dev/null 2>&1 || true; ./dxos remove broken-health >/dev/null 2>&1 || true; ./dxos remove hello >/dev/null 2>&1 || true; exit $rc' EXIT
+trap 'rc=$?; ./dxos remove tea-tour --purge >/dev/null 2>&1 || true; ./dxos remove db-app --purge >/dev/null 2>&1 || true; ./dxos remove broken-health >/dev/null 2>&1 || true; ./dxos remove hello >/dev/null 2>&1 || true; exit $rc' EXIT
 
 RUNTIME="docker/runtime/${COMPOSE_PROJECT_NAME:-docker}"  # per compose project (R13), as in the Makefile
 GW_FILE="$RUNTIME/gateway/apisix.yaml"
@@ -37,8 +38,10 @@ echo "[identity setup]"
 kc_wait
 ensure_client dxos-smoke dx-os-core,roles,profile
 ensure_user smoke_manager_tc manager TC
+ensure_user smoke_farmer_tc farmer TC
 TM=$(user_token smoke_manager_tc); [ -n "$TM" ] && [ "$TM" != null ] || fail "smoke_manager_tc token empty"
-pass "smoke client and user ready"
+TF=$(user_token smoke_farmer_tc); [ -n "$TF" ] && [ "$TF" != null ] || fail "smoke_farmer_tc token empty"
+pass "smoke client and users ready"
 
 echo "[install hello]"
 ./dxos remove hello >/dev/null 2>&1 || true  # start from a stack without hello, so the smoke can be re-run
@@ -100,6 +103,26 @@ assert_eq "$($COMPOSE exec -T postgres psql "$URL" -tAc 'select count(*) from no
 assert_eq "$(psql_app "select count(*) from pg_namespace where nspname='app_db_app'")" 0 "--purge dropped schema app_db_app"
 assert_eq "$(psql_app "select count(*) from pg_roles where rolname='app_db_app'")" 0 "--purge dropped role app_db_app"
 [ ! -e "$DB_ENV" ] && pass "--purge deleted the db-app env file" || fail "db-app env file left after --purge"
+
+echo "[tea-tour]"
+./dxos remove tea-tour --purge >/dev/null 2>&1 || true  # a fresh schema, whatever an earlier run or the browser story left
+./dxos install miniapps/tea-tour && pass "./dxos install miniapps/tea-tour exits 0" || fail "./dxos install miniapps/tea-tour"
+wait_http 200 "manager token -> 200 on /apps/tea-tour/" -- -H "Authorization: Bearer $TM" "$GATEWAY/apps/tea-tour/"
+assert_http 401 "no token -> 401 on /apps/tea-tour/" -- "$GATEWAY/apps/tea-tour/"
+# refused <token> <path> <who>: the gateway's role check (R3) answers before the app. The app refuses a wrong role
+# too, but with its own page, which links /dxos-app.css; the gateway's answer must not be such a page.
+refused() {
+  local out code
+  out="$(curl -s -w $'\n%{http_code}' -H "Authorization: Bearer $1" "$GATEWAY$2")"; code="${out##*$'\n'}"
+  case "$code" in 401|403) ;; *) fail "$3 token on $2 not refused: HTTP $code" ;; esac
+  grep -q 'dxos-app.css' <<<"${out%$'\n'*}" && fail "$3 token on $2 got an app page (HTTP $code), not the gateway's refusal"
+  pass "$3 token on $2 -> HTTP $code from the gateway, no app content"
+}
+refused "$TF" /apps/tea-tour/ smoke_farmer_tc
+refused "$TF" /apps/tea-tour/tours smoke_farmer_tc
+refused "$TM" /apps/tea-tour/guide smoke_manager_tc
+
+./dxos remove tea-tour --purge && pass "./dxos remove tea-tour --purge exits 0" || fail "./dxos remove tea-tour --purge"
 
 echo "[platform-up with hello installed]"
 CID=$(hello_container); [ -n "$CID" ] || fail "app-hello not running before platform-up"
