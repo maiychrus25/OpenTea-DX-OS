@@ -107,6 +107,24 @@ def test_confirm_needs_an_open_tour(db):
     assert store.set_booking_status(db, "TC", booking_id, "CANCELLED", ("PENDING",)) == (tour_id, True)
 
 
+def test_confirm_locks_only_its_own_tour(db, app_db_url):
+    """While a confirm on tour A is uncommitted, tour B can still be edited and booked; tour A cannot be edited."""
+    tour_b = add_tour(db, title="B")  # first, so a scan over every OPEN tour reaches it before tour A
+    tour_a = add_tour(db, title="A")
+    booking_a = add_booking(db, tour_a)
+    values = dict(title="B mới", starts_at=datetime.now(timezone.utc) + timedelta(days=3), meeting_point="Đồi",
+                  seats=5, price_vnd=0, description=None, guide_user_id=None, guide_name="Hộ ông Ba")
+    db.execute("SET lock_timeout = '300ms'")
+    with store.connect(app_db_url) as confirming, confirming.transaction():
+        # The store's own transaction becomes a savepoint, so its locks are held until this block ends.
+        assert store.set_booking_status(confirming, "TC", booking_a, "CONFIRMED", ("PENDING",), open_tour=True) \
+            == (tour_a, True)
+        assert store.edit_tour(db, "TC", tour_b, **values) is None
+        assert isinstance(store.book(db, "TC", tour_b, "Khách", "0912345678", 1, None), Booking)
+        with pytest.raises(psycopg.errors.LockNotAvailable):
+            store.edit_tour(db, "TC", tour_a, **{**values, "title": "A mới"})
+
+
 def test_edit_tour_is_refused_for_closed_missing_or_overbooked_tours(db):
     """The store checks again under the row lock: the page's own check can race with a cancel or a booking."""
     values = dict(title="Mới", starts_at=datetime.now(timezone.utc) + timedelta(days=3), meeting_point="Đồi",

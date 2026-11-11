@@ -148,9 +148,10 @@ def set_booking_status(conn, htx_code: str, booking_id: UUID, status: str, from_
 
     Returns (tour id, whether it changed), or None when the booking is not in that HTX.
     """
-    # FOR SHARE: a tour cancel committing meanwhile is waited for and its new status rechecked.
-    tour_check = ("AND tour_id IN (SELECT id FROM tours WHERE htx_code = %(htx)s AND status = 'OPEN' FOR SHARE)"
-                  if open_tour else "")
+    # FOR SHARE on this booking's tour only: a tour cancel committing meanwhile is waited for and its new status
+    # rechecked, while other tours of the HTX stay free to edit and book.
+    tour_check = ("AND EXISTS (SELECT 1 FROM tours t WHERE t.id = bookings.tour_id AND t.htx_code = %(htx)s "
+                  "AND t.status = 'OPEN' FOR SHARE)" if open_tour else "")
     with conn.transaction():
         changed = conn.execute(
             f"UPDATE bookings SET status = %(status)s WHERE id = %(id)s AND htx_code = %(htx)s "
