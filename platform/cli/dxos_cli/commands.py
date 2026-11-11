@@ -192,7 +192,12 @@ def abort(root: Path, app_id: str) -> None:
     if registered:
         # Commit wrote the row but may have failed to delete the journal: undoing now would drop a live app's data.
         raise InstallError(f"App '{app_id}' đã được đăng ký, không hoàn tác được; dùng remove để gỡ")
-    undo_from_journal(journal_path(root, app_id), {s.name: s for s in _steps(root, app_id)})
+    journal = journal_path(root, app_id)
+    steps = {s.name: s for s in _steps(root, app_id)}
+    state = read_journal(journal)
+    if "database" in state and "database" not in state.get("completed", []):
+        steps["database"].undo()  # a crash inside the database step; undo is idempotent and keeps what existed
+    undo_from_journal(journal, steps)
 
 
 def remove(root: Path, app_id: str, purge: bool) -> None:

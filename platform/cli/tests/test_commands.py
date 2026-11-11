@@ -168,3 +168,24 @@ def test_remove_with_a_corrupt_journal(root, capsys):
     assert runtime_files(root) == {"gateway/apisix.yaml": base_text(root)}
     with psycopg.connect(root_db_url()) as conn:
         assert conn.execute("SELECT count(*) FROM pg_roles WHERE rolname = 'app_tea_tour'").fetchone() == (0,)
+
+
+def test_abort_undoes_a_crash_inside_the_database_step(root, monkeypatch):
+    def crash(*args):
+        raise KeyboardInterrupt  # not an Exception: no in-process undo runs, as with a killed process
+
+    # The schema and role exist, the journal has the "database" entry, but the step is not recorded as completed.
+    real = commands.database.write_env_file
+    monkeypatch.setattr(commands.database, "write_env_file", crash)
+    try:
+        main(["prepare", app_dir(root)])
+    except KeyboardInterrupt:
+        pass
+    monkeypatch.setattr(commands.database, "write_env_file", real)
+    journal = json.loads((root / "docker" / "runtime" / "apps" / "tea-tour.pending.json").read_text(encoding="utf-8"))
+    assert journal["completed"] == ["validate"] and "database" in journal
+    assert main(["abort", "tea-tour"]) == 0
+    with psycopg.connect(root_db_url()) as conn:
+        assert conn.execute("SELECT count(*) FROM pg_namespace WHERE nspname = 'app_tea_tour'").fetchone() == (0,)
+        assert conn.execute("SELECT count(*) FROM pg_roles WHERE rolname = 'app_tea_tour'").fetchone() == (0,)
+    assert runtime_files(root) == {}  # the crash came before the gateway step, and abort removed the journal

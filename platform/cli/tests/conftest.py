@@ -77,6 +77,7 @@ def root(tmp_path, monkeypatch, pg_url):
         conn.execute("TRUNCATE platform.installed_apps")
         for (name,) in conn.execute(r"SELECT rolname FROM pg_roles WHERE rolname LIKE 'app\_%'").fetchall():
             conn.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(name)))
+            conn.execute(sql.SQL("DROP OWNED BY {}").format(sql.Identifier(name)))
             conn.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(name)))
         for (name,) in conn.execute(r"SELECT nspname FROM pg_namespace WHERE nspname LIKE 'app\_%'").fetchall():
             conn.execute(sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(name)))

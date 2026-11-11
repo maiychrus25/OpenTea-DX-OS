@@ -8,6 +8,7 @@ import pytest
 from psycopg.conninfo import make_conninfo
 
 from dxos_cli.__main__ import main
+from dxos_cli import database
 from dxos_cli.database import ensure_app_database, read_env_password, write_env_file
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -35,6 +36,18 @@ def env_file(root, app_id="tea-tour"):
 
 def app_dir(root):
     return str(root / "miniapps" / "tea-tour")
+
+
+def add_migration(root, name, text):
+    (root / "miniapps" / "tea-tour" / "migrations" / name).write_text(text, encoding="utf-8")
+
+
+def core_tables(pg_url):
+    """Tables outside app schemas and pg_catalog/information_schema, with their owners."""
+    with admin(pg_url) as conn:
+        return conn.execute("""SELECT schemaname, tablename, tableowner FROM pg_tables
+                               WHERE schemaname NOT LIKE 'app\\_%' AND schemaname NOT IN ('pg_catalog', 'information_schema')
+                               ORDER BY 1, 2""").fetchall()
 
 
 def test_creates_schema_role_and_applies_migrations_once(root, pg_url):
@@ -141,3 +154,81 @@ def test_env_file_url_encodes_the_password(tmp_path):
         "DXOS_APP_DB_URL=postgresql://app_x_app:a%2Fb%40c%3Ad%25@postgres:5432/agrimarket\n")
     assert read_env_password(path) == "a/b@c:d%"
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+def test_migration_cannot_escape_to_admin(root, pg_url):
+    before = core_tables(pg_url)
+    add_migration(root, "002_escape.sql", "RESET ROLE;\nCREATE TABLE public.x (htx_code text NOT NULL);\n")
+    assert main(["prepare", app_dir(root)]) == 1
+    assert core_tables(pg_url) == before
+    assert exists(pg_url) == (False, False)
+
+
+def test_migrations_run_as_the_app_role(root, pg_url):
+    add_migration(root, "002_who.sql", "CREATE TABLE who (htx_code text NOT NULL, u text, s text);\n"
+                                       "INSERT INTO who SELECT 'TC', current_user, session_user;\n")
+    assert main(["prepare", app_dir(root)]) == 0
+    with admin(pg_url) as conn:
+        assert conn.execute("SELECT u, s FROM app_tea_tour.who").fetchall() == [("app_tea_tour", "app_tea_tour")]
+        owners = conn.execute("SELECT DISTINCT tableowner FROM pg_tables WHERE schemaname = 'app_tea_tour'").fetchall()
+        assert owners == [("app_tea_tour",)]
+
+
+def test_commit_inside_a_migration_keeps_the_app_role(root, pg_url):
+    before = core_tables(pg_url)
+    add_migration(root, "002_commit.sql", "CREATE TABLE who (htx_code text NOT NULL, u text);\nCOMMIT;\n"
+                                          "INSERT INTO who SELECT 'TC', current_user;\n"
+                                          "CREATE TABLE later (htx_code text NOT NULL);\n")
+    assert main(["prepare", app_dir(root)]) == 0
+    with admin(pg_url) as conn:
+        assert conn.execute("SELECT u FROM app_tea_tour.who").fetchall() == [("app_tea_tour",)]
+        assert conn.execute("SELECT tableowner FROM pg_tables WHERE tablename = 'later'").fetchall() == [("app_tea_tour",)]
+        applied = conn.execute("SELECT file FROM app_tea_tour.schema_migrations ORDER BY 1").fetchall()
+        assert applied == [("001_tours.sql",), ("002_commit.sql",)]
+    assert core_tables(pg_url) == before
+
+
+def test_role_statements_never_carry_the_plain_password(root, pg_url):
+    with admin(pg_url) as conn:
+        for create in (True, False):
+            text = database.role_password_statement(conn, "app_x", "plain-secret-42", create=create).as_string(conn)
+            assert "plain-secret-42" not in text and "SCRAM-SHA-256$" in text
+        password = ensure_app_database(conn, "tea-tour", MIGRATIONS)
+        stored = conn.execute("SELECT rolpassword FROM pg_authid WHERE rolname = 'app_tea_tour'").fetchone()[0]
+        assert stored.startswith("SCRAM-SHA-256$")
+    with as_app(pg_url, password) as conn:  # the plain password still logs in
+        assert conn.execute("SELECT current_user").fetchone() == ("app_tea_tour",)
+
+
+def test_purge_after_default_privileges_drops_everything(root, pg_url):
+    add_migration(root, "002_defacl.sql", "ALTER DEFAULT PRIVILEGES GRANT SELECT ON TABLES TO PUBLIC;\n"
+                                          "CREATE TABLE t (htx_code text NOT NULL);\n")
+    assert main(["prepare", app_dir(root)]) == 0
+    assert main(["commit", "tea-tour"]) == 0
+    assert main(["remove", "tea-tour", "--purge"]) == 0
+    assert exists(pg_url) == (False, False)
+    assert not env_file(root).exists()
+
+
+@pytest.mark.parametrize("core_sql, name", [
+    ("CREATE VIEW public.core_view AS SELECT * FROM app_tea_tour.tours", "public.core_view"),
+    ("CREATE TABLE public.core_fk (tour int REFERENCES app_tea_tour.tours (id))", "public.core_fk"),
+])
+def test_purge_refuses_when_a_core_object_depends_on_the_app(root, pg_url, capsys, core_sql, name):
+    assert main(["prepare", app_dir(root)]) == 0
+    assert main(["commit", "tea-tour"]) == 0
+    with admin(pg_url) as conn:
+        conn.execute(core_sql)
+    try:
+        capsys.readouterr()
+        assert main(["remove", "tea-tour", "--purge"]) == 1
+        assert name in capsys.readouterr().err
+        assert exists(pg_url) == (True, True)  # nothing dropped
+        assert env_file(root).exists()  # kept: the role still exists
+        with admin(pg_url) as conn:
+            assert conn.execute("SELECT count(*) FROM app_tea_tour.tours").fetchone() == (0,)
+    finally:
+        with admin(pg_url) as conn:
+            conn.execute(f"DROP {'VIEW' if 'VIEW' in core_sql else 'TABLE'} IF EXISTS {name}")
+    assert main(["remove", "tea-tour", "--purge"]) == 0
+    assert exists(pg_url) == (False, False)
