@@ -40,6 +40,24 @@ function staysInApp(location: string, req: Request, appId: string): boolean {
   return target.origin === new URL(req.url).origin && (target.pathname === prefix || target.pathname.startsWith(`${prefix}/`))
 }
 
+/**
+ * R18: the proxy attaches the session token, so a form posted by another site would act as the signed-in user.
+ * A request without an Origin header is not a cross-site browser form, so only a present, foreign Origin is refused.
+ * req.url is no use here: the standalone server builds it from HOSTNAME (0.0.0.0), so the web origin is the
+ * browser's Host header or, behind a proxy that rewrites Host, AUTH_URL (the origin next-auth already uses).
+ */
+function isCrossSiteWrite(req: Request): boolean {
+  if (req.method === 'GET' || req.method === 'HEAD') return false
+  const origin = req.headers.get('origin')
+  if (origin === null) return false
+  const authUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL
+  try {
+    return new URL(origin).host !== req.headers.get('host') && !(authUrl && new URL(authUrl).origin === origin)
+  } catch {
+    return true // "null" (an opaque origin), garbage, or an unreadable AUTH_URL
+  }
+}
+
 /** Every response under `/apps/` carries the no-script CSP (spec §6.6). */
 export function appResponse(body: BodyInit | null, status: number, headers: HeadersInit = { 'content-type': 'text/plain; charset=utf-8' }) {
   const out = new Headers(headers)
@@ -51,6 +69,7 @@ export function appResponse(body: BodyInit | null, status: number, headers: Head
 /** Sends a browser request for `/apps/<id>/<path>` to the gateway, with the user's token on protected paths (spec §6.7). */
 export async function forwardToApp(req: Request, app: InstalledApp, path: string[], deps: ForwardToAppDeps): Promise<Response> {
   if (path.some(segment => segment === '' || UNSAFE_SEGMENT.test(segment))) return appResponse('Đường dẫn không hợp lệ', 400)
+  if (isCrossSiteWrite(req)) return appResponse('Yêu cầu bị từ chối vì được gửi từ trang khác.', 403)
 
   const headers = new Headers()
   for (const name of FORWARDED_REQUEST_HEADERS) {

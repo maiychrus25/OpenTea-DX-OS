@@ -210,6 +210,64 @@ describe('forwardToApp', () => {
     expect((await forwardToApp(new Request('http://web/apps/tea-tour/'), app, [], { ...deps, clientIp: '192.0.2.10' })).status).toBe(200)
   })
 
+  describe('cross-site writes (R18)', () => {
+    const post = (headers: Record<string, string>, method = 'POST') =>
+      new Request('http://0.0.0.0:3000/apps/tea-tour/tours', { method, body: method === 'GET' ? undefined : 'a=1', headers })
+
+    beforeEach(() => {
+      process.env.AUTH_URL = 'https://htx.example.vn'
+    })
+    afterEach(() => {
+      delete process.env.AUTH_URL
+    })
+
+    test.each([
+      ['POST', { origin: 'https://evil.example', host: 'htx.example.vn' }],
+      ['POST', { origin: 'null', host: 'htx.example.vn' }],
+      ['PUT', { origin: 'https://evil.example' }],
+      ['DELETE', { origin: 'http://htx.example.vn.evil.example' }],
+    ])('refuses a %s from another origin with 403 before any token or upstream call: %j', async (method, headers) => {
+      const { fetchImpl, getToken, deps } = setup()
+
+      const res = await forwardToApp(post(headers, method), app, ['tours'], deps)
+
+      expect(res.status).toBe(403)
+      expect(res.headers.get('content-security-policy')).toBe(CSP)
+      expect(await res.text()).toMatch(/trang khác/)
+      expect(getToken).not.toHaveBeenCalled()
+      expect(fetchImpl).not.toHaveBeenCalled()
+    })
+
+    test('refuses a public form posted from another origin too', async () => {
+      const { fetchImpl, deps } = setup()
+      const req = new Request('http://web/apps/tea-tour/public/TC/tours/x/book', { method: 'POST', body: 'a=1', headers: { origin: 'https://evil.example' } })
+
+      expect((await forwardToApp(req, app, ['public', 'TC', 'tours', 'x', 'book'], deps)).status).toBe(403)
+      expect(fetchImpl).not.toHaveBeenCalled()
+    })
+
+    test.each([
+      ['the Host header', { origin: 'http://localhost:3000', host: 'localhost:3000' }],
+      ['AUTH_URL', { origin: 'https://htx.example.vn', host: 'web:3000' }],
+      ['no Origin header', {}],
+    ])('forwards a POST whose origin matches %s', async (_, headers) => {
+      const { fetchImpl, deps } = setup()
+
+      const res = await forwardToApp(post(headers), app, ['tours'], deps)
+
+      expect(res.status).toBe(200)
+      expect(fetchImpl).toHaveBeenCalledTimes(1)
+    })
+
+    test('does not check the origin of a GET', async () => {
+      const { fetchImpl, deps } = setup()
+
+      await forwardToApp(post({ origin: 'https://evil.example' }, 'GET'), app, ['tours'], deps)
+
+      expect(fetchImpl).toHaveBeenCalledTimes(1)
+    })
+  })
+
   test('answers 401 when the session has no token', async () => {
     const { fetchImpl, getToken, deps } = setup()
     getToken.mockRejectedValue(new Error('no session'))
