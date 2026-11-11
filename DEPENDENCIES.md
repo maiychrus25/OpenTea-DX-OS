@@ -140,6 +140,7 @@ ImageNet weights it downloads are credited in `ai-models/ATTRIBUTION.md`.
 |---------|---------|---------|---------|
 | [PyYAML](https://github.com/yaml/pyyaml) | 6.0.3 | MIT | Reads `app.yaml` manifests |
 | [jsonschema](https://github.com/python-jsonschema/jsonschema) | 4.26.0 | MIT | Validates manifests against `platform/apps/manifest.schema.json` |
+| [psycopg[binary]](https://github.com/psycopg/psycopg) | 3.3.6 | LGPL-3.0 | PostgreSQL driver for `platform.installed_apps` (dynamically linked, unmodified) |
 | [pytest](https://github.com/pytest-dev/pytest) | 9.1.1 | MIT | Unit tests (dev only) |
 
 > **\* n8n License Note:** n8n uses the Sustainable Use License (fair-code, source-available,

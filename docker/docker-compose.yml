@@ -20,6 +20,7 @@ services:
       - ../platform/postgres/init/02-audit.sql:/docker-entrypoint-initdb.d/02-audit.sql
       - ../platform/postgres/init/03-audit-triggers.sql:/docker-entrypoint-initdb.d/03-audit-triggers.sql
       - ../platform/postgres/init/04-telemetry.sql:/docker-entrypoint-initdb.d/04-telemetry.sql
+      - ../platform/postgres/init/05-apps.sql:/docker-entrypoint-initdb.d/05-apps.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrimarket"]
       interval: 5s
@@ -482,6 +483,7 @@ services:
     restart: "no"
     environment:
       DXOS_REPO_ROOT: /repo
+      DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
     volumes:
       - ../miniapps:/repo/miniapps:ro
       - ../platform:/repo/platform:ro
