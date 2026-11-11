@@ -259,6 +259,32 @@ describe('forwardToApp', () => {
       expect(fetchImpl).toHaveBeenCalledTimes(1)
     })
 
+    test('compares the scheme too: https on an http request with a matching Host is refused', async () => {
+      const { fetchImpl, deps } = setup()
+
+      const res = await forwardToApp(post({ origin: 'https://localhost:3000', host: 'localhost:3000' }), app, ['tours'], deps)
+
+      expect(res.status).toBe(403)
+      expect(fetchImpl).not.toHaveBeenCalled()
+    })
+
+    test('refuses a write without Origin that the browser marks cross-site', async () => {
+      const { fetchImpl, deps } = setup()
+
+      const res = await forwardToApp(post({ 'sec-fetch-site': 'cross-site', host: 'htx.example.vn' }), app, ['tours'], deps)
+
+      expect(res.status).toBe(403)
+      expect(fetchImpl).not.toHaveBeenCalled()
+    })
+
+    test.each([['same-origin'], ['none']])('forwards a write without Origin marked %s', async (site) => {
+      const { fetchImpl, deps } = setup()
+
+      await forwardToApp(post({ 'sec-fetch-site': site }), app, ['tours'], deps)
+
+      expect(fetchImpl).toHaveBeenCalledTimes(1)
+    })
+
     test('does not check the origin of a GET', async () => {
       const { fetchImpl, deps } = setup()
 

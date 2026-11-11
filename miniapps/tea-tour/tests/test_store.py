@@ -92,3 +92,33 @@ def test_normalize_phone():
 def test_app_role_cannot_read_core_tables(db):
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         db.execute("SELECT 1 FROM platform.installed_apps LIMIT 1")
+
+
+def test_booking_must_belong_to_its_tours_htx(db):
+    tour_id = add_tour(db)
+    with pytest.raises(psycopg.errors.ForeignKeyViolation):
+        add_booking(db, tour_id, htx="LB")
+
+
+def test_confirm_needs_an_open_tour(db):
+    tour_id = add_tour(db, status="CANCELLED")
+    booking_id = add_booking(db, tour_id)
+    assert store.set_booking_status(db, "TC", booking_id, "CONFIRMED", ("PENDING",), open_tour=True) == (tour_id, False)
+    assert store.set_booking_status(db, "TC", booking_id, "CANCELLED", ("PENDING",)) == (tour_id, True)
+
+
+def test_edit_tour_is_refused_for_closed_missing_or_overbooked_tours(db):
+    """The store checks again under the row lock: the page's own check can race with a cancel or a booking."""
+    values = dict(title="Mới", starts_at=datetime.now(timezone.utc) + timedelta(days=3), meeting_point="Đồi",
+                  seats=2, price_vnd=0, description=None, guide_user_id=None, guide_name="Hộ ông Ba")
+    cancelled = add_tour(db, title="Cũ", status="CANCELLED")
+    past = add_tour(db, title="Cũ", starts_at=datetime.now(timezone.utc) - timedelta(minutes=1))
+    booked = add_tour(db, title="Cũ", seats=5)
+    add_booking(db, booked, party_size=3)
+    assert store.edit_tour(db, "TC", cancelled, **values) is store.EditRefusal.CLOSED
+    assert store.edit_tour(db, "TC", past, **values) is store.EditRefusal.CLOSED
+    assert store.edit_tour(db, "LB", booked, **values) is store.EditRefusal.NOT_FOUND
+    assert store.edit_tour(db, "TC", booked, **values) is store.EditRefusal.SEATS
+    assert db.execute("SELECT count(*) FROM tours WHERE title = 'Cũ'").fetchone()[0] == 3
+    assert store.edit_tour(db, "TC", booked, **{**values, "seats": 3}) is None
+    assert db.execute("SELECT title, seats FROM tours WHERE id = %s", (booked,)).fetchone() == ("Mới", 3)

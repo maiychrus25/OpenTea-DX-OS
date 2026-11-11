@@ -8,6 +8,8 @@ the prefix back, because the browser goes through the web proxy and the gateway.
 import logging
 import os
 import re
+import threading
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
@@ -27,10 +29,17 @@ THEMES = ("light", "dark")  # the shell passes ?theme=; without it /dxos-app.css
 VN_TZ = timezone(timedelta(hours=7))  # Asia/Ho_Chi_Minh: UTC+7 with no DST since 1975, so no tzdata is needed
 HTX_RE = re.compile(r"[A-Za-z0-9_-]{1,32}")
 ERRORS = {401: "Cần đăng nhập để xem trang này.", 403: "Tài khoản của bạn không được vào trang này.",
-          404: "Không có trang này.", 405: "Không có trang này."}
+          404: "Không có trang này.", 405: "Không có trang này.",
+          503: "Hệ thống đang bận. Vui lòng thử lại sau ít phút."}
 BOOKING_STATUS = {"PENDING": "Chờ xác nhận", "CONFIRMED": "Đã xác nhận", "CANCELLED": "Đã huỷ"}
 CORE_DOWN = "Không lấy được danh sách nông hộ từ hệ thống. Vui lòng tải lại trang sau ít phút."
 NOT_FOUND_BOOKING = "Không tìm thấy lượt đặt với mã và số điện thoại này."
+# Fixed keys only: ?notice= never carries free text into the page.
+NOTICES = {"unchanged": "Không có gì thay đổi: lượt đặt đã được xử lý trước đó, hoặc tour đã huỷ.",
+           "saved": "Đã lưu thay đổi của tour."}
+DB_MAX_CONNECTIONS = 8  # the app role allows 10; leaves room for ./dxos install and an admin
+DB_WAIT_S = 2
+DB_SLOTS = threading.BoundedSemaphore(DB_MAX_CONNECTIONS)
 
 log = logging.getLogger("tea_tour")
 # The root path (PREFIX) is set on the server, `uvicorn --root-path /apps/tea-tour`: FastAPI deprecated its own.
@@ -98,8 +107,20 @@ def role(name: str):
     return check
 
 
+@contextmanager
+def open_db():
+    """At most DB_MAX_CONNECTIONS at once, below the role's CONNECTION LIMIT 10; a full house answers 503."""
+    if not DB_SLOTS.acquire(timeout=DB_WAIT_S):
+        raise HTTPException(503)
+    try:
+        with store.connect(os.environ["DXOS_APP_DB_URL"]) as conn:
+            yield conn
+    finally:
+        DB_SLOTS.release()
+
+
 def db():
-    with store.connect(os.environ["DXOS_APP_DB_URL"]) as conn:
+    with open_db() as conn:
         yield conn
 
 
@@ -115,6 +136,8 @@ def healthz():
 
 
 # ---------- Manager ----------
+# Handlers that call the core fetch households first and only then open a connection, so a slow core
+# (up to 5 s) never holds one of the few database slots.
 
 def households_or_error(authorization: str) -> tuple[list[core_client.Household], str | None]:
     try:
@@ -130,9 +153,10 @@ def manager_page(request, conn, claims, households, core_error, status=200, erro
 
 
 @app.get("/")
-def manager_home(request: Request, claims: Claims = Depends(role("manager")), conn=Depends(db),
-                 authorization: str = Header()):
-    return manager_page(request, conn, claims, *households_or_error(authorization))
+def manager_home(request: Request, claims: Claims = Depends(role("manager")), authorization: str = Header()):
+    households, core_error = households_or_error(authorization)
+    with open_db() as conn:
+        return manager_page(request, conn, claims, households, core_error)
 
 
 def parse_int(raw: str) -> int | None:
@@ -140,43 +164,57 @@ def parse_int(raw: str) -> int | None:
     return int(raw) if raw.isascii() and raw.isdigit() and len(raw) <= 9 else None
 
 
-@app.post("/tours")
-def create_tour(request: Request, claims: Claims = Depends(role("manager")), conn=Depends(db),
-                authorization: str = Header(), title: str = Form(""), starts_at: str = Form(""),
-                meeting_point: str = Form(""), seats: str = Form(""), price_vnd: str = Form(""),
-                description: str = Form(""), guide: str = Form("")):
-    form = {"title": title, "starts_at": starts_at, "meeting_point": meeting_point, "seats": seats,
+def tour_form(title: str = Form(""), starts_at: str = Form(""), meeting_point: str = Form(""), seats: str = Form(""),
+              price_vnd: str = Form(""), description: str = Form(""), guide: str = Form("")) -> dict:
+    return {"title": title, "starts_at": starts_at, "meeting_point": meeting_point, "seats": seats,
             "price_vnd": price_vnd, "description": description, "guide": guide}
+
+
+def read_tour_form(form: dict, households: list[core_client.Household], core_error: str | None) -> tuple[dict, list]:
+    """Validated values for store.create_tour / store.edit_tour, and the Vietnamese errors (create and edit alike)."""
     errors = []
-    title, meeting_point, description = title.strip(), meeting_point.strip(), description.strip()
+    title, meeting_point = form["title"].strip(), form["meeting_point"].strip()
+    description = form["description"].strip()
     if not 1 <= len(title) <= 120:
         errors.append("Tên tour cần từ 1 đến 120 ký tự.")
     try:
-        start = datetime.fromisoformat(starts_at).replace(tzinfo=VN_TZ)
+        start = datetime.fromisoformat(form["starts_at"])
+        start = start if start.tzinfo else start.replace(tzinfo=VN_TZ)
     except ValueError:
         start = None
     if start is None or start <= datetime.now(VN_TZ):
         errors.append("Thời gian phải là một ngày giờ trong tương lai.")
     if not 1 <= len(meeting_point) <= 200:
         errors.append("Điểm hẹn cần từ 1 đến 200 ký tự.")
-    seat_count = parse_int(seats)
-    if seat_count is None or not 1 <= seat_count <= 50:
+    seats = parse_int(form["seats"])
+    if seats is None or not 1 <= seats <= 50:
         errors.append("Số chỗ phải từ 1 đến 50.")
-    price = parse_int(price_vnd)
+    price = parse_int(form["price_vnd"])
     if price is None:
         errors.append("Giá phải là số đồng, không âm.")
     if len(description) > 2000:
         errors.append("Mô tả tối đa 2000 ký tự.")
-    households, core_error = households_or_error(authorization)
-    chosen = next((h for h in households if h.id == guide), None)
+    chosen = next((h for h in households if h.id == form["guide"]), None)
     if core_error:
         errors.append(core_error)
     elif chosen is None:
         errors.append("Người dẫn tour phải là một nông hộ của HTX.")
     if errors:
-        return manager_page(request, conn, claims, households, core_error, 400, errors, form)
-    tour_id = store.create_tour(conn, claims.htx_code, title, start, meeting_point, seat_count, price,
-                                description or None, chosen.keycloak_user_id, chosen.name)
+        return {}, errors
+    return {"title": title, "starts_at": start, "meeting_point": meeting_point, "seats": seats, "price_vnd": price,
+            "description": description or None, "guide_user_id": chosen.keycloak_user_id,
+            "guide_name": chosen.name}, []
+
+
+@app.post("/tours")
+def create_tour(request: Request, claims: Claims = Depends(role("manager")), authorization: str = Header(),
+                form: dict = Depends(tour_form)):
+    households, core_error = households_or_error(authorization)
+    values, errors = read_tour_form(form, households, core_error)
+    with open_db() as conn:
+        if errors:
+            return manager_page(request, conn, claims, households, core_error, 400, errors, form)
+        tour_id = store.create_tour(conn, claims.htx_code, **values)
     return redirect(request, f"/tours/{tour_id}")
 
 
@@ -185,7 +223,60 @@ def tour_detail(request: Request, tour_id: UUID, claims: Claims = Depends(role("
     tour = store.get_tour(conn, claims.htx_code, tour_id)
     if tour is None:
         raise HTTPException(404)
-    return page(request, "tour.html", tour=tour, bookings=store.tour_bookings(conn, claims.htx_code, tour_id))
+    return page(request, "tour.html", tour=tour, bookings=store.tour_bookings(conn, claims.htx_code, tour_id),
+                notice=NOTICES.get(request.query_params.get("notice", "")))
+
+
+def editable_tour(request, conn, htx_code: str, tour_id: UUID):
+    """The tour, or the 404 / 409 response a cancelled or past tour gets instead of an edit form."""
+    tour = store.get_tour(conn, htx_code, tour_id)
+    if tour is None:
+        raise HTTPException(404)
+    if tour.status != "OPEN" or tour.past:
+        return None, page(request, "message.html", 409, message=store.EditRefusal.CLOSED.message)
+    return tour, None
+
+
+def edit_page(request, tour, households, core_error, status=200, errors=(), form=None):
+    if form is None:
+        guide = next((h.id for h in households if tour.guide_user_id and h.keycloak_user_id == tour.guide_user_id),
+                     next((h.id for h in households if h.name == tour.guide_name), ""))
+        form = {"title": tour.title, "starts_at": tour.starts_at.astimezone(VN_TZ).strftime("%Y-%m-%dT%H:%M"),
+                "meeting_point": tour.meeting_point, "seats": str(tour.seats), "price_vnd": str(tour.price_vnd),
+                "description": tour.description or "", "guide": guide}
+    return page(request, "edit.html", status, tour=tour, households=households, core_error=core_error,
+                errors=errors, form=form)
+
+
+@app.get("/tours/{tour_id}/edit")
+def edit_tour_form(request: Request, tour_id: UUID, claims: Claims = Depends(role("manager")),
+                   authorization: str = Header()):
+    households, core_error = households_or_error(authorization)
+    with open_db() as conn:
+        tour, refused = editable_tour(request, conn, claims.htx_code, tour_id)
+    return refused or edit_page(request, tour, households, core_error)
+
+
+@app.post("/tours/{tour_id}/edit")
+def edit_tour(request: Request, tour_id: UUID, claims: Claims = Depends(role("manager")),
+              authorization: str = Header(), form: dict = Depends(tour_form)):
+    households, core_error = households_or_error(authorization)
+    values, errors = read_tour_form(form, households, core_error)
+    with open_db() as conn:
+        tour, refused = editable_tour(request, conn, claims.htx_code, tour_id)
+        if refused:
+            return refused
+        if not errors:
+            refusal = store.edit_tour(conn, claims.htx_code, tour_id, **values)
+            if refusal is None:
+                return redirect(request, f"/tours/{tour_id}", notice="saved")
+            if refusal is store.EditRefusal.NOT_FOUND:
+                raise HTTPException(404)
+            if refusal is store.EditRefusal.CLOSED:
+                return page(request, "message.html", 409, message=refusal.message)
+            tour = store.get_tour(conn, claims.htx_code, tour_id)  # fresh seat count for the message
+            errors = [f"Số chỗ không được ít hơn số chỗ khách đã đặt ({tour.seats_used})."]
+    return edit_page(request, tour, households, core_error, 400, errors, form)
 
 
 @app.post("/tours/{tour_id}/cancel")
@@ -195,17 +286,19 @@ def cancel_tour(request: Request, tour_id: UUID, claims: Claims = Depends(role("
     return redirect(request, f"/tours/{tour_id}")
 
 
-def move_booking(request, conn, claims, booking_id, status, from_statuses):
-    tour_id = store.set_booking_status(conn, claims.htx_code, booking_id, status, from_statuses)
-    if tour_id is None:
+def move_booking(request, conn, claims, booking_id, status, from_statuses, open_tour=False):
+    moved = store.set_booking_status(conn, claims.htx_code, booking_id, status, from_statuses, open_tour)
+    if moved is None:
         raise HTTPException(404)
-    return redirect(request, f"/tours/{tour_id}")
+    tour_id, changed = moved
+    return redirect(request, f"/tours/{tour_id}", **({} if changed else {"notice": "unchanged"}))
 
 
 @app.post("/bookings/{booking_id}/confirm")
 def confirm_booking(request: Request, booking_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db)):
-    # Only a pending booking: confirming a cancelled one would take seats back without the row lock of book().
-    return move_booking(request, conn, claims, booking_id, "CONFIRMED", ("PENDING",))
+    # Only a pending booking of an open tour: confirming a cancelled booking would take seats back outside the
+    # row lock of book(), and a cancelled tour takes no guests.
+    return move_booking(request, conn, claims, booking_id, "CONFIRMED", ("PENDING",), open_tour=True)
 
 
 @app.post("/bookings/{booking_id}/cancel")

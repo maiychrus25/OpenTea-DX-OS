@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 import json
 import re
+import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlsplit
@@ -298,3 +299,142 @@ def test_core_client_sends_bearer_and_manager_role(monkeypatch):
     monkeypatch.setattr(core_client.urllib.request, "urlopen", refused)
     with pytest.raises(CoreError):
         core_client.list_households("Bearer t")
+
+
+EDIT = {**FORM, "title": "Hái chè chiều", "starts_at": "2030-06-02T15:00", "meeting_point": "Đồi chè số 3",
+        "seats": "12", "price_vnd": "300000", "description": "Mới", "guide": "h2"}
+
+
+def edit(client, tour_id, **form):
+    return client.post(f"/tours/{tour_id}/edit", headers=MANAGER, data={**EDIT, **form})
+
+
+def tour_row(db, tour_id):
+    return db.execute("SELECT title, seats, price_vnd, guide_name, guide_user_id FROM tours WHERE id = %s",
+                      (tour_id,)).fetchone()
+
+
+def test_confirm_on_cancelled_tour_stays_pending(client, db):
+    tour_id = add_tour(db)
+    booking_id = add_booking(db, tour_id)
+    assert client.post(f"/tours/{tour_id}/cancel", headers=MANAGER).status_code == 303
+    response = client.post(f"/bookings/{booking_id}/confirm?theme=dark", headers=MANAGER)
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/apps/tea-tour/tours/{tour_id}?notice=unchanged&theme=dark"
+    assert db.execute("SELECT status FROM bookings WHERE id = %s", (booking_id,)).fetchone()[0] == "PENDING"
+    page = client.get(f"/tours/{tour_id}?notice=unchanged", headers=MANAGER).text
+    assert 'role="status"' in page and "Không có gì thay đổi" in page
+    assert ">Xác nhận</button>" not in page
+
+
+def test_notice_takes_only_known_keys(client, db):
+    tour_id = add_tour(db)
+    page = client.get(f"/tours/{tour_id}?notice=%3Cb%3Eforged", headers=MANAGER).text
+    assert "forged" not in page and 'role="status"' not in page
+
+
+def test_noop_cancel_shows_notice(client, db):
+    tour_id = add_tour(db)
+    booking_id = add_booking(db, tour_id, status="CANCELLED")
+    response = client.post(f"/bookings/{booking_id}/cancel", headers=MANAGER)
+    assert response.headers["location"] == f"/apps/tea-tour/tours/{tour_id}?notice=unchanged"
+
+
+def test_edit_tour_saves_and_redirects(client, db, households):
+    tour_id = add_tour(db, seats=5, guide_user_id="kc-farmer-1", guide_name="Hộ ông Ba",
+                       starts_at=datetime(2030, 5, 1, 0, 30, tzinfo=timezone.utc))
+    page = client.get(f"/tours/{tour_id}", headers=MANAGER).text
+    assert f'href="/apps/tea-tour/tours/{tour_id}/edit"' in page
+    form = client.get(f"/tours/{tour_id}/edit", headers=MANAGER)
+    assert form.status_code == 200
+    assert 'value="2030-05-01T07:30"' in form.text and '<option value="h1" selected>' in form.text
+    response = edit(client, tour_id)
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/apps/tea-tour/tours/{tour_id}?notice=saved"
+    assert tour_row(db, tour_id) == ("Hái chè chiều", 12, 300000, "Hộ bà Tư", None)
+
+
+def test_edit_tour_from_another_htx_is_404(client, db, households):
+    lb_tour = add_tour(db, htx="LB", title="Tour La Bằng")
+    assert client.get(f"/tours/{lb_tour}/edit", headers=MANAGER).status_code == 404
+    assert edit(client, lb_tour).status_code == 404
+    assert tour_row(db, lb_tour)[0] == "Tour La Bằng"
+
+
+def test_edit_refuses_seats_below_booked(client, db, households):
+    tour_id = add_tour(db, seats=5)
+    add_booking(db, tour_id, code="AAAA2222", party_size=2)
+    add_booking(db, tour_id, code="BBBB3333", party_size=1, status="CONFIRMED")
+    add_booking(db, tour_id, code="CCCC4444", party_size=2, status="CANCELLED")
+    refused = edit(client, tour_id, seats="2")
+    assert refused.status_code == 400
+    assert 'role="alert"' in refused.text and "Số chỗ không được ít hơn số chỗ khách đã đặt (3)." in refused.text
+    assert tour_row(db, tour_id)[1] == 5
+    assert edit(client, tour_id, seats="3").status_code == 303
+    assert tour_row(db, tour_id)[1] == 3
+
+
+def test_edit_with_forged_guide_is_400(client, db, households):
+    tour_id = add_tour(db, title="Giữ nguyên")
+    refused = edit(client, tour_id, guide="h-of-another-htx")
+    assert refused.status_code == 400 and "Người dẫn tour phải là một nông hộ của HTX." in refused.text
+    assert tour_row(db, tour_id)[0] == "Giữ nguyên"
+
+
+def test_cancelled_or_past_tour_cannot_be_edited(client, db, households):
+    for tour_id in (add_tour(db, title="Đã huỷ", status="CANCELLED"),
+                    add_tour(db, title="Đã qua", starts_at=datetime.now(timezone.utc) - timedelta(hours=1))):
+        assert client.get(f"/tours/{tour_id}/edit", headers=MANAGER).status_code == 409
+        response = edit(client, tour_id)
+        assert response.status_code == 409 and "không sửa được" in response.text
+        assert tour_row(db, tour_id)[0] in ("Đã huỷ", "Đã qua")
+        assert f"/tours/{tour_id}/edit" not in client.get(f"/tours/{tour_id}", headers=MANAGER).text
+
+
+def test_db_busy_answers_503(client, db, monkeypatch):
+    monkeypatch.setattr(main, "DB_WAIT_S", 0.05)
+    taken = [main.DB_SLOTS.acquire(blocking=False) for _ in range(main.DB_MAX_CONNECTIONS)]
+    try:
+        assert all(taken)
+        result = {}
+        request = threading.Thread(target=lambda: result.update(response=client.get("/public/TC")), daemon=True)
+        request.start()
+        request.join(5)
+        assert not request.is_alive(), "the request waited for a free connection instead of answering 503"
+        assert result["response"].status_code == 503 and "bận" in result["response"].text
+    finally:
+        for _ in taken:
+            main.DB_SLOTS.release()
+    assert client.get("/public/TC").status_code == 200
+
+
+def test_households_are_fetched_without_holding_a_connection(client, db, monkeypatch):
+    tour_id = add_tour(db)
+    free_slots = []
+
+    def fake(authorization):
+        taken = [main.DB_SLOTS.acquire(blocking=False) for _ in range(main.DB_MAX_CONNECTIONS)]
+        free_slots.append(sum(taken))
+        for got in taken:
+            if got:
+                main.DB_SLOTS.release()
+        return HOUSEHOLDS
+
+    monkeypatch.setattr(core_client, "list_households", fake)
+    client.get("/", headers=MANAGER)
+    client.post("/tours", headers=MANAGER, data=FORM)
+    client.get(f"/tours/{tour_id}/edit", headers=MANAGER)
+    edit(client, tour_id)
+    assert free_slots == [main.DB_MAX_CONNECTIONS] * 4
+
+
+def test_starts_at_with_an_offset_keeps_it(client, db, households):
+    assert client.post("/tours", headers=MANAGER, data={**FORM, "starts_at": "2030-05-01T07:30+00:00"}).status_code == 303
+    assert db.execute("SELECT starts_at FROM tours").fetchone()[0] == datetime(2030, 5, 1, 7, 30, tzinfo=timezone.utc)
+
+
+def test_guest_name_is_escaped_on_the_manager_page(client, db):
+    tour_id = add_tour(db)
+    assert book(client, tour_id, guest_name="<b>x</b>").status_code == 303
+    page = client.get(f"/tours/{tour_id}", headers=MANAGER).text
+    assert "&lt;b&gt;x&lt;/b&gt;" in page and "<b>x</b>" not in page

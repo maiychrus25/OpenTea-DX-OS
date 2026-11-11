@@ -289,16 +289,30 @@ p {
   margin: 0 0 var(--spacing-3);
 }
 
+/* A real table box, so the header row spans the card; text wraps (overflow-wrap: anywhere on body). */
 table {
-  display: block;
   width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin: 0 0 var(--spacing-4);
   background: var(--color-surface-card);
   border: 1px solid var(--color-border-default);
   border-radius: var(--rounded-md);
+}
+
+/* Narrow screens: the table scrolls inside its own box instead of squeezing every column. Cells wrap only
+   between words here; with body's overflow-wrap: anywhere the table would shrink to the box, breaking words. */
+@media (max-width: 640px) {
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  th,
+  td {
+    overflow-wrap: normal;
+  }
 }
 
 th,
@@ -306,6 +320,19 @@ td {
   padding: var(--spacing-2) var(--spacing-3);
   text-align: left;
   border-bottom: 1px solid var(--color-border-subtle);
+}
+
+tr:last-child > td {
+  border-bottom: 0;
+}
+
+/* The header background stays inside the table's rounded corners. */
+th:first-child {
+  border-top-left-radius: calc(var(--rounded-md) - 1px);
+}
+
+th:last-child {
+  border-top-right-radius: calc(var(--rounded-md) - 1px);
 }
 
 th {

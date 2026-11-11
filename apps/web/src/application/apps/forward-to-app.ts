@@ -42,19 +42,21 @@ function staysInApp(location: string, req: Request, appId: string): boolean {
 
 /**
  * R18: the proxy attaches the session token, so a form posted by another site would act as the signed-in user.
- * A request without an Origin header is not a cross-site browser form, so only a present, foreign Origin is refused.
- * req.url is no use here: the standalone server builds it from HOSTNAME (0.0.0.0), so the web origin is the
- * browser's Host header or, behind a proxy that rewrites Host, AUTH_URL (the origin next-auth already uses).
+ * Without an Origin header only the browser's own Sec-Fetch-Site: cross-site marks a request as foreign.
+ * req.url's host is no use here: the standalone server builds it from HOSTNAME (0.0.0.0), so the web origin is
+ * req.url's scheme with the browser's Host header or, behind a proxy, AUTH_URL (the origin next-auth already uses).
  */
 function isCrossSiteWrite(req: Request): boolean {
   if (req.method === 'GET' || req.method === 'HEAD') return false
   const origin = req.headers.get('origin')
-  if (origin === null) return false
+  if (origin === null) return req.headers.get('sec-fetch-site') === 'cross-site'
+  const host = req.headers.get('host')
   const authUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL
   try {
-    return new URL(origin).host !== req.headers.get('host') && !(authUrl && new URL(authUrl).origin === origin)
+    const sameHost = host !== null && origin === `${new URL(req.url).protocol}//${host}`
+    return !sameHost && !(authUrl && new URL(authUrl).origin === origin)
   } catch {
-    return true // "null" (an opaque origin), garbage, or an unreadable AUTH_URL
+    return true // an unreadable AUTH_URL
   }
 }
 

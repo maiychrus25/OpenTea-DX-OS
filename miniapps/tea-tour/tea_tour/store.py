@@ -25,6 +25,7 @@ class Tour:
     seats: int
     price_vnd: int
     description: str | None
+    guide_user_id: str | None
     guide_name: str | None
     status: str
     past: bool
@@ -59,8 +60,19 @@ class BookingRefusal(Enum):
         return self.value
 
 
+class EditRefusal(Enum):
+    NOT_FOUND = "Không tìm thấy tour."
+    CLOSED = "Tour đã huỷ hoặc đã diễn ra nên không sửa được."
+    SEATS = "Số chỗ không được ít hơn số chỗ khách đã đặt."
+
+    @property
+    def message(self) -> str:
+        return self.value
+
+
 TOUR_SELECT = """
-SELECT t.id, t.title, t.starts_at, t.meeting_point, t.seats, t.price_vnd, t.description, t.guide_name, t.status,
+SELECT t.id, t.title, t.starts_at, t.meeting_point, t.seats, t.price_vnd, t.description, t.guide_user_id,
+       t.guide_name, t.status,
        t.starts_at <= now() AS past,
        COALESCE(sum(b.party_size) FILTER (WHERE b.status IN ('PENDING', 'CONFIRMED')), 0)::int AS seats_used,
        COALESCE(sum(b.party_size) FILTER (WHERE b.status = 'CONFIRMED'), 0)::int AS confirmed_guests
@@ -130,14 +142,50 @@ def tour_bookings(conn, htx_code: str, tour_id: UUID) -> list[Booking]:
                            "ORDER BY created_at", (htx_code, tour_id)).fetchall()
 
 
-def set_booking_status(conn, htx_code: str, booking_id: UUID, status: str, from_statuses: tuple[str, ...]) -> UUID | None:
-    """Move a booking to `status` if it is in one of `from_statuses`; the booking's tour id, or None if not found."""
+def set_booking_status(conn, htx_code: str, booking_id: UUID, status: str, from_statuses: tuple[str, ...],
+                       open_tour: bool = False) -> tuple[UUID, bool] | None:
+    """Move a booking to `status` if it is in one of `from_statuses` (and, with open_tour, its tour is OPEN).
+
+    Returns (tour id, whether it changed), or None when the booking is not in that HTX.
+    """
+    # FOR SHARE: a tour cancel committing meanwhile is waited for and its new status rechecked.
+    tour_check = ("AND tour_id IN (SELECT id FROM tours WHERE htx_code = %(htx)s AND status = 'OPEN' FOR SHARE)"
+                  if open_tour else "")
     with conn.transaction():
-        conn.execute("UPDATE bookings SET status = %s WHERE id = %s AND htx_code = %s AND status = ANY(%s)",
-                     (status, booking_id, htx_code, list(from_statuses)))
+        changed = conn.execute(
+            f"UPDATE bookings SET status = %(status)s WHERE id = %(id)s AND htx_code = %(htx)s "
+            f"AND status = ANY(%(from)s) {tour_check} RETURNING id",
+            {"status": status, "id": booking_id, "htx": htx_code, "from": list(from_statuses)}).fetchone()
         row = conn.execute("SELECT tour_id FROM bookings WHERE id = %s AND htx_code = %s",
                            (booking_id, htx_code)).fetchone()
-    return row[0] if row else None
+    return (row[0], changed is not None) if row else None
+
+
+def _seats_used(conn, htx_code: str, tour_id: UUID) -> int:
+    return conn.execute("SELECT COALESCE(sum(party_size), 0) FROM bookings "
+                        "WHERE tour_id = %s AND htx_code = %s AND status = ANY(%s)",
+                        (tour_id, htx_code, list(HOLDING))).fetchone()[0]
+
+
+def edit_tour(conn, htx_code: str, tour_id: UUID, title: str, starts_at: datetime, meeting_point: str, seats: int,
+              price_vnd: int, description: str | None, guide_user_id: str | None, guide_name: str) -> EditRefusal | None:
+    """Same row lock as book(), so seats can never drop below what a concurrent booking just took."""
+    with conn.transaction():
+        row = conn.execute("SELECT status = 'OPEN' AND starts_at > now() FROM tours "
+                           "WHERE id = %s AND htx_code = %s FOR UPDATE", (tour_id, htx_code)).fetchone()
+        if row is None:
+            return EditRefusal.NOT_FOUND
+        if not row[0]:
+            return EditRefusal.CLOSED
+        if seats < _seats_used(conn, htx_code, tour_id):
+            return EditRefusal.SEATS
+        conn.execute(
+            """UPDATE tours SET title = %s, starts_at = %s, meeting_point = %s, seats = %s, price_vnd = %s,
+                                description = %s, guide_user_id = %s, guide_name = %s
+               WHERE id = %s AND htx_code = %s""",
+            (title, starts_at, meeting_point, seats, price_vnd, description, guide_user_id, guide_name,
+             tour_id, htx_code))
+    return None
 
 
 def lookup(conn, htx_code: str, code: str, phone: str) -> tuple[Booking, Tour] | None:
@@ -160,9 +208,7 @@ def book(conn, htx_code: str, tour_id: UUID, guest_name: str, phone: str, party_
         seats, bookable = tour
         if not bookable:
             return BookingRefusal.CLOSED
-        used = conn.execute("SELECT COALESCE(sum(party_size), 0) FROM bookings WHERE tour_id = %s AND status = ANY(%s)",
-                            (tour_id, list(HOLDING))).fetchone()[0]
-        if used + party_size > seats:
+        if _seats_used(conn, htx_code, tour_id) + party_size > seats:
             return BookingRefusal.FULL
         for attempt in range(CODE_TRIES):
             try:
