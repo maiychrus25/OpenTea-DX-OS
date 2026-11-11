@@ -3,9 +3,9 @@
 
 import { createElement } from 'react'
 import { LayoutGrid } from 'lucide-react'
-import { UNSAFE_SEGMENT } from '@/application/apps/forward-to-app'
 import type { NavItem } from '@/components/layout/Sidebar/Sidebar'
 import type { InstalledApp } from '@/domain/entities/installed-app'
+import { UNSAFE_SEGMENT } from '@/lib/apps/unsafe-segment'
 import { logger } from '@/lib/logger'
 
 export type AppRole = 'farmer' | 'officer' | 'manager'

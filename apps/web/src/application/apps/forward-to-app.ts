@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import type { InstalledApp } from '@/domain/entities/installed-app'
+import { UNSAFE_SEGMENT } from '@/lib/apps/unsafe-segment'
 import { createIpLimiter } from '@/lib/ip-rate-limit'
 import { logger } from '@/lib/logger'
 
@@ -12,9 +13,6 @@ const CSP = "default-src 'self'; script-src 'none'; style-src 'self'; img-src 's
 const FORWARDED_REQUEST_HEADERS = ['content-type', 'accept', 'content-length']
 // An allowlist too: set-cookie and the app's own CSP are dropped.
 const KEPT_RESPONSE_HEADERS = ['content-type', 'location']
-// One segment Next.js already decoded: empty, a dot segment, a separator, or a second encoding of either.
-// Shared with the shell's frame src (miniAppSrc), so both refuse the same paths.
-export const UNSAFE_SEGMENT = /^\.{0,2}$|[/\\]|%(2e|2f|5c)/i
 const SIGNED_OUT_PAGE = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Cần đăng nhập</title></head>
 <body><p>Phiên đăng nhập đã hết hạn. <a href="/login" target="_top">Đăng nhập lại</a> để tiếp tục.</p></body></html>`
 
