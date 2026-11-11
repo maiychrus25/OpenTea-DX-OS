@@ -1,0 +1,14 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+<!doctype html>
+<html lang="vi"{% if theme %} data-theme="{{ theme }}"{% endif %}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{% endblock %} · Tour đồi chè</title>
+<link rel="stylesheet" href="/dxos-app.css">
+</head>
+<body><main>
+{% block main %}{% endblock %}
+</main></body>
+</html>

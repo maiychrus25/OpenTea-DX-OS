@@ -108,6 +108,7 @@ apps/web/prisma/migrations/**/migration.sql
 !scripts/*.sql
 !docker/*.sql
 !platform/**/*.sql
+!miniapps/*/migrations/*.sql
 error.html
 execution.json
 market_error*.json

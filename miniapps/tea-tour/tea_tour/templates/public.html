@@ -1,0 +1,34 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Đặt tour HTX {{ htx }}{% endblock %}
+{% block main %}
+<h1>Tour đồi chè HTX {{ htx }}</h1>
+<p>Chọn tour, để lại họ tên và số điện thoại. HTX sẽ gọi điện xác nhận; không cần thanh toán trước.</p>
+{% if error and not error_tour %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+{% for t in tours %}
+<section aria-labelledby="tour-{{ t.id }}">
+  <h2 id="tour-{{ t.id }}">{{ t.title }}</h2>
+  <p>{{ t.starts_at | vn_time }} · Điểm hẹn: {{ t.meeting_point }}</p>
+  <p>{{ t.price_vnd | vnd }} mỗi khách · {% if t.seats_left %}<span class="pill">Còn {{ t.seats_left }} chỗ</span>{% else %}<span class="pill">Hết chỗ</span>{% endif %}</p>
+  {% if t.description %}<p>{{ t.description }}</p>{% endif %}
+  {% set mine = error_tour == t.id %}
+  {% if error and mine %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  {% if t.seats_left %}
+  <form method="post" action="{{ href('/public/' ~ htx ~ '/tours/' ~ t.id ~ '/book', theme) }}" aria-label="Đặt chỗ {{ t.title }}">
+    <label>Họ tên <input name="guest_name" maxlength="80" required autocomplete="name" value="{{ form.guest_name if mine else '' }}"></label>
+    <label>Số điện thoại <input type="tel" name="phone" required autocomplete="tel" inputmode="tel" value="{{ form.phone if mine else '' }}"></label>
+    <label>Số người (1–{{ [10, t.seats_left] | min }}) <input type="number" name="party_size" min="1" max="{{ [10, t.seats_left] | min }}" required value="{{ form.party_size if mine else '1' }}"></label>
+    <label>Ghi chú (không bắt buộc) <textarea name="note" maxlength="500">{{ form.note if mine else '' }}</textarea></label>
+    <button type="submit">Đặt chỗ</button>
+  </form>
+  {% endif %}
+</section>
+{% else %}
+<p>HTX chưa có tour nào sắp diễn ra. Mời bạn quay lại sau.</p>
+{% endfor %}
+
+<h2>Tra cứu đặt chỗ</h2>
+{% include "lookup.html" %}
+{% endblock %}

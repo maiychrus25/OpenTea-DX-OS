@@ -1,0 +1,25 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Lịch dẫn tour{% endblock %}
+{% block main %}
+<h1>Lịch dẫn tour</h1>
+{% if tours %}
+<table>
+  <thead><tr><th>Tour</th><th>Thời gian</th><th>Điểm hẹn</th><th>Khách đã xác nhận</th><th>Trạng thái</th></tr></thead>
+  <tbody>
+  {% for t in tours %}
+    <tr>
+      <td>{{ t.title }}</td>
+      <td>{{ t.starts_at | vn_time }}</td>
+      <td>{{ t.meeting_point }}</td>
+      <td>{{ t.confirmed_guests }}</td>
+      <td><span class="pill">{{ tour_status(t) }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Bạn chưa được giao dẫn tour nào. Khi ban quản trị HTX chọn bạn làm người dẫn, tour sẽ hiện ở đây.</p>
+{% endif %}
+{% endblock %}

@@ -263,6 +263,15 @@ jobs:
           docker build -q -t opentea-dx-os/postgres:local platform/postgres
           cd platform/cli && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
 
+      - name: Validate Mini-app Manifests
+        # The repo root is the working directory: validate reads the core version from apps/web/package.json.
+        run: PYTHONPATH=platform/cli python -m dxos_cli validate miniapps/*
+
+      - name: Mini-app Unit Tests
+        run: |
+          (cd miniapps/hello && python -m unittest -v)
+          cd miniapps/tea-tour && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
+
       # The Ollama image alone unpacks to several GB; the runner's preinstalled SDKs leave too little disk for the full stack.
       - name: Free Runner Disk
         run: |

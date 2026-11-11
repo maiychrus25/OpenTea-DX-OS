@@ -1,0 +1,50 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Tour của HTX {{ htx }}{% endblock %}
+{% block main %}
+<h1>Tour đồi chè HTX {{ htx }}</h1>
+<p>Trang đặt chỗ cho khách (gửi đường dẫn hoặc in mã QR): <a href="{{ href('/public/' ~ htx, theme) }}">{{ prefix }}/public/{{ htx }}</a></p>
+
+<h2>Các tour</h2>
+{% if tours %}
+<table>
+  <thead><tr><th>Tour</th><th>Thời gian</th><th>Người dẫn</th><th>Đã đặt / số chỗ</th><th>Trạng thái</th></tr></thead>
+  <tbody>
+  {% for t in tours %}
+    <tr>
+      <td><a href="{{ href('/tours/' ~ t.id, theme) }}">{{ t.title }}</a></td>
+      <td>{{ t.starts_at | vn_time }}</td>
+      <td>{{ t.guide_name or "Chưa có" }}</td>
+      <td>{{ t.seats_used }} / {{ t.seats }}</td>
+      <td><span class="pill">{{ tour_status(t) }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>HTX chưa có tour nào. Tạo tour đầu tiên bằng biểu mẫu dưới đây.</p>
+{% endif %}
+
+<h2>Tạo tour mới</h2>
+<form method="post" action="{{ href('/tours', theme) }}">
+  {% if errors %}
+  <div class="error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+  {% elif core_error %}
+  <div class="error" role="alert">{{ core_error }}</div>
+  {% endif %}
+  <label>Tên tour <input name="title" maxlength="120" required value="{{ form.title }}"></label>
+  <label>Ngày giờ bắt đầu (giờ Việt Nam) <input type="datetime-local" name="starts_at" required value="{{ form.starts_at }}"></label>
+  <label>Điểm hẹn <input name="meeting_point" maxlength="200" required value="{{ form.meeting_point }}"></label>
+  <label>Số chỗ (1–50) <input type="number" name="seats" min="1" max="50" required value="{{ form.seats }}"></label>
+  <label>Giá mỗi khách (đồng) <input type="number" name="price_vnd" min="0" step="1" required value="{{ form.price_vnd }}"></label>
+  <label>Người dẫn tour
+    <select name="guide" required>
+      <option value="">Chọn nông hộ của HTX</option>
+      {% for h in households %}<option value="{{ h.id }}"{% if form.guide == h.id %} selected{% endif %}>{{ h.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Mô tả (không bắt buộc) <textarea name="description" maxlength="2000">{{ form.description }}</textarea></label>
+  <button type="submit"{% if core_error %} disabled{% endif %}>Tạo tour</button>
+</form>
+{% endblock %}

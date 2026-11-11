@@ -143,6 +143,17 @@ ImageNet weights it downloads are credited in `ai-models/ATTRIBUTION.md`.
 | [psycopg[binary]](https://github.com/psycopg/psycopg) | 3.3.6 | LGPL-3.0 | PostgreSQL driver for `platform.installed_apps` (dynamically linked, unmodified) |
 | [pytest](https://github.com/pytest-dev/pytest) | 9.1.1 | MIT | Unit tests (dev only) |
 
+### Mini-app `tea-tour` (`miniapps/tea-tour`)
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| [fastapi](https://github.com/fastapi/fastapi) | 0.162.2 | MIT | Web framework (same as the disease API) |
+| [uvicorn](https://github.com/encode/uvicorn) | 0.54.0 | BSD-3-Clause | ASGI server |
+| [python-multipart](https://github.com/Kludex/python-multipart) | 0.0.33 | Apache-2.0 | HTML form parsing |
+| [Jinja2](https://github.com/pallets/jinja) | 3.1.6 | BSD-3-Clause | HTML templates (autoescaped) |
+| [psycopg[binary]](https://github.com/psycopg/psycopg) | 3.3.6 | LGPL-3.0 | PostgreSQL driver for schema `app_tea_tour` (dynamically linked, unmodified) |
+| pytest, httpx2 (`requirements-dev.txt`, with the CLI's requirements for its test Postgres) | 9.1.1, 2.16.0 | MIT, BSD-3-Clause | Unit tests (dev only) |
+
 > **\* n8n License Note:** n8n uses the Sustainable Use License (fair-code, source-available,
 > not OSI-approved). DX-AgriMarket does NOT import, link, or bundle n8n source code.
 > Communication is exclusively via HTTP API. n8n is an optional, replaceable component.
