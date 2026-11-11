@@ -210,6 +210,27 @@ describe('forwardToApp', () => {
     expect((await forwardToApp(new Request('http://web/apps/tea-tour/'), app, [], { ...deps, clientIp: '192.0.2.10' })).status).toBe(200)
   })
 
+  describe('DXOS_APP_PUBLIC_LIMIT', () => {
+    afterEach(() => {
+      delete process.env.DXOS_APP_PUBLIC_LIMIT
+    })
+    const countAllowed = (isLimited: (ip: string) => boolean) => {
+      let allowed = 0
+      while (!isLimited('192.0.2.20') && allowed < 1000) allowed += 1
+      return allowed
+    }
+
+    test('raises the public limit when set', () => {
+      process.env.DXOS_APP_PUBLIC_LIMIT = '50'
+      expect(countAllowed(createPublicLimiter())).toBe(50)
+    })
+
+    test.each(['', '0', '-3', 'abc', '2.5'])('keeps 10 when the value is %p', value => {
+      process.env.DXOS_APP_PUBLIC_LIMIT = value
+      expect(countAllowed(createPublicLimiter())).toBe(10)
+    })
+  })
+
   describe('cross-site writes (R18)', () => {
     const post = (headers: Record<string, string>, method = 'POST') =>
       new Request('http://0.0.0.0:3000/apps/tea-tour/tours', { method, body: method === 'GET' ? undefined : 'a=1', headers })

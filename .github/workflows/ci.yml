@@ -302,6 +302,8 @@ jobs:
         # Same gateway file as make platform-up, so starting web does not recreate apisix on the base file.
         env:
           DXOS_GATEWAY_FILE: ../docker/runtime/docker/gateway/apisix.yaml  # default compose project "docker" (R13)
+          # Every browser spec comes from one IP, so a Playwright retry must not hit the public 10/min limit.
+          DXOS_APP_PUBLIC_LIMIT: "1000"
         run: docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
 
       - name: Install Chromium

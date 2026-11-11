@@ -19,7 +19,12 @@ const SIGNED_OUT_PAGE = `<!doctype html><html lang="vi"><head><meta charset="utf
 <body><p>Phiên đăng nhập đã hết hạn. <a href="/login" target="_top">Đăng nhập lại</a> để tiếp tục.</p></body></html>`
 
 // Spec §6.5: public app routes take 10 requests a minute per client IP, counted across every app.
-export const createPublicLimiter = () => createIpLimiter({ max: 10, windowMs: 60_000, maxKeys: 10_000 })
+// DXOS_APP_PUBLIC_LIMIT raises it only where one IP sends many requests on purpose (the CI browser specs).
+function publicLimit(): number {
+  const max = Number(process.env.DXOS_APP_PUBLIC_LIMIT)
+  return Number.isInteger(max) && max > 0 ? max : 10
+}
+export const createPublicLimiter = () => createIpLimiter({ max: publicLimit(), windowMs: 60_000, maxKeys: 10_000 })
 
 export interface ForwardToAppDeps {
   getToken: () => Promise<string>

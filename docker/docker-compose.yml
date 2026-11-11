@@ -152,6 +152,8 @@ services:
       CORE_GATEWAY_URL: http://apisix:9081
       # Without it the login redirect_uri is built from HOSTNAME (0.0.0.0) and Keycloak refuses it.
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      # Public mini-app requests per minute per client IP (spec §6.5); only CI raises it for its browser specs.
+      DXOS_APP_PUBLIC_LIMIT: ${DXOS_APP_PUBLIC_LIMIT:-10}
       HOSTNAME: "0.0.0.0"
     ports:
       - "3000:3000"
