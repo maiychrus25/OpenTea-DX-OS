@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 OpenTea Developers
+
+import type { InstalledApp } from '@/domain/entities/installed-app'
+import { createIpLimiter } from '@/lib/ip-rate-limit'
+import { logger } from '@/lib/logger'
+
+const TIMEOUT_MS = 10_000
+const CSP = "default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'"
+// An allowlist, so the browser's cookie, authorization and x-hasura-* headers never reach the gateway.
+// content-length keeps a streamed body from going out chunked, which a stdlib app server cannot read.
+const FORWARDED_REQUEST_HEADERS = ['content-type', 'accept', 'content-length']
+// An allowlist too: set-cookie and the app's own CSP are dropped.
+const KEPT_RESPONSE_HEADERS = ['content-type', 'location']
+// One segment Next.js already decoded: a dot segment, a separator, or a second encoding of either.
+const UNSAFE_SEGMENT = /^\.{1,2}$|[/\\]|%(2e|2f|5c)/i
+const SIGNED_OUT_PAGE = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Cần đăng nhập</title></head>
+<body><p>Phiên đăng nhập đã hết hạn. <a href="/login" target="_top">Đăng nhập lại</a> để tiếp tục.</p></body></html>`
+
+// Spec §6.5: public app routes take 10 requests a minute per client IP, counted across every app.
+const isPublicLimited = createIpLimiter({ max: 10, windowMs: 60_000, maxKeys: 10_000 })
+
+export interface ForwardToAppDeps {
+  getToken: () => Promise<string>
+  fetchImpl: typeof fetch
+  clientIp: string
+}
+
+/** Every response under `/apps/` carries the no-script CSP (spec §6.6). */
+export function appResponse(body: BodyInit | null, status: number, headers: HeadersInit = { 'content-type': 'text/plain; charset=utf-8' }) {
+  const out = new Headers(headers)
+  out.set('content-security-policy', CSP)
+  out.set('x-content-type-options', 'nosniff')
+  return new Response(body, { status, headers: out })
+}
+
+/** Sends a browser request for `/apps/<id>/<path>` to the gateway, with the user's token on protected paths (spec §6.7). */
+export async function forwardToApp(req: Request, app: InstalledApp, path: string[], deps: ForwardToAppDeps): Promise<Response> {
+  if (path.some(segment => segment === '' || UNSAFE_SEGMENT.test(segment))) return appResponse('Đường dẫn không hợp lệ', 400)
+
+  const headers = new Headers()
+  for (const name of FORWARDED_REQUEST_HEADERS) {
+    const value = req.headers.get(name)
+    if (value !== null) headers.set(name, value)
+  }
+
+  const joined = `/${path.join('/')}`
+  if (app.publicPrefixes.some(prefix => joined.startsWith(prefix))) {
+    if (isPublicLimited(deps.clientIp)) return appResponse('Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau một phút.', 429)
+  } else {
+    try {
+      headers.set('authorization', `Bearer ${await deps.getToken()}`)
+    } catch {
+      return appResponse(SIGNED_OUT_PAGE, 401, { 'content-type': 'text/html; charset=utf-8' })
+    }
+  }
+
+  const url = `${process.env.CORE_GATEWAY_URL}/apps/${app.id}/${path.map(encodeURIComponent).join('/')}${new URL(req.url).search}`
+  let upstream: Response
+  try {
+    upstream = await deps.fetchImpl(url, {
+      method: req.method,
+      headers,
+      // The browser follows the app's redirects itself, through this proxy again.
+      redirect: 'manual',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      // Streamed, not buffered; Node's fetch needs duplex for a stream body.
+      ...(req.body ? { body: req.body, duplex: 'half' } : {}),
+    } as RequestInit)
+  } catch (cause) {
+    logger.error('Mini-app request failed', { app: app.id, cause })
+    return appResponse('Ứng dụng tạm thời không phản hồi. Vui lòng thử lại sau.', 503)
+  }
+
+  const kept = new Headers()
+  for (const name of KEPT_RESPONSE_HEADERS) {
+    const value = upstream.headers.get(name)
+    if (value !== null) kept.set(name, value)
+  }
+  return appResponse(upstream.body, upstream.status, kept)
+}

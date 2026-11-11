@@ -23,3 +23,9 @@ export function isPublicApiPath(pathname: string): boolean {
   if (!normalized || normalized.length > 300) return false
   return /^\/api\/lot\/[^/]+\/certificate$/i.test(normalized) || /^\/api\/register$/i.test(normalized)
 }
+
+/** Mini-app proxy paths, `/apps/<id>` and below: the route decides public or protected from the manifest. */
+export function isMiniAppPath(pathname: string): boolean {
+  // The id pattern of the manifest (dxos/v1).
+  return /^\/apps\/[a-z][a-z0-9-]{1,30}(?:\/|$)/.test(pathname)
+}

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Mini-app web proxy**: `/apps/<id>/...` on the web app forwards to installed mini-apps through the gateway, only for ids in `platform.installed_apps` (read on every request, so a removed app answers 404 at once). Protected paths get the user's access token and answer 401 with a sign-in link when the session has expired; public manifest paths get no token and are limited to 10 requests a minute per IP. Paths with dot segments or encoded separators answer 400; the browser's `cookie`, `authorization` and `x-hasura-*` headers and the app's `set-cookie` are dropped; every response carries a CSP with `script-src 'none'`. The per-IP limiter of `/api/register` now lives in `apps/web/src/lib/ip-rate-limit.ts`, unchanged
+
 ---
 
 ## [1.7.0] - 2026-11-11

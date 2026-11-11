@@ -3,7 +3,7 @@
 
 import { auth } from "./auth"
 import { NextResponse } from "next/server"
-import { isPublicResourcePath, isPublicApiPath } from '@/lib/contracts/public-resource-path'
+import { isPublicResourcePath, isPublicApiPath, isMiniAppPath } from '@/lib/contracts/public-resource-path'
 
 export { isPublicResourcePath, isPublicApiPath } from '@/lib/contracts/public-resource-path'
 
@@ -21,12 +21,13 @@ export function resolveAuthRedirect(
 ): string | null {
   const lowerPath = pathname.toLowerCase()
 
-  // Static assets and auth endpoints — always allow (case-insensitive, exact prefix with slash)
+  // Static assets, auth endpoints and mini-app paths (the proxy route checks them) — always allow
   if (
     lowerPath.startsWith('/api/auth/') ||
     lowerPath === '/api/auth' ||
     lowerPath.startsWith('/_next') ||
-    pathname === '/favicon.ico'
+    pathname === '/favicon.ico' ||
+    isMiniAppPath(pathname)
   ) {
     return null
   }
