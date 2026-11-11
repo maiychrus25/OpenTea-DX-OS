@@ -361,12 +361,16 @@ th {
   }
 
   td {
+    padding: var(--spacing-1) var(--spacing-3);
+    border-bottom: 0;
+  }
+
+  /* Only a labelled cell splits into label and value; an unlabelled one keeps the full card width. */
+  td[data-label] {
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     justify-items: start;
     gap: var(--spacing-3);
-    padding: var(--spacing-1) var(--spacing-3);
-    border-bottom: 0;
   }
 
   td[data-label]::before {
