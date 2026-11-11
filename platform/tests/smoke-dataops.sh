@@ -34,7 +34,8 @@ if $COMPOSE exec -T mosquitto mosquitto_pub -h localhost -q 1 -t "$TOPIC_TC" -m 
 pub TC "$TC_PW" htx/LB/plot/P-LB-001/soil_moisture "$MSG" >/dev/null 2>&1 || true
 pub TC "$TC_PW" "$TOPIC_TC" "$MSG" || fail "TC publish failed"
 wait_count "select count(*) from telemetry.sensor_readings where htx_code='TC' and parcel_code='P-TC-001'" 1 "valid TC reading stored"
-assert_eq "$(psql_app "select count(*) from telemetry.sensor_readings where htx_code='LB'")" "0" "TC publishing into the LB topic created no row"
+# Only the fixture parcel: [lifecycle] below backfills every LB parcel, seeded ones too, so a re-run sees other LB rows.
+assert_eq "$(psql_app "select count(*) from telemetry.sensor_readings where htx_code='LB' and parcel_code='P-LB-001'")" "0" "TC publishing into the LB topic created no row"
 
 pub TC "$TC_PW" htx/TC/plot/P-LB-001/soil_moisture "$MSG" || fail "TC publish failed"
 wait_count "select count(*) from telemetry.ingest_rejects where topic='htx/TC/plot/P-LB-001/soil_moisture' and reason='unknown_parcel' and htx_code='TC'" 1 "parcel of another HTX rejected as unknown_parcel"
@@ -56,7 +57,7 @@ assert_eq "$(psql_app "select count(*) from telemetry.sensor_readings")" "$ROWS"
 
 echo "[telemetry permissions]"
 pub LB "$LB_PW" htx/LB/plot/P-LB-001/soil_moisture "$MSG" || fail "LB publish failed"
-wait_count "select count(*) from telemetry.sensor_readings where htx_code='LB'" 1 "valid LB reading stored"
+wait_count "select count(*) from telemetry.sensor_readings where htx_code='LB' and parcel_code='P-LB-001'" 1 "valid LB reading stored"
 TQ='{telemetry_sensor_readings(where:{parcel_code:{_in:["P-TC-001","P-LB-001"]}}){htx_code}}'  # scoped: a demo simulator may have written other parcels
 TM=$(user_token smoke_manager_tc); TL=$(user_token smoke_manager_lb); TF=$(user_token smoke_farmer_tc)
 [ -n "$TM" ] && [ -n "$TL" ] && [ -n "$TF" ] || fail "telemetry tokens empty"
