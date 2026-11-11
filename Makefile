@@ -1,14 +1,17 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 COMPOSE := docker compose -f docker/docker-compose.yml
+# Runtime state is per compose project (R13); "docker" is compose's default project name for docker/docker-compose.yml.
+PROJECT := $(or $(COMPOSE_PROJECT_NAME),docker)
+RUNTIME := docker/runtime/$(PROJECT)
 # apisix reads the generated route file (base + installed apps); relative to docker/, like every compose path.
-export DXOS_GATEWAY_FILE := ../docker/runtime/gateway/apisix.yaml
+export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 
 .PHONY: gateway-sync platform-up platform-smoke apps-smoke platform-down up down build test lint
 
-# APISIX mounts docker/runtime/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
+# APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
 gateway-sync:
-	mkdir -p docker/runtime/gateway/apps docker/runtime/apps
+	mkdir -p $(RUNTIME)/gateway/apps $(RUNTIME)/apps
 	$(COMPOSE) --profile tools run --rm --build --user "$$(id -u):$$(id -g)" dxos-cli gateway-sync
 
 platform-up: gateway-sync

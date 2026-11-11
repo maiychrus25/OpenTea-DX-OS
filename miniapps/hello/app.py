@@ -46,7 +46,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(404, "Không có trang này")
         if (user := claims(self.headers.get("Authorization", ""))) is None:
             return self.reply(401, "Cần đăng nhập")
-        roles = (user.get("realm_access") or {}).get("roles") or []
+        access = user.get("realm_access")
+        roles = access.get("roles") if isinstance(access, dict) else None
+        roles = roles if isinstance(roles, list) else []  # an odd claim means no roles, never a crash
         said = parse_qs(url.query).get("said", [""])[0][:200]
         self.reply(200, PAGE.format(
             name=html.escape(str(user.get("name") or user.get("preferred_username") or "")),
@@ -60,7 +62,7 @@ class Handler(BaseHTTPRequestHandler):
         if claims(self.headers.get("Authorization", "")) is None:
             return self.reply(401, "Cần đăng nhập")
         length = self.headers.get("Content-Length", "0")
-        if not length.isdigit() or int(length) > 4096:
+        if not (length.isascii() and length.isdigit()) or int(length) > 4096:  # "²".isdigit() is True
             return self.reply(413, "Dữ liệu quá lớn")
         form = parse_qs(self.rfile.read(int(length)).decode("utf-8", "replace"))
         message = form.get("message", [""])[0][:200]

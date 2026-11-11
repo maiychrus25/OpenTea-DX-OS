@@ -44,13 +44,20 @@ def test_compose_has_no_ports_and_only_apps_network(manifest):
     assert svc["networks"] == ["dxos-apps-net"]
 
 
-def test_compose_paths_resolve_from_docker_dir(manifest):
+def test_compose_paths_resolve_from_docker_dir(manifest, monkeypatch):
     # compose resolves relative paths against docker/, the directory of the first -f file.
+    monkeypatch.delenv("DXOS_RUNTIME_SUBDIR", raising=False)
     svc = service(manifest)
     assert svc["build"] == {"context": "../miniapps/tea-tour"}
-    assert svc["env_file"] == ["runtime/apps/tea-tour.env"]
+    assert svc["env_file"] == ["runtime/docker/apps/tea-tour.env"]  # compose's default project for docker/
     manifest["runtime"]["build"] = "app/"
     assert service(manifest)["build"] == {"context": "../miniapps/tea-tour/app"}
+
+
+def test_env_file_lives_in_the_compose_project_runtime_dir(manifest, monkeypatch):
+    # Each compose project keeps its own docker/runtime/<project>/, so a clean round never touches the owner's apps.
+    monkeypatch.setenv("DXOS_RUNTIME_SUBDIR", "dxos-clean")
+    assert service(manifest)["env_file"] == ["runtime/dxos-clean/apps/tea-tour.env"]
 
 
 def test_compose_uses_image_and_skips_env_file_without_database(manifest):

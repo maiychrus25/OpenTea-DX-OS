@@ -12,7 +12,8 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 miniapps/hello/
 ├── app.yaml     # manifest: id, phiên bản, giấy phép, route, menu
 ├── Dockerfile   # image của app
-└── app.py       # máy chủ HTTP
+├── app.py       # máy chủ HTTP
+└── test_app.py  # kiểm thử: python -m unittest (trong thư mục này)
 ```
 
 ## 2. Manifest `app.yaml`

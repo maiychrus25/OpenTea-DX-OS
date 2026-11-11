@@ -125,3 +125,11 @@ def test_cli_validate_exit_codes():
     assert bad.returncode == 1 and "ports" in bad.stderr
     missing = run_cli("validate", str(FIXTURES / "nope"))
     assert missing.returncode == 1
+
+
+def test_cli_manifest_id_prints_only_a_valid_id():
+    ok = run_cli("manifest-id", str(FIXTURES / "valid"))
+    assert ok.returncode == 0, ok.stderr
+    assert ok.stdout == "tea-tour\n"
+    bad = run_cli("manifest-id", str(FIXTURES / "invalid"))
+    assert bad.returncode == 1 and "ports" in bad.stderr and bad.stdout == ""

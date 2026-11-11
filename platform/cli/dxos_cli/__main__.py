@@ -29,6 +29,21 @@ def cmd_validate(dirs: list[str]) -> int:
     return 1 if failed else 0
 
 
+def cmd_manifest_id(raw: str) -> int:
+    """Print the id of a valid manifest (installed or not), for ./dxos; errors go to stderr."""
+    try:
+        data = load_manifest(Path(raw))
+        errors = validate_manifest(data, read_core_version(repo_root()), set())
+    except ManifestError as exc:
+        errors = [str(exc)]
+    for message in errors:
+        print(f"{raw}: {message}", file=sys.stderr)
+    if errors:
+        return 1
+    print(data["id"])
+    return 0
+
+
 def cmd_install(args) -> int:
     root = repo_root()
     try:
@@ -56,6 +71,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     validate = sub.add_parser("validate", help="Kiểm tra app.yaml của mini-app")
     validate.add_argument("dirs", nargs="+")
+    sub.add_parser("manifest-id", help="In id của manifest hợp lệ (dùng cho ./dxos)").add_argument("dir")
     sub.add_parser("gateway-sync", help="Ghép route của các app đã cài vào docker/runtime/gateway/apisix.yaml")
     sub.add_parser("prepare", help="Kiểm tra và chuẩn bị cài một mini-app (chưa đăng ký)").add_argument("dir")
     sub.add_parser("commit", help="Đăng ký app đã chuẩn bị xong").add_argument("id")
@@ -67,6 +83,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command in ("prepare", "commit", "abort", "remove", "list"):
         return cmd_install(args)
+    if args.command == "manifest-id":
+        return cmd_manifest_id(args.dir)
     if args.command == "gateway-sync":
         try:
             sync_gateway(repo_root())

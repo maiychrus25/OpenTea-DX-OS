@@ -6,8 +6,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-# Same as the Makefile: apisix reads the generated route file; relative to docker/, like every compose path.
-export DXOS_GATEWAY_FILE=../docker/runtime/gateway/apisix.yaml
+# Same as the Makefile: runtime state is per compose project (R13), "docker" being compose's default for docker/.
+PROJECT="${COMPOSE_PROJECT_NAME:-docker}"
+RUNTIME="docker/runtime/$PROJECT"
+# apisix reads the generated route file; relative to docker/, like every compose path.
+export DXOS_GATEWAY_FILE="../$RUNTIME/gateway/apisix.yaml"
 ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.json
 
 usage() {
@@ -16,56 +19,75 @@ usage() {
 }
 
 compose() { docker compose -f docker/docker-compose.yml "$@"; }
-# APISIX mounts docker/runtime/gateway/apisix.yaml; create the dirs before any container starts, as the Makefile does.
+# APISIX mounts $RUNTIME/gateway/apisix.yaml; create the dirs before any container starts, as the Makefile does.
 cli() {
-  mkdir -p docker/runtime/gateway/apps docker/runtime/apps
+  mkdir -p "$RUNTIME/gateway/apps" "$RUNTIME/apps"
   # Build first, quietly: `run --build` prints the build log on stdout, which install and list parse.
   compose --profile tools build --quiet dxos-cli >&2
   compose --profile tools run --rm -T --user "$(id -u):$(id -g)" dxos-cli "$@"
 }
-app() { local id="$1"; shift; compose -f "docker/runtime/apps/$id.compose.yml" "$@"; }
+app() { local id="$1"; shift; compose -f "$RUNTIME/apps/$id.compose.yml" "$@"; }
+# Found by compose labels, so this also works for an orphan whose compose file is gone.
+app_containers() {  # <id> [docker ps options]
+  local id="$1"; shift
+  docker ps -a "$@" --filter "label=com.docker.compose.project=$PROJECT" --filter "label=com.docker.compose.service=app-$id"
+}
+remove_container() {
+  local ids
+  ids="$(app_containers "$1" -q)"
+  if [ -n "$ids" ]; then
+    # shellcheck disable=SC2086  # container ids are hex, one per line
+    docker stop $ids >/dev/null && docker rm $ids >/dev/null
+  fi
+}
 
 # Host directory (relative to the caller's cwd) -> the same directory inside dxos-cli, where the repo is /repo.
 to_container() {
   local abs
-  abs="$(cd "$1" 2>/dev/null && pwd -P)" || { echo "Không tìm thấy thư mục $1" >&2; exit 1; }
+  abs="$(cd -- "$1" 2>/dev/null && pwd -P)" || { echo "Không tìm thấy thư mục $1" >&2; exit 1; }
   case "$abs/" in
     "$ROOT/"*) printf '/repo%s\n' "${abs#"$ROOT"}" ;;
     *) echo "Thư mục app $1 phải nằm trong repo $ROOT" >&2; exit 1 ;;
   esac
 }
 
-# shortcut: reads only a plain `id: <id>` line; dxos-cli prepare still validates the full manifest.
-manifest_id() { sed -nE "s/^id:[[:space:]]*[\"']?([a-z][a-z0-9-]{1,30})[\"']?[[:space:]]*(#.*)?$/\1/p" "$1/app.yaml" | head -n 1; }
+# Undo a prepared install: the container first, then the journal's steps (route, compose file).
+undo_install() {  # <id> <exit code>
+  trap - INT TERM
+  echo "Cài $1 hỏng hoặc bị ngắt; đang hoàn tác" >&2
+  remove_container "$1" || true
+  cli abort "$1" || true
+  exit "$2"
+}
 
 install() {
   local dir="$1" id listing
-  id="$(manifest_id "$ROOT${dir#/repo}")"
-  [ -n "$id" ] || { echo "app.yaml trong $dir phải có dòng 'id: <id>'" >&2; exit 1; }
+  id="$(cli manifest-id "$dir")" || exit 1  # validated by dxos-cli, so safe in a path and in the traps below
   listing="$(cli list)"  # captured, not piped: grep -q closing the pipe early would fail it under pipefail
   if grep -qxF "$id" <<<"$(cut -f1 <<<"$listing")"; then
     echo "$id đã được cài; chỉ bảo đảm container đang chạy"
-    app "$id" up -d --build --wait "app-$id"
+    app "$id" up -d --wait "app-$id"
     return
   fi
   # prepare undoes its own steps when it fails; abort only retries an undo that failed (no-op otherwise).
   cli prepare "$dir" || { cli abort "$id" || true; exit 1; }
+  # Ctrl-C (or TERM) from here to commit must not leave a journal, route or container behind.
+  # shellcheck disable=SC2064  # expand the validated id now
+  trap "undo_install $id 130" INT
+  # shellcheck disable=SC2064
+  trap "undo_install $id 143" TERM
   if app "$id" up -d --build --wait "app-$id" && cli commit "$id"; then
+    trap - INT TERM
     echo "Đã cài $id"
     return
   fi
-  echo "Cài $id hỏng; đang hoàn tác" >&2
-  app "$id" rm -sf "app-$id" || true
-  cli abort "$id" || true
-  exit 1
+  undo_install "$id" 1
 }
 
 remove() {
   local id="$1"; shift
   [[ "$id" =~ $ID_RE ]] || { echo "id '$id' không hợp lệ" >&2; exit 1; }
-  if [ -f "docker/runtime/apps/$id.compose.yml" ]; then
-    app "$id" rm -sf "app-$id"
-  fi
+  remove_container "$id"
   cli remove "$id" "$@"
 }
 
@@ -74,10 +96,8 @@ list() {
   out="$(cli list)"
   while IFS= read -r line; do
     if [[ "$line" == *$'\t'* ]]; then
-      id="${line%%$'\t'*}" status=""
-      if [ -f "docker/runtime/apps/$id.compose.yml" ]; then
-        status="$(app "$id" ps -a --format '{{.Status}}' "app-$id")"
-      fi
+      id="${line%%$'\t'*}"
+      status="$(app_containers "$id" --format '{{.Status}}')"
       line+=$'\t'"${status:-không có container}"
     fi
     printf '%s\n' "$line"

@@ -10,8 +10,12 @@ source platform/tests/tokens.sh
 
 command -v jq >/dev/null || { echo "jq is required (brew/apt install jq)"; exit 1; }
 
-GW_FILE=docker/runtime/gateway/apisix.yaml
-HELLO="$COMPOSE -f docker/runtime/apps/hello.compose.yml"
+# Whatever fails, leave no app behind (the registry, docker/runtime/<project> and the containers outlive this script).
+trap 'rc=$?; ./dxos remove broken-health >/dev/null 2>&1 || true; ./dxos remove hello >/dev/null 2>&1 || true; exit $rc' EXIT
+
+RUNTIME="docker/runtime/${COMPOSE_PROJECT_NAME:-docker}"  # per compose project (R13), as in the Makefile
+GW_FILE="$RUNTIME/gateway/apisix.yaml"
+HELLO="$COMPOSE -f $RUNTIME/apps/hello.compose.yml"
 
 # wait_http "codes" msg -- <curl args...>: APISIX reloads the route file within about a second.
 wait_http() {
@@ -63,7 +67,8 @@ assert_eq "$got" 401 "direct POST /echo without a token -> 401"
 
 echo "[registry]"
 assert_eq "$(psql_app "select count(*) from platform.installed_apps where id='hello'")" 1 "platform.installed_apps has the hello row"
-grep -E '^hello' <<<"$(./dxos list)" | grep -q '(healthy)' && pass "./dxos list shows hello healthy" || fail "./dxos list: $(./dxos list)"
+LIST=$(./dxos list) || fail "./dxos list failed"
+grep -Eq $'^hello\t.*\\(healthy\\)$' <<<"$LIST" && pass "./dxos list shows hello healthy" || fail "./dxos list: $LIST"
 ./dxos install miniapps/hello && pass "installing hello again exits 0 (idempotent)" || fail "second install of hello failed"
 assert_eq "$(psql_app "select count(*) from platform.installed_apps where id='hello'")" 1 "still one hello row"
 assert_http 200 "hello still answers after the second install" -- -H "Authorization: Bearer $TM" "$GATEWAY/apps/hello/"
@@ -73,9 +78,10 @@ BEFORE=$(sha "$GW_FILE")
 rc=0; ./dxos install platform/cli/tests/fixtures/broken-health || rc=$?
 assert_eq "$rc" 1 "install broken-health (healthz answers 500) exits 1"
 assert_eq "$(sha "$GW_FILE")" "$BEFORE" "gateway file sha256 equals its value before the failed install"
-grep -q broken-health <<<"$(./dxos list)" && fail "./dxos list shows broken-health" || pass "./dxos list does not show broken-health"
+LIST=$(./dxos list) || fail "./dxos list failed"
+grep -q broken-health <<<"$LIST" && fail "./dxos list shows broken-health: $LIST" || pass "./dxos list does not show broken-health"
 assert_eq "$(psql_app "select count(*) from platform.installed_apps where id='broken-health'")" 0 "no broken-health row"
-assert_eq "$(find docker/runtime -name 'broken-health*' | wc -l | tr -d ' ')" 0 "no broken-health runtime file left"
+assert_eq "$(find "$RUNTIME" -name 'broken-health*' | wc -l | tr -d ' ')" 0 "no broken-health runtime file left"
 assert_eq "$(app_containers broken-health)" 0 "no app-broken-health container left"
 assert_http 200 "hello unaffected by the failed install" -- -H "Authorization: Bearer $TM" "$GATEWAY/apps/hello/"
 

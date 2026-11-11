@@ -476,6 +476,7 @@ services:
   # One-shot mini-app CLI (profile tools, no host port, no docker socket). Run with
   # --user "$(id -u):$(id -g)": the image default is non-root uid 10001, but the bind-mounted
   # docker/runtime must stay writable for the host (and Linux CI) user.
+  # Runtime state is per compose project (R13): this project's docker/runtime/<project> is the CLI's docker/runtime.
   dxos-cli:
     build: ../platform/cli
     image: opentea-dx-os/cli:local
@@ -484,11 +485,13 @@ services:
     environment:
       DXOS_REPO_ROOT: /repo
       DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
+      # Same expression as the mount below, so the generated env_file path and the mount never disagree.
+      DXOS_RUNTIME_SUBDIR: ${COMPOSE_PROJECT_NAME:-docker}
     volumes:
       - ../miniapps:/repo/miniapps:ro
       - ../platform:/repo/platform:ro
       - ../apps/web/package.json:/repo/apps/web/package.json:ro
-      - ./runtime:/repo/docker/runtime
+      - ./runtime/${COMPOSE_PROJECT_NAME:-docker}:/repo/docker/runtime
     networks:
       - agrimarket-net
 
