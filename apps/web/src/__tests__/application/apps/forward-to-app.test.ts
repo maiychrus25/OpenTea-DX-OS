@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { forwardToApp } from '@/application/apps/forward-to-app'
+import { createPublicLimiter, forwardToApp } from '@/application/apps/forward-to-app'
 import type { InstalledApp } from '@/domain/entities/installed-app'
 import { logger } from '@/lib/logger'
 
@@ -16,7 +16,9 @@ beforeAll(() => {
 function setup(reply: Response = new Response('ok', { headers: { 'content-type': 'text/html' } }), clientIp = '203.0.113.1') {
   const fetchImpl = jest.fn().mockResolvedValue(reply)
   const getToken = jest.fn().mockResolvedValue('tok')
-  return { fetchImpl, getToken, deps: { fetchImpl: fetchImpl as unknown as typeof fetch, getToken, clientIp } }
+  // A fresh limiter per test, so no test inherits another's counts.
+  const isPublicLimited = createPublicLimiter()
+  return { fetchImpl, getToken, deps: { fetchImpl: fetchImpl as unknown as typeof fetch, getToken, clientIp, isPublicLimited } }
 }
 const sent = (fetchImpl: jest.Mock) => ({ url: fetchImpl.mock.calls[0][0] as string, init: fetchImpl.mock.calls[0][1] as RequestInit })
 const header = (init: RequestInit, name: string) => new Headers(init.headers).get(name)
@@ -121,6 +123,65 @@ describe('forwardToApp', () => {
     expect(res.headers.get('location')).toBe('/apps/tea-tour/?said=hi')
     expect(res.headers.get('set-cookie')).toBeNull()
     expect(res.headers.get('x-powered-by')).toBeNull()
+  })
+
+  test.each([
+    ['/apps/tea-tour/?said=hi'],
+    ['/apps/tea-tour'],
+    ['?said=hi'],
+    ['done'],
+    ['http://web/apps/tea-tour/done'],
+  ])('keeps a redirect that stays in the app: %s', async (location) => {
+    const { deps } = setup(new Response(null, { status: 303, headers: { location } }))
+
+    const res = await forwardToApp(new Request('http://web/apps/tea-tour/echo', { method: 'POST', body: 'a=1' }), app, ['echo'], deps)
+
+    expect(res.status).toBe(303)
+    expect(res.headers.get('location')).toBe(location)
+  })
+
+  test.each([
+    ['https://evil.example/apps/tea-tour/'],
+    ['//evil.example/apps/tea-tour/'],
+    ['http://apisix:9081/apps/tea-tour/'],
+    ['/manager/dashboard'],
+    ['/apps/other/'],
+    ['/apps/tea-tourx/'],
+    ['/apps/tea-tour/../other/'],
+    ['/apps/tea-tour/%2e%2e/other/'],
+    ['javascript:alert(1)'],
+  ])('drops a redirect that leaves the app and answers 502: %s', async (location) => {
+    const logError = jest.spyOn(logger, 'error').mockImplementation(() => undefined)
+    const { deps } = setup(new Response(null, { status: 302, headers: { location } }))
+
+    const res = await forwardToApp(new Request('http://web/apps/tea-tour/echo', { method: 'POST', body: 'a=1' }), app, ['echo'], deps)
+
+    expect(res.status).toBe(502)
+    expect(res.headers.get('location')).toBeNull()
+    expect(res.headers.get('content-security-policy')).toBe(CSP)
+    expect(await res.text()).toMatch(/chuyển hướng/)
+    expect(logError).toHaveBeenCalledWith('Mini-app redirect refused', { app: 'tea-tour' })
+    logError.mockRestore()
+  })
+
+  test('replaces a forged browser authorization with the session token on protected paths', async () => {
+    const { fetchImpl, deps } = setup()
+    const req = new Request('http://web/apps/tea-tour/', { headers: { authorization: 'Bearer forged' } })
+
+    await forwardToApp(req, app, [], deps)
+
+    expect(header(sent(fetchImpl).init, 'authorization')).toBe('Bearer tok')
+  })
+
+  test('uses the injected public limiter', async () => {
+    const { fetchImpl, deps } = setup()
+    const isPublicLimited = jest.fn().mockReturnValue(true)
+
+    const res = await forwardToApp(new Request('http://web/apps/tea-tour/public/x'), app, ['public', 'x'], { ...deps, isPublicLimited })
+
+    expect(res.status).toBe(429)
+    expect(isPublicLimited).toHaveBeenCalledWith('203.0.113.1')
+    expect(fetchImpl).not.toHaveBeenCalled()
   })
 
   test('sets the CSP without scripts', async () => {

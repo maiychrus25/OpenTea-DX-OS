@@ -4,6 +4,7 @@
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { GET, POST, dynamic } from '@/app/apps/[id]/[[...path]]/route'
+import { logger } from '@/lib/logger'
 
 jest.mock('@/lib/auth/core-token', () => ({ getCoreToken: jest.fn().mockResolvedValue('tok') }))
 jest.mock('@/infrastructure/db/prisma.client', () => ({ prisma: { $queryRaw: jest.fn() } }))
@@ -45,5 +46,20 @@ describe('/apps/[id]/[[...path]]', () => {
     const res = await POST(new Request('http://web/apps/nope/echo', { method: 'POST', body: 'a=1' }), { params: { id: 'nope', path: ['echo'] } })
     expect(res.status).toBe(404)
     expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  test('answers 503 with the CSP when the app list cannot be read', async () => {
+    const logError = jest.spyOn(logger, 'error').mockImplementation(() => undefined)
+    queryRaw.mockRejectedValue(new Error('db down'))
+
+    const res = await GET(new Request('http://web/apps/hello/'), { params: { id: 'hello' } })
+
+    expect(res.status).toBe(503)
+    expect(res.headers.get('content-security-policy')).toMatch(/script-src 'none'/)
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(await res.text()).toMatch(/tạm thời/)
+    expect(logError).toHaveBeenCalledWith('Mini-app lookup failed', expect.objectContaining({ app: 'hello' }))
+    expect(global.fetch).not.toHaveBeenCalled()
+    logError.mockRestore()
   })
 })

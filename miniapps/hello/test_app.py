@@ -30,6 +30,7 @@ class HelloTest(unittest.TestCase):
         conn = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=5)
         conn.request(method, path, body=body, headers=headers or {})
         resp = conn.getresponse()
+        self.last_headers = resp.headers
         return resp.status, resp.read().decode()
 
     def test_greets_name_htx_and_role(self):
@@ -48,6 +49,30 @@ class HelloTest(unittest.TestCase):
         auth = bearer({"sub": "x"})
         status, _ = self.request("POST", "/echo", {"Authorization": auth, "Content-Length": "²"}, body=b"")
         self.assertEqual(status, 413)
+
+    def test_sets_the_theme_from_the_query(self):
+        auth = bearer({"sub": "x"})
+        for theme in ("light", "dark"):
+            status, body = self.request("GET", f"/?theme={theme}", {"Authorization": auth})
+            self.assertEqual(status, 200)
+            self.assertIn(f'<html lang="vi" data-theme="{theme}">', body)
+            self.assertIn(f'<input type="hidden" name="theme" value="{theme}">', body)
+
+    def test_ignores_an_unknown_theme(self):
+        status, body = self.request("GET", "/?theme=%22%3E%3Cb%3E", {"Authorization": bearer({"sub": "x"})})
+        self.assertEqual(status, 200)
+        self.assertIn('<html lang="vi">', body)
+        self.assertNotIn("data-theme", body)
+        self.assertNotIn('name="theme"', body)
+
+    def test_echo_keeps_the_theme(self):
+        auth = bearer({"sub": "x"})
+        for form, location in ((b"message=hi&theme=dark", "/apps/hello/?said=hi&theme=dark"),
+                               (b"message=hi&theme=evil", "/apps/hello/?said=hi")):
+            status, _ = self.request("POST", "/echo", {"Authorization": auth, "Content-Length": str(len(form)),
+                                                       "Content-Type": "application/x-www-form-urlencoded"}, body=form)
+            self.assertEqual(status, 303)
+            self.assertEqual(self.last_headers["Location"], location)
 
     def test_echo_without_token_is_401(self):
         status, _ = self.request("POST", "/echo", body=b"message=x")

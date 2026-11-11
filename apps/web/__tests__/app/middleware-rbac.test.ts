@@ -24,7 +24,7 @@ jest.mock('@/lib/contracts/public-resource-path', () => ({
 }))
 
 // Import pure function — không import middleware handler (Edge Runtime incompatible)
-import { resolveAuthRedirect } from '@/middleware'
+import { resolveAuthRedirect, config } from '@/middleware'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const allow = null // resolveAuthRedirect returns null → allow request
@@ -157,5 +157,20 @@ describe('resolveAuthRedirect — mini-app paths', () => {
     expect(resolveAuthRedirect('/apps/', false, undefined)).toBe('/login')
     expect(resolveAuthRedirect('/apps/Bad_Id/', false, undefined)).toBe('/login')
     expect(resolveAuthRedirect('/appsx/hello', false, undefined)).toBe('/login')
+  })
+})
+
+describe('middleware matcher', () => {
+  // The matcher is a single regex-shaped path pattern; anything it does not match skips the middleware.
+  const runsOn = (path: string) => new RegExp(`^${config.matcher[0]}$`).test(path)
+
+  it('lets the mini-app stylesheet through for signed-out public pages, like manifest.json', () => {
+    expect(runsOn('/dxos-app.css')).toBe(false)
+    expect(runsOn('/manifest.json')).toBe(false)
+  })
+
+  it('still runs on pages', () => {
+    expect(runsOn('/manager/dashboard')).toBe(true)
+    expect(runsOn('/apps/hello')).toBe(true)
   })
 })

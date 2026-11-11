@@ -18,12 +18,26 @@ const SIGNED_OUT_PAGE = `<!doctype html><html lang="vi"><head><meta charset="utf
 <body><p>Phiên đăng nhập đã hết hạn. <a href="/login" target="_top">Đăng nhập lại</a> để tiếp tục.</p></body></html>`
 
 // Spec §6.5: public app routes take 10 requests a minute per client IP, counted across every app.
-const isPublicLimited = createIpLimiter({ max: 10, windowMs: 60_000, maxKeys: 10_000 })
+export const createPublicLimiter = () => createIpLimiter({ max: 10, windowMs: 60_000, maxKeys: 10_000 })
 
 export interface ForwardToAppDeps {
   getToken: () => Promise<string>
   fetchImpl: typeof fetch
   clientIp: string
+  /** One limiter per process, made with `createPublicLimiter`; true means the IP is over the limit. */
+  isPublicLimited: (ip: string) => boolean
+}
+
+/** A redirect may only send the frame to another page of the same app (an open redirect otherwise). */
+function staysInApp(location: string, req: Request, appId: string): boolean {
+  let target: URL
+  try {
+    target = new URL(location, req.url)
+  } catch {
+    return false
+  }
+  const prefix = `/apps/${appId}`
+  return target.origin === new URL(req.url).origin && (target.pathname === prefix || target.pathname.startsWith(`${prefix}/`))
 }
 
 /** Every response under `/apps/` carries the no-script CSP (spec §6.6). */
@@ -46,7 +60,7 @@ export async function forwardToApp(req: Request, app: InstalledApp, path: string
 
   const joined = `/${path.join('/')}`
   if (app.publicPrefixes.some(prefix => joined.startsWith(prefix))) {
-    if (isPublicLimited(deps.clientIp)) return appResponse('Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau một phút.', 429)
+    if (deps.isPublicLimited(deps.clientIp)) return appResponse('Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau một phút.', 429)
   } else {
     try {
       headers.set('authorization', `Bearer ${await deps.getToken()}`)
@@ -71,6 +85,13 @@ export async function forwardToApp(req: Request, app: InstalledApp, path: string
   } catch (cause) {
     logger.error('Mini-app request failed', { app: app.id, cause })
     return appResponse('Ứng dụng tạm thời không phản hồi. Vui lòng thử lại sau.', 503)
+  }
+
+  const location = upstream.headers.get('location')
+  if (location !== null && !staysInApp(location, req, app.id)) {
+    logger.error('Mini-app redirect refused', { app: app.id })
+    await upstream.body?.cancel()
+    return appResponse('Ứng dụng chuyển hướng tới địa chỉ không được phép.', 502)
   }
 
   const kept = new Headers()

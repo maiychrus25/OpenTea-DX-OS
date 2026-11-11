@@ -9,10 +9,11 @@ from urllib.parse import parse_qs, quote, urlsplit
 
 PREFIX = "/apps/hello"  # every link and form goes back through the web proxy and the gateway
 ROLES = ("farmer", "officer", "manager")
-PAGE = """<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Xin chào</title>
+THEMES = ("light", "dark")  # the shell passes ?theme=; without it /dxos-app.css follows the system setting
+PAGE = """<!doctype html><html lang="vi"{theme_attr}><head><meta charset="utf-8"><title>Xin chào</title>
 <link rel="stylesheet" href="/dxos-app.css"></head><body><main>
 <h1>Xin chào {name}, HTX {htx}, vai trò {role}</h1>{said}
-<form method="post" action="{prefix}/echo"><label>Lời nhắn <input name="message" maxlength="200" required></label>
+<form method="post" action="{prefix}/echo">{theme_input}<label>Lời nhắn <input name="message" maxlength="200" required></label>
 <button type="submit">Gửi</button></form></main></body></html>"""
 
 
@@ -49,12 +50,17 @@ class Handler(BaseHTTPRequestHandler):
         access = user.get("realm_access")
         roles = access.get("roles") if isinstance(access, dict) else None
         roles = roles if isinstance(roles, list) else []  # an odd claim means no roles, never a crash
-        said = parse_qs(url.query).get("said", [""])[0][:200]
+        query = parse_qs(url.query)
+        said = query.get("said", [""])[0][:200]
+        theme = query.get("theme", [""])[0]
+        theme = theme if theme in THEMES else ""
         self.reply(200, PAGE.format(
             name=html.escape(str(user.get("name") or user.get("preferred_username") or "")),
             htx=html.escape(str(user.get("htx_code") or "")),
             role=html.escape(", ".join(r for r in ROLES if r in roles)),
-            said=f"<p>Bạn vừa nói: {html.escape(said)}</p>" if said else "", prefix=PREFIX))
+            said=f"<p>Bạn vừa nói: {html.escape(said)}</p>" if said else "", prefix=PREFIX,
+            theme_attr=f' data-theme="{theme}"' if theme else "",
+            theme_input=f'<input type="hidden" name="theme" value="{theme}">' if theme else ""))
 
     def do_POST(self):
         if urlsplit(self.path).path != "/echo":
@@ -66,7 +72,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(413, "Dữ liệu quá lớn")
         form = parse_qs(self.rfile.read(int(length)).decode("utf-8", "replace"))
         message = form.get("message", [""])[0][:200]
-        self.reply(303, headers={"Location": f"{PREFIX}/?said={quote(message)}"})
+        theme = form.get("theme", [""])[0]
+        suffix = f"&theme={theme}" if theme in THEMES else ""
+        self.reply(303, headers={"Location": f"{PREFIX}/?said={quote(message)}{suffix}"})
 
 
 if __name__ == "__main__":

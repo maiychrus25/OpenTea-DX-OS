@@ -34,7 +34,8 @@ Kiểm tra manifest: `./dxos validate miniapps/hello`.
 - Đọc claim từ header `Authorization: Bearer <token>` (`name` hoặc `preferred_username`, `htx_code`, `realm_access.roles`). App không kiểm chữ ký: chỉ gateway với tới được container của app, và gateway đã kiểm token.
 - Trang không chạy JavaScript (`script-src 'none'`); dùng form HTML và chuyển hướng 303.
 - Thoát HTML mọi dữ liệu do người dùng gửi (`html.escape`).
-- Dùng stylesheet chung `/dxos-app.css`.
+- Dùng stylesheet chung `/dxos-app.css` (token màu, chữ, form và nút của lõi; `<button class="secondary">`, `.notice`, `.error`, `.pill`).
+- Giao diện sáng/tối: khung ứng dụng thêm `?theme=light|dark` theo lựa chọn của người dùng. Đặt `data-theme` trên `<html>` từ tham số này (chỉ nhận `light` hoặc `dark`) và giữ nó qua form; không có tham số thì `/dxos-app.css` theo cài đặt hệ thống.
 
 ## 4. Ràng buộc container
 

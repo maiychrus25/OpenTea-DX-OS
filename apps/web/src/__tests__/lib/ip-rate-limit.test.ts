@@ -18,13 +18,21 @@ describe('createIpLimiter', () => {
     expect(limited('a', 999)).toBe(true)
     expect(limited('a', 1000)).toBe(false)
   })
-  test('a new ip is limited while maxKeys live keys are tracked, and admitted once they expire', () => {
-    const limited = createIpLimiter({ max: 5, windowMs: 1000, maxKeys: 2 })
+  test('once maxKeys live keys are tracked, new ips share one overflow bucket limited like any key', () => {
+    const limited = createIpLimiter({ max: 2, windowMs: 1000, maxKeys: 2 })
     limited('a', 0)
     limited('b', 0)
-    expect(limited('c', 1)).toBe(true)
+    expect([limited('c', 1), limited('d', 1), limited('e', 1)]).toEqual([false, false, true])
+    // Tracked ips keep their own count.
     expect(limited('a', 1)).toBe(false)
-    expect(limited('c', 1000)).toBe(false)
+    // Once the keys expire, a new ip gets its own bucket again.
+    expect(limited('c', 1001)).toBe(false)
+    expect(limited('c', 1002)).toBe(false)
+    expect(limited('c', 1003)).toBe(true)
+  })
+  test('without maxKeys every ip keeps its own bucket', () => {
+    const limited = createIpLimiter({ max: 1, windowMs: 1000 })
+    for (let i = 0; i < 1000; i++) expect(limited(`ip-${i}`, 0)).toBe(false)
   })
 })
 

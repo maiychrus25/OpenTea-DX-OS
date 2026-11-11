@@ -8,6 +8,8 @@ import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
 import { Home, FileText, Stethoscope, User, Bell, Calendar } from 'lucide-react'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
+import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
+import { loadAppNavItems } from '@/lib/apps/app-nav'
 
 export default async function FarmerLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -25,6 +27,7 @@ export default async function FarmerLayout({ children }: { children: React.React
     { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <Stethoscope size={20} /> },
     { label: 'Bản tin & thông báo', href: '/farmer/bulletin-notifications', icon: <Bell size={20} /> },
     { label: 'Tài khoản', href: '/farmer/profile', icon: <User size={20} /> },
+    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'farmer')),
   ]
 
   return (

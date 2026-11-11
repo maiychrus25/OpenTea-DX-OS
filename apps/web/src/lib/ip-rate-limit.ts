@@ -23,12 +23,13 @@ export function createIpLimiter({ max, windowMs, maxKeys = Infinity }: { max: nu
       attemptsByIp.delete(oldest[0])
       oldest = attemptsByIp.entries().next().value
     }
-    const attempt = attemptsByIp.get(ip)
+    // A full table sends new IPs to one shared bucket until keys expire, so a flood of forged IPs cannot grow memory
+    // without bound, and real new clients are still let through up to `max`.
+    const key = attemptsByIp.has(ip) || attemptsByIp.size < maxKeys ? ip : 'overflow'
+    const attempt = attemptsByIp.get(key)
     if (!attempt || attempt.resetAt <= now) {
-      // A full table refuses new IPs until keys expire, so a flood of forged IPs cannot grow memory without bound.
-      if (!attempt && attemptsByIp.size >= maxKeys) return true
-      attemptsByIp.delete(ip)
-      attemptsByIp.set(ip, { count: 1, resetAt: now + windowMs })
+      attemptsByIp.delete(key)
+      attemptsByIp.set(key, { count: 1, resetAt: now + windowMs })
       return false
     }
     attempt.count += 1
