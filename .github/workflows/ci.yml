@@ -225,6 +225,7 @@ jobs:
     name: Platform Smoke Test
     runs-on: ubuntu-latest
     # About 16 min before the A3 story; disease-api's image, the seed and the two browser specs add roughly 10.
+    # The tea-tour image, its story and apps-smoke (another platform-up and platform-smoke) add roughly 8.
     timeout-minutes: 45
     needs: [lint]
     steps:
@@ -323,10 +324,23 @@ jobs:
           E2E_BASE_URL: http://localhost:3000
         run: npx playwright test tests/e2e/story/tea-a3.spec.ts --project=chromium --no-deps --reporter=list
 
+      - name: Install Tea Tour App
+        run: ./dxos install miniapps/tea-tour
+
+      - name: Tea Tour Story Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_TEA_TOUR: installed
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/story/tea-tour.spec.ts --project=chromium --no-deps --reporter=list
+
+      # After the tea tour story, so the tea-tour pages hold a tour.
       - name: Priority Screens Browser Test
         working-directory: apps/web
         env:
           E2E_CORE: "1"
+          E2E_TEA_TOUR: installed
           E2E_BASE_URL: http://localhost:3000
         run: npx playwright test tests/e2e/visual/screens.spec.ts --project=chromium --no-deps --reporter=list
 
@@ -338,6 +352,21 @@ jobs:
           path: apps/web/test-results/screens/
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Remove Tea Tour App
+        run: ./dxos remove tea-tour
+
+      - name: Tea Tour Removal Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_TEA_TOUR: removed
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/story/tea-tour.spec.ts --project=chromium --no-deps --reporter=list
+
+      # Installs hello, tea-tour and the CLI fixtures, re-runs platform-up, removes them all, then runs platform-smoke.
+      - name: Mini-app Smoke Test
+        run: make apps-smoke
 
       - name: Docker Logs on Failure
         if: failure()

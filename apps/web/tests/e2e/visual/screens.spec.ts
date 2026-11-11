@@ -4,6 +4,8 @@
 // Priority screens of spec §6.4 at 1280×800 and 390×844, light and dark, on the seeded stack (like tests/e2e/story/tea-a3.spec.ts):
 //   E2E_CORE=1 E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/visual/screens.spec.ts --project=chromium --no-deps
 // Each run saves test-results/screens/<screen>-<viewport>-<theme>.png and checks for page-level horizontal overflow and overlapping text.
+// With E2E_TEA_TOUR=installed (after `./dxos install miniapps/tea-tour`, best after tests/e2e/story/tea-tour.spec.ts so the
+// pages hold a tour) it adds the tea-tour pages, and runs the same checks inside the app's frame.
 import { test, expect, Page } from '@playwright/test'
 import { DEMO_PASSWORD, SMOKE_PASSWORD, keycloakLogin } from '../helpers/keycloak-login'
 
@@ -19,6 +21,10 @@ const USERS: Record<Role, [string, string]> = {
 interface Screen {
   name: string
   role?: Role
+  /** Another user of that role, when the screen needs a particular one. */
+  user?: [string, string]
+  /** The mini-app frame whose document gets the same overflow and overlap checks. */
+  frame?: string
   /** Opens the screen and waits for the content that identifies it. */
   open: (page: Page) => Promise<void>
 }
@@ -53,6 +59,25 @@ const SCREENS: Screen[] = [
   // The page the printed QR code opens (ExportQrUseCase encodes /lot/<code>).
   { name: 'public-lot-trace', open: p => visit(p, '/lot/TC-CHE-A3-001', 'Truy xuất nguồn gốc') },
 ]
+
+const TEA_TOUR_FRAME = 'iframe[title="Đặt tour đồi chè"]'
+
+async function visitApp(page: Page, path: string, heading: string) {
+  await page.goto(path)
+  await expect(page.frameLocator(TEA_TOUR_FRAME).getByRole('heading', { name: heading, level: 1 })).toBeVisible()
+}
+
+if (process.env.E2E_TEA_TOUR === 'installed') {
+  SCREENS.push(
+    { name: 'tea-tour-manager-list', role: 'manager', frame: TEA_TOUR_FRAME, open: p => visitApp(p, '/manager/apps/tea-tour', 'Tour đồi chè HTX TC') },
+    { name: 'tea-tour-public', open: p => visit(p, '/apps/tea-tour/public/TC', 'Tour đồi chè HTX TC') },
+    {
+      // smoke_farmer_tc guides the story's tours (household hh_tc_1); the demo farmer guides none.
+      name: 'tea-tour-guide', role: 'farmer', user: ['smoke_farmer_tc', SMOKE_PASSWORD], frame: TEA_TOUR_FRAME,
+      open: p => visitApp(p, '/farmer/apps/tea-tour/guide', 'Lịch dẫn tour'),
+    },
+  )
+}
 
 const VIEWPORTS = [
   { name: '1280', width: 1280, height: 800 },
@@ -131,7 +156,7 @@ for (const screen of SCREENS) {
       test(`${screen.name} ${viewport.name} ${theme}`, async ({ browser }) => {
         const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, colorScheme: theme })
         const page = await context.newPage()
-        if (screen.role) await keycloakLogin(page, ...USERS[screen.role], screen.role)
+        if (screen.role) await keycloakLogin(page, ...(screen.user ?? USERS[screen.role]), screen.role)
         await screen.open(page)
         await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
         // No stored theme choice, so the page follows prefers-color-scheme from the context.
@@ -139,9 +164,17 @@ for (const screen of SCREENS) {
 
         await page.screenshot({ path: `test-results/screens/${screen.name}-${viewport.name}-${theme}.png`, fullPage: true })
 
-        const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }))
-        expect(widths.scroll, `page-level horizontal overflow: ${JSON.stringify(widths)}`).toBeLessThanOrEqual(widths.inner)
-        expect(await page.evaluate(findTextOverlaps)).toEqual([])
+        const documents = [page.mainFrame()]
+        if (screen.frame) {
+          const frame = await (await page.locator(screen.frame).elementHandle())?.contentFrame()
+          if (!frame) throw new Error(`No frame ${screen.frame}`)
+          documents.push(frame)
+        }
+        for (const doc of documents) {
+          const widths = await doc.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }))
+          expect(widths.scroll, `page-level horizontal overflow in ${doc.url()}: ${JSON.stringify(widths)}`).toBeLessThanOrEqual(widths.inner)
+          expect(await doc.evaluate(findTextOverlaps), `overlapping text in ${doc.url()}`).toEqual([])
+        }
 
         if (screen.role && viewport.name === '390') {
           // The signed-in top bar keeps the theme toggle on a phone, inside the screen and clear of the other controls.

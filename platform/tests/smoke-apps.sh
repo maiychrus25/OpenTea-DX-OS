@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
-# Mini-app smoke tests: ./dxos install/remove with the hello app, and the gateway's role check on tea-tour. Run
-# from the repo root via `make apps-smoke` on a seeded stack (make platform-up + seed), because the last check runs
-# the full platform smoke.
+# Mini-app smoke tests: ./dxos install/remove with the hello and tea-tour apps. Run from the repo root via
+# `make apps-smoke` on a seeded stack after `make platform-smoke` (its fixtures: household hh_tc_1 linked to
+# smoke_farmer_tc), because tea-tour picks that household as guide and the last check runs the full platform smoke.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source platform/tests/lib.sh
@@ -106,6 +106,7 @@ assert_eq "$(psql_app "select count(*) from pg_roles where rolname='app_db_app'"
 
 echo "[tea-tour]"
 ./dxos remove tea-tour --purge >/dev/null 2>&1 || true  # a fresh schema, whatever an earlier run or the browser story left
+TEA_ENV="$RUNTIME/apps/tea-tour.env"
 ./dxos install miniapps/tea-tour && pass "./dxos install miniapps/tea-tour exits 0" || fail "./dxos install miniapps/tea-tour"
 wait_http 200 "manager token -> 200 on /apps/tea-tour/" -- -H "Authorization: Bearer $TM" "$GATEWAY/apps/tea-tour/"
 assert_http 401 "no token -> 401 on /apps/tea-tour/" -- "$GATEWAY/apps/tea-tour/"
@@ -122,7 +123,35 @@ refused "$TF" /apps/tea-tour/ smoke_farmer_tc
 refused "$TF" /apps/tea-tour/tours smoke_farmer_tc
 refused "$TM" /apps/tea-tour/guide smoke_manager_tc
 
+TITLE="Tour smoke $$"
+START="$(( $(date +%Y) + 1 ))-05-01T07:30"
+HDRS=$(curl -s -D - -o /dev/null -H "Authorization: Bearer $TM" --data-urlencode "title=$TITLE" \
+  --data-urlencode "starts_at=$START" --data-urlencode "meeting_point=Nhà văn hoá xóm Hồng Thái" \
+  -d seats=5 -d price_vnd=250000 -d guide=hh_tc_1 "$GATEWAY/apps/tea-tour/tours")
+grep -q '^HTTP/[0-9.]* 303' <<<"$HDRS" && pass "manager creates a tour with guide hh_tc_1 -> 303" || fail "create tour not 303: $HDRS"
+LOC=$(grep -i '^location:' <<<"$HDRS" | tr -d '\r' | cut -d' ' -f2)
+TOUR="${LOC##*/}"
+[[ "$LOC" =~ ^/apps/tea-tour/tours/[0-9a-f-]{36}$ ]] && pass "create redirects to the tour page ($LOC)" || fail "create Location wrong: '$LOC'"
+grep -qF "$TITLE" <<<"$(curl -s "$GATEWAY/apps/tea-tour/public/TC")" && pass "public page lists the tour without a token" \
+  || fail "public page does not list $TITLE"
+HDRS=$(curl -s -D - -o /dev/null --data-urlencode "guest_name=Nguyễn Thị Hoa" -d phone=0912345678 -d party_size=2 \
+  "$GATEWAY/apps/tea-tour/public/TC/tours/$TOUR/book")
+LOC=$(grep -i '^location:' <<<"$HDRS" | tr -d '\r' | cut -d' ' -f2)
+CODE=$(sed -n 's/.*[?&]code=\([A-Z0-9]*\).*/\1/p' <<<"$LOC")
+[[ "$LOC" == /apps/tea-tour/public/TC/booking\?* && -n "$CODE" ]] && pass "guest books 2 seats without a token -> code $CODE" \
+  || fail "booking Location wrong: '$LOC'"
+assert_eq "$(psql_app "select party_size || ' ' || status from app_tea_tour.bookings where code = '$CODE'")" "2 PENDING" \
+  "booking stored: 2 seats, PENDING"
+grep -qF "$TITLE" <<<"$(curl -s -H "Authorization: Bearer $TF" "$GATEWAY/apps/tea-tour/guide")" \
+  && pass "guide farmer sees the tour on /apps/tea-tour/guide" || fail "smoke_farmer_tc /guide does not list $TITLE"
+
+./dxos remove tea-tour && pass "./dxos remove tea-tour exits 0" || fail "./dxos remove tea-tour"
+wait_http 404 "removed tea-tour public route -> 404" -- "$GATEWAY/apps/tea-tour/public/TC"
+assert_eq "$(psql_app "select count(*) from app_tea_tour.bookings where code = '$CODE'")" 1 "remove without --purge keeps the bookings"
 ./dxos remove tea-tour --purge && pass "./dxos remove tea-tour --purge exits 0" || fail "./dxos remove tea-tour --purge"
+assert_eq "$(psql_app "select count(*) from pg_namespace where nspname='app_tea_tour'")" 0 "--purge dropped schema app_tea_tour"
+assert_eq "$(psql_app "select count(*) from pg_roles where rolname='app_tea_tour'")" 0 "--purge dropped role app_tea_tour"
+[ ! -e "$TEA_ENV" ] && pass "--purge deleted the tea-tour env file" || fail "tea-tour env file left after --purge"
 
 echo "[platform-up with hello installed]"
 CID=$(hello_container); [ -n "$CID" ] || fail "app-hello not running before platform-up"

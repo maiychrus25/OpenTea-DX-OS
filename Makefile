@@ -35,7 +35,8 @@ platform-up: gateway-sync
 platform-smoke:
 	bash platform/tests/smoke-platform.sh
 
-# Needs a seeded stack (platform-up + seed); installs hello, re-runs platform-up, removes it, then runs platform-smoke.
+# Needs a seeded stack after platform-smoke (its fixture household hh_tc_1 guides the tea-tour); installs and removes
+# tea-tour and the CLI fixtures, installs hello, re-runs platform-up, removes it, then runs platform-smoke.
 apps-smoke:
 	bash platform/tests/smoke-apps.sh
 
