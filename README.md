@@ -128,6 +128,7 @@ flowchart TB
    docker compose -f docker/docker-compose.yml up -d
    bash scripts/smoke-test.sh   # kiểm tra sức khoẻ các dịch vụ
    ```
+   Muốn dùng mini-app thì khởi chạy bằng `make platform-up` (hoặc `make up`): chỉ khi đó gateway mới nạp route của các app đã cài, còn `docker compose up` trực tiếp chạy lõi không có route app nào.
 
 4. **Truy cập dịch vụ:**
 
@@ -396,6 +397,8 @@ docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f dock
 ```
 
 > [!NOTE]
+> Bản phát hành 1.8.0 chưa hỗ trợ cài mini-app (chưa phát hành image CLI `dxos`): gateway dùng nguyên tệp route gốc `platform/gateway/apisix.yaml`.
+>
 > Hasura phải khởi động sau migration (thiếu bảng thì không phục vụ dữ liệu). Cổng mở ra host: `apisix:9080`, `web:3000`, `keycloak:8080` và `seaweedfs:9000` (trình duyệt tải/xem file qua presigned URL trên cổng 9000 nên chưa thể đóng cho tới khi Tầng 2 đưa storage ra sau gateway).
 
 > [!WARNING]

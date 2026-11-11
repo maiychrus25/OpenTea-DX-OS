@@ -23,6 +23,8 @@ docker compose -f docker/docker-compose.yml up -d
 ```
 Lệnh này sẽ khởi chạy 8 services: `web`, `postgres`, `keycloak`, `n8n`, `ollama`, `piper`, `seaweedfs` (S3 tương thích, cổng 9000), `disease-api`.
 
+Mini-app chỉ có route trên gateway khi khởi chạy bằng `make platform-up` hoặc `make up`; lệnh `docker compose` ở trên chạy lõi mà không có route app nào.
+
 ## Bước 3: Cài đặt Thủ công (Manual Setup)
 
 ### Cài đặt Ollama Model

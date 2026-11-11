@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from dxos_cli.gateway import app_routes, render_gateway, sync_gateway
+from dxos_cli import gateway
+from dxos_cli.gateway import GatewayError, app_routes, render_gateway, sync_gateway
 from dxos_cli.manifest import load_manifest, repo_root
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -120,3 +121,52 @@ def test_sync_rebuilds_from_fragments(tmp_path, manifest):
         "app-hello-public-1", "app-hello-protected-1", "app-hello-protected-2",
         "app-tea-tour-public-1", "app-tea-tour-protected-1", "app-tea-tour-protected-2",
     ]
+
+
+def test_sync_never_leaves_old_end_marker_after_partial_write(tmp_path, manifest, monkeypatch):
+    repo = make_repo(tmp_path)
+    write_fragment(repo, "tea-tour", app_routes(manifest))
+    sync_gateway(repo)
+    target = repo / "docker" / "runtime" / "gateway" / "apisix.yaml"
+    (repo / "docker" / "runtime" / "gateway" / "apps" / "tea-tour.yaml").unlink()
+    real_open = open
+
+    class HalfWrite:
+        def __init__(self, fh):
+            self.fh = fh
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            self.fh.close()
+
+        def truncate(self, *args):
+            return self.fh.truncate(*args)
+
+        def write(self, text):
+            self.fh.write(text[: len(text) // 2])
+            self.fh.flush()
+            raise OSError("disk full")
+
+    monkeypatch.setattr(gateway, "open", lambda *a, **k: HalfWrite(real_open(*a, **k)), raising=False)
+    with pytest.raises(OSError):
+        sync_gateway(repo)
+    # APISIX only loads a file ending in #END; a torn write must never end in the previous file's marker.
+    assert not target.read_text(encoding="utf-8").endswith("#END\n")
+
+
+@pytest.mark.parametrize("field,value", [("uri", "/api/data/graphql"), ("uri", "/apps/hello/x*"),
+                                         ("id", "data-graphql"), ("id", "app-hello-public-1"),
+                                         ("id", "app-tea-tour-x-public-1")])
+def test_sync_rejects_foreign_fragment_route(tmp_path, manifest, field, value):
+    repo = make_repo(tmp_path)
+    sync_gateway(repo)
+    target = repo / "docker" / "runtime" / "gateway" / "apisix.yaml"
+    before = target.read_bytes()
+    routes = app_routes(manifest)
+    routes[0][field] = value
+    write_fragment(repo, "tea-tour", routes)
+    with pytest.raises(GatewayError, match="tea-tour"):
+        sync_gateway(repo)
+    assert target.read_bytes() == before

@@ -89,6 +89,12 @@ def test_rejects_unknown_role(valid):
     assert errs and any("admin" in e or "routes" in e for e in errs)
 
 
+def test_rejects_prefix_both_public_and_protected(valid):
+    routes = {"public": ["/public/", "/guide"], "protected": {"/": ["manager"], "/guide": ["farmer"]}}
+    errs = errors(mutated(valid, routes=routes), core="1.8.0")
+    assert len(errs) == 1 and "routes" in errs[0] and "'/guide'" in errs[0]
+
+
 def test_rejects_ports_field(valid):
     errs = errors(mutated(valid, ports=["8080:8080"]), core="1.8.0")
     assert len(errs) == 1 and "ports" in errs[0]

@@ -95,6 +95,10 @@ def validate_manifest(data: dict, core_version: str, installed_ids: set[str]) ->
     lic = data.get("license")
     if isinstance(lic, str) and lic not in OSI_LICENSES:
         errors.append(f"'license': giấy phép '{lic}' không thuộc danh sách OSI được chấp nhận")
+    routes = data.get("routes")
+    if isinstance(routes, dict) and isinstance(routes.get("public"), list) and isinstance(routes.get("protected"), dict):
+        for prefix in sorted({p for p in routes["public"] if isinstance(p, str)} & set(routes["protected"])):
+            errors.append(f"'routes': đường dẫn '{prefix}' không được vừa công khai vừa cần đăng nhập")
     requires = data.get("requires")
     core = requires.get("core") if isinstance(requires, dict) else None
     match = _CORE_RE.match(core) if isinstance(core, str) else None

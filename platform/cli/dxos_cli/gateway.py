@@ -41,6 +41,7 @@ def app_routes(manifest: dict) -> list[dict]:
                                  "properties": {"roles": {"type": "array", "contains": {"enum": list(roles)}}}},
             },
         }}
+        # radixtree already picks the longest matching uri; priority only orders routes with the same uri.
         out.append({"id": f"app-{app_id}-protected-{n}", "uri": f"/apps/{app_id}{prefix}*",
                     "priority": 10 + len(prefix), **common, "plugins": {"openid-connect": oidc, **rewrite}})
     return out
@@ -67,11 +68,20 @@ def sync_gateway(repo_root: Path) -> None:
         routes = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(routes, list):
             raise GatewayError(f"{path} phải là danh sách route")
-        fragments[path.stem] = routes
+        app_id = path.stem
+        # A fragment may only route its own app's paths; it must never shadow a core route or another app.
+        for route in routes:
+            if not (isinstance(route, dict)
+                    and re.fullmatch(rf"app-{re.escape(app_id)}-(public|protected)-\d+", str(route.get("id", "")))
+                    and str(route.get("uri", "")).startswith(f"/apps/{app_id}/")):
+                raise GatewayError(f"{path}: route {route.get('id') if isinstance(route, dict) else route!r} "
+                                   f"phải có id 'app-{app_id}-<public|protected>-<n>' và uri dưới '/apps/{app_id}/'")
+        fragments[app_id] = routes
     text = render_gateway(base_text, fragments)
     target = runtime / "apisix.yaml"
     runtime.mkdir(parents=True, exist_ok=True)
     # Write in place, never rename: APISIX keeps the inode of its bind-mounted file and would miss a new one.
+    # Truncate first so a torn write never ends in the old #END (APISIX ignores a file without it).
     with open(target, "r+" if target.exists() else "w", encoding="utf-8") as fh:
+        fh.truncate(0)
         fh.write(text)
-        fh.truncate()

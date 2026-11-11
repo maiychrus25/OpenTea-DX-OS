@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 COMPOSE := docker compose -f docker/docker-compose.yml
+# apisix reads the generated route file (base + installed apps); relative to docker/, like every compose path.
+export DXOS_GATEWAY_FILE := ../docker/runtime/gateway/apisix.yaml
 
 .PHONY: gateway-sync platform-up platform-smoke platform-down up down build test lint
 

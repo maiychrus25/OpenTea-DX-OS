@@ -286,6 +286,9 @@ jobs:
         run: make platform-smoke
 
       - name: Start Web
+        # Same gateway file as make platform-up, so starting web does not recreate apisix on the base file.
+        env:
+          DXOS_GATEWAY_FILE: ../docker/runtime/gateway/apisix.yaml
         run: docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
 
       - name: Install Chromium
