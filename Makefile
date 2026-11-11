@@ -2,15 +2,21 @@
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 COMPOSE := docker compose -f docker/docker-compose.yml
 
-.PHONY: platform-up platform-smoke platform-down up down build test lint
+.PHONY: gateway-sync platform-up platform-smoke platform-down up down build test lint
 
-platform-up:
+# APISIX mounts docker/runtime/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
+gateway-sync:
+	mkdir -p docker/runtime/gateway/apps docker/runtime/apps
+	$(COMPOSE) --profile tools run --rm --build --user "$$(id -u):$$(id -g)" dxos-cli gateway-sync
+
+platform-up: gateway-sync
 	$(COMPOSE) up -d --build --wait postgres
 	$(COMPOSE) run --rm platform-init
 	$(COMPOSE) --profile tools run --rm --build migrate
 	$(COMPOSE) run --rm platform-init
 # Hasura loads metadata only at start and APISIX holds the old inode of its bind-mounted route file, so a running
 # stack needs a restart. A fresh start must not get one: it would hide a wrong migrate order from the smoke test.
+# gateway-sync writes the runtime route file in place (same inode), so later app routes reach APISIX without one.
 	@running="$$($(COMPOSE) ps -q --status running hasura apisix)"; \
 	$(COMPOSE) up -d --build --wait postgres keycloak seaweedfs n8n hasura apisix clamav dxos-scanner mosquitto dxos-ingest dxos-lifecycle ollama || exit 1; \
 	[ -z "$$running" ] && exit 0; \
@@ -27,7 +33,7 @@ platform-smoke:
 platform-down:
 	$(COMPOSE) down
 
-up:
+up: gateway-sync
 	$(COMPOSE) up -d
 
 down:
