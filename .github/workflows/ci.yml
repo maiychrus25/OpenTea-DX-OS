@@ -257,6 +257,9 @@ jobs:
       - name: Dataops Unit Tests
         run: cd platform/dataops && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
 
+      - name: DXOS CLI Unit Tests
+        run: cd platform/cli && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
+
       # The Ollama image alone unpacks to several GB; the runner's preinstalled SDKs leave too little disk for the full stack.
       - name: Free Runner Disk
         run: |

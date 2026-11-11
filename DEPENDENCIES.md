@@ -109,7 +109,7 @@ ImageNet weights it downloads are credited in `ai-models/ATTRIBUTION.md`.
 | n8n | `n8nio/n8n:2.47.2` | Sustainable Use License* | Workflow automation |
 | SeaweedFS | `chrislusf/seaweedfs:4.50` | Apache-2.0 | S3-compatible object storage (replaces MinIO); started with `-volume.max=100` so more than one bucket fits |
 | ClamAV | `clamav/clamav-debian:1.4.6` | GPL-2.0 | Antivirus daemon (network service, not linked) |
-| Python | `python:3.12.15-slim-bookworm` | PSF | Base image of `dxos-scanner` and `dxos-dataops`, and of `ai-models/tea` training (not a Compose service) |
+| Python | `python:3.12.15-slim-bookworm` | PSF | Base image of `dxos-scanner`, `dxos-dataops` and `dxos-cli`, and of `ai-models/tea` training (not a Compose service) |
 | Mosquitto | `eclipse-mosquitto:2.1.2-alpine` | EPL-2.0 | MQTT broker (network service, not linked) |
 | Ollama | `ollama/ollama:0.40.15` | MIT | Local LLM runtime (network service, no host port) |
 | qwen2.5:0.5b | pulled by `ollama-init`, pinned by digest ID | Apache-2.0 | Default in-house LLM (model weights, not bundled in any image) |
@@ -132,6 +132,14 @@ ImageNet weights it downloads are credited in `ai-models/ATTRIBUTION.md`.
 | [duckdb](https://github.com/duckdb/duckdb) | 2.0.0 | MIT | Parquet writer and cold-lake query engine |
 | [minio](https://github.com/minio/minio-py) | 7.2.20 | Apache-2.0 | S3 client |
 | [psycopg[binary]](https://github.com/psycopg/psycopg) | 3.3.6 | LGPL-3.0 | PostgreSQL driver (dynamically linked, unmodified) |
+| [pytest](https://github.com/pytest-dev/pytest) | 9.1.1 | MIT | Unit tests (dev only) |
+
+### Mini-app CLI (`platform/cli`)
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| [PyYAML](https://github.com/yaml/pyyaml) | 6.0.3 | MIT | Reads `app.yaml` manifests |
+| [jsonschema](https://github.com/python-jsonschema/jsonschema) | 4.26.0 | MIT | Validates manifests against `platform/apps/manifest.schema.json` |
 | [pytest](https://github.com/pytest-dev/pytest) | 9.1.1 | MIT | Unit tests (dev only) |
 
 > **\* n8n License Note:** n8n uses the Sustainable Use License (fair-code, source-available,

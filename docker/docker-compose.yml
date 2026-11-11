@@ -469,6 +469,24 @@ services:
     networks:
       - agrimarket-net
 
+  # One-shot mini-app CLI (profile tools, no host port, no docker socket). Run with
+  # --user "$(id -u):$(id -g)": the image default is non-root uid 10001, but the bind-mounted
+  # docker/runtime must stay writable for the host (and Linux CI) user.
+  dxos-cli:
+    build: ../platform/cli
+    image: opentea-dx-os/cli:local
+    profiles: ["tools"]
+    restart: "no"
+    environment:
+      DXOS_REPO_ROOT: /repo
+    volumes:
+      - ../miniapps:/repo/miniapps:ro
+      - ../platform:/repo/platform:ro
+      - ../apps/web/package.json:/repo/apps/web/package.json:ro
+      - ./runtime:/repo/docker/runtime
+    networks:
+      - agrimarket-net
+
 volumes:
   pgdata:
   n8n_data:
