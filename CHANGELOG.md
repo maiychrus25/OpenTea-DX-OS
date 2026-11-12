@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.9.0] - 2026-11-13
+
 ### Added
 - **Optional `description` in the mini-app manifest** (1-200 characters), shown by the upcoming app store; `hello` and `tea-tour` now declare one. `docs/miniapps.md` documents it and the rule that public pages live under `/public/<htxCode>/...` (from v1.9.0 the web proxy serves a public page only when that HTX has enabled the app). Web package version is now `1.9.0`
 - **App Store: install mini-apps per cooperative** (the manifest `description` above feeds it). A manager opens "Kho ứng dụng" (`/manager/app-store`) and installs or removes an app for their own HTX; the card shows Chưa cài, Đang cài…, Đã cài, Đang gỡ…, Lỗi (with Thử lại) or "Đã cài cho mọi HTX (quản trị máy chủ)", and polls every 3 s only while something is in progress, then refreshes the sidebar menu of the manager who pressed the button (other signed-in users of the HTX see the change at their next page load). A mini-app is now served, and listed in the menu, only to the HTXs that enabled it: the proxy answers 404 to any other HTX on protected and public paths, and a public page names its HTX in `/public/<htxCode>/...`. New tables in schema `platform` (`platform/postgres/init/06-app-store.sql`, applied by `platform-init`): `app_catalog` (synced from `miniapps/*/app.yaml` by `make platform-up` and by the worker; an installed app keeps its card when its directory is gone), `app_enablements` (`*` means every HTX), `app_requests` (one open request per app and HTX, enforced by a unique index) and `app_worker` (heartbeat); requests and enablements are audited. `./dxos worker` is the host process that claims requests one at a time (`ENABLE` installs the app when needed, `DISABLE` removes the container once no HTX is left, and keeps the data), takes a lock in `docker/runtime/<project>/worker.lock`, fails requests a crashed worker left running (undoing the half install) and logs one line per job; without it the page warns that requests wait for the administrator. `./dxos install <dir>` is unchanged and enables the app for `*`. New API: `GET /api/app-store`, `POST /api/app-store/requests` (`docs/api-contract.md`)
@@ -416,7 +420,8 @@ The `v1.8.0` tag has no GitHub Release, images or bundle: the release workflow's
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.8.1...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.9.0
 [1.8.1]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.8.1
 [1.8.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.8.0
 [1.7.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.7.0
