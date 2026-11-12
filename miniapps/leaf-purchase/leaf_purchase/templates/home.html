@@ -1,0 +1,44 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Phiếu cân ngày {{ day | vn_date }}{% endblock %}
+{% block main %}
+<h1>Thu mua búp tươi</h1>
+<form method="get" action="{{ href('/') }}">
+  {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+  <label>Xem ngày <input type="date" name="day" value="{{ day.isoformat() }}"></label>
+  <button type="submit">Xem</button>
+</form>
+<p>Tổng ngày {{ day | vn_date }}: <strong>{{ kg_total | kg }} kg</strong> · <strong>{{ vnd_total | vnd }}</strong></p>
+
+<h2>Phiếu cân ngày {{ day | vn_date }}</h2>
+{% if tickets %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Hộ</th><th role="columnheader">Loại chè</th><th role="columnheader">Số ký</th><th role="columnheader">Thành tiền</th><th role="columnheader">Trạng thái</th><th role="columnheader">Thao tác</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for t in tickets %}
+    <tr role="row">
+      <td role="cell" data-label="Hộ">{{ t.household_name }}</td>
+      <td role="cell" data-label="Loại chè">{{ t.grade_name }}</td>
+      <td role="cell" data-label="Số ký">{{ t.kg | kg }}</td>
+      <td role="cell" data-label="Thành tiền">{{ t.amount_vnd | vnd }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill">{{ ticket_state(t) }}</span></td>
+      <td role="cell" data-label="Thao tác">{% if t.open %}
+        <a href="{{ href('/tickets/' ~ t.id ~ '/edit', theme) }}">Sửa</a>
+        <form method="post" action="{{ href('/tickets/' ~ t.id ~ '/void', theme) }}"><button type="submit">Huỷ phiếu</button></form>
+      {% else %}—{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Chưa có phiếu cân nào trong ngày này.</p>
+{% endif %}
+
+<h2>Ghi phiếu cân</h2>
+{% if not grades %}<p>HTX chưa có loại chè nào đang dùng. Ban quản trị đặt giá ở trang giá thu mua trước.</p>{% endif %}
+<form method="post" action="{{ href('/tickets', theme) }}">
+  {% include "ticket_fields.html" %}
+  <button type="submit"{% if core_error or not grades %} disabled{% endif %}>Ghi phiếu</button>
+</form>
+{% endblock %}
