@@ -351,15 +351,6 @@ jobs:
           E2E_BASE_URL: http://localhost:3000
         run: npx playwright test tests/e2e/visual/screens.spec.ts --project=chromium --no-deps --reporter=list
 
-      - name: Upload Screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: priority-screens
-          path: apps/web/test-results/screens/
-          if-no-files-found: ignore
-          retention-days: 14
-
       - name: Remove Tea Tour App
         run: ./dxos remove tea-tour
 
@@ -371,6 +362,70 @@ jobs:
           E2E_BASE_URL: http://localhost:3000
         run: npx playwright test tests/e2e/story/tea-tour.spec.ts --project=chromium --no-deps --reporter=list
 
+      # The store stories press Cài and Gỡ, which only queue requests: ./dxos worker does the work. It runs in the background
+      # until the stories and screens are done; apps-smoke starts a worker of its own, and a second one would be refused.
+      - name: Start App Store Worker
+        run: |
+          nohup ./dxos worker > "$RUNNER_TEMP/worker.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/worker.pid"
+          for _ in $(seq 1 60); do grep -q 'worker started' "$RUNNER_TEMP/worker.log" && exit 0; sleep 1; done
+          cat "$RUNNER_TEMP/worker.log"
+          exit 1
+
+      # Installs tea-shop for TC from the page, so the screens below find it.
+      - name: App Store Story Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_APP_STORE: "1"
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/story/app-store.spec.ts --project=chromium --no-deps --reporter=list
+
+      - name: Install Business Apps
+        run: |
+          ./dxos install miniapps/leaf-purchase
+          ./dxos install miniapps/farm-supply
+
+      - name: Business Apps Story Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_BUSINESS_APPS: installed
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/story/business-apps.spec.ts --project=chromium --no-deps --reporter=list
+
+      # Only the screens of the store and the three apps; Priority Screens above ran the rest.
+      - name: Business Apps Screens Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_BUSINESS_APPS: installed
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/visual/screens.spec.ts --project=chromium --no-deps --reporter=list --grep 'app-store|leaf-purchase|tea-shop|farm-supply'
+
+      - name: Upload Screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: priority-screens
+          path: apps/web/test-results/screens/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stop App Store Worker
+        if: always()
+        run: |
+          [ -f "$RUNNER_TEMP/worker.pid" ] || exit 0
+          kill "$(cat "$RUNNER_TEMP/worker.pid")" 2>/dev/null || true
+          for _ in $(seq 1 40); do kill -0 "$(cat "$RUNNER_TEMP/worker.pid")" 2>/dev/null || exit 0; sleep 1; done
+          echo "worker did not stop within 40 s" >&2
+          exit 1
+
+      # apps-smoke purges these apps and refuses to start while one is installed.
+      - name: Remove Business Apps
+        run: |
+          for app in tea-shop leaf-purchase farm-supply; do ./dxos remove "$app"; done
+
       # Installs hello, tea-tour, the three business apps and the CLI fixtures, runs the store queue with a worker of its own,
       # re-runs platform-up, removes them all, then runs platform-smoke.
       - name: Mini-app Smoke Test
@@ -380,4 +435,5 @@ jobs:
         if: failure()
         run: |
           df -h /
+          cat "$RUNNER_TEMP/worker.log" 2>/dev/null || true
           docker compose -f docker/docker-compose.yml logs
