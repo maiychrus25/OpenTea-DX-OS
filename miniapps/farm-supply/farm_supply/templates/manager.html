@@ -1,0 +1,32 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Các đợt mua chung{% endblock %}
+{% block main %}
+<h1>Vật tư mua chung HTX {{ htx }}</h1>
+<h2>Các đợt đăng ký</h2>
+{% if rounds %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Đợt</th><th role="columnheader">Hạn đăng ký</th><th role="columnheader">Trạng thái</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for r in rounds %}
+    <tr role="row">
+      <td role="cell" data-label="Đợt"><a href="{{ href('/rounds/' ~ r.id, theme) }}">{{ r.title }}</a></td>
+      <td role="cell" data-label="Hạn đăng ký">{{ r.deadline | vn_time }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill">{{ round_status(r) }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>HTX chưa mở đợt nào. Tạo đợt đầu tiên bằng biểu mẫu dưới đây, rồi thêm các mặt hàng.</p>
+{% endif %}
+
+<h2>Mở đợt mới</h2>
+<form method="post" action="{{ href('/rounds', theme) }}">
+  {% if errors %}<div class="error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+  <label>Tên đợt <input name="title" maxlength="120" required value="{{ form.title }}"></label>
+  <label>Hạn đăng ký (giờ Việt Nam) <input type="datetime-local" name="deadline" required value="{{ form.deadline }}"></label>
+  <button type="submit">Mở đợt</button>
+</form>
+{% endblock %}

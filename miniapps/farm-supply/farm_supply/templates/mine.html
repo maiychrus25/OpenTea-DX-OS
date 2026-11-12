@@ -1,0 +1,50 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Đăng ký vật tư{% endblock %}
+{% block main %}
+<h1>Đăng ký vật tư</h1>
+{% if household is none %}
+<p class="error" role="alert">{{ problem }}</p>
+{% else %}
+<p>Nông hộ: {{ household.name }}</p>
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+<h2>Đợt đang nhận đăng ký</h2>
+{% for r in rounds %}
+<form method="post" action="{{ href('/mine/rounds/' ~ r.id, theme) }}" aria-label="Đăng ký {{ r.title }}">
+  <h3>{{ r.title }}</h3>
+  <p>Hạn đăng ký: {{ r.deadline | vn_time }}. Để trống hoặc nhập 0 nếu không mua.</p>
+  {% for i in items[r.id] %}
+  <label>{{ i.name }} ({{ i.price_vnd | vnd }} / {{ i.unit }}), số lượng
+    <input name="q_{{ i.item_id }}" inputmode="decimal" maxlength="7" value="{{ typed[i.item_id | string] if typed else (i.quantity | qty if i.quantity else '') }}">
+  </label>
+  {% else %}
+  <p>Đợt chưa có mặt hàng nào.</p>
+  {% endfor %}
+  {% if items[r.id] %}<button type="submit">Lưu đăng ký</button>{% endif %}
+</form>
+{% else %}
+<p>Hiện chưa có đợt nào đang nhận đăng ký.</p>
+{% endfor %}
+
+<h2>Các đợt đã qua</h2>
+{% if history %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Đợt</th><th role="columnheader">Phải trả</th><th role="columnheader">Trạng thái</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for h in history %}
+    <tr role="row">
+      <td role="cell" data-label="Đợt">{{ h.title }}</td>
+      <td role="cell" data-label="Phải trả">{{ h.amount_vnd | vnd }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill">{{ settlement_status(h) }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Anh chị chưa có đợt nào đã qua.</p>
+{% endif %}
+{% endif %}
+{% endblock %}
