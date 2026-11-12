@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`make platform-up` no longer recreates containers whose build inputs did not change**: BuildKit attached a provenance attestation with a new digest to every build, so rebuilding an unchanged image (`up --build`, `run --build migrate`, the web step) produced a new image ID and Compose recreated `agrimarket-postgres` (and its dependents) under a running Keycloak. Keycloak then answered 500 on its next admin call, which failed `make apps-smoke` on main and in the release gate (`FAIL: keycloak admin PUT .../default-client-scopes/...`, `Error 22`). The Makefile, `./dxos` and the CI `platform-smoke` job now set `BUILDX_NO_DEFAULT_ATTESTATIONS=1`, so the same inputs give the same image ID. First-start behaviour is unchanged
+- **`make apps-smoke` waits for Keycloak after `make platform-up`**: it now asserts that the postgres container is the same one as before, then waits (bounded, 120 s for the admin API, 60 s for the user token) before using Keycloak, so a legitimate restart no longer fails the run. New helper `kc_ready` in `platform/tests/tokens.sh`; no assertion was removed
+
 ---
 
 ## [1.8.0] - 2026-11-12

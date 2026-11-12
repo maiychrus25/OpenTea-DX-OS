@@ -11,6 +11,8 @@ PROJECT="${COMPOSE_PROJECT_NAME:-docker}"
 RUNTIME="docker/runtime/$PROJECT"
 # apisix reads the generated route file; relative to docker/, like every compose path.
 export DXOS_GATEWAY_FILE="../$RUNTIME/gateway/apisix.yaml"
+# Same as the Makefile: no build attestation, so rebuilding an unchanged app image keeps its ID and its container.
+export BUILDX_NO_DEFAULT_ATTESTATIONS=1
 ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.json
 
 usage() {

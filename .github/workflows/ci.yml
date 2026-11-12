@@ -228,6 +228,9 @@ jobs:
     # The tea-tour image, its story and apps-smoke (another platform-up and platform-smoke) add roughly 8.
     timeout-minutes: 45
     needs: [lint]
+    # As in the Makefile: the raw compose and docker build steps below must not make a new image ID per build either.
+    env:
+      BUILDX_NO_DEFAULT_ATTESTATIONS: '1'
     steps:
       - uses: actions/checkout@v4
 

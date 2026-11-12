@@ -211,9 +211,19 @@ assert_eq "$(psql_app "select count(*) from pg_roles where rolname='app_tea_tour
 
 echo "[platform-up with hello installed]"
 CID=$(hello_container); [ -n "$CID" ] || fail "app-hello not running before platform-up"
+PG_BEFORE=$($COMPOSE ps -q postgres)
 make platform-up >/dev/null || fail "make platform-up with hello installed"
 pass "make platform-up exits 0 with hello installed"
-TM=$(user_token smoke_manager_tc)
+# Rebuilding unchanged images must not recreate a running core container (CI runs 43224292853, 43224322784: postgres
+# was recreated under keycloak, whose next admin call got a 500).
+assert_eq "$($COMPOSE ps -q postgres)" "$PG_BEFORE" "postgres container kept running through platform-up"
+# Even a legitimate restart must not fail the next steps: wait for the admin API, the token endpoint and the gateway.
+kc_ready
+for _ in $(seq 1 30); do
+  TM=$(user_token smoke_manager_tc 2>/dev/null) && [ -n "$TM" ] && [ "$TM" != null ] && break
+  TM=""; sleep 2
+done
+[ -n "$TM" ] || fail "smoke_manager_tc token not available 60s after platform-up"
 wait_http 200 "/apps/hello/ still 200 after platform-up" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
 assert_eq "$(hello_container)" "$CID" "app-hello container kept running through platform-up"
 

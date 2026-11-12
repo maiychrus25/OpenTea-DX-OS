@@ -16,6 +16,21 @@ kc_wait() {
   fail "keycloak realm not ready after 120s"
 }
 
+# kc_ready: after a legitimate restart the realm document answers while Keycloak's database pool is still broken, so
+# wait (bounded, 60 x 2s) until the admin API itself answers 200, not only the realm page.
+kc_ready() {
+  local i t
+  kc_wait
+  for i in $(seq 1 60); do
+    t="$(curl -sf -d client_id=admin-cli -d grant_type=password \
+      -d "username=${KEYCLOAK_ADMIN:-admin}" -d "password=${KEYCLOAK_ADMIN_PASSWORD:-admin}" \
+      "$KC/realms/master/protocol/openid-connect/token" | jq -r '.access_token // empty')" || t=""
+    if [ -n "$t" ] && [ "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $t" "$KC_ADMIN_API/clients?max=1")" = 200 ]; then return 0; fi
+    sleep 2
+  done
+  fail "keycloak admin API not ready after 120s"
+}
+
 # Bounded retry (3 x 2s): Keycloak admin occasionally answers a transient 400/5xx right after startup.
 kc_admin_token() {
   local i t

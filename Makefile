@@ -7,6 +7,11 @@ RUNTIME := docker/runtime/$(PROJECT)
 # apisix reads the generated route file (base + installed apps); relative to docker/, like every compose path.
 export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 
+# BuildKit adds a provenance attestation with a fresh digest to every build, so a rebuild of an unchanged image gets a
+# new image ID (containerd image store) and `up --build` recreates its running containers: postgres restarted under
+# keycloak on every platform-up. Without the attestation the same inputs give the same ID, so nothing is recreated.
+export BUILDX_NO_DEFAULT_ATTESTATIONS := 1
+
 .PHONY: gateway-sync platform-up platform-smoke apps-smoke platform-down up down build test lint
 
 # APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
