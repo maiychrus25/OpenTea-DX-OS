@@ -65,6 +65,13 @@ def test_protected_route_requires_roles_and_audience(manifest, base_text):
     assert render_gateway(base_text, {"tea-tour": app_routes(manifest)}).count("client_secret") == 1
 
 
+def test_every_app_route_matches_only_the_internal_listener(manifest):
+    # 9080 is published to the host; only web's proxy (on 9081) may reach an app (R23).
+    routes = app_routes(manifest)
+    assert len(routes) == 3
+    assert all(route["vars"] == [["server_port", "==", "9081"]] for route in routes)
+
+
 def test_longer_prefix_has_higher_priority(manifest):
     routes = by_id(app_routes(manifest))
     assert routes["app-tea-tour-protected-1"]["uri"] == "/apps/tea-tour/*"
@@ -158,14 +165,19 @@ def test_sync_never_leaves_old_end_marker_after_partial_write(tmp_path, manifest
 
 @pytest.mark.parametrize("field,value", [("uri", "/api/data/graphql"), ("uri", "/apps/hello/x*"),
                                          ("id", "data-graphql"), ("id", "app-hello-public-1"),
-                                         ("id", "app-tea-tour-x-public-1")])
+                                         ("id", "app-tea-tour-x-public-1"), ("vars", None),
+                                         ("vars", [["server_port", "==", "9080"]]),
+                                         ("vars", [["server_port", "==", "9081"], ["arg_x", "==", "1"]])])
 def test_sync_rejects_foreign_fragment_route(tmp_path, manifest, field, value):
     repo = make_repo(tmp_path)
     sync_gateway(repo)
     target = repo / "docker" / "runtime" / "gateway" / "apisix.yaml"
     before = target.read_bytes()
     routes = app_routes(manifest)
-    routes[0][field] = value
+    if value is None:
+        routes[0].pop(field, None)
+    else:
+        routes[0][field] = value
     write_fragment(repo, "tea-tour", routes)
     with pytest.raises(GatewayError, match="tea-tour"):
         sync_gateway(repo)

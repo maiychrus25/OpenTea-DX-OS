@@ -12,6 +12,8 @@ END = "#END\n"
 AUD = {"anyOf": [{"enum": ["dx-os-core"]}, {"type": "array", "contains": {"enum": ["dx-os-core"]}}]}
 # PyYAML cannot emit an alias, so the merge key is dumped as this string pair and turned into `<<: *oidc` textually.
 _MERGE_DUMPED = "'<<': '*oidc'"
+# App routes match only on the internal listener web's proxy uses; 9080 is published to the host (R23).
+INTERNAL_ONLY = [["server_port", "==", "9081"]]
 
 
 class GatewayError(Exception):
@@ -26,7 +28,7 @@ class _NoAliasDumper(yaml.SafeDumper):
 
 def app_routes(manifest: dict) -> list[dict]:
     app_id, routes = manifest["id"], manifest["routes"]
-    common = {"upstream": {"nodes": {f"app-{app_id}:{manifest['runtime']['port']}": 1}}}
+    common = {"vars": INTERNAL_ONLY, "upstream": {"nodes": {f"app-{app_id}:{manifest['runtime']['port']}": 1}}}
     rewrite = {"proxy-rewrite": {"regex_uri": [f"^/apps/{app_id}(/.*)?$", "$1"]}}
     out = []
     for n, prefix in enumerate(routes.get("public", []), 1):
@@ -76,6 +78,9 @@ def sync_gateway(repo_root: Path) -> None:
                     and str(route.get("uri", "")).startswith(f"/apps/{app_id}/")):
                 raise GatewayError(f"{path}: route {route.get('id') if isinstance(route, dict) else route!r} "
                                    f"phải có id 'app-{app_id}-<public|protected>-<n>' và uri dưới '/apps/{app_id}/'")
+            if route.get("vars") != INTERNAL_ONLY:
+                raise GatewayError(f"{path}: route {route['id']} phải có đúng vars {INTERNAL_ONLY}, "
+                                   "để app chỉ nhận request qua cổng nội bộ 9081 của gateway")
         fragments[app_id] = routes
     text = render_gateway(base_text, fragments)
     target = runtime / "apisix.yaml"
