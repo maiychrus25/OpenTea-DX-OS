@@ -1,0 +1,32 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Tra cứu đơn hàng{% endblock %}
+{% block main %}
+<h1>Tra cứu đơn hàng</h1>
+{% if booked %}
+<p class="notice" role="status">Đã nhận đơn hàng. Mã đơn của bạn là <strong>{{ code }}</strong>. Hãy ghi lại mã này; HTX sẽ gọi điện xác nhận, thanh toán khi nhận hàng.</p>
+{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if found %}
+{% set o, items = found %}
+<h2>Đơn {{ o.code }} <span class="pill">{{ order_status[o.status] }}</span></h2>
+<p>{{ o.customer_name }} · {{ o.created_at | vn_time }}</p>
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Sản phẩm</th><th role="columnheader">Quy cách</th><th role="columnheader">Đơn giá</th><th role="columnheader">Số lượng</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for i in items %}
+    <tr role="row">
+      <td role="cell" data-label="Sản phẩm">{{ i.product_name }}</td>
+      <td role="cell" data-label="Quy cách">{{ i.pack }}</td>
+      <td role="cell" data-label="Đơn giá">{{ i.price_vnd | vnd }}</td>
+      <td role="cell" data-label="Số lượng">{{ i.quantity }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p>Tổng cộng: <strong>{{ o.total_vnd | vnd }}</strong> · Thanh toán khi nhận hàng</p>
+{% endif %}
+{% include "lookup.html" %}
+<p><a href="{{ href('/public/' ~ htx, theme) }}">← Xem sản phẩm của HTX {{ htx }}</a></p>
+{% endblock %}
