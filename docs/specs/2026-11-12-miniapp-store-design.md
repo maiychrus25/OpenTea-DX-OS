@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Kho mini-app: bật/tắt theo HTX và ba ứng dụng nghiệp vụ
 
-> **Trạng thái:** Bản thiết kế (2026-11-12). Chủ dự án đã duyệt từng phần trong lúc trao đổi và cho phép triển khai mà không chờ duyệt thêm; bước merge vào `main` và gắn tag phát hành vẫn hỏi lại.
+> **Trạng thái:** Đã triển khai trên nhánh `feat/miniapp-store` (2026-11-12 đến 2026-11-13); thân tài liệu giữ nguyên bản thiết kế, xem "Ghi chú sau triển khai" ở cuối. Bước merge vào `main` và gắn tag `v1.9.0` vẫn chờ chủ dự án.
 > **Phạm vi:** milestone `v1.9.0`. Tiếp nối Tầng 3 (`docs/specs/2026-11-11-tier3-miniapps-design.md`, phát hành `v1.8.1`).
 > **Căn cứ:** Nền tảng cài/gỡ mini-app đã được chứng minh. Bước tiếp theo là các ứng dụng HTX chè dùng hằng ngày, và để ban quản trị HTX tự chọn ứng dụng ngay trên web.
 
@@ -165,3 +165,46 @@ Tệp dùng chung (CI, smoke, `CHANGELOG.md`, `DEPENDENCIES.md`, README) chỉ j
 | Lần cài đầu phải build image, mất vài phút | Build sẵn image trước buổi demo, như hướng dẫn của Tầng 3 |
 | Ba phiên song song sửa trùng tệp | Mỗi app một thư mục và một worktree; tệp dùng chung chỉ job A và E sửa |
 | App giữ tiền và thông tin cá nhân nhưng các app tin nhau | Kho chỉ chứa app của dự án; giới hạn ghi trong CHANGELOG và README; cách ly thật để sau |
+
+## Ghi chú sau triển khai
+
+Thân tài liệu ở trên giữ nguyên bản thiết kế. Phần này ghi những chỗ code cụ thể hơn hoặc khác thiết kế, và các số đo.
+
+### Các quyết định (S1–S11)
+
+| Mã | Quyết định | Cái giá nếu sai |
+| --- | --- | --- |
+| S1 | `./dxos install` = cài và bật cho `*` (mọi HTX), giữ nguyên hành vi cũ, smoke và các spec đang có | Cài từ máy chủ hiện cho mọi HTX, như trước đây |
+| S2 | Worker là tiến trình máy chủ `./dxos worker`, kiểu kéo. `DISABLE` đánh dấu `DONE` trước khi gỡ container, nên HTX thấy app biến mất ngay | Gỡ container hỏng thì app còn đăng ký mà không HTX nào bật (vô hại, tốn một container nhàn rỗi) |
+| S3 | `catalog-sync` giữ dòng danh mục của app đã cài dù thư mục của nó không còn, để trang kho vẫn hiện thẻ và cho Gỡ | Thẻ cũ còn lại |
+| S4 | Phiên bản gói web là `1.9.0`; app mới khai `requires.core: ">=1.9.0"` vì dựa vào bật tắt theo HTX | Một commit hoàn lại |
+| S5 | `leaf-purchase`: kỳ không chồng ngày được bảo đảm trong transaction dưới `pg_advisory_xact_lock`, không dùng ràng buộc `EXCLUDE` (role của app không tạo được `btree_gist`) | Thêm ràng buộc sau |
+| S6 | Ba app chép các module phụ trợ của `tea-tour` thay vì dùng chung SDK: build context của Docker là thư mục app, và ba job song song không được dùng chung tệp | Trùng khoảng 150 dòng mỗi app |
+| S7 | `leaf-purchase` từ chối phiếu ghi hoặc chuyển vào ngày thuộc kỳ đã chốt ("Ngày cân này thuộc một kỳ đã chốt."); nếu không phiếu đó không bao giờ được trả vì các kỳ không chồng ngày | Trưởng HTX không lùi ngày phiếu vào kỳ đã chốt được; phải mở kỳ mới cho ngày sau |
+| S8 | Lần chạy `platform-init` tạo bảng `platform.app_enablements` bật mọi app đã cài cho `*` một lần (`enabled_by = 'dxos-upgrade'`); các lần sau không làm lại, vì app đã cài mà không có enablement là trạng thái hợp lệ (S2) và không được trả lại cho mọi HTX | Muốn bật lại cho mọi HTX thì `./dxos remove` rồi `install` |
+| S9 | Worker khởi động lại chỉ hoàn tác lần cài dở của app chưa đăng ký; app đã đăng ký có thể đang phục vụ HTX khác | Một lần cài đã commit mà chưa xong để lại app đã cài không có enablement; "Thử lại" bật nó |
+| S10 | Trang coi worker còn sống khi nó gửi nhịp tim trong 30 giây, hoặc có yêu cầu `RUNNING` dưới 15 phút (worker không gửi nhịp tim trong lúc cài) | Sau khi worker sập giữa lúc cài, cảnh báo hiện chậm tới 15 phút |
+| S11 | `DISABLE` thất bại không hiện lỗi trên thẻ (enablement thắng yêu cầu cuối): nó chỉ hỏng khi worker sập hoặc app lạ | Trưởng HTX bấm Gỡ lần nữa |
+
+### Khác thân tài liệu
+
+- §4.3: ngoài hàng đợi, worker còn dùng bảng `platform.app_worker` (nhịp tim) và khoá thư mục `docker/runtime/<project>/worker.lock` (một worker cho mỗi compose project); `./dxos worker` đồng bộ danh mục khi khởi động.
+- §4.4: nút Thử lại hiện ở thẻ `failed`; thẻ "Đã cài cho mọi HTX (quản trị máy chủ)" không có nút Gỡ.
+- §5.2: `tea-shop` điều chỉnh tồn kho theo số gia (`+/-`) khi sửa sản phẩm, không ghi đè, để không mất đơn đặt xen giữa lúc mở và lưu biểu mẫu.
+- §5.3: biểu mẫu thêm hoặc sửa mặt hàng của `farm-supply` báo lỗi bằng trang lỗi chung (tiêu đề và một dòng báo lỗi, không có biểu mẫu và liên kết quay lại), không báo ngay trên biểu mẫu; không lưu gì. Đã nhìn trên trình duyệt ở 1280 và 390 px. Chưa thiết kế lại.
+- §6: tích hợp (`make apps-smoke`) còn kiểm cả vai trò sai qua gateway (`/tickets/*` và `/periods/*` của `leaf-purchase`), việc đọc nông hộ qua Hasura bằng token cán bộ, trưởng HTX và nông hộ, và một thao tác ghi cho mỗi app; câu chuyện trình duyệt chạy với worker thật.
+
+### Số đo
+
+Hai vòng kiểm tra sạch (stack `dxos-clean` dựng mới từ `down -v`, `platform-up`, seed, `platform-smoke`, mọi spec trình duyệt theo thứ tự của CI, `apps-smoke`, rồi `down -v` lại) cho cùng kết quả:
+
+| Hạng mục | Kết quả |
+| --- | --- |
+| `make platform-smoke` | 124 PASS (65–132 giây) |
+| `make apps-smoke` | 215 PASS khi container `web` đang chạy (213 PASS và một dòng SKIP khi không có web); trước job E là 117 PASS. 591 và 597 giây |
+| Trình duyệt | core-tenant 5, câu chuyện A3 1, câu chuyện tour 1 và kiểm tra gỡ 1, ảnh chụp màn hình ưu tiên 56 (gồm trang Kho ứng dụng), câu chuyện Kho ứng dụng 1 (42 giây), câu chuyện ba app 2 (8 giây), ảnh chụp ba app và trang kho 32 (22 giây) |
+| `make test` / `make lint` / `make build` / `npx tsc --noEmit` | 1521 test qua (3 bỏ qua) / không cảnh báo, `actionlint` sạch / dựng xong mọi image / sạch |
+| pytest | CLI 104, `tea-tour` 44, `leaf-purchase` 26, `tea-shop` 34, `farm-supply` 16, scanner 39, dataops 78, `apps/disease-api` 17 (Python 3.11 trong container); `hello` 7 (unittest); kiểm tra realm 13; `seed-test.sh` sạch |
+| Sau khi chạy | `./dxos list` rỗng, không còn schema hay role `app_*`, `dxos-clean` không còn container, volume hay mạng; sáu volume `docker_*` còn nguyên |
+
+Thời gian trên máy phát triển: dựng một image app lạnh 13 giây; bước worker, hai câu chuyện, ảnh chụp, cài và gỡ app của job CI `platform-smoke` mất khoảng 3,5 phút. Giới hạn thời gian của job nâng từ 45 lên 60 phút (ước tính khoảng 41 phút trên runner của CI).

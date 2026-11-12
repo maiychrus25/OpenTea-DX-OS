@@ -622,7 +622,7 @@ Next.js removes a trailing slash with a 308 before the route runs, so `/apps/<id
 Per-cooperative install and removal of mini-apps. The page is `/manager/app-store`. Both routes need a signed-in manager with an HTX; the HTX and the requester always come from the session, never from the body. The web app never talks to Docker: a request is a row in `platform.app_requests`, and `./dxos worker` on the host carries it out.
 
 ### `GET /api/app-store`
-**200** `{ "data": { "workerAlive": boolean, "apps": StoreApp[] } }`. `workerAlive` is true when the worker polled in the last 30 s.
+**200** `{ "data": { "workerAlive": boolean, "apps": StoreApp[] } }`. `workerAlive` is true when the worker heartbeated in the last 30 s, or a request has been `RUNNING` for under 15 minutes (the worker does not heartbeat during an install).
 
 `StoreApp`: `{ id, name, version, description, license, publisher, roles: string[], hasPublic: boolean, status, error: string | null }`. `status`, first match wins for the session's HTX: `installing` (open `ENABLE` request), `removing` (open `DISABLE`), `enabled_all` (enabled for `*`, set by `./dxos install`), `enabled`, `failed` (the newest request failed; `error` holds the Vietnamese reason), otherwise `available`.
 

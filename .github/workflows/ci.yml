@@ -226,7 +226,10 @@ jobs:
     runs-on: ubuntu-latest
     # About 16 min before the A3 story; disease-api's image, the seed and the two browser specs add roughly 10.
     # The tea-tour image, its story and apps-smoke (another platform-up and platform-smoke) add roughly 8.
-    timeout-minutes: 45
+    # The store and the three business apps add about 7: locally the worker, the two stories, the screens and the installs take
+    # about 3.5 min, the three image builds 13 s each (cold runners: more), and the new pytest suites need their own pip installs.
+    # That is about 41 min, too close to the old 45 for a runner a little slower; a timeout would lose the release gate.
+    timeout-minutes: 60
     needs: [lint]
     # As in the Makefile: the raw compose and docker build steps below must not make a new image ID per build either.
     env:

@@ -289,9 +289,45 @@ Số liệu chi tiết ở [ai-models/tea/MODEL_CARD.md](./ai-models/tea/MODEL_C
 
 Mini-app là một dịch vụ riêng (container, schema Postgres, route gateway) cắm vào DX-OS bằng manifest `app.yaml` và lệnh `./dxos`, không sửa và không build lại lõi. Hướng dẫn viết app: **[docs/miniapps.md](./docs/miniapps.md)**. Quyết định kiến trúc: [ADR 0002](./docs/adr/0002-miniapp-architecture.md).
 
-Repo có hai app:
+Repo có năm app:
+- `miniapps/leaf-purchase` ("Thu mua búp tươi"): cán bộ ghi phiếu cân chè búp tươi của từng nông hộ theo loại chè; trưởng HTX đặt giá, chốt kỳ thanh toán (mỗi hộ một khoản chi trả) và ghi nhận đã trả; nông hộ xem phiếu cân và khoản chi trả của chính mình.
+- `miniapps/tea-shop` ("Cửa hàng chè"): trưởng HTX đăng sản phẩm và tồn kho; khách đặt hàng không cần tài khoản tại `/apps/tea-shop/public/<mã HTX>` (thanh toán khi nhận hàng) và tra đơn bằng mã đơn kèm số điện thoại; trưởng HTX xác nhận, giao, hoàn tất hoặc huỷ đơn (huỷ thì trả lại tồn kho).
+- `miniapps/farm-supply` ("Vật tư mua chung"): trưởng HTX mở đợt đăng ký mua chung phân bón và thuốc bảo vệ thực vật với hạn đăng ký; nông hộ đăng ký số lượng; trưởng HTX đóng đợt, xem tổng hợp theo hộ và đánh dấu đã giao, đã thanh toán.
 - `miniapps/tea-tour` ("Đặt tour đồi chè"): ban quản trị tạo, sửa, huỷ tour và xác nhận lượt đặt; khách đặt chỗ không cần tài khoản tại `/apps/tea-tour/public/<mã HTX>`; nông hộ dẫn tour xem lịch dẫn của mình.
 - `miniapps/hello`: app mẫu tối giản để bắt đầu.
+
+### Kho ứng dụng và `./dxos worker`
+
+Từ v1.9.0, trưởng HTX tự cài và gỡ app cho HTX của mình tại **Kho ứng dụng** (`/manager/app-store`, mục "Kho ứng dụng" trong menu quản lý). Thẻ app đổi từ "Chưa cài" sang "Đang cài…" rồi "Đã cài", và mục menu của app hiện ra ở lần tải trang sau. Mỗi HTX bật app riêng: HTX chưa bật không thấy app trong menu và `/apps/<id>/public/<mã HTX>` của HTX đó trả 404. "Gỡ" chỉ tắt app cho HTX và giữ dữ liệu; app chỉ bị gỡ khỏi máy chủ khi HTX cuối cùng đã tắt nó.
+
+Web không có quyền điều khiển Docker. Bấm Cài hoặc Gỡ chỉ ghi một yêu cầu vào database; **`./dxos worker`** là tiến trình trên máy chủ nhận yêu cầu, dựng hoặc tắt container và đóng yêu cầu. Chưa bật worker thì yêu cầu chờ và trang kho báo "Trình cài đặt chưa chạy".
+
+```bash
+./dxos worker                           # chạy ở nền hoặc một cửa sổ riêng, từ thư mục gốc repo; Ctrl-C hoặc TERM để dừng
+```
+
+- Mỗi compose project chỉ có một worker (khoá `docker/runtime/<project>/worker.lock`); worker thứ hai báo "Một worker khác đang chạy (pid …)" và thoát với mã 1. Worker khởi động lại sẽ đánh dấu lỗi các yêu cầu mà worker cũ bỏ dở và hoàn tác lần cài dở.
+- Worker là tiến trình của máy chủ, không phải container: cần `docker` và `docker compose` của tài khoản chạy nó. Chạy lâu dài dưới systemd:
+  ```ini
+  # /etc/systemd/system/dxos-worker.service
+  [Unit]
+  Description=DX-OS App Store worker
+  After=docker.service
+  Requires=docker.service
+
+  [Service]
+  User=dxos
+  WorkingDirectory=/opt/opentea-dx-os
+  Environment=COMPOSE_PROJECT_NAME=docker
+  ExecStart=/opt/opentea-dx-os/dxos worker
+  Restart=on-failure
+  RestartSec=5
+
+  [Install]
+  WantedBy=multi-user.target
+  ```
+  `User` phải thuộc nhóm `docker`; `COMPOSE_PROJECT_NAME` phải trùng project mà `make platform-up` dùng. Đổi đường dẫn cho khớp máy của anh chị, rồi `sudo systemctl enable --now dxos-worker`.
+- `./dxos install <thư mục>` vẫn dùng như trước và bật app cho mọi HTX (`*`); thẻ khi đó ghi "Đã cài cho mọi HTX (quản trị máy chủ)" và trưởng HTX không gỡ riêng được.
 
 ```bash
 make platform-up                        # bắt buộc: chỉ khi đó gateway mới nạp route của các app đã cài
@@ -306,7 +342,7 @@ make apps-smoke                         # kiểm thử tích hợp (sau npm run 
 ```
 
 > [!WARNING]
-> `make apps-smoke` xoá dữ liệu của `tea-tour` (`--purge`) và của các fixture. Không chạy nó trên stack có dữ liệu thật, ví dụ stack demo sau khi đã chuẩn bị dữ liệu; hãy dùng stack riêng (`COMPOSE_PROJECT_NAME=dxos-clean`). Script tự dừng với mã 1 khi `tea-tour` hoặc `hello` đang được cài.
+> `make apps-smoke` xoá dữ liệu của `tea-tour`, `leaf-purchase`, `tea-shop`, `farm-supply` (`--purge`) và của các fixture, và tự bật một `./dxos worker` của riêng nó. Không chạy nó trên stack có dữ liệu thật, ví dụ stack demo sau khi đã chuẩn bị dữ liệu; hãy dùng stack riêng (`COMPOSE_PROJECT_NAME=dxos-clean`). Script tự dừng với mã 1 khi `tea-tour`, `hello` hoặc một app nghiệp vụ đang được cài, và cũng không chạy được khi một worker khác đang chạy.
 
 - Mục "Tour đồi chè" hiện trong menu của quản lý, "Lịch dẫn tour" trong menu của nông hộ. Gỡ app thì mục menu biến mất ở lần tải trang sau và `/apps/tea-tour/...` trả 404 ngay.
 - Tệp sinh ra nằm dưới `docker/runtime/<project>/` (git-ignored). `<project>` lấy từ biến môi trường `COMPOSE_PROJECT_NAME`, mặc định `docker`. Hãy đặt project bằng biến này, không dùng cờ `-p`.
@@ -318,8 +354,16 @@ make apps-smoke                         # kiểm thử tích hợp (sau npm run 
 > - Trang công khai không bao giờ hiện tên hay số điện thoại của khách khác. Tra cứu lượt đặt cần cả mã đặt chỗ lẫn số điện thoại.
 > - `./dxos remove tea-tour` giữ dữ liệu này. `./dxos remove tea-tour --purge` xoá toàn bộ tour và lượt đặt, kèm schema, role và tệp env của app.
 
+> [!IMPORTANT]
+> **Dữ liệu cá nhân của ba app nghiệp vụ** nằm trong schema riêng của từng app (`app_leaf_purchase`, `app_tea_shop`, `app_farm_supply`), mọi bảng đều có `htx_code` và mọi truy vấn lọc theo HTX trong token.
+> - `tea-shop` giữ họ tên, số điện thoại, địa chỉ nhận hàng và ghi chú của khách đặt hàng. Chỉ trưởng HTX của đúng HTX xem được; trang công khai không bao giờ hiện thông tin này, và tra cứu đơn cần cả mã đơn lẫn số điện thoại. Đơn hàng không bị xoá khi gỡ app.
+> - `leaf-purchase` giữ tên nông hộ, số ký chè và số tiền chi trả: cán bộ và trưởng HTX xem theo HTX, nông hộ chỉ xem hộ của chính mình (Hasura lọc theo token của nông hộ). `farm-supply` giữ đăng ký vật tư và công nợ theo hộ, cùng cách phân quyền.
+> - `./dxos remove <id>` giữ dữ liệu; `./dxos remove <id> --purge` xoá toàn bộ, kèm schema, role và tệp env.
+
 **Chuẩn bị demo** (spec §12, cài dưới 30 giây):
 - Build image `tea-tour` trước buổi demo: chạy `./dxos install miniapps/tea-tour` một lần rồi `./dxos remove tea-tour --purge`. Image vẫn nằm trong cache Docker.
+- Làm tương tự cho ba app mới (`leaf-purchase`, `tea-shop`, `farm-supply`) để lần bấm Cài đầu tiên trong buổi demo không phải build image (vài phút): cài một lần rồi `./dxos remove <id> --purge`.
+- **Bật `./dxos worker` trước buổi demo** (và để nó chạy suốt buổi); không có worker thì nút Cài chỉ xếp yêu cầu vào hàng đợi. Nên dùng một HTX chưa bật app nào để cho thấy "Chưa cài" rồi "Đang cài…" rồi "Đã cài".
 - Khi app đang cài, có thể build lại image bằng:
   ```bash
   docker compose -f docker/docker-compose.yml -f docker/runtime/docker/apps/tea-tour.compose.yml build app-tea-tour
@@ -338,12 +382,13 @@ make apps-smoke                         # kiểm thử tích hợp (sau npm run 
   Spec tạo tour và lượt đặt thật trong HTX `TC`; chạy `./dxos remove tea-tour --purge` rồi cài lại trước buổi demo.
 
 > [!NOTE]
-> Giới hạn đã biết của mini-app trong v1.8.0:
+> Giới hạn đã biết của mini-app (v1.8.0, còn nguyên ở v1.9.0):
 > 1. Bản phát hành chưa cài được mini-app (xem mục Bản phát hành).
 > 2. Giới hạn 10 request mỗi phút cho mỗi IP trên route công khai tính trong từng tiến trình web và tin vào `X-Forwarded-For`, giống `/api/register`.
 > 3. Role của app vẫn có quyền `CONNECT` vào các database khác qua `PUBLIC`.
 > 4. Tin cậy giữa các app: mọi app đã cài dùng chung mạng `dxos-apps-net`, và app chỉ giải mã token mà không kiểm chữ ký. Một app khác gọi thẳng được app với token tự tạo, nên chỉ cài app tin cậy. Cách ly thật cho từng app (kiểm JWT hoặc mạng riêng cho mỗi app) để sang v1.9.
-> 5. Chi tiết và cách nâng cấp: mục `[Unreleased]` của [CHANGELOG.md](./CHANGELOG.md).
+> 5. Kho ứng dụng: worker là tiến trình của máy chủ chứ không phải container, nên phải được bật (hoặc cấu hình systemd) thì nút Cài và Gỡ mới có tác dụng. Bật tắt theo HTX chỉ giới hạn ai thấy app, không cách ly app: các app vẫn tin nhau như mục 4.
+> 6. Chi tiết và cách nâng cấp: mục `[Unreleased]` của [CHANGELOG.md](./CHANGELOG.md).
 
 ## 🔨 Biên dịch từ Mã nguồn (Build from Source)
 
@@ -379,6 +424,8 @@ npm run check        # Validate schema → ESLint → TypeScript → Contract te
 npm test             # Unit tests (Jest)
 npm run test:e2e     # End-to-end tests (Playwright)
 ```
+
+Kho ứng dụng và ba app nghiệp vụ có câu chuyện trình duyệt riêng (`tests/e2e/story/app-store.spec.ts`, `business-apps.spec.ts`; cần worker đang chạy và Keycloak thật, xem đầu từng tệp) và được `make apps-smoke` kiểm trên stack thật.
 
 Mọi Pull Request vào `main` đều phải qua **CI Quality Gate** trên GitHub Actions: lint, type-check, unit test, browser smoke test, production build và Docker Compose smoke test. Chiến lược kiểm thử chi tiết tại [docs/testing-strategy.md](./docs/testing-strategy.md).
 

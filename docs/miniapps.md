@@ -6,9 +6,12 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 Mini-app là một dịch vụ riêng (container, schema Postgres, route gateway) được cắm vào DX-OS bằng một manifest `app.yaml` và lệnh `./dxos`, không sửa và không build lại lõi. Tài liệu này dành cho người viết mini-app. Thiết kế và lý do nằm ở [đặc tả Tầng 3](./specs/2026-11-11-tier3-miniapps-design.md) (kèm "Ghi chú sau triển khai 3") và [ADR 0002](./adr/0002-miniapp-architecture.md).
 
-Hai app mẫu trong repo:
+Các app mẫu trong repo:
 - [`miniapps/hello`](../miniapps/hello/README.md): khoảng 80 dòng Python, chỉ dùng thư viện chuẩn, không có database. Nên đọc trước.
 - [`miniapps/tea-tour`](../miniapps/tea-tour/): FastAPI và Jinja2, có database, route công khai và route theo vai trò.
+- Ba app nghiệp vụ cùng khuôn với `tea-tour` (mỗi app có README riêng): [`miniapps/leaf-purchase`](../miniapps/leaf-purchase/README.md) (thu mua búp tươi, route theo ba vai trò, đọc nông hộ qua Hasura bằng token của người gọi), [`miniapps/tea-shop`](../miniapps/tea-shop/README.md) (cửa hàng, đặt hàng công khai, tồn kho) và [`miniapps/farm-supply`](../miniapps/farm-supply/README.md) (đợt mua chung vật tư).
+
+App có `description` trong manifest sẽ hiện thành thẻ trong **Kho ứng dụng** của trưởng HTX (§8). Chỉ app nằm trong `miniapps/` của repo mới có thẻ.
 
 ## 1. Đường đi của một request
 
@@ -215,6 +218,9 @@ Hệ quả cho người viết app:
 | `./dxos install <dir>` | Kiểm manifest, database, sinh route gateway, sinh compose, chạy `up -d --build --wait`, rồi ghi `platform.installed_apps`. Bước nào hỏng (kể cả health check, Ctrl-C hoặc TERM) thì mọi bước trước được hoàn tác. Cài lại một app đã cài chỉ bảo đảm container đang chạy |
 | `./dxos remove <id> [--purge]` | Tắt container, gỡ route, xoá đăng ký; mặc định giữ dữ liệu (§5) |
 | `./dxos list` | Mỗi app đã cài một dòng: id, phiên bản, thời điểm cài, trạng thái container; hoặc "Chưa cài app nào" |
+| `./dxos worker` | Tiến trình của máy chủ làm các yêu cầu Cài và Gỡ mà trưởng HTX gửi từ Kho ứng dụng (xem dưới); chạy cho tới khi nhận TERM hoặc Ctrl-C |
+
+**Kho ứng dụng và bật tắt theo HTX.** `./dxos install` ghi app vào `platform.installed_apps` và bật nó cho mọi HTX (`platform.app_enablements`, mã `*`). Trang `/manager/app-store` thì bật hoặc tắt riêng cho HTX của trưởng HTX: web chỉ ghi một dòng vào `platform.app_requests`, còn `./dxos worker` nhận từng yêu cầu một. `ENABLE` cài app nếu chưa cài rồi ghi enablement của HTX; `DISABLE` xoá enablement (HTX thấy app biến mất ngay) rồi gỡ container khi không còn HTX nào dùng, vẫn giữ dữ liệu. App chỉ được phục vụ và hiện trong menu của HTX đã bật nó. Catalogue của kho (`platform.app_catalog`) được `make platform-up` và worker đồng bộ từ `miniapps/*/app.yaml`, nên tên thư mục phải trùng `id` trong manifest. Worker giữ khoá `docker/runtime/<project>/worker.lock` (mỗi project một worker), đánh dấu lỗi các yêu cầu mà worker cũ bỏ dở lúc khởi động và chỉ hoàn tác lần cài dở của app chưa đăng ký. Cách chạy dưới systemd nằm trong README, mục "Kho ứng dụng và `./dxos worker`".
 
 `<dir>` phải nằm trong repo, vì `dxos-cli` chỉ thấy repo.
 
@@ -241,9 +247,9 @@ Tệp đang được git theo dõi không bao giờ bị sửa lúc chạy. `mak
     docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
   ```
 
-**Kiểm thử tích hợp:** `make apps-smoke` (sau `npm run seed` và `make platform-smoke`) cài và gỡ `hello`, `tea-tour` và các fixture của CLI, kiểm route, quyền, rollback, idempotent và `--purge`, rồi chạy lại `make platform-smoke` trên stack không có app.
+**Kiểm thử tích hợp:** `make apps-smoke` (sau `npm run seed` và `make platform-smoke`) cài và gỡ `hello`, `tea-tour`, ba app nghiệp vụ và các fixture của CLI, kiểm route, quyền (kể cả `/tickets/*` và `/periods/*` của `leaf-purchase`), việc đọc nông hộ qua Hasura với vai trò cán bộ và nông hộ, một thao tác ghi cho mỗi app, rollback, idempotent và `--purge`; chạy hàng đợi của kho với worker thật (bật cho một HTX, gỡ, bật lại giữ dữ liệu, cài hỏng, worker bị kill giữa chừng, nâng cấp từ stack chưa có kho); rồi chạy lại `make platform-smoke` trên stack không có app.
 
-> **Cảnh báo:** `make apps-smoke` xoá dữ liệu của `tea-tour` (`--purge`) và của các fixture. Không chạy nó trên stack có dữ liệu thật; hãy dùng stack riêng như `COMPOSE_PROJECT_NAME=dxos-clean`. Script tự dừng với mã 1 khi `./dxos list` cho thấy `tea-tour` hoặc `hello` đang được cài.
+> **Cảnh báo:** `make apps-smoke` xoá dữ liệu của `tea-tour`, `leaf-purchase`, `tea-shop`, `farm-supply` (`--purge`) và của các fixture. Không chạy nó trên stack có dữ liệu thật; hãy dùng stack riêng như `COMPOSE_PROJECT_NAME=dxos-clean`. Script tự dừng với mã 1 khi `./dxos list` cho thấy một trong các app đó hoặc `hello` đang được cài, và tự bật `./dxos worker` của riêng nó nên không chạy được khi đã có một worker khác.
 
 ## 9. Mười phút với `hello`
 
