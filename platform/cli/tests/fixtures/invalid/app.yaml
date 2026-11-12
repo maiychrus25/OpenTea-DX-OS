@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+apiVersion: dxos/v1
+id: bad-app
+name: Bad
+version: 0.1.0
+license: MIT
+publisher: X
+requires: { core: ">=1.0.0" }
+runtime: { build: ., port: 8080, health: /healthz }
+routes: { protected: { /: [manager] } }
+ports: ["8080:8080"]

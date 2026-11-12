@@ -1,0 +1,34 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Tour của HTX {{ htx }}{% endblock %}
+{% block main %}
+<h1>Tour đồi chè HTX {{ htx }}</h1>
+<p>Trang đặt chỗ cho khách (gửi đường dẫn hoặc in mã QR): <a href="{{ href('/public/' ~ htx, theme) }}">{{ prefix }}/public/{{ htx }}</a></p>
+
+<h2>Các tour</h2>
+{% if tours %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Tour</th><th role="columnheader">Thời gian</th><th role="columnheader">Người dẫn</th><th role="columnheader">Đã đặt / số chỗ</th><th role="columnheader">Trạng thái</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for t in tours %}
+    <tr role="row">
+      <td role="cell" data-label="Tour"><a href="{{ href('/tours/' ~ t.id, theme) }}">{{ t.title }}</a></td>
+      <td role="cell" data-label="Thời gian">{{ t.starts_at | vn_time }}</td>
+      <td role="cell" data-label="Người dẫn">{{ t.guide_name or "Chưa có" }}</td>
+      <td role="cell" data-label="Đã đặt / số chỗ">{{ t.seats_used }} / {{ t.seats }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill">{{ tour_status(t) }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>HTX chưa có tour nào. Tạo tour đầu tiên bằng biểu mẫu dưới đây.</p>
+{% endif %}
+
+<h2>Tạo tour mới</h2>
+<form method="post" action="{{ href('/tours', theme) }}">
+  {% include "tour_fields.html" %}
+  <button type="submit"{% if core_error %} disabled{% endif %}>Tạo tour</button>
+</form>
+{% endblock %}

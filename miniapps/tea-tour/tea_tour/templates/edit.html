@@ -1,0 +1,13 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Sửa {{ tour.title }}{% endblock %}
+{% block main %}
+<p><a href="{{ href('/tours/' ~ tour.id, theme) }}">← Quay lại tour</a></p>
+<h1>Sửa tour</h1>
+<p>Đã đặt {{ tour.seats_used }} / {{ tour.seats }} chỗ. Số chỗ mới không được ít hơn số chỗ khách đã đặt.</p>
+<form method="post" action="{{ href('/tours/' ~ tour.id ~ '/edit', theme) }}">
+  {% include "tour_fields.html" %}
+  <button type="submit"{% if core_error %} disabled{% endif %}>Lưu thay đổi</button>
+</form>
+{% endblock %}

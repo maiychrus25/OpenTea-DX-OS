@@ -1,0 +1,35 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}{{ tour.title }}{% endblock %}
+{% block main %}
+<p><a href="{{ href('', theme) }}">← Tất cả tour</a></p>
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+<h1>{{ tour.title }} <span class="pill">{{ tour_status(tour) }}</span></h1>
+<p>{{ tour.starts_at | vn_time }} · Điểm hẹn: {{ tour.meeting_point }}</p>
+<p>Giá: {{ tour.price_vnd | vnd }} mỗi khách · Người dẫn: {{ tour.guide_name or "Chưa có" }}</p>
+<p>Đã đặt {{ tour.seats_used }} / {{ tour.seats }} chỗ · Đã xác nhận {{ tour.confirmed_guests }} khách</p>
+{% if tour.description %}<p>{{ tour.description }}</p>{% endif %}
+{% if tour.status == "OPEN" and not tour.past %}<p><a href="{{ href('/tours/' ~ tour.id ~ '/edit', theme) }}">Sửa thông tin tour</a></p>{% endif %}
+
+<h2>Lượt đặt</h2>
+{% for b in bookings %}
+<form method="post" action="{{ href('/bookings/' ~ b.id ~ '/confirm', theme) }}" aria-label="Lượt đặt {{ b.code }}">
+  <h3>{{ b.guest_name }} · {{ b.party_size }} người <span class="pill">{{ booking_status[b.status] }}</span></h3>
+  <p>Mã {{ b.code }} · Điện thoại <a href="tel:{{ b.phone }}">{{ b.phone }}</a> · Đặt lúc {{ b.created_at | vn_time }}</p>
+  {% if b.note %}<p>Ghi chú: {{ b.note }}</p>{% endif %}
+  {% if b.status == "PENDING" and tour.status == "OPEN" %}<button type="submit">Xác nhận</button>{% endif %}
+  {% if b.status != "CANCELLED" %}<button type="submit" class="secondary" formaction="{{ href('/bookings/' ~ b.id ~ '/cancel', theme) }}">Huỷ lượt đặt</button>{% endif %}
+</form>
+{% else %}
+<p>Chưa có lượt đặt nào.</p>
+{% endfor %}
+
+{% if tour.status == "OPEN" %}
+<h2>Huỷ tour</h2>
+<form method="post" action="{{ href('/tours/' ~ tour.id ~ '/cancel', theme) }}">
+  <p>Khách đã đặt vẫn tra cứu được lượt đặt và thấy tour đã huỷ. Hãy gọi điện báo cho khách.</p>
+  <button type="submit" class="secondary">Huỷ tour này</button>
+</form>
+{% endif %}
+{% endblock %}

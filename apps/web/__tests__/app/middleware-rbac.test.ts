@@ -20,10 +20,11 @@ jest.mock('@/auth', () => ({
 jest.mock('@/lib/contracts/public-resource-path', () => ({
   isPublicResourcePath: (pathname: string) => /^\/(?:lot|htx)\/[^/]+$/.test(pathname),
   isPublicApiPath: jest.requireActual('@/lib/contracts/public-resource-path').isPublicApiPath,
+  isMiniAppPath: jest.requireActual('@/lib/contracts/public-resource-path').isMiniAppPath,
 }))
 
 // Import pure function — không import middleware handler (Edge Runtime incompatible)
-import { resolveAuthRedirect } from '@/middleware'
+import { resolveAuthRedirect, config } from '@/middleware'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const allow = null // resolveAuthRedirect returns null → allow request
@@ -135,5 +136,41 @@ describe('resolveAuthRedirect — static/auth paths always allowed', () => {
 
   it('/favicon.ico → allow', () => {
     expect(resolveAuthRedirect('/favicon.ico', false, undefined)).toBe(allow)
+  })
+})
+
+// The mini-app route decides public or protected from the manifest, so the middleware never redirects it.
+describe('resolveAuthRedirect — mini-app paths', () => {
+  it('lets a signed-out request reach /apps/<id>/ and its subpaths', () => {
+    expect(resolveAuthRedirect('/apps/hello', false, undefined)).toBe(allow)
+    expect(resolveAuthRedirect('/apps/hello/', false, undefined)).toBe(allow)
+    expect(resolveAuthRedirect('/apps/tea-tour/public/book', false, undefined)).toBe(allow)
+  })
+
+  it('lets a signed-in user with any role reach /apps/<id>/', () => {
+    expect(resolveAuthRedirect('/apps/hello/', true, 'farmer')).toBe(allow)
+    expect(resolveAuthRedirect('/apps/hello/', true, undefined)).toBe(allow)
+  })
+
+  it('still redirects paths that are not a valid app id', () => {
+    expect(resolveAuthRedirect('/apps', false, undefined)).toBe('/login')
+    expect(resolveAuthRedirect('/apps/', false, undefined)).toBe('/login')
+    expect(resolveAuthRedirect('/apps/Bad_Id/', false, undefined)).toBe('/login')
+    expect(resolveAuthRedirect('/appsx/hello', false, undefined)).toBe('/login')
+  })
+})
+
+describe('middleware matcher', () => {
+  // The matcher is a single regex-shaped path pattern; anything it does not match skips the middleware.
+  const runsOn = (path: string) => new RegExp(`^${config.matcher[0]}$`).test(path)
+
+  it('lets the mini-app stylesheet through for signed-out public pages, like manifest.json', () => {
+    expect(runsOn('/dxos-app.css')).toBe(false)
+    expect(runsOn('/manifest.json')).toBe(false)
+  })
+
+  it('still runs on pages', () => {
+    expect(runsOn('/manager/dashboard')).toBe(true)
+    expect(runsOn('/apps/hello')).toBe(true)
   })
 })

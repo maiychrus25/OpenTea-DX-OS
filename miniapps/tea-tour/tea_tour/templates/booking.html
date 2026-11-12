@@ -1,0 +1,20 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Tra cứu đặt chỗ{% endblock %}
+{% block main %}
+<h1>Tra cứu đặt chỗ</h1>
+{% if booked %}
+<p class="notice" role="status">Đã nhận yêu cầu đặt chỗ. Mã đặt chỗ của bạn là <strong>{{ code }}</strong>. Hãy ghi lại mã này; HTX sẽ gọi điện để xác nhận.</p>
+{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if found %}
+{% set b, t = found %}
+<h2>{{ t.title }} <span class="pill">{{ booking_status[b.status] }}</span></h2>
+<p>Mã {{ b.code }} · {{ b.guest_name }} · {{ b.party_size }} người</p>
+<p>{{ t.starts_at | vn_time }} · Điểm hẹn: {{ t.meeting_point }} · {{ t.price_vnd | vnd }} mỗi khách</p>
+{% if t.status == "CANCELLED" %}<p class="error" role="alert">Tour này đã bị huỷ. HTX sẽ liên hệ với bạn.</p>{% endif %}
+{% endif %}
+{% include "lookup.html" %}
+<p><a href="{{ href('/public/' ~ htx, theme) }}">← Xem các tour của HTX {{ htx }}</a></p>
+{% endblock %}

@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+# dxos: install, remove and list mini-apps (spec §5). The dxos-cli container does the manifest, gateway, journal
+# and registry work; this script only starts and stops app containers, so no docker socket goes into a container.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+# Same as the Makefile: runtime state is per compose project (R13), "docker" being compose's default for docker/.
+PROJECT="${COMPOSE_PROJECT_NAME:-docker}"
+RUNTIME="docker/runtime/$PROJECT"
+# apisix reads the generated route file; relative to docker/, like every compose path.
+export DXOS_GATEWAY_FILE="../$RUNTIME/gateway/apisix.yaml"
+ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.json
+
+usage() {
+  echo "Dùng: ./dxos install <dir> | remove <id> [--purge] | list | validate <dir>..." >&2
+  exit 2
+}
+
+compose() { docker compose -f docker/docker-compose.yml "$@"; }
+# APISIX mounts $RUNTIME/gateway/apisix.yaml; create the dirs before any container starts, as the Makefile does.
+cli() {
+  mkdir -p "$RUNTIME/gateway/apps" "$RUNTIME/apps"
+  # Build first, quietly: `run --build` prints the build log on stdout, which install and list parse.
+  compose --profile tools build --quiet dxos-cli >&2
+  compose --profile tools run --rm -T --user "$(id -u):$(id -g)" dxos-cli "$@"
+}
+app() { local id="$1"; shift; compose -f "$RUNTIME/apps/$id.compose.yml" "$@"; }
+# Found by compose labels, so this also works for an orphan whose compose file is gone.
+app_containers() {  # <id> [docker ps options]
+  local id="$1"; shift
+  docker ps -a "$@" --filter "label=com.docker.compose.project=$PROJECT" --filter "label=com.docker.compose.service=app-$id"
+}
+remove_container() {
+  local ids
+  ids="$(app_containers "$1" -q)"
+  if [ -n "$ids" ]; then
+    # shellcheck disable=SC2086  # container ids are hex, one per line
+    docker stop $ids >/dev/null && docker rm $ids >/dev/null
+  fi
+}
+
+# Host directory (relative to the caller's cwd) -> the same directory inside dxos-cli, where the repo is /repo.
+to_container() {
+  local abs
+  abs="$(cd -- "$1" 2>/dev/null && pwd -P)" || { echo "Không tìm thấy thư mục $1" >&2; exit 1; }
+  case "$abs/" in
+    "$ROOT/"*) printf '/repo%s\n' "${abs#"$ROOT"}" ;;
+    *) echo "Thư mục app $1 phải nằm trong repo $ROOT" >&2; exit 1 ;;
+  esac
+}
+
+# Undo a prepared install: the container first, then the journal's steps (route, compose file).
+undo_install() {  # <id> <exit code>
+  trap - INT TERM
+  echo "Cài $1 hỏng hoặc bị ngắt; đang hoàn tác" >&2
+  remove_container "$1" || true
+  cli abort "$1" || true
+  exit "$2"
+}
+
+install() {
+  local dir="$1" id listing
+  id="$(cli manifest-id "$dir")" || exit 1  # validated by dxos-cli, so safe in a path and in the traps below
+  listing="$(cli list)"  # captured, not piped: grep -q closing the pipe early would fail it under pipefail
+  if grep -qxF "$id" <<<"$(cut -f1 <<<"$listing")"; then
+    echo "$id đã được cài; chỉ bảo đảm container đang chạy"
+    app "$id" up -d --wait "app-$id"
+    return
+  fi
+  # Ctrl-C (or TERM) from here to commit must not leave a journal, route, schema or container behind. Set before
+  # prepare, so an interrupt inside it is undone too; abort is a no-op when prepare had not written the journal yet.
+  # shellcheck disable=SC2064  # expand the validated id now
+  trap "undo_install $id 130" INT
+  # shellcheck disable=SC2064
+  trap "undo_install $id 143" TERM
+  # prepare undoes its own steps when it fails; abort only retries an undo that failed (no-op otherwise).
+  cli prepare "$dir" || { cli abort "$id" || true; exit 1; }
+  if app "$id" up -d --build --wait "app-$id" && cli commit "$id"; then
+    trap - INT TERM
+    echo "Đã cài $id"
+    return
+  fi
+  undo_install "$id" 1
+}
+
+remove() {
+  local id="$1"; shift
+  [[ "$id" =~ $ID_RE ]] || { echo "id '$id' không hợp lệ" >&2; exit 1; }
+  remove_container "$id"
+  cli remove "$id" "$@"
+}
+
+list() {
+  local out line id status
+  out="$(cli list)"
+  while IFS= read -r line; do
+    if [[ "$line" == *$'\t'* ]]; then
+      id="${line%%$'\t'*}"
+      status="$(app_containers "$id" --format '{{.Status}}')"
+      line+=$'\t'"${status:-không có container}"
+    fi
+    printf '%s\n' "$line"
+  done <<<"$out"
+}
+
+[ $# -ge 1 ] || usage
+cmd="$1"; shift
+case "$cmd" in
+  install)
+    [ $# -eq 1 ] || usage
+    dir="$(to_container "$1")"; cd "$ROOT"; install "$dir" ;;
+  remove)
+    [ $# -ge 1 ] || usage
+    cd "$ROOT"; remove "$@" ;;
+  list)
+    [ $# -eq 0 ] || usage
+    cd "$ROOT"; list ;;
+  validate)
+    [ $# -ge 1 ] || usage
+    dirs=(); for d in "$@"; do c="$(to_container "$d")"; dirs+=("$c"); done
+    cd "$ROOT"; cli validate "${dirs[@]}" ;;
+  *) usage ;;
+esac

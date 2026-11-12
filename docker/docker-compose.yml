@@ -20,6 +20,7 @@ services:
       - ../platform/postgres/init/02-audit.sql:/docker-entrypoint-initdb.d/02-audit.sql
       - ../platform/postgres/init/03-audit-triggers.sql:/docker-entrypoint-initdb.d/03-audit-triggers.sql
       - ../platform/postgres/init/04-telemetry.sql:/docker-entrypoint-initdb.d/04-telemetry.sql
+      - ../platform/postgres/init/05-apps.sql:/docker-entrypoint-initdb.d/05-apps.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrimarket"]
       interval: 5s
@@ -27,6 +28,7 @@ services:
       retries: 5
     networks:
       - agrimarket-net
+      - dxos-apps-net
 
   # One-shot: applies every init script (extensions, audit schema) to an already-initialised database (idempotent).
   platform-init:
@@ -97,7 +99,8 @@ services:
       DXOS_GATEWAY_CLIENT_SECRET: ${DXOS_GATEWAY_CLIENT_SECRET:-dev-gateway-secret}
     volumes:
       - ../platform/gateway/config.yaml:/usr/local/apisix/conf/config.yaml:ro
-      - ../platform/gateway/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+      # Defaults to the tracked base file (release bundle, bare compose: no app routes); make sets the gateway-sync output.
+      - ${DXOS_GATEWAY_FILE:-../platform/gateway/apisix.yaml}:/usr/local/apisix/conf/apisix.yaml:ro
     ports:
       - "9080:9080"
     depends_on:
@@ -107,6 +110,7 @@ services:
         condition: service_started
     networks:
       - agrimarket-net
+      - dxos-apps-net
 
   # Read-only GraphQL data API over the Prisma-owned schema (metadata only, no migrations).
   # No host port: reachable only through the APISIX gateway (/api/data/graphql).
@@ -148,6 +152,8 @@ services:
       CORE_GATEWAY_URL: http://apisix:9081
       # Without it the login redirect_uri is built from HOSTNAME (0.0.0.0) and Keycloak refuses it.
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      # Public mini-app requests per minute per client IP (spec §6.5); CI and a Docker Desktop demo raise it (README).
+      DXOS_APP_PUBLIC_LIMIT: ${DXOS_APP_PUBLIC_LIMIT:-10}
       HOSTNAME: "0.0.0.0"
     ports:
       - "3000:3000"
@@ -469,6 +475,28 @@ services:
     networks:
       - agrimarket-net
 
+  # One-shot mini-app CLI (profile tools, no host port, no docker socket). Run with
+  # --user "$(id -u):$(id -g)": the image default is non-root uid 10001, but the bind-mounted
+  # docker/runtime must stay writable for the host (and Linux CI) user.
+  # Runtime state is per compose project (R13): this project's docker/runtime/<project> is the CLI's docker/runtime.
+  dxos-cli:
+    build: ../platform/cli
+    image: opentea-dx-os/cli:local
+    profiles: ["tools"]
+    restart: "no"
+    environment:
+      DXOS_REPO_ROOT: /repo
+      DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
+      # Same expression as the mount below, so the generated env_file path and the mount never disagree.
+      DXOS_RUNTIME_SUBDIR: ${COMPOSE_PROJECT_NAME:-docker}
+    volumes:
+      - ../miniapps:/repo/miniapps:ro
+      - ../platform:/repo/platform:ro
+      - ../apps/web/package.json:/repo/apps/web/package.json:ro
+      - ./runtime/${COMPOSE_PROJECT_NAME:-docker}:/repo/docker/runtime
+    networks:
+      - agrimarket-net
+
 volumes:
   pgdata:
   n8n_data:
@@ -482,3 +510,7 @@ volumes:
 networks:
   agrimarket-net:
     driver: bridge
+  # Mini-app containers live only here, with apisix and postgres (spec §6.2); internal, so apps have no egress either.
+  dxos-apps-net:
+    driver: bridge
+    internal: true

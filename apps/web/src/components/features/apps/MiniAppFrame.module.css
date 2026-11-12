@@ -1,0 +1,22 @@
+/* SPDX-License-Identifier: MIT
+   SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+/* Fills the page content area: the viewport less the top bar, the content padding and, on mobile, the bottom nav.
+   The extra --spacing-4 covers the TopBar drawing 70px while --topbar-height says 56px, so the page itself never scrolls. */
+.frame {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 480px;
+  height: calc(100dvh - var(--topbar-height) - var(--spacing-4) - 2 * var(--spacing-gutter-mobile) - 64px);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--rounded-lg);
+  background-color: var(--color-surface-card);
+}
+
+@media (min-width: 1024px) {
+  .frame {
+    height: calc(100dvh - var(--topbar-height) - var(--spacing-4) - 2 * var(--spacing-gutter-desktop));
+  }
+}

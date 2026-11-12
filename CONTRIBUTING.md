@@ -43,7 +43,8 @@ Trước khi code, hãy chắc chắn bạn đã đọc qua các tài liệu c�
    cd docker && docker compose up -d
    cd ../apps/web && npm run dev
    ```
-   Khi chạy `npm run dev` trên máy (ngoài Docker), đặt `CORE_GATEWAY_URL=http://localhost:9080`, vì `apisix:9081` chỉ truy cập được bên trong mạng Docker.
+   Khi chạy `npm run dev` trên máy (ngoài Docker), đặt `CORE_GATEWAY_URL=http://localhost:9080`, vì `apisix:9081` chỉ truy cập được bên trong mạng Docker. Route của mini-app chỉ khớp ở cổng `9081` (R23), nên trong cách chạy này `/apps/...` trả 404; làm việc với mini-app thì dùng container `web`.
+   Làm việc với mini-app thì khởi chạy bằng `make platform-up` (hoặc `make up`) từ thư mục gốc: `docker compose up` trực tiếp không nạp route của app nào.
 
 ### 2.2 Tạo Branch
 

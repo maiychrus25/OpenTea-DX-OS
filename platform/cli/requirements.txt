@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+
+PyYAML==6.0.3
+jsonschema==4.26.0
+psycopg[binary]==3.3.6

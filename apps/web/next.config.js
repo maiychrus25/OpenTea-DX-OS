@@ -47,6 +47,10 @@ const withPWA = require("@ducanh2912/next-pwa").default({
     runtimeCaching: [{
       urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname === "/api/notifications/stream",
       handler: "NetworkOnly",
+    }, {
+      // Mini-app pages are per user and an app can be removed at any time: never answer them from the cache.
+      urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/apps/"),
+      handler: "NetworkOnly",
     }],
   },
 });

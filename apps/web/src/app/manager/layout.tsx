@@ -9,6 +9,8 @@ import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landma
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
+import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
+import { loadAppNavItems } from '@/lib/apps/app-nav'
 
 export default async function ManagerLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -31,6 +33,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
     { label: 'Lô hàng', href: '/manager/lots', icon: <Package size={20} /> },
     { label: 'Thông báo', href: '/manager/notifications', icon: <Bell size={20} /> },
     { label: 'Hồ sơ HTX', href: '/manager/profile', icon: <Landmark size={20} /> },
+    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'manager')),
   ]
 
   return (

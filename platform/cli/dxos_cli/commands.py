@@ -1,0 +1,221 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+"""Cài và gỡ mini-app trong container dxos-cli: prepare, commit, abort, remove, list (spec §5).
+
+./dxos runs prepare, starts the container, then commit, or abort when the container step fails.
+"""
+import os
+import re
+from pathlib import Path
+
+import psycopg
+import yaml
+
+from dxos_cli import database, registry
+from dxos_cli.compose import render_app_compose
+from dxos_cli.gateway import app_routes, sync_gateway
+from dxos_cli.manifest import load_manifest, read_core_version, validate_manifest
+from dxos_cli.steps import InstallError, read_journal, run_steps, undo_from_journal, write_journal
+
+# Same pattern as "id" in manifest.schema.json; checked before an id becomes part of a file path.
+APP_ID_RE = re.compile(r"[a-z][a-z0-9-]{1,30}")
+
+
+def apps_dir(root: Path) -> Path:
+    return root / "docker" / "runtime" / "apps"
+
+
+def journal_path(root: Path, app_id: str) -> Path:
+    return apps_dir(root) / f"{app_id}.pending.json"
+
+
+def compose_path(root: Path, app_id: str) -> Path:
+    return apps_dir(root) / f"{app_id}.compose.yml"
+
+
+def env_path(root: Path, app_id: str) -> Path:
+    return apps_dir(root) / f"{app_id}.env"
+
+
+def fragment_path(root: Path, app_id: str) -> Path:
+    return root / "docker" / "runtime" / "gateway" / "apps" / f"{app_id}.yaml"
+
+
+class ValidateStep:
+    name = "validate"
+
+    def __init__(self, root: Path, manifest: dict | None, installed: set[str]):
+        self.root, self.manifest, self.installed = root, manifest, installed
+
+    def apply(self) -> None:
+        errors = validate_manifest(self.manifest, read_core_version(self.root), self.installed)
+        if errors:
+            raise InstallError("; ".join(errors))
+
+    def undo(self) -> None:
+        pass
+
+
+class DatabaseStep:
+    """Spec §5 step 2: schema, role, migrations and the env file, written before the compose step needs it.
+
+    Undo reads what existed before this install from the journal ("database"), which prepare writes before any step
+    runs, so a replay after a crash drops only the schema and role this install created.
+    """
+    name = "database"
+
+    def __init__(self, root: Path, app_id: str, manifest: dict | None = None, app_dir: Path | None = None):
+        self.root, self.app_id, self.manifest, self.app_dir = root, app_id, manifest, app_dir
+
+    def apply(self) -> None:
+        if "database" not in self.manifest:
+            return
+        env = env_path(self.root, self.app_id)
+        migrations = self.root / self.app_dir / self.manifest["database"]["migrations"]
+        try:
+            with _connect(autocommit=True) as conn:
+                password = database.ensure_app_database(conn, self.app_id, migrations, database.read_env_password(env))
+            database.write_env_file(env, self.app_id, password)
+        except Exception:
+            # This step is not journaled yet, so clean it here, like GatewayStep.
+            self.undo()
+            raise
+
+    def undo(self) -> None:
+        existed = read_journal(journal_path(self.root, self.app_id)).get("database")
+        if not existed:
+            return
+        with _connect(autocommit=True) as conn:
+            database.drop_app_database(conn, self.app_id, schema=not existed["schema_existed"],
+                                       role=not existed["role_existed"])
+        if not existed["role_existed"]:
+            env_path(self.root, self.app_id).unlink(missing_ok=True)  # its password belongs to the dropped role
+
+    def purge(self) -> None:
+        with _connect(autocommit=True) as conn:
+            database.drop_app_database(conn, self.app_id)
+        env_path(self.root, self.app_id).unlink(missing_ok=True)
+
+
+class GatewayStep:
+    name = "gateway"
+
+    def __init__(self, root: Path, app_id: str, manifest: dict | None = None):
+        self.root, self.app_id, self.manifest = root, app_id, manifest
+
+    def apply(self) -> None:
+        path = fragment_path(self.root, self.app_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(yaml.safe_dump(app_routes(self.manifest), sort_keys=False, allow_unicode=True), encoding="utf-8")
+        try:
+            sync_gateway(self.root)
+        except Exception:
+            # This step is not journaled yet, so clean it here: a stray fragment would break every later sync.
+            self.undo()
+            raise
+
+    def undo(self) -> None:
+        fragment_path(self.root, self.app_id).unlink(missing_ok=True)
+        sync_gateway(self.root)
+
+
+class ComposeStep:
+    name = "compose"
+
+    def __init__(self, root: Path, app_id: str, manifest: dict | None = None, app_dir: Path | None = None):
+        self.root, self.app_id, self.manifest, self.app_dir = root, app_id, manifest, app_dir
+
+    def apply(self) -> None:
+        path = compose_path(self.root, self.app_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# Generated by dxos prepare; do not edit.\n"
+                        + yaml.safe_dump(render_app_compose(self.manifest, self.app_dir), sort_keys=False),
+                        encoding="utf-8")
+
+    def undo(self) -> None:
+        compose_path(self.root, self.app_id).unlink(missing_ok=True)
+
+
+def _steps(root: Path, app_id: str, manifest: dict | None = None, app_dir: Path | None = None,
+           installed: set[str] = frozenset()) -> list:
+    # Undo needs only the id, so abort and remove build the same steps without a manifest.
+    return [ValidateStep(root, manifest, installed), DatabaseStep(root, app_id, manifest, app_dir),
+            GatewayStep(root, app_id, manifest), ComposeStep(root, app_id, manifest, app_dir)]
+
+
+def _check_id(app_id) -> str:
+    if not isinstance(app_id, str) or not APP_ID_RE.fullmatch(app_id):
+        raise InstallError(f"'id': '{app_id}' không hợp lệ (cần khớp {APP_ID_RE.pattern})")
+    return app_id
+
+
+def _connect(autocommit: bool = False) -> psycopg.Connection:
+    url = os.environ.get("DXOS_DB_URL")
+    if not url:
+        raise InstallError("Thiếu biến môi trường DXOS_DB_URL")
+    return psycopg.connect(url, autocommit=autocommit)
+
+
+def prepare(root: Path, app_dir: Path) -> str:
+    manifest = load_manifest(app_dir)
+    app_id = _check_id(manifest.get("id"))
+    try:
+        # The compose file names the build context relative to the repo, the only tree the host and container share.
+        rel_dir = app_dir.resolve().relative_to(root.resolve())
+    except ValueError:
+        raise InstallError(f"Thư mục app {app_dir} phải nằm trong repo {root}") from None
+    journal = journal_path(root, app_id)
+    state = {**read_journal(journal), "manifest": manifest}
+    with _connect() as conn:
+        installed = registry.installed_ids(conn)
+        if "database" in manifest and "database" not in state:
+            # Durable before anything is created; a re-run keeps the first run's answer (it now sees its own schema).
+            state["database"] = database.database_state(conn, app_id)
+    write_journal(journal, state)
+    run_steps(_steps(root, app_id, manifest, rel_dir, installed), journal)
+    return app_id
+
+
+def commit(root: Path, app_id: str) -> None:
+    journal = journal_path(root, _check_id(app_id))
+    state = read_journal(journal)
+    if state.get("completed") != [step.name for step in _steps(root, app_id)]:
+        raise InstallError(f"App '{app_id}' chưa có bản cài đã chuẩn bị xong (chạy prepare trước)")
+    with _connect() as conn:
+        registry.register(conn, state["manifest"])
+    journal.unlink()
+
+
+def abort(root: Path, app_id: str) -> None:
+    with _connect() as conn:
+        registered = _check_id(app_id) in registry.installed_ids(conn)
+    if registered:
+        # Commit wrote the row but may have failed to delete the journal: undoing now would drop a live app's data.
+        raise InstallError(f"App '{app_id}' đã được đăng ký, không hoàn tác được; dùng remove để gỡ")
+    journal = journal_path(root, app_id)
+    steps = {s.name: s for s in _steps(root, app_id)}
+    state = read_journal(journal)
+    if "database" in state and "database" not in state.get("completed", []):
+        steps["database"].undo()  # a crash inside the database step; undo is idempotent and keeps what existed
+    undo_from_journal(journal, steps)
+
+
+def remove(root: Path, app_id: str, purge: bool) -> None:
+    _check_id(app_id)
+    with _connect() as conn:
+        registered = app_id in registry.installed_ids(conn)
+        registry.unregister(conn, app_id)
+    steps = {s.name: s for s in _steps(root, app_id)}
+    steps["gateway"].undo()
+    steps["compose"].undo()
+    if not registered and not purge:
+        steps["database"].undo()  # a prepared, uncommitted install must not orphan its schema and role
+    if purge:
+        steps["database"].purge()
+    journal_path(root, app_id).unlink(missing_ok=True)  # a stale pending install must not be committed later
+
+
+def list_lines() -> list[str]:
+    with _connect() as conn:
+        return [f"{app_id}\t{version}\t{installed_at.isoformat()}"
+                for app_id, version, installed_at in registry.installed_apps(conn)]

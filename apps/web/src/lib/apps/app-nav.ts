@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 OpenTea Developers
+
+import { createElement } from 'react'
+import { LayoutGrid } from 'lucide-react'
+import type { NavItem } from '@/components/layout/Sidebar/Sidebar'
+import type { InstalledApp } from '@/domain/entities/installed-app'
+import { UNSAFE_SEGMENT } from '@/lib/apps/unsafe-segment'
+import { logger } from '@/lib/logger'
+
+export type AppRole = 'farmer' | 'officer' | 'manager'
+
+// Next redirects a trailing slash away, and the Sidebar marks an item active only on an exact or child path.
+const withoutTrailingSlash = (path: string) => path.replace(/\/+$/, '')
+
+/** The menu entries of the installed apps for one role, each pointing at the app page in the shell. */
+export function appNavItems(apps: InstalledApp[], role: AppRole): NavItem[] {
+  return apps.flatMap(app =>
+    app.menu
+      .filter(entry => entry.roles.includes(role))
+      .map(entry => ({
+        label: entry.label,
+        href: withoutTrailingSlash(`/${role}/apps/${app.id}${entry.path}`),
+        icon: createElement(LayoutGrid, { size: 20 }),
+      })),
+  )
+}
+
+/** The app items for a role layout; when the list cannot be read the menu shows no app, never an error (spec §9). */
+export async function loadAppNavItems(repository: { list: () => Promise<InstalledApp[]> }, role: AppRole): Promise<NavItem[]> {
+  try {
+    return appNavItems(await repository.list(), role)
+  } catch (cause) {
+    logger.error('Mini-app menu unavailable', { role, cause })
+    return []
+  }
+}
+
+/**
+ * The proxy URL the shell frames for `/<role>/apps/<id>/<path>?<query>`, or null when the role has no menu entry or a
+ * segment is empty or unsafe (the proxy refuses those too; this keeps them out of the frame's src).
+ */
+export function miniAppSrc(
+  app: InstalledApp,
+  role: AppRole,
+  path: string[],
+  searchParams: Record<string, string | string[] | undefined>,
+): string | null {
+  if (!app.menu.some(entry => entry.roles.includes(role))) return null
+  if (path.some(segment => UNSAFE_SEGMENT.test(segment))) return null
+  const query = new URLSearchParams()
+  for (const [name, value] of Object.entries(searchParams)) {
+    for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(name, item)
+  }
+  const search = query.toString()
+  return `${withoutTrailingSlash(`/apps/${app.id}/${path.map(encodeURIComponent).join('/')}`)}${search && `?${search}`}`
+}

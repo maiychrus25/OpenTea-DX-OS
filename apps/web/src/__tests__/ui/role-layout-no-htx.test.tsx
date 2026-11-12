@@ -17,6 +17,9 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({ prisma: {} }))
 jest.mock('@/infrastructure/db/repositories/PrismaHtxProfileRepository', () => ({
   PrismaHtxProfileRepository: jest.fn().mockImplementation(() => ({ getProfile: (code: string) => getProfile(code) })),
 }))
+jest.mock('@/infrastructure/db/repositories/prisma-installed-app-repository', () => ({
+  PrismaInstalledAppRepository: jest.fn().mockImplementation(() => ({ list: async () => [] })),
+}))
 jest.mock('@/components/layout/AppShell', () => ({
   AppShell: ({ children }: { children: ReactNode }) => <div data-testid="app-shell">{children}</div>,
 }))

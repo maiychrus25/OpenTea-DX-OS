@@ -15,18 +15,19 @@ function declarations(body: string): Decls {
   return out
 }
 
-function block(re: RegExp, label: string): Decls {
-  const m = css.match(re)
-  if (!m) throw new Error(`globals.css has no ${label} block`)
+function block(re: RegExp, label: string, source = css, file = 'globals.css'): Decls {
+  const m = source.match(re)
+  if (!m) throw new Error(`${file} has no ${label} block`)
   return declarations(m[1])
 }
 
-const light = block(/(?:^|\n):root\s*\{([^}]*)\}/, ':root')
-const darkMedia = block(
-  /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\)\s*\{([^}]*)\}/,
-  'prefers-color-scheme dark',
-)
-const darkAttr = block(/(?:^|\n):root\[data-theme="dark"\]\s*\{([^}]*)\}/, ':root[data-theme="dark"]')
+const LIGHT_BLOCK = /(?:^|\n):root\s*\{([^}]*)\}/
+const DARK_MEDIA_BLOCK = /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\)\s*\{([^}]*)\}/
+const DARK_ATTR_BLOCK = /(?:^|\n):root\[data-theme="dark"\]\s*\{([^}]*)\}/
+
+const light = block(LIGHT_BLOCK, ':root')
+const darkMedia = block(DARK_MEDIA_BLOCK, 'prefers-color-scheme dark')
+const darkAttr = block(DARK_ATTR_BLOCK, ':root[data-theme="dark"]')
 
 const hasColorLiteral = (v: string) => /#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i.test(v)
 const lightColorTokens = Object.keys(light).filter((k) => hasColorLiteral(light[k]))
@@ -210,5 +211,41 @@ describe('DESIGN.md matches globals.css', () => {
     for (const token of Object.keys(light).filter((k) => /^--spacing-[\w-]+$/.test(k) && /^\d+px$/.test(light[k]))) {
       expect([token, spacing[token.replace('--spacing-', '')]]).toEqual([token, light[token]])
     }
+  })
+})
+
+// Mini-apps load /dxos-app.css instead of globals.css: the same tokens, read by the same parser.
+describe('dxos-app.css tokens match globals.css', () => {
+  const appCss = readFileSync(join(process.cwd(), 'public/dxos-app.css'), 'utf-8')
+  const appLight = block(LIGHT_BLOCK, ':root', appCss, 'dxos-app.css')
+  const appDarkMedia = block(DARK_MEDIA_BLOCK, 'prefers-color-scheme dark', appCss, 'dxos-app.css')
+  const appDarkAttr = block(DARK_ATTR_BLOCK, ':root[data-theme="dark"]', appCss, 'dxos-app.css')
+
+  it('has every colour token of globals.css', () => {
+    expect(lightColorTokens.filter((t) => !(t in appLight))).toEqual([])
+  })
+
+  it('has the font size, radius and spacing scales', () => {
+    const scales = Object.keys(light).filter((k) => /^--(font-size|rounded|spacing)-/.test(k))
+    expect(scales.length).toBeGreaterThan(20)
+    expect(scales.filter((t) => !(t in appLight))).toEqual([])
+  })
+
+  it('gives every light token the globals.css value', () => {
+    const differs = Object.keys(appLight).filter((t) => appLight[t] !== light[t])
+    expect(differs.map((t) => `${t}: ${appLight[t]} != ${light[t]}`)).toEqual([])
+  })
+
+  it.each([
+    ['prefers-color-scheme dark', appDarkMedia, darkMedia],
+    [':root[data-theme="dark"]', appDarkAttr, darkAttr],
+  ])('declares the %s block exactly as globals.css', (_label, app, globals) => {
+    expect(app).toEqual(globals)
+  })
+
+  it('never reads a variable it does not declare', () => {
+    const declaredHere = new Set(Object.keys(appLight))
+    const unknown = Array.from(appCss.matchAll(/var\(\s*(--[\w-]+)/g), (m) => m[1]).filter((name) => !declaredHere.has(name))
+    expect(Array.from(new Set(unknown))).toEqual([])
   })
 })

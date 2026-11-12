@@ -1,16 +1,27 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 COMPOSE := docker compose -f docker/docker-compose.yml
+# Runtime state is per compose project (R13); "docker" is compose's default project name for docker/docker-compose.yml.
+PROJECT := $(or $(COMPOSE_PROJECT_NAME),docker)
+RUNTIME := docker/runtime/$(PROJECT)
+# apisix reads the generated route file (base + installed apps); relative to docker/, like every compose path.
+export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 
-.PHONY: platform-up platform-smoke platform-down up down build test lint
+.PHONY: gateway-sync platform-up platform-smoke apps-smoke platform-down up down build test lint
 
-platform-up:
+# APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
+gateway-sync:
+	mkdir -p $(RUNTIME)/gateway/apps $(RUNTIME)/apps
+	$(COMPOSE) --profile tools run --rm --build --user "$$(id -u):$$(id -g)" dxos-cli gateway-sync
+
+platform-up: gateway-sync
 	$(COMPOSE) up -d --build --wait postgres
 	$(COMPOSE) run --rm platform-init
 	$(COMPOSE) --profile tools run --rm --build migrate
 	$(COMPOSE) run --rm platform-init
 # Hasura loads metadata only at start and APISIX holds the old inode of its bind-mounted route file, so a running
 # stack needs a restart. A fresh start must not get one: it would hide a wrong migrate order from the smoke test.
+# gateway-sync writes the runtime route file in place (same inode), so later app routes reach APISIX without one.
 	@running="$$($(COMPOSE) ps -q --status running hasura apisix)"; \
 	$(COMPOSE) up -d --build --wait postgres keycloak seaweedfs n8n hasura apisix clamav dxos-scanner mosquitto dxos-ingest dxos-lifecycle ollama || exit 1; \
 	[ -z "$$running" ] && exit 0; \
@@ -24,10 +35,15 @@ platform-up:
 platform-smoke:
 	bash platform/tests/smoke-platform.sh
 
+# Needs a seeded stack after platform-smoke (its fixture household hh_tc_1 guides the tea-tour); installs and removes
+# tea-tour and the CLI fixtures, installs hello, re-runs platform-up, removes it, then runs platform-smoke.
+apps-smoke:
+	bash platform/tests/smoke-apps.sh
+
 platform-down:
 	$(COMPOSE) down
 
-up:
+up: gateway-sync
 	$(COMPOSE) up -d
 
 down:
