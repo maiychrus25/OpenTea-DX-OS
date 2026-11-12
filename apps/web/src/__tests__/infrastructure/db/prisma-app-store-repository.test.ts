@@ -43,12 +43,15 @@ describe('PrismaAppStoreRepository', () => {
     expect(queryRaw.mock.calls.slice(1).map(call => call.slice(1))).toEqual([["T'C"], ["T'C"], ["T'C"]])
   })
 
-  test('workerAlive is true only when a recent heartbeat exists', async () => {
+  test('workerAlive is true for a recent heartbeat or a request running for under 15 minutes', async () => {
     queryRaw.mockResolvedValueOnce([{ alive: true }]).mockResolvedValueOnce([{ alive: false }])
     const repo = new PrismaAppStoreRepository()
     await expect(repo.workerAlive()).resolves.toBe(true)
     await expect(repo.workerAlive()).resolves.toBe(false)
-    expect(sql(queryRaw.mock.calls[0])).toContain("interval '30 seconds'")
+    expect(queryRaw).toHaveBeenCalledTimes(2)
+    const text = sql(queryRaw.mock.calls[0])
+    expect(text).toContain("seen_at > now() - interval '30 seconds'")
+    expect(text).toContain("status = 'RUNNING' AND started_at > now() - interval '15 minutes'")
   })
 
   test('createRequest binds every value', async () => {

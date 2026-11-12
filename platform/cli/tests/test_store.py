@@ -9,7 +9,7 @@ import pytest
 from dxos_cli import commands, store
 from dxos_cli.__main__ import main
 
-from conftest import FIXTURES
+from conftest import FIXTURES, INIT_DIR
 
 
 @pytest.fixture
@@ -175,3 +175,62 @@ def test_heartbeat_keeps_one_row(root, conn):
     store.heartbeat(conn)
     store.heartbeat(conn)
     assert conn.execute("SELECT count(*) FROM platform.app_worker").fetchone()[0] == 1
+
+
+def apply_store_sql(conn):
+    conn.execute((INIT_DIR / "06-app-store.sql").read_text(encoding="utf-8"))
+
+
+def drop_store_tables(conn):
+    conn.execute("DROP TABLE platform.app_requests, platform.app_enablements, platform.app_worker, platform.app_catalog")
+
+
+def enablement_rows(conn):
+    return conn.execute("SELECT app_id, htx_code, enabled_by FROM platform.app_enablements").fetchall()
+
+
+def install_row(conn, app_id):
+    conn.execute("INSERT INTO platform.installed_apps (id, name, version, manifest) VALUES (%s, 'n', '1', '{}')", (app_id,))
+
+
+def test_upgrade_backfills_star_once(root, conn):
+    install_row(conn, "x")
+    drop_store_tables(conn)
+    apply_store_sql(conn)
+    assert enablement_rows(conn) == [("x", "*", "dxos-upgrade")]
+    conn.execute("DELETE FROM platform.app_enablements")
+    apply_store_sql(conn)  # tables exist now: nothing is handed back
+    assert enablement_rows(conn) == []
+
+
+def test_upgrade_without_installed_apps_adds_nothing(root, conn):
+    drop_store_tables(conn)
+    apply_store_sql(conn)
+    assert enablement_rows(conn) == []
+
+
+def test_fail_stale_reports_installed(root, conn):
+    install_row(conn, "live")
+    live, half = add_request(conn, "live", "TC"), add_request(conn, "half", "TC")
+    store.claim_next(conn), store.claim_next(conn)
+    jobs = {j.id: j for j in store.fail_stale(conn)}
+    assert jobs[live].installed is True and jobs[half].installed is False
+    assert status_of(conn, live)[0] == status_of(conn, half)[0] == "FAILED"
+
+
+def test_worker_start_prints_only_half_installs(root, conn, capsys):
+    install_row(conn, "live")
+    add_request(conn, "live", "TC")
+    add_request(conn, "half", "TC")
+    add_request(conn, "gone", "TC", "DISABLE")
+    for _ in range(3):
+        store.claim_next(conn)
+    capsys.readouterr()
+    assert main(["worker-start"]) == 0
+    assert capsys.readouterr().out.split() == ["half"]
+
+
+def test_sync_skips_directory_named_differently_from_its_id(root, conn, capsys):
+    shutil.copytree(root / "miniapps" / "tea-tour", root / "miniapps" / "other-name")
+    assert store.sync_catalog(conn, root / "miniapps", "1.9.0") == ["tea-tour"]
+    assert "other-name" in capsys.readouterr().err

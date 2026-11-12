@@ -244,7 +244,13 @@ assert_eq "$(psql_app "select count(*) from platform.installed_apps")" 0 "regist
 
 echo "[store queue]"
 # The App Store page queues rows in platform.app_requests; ./dxos worker installs, enables and removes per HTX.
-start_worker() { ./dxos worker >>"$WORKER_OUT" 2>&1 & WORKER_PID=$!; }
+start_worker() {
+  local _
+  ./dxos worker >>"$WORKER_OUT" 2>&1 & WORKER_PID=$!
+  # Until the worker holds its lock a second ./dxos worker could win it, so wait for the pid file.
+  for _ in $(seq 1 60); do [ "$(cat "$RUNTIME/worker.lock/pid" 2>/dev/null)" = "$WORKER_PID" ] && return 0; sleep 0.5; done
+  fail "worker did not take its lock within 30 s"
+}
 stop_worker() {
   local _
   [ -z "$WORKER_PID" ] || kill "$WORKER_PID" 2>/dev/null || true
@@ -296,6 +302,7 @@ R4=$(request hello LB DISABLE)
 wait_request "$R4" DONE "DISABLE hello for LB -> DONE"
 for _ in $(seq 1 30); do [ "$(app_containers hello)" = 0 ] && break; sleep 2; done
 assert_eq "$(app_containers hello)" 0 "container removed once no HTX is left"
+for _ in $(seq 1 30); do [ "$(installed_count hello)" = 0 ] && break; sleep 2; done  # remove stops the container, then unregisters
 assert_eq "$(installed_count hello)" 0 "hello is no longer installed"
 wait_http 404 "removed app route -> 404 after the last DISABLE" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
 
@@ -340,6 +347,28 @@ assert_eq "$(app_containers hello)" 0 "hello removed again"
 stop_worker
 pass "worker stops on TERM and frees its lock"
 [ ! -e "$RUNTIME/worker.lock" ] && pass "worker lock directory removed" || fail "worker.lock left behind"
+
+# Upgrade from a stack without the store: the first run of 06-app-store.sql gives an installed app '*', later runs do not.
+./dxos install miniapps/hello >/dev/null && pass "./dxos install miniapps/hello exits 0 (upgrade check)" || fail "install hello for the upgrade check"
+psql_app "drop table platform.app_requests, platform.app_enablements, platform.app_worker, platform.app_catalog" >/dev/null
+$COMPOSE run --rm platform-init >/dev/null 2>&1 || fail "platform-init after dropping the store tables"
+assert_eq "$(psql_app "select app_id || ' ' || htx_code || ' ' || enabled_by from platform.app_enablements")" "hello * dxos-upgrade" \
+  "first run of 06-app-store.sql enables the installed app for *"
+wait_http 200 "hello still answers after the upgrade" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
+psql_app "delete from platform.app_enablements" >/dev/null
+$COMPOSE run --rm platform-init >/dev/null 2>&1 || fail "second platform-init"
+assert_eq "$(enabled_for hello)" "" "a later platform-init does not hand a removed enablement back"
+cli_run catalog-sync >/dev/null
+
+# A restarted worker must fail a stale request but leave the container of a registered app alone.
+CID=$(hello_container); [ -n "$CID" ] || fail "app-hello not running before the stale-request check"
+R9=$(psql_app "insert into platform.app_requests (app_id, htx_code, action, requested_by, status, started_at) values ('hello', 'LB', 'ENABLE', 'smoke', 'RUNNING', now()) returning id" | head -n 1)
+start_worker
+wait_request "$R9" FAILED "stale ENABLE of an installed app -> FAILED" 30
+assert_eq "$(hello_container)" "$CID" "restarted worker kept the container of the installed app"
+wait_http 200 "hello still answers after the worker restart" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
+stop_worker
+./dxos remove hello >/dev/null && pass "hello removed after the upgrade checks" || fail "remove hello after the upgrade checks"
 OUT=$(make platform-smoke 2>&1) || { tail -20 <<<"$OUT" >&2; fail "make platform-smoke after remove"; }
 assert_eq "$(grep -c '^PASS' <<<"$OUT")" 124 "platform smoke still gives 124 PASS without apps"
 

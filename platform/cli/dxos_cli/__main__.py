@@ -79,7 +79,8 @@ def cmd_store(args) -> int:
             elif args.command == "worker-start":
                 store.sync_catalog(conn, root / "miniapps", read_core_version(root))
                 for job in store.fail_stale(conn):
-                    if job.action == "ENABLE":
+                    # Only a half install is undone; a registered app's container serves other HTXs.
+                    if job.action == "ENABLE" and not job.installed:
                         print(job.app_id)
             elif args.command == "worker-claim":
                 deadline = time.monotonic() + args.wait

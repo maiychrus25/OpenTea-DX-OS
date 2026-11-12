@@ -48,7 +48,11 @@ export class PrismaAppStoreRepository implements AppStoreRepository {
 
   async workerAlive(): Promise<boolean> {
     const rows = await prisma.$queryRaw<{ alive: boolean }[]>`
-      SELECT EXISTS (SELECT 1 FROM platform.app_worker WHERE seen_at > now() - interval '30 seconds') AS alive`
+      SELECT (
+        EXISTS (SELECT 1 FROM platform.app_worker WHERE seen_at > now() - interval '30 seconds')
+        -- A long install does not poll, but it is proof the worker is there.
+        OR EXISTS (SELECT 1 FROM platform.app_requests WHERE status = 'RUNNING' AND started_at > now() - interval '15 minutes')
+      ) AS alive`
     return rows[0]?.alive === true
   }
 

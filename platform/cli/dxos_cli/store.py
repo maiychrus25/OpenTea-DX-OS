@@ -34,6 +34,9 @@ def sync_catalog(conn: psycopg.Connection, miniapps_dir: Path, core_version: str
         try:
             manifest = load_manifest(app_dir)
             errors = validate_manifest(manifest, core_version, set())
+            # The worker installs miniapps/<id>, so the directory must carry the manifest id.
+            if not errors and manifest["id"] != app_dir.name:
+                errors = [f"thư mục phải trùng id '{manifest['id']}' của manifest"]
         except ManifestError as exc:
             errors = [str(exc)]
         if errors:
@@ -101,8 +104,10 @@ def fail_stale(conn: psycopg.Connection) -> list[Job]:
     with conn.transaction():
         rows = conn.execute(
             "UPDATE platform.app_requests SET status = 'FAILED', error = %s, finished_at = now()"
-            " WHERE status = 'RUNNING' RETURNING id, action, app_id, htx_code", (STALE_MESSAGE,)).fetchall()
-    return [Job(str(r[0]), r[1], r[2], r[3], False) for r in rows]
+            " WHERE status = 'RUNNING' RETURNING id, action, app_id, htx_code,"
+            " EXISTS (SELECT 1 FROM platform.installed_apps a WHERE a.id = app_requests.app_id)",
+            (STALE_MESSAGE,)).fetchall()
+    return [Job(str(r[0]), *r[1:]) for r in rows]
 
 
 def heartbeat(conn: psycopg.Connection) -> None:

@@ -3,6 +3,9 @@
 -- App Store: catalogue of installable mini-apps, per-HTX enablement and the install request queue. Idempotent.
 CREATE SCHEMA IF NOT EXISTS platform AUTHORIZATION agrimarket;
 
+-- True only for the run that creates app_enablements (the upgrade from a stack without the store); read at the end.
+SELECT set_config('dxos.store_first_run', (to_regclass('platform.app_enablements') IS NULL)::text, false);
+
 CREATE TABLE IF NOT EXISTS platform.app_catalog (
   id          text        PRIMARY KEY,
   name        text        NOT NULL,
@@ -52,3 +55,10 @@ CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON pla
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
 CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.app_requests
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
+
+-- Upgrade: apps installed before the store were visible to every HTX, so they keep '*'. Never on later runs: an
+-- installed app with no enablement row is valid (every HTX removed it) and must not be handed back to everyone.
+INSERT INTO platform.app_enablements (app_id, htx_code, enabled_by)
+  SELECT id, '*', 'dxos-upgrade' FROM platform.installed_apps
+  WHERE current_setting('dxos.store_first_run')::boolean
+  ON CONFLICT (app_id, htx_code) DO NOTHING;
