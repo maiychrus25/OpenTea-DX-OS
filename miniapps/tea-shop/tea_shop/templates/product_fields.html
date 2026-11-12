@@ -7,6 +7,11 @@
   <label>Tên sản phẩm <input name="name" maxlength="120" required value="{{ form.name or '' }}"></label>
   <label>Quy cách (ví dụ: Gói 200g) <input name="pack" maxlength="60" required value="{{ form.pack or '' }}"></label>
   <label>Giá (đồng) <input type="number" name="price_vnd" min="0" step="1" required value="{{ form.price_vnd or '' }}"></label>
+  {% if product %}
+  <p>Tồn kho hiện tại: <strong>{{ product.stock }}</strong></p>
+  <label>Điều chỉnh tồn kho (+/−) <input type="number" name="stock_delta" min="-9999" max="9999" step="1" value="{{ form.stock_delta or '0' }}"></label>
+  {% else %}
   <label>Tồn kho <input type="number" name="stock" min="0" step="1" required value="{{ form.stock or '' }}"></label>
+  {% endif %}
   <label>Mã lô truy xuất (không bắt buộc) <input name="lot_code" maxlength="40" value="{{ form.lot_code or '' }}"></label>
   <label><input type="checkbox" name="active"{% if form.active %} checked{% endif %}> Đang bán</label>

@@ -26,7 +26,7 @@ Mọi thao tác ghi là `POST` và trả 303 về một trang dưới `/apps/tea
 - Tên, quy cách và giá được sao vào từng dòng đơn lúc đặt; sửa sản phẩm sau đó không đổi đơn cũ. Tổng tiền là số nguyên VND.
 - Mã đơn: 8 ký tự trong `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, sinh bằng `secrets`; trùng thì thử lại, tối đa 5 lần.
 - Trạng thái: `NEW` → `CONFIRMED` → `SHIPPING` → `DONE`. Huỷ được từ `NEW`, `CONFIRMED`, `SHIPPING` và trả lại tồn kho; đơn `DONE` hoặc `CANCELLED` không đổi nữa.
-- Sửa sản phẩm ghi đè tồn kho bằng giá trị trong form; đơn đặt giữa lúc mở và lưu form sẽ không được tính lại.
+- Sửa sản phẩm không ghi đè tồn kho: form nhập số điều chỉnh (+/−, từ -9999 đến 9999) và `UPDATE ... stock = stock + delta` chạy một câu, nên đơn đặt giữa lúc mở và lưu form không bị mất. Điều chỉnh làm tồn kho âm thì bị từ chối. Thêm sản phẩm mới vẫn nhập tồn kho tuyệt đối.
 
 ## Dữ liệu và mạng
 

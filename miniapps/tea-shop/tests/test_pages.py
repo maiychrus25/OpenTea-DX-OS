@@ -77,9 +77,17 @@ def test_manager_creates_and_edits_a_product(client, db):
     product_id, stock, lot, active = db.execute("SELECT id, stock, lot_code, active FROM products").fetchone()
     assert (stock, lot, active) == (10, "LOT-2026-1", True)
     edited = client.post(f"/products/{product_id}/edit", headers=MANAGER,
-                         data={**PRODUCT_FORM, "name": "Chè mới", "stock": "7", "lot_code": "", "active": ""})
+                         data={**PRODUCT_FORM, "name": "Chè mới", "stock_delta": "-3", "lot_code": "", "active": ""})
     assert edited.status_code == 303
     assert db.execute("SELECT name, stock, lot_code, active FROM products").fetchone() == ("Chè mới", 7, None, False)
+    refused = client.post(f"/products/{product_id}/edit", headers=MANAGER, data={**PRODUCT_FORM, "stock_delta": "-8"})
+    assert refused.status_code == 400 and "Tồn kho hiện chỉ còn 7, không thể giảm 8." in refused.text
+    for bad in ("10000", "-10000", "abc", "1.5"):
+        assert client.post(f"/products/{product_id}/edit", headers=MANAGER,
+                           data={**PRODUCT_FORM, "stock_delta": bad}).status_code == 400, bad
+    assert db.execute("SELECT stock FROM products").fetchone()[0] == 7
+    page = client.get(f"/products/{product_id}/edit", headers=MANAGER).text
+    assert "Điều chỉnh tồn kho (+/−)" in page and 'name="stock_delta"' in page and 'name="stock"' not in page
     assert "Chè mới" in client.get(f"/products/{product_id}/edit", headers=MANAGER).text
 
 

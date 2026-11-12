@@ -155,3 +155,26 @@ def test_order_code_alphabet_and_retry_on_a_taken_code(db, monkeypatch):
     monkeypatch.setattr(store, "new_code", lambda: next(codes))
     assert order(db, [(product, 1)]).code == "BBBB3333"
     assert stock_of(db, product) == 3
+
+
+def edit(conn, product, delta, htx="TC"):
+    return store.edit_product(conn, htx, product, "Chè mới", "Gói 100g", 99000, None, True, delta)
+
+
+def test_stock_adjustment_keeps_concurrent_order(db):
+    """An order placed after the edit form was read is not lost when the adjustment is saved."""
+    product = add_product(db, stock=10)
+    seen = stock_of(db, product)  # what the edit form showed
+    assert isinstance(order(db, [(product, 2)]), Order)
+    assert edit(db, product, 10) is True
+    assert stock_of(db, product) == seen - 2 + 10
+
+
+def test_stock_adjustment_cannot_go_negative(db):
+    product = add_product(db, stock=3)
+    refused = edit(db, product, -4)
+    assert isinstance(refused, Refusal) and refused.message == "Tồn kho hiện chỉ còn 3, không thể giảm 4."
+    assert stock_of(db, product) == 3
+    assert db.execute("SELECT name FROM products WHERE id = %s", (product,)).fetchone()[0] == "Chè Shan tuyết"
+    assert edit(db, product, -3) is True and stock_of(db, product) == 0
+    assert edit(db, uuid.uuid4(), 1) is None and edit(db, product, 1, htx="LB") is None

@@ -96,13 +96,22 @@ def create_product(conn, htx_code: str, name: str, pack: str, price_vnd: int, st
                         (htx_code, name, pack, price_vnd, stock, lot_code, active)).fetchone()[0]
 
 
-def edit_product(conn, htx_code: str, product_id: UUID, name: str, pack: str, price_vnd: int, stock: int,
-                 lot_code: str | None, active: bool) -> bool:
-    # shortcut: stock is overwritten with the form value, so an order placed between opening and saving the form
-    # is lost from the count; upgrade to a stock adjustment if managers edit during busy hours.
-    return conn.execute("UPDATE products SET name = %s, pack = %s, price_vnd = %s, stock = %s, lot_code = %s, "
-                        "active = %s WHERE id = %s AND htx_code = %s RETURNING id",
-                        (name, pack, price_vnd, stock, lot_code, active, product_id, htx_code)).fetchone() is not None
+def edit_product(conn, htx_code: str, product_id: UUID, name: str, pack: str, price_vnd: int, lot_code: str | None,
+                 active: bool, stock_delta: int) -> bool | Refusal | None:
+    """True if saved, a Refusal if the delta would take stock below 0, None if the product is not in this HTX.
+
+    Stock moves by a delta in the same UPDATE, so an order placed meanwhile is never overwritten.
+    """
+    params = {"name": name, "pack": pack, "price": price_vnd, "lot": lot_code, "active": active, "delta": stock_delta,
+              "id": product_id, "htx": htx_code}
+    with conn.transaction():
+        if conn.execute("UPDATE products SET name = %(name)s, pack = %(pack)s, price_vnd = %(price)s, "
+                        "lot_code = %(lot)s, active = %(active)s, stock = stock + %(delta)s "
+                        "WHERE id = %(id)s AND htx_code = %(htx)s AND stock + %(delta)s >= 0 RETURNING id",
+                        params).fetchone():
+            return True
+        row = conn.execute("SELECT stock FROM products WHERE id = %s AND htx_code = %s", (product_id, htx_code)).fetchone()
+    return None if row is None else Refusal(f"Tồn kho hiện chỉ còn {row[0]}, không thể giảm {-stock_delta}.")
 
 
 def list_orders(conn, htx_code: str) -> list[Order]:
@@ -137,7 +146,8 @@ def advance_order(conn, htx_code: str, order_id: UUID) -> bool | None:
             return None
         if row[0] not in NEXT_STATUS:
             return False
-        conn.execute("UPDATE orders SET status = %s WHERE id = %s", (NEXT_STATUS[row[0]], order_id))
+        conn.execute("UPDATE orders SET status = %s WHERE id = %s AND htx_code = %s",
+                     (NEXT_STATUS[row[0]], order_id, htx_code))
         return True
 
 
@@ -155,8 +165,9 @@ def cancel_order(conn, htx_code: str, order_id: UUID) -> bool | None:
                      "(SELECT product_id FROM order_items WHERE order_id = %(id)s) ORDER BY id FOR UPDATE",
                      {"htx": htx_code, "id": order_id}).fetchall()
         conn.execute("UPDATE products p SET stock = p.stock + i.quantity FROM order_items i "
-                     "WHERE i.order_id = %s AND p.id = i.product_id AND p.htx_code = i.htx_code", (order_id,))
-        conn.execute("UPDATE orders SET status = 'CANCELLED' WHERE id = %s", (order_id,))
+                     "WHERE i.order_id = %s AND i.htx_code = %s AND p.id = i.product_id AND p.htx_code = i.htx_code",
+                     (order_id, htx_code))
+        conn.execute("UPDATE orders SET status = 'CANCELLED' WHERE id = %s AND htx_code = %s", (order_id, htx_code))
         return True
 
 
@@ -188,7 +199,8 @@ def place_order(conn, htx_code: str, lines: list[tuple[UUID, int]], customer_nam
         placed = _insert_order(conn, htx_code, customer_name, phone, address, note, total)
         for product_id in sorted(wanted):
             product = products[product_id]
-            conn.execute("UPDATE products SET stock = stock - %s WHERE id = %s", (wanted[product_id], product_id))
+            conn.execute("UPDATE products SET stock = stock - %s WHERE id = %s AND htx_code = %s",
+                         (wanted[product_id], product_id, htx_code))
             conn.execute("INSERT INTO order_items (htx_code, order_id, product_id, product_name, pack, price_vnd, "
                          "quantity) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                          (htx_code, placed.id, product_id, product.name, product.pack, product.price_vnd,

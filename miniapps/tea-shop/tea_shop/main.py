@@ -148,35 +148,42 @@ def manager_home(request: Request, claims: Claims = Depends(role("manager")), co
 
 
 def product_form(name: str = Form(""), pack: str = Form(""), price_vnd: str = Form(""), stock: str = Form(""),
-                 lot_code: str = Form(""), active: str = Form("")) -> dict:
-    return {"name": name, "pack": pack, "price_vnd": price_vnd, "stock": stock, "lot_code": lot_code, "active": active}
+                 lot_code: str = Form(""), active: str = Form(""), stock_delta: str = Form("0")) -> dict:
+    return {"name": name, "pack": pack, "price_vnd": price_vnd, "stock": stock, "lot_code": lot_code, "active": active,
+            "stock_delta": stock_delta}
 
 
-def read_product_form(form: dict) -> tuple[dict, list[str]]:
-    """Validated values for store.create_product / store.edit_product, and the Vietnamese errors."""
+def parse_delta(raw: str) -> int | None:
+    raw = raw.strip() or "0"
+    return int(raw) if re.fullmatch(r"[+-]?[0-9]{1,4}", raw) else None
+
+
+def read_product_form(form: dict, creating: bool) -> tuple[dict, list[str]]:
+    """Validated values for store.create_product (absolute stock) / store.edit_product (stock_delta), and the errors."""
     errors = []
     name, pack, lot_code = form["name"].strip(), form["pack"].strip(), form["lot_code"].strip()
     if not 1 <= len(name) <= 120:
         errors.append("Tên sản phẩm cần từ 1 đến 120 ký tự.")
     if not 1 <= len(pack) <= 60:
         errors.append("Quy cách cần từ 1 đến 60 ký tự.")
-    price, stock = parse_int(form["price_vnd"]), parse_int(form["stock"])
+    price = parse_int(form["price_vnd"])
     if price is None:
         errors.append("Giá phải là số đồng, không âm.")
+    stock = parse_int(form["stock"]) if creating else parse_delta(form["stock_delta"])
     if stock is None:
-        errors.append("Tồn kho phải là số nguyên, không âm.")
+        errors.append("Tồn kho phải là số nguyên, không âm." if creating else "Điều chỉnh tồn kho phải là số nguyên từ -9999 đến 9999.")
     if lot_code and not LOT_RE.fullmatch(lot_code):
         errors.append("Mã lô chỉ gồm chữ, số và dấu gạch ngang, tối đa 40 ký tự.")
     if errors:
         return {}, errors
-    return {"name": name, "pack": pack, "price_vnd": price, "stock": stock, "lot_code": lot_code or None,
-            "active": bool(form["active"])}, []
+    values = {"name": name, "pack": pack, "price_vnd": price, "lot_code": lot_code or None, "active": bool(form["active"])}
+    return {**values, ("stock" if creating else "stock_delta"): stock}, []
 
 
 @app.post("/products")
 def create_product(request: Request, claims: Claims = Depends(role("manager")), conn=Depends(db),
                    form: dict = Depends(product_form)):
-    values, errors = read_product_form(form)
+    values, errors = read_product_form(form, creating=True)
     if errors:
         return manager_page(request, conn, claims, 400, errors, form)
     store.create_product(conn, claims.htx_code, **values)
@@ -185,7 +192,7 @@ def create_product(request: Request, claims: Claims = Depends(role("manager")), 
 
 def edit_page(request, product, status=200, errors=(), form=None):
     form = form or {"name": product.name, "pack": product.pack, "price_vnd": str(product.price_vnd),
-                    "stock": str(product.stock), "lot_code": product.lot_code or "",
+                    "stock_delta": "0", "lot_code": product.lot_code or "",
                     "active": "on" if product.active else ""}
     return page(request, "product_edit.html", status, product=product, errors=errors, form=form)
 
@@ -206,11 +213,15 @@ def edit_product_form(request: Request, product_id: UUID, claims: Claims = Depen
 def edit_product(request: Request, product_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db),
                  form: dict = Depends(product_form)):
     product = existing_product(conn, claims.htx_code, product_id)
-    values, errors = read_product_form(form)
+    values, errors = read_product_form(form, creating=False)
     if errors:
         return edit_page(request, product, 400, errors, form)
-    if not store.edit_product(conn, claims.htx_code, product_id, **values):
+    saved = store.edit_product(conn, claims.htx_code, product_id, **values)
+    if saved is None:
         raise HTTPException(404)
+    if isinstance(saved, store.Refusal):
+        return edit_page(request, store.get_product(conn, claims.htx_code, product_id) or product, 400,
+                         [saved.message], form)
     return redirect(request, "/", notice="saved")
 
 
