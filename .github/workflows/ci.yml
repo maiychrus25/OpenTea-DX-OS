@@ -382,7 +382,7 @@ jobs:
           E2E_CORE: "1"
           E2E_APP_STORE: "1"
           E2E_BASE_URL: http://localhost:3000
-        run: npx playwright test tests/e2e/story/app-store.spec.ts --project=chromium --no-deps --reporter=list
+        run: npx playwright test tests/e2e/story/app-store.spec.ts --project=chromium --no-deps --reporter=list --trace retain-on-failure
 
       - name: Install Business Apps
         run: |
@@ -395,7 +395,7 @@ jobs:
           E2E_CORE: "1"
           E2E_BUSINESS_APPS: installed
           E2E_BASE_URL: http://localhost:3000
-        run: npx playwright test tests/e2e/story/business-apps.spec.ts --project=chromium --no-deps --reporter=list
+        run: npx playwright test tests/e2e/story/business-apps.spec.ts --project=chromium --no-deps --reporter=list --trace retain-on-failure
 
       # Only the screens of the store and the three apps; Priority Screens above ran the rest.
       - name: Business Apps Screens Browser Test
@@ -404,7 +404,7 @@ jobs:
           E2E_CORE: "1"
           E2E_BUSINESS_APPS: installed
           E2E_BASE_URL: http://localhost:3000
-        run: npx playwright test tests/e2e/visual/screens.spec.ts --project=chromium --no-deps --reporter=list --grep 'app-store|leaf-purchase|tea-shop|farm-supply'
+        run: npx playwright test tests/e2e/visual/screens.spec.ts --project=chromium --no-deps --reporter=list --trace retain-on-failure --grep 'app-store|leaf-purchase|tea-shop|farm-supply'
 
       - name: Upload Screenshots
         if: always()
@@ -412,6 +412,16 @@ jobs:
         with:
           name: priority-screens
           path: apps/web/test-results/screens/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # Traces hold the page, its requests and the session of a throwaway CI stack.
+      - name: Upload Browser Failure Results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-results
+          path: apps/web/test-results/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -439,4 +449,9 @@ jobs:
         run: |
           df -h /
           cat "$RUNNER_TEMP/worker.log" 2>/dev/null || true
+          # Mini-app containers are not services of docker-compose.yml, so compose logs leaves them out.
+          for name in $(docker ps -a --filter "name=-app-" --format '{{.Names}}'); do
+            echo "== $name"
+            docker logs --tail 200 "$name" 2>&1 || true
+          done
           docker compose -f docker/docker-compose.yml logs
