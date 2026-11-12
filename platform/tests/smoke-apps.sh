@@ -70,8 +70,18 @@ kc_wait
 ensure_client dxos-smoke dx-os-core,roles,profile
 ensure_user smoke_manager_tc manager TC
 ensure_user smoke_farmer_tc farmer TC
-TM=$(user_token smoke_manager_tc); [ -n "$TM" ] && [ "$TM" != null ] || fail "smoke_manager_tc token empty"
-TF=$(user_token smoke_farmer_tc); [ -n "$TF" ] && [ "$TF" != null ] || fail "smoke_farmer_tc token empty"
+# Access tokens live 5 minutes and Hasura refuses an expired one (the gateway allows 120 s of slack), so a section must not
+# start with an old token.
+fresh_tokens() {
+  local pair user var t
+  for pair in smoke_manager_tc:TM smoke_farmer_tc:TF smoke_officer_tc:TO; do
+    user="${pair%%:*}"; var="${pair##*:}"
+    t=$(user_token "$user") || t=""; [ -n "$t" ] && [ "$t" != null ] || fail "$user token empty"
+    printf -v "$var" %s "$t"
+  done
+}
+ensure_user smoke_officer_tc officer TC
+fresh_tokens
 pass "smoke client and users ready"
 
 echo "[reinstall after another app may take the old address]"
@@ -173,6 +183,7 @@ echo "[tea-tour]"
 ./dxos remove tea-tour --purge >/dev/null 2>&1 || true  # a fresh schema, whatever an earlier run or the browser story left
 TEA_ENV="$RUNTIME/apps/tea-tour.env"
 ./dxos install miniapps/tea-tour && pass "./dxos install miniapps/tea-tour exits 0" || fail "./dxos install miniapps/tea-tour"
+fresh_tokens
 wait_http 200 "manager token -> 200 on /apps/tea-tour/" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-tour/"
 assert_app_http 401 "no token -> 401 on /apps/tea-tour/" -- "$APP_GW/apps/tea-tour/"
 assert_http 404 "published port 9080 -> 404 on the public /apps/tea-tour/public/TC (R23)" -- "$GATEWAY/apps/tea-tour/public/TC"
@@ -245,8 +256,6 @@ assert_eq "$(psql_app "select count(*) from platform.installed_apps")" 0 "regist
 
 echo "[business apps]"
 # The three business apps of the store: install, role routes through the gateway, one write each, purge.
-ensure_user smoke_officer_tc officer TC
-TO=$(user_token smoke_officer_tc); [ -n "$TO" ] && [ "$TO" != null ] || fail "smoke_officer_tc token empty"
 # post_loc <token|""> <path> <curl data args...>: the Location of a 303, otherwise the status line.
 post_loc() {
   local tok="$1" path="$2" hdrs auth=(); shift 2
@@ -267,6 +276,7 @@ NOID=00000000-0000-0000-0000-000000000000
 echo "[leaf-purchase]"
 ./dxos remove leaf-purchase --purge >/dev/null 2>&1 || true
 ./dxos install miniapps/leaf-purchase && pass "./dxos install miniapps/leaf-purchase exits 0" || fail "./dxos install miniapps/leaf-purchase"
+fresh_tokens
 LP=/apps/leaf-purchase
 wait_http 200 "officer token -> 200 on $LP/" -- -H "Authorization: Bearer $TO" "$APP_GW$LP/"
 assert_app_http 200 "manager token -> 200 on $LP/periods" -- -H "Authorization: Bearer $TM" "$APP_GW$LP/periods"
@@ -318,6 +328,7 @@ wait_http 404 "removed leaf-purchase route -> 404" -- -H "Authorization: Bearer 
 echo "[tea-shop]"
 ./dxos remove tea-shop --purge >/dev/null 2>&1 || true
 ./dxos install miniapps/tea-shop && pass "./dxos install miniapps/tea-shop exits 0" || fail "./dxos install miniapps/tea-shop"
+fresh_tokens
 TS=/apps/tea-shop
 wait_http 200 "manager token -> 200 on $TS/" -- -H "Authorization: Bearer $TM" "$APP_GW$TS/"
 assert_app_http 401 "no token -> 401 on $TS/" -- "$APP_GW$TS/"
@@ -351,6 +362,7 @@ purged tea-shop app_tea_shop
 echo "[farm-supply]"
 ./dxos remove farm-supply --purge >/dev/null 2>&1 || true
 ./dxos install miniapps/farm-supply && pass "./dxos install miniapps/farm-supply exits 0" || fail "./dxos install miniapps/farm-supply"
+fresh_tokens
 FS=/apps/farm-supply
 wait_http 200 "manager token -> 200 on $FS/" -- -H "Authorization: Bearer $TM" "$APP_GW$FS/"
 assert_app_http 200 "farmer token -> 200 on $FS/mine" -- -H "Authorization: Bearer $TF" "$APP_GW$FS/mine"
@@ -390,6 +402,7 @@ assert_eq "$(psql_app "select count(*) from app_farm_supply.rounds")" 1 "remove 
 purged farm-supply app_farm_supply
 
 echo "[store queue]"
+fresh_tokens
 # The App Store page queues rows in platform.app_requests; ./dxos worker installs, enables and removes per HTX.
 start_worker() {
   local _
@@ -500,6 +513,7 @@ web_status() { curl -s -o /dev/null -w '%{http_code}' "$WEB$1"; }
 ./dxos remove tea-shop --purge >/dev/null 2>&1 || true
 RS1=$(request tea-shop TC ENABLE)
 wait_request "$RS1" DONE "ENABLE tea-shop for TC -> DONE" 300
+fresh_tokens
 assert_eq "$(enabled_for tea-shop)" TC "tea-shop is enabled for TC only"
 wait_http 200 "manager token -> 200 on /apps/tea-shop/ after the worker installed it" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-shop/"
 LOC=$(post_loc "$TM" /apps/tea-shop/products --data-urlencode "name=Chè Oolong" --data-urlencode "pack=Hộp 100g" -d price_vnd=120000 -d stock=5 -d active=on)
@@ -518,6 +532,7 @@ wait_http 404 "removed tea-shop public route -> 404" -- "$APP_GW/apps/tea-shop/p
 assert_eq "$(psql_app "select count(*) from app_tea_shop.products where name = 'Chè Oolong'")" 1 "the product survives the disable"
 RS3=$(request tea-shop TC ENABLE)
 wait_request "$RS3" DONE "ENABLE tea-shop for TC again -> DONE" 120
+fresh_tokens
 wait_http 200 "tea-shop answers again after the second enable" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-shop/"
 grep -q 'Chè Oolong' <<<"$(app_curl -s "$APP_GW/apps/tea-shop/public/TC")" && pass "the product created before the disable is on the public page again" \
   || fail "the product is gone after the second enable"
@@ -533,6 +548,7 @@ pass "worker stops on TERM and frees its lock"
 ./dxos install miniapps/hello >/dev/null && pass "./dxos install miniapps/hello exits 0 (upgrade check)" || fail "install hello for the upgrade check"
 psql_app "drop table platform.app_requests, platform.app_enablements, platform.app_worker, platform.app_catalog" >/dev/null
 $COMPOSE run --rm platform-init >/dev/null 2>&1 || fail "platform-init after dropping the store tables"
+fresh_tokens
 assert_eq "$(psql_app "select app_id || ' ' || htx_code || ' ' || enabled_by from platform.app_enablements")" "hello * dxos-upgrade" \
   "first run of 06-app-store.sql enables the installed app for *"
 wait_http 200 "hello still answers after the upgrade" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
@@ -546,6 +562,7 @@ CID=$(hello_container); [ -n "$CID" ] || fail "app-hello not running before the 
 R9=$(psql_app "insert into platform.app_requests (app_id, htx_code, action, requested_by, status, started_at) values ('hello', 'LB', 'ENABLE', 'smoke', 'RUNNING', now()) returning id" | sed -n 1p)
 start_worker
 wait_request "$R9" FAILED "stale ENABLE of an installed app -> FAILED" 30
+fresh_tokens
 assert_eq "$(hello_container)" "$CID" "restarted worker kept the container of the installed app"
 wait_http 200 "hello still answers after the worker restart" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
 stop_worker
