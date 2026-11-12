@@ -18,7 +18,7 @@ jest.mock('@/infrastructure/db/repositories/PrismaHtxProfileRepository', () => (
   PrismaHtxProfileRepository: jest.fn().mockImplementation(() => ({ getProfile: async () => ({ name: 'HTX', address: 'A' }) })),
 }))
 jest.mock('@/infrastructure/db/repositories/prisma-installed-app-repository', () => ({
-  PrismaInstalledAppRepository: jest.fn().mockImplementation(() => ({ list: () => list() })),
+  PrismaInstalledAppRepository: jest.fn().mockImplementation(() => ({ list: (htxCode: string | null) => list(htxCode) })),
 }))
 jest.mock('@/components/layout/AppShell', () => ({
   AppShell: ({ navItems }: { navItems: { label: string; href: string }[] }) => (
@@ -59,6 +59,12 @@ describe.each([
     expect(items[items.length - 1]).toHaveTextContent('Xin chào')
     expect(items[items.length - 1]).toHaveAttribute('data-href', `/${role}/apps/hello`)
     expect(screen.getByText('Tổng quan')).toBeInTheDocument()
+  })
+
+  test('asks for the apps enabled for the session HTX', async () => {
+    list.mockResolvedValue([])
+    await renderLayout()
+    expect(list).toHaveBeenCalledWith('TC')
   })
 
   test('layouts keep their items when the app list fails', async () => {

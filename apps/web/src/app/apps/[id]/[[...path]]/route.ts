@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { appResponse, createPublicLimiter, forwardToApp } from '@/application/apps/forward-to-app'
+import { auth } from '@/auth'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
 import { getCoreToken } from '@/lib/auth/core-token'
 import { clientIp } from '@/lib/ip-rate-limit'
@@ -22,7 +23,14 @@ async function handle(req: Request, { params }: { params: { id: string; path?: s
     return appResponse('Ứng dụng tạm thời không phản hồi. Vui lòng thử lại sau.', 503)
   }
   if (!app) return appResponse('Không có ứng dụng này', 404)
-  return forwardToApp(req, app, params.path ?? [], { getToken: getCoreToken, fetchImpl: fetch, clientIp: clientIp(req), isPublicLimited })
+  return forwardToApp(req, app, params.path ?? [], {
+    getToken: getCoreToken,
+    fetchImpl: fetch,
+    clientIp: clientIp(req),
+    isPublicLimited,
+    getHtxCode: async () => (await auth())?.user?.htxCode ?? null,
+    isEnabledFor: (appId, htxCode) => installedApps.isEnabledFor(appId, htxCode),
+  })
 }
 
 export const GET = handle

@@ -27,9 +27,13 @@ export function appNavItems(apps: InstalledApp[], role: AppRole): NavItem[] {
 }
 
 /** The app items for a role layout; when the list cannot be read the menu shows no app, never an error (spec §9). */
-export async function loadAppNavItems(repository: { list: () => Promise<InstalledApp[]> }, role: AppRole): Promise<NavItem[]> {
+export async function loadAppNavItems(
+  repository: { list: (htxCode: string | null) => Promise<InstalledApp[]> },
+  role: AppRole,
+  htxCode: string | null,
+): Promise<NavItem[]> {
   try {
-    return appNavItems(await repository.list(), role)
+    return appNavItems(await repository.list(htxCode), role)
   } catch (cause) {
     logger.error('Mini-app menu unavailable', { role, cause })
     return []

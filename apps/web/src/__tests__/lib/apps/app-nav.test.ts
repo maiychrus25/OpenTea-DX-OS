@@ -42,15 +42,23 @@ describe('appNavItems', () => {
 describe('loadAppNavItems', () => {
   test('a repository error gives no app items and does not throw', async () => {
     const logError = jest.spyOn(logger, 'error').mockImplementation(() => undefined)
-    const items = await loadAppNavItems({ list: jest.fn().mockRejectedValue(new Error('db down')) }, 'manager')
+    const items = await loadAppNavItems({ list: jest.fn().mockRejectedValue(new Error('db down')) }, 'manager', 'TC')
     expect(items).toEqual([])
     expect(logError).toHaveBeenCalledWith('Mini-app menu unavailable', expect.anything())
     logError.mockRestore()
   })
 
   test('lists the items of the installed apps', async () => {
-    const items = await loadAppNavItems({ list: jest.fn().mockResolvedValue([hello]) }, 'farmer')
+    const list = jest.fn().mockResolvedValue([hello])
+    const items = await loadAppNavItems({ list }, 'farmer', 'TC')
     expect(items.map(item => item.href)).toEqual(['/farmer/apps/hello'])
+    expect(list).toHaveBeenCalledWith('TC')
+  })
+
+  test('a session without an HTX asks for the apps enabled for everyone only', async () => {
+    const list = jest.fn().mockResolvedValue([])
+    await loadAppNavItems({ list }, 'farmer', null)
+    expect(list).toHaveBeenCalledWith(null)
   })
 })
 

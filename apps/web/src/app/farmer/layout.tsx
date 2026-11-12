@@ -27,7 +27,7 @@ export default async function FarmerLayout({ children }: { children: React.React
     { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <Stethoscope size={20} /> },
     { label: 'Bản tin & thông báo', href: '/farmer/bulletin-notifications', icon: <Bell size={20} /> },
     { label: 'Tài khoản', href: '/farmer/profile', icon: <User size={20} /> },
-    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'farmer')),
+    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'farmer', session.user.htxCode ?? null)),
   ]
 
   return (

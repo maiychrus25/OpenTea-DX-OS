@@ -33,7 +33,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
     { label: 'Lô hàng', href: '/manager/lots', icon: <Package size={20} /> },
     { label: 'Thông báo', href: '/manager/notifications', icon: <Bell size={20} /> },
     { label: 'Hồ sơ HTX', href: '/manager/profile', icon: <Landmark size={20} /> },
-    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'manager')),
+    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'manager', session.user.htxCode ?? null)),
   ]
 
   return (

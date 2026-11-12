@@ -6,6 +6,7 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { GET, POST, dynamic } from '@/app/apps/[id]/[[...path]]/route'
 import { logger } from '@/lib/logger'
 
+jest.mock('@/auth', () => ({ auth: jest.fn().mockResolvedValue({ user: { id: 'u1', htxCode: 'TC' } }) }))
 jest.mock('@/lib/auth/core-token', () => ({ getCoreToken: jest.fn().mockResolvedValue('tok') }))
 jest.mock('@/infrastructure/db/prisma.client', () => ({ prisma: { $queryRaw: jest.fn() } }))
 
@@ -26,7 +27,7 @@ describe('/apps/[id]/[[...path]]', () => {
   })
 
   test('forwards only to installed apps', async () => {
-    queryRaw.mockResolvedValueOnce([row]).mockResolvedValueOnce([])
+    queryRaw.mockResolvedValueOnce([row]).mockResolvedValueOnce([{ enabled: true }]).mockResolvedValueOnce([])
     const get = () => GET(new Request('http://web/apps/hello/'), { params: { id: 'hello' } })
 
     const first = await get()
@@ -38,7 +39,15 @@ describe('/apps/[id]/[[...path]]', () => {
     const second = await get()
     expect(second.status).toBe(404)
     expect(global.fetch).toHaveBeenCalledTimes(1)
-    expect(queryRaw).toHaveBeenCalledTimes(2)
+    expect(queryRaw).toHaveBeenCalledTimes(3)
+  })
+
+  test('answers 404 for an installed app that the session HTX did not enable', async () => {
+    queryRaw.mockResolvedValueOnce([row]).mockResolvedValueOnce([{ enabled: false }])
+    const res = await GET(new Request('http://web/apps/hello/'), { params: { id: 'hello' } })
+    expect(res.status).toBe(404)
+    expect(global.fetch).not.toHaveBeenCalled()
+    expect(queryRaw.mock.calls[1].slice(1)).toEqual(['hello', 'TC'])
   })
 
   test('an unknown app is 404 for every method', async () => {

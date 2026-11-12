@@ -37,8 +37,36 @@ describe('PrismaInstalledAppRepository', () => {
     queryRaw.mockResolvedValueOnce([row]).mockResolvedValueOnce([])
     const repo = new PrismaInstalledAppRepository()
 
-    expect(await repo.list()).toHaveLength(1)
-    expect(await repo.list()).toEqual([])
+    expect(await repo.list('TC')).toHaveLength(1)
+    expect(await repo.list('TC')).toEqual([])
     expect(queryRaw).toHaveBeenCalledTimes(2)
+  })
+
+  test('list binds the HTX and keeps apps enabled for it or for *', async () => {
+    queryRaw.mockResolvedValue([row])
+    await new PrismaInstalledAppRepository().list("T'C")
+    const [strings, ...values] = queryRaw.mock.calls[0]
+    const text = strings.join('?')
+    expect(text).toContain('platform.app_enablements')
+    expect(text).toMatch(/htx_code = \?::text OR e\.htx_code = '\*'/)
+    expect(text).not.toContain("T'C")
+    expect(values).toEqual(["T'C"])
+  })
+
+  test('list(null) binds null, so only the * enablement can match', async () => {
+    queryRaw.mockResolvedValue([])
+    await new PrismaInstalledAppRepository().list(null)
+    expect(queryRaw.mock.calls[0].slice(1)).toEqual([null])
+  })
+
+  test('isEnabledFor binds both values', async () => {
+    queryRaw.mockResolvedValueOnce([{ enabled: true }]).mockResolvedValueOnce([{ enabled: false }])
+    const repo = new PrismaInstalledAppRepository()
+    await expect(repo.isEnabledFor('hello', 'TC')).resolves.toBe(true)
+    await expect(repo.isEnabledFor('hello', 'LB')).resolves.toBe(false)
+    const [strings, ...values] = queryRaw.mock.calls[0]
+    expect(strings.join('?')).toContain('platform.app_enablements')
+    expect(strings.join('?')).toContain("'*'")
+    expect(values).toEqual(['hello', 'TC'])
   })
 })
