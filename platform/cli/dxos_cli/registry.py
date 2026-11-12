@@ -23,5 +23,14 @@ def unregister(conn: psycopg.Connection, app_id: str) -> None:
     conn.execute("DELETE FROM platform.installed_apps WHERE id = %s", (app_id,))
 
 
+def enable(conn: psycopg.Connection, app_id: str, htx_code: str, enabled_by: str) -> None:
+    conn.execute("INSERT INTO platform.app_enablements (app_id, htx_code, enabled_by) VALUES (%s, %s, %s)"
+                 " ON CONFLICT (app_id, htx_code) DO NOTHING", (app_id, htx_code, enabled_by))
+
+
+def disable_all(conn: psycopg.Connection, app_id: str) -> None:
+    conn.execute("DELETE FROM platform.app_enablements WHERE app_id = %s", (app_id,))
+
+
 def installed_apps(conn: psycopg.Connection) -> list[tuple[str, str, datetime]]:
     return conn.execute("SELECT id, version, installed_at FROM platform.installed_apps ORDER BY id").fetchall()
