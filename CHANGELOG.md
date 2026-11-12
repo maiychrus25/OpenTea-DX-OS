@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.8.0] - 2026-11-12
+
 ### Added
 - **Mini-app manifest and `dxos validate`**: a mini-app is described by `app.yaml` (`apiVersion: dxos/v1`), published as the JSON Schema `platform/apps/manifest.schema.json` with `additionalProperties: false` everywhere. `./dxos validate <dir>...` refuses a manifest with a schema error, an `id` already installed, a licence outside the CLI's OSI list, a `requires.core` the core (`version` in `apps/web/package.json`) does not satisfy, an `image` not pinned by `@sha256:` digest, a route or menu path with `..`, `//` or characters outside `[a-z0-9/_-]`, a role other than `farmer`, `officer` and `manager`, a prefix listed as both public and protected, or a protected prefix nested under a public one (the web proxy would never send it a token). The developer guide is `docs/miniapps.md`; the decision is recorded in `docs/adr/0002-miniapp-architecture.md`
 - **`./dxos install`, `remove` and `list`**: `./dxos` at the repo root runs the `dxos-cli` container (profile `tools`, no host port, no docker socket) for the manifest, database, gateway, install journal and registry work, and starts or stops the app container itself with `docker compose`. Install validates the manifest, prepares the database (when declared), writes the app's APISIX routes under `/apps/<id>/` and the app's compose file, starts the container with `up -d --build --wait`, then records the app in `platform.installed_apps` (id, name, version, menu, manifest, install time; created by `platform-init` from `platform/postgres/init/05-apps.sql`). A failure at any step, a failing health check, Ctrl-C or TERM undoes the earlier steps in reverse order from the journal `docker/runtime/<project>/apps/<id>.pending.json`; installing an installed app only makes sure its container runs. `remove <id>` stops the container, removes the routes and the registry row and keeps the data; `--purge` also drops it. `list` prints id, version, install time and container state. Protected routes use `openid-connect` `bearer_only` with a `claim_schema` check on `realm_access.roles`; a token without one of the manifest's roles gets 401 from the gateway. The routes are merged with the tracked `platform/gateway/apisix.yaml` into `docker/runtime/<project>/gateway/apisix.yaml`, which APISIX reloads in place within about a second; with no app installed that file is identical to the base, and the tracked file is never modified. `make platform-up` and `make up` run `gateway-sync` first, so installed apps keep their routes and containers across a restart. App routes match only on the gateway's internal listener `9081` (`vars: [["server_port", "==", "9081"]]`), so the published `9080` answers 404 under `/apps/` and every outside request goes through the web proxy; `gateway-sync` refuses an app route without that condition
@@ -30,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`make platform-smoke` re-run on a seeded stack**: two checks of `smoke-dataops.sh` counted every LB reading, including the ones `[lifecycle]` backfills for the seeded LB parcels in the first run, so any second run failed. They now count only the fixture parcel `P-LB-001`, whose rows the section deletes first
 
 ### Upgrade notes
+- **Routes written before the internal-port fix**: an app installed from a pre-release build of this branch has a route file without the `9081` condition, and `gateway-sync` refuses it. Run `./dxos remove <id>` (it deletes that route file), then `./dxos install miniapps/<id>` again
 - **Start the stack with make**: `make platform-up` (or `make up`) creates `docker/runtime/<project>/gateway/apisix.yaml` and sets `DXOS_GATEWAY_FILE`. When starting `web` on its own, pass the same variable (`DXOS_GATEWAY_FILE=../docker/runtime/docker/gateway/apisix.yaml docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api`), or Compose recreates apisix on the base file and the app routes disappear until the next `make platform-up`
 - **First `make platform-up` recreates `postgres` and `apisix`**: their mounts changed (the new init file, the generated route file) and both join `dxos-apps-net`. The data in `docker_pgdata` is kept, and `platform-init` creates `platform.installed_apps` on the existing database. Never delete the `docker_*` volumes
 - **Runtime state per compose project**: generated files live under `docker/runtime/<project>/` (git-ignored), where `<project>` is the `COMPOSE_PROJECT_NAME` environment variable, default `docker`. Set the project with that variable; `./dxos` and the Makefile do not read `-p` or `docker/.env`. No app was installed before this release, so nothing needs moving
@@ -380,7 +385,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.8.0
 [1.7.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.7.0
 [1.6.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.6.0
 [1.5.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.5.0

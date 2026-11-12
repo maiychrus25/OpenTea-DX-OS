@@ -31,7 +31,7 @@ Kiểm tra manifest: `./dxos validate miniapps/hello`.
 
 - Gateway cắt tiền tố `/apps/<id>` trước khi chuyển request: app nhận `/`, `/echo`, `/healthz`.
 - Mọi link và form trong trang phải ghi lại tiền tố `/apps/<id>`, vì trình duyệt đi qua web và gateway.
-- Đọc claim từ header `Authorization: Bearer <token>` (`name` hoặc `preferred_username`, `htx_code`, `realm_access.roles`). App không kiểm chữ ký: chỉ gateway với tới được container của app, và gateway đã kiểm token.
+- Đọc claim từ header `Authorization: Bearer <token>` (`name` hoặc `preferred_username`, `htx_code`, `realm_access.roles`). App không kiểm chữ ký. Gateway kiểm token của người dùng, nhưng mọi mini-app đã cài dùng chung mạng `dxos-apps-net`, nên một app khác có thể gọi thẳng app này với token giả: chỉ cài mini-app đáng tin (ruling R24).
 - Trang không chạy JavaScript (`script-src 'none'`); dùng form HTML và chuyển hướng 303.
 - Thoát HTML mọi dữ liệu do người dùng gửi (`html.escape`).
 - Dùng stylesheet chung `/dxos-app.css` (token màu, chữ, form và nút của lõi; `<button class="secondary">`, `.notice`, `.error`, `.pill`).

@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Tầng 3: App Manifest, CLI `dxos` và mini-app
 
-> **Trạng thái:** Đã triển khai trên nhánh `feat/tier3-miniapps` (2026-11-11), chờ chủ dự án duyệt PR và phát hành `v1.8.0`. Xem "Ghi chú sau triển khai 3" ở cuối.
+> **Trạng thái:** Đã phát hành `v1.8.0` (2026-11-12). Xem "Ghi chú sau triển khai 3" ở cuối.
 > **Phạm vi:** Tầng 3 (milestone `v1.8.0`). Tiếp nối Tầng 2b (`docs/specs/2026-11-10-tier2b-tea-domain-design.md`, đã phát hành `v1.7.0`).
 > **Căn cứ:** Kế hoạch dự thi OLP 2026 (DX-OS Open-Core): mô hình cắm thêm mini-app qua App Manifest và CLI là điểm độc đáo chính của bài dự thi.
 
@@ -291,10 +291,10 @@ Phần này ghi chỗ code khác đặc tả và các số đo được khi hoà
   - migration chỉ ghi tên tệp, không có checksum;
   - `/apps/<id>` không có dấu `/` cuối trả 404 ở gateway.
 
-**Số đo khi hoàn tất** (hai vòng sạch trên `COMPOSE_PROJECT_NAME=dxos-clean`, HEAD gồm các sửa lỗi của Task 10):
+**Số đo khi hoàn tất** (vòng sạch cuối trên `COMPOSE_PROJECT_NAME=dxos-clean`, sau đợt sửa của review toàn nhánh):
 - `make test`: 1.413 test web qua, 3 bỏ qua (1.416 test, 130 bộ).
 - pytest:
-  - CLI 77;
+  - CLI 81;
   - `tea-tour` 44;
   - `disease-api` 17;
   - `scanner` 39;
@@ -302,7 +302,7 @@ Phần này ghi chỗ code khác đặc tả và các số đo được khi hoà
 - `hello`: 7 test (`unittest`).
 - realm 13; `seed-test.sh` 19 PASS.
 - `make platform-smoke`: 124 PASS, 0 FAIL.
-- `make apps-smoke`: 60 PASS, 0 FAIL, khoảng 290 giây. Lần chạy này gồm `platform-smoke` 124 PASS sau khi gỡ hết app.
+- `make apps-smoke`: 62 PASS, 0 FAIL, khoảng 280 giây. Lần chạy này gồm `platform-smoke` 124 PASS sau khi gỡ hết app.
 - Trình duyệt:
   - `core-tenant` 5;
   - câu chuyện A3 1;
