@@ -405,7 +405,8 @@ stop_worker() {
   kill -0 "$WORKER_PID" 2>/dev/null && fail "worker did not stop within 40 s after TERM"
   WORKER_PID=""
 }
-request() { psql_app "insert into platform.app_requests (app_id, htx_code, action, requested_by) values ('$1', '$2', '$3', 'smoke') returning id" | head -n 1; }
+# sed -n 1p, not head -n 1: head closes the pipe early and docker compose exec then exits 255 without a message.
+request() { psql_app "insert into platform.app_requests (app_id, htx_code, action, requested_by) values ('$1', '$2', '$3', 'smoke') returning id" | sed -n 1p; }
 request_status() { psql_app "select status from platform.app_requests where id = '$1'"; }
 # wait_request <id> <status> <msg> [seconds]: poll until the request is closed or has the status.
 wait_request() {
@@ -542,7 +543,7 @@ cli_run catalog-sync >/dev/null
 
 # A restarted worker must fail a stale request but leave the container of a registered app alone.
 CID=$(hello_container); [ -n "$CID" ] || fail "app-hello not running before the stale-request check"
-R9=$(psql_app "insert into platform.app_requests (app_id, htx_code, action, requested_by, status, started_at) values ('hello', 'LB', 'ENABLE', 'smoke', 'RUNNING', now()) returning id" | head -n 1)
+R9=$(psql_app "insert into platform.app_requests (app_id, htx_code, action, requested_by, status, started_at) values ('hello', 'LB', 'ENABLE', 'smoke', 'RUNNING', now()) returning id" | sed -n 1p)
 start_worker
 wait_request "$R9" FAILED "stale ENABLE of an installed app -> FAILED" 30
 assert_eq "$(hello_container)" "$CID" "restarted worker kept the container of the installed app"
