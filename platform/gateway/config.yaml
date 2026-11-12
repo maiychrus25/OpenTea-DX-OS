@@ -7,6 +7,8 @@ deployment:
 apisix:
   node_listen: [9080, 9081]  # 9081 is for the compose network only, never published
   enable_admin: false
+  # Docker's DNS answers with a 600 s TTL and reuses a removed app's IP: re-resolve upstream app names every second.
+  dns_resolver_valid: 1
 plugins:
   - request-id
   - cors

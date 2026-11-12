@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **`make platform-smoke` re-run on a seeded stack**: two checks of `smoke-dataops.sh` counted every LB reading, including the ones `[lifecycle]` backfills for the seeded LB parcels in the first run, so any second run failed. They now count only the fixture parcel `P-LB-001`, whose rows the section deletes first
+- **The gateway could send one mini-app's requests to another after a reinstall**: Docker's DNS answers app names with a 600 s TTL and gives a removed app's IP to the next container, and APISIX kept the old answer. After `./dxos remove tea-tour`, `./dxos install miniapps/hello` and a reinstall of `tea-tour`, tea-tour's requests, with the user's token, reached `hello` (CI run 43178558735: creating a tour got hello's 404). `platform/gateway/config.yaml` now sets `apisix.dns_resolver_valid: 1`, so the gateway resolves app names again every second. `make apps-smoke` first replays that sequence and checks that 30 requests on new connections all reach `tea-tour`
 
 ### Upgrade notes
 - **Routes written before the internal-port fix**: an app installed from a pre-release build of this branch has a route file without the `9081` condition, and `gateway-sync` refuses it. Run `./dxos remove <id>` (it deletes that route file), then `./dxos install miniapps/<id>` again

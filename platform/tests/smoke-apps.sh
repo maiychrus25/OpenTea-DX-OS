@@ -64,6 +64,38 @@ TM=$(user_token smoke_manager_tc); [ -n "$TM" ] && [ "$TM" != null ] || fail "sm
 TF=$(user_token smoke_farmer_tc); [ -n "$TF" ] && [ "$TF" != null ] || fail "smoke_farmer_tc token empty"
 pass "smoke client and users ready"
 
+echo "[reinstall after another app may take the old address]"
+# CI run 43178558735: Docker gave hello the IP a removed tea-tour had, and the gateway still held tea-tour's old DNS
+# answer (600 s TTL), so tea-tour's requests and the user's token went to hello. Each gateway worker keeps its own
+# cache: tour_gets asks 30 times, each on a new connection, so the requests spread over the workers.
+tour_gets() { app_curl -s -H 'Connection: close' -H "Authorization: Bearer $TM" -w '\n%{http_code} %{size_download}\n' "$APP_GW$1?n=[1-30]"; }
+app_ip() { docker inspect -f "{{(index .NetworkSettings.Networks \"${COMPOSE_PROJECT_NAME:-docker}_dxos-apps-net\").IPAddress}}" \
+  "$(docker ps -q --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-docker}" --filter "label=com.docker.compose.service=app-$1")"; }
+./dxos remove tea-tour --purge >/dev/null 2>&1 || true
+./dxos install miniapps/tea-tour >/dev/null && pass "./dxos install miniapps/tea-tour exits 0" || fail "./dxos install miniapps/tea-tour"
+wait_http 200 "manager token -> 200 on /apps/tea-tour/" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-tour/"
+TITLE="Tour reinstall $$"
+HDRS=$(app_curl -s -D - -o /dev/null -H "Authorization: Bearer $TM" --data-urlencode "title=$TITLE" \
+  --data-urlencode "starts_at=$(( $(date +%Y) + 1 ))-06-01T07:30" --data-urlencode "meeting_point=Nhà văn hoá xóm Hồng Thái" \
+  -d seats=5 -d price_vnd=250000 -d guide=hh_tc_1 "$APP_GW/apps/tea-tour/tours")
+LOC=$(grep -i '^location:' <<<"$HDRS" | tr -d '\r' | cut -d' ' -f2)
+[[ "$LOC" =~ ^/apps/tea-tour/tours/[0-9a-f-]{36}$ ]] && pass "manager creates a tour before the reinstall" || fail "create tour not 303: $HDRS"
+assert_eq "$(tour_gets "$LOC" | grep -c '^200 ')" 30 "tour page -> 200 on 30 connections (every worker caches app-tea-tour)"
+OLD_IP=$(app_ip tea-tour)
+./dxos remove tea-tour >/dev/null && pass "./dxos remove tea-tour (data kept) exits 0" || fail "./dxos remove tea-tour"
+./dxos install miniapps/hello >/dev/null && pass "./dxos install miniapps/hello exits 0" || fail "./dxos install miniapps/hello"
+HELLO_IP=$(app_ip hello)
+./dxos install miniapps/tea-tour >/dev/null && pass "./dxos reinstall of tea-tour exits 0" || fail "./dxos reinstall of tea-tour"
+echo "  app-tea-tour was $OLD_IP, hello got $HELLO_IP$([ "$OLD_IP" = "$HELLO_IP" ] && echo ' (reused)'), app-tea-tour is now $(app_ip tea-tour)"
+wait_http 200 "manager token -> 200 on /apps/tea-tour/ after the reinstall" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-tour/"
+OUT=$(tour_gets "$LOC")
+assert_eq "$(grep -c '^200 ' <<<"$OUT")" 30 "kept tour page -> 200 on all 30 connections after the reinstall"
+assert_eq "$(grep -c "<h1>$TITLE " <<<"$OUT")" 30 "all 30 answers render the kept tour, which only tea-tour has"
+grep -q -e '^404 21$' -e 'Không có trang này' <<<"$OUT" && fail "a request to tea-tour got hello's 404: $(grep -c '^404 21$' <<<"$OUT") of 30" \
+  || pass "no request to tea-tour got hello's 21-byte 404"
+./dxos remove tea-tour --purge >/dev/null && ./dxos remove hello >/dev/null && pass "tea-tour (--purge) and hello removed" \
+  || fail "remove tea-tour --purge / hello"
+
 echo "[install hello]"
 ./dxos remove hello >/dev/null 2>&1 || true  # an orphan app-hello container a crashed run left (the guard refuses a registered hello)
 ./dxos install miniapps/hello && pass "./dxos install miniapps/hello exits 0" || fail "./dxos install miniapps/hello"

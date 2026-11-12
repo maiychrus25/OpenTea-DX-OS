@@ -286,6 +286,7 @@ Phần này ghi chỗ code khác đặc tả và các số đo được khi hoà
 - **Bảng trên điện thoại.** Dưới 640 px, `/dxos-app.css` xếp mỗi dòng bảng thành một thẻ có nhãn cột (`data-label`). Bảng của `tea-tour` có thêm vai trò ARIA.
 - **Re-run `platform-smoke`.** `apps-smoke` chạy lại `platform-smoke` trên stack đã seed, nên hai phép kiểm LB trong `smoke-dataops.sh` được giới hạn vào thửa fixture `P-LB-001` (lỗi có từ trước, lộ ra ở Task 9).
 - **§6.2, tin cậy giữa các app (R24).** Spec ghi app "không nhận request từ dịch vụ nào ngoài gateway". Điều này không đúng khi có hai app trở lên: mọi app dùng chung `dxos-apps-net` và gọi thẳng được nhau với token tự tạo, vì app không kiểm chữ ký token. Trong v1.8.0 chỉ cài app tin cậy; cách ly thật để sang v1.9.
+- **Gateway phân giải lại tên app mỗi giây.** DNS của Docker trả TTL 600 giây và cấp lại IP của app vừa gỡ cho container kế tiếp, nên sau khi gỡ `tea-tour`, cài `hello` rồi cài lại `tea-tour`, APISIX gửi request của `tea-tour` (kèm token người dùng) tới `hello` (CI run 43178558735). `platform/gateway/config.yaml` đặt `apisix.dns_resolver_valid: 1`, và `apps-smoke` chạy lại đúng kịch bản này.
 - **Các giới hạn còn lại** được ghi trong CHANGELOG ("Known limits"):
   - phép kiểm phụ thuộc trước khi `--purge` chỉ xét bảng, kiểu và hàm;
   - migration chỉ ghi tên tệp, không có checksum;
