@@ -69,13 +69,14 @@ install() {
     app "$id" up -d --wait "app-$id"
     return
   fi
-  # prepare undoes its own steps when it fails; abort only retries an undo that failed (no-op otherwise).
-  cli prepare "$dir" || { cli abort "$id" || true; exit 1; }
-  # Ctrl-C (or TERM) from here to commit must not leave a journal, route or container behind.
+  # Ctrl-C (or TERM) from here to commit must not leave a journal, route, schema or container behind. Set before
+  # prepare, so an interrupt inside it is undone too; abort is a no-op when prepare had not written the journal yet.
   # shellcheck disable=SC2064  # expand the validated id now
   trap "undo_install $id 130" INT
   # shellcheck disable=SC2064
   trap "undo_install $id 143" TERM
+  # prepare undoes its own steps when it fails; abort only retries an undo that failed (no-op otherwise).
+  cli prepare "$dir" || { cli abort "$id" || true; exit 1; }
   if app "$id" up -d --build --wait "app-$id" && cli commit "$id"; then
     trap - INT TERM
     echo "Đã cài $id"

@@ -11,6 +11,17 @@ source platform/tests/tokens.sh
 
 command -v jq >/dev/null || { echo "jq is required (brew/apt install jq)"; exit 1; }
 
+# This smoke purges tea-tour's and hello's data, so it must never run on a stack where either is really installed.
+# Checked before the EXIT trap below, which would otherwise remove them on the way out.
+LISTED=$(./dxos list) || { echo "./dxos list failed; apps-smoke did not start"; exit 1; }
+for id in tea-tour hello; do
+  if grep -qxF "$id" <<<"$(cut -f1 <<<"$LISTED")"; then
+    echo "apps-smoke xoá dữ liệu của tea-tour và hello, nhưng stack này đang cài $id. Không chạy trên stack có dữ liệu thật;" \
+      "hãy chạy trên stack riêng (COMPOSE_PROJECT_NAME=dxos-clean make platform-up) hoặc gỡ $id trước." >&2
+    exit 1
+  fi
+done
+
 # Whatever fails, leave no app behind (the registry, docker/runtime/<project> and the containers outlive this script).
 trap 'rc=$?; ./dxos remove tea-tour --purge >/dev/null 2>&1 || true; ./dxos remove db-app --purge >/dev/null 2>&1 || true; ./dxos remove broken-health >/dev/null 2>&1 || true; ./dxos remove hello >/dev/null 2>&1 || true; exit $rc' EXIT
 
@@ -54,7 +65,7 @@ TF=$(user_token smoke_farmer_tc); [ -n "$TF" ] && [ "$TF" != null ] || fail "smo
 pass "smoke client and users ready"
 
 echo "[install hello]"
-./dxos remove hello >/dev/null 2>&1 || true  # start from a stack without hello, so the smoke can be re-run
+./dxos remove hello >/dev/null 2>&1 || true  # an orphan app-hello container a crashed run left (the guard refuses a registered hello)
 ./dxos install miniapps/hello && pass "./dxos install miniapps/hello exits 0" || fail "./dxos install miniapps/hello"
 wait_http 200 "manager token -> 200 on /apps/hello/" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
 assert_http 404 "published port 9080 -> 404 on /apps/hello/ while hello is installed (R23)" -- \
