@@ -51,6 +51,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 - Bảng `platform.app_enablements(id, app_id, htx_code, enabled_by, enabled_at)`, duy nhất theo `(app_id, htx_code)`. `htx_code = '*'` nghĩa là bật cho mọi HTX.
 - Một HTX **dùng được** app khi app có trong `platform.installed_apps` và có dòng bật cho HTX đó hoặc cho `'*'`.
 - `./dxos install` ghi dòng `'*'` khi đăng ký app; `./dxos remove` xoá mọi dòng bật của app.
+- **Nâng cấp từ bản chưa có kho:** lần chạy `platform-init` tạo ra bảng `app_enablements` ghi dòng `'*'` (`enabled_by = 'dxos-upgrade'`) cho mọi app đang có trong `installed_apps`, vì trước đó app cài bằng `./dxos install` phục vụ mọi HTX. Các lần chạy sau không ghi lại: app đã cài mà không còn dòng bật nào là trạng thái hợp lệ (mọi HTX đã gỡ nhưng gỡ container hỏng).
 - **Menu:** chỉ hiện mục của app mà HTX của người dùng dùng được.
 - **Proxy, trang có đăng nhập:** HTX lấy từ phiên đăng nhập; HTX chưa bật nhận 404.
 - **Proxy, trang công khai:** quy ước chung là đoạn đường dẫn ngay sau tiền tố công khai là mã HTX, ví dụ `/apps/tea-shop/public/TC/...`. HTX đó chưa bật thì 404. `tea-tour` đã theo quy ước này.
@@ -61,7 +62,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 - Bảng `platform.app_requests(id, app_id, htx_code, action, requested_by, status, error, created_at, started_at, finished_at)`; `action` là `ENABLE` hoặc `DISABLE`; `status` là `PENDING`, `RUNNING`, `DONE` hoặc `FAILED`. Mỗi cặp `(app_id, htx_code)` chỉ có tối đa một yêu cầu đang mở (`PENDING` hoặc `RUNNING`).
 - Bảng một dòng `platform.app_worker(seen_at)` giữ nhịp tim của worker.
 - `./dxos worker` chạy trên máy chủ bằng tài khoản người vận hành, mỗi lúc một việc:
-  1. Lúc khởi động: `catalog-sync`; chuyển yêu cầu `RUNNING` còn sót thành `FAILED` ("worker khởi động lại") và hoàn tác bản cài dở của app đó.
+  1. Lúc khởi động: `catalog-sync`; chuyển yêu cầu `RUNNING` còn sót thành `FAILED` ("worker khởi động lại") và hoàn tác bản cài dở của app đó. Chỉ hoàn tác khi app **chưa** có trong `installed_apps`: app đã đăng ký có thể đang phục vụ HTX khác, nên container của nó không bị đụng tới.
   2. Lấy yêu cầu `PENDING` cũ nhất, đặt `RUNNING`, cập nhật nhịp tim (lệnh lấy việc chờ tối đa 30 giây rồi trả về, để không phải khởi động container liên tục).
   3. `ENABLE`: nếu app chưa cài, chạy đúng luồng cài hiện có với thư mục `miniapps/<app_id>`, không ghi dòng `'*'`. Thành công thì ghi dòng bật cho HTX và đặt `DONE`. Hỏng thì hoàn tác như `./dxos install` và đặt `FAILED` kèm lý do ngắn bằng tiếng Việt.
   4. `DISABLE`: xoá dòng bật của HTX. Nếu app không còn dòng bật nào, chạy luồng `remove` hiện có (không `--purge`). Đặt `DONE`.
@@ -78,7 +79,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
   - **Đã cài** → nút **Gỡ**, có bước xác nhận và dòng "Dữ liệu được giữ lại".
   - **Đã cài cho mọi HTX (quản trị máy chủ)** → không có nút.
   - **Lỗi** → hiện lý do và nút **Thử lại**.
-- Worker không có nhịp tim trong 30 giây: trang hiện cảnh báo "Trình cài đặt chưa chạy. Yêu cầu sẽ được xử lý khi quản trị máy chủ bật `./dxos worker`."
+- Worker được coi là đang chạy khi có nhịp tim trong 30 giây gần nhất, hoặc khi có một yêu cầu `RUNNING` bắt đầu chưa quá 15 phút (worker không gửi nhịp tim trong lúc cài, và lần cài đầu phải build image). Ngoài hai trường hợp đó, trang hiện cảnh báo "Trình cài đặt chưa chạy. Yêu cầu sẽ được xử lý khi quản trị máy chủ bật `./dxos worker`."
 - API: `GET /api/app-store` (danh mục, trạng thái của HTX người gọi, worker còn sống hay không) và `POST /api/app-store/requests` với `{ appId, action }`. Chỉ vai trò `manager`; HTX lấy từ `requireTenant()`, không lấy từ thân request.
 - `POST` từ chối: app không có trong danh mục (404); đã có yêu cầu đang mở (409); `ENABLE` khi HTX đã bật, `DISABLE` khi HTX chưa bật hoặc app bật theo `'*'` (409).
 - Giao diện theo `DESIGN.md`: chỉ dùng token, sáng/tối nhất quán, không tràn ngang ở 390 px, có trạng thái rỗng, đang tải và lỗi.
