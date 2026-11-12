@@ -30,8 +30,9 @@ and installed with the `dxos` CLI (`./dxos install|remove|list|validate`).
 - **Process:** one container per app, built from the app directory or pulled
   by `@sha256:` digest. The CLI generates its compose file with fixed settings
   that the manifest cannot change:
-  - network `dxos-apps-net` only (`internal: true`, shared with `apisix` and
-    `postgres` alone), no host port;
+  - network `dxos-apps-net` only (`internal: true`; besides the apps it holds
+    only `apisix` and `postgres`, and every installed app shares it), no host
+    port;
   - user `10001:10001`, read-only root filesystem, `/tmp` tmpfs;
   - `cap_drop: [ALL]`, `no-new-privileges`;
   - 256 MB of memory and 0.5 CPU.
@@ -42,14 +43,23 @@ and installed with the `dxos` CLI (`./dxos install|remove|list|validate`).
   - Protected prefixes use `openid-connect` `bearer_only`, plus a `claim_schema`
     check on `realm_access.roles` with the manifest's roles.
   - The tracked file is never modified at runtime.
+  - App routes match only on the internal listener `9081`
+    (`vars: [["server_port", "==", "9081"]]`, ruling R23), so the published
+    `9080` answers 404 under `/apps/` and every outside request goes through
+    the web proxy. `gateway-sync` refuses an app route without that condition.
 - **Sign-in:**
   - The web app proxies `/apps/<id>/...` to `apisix:9081`. It attaches the
     user's access token, taken server-side by `getCoreToken()`, on protected
     paths only.
   - It forwards only to ids in `platform.installed_apps`, drops the browser's
     cookies and authorization headers, and refuses cross-site writes.
-  - The app reads claims from the token that the gateway verified. Only the
-    gateway can reach the app, and that is the trust boundary.
+  - The app decodes the token's claims without verifying its signature; on a
+    user request the gateway has verified it. The gateway is not the only
+    path to an app, though: every installed app shares `dxos-apps-net` and can
+    call another app directly with a forged token. In v1.8.0 the trust
+    boundary is therefore the set of installed apps, so only trusted apps may
+    be installed (ruling R24). Per-app isolation (JWT verification or a
+    network per app) is deferred to v1.9.
 - **Data:**
   - Each app gets a schema and a login role, both `app_<id>`, with rights on
     that schema only and a connection cap.

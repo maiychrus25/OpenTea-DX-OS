@@ -19,6 +19,7 @@ trình duyệt ──▶ web  /apps/<id>/<path>?<query>
                  │  route cần đăng nhập: gắn access token của người dùng
                  ▼
                APISIX :9081  /apps/<id>/<path>?<query>
+                 │  route app chỉ khớp ở cổng nội bộ 9081 (R23)
                  │  route cần đăng nhập: openid-connect bearer_only + kiểm vai trò
                  │  cắt tiền tố /apps/<id>
                  ▼
@@ -29,6 +30,7 @@ trình duyệt ──▶ web  /apps/<id>/<path>?<query>
 - Trình duyệt luôn đi qua web và gateway, nên **mọi link, form và chuyển hướng trong trang phải ghi đầy đủ tiền tố `/apps/<id>`**.
   - `hello` dùng hằng `PREFIX = "/apps/hello"`.
   - Với FastAPI/Starlette, chạy uvicorn với `--root-path /apps/<id>` để app biết tiền tố của chính nó (xem `miniapps/tea-tour/Dockerfile`).
+- Route của app chỉ khớp ở cổng nội bộ `9081` của gateway (`vars: [["server_port", "==", "9081"]]`, R23), cổng mà chỉ mạng compose thấy. Cổng `9080` mở ra máy chủ trả 404 cho mọi `/apps/...`, nên request từ ngoài luôn phải qua web và các kiểm tra của web proxy. `gateway-sync` từ chối route app thiếu điều kiện này.
 - Gateway chỉ có route cho các tiền tố khai trong manifest. Đường dẫn ngoài mọi tiền tố trả 404 từ gateway. `/apps/<id>` không có dấu `/` cuối cũng trả 404 ở gateway, nhưng web proxy luôn gửi `/apps/<id>/...`.
 - Header request tới app chỉ gồm `content-type`, `accept`, `content-length`, và `authorization` trên route cần đăng nhập. App không nhận cookie.
 - Header phản hồi về trình duyệt chỉ giữ `content-type` và `location`. `set-cookie` và CSP riêng của app bị bỏ, nên **app không dùng được cookie hay session**; trạng thái nằm trong URL, form và database.
@@ -84,8 +86,9 @@ Trên route cần đăng nhập, app nhận `Authorization: Bearer <access token
 | `realm_access.roles` | vai trò; chỉ dùng `farmer`, `officer`, `manager` |
 
 **Ranh giới tin cậy:**
-- App **không** kiểm chữ ký token. Chỉ APISIX với tới được container của app (mạng `dxos-apps-net`, §7), và APISIX chỉ chuyển request sau khi đã kiểm token.
-- Vì vậy app phải coi claim là dữ liệu đã kiểm, nhưng vẫn đọc cẩn thận: claim lạ hoặc thiếu thì coi như không có vai trò, không được làm app lỗi. Xem `read_claims` trong `miniapps/tea-tour/tea_tour/claims.py` và `claims` trong `miniapps/hello/app.py`.
+- App **không** kiểm chữ ký token, chỉ giải mã nó. Với request của người dùng, APISIX đã kiểm token trước khi chuyển tới app.
+- **Nhưng gateway không phải đường duy nhất tới app:** mọi app đã cài dùng chung mạng `dxos-apps-net` (§7), nên một app khác gọi thẳng được `app-<id>:<port>` với token tự tạo (HTX và vai trò tuỳ ý) và đọc hoặc sửa dữ liệu của app này. Vì vậy **chỉ cài app tin cậy**, như code lõi. Cách ly thật cho từng app (kiểm JWT, hoặc mỗi app một mạng riêng) để sang v1.9.
+- Claim từ gateway là dữ liệu đã kiểm, nhưng app vẫn đọc cẩn thận: claim lạ hoặc thiếu thì coi như không có vai trò, không được làm app lỗi. Xem `read_claims` trong `miniapps/tea-tour/tea_tour/claims.py` và `claims` trong `miniapps/hello/app.py`.
 - App vẫn tự kiểm vai trò cho từng trang (phòng thủ nhiều lớp). `tea-tour` trả 403 khi vai trò không khớp.
 - **Mọi truy vấn lọc theo `htx_code` lấy từ token**, không bao giờ theo giá trị từ URL hay form.
 - Trên route công khai, app không nhận header `Authorization` (web bỏ header của trình duyệt), nên phải tự validate mọi dữ liệu vào.
@@ -176,7 +179,7 @@ Khi manifest khai `database`, `dxos install`:
   - Giới hạn tính trong từng tiến trình web.
   - Bảng đếm giữ tối đa 10.000 IP; khi đầy, IP mới dùng chung một nhóm.
   - Route cần đăng nhập không bị tính.
-- **Biến `DXOS_APP_PUBLIC_LIMIT`** (container `web`, đọc qua Compose interpolation, mặc định `10`) đổi giới hạn. Chỉ CI nâng nó, cho các spec trình duyệt cùng chạy từ một IP; production và compose giữ `10`. Giá trị không phải số nguyên dương thì dùng `10`.
+- **Biến `DXOS_APP_PUBLIC_LIMIT`** (container `web`, đọc qua Compose interpolation, mặc định `10`) đổi giới hạn. CI nâng nó lên 1000 cho các spec trình duyệt cùng chạy từ một IP. Máy demo chạy Docker Desktop cũng nên nâng nó (ví dụ 300), vì Docker Desktop cho web thấy mọi client trong LAN là một IP, nên giới hạn thành chung cho cả phòng (README, "Chuẩn bị demo"). Production và mặc định của compose giữ `10`. Giá trị không phải số nguyên dương thì dùng `10`.
 
 ## 7. Container được khoá chặt
 
@@ -184,7 +187,7 @@ Khi manifest khai `database`, `dxos install`:
 
 | Thiết lập | Giá trị |
 | --- | --- |
-| Mạng | chỉ `dxos-apps-net`: `internal: true`, nên không ra internet; chỉ có `apisix` và `postgres` |
+| Mạng | chỉ `dxos-apps-net`: `internal: true`, nên không ra internet; ngoài các app chỉ có `apisix` và `postgres`. Mọi app đã cài dùng chung mạng này và gọi được nhau (§3) |
 | Cổng ra máy chủ | không có |
 | User | `10001:10001`, bất kể `USER` của image |
 | Hệ thống tệp | `read_only: true`; chỉ `/tmp` (tmpfs) ghi được |
@@ -196,7 +199,8 @@ Khi manifest khai `database`, `dxos install`:
 Hệ quả cho người viết app:
 - Image phải có `python` (cho health check) và mọi tệp phải đọc được bởi uid 10001.
 - Cài thư viện **lúc build**; lúc chạy không có mạng ra ngoài.
-- App chỉ gọi được gateway (`apisix:9081`) và Postgres (`postgres:5432`), không gọi được dịch vụ lõi nào khác. Không dịch vụ nào ngoài gateway gửi request tới app.
+- App chỉ gọi được gateway (`apisix:9081`), Postgres (`postgres:5432`) và các app khác đã cài, không gọi được dịch vụ lõi nào khác.
+- Trong lõi, chỉ gateway gửi request tới app. Các app khác cùng mạng cũng gọi thẳng được app (§3), nên chỉ cài app tin cậy.
 
 ## 8. Lệnh `./dxos`
 
@@ -235,6 +239,8 @@ Tệp đang được git theo dõi không bao giờ bị sửa lúc chạy. `mak
   ```
 
 **Kiểm thử tích hợp:** `make apps-smoke` (sau `npm run seed` và `make platform-smoke`) cài và gỡ `hello`, `tea-tour` và các fixture của CLI, kiểm route, quyền, rollback, idempotent và `--purge`, rồi chạy lại `make platform-smoke` trên stack không có app.
+
+> **Cảnh báo:** `make apps-smoke` xoá dữ liệu của `tea-tour` (`--purge`) và của các fixture. Không chạy nó trên stack có dữ liệu thật; hãy dùng stack riêng như `COMPOSE_PROJECT_NAME=dxos-clean`. Script tự dừng với mã 1 khi `./dxos list` cho thấy `tea-tour` hoặc `hello` đang được cài.
 
 ## 9. Mười phút với `hello`
 

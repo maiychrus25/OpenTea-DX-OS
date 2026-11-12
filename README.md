@@ -305,6 +305,9 @@ DXOS_GATEWAY_FILE=../docker/runtime/docker/gateway/apisix.yaml \
 make apps-smoke                         # kiểm thử tích hợp (sau npm run seed và make platform-smoke)
 ```
 
+> [!WARNING]
+> `make apps-smoke` xoá dữ liệu của `tea-tour` (`--purge`) và của các fixture. Không chạy nó trên stack có dữ liệu thật, ví dụ stack demo sau khi đã chuẩn bị dữ liệu; hãy dùng stack riêng (`COMPOSE_PROJECT_NAME=dxos-clean`). Script tự dừng với mã 1 khi `tea-tour` hoặc `hello` đang được cài.
+
 - Mục "Tour đồi chè" hiện trong menu của quản lý, "Lịch dẫn tour" trong menu của nông hộ. Gỡ app thì mục menu biến mất ở lần tải trang sau và `/apps/tea-tour/...` trả 404 ngay.
 - Tệp sinh ra nằm dưới `docker/runtime/<project>/` (git-ignored). `<project>` lấy từ biến môi trường `COMPOSE_PROJECT_NAME`, mặc định `docker`. Hãy đặt project bằng biến này, không dùng cờ `-p`.
 - Một `docker compose up` trần chạy lõi mà không có route app nào. Khi bật riêng `web`, đặt `DXOS_GATEWAY_FILE` như trên, nếu không APISIX bị tạo lại với tệp route gốc.
@@ -322,6 +325,12 @@ make apps-smoke                         # kiểm thử tích hợp (sau npm run 
   docker compose -f docker/docker-compose.yml -f docker/runtime/docker/apps/tea-tour.compose.yml build app-tea-tour
   ```
 - Với image đã build, `./dxos install miniapps/tea-tour` mất khoảng 11–12 giây.
+- **Nâng giới hạn công khai trên máy demo.** Docker Desktop (macOS, Windows) cho container `web` thấy mọi client, từ điện thoại trong LAN tới trình duyệt của người trình bày, là cùng một IP. Giới hạn 10 request mỗi phút của route công khai vì thế thành giới hạn chung cho cả phòng, trong khi một lượt đặt tour tốn khoảng 3 request. Chỉ vài khách quét QR trong cùng một phút là đã gặp trang 429. Trên máy demo, bật web với giới hạn cao hơn:
+  ```bash
+  DXOS_APP_PUBLIC_LIMIT=300 DXOS_GATEWAY_FILE=../docker/runtime/docker/gateway/apisix.yaml \
+    docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
+  ```
+  Biến chỉ có hiệu lực cho lần bật web này. Mặc định 10 của compose và production giữ nguyên.
 - Câu chuyện tour trên trình duyệt (sau `npm run seed`, `make platform-smoke` và `./dxos install miniapps/tea-tour`):
   ```bash
   cd apps/web && E2E_CORE=1 E2E_TEA_TOUR=installed E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/story/tea-tour.spec.ts --project=chromium --no-deps
@@ -333,7 +342,8 @@ make apps-smoke                         # kiểm thử tích hợp (sau npm run 
 > 1. Bản phát hành chưa cài được mini-app (xem mục Bản phát hành).
 > 2. Giới hạn 10 request mỗi phút cho mỗi IP trên route công khai tính trong từng tiến trình web và tin vào `X-Forwarded-For`, giống `/api/register`.
 > 3. Role của app vẫn có quyền `CONNECT` vào các database khác qua `PUBLIC`.
-> 4. Chi tiết và cách nâng cấp: mục `[Unreleased]` của [CHANGELOG.md](./CHANGELOG.md).
+> 4. Tin cậy giữa các app: mọi app đã cài dùng chung mạng `dxos-apps-net`, và app chỉ giải mã token mà không kiểm chữ ký. Một app khác gọi thẳng được app với token tự tạo, nên chỉ cài app tin cậy. Cách ly thật cho từng app (kiểm JWT hoặc mạng riêng cho mỗi app) để sang v1.9.
+> 5. Chi tiết và cách nâng cấp: mục `[Unreleased]` của [CHANGELOG.md](./CHANGELOG.md).
 
 ## 🔨 Biên dịch từ Mã nguồn (Build from Source)
 

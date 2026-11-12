@@ -239,7 +239,7 @@ Nối tiếp câu chuyện A3, khoảng 3 phút:
 
 Phần này ghi chỗ code khác đặc tả và các số đo được khi hoàn tất Tầng 3 (nhánh `feat/tier3-miniapps`, 2026-11-11). Thân đặc tả ở trên giữ nguyên. Hướng dẫn cho người viết app nằm ở `docs/miniapps.md`, quyết định kiến trúc ở `docs/adr/0002-miniapp-architecture.md`.
 
-**Các ruling (R1–R22).**
+**Các ruling (R1–R24).**
 - **R1:** web đọc `platform.installed_apps` bằng Prisma `$queryRaw`, không thêm metadata Hasura, vì request công khai không có token và bảng là dữ liệu nền tảng, không thuộc HTX nào.
 - **R2:** giới hạn 10 request/phút/IP của route công khai nằm ở web proxy, không ở APISIX, vì APISIX chỉ thấy IP của container web trên cổng `9081`. Bộ đếm theo IP của `/api/register` được tách ra `apps/web/src/lib/ip-rate-limit.ts` để dùng chung.
 - **R3:** APISIX kiểm vai trò bằng `openid-connect.claim_schema` trên `realm_access.roles`. `tea-tour` chỉ cấp `/` cho `manager` và `/guide` cho `farmer` (ít quyền nhất), không cấp cả ba vai trò như ví dụ ở §4.
@@ -262,12 +262,14 @@ Phần này ghi chỗ code khác đặc tả và các số đo được khi hoà
 - **R20:** `tea-tour` giữ tối đa 8 kết nối DB đồng thời bằng `threading.BoundedSemaphore`, dưới `CONNECTION LIMIT 10` của role. Khi bận, app trả trang 503 tiếng Việt thay cho lỗi 500.
 - **R21:** thứ tự trong CI là cài `tea-tour`, câu chuyện, ảnh chụp, gỡ, kiểm tra sau khi gỡ, rồi `apps-smoke`, để `apps-smoke` kết thúc bằng `platform-smoke` trên stack không có app.
 - **R22:** `screens.spec` vẫn đăng nhập bằng tài khoản demo `farmer_tc` như từ Tầng 2b; spec chỉ đăng nhập, không đổi mật khẩu hay TOTP.
+- **R23:** route app chỉ khớp ở cổng nội bộ `9081` (`vars: [["server_port", "==", "9081"]]`), và `gateway-sync` từ chối route app thiếu điều kiện này. Cổng `9080` mở ra máy chủ trả 404 cho `/apps/...`, nên CSP, bộ lọc header, kiểm Origin và giới hạn công khai của web proxy không bị đi vòng.
+- **R24:** tin cậy giữa các app chỉ được sửa bằng tài liệu trong v1.8.0: mọi app dùng chung `dxos-apps-net` và chỉ giải mã token, nên chỉ cài app tin cậy. Cách ly thật cho từng app (kiểm JWT với JWKS của Keycloak, hoặc mỗi app một mạng) để sang v1.9, vì mạng app là internal và Keycloak không nằm trên đó.
 
 **Khác với đặc tả.**
 - **§9, không dùng Hasura cho `installed_apps` (R1).** Không có quyền Hasura nào trên bảng này. Menu và proxy đọc bằng Prisma mỗi lần tải trang hoặc mỗi request.
 - **§6.5, giới hạn tần suất nằm ở web proxy (R2).**
   - Giới hạn tính trong từng tiến trình web và tin vào `X-Forwarded-For`.
-  - Biến `DXOS_APP_PUBLIC_LIMIT` (mặc định 10) đổi được giới hạn; chỉ CI nâng nó lên 1000.
+  - Biến `DXOS_APP_PUBLIC_LIMIT` (mặc định 10) đổi được giới hạn. CI nâng nó lên 1000. Máy demo chạy Docker Desktop cũng nên nâng (ví dụ 300), vì Docker Desktop cho web thấy mọi client là một IP.
 - **§5, runtime theo từng compose project (R13).** Các đường dẫn `docker/runtime/gateway/...` và `docker/runtime/apps/...` ở §5 nay nằm dưới `docker/runtime/<project>/`. Bên trong `dxos-cli`, thư mục của project được mount tại `/repo/docker/runtime`.
 - **`DXOS_GATEWAY_FILE` (R10).** APISIX chỉ đọc tệp ghép khi stack được bật bằng `make platform-up` hoặc `make up`. `docker compose up` trần chạy lõi không có route app (đóng an toàn).
 - **Kiểm Origin (R18).** Đây là ràng buộc bảo mật thêm, không có trong §6.
@@ -283,6 +285,7 @@ Phần này ghi chỗ code khác đặc tả và các số đo được khi hoà
 - **§8, kích thước `hello`.** `hello` khoảng 80 dòng chứ không phải 50, vì có thêm form lời nhắn và tham số `?theme=`.
 - **Bảng trên điện thoại.** Dưới 640 px, `/dxos-app.css` xếp mỗi dòng bảng thành một thẻ có nhãn cột (`data-label`). Bảng của `tea-tour` có thêm vai trò ARIA.
 - **Re-run `platform-smoke`.** `apps-smoke` chạy lại `platform-smoke` trên stack đã seed, nên hai phép kiểm LB trong `smoke-dataops.sh` được giới hạn vào thửa fixture `P-LB-001` (lỗi có từ trước, lộ ra ở Task 9).
+- **§6.2, tin cậy giữa các app (R24).** Spec ghi app "không nhận request từ dịch vụ nào ngoài gateway". Điều này không đúng khi có hai app trở lên: mọi app dùng chung `dxos-apps-net` và gọi thẳng được nhau với token tự tạo, vì app không kiểm chữ ký token. Trong v1.8.0 chỉ cài app tin cậy; cách ly thật để sang v1.9.
 - **Các giới hạn còn lại** được ghi trong CHANGELOG ("Known limits"):
   - phép kiểm phụ thuộc trước khi `--purge` chỉ xét bảng, kiểu và hàm;
   - migration chỉ ghi tên tệp, không có checksum;
