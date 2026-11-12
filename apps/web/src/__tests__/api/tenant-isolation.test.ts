@@ -22,6 +22,8 @@ import * as diagnosis from '@/app/api/diagnosis/route'
 import * as harvestSchedule from '@/app/api/schedule/harvest/route'
 import * as unscheduled from '@/app/api/schedule/unscheduled/route'
 import * as forecast from '@/app/api/weather/forecast/route'
+import * as appStore from '@/app/api/app-store/route'
+import * as appStoreRequests from '@/app/api/app-store/requests/route'
 import SoilHealthPage from '@/app/officer/households/[id]/soil-health/page'
 
 // Every model method is a jest.fn created on first use, so any write the routes attempt is recorded.
@@ -205,5 +207,39 @@ describe('read routes return only the HTX of the caller', () => {
     await SoilHealthPage({ params: Promise.resolve({ id: 'r1' }) })
     expect(mock(prisma.household.findFirst).mock.calls[0][0].where).toEqual({ id: 'r1', htx_profile_id: 'htx-tc' })
     expect(mock(prisma.household.findUnique)).not.toHaveBeenCalled()
+  })
+})
+
+describe('App Store requests', () => {
+  test('POST app-store/requests queues for the HTX of the session, not the one in the body', async () => {
+    signIn('manager')
+    mock(prisma.htxProfile.findUnique).mockResolvedValue(tc)
+    const request = (prisma as any).$queryRaw as jest.Mock
+    request.mockImplementation(async (strings: string[]) => {
+      const text = strings.join('?')
+      if (text.includes('app_catalog')) return [{ id: 'hello', name: 'H', version: '1', description: '', license: 'MIT', publisher: 'P', roles: [], has_public: false }]
+      return []
+    })
+    const response = await appStoreRequests.POST(
+      new Request('http://localhost/api/app-store/requests', {
+        method: 'POST',
+        body: JSON.stringify({ appId: 'hello', action: 'ENABLE', htxCode: 'LB', htx_code: 'LB' }),
+      }),
+      {},
+    )
+    expect(response.status).toBe(202)
+    const insert = mock((prisma as any).$executeRaw).mock.calls[0]
+    expect(insert.slice(1)).toEqual(['hello', 'TC', 'ENABLE', 'u1'])
+    // Every read of the snapshot is bound to TC as well.
+    expect(request.mock.calls.flatMap((call: unknown[]) => call.slice(1))).not.toContain('LB')
+  })
+
+  test.each(['officer', 'farmer'])('a %s cannot read or queue anything', async role => {
+    signIn(role)
+    expect((await appStore.GET(new Request('http://localhost/api/app-store'), {})).status).toBe(403)
+    const post = new Request('http://localhost/api/app-store/requests', { method: 'POST', body: JSON.stringify({ appId: 'hello', action: 'ENABLE' }) })
+    expect((await appStoreRequests.POST(post, {})).status).toBe(403)
+    expect(mock((prisma as any).$executeRaw)).not.toHaveBeenCalled()
+    expect(mock((prisma as any).$queryRaw)).not.toHaveBeenCalled()
   })
 })

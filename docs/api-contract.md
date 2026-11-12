@@ -607,12 +607,42 @@ Forwards a browser request to an installed mini-app through the gateway's intern
 - **Apps:** only an `id` in `platform.installed_apps`, read on every request with no cache; any other id, or an app removed meanwhile, answers 404. When the list cannot be read, 503.
 - **Paths:** a segment that is `.`, `..` or empty, or holds `/`, `\`, `%2e`, `%2f` or `%5c` after decoding, answers 400 and is not forwarded.
 - **Cross-site writes:** a request other than `GET`/`HEAD` answers 403 and is not forwarded (public and protected paths alike) when its `Origin` header is present and equals neither `<request scheme>://<Host header>` nor the origin of `AUTH_URL` (`Origin: null` counts as foreign), or when it has no `Origin` but `Sec-Fetch-Site: cross-site`. Without either header the request is forwarded.
-- **Public paths** (start with a `routes.public` prefix of the manifest, e.g. `/apps/tea-tour/public/...`): no token is sent; 10 requests per minute per client IP (first `x-forwarded-for` element, counted across every app), then 429. Once 10,000 IPs are tracked in the window, new IPs share one `overflow` bucket with the same limit.
+- **Enablement:** an installed app is served only to an HTX that enabled it (`platform.app_enablements` has a row for that HTX or for `*`). A public path names its HTX in the segment right after the prefix (`/public/<htxCode>/...`, `^[A-Za-z0-9_-]{1,20}$`); no HTX there, or one that did not enable the app, answers 404 (after the rate limit). A protected path uses the session's HTX; a session without an HTX, or one that did not enable the app, answers 404 (a missing session still answers 401 first). The 404 carries the same CSP headers. When the enablement cannot be read, 503.
+- **Public paths** (start with a `routes.public` prefix of the manifest, e.g. `/apps/tea-tour/public/...`; `/apps/<id>/public` without a slash counts as public too): no token is sent; 10 requests per minute per client IP (first `x-forwarded-for` element, counted across every app), then 429. Once 10,000 IPs are tracked in the window, new IPs share one `overflow` bucket with the same limit.
 - **Protected paths** (everything else): the user's Keycloak access token is sent as `Authorization: Bearer <token>`; the gateway checks it and the manifest roles (401/403 from the gateway are passed through). With no session or token, the proxy answers 401 with a short Vietnamese HTML page whose sign-in link is `<a href="/login" target="_top">`.
 - **Request:** method, body (streamed), query string, `content-type`, `accept` and `content-length` are forwarded; nothing else, so the browser's `cookie`, `authorization` and `x-hasura-*` headers never reach the gateway. Redirects are not followed (`redirect: manual`); timeout 10 s, then 503.
 - **Response:** status, body (streamed), `content-type` and `location` only; `set-cookie` and every other app header are dropped. A `location` is kept only when it resolves to the same origin under `/apps/<id>`; any other redirect answers 502 with no `location`. Every response, including the proxy's own 400/401/403/404/429/502/503, adds `Content-Security-Policy: default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'` and `X-Content-Type-Options: nosniff`.
 
 Next.js removes a trailing slash with a 308 before the route runs, so `/apps/<id>/` becomes `/apps/<id>`, which is forwarded as `/apps/<id>/`.
+
+---
+
+## App Store (Manager)
+
+Per-cooperative install and removal of mini-apps. The page is `/manager/app-store`. Both routes need a signed-in manager with an HTX; the HTX and the requester always come from the session, never from the body. The web app never talks to Docker: a request is a row in `platform.app_requests`, and `./dxos worker` on the host carries it out.
+
+### `GET /api/app-store`
+**200** `{ "data": { "workerAlive": boolean, "apps": StoreApp[] } }`. `workerAlive` is true when the worker polled in the last 30 s.
+
+`StoreApp`: `{ id, name, version, description, license, publisher, roles: string[], hasPublic: boolean, status, error: string | null }`. `status`, first match wins for the session's HTX: `installing` (open `ENABLE` request), `removing` (open `DISABLE`), `enabled_all` (enabled for `*`, set by `./dxos install`), `enabled`, `failed` (the newest request failed; `error` holds the Vietnamese reason), otherwise `available`.
+
+### `POST /api/app-store/requests`
+Body `{ "appId": string (^[a-z][a-z0-9-]{1,30}$), "action": "ENABLE" | "DISABLE" }`; other fields are ignored.
+**202** `{ "data": { "status": "installing" | "removing" } }`.
+
+| HTTP | code | When |
+|------|------|------|
+| 400 | VALIDATION_ERROR | Body is not JSON, `appId` or `action` is invalid |
+| 401 | UNAUTHORIZED | No session |
+| 403 | FORBIDDEN | Not a manager |
+| 403 | NO_HTX | The manager has no HTX |
+| 404 | APP_NOT_FOUND | `appId` is not in the catalogue |
+| 409 | REQUEST_OPEN | The app already has a pending or running request for the HTX (also when two posts race: one unique index decides) |
+| 409 | ALREADY_ENABLED | `ENABLE` for an app the HTX already enabled |
+| 409 | NOT_ENABLED | `DISABLE` for an app the HTX has not enabled |
+| 409 | ENABLED_FOR_ALL | The app is enabled for every HTX by the server administrator |
+
+All errors use `{ "error": { "code", "message" } }`.
 
 ---
 

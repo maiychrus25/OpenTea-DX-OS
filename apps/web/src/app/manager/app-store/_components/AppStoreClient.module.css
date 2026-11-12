@@ -1,0 +1,114 @@
+/* SPDX-License-Identifier: MIT */
+/* SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-6) var(--spacing-4);
+}
+
+.header {
+  margin-bottom: var(--spacing-6);
+}
+
+.title {
+  font-size: var(--font-size-h1);
+  font-weight: 700;
+  color: var(--color-ink-primary);
+  margin: 0 0 var(--spacing-2);
+}
+
+.subtitle {
+  font-size: var(--font-size-body);
+  color: var(--color-ink-secondary);
+  margin: 0;
+}
+
+.notice {
+  margin: 0 0 var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: var(--rounded-md);
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
+  font-size: var(--font-size-label);
+  overflow-wrap: anywhere;
+}
+
+.error {
+  margin: var(--spacing-3) 0 0;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--rounded-sm);
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+  font-size: var(--font-size-label);
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  color: var(--color-ink-secondary);
+  font-size: var(--font-size-body);
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: var(--spacing-4);
+}
+
+.item {
+  min-width: 0;
+}
+
+.card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+}
+
+.name {
+  font-size: var(--font-size-h3);
+  font-weight: 600;
+  color: var(--color-ink-primary);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.version {
+  font-size: var(--font-size-meta);
+  color: var(--color-ink-tertiary);
+  white-space: nowrap;
+}
+
+.description {
+  margin: 0;
+  font-size: var(--font-size-body);
+  color: var(--color-ink-secondary);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin: 0;
+  font-size: var(--font-size-meta);
+  color: var(--color-ink-tertiary);
+  overflow-wrap: anywhere;
+}
+
+.footer {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+}

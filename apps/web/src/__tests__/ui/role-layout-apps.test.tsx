@@ -77,3 +77,10 @@ describe.each([
     logError.mockRestore()
   })
 })
+
+test('the manager menu links the App Store', async () => {
+  ;(auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', role: 'manager', name: 'A', htxCode: 'TC' } })
+  list.mockResolvedValue([])
+  render(await ManagerLayout({ children: <p>page</p> }))
+  expect(screen.getByText('Kho ứng dụng')).toHaveAttribute('data-href', '/manager/app-store')
+})
