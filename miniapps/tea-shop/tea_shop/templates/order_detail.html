@@ -1,0 +1,35 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Đơn {{ order.code }}{% endblock %}
+{% block main %}
+<p><a href="{{ href('/', theme) }}">← Tất cả đơn hàng</a></p>
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+<h1>Đơn {{ order.code }} <span class="pill">{{ order_status[order.status] }}</span></h1>
+<p>Đặt lúc {{ order.created_at | vn_time }}</p>
+<p>Khách: {{ order.customer_name }} · Điện thoại <a href="tel:{{ order.phone }}">{{ order.phone }}</a></p>
+<p>Địa chỉ: {{ order.address }}</p>
+{% if order.note %}<p>Ghi chú: {{ order.note }}</p>{% endif %}
+
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Sản phẩm</th><th role="columnheader">Quy cách</th><th role="columnheader">Đơn giá</th><th role="columnheader">Số lượng</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for i in items %}
+    <tr role="row">
+      <td role="cell" data-label="Sản phẩm">{{ i.product_name }}</td>
+      <td role="cell" data-label="Quy cách">{{ i.pack }}</td>
+      <td role="cell" data-label="Đơn giá">{{ i.price_vnd | vnd }}</td>
+      <td role="cell" data-label="Số lượng">{{ i.quantity }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p>Tổng cộng: <strong>{{ order.total_vnd | vnd }}</strong> · Thanh toán khi nhận hàng</p>
+
+{% if order.status in ("NEW", "CONFIRMED", "SHIPPING") %}
+<form method="post" action="{{ href('/orders/' ~ order.id ~ '/advance', theme) }}" aria-label="Xử lý đơn">
+  <button type="submit">{{ {"NEW": "Xác nhận đơn", "CONFIRMED": "Bắt đầu giao", "SHIPPING": "Hoàn tất đơn"}[order.status] }}</button>
+  <button type="submit" class="secondary" formaction="{{ href('/orders/' ~ order.id ~ '/cancel', theme) }}">Huỷ đơn (trả lại tồn kho)</button>
+</form>
+{% endif %}
+{% endblock %}

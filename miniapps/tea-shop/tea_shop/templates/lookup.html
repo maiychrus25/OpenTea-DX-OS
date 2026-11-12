@@ -1,0 +1,8 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+<form method="get" action="{{ href('/public/' ~ htx ~ '/order', theme) }}" aria-label="Tra cứu đơn hàng">
+  {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+  <label>Mã đơn <input name="code" maxlength="16" required autocapitalize="characters" value="{{ code or '' }}"></label>
+  <label>Số điện thoại đã dùng khi đặt <input type="tel" name="phone" required autocomplete="tel" inputmode="tel"></label>
+  <button type="submit" class="secondary">Tra cứu</button>
+</form>

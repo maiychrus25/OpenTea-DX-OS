@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+apiVersion: dxos/v1
+id: tea-shop
+name: Cửa hàng chè
+description: Giới thiệu sản phẩm chè, nhận đơn đặt hàng và theo dõi đơn.
+version: 0.1.0
+license: MIT
+publisher: OpenTea Developers
+requires: { core: ">=1.9.0" }
+runtime:
+  build: .
+  port: 8080
+  health: /healthz
+database:
+  migrations: migrations/
+routes:
+  public: [/public/]
+  protected:
+    /: [manager]
+menu:
+  - { label: Cửa hàng chè, path: /, roles: [manager] }
