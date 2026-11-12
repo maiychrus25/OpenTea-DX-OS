@@ -22,9 +22,13 @@ const data = (apps: StoreApp[], workerAlive = true): AppStoreData => ({ workerAl
 // jsdom has no Response, so the tests answer with the three members the component reads.
 const reply = (body: unknown, status = 200) => Promise.resolve({ ok: status < 400, status, json: async () => body })
 
+const refresh = jest.fn()
+jest.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }))
+
 let fetchMock: jest.Mock
 
 beforeEach(() => {
+  refresh.mockClear()
   fetchMock = jest.fn()
   global.fetch = fetchMock as unknown as typeof fetch
 })
@@ -163,6 +167,43 @@ describe('AppStoreClient', () => {
         jest.advanceTimersByTime(3000)
       })
       expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    test('refreshes the server layout once when an install ends, not while it runs', async () => {
+      fetchMock
+        .mockImplementationOnce(() => reply({ data: data([card('hello', 'installing')]) }))
+        .mockImplementation(() => reply({ data: data([card('hello', 'enabled')]) }))
+      render(<AppStoreClient initial={data([card('hello', 'installing')])} />)
+      await act(async () => {
+        jest.advanceTimersByTime(3000)
+      })
+      expect(refresh).not.toHaveBeenCalled()
+      await act(async () => {
+        jest.advanceTimersByTime(3000)
+      })
+      expect(refresh).toHaveBeenCalledTimes(1)
+      await act(async () => {
+        jest.advanceTimersByTime(30_000)
+      })
+      expect(refresh).toHaveBeenCalledTimes(1)
+    })
+
+    test('refreshes once when a removal ends as available', async () => {
+      fetchMock.mockImplementation(() => reply({ data: data([card('hello', 'available')]) }))
+      render(<AppStoreClient initial={data([card('hello', 'removing')])} />)
+      await act(async () => {
+        jest.advanceTimersByTime(3000)
+      })
+      expect(screen.getByText('Chưa cài')).toBeInTheDocument()
+      expect(refresh).toHaveBeenCalledTimes(1)
+    })
+
+    test('never refreshes a page that had nothing in progress', async () => {
+      render(<AppStoreClient initial={data([card('a', 'available'), card('b', 'enabled')])} />)
+      await act(async () => {
+        jest.advanceTimersByTime(30_000)
+      })
+      expect(refresh).not.toHaveBeenCalled()
     })
   })
 })

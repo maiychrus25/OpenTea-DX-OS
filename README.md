@@ -298,7 +298,7 @@ Repo có năm app:
 
 ### Kho ứng dụng và `./dxos worker`
 
-Từ v1.9.0, trưởng HTX tự cài và gỡ app cho HTX của mình tại **Kho ứng dụng** (`/manager/app-store`, mục "Kho ứng dụng" trong menu quản lý). Thẻ app đổi từ "Chưa cài" sang "Đang cài…" rồi "Đã cài", và mục menu của app hiện ra ở lần tải trang sau. Mỗi HTX bật app riêng: HTX chưa bật không thấy app trong menu và `/apps/<id>/public/<mã HTX>` của HTX đó trả 404. "Gỡ" chỉ tắt app cho HTX và giữ dữ liệu; app chỉ bị gỡ khỏi máy chủ khi HTX cuối cùng đã tắt nó.
+Từ v1.9.0, trưởng HTX tự cài và gỡ app cho HTX của mình tại **Kho ứng dụng** (`/manager/app-store`, mục "Kho ứng dụng" trong menu quản lý). Thẻ app đổi từ "Chưa cài" sang "Đang cài…" rồi "Đã cài", và menu của trưởng HTX vừa bấm tự cập nhật khi việc cài hoặc gỡ xong (những người khác của HTX đang đăng nhập thấy ở lần tải trang kế tiếp). Mỗi HTX bật app riêng: HTX chưa bật không thấy app trong menu và `/apps/<id>/public/<mã HTX>` của HTX đó trả 404. "Gỡ" chỉ tắt app cho HTX và giữ dữ liệu; app chỉ bị gỡ khỏi máy chủ khi HTX cuối cùng đã tắt nó.
 
 Web không có quyền điều khiển Docker. Bấm Cài hoặc Gỡ chỉ ghi một yêu cầu vào database; **`./dxos worker`** là tiến trình trên máy chủ nhận yêu cầu, dựng hoặc tắt container và đóng yêu cầu. Chưa bật worker thì yêu cầu chờ và trang kho báo "Trình cài đặt chưa chạy".
 

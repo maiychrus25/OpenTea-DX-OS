@@ -3,7 +3,8 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Card, Pill } from '@/components/ui'
 import type { AppStoreStatus, StoreAction, StoreApp } from '@/domain/entities/app-store'
 import { fetchJson } from '@/lib/api/fetch-json'
@@ -37,10 +38,18 @@ const CONFIRM_REMOVE = 'Gỡ ứng dụng này khỏi HTX? Dữ liệu được 
 const REQUEST_FAILED = 'Không gửi được yêu cầu. Vui lòng thử lại.'
 
 export function AppStoreClient({ initial }: { initial: AppStoreData }) {
+  const router = useRouter()
   const [data, setData] = useState(initial)
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const working = data.apps.some(app => app.status === 'installing' || app.status === 'removing')
+
+  // The menu is rendered by the server layout: ask for it again once the work in progress has ended.
+  const wasWorking = useRef(false)
+  useEffect(() => {
+    if (wasWorking.current && !working) router.refresh()
+    wasWorking.current = working
+  }, [working, router])
 
   // Poll only while the worker has something to do.
   useEffect(() => {

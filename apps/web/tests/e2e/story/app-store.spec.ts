@@ -54,7 +54,7 @@ test.describe('App Store', () => {
     await card(manager).getByRole('button', { name: 'Cài', exact: true }).click()
     await expect(card(manager).getByText('Đang cài…', { exact: true })).toBeVisible()
     await expect(card(manager).getByText('Đã cài', { exact: true })).toBeVisible({ timeout: INSTALL_MS })
-    await manager.reload()
+    // The page refreshes the menu on its own when the install ends.
     await expect(menuLink(manager, APP_NAME).first()).toBeVisible()
 
     // LB's manager has not installed it: not in the menu, card says so, the public page answers 404.
@@ -104,7 +104,6 @@ test.describe('App Store', () => {
     manager.once('dialog', dialog => dialog.accept())
     await card(manager).getByRole('button', { name: 'Gỡ', exact: true }).click()
     await expect(card(manager).getByText('Chưa cài', { exact: true })).toBeVisible({ timeout: INSTALL_MS })
-    await manager.reload()
     await expect(menuLink(manager, 'Tổng quan').first()).toBeVisible()
     await expect(menuLink(manager, APP_NAME)).toHaveCount(0)
 
