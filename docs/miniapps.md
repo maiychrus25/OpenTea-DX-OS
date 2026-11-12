@@ -46,10 +46,11 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `apiVersion` | có | đúng `dxos/v1` |
 | `id` | có | `^[a-z][a-z0-9-]{1,30}$`, duy nhất trong các app đã cài. Schema và role DB tên `app_<id>`, với `-` đổi thành `_` |
 | `name` | có | 1–80 ký tự, tên hiện cho người dùng (cũng là `title` của khung iframe) |
+| `description` | không | 1–200 ký tự, mô tả ngắn hiện trong cửa hàng ứng dụng |
 | `version` | có | SemVer, ví dụ `0.1.0` |
 | `license` | có | thuộc danh sách OSI của CLI: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `LGPL-3.0-or-later`, `GPL-2.0-only`, `GPL-3.0-only`, `GPL-3.0-or-later`, `AGPL-3.0-only`, `AGPL-3.0-or-later` |
 | `publisher` | có | 1–80 ký tự |
-| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.8.0`) |
+| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.9.0`) |
 | `runtime.build` / `runtime.image` | đúng một trong hai | `build`: thư mục tương đối trong thư mục app (thường là `.`). `image`: phải ghim digest, dạng `<ref>@sha256:<64 ký tự hex>` |
 | `runtime.port` | có | 1–65535, cổng app nghe trong container |
 | `runtime.health` | có | đường dẫn health check (đã cắt tiền tố), ví dụ `/healthz`, phải trả 2xx |
@@ -60,6 +61,8 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `menu[]` | không | `label` (1–60 ký tự), `path` (đường dẫn trong app), `roles` (ít nhất một) |
 
 **Đường dẫn** (route, menu, `health`) phải khớp `^/([a-z0-9_-]+(/[a-z0-9_-]+)*/?)?$`: bắt đầu bằng `/`, chỉ gồm `[a-z0-9/_-]`, không có `..` hay `//`. Mọi route nằm dưới `/apps/<id>/`; trong manifest chỉ ghi phần sau tiền tố đó.
+
+**Trang công khai nằm dưới `/public/<htxCode>/...`.** Từ v1.9.0, web proxy chỉ phục vụ trang công khai của app khi HTX có mã `<htxCode>` đã bật app đó; HTX chưa bật thì trả 404. Vì vậy mã HTX phải là đoạn đầu tiên sau `/public/` (khớp `^[A-Za-z0-9_-]{1,20}$`) và app lấy HTX từ đường dẫn này. Khai `public: [/public/]` trong manifest như trước.
 
 **Luật về tiền tố**, CLI từ chối khi:
 - một tiền tố vừa nằm trong `public` vừa là khoá của `protected`;

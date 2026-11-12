@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Optional `description` in the mini-app manifest** (1-200 characters), shown by the upcoming app store; `hello` and `tea-tour` now declare one. `docs/miniapps.md` documents it and the rule that public pages live under `/public/<htxCode>/...` (from v1.9.0 the web proxy serves a public page only when that HTX has enabled the app). Web package version is now `1.9.0`
+
 ---
 
 ## [1.8.1] - 2026-11-12
