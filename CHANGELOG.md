@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Apps still trust each other** (ruling R24, unchanged): enabling an app per HTX only decides who sees it; every installed app shares `dxos-apps-net` and decodes the token without verifying it, so another installed app can read or change the data of `leaf-purchase`, `tea-shop` and `farm-supply`. Install only apps of this repository. Real per-app isolation is deferred
 - **The worker is a host process**, not a container (the web app must never hold the Docker socket): it must be started and kept alive by the operator, and one worker serves one compose project
 - **The farm-supply item form** shows a rejected item (empty name, bad price) as a plain error page (heading and one message, no form and no link back; the browser's Back button returns to the round) instead of an inline error; nothing is stored
+- **The gateway can answer 503 for up to about 30 seconds after a core service restarts** (for example Hasura): its DNS client caches the "name not found" answer it got while the service was down, and `apisix.dns_resolver_valid` only shortens the cache of valid answers. Unchanged from earlier releases
 
 ---
 
