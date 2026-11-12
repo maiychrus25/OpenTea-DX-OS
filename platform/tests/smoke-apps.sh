@@ -22,8 +22,17 @@ for id in tea-tour hello; do
   fi
 done
 
+# [store queue] state, defined before the trap so the trap can always call it: the background worker and the
+# temporary miniapps/broken-health copy.
+WORKER_PID=""
+WORKER_OUT="$(mktemp)"
+cleanup_store() {
+  [ -z "$WORKER_PID" ] || kill "$WORKER_PID" 2>/dev/null || true
+  rm -r -f miniapps/broken-health
+}
+
 # Whatever fails, leave no app behind (the registry, docker/runtime/<project> and the containers outlive this script).
-trap 'rc=$?; ./dxos remove tea-tour --purge >/dev/null 2>&1 || true; ./dxos remove db-app --purge >/dev/null 2>&1 || true; ./dxos remove broken-health >/dev/null 2>&1 || true; ./dxos remove hello >/dev/null 2>&1 || true; exit $rc' EXIT
+trap 'rc=$?; cleanup_store; ./dxos remove tea-tour --purge >/dev/null 2>&1 || true; ./dxos remove db-app --purge >/dev/null 2>&1 || true; ./dxos remove broken-health >/dev/null 2>&1 || true; ./dxos remove hello >/dev/null 2>&1 || true; exit $rc' EXIT
 
 RUNTIME="docker/runtime/${COMPOSE_PROJECT_NAME:-docker}"  # per compose project (R13), as in the Makefile
 GW_FILE="$RUNTIME/gateway/apisix.yaml"
@@ -232,6 +241,105 @@ echo "[remove hello]"
 wait_http 404 "removed app route -> 404" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
 assert_eq "$(app_containers hello)" 0 "app-hello container removed"
 assert_eq "$(psql_app "select count(*) from platform.installed_apps")" 0 "registry empty after remove"
+
+echo "[store queue]"
+# The App Store page queues rows in platform.app_requests; ./dxos worker installs, enables and removes per HTX.
+start_worker() { ./dxos worker >>"$WORKER_OUT" 2>&1 & WORKER_PID=$!; }
+stop_worker() {
+  local _
+  [ -z "$WORKER_PID" ] || kill "$WORKER_PID" 2>/dev/null || true
+  for _ in $(seq 1 40); do kill -0 "$WORKER_PID" 2>/dev/null || break; sleep 1; done
+  kill -0 "$WORKER_PID" 2>/dev/null && fail "worker did not stop within 40 s after TERM"
+  WORKER_PID=""
+}
+request() { psql_app "insert into platform.app_requests (app_id, htx_code, action, requested_by) values ('$1', '$2', '$3', 'smoke') returning id" | head -n 1; }
+request_status() { psql_app "select status from platform.app_requests where id = '$1'"; }
+# wait_request <id> <status> <msg> [seconds]: poll until the request is closed or has the status.
+wait_request() {
+  local got="" _
+  for _ in $(seq 1 "${4:-60}"); do
+    got="$(request_status "$1")"
+    case "$got" in "$2"|DONE|FAILED) break;; esac
+    sleep 2
+  done
+  assert_eq "$got" "$2" "$3"
+}
+enabled_for() { psql_app "select coalesce(string_agg(htx_code, ',' order by htx_code), '') from platform.app_enablements where app_id = '$1'"; }
+installed_count() { psql_app "select count(*) from platform.installed_apps where id = '$1'"; }
+# Descendants of a pid, the pid first: a crashed host takes the whole install with it, so kill the whole tree.
+proc_tree() { local c; echo "$1"; for c in $(pgrep -P "$1" || true); do proc_tree "$c"; done; }
+cli_run() { $COMPOSE --profile tools run --rm -T --user "$(id -u):$(id -g)" dxos-cli "$@"; }
+
+cli_run catalog-sync >/dev/null
+assert_eq "$(psql_app "select count(*) from platform.app_catalog where id = 'hello'")" 1 "catalog-sync lists hello"
+start_worker
+OUT=$(./dxos worker 2>&1) && rc=0 || rc=$?
+assert_eq "$rc" 1 "a second ./dxos worker exits 1"
+grep -q 'Một worker khác đang chạy (pid ' <<<"$OUT" && pass "second worker names the running pid" || fail "second worker message: $OUT"
+
+R1=$(request hello TC ENABLE)
+wait_request "$R1" DONE "ENABLE hello for TC -> DONE" 60
+assert_eq "$(installed_count hello)" 1 "hello was installed by the worker"
+assert_eq "$(enabled_for hello)" TC "hello is enabled for TC only, not for *"
+CID=$(hello_container); [ -n "$CID" ] || fail "app-hello not running after the worker installed it"
+
+R2=$(request hello LB ENABLE)
+wait_request "$R2" DONE "ENABLE hello for LB -> DONE"
+assert_eq "$(hello_container)" "$CID" "second ENABLE did not reinstall: same container"
+assert_eq "$(enabled_for hello)" LB,TC "hello is enabled for LB and TC"
+
+R3=$(request hello TC DISABLE)
+wait_request "$R3" DONE "DISABLE hello for TC -> DONE"
+assert_eq "$(enabled_for hello)" LB "hello stays enabled for LB"
+assert_eq "$(hello_container)" "$CID" "container still runs while LB uses it"
+R4=$(request hello LB DISABLE)
+wait_request "$R4" DONE "DISABLE hello for LB -> DONE"
+for _ in $(seq 1 30); do [ "$(app_containers hello)" = 0 ] && break; sleep 2; done
+assert_eq "$(app_containers hello)" 0 "container removed once no HTX is left"
+assert_eq "$(installed_count hello)" 0 "hello is no longer installed"
+wait_http 404 "removed app route -> 404 after the last DISABLE" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
+
+# Review focus 2: a failing install fails the request and leaves nothing behind.
+cp -R platform/cli/tests/fixtures/broken-health miniapps/broken-health
+cli_run catalog-sync >/dev/null
+BEFORE=$(sha "$GW_FILE")
+R5=$(request broken-health TC ENABLE)
+wait_request "$R5" FAILED "ENABLE of the broken app -> FAILED" 90
+grep -q 'Cài đặt hỏng' <<<"$(psql_app "select error from platform.app_requests where id = '$R5'")" \
+  && pass "request carries the Vietnamese failure message" || fail "request error: $(psql_app "select error from platform.app_requests where id = '$R5'")"
+assert_eq "$(installed_count broken-health)" 0 "broken-health is not installed"
+assert_eq "$(enabled_for broken-health)" "" "broken-health is enabled for nobody"
+assert_eq "$(app_containers broken-health)" 0 "no app-broken-health container left"
+assert_eq "$(sha "$GW_FILE")" "$BEFORE" "gateway file sha256 unchanged by the failed request"
+rm -r -f miniapps/broken-health
+cli_run catalog-sync >/dev/null
+
+# A worker killed in the middle of an install: the next worker fails the request and undoes the half install.
+R6=$(request hello TC ENABLE)
+for _ in $(seq 1 60); do [ -e "$RUNTIME/apps/hello.pending.json" ] && break; sleep 0.5; done
+[ -e "$RUNTIME/apps/hello.pending.json" ] || fail "worker never started installing hello"
+# shellcheck disable=SC2046  # pids, one per word
+kill -9 $(proc_tree "$WORKER_PID") 2>/dev/null || true
+WORKER_PID=""
+sleep 3
+assert_eq "$(request_status "$R6")" RUNNING "killed worker left the request RUNNING"
+start_worker
+wait_request "$R6" FAILED "restarted worker fails the half-done request" 90
+assert_eq "$(psql_app "select error from platform.app_requests where id = '$R6'")" "Trình cài đặt khởi động lại giữa chừng." \
+  "request carries the restart message"
+assert_eq "$(installed_count hello)" 0 "half-done hello is not installed"
+assert_eq "$(app_containers hello)" 0 "no app-hello container left after the crash"
+assert_eq "$(grep -c 'app-hello' "$GW_FILE" || true)" 0 "no hello route left after the crash"
+R7=$(request hello TC ENABLE)
+wait_request "$R7" DONE "a new ENABLE after the crash -> DONE"
+assert_eq "$(enabled_for hello)" TC "hello enabled for TC after the retry"
+R8=$(request hello TC DISABLE)
+wait_request "$R8" DONE "DISABLE after the retry -> DONE"
+for _ in $(seq 1 30); do [ "$(app_containers hello)" = 0 ] && break; sleep 2; done
+assert_eq "$(app_containers hello)" 0 "hello removed again"
+stop_worker
+pass "worker stops on TERM and frees its lock"
+[ ! -e "$RUNTIME/worker.lock" ] && pass "worker lock directory removed" || fail "worker.lock left behind"
 OUT=$(make platform-smoke 2>&1) || { tail -20 <<<"$OUT" >&2; fail "make platform-smoke after remove"; }
 assert_eq "$(grep -c '^PASS' <<<"$OUT")" 124 "platform smoke still gives 124 PASS without apps"
 

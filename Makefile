@@ -24,6 +24,7 @@ platform-up: gateway-sync
 	$(COMPOSE) run --rm platform-init
 	$(COMPOSE) --profile tools run --rm --build migrate
 	$(COMPOSE) run --rm platform-init
+	$(COMPOSE) --profile tools run --rm -T --user "$$(id -u):$$(id -g)" dxos-cli catalog-sync >/dev/null
 # Hasura loads metadata only at start and APISIX holds the old inode of its bind-mounted route file, so a running
 # stack needs a restart. A fresh start must not get one: it would hide a wrong migrate order from the smoke test.
 # gateway-sync writes the runtime route file in place (same inode), so later app routes reach APISIX without one.

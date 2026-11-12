@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
-# dxos: install, remove and list mini-apps (spec §5). The dxos-cli container does the manifest, gateway, journal
+# dxos: install, remove, list mini-apps and run the store worker (spec §5). The dxos-cli container does the manifest, gateway, journal
 # and registry work; this script only starts and stops app containers, so no docker socket goes into a container.
 set -euo pipefail
 
@@ -16,7 +16,7 @@ export BUILDX_NO_DEFAULT_ATTESTATIONS=1
 ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.json
 
 usage() {
-  echo "Dùng: ./dxos install <dir> | remove <id> [--purge] | list | validate <dir>..." >&2
+  echo "Dùng: ./dxos install <dir> | remove <id> [--purge] | list | validate <dir>... | worker" >&2
   exit 2
 }
 
@@ -62,8 +62,9 @@ undo_install() {  # <id> <exit code>
   exit "$2"
 }
 
-install() {
-  local dir="$1" id listing
+install() {  # <dir> [all|htx]: "htx" leaves enabling to the store worker, "all" (default) enables for every HTX
+  local dir="$1" mode="${2:-all}" id listing flag=""
+  [ "$mode" != htx ] || flag=--no-enable-all
   id="$(cli manifest-id "$dir")" || exit 1  # validated by dxos-cli, so safe in a path and in the traps below
   listing="$(cli list)"  # captured, not piped: grep -q closing the pipe early would fail it under pipefail
   if grep -qxF "$id" <<<"$(cut -f1 <<<"$listing")"; then
@@ -79,7 +80,8 @@ install() {
   trap "undo_install $id 143" TERM
   # prepare undoes its own steps when it fails; abort only retries an undo that failed (no-op otherwise).
   cli prepare "$dir" || { cli abort "$id" || true; exit 1; }
-  if app "$id" up -d --build --wait "app-$id" && cli commit "$id"; then
+  # shellcheck disable=SC2086  # flag is empty or one option
+  if app "$id" up -d --build --wait "app-$id" && cli commit "$id" $flag; then
     trap - INT TERM
     echo "Đã cài $id"
     return
@@ -107,6 +109,86 @@ list() {
   done <<<"$out"
 }
 
+# Store worker (spec §6): runs the install and remove requests the App Store page queues in platform.app_requests.
+# One worker per compose project, held by the directory $WORKER_LOCK (a pid file inside); a dead pid's lock is replaced.
+WORKER_LOCK="$RUNTIME/worker.lock"
+worker_log() { printf '%s %s\n' "$(date '+%F %T')" "$*"; }
+worker_release() { rm -rf "$WORKER_LOCK"; }
+
+worker() {
+  mkdir -p "$RUNTIME"
+  if ! mkdir "$WORKER_LOCK" 2>/dev/null; then
+    local old
+    old="$(cat "$WORKER_LOCK/pid" 2>/dev/null || true)"
+    if [[ "$old" =~ ^[0-9]+$ ]] && kill -0 "$old" 2>/dev/null; then
+      echo "Một worker khác đang chạy (pid $old)." >&2
+      exit 1
+    fi
+    # shortcut: two workers started in the same instant could both replace a stale lock; one operator, one worker.
+    rm -rf "$WORKER_LOCK"
+    mkdir "$WORKER_LOCK" || { echo "Không tạo được $WORKER_LOCK" >&2; exit 1; }
+  fi
+  echo $$ >"$WORKER_LOCK/pid"
+  trap worker_release EXIT
+  local stop=0 claim_pid="" claim_out id job action app htx installed rc dir remaining
+  claim_out="$(mktemp)"
+  # A signal between jobs ends the loop at once (the claim is killed); during a job it ends the loop afterwards.
+  on_signal() { stop=1; [ -z "$claim_pid" ] || kill "$claim_pid" 2>/dev/null || true; }
+  trap on_signal INT TERM
+
+  # A crashed worker leaves a half install: the container and the journal go, the request is failed by worker-start.
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    remove_container "$id" || true
+    cli abort "$id" >/dev/null 2>&1 || true
+    worker_log "recovered half install of $id"
+  done <<<"$(cli worker-start)"
+  worker_log "worker started (pid $$, project $PROJECT)"
+
+  while [ "$stop" = 0 ]; do
+    : >"$claim_out"
+    cli worker-claim --wait 30 >"$claim_out" &
+    claim_pid=$!
+    rc=0; wait "$claim_pid" || rc=$?
+    claim_pid=""
+    [ "$stop" = 0 ] || break
+    if [ "$rc" != 0 ]; then worker_log "worker-claim failed (code $rc); retrying in 5 s"; sleep 5; continue; fi
+    IFS=$'\t' read -r job action app htx installed <"$claim_out" || continue
+    if [ "$action" = ENABLE ] && [ "$installed" = 0 ]; then
+      # set -e is off inside a condition, so run the install in its own subshell with it switched on again.
+      set +e
+      ( set -e; dir="$(to_container "miniapps/$app")" || exit 1; install "$dir" htx )
+      rc=$?
+      set -e
+      if [ "$rc" = 130 ] || [ "$rc" = 143 ]; then  # interrupted: install undid itself; worker-start fails the request
+        worker_log "job=$job action=$action app=$app htx=$htx result=interrupted"
+        break
+      elif [ "$rc" = 0 ]; then
+        cli worker-finish "$job" ok >/dev/null
+        worker_log "job=$job action=$action app=$app htx=$htx result=ok"
+      else
+        cli worker-finish "$job" fail "Cài đặt hỏng (mã $rc). Quản trị máy chủ xem nhật ký của ./dxos worker." >/dev/null
+        worker_log "job=$job action=$action app=$app htx=$htx result=failed (code $rc)"
+      fi
+    elif [ "$action" = ENABLE ]; then
+      cli worker-finish "$job" ok >/dev/null
+      worker_log "job=$job action=$action app=$app htx=$htx result=ok (already installed)"
+    else
+      remaining="$(cli worker-finish "$job" ok)"
+      worker_log "job=$job action=$action app=$app htx=$htx result=ok ($remaining)"
+      if [ "$remaining" = remaining=0 ]; then
+        if ( remove "$app" ) >/dev/null; then
+          worker_log "removed $app (no cooperative left)"
+        else
+          worker_log "removing $app failed; it stays installed with no cooperative enabled"
+        fi
+      fi
+    fi
+  done
+  rm -f "$claim_out"
+  worker_log "worker stopped"
+}
+
 [ $# -ge 1 ] || usage
 cmd="$1"; shift
 case "$cmd" in
@@ -123,5 +205,8 @@ case "$cmd" in
     [ $# -ge 1 ] || usage
     dirs=(); for d in "$@"; do c="$(to_container "$d")"; dirs+=("$c"); done
     cd "$ROOT"; cli validate "${dirs[@]}" ;;
+  worker)
+    [ $# -eq 0 ] || usage
+    cd "$ROOT"; worker ;;
   *) usage ;;
 esac
