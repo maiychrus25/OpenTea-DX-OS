@@ -274,7 +274,9 @@ jobs:
       - name: Mini-app Unit Tests
         run: |
           (cd miniapps/hello && python -m unittest -v)
-          cd miniapps/tea-tour && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
+          for app in tea-tour leaf-purchase tea-shop farm-supply; do
+            (cd "miniapps/$app" && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error)
+          done
 
       # The Ollama image alone unpacks to several GB; the runner's preinstalled SDKs leave too little disk for the full stack.
       - name: Free Runner Disk
@@ -369,7 +371,8 @@ jobs:
           E2E_BASE_URL: http://localhost:3000
         run: npx playwright test tests/e2e/story/tea-tour.spec.ts --project=chromium --no-deps --reporter=list
 
-      # Installs hello, tea-tour and the CLI fixtures, re-runs platform-up, removes them all, then runs platform-smoke.
+      # Installs hello, tea-tour, the three business apps and the CLI fixtures, runs the store queue with a worker of its own,
+      # re-runs platform-up, removes them all, then runs platform-smoke.
       - name: Mini-app Smoke Test
         run: make apps-smoke
 

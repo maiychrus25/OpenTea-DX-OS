@@ -109,7 +109,7 @@ ImageNet weights it downloads are credited in `ai-models/ATTRIBUTION.md`.
 | n8n | `n8nio/n8n:2.47.2` | Sustainable Use License* | Workflow automation |
 | SeaweedFS | `chrislusf/seaweedfs:4.50` | Apache-2.0 | S3-compatible object storage (replaces MinIO); started with `-volume.max=100` so more than one bucket fits |
 | ClamAV | `clamav/clamav-debian:1.4.6` | GPL-2.0 | Antivirus daemon (network service, not linked) |
-| Python | `python:3.12.15-slim-bookworm` | PSF | Base image of `dxos-scanner`, `dxos-dataops`, `dxos-cli` and the mini-apps `hello` and `tea-tour`, and of `ai-models/tea` training (not a Compose service) |
+| Python | `python:3.12.15-slim-bookworm` | PSF | Base image of `dxos-scanner`, `dxos-dataops`, `dxos-cli` and the mini-apps `hello`, `tea-tour`, `leaf-purchase`, `tea-shop` and `farm-supply`, and of `ai-models/tea` training (not a Compose service) |
 | Mosquitto | `eclipse-mosquitto:2.1.2-alpine` | EPL-2.0 | MQTT broker (network service, not linked) |
 | Ollama | `ollama/ollama:0.40.15` | MIT | Local LLM runtime (network service, no host port) |
 | qwen2.5:0.5b | pulled by `ollama-init`, pinned by digest ID | Apache-2.0 | Default in-house LLM (model weights, not bundled in any image) |
@@ -157,6 +157,10 @@ Python standard library only (`http.server`, `unittest`); no third-party package
 | [Jinja2](https://github.com/pallets/jinja) | 3.1.6 | BSD-3-Clause | HTML templates (autoescaped) |
 | [psycopg[binary]](https://github.com/psycopg/psycopg) | 3.3.6 | LGPL-3.0 | PostgreSQL driver for schema `app_tea_tour` (dynamically linked, unmodified) |
 | pytest, httpx2 (`requirements-dev.txt`, with the CLI's requirements for its test Postgres) | 9.1.1, 2.16.0 | MIT, BSD-3-Clause | Unit tests (dev only) |
+
+### Mini-apps `leaf-purchase`, `tea-shop` and `farm-supply` (`miniapps/<id>`)
+
+No new package: each app's `requirements.txt` and `requirements-dev.txt` are identical to `tea-tour`'s (the packages and pins in the table above), and each stores its data in its own schema (`app_leaf_purchase`, `app_tea_shop`, `app_farm_supply`).
 
 > **\* n8n License Note:** n8n uses the Sustainable Use License (fair-code, source-available,
 > not OSI-approved). DX-AgriMarket does NOT import, link, or bundle n8n source code.
