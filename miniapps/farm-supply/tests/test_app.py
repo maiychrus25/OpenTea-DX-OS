@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
+import re
 import threading
 from datetime import datetime, timedelta, timezone
 
@@ -257,3 +258,158 @@ def test_bad_quantity_writes_nothing_and_keeps_typed_value(client, db, household
     response = register(client, round_id, **{str(good): "2", str(other): "abc"})
     assert response.status_code == 400 and 'role="alert"' in response.text and 'value="abc"' in response.text
     assert requests_of(db) == []
+
+
+# ---------- App kit: overview, round list, exports, print, inline item errors, farmer cards ----------
+
+def stat(html, label):
+    found = re.search(rf'<span class="stat-label">{re.escape(label)}</span>\s*<span class="stat-value">([^<]*)</span>', html)
+    assert found, f"no stat {label!r}"
+    return found.group(1)
+
+
+def settle(db, round_id, household, delivered=False, paid=False, htx="TC"):
+    db.execute("INSERT INTO settlements (htx_code, round_id, household_id, delivered_at, paid_at) VALUES "
+               "(%s, %s, %s, CASE WHEN %s THEN now() END, CASE WHEN %s THEN now() END)",
+               (htx, round_id, household, delivered, paid))
+
+
+def test_overview_stats_on_a_fixed_set(client, db, households):
+    open_round = add_round(db, title="Phân bón vụ xuân 2027")
+    npk = add_item(db, open_round, price_vnd=400000)
+    ure = add_item(db, open_round, name="Urê", price_vnd=10000)
+    add_request(db, open_round, npk, household_id="h1", quantity=2)
+    add_request(db, open_round, ure, household_id="h1", quantity=5)
+    add_request(db, open_round, npk, household_id="h2", household_name="Hộ bà Tư", quantity=1)
+    closed = add_round(db, title="Đợt cũ", status="CLOSED", deadline=PAST)
+    old = add_item(db, closed)
+    for household in ("h1", "h2", "h3"):
+        add_request(db, closed, old, household_id=household, quantity=1)
+    settle(db, closed, "h1", delivered=True, paid=True)
+    settle(db, closed, "h2", delivered=True)
+    settle(db, closed, "h3")
+    other = add_round(db, htx="LB", title="Đợt của La Bằng")
+    add_request(db, other, add_item(db, other, htx="LB"), htx="LB", household_id="h9", quantity=9)
+    html = client.get("/", headers=MANAGER).text
+    assert stat(html, "Đợt đang mở") == "1"
+    assert stat(html, "Hộ đã đăng ký") == "2"
+    assert stat(html, "Tổng tiền đăng ký") == "1.250.000 ₫"  # 2 * 400000 + 5 * 10000 + 1 * 400000
+    assert stat(html, "Chưa giao") == "1"
+    assert stat(html, "Chưa thu tiền") == "2"
+    assert "Đợt của La Bằng" not in html and 'aria-current="page"' in html and "Đợt đăng ký" in html
+
+
+def test_round_list_filters_and_pages(client, db, households):
+    for n in range(28):
+        add_round(db, title=f"Đợt mở {n:02d}")
+    for n in range(2):
+        add_round(db, title=f"Đợt đóng {n}", status="CLOSED", deadline=PAST)
+    add_round(db, htx="LB", title="Đợt của La Bằng")
+    everything = client.get("/", headers=MANAGER).text
+    assert everything.count('href="/apps/farm-supply/rounds/') == 25
+    assert "Trang 1/2" in everything and "30 dòng" in everything
+    assert client.get("/?page=2", headers=MANAGER).text.count('href="/apps/farm-supply/rounds/') == 5
+    closed = client.get("/?status=closed", headers=MANAGER).text
+    assert closed.count('href="/apps/farm-supply/rounds/') == 2 and "Đợt đóng" in closed and "Đợt mở" not in closed
+    opened = client.get("/?status=open&page=2", headers=MANAGER).text
+    assert opened.count('href="/apps/farm-supply/rounds/') == 3 and "status=open" in opened
+    for query in ("page=0", "page=abc", "page=999999", "status=%25", "status=x'%3B--", "page=-3"):
+        assert client.get(f"/?{query}", headers=MANAGER).status_code == 200, query
+    assert client.get("/?page=999999", headers=MANAGER).text.count("Trang 2/2") == 1
+
+
+def test_exports_hold_the_round_totals(client, db, households):
+    round_id = add_round(db)
+    npk = add_item(db, round_id, name="Phân NPK 16-16-8, bao 50 kg", unit="bao", price_vnd=400000)
+    add_request(db, round_id, npk, household_id="h1", household_name="=HYPERLINK(\"http://x\")", quantity=2.5)
+    add_request(db, round_id, npk, household_id="h2", household_name="Hộ bà Tư", quantity=1)
+    store.close_round(db, "TC", round_id)
+    store.mark(db, "TC", round_id, "h2", "delivered")
+    items = client.get(f"/rounds/{round_id}/items/export.csv", headers=MANAGER)
+    assert items.status_code == 200 and items.headers["content-type"].startswith("text/csv")
+    assert items.headers["content-disposition"].startswith('attachment; filename="farm-supply-TC-items-')
+    assert items.content.startswith("﻿".encode())
+    lines = items.content.decode("utf-8-sig").split("\r\n")
+    assert lines[0] == "Mặt hàng,Đơn vị,Đơn giá,Số hộ,Tổng số lượng,Thành tiền"
+    assert lines[1] == '"Phân NPK 16-16-8, bao 50 kg",bao,400000,2,3.5,1400000'
+    households_csv = client.get(f"/rounds/{round_id}/households/export.csv", headers=MANAGER)
+    lines = households_csv.content.decode("utf-8-sig").split("\r\n")
+    assert lines[0] == "Hộ,Thành tiền,Đã giao,Đã trả tiền"
+    formula = next(line for line in lines if "HYPERLINK" in line)
+    marked = next(line for line in lines if line.startswith("Hộ bà Tư"))
+    assert formula.startswith("\"'=HYPERLINK(") and formula.endswith(",1000000,,")  # neutralised, nothing marked
+    assert marked.startswith("Hộ bà Tư,400000,") and marked.count(",") == 3 and not marked.endswith(",,")
+
+
+def test_export_only_holds_the_callers_rows(client, db, households):
+    mine = add_round(db)
+    add_request(db, mine, add_item(db, mine, name="Của TC"), household_id="h1", household_name="Hộ của TC")
+    other = add_round(db, htx="LB", title="Đợt của La Bằng")
+    add_request(db, other, add_item(db, other, htx="LB", name="Của LB"), htx="LB", household_id="h9", household_name="Hộ của LB")
+    for kind in ("items", "households"):
+        body = client.get(f"/rounds/{mine}/{kind}/export.csv", headers=MANAGER).text
+        assert "LB" not in body.replace("farm-supply", "") and ("Của TC" in body or "Hộ của TC" in body)
+        assert client.get(f"/rounds/{other}/{kind}/export.csv", headers=MANAGER).status_code == 404
+    assert client.get(f"/rounds/{other}/print", headers=MANAGER).status_code == 404
+
+
+def test_farmer_cannot_reach_manager_exports_or_print(client, db, households):
+    round_id = add_round(db)
+    for path in (f"/rounds/{round_id}/items/export.csv", f"/rounds/{round_id}/households/export.csv", f"/rounds/{round_id}/print"):
+        assert client.get(path, headers=FARMER).status_code == 403, path
+        assert client.get(path).status_code == 401, path
+
+
+def test_print_sheet_lists_households_with_signature_column(client, db, households):
+    round_id = add_round(db)
+    npk = add_item(db, round_id, name="Phân NPK 16-16-8, bao 50 kg", unit="bao", price_vnd=400000)
+    add_request(db, round_id, npk, household_id="h1", household_name="Nguyễn Văn An", quantity=2.5)
+    add_request(db, round_id, npk, household_id="h2", household_name="Lê Thị Hoa", quantity=1)
+    response = client.get(f"/rounds/{round_id}/print", headers=MANAGER)
+    html = response.text
+    assert response.status_code == 200 and "print-sheet" in html and "Ký nhận" in html
+    assert "Nguyễn Văn An" in html and "Lê Thị Hoa" in html and "2,5 bao" in html and "1.000.000 ₫" in html
+    assert 'target="_top"' in html and "/manager/apps/farm-supply/rounds/" in html
+    assert client.get("/rounds/00000000-0000-0000-0000-000000000000/print", headers=MANAGER).status_code == 404
+
+
+def test_item_errors_show_inline_with_typed_values(client, db, households):
+    round_id = add_round(db)
+    existing = add_item(db, round_id, name="Urê", unit="bao", price_vnd=500000)
+    added = client.post(f"/rounds/{round_id}/items", headers=MANAGER, data={"name": "", "unit": "bao 50kg", "price_vnd": "abc"})
+    assert added.status_code == 400 and 'class="field-error"' in added.text
+    assert "Tên mặt hàng cần từ 1 đến 120 ký tự." in added.text and "Đơn giá phải là số đồng" in added.text
+    assert 'value="bao 50kg"' in added.text and 'value="abc"' in added.text
+    assert 'action="/apps/farm-supply/rounds/' in added.text and "Thêm mặt hàng" in added.text  # the form is back
+    edited = client.post(f"/items/{existing}/edit", headers=MANAGER, data={"name": "Urê đổi", "unit": "", "price_vnd": "-5"})
+    assert edited.status_code == 400 and "Đơn vị tính cần từ 1 đến 20 ký tự." in edited.text
+    assert 'value="Urê đổi"' in edited.text and 'value="-5"' in edited.text
+    assert db.execute("SELECT name, price_vnd FROM items").fetchall() == [("Urê", 500000)]
+    assert client.get(f"/rounds/{round_id}", headers=MANAGER).text.count('class="field-error"') == 0
+
+
+def test_farmer_sees_cards_and_history_with_totals(client, db, households):
+    open_round = add_round(db, title="Phân bón vụ xuân 2027")
+    npk = add_item(db, open_round, price_vnd=400000)
+    add_request(db, open_round, npk, quantity=2.5)
+    for n in range(30):
+        past = add_round(db, title=f"Đợt cũ {n:02d}", status="CLOSED", deadline=PAST - timedelta(days=n))
+        add_request(db, past, add_item(db, past, price_vnd=1000), quantity=3)
+    html = client.get("/mine", headers=FARMER).text
+    assert '<li class="card">' in html and "Phân bón vụ xuân 2027" in html and "1.000.000 ₫" in html
+    assert html.count("3.000 ₫") == 25 and "Trang 1/2" in html
+    second = client.get("/mine?page=2", headers=FARMER).text
+    assert second.count("3.000 ₫") == 5 and "Đợt cũ 29" in second
+    for query in ("page=0", "page=abc", "page=999999"):
+        assert client.get(f"/mine?{query}", headers=FARMER).status_code == 200, query
+    assert 'aria-current="page"' in html and "Đăng ký vật tư" in html
+
+
+def test_pages_have_no_script_or_style_attribute(client, db, households):
+    round_id = add_round(db)
+    add_request(db, round_id, add_item(db, round_id))
+    bad = client.post(f"/rounds/{round_id}/items", headers=MANAGER, data={"name": "", "unit": "", "price_vnd": ""})
+    pages = [client.get(p, headers=h) for p, h in (("/", MANAGER), (f"/rounds/{round_id}", MANAGER),
+                                                    (f"/rounds/{round_id}/print", MANAGER), ("/mine", FARMER))] + [bad]
+    for response in pages:
+        assert "<script" not in response.text and " style=" not in response.text
