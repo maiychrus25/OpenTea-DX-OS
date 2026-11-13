@@ -33,7 +33,8 @@ const newPage = async (browser: Browser, options: BrowserContextOptions = { view
 
 test.describe('app kit: business apps', () => {
   test.skip(process.env.E2E_APP_KIT !== 'business', 'Needs leaf-purchase, tea-shop and farm-supply installed and E2E_APP_KIT=business')
-  test.describe.configure({ retries: 0 })
+  // One worker, in order: the theme story pages through the orders the tea-shop story wrote.
+  test.describe.configure({ retries: 0, mode: 'serial' })
   test.afterEach(async () => {
     await Promise.all(contexts.splice(0).map(context => context.close()))
   })
@@ -317,14 +318,6 @@ test.describe('app kit: business apps', () => {
     await expect(app.locator('input[name=price_vnd]').first()).toHaveAttribute('aria-invalid', 'true')
     await expect(app.locator('[role=alert]').first()).toBeVisible()
     await expectNoOverflow(manager, title)
-  })
-})
-
-test.describe('app kit: theme', () => {
-  test.skip(process.env.E2E_APP_KIT !== 'business', 'Needs the business apps installed and E2E_APP_KIT=business')
-  test.describe.configure({ retries: 0 })
-  test.afterEach(async () => {
-    await Promise.all(contexts.splice(0).map(context => context.close()))
   })
 
   test('a stored dark theme follows in-app tabs, pagination and the print page', async ({ browser }) => {
