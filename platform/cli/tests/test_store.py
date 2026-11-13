@@ -248,3 +248,95 @@ def test_store_sql_is_idempotent_and_adds_columns(root, conn):
     with pytest.raises(psycopg.errors.CheckViolation):
         conn.execute("INSERT INTO platform.app_requests (app_id, htx_code, action, requested_by, phase) "
                      "VALUES ('x', 'TC', 'ENABLE', 'u1', 'other')")
+
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 8
+
+
+def add_store(root, shots, extra=""):
+    app = root / "miniapps" / "tea-tour"
+    lines = "".join(f"    - {{ file: {name}, caption: {cap} }}\n" for name, cap in shots)
+    block = f"store:\n  category: tourism\n{extra}" + (f"  screenshots:\n{lines}" if shots else "")
+    with (app / "app.yaml").open("a") as f:
+        f.write(block)
+    for name, _ in shots:
+        (app / name).write_bytes(PNG + name.encode())
+    return app
+
+
+def shots(conn):
+    return conn.execute("SELECT position, caption, content_type FROM platform.app_catalog_screenshots"
+                        " WHERE app_id = 'tea-tour' ORDER BY position").fetchall()
+
+
+def test_sync_stores_block_requires_core_and_has_database(root, conn):
+    add_store(root, [])
+    store.sync_catalog(conn, root / "miniapps", "1.9.0")
+    row = conn.execute("SELECT store, requires_core, has_database FROM platform.app_catalog").fetchone()
+    assert row == ({"category": "tourism"}, ">=1.0.0", True)
+
+
+def test_sync_screenshots_positions_resync_and_cascade(root, conn, capsys):
+    app = add_store(root, [("a.png", "Một"), ("bad.png", "Hỏng"), ("c.png", "Ba")])
+    (app / "bad.png").write_text("not an image")
+    store.sync_catalog(conn, root / "miniapps", "1.9.0")
+    assert "bỏ qua ảnh bad.png của tea-tour" in capsys.readouterr().err
+    assert shots(conn) == [(0, "Một", "image/png"), (1, "Ba", "image/png")]
+    assert "screenshots" not in conn.execute("SELECT store FROM platform.app_catalog").fetchone()[0]
+    text = (app / "app.yaml").read_text().replace("    - { file: c.png, caption: Ba }\n", "")
+    (app / "app.yaml").write_text(text)
+    store.sync_catalog(conn, root / "miniapps", "1.9.0")
+    assert len(shots(conn)) == 1
+    shutil.rmtree(app)
+    store.sync_catalog(conn, root / "miniapps", "1.9.0")
+    assert conn.execute("SELECT count(*) FROM platform.app_catalog_screenshots").fetchone()[0] == 0
+
+
+def test_sync_without_store_block(root, conn):
+    store.sync_catalog(conn, root / "miniapps", "1.9.0")
+    assert conn.execute("SELECT store FROM platform.app_catalog").fetchone()[0] == {}
+    assert shots(conn) == []
+
+
+def phase_of(conn, job_id):
+    return conn.execute("SELECT phase FROM platform.app_requests WHERE id = %s", (job_id,)).fetchone()[0]
+
+
+def test_set_phase_only_touches_a_running_request(root, conn):
+    seed_catalog(conn, "hello")
+    pending, running, done, failed = (add_request(conn, "hello", h) for h in ("A", "B", "C", "D"))
+    conn.execute("UPDATE platform.app_requests SET status = 'RUNNING' WHERE id = %s", (running,))
+    conn.execute("UPDATE platform.app_requests SET status = 'DONE' WHERE id = %s", (done,))
+    conn.execute("UPDATE platform.app_requests SET status = 'FAILED' WHERE id = %s", (failed,))
+    assert store.set_phase(conn, running, "build") is True
+    assert phase_of(conn, running) == "build"
+    for job_id in (pending, done, failed):
+        assert store.set_phase(conn, job_id, "build") is False
+        assert phase_of(conn, job_id) is None
+
+
+def test_set_phase_refuses_bad_arguments(root, conn):
+    with pytest.raises(ValueError):
+        store.set_phase(conn, "11111111-1111-1111-1111-111111111111", "other")
+    with pytest.raises(ValueError):
+        store.set_phase(conn, "not-a-uuid", "build")
+
+
+def test_worker_progress_exit_codes(root, conn, capsys):
+    seed_catalog(conn, "hello")
+    job_id = add_request(conn, "hello", "TC")
+    assert main(["worker-progress", job_id, "build"]) == 0  # PENDING: nothing matched, still fine
+    conn.execute("UPDATE platform.app_requests SET status = 'RUNNING' WHERE id = %s", (job_id,))
+    assert main(["worker-progress", job_id, "register"]) == 0 and phase_of(conn, job_id) == "register"
+    assert main(["worker-progress", job_id, "other"]) == 1
+    assert main(["worker-progress", "not-a-uuid", "build"]) == 1
+    assert "worker-progress" in capsys.readouterr().err
+
+
+def test_failed_request_keeps_the_phase_that_failed(root, conn):
+    seed_catalog(conn, "hello")
+    job_id = add_request(conn, "hello", "TC")
+    conn.execute("UPDATE platform.app_requests SET status = 'RUNNING' WHERE id = %s", (job_id,))
+    store.set_phase(conn, job_id, "build")
+    store.finish(conn, job_id, False, "boom")
+    assert status_of(conn, job_id)[0] == "FAILED" and phase_of(conn, job_id) == "build"
