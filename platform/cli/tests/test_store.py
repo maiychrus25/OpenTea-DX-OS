@@ -182,7 +182,7 @@ def apply_store_sql(conn):
 
 
 def drop_store_tables(conn):
-    conn.execute("DROP TABLE platform.app_requests, platform.app_enablements, platform.app_worker, platform.app_catalog")
+    conn.execute("DROP TABLE platform.app_catalog_screenshots, platform.app_requests, platform.app_enablements, platform.app_worker, platform.app_catalog")
 
 
 def enablement_rows(conn):
@@ -234,3 +234,17 @@ def test_sync_skips_directory_named_differently_from_its_id(root, conn, capsys):
     shutil.copytree(root / "miniapps" / "tea-tour", root / "miniapps" / "other-name")
     assert store.sync_catalog(conn, root / "miniapps", "1.9.0") == ["tea-tour"]
     assert "other-name" in capsys.readouterr().err
+
+
+def test_store_sql_is_idempotent_and_adds_columns(root, conn):
+    apply_store_sql(conn)
+    apply_store_sql(conn)
+    cols = {(t, c) for t, c in conn.execute(
+        "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'platform'").fetchall()}
+    for table, col in [("app_catalog", "store"), ("app_catalog", "requires_core"), ("app_catalog", "has_database"),
+                       ("app_requests", "phase"), ("app_requests", "requested_by_name")]:
+        assert (table, col) in cols
+    assert conn.execute("SELECT to_regclass('platform.app_catalog_screenshots')").fetchone()[0] is not None
+    with pytest.raises(psycopg.errors.CheckViolation):
+        conn.execute("INSERT INTO platform.app_requests (app_id, htx_code, action, requested_by, phase) "
+                     "VALUES ('x', 'TC', 'ENABLE', 'u1', 'other')")

@@ -53,7 +53,7 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `version` | có | SemVer, ví dụ `0.1.0` |
 | `license` | có | thuộc danh sách OSI của CLI: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `LGPL-3.0-or-later`, `GPL-2.0-only`, `GPL-3.0-only`, `GPL-3.0-or-later`, `AGPL-3.0-only`, `AGPL-3.0-or-later` |
 | `publisher` | có | 1–80 ký tự |
-| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.9.0`) |
+| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.10.0`) |
 | `runtime.build` / `runtime.image` | đúng một trong hai | `build`: thư mục tương đối trong thư mục app (thường là `.`). `image`: phải ghim digest, dạng `<ref>@sha256:<64 ký tự hex>` |
 | `runtime.port` | có | 1–65535, cổng app nghe trong container |
 | `runtime.health` | có | đường dẫn health check (đã cắt tiền tố), ví dụ `/healthz`, phải trả 2xx |
@@ -62,6 +62,19 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `routes.public` | không | danh sách tiền tố không cần đăng nhập, ví dụ `[/public/]` |
 | `routes.protected` | không | ánh xạ tiền tố → danh sách vai trò (`farmer`, `officer`, `manager`, ít nhất một) |
 | `menu[]` | không | `label` (1–60 ký tự), `path` (đường dẫn trong app), `roles` (ít nhất một) |
+| `store` | không | thông tin cho trang chi tiết trong cửa hàng; mọi khoá đều tuỳ chọn, khoá lạ bị từ chối (bảng dưới). App khai `store` nên khai `requires.core: ">=1.10.0"` |
+
+**Khối `store`** (từ v1.10.0). Văn bản chỉ được hiển thị dạng văn bản thuần; biểu tượng chỉ là tên trong danh sách cho phép.
+
+| Khoá | Quy tắc |
+| --- | --- |
+| `category` | một trong `production`, `sales`, `members`, `tourism`, `sample` |
+| `icon` | một trong `leaf`, `scale`, `shopping-bag`, `package`, `map-pinned`, `users`, `calendar`, `clipboard-list`, `truck`, `sparkles` |
+| `about` | 1–2000 ký tự, giới thiệu đầy đủ |
+| `data` | tối đa 8 mục, mỗi mục 1–160 ký tự: app lưu những dữ liệu nào |
+| `personal_data` | 1–300 ký tự: app có xử lý dữ liệu cá nhân không |
+| `core_reads` | tối đa 6 mục, mỗi mục 1–160 ký tự: app đọc gì từ lõi |
+| `screenshots[]` | tối đa 4 mục `{file, caption}`, cả hai bắt buộc. `file`: đường dẫn tương đối trong thư mục app (không bắt đầu bằng `/`, không có `..`, `[A-Za-z0-9._/-]`, tối đa 120 ký tự); `caption`: 1–120 ký tự |
 
 **Đường dẫn** (route, menu, `health`) phải khớp `^/([a-z0-9_-]+(/[a-z0-9_-]+)*/?)?$`: bắt đầu bằng `/`, chỉ gồm `[a-z0-9/_-]`, không có `..` hay `//`. Mọi route nằm dưới `/apps/<id>/`; trong manifest chỉ ghi phần sau tiền tố đó.
 

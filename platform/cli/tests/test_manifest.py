@@ -153,3 +153,44 @@ def test_accepts_description(valid):
 def test_rejects_bad_description(valid, bad):
     errs = errors(mutated(valid, description=bad), core="1.8.0")
     assert errs and any("description" in e for e in errs)
+
+
+STORE_FULL = {
+    "category": "tourism",
+    "icon": "leaf",
+    "about": "About text",
+    "data": ["one"],
+    "personal_data": "None",
+    "core_reads": ["members"],
+    "screenshots": [{"file": "shots/a.png", "caption": "A"}],
+}
+
+
+def with_store(valid, **changes):
+    return mutated(valid, store={**STORE_FULL, **changes})
+
+
+def test_store_block_is_optional(valid):
+    assert "store" not in valid and errors(valid, core="1.8.0") == []
+
+
+def test_store_block_accepts_every_key(valid):
+    assert errors(with_store(valid), core="1.8.0") == []
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"extra": 1},
+        {"category": "other"},
+        {"icon": "rocket"},
+        {"about": "a" * 2001},
+        {"data": ["x"] * 9},
+        {"screenshots": [{"file": "a.png", "caption": "c"}] * 5},
+        {"screenshots": [{"file": "../x.png", "caption": "c"}]},
+        {"screenshots": [{"file": "/x.png", "caption": "c"}]},
+        {"screenshots": [{"file": "x.png"}]},
+    ],
+)
+def test_store_block_refuses(valid, changes):
+    assert errors(with_store(valid, **changes), core="1.8.0")

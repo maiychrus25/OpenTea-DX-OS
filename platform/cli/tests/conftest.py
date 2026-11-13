@@ -74,7 +74,7 @@ def root(tmp_path, monkeypatch, pg_url):
     monkeypatch.setenv("DXOS_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("DXOS_DB_URL", pg_url)
     with psycopg.connect(pg_url) as conn:
-        conn.execute("TRUNCATE platform.installed_apps, platform.app_catalog, platform.app_enablements, platform.app_requests")
+        conn.execute("TRUNCATE platform.installed_apps, platform.app_catalog, platform.app_catalog_screenshots, platform.app_enablements, platform.app_requests")
         for (name,) in conn.execute(r"SELECT rolname FROM pg_roles WHERE rolname LIKE 'app\_%'").fetchall():
             conn.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(name)))
             conn.execute(sql.SQL("DROP OWNED BY {}").format(sql.Identifier(name)))

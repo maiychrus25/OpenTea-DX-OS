@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Mini-app manifests can carry an optional `store` block (category, icon, about, data, personal data, core reads, screenshots), and the platform database gets the columns and the screenshots table the store needs. Web version 1.10.0.
+
 ---
 
 ## [1.9.0] - 2026-11-13
