@@ -350,6 +350,15 @@ jobs:
           E2E_BASE_URL: http://localhost:3000
         run: npx playwright test tests/e2e/story/tea-tour.spec.ts --project=chromium --no-deps --reporter=list
 
+      # Sample data through the app, then the kit in the shell: lists in two pages, CSV download, print page and the way back.
+      - name: App Kit Tea Tour Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_APP_KIT: tea-tour
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/story/app-kit.spec.ts --project=chromium --no-deps --reporter=list
+
       # After the tea tour story, so the tea-tour pages hold a tour.
       - name: Priority Screens Browser Test
         working-directory: apps/web
@@ -401,6 +410,14 @@ jobs:
           E2E_BUSINESS_APPS: installed
           E2E_BASE_URL: http://localhost:3000
         run: npx playwright test tests/e2e/story/business-apps.spec.ts --project=chromium --no-deps --reporter=list --trace retain-on-failure
+
+      - name: App Kit Business Apps Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_APP_KIT: business
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/story/app-kit.spec.ts --project=chromium --no-deps --reporter=list --trace retain-on-failure
 
       # Only the screens of the store and the three apps; Priority Screens above ran the rest.
       - name: Business Apps Screens Browser Test
