@@ -124,7 +124,7 @@ echo "  app-tea-tour was $OLD_IP, hello got $HELLO_IP$([ "$OLD_IP" = "$HELLO_IP"
 wait_http 200 "manager token -> 200 on /apps/tea-tour/ after the reinstall" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-tour/"
 OUT=$(tour_gets "$LOC")
 assert_eq "$(grep -c '^200 ' <<<"$OUT")" 30 "kept tour page -> 200 on all 30 connections after the reinstall"
-assert_eq "$(grep -c "<h1>$TITLE " <<<"$OUT")" 30 "all 30 answers render the kept tour, which only tea-tour has"
+assert_eq "$(grep -c "<h1>$TITLE</h1>" <<<"$OUT")" 30 "all 30 answers render the kept tour, which only tea-tour has"
 grep -q -e '^404 21$' -e 'Không có trang này' <<<"$OUT" && fail "a request to tea-tour got hello's 404: $(grep -c '^404 21$' <<<"$OUT") of 30" \
   || pass "no request to tea-tour got hello's 21-byte 404"
 ./dxos remove tea-tour --purge >/dev/null && ./dxos remove hello >/dev/null && pass "tea-tour (--purge) and hello removed" \
@@ -336,7 +336,7 @@ grep -q '<option value="hh_tc_1"' <<<"$(get_page "$TO" $LP/)" && pass "officer's
 grep -q '<option value="hh_lb_' <<<"$(get_page "$TO" $LP/)" && fail "officer page offers an LB household" || pass "officer page offers no household of another HTX"
 grep -q '<option value="hh_tc_1"' <<<"$(get_page "$TM" $LP/)" && pass "manager's household list (Hasura, role manager) offers hh_tc_1" \
   || fail "manager page does not offer hh_tc_1"
-grep -q 'Hộ: <strong>' <<<"$(get_page "$TF" $LP/mine)" && pass "farmer's /mine names the farmer's own household (Hasura, role farmer)" \
+grep -q 'app-header-subtitle">Hộ ' <<<"$(get_page "$TF" $LP/mine)" && pass "farmer's /mine names the farmer's own household (Hasura, role farmer)" \
   || fail "farmer /mine shows no household"
 
 LOC=$(post_loc "$TM" $LP/prices --data-urlencode "name=Búp tươi loại 1" -d price_vnd=9000)
