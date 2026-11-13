@@ -153,6 +153,9 @@ test('with Hasura stopped the list page shows the Vietnamese error and no rows',
     await expect(() => {
       compose('exec', '-T', 'hasura', 'curl', '-sf', '-o', '/dev/null', 'http://localhost:8080/healthz');
     }).toPass({ timeout: 120_000, intervals: [2000] });
+    // Every gateway worker keeps its own DNS cache (30 s + 4 s stale); a fixed wait is used because
+    // from outside the state of the other workers cannot be observed.
+    await page.waitForTimeout(35_000);
     // The gateway caches the "no such name" DNS answer it got while Hasura was stopped for 30 s,
     // so a healthy Hasura is not yet a reachable one.
     await expect(async () => {
