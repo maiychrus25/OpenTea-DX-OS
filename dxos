@@ -45,6 +45,19 @@ remove_container() {
   fi
 }
 
+# A hand-typed `docker compose up` recreates apisix on the base route file and every mini-app route answers 404 with no hint why.
+gateway_guard() {
+  local id src
+  id="$(compose ps -q apisix 2>/dev/null)" || return 0
+  [ -n "$id" ] || return 0  # no gateway yet: the next `make up` mounts the right file
+  src="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/usr/local/apisix/conf/apisix.yaml"}}{{.Source}}{{end}}{{end}}' "$id" 2>/dev/null)" || return 0
+  case "$src" in
+    ""|*"/$RUNTIME/gateway/apisix.yaml") return 0 ;;  # suffix, not the absolute path: a symlinked checkout must not alarm
+  esac
+  echo "Cổng API đang đọc tệp route gốc chứ không phải $RUNTIME/gateway/apisix.yaml, nên route của mini-app không được nạp (thường do chạy docker compose trực tiếp, thiếu DXOS_GATEWAY_FILE). Chạy: make gateway-up" >&2
+  exit 1
+}
+
 # Host directory (relative to the caller's cwd) -> the same directory inside dxos-cli, where the repo is /repo.
 to_container() {
   local abs
@@ -65,6 +78,7 @@ undo_install() {  # <id> <exit code>
 }
 
 install() {  # <dir> [all|htx]: "htx" leaves enabling to the store worker, "all" (default) enables for every HTX
+  gateway_guard
   local dir="$1" mode="${2:-all}" id listing flag=""
   [ "$mode" != htx ] || flag=--no-enable-all
   id="$(cli manifest-id "$dir")" || exit 1  # validated by dxos-cli, so safe in a path and in the traps below
@@ -120,6 +134,7 @@ worker_log() { printf '%s %s\n' "$(date '+%F %T')" "$*"; }
 worker_release() { rm -rf "$WORKER_LOCK"; }
 
 worker() {
+  gateway_guard
   mkdir -p "$RUNTIME"
   if ! mkdir "$WORKER_LOCK" 2>/dev/null; then
     local old

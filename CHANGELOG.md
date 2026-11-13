@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`./dxos install` and `./dxos worker` refuse to run while the gateway reads the base route file**: after a hand-typed `docker compose up` without `DXOS_GATEWAY_FILE` recreated apisix, every mini-app route answered 404 and an install still ended "Đã cài". They now stop with a message naming `make gateway-up`; the check never blocks when docker cannot be asked.
+
 ---
 
 ## [1.10.0] - 2026-11-13
