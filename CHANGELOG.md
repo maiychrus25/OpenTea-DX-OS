@@ -13,6 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mini-apps can offer downloads**: the app frame sandbox gains `allow-downloads` and the proxy keeps a `content-disposition` header when it starts with `attachment`. Scripts stay blocked and the CSP is unchanged.
 - **`./dxos upgrade <dir>`** gives an installed mini-app new code in place: it validates the manifest, applies only pending migrations (same role and password), rewrites the route and compose file, rebuilds and restarts the container, then stores the new `name`, `version`, `menu` and `manifest`. Enablements are never touched; a failed build or health check leaves the registry on the old version. The App Store card and detail show `Có bản mới` when the running version differs from the catalogue.
 
+- **The four business apps rebuilt on the kit (version 0.2.0)**: `leaf-purchase` (overview, ticket list with filters and search, print of a weighing slip and a payout sheet, CSV of tickets and payouts, month filter for farmers, inline field errors), `tea-shop` (overview with revenue chart and best sellers, order and product lists, delivery note, order CSV, tracking steps), `farm-supply` (overview, round list, item and household CSV, delivery sheet with a signature column, inline item errors, round cards for farmers) and `tea-tour` (overview, tour and booking lists, guest CSV, group list with check-in boxes, public cards). Status pills carry tones (amber waiting, red cancelled, grey closed). Existing paths, form fields, status codes and redirects are unchanged.
+- **Tests**: the app smoke checks a list, a CSV download (`text/csv`, attachment, BOM) and a print page for each app, wildcard and out-of-range page values, role refusals on exports, and `./dxos upgrade` (installed app: exit 0, version, same enablement rows, still answering; not installed: refused). A new browser story (`app-kit.spec.ts`) writes sample data through each app and checks tabs, a second page, CSV download inside the frame, the print page in the top window and the way back, inline errors and the stored theme; screens cover the overview, one list and one print page of every app at 1280 and 390 px, light and dark. The five store screenshots are recaptured from the new pages (the tea-shop picture is now `manager-orders.png`).
+
+### Upgrade notes
+- Run `make platform-up` and `make web-up` (rebuilds the web image: new `dxos-app.css`, `allow-downloads` on the app frame, "Có bản mới" in the store), then `./dxos upgrade miniapps/<id>` for each installed app (`leaf-purchase`, `tea-shop`, `farm-supply`, `tea-tour`). Enablements are kept; until you upgrade, an installed app keeps its 0.1.0 code and pages. The new `leaf-purchase` route `/overview` reaches an installed app only after its upgrade. Restart `./dxos worker` if one runs.
+- No database migration; keep every `docker_*` volume.
+
+### Known limits
+- Search in the apps is accent-sensitive (`Nguyen` does not find `Nguyễn`): the app roles cannot create the `unaccent` extension.
+- No notifications: nothing tells a manager that a new order or booking arrived; the overview shows the count when opened.
+- Printing goes through the browser's own print command (Ctrl+P); the pages only prepare the sheet. No script may call `print()`.
+- CSV files hold every row of the current filter, with no row cap.
+- `farm-supply` prints inside a `section` rather than on the `body`, so its print page keeps the page background in dark mode.
+
 ### Fixed
 
 - **Flaky crash-recovery check in `make apps-smoke`**: the check of the leftover container and gateway route now waits (up to 60 s) for the worker to undo the half install, which it does after marking the request FAILED.
