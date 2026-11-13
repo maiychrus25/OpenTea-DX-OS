@@ -143,3 +143,13 @@ def test_cli_manifest_id_prints_only_a_valid_id():
     assert ok.stdout == "tea-tour\n"
     bad = run_cli("manifest-id", str(FIXTURES / "invalid"))
     assert bad.returncode == 1 and "ports" in bad.stderr and bad.stdout == ""
+
+
+def test_accepts_description(valid):
+    assert errors(mutated(valid, description="Ứng dụng mẫu."), core="1.8.0") == []
+
+
+@pytest.mark.parametrize("bad", ["", "a" * 201])
+def test_rejects_bad_description(valid, bad):
+    errs = errors(mutated(valid, description=bad), core="1.8.0")
+    assert errs and any("description" in e for e in errs)

@@ -5,7 +5,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
-import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landmark, CheckSquare, Bell, Users, Calendar } from 'lucide-react'
+import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landmark, CheckSquare, Bell, Users, Calendar, Store } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
@@ -33,7 +33,8 @@ export default async function ManagerLayout({ children }: { children: React.Reac
     { label: 'Lô hàng', href: '/manager/lots', icon: <Package size={20} /> },
     { label: 'Thông báo', href: '/manager/notifications', icon: <Bell size={20} /> },
     { label: 'Hồ sơ HTX', href: '/manager/profile', icon: <Landmark size={20} /> },
-    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'manager')),
+    { label: 'Kho ứng dụng', href: '/manager/app-store', icon: <Store size={20} /> },
+    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'manager', session.user.htxCode ?? null)),
   ]
 
   return (

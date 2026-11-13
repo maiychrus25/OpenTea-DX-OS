@@ -33,7 +33,7 @@ export default async function OfficerLayout({ children }: { children: React.Reac
     { label: 'Trợ lý TT', href: '/officer/assistant', icon: <Bot size={20} /> },
     { label: 'Thông báo', href: '/officer/notifications', icon: <Bell size={20} /> },
     { label: 'Tài khoản', href: '/officer/profile', icon: <User size={20} /> },
-    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'officer')),
+    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'officer', session.user.htxCode ?? null)),
   ]
 
   return (

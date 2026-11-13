@@ -1,0 +1,49 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Phiếu cân của tôi{% endblock %}
+{% block main %}
+<h1>Phiếu cân của tôi</h1>
+{% if not household %}
+<p class="notice" role="status">{{ notice_text }}</p>
+{% else %}
+<p>Hộ: <strong>{{ household.name }}</strong></p>
+<h2>Chi trả theo kỳ</h2>
+{% if payouts %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Kỳ</th><th role="columnheader">Số ký</th><th role="columnheader">Số tiền</th><th role="columnheader">Trạng thái</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for date_from, date_to, o in payouts %}
+    <tr role="row">
+      <td role="cell" data-label="Kỳ">{{ date_from | vn_date }} – {{ date_to | vn_date }}</td>
+      <td role="cell" data-label="Số ký">{{ o.total_kg | kg }}</td>
+      <td role="cell" data-label="Số tiền">{{ o.total_vnd | vnd }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill">{{ "Đã trả" if o.paid_at else "Chưa trả" }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Chưa có kỳ nào được chốt cho hộ của anh/chị.</p>
+{% endif %}
+<h2>Phiếu cân gần đây</h2>
+{% if tickets %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Ngày cân</th><th role="columnheader">Loại chè</th><th role="columnheader">Số ký</th><th role="columnheader">Thành tiền</th><th role="columnheader">Trạng thái</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for t in tickets %}
+    <tr role="row">
+      <td role="cell" data-label="Ngày cân">{{ t.weighed_on | vn_date }}</td>
+      <td role="cell" data-label="Loại chè">{{ t.grade_name }}</td>
+      <td role="cell" data-label="Số ký">{{ t.kg | kg }}</td>
+      <td role="cell" data-label="Thành tiền">{{ t.amount_vnd | vnd }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill">{{ ticket_state(t) }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Chưa có phiếu cân nào.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

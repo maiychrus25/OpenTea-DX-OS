@@ -18,7 +18,7 @@ jest.mock('@/infrastructure/db/repositories/PrismaHtxProfileRepository', () => (
   PrismaHtxProfileRepository: jest.fn().mockImplementation(() => ({ getProfile: async () => ({ name: 'HTX', address: 'A' }) })),
 }))
 jest.mock('@/infrastructure/db/repositories/prisma-installed-app-repository', () => ({
-  PrismaInstalledAppRepository: jest.fn().mockImplementation(() => ({ list: () => list() })),
+  PrismaInstalledAppRepository: jest.fn().mockImplementation(() => ({ list: (htxCode: string | null) => list(htxCode) })),
 }))
 jest.mock('@/components/layout/AppShell', () => ({
   AppShell: ({ navItems }: { navItems: { label: string; href: string }[] }) => (
@@ -61,6 +61,12 @@ describe.each([
     expect(screen.getByText('Tổng quan')).toBeInTheDocument()
   })
 
+  test('asks for the apps enabled for the session HTX', async () => {
+    list.mockResolvedValue([])
+    await renderLayout()
+    expect(list).toHaveBeenCalledWith('TC')
+  })
+
   test('layouts keep their items when the app list fails', async () => {
     const logError = jest.spyOn(logger, 'error').mockImplementation(() => undefined)
     list.mockRejectedValue(new Error('db down'))
@@ -70,4 +76,11 @@ describe.each([
     expect(logError).toHaveBeenCalled()
     logError.mockRestore()
   })
+})
+
+test('the manager menu links the App Store', async () => {
+  ;(auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', role: 'manager', name: 'A', htxCode: 'TC' } })
+  list.mockResolvedValue([])
+  render(await ManagerLayout({ children: <p>page</p> }))
+  expect(screen.getByText('Kho ứng dụng')).toHaveAttribute('data-href', '/manager/app-store')
 })

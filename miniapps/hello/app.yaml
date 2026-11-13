@@ -3,6 +3,7 @@
 apiVersion: dxos/v1
 id: hello
 name: Xin chào
+description: Ứng dụng mẫu cho người viết mini-app.
 version: 0.1.0
 license: MIT
 publisher: OpenTea Developers

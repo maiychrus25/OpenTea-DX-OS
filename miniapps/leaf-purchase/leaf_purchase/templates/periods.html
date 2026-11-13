@@ -1,0 +1,35 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Kỳ thanh toán{% endblock %}
+{% block main %}
+<p><a href="{{ href('/', theme) }}">← Phiếu cân</a> · <a href="{{ href('/prices', theme) }}">Giá thu mua</a></p>
+<h1>Kỳ thanh toán</h1>
+{% if periods %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Kỳ</th><th role="columnheader">Chốt lúc</th><th role="columnheader">Số hộ</th><th role="columnheader">Tổng tiền</th><th role="columnheader">Đã trả</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for p in periods %}
+    <tr role="row">
+      <td role="cell" data-label="Kỳ"><a href="{{ href('/periods/' ~ p.id, theme) }}">Kỳ {{ p.date_from | vn_date }} – {{ p.date_to | vn_date }}</a></td>
+      <td role="cell" data-label="Chốt lúc">{{ p.closed_at | vn_time }}</td>
+      <td role="cell" data-label="Số hộ">{{ p.households }}</td>
+      <td role="cell" data-label="Tổng tiền">{{ p.total_vnd | vnd }}</td>
+      <td role="cell" data-label="Đã trả">{{ p.paid }} / {{ p.households }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>HTX chưa chốt kỳ nào.</p>
+{% endif %}
+
+<h2>Chốt kỳ mới</h2>
+<p>Chốt gom mọi phiếu chưa huỷ trong khoảng ngày và tính tiền từng hộ. Sau khi chốt không sửa hay huỷ được các phiếu này.</p>
+<form method="post" action="{{ href('/periods', theme) }}">
+  {% include "errors.html" %}
+  <label>Từ ngày <input type="date" name="date_from" required value="{{ form.date_from }}"></label>
+  <label>Đến ngày <input type="date" name="date_to" required value="{{ form.date_to }}"></label>
+  <button type="submit">Chốt kỳ</button>
+</form>
+{% endblock %}

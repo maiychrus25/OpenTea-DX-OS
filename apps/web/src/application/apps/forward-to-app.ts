@@ -30,6 +30,24 @@ export interface ForwardToAppDeps {
   clientIp: string
   /** One limiter per process, made with `createPublicLimiter`; true means the IP is over the limit. */
   isPublicLimited: (ip: string) => boolean
+  /** The signed-in user's HTX, or null without a session HTX. Only read on protected paths. */
+  getHtxCode: () => Promise<string | null>
+  /** Whether the app is enabled for the HTX or for every HTX (platform.app_enablements). */
+  isEnabledFor: (appId: string, htxCode: string) => Promise<boolean>
+}
+
+const HTX_CODE = /^[A-Za-z0-9_-]{1,20}$/
+
+/**
+ * Which tenant a request belongs to: a path under a public prefix names its HTX in the segment right after the prefix
+ * (`/public/<htxCode>/...`), every other path uses the signed-in user's HTX. `/public` alone counts as public, with no HTX.
+ */
+export function appTenant(app: InstalledApp, path: string[]): { kind: 'protected' } | { kind: 'public'; htxCode: string | null } {
+  const joined = `/${path.join('/')}/`
+  const prefix = app.publicPrefixes.find(candidate => joined.startsWith(candidate))
+  if (prefix === undefined) return { kind: 'protected' }
+  const segment = joined.slice(prefix.length).split('/')[0]
+  return { kind: 'public', htxCode: HTX_CODE.test(segment) ? segment : null }
 }
 
 /** A redirect may only send the frame to another page of the same app (an open redirect otherwise). */
@@ -83,15 +101,25 @@ export async function forwardToApp(req: Request, app: InstalledApp, path: string
     if (value !== null) headers.set(name, value)
   }
 
-  const joined = `/${path.join('/')}`
-  if (app.publicPrefixes.some(prefix => joined.startsWith(prefix))) {
+  const tenant = appTenant(app, path)
+  let htxCode: string | null
+  if (tenant.kind === 'public') {
     if (deps.isPublicLimited(deps.clientIp)) return appResponse('Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau một phút.', 429)
+    htxCode = tenant.htxCode
   } else {
     try {
       headers.set('authorization', `Bearer ${await deps.getToken()}`)
     } catch {
       return appResponse(SIGNED_OUT_PAGE, 401, { 'content-type': 'text/html; charset=utf-8' })
     }
+    htxCode = await deps.getHtxCode().catch(() => null)
+  }
+  // An app a cooperative did not enable is as good as absent for it, so the answer is the same 404 as for a missing app.
+  try {
+    if (htxCode === null || !(await deps.isEnabledFor(app.id, htxCode))) return appResponse('Không có ứng dụng này', 404)
+  } catch (cause) {
+    logger.error('Mini-app enablement lookup failed', { app: app.id, cause })
+    return appResponse('Ứng dụng tạm thời không phản hồi. Vui lòng thử lại sau.', 503)
   }
 
   const url = `${process.env.CORE_GATEWAY_URL}/apps/${app.id}/${path.map(encodeURIComponent).join('/')}${new URL(req.url).search}`

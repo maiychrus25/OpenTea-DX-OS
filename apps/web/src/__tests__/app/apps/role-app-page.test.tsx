@@ -9,14 +9,20 @@ import FarmerAppPage from '@/app/farmer/apps/[id]/[[...path]]/page'
 import { logger } from '@/lib/logger'
 
 const find = jest.fn()
+const isEnabledFor = jest.fn()
+const authMock = jest.fn()
 
+jest.mock('@/auth', () => ({ auth: () => authMock() }))
 jest.mock('next/navigation', () => ({
   notFound: () => {
     throw new Error('NEXT_NOT_FOUND')
   },
 }))
 jest.mock('@/infrastructure/db/repositories/prisma-installed-app-repository', () => ({
-  PrismaInstalledAppRepository: jest.fn().mockImplementation(() => ({ find: (id: string) => find(id) })),
+  PrismaInstalledAppRepository: jest.fn().mockImplementation(() => ({
+    find: (id: string) => find(id),
+    isEnabledFor: (id: string, htx: string) => isEnabledFor(id, htx),
+  })),
 }))
 
 const managerOnly = {
@@ -27,7 +33,11 @@ const managerOnly = {
   publicPrefixes: [],
 }
 
-beforeEach(() => find.mockReset())
+beforeEach(() => {
+  find.mockReset()
+  isEnabledFor.mockReset().mockResolvedValue(true)
+  authMock.mockReset().mockResolvedValue({ user: { id: 'u1', htxCode: 'TC' } })
+})
 
 describe('/<role>/apps/[id]/[[...path]]', () => {
   test('is never statically rendered', () => {
@@ -62,6 +72,28 @@ describe('/<role>/apps/[id]/[[...path]]', () => {
     await expect(Page({ params: { id: 'tea-tour' }, searchParams: {} })).rejects.toMatchObject({ digest: 'CORE_UNAVAILABLE' })
     expect(logError).toHaveBeenCalledWith('Mini-app lookup failed', expect.objectContaining({ app: 'tea-tour' }))
     logError.mockRestore()
+  })
+
+  test.each([
+    ['manager', ManagerAppPage],
+    ['officer', OfficerAppPage],
+    ['farmer', FarmerAppPage],
+  ])('%s: answers notFound when the app is not enabled for the session HTX', async (role, Page) => {
+    find.mockResolvedValue({ ...managerOnly, menu: [{ label: 'Tour chè', path: '/', roles: [role] }] })
+    isEnabledFor.mockResolvedValue(false)
+    await expect(Page({ params: { id: 'tea-tour' }, searchParams: {} })).rejects.toThrow('NEXT_NOT_FOUND')
+    expect(isEnabledFor).toHaveBeenCalledWith('tea-tour', 'TC')
+  })
+
+  test.each([
+    ['manager', ManagerAppPage],
+    ['officer', OfficerAppPage],
+    ['farmer', FarmerAppPage],
+  ])('%s: answers notFound when the session has no HTX', async (role, Page) => {
+    find.mockResolvedValue({ ...managerOnly, menu: [{ label: 'Tour chè', path: '/', roles: [role] }] })
+    authMock.mockResolvedValue({ user: { id: 'u1', htxCode: null } })
+    await expect(Page({ params: { id: 'tea-tour' }, searchParams: {} })).rejects.toThrow('NEXT_NOT_FOUND')
+    expect(isEnabledFor).not.toHaveBeenCalled()
   })
 
   test('renders the frame on the proxy path with the shell query', async () => {

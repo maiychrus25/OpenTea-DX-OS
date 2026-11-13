@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { createPublicLimiter, forwardToApp } from '@/application/apps/forward-to-app'
+import { appTenant, createPublicLimiter, forwardToApp } from '@/application/apps/forward-to-app'
 import type { InstalledApp } from '@/domain/entities/installed-app'
 import { logger } from '@/lib/logger'
 
@@ -18,7 +18,15 @@ function setup(reply: Response = new Response('ok', { headers: { 'content-type':
   const getToken = jest.fn().mockResolvedValue('tok')
   // A fresh limiter per test, so no test inherits another's counts.
   const isPublicLimited = createPublicLimiter()
-  return { fetchImpl, getToken, deps: { fetchImpl: fetchImpl as unknown as typeof fetch, getToken, clientIp, isPublicLimited } }
+  const isEnabledFor = jest.fn().mockResolvedValue(true)
+  const getHtxCode = jest.fn().mockResolvedValue('TC')
+  return {
+    fetchImpl,
+    getToken,
+    isEnabledFor,
+    getHtxCode,
+    deps: { fetchImpl: fetchImpl as unknown as typeof fetch, getToken, clientIp, isPublicLimited, isEnabledFor, getHtxCode },
+  }
 }
 const sent = (fetchImpl: jest.Mock) => ({ url: fetchImpl.mock.calls[0][0] as string, init: fetchImpl.mock.calls[0][1] as RequestInit })
 const header = (init: RequestInit, name: string) => new Headers(init.headers).get(name)
@@ -328,5 +336,91 @@ describe('forwardToApp', () => {
     expect(body).toContain('đăng nhập')
     expect(body).toMatch(/<a href="\/login" target="_top">/)
     expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  describe('enablement (store)', () => {
+    test('forwards a protected request for an HTX that enabled the app', async () => {
+      const { fetchImpl, isEnabledFor, deps } = setup()
+      const res = await forwardToApp(new Request('http://web/apps/tea-tour/'), app, [], deps)
+      expect(res.status).toBe(200)
+      expect(isEnabledFor).toHaveBeenCalledWith('tea-tour', 'TC')
+      expect(fetchImpl).toHaveBeenCalledTimes(1)
+    })
+
+    test.each([
+      ['an HTX that did not enable the app', 'LB', false],
+      ['a session without an HTX', null, true],
+    ])('protected: 404 for %s, and nothing is forwarded', async (_name, htx, enabled) => {
+      const { fetchImpl, isEnabledFor, getHtxCode, deps } = setup()
+      getHtxCode.mockResolvedValue(htx)
+      isEnabledFor.mockResolvedValue(enabled)
+      const res = await forwardToApp(new Request('http://web/apps/tea-tour/'), app, [], deps)
+      expect(res.status).toBe(404)
+      expect(res.headers.get('content-security-policy')).toBe(CSP)
+      expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+      expect(fetchImpl).not.toHaveBeenCalled()
+    })
+
+    test('protected: no session still answers 401, before the enablement check', async () => {
+      const { getToken, isEnabledFor, deps } = setup()
+      getToken.mockRejectedValue(new Error('no session'))
+      const res = await forwardToApp(new Request('http://web/apps/tea-tour/'), app, [], deps)
+      expect(res.status).toBe(401)
+      expect(isEnabledFor).not.toHaveBeenCalled()
+    })
+
+    test('public: forwards when the HTX in the URL enabled the app (the session is not read)', async () => {
+      const { fetchImpl, isEnabledFor, getHtxCode, deps } = setup(undefined, '198.51.100.60')
+      const res = await forwardToApp(new Request('http://web/apps/tea-tour/public/TC'), app, ['public', 'TC'], deps)
+      expect(res.status).toBe(200)
+      expect(isEnabledFor).toHaveBeenCalledWith('tea-tour', 'TC')
+      expect(getHtxCode).not.toHaveBeenCalled()
+      expect(fetchImpl).toHaveBeenCalledTimes(1)
+    })
+
+    test.each([
+      ['an HTX that did not enable the app', ['public', 'LB'], false],
+      ['no HTX in the URL', ['public'], true],
+      ['a malformed HTX in the URL', ['public', 'a'.repeat(21)], true],
+    ])('public: 404 for %s, and nothing is forwarded', async (_name, path, enabled) => {
+      const { fetchImpl, isEnabledFor, deps } = setup(undefined, '198.51.100.61')
+      isEnabledFor.mockResolvedValue(enabled)
+      const res = await forwardToApp(new Request('http://web/apps/tea-tour/x'), app, path, deps)
+      expect(res.status).toBe(404)
+      expect(res.headers.get('content-security-policy')).toBe(CSP)
+      expect(fetchImpl).not.toHaveBeenCalled()
+    })
+
+    test('answers 503 when the enablement lookup fails', async () => {
+      const logError = jest.spyOn(logger, 'error').mockImplementation(() => undefined)
+      const { fetchImpl, isEnabledFor, deps } = setup()
+      isEnabledFor.mockRejectedValue(new Error('db down'))
+      const res = await forwardToApp(new Request('http://web/apps/tea-tour/'), app, [], deps)
+      expect(res.status).toBe(503)
+      expect(fetchImpl).not.toHaveBeenCalled()
+      logError.mockRestore()
+    })
+
+    test('a path with an encoded separator is refused as unsafe before any lookup', async () => {
+      const { isEnabledFor, deps } = setup()
+      const res = await forwardToApp(new Request('http://web/apps/tea-tour/x'), app, ['public', '..%2Fx'], deps)
+      expect(res.status).toBe(400)
+      expect(isEnabledFor).not.toHaveBeenCalled()
+    })
+  })
+})
+
+describe('appTenant', () => {
+  test.each([
+    [['public', 'TC', 'x'], { kind: 'public', htxCode: 'TC' }],
+    [['public', 'TC'], { kind: 'public', htxCode: 'TC' }],
+    [['public'], { kind: 'public', htxCode: null }],
+    [['public', ''], { kind: 'public', htxCode: null }],
+    [['public', 'a b'], { kind: 'public', htxCode: null }],
+    [[], { kind: 'protected' }],
+    [['tours', 'public'], { kind: 'protected' }],
+    [['publicity'], { kind: 'protected' }],
+  ])('%j', (path, expected) => {
+    expect(appTenant(app, path)).toEqual(expected)
   })
 })

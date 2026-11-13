@@ -1,0 +1,40 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Giá thu mua{% endblock %}
+{% block main %}
+<p><a href="{{ href('/', theme) }}">← Phiếu cân</a></p>
+<h1>Giá thu mua theo loại chè</h1>
+<p>Giá chỉ áp dụng cho phiếu ghi sau khi đổi; phiếu đã ghi giữ giá cũ.</p>
+{% if grades %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Loại chè</th><th role="columnheader">Giá mỗi ký</th><th role="columnheader">Trạng thái</th><th role="columnheader">Cập nhật</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for g in grades %}
+    <tr role="row">
+      <td role="cell" data-label="Loại chè">{{ g.name }}</td>
+      <td role="cell" data-label="Giá mỗi ký">{{ g.price_vnd | vnd }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill">{{ "Đang dùng" if g.active else "Tạm ngưng" }}</span></td>
+      <td role="cell" data-label="Cập nhật">
+        <form method="post" action="{{ href('/prices/' ~ g.id, theme) }}">
+          <label>Giá mới (đồng/kg) <input type="number" name="price_vnd" min="0" step="1" required value="{{ g.price_vnd }}"></label>
+          <label><input type="checkbox" name="active" value="1"{% if g.active %} checked{% endif %}> Đang dùng</label>
+          <button type="submit">Lưu</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>HTX chưa có loại chè nào. Thêm loại đầu tiên bằng biểu mẫu dưới đây.</p>
+{% endif %}
+
+<h2>Thêm loại chè</h2>
+<form method="post" action="{{ href('/prices', theme) }}">
+  {% include "errors.html" %}
+  <label>Tên loại chè <input name="name" maxlength="60" required value="{{ form.name }}"></label>
+  <label>Giá mỗi ký (đồng) <input type="number" name="price_vnd" min="0" step="1" required value="{{ form.price_vnd }}"></label>
+  <button type="submit">Thêm loại chè</button>
+</form>
+{% endblock %}

@@ -176,13 +176,15 @@ def prepare(root: Path, app_dir: Path) -> str:
     return app_id
 
 
-def commit(root: Path, app_id: str) -> None:
+def commit(root: Path, app_id: str, enable_all: bool = True) -> None:
     journal = journal_path(root, _check_id(app_id))
     state = read_journal(journal)
     if state.get("completed") != [step.name for step in _steps(root, app_id)]:
         raise InstallError(f"App '{app_id}' chưa có bản cài đã chuẩn bị xong (chạy prepare trước)")
     with _connect() as conn:
         registry.register(conn, state["manifest"])
+        if enable_all:
+            registry.enable(conn, app_id, "*", "dxos-cli")
     journal.unlink()
 
 
@@ -205,6 +207,7 @@ def remove(root: Path, app_id: str, purge: bool) -> None:
     with _connect() as conn:
         registered = app_id in registry.installed_ids(conn)
         registry.unregister(conn, app_id)
+        registry.disable_all(conn, app_id)
     steps = {s.name: s for s in _steps(root, app_id)}
     steps["gateway"].undo()
     steps["compose"].undo()

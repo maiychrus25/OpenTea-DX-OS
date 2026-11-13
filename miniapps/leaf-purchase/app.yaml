@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+apiVersion: dxos/v1
+id: leaf-purchase
+name: Thu mua búp tươi
+description: Ghi phiếu cân chè búp tươi của từng hộ, chốt kỳ và theo dõi chi trả.
+version: 0.1.0
+license: MIT
+publisher: OpenTea Developers
+requires: { core: ">=1.9.0" }
+runtime:
+  build: .
+  port: 8080
+  health: /healthz
+database:
+  migrations: migrations/
+routes:
+  protected:
+    /: [officer, manager]
+    /prices: [manager]
+    /periods: [manager]
+    /mine: [farmer]
+menu:
+  - { label: Thu mua búp tươi, path: /, roles: [officer, manager] }
+  - { label: Kỳ thanh toán, path: /periods, roles: [manager] }
+  - { label: Phiếu cân của tôi, path: /mine, roles: [farmer] }

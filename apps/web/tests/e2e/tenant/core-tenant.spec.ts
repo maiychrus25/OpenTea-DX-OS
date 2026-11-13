@@ -140,6 +140,7 @@ test('a session cookie survives an expired access token and the page still loads
 });
 
 test('with Hasura stopped the list page shows the Vietnamese error and no rows', async ({ page }) => {
+  test.setTimeout(300_000);
   await login(page, 'smoke_manager_tc');
   try {
     compose('stop', 'hasura');
@@ -151,6 +152,12 @@ test('with Hasura stopped the list page shows the Vietnamese error and no rows',
     compose('start', 'hasura');
     await expect(() => {
       compose('exec', '-T', 'hasura', 'curl', '-sf', '-o', '/dev/null', 'http://localhost:8080/healthz');
+    }).toPass({ timeout: 120_000, intervals: [2000] });
+    // The gateway caches the "no such name" DNS answer it got while Hasura was stopped for 30 s,
+    // so a healthy Hasura is not yet a reachable one.
+    await expect(async () => {
+      await page.goto('/manager/zones');
+      await expect(page.getByRole('cell', { name: 'P-TC-001' })).toBeVisible({ timeout: 3000 });
     }).toPass({ timeout: 120_000, intervals: [2000] });
   }
 });
