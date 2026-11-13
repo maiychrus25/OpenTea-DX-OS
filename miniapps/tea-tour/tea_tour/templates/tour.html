@@ -30,7 +30,7 @@
       <td role="cell" data-label="Khách">{{ b.guest_name }}{% if b.note %}<br>Ghi chú: {{ b.note }}{% endif %}</td>
       <td role="cell" data-label="Số điện thoại"><a href="tel:{{ b.phone }}">{{ b.phone }}</a></td>
       <td role="cell" data-label="Số người">{{ b.party_size }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ booking_status[b.status] }}</span></td>
+      <td role="cell" data-label="Trạng thái"><span class="{{ booking_pill(b.status) }}">{{ booking_status[b.status] }}</span></td>
       <td role="cell" data-label="Đặt lúc">{{ b.created_at | vn_time }}</td>
       <td role="cell" data-label="Thao tác"><span class="actions">
         {% if b.status == "PENDING" and tour.status == "OPEN" %}<form method="post" action="{{ href('/bookings/' ~ b.id ~ '/confirm', theme) }}"><button type="submit">Xác nhận</button></form>{% endif %}

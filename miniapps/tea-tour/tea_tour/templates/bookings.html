@@ -18,7 +18,7 @@
 </form>
 {% if bookings %}
 <table role="table">
-  <thead role="rowgroup"><tr role="row"><th role="columnheader">Mã</th><th role="columnheader">Khách</th><th role="columnheader">Số điện thoại</th><th role="columnheader">Tour</th><th role="columnheader">Số người</th><th role="columnheader">Trạng thái</th><th role="columnheader">Đặt lúc</th></tr></thead>
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Mã</th><th role="columnheader">Khách</th><th role="columnheader">Số điện thoại</th><th role="columnheader">Tour</th><th role="columnheader">Số người</th><th role="columnheader">Trạng thái</th></tr></thead>
   <tbody role="rowgroup">
   {% for b in bookings %}
     <tr role="row">
@@ -27,8 +27,7 @@
       <td role="cell" data-label="Số điện thoại"><a href="tel:{{ b.phone }}">{{ b.phone }}</a></td>
       <td role="cell" data-label="Tour">{{ b.tour_title }} · {{ b.tour_starts_at | vn_time }}</td>
       <td role="cell" data-label="Số người">{{ b.party_size }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ booking_status[b.status] }}</span></td>
-      <td role="cell" data-label="Đặt lúc">{{ b.created_at | vn_time }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="{{ booking_pill(b.status) }}">{{ booking_status[b.status] }}</span></td>
     </tr>
   {% endfor %}
   </tbody>

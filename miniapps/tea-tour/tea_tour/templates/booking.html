@@ -13,7 +13,7 @@
 {% set b, t = found %}
 <h2>{{ t.title }}</h2>
 {% if b.status == "CANCELLED" %}
-<p><span class="pill">{{ booking_status[b.status] }}</span></p>
+<p><span class="{{ booking_pill(b.status) }}">{{ booking_status[b.status] }}</span></p>
 {% else %}
 {{ kit.steps(["Chờ xác nhận", "Đã xác nhận"], 0 if b.status == "PENDING" else 1) }}
 {% endif %}

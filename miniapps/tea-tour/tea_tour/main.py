@@ -58,7 +58,16 @@ def tour_status(tour: store.Tour) -> str:
     return "Đã diễn ra" if tour.past else "Đang nhận khách"
 
 
-templates.env.globals.update(href=href, prefix=PREFIX, booking_status=BOOKING_STATUS, tour_status=tour_status)
+def tour_pill(tour: store.Tour) -> str:
+    return "pill danger" if tour.status == "CANCELLED" else "pill neutral" if tour.past else "pill"
+
+
+def booking_pill(status: str) -> str:
+    return {"PENDING": "pill warn", "CANCELLED": "pill danger"}.get(status, "pill")
+
+
+templates.env.globals.update(href=href, prefix=PREFIX, booking_status=BOOKING_STATUS, tour_status=tour_status,
+                             tour_pill=tour_pill, booking_pill=booking_pill)
 templates.env.filters["vnd"] = lambda n: f"{n:,}".replace(",", ".") + " ₫"
 templates.env.filters["vn_time"] = lambda t: t.astimezone(VN_TZ).strftime("%d/%m/%Y %H:%M")
 

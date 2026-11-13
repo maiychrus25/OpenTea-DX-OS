@@ -663,7 +663,7 @@ def test_lookup_shows_steps_or_a_cancelled_pill(client, db):
     confirmed = client.get("/public/TC/booking?code=BBBB3333&phone=0922222222").text
     assert re.search(r'<li data-state="done">Chờ xác nhận</li>\s*<li aria-current="step">Đã xác nhận</li>', confirmed)
     cancelled = client.get("/public/TC/booking?code=CCCC4444&phone=0933333333").text
-    assert '<ol class="steps">' not in cancelled and '<span class="pill">Đã huỷ</span>' in cancelled
+    assert '<ol class="steps">' not in cancelled and '<span class="pill danger">Đã huỷ</span>' in cancelled
 
 
 def test_guide_page_has_upcoming_and_past_sections(client, db):
@@ -681,3 +681,21 @@ def test_guide_page_has_upcoming_and_past_sections(client, db):
     assert "Lê Thị Hoa" not in html and "0912345678" not in html
     none = client.get("/guide", headers=bearer(sub="kc-farmer-9", roles=("farmer",))).text
     assert none.count('class="empty"') == 2
+
+
+def test_status_pills_carry_tones(client, db, households):
+    now = datetime.now(timezone.utc)
+    open_tour = add_tour(db, title="Tour mở", starts_at=now + timedelta(days=2), seats=1)
+    add_tour(db, title="Tour đã qua", starts_at=now - timedelta(days=2))
+    add_tour(db, title="Tour huỷ", status="CANCELLED")
+    add_booking(db, open_tour, code="AAAA2222", status="PENDING")
+    add_booking(db, open_tour, code="BBBB3333", status="CONFIRMED", phone="0922222222")
+    add_booking(db, open_tour, code="CCCC4444", status="CANCELLED", phone="0933333333")
+    tours = client.get("/?show=all", headers=MANAGER).text
+    for tone, label in (("pill", "Đang nhận khách"), ("pill neutral", "Đã diễn ra"), ("pill danger", "Đã huỷ")):
+        assert f'<span class="{tone}">{label}</span>' in tours, label
+    bookings = client.get("/bookings", headers=MANAGER).text
+    for tone, label in (("pill warn", "Chờ xác nhận"), ("pill", "Đã xác nhận"), ("pill danger", "Đã huỷ")):
+        assert f'<span class="{tone}">{label}</span>' in bookings, label
+    assert '<span class="pill danger">Hết chỗ</span>' in client.get("/public/TC").text
+    assert "Người dẫn tour" in client.get(f"/tours/{open_tour}/print", headers=MANAGER).text

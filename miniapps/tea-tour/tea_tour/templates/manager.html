@@ -30,7 +30,7 @@
       <td role="cell" data-label="Thời gian">{{ t.starts_at | vn_time }}</td>
       <td role="cell" data-label="Người dẫn">{{ t.guide_name or "Chưa có" }}</td>
       <td role="cell" data-label="Đã đặt / số chỗ">{{ t.seats_used }} / {{ t.seats }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ tour_status(t) }}</span></td>
+      <td role="cell" data-label="Trạng thái"><span class="{{ tour_pill(t) }}">{{ tour_status(t) }}</span></td>
     </tr>
   {% endfor %}
   </tbody>

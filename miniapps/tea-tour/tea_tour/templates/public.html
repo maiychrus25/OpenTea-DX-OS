@@ -15,7 +15,7 @@
   <li class="card">
     <h3>{{ t.title }}</h3>
     <p>{{ t.starts_at | vn_time }} · Điểm hẹn: {{ t.meeting_point }}</p>
-    <p><strong>{{ t.price_vnd | vnd }}</strong> mỗi khách · {% if t.seats_left %}<span class="pill">Còn {{ t.seats_left }} chỗ</span>{% else %}<span class="pill">Hết chỗ</span>{% endif %}</p>
+    <p><strong>{{ t.price_vnd | vnd }}</strong> mỗi khách · {% if t.seats_left %}<span class="pill">Còn {{ t.seats_left }} chỗ</span>{% else %}<span class="pill danger">Hết chỗ</span>{% endif %}</p>
     {% if t.description %}<p>{{ t.description }}</p>{% endif %}
     {% if error and mine %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     {% if t.seats_left %}
