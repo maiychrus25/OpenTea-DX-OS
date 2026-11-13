@@ -149,16 +149,50 @@ def test_paging_edges(db, client):
     assert empty.status_code == 200 and 'class="empty"' in empty.text and 'class="pagination"' not in empty.text
 
 
-def test_totals_equal_the_sum_of_the_filtered_rows(client, listed):
-    g1, g2 = listed
-    for query, kg, vnd, count in (("", "38,0", "258.000 ₫", 4), ("?status=all", "45,0", "314.000 ₫", 5),
-                                  ("?household=h1", "30,0", "200.000 ₫", 2), ("?q=nobody", "0,0", "0 ₫", 0)):
+def test_totals_never_count_voided_tickets(client, listed):
+    hint = "Không tính phiếu đã huỷ"
+    # (query, kg, vnd, tickets, rows shown, hint shown)
+    for query, kg, vnd, count, rows, hinted in (
+            ("", "38,0", "258.000 ₫", 4, 4, False), ("?status=all", "38,0", "258.000 ₫", 4, 5, True),
+            ("?status=voided", "0,0", "0 ₫", 0, 1, True), ("?household=h1", "30,0", "200.000 ₫", 2, 2, False),
+            ("?household=h2&status=all", "5,0", "40.000 ₫", 1, 2, True), ("?q=nobody", "0,0", "0 ₫", 0, 0, False)):
         html = client.get("/tickets" + query, headers=OFFICER).text
         stats = re.findall(r'<span class="stat-value">(.*?)</span>', html)
         assert stats[:3] == [f"{kg} kg", vnd, str(count)], query
-        assert len(column(html, "Số ký")) == count, query
-    amounts = column(client.get("/tickets?status=all", headers=OFFICER).text, "Thành tiền")
-    assert sum(int(a.replace(".", "").replace(" ₫", "")) for a in amounts) == 314000
+        assert len(column(html, "Số ký")) == rows, query
+        assert (hint in html) is hinted, query
+    html = client.get("/tickets?status=all", headers=OFFICER).text
+    amounts = [int(a.replace(".", "").replace(" ₫", "")) for a in column(html, "Thành tiền")]
+    states = [re.search(r">(.*?)<", st).group(1) for st in column(html, "Tình trạng")]
+    assert sum(a for a, st in zip(amounts, states) if st != "Đã huỷ") == 258000
+
+
+def test_status_pills_carry_a_tone(db, client, households):
+    grade = add_grade(db)
+    add_ticket(db, grade, household_id="h1", weighed_on="2030-05-01", kg="1.0")
+    add_ticket(db, grade, household_id="h1", weighed_on="2030-05-02", kg="2.0", voided=True)
+    html = client.get("/tickets?status=all", headers=OFFICER).text
+    assert '<span class="pill warn">Chưa chốt</span>' in html and '<span class="pill danger">Đã huỷ</span>' in html
+    closed = client.post("/periods", headers=MANAGER, data={"date_from": "2030-05-01", "date_to": "2030-05-31"})
+    period = closed.headers["location"].split("?")[0].rsplit("/", 1)[1]
+    assert '<span class="pill">Đã vào kỳ</span>' in client.get("/tickets", headers=OFFICER).text
+    assert '<span class="pill warn">Chưa trả</span>' in client.get(f"/periods/{period}", headers=MANAGER).text
+    farmer = client.get("/mine", headers=FARMER).text
+    assert '<span class="pill warn">Chưa trả</span>' in farmer and '<span class="pill">Đã vào kỳ</span>' in farmer
+    payout = db.execute("SELECT id FROM payouts").fetchone()[0]
+    client.post(f"/periods/{period}/payouts/{payout}/paid", headers=MANAGER)
+    assert '<span class="pill">Đã trả</span>' in client.get(f"/periods/{period}", headers=MANAGER).text
+    assert '<span class="pill">Đã trả</span>' in client.get("/mine", headers=FARMER).text
+
+
+def test_print_pages_use_the_signature_block(db, client, households):
+    grade = add_grade(db)
+    ticket = add_ticket(db, grade)
+    client.post("/periods", headers=MANAGER, data={"date_from": "2030-05-01", "date_to": "2030-05-31"})
+    period = db.execute("SELECT id FROM periods").fetchone()[0]
+    assert client.get(f"/tickets/{ticket}/print", headers=OFFICER).text.count('class="signature"') == 2
+    sheet = client.get(f"/periods/{period}/print", headers=MANAGER).text
+    assert sheet.count('class="signature"') == 1 and "<br><br>" not in sheet
 
 
 def test_export_only_holds_the_callers_rows(db, client, listed):

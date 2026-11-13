@@ -18,7 +18,7 @@
       <td role="cell" data-label="Số ký">{{ o.total_kg | kg }}</td>
       <td role="cell" data-label="Số tiền">{{ o.total_vnd | vnd }}</td>
       <td role="cell" data-label="Đã trả">{{ ("Đã trả " ~ (o.paid_at | vn_date)) if o.paid_at else "Chưa trả" }}</td>
-      <td role="cell" data-label="Chữ ký"><br><br></td>
+      <td role="cell" class="signature" data-label="Chữ ký"></td>
     </tr>
   {% endfor %}
   </tbody>

@@ -12,7 +12,7 @@
     <tr role="row">
       <td role="cell" data-label="Loại chè">{{ g.name }}</td>
       <td role="cell" data-label="Giá mỗi ký">{{ g.price_vnd | vnd }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ "Đang dùng" if g.active else "Tạm ngưng" }}</span></td>
+      <td role="cell" data-label="Trạng thái">{% set label = "Đang dùng" if g.active else "Tạm ngưng" %}<span class="{{ pill(label) }}">{{ label }}</span></td>
       <td role="cell" data-label="Cập nhật">
         <form method="post" action="{{ href('/prices/' ~ g.id, theme) }}">
           <label>Giá mới (đồng/kg) <input type="number" name="price_vnd" min="0" step="1" required value="{{ g.price_vnd }}"></label>

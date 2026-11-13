@@ -34,7 +34,8 @@
   <a class="button secondary" href="{{ href('/tickets', theme) }}">Xoá lọc</a>
 </form>
 
-{{ kit.stats([{"label": "Số ký", "value": (totals.kg | kg) ~ " kg"}, {"label": "Thành tiền", "value": totals.vnd | vnd}, {"label": "Số phiếu", "value": totals.tickets}]) }}
+{% set hint = "Không tính phiếu đã huỷ" if f.status != "active" else None %}
+{{ kit.stats([{"label": "Số ký", "value": (totals.kg | kg) ~ " kg", "hint": hint}, {"label": "Thành tiền", "value": totals.vnd | vnd, "hint": hint}, {"label": "Số phiếu", "value": totals.tickets, "hint": hint}]) }}
 
 {% if tickets %}
 <table role="table">
@@ -47,7 +48,7 @@
       <td role="cell" data-label="Loại chè">{{ t.grade_name }}</td>
       <td role="cell" data-label="Số ký">{{ t.kg | kg }}</td>
       <td role="cell" data-label="Thành tiền">{{ t.amount_vnd | vnd }}</td>
-      <td role="cell" data-label="Tình trạng"><span class="pill">{{ ticket_state(t) }}</span></td>
+      <td role="cell" data-label="Tình trạng"><span class="{{ pill(ticket_state(t)) }}">{{ ticket_state(t) }}</span></td>
       <td role="cell" data-label="Thao tác"><span class="actions">
         {% if t.open %}<a class="button secondary" href="{{ href('/tickets/' ~ t.id ~ '/edit', theme) }}">Sửa</a>{% endif %}
         {{ kit.print_link(href('/tickets/' ~ t.id ~ '/print', theme)) }}

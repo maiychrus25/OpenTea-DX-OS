@@ -19,7 +19,7 @@
       <td role="cell" data-label="Hộ">{{ o.household_name }}</td>
       <td role="cell" data-label="Số ký">{{ o.total_kg | kg }}</td>
       <td role="cell" data-label="Số tiền">{{ o.total_vnd | vnd }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ "Đã trả" if o.paid_at else "Chưa trả" }}</span>{% if o.paid_at %} {{ o.paid_at | vn_time }}{% endif %}</td>
+      <td role="cell" data-label="Trạng thái">{% set label = "Đã trả" if o.paid_at else "Chưa trả" %}<span class="{{ pill(label) }}">{{ label }}</span>{% if o.paid_at %} {{ o.paid_at | vn_time }}{% endif %}</td>
       <td role="cell" data-label="Thao tác">{% if o.paid_at %}—{% else %}<span class="actions">
         <form method="post" action="{{ href('/periods/' ~ period.id ~ '/payouts/' ~ o.id ~ '/paid', theme) }}"><button type="submit">Đã trả</button></form>
       </span>{% endif %}</td>

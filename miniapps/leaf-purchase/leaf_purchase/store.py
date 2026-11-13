@@ -223,10 +223,17 @@ def _where(htx_code: str, f: TicketFilter) -> tuple[str, dict]:
 
 
 def ticket_totals(conn, htx_code: str, f: TicketFilter) -> Totals:
+    """Sums of the filtered tickets that are not voided: a voided ticket's kg and money are not real."""
     where, params = _where(htx_code, f)
     row = conn.execute(f"SELECT COALESCE(sum(t.kg), 0), COALESCE(sum(t.amount_vnd), 0)::bigint, count(*) "
-                       f"FROM tickets t WHERE {where}", params).fetchone()
+                       f"FROM tickets t WHERE {where} AND NOT t.voided", params).fetchone()
     return Totals(row[0], row[1], row[2])
+
+
+def count_tickets(conn, htx_code: str, f: TicketFilter) -> int:
+    """Rows the list shows (voided ones too under status all or voided), for paging."""
+    where, params = _where(htx_code, f)
+    return conn.execute(f"SELECT count(*) FROM tickets t WHERE {where}", params).fetchone()[0]
 
 
 def list_tickets(conn, htx_code: str, f: TicketFilter, limit: int | None = None, offset: int = 0) -> list[ListedTicket]:

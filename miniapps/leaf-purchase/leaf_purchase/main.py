@@ -50,6 +50,14 @@ def href(path: str, theme: str = "", **params) -> str:
     return f"{PREFIX}{path}" + (f"?{urlencode(query)}" if query else "")
 
 
+PILL_TONES = {"Chưa chốt": " warn", "Chưa trả": " warn", "Đã huỷ": " danger", "Tạm ngưng": " neutral"}
+
+
+def pill(label: str) -> str:
+    """Class list of a status pill: waiting is amber, voided red, paused grey, settled stays green."""
+    return "pill" + PILL_TONES.get(label, "")
+
+
 def ticket_state(ticket: store.Ticket) -> str:
     if ticket.voided:
         return "Đã huỷ"
@@ -62,7 +70,7 @@ def fmt_kg(n) -> str:
     return f"{n:,.1f}".replace(",", "_").replace(".", ",").replace("_", ".")
 
 
-templates.env.globals.update(href=href, prefix=PREFIX, ticket_state=ticket_state)
+templates.env.globals.update(href=href, prefix=PREFIX, ticket_state=ticket_state, pill=pill)
 templates.env.filters["vnd"] = lambda n: f"{n:,}".replace(",", ".") + " ₫"
 templates.env.filters["kg"] = fmt_kg
 templates.env.filters["vn_date"] = lambda d: d.strftime("%d/%m/%Y")
@@ -448,7 +456,7 @@ def ticket_list(request: Request, claims: Claims = Depends(staff), conn=Depends(
     theme = theme if theme in THEMES else ""
     f = ticket_filter(request)
     totals = store.ticket_totals(conn, claims.htx_code, f)
-    pg = appkit.page_of(request.query_params.get("page"), totals.tickets)
+    pg = appkit.page_of(request.query_params.get("page"), store.count_tickets(conn, claims.htx_code, f))
     params = filter_params(f)
 
     def link(number: int | None):

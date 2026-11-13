@@ -18,7 +18,7 @@
       <td role="cell" data-label="Kỳ">{{ date_from | vn_date }} – {{ date_to | vn_date }}</td>
       <td role="cell" data-label="Số ký">{{ o.total_kg | kg }}</td>
       <td role="cell" data-label="Số tiền">{{ o.total_vnd | vnd }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ "Đã trả" if o.paid_at else "Chưa trả" }}</span></td>
+      <td role="cell" data-label="Trạng thái">{% set label = "Đã trả" if o.paid_at else "Chưa trả" %}<span class="{{ pill(label) }}">{{ label }}</span></td>
     </tr>
   {% endfor %}
   </tbody>
@@ -46,7 +46,7 @@
       <td role="cell" data-label="Loại chè">{{ t.grade_name }}</td>
       <td role="cell" data-label="Số ký">{{ t.kg | kg }}</td>
       <td role="cell" data-label="Thành tiền">{{ t.amount_vnd | vnd }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ ticket_state(t) }}</span></td>
+      <td role="cell" data-label="Trạng thái"><span class="{{ pill(ticket_state(t)) }}">{{ ticket_state(t) }}</span></td>
     </tr>
   {% endfor %}
   </tbody>
