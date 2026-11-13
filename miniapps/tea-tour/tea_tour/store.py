@@ -11,6 +11,8 @@ from uuid import UUID
 import psycopg
 from psycopg.rows import class_row
 
+from tea_tour.appkit import like_pattern
+
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no I, O, 0 or 1: read aloud over the phone
 CODE_TRIES = 5
 HOLDING = ("PENDING", "CONFIRMED")  # bookings that take seats
@@ -35,6 +37,29 @@ class Tour:
     @property
     def seats_left(self) -> int:
         return max(self.seats - self.seats_used, 0)
+
+
+@dataclass(frozen=True)
+class Overview:
+    upcoming_tours: int
+    seats_held: int
+    seats_total: int
+    pending: int
+    guests_this_month: int
+
+
+@dataclass(frozen=True)
+class BookingRow:
+    id: UUID
+    tour_id: UUID
+    code: str
+    guest_name: str
+    phone: str
+    party_size: int
+    status: str
+    created_at: datetime
+    tour_title: str
+    tour_starts_at: datetime
 
 
 @dataclass(frozen=True)
@@ -79,7 +104,7 @@ SELECT t.id, t.title, t.starts_at, t.meeting_point, t.seats, t.price_vnd, t.desc
 FROM tours t LEFT JOIN bookings b ON b.tour_id = t.id AND b.htx_code = t.htx_code
 WHERE t.htx_code = %(htx)s {where}
 GROUP BY t.id
-ORDER BY t.starts_at"""
+ORDER BY {order} {paging}"""
 BOOKING_COLUMNS = "id, tour_id, code, guest_name, phone, party_size, note, status, created_at"
 
 
@@ -99,13 +124,76 @@ def new_code() -> str:
     return "".join(secrets.choice(CODE_ALPHABET) for _ in range(8))
 
 
-def _tours(conn: psycopg.Connection, htx_code: str, where: str = "", **params) -> list[Tour]:
+def _tours(conn: psycopg.Connection, htx_code: str, where: str = "", order: str = "t.starts_at", paging: str = "",
+           **params) -> list[Tour]:
+    # where, order and paging are constants of this module; every value reaches SQL as a parameter.
     with conn.cursor(row_factory=class_row(Tour)) as cur:
-        return cur.execute(TOUR_SELECT.format(where=where), {"htx": htx_code, **params}).fetchall()
+        return cur.execute(TOUR_SELECT.format(where=where, order=order, paging=paging),
+                           {"htx": htx_code, **params}).fetchall()
 
 
-def list_tours(conn, htx_code: str) -> list[Tour]:
-    return _tours(conn, htx_code)
+SHOW_WHERE = {"upcoming": "AND t.status = 'OPEN' AND t.starts_at > now()",
+              "past": "AND t.status = 'OPEN' AND t.starts_at <= now()",
+              "cancelled": "AND t.status = 'CANCELLED'", "all": ""}
+UPCOMING = "t.status = 'OPEN' AND t.starts_at > now()"
+
+
+def VN_MONTH(column: str) -> str:
+    return f"date_trunc('month', {column} AT TIME ZONE 'Asia/Ho_Chi_Minh')"
+
+
+def count_tours(conn, htx_code: str, show: str) -> int:
+    return conn.execute(f"SELECT count(*) FROM tours t WHERE t.htx_code = %s {SHOW_WHERE[show]}",
+                        (htx_code,)).fetchone()[0]
+
+
+def list_tours_page(conn, htx_code: str, show: str, limit: int, offset: int) -> list[Tour]:
+    """Upcoming tours soonest first; every other view newest first."""
+    order = "t.starts_at" if show == "upcoming" else "t.starts_at DESC"
+    return _tours(conn, htx_code, SHOW_WHERE[show], order, "LIMIT %(limit)s OFFSET %(offset)s",
+                  limit=limit, offset=offset)
+
+
+def overview(conn, htx_code: str) -> Overview:
+    tours = conn.execute(f"SELECT count(*), COALESCE(sum(seats), 0)::int FROM tours t "
+                         f"WHERE t.htx_code = %s AND {UPCOMING}", (htx_code,)).fetchone()
+    held, pending, month = conn.execute(
+        f"""SELECT COALESCE(sum(b.party_size) FILTER (WHERE b.status = ANY(%(holding)s) AND {UPCOMING}), 0)::int,
+                   count(*) FILTER (WHERE b.status = 'PENDING' AND {UPCOMING}),
+                   COALESCE(sum(b.party_size) FILTER (WHERE b.status = 'CONFIRMED' AND t.status = 'OPEN'
+                       AND {VN_MONTH('t.starts_at')} = {VN_MONTH('now()')}), 0)::int
+            FROM bookings b JOIN tours t ON t.id = b.tour_id AND t.htx_code = b.htx_code
+            WHERE b.htx_code = %(htx)s""", {"htx": htx_code, "holding": list(HOLDING)}).fetchone()
+    return Overview(tours[0], held, tours[1], pending, month)
+
+
+def _booking_filter(status: str, q: str) -> tuple[str, dict]:
+    where, params = "", {}
+    if status in ("PENDING", "CONFIRMED", "CANCELLED"):
+        where, params = " AND b.status = %(status)s", {"status": status}
+    if q:
+        where += (" AND (b.code ILIKE %(like)s ESCAPE '\\' OR b.guest_name ILIKE %(like)s ESCAPE '\\'"
+                  " OR b.phone ILIKE %(like)s ESCAPE '\\')")
+        params["like"] = like_pattern(q)
+    return where, params
+
+
+def count_bookings(conn, htx_code: str, status: str, q: str) -> int:
+    where, params = _booking_filter(status, q)
+    return conn.execute(f"SELECT count(*) FROM bookings b WHERE b.htx_code = %(htx)s{where}",
+                        {"htx": htx_code, **params}).fetchone()[0]
+
+
+def list_bookings(conn, htx_code: str, status: str, q: str, limit: int, offset: int) -> list[BookingRow]:
+    where, params = _booking_filter(status, q)
+    with conn.cursor(row_factory=class_row(BookingRow)) as cur:
+        return cur.execute(
+            f"""SELECT b.id, b.tour_id, b.code, b.guest_name, b.phone, b.party_size, b.status, b.created_at,
+                       t.title AS tour_title, t.starts_at AS tour_starts_at
+                FROM bookings b JOIN tours t ON t.id = b.tour_id AND t.htx_code = b.htx_code
+                WHERE b.htx_code = %(htx)s{where}
+                ORDER BY b.created_at DESC, b.id LIMIT %(limit)s OFFSET %(offset)s""",
+            {"htx": htx_code, "limit": limit, "offset": offset, **params}).fetchall()
 
 
 def get_tour(conn, htx_code: str, tour_id: UUID) -> Tour | None:

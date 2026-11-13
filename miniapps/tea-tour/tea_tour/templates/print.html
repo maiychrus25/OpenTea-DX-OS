@@ -1,0 +1,30 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Danh sách đoàn · {{ tour.title }}{% endblock %}
+{% block body_attrs %} class="print-sheet"{% endblock %}
+{% block main %}
+{{ kit.print_bar(back) }}
+<h1>Danh sách đoàn · HTX {{ htx }}</h1>
+<h2>{{ tour.title }}</h2>
+<p>{{ tour.starts_at | vn_time }} · Điểm hẹn: {{ tour.meeting_point }} · Người dẫn: {{ tour.guide_name or "chưa có" }}</p>
+{% if guests %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Khách</th><th role="columnheader">Số điện thoại</th><th role="columnheader">Số người</th><th role="columnheader">Điểm danh</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for b in guests %}
+    <tr role="row">
+      <td role="cell" data-label="Khách">{{ b.guest_name }}</td>
+      <td role="cell" data-label="Số điện thoại">{{ b.phone }}</td>
+      <td role="cell" data-label="Số người">{{ b.party_size }}</td>
+      <td role="cell" data-label="Điểm danh">☐</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p><strong>Tổng cộng: {{ guests | sum(attribute="party_size") }} khách</strong> trong {{ guests | length }} lượt đặt đã xác nhận.</p>
+{% else %}
+{{ kit.empty("Tour này chưa có lượt đặt nào được xác nhận.") }}
+{% endif %}
+{% endblock %}

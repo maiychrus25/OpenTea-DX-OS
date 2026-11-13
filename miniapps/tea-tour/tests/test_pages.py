@@ -451,3 +451,233 @@ def test_guest_name_is_escaped_on_the_manager_page(client, db):
     assert book(client, tour_id, guest_name="<b>x</b>").status_code == 303
     page = client.get(f"/tours/{tour_id}", headers=MANAGER).text
     assert "&lt;b&gt;x&lt;/b&gt;" in page and "<b>x</b>" not in page
+
+
+# ---------- App kit: overview, lists, print, CSV ----------
+
+def stat(html, label):
+    return re.search(rf'<span class="stat-label">{label}</span>\s*<span class="stat-value">(.*?)</span>', html).group(1)
+
+
+def vn_month(moment):
+    local = moment.astimezone(timezone(timedelta(hours=7)))
+    return local.year, local.month
+
+
+def test_overview_stats_on_a_fixed_set(client, db, households):
+    now = datetime.now(timezone.utc)
+    soon, later, past = now + timedelta(days=2), now + timedelta(days=40), now - timedelta(days=2)
+    first = add_tour(db, starts_at=soon, seats=10)
+    add_booking(db, first, code="AAAA2222", party_size=2, status="PENDING")
+    add_booking(db, first, code="BBBB3333", party_size=3, status="CONFIRMED")
+    add_booking(db, first, code="CCCC4444", party_size=4, status="CANCELLED")
+    second = add_tour(db, starts_at=later, seats=6)
+    add_booking(db, second, code="DDDD5555", party_size=1, status="PENDING")
+    add_booking(db, second, code="EEEE6666", party_size=2, status="CONFIRMED")
+    cancelled = add_tour(db, starts_at=soon, seats=9, status="CANCELLED")
+    add_booking(db, cancelled, code="FFFF7777", party_size=5, status="CONFIRMED")
+    gone = add_tour(db, starts_at=past, seats=4)
+    add_booking(db, gone, code="GGGG8888", party_size=2, status="CONFIRMED")
+    other = add_tour(db, htx="LB", starts_at=soon, seats=20)
+    add_booking(db, other, htx="LB", code="HHHH9999", party_size=7, status="PENDING")
+    expected_month = sum(n for when, n in ((soon, 3), (later, 2), (past, 2)) if vn_month(when) == vn_month(now))
+
+    html = client.get("/", headers=MANAGER).text
+    assert stat(html, "Tour sắp diễn ra") == "2"
+    assert stat(html, "Chỗ đã giữ") == "8"  # 2 + 3 + 1 + 2 on the two upcoming open tours
+    assert stat(html, "Chờ xác nhận") == "2"
+    assert stat(html, "Khách tháng này") == str(expected_month)
+    empty = client.get("/", headers=bearer(htx="ZZ")).text
+    assert [stat(empty, label) for label in ("Tour sắp diễn ra", "Chỗ đã giữ", "Chờ xác nhận", "Khách tháng này")] == ["0"] * 4
+
+
+def test_manager_pages_have_tabs_and_a_collapsed_new_tour_form(client, db, households):
+    html = client.get("/?theme=dark", headers=MANAGER).text
+    assert '<nav class="tabs"' in html and 'href="/apps/tea-tour/bookings?theme=dark"' in html
+    assert re.search(r'<a href="/apps/tea-tour/\?theme=dark" aria-current="page">Tour</a>', html)
+    assert '<details class="disclosure">' in html and 'action="/apps/tea-tour/tours?theme=dark"' in html
+    assert "<h1>Tour đồi chè HTX TC</h1>" in html
+    assert 'name="guide"' in html and '<option value="h1">Hộ ông Ba</option>' in html
+    bookings = client.get("/bookings", headers=MANAGER).text
+    assert re.search(r'<a href="/apps/tea-tour/bookings" aria-current="page">Lượt đặt chỗ</a>', bookings)
+    failed = client.post("/tours", headers=MANAGER, data={**FORM, "title": ""})
+    assert failed.status_code == 400 and '<details class="disclosure" open>' in failed.text
+
+
+def test_tour_list_filters_and_pages(client, db, households):
+    now = datetime.now(timezone.utc)
+    for n in range(27):
+        add_tour(db, title=f"Sắp tới {n:02d}", starts_at=now + timedelta(days=1, hours=n))
+    add_tour(db, title="Đã qua một", starts_at=now - timedelta(days=3))
+    add_tour(db, title="Đã huỷ một", status="CANCELLED")
+    add_tour(db, htx="LB", title="Của HTX khác")
+    first = client.get("/", headers=MANAGER).text
+    assert first.count('data-label="Tour"') == 25 and "Sắp tới 00" in first and "Sắp tới 24" in first
+    assert "Sắp tới 25" not in first and "Trang 1/2 · 27 dòng" in first
+    second = client.get("/?page=2", headers=MANAGER).text
+    assert second.count('data-label="Tour"') == 2 and "Sắp tới 26" in second and "Sắp tới 00" not in second
+    assert 'rel="prev"' in second and 'href="/apps/tea-tour/?page=1"' in second
+    past = client.get("/?show=past", headers=MANAGER).text
+    assert "Đã qua một" in past and "Sắp tới 00" not in past and "Đã huỷ một" not in past
+    cancelled = client.get("/?show=cancelled", headers=MANAGER).text
+    assert "Đã huỷ một" in cancelled and "Đã qua một" not in cancelled
+    everything = client.get("/?show=all&page=2", headers=MANAGER).text
+    assert "Trang 2/2 · 29 dòng" in everything and "Của HTX khác" not in everything
+    assert 'href="/apps/tea-tour/?show=all&amp;page=1"' in everything
+    assert "Sắp tới 00" in client.get("/?show=nonsense", headers=MANAGER).text
+
+
+@pytest.mark.parametrize("raw", ["0", "abc", "999999", "-3", "1.5", ""])
+def test_list_pages_clamp_the_page(client, db, households, raw):
+    tour_id = add_tour(db)
+    add_booking(db, tour_id)
+    for path in ("/", "/bookings"):
+        response = client.get(f"{path}?page={raw}", headers=MANAGER)
+        assert response.status_code == 200, (path, raw)
+        assert "Trang 1/1 · 1 dòng" in response.text, (path, raw)
+
+
+def test_bookings_list_filters_by_status_and_search(client, db):
+    tour_id = add_tour(db, title="Một ngày hái chè Tân Cương")
+    other = add_tour(db, htx="LB", title="Tour La Bằng")
+    add_booking(db, tour_id, code="HQAA2222", guest_name="Lê Thị Hoa", phone="0912345678", status="PENDING")
+    add_booking(db, tour_id, code="BNHH3333", guest_name="Trần Văn Bình", phone="0987654321", status="CONFIRMED")
+    add_booking(db, tour_id, code="CUCC4444", guest_name="Phạm Thị Cúc", phone="0933333333", status="CANCELLED")
+    add_booking(db, other, htx="LB", code="LBBB5555", guest_name="Khách La Bằng", phone="0944444444")
+    html = client.get("/bookings", headers=MANAGER).text
+    assert all(name in html for name in ("Lê Thị Hoa", "Trần Văn Bình", "Phạm Thị Cúc"))
+    assert "Khách La Bằng" not in html and "Một ngày hái chè Tân Cương" in html
+    assert "Trang 1/1 · 3 dòng" in html
+    only = client.get("/bookings?status=CONFIRMED", headers=MANAGER).text
+    assert "Trần Văn Bình" in only and "Lê Thị Hoa" not in only
+    assert "Lê Thị Hoa" in client.get("/bookings?status=nonsense", headers=MANAGER).text
+    for query, name in (("hqaa", "Lê Thị Hoa"), ("Thị", "Lê Thị Hoa"), ("0987", "Trần Văn Bình"), ("cucc4444", "Phạm Thị Cúc")):
+        found = client.get("/bookings", params={"q": query}, headers=MANAGER).text
+        assert name in found, query
+    both = client.get("/bookings?q=Th%E1%BB%8B&status=PENDING", headers=MANAGER).text
+    assert "Lê Thị Hoa" in both and "Phạm Thị Cúc" not in both
+    nothing = client.get("/bookings?q=khongco", headers=MANAGER).text
+    assert "Không có lượt đặt nào" in nothing
+    assert client.get("/bookings", headers=FARMER).status_code == 403
+    assert client.get("/bookings").status_code == 401
+
+
+def test_search_treats_wildcards_as_text(client, db):
+    tour_id = add_tour(db)
+    add_booking(db, tour_id, code="AAAA2222", guest_name="Giảm 100% sớm", phone="0911111111")
+    add_booking(db, tour_id, code="BBBB3333", guest_name="Khách a_b", phone="0922222222")
+    add_booking(db, tour_id, code="CCCC4444", guest_name="Khách axb", phone="0933333333")
+    add_booking(db, tour_id, code="DDDD5555", guest_name="O'Neil; DROP TABLE tours", phone="0944444444")
+    for query, present, absent in (("%", "Giảm 100% sớm", "Khách axb"), ("_", "Khách a_b", "Khách axb"),
+                                   ("a_b", "Khách a_b", "Khách axb"), ("\\", None, "Khách axb"),
+                                   ("'; DROP", None, "Giảm 100%"), ("O'Neil; DROP TABLE tours", "O&#39;Neil", "Giảm 100%")):
+        response = client.get("/bookings", params={"q": query}, headers=MANAGER)
+        assert response.status_code == 200, query
+        if present:
+            assert present in response.text, query
+        assert absent not in response.text, query
+    assert db.execute("SELECT count(*) FROM tours").fetchone()[0] == 1
+
+
+def test_export_csv_columns_and_formula_safety(client, db):
+    tour_id = add_tour(db, title="Một ngày hái chè Tân Cương")
+    add_booking(db, tour_id, code="AAAA2222", guest_name="Lê Thị Hoa", phone="0912345678", party_size=2,
+                status="CONFIRMED")
+    add_booking(db, tour_id, code="BBBB3333", guest_name="=HYPERLINK(\"http://x\")", phone="0987654321", party_size=1,
+                status="CANCELLED")
+    response = client.get(f"/tours/{tour_id}/guests/export.csv", headers=MANAGER)
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert re.fullmatch(r'attachment; filename="tea-tour-TC-khach-Mot-ngay-hai-che-Tan-Cuong-\d{4}-\d{2}-\d{2}\.csv"',
+                        response.headers["content-disposition"])
+    assert response.content.startswith("﻿".encode())
+    lines = response.content.decode("utf-8-sig").split("\r\n")
+    assert lines[0] == "Mã đặt chỗ,Khách,Số điện thoại,Số người,Ghi chú,Trạng thái"
+    assert lines[1] == "AAAA2222,Lê Thị Hoa,0912345678,2,,Đã xác nhận"
+    assert lines[2].startswith("BBBB3333,\"'=HYPERLINK(") and lines[2].endswith(",Đã huỷ")
+
+
+def test_export_only_holds_the_callers_rows(client, db):
+    mine = add_tour(db, title="Tour của tôi")
+    add_booking(db, mine, code="AAAA2222", guest_name="Khách của tôi")
+    theirs = add_tour(db, htx="LB", title="Tour La Bằng")
+    add_booking(db, theirs, htx="LB", code="BBBB3333", guest_name="Khách La Bằng")
+    assert client.get(f"/tours/{theirs}/guests/export.csv", headers=MANAGER).status_code == 404
+    body = client.get(f"/tours/{mine}/guests/export.csv", headers=MANAGER).text
+    assert "Khách của tôi" in body and "Khách La Bằng" not in body and "BBBB3333" not in body
+    assert client.get(f"/tours/{mine}/guests/export.csv", headers=bearer(htx="LB")).status_code == 404
+    assert client.get(f"/tours/{mine}/guests/export.csv", headers=FARMER).status_code == 403
+    assert client.get(f"/tours/{mine}/guests/export.csv").status_code == 401
+    assert client.get(f"/tours/{uuid.uuid4()}/guests/export.csv", headers=MANAGER).status_code == 404
+
+
+def test_print_group_list(client, db):
+    tour_id = add_tour(db, title="Một ngày hái chè Tân Cương", guide_name="Hộ ông Ba")
+    add_booking(db, tour_id, code="AAAA2222", guest_name="Lê Thị Hoa", phone="0912345678", party_size=3,
+                status="CONFIRMED")
+    add_booking(db, tour_id, code="BBBB3333", guest_name="Chưa xác nhận", phone="0987654321", status="PENDING")
+    add_booking(db, tour_id, code="CCCC4444", guest_name="Đã huỷ rồi", phone="0933333333", status="CANCELLED")
+    response = client.get(f"/tours/{tour_id}/print", headers=MANAGER)
+    assert response.status_code == 200
+    html = response.text
+    assert '<body class="print-sheet">' in html and "Điểm danh" in html and "Hộ ông Ba" in html
+    assert "Lê Thị Hoa" in html and "0912345678" in html and "Tổng cộng" in html
+    for hidden in ("Chưa xác nhận", "Đã huỷ rồi", "0987654321", "0933333333"):
+        assert hidden not in html
+    assert 'target="_top"' in html and 'href="/manager/apps/tea-tour/tours/' in html
+    assert client.get(f"/tours/{add_tour(db, htx='LB')}/print", headers=MANAGER).status_code == 404
+    assert client.get(f"/tours/{uuid.uuid4()}/print", headers=MANAGER).status_code == 404
+    assert client.get(f"/tours/{tour_id}/print", headers=FARMER).status_code == 403
+    assert client.get(f"/tours/{tour_id}/print").status_code == 401
+
+
+def test_tour_page_links_to_print_and_csv(client, db):
+    tour_id = add_tour(db)
+    add_booking(db, tour_id, guest_name="Lê Thị Hoa", status="CONFIRMED")
+    html = client.get(f"/tours/{tour_id}?theme=dark", headers=MANAGER).text
+    assert f'href="/apps/tea-tour/tours/{tour_id}/guests/export.csv?theme=dark"' in html
+    assert re.search(rf'href="/apps/tea-tour/tours/{tour_id}/print\?theme=dark" target="_top"', html)
+    assert "Lê Thị Hoa" in html and ">Huỷ lượt đặt</button>" in html
+
+
+def test_public_cards_show_seats_left_and_no_personal_data(client, db):
+    tour_id = add_tour(db, title="Một ngày hái chè Tân Cương", seats=6, guide_name="Hộ ông Ba")
+    add_booking(db, tour_id, guest_name="Lê Thị Hoa", phone="0912345678", party_size=2, status="CONFIRMED")
+    html = client.get("/public/TC").text
+    assert '<ul class="cards">' in html and '<li class="card">' in html
+    assert "Còn 4 chỗ" in html and "Một ngày hái chè Tân Cương" in html
+    assert "Lê Thị Hoa" not in html and "0912345678" not in html
+    assert "<h1>Tour đồi chè HTX TC</h1>" in html
+    assert '<details class="disclosure"' in html and html.count('name="guest_name"') == 1
+    failed = book(client, tour_id, phone="12345")
+    assert failed.status_code == 400 and '<details class="disclosure" open>' in failed.text
+
+
+def test_lookup_shows_steps_or_a_cancelled_pill(client, db):
+    tour_id = add_tour(db)
+    for code, phone, status in (("AAAA2222", "0911111111", "PENDING"), ("BBBB3333", "0922222222", "CONFIRMED"),
+                                ("CCCC4444", "0933333333", "CANCELLED")):
+        add_booking(db, tour_id, code=code, phone=phone, status=status)
+    pending = client.get("/public/TC/booking?code=AAAA2222&phone=0911111111").text
+    assert re.search(r'<li aria-current="step">Chờ xác nhận</li>\s*<li>Đã xác nhận</li>', pending)
+    confirmed = client.get("/public/TC/booking?code=BBBB3333&phone=0922222222").text
+    assert re.search(r'<li data-state="done">Chờ xác nhận</li>\s*<li aria-current="step">Đã xác nhận</li>', confirmed)
+    cancelled = client.get("/public/TC/booking?code=CCCC4444&phone=0933333333").text
+    assert '<ol class="steps">' not in cancelled and '<span class="pill">Đã huỷ</span>' in cancelled
+
+
+def test_guide_page_has_upcoming_and_past_sections(client, db):
+    now = datetime.now(timezone.utc)
+    mine = {"guide_user_id": "kc-farmer-1", "guide_name": "Hộ ông Ba"}
+    soon = add_tour(db, title="Tour sắp tới", starts_at=now + timedelta(days=3), **mine)
+    add_booking(db, soon, guest_name="Lê Thị Hoa", phone="0912345678", party_size=4, status="CONFIRMED")
+    add_tour(db, title="Tour đã huỷ sắp tới", starts_at=now + timedelta(days=5), status="CANCELLED", **mine)
+    add_tour(db, title="Tour đã qua", starts_at=now - timedelta(days=4), **mine)
+    add_tour(db, title="Tour người khác", **{"guide_user_id": "kc-farmer-2"})
+    html = client.get("/guide", headers=FARMER).text
+    upcoming, past = html.split("Tour đã diễn ra")
+    assert "Tour sắp tới" in upcoming and "Tour đã huỷ sắp tới" in upcoming and "Tour đã qua" not in upcoming
+    assert "Tour đã qua" in past and "Tour sắp tới" not in past and "Tour người khác" not in html
+    assert "Lê Thị Hoa" not in html and "0912345678" not in html
+    none = client.get("/guide", headers=bearer(sub="kc-farmer-9", roles=("farmer",))).text
+    assert none.count('class="empty"') == 2

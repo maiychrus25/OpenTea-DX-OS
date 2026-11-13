@@ -1,35 +1,56 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "kit.html" as kit %}
 {% block title %}{{ tour.title }}{% endblock %}
 {% block main %}
-<p><a href="{{ href('', theme) }}">← Tất cả tour</a></p>
+{% call kit.app_header(tour.title, tour.starts_at | vn_time ~ " · Điểm hẹn: " ~ tour.meeting_point) %}
+  {% if tour.status == "OPEN" and not tour.past %}<a class="button secondary" href="{{ href('/tours/' ~ tour.id ~ '/edit', theme) }}">Sửa thông tin tour</a>{% endif %}
+  {{ kit.export_link(href('/tours/' ~ tour.id ~ '/guests/export.csv', theme)) }}
+  {{ kit.print_link(href('/tours/' ~ tour.id ~ '/print', theme), "Danh sách đoàn") }}
+{% endcall %}
+{{ kit.tabs([("tours", "Tour", href('/', theme)), ("bookings", "Lượt đặt chỗ", href('/bookings', theme))], "tours") }}
 {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
-<h1>{{ tour.title }} <span class="pill">{{ tour_status(tour) }}</span></h1>
-<p>{{ tour.starts_at | vn_time }} · Điểm hẹn: {{ tour.meeting_point }}</p>
-<p>Giá: {{ tour.price_vnd | vnd }} mỗi khách · Người dẫn: {{ tour.guide_name or "Chưa có" }}</p>
-<p>Đã đặt {{ tour.seats_used }} / {{ tour.seats }} chỗ · Đã xác nhận {{ tour.confirmed_guests }} khách</p>
+{{ kit.stats([
+  {"label": "Trạng thái", "value": tour_status(tour)},
+  {"label": "Chỗ đã giữ", "value": tour.seats_used ~ " / " ~ tour.seats, "hint": "còn " ~ tour.seats_left ~ " chỗ"},
+  {"label": "Khách đã xác nhận", "value": tour.confirmed_guests},
+  {"label": "Giá mỗi khách", "value": tour.price_vnd | vnd, "hint": "Người dẫn: " ~ (tour.guide_name or "chưa có")}
+]) }}
 {% if tour.description %}<p>{{ tour.description }}</p>{% endif %}
-{% if tour.status == "OPEN" and not tour.past %}<p><a href="{{ href('/tours/' ~ tour.id ~ '/edit', theme) }}">Sửa thông tin tour</a></p>{% endif %}
 
 <h2>Lượt đặt</h2>
-{% for b in bookings %}
-<form method="post" action="{{ href('/bookings/' ~ b.id ~ '/confirm', theme) }}" aria-label="Lượt đặt {{ b.code }}">
-  <h3>{{ b.guest_name }} · {{ b.party_size }} người <span class="pill">{{ booking_status[b.status] }}</span></h3>
-  <p>Mã {{ b.code }} · Điện thoại <a href="tel:{{ b.phone }}">{{ b.phone }}</a> · Đặt lúc {{ b.created_at | vn_time }}</p>
-  {% if b.note %}<p>Ghi chú: {{ b.note }}</p>{% endif %}
-  {% if b.status == "PENDING" and tour.status == "OPEN" %}<button type="submit">Xác nhận</button>{% endif %}
-  {% if b.status != "CANCELLED" %}<button type="submit" class="secondary" formaction="{{ href('/bookings/' ~ b.id ~ '/cancel', theme) }}">Huỷ lượt đặt</button>{% endif %}
-</form>
+{% if bookings %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Mã</th><th role="columnheader">Khách</th><th role="columnheader">Số điện thoại</th><th role="columnheader">Số người</th><th role="columnheader">Trạng thái</th><th role="columnheader">Đặt lúc</th><th role="columnheader">Thao tác</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for b in bookings %}
+    <tr role="row">
+      <td role="cell" data-label="Mã">{{ b.code }}</td>
+      <td role="cell" data-label="Khách">{{ b.guest_name }}{% if b.note %}<br>Ghi chú: {{ b.note }}{% endif %}</td>
+      <td role="cell" data-label="Số điện thoại"><a href="tel:{{ b.phone }}">{{ b.phone }}</a></td>
+      <td role="cell" data-label="Số người">{{ b.party_size }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill">{{ booking_status[b.status] }}</span></td>
+      <td role="cell" data-label="Đặt lúc">{{ b.created_at | vn_time }}</td>
+      <td role="cell" data-label="Thao tác"><span class="actions">
+        {% if b.status == "PENDING" and tour.status == "OPEN" %}<form method="post" action="{{ href('/bookings/' ~ b.id ~ '/confirm', theme) }}"><button type="submit">Xác nhận</button></form>{% endif %}
+        {% if b.status != "CANCELLED" %}<form method="post" action="{{ href('/bookings/' ~ b.id ~ '/cancel', theme) }}"><button type="submit" class="danger">Huỷ lượt đặt</button></form>{% endif %}
+      </span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
 {% else %}
-<p>Chưa có lượt đặt nào.</p>
-{% endfor %}
+{{ kit.empty("Chưa có lượt đặt nào.") }}
+{% endif %}
 
 {% if tour.status == "OPEN" %}
-<h2>Huỷ tour</h2>
-<form method="post" action="{{ href('/tours/' ~ tour.id ~ '/cancel', theme) }}">
-  <p>Khách đã đặt vẫn tra cứu được lượt đặt và thấy tour đã huỷ. Hãy gọi điện báo cho khách.</p>
-  <button type="submit" class="secondary">Huỷ tour này</button>
-</form>
+<details class="disclosure">
+  <summary>Huỷ tour</summary>
+  <form method="post" action="{{ href('/tours/' ~ tour.id ~ '/cancel', theme) }}">
+    <p>Khách đã đặt vẫn tra cứu được lượt đặt và thấy tour đã huỷ. Hãy gọi điện báo cho khách.</p>
+    <button type="submit" class="danger">Huỷ tour này</button>
+  </form>
+</details>
 {% endif %}
 {% endblock %}

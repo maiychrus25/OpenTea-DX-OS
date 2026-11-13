@@ -1,10 +1,9 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "kit.html" as kit %}
 {% block title %}Lịch dẫn tour{% endblock %}
-{% block main %}
-<h1>Lịch dẫn tour</h1>
-{% if tours %}
+{% macro tour_table(tours) %}
 <table role="table">
   <thead role="rowgroup"><tr role="row"><th role="columnheader">Tour</th><th role="columnheader">Thời gian</th><th role="columnheader">Điểm hẹn</th><th role="columnheader">Khách đã xác nhận</th><th role="columnheader">Trạng thái</th></tr></thead>
   <tbody role="rowgroup">
@@ -19,7 +18,15 @@
   {% endfor %}
   </tbody>
 </table>
-{% else %}
-<p>Bạn chưa được giao dẫn tour nào. Khi ban quản trị HTX chọn bạn làm người dẫn, tour sẽ hiện ở đây.</p>
+{% endmacro %}
+{% block main %}
+{{ kit.app_header("Lịch dẫn tour", "Các tour ban quản trị HTX giao cho bạn dẫn.") }}
+<h2>Tour sắp tới</h2>
+{% if upcoming %}{{ tour_table(upcoming) }}{% else %}
+{{ kit.empty("Bạn chưa được giao dẫn tour nào. Khi ban quản trị HTX chọn bạn làm người dẫn, tour sẽ hiện ở đây.") }}
+{% endif %}
+<h2>Tour đã diễn ra</h2>
+{% if past %}{{ tour_table(past) }}{% else %}
+{{ kit.empty("Chưa có tour nào đã diễn ra.") }}
 {% endif %}
 {% endblock %}

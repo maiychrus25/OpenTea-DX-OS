@@ -10,12 +10,15 @@ Ban quản trị HTX tạo tour trải nghiệm đồi chè, khách du lịch đ
 
 | Đường dẫn (dưới `/apps/tea-tour`) | Ai vào | Nội dung |
 | --- | --- | --- |
-| `/` | `manager` | Tour của HTX trong token, tạo tour (người dẫn chọn trong nông hộ của HTX, lấy qua Hasura) |
+| `/` | `manager` | Tổng quan (Tour sắp diễn ra, Chỗ đã giữ, Chờ xác nhận, Khách tháng này), danh sách tour lọc `?show=upcoming\|past\|cancelled\|all`, phân trang 25 dòng; tạo tour trong khối mở ra (người dẫn chọn trong nông hộ của HTX, lấy qua Hasura) |
+| `/bookings` | `manager` | Mọi lượt đặt của HTX, lọc `?status=` và tìm `?q=` theo mã, tên hoặc số điện thoại (tìm theo nghĩa đen, không có ký tự đại diện), phân trang |
 | `/tours/<id>` | `manager` | Chi tiết tour, lượt đặt kèm số điện thoại; xác nhận hoặc huỷ lượt đặt, huỷ tour |
+| `/tours/<id>/guests/export.csv` | `manager` | CSV khách của tour (Mã đặt chỗ, Khách, Số điện thoại, Số người, Ghi chú, Trạng thái) |
+| `/tours/<id>/print` | `manager` | Danh sách đoàn để in: lượt đã xác nhận, cột điểm danh, tổng số khách |
 | `/tours/<id>/edit` | `manager` | Sửa tour còn mở và chưa diễn ra; cùng kiểm tra như khi tạo |
-| `/guide` | `farmer` | Tour mình được giao dẫn, kèm số khách đã xác nhận |
-| `/public/<htx>` | công khai | Tour sắp diễn ra còn mở, số chỗ trống, form đặt chỗ |
-| `/public/<htx>/booking?code=&phone=` | công khai | Tra cứu lượt đặt: phải đúng cả mã và số điện thoại |
+| `/guide` | `farmer` | Tour sắp tới và tour đã diễn ra của mình, kèm số khách đã xác nhận |
+| `/public/<htx>` | công khai | Tour dạng thẻ với số chỗ còn lại, form đặt chỗ |
+| `/public/<htx>/booking?code=&phone=` | công khai | Tra cứu lượt đặt (các bước Chờ xác nhận, Đã xác nhận): phải đúng cả mã và số điện thoại |
 
 Mọi thao tác ghi là `POST` và trả 303 về một trang dưới `/apps/tea-tour/`. Trang công khai không bao giờ hiện tên hay số điện thoại của khách khác, và trả cùng một thông báo khi sai mã hoặc sai số điện thoại.
 
