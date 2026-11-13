@@ -3,64 +3,59 @@
 
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Button, Card, Pill } from '@/components/ui'
-import type { AppStoreStatus, StoreAction, StoreApp } from '@/domain/entities/app-store'
+import type { AppStoreStatus, StoreAction, StoreApp, StoreCategory } from '@/domain/entities/app-store'
 import { fetchJson } from '@/lib/api/fetch-json'
 import styles from './AppStoreClient.module.css'
+import { StoreAppIcon } from './StoreAppIcon'
+import { StoreHistory } from './StoreHistory'
+import { CATEGORY_LABELS, INSTALLED_STATUSES, normalizeSearch, ROLE_LABELS, STATUS_LABELS, STATUS_TONES, WORKER_WARNING } from './store-labels'
+import { useStorePolling } from './use-store-polling'
 
 export interface AppStoreData {
   workerAlive: boolean
   apps: StoreApp[]
 }
 
-const POLL_MS = 3000
-const ROLE_LABELS: Record<string, string> = { manager: 'Trưởng HTX', officer: 'Cán bộ', farmer: 'Nông dân' }
-const STATUS_LABELS: Record<AppStoreStatus, string> = {
-  available: 'Chưa cài',
-  installing: 'Đang cài…',
-  enabled: 'Đã cài',
-  removing: 'Đang gỡ…',
-  enabled_all: 'Đã cài cho mọi HTX (quản trị máy chủ)',
-  failed: 'Lỗi',
-}
-const STATUS_TONES: Record<AppStoreStatus, 'green' | 'amber' | 'blue' | 'neutral'> = {
-  available: 'neutral',
-  installing: 'blue',
-  enabled: 'green',
-  removing: 'blue',
-  enabled_all: 'green',
-  failed: 'amber',
-}
-const WORKER_WARNING = 'Trình cài đặt chưa chạy. Yêu cầu sẽ được xử lý khi quản trị máy chủ bật ./dxos worker.'
+type Tab = 'apps' | 'history'
+type StatusFilter = 'all' | 'installed' | 'notInstalled'
+const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'installed', label: 'Đã cài' },
+  { value: 'notInstalled', label: 'Chưa cài' },
+]
 const CONFIRM_REMOVE = 'Gỡ ứng dụng này khỏi HTX? Dữ liệu được giữ lại.'
 const REQUEST_FAILED = 'Không gửi được yêu cầu. Vui lòng thử lại.'
 
 export function AppStoreClient({ initial }: { initial: AppStoreData }) {
-  const router = useRouter()
   const [data, setData] = useState(initial)
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [tab, setTab] = useState<Tab>('apps')
+  const [historyOpened, setHistoryOpened] = useState(false)
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<StoreCategory | null>(null)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const working = data.apps.some(app => app.status === 'installing' || app.status === 'removing')
 
-  // The menu is rendered by the server layout: ask for it again once the work in progress has ended.
-  const wasWorking = useRef(false)
-  useEffect(() => {
-    if (wasWorking.current && !working) router.refresh()
-    wasWorking.current = working
-  }, [working, router])
+  useStorePolling(working, () => fetchJson<{ data: AppStoreData }>('/api/app-store').then(body => setData(body.data)))
 
-  // Poll only while the worker has something to do.
-  useEffect(() => {
-    if (!working) return
-    const timer = setInterval(() => {
-      fetchJson<{ data: AppStoreData }>('/api/app-store')
-        .then(body => setData(body.data))
-        .catch(() => undefined) // keep the last state; the next tick tries again
-    }, POLL_MS)
-    return () => clearInterval(timer)
-  }, [working])
+  const categories = useMemo(() => Object.keys(CATEGORY_LABELS).filter(key => data.apps.some(app => app.category === key)) as StoreCategory[], [data.apps])
+  const visible = useMemo(() => {
+    const needle = normalizeSearch(query.trim())
+    return data.apps.filter(app => {
+      if (category && app.category !== category) return false
+      if (statusFilter !== 'all' && INSTALLED_STATUSES.includes(app.status) !== (statusFilter === 'installed')) return false
+      return !needle || normalizeSearch(`${app.name} ${app.description}`).includes(needle)
+    })
+  }, [data.apps, query, category, statusFilter])
+
+  function openTab(next: Tab) {
+    setTab(next)
+    if (next === 'history') setHistoryOpened(true)
+  }
 
   async function request(app: StoreApp, action: StoreAction) {
     if (action === 'DISABLE' && !window.confirm(CONFIRM_REMOVE)) return
@@ -104,53 +99,128 @@ export function AppStoreClient({ initial }: { initial: AppStoreData }) {
         </p>
       )}
 
-      {data.apps.length === 0 ? (
-        <p className={styles.empty}>Kho chưa có ứng dụng nào.</p>
-      ) : (
-        <ul className={styles.grid}>
-          {data.apps.map(app => (
-            <li key={app.id} className={styles.item}>
-              <Card className={styles.card}>
-                <div className={styles.cardHead}>
-                  <h2 className={styles.name}>{app.name}</h2>
-                  <span className={styles.version}>v{app.version}</span>
+      <div className={styles.tabs} role="tablist" aria-label="Kho ứng dụng">
+        {(['apps', 'history'] as const).map(value => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            id={`store-tab-${value}`}
+            aria-selected={tab === value}
+            aria-controls={`store-panel-${value}`}
+            className={styles.tab}
+            onClick={() => openTab(value)}
+          >
+            {value === 'apps' ? 'Ứng dụng' : 'Lịch sử'}
+          </button>
+        ))}
+      </div>
+
+      <div role="tabpanel" id="store-panel-apps" aria-labelledby="store-tab-apps" hidden={tab !== 'apps'}>
+        {data.apps.length === 0 ? (
+          <p className={styles.empty}>Kho chưa có ứng dụng nào.</p>
+        ) : (
+          <>
+            <div className={styles.toolbar}>
+              <label className={styles.searchLabel}>
+                <span className={styles.srOnly}>Tìm ứng dụng</span>
+                <input
+                  type="search"
+                  className={styles.search}
+                  placeholder="Tìm ứng dụng"
+                  value={query}
+                  onChange={event => setQuery(event.target.value)}
+                />
+              </label>
+              <div className={styles.filters} role="group" aria-label="Lọc theo trạng thái">
+                {STATUS_FILTERS.map(filter => (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    className={styles.filter}
+                    aria-pressed={statusFilter === filter.value}
+                    onClick={() => setStatusFilter(filter.value)}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+              {categories.length > 0 && (
+                <div className={styles.filters} role="group" aria-label="Lọc theo danh mục">
+                  {categories.map(key => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={styles.filter}
+                      aria-pressed={category === key}
+                      onClick={() => setCategory(category === key ? null : key)}
+                    >
+                      {CATEGORY_LABELS[key]}
+                    </button>
+                  ))}
                 </div>
-                {app.description && <p className={styles.description}>{app.description}</p>}
-                <p className={styles.meta}>
-                  {app.publisher} · {app.license}
-                  {app.roles.length > 0 && <> · Dành cho {app.roles.map(role => ROLE_LABELS[role] ?? role).join(', ')}</>}
-                  {app.hasPublic && <> · Có trang công khai</>}
-                </p>
-                <div className={styles.footer}>
-                  <Pill tone={STATUS_TONES[app.status]} size="md">
-                    {STATUS_LABELS[app.status]}
-                  </Pill>
-                  {app.status === 'available' && (
-                    <Button size="sm" isLoading={pendingId === app.id} onClick={() => request(app, 'ENABLE')}>
-                      Cài
-                    </Button>
-                  )}
-                  {app.status === 'enabled' && (
-                    <Button size="sm" variant="secondary" isLoading={pendingId === app.id} onClick={() => request(app, 'DISABLE')}>
-                      Gỡ
-                    </Button>
-                  )}
-                  {app.status === 'failed' && (
-                    <Button size="sm" isLoading={pendingId === app.id} onClick={() => request(app, 'ENABLE')}>
-                      Thử lại
-                    </Button>
-                  )}
-                </div>
-                {app.status === 'failed' && app.error && (
-                  <p className={styles.error} role="alert">
-                    {app.error}
-                  </p>
-                )}
-              </Card>
-            </li>
-          ))}
-        </ul>
-      )}
+              )}
+            </div>
+            {visible.length === 0 ? (
+              <p className={styles.empty}>Không có ứng dụng nào khớp bộ lọc.</p>
+            ) : (
+              <ul className={styles.grid}>
+                {visible.map(app => (
+                  <li key={app.id} className={styles.item}>
+                    <Card className={styles.card}>
+                      <div className={styles.cardHead}>
+                        <StoreAppIcon name={app.icon} />
+                        <h2 className={styles.name}>
+                          <Link href={`/manager/app-store/${app.id}`} className={styles.nameLink}>
+                            {app.name}
+                          </Link>
+                        </h2>
+                        <span className={styles.version}>v{app.version}</span>
+                      </div>
+                      {app.description && <p className={styles.description}>{app.description}</p>}
+                      <p className={styles.meta}>
+                        {app.category && <>{CATEGORY_LABELS[app.category]} · </>}
+                        {app.publisher} · {app.license}
+                        {app.roles.length > 0 && <> · Dành cho {app.roles.map(role => ROLE_LABELS[role] ?? role).join(', ')}</>}
+                        {app.hasPublic && <> · Có trang công khai</>}
+                      </p>
+                      <div className={styles.footer}>
+                        <Pill tone={STATUS_TONES[app.status]} size="md">
+                          {STATUS_LABELS[app.status]}
+                        </Pill>
+                        {app.status === 'available' && (
+                          <Button size="sm" isLoading={pendingId === app.id} onClick={() => request(app, 'ENABLE')}>
+                            Cài
+                          </Button>
+                        )}
+                        {app.status === 'enabled' && (
+                          <Button size="sm" variant="secondary" isLoading={pendingId === app.id} onClick={() => request(app, 'DISABLE')}>
+                            Gỡ
+                          </Button>
+                        )}
+                        {app.status === 'failed' && (
+                          <Button size="sm" isLoading={pendingId === app.id} onClick={() => request(app, 'ENABLE')}>
+                            Thử lại
+                          </Button>
+                        )}
+                      </div>
+                      {app.status === 'failed' && app.error && (
+                        <p className={styles.error} role="alert">
+                          {app.error}
+                        </p>
+                      )}
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+
+      <div role="tabpanel" id="store-panel-history" aria-labelledby="store-tab-history" hidden={tab !== 'history'}>
+        {historyOpened && <StoreHistory />}
+      </div>
     </div>
   )
 }
