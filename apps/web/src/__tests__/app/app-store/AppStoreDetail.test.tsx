@@ -57,6 +57,17 @@ describe('AppStoreDetail', () => {
     expect(screen.getByText('Quản trị máy chủ chạy ./dxos upgrade miniapps/tea-shop để cập nhật.')).toBeInTheDocument()
   })
 
+  test('no pill and no running-version line when the HTX has not installed the app', () => {
+    view({ version: '0.2.0', installedVersion: '0.1.0', status: 'available' })
+    expect(screen.queryByText('Có bản mới')).toBeNull()
+    expect(screen.queryByText(/Bản đang chạy/)).toBeNull()
+  })
+
+  test('enabled for every HTX also shows the pill', () => {
+    view({ version: '0.2.0', installedVersion: '0.1.0', status: 'enabled_all' })
+    expect(screen.getByText('Có bản mới')).toBeInTheDocument()
+  })
+
   test('no pill and no upgrade line when the versions match or the app is not installed', () => {
     const { unmount } = view({ version: '0.2.0', installedVersion: '0.2.0' })
     expect(screen.queryByText('Có bản mới')).toBeNull()

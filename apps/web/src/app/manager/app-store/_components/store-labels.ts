@@ -26,9 +26,9 @@ export const STATUS_TONES: Record<AppStoreStatus, 'green' | 'amber' | 'blue' | '
 export const INSTALLED_STATUSES: readonly AppStoreStatus[] = ['enabled', 'enabled_all', 'removing']
 
 export const NEW_VERSION_LABEL = 'Có bản mới'
-/** True when the server runs another version than the catalogue offers. */
-export const hasNewVersion = (app: { version: string; installedVersion: string | null }) =>
-  app.installedVersion !== null && app.installedVersion !== app.version
+/** True when the HTX uses the app and the server runs another version than the catalogue offers. */
+export const hasNewVersion = (app: { version: string; installedVersion: string | null; status: AppStoreStatus }) =>
+  (app.status === 'enabled' || app.status === 'enabled_all') && app.installedVersion !== null && app.installedVersion !== app.version
 
 export const CATEGORY_LABELS: Record<StoreCategory, string> = {
   production: 'Sản xuất và thu mua',
