@@ -529,6 +529,8 @@ wait_request "$R6" FAILED "restarted worker fails the half-done request" 90
 assert_eq "$(psql_app "select error from platform.app_requests where id = '$R6'")" "Trình cài đặt khởi động lại giữa chừng." \
   "request carries the restart message"
 assert_eq "$(installed_count hello)" 0 "half-done hello is not installed"
+# The worker marks the request FAILED first and undoes the half install after that, so wait for the undo.
+for _ in $(seq 1 30); do [ "$(app_containers hello)" = 0 ] && [ "$(grep -c 'app-hello' "$GW_FILE" || true)" = 0 ] && break; sleep 2; done
 assert_eq "$(app_containers hello)" 0 "no app-hello container left after the crash"
 assert_eq "$(grep -c 'app-hello' "$GW_FILE" || true)" 0 "no hello route left after the crash"
 R7=$(request hello TC ENABLE)
