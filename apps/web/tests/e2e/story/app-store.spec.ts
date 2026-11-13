@@ -46,16 +46,41 @@ test.describe('App Store', () => {
   test('TC installs the shop, LB does not see it, a guest orders, TC removes and reinstalls it', async ({ browser }) => {
     const product = `Chè Shan Tuyết ${Date.now()}`
 
-    // TC's manager installs the shop and sees the pill change while the worker runs.
+    // TC's manager finds the shop by searching without accents, reads its detail page, installs it and sees the steps.
     const manager = await newPage(browser, { viewport: { width: 1280, height: 800 } })
     await keycloakLogin(manager, 'smoke_manager_tc', SMOKE_PASSWORD, 'manager')
+    const session = await manager.evaluate(() => fetch('/api/auth/session').then(response => response.json()))
+    const managerName: string = session.user.name
+    expect(managerName).toBeTruthy()
     await openStore(manager)
+    await manager.getByPlaceholder('Tìm ứng dụng').fill('che')
     await expect(card(manager).getByText('Chưa cài', { exact: true })).toBeVisible()
-    await card(manager).getByRole('button', { name: 'Cài', exact: true }).click()
-    await expect(card(manager).getByText('Đang cài…', { exact: true })).toBeVisible()
-    await expect(card(manager).getByText('Đã cài', { exact: true })).toBeVisible({ timeout: INSTALL_MS })
+    await card(manager).getByRole('link', { name: APP_NAME }).click()
+    await manager.waitForURL('**/manager/app-store/tea-shop')
+    await expect(manager.getByRole('heading', { name: APP_NAME, level: 1 })).toBeVisible()
+    // The screenshot is served from the database by our own route and has loaded.
+    const shot = manager.getByRole('img', { name: 'Khách đặt hàng trên điện thoại, không cần đăng nhập' })
+    await shot.scrollIntoViewIfNeeded()
+    await expect.poll(() => shot.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+    await expect(manager.getByText('Mở trang công khai tại /apps/tea-shop/public/TC', { exact: false })).toBeVisible()
+    await expect(manager.getByText('Theo khai báo của nhà phát hành.', { exact: false })).toBeVisible()
+    await manager.getByRole('button', { name: 'Cài', exact: true }).click()
+    // The steps show once the worker reports a phase; with a warm image cache that can be over in seconds, so the waiting line counts too.
+    await expect(manager.locator('ol li[aria-current="step"]').or(manager.getByText(/Đang chờ trình cài đặt|Đang bật cho HTX/))).toBeVisible()
+    await expect(manager.getByText('Đã cài', { exact: true })).toBeVisible({ timeout: INSTALL_MS })
     // The page refreshes the menu on its own when the install ends.
     await expect(menuLink(manager, APP_NAME).first()).toBeVisible()
+    await manager.getByRole('link', { name: 'Mở ứng dụng' }).click()
+    await manager.waitForURL('**/manager/apps/tea-shop')
+    await expect(appFrame(manager).locator('input[name=name]')).toBeVisible()
+
+    // Back in the store, the history tab has the request with the manager's name.
+    await openStore(manager)
+    await manager.getByRole('tab', { name: 'Lịch sử' }).click()
+    // Newest first; an older run on the same stack may have left rows of its own.
+    const historyRow = manager.locator('tr', { hasText: APP_NAME }).first()
+    await expect(historyRow.getByText(managerName, { exact: true })).toBeVisible()
+    await expect(historyRow.getByText('Xong', { exact: true })).toBeVisible()
 
     // LB's manager has not installed it: not in the menu, card says so, the public page answers 404.
     const other = await newPage(browser, { viewport: { width: 1280, height: 800 } })

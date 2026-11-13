@@ -8,6 +8,7 @@
 // pages hold a tour) it adds the tea-tour pages, and runs the same checks inside the app's frame.
 // With E2E_BUSINESS_APPS=installed (leaf-purchase and farm-supply installed with `./dxos install`, tea-shop installed for TC from the
 // App Store, best after tests/e2e/story/app-store.spec.ts and business-apps.spec.ts) it adds one screen per business app and role.
+// The App Store screens (list, history tab, detail page of tea-shop) need no app installed, only a catalog-sync (make platform-up does it).
 import { test, expect, Page } from '@playwright/test'
 import { DEMO_PASSWORD, SMOKE_PASSWORD, keycloakLogin } from '../helpers/keycloak-login'
 
@@ -58,6 +59,23 @@ const SCREENS: Screen[] = [
   },
   { name: 'manager-dashboard', role: 'manager', open: p => visit(p, '/manager/dashboard', /./) },
   { name: 'manager-app-store', role: 'manager', open: p => visit(p, '/manager/app-store', 'Kho ứng dụng') },
+  {
+    name: 'manager-app-store-history', role: 'manager', open: async p => {
+      await visit(p, '/manager/app-store', 'Kho ứng dụng')
+      await p.getByRole('tab', { name: 'Lịch sử' }).click()
+      await expect(p.locator('#store-panel-history').getByRole('table').or(p.getByText('Chưa có yêu cầu cài hoặc gỡ nào.'))).toBeVisible()
+    },
+  },
+  {
+    // Any state: the detail page of a catalog app does not need it installed. The screenshot strip must have loaded before the capture.
+    name: 'manager-app-store-detail', role: 'manager', open: async p => {
+      await visit(p, '/manager/app-store/tea-shop', 'Cửa hàng chè')
+      const shot = p.locator('img').first()
+      await shot.scrollIntoViewIfNeeded()
+      await expect.poll(() => shot.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+      await p.evaluate(() => window.scrollTo(0, 0))
+    },
+  },
   { name: 'public-qr-trace', open: p => visit(p, '/q/TC-CHE-A3-001', 'Chè') },
   // The page the printed QR code opens (ExportQrUseCase encodes /lot/<code>).
   { name: 'public-lot-trace', open: p => visit(p, '/lot/TC-CHE-A3-001', 'Truy xuất nguồn gốc') },
