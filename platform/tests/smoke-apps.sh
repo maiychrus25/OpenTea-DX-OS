@@ -28,7 +28,7 @@ WORKER_PID=""
 WORKER_OUT="$(mktemp)"
 cleanup_store() {
   [ -z "$WORKER_PID" ] || kill "$WORKER_PID" 2>/dev/null || true
-  rm -r -f miniapps/broken-health
+  rm -r -f miniapps/broken-health miniapps/bad-shot
   for app in leaf-purchase tea-shop farm-supply; do ./dxos remove "$app" --purge >/dev/null 2>&1 || true; done
 }
 
@@ -439,6 +439,21 @@ cli_run() { $COMPOSE --profile tools run --rm -T --user "$(id -u):$(id -g)" dxos
 
 cli_run catalog-sync >/dev/null
 assert_eq "$(psql_app "select count(*) from platform.app_catalog where id = 'hello'")" 1 "catalog-sync lists hello"
+# Store details: catalog-sync copies the store block and the screenshot rows; the manifest is the source of the count.
+assert_eq "$(psql_app "select store->>'category' from platform.app_catalog where id = 'tea-shop'")" sales "catalog-sync: tea-shop category is sales"
+assert_eq "$(psql_app "select has_database::text from platform.app_catalog where id = 'tea-shop'")" true "catalog-sync: tea-shop has a database"
+SHOTS=$(grep -c '^    - { file: ' miniapps/tea-shop/app.yaml)
+assert_eq "$(psql_app "select count(*) from platform.app_catalog_screenshots where app_id = 'tea-shop'")" "$SHOTS" \
+  "catalog-sync: tea-shop screenshot rows equal the $SHOTS in its manifest"
+# A text file declared as a screenshot is refused by validate; the copy without it is the positive control.
+rm -r -f miniapps/bad-shot
+cp -R miniapps/hello miniapps/bad-shot
+./dxos validate miniapps/bad-shot >/dev/null 2>&1 && pass "validate accepts a copy of hello" || fail "validate refused the clean copy of hello"
+echo "not an image" > miniapps/bad-shot/notes.txt
+printf '  screenshots:\n    - { file: notes.txt, caption: "Không phải ảnh" }\n' >> miniapps/bad-shot/app.yaml
+./dxos validate miniapps/bad-shot >/dev/null 2>&1 && rc=0 || rc=$?
+assert_eq "$rc" 1 "validate exits 1 for a text file declared as a screenshot"
+rm -r -f miniapps/bad-shot
 start_worker
 OUT=$(./dxos worker 2>&1) && rc=0 || rc=$?
 assert_eq "$rc" 1 "a second ./dxos worker exits 1"
@@ -475,6 +490,7 @@ R5=$(request broken-health TC ENABLE)
 wait_request "$R5" FAILED "ENABLE of the broken app -> FAILED" 90
 grep -q 'Cài đặt hỏng' <<<"$(psql_app "select error from platform.app_requests where id = '$R5'")" \
   && pass "request carries the Vietnamese failure message" || fail "request error: $(psql_app "select error from platform.app_requests where id = '$R5'")"
+assert_eq "$(psql_app "select phase from platform.app_requests where id = '$R5'")" build "the failed install keeps the phase of the step that failed"
 assert_eq "$(installed_count broken-health)" 0 "broken-health is not installed"
 assert_eq "$(enabled_for broken-health)" "" "broken-health is enabled for nobody"
 assert_eq "$(app_containers broken-health)" 0 "no app-broken-health container left"
@@ -512,7 +528,21 @@ web_up() { [ -n "$($COMPOSE ps -q --status running web)" ]; }
 web_status() { curl -s -o /dev/null -w '%{http_code}' "$WEB$1"; }
 ./dxos remove tea-shop --purge >/dev/null 2>&1 || true
 RS1=$(request tea-shop TC ENABLE)
-wait_request "$RS1" DONE "ENABLE tea-shop for TC -> DONE" 300
+# Poll the phase while the worker installs. A warm image cache can finish between two polls, so the phases seen are not the only proof:
+# a finished request must still carry the last phase, register.
+SEEN=""; RS1_STATUS=""; RS1_PHASE=""
+for _ in $(seq 1 600); do
+  got="$(psql_app "select status || ' ' || coalesce(phase, '') from platform.app_requests where id = '$RS1'")"
+  RS1_STATUS="${got%% *}"; RS1_PHASE="${got#* }"
+  case "$RS1_PHASE" in prepare|build|register) case " $SEEN " in *" $RS1_PHASE "*) ;; *) SEEN="$SEEN $RS1_PHASE";; esac;; esac
+  case "$RS1_STATUS" in DONE|FAILED) break;; esac
+  sleep 0.5
+done
+assert_eq "$RS1_STATUS" DONE "ENABLE tea-shop for TC -> DONE"
+if [ -n "$SEEN" ]; then pass "install phases seen while the worker worked:$SEEN"
+elif [ "$RS1_PHASE" = register ]; then pass "install finished between polls with phase register"
+else fail "no install phase seen and the request ended with phase '$RS1_PHASE'"; fi
+assert_eq "$RS1_PHASE" register "a finished install keeps the last phase, register"
 fresh_tokens
 assert_eq "$(enabled_for tea-shop)" TC "tea-shop is enabled for TC only"
 wait_http 200 "manager token -> 200 on /apps/tea-shop/ after the worker installed it" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-shop/"
@@ -545,8 +575,11 @@ pass "worker stops on TERM and frees its lock"
 [ ! -e "$RUNTIME/worker.lock" ] && pass "worker lock directory removed" || fail "worker.lock left behind"
 
 # Upgrade from a stack without the store: the first run of 06-app-store.sql gives an installed app '*', later runs do not.
+requests_state() { psql_app "select count(*) || ' ' || md5(coalesce(string_agg(id::text || status || coalesce(phase, '-'), ',' order by id), '')) from platform.app_requests"; }
+BEFORE_REQUESTS=$(requests_state)
 ./dxos install miniapps/hello >/dev/null && pass "./dxos install miniapps/hello exits 0 (upgrade check)" || fail "install hello for the upgrade check"
-psql_app "drop table platform.app_requests, platform.app_enablements, platform.app_worker, platform.app_catalog" >/dev/null
+assert_eq "$(requests_state)" "$BEFORE_REQUESTS" "a hand ./dxos install adds no request row and changes no phase"
+psql_app "drop table platform.app_catalog_screenshots, platform.app_requests, platform.app_enablements, platform.app_worker, platform.app_catalog" >/dev/null
 $COMPOSE run --rm platform-init >/dev/null 2>&1 || fail "platform-init after dropping the store tables"
 fresh_tokens
 assert_eq "$(psql_app "select app_id || ' ' || htx_code || ' ' || enabled_by from platform.app_enablements")" "hello * dxos-upgrade" \
