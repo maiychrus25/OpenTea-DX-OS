@@ -44,6 +44,7 @@ test.describe('tea-tour installed', () => {
     await menuLink(manager, MENU_ITEM).first().click()
     await manager.waitForURL('**/manager/apps/tea-tour')
     const managerApp = appFrame(manager)
+    await managerApp.locator('summary', { hasText: 'Tạo tour mới' }).click()
     await managerApp.locator('input[name=title]').fill(title)
     await managerApp.locator('input[name=starts_at]').fill(inTwoDays())
     await managerApp.locator('input[name=meeting_point]').fill('Nhà văn hoá xóm Hồng Thái')
@@ -56,6 +57,7 @@ test.describe('tea-tour installed', () => {
     // A guest on a phone books 2 seats on the public page, with no account, and sees the booking code.
     const guest = await newPage(browser, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
     await guest.goto('/apps/tea-tour/public/TC')
+    await guest.locator('li.card', { hasText: title }).locator('summary', { hasText: 'Đặt chỗ' }).click()
     const tour = guest.getByRole('form', { name: `Đặt chỗ ${title}` })
     await tour.locator('input[name=guest_name]').fill('Nguyễn Thị Hoa')
     await tour.locator('input[name=phone]').fill('0912 345 678')
@@ -71,10 +73,10 @@ test.describe('tea-tour installed', () => {
     // The manager confirms the booking.
     await manager.goto('/manager/apps/tea-tour')
     await managerApp.getByRole('link', { name: title }).click()
-    const booking = managerApp.getByRole('form', { name: `Lượt đặt ${code}` })
+    const booking = managerApp.locator('tr', { hasText: code })
     await booking.getByRole('button', { name: 'Xác nhận' }).click()
     await expect(booking.locator('.pill')).toHaveText('Đã xác nhận')
-    await expect(managerApp.locator('main')).toContainText('Đã xác nhận 2 khách')
+    await expect(managerApp.locator('.stats li', { hasText: 'Khách đã xác nhận' })).toContainText('2')
 
     // The guide farmer sees the tour with its 2 confirmed guests.
     const farmer = await newPage(browser, { viewport: { width: 1280, height: 800 } })

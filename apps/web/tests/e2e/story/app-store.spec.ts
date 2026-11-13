@@ -106,7 +106,7 @@ test.describe('App Store', () => {
     const guest = await newPage(browser, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
     await guest.goto('/apps/tea-shop/public/TC')
     const order = guest.getByRole('form', { name: 'Đặt hàng' })
-    await order.locator('section', { hasText: product }).locator('input[name=quantity]').fill('2')
+    await order.locator('li.card', { hasText: product }).locator('input[name=quantity]').fill('2')
     await order.locator('input[name=customer_name]').fill('Nguyễn Thị Hoa')
     await order.locator('input[name=phone]').fill('0912 345 678')
     await order.locator('input[name=address]').fill('Xóm Hồng Thái, xã Tân Cương')
@@ -122,7 +122,7 @@ test.describe('App Store', () => {
     await manager.goto('/manager/apps/tea-shop')
     await managerApp.getByRole('link', { name: code }).click()
     await managerApp.getByRole('button', { name: 'Xác nhận đơn' }).click()
-    await expect(managerApp.locator('h1 .pill')).toHaveText('Đã xác nhận')
+    await expect(managerApp.locator('ol.steps li[aria-current="step"]')).toHaveText('Đã xác nhận')
 
     // Removing keeps the data: the menu item goes, the order is there again after the reinstall.
     await openStore(manager)
