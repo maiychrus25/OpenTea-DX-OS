@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.10.1] - 2026-11-13
+
+### Added
+
+- **`make web-up` and `make gateway-up`**: `web-up` rebuilds or starts `web` and `disease-api` on the generated route file (it replaces the hand-typed `docker compose up` for `web`, in the README, `docs/miniapps.md` and CI); `gateway-up` puts the gateway back on that file after a hand-typed compose command recreated it on the base one.
+
+### Fixed
+
+- **`./dxos install` and `./dxos worker` refuse to run while the gateway reads the base route file**: after a hand-typed `docker compose up` without `DXOS_GATEWAY_FILE` recreated apisix, every mini-app route answered 404 and an install still ended "Đã cài". They now stop with a message naming `make gateway-up`; the check never blocks when docker cannot be asked.
+
+---
+
 ## [1.10.0] - 2026-11-13
 
 ### Added
@@ -22,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrade notes
 - **`make platform-up` applies the new columns and tables without recreating `postgres`** (`06-app-store.sql` is extended in place and stays idempotent). Keep every `docker_*` volume.
-- **Rebuild the web image** (`up -d --build web`) and **restart `./dxos worker`**, otherwise the page works but no install phase is reported.
+- **Rebuild the web image** (`make web-up` from v1.10.1; before that the full command of the v1.8.0 note, with `DXOS_GATEWAY_FILE`) and **restart `./dxos worker`**, otherwise the page works but no install phase is reported.
 - Apps that carry a `store` block declare `requires.core: ">=1.10.0"`; app versions are unchanged.
 
 ### Known limits
@@ -46,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **First `make platform-up` recreates `postgres` once**: it mounts the new `platform/postgres/init/06-app-store.sql`. The data in `docker_pgdata` is kept, and `platform-init` creates the store tables on the existing database. Never delete the `docker_*` volumes
 - **Apps installed before the upgrade stay enabled for every HTX**: the `platform-init` run that creates `platform.app_enablements` enables each already-installed app for `*` once (`enabled_by = 'dxos-upgrade'`), so nothing disappears from the menu. Later runs never do it again: an installed app with no enablement is a valid state (every HTX turned it off) and is not handed back to everyone
 - **Start `./dxos worker`**: the store only queues a request until a worker runs. Start it from the repo root (README, "Kho ứng dụng và `./dxos worker`", has a systemd unit); until it runs, the page warns "Trình cài đặt chưa chạy". `./dxos install` and `./dxos remove` work without it
-- **The web image must be rebuilt** (`up -d --build web`): the proxy, the menu and the store page read `platform.app_enablements`; the package version is now `1.9.0`, which the new manifests require
+- **The web image must be rebuilt** (`make web-up` from v1.10.1; before that the full command of the v1.8.0 note, with `DXOS_GATEWAY_FILE`): the proxy, the menu and the store page read `platform.app_enablements`; the package version is now `1.9.0`, which the new manifests require
 - **Demo**: build the images of the three new apps ahead (install each once, then `./dxos remove <id> --purge`) and start the worker before the demo; the first Cài otherwise builds an image, which takes minutes
 
 ### Known limits
@@ -444,7 +456,8 @@ The `v1.8.0` tag has no GitHub Release, images or bundle: the release workflow's
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.10.1...HEAD
+[1.10.1]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.1
 [1.10.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.0
 [1.9.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.9.0
 [1.8.1]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.8.1

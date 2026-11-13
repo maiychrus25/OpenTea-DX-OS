@@ -254,6 +254,23 @@ wait_http 404 "removed app route -> 404" -- -H "Authorization: Bearer $TM" "$APP
 assert_eq "$(app_containers hello)" 0 "app-hello container removed"
 assert_eq "$(psql_app "select count(*) from platform.installed_apps")" 0 "registry empty after remove"
 
+echo "[gateway guard]"
+# A hand-typed compose command (no DXOS_GATEWAY_FILE) recreates apisix on the base route file; install must refuse.
+env -u DXOS_GATEWAY_FILE $COMPOSE up -d --no-deps apisix >/dev/null 2>&1 || fail "recreate apisix on the base route file"
+ERR=$(./dxos install miniapps/hello 2>&1 >/dev/null) && fail "install succeeded while the gateway read the base route file" \
+  || pass "./dxos install exits non-zero while the gateway reads the base route file"
+grep -q 'make gateway-up' <<<"$ERR" && pass "the refusal names make gateway-up" || fail "the refusal does not name make gateway-up: $ERR"
+assert_eq "$(psql_app "select count(*) from platform.installed_apps" | sed -n 1p)" 0 "registry still empty after the refusal"
+make gateway-up >/dev/null 2>&1 && pass "make gateway-up exits 0" || fail "make gateway-up"
+SRC=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/usr/local/apisix/conf/apisix.yaml"}}{{.Source}}{{end}}{{end}}' "$($COMPOSE ps -q apisix)")
+case "$SRC" in */"$RUNTIME/gateway/apisix.yaml") pass "gateway mounts the runtime route file";; *) fail "gateway mount source is '$SRC'";; esac
+wait_http 404 "gateway answers again" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
+fresh_tokens
+./dxos install miniapps/hello && pass "./dxos install exits 0 once the gateway is back" || fail "./dxos install after make gateway-up"
+wait_http 200 "manager token -> 200 on /apps/hello/ after the guard" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
+./dxos remove hello >/dev/null && pass "hello removed after the guard section" || fail "./dxos remove hello after the guard section"
+assert_eq "$(psql_app "select count(*) from platform.installed_apps" | sed -n 1p)" 0 "registry empty after the guard section"
+
 echo "[business apps]"
 # The three business apps of the store: install, role routes through the gateway, one write each, purge.
 # post_loc <token|""> <path> <curl data args...>: the Location of a 303, otherwise the status line.

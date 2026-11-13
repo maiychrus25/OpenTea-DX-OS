@@ -53,7 +53,7 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `version` | có | SemVer, ví dụ `0.1.0` |
 | `license` | có | thuộc danh sách OSI của CLI: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `LGPL-3.0-or-later`, `GPL-2.0-only`, `GPL-3.0-only`, `GPL-3.0-or-later`, `AGPL-3.0-only`, `AGPL-3.0-or-later` |
 | `publisher` | có | 1–80 ký tự |
-| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.10.0`) |
+| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.10.1`) |
 | `runtime.build` / `runtime.image` | đúng một trong hai | `build`: thư mục tương đối trong thư mục app (thường là `.`). `image`: phải ghim digest, dạng `<ref>@sha256:<64 ký tự hex>` |
 | `runtime.port` | có | 1–65535, cổng app nghe trong container |
 | `runtime.health` | có | đường dẫn health check (đã cắt tiền tố), ví dụ `/healthz`, phải trả 2xx |
@@ -257,11 +257,10 @@ Tệp đang được git theo dõi không bao giờ bị sửa lúc chạy. `mak
 
 **Khởi động stack:**
 - Một `docker compose up` trần không đặt `DXOS_GATEWAY_FILE`, nên APISIX dùng tệp gốc và **không có route app nào** (đóng an toàn).
-- Khi bật riêng `web`, đặt cùng biến để APISIX không bị tạo lại với tệp gốc:
+- Khi bật riêng `web`, dùng `make web-up` (đặt sẵn biến này) để APISIX không bị tạo lại với tệp gốc:
 
   ```bash
-  DXOS_GATEWAY_FILE=../docker/runtime/docker/gateway/apisix.yaml \
-    docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
+  make web-up
   ```
 
 **Kiểm thử tích hợp:** `make apps-smoke` (sau `npm run seed` và `make platform-smoke`) cài và gỡ `hello`, `tea-tour`, ba app nghiệp vụ và các fixture của CLI, kiểm route, quyền (kể cả `/tickets/*` và `/periods/*` của `leaf-purchase`), việc đọc nông hộ qua Hasura với vai trò cán bộ và nông hộ, một thao tác ghi cho mỗi app, rollback, idempotent và `--purge`; chạy hàng đợi của kho với worker thật (bật cho một HTX, gỡ, bật lại giữ dữ liệu, cài hỏng, worker bị kill giữa chừng, nâng cấp từ stack chưa có kho); rồi chạy lại `make platform-smoke` trên stack không có app.
