@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Bộ giao diện mini-app và nâng bốn ứng dụng nghiệp vụ
 
-> **Trạng thái:** Bản thiết kế (2026-11-13). Chủ dự án đã chốt hướng và cho phép triển khai mà không chờ duyệt thêm; bước merge vào `main` và gắn tag phát hành vẫn hỏi lại.
+> **Trạng thái:** Đã triển khai trên nhánh `feat/app-kit` (2026-11-13); thân tài liệu giữ nguyên bản thiết kế, xem "Ghi chú sau triển khai" ở cuối. Bước merge vào `main` và gắn tag `v1.11.0` vẫn chờ chủ dự án.
 > **Phạm vi:** milestone `v1.11.0`, đợt đầu của lộ trình ở mục 2. Tiếp nối `v1.10.1`.
 > **Căn cứ:** Chủ dự án nhận xét các mini-app còn sơ sài ở ba điểm: giao diện bên trong app, thiếu chức năng, ít app; và muốn nền tảng giống mô hình "lõi ở dưới, nhiều mini-app ở trên, người dùng tự tạo được mini-app". Người tạo app là trưởng HTX, không cần lập trình. Mô hình bảo mật không chạy JavaScript trong mini-app được giữ nguyên.
 
@@ -133,3 +133,33 @@ Mọi thành phần chỉ dùng token đã có trong tệp, đúng ở chế đ�
 | I | Smoke, trình duyệt, chụp lại ảnh cho kho, tài liệu, hai vòng kiểm trên stack sạch | Một phiên riêng, sau khi gộp |
 
 Phiên chính viết spec và kế hoạch, giao việc cho các phiên Sonnet và tự review. GitHub Actions đang bị chặn vì hạn mức của tài khoản, nên bằng chứng kiểm thử của đợt này là các vòng chạy trên máy cho tới khi CI chạy lại được.
+
+## Ghi chú sau triển khai
+
+Các quyết định K1–K6 trong lúc làm (sổ `progress.md` của đợt này):
+
+- **K1** App kit được chép vào từng app bằng `make appkit-sync` và kiểm bằng `make lint`, không đóng thành gói dùng chung hay image nền, vì image app dựng từ chính thư mục của nó. Giá phải trả: một bước đồng bộ cần nhớ; `lint` bắt lệch.
+- **K2** Tải tệp cần `allow-downloads` trên khung app và `content-disposition: attachment` qua proxy; không đổi gì khác của sandbox hay CSP. Trong trình duyệt thật, nút "Tải CSV" trong khung tải được tệp.
+- **K3** Trang in mở ở cửa sổ ngoài (`target="_top"`) và dùng lệnh In của trình duyệt, không script nào gọi `print()`. Liên kết "Quay lại ứng dụng" (dựng bằng `appkit.shell_url`) đưa về đúng trang trong khung của vỏ; câu chuyện trình duyệt kiểm đúng đường dẫn cho `leaf-purchase`, `tea-shop`, `farm-supply` và `tea-tour`.
+- **K4** Hợp đồng HTTP hiện có giữ nguyên (đường dẫn, tên trường, mã trạng thái, `Location`); hành vi mới nằm ở route mới. Hệ quả: các phép kiểm của smoke và câu chuyện cũ vẫn đúng, chỉ hai bộ chọn trong smoke và vài bộ chọn trình duyệt phải đổi vì cấu trúc trang đổi (tiêu đề `<h1>tên</h1>`, biểu mẫu nằm trong `disclosure`, thống kê thay cho đoạn chữ); không phép kiểm nào bị bỏ.
+- **K5** `./dxos upgrade <thư mục>` thuộc M1: không có nó thì app đã cài không bao giờ nhận code mới. Kho chỉ hiện "Có bản mới", không có nút nâng cấp. Đã thử trên stack thật của chủ dự án: `tea-shop` và `tea-tour` lên 0.2.0 tại chỗ, các dòng `app_enablements` giữ nguyên từng cột.
+- **K6** Tìm kiếm trong app dùng `ILIKE`, phân biệt dấu, vì role của app không tạo được extension `unaccent`.
+
+Khác với bản thiết kế hoặc phát hiện khi chạy trên stack thật:
+
+- Smoke kiểm CSV ở gateway (200, `text/csv`, `attachment`, BOM) chứ không qua proxy của web, vì proxy cần phiên đăng nhập; việc tải qua proxy được kiểm trong trình duyệt (sự kiện download trong khung).
+- Lỗi thật duy nhất thấy trong vỏ: bảng ở 1280 px ngắt giữa số điện thoại, mã đặt chỗ và nhãn trạng thái, vì `overflow-wrap: anywhere` của thân trang thu chiều rộng tối thiểu của cột về một chữ. Sửa trong `dxos-app.css` (ô bảng dùng `break-word`, `.pill` không xuống dòng), commit `fix(platform)` riêng.
+- Ảnh chụp của kho đổi: ảnh `tea-shop` nay là danh sách đơn (`manager-orders.png`), ảnh `leaf-purchase` là danh sách phiếu cân; chú thích cập nhật.
+- Trang in của `farm-supply` dùng `<section class="print-sheet">` nên giữ màu nền trang khi xem ở chế độ tối (khi in thì đen trên trắng); không đổi.
+- Trang công khai của `tea-shop` xếp thẻ sản phẩm trong một cột hẹp ở 1280 px vì biểu mẫu đặt hàng có chiều rộng tối đa; không bị cắt hay chồng chữ, không đổi.
+
+Số đo trên stack sạch `dxos-clean` (dựng mới từ `down -v`, `platform-up`, seed, `platform-smoke`, mọi spec trình duyệt theo thứ tự CI, `apps-smoke`, gỡ và xoá mọi app, `down -v`). Hai vòng sạch (vòng 4 và vòng 6; vòng 5 có một lần `401` khi seed dữ liệu ngay sau đăng nhập, không lặp lại, không rõ nguyên nhân):
+
+| Hạng mục | Kết quả |
+| --- | --- |
+| `make platform-smoke` | 124 PASS |
+| `make apps-smoke` | 267 PASS (234 trước đợt này; 672 và 590 giây) |
+| Trình duyệt | core-tenant 5, câu chuyện A3 1, câu chuyện tour 1, `app-kit` tea-tour 1, ảnh màn hình ưu tiên 72, kiểm tra gỡ 1, câu chuyện Kho ứng dụng 1, câu chuyện ba app 2, `app-kit` ba app và giao diện 4, ảnh màn hình ba app và kho 68 |
+| `make test` / `make lint` / `npx tsc --noEmit` | 1644 test qua (3 bỏ qua) / `eslint`, `actionlint`, `appkit-sync --check` sạch / sạch |
+| pytest | CLI 147, `leaf-purchase` 42, `tea-shop` 62, `tea-tour` 63, `farm-supply` 25, app kit 19 |
+| Sau khi chạy | không còn container, volume hay worker của `dxos-clean`; sáu volume `docker_*` còn nguyên |
