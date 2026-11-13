@@ -38,3 +38,6 @@ store:
   personal_data: "Lưu tên hộ cùng số lượng và số tiền đăng ký của hộ. Trưởng HTX xem được của mọi hộ. Mỗi nông dân chỉ xem được của hộ mình."
   core_reads:
     - "Hộ gắn với tài khoản của nông dân đang đăng nhập (tên hộ)"
+  screenshots:
+    - { file: store/manager-round.png, caption: "Trưởng HTX mở đợt mua chung và xem số lượng đăng ký" }
+    - { file: store/farmer-register.png, caption: "Nông dân đăng ký số lượng vật tư cho hộ mình" }

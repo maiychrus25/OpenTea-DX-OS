@@ -37,3 +37,5 @@ store:
   personal_data: "Lưu tên, số điện thoại và ghi chú của khách đặt chỗ. Chỉ trưởng HTX xem được. Người dẫn tour chỉ thấy số khách đã xác nhận. Khách chỉ tra được lượt đặt của mình khi nhập đúng mã và số điện thoại."
   core_reads:
     - "Danh sách nông hộ của HTX (tên hộ) để chọn người dẫn tour"
+  screenshots:
+    - { file: store/manager-tour.png, caption: "Trưởng HTX xác nhận lượt đặt và xem số khách của tour" }
