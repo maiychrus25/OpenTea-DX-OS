@@ -229,7 +229,7 @@ describe('App Store requests', () => {
     )
     expect(response.status).toBe(202)
     const insert = mock((prisma as any).$executeRaw).mock.calls[0]
-    expect(insert.slice(1)).toEqual(['hello', 'TC', 'ENABLE', 'u1'])
+    expect(insert.slice(1)).toEqual(['hello', 'TC', 'ENABLE', 'u1', 'U'])
     // Every read of the snapshot is bound to TC as well.
     expect(request.mock.calls.flatMap((call: unknown[]) => call.slice(1))).not.toContain('LB')
   })

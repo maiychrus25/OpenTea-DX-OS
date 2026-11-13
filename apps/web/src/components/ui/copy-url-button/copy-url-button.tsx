@@ -10,12 +10,13 @@ import styles from "./copy-url-button.module.css"
 
 type CopyStatus = "idle" | "success" | "error"
 
-export default function CopyUrlButton(): ReactElement {
+/** Copies `url` (resolved against this page) or, without one, the address of the current page. */
+export default function CopyUrlButton({ url }: { url?: string } = {}): ReactElement {
     const [status, setStatus] = useState<CopyStatus>("idle")
 
     const handleCopy = async () => {
         try {
-            await navigator.clipboard.writeText(window.location.href)
+            await navigator.clipboard.writeText(url ? new URL(url, window.location.href).href : window.location.href)
             setStatus("success")
         } catch (error) {
             logger.error("Copy failed", { error })
