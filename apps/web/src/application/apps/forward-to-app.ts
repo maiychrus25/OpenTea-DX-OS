@@ -11,7 +11,7 @@ const CSP = "default-src 'self'; script-src 'none'; style-src 'self'; img-src 's
 // An allowlist, so the browser's cookie, authorization and x-hasura-* headers never reach the gateway.
 // content-length keeps a streamed body from going out chunked, which a stdlib app server cannot read.
 const FORWARDED_REQUEST_HEADERS = ['content-type', 'accept', 'content-length']
-// An allowlist too: set-cookie and the app's own CSP are dropped.
+// An allowlist too: set-cookie and the app's own CSP are dropped (content-disposition is kept below, attachments only).
 const KEPT_RESPONSE_HEADERS = ['content-type', 'location']
 const SIGNED_OUT_PAGE = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Cần đăng nhập</title></head>
 <body><p>Phiên đăng nhập đã hết hạn. <a href="/login" target="_top">Đăng nhập lại</a> để tiếp tục.</p></body></html>`
@@ -152,5 +152,8 @@ export async function forwardToApp(req: Request, app: InstalledApp, path: string
     const value = upstream.headers.get(name)
     if (value !== null) kept.set(name, value)
   }
+  // A download link in the app (CSV) needs this; anything but an attachment (inline, a script-like name) is dropped.
+  const disposition = upstream.headers.get('content-disposition')
+  if (disposition !== null && /^attachment\b/i.test(disposition)) kept.set('content-disposition', disposition)
   return appResponse(upstream.body, upstream.status, kept)
 }
