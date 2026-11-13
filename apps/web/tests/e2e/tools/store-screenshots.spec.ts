@@ -71,7 +71,7 @@ test.describe('store screenshots', () => {
     const officerApp = appFrame(officer, title)
     // [household option, grade option, kg]; option 0 is the placeholder.
     const tickets: [number, number, string][] = [[1, 1, '14,5'], [2, 1, '9'], [4, 2, '11,5'], [1, 2, '6']]
-    for (const [count, [household, grade, kg]] of tickets.entries()) {
+    for (const [count, [household, grade, kg]] of Array.from(tickets.entries())) {
       const form = officerApp.locator('form', { has: officerApp.getByRole('button', { name: 'Ghi phiếu' }) })
       await form.locator('select[name=household]').selectOption({ index: household })
       await form.locator('input[name=weighed_on]').fill(daysAgo(3))
