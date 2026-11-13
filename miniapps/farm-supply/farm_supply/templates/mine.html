@@ -46,7 +46,7 @@
     <tr role="row">
       <td role="cell" data-label="Đợt">{{ h.title }}</td>
       <td role="cell" data-label="Phải trả">{{ h.amount_vnd | vnd }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ settlement_status(h) }}</span></td>
+      <td role="cell" data-label="Trạng thái"><span class="pill{{ settlement_tone(h) }}">{{ settlement_status(h) }}</span></td>
     </tr>
   {% endfor %}
   </tbody>

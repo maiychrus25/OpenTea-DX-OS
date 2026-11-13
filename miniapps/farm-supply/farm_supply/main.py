@@ -60,6 +60,18 @@ def round_status(r: store.Round) -> str:
     return "Đang nhận đăng ký" if r.accepting else "Hết hạn, chờ đóng đợt"
 
 
+def round_tone(r: store.Round) -> str:
+    """Pill tone: green while taking registrations, grey once closed or past the deadline."""
+    return "" if r.status == "OPEN" and r.accepting else " neutral"
+
+
+def settlement_tone(line) -> str:
+    """Green when done; amber for a household still to be delivered or to pay in a closed round; grey while open."""
+    if line.status == "OPEN":
+        return " neutral"
+    return "" if line.paid_at else " warn"
+
+
 def settlement_status(line) -> str:
     if line.status == "OPEN":
         return "Chờ đóng đợt"
@@ -68,7 +80,8 @@ def settlement_status(line) -> str:
     return "Đã giao, chờ thanh toán" if line.delivered_at else "Chờ giao hàng"
 
 
-templates.env.globals.update(href=href, prefix=PREFIX, round_status=round_status, settlement_status=settlement_status)
+templates.env.globals.update(href=href, prefix=PREFIX, round_status=round_status, round_tone=round_tone,
+                         settlement_status=settlement_status, settlement_tone=settlement_tone)
 templates.env.filters["vnd"] = lambda n: f"{n:,}".replace(",", ".") + " ₫"
 templates.env.filters["vn_time"] = lambda t: t.astimezone(VN_TZ).strftime("%d/%m/%Y %H:%M")
 templates.env.filters["qty"] = lambda q: f"{q:f}".removesuffix(".0")

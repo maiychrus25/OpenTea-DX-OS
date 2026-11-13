@@ -48,7 +48,7 @@
       <td role="cell" data-label="Hạn đăng ký">{{ r.deadline | vn_time }}</td>
       <td role="cell" data-label="Hộ đăng ký">{{ r.household_count }}</td>
       <td role="cell" data-label="Tổng tiền">{{ r.amount_vnd | vnd }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ round_status(r) }}</span></td>
+      <td role="cell" data-label="Trạng thái"><span class="pill{{ round_tone(r) }}">{{ round_status(r) }}</span></td>
     </tr>
   {% endfor %}
   </tbody>

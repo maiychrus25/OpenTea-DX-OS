@@ -4,10 +4,11 @@
 {% import "kit.html" as kit %}
 {% block title %}{{ round.title }}{% endblock %}
 {% block main %}
-{% call kit.app_header(round.title, round_status(round) ~ " · hạn đăng ký " ~ (round.deadline | vn_time)) %}
+{% call kit.app_header(round.title, "Hạn đăng ký " ~ (round.deadline | vn_time)) %}
   {{ kit.print_link(href('/rounds/' ~ round.id ~ '/print', theme), "In bảng kê giao hàng") }}
 {% endcall %}
 {{ kit.tabs(tabs, "rounds") }}
+<p><span class="pill{{ round_tone(round) }}">{{ round_status(round) }}</span></p>
 {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
 {{ kit.steps(steps, step) }}
 {{ kit.stats([
@@ -92,12 +93,12 @@
       <td role="cell" data-label="Giao hàng">
         {% if h.delivered_at %}<span class="pill">Đã giao</span> {{ h.delivered_at | vn_time }}
         {% elif round.status == "CLOSED" %}<span class="actions"><form method="post" action="{{ href('/rounds/' ~ round.id ~ '/settlements/' ~ h.household_id ~ '/delivered', theme) }}"><button type="submit" class="secondary" aria-label="Đánh dấu đã giao cho {{ h.household_name }}">Đánh dấu đã giao</button></form></span>
-        {% else %}Chờ đóng đợt{% endif %}
+        {% else %}<span class="pill neutral">Chờ đóng đợt</span>{% endif %}
       </td>
       <td role="cell" data-label="Thanh toán">
         {% if h.paid_at %}<span class="pill">Đã thanh toán</span> {{ h.paid_at | vn_time }}
         {% elif round.status == "CLOSED" %}<span class="actions"><form method="post" action="{{ href('/rounds/' ~ round.id ~ '/settlements/' ~ h.household_id ~ '/paid', theme) }}"><button type="submit" class="secondary" aria-label="Đánh dấu đã thanh toán cho {{ h.household_name }}">Đánh dấu đã thanh toán</button></form></span>
-        {% else %}Chờ đóng đợt{% endif %}
+        {% else %}<span class="pill neutral">Chờ đóng đợt</span>{% endif %}
       </td>
     </tr>
   {% endfor %}
