@@ -9,11 +9,14 @@ export const appFrame = (page: Page, title: string): FrameLocator => page.frameL
 
 /** POSTs a urlencoded form (repeated keys allowed) through the web proxy with the context's session; redirects are not followed. */
 export async function postForm(request: APIRequestContext, path: string, pairs: [string, string][]) {
-  return request.post(path, {
+  const response = await request.post(path, {
     data: new URLSearchParams(pairs).toString(),
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     maxRedirects: 0,
   })
+  // A refusal says who answered: keep it in the log of the run.
+  if (response.status() >= 400) console.log(`POST ${path} -> ${response.status()} ${JSON.stringify(response.headers())} ${(await response.text()).slice(0, 300)}`)
+  return response
 }
 
 /** The values of the non-empty options of `<select name=...>` in a page's HTML. */
