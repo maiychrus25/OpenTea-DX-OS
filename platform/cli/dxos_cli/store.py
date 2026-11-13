@@ -5,6 +5,7 @@
 The web app inserts requests; `./dxos worker` claims them through the CLI and reports back with finish().
 """
 import sys
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from dxos_cli.store_assets import read_screenshot
 STALE_MESSAGE = "Trình cài đặt khởi động lại giữa chừng."
 UNKNOWN_MESSAGE = "Ứng dụng không có trong kho."
 ERROR_LIMIT = 300
+PHASES = ("prepare", "build", "register")
 
 
 @dataclass(frozen=True)
@@ -116,6 +118,15 @@ def finish(conn: psycopg.Connection, job_id: str, ok: bool, error: str | None = 
             conn.execute("DELETE FROM platform.app_enablements WHERE app_id = %s AND htx_code = %s",
                          (app_id, htx_code))
         return conn.execute("SELECT count(*) FROM platform.app_enablements WHERE app_id = %s", (app_id,)).fetchone()[0]
+
+
+def set_phase(conn: psycopg.Connection, job_id: str, phase: str) -> bool:
+    """Record which step of the install a RUNNING request is in; False when no RUNNING row matched."""
+    if phase not in PHASES:
+        raise ValueError(f"giai đoạn '{phase}' không hợp lệ")
+    uuid.UUID(job_id)  # ValueError for anything else, before it reaches SQL
+    return conn.execute("UPDATE platform.app_requests SET phase = %s WHERE id = %s AND status = 'RUNNING'",
+                        (phase, job_id)).rowcount > 0
 
 
 def fail_stale(conn: psycopg.Connection) -> list[Job]:

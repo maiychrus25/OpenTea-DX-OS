@@ -296,3 +296,47 @@ def test_sync_without_store_block(root, conn):
     store.sync_catalog(conn, root / "miniapps", "1.9.0")
     assert conn.execute("SELECT store FROM platform.app_catalog").fetchone()[0] == {}
     assert shots(conn) == []
+
+
+def phase_of(conn, job_id):
+    return conn.execute("SELECT phase FROM platform.app_requests WHERE id = %s", (job_id,)).fetchone()[0]
+
+
+def test_set_phase_only_touches_a_running_request(root, conn):
+    seed_catalog(conn, "hello")
+    pending, running, done, failed = (add_request(conn, "hello", h) for h in ("A", "B", "C", "D"))
+    conn.execute("UPDATE platform.app_requests SET status = 'RUNNING' WHERE id = %s", (running,))
+    conn.execute("UPDATE platform.app_requests SET status = 'DONE' WHERE id = %s", (done,))
+    conn.execute("UPDATE platform.app_requests SET status = 'FAILED' WHERE id = %s", (failed,))
+    assert store.set_phase(conn, running, "build") is True
+    assert phase_of(conn, running) == "build"
+    for job_id in (pending, done, failed):
+        assert store.set_phase(conn, job_id, "build") is False
+        assert phase_of(conn, job_id) is None
+
+
+def test_set_phase_refuses_bad_arguments(root, conn):
+    with pytest.raises(ValueError):
+        store.set_phase(conn, "11111111-1111-1111-1111-111111111111", "other")
+    with pytest.raises(ValueError):
+        store.set_phase(conn, "not-a-uuid", "build")
+
+
+def test_worker_progress_exit_codes(root, conn, capsys):
+    seed_catalog(conn, "hello")
+    job_id = add_request(conn, "hello", "TC")
+    assert main(["worker-progress", job_id, "build"]) == 0  # PENDING: nothing matched, still fine
+    conn.execute("UPDATE platform.app_requests SET status = 'RUNNING' WHERE id = %s", (job_id,))
+    assert main(["worker-progress", job_id, "register"]) == 0 and phase_of(conn, job_id) == "register"
+    assert main(["worker-progress", job_id, "other"]) == 1
+    assert main(["worker-progress", "not-a-uuid", "build"]) == 1
+    assert "worker-progress" in capsys.readouterr().err
+
+
+def test_failed_request_keeps_the_phase_that_failed(root, conn):
+    seed_catalog(conn, "hello")
+    job_id = add_request(conn, "hello", "TC")
+    conn.execute("UPDATE platform.app_requests SET status = 'RUNNING' WHERE id = %s", (job_id,))
+    store.set_phase(conn, job_id, "build")
+    store.finish(conn, job_id, False, "boom")
+    assert status_of(conn, job_id)[0] == "FAILED" and phase_of(conn, job_id) == "build"

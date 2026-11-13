@@ -96,9 +96,11 @@ def cmd_store(args) -> int:
                     if time.monotonic() >= deadline:
                         break
                     time.sleep(1)
+            elif args.command == "worker-progress":
+                store.set_phase(conn, args.job_id, args.phase)
             else:
                 print(f"remaining={store.finish(conn, args.job_id, args.result == 'ok', args.message)}")
-    except (LookupError, ManifestError, OSError, yaml.YAMLError, psycopg.Error) as exc:
+    except (LookupError, ValueError, ManifestError, OSError, yaml.YAMLError, psycopg.Error) as exc:
         print(f"{args.command}: {exc}", file=sys.stderr)
         return 1
     return 0
@@ -123,6 +125,9 @@ def main(argv: list[str] | None = None) -> int:
     done.add_argument("job_id")
     done.add_argument("result", choices=["ok", "fail"])
     done.add_argument("message", nargs="?")
+    progress = sub.add_parser("worker-progress", help="Ghi giai đoạn cài đặt của yêu cầu đang chạy")
+    progress.add_argument("job_id")
+    progress.add_argument("phase")
     sub.add_parser("abort", help="Hoàn tác bản cài dở theo nhật ký").add_argument("id")
     remove = sub.add_parser("remove", help="Gỡ app; giữ dữ liệu trừ khi có --purge")
     remove.add_argument("id")
@@ -131,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command in ("prepare", "commit", "abort", "remove", "list"):
         return cmd_install(args)
-    if args.command in ("catalog-sync", "worker-start", "worker-claim", "worker-finish"):
+    if args.command in ("catalog-sync", "worker-start", "worker-claim", "worker-finish", "worker-progress"):
         return cmd_store(args)
     if args.command == "manifest-id":
         return cmd_manifest_id(args.dir)
