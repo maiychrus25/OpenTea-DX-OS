@@ -13,6 +13,7 @@ from dxos_cli import commands, store
 from dxos_cli.gateway import GatewayError, sync_gateway
 from dxos_cli.manifest import ManifestError, load_manifest, read_core_version, repo_root, validate_manifest
 from dxos_cli.steps import InstallError
+from dxos_cli.store_assets import check_store_files
 
 
 def cmd_validate(dirs: list[str]) -> int:
@@ -20,7 +21,10 @@ def cmd_validate(dirs: list[str]) -> int:
     failed = False
     for raw in dirs:
         try:
-            errors = validate_manifest(load_manifest(Path(raw)), core, set())
+            manifest = load_manifest(Path(raw))
+            errors = validate_manifest(manifest, core, set())
+            if not errors:
+                errors = check_store_files(Path(raw), manifest)
         except ManifestError as exc:
             errors = [str(exc)]
         for message in errors:

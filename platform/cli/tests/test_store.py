@@ -248,3 +248,51 @@ def test_store_sql_is_idempotent_and_adds_columns(root, conn):
     with pytest.raises(psycopg.errors.CheckViolation):
         conn.execute("INSERT INTO platform.app_requests (app_id, htx_code, action, requested_by, phase) "
                      "VALUES ('x', 'TC', 'ENABLE', 'u1', 'other')")
+
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 8
+
+
+def add_store(root, shots, extra=""):
+    app = root / "miniapps" / "tea-tour"
+    lines = "".join(f"    - {{ file: {name}, caption: {cap} }}\n" for name, cap in shots)
+    block = f"store:\n  category: tourism\n{extra}" + (f"  screenshots:\n{lines}" if shots else "")
+    with (app / "app.yaml").open("a") as f:
+        f.write(block)
+    for name, _ in shots:
+        (app / name).write_bytes(PNG + name.encode())
+    return app
+
+
+def shots(conn):
+    return conn.execute("SELECT position, caption, content_type FROM platform.app_catalog_screenshots"
+                        " WHERE app_id = 'tea-tour' ORDER BY position").fetchall()
+
+
+def test_sync_stores_block_requires_core_and_has_database(root, conn):
+    add_store(root, [])
+    store.sync_catalog(conn, root / "miniapps", "1.9.0")
+    row = conn.execute("SELECT store, requires_core, has_database FROM platform.app_catalog").fetchone()
+    assert row == ({"category": "tourism"}, ">=1.0.0", True)
+
+
+def test_sync_screenshots_positions_resync_and_cascade(root, conn, capsys):
+    app = add_store(root, [("a.png", "Một"), ("bad.png", "Hỏng"), ("c.png", "Ba")])
+    (app / "bad.png").write_text("not an image")
+    store.sync_catalog(conn, root / "miniapps", "1.9.0")
+    assert "bỏ qua ảnh bad.png của tea-tour" in capsys.readouterr().err
+    assert shots(conn) == [(0, "Một", "image/png"), (1, "Ba", "image/png")]
+    assert "screenshots" not in conn.execute("SELECT store FROM platform.app_catalog").fetchone()[0]
+    text = (app / "app.yaml").read_text().replace("    - { file: c.png, caption: Ba }\n", "")
+    (app / "app.yaml").write_text(text)
+    store.sync_catalog(conn, root / "miniapps", "1.9.0")
+    assert len(shots(conn)) == 1
+    shutil.rmtree(app)
+    store.sync_catalog(conn, root / "miniapps", "1.9.0")
+    assert conn.execute("SELECT count(*) FROM platform.app_catalog_screenshots").fetchone()[0] == 0
+
+
+def test_sync_without_store_block(root, conn):
+    store.sync_catalog(conn, root / "miniapps", "1.9.0")
+    assert conn.execute("SELECT store FROM platform.app_catalog").fetchone()[0] == {}
+    assert shots(conn) == []
