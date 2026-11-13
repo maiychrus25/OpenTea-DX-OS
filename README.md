@@ -246,8 +246,10 @@ Smoke test và test trình duyệt chỉ tạo và sửa tài khoản riêng ti�
 
 Kiểm thử trên trình duyệt với stack thật (cần `make platform-up`, `make platform-smoke` và container `web` đang chạy):
 
+> Luôn khởi động hoặc dựng lại dịch vụ bằng `make` hoặc `./dxos`. Lệnh `docker compose up` gõ tay mà thiếu `DXOS_GATEWAY_FILE` làm gateway mất route của mini-app (trả 404 Route Not Found); `make gateway-up` đưa gateway về đúng.
+
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
+make web-up
 cd apps/web && npx playwright install chromium
 E2E_CORE=1 E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/tenant/core-tenant.spec.ts --project=chromium --no-deps --reporter=list
 # Sau npm run seed: câu chuyện "Một ngày của lô chè A3" và ảnh chụp các màn hình ưu tiên (lưu ở apps/web/test-results/screens/)
@@ -335,8 +337,7 @@ Web không có quyền điều khiển Docker. Bấm Cài hoặc Gỡ chỉ ghi 
 
 ```bash
 make platform-up                        # bắt buộc: chỉ khi đó gateway mới nạp route của các app đã cài
-DXOS_GATEWAY_FILE=../docker/runtime/docker/gateway/apisix.yaml \
-  docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
+make web-up
 ./dxos validate miniapps/tea-tour       # chỉ kiểm tra manifest
 ./dxos install miniapps/tea-tour        # cài; hỏng ở bước nào thì hoàn tác mọi bước trước
 ./dxos list                             # app đã cài, phiên bản, trạng thái container
@@ -350,7 +351,7 @@ make apps-smoke                         # kiểm thử tích hợp (sau npm run 
 
 - Mục "Tour đồi chè" hiện trong menu của quản lý, "Lịch dẫn tour" trong menu của nông hộ. Gỡ app thì mục menu biến mất ở lần tải trang sau và `/apps/tea-tour/...` trả 404 ngay.
 - Tệp sinh ra nằm dưới `docker/runtime/<project>/` (git-ignored). `<project>` lấy từ biến môi trường `COMPOSE_PROJECT_NAME`, mặc định `docker`. Hãy đặt project bằng biến này, không dùng cờ `-p`.
-- Một `docker compose up` trần chạy lõi mà không có route app nào. Khi bật riêng `web`, đặt `DXOS_GATEWAY_FILE` như trên, nếu không APISIX bị tạo lại với tệp route gốc.
+- Một `docker compose up` trần chạy lõi mà không có route app nào. Khi bật riêng `web`, dùng `make web-up` như trên, nếu không APISIX bị tạo lại với tệp route gốc.
 
 > [!IMPORTANT]
 > **Dữ liệu cá nhân của khách tour:** họ tên, số điện thoại và ghi chú của khách nằm trong schema `app_tea_tour`.
@@ -375,8 +376,7 @@ make apps-smoke                         # kiểm thử tích hợp (sau npm run 
 - Với image đã build, `./dxos install miniapps/tea-tour` mất khoảng 11–12 giây.
 - **Nâng giới hạn công khai trên máy demo.** Docker Desktop (macOS, Windows) cho container `web` thấy mọi client, từ điện thoại trong LAN tới trình duyệt của người trình bày, là cùng một IP. Giới hạn 10 request mỗi phút của route công khai vì thế thành giới hạn chung cho cả phòng, trong khi một lượt đặt tour tốn khoảng 3 request. Chỉ vài khách quét QR trong cùng một phút là đã gặp trang 429. Trên máy demo, bật web với giới hạn cao hơn:
   ```bash
-  DXOS_APP_PUBLIC_LIMIT=300 DXOS_GATEWAY_FILE=../docker/runtime/docker/gateway/apisix.yaml \
-    docker compose -f docker/docker-compose.yml up -d --build --wait web disease-api
+  DXOS_APP_PUBLIC_LIMIT=300 make web-up
   ```
   Biến chỉ có hiệu lực cho lần bật web này. Mặc định 10 của compose và production giữ nguyên.
 - Câu chuyện tour trên trình duyệt (sau `npm run seed`, `make platform-smoke` và `./dxos install miniapps/tea-tour`):

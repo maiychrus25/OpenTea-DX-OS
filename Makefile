@@ -12,7 +12,7 @@ export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 # keycloak on every platform-up. Without the attestation the same inputs give the same ID, so nothing is recreated.
 export BUILDX_NO_DEFAULT_ATTESTATIONS := 1
 
-.PHONY: gateway-sync platform-up platform-smoke apps-smoke platform-down up down build test lint
+.PHONY: gateway-sync web-up gateway-up platform-up platform-smoke apps-smoke platform-down up down build test lint
 
 # APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
 gateway-sync:
@@ -37,6 +37,14 @@ platform-up: gateway-sync
 		sleep 2; \
 	done; echo "hasura or apisix did not come back after restart" >&2; exit 1
 	$(COMPOSE) --profile tools run --rm ollama-init
+
+# Rebuild or start web (and the disease service) on the generated route file, so apisix is not recreated on the base one.
+web-up: gateway-sync
+	$(COMPOSE) up -d --build --wait web disease-api
+
+# Put the gateway back on the generated route file after a hand-typed compose command recreated it on the base one.
+gateway-up: gateway-sync
+	$(COMPOSE) up -d --no-deps apisix
 
 platform-smoke:
 	bash platform/tests/smoke-platform.sh
