@@ -1,18 +1,26 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
-{#- Fields of the write and edit forms; needs form, households, grades, errors, core_error. -#}
-  {% if errors %}{% include "errors.html" %}{% elif core_error %}<div class="error" role="alert">{{ core_error }}</div>{% endif %}
+{#- Fields of the write and edit forms; needs form, households, grades, errors (by field), core_error. -#}
+{% import "kit.html" as kit %}
+  {% set general = errors.get("form") or core_error %}
+  {% if general %}<div class="error" role="alert">{{ general }}</div>{% endif %}
   <label>Hộ giao chè
-    <select name="household" required>
+    <select name="household" required{% if errors.get("household") %} aria-invalid="true"{% endif %}>
       <option value="">Chọn nông hộ</option>
       {% for h in households %}<option value="{{ h.id }}"{% if form.household == h.id %} selected{% endif %}>{{ h.name }}</option>{% endfor %}
     </select>
+    {{ kit.field_error(errors, "household") }}
   </label>
-  <label>Ngày cân <input type="date" name="weighed_on" required value="{{ form.weighed_on }}"></label>
+  <label>Ngày cân <input type="date" name="weighed_on" required value="{{ form.weighed_on }}"{% if errors.get("weighed_on") %} aria-invalid="true"{% endif %}>
+    {{ kit.field_error(errors, "weighed_on") }}
+  </label>
   <label>Loại chè
-    <select name="grade" required>
+    <select name="grade" required{% if errors.get("grade") %} aria-invalid="true"{% endif %}>
       <option value="">Chọn loại chè</option>
       {% for g in grades %}<option value="{{ g.id }}"{% if form.grade == g.id | string %} selected{% endif %}>{{ g.name }} ({{ g.price_vnd | vnd }}/kg)</option>{% endfor %}
     </select>
+    {{ kit.field_error(errors, "grade") }}
   </label>
-  <label>Số ký (kg, dùng dấu phẩy cho số lẻ) <input name="kg" inputmode="decimal" maxlength="6" required value="{{ form.kg }}"></label>
+  <label>Số ký (kg, dùng dấu phẩy cho số lẻ) <input name="kg" inputmode="decimal" maxlength="6" required value="{{ form.kg }}"{% if errors.get("kg") %} aria-invalid="true"{% endif %}>
+    {{ kit.field_error(errors, "kg") }}
+  </label>

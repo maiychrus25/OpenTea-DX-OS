@@ -1,0 +1,26 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Bảng kê chi trả {{ period.date_from | vn_date }}{% endblock %}
+{% block body_attrs %} class="print-sheet"{% endblock %}
+{% block main %}
+{{ kit.print_bar(back) }}
+<h1>Bảng kê chi trả tiền chè</h1>
+<p>HTX <strong>{{ htx_code }}</strong> · Kỳ {{ period.date_from | vn_date }} – {{ period.date_to | vn_date }} · Chốt lúc {{ period.closed_at | vn_time }}</p>
+<p>Tổng <strong>{{ period.total_vnd | vnd }}</strong> cho {{ period.households }} hộ</p>
+<p class="print-only">In ngày {{ today | vn_date }}</p>
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Hộ</th><th role="columnheader">Số ký</th><th role="columnheader">Số tiền</th><th role="columnheader">Đã trả</th><th role="columnheader">Chữ ký</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for o in payouts %}
+    <tr role="row">
+      <td role="cell" data-label="Hộ">{{ o.household_name }}</td>
+      <td role="cell" data-label="Số ký">{{ o.total_kg | kg }}</td>
+      <td role="cell" data-label="Số tiền">{{ o.total_vnd | vnd }}</td>
+      <td role="cell" data-label="Đã trả">{{ ("Đã trả " ~ (o.paid_at | vn_date)) if o.paid_at else "Chưa trả" }}</td>
+      <td role="cell" data-label="Chữ ký"><br><br></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

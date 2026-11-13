@@ -1,0 +1,63 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Phiếu cân{% endblock %}
+{% block head %}
+{% call kit.app_header("Phiếu cân", "Tìm và lọc mọi phiếu cân của HTX") %}
+  {{ kit.export_link(export_href) }}
+{% endcall %}
+{% endblock %}
+{% block main %}
+<form class="toolbar" method="get" action="{{ href('/tickets') }}">
+  {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+  <label>Tìm theo tên hộ <input type="search" name="q" value="{{ f.q }}" maxlength="100" placeholder="Ví dụ: Nguyễn Văn"></label>
+  <label>Hộ
+    <select name="household"><option value="">Tất cả hộ</option>
+      {% for hid, name in household_options %}<option value="{{ hid }}"{% if f.household_id == hid %} selected{% endif %}>{{ name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Loại chè
+    <select name="grade"><option value="">Tất cả loại</option>
+      {% for g in grades %}<option value="{{ g.id }}"{% if f.grade_id == g.id %} selected{% endif %}>{{ g.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Tình trạng
+    <select name="status">
+      <option value="active"{% if f.status == "active" %} selected{% endif %}>Còn hiệu lực</option>
+      <option value="voided"{% if f.status == "voided" %} selected{% endif %}>Đã huỷ</option>
+      <option value="all"{% if f.status == "all" %} selected{% endif %}>Tất cả</option>
+    </select>
+  </label>
+  <label>Từ ngày <input type="date" name="from" value="{{ f.date_from.isoformat() if f.date_from }}"></label>
+  <label>Đến ngày <input type="date" name="to" value="{{ f.date_to.isoformat() if f.date_to }}"></label>
+  <button type="submit">Lọc</button>
+  <a class="button secondary" href="{{ href('/tickets', theme) }}">Xoá lọc</a>
+</form>
+
+{{ kit.stats([{"label": "Số ký", "value": (totals.kg | kg) ~ " kg"}, {"label": "Thành tiền", "value": totals.vnd | vnd}, {"label": "Số phiếu", "value": totals.tickets}]) }}
+
+{% if tickets %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Ngày cân</th><th role="columnheader">Hộ</th><th role="columnheader">Loại chè</th><th role="columnheader">Số ký</th><th role="columnheader">Thành tiền</th><th role="columnheader">Tình trạng</th><th role="columnheader">Thao tác</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for t in tickets %}
+    <tr role="row">
+      <td role="cell" data-label="Ngày cân">{{ t.weighed_on | vn_date }}</td>
+      <td role="cell" data-label="Hộ">{{ t.household_name }}</td>
+      <td role="cell" data-label="Loại chè">{{ t.grade_name }}</td>
+      <td role="cell" data-label="Số ký">{{ t.kg | kg }}</td>
+      <td role="cell" data-label="Thành tiền">{{ t.amount_vnd | vnd }}</td>
+      <td role="cell" data-label="Tình trạng"><span class="pill">{{ ticket_state(t) }}</span></td>
+      <td role="cell" data-label="Thao tác"><span class="actions">
+        {% if t.open %}<a class="button secondary" href="{{ href('/tickets/' ~ t.id ~ '/edit', theme) }}">Sửa</a>{% endif %}
+        {{ kit.print_link(href('/tickets/' ~ t.id ~ '/print', theme)) }}
+      </span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ kit.pagination(page_info, prev_href, next_href) }}
+{% else %}
+{{ kit.empty("Không có phiếu cân nào khớp bộ lọc.", "Xoá lọc", href('/tickets', theme)) }}
+{% endif %}
+{% endblock %}

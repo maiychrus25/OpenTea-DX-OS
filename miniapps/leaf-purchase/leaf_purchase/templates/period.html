@@ -2,10 +2,15 @@
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
 {% block title %}Kỳ {{ period.date_from | vn_date }}{% endblock %}
+{% block head %}
+{% call kit.app_header("Kỳ " ~ (period.date_from | vn_date) ~ " – " ~ (period.date_to | vn_date), "Chốt lúc " ~ (period.closed_at | vn_time)) %}
+  {{ kit.export_link(href('/periods/' ~ period.id ~ '/export.csv')) }}
+  {{ kit.print_link(href('/periods/' ~ period.id ~ '/print', theme), "In bảng kê") }}
+{% endcall %}
+{% endblock %}
 {% block main %}
 <p><a href="{{ href('/periods', theme) }}">← Các kỳ</a></p>
-<h1>Kỳ {{ period.date_from | vn_date }} – {{ period.date_to | vn_date }}</h1>
-<p>Chốt lúc {{ period.closed_at | vn_time }} · Tổng <strong>{{ period.total_vnd | vnd }}</strong> · Đã trả {{ period.paid }} / {{ period.households }} hộ</p>
+{{ kit.stats([{"label": "Tổng tiền", "value": period.total_vnd | vnd}, {"label": "Số hộ", "value": period.households}, {"label": "Đã trả", "value": period.paid ~ " / " ~ period.households ~ " hộ"}]) }}
 <table role="table">
   <thead role="rowgroup"><tr role="row"><th role="columnheader">Hộ</th><th role="columnheader">Số ký</th><th role="columnheader">Số tiền</th><th role="columnheader">Trạng thái</th><th role="columnheader">Thao tác</th></tr></thead>
   <tbody role="rowgroup">
@@ -15,9 +20,9 @@
       <td role="cell" data-label="Số ký">{{ o.total_kg | kg }}</td>
       <td role="cell" data-label="Số tiền">{{ o.total_vnd | vnd }}</td>
       <td role="cell" data-label="Trạng thái"><span class="pill">{{ "Đã trả" if o.paid_at else "Chưa trả" }}</span>{% if o.paid_at %} {{ o.paid_at | vn_time }}{% endif %}</td>
-      <td role="cell" data-label="Thao tác">{% if o.paid_at %}—{% else %}
+      <td role="cell" data-label="Thao tác">{% if o.paid_at %}—{% else %}<span class="actions">
         <form method="post" action="{{ href('/periods/' ~ period.id ~ '/payouts/' ~ o.id ~ '/paid', theme) }}"><button type="submit">Đã trả</button></form>
-      {% endif %}</td>
+      </span>{% endif %}</td>
     </tr>
   {% endfor %}
   </tbody>

@@ -3,13 +3,15 @@
 """Phiếu cân, loại chè, kỳ và chi trả trong schema app_leaf_purchase. Mọi truy vấn lọc theo htx_code lấy từ token."""
 import re
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from enum import Enum
 from uuid import UUID
 
 import psycopg
 from psycopg.rows import class_row
+
+from leaf_purchase.appkit import like_pattern
 
 KG_RE = re.compile(r"[0-9]{1,4}(?:[.,][0-9])?")  # ASCII digits, at most one decimal: kg is numeric(7,1)
 MAX_KG = Decimal(5000)
@@ -40,6 +42,53 @@ class Ticket:
     @property
     def open(self) -> bool:
         return not self.voided and self.period_id is None
+
+
+@dataclass(frozen=True)
+class ListedTicket(Ticket):
+    """A ticket with the dates of its period, for the list, the CSV and the farmer page."""
+    period_from: date | None
+    period_to: date | None
+
+
+@dataclass(frozen=True)
+class TicketFilter:
+    date_from: date | None = None
+    date_to: date | None = None
+    household_id: str = ""
+    grade_id: UUID | None = None
+    status: str = "active"  # active | voided | all
+    q: str = ""
+
+
+@dataclass(frozen=True)
+class Totals:
+    kg: Decimal
+    vnd: int
+    tickets: int
+
+
+@dataclass(frozen=True)
+class TopHousehold:
+    household_name: str
+    kg: Decimal
+    vnd: int
+
+
+@dataclass(frozen=True)
+class Overview:
+    today_kg: Decimal
+    today_vnd: int
+    today_tickets: int
+    month_kg: Decimal
+    month_vnd: int
+    month_tickets: int
+    open_kg: Decimal
+    open_vnd: int
+    unpaid_vnd: int
+    unpaid_households: int
+    days: list[tuple[date, Decimal]]
+    top: list[TopHousehold]
 
 
 @dataclass(frozen=True)
@@ -143,6 +192,115 @@ def get_ticket(conn, htx_code: str, ticket_id: UUID) -> Ticket | None:
     with conn.cursor(row_factory=class_row(Ticket)) as cur:
         return cur.execute(f"SELECT {TICKET_COLUMNS} FROM tickets WHERE htx_code = %s AND id = %s",
                            (htx_code, ticket_id)).fetchone()
+
+
+LISTED_COLUMNS = ("t.id, t.household_id, t.household_name, t.weighed_on, t.grade_id, t.grade_name, t.kg, "
+                  "t.price_vnd, t.amount_vnd, t.voided, t.period_id, p.date_from AS period_from, p.date_to AS period_to")
+LISTED_FROM = "FROM tickets t LEFT JOIN periods p ON p.id = t.period_id AND p.htx_code = t.htx_code"
+
+
+def _where(htx_code: str, f: TicketFilter) -> tuple[str, dict]:
+    """The filter as a WHERE clause; every value is a parameter, the search text is escaped for ILIKE."""
+    clauses, params = ["t.htx_code = %(htx)s"], {"htx": htx_code}
+    if f.date_from:
+        clauses.append("t.weighed_on >= %(from)s")
+        params["from"] = f.date_from
+    if f.date_to:
+        clauses.append("t.weighed_on <= %(to)s")
+        params["to"] = f.date_to
+    if f.household_id:
+        clauses.append("t.household_id = %(household)s")
+        params["household"] = f.household_id
+    if f.grade_id:
+        clauses.append("t.grade_id = %(grade)s")
+        params["grade"] = f.grade_id
+    if f.status != "all":
+        clauses.append("t.voided" if f.status == "voided" else "NOT t.voided")
+    if f.q:
+        clauses.append("t.household_name ILIKE %(q)s ESCAPE '\\'")
+        params["q"] = like_pattern(f.q)
+    return " AND ".join(clauses), params
+
+
+def ticket_totals(conn, htx_code: str, f: TicketFilter) -> Totals:
+    where, params = _where(htx_code, f)
+    row = conn.execute(f"SELECT COALESCE(sum(t.kg), 0), COALESCE(sum(t.amount_vnd), 0)::bigint, count(*) "
+                       f"FROM tickets t WHERE {where}", params).fetchone()
+    return Totals(row[0], row[1], row[2])
+
+
+def list_tickets(conn, htx_code: str, f: TicketFilter, limit: int | None = None, offset: int = 0) -> list[ListedTicket]:
+    """Newest first; limit None returns every matching row (the CSV)."""
+    where, params = _where(htx_code, f)
+    with conn.cursor(row_factory=class_row(ListedTicket)) as cur:
+        return cur.execute(f"SELECT {LISTED_COLUMNS} {LISTED_FROM} WHERE {where} "
+                           "ORDER BY t.weighed_on DESC, t.created_at DESC, t.id LIMIT %(limit)s OFFSET %(offset)s",
+                           {**params, "limit": limit, "offset": offset}).fetchall()
+
+
+def ticket_households(conn, htx_code: str) -> list[tuple[str, str]]:
+    """(id, latest name) of every household with a ticket, for the filter dropdown."""
+    return conn.execute("SELECT household_id, (array_agg(household_name ORDER BY created_at DESC))[1] AS name "
+                        "FROM tickets WHERE htx_code = %s GROUP BY household_id ORDER BY name", (htx_code,)).fetchall()
+
+
+def get_listed_ticket(conn, htx_code: str, ticket_id: UUID) -> ListedTicket | None:
+    with conn.cursor(row_factory=class_row(ListedTicket)) as cur:
+        return cur.execute(f"SELECT {LISTED_COLUMNS} {LISTED_FROM} WHERE t.htx_code = %s AND t.id = %s",
+                           (htx_code, ticket_id)).fetchone()
+
+
+def household_months(conn, htx_code: str, household_id: str) -> list[str]:
+    """YYYY-MM of every month the household has a ticket in, newest first."""
+    return [r[0] for r in conn.execute(
+        "SELECT DISTINCT to_char(weighed_on, 'YYYY-MM') AS month FROM tickets WHERE htx_code = %s AND household_id = %s "
+        "AND NOT voided ORDER BY month DESC", (htx_code, household_id)).fetchall()]
+
+
+def household_month_total(conn, htx_code: str, household_id: str, first_day: date) -> Totals:
+    row = conn.execute("SELECT COALESCE(sum(kg), 0), COALESCE(sum(amount_vnd), 0)::bigint, count(*) FROM tickets "
+                       "WHERE htx_code = %s AND household_id = %s AND NOT voided AND weighed_on >= %s "
+                       "AND weighed_on < %s", (htx_code, household_id, first_day, _next_month(first_day))).fetchone()
+    return Totals(row[0], row[1], row[2])
+
+
+def household_unpaid_vnd(conn, htx_code: str, household_id: str) -> int:
+    return conn.execute("SELECT COALESCE(sum(total_vnd), 0)::bigint FROM payouts WHERE htx_code = %s "
+                        "AND household_id = %s AND paid_at IS NULL", (htx_code, household_id)).fetchone()[0]
+
+
+def _next_month(first_day: date) -> date:
+    return (first_day.replace(day=28) + timedelta(days=4)).replace(day=1)
+
+
+def overview(conn, htx_code: str, today: date) -> Overview:
+    """Figures of the manager's overview. `today` is the Vietnam date; the month runs from its 1st."""
+    first = today.replace(day=1)
+    row = conn.execute(
+        """SELECT COALESCE(sum(kg) FILTER (WHERE weighed_on = %(today)s), 0),
+                  COALESCE(sum(amount_vnd) FILTER (WHERE weighed_on = %(today)s), 0)::bigint,
+                  count(*) FILTER (WHERE weighed_on = %(today)s),
+                  COALESCE(sum(kg) FILTER (WHERE weighed_on >= %(first)s AND weighed_on < %(next)s), 0),
+                  COALESCE(sum(amount_vnd) FILTER (WHERE weighed_on >= %(first)s AND weighed_on < %(next)s), 0)::bigint,
+                  count(*) FILTER (WHERE weighed_on >= %(first)s AND weighed_on < %(next)s),
+                  COALESCE(sum(kg) FILTER (WHERE period_id IS NULL), 0),
+                  COALESCE(sum(amount_vnd) FILTER (WHERE period_id IS NULL), 0)::bigint
+           FROM tickets WHERE htx_code = %(htx)s AND NOT voided""",
+        {"htx": htx_code, "today": today, "first": first, "next": _next_month(first)}).fetchone()
+    unpaid = conn.execute("SELECT COALESCE(sum(total_vnd), 0)::bigint, count(DISTINCT household_id) FROM payouts "
+                          "WHERE htx_code = %s AND paid_at IS NULL", (htx_code,)).fetchone()
+    start = today - timedelta(days=13)
+    per_day = dict(conn.execute("SELECT weighed_on, sum(kg) FROM tickets WHERE htx_code = %s AND NOT voided "
+                                "AND weighed_on BETWEEN %s AND %s GROUP BY weighed_on", (htx_code, start, today)))
+    days = [(start + timedelta(days=i), per_day.get(start + timedelta(days=i), Decimal(0))) for i in range(14)]
+    with conn.cursor(row_factory=class_row(TopHousehold)) as cur:
+        top = cur.execute(
+            """SELECT (array_agg(household_name ORDER BY created_at DESC))[1] AS household_name, sum(kg) AS kg,
+                      sum(amount_vnd)::bigint AS vnd
+               FROM tickets WHERE htx_code = %s AND NOT voided AND weighed_on >= %s AND weighed_on < %s
+               GROUP BY household_id ORDER BY sum(kg) DESC, household_id LIMIT 10""",
+            (htx_code, first, _next_month(first))).fetchall()
+    return Overview(*row, unpaid[0], unpaid[1], days, top)
 
 
 def household_tickets(conn, htx_code: str, household_id: str) -> list[Ticket]:
@@ -260,6 +418,22 @@ def household_payouts(conn, htx_code: str, household_id: str) -> list[tuple[date
            WHERE o.htx_code = %s AND o.household_id = %s ORDER BY p.date_from DESC LIMIT 50""",
         (htx_code, household_id)).fetchall()
     return [(r[0], r[1], Payout(*r[2:])) for r in rows]
+
+
+def household_ticket_page(conn, htx_code: str, household_id: str, month: str, limit: int, offset: int
+                          ) -> tuple[int, list[ListedTicket]]:
+    """(total, rows) of a household's tickets, optionally one month (YYYY-MM)."""
+    where, params = "t.htx_code = %(htx)s AND t.household_id = %(hid)s AND NOT t.voided", {"htx": htx_code, "hid": household_id}
+    if month:
+        first = date.fromisoformat(month + "-01")
+        where += " AND t.weighed_on >= %(first)s AND t.weighed_on < %(next)s"
+        params |= {"first": first, "next": _next_month(first)}
+    total = conn.execute(f"SELECT count(*) FROM tickets t WHERE {where}", params).fetchone()[0]
+    with conn.cursor(row_factory=class_row(ListedTicket)) as cur:
+        rows = cur.execute(f"SELECT {LISTED_COLUMNS} {LISTED_FROM} WHERE {where} "
+                           "ORDER BY t.weighed_on DESC, t.created_at DESC, t.id LIMIT %(limit)s OFFSET %(offset)s",
+                           {**params, "limit": limit, "offset": offset}).fetchall()
+    return total, rows
 
 
 def mark_paid(conn, htx_code: str, period_id: UUID, payout_id: UUID, paid_by: str) -> bool | None:

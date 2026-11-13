@@ -10,12 +10,19 @@ Cán bộ HTX ghi phiếu cân chè búp tươi của từng hộ, ban quản tr
 
 | Đường dẫn (dưới `/apps/leaf-purchase`) | Ai vào | Nội dung |
 | --- | --- | --- |
-| `/?day=YYYY-MM-DD` | `officer`, `manager` | Phiếu cân của một ngày (mặc định hôm nay), tổng ký và tiền trong ngày, form ghi phiếu |
+| `/?day=YYYY-MM-DD` | `officer`, `manager` | Ghi phiếu cân (lỗi báo ngay dưới ô, giữ giá trị đã gõ) và phiếu của một ngày (mặc định hôm nay) |
+| `/tickets` | `officer`, `manager` | Phiếu cân: lọc `from`, `to`, `household`, `grade`, `status` (`active`, `voided`, `all`), tìm `q` theo tên hộ; tổng ký và tiền của kết quả lọc; 25 dòng mỗi trang (`page`) |
+| `/tickets/export.csv` | `officer`, `manager` | CSV của kết quả lọc hiện tại (UTF-8 có BOM) |
+| `/tickets/<id>/print` | `officer`, `manager` | Bản in phiếu cân có chỗ ký |
 | `/tickets/<id>/edit` | `officer`, `manager` | Sửa phiếu chưa vào kỳ; `POST /tickets/<id>/void` huỷ phiếu |
+| `/overview` | `manager` | Tổng quan: hôm nay, tháng này, chưa vào kỳ, chưa trả; biểu đồ 14 ngày; mười hộ bán nhiều nhất tháng |
 | `/prices` | `manager` | Loại chè và giá mỗi ký; thêm loại, đổi giá, tạm ngưng |
 | `/periods` | `manager` | Các kỳ đã chốt, form chốt kỳ mới |
 | `/periods/<id>` | `manager` | Tiền từng hộ trong kỳ, đánh dấu đã trả |
-| `/mine` | `farmer` | Phiếu cân và chi trả của hộ mình |
+| `/periods/<id>/print`, `/periods/<id>/export.csv` | `manager` | Bảng kê chi trả để in (có cột chữ ký) và CSV |
+| `/mine` | `farmer` | Ô số liệu tháng này và chưa trả, phiếu cân lọc theo tháng (`month=YYYY-MM`), phân trang |
+
+Thanh tab trong app theo vai (cán bộ: Ghi phiếu, Phiếu cân; trưởng HTX thêm Kỳ thanh toán, Giá thu mua, Tổng quan). Trang in mở ngoài khung (`target="_top"`).
 
 Mọi thao tác ghi là `POST` và trả 303 về một trang dưới `/apps/leaf-purchase/`.
 

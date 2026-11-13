@@ -2,10 +2,8 @@
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
 {% block title %}Giá thu mua{% endblock %}
+{% block head %}{{ kit.app_header("Giá thu mua theo loại chè", "Giá chỉ áp dụng cho phiếu ghi sau khi đổi; phiếu đã ghi giữ giá cũ.") }}{% endblock %}
 {% block main %}
-<p><a href="{{ href('/', theme) }}">← Phiếu cân</a></p>
-<h1>Giá thu mua theo loại chè</h1>
-<p>Giá chỉ áp dụng cho phiếu ghi sau khi đổi; phiếu đã ghi giữ giá cũ.</p>
 {% if grades %}
 <table role="table">
   <thead role="rowgroup"><tr role="row"><th role="columnheader">Loại chè</th><th role="columnheader">Giá mỗi ký</th><th role="columnheader">Trạng thái</th><th role="columnheader">Cập nhật</th></tr></thead>
@@ -27,14 +25,17 @@
   </tbody>
 </table>
 {% else %}
-<p>HTX chưa có loại chè nào. Thêm loại đầu tiên bằng biểu mẫu dưới đây.</p>
+{{ kit.empty("HTX chưa có loại chè nào. Thêm loại đầu tiên bằng biểu mẫu dưới đây.") }}
 {% endif %}
 
 <h2>Thêm loại chè</h2>
-<form method="post" action="{{ href('/prices', theme) }}">
-  {% include "errors.html" %}
-  <label>Tên loại chè <input name="name" maxlength="60" required value="{{ form.name }}"></label>
-  <label>Giá mỗi ký (đồng) <input type="number" name="price_vnd" min="0" step="1" required value="{{ form.price_vnd }}"></label>
-  <button type="submit">Thêm loại chè</button>
-</form>
+<details class="disclosure"{% if errors or not grades %} open{% endif %}>
+  <summary>Thêm loại chè</summary>
+  <form method="post" action="{{ href('/prices', theme) }}">
+    {% include "errors.html" %}
+    <label>Tên loại chè <input name="name" maxlength="60" required value="{{ form.name }}"></label>
+    <label>Giá mỗi ký (đồng) <input type="number" name="price_vnd" min="0" step="1" required value="{{ form.price_vnd }}"></label>
+    <button type="submit">Thêm loại chè</button>
+  </form>
+</details>
 {% endblock %}

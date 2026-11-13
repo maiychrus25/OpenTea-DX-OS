@@ -1,0 +1,34 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Phiếu cân {{ ticket.weighed_on | vn_date }}{% endblock %}
+{% block body_attrs %} class="print-sheet"{% endblock %}
+{% block main %}
+{{ kit.print_bar(back) }}
+<h1>Phiếu cân chè búp tươi</h1>
+<p>HTX <strong>{{ htx_code }}</strong> · Phiếu số {{ ticket.id | string | truncate(8, True, "") | upper }}</p>
+<p class="print-only">In ngày {{ today | vn_date }}</p>
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Hộ giao chè</th><th role="columnheader">Ngày cân</th><th role="columnheader">Loại chè</th><th role="columnheader">Số ký</th><th role="columnheader">Giá mỗi ký</th><th role="columnheader">Thành tiền</th></tr></thead>
+  <tbody role="rowgroup">
+    <tr role="row">
+      <td role="cell" data-label="Hộ giao chè">{{ ticket.household_name }}</td>
+      <td role="cell" data-label="Ngày cân">{{ ticket.weighed_on | vn_date }}</td>
+      <td role="cell" data-label="Loại chè">{{ ticket.grade_name }}</td>
+      <td role="cell" data-label="Số ký">{{ ticket.kg | kg }}</td>
+      <td role="cell" data-label="Giá mỗi ký">{{ ticket.price_vnd | vnd }}</td>
+      <td role="cell" data-label="Thành tiền"><strong>{{ ticket.amount_vnd | vnd }}</strong></td>
+    </tr>
+  </tbody>
+</table>
+{% if ticket.voided %}<p><strong>Phiếu này đã huỷ.</strong></p>{% endif %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Chữ ký người giao chè</th><th role="columnheader">Chữ ký người cân</th></tr></thead>
+  <tbody role="rowgroup">
+    <tr role="row">
+      <td role="cell" data-label="Chữ ký người giao chè">(Ký, ghi rõ họ tên)<br><br><br><br></td>
+      <td role="cell" data-label="Chữ ký người cân">(Ký, ghi rõ họ tên)<br><br><br><br></td>
+    </tr>
+  </tbody>
+</table>
+{% endblock %}
