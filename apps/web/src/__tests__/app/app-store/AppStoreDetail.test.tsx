@@ -20,6 +20,7 @@ const detail = (over: Partial<StoreAppDetail> = {}): StoreAppDetail => ({
   category: 'sales',
   icon: 'shopping-bag',
   installedOnServer: false,
+  installedVersion: null,
   phase: null,
   openHref: null,
   about: [],
@@ -49,6 +50,22 @@ afterEach(() => jest.useRealTimers())
 const view = (over: Partial<StoreAppDetail> = {}, workerAlive = true) => render(<AppStoreDetail initial={detail(over)} workerAlive={workerAlive} />)
 
 describe('AppStoreDetail', () => {
+  test('a newer catalogue version shows the pill, the running version and the upgrade command', () => {
+    view({ version: '0.2.0', installedVersion: '0.1.0', status: 'enabled' })
+    expect(screen.getByText('Có bản mới')).toBeInTheDocument()
+    expect(screen.getByText('Bản đang chạy: 0.1.0')).toBeInTheDocument()
+    expect(screen.getByText('Quản trị máy chủ chạy ./dxos upgrade miniapps/tea-shop để cập nhật.')).toBeInTheDocument()
+  })
+
+  test('no pill and no upgrade line when the versions match or the app is not installed', () => {
+    const { unmount } = view({ version: '0.2.0', installedVersion: '0.2.0' })
+    expect(screen.queryByText('Có bản mới')).toBeNull()
+    expect(screen.queryByText(/Bản đang chạy/)).toBeNull()
+    unmount()
+    view({ installedVersion: null })
+    expect(screen.queryByText('Có bản mới')).toBeNull()
+  })
+
   test('the header shows the name, back link, version, publisher, license, category and status', () => {
     view()
     expect(screen.getByRole('heading', { level: 1, name: 'Cửa hàng chè' })).toBeInTheDocument()

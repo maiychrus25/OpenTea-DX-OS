@@ -18,6 +18,7 @@ const catalogApp = (id: string) => ({
   hasDatabase: false,
   requiresCore: null as string | null,
   installedOnServer: false,
+  installedVersion: null as string | null,
   store: {} as unknown,
 })
 const snapshot = (over: Partial<AppStoreSnapshot> = {}): AppStoreSnapshot => ({
@@ -182,6 +183,12 @@ describe('AppStoreUseCase.list (store fields)', () => {
     )
     const { apps } = await useCase.list('TC')
     expect(apps.map(app => app.phase)).toEqual(['build', 'register', null, null])
+  })
+
+  test('installedVersion reaches the card and the detail', async () => {
+    const { useCase } = setup(snapshot({ apps: [{ ...catalogApp('a'), installedVersion: '0.1.0' }] }))
+    expect((await useCase.list('TC')).apps[0].installedVersion).toBe('0.1.0')
+    expect((await useCase.detail('TC', 'a')).installedVersion).toBe('0.1.0')
   })
 
   test('category, icon and installedOnServer come from the catalogue', async () => {

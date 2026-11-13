@@ -28,7 +28,7 @@ jest.mock('@/infrastructure/db/repositories/prisma-app-store-repository', () => 
 }))
 
 const mock = (fn: unknown) => fn as jest.Mock
-const app = { id: 'hello', name: 'Xin chào', version: '0.1.0', description: '', license: 'MIT', publisher: 'P', roles: ['manager'], hasPublic: false, menu: [], hasDatabase: false, requiresCore: null, installedOnServer: false, store: {} }
+const app = { id: 'hello', name: 'Xin chào', version: '0.1.0', description: '', license: 'MIT', publisher: 'P', roles: ['manager'], hasPublic: false, menu: [], hasDatabase: false, requiresCore: null, installedOnServer: false, installedVersion: null, store: {} }
 const cardOf = ({ menu: _m, hasDatabase: _d, requiresCore: _r, store: _s, ...card }: typeof app) => card
 const post = (body: unknown) =>
   POST(new Request('http://web/api/app-store/requests', { method: 'POST', body: typeof body === 'string' ? body : JSON.stringify(body) }), {})

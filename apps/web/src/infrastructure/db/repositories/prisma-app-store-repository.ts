@@ -28,6 +28,7 @@ type CatalogRow = {
   requires_core: string | null
   has_database: boolean
   installed_on_server: boolean
+  installed_version: string | null
 }
 
 type HistoryRow = {
@@ -55,7 +56,8 @@ export class PrismaAppStoreRepository implements AppStoreRepository {
       prisma.$queryRaw<CatalogRow[]>`
         SELECT c.id, c.name, c.version, c.description, c.license, c.publisher, c.roles, c.has_public,
                c.menu, c.store, c.requires_core, c.has_database,
-               EXISTS (SELECT 1 FROM platform.installed_apps i WHERE i.id = c.id) AS installed_on_server
+               EXISTS (SELECT 1 FROM platform.installed_apps i WHERE i.id = c.id) AS installed_on_server,
+               (SELECT i.version FROM platform.installed_apps i WHERE i.id = c.id) AS installed_version
         FROM platform.app_catalog c ORDER BY c.name, c.id`,
       prisma.$queryRaw<{ app_id: string; action: 'ENABLE' | 'DISABLE'; phase: InstallPhase | null }[]>`
         SELECT app_id, action, phase FROM platform.app_requests
@@ -67,12 +69,13 @@ export class PrismaAppStoreRepository implements AppStoreRepository {
         WHERE htx_code = ${htxCode} ORDER BY app_id, created_at DESC`,
     ])
     return {
-      apps: apps.map(({ has_public, requires_core, has_database, installed_on_server, ...app }) => ({
+      apps: apps.map(({ has_public, requires_core, has_database, installed_on_server, installed_version, ...app }) => ({
         ...app,
         hasPublic: has_public,
         requiresCore: requires_core,
         hasDatabase: has_database,
         installedOnServer: installed_on_server,
+        installedVersion: installed_version,
       })),
       open: open.map(row => ({ appId: row.app_id, action: row.action, phase: row.phase })),
       enablements: enablements.map(row => ({ appId: row.app_id, htxCode: row.htx_code })),

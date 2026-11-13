@@ -23,7 +23,7 @@ describe('PrismaAppStoreRepository', () => {
     queryRaw
       .mockResolvedValueOnce([
         { id: 'hello', name: 'Xin chào', version: '0.1.0', description: 'd', license: 'MIT', publisher: 'P', roles: ['manager'], has_public: true,
-          menu: [{ label: 'M', path: '/', roles: ['manager'] }], store: { icon: 'leaf' }, requires_core: '>=1.10.0', has_database: true, installed_on_server: true },
+          menu: [{ label: 'M', path: '/', roles: ['manager'] }], store: { icon: 'leaf' }, requires_core: '>=1.10.0', has_database: true, installed_on_server: true, installed_version: '0.0.9' },
       ])
       .mockResolvedValueOnce([{ app_id: 'hello', action: 'ENABLE', phase: 'build' }])
       .mockResolvedValueOnce([{ app_id: 'hello', htx_code: '*' }])
@@ -33,7 +33,7 @@ describe('PrismaAppStoreRepository', () => {
 
     expect(snap).toEqual({
       apps: [{ id: 'hello', name: 'Xin chào', version: '0.1.0', description: 'd', license: 'MIT', publisher: 'P', roles: ['manager'], hasPublic: true,
-        menu: [{ label: 'M', path: '/', roles: ['manager'] }], store: { icon: 'leaf' }, requiresCore: '>=1.10.0', hasDatabase: true, installedOnServer: true }],
+        menu: [{ label: 'M', path: '/', roles: ['manager'] }], store: { icon: 'leaf' }, requiresCore: '>=1.10.0', hasDatabase: true, installedOnServer: true, installedVersion: '0.0.9' }],
       open: [{ appId: 'hello', action: 'ENABLE', phase: 'build' }],
       enablements: [{ appId: 'hello', htxCode: '*' }],
       latest: [{ appId: 'hello', status: 'FAILED', error: 'x', phase: null }],
@@ -41,6 +41,7 @@ describe('PrismaAppStoreRepository', () => {
     expect(queryRaw.mock.calls.map(call => Array.isArray((call[0] as { raw?: string[] }).raw))).toEqual([true, true, true, true])
     const tables = queryRaw.mock.calls.map(sql).join('\n')
     for (const table of ['app_catalog', 'app_requests', 'app_enablements', 'installed_apps']) expect(tables).toContain(`platform.${table}`)
+    expect(tables).toContain('i.version')
     expect(tables).not.toContain("T'C")
     expect(queryRaw.mock.calls.slice(1).map(call => call.slice(1))).toEqual([["T'C"], ["T'C"], ["T'C"]])
   })
