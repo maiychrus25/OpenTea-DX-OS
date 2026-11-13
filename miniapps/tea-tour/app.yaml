@@ -7,7 +7,7 @@ description: Mở tour tham quan đồi chè, nhận đặt chỗ và phân côn
 version: 0.1.0
 license: MIT
 publisher: OpenTea Developers
-requires: { core: ">=1.8.0" }
+requires: { core: ">=1.10.0" }
 runtime:
   build: .
   port: 8080
@@ -22,3 +22,18 @@ routes:
 menu:
   - { label: Tour đồi chè, path: /, roles: [manager] }
   - { label: Lịch dẫn tour, path: /guide, roles: [farmer] }
+store:
+  category: tourism
+  icon: map-pinned
+  about: |
+    Ứng dụng giúp HTX mở các tour tham quan đồi chè và nhận khách đặt chỗ. Khách đặt trên điện thoại, không cần đăng nhập.
+
+    Trưởng HTX tạo tour (ngày giờ, điểm hẹn, số chỗ, giá), chọn một nông hộ làm người dẫn, xác nhận hoặc huỷ từng lượt đặt, sửa hoặc huỷ tour. Nông dân được giao dẫn tour xem lịch của mình và số khách đã xác nhận. Khách nhận một mã đặt chỗ, dùng mã đó cùng số điện thoại để tra lại lượt đặt.
+
+    HTX có một trang công khai liệt kê các tour sắp diễn ra và số chỗ còn trống. Ứng dụng không thu tiền trực tuyến.
+  data:
+    - "Tour: tên, ngày giờ, điểm hẹn, số chỗ, giá, mô tả, người dẫn, tình trạng mở hoặc huỷ"
+    - "Lượt đặt chỗ: mã đặt chỗ, tên khách, số điện thoại, số người, ghi chú, tình trạng"
+  personal_data: "Lưu tên, số điện thoại và ghi chú của khách đặt chỗ. Chỉ trưởng HTX xem được. Người dẫn tour chỉ thấy số khách đã xác nhận. Khách chỉ tra được lượt đặt của mình khi nhập đúng mã và số điện thoại."
+  core_reads:
+    - "Danh sách nông hộ của HTX (tên hộ) để chọn người dẫn tour"

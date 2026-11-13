@@ -7,7 +7,7 @@ description: Ghi phiếu cân chè búp tươi của từng hộ, chốt kỳ v�
 version: 0.1.0
 license: MIT
 publisher: OpenTea Developers
-requires: { core: ">=1.9.0" }
+requires: { core: ">=1.10.0" }
 runtime:
   build: .
   port: 8080
@@ -24,3 +24,21 @@ menu:
   - { label: Thu mua búp tươi, path: /, roles: [officer, manager] }
   - { label: Kỳ thanh toán, path: /periods, roles: [manager] }
   - { label: Phiếu cân của tôi, path: /mine, roles: [farmer] }
+store:
+  category: production
+  icon: scale
+  about: |
+    Ứng dụng giúp HTX ghi lại số chè búp tươi thu mua của từng hộ và tính tiền chi trả theo kỳ.
+
+    Cán bộ hoặc trưởng HTX ghi phiếu cân mỗi lần cân: hộ nào, ngày nào, loại chè nào, bao nhiêu ký. Trưởng HTX đặt giá cho từng loại chè, chốt kỳ thanh toán và đánh dấu hộ nào đã được trả tiền. Nông dân vào xem phiếu cân và tiền của chính hộ mình.
+
+    Giá được ghi vào phiếu lúc cân, nên đổi giá sau này không làm đổi các phiếu cũ. Phiếu đã vào kỳ đã chốt thì không sửa hoặc huỷ được.
+  data:
+    - "Phiếu cân: hộ, ngày cân, loại chè, số ký, giá mỗi ký, thành tiền"
+    - "Loại chè và giá mỗi ký"
+    - "Kỳ thanh toán: từ ngày, đến ngày, thời điểm chốt"
+    - "Chi trả theo hộ: tổng số ký, tổng tiền, đã trả hay chưa"
+  personal_data: "Lưu tên hộ cùng số ký và số tiền của hộ. Cán bộ và trưởng HTX xem được của mọi hộ. Mỗi nông dân chỉ xem được của hộ mình."
+  core_reads:
+    - "Danh sách nông hộ của HTX (tên hộ) để chọn hộ khi ghi phiếu"
+    - "Hộ gắn với tài khoản của nông dân đang đăng nhập"

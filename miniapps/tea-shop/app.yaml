@@ -7,7 +7,7 @@ description: Giới thiệu sản phẩm chè, nhận đơn đặt hàng và the
 version: 0.1.0
 license: MIT
 publisher: OpenTea Developers
-requires: { core: ">=1.9.0" }
+requires: { core: ">=1.10.0" }
 runtime:
   build: .
   port: 8080
@@ -20,3 +20,17 @@ routes:
     /: [manager]
 menu:
   - { label: Cửa hàng chè, path: /, roles: [manager] }
+store:
+  category: sales
+  icon: shopping-bag
+  about: |
+    Ứng dụng giúp HTX giới thiệu sản phẩm chè và nhận đơn đặt hàng. Khách đặt trên điện thoại, không cần đăng nhập, thanh toán khi nhận hàng.
+
+    Trưởng HTX thêm và sửa sản phẩm (quy cách, giá, tồn kho, mã lô), xem đơn, chuyển đơn qua từng bước xác nhận, giao hàng, hoàn tất hoặc huỷ. Khách chọn số lượng, để lại tên, số điện thoại, địa chỉ rồi nhận một mã đơn để tra lại đơn.
+
+    Đơn mới trừ tồn kho ngay, đơn huỷ trả lại tồn kho. Sản phẩm có mã lô sẽ có đường dẫn xem nguồn gốc.
+  data:
+    - "Sản phẩm: tên, quy cách, giá, tồn kho, mã lô, đang bán hay ngừng"
+    - "Đơn hàng: mã đơn, tên khách, số điện thoại, địa chỉ, ghi chú, tổng tiền, tình trạng"
+    - "Dòng đơn: sản phẩm, quy cách, giá và số lượng tại lúc đặt"
+  personal_data: "Lưu tên, số điện thoại, địa chỉ và ghi chú của khách đặt hàng. Chỉ trưởng HTX xem được. Khách chỉ tra được đơn của mình khi nhập đúng mã đơn và số điện thoại."
