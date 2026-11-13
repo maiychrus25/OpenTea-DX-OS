@@ -4,16 +4,22 @@
 import re
 import secrets
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 import psycopg
 from psycopg.rows import class_row
 
+from tea_shop.appkit import Page, like_pattern, page_of
+
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no I, O, 0 or 1: read aloud over the phone
 CODE_TRIES = 5
 NEXT_STATUS = {"NEW": "CONFIRMED", "CONFIRMED": "SHIPPING", "SHIPPING": "DONE"}
 CANCELLABLE = ("NEW", "CONFIRMED", "SHIPPING")
+LOW_STOCK = 5  # an active product with this many packs or fewer is "sắp hết"
+VN_DAY = "(created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date"
+# Start of the current month in Vietnam time, as a timestamptz.
+MONTH_START = "date_trunc('month', now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh'"
 
 
 @dataclass(frozen=True)
@@ -53,6 +59,7 @@ class Refusal:
     message: str
 
 
+ORDER_STATUSES = ("NEW", "CONFIRMED", "SHIPPING", "DONE", "CANCELLED")
 PRODUCT_COLUMNS = "id, name, pack, price_vnd, stock, lot_code, active"
 ORDER_COLUMNS = "id, code, customer_name, phone, address, note, status, total_vnd, created_at"
 
@@ -114,9 +121,74 @@ def edit_product(conn, htx_code: str, product_id: UUID, name: str, pack: str, pr
     return None if row is None else Refusal(f"Tồn kho hiện chỉ còn {row[0]}, không thể giảm {-stock_delta}.")
 
 
-def list_orders(conn, htx_code: str) -> list[Order]:
-    return _all(conn, Order, f"SELECT {ORDER_COLUMNS} FROM orders WHERE htx_code = %s "
-                "ORDER BY created_at DESC LIMIT 200", (htx_code,))
+def _paged(conn, cls, columns: str, table: str, clause: str, params: list, page_raw: str | None, size: int | None):
+    """(rows, Page) newest first; the page number is clamped to a page that exists; size None = every row."""
+    total = conn.execute(f"SELECT count(*) FROM {table} WHERE {clause}", params).fetchone()[0]
+    page = page_of(page_raw, total, size) if size else Page(1, max(total, 1), total)
+    rows = _all(conn, cls, f"SELECT {columns} FROM {table} WHERE {clause} ORDER BY created_at DESC, id LIMIT %s OFFSET %s",
+                (*params, size, page.offset))
+    return rows, page
+
+
+def search_products(conn, htx_code: str, q: str = "", show: str = "all", page_raw: str | None = None,
+                    size: int | None = 25) -> tuple[list[Product], Page]:
+    """show: all, active, hidden or low (active with LOW_STOCK packs or fewer)."""
+    where, params = ["htx_code = %s"], [htx_code]
+    if q:
+        where.append("name ILIKE %s ESCAPE '\\'")
+        params.append(like_pattern(q))
+    where.extend({"active": ["active"], "hidden": ["NOT active"], "low": ["active", "stock <= %s"]}.get(show, []))
+    if show == "low":
+        params.append(LOW_STOCK)
+    return _paged(conn, Product, PRODUCT_COLUMNS, "products", " AND ".join(where), params, page_raw, size)
+
+
+def search_orders(conn, htx_code: str, status: str = "all", date_from: date | None = None, date_to: date | None = None,
+                  q: str = "", page_raw: str | None = None, size: int | None = 25) -> tuple[list[Order], Page]:
+    """q matches code, customer name or phone as text."""
+    where, params = ["htx_code = %s"], [htx_code]
+    if status in ORDER_STATUSES:
+        where.append("status = %s")
+        params.append(status)
+    if date_from:
+        where.append(f"{VN_DAY} >= %s")
+        params.append(date_from)
+    if date_to:
+        where.append(f"{VN_DAY} <= %s")
+        params.append(date_to)
+    if q:
+        where.append("(code ILIKE %s ESCAPE '\\' OR customer_name ILIKE %s ESCAPE '\\' OR phone ILIKE %s ESCAPE '\\')")
+        params.extend([like_pattern(q)] * 3)
+    return _paged(conn, Order, ORDER_COLUMNS, "orders", " AND ".join(where), params, page_raw, size)
+
+
+@dataclass(frozen=True)
+class Overview:
+    waiting: int
+    shipping: int
+    month_revenue: int
+    low_stock: int
+    daily_revenue: list[tuple[date, int]]  # the last 14 days, oldest first, completed orders by day placed
+    top_products: list[tuple[str, int]]  # this month, by packs sold, cancelled orders left out
+
+
+def overview(conn, htx_code: str) -> Overview:
+    waiting, shipping, revenue = conn.execute(
+        f"SELECT count(*) FILTER (WHERE status = 'NEW'), count(*) FILTER (WHERE status = 'SHIPPING'), "
+        f"COALESCE(sum(total_vnd) FILTER (WHERE status = 'DONE' AND created_at >= {MONTH_START}), 0) "
+        "FROM orders WHERE htx_code = %s", (htx_code,)).fetchone()
+    low = conn.execute("SELECT count(*) FROM products WHERE htx_code = %s AND active AND stock <= %s",
+                       (htx_code, LOW_STOCK)).fetchone()[0]
+    daily = conn.execute(
+        f"SELECT d, COALESCE(sum(o.total_vnd), 0) FROM (SELECT (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date - g AS d "
+        f"FROM generate_series(0, 13) g) days LEFT JOIN orders o ON o.htx_code = %s AND o.status = 'DONE' "
+        f"AND (o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date = days.d GROUP BY d ORDER BY d", (htx_code,)).fetchall()
+    top = conn.execute(
+        f"SELECT i.product_name, sum(i.quantity) AS sold FROM order_items i JOIN orders o "
+        f"ON o.id = i.order_id AND o.htx_code = i.htx_code WHERE i.htx_code = %s AND o.status <> 'CANCELLED' "
+        f"AND o.created_at >= {MONTH_START} GROUP BY i.product_name ORDER BY sold DESC, i.product_name LIMIT 5",
+        (htx_code,)).fetchall()
+    return Overview(waiting, shipping, int(revenue), low, [(d, int(v)) for d, v in daily], [(n, int(q)) for n, q in top])
 
 
 def _items(conn, htx_code: str, order_id: UUID) -> list[Item]:

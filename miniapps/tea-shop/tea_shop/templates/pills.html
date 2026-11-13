@@ -1,0 +1,18 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Status pills with their tone: warn = needs attention, danger = lost or gone, neutral = off, no tone = fine. -#}
+{% macro order(status) -%}
+<span class="pill{% if status == 'NEW' %} warn{% elif status == 'CANCELLED' %} danger{% endif %}">{{ order_status[status] }}</span>
+{%- endmacro %}
+
+{# Active product: "Còn n" (warn at 5 or fewer) or "Hết hàng"; a hidden product shows the bare number. #}
+{% macro stock(p, long=False) -%}
+{%- if p.stock == 0 and p.active -%}<span class="pill danger">Hết hàng</span>
+{%- elif p.stock <= 5 and p.active -%}<span class="pill warn">Còn {{ p.stock }}</span>
+{%- elif p.active -%}<span class="pill">Còn {{ p.stock }}</span>
+{%- else -%}{{ p.stock }}{%- endif -%}
+{%- endmacro %}
+
+{% macro product_state(p) -%}
+<span class="pill{% if not p.active %} neutral{% endif %}">{{ "Đang bán" if p.active else "Ngừng bán" }}</span>
+{%- endmacro %}
