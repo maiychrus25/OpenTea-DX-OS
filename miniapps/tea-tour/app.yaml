@@ -4,7 +4,7 @@ apiVersion: dxos/v1
 id: tea-tour
 name: Đặt tour đồi chè
 description: Mở tour tham quan đồi chè, nhận đặt chỗ và phân công người dẫn.
-version: 0.1.0
+version: 0.2.0
 license: MIT
 publisher: OpenTea Developers
 requires: { core: ">=1.10.0" }
