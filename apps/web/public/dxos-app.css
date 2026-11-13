@@ -300,9 +300,12 @@ table {
   border-radius: var(--rounded-md);
 }
 
+/* break-word, not the body's anywhere: anywhere also shrinks the minimum width of a column to one letter, so a phone
+   number or a code broke in the middle while a long title kept its room. */
 th,
 td {
   padding: var(--spacing-2) var(--spacing-3);
+  overflow-wrap: break-word;
   text-align: left;
   border-bottom: 1px solid var(--color-border-subtle);
 }
@@ -486,6 +489,7 @@ button:disabled {
 
 .pill {
   display: inline-block;
+  white-space: nowrap;
   padding: 2px var(--spacing-2);
   color: var(--color-primary);
   background: var(--color-primary-subtle);
