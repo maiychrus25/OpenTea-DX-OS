@@ -44,5 +44,5 @@ store:
     - "Danh sách nông hộ của HTX (tên hộ) để chọn hộ khi ghi phiếu"
     - "Hộ gắn với tài khoản của nông dân đang đăng nhập"
   screenshots:
-    - { file: store/officer-tickets.png, caption: "Cán bộ ghi phiếu cân búp tươi theo hộ và theo loại chè" }
+    - { file: store/officer-tickets.png, caption: "Cán bộ và trưởng HTX tìm, lọc và tải CSV các phiếu cân búp tươi theo hộ và loại chè" }
     - { file: store/manager-period.png, caption: "Trưởng HTX chốt kỳ và theo dõi tiền chè từng hộ" }

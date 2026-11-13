@@ -35,5 +35,5 @@ store:
     - "Dòng đơn: sản phẩm, quy cách, giá và số lượng tại lúc đặt"
   personal_data: "Lưu tên, số điện thoại, địa chỉ và ghi chú của khách đặt hàng. Chỉ trưởng HTX xem được. Khách chỉ tra được đơn của mình khi nhập đúng mã đơn và số điện thoại."
   screenshots:
-    - { file: store/manager-products.png, caption: "Trưởng HTX xem đơn hàng và quản lý sản phẩm" }
+    - { file: store/manager-orders.png, caption: "Trưởng HTX theo dõi đơn hàng, lọc, in phiếu giao và tải CSV" }
     - { file: store/public-order.png, caption: "Khách đặt hàng trên điện thoại, không cần đăng nhập" }
