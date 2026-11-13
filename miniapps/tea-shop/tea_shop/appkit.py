@@ -126,7 +126,7 @@ def _cell(value) -> str:
     if isinstance(value, (int, float, Decimal)) and not isinstance(value, bool):
         return str(value)
     text = str(value)
-    return "'" + text if text[:1] in ("=", "+", "-", "@") else text
+    return "'" + text if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
 
 
 def csv_response(filename: str, header: Sequence[str], rows: Iterable[Sequence]) -> Response:

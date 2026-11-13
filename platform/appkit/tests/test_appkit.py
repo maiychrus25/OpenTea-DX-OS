@@ -77,9 +77,9 @@ def test_csv_response():
 
 
 def test_csv_response_escapes_formula_cells():
-    res = appkit.csv_response("a.csv", ["x"], [("=1+1",), ("+x",), ("-x",), ("@x",), (-5,), (Decimal("-2.5"),), ("ok",), ("a,b",)])
+    res = appkit.csv_response("a.csv", ["x"], [("=1+1",), ("+x",), ("-x",), ("@x",), ("\tx",), ("\rx",), (-5,), (Decimal("-2.5"),), ("ok",), ("a,b",)])
     lines = res.body.decode("utf-8-sig").split("\r\n")
-    assert lines[1:] == ["'=1+1", "'+x", "'-x", "'@x", "-5", "-2.5", "ok", '"a,b"', ""]
+    assert lines[1:] == ["'=1+1", "'+x", "'-x", "'@x", "'\tx", "\"'\rx\"", "-5", "-2.5", "ok", '"a,b"', ""]
 
 
 def test_shell_url():

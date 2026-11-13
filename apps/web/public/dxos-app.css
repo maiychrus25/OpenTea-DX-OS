@@ -687,7 +687,8 @@ a.button.danger:hover {
 }
 
 .stat-value {
-  font-size: var(--font-size-h1);
+  font-size: clamp(1rem, 5vw, var(--font-size-h1));
+  white-space: nowrap;
   font-weight: 700;
   line-height: 1.2;
 }
