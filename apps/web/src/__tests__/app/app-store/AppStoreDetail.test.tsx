@@ -126,6 +126,25 @@ describe('AppStoreDetail', () => {
     expect(screen.getByAltText('Giỏ hàng')).toBeInTheDocument()
   })
 
+  test('each screenshot opens its own URL in a new tab', () => {
+    view({ screenshots: [{ position: 0, caption: 'Trang chủ', url: '/api/app-store/apps/tea-shop/screenshots/0' }] })
+    const link = screen.getByRole('link', { name: 'Xem ảnh lớn: Trang chủ' })
+    expect(link).toHaveAttribute('href', '/api/app-store/apps/tea-shop/screenshots/0')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link.getAttribute('rel')).toContain('noopener')
+    expect(within(link).getByAltText('Trang chủ')).toHaveAttribute('loading', 'lazy')
+  })
+
+  test.each([
+    ['available', 'Khi cài, ứng dụng sẽ'],
+    ['failed', 'Khi cài, ứng dụng sẽ'],
+    ['enabled', 'Ứng dụng đã thêm vào HTX'],
+    ['enabled_all', 'Ứng dụng đã thêm vào HTX'],
+  ] as const)('the preview heading for %s is %s', (status, heading) => {
+    view({ status })
+    expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument()
+  })
+
   test('Mở ứng dụng links to the first manager page once installed', () => {
     view({ status: 'enabled', openHref: '/manager/apps/tea-shop' })
     expect(screen.getByRole('link', { name: 'Mở ứng dụng' })).toHaveAttribute('href', '/manager/apps/tea-shop')
@@ -143,11 +162,57 @@ describe('AppStoreDetail', () => {
     expect(screen.queryByText(/Ứng dụng này dành cho/)).not.toBeInTheDocument()
   })
 
-  test('the public URL shows only when the server gives one, with a copy button', () => {
+  describe('public address', () => {
+    const absolute = `${window.location.origin}/apps/tea-shop/public/TC`
+    const open = () => view({ status: 'enabled', hasPublic: true, publicUrl: '/apps/tea-shop/public/TC' })
+
+    test('shows the full address as a link to a new tab after mount', () => {
+      open()
+      const link = screen.getByRole('link', { name: absolute })
+      expect(link).toHaveAttribute('href', absolute)
+      expect(link).toHaveAttribute('target', '_blank')
+      expect(link.getAttribute('rel')).toContain('noopener')
+    })
+
+    test('the server HTML has the path only', () => {
+      // The server renderer needs TextEncoder, which jsdom lacks; load it after providing one.
+      Object.assign(global, { TextEncoder: require('util').TextEncoder })
+      const { renderToString } = require('react-dom/server')
+      const html = renderToString(<AppStoreDetail initial={detail({ status: 'enabled', hasPublic: true, publicUrl: '/apps/tea-shop/public/TC' })} workerAlive />)
+      expect(html).toContain('>/apps/tea-shop/public/TC<')
+      expect(html).not.toContain('href="http')
+    })
+
+    test('Chép địa chỉ writes the full address and says Đã chép for 2 seconds', async () => {
+      jest.useFakeTimers()
+      const writeText = jest.fn().mockResolvedValue(undefined)
+      Object.assign(navigator, { clipboard: { writeText } })
+      open()
+      expect(screen.queryByText('Sao chép URL')).not.toBeInTheDocument()
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Chép địa chỉ' }))
+      })
+      expect(writeText).toHaveBeenCalledWith(absolute)
+      expect(screen.getByRole('button', { name: 'Đã chép' })).toBeInTheDocument()
+      await act(async () => {
+        jest.advanceTimersByTime(2000)
+      })
+      expect(screen.getByRole('button', { name: 'Chép địa chỉ' })).toBeInTheDocument()
+    })
+
+    test('a rejected clipboard write keeps the label and throws nothing', async () => {
+      Object.assign(navigator, { clipboard: { writeText: jest.fn().mockRejectedValue(new Error('denied')) } })
+      open()
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Chép địa chỉ' }))
+      })
+      expect(screen.getByRole('button', { name: 'Chép địa chỉ' })).toBeInTheDocument()
+    })
+  })
+
+  test('the public URL shows only when the server gives one', () => {
     const { unmount } = view({ status: 'enabled', hasPublic: true, publicUrl: '/apps/tea-shop/public/TC' })
     expect(screen.getByText('Trang công khai')).toBeInTheDocument()
-    expect(screen.getByText('/apps/tea-shop/public/TC')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Sao chép/ })).toBeInTheDocument()
     unmount()
     view({ status: 'available', hasPublic: true, publicUrl: null })
     expect(screen.queryByText('Trang công khai')).not.toBeInTheDocument()

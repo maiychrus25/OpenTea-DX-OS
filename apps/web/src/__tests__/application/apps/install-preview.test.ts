@@ -39,4 +39,10 @@ describe('installPreview', () => {
   test('an app with nothing declared gives only the last line', () => {
     expect(installPreview(base, 'TC')).toEqual(['Lần cài đầu trên máy chủ phải dựng ứng dụng, mất vài phút'])
   })
+
+  test('leaves out the timing line when the HTX already uses the app', () => {
+    expect(installPreview({ ...base, hasDatabase: true }, 'TC', true)).toEqual(['Tạo kho dữ liệu riêng cho ứng dụng; dữ liệu của mỗi HTX tách theo mã HTX'])
+    expect(installPreview({ ...base, installedOnServer: true }, 'TC', true)).toEqual([])
+    expect(installPreview({ ...base, installedOnServer: true }, 'TC', false)).toEqual(['Ứng dụng đã có trên máy chủ nên được bật ngay'])
+  })
 })

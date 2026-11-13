@@ -115,7 +115,7 @@ export class AppStoreUseCase {
       requiresCore: app.requiresCore ?? '',
       hasDatabase: app.hasDatabase,
       publicUrl: app.hasPublic && usable ? `/apps/${app.id}/public/${htxCode}` : null,
-      preview: installPreview({ ...app, coreReads }, htxCode),
+      preview: installPreview({ ...app, coreReads }, htxCode, usable),
       screenshots: shots.map(shot => ({ ...shot, url: `/api/app-store/apps/${app.id}/screenshots/${shot.position}` })),
       history,
     }

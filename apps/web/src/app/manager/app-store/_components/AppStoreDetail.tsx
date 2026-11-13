@@ -3,10 +3,9 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Button, Pill } from '@/components/ui'
-import CopyUrlButton from '@/components/ui/copy-url-button'
 import type { AppStoreStatus, StoreAction, StoreAppDetail } from '@/domain/entities/app-store'
 import { fetchJson } from '@/lib/api/fetch-json'
 import styles from './AppStoreDetail.module.css'
@@ -18,6 +17,38 @@ import { useStorePolling } from './use-store-polling'
 
 const CONFIRM_REMOVE = 'Gỡ ứng dụng này khỏi HTX? Dữ liệu được giữ lại.'
 const REQUEST_FAILED = 'Không gửi được yêu cầu. Vui lòng thử lại.'
+
+/** The public address: the path on the server, the full address once mounted, with a button that copies it. */
+function PublicAddress({ path }: { path: string }) {
+  const [address, setAddress] = useState(path)
+  const [copied, setCopied] = useState(false)
+  useEffect(() => setAddress(new URL(path, window.location.origin).href), [path])
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 2000)
+    return () => clearTimeout(timer)
+  }, [copied])
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(address)
+      setCopied(true)
+    } catch {
+      // The label stays; nothing else to do when the browser refuses.
+    }
+  }
+
+  return (
+    <>
+      <a href={address} target="_blank" rel="noopener noreferrer" className={styles.url}>
+        {address}
+      </a>
+      <Button variant="secondary" size="sm" onClick={copy}>
+        {copied ? 'Đã chép' : 'Chép địa chỉ'}
+      </Button>
+    </>
+  )
+}
 
 // Every text below comes from a manifest and is rendered as React text: no HTML, no Markdown.
 export function AppStoreDetail({ initial, workerAlive }: { initial: StoreAppDetail; workerAlive: boolean }) {
@@ -106,8 +137,10 @@ export function AppStoreDetail({ initial, workerAlive }: { initial: StoreAppDeta
           <ul className={styles.shots}>
             {app.screenshots.map(shot => (
               <li key={shot.position} className={styles.shot}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- served by our own route; sizes are not known */}
-                <img src={shot.url} alt={shot.caption} loading="lazy" className={styles.shotImage} />
+                <a href={shot.url} target="_blank" rel="noopener noreferrer" aria-label={`Xem ảnh lớn: ${shot.caption}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- served by our own route; sizes are not known */}
+                  <img src={shot.url} alt={shot.caption} loading="lazy" className={styles.shotImage} />
+                </a>
                 <span className={styles.shotCaption}>{shot.caption}</span>
               </li>
             ))}
@@ -126,14 +159,16 @@ export function AppStoreDetail({ initial, workerAlive }: { initial: StoreAppDeta
         </section>
       )}
 
-      <section className={styles.section}>
-        <h2 className={styles.heading}>Khi cài, ứng dụng sẽ</h2>
-        <ul className={styles.list}>
-          {app.preview.map((line, index) => (
-            <li key={index}>{line}</li>
-          ))}
-        </ul>
-      </section>
+      {app.preview.length > 0 && (
+        <section className={styles.section}>
+          <h2 className={styles.heading}>{installed ? 'Ứng dụng đã thêm vào HTX' : 'Khi cài, ứng dụng sẽ'}</h2>
+          <ul className={styles.list}>
+            {app.preview.map((line, index) => (
+              <li key={index}>{line}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {hasData && (
         <section className={styles.section}>
@@ -187,8 +222,7 @@ export function AppStoreDetail({ initial, workerAlive }: { initial: StoreAppDeta
             <>
               <dt>Trang công khai</dt>
               <dd>
-                <span className={styles.url}>{app.publicUrl}</span>
-                <CopyUrlButton url={app.publicUrl} />
+                <PublicAddress path={app.publicUrl} />
               </dd>
             </>
           )}
