@@ -1,0 +1,112 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Copied by make appkit-sync from platform/appkit/kit.html. Edit the original. -#}
+{#- Macros of the shared mini-app kit: {% import "kit.html" as kit %}. Styles live in /dxos-app.css. No script, no style attribute. -#}
+
+{% macro app_header(title, subtitle=None) -%}
+<header class="app-header">
+  <div class="app-header-text">
+    <h1>{{ title }}</h1>
+    {%- if subtitle %}
+    <p class="app-header-subtitle">{{ subtitle }}</p>
+    {%- endif %}
+  </div>
+  {%- if caller is defined %}
+  <div class="app-header-actions">{{ caller() }}</div>
+  {%- endif %}
+</header>
+{%- endmacro %}
+
+{# items: list of (key, label, href); the link whose key equals current is marked. #}
+{% macro tabs(items, current) -%}
+<nav class="tabs" aria-label="Điều hướng trong ứng dụng">
+  {%- for key, label, link in items %}
+  <a href="{{ link }}"{% if key == current %} aria-current="page"{% endif %}>{{ label }}</a>
+  {%- endfor %}
+</nav>
+{%- endmacro %}
+
+{# items: list of {label, value, hint}; hint is optional. #}
+{% macro stats(items) -%}
+<ul class="stats">
+  {%- for item in items %}
+  <li>
+    <span class="stat-label">{{ item.label }}</span>
+    <span class="stat-value">{{ item.value }}</span>
+    {%- if item.get("hint") %}
+    <span class="stat-hint">{{ item.hint }}</span>
+    {%- endif %}
+  </li>
+  {%- endfor %}
+</ul>
+{%- endmacro %}
+
+{# rows: appkit.chart_rows(...). The bar width is an SVG attribute, never a style attribute (CSP). #}
+{% macro chart(title, rows, unit="") -%}
+<figure class="chart">
+  <figcaption>{{ title }}</figcaption>
+  <ul>
+    {%- for row in rows %}
+    <li>
+      <span class="chart-label">{{ row.label }}</span>
+      <span class="chart-value">{{ row.value }}{% if unit %} {{ unit }}{% endif %}</span>
+      <svg class="chart-bar" aria-hidden="true" focusable="false"><rect width="{{ row.percent }}%" height="100%" rx="5"/></svg>
+    </li>
+    {%- endfor %}
+  </ul>
+</figure>
+{%- endmacro %}
+
+{# page: appkit.Page; the hrefs are None when there is no such page. Keep the filters in the hrefs. #}
+{% macro pagination(page, prev_href, next_href) -%}
+{%- if page.total > 0 -%}
+<nav class="pagination" aria-label="Phân trang">
+  {%- if prev_href %}
+  <a class="button secondary" href="{{ prev_href }}" rel="prev">‹ Trước</a>
+  {%- else %}
+  <span class="button secondary" aria-disabled="true">‹ Trước</span>
+  {%- endif %}
+  <span class="pagination-status">Trang {{ page.number }}/{{ page.pages }} · {{ page.total }} dòng</span>
+  {%- if next_href %}
+  <a class="button secondary" href="{{ next_href }}" rel="next">Sau ›</a>
+  {%- else %}
+  <span class="button secondary" aria-disabled="true">Sau ›</span>
+  {%- endif %}
+</nav>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro empty(message, action_label=None, action_href=None) -%}
+<p class="empty">{{ message }}
+  {%- if action_label and action_href %} <a class="button" href="{{ action_href }}">{{ action_label }}</a>{% endif -%}
+</p>
+{%- endmacro %}
+
+{# errors: dict of field name -> message. Put it right under the input. #}
+{% macro field_error(errors, name) -%}
+{%- if errors and errors.get(name) -%}
+<span class="field-error" role="alert">{{ errors[name] }}</span>
+{%- endif -%}
+{%- endmacro %}
+
+{# current: index of the active step; earlier steps are done. #}
+{% macro steps(labels, current) -%}
+<ol class="steps">
+  {%- for label in labels %}
+  <li{% if loop.index0 < current %} data-state="done"{% elif loop.index0 == current %} aria-current="step"{% endif %}>{{ label }}</li>
+  {%- endfor %}
+</ol>
+{%- endmacro %}
+
+{% macro export_link(href, label="Tải CSV") -%}
+<a class="button secondary" href="{{ href }}">{{ label }}</a>
+{%- endmacro %}
+
+{# Print pages open in the main window, outside the frame. #}
+{% macro print_link(href, label="Bản in") -%}
+<a class="button secondary" href="{{ href }}" target="_top">{{ label }}</a>
+{%- endmacro %}
+
+{% macro print_bar(back_href) -%}
+<p class="no-print">Dùng lệnh In của trình duyệt (Ctrl+P) để in trang này. <a href="{{ back_href }}" target="_top">Quay lại ứng dụng</a></p>
+{%- endmacro %}

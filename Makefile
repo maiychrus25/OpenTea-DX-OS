@@ -12,7 +12,7 @@ export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 # keycloak on every platform-up. Without the attestation the same inputs give the same ID, so nothing is recreated.
 export BUILDX_NO_DEFAULT_ATTESTATIONS := 1
 
-.PHONY: gateway-sync web-up gateway-up platform-up platform-smoke apps-smoke platform-down up down build test lint
+.PHONY: gateway-sync web-up gateway-up platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync
 
 # APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
 gateway-sync:
@@ -72,3 +72,8 @@ test:
 lint:
 	cd apps/web && npm run lint
 	actionlint
+	bash scripts/appkit-sync.sh --check
+
+# Copy platform/appkit/appkit.py and kit.html into every app that uses the kit.
+appkit-sync:
+	bash scripts/appkit-sync.sh

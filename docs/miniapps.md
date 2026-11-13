@@ -36,7 +36,7 @@ trình duyệt ──▶ web  /apps/<id>/<path>?<query>
 - Route của app chỉ khớp ở cổng nội bộ `9081` của gateway (`vars: [["server_port", "==", "9081"]]`, R23), cổng mà chỉ mạng compose thấy. Cổng `9080` mở ra máy chủ trả 404 cho mọi `/apps/...`, nên request từ ngoài luôn phải qua web và các kiểm tra của web proxy. `gateway-sync` từ chối route app thiếu điều kiện này.
 - Gateway chỉ có route cho các tiền tố khai trong manifest. Đường dẫn ngoài mọi tiền tố trả 404 từ gateway. `/apps/<id>` không có dấu `/` cuối cũng trả 404 ở gateway, nhưng web proxy luôn gửi `/apps/<id>/...`.
 - Header request tới app chỉ gồm `content-type`, `accept`, `content-length`, và `authorization` trên route cần đăng nhập. App không nhận cookie.
-- Header phản hồi về trình duyệt chỉ giữ `content-type` và `location`. `set-cookie` và CSP riêng của app bị bỏ, nên **app không dùng được cookie hay session**; trạng thái nằm trong URL, form và database.
+- Header phản hồi về trình duyệt chỉ giữ `content-type`, `location` và `content-disposition` (chỉ khi giá trị bắt đầu bằng `attachment`, để liên kết "Tải CSV" tải được tệp). `set-cookie` và CSP riêng của app bị bỏ, nên **app không dùng được cookie hay session**; trạng thái nằm trong URL, form và database.
 - Chuyển hướng (`location`) chỉ được trỏ tới một trang khác của chính app (cùng origin, dưới `/apps/<id>`). Nếu không, web trả 502.
 - App không trả lời trong 10 giây thì web trả 503.
 
@@ -53,7 +53,7 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `version` | có | SemVer, ví dụ `0.1.0` |
 | `license` | có | thuộc danh sách OSI của CLI: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `LGPL-3.0-or-later`, `GPL-2.0-only`, `GPL-3.0-only`, `GPL-3.0-or-later`, `AGPL-3.0-only`, `AGPL-3.0-or-later` |
 | `publisher` | có | 1–80 ký tự |
-| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.10.1`) |
+| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.11.0`) |
 | `runtime.build` / `runtime.image` | đúng một trong hai | `build`: thư mục tương đối trong thư mục app (thường là `.`). `image`: phải ghim digest, dạng `<ref>@sha256:<64 ký tự hex>` |
 | `runtime.port` | có | 1–65535, cổng app nghe trong container |
 | `runtime.health` | có | đường dẫn health check (đã cắt tiền tố), ví dụ `/healthz`, phải trả 2xx |
@@ -128,7 +128,7 @@ Trên route cần đăng nhập, app nhận `Authorization: Bearer <access token
   - không có `<style>` nội tuyến hay thuộc tính `style`; dùng stylesheet chung;
   - ảnh chỉ lấy từ cùng origin hoặc `data:`;
   - form chỉ gửi về cùng origin.
-- Trang cần đăng nhập hiện trong khung ứng dụng `/<role>/apps/<id>/<path>`, bên trong `<iframe sandbox="allow-forms allow-same-origin allow-top-navigation-by-user-activation">`. Khung không có `allow-scripts` nên app không đọc được cookie hay DOM của ứng dụng chính. Link ra ngoài app cần `target="_top"`.
+- Trang cần đăng nhập hiện trong khung ứng dụng `/<role>/apps/<id>/<path>`, bên trong `<iframe sandbox="allow-forms allow-same-origin allow-top-navigation-by-user-activation allow-downloads">`. Khung không có `allow-scripts` nên app không đọc được cookie hay DOM của ứng dụng chính. Link ra ngoài app cần `target="_top"`.
 - Trang công khai mở thẳng toàn màn hình, ví dụ `/apps/tea-tour/public/TC`.
 - Thoát HTML mọi dữ liệu người dùng gửi (Jinja2 bật autoescape; với thư viện chuẩn dùng `html.escape`).
 - Sau một POST, chuyển hướng 303 về trang GET (mẫu POST/redirect/GET).
@@ -155,6 +155,48 @@ Thêm `<link rel="stylesheet" href="/dxos-app.css">` vào mọi trang. Tệp do 
   - Gắn `data-label="<tên cột>"` cho mỗi ô `<td>`: ô có nhãn hiện tên cột bên trái và giá trị bên phải; ô không có nhãn (ví dụ một nút) chiếm cả chiều ngang thẻ.
   - Hàng tiêu đề được ẩn bằng hình ảnh nhưng vẫn còn cho trình đọc màn hình.
   - Vì các phần của bảng chuyển sang `display: block`, một số trình đọc màn hình bỏ ngữ nghĩa bảng. Nên thêm `role="table"`, `role="rowgroup"` (cho `thead` và `tbody`), `role="row"`, `role="columnheader"` và `role="cell"`, như `tea_tour/templates/manager.html`.
+
+## 4b. Bộ giao diện dùng chung (app kit)
+
+Bản gốc nằm ở `platform/appkit/` (`appkit.py`, `kit.html`, `showcase.html`) và `apps/web/public/dxos-app.css`. Mỗi app tự đủ vì image dựng từ thư mục của chính nó, nên hai tệp được **chép** vào gói của app: `<gói>/appkit.py` và `<gói>/templates/kit.html`.
+
+- `make appkit-sync` chép bản gốc vào bốn app (`leaf-purchase`, `tea-shop`, `farm-supply`, `tea-tour`; danh sách nằm trong `scripts/appkit-sync.sh`). `make lint` chạy `scripts/appkit-sync.sh --check` và báo lỗi nếu một bản chép lệch hoặc thiếu.
+- Không sửa bản chép trong app: sửa bản gốc rồi chạy `make appkit-sync`. Xem mọi thành phần với dữ liệu mẫu ở `platform/appkit/showcase.html`.
+- Dùng trong template: `{% import "kit.html" as kit %}`. Trong CSS và HTML không có `style=` hay `<script`; chiều dài thanh biểu đồ là thuộc tính SVG.
+
+**Macro (`kit.<tên>`) và HTML sinh ra:**
+
+| Macro | HTML |
+|---|---|
+| `app_header(title, subtitle=None)` + `{% call %}` | `<header class="app-header">` có một `<h1>`; phần thân `call` là các nút hành động |
+| `tabs(items, current)` | `<nav class="tabs" aria-label="Điều hướng trong ứng dụng">`; `items` là `(khoá, nhãn, href)`, mục hiện tại có `aria-current="page"` |
+| `stats(items)` | `<ul class="stats">`; mỗi mục `{label, value, hint}` (`hint` không bắt buộc) |
+| `chart(title, rows, unit="")` | `<figure class="chart">`; `rows` từ `appkit.chart_rows`; mỗi dòng một `<rect width="62%">` |
+| `pagination(page, prev_href, next_href)` | `<nav class="pagination" aria-label="Phân trang">` với "Trang 2/5 · 87 dòng"; không hiện gì khi `page.total == 0` |
+| `empty(message, action_label=None, action_href=None)` | `<p class="empty">` |
+| `field_error(errors, name)` | `<span class="field-error" role="alert">` dưới ô nhập; không có lỗi thì không sinh gì |
+| `steps(labels, current)` | `<ol class="steps">`; bước hiện tại `aria-current="step"`, bước trước đó `data-state="done"` |
+| `export_link(href, label="Tải CSV")` | `<a class="button secondary" href>` |
+| `print_link(href, label="Bản in")` | `<a class="button secondary" href target="_top">` |
+| `print_bar(back_href)` | `<p class="no-print">` có hướng dẫn Ctrl+P và liên kết "Quay lại ứng dụng" |
+
+**Mẫu chỉ cần CSS (viết HTML trực tiếp):**
+
+- `<form class="toolbar" method="get">`: ô tìm, bộ lọc, khoảng ngày và nút, tự xuống dòng.
+- `<ul class="cards"><li class="card">…</li></ul>`: lưới thẻ cho trang công khai.
+- `<details class="disclosure"><summary>Thêm …</summary>…</details>`: khối mở ra cho biểu mẫu thêm.
+- `<span class="actions">` quanh các nút nhỏ trong một dòng bảng (một `<form>` bọc một nút vẫn được); `a.button` là liên kết trông như nút (thêm `secondary` cho nút phụ); `.danger` cho nút huỷ, xoá.
+- Trang in: `<body class="print-sheet">`, `.no-print` ẩn khi in, `.print-only` chỉ hiện khi in; `@media print` bỏ nền, màu, điều hướng và nút.
+
+**Hàm Python (`appkit`):**
+
+- `page_of(raw, total, size=25)` trả `Page` (`number`, `pages`, `offset`, `has_prev`, `has_next`); thiếu, sai hoặc vượt trang cuối đều ra một trang hợp lệ.
+- `parse_date(raw)` (đúng `YYYY-MM-DD`), `parse_int(raw, low, high)`: trả `None` khi sai.
+- `like_pattern(q)`: thoát `\ % _` rồi bọc `%…%`, dùng với `ILIKE %s ESCAPE '\'` và tham số SQL.
+- `money(vnd)` ("9.000 ₫"), `number(value, digits=1)` ("12,5"), `vn_date`, `vn_datetime` (giờ Asia/Ho_Chi_Minh).
+- `chart_rows(pairs, fmt=number)`: độ dài cột theo phần trăm của giá trị lớn nhất.
+- `csv_filename(app_id, htx_code, name, day)` (chỉ ASCII), `csv_response(filename, header, rows)`: UTF-8 có BOM, CRLF, `content-disposition: attachment`; ô chữ bắt đầu bằng `=`, `+`, `-`, `@` được thêm `'` phía trước.
+- `shell_url(role, app_id, path="/")`: địa chỉ trang khung (`/manager/apps/tea-shop/orders`) cho liên kết quay lại từ trang in.
 
 ## 5. Database: `DXOS_APP_DB_URL` và migration
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Shared mini-app kit** (`platform/appkit/`): CSS components in `dxos-app.css` (header, tabs, stats, SVG bar chart, toolbar, pagination, cards, steps, empty state, field errors, disclosure, row actions, print sheet), Jinja macros (`kit.html`), Python helpers (`appkit.py`: paging, safe date and integer parameters, `ILIKE` escaping, Vietnamese money, number and date formats, CSV with BOM and formula escaping, chart widths) and a showcase page. `make appkit-sync` copies the two files into the four apps; `make lint` fails when a copy differs.
+- **Mini-apps can offer downloads**: the app frame sandbox gains `allow-downloads` and the proxy keeps a `content-disposition` header when it starts with `attachment`. Scripts stay blocked and the CSP is unchanged.
+
+### Fixed
+
+- **Flaky crash-recovery check in `make apps-smoke`**: the check of the leftover container and gateway route now waits (up to 60 s) for the worker to undo the half install, which it does after marking the request FAILED.
+
 ---
 
 ## [1.10.1] - 2026-11-13
