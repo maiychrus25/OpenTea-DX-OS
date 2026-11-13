@@ -8,8 +8,18 @@ import { NoHtxError, UnauthorizedError } from '@/domain/errors'
 import { requireTenant } from '@/lib/api/tenant'
 import { GET } from '@/app/api/app-store/route'
 import { POST } from '@/app/api/app-store/requests/route'
+import { GET as getDetail } from '@/app/api/app-store/apps/[id]/route'
+import { GET as getScreenshot } from '@/app/api/app-store/apps/[id]/screenshots/[position]/route'
+import { GET as getHistory } from '@/app/api/app-store/history/route'
 
-const repository = { snapshot: jest.fn(), workerAlive: jest.fn(), createRequest: jest.fn() }
+const repository = {
+  snapshot: jest.fn(),
+  workerAlive: jest.fn(),
+  createRequest: jest.fn(),
+  history: jest.fn(),
+  screenshots: jest.fn(),
+  screenshot: jest.fn(),
+}
 
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 jest.mock('@/lib/api/tenant', () => ({ requireTenant: jest.fn() }))
@@ -26,16 +36,22 @@ const get = () => GET(new Request('http://web/api/app-store'), {})
 
 beforeEach(() => {
   jest.clearAllMocks()
-  mock(auth).mockResolvedValue({ user: { id: 'u1', role: 'manager', htxCode: 'TC' } })
+  mock(auth).mockResolvedValue({ user: { id: 'u1', name: 'An', role: 'manager', htxCode: 'TC' } })
   mock(requireTenant).mockResolvedValue({ userId: 'u1', role: 'manager', htxCode: 'TC', htxProfileId: 'htx-tc' })
   repository.snapshot.mockResolvedValue({ apps: [app], open: [], enablements: [], latest: [] })
   repository.workerAlive.mockResolvedValue(true)
   repository.createRequest.mockResolvedValue(undefined)
+  repository.history.mockResolvedValue([])
+  repository.screenshots.mockResolvedValue([])
+  repository.screenshot.mockResolvedValue(null)
 })
 
 describe.each([
   ['GET /api/app-store', () => get()],
   ['POST /api/app-store/requests', () => post({ appId: 'hello', action: 'ENABLE' })],
+  ['GET /api/app-store/apps/[id]', () => getDetail(new Request('http://web/x'), { params: { id: 'hello' } })],
+  ['GET /api/app-store/apps/[id]/screenshots/[position]', () => getScreenshot(new Request('http://web/x'), { params: { id: 'hello', position: '0' } })],
+  ['GET /api/app-store/history', () => getHistory(new Request('http://web/x'), {})],
 ])('%s', (_name, call) => {
   test('401 without a session', async () => {
     mock(auth).mockResolvedValue(null)
@@ -80,6 +96,12 @@ describe('POST /api/app-store/requests', () => {
     const response = await post({ appId: 'hello', action: 'ENABLE', htxCode: 'LB', htx_code: 'LB', requestedBy: 'attacker' })
     expect(response.status).toBe(202)
     expect(await response.json()).toEqual({ data: { status: 'installing' } })
+    expect(repository.createRequest).toHaveBeenCalledWith('hello', 'TC', 'ENABLE', 'u1', 'An')
+  })
+
+  test('the requester name comes from the session, never from the body; null without one', async () => {
+    mock(auth).mockResolvedValue({ user: { id: 'u1', role: 'manager', htxCode: 'TC' } })
+    await post({ appId: 'hello', action: 'ENABLE', requestedByName: 'attacker', userName: 'attacker' })
     expect(repository.createRequest).toHaveBeenCalledWith('hello', 'TC', 'ENABLE', 'u1', null)
   })
 
@@ -131,5 +153,60 @@ describe('POST /api/app-store/requests', () => {
     repository.createRequest.mockRejectedValue(new Error('db down'))
     jest.spyOn(console, 'error').mockImplementation(() => undefined)
     expect((await post({ appId: 'hello', action: 'ENABLE' })).status).toBe(500)
+  })
+})
+
+describe('GET /api/app-store/apps/[id]', () => {
+  const detail = (id: string, url = `http://web/api/app-store/apps/${id}`) => getDetail(new Request(url), { params: { id } })
+
+  test('200 with the detail of the session HTX; a query htxCode is ignored', async () => {
+    const response = await detail('hello', 'http://web/api/app-store/apps/hello?htxCode=LB')
+    expect(response.status).toBe(200)
+    expect((await response.json()).data).toMatchObject({ id: 'hello', status: 'available', preview: expect.any(Array) })
+    expect(repository.snapshot).toHaveBeenCalledWith('TC')
+    expect(repository.history).toHaveBeenCalledWith('TC', 'hello', 20)
+  })
+
+  test.each(['ghost', '../x', 'A', 'x', '1abc'])('404 APP_NOT_FOUND for %s', async id => {
+    const response = await detail(id)
+    expect(response.status).toBe(404)
+    expect((await response.json()).error.code).toBe('APP_NOT_FOUND')
+  })
+})
+
+describe('GET /api/app-store/apps/[id]/screenshots/[position]', () => {
+  const shot = (id: string, position: string) => getScreenshot(new Request('http://web/x'), { params: { id, position } })
+
+  test('200 with the stored bytes and the safe headers', async () => {
+    repository.screenshot.mockResolvedValue({ contentType: 'image/webp', bytes: new Uint8Array([1, 2, 3]) })
+    const response = await shot('hello', '2')
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('image/webp')
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(response.headers.get('cache-control')).toBe('private, max-age=300')
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]))
+    expect(repository.screenshot).toHaveBeenCalledWith('hello', 2)
+  })
+
+  test.each([['hello', '4'], ['hello', '-1'], ['hello', '1.5'], ['hello', 'a'], ['hello', ''], ['../x', '0'], ['hello', '01']])(
+    '404 for app %s position %s, without a lookup',
+    async (id, position) => {
+      expect((await shot(id, position)).status).toBe(404)
+      expect(repository.screenshot).not.toHaveBeenCalled()
+    },
+  )
+
+  test('404 when there is no such image', async () => {
+    expect((await shot('hello', '0')).status).toBe(404)
+  })
+})
+
+describe('GET /api/app-store/history', () => {
+  test('200 with the 50 newest requests of the session HTX; a query htxCode is ignored', async () => {
+    repository.history.mockResolvedValue([{ id: 'r1' }])
+    const response = await getHistory(new Request('http://web/api/app-store/history?htxCode=LB'), {})
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ data: [{ id: 'r1' }] })
+    expect(repository.history).toHaveBeenCalledWith('TC', null, 50)
   })
 })
