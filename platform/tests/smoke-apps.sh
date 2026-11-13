@@ -642,10 +642,10 @@ assert_eq "$(psql_app "select app_id || ' ' || htx_code || ' ' || enabled_by fro
   "first run of 06-app-store.sql enables the installed app for *"
 wait_http 200 "hello still answers after the upgrade" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
 # ./dxos upgrade of the installed app: exit 0, the registry version, the same enablement rows, still answering; of an app that is not installed: exit 1.
-ENABLEMENTS=$(psql_app "select app_id || '|' || htx_code || '|' || enabled_by from platform.app_enablements order by 1, 2")
+ENABLEMENTS=$(psql_app "select app_id || '|' || htx_code || '|' || enabled_by from platform.app_enablements order by app_id, htx_code")
 ./dxos upgrade miniapps/hello >/dev/null && pass "./dxos upgrade miniapps/hello exits 0" || fail "./dxos upgrade miniapps/hello"
 assert_eq "$(psql_app "select version from platform.installed_apps where id = 'hello'" | sed -n 1p)" "$(sed -n 's/^version: *"\{0,1\}\([0-9.]*\).*/\1/p' miniapps/hello/app.yaml | sed -n 1p)" "upgrade leaves the registry at the manifest version"
-assert_eq "$(psql_app "select app_id || '|' || htx_code || '|' || enabled_by from platform.app_enablements order by 1, 2")" "$ENABLEMENTS" "upgrade keeps the enablement rows"
+assert_eq "$(psql_app "select app_id || '|' || htx_code || '|' || enabled_by from platform.app_enablements order by app_id, htx_code")" "$ENABLEMENTS" "upgrade keeps the enablement rows"
 fresh_tokens
 wait_http 200 "hello still answers after ./dxos upgrade" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
 if ./dxos upgrade miniapps/leaf-purchase >/dev/null 2>&1; then fail "./dxos upgrade of an app that is not installed exited 0"; else pass "./dxos upgrade of an app that is not installed exits non-zero"; fi
