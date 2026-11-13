@@ -136,6 +136,33 @@ class ComposeStep:
         compose_path(self.root, self.app_id).unlink(missing_ok=True)
 
 
+class UpgradeGatewayStep(GatewayStep):
+    """Undo puts the live app's previous route back instead of removing it."""
+
+    def __init__(self, root: Path, app_id: str, manifest: dict | None = None):
+        super().__init__(root, app_id, manifest)
+        path = fragment_path(root, app_id)
+        self.previous = path.read_text(encoding="utf-8") if path.exists() else None
+
+    def undo(self) -> None:
+        if self.previous is None:
+            return super().undo()
+        fragment_path(self.root, self.app_id).write_text(self.previous, encoding="utf-8")
+        sync_gateway(self.root)
+
+
+class UpgradeComposeStep(ComposeStep):
+    def __init__(self, root: Path, app_id: str, manifest: dict | None = None, app_dir: Path | None = None):
+        super().__init__(root, app_id, manifest, app_dir)
+        path = compose_path(root, app_id)
+        self.previous = path.read_text(encoding="utf-8") if path.exists() else None
+
+    def undo(self) -> None:
+        if self.previous is None:
+            return super().undo()
+        compose_path(self.root, self.app_id).write_text(self.previous, encoding="utf-8")
+
+
 def _steps(root: Path, app_id: str, manifest: dict | None = None, app_dir: Path | None = None,
            installed: set[str] = frozenset()) -> list:
     # Undo needs only the id, so abort and remove build the same steps without a manifest.
@@ -174,6 +201,37 @@ def prepare(root: Path, app_dir: Path) -> str:
     write_journal(journal, state)
     run_steps(_steps(root, app_id, manifest, rel_dir, installed), journal)
     return app_id
+
+
+def upgrade_prepare(root: Path, app_dir: Path) -> str:
+    """Like prepare for an app that is already registered: pending migrations only, the live route and compose file
+    come back if a step fails. The database step has no "database" journal entry, so its undo drops nothing."""
+    manifest = load_manifest(app_dir)
+    app_id = _check_id(manifest.get("id"))
+    try:
+        rel_dir = app_dir.resolve().relative_to(root.resolve())
+    except ValueError:
+        raise InstallError(f"Thư mục app {app_dir} phải nằm trong repo {root}") from None
+    with _connect() as conn:
+        installed = registry.installed_ids(conn)
+    if app_id not in installed:
+        raise InstallError(f"App '{app_id}' chưa được cài; dùng install")
+    journal = journal_path(root, app_id)
+    write_journal(journal, {"manifest": manifest})  # a stale install journal would make the steps undo an install
+    steps = [ValidateStep(root, manifest, installed - {app_id}), DatabaseStep(root, app_id, manifest, rel_dir),
+             UpgradeGatewayStep(root, app_id, manifest), UpgradeComposeStep(root, app_id, manifest, rel_dir)]
+    run_steps(steps, journal)
+    return app_id
+
+
+def upgrade_commit(root: Path, app_id: str) -> None:
+    journal = journal_path(root, _check_id(app_id))
+    state = read_journal(journal)
+    if state.get("completed") != [step.name for step in _steps(root, app_id)]:
+        raise InstallError(f"App '{app_id}' chưa có bản nâng cấp đã chuẩn bị xong (chạy upgrade-prepare trước)")
+    with _connect() as conn:
+        registry.update(conn, state["manifest"])
+    journal.unlink()
 
 
 def commit(root: Path, app_id: str, enable_all: bool = True) -> None:

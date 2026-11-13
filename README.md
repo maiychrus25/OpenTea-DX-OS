@@ -329,6 +329,7 @@ Web không có quyền điều khiển Docker. Bấm Cài hoặc Gỡ chỉ ghi 
   WantedBy=multi-user.target
   ```
   `User` phải thuộc nhóm `docker`; `COMPOSE_PROJECT_NAME` phải trùng project mà `make platform-up` dùng. Đổi đường dẫn cho khớp máy của anh chị, rồi `sudo systemctl enable --now dxos-worker`.
+- `./dxos upgrade <thư mục>` nâng cấp app đã cài tại chỗ (code mới, route, migration còn thiếu) mà không đổi việc bật theo HTX; thẻ trong Kho ứng dụng hiện `Có bản mới` khi bản đang chạy cũ hơn catalogue.
 - `./dxos install <thư mục>` vẫn dùng như trước và bật app cho mọi HTX (`*`); thẻ khi đó ghi "Đã cài cho mọi HTX (quản trị máy chủ)" và trưởng HTX không gỡ riêng được.
 
 **Trang chi tiết của app (từ v1.10.0).** Trang kho có hai thẻ: "Ứng dụng" (tìm theo tên không cần dấu, lọc theo trạng thái và danh mục) và "Lịch sử" (50 yêu cầu cài và gỡ gần nhất của HTX, kèm tên người bấm). Bấm tên một app để mở `/manager/app-store/<id>`: ảnh màn hình, phần giới thiệu, mục "Khi cài, ứng dụng sẽ" (xem trước những gì việc cài sẽ làm cho HTX), dữ liệu app lưu và dữ liệu cá nhân (theo khai báo của nhà phát hành), thông tin phiên bản, và nút Cài, Gỡ, Thử lại hoặc Mở ứng dụng. Khi đang cài, trang hiện các bước Đã gửi yêu cầu, Chuẩn bị, Dựng và khởi động, Đăng ký; các bước này do `./dxos worker` báo, nên cần chạy lại worker sau khi nâng cấp.

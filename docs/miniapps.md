@@ -275,11 +275,12 @@ Hệ quả cho người viết app:
 | --- | --- |
 | `./dxos validate <dir>...` | Chỉ kiểm tra manifest; in "hợp lệ" hoặc từng lỗi; mã thoát 1 khi có lỗi |
 | `./dxos install <dir>` | Kiểm manifest, database, sinh route gateway, sinh compose, chạy `up -d --build --wait`, rồi ghi `platform.installed_apps`. Bước nào hỏng (kể cả health check, Ctrl-C hoặc TERM) thì mọi bước trước được hoàn tác. Cài lại một app đã cài chỉ bảo đảm container đang chạy |
+| `./dxos upgrade <dir>` | Nâng cấp app đã đăng ký tại chỗ: kiểm manifest, chạy migration còn thiếu (giữ nguyên role và mật khẩu), sinh lại route và compose, `up -d --build --wait`, rồi cập nhật `name`, `version`, `menu`, `manifest` trong `platform.installed_apps`. Không đụng tới enablement của HTX. Build hoặc health check hỏng thì đăng ký vẫn ở bản cũ và lệnh thoát mã 1 (route và compose file đã sinh lại; chạy `upgrade` lần nữa để sửa). App chưa cài thì dùng `install` |
 | `./dxos remove <id> [--purge]` | Tắt container, gỡ route, xoá đăng ký; mặc định giữ dữ liệu (§5) |
 | `./dxos list` | Mỗi app đã cài một dòng: id, phiên bản, thời điểm cài, trạng thái container; hoặc "Chưa cài app nào" |
 | `./dxos worker` | Tiến trình của máy chủ làm các yêu cầu Cài và Gỡ mà trưởng HTX gửi từ Kho ứng dụng (xem dưới); chạy cho tới khi nhận TERM hoặc Ctrl-C |
 
-**Kho ứng dụng và bật tắt theo HTX.** `./dxos install` ghi app vào `platform.installed_apps` và bật nó cho mọi HTX (`platform.app_enablements`, mã `*`). Trang `/manager/app-store` thì bật hoặc tắt riêng cho HTX của trưởng HTX: web chỉ ghi một dòng vào `platform.app_requests`, còn `./dxos worker` nhận từng yêu cầu một. `ENABLE` cài app nếu chưa cài rồi ghi enablement của HTX; `DISABLE` xoá enablement (HTX thấy app biến mất ngay) rồi gỡ container khi không còn HTX nào dùng, vẫn giữ dữ liệu. App chỉ được phục vụ và hiện trong menu của HTX đã bật nó. Catalogue của kho (`platform.app_catalog`) được `make platform-up` và worker đồng bộ từ `miniapps/*/app.yaml`, nên tên thư mục phải trùng `id` trong manifest. Worker giữ khoá `docker/runtime/<project>/worker.lock` (mỗi project một worker), đánh dấu lỗi các yêu cầu mà worker cũ bỏ dở lúc khởi động và chỉ hoàn tác lần cài dở của app chưa đăng ký. Cách chạy dưới systemd nằm trong README, mục "Kho ứng dụng và `./dxos worker`".
+**Kho ứng dụng và bật tắt theo HTX.** `./dxos install` ghi app vào `platform.installed_apps` và bật nó cho mọi HTX (`platform.app_enablements`, mã `*`). Trang `/manager/app-store` thì bật hoặc tắt riêng cho HTX của trưởng HTX: web chỉ ghi một dòng vào `platform.app_requests`, còn `./dxos worker` nhận từng yêu cầu một. `ENABLE` cài app nếu chưa cài rồi ghi enablement của HTX; `DISABLE` xoá enablement (HTX thấy app biến mất ngay) rồi gỡ container khi không còn HTX nào dùng, vẫn giữ dữ liệu. App chỉ được phục vụ và hiện trong menu của HTX đã bật nó. Catalogue của kho (`platform.app_catalog`) được `make platform-up` và worker đồng bộ từ `miniapps/*/app.yaml`, nên tên thư mục phải trùng `id` trong manifest. Worker giữ khoá `docker/runtime/<project>/worker.lock` (mỗi project một worker), đánh dấu lỗi các yêu cầu mà worker cũ bỏ dở lúc khởi động và chỉ hoàn tác lần cài dở của app chưa đăng ký. Khi `version` trong catalogue khác phiên bản đang đăng ký, thẻ và trang chi tiết hiện nhãn `Có bản mới`, kèm dòng nhắc quản trị máy chủ chạy `./dxos upgrade miniapps/<id>`. Cách chạy dưới systemd nằm trong README, mục "Kho ứng dụng và `./dxos worker`".
 
 `<dir>` phải nằm trong repo, vì `dxos-cli` chỉ thấy repo.
 
@@ -333,7 +334,7 @@ Tệp đang được git theo dõi không bao giờ bị sửa lúc chạy. `mak
    ```
    - Trong `app.yaml`, đổi `id: my-app`, `name` và `label` của menu.
    - Trong `app.py`, đổi `PREFIX = "/apps/my-app"`.
-   - Chạy `./dxos validate miniapps/my-app`, rồi `./dxos install miniapps/my-app`. Sửa code rồi cài lại: `./dxos remove my-app && ./dxos install miniapps/my-app`.
+   - Chạy `./dxos validate miniapps/my-app`, rồi `./dxos install miniapps/my-app`. Sửa code rồi nâng cấp tại chỗ: `./dxos upgrade miniapps/my-app` (giữ dữ liệu và việc bật theo HTX).
 7. **Thêm database** (khi cần):
    - Thêm `database: { migrations: migrations/ }` và `migrations/001_init.sql`; mọi bảng có `htx_code text NOT NULL`.
    - Đọc `DXOS_APP_DB_URL` từ môi trường.

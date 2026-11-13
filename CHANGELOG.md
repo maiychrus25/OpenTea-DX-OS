@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Shared mini-app kit** (`platform/appkit/`): CSS components in `dxos-app.css` (header, tabs, stats, SVG bar chart, toolbar, pagination, cards, steps, empty state, field errors, disclosure, row actions, print sheet), Jinja macros (`kit.html`), Python helpers (`appkit.py`: paging, safe date and integer parameters, `ILIKE` escaping, Vietnamese money, number and date formats, CSV with BOM and formula escaping, chart widths) and a showcase page. `make appkit-sync` copies the two files into the four apps; `make lint` fails when a copy differs.
 - **Mini-apps can offer downloads**: the app frame sandbox gains `allow-downloads` and the proxy keeps a `content-disposition` header when it starts with `attachment`. Scripts stay blocked and the CSP is unchanged.
+- **`./dxos upgrade <dir>`** gives an installed mini-app new code in place: it validates the manifest, applies only pending migrations (same role and password), rewrites the route and compose file, rebuilds and restarts the container, then stores the new `name`, `version`, `menu` and `manifest`. Enablements are never touched; a failed build or health check leaves the registry on the old version. The App Store card and detail show `Có bản mới` when the running version differs from the catalogue.
 
 ### Fixed
 
