@@ -5,6 +5,7 @@
 The web app inserts requests; `./dxos worker` claims them through the CLI and reports back with finish().
 """
 import sys
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,10 +14,12 @@ from psycopg.types.json import Jsonb
 
 from dxos_cli.commands import APP_ID_RE
 from dxos_cli.manifest import ManifestError, load_manifest, validate_manifest
+from dxos_cli.store_assets import read_screenshot
 
 STALE_MESSAGE = "Trình cài đặt khởi động lại giữa chừng."
 UNKNOWN_MESSAGE = "Ứng dụng không có trong kho."
 ERROR_LIMIT = 300
+PHASES = ("prepare", "build", "register")
 
 
 @dataclass(frozen=True)
@@ -43,16 +46,33 @@ def sync_catalog(conn: psycopg.Connection, miniapps_dir: Path, core_version: str
             print(f"catalog-sync: bỏ qua {app_dir.name}: {'; '.join(errors)}", file=sys.stderr)
             continue
         protected = manifest["routes"].get("protected", {})
-        conn.execute(
-            "INSERT INTO platform.app_catalog (id, name, version, description, license, publisher, menu, roles,"
-            " has_public, synced_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now())"
-            " ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, version = EXCLUDED.version,"
-            " description = EXCLUDED.description, license = EXCLUDED.license, publisher = EXCLUDED.publisher,"
-            " menu = EXCLUDED.menu, roles = EXCLUDED.roles, has_public = EXCLUDED.has_public, synced_at = now()",
-            (manifest["id"], manifest["name"], manifest["version"], manifest.get("description", ""),
-             manifest["license"], manifest["publisher"], Jsonb(manifest.get("menu", [])),
-             sorted({role for roles in protected.values() for role in roles}),
-             bool(manifest["routes"].get("public"))))
+        store_block = {k: v for k, v in manifest.get("store", {}).items() if k != "screenshots"}
+        images = []
+        for shot in manifest.get("store", {}).get("screenshots", []):
+            try:
+                images.append((read_screenshot(app_dir, shot["file"]), shot["caption"]))
+            except ManifestError as exc:
+                print(f"catalog-sync: bỏ qua ảnh {shot['file']} của {manifest['id']}: {exc}", file=sys.stderr)
+        # One transaction per app: the card never shows the new text with the old screenshots.
+        with conn.transaction():
+            conn.execute(
+                "INSERT INTO platform.app_catalog (id, name, version, description, license, publisher, menu, roles,"
+                " has_public, store, requires_core, has_database, synced_at)"
+                " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())"
+                " ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, version = EXCLUDED.version,"
+                " description = EXCLUDED.description, license = EXCLUDED.license, publisher = EXCLUDED.publisher,"
+                " menu = EXCLUDED.menu, roles = EXCLUDED.roles, has_public = EXCLUDED.has_public,"
+                " store = EXCLUDED.store, requires_core = EXCLUDED.requires_core,"
+                " has_database = EXCLUDED.has_database, synced_at = now()",
+                (manifest["id"], manifest["name"], manifest["version"], manifest.get("description", ""),
+                 manifest["license"], manifest["publisher"], Jsonb(manifest.get("menu", [])),
+                 sorted({role for roles in protected.values() for role in roles}),
+                 bool(manifest["routes"].get("public")), Jsonb(store_block), manifest["requires"]["core"],
+                 "database" in manifest))
+            conn.execute("DELETE FROM platform.app_catalog_screenshots WHERE app_id = %s", (manifest["id"],))
+            for position, (file, caption) in enumerate(images):
+                conn.execute("INSERT INTO platform.app_catalog_screenshots (app_id, position, caption, content_type, bytes)"
+                             " VALUES (%s, %s, %s, %s, %s)", (manifest["id"], position, caption, *file))
         synced.append(manifest["id"])
     # An installed app keeps its card even when its directory is gone, so the store can still offer Gỡ.
     conn.execute("DELETE FROM platform.app_catalog WHERE NOT (id = ANY(%s))"
@@ -98,6 +118,15 @@ def finish(conn: psycopg.Connection, job_id: str, ok: bool, error: str | None = 
             conn.execute("DELETE FROM platform.app_enablements WHERE app_id = %s AND htx_code = %s",
                          (app_id, htx_code))
         return conn.execute("SELECT count(*) FROM platform.app_enablements WHERE app_id = %s", (app_id,)).fetchone()[0]
+
+
+def set_phase(conn: psycopg.Connection, job_id: str, phase: str) -> bool:
+    """Record which step of the install a RUNNING request is in; False when no RUNNING row matched."""
+    if phase not in PHASES:
+        raise ValueError(f"giai đoạn '{phase}' không hợp lệ")
+    uuid.UUID(job_id)  # ValueError for anything else, before it reaches SQL
+    return conn.execute("UPDATE platform.app_requests SET phase = %s WHERE id = %s AND status = 'RUNNING'",
+                        (phase, job_id)).rowcount > 0
 
 
 def fail_stale(conn: psycopg.Connection) -> list[Job]:

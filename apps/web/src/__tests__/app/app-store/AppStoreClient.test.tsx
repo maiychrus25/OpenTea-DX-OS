@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { AppStoreClient, type AppStoreData } from '@/app/manager/app-store/_components/AppStoreClient'
-import type { AppStoreStatus, StoreApp } from '@/domain/entities/app-store'
+import type { AppStoreStatus, StoreApp, StoreCategory } from '@/domain/entities/app-store'
 
 const card = (id: string, status: AppStoreStatus, error: string | null = null): StoreApp => ({
   id,
@@ -17,7 +17,20 @@ const card = (id: string, status: AppStoreStatus, error: string | null = null): 
   hasPublic: id === 'pub',
   status,
   error,
+  category: null,
+  icon: null,
+  installedOnServer: false,
+  phase: null,
+  openHref: null,
 })
+const named = (id: string, name: string, description: string, status: AppStoreStatus, category: StoreCategory | null = null): StoreApp => ({
+  ...card(id, status),
+  name,
+  description,
+  category,
+})
+// The filter buttons share their words with the status pills, so card assertions look inside the list.
+const cards = () => within(screen.getByRole('list'))
 const data = (apps: StoreApp[], workerAlive = true): AppStoreData => ({ workerAlive, apps })
 // jsdom has no Response, so the tests answer with the three members the component reads.
 const reply = (body: unknown, status = 200) => Promise.resolve({ ok: status < 400, status, json: async () => body })
@@ -57,8 +70,8 @@ describe('AppStoreClient', () => {
   ] as const)('%s: label %s and buttons %j', (status, label, buttons) => {
     fetchMock.mockImplementation(() => reply({ data: data([card('a', status)]) }))
     render(<AppStoreClient initial={data([card('a', status, status === 'failed' ? 'Cài đặt hỏng' : null)])} />)
-    expect(screen.getByText(label)).toBeInTheDocument()
-    expect(screen.queryAllByRole('button').map(b => b.textContent)).toEqual(buttons)
+    expect(cards().getByText(label)).toBeInTheDocument()
+    expect(cards().queryAllByRole('button').map(b => b.textContent)).toEqual(buttons)
   })
 
   test('a failed card shows its error in an alert', () => {
@@ -102,7 +115,7 @@ describe('AppStoreClient', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Gỡ' }))
     expect(confirm).toHaveBeenCalledWith('Gỡ ứng dụng này khỏi HTX? Dữ liệu được giữ lại.')
     expect(fetchMock).not.toHaveBeenCalled()
-    expect(screen.getByText('Đã cài')).toBeInTheDocument()
+    expect(cards().getByText('Đã cài')).toBeInTheDocument()
     confirm.mockRestore()
   })
 
@@ -121,7 +134,112 @@ describe('AppStoreClient', () => {
     render(<AppStoreClient initial={data([card('hello', 'available')])} />)
     fireEvent.click(screen.getByRole('button', { name: 'Cài' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Ứng dụng này đang được xử lý. Vui lòng đợi.')
-    expect(screen.getByText('Chưa cài')).toBeInTheDocument()
+    expect(cards().getByText('Chưa cài')).toBeInTheDocument()
+  })
+
+  describe('search and filters', () => {
+    const apps = [
+      named('tea-shop', 'Cửa hàng chè', 'Bán chè trực tuyến', 'enabled', 'sales'),
+      named('farm-supply', 'Vật tư mua chung', 'Đặt phân bón', 'available', 'members'),
+      named('hello', 'Xin chào', 'Ứng dụng mẫu', 'failed', 'sample'),
+      named('busy', 'Đang bận', 'Một việc', 'installing', 'sales'),
+    ]
+    const names = () => cards().getAllByRole('heading').map(h => h.textContent)
+
+    test('search ignores case and accents, and matches the description too', () => {
+      render(<AppStoreClient initial={data(apps)} />)
+      fireEvent.change(screen.getByLabelText('Tìm ứng dụng'), { target: { value: 'che' } })
+      expect(names()).toEqual(['Cửa hàng chè'])
+      fireEvent.change(screen.getByLabelText('Tìm ứng dụng'), { target: { value: 'vat tu' } })
+      expect(names()).toEqual(['Vật tư mua chung'])
+      fireEvent.change(screen.getByLabelText('Tìm ứng dụng'), { target: { value: 'DAT PHAN' } })
+      expect(names()).toEqual(['Vật tư mua chung'])
+      fireEvent.change(screen.getByLabelText('Tìm ứng dụng'), { target: { value: 'dang ban' } })
+      expect(names()).toEqual(['Đang bận'])
+    })
+
+    test('the search box also carries the placeholder', () => {
+      render(<AppStoreClient initial={data(apps)} />)
+      expect(screen.getByPlaceholderText('Tìm ứng dụng')).toBeInTheDocument()
+    })
+
+    test('only categories that have an app get a button, labelled in Vietnamese', () => {
+      render(<AppStoreClient initial={data(apps)} />)
+      for (const label of ['Bán hàng', 'Thành viên và vật tư', 'Ứng dụng mẫu']) expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
+      for (const label of ['Sản xuất và thu mua', 'Du lịch']) expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument()
+    })
+
+    test('a category button filters, carries aria-pressed and toggles off', () => {
+      render(<AppStoreClient initial={data(apps)} />)
+      const sales = screen.getByRole('button', { name: 'Bán hàng' })
+      expect(sales).toHaveAttribute('aria-pressed', 'false')
+      fireEvent.click(sales)
+      expect(sales).toHaveAttribute('aria-pressed', 'true')
+      expect(names()).toEqual(['Cửa hàng chè', 'Đang bận'])
+      fireEvent.click(sales)
+      expect(names()).toHaveLength(4)
+    })
+
+    test('Đã cài is enabled, enabled_all and removing; Chưa cài is available, installing and failed', () => {
+      const all = [
+        named('a', 'A', '', 'enabled'),
+        named('b', 'B', '', 'enabled_all'),
+        named('c', 'C', '', 'removing'),
+        named('d', 'D', '', 'available'),
+        named('e', 'E', '', 'installing'),
+        named('f', 'F', '', 'failed'),
+      ]
+      render(<AppStoreClient initial={data(all)} />)
+      const installed = screen.getByRole('button', { name: 'Đã cài' })
+      const notInstalled = screen.getByRole('button', { name: 'Chưa cài' })
+      expect(screen.getByRole('button', { name: 'Tất cả' })).toHaveAttribute('aria-pressed', 'true')
+      fireEvent.click(installed)
+      expect(installed).toHaveAttribute('aria-pressed', 'true')
+      expect(names()).toEqual(['A', 'B', 'C'])
+      fireEvent.click(notInstalled)
+      expect(names()).toEqual(['D', 'E', 'F'])
+      fireEvent.click(screen.getByRole('button', { name: 'Tất cả' }))
+      expect(names()).toHaveLength(6)
+    })
+
+    test('filters combine and an empty result says so', () => {
+      render(<AppStoreClient initial={data(apps)} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Bán hàng' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Chưa cài' }))
+      expect(names()).toEqual(['Đang bận'])
+      fireEvent.change(screen.getByLabelText('Tìm ứng dụng'), { target: { value: 'zzz' } })
+      expect(screen.getByText('Không có ứng dụng nào khớp bộ lọc.')).toBeInTheDocument()
+      expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    })
+
+    test('the name of a card links to its detail page and the action stays on the card', () => {
+      render(<AppStoreClient initial={data(apps)} />)
+      expect(screen.getByRole('link', { name: 'Cửa hàng chè' })).toHaveAttribute('href', '/manager/app-store/tea-shop')
+      expect(within(screen.getByRole('link', { name: 'Vật tư mua chung' }).closest('li')!).getByRole('button', { name: 'Cài' })).toBeInTheDocument()
+    })
+
+    test('an icon outside the allowlist falls back to the default one', () => {
+      const { container } = render(<AppStoreClient initial={data([{ ...card('a', 'available'), icon: '<svg onload=1>' }, { ...card('b', 'available'), icon: 'leaf' }])} />)
+      expect(container.querySelectorAll('li svg')).toHaveLength(2)
+      expect(container.querySelector('li svg.lucide-layout-grid')).not.toBeNull()
+      expect(container.querySelector('li svg.lucide-leaf')).not.toBeNull()
+    })
+  })
+
+  describe('tabs and history', () => {
+    test('Lịch sử loads the history once, on first open', async () => {
+      fetchMock.mockImplementation(() => reply({ data: [] }))
+      render(<AppStoreClient initial={data([card('a', 'available')])} />)
+      expect(screen.getByRole('tab', { name: 'Ứng dụng' })).toHaveAttribute('aria-selected', 'true')
+      expect(fetchMock).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByRole('tab', { name: 'Lịch sử' }))
+      expect(await screen.findByText('Chưa có yêu cầu cài hoặc gỡ nào.')).toBeInTheDocument()
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(fetchMock.mock.calls[0][0]).toBe('/api/app-store/history')
+      fireEvent.click(screen.getByRole('tab', { name: 'Ứng dụng' }))
+      fireEvent.click(screen.getByRole('tab', { name: 'Lịch sử' }))
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('polling', () => {
@@ -144,7 +262,7 @@ describe('AppStoreClient', () => {
         jest.advanceTimersByTime(3000)
       })
       expect(fetchMock).toHaveBeenCalledTimes(2)
-      expect(screen.getByText('Đã cài')).toBeInTheDocument()
+      expect(cards().getByText('Đã cài')).toBeInTheDocument()
 
       await act(async () => {
         jest.advanceTimersByTime(30_000)
@@ -194,7 +312,7 @@ describe('AppStoreClient', () => {
       await act(async () => {
         jest.advanceTimersByTime(3000)
       })
-      expect(screen.getByText('Chưa cài')).toBeInTheDocument()
+      expect(cards().getByText('Chưa cài')).toBeInTheDocument()
       expect(refresh).toHaveBeenCalledTimes(1)
     })
 

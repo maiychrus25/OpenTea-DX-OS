@@ -28,6 +28,8 @@ cli() {
   compose --profile tools build --quiet dxos-cli >&2
   compose --profile tools run --rm -T --user "$(id -u):$(id -g)" dxos-cli "$@"
 }
+# Tells the store which phase a worker install is in; never lets a reporting failure fail the install.
+progress() { [ -z "${DXOS_JOB:-}" ] || cli worker-progress "$DXOS_JOB" "$1" >/dev/null 2>&1 || true; }
 app() { local id="$1"; shift; compose -f "$RUNTIME/apps/$id.compose.yml" "$@"; }
 # Found by compose labels, so this also works for an orphan whose compose file is gone.
 app_containers() {  # <id> [docker ps options]
@@ -79,9 +81,11 @@ install() {  # <dir> [all|htx]: "htx" leaves enabling to the store worker, "all"
   # shellcheck disable=SC2064
   trap "undo_install $id 143" TERM
   # prepare undoes its own steps when it fails; abort only retries an undo that failed (no-op otherwise).
+  progress prepare
   cli prepare "$dir" || { cli abort "$id" || true; exit 1; }
+  progress build
   # shellcheck disable=SC2086  # flag is empty or one option
-  if app "$id" up -d --build --wait "app-$id" && cli commit "$id" $flag; then
+  if app "$id" up -d --build --wait "app-$id" && { progress register; cli commit "$id" $flag; }; then
     trap - INT TERM
     echo "Đã cài $id"
     return
@@ -157,7 +161,7 @@ worker() {
     if [ "$action" = ENABLE ] && [ "$installed" = 0 ]; then
       # set -e is off inside a condition, so run the install in its own subshell with it switched on again.
       set +e
-      ( set -e; dir="$(to_container "miniapps/$app")" || exit 1; install "$dir" htx )
+      ( set -e; DXOS_JOB="$job"; dir="$(to_container "miniapps/$app")" || exit 1; install "$dir" htx )
       rc=$?
       set -e
       if [ "$rc" = 130 ] || [ "$rc" = 143 ]; then  # interrupted: install undid itself; worker-start fails the request

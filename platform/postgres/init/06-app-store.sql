@@ -56,6 +56,21 @@ CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON pla
 CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.app_requests
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
 
+-- Store details (manifest `store` block), screenshots, and install progress on requests.
+ALTER TABLE platform.app_catalog ADD COLUMN IF NOT EXISTS store jsonb NOT NULL DEFAULT '{}';
+ALTER TABLE platform.app_catalog ADD COLUMN IF NOT EXISTS requires_core text NOT NULL DEFAULT '';
+ALTER TABLE platform.app_catalog ADD COLUMN IF NOT EXISTS has_database boolean NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS platform.app_catalog_screenshots (
+  app_id       text     NOT NULL REFERENCES platform.app_catalog(id) ON DELETE CASCADE,
+  position     smallint NOT NULL CHECK (position BETWEEN 0 AND 3),
+  caption      text     NOT NULL,
+  content_type text     NOT NULL CHECK (content_type IN ('image/png', 'image/webp', 'image/jpeg')),
+  bytes        bytea    NOT NULL,
+  PRIMARY KEY (app_id, position)
+);
+ALTER TABLE platform.app_requests ADD COLUMN IF NOT EXISTS phase text CHECK (phase IN ('prepare', 'build', 'register'));
+ALTER TABLE platform.app_requests ADD COLUMN IF NOT EXISTS requested_by_name text;
+
 -- Upgrade: apps installed before the store were visible to every HTX, so they keep '*'. Never on later runs: an
 -- installed app with no enablement row is valid (every HTX removed it) and must not be handed back to everyone.
 INSERT INTO platform.app_enablements (app_id, htx_code, enabled_by)

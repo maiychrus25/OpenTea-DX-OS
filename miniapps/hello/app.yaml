@@ -7,7 +7,7 @@ description: Ứng dụng mẫu cho người viết mini-app.
 version: 0.1.0
 license: MIT
 publisher: OpenTea Developers
-requires: { core: ">=1.8.0" }
+requires: { core: ">=1.10.0" }
 runtime:
   build: .
   port: 8080
@@ -17,3 +17,10 @@ routes:
     /: [farmer, officer, manager]
 menu:
   - { label: Xin chào, path: /, roles: [farmer, officer, manager] }
+store:
+  category: sample
+  icon: sparkles
+  about: |
+    Đây là ứng dụng mẫu dành cho người viết mini-app, không phải công cụ làm việc của hợp tác xã.
+
+    Ứng dụng chỉ chào người đang đăng nhập bằng tên, mã HTX và vai trò của họ. Ứng dụng không lưu gì và không đọc dữ liệu nào của HTX.

@@ -255,6 +255,9 @@ Bo góc vừa phải: 6px cho điều khiển nhỏ, 10px cho nút và ô nhập
 - **Thẻ:** nền `card`, viền `border`, bo 14px, đệm 16px.
 - **Sidebar:** nền `sidebar-bg`, chữ `sidebar-foreground`, cùng màu ở hai chế độ.
 - **Nút giao diện (`ThemeToggle`):** xoay vòng Sáng → Tối → Theo hệ thống, lưu ở `localStorage` khóa `opentea-theme`. Có tên truy cập, viền focus `border-focus`, dùng được bằng bàn phím. Có ở topbar, trang chủ và trang đăng nhập.
+- **Nút lọc (App Store):** viên thuốc cao tối thiểu 44px, bo `full`, viền `border`. Là nút bật tắt có `aria-pressed`; khi bật nền `primary-subtle`, viền và chữ `primary`, chữ đậm (không chỉ đổi màu). Các nút xếp hàng và xuống dòng, không cuộn ngang trang.
+- **Tiến trình theo bước (App Store):** danh sách có thứ tự, mỗi bước là một chấm tròn 24px kèm tên. Bước xong có dấu ✓ trên `success-subtle`, bước đang chạy là chấm `primary` và đặt `aria-current="step"`, bước hỏng có dấu ! trên `danger-subtle` kèm chữ "Lỗi"; lý do và hướng xử lý nằm trong khối `danger-subtle` có `role="alert"`. Các bước xuống dòng ở 390px.
+- **Dải ảnh màn hình (App Store):** hàng ngang các ảnh rộng `min(640px, 86vw)` giữ tỉ lệ ảnh, mỗi ảnh là liên kết mở ảnh lớn ở thẻ mới (`aria-label` "Xem ảnh lớn: <chú thích>"), viền `border`, bo 10px, chú thích `meta` bên dưới. Dải tự cuộn trong chính nó (`overflow-x: auto`), không làm trang tràn ngang; ảnh tải lười và có `alt` là chú thích.
 - **Không nhấp nháy:** `layout.tsx` chạy một đoạn script nội tuyến trước lần vẽ đầu, trong `try/catch`, để đặt `data-theme` từ lựa chọn đã lưu; không có lựa chọn hoặc `system` thì để trống và theo `prefers-color-scheme`.
 
 ## Do's and Don'ts

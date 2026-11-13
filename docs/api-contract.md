@@ -619,15 +619,24 @@ Next.js removes a trailing slash with a 308 before the route runs, so `/apps/<id
 
 ## App Store (Manager)
 
-Per-cooperative install and removal of mini-apps. The page is `/manager/app-store`. Both routes need a signed-in manager with an HTX; the HTX and the requester always come from the session, never from the body. The web app never talks to Docker: a request is a row in `platform.app_requests`, and `./dxos worker` on the host carries it out.
+Per-cooperative install and removal of mini-apps. The page is `/manager/app-store`. These routes need a signed-in manager (all `force-dynamic`) with an HTX; the HTX and the requester always come from the session, never from the body. The web app never talks to Docker: a request is a row in `platform.app_requests`, and `./dxos worker` on the host carries it out.
 
 ### `GET /api/app-store`
 **200** `{ "data": { "workerAlive": boolean, "apps": StoreApp[] } }`. `workerAlive` is true when the worker heartbeated in the last 30 s, or a request has been `RUNNING` for under 15 minutes (the worker does not heartbeat during an install).
 
-`StoreApp`: `{ id, name, version, description, license, publisher, roles: string[], hasPublic: boolean, status, error: string | null }`. `status`, first match wins for the session's HTX: `installing` (open `ENABLE` request), `removing` (open `DISABLE`), `enabled_all` (enabled for `*`, set by `./dxos install`), `enabled`, `failed` (the newest request failed; `error` holds the Vietnamese reason), otherwise `available`.
+`StoreApp`: `{ id, name, version, description, license, publisher, roles: string[], hasPublic: boolean, status, error: string | null, category: 'production' | 'sales' | 'members' | 'tourism' | 'sample' | null, icon: string | null, installedOnServer: boolean, phase: 'prepare' | 'build' | 'register' | null, openHref: string | null }`. `category` and `icon` come from the manifest `store` block (an unknown value is null); `phase` is the step of the open request, or of the newest request when it failed; `openHref` is `/manager/apps/<id><path>` of the first menu entry for managers when the HTX can use the app. `status`, first match wins for the session's HTX: `installing` (open `ENABLE` request), `removing` (open `DISABLE`), `enabled_all` (enabled for `*`, set by `./dxos install`), `enabled`, `failed` (the newest request failed; `error` holds the Vietnamese reason), otherwise `available`.
+
+### `GET /api/app-store/apps/[id]`
+**200** `{ "data": StoreAppDetail }`: a `StoreApp` plus `about: string[]` (paragraphs), `menu: { label, path, roles }[]`, `data: string[]`, `personalData: string | null`, `coreReads: string[]`, `requiresCore: string`, `hasDatabase: boolean`, `publicUrl: string | null` (`/apps/<id>/public/<htxCode>`, only when the app has public pages and the HTX can use it), `preview: string[]` (what installing adds), `screenshots: { position, caption, url }[]` and `history` (the 20 newest requests of the HTX for the app). `id` outside `^[a-z][a-z0-9-]{1,30}$` or not in the catalogue: **404** `APP_NOT_FOUND`. Text from the manifest is plain text.
+
+### `GET /api/app-store/apps/[id]/screenshots/[position]`
+**200** the stored image bytes with the stored `content-type`, `x-content-type-options: nosniff`, `cache-control: private, max-age=300`. `position` must be `0` to `3`; anything else, or no such image: **404** `APP_NOT_FOUND`.
+
+### `GET /api/app-store/history`
+**200** `{ "data": StoreHistoryEntry[] }`, the 50 newest requests of the session's HTX: `{ id, appId, appName, action: 'ENABLE' | 'DISABLE', status: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED', requestedByName: string | null, createdAt, finishedAt: string | null, error: string | null }`.
 
 ### `POST /api/app-store/requests`
-Body `{ "appId": string (^[a-z][a-z0-9-]{1,30}$), "action": "ENABLE" | "DISABLE" }`; other fields are ignored.
+Body `{ "appId": string (^[a-z][a-z0-9-]{1,30}$), "action": "ENABLE" | "DISABLE" }`; other fields are ignored. The requester's name (at most 120 characters) is stored from the session.
 **202** `{ "data": { "status": "installing" | "removing" } }`.
 
 | HTTP | code | When |

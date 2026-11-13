@@ -60,6 +60,33 @@
         }
       }
     },
+    "store": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "category": { "enum": ["production", "sales", "members", "tourism", "sample"] },
+        "icon": {
+          "enum": ["leaf", "scale", "shopping-bag", "package", "map-pinned", "users", "calendar", "clipboard-list", "truck", "sparkles"]
+        },
+        "about": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "data": { "type": "array", "maxItems": 8, "items": { "type": "string", "minLength": 1, "maxLength": 160 } },
+        "personal_data": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "core_reads": { "type": "array", "maxItems": 6, "items": { "type": "string", "minLength": 1, "maxLength": 160 } },
+        "screenshots": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "caption"],
+            "properties": {
+              "file": { "type": "string", "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$))[A-Za-z0-9._/-]{1,120}$" },
+              "caption": { "type": "string", "minLength": 1, "maxLength": 120 }
+            }
+          }
+        }
+      }
+    },
     "menu": {
       "type": "array",
       "items": {
