@@ -186,6 +186,13 @@ Bản gốc nằm ở `platform/appkit/` (`appkit.py`, `kit.html`, `showcase.htm
 - `<ul class="cards"><li class="card">…</li></ul>`: lưới thẻ cho trang công khai.
 - `<details class="disclosure"><summary>Thêm …</summary>…</details>`: khối mở ra cho biểu mẫu thêm.
 - `<span class="actions">` quanh các nút nhỏ trong một dòng bảng (một `<form>` bọc một nút vẫn được); `a.button` là liên kết trông như nút (thêm `secondary` cho nút phụ); `.danger` cho nút huỷ, xoá.
+- `<form class="toolbar">`: ô tìm (`type="search"`) giãn được, ô chọn và ngày giữ chiều rộng tự nhiên, các nút nằm cuối hàng cuối; trên điện thoại mỗi ô một hàng.
+- Nút trong ô bảng và trong `.actions` gọn hơn (cao 34 px) để một dòng bảng cao khoảng 44 px.
+- `input[type=checkbox|radio]` có cỡ bình thường, cùng một dòng với nhãn: `<label><input type="checkbox"> Chữ</label>`, hoặc ô nhập rồi tới `<label for>` ngay sau nó (trong `<form>`).
+- Nhãn trạng thái: `.pill` (xanh: đang dùng, xong), `.pill.neutral` (xám: ngừng, đóng, đã qua), `.pill.warn` (hổ phách: chờ, mới, chưa thanh toán), `.pill.danger` (đỏ: đã huỷ, vô hiệu).
+- `stats` tự chia đều hàng cho 3, 4 hay 5 ô; trên điện thoại hai cột, ô lẻ cuối chiếm cả hàng.
+- Biểu mẫu trong `.card` không có khung riêng.
+- Trang in: `.signature` (ô bảng hoặc khối) chừa khoảng 4,5 rem trống để ký tay; bảng trong `.print-sheet` rộng hết khổ, viền đen mảnh.
 - Trang in: `<body class="print-sheet">`, `.no-print` ẩn khi in, `.print-only` chỉ hiện khi in; `@media print` bỏ nền, màu, điều hướng và nút.
 
 **Hàm Python (`appkit`):**

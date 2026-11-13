@@ -587,6 +587,61 @@ a.button.danger:hover {
   box-shadow: none;
 }
 
+/* Buttons in a table row are compact: about 44px rows, targets still 34px. */
+.actions a.button,
+.actions button,
+td a.button,
+td button {
+  min-height: 34px;
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-label);
+}
+
+td:has(> .actions, > button, > a.button, > form) {
+  padding-block: var(--spacing-1);
+}
+
+/* Checkbox and radio: a normal control next to its text, not a text-input box. Works for <label><input> Text</label>
+   and for an input followed by its label (inside a form, the label is pulled up beside the input). */
+input[type="checkbox"],
+input[type="radio"] {
+  flex: none;
+  align-self: flex-start;
+  width: 1.125rem;
+  min-height: 0;
+  height: 1.125rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--color-primary);
+}
+
+label:has(> input[type="checkbox"], > input[type="radio"]) {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+input[type="checkbox"]:has(+ label),
+input[type="radio"]:has(+ label) {
+  margin-bottom: calc(-1.125rem - var(--spacing-3));
+}
+
+input[type="checkbox"] + label,
+input[type="radio"] + label {
+  min-height: 1.125rem;
+  padding-left: calc(1.125rem + var(--spacing-2));
+}
+
+/* A form inside a card has no box of its own. */
+.card form {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
 [aria-invalid="true"] {
   border-color: var(--color-danger);
 }
@@ -663,9 +718,19 @@ a.button.danger:hover {
   list-style: none;
 }
 
+/* An odd last tile fills the row instead of leaving a hole. */
+.stats li:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+/* Any number of tiles fills the row; three or five do not wrap 4+1. */
 @media (min-width: 768px) {
   .stats {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  }
+
+  .stats li:last-child:nth-child(odd) {
+    grid-column: auto;
   }
 }
 
@@ -678,6 +743,7 @@ a.button.danger:hover {
   border: 1px solid var(--color-border-default);
   border-radius: var(--rounded-lg);
   box-shadow: var(--shadow-card);
+  container-type: inline-size;
 }
 
 .stat-label {
@@ -687,7 +753,7 @@ a.button.danger:hover {
 }
 
 .stat-value {
-  font-size: clamp(1rem, 5vw, var(--font-size-h1));
+  font-size: clamp(1rem, 11cqw, var(--font-size-h1)); /* scales with the tile, so a long amount fits */
   white-space: nowrap;
   font-weight: 700;
   line-height: 1.2;
@@ -746,6 +812,38 @@ a.button.danger:hover {
   fill: var(--color-primary);
 }
 
+/* From 640px each row is one line: label, bar, value. The list is the grid and each row a subgrid, so the columns line up. */
+@media (min-width: 640px) {
+  .chart ul {
+    display: grid;
+    grid-template-columns: fit-content(14rem) minmax(0, 1fr) max-content;
+    gap: var(--spacing-2) var(--spacing-3);
+  }
+
+  .chart li {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: center;
+  }
+
+  .chart-label {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .chart-bar {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .chart-value {
+    grid-column: 3;
+    grid-row: 1;
+    white-space: nowrap;
+  }
+}
+
 /* Search and filter row: a GET form that wraps. */
 form.toolbar {
   flex-direction: row;
@@ -755,9 +853,29 @@ form.toolbar {
   gap: var(--spacing-3);
 }
 
+/* Fields keep a natural width; a search field may grow; the buttons go to the end of the last row. */
 form.toolbar label {
-  flex: 1 1 10rem;
+  flex: 0 1 11rem;
+  max-width: 14rem;
   min-width: 0;
+}
+
+form.toolbar label:has(input[type="search"], input[type="text"]) {
+  flex: 1 1 14rem;
+  max-width: 24rem;
+}
+
+form.toolbar > label + :is(button, a.button) {
+  margin-left: auto;
+}
+
+/* On a phone every field takes the full row. */
+@media (max-width: 640px) {
+  form.toolbar label,
+  form.toolbar label:has(input[type="search"], input[type="text"]) {
+    flex-basis: 100%;
+    max-width: none;
+  }
 }
 
 form.toolbar button {
@@ -972,6 +1090,50 @@ body.print-sheet {
 
   a {
     text-decoration: none;
+  }
+}
+
+/* Pill tones. The plain .pill stays green (active, done). */
+.pill.neutral {
+  color: var(--color-ink-secondary);
+  background: var(--color-surface-sunken);
+}
+
+.pill.warn {
+  color: var(--color-warning);
+  background: var(--color-warning-subtle);
+}
+
+.pill.danger {
+  color: var(--color-danger);
+  background: var(--color-danger-subtle);
+}
+
+/* Print sheet tables: full width, thin black borders. */
+.print-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 0;
+  border-radius: 0;
+}
+
+.print-sheet table th,
+.print-sheet table td {
+  border: 1px solid var(--color-ink-primary);
+  border-radius: 0;
+}
+
+/* Blank room for a handwritten signature (a table cell or a block). */
+.signature {
+  height: 4.5rem;
+  min-height: 4.5rem;
+  vertical-align: bottom;
+}
+
+@media print {
+  .print-sheet table th,
+  .print-sheet table td {
+    border-color: CanvasText !important;
   }
 }
 

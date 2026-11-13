@@ -52,7 +52,7 @@
       <td role="cell" data-label="Mã đơn"><a href="#">DH-0128</a></td>
       <td role="cell" data-label="Khách">Trần Thị Bích Ngọc</td>
       <td role="cell" data-label="Tổng tiền">{{ appkit.money(1260000) }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">Mới</span></td>
+      <td role="cell" data-label="Trạng thái"><span class="pill warn">Chờ thanh toán</span></td>
       <td role="cell" data-label="Đặt lúc">13/11/2026 08:11</td>
       <td role="cell" data-label="Thao tác"><span class="actions">
         <a class="button secondary" href="#">Xem</a>
@@ -71,9 +71,34 @@
         {{ kit.print_link("#") }}
       </span></td>
     </tr>
+    <tr role="row">
+      <td role="cell" data-label="Mã đơn"><a href="#">DH-0126</a></td>
+      <td role="cell" data-label="Khách">Vũ Thị Lan</td>
+      <td role="cell" data-label="Tổng tiền">{{ appkit.money(95000) }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill danger">Đã huỷ</span></td>
+      <td role="cell" data-label="Đặt lúc">11/11/2026 09:05</td>
+      <td role="cell" data-label="Thao tác"><span class="actions"><a class="button secondary" href="#">Xem</a></span></td>
+    </tr>
+    <tr role="row">
+      <td role="cell" data-label="Mã đơn"><a href="#">DH-0120</a></td>
+      <td role="cell" data-label="Khách">Bùi Quang Huy</td>
+      <td role="cell" data-label="Tổng tiền">{{ appkit.money(720000) }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill neutral">Đã đóng</span></td>
+      <td role="cell" data-label="Đặt lúc">02/11/2026 14:20</td>
+      <td role="cell" data-label="Thao tác"><span class="actions"><a class="button secondary" href="#">Xem</a></span></td>
+    </tr>
   </tbody>
 </table>
 {{ kit.pagination(page, "#trang-truoc", "#trang-sau") }}
+
+<h2>Tuần này</h2>
+{{ kit.stats([
+  {"label": "Phiếu cân", "value": "41"},
+  {"label": "Khối lượng", "value": appkit.number(1286.5) ~ " kg"},
+  {"label": "Thành tiền", "value": appkit.money(10292000)},
+  {"label": "Hộ giao chè", "value": "23"},
+  {"label": "Chưa chốt", "value": "6", "hint": "chốt trước thứ Sáu"}
+]) }}
 
 <h2>Sản phẩm đang bán</h2>
 <ul class="cards">
@@ -95,6 +120,13 @@
     <p><strong>{{ appkit.money(350000) }}</strong> · còn 6 chỗ ngày 20/11/2026</p>
     <a class="button secondary" href="#">Đặt chỗ</a>
   </li>
+  <li class="card">
+    <h3>Đăng ký nhận tin</h3>
+    <form method="post" action="#">
+      <label>Số điện thoại <input name="phone" type="tel" value="0912 345 678"></label>
+      <button type="submit">Đăng ký</button>
+    </form>
+  </li>
 </ul>
 
 <h2>Tiến trình đơn DH-0128</h2>
@@ -109,6 +141,9 @@
       <input name="quantity" type="number" value="0" aria-invalid="true">
       {{ kit.field_error(errors, "quantity") }}
     </label>
+    <label><input type="checkbox" name="active" checked> Đang bán</label>
+    <input type="checkbox" id="organic" name="organic">
+    <label for="organic">Chè hữu cơ, có chứng nhận</label>
     <button type="submit">Lưu sản phẩm</button>
   </form>
 </details>
@@ -126,9 +161,9 @@
   <h3>Phiếu cân PC-2026-0412</h3>
   <p class="print-only">In ngày 13/11/2026 bởi HTX Tân Cương</p>
   <table role="table">
-    <thead role="rowgroup"><tr role="row"><th role="columnheader">Hộ</th><th role="columnheader">Loại</th><th role="columnheader">Khối lượng</th><th role="columnheader">Thành tiền</th></tr></thead>
+    <thead role="rowgroup"><tr role="row"><th role="columnheader">Hộ</th><th role="columnheader">Loại</th><th role="columnheader">Khối lượng</th><th role="columnheader">Thành tiền</th><th role="columnheader">Ký nhận</th></tr></thead>
     <tbody role="rowgroup">
-      <tr role="row"><td role="cell" data-label="Hộ">Nguyễn Văn Tám</td><td role="cell" data-label="Loại">Búp một tôm hai lá</td><td role="cell" data-label="Khối lượng">62,5 kg</td><td role="cell" data-label="Thành tiền">{{ appkit.money(2187500) }}</td></tr>
+      <tr role="row"><td role="cell" data-label="Hộ">Nguyễn Văn Tám</td><td role="cell" data-label="Loại">Búp một tôm hai lá</td><td role="cell" data-label="Khối lượng">62,5 kg</td><td role="cell" data-label="Thành tiền">{{ appkit.money(2187500) }}</td><td role="cell" class="signature" data-label="Ký nhận"></td></tr>
     </tbody>
   </table>
 </section>

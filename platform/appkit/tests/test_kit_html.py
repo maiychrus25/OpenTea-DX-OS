@@ -109,5 +109,6 @@ def test_showcase_renders_without_style_or_script():
     html = env.get_template("showcase.html").render(theme="")
     assert "style=" not in html and "<script" not in html.lower()
     for marker in ("app-header", "tabs", "stats", "chart", "pagination", "empty", "field-error", "steps", "toolbar",
-                   "cards", "disclosure", "actions", "print-sheet", "no-print", "print-only"):
+                   "cards", "disclosure", "actions", "print-sheet", "no-print", "print-only", "pill warn", "pill neutral",
+                   "pill danger", "signature", 'type="checkbox"'):
         assert marker in html, marker
