@@ -7,7 +7,7 @@ description: Mở đợt đăng ký mua chung phân bón và thuốc bảo vệ 
 version: 0.1.0
 license: MIT
 publisher: OpenTea Developers
-requires: { core: ">=1.9.0" }
+requires: { core: ">=1.10.0" }
 runtime:
   build: .
   port: 8080
@@ -21,3 +21,20 @@ routes:
 menu:
   - { label: Vật tư mua chung, path: /, roles: [manager] }
   - { label: Đăng ký vật tư, path: /mine, roles: [farmer] }
+store:
+  category: members
+  icon: package
+  about: |
+    Ứng dụng giúp HTX gom nhu cầu mua chung phân bón và thuốc bảo vệ thực vật để mua số lượng lớn.
+
+    Trưởng HTX mở một đợt đăng ký với hạn chót, thêm các mặt hàng (đơn vị, đơn giá). Mỗi nông dân ghi số lượng cần mua cho hộ mình trước hạn. Khi đóng đợt, trưởng HTX xem tổng hợp theo mặt hàng và theo hộ, rồi đánh dấu hộ nào đã nhận hàng, đã trả tiền.
+
+    Đợt đã đóng thì không đăng ký thêm hay sửa được nữa. Ứng dụng không đặt hàng với nhà cung cấp thay HTX.
+  data:
+    - "Đợt đăng ký: tên đợt, hạn đăng ký, đang mở hay đã đóng"
+    - "Mặt hàng: tên, đơn vị, đơn giá"
+    - "Số lượng đăng ký của từng hộ cho từng mặt hàng"
+    - "Đối soát theo hộ: đã giao lúc nào, đã trả tiền lúc nào"
+  personal_data: "Lưu tên hộ cùng số lượng và số tiền đăng ký của hộ. Trưởng HTX xem được của mọi hộ. Mỗi nông dân chỉ xem được của hộ mình."
+  core_reads:
+    - "Hộ gắn với tài khoản của nông dân đang đăng nhập (tên hộ)"
