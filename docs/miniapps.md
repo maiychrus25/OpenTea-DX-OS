@@ -76,6 +76,10 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `core_reads` | tối đa 6 mục, mỗi mục 1–160 ký tự: app đọc gì từ lõi |
 | `screenshots[]` | tối đa 4 mục `{file, caption}`, cả hai bắt buộc. `file`: đường dẫn tương đối trong thư mục app (không bắt đầu bằng `/`, không có `..`, `[A-Za-z0-9._/-]`, tối đa 120 ký tự); `caption`: 1–120 ký tự |
 
+**Ảnh màn hình.** Tệp là PNG, WebP hoặc JPEG (nhận theo byte đầu, không theo đuôi tệp; không nhận SVG), tối đa 409600 byte mỗi ảnh, nằm trong thư mục app (liên kết trỏ ra ngoài thư mục bị từ chối). Quy ước của kho: đặt trong `store/`, chụp từ app thật ở 1280×800, giao diện sáng, chỉ phần trang của app, dữ liệu mẫu không có người thật. `./dxos validate` báo lỗi tệp sai loại, quá cỡ hoặc ra ngoài thư mục; `catalog-sync` bỏ qua tệp như vậy và ghi một dòng cảnh báo. Thư mục `store/` không vào image của app vì Dockerfile chỉ chép các đường dẫn nêu tên.
+
+**Bước cài.** Khi cài qua `./dxos worker`, `./dxos` báo `prepare`, `build`, `register` bằng `./dxos worker-progress <mã yêu cầu> <bước>`; trang chi tiết hiện các bước này. Lỗi của lệnh báo không làm hỏng lần cài, và `./dxos install` gõ tay không ghi bước nào.
+
 **Đường dẫn** (route, menu, `health`) phải khớp `^/([a-z0-9_-]+(/[a-z0-9_-]+)*/?)?$`: bắt đầu bằng `/`, chỉ gồm `[a-z0-9/_-]`, không có `..` hay `//`. Mọi route nằm dưới `/apps/<id>/`; trong manifest chỉ ghi phần sau tiền tố đó.
 
 **Trang công khai nằm dưới `/public/<htxCode>/...`.** Từ v1.9.0, web proxy chỉ phục vụ trang công khai của app khi HTX có mã `<htxCode>` đã bật app đó; HTX chưa bật thì trả 404. Vì vậy mã HTX phải là đoạn đầu tiên sau `/public/` (khớp `^[A-Za-z0-9_-]{1,20}$`) và app lấy HTX từ đường dẫn này. Khai `public: [/public/]` trong manifest như trước.

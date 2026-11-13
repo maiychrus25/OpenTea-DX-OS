@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Kho ứng dụng: trang chi tiết, xem trước khi cài, tiến trình và lịch sử
 
-> **Trạng thái:** Bản thiết kế (2026-11-13). Chủ dự án đã chọn phạm vi (trang chi tiết và xem trước; trạng thái, tìm kiếm và lịch sử) và cho phép triển khai mà không chờ duyệt thêm; bước merge vào `main` và gắn tag phát hành vẫn hỏi lại.
+> **Trạng thái:** Đã triển khai trên nhánh `feat/app-store-detail` (2026-11-13); thân tài liệu giữ nguyên bản thiết kế, xem "Ghi chú sau triển khai" ở cuối. Bước merge vào `main` và gắn tag `v1.10.0` vẫn chờ chủ dự án.
 > **Phạm vi:** milestone `v1.10.0`. Tiếp nối Kho mini-app (`docs/specs/2026-11-12-miniapp-store-design.md`, phát hành `v1.9.0`).
 > **Căn cứ:** Phần máy của kho (hàng đợi, worker, bật tắt theo HTX) đã chạy. Phần trưởng HTX nhìn thấy mới là một trang thẻ với nút Cài và Gỡ: không biết app làm gì, cài sẽ thêm gì, đang cài tới đâu, và ai đã cài.
 
@@ -138,3 +138,31 @@ Theo `DESIGN.md`: chỉ dùng token, sáng và tối nhất quán, không tràn 
 | I | Chụp ảnh màn hình, smoke, trình duyệt, CI, tài liệu, hai vòng kiểm | Một phiên riêng, sau khi gộp P, W, C |
 
 Phiên chính viết spec và kế hoạch, giao việc cho các phiên Sonnet và tự review.
+
+## Ghi chú sau triển khai
+
+Code khớp thiết kế; các quyết định và chỗ khác bản thiết kế:
+
+- **T1** `06-app-store.sql` được mở rộng tại chỗ thay vì thêm tệp init mới: tệp mới cần một mount mới trong compose và sẽ tạo lại `postgres` một lần khi nâng cấp. Câu lệnh `set_config('dxos.store_first_run', …)` vẫn đứng đầu sau schema và dòng chèn `'*'` vẫn đứng cuối.
+- **T2** Ba bước (`prepare`, `build`, `register`); dựng và khởi động vẫn là một lệnh `up --build --wait`, nên trang chỉ có một bước "Dựng và khởi động". Tách đôi sẽ đổi đường cài dùng chung.
+- **T3** Ảnh màn hình lưu dạng `bytea` trong PostgreSQL do CLI đồng bộ: container web không đọc được `miniapps/`, và SeaweedFS thêm một bộ phận chuyển động cho tối đa 4 × 400 KB mỗi app.
+- **T4** Tên người yêu cầu được chép vào `app_requests` lúc tạo yêu cầu (không có bảng nào ánh xạ id Keycloak sang tên cho trưởng HTX); người đổi tên sau đó vẫn thấy tên cũ trong lịch sử.
+- **T5** Phiên bản app không đổi khi chỉ thêm khối `store`; `requires.core` thành `>=1.10.0`. Chưa có luồng cập nhật nên tăng phiên bản chỉ tạo ra chênh lệch không ai xử lý được.
+- Ảnh chụp bằng công cụ `apps/web/tests/e2e/tools/store-screenshots.spec.ts` (cờ `E2E_STORE_SHOTS=1`): iframe của app được phóng ra toàn cửa sổ 1280×800 rồi chụp, nên mỗi ảnh chỉ có phần trang của app. Bảy ảnh, 48–81 KB mỗi ảnh.
+- Trang chi tiết chưa có tiến trình khi worker chưa báo bước: hiện dòng "Đang chờ trình cài đặt" (hoặc "Đang bật cho HTX…" nếu app đã có trên máy chủ) cho tới khi có `phase`. Với image đã dựng sẵn, cả lần cài có thể chỉ vài giây, nên câu chuyện trình duyệt chấp nhận cả dòng chờ lẫn danh sách bước.
+- Smoke kiểm `phase` bằng cách hỏi lặp trong lúc worker cài `tea-shop`; vì cache image ấm có thể xong giữa hai lần hỏi, smoke cũng đòi yêu cầu đã xong giữ `phase = register`. Bước kiểm "nâng cấp từ stack chưa có kho" phải xoá cả bảng `app_catalog_screenshots` (khoá ngoại tới `app_catalog`).
+- Giới hạn đã biết: dữ liệu app khai báo không được kiểm chứng; chưa có luồng cập nhật app; danh sách trên trang chi tiết dùng kiểu không dấu đầu dòng.
+
+Kết quả đo (stack `dxos-clean` dựng mới từ `down -v`, `platform-up`, seed, `platform-smoke`, mọi spec trình duyệt theo thứ tự CI, `apps-smoke`, gỡ và xoá mọi app, `down -v`). Vòng đầu có một lần hỏng của câu chuyện tea-tour (danh sách người dẫn tour không có hộ `hh_tc_1`, quá 120 giây; app tea-tour không bị đổi trên nhánh này), không lặp lại ở hai vòng sau; hai vòng sạch liên tiếp (vòng 2 và 3) cho cùng kết quả:
+
+| Hạng mục | Vòng 2 | Vòng 3 |
+| --- | --- | --- |
+| `make platform-smoke` | 124 PASS (129 giây) | 124 PASS (131 giây) |
+| core-tenant / A3 / tour / tour đã gỡ | 5 / 1 / 1 / 1 qua | 5 / 1 / 1 / 1 qua |
+| Ảnh màn hình ưu tiên (gồm kho, lịch sử, chi tiết) | 64 qua | 64 qua |
+| Câu chuyện Kho ứng dụng | 1 qua (58 giây) | 1 qua (56 giây) |
+| Câu chuyện ba app / ảnh màn hình app và kho | 2 / 40 qua | 2 / 40 qua |
+| `make apps-smoke` | 224 PASS (662 giây); trước đó 215 | 224 PASS (680 giây) |
+| Sau khi chạy | không còn container, volume hay mạng của `dxos-clean` | giống vòng 2 |
+
+`make build` xong; `make test` 1624 qua (3 bỏ qua, 138 suite); `make lint` và `actionlint` sạch; `npx tsc --noEmit` sạch; pytest: CLI 133, `leaf-purchase` 26, `tea-shop` 34, `farm-supply` 16, `hello` 7 (unittest); `./dxos validate` hợp lệ cho cả năm app.

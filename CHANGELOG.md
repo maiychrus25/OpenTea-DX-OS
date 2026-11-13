@@ -9,7 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Mini-app manifests can carry an optional `store` block (category, icon, about, data, personal data, core reads, screenshots), and the platform database gets the columns and the screenshots table the store needs. Web version 1.10.0.
+- **App Store detail page** (`/manager/app-store/<id>`, web version 1.10.0): header with the Cài, Gỡ, Thử lại and Mở ứng dụng buttons, a step progress while an install runs (Đã gửi yêu cầu, Chuẩn bị, Dựng và khởi động, Đăng ký), a strip of screenshots, the "Giới thiệu" text, a preview "Khi cài, ứng dụng sẽ" of what the install does for the HTX, the data and personal data the app declares, version information and the history of the app.
+- **Richer store page**: accent-insensitive search, filters by status and category, cards that link to the detail page, and a "Lịch sử" tab with the 50 newest install and removal requests of the HTX and the name of who asked. The history only holds requests of the caller's HTX.
+- **Optional `store` block in the mini-app manifest** (category, icon from an allowlist, about, data, personal data, core reads, up to 4 screenshots of at most 400 KB, PNG, WebP or JPEG detected from the first bytes). Text from a manifest is shown as plain text only. `./dxos validate` also checks the screenshot files (inside the app directory, size, type); `catalog-sync` stores the block (`platform.app_catalog.store`, `requires_core`, `has_database`) and the screenshots (`platform.app_catalog_screenshots`) in the platform database.
+- **Install phases**: while the worker installs an app it sets `platform.app_requests.phase` to `prepare`, `build` and `register` through the new `./dxos worker-progress`, so the page can show the step; a failed install keeps the phase that failed. A hand `./dxos install` never writes a request or a phase.
+- **Store text and screenshots for the five apps**: `leaf-purchase`, `tea-shop`, `farm-supply` (two screenshots each), `tea-tour` (one) and `hello` carry a `store` block in Vietnamese; the screenshots come from the real apps with sample data and are retaken with `apps/web/tests/e2e/tools/store-screenshots.spec.ts` (`E2E_STORE_SHOTS=1`).
+- **Tests**: the app smoke checks the synced store block, the phases seen during a queued install, the `build` phase of a failed install, that a hand install writes no request, and that `validate` refuses a text file declared as a screenshot; the App Store story now searches, opens the detail page, installs from it, opens the app and finds the history row; the screens add the history tab and the detail page at 1280 and 390 px, light and dark.
+
+### Upgrade notes
+- **`make platform-up` applies the new columns and tables without recreating `postgres`** (`06-app-store.sql` is extended in place and stays idempotent). Keep every `docker_*` volume.
+- **Rebuild the web image** (`up -d --build web`) and **restart `./dxos worker`**, otherwise the page works but no install phase is reported.
+- Apps that carry a `store` block declare `requires.core: ">=1.10.0"`; app versions are unchanged.
+
+### Known limits
+- **The declared data is not enforced**: what an app says it stores or reads is the publisher's statement, shown as such; nothing checks it against the app's real behaviour.
+- **There is no update flow**: an installed app is not upgraded from the store, and its version does not change for a metadata-only edit.
+- The install steps show only what the worker reports (three phases); building and starting the container are one step.
 
 ---
 
