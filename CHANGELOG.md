@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.10.0] - 2026-11-13
+
 ### Added
 
-- **App Store detail page** (`/manager/app-store/<id>`, web version 1.10.0): header with the Cài, Gỡ, Thử lại and Mở ứng dụng buttons, a step progress while an install runs (Đã gửi yêu cầu, Chuẩn bị, Dựng và khởi động, Đăng ký), a strip of screenshots, the "Giới thiệu" text, a preview "Khi cài, ứng dụng sẽ" of what the install does for the HTX, the data and personal data the app declares, version information and the history of the app.
+- **App Store detail page** (`/manager/app-store/<id>`, web version 1.10.0): header with the Cài, Gỡ, Thử lại and Mở ứng dụng buttons, a step progress while an install runs (Đã gửi yêu cầu, Chuẩn bị, Dựng và khởi động, Đăng ký), a strip of screenshots that open at full size, the "Giới thiệu" text, a preview "Khi cài, ứng dụng sẽ" of what the install does for the HTX ("Ứng dụng đã thêm vào HTX" once the HTX uses the app), the data and personal data the app declares, version information, the full address of the app's public page with a "Chép địa chỉ" button, and the history of the app.
 - **Richer store page**: accent-insensitive search, filters by status and category, cards that link to the detail page, and a "Lịch sử" tab with the 50 newest install and removal requests of the HTX and the name of who asked. The history only holds requests of the caller's HTX.
 - **Optional `store` block in the mini-app manifest** (category, icon from an allowlist, about, data, personal data, core reads, up to 4 screenshots of at most 400 KB, PNG, WebP or JPEG detected from the first bytes). Text from a manifest is shown as plain text only. `./dxos validate` also checks the screenshot files (inside the app directory, size, type); `catalog-sync` stores the block (`platform.app_catalog.store`, `requires_core`, `has_database`) and the screenshots (`platform.app_catalog_screenshots`) in the platform database.
 - **Install phases**: while the worker installs an app it sets `platform.app_requests.phase` to `prepare`, `build` and `register` through the new `./dxos worker-progress`, so the page can show the step; a failed install keeps the phase that failed. A hand `./dxos install` never writes a request or a phase.
@@ -440,7 +444,8 @@ The `v1.8.0` tag has no GitHub Release, images or bundle: the release workflow's
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.0
 [1.9.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.9.0
 [1.8.1]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.8.1
 [1.8.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.8.0
