@@ -2,12 +2,11 @@
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
 {% block title %}Kỳ thanh toán{% endblock %}
+{% block head %}{{ kit.app_header("Kỳ thanh toán", "Chốt kỳ để tính tiền từng hộ, rồi ghi nhận chi trả") }}{% endblock %}
 {% block main %}
-<p><a href="{{ href('/', theme) }}">← Phiếu cân</a> · <a href="{{ href('/prices', theme) }}">Giá thu mua</a></p>
-<h1>Kỳ thanh toán</h1>
 {% if periods %}
 <table role="table">
-  <thead role="rowgroup"><tr role="row"><th role="columnheader">Kỳ</th><th role="columnheader">Chốt lúc</th><th role="columnheader">Số hộ</th><th role="columnheader">Tổng tiền</th><th role="columnheader">Đã trả</th></tr></thead>
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Kỳ</th><th role="columnheader">Chốt lúc</th><th role="columnheader">Số hộ</th><th role="columnheader">Tổng tiền</th><th role="columnheader">Đã trả</th><th role="columnheader">Thao tác</th></tr></thead>
   <tbody role="rowgroup">
   {% for p in periods %}
     <tr role="row">
@@ -16,20 +15,28 @@
       <td role="cell" data-label="Số hộ">{{ p.households }}</td>
       <td role="cell" data-label="Tổng tiền">{{ p.total_vnd | vnd }}</td>
       <td role="cell" data-label="Đã trả">{{ p.paid }} / {{ p.households }}</td>
+      <td role="cell" data-label="Thao tác"><span class="actions">
+        <a class="button secondary" href="{{ href('/periods/' ~ p.id, theme) }}">Xem</a>
+        {{ kit.print_link(href('/periods/' ~ p.id ~ '/print', theme)) }}
+        {{ kit.export_link(href('/periods/' ~ p.id ~ '/export.csv'), "CSV") }}
+      </span></td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
 {% else %}
-<p>HTX chưa chốt kỳ nào.</p>
+{{ kit.empty("HTX chưa chốt kỳ nào.") }}
 {% endif %}
 
 <h2>Chốt kỳ mới</h2>
-<p>Chốt gom mọi phiếu chưa huỷ trong khoảng ngày và tính tiền từng hộ. Sau khi chốt không sửa hay huỷ được các phiếu này.</p>
-<form method="post" action="{{ href('/periods', theme) }}">
-  {% include "errors.html" %}
-  <label>Từ ngày <input type="date" name="date_from" required value="{{ form.date_from }}"></label>
-  <label>Đến ngày <input type="date" name="date_to" required value="{{ form.date_to }}"></label>
-  <button type="submit">Chốt kỳ</button>
-</form>
+<details class="disclosure"{% if errors or form.date_from or form.date_to %} open{% endif %}>
+  <summary>Chốt kỳ mới</summary>
+  <p>Chốt gom mọi phiếu chưa huỷ trong khoảng ngày và tính tiền từng hộ. Sau khi chốt không sửa hay huỷ được các phiếu này.</p>
+  <form method="post" action="{{ href('/periods', theme) }}">
+    {% include "errors.html" %}
+    <label>Từ ngày <input type="date" name="date_from" required value="{{ form.date_from }}"></label>
+    <label>Đến ngày <input type="date" name="date_to" required value="{{ form.date_to }}"></label>
+    <button type="submit">Chốt kỳ</button>
+  </form>
+</details>
 {% endblock %}
