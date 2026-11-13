@@ -17,6 +17,11 @@ const card = (id: string, status: AppStoreStatus, error: string | null = null): 
   hasPublic: id === 'pub',
   status,
   error,
+  category: null,
+  icon: null,
+  installedOnServer: false,
+  phase: null,
+  openHref: null,
 })
 const data = (apps: StoreApp[], workerAlive = true): AppStoreData => ({ workerAlive, apps })
 // jsdom has no Response, so the tests answer with the three members the component reads.

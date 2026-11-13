@@ -27,7 +27,7 @@ async function postRequest(request: Request) {
   // The HTX and the requester come from the session, never from the body.
   const tenant = await requireTenant()
   try {
-    const status = await new AppStoreUseCase(new PrismaAppStoreRepository()).requestChange(tenant, parsed.data.appId, parsed.data.action)
+    const status = await new AppStoreUseCase(new PrismaAppStoreRepository()).requestChange({ ...tenant, userName: session.user.name ?? null }, parsed.data.appId, parsed.data.action)
     return NextResponse.json({ data: { status } }, { status: 202 })
   } catch (error) {
     if (error instanceof AppStoreError) {

@@ -18,7 +18,8 @@ jest.mock('@/infrastructure/db/repositories/prisma-app-store-repository', () => 
 }))
 
 const mock = (fn: unknown) => fn as jest.Mock
-const app = { id: 'hello', name: 'Xin chào', version: '0.1.0', description: '', license: 'MIT', publisher: 'P', roles: ['manager'], hasPublic: false }
+const app = { id: 'hello', name: 'Xin chào', version: '0.1.0', description: '', license: 'MIT', publisher: 'P', roles: ['manager'], hasPublic: false, menu: [], hasDatabase: false, requiresCore: null, installedOnServer: false, store: {} }
+const cardOf = ({ menu: _m, hasDatabase: _d, requiresCore: _r, store: _s, ...card }: typeof app) => card
 const post = (body: unknown) =>
   POST(new Request('http://web/api/app-store/requests', { method: 'POST', body: typeof body === 'string' ? body : JSON.stringify(body) }), {})
 const get = () => GET(new Request('http://web/api/app-store'), {})
@@ -69,7 +70,7 @@ describe('GET /api/app-store', () => {
   test('200 with the worker flag and the cards of the session HTX', async () => {
     const response = await get()
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ data: { workerAlive: true, apps: [{ ...app, status: 'available', error: null }] } })
+    expect(await response.json()).toEqual({ data: { workerAlive: true, apps: [{ ...cardOf(app), status: 'available', error: null, category: null, icon: null, phase: null, openHref: null }] } })
     expect(repository.snapshot).toHaveBeenCalledWith('TC')
   })
 })
@@ -79,7 +80,7 @@ describe('POST /api/app-store/requests', () => {
     const response = await post({ appId: 'hello', action: 'ENABLE', htxCode: 'LB', htx_code: 'LB', requestedBy: 'attacker' })
     expect(response.status).toBe(202)
     expect(await response.json()).toEqual({ data: { status: 'installing' } })
-    expect(repository.createRequest).toHaveBeenCalledWith('hello', 'TC', 'ENABLE', 'u1')
+    expect(repository.createRequest).toHaveBeenCalledWith('hello', 'TC', 'ENABLE', 'u1', null)
   })
 
   test.each([
