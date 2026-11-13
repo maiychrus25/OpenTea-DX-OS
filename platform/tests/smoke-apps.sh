@@ -620,6 +620,11 @@ RS3=$(request tea-shop TC ENABLE)
 wait_request "$RS3" DONE "ENABLE tea-shop for TC again -> DONE" 120
 fresh_tokens
 wait_http 200 "tea-shop answers again after the second enable" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-shop/"
+# The public route can reach the gateway a moment after the manager route, so poll instead of reading once.
+for _ in $(seq 1 15); do
+  grep -q 'Chè Oolong' <<<"$(app_curl -s "$APP_GW/apps/tea-shop/public/TC")" && break
+  sleep 1
+done
 grep -q 'Chè Oolong' <<<"$(app_curl -s "$APP_GW/apps/tea-shop/public/TC")" && pass "the product created before the disable is on the public page again" \
   || fail "the product is gone after the second enable"
 RS4=$(request tea-shop TC DISABLE)
