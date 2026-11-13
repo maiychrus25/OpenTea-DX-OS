@@ -10,9 +10,12 @@ Ban quản trị HTX mở đợt đăng ký mua chung phân bón và thuốc b�
 
 | Đường dẫn (dưới `/apps/farm-supply`) | Ai vào | Nội dung |
 | --- | --- | --- |
-| `/` | `manager` | Các đợt của HTX trong token, mở đợt mới |
-| `/rounds/<id>` | `manager` | Mặt hàng, tổng hợp theo mặt hàng và theo hộ, thêm/sửa mặt hàng, đóng đợt, đánh dấu đã giao / đã thanh toán |
-| `/mine` | `farmer` | Đợt đang nhận đăng ký (một ô số lượng cho mỗi mặt hàng), đợt đã qua kèm số tiền và trạng thái |
+| `/` | `manager` | Số liệu (đợt đang mở, hộ đã đăng ký, tổng tiền, chưa giao, chưa thu tiền), danh sách đợt lọc `?status=open\|closed` có phân trang `?page=` (25 đợt một trang), mở đợt mới |
+| `/rounds/<id>` | `manager` | Các bước của đợt, mặt hàng, tổng hợp theo mặt hàng và theo hộ, thêm/sửa mặt hàng (lỗi hiện ngay cạnh ô, mã 400, giữ giá trị đã gõ), đóng đợt, đánh dấu đã giao / đã thanh toán |
+| `/rounds/<id>/items/export.csv` | `manager` | CSV mặt hàng: `Mặt hàng, Đơn vị, Đơn giá, Số hộ, Tổng số lượng, Thành tiền` |
+| `/rounds/<id>/households/export.csv` | `manager` | CSV theo hộ: `Hộ, Thành tiền, Đã giao, Đã trả tiền` |
+| `/rounds/<id>/print` | `manager` | Bảng kê giao hàng theo hộ, có cột ký nhận, mở ở cửa sổ chính để in |
+| `/mine` | `farmer` | Mỗi đợt đang nhận đăng ký là một thẻ (hạn, tổng tiền hiện tại của hộ, ô số lượng); các đợt đã qua có số tiền, trạng thái, phân trang |
 | `/healthz` | gateway | `ok` |
 
 Mọi thao tác ghi là `POST` và trả 303 về một trang dưới `/apps/farm-supply/`.

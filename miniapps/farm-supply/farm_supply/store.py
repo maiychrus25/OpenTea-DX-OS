@@ -72,6 +72,31 @@ class MyHistory:
     paid_at: datetime | None
 
 
+@dataclass(frozen=True)
+class RoundRow(Round):
+    household_count: int
+    amount_vnd: int
+
+
+@dataclass(frozen=True)
+class Overview:
+    open_rounds: int
+    open_households: int
+    open_amount_vnd: int
+    undelivered: int
+    unpaid: int
+
+
+@dataclass(frozen=True)
+class PrintLine:
+    household_id: str
+    household_name: str
+    item_name: str
+    unit: str
+    quantity: Decimal
+    amount_vnd: int
+
+
 ROUND_COLUMNS = "id, title, deadline, status, (status = 'OPEN' AND deadline > now()) AS accepting"
 MARKS = {"delivered": "delivered_at", "paid": "paid_at"}
 
@@ -88,6 +113,56 @@ def _all(conn, cls, sql: str, params) -> list:
 
 def list_rounds(conn, htx_code: str) -> list[Round]:
     return _all(conn, Round, f"SELECT {ROUND_COLUMNS} FROM rounds WHERE htx_code = %s ORDER BY created_at DESC", (htx_code,))
+
+
+STATUS_FILTERS = {"open": "OPEN", "closed": "CLOSED"}  # anything else means all rounds
+
+
+def count_rounds(conn, htx_code: str, status: str | None) -> int:
+    return conn.execute("SELECT count(*) FROM rounds WHERE htx_code = %s AND (%s::text IS NULL OR status = %s)",
+                        (htx_code, status, status)).fetchone()[0]
+
+
+def list_round_rows(conn, htx_code: str, status: str | None, limit: int, offset: int) -> list[RoundRow]:
+    """One page of rounds, newest first, with the households that registered and what they owe."""
+    return _all(conn, RoundRow, f"""
+        SELECT {ROUND_COLUMNS},
+               (SELECT count(DISTINCT r.household_id) FROM requests r
+                 WHERE r.round_id = rounds.id AND r.htx_code = rounds.htx_code)::int AS household_count,
+               (SELECT COALESCE(sum(round(r.quantity * i.price_vnd)), 0) FROM requests r
+                 JOIN items i ON i.id = r.item_id AND i.htx_code = r.htx_code
+                 WHERE r.round_id = rounds.id AND r.htx_code = rounds.htx_code)::bigint AS amount_vnd
+        FROM rounds WHERE htx_code = %s AND (%s::text IS NULL OR status = %s)
+        ORDER BY created_at DESC, id LIMIT %s OFFSET %s""", (htx_code, status, status, limit, offset))
+
+
+def overview(conn, htx_code: str) -> Overview:
+    """Open rounds: how many, which households registered, what they owe. Closed rounds: settlements still to do."""
+    rounds, households, amount = conn.execute("""
+        SELECT count(DISTINCT o.id), count(DISTINCT r.household_id), COALESCE(sum(round(r.quantity * i.price_vnd)), 0)::bigint
+        FROM rounds o LEFT JOIN requests r ON r.round_id = o.id AND r.htx_code = o.htx_code
+        LEFT JOIN items i ON i.id = r.item_id AND i.htx_code = r.htx_code
+        WHERE o.htx_code = %s AND o.status = 'OPEN'""", (htx_code,)).fetchone()
+    undelivered, unpaid = conn.execute("""
+        SELECT count(*) FILTER (WHERE s.delivered_at IS NULL), count(*) FILTER (WHERE s.paid_at IS NULL)
+        FROM settlements s JOIN rounds o ON o.id = s.round_id AND o.htx_code = s.htx_code
+        WHERE s.htx_code = %s AND o.status = 'CLOSED'""", (htx_code,)).fetchone()
+    return Overview(rounds, households, amount, undelivered, unpaid)
+
+
+def print_lines(conn, htx_code: str, round_id: UUID) -> list[PrintLine]:
+    """What each household is to receive, for the delivery sheet."""
+    return _all(conn, PrintLine, """
+        SELECT r.household_id, r.household_name, i.name AS item_name, i.unit, r.quantity,
+               round(r.quantity * i.price_vnd)::bigint AS amount_vnd
+        FROM requests r JOIN items i ON i.id = r.item_id AND i.htx_code = r.htx_code
+        WHERE r.htx_code = %s AND r.round_id = %s ORDER BY r.household_name, r.household_id, i.name, i.id""",
+                (htx_code, round_id))
+
+
+def item_round(conn, htx_code: str, item_id: UUID) -> UUID | None:
+    row = conn.execute("SELECT round_id FROM items WHERE id = %s AND htx_code = %s", (item_id, htx_code)).fetchone()
+    return row[0] if row else None
 
 
 def get_round(conn, htx_code: str, round_id: UUID) -> Round | None:
@@ -223,8 +298,15 @@ def my_items(conn, htx_code: str, household_id: str) -> list[MyItem]:
                 (household_id, htx_code))
 
 
-def my_history(conn, htx_code: str, household_id: str) -> list[MyHistory]:
-    """Rounds no longer taking registrations in which this household asked for something."""
+def count_my_history(conn, htx_code: str, household_id: str) -> int:
+    return conn.execute("""SELECT count(DISTINCT o.id) FROM rounds o JOIN requests r ON r.round_id = o.id
+                           AND r.htx_code = o.htx_code AND r.household_id = %s
+                           WHERE o.htx_code = %s AND NOT (o.status = 'OPEN' AND o.deadline > now())""",
+                        (household_id, htx_code)).fetchone()[0]
+
+
+def my_history(conn, htx_code: str, household_id: str, limit: int | None = None, offset: int = 0) -> list[MyHistory]:
+    """Rounds no longer taking registrations in which this household asked for something (LIMIT NULL = all)."""
     return _all(conn, MyHistory, """
         SELECT o.id AS round_id, o.title, o.status, sum(round(r.quantity * i.price_vnd))::bigint AS amount_vnd,
                s.delivered_at, s.paid_at
@@ -232,4 +314,4 @@ def my_history(conn, htx_code: str, household_id: str) -> list[MyHistory]:
         JOIN items i ON i.id = r.item_id AND i.htx_code = r.htx_code
         LEFT JOIN settlements s ON s.round_id = o.id AND s.household_id = r.household_id AND s.htx_code = o.htx_code
         WHERE o.htx_code = %s AND NOT (o.status = 'OPEN' AND o.deadline > now())
-        GROUP BY o.id, s.delivered_at, s.paid_at ORDER BY o.deadline DESC""", (household_id, htx_code))
+        GROUP BY o.id, s.delivered_at, s.paid_at ORDER BY o.deadline DESC, o.id LIMIT %s OFFSET %s""", (household_id, htx_code, limit, offset))

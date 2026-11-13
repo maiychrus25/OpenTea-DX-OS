@@ -1,0 +1,31 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Bảng kê giao hàng {{ round.title }}{% endblock %}
+{% block main %}
+<section class="print-sheet">
+  {{ kit.print_bar(back) }}
+  <h1>Bảng kê giao hàng</h1>
+  <p>{{ round.title }} · HTX {{ htx }} · Hạn đăng ký {{ round.deadline | vn_time }}</p>
+  <p class="print-only">In ngày {{ printed }}</p>
+  {% if round.status == "OPEN" %}<p class="notice no-print" role="status">Đợt chưa đóng nên số liệu còn có thể thay đổi.</p>{% endif %}
+  {% if sheet %}
+  <table role="table">
+    <thead role="rowgroup"><tr role="row"><th role="columnheader">Nông hộ</th><th role="columnheader">Hàng giao</th><th role="columnheader">Thành tiền</th><th role="columnheader">Ký nhận</th></tr></thead>
+    <tbody role="rowgroup">
+    {% for h in sheet %}
+      <tr role="row">
+        <td role="cell" data-label="Nông hộ">{{ h.name }}</td>
+        <td role="cell" data-label="Hàng giao"><ul>{% for l in h.lines %}<li>{{ l.item_name }}: {{ number(l.quantity) }} {{ l.unit }}</li>{% endfor %}</ul></td>
+        <td role="cell" data-label="Thành tiền">{{ h.total | vnd }}</td>
+        <td role="cell" data-label="Ký nhận" class="signature"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  {{ kit.empty("Chưa có hộ nào đăng ký trong đợt này.") }}
+  {% endif %}
+</section>
+{% endblock %}

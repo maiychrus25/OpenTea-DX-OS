@@ -1,32 +1,62 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "kit.html" as kit %}
 {% block title %}Các đợt mua chung{% endblock %}
 {% block main %}
-<h1>Vật tư mua chung HTX {{ htx }}</h1>
+{{ kit.app_header("Vật tư mua chung", "HTX " ~ htx ~ " · gom nhu cầu phân bón và thuốc bảo vệ thực vật theo từng đợt") }}
+{{ kit.tabs(tabs, "rounds") }}
+{{ kit.stats([
+  {"label": "Đợt đang mở", "value": overview.open_rounds, "hint": "chưa đóng đợt"},
+  {"label": "Hộ đã đăng ký", "value": overview.open_households, "hint": "trong các đợt đang mở"},
+  {"label": "Tổng tiền đăng ký", "value": overview.open_amount_vnd | vnd, "hint": "các đợt đang mở"},
+  {"label": "Chưa giao", "value": overview.undelivered, "hint": "hộ trong các đợt đã đóng"},
+  {"label": "Chưa thu tiền", "value": overview.unpaid, "hint": "hộ trong các đợt đã đóng"}
+]) }}
+
+<h2>Mở đợt mới</h2>
+<details class="disclosure"{% if errors %} open{% endif %}>
+  <summary>Mở đợt đăng ký mới</summary>
+  <form method="post" action="{{ href('/rounds', theme) }}">
+    <label>Tên đợt <input name="title" maxlength="120" required value="{{ form.title }}"{% if errors.title %} aria-invalid="true"{% endif %}>
+      {{ kit.field_error(errors, "title") }}</label>
+    <label>Hạn đăng ký (giờ Việt Nam) <input type="datetime-local" name="deadline" required value="{{ form.deadline }}"{% if errors.deadline %} aria-invalid="true"{% endif %}>
+      {{ kit.field_error(errors, "deadline") }}</label>
+    <button type="submit">Mở đợt</button>
+  </form>
+</details>
+
 <h2>Các đợt đăng ký</h2>
+<form class="toolbar" method="get" action="{{ href('/') }}">
+  {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+  <label>Trạng thái
+    <select name="status">
+      <option value=""{% if not shown %} selected{% endif %}>Tất cả</option>
+      <option value="open"{% if shown == "open" %} selected{% endif %}>Đang mở</option>
+      <option value="closed"{% if shown == "closed" %} selected{% endif %}>Đã đóng</option>
+    </select>
+  </label>
+  <button type="submit">Lọc</button>
+</form>
 {% if rounds %}
 <table role="table">
-  <thead role="rowgroup"><tr role="row"><th role="columnheader">Đợt</th><th role="columnheader">Hạn đăng ký</th><th role="columnheader">Trạng thái</th></tr></thead>
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Đợt</th><th role="columnheader">Hạn đăng ký</th><th role="columnheader">Hộ đăng ký</th><th role="columnheader">Tổng tiền</th><th role="columnheader">Trạng thái</th></tr></thead>
   <tbody role="rowgroup">
   {% for r in rounds %}
     <tr role="row">
       <td role="cell" data-label="Đợt"><a href="{{ href('/rounds/' ~ r.id, theme) }}">{{ r.title }}</a></td>
       <td role="cell" data-label="Hạn đăng ký">{{ r.deadline | vn_time }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ round_status(r) }}</span></td>
+      <td role="cell" data-label="Hộ đăng ký">{{ r.household_count }}</td>
+      <td role="cell" data-label="Tổng tiền">{{ r.amount_vnd | vnd }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill{{ round_tone(r) }}">{{ round_status(r) }}</span></td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
+{{ kit.pagination(paging, links[0], links[1]) }}
+{% elif shown %}
+{{ kit.empty("Không có đợt nào ở trạng thái này.", "Xem tất cả đợt", href('/', theme)) }}
 {% else %}
-<p>HTX chưa mở đợt nào. Tạo đợt đầu tiên bằng biểu mẫu dưới đây, rồi thêm các mặt hàng.</p>
+{{ kit.empty("HTX chưa mở đợt nào. Mở đợt đầu tiên ở khung phía trên, rồi thêm các mặt hàng.") }}
 {% endif %}
-
-<h2>Mở đợt mới</h2>
-<form method="post" action="{{ href('/rounds', theme) }}">
-  {% if errors %}<div class="error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
-  <label>Tên đợt <input name="title" maxlength="120" required value="{{ form.title }}"></label>
-  <label>Hạn đăng ký (giờ Việt Nam) <input type="datetime-local" name="deadline" required value="{{ form.deadline }}"></label>
-  <button type="submit">Mở đợt</button>
-</form>
 {% endblock %}

@@ -1,15 +1,25 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "kit.html" as kit %}
 {% block title %}{{ round.title }}{% endblock %}
 {% block main %}
-<p><a href="{{ href('', theme) }}">← Tất cả đợt</a></p>
+{% call kit.app_header(round.title, "Hạn đăng ký " ~ (round.deadline | vn_time)) %}
+  {{ kit.print_link(href('/rounds/' ~ round.id ~ '/print', theme), "In bảng kê giao hàng") }}
+{% endcall %}
+{{ kit.tabs(tabs, "rounds") }}
+<p><span class="pill{{ round_tone(round) }}">{{ round_status(round) }}</span></p>
 {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
-<h1>{{ round.title }} <span class="pill">{{ round_status(round) }}</span></h1>
-<p>Hạn đăng ký: {{ round.deadline | vn_time }} · Tổng cộng: {{ total | vnd }}</p>
+{{ kit.steps(steps, step) }}
+{{ kit.stats([
+  {"label": "Mặt hàng", "value": items | length},
+  {"label": "Hộ đăng ký", "value": households | length},
+  {"label": "Tổng cộng", "value": total | vnd}
+]) }}
 
 <h2>Mặt hàng</h2>
 {% if items %}
+{{ kit.export_link(href('/rounds/' ~ round.id ~ '/items/export.csv', theme), "Tải CSV mặt hàng") }}
 <table role="table">
   <thead role="rowgroup"><tr role="row"><th role="columnheader">Mặt hàng</th><th role="columnheader">Đơn vị</th><th role="columnheader">Đơn giá</th><th role="columnheader">Số hộ đăng ký</th><th role="columnheader">Tổng số lượng</th><th role="columnheader">Thành tiền</th></tr></thead>
   <tbody role="rowgroup">
@@ -25,32 +35,54 @@
   {% endfor %}
   </tbody>
 </table>
+{% if chart %}{{ kit.chart("Thành tiền theo mặt hàng", chart) }}{% endif %}
 {% else %}
-<p>Đợt chưa có mặt hàng nào.</p>
+{{ kit.empty("Đợt chưa có mặt hàng nào." ~ (" Thêm mặt hàng ở khung bên dưới." if round.status == "OPEN" else "")) }}
 {% endif %}
 
 {% if round.status == "OPEN" %}
-{% for i in items if i.request_count == 0 %}
-{% if loop.first %}<h2>Sửa mặt hàng chưa có hộ đăng ký</h2>{% endif %}
-<form method="post" action="{{ href('/items/' ~ i.id ~ '/edit', theme) }}" aria-label="Sửa {{ i.name }}">
-  <label>Tên mặt hàng <input name="name" maxlength="120" required value="{{ i.name }}"></label>
-  <label>Đơn vị tính <input name="unit" maxlength="20" required value="{{ i.unit }}"></label>
-  <label>Đơn giá (đồng) <input type="number" name="price_vnd" min="0" step="1" required value="{{ i.price_vnd }}"></label>
-  <button type="submit" class="secondary">Lưu</button>
-</form>
-{% endfor %}
-
+{% set add_open = item_form.target == "new" %}
+{% set add_err = item_form.errors if add_open else {} %}
+{% set add_val = item_form.typed if add_open else {} %}
 <h2>Thêm mặt hàng</h2>
-<form method="post" action="{{ href('/rounds/' ~ round.id ~ '/items', theme) }}">
-  <label>Tên mặt hàng <input name="name" maxlength="120" required></label>
-  <label>Đơn vị tính (ví dụ bao 50kg) <input name="unit" maxlength="20" required></label>
-  <label>Đơn giá (đồng) <input type="number" name="price_vnd" min="0" step="1" required></label>
-  <button type="submit">Thêm mặt hàng</button>
-</form>
+<details class="disclosure"{% if add_open %} open{% endif %}>
+  <summary>Thêm mặt hàng mới</summary>
+  <form method="post" action="{{ href('/rounds/' ~ round.id ~ '/items', theme) }}">
+    <label>Tên mặt hàng <input name="name" maxlength="120" required value="{{ add_val.name }}"{% if add_err.name %} aria-invalid="true"{% endif %}>
+      {{ kit.field_error(add_err, "name") }}</label>
+    <label>Đơn vị tính (ví dụ bao 50kg) <input name="unit" maxlength="20" required value="{{ add_val.unit }}"{% if add_err.unit %} aria-invalid="true"{% endif %}>
+      {{ kit.field_error(add_err, "unit") }}</label>
+    <label>Đơn giá (đồng) <input type="text" inputmode="numeric" name="price_vnd" required value="{{ add_val.price_vnd }}"{% if add_err.price_vnd %} aria-invalid="true"{% endif %}>
+      {{ kit.field_error(add_err, "price_vnd") }}</label>
+    <button type="submit">Thêm mặt hàng</button>
+  </form>
+</details>
+
+{% set editable = items | selectattr("request_count", "equalto", 0) | list %}
+{% if editable %}
+<details class="disclosure"{% if item_form.target and item_form.target != "new" %} open{% endif %}>
+  <summary>Sửa mặt hàng chưa có hộ đăng ký</summary>
+  {% for i in editable %}
+  {% set mine_open = item_form.target == (i.id | string) %}
+  {% set mine_err = item_form.errors if mine_open else {} %}
+  {% set mine_val = item_form.typed if mine_open else {} %}
+  <form method="post" action="{{ href('/items/' ~ i.id ~ '/edit', theme) }}" aria-label="Sửa {{ i.name }}">
+    <label>Tên mặt hàng <input name="name" maxlength="120" required value="{{ mine_val.name if mine_open else i.name }}"{% if mine_err.name %} aria-invalid="true"{% endif %}>
+      {{ kit.field_error(mine_err, "name") }}</label>
+    <label>Đơn vị tính <input name="unit" maxlength="20" required value="{{ mine_val.unit if mine_open else i.unit }}"{% if mine_err.unit %} aria-invalid="true"{% endif %}>
+      {{ kit.field_error(mine_err, "unit") }}</label>
+    <label>Đơn giá (đồng) <input type="text" inputmode="numeric" name="price_vnd" required value="{{ mine_val.price_vnd if mine_open else i.price_vnd }}"{% if mine_err.price_vnd %} aria-invalid="true"{% endif %}>
+      {{ kit.field_error(mine_err, "price_vnd") }}</label>
+    <button type="submit" class="secondary">Lưu</button>
+  </form>
+  {% endfor %}
+</details>
+{% endif %}
 {% endif %}
 
 <h2>Tổng hợp theo hộ</h2>
 {% if households %}
+{{ kit.export_link(href('/rounds/' ~ round.id ~ '/households/export.csv', theme), "Tải CSV theo hộ") }}
 <table role="table">
   <thead role="rowgroup"><tr role="row"><th role="columnheader">Nông hộ</th><th role="columnheader">Phải trả</th><th role="columnheader">Giao hàng</th><th role="columnheader">Thanh toán</th></tr></thead>
   <tbody role="rowgroup">
@@ -59,28 +91,31 @@
       <td role="cell" data-label="Nông hộ">{{ h.household_name }}</td>
       <td role="cell" data-label="Phải trả">{{ h.amount_vnd | vnd }}</td>
       <td role="cell" data-label="Giao hàng">
-        {% if h.delivered_at %}Đã giao {{ h.delivered_at | vn_time }}
-        {% elif round.status == "CLOSED" %}<form method="post" action="{{ href('/rounds/' ~ round.id ~ '/settlements/' ~ h.household_id ~ '/delivered', theme) }}"><button type="submit" class="secondary" aria-label="Đánh dấu đã giao cho {{ h.household_name }}">Đánh dấu đã giao</button></form>
-        {% else %}Chờ đóng đợt{% endif %}
+        {% if h.delivered_at %}<span class="pill">Đã giao</span> {{ h.delivered_at | vn_time }}
+        {% elif round.status == "CLOSED" %}<span class="actions"><form method="post" action="{{ href('/rounds/' ~ round.id ~ '/settlements/' ~ h.household_id ~ '/delivered', theme) }}"><button type="submit" class="secondary" aria-label="Đánh dấu đã giao cho {{ h.household_name }}">Đánh dấu đã giao</button></form></span>
+        {% else %}<span class="pill neutral">Chờ đóng đợt</span>{% endif %}
       </td>
       <td role="cell" data-label="Thanh toán">
-        {% if h.paid_at %}Đã thanh toán {{ h.paid_at | vn_time }}
-        {% elif round.status == "CLOSED" %}<form method="post" action="{{ href('/rounds/' ~ round.id ~ '/settlements/' ~ h.household_id ~ '/paid', theme) }}"><button type="submit" class="secondary" aria-label="Đánh dấu đã thanh toán cho {{ h.household_name }}">Đánh dấu đã thanh toán</button></form>
-        {% else %}Chờ đóng đợt{% endif %}
+        {% if h.paid_at %}<span class="pill">Đã thanh toán</span> {{ h.paid_at | vn_time }}
+        {% elif round.status == "CLOSED" %}<span class="actions"><form method="post" action="{{ href('/rounds/' ~ round.id ~ '/settlements/' ~ h.household_id ~ '/paid', theme) }}"><button type="submit" class="secondary" aria-label="Đánh dấu đã thanh toán cho {{ h.household_name }}">Đánh dấu đã thanh toán</button></form></span>
+        {% else %}<span class="pill neutral">Chờ đóng đợt</span>{% endif %}
       </td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
 {% else %}
-<p>Chưa có hộ nào đăng ký.</p>
+{{ kit.empty("Chưa có hộ nào đăng ký.") }}
 {% endif %}
 
 {% if round.status == "OPEN" %}
 <h2>Đóng đợt</h2>
-<form method="post" action="{{ href('/rounds/' ~ round.id ~ '/close', theme) }}">
-  <p>Đóng đợt là không mở lại được. Sau khi đóng, các hộ không đăng ký hay sửa được nữa, và anh chị đánh dấu giao hàng, thanh toán theo từng hộ.</p>
-  <button type="submit" class="secondary">Đóng đợt này</button>
-</form>
+<details class="disclosure">
+  <summary>Đóng đợt đăng ký này</summary>
+  <form method="post" action="{{ href('/rounds/' ~ round.id ~ '/close', theme) }}">
+    <p>Đóng đợt là không mở lại được. Sau khi đóng, các hộ không đăng ký hay sửa được nữa, và anh chị đánh dấu giao hàng, thanh toán theo từng hộ.</p>
+    <button type="submit" class="danger">Đóng đợt này</button>
+  </form>
+</details>
 {% endif %}
 {% endblock %}
