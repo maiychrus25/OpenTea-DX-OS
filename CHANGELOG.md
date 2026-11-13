@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.10.1] - 2026-11-13
+
 ### Added
 
 - **`make web-up` and `make gateway-up`**: `web-up` rebuilds or starts `web` and `disease-api` on the generated route file (it replaces the hand-typed `docker compose up` for `web`, in the README, `docs/miniapps.md` and CI); `gateway-up` puts the gateway back on that file after a hand-typed compose command recreated it on the base one.
@@ -452,7 +456,8 @@ The `v1.8.0` tag has no GitHub Release, images or bundle: the release workflow's
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.10.1...HEAD
+[1.10.1]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.1
 [1.10.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.0
 [1.9.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.9.0
 [1.8.1]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.8.1
