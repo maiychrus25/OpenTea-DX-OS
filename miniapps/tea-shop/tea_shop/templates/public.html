@@ -2,6 +2,7 @@
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
 {% import "kit.html" as kit %}
+{% import "pills.html" as pills %}
 {% block title %}Cửa hàng chè HTX {{ htx }}{% endblock %}
 {% block main %}
 {{ kit.app_header("Cửa hàng chè HTX " ~ htx, "Chọn số lượng, để lại họ tên, số điện thoại và địa chỉ nhận hàng. HTX sẽ gọi điện xác nhận; thanh toán khi nhận hàng.") }}
@@ -14,7 +15,7 @@
     <li class="card" aria-labelledby="product-{{ p.id }}">
       <h3 id="product-{{ p.id }}">{{ p.name }}</h3>
       <p>{{ p.pack }}</p>
-      <p><strong>{{ p.price_vnd | vnd }}</strong> · {% if p.stock %}<span class="pill">Còn {{ p.stock }}</span>{% else %}<span class="pill">Hết hàng</span>{% endif %}</p>
+      <p><strong>{{ p.price_vnd | vnd }}</strong> · {{ pills.stock(p) }}</p>
       {% if p.lot_code %}<p><a href="/lot/{{ p.lot_code }}">Xem nguồn gốc</a></p>{% endif %}
       {% if p.stock %}
       <input type="hidden" name="product_id" value="{{ p.id }}">

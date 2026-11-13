@@ -2,6 +2,7 @@
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
 {% import "kit.html" as kit %}
+{% import "pills.html" as pills %}
 {% block title %}Sản phẩm của HTX {{ htx }}{% endblock %}
 {% block main %}
 {% call kit.app_header("Sản phẩm", "HTX " ~ htx ~ " · mới thêm ở trên cùng") %}
@@ -31,8 +32,8 @@
       <td role="cell" data-label="Sản phẩm"><a href="{{ href('/products/' ~ p.id ~ '/edit', theme) }}">{{ p.name }}</a></td>
       <td role="cell" data-label="Quy cách">{{ p.pack }}</td>
       <td role="cell" data-label="Giá">{{ p.price_vnd | vnd }}</td>
-      <td role="cell" data-label="Tồn kho">{{ p.stock }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ "Đang bán" if p.active else "Ngừng bán" }}</span></td>
+      <td role="cell" data-label="Tồn kho">{{ pills.stock(p) }}</td>
+      <td role="cell" data-label="Trạng thái">{{ pills.product_state(p) }}</td>
       <td role="cell" data-label="Thao tác"><span class="actions"><a class="button secondary" href="{{ href('/products/' ~ p.id ~ '/edit', theme) }}">Sửa</a></span></td>
     </tr>
   {% endfor %}

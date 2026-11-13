@@ -2,6 +2,7 @@
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
 {% import "kit.html" as kit %}
+{% import "pills.html" as pills %}
 {% block title %}Đơn {{ order.code }}{% endblock %}
 {% block main %}
 {% call kit.app_header("Đơn " ~ order.code, "Đặt lúc " ~ (order.created_at | vn_time)) %}
@@ -11,7 +12,7 @@
 <p><a href="{{ href('/orders', theme) }}">← Tất cả đơn hàng</a></p>
 {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
 {% if order.status == "CANCELLED" %}
-<p><span class="pill">{{ order_status[order.status] }}</span></p>
+<p>{{ pills.order(order.status) }}</p>
 {% else %}
 {{ kit.steps(step_labels, step_index[order.status]) }}
 {% endif %}

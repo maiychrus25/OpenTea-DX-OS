@@ -1,6 +1,7 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% import "kit.html" as kit %}
+{% import "pills.html" as pills %}
 <!doctype html>
 <html lang="vi"{% if theme %} data-theme="{{ theme }}"{% endif %}>
 <head>
@@ -33,5 +34,9 @@
 </table>
 <p>Tổng cộng: <strong>{{ order.total_vnd | vnd }}</strong></p>
 <p><strong>Thanh toán khi nhận hàng</strong>: người giao thu {{ order.total_vnd | vnd }}.</p>
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Người giao hàng</th><th role="columnheader">Người nhận hàng</th></tr></thead>
+  <tbody role="rowgroup"><tr role="row"><td role="cell" class="signature" data-label="Người giao hàng"></td><td role="cell" class="signature" data-label="Người nhận hàng"></td></tr></tbody>
+</table>
 </main></body>
 </html>

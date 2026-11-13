@@ -2,6 +2,7 @@
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
 {% import "kit.html" as kit %}
+{% import "pills.html" as pills %}
 {% block title %}Cửa hàng của HTX {{ htx }}{% endblock %}
 {% block main %}
 {% call kit.app_header("Cửa hàng chè HTX " ~ htx, "Đơn hàng, sản phẩm và doanh thu của cửa hàng") %}
@@ -37,7 +38,7 @@
       <td role="cell" data-label="Mã đơn"><a href="{{ href('/orders/' ~ o.id, theme) }}">{{ o.code }}</a></td>
       <td role="cell" data-label="Khách">{{ o.customer_name }}</td>
       <td role="cell" data-label="Tổng tiền">{{ o.total_vnd | vnd }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ order_status[o.status] }}</span></td>
+      <td role="cell" data-label="Trạng thái">{{ pills.order(o.status) }}</td>
       <td role="cell" data-label="Đặt lúc">{{ o.created_at | vn_time }}</td>
     </tr>
   {% endfor %}
@@ -58,8 +59,8 @@
       <td role="cell" data-label="Sản phẩm"><a href="{{ href('/products/' ~ p.id ~ '/edit', theme) }}">{{ p.name }}</a></td>
       <td role="cell" data-label="Quy cách">{{ p.pack }}</td>
       <td role="cell" data-label="Giá">{{ p.price_vnd | vnd }}</td>
-      <td role="cell" data-label="Tồn kho">{{ p.stock }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ "Đang bán" if p.active else "Ngừng bán" }}</span></td>
+      <td role="cell" data-label="Tồn kho">{{ pills.stock(p) }}</td>
+      <td role="cell" data-label="Trạng thái">{{ pills.product_state(p) }}</td>
     </tr>
   {% endfor %}
   </tbody>

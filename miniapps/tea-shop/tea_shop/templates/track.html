@@ -2,6 +2,7 @@
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
 {% import "kit.html" as kit %}
+{% import "pills.html" as pills %}
 {% block title %}Tra cứu đơn hàng{% endblock %}
 {% block main %}
 {{ kit.app_header("Tra cứu đơn hàng", "Nhập mã đơn và số điện thoại đã dùng khi đặt hàng") }}
@@ -13,7 +14,7 @@
 {% set o, items = found %}
 <h2>Đơn {{ o.code }}</h2>
 {% if o.status == "CANCELLED" %}
-<p><span class="pill">{{ order_status[o.status] }}</span></p>
+<p>{{ pills.order(o.status) }}</p>
 {% else %}
 {{ kit.steps(step_labels, step_index[o.status]) }}
 {% endif %}

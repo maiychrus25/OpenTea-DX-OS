@@ -323,7 +323,7 @@ def test_tracking_shows_the_status_steps(client, db, status, current):
 def test_tracking_cancelled_order_shows_a_pill_instead_of_steps(client, db):
     add_order(db, status="CANCELLED", n=341)
     html = client.get(f"/public/TC/order?code={code_for(341)}&phone=0912345678").text
-    assert 'class="steps"' not in html and '<span class="pill">Đã huỷ</span>' in html
+    assert 'class="steps"' not in html and '<span class="pill danger">Đã huỷ</span>' in html
 
 
 def test_new_pages_keep_the_theme_and_have_no_script_or_style(client, db):
@@ -360,3 +360,42 @@ def test_order_detail_has_steps_and_keeps_its_contract(client, db):
 def test_edited_product_notice_shows_on_the_overview(client, db):
     assert "Đã lưu sản phẩm." in client.get("/?notice=saved", headers=MANAGER).text
     assert "Đã lưu sản phẩm." not in client.get("/?notice=%3Cb%3E", headers=MANAGER).text
+
+
+def test_status_pills_carry_their_tone(client, db):
+    for status, n in (("NEW", 400), ("CONFIRMED", 401), ("SHIPPING", 402), ("DONE", 403), ("CANCELLED", 404)):
+        add_order(db, status=status, n=n)
+    add_product(db, name="Còn nhiều", stock=6)
+    add_product(db, name="Còn ít", stock=5)
+    add_product(db, name="Còn một", stock=1)
+    add_product(db, name="Hết sạch", stock=0)
+    add_product(db, name="Đã ngừng", stock=3, active=False)
+    for path in ("/", "/orders"):
+        html = client.get(path, headers=MANAGER).text
+        assert html.count('<span class="pill warn">Mới</span>') == 1, path
+        assert html.count('<span class="pill danger">Đã huỷ</span>') == 1, path
+        for plain in ("Đã xác nhận", "Đang giao", "Hoàn tất"):
+            assert f'<span class="pill">{plain}</span>' in html, (path, plain)
+    for path in ("/", "/products"):
+        html = client.get(path, headers=MANAGER).text
+        assert '<span class="pill warn">Còn 5</span>' in html and '<span class="pill warn">Còn 1</span>' in html
+        assert '<span class="pill danger">Hết hàng</span>' in html and '<span class="pill">Còn 6</span>' in html
+        assert '<span class="pill neutral">Ngừng bán</span>' in html and '<span class="pill">Đang bán</span>' in html
+    public = client.get("/public/TC").text
+    assert '<span class="pill warn">Còn 5</span>' in public and '<span class="pill danger">Hết hàng</span>' in public
+    assert '<span class="pill">Còn 6</span>' in public and "Đã ngừng" not in public
+    track = client.get(f"/public/TC/order?code={code_for(404)}&phone=0912345678").text
+    assert '<span class="pill danger">Đã huỷ</span>' in track
+    order_id = db.execute("SELECT id FROM orders WHERE status = 'NEW'").fetchone()[0]
+    assert '<span class="pill warn">Mới</span>' not in client.get(f"/orders/{order_id}", headers=MANAGER).text  # steps, not a pill
+    cancelled = db.execute("SELECT id FROM orders WHERE status = 'CANCELLED'").fetchone()[0]
+    assert '<span class="pill danger">Đã huỷ</span>' in client.get(f"/orders/{cancelled}", headers=MANAGER).text
+
+
+def test_delivery_note_has_a_signature_row_and_forms_use_inline_checkbox(client, db):
+    order_id = add_order(db, n=410, items=[("Trà sen", "Hộp", 10000, 1)])
+    html = client.get(f"/orders/{order_id}/print", headers=MANAGER).text
+    assert html.count('class="signature"') == 2 and "Người giao hàng" in html and "Người nhận hàng" in html
+    product = add_product(db)
+    for page in (client.get("/", headers=MANAGER).text, client.get(f"/products/{product}/edit", headers=MANAGER).text):
+        assert re.search(r'<label><input type="checkbox" name="active"[^>]*> Đang bán</label>', page)
