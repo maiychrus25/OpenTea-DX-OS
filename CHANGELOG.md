@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.11.0] - 2026-11-13
+
 ### Added
 
 - **Shared mini-app kit** (`platform/appkit/`): CSS components in `dxos-app.css` (header, tabs, stats, SVG bar chart, toolbar, pagination, cards, steps, empty state, field errors, disclosure, row actions, print sheet), Jinja macros (`kit.html`), Python helpers (`appkit.py`: paging, safe date and integer parameters, `ILIKE` escaping, Vietnamese money, number and date formats, CSV with BOM and formula escaping, chart widths) and a showcase page. `make appkit-sync` copies the two files into the four apps; `make lint` fails when a copy differs.
@@ -480,7 +484,8 @@ The `v1.8.0` tag has no GitHub Release, images or bundle: the release workflow's
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.10.1...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.11.0
 [1.10.1]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.1
 [1.10.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.0
 [1.9.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.9.0
