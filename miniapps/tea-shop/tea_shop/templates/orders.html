@@ -1,0 +1,51 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Đơn hàng của HTX {{ htx }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Đơn hàng", "HTX " ~ htx ~ " · mới nhất ở trên cùng") %}
+  {{ kit.export_link(export_href) }}
+{% endcall %}
+{{ kit.tabs(tab_items(theme), "orders") }}
+
+<form class="toolbar" method="get" action="{{ href('/orders', theme) }}">
+  {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+  <label>Tìm kiếm
+    <input type="search" name="q" maxlength="100" value="{{ filters.q }}" placeholder="Mã đơn, tên khách hoặc số điện thoại">
+  </label>
+  <label>Trạng thái
+    <select name="status">
+      <option value="">Tất cả</option>
+      {% for key, label in order_status.items() %}<option value="{{ key }}"{% if filters.status == key %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Từ ngày <input type="date" name="from" value="{{ filters['from'] }}"></label>
+  <label>Đến ngày <input type="date" name="to" value="{{ filters.to }}"></label>
+  <button type="submit">Lọc</button>
+</form>
+
+{% if orders %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Mã đơn</th><th role="columnheader">Khách</th><th role="columnheader">Tổng tiền</th><th role="columnheader">Trạng thái</th><th role="columnheader">Đặt lúc</th><th role="columnheader">Thao tác</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for o in orders %}
+    <tr role="row">
+      <td role="cell" data-label="Mã đơn"><a href="{{ href('/orders/' ~ o.id, theme) }}">{{ o.code }}</a></td>
+      <td role="cell" data-label="Khách">{{ o.customer_name }}</td>
+      <td role="cell" data-label="Tổng tiền">{{ o.total_vnd | vnd }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill">{{ order_status[o.status] }}</span></td>
+      <td role="cell" data-label="Đặt lúc">{{ o.created_at | vn_time }}</td>
+      <td role="cell" data-label="Thao tác"><span class="actions">
+        <a class="button secondary" href="{{ href('/orders/' ~ o.id, theme) }}">Xem</a>
+        {{ kit.print_link(href('/orders/' ~ o.id ~ '/print', theme), "In phiếu giao") }}
+      </span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ kit.pagination(page, prev_href, next_href) }}
+{% else %}
+{{ kit.empty("Không có đơn hàng nào khớp bộ lọc." if (filters.q or filters.status or filters['from'] or filters.to) else "Chưa có đơn hàng nào.") }}
+{% endif %}
+{% endblock %}

@@ -4,7 +4,7 @@ apiVersion: dxos/v1
 id: tea-shop
 name: Cửa hàng chè
 description: Giới thiệu sản phẩm chè, nhận đơn đặt hàng và theo dõi đơn.
-version: 0.1.0
+version: 0.2.0
 license: MIT
 publisher: OpenTea Developers
 requires: { core: ">=1.10.0" }

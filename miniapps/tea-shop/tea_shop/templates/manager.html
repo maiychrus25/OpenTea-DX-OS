@@ -1,12 +1,33 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "kit.html" as kit %}
 {% block title %}Cửa hàng của HTX {{ htx }}{% endblock %}
 {% block main %}
-<h1>Cửa hàng chè HTX {{ htx }}</h1>
+{% call kit.app_header("Cửa hàng chè HTX " ~ htx, "Đơn hàng, sản phẩm và doanh thu của cửa hàng") %}
+  {{ kit.export_link(href('/orders/export.csv', theme), "Tải đơn hàng (CSV)") }}
+{% endcall %}
+{{ kit.tabs(tab_items(theme), "overview") }}
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+
+{{ kit.stats([
+  {"label": "Đơn chờ xác nhận", "value": figures.waiting},
+  {"label": "Đang giao", "value": figures.shipping},
+  {"label": "Doanh thu tháng này", "value": figures.month_revenue | vnd, "hint": "Tính các đơn đã hoàn tất"},
+  {"label": "Sắp hết hàng", "value": figures.low_stock, "hint": "Đang bán, tồn kho từ 5 trở xuống"}
+]) }}
+
+{{ kit.chart("Doanh thu 14 ngày gần nhất", daily) }}
+{% if top %}
+{{ kit.chart("Bán chạy tháng này", top, "gói") }}
+{% else %}
+<h2>Bán chạy tháng này</h2>
+{{ kit.empty("Tháng này chưa có đơn hàng nào.") }}
+{% endif %}
+
 <p>Trang đặt hàng cho khách (gửi đường dẫn hoặc in mã QR): <a href="{{ href('/public/' ~ htx, theme) }}">{{ prefix }}/public/{{ htx }}</a></p>
 
-<h2>Đơn hàng</h2>
+<h2>Đơn hàng mới nhất</h2>
 {% if orders %}
 <table role="table">
   <thead role="rowgroup"><tr role="row"><th role="columnheader">Mã đơn</th><th role="columnheader">Khách</th><th role="columnheader">Tổng tiền</th><th role="columnheader">Trạng thái</th><th role="columnheader">Đặt lúc</th></tr></thead>
@@ -22,11 +43,12 @@
   {% endfor %}
   </tbody>
 </table>
+<p><a href="{{ href('/orders', theme) }}">Xem tất cả đơn hàng →</a></p>
 {% else %}
-<p>Chưa có đơn hàng nào.</p>
+{{ kit.empty("Chưa có đơn hàng nào. Gửi trang đặt hàng cho khách để nhận đơn đầu tiên.") }}
 {% endif %}
 
-<h2>Sản phẩm</h2>
+<h2>Sản phẩm mới nhất</h2>
 {% if products %}
 <table role="table">
   <thead role="rowgroup"><tr role="row"><th role="columnheader">Sản phẩm</th><th role="columnheader">Quy cách</th><th role="columnheader">Giá</th><th role="columnheader">Tồn kho</th><th role="columnheader">Trạng thái</th></tr></thead>
@@ -42,11 +64,12 @@
   {% endfor %}
   </tbody>
 </table>
+<p><a href="{{ href('/products', theme) }}">Xem tất cả sản phẩm →</a></p>
 {% else %}
-<p>HTX chưa có sản phẩm nào. Thêm sản phẩm đầu tiên bằng biểu mẫu dưới đây.</p>
+{{ kit.empty("HTX chưa có sản phẩm nào. Thêm sản phẩm đầu tiên bằng biểu mẫu dưới đây.") }}
 {% endif %}
 
-<h2>Thêm sản phẩm</h2>
+<h2 id="them-san-pham">Thêm sản phẩm</h2>
 <form method="post" action="{{ href('/products', theme) }}">
   {% include "product_fields.html" %}
   <button type="submit">Thêm sản phẩm</button>

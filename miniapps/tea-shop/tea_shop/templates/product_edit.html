@@ -1,10 +1,12 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "kit.html" as kit %}
 {% block title %}Sửa {{ product.name }}{% endblock %}
 {% block main %}
-<p><a href="{{ href('/', theme) }}">← Quay lại cửa hàng</a></p>
-<h1>Sửa sản phẩm</h1>
+{{ kit.app_header("Sửa sản phẩm", product.name) }}
+{{ kit.tabs(tab_items(theme), "products") }}
+<p><a href="{{ href('/products', theme) }}">← Tất cả sản phẩm</a></p>
 <form method="post" action="{{ href('/products/' ~ product.id ~ '/edit', theme) }}">
   {% include "product_fields.html" %}
   <button type="submit">Lưu thay đổi</button>

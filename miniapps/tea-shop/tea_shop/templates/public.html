@@ -1,25 +1,28 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "kit.html" as kit %}
 {% block title %}Cửa hàng chè HTX {{ htx }}{% endblock %}
 {% block main %}
-<h1>Cửa hàng chè HTX {{ htx }}</h1>
-<p>Chọn số lượng, để lại họ tên, số điện thoại và địa chỉ nhận hàng. HTX sẽ gọi điện xác nhận; thanh toán khi nhận hàng.</p>
+{{ kit.app_header("Cửa hàng chè HTX " ~ htx, "Chọn số lượng, để lại họ tên, số điện thoại và địa chỉ nhận hàng. HTX sẽ gọi điện xác nhận; thanh toán khi nhận hàng.") }}
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 
 {% if products %}
 <form method="post" action="{{ href('/public/' ~ htx ~ '/order', theme) }}" aria-label="Đặt hàng">
+  <ul class="cards">
   {% for p in products %}
-  <section aria-labelledby="product-{{ p.id }}">
-    <h2 id="product-{{ p.id }}">{{ p.name }}</h2>
-    <p>{{ p.pack }} · {{ p.price_vnd | vnd }} · {% if p.stock %}<span class="pill">Còn {{ p.stock }}</span>{% else %}<span class="pill">Hết hàng</span>{% endif %}</p>
-    {% if p.lot_code %}<p><a href="/lot/{{ p.lot_code }}">Xem nguồn gốc</a></p>{% endif %}
-    {% if p.stock %}
-    <input type="hidden" name="product_id" value="{{ p.id }}">
-    <label>Số lượng {{ p.name }} (0–{{ [99, p.stock] | min }}) <input type="number" name="quantity" min="0" max="{{ [99, p.stock] | min }}" value="{{ form.quantities.get(p.id | string, '0') if form.quantities else '0' }}"></label>
-    {% endif %}
-  </section>
+    <li class="card" aria-labelledby="product-{{ p.id }}">
+      <h3 id="product-{{ p.id }}">{{ p.name }}</h3>
+      <p>{{ p.pack }}</p>
+      <p><strong>{{ p.price_vnd | vnd }}</strong> · {% if p.stock %}<span class="pill">Còn {{ p.stock }}</span>{% else %}<span class="pill">Hết hàng</span>{% endif %}</p>
+      {% if p.lot_code %}<p><a href="/lot/{{ p.lot_code }}">Xem nguồn gốc</a></p>{% endif %}
+      {% if p.stock %}
+      <input type="hidden" name="product_id" value="{{ p.id }}">
+      <label>Số lượng {{ p.name }} (0–{{ [99, p.stock] | min }}) <input type="number" name="quantity" min="0" max="{{ [99, p.stock] | min }}" value="{{ form.quantities.get(p.id | string, '0') if form.quantities else '0' }}"></label>
+      {% endif %}
+    </li>
   {% endfor %}
+  </ul>
   <h2>Thông tin nhận hàng</h2>
   <label>Họ tên <input name="customer_name" maxlength="80" required autocomplete="name" value="{{ form.customer_name or '' }}"></label>
   <label>Số điện thoại <input type="tel" name="phone" required autocomplete="tel" inputmode="tel" value="{{ form.phone or '' }}"></label>
@@ -28,7 +31,7 @@
   <button type="submit">Đặt hàng</button>
 </form>
 {% else %}
-<p>HTX chưa có sản phẩm nào đang bán. Mời bạn quay lại sau.</p>
+{{ kit.empty("HTX chưa có sản phẩm nào đang bán. Mời bạn quay lại sau.") }}
 {% endif %}
 
 <h2>Tra cứu đơn hàng</h2>

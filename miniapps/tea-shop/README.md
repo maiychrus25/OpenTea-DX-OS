@@ -10,11 +10,15 @@ Ban quản trị HTX quản lý sản phẩm chè và xử lý đơn hàng; khá
 
 | Đường dẫn (dưới `/apps/tea-shop`) | Ai vào | Nội dung |
 | --- | --- | --- |
-| `/` | `manager` | Đơn hàng và sản phẩm của HTX trong token; thêm sản phẩm |
+| `/` | `manager` | Tổng quan: đơn chờ xác nhận, đang giao, doanh thu tháng (đơn hoàn tất), sắp hết hàng (tồn từ 5 trở xuống); biểu đồ doanh thu 14 ngày; năm sản phẩm bán chạy; 10 đơn và 10 sản phẩm mới nhất; thêm sản phẩm |
+| `/orders` | `manager` | Danh sách đơn: lọc `status`, `from`, `to`, tìm `q` (mã, tên khách, số điện thoại), 25 dòng một trang (`page`) |
+| `/orders/export.csv` | `manager` | CSV của danh sách đang lọc: Mã đơn, Đặt lúc, Khách, Số điện thoại, Địa chỉ, Tổng tiền, Trạng thái |
+| `/orders/<id>/print` | `manager` | Phiếu giao hàng để in (mã đơn, khách, điện thoại, địa chỉ, dòng hàng, tổng, thu tiền khi nhận) |
+| `/products` | `manager` | Danh sách sản phẩm: tìm `q` theo tên, lọc `show` (`all`, `active`, `hidden`, `low`), phân trang |
 | `/products/<id>/edit` | `manager` | Sửa tên, quy cách, giá, tồn kho, mã lô, đang bán hay ngừng |
-| `/orders/<id>` | `manager` | Chi tiết đơn kèm họ tên, điện thoại, địa chỉ; chuyển trạng thái hoặc huỷ |
-| `/public/<htx>` | công khai | Sản phẩm đang bán, ô số lượng cho từng sản phẩm, form đặt hàng |
-| `/public/<htx>/order?code=&phone=` | công khai | Tra đơn: phải đúng cả mã và số điện thoại |
+| `/orders/<id>` | `manager` | Chi tiết đơn kèm họ tên, điện thoại, địa chỉ; các bước trạng thái; chuyển trạng thái hoặc huỷ |
+| `/public/<htx>` | công khai | Sản phẩm đang bán dạng thẻ, ô số lượng cho từng sản phẩm, form đặt hàng |
+| `/public/<htx>/order?code=&phone=` | công khai | Tra đơn: phải đúng cả mã và số điện thoại; hiện các bước Mới, Đã xác nhận, Đang giao, Hoàn tất (đơn huỷ hiện nhãn Đã huỷ) |
 
 Mọi thao tác ghi là `POST` và trả 303 về một trang dưới `/apps/tea-shop/`. Trang công khai không bao giờ hiện tên, số điện thoại hay địa chỉ của khách khác, và trả cùng một thông báo khi sai mã hoặc sai số điện thoại. Sản phẩm có mã lô có link "Xem nguồn gốc" tới `/lot/<mã lô>` của ứng dụng chính.
 

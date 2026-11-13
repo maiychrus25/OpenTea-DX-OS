@@ -1,0 +1,45 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Sản phẩm của HTX {{ htx }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Sản phẩm", "HTX " ~ htx ~ " · mới thêm ở trên cùng") %}
+  <a class="button" href="{{ href('/', theme) }}">Thêm sản phẩm</a>
+{% endcall %}
+{{ kit.tabs(tab_items(theme), "products") }}
+
+<form class="toolbar" method="get" action="{{ href('/products', theme) }}">
+  {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+  <label>Tìm theo tên
+    <input type="search" name="q" maxlength="100" value="{{ filters.q }}" placeholder="Tên sản phẩm">
+  </label>
+  <label>Hiển thị
+    <select name="show">
+      {% for key, label in product_filters.items() %}<option value="{{ key }}"{% if (filters.show or "all") == key %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+  <button type="submit">Lọc</button>
+</form>
+
+{% if products %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Sản phẩm</th><th role="columnheader">Quy cách</th><th role="columnheader">Giá</th><th role="columnheader">Tồn kho</th><th role="columnheader">Trạng thái</th><th role="columnheader">Thao tác</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for p in products %}
+    <tr role="row">
+      <td role="cell" data-label="Sản phẩm"><a href="{{ href('/products/' ~ p.id ~ '/edit', theme) }}">{{ p.name }}</a></td>
+      <td role="cell" data-label="Quy cách">{{ p.pack }}</td>
+      <td role="cell" data-label="Giá">{{ p.price_vnd | vnd }}</td>
+      <td role="cell" data-label="Tồn kho">{{ p.stock }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill">{{ "Đang bán" if p.active else "Ngừng bán" }}</span></td>
+      <td role="cell" data-label="Thao tác"><span class="actions"><a class="button secondary" href="{{ href('/products/' ~ p.id ~ '/edit', theme) }}">Sửa</a></span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ kit.pagination(page, prev_href, next_href) }}
+{% else %}
+{{ kit.empty("Không có sản phẩm nào khớp bộ lọc." if (filters.q or filters.show) else "HTX chưa có sản phẩm nào.", "Thêm sản phẩm", href('/', theme)) }}
+{% endif %}
+{% endblock %}
