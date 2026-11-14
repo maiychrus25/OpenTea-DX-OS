@@ -132,7 +132,7 @@ Thân tài liệu trên giữ nguyên là bản thiết kế. Những chỗ code
 **Quan sát trên stack thật (`dxos-clean`)**
 - Phần "Ứng dụng do HTX tự tạo" hiện ngay sau khi cài app, có câu "Chưa có ứng dụng nào. Bấm "Tạo sổ mới" để bắt đầu." và nút mở bảng chọn mẫu trong khung. Sau khi trưởng HTX phát hành, mục mới hiện trong menu của cán bộ và nông dân ở lần tải trang kế tiếp (đo: trong khoảng nhớ 15 giây), vai đặt "Không dùng sổ này" không có mục.
 - Khi container của app tắt, `feed` hỏng ngay (không chờ hết 1,5 giây); bốn lần tải trang liên tiếp của trưởng HTX mất 121–210 ms, trang vẫn dựng đủ menu tĩnh.
-- Trình thiết kế: cột tên ô ở 1280 px chỉ rộng khoảng 110 px nên tên 30 ký tự bị cắt; đã thêm lớp `form-table` trong `dxos-app.css` (cột tên 14,5rem, cột kiểu 7,5rem, cột tuỳ chọn 6rem, cột đơn vị 5,5rem, đệm ô hẹp lại): ô tên rộng khoảng 232 px và bảng vừa khít khung, không tràn. Ở 390 px mỗi ô là một thẻ, không tràn trang.
+- Trình thiết kế: cột tên ô ở 1280 px chỉ rộng khoảng 110 px nên tên 30 ký tự bị cắt; đã thêm lớp `form-table` trong `dxos-app.css`, chia bề rộng bảng theo tỷ lệ (cột tên 28%, kiểu 15%, lựa chọn 13%, đơn vị 11%, thứ tự 8%, đệm ô hẹp lại): ô tên rộng khoảng 230 px và bảng không tràn khung. Bản đầu dùng bề rộng tối thiểu cố định (14,5rem cho cột tên); tổng các mức tối thiểu vừa khít khung với phông của macOS nên tràn trên máy Linux của CI, nơi phông rộng hơn và thanh cuộn chiếm 15 px. Tỷ lệ thì không phụ thuộc phông chữ: tên 30 ký tự hiện đủ với phông macOS, khoảng 27 ký tự với phông Linux. Ở 390 px mỗi ô là một thẻ, không tràn trang.
 
 **Số đo trên stack sạch** (`down -v`, `platform-up`, seed, `platform-smoke`, mọi spec trình duyệt theo thứ tự CI, `apps-smoke`, gỡ và xoá mọi app, `down -v`):
 

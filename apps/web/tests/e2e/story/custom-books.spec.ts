@@ -95,11 +95,11 @@ test.describe('Sổ tự tạo', () => {
     await app.getByLabel('Tên ô 2', { exact: true }).fill('Hộ hái chè')
     const blank = app.locator('input[name^="label_"][placeholder^="Thêm ô mới"]').first()
     const blankIndex = (await blank.getAttribute('name'))!.replace('label_', '')
-    // At 1280 px the name input keeps its width (it was squeezed to about 110 px) and the table stays inside its card. How many characters
-    // fit depends on the system font (all 30 with macOS's, about 27 with Linux's), so the width is measured, not the text.
+    // At 1280 px the name column keeps its share of the table (it was squeezed to about 110 px) and the table stays inside its card.
+    // Widths are measured, not the text that fits: that depends on the system font, and the card is narrower where scrollbars take room.
     const spare = app.locator('input[name^="label_"][placeholder^="Thêm ô mới"]').nth(1)
     await spare.fill('Số ký chè búp tươi hái buổi sáng'.slice(0, 30))
-    expect(await spare.evaluate(input => (input as HTMLInputElement).clientWidth), 'the name input is squeezed').toBeGreaterThanOrEqual(220)
+    expect(await spare.evaluate(input => (input as HTMLInputElement).clientWidth), 'the name input is squeezed').toBeGreaterThanOrEqual(200)
     expect(await app.locator('table.form-table').evaluate(table => table.scrollWidth <= table.parentElement!.clientWidth), 'the designer table overflows its card').toBe(true)
     await spare.fill('')
     await blank.fill('Ca hái')

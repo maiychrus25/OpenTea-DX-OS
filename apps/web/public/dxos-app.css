@@ -310,9 +310,10 @@ td {
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
-/* A table of form inputs (the designer of Sổ tự tạo): the name column keeps room for a long name (27 to 30 characters,
-   by system font), the others stay readable, and the cells give up some padding so the table still fits the card. Wide
-   screens only: a narrow screen shows one card per row (below). */
+/* A table of form inputs (the designer of Sổ tự tạo): the input columns take a share of the table, the name column the
+   largest, so the name does not end up as narrow as the unit. Shares, not minimum widths: minimum widths added up to
+   the width of the card on one system font and overflowed it with a wider font or a scrollbar. Wide screens only: a
+   narrow screen shows one card per row (below). */
 @media (min-width: 641px) {
   table.form-table th,
   table.form-table td {
@@ -320,24 +321,24 @@ td {
     padding-left: var(--spacing-2);
   }
 
-  table.form-table td:first-child input {
-    min-width: 14.5rem;
+  table.form-table th:first-child {
+    width: 28%;
   }
 
-  table.form-table td:nth-child(2) select {
-    min-width: 7.5rem;
+  table.form-table th:nth-child(2) {
+    width: 15%;
   }
 
-  table.form-table td:nth-child(3) input {
-    min-width: 6rem;
+  table.form-table th:nth-child(3) {
+    width: 13%;
   }
 
-  table.form-table td:nth-child(4) input {
-    min-width: 5.5rem;
+  table.form-table th:nth-child(4) {
+    width: 11%;
   }
 
-  table.form-table td:nth-child(8) input {
-    min-width: 3.5rem;
+  table.form-table th:nth-child(8) {
+    width: 8%;
   }
 }
 
