@@ -55,6 +55,11 @@ def cmd_install(args) -> int:
     try:
         if args.command == "prepare":
             print(f"Đã chuẩn bị {commands.prepare(root, Path(args.dir))}; chạy commit hoặc abort")
+        elif args.command == "upgrade-prepare":
+            print(f"Đã chuẩn bị nâng cấp {commands.upgrade_prepare(root, Path(args.dir))}; chạy upgrade-commit")
+        elif args.command == "upgrade-commit":
+            commands.upgrade_commit(root, args.id)
+            print(f"Đã đăng ký bản mới của {args.id}")
         elif args.command == "commit":
             commands.commit(root, args.id, not args.no_enable_all)
             print(f"Đã đăng ký {args.id}")
@@ -114,6 +119,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("manifest-id", help="In id của manifest hợp lệ (dùng cho ./dxos)").add_argument("dir")
     sub.add_parser("gateway-sync", help="Ghép route của các app đã cài vào docker/runtime/gateway/apisix.yaml")
     sub.add_parser("prepare", help="Kiểm tra và chuẩn bị cài một mini-app (chưa đăng ký)").add_argument("dir")
+    sub.add_parser("upgrade-prepare", help="Chuẩn bị nâng cấp app đã cài (route, compose, migration mới)").add_argument("dir")
+    sub.add_parser("upgrade-commit", help="Ghi phiên bản mới của app đã nâng cấp").add_argument("id")
     commit = sub.add_parser("commit", help="Đăng ký app đã chuẩn bị xong")
     commit.add_argument("id")
     commit.add_argument("--no-enable-all", action="store_true", help="Không bật app cho mọi HTX ('*')")
@@ -134,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
     remove.add_argument("--purge", action="store_true", help="Xoá cả schema, role và tệp env của app")
     sub.add_parser("list", help="Liệt kê app đã cài")
     args = parser.parse_args(argv)
-    if args.command in ("prepare", "commit", "abort", "remove", "list"):
+    if args.command in ("prepare", "commit", "abort", "remove", "list", "upgrade-prepare", "upgrade-commit"):
         return cmd_install(args)
     if args.command in ("catalog-sync", "worker-start", "worker-claim", "worker-finish", "worker-progress"):
         return cmd_store(args)

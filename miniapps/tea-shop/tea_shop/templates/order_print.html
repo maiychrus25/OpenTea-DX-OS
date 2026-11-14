@@ -1,0 +1,42 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% import "kit.html" as kit %}
+{% import "pills.html" as pills %}
+<!doctype html>
+<html lang="vi"{% if theme %} data-theme="{{ theme }}"{% endif %}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phiếu giao hàng {{ order.code }} · Cửa hàng chè</title>
+<link rel="stylesheet" href="/dxos-app.css">
+</head>
+<body class="print-sheet"><main>
+{{ kit.print_bar(back_href) }}
+<h1>Phiếu giao hàng {{ order.code }}</h1>
+<p class="print-only">HTX {{ htx }} · Cửa hàng chè</p>
+<p>Đặt lúc {{ order.created_at | vn_time }}</p>
+<p>Khách: <strong>{{ order.customer_name }}</strong> · Điện thoại {{ order.phone }}</p>
+<p>Địa chỉ giao: {{ order.address }}</p>
+{% if order.note %}<p>Ghi chú: {{ order.note }}</p>{% endif %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Sản phẩm</th><th role="columnheader">Quy cách</th><th role="columnheader">Đơn giá</th><th role="columnheader">Số lượng</th><th role="columnheader">Thành tiền</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for i in items %}
+    <tr role="row">
+      <td role="cell" data-label="Sản phẩm">{{ i.product_name }}</td>
+      <td role="cell" data-label="Quy cách">{{ i.pack }}</td>
+      <td role="cell" data-label="Đơn giá">{{ i.price_vnd | vnd }}</td>
+      <td role="cell" data-label="Số lượng">{{ i.quantity }}</td>
+      <td role="cell" data-label="Thành tiền">{{ (i.price_vnd * i.quantity) | vnd }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p>Tổng cộng: <strong>{{ order.total_vnd | vnd }}</strong></p>
+<p><strong>Thanh toán khi nhận hàng</strong>: người giao thu {{ order.total_vnd | vnd }}.</p>
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Người giao hàng</th><th role="columnheader">Người nhận hàng</th></tr></thead>
+  <tbody role="rowgroup"><tr role="row"><td role="cell" class="signature" data-label="Người giao hàng"></td><td role="cell" class="signature" data-label="Người nhận hàng"></td></tr></tbody>
+</table>
+</main></body>
+</html>

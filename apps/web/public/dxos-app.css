@@ -300,9 +300,12 @@ table {
   border-radius: var(--rounded-md);
 }
 
+/* break-word, not the body's anywhere: anywhere also shrinks the minimum width of a column to one letter, so a phone
+   number or a code broke in the middle while a long title kept its room. */
 th,
 td {
   padding: var(--spacing-2) var(--spacing-3);
+  overflow-wrap: break-word;
   text-align: left;
   border-bottom: 1px solid var(--color-border-subtle);
 }
@@ -486,6 +489,7 @@ button:disabled {
 
 .pill {
   display: inline-block;
+  white-space: nowrap;
   padding: 2px var(--spacing-2);
   color: var(--color-primary);
   background: var(--color-primary-subtle);
@@ -496,6 +500,649 @@ button:disabled {
 
 @media (prefers-reduced-motion: reduce) {
   button {
+    transition: none;
+  }
+}
+
+/* ---------- Mini-app kit (spec 2026-11-13 §4) ----------
+   Components for platform/appkit/kit.html and the CSS-only patterns in its showcase. Tokens only; both themes;
+   nothing here widens the page at 390px (wide parts scroll or wrap inside themselves). */
+
+/* Buttons that are links. Plain <a class="button"> is primary, add "secondary" for the quiet one. */
+a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--spacing-2) var(--spacing-5);
+  color: var(--color-primary-foreground);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--rounded-md);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+a.button:hover {
+  color: var(--color-primary-foreground);
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+a.button.secondary,
+span.button.secondary {
+  color: var(--color-ink-primary);
+  background: var(--color-surface-card);
+  border-color: var(--color-border-default);
+}
+
+a.button.secondary:hover {
+  color: var(--color-ink-primary);
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border-default);
+}
+
+span.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--spacing-2) var(--spacing-5);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--rounded-md);
+  font-weight: 600;
+}
+
+span.button[aria-disabled="true"] {
+  opacity: 0.5;
+}
+
+/* Cancel, delete: filled danger. */
+button.danger,
+a.button.danger {
+  color: var(--color-ink-inverse);
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+button.danger:hover,
+a.button.danger:hover {
+  color: var(--color-ink-inverse);
+  background: var(--color-danger-hover);
+  border-color: var(--color-danger-hover);
+}
+
+/* Small button group inside a table row. A form wrapped around one button loses the card look. */
+.actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.actions form {
+  display: inline-flex;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+/* Buttons in a table row are compact: about 44px rows, targets still 34px. */
+.actions a.button,
+.actions button,
+td a.button,
+td button {
+  min-height: 34px;
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-label);
+}
+
+td:has(> .actions, > button, > a.button, > form) {
+  padding-block: var(--spacing-1);
+}
+
+/* Checkbox and radio: a normal control next to its text, not a text-input box. Works for <label><input> Text</label>
+   and for an input followed by its label (inside a form, the label is pulled up beside the input). */
+input[type="checkbox"],
+input[type="radio"] {
+  flex: none;
+  align-self: flex-start;
+  width: 1.125rem;
+  min-height: 0;
+  height: 1.125rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--color-primary);
+}
+
+label:has(> input[type="checkbox"], > input[type="radio"]) {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+input[type="checkbox"]:has(+ label),
+input[type="radio"]:has(+ label) {
+  margin-bottom: calc(-1.125rem - var(--spacing-3));
+}
+
+input[type="checkbox"] + label,
+input[type="radio"] + label {
+  min-height: 1.125rem;
+  padding-left: calc(1.125rem + var(--spacing-2));
+}
+
+/* A form inside a card has no box of its own. */
+.card form {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+/* Page header: title, subtitle and the action buttons on the right. */
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-3) var(--spacing-4);
+  margin: 0 0 var(--spacing-4);
+}
+
+.app-header-text {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.app-header h1 {
+  margin: 0;
+}
+
+.app-header-subtitle {
+  margin: var(--spacing-1) 0 0;
+  color: var(--color-ink-secondary);
+}
+
+.app-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+/* Tabs: scroll inside the bar on a narrow screen, never the page. */
+.tabs {
+  display: flex;
+  gap: var(--spacing-1);
+  margin: 0 0 var(--spacing-5);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.tabs a {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--spacing-4);
+  color: var(--color-ink-secondary);
+  border-bottom: 2px solid transparent;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tabs a:hover {
+  color: var(--color-ink-primary);
+  background: var(--color-surface-sunken);
+}
+
+.tabs a[aria-current="page"] {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* Stat tiles: two columns on a phone, four from tablet width. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-3);
+  margin: 0 0 var(--spacing-5);
+  padding: 0;
+  list-style: none;
+}
+
+/* An odd last tile fills the row instead of leaving a hole. */
+.stats li:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+/* Any number of tiles fills the row; three or five do not wrap 4+1. */
+@media (min-width: 768px) {
+  .stats {
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  }
+
+  .stats li:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+}
+
+.stats li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-4);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-card);
+  container-type: inline-size;
+}
+
+.stat-label {
+  color: var(--color-ink-secondary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: clamp(1rem, 11cqw, var(--font-size-h1)); /* scales with the tile, so a long amount fits */
+  white-space: nowrap;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.stat-hint {
+  color: var(--color-ink-tertiary);
+  font-size: var(--font-size-meta);
+}
+
+/* Horizontal bar chart drawn by the server: a label, a value and one SVG bar per row. */
+.chart {
+  margin: 0 0 var(--spacing-5);
+  padding: var(--spacing-4);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.chart figcaption {
+  margin: 0 0 var(--spacing-3);
+  font-size: var(--font-size-h3);
+  font-weight: 600;
+}
+
+.chart ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--spacing-1) var(--spacing-3);
+}
+
+.chart-value {
+  font-weight: 600;
+  text-align: right;
+}
+
+.chart-bar {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 10px;
+  background: var(--color-surface-sunken);
+  border-radius: var(--rounded-full);
+}
+
+.chart-bar rect {
+  fill: var(--color-primary);
+}
+
+/* From 640px each row is one line: label, bar, value. The list is the grid and each row a subgrid, so the columns line up. */
+@media (min-width: 640px) {
+  .chart ul {
+    display: grid;
+    grid-template-columns: fit-content(14rem) minmax(0, 1fr) max-content;
+    gap: var(--spacing-2) var(--spacing-3);
+  }
+
+  .chart li {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: center;
+  }
+
+  .chart-label {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .chart-bar {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .chart-value {
+    grid-column: 3;
+    grid-row: 1;
+    white-space: nowrap;
+  }
+}
+
+/* Search and filter row: a GET form that wraps. */
+form.toolbar {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  max-width: none;
+  gap: var(--spacing-3);
+}
+
+/* Fields keep a natural width; a search field may grow; the buttons go to the end of the last row. */
+form.toolbar label {
+  flex: 0 1 11rem;
+  max-width: 14rem;
+  min-width: 0;
+}
+
+form.toolbar label:has(input[type="search"], input[type="text"]) {
+  flex: 1 1 14rem;
+  max-width: 24rem;
+}
+
+form.toolbar > label + :is(button, a.button) {
+  margin-left: auto;
+}
+
+/* On a phone every field takes the full row. */
+@media (max-width: 640px) {
+  form.toolbar label,
+  form.toolbar label:has(input[type="search"], input[type="text"]) {
+    flex-basis: 100%;
+    max-width: none;
+  }
+}
+
+form.toolbar button {
+  align-self: flex-end;
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  margin: 0 0 var(--spacing-4);
+}
+
+.pagination-status {
+  color: var(--color-ink-secondary);
+}
+
+/* Card grid for the public pages (products, tours). */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: var(--spacing-4);
+  margin: 0 0 var(--spacing-5);
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-width: 0;
+  padding: var(--spacing-4);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.card h3,
+.card p {
+  margin: 0;
+}
+
+/* Order or booking progress: numbered dots, done steps get a tick, the current one is filled. */
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2) var(--spacing-4);
+  margin: 0 0 var(--spacing-4);
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  color: var(--color-ink-tertiary);
+  font-weight: 600;
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--color-ink-secondary);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--rounded-full);
+  font-size: var(--font-size-meta);
+}
+
+.steps li[data-state="done"] {
+  color: var(--color-ink-primary);
+}
+
+.steps li[data-state="done"]::before {
+  content: "✓";
+  color: var(--color-success);
+  background: var(--color-success-subtle);
+  border-color: var(--color-success);
+}
+
+.steps li[aria-current="step"] {
+  color: var(--color-primary);
+}
+
+.steps li[aria-current="step"]::before {
+  color: var(--color-primary-foreground);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin: 0 0 var(--spacing-4);
+  padding: var(--spacing-8) var(--spacing-4);
+  color: var(--color-ink-secondary);
+  background: var(--color-surface-sunken);
+  border: 1px dashed var(--color-border-default);
+  border-radius: var(--rounded-lg);
+  text-align: center;
+}
+
+.field-error {
+  color: var(--color-danger);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+}
+
+/* <details> as an opening block, for the "Thêm …" forms. */
+.disclosure {
+  margin: 0 0 var(--spacing-4);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--rounded-lg);
+}
+
+.disclosure > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--spacing-4);
+  color: var(--color-primary);
+  border-radius: var(--rounded-lg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.disclosure > summary:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.disclosure[open] > summary {
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: var(--rounded-lg) var(--rounded-lg) 0 0;
+}
+
+.disclosure > :not(summary) {
+  margin: var(--spacing-4);
+}
+
+.disclosure form {
+  max-width: none;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+/* Print pages: a paper-like sheet on screen (class on <body> or a wrapper), plain black on white when printed. */
+.print-sheet {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+body.print-sheet {
+  background: var(--color-surface-card);
+}
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  *,
+  *::before,
+  *::after {
+    color: CanvasText !important;
+    background: none !important;
+    border-color: GrayText !important;
+    box-shadow: none !important;
+  }
+
+  body {
+    padding: 0;
+  }
+
+  .no-print,
+  .tabs,
+  .app-header-actions,
+  button,
+  a.button,
+  span.button {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .chart-bar rect {
+    fill: CanvasText;
+  }
+
+  a {
+    text-decoration: none;
+  }
+}
+
+/* Pill tones. The plain .pill stays green (active, done). */
+.pill.neutral {
+  color: var(--color-ink-secondary);
+  background: var(--color-surface-sunken);
+}
+
+.pill.warn {
+  color: var(--color-warning);
+  background: var(--color-warning-subtle);
+}
+
+.pill.danger {
+  color: var(--color-danger);
+  background: var(--color-danger-subtle);
+}
+
+/* Print sheet tables: full width, thin black borders. */
+.print-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 0;
+  border-radius: 0;
+}
+
+.print-sheet table th,
+.print-sheet table td {
+  border: 1px solid var(--color-ink-primary);
+  border-radius: 0;
+}
+
+/* Blank room for a handwritten signature (a table cell or a block). */
+.signature {
+  height: 4.5rem;
+  min-height: 4.5rem;
+  vertical-align: bottom;
+}
+
+@media print {
+  .print-sheet table th,
+  .print-sheet table td {
+    border-color: CanvasText !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a.button {
     transition: none;
   }
 }

@@ -49,6 +49,20 @@ assert_app_http() {
   case " $codes " in *" $got "*) pass "$msg";; *) fail "$msg (expected one of '$codes', got '$got')";; esac
 }
 
+# page_ok <token> <path> <label>: a page of the kit answers 200. csv_check <token> <path> <label>: a CSV download answers 200 as
+# text/csv with content-disposition: attachment and starts with the UTF-8 BOM. The same download through the web proxy is
+# pressed in the browser story, which needs a session (the proxy passes content-disposition: tests in the web suite).
+page_ok() { assert_app_http 200 "$3 -> 200" -- -H "Authorization: Bearer $1" "$APP_GW$2"; }
+csv_check() {
+  local hdrs body
+  hdrs="$(app_curl -s -D - -o /dev/null -H "Authorization: Bearer $1" "$APP_GW$2" | tr -d '\r')"
+  if grep -q '^HTTP/[0-9.]* 200' <<<"$hdrs" && grep -qi '^content-type: text/csv' <<<"$hdrs" && grep -qi '^content-disposition: attachment' <<<"$hdrs"; then
+    pass "$3 -> 200 text/csv as an attachment"
+  else fail "$3 is not a CSV download: $hdrs"; fi
+  body="$(app_curl -s -H "Authorization: Bearer $1" "$APP_GW$2")"
+  assert_eq "$(od -An -tx1 -N3 <<<"$body" | tr -d ' ')" efbbbf "$3 starts with the UTF-8 BOM"
+}
+
 # wait_http "codes" msg -- <curl args...>: APISIX reloads the route file within about a second.
 wait_http() {  # through app_curl, like assert_app_http
   local codes="$1" msg="$2" got _; shift 3
@@ -110,7 +124,7 @@ echo "  app-tea-tour was $OLD_IP, hello got $HELLO_IP$([ "$OLD_IP" = "$HELLO_IP"
 wait_http 200 "manager token -> 200 on /apps/tea-tour/ after the reinstall" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-tour/"
 OUT=$(tour_gets "$LOC")
 assert_eq "$(grep -c '^200 ' <<<"$OUT")" 30 "kept tour page -> 200 on all 30 connections after the reinstall"
-assert_eq "$(grep -c "<h1>$TITLE " <<<"$OUT")" 30 "all 30 answers render the kept tour, which only tea-tour has"
+assert_eq "$(grep -c "<h1>$TITLE</h1>" <<<"$OUT")" 30 "all 30 answers render the kept tour, which only tea-tour has"
 grep -q -e '^404 21$' -e 'Không có trang này' <<<"$OUT" && fail "a request to tea-tour got hello's 404: $(grep -c '^404 21$' <<<"$OUT") of 30" \
   || pass "no request to tea-tour got hello's 21-byte 404"
 ./dxos remove tea-tour --purge >/dev/null && ./dxos remove hello >/dev/null && pass "tea-tour (--purge) and hello removed" \
@@ -221,6 +235,11 @@ assert_eq "$(psql_app "select party_size || ' ' || status from app_tea_tour.book
   "booking stored: 2 seats, PENDING"
 grep -qF "$TITLE" <<<"$(app_curl -s -H "Authorization: Bearer $TF" "$APP_GW/apps/tea-tour/guide")" \
   && pass "guide farmer sees the tour on /apps/tea-tour/guide" || fail "smoke_farmer_tc /guide does not list $TITLE"
+page_ok "$TM" /apps/tea-tour/bookings "tea-tour bookings list"
+page_ok "$TM" "/apps/tea-tour/bookings?q=Ho%25&status=PENDING&page=999999" "tea-tour bookings list with wildcard search and a page far out"
+csv_check "$TM" /apps/tea-tour/tours/$TOUR/guests/export.csv "tea-tour guest list CSV"
+page_ok "$TM" /apps/tea-tour/tours/$TOUR/print "tea-tour group list print page"
+refused "$TF" /apps/tea-tour/tours/$TOUR/guests/export.csv smoke_farmer_tc
 
 ./dxos remove tea-tour && pass "./dxos remove tea-tour exits 0" || fail "./dxos remove tea-tour"
 wait_http 404 "removed tea-tour public route -> 404" -- "$APP_GW/apps/tea-tour/public/TC"
@@ -317,7 +336,7 @@ grep -q '<option value="hh_tc_1"' <<<"$(get_page "$TO" $LP/)" && pass "officer's
 grep -q '<option value="hh_lb_' <<<"$(get_page "$TO" $LP/)" && fail "officer page offers an LB household" || pass "officer page offers no household of another HTX"
 grep -q '<option value="hh_tc_1"' <<<"$(get_page "$TM" $LP/)" && pass "manager's household list (Hasura, role manager) offers hh_tc_1" \
   || fail "manager page does not offer hh_tc_1"
-grep -q 'Hộ: <strong>' <<<"$(get_page "$TF" $LP/mine)" && pass "farmer's /mine names the farmer's own household (Hasura, role farmer)" \
+grep -q 'app-header-subtitle">Hộ ' <<<"$(get_page "$TF" $LP/mine)" && pass "farmer's /mine names the farmer's own household (Hasura, role farmer)" \
   || fail "farmer /mine shows no household"
 
 LOC=$(post_loc "$TM" $LP/prices --data-urlencode "name=Búp tươi loại 1" -d price_vnd=9000)
@@ -333,6 +352,14 @@ PERIOD="${LOC##*/}"
 assert_eq "$(psql_app "select household_id || ' ' || total_vnd from app_leaf_purchase.payouts where period_id = '$PERIOD'")" "hh_tc_1 112500" \
   "the period holds one payout: hh_tc_1 112500"
 PAYOUT=$(psql_app "select id from app_leaf_purchase.payouts where period_id = '$PERIOD'")
+page_ok "$TM" $LP/overview "leaf-purchase overview"
+page_ok "$TO" "$LP/tickets?q=Household%25&page=0" "leaf-purchase ticket list (officer, wildcard search, page 0)"
+csv_check "$TM" "$LP/tickets/export.csv?from=$DAY&to=$DAY" "leaf-purchase ticket CSV"
+TICKET=$(psql_app "select id from app_leaf_purchase.tickets where household_id = 'hh_tc_1'" | sed -n 1p)
+page_ok "$TO" $LP/tickets/$TICKET/print "leaf-purchase weighing slip print page"
+csv_check "$TM" $LP/periods/$PERIOD/export.csv "leaf-purchase payout CSV"
+page_ok "$TM" $LP/periods/$PERIOD/print "leaf-purchase payout sheet print page"
+refused "$TF" $LP/tickets/export.csv smoke_farmer_tc
 grep -q 'Chưa trả' <<<"$(get_page "$TF" $LP/mine)" && pass "farmer sees the payout as unpaid" || fail "farmer /mine shows no unpaid payout"
 LOC=$(post_loc "$TM" $LP/periods/$PERIOD/payouts/$PAYOUT/paid -X POST)
 [[ "$LOC" == $LP/periods/$PERIOD* ]] && pass "manager marks the payout paid -> 303" || fail "mark paid Location wrong: '$LOC'"
@@ -369,6 +396,11 @@ OID=$(psql_app "select id from app_tea_shop.orders where code = '$CODE'")
 LOC=$(post_loc "$TM" $TS/orders/$OID/advance -X POST)
 [[ "$LOC" == $TS/orders/$OID* ]] && pass "manager confirms the order -> 303" || fail "advance Location wrong: '$LOC'"
 assert_eq "$(psql_app "select status from app_tea_shop.orders where id = '$OID'")" CONFIRMED "order is CONFIRMED"
+page_ok "$TM" "$TS/orders?status=CONFIRMED&q=Nguy%25" "tea-shop order list (status filter, wildcard search)"
+page_ok "$TM" $TS/products "tea-shop product list"
+csv_check "$TM" "$TS/orders/export.csv?status=CONFIRMED" "tea-shop order CSV"
+page_ok "$TM" $TS/orders/$OID/print "tea-shop delivery note print page"
+refused "$TF" $TS/orders/export.csv smoke_farmer_tc
 grep -q 'Nguyễn Thị Hoa' <<<"$(app_curl -s "$APP_GW$TS/public/TC/order?code=$CODE&phone=0912345678")" \
   && pass "lookup with code and phone shows the order" || fail "lookup with code and phone shows nothing"
 assert_app_http 404 "lookup with the wrong phone -> 404" -- "$APP_GW$TS/public/TC/order?code=$CODE&phone=0987654321"
@@ -405,6 +437,11 @@ ITEM2=$(psql_app "select id from app_farm_supply.items where name = 'Thuốc tr�
 LOC=$(post_loc "$TF" $FS/mine/rounds/$ROUND -d "q_$ITEM1=2" --data-urlencode "q_$ITEM2=1,5")
 assert_eq "$LOC" "$FS/mine?notice=saved" "farmer registers 2 bao and 1,5 chai -> 303"
 assert_eq "$(psql_app "select household_id || ' ' || count(*) from app_farm_supply.requests group by household_id")" "hh_tc_1 2" "two requests stored for hh_tc_1"
+page_ok "$TM" "$FS/?status=open&page=999999" "farm-supply round list (status filter, a page far out)"
+csv_check "$TM" $FS/rounds/$ROUND/items/export.csv "farm-supply item CSV"
+csv_check "$TM" $FS/rounds/$ROUND/households/export.csv "farm-supply household CSV"
+page_ok "$TM" $FS/rounds/$ROUND/print "farm-supply delivery sheet print page"
+refused "$TF" $FS/rounds/$ROUND/items/export.csv smoke_farmer_tc
 LOC=$(post_loc "$TM" $FS/rounds/$ROUND/close -X POST)
 assert_eq "$LOC" "$FS/rounds/$ROUND" "manager closes the round -> 303"
 LOC=$(post_loc "$TF" $FS/mine/rounds/$ROUND -d "q_$ITEM1=9")
@@ -529,6 +566,8 @@ wait_request "$R6" FAILED "restarted worker fails the half-done request" 90
 assert_eq "$(psql_app "select error from platform.app_requests where id = '$R6'")" "Trình cài đặt khởi động lại giữa chừng." \
   "request carries the restart message"
 assert_eq "$(installed_count hello)" 0 "half-done hello is not installed"
+# The worker marks the request FAILED first and undoes the half install after that, so wait for the undo.
+for _ in $(seq 1 30); do [ "$(app_containers hello)" = 0 ] && [ "$(grep -c 'app-hello' "$GW_FILE" || true)" = 0 ] && break; sleep 2; done
 assert_eq "$(app_containers hello)" 0 "no app-hello container left after the crash"
 assert_eq "$(grep -c 'app-hello' "$GW_FILE" || true)" 0 "no hello route left after the crash"
 R7=$(request hello TC ENABLE)
@@ -581,6 +620,11 @@ RS3=$(request tea-shop TC ENABLE)
 wait_request "$RS3" DONE "ENABLE tea-shop for TC again -> DONE" 120
 fresh_tokens
 wait_http 200 "tea-shop answers again after the second enable" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-shop/"
+# The public route can reach the gateway a moment after the manager route, so poll instead of reading once.
+for _ in $(seq 1 15); do
+  grep -q 'Chè Oolong' <<<"$(app_curl -s "$APP_GW/apps/tea-shop/public/TC")" && break
+  sleep 1
+done
 grep -q 'Chè Oolong' <<<"$(app_curl -s "$APP_GW/apps/tea-shop/public/TC")" && pass "the product created before the disable is on the public page again" \
   || fail "the product is gone after the second enable"
 RS4=$(request tea-shop TC DISABLE)
@@ -602,6 +646,14 @@ fresh_tokens
 assert_eq "$(psql_app "select app_id || ' ' || htx_code || ' ' || enabled_by from platform.app_enablements")" "hello * dxos-upgrade" \
   "first run of 06-app-store.sql enables the installed app for *"
 wait_http 200 "hello still answers after the upgrade" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
+# ./dxos upgrade of the installed app: exit 0, the registry version, the same enablement rows, still answering; of an app that is not installed: exit 1.
+ENABLEMENTS=$(psql_app "select app_id || '|' || htx_code || '|' || enabled_by from platform.app_enablements order by app_id, htx_code")
+./dxos upgrade miniapps/hello >/dev/null && pass "./dxos upgrade miniapps/hello exits 0" || fail "./dxos upgrade miniapps/hello"
+assert_eq "$(psql_app "select version from platform.installed_apps where id = 'hello'" | sed -n 1p)" "$(sed -n 's/^version: *"\{0,1\}\([0-9.]*\).*/\1/p' miniapps/hello/app.yaml | sed -n 1p)" "upgrade leaves the registry at the manifest version"
+assert_eq "$(psql_app "select app_id || '|' || htx_code || '|' || enabled_by from platform.app_enablements order by app_id, htx_code")" "$ENABLEMENTS" "upgrade keeps the enablement rows"
+fresh_tokens
+wait_http 200 "hello still answers after ./dxos upgrade" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/hello/"
+if ./dxos upgrade miniapps/leaf-purchase >/dev/null 2>&1; then fail "./dxos upgrade of an app that is not installed exited 0"; else pass "./dxos upgrade of an app that is not installed exits non-zero"; fi
 psql_app "delete from platform.app_enablements" >/dev/null
 $COMPOSE run --rm platform-init >/dev/null 2>&1 || fail "second platform-init"
 assert_eq "$(enabled_for hello)" "" "a later platform-init does not hand a removed enablement back"

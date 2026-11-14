@@ -12,7 +12,7 @@ import styles from './AppStoreDetail.module.css'
 import { InstallProgress } from './InstallProgress'
 import { StoreAppIcon } from './StoreAppIcon'
 import { StoreHistoryTable } from './StoreHistory'
-import { CATEGORY_LABELS, ROLE_LABELS, STATUS_LABELS, STATUS_TONES } from './store-labels'
+import { CATEGORY_LABELS, hasNewVersion, NEW_VERSION_LABEL, ROLE_LABELS, STATUS_LABELS, STATUS_TONES } from './store-labels'
 import { useStorePolling } from './use-store-polling'
 
 const CONFIRM_REMOVE = 'Gỡ ứng dụng này khỏi HTX? Dữ liệu được giữ lại.'
@@ -106,6 +106,11 @@ export function AppStoreDetail({ initial, workerAlive }: { initial: StoreAppDeta
           <Pill tone={STATUS_TONES[app.status]} size="md">
             {STATUS_LABELS[app.status]}
           </Pill>
+          {hasNewVersion(app) && (
+            <Pill tone="amber" size="md">
+              {NEW_VERSION_LABEL}
+            </Pill>
+          )}
           {app.status === 'available' && <Button isLoading={pending} onClick={() => request('ENABLE')}>Cài</Button>}
           {app.status === 'enabled' && (
             <Button variant="secondary" isLoading={pending} onClick={() => request('DISABLE')}>
@@ -227,6 +232,12 @@ export function AppStoreDetail({ initial, workerAlive }: { initial: StoreAppDeta
             </>
           )}
         </dl>
+        {hasNewVersion(app) && (
+          <>
+            <p className={styles.paragraph}>Bản đang chạy: {app.installedVersion}</p>
+            <p className={styles.paragraph}>Quản trị máy chủ chạy ./dxos upgrade miniapps/{app.id} để cập nhật.</p>
+          </>
+        )}
       </section>
 
       {app.history.length > 0 && (

@@ -8,7 +8,7 @@ import { readStoredTheme } from '@/components/ui/ThemeToggle/theme'
 import styles from './MiniAppFrame.module.css'
 
 /** Spec §6.6: forms and same-origin links work, scripts never run, and the app may leave the frame only on a click. */
-const SANDBOX = 'allow-forms allow-same-origin allow-top-navigation-by-user-activation'
+const SANDBOX = 'allow-forms allow-same-origin allow-top-navigation-by-user-activation allow-downloads'
 
 /** `src` with `theme=light|dark` from the stored choice; unchanged for the system setting or unreadable storage. */
 function withStoredTheme(src: string): string {

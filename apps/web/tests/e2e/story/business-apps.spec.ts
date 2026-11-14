@@ -21,6 +21,11 @@ function runDay() {
   const back = (Math.floor(Date.now() / 1000) % 3000) + 30
   return new Date(Date.now() + 7 * 3600e3 - back * 86400e3).toISOString().slice(0, 10)
 }
+/** Opens a kit disclosure unless the page already opened it (it does when the form has nothing to hide yet or holds an error). */
+async function openDisclosure(app: ReturnType<typeof appFrame>, summary: string) {
+  const details = app.locator('details.disclosure', { has: app.locator('summary', { hasText: summary }) })
+  if ((await details.getAttribute('open')) === null) await details.locator('summary').click()
+}
 const vnDate = (iso: string) => iso.split('-').reverse().join('/')
 
 test.describe('business apps', () => {
@@ -49,6 +54,7 @@ test.describe('business apps', () => {
     await manager.waitForURL('**/manager/apps/leaf-purchase/periods')
     const managerApp = appFrame(manager, title)
     await managerApp.getByRole('link', { name: 'Giá thu mua' }).click()
+    await openDisclosure(managerApp, 'Thêm loại chè')
     await managerApp.locator('input[name=name]').fill(grade)
     await managerApp.locator('input[name=price_vnd]').last().fill('9000')
     await managerApp.getByRole('button', { name: 'Thêm loại chè' }).click()
@@ -70,10 +76,11 @@ test.describe('business apps', () => {
       await expect(officerApp.locator('.notice')).toContainText('Đã lưu phiếu cân.')
     }
     await expect(officerApp.locator('tbody tr')).toHaveCount(2)
-    await expect(officerApp.locator('p', { hasText: 'Tổng ngày' })).toContainText('20,5 kg')
+    await expect(officerApp.locator('.stats li', { hasText: 'Số ký trong ngày' })).toContainText('20,5 kg')
 
     // The manager closes a period of that day.
     await manager.goto('/manager/apps/leaf-purchase/periods')
+    await openDisclosure(managerApp, 'Chốt kỳ mới')
     const closing = managerApp.locator('form', { has: managerApp.getByRole('button', { name: 'Chốt kỳ' }) })
     await closing.locator('input[name=date_from]').fill(day)
     await closing.locator('input[name=date_to]').fill(day)
@@ -108,12 +115,14 @@ test.describe('business apps', () => {
     await menuLink(manager, title).first().click()
     await manager.waitForURL('**/manager/apps/farm-supply')
     const managerApp = appFrame(manager, title)
+    await managerApp.locator('summary', { hasText: 'Mở đợt đăng ký mới' }).click()
     await managerApp.locator('input[name=title]').fill(round)
     await managerApp.locator('input[name=deadline]').fill(`${new Date().getFullYear() + 1}-03-01T17:00`)
     await managerApp.getByRole('button', { name: 'Mở đợt' }).click()
     await expect(managerApp.locator('h1')).toContainText(round)
     const items: [string, string, string][] = [['Phân NPK', 'bao 50kg', '450000'], ['Thuốc trừ sâu sinh học', 'chai', '85000']]
     for (const [name, unit, price] of items) {
+      await managerApp.locator('summary', { hasText: 'Thêm mặt hàng mới' }).click()
       const form = managerApp.locator('form', { has: managerApp.getByRole('button', { name: 'Thêm mặt hàng' }) })
       await form.locator('input[name=name]').fill(name)
       await form.locator('input[name=unit]').fill(unit)
@@ -138,8 +147,9 @@ test.describe('business apps', () => {
     await manager.goto('/manager/apps/farm-supply')
     await managerApp.getByRole('link', { name: round }).click()
     await expect(managerApp.locator('td[data-label="Phải trả"]')).toHaveText('1.027.500 ₫')
+    await managerApp.locator('summary', { hasText: 'Đóng đợt đăng ký này' }).click()
     await managerApp.getByRole('button', { name: 'Đóng đợt này' }).click()
-    await expect(managerApp.locator('h1 .pill')).toHaveText('Đã đóng')
+    await expect(managerApp.locator('p > .pill').first()).toHaveText('Đã đóng')
     await managerApp.getByRole('button', { name: /Đánh dấu đã giao/ }).click()
     await expect(managerApp.locator('td[data-label="Giao hàng"]')).toContainText('Đã giao')
 

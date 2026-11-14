@@ -1,0 +1,39 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Lượt đặt chỗ của HTX {{ htx }}{% endblock %}
+{% block main %}
+{{ kit.app_header("Lượt đặt chỗ", "Mọi lượt đặt của HTX " ~ htx ~ ", mới nhất trước.") }}
+{{ kit.tabs([("tours", "Tour", href('/', theme)), ("bookings", "Lượt đặt chỗ", href('/bookings', theme))], "bookings") }}
+<form class="toolbar" method="get" action="{{ href('/bookings', theme) }}">
+  {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+  <label>Tìm kiếm
+    <input type="search" name="q" value="{{ q }}" maxlength="80" placeholder="Mã, tên khách hoặc số điện thoại">
+  </label>
+  <label>Trạng thái
+    <select name="status">{% for key, label in filters %}<option value="{{ key }}"{% if key == status_filter %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  </label>
+  <button type="submit">Lọc</button>
+</form>
+{% if bookings %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Mã</th><th role="columnheader">Khách</th><th role="columnheader">Số điện thoại</th><th role="columnheader">Tour</th><th role="columnheader">Số người</th><th role="columnheader">Trạng thái</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for b in bookings %}
+    <tr role="row">
+      <td role="cell" data-label="Mã"><a href="{{ href('/tours/' ~ b.tour_id, theme) }}">{{ b.code }}</a></td>
+      <td role="cell" data-label="Khách">{{ b.guest_name }}</td>
+      <td role="cell" data-label="Số điện thoại"><a href="tel:{{ b.phone }}">{{ b.phone }}</a></td>
+      <td role="cell" data-label="Tour">{{ b.tour_title }} · {{ b.tour_starts_at | vn_time }}</td>
+      <td role="cell" data-label="Số người">{{ b.party_size }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="{{ booking_pill(b.status) }}">{{ booking_status[b.status] }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ kit.pagination(page_info, links[0], links[1]) }}
+{% else %}
+{{ kit.empty("Không có lượt đặt nào khớp bộ lọc." if q or status_filter != "all" else "Chưa có lượt đặt chỗ nào.") }}
+{% endif %}
+{% endblock %}

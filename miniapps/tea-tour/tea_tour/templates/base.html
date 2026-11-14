@@ -8,7 +8,7 @@
 <title>{% block title %}{% endblock %} · Tour đồi chè</title>
 <link rel="stylesheet" href="/dxos-app.css">
 </head>
-<body><main>
+<body{% block body_attrs %}{% endblock %}><main>
 {% block main %}{% endblock %}
 </main></body>
 </html>

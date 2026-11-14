@@ -1,0 +1,34 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Tổng quan{% endblock %}
+{% block head %}{{ kit.app_header("Tổng quan thu mua", "Số liệu của HTX tính đến hôm nay") }}{% endblock %}
+{% block main %}
+{{ kit.stats([
+  {"label": "Hôm nay", "value": (data.today_kg | kg) ~ " kg", "hint": (data.today_vnd | vnd) ~ " · " ~ data.today_tickets ~ " phiếu"},
+  {"label": "Tháng này", "value": (data.month_kg | kg) ~ " kg", "hint": (data.month_vnd | vnd) ~ " · " ~ data.month_tickets ~ " phiếu"},
+  {"label": "Chưa vào kỳ", "value": (data.open_kg | kg) ~ " kg", "hint": (data.open_vnd | vnd) ~ " chưa chốt kỳ"},
+  {"label": "Chưa trả", "value": data.unpaid_vnd | vnd, "hint": data.unpaid_households ~ " hộ chờ chi trả"}
+]) }}
+
+{{ kit.chart("Số ký 14 ngày gần nhất", chart, "kg") }}
+
+<h2>Hộ bán nhiều nhất tháng này</h2>
+{% if data.top %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Hạng</th><th role="columnheader">Hộ</th><th role="columnheader">Số ký</th><th role="columnheader">Thành tiền</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for h in data.top %}
+    <tr role="row">
+      <td role="cell" data-label="Hạng">{{ loop.index }}</td>
+      <td role="cell" data-label="Hộ">{{ h.household_name }}</td>
+      <td role="cell" data-label="Số ký">{{ h.kg | kg }}</td>
+      <td role="cell" data-label="Thành tiền">{{ h.vnd | vnd }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+{{ kit.empty("Tháng này chưa có phiếu cân nào.", "Ghi phiếu cân", href('/', theme)) }}
+{% endif %}
+{% endblock %}

@@ -2,12 +2,12 @@
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
 {% block title %}Phiếu cân của tôi{% endblock %}
+{% block head %}{{ kit.app_header("Phiếu cân của tôi", ("Hộ " ~ household.name) if household else None) }}{% endblock %}
 {% block main %}
-<h1>Phiếu cân của tôi</h1>
 {% if not household %}
 <p class="notice" role="status">{{ notice_text }}</p>
 {% else %}
-<p>Hộ: <strong>{{ household.name }}</strong></p>
+{{ kit.stats([{"label": "Tháng này", "value": (this_month.kg | kg) ~ " kg", "hint": (this_month.vnd | vnd) ~ " · " ~ this_month.tickets ~ " phiếu"}, {"label": "Chưa trả", "value": unpaid_vnd | vnd, "hint": "tiền các kỳ đã chốt chưa chi trả"}]) }}
 <h2>Chi trả theo kỳ</h2>
 {% if payouts %}
 <table role="table">
@@ -18,15 +18,24 @@
       <td role="cell" data-label="Kỳ">{{ date_from | vn_date }} – {{ date_to | vn_date }}</td>
       <td role="cell" data-label="Số ký">{{ o.total_kg | kg }}</td>
       <td role="cell" data-label="Số tiền">{{ o.total_vnd | vnd }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ "Đã trả" if o.paid_at else "Chưa trả" }}</span></td>
+      <td role="cell" data-label="Trạng thái">{% set label = "Đã trả" if o.paid_at else "Chưa trả" %}<span class="{{ pill(label) }}">{{ label }}</span></td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
 {% else %}
-<p>Chưa có kỳ nào được chốt cho hộ của anh/chị.</p>
+{{ kit.empty("Chưa có kỳ nào được chốt cho hộ của anh/chị.") }}
 {% endif %}
-<h2>Phiếu cân gần đây</h2>
+<h2>Phiếu cân</h2>
+<form class="toolbar" method="get" action="{{ href('/mine') }}">
+  {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+  <label>Tháng
+    <select name="month"><option value="">Tất cả các tháng</option>
+      {% for m in months %}<option value="{{ m }}"{% if m == month %} selected{% endif %}>{{ m[5:] }}/{{ m[:4] }}</option>{% endfor %}
+    </select>
+  </label>
+  <button type="submit">Xem</button>
+</form>
 {% if tickets %}
 <table role="table">
   <thead role="rowgroup"><tr role="row"><th role="columnheader">Ngày cân</th><th role="columnheader">Loại chè</th><th role="columnheader">Số ký</th><th role="columnheader">Thành tiền</th><th role="columnheader">Trạng thái</th></tr></thead>
@@ -37,13 +46,14 @@
       <td role="cell" data-label="Loại chè">{{ t.grade_name }}</td>
       <td role="cell" data-label="Số ký">{{ t.kg | kg }}</td>
       <td role="cell" data-label="Thành tiền">{{ t.amount_vnd | vnd }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ ticket_state(t) }}</span></td>
+      <td role="cell" data-label="Trạng thái"><span class="{{ pill(ticket_state(t)) }}">{{ ticket_state(t) }}</span></td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
+{{ kit.pagination(page_info, prev_href, next_href) }}
 {% else %}
-<p>Chưa có phiếu cân nào.</p>
+{{ kit.empty("Chưa có phiếu cân nào." if not month else "Tháng này hộ của anh/chị chưa có phiếu cân.") }}
 {% endif %}
 {% endif %}
 {% endblock %}

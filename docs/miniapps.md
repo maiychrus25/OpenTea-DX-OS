@@ -36,7 +36,7 @@ trình duyệt ──▶ web  /apps/<id>/<path>?<query>
 - Route của app chỉ khớp ở cổng nội bộ `9081` của gateway (`vars: [["server_port", "==", "9081"]]`, R23), cổng mà chỉ mạng compose thấy. Cổng `9080` mở ra máy chủ trả 404 cho mọi `/apps/...`, nên request từ ngoài luôn phải qua web và các kiểm tra của web proxy. `gateway-sync` từ chối route app thiếu điều kiện này.
 - Gateway chỉ có route cho các tiền tố khai trong manifest. Đường dẫn ngoài mọi tiền tố trả 404 từ gateway. `/apps/<id>` không có dấu `/` cuối cũng trả 404 ở gateway, nhưng web proxy luôn gửi `/apps/<id>/...`.
 - Header request tới app chỉ gồm `content-type`, `accept`, `content-length`, và `authorization` trên route cần đăng nhập. App không nhận cookie.
-- Header phản hồi về trình duyệt chỉ giữ `content-type` và `location`. `set-cookie` và CSP riêng của app bị bỏ, nên **app không dùng được cookie hay session**; trạng thái nằm trong URL, form và database.
+- Header phản hồi về trình duyệt chỉ giữ `content-type`, `location` và `content-disposition` (chỉ khi giá trị bắt đầu bằng `attachment`, để liên kết "Tải CSV" tải được tệp). `set-cookie` và CSP riêng của app bị bỏ, nên **app không dùng được cookie hay session**; trạng thái nằm trong URL, form và database.
 - Chuyển hướng (`location`) chỉ được trỏ tới một trang khác của chính app (cùng origin, dưới `/apps/<id>`). Nếu không, web trả 502.
 - App không trả lời trong 10 giây thì web trả 503.
 
@@ -53,7 +53,7 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `version` | có | SemVer, ví dụ `0.1.0` |
 | `license` | có | thuộc danh sách OSI của CLI: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `LGPL-3.0-or-later`, `GPL-2.0-only`, `GPL-3.0-only`, `GPL-3.0-or-later`, `AGPL-3.0-only`, `AGPL-3.0-or-later` |
 | `publisher` | có | 1–80 ký tự |
-| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.10.1`) |
+| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.11.0`) |
 | `runtime.build` / `runtime.image` | đúng một trong hai | `build`: thư mục tương đối trong thư mục app (thường là `.`). `image`: phải ghim digest, dạng `<ref>@sha256:<64 ký tự hex>` |
 | `runtime.port` | có | 1–65535, cổng app nghe trong container |
 | `runtime.health` | có | đường dẫn health check (đã cắt tiền tố), ví dụ `/healthz`, phải trả 2xx |
@@ -128,7 +128,7 @@ Trên route cần đăng nhập, app nhận `Authorization: Bearer <access token
   - không có `<style>` nội tuyến hay thuộc tính `style`; dùng stylesheet chung;
   - ảnh chỉ lấy từ cùng origin hoặc `data:`;
   - form chỉ gửi về cùng origin.
-- Trang cần đăng nhập hiện trong khung ứng dụng `/<role>/apps/<id>/<path>`, bên trong `<iframe sandbox="allow-forms allow-same-origin allow-top-navigation-by-user-activation">`. Khung không có `allow-scripts` nên app không đọc được cookie hay DOM của ứng dụng chính. Link ra ngoài app cần `target="_top"`.
+- Trang cần đăng nhập hiện trong khung ứng dụng `/<role>/apps/<id>/<path>`, bên trong `<iframe sandbox="allow-forms allow-same-origin allow-top-navigation-by-user-activation allow-downloads">`. Khung không có `allow-scripts` nên app không đọc được cookie hay DOM của ứng dụng chính. Link ra ngoài app cần `target="_top"`.
 - Trang công khai mở thẳng toàn màn hình, ví dụ `/apps/tea-tour/public/TC`.
 - Thoát HTML mọi dữ liệu người dùng gửi (Jinja2 bật autoescape; với thư viện chuẩn dùng `html.escape`).
 - Sau một POST, chuyển hướng 303 về trang GET (mẫu POST/redirect/GET).
@@ -155,6 +155,55 @@ Thêm `<link rel="stylesheet" href="/dxos-app.css">` vào mọi trang. Tệp do 
   - Gắn `data-label="<tên cột>"` cho mỗi ô `<td>`: ô có nhãn hiện tên cột bên trái và giá trị bên phải; ô không có nhãn (ví dụ một nút) chiếm cả chiều ngang thẻ.
   - Hàng tiêu đề được ẩn bằng hình ảnh nhưng vẫn còn cho trình đọc màn hình.
   - Vì các phần của bảng chuyển sang `display: block`, một số trình đọc màn hình bỏ ngữ nghĩa bảng. Nên thêm `role="table"`, `role="rowgroup"` (cho `thead` và `tbody`), `role="row"`, `role="columnheader"` và `role="cell"`, như `tea_tour/templates/manager.html`.
+
+## 4b. Bộ giao diện dùng chung (app kit)
+
+Bản gốc nằm ở `platform/appkit/` (`appkit.py`, `kit.html`, `showcase.html`) và `apps/web/public/dxos-app.css`. Mỗi app tự đủ vì image dựng từ thư mục của chính nó, nên hai tệp được **chép** vào gói của app: `<gói>/appkit.py` và `<gói>/templates/kit.html`.
+
+- `make appkit-sync` chép bản gốc vào bốn app (`leaf-purchase`, `tea-shop`, `farm-supply`, `tea-tour`; danh sách nằm trong `scripts/appkit-sync.sh`). `make lint` chạy `scripts/appkit-sync.sh --check` và báo lỗi nếu một bản chép lệch hoặc thiếu.
+- Không sửa bản chép trong app: sửa bản gốc rồi chạy `make appkit-sync`. Xem mọi thành phần với dữ liệu mẫu ở `platform/appkit/showcase.html`.
+- Dùng trong template: `{% import "kit.html" as kit %}`. Trong CSS và HTML không có `style=` hay `<script`; chiều dài thanh biểu đồ là thuộc tính SVG.
+
+**Macro (`kit.<tên>`) và HTML sinh ra:**
+
+| Macro | HTML |
+|---|---|
+| `app_header(title, subtitle=None)` + `{% call %}` | `<header class="app-header">` có một `<h1>`; phần thân `call` là các nút hành động |
+| `tabs(items, current)` | `<nav class="tabs" aria-label="Điều hướng trong ứng dụng">`; `items` là `(khoá, nhãn, href)`, mục hiện tại có `aria-current="page"` |
+| `stats(items)` | `<ul class="stats">`; mỗi mục `{label, value, hint}` (`hint` không bắt buộc) |
+| `chart(title, rows, unit="")` | `<figure class="chart">`; `rows` từ `appkit.chart_rows`; mỗi dòng một `<rect width="62%">` |
+| `pagination(page, prev_href, next_href)` | `<nav class="pagination" aria-label="Phân trang">` với "Trang 2/5 · 87 dòng"; không hiện gì khi `page.total == 0` |
+| `empty(message, action_label=None, action_href=None)` | `<p class="empty">` |
+| `field_error(errors, name)` | `<span class="field-error" role="alert">` dưới ô nhập; không có lỗi thì không sinh gì |
+| `steps(labels, current)` | `<ol class="steps">`; bước hiện tại `aria-current="step"`, bước trước đó `data-state="done"` |
+| `export_link(href, label="Tải CSV")` | `<a class="button secondary" href>` |
+| `print_link(href, label="Bản in")` | `<a class="button secondary" href target="_top">` |
+| `print_bar(back_href)` | `<p class="no-print">` có hướng dẫn Ctrl+P và liên kết "Quay lại ứng dụng" |
+
+**Mẫu chỉ cần CSS (viết HTML trực tiếp):**
+
+- `<form class="toolbar" method="get">`: ô tìm, bộ lọc, khoảng ngày và nút, tự xuống dòng.
+- `<ul class="cards"><li class="card">…</li></ul>`: lưới thẻ cho trang công khai.
+- `<details class="disclosure"><summary>Thêm …</summary>…</details>`: khối mở ra cho biểu mẫu thêm.
+- `<span class="actions">` quanh các nút nhỏ trong một dòng bảng (một `<form>` bọc một nút vẫn được); `a.button` là liên kết trông như nút (thêm `secondary` cho nút phụ); `.danger` cho nút huỷ, xoá.
+- `<form class="toolbar">`: ô tìm (`type="search"`) giãn được, ô chọn và ngày giữ chiều rộng tự nhiên, các nút nằm cuối hàng cuối; trên điện thoại mỗi ô một hàng.
+- Nút trong ô bảng và trong `.actions` gọn hơn (cao 34 px) để một dòng bảng cao khoảng 44 px.
+- `input[type=checkbox|radio]` có cỡ bình thường, cùng một dòng với nhãn: `<label><input type="checkbox"> Chữ</label>`, hoặc ô nhập rồi tới `<label for>` ngay sau nó (trong `<form>`).
+- Nhãn trạng thái: `.pill` (xanh: đang dùng, xong), `.pill.neutral` (xám: ngừng, đóng, đã qua), `.pill.warn` (hổ phách: chờ, mới, chưa thanh toán), `.pill.danger` (đỏ: đã huỷ, vô hiệu).
+- `stats` tự chia đều hàng cho 3, 4 hay 5 ô; trên điện thoại hai cột, ô lẻ cuối chiếm cả hàng.
+- Biểu mẫu trong `.card` không có khung riêng.
+- Trang in: `.signature` (ô bảng hoặc khối) chừa khoảng 4,5 rem trống để ký tay; bảng trong `.print-sheet` rộng hết khổ, viền đen mảnh.
+- Trang in: `<body class="print-sheet">`, `.no-print` ẩn khi in, `.print-only` chỉ hiện khi in; `@media print` bỏ nền, màu, điều hướng và nút.
+
+**Hàm Python (`appkit`):**
+
+- `page_of(raw, total, size=25)` trả `Page` (`number`, `pages`, `offset`, `has_prev`, `has_next`); thiếu, sai hoặc vượt trang cuối đều ra một trang hợp lệ.
+- `parse_date(raw)` (đúng `YYYY-MM-DD`), `parse_int(raw, low, high)`: trả `None` khi sai.
+- `like_pattern(q)`: thoát `\ % _` rồi bọc `%…%`, dùng với `ILIKE %s ESCAPE '\'` và tham số SQL.
+- `money(vnd)` ("9.000 ₫"), `number(value, digits=1)` ("12,5"), `vn_date`, `vn_datetime` (giờ Asia/Ho_Chi_Minh).
+- `chart_rows(pairs, fmt=number)`: độ dài cột theo phần trăm của giá trị lớn nhất.
+- `csv_filename(app_id, htx_code, name, day)` (chỉ ASCII), `csv_response(filename, header, rows)`: UTF-8 có BOM, CRLF, `content-disposition: attachment`; ô chữ bắt đầu bằng `=`, `+`, `-`, `@` được thêm `'` phía trước.
+- `shell_url(role, app_id, path="/")`: địa chỉ trang khung (`/manager/apps/tea-shop/orders`) cho liên kết quay lại từ trang in.
 
 ## 5. Database: `DXOS_APP_DB_URL` và migration
 
@@ -233,11 +282,12 @@ Hệ quả cho người viết app:
 | --- | --- |
 | `./dxos validate <dir>...` | Chỉ kiểm tra manifest; in "hợp lệ" hoặc từng lỗi; mã thoát 1 khi có lỗi |
 | `./dxos install <dir>` | Kiểm manifest, database, sinh route gateway, sinh compose, chạy `up -d --build --wait`, rồi ghi `platform.installed_apps`. Bước nào hỏng (kể cả health check, Ctrl-C hoặc TERM) thì mọi bước trước được hoàn tác. Cài lại một app đã cài chỉ bảo đảm container đang chạy |
+| `./dxos upgrade <dir>` | Nâng cấp app đã đăng ký tại chỗ: kiểm manifest, chạy migration còn thiếu (giữ nguyên role và mật khẩu), sinh lại route và compose, `up -d --build --wait`, rồi cập nhật `name`, `version`, `menu`, `manifest` trong `platform.installed_apps`. Không đụng tới enablement của HTX. Build hoặc health check hỏng thì đăng ký vẫn ở bản cũ và lệnh thoát mã 1 (route và compose file đã sinh lại; chạy `upgrade` lần nữa để sửa). App chưa cài thì dùng `install` |
 | `./dxos remove <id> [--purge]` | Tắt container, gỡ route, xoá đăng ký; mặc định giữ dữ liệu (§5) |
 | `./dxos list` | Mỗi app đã cài một dòng: id, phiên bản, thời điểm cài, trạng thái container; hoặc "Chưa cài app nào" |
 | `./dxos worker` | Tiến trình của máy chủ làm các yêu cầu Cài và Gỡ mà trưởng HTX gửi từ Kho ứng dụng (xem dưới); chạy cho tới khi nhận TERM hoặc Ctrl-C |
 
-**Kho ứng dụng và bật tắt theo HTX.** `./dxos install` ghi app vào `platform.installed_apps` và bật nó cho mọi HTX (`platform.app_enablements`, mã `*`). Trang `/manager/app-store` thì bật hoặc tắt riêng cho HTX của trưởng HTX: web chỉ ghi một dòng vào `platform.app_requests`, còn `./dxos worker` nhận từng yêu cầu một. `ENABLE` cài app nếu chưa cài rồi ghi enablement của HTX; `DISABLE` xoá enablement (HTX thấy app biến mất ngay) rồi gỡ container khi không còn HTX nào dùng, vẫn giữ dữ liệu. App chỉ được phục vụ và hiện trong menu của HTX đã bật nó. Catalogue của kho (`platform.app_catalog`) được `make platform-up` và worker đồng bộ từ `miniapps/*/app.yaml`, nên tên thư mục phải trùng `id` trong manifest. Worker giữ khoá `docker/runtime/<project>/worker.lock` (mỗi project một worker), đánh dấu lỗi các yêu cầu mà worker cũ bỏ dở lúc khởi động và chỉ hoàn tác lần cài dở của app chưa đăng ký. Cách chạy dưới systemd nằm trong README, mục "Kho ứng dụng và `./dxos worker`".
+**Kho ứng dụng và bật tắt theo HTX.** `./dxos install` ghi app vào `platform.installed_apps` và bật nó cho mọi HTX (`platform.app_enablements`, mã `*`). Trang `/manager/app-store` thì bật hoặc tắt riêng cho HTX của trưởng HTX: web chỉ ghi một dòng vào `platform.app_requests`, còn `./dxos worker` nhận từng yêu cầu một. `ENABLE` cài app nếu chưa cài rồi ghi enablement của HTX; `DISABLE` xoá enablement (HTX thấy app biến mất ngay) rồi gỡ container khi không còn HTX nào dùng, vẫn giữ dữ liệu. App chỉ được phục vụ và hiện trong menu của HTX đã bật nó. Catalogue của kho (`platform.app_catalog`) được `make platform-up` và worker đồng bộ từ `miniapps/*/app.yaml`, nên tên thư mục phải trùng `id` trong manifest. Worker giữ khoá `docker/runtime/<project>/worker.lock` (mỗi project một worker), đánh dấu lỗi các yêu cầu mà worker cũ bỏ dở lúc khởi động và chỉ hoàn tác lần cài dở của app chưa đăng ký. Khi `version` trong catalogue khác phiên bản đang đăng ký, thẻ và trang chi tiết hiện nhãn `Có bản mới`, kèm dòng nhắc quản trị máy chủ chạy `./dxos upgrade miniapps/<id>`. Cách chạy dưới systemd nằm trong README, mục "Kho ứng dụng và `./dxos worker`".
 
 `<dir>` phải nằm trong repo, vì `dxos-cli` chỉ thấy repo.
 
@@ -291,7 +341,7 @@ Tệp đang được git theo dõi không bao giờ bị sửa lúc chạy. `mak
    ```
    - Trong `app.yaml`, đổi `id: my-app`, `name` và `label` của menu.
    - Trong `app.py`, đổi `PREFIX = "/apps/my-app"`.
-   - Chạy `./dxos validate miniapps/my-app`, rồi `./dxos install miniapps/my-app`. Sửa code rồi cài lại: `./dxos remove my-app && ./dxos install miniapps/my-app`.
+   - Chạy `./dxos validate miniapps/my-app`, rồi `./dxos install miniapps/my-app`. Sửa code rồi nâng cấp tại chỗ: `./dxos upgrade miniapps/my-app` (giữ dữ liệu và việc bật theo HTX).
 7. **Thêm database** (khi cần):
    - Thêm `database: { migrations: migrations/ }` và `migrations/001_init.sql`; mọi bảng có `htx_code text NOT NULL`.
    - Đọc `DXOS_APP_DB_URL` từ môi trường.

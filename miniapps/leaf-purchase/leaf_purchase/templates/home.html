@@ -2,14 +2,22 @@
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
 {% block title %}Phiếu cân ngày {{ day | vn_date }}{% endblock %}
+{% block head %}{{ kit.app_header("Thu mua búp tươi", "Phiếu cân ngày " ~ (day | vn_date)) }}{% endblock %}
 {% block main %}
-<h1>Thu mua búp tươi</h1>
-<form method="get" action="{{ href('/') }}">
+{{ kit.stats([{"label": "Số ký trong ngày", "value": (kg_total | kg) ~ " kg"}, {"label": "Thành tiền", "value": vnd_total | vnd}, {"label": "Số phiếu", "value": ticket_count}]) }}
+
+<form class="toolbar" method="get" action="{{ href('/') }}">
   {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
   <label>Xem ngày <input type="date" name="day" value="{{ day.isoformat() }}"></label>
   <button type="submit">Xem</button>
 </form>
-<p>Tổng ngày {{ day | vn_date }}: <strong>{{ kg_total | kg }} kg</strong> · <strong>{{ vnd_total | vnd }}</strong></p>
+
+<h2>Ghi phiếu cân</h2>
+{% if not grades %}{{ kit.empty("HTX chưa có loại chè nào đang dùng. Ban quản trị đặt giá ở trang giá thu mua trước.") }}{% endif %}
+<form method="post" action="{{ href('/tickets', theme) }}">
+  {% include "ticket_fields.html" %}
+  <button type="submit"{% if core_error or not grades %} disabled{% endif %}>Ghi phiếu</button>
+</form>
 
 <h2>Phiếu cân ngày {{ day | vn_date }}</h2>
 {% if tickets %}
@@ -22,23 +30,17 @@
       <td role="cell" data-label="Loại chè">{{ t.grade_name }}</td>
       <td role="cell" data-label="Số ký">{{ t.kg | kg }}</td>
       <td role="cell" data-label="Thành tiền">{{ t.amount_vnd | vnd }}</td>
-      <td role="cell" data-label="Trạng thái"><span class="pill">{{ ticket_state(t) }}</span></td>
-      <td role="cell" data-label="Thao tác">{% if t.open %}
-        <a href="{{ href('/tickets/' ~ t.id ~ '/edit', theme) }}">Sửa</a>
-        <form method="post" action="{{ href('/tickets/' ~ t.id ~ '/void', theme) }}"><button type="submit">Huỷ phiếu</button></form>
-      {% else %}—{% endif %}</td>
+      <td role="cell" data-label="Trạng thái"><span class="{{ pill(ticket_state(t)) }}">{{ ticket_state(t) }}</span></td>
+      <td role="cell" data-label="Thao tác"><span class="actions">
+        {% if t.open %}<a class="button secondary" href="{{ href('/tickets/' ~ t.id ~ '/edit', theme) }}">Sửa</a>{% endif %}
+        {{ kit.print_link(href('/tickets/' ~ t.id ~ '/print', theme)) }}
+        {% if t.open %}<form method="post" action="{{ href('/tickets/' ~ t.id ~ '/void', theme) }}"><button class="danger" type="submit">Huỷ phiếu</button></form>{% endif %}
+      </span></td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
 {% else %}
-<p>Chưa có phiếu cân nào trong ngày này.</p>
+{{ kit.empty("Chưa có phiếu cân nào trong ngày này.") }}
 {% endif %}
-
-<h2>Ghi phiếu cân</h2>
-{% if not grades %}<p>HTX chưa có loại chè nào đang dùng. Ban quản trị đặt giá ở trang giá thu mua trước.</p>{% endif %}
-<form method="post" action="{{ href('/tickets', theme) }}">
-  {% include "ticket_fields.html" %}
-  <button type="submit"{% if core_error or not grades %} disabled{% endif %}>Ghi phiếu</button>
-</form>
 {% endblock %}

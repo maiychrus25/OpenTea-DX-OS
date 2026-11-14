@@ -133,6 +133,24 @@ describe('forwardToApp', () => {
     expect(res.headers.get('x-powered-by')).toBeNull()
   })
 
+  test('keeps an attachment content-disposition so a CSV link downloads', async () => {
+    const { deps } = setup(new Response('a', { headers: { 'content-type': 'text/csv', 'content-disposition': 'attachment; filename="a.csv"' } }))
+
+    const res = await forwardToApp(new Request('http://web/apps/tea-tour/export.csv'), app, ['export.csv'], deps)
+
+    expect(res.headers.get('content-disposition')).toBe('attachment; filename="a.csv"')
+  })
+
+  test.each(['inline; filename="a.html"', null])('drops a content-disposition that is not an attachment: %s', async (value) => {
+    const headers: Record<string, string> = { 'content-type': 'text/html' }
+    if (value) headers['content-disposition'] = value
+    const { deps } = setup(new Response('a', { headers }))
+
+    const res = await forwardToApp(new Request('http://web/apps/tea-tour/x'), app, ['x'], deps)
+
+    expect(res.headers.get('content-disposition')).toBeNull()
+  })
+
   test.each([
     ['/apps/tea-tour/?said=hi'],
     ['/apps/tea-tour'],

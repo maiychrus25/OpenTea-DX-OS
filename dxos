@@ -16,7 +16,7 @@ export BUILDX_NO_DEFAULT_ATTESTATIONS=1
 ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.json
 
 usage() {
-  echo "Dùng: ./dxos install <dir> | remove <id> [--purge] | list | validate <dir>... | worker" >&2
+  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker" >&2
   exit 2
 }
 
@@ -105,6 +105,22 @@ install() {  # <dir> [all|htx]: "htx" leaves enabling to the store worker, "all"
     return
   fi
   undo_install "$id" 1
+}
+
+# Upgrade a registered app in place: new code, route and pending migrations; enablements are never touched.
+# A failure leaves the registry on the old version (commit comes last); the next upgrade rewrites route and compose file.
+upgrade() {  # <dir>
+  gateway_guard
+  local dir="$1" id old new
+  id="$(cli manifest-id "$dir")" || exit 1
+  old="$(cli list | awk -F'\t' -v id="$id" '$1 == id { print $2 }')"
+  if cli upgrade-prepare "$dir" && app "$id" up -d --build --wait "app-$id" && cli upgrade-commit "$id"; then
+    new="$(cli list | awk -F'\t' -v id="$id" '$1 == id { print $2 }')"
+    echo "Đã nâng cấp $id lên $new"
+    return
+  fi
+  echo "Nâng cấp $id hỏng; bản đang đăng ký vẫn là ${old:-không rõ}" >&2
+  exit 1
 }
 
 remove() {
@@ -214,6 +230,9 @@ case "$cmd" in
   install)
     [ $# -eq 1 ] || usage
     dir="$(to_container "$1")"; cd "$ROOT"; install "$dir" ;;
+  upgrade)
+    [ $# -eq 1 ] || usage
+    dir="$(to_container "$1")"; cd "$ROOT"; upgrade "$dir" ;;
   remove)
     [ $# -ge 1 ] || usage
     cd "$ROOT"; remove "$@" ;;

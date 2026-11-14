@@ -20,6 +20,7 @@ const card = (id: string, status: AppStoreStatus, error: string | null = null): 
   category: null,
   icon: null,
   installedOnServer: false,
+  installedVersion: null,
   phase: null,
   openHref: null,
 })
@@ -48,6 +49,22 @@ beforeEach(() => {
 afterEach(() => jest.useRealTimers())
 
 describe('AppStoreClient', () => {
+  test('a card shows Có bản mới only when the installed version differs', () => {
+    const behind = { ...card('old', 'enabled'), version: '0.2.0', installedVersion: '0.1.0' }
+    const current = { ...card('cur', 'enabled'), version: '0.2.0', installedVersion: '0.2.0' }
+    render(<AppStoreClient initial={data([behind, current, card('none', 'available')])} />)
+    expect(cards().getAllByText('Có bản mới')).toHaveLength(1)
+    expect(within(screen.getByText('App old').closest('li')!).getByText('Có bản mới')).toBeInTheDocument()
+  })
+
+  test('a card shows no Có bản mới to an HTX that does not use the app', () => {
+    const elsewhere = { ...card('far', 'available'), version: '0.2.0', installedVersion: '0.1.0' }
+    const all = { ...card('all', 'enabled_all'), version: '0.2.0', installedVersion: '0.1.0' }
+    render(<AppStoreClient initial={data([elsewhere, all])} />)
+    expect(within(screen.getByText('App far').closest('li')!).queryByText('Có bản mới')).toBeNull()
+    expect(within(screen.getByText('App all').closest('li')!).getByText('Có bản mới')).toBeInTheDocument()
+  })
+
   test('shows the card text and the empty state', () => {
     const { unmount } = render(<AppStoreClient initial={data([card('pub', 'available')])} />)
     expect(screen.getByRole('heading', { name: 'Kho ứng dụng' })).toBeInTheDocument()

@@ -1,0 +1,172 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Living documentation of the kit: every macro and every CSS-only pattern with realistic content. Not shipped to an app.
+    Render it with a Jinja environment that has kit.html beside it and `appkit` (appkit.py) as a global; see the test
+    test_showcase_renders_without_style_or_script. Copy the HTML of a pattern from here. -#}
+{% import "kit.html" as kit %}
+{% set errors = {"quantity": "Số lượng phải từ 1 đến 999."} %}
+{% set page = appkit.page_of("2", 87) %}
+<!doctype html>
+<html lang="vi"{% if theme %} data-theme="{{ theme }}"{% endif %}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bộ giao diện mini-app · Mẫu</title>
+<link rel="stylesheet" href="{{ stylesheet | default('/dxos-app.css') }}">
+</head>
+<body><main>
+
+{% call kit.app_header("Cửa hàng chè HTX Tân Cương", "Đơn hàng, sản phẩm và phiếu cân trong tháng 11/2026") %}
+  {{ kit.export_link("/apps/tea-shop/orders/export.csv") }}
+  <a class="button" href="#them-san-pham">Thêm sản phẩm</a>
+{% endcall %}
+
+{{ kit.tabs([("overview", "Tổng quan", "#"), ("orders", "Đơn hàng", "#"), ("products", "Sản phẩm", "#"), ("tickets", "Phiếu cân", "#"), ("tours", "Tour trải nghiệm", "#")], "orders") }}
+
+{{ kit.stats([
+  {"label": "Đơn trong tháng", "value": "128", "hint": "tăng 12 đơn so với tháng trước"},
+  {"label": "Doanh thu", "value": appkit.money(48250000), "hint": "đã thu 41.900.000 ₫"},
+  {"label": "Chè búp tươi nhập", "value": appkit.number(3425.5) ~ " kg", "hint": "từ 64 hộ"},
+  {"label": "Đơn chờ giao", "value": "9"}
+]) }}
+
+{{ kit.chart("Sản lượng chè búp tươi theo hộ (kg)", appkit.chart_rows([("Hộ Nguyễn Văn Tám", 620), ("Hộ Lê Thị Hoa", 455.5), ("Hộ Hoàng Văn Lộc", 310), ("Hộ Đinh Thị Mai", 96)]), "kg") }}
+
+<h2>Đơn hàng</h2>
+<form class="toolbar" method="get" action="#">
+  <label>Tìm kiếm
+    <input type="search" name="q" value="Thái Nguyên" placeholder="Mã đơn hoặc tên khách">
+  </label>
+  <label>Trạng thái
+    <select name="status"><option value="">Tất cả</option><option value="new" selected>Mới</option><option value="shipped">Đã giao</option></select>
+  </label>
+  <label>Từ ngày <input type="date" name="from" value="2026-11-01"></label>
+  <label>Đến ngày <input type="date" name="to" value="2026-11-13"></label>
+  <button type="submit">Lọc</button>
+</form>
+
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Mã đơn</th><th role="columnheader">Khách</th><th role="columnheader">Tổng tiền</th><th role="columnheader">Trạng thái</th><th role="columnheader">Đặt lúc</th><th role="columnheader">Thao tác</th></tr></thead>
+  <tbody role="rowgroup">
+    <tr role="row">
+      <td role="cell" data-label="Mã đơn"><a href="#">DH-0128</a></td>
+      <td role="cell" data-label="Khách">Trần Thị Bích Ngọc</td>
+      <td role="cell" data-label="Tổng tiền">{{ appkit.money(1260000) }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill warn">Chờ thanh toán</span></td>
+      <td role="cell" data-label="Đặt lúc">13/11/2026 08:11</td>
+      <td role="cell" data-label="Thao tác"><span class="actions">
+        <a class="button secondary" href="#">Xem</a>
+        {{ kit.print_link("#") }}
+        <form method="post" action="#"><button class="danger" type="submit">Huỷ đơn</button></form>
+      </span></td>
+    </tr>
+    <tr role="row">
+      <td role="cell" data-label="Mã đơn"><a href="#">DH-0127</a></td>
+      <td role="cell" data-label="Khách">Phạm Quốc Khánh</td>
+      <td role="cell" data-label="Tổng tiền">{{ appkit.money(450000) }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill">Đã giao</span></td>
+      <td role="cell" data-label="Đặt lúc">12/11/2026 16:40</td>
+      <td role="cell" data-label="Thao tác"><span class="actions">
+        <a class="button secondary" href="#">Xem</a>
+        {{ kit.print_link("#") }}
+      </span></td>
+    </tr>
+    <tr role="row">
+      <td role="cell" data-label="Mã đơn"><a href="#">DH-0126</a></td>
+      <td role="cell" data-label="Khách">Vũ Thị Lan</td>
+      <td role="cell" data-label="Tổng tiền">{{ appkit.money(95000) }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill danger">Đã huỷ</span></td>
+      <td role="cell" data-label="Đặt lúc">11/11/2026 09:05</td>
+      <td role="cell" data-label="Thao tác"><span class="actions"><a class="button secondary" href="#">Xem</a></span></td>
+    </tr>
+    <tr role="row">
+      <td role="cell" data-label="Mã đơn"><a href="#">DH-0120</a></td>
+      <td role="cell" data-label="Khách">Bùi Quang Huy</td>
+      <td role="cell" data-label="Tổng tiền">{{ appkit.money(720000) }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill neutral">Đã đóng</span></td>
+      <td role="cell" data-label="Đặt lúc">02/11/2026 14:20</td>
+      <td role="cell" data-label="Thao tác"><span class="actions"><a class="button secondary" href="#">Xem</a></span></td>
+    </tr>
+  </tbody>
+</table>
+{{ kit.pagination(page, "#trang-truoc", "#trang-sau") }}
+
+<h2>Tuần này</h2>
+{{ kit.stats([
+  {"label": "Phiếu cân", "value": "41"},
+  {"label": "Khối lượng", "value": appkit.number(1286.5) ~ " kg"},
+  {"label": "Thành tiền", "value": appkit.money(10292000)},
+  {"label": "Hộ giao chè", "value": "23"},
+  {"label": "Chưa chốt", "value": "6", "hint": "chốt trước thứ Sáu"}
+]) }}
+
+<h2>Sản phẩm đang bán</h2>
+<ul class="cards">
+  <li class="card">
+    <h3>Trà xanh Tân Cương hộp 200 g</h3>
+    <p>Chè búp sao thủ công, hương cốm non, nước xanh vàng.</p>
+    <p><strong>{{ appkit.money(180000) }}</strong> · còn 42 hộp</p>
+    <a class="button secondary" href="#">Đặt hàng</a>
+  </li>
+  <li class="card">
+    <h3>Trà ướp sen túi 100 g</h3>
+    <p>Ướp sen Tây Hồ theo mẻ nhỏ, đóng túi hút chân không.</p>
+    <p><strong>{{ appkit.money(95000) }}</strong> · còn 7 túi</p>
+    <a class="button secondary" href="#">Đặt hàng</a>
+  </li>
+  <li class="card">
+    <h3>Tour một ngày hái chè</h3>
+    <p>Đi nương cùng hộ nông dân, tự sao chè và uống trà tại vườn.</p>
+    <p><strong>{{ appkit.money(350000) }}</strong> · còn 6 chỗ ngày 20/11/2026</p>
+    <a class="button secondary" href="#">Đặt chỗ</a>
+  </li>
+  <li class="card">
+    <h3>Đăng ký nhận tin</h3>
+    <form method="post" action="#">
+      <label>Số điện thoại <input name="phone" type="tel" value="0912 345 678"></label>
+      <button type="submit">Đăng ký</button>
+    </form>
+  </li>
+</ul>
+
+<h2>Tiến trình đơn DH-0128</h2>
+{{ kit.steps(["Đã đặt", "Đã xác nhận", "Đang giao", "Hoàn tất"], 1) }}
+
+<h2 id="them-san-pham">Thêm sản phẩm</h2>
+<details class="disclosure" open>
+  <summary>Thêm sản phẩm mới</summary>
+  <form method="post" action="#">
+    <label>Tên sản phẩm <input name="name" value="Trà shan tuyết 250 g" required></label>
+    <label>Số lượng nhập kho
+      <input name="quantity" type="number" value="0" aria-invalid="true">
+      {{ kit.field_error(errors, "quantity") }}
+    </label>
+    <label><input type="checkbox" name="active" checked> Đang bán</label>
+    <input type="checkbox" id="organic" name="organic">
+    <label for="organic">Chè hữu cơ, có chứng nhận</label>
+    <button type="submit">Lưu sản phẩm</button>
+  </form>
+</details>
+<details class="disclosure">
+  <summary>Hướng dẫn nhập phiếu cân</summary>
+  <p>Cân tại điểm thu mua, ghi khối lượng búp tươi theo hộ. Phiếu đã chốt không sửa được, chỉ huỷ và lập lại.</p>
+</details>
+
+<h2>Phiếu cân hôm nay</h2>
+{{ kit.empty("Hôm nay chưa có phiếu cân nào.", "Lập phiếu cân", "#") }}
+
+<h2>Bản in phiếu cân</h2>
+<section class="print-sheet">
+  {{ kit.print_bar("#") }}
+  <h3>Phiếu cân PC-2026-0412</h3>
+  <p class="print-only">In ngày 13/11/2026 bởi HTX Tân Cương</p>
+  <table role="table">
+    <thead role="rowgroup"><tr role="row"><th role="columnheader">Hộ</th><th role="columnheader">Loại</th><th role="columnheader">Khối lượng</th><th role="columnheader">Thành tiền</th><th role="columnheader">Ký nhận</th></tr></thead>
+    <tbody role="rowgroup">
+      <tr role="row"><td role="cell" data-label="Hộ">Nguyễn Văn Tám</td><td role="cell" data-label="Loại">Búp một tôm hai lá</td><td role="cell" data-label="Khối lượng">62,5 kg</td><td role="cell" data-label="Thành tiền">{{ appkit.money(2187500) }}</td><td role="cell" class="signature" data-label="Ký nhận"></td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main></body>
+</html>

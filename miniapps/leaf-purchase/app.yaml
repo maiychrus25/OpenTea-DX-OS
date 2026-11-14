@@ -4,7 +4,7 @@ apiVersion: dxos/v1
 id: leaf-purchase
 name: Thu mua búp tươi
 description: Ghi phiếu cân chè búp tươi của từng hộ, chốt kỳ và theo dõi chi trả.
-version: 0.1.0
+version: 0.2.0
 license: MIT
 publisher: OpenTea Developers
 requires: { core: ">=1.10.0" }
@@ -19,6 +19,7 @@ routes:
     /: [officer, manager]
     /prices: [manager]
     /periods: [manager]
+    /overview: [manager]
     /mine: [farmer]
 menu:
   - { label: Thu mua búp tươi, path: /, roles: [officer, manager] }
@@ -43,5 +44,5 @@ store:
     - "Danh sách nông hộ của HTX (tên hộ) để chọn hộ khi ghi phiếu"
     - "Hộ gắn với tài khoản của nông dân đang đăng nhập"
   screenshots:
-    - { file: store/officer-tickets.png, caption: "Cán bộ ghi phiếu cân búp tươi theo hộ và theo loại chè" }
+    - { file: store/officer-tickets.png, caption: "Cán bộ và trưởng HTX tìm, lọc và tải CSV các phiếu cân búp tươi theo hộ và loại chè" }
     - { file: store/manager-period.png, caption: "Trưởng HTX chốt kỳ và theo dõi tiền chè từng hộ" }

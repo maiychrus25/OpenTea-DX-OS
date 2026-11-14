@@ -4,7 +4,7 @@ apiVersion: dxos/v1
 id: tea-tour
 name: Đặt tour đồi chè
 description: Mở tour tham quan đồi chè, nhận đặt chỗ và phân công người dẫn.
-version: 0.1.0
+version: 0.2.0
 license: MIT
 publisher: OpenTea Developers
 requires: { core: ">=1.10.0" }
@@ -38,4 +38,4 @@ store:
   core_reads:
     - "Danh sách nông hộ của HTX (tên hộ) để chọn người dẫn tour"
   screenshots:
-    - { file: store/manager-tour.png, caption: "Trưởng HTX xác nhận lượt đặt và xem số khách của tour" }
+    - { file: store/manager-tour.png, caption: "Trưởng HTX xác nhận lượt đặt, in danh sách đoàn và tải danh sách khách" }

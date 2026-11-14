@@ -32,6 +32,8 @@ export interface StoreApp {
   category: StoreCategory | null
   icon: string | null
   installedOnServer: boolean
+  /** Version registered on the server (`platform.installed_apps`), null when the app is not installed there. */
+  installedVersion: string | null
   /** Phase of the open request, or of the last request when it failed. */
   phase: InstallPhase | null
   /** `/manager/apps/<id><path>` of the first menu entry for managers when the HTX can use the app, else null. */

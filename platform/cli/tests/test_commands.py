@@ -189,3 +189,91 @@ def test_abort_undoes_a_crash_inside_the_database_step(root, monkeypatch):
         assert conn.execute("SELECT count(*) FROM pg_namespace WHERE nspname = 'app_tea_tour'").fetchone() == (0,)
         assert conn.execute("SELECT count(*) FROM pg_roles WHERE rolname = 'app_tea_tour'").fetchone() == (0,)
     assert runtime_files(root) == {}  # the crash came before the gateway step, and abort removed the journal
+
+
+def install_tea_tour(root):
+    assert main(["prepare", app_dir(root)]) == 0
+    assert main(["commit", "tea-tour"]) == 0
+    with psycopg.connect(root_db_url()) as conn:
+        conn.execute("INSERT INTO platform.app_enablements (app_id, htx_code, enabled_by) VALUES ('tea-tour', 'htx-a', 't')"
+                     " ON CONFLICT DO NOTHING")
+
+
+def new_version(root):
+    """tea-tour 0.2.0: a new protected route, a new menu entry and a second migration."""
+    path = root / "miniapps" / "tea-tour"
+    text = (path / "app.yaml").read_text(encoding="utf-8")
+    text = text.replace("version: 0.1.0", "version: 0.2.0").replace(
+        "    /: [manager, officer, farmer]\n", "    /: [manager, officer, farmer]\n    /reports: [manager]\n")
+    text += "  - { label: Báo cáo, path: /reports, roles: [manager] }\n"
+    (path / "app.yaml").write_text(text, encoding="utf-8")
+    (path / "migrations" / "002_extra.sql").write_text("CREATE TABLE extra (id int, htx_code text NOT NULL);\n", encoding="utf-8")
+    return str(path)
+
+
+def enablements(root):
+    with psycopg.connect(root_db_url()) as conn:
+        return conn.execute("SELECT htx_code FROM platform.app_enablements WHERE app_id = 'tea-tour' ORDER BY 1").fetchall()
+
+
+def test_upgrade_keeps_enablements(root):
+    install_tea_tour(root)
+    before = enablements(root)
+    assert before == [("*",), ("htx-a",)]
+    assert main(["upgrade-prepare", new_version(root)]) == 0
+    assert main(["upgrade-commit", "tea-tour"]) == 0
+    assert enablements(root) == before
+
+
+def test_upgrade_of_an_unregistered_app_is_refused(root, capsys):
+    assert main(["upgrade-prepare", app_dir(root)]) == 1
+    assert "App 'tea-tour' chưa được cài; dùng install" in capsys.readouterr().err
+    assert runtime_files(root) == {}
+
+
+def test_upgrade_registers_the_new_version_and_menu(root):
+    install_tea_tour(root)
+    assert main(["upgrade-prepare", new_version(root)]) == 0
+    with psycopg.connect(root_db_url()) as conn:
+        assert conn.execute("SELECT version FROM platform.installed_apps").fetchone() == ("0.1.0",)  # not before commit
+    assert main(["upgrade-commit", "tea-tour"]) == 0
+    with psycopg.connect(root_db_url()) as conn:
+        version, menu, manifest = conn.execute("SELECT version, menu, manifest FROM platform.installed_apps").fetchone()
+        assert conn.execute("SELECT count(*) FROM app_tea_tour.extra").fetchone() == (0,)  # the pending migration ran
+    assert version == "0.2.0" and manifest["version"] == "0.2.0"
+    assert [m["path"] for m in menu] == ["/", "/guide", "/reports"]
+    assert not (root / "docker" / "runtime" / "apps" / "tea-tour.pending.json").exists()
+
+
+def test_upgrade_writes_the_new_route(root):
+    install_tea_tour(root)
+    assert "/reports" not in gateway_text(root)
+    assert main(["upgrade-prepare", new_version(root)]) == 0
+    assert "/reports" in gateway_text(root)
+
+
+def test_second_upgrade_to_the_same_version_is_a_no_op(root):
+    install_tea_tour(root)
+    path = new_version(root)
+    for _ in range(2):
+        assert main(["upgrade-prepare", path]) == 0
+        assert main(["upgrade-commit", "tea-tour"]) == 0
+    with psycopg.connect(root_db_url()) as conn:
+        assert conn.execute("SELECT version FROM platform.installed_apps").fetchone() == ("0.2.0",)
+    assert enablements(root) == [("*",), ("htx-a",)]
+
+
+def test_failed_upgrade_step_keeps_the_live_route_and_version(root, monkeypatch):
+    install_tea_tour(root)
+    live = gateway_text(root)
+    path = new_version(root)
+
+    def fail(self):
+        raise commands.InstallError("compose hỏng")
+
+    monkeypatch.setattr(commands.UpgradeComposeStep, "apply", fail)
+    assert main(["upgrade-prepare", path]) == 1
+    assert gateway_text(root) == live and "/reports" not in live
+    assert (root / "docker" / "runtime" / "apps" / "tea-tour.compose.yml").exists()
+    with psycopg.connect(root_db_url()) as conn:
+        assert conn.execute("SELECT version FROM platform.installed_apps").fetchone() == ("0.1.0",)

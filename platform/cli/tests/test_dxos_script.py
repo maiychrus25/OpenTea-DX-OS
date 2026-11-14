@@ -67,3 +67,34 @@ def test_install_and_worker_call_the_guard():
     for name in ("install", "worker"):
         body = subprocess.run(["sed", "-n", f"/^{name}()/,/^}}/p", str(DXOS)], capture_output=True, text=True).stdout
         assert "gateway_guard" in body
+
+
+def test_upgrade_runs_the_guard_then_the_three_steps_in_order(tmp_path):
+    body = subprocess.run(["sed", "-n", "/^upgrade()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    snippet = (f"set -e\nlog() {{ echo \"$@\" >>{tmp_path}/calls; }}\n"
+               "gateway_guard() { log guard; }\n"
+               "cli() { log \"cli $*\"; case \"$1\" in manifest-id) echo tea-tour;; list) printf 'tea-tour\\t0.1.0\\tx\\n';; esac; }\n"
+               "app() { log \"app $*\"; }\n"
+               f"{body}\nupgrade /repo/miniapps/tea-tour\n")
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    calls = (tmp_path / "calls").read_text().splitlines()
+    assert calls == ["guard", "cli manifest-id /repo/miniapps/tea-tour", "cli list",
+                     "cli upgrade-prepare /repo/miniapps/tea-tour", "app tea-tour up -d --build --wait app-tea-tour",
+                     "cli upgrade-commit tea-tour", "cli list"]
+    assert run.stdout.strip() == "Đã nâng cấp tea-tour lên 0.1.0"  # the stub's list reports 0.1.0 both times
+
+
+def test_upgrade_failure_keeps_the_old_version_and_says_so(tmp_path):
+    body = subprocess.run(["sed", "-n", "/^upgrade()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    snippet = ("gateway_guard() { :; }\n"
+               "cli() { case \"$1\" in manifest-id) echo tea-tour;; list) printf 'tea-tour\\t0.1.0\\tx\\n';; esac; }\n"
+               "app() { return 1; }\n"
+               f"{body}\nupgrade /repo/miniapps/tea-tour\n")
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 1
+    assert "Nâng cấp tea-tour hỏng; bản đang đăng ký vẫn là 0.1.0" in run.stderr
+
+
+def test_usage_lists_upgrade():
+    assert "upgrade <dir>" in DXOS.read_text()

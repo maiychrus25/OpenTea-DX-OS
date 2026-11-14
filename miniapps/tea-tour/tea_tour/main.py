@@ -21,7 +21,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException
 
-from tea_tour import core_client, store
+from tea_tour import appkit, core_client, store
 from tea_tour.claims import Claims, read_claims
 
 PREFIX = "/apps/tea-tour"
@@ -58,20 +58,31 @@ def tour_status(tour: store.Tour) -> str:
     return "Đã diễn ra" if tour.past else "Đang nhận khách"
 
 
-templates.env.globals.update(href=href, prefix=PREFIX, booking_status=BOOKING_STATUS, tour_status=tour_status)
+def tour_pill(tour: store.Tour) -> str:
+    return "pill danger" if tour.status == "CANCELLED" else "pill neutral" if tour.past else "pill"
+
+
+def booking_pill(status: str) -> str:
+    return {"PENDING": "pill warn", "CANCELLED": "pill danger"}.get(status, "pill")
+
+
+templates.env.globals.update(href=href, prefix=PREFIX, booking_status=BOOKING_STATUS, tour_status=tour_status,
+                             tour_pill=tour_pill, booking_pill=booking_pill)
 templates.env.filters["vnd"] = lambda n: f"{n:,}".replace(",", ".") + " ₫"
 templates.env.filters["vn_time"] = lambda t: t.astimezone(VN_TZ).strftime("%d/%m/%Y %H:%M")
 
 
-def page(request: Request, name: str, status: int = 200, **context) -> HTMLResponse:
+def theme_of(request: Request) -> str:
     theme = request.query_params.get("theme", "")
-    return templates.TemplateResponse(request, name, {"theme": theme if theme in THEMES else "", **context},
-                                      status_code=status)
+    return theme if theme in THEMES else ""
+
+
+def page(request: Request, name: str, status: int = 200, **context) -> HTMLResponse:
+    return templates.TemplateResponse(request, name, {"theme": theme_of(request), **context}, status_code=status)
 
 
 def redirect(request: Request, path: str, **params) -> RedirectResponse:
-    theme = request.query_params.get("theme", "")
-    return RedirectResponse(href(path, theme if theme in THEMES else "", **params), status_code=303)
+    return RedirectResponse(href(path, theme_of(request), **params), status_code=303)
 
 
 @app.exception_handler(HTTPException)
@@ -147,8 +158,33 @@ def households_or_error(authorization: str) -> tuple[list[core_client.Household]
         return [], CORE_DOWN
 
 
+SHOWS = (("upcoming", "Sắp diễn ra"), ("past", "Đã diễn ra"), ("cancelled", "Đã huỷ"), ("all", "Tất cả"))
+BOOKING_FILTERS = (("all", "Tất cả"),) + tuple((k, v) for k, v in BOOKING_STATUS.items())
+Q_MAX = 80
+
+
+def paging_links(page_info: appkit.Page, theme: str, path: str, **params) -> tuple[str | None, str | None]:
+    prev_href = href(path, theme, **params, page=page_info.number - 1) if page_info.has_prev else None
+    next_href = href(path, theme, **params, page=page_info.number + 1) if page_info.has_next else None
+    return prev_href, next_href
+
+
 def manager_page(request, conn, claims, households, core_error, status=200, errors=(), form=None):
-    return page(request, "manager.html", status, htx=claims.htx_code, tours=store.list_tours(conn, claims.htx_code),
+    """The overview; show and page come from the query string, so a failed create keeps the list as it was."""
+    htx, theme = claims.htx_code, theme_of(request)
+    show = request.query_params.get("show", "")
+    show = show if show in store.SHOW_WHERE else "upcoming"
+    page_info = appkit.page_of(request.query_params.get("page"), store.count_tours(conn, htx, show))
+    stats = store.overview(conn, htx)
+    return page(request, "manager.html", status, htx=htx, show=show, shows=SHOWS, page_info=page_info,
+                tours=store.list_tours_page(conn, htx, show, page_info.size, page_info.offset),
+                links=paging_links(page_info, theme, "/", **({"show": show} if show != "upcoming" else {})),
+                stats=[{"label": "Tour sắp diễn ra", "value": appkit.number(stats.upcoming_tours, 0)},
+                       {"label": "Chỗ đã giữ", "value": appkit.number(stats.seats_held, 0),
+                        "hint": f"trên {appkit.number(stats.seats_total, 0)} chỗ của tour sắp diễn ra"},
+                       {"label": "Chờ xác nhận", "value": appkit.number(stats.pending, 0), "hint": "lượt đặt"},
+                       {"label": "Khách tháng này", "value": appkit.number(stats.guests_this_month, 0),
+                        "hint": "đã xác nhận"}],
                 households=households, core_error=core_error, errors=errors, form=form or {})
 
 
@@ -225,6 +261,40 @@ def tour_detail(request: Request, tour_id: UUID, claims: Claims = Depends(role("
         raise HTTPException(404)
     return page(request, "tour.html", tour=tour, bookings=store.tour_bookings(conn, claims.htx_code, tour_id),
                 notice=NOTICES.get(request.query_params.get("notice", "")))
+
+
+@app.get("/bookings")
+def bookings_list(request: Request, claims: Claims = Depends(role("manager")), conn=Depends(db)):
+    htx, theme = claims.htx_code, theme_of(request)
+    status = request.query_params.get("status", "")
+    status = status if status in BOOKING_STATUS else "all"
+    q = request.query_params.get("q", "").strip()[:Q_MAX]
+    page_info = appkit.page_of(request.query_params.get("page"), store.count_bookings(conn, htx, status, q))
+    filters = {**({"status": status} if status != "all" else {}), **({"q": q} if q else {})}
+    return page(request, "bookings.html", status=200, htx=htx, status_filter=status, filters=BOOKING_FILTERS, q=q,
+                page_info=page_info, links=paging_links(page_info, theme, "/bookings", **filters),
+                bookings=store.list_bookings(conn, htx, status, q, page_info.size, page_info.offset))
+
+
+@app.get("/tours/{tour_id}/guests/export.csv")
+def export_guests(tour_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db)):
+    tour = store.get_tour(conn, claims.htx_code, tour_id)
+    if tour is None:
+        raise HTTPException(404)
+    rows = [(b.code, b.guest_name, b.phone, b.party_size, b.note, BOOKING_STATUS[b.status])
+            for b in store.tour_bookings(conn, claims.htx_code, tour_id)]
+    name = appkit.csv_filename("tea-tour", claims.htx_code, f"khach-{tour.title}", datetime.now(VN_TZ).date())
+    return appkit.csv_response(name, ("Mã đặt chỗ", "Khách", "Số điện thoại", "Số người", "Ghi chú", "Trạng thái"), rows)
+
+
+@app.get("/tours/{tour_id}/print")
+def print_guests(request: Request, tour_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db)):
+    tour = store.get_tour(conn, claims.htx_code, tour_id)
+    if tour is None:
+        raise HTTPException(404)
+    guests = [b for b in store.tour_bookings(conn, claims.htx_code, tour_id) if b.status == "CONFIRMED"]
+    return page(request, "print.html", htx=claims.htx_code, tour=tour, guests=guests,
+                back=appkit.shell_url("manager", "tea-tour", f"/tours/{tour_id}"))
 
 
 def editable_tour(request, conn, htx_code: str, tour_id: UUID):
@@ -310,7 +380,9 @@ def cancel_booking(request: Request, booking_id: UUID, claims: Claims = Depends(
 
 @app.get("/guide")
 def guide(request: Request, claims: Claims = Depends(role("farmer")), conn=Depends(db)):
-    return page(request, "guide.html", tours=store.guide_tours(conn, claims.htx_code, claims.sub))
+    tours = store.guide_tours(conn, claims.htx_code, claims.sub)
+    return page(request, "guide.html", upcoming=[t for t in tours if not t.past],
+                past=[t for t in reversed(tours) if t.past])
 
 
 # ---------- Public (no token; never shows another guest's name or phone) ----------

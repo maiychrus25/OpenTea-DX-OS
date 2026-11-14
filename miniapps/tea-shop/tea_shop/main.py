@@ -10,7 +10,7 @@ import os
 import re
 import threading
 from contextlib import contextmanager
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 from uuid import UUID
@@ -21,7 +21,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException
 
-from tea_shop import store
+from tea_shop import appkit, store
 from tea_shop.claims import Claims, read_claims
 
 PREFIX = "/apps/tea-shop"
@@ -53,7 +53,19 @@ def href(path: str, theme: str = "", **params) -> str:
     return f"{PREFIX}{path}" + (f"?{urlencode(query)}" if query else "")
 
 
-templates.env.globals.update(href=href, prefix=PREFIX, order_status=ORDER_STATUS)
+STEP_LABELS = [ORDER_STATUS[key] for key in ("NEW", "CONFIRMED", "SHIPPING", "DONE")]
+STEP_INDEX = {key: index for index, key in enumerate(("NEW", "CONFIRMED", "SHIPPING", "DONE"))}
+PRODUCT_FILTERS = {"all": "Tất cả", "active": "Đang bán", "hidden": "Ngừng bán", "low": "Sắp hết hàng"}
+NOTICES_HOME = {"saved": NOTICES["saved"]}
+
+
+def tab_items(theme: str) -> list[tuple[str, str, str]]:
+    return [("overview", "Tổng quan", href("/", theme)), ("orders", "Đơn hàng", href("/orders", theme)),
+            ("products", "Sản phẩm", href("/products", theme))]
+
+
+templates.env.globals.update(href=href, prefix=PREFIX, order_status=ORDER_STATUS, tab_items=tab_items,
+                             step_labels=STEP_LABELS, step_index=STEP_INDEX, product_filters=PRODUCT_FILTERS)
 templates.env.filters["vnd"] = lambda n: f"{n:,}".replace(",", ".") + " ₫"
 templates.env.filters["vn_time"] = lambda t: t.astimezone(VN_TZ).strftime("%d/%m/%Y %H:%M")
 
@@ -137,9 +149,18 @@ def healthz():
 
 # ---------- Manager ----------
 
+RECENT = 10  # rows of each list on the overview; the full lists are one link away
+
+
 def manager_page(request, conn, claims, status=200, errors=(), form=None):
-    return page(request, "manager.html", status, htx=claims.htx_code, products=store.list_products(conn, claims.htx_code),
-                orders=store.list_orders(conn, claims.htx_code), errors=errors, form=form or {"active": "on"})
+    htx = claims.htx_code
+    figures = store.overview(conn, htx)
+    daily = appkit.chart_rows([(day.strftime("%d/%m"), vnd) for day, vnd in figures.daily_revenue], appkit.money)
+    return page(request, "manager.html", status, htx=htx, figures=figures, daily=daily,
+                top=appkit.chart_rows(figures.top_products, lambda n: str(n)),
+                orders=store.search_orders(conn, htx, size=RECENT)[0], products=store.search_products(conn, htx, size=RECENT)[0],
+                notice=NOTICES_HOME.get(request.query_params.get("notice", "")), errors=errors,
+                form=form or {"active": "on"})
 
 
 @app.get("/")
@@ -223,6 +244,81 @@ def edit_product(request: Request, product_id: UUID, claims: Claims = Depends(ro
         return edit_page(request, store.get_product(conn, claims.htx_code, product_id) or product, 400,
                          [saved.message], form)
     return redirect(request, "/", notice="saved")
+
+
+def list_params(request: Request, names: tuple[str, ...]) -> dict[str, str]:
+    """The query values a list page filters on, trimmed and cut to a sane length; unknown keys are never read."""
+    return {name: request.query_params.get(name, "").strip()[:100] for name in names}
+
+
+def list_href(path: str, theme: str, filters: dict[str, str], number: int | None = None) -> str:
+    """The list URL with its non-empty filters (and a page when it is not the first), so links keep the filters."""
+    query = {key: value for key, value in filters.items() if value}
+    if number and number > 1:
+        query["page"] = str(number)
+    return href(path, theme, **query)
+
+
+def order_filters(request: Request) -> dict[str, str]:
+    values = list_params(request, ("q", "status", "from", "to"))
+    values["status"] = values["status"] if values["status"] in store.ORDER_STATUSES else ""
+    for key in ("from", "to"):
+        values[key] = values[key] if appkit.parse_date(values[key]) else ""
+    return values
+
+
+def search_orders(conn, htx: str, filters: dict[str, str], page_raw: str | None, size: int | None):
+    return store.search_orders(conn, htx, filters["status"] or "all", appkit.parse_date(filters["from"]),
+                               appkit.parse_date(filters["to"]), filters["q"], page_raw, size)
+
+
+def pager(path: str, theme: str, filters: dict[str, str], pg) -> dict:
+    return {"prev_href": list_href(path, theme, filters, pg.number - 1) if pg.has_prev else None,
+            "next_href": list_href(path, theme, filters, pg.number + 1) if pg.has_next else None}
+
+
+@app.get("/orders")
+def order_list(request: Request, claims: Claims = Depends(role("manager")), conn=Depends(db)):
+    theme = request.query_params.get("theme", "")
+    theme = theme if theme in THEMES else ""
+    filters = order_filters(request)
+    orders, pg = search_orders(conn, claims.htx_code, filters, request.query_params.get("page"), appkit.PAGE_SIZE)
+    return page(request, "orders.html", htx=claims.htx_code, orders=orders, page=pg, filters=filters,
+                export_href=list_href("/orders/export.csv", theme, filters), **pager("/orders", theme, filters, pg))
+
+
+# Declared before /orders/{order_id}, whose UUID path would otherwise take "export.csv" for an id.
+@app.get("/orders/export.csv")
+def export_orders(request: Request, claims: Claims = Depends(role("manager")), conn=Depends(db)):
+    orders, _ = search_orders(conn, claims.htx_code, order_filters(request), None, None)
+    today = datetime.now(VN_TZ).date()
+    return appkit.csv_response(
+        appkit.csv_filename("tea-shop", claims.htx_code, "don-hang", today),
+        ["Mã đơn", "Đặt lúc", "Khách", "Số điện thoại", "Địa chỉ", "Tổng tiền", "Trạng thái"],
+        [(o.code, appkit.vn_datetime(o.created_at), o.customer_name, o.phone, o.address, o.total_vnd,
+          ORDER_STATUS[o.status]) for o in orders])
+
+
+@app.get("/orders/{order_id}/print")
+def order_print(request: Request, order_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db)):
+    found = store.get_order(conn, claims.htx_code, order_id)
+    if found is None:
+        raise HTTPException(404)
+    order, items = found
+    return page(request, "order_print.html", order=order, items=items, htx=claims.htx_code,
+                back_href=appkit.shell_url("manager", "tea-shop", f"/orders/{order_id}"))
+
+
+@app.get("/products")
+def product_list(request: Request, claims: Claims = Depends(role("manager")), conn=Depends(db)):
+    theme = request.query_params.get("theme", "")
+    theme = theme if theme in THEMES else ""
+    filters = list_params(request, ("q", "show"))
+    filters["show"] = filters["show"] if filters["show"] in PRODUCT_FILTERS and filters["show"] != "all" else ""
+    products, pg = store.search_products(conn, claims.htx_code, filters["q"], filters["show"] or "all",
+                                         request.query_params.get("page"), appkit.PAGE_SIZE)
+    return page(request, "products.html", htx=claims.htx_code, products=products, page=pg, filters=filters,
+                **pager("/products", theme, filters, pg))
 
 
 @app.get("/orders/{order_id}")

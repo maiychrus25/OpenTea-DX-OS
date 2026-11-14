@@ -2,10 +2,9 @@
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
 {% block title %}Sửa phiếu cân{% endblock %}
+{% block head %}{{ kit.app_header("Sửa phiếu cân", "Chỉ sửa được khi phiếu chưa vào kỳ đã chốt. Giá giữ nguyên nếu không đổi loại chè.") }}{% endblock %}
 {% block main %}
 <p><a href="{{ href('/', theme, day=ticket.weighed_on.isoformat()) }}">← Quay lại danh sách</a></p>
-<h1>Sửa phiếu cân</h1>
-<p>Chỉ sửa được khi phiếu chưa vào kỳ đã chốt. Giá giữ nguyên nếu không đổi loại chè.</p>
 <form method="post" action="{{ href('/tickets/' ~ ticket.id ~ '/edit', theme) }}">
   {% include "ticket_fields.html" %}
   <button type="submit"{% if core_error %} disabled{% endif %}>Lưu thay đổi</button>

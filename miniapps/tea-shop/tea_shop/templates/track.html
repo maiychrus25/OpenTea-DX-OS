@@ -1,16 +1,23 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% import "pills.html" as pills %}
 {% block title %}Tra cứu đơn hàng{% endblock %}
 {% block main %}
-<h1>Tra cứu đơn hàng</h1>
+{{ kit.app_header("Tra cứu đơn hàng", "Nhập mã đơn và số điện thoại đã dùng khi đặt hàng") }}
 {% if booked %}
 <p class="notice" role="status">Đã nhận đơn hàng. Mã đơn của bạn là <strong>{{ code }}</strong>. Hãy ghi lại mã này; HTX sẽ gọi điện xác nhận, thanh toán khi nhận hàng.</p>
 {% endif %}
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 {% if found %}
 {% set o, items = found %}
-<h2>Đơn {{ o.code }} <span class="pill">{{ order_status[o.status] }}</span></h2>
+<h2>Đơn {{ o.code }}</h2>
+{% if o.status == "CANCELLED" %}
+<p>{{ pills.order(o.status) }}</p>
+{% else %}
+{{ kit.steps(step_labels, step_index[o.status]) }}
+{% endif %}
 <p>{{ o.customer_name }} · {{ o.created_at | vn_time }}</p>
 <table role="table">
   <thead role="rowgroup"><tr role="row"><th role="columnheader">Sản phẩm</th><th role="columnheader">Quy cách</th><th role="columnheader">Đơn giá</th><th role="columnheader">Số lượng</th></tr></thead>

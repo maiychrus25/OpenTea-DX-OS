@@ -19,6 +19,13 @@ def register(conn: psycopg.Connection, manifest: dict) -> None:
     )
 
 
+def update(conn: psycopg.Connection, manifest: dict) -> None:
+    # Enablement rows are a different table and stay as they are.
+    conn.execute("UPDATE platform.installed_apps SET name = %s, version = %s, menu = %s, manifest = %s WHERE id = %s",
+                 (manifest["name"], manifest["version"], Jsonb(manifest.get("menu", [])), Jsonb(manifest),
+                  manifest["id"]))
+
+
 def unregister(conn: psycopg.Connection, app_id: str) -> None:
     conn.execute("DELETE FROM platform.installed_apps WHERE id = %s", (app_id,))
 

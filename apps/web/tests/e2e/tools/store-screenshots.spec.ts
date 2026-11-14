@@ -58,6 +58,9 @@ test.describe('store screenshots', () => {
     const managerApp = appFrame(manager, title)
     await managerApp.getByRole('link', { name: 'Giá thu mua' }).click()
     for (const [name, price] of [['Búp tươi loại 1', '9000'], ['Búp tươi loại 2', '7500']]) {
+      // The form is open while there is no grade yet, closed after that.
+      const add = managerApp.locator('details.disclosure', { has: managerApp.locator('summary', { hasText: 'Thêm loại chè' }) })
+      if ((await add.getAttribute('open')) === null) await add.locator('summary').click()
       await managerApp.locator('input[name=name]').fill(name)
       await managerApp.locator('input[name=price_vnd]').last().fill(price)
       await managerApp.getByRole('button', { name: 'Thêm loại chè' }).click()
@@ -69,8 +72,12 @@ test.describe('store screenshots', () => {
     await menuLink(officer, title).first().click()
     await officer.waitForURL('**/officer/apps/leaf-purchase')
     const officerApp = appFrame(officer, title)
-    // [household option, grade option, kg]; option 0 is the placeholder.
-    const tickets: [number, number, string][] = [[1, 1, '14,5'], [2, 1, '9'], [4, 2, '11,5'], [1, 2, '6']]
+    // [household option, grade option, kg]; option 0 is the placeholder. The households with real-looking names come after the two demo ones.
+    await expect(officerApp.locator('select[name=household]')).toBeVisible()
+    const options = await officerApp.locator('select[name=household] option').evaluateAll(all => all.map(option => option.textContent ?? ''))
+    const named = options.flatMap((label, index) => (index > 0 && !label.startsWith('Household') ? [index] : []))
+    expect(named.length, 'households with real-looking names in the seed').toBeGreaterThan(1)
+    const tickets: [number, number, string][] = [[named[0], 1, '14,5'], [named[1], 1, '9'], [named[named.length - 1], 2, '11,5'], [named[0], 2, '6']]
     for (const [count, [household, grade, kg]] of Array.from(tickets.entries())) {
       const form = officerApp.locator('form', { has: officerApp.getByRole('button', { name: 'Ghi phiếu' }) })
       await form.locator('select[name=household]').selectOption({ index: household })
@@ -81,9 +88,12 @@ test.describe('store screenshots', () => {
       // The previous notice is still on the page until the reload, so wait for the new row instead.
       await expect(officerApp.locator('tbody tr')).toHaveCount(count + 1)
     }
+    await officer.goto('/officer/apps/leaf-purchase/tickets')
+    await expect(officerApp.locator('tbody tr')).toHaveCount(4)
     await capture(officer, 'leaf-purchase', 'officer-tickets', title)
 
     await manager.goto('/manager/apps/leaf-purchase/periods')
+    await managerApp.locator('summary', { hasText: 'Chốt kỳ mới' }).click()
     const closing = managerApp.locator('form', { has: managerApp.getByRole('button', { name: 'Chốt kỳ' }) })
     await closing.locator('input[name=date_from]').fill(daysAgo(3))
     await closing.locator('input[name=date_to]').fill(daysAgo(3))
@@ -124,7 +134,7 @@ test.describe('store screenshots', () => {
     for (const [name, phone, address, quantity] of customers) {
       await guest.goto('/apps/tea-shop/public/TC')
       const order = guest.getByRole('form', { name: 'Đặt hàng' })
-      await order.locator('section', { hasText: products[0][0] }).locator('input[name=quantity]').fill(quantity)
+      await order.locator('li.card', { hasText: products[0][0] }).locator('input[name=quantity]').fill(quantity)
       await order.locator('input[name=customer_name]').fill(name)
       await order.locator('input[name=phone]').fill(phone)
       await order.locator('input[name=address]').fill(address)
@@ -135,9 +145,9 @@ test.describe('store screenshots', () => {
     await expect(guest.getByRole('form', { name: 'Đặt hàng' })).toBeVisible()
     await capture(guest, 'tea-shop', 'public-order')
 
-    await manager.goto('/manager/apps/tea-shop')
-    await expect(managerApp.getByRole('link', { name: products[0][0] })).toBeVisible()
-    await capture(manager, 'tea-shop', 'manager-products', title)
+    await manager.goto('/manager/apps/tea-shop/orders')
+    await expect(managerApp.locator('tbody tr')).toHaveCount(customers.length)
+    await capture(manager, 'tea-shop', 'manager-orders', title)
   })
 
   test('farm-supply', async ({ browser }) => {
@@ -148,12 +158,14 @@ test.describe('store screenshots', () => {
     await menuLink(manager, title).first().click()
     await manager.waitForURL('**/manager/apps/farm-supply')
     const managerApp = appFrame(manager, title)
+    await managerApp.locator('summary', { hasText: 'Mở đợt đăng ký mới' }).click()
     await managerApp.locator('input[name=title]').fill(round)
     await managerApp.locator('input[name=deadline]').fill(`${new Date().getFullYear() + 1}-03-01T17:00`)
     await managerApp.getByRole('button', { name: 'Mở đợt' }).click()
     await expect(managerApp.locator('h1')).toContainText(round)
     const items: [string, string, string][] = [['Phân NPK', 'bao 50kg', '450000'], ['Phân hữu cơ vi sinh', 'bao 25kg', '180000'], ['Thuốc trừ sâu sinh học', 'chai', '85000']]
     for (const [name, unit, price] of items) {
+      await managerApp.locator('summary', { hasText: 'Thêm mặt hàng mới' }).click()
       const form = managerApp.locator('form', { has: managerApp.getByRole('button', { name: 'Thêm mặt hàng' }) })
       await form.locator('input[name=name]').fill(name)
       await form.locator('input[name=unit]').fill(unit)
@@ -188,28 +200,37 @@ test.describe('store screenshots', () => {
     await menuLink(manager, 'Tour đồi chè').first().click()
     await manager.waitForURL('**/manager/apps/tea-tour')
     const managerApp = appFrame(manager, 'Đặt tour đồi chè')
+    await managerApp.locator('summary', { hasText: 'Tạo tour mới' }).click()
     await managerApp.locator('input[name=title]').fill(title)
     await managerApp.locator('input[name=starts_at]').fill(`${new Date(Date.now() + 7 * 3600e3 + 4 * 86400e3).toISOString().slice(0, 10)}T07:30`)
     await managerApp.locator('input[name=meeting_point]').fill('Nhà văn hoá xóm Hồng Thái')
     await managerApp.locator('input[name=seats]').fill('12')
     await managerApp.locator('input[name=price_vnd]').fill('250000')
-    await managerApp.locator('select[name=guide]').selectOption('hh_tc_1')
+    await managerApp.locator('select[name=guide]').selectOption({ label: 'Hoàng Văn Tâm' })
     await managerApp.getByRole('button', { name: 'Tạo tour' }).click()
     await expect(managerApp.locator('h1')).toContainText(title)
 
     const guest = await newPage(browser, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
-    await guest.goto('/apps/tea-tour/public/TC')
-    const form = guest.getByRole('form', { name: `Đặt chỗ ${title}` })
-    await form.locator('input[name=guest_name]').fill('Nguyễn Văn An')
-    await form.locator('input[name=phone]').fill('0912 345 678')
-    await form.locator('input[name=party_size]').fill('3')
-    await form.getByRole('button', { name: 'Đặt chỗ' }).click()
-    await guest.waitForURL('**/apps/tea-tour/public/TC/booking?code=*')
+    const bookings: [string, string, string][] = [['Nguyễn Văn An', '0912 345 678', '3'], ['Trần Thị Mai', '0987 654 321', '2'], ['Lê Quốc Bảo', '0903 112 233', '4']]
+    for (const [name, phone, size] of bookings) {
+      await guest.goto('/apps/tea-tour/public/TC')
+      await guest.locator('li.card', { hasText: title }).locator('summary', { hasText: 'Đặt chỗ' }).click()
+      const form = guest.getByRole('form', { name: `Đặt chỗ ${title}` })
+      await form.locator('input[name=guest_name]').fill(name)
+      await form.locator('input[name=phone]').fill(phone)
+      await form.locator('input[name=party_size]').fill(size)
+      await form.getByRole('button', { name: 'Đặt chỗ' }).click()
+      await guest.waitForURL('**/apps/tea-tour/public/TC/booking?code=*')
+    }
 
     await manager.goto('/manager/apps/tea-tour')
     await managerApp.getByRole('link', { name: title }).click()
-    await managerApp.getByRole('button', { name: 'Xác nhận' }).click()
-    await expect(managerApp.locator('main')).toContainText('Đã xác nhận 3 khách')
+    // Two of the three are confirmed; the third stays pending, so the page shows both tones.
+    for (const [name] of bookings.slice(0, 2)) {
+      await managerApp.locator('tbody tr', { hasText: name }).getByRole('button', { name: 'Xác nhận' }).click()
+      await expect(managerApp.locator('tbody tr', { hasText: name })).toContainText('Đã xác nhận')
+    }
+    await expect(managerApp.locator('.stats li', { hasText: 'Khách đã xác nhận' })).toContainText('5')
     await capture(manager, 'tea-tour', 'manager-tour', 'Đặt tour đồi chè')
   })
 })

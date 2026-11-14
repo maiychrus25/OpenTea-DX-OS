@@ -16,7 +16,9 @@ describe('MiniAppFrame', () => {
   test('MiniAppFrame sets the sandbox without allow-scripts', () => {
     render(<MiniAppFrame src="/apps/hello" title="Xin chào" />)
     expect(frame().tagName).toBe('IFRAME')
-    expect(frame().getAttribute('sandbox')).toBe('allow-forms allow-same-origin allow-top-navigation-by-user-activation')
+    expect(frame().getAttribute('sandbox')).toBe(
+      'allow-forms allow-same-origin allow-top-navigation-by-user-activation allow-downloads',
+    )
     expect(frame().getAttribute('sandbox')).not.toMatch(/allow-scripts/)
   })
 

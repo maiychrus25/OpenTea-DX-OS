@@ -1,12 +1,21 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% import "pills.html" as pills %}
 {% block title %}Đơn {{ order.code }}{% endblock %}
 {% block main %}
-<p><a href="{{ href('/', theme) }}">← Tất cả đơn hàng</a></p>
+{% call kit.app_header("Đơn " ~ order.code, "Đặt lúc " ~ (order.created_at | vn_time)) %}
+  {{ kit.print_link(href('/orders/' ~ order.id ~ '/print', theme), "In phiếu giao") }}
+{% endcall %}
+{{ kit.tabs(tab_items(theme), "orders") }}
+<p><a href="{{ href('/orders', theme) }}">← Tất cả đơn hàng</a></p>
 {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
-<h1>Đơn {{ order.code }} <span class="pill">{{ order_status[order.status] }}</span></h1>
-<p>Đặt lúc {{ order.created_at | vn_time }}</p>
+{% if order.status == "CANCELLED" %}
+<p>{{ pills.order(order.status) }}</p>
+{% else %}
+{{ kit.steps(step_labels, step_index[order.status]) }}
+{% endif %}
 <p>Khách: {{ order.customer_name }} · Điện thoại <a href="tel:{{ order.phone }}">{{ order.phone }}</a></p>
 <p>Địa chỉ: {{ order.address }}</p>
 {% if order.note %}<p>Ghi chú: {{ order.note }}</p>{% endif %}

@@ -11,7 +11,7 @@ import { fetchJson } from '@/lib/api/fetch-json'
 import styles from './AppStoreClient.module.css'
 import { StoreAppIcon } from './StoreAppIcon'
 import { StoreHistory } from './StoreHistory'
-import { CATEGORY_LABELS, INSTALLED_STATUSES, normalizeSearch, ROLE_LABELS, STATUS_LABELS, STATUS_TONES, WORKER_WARNING } from './store-labels'
+import { CATEGORY_LABELS, hasNewVersion, INSTALLED_STATUSES, NEW_VERSION_LABEL, normalizeSearch, ROLE_LABELS, STATUS_LABELS, STATUS_TONES, WORKER_WARNING } from './store-labels'
 import { useStorePolling } from './use-store-polling'
 
 export interface AppStoreData {
@@ -188,6 +188,11 @@ export function AppStoreClient({ initial }: { initial: AppStoreData }) {
                         <Pill tone={STATUS_TONES[app.status]} size="md">
                           {STATUS_LABELS[app.status]}
                         </Pill>
+                        {hasNewVersion(app) && (
+                          <Pill tone="amber" size="md">
+                            {NEW_VERSION_LABEL}
+                          </Pill>
+                        )}
                         {app.status === 'available' && (
                           <Button size="sm" isLoading={pendingId === app.id} onClick={() => request(app, 'ENABLE')}>
                             Cài

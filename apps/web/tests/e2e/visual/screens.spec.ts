@@ -26,6 +26,8 @@ interface Screen {
   role?: Role
   /** Another user of that role, when the screen needs a particular one. */
   user?: [string, string]
+  /** A page outside the shell (a print page): it has no top bar, so the top bar checks are skipped. */
+  bare?: boolean
   /** The mini-app frame whose document gets the same overflow and overlap checks. */
   frame?: string
   /** Opens the screen and waits for the content that identifies it. */
@@ -88,9 +90,32 @@ async function visitApp(page: Page, path: string, heading: string, frame = TEA_T
   await expect(page.frameLocator(frame).getByRole('heading', { name: heading, level: 1 })).toBeVisible()
 }
 
+/** Opens a print page of the app (top window, no frame): finds the print link on the list inside the frame and follows it. */
+async function visitPrint(page: Page, listPath: string, frame: string, linkName: string, heading: string | RegExp) {
+  await page.goto(listPath)
+  const link = page.frameLocator(frame).getByRole('link', { name: linkName }).first()
+  await expect(link).toBeVisible()
+  const href = await link.getAttribute('href')
+  await page.goto(href!)
+  await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
+}
+
 if (process.env.E2E_TEA_TOUR === 'installed') {
   SCREENS.push(
     { name: 'tea-tour-manager-list', role: 'manager', frame: TEA_TOUR_FRAME, open: p => visitApp(p, '/manager/apps/tea-tour', 'Tour đồi chè HTX TC') },
+    { name: 'tea-tour-bookings', role: 'manager', frame: TEA_TOUR_FRAME, open: p => visitApp(p, '/manager/apps/tea-tour/bookings', 'Lượt đặt chỗ') },
+    {
+      name: 'tea-tour-print', role: 'manager', bare: true,
+      open: async p => {
+        await p.goto('/manager/apps/tea-tour')
+        await p.frameLocator(TEA_TOUR_FRAME).locator('tbody a').first().click()
+        await expect(p.frameLocator(TEA_TOUR_FRAME).getByRole('link', { name: 'Danh sách đoàn' })).toBeVisible()
+        const frame = await (await p.locator(TEA_TOUR_FRAME).elementHandle())?.contentFrame()
+        const href = await frame!.locator('a', { hasText: 'Danh sách đoàn' }).getAttribute('href')
+        await p.goto(href!)
+        await expect(p.getByText('Dùng lệnh In của trình duyệt')).toBeVisible()
+      },
+    },
     { name: 'tea-tour-public', open: p => visit(p, '/apps/tea-tour/public/TC', 'Tour đồi chè HTX TC') },
     {
       // smoke_farmer_tc guides the story's tours (household hh_tc_1); the demo farmer guides none.
@@ -111,8 +136,33 @@ if (process.env.E2E_BUSINESS_APPS === 'installed') {
     { name: 'leaf-purchase-manager', role: 'manager', frame: LEAF, open: p => visitApp(p, '/manager/apps/leaf-purchase/periods', 'Kỳ thanh toán', LEAF) },
     { name: 'leaf-purchase-farmer', role: 'farmer', user: farmer, frame: LEAF, open: p => visitApp(p, '/farmer/apps/leaf-purchase/mine', 'Phiếu cân của tôi', LEAF) },
     { name: 'tea-shop-manager', role: 'manager', frame: SHOP, open: p => visitApp(p, '/manager/apps/tea-shop', 'Cửa hàng chè HTX TC', SHOP) },
+    { name: 'leaf-purchase-overview', role: 'manager', frame: LEAF, open: p => visitApp(p, '/manager/apps/leaf-purchase/overview', 'Tổng quan', LEAF) },
+    { name: 'leaf-purchase-tickets', role: 'manager', frame: LEAF, open: p => visitApp(p, '/manager/apps/leaf-purchase/tickets', 'Phiếu cân', LEAF) },
+    { name: 'leaf-purchase-print', role: 'manager', bare: true, open: p => visitPrint(p, '/manager/apps/leaf-purchase/tickets', LEAF, 'Bản in', 'Phiếu cân chè búp tươi') },
+    { name: 'tea-shop-orders', role: 'manager', frame: SHOP, open: p => visitApp(p, '/manager/apps/tea-shop/orders', 'Đơn hàng', SHOP) },
+    { name: 'tea-shop-print', role: 'manager', bare: true, open: p => visitPrint(p, '/manager/apps/tea-shop/orders', SHOP, 'In phiếu giao', /Phiếu giao hàng/) },
     { name: 'tea-shop-public', open: p => visit(p, '/apps/tea-shop/public/TC', 'Cửa hàng chè HTX TC') },
-    { name: 'farm-supply-manager', role: 'manager', frame: SUPPLY, open: p => visitApp(p, '/manager/apps/farm-supply', 'Vật tư mua chung HTX TC', SUPPLY) },
+    { name: 'farm-supply-manager', role: 'manager', frame: SUPPLY, open: p => visitApp(p, '/manager/apps/farm-supply', 'Vật tư mua chung', SUPPLY) },
+    {
+      name: 'farm-supply-round', role: 'manager', frame: SUPPLY,
+      open: async p => {
+        await p.goto('/manager/apps/farm-supply')
+        await p.frameLocator(SUPPLY).locator('tbody a', { hasText: 'Phân bón vụ' }).first().click()
+        await expect(p.frameLocator(SUPPLY).getByRole('link', { name: 'In bảng kê giao hàng' })).toBeVisible()
+      },
+    },
+    {
+      name: 'farm-supply-print', role: 'manager', bare: true,
+      open: async p => {
+        await p.goto('/manager/apps/farm-supply')
+        await p.frameLocator(SUPPLY).locator('tbody a', { hasText: 'Phân bón vụ' }).first().click()
+        const frame = await (await p.locator(SUPPLY).elementHandle())?.contentFrame()
+        const link = frame!.locator('a', { hasText: 'In bảng kê giao hàng' })
+        await expect(link).toBeVisible()
+        await p.goto((await link.getAttribute('href'))!)
+        await expect(p.getByText('Dùng lệnh In của trình duyệt')).toBeVisible()
+      },
+    },
     { name: 'farm-supply-farmer', role: 'farmer', user: farmer, frame: SUPPLY, open: p => visitApp(p, '/farmer/apps/farm-supply/mine', 'Đăng ký vật tư', SUPPLY) },
   )
 }
@@ -214,7 +264,7 @@ for (const screen of SCREENS) {
           expect(await doc.evaluate(findTextOverlaps), `overlapping text in ${doc.url()}`).toEqual([])
         }
 
-        if (screen.role && viewport.name === '390') {
+        if (screen.role && !screen.bare && viewport.name === '390') {
           // The signed-in top bar keeps the theme toggle on a phone, inside the screen and clear of the other controls.
           const toggle = page.getByRole('button', { name: /^Giao diện:/ })
           await expect(toggle).toBeVisible()
