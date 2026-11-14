@@ -241,7 +241,7 @@ test.describe('Sổ tự tạo: the app is down', () => {
       const response = await manager.goto(path)
       timings.push(Date.now() - started)
       expect(response?.status(), path).toBe(200)
-      await expect(manager.locator('nav')).toBeVisible()
+      await expect(manager.getByTestId('sidebar')).toBeVisible()
       await expect(menuLink(manager, 'Kho ứng dụng').first()).toBeVisible()
       await expect(menuLink(manager, 'Sổ của HTX').first()).toBeVisible()
     }
