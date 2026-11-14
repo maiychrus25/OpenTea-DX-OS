@@ -6,7 +6,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Button, Card, Pill } from '@/components/ui'
-import type { AppStoreStatus, StoreAction, StoreApp, StoreCategory } from '@/domain/entities/app-store'
+import type { AppStoreStatus, StoreAction, StoreApp, StoreCategory, StoreCreatedApp } from '@/domain/entities/app-store'
 import { fetchJson } from '@/lib/api/fetch-json'
 import styles from './AppStoreClient.module.css'
 import { StoreAppIcon } from './StoreAppIcon'
@@ -17,6 +17,7 @@ import { useStorePolling } from './use-store-polling'
 export interface AppStoreData {
   workerAlive: boolean
   apps: StoreApp[]
+  created: StoreCreatedApp[]
 }
 
 type Tab = 'apps' | 'history'
@@ -220,6 +221,49 @@ export function AppStoreClient({ initial }: { initial: AppStoreData }) {
               </ul>
             )}
           </>
+        )}
+        {data.created.length > 0 && (
+          <section className={styles.created} aria-labelledby="store-created">
+            <h2 id="store-created" className={styles.createdTitle}>
+              Ứng dụng do HTX tự tạo
+            </h2>
+            {data.created.map(created => (
+              <div key={created.appId} className={styles.createdApp}>
+                <div className={styles.createdHead}>
+                  <h3 className={styles.name}>{created.appName}</h3>
+                  {created.create && (
+                    <Link href={created.create.href} className={styles.createLink}>
+                      {created.create.label}
+                    </Link>
+                  )}
+                </div>
+                {created.entries.length === 0 ? (
+                  <p className={styles.empty}>
+                    {created.create ? `Chưa có ứng dụng nào. Bấm "${created.create.label}" để bắt đầu.` : 'Chưa có ứng dụng nào.'}
+                  </p>
+                ) : (
+                  <ul className={styles.grid}>
+                    {created.entries.map(entry => (
+                      <li key={entry.href} className={styles.item}>
+                        <Card className={styles.card}>
+                          <div className={styles.cardHead}>
+                            <StoreAppIcon name={entry.icon} />
+                            <h4 className={styles.name}>{entry.label}</h4>
+                          </div>
+                          {entry.description && <p className={styles.description}>{entry.description}</p>}
+                          <div className={styles.footer}>
+                            <Link href={entry.href} className={styles.openLink}>
+                              Mở
+                            </Link>
+                          </div>
+                        </Card>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </section>
         )}
       </div>
 

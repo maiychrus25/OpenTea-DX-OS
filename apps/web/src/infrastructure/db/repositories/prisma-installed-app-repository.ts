@@ -15,7 +15,8 @@ const toInstalledApp = ({ public_prefixes, ...app }: InstalledAppRow): Installed
 export class PrismaInstalledAppRepository {
   async find(id: string): Promise<InstalledApp | null> {
     const rows = await prisma.$queryRaw<InstalledAppRow[]>`
-      SELECT id, name, version, menu, COALESCE(manifest #> '{routes,public}', '[]'::jsonb) AS public_prefixes
+      SELECT id, name, version, menu, COALESCE(manifest #> '{routes,public}', '[]'::jsonb) AS public_prefixes,
+             manifest ->> 'feed' AS feed
       FROM platform.installed_apps WHERE id = ${id}`
     return rows[0] ? toInstalledApp(rows[0]) : null
   }
@@ -23,7 +24,8 @@ export class PrismaInstalledAppRepository {
   /** Installed apps enabled for `htxCode` or for every HTX (`*`); with null, only the latter. */
   async list(htxCode: string | null): Promise<InstalledApp[]> {
     const rows = await prisma.$queryRaw<InstalledAppRow[]>`
-      SELECT a.id, a.name, a.version, a.menu, COALESCE(a.manifest #> '{routes,public}', '[]'::jsonb) AS public_prefixes
+      SELECT a.id, a.name, a.version, a.menu, COALESCE(a.manifest #> '{routes,public}', '[]'::jsonb) AS public_prefixes,
+             a.manifest ->> 'feed' AS feed
       FROM platform.installed_apps a
       WHERE EXISTS (
         SELECT 1 FROM platform.app_enablements e

@@ -87,6 +87,7 @@
         }
       }
     },
+    "feed": { "$ref": "#/$defs/route" },
     "menu": {
       "type": "array",
       "items": {

@@ -63,3 +63,10 @@ export async function expectNoOverflow(page: Page, frameTitle?: string) {
   const inner = await frame!.evaluate(measure)
   expect(inner.scroll, `frame overflow ${JSON.stringify(inner)}`).toBeLessThanOrEqual(inner.inner)
 }
+
+/** Waits until the frame's document is the one at a URL holding `fragment` (a form that navigates it has landed). */
+export async function expectFrameUrl(page: Page, frameTitle: string, fragment: string) {
+  await expect
+    .poll(async () => (await (await page.locator(`iframe[title="${frameTitle}"]`).elementHandle())?.contentFrame())?.url() ?? '')
+    .toContain(fragment)
+}

@@ -283,7 +283,7 @@ jobs:
       - name: Mini-app Unit Tests
         run: |
           (cd miniapps/hello && python -m unittest -v)
-          for app in tea-tour leaf-purchase tea-shop farm-supply; do
+          for app in tea-tour leaf-purchase tea-shop farm-supply custom-books; do
             (cd "miniapps/$app" && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error)
           done
 
@@ -428,6 +428,37 @@ jobs:
           E2E_BASE_URL: http://localhost:3000
         run: npx playwright test tests/e2e/visual/screens.spec.ts --project=chromium --no-deps --reporter=list --trace retain-on-failure --grep 'app-store|leaf-purchase|tea-shop|farm-supply'
 
+      # Installs custom-books from the page (the worker runs), designs and publishes a book and follows it through the roles.
+      - name: Custom Books Story Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_CUSTOM_BOOKS: "1"
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/story/custom-books.spec.ts --project=chromium --no-deps --reporter=list --trace retain-on-failure
+
+      - name: Custom Books Screens Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_CUSTOM_BOOKS: installed
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/visual/screens.spec.ts --project=chromium --no-deps --reporter=list --trace retain-on-failure --grep 'custom-books'
+
+      # With the app's container stopped the shell must still render with its static menu.
+      - name: Custom Books Feed Down Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_CUSTOM_BOOKS: down
+          E2E_BASE_URL: http://localhost:3000
+        run: |
+          docker ps -q --filter label=com.docker.compose.service=app-custom-books | xargs docker stop
+          rc=0
+          npx playwright test tests/e2e/story/custom-books.spec.ts --project=chromium --no-deps --reporter=list --trace retain-on-failure || rc=$?
+          docker ps -aq --filter label=com.docker.compose.service=app-custom-books | xargs docker start
+          exit "$rc"
+
       - name: Upload Screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -459,7 +490,7 @@ jobs:
       # apps-smoke purges these apps and refuses to start while one is installed.
       - name: Remove Business Apps
         run: |
-          for app in tea-shop leaf-purchase farm-supply; do ./dxos remove "$app"; done
+          for app in tea-shop leaf-purchase farm-supply custom-books; do ./dxos remove "$app"; done
 
       # Installs hello, tea-tour, the three business apps and the CLI fixtures, runs the store queue with a worker of its own,
       # re-runs platform-up, removes them all, then runs platform-smoke.

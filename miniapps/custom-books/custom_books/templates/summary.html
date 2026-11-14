@@ -1,0 +1,14 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Tổng hợp · {{ book.name }}{% endblock %}
+{% block main %}
+{% call kit.app_header(book.name, "Tổng hợp") %}
+  {% if can_write %}<a class="button" href="{{ href('/b/' ~ book.id ~ '/new', theme) }}">Ghi dòng mới</a>{% endif %}
+{% endcall %}
+{{ kit.tabs(tabs, current) }}
+{{ kit.stats(stats) }}
+{{ kit.chart(month_title, month_rows, month_unit) }}
+{% if option_rows %}{{ kit.chart(option_title, option_rows) }}{% endif %}
+{% endblock %}

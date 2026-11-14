@@ -52,4 +52,27 @@ describe('Sidebar Component', () => {
     const link = screen.getByText('Dashboard').closest('a')
     expect(link?.className).not.toContain('active')
   })
+
+  describe('nested items', () => {
+    const nested = [
+      { label: 'Sổ của HTX', href: '/manager/apps/custom-books', icon: <span /> },
+      { label: 'Chấm công', href: '/manager/apps/custom-books/b/3', icon: <span /> },
+    ]
+
+    it('lights only the most specific item on a nested page', () => {
+      ;(usePathname as jest.Mock).mockReturnValue('/manager/apps/custom-books/b/3')
+      const { container } = render(<Sidebar navItems={nested} />)
+      const current = container.querySelectorAll('[aria-current="page"]')
+      expect(current).toHaveLength(1)
+      expect(current[0]).toHaveTextContent('Chấm công')
+    })
+
+    it('lights the parent item on a page only it matches', () => {
+      ;(usePathname as jest.Mock).mockReturnValue('/manager/apps/custom-books/books')
+      const { container } = render(<Sidebar navItems={nested} />)
+      const current = container.querySelectorAll('[aria-current="page"]')
+      expect(current).toHaveLength(1)
+      expect(current[0]).toHaveTextContent('Sổ của HTX')
+    })
+  })
 })

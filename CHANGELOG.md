@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.12.0] - 2026-11-14
+
+The `v1.11.0` tag has no GitHub Release, images or bundle: its release run failed twice on a race in a browser test (the test typed into a frame that was still navigating), fixed here. `v1.12.0` contains everything in 1.11.0.
+
+### Added
+
+- **Manifest `feed`** (`platform/apps/manifest.schema.json`, `dxos validate`): an app may name a protected path that returns, for the calling user, a JSON list of sub-apps (`entries` and an optional `create` link). The web menu shows them after the app's own items in each role's sidebar, and the App Store shows a section "Ứng dụng do HTX tự tạo". The web validates the feed (30 entries, label 60, path `^/[a-z0-9_-]+(/[a-z0-9_-]+)*$`, icon allowlist, 64 KB, 1.5 s, cached 15 s) and a broken feed leaves the menu intact. `GET /api/app-store` gains `created`. The icon map moved to `lib/apps/app-icons.tsx`. See `docs/miniapps.md`.
+
+- **Mini-app `custom-books` ("Sổ tự tạo", 0.1.0)**: the HTX manager designs record-keeping books without code. Eight templates (picking attendance, spraying, fertilising, cashbook, meeting minutes, supply hand-over, pest tracking, visitors) and a blank book; a form-based designer (name, description, menu icon, fields of eight types, which fields show in the list or are summed, access of officers and farmers: none, view, own rows, all rows; optional approval of each row); preview, publish, archive and publish again. Each published book appears in the menu of the roles allowed to use it and in the App Store section "Ứng dụng do HTX tự tạo", with a form, a filtered list with search and paging, a summary with totals and charts, a CSV download and a print page. With approval on, a row waits for the manager, who approves or rejects it on a page with a reason; the author corrects a rejected row, an approved row is locked, and the summary counts approved rows only. A user at level "own" never reads another user's row (list, edit, CSV, print, summary). Requires core 1.12.0.
+- **Smaller dev stack**: `make up-core` (postgres, keycloak, hasura, apisix, web) and one target per optional group (`up-docs`, `up-sensors`, `up-ai`, `up-voice`, `up-workflow`, `up-chat`) start only their own containers; `make stop-extras` stops (never removes) every optional container. `make up` and `make platform-up` are unchanged. See the README.
+- **Designer table** (`dxos-app.css`): a `form-table` modifier gives the input columns of a table of inputs a share of its width, the name column the largest (about 230 px at 1280 px), and the table stays inside its card with any system font.
+- **Tests**: the app smoke installs `custom-books`, drives a book from the picking template through publish, feed per role, rows at level own, rejection, approval, CSV, print, archive and purge; a browser story installs it from the App Store, designs and publishes a book, checks that the officer and farmer menus gain the entry on their own, a farmer row at 390 px, approval, summary, CSV, print and archive, and that the shell still renders when the app is stopped; screens for the books list, template chooser, designer, list, summary, print and farmer list at 1280 and 390 px, light and dark.
+
+### Changed
+
+- **Keycloak heap cap in the dev stack** (`docker/docker-compose.yml`): `JAVA_OPTS_KC_HEAP` defaults to `-Xms64m -Xmx512m` (override with `KEYCLOAK_HEAP_OPTS`); Keycloak used about 1.1 GiB before and about 360 MiB after for the same activity.
+- The sidebar lights only the most specific menu item, so a feed entry no longer lights its app's own item as well.
+
+### Upgrade notes
+- The Keycloak cap applies when the keycloak container is next recreated (`make up-core` or `make platform-up` after pulling); recreating it also restarts web.
+- Run `make platform-up` and `make web-up` (new menu feed, store section and designer CSS), then `./dxos install miniapps/custom-books` or install "Sổ tự tạo" from the App Store (a worker must be running). No migration of existing apps; keep every `docker_*` volume.
+- `./dxos validate` now accepts the `feed` key; an app that declares it should require core `>=1.12.0`.
+
+### Known limits
+- No photo or file fields (mini-apps have no object storage access).
+- No formulas or calculated fields: the summary only totals number and money fields.
+- Approval is one step, by the manager.
+- The designer is a form, not a drag-and-drop canvas; a field's type cannot change once the book has rows, and a choice field that has rows cannot lose options.
+- A book's menu entry shows on the next page load, up to 15 seconds after publishing (the feed is cached 15 s per app, HTX and role, 5 s after a failure).
+- The menu entry cap is 30 books per role; an HTX has at most 50 books; CSV and print hold at most 5000 rows.
+- A second household field in one book shows "Nông hộ khác" for households a farmer may not see; only the first household field's name is stored.
+
+---
+
 ## [1.11.0] - 2026-11-13
 
 ### Added
@@ -484,7 +518,8 @@ The `v1.8.0` tag has no GitHub Release, images or bundle: the release workflow's
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.12.0...HEAD
+[1.12.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.12.0
 [1.11.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.11.0
 [1.10.1]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.1
 [1.10.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.0

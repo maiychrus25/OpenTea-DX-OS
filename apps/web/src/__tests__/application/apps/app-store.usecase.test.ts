@@ -263,3 +263,44 @@ describe('AppStoreUseCase.history and screenshot', () => {
     expect(repository.screenshot).toHaveBeenCalledWith('hello', 0)
   })
 })
+
+describe('AppStoreUseCase.list (created apps)', () => {
+  const books = { id: 'custom-books', name: 'Sổ tự tạo', version: '0.1.0', menu: [], publicPrefixes: [], feed: '/feed' }
+  const feed = {
+    entries: [{ label: 'Sổ thu mua', path: '/books/1', icon: 'leaf', description: 'Ghi chép' }],
+    create: { label: 'Tạo sổ', path: '/new' },
+  }
+  const withCreated = (apps: unknown[], loadFeed: jest.Mock) => {
+    const { repository } = setup()
+    const list = jest.fn().mockResolvedValue(apps)
+    return { list, loadFeed, useCase: new AppStoreUseCase(repository, { apps: { list }, loadFeed }) }
+  }
+
+  test('one element per enabled app that declares a feed, with manager hrefs', async () => {
+    const { useCase, list, loadFeed } = withCreated([books, { ...books, id: 'plain', feed: null }], jest.fn().mockResolvedValue(feed))
+    expect((await useCase.list('TC')).created).toEqual([
+      {
+        appId: 'custom-books',
+        appName: 'Sổ tự tạo',
+        create: { label: 'Tạo sổ', href: '/manager/apps/custom-books/new' },
+        entries: [{ label: 'Sổ thu mua', description: 'Ghi chép', icon: 'leaf', href: '/manager/apps/custom-books/books/1' }],
+      },
+    ])
+    expect(list).toHaveBeenCalledWith('TC')
+    expect(loadFeed).toHaveBeenCalledTimes(1)
+    expect(loadFeed).toHaveBeenCalledWith(books, 'manager', 'TC')
+  })
+
+  test('no feed app, no created apps; without a source it is empty too', async () => {
+    expect((await withCreated([{ ...books, feed: null }], jest.fn()).useCase.list('TC')).created).toEqual([])
+    expect((await setup().useCase.list('TC')).created).toEqual([])
+  })
+
+  test('a failing app list leaves the store intact', async () => {
+    const { repository } = setup()
+    const useCase = new AppStoreUseCase(repository, { apps: { list: jest.fn().mockRejectedValue(new Error('db')) }, loadFeed: jest.fn() })
+    const data = await useCase.list('TC')
+    expect(data.created).toEqual([])
+    expect(data.apps).toHaveLength(1)
+  })
+})

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { Calendar, ClipboardList, Leaf, MapPinned, Package, Scale, ShoppingBag, Sparkles, Truck, Users, type LucideIcon } from 'lucide-react'
 import type { AppStoreStatus, RequestStatus, StoreCategory } from '@/domain/entities/app-store'
 
 export const ROLE_LABELS: Record<string, string> = { manager: 'Trưởng HTX', officer: 'Cán bộ', farmer: 'Nông dân' }
@@ -47,20 +46,6 @@ export const REQUEST_TONES: Record<RequestStatus, 'green' | 'amber' | 'blue' | '
 }
 
 export const WORKER_WARNING = 'Trình cài đặt chưa chạy. Yêu cầu sẽ được xử lý khi quản trị máy chủ bật ./dxos worker.'
-
-/** The ten icon names a manifest may use (STORE_ICONS); anything else is drawn as the default. */
-export const ICONS: Record<string, LucideIcon> = {
-  leaf: Leaf,
-  scale: Scale,
-  'shopping-bag': ShoppingBag,
-  package: Package,
-  'map-pinned': MapPinned,
-  users: Users,
-  calendar: Calendar,
-  'clipboard-list': ClipboardList,
-  truck: Truck,
-  sparkles: Sparkles,
-}
 
 /** Lower case, no accents; `đ` becomes `d`. */
 export function normalizeSearch(text: string): string {

@@ -1,0 +1,17 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}{{ "Sửa dòng" if record else "Ghi dòng mới" }} · {{ book.name }}{% endblock %}
+{% block main %}
+{% call kit.app_header(("Sửa dòng" if record else "Ghi dòng mới"), book.name) %}
+  <a class="button secondary" href="{{ href('/b/' ~ book.id, theme) }}">Quay lại danh sách</a>
+{% endcall %}
+{% if errors %}<div class="error" role="alert">Còn chỗ cần sửa. Xem các dòng báo lỗi màu đỏ bên dưới.</div>{% endif %}
+{% if book.approval and record and record.status == "REJECTED" %}<div class="error" role="alert">Dòng này bị từ chối{% if record.reject_reason %}: {{ record.reject_reason }}{% endif %}. Sửa xong dòng sẽ quay lại chờ trưởng HTX duyệt.</div>{% endif %}
+<form method="post" action="{{ href('/b/' ~ book.id ~ ('/r/' ~ record.id ~ '/edit' if record else '/records'), theme) }}">
+  {% include "entry_fields.html" %}
+  {% if book.approval %}<p>Sổ này cần trưởng HTX duyệt: dòng ghi xong ở tình trạng chờ duyệt.</p>{% endif %}
+  <button type="submit">{{ "Lưu thay đổi" if record else "Ghi dòng" }}</button>
+</form>
+{% endblock %}

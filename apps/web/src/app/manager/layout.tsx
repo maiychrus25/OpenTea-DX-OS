@@ -11,6 +11,7 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
 import { loadAppNavItems } from '@/lib/apps/app-nav'
+import { loadAppFeed } from '@/lib/apps/feed-loader'
 
 export default async function ManagerLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -34,7 +35,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
     { label: 'Thông báo', href: '/manager/notifications', icon: <Bell size={20} /> },
     { label: 'Hồ sơ HTX', href: '/manager/profile', icon: <Landmark size={20} /> },
     { label: 'Kho ứng dụng', href: '/manager/app-store', icon: <Store size={20} /> },
-    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'manager', session.user.htxCode ?? null)),
+    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'manager', session.user.htxCode ?? null, loadAppFeed)),
   ]
 
   return (

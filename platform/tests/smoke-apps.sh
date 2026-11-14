@@ -11,12 +11,12 @@ source platform/tests/tokens.sh
 
 command -v jq >/dev/null || { echo "jq is required (brew/apt install jq)"; exit 1; }
 
-# This smoke purges the data of tea-tour, hello and the three business apps, so it must never run on a stack where one is really installed.
+# This smoke purges the data of tea-tour, hello, the three business apps and custom-books, so it must never run on a stack where one is really installed.
 # Checked before the EXIT trap below, which would otherwise remove them on the way out.
 LISTED=$(./dxos list) || { echo "./dxos list failed; apps-smoke did not start"; exit 1; }
-for id in tea-tour hello leaf-purchase tea-shop farm-supply; do
+for id in tea-tour hello leaf-purchase tea-shop farm-supply custom-books; do
   if grep -qxF "$id" <<<"$(cut -f1 <<<"$LISTED")"; then
-    echo "apps-smoke xoá dữ liệu của tea-tour, hello, leaf-purchase, tea-shop và farm-supply, nhưng stack này đang cài $id. Không chạy trên stack có dữ liệu thật;" \
+    echo "apps-smoke xoá dữ liệu của tea-tour, hello, leaf-purchase, tea-shop, farm-supply và custom-books, nhưng stack này đang cài $id. Không chạy trên stack có dữ liệu thật;" \
       "hãy chạy trên stack riêng (COMPOSE_PROJECT_NAME=dxos-clean make platform-up) hoặc gỡ $id trước." >&2
     exit 1
   fi
@@ -29,7 +29,7 @@ WORKER_OUT="$(mktemp)"
 cleanup_store() {
   [ -z "$WORKER_PID" ] || kill "$WORKER_PID" 2>/dev/null || true
   rm -r -f miniapps/broken-health miniapps/bad-shot
-  for app in leaf-purchase tea-shop farm-supply; do ./dxos remove "$app" --purge >/dev/null 2>&1 || true; done
+  for app in leaf-purchase tea-shop farm-supply custom-books; do ./dxos remove "$app" --purge >/dev/null 2>&1 || true; done
 }
 
 # Whatever fails, leave no app behind (the registry, docker/runtime/<project> and the containers outlive this script).
@@ -455,6 +455,83 @@ grep -q 'Đã giao' <<<"$(get_page "$TM" $FS/rounds/$ROUND)" && pass "round page
 assert_eq "$(psql_app "select count(*) from app_farm_supply.rounds")" 1 "remove without --purge keeps the round"
 purged farm-supply app_farm_supply
 
+echo "[custom-books]"
+./dxos remove custom-books --purge >/dev/null 2>&1 || true
+./dxos install miniapps/custom-books && pass "./dxos install miniapps/custom-books exits 0" || fail "./dxos install miniapps/custom-books"
+fresh_tokens
+CB=/apps/custom-books
+wait_http 200 "manager token -> 200 on $CB/" -- -H "Authorization: Bearer $TM" "$APP_GW$CB/"
+assert_app_http 200 "farmer token -> 200 on $CB/" -- -H "Authorization: Bearer $TF" "$APP_GW$CB/"
+assert_app_http 401 "no token -> 401 on $CB/" -- "$APP_GW$CB/"
+assert_http 404 "published port 9080 -> 404 on $CB/ (R23)" -- -H "Authorization: Bearer $TM" "$GATEWAY$CB/"
+refused "$TF" $CB/books smoke_farmer_tc
+refused "$TO" $CB/books/new smoke_officer_tc
+assert_eq "$(get_page "$TM" $CB/feed | jq -c '{n: (.entries | length), create: .create.path}')" '{"n":0,"create":"/books/new"}' "feed of an empty HTX: no entries, the manager gets the create link"
+assert_eq "$(get_page "$TF" $CB/feed | jq -c 'has("create")')" false "feed: a farmer gets no create link"
+page_ok "$TM" $CB/books/new "template chooser"
+# A book from the picking template (officer: all, farmer: own, approval on) and one from the cashbook template (farmer: none).
+LOC=$(post_loc "$TM" $CB/books -d template=picking)
+[[ "$LOC" =~ ^$CB/books/[0-9a-f-]{36}/design$ ]] && pass "manager creates a book from the picking template -> 303 ($LOC)" || fail "create book Location wrong: '$LOC'"
+BOOK=$(sed -E 's#.*/books/([0-9a-f-]{36})/design#\1#' <<<"$LOC")
+assert_eq "$(get_page "$TM" $CB/feed | jq '.entries | length')" 0 "a draft book is not in the feed"
+LOC=$(post_loc "$TM" $CB/books/$BOOK/publish -X POST)
+assert_eq "$LOC" "$CB/b/$BOOK" "manager publishes the book -> 303"
+LOC=$(post_loc "$TM" $CB/books -d template=cashbook)
+CASH=$(sed -E 's#.*/books/([0-9a-f-]{36})/design#\1#' <<<"$LOC")
+assert_eq "$(post_loc "$TM" $CB/books/$CASH/publish -X POST)" "$CB/b/$CASH" "manager publishes the cashbook (farmer: none)"
+fresh_tokens
+FEED_O=$(get_page "$TO" $CB/feed); FEED_F=$(get_page "$TF" $CB/feed)
+assert_eq "$(jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_O")" 1 "feed: the officer lists the picking book"
+assert_eq "$(jq -r --arg p "/b/$CASH" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_O")" 1 "feed: the officer lists the cashbook (level own)"
+assert_eq "$(jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_F")" 1 "feed: the farmer lists the picking book"
+assert_eq "$(jq -r --arg p "/b/$CASH" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_F")" 0 "feed: a role at level none does not list the cashbook"
+assert_eq "$(jq -r '.entries[0] | [.label, .icon] | join("|")' <<<"$FEED_F")" "Chấm công hái chè|leaf" "feed entry carries the book's name and icon"
+assert_eq "$(jq -c 'has("create")' <<<"$FEED_F")" false "feed: no create link for the farmer"
+assert_app_http 403 "farmer token on the cashbook (level none) -> 403 from the app" -- -H "Authorization: Bearer $TF" "$APP_GW$CB/b/$CASH"
+# Rows: the farmer's own household, the officer's row for the same household.
+MARK_F=12.5; MARK_O=77.7
+LOC=$(post_loc "$TF" $CB/b/$BOOK/records -d "f1=$DAY" -d f2=hh_tc_1 -d "f3=$MARK_F" --data-urlencode "f4=Chè búp tươi")
+assert_eq "$LOC" "$CB/b/$BOOK?notice=saved" "farmer adds a row -> 303"
+LOC=$(post_loc "$TO" $CB/b/$BOOK/records -d "f1=$DAY" -d f2=hh_tc_1 -d "f3=$MARK_O" --data-urlencode "f4=Chè già")
+assert_eq "$LOC" "$CB/b/$BOOK?notice=saved" "officer adds a row -> 303"
+assert_eq "$(psql_app "select string_agg(status, ',' order by status) from app_custom_books.records where book_id = '$BOOK'")" "PENDING,PENDING" "both rows wait for approval"
+OFFICER_ROW=$(psql_app "select id from app_custom_books.records where book_id = '$BOOK' and (data->>'f3')::numeric = $MARK_O" | sed -n 1p)
+FARM_ROW=$(psql_app "select id from app_custom_books.records where book_id = '$BOOK' and (data->>'f3')::numeric = $MARK_F" | sed -n 1p)
+LIST_F=$(get_page "$TF" $CB/b/$BOOK)
+grep -q "12,5" <<<"$LIST_F" && pass "farmer's list shows the farmer's own row" || fail "farmer's list lacks their own row"
+grep -q "77,7" <<<"$LIST_F" && fail "farmer (level own) sees the officer's row in the list" || pass "farmer (level own) does not see the officer's row in the list"
+assert_app_http 404 "farmer opening the officer's row by its URL -> 404" -- -H "Authorization: Bearer $TF" "$APP_GW$CB/b/$BOOK/r/$OFFICER_ROW/edit"
+grep -q "77,7\|77.7" <<<"$(get_page "$TF" $CB/b/$BOOK/export.csv)" && fail "farmer's CSV holds the officer's row" || pass "farmer's CSV holds only their own rows"
+grep -q "77,7" <<<"$(get_page "$TF" $CB/b/$BOOK/print)" && fail "farmer's print page holds the officer's row" || pass "farmer's print page holds only their own rows"
+grep -q "77,7" <<<"$(get_page "$TF" $CB/b/$BOOK/summary)" && fail "farmer's summary counts the officer's row" || pass "farmer's summary counts only their own rows"
+grep -q "12,5" <<<"$(get_page "$TM" $CB/b/$BOOK/summary)" && fail "summary counts a row that is not approved" || pass "summary does not count pending rows"
+[[ "$(post_loc "$TF" $CB/b/$BOOK/r/$FARM_ROW/approve -X POST)" == HTTP/*\ 403* ]] && pass "farmer cannot approve a row (403)" || fail "farmer approve was not refused with 403"
+LOC=$(post_loc "$TM" $CB/b/$BOOK/r/$FARM_ROW/reject --data-urlencode "reason=Thiếu ghi chú lô chè")
+[[ "$LOC" == $CB/b/$BOOK* ]] && pass "manager rejects the farmer's row with a reason ($LOC)" || fail "reject Location wrong: '$LOC'"
+assert_eq "$(psql_app "select status from app_custom_books.records where id = '$FARM_ROW'")" REJECTED "the row is REJECTED"
+LOC=$(post_loc "$TF" $CB/b/$BOOK/r/$FARM_ROW/edit -d "f1=$DAY" -d f2=hh_tc_1 -d "f3=$MARK_F" --data-urlencode "f4=Chè búp tươi")
+[[ "$LOC" == $CB/b/$BOOK* ]] && pass "farmer edits the rejected row ($LOC)" || fail "edit Location wrong: '$LOC'"
+assert_eq "$(psql_app "select status from app_custom_books.records where id = '$FARM_ROW'")" PENDING "an edited row is PENDING again"
+LOC=$(post_loc "$TM" $CB/b/$BOOK/r/$FARM_ROW/approve -X POST)
+[[ "$LOC" == $CB/b/$BOOK* ]] && pass "manager approves the farmer's row ($LOC)" || fail "approve Location wrong: '$LOC'"
+assert_eq "$(psql_app "select status from app_custom_books.records where id = '$FARM_ROW'")" APPROVED "the row is APPROVED"
+grep -q "12,5" <<<"$(get_page "$TM" $CB/b/$BOOK/summary)" && pass "summary counts the row after approval" || fail "summary lacks the approved row"
+LOC=$(post_loc "$TF" $CB/b/$BOOK/r/$FARM_ROW/edit -d "f1=$DAY" -d f2=hh_tc_1 -d "f3=99" --data-urlencode "f4=Chè già")
+[[ "$LOC" == $CB/b/$BOOK?notice=saved ]] && fail "an approved row was edited by its author" || pass "an approved row is locked for its author ($LOC)"
+csv_check "$TM" $CB/b/$BOOK/export.csv "custom-books CSV"
+grep -q "77,7\|77.7" <<<"$(get_page "$TM" $CB/b/$BOOK/export.csv)" && pass "manager's CSV holds every row" || fail "manager's CSV lacks the officer's row"
+page_ok "$TM" $CB/b/$BOOK/print "custom-books print page"
+page_ok "$TM" $CB/b/$BOOK/summary "custom-books summary"
+# Archive: the entry leaves the feed; publish again: it returns.
+assert_eq "$(post_loc "$TM" $CB/books/$BOOK/archive -X POST)" "$CB/books" "manager archives the book -> 303"
+assert_eq "$(get_page "$TO" $CB/feed | jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length')" 0 "an archived book leaves the feed"
+assert_eq "$(post_loc "$TM" $CB/books/$BOOK/publish -X POST)" "$CB/b/$BOOK" "manager publishes the archived book again"
+assert_eq "$(get_page "$TO" $CB/feed | jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length')" 1 "the book is back in the feed"
+[[ "$(post_loc "$TM" $CB/books/$BOOK/delete -X POST)" == HTTP/*\ 409* ]] && pass "a book with rows cannot be deleted (409)" || fail "delete of a book with rows was not refused with 409"
+./dxos remove custom-books >/dev/null && pass "./dxos remove custom-books exits 0"
+assert_eq "$(psql_app "select count(*) from app_custom_books.records")" 2 "remove without --purge keeps the rows"
+purged custom-books app_custom_books
+
 echo "[store queue]"
 fresh_tokens
 # The App Store page queues rows in platform.app_requests; ./dxos worker installs, enables and removes per HTX.
@@ -620,13 +697,16 @@ RS3=$(request tea-shop TC ENABLE)
 wait_request "$RS3" DONE "ENABLE tea-shop for TC again -> DONE" 120
 fresh_tokens
 wait_http 200 "tea-shop answers again after the second enable" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-shop/"
-# The public route can reach the gateway a moment after the manager route, so poll instead of reading once.
-for _ in $(seq 1 15); do
+# The public route can reach the gateway a moment after the manager route, so poll instead of reading once. 40 tries: the cause is a
+# hypothesis, not proven: an APISIX worker that resolved app-tea-shop while the container was gone may keep the negative DNS answer for
+# 30 s (+4 s), the same cache the tenant spec waits out; 15 s failed once in three rounds.
+for _ in $(seq 1 40); do
   grep -q 'Chè Oolong' <<<"$(app_curl -s "$APP_GW/apps/tea-shop/public/TC")" && break
   sleep 1
 done
 grep -q 'Chè Oolong' <<<"$(app_curl -s "$APP_GW/apps/tea-shop/public/TC")" && pass "the product created before the disable is on the public page again" \
-  || fail "the product is gone after the second enable"
+  || { fail "the product is gone after the second enable"
+       echo "  diagnostics: public page status/size: $(app_curl -s -o /dev/null -w '%{http_code} %{size_download}' "$APP_GW/apps/tea-shop/public/TC"); product rows: $(psql_app "select count(*) || ' active=' || count(*) filter (where active) from app_tea_shop.products where name = 'Chè Oolong'"); page head: $(app_curl -s "$APP_GW/apps/tea-shop/public/TC" | head -c 300 | tr '\n' ' ')"; }
 RS4=$(request tea-shop TC DISABLE)
 wait_request "$RS4" DONE "DISABLE tea-shop for TC again -> DONE"
 for _ in $(seq 1 30); do [ "$(installed_count tea-shop)" = 0 ] && break; sleep 2; done

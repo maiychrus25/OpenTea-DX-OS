@@ -14,8 +14,12 @@ import {
   type StoreApp,
   type StoreAppDetail,
   type StoreCategory,
+  type StoreCreatedApp,
   type StoreHistoryEntry,
 } from '@/domain/entities/app-store'
+import type { FeedLoader } from '@/application/apps/app-feed'
+import type { InstalledApp } from '@/domain/entities/installed-app'
+import { logger } from '@/lib/logger'
 import { installPreview } from '@/application/apps/install-preview'
 
 /** First match wins: open request, then enablement for every HTX, then for this HTX, then a failed last request. */
@@ -89,12 +93,45 @@ const REFUSALS: Record<StoreAction, Partial<Record<AppStoreStatus, AppStoreError
   },
 }
 
-export class AppStoreUseCase {
-  constructor(private readonly repository: AppStoreRepository) {}
+/** Where the apps made inside the HTX come from: the enabled apps and the loader of their feed. */
+export interface CreatedAppsSource {
+  apps: { list: (htxCode: string | null) => Promise<InstalledApp[]> }
+  loadFeed: FeedLoader
+}
 
-  async list(htxCode: string): Promise<{ workerAlive: boolean; apps: StoreApp[] }> {
-    const [snapshot, workerAlive] = await Promise.all([this.repository.snapshot(htxCode), this.repository.workerAlive()])
-    return { workerAlive, apps: snapshot.apps.map(app => toCard(app, snapshot, htxCode)) }
+const managerHref = (appId: string, path: string) => `/manager/apps/${appId}${path}`
+
+export class AppStoreUseCase {
+  constructor(
+    private readonly repository: AppStoreRepository,
+    private readonly createdSource?: CreatedAppsSource,
+  ) {}
+
+  /** The manager's feed of every enabled app that declares one; a failure here never breaks the store. */
+  private async created(htxCode: string): Promise<StoreCreatedApp[]> {
+    if (!this.createdSource) return []
+    try {
+      const apps = (await this.createdSource.apps.list(htxCode)).filter(app => app.feed)
+      return await Promise.all(
+        apps.map(async app => {
+          const feed = await this.createdSource!.loadFeed(app, 'manager', htxCode)
+          return {
+            appId: app.id,
+            appName: app.name,
+            create: feed.create && { label: feed.create.label, href: managerHref(app.id, feed.create.path) },
+            entries: feed.entries.map(({ label, description, icon, path }) => ({ label, description, icon, href: managerHref(app.id, path) })),
+          }
+        }),
+      )
+    } catch (cause) {
+      logger.error('Created apps unavailable', { cause })
+      return []
+    }
+  }
+
+  async list(htxCode: string): Promise<{ workerAlive: boolean; apps: StoreApp[]; created: StoreCreatedApp[] }> {
+    const [snapshot, workerAlive, created] = await Promise.all([this.repository.snapshot(htxCode), this.repository.workerAlive(), this.created(htxCode)])
+    return { workerAlive, apps: snapshot.apps.map(app => toCard(app, snapshot, htxCode)), created }
   }
 
   async detail(htxCode: string, appId: string): Promise<StoreAppDetail> {

@@ -53,7 +53,7 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `version` | có | SemVer, ví dụ `0.1.0` |
 | `license` | có | thuộc danh sách OSI của CLI: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `LGPL-3.0-or-later`, `GPL-2.0-only`, `GPL-3.0-only`, `GPL-3.0-or-later`, `AGPL-3.0-only`, `AGPL-3.0-or-later` |
 | `publisher` | có | 1–80 ký tự |
-| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.11.0`) |
+| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.12.0`) |
 | `runtime.build` / `runtime.image` | đúng một trong hai | `build`: thư mục tương đối trong thư mục app (thường là `.`). `image`: phải ghim digest, dạng `<ref>@sha256:<64 ký tự hex>` |
 | `runtime.port` | có | 1–65535, cổng app nghe trong container |
 | `runtime.health` | có | đường dẫn health check (đã cắt tiền tố), ví dụ `/healthz`, phải trả 2xx |
@@ -61,6 +61,7 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `routes` | có | ít nhất một trong `public` và `protected` |
 | `routes.public` | không | danh sách tiền tố không cần đăng nhập, ví dụ `[/public/]` |
 | `routes.protected` | không | ánh xạ tiền tố → danh sách vai trò (`farmer`, `officer`, `manager`, ít nhất một) |
+| `feed` | không | đường dẫn (cùng quy tắc với route) mà app trả danh sách app con của người gọi; phải nằm dưới một tiền tố trong `routes.protected`. Xem mục dưới. App khai `feed` nên khai `requires.core: ">=1.12.0"` |
 | `menu[]` | không | `label` (1–60 ký tự), `path` (đường dẫn trong app), `roles` (ít nhất một) |
 | `store` | không | thông tin cho trang chi tiết trong cửa hàng; mọi khoá đều tuỳ chọn, khoá lạ bị từ chối (bảng dưới). App khai `store` nên khai `requires.core: ">=1.10.0"` |
 
@@ -80,7 +81,16 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 
 **Bước cài.** Khi cài qua `./dxos worker`, `./dxos` báo `prepare`, `build`, `register` bằng `./dxos worker-progress <mã yêu cầu> <bước>`; trang chi tiết hiện các bước này. Lỗi của lệnh báo không làm hỏng lần cài, và `./dxos install` gõ tay không ghi bước nào.
 
-**Đường dẫn** (route, menu, `health`) phải khớp `^/([a-z0-9_-]+(/[a-z0-9_-]+)*/?)?$`: bắt đầu bằng `/`, chỉ gồm `[a-z0-9/_-]`, không có `..` hay `//`. Mọi route nằm dưới `/apps/<id>/`; trong manifest chỉ ghi phần sau tiền tố đó.
+**Nguồn app con `feed`** (từ v1.12.0). App khai `feed: /feed` có thể tự sinh ra các "app con" cho từng người dùng, ví dụ sổ do trưởng HTX tự tạo. Web gọi `GET /apps/<id><feed>` kèm token của người dùng (`authorization: Bearer ...`, `accept: application/json`), chờ tối đa 1,5 giây, chỉ đọc thân khi mã là 200 và thân không quá 64 KB, rồi nhớ kết quả 15 giây cho mỗi bộ (app, HTX, vai trò). Mọi lỗi (quá hạn, mã khác 200, thân quá lớn hoặc không phải JSON) cho danh sách rỗng, được ghi một dòng log, không làm hỏng menu và được nhớ 5 giây (trong lúc đó web không gọi lại, để app đang hỏng không làm chậm mọi lần mở trang). Chỉ app có mục menu cho vai trò đó mới được gọi `feed`. Phản hồi:
+
+```json
+{"entries": [{"label": "Sổ thu mua", "path": "/books/1", "icon": "leaf", "description": "Ghi chép thu mua"}],
+ "create": {"label": "Tạo sổ", "path": "/new"}}
+```
+
+Luật kiểm tra của web, mục sai bị bỏ chứ không làm hỏng cả danh sách: tối đa 30 `entries` (phần thừa bị bỏ); `label` 1–60 ký tự sau khi cắt khoảng trắng; `description` tối đa 200 ký tự (dài hơn thì bị cắt), mặc định rỗng; `path` khớp `^/[a-z0-9_-]+(/[a-z0-9_-]+)*$` và không có đoạn `.`/`..`, nên không thể là `//host` hay URL tuyệt đối; `icon` chỉ nhận tên trong danh sách của khối `store`, tên khác thành biểu tượng mặc định; `create` (tuỳ chọn) kiểm tra như một mục. Văn bản luôn hiện dạng văn bản thuần. Mỗi mục thành một mục menu `/<vai trò>/apps/<id><path>` ngay sau các mục menu tĩnh của app, và trong Kho ứng dụng có phần "Ứng dụng do HTX tự tạo" (lấy `feed` của vai trò `manager`). Mục mới hiện ở lần tải trang kế tiếp (menu do máy chủ dựng, không tự cập nhật trong trang đang mở), trễ tối đa 15 giây sau khi app đổi `feed`; đã đo trên stack thật: người dùng không cần làm gì thêm. Bấm một mục mở app con trong khung; địa chỉ của trang bao quanh không đổi khi người dùng đi tiếp bên trong khung. Khi app tắt, `feed` hỏng ngay (không chờ hết thời hạn) nên trang vẫn dựng bình thường với các mục menu tĩnh. Bộ nhớ đệm theo vai trò, không theo người dùng: app không nên đưa vào `feed` thứ gì mà hai người cùng vai trò trong một HTX không được thấy chung.
+
+**Đường dẫn** (route, menu, `health`, `feed`) phải khớp `^/([a-z0-9_-]+(/[a-z0-9_-]+)*/?)?$`: bắt đầu bằng `/`, chỉ gồm `[a-z0-9/_-]`, không có `..` hay `//`. Mọi route nằm dưới `/apps/<id>/`; trong manifest chỉ ghi phần sau tiền tố đó.
 
 **Trang công khai nằm dưới `/public/<htxCode>/...`.** Từ v1.9.0, web proxy chỉ phục vụ trang công khai của app khi HTX có mã `<htxCode>` đã bật app đó; HTX chưa bật thì trả 404. Vì vậy mã HTX phải là đoạn đầu tiên sau `/public/` (khớp `^[A-Za-z0-9_-]{1,20}$`) và app lấy HTX từ đường dẫn này. Khai `public: [/public/]` trong manifest như trước.
 

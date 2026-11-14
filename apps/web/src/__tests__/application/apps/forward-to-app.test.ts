@@ -6,7 +6,7 @@ import { appTenant, createPublicLimiter, forwardToApp } from '@/application/apps
 import type { InstalledApp } from '@/domain/entities/installed-app'
 import { logger } from '@/lib/logger'
 
-const app: InstalledApp = { id: 'tea-tour', name: 'Tour', version: '1.0.0', menu: [], publicPrefixes: ['/public/'] }
+const app: InstalledApp = { id: 'tea-tour', name: 'Tour', version: '1.0.0', menu: [], publicPrefixes: ['/public/'], feed: null }
 const CSP = "default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'"
 
 beforeAll(() => {

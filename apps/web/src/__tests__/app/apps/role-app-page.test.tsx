@@ -31,6 +31,7 @@ const managerOnly = {
   version: '1.0.0',
   menu: [{ label: 'Tour chè', path: '/', roles: ['manager'] }],
   publicPrefixes: [],
+  feed: null,
 }
 
 beforeEach(() => {

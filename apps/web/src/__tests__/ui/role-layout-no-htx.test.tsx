@@ -11,6 +11,7 @@ import FarmerLayout from '@/app/farmer/layout'
 
 const getProfile = jest.fn()
 
+jest.mock('@/lib/apps/feed-loader', () => ({ loadAppFeed: jest.fn() }))
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 jest.mock('next/navigation', () => ({ redirect: jest.fn() }))
 jest.mock('@/infrastructure/db/prisma.client', () => ({ prisma: {} }))

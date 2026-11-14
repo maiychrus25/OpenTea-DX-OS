@@ -142,6 +142,28 @@ flowchart TB
 
 Các bước thiết lập bổ sung (bucket S3, import n8n workflows, Ollama model) và tài khoản mặc định xem tại **[Hướng dẫn cài đặt môi trường phát triển](./docs/dev-setup.md)**.
 
+### Chạy stack nhỏ hơn khi máy ít RAM
+
+Stack đầy đủ có 16 container và dùng khoảng 3,6 GiB RAM. Khi chỉ cần đăng nhập, bảng điều khiển, Kho ứng dụng và các mini-app, chạy phần lõi và tắt các nhóm tuỳ chọn:
+
+```bash
+make platform-up   # một lần đầu (khởi tạo và migrate cơ sở dữ liệu), rồi:
+make up-core       # postgres, keycloak, hasura, apisix, web
+make stop-extras   # dừng (không xoá) mọi nhóm tuỳ chọn; dữ liệu và volume còn nguyên
+```
+
+| Lệnh bật lại | Container | Khi tắt nhóm này | RAM xấp xỉ |
+| --- | --- | --- | --- |
+| `make up-core` | postgres, keycloak, hasura, apisix, web | Không tắt được: thiếu thì không đăng nhập được | khoảng 0,75 GiB (Keycloak giới hạn heap 512 MB) |
+| `make up-docs` | seaweedfs, clamav, dxos-scanner, dxos-lifecycle | Kho tài liệu P.A.R.A mở được nhưng tải lên báo "Không thể tạo URL tải lên" (có nút Thử lại); ảnh nhật ký và chứng nhận không tải được | 1,2–1,4 GiB (ClamAV chiếm phần lớn) |
+| `make up-sensors` | mosquitto, dxos-ingest | Dữ liệu cảm biến không được nhận; các trang vẫn mở, không có số đo mới | khoảng 40 MiB |
+| `make up-ai` | disease-api, ollama | Chẩn đoán bệnh báo "Internal server error" khi gửi ảnh; Chatbot trả lời "Dịch vụ AI hiện không khả dụng" | 0,4–1,0 GiB (ollama thêm khoảng 0,6 GiB khi đã nạp mô hình) |
+| `make up-voice` | piper | Không có giọng đọc cho bản tin | khoảng 40 MiB |
+| `make up-workflow` | n8n | Các workflow (báo cáo thị trường, đẩy sự kiện) không chạy; các trang vẫn mở | khoảng 0,4 GiB |
+| `make up-chat` | mattermost | Không nhận được thông báo đẩy sang Mattermost (không có build arm64, chỉ chạy trên máy x86) | chưa đo |
+
+Mini-app cài bằng `./dxos` là các container riêng, mỗi cái khoảng 50 MB, vẫn chạy khi bạn dừng các nhóm trên. Các số RAM là số đo `docker stats` trên một máy phát triển và thay đổi theo tải.
+
 ## 🧱 Tier 1: Nền tảng lõi (Headless Core)
 
 Tier 1 gồm PostgreSQL (PostGIS, pgvector), SeaweedFS S3, Keycloak, Hasura (chỉ đọc, phân quyền theo `htx_code`), n8n, cổng API APISIX, ClamAV và `dxos-scanner` (kiểm dịch file), cùng Mosquitto (MQTT), `dxos-ingest`, `dxos-lifecycle` (kho lạnh Parquet) và Ollama (LLM nội bộ).
@@ -291,12 +313,26 @@ Số liệu chi tiết ở [ai-models/tea/MODEL_CARD.md](./ai-models/tea/MODEL_C
 
 Mini-app là một dịch vụ riêng (container, schema Postgres, route gateway) cắm vào DX-OS bằng manifest `app.yaml` và lệnh `./dxos`, không sửa và không build lại lõi. Hướng dẫn viết app: **[docs/miniapps.md](./docs/miniapps.md)**. Quyết định kiến trúc: [ADR 0002](./docs/adr/0002-miniapp-architecture.md).
 
-Repo có năm app:
+Repo có sáu app:
 - `miniapps/leaf-purchase` ("Thu mua búp tươi", 0.2.0): cán bộ ghi phiếu cân chè búp tươi của từng nông hộ theo loại chè (lỗi nhập hiện ngay dưới ô sai, giữ nguyên chữ đã gõ); trưởng HTX có trang **Tổng quan** (số ký hôm nay và tháng này, số ký chưa vào kỳ, tiền chưa trả, biểu đồ 14 ngày, 10 hộ giao nhiều nhất), danh sách **Phiếu cân** lọc theo ngày, hộ, loại chè, tình trạng và tìm theo tên hộ (25 dòng một trang, tải CSV, in phiếu cân), đặt giá, chốt kỳ thanh toán (in bảng kê, tải CSV) và ghi nhận đã trả; nông hộ xem phiếu cân theo tháng và khoản chi trả của chính mình.
 - `miniapps/tea-shop` ("Cửa hàng chè", 0.2.0): trưởng HTX có **Tổng quan** (đơn chờ xác nhận, đang giao, doanh thu tháng, sắp hết hàng, biểu đồ doanh thu 14 ngày, bán chạy), danh sách **Đơn hàng** (lọc theo trạng thái, ngày, tìm theo mã, tên, số điện thoại; tải CSV; in phiếu giao) và **Sản phẩm** (tìm, lọc còn hàng hay sắp hết); khách đặt hàng không cần tài khoản tại `/apps/tea-shop/public/<mã HTX>` (thanh toán khi nhận hàng) và tra đơn bằng mã đơn kèm số điện thoại, thấy đơn đang ở bước nào; trưởng HTX xác nhận, giao, hoàn tất hoặc huỷ đơn.
 - `miniapps/farm-supply` ("Vật tư mua chung", 0.2.0): trưởng HTX có số liệu tổng quan (đợt đang mở, hộ đã đăng ký, tổng tiền, chưa giao, chưa thu), danh sách đợt lọc theo trạng thái, mở đợt đăng ký với hạn đăng ký, thêm và sửa mặt hàng (lỗi hiện ngay dưới ô sai), đóng đợt, đánh dấu đã giao và đã thanh toán theo hộ, tải CSV theo mặt hàng và theo hộ, in bảng kê giao hàng có cột ký tên; nông hộ thấy thẻ từng đợt đang mở với tổng tiền của hộ mình và lịch sử các đợt đã qua.
 - `miniapps/tea-tour` ("Đặt tour đồi chè", 0.2.0): ban quản trị có **Tổng quan** (tour sắp tới, chỗ đã giữ, chờ xác nhận, khách tháng này), danh sách tour lọc theo thời gian, danh sách **Lượt đặt chỗ** (tìm theo mã, tên, số điện thoại), tạo, sửa, huỷ tour, xác nhận lượt đặt, tải danh sách khách (CSV) và in danh sách đoàn có ô điểm danh và chữ ký người dẫn; khách đặt chỗ không cần tài khoản tại `/apps/tea-tour/public/<mã HTX>`; nông hộ dẫn tour xem lịch sắp tới và đã qua của mình.
+- `miniapps/custom-books` ("Sổ tự tạo", 0.1.0): trưởng HTX tự tạo sổ ghi chép (chấm công, phun thuốc, thu chi...) từ mẫu có sẵn, không cần lập trình; mỗi sổ hiện trong menu của đúng những vai được dùng. Xem mục **Tự tạo sổ ghi chép** bên dưới.
 - `miniapps/hello`: app mẫu tối giản để bắt đầu.
+
+### Tự tạo sổ ghi chép
+
+Mỗi HTX có những sổ riêng (chấm công hái chè, sổ phun thuốc, thu chi, biên bản họp). Với app **Sổ tự tạo**, trưởng HTX tự lập các sổ này, không cần biết lập trình:
+
+1. **Cài app.** Vào **Kho ứng dụng**, tìm "Sổ tự tạo" và bấm **Cài** (cần `./dxos worker` đang chạy). Dưới danh sách app có phần **Ứng dụng do HTX tự tạo** với nút **Tạo sổ mới**.
+2. **Chọn mẫu.** Bấm **Tạo sổ mới**, chọn một mẫu rồi bấm **Dùng mẫu này**. Có tám mẫu: Chấm công hái chè, Sổ phun thuốc bảo vệ thực vật, Sổ bón phân, Sổ thu chi, Biên bản họp thành viên, Sổ giao nhận vật tư, Theo dõi sâu bệnh, Sổ khách tham quan; hoặc **Sổ trắng** để tự đặt từng ô.
+3. **Thiết kế.** Sửa tên sổ, mô tả và biểu tượng; đổi tên các ô, chọn kiểu (chữ, chữ dài, số, tiền, ngày, lựa chọn, có/không, nông hộ), chọn ô nào hiện trong danh sách, ô nào được cộng tổng, ô nào bắt buộc; thêm ô ở ba dòng trống cuối bảng. Ô kiểu lựa chọn: gõ các mục trên một dòng, cách nhau bằng dấu chấm phẩy (ví dụ `Sáng; Chiều; Tối`). Chọn mức dùng của **cán bộ** và **nông dân** (không dùng, chỉ xem, ghi và xem dòng của mình, ghi và xem mọi dòng) và có cần trưởng HTX duyệt từng dòng hay không. Bấm **Lưu thiết kế**; chỗ nhập sai được báo ngay dưới ô, mọi chữ đã gõ được giữ nguyên. **Xem thử biểu mẫu** cho thấy người dùng sẽ thấy gì.
+4. **Phát hành.** Bấm **Phát hành**. Trong khoảng 15 giây, sổ hiện trong menu của các vai được dùng (tải lại trang để thấy) và trong Kho ứng dụng. Vai đặt ở "Không dùng sổ này" không thấy sổ.
+5. **Dùng sổ.** Người được phép bấm **Ghi dòng mới**; danh sách có tìm chữ, lọc theo ngày, lựa chọn, nông hộ và tình trạng; trang **Tổng hợp** có tổng và biểu đồ theo tháng; có **Tải CSV** và **Bản in**. Khi cần duyệt, dòng mới ở "Chờ duyệt": trưởng HTX bấm **Duyệt**, hoặc **Từ chối** và ghi lý do; người ghi sửa lại thì dòng quay về chờ duyệt. Dòng đã duyệt bị khoá và chỉ được cộng vào Tổng hợp sau khi duyệt.
+6. **Ngừng dùng.** **Ngừng dùng** gỡ sổ khỏi menu nhưng giữ dữ liệu; **Phát hành lại** đưa sổ về với các dòng cũ.
+
+Giới hạn: không có ô ảnh hay tệp, không có công thức (Tổng hợp chỉ cộng ô số và ô tiền), duyệt một bước bởi trưởng HTX, thiết kế bằng biểu mẫu (không kéo thả). Mỗi HTX tối đa 50 sổ, mỗi sổ tối đa 20 ô. Ô đã có dữ liệu không đổi được kiểu. Thông tin kỹ thuật cho người viết app: mục `feed` trong **[docs/miniapps.md](docs/miniapps.md)**.
 
 ### Kho ứng dụng và `./dxos worker`
 
@@ -349,7 +385,7 @@ make apps-smoke                         # kiểm thử tích hợp (sau npm run 
 ```
 
 > [!WARNING]
-> `make apps-smoke` xoá dữ liệu của `tea-tour`, `leaf-purchase`, `tea-shop`, `farm-supply` (`--purge`) và của các fixture, và tự bật một `./dxos worker` của riêng nó. Không chạy nó trên stack có dữ liệu thật, ví dụ stack demo sau khi đã chuẩn bị dữ liệu; hãy dùng stack riêng (`COMPOSE_PROJECT_NAME=dxos-clean`). Script tự dừng với mã 1 khi `tea-tour`, `hello` hoặc một app nghiệp vụ đang được cài, và cũng không chạy được khi một worker khác đang chạy.
+> `make apps-smoke` xoá dữ liệu của `tea-tour`, `leaf-purchase`, `tea-shop`, `farm-supply`, `custom-books` (`--purge`) và của các fixture, và tự bật một `./dxos worker` của riêng nó. Không chạy nó trên stack có dữ liệu thật, ví dụ stack demo sau khi đã chuẩn bị dữ liệu; hãy dùng stack riêng (`COMPOSE_PROJECT_NAME=dxos-clean`). Script tự dừng với mã 1 khi `tea-tour`, `hello` hoặc một app nghiệp vụ đang được cài, và cũng không chạy được khi một worker khác đang chạy.
 
 - Mục "Tour đồi chè" hiện trong menu của quản lý, "Lịch dẫn tour" trong menu của nông hộ. Gỡ app thì mục menu biến mất ở lần tải trang sau và `/apps/tea-tour/...` trả 404 ngay.
 - Tệp sinh ra nằm dưới `docker/runtime/<project>/` (git-ignored). `<project>` lấy từ biến môi trường `COMPOSE_PROJECT_NAME`, mặc định `docker`. Hãy đặt project bằng biến này, không dùng cờ `-p`.

@@ -310,6 +310,38 @@ td {
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
+/* A table of form inputs (the designer of Sổ tự tạo): the input columns take a share of the table, the name column the
+   largest, so the name does not end up as narrow as the unit. Shares, not minimum widths: minimum widths added up to
+   the width of the card on one system font and overflowed it with a wider font or a scrollbar. Wide screens only: a
+   narrow screen shows one card per row (below). */
+@media (min-width: 641px) {
+  table.form-table th,
+  table.form-table td {
+    padding-right: var(--spacing-2);
+    padding-left: var(--spacing-2);
+  }
+
+  table.form-table th:first-child {
+    width: 28%;
+  }
+
+  table.form-table th:nth-child(2) {
+    width: 15%;
+  }
+
+  table.form-table th:nth-child(3) {
+    width: 13%;
+  }
+
+  table.form-table th:nth-child(4) {
+    width: 11%;
+  }
+
+  table.form-table th:nth-child(8) {
+    width: 8%;
+  }
+}
+
 tr:last-child > td {
   border-bottom: 0;
 }

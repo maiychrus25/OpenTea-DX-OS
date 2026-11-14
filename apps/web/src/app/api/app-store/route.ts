@@ -4,6 +4,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { AppStoreUseCase } from '@/application/apps/app-store.usecase'
+import { loadAppFeed } from '@/lib/apps/feed-loader'
+import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
 import { PrismaAppStoreRepository } from '@/infrastructure/db/repositories/prisma-app-store-repository'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
@@ -18,7 +20,7 @@ async function getAppStore() {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Chỉ trưởng HTX được dùng Kho ứng dụng' } }, { status: 403 })
   }
   const tenant = await requireTenant()
-  const data = await new AppStoreUseCase(new PrismaAppStoreRepository()).list(tenant.htxCode)
+  const data = await new AppStoreUseCase(new PrismaAppStoreRepository(), { apps: new PrismaInstalledAppRepository(), loadFeed: loadAppFeed }).list(tenant.htxCode)
   return NextResponse.json({ data })
 }
 

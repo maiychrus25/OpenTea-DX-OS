@@ -104,6 +104,13 @@ def validate_manifest(data: dict, core_version: str, installed_ids: set[str]) ->
         for prefix, parent in sorted((p, q) for p in routes["protected"] for q in public if p != q and p.startswith(q)):
             errors.append(f"'routes': đường dẫn cần đăng nhập '{prefix}' nằm dưới đường dẫn công khai '{parent}', "
                           "web sẽ không gửi token nên không vào được")
+    feed = data.get("feed")
+    if isinstance(feed, str) and feed.startswith("/"):
+        protected = routes.get("protected") if isinstance(routes, dict) else None
+        covered = feed.rstrip("/") + "/"
+        if not isinstance(protected, dict) or not any(
+                isinstance(p, str) and covered.startswith(p.rstrip("/") + "/") for p in protected):
+            errors.append(f"'feed': đường dẫn '{feed}' phải nằm dưới một tiền tố cần đăng nhập trong 'routes.protected'")
     requires = data.get("requires")
     core = requires.get("core") if isinstance(requires, dict) else None
     match = _CORE_RE.match(core) if isinstance(core, str) else None

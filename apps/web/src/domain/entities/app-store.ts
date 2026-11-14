@@ -40,6 +40,14 @@ export interface StoreApp {
   openHref: string | null
 }
 
+/** An app that is enabled for the HTX and publishes a feed: the sub-apps the manager sees in it, as links into the shell. */
+export interface StoreCreatedApp {
+  appId: string
+  appName: string
+  create: { label: string; href: string } | null
+  entries: { label: string; description: string; icon: string | null; href: string }[]
+}
+
 export interface StoreHistoryEntry {
   id: string
   appId: string

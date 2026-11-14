@@ -19,13 +19,15 @@ const menuLink = (page: Page, label: string) => page.locator('nav a', { hasText:
 const appFrame = (page: Page, title: string) => page.frameLocator(`iframe[title="${title}"]`)
 
 /** Saves miniapps/<app>/store/<name>.png: the frame filling the whole window (the app page only), or the page itself. */
-async function capture(page: Page, app: string, name: string, frameTitle?: string) {
+async function capture(page: Page, app: string, name: string, frameTitle?: string, scrollTo?: string) {
   if (frameTitle) {
     await page.evaluate(title => {
       const frame = document.querySelector<HTMLElement>(`iframe[title="${title}"]`)!
       frame.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;z-index:99999;border:0;background:#fff'
     }, frameTitle)
     await appFrame(page, frameTitle).locator('html').evaluate(root => root.ownerDocument.defaultView?.scrollTo(0, 0))
+    // A long page can show the part that matters: the element goes to the top of the window.
+    if (scrollTo) await appFrame(page, frameTitle).locator(scrollTo).first().evaluate(el => el.scrollIntoView({ block: 'start' }))
   }
   const dir = resolve(process.cwd(), '../../miniapps', app, 'store')
   mkdirSync(dir, { recursive: true })
@@ -232,5 +234,51 @@ test.describe('store screenshots', () => {
     }
     await expect(managerApp.locator('.stats li', { hasText: 'Khách đã xác nhận' })).toContainText('5')
     await capture(manager, 'tea-tour', 'manager-tour', 'Đặt tour đồi chè')
+  })
+
+  test('custom-books', async ({ browser }) => {
+    const title = 'Sổ tự tạo'
+    const manager = await newPage(browser)
+    await keycloakLogin(manager, 'smoke_manager_tc', SMOKE_PASSWORD, 'manager')
+    await manager.goto('/manager/apps/custom-books/books/new')
+    const managerApp = appFrame(manager, title)
+    await managerApp.locator('li.card', { hasText: 'Chấm công hái chè' }).getByRole('button', { name: 'Dùng mẫu này' }).click()
+    await expect(managerApp.getByRole('heading', { name: 'Thiết kế sổ', level: 1 })).toBeVisible()
+    const bookId = /books\/([0-9a-f-]{36})\/design/.exec((await managerApp.locator('form[action*="/design"]').getAttribute('action'))!)![1]
+    await capture(manager, 'custom-books', 'designer', title, 'table.form-table')
+
+    await manager.goto(`/manager/apps/custom-books/books/${bookId}/design`)
+    await managerApp.getByRole('button', { name: 'Phát hành', exact: true }).click()
+    await expect(managerApp.getByRole('heading', { name: 'Chấm công hái chè', level: 1 })).toBeVisible()
+
+    // The officer writes four rows for different households (the seed's real-looking names come after the two demo ones).
+    const officer = await newPage(browser)
+    await keycloakLogin(officer, 'smoke_officer_tc', SMOKE_PASSWORD, 'officer')
+    const form = await (await officer.request.get(`/apps/custom-books/b/${bookId}/new`)).text()
+    const households = Array.from((/<select[^>]*name="f2"[^>]*>([\s\S]*?)<\/select>/.exec(form)?.[1] ?? '').matchAll(/<option[^>]*value="([^"]+)"[^>]*>([^<]*)</g))
+      .filter(match => !match[2].startsWith('Household'))
+    expect(households.length, 'households with real-looking names in the seed').toBeGreaterThan(1)
+    const rows: [number, string, string, string][] = [[0, daysAgo(0), '18,5', 'Chè búp tươi'], [1, daysAgo(1), '12', 'Một tôm hai lá'], [households.length - 1, daysAgo(1), '9,5', 'Chè búp tươi'], [0, daysAgo(2), '21', 'Chè già']]
+    for (const [household, day, kg, kind] of rows) {
+      const response = await officer.request.post(`/apps/custom-books/b/${bookId}/records`, {
+        data: new URLSearchParams([['f1', day], ['f2', households[household][1]], ['f3', kg], ['f4', kind]]).toString(),
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        maxRedirects: 0,
+      })
+      expect(response.status()).toBe(303)
+    }
+    await manager.goto(`/manager/apps/custom-books/b/${bookId}`)
+    await expect(managerApp.locator('tbody tr')).toHaveCount(4)
+    // Three of the four are approved; the last stays pending, so the page shows both tones.
+    const awaiting = managerApp.locator('tbody tr', { has: managerApp.getByRole('button', { name: 'Duyệt' }) })
+    for (let i = 0; i < 3; i++) {
+      await expect(awaiting).toHaveCount(4 - i)
+      await awaiting.last().getByRole('button', { name: 'Duyệt' }).click()
+    }
+    await expect(awaiting).toHaveCount(1)
+    await expect(managerApp.locator('tbody tr', { hasText: 'Chờ duyệt' })).toHaveCount(1)
+    await manager.goto(`/manager/apps/custom-books/b/${bookId}`)
+    await expect(managerApp.locator('tbody tr')).toHaveCount(4)
+    await capture(manager, 'custom-books', 'book-in-use', title)
   })
 })

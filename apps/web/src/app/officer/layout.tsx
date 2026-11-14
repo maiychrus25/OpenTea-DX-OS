@@ -10,6 +10,7 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
 import { loadAppNavItems } from '@/lib/apps/app-nav'
+import { loadAppFeed } from '@/lib/apps/feed-loader'
 
 export default async function OfficerLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -33,7 +34,7 @@ export default async function OfficerLayout({ children }: { children: React.Reac
     { label: 'Trợ lý TT', href: '/officer/assistant', icon: <Bot size={20} /> },
     { label: 'Thông báo', href: '/officer/notifications', icon: <Bell size={20} /> },
     { label: 'Tài khoản', href: '/officer/profile', icon: <User size={20} /> },
-    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'officer', session.user.htxCode ?? null)),
+    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'officer', session.user.htxCode ?? null, loadAppFeed)),
   ]
 
   return (

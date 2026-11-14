@@ -10,7 +10,7 @@
 //     the same with E2E_APP_KIT=tea-tour
 import { test, expect, Browser, BrowserContext, BrowserContextOptions, Page } from '@playwright/test'
 import { SMOKE_PASSWORD, keycloakLogin } from '../helpers/keycloak-login'
-import { appFrame, downloadCsv, expectNoOverflow, optionValues, postForm, printAndGoBack } from '../helpers/app-kit'
+import { appFrame, downloadCsv, expectFrameUrl, expectNoOverflow, optionValues, postForm, printAndGoBack } from '../helpers/app-kit'
 
 test.skip(!process.env.E2E_CORE, 'Needs the real stack: set E2E_CORE=1')
 
@@ -90,6 +90,7 @@ test.describe('app kit: business apps', () => {
     await expect(app.locator('.pagination-status')).toContainText('Trang 1/2')
     await app.locator('input[name=q]').fill('Household')
     await app.getByRole('button', { name: 'Lọc' }).click()
+    await expectFrameUrl(manager, title, 'q=Household')
     await expect(app.locator('tbody tr').first()).toBeVisible()
     await app.locator('input[name=q]').fill('50%')
     await app.getByRole('button', { name: 'Lọc' }).click()
@@ -412,7 +413,7 @@ test.describe('app kit: tea-tour', () => {
     expect(new URL(manager.url()).pathname).toBe('/manager/apps/tea-tour')
     await app.locator('select[name=show]').selectOption('past')
     await app.getByRole('button', { name: 'Lọc' }).click()
-    await expect(app.locator('select[name=show]')).toHaveValue('past')
+    await expectFrameUrl(manager, title, 'show=past')
     await expectNoOverflow(manager, title)
 
     // Bookings tab: 27 pending bookings of the main tour in two pages; a search by guest name; wildcards are text.
@@ -422,6 +423,7 @@ test.describe('app kit: tea-tour', () => {
     await app.getByRole('link', { name: 'Sau ›' }).click()
     await expect(app.locator('.pagination-status')).toContainText('Trang 2/')
     await app.getByRole('link', { name: '‹ Trước' }).click()
+    await expect(app.locator('.pagination-status')).toContainText('Trang 1/')
     await app.locator('input[name=q]').fill('Lê Quốc Bảo')
     await app.getByRole('button', { name: 'Lọc' }).click()
     await expect.poll(async () => {
