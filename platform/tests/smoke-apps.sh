@@ -697,8 +697,10 @@ RS3=$(request tea-shop TC ENABLE)
 wait_request "$RS3" DONE "ENABLE tea-shop for TC again -> DONE" 120
 fresh_tokens
 wait_http 200 "tea-shop answers again after the second enable" -- -H "Authorization: Bearer $TM" "$APP_GW/apps/tea-shop/"
-# The public route can reach the gateway a moment after the manager route, so poll instead of reading once.
-for _ in $(seq 1 15); do
+# The public route can reach the gateway a moment after the manager route, so poll instead of reading once. 40 tries: the cause is a
+# hypothesis, not proven: an APISIX worker that resolved app-tea-shop while the container was gone may keep the negative DNS answer for
+# 30 s (+4 s), the same cache the tenant spec waits out; 15 s failed once in three rounds.
+for _ in $(seq 1 40); do
   grep -q 'Chè Oolong' <<<"$(app_curl -s "$APP_GW/apps/tea-shop/public/TC")" && break
   sleep 1
 done
