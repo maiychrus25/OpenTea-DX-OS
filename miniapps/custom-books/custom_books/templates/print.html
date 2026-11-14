@@ -1,0 +1,35 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}In · {{ book.name }}{% endblock %}
+{% block body_attrs %} class="print-sheet"{% endblock %}
+{% block main %}
+{{ kit.print_bar(back) }}
+<h1>{{ book.name }} · HTX {{ htx }}</h1>
+<p>In ngày {{ printed }}{% if filtered %} · đã lọc theo bộ lọc của danh sách{% endif %}</p>
+{% if rows %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row">
+    {% for f in book.fields %}<th role="columnheader">{{ f.label }}</th>{% endfor %}
+    <th role="columnheader">Người ghi</th>{% if book.approval %}<th role="columnheader">Tình trạng</th>{% endif %}
+  </tr></thead>
+  <tbody role="rowgroup">
+  {% for row in rows %}
+    <tr role="row">
+      {% for f in book.fields %}<td role="cell" data-label="{{ f.label }}">{{ row.cells[loop.index0] }}</td>{% endfor %}
+      <td role="cell" data-label="Người ghi">{{ row.record.created_by_name }}</td>
+      {% if book.approval %}<td role="cell" data-label="Tình trạng">{{ statuses[row.record.status] }}</td>{% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p><strong>{{ rows | length }} dòng.</strong></p>
+{% else %}
+{{ kit.empty("Không có dòng nào để in.") }}
+{% endif %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Người lập</th><th role="columnheader">Trưởng HTX</th></tr></thead>
+  <tbody role="rowgroup"><tr role="row"><td role="cell" class="signature" data-label="Người lập">Ký tên:</td><td role="cell" class="signature" data-label="Trưởng HTX">Ký tên:</td></tr></tbody>
+</table>
+{% endblock %}

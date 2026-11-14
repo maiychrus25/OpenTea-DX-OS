@@ -1,0 +1,17 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Xoá dòng · {{ book.name }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Xoá dòng", book.name) %}{% endcall %}
+<p>Anh chị có chắc muốn xoá dòng này không? Dòng đã xoá không khôi phục được.</p>
+<ul>
+  {% for label, text in summary %}<li><strong>{{ label }}</strong>: {{ text }}</li>{% endfor %}
+  <li><strong>Người ghi</strong>: {{ record.created_by_name }}</li>
+</ul>
+<div class="actions">
+  <form method="post" action="{{ href('/b/' ~ book.id ~ '/r/' ~ record.id ~ '/delete', theme) }}"><button type="submit">Xoá dòng</button></form>
+  <a class="button secondary" href="{{ href('/b/' ~ book.id, theme) }}">Không xoá</a>
+</div>
+{% endblock %}

@@ -237,7 +237,7 @@ def display(field: Field, value, households: Mapping[str, str]) -> str:
         if field.type == "yes_no":
             return "Có" if value is True else "Không"
         if field.type == "household":
-            return households.get(str(value), "Nông hộ không còn trong danh sách")
+            return households.get(str(value), "Nông hộ khác")
     except (ValueError, ArithmeticError, TypeError):
         return str(value)
     return str(value)

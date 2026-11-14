@@ -11,6 +11,7 @@ import re
 import threading
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
 from urllib.parse import urlencode
 from uuid import UUID
@@ -21,7 +22,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Red
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException
 
-from custom_books import book_templates, core_client, fields as fl, store
+from custom_books import appkit, book_templates, core_client, fields as fl, store
 from custom_books.claims import Claims, read_claims
 
 PREFIX = "/apps/custom-books"
@@ -33,6 +34,10 @@ ERRORS = {401: "Cần đăng nhập để xem trang này.", 403: "Tài khoản c
 CORE_DOWN = "Không lấy được danh sách nông hộ từ hệ thống. Vui lòng tải lại trang sau ít phút."
 # Fixed keys only: ?notice= never carries free text into the page.
 NOTICES = {"saved": "Đã lưu thiết kế của sổ."}
+BOOK_NOTICES = {"saved": "Đã ghi dòng vào sổ.", "deleted": "Đã xoá dòng.", "approved": "Đã duyệt dòng.",
+                "rejected": "Đã từ chối dòng.", "unchanged": "Không có gì thay đổi: dòng đã được xử lý trước đó."}
+RECORD_STATUS_NAMES = {"PENDING": "Chờ duyệt", "APPROVED": "Đã duyệt", "REJECTED": "Bị từ chối"}
+Q_MAX = 80
 FEED_MAX = 30
 DB_MAX_CONNECTIONS = 8  # the app role allows 10; leaves room for ./dxos install and an admin
 DB_WAIT_S = 2
@@ -59,7 +64,8 @@ def href(path: str, theme: str = "", **params) -> str:
 
 templates.env.globals.update(href=href, prefix=PREFIX, field_type_names=FIELD_TYPE_NAMES, icon_names=ICON_NAMES,
                              access_names=ACCESS_NAMES, status_names=STATUS_NAMES, field_types=fl.FIELD_TYPES,
-                             access_levels=fl.ACCESS_LEVELS, icons=fl.ICONS, display=fl.display)
+                             access_levels=fl.ACCESS_LEVELS, icons=fl.ICONS, display=fl.display,
+                             record_status_names=RECORD_STATUS_NAMES)
 
 
 def theme_of(request: Request) -> str:
@@ -301,3 +307,345 @@ def delete(request: Request, book_id: UUID, claims: Claims = Depends(manager), c
     if outcome == "has_records":
         return refuse(request, 409, "Sổ đã có dòng nên không xoá được. Hãy chọn Ngừng dùng để gỡ sổ khỏi menu mà vẫn giữ dữ liệu.")
     return redirect(request, "/books")
+
+
+# ---------- Using a book (every role with a level) ----------
+
+def load_book(conn, claims: Claims, book_id: UUID) -> tuple[store.Book, str]:
+    """The book and the caller's level. A draft or archived book exists only for the manager; level 'none' is 403."""
+    book = book_or_404(conn, claims, book_id)
+    is_manager = "manager" in claims.roles
+    if book.status != "PUBLISHED" and not is_manager:
+        raise HTTPException(404)
+    level = fl.level_for(claims.roles, book.officer_access, book.farmer_access)
+    if level == "none":
+        raise HTTPException(403)
+    return book, level
+
+
+def owner_of(claims: Claims, level: str) -> str | None:
+    """The author whose rows the caller is limited to (level 'own'), else None for every row."""
+    return claims.sub if level == "own" and "manager" not in claims.roles else None
+
+
+def can_write(claims: Claims, level: str) -> bool:
+    return "manager" in claims.roles or level in ("own", "all")
+
+
+def can_edit(claims: Claims, book: store.Book, level: str, record: store.Record) -> bool:
+    if "manager" in claims.roles:
+        return True
+    return (level in ("own", "all") and record.created_by == claims.sub
+            and not (book.approval and record.status == "APPROVED"))
+
+
+def locked_for(claims: Claims, book: store.Book) -> tuple[str, ...]:
+    return () if "manager" in claims.roles or not book.approval else ("APPROVED",)
+
+
+def writer_or_403(claims: Claims, level: str) -> None:
+    if not can_write(claims, level):
+        raise HTTPException(403)
+
+
+def visible_record(conn, claims: Claims, book: store.Book, level: str, record_id: UUID) -> store.Record:
+    record = store.get_record(conn, claims.htx_code, book.id, record_id)
+    owner = owner_of(claims, level)
+    if record is None or (owner is not None and record.created_by != owner):
+        raise HTTPException(404)  # a row you may not see does not exist for you
+    return record
+
+
+def book_households(book: store.Book, authorization: str, claims: Claims):
+    """Households of the caller (a farmer gets only their own), only when the book has a household field."""
+    if not any(f.type == "household" for f in book.fields):
+        return [], None
+    return households_or_error(authorization, claims)
+
+
+def read_filters(request: Request, book: store.Book) -> tuple[store.Filters, dict[str, str]]:
+    """Filters from the query string; anything that does not fit is ignored. Also the parameters to keep in links."""
+    query = request.query_params
+    q = query.get("q", "").strip()[:Q_MAX]
+    start, end = appkit.parse_date(query.get("from")), appkit.parse_date(query.get("to"))
+    choices = tuple((f.key, query[f"c_{f.key}"]) for f in book.fields
+                    if f.type == "choice" and query.get(f"c_{f.key}") in f.options)
+    household = query.get("household", "")[:64]
+    status = query.get("status", "") if book.approval and query.get("status") in store.RECORD_STATUSES else ""
+    params = {**({"q": q} if q else {}), **({"from": start.isoformat()} if start else {}),
+              **({"to": end.isoformat()} if end else {}), **{f"c_{k}": v for k, v in choices},
+              **({"household": household} if household else {}), **({"status": status} if status else {})}
+    return store.Filters(q, start, end, choices, household, status), params
+
+
+def paging_links(page_info: appkit.Page, theme: str, path: str, params: dict) -> tuple[str | None, str | None]:
+    prev_href = href(path, theme, **params, page=page_info.number - 1) if page_info.has_prev else None
+    next_href = href(path, theme, **params, page=page_info.number + 1) if page_info.has_next else None
+    return prev_href, next_href
+
+
+def book_tabs(book: store.Book, claims: Claims, theme: str) -> list[tuple[str, str, str]]:
+    tabs = [("list", "Danh sách", href(f"/b/{book.id}", theme)), ("summary", "Tổng hợp", href(f"/b/{book.id}/summary", theme))]
+    if "manager" in claims.roles:
+        tabs.append(("design", "Thiết kế", href(f"/books/{book.id}/design", theme)))
+    return tabs
+
+
+@app.get("/b/{book_id}")
+def book_list(request: Request, book_id: UUID, claims: Claims = Depends(member), authorization: str = Header()):
+    with open_db() as conn:
+        book, level = load_book(conn, claims, book_id)
+    households, core_error = book_households(book, authorization, claims)
+    names = {h.id: h.name for h in households}
+    flt, params = read_filters(request, book)
+    owner, theme = owner_of(claims, level), theme_of(request)
+    with open_db() as conn:
+        page_info = appkit.page_of(request.query_params.get("page"), store.count_records(conn, claims.htx_code, book, owner, flt))
+        records = store.list_records(conn, claims.htx_code, book, owner, flt, page_info.size, page_info.offset)
+        count, totals = store.sums(conn, claims.htx_code, book, owner, flt)
+    columns = [f for f in book.fields if f.in_list]
+    first_date = next((f for f in book.fields if f.type == "date"), None)
+    show_date = first_date is None or not first_date.in_list  # the row's date is that field; do not show it twice
+    rows = [{"record": r, "cells": [fl.display(f, r.data.get(f.key), names) for f in columns],
+             "can_edit": can_edit(claims, book, level, r),
+             "can_decide": "manager" in claims.roles and book.approval and r.status == "PENDING"} for r in records]
+    stats = [{"label": "Số dòng", "value": appkit.number(count, 0),
+              "hint": "đã duyệt, khớp bộ lọc" if book.approval else "khớp bộ lọc"}]
+    stats += [{"label": f"Tổng {f.label.lower()}", "value": fl.display(f, totals[f.key], names)} for f in book.fields if f.summary]
+    return page(request, "book.html", book=book, level=level, columns=columns, rows=rows, stats=stats, params=params,
+                page_info=page_info, links=paging_links(page_info, theme, f"/b/{book.id}", params), show_date=show_date,
+                filtered=bool(params), households=households, core_error=core_error,
+                can_write=can_write(claims, level) and book.status == "PUBLISHED",
+                tabs=book_tabs(book, claims, theme), current="list", htx=claims.htx_code,
+                notice=BOOK_NOTICES.get(request.query_params.get("notice", "")), statuses=RECORD_STATUS_NAMES,
+                is_manager="manager" in claims.roles)
+
+
+def form_from_data(book: store.Book, data: dict) -> dict[str, str]:
+    """A saved row as the text of its inputs (a number shows its decimal comma)."""
+    form = {}
+    for f in book.fields:
+        value = data.get(f.key)
+        if value is None or value == "" or (f.type == "yes_no" and not value):
+            continue
+        form[f.key] = "on" if f.type == "yes_no" else str(value).replace(".", ",") if f.type == "number" else str(value)
+    return form
+
+
+def entry_page(request, book, claims, households, core_error, record=None, form=None, errors=None, status=200):
+    return page(request, "entry.html", status, book=book, fields=book.fields, record=record, households=households,
+                core_error=core_error, form=form if form is not None else blank_entry(book), errors=errors or {})
+
+
+@app.get("/b/{book_id}/new")
+def entry_new(request: Request, book_id: UUID, claims: Claims = Depends(member), authorization: str = Header()):
+    with open_db() as conn:
+        book, level = load_book(conn, claims, book_id)
+    writer_or_403(claims, level)
+    households, core_error = book_households(book, authorization, claims)
+    return entry_page(request, book, claims, households, core_error)
+
+
+def row_meta(book: store.Book, values: dict) -> tuple:
+    """Date and household of a row: the first date field (else today) and the first household field."""
+    day_key = next((f.key for f in book.fields if f.type == "date"), None)
+    household_key = next((f.key for f in book.fields if f.type == "household"), None)
+    day = appkit.parse_date(values.get(day_key)) if day_key else None
+    return day or today(), values.get(household_key) if household_key else None
+
+
+@app.post("/b/{book_id}/records")
+def entry_create(request: Request, book_id: UUID, claims: Claims = Depends(member), authorization: str = Header(),
+                 form: dict = Depends(posted)):
+    with open_db() as conn:
+        book, level = load_book(conn, claims, book_id)
+    writer_or_403(claims, level)
+    if book.status != "PUBLISHED":
+        return refuse(request, 409, "Sổ chưa phát hành hoặc đã ngừng dùng nên chưa ghi được dòng mới.")
+    households, core_error = book_households(book, authorization, claims)
+    values, errors = fl.parse_values(book.fields, form, None if core_error else {h.id: h.name for h in households})
+    if errors:
+        return entry_page(request, book, claims, households, core_error, form=form, errors=errors, status=400)
+    day, household_id = row_meta(book, values)
+    status = "PENDING" if book.approval and "manager" not in claims.roles else "APPROVED"  # the manager is the approver
+    with open_db() as conn:
+        store.insert_record(conn, claims.htx_code, book.id, claims.sub, claims.name, values, day, household_id, status)
+    return redirect(request, f"/b/{book_id}", notice="saved")
+
+
+@app.get("/b/{book_id}/r/{record_id}/edit")
+def edit_form(request: Request, book_id: UUID, record_id: UUID, claims: Claims = Depends(member),
+              authorization: str = Header()):
+    with open_db() as conn:
+        book, level = load_book(conn, claims, book_id)
+        record = visible_record(conn, claims, book, level, record_id)
+    if not can_edit(claims, book, level, record):
+        raise HTTPException(403)
+    households, core_error = book_households(book, authorization, claims)
+    return entry_page(request, book, claims, households, core_error, record, form_from_data(book, record.data))
+
+
+@app.post("/b/{book_id}/r/{record_id}/edit")
+def edit_save(request: Request, book_id: UUID, record_id: UUID, claims: Claims = Depends(member),
+              authorization: str = Header(), form: dict = Depends(posted)):
+    with open_db() as conn:
+        book, level = load_book(conn, claims, book_id)
+        record = visible_record(conn, claims, book, level, record_id)
+    if not can_edit(claims, book, level, record):
+        raise HTTPException(403)
+    households, core_error = book_households(book, authorization, claims)
+    values, errors = fl.parse_values(book.fields, form, None if core_error else {h.id: h.name for h in households})
+    if errors:
+        return entry_page(request, book, claims, households, core_error, record, form, errors, 400)
+    day, household_id = row_meta(book, values)
+    # The manager's edit keeps the status; an author's edit sends the row (back) to the manager when approval is on.
+    status = record.status if "manager" in claims.roles else "PENDING" if book.approval else "APPROVED"
+    with open_db() as conn:
+        done = store.update_record(conn, claims.htx_code, book.id, record_id, values, day, household_id, status,
+                                   None if "manager" in claims.roles else claims.sub, locked_for(claims, book))
+    if not done:
+        raise HTTPException(403)  # approved a moment ago
+    return redirect(request, f"/b/{book_id}", notice="saved")
+
+
+@app.get("/b/{book_id}/r/{record_id}/delete")
+def delete_confirm(request: Request, book_id: UUID, record_id: UUID, claims: Claims = Depends(member),
+                   authorization: str = Header()):
+    with open_db() as conn:
+        book, level = load_book(conn, claims, book_id)
+        record = visible_record(conn, claims, book, level, record_id)
+    if not can_edit(claims, book, level, record):
+        raise HTTPException(403)
+    households, _ = book_households(book, authorization, claims)
+    names = {h.id: h.name for h in households}
+    summary = [(f.label, fl.display(f, record.data.get(f.key), names)) for f in book.fields if f.in_list]
+    return page(request, "delete.html", book=book, record=record, summary=summary)
+
+
+@app.post("/b/{book_id}/r/{record_id}/delete")
+def delete_record(request: Request, book_id: UUID, record_id: UUID, claims: Claims = Depends(member)):
+    with open_db() as conn:
+        book, level = load_book(conn, claims, book_id)
+        record = visible_record(conn, claims, book, level, record_id)
+        if not can_edit(claims, book, level, record):
+            raise HTTPException(403)
+        if not store.delete_record(conn, claims.htx_code, book.id, record_id,
+                                   None if "manager" in claims.roles else claims.sub, locked_for(claims, book)):
+            raise HTTPException(403)
+    return redirect(request, f"/b/{book_id}", notice="deleted")
+
+
+def decide_row(request, claims, book_id, record_id, status, reason, from_statuses):
+    with open_db() as conn:
+        book = book_or_404(conn, claims, book_id)
+        if not book.approval:
+            return refuse(request, 409, "Sổ này không cần duyệt.")
+        if store.get_record(conn, claims.htx_code, book.id, record_id) is None:
+            raise HTTPException(404)
+        changed = store.decide(conn, claims.htx_code, book.id, record_id, status, reason, claims.name, from_statuses)
+    return redirect(request, f"/b/{book_id}", notice=("approved" if status == "APPROVED" else "rejected") if changed else "unchanged")
+
+
+@app.post("/b/{book_id}/r/{record_id}/approve")
+def approve(request: Request, book_id: UUID, record_id: UUID, claims: Claims = Depends(manager)):
+    return decide_row(request, claims, book_id, record_id, "APPROVED", None, ("PENDING", "REJECTED"))
+
+
+@app.post("/b/{book_id}/r/{record_id}/reject")
+def reject(request: Request, book_id: UUID, record_id: UUID, claims: Claims = Depends(manager),
+           form: dict = Depends(posted)):
+    reason = form.get("reason", "").strip()
+    if not 1 <= len(reason) <= 200:
+        return refuse(request, 400, "Cần ghi lý do từ chối, từ 1 đến 200 ký tự.")
+    return decide_row(request, claims, book_id, record_id, "REJECTED", reason, ("PENDING",))
+
+
+# ---------- Summary, CSV, print ----------
+
+def month_starts(count: int = 6) -> list[date]:
+    first = today().replace(day=1)
+    months = []
+    for back in range(count - 1, -1, -1):
+        total = first.year * 12 + first.month - 1 - back
+        months.append(date(total // 12, total % 12 + 1, 1))
+    return months
+
+
+@app.get("/b/{book_id}/summary")
+def summary(request: Request, book_id: UUID, claims: Claims = Depends(member)):
+    with open_db() as conn:
+        book, level = load_book(conn, claims, book_id)
+        owner, htx = owner_of(claims, level), claims.htx_code
+        months = month_starts()
+        next_month = date(months[-1].year + months[-1].month // 12, months[-1].month % 12 + 1, 1)
+        count, overall = store.sums(conn, htx, book, owner)
+        _, this_month = store.sums(conn, htx, book, owner, since=months[-1], until=next_month)
+        pending = store.count_records(conn, htx, book, owner, store.Filters(status="PENDING")) if book.approval else 0
+        summed = [f for f in book.fields if f.summary]
+        series = store.monthly(conn, htx, book, owner, summed[0].key if summed else None, months[0])
+        choice = next((f for f in book.fields if f.type == "choice"), None)
+        options = store.by_option(conn, htx, book, owner, choice.key) if choice else {}
+    show = lambda f, v: fl.display(f, v, {})
+    stats = [{"label": "Số dòng", "value": appkit.number(count, 0), "hint": "đã duyệt" if book.approval else "tất cả"}]
+    if book.approval:
+        stats.append({"label": "Chờ duyệt", "value": appkit.number(pending, 0), "hint": "dòng chưa được tính"})
+    for f in summed:
+        stats += [{"label": f"{f.label} tháng này", "value": show(f, this_month[f.key])},
+                  {"label": f"{f.label} tất cả", "value": show(f, overall[f.key])}]
+    if summed:
+        f = summed[0]
+        fmt = (lambda v: appkit.money(int(v))) if f.type == "money" else (lambda v: appkit.number(v, 3))
+        month_chart = (f"{f.label} theo tháng (6 tháng gần nhất)", f.unit if f.type == "number" else "", fmt)
+    else:
+        month_chart = ("Số dòng theo tháng (6 tháng gần nhất)", "", lambda v: appkit.number(v, 0))
+    month_rows = appkit.chart_rows([(f"{m.month:02d}/{m.year}", series.get(m, 0)) for m in months], month_chart[2])
+    option_rows = (appkit.chart_rows([(o, options.get(o, 0)) for o in choice.options], lambda v: appkit.number(v, 0))
+                   if choice else None)
+    theme = theme_of(request)
+    return page(request, "summary.html", book=book, stats=stats, month_title=month_chart[0], month_unit=month_chart[1],
+                month_rows=month_rows, option_title=f"Số dòng theo {choice.label}" if choice else "",
+                option_rows=option_rows, tabs=book_tabs(book, claims, theme), current="summary",
+                can_write=can_write(claims, level) and book.status == "PUBLISHED")
+
+
+def export_rows(request: Request, claims: Claims, book_id: UUID, authorization: str):
+    """Book, caller's level, households by id and the rows (same filters and visibility as the list)."""
+    with open_db() as conn:
+        book, level = load_book(conn, claims, book_id)
+    households, _ = book_households(book, authorization, claims)
+    flt, params = read_filters(request, book)
+    with open_db() as conn:
+        records = store.list_records(conn, claims.htx_code, book, owner_of(claims, level), flt, store.MAX_EXPORT)
+    return book, level, {h.id: h.name for h in households}, records, params
+
+
+def csv_cell(f, value, names):
+    if value is None or value == "":
+        return ""
+    if f.type in ("number", "money"):
+        return Decimal(str(value)) if f.type == "number" else int(value)
+    return fl.display(f, value, names)
+
+
+@app.get("/b/{book_id}/export.csv")
+def export_csv(request: Request, book_id: UUID, claims: Claims = Depends(member), authorization: str = Header()):
+    book, level, names, records, _ = export_rows(request, claims, book_id, authorization)
+    known = {f.key for f in book.fields}
+    # A removed field leaves the design but not the data: its old values still go out, under its key.
+    extra = sorted({k for r in records for k in r.data if k not in known}, key=lambda k: int(k[1:]) if k[1:].isdigit() else 0)
+    header = [f.label for f in book.fields] + [f"(ô đã bỏ) {k}" for k in extra] + ["Người ghi", "Ngày ghi", "Tình trạng"]
+    header = [h if not h.startswith("(ô đã bỏ)") else h.replace("(ô đã bỏ) ", "") for h in header]
+    rows = [[csv_cell(f, r.data.get(f.key), names) for f in book.fields] + [str(r.data.get(k, "")) for k in extra]
+            + [r.created_by_name, appkit.vn_datetime(r.created_at),
+               RECORD_STATUS_NAMES[r.status] if book.approval else "Đã ghi"] for r in records]
+    return appkit.csv_response(appkit.csv_filename("custom-books", claims.htx_code, book.name, today()), header, rows)
+
+
+@app.get("/b/{book_id}/print")
+def print_book(request: Request, book_id: UUID, claims: Claims = Depends(member), authorization: str = Header()):
+    book, level, names, records, params = export_rows(request, claims, book_id, authorization)
+    owner_role = "manager" if "manager" in claims.roles else "officer" if "officer" in claims.roles else "farmer"
+    rows = [{"record": r, "cells": [fl.display(f, r.data.get(f.key), names) for f in book.fields]} for r in records]
+    return page(request, "print.html", book=book, rows=rows, htx=claims.htx_code, printed=appkit.vn_date(today()),
+                filtered=bool(params), back=appkit.shell_url(owner_role, "custom-books", f"/b/{book.id}"),
+                statuses=RECORD_STATUS_NAMES)
