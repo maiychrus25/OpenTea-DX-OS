@@ -1,0 +1,29 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- The input fields of a book's entry form (also the preview). Needs fields, form (key -> text), errors (by key), households, core_error. -#}
+{% import "kit.html" as kit %}
+  {% if core_error %}<div class="error" role="alert">{{ core_error }}</div>{% endif %}
+  {% for f in fields %}
+  {% set bad = ' aria-invalid="true"' if errors.get(f.key) else '' %}
+  {% if f.type == "yes_no" %}
+  <label><input type="checkbox" name="{{ f.key }}" value="on"{% if form.get(f.key) %} checked{% endif %}> {{ f.label }}</label>
+  {% else %}
+  <label>{{ f.label }}{% if f.type == "number" and f.unit %} ({{ f.unit }}){% elif f.type == "money" %} (đồng){% endif %}{% if f.required %} *{% endif %}
+    {% if f.type == "long_text" %}<textarea name="{{ f.key }}" maxlength="2000"{% if f.required %} required{% endif %}{{ bad | safe }}>{{ form.get(f.key, "") }}</textarea>
+    {% elif f.type == "choice" %}<select name="{{ f.key }}"{% if f.required %} required{% endif %}{{ bad | safe }}>
+      <option value="">Chọn một mục</option>
+      {% for o in f.options %}<option value="{{ o }}"{% if form.get(f.key) == o %} selected{% endif %}>{{ o }}</option>{% endfor %}
+    </select>
+    {% elif f.type == "household" %}<select name="{{ f.key }}"{% if f.required %} required{% endif %}{{ bad | safe }}>
+      <option value="">Chọn nông hộ</option>
+      {% for h in households %}<option value="{{ h.id }}"{% if form.get(f.key) == h.id %} selected{% endif %}>{{ h.name }}</option>{% endfor %}
+    </select>
+    {% elif f.type == "date" %}<input type="date" name="{{ f.key }}" value="{{ form.get(f.key, '') }}"{% if f.required %} required{% endif %}{{ bad | safe }}>
+    {% elif f.type == "number" %}<input name="{{ f.key }}" inputmode="decimal" maxlength="17" value="{{ form.get(f.key, '') }}"{% if f.required %} required{% endif %}{{ bad | safe }}>
+    {% elif f.type == "money" %}<input name="{{ f.key }}" inputmode="numeric" maxlength="19" value="{{ form.get(f.key, '') }}"{% if f.required %} required{% endif %}{{ bad | safe }}>
+    {% else %}<input name="{{ f.key }}" maxlength="200" value="{{ form.get(f.key, '') }}"{% if f.required %} required{% endif %}{{ bad | safe }}>
+    {% endif %}
+    {{ kit.field_error(errors, f.key) }}
+  </label>
+  {% endif %}
+  {% endfor %}

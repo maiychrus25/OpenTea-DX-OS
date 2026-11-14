@@ -1,0 +1,25 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Sổ của HTX {{ htx }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Sổ của HTX " ~ htx, "Các sổ ghi chép mà HTX đang dùng.") %}
+  {% if is_manager %}<a class="button" href="{{ href('/books/new', theme) }}">Tạo sổ mới</a>
+  <a class="button secondary" href="{{ href('/books', theme) }}">Quản lý các sổ</a>{% endif %}
+{% endcall %}
+{% if books %}
+<ul class="cards">
+  {% for b in books %}
+  <li class="card">
+    <h3><a href="{{ href('/b/' ~ b.id, theme) }}">{{ b.name }}</a></h3>
+    {% if b.description %}<p>{{ b.description }}</p>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% elif is_manager %}
+{{ kit.empty("HTX chưa có sổ nào đang dùng. Tạo sổ từ một mẫu có sẵn chỉ mất vài phút.", "Tạo sổ mới", href('/books/new', theme)) }}
+{% else %}
+{{ kit.empty("HTX chưa có sổ nào dành cho bạn. Hãy hỏi trưởng HTX.") }}
+{% endif %}
+{% endblock %}

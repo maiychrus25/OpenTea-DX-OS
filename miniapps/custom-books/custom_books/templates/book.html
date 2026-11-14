@@ -1,0 +1,86 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}{{ book.name }}{% endblock %}
+{% block main %}
+{% call kit.app_header(book.name, book.description or ("Sổ của HTX " ~ htx)) %}
+  {% if can_write %}<a class="button" href="{{ href('/b/' ~ book.id ~ '/new', theme) }}">Ghi dòng mới</a>{% endif %}
+  {{ kit.export_link(href('/b/' ~ book.id ~ '/export.csv', theme, **params)) }}
+  {{ kit.print_link(href('/b/' ~ book.id ~ '/print', theme, **params)) }}
+{% endcall %}
+{{ kit.tabs(tabs, current) }}
+{% if book.status != "PUBLISHED" %}<div class="notice" role="status">Sổ này {{ "đang soạn" if book.status == "DRAFT" else "đã ngừng dùng" }}, chỉ trưởng HTX thấy.</div>{% endif %}
+{% if notice %}<div class="notice" role="status">{{ notice }}</div>{% endif %}
+{% if level == "view" and not is_manager %}<p>Anh chị được xem sổ này, không ghi được.</p>{% elif level == "own" and not is_manager %}<p>Anh chị chỉ thấy các dòng do chính mình ghi.</p>{% endif %}
+
+{{ kit.stats(stats) }}
+
+<form class="toolbar" method="get" action="{{ href('/b/' ~ book.id) }}">
+  {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+  <label>Tìm chữ <input type="search" name="q" maxlength="80" value="{{ params.get('q', '') }}"></label>
+  <label>Từ ngày <input type="date" name="from" value="{{ params.get('from', '') }}"></label>
+  <label>Đến ngày <input type="date" name="to" value="{{ params.get('to', '') }}"></label>
+  {% for f in book.fields if f.type == "choice" %}
+  <label>{{ f.label }}
+    <select name="c_{{ f.key }}"><option value="">Tất cả</option>
+      {% for o in f.options %}<option value="{{ o }}"{% if params.get('c_' ~ f.key) == o %} selected{% endif %}>{{ o }}</option>{% endfor %}
+    </select>
+  </label>
+  {% endfor %}
+  {% if households %}
+  <label>Nông hộ
+    <select name="household"><option value="">Tất cả</option>
+      {% for h in households %}<option value="{{ h.id }}"{% if params.get('household') == h.id %} selected{% endif %}>{{ h.name }}</option>{% endfor %}
+    </select>
+  </label>
+  {% endif %}
+  {% if book.approval %}
+  <label>Tình trạng
+    <select name="status"><option value="">Tất cả</option>
+      {% for key, name in statuses.items() %}<option value="{{ key }}"{% if params.get('status') == key %} selected{% endif %}>{{ name }}</option>{% endfor %}
+    </select>
+  </label>
+  {% endif %}
+  <button type="submit">Lọc</button>
+  {% if filtered %}<a class="button secondary" href="{{ href('/b/' ~ book.id, theme) }}">Bỏ lọc</a>{% endif %}
+</form>
+{% if core_error %}<div class="error" role="alert">{{ core_error }}</div>{% endif %}
+
+{% if rows %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row">
+    {% for f in columns %}<th role="columnheader">{{ f.label }}</th>{% endfor %}
+    <th role="columnheader">Người ghi</th>{% if show_date %}<th role="columnheader">Ngày</th>{% endif %}
+    {% if book.approval %}<th role="columnheader">Tình trạng</th>{% endif %}
+    <th role="columnheader">Thao tác</th>
+  </tr></thead>
+  <tbody role="rowgroup">
+  {% for row in rows %}
+    {% set r = row.record %}
+    <tr role="row">
+      {% for f in columns %}<td role="cell" data-label="{{ f.label }}">{{ row.cells[loop.index0] }}</td>{% endfor %}
+      <td role="cell" data-label="Người ghi">{{ r.created_by_name }}</td>
+      {% if show_date %}<td role="cell" data-label="Ngày">{{ r.entry_date.strftime("%d/%m/%Y") }}</td>{% endif %}
+      {% if book.approval %}<td role="cell" data-label="Tình trạng"><span class="pill{% if r.status == 'PENDING' %} warn{% elif r.status == 'REJECTED' %} danger{% endif %}">{{ statuses[r.status] }}</span>{% if r.reject_reason %} {{ r.reject_reason }}{% endif %}</td>{% endif %}
+      <td role="cell" data-label="Thao tác"><div class="actions">
+        {% if row.can_edit %}<a class="button secondary" href="{{ href('/b/' ~ book.id ~ '/r/' ~ r.id ~ '/edit', theme) }}">Sửa</a>
+        <a class="button secondary" href="{{ href('/b/' ~ book.id ~ '/r/' ~ r.id ~ '/delete', theme) }}">Xoá</a>{% endif %}
+        {% if row.can_decide %}
+        <form method="post" action="{{ href('/b/' ~ book.id ~ '/r/' ~ r.id ~ '/approve', theme) }}"><button type="submit">Duyệt</button></form>
+        <a class="button secondary" href="{{ href('/b/' ~ book.id ~ '/r/' ~ r.id ~ '/reject', theme) }}">Từ chối</a>
+        {% endif %}
+      </div></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ kit.pagination(page_info, links[0], links[1]) }}
+{% elif filtered %}
+{{ kit.empty("Không có dòng nào khớp với bộ lọc.") }}
+{% elif can_write %}
+{{ kit.empty("Sổ chưa có dòng nào.", "Ghi dòng mới", href('/b/' ~ book.id ~ '/new', theme)) }}
+{% else %}
+{{ kit.empty("Sổ chưa có dòng nào.") }}
+{% endif %}
+{% endblock %}

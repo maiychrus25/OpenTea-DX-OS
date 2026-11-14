@@ -1,0 +1,126 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Thiết kế · {{ book.name }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Thiết kế sổ", book.name ~ " · " ~ status_names[book.status] ~ " · " ~ book.record_count ~ " dòng đã ghi") %}
+  <a class="button secondary" href="{{ href('/books/' ~ book.id ~ '/preview', theme) }}">Xem thử biểu mẫu</a>
+  <a class="button secondary" href="{{ href('/books', theme) }}">Quay lại các sổ</a>
+{% endcall %}
+{% if notice %}<div class="notice" role="status">{{ notice }}</div>{% endif %}
+{% if errors %}<div class="error" role="alert">{{ errors.get("form") or errors.get("fields") or "Còn chỗ cần sửa. Xem các dòng báo lỗi màu đỏ bên dưới." }}</div>{% endif %}
+
+<div class="card">
+<form method="post" action="{{ href('/books/' ~ book.id ~ '/design', theme) }}">
+  <h2>Thông tin sổ</h2>
+  <label>Tên sổ
+    <input name="name" maxlength="80" required value="{{ form.name }}"{% if errors.get("name") %} aria-invalid="true"{% endif %}>
+    {{ kit.field_error(errors, "name") }}
+  </label>
+  <p>Tên này hiện trong menu và ở đầu trang của sổ. Ví dụ: Chấm công hái chè.</p>
+  <label>Mô tả ngắn (không bắt buộc)
+    <input name="description" maxlength="200" value="{{ form.description }}"{% if errors.get("description") %} aria-invalid="true"{% endif %}>
+    {{ kit.field_error(errors, "description") }}
+  </label>
+  <label>Biểu tượng trong menu
+    <select name="icon"{% if errors.get("icon") %} aria-invalid="true"{% endif %}>
+      {% for key in icons %}<option value="{{ key }}"{% if form.icon == key %} selected{% endif %}>{{ icon_names[key] }}</option>{% endfor %}
+    </select>
+    {{ kit.field_error(errors, "icon") }}
+  </label>
+
+  <h2>Các ô cần ghi</h2>
+  <p>Mỗi ô là một thông tin phải ghi cho mỗi dòng của sổ, ví dụ Ngày, Nông hộ, Số ký. Sổ có tối đa {{ max_fields }} ô. Ba dòng trống ở cuối dùng để thêm ô mới: gõ tên ô là được.</p>
+  <ul>
+    <li><strong>Kiểu</strong>: chữ (một dòng), chữ dài (nhiều dòng), số, tiền, ngày, lựa chọn (chọn một trong các mục anh chị đặt sẵn, gõ trên một dòng và cách nhau bằng dấu chấm phẩy, ví dụ Sớm; Trưa; Chiều), có / không, hoặc nông hộ (chọn từ danh sách nông hộ của HTX).</li>
+    <li><strong>Hiện trong danh sách</strong>: ô này thành một cột trong danh sách các dòng đã ghi. Chọn tối đa {{ max_list }} ô, nên chọn những ô cần nhìn lướt.</li>
+    <li><strong>Tính tổng</strong>: chỉ cho ô số và ô tiền. Trang Tổng hợp sẽ cộng ô này lại, ví dụ tổng số ký chè đã hái.</li>
+    <li><strong>Thứ tự</strong>: ô có số nhỏ hơn đứng trước. <strong>Bỏ ô</strong>: ô không còn dùng nữa; dữ liệu đã ghi vẫn được giữ lại.</li>
+  </ul>
+  {% if book.record_count %}<p>Sổ đã có dòng, nên các ô đang có không đổi được kiểu. Anh chị vẫn đổi được tên, thứ tự, thêm ô mới hoặc bỏ ô.</p>{% endif %}
+  {{ kit.field_error(errors, "fields") }}
+  <table role="table">
+    <thead role="rowgroup"><tr role="row">
+      <th role="columnheader">Tên ô</th><th role="columnheader">Kiểu</th><th role="columnheader">Các lựa chọn (cách nhau bằng dấu chấm phẩy)</th><th role="columnheader">Đơn vị (cho ô số)</th><th role="columnheader">Bắt buộc</th><th role="columnheader">Hiện trong danh sách</th><th role="columnheader">Tính tổng</th><th role="columnheader">Thứ tự</th><th role="columnheader">Bỏ ô</th>
+    </tr></thead>
+    <tbody role="rowgroup">
+    {% for row in rows %}
+      <tr role="row">
+        <td role="cell" data-label="Tên ô">
+          <input type="hidden" name="key_{{ row.i }}" value="{{ row.key }}">
+          <input name="label_{{ row.i }}" size="22" maxlength="60" aria-label="Tên ô {{ row.i }}" value="{{ row.label }}"{% if not row.key %} placeholder="Thêm ô mới: gõ tên ô"{% endif %}{% if errors.get("label_" ~ row.i) %} aria-invalid="true"{% endif %}>
+          {{ kit.field_error(errors, "label_" ~ row.i) }}
+        </td>
+        <td role="cell" data-label="Kiểu">
+          {% if row.locked %}
+          <input type="hidden" name="type_{{ row.i }}" value="{{ row.type }}">{{ field_type_names[row.type] }} (đã có dữ liệu)
+          {% else %}
+          <select name="type_{{ row.i }}" aria-label="Kiểu của ô {{ row.i }}"{% if errors.get("type_" ~ row.i) %} aria-invalid="true"{% endif %}>
+            {% for t in field_types %}<option value="{{ t }}"{% if row.type == t %} selected{% endif %}>{{ field_type_names[t] }}</option>{% endfor %}
+          </select>
+          {% endif %}
+          {{ kit.field_error(errors, "type_" ~ row.i) }}
+        </td>
+        <td role="cell" data-label="Các lựa chọn">
+          <input name="options_{{ row.i }}" size="12" maxlength="1300" aria-label="Các lựa chọn của ô {{ row.i }}" placeholder="Mục 1; Mục 2; Mục 3" value="{{ row.options }}"{% if errors.get("options_" ~ row.i) %} aria-invalid="true"{% endif %}>
+          {{ kit.field_error(errors, "options_" ~ row.i) }}
+        </td>
+        <td role="cell" data-label="Đơn vị">
+          <input name="unit_{{ row.i }}" size="9" maxlength="20" aria-label="Đơn vị của ô {{ row.i }}" placeholder="ví dụ: kg" value="{{ row.unit }}"{% if errors.get("unit_" ~ row.i) %} aria-invalid="true"{% endif %}>
+          {{ kit.field_error(errors, "unit_" ~ row.i) }}
+        </td>
+        <td role="cell" data-label="Bắt buộc"><input type="checkbox" name="required_{{ row.i }}" aria-label="Bắt buộc ghi ô {{ row.i }}"{% if row.required %} checked{% endif %}></td>
+        <td role="cell" data-label="Hiện trong danh sách"><input type="checkbox" name="in_list_{{ row.i }}" aria-label="Hiện ô {{ row.i }} trong danh sách"{% if row.in_list %} checked{% endif %}></td>
+        <td role="cell" data-label="Tính tổng"><input type="checkbox" name="summary_{{ row.i }}" aria-label="Tính tổng ô {{ row.i }}"{% if row.summary %} checked{% endif %}></td>
+        <td role="cell" data-label="Thứ tự"><input name="order_{{ row.i }}" size="4" inputmode="numeric" maxlength="4" aria-label="Thứ tự của ô {{ row.i }}" value="{{ row.order }}"></td>
+        <td role="cell" data-label="Bỏ ô">{% if row.key %}<input type="checkbox" name="remove_{{ row.i }}" aria-label="Bỏ ô {{ row.i }}"{% if row.remove %} checked{% endif %}>{% else %}<span>Chưa có</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Ai được dùng</h2>
+  <p>Trưởng HTX luôn xem, ghi, sửa và xoá được mọi dòng. Với cán bộ và nông dân, chọn một mức:</p>
+  <ul>
+    <li><strong>Không dùng sổ này</strong>: sổ không hiện trong menu của họ.</li>
+    <li><strong>Chỉ xem mọi dòng</strong>: xem tất cả các dòng nhưng không ghi được.</li>
+    <li><strong>Ghi và xem dòng của mình</strong>: ghi dòng mới, chỉ thấy, sửa và xoá dòng do chính mình ghi.</li>
+    <li><strong>Ghi và xem mọi dòng</strong>: ghi dòng mới và xem tất cả các dòng; chỉ sửa và xoá dòng của mình.</li>
+  </ul>
+  <label>Cán bộ
+    <select name="officer_access"{% if errors.get("officer_access") %} aria-invalid="true"{% endif %}>
+      {% for level in access_levels %}<option value="{{ level }}"{% if form.officer_access == level %} selected{% endif %}>{{ access_names[level] }}</option>{% endfor %}
+    </select>
+    {{ kit.field_error(errors, "officer_access") }}
+  </label>
+  <label>Nông dân
+    <select name="farmer_access"{% if errors.get("farmer_access") %} aria-invalid="true"{% endif %}>
+      {% for level in access_levels %}<option value="{{ level }}"{% if form.farmer_access == level %} selected{% endif %}>{{ access_names[level] }}</option>{% endfor %}
+    </select>
+    {{ kit.field_error(errors, "farmer_access") }}
+  </label>
+
+  <h2>Duyệt</h2>
+  <label><input type="checkbox" name="approval"{% if form.approval %} checked{% endif %}> Cần trưởng HTX duyệt từng dòng</label>
+  <p>Khi bật, dòng mới ở tình trạng chờ duyệt và chỉ được tính vào trang Tổng hợp sau khi trưởng HTX duyệt. Trưởng HTX cũng có thể từ chối và ghi lý do; người ghi sửa lại thì dòng quay về chờ duyệt. Dòng đã duyệt bị khoá, người ghi không sửa được nữa.</p>
+
+  <button type="submit">Lưu thiết kế</button>
+</form>
+</div>
+
+<div class="card">
+<h2>Phát hành</h2>
+{% if book.status == "PUBLISHED" %}
+<p>Sổ đang dùng: các vai có quyền thấy sổ trong menu. Ngừng dùng sẽ gỡ sổ khỏi menu nhưng giữ nguyên dữ liệu; phát hành lại được bất cứ lúc nào.</p>
+{% else %}
+<p>Lưu thiết kế trước, rồi bấm Phát hành để đưa sổ vào menu của những vai được dùng. Sổ cần có ít nhất một ô.</p>
+{% endif %}
+<div class="actions">
+  {% if book.status != "PUBLISHED" %}<form method="post" action="{{ href('/books/' ~ book.id ~ '/publish', theme) }}"><button type="submit">{{ "Phát hành lại" if book.status == "ARCHIVED" else "Phát hành" }}</button></form>{% endif %}
+  {% if book.status == "PUBLISHED" %}<form method="post" action="{{ href('/books/' ~ book.id ~ '/archive', theme) }}"><button type="submit" class="secondary">Ngừng dùng</button></form>{% endif %}
+  {% if not book.record_count %}<form method="post" action="{{ href('/books/' ~ book.id ~ '/delete', theme) }}"><button type="submit" class="secondary">Xoá sổ</button></form>{% endif %}
+</div>
+{% if book.record_count %}<p>Sổ đã có dòng nên không xoá được; chọn Ngừng dùng để gỡ sổ khỏi menu.</p>{% endif %}
+</div>
+{% endblock %}

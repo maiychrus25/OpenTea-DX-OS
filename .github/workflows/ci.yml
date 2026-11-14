@@ -283,7 +283,7 @@ jobs:
       - name: Mini-app Unit Tests
         run: |
           (cd miniapps/hello && python -m unittest -v)
-          for app in tea-tour leaf-purchase tea-shop farm-supply; do
+          for app in tea-tour leaf-purchase tea-shop farm-supply custom-books; do
             (cd "miniapps/$app" && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error)
           done
 
