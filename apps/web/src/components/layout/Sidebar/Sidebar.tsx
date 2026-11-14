@@ -68,7 +68,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  
+  // Only the most specific item is active: a feed entry sits under its app's own menu item.
+  const activeHref = navItems
+    .filter((item) => isActive(pathname, item.href))
+    .reduce<string | null>((best, item) => (best === null || item.href.length > best.length ? item.href : best), null)
+
   const initials = userName
     .split(' ')
     .map((n) => n[0])
@@ -105,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Nav */}
       <nav className={styles.nav}>
         {navItems.map((item) => {
-          const active = isActive(pathname, item.href)
+          const active = item.href === activeHref
           return (
             <Link
               key={item.href}

@@ -124,6 +124,9 @@ test.describe('Sổ tự tạo', () => {
     await app.getByRole('button', { name: 'Phát hành', exact: true }).click()
     await expect(app.getByRole('heading', { name: 'Chấm công hái chè', level: 1 })).toBeVisible()
     await expectEntry(manager, 'manager', bookId, true, 'Chấm công hái chè')
+    // On a book page only the book's own entry is lit, not also "Sổ của HTX".
+    await manager.goto(`/manager/apps/custom-books/b/${bookId}`)
+    await expect(manager.locator('[data-testid=sidebar] [aria-current=page]')).toHaveCount(1)
 
     // ---- A second book where the farmer is "none" (the cashbook template): the officer gets it, the farmer does not.
     await manager.goto('/manager/apps/custom-books/books/new')
