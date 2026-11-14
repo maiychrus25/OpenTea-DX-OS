@@ -9,7 +9,7 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({ prisma: { $queryRaw: jes
 
 const queryRaw = prisma.$queryRaw as unknown as jest.Mock
 const menu = [{ label: 'Tour', path: '/', roles: ['manager'] }]
-const row = { id: 'tea-tour', name: 'Tour', version: '1.0.0', menu, public_prefixes: ['/public/'] }
+const row = { id: 'tea-tour', name: 'Tour', version: '1.0.0', menu, public_prefixes: ['/public/'], feed: '/feed' }
 
 beforeEach(() => queryRaw.mockReset())
 
@@ -19,13 +19,21 @@ describe('PrismaInstalledAppRepository', () => {
 
     const app = await new PrismaInstalledAppRepository().find("x' OR '1'='1")
 
-    expect(app).toEqual({ id: 'tea-tour', name: 'Tour', version: '1.0.0', menu, publicPrefixes: ['/public/'] })
+    expect(app).toEqual({ id: 'tea-tour', name: 'Tour', version: '1.0.0', menu, publicPrefixes: ['/public/'], feed: '/feed' })
     const [strings, ...values] = queryRaw.mock.calls[0]
     // A tagged template: the SQL text never holds the id.
     expect(Array.isArray(strings.raw)).toBe(true)
     expect(strings.join('?')).toContain('platform.installed_apps')
     expect(strings.join('?')).not.toContain("OR '1'")
     expect(values).toEqual(["x' OR '1'='1"])
+  })
+
+  test('a manifest without feed maps to null and the query reads it from the manifest', async () => {
+    queryRaw.mockResolvedValue([{ ...row, feed: null }])
+    const repo = new PrismaInstalledAppRepository()
+    expect((await repo.find('tea-tour'))?.feed).toBeNull()
+    expect((await repo.list('TC'))[0].feed).toBeNull()
+    for (const [strings] of queryRaw.mock.calls) expect(strings.join('?')).toContain("manifest ->> 'feed'")
   })
 
   test('find is null when no row matches', async () => {

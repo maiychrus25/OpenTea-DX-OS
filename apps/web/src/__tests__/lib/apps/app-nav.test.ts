@@ -4,6 +4,7 @@
 
 import type { InstalledApp } from '@/domain/entities/installed-app'
 import { appNavItems, loadAppNavItems, miniAppSrc } from '@/lib/apps/app-nav'
+import type { AppFeed } from '@/application/apps/app-feed'
 import { logger } from '@/lib/logger'
 
 const hello: InstalledApp = {
@@ -12,6 +13,7 @@ const hello: InstalledApp = {
   version: '0.1.0',
   menu: [{ label: 'Xin chào', path: '/', roles: ['farmer', 'officer', 'manager'] }],
   publicPrefixes: [],
+  feed: null,
 }
 const tour: InstalledApp = {
   id: 'tea-tour',
@@ -22,6 +24,7 @@ const tour: InstalledApp = {
     { label: 'Hướng dẫn', path: '/guide', roles: ['farmer'] },
   ],
   publicPrefixes: ['/public/'],
+  feed: null,
 }
 
 describe('appNavItems', () => {
@@ -59,6 +62,52 @@ describe('loadAppNavItems', () => {
     const list = jest.fn().mockResolvedValue([])
     await loadAppNavItems({ list }, 'farmer', null)
     expect(list).toHaveBeenCalledWith(null)
+  })
+})
+
+describe('feed items', () => {
+  const books: InstalledApp = { ...hello, id: 'custom-books', feed: '/feed' }
+  const feed: AppFeed = {
+    entries: [
+      { label: 'Sổ thu mua', path: '/books/1', icon: 'leaf', description: '' },
+      { label: 'Sổ lạ', path: '/books/2', icon: null, description: '' },
+    ],
+    create: null,
+  }
+
+  test('static items come first, then one item per feed entry', async () => {
+    const loadFeed = jest.fn().mockResolvedValue(feed)
+    const items = await loadAppNavItems({ list: async () => [books, hello] }, 'manager', 'TC', loadFeed)
+    expect(items.map(item => item.href)).toEqual([
+      '/manager/apps/custom-books',
+      '/manager/apps/custom-books/books/1',
+      '/manager/apps/custom-books/books/2',
+      '/manager/apps/hello',
+    ])
+    expect(items.every(item => item.icon)).toBe(true)
+    expect(loadFeed).toHaveBeenCalledTimes(1)
+    expect(loadFeed).toHaveBeenCalledWith(books, 'manager', 'TC')
+  })
+
+  test('a throwing loader leaves the static items', async () => {
+    const logError = jest.spyOn(logger, 'error').mockImplementation(() => undefined)
+    const items = await loadAppNavItems({ list: async () => [books] }, 'farmer', 'TC', jest.fn().mockRejectedValue(new Error('x')))
+    expect(items.map(item => item.href)).toEqual(['/farmer/apps/custom-books'])
+    logError.mockRestore()
+  })
+
+  test('no feed call without a loader, for an app without feed, or a role without a menu entry', async () => {
+    const loadFeed = jest.fn().mockResolvedValue(feed)
+    expect(await loadAppNavItems({ list: async () => [books] }, 'manager', 'TC')).toHaveLength(1)
+    await loadAppNavItems({ list: async () => [hello] }, 'manager', 'TC', loadFeed)
+    await loadAppNavItems({ list: async () => [{ ...books, menu: [{ label: 'x', path: '/', roles: ['manager'] }] }] }, 'farmer', 'TC', loadFeed)
+    expect(loadFeed).not.toHaveBeenCalled()
+  })
+
+  test('no feed call without an HTX', async () => {
+    const loadFeed = jest.fn()
+    await loadAppNavItems({ list: async () => [books] }, 'manager', null, loadFeed)
+    expect(loadFeed).not.toHaveBeenCalled()
   })
 })
 

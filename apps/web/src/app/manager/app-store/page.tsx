@@ -4,6 +4,8 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { AppStoreUseCase } from '@/application/apps/app-store.usecase'
+import { loadAppFeed } from '@/lib/apps/feed-loader'
+import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
 import { PrismaAppStoreRepository } from '@/infrastructure/db/repositories/prisma-app-store-repository'
 import { requireTenant } from '@/lib/api/tenant'
 import { AppStoreClient } from './_components/AppStoreClient'
@@ -18,6 +20,6 @@ export default async function ManagerAppStorePage() {
   if (session.user.role !== 'manager') redirect('/unauthorized')
 
   const tenant = await requireTenant()
-  const initial = await new AppStoreUseCase(new PrismaAppStoreRepository()).list(tenant.htxCode)
+  const initial = await new AppStoreUseCase(new PrismaAppStoreRepository(), { apps: new PrismaInstalledAppRepository(), loadFeed: loadAppFeed }).list(tenant.htxCode)
   return <AppStoreClient initial={initial} />
 }

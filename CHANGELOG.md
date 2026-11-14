@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Manifest `feed`** (`platform/apps/manifest.schema.json`, `dxos validate`): an app may name a protected path that returns, for the calling user, a JSON list of sub-apps (`entries` and an optional `create` link). The web menu shows them after the app's own items in each role's sidebar, and the App Store shows a section "Ứng dụng do HTX tự tạo". The web validates the feed (30 entries, label 60, path `^/[a-z0-9_-]+(/[a-z0-9_-]+)*$`, icon allowlist, 64 KB, 1.5 s, cached 15 s) and a broken feed leaves the menu intact. `GET /api/app-store` gains `created`. The icon map moved to `lib/apps/app-icons.tsx`. See `docs/miniapps.md`.
+
 ---
 
 ## [1.11.0] - 2026-11-13

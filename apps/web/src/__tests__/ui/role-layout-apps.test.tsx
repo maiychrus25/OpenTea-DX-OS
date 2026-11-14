@@ -20,6 +20,9 @@ jest.mock('@/infrastructure/db/repositories/PrismaHtxProfileRepository', () => (
 jest.mock('@/infrastructure/db/repositories/prisma-installed-app-repository', () => ({
   PrismaInstalledAppRepository: jest.fn().mockImplementation(() => ({ list: (htxCode: string | null) => list(htxCode) })),
 }))
+jest.mock('@/lib/apps/feed-loader', () => ({
+  loadAppFeed: jest.fn().mockResolvedValue({ entries: [{ label: 'Sổ thu mua', path: '/books/1', icon: 'leaf', description: '' }], create: null }),
+}))
 jest.mock('@/components/layout/AppShell', () => ({
   AppShell: ({ navItems }: { navItems: { label: string; href: string }[] }) => (
     <ul>
@@ -38,6 +41,7 @@ const hello = {
   version: '0.1.0',
   menu: [{ label: 'Xin chào', path: '/', roles: ['farmer', 'officer', 'manager'] }],
   publicPrefixes: [],
+  feed: null,
 }
 
 describe.each([
@@ -59,6 +63,14 @@ describe.each([
     expect(items[items.length - 1]).toHaveTextContent('Xin chào')
     expect(items[items.length - 1]).toHaveAttribute('data-href', `/${role}/apps/hello`)
     expect(screen.getByText('Tổng quan')).toBeInTheDocument()
+  })
+
+  test('shows the feed entries after the static item', async () => {
+    list.mockResolvedValue([{ ...hello, feed: '/feed' }])
+    await renderLayout()
+    const items = screen.getAllByRole('listitem')
+    expect(items[items.length - 1]).toHaveAttribute('data-href', `/${role}/apps/hello/books/1`)
+    expect(items[items.length - 2]).toHaveAttribute('data-href', `/${role}/apps/hello`)
   })
 
   test('asks for the apps enabled for the session HTX', async () => {

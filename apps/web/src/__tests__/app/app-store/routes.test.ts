@@ -27,6 +27,11 @@ jest.mock('@/infrastructure/db/repositories/prisma-app-store-repository', () => 
   PrismaAppStoreRepository: jest.fn().mockImplementation(() => repository),
 }))
 
+jest.mock('@/infrastructure/db/repositories/prisma-installed-app-repository', () => ({
+  PrismaInstalledAppRepository: jest.fn().mockImplementation(() => ({ list: async () => [] })),
+}))
+jest.mock('@/lib/apps/feed-loader', () => ({ loadAppFeed: jest.fn() }))
+
 const mock = (fn: unknown) => fn as jest.Mock
 const app = { id: 'hello', name: 'Xin chào', version: '0.1.0', description: '', license: 'MIT', publisher: 'P', roles: ['manager'], hasPublic: false, menu: [], hasDatabase: false, requiresCore: null, installedOnServer: false, installedVersion: null, store: {} }
 const cardOf = ({ menu: _m, hasDatabase: _d, requiresCore: _r, store: _s, ...card }: typeof app) => card
@@ -86,7 +91,7 @@ describe('GET /api/app-store', () => {
   test('200 with the worker flag and the cards of the session HTX', async () => {
     const response = await get()
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ data: { workerAlive: true, apps: [{ ...cardOf(app), status: 'available', error: null, category: null, icon: null, phase: null, openHref: null }] } })
+    expect(await response.json()).toEqual({ data: { workerAlive: true, created: [], apps: [{ ...cardOf(app), status: 'available', error: null, category: null, icon: null, phase: null, openHref: null }] } })
     expect(repository.snapshot).toHaveBeenCalledWith('TC')
   })
 })

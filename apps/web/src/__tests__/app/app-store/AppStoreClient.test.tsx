@@ -32,7 +32,7 @@ const named = (id: string, name: string, description: string, status: AppStoreSt
 })
 // The filter buttons share their words with the status pills, so card assertions look inside the list.
 const cards = () => within(screen.getByRole('list'))
-const data = (apps: StoreApp[], workerAlive = true): AppStoreData => ({ workerAlive, apps })
+const data = (apps: StoreApp[], workerAlive = true, created: AppStoreData['created'] = []): AppStoreData => ({ workerAlive, apps, created })
 // jsdom has no Response, so the tests answer with the three members the component reads.
 const reply = (body: unknown, status = 200) => Promise.resolve({ ok: status < 400, status, json: async () => body })
 
@@ -47,6 +47,39 @@ beforeEach(() => {
   global.fetch = fetchMock as unknown as typeof fetch
 })
 afterEach(() => jest.useRealTimers())
+
+describe('AppStoreClient (apps made by the HTX)', () => {
+  const made = (entries: AppStoreData['created'][number]['entries']): AppStoreData['created'] => [
+    { appId: 'custom-books', appName: 'Sổ tự tạo', create: { label: 'Tạo sổ', href: '/manager/apps/custom-books/new' }, entries },
+  ]
+
+  test('shows the section with the entries and the create button', () => {
+    const entries = [{ label: 'Sổ thu mua', description: 'Ghi chép', icon: 'leaf', href: '/manager/apps/custom-books/books/1' }]
+    render(<AppStoreClient initial={data([card('a', 'available')], true, made(entries))} />)
+    expect(screen.getByRole('heading', { name: 'Ứng dụng do HTX tự tạo' })).toBeInTheDocument()
+    expect(screen.getByText('Sổ tự tạo')).toBeInTheDocument()
+    expect(screen.getByText('Sổ thu mua')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Mở' })).toHaveAttribute('href', '/manager/apps/custom-books/books/1')
+    expect(screen.getByRole('link', { name: 'Tạo sổ' })).toHaveAttribute('href', '/manager/apps/custom-books/new')
+  })
+
+  test('the empty state points at the create button', () => {
+    render(<AppStoreClient initial={data([card('a', 'available')], true, made([]))} />)
+    expect(screen.getByText('Chưa có ứng dụng nào. Bấm "Tạo sổ" để bắt đầu.')).toBeInTheDocument()
+  })
+
+  test('hostile entry text is shown as text', () => {
+    const entries = [{ label: '<img src=x onerror=alert(1)>', description: '', icon: null, href: '/manager/apps/custom-books/b' }]
+    const { container } = render(<AppStoreClient initial={data([], true, made(entries))} />)
+    expect(screen.getByText('<img src=x onerror=alert(1)>')).toBeInTheDocument()
+    expect(container.querySelector('img')).toBeNull()
+  })
+
+  test('no section without a feed app', () => {
+    render(<AppStoreClient initial={data([card('a', 'available')])} />)
+    expect(screen.queryByText('Ứng dụng do HTX tự tạo')).toBeNull()
+  })
+})
 
 describe('AppStoreClient', () => {
   test('a card shows Có bản mới only when the installed version differs', () => {
