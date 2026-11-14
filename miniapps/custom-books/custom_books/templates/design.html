@@ -40,7 +40,7 @@
   </ul>
   {% if book.record_count %}<p>Sổ đã có dòng, nên các ô đang có không đổi được kiểu. Anh chị vẫn đổi được tên, thứ tự, thêm ô mới hoặc bỏ ô.</p>{% endif %}
   {{ kit.field_error(errors, "fields") }}
-  <table role="table">
+  <table class="form-table" role="table">
     <thead role="rowgroup"><tr role="row">
       <th role="columnheader">Tên ô</th><th role="columnheader">Kiểu</th><th role="columnheader">Các lựa chọn (cách nhau bằng dấu chấm phẩy)</th><th role="columnheader">Đơn vị (cho ô số)</th><th role="columnheader">Bắt buộc</th><th role="columnheader">Hiện trong danh sách</th><th role="columnheader">Tính tổng</th><th role="columnheader">Thứ tự</th><th role="columnheader">Bỏ ô</th>
     </tr></thead>

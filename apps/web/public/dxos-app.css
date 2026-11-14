@@ -310,6 +310,37 @@ td {
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
+/* A table of form inputs (the designer of Sổ tự tạo): the name column keeps room for a 30-character name, the others stay
+   readable, and the cells give up some padding so the table still fits the card. Wide screens only: a narrow screen shows
+   one card per row (below). */
+@media (min-width: 641px) {
+  table.form-table th,
+  table.form-table td {
+    padding-right: var(--spacing-2);
+    padding-left: var(--spacing-2);
+  }
+
+  table.form-table td:first-child input {
+    min-width: 15rem;
+  }
+
+  table.form-table td:nth-child(2) select {
+    min-width: 6rem;
+  }
+
+  table.form-table td:nth-child(3) input {
+    min-width: 6rem;
+  }
+
+  table.form-table td:nth-child(4) input {
+    min-width: 5.5rem;
+  }
+
+  table.form-table td:nth-child(8) input {
+    min-width: 3.5rem;
+  }
+}
+
 tr:last-child > td {
   border-bottom: 0;
 }
