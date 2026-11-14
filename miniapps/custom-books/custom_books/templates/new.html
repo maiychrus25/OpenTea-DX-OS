@@ -1,0 +1,25 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Tạo sổ mới{% endblock %}
+{% block main %}
+{% call kit.app_header("Tạo sổ mới", "Chọn một mẫu có sẵn rồi sửa theo ý HTX, hoặc bắt đầu từ sổ trắng. Sổ mới ở trạng thái đang soạn, chưa ai thấy cho đến khi anh chị bấm Phát hành.") %}
+  <a class="button secondary" href="{{ href('/books', theme) }}">Quay lại các sổ</a>
+{% endcall %}
+<ul class="cards">
+  {% for t in choices %}
+  <li class="card">
+    <h3>{{ t.name }}</h3>
+    <p>{{ t.description }}</p>
+    <p>{{ t.fields | length }} ô{% if t.approval %} · trưởng HTX duyệt từng dòng{% endif %}</p>
+    <form method="post" action="{{ href('/books', theme) }}"><input type="hidden" name="template" value="{{ t.key }}"><button type="submit">Dùng mẫu này</button></form>
+  </li>
+  {% endfor %}
+  <li class="card">
+    <h3>Sổ trắng</h3>
+    <p>Tự đặt tên và chọn từng ô cần ghi, không theo mẫu nào.</p>
+    <form method="post" action="{{ href('/books', theme) }}"><input type="hidden" name="template" value="blank"><button type="submit" class="secondary">Bắt đầu từ sổ trắng</button></form>
+  </li>
+</ul>
+{% endblock %}

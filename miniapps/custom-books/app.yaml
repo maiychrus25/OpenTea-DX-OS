@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+apiVersion: dxos/v1
+id: custom-books
+name: Sổ tự tạo
+description: Trưởng HTX tự tạo các sổ ghi chép (chấm công, phun thuốc, thu chi) mà không cần lập trình.
+version: 0.1.0
+license: MIT
+publisher: OpenTea Developers
+requires: { core: ">=1.12.0" }
+runtime:
+  build: .
+  port: 8080
+  health: /healthz
+database:
+  migrations: migrations/
+routes:
+  protected:
+    /: [manager, officer, farmer]
+    /books: [manager]
+feed: /feed
+menu:
+  - { label: Sổ của HTX, path: /, roles: [manager, officer, farmer] }
+store:
+  category: members
+  icon: clipboard-list
+  about: |
+    Ứng dụng giúp trưởng HTX tự tạo các sổ ghi chép riêng của HTX mà không cần biết lập trình: chấm công hái chè, sổ phun thuốc, sổ bón phân, sổ thu chi, biên bản họp, sổ giao nhận vật tư, theo dõi sâu bệnh, sổ khách tham quan, hoặc một sổ trắng tự thiết kế.
+
+    Trưởng HTX chọn một mẫu có sẵn hoặc bắt đầu từ sổ trắng, đặt tên các ô cần ghi (chữ, số, tiền, ngày, lựa chọn, có/không, nông hộ), chọn cán bộ và nông dân được xem hay ghi, và có thể yêu cầu duyệt từng dòng. Khi phát hành, mỗi sổ hiện trong menu của đúng những vai được dùng như một ứng dụng riêng: có biểu mẫu nhập, danh sách tìm và lọc được, trang tổng hợp có tổng và biểu đồ, tải CSV và bản in.
+
+    Ứng dụng không có ô ảnh hay tệp đính kèm.
+  data:
+    - "Sổ: tên, mô tả, biểu tượng, danh sách ô, quyền của cán bộ và nông dân, có cần duyệt hay không, tình trạng"
+    - "Dòng ghi trong sổ: giá trị các ô, ngày, người ghi, tình trạng duyệt và lý do từ chối"
+  personal_data: "Lưu tên người ghi và các giá trị mà HTX tự đặt ra ô để ghi, có thể gồm cả nông hộ được chọn. Người dùng ở mức dòng của mình chỉ thấy dòng mình ghi; mức xem mọi dòng cho thấy dòng của người khác. Trưởng HTX xem được tất cả."
+  core_reads:
+    - "Danh sách nông hộ của HTX (tên hộ) cho các ô kiểu nông hộ; nông dân chỉ thấy hộ của chính mình"

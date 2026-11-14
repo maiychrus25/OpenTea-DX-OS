@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+-r requirements.txt
+# The tests reuse the CLI's throwaway Postgres and database step (platform/cli/tests/conftest.py).
+-r ../../platform/cli/requirements.txt
+pytest==9.1.1
+httpx2==2.16.0

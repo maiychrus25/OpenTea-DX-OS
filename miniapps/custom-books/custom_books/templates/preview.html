@@ -1,0 +1,18 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Xem thử · {{ book.name }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Xem thử: " ~ book.name, "Đây là biểu mẫu mà người dùng sẽ thấy. Bản xem thử không ghi gì vào sổ.") %}
+  <a class="button" href="{{ href('/books/' ~ book.id ~ '/design', theme) }}">Quay lại thiết kế</a>
+{% endcall %}
+{% if fields %}
+<form>
+  {% include "entry_fields.html" %}
+  <button type="button" disabled>Ghi dòng mới (bản xem thử)</button>
+</form>
+{% else %}
+{{ kit.empty("Sổ chưa có ô nào để ghi. Quay lại thiết kế để thêm ô.") }}
+{% endif %}
+{% endblock %}

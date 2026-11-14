@@ -1,0 +1,36 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Quản lý các sổ{% endblock %}
+{% block main %}
+{% call kit.app_header("Quản lý các sổ", "HTX " ~ htx ~ " có " ~ total ~ " trên " ~ max_books ~ " sổ tối đa.") %}
+  <a class="button" href="{{ href('/books/new', theme) }}">Tạo sổ mới</a>
+  <a class="button secondary" href="{{ href('/', theme) }}">Các sổ đang dùng</a>
+{% endcall %}
+{% if not total %}
+{{ kit.empty("HTX chưa có sổ nào.", "Tạo sổ mới", href('/books/new', theme)) }}
+{% endif %}
+{% for key, title, books in groups if books %}
+<h2>{{ title }}</h2>
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Tên sổ</th><th role="columnheader">Số ô</th><th role="columnheader">Số dòng đã ghi</th><th role="columnheader">Thao tác</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for b in books %}
+    <tr role="row">
+      <td role="cell" data-label="Tên sổ">{% if key == "PUBLISHED" %}<a href="{{ href('/b/' ~ b.id, theme) }}">{{ b.name }}</a>{% else %}{{ b.name }}{% endif %}</td>
+      <td role="cell" data-label="Số ô">{{ b.fields | length }}</td>
+      <td role="cell" data-label="Số dòng đã ghi">{{ b.record_count }}</td>
+      <td role="cell" data-label="Thao tác"><div class="actions">
+        <a class="button secondary" href="{{ href('/books/' ~ b.id ~ '/design', theme) }}">Thiết kế</a>
+        <a class="button secondary" href="{{ href('/books/' ~ b.id ~ '/preview', theme) }}">Xem thử</a>
+        {% if key != "PUBLISHED" %}<form method="post" action="{{ href('/books/' ~ b.id ~ '/publish', theme) }}"><button type="submit">{{ "Phát hành lại" if key == "ARCHIVED" else "Phát hành" }}</button></form>{% endif %}
+        {% if key == "PUBLISHED" %}<form method="post" action="{{ href('/books/' ~ b.id ~ '/archive', theme) }}"><button type="submit" class="secondary">Ngừng dùng</button></form>{% endif %}
+        {% if not b.record_count %}<form method="post" action="{{ href('/books/' ~ b.id ~ '/delete', theme) }}"><button type="submit" class="secondary">Xoá sổ</button></form>{% endif %}
+      </div></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+{% endblock %}

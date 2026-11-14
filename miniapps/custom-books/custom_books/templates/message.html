@@ -1,0 +1,9 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Lỗi{% endblock %}
+{% block main %}
+<h1>Sổ tự tạo</h1>
+<p class="error" role="alert">{{ message }}</p>
+<p><a class="button secondary" href="{{ href('/', theme) }}">Về trang Sổ của HTX</a></p>
+{% endblock %}
