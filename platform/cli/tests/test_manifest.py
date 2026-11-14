@@ -194,3 +194,26 @@ def test_store_block_accepts_every_key(valid):
 )
 def test_store_block_refuses(valid, changes):
     assert errors(with_store(valid, **changes), core="1.8.0")
+
+
+def test_accepts_feed_under_a_protected_prefix(valid):
+    assert errors(mutated(valid, feed="/feed"), core="1.8.0") == []
+
+
+@pytest.mark.parametrize("bad", ["feed", "/a.json", "//x", "/a/../b"])
+def test_rejects_malformed_feed(valid, bad):
+    errs = errors(mutated(valid, feed=bad), core="1.8.0")
+    assert errs and all("feed" in e for e in errs)
+
+
+def test_rejects_feed_without_a_protected_prefix(valid):
+    data = mutated(valid, feed="/feed")
+    data["routes"] = {"protected": {"/books/": ["manager"]}}
+    errs = errors(data, core="1.8.0")
+    assert len(errs) == 1 and "feed" in errs[0]
+
+
+def test_accepts_feed_covered_by_a_narrow_prefix(valid):
+    data = mutated(valid, feed="/books/feed")
+    data["routes"] = {"protected": {"/books/": ["manager"]}}
+    assert errors(data, core="1.8.0") == []
