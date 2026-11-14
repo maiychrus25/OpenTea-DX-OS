@@ -321,11 +321,11 @@ td {
   }
 
   table.form-table td:first-child input {
-    min-width: 15rem;
+    min-width: 14.5rem;
   }
 
   table.form-table td:nth-child(2) select {
-    min-width: 6rem;
+    min-width: 7.5rem;
   }
 
   table.form-table td:nth-child(3) input {
