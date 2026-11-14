@@ -125,10 +125,10 @@ def test_own_level_sees_only_own_rows(client, db):
                  money=900000, kind="Chè già")
     for tail in ("", "/export.csv", "/print", "/summary"):
         body = client.get(f"/b/{book}{tail}", headers=FARMER).text
-        assert "Lê Thị Hoa" not in body and "GHICHU-CUA-HOA" not in body and "99" not in body.replace("1999", ""), tail
+        assert "Lê Thị Hoa" not in body and "GHICHU-CUA-HOA" not in body and "99 kg" not in body and ",99," not in body, tail
     assert "GHICHU-CUA-AN" in client.get(f"/b/{book}/export.csv", headers=FARMER).text
     summary = client.get(f"/b/{book}/summary", headers=FARMER).text
-    assert "100.000 ₫" in summary and "900.000" not in summary and "109" not in summary
+    assert "100.000 ₫" in summary and "900.000" not in summary and "109 kg" not in summary
     # typing the URL of the other person's row
     for path in (f"/b/{book}/r/{theirs}/edit", f"/b/{book}/r/{theirs}/delete"):
         assert client.get(path, headers=FARMER).status_code == 404
@@ -494,3 +494,49 @@ def test_print_page_uses_the_same_filters(client, db):
     assert "Ký tên" in body or "signature" in body
     assert f"/manager/apps/custom-books/b/{book}" in body
     assert "target=\"_top\"" in client.get(f"/b/{book}", headers=MANAGER).text
+
+
+# ---------- fix round 1: reject page, stored household names ----------
+
+def test_reject_page_and_compact_list_row(client, db):
+    book = book_with(db, "all", "all", approval=True)
+    rid = rec(db, book, status="PENDING", note="CHO-DUYET")
+    listing = client.get(f"/b/{book}", headers=MANAGER).text
+    assert 'name="reason"' not in listing
+    assert f"/b/{book}/r/{rid}/reject" in listing and "Từ chối" in listing and "Duyệt" in listing
+    page = client.get(f"/b/{book}/r/{rid}/reject", headers=MANAGER)
+    assert page.status_code == 200 and 'name="reason"' in page.text and "Nguyễn Văn An" in page.text
+    for headers in (OFFICER, FARMER):
+        assert client.get(f"/b/{book}/r/{rid}/reject", headers=headers).status_code == 403
+    empty = client.post(f"/b/{book}/r/{rid}/reject", headers=MANAGER, data={"reason": "  "})
+    assert empty.status_code == 400 and 'name="reason"' in empty.text and "field-error" in empty.text
+    assert db.execute("SELECT status FROM records WHERE id = %s", (rid,)).fetchone()[0] == "PENDING"
+    assert client.post(f"/b/{book}/r/{rid}/reject", headers=MANAGER, data={"reason": "Sai số"}).status_code == 303
+    assert client.get(f"/b/{book}/r/{rid}/reject", headers=MANAGER).status_code == 409  # no longer pending
+    assert client.get(f"/b/{book}/r/{uuid.uuid4()}/reject", headers=MANAGER).status_code == 404
+    plain = book_with(db, "all", "all", approval=False)
+    assert client.get(f"/b/{plain}/r/{rec(db, plain)}/reject", headers=MANAGER).status_code == 409
+
+
+def test_household_name_is_stored_and_shown_to_a_farmer_at_level_all(client, db):
+    book = book_with(db, "all", "all")
+    assert client.post(f"/b/{book}/records", headers=OFFICER, data=form(f2="h2")).status_code == 303
+    assert db.execute("SELECT household_id, household_name FROM records").fetchone() == ("h2", "Lê Thị Hoa")
+    # an old row without a stored name falls back
+    rec(db, book, user="kc-farmer-2", name="Cán bộ khác", household="h9", day="2026-11-01")
+    body = client.get(f"/b/{book}", headers=FARMER).text.partition("<tbody")[2]
+    assert "Lê Thị Hoa" in body and "Nông hộ khác" in body  # the farmer's live lookup only has h1
+    csv = client.get(f"/b/{book}/export.csv", headers=FARMER).content.decode("utf-8-sig")
+    assert "Lê Thị Hoa" in csv and "Nông hộ khác" in csv
+    assert "Lê Thị Hoa" in client.get(f"/b/{book}/print", headers=FARMER).text
+    assert "Lê Thị Hoa" in client.get(f"/b/{book}?household=h2", headers=FARMER).text.partition("<tbody")[2]
+
+
+def test_edit_keeps_a_stored_household_the_lookup_no_longer_has(client, db):
+    book = book_with(db, "all", "all")
+    rid = add_record(db, book, {"f1": "2026-11-10", "f2": "h9", "f3": "4"}, created_by="kc-officer",
+                     created_by_name="Cán bộ Hà", household_id="h9", household_name="Hộ cũ Trần Văn Ba")
+    page = client.get(f"/b/{book}/r/{rid}/edit", headers=OFFICER)
+    assert page.status_code == 200 and "Hộ cũ Trần Văn Ba" in page.text
+    assert client.post(f"/b/{book}/r/{rid}/edit", headers=OFFICER, data=form(f2="h9")).status_code == 303
+    assert db.execute("SELECT household_name FROM records WHERE id = %s", (rid,)).fetchone()[0] == "Hộ cũ Trần Văn Ba"

@@ -33,7 +33,7 @@
   <h2>Các ô cần ghi</h2>
   <p>Mỗi ô là một thông tin phải ghi cho mỗi dòng của sổ, ví dụ Ngày, Nông hộ, Số ký. Sổ có tối đa {{ max_fields }} ô. Ba dòng trống ở cuối dùng để thêm ô mới: gõ tên ô là được.</p>
   <ul>
-    <li><strong>Kiểu</strong>: chữ (một dòng), chữ dài (nhiều dòng), số, tiền, ngày, lựa chọn (chọn một trong các mục anh chị đặt sẵn), có / không, hoặc nông hộ (chọn từ danh sách nông hộ của HTX).</li>
+    <li><strong>Kiểu</strong>: chữ (một dòng), chữ dài (nhiều dòng), số, tiền, ngày, lựa chọn (chọn một trong các mục anh chị đặt sẵn, gõ trên một dòng và cách nhau bằng dấu chấm phẩy, ví dụ Sớm; Trưa; Chiều), có / không, hoặc nông hộ (chọn từ danh sách nông hộ của HTX).</li>
     <li><strong>Hiện trong danh sách</strong>: ô này thành một cột trong danh sách các dòng đã ghi. Chọn tối đa {{ max_list }} ô, nên chọn những ô cần nhìn lướt.</li>
     <li><strong>Tính tổng</strong>: chỉ cho ô số và ô tiền. Trang Tổng hợp sẽ cộng ô này lại, ví dụ tổng số ký chè đã hái.</li>
     <li><strong>Thứ tự</strong>: ô có số nhỏ hơn đứng trước. <strong>Bỏ ô</strong>: ô không còn dùng nữa; dữ liệu đã ghi vẫn được giữ lại.</li>
@@ -42,7 +42,7 @@
   {{ kit.field_error(errors, "fields") }}
   <table role="table">
     <thead role="rowgroup"><tr role="row">
-      <th role="columnheader">Tên ô</th><th role="columnheader">Kiểu</th><th role="columnheader">Các lựa chọn (mỗi dòng một mục)</th><th role="columnheader">Đơn vị (cho ô số)</th><th role="columnheader">Tuỳ chọn cho ô</th><th role="columnheader">Thứ tự</th><th role="columnheader">Bỏ ô</th>
+      <th role="columnheader">Tên ô</th><th role="columnheader">Kiểu</th><th role="columnheader">Các lựa chọn (cách nhau bằng dấu chấm phẩy)</th><th role="columnheader">Đơn vị (cho ô số)</th><th role="columnheader">Bắt buộc</th><th role="columnheader">Hiện trong danh sách</th><th role="columnheader">Tính tổng</th><th role="columnheader">Thứ tự</th><th role="columnheader">Bỏ ô</th>
     </tr></thead>
     <tbody role="rowgroup">
     {% for row in rows %}
@@ -63,19 +63,17 @@
           {{ kit.field_error(errors, "type_" ~ row.i) }}
         </td>
         <td role="cell" data-label="Các lựa chọn">
-          <textarea name="options_{{ row.i }}" cols="14" rows="3" aria-label="Các lựa chọn của ô {{ row.i }}"{% if errors.get("options_" ~ row.i) %} aria-invalid="true"{% endif %}>{{ row.options }}</textarea>
+          <input name="options_{{ row.i }}" size="12" maxlength="1300" aria-label="Các lựa chọn của ô {{ row.i }}" placeholder="Mục 1; Mục 2; Mục 3" value="{{ row.options }}"{% if errors.get("options_" ~ row.i) %} aria-invalid="true"{% endif %}>
           {{ kit.field_error(errors, "options_" ~ row.i) }}
         </td>
         <td role="cell" data-label="Đơn vị">
-          <input name="unit_{{ row.i }}" size="6" maxlength="20" aria-label="Đơn vị của ô {{ row.i }}" placeholder="kg" value="{{ row.unit }}"{% if errors.get("unit_" ~ row.i) %} aria-invalid="true"{% endif %}>
+          <input name="unit_{{ row.i }}" size="9" maxlength="20" aria-label="Đơn vị của ô {{ row.i }}" placeholder="ví dụ: kg" value="{{ row.unit }}"{% if errors.get("unit_" ~ row.i) %} aria-invalid="true"{% endif %}>
           {{ kit.field_error(errors, "unit_" ~ row.i) }}
         </td>
-        <td role="cell" data-label="Tuỳ chọn cho ô"><div>
-          <label><input type="checkbox" name="required_{{ row.i }}"{% if row.required %} checked{% endif %}> Bắt buộc</label>
-          <label><input type="checkbox" name="in_list_{{ row.i }}"{% if row.in_list %} checked{% endif %}> Hiện trong danh sách</label>
-          <label><input type="checkbox" name="summary_{{ row.i }}"{% if row.summary %} checked{% endif %}> Tính tổng</label>
-        </div></td>
-        <td role="cell" data-label="Thứ tự"><input name="order_{{ row.i }}" size="3" inputmode="numeric" maxlength="4" aria-label="Thứ tự của ô {{ row.i }}" value="{{ row.order }}"></td>
+        <td role="cell" data-label="Bắt buộc"><input type="checkbox" name="required_{{ row.i }}" aria-label="Bắt buộc ghi ô {{ row.i }}"{% if row.required %} checked{% endif %}></td>
+        <td role="cell" data-label="Hiện trong danh sách"><input type="checkbox" name="in_list_{{ row.i }}" aria-label="Hiện ô {{ row.i }} trong danh sách"{% if row.in_list %} checked{% endif %}></td>
+        <td role="cell" data-label="Tính tổng"><input type="checkbox" name="summary_{{ row.i }}" aria-label="Tính tổng ô {{ row.i }}"{% if row.summary %} checked{% endif %}></td>
+        <td role="cell" data-label="Thứ tự"><input name="order_{{ row.i }}" size="4" inputmode="numeric" maxlength="4" aria-label="Thứ tự của ô {{ row.i }}" value="{{ row.order }}"></td>
         <td role="cell" data-label="Bỏ ô">{% if row.key %}<input type="checkbox" name="remove_{{ row.i }}" aria-label="Bỏ ô {{ row.i }}"{% if row.remove %} checked{% endif %}>{% else %}<span>Chưa có</span>{% endif %}</td>
       </tr>
     {% endfor %}

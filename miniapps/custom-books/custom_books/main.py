@@ -363,6 +363,14 @@ def book_households(book: store.Book, authorization: str, claims: Claims):
     return households_or_error(authorization, claims)
 
 
+def name_map(households, records=()) -> dict[str, str]:
+    """Household names by id: the names saved with the rows, overridden by the live lookup (which may know fewer
+    households, e.g. a farmer's own only)."""
+    names = {r.household_id: r.household_name for r in records if r.household_id and r.household_name}
+    names.update({h.id: h.name for h in households})
+    return names
+
+
 def read_filters(request: Request, book: store.Book) -> tuple[store.Filters, dict[str, str]]:
     """Filters from the query string; anything that does not fit is ignored. Also the parameters to keep in links."""
     query = request.query_params
@@ -396,13 +404,13 @@ def book_list(request: Request, book_id: UUID, claims: Claims = Depends(member),
     with open_db() as conn:
         book, level = load_book(conn, claims, book_id)
     households, core_error = book_households(book, authorization, claims)
-    names = {h.id: h.name for h in households}
     flt, params = read_filters(request, book)
     owner, theme = owner_of(claims, level), theme_of(request)
     with open_db() as conn:
         page_info = appkit.page_of(request.query_params.get("page"), store.count_records(conn, claims.htx_code, book, owner, flt))
         records = store.list_records(conn, claims.htx_code, book, owner, flt, page_info.size, page_info.offset)
         count, totals = store.sums(conn, claims.htx_code, book, owner, flt)
+    names = name_map(households, records)
     columns = [f for f in book.fields if f.in_list]
     first_date = next((f for f in book.fields if f.type == "date"), None)
     show_date = first_date is None or not first_date.in_list  # the row's date is that field; do not show it twice
@@ -432,7 +440,15 @@ def form_from_data(book: store.Book, data: dict) -> dict[str, str]:
     return form
 
 
+def with_stored_household(households, record):
+    """An edited row may keep a household the live lookup no longer has (its saved name is shown)."""
+    if record and record.household_id and record.household_name and all(h.id != record.household_id for h in households):
+        return [*households, core_client.Household(record.household_id, record.household_name, None)]
+    return households
+
+
 def entry_page(request, book, claims, households, core_error, record=None, form=None, errors=None, status=200):
+    households = with_stored_household(households, record)
     return page(request, "entry.html", status, book=book, fields=book.fields, record=record, households=households,
                 core_error=core_error, form=form if form is not None else blank_entry(book), errors=errors or {})
 
@@ -463,13 +479,15 @@ def entry_create(request: Request, book_id: UUID, claims: Claims = Depends(membe
     if book.status != "PUBLISHED":
         return refuse(request, 409, "Sổ chưa phát hành hoặc đã ngừng dùng nên chưa ghi được dòng mới.")
     households, core_error = book_households(book, authorization, claims)
-    values, errors = fl.parse_values(book.fields, form, None if core_error else {h.id: h.name for h in households})
+    names = {h.id: h.name for h in households}
+    values, errors = fl.parse_values(book.fields, form, None if core_error else names)
     if errors:
         return entry_page(request, book, claims, households, core_error, form=form, errors=errors, status=400)
     day, household_id = row_meta(book, values)
     status = "PENDING" if book.approval and "manager" not in claims.roles else "APPROVED"  # the manager is the approver
     with open_db() as conn:
-        store.insert_record(conn, claims.htx_code, book.id, claims.sub, claims.name, values, day, household_id, status)
+        store.insert_record(conn, claims.htx_code, book.id, claims.sub, claims.name, values, day, household_id,
+                            names.get(household_id), status)
     return redirect(request, f"/b/{book_id}", notice="saved")
 
 
@@ -494,15 +512,16 @@ def edit_save(request: Request, book_id: UUID, record_id: UUID, claims: Claims =
     if not can_edit(claims, book, level, record):
         raise HTTPException(403)
     households, core_error = book_households(book, authorization, claims)
-    values, errors = fl.parse_values(book.fields, form, None if core_error else {h.id: h.name for h in households})
+    names = {h.id: h.name for h in with_stored_household(households, record)}
+    values, errors = fl.parse_values(book.fields, form, None if core_error else names)
     if errors:
         return entry_page(request, book, claims, households, core_error, record, form, errors, 400)
     day, household_id = row_meta(book, values)
     # The manager's edit keeps the status; an author's edit sends the row (back) to the manager when approval is on.
     status = record.status if "manager" in claims.roles else "PENDING" if book.approval else "APPROVED"
     with open_db() as conn:
-        done = store.update_record(conn, claims.htx_code, book.id, record_id, values, day, household_id, status,
-                                   None if "manager" in claims.roles else claims.sub, locked_for(claims, book))
+        done = store.update_record(conn, claims.htx_code, book.id, record_id, values, day, household_id,
+                                   names.get(household_id), status, None if "manager" in claims.roles else claims.sub, locked_for(claims, book))
     if not done:
         raise HTTPException(403)  # approved a moment ago
     return redirect(request, f"/b/{book_id}", notice="saved")
@@ -517,7 +536,7 @@ def delete_confirm(request: Request, book_id: UUID, record_id: UUID, claims: Cla
     if not can_edit(claims, book, level, record):
         raise HTTPException(403)
     households, _ = book_households(book, authorization, claims)
-    names = {h.id: h.name for h in households}
+    names = name_map(households, [record])
     summary = [(f.label, fl.display(f, record.data.get(f.key), names)) for f in book.fields if f.in_list]
     return page(request, "delete.html", book=book, record=record, summary=summary)
 
@@ -551,12 +570,44 @@ def approve(request: Request, book_id: UUID, record_id: UUID, claims: Claims = D
     return decide_row(request, claims, book_id, record_id, "APPROVED", None, ("PENDING", "REJECTED"))
 
 
+def pending_row_for_reject(conn, claims: Claims, book_id: UUID, record_id: UUID):
+    book = book_or_404(conn, claims, book_id)
+    if not book.approval:
+        raise HTTPException(409)
+    record = store.get_record(conn, claims.htx_code, book.id, record_id)
+    if record is None:
+        raise HTTPException(404)
+    return book, record
+
+
+def reject_page(request, book, record, households, form, errors=None, status=200):
+    names = name_map(households, [record])
+    summary = [(f.label, fl.display(f, record.data.get(f.key), names)) for f in book.fields if f.in_list]
+    return page(request, "reject.html", status, book=book, record=record, summary=summary, form=form,
+                errors=errors or {})
+
+
+@app.get("/b/{book_id}/r/{record_id}/reject")
+def reject_form(request: Request, book_id: UUID, record_id: UUID, claims: Claims = Depends(manager),
+                authorization: str = Header()):
+    with open_db() as conn:
+        book, record = pending_row_for_reject(conn, claims, book_id, record_id)
+    if record.status != "PENDING":
+        return refuse(request, 409, BOOK_NOTICES["unchanged"])
+    households, _ = book_households(book, authorization, claims)
+    return reject_page(request, book, record, households, {})
+
+
 @app.post("/b/{book_id}/r/{record_id}/reject")
 def reject(request: Request, book_id: UUID, record_id: UUID, claims: Claims = Depends(manager),
-           form: dict = Depends(posted)):
+           authorization: str = Header(), form: dict = Depends(posted)):
     reason = form.get("reason", "").strip()
     if not 1 <= len(reason) <= 200:
-        return refuse(request, 400, "Cần ghi lý do từ chối, từ 1 đến 200 ký tự.")
+        with open_db() as conn:
+            book, record = pending_row_for_reject(conn, claims, book_id, record_id)
+        households, _ = book_households(book, authorization, claims)
+        return reject_page(request, book, record, households, form,
+                           {"reason": "Cần ghi lý do từ chối, từ 1 đến 200 ký tự."}, 400)
     return decide_row(request, claims, book_id, record_id, "REJECTED", reason, ("PENDING",))
 
 
@@ -616,7 +667,7 @@ def export_rows(request: Request, claims: Claims, book_id: UUID, authorization: 
     flt, params = read_filters(request, book)
     with open_db() as conn:
         records = store.list_records(conn, claims.htx_code, book, owner_of(claims, level), flt, store.MAX_EXPORT)
-    return book, level, {h.id: h.name for h in households}, records, params
+    return book, level, name_map(households, records), records, params
 
 
 def csv_cell(f, value, names):

@@ -71,12 +71,19 @@ def form_rows(form: Mapping[str, str]) -> list[dict]:
 
 def rows_of(fields: Sequence[Field], blanks: int = 3) -> list[dict]:
     """Rows to show for a saved design: one per field and a few empty ones to add fields."""
-    rows = [{"i": n, "key": f.key, "label": f.label, "type": f.type, "options": "\n".join(f.options), "unit": f.unit,
+    rows = [{"i": n, "key": f.key, "label": f.label, "type": f.type, "options": "; ".join(f.options), "unit": f.unit,
              "required": f.required, "in_list": f.in_list, "summary": f.summary, "order": str(n * 10),
              "remove": False} for n, f in enumerate(fields, 1)]
     start = len(rows)
     return rows + [{"i": start + n, "key": "", "label": "", "type": "text", "options": "", "unit": "", "required": False,
                     "in_list": False, "summary": False, "order": "", "remove": False} for n in range(1, blanks + 1)]
+
+
+def split_options(raw: str) -> tuple[str, ...]:
+    """Options typed on one line, separated by ';'. Text with line breaks is read one option per line (older forms),
+    so a ';' left inside such a line is returned as it is and refused by the caller."""
+    parts = raw.splitlines() if "\n" in raw or "\r" in raw else raw.split(";")
+    return tuple(p.strip() for p in parts if p.strip())
 
 
 def parse_design(form: Mapping[str, str], existing: Sequence[Field], next_key: int,
@@ -119,9 +126,12 @@ def parse_design(form: Mapping[str, str], existing: Sequence[Field], next_key: i
             ftype = old.type
         options: tuple[str, ...] = ()
         if ftype == "choice":
-            options = tuple(line.strip() for line in row["options"].splitlines() if line.strip())
-            if not 2 <= len(options) <= MAX_OPTIONS or any(len(o) > 60 for o in options):
-                errors[f"options_{i}"] = f"Cần từ 2 đến {MAX_OPTIONS} lựa chọn, mỗi dòng một lựa chọn, tối đa 60 ký tự."
+            options = split_options(row["options"])
+            if any(";" in o for o in options):
+                errors[f"options_{i}"] = "Một lựa chọn không được chứa dấu chấm phẩy; dấu này dùng để ngăn cách các lựa chọn."
+            elif not 2 <= len(options) <= MAX_OPTIONS or any(len(o) > 60 for o in options):
+                errors[f"options_{i}"] = (f"Cần từ 2 đến {MAX_OPTIONS} lựa chọn, cách nhau bằng dấu chấm phẩy, "
+                                          "mỗi lựa chọn tối đa 60 ký tự.")
             elif len(set(o.casefold() for o in options)) != len(options):
                 errors[f"options_{i}"] = "Các lựa chọn không được trùng nhau."
             elif old is not None and has_records and not set(old.options) <= set(options):

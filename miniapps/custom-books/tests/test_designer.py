@@ -138,7 +138,7 @@ def test_hostile_labels_are_stored_and_shown_as_text(client, db):
     book = store.get_book(db, "TC", book_id)
     hostile = "x'); DROP TABLE records;--"
     form = design_form(book, label_3=hostile, label_4="<script>alert(1)</script>", type_4="choice",
-                       options_4="<img src=x onerror=y>\n'; --")
+                       options_4="<img src=x onerror=y>; '--")
     assert client.post(f"/books/{book_id}/design", headers=MANAGER, data=form).status_code == 303
     assert store.get_book(db, "TC", book_id).fields[2].label == hostile
     assert db.execute("SELECT count(*) FROM records").fetchone()[0] == 0  # the table still exists

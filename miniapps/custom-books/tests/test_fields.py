@@ -42,6 +42,17 @@ def test_choice_options_two_to_twenty_each_up_to_sixty():
     assert fields[0].options == ("A", "B")
 
 
+def test_options_separated_by_semicolons_or_newlines():
+    for raw in ("Sớm; Trưa ;Chiều", "Sớm\nTrưa\r\nChiều", " Sớm;;Trưa; Chiều; "):
+        fields, _, errors = design([row(1, "Buổi", "choice", options=raw)])
+        assert errors == {} and fields[0].options == ("Sớm", "Trưa", "Chiều"), raw
+    # a newline-separated line is one option, so a ';' inside it is refused
+    _, _, errors = design([row(1, "Buổi", "choice", options="Sớm\nTrưa; chiều")])
+    assert "dấu chấm phẩy" in errors["options_1"]
+    assert "options_1" in design([row(1, "Buổi", "choice", options="Chỉ một")])[2]
+    assert fl.rows_of([Field("f1", "Buổi", "choice", options=("Sớm", "Trưa"))], 0)[0]["options"] == "Sớm; Trưa"
+
+
 def test_unit_only_for_numbers_and_limited():
     fields, _, errors = design([row(1, "Ký", "number", unit="kg"), row(2, "Chữ", "text", unit="kg")])
     assert errors == {} and fields[0].unit == "kg" and fields[1].unit == ""

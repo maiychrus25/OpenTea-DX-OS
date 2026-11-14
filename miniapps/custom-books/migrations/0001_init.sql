@@ -28,6 +28,7 @@ CREATE TABLE records (
   data jsonb NOT NULL DEFAULT '{}',
   entry_date date NOT NULL,
   household_id text,
+  household_name text CHECK (char_length(household_name) <= 200),  -- the name when the row was saved
   status text NOT NULL DEFAULT 'APPROVED' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
   reject_reason text CHECK (char_length(reject_reason) <= 200),
   decided_by_name text,

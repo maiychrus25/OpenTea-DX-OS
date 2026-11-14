@@ -19,7 +19,7 @@ Trưởng HTX tự tạo các sổ ghi chép (chấm công hái chè, sổ phun 
 | `POST /books/<id>/publish`, `/archive`, `/delete` | `manager` | Phát hành (cần ít nhất một ô), ngừng dùng, xoá (chỉ khi chưa có dòng nào, ngược lại 409) |
 | `/b/<id>` | theo mức | Danh sách: cột là các ô "hiện trong danh sách", Người ghi, Ngày, Tình trạng (sổ cần duyệt); tìm `q` (ô chữ và tên người ghi, theo nghĩa đen), `from`, `to`, `c_<khoá>` cho ô lựa chọn, `household`, `status`; phân trang 25 dòng; tổng các ô tính tổng của tập đã lọc |
 | `/b/<id>/new`, `POST /b/<id>/records`, `/b/<id>/r/<rid>/edit`, `/b/<id>/r/<rid>/delete` | mức ghi | Ghi, sửa, xoá (xoá qua trang xác nhận); 303 về `/b/<id>?notice=saved\|deleted` hoặc 400 kèm biểu mẫu |
-| `POST /b/<id>/r/<rid>/approve`, `/reject` | `manager` | Duyệt hoặc từ chối (`reason` 1–200 ký tự) dòng đang chờ, chỉ với sổ cần duyệt |
+| `POST /b/<id>/r/<rid>/approve`, `GET`/`POST …/reject` | `manager` | Duyệt, hoặc mở trang từ chối (`GET`) rồi gửi `reason` 1–200 ký tự (`POST`; trống thì 400 kèm biểu mẫu) cho dòng đang chờ, chỉ với sổ cần duyệt |
 | `/b/<id>/summary`, `/b/<id>/export.csv`, `/b/<id>/print` | theo mức | Tổng hợp (số dòng, tổng tháng này và tất cả, biểu đồ 6 tháng, biểu đồ theo mục), CSV (tối đa 5000 dòng), bản in; cùng bộ lọc và cùng quyền xem với danh sách |
 
 ## Quyền trên dòng
@@ -27,6 +27,7 @@ Trưởng HTX tự tạo các sổ ghi chép (chấm công hái chè, sổ phun 
 - Sổ đang soạn hoặc ngừng dùng chỉ trưởng HTX mở được (người khác nhận 404); mức `none` nhận 403; sổ hoặc dòng của HTX khác nhận 404.
 - `view`: xem mọi dòng, không ghi. `own`: chỉ thấy, sửa, xoá dòng của mình (dòng người khác là 404, kể cả qua CSV, bản in, tổng hợp). `all`: thấy mọi dòng, sửa và xoá dòng của mình. Trưởng HTX làm được mọi thứ.
 - Sổ cần duyệt: dòng của cán bộ và nông dân vào ở trạng thái chờ duyệt, dòng của trưởng HTX vào thẳng đã duyệt; người ghi sửa dòng chờ hoặc bị từ chối thì dòng về chờ duyệt; dòng đã duyệt bị khoá với người ghi (sửa và xoá). Tổng hợp và tổng trên danh sách chỉ tính dòng đã duyệt.
+- Dòng lưu cả tên nông hộ lúc ghi (`records.household_name`): người chỉ tra được hộ của mình vẫn thấy tên hộ khác ở dòng đã ghi; dòng cũ không có tên hiện "Nông hộ khác". Lựa chọn của ô lựa chọn gõ trên một dòng, cách nhau bằng dấu chấm phẩy.
 - Ngày của dòng là ô ngày đầu tiên, không có thì ngày ghi. CSV: số và tiền là số thô, ô bị bỏ khỏi thiết kế vẫn xuất giá trị cũ dưới khoá của nó (`f3`).
 
 ## Quy tắc thiết kế

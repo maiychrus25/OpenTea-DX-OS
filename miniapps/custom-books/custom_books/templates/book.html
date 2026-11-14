@@ -68,7 +68,7 @@
         <a class="button secondary" href="{{ href('/b/' ~ book.id ~ '/r/' ~ r.id ~ '/delete', theme) }}">Xoá</a>{% endif %}
         {% if row.can_decide %}
         <form method="post" action="{{ href('/b/' ~ book.id ~ '/r/' ~ r.id ~ '/approve', theme) }}"><button type="submit">Duyệt</button></form>
-        <form method="post" action="{{ href('/b/' ~ book.id ~ '/r/' ~ r.id ~ '/reject', theme) }}"><input name="reason" maxlength="200" required aria-label="Lý do từ chối" placeholder="Lý do từ chối"><button type="submit" class="secondary">Từ chối</button></form>
+        <a class="button secondary" href="{{ href('/b/' ~ book.id ~ '/r/' ~ r.id ~ '/reject', theme) }}">Từ chối</a>
         {% endif %}
       </div></td>
     </tr>

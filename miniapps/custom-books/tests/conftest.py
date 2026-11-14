@@ -64,8 +64,9 @@ def add_book(conn, htx="TC", name=BOOK_NAME, fields=(), status="PUBLISHED", offi
 
 
 def add_record(conn, book_id, data, htx="TC", created_by="kc-manager-tc", created_by_name="Quản trị TC",
-               entry_date="2026-11-10", status="APPROVED", household_id=None):
+               entry_date="2026-11-10", status="APPROVED", household_id=None, household_name=None):
     return conn.execute(
-        """INSERT INTO records (htx_code, book_id, data, entry_date, status, household_id, created_by, created_by_name)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
-        (htx, book_id, Jsonb(data), entry_date, status, household_id, created_by, created_by_name)).fetchone()[0]
+        """INSERT INTO records (htx_code, book_id, data, entry_date, status, household_id, household_name, created_by,
+                                created_by_name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+        (htx, book_id, Jsonb(data), entry_date, status, household_id, household_name, created_by,
+         created_by_name)).fetchone()[0]

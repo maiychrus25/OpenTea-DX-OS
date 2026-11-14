@@ -130,6 +130,7 @@ class Record:
     data: dict
     entry_date: date
     household_id: str | None
+    household_name: str | None
     status: str
     reject_reason: str | None
     decided_by_name: str | None
@@ -148,7 +149,7 @@ class Filters:
     status: str = ""
 
 
-RECORD_COLUMNS = """r.id, r.data, r.entry_date, r.household_id, r.status, r.reject_reason, r.decided_by_name,
+RECORD_COLUMNS = """r.id, r.data, r.entry_date, r.household_id, r.household_name, r.status, r.reject_reason, r.decided_by_name,
   r.created_by, r.created_by_name, r.created_at"""
 _ESCAPE = r"ESCAPE '\'"
 
@@ -209,25 +210,27 @@ def get_record(conn, htx: str, book_id: UUID, record_id: UUID) -> Record | None:
 
 
 def insert_record(conn, htx: str, book_id: UUID, user: str, user_name: str, data: dict, entry_date: date,
-                  household_id: str | None, status: str) -> UUID:
+                  household_id: str | None, household_name: str | None, status: str) -> UUID:
     return conn.execute(
-        """INSERT INTO records (htx_code, book_id, data, entry_date, household_id, status, created_by, created_by_name)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
-        (htx, book_id, Jsonb(data), entry_date, household_id, status, user, user_name)).fetchone()[0]
+        """INSERT INTO records (htx_code, book_id, data, entry_date, household_id, household_name, status, created_by,
+                                created_by_name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+        (htx, book_id, Jsonb(data), entry_date, household_id, household_name, status, user, user_name)).fetchone()[0]
 
 
 def update_record(conn, htx: str, book_id: UUID, record_id: UUID, data: dict, entry_date: date,
-                  household_id: str | None, status: str, owner: str | None, locked: tuple[str, ...]) -> bool:
+                  household_id: str | None, household_name: str | None, status: str, owner: str | None,
+                  locked: tuple[str, ...]) -> bool:
     """owner: only that author's row (None = any); locked: statuses that may not be changed (the check is in the
     statement, so a row approved a moment ago cannot be overwritten)."""
     return conn.execute(
-        """UPDATE records SET data = %s, entry_date = %s, household_id = %s, status = %s, updated_at = now(),
+        """UPDATE records SET data = %s, entry_date = %s, household_id = %s, household_name = %s, status = %s,
+               updated_at = now(),
                reject_reason = CASE WHEN %s = 'PENDING' THEN NULL ELSE reject_reason END,
                decided_by_name = CASE WHEN %s = 'PENDING' THEN NULL ELSE decided_by_name END,
                decided_at = CASE WHEN %s = 'PENDING' THEN NULL ELSE decided_at END
            WHERE htx_code = %s AND book_id = %s AND id = %s AND (%s::text IS NULL OR created_by = %s)
              AND NOT (status = ANY(%s))""",
-        (Jsonb(data), entry_date, household_id, status, status, status, status, htx, book_id, record_id, owner, owner,
+        (Jsonb(data), entry_date, household_id, household_name, status, status, status, status, htx, book_id, record_id, owner, owner,
          list(locked))).rowcount == 1
 
 
