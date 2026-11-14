@@ -174,6 +174,7 @@ test.describe('Sổ tự tạo', () => {
     const row = app.locator('tbody tr', { hasText: '18,5' })
     await expect(row.getByText('Chờ duyệt')).toBeVisible()
     await app.getByRole('link', { name: 'Tổng hợp' }).click()
+    await expect(app.locator('figure.chart').first()).toBeVisible()
     await expect(app.locator('.stats')).not.toContainText('18,5')
     await app.getByRole('link', { name: 'Danh sách' }).first().click()
     await row.getByRole('link', { name: 'Từ chối' }).click()
@@ -186,6 +187,7 @@ test.describe('Sổ tự tạo', () => {
     // ---- The farmer edits it (sees the reason), the manager approves.
     await farmer.goto(`/farmer/apps/custom-books/b/${bookId}`)
     await farmerApp.locator('tbody tr', { hasText: '18,5' }).getByRole('link', { name: 'Sửa' }).click()
+    await expect(farmerApp.getByRole('heading', { name: 'Sửa dòng', level: 1 })).toBeVisible()
     await expect(farmerApp.getByText('Thiếu ca hái').first()).toBeVisible()
     await farmerApp.locator('select[name="f6"]').selectOption('Sáng')
     await farmerApp.getByRole('button', { name: 'Lưu thay đổi' }).click()
@@ -196,6 +198,7 @@ test.describe('Sổ tự tạo', () => {
 
     // ---- The summary counts it only now; the farmer's own row is locked.
     await app.getByRole('link', { name: 'Tổng hợp' }).click()
+    await expect(app.locator('figure.chart').first()).toBeVisible()
     await expect(app.locator('.stats')).toContainText('18,5')
     await expectNoOverflow(manager, APP_NAME)
     await farmer.goto(`/farmer/apps/custom-books/b/${bookId}`)

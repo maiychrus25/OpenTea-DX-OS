@@ -90,6 +90,7 @@ test.describe('app kit: business apps', () => {
     await expect(app.locator('.pagination-status')).toContainText('Trang 1/2')
     await app.locator('input[name=q]').fill('Household')
     await app.getByRole('button', { name: 'Lọc' }).click()
+    await expect(app.locator('input[name=q]')).toHaveValue('Household')
     await expect(app.locator('tbody tr').first()).toBeVisible()
     await app.locator('input[name=q]').fill('50%')
     await app.getByRole('button', { name: 'Lọc' }).click()
@@ -422,6 +423,7 @@ test.describe('app kit: tea-tour', () => {
     await app.getByRole('link', { name: 'Sau ›' }).click()
     await expect(app.locator('.pagination-status')).toContainText('Trang 2/')
     await app.getByRole('link', { name: '‹ Trước' }).click()
+    await expect(app.locator('.pagination-status')).toContainText('Trang 1/')
     await app.locator('input[name=q]').fill('Lê Quốc Bảo')
     await app.getByRole('button', { name: 'Lọc' }).click()
     await expect.poll(async () => {
