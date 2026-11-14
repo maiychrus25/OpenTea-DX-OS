@@ -703,7 +703,8 @@ for _ in $(seq 1 15); do
   sleep 1
 done
 grep -q 'Chè Oolong' <<<"$(app_curl -s "$APP_GW/apps/tea-shop/public/TC")" && pass "the product created before the disable is on the public page again" \
-  || fail "the product is gone after the second enable"
+  || { fail "the product is gone after the second enable"
+       echo "  diagnostics: public page status/size: $(app_curl -s -o /dev/null -w '%{http_code} %{size_download}' "$APP_GW/apps/tea-shop/public/TC"); product rows: $(psql_app "select count(*) || ' active=' || count(*) filter (where active) from app_tea_shop.products where name = 'Chè Oolong'"); page head: $(app_curl -s "$APP_GW/apps/tea-shop/public/TC" | head -c 300 | tr '\n' ' ')"; }
 RS4=$(request tea-shop TC DISABLE)
 wait_request "$RS4" DONE "DISABLE tea-shop for TC again -> DONE"
 for _ in $(seq 1 30); do [ "$(installed_count tea-shop)" = 0 ] && break; sleep 2; done
