@@ -167,6 +167,51 @@ if (process.env.E2E_BUSINESS_APPS === 'installed') {
   )
 }
 
+// With E2E_CUSTOM_BOOKS=installed (custom-books installed and a published book with rows, best after tests/e2e/story/custom-books.spec.ts)
+// it adds the books list, the template chooser, the designer, a book's list and summary, and the farmer's list.
+if (process.env.E2E_CUSTOM_BOOKS === 'installed') {
+  const BOOKS = 'iframe[title="Sổ tự tạo"]'
+  const openBook = async (p: Page, base: string) => {
+    await p.goto(base)
+    await p.frameLocator(BOOKS).getByRole('link', { name: 'Chấm công hái chè' }).first().click()
+    await expect(p.frameLocator(BOOKS).getByRole('heading', { name: 'Chấm công hái chè', level: 1 })).toBeVisible()
+  }
+  SCREENS.push(
+    { name: 'custom-books-books', role: 'manager', frame: BOOKS, open: p => visitApp(p, '/manager/apps/custom-books/books', 'Quản lý các sổ', BOOKS) },
+    { name: 'custom-books-templates', role: 'manager', frame: BOOKS, open: p => visitApp(p, '/manager/apps/custom-books/books/new', 'Tạo sổ mới', BOOKS) },
+    {
+      name: 'custom-books-design', role: 'manager', frame: BOOKS,
+      open: async p => {
+        await p.goto('/manager/apps/custom-books/books')
+        await p.frameLocator(BOOKS).getByRole('link', { name: 'Thiết kế' }).first().click()
+        await expect(p.frameLocator(BOOKS).getByRole('heading', { name: 'Thiết kế sổ', level: 1 })).toBeVisible()
+      },
+    },
+    { name: 'custom-books-list', role: 'manager', frame: BOOKS, open: p => openBook(p, '/manager/apps/custom-books') },
+    {
+      name: 'custom-books-summary', role: 'manager', frame: BOOKS,
+      open: async p => {
+        await openBook(p, '/manager/apps/custom-books')
+        await p.frameLocator(BOOKS).getByRole('link', { name: 'Tổng hợp' }).click()
+        await expect(p.frameLocator(BOOKS).locator('.stats')).toBeVisible()
+      },
+    },
+    {
+      name: 'custom-books-print', role: 'manager', bare: true,
+      open: async p => {
+        await p.goto('/manager/apps/custom-books')
+        await p.frameLocator(BOOKS).getByRole('link', { name: 'Chấm công hái chè' }).first().click()
+        const frame = await (await p.locator(BOOKS).elementHandle())?.contentFrame()
+        const link = frame!.locator('a', { hasText: 'Bản in' }).first()
+        await expect(link).toBeVisible()
+        await p.goto((await link.getAttribute('href'))!)
+        await expect(p.getByText('Dùng lệnh In của trình duyệt')).toBeVisible()
+      },
+    },
+    { name: 'custom-books-farmer', role: 'farmer', user: ['smoke_farmer_tc', SMOKE_PASSWORD], frame: BOOKS, open: p => openBook(p, '/farmer/apps/custom-books') },
+  )
+}
+
 const VIEWPORTS = [
   { name: '1280', width: 1280, height: 800 },
   { name: '390', width: 390, height: 844 },
