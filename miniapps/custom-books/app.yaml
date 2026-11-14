@@ -36,3 +36,6 @@ store:
   personal_data: "Lưu tên người ghi và các giá trị mà HTX tự đặt ra ô để ghi, có thể gồm cả nông hộ được chọn. Người dùng ở mức dòng của mình chỉ thấy dòng mình ghi; mức xem mọi dòng cho thấy dòng của người khác. Trưởng HTX xem được tất cả."
   core_reads:
     - "Danh sách nông hộ của HTX (tên hộ) cho các ô kiểu nông hộ; nông dân chỉ thấy hộ của chính mình"
+  screenshots:
+    - { file: store/designer.png, caption: "Trưởng HTX tự thiết kế sổ bằng biểu mẫu: đặt tên ô, chọn kiểu, ai được dùng, có cần duyệt hay không" }
+    - { file: store/book-in-use.png, caption: "Một sổ đang dùng: cán bộ ghi dòng, trưởng HTX duyệt hoặc từ chối, tìm, lọc, tải CSV và in" }
