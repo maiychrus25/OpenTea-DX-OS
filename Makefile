@@ -12,7 +12,7 @@ export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 # keycloak on every platform-up. Without the attestation the same inputs give the same ID, so nothing is recreated.
 export BUILDX_NO_DEFAULT_ATTESTATIONS := 1
 
-.PHONY: gateway-sync web-up gateway-up platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync
+.PHONY: gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice up-workflow up-chat stop-extras platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync
 
 # APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
 gateway-sync:
@@ -45,6 +45,42 @@ web-up: gateway-sync
 # Put the gateway back on the generated route file after a hand-typed compose command recreated it on the base one.
 gateway-up: gateway-sync
 	$(COMPOSE) up -d --no-deps apisix
+
+# A smaller stack. up-core: sign-in, dashboards, App Store and installed mini-apps (run `make platform-up` once first: it
+# initialises and migrates the database). --no-deps with the services in start order: none of them depends on an optional one.
+up-core: gateway-sync
+	$(COMPOSE) up -d --no-deps --wait postgres keycloak hasura apisix web
+
+# One target per optional group; each starts only its own services (--no-deps: core is already up, and the
+# dependencies inside a group are listed in start order). stop-extras stops exactly the union of these groups.
+EXTRAS_DOCS := seaweedfs clamav dxos-scanner dxos-lifecycle
+EXTRAS_SENSORS := mosquitto dxos-ingest
+EXTRAS_AI := disease-api ollama
+EXTRAS_VOICE := piper
+EXTRAS_WORKFLOW := n8n
+EXTRAS_CHAT := mattermost
+
+up-docs: gateway-sync
+	$(COMPOSE) up -d --no-deps $(EXTRAS_DOCS)
+
+up-sensors: gateway-sync
+	$(COMPOSE) up -d --no-deps $(EXTRAS_SENSORS)
+
+up-ai: gateway-sync
+	$(COMPOSE) up -d --no-deps $(EXTRAS_AI)
+
+up-voice: gateway-sync
+	$(COMPOSE) up -d --no-deps $(EXTRAS_VOICE)
+
+up-workflow: gateway-sync
+	$(COMPOSE) up -d --no-deps $(EXTRAS_WORKFLOW)
+
+up-chat: gateway-sync
+	$(COMPOSE) up -d --no-deps $(EXTRAS_CHAT)
+
+# Stop, never down: containers, volumes and data stay; the matching up-<group> starts them again.
+stop-extras:
+	$(COMPOSE) stop $(EXTRAS_DOCS) $(EXTRAS_SENSORS) $(EXTRAS_AI) $(EXTRAS_VOICE) $(EXTRAS_WORKFLOW) $(EXTRAS_CHAT)
 
 platform-smoke:
 	bash platform/tests/smoke-platform.sh
