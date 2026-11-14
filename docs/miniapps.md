@@ -81,7 +81,7 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 
 **Bước cài.** Khi cài qua `./dxos worker`, `./dxos` báo `prepare`, `build`, `register` bằng `./dxos worker-progress <mã yêu cầu> <bước>`; trang chi tiết hiện các bước này. Lỗi của lệnh báo không làm hỏng lần cài, và `./dxos install` gõ tay không ghi bước nào.
 
-**Nguồn app con `feed`** (từ v1.12.0). App khai `feed: /feed` có thể tự sinh ra các "app con" cho từng người dùng, ví dụ sổ do trưởng HTX tự tạo. Web gọi `GET /apps/<id><feed>` kèm token của người dùng (`authorization: Bearer ...`, `accept: application/json`), chờ tối đa 1,5 giây, chỉ đọc thân khi mã là 200 và thân không quá 64 KB, rồi nhớ kết quả 15 giây cho mỗi bộ (app, HTX, vai trò). Mọi lỗi (quá hạn, mã khác 200, thân quá lớn hoặc không phải JSON) cho danh sách rỗng, được ghi một dòng log và không làm hỏng menu. Chỉ app có mục menu cho vai trò đó mới được gọi `feed`. Phản hồi:
+**Nguồn app con `feed`** (từ v1.12.0). App khai `feed: /feed` có thể tự sinh ra các "app con" cho từng người dùng, ví dụ sổ do trưởng HTX tự tạo. Web gọi `GET /apps/<id><feed>` kèm token của người dùng (`authorization: Bearer ...`, `accept: application/json`), chờ tối đa 1,5 giây, chỉ đọc thân khi mã là 200 và thân không quá 64 KB, rồi nhớ kết quả 15 giây cho mỗi bộ (app, HTX, vai trò). Mọi lỗi (quá hạn, mã khác 200, thân quá lớn hoặc không phải JSON) cho danh sách rỗng, được ghi một dòng log, không làm hỏng menu và được nhớ 5 giây (trong lúc đó web không gọi lại, để app đang hỏng không làm chậm mọi lần mở trang). Chỉ app có mục menu cho vai trò đó mới được gọi `feed`. Phản hồi:
 
 ```json
 {"entries": [{"label": "Sổ thu mua", "path": "/books/1", "icon": "leaf", "description": "Ghi chép thu mua"}],

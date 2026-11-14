@@ -108,12 +108,23 @@ describe('createFeedLoader', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(4)
   })
 
-  test('a failure is empty, logged once and not cached', async () => {
+  test('a failure is empty, logged once and remembered for 5 seconds', async () => {
     const fetchImpl = jest.fn().mockRejectedValueOnce(new Error('down')).mockImplementation(async () => new Response(body))
     const { load } = setup(fetchImpl)
     expect(await load(app, 'manager', 'TC')).toEqual({ entries: [], create: null })
     expect(logError).toHaveBeenCalledTimes(1)
+    time += 4_999
+    expect(await load(app, 'manager', 'TC')).toEqual({ entries: [], create: null })
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    expect(logError).toHaveBeenCalledTimes(1)
+    // another role or HTX is its own key and tries at once
+    expect((await load(app, 'officer', 'TC')).entries).toHaveLength(1)
+    time += 2
     expect((await load(app, 'manager', 'TC')).entries).toHaveLength(1)
+    expect(fetchImpl).toHaveBeenCalledTimes(3)
+    time += 14_999
+    await load(app, 'manager', 'TC')
+    expect(fetchImpl).toHaveBeenCalledTimes(3)
   })
 
   test('times out', async () => {
