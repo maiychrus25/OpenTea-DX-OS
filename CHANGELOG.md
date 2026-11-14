@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.12.0] - 2026-11-14
+
+The `v1.11.0` tag has no GitHub Release, images or bundle: its release run failed twice on a race in a browser test (the test typed into a frame that was still navigating), fixed here. `v1.12.0` contains everything in 1.11.0.
+
 ### Added
 
 - **Manifest `feed`** (`platform/apps/manifest.schema.json`, `dxos validate`): an app may name a protected path that returns, for the calling user, a JSON list of sub-apps (`entries` and an optional `create` link). The web menu shows them after the app's own items in each role's sidebar, and the App Store shows a section "Ứng dụng do HTX tự tạo". The web validates the feed (30 entries, label 60, path `^/[a-z0-9_-]+(/[a-z0-9_-]+)*$`, icon allowlist, 64 KB, 1.5 s, cached 15 s) and a broken feed leaves the menu intact. `GET /api/app-store` gains `created`. The icon map moved to `lib/apps/app-icons.tsx`. See `docs/miniapps.md`.
@@ -512,7 +518,8 @@ The `v1.8.0` tag has no GitHub Release, images or bundle: the release workflow's
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.12.0...HEAD
+[1.12.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.12.0
 [1.11.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.11.0
 [1.10.1]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.1
 [1.10.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.0
