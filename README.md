@@ -142,6 +142,28 @@ flowchart TB
 
 Các bước thiết lập bổ sung (bucket S3, import n8n workflows, Ollama model) và tài khoản mặc định xem tại **[Hướng dẫn cài đặt môi trường phát triển](./docs/dev-setup.md)**.
 
+### Chạy stack nhỏ hơn khi máy ít RAM
+
+Stack đầy đủ có 16 container và dùng khoảng 3,6 GiB RAM. Khi chỉ cần đăng nhập, bảng điều khiển, Kho ứng dụng và các mini-app, chạy phần lõi và tắt các nhóm tuỳ chọn:
+
+```bash
+make platform-up   # một lần đầu (khởi tạo và migrate cơ sở dữ liệu), rồi:
+make up-core       # postgres, keycloak, hasura, apisix, web
+make stop-extras   # dừng (không xoá) mọi nhóm tuỳ chọn; dữ liệu và volume còn nguyên
+```
+
+| Lệnh bật lại | Container | Khi tắt nhóm này | RAM xấp xỉ |
+| --- | --- | --- | --- |
+| `make up-core` | postgres, keycloak, hasura, apisix, web | Không tắt được: thiếu thì không đăng nhập được | khoảng 0,75 GiB (Keycloak giới hạn heap 512 MB) |
+| `make up-docs` | seaweedfs, clamav, dxos-scanner, dxos-lifecycle | Kho tài liệu P.A.R.A mở được nhưng tải lên báo "Không thể tạo URL tải lên" (có nút Thử lại); ảnh nhật ký và chứng nhận không tải được | 1,2–1,4 GiB (ClamAV chiếm phần lớn) |
+| `make up-sensors` | mosquitto, dxos-ingest | Dữ liệu cảm biến không được nhận; các trang vẫn mở, không có số đo mới | khoảng 40 MiB |
+| `make up-ai` | disease-api, ollama | Chẩn đoán bệnh báo "Internal server error" khi gửi ảnh; Chatbot trả lời "Dịch vụ AI hiện không khả dụng" | 0,4–1,0 GiB (ollama thêm khoảng 0,6 GiB khi đã nạp mô hình) |
+| `make up-voice` | piper | Không có giọng đọc cho bản tin | khoảng 40 MiB |
+| `make up-workflow` | n8n | Các workflow (báo cáo thị trường, đẩy sự kiện) không chạy; các trang vẫn mở | khoảng 0,4 GiB |
+| `make up-chat` | mattermost | Không nhận được thông báo đẩy sang Mattermost (không có build arm64, chỉ chạy trên máy x86) | chưa đo |
+
+Mini-app cài bằng `./dxos` là các container riêng, mỗi cái khoảng 50 MB, vẫn chạy khi bạn dừng các nhóm trên. Các số RAM là số đo `docker stats` trên một máy phát triển và thay đổi theo tải.
+
 ## 🧱 Tier 1: Nền tảng lõi (Headless Core)
 
 Tier 1 gồm PostgreSQL (PostGIS, pgvector), SeaweedFS S3, Keycloak, Hasura (chỉ đọc, phân quyền theo `htx_code`), n8n, cổng API APISIX, ClamAV và `dxos-scanner` (kiểm dịch file), cùng Mosquitto (MQTT), `dxos-ingest`, `dxos-lifecycle` (kho lạnh Parquet) và Ollama (LLM nội bộ).
