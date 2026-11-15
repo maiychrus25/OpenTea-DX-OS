@@ -1,0 +1,33 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 OpenTea Developers -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Đồi chè">
+  <defs>
+    <linearGradient id="sky-crafting" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2c48d"/><stop offset="1" stop-color="#fbe7c3"/></linearGradient>
+    <radialGradient id="glow-crafting" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffe9b8" stop-opacity="0.9"/><stop offset="1" stop-color="#ffe9b8" stop-opacity="0"/></radialGradient>
+    <linearGradient id="mist-crafting" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.55"/></linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#sky-crafting)"/>
+  <circle cx="160" cy="150" r="150" fill="url(#glow-crafting)"/>
+  <circle cx="160" cy="150" r="46" fill="#ffd98a"/>
+  <path d="M60 120 q22 -18 44 0 q22 -18 44 0 q-22 10 -44 10 q-22 0 -44 -10z" fill="#ffffff" fill-opacity="0.7"/>
+  <path d="M330 80 q18 -14 36 0 q18 -14 36 0 q-18 8 -36 8 q-18 0 -36 -8z" fill="#ffffff" fill-opacity="0.55"/>
+  <path d="M0 330 C 120 270 240 300 360 270 C 500 235 640 290 800 250 L800 600 L0 600Z" fill="#a9b27a"/>
+  <rect x="0" y="250" width="800" height="120" fill="url(#mist-crafting)"/>
+  <path d="M0 400 C 140 330 280 360 420 330 C 560 300 680 350 800 320 L800 600 L0 600Z" fill="#5e9a58"/>
+  <g>
+    <path d="M-20 412 Q 400 302 820 442" fill="none" stroke="#1d5a37" stroke-width="2.0" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 430 Q 400 320 820 460" fill="none" stroke="#1d5a37" stroke-width="2.6" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 448 Q 400 338 820 478" fill="none" stroke="#1d5a37" stroke-width="3.2" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 466 Q 400 356 820 496" fill="none" stroke="#1d5a37" stroke-width="3.8" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 484 Q 400 374 820 514" fill="none" stroke="#1d5a37" stroke-width="4.4" stroke-opacity="0.28" stroke-linecap="round"/>
+  </g>
+  <path d="M0 500 C 160 440 320 470 480 440 C 620 414 720 450 800 430 L800 600 L0 600Z" fill="#2d7449"/>
+  <g>
+    <path d="M-20 510 Q 400 410 820 540" fill="none" stroke="#0c4a2c" stroke-width="2.0" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 534 Q 400 434 820 564" fill="none" stroke="#0c4a2c" stroke-width="2.6" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 558 Q 400 458 820 588" fill="none" stroke="#0c4a2c" stroke-width="3.2" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 582 Q 400 482 820 612" fill="none" stroke="#0c4a2c" stroke-width="3.8" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 606 Q 400 506 820 636" fill="none" stroke="#0c4a2c" stroke-width="4.4" stroke-opacity="0.35" stroke-linecap="round"/>
+  </g>
+  <g><ellipse cx="400" cy="548" rx="190" ry="16" fill="#0c3a24" fill-opacity="0.35"/><path d="M335 540 C 350 500 375 486 400 486 C 425 486 450 500 465 540 C 440 520 360 520 335 540Z" fill="#e8742a"/><path d="M365 538 C 372 508 390 498 400 498 C 410 498 428 508 435 538Z" fill="#ffc447"/><path d="M385 536 C 390 516 396 510 400 508 C 404 510 410 516 415 536Z" fill="#fff0a0"/><path d="M250 470 C 250 420 310 392 400 392 C 490 392 550 420 550 470 C 520 486 280 486 250 470Z" fill="#2c2f33"/><ellipse cx="400" cy="440" rx="150" ry="26" fill="#3a3f45"/><ellipse cx="400" cy="440" rx="132" ry="19" fill="#6a8f3d"/><path d="M300 436 q22 -10 44 0 q22 10 44 0 q22 -10 44 0 q22 10 44 0" fill="none" stroke="#9bd36a" stroke-width="6" stroke-linecap="round"/><rect x="545" y="452" width="86" height="10" rx="5" fill="#8a5f1f" transform="rotate(-12 545 452)"/><path d="M330 380 C 310 350 350 336 330 304 C 316 280 340 266 338 248" fill="none" stroke="#ffffff" stroke-opacity="0.75" stroke-width="10" stroke-linecap="round"/><path d="M400 372 C 380 342 420 326 400 294 C 386 270 410 256 408 236" fill="none" stroke="#ffffff" stroke-opacity="0.8" stroke-width="10" stroke-linecap="round"/><path d="M470 380 C 450 352 490 338 470 308 C 458 286 480 272 478 256" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="10" stroke-linecap="round"/></g><g><ellipse cx="165" cy="520" rx="95" ry="26" fill="#d9ad5a"/><ellipse cx="165" cy="512" rx="84" ry="19" fill="#e9c97a"/><path d="M110 510 q16 -16 32 0 q16 -12 32 0 q16 -14 32 2" fill="#8fc05a"/></g>
+</svg>

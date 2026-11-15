@@ -1,0 +1,145 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "site/layout.html" %}
+{% import "icons.html" as icons %}
+{% import "site/macros.html" as m with context %}
+{% set book_href = site_href(htx, '/tours/' ~ tour.slug ~ '/book', theme, departure=next_open.id if next_open else None) %}
+{% block title %}{{ tour.title }}{% endblock %}
+{% block main_class %}page-tour{% endblock %}
+{% block main %}
+<div class="container">
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{{ site_href(htx, '/', theme) }}">Trang chủ</a> {{ icons.chevron_right(14) }} <a href="{{ site_href(htx, '/tours', theme) }}">Tour</a> {{ icons.chevron_right(14) }} <span>{{ tour.title }}</span></nav>
+  <div class="tour-layout">
+    <article class="tour-main">
+      <header class="tour-head">
+        <p class="eyebrow">{{ categories.get(tour.category, "Tour") }}</p>
+        <h1>{{ tour.title }}</h1>
+        {% if tour.summary %}<p class="lead">{{ tour.summary }}</p>{% endif %}
+        <ul class="meta-row meta-row-large">
+          <li>{{ icons.clock(18) }} {{ duration_label(tour.duration_minutes) }}</li>
+          <li>{{ icons.map_pin(18) }} {{ tour.meeting_point or "Điểm hẹn sẽ báo khi đặt" }}</li>
+          {% if review_count %}<li class="rating">{{ icons.star(18, "icon star on") }} <strong>{{ rating_text(average) }}</strong> <span>{{ review_count }} đánh giá</span></li>{% endif %}
+        </ul>
+      </header>
+
+      <div class="gallery" aria-label="Ảnh của tour">
+        <div class="gallery-strip">
+          {% if photos %}{% for photo in photos %}
+          <figure id="photo-{{ loop.index }}">{{ m.cover(photo.id, tour.category, tour.title ~ ", ảnh " ~ loop.index, "large", loop.first) }}</figure>
+          {% endfor %}{% else %}
+          <figure id="photo-1">{{ m.cover(None, tour.category, tour.title, "large", True) }}</figure>
+          {% endif %}
+        </div>
+        {% if photos|length > 1 %}
+        <nav class="gallery-thumbs" aria-label="Chọn ảnh">
+          {% for photo in photos %}<a href="#photo-{{ loop.index }}"><img src="{{ photo_url(htx, photo.id, 'thumb') }}" alt="Xem ảnh {{ loop.index }}" loading="lazy" decoding="async"></a>{% endfor %}
+        </nav>
+        {% endif %}
+      </div>
+
+      {% if tour.description %}
+      <section class="block" id="about"><h2>Về chuyến đi</h2><div class="prose">{{ tour.description }}</div></section>
+      {% endif %}
+
+      {% if tour.itinerary %}
+      <section class="block" id="itinerary"><h2>Lịch trình</h2>
+        <ol class="timeline">
+          {% for step in tour.itinerary %}
+          <li><span class="timeline-time">{{ step.time }}</span><div><h3>{{ step.title }}</h3>{% if step.detail %}<p>{{ step.detail }}</p>{% endif %}</div></li>
+          {% endfor %}
+        </ol>
+      </section>
+      {% endif %}
+
+      {% if tour.includes or tour.excludes %}
+      <section class="block" id="included"><h2>Bao gồm và không bao gồm</h2>
+        <div class="include-grid">
+          {% if tour.includes %}<div><h3>Bao gồm</h3><ul class="tick-list">{% for line in tour.includes %}<li>{{ icons.circle_check(20, "icon yes") }} <span>{{ line }}</span></li>{% endfor %}</ul></div>{% endif %}
+          {% if tour.excludes %}<div><h3>Không bao gồm</h3><ul class="tick-list">{% for line in tour.excludes %}<li>{{ icons.circle_x(20, "icon no") }} <span>{{ line }}</span></li>{% endfor %}</ul></div>{% endif %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if tour.bring %}
+      <section class="block" id="bring"><h2>Cần mang theo</h2>
+        <ul class="tick-list">{% for line in tour.bring %}<li>{{ icons.check(20, "icon yes") }} <span>{{ line }}</span></li>{% endfor %}</ul>
+      </section>
+      {% endif %}
+
+      <section class="block" id="meeting"><h2>Điểm hẹn</h2>
+        <p class="meeting">{{ icons.map_pin(20) }} <span>{{ tour.meeting_point or "HTX sẽ báo điểm hẹn khi xác nhận lượt đặt." }}</span></p>
+        {% if tour.map_url %}<p><a class="link-arrow" href="{{ tour.map_url }}" target="_blank" rel="noopener noreferrer">Xem bản đồ {{ icons.external_link(14) }}</a></p>{% endif %}
+      </section>
+
+      <section class="block" id="departures"><h2>Chuyến sắp tới</h2>
+        {% if departures %}
+        <ul class="departure-list">
+          {% for d in departures %}
+          <li class="departure{% if not d.bookable %} is-unavailable{% endif %}">
+            <div class="departure-when"><strong>{{ short_day(d.starts_at) }}</strong><span>{{ time_label(d.starts_at) }}</span></div>
+            <div class="departure-info">
+              <span>{{ day_label(d.starts_at) }}</span>
+              {% if d.guide_name %}<span class="muted">{{ icons.user(14) }} Người dẫn: {{ d.guide_name }}</span>{% endif %}
+              <span class="price-line">{{ d.price_adult_vnd|vnd }} / người lớn · {{ d.price_child_vnd|vnd }} / trẻ em</span>
+            </div>
+            <div class="departure-action">
+              {% if d.bookable %}
+              <span class="seats{% if d.seats_left <= 3 %} low{% endif %}">Còn {{ d.seats_left }} chỗ</span>
+              <a class="button button-primary" href="{{ site_href(htx, '/tours/' ~ tour.slug ~ '/book', theme, departure=d.id) }}">Chọn chuyến</a>
+              {% elif d.status == 'CLOSED' %}<span class="seats none">Đã đóng đặt chỗ</span>
+              {% else %}<span class="seats none">Hết chỗ</span>{% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state compact">{{ icons.calendar(28) }}<h3>Chưa có chuyến sắp tới</h3>
+          <p>HTX chưa mở lịch cho tour này. Gửi yêu cầu để được báo khi có chuyến hoặc đặt riêng cho đoàn của bạn.</p>
+          <a class="button button-secondary" href="{{ site_href(htx, '/inquiry', theme) }}">Gửi yêu cầu tour riêng</a></div>
+        {% endif %}
+      </section>
+
+      <section class="block" id="reviews"><h2>Đánh giá của khách</h2>
+        {% if reviews %}
+        <p class="rating-summary">{{ m.stars(average, 20) }} <strong>{{ rating_text(average) }}</strong> <span>{{ review_count }} đánh giá</span></p>
+        <div class="review-grid">{% for item in reviews %}{{ m.review_card(item) }}{% endfor %}</div>
+        {% else %}<p class="empty-note">Chưa có đánh giá cho tour này.</p>{% endif %}
+      </section>
+
+      {% if tour.faq %}
+      <section class="block" id="faq"><h2>Câu hỏi thường gặp</h2>
+        <div class="faq">{% for item in tour.faq %}<details><summary>{{ item.q }}</summary><p>{{ item.a }}</p></details>{% endfor %}</div>
+      </section>
+      {% endif %}
+
+      <section class="block" id="policy"><h2>Chính sách huỷ</h2>
+        <p>Huỷ miễn phí trước giờ khởi hành <strong>{{ site.cancel_free_hours }} giờ</strong>.{% if site.deposit_percent %} Đặt cọc {{ site.deposit_percent }}% để giữ chỗ trong {{ site.hold_hours }} giờ.{% endif %}
+          <a href="{{ site_href(htx, '/policy', theme) }}">Xem chính sách đầy đủ</a>.</p>
+      </section>
+    </article>
+
+    <aside class="booking-card" aria-label="Đặt tour">
+      <p class="booking-from">Giá từ</p>
+      <p class="booking-price"><strong>{{ price_from|vnd }}</strong> <span>/ người lớn</span></p>
+      <p class="booking-sub">Trẻ em {{ tour.price_child_vnd|vnd }} · {{ duration_label(tour.duration_minutes) }}</p>
+      {% if next_open %}
+      <div class="booking-next">{{ icons.calendar(18) }} <span><small>Chuyến gần nhất</small>{{ day_label(next_open.starts_at) }}, {{ time_label(next_open.starts_at) }}<br><span class="seats{% if next_open.seats_left <= 3 %} low{% endif %}">Còn {{ next_open.seats_left }} chỗ</span></span></div>
+      <a class="button button-primary button-large button-block" href="{{ book_href }}">Đặt tour {{ icons.arrow_right(18) }}</a>
+      <a class="button button-secondary button-block" href="#departures">Xem tất cả chuyến</a>
+      {% else %}
+      <p class="booking-none">Hiện chưa có chuyến nào còn chỗ.</p>
+      <a class="button button-primary button-large button-block" href="{{ site_href(htx, '/inquiry', theme) }}">Gửi yêu cầu tour riêng</a>
+      {% endif %}
+      <ul class="booking-points">
+        <li>{{ icons.shield_check(18) }} Huỷ miễn phí trước {{ site.cancel_free_hours }} giờ</li>
+        <li>{{ icons.qr_code(18) }} Thanh toán VietQR, nhận vé có mã QR</li>
+        {% if site.hotline %}<li>{{ icons.phone(18) }} <a href="{{ tel_href(site.hotline) }}">{{ site.hotline }}</a></li>{% endif %}
+      </ul>
+    </aside>
+  </div>
+</div>
+<div class="mobile-bar">
+  <p><small>Giá từ</small><strong>{{ price_from|vnd }}</strong></p>
+  {% if next_open %}<a class="button button-primary" href="#departures">Chọn ngày</a>{% else %}<a class="button button-primary" href="{{ site_href(htx, '/inquiry', theme) }}">Tour riêng</a>{% endif %}
+</div>
+{% endblock %}

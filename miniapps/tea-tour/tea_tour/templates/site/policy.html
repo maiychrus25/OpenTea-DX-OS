@@ -1,0 +1,25 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "site/layout.html" %}
+{% import "icons.html" as icons %}
+{% block title %}Chính sách đặt cọc và huỷ{% endblock %}
+{% block main_class %}page-narrow{% endblock %}
+{% block main %}
+<div class="container narrow">
+  <div class="form-card">
+    <p class="eyebrow">{{ icons.shield_check(16) }} Chính sách</p>
+    <h1>Đặt cọc, huỷ và hoàn tiền</h1>
+    <ul class="policy-list">
+      <li>{{ icons.wallet(22) }}<div><h2>Đặt cọc</h2>
+        <p>{% if site.deposit_percent %}Bạn chuyển <strong>{{ site.deposit_percent }}%</strong> tổng tiền để giữ chỗ, phần còn lại thanh toán khi đi tour.{% else %}Không cần đặt cọc. HTX sẽ gọi xác nhận lượt đặt của bạn.{% endif %}</p></div></li>
+      {% if site.deposit_percent %}<li>{{ icons.hourglass(22) }}<div><h2>Giữ chỗ</h2>
+        <p>Chỗ được giữ trong <strong>{{ site.hold_hours }} giờ</strong> (hoặc tới giờ khởi hành nếu chuyến sớm hơn). Quá hạn mà chưa nhận được tiền cọc, lượt đặt tự huỷ và chỗ được nhả cho khách khác.</p></div></li>{% endif %}
+      <li>{{ icons.calendar(22) }}<div><h2>Huỷ miễn phí</h2>
+        <p>Bạn tự huỷ miễn phí trên trang lượt đặt trước giờ khởi hành <strong>{{ site.cancel_free_hours }} giờ</strong>. Sau thời hạn này, vui lòng gọi {% if site.hotline %}<a href="{{ tel_href(site.hotline) }}">{{ site.hotline }}</a>{% else %}HTX{% endif %} để được xử lý.</p></div></li>
+      <li>{{ icons.banknote(22) }}<div><h2>Hoàn tiền</h2>
+        <p>Lượt đã huỷ mà bạn đã chuyển tiền sẽ được HTX hoàn lại. HTX cũng hoàn tiền nếu chính HTX huỷ chuyến.</p></div></li>
+    </ul>
+    {% if site.policy_text %}<h2>Quy định của HTX</h2><div class="prose">{{ site.policy_text }}</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

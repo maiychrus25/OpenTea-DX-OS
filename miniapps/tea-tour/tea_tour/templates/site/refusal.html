@@ -1,0 +1,19 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "site/layout.html" %}
+{% import "icons.html" as icons %}
+{% block title %}Chưa thực hiện được{% endblock %}
+{% block main_class %}page-narrow{% endblock %}
+{% block main %}
+<div class="container narrow">
+  <div class="form-card center">
+    {{ icons.triangle_alert(40, "icon icon-warning") }}
+    <h1>Chưa thực hiện được</h1>
+    <p class="lead" role="alert">{{ message }}</p>
+    <div class="form-actions center">
+      {% if back_href %}<a class="button button-primary" href="{{ back_href }}">{{ back_label }}</a>{% endif %}
+      <a class="button button-secondary" href="{{ site_href(htx, '/', theme) }}">Về trang chủ</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

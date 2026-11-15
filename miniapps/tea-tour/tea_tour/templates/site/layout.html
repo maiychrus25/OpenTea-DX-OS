@@ -1,0 +1,58 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Page frame of the customer site: sticky header, main, footer. Pages set the title block and fill main (and may set main_class). -#}
+{% extends "site/base.html" %}
+{% import "icons.html" as icons %}
+{% set site = site if site is defined else {} %}
+{% block title_suffix %} · {{ site.display_name or "Tour đồi chè" }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('site.css') }}">{% endblock %}
+{% block body %}<a class="skip-link" href="#main">Bỏ qua tới nội dung</a>
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="{{ site_href(htx, '/', theme) }}">
+      <span class="brand-mark">{{ icons.leaf(22) }}</span>
+      <span class="brand-name">{{ site.display_name or "Tour đồi chè" }}</span>
+    </a>
+    <nav class="nav-desktop" aria-label="Điều hướng chính">
+      <a href="{{ site_href(htx, '/tours', theme) }}">Tour</a>
+      <a href="{{ site_href(htx, '/booking', theme) }}">Tra cứu</a>
+      <a href="{{ site_href(htx, '/inquiry', theme) }}">Tour riêng</a>
+    </nav>
+    <a class="button button-primary header-cta" href="{{ site_href(htx, '/tours', theme) }}">Đặt tour</a>
+    <details class="nav-mobile">
+      <summary aria-label="Mở menu">{{ icons.menu(24) }}</summary>
+      <nav aria-label="Điều hướng chính trên điện thoại">
+        <a href="{{ site_href(htx, '/tours', theme) }}">Tour</a>
+        <a href="{{ site_href(htx, '/booking', theme) }}">Tra cứu lượt đặt</a>
+        <a href="{{ site_href(htx, '/inquiry', theme) }}">Yêu cầu tour riêng</a>
+        <a href="{{ site_href(htx, '/policy', theme) }}">Chính sách</a>
+        {% if site.hotline %}<a href="{{ tel_href(site.hotline) }}">Gọi {{ site.hotline }}</a>{% endif %}
+      </nav>
+    </details>
+  </div>
+</header>
+<main id="main">
+<div class="{% block main_class %}{% endblock %}">
+{% block main %}{% endblock %}
+</div>
+</main>
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div>
+      <p class="footer-brand">{{ icons.leaf(20) }} {{ site.display_name or "Tour đồi chè" }}</p>
+      {% if site.tagline %}<p class="footer-note">{{ site.tagline }}</p>{% endif %}
+      {% if site.address %}<p class="footer-note">{{ icons.map_pin(16) }} {{ site.address }}</p>{% endif %}
+    </div>
+    <nav aria-label="Liên kết chân trang">
+      <a href="{{ site_href(htx, '/tours', theme) }}">Tất cả tour</a>
+      <a href="{{ site_href(htx, '/booking', theme) }}">Tra cứu lượt đặt</a>
+      <a href="{{ site_href(htx, '/inquiry', theme) }}">Yêu cầu tour riêng</a>
+      <a href="{{ site_href(htx, '/policy', theme) }}">Chính sách đặt cọc và huỷ</a>
+    </nav>
+    <div>
+      {% if site.hotline %}<p class="footer-note">{{ icons.phone(16) }} <a href="{{ tel_href(site.hotline) }}">{{ site.hotline }}</a></p>{% endif %}
+      {% if site.email %}<p class="footer-note">{{ icons.mail(16) }} <a href="mailto:{{ site.email }}">{{ site.email }}</a></p>{% endif %}
+    </div>
+  </div>
+  <p class="container footer-legal">Trang đặt tour của {{ site.display_name or "hợp tác xã" }}. Thanh toán bằng chuyển khoản VietQR.</p>
+</footer>{% endblock %}

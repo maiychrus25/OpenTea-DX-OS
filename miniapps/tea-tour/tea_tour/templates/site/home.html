@@ -1,0 +1,97 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "site/layout.html" %}
+{% import "icons.html" as icons %}
+{% import "site/macros.html" as m with context %}
+{% block title %}{{ site.display_name or "Tour đồi chè" }}{% endblock %}
+{% block title_suffix %}{% endblock %}
+{% block main_class %}page-home{% endblock %}
+{% block main %}
+<section class="hero">
+  <div class="hero-media">
+    {% if site.cover_media_id %}<img src="{{ photo_url(htx, site.cover_media_id, 'large') }}" alt="" decoding="async">
+    {% else %}<img class="illustration" src="{{ asset_url('illustrations/picking.svg') }}" alt="" decoding="async">{% endif %}
+  </div>
+  <div class="container hero-inner">
+    <p class="eyebrow">{{ icons.leaf(16) }} Trải nghiệm đồi chè</p>
+    <h1 class="display">{{ site.display_name or "Tour đồi chè" }}</h1>
+    <p class="lead">{{ site.tagline or "Hái chè, sao chè và thưởng trà ngay trên đồi, cùng người làm chè." }}</p>
+    <div class="hero-actions">
+      <a class="button button-primary button-large" href="{{ site_href(htx, '/tours', theme) }}">Xem các tour {{ icons.arrow_right(18) }}</a>
+      <a class="button button-glass button-large" href="{{ site_href(htx, '/booking', theme) }}">Tra cứu lượt đặt</a>
+    </div>
+    <ul class="hero-facts">
+      <li>{{ icons.users(18) }} Đoàn nhỏ, người dẫn là nông hộ</li>
+      <li>{{ icons.shield_check(18) }} {% if site.deposit_percent %}Cọc {{ site.deposit_percent }}% giữ chỗ{% else %}Không cần đặt cọc{% endif %}</li>
+      <li>{{ icons.qr_code(18) }} Thanh toán VietQR</li>
+    </ul>
+  </div>
+</section>
+
+{% if site.intro %}
+<section class="section section-intro">
+  <div class="container narrow">
+    <p class="eyebrow">Về chúng tôi</p>
+    <p class="intro-text">{{ site.intro }}</p>
+  </div>
+</section>
+{% endif %}
+
+<section class="section" id="tours">
+  <div class="container">
+    <div class="section-head">
+      <div><p class="eyebrow">Tour nổi bật</p><h2>Chọn một ngày trên đồi chè</h2></div>
+      <a class="link-arrow" href="{{ site_href(htx, '/tours', theme) }}">Tất cả tour {{ icons.arrow_right(16) }}</a>
+    </div>
+    {% if cards %}
+    <div class="card-grid">{% for card in cards %}{{ m.tour_card(card) }}{% endfor %}</div>
+    {% else %}
+    <div class="empty-state">
+      {{ icons.leaf(32) }}
+      <h3>Chưa có tour nào đang mở bán</h3>
+      <p>HTX sẽ sớm cập nhật. Bạn có thể gửi yêu cầu tour riêng để được tư vấn ngay.</p>
+      <a class="button button-primary" href="{{ site_href(htx, '/inquiry', theme) }}">Gửi yêu cầu tour riêng</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="section section-tinted">
+  <div class="container">
+    <div class="section-head"><div><p class="eyebrow">Cách đặt</p><h2>Đặt tour trong 3 bước</h2></div></div>
+    <ol class="how-steps">
+      <li><span class="how-number">1</span><h3>Chọn tour và ngày</h3><p>Xem lịch trình, giá và số chỗ còn lại của từng chuyến.</p></li>
+      <li><span class="how-number">2</span><h3>Điền thông tin, đặt cọc</h3><p>Kiểm tra tổng tiền rồi chuyển khoản bằng mã VietQR{% if site.deposit_percent %} (cọc {{ site.deposit_percent }}%){% endif %}.</p></li>
+      <li><span class="how-number">3</span><h3>Nhận vé và lên đồi</h3><p>HTX xác nhận, bạn lưu vé có mã QR và gặp người dẫn đúng giờ.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head"><div><p class="eyebrow">Khách nói gì</p><h2>Đánh giá mới</h2></div></div>
+    {% if reviews %}<div class="review-grid">{% for item in reviews %}{{ m.review_card(item) }}{% endfor %}</div>
+    {% else %}<p class="empty-note">Chưa có đánh giá nào. Hãy là người đầu tiên đi tour và chia sẻ cảm nhận.</p>{% endif %}
+  </div>
+</section>
+
+<section class="section section-contact" id="contact">
+  <div class="container">
+    <div class="contact-card">
+      <div>
+        <p class="eyebrow">Liên hệ</p>
+        <h2>Cần tư vấn thêm?</h2>
+        <p>Gọi hoặc nhắn cho HTX, chúng tôi trả lời trong giờ làm việc.</p>
+        <a class="button button-primary" href="{{ site_href(htx, '/inquiry', theme) }}">Gửi yêu cầu tour riêng</a>
+      </div>
+      <ul class="contact-list">
+        {% if site.hotline %}<li>{{ icons.phone(20) }}<span><small>Đường dây nóng</small><a href="{{ tel_href(site.hotline) }}">{{ site.hotline }}</a></span></li>{% endif %}
+        {% if site.zalo %}<li>{{ icons.message_circle(20) }}<span><small>Zalo</small>{{ site.zalo }}</span></li>{% endif %}
+        {% if site.email %}<li>{{ icons.mail(20) }}<span><small>Email</small><a href="mailto:{{ site.email }}">{{ site.email }}</a></span></li>{% endif %}
+        {% if site.address %}<li>{{ icons.map_pin(20) }}<span><small>Địa chỉ</small>{{ site.address }}
+          {% if site.map_url %}<br><a href="{{ site.map_url }}" target="_blank" rel="noopener noreferrer">Mở bản đồ {{ icons.external_link(14) }}</a>{% endif %}</span></li>{% endif %}
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock %}

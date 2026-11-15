@@ -1,9 +1,19 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
-{% extends "site/base.html" %}
+{% extends "site/layout.html" %}
+{% import "icons.html" as icons %}
 {% block title %}Lỗi{% endblock %}
+{% block main_class %}page-narrow{% endblock %}
 {% block main %}
-<h1>Tour đồi chè</h1>
-<p role="alert">{{ message }}</p>
-{% if htx %}<p><a href="{{ site_href(htx, '/', theme) }}">Về trang chủ</a></p>{% endif %}
+<div class="container narrow">
+  <div class="form-card center">
+    {{ icons.leaf(40, "icon icon-muted") }}
+    <h1>Rất tiếc</h1>
+    <p class="lead" role="alert">{{ message }}</p>
+    <div class="form-actions center">
+      {% if htx %}<a class="button button-primary" href="{{ site_href(htx, '/', theme) }}">Về trang chủ</a>
+      <a class="button button-secondary" href="{{ site_href(htx, '/tours', theme) }}">Xem các tour</a>{% endif %}
+    </div>
+  </div>
+</div>
 {% endblock %}

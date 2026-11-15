@@ -1,0 +1,33 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 OpenTea Developers -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Đồi chè">
+  <defs>
+    <linearGradient id="sky-education" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9d3ee"/><stop offset="1" stop-color="#e8f4ea"/></linearGradient>
+    <radialGradient id="glow-education" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffffff" stop-opacity="0.9"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="mist-education" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.55"/></linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#sky-education)"/>
+  <circle cx="620" cy="130" r="150" fill="url(#glow-education)"/>
+  <circle cx="620" cy="130" r="46" fill="#fff6b8"/>
+  <path d="M60 120 q22 -18 44 0 q22 -18 44 0 q-22 10 -44 10 q-22 0 -44 -10z" fill="#ffffff" fill-opacity="0.7"/>
+  <path d="M330 80 q18 -14 36 0 q18 -14 36 0 q-18 8 -36 8 q-18 0 -36 -8z" fill="#ffffff" fill-opacity="0.55"/>
+  <path d="M0 330 C 120 270 240 300 360 270 C 500 235 640 290 800 250 L800 600 L0 600Z" fill="#86c0a0"/>
+  <rect x="0" y="250" width="800" height="120" fill="url(#mist-education)"/>
+  <path d="M0 400 C 140 330 280 360 420 330 C 560 300 680 350 800 320 L800 600 L0 600Z" fill="#47a06c"/>
+  <g>
+    <path d="M-20 412 Q 400 302 820 442" fill="none" stroke="#165a38" stroke-width="2.0" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 430 Q 400 320 820 460" fill="none" stroke="#165a38" stroke-width="2.6" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 448 Q 400 338 820 478" fill="none" stroke="#165a38" stroke-width="3.2" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 466 Q 400 356 820 496" fill="none" stroke="#165a38" stroke-width="3.8" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 484 Q 400 374 820 514" fill="none" stroke="#165a38" stroke-width="4.4" stroke-opacity="0.28" stroke-linecap="round"/>
+  </g>
+  <path d="M0 500 C 160 440 320 470 480 440 C 620 414 720 450 800 430 L800 600 L0 600Z" fill="#23784c"/>
+  <g>
+    <path d="M-20 510 Q 400 410 820 540" fill="none" stroke="#0c4a2c" stroke-width="2.0" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 534 Q 400 434 820 564" fill="none" stroke="#0c4a2c" stroke-width="2.6" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 558 Q 400 458 820 588" fill="none" stroke="#0c4a2c" stroke-width="3.2" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 582 Q 400 482 820 612" fill="none" stroke="#0c4a2c" stroke-width="3.8" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 606 Q 400 506 820 636" fill="none" stroke="#0c4a2c" stroke-width="4.4" stroke-opacity="0.35" stroke-linecap="round"/>
+  </g>
+  <g><ellipse cx="400" cy="548" rx="240" ry="16" fill="#0c3a24" fill-opacity="0.3"/><path d="M160 540 L 400 520 L 640 540 L 640 470 L 400 450 L 160 470Z" fill="#ffffff"/><path d="M400 450 L 400 520" stroke="#cfd8d2" stroke-width="4"/><path d="M160 470 L 400 450 L 400 436 C 330 420 230 424 150 446Z" fill="#f4f7f2"/><path d="M640 470 L 400 450 L 400 436 C 470 420 570 424 650 446Z" fill="#ffffff"/><path d="M190 480 L 370 466 M190 498 L 370 484 M190 516 L 370 502 M430 466 L 610 480 M430 484 L 610 498 M430 502 L 610 516" stroke="#b9c8be" stroke-width="4" stroke-linecap="round"/><path d="M400 440 C 396 380 404 340 400 300" fill="none" stroke="#3f9b4a" stroke-width="10" stroke-linecap="round"/><path d="M400 360 C 360 360 330 336 320 304 C 358 306 392 326 400 360Z" fill="#7cc04f"/><path d="M400 330 C 440 330 470 306 480 274 C 442 276 408 296 400 330Z" fill="#9bd36a"/><path d="M400 304 C 384 290 380 268 392 250 C 408 262 412 286 400 304Z" fill="#c6ec8a"/></g><g><rect x="90" y="400" width="6" height="108" fill="#6b4a22"/><path d="M96 404 H176 L158 424 L176 444 H96Z" fill="#e23d5a"/></g><g><rect x="660" y="430" width="90" height="68" fill="#f4efe2"/><path d="M648 432 L705 388 L762 432Z" fill="#a8452c"/><rect x="690" y="458" width="26" height="40" fill="#6b4a22"/><rect x="668" y="446" width="16" height="16" fill="#a9d3ee"/><rect x="726" y="446" width="16" height="16" fill="#a9d3ee"/></g>
+</svg>

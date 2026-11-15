@@ -1,0 +1,33 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 OpenTea Developers -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Đồi chè">
+  <defs>
+    <linearGradient id="sky-sightseeing" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6a98b"/><stop offset="1" stop-color="#fde5b8"/></linearGradient>
+    <radialGradient id="glow-sightseeing" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffe2b0" stop-opacity="0.9"/><stop offset="1" stop-color="#ffe2b0" stop-opacity="0"/></radialGradient>
+    <linearGradient id="mist-sightseeing" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.55"/></linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#sky-sightseeing)"/>
+  <circle cx="400" cy="300" r="150" fill="url(#glow-sightseeing)"/>
+  <circle cx="400" cy="300" r="46" fill="#fff1a6"/>
+  <path d="M60 120 q22 -18 44 0 q22 -18 44 0 q-22 10 -44 10 q-22 0 -44 -10z" fill="#ffffff" fill-opacity="0.7"/>
+  <path d="M330 80 q18 -14 36 0 q18 -14 36 0 q-18 8 -36 8 q-18 0 -36 -8z" fill="#ffffff" fill-opacity="0.55"/>
+  <path d="M0 330 C 120 270 240 300 360 270 C 500 235 640 290 800 250 L800 600 L0 600Z" fill="#8fb7a0"/>
+  <rect x="0" y="250" width="800" height="120" fill="url(#mist-sightseeing)"/>
+  <path d="M0 400 C 140 330 280 360 420 330 C 560 300 680 350 800 320 L800 600 L0 600Z" fill="#4f9a6c"/>
+  <g>
+    <path d="M-20 412 Q 400 302 820 442" fill="none" stroke="#195437" stroke-width="2.0" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 430 Q 400 320 820 460" fill="none" stroke="#195437" stroke-width="2.6" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 448 Q 400 338 820 478" fill="none" stroke="#195437" stroke-width="3.2" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 466 Q 400 356 820 496" fill="none" stroke="#195437" stroke-width="3.8" stroke-opacity="0.28" stroke-linecap="round"/>
+    <path d="M-20 484 Q 400 374 820 514" fill="none" stroke="#195437" stroke-width="4.4" stroke-opacity="0.28" stroke-linecap="round"/>
+  </g>
+  <path d="M0 500 C 160 440 320 470 480 440 C 620 414 720 450 800 430 L800 600 L0 600Z" fill="#26704a"/>
+  <g>
+    <path d="M-20 510 Q 400 410 820 540" fill="none" stroke="#0c4a2c" stroke-width="2.0" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 534 Q 400 434 820 564" fill="none" stroke="#0c4a2c" stroke-width="2.6" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 558 Q 400 458 820 588" fill="none" stroke="#0c4a2c" stroke-width="3.2" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 582 Q 400 482 820 612" fill="none" stroke="#0c4a2c" stroke-width="3.8" stroke-opacity="0.35" stroke-linecap="round"/>
+    <path d="M-20 606 Q 400 506 820 636" fill="none" stroke="#0c4a2c" stroke-width="4.4" stroke-opacity="0.35" stroke-linecap="round"/>
+  </g>
+  <g fill="none" stroke="#3f5e4b" stroke-width="4" stroke-linecap="round"><path d="M170 130 q14 -14 28 0 q14 -14 28 0"/><path d="M250 92 q10 -10 20 0 q10 -10 20 0"/><path d="M330 150 q8 -8 16 0 q8 -8 16 0"/></g><g><rect x="0" y="372" width="800" height="70" fill="url(#mist-sightseeing)"/><ellipse cx="400" cy="496" rx="300" ry="20" fill="#ffffff" fill-opacity="0.25"/></g><g><path d="M250 438 H430 V452 H250Z" fill="#7a4e21"/><rect x="262" y="452" width="10" height="46" fill="#5d3a16"/><rect x="408" y="452" width="10" height="46" fill="#5d3a16"/><rect x="266" y="370" width="8" height="70" fill="#7a4e21"/><rect x="406" y="370" width="8" height="70" fill="#7a4e21"/><path d="M236 372 L340 318 L444 372Z" fill="#a8452c"/><path d="M236 372 H444 V382 H236Z" fill="#7a2f1d"/><path d="M274 420 H406" stroke="#7a4e21" stroke-width="6"/></g><g><path d="M520 540 C 560 500 620 492 700 470" fill="none" stroke="#e9d6a4" stroke-width="22" stroke-linecap="round" stroke-opacity="0.8"/></g><g transform="translate(130 536) scale(1.0)"><path d="M0 0 C -6 -20 -24 -30 -34 -26 C -30 -10 -16 0 0 0Z" fill="#9bd36a"/><path d="M0 0 C 6 -22 24 -34 36 -30 C 32 -12 16 0 0 0Z" fill="#7cc04f"/><path d="M0 0 C -2 -28 2 -44 4 -52 C 12 -38 10 -16 0 0Z" fill="#c6ec8a"/></g><g transform="translate(740 540) scale(0.8)"><path d="M0 0 C -6 -20 -24 -30 -34 -26 C -30 -10 -16 0 0 0Z" fill="#9bd36a"/><path d="M0 0 C 6 -22 24 -34 36 -30 C 32 -12 16 0 0 0Z" fill="#7cc04f"/><path d="M0 0 C -2 -28 2 -44 4 -52 C 12 -38 10 -16 0 0Z" fill="#c6ec8a"/></g>
+</svg>

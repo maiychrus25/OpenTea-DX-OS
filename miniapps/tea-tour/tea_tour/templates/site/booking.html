@@ -1,0 +1,155 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "site/layout.html" %}
+{% import "icons.html" as icons %}
+{% import "site/macros.html" as m with context %}
+{% block title %}Lượt đặt {{ booking.code }}{% endblock %}
+{% block main_class %}page-booking{% endblock %}
+{% macro hidden() %}<input type="hidden" name="code" value="{{ booking.code }}"><input type="hidden" name="key" value="{{ booking.access_key }}">{% endmacro %}
+{% block main %}
+<div class="container">
+  {% if booked %}
+  <div class="banner banner-success" role="status">{{ icons.circle_check(24) }}
+    <div><strong>Đặt chỗ thành công!</strong>
+    <p>Hãy lưu lại trang này: đường dẫn của trang chính là chìa khoá xem lượt đặt, đừng chia sẻ cho người lạ. Nếu quên, bạn có thể <a href="{{ site_href(htx, '/booking', theme) }}">tra cứu bằng mã đặt chỗ và số điện thoại</a>.</p></div></div>
+  {% endif %}
+  {% if reviewed %}<div class="banner banner-success" role="status">{{ icons.circle_check(24) }}<div><strong>Cảm ơn bạn đã đánh giá.</strong><p>Đánh giá sẽ hiện trên trang sau khi HTX duyệt.</p></div></div>{% endif %}
+
+  <header class="booking-head">
+    <div>
+      <p class="eyebrow">Lượt đặt của {{ booking.guest_name }}</p>
+      <h1>Mã đặt chỗ <span class="code">{{ booking.code }}</span></h1>
+      <p class="lead">{{ trip.tour_title }}</p>
+    </div>
+    <span class="status-pill tone-{{ status_tone }}">{{ status_label }}</span>
+  </header>
+
+  {% if booking.status == 'CANCELLED' %}
+  <div class="banner banner-danger" role="status">{{ icons.circle_x(24) }}
+    <div><strong>Lượt đặt đã huỷ</strong>
+    {% if booking.cancel_reason %}<p>Lý do: {{ booking.cancel_reason }}.</p>{% endif %}
+    {% if booking.refund_due_vnd %}<p>HTX sẽ hoàn lại <strong>{{ booking.refund_due_vnd|vnd }}</strong> bạn đã chuyển. Liên hệ {% if site.hotline %}<a href="{{ tel_href(site.hotline) }}">{{ site.hotline }}</a>{% else %}HTX{% endif %} nếu cần hỗ trợ.</p>{% endif %}
+    <p><a href="{{ site_href(htx, '/tours/' ~ trip.tour_slug, theme) }}">Đặt chuyến khác</a></p></div></div>
+  {% else %}
+  <ol class="timeline-h" aria-label="Tiến trình lượt đặt">
+    {% for step in timeline %}<li data-state="{{ step.state }}"{% if step.state == 'current' %} aria-current="step"{% endif %}><span class="step-dot">{% if step.state == 'done' %}{{ icons.check(14) }}{% else %}{{ loop.index }}{% endif %}</span><span class="step-label">{{ step.label }}</span></li>{% endfor %}
+  </ol>
+  {% endif %}
+
+  <div class="booking-layout">
+    <div class="booking-main">
+      <section class="card">
+        <h2>Chuyến đi</h2>
+        <dl class="detail-list">
+          <div><dt>{{ icons.calendar(16) }} Khởi hành</dt><dd>{{ day_label(booking.starts_at) }}, {{ time_label(booking.starts_at) }}</dd></div>
+          <div><dt>{{ icons.map_pin(16) }} Điểm hẹn</dt><dd>{{ trip.meeting_point or "HTX báo khi xác nhận" }}
+            {% if trip.map_url %}<br><a href="{{ trip.map_url }}" target="_blank" rel="noopener noreferrer">Xem bản đồ {{ icons.external_link(14) }}</a>{% endif %}</dd></div>
+          {% if trip.guide_name %}<div><dt>{{ icons.user(16) }} Người dẫn</dt><dd>{{ trip.guide_name }}</dd></div>{% endif %}
+          <div><dt>{{ icons.users(16) }} Số khách</dt><dd>{{ booking.adults }} người lớn{% if booking.children %}, {{ booking.children }} trẻ em{% endif %}</dd></div>
+          {% if booking.note %}<div><dt>{{ icons.message_circle(16) }} Ghi chú của bạn</dt><dd>{{ booking.note }}</dd></div>{% endif %}
+        </dl>
+        {% if trip.departure_status == 'CANCELLED' %}<p class="callout callout-danger">{{ icons.triangle_alert(18) }} <span>Chuyến này đã bị huỷ{% if trip.departure_cancel_reason %}: {{ trip.departure_cancel_reason }}{% endif %}.</span></p>{% endif %}
+      </section>
+
+      <section class="card">
+        <h2>Tiền</h2>
+        <table class="price-table">
+          <tbody>
+            <tr><th scope="row">{{ booking.adults }} người lớn × {{ booking.price_adult_vnd|vnd }}</th><td>{{ (booking.adults * booking.price_adult_vnd)|vnd }}</td></tr>
+            {% if booking.children %}<tr><th scope="row">{{ booking.children }} trẻ em × {{ booking.price_child_vnd|vnd }}</th><td>{{ (booking.children * booking.price_child_vnd)|vnd }}</td></tr>{% endif %}
+            <tr class="total"><th scope="row">Tổng tiền</th><td>{{ booking.total_vnd|vnd }}</td></tr>
+            {% if booking.deposit_vnd %}<tr><th scope="row">Tiền cọc</th><td>{{ booking.deposit_vnd|vnd }}</td></tr>{% endif %}
+            <tr><th scope="row">Đã thanh toán</th><td>{{ booking.paid_vnd|vnd }}</td></tr>
+          </tbody>
+        </table>
+        <p class="muted">Tình trạng: <strong>{{ payment_labels[booking.payment_state] }}</strong></p>
+      </section>
+
+      {% if booking.status == 'CONFIRMED' %}
+      <section class="card card-ticket">
+        <div><h2>Vé vào tour</h2><p>Vé có mã QR để người dẫn điểm danh. Mở vé trên điện thoại hoặc in ra.</p></div>
+        <a class="button button-primary" href="{{ site_href(htx, '/ticket', theme, code=booking.code, key=booking.access_key) }}">{{ icons.ticket(18) }} Mở vé</a>
+      </section>
+      {% endif %}
+
+      {% if review %}
+      <section class="card"><h2>Đánh giá của bạn</h2>
+        <p>{{ m.stars(review.rating, 20) }}</p>
+        {% if review.comment %}<blockquote class="quote">{{ review.comment }}</blockquote>{% endif %}
+        {% if review.status == 'PENDING' %}<p class="muted">Đánh giá của bạn đang chờ HTX duyệt.</p>
+        {% elif review.status == 'PUBLISHED' %}<p class="muted">Đánh giá đã được đăng.</p>{% endif %}
+        {% if review.reply %}<p class="review-reply"><strong>Phản hồi của HTX:</strong> {{ review.reply }}</p>{% endif %}
+      </section>
+      {% elif can_review %}
+      <section class="card" id="review"><h2>Chia sẻ cảm nhận</h2>
+        <form method="post" action="{{ site_href(htx, '/booking/review', theme) }}" novalidate>
+          {{ hidden() }}
+          <fieldset class="field-group rating-input{% if errors.rating %} has-error{% endif %}"><legend>Bạn chấm mấy sao?</legend>
+            <div class="rating-options">{% for n in (5, 4, 3, 2, 1) %}<label><input type="radio" name="rating" value="{{ n }}"{% if values.rating == n|string %} checked{% endif %}><span>{{ n }} {{ icons.star(16, "icon star on") }}</span></label>{% endfor %}</div>
+            {{ m.error(errors, 'rating') }}
+          </fieldset>
+          {{ m.area('comment', 'Nhận xét', values, errors, 4, 1000) }}
+          {{ m.field('display_name', 'Tên hiển thị (để trống sẽ dùng tên gọi của bạn)', values, errors, 'text', False, '', '', '', 40) }}
+          <button class="button button-primary" type="submit">Gửi đánh giá</button>
+        </form>
+      </section>
+      {% endif %}
+
+      {% if booking.status in ('PENDING', 'CONFIRMED') %}
+      <section class="card card-quiet">
+        <h2>Cần thay đổi?</h2>
+        {% if can_cancel %}
+        <details class="cancel-box"><summary>Huỷ lượt đặt</summary>
+          <form method="post" action="{{ site_href(htx, '/booking/cancel', theme) }}">
+            {{ hidden() }}
+            <p>Bạn được huỷ miễn phí đến {{ rules.cancel_free_hours }} giờ trước giờ khởi hành. Chỗ sẽ được nhả cho khách khác và không thể mở lại.</p>
+            <div class="field"><label for="f-reason">Lý do (không bắt buộc)</label><input id="f-reason" name="reason" maxlength="200"></div>
+            <button class="button button-danger" type="submit">Xác nhận huỷ</button>
+          </form>
+        </details>
+        {% else %}
+        <p>Đã quá hạn huỷ miễn phí. Vui lòng gọi {% if site.hotline %}<a href="{{ tel_href(site.hotline) }}">{{ site.hotline }}</a>{% else %}HTX{% endif %} để được hỗ trợ.</p>
+        {% endif %}
+      </section>
+      {% endif %}
+    </div>
+
+    <aside class="booking-side">
+      {% if show_payment %}
+      <section class="card pay-card">
+        <h2>{{ icons.wallet(20) }} {% if booking.paid_vnd < booking.deposit_vnd %}Chuyển cọc để giữ chỗ{% else %}Thanh toán{% endif %}</h2>
+        {% if booking.hold_until and booking.status == 'PENDING' and not booking.guest_paid_reported_at %}
+        <p class="callout">{{ icons.hourglass(18) }} <span>Giữ chỗ tới <strong>{{ booking.hold_until|vn_datetime }}</strong></span></p>{% endif %}
+        {% if pay.qr %}
+        <div class="qr-box"><img src="{{ pay.qr }}" alt="Mã VietQR chuyển {{ pay.due|vnd }}" width="220" height="220"></div>
+        <p class="hint center">Mở app ngân hàng, chọn quét mã QR.</p>
+        <dl class="detail-list pay-list">
+          <div><dt>Ngân hàng</dt><dd>{{ pay.bank }}</dd></div>
+          <div><dt>Số tài khoản</dt><dd class="mono">{{ pay.account }}</dd></div>
+          <div><dt>Chủ tài khoản</dt><dd>{{ pay.holder }}</dd></div>
+          <div><dt>Số tiền</dt><dd class="mono strong">{{ pay.due|vnd }}</dd></div>
+          <div><dt>Nội dung</dt><dd class="mono">{{ pay.content }}</dd></div>
+        </dl>
+        {% else %}
+        <p class="pay-contact">Liên hệ HTX để thanh toán{% if site.hotline %}: <a href="{{ tel_href(site.hotline) }}">{{ site.hotline }}</a>{% endif %}.</p>
+        <p class="strong">Cần trả: {{ pay.due|vnd }}</p>
+        {% endif %}
+        {% if booking.guest_paid_reported_at %}
+        <p class="callout callout-success">{{ icons.circle_check(18) }} <span>Đã ghi nhận bạn đã chuyển khoản. HTX sẽ kiểm tra và xác nhận, thường trong giờ làm việc.</span></p>
+        {% else %}
+        <form method="post" action="{{ site_href(htx, '/booking/paid', theme) }}">{{ hidden() }}
+          <button class="button button-primary button-block" type="submit">Tôi đã chuyển khoản</button>
+        </form>
+        {% endif %}
+      </section>
+      {% elif booking.status != 'CANCELLED' %}
+      <section class="card pay-card"><h2>{{ icons.wallet(20) }} Thanh toán</h2><p class="callout callout-success">{{ icons.circle_check(18) }} <span>Không còn khoản nào cần chuyển.</span></p></section>
+      {% endif %}
+      <section class="card card-quiet help-card"><h2>Cần hỗ trợ?</h2>
+        {% if site.hotline %}<p>{{ icons.phone(18) }} <a href="{{ tel_href(site.hotline) }}">{{ site.hotline }}</a></p>{% endif %}
+        <p><a href="{{ site_href(htx, '/policy', theme) }}">Chính sách đặt cọc và huỷ</a></p>
+      </section>
+    </aside>
+  </div>
+</div>
+{% endblock %}

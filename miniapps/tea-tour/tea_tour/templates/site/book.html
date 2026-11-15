@@ -1,0 +1,73 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "site/layout.html" %}
+{% import "icons.html" as icons %}
+{% import "site/macros.html" as m with context %}
+{% block title %}Đặt tour {{ tour.title }}{% endblock %}
+{% block main_class %}page-book{% endblock %}
+{% block main %}
+<div class="container">
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{{ site_href(htx, '/tours', theme) }}">Tour</a> {{ icons.chevron_right(14) }} <a href="{{ site_href(htx, '/tours/' ~ tour.slug, theme) }}">{{ tour.title }}</a> {{ icons.chevron_right(14) }} <span>Đặt chỗ</span></nav>
+  {{ m.stepper(1) }}
+  <div class="flow-layout">
+    <form class="form-card" method="post" action="{{ site_href(htx, '/tours/' ~ tour.slug ~ '/book', theme) }}" novalidate>
+      <h1>Chọn chuyến và điền thông tin</h1>
+      {% if errors %}<p class="form-alert" role="alert">{{ icons.triangle_alert(18) }} <span>Vui lòng kiểm tra lại các ô được đánh dấu.</span></p>{% endif %}
+      {% if notice %}<p class="form-alert" role="alert">{{ notice }}</p>{% endif %}
+
+      <fieldset class="field-group">
+        <legend>1. Chuyến đi</legend>
+        {% if departures %}
+        <div class="choices">
+          {% for d in departures %}
+          <label class="choice{% if not d.bookable %} is-disabled{% endif %}">
+            <input type="radio" name="departure" value="{{ d.id }}"{% if values.departure == d.id|string %} checked{% endif %}{% if not d.bookable %} disabled{% endif %}>
+            <span class="choice-body">
+              <strong>{{ day_label(d.starts_at) }}, {{ time_label(d.starts_at) }}</strong>
+              <span class="muted">{{ d.price_adult_vnd|vnd }} / người lớn · {{ d.price_child_vnd|vnd }} / trẻ em</span>
+            </span>
+            <span class="seats{% if not d.bookable %} none{% elif d.seats_left <= 3 %} low{% endif %}">{% if d.bookable %}Còn {{ d.seats_left }} chỗ{% elif d.status == 'CLOSED' %}Đã đóng{% else %}Hết chỗ{% endif %}</span>
+          </label>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state compact">{{ icons.calendar(28) }}<h3>Chưa có chuyến nào để đặt</h3><p>Hãy gửi yêu cầu để HTX sắp xếp cho bạn.</p>
+          <a class="button button-secondary" href="{{ site_href(htx, '/inquiry', theme) }}">Gửi yêu cầu tour riêng</a></div>
+        {% endif %}
+        {{ m.error(errors, 'departure') }}
+      </fieldset>
+
+      <fieldset class="field-group">
+        <legend>2. Số người</legend>
+        <div class="field-row pair">
+          {{ m.field('adults', 'Người lớn', values, errors, 'number', True, 'Từ 13 tuổi', '', 'numeric', None, 0, 20) }}
+          {{ m.field('children', 'Trẻ em', values, errors, 'number', False, 'Dưới 13 tuổi, giá riêng', '', 'numeric', None, 0, 20) }}
+        </div>
+      </fieldset>
+
+      <fieldset class="field-group">
+        <legend>3. Người liên hệ</legend>
+        {{ m.field('guest_name', 'Họ và tên', values, errors, 'text', True, '', 'name', '', 80) }}
+        <div class="field-row">
+          {{ m.field('phone', 'Số điện thoại', values, errors, 'tel', True, 'HTX gọi xác nhận qua số này', 'tel', 'tel', 20) }}
+          {{ m.field('email', 'Email (không bắt buộc)', values, errors, 'email', False, '', 'email', 'email', 120) }}
+        </div>
+        {{ m.area('note', 'Ghi chú cho HTX (không bắt buộc)', values, errors, 3, 500, 'Ví dụ: có trẻ nhỏ, ăn chay, cần đón tại bến xe.') }}
+      </fieldset>
+
+      {% if departures %}<button class="button button-primary button-large" type="submit">Tiếp tục {{ icons.arrow_right(18) }}</button>{% endif %}
+    </form>
+
+    <aside class="summary-card">
+      <div class="summary-media">{{ m.cover(None, tour.category, tour.title, "thumb", True) }}</div>
+      <h2>{{ tour.title }}</h2>
+      <ul class="meta-row stacked">
+        <li>{{ icons.clock(16) }} {{ duration_label(tour.duration_minutes) }}</li>
+        <li>{{ icons.map_pin(16) }} {{ tour.meeting_point or "Điểm hẹn báo khi xác nhận" }}</li>
+        <li>{{ icons.shield_check(16) }} Huỷ miễn phí trước {{ site.cancel_free_hours }} giờ</li>
+      </ul>
+      <p class="summary-note">Bạn chưa phải trả tiền ở bước này. Bước tiếp theo cho biết tổng tiền và tiền cọc.</p>
+    </aside>
+  </div>
+</div>
+{% endblock %}

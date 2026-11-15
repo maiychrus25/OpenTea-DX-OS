@@ -1,0 +1,66 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "site/layout.html" %}
+{% import "icons.html" as icons %}
+{% import "site/macros.html" as m with context %}
+{% block title %}Xác nhận đặt chỗ{% endblock %}
+{% block main_class %}page-book{% endblock %}
+{% block main %}
+<div class="container">
+  <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{{ site_href(htx, '/tours', theme) }}">Tour</a> {{ icons.chevron_right(14) }} <a href="{{ site_href(htx, '/tours/' ~ tour.slug, theme) }}">{{ tour.title }}</a> {{ icons.chevron_right(14) }} <span>Xác nhận</span></nav>
+  {{ m.stepper(2) }}
+  <div class="flow-layout">
+    <form class="form-card" method="post" action="{{ site_href(htx, '/bookings', theme) }}">
+      <h1>Kiểm tra và xác nhận</h1>
+      {% if notice %}<p class="form-alert" role="alert">{{ icons.triangle_alert(18) }} <span>{{ notice }}</span></p>{% endif %}
+      <input type="hidden" name="departure" value="{{ values.departure }}">
+      <input type="hidden" name="adults" value="{{ adults }}">
+      <input type="hidden" name="children" value="{{ children }}">
+      <input type="hidden" name="guest_name" value="{{ values.guest_name }}">
+      <input type="hidden" name="phone" value="{{ values.phone }}">
+      <input type="hidden" name="email" value="{{ values.email }}">
+      <input type="hidden" name="note" value="{{ values.note }}">
+      <input type="hidden" name="request_key" value="{{ request_key }}">
+      <input type="hidden" name="expected_total" value="{{ total }}">
+
+      <dl class="detail-list">
+        <div><dt>Tour</dt><dd>{{ tour.title }}</dd></div>
+        <div><dt>Khởi hành</dt><dd>{{ day_label(departure.starts_at) }}, {{ time_label(departure.starts_at) }}</dd></div>
+        <div><dt>Điểm hẹn</dt><dd>{{ tour.meeting_point or "HTX báo khi xác nhận" }}</dd></div>
+        <div><dt>Người liên hệ</dt><dd>{{ values.guest_name }}<br>{{ values.phone }}{% if values.email %}<br>{{ values.email }}{% endif %}</dd></div>
+        {% if values.note %}<div><dt>Ghi chú</dt><dd>{{ values.note }}</dd></div>{% endif %}
+      </dl>
+
+      <table class="price-table">
+        <tbody>
+          <tr><th scope="row">{{ adults }} người lớn × {{ price_adult|vnd }}</th><td>{{ (adults * price_adult)|vnd }}</td></tr>
+          {% if children %}<tr><th scope="row">{{ children }} trẻ em × {{ price_child|vnd }}</th><td>{{ (children * price_child)|vnd }}</td></tr>{% endif %}
+          <tr class="total"><th scope="row">Tổng tiền</th><td>{{ total|vnd }}</td></tr>
+          {% if deposit %}<tr class="deposit"><th scope="row">Tiền cọc cần chuyển để giữ chỗ ({{ site.deposit_percent }}%)</th><td>{{ deposit|vnd }}</td></tr>{% endif %}
+        </tbody>
+      </table>
+      <p class="callout">
+        {% if deposit %}{{ icons.hourglass(18) }} <span>Giữ chỗ tới <strong>{{ hold|vn_datetime }}</strong>. Chuyển cọc trước hạn này, nếu không chỗ sẽ được nhả cho khách khác. Phần còn lại trả khi đi tour.</span>
+        {% else %}{{ icons.circle_check(18) }} <span>Không cần đặt cọc. HTX sẽ gọi để xác nhận và hướng dẫn thanh toán.</span>{% endif %}
+      </p>
+
+      <div class="field{% if errors.agree %} has-error{% endif %}">
+        <label class="checkbox"><input type="checkbox" name="agree" value="on"{% if errors.agree %} aria-invalid="true" aria-describedby="agree-error"{% endif %}>
+          <span>Tôi đã đọc và đồng ý với <a href="{{ site_href(htx, '/policy', theme) }}" target="_blank" rel="noopener noreferrer">chính sách đặt cọc và huỷ chỗ</a> (huỷ miễn phí trước {{ site.cancel_free_hours }} giờ).</span></label>
+        {{ m.error(errors, 'agree') }}
+      </div>
+
+      <div class="form-actions">
+        <button class="button button-primary button-large" type="submit">Xác nhận đặt chỗ</button>
+        <button class="button button-secondary" type="submit" name="back" value="1" formnovalidate formaction="{{ site_href(htx, '/tours/' ~ tour.slug ~ '/book', theme) }}">{{ icons.chevron_left(16) }} Sửa thông tin</button>
+      </div>
+    </form>
+    <aside class="summary-card">
+      <h2>{{ adults + children }} khách</h2>
+      <p class="summary-total"><small>Tổng tiền</small><strong>{{ total|vnd }}</strong></p>
+      {% if deposit %}<p class="summary-total deposit"><small>Cọc để giữ chỗ</small><strong>{{ deposit|vnd }}</strong></p>{% endif %}
+      <p class="summary-note">Nhấn "Xác nhận đặt chỗ" một lần là đủ. Nếu bấm lại, hệ thống vẫn chỉ ghi một lượt đặt.</p>
+    </aside>
+  </div>
+</div>
+{% endblock %}

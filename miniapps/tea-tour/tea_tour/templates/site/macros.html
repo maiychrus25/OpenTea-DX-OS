@@ -1,0 +1,89 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Import with context: {% import "site/macros.html" as m with context %} (asset_url needs the page's asset base). -#}
+{% import "icons.html" as icons %}
+
+{# Five stars, the first `average` rounded ones filled. #}
+{% macro stars(average, size=16) -%}
+<span class="stars" role="img" aria-label="{{ rating_text(average) }} trên 5 sao">
+  {%- for i in range(1, 6) %}{{ icons.star(size, "icon star on" if average >= i - 0.25 else "icon star") }}{% endfor -%}
+</span>
+{%- endmacro %}
+
+{# A photo, or the illustration of the category when the tour has none. variant: large | thumb #}
+{% macro cover(media_id, category, alt, variant="large", eager=False) -%}
+{%- if media_id -%}
+<img src="{{ photo_url(htx, media_id, variant) }}" alt="{{ alt }}" {% if not eager %}loading="lazy" {% endif %}decoding="async">
+{%- else -%}
+<img class="illustration" src="{{ asset_url('illustrations/' ~ (category or 'PICKING')|lower ~ '.svg') }}" alt="" {% if not eager %}loading="lazy" {% endif %}decoding="async">
+{%- endif -%}
+{%- endmacro %}
+
+{% macro tour_card(card) -%}
+<article class="tour-card">
+  <div class="tour-card-media">
+    {{ cover(card.cover_media_id, card.category, card.title, "thumb") }}
+    <span class="chip">{{ categories.get(card.category, "Tour") }}</span>
+  </div>
+  <div class="tour-card-body">
+    <h3 class="tour-card-title"><a href="{{ site_href(htx, '/tours/' ~ card.slug, theme) }}">{{ card.title }}</a></h3>
+    {% if card.summary %}<p class="tour-card-summary">{{ card.summary }}</p>{% endif %}
+    <ul class="meta-row">
+      <li>{{ icons.clock(16) }} {{ duration_label(card.duration_minutes) }}</li>
+      {% if card.rating_count %}<li class="rating">{{ icons.star(16, "icon star on") }} <strong>{{ rating_text(card.rating_avg) }}</strong> <span>({{ card.rating_count }})</span></li>
+      {% else %}<li class="muted">Chưa có đánh giá</li>{% endif %}
+    </ul>
+    <div class="tour-card-foot">
+      <p class="price"><span>Giá từ</span> <strong>{{ card.price_from|vnd }}</strong> <span>/ người lớn</span></p>
+      {% if card.next_starts_at %}<p class="next-departure">{{ icons.calendar(16) }} {{ short_day(card.next_starts_at) }} · {{ time_label(card.next_starts_at) }}
+        <span class="seats{% if card.next_seats_left <= 3 %} low{% endif %}">Còn {{ card.next_seats_left }} chỗ</span></p>
+      {% else %}<p class="next-departure muted">{{ icons.calendar(16) }} Chưa có chuyến sắp tới</p>{% endif %}
+    </div>
+  </div>
+</article>
+{%- endmacro %}
+
+{% macro review_card(item) -%}
+<figure class="review-card">
+  <div class="review-head">{{ stars(item.rating) }}<span class="review-when">{{ month_label(item.trip_at) }}</span></div>
+  {% if item.comment %}<blockquote>{{ item.comment }}</blockquote>{% endif %}
+  <figcaption><strong>{{ item.display_name }}</strong>{% if item.tour_title %} · <a href="{{ site_href(htx, '/tours/' ~ item.tour_slug, theme) }}">{{ item.tour_title }}</a>{% endif %}</figcaption>
+  {% if item.reply %}<p class="review-reply"><strong>Phản hồi của HTX:</strong> {{ item.reply }}</p>{% endif %}
+</figure>
+{%- endmacro %}
+
+{# errors: dict of field -> message #}
+{% macro error(errors, name) -%}
+{%- if errors and errors.get(name) -%}<p class="field-error" id="{{ name }}-error" role="alert">{{ errors[name] }}</p>{%- endif -%}
+{%- endmacro %}
+
+{# current is 1, 2 or 3 #}
+{% macro stepper(current) -%}
+<ol class="stepper" aria-label="Các bước đặt tour">
+  {%- for label in ("Chọn chuyến", "Xác nhận", "Hoàn tất") %}
+  <li{% if loop.index == current %} aria-current="step"{% elif loop.index < current %} data-state="done"{% endif %}><span class="step-dot">{% if loop.index < current %}{{ icons.check(14) }}{% else %}{{ loop.index }}{% endif %}</span><span class="step-label">{{ label }}</span></li>
+  {%- endfor %}
+</ol>
+{%- endmacro %}
+
+{% macro field(name, label, values, errors, type="text", required=False, hint="", autocomplete="", inputmode="", maxlength=None, min=None, max=None) -%}
+<div class="field{% if errors.get(name) %} has-error{% endif %}">
+  <label for="f-{{ name }}">{{ label }}{% if required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>
+  <input id="f-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ values.get(name, '') }}"
+    {%- if required %} required{% endif %}{% if autocomplete %} autocomplete="{{ autocomplete }}"{% endif %}{% if inputmode %} inputmode="{{ inputmode }}"{% endif %}
+    {%- if maxlength %} maxlength="{{ maxlength }}"{% endif %}{% if min is not none %} min="{{ min }}"{% endif %}{% if max is not none %} max="{{ max }}"{% endif %}
+    {%- if errors.get(name) %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
+  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+  {{ error(errors, name) }}
+</div>
+{%- endmacro %}
+
+{% macro area(name, label, values, errors, rows=4, maxlength=None, hint="") -%}
+<div class="field{% if errors.get(name) %} has-error{% endif %}">
+  <label for="f-{{ name }}">{{ label }}</label>
+  <textarea id="f-{{ name }}" name="{{ name }}" rows="{{ rows }}"{% if maxlength %} maxlength="{{ maxlength }}"{% endif %}
+    {%- if errors.get(name) %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>{{ values.get(name, '') }}</textarea>
+  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+  {{ error(errors, name) }}
+</div>
+{%- endmacro %}

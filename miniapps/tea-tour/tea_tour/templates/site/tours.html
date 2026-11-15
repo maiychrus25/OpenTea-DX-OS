@@ -1,0 +1,67 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "site/layout.html" %}
+{% import "icons.html" as icons %}
+{% import "site/macros.html" as m with context %}
+{% block title %}Các tour{% endblock %}
+{% block main_class %}page-tours{% endblock %}
+{% block main %}
+<section class="page-head">
+  <div class="container">
+    <nav class="breadcrumb" aria-label="Đường dẫn"><a href="{{ site_href(htx, '/', theme) }}">Trang chủ</a> {{ icons.chevron_right(14) }} <span>Tour</span></nav>
+    <h1>Tất cả tour</h1>
+    <p class="lead">Chọn trải nghiệm hợp với bạn: hái chè, sao chè, thưởng trà hay ngắm bình minh trên đồi.</p>
+  </div>
+</section>
+<section class="section section-tight">
+  <div class="container">
+    <form class="filter-bar" method="get" action="{{ site_href(htx, '/tours') }}">
+      {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+      <nav class="chips" aria-label="Loại tour">
+        <a class="chip-link" href="{{ site_href(htx, '/tours', theme, month=month or None, sort=sort if sort != 'soon' else None) }}"{% if not category %} aria-current="true"{% endif %}>Tất cả</a>
+        {% for key, label in categories.items() %}
+        <a class="chip-link" href="{{ site_href(htx, '/tours', theme, category=key, month=month or None, sort=sort if sort != 'soon' else None) }}"{% if category == key %} aria-current="true"{% endif %}>{{ label }}</a>
+        {% endfor %}
+      </nav>
+      <div class="filter-fields">
+        {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+        <label>Tháng đi
+          <select name="month">
+            <option value="">Mọi tháng</option>
+            {% for value in months %}<option value="{{ value }}"{% if value == month %} selected{% endif %}>{{ month_label(value) }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Sắp xếp
+          <select name="sort">
+            <option value="soon"{% if sort == 'soon' %} selected{% endif %}>Chuyến gần nhất</option>
+            <option value="price"{% if sort == 'price' %} selected{% endif %}>Giá thấp đến cao</option>
+            <option value="rating"{% if sort == 'rating' %} selected{% endif %}>Đánh giá cao nhất</option>
+          </select>
+        </label>
+        <button class="button button-secondary" type="submit">Áp dụng</button>
+      </div>
+    </form>
+    <p class="result-count">{{ total }} tour{% if filtered %} phù hợp{% endif %}</p>
+    {% if cards %}
+    <div class="card-grid">{% for card in cards %}{{ m.tour_card(card) }}{% endfor %}</div>
+    {% if paging.pages > 1 %}
+    <nav class="pagination" aria-label="Phân trang">
+      {% if paging.has_prev %}<a class="button button-secondary" rel="prev" href="{{ site_href(htx, '/tours', theme, category=category or None, month=month or None, sort=sort if sort != 'soon' else None, page=paging.number - 1 if paging.number > 2 else None) }}">{{ icons.chevron_left(16) }} Trước</a>{% else %}<span></span>{% endif %}
+      <span class="pagination-status">Trang {{ paging.number }} / {{ paging.pages }}</span>
+      {% if paging.has_next %}<a class="button button-secondary" rel="next" href="{{ site_href(htx, '/tours', theme, category=category or None, month=month or None, sort=sort if sort != 'soon' else None, page=paging.number + 1) }}">Sau {{ icons.chevron_right(16) }}</a>{% else %}<span></span>{% endif %}
+    </nav>
+    {% endif %}
+    {% elif filtered %}
+    <div class="empty-state">
+      {{ icons.search(32) }}<h3>Không có tour phù hợp</h3><p>Thử đổi loại tour hoặc tháng đi.</p>
+      <a class="button button-primary" href="{{ site_href(htx, '/tours', theme) }}">Xoá bộ lọc</a>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      {{ icons.leaf(32) }}<h3>Chưa có tour nào đang mở bán</h3><p>Bạn có thể gửi yêu cầu tour riêng để được HTX tư vấn.</p>
+      <a class="button button-primary" href="{{ site_href(htx, '/inquiry', theme) }}">Gửi yêu cầu tour riêng</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

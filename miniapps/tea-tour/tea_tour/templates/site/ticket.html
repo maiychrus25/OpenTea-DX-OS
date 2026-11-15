@@ -1,0 +1,32 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "site/layout.html" %}
+{% import "icons.html" as icons %}
+{% block title %}Vé {{ booking.code }}{% endblock %}
+{% block main_class %}page-ticket{% endblock %}
+{% block main %}
+<div class="container narrow">
+  <p class="no-print ticket-back"><a class="link-arrow" href="{{ site_href(htx, '/booking', theme, code=booking.code, key=booking.access_key) }}">{{ icons.chevron_left(16) }} Về lượt đặt của tôi</a></p>
+  <article class="ticket" aria-label="Vé vào tour">
+    <div class="ticket-main">
+      <p class="eyebrow">{{ icons.ticket(16) }} {{ site.display_name or "Tour đồi chè" }}</p>
+      <h1>{{ trip.tour_title }}</h1>
+      <dl class="ticket-grid">
+        <div><dt>Ngày</dt><dd>{{ day_label(booking.starts_at) }}</dd></div>
+        <div><dt>Giờ khởi hành</dt><dd class="big">{{ time_label(booking.starts_at) }}</dd></div>
+        <div class="wide"><dt>Điểm hẹn</dt><dd>{{ trip.meeting_point or "HTX báo khi xác nhận" }}</dd></div>
+        <div><dt>Khách</dt><dd>{{ booking.guest_name }}</dd></div>
+        <div><dt>Số người</dt><dd>{{ booking.adults }} người lớn{% if booking.children %} + {{ booking.children }} trẻ em{% endif %}</dd></div>
+        <div><dt>Thanh toán</dt><dd>{{ pay_state }}</dd></div>
+        {% if trip.guide_name %}<div><dt>Người dẫn</dt><dd>{{ trip.guide_name }}</dd></div>{% endif %}
+      </dl>
+    </div>
+    <div class="ticket-stub">
+      <img src="{{ qr }}" alt="Mã QR của vé {{ booking.code }}" width="180" height="180">
+      <p class="stub-label">Mã đặt chỗ</p>
+      <p class="stub-code">{{ booking.code }}</p>
+    </div>
+  </article>
+  <p class="hint center no-print">Đưa mã QR này cho người dẫn khi điểm danh. Để in hoặc lưu thành PDF, dùng lệnh In của trình duyệt (Ctrl+P hoặc Chia sẻ, In).</p>
+</div>
+{% endblock %}
