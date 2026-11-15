@@ -1,4 +1,617 @@
 /* SPDX-License-Identifier: MIT
    SPDX-FileCopyrightText: 2026 OpenTea Developers */
 
-/* Placeholder: the feature task that owns this file replaces it. */
+/* Sales desk (overview, bookings, payments, customers, reviews, reports): what /dxos-app.css and admin.css lack. Tokens
+   only, so both themes follow; nothing here widens the page at 390 px. */
+
+a.button,
+button {
+  gap: var(--spacing-2);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* Six figures make two rows of three, not five and one. */
+@media (min-width: 768px) {
+  .stats:has(> li:nth-child(6):last-child) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.meta {
+  color: var(--color-ink-tertiary);
+  font-size: var(--font-size-label);
+}
+
+.code {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-mono);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1);
+}
+
+.in {
+  color: var(--color-success);
+}
+
+.out {
+  color: var(--color-danger);
+}
+
+.stars {
+  color: var(--color-accent);
+  letter-spacing: 0.08em;
+}
+
+.stars-off {
+  color: var(--color-border-default);
+}
+
+/* ---------- overview: to-do cards ---------- */
+
+.todo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: var(--spacing-3);
+  margin: 0 0 var(--spacing-6);
+}
+
+.todo-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-width: 0;
+  padding: var(--spacing-4);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-default);
+  border-left: 4px solid var(--color-border-default);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.todo-card[data-tone="warn"] {
+  border-left-color: var(--color-warning);
+}
+
+.todo-card[data-tone="danger"] {
+  border-left-color: var(--color-danger);
+}
+
+.todo-card[data-tone="ok"] {
+  border-left-color: var(--color-success);
+}
+
+.todo-card header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+}
+
+.todo-card h3 {
+  margin: 0;
+}
+
+.todo-count {
+  font-size: var(--font-size-h1);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.todo-card ul {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.todo-card li a {
+  display: flex;
+  flex-direction: column;
+  min-height: 44px;
+  justify-content: center;
+  padding: var(--spacing-1) 0;
+  border-top: 1px solid var(--color-border-subtle);
+  text-decoration: none;
+}
+
+.todo-card li:first-child a {
+  border-top: 0;
+}
+
+.todo-card p {
+  margin: 0;
+}
+
+.todo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  min-height: 44px;
+  margin-top: auto;
+  font-weight: 600;
+}
+
+/* ---------- bookings: filter row and list ---------- */
+
+form.toolbar label.check {
+  flex: 0 0 auto;
+  max-width: none;
+}
+
+@media (max-width: 640px) {
+  form.toolbar label.check {
+    flex-basis: 100%;
+  }
+}
+
+/* ---------- booking page ---------- */
+
+.booking-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-5);
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .booking-layout {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+  }
+
+  .booking-side {
+    position: sticky;
+    top: var(--spacing-4);
+  }
+}
+
+.booking-main,
+.booking-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-width: 0;
+}
+
+.booking-main h2,
+.booking-side h2 {
+  margin: 0;
+}
+
+.panel {
+  padding: var(--spacing-4);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.panel > h2 {
+  margin: 0 0 var(--spacing-3);
+}
+
+.panel h3 {
+  margin: var(--spacing-4) 0 var(--spacing-2);
+}
+
+.panel form {
+  max-width: none;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: var(--spacing-3) var(--spacing-4);
+  margin: 0;
+}
+
+.facts div {
+  min-width: 0;
+}
+
+.facts .wide {
+  grid-column: 1 / -1;
+}
+
+.facts dt {
+  color: var(--color-ink-secondary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.money-table {
+  margin: 0;
+  background: none;
+  border: 0;
+}
+
+.money-table th {
+  background: none;
+  font-weight: 400;
+}
+
+.money-table tr:last-child th {
+  border-bottom: 0;
+}
+
+.money-table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.money-table tr.total th,
+.money-table tr.total td {
+  color: var(--color-ink-primary);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .money-table tr {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+    margin: 0;
+    padding: var(--spacing-2) 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+    border-radius: 0;
+  }
+
+  .money-table th,
+  .money-table td {
+    display: block;
+    padding: 0;
+  }
+}
+
+/* The booking history: a line with one dot per event. */
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  top: var(--spacing-2);
+  bottom: var(--spacing-2);
+  left: 5px;
+  width: 2px;
+  background: var(--color-border-subtle);
+}
+
+.timeline li {
+  position: relative;
+  display: flex;
+  gap: var(--spacing-3);
+}
+
+.timeline-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 5px;
+  background: var(--color-primary);
+  border: 2px solid var(--color-surface-card);
+  border-radius: var(--rounded-full);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.timeline li[data-kind="CANCELLED"] .timeline-dot {
+  background: var(--color-danger);
+  box-shadow: 0 0 0 1px var(--color-danger);
+}
+
+.timeline li[data-kind="PAYMENT"] .timeline-dot,
+.timeline li[data-kind="PAID_REPORTED"] .timeline-dot {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.timeline li > div {
+  min-width: 0;
+}
+
+.timeline p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.timeline-detail {
+  font-weight: 600;
+}
+
+/* Actions beside the booking. */
+.action-panel p {
+  margin: 0;
+}
+
+.booking-side .disclosure {
+  margin: 0;
+}
+
+.disclosure > form {
+  margin: var(--spacing-4);
+}
+
+.disclosure summary svg {
+  margin-right: var(--spacing-2);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-3);
+}
+
+form.wide-form {
+  max-width: 36rem;
+}
+
+fieldset.choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-3) var(--spacing-5);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+fieldset.choice legend {
+  padding: 0;
+  margin-bottom: var(--spacing-1);
+  color: var(--color-ink-secondary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+}
+
+label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-height: 44px;
+}
+
+label.check input {
+  width: auto;
+  min-height: 0;
+}
+
+button.danger-button {
+  background: var(--color-danger);
+  color: var(--color-ink-inverse);
+}
+
+button.danger-button:hover {
+  background: var(--color-danger-hover);
+}
+
+/* ---------- payments ledger ---------- */
+
+td strong.in,
+td strong.out {
+  white-space: nowrap;
+}
+
+.ledger-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--spacing-3);
+  margin: 0 0 var(--spacing-4);
+  padding: 0;
+  list-style: none;
+}
+
+.ledger-totals li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--rounded-lg);
+}
+
+.ledger-totals span {
+  color: var(--color-ink-secondary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+}
+
+.ledger-totals strong {
+  font-size: var(--font-size-h2);
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-totals .in strong {
+  color: var(--color-success);
+}
+
+.ledger-totals .out strong {
+  color: var(--color-danger);
+}
+
+/* ---------- reviews and inquiries ---------- */
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin: 0 0 var(--spacing-4);
+}
+
+.filter-chips a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-height: 44px;
+  padding: 0 var(--spacing-4);
+  color: var(--color-ink-secondary);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--rounded-full);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.filter-chips a:hover {
+  background: var(--color-surface-sunken);
+}
+
+.filter-chips a[aria-current="true"] {
+  color: var(--color-primary-foreground);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.chip-count {
+  font-size: var(--font-size-meta);
+  opacity: 0.85;
+}
+
+.review-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
+  gap: var(--spacing-3);
+  margin: 0 0 var(--spacing-5);
+  padding: 0;
+  list-style: none;
+}
+
+.review-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-width: 0;
+  padding: var(--spacing-4);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border-default);
+  border-left: 4px solid var(--color-border-default);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.review-card[data-status="PENDING"],
+.review-card[data-status="NEW"] {
+  border-left-color: var(--color-warning);
+}
+
+.review-card[data-status="PUBLISHED"],
+.review-card[data-status="CONTACTED"] {
+  border-left-color: var(--color-success);
+}
+
+.review-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+}
+
+.review-card p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.review-comment {
+  white-space: pre-line;
+}
+
+.review-reply {
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-surface-sunken);
+  border-radius: var(--rounded-md);
+}
+
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.review-actions form,
+.inquiry-form {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.review-actions form {
+  display: inline-flex;
+}
+
+.review-card .disclosure {
+  margin: 0;
+}
+
+.inquiry-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-2);
+}
+
+/* ---------- reports ---------- */
+
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--spacing-4);
+  margin: 0 0 var(--spacing-5);
+}
+
+.report-grid .chart {
+  margin: 0;
+}
+
+.big-figure {
+  margin: 0;
+  font-size: var(--font-size-display);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.panel .big-figure + .meta {
+  margin: var(--spacing-1) 0 0;
+}
+
+.report-grid .chart:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+.panel + h2 {
+  margin-top: var(--spacing-5);
+}
+
+/* The booking list is long on a phone: the creation time is on the booking page. */
+@media (max-width: 640px) {
+  td.hide-phone {
+    display: none;
+  }
+}

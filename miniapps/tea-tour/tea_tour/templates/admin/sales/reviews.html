@@ -1,0 +1,93 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "icons.html" as icons %}
+{% import "admin/sales/ui.html" as ui %}
+{% set active_tab = "reviews" %}
+{% block title %}Đánh giá{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-sales.css') }}">{% endblock %}
+{% block header %}{{ kit.app_header("Đánh giá", "HTX " ~ htx ~ " · duyệt, ẩn, trả lời đánh giá và gọi lại khách hỏi tour riêng") }}{% endblock %}
+{% block main %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+
+<h2>Đánh giá của khách</h2>
+<nav class="filter-chips" aria-label="Lọc đánh giá">
+  <a href="{{ href('/reviews', theme, inq=inquiry_status or None) }}"{% if not review_status %} aria-current="true"{% endif %}>Tất cả</a>
+  {% for key, label in [("PENDING", "Chờ duyệt"), ("PUBLISHED", "Đang hiện"), ("HIDDEN", "Đã ẩn")] %}
+  <a href="{{ href('/reviews', theme, status=key, inq=inquiry_status or None) }}"{% if review_status == key %} aria-current="true"{% endif %}>{{ label }} <span class="chip-count">{{ review_counts.get(key, 0) }}</span></a>
+  {% endfor %}
+</nav>
+{% if reviews %}
+<ul class="review-list">
+  {% for r in reviews %}
+  <li class="review-card" data-status="{{ r.status }}">
+    <header>
+      <div>{{ ui.stars(r.rating) }} <strong>{{ r.display_name }}</strong></div>
+      {{ ui.review_status(r.status) }}
+    </header>
+    <p class="meta">{{ r.tour_title }} · chuyến {{ r.starts_at | vn_date }} · <a href="{{ href('/bookings/' ~ r.booking_id, theme) }}">{{ r.code }}</a> ({{ r.guest_name }}) · gửi {{ r.created_at | vn_date }}</p>
+    {% if r.comment %}<p class="review-comment">{{ r.comment }}</p>{% else %}<p class="meta">Khách chỉ chấm sao, không viết nhận xét.</p>{% endif %}
+    {% if r.reply %}<p class="review-reply"><strong>HTX trả lời:</strong> {{ r.reply }}</p>{% endif %}
+    <div class="review-actions">
+      {% if r.status != "PUBLISHED" %}
+      <form method="post" action="{{ href('/reviews/' ~ r.id ~ '/publish', theme) }}"><button type="submit">{{ icons.check(18) }} Đăng lên trang khách</button></form>
+      {% endif %}
+      {% if r.status != "HIDDEN" %}
+      <form method="post" action="{{ href('/reviews/' ~ r.id ~ '/hide', theme) }}"><button type="submit" class="secondary">Ẩn</button></form>
+      {% endif %}
+    </div>
+    <details class="disclosure"{% if target == r.id|string %} open{% endif %}>
+      <summary>{{ icons.message_circle(18) }}&nbsp;{{ "Sửa câu trả lời" if r.reply else "Trả lời khách" }}</summary>
+      <form method="post" action="{{ href('/reviews/' ~ r.id ~ '/reply', theme) }}">
+        <label>Câu trả lời hiện công khai dưới đánh giá
+          <textarea name="reply" rows="3" maxlength="1000">{{ values.reply if target == r.id|string else (r.reply or "") }}</textarea>
+        </label>
+        <button type="submit" class="secondary">Lưu câu trả lời</button>
+      </form>
+    </details>
+  </li>
+  {% endfor %}
+</ul>
+{% if review_paging.pages > 1 %}{{ kit.pagination(review_paging, review_prev, review_next) }}{% endif %}
+{% else %}
+{{ kit.empty("Không có đánh giá nào ở mục này." if review_status else "Chưa có đánh giá nào. Khách gửi đánh giá sau khi đi tour và được điểm danh.") }}
+{% endif %}
+
+<h2 id="inquiries">Yêu cầu tour riêng</h2>
+<nav class="filter-chips" aria-label="Lọc yêu cầu">
+  <a href="{{ href('/reviews', theme, status=review_status or None) }}#inquiries"{% if not inquiry_status %} aria-current="true"{% endif %}>Tất cả</a>
+  {% for key, label in [("NEW", "Mới"), ("CONTACTED", "Đã liên hệ"), ("CLOSED", "Đã đóng")] %}
+  <a href="{{ href('/reviews', theme, inq=key, status=review_status or None) }}#inquiries"{% if inquiry_status == key %} aria-current="true"{% endif %}>{{ label }} <span class="chip-count">{{ inquiry_counts.get(key, 0) }}</span></a>
+  {% endfor %}
+</nav>
+{% if inquiries %}
+<ul class="review-list">
+  {% for q in inquiries %}
+  <li class="review-card" data-status="{{ q.status }}">
+    <header>
+      <div><strong>{{ q.name }}</strong> · <a href="tel:{{ q.phone }}">{{ q.phone }}</a></div>
+      <span class="pill{% if q.status == 'NEW' %} warn{% elif q.status == 'CLOSED' %} neutral{% endif %}">{{ {"NEW": "Mới", "CONTACTED": "Đã liên hệ", "CLOSED": "Đã đóng"}[q.status] }}</span>
+    </header>
+    <p class="meta">{{ q.group_size }} người{% if q.desired_date %} · mong muốn ngày {{ q.desired_date | vn_date }}{% endif %} · gửi {{ q.created_at | vn_datetime }}</p>
+    {% if q.message %}<p class="review-comment">{{ q.message }}</p>{% endif %}
+    <form method="post" action="{{ href('/inquiries/' ~ q.id, theme) }}" class="inquiry-form">
+      <label>Trạng thái
+        <select name="status">
+          {% for key, label in [("NEW", "Mới"), ("CONTACTED", "Đã liên hệ"), ("CLOSED", "Đã đóng")] %}<option value="{{ key }}"{% if (values.status if target == q.id|string else q.status) == key %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Ghi chú nội bộ
+        <input type="text" name="note" maxlength="500" value="{{ values.note if target == q.id|string else (q.internal_note or '') }}">
+      </label>
+      <button type="submit" class="secondary">Lưu</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% if inquiry_paging.pages > 1 %}{{ kit.pagination(inquiry_paging, inquiry_prev, inquiry_next) }}{% endif %}
+{% else %}
+{{ kit.empty("Không có yêu cầu nào ở mục này." if inquiry_status else "Chưa có yêu cầu tour riêng nào. Khách để lại số điện thoại ở trang khách khi cần tour theo đoàn.") }}
+{% endif %}
+{% endblock %}

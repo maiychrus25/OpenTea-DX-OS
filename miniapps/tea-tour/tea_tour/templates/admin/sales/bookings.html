@@ -1,0 +1,67 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "icons.html" as icons %}
+{% import "admin/sales/ui.html" as ui %}
+{% set active_tab = "bookings" %}
+{% block title %}Lượt đặt{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-sales.css') }}">{% endblock %}
+{% block header %}
+{% call kit.app_header("Lượt đặt", "HTX " ~ htx ~ " · mới nhất ở trên cùng") %}
+  <a class="button" href="{{ href('/bookings/new', theme) }}">{{ icons.phone(18) }} Đặt hộ khách</a>
+  {{ kit.export_link(href('/bookings/export.csv', theme, **export_params)) }}
+{% endcall %}
+{% endblock %}
+{% block main %}
+<form class="toolbar" method="get" action="{{ href('/bookings') }}">
+  {{ ui.theme_field(theme) }}
+  <label>Tìm kiếm
+    <input type="search" name="q" maxlength="100" value="{{ filters.q }}" placeholder="Mã đặt chỗ, tên hoặc số điện thoại">
+  </label>
+  <label>Trạng thái
+    <select name="status">
+      <option value="">Tất cả</option>
+      {% for key, label in [("PENDING", "Chờ xác nhận"), ("CONFIRMED", "Đã xác nhận"), ("CANCELLED", "Đã huỷ")] %}<option value="{{ key }}"{% if filters.status == key %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Thanh toán
+    <select name="payment">
+      <option value="">Tất cả</option>
+      {% for key, label in [("UNPAID", "Chưa trả"), ("DEPOSITED", "Trả một phần"), ("PAID", "Đã trả đủ"), ("REFUND_DUE", "Cần hoàn tiền")] %}<option value="{{ key }}"{% if filters.payment == key %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Chuyến
+    <select name="departure">
+      <option value="">Tất cả các chuyến</option>
+      {% for d in departures %}<option value="{{ d.id }}"{% if filters.departure == d.id %} selected{% endif %}>{{ d.starts_at | vn_datetime }} · {{ d.tour_title }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Đi từ ngày <input type="date" name="from" value="{{ filters.date_from or '' }}"></label>
+  <label>Đến ngày <input type="date" name="to" value="{{ filters.date_to or '' }}"></label>
+  <label class="check"><input type="checkbox" name="reported" value="1"{% if filters.reported %} checked{% endif %}> Chỉ khách đã báo chuyển khoản</label>
+  <button type="submit">Lọc</button>
+</form>
+
+{% if rows %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Mã</th><th role="columnheader">Khách</th><th role="columnheader">Chuyến</th><th role="columnheader">Số người</th><th role="columnheader">Tiền</th><th role="columnheader">Trạng thái</th><th role="columnheader">Đặt lúc</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for b in rows %}
+    <tr role="row">
+      <td role="cell" data-label="Mã"><a class="code" href="{{ href('/bookings/' ~ b.id, theme) }}">{{ b.code }}</a></td>
+      <td role="cell" data-label="Khách"><strong>{{ b.guest_name }}</strong><br><span class="meta">{{ b.phone }}</span></td>
+      <td role="cell" data-label="Chuyến">{{ b.starts_at | vn_datetime }}<br><span class="meta">{{ b.tour_title }}</span></td>
+      <td role="cell" data-label="Số người">{{ b.party_size }}{% if b.children %} <span class="meta">({{ b.adults }} lớn, {{ b.children }} trẻ)</span>{% endif %}</td>
+      <td role="cell" data-label="Tiền">{{ b.paid_vnd | vnd }} <span class="meta">/ {{ b.total_vnd | vnd }}</span></td>
+      <td role="cell" data-label="Trạng thái"><span class="pills">{{ ui.status(b.status) }} {{ ui.payment(b.payment_state) }}{% if b.guest_paid_reported_at and b.status == 'PENDING' %} <span class="pill warn">Khách báo đã chuyển</span>{% endif %}</span></td>
+      <td role="cell" data-label="Đặt lúc" class="nowrap hide-phone">{{ b.created_at | vn_datetime }}{% if b.source == 'MANAGER' %}<br><span class="meta">Đặt hộ</span>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ kit.pagination(paging, prev_href, next_href) }}
+{% else %}
+{{ kit.empty("Không có lượt đặt nào khớp bộ lọc." if filters.params() else "Chưa có lượt đặt nào. Khách đặt trên trang khách, hoặc anh chị đặt hộ khách gọi điện.", "Đặt hộ khách" if not filters.params() else None, href('/bookings/new', theme)) }}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,80 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "icons.html" as icons %}
+{% import "admin/sales/ui.html" as ui %}
+{% set active_tab = "overview" %}
+{% block title %}Tổng quan{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-sales.css') }}">{% endblock %}
+{% block header %}
+{% call kit.app_header("Tour đồi chè", "HTX " ~ htx) %}
+  <a class="button" href="{{ href('/bookings/new', theme) }}">{{ icons.phone(18) }} Đặt hộ khách</a>
+  <a class="button secondary" href="{{ site_href(htx, '', theme) }}" target="_top">{{ icons.external_link(18) }} Trang khách</a>
+{% endcall %}
+{% endblock %}
+{% block main %}
+{{ kit.stats([
+  {"label": "Chuyến sắp tới", "value": view.upcoming_departures, "hint": "Chưa khởi hành, chưa huỷ"},
+  {"label": "Khách tháng này", "value": view.guests_month, "hint": "Lượt đã xác nhận, chuyến trong tháng"},
+  {"label": "Đã thu tháng này", "value": view.collected_month | vnd, "hint": "Đã trừ tiền hoàn"},
+  {"label": "Chờ xác nhận", "value": view.pending},
+  {"label": "Khách báo đã chuyển khoản", "value": view.reported, "hint": "Cần đối chiếu và ghi khoản thu"},
+  {"label": "Cần hoàn tiền", "value": view.refund_vnd | vnd, "hint": view.refund_count ~ " lượt"}
+]) }}
+
+<h2>Việc cần làm</h2>
+{% macro todo(title, count, tone, link, rows, empty) %}
+<article class="todo-card" data-tone="{{ tone if count else 'ok' }}">
+  <header>
+    <h3>{{ title }}</h3>
+    <span class="todo-count">{{ count }}</span>
+  </header>
+  {% if rows %}
+  <ul>
+    {% for b in rows %}
+    <li><a href="{{ href('/bookings/' ~ b.id, theme) }}"><strong>{{ b.guest_name }}</strong> <span class="meta">{{ b.code }} · {{ b.party_size }} người · {{ b.starts_at | vn_date }}</span></a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="meta">{{ empty }}</p>
+  {% endif %}
+  {% if count %}<a class="todo-link" href="{{ link }}">Xem tất cả {{ icons.arrow_right(16) }}</a>{% endif %}
+</article>
+{% endmacro %}
+<section class="todo-grid" aria-label="Việc cần làm">
+  {{ todo("Chờ xác nhận", view.pending, "warn", href('/bookings', theme, status='PENDING'), view.pending_rows, "Không có lượt nào đang chờ.") }}
+  {{ todo("Khách báo đã chuyển khoản", view.reported, "warn", href('/bookings', theme, reported=1), view.reported_rows, "Chưa có khách nào báo chuyển khoản.") }}
+  {{ todo("Cần hoàn tiền", view.refund_count, "danger", href('/bookings', theme, payment='REFUND_DUE'), view.refund_rows, "Không có khoản nào phải hoàn.") }}
+  <article class="todo-card" data-tone="{{ 'warn' if view.reviews_pending else 'ok' }}">
+    <header><h3>Đánh giá chờ duyệt</h3><span class="todo-count">{{ view.reviews_pending }}</span></header>
+    <p class="meta">{{ "Duyệt để đánh giá hiện trên trang khách." if view.reviews_pending else "Không có đánh giá nào chờ." }}</p>
+    {% if view.reviews_pending %}<a class="todo-link" href="{{ href('/reviews', theme, status='PENDING') }}">Duyệt ngay {{ icons.arrow_right(16) }}</a>{% endif %}
+  </article>
+  <article class="todo-card" data-tone="{{ 'warn' if view.inquiries_new else 'ok' }}">
+    <header><h3>Yêu cầu tour riêng mới</h3><span class="todo-count">{{ view.inquiries_new }}</span></header>
+    <p class="meta">{{ "Gọi lại cho khách để chốt lịch." if view.inquiries_new else "Không có yêu cầu nào chưa xử lý." }}</p>
+    {% if view.inquiries_new %}<a class="todo-link" href="{{ href('/reviews', theme, inq='NEW') }}#inquiries">Xem yêu cầu {{ icons.arrow_right(16) }}</a>{% endif %}
+  </article>
+</section>
+
+<h2>Chuyến trong 7 ngày tới</h2>
+{% if view.soon %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Giờ đi</th><th role="columnheader">Tour</th><th role="columnheader">Người dẫn</th><th role="columnheader">Chỗ</th><th role="columnheader">Trạng thái</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for d in view.soon %}
+    <tr role="row">
+      <td role="cell" data-label="Giờ đi"><a href="{{ href('/departures/' ~ d.departure_id, theme) }}">{{ d.starts_at | vn_datetime }}</a></td>
+      <td role="cell" data-label="Tour">{{ d.tour_title }}</td>
+      <td role="cell" data-label="Người dẫn">{{ d.guide_name or "Chưa giao" }}</td>
+      <td role="cell" data-label="Chỗ">{{ d.seats_used }}/{{ d.seats }}{% if d.seats_used >= d.seats %} <span class="pill danger">Hết chỗ</span>{% endif %}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill{% if d.status == 'CLOSED' %} neutral{% endif %}">{{ "Đã đóng" if d.status == 'CLOSED' else "Nhận khách" }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+{{ kit.empty("Không có chuyến nào trong 7 ngày tới.", "Mở trang Lịch", href('/departures', theme)) }}
+{% endif %}
+{% endblock %}

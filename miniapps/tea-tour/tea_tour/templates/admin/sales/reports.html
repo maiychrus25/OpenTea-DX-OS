@@ -1,0 +1,64 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% set active_tab = "reports" %}
+{% block title %}Báo cáo{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-sales.css') }}">{% endblock %}
+{% block header %}{{ kit.app_header("Báo cáo", "HTX " ~ htx ~ " · 12 tháng gần nhất, tính theo giờ Việt Nam") }}{% endblock %}
+{% block main %}
+{{ kit.stats([
+  {"label": "Khách trong 12 tháng", "value": total_guests, "hint": "Lượt đã xác nhận, theo tháng khởi hành"},
+  {"label": "Lượt đặt đã xác nhận", "value": total_bookings},
+  {"label": "Tiền đã thu", "value": total_money | vnd, "hint": "Đã trừ tiền hoàn"},
+  {"label": "Tỉ lệ lấp đầy", "value": (number(report.occupancy) ~ "%") if report.occupancy is not none else "—", "hint": "Chuyến đã diễn ra"},
+  {"label": "Tỉ lệ huỷ", "value": (number(report.cancel_rate) ~ "%") if report.cancel_rate is not none else "—", "hint": report.cancelled ~ "/" ~ report.created ~ " lượt đặt"}
+]) }}
+
+<div class="report-grid">
+  {{ kit.chart("Khách theo tháng", charts.guests, "khách") }}
+  {{ kit.chart("Lượt đặt theo tháng", charts.bookings, "lượt") }}
+  {{ kit.chart("Tiền đã thu theo tháng", charts.money) }}
+</div>
+
+<h2>Theo tour</h2>
+{% if report.tours %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Tour</th><th role="columnheader">Chuyến đã đi</th><th role="columnheader">Khách</th><th role="columnheader">Lượt đặt</th><th role="columnheader">Đã thu</th><th role="columnheader">Lấp đầy</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for t in report.tours %}
+    <tr role="row">
+      <td role="cell" data-label="Tour">{{ t.tour_title }}</td>
+      <td role="cell" data-label="Chuyến đã đi">{{ t.departures }}</td>
+      <td role="cell" data-label="Khách">{{ t.guests }}</td>
+      <td role="cell" data-label="Lượt đặt">{{ t.bookings }}</td>
+      <td role="cell" data-label="Đã thu">{{ t.collected | vnd }}</td>
+      <td role="cell" data-label="Lấp đầy">{% if t.occupancy is not none %}{{ number(t.occupancy) }}%{% else %}—{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+{{ kit.empty("Chưa có số liệu theo tour trong 12 tháng qua.") }}
+{% endif %}
+
+<h2>Tỉ lệ lấp đầy</h2>
+<section class="panel">
+  {% if report.past_departures %}
+  <p class="big-figure">{{ number(report.occupancy) }}%</p>
+  <p class="meta">{{ report.past_guests }} khách trên {{ report.past_seats }} chỗ của {{ report.past_departures }} chuyến đã diễn ra. Chuyến bị huỷ không tính.</p>
+  {% else %}
+  <p class="meta">Chưa có chuyến nào đã diễn ra trong 12 tháng qua.</p>
+  {% endif %}
+</section>
+
+<h2>Tỉ lệ huỷ</h2>
+<section class="panel">
+  {% if report.created %}
+  <p class="big-figure">{{ number(report.cancel_rate) }}%</p>
+  <p class="meta">{{ report.cancelled }} trên {{ report.created }} lượt đặt tạo trong 12 tháng qua bị huỷ: khách tự huỷ {{ report.cancelled_by.GUEST }}, trưởng HTX huỷ {{ report.cancelled_by.MANAGER }}, hệ thống huỷ (quá hạn giữ chỗ hoặc huỷ chuyến) {{ report.cancelled_by.SYSTEM }}.</p>
+  {% else %}
+  <p class="meta">Chưa có lượt đặt nào trong 12 tháng qua.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,42 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "admin/sales/ui.html" as ui %}
+{% set active_tab = "customers" %}
+{% block title %}Khách{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-sales.css') }}">{% endblock %}
+{% block header %}
+{% call kit.app_header("Khách", "HTX " ~ htx ~ " · gộp theo số điện thoại, khách đặt gần nhất ở trên") %}
+  {{ kit.export_link(href('/customers/export.csv', theme, q=q or None)) }}
+{% endcall %}
+{% endblock %}
+{% block main %}
+<form class="toolbar" method="get" action="{{ href('/customers') }}">
+  {{ ui.theme_field(theme) }}
+  <label>Tìm kiếm
+    <input type="search" name="q" maxlength="100" value="{{ q }}" placeholder="Tên hoặc số điện thoại">
+  </label>
+  <button type="submit">Tìm</button>
+</form>
+{% if rows %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Điện thoại</th><th role="columnheader">Tên gần nhất</th><th role="columnheader">Lần đặt</th><th role="columnheader">Lần đã đi</th><th role="columnheader">Tổng đã trả</th><th role="columnheader">Gần nhất</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for c in rows %}
+    <tr role="row">
+      <td role="cell" data-label="Điện thoại">{{ c.phone }}</td>
+      <td role="cell" data-label="Tên gần nhất"><a href="{{ href('/bookings', theme, q=c.phone) }}">{{ c.guest_name }}</a></td>
+      <td role="cell" data-label="Lần đặt">{{ c.bookings }}</td>
+      <td role="cell" data-label="Lần đã đi">{{ c.went }}</td>
+      <td role="cell" data-label="Tổng đã trả">{{ c.paid_vnd | vnd }}</td>
+      <td role="cell" data-label="Gần nhất">{{ c.last_at | vn_date }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ kit.pagination(paging, prev_href, next_href) }}
+{% else %}
+{{ kit.empty("Không có khách nào khớp “" ~ q ~ "”." if q else "Chưa có khách nào. Khách xuất hiện ở đây sau lượt đặt đầu tiên.") }}
+{% endif %}
+{% endblock %}
