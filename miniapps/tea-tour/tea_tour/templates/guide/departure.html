@@ -1,0 +1,106 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "guide/base.html" %}
+{% import "kit.html" as kit %}
+{% import "icons.html" as icons %}
+{% block title %}{{ departure.title }}{% endblock %}
+
+{% block main %}
+{% set action = href('/guide/departures/' ~ departure.id ~ '/checkin', theme) %}
+<p class="back"><a href="{{ href('/guide', theme) }}">{{ icons.chevron_left(18) }} Lịch dẫn tour</a></p>
+
+<header class="trip-head">
+  <h1>{{ departure.title }}</h1>
+  <p class="trip-meta">{{ icons.calendar(16) }} {{ departure.weekday }}, {{ departure.local.strftime('%d/%m/%Y') }} · {{ departure.local.strftime('%H:%M') }}</p>
+  {%- if departure.meeting_point %}
+  <p class="trip-meta">{{ icons.map_pin(16) }} {{ departure.meeting_point }}</p>
+  {%- endif %}
+</header>
+
+{% if cancelled %}
+<p class="error" role="alert">Chuyến này đã huỷ{% if departure.cancel_reason %}: {{ departure.cancel_reason }}{% endif %}. Không điểm danh.</p>
+{% else %}
+
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if banner %}
+<p class="notice" role="status">
+  {%- if did == "undo" %}Đã bỏ điểm danh {{ banner.name }}.{% else %}Đã điểm danh {{ banner.name }}{% if banner.checked_in_count %} ({{ banner.checked_in_count }}/{{ banner.party_size }} người){% endif %}.{% endif -%}
+</p>
+{% endif %}
+
+<ul class="stats" aria-label="Tổng quan chuyến">
+  <li><span class="stat-label">Có mặt</span><span class="stat-value">{{ present }}/{{ total }}</span><span class="stat-hint">người</span></li>
+  <li><span class="stat-label">Lượt đặt</span><span class="stat-value">{{ guests|length }}</span><span class="stat-hint">đã xác nhận</span></li>
+</ul>
+
+{% if reason %}
+<p class="notice window-reason">{{ icons.info(20) }} {{ reason }}</p>
+{% else %}
+<form class="code-form" method="post" action="{{ action }}">
+  <input type="hidden" name="action" value="code">
+  <label for="code">Mã đặt chỗ của khách</label>
+  <div class="code-row">
+    <input id="code" name="code" value="{{ code }}" maxlength="20" autocomplete="off" autocapitalize="characters"
+           spellcheck="false" autocorrect="off" enterkeyhint="go" placeholder="VD: AB12CD34" required{% if error %} aria-invalid="true"{% endif %}>
+    <button type="submit">{{ icons.check(20) }} Điểm danh</button>
+  </div>
+</form>
+{% endif %}
+
+<section aria-labelledby="guests-title">
+  <h2 id="guests-title">Danh sách khách</h2>
+  {%- if not guests %}
+  {{ kit.empty("Chưa có lượt đặt nào được xác nhận cho chuyến này.") }}
+  {%- else %}
+  <ul class="guests">
+    {%- for g in guests %}
+    {%- set here = g.checked_in_at is not none %}
+    <li class="guest{% if here %} is-here{% endif %}" id="g-{{ g.id }}">
+      <div class="guest-top">
+        <h3>{{ g.name }}</h3>
+        {%- if here %}<span class="pill ok">{{ icons.circle_check(16) }} Có mặt {{ g.checked_in_count }}/{{ g.party_size }}</span>
+        {%- elif departure.ended %}<span class="pill danger">Vắng mặt</span>
+        {%- else %}<span class="pill neutral">Chưa điểm danh</span>{% endif %}
+      </div>
+      <p class="guest-party">{{ icons.users(18) }} {{ g.adults }} người lớn{% if g.children %} · {{ g.children }} trẻ em{% endif %}
+        <span class="guest-code">Mã {{ g.code }}</span></p>
+      {%- if g.note %}<p class="guest-note">{{ icons.message_circle(16) }} {{ g.note }}</p>{% endif %}
+      <p class="guest-due{% if g.due_vnd %} has-due{% endif %}">
+        {%- if g.due_vnd %}Còn thu <strong>{{ g.due_vnd|vnd }}</strong>{% else %}Đã thanh toán đủ{% endif -%}
+      </p>
+      {%- if here and g.checked_in_by %}<p class="guest-by">Điểm danh bởi {{ g.checked_in_by }}</p>{% endif %}
+      {%- if not reason %}
+      <div class="guest-actions">
+        {%- if here %}
+        <form method="post" action="{{ action }}">
+          <input type="hidden" name="action" value="undo"><input type="hidden" name="booking_id" value="{{ g.id }}">
+          <button class="secondary" type="submit">Bỏ điểm danh</button>
+        </form>
+        {%- else %}
+        <form method="post" action="{{ action }}">
+          <input type="hidden" name="action" value="checkin"><input type="hidden" name="booking_id" value="{{ g.id }}">
+          <button class="big" type="submit">{{ icons.check(22) }} Điểm danh cả đoàn ({{ g.party_size }})</button>
+        </form>
+        {%- if g.party_size > 1 %}
+        <details class="disclosure partial">
+          <summary>Chỉ một phần đoàn có mặt</summary>
+          <form method="post" action="{{ action }}">
+            <input type="hidden" name="action" value="checkin"><input type="hidden" name="booking_id" value="{{ g.id }}">
+            <label for="n-{{ g.id }}">Số người có mặt (1 đến {{ g.party_size }})</label>
+            <div class="code-row">
+              <input id="n-{{ g.id }}" name="count" type="number" inputmode="numeric" min="1" max="{{ g.party_size }}" required>
+              <button class="secondary" type="submit">Ghi</button>
+            </div>
+          </form>
+        </details>
+        {%- endif %}
+        {%- endif %}
+      </div>
+      {%- endif %}
+    </li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
+</section>
+{% endif %}
+{% endblock %}
