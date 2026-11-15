@@ -1,11 +1,8 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Throwaway Postgres and the install's database step, reused from platform/cli (run with its requirements too)."""
-import base64
 import importlib.util
-import json
 import sys
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import psycopg
@@ -14,6 +11,7 @@ from psycopg.conninfo import make_conninfo
 
 APP_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(APP_DIR))
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # factories, importable by name from every test file
 
 # The CLI's pg_url fixture (and its sys.path entry for dxos_cli), loaded under another name than "conftest".
 _spec = importlib.util.spec_from_file_location("cli_conftest", APP_DIR.parents[1] / "platform/cli/tests/conftest.py")
@@ -23,9 +21,9 @@ pg_url = _cli_conftest.pg_url
 
 from dxos_cli.database import drop_app_database, ensure_app_database  # noqa: E402
 
-from tea_tour import store  # noqa: E402
+from factories import bearer  # noqa: E402,F401  (re-exported for the test files that import it from here)
 
-LATER = datetime.now(timezone.utc) + timedelta(days=7)
+TABLES = "reviews, inquiries, booking_events, payments, bookings, tour_media, departures, tours, settings, media"
 
 
 @pytest.fixture(scope="session")
@@ -39,30 +37,19 @@ def app_db_url(pg_url):
 
 @pytest.fixture
 def db(app_db_url, monkeypatch):
-    """Empty tables and DXOS_APP_DB_URL set; yields a connection as the app role."""
+    """Empty tables and DXOS_APP_DB_URL set; yields an autocommit connection as the app role."""
+    from tea_tour import store
     monkeypatch.setenv("DXOS_APP_DB_URL", app_db_url)
     with store.connect(app_db_url) as conn:
-        conn.execute("TRUNCATE bookings, tours")
+        conn.execute(f"TRUNCATE {TABLES}")
         yield conn
 
 
-def add_tour(conn, htx="TC", title="Tour đồi chè Tân Cương", starts_at=LATER, seats=5, status="OPEN",
-             guide_user_id=None, guide_name=None, price_vnd=250000):
-    return conn.execute(
-        """INSERT INTO tours (htx_code, title, starts_at, meeting_point, seats, price_vnd, guide_user_id, guide_name, status)
-           VALUES (%s, %s, %s, 'Nhà văn hoá xóm Hồng Thái', %s, %s, %s, %s, %s) RETURNING id""",
-        (htx, title, starts_at, seats, price_vnd, guide_user_id, guide_name, status)).fetchone()[0]
+@pytest.fixture
+def client(db):
+    """The app over HTTP as the gateway presents it (prefix stripped, root path set); errors become 500 pages."""
+    from fastapi.testclient import TestClient
 
-
-def add_booking(conn, tour_id, htx="TC", code="AAAA2222", guest_name="Khách", phone="0912345678", party_size=1,
-                status="PENDING"):
-    return conn.execute(
-        """INSERT INTO bookings (htx_code, tour_id, code, guest_name, phone, party_size, status)
-           VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id""",
-        (htx, tour_id, code, guest_name, phone, party_size, status)).fetchone()[0]
-
-
-def bearer(sub="kc-manager-tc", htx="TC", roles=("manager",), name="Quản trị TC") -> dict:
-    claims = {"sub": sub, "name": name, "htx_code": htx, "realm_access": {"roles": list(roles)}}
-    payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
-    return {"Authorization": f"Bearer h.{payload}.s"}
+    from tea_tour import main, web
+    with TestClient(main.app, root_path=web.PREFIX, raise_server_exceptions=False, follow_redirects=False) as test_client:
+        yield test_client

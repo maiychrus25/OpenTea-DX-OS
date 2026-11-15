@@ -1,0 +1,14 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Manager shell: dxos-app.css, admin.css, the header and the nine-tab bar. Pages set {% set active_tab = "tours" %}
+    (overview, tours, departures, bookings, payments, customers, reviews, reports, settings) or pass active_tab, and fill
+    main; the header block can be replaced to add actions. Pass htx=claims.htx_code to show the cooperative. -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block styles %}<link rel="stylesheet" href="/dxos-app.css">
+<link rel="stylesheet" href="{{ asset_url('admin.css') }}">{% endblock %}
+{% block body %}<main>
+{% block header %}{{ kit.app_header("Tour đồi chè", ("HTX " ~ htx) if htx else None) }}{% endblock %}
+{{ kit.tabs(tab_items(theme), active_tab|default("")) }}
+{% block main %}{% endblock %}
+</main>{% endblock %}

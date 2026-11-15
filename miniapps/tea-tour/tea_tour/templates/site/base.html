@@ -1,0 +1,12 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Customer shell: tokens.css (colour, type, radius, spacing, Be Vietnam Pro), the no-referrer meta every guest page needs,
+    a skip link and one main element. Pages add site.css with {% block head_extra %}<link rel="stylesheet" href="{{ asset_url('site.css') }}">{% endblock %}. -#}
+{% extends "base.html" %}
+{% block head_meta %}<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ asset_url('tokens.css') }}">{% endblock %}
+{% block body %}<a class="skip-link" href="#main">Bỏ qua tới nội dung</a>
+<main id="main">
+{% block main %}{% endblock %}
+</main>{% endblock %}

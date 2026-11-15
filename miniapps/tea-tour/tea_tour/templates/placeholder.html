@@ -1,0 +1,9 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Stand-in for a page a feature task has not built yet; the feature task deletes its use of it. -#}
+{% extends "base.html" %}
+{% block title %}{{ title|default("Đang xây dựng") }}{% endblock %}
+{% block main %}
+<h1>{{ title|default("Đang xây dựng") }}</h1>
+<p class="empty">Trang này đang được xây dựng.</p>
+{% endblock %}
