@@ -1,0 +1,17 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Sửa {{ exp.name }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Sửa gói trải nghiệm", "Gói này " ~ ("đang hiện cho khách." if exp.is_visible else "đang ẩn, khách chưa thấy.")) %}{% endcall %}
+{{ kit.tabs(tabs, current) }}
+<p><a href="{{ href('/experiences', theme) }}">← Quay lại danh sách gói</a></p>
+{% if errors %}
+<div class="error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+{% endif %}
+<form method="post" action="{{ href('/experiences/' ~ exp.id ~ '/edit', theme) }}">
+  {% include "experience_fields.html" %}
+  <button type="submit">Lưu gói</button>
+</form>
+{% endblock %}

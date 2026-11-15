@@ -1,0 +1,42 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "public_base.html" %}
+{% import "public_parts.html" as pp %}
+{% block title %}{{ exp.name }} · HTX {{ htx }}{% endblock %}
+{% block content %}
+{{ pp.subhero(exp.name, none, href('/public/' ~ htx ~ '/experiences', theme), "Tất cả gói trải nghiệm") }}
+<section class="tp-wrap tp-page tp-detail">
+  <div class="tp-detail-main">
+    <div class="tp-chips">
+      <span class="tp-chip">🕒 {{ exp.duration_min }} phút</span>
+      {%- for m in exp.months %}
+      <span class="tp-chip tp-chip--month">{{ month_names[m] }}</span>
+      {%- endfor %}
+    </div>
+    <p class="tp-price">{{ exp.price_vnd | vnd }} <span class="tp-muted tp-price-note">giá tham khảo, không phải giá tour</span></p>
+    <p>Thời lượng: {{ exp.duration_min }} phút</p>
+    <p>Tháng phù hợp: {{ exp.months | months_text or "HTX chưa ghi" }}</p>
+    {%- if exp.description %}
+    <p class="tp-body">{{ exp.description }}</p>
+    {%- endif %}
+
+    {%- if sites %}
+    <h2>Điểm liên quan</h2>
+    <ul class="tp-grid tp-grid--list">
+      {%- for s in sites %}
+      {{ pp.site_card(s) }}
+      {%- endfor %}
+    </ul>
+    {%- endif %}
+  </div>
+
+  <aside class="tp-card tp-card--aside" aria-label="Đặt chỗ">
+    <h2>Chọn ngày đi</h2>
+    <p>Lịch tour và đặt chỗ nằm ở ứng dụng đặt tour của HTX.</p>
+    <div class="tp-card-actions">
+      <a class="tp-btn tp-btn--cta" href="{{ tour_link(htx, theme) }}">Xem lịch tour và đặt chỗ</a>
+    </div>
+    <p class="tp-muted">Nếu chưa có lịch, liên hệ HTX.</p>
+  </aside>
+</section>
+{% endblock %}

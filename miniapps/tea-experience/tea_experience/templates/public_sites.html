@@ -1,0 +1,19 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "public_base.html" %}
+{% import "public_parts.html" as pp %}
+{% block title %}Điểm tham quan · HTX {{ htx }}{% endblock %}
+{% block content %}
+{{ pp.subhero("Điểm tham quan", "Các điểm HTX đã đánh dấu cho khách tham quan.", href('/public/' ~ htx, theme)) }}
+<section class="tp-wrap tp-page">
+  {%- if sites %}
+  <ul class="tp-grid">
+    {%- for s in sites %}
+    {{ pp.site_card(s) }}
+    {%- endfor %}
+  </ul>
+  {%- else %}
+  {{ pp.empty("HTX đang cập nhật, mời quay lại sau.") }}
+  {%- endif %}
+</section>
+{% endblock %}

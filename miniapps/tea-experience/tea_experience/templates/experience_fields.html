@@ -1,0 +1,24 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Fields of the create and edit forms of an experience; needs form, sites. -#}
+  <label>Tên gói <input name="name" maxlength="120" required value="{{ form.name }}"></label>
+  <label>Mô tả (không bắt buộc) <textarea name="description" maxlength="1000">{{ form.description }}</textarea></label>
+  <label>Thời lượng (phút, 15 đến 1440) <input type="number" name="duration_min" min="15" max="1440" step="1" required value="{{ form.duration_min }}"></label>
+  <label>Giá tham khảo (đồng, 0 trở lên) <input type="number" name="price_vnd" min="0" max="1000000000" step="1" required value="{{ form.price_vnd }}"></label>
+  <fieldset>
+    <legend>Tháng phù hợp (để trống nếu chưa ghi)</legend>
+    {% for m in months %}
+    <label><input type="checkbox" name="months" value="{{ m }}"{% if (m|string) in form.months %} checked{% endif %}> Tháng {{ m }}</label>
+    {% endfor %}
+  </fieldset>
+  <fieldset>
+    <legend>Điểm liên quan (không bắt buộc)</legend>
+    {% for s in sites %}
+    <label><input type="checkbox" name="sites" value="{{ s.id }}"{% if (s.id|string) in form.sites %} checked{% endif %}> {{ s.name }}{% if not s.is_public %} (đang ẩn){% endif %}</label>
+    {% else %}
+    <p class="empty">Chưa có điểm tham quan nào để liên kết.</p>
+    {% endfor %}
+  </fieldset>
+  <label>Thứ tự hiển thị (0 đến 999) <input type="number" name="sort_order" min="0" max="999" step="1" value="{{ form.sort_order or '0' }}"></label>
+  <label><input type="checkbox" name="visible" value="1"{% if form.visible == '1' or form.visible is not defined %} checked{% endif %}> Đang hiện cho khách</label>
+  <label><input type="checkbox" name="featured" value="1"{% if form.featured == '1' %} checked{% endif %}> Nổi bật trên trang chủ khách (tối đa 6 gói)</label>

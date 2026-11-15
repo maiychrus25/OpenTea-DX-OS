@@ -1,0 +1,25 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Cẩm nang HTX {{ htx }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Cẩm nang du lịch HTX " ~ htx, "Trang này chỉ hiện nội dung đang công khai. Bạn không sửa nội dung ở đây.") %}
+  <a class="button secondary" href="{{ public_href }}">Xem trang khách</a>
+{% endcall %}
+{% if intro and intro.intro_text %}<p>{{ intro.intro_text }}</p>{% endif %}
+
+<h2>Điểm tham quan</h2>
+{% if sites %}
+<ul>{% for s in sites %}<li>{{ s.name }}</li>{% endfor %}</ul>
+{% else %}
+{{ kit.empty("Chưa có điểm công khai.") }}
+{% endif %}
+
+<h2>Gói trải nghiệm</h2>
+{% if experiences %}
+<ul>{% for e in experiences %}<li><a href="{{ href('/public/' ~ htx ~ '/experiences/' ~ e.id, theme) }}">{{ e.name }}</a></li>{% endfor %}</ul>
+{% else %}
+{{ kit.empty("Chưa có gói công khai.") }}
+{% endif %}
+{% endblock %}

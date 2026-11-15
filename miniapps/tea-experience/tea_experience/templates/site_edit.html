@@ -1,0 +1,17 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Sửa {{ site.name }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Sửa điểm tham quan", "Điểm này " ~ ("đang công khai." if site.is_public else "đang ẩn, khách chưa thấy.")) %}{% endcall %}
+{{ kit.tabs(tabs, current) }}
+<p><a href="{{ href('/sites', theme) }}">← Quay lại danh sách điểm</a></p>
+{% if errors %}
+<div class="error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+{% endif %}
+<form method="post" action="{{ href('/sites/' ~ site.id ~ '/edit', theme) }}">
+  {% include "site_fields.html" %}
+  <button type="submit">Lưu điểm</button>
+</form>
+{% endblock %}

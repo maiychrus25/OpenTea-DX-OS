@@ -1,0 +1,9 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Khung của mọi trang khách: thêm stylesheet riêng (CSP không cho thẻ style nội tuyến), hero/nội dung ở khối content, chân trang ngoài <main>. -#}
+{% extends "base.html" %}
+{% import "public_parts.html" as pp %}
+{% block head %}<link rel="stylesheet" href="{{ href('/public/' ~ htx ~ '/style.css') }}">{% endblock %}
+{% block body_attrs %} class="tp"{% endblock %}
+{% block main %}{% block content %}{% endblock %}{% endblock %}
+{% block after_main %}{{ pp.footer(htx, intro) }}{% endblock %}

@@ -13,6 +13,7 @@ PACKAGES=(
   miniapps/farm-supply/farm_supply
   miniapps/tea-tour/tea_tour
   miniapps/custom-books/custom_books
+  miniapps/tea-experience/tea_experience
 )
 # source file : path inside the package
 FILES=(

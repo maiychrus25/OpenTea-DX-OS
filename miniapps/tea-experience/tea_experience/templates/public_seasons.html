@@ -1,0 +1,22 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "public_base.html" %}
+{% import "public_parts.html" as pp %}
+{% block title %}Lịch mùa vụ · HTX {{ htx }}{% endblock %}
+{% block content %}
+{{ pp.subhero("Lịch mùa vụ", "Tháng nào hợp đi, và HTX ghi gì cho từng tháng.", href('/public/' ~ htx, theme)) }}
+<section class="tp-wrap tp-page">
+  <ul class="tp-legend" aria-label="Chú thích">
+    <li><span class="tp-swatch tp-swatch--fit" aria-hidden="true"></span>Hợp đi theo gói trải nghiệm</li>
+    <li><span class="tp-swatch tp-swatch--note" aria-hidden="true"></span>Có ghi chú của HTX</li>
+  </ul>
+  {{ pp.months_grid(rows, fit) }}
+
+  <h2 class="tp-h2-gap">Ghi chú của HTX theo tháng</h2>
+  <ol class="tp-notes">
+    {%- for m, label, note in rows %}
+    <li{% if not note %} data-empty="1"{% endif %}><strong>{{ label }}</strong><span>{{ note or "Chưa có ghi chú" }}</span></li>
+    {%- endfor %}
+  </ol>
+</section>
+{% endblock %}

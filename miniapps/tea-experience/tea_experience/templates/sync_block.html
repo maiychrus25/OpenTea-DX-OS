@@ -1,0 +1,16 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- The refresh button and the state of the last refresh. Needs last (last_sync_view or none), theme. -#}
+<section class="disclosure" aria-labelledby="sync-title">
+  <h2 id="sync-title">Dữ liệu từ lõi</h2>
+  {% if last and last.ok %}
+  <p class="notice">Cập nhật lúc {{ last.at | vn_time }}: {{ last.parcels }} thửa, {{ last.crops }} thửa có vụ đang trồng{% if last.skipped %}; bỏ {{ last.skipped }} thửa không có toạ độ hợp lệ{% endif %}.</p>
+  {% elif last %}
+  <p class="error" role="alert">Lần làm mới lúc {{ last.at | vn_time }} không thành công: {{ last.reason or "lỗi không rõ" }} Đang dùng bản cũ, nội dung bạn soạn vẫn còn.</p>
+  {% else %}
+  <p class="empty">Chưa làm mới lần nào. {{ no_time_yet }}</p>
+  {% endif %}
+  <form method="post" action="{{ href('/sync', theme) }}">
+    <button type="submit">Làm mới từ dữ liệu lõi</button>
+  </form>
+</section>

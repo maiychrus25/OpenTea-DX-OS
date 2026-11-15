@@ -1,0 +1,20 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Tổng quan · HTX {{ htx }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Cẩm nang du lịch HTX " ~ htx, "Soạn nội dung để khách đọc trên điện thoại. Khách xem bản công khai, không cần đăng nhập.") %}
+  <a class="button secondary" href="{{ href('/public/' ~ htx, theme) }}">Xem như khách</a>
+{% endcall %}
+{{ kit.tabs(tabs, current) }}
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+{{ kit.stats([
+  {"label": "Điểm công khai", "value": stats.sites_public ~ " / " ~ stats.sites_total, "hint": "đã đánh dấu công khai trên tổng số điểm"},
+  {"label": "Gói đang hiện", "value": stats.experiences_visible ~ " / " ~ stats.experiences_total, "hint": "khách thấy được"},
+  {"label": "Tháng có ghi chú", "value": stats.months_with_notes ~ " / 12", "hint": "mùa vụ"},
+  {"label": "Làm mới từ lõi", "value": last.at | vn_time if last else "Chưa có", "hint": ("Cập nhật lúc" if last and last.ok else "Lần gần nhất")}
+]) }}
+{% include "sync_block.html" %}
+<p>Đường dẫn cho khách: <a href="{{ href('/public/' ~ htx, theme) }}">{{ prefix }}/public/{{ htx }}</a></p>
+{% endblock %}

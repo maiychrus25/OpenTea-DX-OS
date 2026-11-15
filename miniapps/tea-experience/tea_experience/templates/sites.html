@@ -1,0 +1,52 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Điểm tham quan · HTX {{ htx }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Điểm tham quan", "Chỉ điểm đánh dấu công khai mới hiện cho khách, kèm nút mở bản đồ nếu có toạ độ.") %}
+  <a class="button secondary" href="{{ href('/public/' ~ htx ~ '/sites', theme) }}">Xem như khách</a>
+{% endcall %}
+{{ kit.tabs(tabs, current) }}
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+
+{% if sites %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Điểm</th><th role="columnheader">Toạ độ</th><th role="columnheader">Khách thấy</th><th role="columnheader">Thao tác</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for s in sites %}
+    <tr role="row">
+      <td role="cell" data-label="Điểm">{{ s.name }}{% if s.description %}<br>{{ s.description }}{% endif %}</td>
+      <td role="cell" data-label="Toạ độ">{% if s.latitude is not none %}{{ s.latitude | num(5) }}, {{ s.longitude | num(5) }}{% else %}chưa có{% endif %}</td>
+      <td role="cell" data-label="Khách thấy"><span class="{{ 'pill' if s.is_public else 'pill neutral' }}">{{ 'Công khai' if s.is_public else 'Đang ẩn' }}</span></td>
+      <td role="cell" data-label="Thao tác">
+        <span class="actions">
+          <a class="button secondary" href="{{ href('/sites/' ~ s.id ~ '/edit', theme) }}">Sửa</a>
+          <form method="post" action="{{ href('/sites/' ~ s.id ~ '/public', theme) }}">
+            <input type="hidden" name="to" value="{{ '0' if s.is_public else '1' }}">
+            <button type="submit" class="secondary">{{ 'Ẩn' if s.is_public else 'Hiện' }}</button>
+          </form>
+          <form method="post" action="{{ href('/sites/' ~ s.id ~ '/delete', theme) }}">
+            <button type="submit" class="danger">Xoá</button>
+          </form>
+        </span>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+{{ kit.empty("Chưa có điểm nào. Thêm điểm bằng biểu mẫu dưới đây.") }}
+{% endif %}
+
+<details class="disclosure"{% if errors %} open{% endif %}>
+  <summary>Thêm điểm tham quan</summary>
+  {% if errors %}
+  <div class="error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+  {% endif %}
+  <form method="post" action="{{ href('/sites', theme) }}">
+    {% include "site_fields.html" %}
+    <button type="submit">Thêm điểm</button>
+  </form>
+</details>
+{% endblock %}

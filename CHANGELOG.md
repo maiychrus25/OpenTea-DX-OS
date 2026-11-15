@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Mini-app `tea-experience` ("Cẩm nang du lịch đồi chè", 0.1.0)**: a tourism guide for one HTX, same stack as `tea-tour` (FastAPI, Jinja2, no JavaScript). The manager writes the HTX intro, sightseeing sites (coordinates, public or not), experience packages (duration, reference price, suitable months, featured flag, up to 6) and a 12-month season calendar, and refreshes a minimal copy of the core (HTX profile, household count, parcel codes and crops) with the manager's own token. Guests, who have no token, read only that copy on `/public/<htx>`: hero, featured tours and experiences with filters (`month`, `q`, `max_price`, `sort`), sites with an "open on map" link, season grid, and a link to the booking page of `tea-tour`. Farmers see what is public. The public pages never show household names, phone numbers or parcel coordinates. The refresh reads only columns that exist in `apps/web/prisma/schema.prisma` (a contract test fails on drift). It does not read `tea-tour` (apps do not read each other), so departure dates and free seats are a link, not a list. Requires core 1.10.0. See `miniapps/tea-experience/README.md` and `docs/specs/2026-11-15-tea-experience-phase1-design.md`.
+- `scripts/appkit-sync.sh` and the CI mini-app unit tests now include `tea-experience`.
+
 ---
 
 ## [1.12.0] - 2026-11-14

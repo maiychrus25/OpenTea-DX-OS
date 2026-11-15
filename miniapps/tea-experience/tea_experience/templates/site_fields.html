@@ -1,0 +1,17 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Fields of the create and edit forms of a site; needs form, parcels. -#}
+  <label>Tên điểm <input name="name" maxlength="120" required value="{{ form.name }}"></label>
+  <label>Mô tả (không bắt buộc) <textarea name="description" maxlength="500">{{ form.description }}</textarea></label>
+  <label>Thửa tham chiếu (không bắt buộc)
+    <select name="parcel_code">
+      <option value="">Không chọn thửa</option>
+      {% for p in parcels %}<option value="{{ p.parcel_code }}"{% if form.parcel_code == p.parcel_code %} selected{% endif %}>{{ p.parcel_code }}</option>{% endfor %}
+    </select>
+  </label>
+  {% if not parcels %}<p class="empty">Chưa có thửa từ lõi. Làm mới ở trang Giới thiệu để lấy thửa.</p>{% endif %}
+  <label>Vĩ độ (ví dụ 21,0285) <input name="latitude" inputmode="decimal" value="{{ form.latitude }}"></label>
+  <label>Kinh độ (ví dụ 105,8542) <input name="longitude" inputmode="decimal" value="{{ form.longitude }}"></label>
+  <p>Nếu chọn thửa và để trống toạ độ, toạ độ tâm thửa được sao chép. Bạn sửa được sau đó.</p>
+  <label>Thứ tự hiển thị (0 đến 999, số nhỏ lên trước) <input type="number" name="sort_order" min="0" max="999" step="1" value="{{ form.sort_order or '0' }}"></label>
+  <label><input type="checkbox" name="public" value="1"{% if form.public == '1' %} checked{% endif %}> Đánh dấu công khai (khách thấy điểm này)</label>

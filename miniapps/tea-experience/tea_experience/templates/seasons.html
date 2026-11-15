@@ -1,0 +1,38 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Mùa vụ · HTX {{ htx }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Lịch mùa vụ", "Mỗi tháng một ghi chú để khách chọn ngày. Ô trống nghĩa là không ghi.") %}
+  <a class="button secondary" href="{{ href('/public/' ~ htx ~ '/seasons', theme) }}">Xem như khách</a>
+{% endcall %}
+{{ kit.tabs(tabs, current) }}
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+
+<section class="disclosure" aria-labelledby="hint-title">
+  <h2 id="hint-title">Vụ đang trồng theo lõi (gợi ý)</h2>
+  {% if hints %}
+  <ul>
+    {% for crop, season, count in hints %}
+    <li>{{ crop }}{% if season %}, vụ {{ season }}{% endif %}: {{ count }} thửa</li>
+    {% endfor %}
+  </ul>
+  <p>{% if last and last.ok %}Cập nhật lúc {{ last.at | vn_time }}.{% else %}Chưa có số liệu mới từ lõi.{% endif %}</p>
+  {% else %}
+  <p class="empty">Chưa có vụ đang trồng từ lõi. Làm mới ở trang Giới thiệu để lấy dữ liệu.</p>
+  {% endif %}
+</section>
+
+{% if errors %}
+<div class="error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+{% endif %}
+<form method="post" action="{{ href('/seasons', theme) }}">
+  {% for month, label in notes %}
+  <label>{{ label }}
+    <textarea name="notes" maxlength="300" rows="2">{{ form.notes[loop.index0] }}</textarea>
+  </label>
+  {% endfor %}
+  <button type="submit">Lưu lịch mùa vụ</button>
+</form>
+{% endblock %}

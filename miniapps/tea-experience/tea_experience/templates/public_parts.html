@@ -1,0 +1,90 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Thành phần dùng chung của trang khách. Biểu tượng là emoji (văn bản), trang trí là CSS; không script, không style attribute. -#}
+
+{# Biểu tượng trang trí: đọc máy bỏ qua. #}
+{% macro icon(glyph) -%}
+<span class="tp-icon" aria-hidden="true">{{ glyph }}</span>
+{%- endmacro %}
+
+{# Tiêu đề trang con: dải ngắn có liên kết quay lại. #}
+{% macro subhero(title, lead, back_href, back_label="Trang giới thiệu") -%}
+<header class="tp-subhero">
+  <div class="tp-wrap">
+    <a class="tp-back" href="{{ back_href }}">← {{ back_label }}</a>
+    <h1>{{ title }}</h1>
+    {%- if lead %}
+    <p class="tp-hero-lede">{{ lead }}</p>
+    {%- endif %}
+  </div>
+</header>
+{%- endmacro %}
+
+{# Khung trống thân thiện; không có nút, không có lỗi. #}
+{% macro empty(message) -%}
+<p class="tp-empty">{{ message }}</p>
+{%- endmacro %}
+
+{% macro site_card(s) -%}
+<li class="tp-card tp-card--site">
+  {{ icon("🌄") }}
+  <h3>{{ s.name }}</h3>
+  <p>{{ s.description or "Điểm HTX đánh dấu cho khách tham quan." }}</p>
+  {%- if s.latitude is not none %}
+  <div class="tp-card-actions">
+    <a class="tp-btn tp-btn--soft" href="{{ map_link(s.latitude, s.longitude) }}" target="_blank" rel="noopener">Mở trên bản đồ<span class="tp-sr"> (mở tab mới)</span></a>
+  </div>
+  {%- endif %}
+</li>
+{%- endmacro %}
+
+{# related: tên điểm công khai liên quan (chỉ tên). from_price: hiện "Từ ..." (mục nổi bật). #}
+{% macro exp_card(e, related, htx, theme, from_price=False) -%}
+<li class="tp-card tp-card--exp">
+  {{ icon("🍵") }}
+  <h3><a href="{{ href('/public/' ~ htx ~ '/experiences/' ~ e.id, theme) }}">{{ e.name }}</a></h3>
+  <p class="tp-price">{% if from_price %}Từ {% endif %}{{ e.price_vnd | vnd }}{% if not from_price %} <span class="tp-muted tp-price-note">giá tham khảo</span>{% endif %}</p>
+  <div class="tp-chips">
+    <span class="tp-chip">🕒 {{ e.duration_min }} phút</span>
+    {%- for m in e.months %}
+    <span class="tp-chip tp-chip--month">{{ month_names[m] }}</span>
+    {%- else %}
+    <span class="tp-chip">Chưa ghi tháng phù hợp</span>
+    {%- endfor %}
+  </div>
+  {%- if related %}
+  <p class="tp-muted">Gần: {{ related | join(", ") }}</p>
+  {%- endif %}
+  <div class="tp-card-actions">
+    <a class="tp-btn tp-btn--soft" href="{{ href('/public/' ~ htx ~ '/experiences/' ~ e.id, theme) }}">Xem chi tiết</a>
+    <a class="tp-btn tp-btn--cta" href="{{ tour_link(htx, theme) }}">Đặt chỗ</a>
+  </div>
+</li>
+{%- endmacro %}
+
+{# Lưới 12 tháng. rows: (tháng, nhãn, ghi chú hoặc None); fit: tập tháng có gói trải nghiệm đang hiện. #}
+{% macro months_grid(rows, fit) -%}
+<ul class="tp-months">
+  {%- for m, label, note in rows %}
+  {%- set good = m in fit %}
+  {%- set has_note = note is not none and note != "" %}
+  <li class="tp-month" data-fit="{{ '1' if good else '0' }}" data-note="{{ '1' if has_note else '0' }}">
+    <span class="tp-month-name">{{ label }}</span>
+    <span class="tp-month-state">{% if good and has_note %}Hợp đi · có ghi chú{% elif good %}Hợp đi{% elif has_note %}Có ghi chú{% endif %}</span>
+  </li>
+  {%- endfor %}
+</ul>
+{%- endmacro %}
+
+{% macro footer(htx, intro) -%}
+<footer class="tp-footer">
+  <div class="tp-wrap">
+    <p class="tp-footer-name">{{ intro.name if intro and intro.name else "HTX " ~ htx }}</p>
+    {%- if intro and intro.synced_at %}
+    <p>Cập nhật lúc {{ intro.synced_at | vn_time }}</p>
+    {%- endif %}
+    <p>Quét mã QR trên gói chè để xem nguồn gốc lô chè.</p>
+    <p>Đặt chỗ thực hiện ở ứng dụng đặt tour. Nếu chưa có lịch, liên hệ HTX.</p>
+  </div>
+</footer>
+{%- endmacro %}

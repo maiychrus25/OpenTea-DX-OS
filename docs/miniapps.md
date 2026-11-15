@@ -9,6 +9,7 @@ Mini-app là một dịch vụ riêng (container, schema Postgres, route gateway
 Các app mẫu trong repo:
 - [`miniapps/hello`](../miniapps/hello/README.md): khoảng 80 dòng Python, chỉ dùng thư viện chuẩn, không có database. Nên đọc trước.
 - [`miniapps/tea-tour`](../miniapps/tea-tour/): FastAPI và Jinja2, có database, route công khai và route theo vai trò.
+- [`miniapps/tea-experience`](../miniapps/tea-experience/README.md): cẩm nang du lịch đồi chè (giai đoạn 1), cùng khuôn với `tea-tour`; làm mới bản sao từ lõi bằng token của trưởng HTX, trang công khai cho khách không đăng nhập.
 - Ba app nghiệp vụ cùng khuôn với `tea-tour` (mỗi app có README riêng): [`miniapps/leaf-purchase`](../miniapps/leaf-purchase/README.md) (thu mua búp tươi, route theo ba vai trò, đọc nông hộ qua Hasura bằng token của người gọi), [`miniapps/tea-shop`](../miniapps/tea-shop/README.md) (cửa hàng, đặt hàng công khai, tồn kho) và [`miniapps/farm-supply`](../miniapps/farm-supply/README.md) (đợt mua chung vật tư).
 
 App có `description` trong manifest sẽ hiện thành thẻ trong **Kho ứng dụng** của trưởng HTX (§8). Chỉ app nằm trong `miniapps/` của repo mới có thẻ.

@@ -1,0 +1,71 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "public_base.html" %}
+{% import "public_parts.html" as pp %}
+{% block title %}Gói trải nghiệm · HTX {{ htx }}{% endblock %}
+{% block content %}
+{% set base = href('/public/' ~ htx ~ '/experiences', theme) %}
+{{ pp.subhero("Gói trải nghiệm", "Hái chè, sao chè, pha trà. Giá là giá tham khảo; lịch khởi hành và số chỗ còn xem ở trang đặt tour.", href('/public/' ~ htx, theme)) }}
+<section class="tp-wrap tp-page">
+  {%- if total %}
+  <form class="tp-filter" method="get" action="{{ base }}" role="search">
+    {%- if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+    <div class="tp-filter-grid">
+      <label class="tp-field">Tìm theo tên
+        <input type="search" name="q" maxlength="60" value="{{ filters.q }}">
+      </label>
+      <label class="tp-field">Tháng đi
+        <select name="month">
+          <option value="">Tất cả các tháng</option>
+          {%- for m in months_offered %}
+          <option value="{{ m }}"{% if filters.month == m %} selected{% endif %}>{{ month_names[m] }}</option>
+          {%- endfor %}
+        </select>
+      </label>
+      <label class="tp-field">Giá tối đa (đồng)
+        <input type="number" name="max_price" min="0" max="1000000000" step="1000" inputmode="numeric" value="{{ filters.max_price if filters.max_price is not none else '' }}">
+      </label>
+      <label class="tp-field">Sắp xếp
+        <select name="sort">
+          <option value="">Mặc định</option>
+          <option value="price"{% if filters.sort == 'price' %} selected{% endif %}>Giá thấp đến cao</option>
+          <option value="duration"{% if filters.sort == 'duration' %} selected{% endif %}>Thời lượng ngắn đến dài</option>
+        </select>
+      </label>
+    </div>
+    <div class="tp-actions">
+      <button type="submit" class="tp-btn tp-btn--cta">Lọc</button>
+      <a class="tp-link" href="{{ base }}">Bỏ lọc</a>
+    </div>
+  </form>
+
+  <ul class="tp-chips tp-chips--quick" aria-label="Lọc nhanh">
+    <li><a class="tp-chip tp-chip--link" href="{{ base }}"{% if not filters.month and filters.max_price is none and not filters.sort and not filters.q %} aria-current="true"{% endif %}>Tất cả</a></li>
+    <li><a class="tp-chip tp-chip--link" href="{{ href('/public/' ~ htx ~ '/experiences', theme, max_price=150000) }}"{% if filters.max_price == 150000 %} aria-current="true"{% endif %}>Dưới {{ 150000 | vnd }}</a></li>
+    <li><a class="tp-chip tp-chip--link" href="{{ href('/public/' ~ htx ~ '/experiences', theme, max_price=200000) }}"{% if filters.max_price == 200000 %} aria-current="true"{% endif %}>Dưới {{ 200000 | vnd }}</a></li>
+    <li><a class="tp-chip tp-chip--link" href="{{ href('/public/' ~ htx ~ '/experiences', theme, sort='price') }}"{% if filters.sort == 'price' %} aria-current="true"{% endif %}>Giá thấp nhất</a></li>
+    <li><a class="tp-chip tp-chip--link" href="{{ href('/public/' ~ htx ~ '/experiences', theme, sort='duration') }}"{% if filters.sort == 'duration' %} aria-current="true"{% endif %}>Ngắn nhất</a></li>
+    {%- for m in months_offered %}
+    <li><a class="tp-chip tp-chip--link tp-chip--month" href="{{ href('/public/' ~ htx ~ '/experiences', theme, month=m) }}"{% if filters.month == m %} aria-current="true"{% endif %}>{{ month_names[m] }}</a></li>
+    {%- endfor %}
+  </ul>
+
+  {%- for note in filter_notices %}
+  <p class="tp-notice" role="status">{{ note }}</p>
+  {%- endfor %}
+  <p class="tp-count" role="status">{{ experiences | length }} gói{% if experiences | length != total %} trong {{ total }} gói đang hiện{% endif %}</p>
+
+  {%- if experiences %}
+  <ul class="tp-grid">
+    {%- for e in experiences %}
+    {{ pp.exp_card(e, related.get(e.id, []), htx, theme) }}
+    {%- endfor %}
+  </ul>
+  {%- else %}
+  {{ pp.empty("Không có gói nào khớp bộ lọc. Thử bỏ bớt một lọc nhé.") }}
+  {%- endif %}
+  {%- else %}
+  {{ pp.empty("HTX đang cập nhật, mời quay lại sau.") }}
+  {%- endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,47 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Giới thiệu · HTX {{ htx }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Giới thiệu HTX " ~ htx, "Số liệu do lõi cấp (chỉ đọc). Đoạn giới thiệu do bạn soạn.") %}
+  <a class="button secondary" href="{{ href('/public/' ~ htx, theme) }}">Xem như khách</a>
+{% endcall %}
+{{ kit.tabs(tabs, current) }}
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+{% include "sync_block.html" %}
+
+<h2>Thông tin từ lõi</h2>
+{% if intro and intro.synced_at %}
+<p>Cập nhật lúc {{ intro.synced_at | vn_time }}.</p>
+<ul>
+  <li>Tên HTX: {{ intro.name or "chưa có" }}</li>
+  <li>Địa chỉ trong lõi (chỉ bạn xem, không hiện cho khách): {{ intro.address or "chưa có" }}</li>
+  <li>Địa phương hiển thị cho khách: {{ intro.locality_public or "chưa đặt (khách không thấy địa phương)" }}</li>
+  <li>Cây trồng (lõi): {{ intro.crop_types or "chưa có" }}</li>
+  <li>Lứa: {{ intro.season_label or "chưa có" }}</li>
+  <li>Tổng diện tích: {% if intro.total_area_ha is not none %}{{ intro.total_area_ha | num(2) }} ha{% else %}chưa có{% endif %}</li>
+  <li>Số hộ thành viên (đếm từ lõi): {{ intro.member_count if intro.member_count is not none else "chưa có" }}</li>
+</ul>
+{% else %}
+<p class="empty">Chưa có số liệu từ lõi. Bấm "Làm mới từ dữ liệu lõi" phía trên.</p>
+{% endif %}
+
+<h2>Đoạn giới thiệu</h2>
+{% if errors %}
+<div class="error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+{% endif %}
+<form method="post" action="{{ href('/intro', theme) }}">
+  <label>Giới thiệu HTX (tối đa 2000 ký tự)
+    <textarea name="intro_text" maxlength="2000" rows="8">{{ form.intro_text }}</textarea>
+  </label>
+  <label>Địa phương hiển thị cho khách (ví dụ "Tân Cương, Đại Từ, Thái Nguyên"; tối đa 200 ký tự)
+    <input name="locality" maxlength="200" value="{{ form.locality }}">
+  </label>
+  <p>Đây là chỗ duy nhất khách thấy địa phương. Đừng ghi địa chỉ chi tiết; lõi không có ô này nên bạn tự nhập.</p>
+  <label>Chứng nhận (ví dụ "VietGAP"; tối đa 50 ký tự; lõi không có, bạn tự nhập)
+    <input name="certification" maxlength="50" value="{{ form.certification }}">
+  </label>
+  <button type="submit">Lưu giới thiệu</button>
+</form>
+{% endblock %}

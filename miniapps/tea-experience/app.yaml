@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+apiVersion: dxos/v1
+id: tea-experience
+name: Cẩm nang du lịch đồi chè
+description: Giới thiệu HTX, điểm tham quan, gói trải nghiệm và lịch mùa vụ cho khách du lịch.
+version: 0.1.0
+license: MIT
+publisher: OpenTea Developers
+requires: { core: ">=1.10.0" }
+runtime:
+  build: .
+  port: 8080
+  health: /healthz
+database:
+  migrations: migrations/
+routes:
+  public: [/public/]
+  protected:
+    /: [manager]
+    /guide: [farmer]
+menu:
+  - { label: Cẩm nang du lịch, path: /, roles: [manager] }
+  - { label: Cẩm nang du lịch, path: /guide, roles: [farmer] }
+store:
+  category: tourism
+  icon: map-pinned
+  about: |
+    Ứng dụng giúp HTX giới thiệu mình với khách du lịch: trang giới thiệu, điểm tham quan trên đồi chè, các gói trải nghiệm (hái chè, sao chè, pha trà) và lịch mùa vụ theo tháng. Khách đọc trên điện thoại, không cần đăng nhập.
+
+    Trưởng HTX soạn đoạn giới thiệu, thêm điểm tham quan (đánh dấu công khai hay không, có toạ độ để mở trên bản đồ), thêm gói trải nghiệm (thời lượng, giá tham khảo, tháng phù hợp), ghi chú cho từng tháng. Trưởng HTX bấm "Làm mới từ dữ liệu lõi" để lấy tên HTX, số liệu và các thửa về bản sao của ứng dụng. Khách không gọi được lõi nên luôn xem bản sao này, kèm giờ cập nhật.
+
+    Khi khách quyết định đi, nút "Xem lịch tour và đặt chỗ" mở trang đặt tour của HTX trong ứng dụng Đặt tour đồi chè. Ứng dụng này không đặt chỗ, không thu tiền và không có đánh giá.
+  data:
+    - "Giới thiệu HTX: đoạn giới thiệu do trưởng HTX viết, bản sao tên, địa phương, cây trồng, diện tích, thành viên, chứng nhận"
+    - "Điểm tham quan: tên, mô tả, toạ độ, đánh dấu công khai hay không"
+    - "Gói trải nghiệm: tên, mô tả, thời lượng, giá tham khảo, tháng phù hợp, điểm liên quan"
+    - "Ghi chú mùa vụ theo 12 tháng"
+    - "Bản sao thửa từ lõi: mã thửa, tên thửa, tâm thửa, cây đang trồng (chỉ trưởng HTX xem)"
+    - "Nhật ký làm mới từ lõi: thời điểm, người làm, số thửa, kết quả"
+  personal_data: "Lưu tên hiển thị của trưởng HTX làm mới dữ liệu và mã thửa, toạ độ tâm thửa của hộ (chỉ trưởng HTX xem). Trang công khai không hiện tên hộ, mã thửa hay toạ độ thửa; khách không đăng nhập và app không lưu thông tin khách."
+  core_reads:
+    - "Hồ sơ HTX: tên, tỉnh, huyện, xã, cây trồng chính, diện tích, số thành viên, chứng nhận"
+    - "Thửa của HTX: mã thửa, tên thửa, tâm thửa (toạ độ)"
+    - "Vụ đang trồng của từng thửa: cây trồng và mùa vụ"

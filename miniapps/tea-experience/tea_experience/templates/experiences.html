@@ -1,0 +1,59 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Gói trải nghiệm · HTX {{ htx }}{% endblock %}
+{% block main %}
+{% call kit.app_header("Gói trải nghiệm", "Khách thấy các gói đang hiện. Giá là giá tham khảo; giá tour xem ở trang lịch tour.") %}
+  <a class="button secondary" href="{{ href('/public/' ~ htx ~ '/experiences', theme) }}">Xem như khách</a>
+{% endcall %}
+{{ kit.tabs(tabs, current) }}
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+
+{% if experiences %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Gói</th><th role="columnheader">Thời lượng</th><th role="columnheader">Giá tham khảo</th><th role="columnheader">Tháng phù hợp</th><th role="columnheader">Khách thấy</th><th role="columnheader">Trên trang chủ</th><th role="columnheader">Thao tác</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for e in experiences %}
+    <tr role="row">
+      <td role="cell" data-label="Gói"><a href="{{ href('/experiences/' ~ e.id ~ '/edit', theme) }}">{{ e.name }}</a></td>
+      <td role="cell" data-label="Thời lượng">{{ e.duration_min }} phút</td>
+      <td role="cell" data-label="Giá tham khảo">{{ e.price_vnd | vnd }}</td>
+      <td role="cell" data-label="Tháng phù hợp">{{ e.months | months_text or "chưa ghi" }}</td>
+      <td role="cell" data-label="Khách thấy"><span class="{{ 'pill' if e.is_visible else 'pill neutral' }}">{{ 'Đang hiện' if e.is_visible else 'Đang ẩn' }}</span></td>
+      <td role="cell" data-label="Trên trang chủ"><span class="{{ 'pill' if e.is_featured else 'pill neutral' }}">{{ 'Nổi bật' if e.is_featured else 'Thường' }}</span></td>
+      <td role="cell" data-label="Thao tác">
+        <span class="actions">
+          <a class="button secondary" href="{{ href('/experiences/' ~ e.id ~ '/edit', theme) }}">Sửa</a>
+          <form method="post" action="{{ href('/experiences/' ~ e.id ~ '/visible', theme) }}">
+            <input type="hidden" name="to" value="{{ '0' if e.is_visible else '1' }}">
+            <button type="submit" class="secondary">{{ 'Ẩn' if e.is_visible else 'Hiện' }}</button>
+          </form>
+          <form method="post" action="{{ href('/experiences/' ~ e.id ~ '/featured', theme) }}">
+            <input type="hidden" name="to" value="{{ '0' if e.is_featured else '1' }}">
+            <button type="submit" class="secondary">{{ 'Bỏ nổi bật' if e.is_featured else 'Nổi bật' }}</button>
+          </form>
+          <form method="post" action="{{ href('/experiences/' ~ e.id ~ '/delete', theme) }}">
+            <button type="submit" class="danger">Xoá</button>
+          </form>
+        </span>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+{{ kit.empty("Chưa có gói nào. Thêm gói bằng biểu mẫu dưới đây.") }}
+{% endif %}
+
+<details class="disclosure"{% if errors %} open{% endif %}>
+  <summary>Thêm gói trải nghiệm</summary>
+  {% if errors %}
+  <div class="error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+  {% endif %}
+  <form method="post" action="{{ href('/experiences', theme) }}">
+    {% include "experience_fields.html" %}
+    <button type="submit">Thêm gói</button>
+  </form>
+</details>
+{% endblock %}

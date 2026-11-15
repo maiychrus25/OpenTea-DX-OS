@@ -1,0 +1,118 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "public_base.html" %}
+{% import "public_parts.html" as pp %}
+{% block title %}{{ intro.name if intro and intro.name else "HTX " ~ htx }}{% endblock %}
+{% block content %}
+{% set place = intro.locality_public if intro and intro.locality_public else "" %}
+{% set name = intro.name if intro and intro.name else "HTX " ~ htx %}
+{% set lede = intro.intro_text if intro and intro.intro_text else "HTX đang cập nhật, mời quay lại sau." %}
+
+<header class="tp-hero">
+  <div class="tp-wrap tp-hero-inner">
+    <p class="tp-eyebrow">Du lịch đồi chè</p>
+    <h1 class="tp-hero-title">{{ name }}</h1>
+    {%- if place %}
+    <p class="tp-hero-place"><span aria-hidden="true">📍</span> {{ place }}</p>
+    {%- endif %}
+    {%- if intro and intro.crop_types %}
+    <p class="tp-hero-tags"><span class="tp-chip tp-chip--hero"><span aria-hidden="true">🌿</span> {{ intro.crop_types }}</span></p>
+    {%- endif %}
+    <p class="tp-hero-lede">{{ lede }}</p>
+    <div class="tp-actions">
+      <a class="tp-btn tp-btn--cta tp-btn--large" href="{{ tour_link(htx, theme) }}">Xem lịch tour và đặt chỗ</a>
+      <a class="tp-btn tp-btn--ghost" href="{{ href('/public/' ~ htx ~ '/experiences', theme) }}">Xem các trải nghiệm</a>
+    </div>
+  </div>
+</header>
+
+{% if intro and intro.synced_at %}
+<section class="tp-wrap tp-facts" aria-label="Thông tin nhanh về HTX">
+  <ul>
+    {%- if place %}
+    <li><span class="tp-fact-icon" aria-hidden="true">📍</span><span class="tp-fact-label">Địa phương</span><span class="tp-fact-value">{{ place }}</span></li>
+    {%- endif %}
+    {%- if intro.total_area_ha is not none %}
+    <li><span class="tp-fact-icon" aria-hidden="true">📐</span><span class="tp-fact-label">Tổng diện tích</span><span class="tp-fact-value">{{ intro.total_area_ha | num(2) }} ha</span></li>
+    {%- endif %}
+    {%- if intro.member_count is not none %}
+    <li><span class="tp-fact-icon" aria-hidden="true">👥</span><span class="tp-fact-label">Thành viên</span><span class="tp-fact-value">{{ intro.member_count }}</span></li>
+    {%- endif %}
+    {%- if intro.certification %}
+    <li><span class="tp-fact-icon" aria-hidden="true">🏅</span><span class="tp-fact-label">Chứng nhận</span><span class="tp-fact-value">{{ intro.certification }}</span></li>
+    {%- endif %}
+  </ul>
+  <p class="tp-updated">Cập nhật lúc {{ intro.synced_at | vn_time }}</p>
+</section>
+{% endif %}
+
+<section class="tp-wrap tp-section" aria-labelledby="tp-sec-featured">
+  <div class="tp-section-head">
+    <div>
+      <h2 id="tp-sec-featured">Tour và trải nghiệm nổi bật</h2>
+      <p class="tp-lead">Những gói HTX giới thiệu trước. Giá là giá tham khảo; lịch khởi hành và số chỗ còn xem ở trang đặt chỗ.</p>
+    </div>
+  </div>
+  {%- if featured %}
+  <ul class="tp-scroller" aria-label="Gói nổi bật">
+    {%- for e in featured %}
+    {{ pp.exp_card(e, related.get(e.id, []), htx, theme, true) }}
+    {%- endfor %}
+  </ul>
+  <p class="tp-more"><a class="tp-link" href="{{ href('/public/' ~ htx ~ '/experiences', theme) }}">Tất cả trải nghiệm</a></p>
+  {%- else %}
+  {{ pp.empty("HTX đang cập nhật, mời quay lại sau.") }}
+  {%- endif %}
+</section>
+
+<section class="tp-wrap tp-section" aria-labelledby="tp-sec-sites">
+  <div class="tp-section-head">
+    <div>
+      <h2 id="tp-sec-sites">Điểm tham quan</h2>
+      <p class="tp-lead">Đồi chè, xưởng sao chè, cây chè cổ.</p>
+    </div>
+    {%- if sites %}
+    <a class="tp-link" href="{{ href('/public/' ~ htx ~ '/sites', theme) }}">Xem tất cả</a>
+    {%- endif %}
+  </div>
+  {%- if sites %}
+  <ul class="tp-grid">
+    {%- for s in sites[:3] %}
+    {{ pp.site_card(s) }}
+    {%- endfor %}
+  </ul>
+  {%- else %}
+  {{ pp.empty("HTX đang cập nhật, mời quay lại sau.") }}
+  {%- endif %}
+</section>
+
+<section class="tp-wrap tp-section" aria-labelledby="tp-sec-season">
+  <div class="tp-section-head">
+    <div>
+      <h2 id="tp-sec-season">Lịch mùa vụ</h2>
+      <p class="tp-lead">Tháng nào hợp đi, tháng nào HTX có lời nhắn.</p>
+    </div>
+    <a class="tp-link" href="{{ href('/public/' ~ htx ~ '/seasons', theme) }}">Xem tất cả</a>
+  </div>
+  <ul class="tp-legend" aria-label="Chú thích">
+    <li><span class="tp-swatch tp-swatch--fit" aria-hidden="true"></span>Hợp đi theo gói trải nghiệm</li>
+    <li><span class="tp-swatch tp-swatch--note" aria-hidden="true"></span>Có ghi chú của HTX</li>
+  </ul>
+  {{ pp.months_grid(rows, fit) }}
+  {%- if noted %}
+  <ul class="tp-notes tp-notes--preview">
+    {%- for m, label, note in noted[:3] %}
+    <li><strong>{{ label }}</strong><span>{{ note }}</span></li>
+    {%- endfor %}
+  </ul>
+  {%- endif %}
+</section>
+
+<section class="tp-wrap tp-section">
+  <div class="tp-cta-box">
+    <h2>Chọn ngày đi</h2>
+    <p>Lịch khởi hành và số chỗ còn xem ở trang đặt tour của HTX. Nếu chưa có lịch, liên hệ HTX.</p>
+    <a class="tp-btn tp-btn--cta" href="{{ tour_link(htx, theme) }}">Xem lịch tour và đặt chỗ</a>
+  </div>
+</section>
+{% endblock %}
