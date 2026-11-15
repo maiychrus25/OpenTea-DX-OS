@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`DXOS_APP_PUBLIC_READ_LIMIT`**: the public mini-app read limit (`GET`/`HEAD`) per minute and IP for the `web` container, default `300`; the CI `Start Web` step raises it to 1000.
+- **Request body cap**: a mini-app request with `content-length` above 10 MiB is answered 413 ("Tệp gửi lên quá lớn.") before it is forwarded.
+
+### Changed
+
+- **Public mini-app limits are split**: writes (not `GET`/`HEAD`) are limited to 30 a minute per IP (`DXOS_APP_PUBLIC_LIMIT`, was 10 for every request), reads to 300; two counters, the same 429 message. The compose default of `DXOS_APP_PUBLIC_LIMIT` is now 30.
+- **`cache-control` of a mini-app** is kept on public `GET`/`HEAD` 200 responses; every other response still drops it.
+- Web version `1.13.0`.
+
 ---
 
 ## [1.12.0] - 2026-11-14

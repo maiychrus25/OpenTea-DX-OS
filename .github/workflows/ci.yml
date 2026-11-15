@@ -315,8 +315,9 @@ jobs:
       - name: Start Web
         # make web-up uses the same gateway file as make platform-up, so starting web does not recreate apisix on the base file.
         env:
-          # Every browser spec comes from one IP, so a Playwright retry must not hit the public 10/min limit.
+          # Every browser spec comes from one IP, so a Playwright retry must not hit the public write or read limit.
           DXOS_APP_PUBLIC_LIMIT: "1000"
+          DXOS_APP_PUBLIC_READ_LIMIT: "1000"
         run: make web-up
 
       - name: Install Chromium

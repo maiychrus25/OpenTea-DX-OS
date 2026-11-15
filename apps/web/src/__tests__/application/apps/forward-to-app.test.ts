@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { appTenant, createPublicLimiter, forwardToApp } from '@/application/apps/forward-to-app'
+import { appTenant, createPublicLimiter, createPublicReadLimiter, forwardToApp } from '@/application/apps/forward-to-app'
 import type { InstalledApp } from '@/domain/entities/installed-app'
 import { logger } from '@/lib/logger'
 
@@ -18,6 +18,7 @@ function setup(reply: Response = new Response('ok', { headers: { 'content-type':
   const getToken = jest.fn().mockResolvedValue('tok')
   // A fresh limiter per test, so no test inherits another's counts.
   const isPublicLimited = createPublicLimiter()
+  const isPublicReadLimited = createPublicReadLimiter()
   const isEnabledFor = jest.fn().mockResolvedValue(true)
   const getHtxCode = jest.fn().mockResolvedValue('TC')
   return {
@@ -25,7 +26,7 @@ function setup(reply: Response = new Response('ok', { headers: { 'content-type':
     getToken,
     isEnabledFor,
     getHtxCode,
-    deps: { fetchImpl: fetchImpl as unknown as typeof fetch, getToken, clientIp, isPublicLimited, isEnabledFor, getHtxCode },
+    deps: { fetchImpl: fetchImpl as unknown as typeof fetch, getToken, clientIp, isPublicLimited, isPublicReadLimited, isEnabledFor, getHtxCode },
   }
 }
 const sent = (fetchImpl: jest.Mock) => ({ url: fetchImpl.mock.calls[0][0] as string, init: fetchImpl.mock.calls[0][1] as RequestInit })
@@ -199,15 +200,47 @@ describe('forwardToApp', () => {
     expect(header(sent(fetchImpl).init, 'authorization')).toBe('Bearer tok')
   })
 
-  test('uses the injected public limiter', async () => {
+  test('public GET uses the read limiter only', async () => {
+    const { fetchImpl, deps } = setup()
+    const isPublicLimited = jest.fn().mockReturnValue(false)
+    const isPublicReadLimited = jest.fn().mockReturnValue(true)
+
+    const res = await forwardToApp(new Request('http://web/apps/tea-tour/public/x'), app, ['public', 'x'], { ...deps, isPublicLimited, isPublicReadLimited })
+
+    expect(res.status).toBe(429)
+    expect(isPublicReadLimited).toHaveBeenCalledWith('203.0.113.1')
+    expect(isPublicLimited).not.toHaveBeenCalled()
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  test('a public HEAD counts as a read', async () => {
+    const { deps } = setup()
+    const isPublicLimited = jest.fn().mockReturnValue(false)
+    const isPublicReadLimited = jest.fn().mockReturnValue(false)
+    await forwardToApp(new Request('http://web/apps/tea-tour/public/x', { method: 'HEAD' }), app, ['public', 'x'], { ...deps, isPublicLimited, isPublicReadLimited })
+    expect(isPublicReadLimited).toHaveBeenCalledTimes(1)
+    expect(isPublicLimited).not.toHaveBeenCalled()
+  })
+
+  test('public POST uses the write limiter only', async () => {
     const { fetchImpl, deps } = setup()
     const isPublicLimited = jest.fn().mockReturnValue(true)
+    const isPublicReadLimited = jest.fn().mockReturnValue(false)
 
-    const res = await forwardToApp(new Request('http://web/apps/tea-tour/public/x'), app, ['public', 'x'], { ...deps, isPublicLimited })
+    const res = await forwardToApp(new Request('http://web/apps/tea-tour/public/x', { method: 'POST', body: 'a=1' }), app, ['public', 'x'], { ...deps, isPublicLimited, isPublicReadLimited })
 
     expect(res.status).toBe(429)
     expect(isPublicLimited).toHaveBeenCalledWith('203.0.113.1')
+    expect(isPublicReadLimited).not.toHaveBeenCalled()
     expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  test('read limit answers 429 with the same message as the write limit', async () => {
+    const { deps } = setup()
+    const read = await forwardToApp(new Request('http://web/apps/tea-tour/public/x'), app, ['public', 'x'], { ...deps, isPublicReadLimited: () => true })
+    const write = await forwardToApp(new Request('http://web/apps/tea-tour/public/x', { method: 'POST', body: 'a=1' }), app, ['public', 'x'], { ...deps, isPublicLimited: () => true })
+    expect(await read.text()).toBe(await write.text())
+    expect(read.headers.get('content-security-policy')).toBe(CSP)
   })
 
   test('sets the CSP without scripts', async () => {
@@ -225,9 +258,9 @@ describe('forwardToApp', () => {
     const { fetchImpl, deps } = setup()
     fetchImpl.mockImplementation(async () => new Response('ok'))
     const call = (ip: string) =>
-      forwardToApp(new Request('http://web/apps/tea-tour/public/x'), app, ['public', 'x'], { ...deps, clientIp: ip })
+      forwardToApp(new Request('http://web/apps/tea-tour/public/x', { method: 'POST', body: 'a=1' }), app, ['public', 'x'], { ...deps, clientIp: ip })
 
-    for (let i = 0; i < 10; i++) expect((await call('192.0.2.10')).status).toBe(200)
+    for (let i = 0; i < 30; i++) expect((await call('192.0.2.10')).status).toBe(200)
     const limited = await call('192.0.2.10')
     expect(limited.status).toBe(429)
     expect(limited.headers.get('content-security-policy')).toBe(CSP)
@@ -239,6 +272,7 @@ describe('forwardToApp', () => {
   describe('DXOS_APP_PUBLIC_LIMIT', () => {
     afterEach(() => {
       delete process.env.DXOS_APP_PUBLIC_LIMIT
+      delete process.env.DXOS_APP_PUBLIC_READ_LIMIT
     })
     const countAllowed = (isLimited: (ip: string) => boolean) => {
       let allowed = 0
@@ -251,9 +285,73 @@ describe('forwardToApp', () => {
       expect(countAllowed(createPublicLimiter())).toBe(50)
     })
 
-    test.each(['', '0', '-3', 'abc', '2.5'])('keeps 10 when the value is %p', value => {
+    test.each(['', '0', '-3', 'abc', '2.5'])('keeps 30 when the value is %p', value => {
       process.env.DXOS_APP_PUBLIC_LIMIT = value
-      expect(countAllowed(createPublicLimiter())).toBe(10)
+      expect(countAllowed(createPublicLimiter())).toBe(30)
+    })
+
+    test('default write limit is 30 and read limit is 300', () => {
+      expect(countAllowed(createPublicLimiter())).toBe(30)
+      expect(countAllowed(createPublicReadLimiter())).toBe(300)
+    })
+
+    test('DXOS_APP_PUBLIC_READ_LIMIT overrides the read limit', () => {
+      process.env.DXOS_APP_PUBLIC_READ_LIMIT = '50'
+      expect(countAllowed(createPublicReadLimiter())).toBe(50)
+      expect(countAllowed(createPublicLimiter())).toBe(30)
+    })
+
+    test.each(['', '0', '-3', 'abc', '2.5'])('keeps 300 when the read value is %p', value => {
+      process.env.DXOS_APP_PUBLIC_READ_LIMIT = value
+      expect(countAllowed(createPublicReadLimiter())).toBe(300)
+    })
+  })
+
+  describe('cache-control', () => {
+    const reply = (status = 200, extra: Record<string, string> = {}) =>
+      new Response(status === 200 ? 'ok' : null, { status, headers: { 'content-type': 'text/html', 'cache-control': 'public, max-age=3600', ...extra } })
+    const run = (r: Response, method: string, path: string[]) => {
+      const { deps } = setup(r)
+      const init = method === 'POST' ? { method, body: 'a=1' } : { method }
+      return forwardToApp(new Request(`http://web/apps/tea-tour/${path.join('/')}`, init), app, path, deps)
+    }
+
+    test('is kept on a public GET 200', async () => {
+      expect((await run(reply(), 'GET', ['public', 'x'])).headers.get('cache-control')).toBe('public, max-age=3600')
+    })
+    test('is dropped on a public POST', async () => {
+      expect((await run(reply(), 'POST', ['public', 'x'])).headers.get('cache-control')).toBeNull()
+    })
+    test('is dropped on a public 404', async () => {
+      expect((await run(reply(404), 'GET', ['public', 'x'])).headers.get('cache-control')).toBeNull()
+    })
+    test('is dropped on a public 303', async () => {
+      const r = reply(303, { location: '/apps/tea-tour/public/x' })
+      expect((await run(r, 'GET', ['public', 'x'])).headers.get('cache-control')).toBeNull()
+    })
+    test('is dropped on any protected response', async () => {
+      expect((await run(reply(), 'GET', [])).headers.get('cache-control')).toBeNull()
+    })
+  })
+
+  describe('request body cap', () => {
+    const MAX = 10 * 1024 * 1024
+    const post = (length: number) =>
+      new Request('http://web/apps/tea-tour/tours', { method: 'POST', body: 'a=1', headers: { 'content-length': String(length) } })
+
+    test('content-length above 10 MiB answers 413 without calling the app', async () => {
+      const { fetchImpl, deps } = setup()
+      const res = await forwardToApp(post(MAX + 1), app, ['tours'], deps)
+      expect(res.status).toBe(413)
+      expect(res.headers.get('content-security-policy')).toBe(CSP)
+      expect(fetchImpl).not.toHaveBeenCalled()
+    })
+
+    test('exactly 10 MiB is forwarded', async () => {
+      const { fetchImpl, deps } = setup()
+      const res = await forwardToApp(post(MAX), app, ['tours'], deps)
+      expect(res.status).toBe(200)
+      expect(fetchImpl).toHaveBeenCalledTimes(1)
     })
   })
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { appResponse, createPublicLimiter, forwardToApp } from '@/application/apps/forward-to-app'
+import { appResponse, createPublicLimiter, createPublicReadLimiter, forwardToApp } from '@/application/apps/forward-to-app'
 import { auth } from '@/auth'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
 import { getCoreToken } from '@/lib/auth/core-token'
@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic'
 
 const installedApps = new PrismaInstalledAppRepository()
 const isPublicLimited = createPublicLimiter()
+const isPublicReadLimited = createPublicReadLimiter()
 
 async function handle(req: Request, { params }: { params: { id: string; path?: string[] } }): Promise<Response> {
   let app
@@ -28,6 +29,7 @@ async function handle(req: Request, { params }: { params: { id: string; path?: s
     fetchImpl: fetch,
     clientIp: clientIp(req),
     isPublicLimited,
+    isPublicReadLimited,
     getHtxCode: async () => (await auth())?.user?.htxCode ?? null,
     isEnabledFor: (appId, htxCode) => installedApps.isEnabledFor(appId, htxCode),
   })

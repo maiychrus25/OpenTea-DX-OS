@@ -16,20 +16,27 @@ const KEPT_RESPONSE_HEADERS = ['content-type', 'location']
 const SIGNED_OUT_PAGE = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Cần đăng nhập</title></head>
 <body><p>Phiên đăng nhập đã hết hạn. <a href="/login" target="_top">Đăng nhập lại</a> để tiếp tục.</p></body></html>`
 
-// Spec §6.5: public app routes take 10 requests a minute per client IP, counted across every app.
-// DXOS_APP_PUBLIC_LIMIT raises it only where one IP sends many requests on purpose (the CI browser specs).
-function publicLimit(): number {
-  const max = Number(process.env.DXOS_APP_PUBLIC_LIMIT)
-  return Number.isInteger(max) && max > 0 ? max : 10
+// Public app routes are limited per client IP, counted across every app: writes (not GET/HEAD) 30 a minute, reads 300.
+// The env variables raise them only where one IP sends many requests on purpose (the CI browser specs, a demo LAN).
+const positiveInt = (raw: string | undefined, fallback: number) => {
+  const max = Number(raw)
+  return Number.isInteger(max) && max > 0 ? max : fallback
 }
-export const createPublicLimiter = () => createIpLimiter({ max: publicLimit(), windowMs: 60_000, maxKeys: 10_000 })
+export const createPublicLimiter = () =>
+  createIpLimiter({ max: positiveInt(process.env.DXOS_APP_PUBLIC_LIMIT, 30), windowMs: 60_000, maxKeys: 10_000 })
+export const createPublicReadLimiter = () =>
+  createIpLimiter({ max: positiveInt(process.env.DXOS_APP_PUBLIC_READ_LIMIT, 300), windowMs: 60_000, maxKeys: 10_000 })
+
+const MAX_BODY_BYTES = 10 * 1024 * 1024
 
 export interface ForwardToAppDeps {
   getToken: () => Promise<string>
   fetchImpl: typeof fetch
   clientIp: string
-  /** One limiter per process, made with `createPublicLimiter`; true means the IP is over the limit. */
+  /** One limiter per process, made with `createPublicLimiter` (writes); true means the IP is over the limit. */
   isPublicLimited: (ip: string) => boolean
+  /** The same for GET and HEAD, made with `createPublicReadLimiter`. */
+  isPublicReadLimited: (ip: string) => boolean
   /** The signed-in user's HTX, or null without a session HTX. Only read on protected paths. */
   getHtxCode: () => Promise<string | null>
   /** Whether the app is enabled for the HTX or for every HTX (platform.app_enablements). */
@@ -68,8 +75,10 @@ function staysInApp(location: string, req: Request, appId: string): boolean {
  * req.url's host is no use here: the standalone server builds it from HOSTNAME (0.0.0.0), so the web origin is
  * req.url's scheme with the browser's Host header or, behind a proxy, AUTH_URL (the origin next-auth already uses).
  */
+const isRead = (req: Request) => req.method === 'GET' || req.method === 'HEAD'
+
 function isCrossSiteWrite(req: Request): boolean {
-  if (req.method === 'GET' || req.method === 'HEAD') return false
+  if (isRead(req)) return false
   const origin = req.headers.get('origin')
   if (origin === null) return req.headers.get('sec-fetch-site') === 'cross-site'
   const host = req.headers.get('host')
@@ -94,6 +103,7 @@ export function appResponse(body: BodyInit | null, status: number, headers: Head
 export async function forwardToApp(req: Request, app: InstalledApp, path: string[], deps: ForwardToAppDeps): Promise<Response> {
   if (path.some(segment => UNSAFE_SEGMENT.test(segment))) return appResponse('Đường dẫn không hợp lệ', 400)
   if (isCrossSiteWrite(req)) return appResponse('Yêu cầu bị từ chối vì được gửi từ trang khác.', 403)
+  if (Number(req.headers.get('content-length')) > MAX_BODY_BYTES) return appResponse('Tệp gửi lên quá lớn.', 413)
 
   const headers = new Headers()
   for (const name of FORWARDED_REQUEST_HEADERS) {
@@ -104,7 +114,8 @@ export async function forwardToApp(req: Request, app: InstalledApp, path: string
   const tenant = appTenant(app, path)
   let htxCode: string | null
   if (tenant.kind === 'public') {
-    if (deps.isPublicLimited(deps.clientIp)) return appResponse('Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau một phút.', 429)
+    const limited = isRead(req) ? deps.isPublicReadLimited : deps.isPublicLimited
+    if (limited(deps.clientIp)) return appResponse('Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau một phút.', 429)
     htxCode = tenant.htxCode
   } else {
     try {
@@ -155,5 +166,8 @@ export async function forwardToApp(req: Request, app: InstalledApp, path: string
   // A download link in the app (CSV) needs this; anything but an attachment (inline, a script-like name) is dropped.
   const disposition = upstream.headers.get('content-disposition')
   if (disposition !== null && /^attachment\b/i.test(disposition)) kept.set('content-disposition', disposition)
+  // Only a public page read may be cached by the browser; the app decides how long (spec §9.2).
+  const cacheControl = upstream.headers.get('cache-control')
+  if (cacheControl !== null && tenant.kind === 'public' && isRead(req) && upstream.status === 200) kept.set('cache-control', cacheControl)
   return appResponse(upstream.body, upstream.status, kept)
 }

@@ -53,7 +53,7 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `version` | có | SemVer, ví dụ `0.1.0` |
 | `license` | có | thuộc danh sách OSI của CLI: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `LGPL-3.0-or-later`, `GPL-2.0-only`, `GPL-3.0-only`, `GPL-3.0-or-later`, `AGPL-3.0-only`, `AGPL-3.0-or-later` |
 | `publisher` | có | 1–80 ký tự |
-| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.12.0`) |
+| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.13.0`) |
 | `runtime.build` / `runtime.image` | đúng một trong hai | `build`: thư mục tương đối trong thư mục app (thường là `.`). `image`: phải ghim digest, dạng `<ref>@sha256:<64 ký tự hex>` |
 | `runtime.port` | có | 1–65535, cổng app nghe trong container |
 | `runtime.health` | có | đường dẫn health check (đã cắt tiền tố), ví dụ `/healthz`, phải trả 2xx |
@@ -256,12 +256,14 @@ Khi manifest khai `database`, `dxos install`:
   - hoặc không có `Origin` nhưng trình duyệt gửi `Sec-Fetch-Site: cross-site`.
 
   Form của app gửi từ chính trang của app nên luôn qua được. Đặt `AUTH_URL` đúng URL công khai khi web chạy sau một reverse proxy TLS.
-- **Giới hạn route công khai:** **10 request mỗi phút cho mỗi IP**, tính chung cho mọi app, quá thì trả **429** kèm thông báo tiếng Việt.
+- **Giới hạn route công khai:** tính theo IP, chung cho mọi app, tách đọc và ghi: yêu cầu ghi (không phải `GET`/`HEAD`) **30 mỗi phút**, yêu cầu đọc (`GET`/`HEAD`) **300 mỗi phút**; hai bộ đếm riêng, quá thì trả **429** kèm cùng một thông báo tiếng Việt.
   - IP là phần tử đầu của `X-Forwarded-For`, như `/api/register`.
   - Giới hạn tính trong từng tiến trình web.
   - Bảng đếm giữ tối đa 10.000 IP; khi đầy, IP mới dùng chung một nhóm.
   - Route cần đăng nhập không bị tính.
-- **Biến `DXOS_APP_PUBLIC_LIMIT`** (container `web`, đọc qua Compose interpolation, mặc định `10`) đổi giới hạn. CI nâng nó lên 1000 cho các spec trình duyệt cùng chạy từ một IP. Máy demo chạy Docker Desktop cũng nên nâng nó (ví dụ 300), vì Docker Desktop cho web thấy mọi client trong LAN là một IP, nên giới hạn thành chung cho cả phòng (README, "Chuẩn bị demo"). Production và mặc định của compose giữ `10`. Giá trị không phải số nguyên dương thì dùng `10`.
+- **Biến `DXOS_APP_PUBLIC_LIMIT`** (mức ghi, mặc định `30`) và **`DXOS_APP_PUBLIC_READ_LIMIT`** (mức đọc, mặc định `300`), container `web`, đọc qua Compose interpolation. CI nâng cả hai lên 1000 cho các spec trình duyệt cùng chạy từ một IP. Máy demo chạy Docker Desktop cũng nên nâng chúng, vì Docker Desktop cho web thấy mọi client trong LAN là một IP, nên giới hạn thành chung cho cả phòng (README, "Chuẩn bị demo"). Giá trị không phải số nguyên dương thì dùng mặc định.
+- **`cache-control` của app** được giữ trên phản hồi `GET`/`HEAD` mã 200 của đường dẫn công khai; mọi phản hồi khác bỏ header này.
+- **Thân yêu cầu:** `content-length` trên 10 MiB bị trả **413** ("Tệp gửi lên quá lớn.") trước khi chuyển tiếp tới app.
 
 ## 7. Container được khoá chặt
 
