@@ -1,0 +1,51 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "guide/base.html" %}
+{% import "kit.html" as kit %}
+{% import "icons.html" as icons %}
+{% block title %}Lịch dẫn tour{% endblock %}
+
+{% macro departure_card(d) %}
+<li>
+  <a class="trip" href="{{ href('/guide/departures/' ~ d.id, theme) }}">
+    <span class="trip-date" aria-hidden="true">
+      <span class="trip-weekday">{{ d.weekday }}</span>
+      <span class="trip-day">{{ d.local.strftime('%d/%m') }}</span>
+    </span>
+    <span class="trip-body">
+      <span class="trip-title">{{ d.title }}</span>
+      <span class="trip-meta">{{ icons.clock(16) }} {{ d.local.strftime('%H:%M') }} · {{ d.local.strftime('%d/%m/%Y') }}</span>
+      {%- if d.meeting_point %}
+      <span class="trip-meta">{{ icons.map_pin(16) }} {{ d.meeting_point }}</span>
+      {%- endif %}
+      {%- if d.status == "CANCELLED" %}
+      <span class="trip-meta trip-cancelled">Đã huỷ{% if d.cancel_reason %}: {{ d.cancel_reason }}{% endif %}</span>
+      {%- endif %}
+    </span>
+    <span class="trip-count{% if d.status == 'CANCELLED' %} is-off{% endif %}">
+      <span class="trip-number">{{ d.confirmed_guests if d.status != 'CANCELLED' else '–' }}</span>
+      <span class="trip-unit">khách</span>
+    </span>
+  </a>
+</li>
+{% endmacro %}
+
+{% block main %}
+{{ kit.app_header("Lịch dẫn tour", guide_name or "Người dẫn") }}
+
+<section aria-labelledby="upcoming-title">
+  <h2 id="upcoming-title">Sắp tới</h2>
+  {%- if upcoming %}
+  <ul class="trips">{% for d in upcoming %}{{ departure_card(d) }}{% endfor %}</ul>
+  {%- else %}
+  {{ kit.empty("Bạn chưa được giao chuyến nào sắp tới. Trưởng HTX sẽ giao chuyến cho bạn trong phần Lịch.") }}
+  {%- endif %}
+</section>
+
+{% if past %}
+<section aria-labelledby="past-title">
+  <h2 id="past-title">Đã diễn ra</h2>
+  <ul class="trips is-past">{% for d in past %}{{ departure_card(d) }}{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}
