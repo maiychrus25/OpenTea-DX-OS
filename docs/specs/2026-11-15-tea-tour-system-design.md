@@ -120,7 +120,7 @@ Quy tắc chung: mọi truy vấn lọc theo `htx_code` của token; mọi thao 
 - Lượt còn `PENDING` khi chuyến khởi hành bị huỷ với lý do "Chuyến đã khởi hành mà chưa được xác nhận" (người huỷ `SYSTEM`), cùng lượt quét đó.
 - Lượt `PENDING` thành `CONFIRMED` khi: trưởng HTX bấm xác nhận; hoặc tổng khoản thu đạt tiền cọc (khi `deposit > 0`); hoặc ngay lúc đặt nếu `auto_confirm` bật và `deposit = 0`.
 - Hoàn tiền làm tiền đã trả xuống dưới tiền cọc không đổi trạng thái của lượt `CONFIRMED`.
-- Lượt `CANCELLED` không mở lại. Chuyến `CANCELLED` không mở lại.
+- Lượt `CANCELLED` không mở lại, trừ một trường hợp: lượt bị hệ thống huỷ vì "Quá hạn giữ chỗ" mà sau đó trưởng HTX ghi khoản thu làm tiền đã trả đạt tiền cọc (khách đã chuyển khoản đúng hạn nhưng HTX ghi nhận muộn). Nếu chuyến chưa khởi hành, chưa bị huỷ và còn đủ chỗ thì lượt được khôi phục thành `CONFIRMED`, lịch sử ghi "Khôi phục: tiền cọc về sau hạn giữ chỗ". Không đủ điều kiện thì lượt vẫn huỷ và hiện ở "Cần hoàn tiền". Chuyến `CANCELLED` không mở lại.
 
 ### 7.3 Thanh toán VietQR
 
@@ -150,7 +150,7 @@ Quy tắc chung: mọi truy vấn lọc theo `htx_code` của token; mọi thao 
 
 ### 7.7 Ảnh
 
-- Chỉ trưởng HTX tải ảnh lên: JPEG, PNG hoặc WebP, mỗi lần một ảnh, tệp tối đa 5 MB, ảnh tối đa 16 triệu điểm ảnh (kiểm trên kích thước khai trong tệp, trước khi giải mã). Giới hạn này theo container của app: 256 MB bộ nhớ, nửa nhân CPU, proxy hết giờ sau 10 giây; ảnh JPEG được giải mã ở cỡ thu nhỏ (`draft`). Máy chủ dùng Pillow để xoay theo EXIF, bỏ toàn bộ siêu dữ liệu (kể cả toạ độ GPS) và mã hoá lại thành JPEG ở hai cỡ: `large` (cạnh dài tối đa 1600 px) và `thumb` (tối đa 640 px). Tệp không giải mã được thành ảnh bị từ chối.
+- Chỉ trưởng HTX tải ảnh lên: JPEG, PNG hoặc WebP, mỗi lần một ảnh, tệp tối đa 5 MB; ảnh JPEG tối đa 16 triệu điểm ảnh, ảnh PNG và WebP tối đa 6 triệu điểm ảnh (kiểm trên kích thước khai trong tệp, trước khi giải mã; đo trong container thật, ảnh PNG hoặc WebP 16 triệu điểm ảnh vượt bộ nhớ của app). Giới hạn này theo container của app: 256 MB bộ nhớ, nửa nhân CPU, proxy hết giờ sau 10 giây; ảnh JPEG được giải mã ở cỡ thu nhỏ (`draft`). Máy chủ dùng Pillow để xoay theo EXIF, bỏ toàn bộ siêu dữ liệu (kể cả toạ độ GPS) và mã hoá lại thành JPEG ở hai cỡ: `large` (cạnh dài tối đa 1600 px) và `thumb` (tối đa 640 px). Tệp không giải mã được thành ảnh bị từ chối.
 - Ảnh lưu trong schema của app (cột `bytea`), vì container của app chỉ đọc và không có kho tệp. Tối đa 12 ảnh một tour, 200 ảnh một HTX.
 - Tour không có ảnh dùng hình minh hoạ SVG theo loại tour (5 hình do dự án vẽ, giấy phép MIT).
 
@@ -178,7 +178,7 @@ Migration mới `migrations/002_tour_system.sql` chạy trong một transaction 
 | `tours` | thêm `slug` (duy nhất trong HTX, `^[a-z0-9]+(-[a-z0-9]+)*$`, ≤80), `summary` ≤200, `category`, `duration_minutes` 30–2880, `map_url`, `price_adult_vnd`, `price_child_vnd`, `default_seats` 1–200, `itinerary jsonb` (≤12 mục `{time ≤20, title ≤80, detail ≤300}`), `includes`, `excludes`, `bring` (`jsonb`, mỗi danh sách ≤10 dòng ≤120), `faq jsonb` (≤8 mục `{q ≤160, a ≤500}`), `cover_media_id`, `updated_at`; `description` ≤4000; `status` thành `DRAFT`/`PUBLISHED`/`ARCHIVED`; bỏ `starts_at`, `seats`, `price_vnd`, `guide_user_id`, `guide_name` |
 | `tour_media` | `tour_id`, `media_id`, `position`; khoá (`tour_id`, `media_id`) |
 | `departures` | `id`, `tour_id`, `starts_at`, `seats` 1–200, `price_adult_vnd`, `price_child_vnd`, `guide_user_id`, `guide_name`, `status`, `cancel_reason` ≤200, `created_at` |
-| `bookings` | `tour_id` đổi thành `departure_id`; thêm `email`, `adults`, `children`, `party_size` (cột sinh ra `adults + children`, 1–200), `price_adult_vnd`, `price_child_vnd`, `total_vnd`, `deposit_vnd`, `paid_vnd` mặc định 0, `hold_until`, `request_key` (duy nhất), `access_key` (22 ký tự), `internal_note` ≤500, `cancel_reason` ≤200, `cancelled_by` (`GUEST`/`MANAGER`/`SYSTEM`), `cancelled_at`, `guest_paid_reported_at`, `checked_in_at`, `checked_in_count`, `checked_in_by`, `source` (`WEB`/`APP`/`MANAGER`) |
+| `bookings` | `tour_id` đổi thành `departure_id`; thêm `email`, `adults`, `children`, `party_size` (cột sinh ra `adults + children`, 1–200), `price_adult_vnd`, `price_child_vnd`, `total_vnd`, `deposit_vnd`, `paid_vnd` mặc định 0, `hold_until`, `request_key` (duy nhất trong HTX), `access_key` (22 ký tự), `internal_note` ≤500, `cancel_reason` ≤200, `cancelled_by` (`GUEST`/`MANAGER`/`SYSTEM`), `cancelled_at`, `guest_paid_reported_at`, `checked_in_at`, `checked_in_count`, `checked_in_by`, `source` (`WEB`/`APP`/`MANAGER`) |
 | `payments` | `id`, `booking_id`, `amount_vnd` (khác 0), `method`, `note` ≤200, `recorded_by_id`, `recorded_by_name`, `recorded_at` |
 | `booking_events` | `id`, `booking_id`, `at`, `actor_kind` (`GUEST`/`MANAGER`/`GUIDE`/`SYSTEM`), `actor_name`, `kind`, `detail` ≤300 |
 | `reviews` | `id`, `booking_id` (duy nhất), `tour_id`, `rating` 1–5, `comment` ≤1000, `display_name` ≤40, `status`, `reply` ≤1000, `created_at`, `moderated_at` |
