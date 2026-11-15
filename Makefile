@@ -12,7 +12,7 @@ export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 # keycloak on every platform-up. Without the attestation the same inputs give the same ID, so nothing is recreated.
 export BUILDX_NO_DEFAULT_ATTESTATIONS := 1
 
-.PHONY: gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice up-workflow up-chat stop-extras platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync
+.PHONY: gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice up-workflow up-chat stop-extras platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync mobile-client
 
 # APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
 gateway-sync:
@@ -113,3 +113,18 @@ lint:
 # Copy platform/appkit/appkit.py and kit.html into every app that uses the kit.
 appkit-sync:
 	bash scripts/appkit-sync.sh
+
+# Adds the public PKCE client of the Android app to a running realm (a new machine gets it from the realm file).
+# Runs kcadm inside the keycloak container with the container's own admin variables; creates the client only when it is missing.
+mobile-client:
+	$(COMPOSE) exec -T keycloak sh -c ' \
+	  set -e; K=/opt/keycloak/bin/kcadm.sh; \
+	  $$K config credentials --server http://localhost:8080 --realm master --user "$$KEYCLOAK_ADMIN" --password "$$KEYCLOAK_ADMIN_PASSWORD" >/dev/null; \
+	  if [ -n "$$($$K get clients -r agrimarket -q clientId=dxos-mobile --fields id --format csv --noquotes)" ]; then echo "dxos-mobile already exists"; exit 0; fi; \
+	  $$K create clients -r agrimarket -s clientId=dxos-mobile -s enabled=true -s publicClient=true -s protocol=openid-connect \
+	    -s standardFlowEnabled=true -s implicitFlowEnabled=false -s directAccessGrantsEnabled=false -s serviceAccountsEnabled=false \
+	    -s "redirectUris=[\"vn.opentea.dxos.tour:/oauth2redirect\"]" \
+	    -s "defaultClientScopes=[\"web-origins\",\"acr\",\"profile\",\"roles\",\"email\",\"dx-os-core\"]" \
+	    -s "optionalClientScopes=[]" \
+	    -s "attributes.\"pkce.code.challenge.method\"=S256"; \
+	  echo "dxos-mobile created"'
