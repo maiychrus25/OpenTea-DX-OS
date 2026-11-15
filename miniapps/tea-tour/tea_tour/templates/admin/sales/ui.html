@@ -1,0 +1,24 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Small pieces of the sales desk: status pills, stars, the filter-keeping hidden theme field. -#}
+{% macro status(value) -%}
+<span class="pill{% if value == 'PENDING' %} warn{% elif value == 'CANCELLED' %} danger{% endif %}">{{ {"PENDING": "Chờ xác nhận", "CONFIRMED": "Đã xác nhận", "CANCELLED": "Đã huỷ"}[value] }}</span>
+{%- endmacro %}
+
+{% macro payment(value) -%}
+<span class="pill{% if value == 'UNPAID' %} neutral{% elif value == 'DEPOSITED' %} warn{% elif value == 'REFUND_DUE' %} danger{% endif %}">{{ {"UNPAID": "Chưa trả", "DEPOSITED": "Trả một phần", "PAID": "Đã trả đủ", "REFUND_DUE": "Cần hoàn tiền"}[value] }}</span>
+{%- endmacro %}
+
+{% macro review_status(value) -%}
+<span class="pill{% if value == 'PENDING' %} warn{% elif value == 'HIDDEN' %} neutral{% endif %}">{{ {"PENDING": "Chờ duyệt", "PUBLISHED": "Đang hiện", "HIDDEN": "Đã ẩn"}[value] }}</span>
+{%- endmacro %}
+
+{% macro stars(rating) -%}
+<span class="stars" role="img" aria-label="{{ rating }} trên 5 sao">{{ "★" * rating }}<span class="stars-off">{{ "★" * (5 - rating) }}</span></span>
+{%- endmacro %}
+
+{% macro theme_field(theme) -%}
+{%- if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif -%}
+{%- endmacro %}
+
+{% macro booking_label(b) -%}{{ b.code }} · {{ b.guest_name }}{%- endmacro %}

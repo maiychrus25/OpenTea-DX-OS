@@ -1,0 +1,58 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "admin/sales/ui.html" as ui %}
+{% set active_tab = "payments" %}
+{% block title %}Thu tiền{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-sales.css') }}">{% endblock %}
+{% block header %}
+{% call kit.app_header("Thu tiền", "HTX " ~ htx ~ " · sổ thu, mới nhất ở trên cùng") %}
+  {{ kit.export_link(href('/payments/export.csv', theme, **export_params)) }}
+{% endcall %}
+{% endblock %}
+{% block main %}
+<form class="toolbar" method="get" action="{{ href('/payments') }}">
+  {{ ui.theme_field(theme) }}
+  <label>Mã đặt chỗ
+    <input type="search" name="q" maxlength="100" value="{{ filters.q }}" placeholder="Ví dụ K7M2QX9A">
+  </label>
+  <label>Hình thức
+    <select name="method">
+      <option value="">Tất cả</option>
+      {% for key, label in methods.items() %}<option value="{{ key }}"{% if filters.method == key %} selected{% endif %}>{{ label | capitalize }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Từ ngày <input type="date" name="from" value="{{ filters.date_from or '' }}"></label>
+  <label>Đến ngày <input type="date" name="to" value="{{ filters.date_to or '' }}"></label>
+  <button type="submit">Lọc</button>
+</form>
+
+<ul class="ledger-totals" aria-label="Tổng của bộ lọc">
+  <li class="in"><span>Tổng thu</span><strong>{{ totals.money_in | vnd }}</strong></li>
+  <li class="out"><span>Tổng hoàn</span><strong>{{ totals.money_out | vnd }}</strong></li>
+  <li class="net"><span>Còn lại</span><strong>{{ totals.net | vnd }}</strong></li>
+</ul>
+
+{% if rows %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Lúc</th><th role="columnheader">Mã đặt chỗ</th><th role="columnheader">Khách</th><th role="columnheader">Số tiền</th><th role="columnheader">Hình thức</th><th role="columnheader">Người ghi</th><th role="columnheader">Ghi chú</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for r in rows %}
+    <tr role="row">
+      <td role="cell" data-label="Lúc" class="nowrap">{{ r.recorded_at | vn_datetime }}</td>
+      <td role="cell" data-label="Mã đặt chỗ"><a class="code" href="{{ href('/bookings/' ~ r.booking_id, theme) }}">{{ r.code }}</a></td>
+      <td role="cell" data-label="Khách">{{ r.guest_name }}</td>
+      <td role="cell" data-label="Số tiền"><strong class="{{ 'out' if r.amount_vnd < 0 else 'in' }}">{{ ("+" if r.amount_vnd > 0 else "") ~ (r.amount_vnd | vnd) }}</strong></td>
+      <td role="cell" data-label="Hình thức">{{ methods[r.method] | capitalize }}</td>
+      <td role="cell" data-label="Người ghi">{{ r.recorded_by_name or "—" }}</td>
+      <td role="cell" data-label="Ghi chú">{{ r.note or "—" }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ kit.pagination(paging, prev_href, next_href) }}
+{% else %}
+{{ kit.empty("Không có khoản thu nào khớp bộ lọc." if filters.params() else "Chưa ghi khoản thu nào. Mở một lượt đặt để ghi khoản thu đầu tiên.", "Xem lượt đặt" if not filters.params() else None, href('/bookings', theme)) }}
+{% endif %}
+{% endblock %}

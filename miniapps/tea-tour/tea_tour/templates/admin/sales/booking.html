@@ -1,0 +1,204 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "icons.html" as icons %}
+{% import "admin/sales/ui.html" as ui %}
+{% set active_tab = "bookings" %}
+{% block title %}Lượt đặt {{ booking.code }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-sales.css') }}">{% endblock %}
+{% block header %}
+{% call kit.app_header("Lượt đặt " ~ booking.code, "Đặt lúc " ~ (booking.created_at | vn_datetime) ~ (" · do trưởng HTX đặt hộ" if booking.source == "MANAGER" else "")) %}
+  {{ ui.status(booking.status) }} {{ ui.payment(booking.payment_state) }}
+{% endcall %}
+{% endblock %}
+{% macro field(errors, name) %}{{ kit.field_error(errors, name) }}{% endmacro %}
+{% block main %}
+<p><a href="{{ href('/bookings', theme) }}">← Tất cả lượt đặt</a></p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+{% if booking.status == "PENDING" and booking.hold_until and not booking.guest_paid_reported_at %}
+<p class="notice" role="note">Giữ chỗ tới {{ booking.hold_until | vn_datetime }}; quá hạn mà chưa đủ tiền cọc, lượt sẽ tự huỷ.</p>
+{% endif %}
+{% if booking.status == "PENDING" and booking.guest_paid_reported_at %}
+<p class="notice" role="note">Khách báo đã chuyển khoản lúc {{ booking.guest_paid_reported_at | vn_datetime }}. Đối chiếu với tài khoản rồi ghi khoản thu hoặc huỷ lượt.</p>
+{% endif %}
+{% if booking.status == "CANCELLED" %}
+<p class="error" role="note">Đã huỷ{% if booking.cancelled_at %} lúc {{ booking.cancelled_at | vn_datetime }}{% endif %}{% if booking.cancelled_by %} ({{ {"GUEST": "khách", "MANAGER": "trưởng HTX", "SYSTEM": "hệ thống"}[booking.cancelled_by] }}){% endif %}: {{ booking.cancel_reason }}</p>
+{% endif %}
+{% if booking.refund_due_vnd %}
+<p class="error" role="note">Cần hoàn {{ booking.refund_due_vnd | vnd }} cho khách. Ghi khoản hoàn bên dưới sau khi chuyển tiền.</p>
+{% endif %}
+
+<div class="booking-layout">
+  <div class="booking-main">
+    <section class="panel" aria-labelledby="who">
+      <h2 id="who">Khách và chuyến</h2>
+      <dl class="facts">
+        <div><dt>Họ tên</dt><dd>{{ booking.guest_name }}</dd></div>
+        <div><dt>Điện thoại</dt><dd><a href="tel:{{ booking.phone }}">{{ booking.phone }}</a></dd></div>
+        {% if booking.email %}<div><dt>Email</dt><dd>{{ booking.email }}</dd></div>{% endif %}
+        <div><dt>Tour</dt><dd>{{ detail.tour_title }}</dd></div>
+        <div><dt>Khởi hành</dt><dd><a href="{{ href('/departures/' ~ booking.departure_id, theme) }}">{{ booking.starts_at | vn_datetime }}</a>{% if detail.departure_status == "CANCELLED" %} <span class="pill danger">Chuyến đã huỷ</span>{% elif detail.departure_status == "CLOSED" %} <span class="pill neutral">Đã đóng</span>{% endif %}</dd></div>
+        <div><dt>Số người</dt><dd>{{ booking.adults }} người lớn{% if booking.children %}, {{ booking.children }} trẻ em{% endif %}</dd></div>
+        {% if booking.checked_in_count %}<div><dt>Điểm danh</dt><dd>{{ booking.checked_in_count }} người có mặt ({{ booking.checked_in_at | vn_datetime }})</dd></div>{% endif %}
+        {% if booking.note %}<div class="wide"><dt>Ghi chú của khách</dt><dd>{{ booking.note }}</dd></div>{% endif %}
+        {% if booking.internal_note %}<div class="wide"><dt>Ghi chú nội bộ</dt><dd>{{ booking.internal_note }}</dd></div>{% endif %}
+      </dl>
+    </section>
+
+    <section class="panel" aria-labelledby="money">
+      <h2 id="money">Tiền</h2>
+      <table class="money-table" role="table">
+        <tbody role="rowgroup">
+          <tr role="row"><th role="rowheader" scope="row">{{ booking.adults }} người lớn × {{ booking.price_adult_vnd | vnd }}</th><td role="cell">{{ (booking.adults * booking.price_adult_vnd) | vnd }}</td></tr>
+          {% if booking.children %}<tr role="row"><th role="rowheader" scope="row">{{ booking.children }} trẻ em × {{ booking.price_child_vnd | vnd }}</th><td role="cell">{{ (booking.children * booking.price_child_vnd) | vnd }}</td></tr>{% endif %}
+          <tr role="row" class="total"><th role="rowheader" scope="row">Tổng tiền</th><td role="cell">{{ booking.total_vnd | vnd }}</td></tr>
+          <tr role="row"><th role="rowheader" scope="row">Tiền cọc phải trả</th><td role="cell">{{ booking.deposit_vnd | vnd }}</td></tr>
+          <tr role="row"><th role="rowheader" scope="row">Đã thu</th><td role="cell">{{ booking.paid_vnd | vnd }}</td></tr>
+          {% if booking.status != "CANCELLED" %}<tr role="row" class="total"><th role="rowheader" scope="row">Còn phải thu</th><td role="cell">{{ booking.amount_due_now | vnd }}</td></tr>{% endif %}
+        </tbody>
+      </table>
+      <h3>Sổ thu của lượt này</h3>
+      {% if detail.payments %}
+      <table role="table">
+        <thead role="rowgroup"><tr role="row"><th role="columnheader">Lúc</th><th role="columnheader">Số tiền</th><th role="columnheader">Hình thức</th><th role="columnheader">Người ghi</th><th role="columnheader">Ghi chú</th></tr></thead>
+        <tbody role="rowgroup">
+        {% for p in detail.payments %}
+          <tr role="row">
+            <td role="cell" data-label="Lúc">{{ p.recorded_at | vn_datetime }}</td>
+            <td role="cell" data-label="Số tiền"><strong class="{{ 'out' if p.amount_vnd < 0 else 'in' }}">{{ ("+" if p.amount_vnd > 0 else "") ~ (p.amount_vnd | vnd) }}</strong></td>
+            <td role="cell" data-label="Hình thức">{{ methods[p.method] | capitalize }}</td>
+            <td role="cell" data-label="Người ghi">{{ p.recorded_by_name or "—" }}</td>
+            <td role="cell" data-label="Ghi chú">{{ p.note or "—" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="meta">Chưa ghi khoản thu nào.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel" aria-labelledby="history">
+      <h2 id="history">Lịch sử</h2>
+      {% if detail.events %}
+      <ol class="timeline">
+        {% for e in detail.events %}
+        <li data-kind="{{ e.kind }}">
+          <span class="timeline-dot" aria-hidden="true"></span>
+          <div>
+            <p class="timeline-detail">{{ e.detail or e.kind }}</p>
+            <p class="meta">{{ e.at | vn_datetime }} · {{ {"GUEST": "Khách", "MANAGER": "Trưởng HTX", "GUIDE": "Người dẫn", "SYSTEM": "Hệ thống"}[e.actor_kind] }}{% if e.actor_name and e.actor_kind != "SYSTEM" %} {{ e.actor_name }}{% endif %}</p>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p class="meta">Chưa có lịch sử.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="booking-side" aria-label="Thao tác">
+    <h2>Thao tác</h2>
+    {% if booking.status == "PENDING" %}
+    <section class="panel action-panel">
+      <form method="post" action="{{ href('/bookings/' ~ booking.id ~ '/confirm', theme) }}">
+        <p class="meta">Xác nhận khi đã thu đủ cọc hoặc đã thoả thuận với khách.</p>
+        <button type="submit">{{ icons.circle_check(18) }} Xác nhận đặt chỗ</button>
+      </form>
+    </section>
+    {% endif %}
+
+    <details class="disclosure"{% if form == "payments" %} open{% endif %}>
+      <summary>{{ icons.banknote(18) }}&nbsp;Ghi khoản thu hoặc hoàn tiền</summary>
+      <form method="post" action="{{ href('/bookings/' ~ booking.id ~ '/payments', theme) }}">
+        <fieldset class="choice">
+          <legend>Loại</legend>
+          <label class="check"><input type="radio" name="kind" value="in"{% if values.kind|default("in") != "out" %} checked{% endif %}> Thu tiền</label>
+          <label class="check"><input type="radio" name="kind" value="out"{% if values.kind == "out" %} checked{% endif %}> Hoàn tiền</label>
+          {{ field(errors, "kind") }}
+        </fieldset>
+        <label>Số tiền (₫)
+          <input type="text" name="amount" inputmode="numeric" required autocomplete="off" placeholder="{{ booking.amount_due_now if booking.amount_due_now else '' }}" value="{{ values.amount }}"{% if errors.amount %} aria-invalid="true"{% endif %}>
+          {{ field(errors, "amount") }}
+        </label>
+        <label>Hình thức
+          <select name="method">
+            {% for key, label in methods.items() %}<option value="{{ key }}"{% if values.method == key %} selected{% endif %}>{{ label | capitalize }}</option>{% endfor %}
+          </select>
+          {{ field(errors, "method") }}
+        </label>
+        <label>Ghi chú
+          <input type="text" name="note" maxlength="200" value="{{ values.note }}">
+          {{ field(errors, "note") }}
+        </label>
+        <p class="meta">Tổng đã thu không được vượt {{ booking.total_vnd | vnd }} và không xuống dưới 0.</p>
+        <button type="submit">Ghi vào sổ thu</button>
+      </form>
+    </details>
+
+    {% if booking.status != "CANCELLED" and booking.starts_at > now %}
+    <details class="disclosure"{% if form == "resize" %} open{% endif %}>
+      <summary>{{ icons.users(18) }}&nbsp;Sửa số người</summary>
+      <form method="post" action="{{ href('/bookings/' ~ booking.id ~ '/resize', theme) }}">
+        <div class="form-row">
+          <label>Người lớn
+            <input type="number" name="adults" min="0" max="200" inputmode="numeric" required value="{{ values.adults if form == 'resize' else booking.adults }}"{% if errors.adults %} aria-invalid="true"{% endif %}>
+            {{ field(errors, "adults") }}
+          </label>
+          <label>Trẻ em
+            <input type="number" name="children" min="0" max="200" inputmode="numeric" required value="{{ values.children if form == 'resize' else booking.children }}"{% if errors.children %} aria-invalid="true"{% endif %}>
+            {{ field(errors, "children") }}
+          </label>
+        </div>
+        <p class="meta">Giữ đơn giá của lượt này; tổng tiền và tiền cọc tính lại, phải còn đủ chỗ.</p>
+        <button type="submit" class="secondary">Lưu số người</button>
+      </form>
+    </details>
+
+    <details class="disclosure"{% if form == "move" %} open{% endif %}>
+      <summary>{{ icons.calendar(18) }}&nbsp;Đổi sang chuyến khác</summary>
+      <form method="post" action="{{ href('/bookings/' ~ booking.id ~ '/move', theme) }}">
+        {% if detail.move_targets %}
+        <label>Chuyến mới
+          <select name="departure" required>
+            {% for d in detail.move_targets %}<option value="{{ d.id }}"{% if values.departure == d.id|string %} selected{% endif %}>{{ d.starts_at | vn_datetime }} · còn {{ d.seats_left }} chỗ{% if d.status == 'CLOSED' %} (đã đóng){% endif %}</option>{% endfor %}
+          </select>
+          {{ field(errors, "departure") }}
+        </label>
+        <p class="meta">Chỉ đổi được sang chuyến khác của cùng tour, còn đủ chỗ. Giá và tiền đã thu giữ nguyên.</p>
+        <button type="submit" class="secondary">Đổi chuyến</button>
+        {% else %}
+        <p class="meta">Không có chuyến nào khác của tour này còn đủ chỗ.</p>
+        {% endif %}
+      </form>
+    </details>
+
+    <details class="disclosure"{% if form == "cancel" %} open{% endif %}>
+      <summary>{{ icons.circle_x(18) }}&nbsp;Huỷ lượt đặt</summary>
+      <form method="post" action="{{ href('/bookings/' ~ booking.id ~ '/cancel', theme) }}">
+        <label>Lý do huỷ (bắt buộc)
+          <input type="text" name="reason" maxlength="200" required value="{{ values.reason }}"{% if errors.reason %} aria-invalid="true"{% endif %}>
+          {{ field(errors, "reason") }}
+        </label>
+        <p class="meta">Huỷ không mở lại được. Nếu khách đã trả tiền, lượt hiện ở mục Cần hoàn tiền.</p>
+        <button type="submit" class="danger-button">Huỷ lượt đặt</button>
+      </form>
+    </details>
+    {% endif %}
+
+    <details class="disclosure"{% if form == "note" %} open{% endif %}>
+      <summary>{{ icons.info(18) }}&nbsp;Ghi chú nội bộ</summary>
+      <form method="post" action="{{ href('/bookings/' ~ booking.id ~ '/note', theme) }}">
+        <label>Chỉ trưởng HTX xem được
+          <textarea name="note" maxlength="500" rows="4">{{ values.note if form == "note" else (booking.internal_note or "") }}</textarea>
+          {{ field(errors, "note") }}
+        </label>
+        <button type="submit" class="secondary">Lưu ghi chú</button>
+      </form>
+    </details>
+  </aside>
+</div>
+{% endblock %}

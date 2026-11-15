@@ -1,0 +1,55 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% set active_tab = "bookings" %}
+{% block title %}Đặt hộ khách{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-sales.css') }}">{% endblock %}
+{% block header %}{{ kit.app_header("Đặt hộ khách", "Khách gọi điện hoặc nhắn tin, anh chị ghi lượt đặt thay khách") }}{% endblock %}
+{% block main %}
+<p><a href="{{ href('/bookings', theme) }}">← Tất cả lượt đặt</a></p>
+{% if not departures %}
+{{ kit.empty("Chưa có chuyến nào còn đặt được. Tạo chuyến trước khi đặt hộ khách.", "Mở trang Lịch", href('/departures', theme)) }}
+{% else %}
+<form method="post" action="{{ href('/bookings', theme) }}" class="wide-form">
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <label>Chuyến
+    <select name="departure" required{% if errors.departure %} aria-invalid="true"{% endif %}>
+      <option value="">Chọn chuyến…</option>
+      {% for d in departures %}<option value="{{ d.id }}"{% if values.departure == d.id|string %} selected{% endif %}>{{ d.starts_at | vn_datetime }} · {{ d.tour_title }} · còn {{ d.seats_left }} chỗ{% if d.status == 'CLOSED' %} (đã đóng){% endif %}</option>{% endfor %}
+    </select>
+    {{ kit.field_error(errors, "departure") }}
+  </label>
+  <div class="form-row">
+    <label>Người lớn
+      <input type="number" name="adults" min="0" max="200" inputmode="numeric" required value="{{ values.adults }}"{% if errors.adults %} aria-invalid="true"{% endif %}>
+      {{ kit.field_error(errors, "adults") }}
+    </label>
+    <label>Trẻ em
+      <input type="number" name="children" min="0" max="200" inputmode="numeric" required value="{{ values.children }}"{% if errors.children %} aria-invalid="true"{% endif %}>
+      {{ kit.field_error(errors, "children") }}
+    </label>
+  </div>
+  <label>Họ tên khách
+    <input type="text" name="guest_name" maxlength="80" required autocomplete="off" value="{{ values.guest_name }}"{% if errors.guest_name %} aria-invalid="true"{% endif %}>
+    {{ kit.field_error(errors, "guest_name") }}
+  </label>
+  <label>Số điện thoại
+    <input type="tel" name="phone" inputmode="tel" required autocomplete="off" placeholder="09xx xxx xxx" value="{{ values.phone }}"{% if errors.phone %} aria-invalid="true"{% endif %}>
+    {{ kit.field_error(errors, "phone") }}
+  </label>
+  <label>Email (không bắt buộc)
+    <input type="email" name="email" maxlength="120" autocomplete="off" value="{{ values.email }}"{% if errors.email %} aria-invalid="true"{% endif %}>
+    {{ kit.field_error(errors, "email") }}
+  </label>
+  <label>Ghi chú của khách
+    <textarea name="note" maxlength="500" rows="3">{{ values.note }}</textarea>
+    {{ kit.field_error(errors, "note") }}
+  </label>
+  <input type="hidden" name="request_key" value="{{ values.request_key }}">
+  {{ kit.field_error(errors, "request_key") }}
+  <p class="meta">Giá lấy theo giá hiện tại của chuyến. Anh chị đặt được tới số chỗ còn lại, kể cả chuyến đã đóng.</p>
+  <button type="submit">Tạo lượt đặt</button>
+</form>
+{% endif %}
+{% endblock %}
