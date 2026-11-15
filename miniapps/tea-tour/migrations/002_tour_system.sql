@@ -187,7 +187,7 @@ ALTER TABLE bookings
   ADD CONSTRAINT bookings_party_check CHECK (adults >= 0 AND children >= 0 AND adults + children BETWEEN 1 AND 200),
   ADD CONSTRAINT bookings_money_check CHECK (price_adult_vnd >= 0 AND price_child_vnd >= 0 AND total_vnd >= 0
                                              AND deposit_vnd >= 0 AND deposit_vnd <= total_vnd AND paid_vnd >= 0),
-  ADD CONSTRAINT bookings_request_key_unique UNIQUE (request_key),
+  ADD CONSTRAINT bookings_request_key_unique UNIQUE (htx_code, request_key),
   ADD CONSTRAINT bookings_access_key_check CHECK (access_key ~ '^[A-Za-z0-9_-]{22}$'),
   ADD CONSTRAINT bookings_request_key_check CHECK (char_length(request_key) BETWEEN 8 AND 64),
   ADD CONSTRAINT bookings_source_check CHECK (source IN ('WEB', 'APP', 'MANAGER')),

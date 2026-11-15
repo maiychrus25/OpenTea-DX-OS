@@ -623,3 +623,100 @@ def test_paid_always_equals_the_ledger(world):
     core.cancel_booking(db, HTX, booking.id, "x", MANAGER)
     assert ledger_matches(db, booking.id)
     assert core.get_booking(db, HTX, booking.id).paid_vnd == 1_000_000
+
+
+# ---------- late deposit restores a hold-expired booking (spec 7.2) ----------
+
+def expired_cancelled(db, departure, adults=2, **fields):
+    """A booking the sweep cancelled for an expired hold (deposit 100.000, nothing recorded yet)."""
+    return add_booking(db, departure, adults=adults, status="CANCELLED", deposit_vnd=100_000,
+                       cancel_reason=core.HOLD_EXPIRED, cancelled_by="SYSTEM", cancelled_at=NOW, **fields)
+
+
+def pay(db, booking_id, amount=100_000):
+    return core.record_payment(db, HTX, booking_id, amount, "TRANSFER", "Chuyển muộn", MANAGER)
+
+
+def test_late_deposit_restores_a_hold_expired_booking(world):
+    db, _, departure = world
+    booking = expired_cancelled(db, departure)
+    restored = pay(db, booking)
+    assert (restored.status, restored.cancel_reason, restored.cancelled_by, restored.cancelled_at) == (
+        "CONFIRMED", None, None, None)
+    assert restored.paid_vnd == 100_000 and restored.payment_state == "DEPOSITED"
+    assert events(db, booking)[-2:] == [("PAYMENT", "MANAGER", "Quản trị TC"), ("RESTORED", "MANAGER", "Quản trị TC")]
+    assert db.execute("SELECT detail FROM booking_events WHERE booking_id = %s AND kind = 'RESTORED'",
+                      (booking,)).fetchone()[0] == "Khôi phục: tiền cọc về sau hạn giữ chỗ"
+    assert seats_used(db, departure) == 2 and ledger_matches(db, booking)
+
+
+def test_late_deposit_does_not_restore_when_the_seats_were_taken(world):
+    db, _, departure = world
+    booking = expired_cancelled(db, departure, adults=2)
+    assert isinstance(create(db, departure, adults=4), core.Booking)  # 4 of 5 seats gone; 2 do not fit
+    late = pay(db, booking)
+    assert (late.status, late.payment_state, late.refund_due_vnd) == ("CANCELLED", "REFUND_DUE", 100_000)
+    assert [e[0] for e in events(db, booking)].count("RESTORED") == 0
+
+
+def test_late_deposit_does_not_restore_after_the_departure_started(world):
+    db, tour, _ = world
+    started = add_departure(db, tour, starts_at=NOW - timedelta(hours=1))
+    late = pay(db, expired_cancelled(db, started))
+    assert late.status == "CANCELLED" and late.refund_due_vnd == 100_000
+    cancelled = add_departure(db, tour, status="CANCELLED")
+    assert pay(db, expired_cancelled(db, cancelled)).status == "CANCELLED"
+
+
+def test_late_deposit_does_not_restore_a_booking_cancelled_by_the_guest_or_the_manager(world):
+    db, _, departure = world
+    add_settings(db, deposit_percent=40)
+    for actor in (GUEST, MANAGER):
+        booking = create(db, departure, adults=1)
+        core.cancel_booking(db, HTX, booking.id, "Đổi ý", actor)
+        late = pay(db, booking.id, booking.deposit_vnd)
+        assert (late.status, late.refund_due_vnd) == ("CANCELLED", booking.deposit_vnd)
+    stale = add_booking(db, departure, status="CANCELLED", deposit_vnd=100_000, cancel_reason=core.STALE_PENDING,
+                        cancelled_by="SYSTEM")
+    assert pay(db, stale).status == "CANCELLED"  # only an expired hold is restored
+
+
+def test_late_payment_below_the_deposit_does_not_restore(world):
+    db, _, departure = world
+    booking = expired_cancelled(db, departure)
+    part = pay(db, booking, 60_000)
+    assert (part.status, part.paid_vnd) == ("CANCELLED", 60_000)
+    assert pay(db, booking, 40_000).status == "CONFIRMED"  # the rest of the deposit arrives: restored then
+
+
+def test_payment_recorded_right_after_the_hold_ran_out_restores_in_the_same_call(world):
+    db, _, departure = world
+    booking = add_booking(db, departure, adults=2, deposit_vnd=100_000, hold_until=NOW - timedelta(minutes=5))
+    restored = pay(db, booking)  # _locked sweeps first (cancels), the payment then restores it
+    assert (restored.status, restored.cancelled_by) == ("CONFIRMED", None)
+    assert [e[0] for e in events(db, booking)] == ["CANCELLED", "PAYMENT", "RESTORED"]
+    assert seats_used(db, departure) == 2
+
+
+# ---------- request keys per cooperative ----------
+
+def test_same_request_key_in_another_cooperative_creates_its_own_booking(world):
+    db, _, departure = world
+    other = add_departure(db, add_tour(db, htx="LB"), htx="LB")
+    mine = core.create_booking(db, new(departure, request_key="shared-key-0001"), GUEST)
+    theirs = core.create_booking(db, new(other, htx="LB", request_key="shared-key-0001"), GUEST)
+    assert isinstance(mine, core.Booking) and isinstance(theirs, core.Booking) and mine.id != theirs.id
+    assert (mine.htx_code, theirs.htx_code) == ("TC", "LB")
+    assert core.create_booking(db, new(departure, request_key="shared-key-0001"), GUEST).id == mine.id
+
+
+def test_a_unique_violation_that_is_not_the_code_is_not_retried(world, monkeypatch):
+    db, _, departure = world
+    add_booking(db, departure, request_key="dup-key-000001")
+    calls = []
+    monkeypatch.setattr(core.secrets, "choice", lambda alphabet: calls.append(1) or "A")
+    dep = core._lock_departures(db, HTX, [departure])[departure]
+    import psycopg
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        core._insert_booking(db, new(departure, request_key="dup-key-000001"), dep, 500_000, 0, None, "PENDING")
+    assert len(calls) == 8  # one code drawn, no second attempt
