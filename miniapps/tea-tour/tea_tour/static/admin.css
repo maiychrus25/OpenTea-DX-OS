@@ -1,0 +1,37 @@
+/* SPDX-License-Identifier: MIT
+   SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+/* Manager pages: small additions to /dxos-app.css. Nine tabs do not fit a phone, so the bar scrolls inside itself
+   (never the page) and snaps to a tab. */
+.tabs {
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabs a {
+  scroll-snap-align: start;
+}
+
+.icon {
+  flex: none;
+  vertical-align: -0.2em;
+}
+
+/* A wide table scrolls inside its own box. */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

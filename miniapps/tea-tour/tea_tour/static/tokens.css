@@ -1,0 +1,378 @@
+/* SPDX-License-Identifier: MIT
+   SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+/* Design tokens of the customer site: the colour, type, radius and spacing tokens of the root DESIGN.md, with the same
+   names as /dxos-app.css. Light by default; dark follows the system unless <html data-theme="light"> says otherwise,
+   and <html data-theme="dark"> forces it. The two dark blocks below must stay identical.
+   Be Vietnam Pro (SIL OFL 1.1, see fonts/OFL.txt) ships with the app because the CSP does not allow other origins. */
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(fonts/be-vietnam-pro-vietnamese-400-normal.woff2) format('woff2');
+  unicode-range: U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(fonts/be-vietnam-pro-latin-ext-400-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(fonts/be-vietnam-pro-latin-400-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(fonts/be-vietnam-pro-vietnamese-500-normal.woff2) format('woff2');
+  unicode-range: U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(fonts/be-vietnam-pro-latin-ext-500-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url(fonts/be-vietnam-pro-latin-500-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(fonts/be-vietnam-pro-vietnamese-600-normal.woff2) format('woff2');
+  unicode-range: U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(fonts/be-vietnam-pro-latin-ext-600-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(fonts/be-vietnam-pro-latin-600-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(fonts/be-vietnam-pro-vietnamese-700-normal.woff2) format('woff2');
+  unicode-range: U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(fonts/be-vietnam-pro-latin-ext-700-normal.woff2) format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(fonts/be-vietnam-pro-latin-700-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+:root {
+  color-scheme: light;
+
+  /* Base palette */
+  --background:         #f5f7f3;
+  --foreground:         #19231e;
+  --card:               #ffffff;
+  --primary:            #176c4b;
+  --primary-foreground: #ffffff;
+  --accent-lime:        #d6f05c;
+  --secondary:          #e7f0ea;
+  --muted:              #eef1ed;
+  --muted-foreground:   #5d6a63;
+  --border:             #dce3dd;
+  --sidebar-bg:         #143c2d;
+  --sidebar-darker:     #0d3023;
+  --sidebar-foreground: #ffffff;
+
+  /* Primary */
+  --color-primary: var(--primary);
+  --color-primary-hover: #125c3f;
+  --color-primary-subtle: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  /* Accent: tea-bud amber, used sparingly for highlights */
+  --color-accent: #b45309;
+  --color-accent-hover: #92400e;
+  --color-accent-subtle: #fef3c7;
+  --color-accent-foreground: #ffffff;
+
+
+  /* Semantic Feedback */
+  --color-success: #15803d;
+  --color-warning: #854d0e;
+  --color-danger: #b91c1c;
+  --color-info: #1d4ed8;
+  --color-success-subtle: #dcfce7;
+  --color-warning-subtle: #fef3c7;
+  --color-danger-subtle: #fee2e2;
+  --color-info-subtle: #dbeafe;
+
+  /* Neutral Surfaces */
+  --color-surface-page: var(--background);
+  --color-surface-card: var(--card);
+  --color-surface-sunken: #f1f5f9;
+  --color-surface-overlay: #ffffff;
+
+  /* Borders */
+  --color-border-subtle: #e2e8f0;
+  --color-border-default: var(--border);
+  --color-border-focus: var(--primary);
+
+  /* Text */
+  --color-ink-primary: var(--foreground);
+  --color-ink-secondary: #475569;
+  --color-ink-tertiary: #5f6b7a;
+  --color-ink-inverse: #ffffff;
+
+  /* Special */
+  --color-map-overlay: rgba(15, 23, 42, 0.55);
+  --color-modal-overlay: rgba(15, 23, 42, 0.55);
+  --color-badge-unread: #dc2626;
+  --color-danger-hover: #991b1b;
+
+  /* Shadows */
+  --shadow-card: 0 1px 4px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 4px 16px rgba(15, 23, 42, 0.10);
+  --shadow-modal: 0 10px 25px rgba(15, 23, 42, 0.15);
+
+  /* Motion */
+  --motion-duration-fast: 150ms;
+  --motion-duration-base: 200ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Typography Scale */
+  --font-size-display: 2rem;        /* 32px */
+  --font-size-h1: 1.5rem;           /* 24px */
+  --font-size-h2: 1.25rem;          /* 20px */
+  --font-size-h3: 1rem;             /* 16px */
+  --font-size-body: 0.9375rem;      /* 15px */
+  --font-size-body-large: 1.0625rem;/* 17px, farmer role */
+  --font-size-label: 0.875rem;      /* 14px */
+  --font-size-meta: 0.75rem;        /* 12px */
+  --font-size-mono: 0.8125rem;      /* 13px */
+
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Spacing Scale (4px base unit) */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-gutter-mobile: 16px;
+  --spacing-gutter-desktop: 24px;
+  --spacing-gutter: var(--spacing-gutter-mobile);
+  --sidebar-width: 240px;
+  --topbar-height: 56px;
+
+  /* Z-Index Scale */
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-toast: 1060;
+
+  /* Border Radius */
+  --rounded-sm: 6px;
+  --rounded-md: 10px;
+  --rounded-lg: 14px;
+  --rounded-xl: 20px;
+  --rounded-full: 9999px;
+  --font-family-sans: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --background:         #0b1712;
+    --foreground:         #e3ece6;
+    --card:               #112219;
+    --primary:            #4cc38a;
+    --primary-foreground: #04140c;
+    --accent-lime:        #c9e157;
+    --secondary:          #173328;
+    --muted:              #162a20;
+    --muted-foreground:   #9fb4a8;
+    --border:             #2a4034;
+    --sidebar-bg:         #0e271d;
+    --sidebar-darker:     #081a13;
+    --sidebar-foreground: #e8f1eb;
+    --color-primary-hover: #6dd3a2;
+    --color-accent: #f2b544;
+    --color-accent-hover: #f6c76a;
+    --color-accent-subtle: #2e2410;
+    --color-accent-foreground: #1d1405;
+    --color-success: #4ade80;
+    --color-warning: #fbbf24;
+    --color-danger: #f87171;
+    --color-info: #60a5fa;
+    --color-success-subtle: #12301f;
+    --color-warning-subtle: #2f250c;
+    --color-danger-subtle: #3a1414;
+    --color-info-subtle: #132640;
+    --color-surface-sunken: #0e1d16;
+    --color-surface-overlay: #152a20;
+    --color-border-subtle: #1f3229;
+    --color-ink-secondary: #b4c4bb;
+    --color-ink-tertiary: #8ea398;
+    --color-ink-inverse: #08130e;
+    --color-map-overlay: rgba(0, 0, 0, 0.6);
+    --color-modal-overlay: rgba(0, 0, 0, 0.6);
+    --color-badge-unread: #f87171;
+    --color-danger-hover: #fca5a5;
+    --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.4);
+    --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-modal: 0 10px 25px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background:         #0b1712;
+  --foreground:         #e3ece6;
+  --card:               #112219;
+  --primary:            #4cc38a;
+  --primary-foreground: #04140c;
+  --accent-lime:        #c9e157;
+  --secondary:          #173328;
+  --muted:              #162a20;
+  --muted-foreground:   #9fb4a8;
+  --border:             #2a4034;
+  --sidebar-bg:         #0e271d;
+  --sidebar-darker:     #081a13;
+  --sidebar-foreground: #e8f1eb;
+  --color-primary-hover: #6dd3a2;
+  --color-accent: #f2b544;
+  --color-accent-hover: #f6c76a;
+  --color-accent-subtle: #2e2410;
+  --color-accent-foreground: #1d1405;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #60a5fa;
+  --color-success-subtle: #12301f;
+  --color-warning-subtle: #2f250c;
+  --color-danger-subtle: #3a1414;
+  --color-info-subtle: #132640;
+  --color-surface-sunken: #0e1d16;
+  --color-surface-overlay: #152a20;
+  --color-border-subtle: #1f3229;
+  --color-ink-secondary: #b4c4bb;
+  --color-ink-tertiary: #8ea398;
+  --color-ink-inverse: #08130e;
+  --color-map-overlay: rgba(0, 0, 0, 0.6);
+  --color-modal-overlay: rgba(0, 0, 0, 0.6);
+  --color-badge-unread: #f87171;
+  --color-danger-hover: #fca5a5;
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 10px 25px rgba(0, 0, 0, 0.6);
+}
+
+/* Baseline shared by every customer page; site.css builds on it. */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--color-ink-primary);
+  background: var(--color-surface-page);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-body);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--spacing-4);
+  top: -100px;
+  z-index: var(--z-index-modal);
+  padding: var(--spacing-2) var(--spacing-4);
+  color: var(--color-primary-foreground);
+  background: var(--color-primary);
+  border-radius: var(--rounded-md);
+}
+
+.skip-link:focus {
+  top: var(--spacing-2);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
