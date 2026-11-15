@@ -396,7 +396,7 @@ def record_payment(conn, htx_code: str, booking_id: UUID, amount_vnd: int, metho
         found = _locked(conn, htx_code, booking_id)
         if found is None:
             return Refusal.NOT_FOUND
-        booking, _ = found
+        booking, departure = found
         paid = booking.paid_vnd + amount_vnd
         if paid < 0:
             return Refusal.PAYMENT_BELOW_ZERO
@@ -411,7 +411,20 @@ def record_payment(conn, htx_code: str, booking_id: UUID, amount_vnd: int, metho
         _event(conn, htx_code, booking_id, actor, "PAYMENT", detail)
         if booking.status == "PENDING" and booking.deposit_vnd > 0 and paid >= booking.deposit_vnd:
             _confirm(conn, htx_code, booking_id, actor, "Đã đủ tiền cọc")
+        elif _restorable(conn, booking, departure, paid):
+            conn.execute("UPDATE bookings SET status = 'CONFIRMED', cancel_reason = NULL, cancelled_by = NULL, "
+                         "cancelled_at = NULL WHERE id = %s AND htx_code = %s", (booking_id, htx_code))
+            _event(conn, htx_code, booking_id, actor, "RESTORED", "Khôi phục: tiền cọc về sau hạn giữ chỗ")
         return _reload(conn, htx_code, booking_id)
+
+
+def _restorable(conn, booking: Booking, departure: _Departure, paid: int) -> bool:
+    """The one exception to "a cancelled booking never reopens" (spec 7.2): the sweep cancelled it for an expired hold,
+    the deposit has now arrived, and its seats are still free on a departure that has not started."""
+    return (booking.status == "CANCELLED" and booking.cancelled_by == "SYSTEM" and booking.cancel_reason == HOLD_EXPIRED
+            and booking.deposit_vnd > 0 and paid >= booking.deposit_vnd and departure.status != "CANCELLED"
+            and departure.starts_at > _now(conn)
+            and _seats_used(conn, departure.id) + booking.party_size <= departure.seats)
 
 
 def report_paid(conn, htx_code: str, booking_id: UUID) -> Booking | Refusal:
