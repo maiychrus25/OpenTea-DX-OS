@@ -1,0 +1,31 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "admin/catalog/_macros.html" as m %}
+{% block title %}Huỷ chuyến · {{ departure.tour_title }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-catalog.css') }}">{% endblock %}
+{% block header %}{{ kit.app_header("Huỷ chuyến", departure.tour_title ~ " · " ~ (departure.starts_at|vn_datetime)) }}{% endblock %}
+{% block main %}
+{{ m.back("Quay lại chuyến", href('/departures/' ~ departure.id, theme)) }}
+<section class="confirm">
+  <h2>Huỷ chuyến này?</h2>
+  {% if problem %}<p class="error" role="alert">{{ problem }}</p>{% endif %}
+  {% if bookings %}
+  <p class="notice"><strong>{{ bookings }} lượt đặt</strong> ({{ people }} khách) đang giữ chỗ sẽ bị huỷ cùng chuyến. Lượt nào đã trả tiền sẽ hiện ở mục cần hoàn tiền. Nếu khách còn muốn đi, hãy đổi họ sang chuyến khác của tour trước khi huỷ.</p>
+  {% else %}
+  <p>Chuyến chưa có lượt đặt nào đang giữ chỗ.</p>
+  {% endif %}
+  <form method="post" action="{{ href('/departures/' ~ departure.id ~ '/status', theme) }}">
+    <input type="hidden" name="status" value="CANCELLED">
+    <input type="hidden" name="confirm" value="1">
+    <label>Lý do huỷ (khách sẽ thấy lý do này, tối đa 200 ký tự)
+      <input name="reason" maxlength="200" required value="{{ reason }}"{% if problem %} aria-invalid="true"{% endif %}>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="danger">Huỷ chuyến</button>
+      <a class="button secondary" href="{{ href('/departures/' ~ departure.id, theme) }}">Giữ chuyến</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,53 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Small pieces the catalogue pages share: {% import "admin/catalog/_macros.html" as m %}. -#}
+{% macro tour_pill(status) -%}
+<span class="pill {{ {'PUBLISHED': '', 'DRAFT': 'neutral', 'ARCHIVED': 'warn'}[status] }}">{{ {'PUBLISHED': 'Đang bán', 'DRAFT': 'Bản nháp', 'ARCHIVED': 'Ngừng bán'}[status] }}</span>
+{%- endmacro %}
+
+{# past: the departure time has gone by. #}
+{% macro departure_pill(status, past) -%}
+{%- if status == 'CANCELLED' -%}<span class="pill danger">Đã huỷ</span>
+{%- elif past -%}<span class="pill neutral">Đã diễn ra</span>
+{%- elif status == 'CLOSED' -%}<span class="pill warn">Đã đóng</span>
+{%- else -%}<span class="pill">Nhận khách</span>{%- endif -%}
+{%- endmacro %}
+
+{# A cover thumbnail from the protected media route, or a leaf on a tinted tile when the tour has no photo. #}
+{% macro thumb(media_id, icons, alt="") -%}
+{%- if media_id -%}<img class="thumb" src="{{ prefix }}/media/{{ media_id }}-thumb.jpg" alt="{{ alt }}" loading="lazy" width="96" height="72">
+{%- else -%}<span class="thumb thumb-empty" aria-hidden="true">{{ icons.leaf(28) }}</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro seats_bar(used, seats) -%}
+<span class="seats" title="{{ used }} / {{ seats }} chỗ"><svg class="seats-bar" aria-hidden="true" focusable="false"><rect width="{{ [100, (used * 100 / seats)|round|int]|min if seats else 0 }}%" height="100%" rx="4"/></svg><span class="seats-text">{{ used }}/{{ seats }}</span></span>
+{%- endmacro %}
+
+{% macro back(label, link) -%}
+<p class="back"><a href="{{ link }}">‹ {{ label }}</a></p>
+{%- endmacro %}
+
+{# The guide select. selected: the value to show as chosen when the form came back with one (explicit), else the stored guide. #}
+{% macro guide_field(households, core_error, selected="", explicit=False, current_user=None, current_name=None, errors=None) -%}
+{%- if core_error -%}
+<p class="notice">{{ core_error }}{% if current_name %} Người dẫn hiện tại: {{ current_name }} (giữ nguyên).{% endif %}</p>
+{%- else -%}
+<label>Người dẫn
+  <select name="guide">
+    <option value="">Chưa phân công</option>
+    {%- set ns = namespace(known=false) %}
+    {%- for h in households %}
+    {%- if current_user and h.keycloak_user_id == current_user %}{% set ns.known = true %}{% endif %}
+    <option value="{{ h.id }}"{% if not h.keycloak_user_id %} disabled{% endif %}
+      {%- if (explicit and selected == h.id) or (not explicit and current_user and h.keycloak_user_id == current_user) %} selected{% endif %}>{{ h.name }}{% if not h.keycloak_user_id %} (chưa có tài khoản){% endif %}</option>
+    {%- endfor %}
+    {%- if current_user and not ns.known %}
+    <option value="keep"{% if not explicit or selected == "keep" %} selected{% endif %}>{{ current_name }} (giữ nguyên)</option>
+    {%- endif %}
+  </select>
+  {%- if errors and errors.get("guide") %}<span class="field-error" role="alert">{{ errors.guide }}</span>{% endif %}
+</label>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro flash(kind, text) -%}<p class="{{ kind }}" role="{{ 'alert' if kind == 'error' else 'status' }}">{{ text }}</p>{%- endmacro %}

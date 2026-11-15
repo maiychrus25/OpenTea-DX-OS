@@ -1,0 +1,37 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- The group list: opens outside the frame, so it extends the plain page and not the admin shell. -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Danh sách đoàn · {{ departure.tour_title }}{% endblock %}
+{% block body_attrs %} class="print-sheet"{% endblock %}
+{% block main %}
+{{ kit.print_bar(back) }}
+<h1>Danh sách đoàn · HTX {{ htx }}</h1>
+<h2>{{ departure.tour_title }}</h2>
+<p>{{ departure.starts_at|vn_datetime }} · Điểm hẹn: {{ departure.meeting_point }} · Người dẫn: {{ departure.guide_name or "chưa phân công" }}</p>
+{% if guests %}
+<table>
+  <thead><tr><th>Khách</th><th>Số điện thoại</th><th>Người lớn</th><th>Trẻ em</th><th>Còn phải thu</th><th>Điểm danh</th></tr></thead>
+  <tbody>
+    {%- for b in guests %}
+    <tr>
+      <td data-label="Khách">{{ b.guest_name }}{% if b.note %}<br><small>{{ b.note }}</small>{% endif %}</td>
+      <td data-label="Số điện thoại">{{ b.phone }}</td>
+      <td data-label="Người lớn">{{ b.adults }}</td>
+      <td data-label="Trẻ em">{{ b.children }}</td>
+      <td data-label="Còn phải thu">{{ [b.total_vnd - b.paid_vnd, 0]|max|vnd }}</td>
+      <td data-label="Điểm danh">{% if b.checked_in_at %}{{ b.checked_in_count }}/{{ b.party_size }}{% else %}☐{% endif %}</td>
+    </tr>
+    {%- endfor %}
+  </tbody>
+</table>
+<p><strong>Tổng cộng: {{ people }} khách</strong> trong {{ guests|length }} lượt đặt đã xác nhận.</p>
+{% else %}
+{{ kit.empty("Chuyến này chưa có lượt đặt nào được xác nhận.") }}
+{% endif %}
+<table>
+  <thead><tr><th>Người dẫn</th></tr></thead>
+  <tbody><tr><td class="signature" data-label="Người dẫn">Ký tên:</td></tr></tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,88 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "icons.html" as icons %}
+{% import "admin/catalog/_macros.html" as m %}
+{% block title %}Cài đặt{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-catalog.css') }}">{% endblock %}
+{% block header %}{{ kit.app_header("Cài đặt", "HTX " ~ htx) }}{% endblock %}
+{% block main %}
+{% if saved %}<p class="notice" role="status">Đã lưu {{ "ảnh bìa" if saved == "cover" else "cài đặt" }}.</p>{% endif %}
+<section class="panel cover-panel">
+  <div class="panel-head"><h2>Ảnh bìa của HTX</h2></div>
+  {% if cover_error %}<p class="error" role="alert">{{ cover_error }}</p>{% endif %}
+  <div class="cover-row">
+    {% if current.cover_media_id %}<img class="cover-thumb" src="{{ prefix }}/media/{{ current.cover_media_id }}-thumb.jpg" alt="Ảnh bìa hiện tại" width="320" height="213">
+    {% else %}<span class="cover-thumb thumb-empty" aria-hidden="true">{{ icons.image(40) }}</span>{% endif %}
+    <form class="upload" method="post" enctype="multipart/form-data" action="{{ href('/settings/cover', theme) }}">
+      <label>{{ "Đổi ảnh bìa" if current.cover_media_id else "Tải ảnh bìa lên" }}
+        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required{% if cover_error %} aria-invalid="true"{% endif %}>
+      </label>
+      <p class="hint">{{ image_limits }} Ảnh bìa hiện ở đầu trang khách.</p>
+      <button type="submit" class="secondary">Tải lên</button>
+    </form>
+  </div>
+</section>
+
+<form class="editor" method="post" action="{{ href('/settings', theme) }}">
+  {% if errors %}<p class="error" role="alert">Chưa lưu được: hãy sửa các ô báo lỗi bên dưới.</p>{% endif %}
+  <fieldset>
+    <legend>Giới thiệu</legend>
+    <label>Tên hiển thị <input name="display_name" maxlength="80" value="{{ shown.display_name }}">{{ kit.field_error(errors, "display_name") }}</label>
+    <label>Lời giới thiệu ngắn <input name="tagline" maxlength="160" value="{{ shown.tagline }}">{{ kit.field_error(errors, "tagline") }}</label>
+    <label>Giới thiệu HTX (tối đa 2000 ký tự) <textarea name="intro" rows="5">{{ shown.intro }}</textarea>{{ kit.field_error(errors, "intro") }}</label>
+  </fieldset>
+  <fieldset>
+    <legend>Liên hệ</legend>
+    <div class="grid-2">
+      <label>Đường dây nóng <input name="hotline" inputmode="tel" value="{{ shown.hotline }}">{{ kit.field_error(errors, "hotline") }}</label>
+      <label>Zalo <input name="zalo" inputmode="tel" value="{{ shown.zalo }}">{{ kit.field_error(errors, "zalo") }}</label>
+    </div>
+    <label>Email <input type="email" name="email" value="{{ shown.email }}">{{ kit.field_error(errors, "email") }}</label>
+    <label>Địa chỉ <input name="address" maxlength="200" value="{{ shown.address }}">{{ kit.field_error(errors, "address") }}</label>
+    <label>Liên kết bản đồ (https://) <input type="url" name="map_url" value="{{ shown.map_url }}">{{ kit.field_error(errors, "map_url") }}</label>
+  </fieldset>
+  <fieldset>
+    <legend>Tài khoản nhận tiền (VietQR)</legend>
+    <div class="bank-grid">
+      <div class="bank-fields">
+        <label>Ngân hàng
+          <select name="bank_bin">
+            <option value="">Chưa chọn</option>
+            {%- for bank in banks %}<option value="{{ bank.bin }}"{% if shown.bank_bin == bank.bin %} selected{% endif %}>{{ bank.name }}</option>{% endfor %}
+          </select>{{ kit.field_error(errors, "bank_bin") }}
+        </label>
+        <label>Số tài khoản (6 đến 19 chữ số) <input name="bank_account" inputmode="numeric" autocomplete="off" value="{{ shown.bank_account }}">{{ kit.field_error(errors, "bank_account") }}</label>
+        <label>Tên chủ tài khoản <input name="bank_holder" autocomplete="off" value="{{ shown.bank_holder }}">{{ kit.field_error(errors, "bank_holder") }}</label>
+        <p class="hint">Khai đủ ba mục hoặc để trống cả ba. Tên chủ tài khoản được đổi thành chữ hoa không dấu. Chưa khai thì trang khách hiện “Liên hệ HTX để thanh toán” kèm đường dây nóng.</p>
+      </div>
+      <aside class="qr-preview" aria-label="Mã QR mẫu">
+        {% if sample %}
+        <img class="qr-sample" src="{{ sample }}" alt="Mã VietQR mẫu" width="168" height="168">
+        <p><strong>{{ current.bank_name }}</strong><br>{{ current.bank_account }}<br>{{ current.bank_holder }}</p>
+        <p class="hint">Mã mẫu: {{ sample_amount|vnd }}, nội dung “{{ sample_content }}”. Quét bằng ứng dụng ngân hàng để kiểm tra đúng tài khoản và tên chủ; đừng chuyển tiền. Mã này theo thông tin đã lưu.</p>
+        {% else %}
+        <span class="qr-empty" aria-hidden="true">{{ icons.qr_code(40) }}</span>
+        <p class="hint">Chưa khai tài khoản ngân hàng nên chưa có mã QR. Lưu đủ ba mục để xem mã mẫu.</p>
+        {% endif %}
+      </aside>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Đặt cọc, giữ chỗ và huỷ</legend>
+    <div class="grid-3">
+      <label>Tỉ lệ đặt cọc (%) <input name="deposit_percent" inputmode="numeric" required value="{{ shown.deposit_percent }}">{{ kit.field_error(errors, "deposit_percent") }}</label>
+      <label>Giữ chỗ (giờ) <input name="hold_hours" inputmode="numeric" required value="{{ shown.hold_hours }}">{{ kit.field_error(errors, "hold_hours") }}</label>
+      <label>Huỷ miễn phí trước (giờ) <input name="cancel_free_hours" inputmode="numeric" required value="{{ shown.cancel_free_hours }}">{{ kit.field_error(errors, "cancel_free_hours") }}</label>
+    </div>
+    <label class="check"><input type="checkbox" name="auto_confirm"{% if shown.auto_confirm %} checked{% endif %}>Tự xác nhận lượt đặt khi không cần đặt cọc</label>
+    <p class="hint">Đặt cọc 0% nghĩa là khách không phải trả trước. Lượt chưa đủ cọc bị huỷ khi quá thời gian giữ chỗ, trừ khi khách đã bấm “Tôi đã chuyển khoản”. Khách tự huỷ được nếu còn ít nhất số giờ ghi ở trên trước giờ khởi hành.</p>
+  </fieldset>
+  <fieldset>
+    <legend>Chính sách</legend>
+    <label>Chính sách đặt cọc, huỷ và hoàn tiền (tối đa 2000 ký tự) <textarea name="policy_text" rows="6">{{ shown.policy_text }}</textarea>{{ kit.field_error(errors, "policy_text") }}</label>
+  </fieldset>
+  <div class="form-actions"><button type="submit">Lưu cài đặt</button></div>
+</form>
+{% endblock %}

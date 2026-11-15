@@ -1,0 +1,95 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{#- Create and edit form of a tour. Needs shown (what to show), errors, rows (rows with spare ones), tour (None when new). -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "admin/catalog/_macros.html" as m %}
+{% block title %}{{ "Sửa tour" if tour else "Tạo tour" }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-catalog.css') }}">{% endblock %}
+{% block header %}{{ kit.app_header("Sửa tour" if tour else "Tạo tour", tour.title if tour else "HTX " ~ htx) }}{% endblock %}
+{% block main %}
+{{ m.back("Quay lại tour" if tour else "Danh sách tour", href('/tours/' ~ tour.id if tour else '/tours', theme)) }}
+{% if not tour %}
+<nav class="chips" aria-label="Bắt đầu từ mẫu">
+  <span class="chips-label">Bắt đầu từ</span>
+  <a href="{{ href('/tours/new', theme) }}"{% if not template_key %} aria-current="true"{% endif %}>Trang trắng</a>
+  {%- for tpl in templates %}
+  <a href="{{ href('/tours/new', theme, template=tpl.key) }}"{% if tpl.key == template_key %} aria-current="true"{% endif %}>{{ tpl.title }}</a>
+  {%- endfor %}
+</nav>
+{% endif %}
+{% if errors %}<p class="error" role="alert">Chưa lưu được: hãy sửa các ô báo lỗi bên dưới.</p>{% endif %}
+<form class="editor" method="post" action="{{ href('/tours/' ~ tour.id if tour else '/tours', theme) }}">
+  <fieldset>
+    <legend>Thông tin chính</legend>
+    <label>Tên tour <input name="title" maxlength="120" required value="{{ shown.title }}"{% if errors.title %} aria-invalid="true"{% endif %}>{{ kit.field_error(errors, "title") }}</label>
+    <label>Tóm tắt (tối đa 200 ký tự) <textarea name="summary" rows="2">{{ shown.summary }}</textarea>{{ kit.field_error(errors, "summary") }}</label>
+    <label>Mô tả (tối đa 4000 ký tự) <textarea name="description" rows="8">{{ shown.description }}</textarea>{{ kit.field_error(errors, "description") }}</label>
+    <div class="grid-2">
+      <label>Loại tour
+        <select name="category">
+          {%- for key, label in categories %}<option value="{{ key }}"{% if shown.category == key %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>{{ kit.field_error(errors, "category") }}
+      </label>
+      <label>Thời lượng (phút) <input name="duration_minutes" inputmode="numeric" required value="{{ shown.duration_minutes }}">{{ kit.field_error(errors, "duration_minutes") }}</label>
+    </div>
+    <label>Điểm hẹn <input name="meeting_point" required value="{{ shown.meeting_point }}">{{ kit.field_error(errors, "meeting_point") }}</label>
+    <label>Liên kết bản đồ (https://, không bắt buộc) <input type="url" name="map_url" value="{{ shown.map_url }}">{{ kit.field_error(errors, "map_url") }}</label>
+  </fieldset>
+  <fieldset>
+    <legend>Giá và số chỗ</legend>
+    <div class="grid-3">
+      <label>Giá người lớn (₫) <input name="price_adult_vnd" inputmode="numeric" required value="{{ shown.price_adult_vnd }}">{{ kit.field_error(errors, "price_adult_vnd") }}</label>
+      <label>Giá trẻ em (₫) <input name="price_child_vnd" inputmode="numeric" required value="{{ shown.price_child_vnd }}">{{ kit.field_error(errors, "price_child_vnd") }}</label>
+      <label>Số chỗ mặc định <input name="default_seats" inputmode="numeric" required value="{{ shown.default_seats }}">{{ kit.field_error(errors, "default_seats") }}</label>
+    </div>
+    <p class="hint">Giá và số chỗ này được chép vào mỗi chuyến mới; chuyến sửa riêng được. Đổi ở đây không đổi chuyến đã tạo.</p>
+  </fieldset>
+  <fieldset>
+    <legend>Lịch trình (tối đa 12 mục)</legend>
+    {{ kit.field_error(errors, "itinerary") }}
+    <ol class="rows">
+      {%- for r in rows.itinerary %}
+      <li class="row row-itinerary">
+        <label>Giờ <input name="itinerary_time" value="{{ r.time }}" placeholder="07:30"></label>
+        <label>Việc <input name="itinerary_title" value="{{ r.title }}"></label>
+        <label>Mô tả <input name="itinerary_detail" value="{{ r.detail }}"></label>
+      </li>
+      {%- endfor %}
+    </ol>
+  </fieldset>
+  <fieldset>
+    <legend>Bao gồm, không bao gồm, cần mang theo</legend>
+    <div class="lists">
+      {%- for name, label in (("includes", "Bao gồm"), ("excludes", "Không bao gồm"), ("bring", "Cần mang theo")) %}
+      <div>
+        <h3>{{ label }}</h3>
+        {{ kit.field_error(errors, name) }}
+        {%- for line in rows[name] %}
+        <label class="visually-hidden" for="{{ name }}-{{ loop.index }}">{{ label }} {{ loop.index }}</label>
+        <input id="{{ name }}-{{ loop.index }}" name="{{ name }}" value="{{ line }}">
+        {%- endfor %}
+      </div>
+      {%- endfor %}
+    </div>
+    <p class="hint">Mỗi dòng một ý, tối đa 10 dòng, 120 ký tự. Dòng trống được bỏ qua.</p>
+  </fieldset>
+  <fieldset>
+    <legend>Hỏi đáp (tối đa 8 mục)</legend>
+    {{ kit.field_error(errors, "faq") }}
+    <ol class="rows">
+      {%- for r in rows.faq %}
+      <li class="row row-faq">
+        <label>Câu hỏi <input name="faq_q" value="{{ r.q }}"></label>
+        <label>Trả lời <textarea name="faq_a" rows="2">{{ r.a }}</textarea></label>
+      </li>
+      {%- endfor %}
+    </ol>
+  </fieldset>
+  <div class="form-actions">
+    <button type="submit">{{ "Lưu thay đổi" if tour else "Tạo tour" }}</button>
+    <a class="button secondary" href="{{ href('/tours/' ~ tour.id if tour else '/tours', theme) }}">Bỏ qua</a>
+    {% if not tour %}<span class="hint">Tour mới là bản nháp. Thêm ảnh ở trang tour rồi bấm Đăng bán.</span>{% endif %}
+  </div>
+</form>
+{% endblock %}

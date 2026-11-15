@@ -1,0 +1,143 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "icons.html" as icons %}
+{% import "admin/catalog/_macros.html" as m %}
+{% block title %}Lịch{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-catalog.css') }}">{% endblock %}
+{% block header %}{{ kit.app_header("Lịch", "HTX " ~ htx) }}{% endblock %}
+{% block main %}
+{% if created is defined %}
+<p class="notice" role="status">Đã tạo {{ created[0] }} chuyến.
+  {%- if created[1] %} Bỏ qua {{ created[1] }} ngày đã có chuyến vào giờ này.{% endif %}
+  {%- if created[2] %} Bỏ qua {{ created[2] }} ngày đã qua.{% endif %}</p>
+{% endif %}
+<div class="toolbar-row">
+  <nav class="segmented" aria-label="Cách xem">
+    <a href="{{ href('/departures', theme, tour=tour_filter) }}"{% if view == "list" %} aria-current="true"{% endif %}>Danh sách</a>
+    <a href="{{ href('/departures', theme, view='calendar', tour=tour_filter) }}"{% if view == "calendar" %} aria-current="true"{% endif %}>Lịch tháng</a>
+  </nav>
+  <form class="toolbar" method="get" action="{{ href('/departures', theme) }}">
+    {%- if view == "calendar" %}<input type="hidden" name="view" value="calendar">{% if calendar %}<input type="hidden" name="month" value="{{ calendar.first.strftime('%Y-%m') }}">{% endif %}{% endif %}
+    {%- if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+    <label>Tour
+      <select name="tour">
+        <option value="">Tất cả tour</option>
+        {%- for id, title, status in tours %}<option value="{{ id }}"{% if tour_filter and tour_filter|string == id|string %} selected{% endif %}>{{ title }}</option>{% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="secondary">Lọc</button>
+  </form>
+</div>
+
+<details class="disclosure"{% if open_form == "single" %} open{% endif %}>
+  <summary>Thêm một chuyến</summary>
+  <form class="departure-form" method="post" action="{{ href('/departures', theme) }}">
+    {% if single_errors %}<p class="error" role="alert">Chưa tạo được chuyến: hãy sửa các ô báo lỗi.</p>{% endif %}
+    <label>Tour
+      <select name="tour" required>
+        <option value="">Chọn tour</option>
+        {%- for id, title, status in tours %}<option value="{{ id }}"{% if single_form.tour == id|string %} selected{% endif %}>{{ title }}{% if status == "DRAFT" %} (bản nháp){% endif %}</option>{% endfor %}
+      </select>{{ kit.field_error(single_errors, "tour") }}
+    </label>
+    <div class="grid-2">
+      <label>Ngày khởi hành <input type="date" name="date" required value="{{ single_form.date }}">{{ kit.field_error(single_errors, "date") }}</label>
+      <label>Giờ khởi hành <input type="time" name="time" required value="{{ single_form.time }}">{{ kit.field_error(single_errors, "time") }}</label>
+    </div>
+    <div class="grid-3">
+      <label>Số chỗ <input name="seats" inputmode="numeric" placeholder="Theo tour" value="{{ single_form.seats }}">{{ kit.field_error(single_errors, "seats") }}</label>
+      <label>Giá người lớn (₫) <input name="price_adult_vnd" inputmode="numeric" placeholder="Theo tour" value="{{ single_form.price_adult_vnd }}">{{ kit.field_error(single_errors, "price_adult_vnd") }}</label>
+      <label>Giá trẻ em (₫) <input name="price_child_vnd" inputmode="numeric" placeholder="Theo tour" value="{{ single_form.price_child_vnd }}">{{ kit.field_error(single_errors, "price_child_vnd") }}</label>
+    </div>
+    {{ m.guide_field(households, core_error, single_form.guide, true, errors=single_errors) }}
+    <p class="hint">Để trống số chỗ và giá thì chuyến lấy theo tour. Lượt đặt về sau giữ giá lúc đặt, sửa giá chuyến không đổi giá của lượt đã đặt.</p>
+    <button type="submit">Tạo chuyến</button>
+  </form>
+</details>
+
+<details class="disclosure"{% if open_form == "bulk" %} open{% endif %}>
+  <summary>Tạo nhiều chuyến theo thứ trong tuần</summary>
+  <form class="departure-form" method="post" action="{{ href('/departures/bulk', theme) }}">
+    {% if bulk_errors %}<p class="error" role="alert">{{ bulk_errors.form or "Chưa tạo chuyến nào: hãy sửa các ô báo lỗi." }}</p>{% endif %}
+    <label>Tour
+      <select name="tour" required>
+        <option value="">Chọn tour</option>
+        {%- for id, title, status in tours %}<option value="{{ id }}"{% if bulk_form.tour == id|string %} selected{% endif %}>{{ title }}{% if status == "DRAFT" %} (bản nháp){% endif %}</option>{% endfor %}
+      </select>{{ kit.field_error(bulk_errors, "tour") }}
+    </label>
+    <fieldset class="weekday-picker">
+      <legend>Các thứ trong tuần</legend>
+      <div class="weekday-row">
+        {%- for value, label in weekdays %}
+        <label class="weekday"><input type="checkbox" name="weekdays" value="{{ value }}"{% if value in bulk_form.weekdays %} checked{% endif %}><span>{{ label }}</span></label>
+        {%- endfor %}
+      </div>
+      {{ kit.field_error(bulk_errors, "weekdays") }}
+    </fieldset>
+    <div class="grid-3">
+      <label>Giờ khởi hành <input type="time" name="time" required value="{{ bulk_form.time }}">{{ kit.field_error(bulk_errors, "time") }}</label>
+      <label>Từ ngày <input type="date" name="first" required value="{{ bulk_form.first }}">{{ kit.field_error(bulk_errors, "first") }}</label>
+      <label>Đến ngày <input type="date" name="last" required value="{{ bulk_form.last }}">{{ kit.field_error(bulk_errors, "last") }}</label>
+    </div>
+    <div class="grid-3">
+      <label>Số chỗ <input name="seats" inputmode="numeric" placeholder="Theo tour" value="{{ bulk_form.seats }}">{{ kit.field_error(bulk_errors, "seats") }}</label>
+      <label>Giá người lớn (₫) <input name="price_adult_vnd" inputmode="numeric" placeholder="Theo tour" value="{{ bulk_form.price_adult_vnd }}">{{ kit.field_error(bulk_errors, "price_adult_vnd") }}</label>
+      <label>Giá trẻ em (₫) <input name="price_child_vnd" inputmode="numeric" placeholder="Theo tour" value="{{ bulk_form.price_child_vnd }}">{{ kit.field_error(bulk_errors, "price_child_vnd") }}</label>
+    </div>
+    {{ m.guide_field(households, core_error, bulk_form.guide, true, errors=bulk_errors) }}
+    <p class="hint">Hai ngày đầu và cuối cách nhau tối đa 180 ngày. Ngày đã có chuyến chưa huỷ của tour vào đúng giờ này và giờ đã qua được bỏ qua. Nếu sẽ tạo quá 60 chuyến thì không tạo chuyến nào.</p>
+    <button type="submit">Tạo các chuyến</button>
+  </form>
+</details>
+
+{% if view == "calendar" %}
+<section class="calendar" aria-labelledby="cal-title">
+  <header class="cal-nav">
+    <a class="button secondary" href="{{ calendar.prev }}" aria-label="Tháng trước">{{ icons.chevron_left(18) }}</a>
+    <h2 id="cal-title">Tháng {{ calendar.first.month }}/{{ calendar.first.year }}</h2>
+    <a class="button secondary" href="{{ calendar.next }}" aria-label="Tháng sau">{{ icons.chevron_right(18) }}</a>
+    <a class="button secondary cal-today" href="{{ calendar.today }}">Tháng này</a>
+  </header>
+  {% if not calendar.total %}<p class="empty">Tháng này chưa có chuyến nào. Dùng “Thêm một chuyến” hoặc “Tạo nhiều chuyến” ở trên.</p>{% endif %}
+  <ol class="cal-weekdays" aria-hidden="true">{% for value, label in weekdays %}<li>{{ label }}</li>{% endfor %}</ol>
+  <ol class="cal-grid">
+    {%- for cell in calendar.cells %}
+    <li class="cal-day{% if not cell.in_month %} out{% endif %}{% if cell.today %} today{% endif %}{% if cell['items'] %} has{% endif %}">
+      <span class="cal-date"><span class="cal-dow">{{ weekdays[cell.day.weekday()][1] }}</span> {{ cell.day.day }}{% if cell.day.day == 1 or loop.first %}/{{ cell.day.month }}{% endif %}</span>
+      {%- if cell['items'] %}
+      <ul>
+        {%- for time, d in cell['items'] %}
+        <li><a class="cal-chip {% if d.status == 'CANCELLED' %}cancelled{% elif d.starts_at < now %}past{% elif d.status == 'CLOSED' %}closed{% elif d.seats_used >= d.seats %}full{% endif %}" href="{{ href('/departures/' ~ d.id, theme) }}">
+          <span class="cal-time">{{ time }}</span> <span class="cal-title">{{ d.tour_title }}</span> <span class="cal-seats">{{ d.seats_used }}/{{ d.seats }}</span></a></li>
+        {%- endfor %}
+      </ul>
+      {%- endif %}
+    </li>
+    {%- endfor %}
+  </ol>
+</section>
+{% else %}
+{% if rows %}
+<div class="table-scroll">
+<table class="departures">
+  <thead><tr><th>Ngày giờ</th><th>Tour</th><th>Chỗ</th><th>Trạng thái</th><th>Người dẫn</th></tr></thead>
+  <tbody>
+    {%- for d in rows %}
+    <tr class="departure-row">
+      <td data-label="Ngày giờ"><a href="{{ href('/departures/' ~ d.id, theme) }}">{{ d.starts_at|vn_datetime }}</a></td>
+      <td data-label="Tour">{{ d.tour_title }}</td>
+      <td data-label="Chỗ">{{ m.seats_bar(d.seats_used, d.seats) }}</td>
+      <td data-label="Trạng thái">{{ m.departure_pill(d.status, d.starts_at < now) }}</td>
+      <td data-label="Người dẫn">{{ d.guide_name or "Chưa phân công" }}</td>
+    </tr>
+    {%- endfor %}
+  </tbody>
+</table>
+</div>
+{{ kit.pagination(page_info, links[0], links[1]) }}
+{% else %}
+{{ kit.empty("Chưa có chuyến nào trong mục này." if show != "upcoming" else "Chưa có chuyến nào sắp tới. Mở “Thêm một chuyến” hoặc “Tạo nhiều chuyến” ở trên.") }}
+{% endif %}
+{% endif %}
+{% endblock %}

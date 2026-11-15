@@ -1,0 +1,108 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "icons.html" as icons %}
+{% import "admin/catalog/_macros.html" as m %}
+{% block title %}{{ tour.title }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-catalog.css') }}">{% endblock %}
+{% block header %}{% call kit.app_header(tour.title, category ~ " · " ~ (tour.duration_minutes // 60) ~ " giờ" ~ ((" " ~ (tour.duration_minutes % 60) ~ " phút") if tour.duration_minutes % 60 else "")) %}
+<a class="button secondary" href="{{ href('/tours/' ~ tour.id ~ '/edit', theme) }}">Sửa tour</a>
+{% if tour.status == "PUBLISHED" %}<a class="button secondary" href="{{ site_href(htx, '/tours/' ~ tour.slug) }}" target="_blank" rel="noopener">Xem trang khách {{ icons.external_link(16) }}</a>{% endif %}
+{% endcall %}{% endblock %}
+{% block main %}
+{{ m.back("Danh sách tour", href('/tours', theme)) }}
+<section class="status-card">
+  <div>
+    {{ m.tour_pill(tour.status) }}
+    <p>{% if tour.status == "PUBLISHED" %}Khách thấy tour này trên trang đặt tour và đặt được các chuyến đang nhận khách.
+       {%- elif tour.status == "DRAFT" %}Tour đang soạn: khách chưa thấy. Điền đủ nội dung và thêm ảnh rồi đăng bán.
+       {%- else %}Tour đã ngừng bán: khách mới không thấy, các chuyến và lượt đặt cũ vẫn giữ.{% endif %}</p>
+  </div>
+  <div class="actions">
+    {%- if tour.status != "PUBLISHED" %}
+    <form method="post" action="{{ href('/tours/' ~ tour.id ~ '/status', theme) }}"><input type="hidden" name="status" value="PUBLISHED"><button type="submit">Đăng bán</button></form>
+    {%- endif %}
+    {%- if tour.status == "PUBLISHED" %}
+    <form method="post" action="{{ href('/tours/' ~ tour.id ~ '/status', theme) }}"><input type="hidden" name="status" value="DRAFT"><button type="submit" class="secondary">Đưa về bản nháp</button></form>
+    {%- endif %}
+    {%- if tour.status != "ARCHIVED" %}
+    <form method="post" action="{{ href('/tours/' ~ tour.id ~ '/status', theme) }}"><input type="hidden" name="status" value="ARCHIVED"><button type="submit" class="secondary">Ngừng bán</button></form>
+    {%- endif %}
+  </div>
+</section>
+{{ kit.stats([{"label": "Giá người lớn", "value": tour.price_adult_vnd|vnd}, {"label": "Giá trẻ em", "value": tour.price_child_vnd|vnd},
+              {"label": "Số chỗ mặc định", "value": tour.default_seats}, {"label": "Chuyến sắp tới", "value": departures|length, "hint": "xem bên dưới"}]) }}
+
+<section id="photos" class="panel">
+  <div class="panel-head">
+    <h2>Ảnh <span class="count">{{ gallery|length }}/{{ photo_limit }}</span></h2>
+  </div>
+  {% if photo_error %}<p class="error" role="alert">{{ photo_error }}</p>{% endif %}
+  {% if gallery %}
+  <ul class="photo-grid">
+    {%- for p in gallery %}
+    <li class="photo">
+      <img src="{{ prefix }}/media/{{ p.id }}-thumb.jpg" alt="Ảnh {{ loop.index }} của tour" loading="lazy" width="320" height="240">
+      {% if tour.cover_media_id == p.id %}<span class="pill photo-cover">Ảnh bìa</span>{% endif %}
+      <div class="actions">
+        <form method="post" action="{{ href('/tours/' ~ tour.id ~ '/photos/' ~ p.id ~ '/up', theme) }}"><button type="submit" class="secondary" aria-label="Đưa ảnh {{ loop.index }} lên trước"{% if loop.first %} disabled{% endif %}>←</button></form>
+        <form method="post" action="{{ href('/tours/' ~ tour.id ~ '/photos/' ~ p.id ~ '/down', theme) }}"><button type="submit" class="secondary" aria-label="Đưa ảnh {{ loop.index }} ra sau"{% if loop.last %} disabled{% endif %}>→</button></form>
+        {%- if tour.cover_media_id != p.id %}
+        <form method="post" action="{{ href('/tours/' ~ tour.id ~ '/photos/' ~ p.id ~ '/cover', theme) }}"><button type="submit" class="secondary">Làm ảnh bìa</button></form>
+        {%- endif %}
+        <form method="post" action="{{ href('/tours/' ~ tour.id ~ '/photos/' ~ p.id ~ '/remove', theme) }}"><button type="submit" class="secondary danger-text">Gỡ</button></form>
+      </div>
+    </li>
+    {%- endfor %}
+  </ul>
+  {% else %}
+  <p class="empty">Tour chưa có ảnh. Khách sẽ thấy hình minh hoạ theo loại tour cho tới khi anh chị tải ảnh lên.</p>
+  {% endif %}
+  <form class="upload" method="post" enctype="multipart/form-data" action="{{ href('/tours/' ~ tour.id ~ '/photos', theme) }}">
+    <label>Tải một ảnh lên
+      <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required{% if photo_error %} aria-invalid="true"{% endif %}>
+    </label>
+    <p class="hint">JPEG tối đa 16 triệu điểm ảnh; PNG và WebP tối đa 6 triệu điểm ảnh (khoảng 3000 x 2000). Tệp tối đa 5 MB, mỗi lần một ảnh. Ảnh đầu tiên là ảnh bìa; tối đa {{ photo_limit }} ảnh mỗi tour.</p>
+    <button type="submit">Tải lên</button>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Chuyến sắp tới</h2>
+    <a class="button secondary" href="{{ href('/departures', theme, tour=tour.id) }}">Tất cả chuyến</a>
+  </div>
+  {% if departures %}
+  <ul class="mini-list">
+    {%- for d in departures %}
+    <li><a href="{{ href('/departures/' ~ d.id, theme) }}">{{ d.starts_at|vn_datetime }}</a> {{ m.departure_pill(d.status, False) }} {{ m.seats_bar(d.seats_used, d.seats) }}</li>
+    {%- endfor %}
+  </ul>
+  {% else %}
+  {{ kit.empty("Tour chưa có chuyến sắp tới.", "Thêm chuyến", href('/departures', theme, tour=tour.id)) }}
+  {% endif %}
+</section>
+
+<section class="panel content">
+  <div class="panel-head"><h2>Nội dung</h2><a class="button secondary" href="{{ href('/tours/' ~ tour.id ~ '/edit', theme) }}">Sửa tour</a></div>
+  {% if tour.summary %}<p class="lead">{{ tour.summary }}</p>{% endif %}
+  {% if tour.description %}<p class="prose">{{ tour.description }}</p>{% endif %}
+  <p class="meta">{{ icons.map_pin(16) }} {{ tour.meeting_point }}{% if tour.map_url %} · <a href="{{ tour.map_url }}" target="_blank" rel="noopener noreferrer">Bản đồ</a>{% endif %}</p>
+  {% if tour.itinerary %}
+  <h3>Lịch trình</h3>
+  <ol class="timeline">
+    {%- for item in tour.itinerary %}<li><span class="time">{{ item.time }}</span><div><strong>{{ item.title }}</strong>{% if item.detail %}<p>{{ item.detail }}</p>{% endif %}</div></li>{% endfor %}
+  </ol>
+  {% endif %}
+  <div class="lists">
+    {%- for label, items in (("Bao gồm", tour.includes), ("Không bao gồm", tour.excludes), ("Cần mang theo", tour.bring)) %}
+    {%- if items %}<div><h3>{{ label }}</h3><ul>{% for line in items %}<li>{{ line }}</li>{% endfor %}</ul></div>{% endif %}
+    {%- endfor %}
+  </div>
+  {% if tour.faq %}
+  <h3>Hỏi đáp</h3>
+  <dl class="faq">{% for item in tour.faq %}<dt>{{ item.q }}</dt><dd>{{ item.a }}</dd>{% endfor %}</dl>
+  {% endif %}
+</section>
+{% endblock %}

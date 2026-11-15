@@ -1,0 +1,47 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "icons.html" as icons %}
+{% import "admin/catalog/_macros.html" as m %}
+{% block title %}Tour{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-catalog.css') }}">{% endblock %}
+{% block header %}{% call kit.app_header("Tour", "HTX " ~ htx) %}<a class="button" href="{{ href('/tours/new', theme) }}">Tạo tour</a>{% endcall %}{% endblock %}
+{% block main %}
+<nav class="filters" aria-label="Lọc theo trạng thái">
+  {%- for key, label, count, link in filters %}
+  <a href="{{ link }}"{% if key == current %} aria-current="true"{% endif %}>{{ label }} <span class="count">{{ count }}</span></a>
+  {%- endfor %}
+</nav>
+{% if tours %}
+<ul class="tour-list">
+  {%- for t in tours %}
+  <li class="tour-row">
+    {{ m.thumb(t.cover_media_id, icons) }}
+    <div class="tour-row-body">
+      <h2><a href="{{ href('/tours/' ~ t.id, theme) }}">{{ t.title }}</a></h2>
+      <p class="meta">{{ {'PICKING': 'Hái chè', 'CRAFTING': 'Sao chè', 'TASTING': 'Thưởng trà', 'SIGHTSEEING': 'Ngắm cảnh', 'EDUCATION': 'Học tập'}[t.category] }} · {{ t.price_adult_vnd|vnd }} / người lớn · {{ t.price_child_vnd|vnd }} / trẻ em</p>
+    </div>
+    <div class="tour-row-side">
+      {{ m.tour_pill(t.status) }}
+      <span class="meta">{{ t.upcoming }} chuyến sắp tới · {{ t.photos }} ảnh</span>
+    </div>
+  </li>
+  {%- endfor %}
+</ul>
+{{ kit.pagination(page_info, links[0], links[1]) }}
+{% elif current %}
+{{ kit.empty("Không có tour nào ở trạng thái này.", "Xem tất cả tour", href('/tours', theme)) }}
+{% else %}
+<section class="starter">
+  <h2>Chưa có tour nào</h2>
+  <p>Bắt đầu từ một mẫu đã điền sẵn lịch trình và hỏi đáp, rồi sửa cho đúng với HTX của anh chị. Tour mới là bản nháp, chưa hiện cho khách.</p>
+  <ul class="template-cards">
+    {%- for tpl in templates %}
+    <li class="card"><h3>{{ tpl.title }}</h3><p>{{ tpl.summary }}</p><a class="button secondary" href="{{ href('/tours/new', theme, template=tpl.key) }}">Dùng mẫu này</a></li>
+    {%- endfor %}
+  </ul>
+  <p><a class="button" href="{{ href('/tours/new', theme) }}">Tạo từ trang trắng</a></p>
+</section>
+{% endif %}
+{% endblock %}

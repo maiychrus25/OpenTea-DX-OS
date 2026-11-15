@@ -1,0 +1,129 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "icons.html" as icons %}
+{% import "admin/catalog/_macros.html" as m %}
+{% block title %}{{ departure.tour_title }} · {{ departure.starts_at|vn_datetime }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-catalog.css') }}">{% endblock %}
+{% block header %}{% call kit.app_header(departure.tour_title, departure.starts_at|vn_datetime ~ " · " ~ departure.meeting_point) %}
+{{ kit.print_link(href('/departures/' ~ departure.id ~ '/print', theme), "Bản in danh sách đoàn") }}
+{{ kit.export_link(href('/departures/' ~ departure.id ~ '/guests/export.csv', theme)) }}
+{% endcall %}{% endblock %}
+{% block main %}
+{{ m.back("Lịch", href('/departures', theme)) }}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if notice_cancelled is not none and notice_cancelled is defined %}<p class="notice" role="status">Đã huỷ chuyến và {{ notice_cancelled }} lượt đặt.</p>{% endif %}
+{% if done %}<p class="notice" role="status">
+  {%- if done[0] == "checkin" %}Đã điểm danh {{ done[1].guest_name }}: {{ done[1].checked_in_count }}/{{ done[1].party_size }} người.
+  {%- else %}Đã bỏ điểm danh của {{ done[1].guest_name }}.{% endif %}</p>{% endif %}
+<section class="status-card">
+  <div>
+    {{ m.departure_pill(departure.status, departure.starts_at < now) }}
+    <p>{% if departure.status == "CANCELLED" %}Chuyến đã huỷ{% if departure.cancel_reason %}: {{ departure.cancel_reason }}{% endif %}.
+       {%- elif departure.status == "CLOSED" %}Chuyến đã đóng: khách mới không đặt được, các lượt đã đặt vẫn đi.
+       {%- elif departure.starts_at < now %}Chuyến đã khởi hành.
+       {%- else %}Chuyến đang nhận khách.{% endif %}
+       Người dẫn: <strong>{{ departure.guide_name or "chưa phân công" }}</strong>.</p>
+  </div>
+  {%- if departure.status != "CANCELLED" %}
+  <div class="actions">
+    {%- if departure.starts_at < now %}
+    {%- elif departure.status == "OPEN" %}
+    <form method="post" action="{{ href('/departures/' ~ departure.id ~ '/status', theme) }}"><input type="hidden" name="status" value="CLOSED"><button type="submit" class="secondary">Đóng nhận khách</button></form>
+    {%- else %}
+    <form method="post" action="{{ href('/departures/' ~ departure.id ~ '/status', theme) }}"><input type="hidden" name="status" value="OPEN"><button type="submit">Mở lại</button></form>
+    {%- endif %}
+    {%- if departure.starts_at > now %}
+    <form method="post" action="{{ href('/departures/' ~ departure.id ~ '/status', theme) }}"><input type="hidden" name="status" value="CANCELLED"><button type="submit" class="secondary danger-text">Huỷ chuyến</button></form>
+    {%- endif %}
+  </div>
+  {%- endif %}
+</section>
+{{ kit.stats([{"label": "Chỗ đã giữ", "value": departure.seats_used ~ "/" ~ departure.seats, "hint": "còn " ~ departure.seats_left ~ " chỗ"},
+              {"label": "Khách đã xác nhận", "value": departure.confirmed_guests, "hint": "người"},
+              {"label": "Có mặt", "value": present, "hint": "người đã điểm danh"},
+              {"label": "Giá", "value": departure.price_adult_vnd|vnd, "hint": "trẻ em " ~ (departure.price_child_vnd|vnd)}]) }}
+
+{% if departure.status != "CANCELLED" %}
+<section class="panel" id="checkin">
+  <div class="panel-head"><h2>Điểm danh nhanh</h2></div>
+  {% if window_open %}
+  <form class="inline-form" method="post" action="{{ href('/departures/' ~ departure.id ~ '/checkin', theme) }}">
+    <label>Mã đặt chỗ <input name="code" autocomplete="off" autocapitalize="characters" maxlength="12" placeholder="Ví dụ K7M2QX9A" value="{{ form_values.code if form_values else '' }}" required{% if errors.code %} aria-invalid="true"{% endif %}>{{ kit.field_error(errors, "code") }}</label>
+    <button type="submit">Điểm danh cả đoàn</button>
+  </form>
+  <p class="hint">Gõ mã khách đưa ra: cả nhóm được ghi có mặt. Muốn ghi chỉ một phần của nhóm, dùng ô số người ở bảng bên dưới.</p>
+  {% else %}
+  <p class="hint">Điểm danh mở từ 00:00 ngày {{ window_opens|vn_date }} (giờ Việt Nam) tới 24 giờ sau khi chuyến kết thúc.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-head"><h2>Khách của chuyến <span class="count">{{ holding|length }}</span></h2></div>
+  {% if holding %}
+  <div class="table-scroll">
+  <table class="guests">
+    <thead><tr><th>Mã</th><th>Khách</th><th>Người</th><th>Trạng thái và tiền</th><th>Điểm danh</th></tr></thead>
+    <tbody>
+      {%- for b in holding %}
+      <tr>
+        <td data-label="Mã"><a href="{{ href('/bookings/' ~ b.id, theme) }}">{{ b.code }}</a></td>
+        <td data-label="Khách"><div><strong>{{ b.guest_name }}</strong><br><span class="meta">{{ b.phone }}</span>{% if b.note %}<br><span class="meta">“{{ b.note }}”</span>{% endif %}</div></td>
+        <td data-label="Người">{{ b.adults }} lớn{% if b.children %} + {{ b.children }} trẻ{% endif %}</td>
+        <td data-label="Trạng thái và tiền"><div><span class="pill {{ 'neutral' if b.status == 'PENDING' else '' }}">{{ booking_labels[b.status] }}</span>
+          <span class="meta">{{ payment_labels[b.payment_state] }} · {{ b.paid_vnd|vnd }} / {{ b.total_vnd|vnd }}</span></div></td>
+        <td data-label="Điểm danh"><div>
+          {%- if b.checked_in_at %}
+          <span class="pill">Có mặt {{ b.checked_in_count }}/{{ b.party_size }}</span>
+          {%- if window_open %}
+          <form class="inline" method="post" action="{{ href('/departures/' ~ departure.id ~ '/checkin', theme) }}"><input type="hidden" name="booking_id" value="{{ b.id }}"><input type="hidden" name="undo" value="1"><button type="submit" class="secondary">Bỏ điểm danh</button></form>
+          {%- endif %}
+          {%- else %}
+          {%- if checkin_state(b) == "absent" %}<span class="pill danger">Vắng mặt</span>{% endif %}
+          {%- if b.status == "CONFIRMED" and window_open %}
+          <form class="inline" method="post" action="{{ href('/departures/' ~ departure.id ~ '/checkin', theme) }}">
+            <input type="hidden" name="booking_id" value="{{ b.id }}">
+            <label class="count-field"><span class="visually-hidden">Số người có mặt của {{ b.guest_name }}</span><input name="count" type="number" min="1" max="{{ b.party_size }}" value="{{ b.party_size }}" inputmode="numeric"></label>
+            <button type="submit">Điểm danh</button>
+          </form>
+          {%- elif b.status == "PENDING" %}<span class="meta">Chờ xác nhận</span>
+          {%- elif checkin_state(b) != "absent" %}<span class="meta">Chưa tới giờ</span>{% endif %}
+          {%- endif %}
+        </div></td>
+      </tr>
+      {%- endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  {{ kit.empty("Chuyến này chưa có lượt đặt nào đang giữ chỗ.") }}
+  {% endif %}
+  {% if cancelled %}
+  <details class="disclosure">
+    <summary>Lượt đã huỷ ({{ cancelled|length }})</summary>
+    <ul class="mini-list">
+      {%- for b in cancelled %}<li><a href="{{ href('/bookings/' ~ b.id, theme) }}">{{ b.code }}</a> {{ b.guest_name }} · {{ b.cancel_reason or "" }}{% if b.paid_vnd %} · <span class="pill warn">đã trả {{ b.paid_vnd|vnd }}</span>{% endif %}</li>{% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+</section>
+
+{% if departure.status != "CANCELLED" %}
+<section class="panel">
+  <div class="panel-head"><h2>Sửa chuyến</h2></div>
+  <form class="departure-form" method="post" action="{{ href('/departures/' ~ departure.id, theme) }}">
+    {% if errors %}<p class="error" role="alert">Chưa lưu được: hãy sửa các ô báo lỗi.</p>{% endif %}
+    <div class="grid-3">
+      <label>Số chỗ <input name="seats" inputmode="numeric" required value="{{ form_values.seats if form_values else departure.seats }}">{{ kit.field_error(errors, "seats") }}</label>
+      <label>Giá người lớn (₫) <input name="price_adult_vnd" inputmode="numeric" required value="{{ form_values.price_adult_vnd if form_values else departure.price_adult_vnd }}">{{ kit.field_error(errors, "price_adult_vnd") }}</label>
+      <label>Giá trẻ em (₫) <input name="price_child_vnd" inputmode="numeric" required value="{{ form_values.price_child_vnd if form_values else departure.price_child_vnd }}">{{ kit.field_error(errors, "price_child_vnd") }}</label>
+    </div>
+    {{ m.guide_field(households, core_error, form_values.guide if form_values else "", form_values is not none and form_values, departure.guide_user_id, departure.guide_name, errors) }}
+    <p class="hint">Số chỗ không được ít hơn số chỗ khách đã giữ ({{ departure.seats_used }}). Giá mới chỉ áp dụng cho lượt đặt sau này.</p>
+    <button type="submit">Lưu thay đổi</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

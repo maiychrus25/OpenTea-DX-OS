@@ -1,0 +1,28 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "admin/base.html" %}
+{% import "kit.html" as kit %}
+{% import "admin/catalog/_macros.html" as m %}
+{% block title %}Xác nhận · {{ tour.title }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ asset_url('admin-catalog.css') }}">{% endblock %}
+{% block header %}{{ kit.app_header("Xác nhận", tour.title) }}{% endblock %}
+{% block main %}
+{{ m.back("Quay lại tour", href('/tours/' ~ tour.id, theme)) }}
+<section class="confirm">
+  <h2>{{ "Ngừng bán tour này?" if target == "ARCHIVED" else "Đưa tour về bản nháp?" }}</h2>
+  <p>Tour sẽ không còn hiện trên trang khách và khách mới không đặt được nữa ({{ target_label }}).</p>
+  {% if holding %}
+  <p class="notice"><strong>{{ holding }} chuyến sắp tới</strong> của tour còn lượt đặt đang giữ chỗ. Các chuyến và lượt đặt đó vẫn chạy bình thường; khách đã đặt vẫn mở được trang lượt đặt và vé của mình.</p>
+  {% else %}
+  <p>Tour không có chuyến sắp tới nào còn lượt đặt giữ chỗ.</p>
+  {% endif %}
+  <form method="post" action="{{ href('/tours/' ~ tour.id ~ '/status', theme) }}">
+    <input type="hidden" name="status" value="{{ target }}">
+    <input type="hidden" name="confirm" value="1">
+    <div class="form-actions">
+      <button type="submit" class="danger">{{ "Ngừng bán" if target == "ARCHIVED" else "Đưa về bản nháp" }}</button>
+      <a class="button secondary" href="{{ href('/tours/' ~ tour.id, theme) }}">Giữ nguyên</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
