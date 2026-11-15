@@ -44,6 +44,27 @@ export interface ForwardToAppDeps {
 }
 
 const HTX_CODE = /^[A-Za-z0-9_-]{1,20}$/
+const BASE64URL = /^[A-Za-z0-9_-]+$/
+
+/**
+ * The `htx_code` claim of a mobile bearer token: undefined when the token is not three base64url parts with a JSON
+ * object payload (answered 401), null when the claim is missing or not a plausible code. The signature is NOT checked
+ * here, the gateway checks it, the audience and the role before the app sees the request; the value only picks which
+ * cooperative's enablement row to look at.
+ */
+function bearerHtxCode(token: string): string | null | undefined {
+  const parts = token.split('.')
+  if (parts.length !== 3 || !parts.every(part => BASE64URL.test(part))) return undefined
+  let payload: unknown
+  try {
+    payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
+  } catch {
+    return undefined
+  }
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined
+  const code = (payload as { htx_code?: unknown }).htx_code
+  return typeof code === 'string' && HTX_CODE.test(code) ? code : null
+}
 
 /**
  * Which tenant a request belongs to: a path under a public prefix names its HTX in the segment right after the prefix
@@ -112,11 +133,20 @@ export async function forwardToApp(req: Request, app: InstalledApp, path: string
   }
 
   const tenant = appTenant(app, path)
+  // Only a protected path reads it; on a public path the header is dropped like every header outside the allowlist.
+  const authorization = tenant.kind === 'protected' ? /^bearer\b\s*(.*)$/i.exec(req.headers.get('authorization') ?? '') : null
+  const bearer = authorization === null ? null : authorization[1].trim()
   let htxCode: string | null
   if (tenant.kind === 'public') {
     const limited = isRead(req) ? deps.isPublicReadLimited : deps.isPublicLimited
     if (limited(deps.clientIp)) return appResponse('Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau một phút.', 429)
     htxCode = tenant.htxCode
+  } else if (bearer !== null) {
+    // A mobile app signs in on its own; its token replaces the session and is passed on exactly as received.
+    const code = bearerHtxCode(bearer)
+    if (code === undefined) return appResponse('Token không hợp lệ.', 401)
+    headers.set('authorization', `Bearer ${bearer}`)
+    htxCode = code
   } else {
     try {
       headers.set('authorization', `Bearer ${await deps.getToken()}`)

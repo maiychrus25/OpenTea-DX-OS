@@ -191,11 +191,10 @@ describe('forwardToApp', () => {
     logError.mockRestore()
   })
 
-  test('replaces a forged browser authorization with the session token on protected paths', async () => {
+  test('a request without an authorization header still uses the session token', async () => {
     const { fetchImpl, deps } = setup()
-    const req = new Request('http://web/apps/tea-tour/', { headers: { authorization: 'Bearer forged' } })
 
-    await forwardToApp(req, app, [], deps)
+    await forwardToApp(new Request('http://web/apps/tea-tour/'), app, [], deps)
 
     expect(header(sent(fetchImpl).init, 'authorization')).toBe('Bearer tok')
   })
@@ -523,6 +522,127 @@ describe('forwardToApp', () => {
       expect(res.status).toBe(400)
       expect(isEnabledFor).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe('mobile bearer token (spec 5.1)', () => {
+  const b64 = (value: unknown) => Buffer.from(typeof value === 'string' ? value : JSON.stringify(value)).toString('base64url')
+  const jwt = (payload: unknown = { htx_code: 'TC' }) => `${b64({ alg: 'RS256' })}.${b64(payload)}.c2ln`
+  const bearer = (token: string, url = 'http://web/apps/tea-tour/api/v1/departures') =>
+    new Request(url, { headers: { authorization: `Bearer ${token}`, cookie: 'authjs.session-token=s' } })
+
+  test('bearer is forwarded untouched on protected paths, without the session', async () => {
+    const { fetchImpl, getToken, getHtxCode, isEnabledFor, deps } = setup()
+    const token = jwt()
+
+    const res = await forwardToApp(bearer(token), app, ['api', 'v1', 'departures'], deps)
+
+    expect(res.status).toBe(200)
+    expect(header(sent(fetchImpl).init, 'authorization')).toBe(`Bearer ${token}`)
+    expect(header(sent(fetchImpl).init, 'cookie')).toBeNull()
+    expect(getToken).not.toHaveBeenCalled()
+    expect(getHtxCode).not.toHaveBeenCalled()
+    expect(isEnabledFor).toHaveBeenCalledWith('tea-tour', 'TC')
+  })
+
+  test('bearer is ignored on public paths', async () => {
+    const { fetchImpl, getToken, deps } = setup()
+
+    await forwardToApp(bearer(jwt(), 'http://web/apps/tea-tour/public/TC/api/v1/tours'), app, ['public', 'TC', 'api', 'v1', 'tours'], {
+      ...deps,
+      clientIp: '198.51.100.60',
+    })
+
+    expect(header(sent(fetchImpl).init, 'authorization')).toBeNull()
+    expect(getToken).not.toHaveBeenCalled()
+  })
+
+  test('a request with a bearer does not count against the public limiters', async () => {
+    const { deps } = setup()
+    const limited = jest.fn().mockReturnValue(true)
+
+    const res = await forwardToApp(bearer(jwt()), app, ['api'], { ...deps, isPublicLimited: limited, isPublicReadLimited: limited })
+
+    expect(res.status).toBe(200)
+    expect(limited).not.toHaveBeenCalled()
+  })
+
+  test('token without htx_code is 404', async () => {
+    const { fetchImpl, isEnabledFor, deps } = setup()
+
+    const res = await forwardToApp(bearer(jwt({ sub: 'u1' })), app, ['api'], deps)
+
+    expect(res.status).toBe(404)
+    expect(isEnabledFor).not.toHaveBeenCalled()
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  test('token of a cooperative that did not enable the app is 404', async () => {
+    const { fetchImpl, isEnabledFor, deps } = setup()
+    isEnabledFor.mockResolvedValue(false)
+
+    const res = await forwardToApp(bearer(jwt({ htx_code: 'LB' })), app, ['api'], deps)
+
+    expect(res.status).toBe(404)
+    expect(isEnabledFor).toHaveBeenCalledWith('tea-tour', 'LB')
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  test.each([
+    ['not three parts', 'abc.def'],
+    ['four parts', 'a.b.c.d'],
+    ['empty signature', `${b64({})}.${b64({ htx_code: 'TC' })}.`],
+    ['characters outside base64url', 'a b.c.d'],
+    ['payload that is not JSON', `${b64({})}.${b64('nope')}.c2ln`],
+    ['payload that is a JSON array', `${b64({})}.${b64([1])}.c2ln`],
+    ['payload that is JSON null', `${b64({})}.${b64('null')}.c2ln`],
+    ['empty token', ''],
+  ])('a malformed bearer (%s) answers 401 without calling the gateway or the session', async (_name, token) => {
+    const { fetchImpl, getToken, isEnabledFor, deps } = setup()
+
+    const res = await forwardToApp(bearer(token), app, ['api'], deps)
+
+    expect(res.status).toBe(401)
+    expect(await res.text()).not.toContain('Phiên đăng nhập đã hết hạn')
+    expect(fetchImpl).not.toHaveBeenCalled()
+    expect(getToken).not.toHaveBeenCalled()
+    expect(isEnabledFor).not.toHaveBeenCalled()
+  })
+
+  test.each([[401], [403]])('gateway %i passes through unchanged', async status => {
+    const { deps } = setup(new Response('denied', { status, headers: { 'content-type': 'application/json' } }))
+
+    const res = await forwardToApp(bearer(jwt()), app, ['api'], deps)
+
+    expect(res.status).toBe(status)
+    expect(await res.text()).toBe('denied')
+  })
+
+  test('the checks before the token keep their order: path, cross-site write, size', async () => {
+    const { fetchImpl, deps } = setup()
+    const headers = { authorization: 'Bearer nonsense' }
+
+    const traversal = await forwardToApp(new Request('http://web/apps/tea-tour/x', { headers }), app, ['..'], deps)
+    const crossSite = await forwardToApp(
+      new Request('http://web/apps/tea-tour/x', { method: 'POST', body: 'a=1', headers: { ...headers, origin: 'http://evil.example', host: 'web' } }),
+      app,
+      ['x'],
+      deps,
+    )
+    const tooBig = await forwardToApp(new Request('http://web/apps/tea-tour/x', { headers: { ...headers, 'content-length': '99999999' } }), app, ['x'], deps)
+
+    expect([traversal.status, crossSite.status, tooBig.status]).toEqual([400, 403, 413])
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  test('a bearer POST without an Origin header (a native app) is forwarded', async () => {
+    const { fetchImpl, deps } = setup()
+    const req = new Request('http://web/apps/tea-tour/api/v1/x', { method: 'POST', body: '{}', headers: { authorization: `Bearer ${jwt()}`, 'content-type': 'application/json' } })
+
+    const res = await forwardToApp(req, app, ['api', 'v1', 'x'], deps)
+
+    expect(res.status).toBe(200)
+    expect(sent(fetchImpl).init.method).toBe('POST')
   })
 })
 

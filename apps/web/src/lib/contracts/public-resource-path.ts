@@ -21,7 +21,13 @@ export function isPublicApiPath(pathname: string): boolean {
   }
   const normalized = pathname.split('?')[0].replace(/\/+$/, '')
   if (!normalized || normalized.length > 300) return false
-  return /^\/api\/lot\/[^/]+\/certificate$/i.test(normalized) || /^\/api\/register$/i.test(normalized)
+  return (
+    /^\/api\/lot\/[^/]+\/certificate$/i.test(normalized) ||
+    /^\/api\/register$/i.test(normalized) ||
+    // The Android app reads these before it can sign in: the cooperatives of a mini-app, and where Keycloak is.
+    /^\/api\/apps\/[a-z][a-z0-9-]{1,30}\/tenants$/.test(normalized) ||
+    /^\/api\/mobile\/config$/.test(normalized)
+  )
 }
 
 /** Mini-app proxy paths, `/apps/<id>` and below: the route decides public or protected from the manifest. */

@@ -77,4 +77,21 @@ describe('PrismaInstalledAppRepository', () => {
     expect(strings.join('?')).toContain("'*'")
     expect(values).toEqual(['hello', 'TC'])
   })
+
+  test('listTenants binds the app id, joins the profiles on the enablement (or *), sorts by name and caps at 200', async () => {
+    const tenants = [{ htx_code: 'TC', name: 'HTX Chè Tân Cương', address: 'Thái Nguyên' }]
+    queryRaw.mockResolvedValue(tenants)
+
+    expect(await new PrismaInstalledAppRepository().listTenants("x' OR '1'='1")).toEqual(tenants)
+
+    const [strings, ...values] = queryRaw.mock.calls[0]
+    const text = strings.join('?')
+    expect(values).toEqual(["x' OR '1'='1"])
+    expect(text).toContain('htx_profiles')
+    expect(text).toContain('platform.app_enablements')
+    expect(text).toMatch(/e\.htx_code = p\.htx_code OR e\.htx_code = '\*'/)
+    expect(text).toMatch(/ORDER BY p\.name/)
+    expect(text).toMatch(/LIMIT 200/)
+    expect(text).not.toMatch(/contact_|crop_types/)
+  })
 })

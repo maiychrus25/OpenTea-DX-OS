@@ -126,6 +126,12 @@ Trên route cần đăng nhập, app nhận `Authorization: Bearer <access token
 - **Mọi truy vấn lọc theo `htx_code` lấy từ token**, không bao giờ theo giá trị từ URL hay form.
 - Trên route công khai, app không nhận header `Authorization` (web bỏ header của trình duyệt), nên phải tự validate mọi dữ liệu vào.
 
+**App di động.** Một app Android đăng nhập Keycloak bằng client công khai `dxos-mobile` (Authorization Code + PKCE `S256`, không cấp bằng mật khẩu; máy đang chạy thêm client bằng `make mobile-client`) rồi gọi chính proxy `/apps/<id>/...` với `Authorization: Bearer <access token>`:
+
+- Trên đường dẫn có bảo vệ, proxy chuyển đúng token đó tới cổng thay cho phiên đăng nhập của web. Mã HTX để kiểm app có bật hay không lấy từ claim `htx_code` mà proxy đọc không kiểm chữ ký; cổng vẫn kiểm chữ ký, hạn, đối tượng và vai trước khi app nhận yêu cầu, nên app vẫn coi claim như ở trên. Token sai dạng trả 401, token không có `htx_code` hoặc HTX chưa bật app trả 404. Yêu cầu có token không bị tính vào giới hạn công khai theo IP.
+- Trên đường dẫn công khai, header này bị bỏ qua và không tới app.
+- `GET /api/apps/<id>/tenants` (công khai) trả `{"items": [{"htx_code", "name", "address"}]}` các HTX đang bật app có route công khai, tối đa 200 dòng xếp theo tên. `GET /api/mobile/config` (công khai) trả `{"oidc": {"issuer", "client_id", "redirect_uri"}, "core_version"}`; `issuer` là `KEYCLOAK_ISSUER`, địa chỉ mà trình duyệt trên điện thoại tới được.
+
 **Đọc dữ liệu lõi:** gọi `http://apisix:9081/api/data/graphql` và chuyển tiếp nguyên header `Authorization` của người dùng (xem `miniapps/tea-tour/tea_tour/core_client.py`). Hasura áp quyền theo dòng bằng `htx_code` của chính token, nên app chỉ thấy dữ liệu của HTX người dùng. App không đọc bảng lõi trực tiếp.
 
 ## 4. Giao diện: HTML không script

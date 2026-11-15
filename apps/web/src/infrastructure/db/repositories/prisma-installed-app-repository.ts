@@ -41,4 +41,16 @@ export class PrismaInstalledAppRepository {
         WHERE e.app_id = ${appId} AND e.htx_code IN (${htxCode}, '*')) AS enabled`
     return rows[0]?.enabled === true
   }
+
+  /** The cooperatives that enabled the app, one by one or through `*`: public name and address only, by name, at most 200. */
+  async listTenants(appId: string): Promise<{ htx_code: string; name: string; address: string }[]> {
+    return prisma.$queryRaw<{ htx_code: string; name: string; address: string }[]>`
+      SELECT p.htx_code, p.name, p.address
+      FROM htx_profiles p
+      WHERE EXISTS (
+        SELECT 1 FROM platform.app_enablements e
+        WHERE e.app_id = ${appId} AND (e.htx_code = p.htx_code OR e.htx_code = '*'))
+      ORDER BY p.name, p.htx_code
+      LIMIT 200`
+  }
 }
