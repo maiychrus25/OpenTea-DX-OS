@@ -23,6 +23,7 @@ from tea_tour.store import settings as settings_store
 
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no I, O, 0 or 1: read aloud over the phone
 CODE_TRIES = 5
+CODE_CONSTRAINT = "bookings_code_key"
 GUEST_PARTY_MAX = 20
 HOLDING = ("PENDING", "CONFIRMED")
 HOLD_EXPIRED = "Quá hạn giữ chỗ"
@@ -367,9 +368,9 @@ def _insert_booking(conn, new: NewBooking, departure: _Departure, total: int, de
                      (new.note or "").strip() or None, new.adults, new.children, departure.price_adult_vnd,
                      departure.price_child_vnd, total, deposit, hold, status, new.request_key,
                      secrets.token_urlsafe(16), new.source)).fetchone()[0]
-        except psycopg.errors.UniqueViolation:
-            if attempt == CODE_TRIES - 1:
-                raise
+        except psycopg.errors.UniqueViolation as exc:
+            if exc.diag.constraint_name != CODE_CONSTRAINT or attempt == CODE_TRIES - 1:
+                raise  # only a taken booking code is worth another draw
     raise AssertionError("unreachable")
 
 

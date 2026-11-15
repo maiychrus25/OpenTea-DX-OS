@@ -696,3 +696,27 @@ def test_payment_recorded_right_after_the_hold_ran_out_restores_in_the_same_call
     assert (restored.status, restored.cancelled_by) == ("CONFIRMED", None)
     assert [e[0] for e in events(db, booking)] == ["CANCELLED", "PAYMENT", "RESTORED"]
     assert seats_used(db, departure) == 2
+
+
+# ---------- request keys per cooperative ----------
+
+def test_same_request_key_in_another_cooperative_creates_its_own_booking(world):
+    db, _, departure = world
+    other = add_departure(db, add_tour(db, htx="LB"), htx="LB")
+    mine = core.create_booking(db, new(departure, request_key="shared-key-0001"), GUEST)
+    theirs = core.create_booking(db, new(other, htx="LB", request_key="shared-key-0001"), GUEST)
+    assert isinstance(mine, core.Booking) and isinstance(theirs, core.Booking) and mine.id != theirs.id
+    assert (mine.htx_code, theirs.htx_code) == ("TC", "LB")
+    assert core.create_booking(db, new(departure, request_key="shared-key-0001"), GUEST).id == mine.id
+
+
+def test_a_unique_violation_that_is_not_the_code_is_not_retried(world, monkeypatch):
+    db, _, departure = world
+    add_booking(db, departure, request_key="dup-key-000001")
+    calls = []
+    monkeypatch.setattr(core.secrets, "choice", lambda alphabet: calls.append(1) or "A")
+    dep = core._lock_departures(db, HTX, [departure])[departure]
+    import psycopg
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        core._insert_booking(db, new(departure, request_key="dup-key-000001"), dep, 500_000, 0, None, "PENDING")
+    assert len(calls) == 8  # one code drawn, no second attempt
