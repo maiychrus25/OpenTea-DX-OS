@@ -36,6 +36,11 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 JSON UTF-8. Lỗi trả `{"error": {"code": "<MÃ>", "message": "<câu tiếng Việt>"}}` với mã HTTP 400, 404, 409 hoặc 422. Thời điểm là ISO 8601 có múi giờ. Tiền là số nguyên đồng. Mọi hàm xử lý gọi đúng lớp `store`/`domain` của đợt 1; không có quy tắc nghiệp vụ nào viết lại trong API.
 
+- **Danh sách** trả `{"items": [...], "page": n, "pages": m, "total": t}`; cỡ trang cố định (12 tour, 25 cho các danh sách khác), không có tham số đổi cỡ trang. Giới hạn độ dài các ô nhập theo §8 của đặc tả web.
+- **Lỗi không phải JSON:** proxy và cổng trả 401, 403, 404, 413, 429, 503 dạng chữ thường. App không đọc thân các phản hồi đó mà hiện câu theo mã HTTP (429: "Máy chủ đang bận, thử lại sau một phút").
+- **`request_key`** do app sinh (UUID, tối đa 64 ký tự). Gửi lại cùng khoá luôn trả về lượt đặt đầu tiên, bất kể nội dung gửi kèm và không có hạn; nhờ đó app gửi lại an toàn khi mất phản hồi.
+- App không hỏi lại máy chủ theo chu kỳ: chỉ tải khi mở màn hình và khi người dùng kéo để làm mới. Ảnh được giữ trong bộ đệm của máy theo `cache-control` của app.
+
 ### 4.1 Công khai — dưới `/apps/tea-tour/public/<htx>/api/v1`
 
 | Phương thức và đường dẫn | Trả về |
@@ -63,9 +68,17 @@ JSON UTF-8. Lỗi trả `{"error": {"code": "<MÃ>", "message": "<câu tiếng V
 | `POST /bookings/<id>/undo-checkin` | cả hai | Bỏ điểm danh |
 | `GET /todo` | trưởng HTX | Lượt chờ xác nhận, lượt khách báo đã chuyển khoản, lượt cần hoàn tiền |
 | `POST /bookings/<id>/confirm` | trưởng HTX | Xác nhận |
-| `POST /bookings/<id>/payments` | trưởng HTX | Nhận `amount_vnd`, `method`, `note`; ghi khoản thu |
+| `POST /bookings/<id>/payments` | trưởng HTX | Nhận `amount_vnd`, `method`, `note`, `request_key`; ghi khoản thu. Gửi lại cùng `request_key` không ghi lần hai |
 
 Manifest thêm tiền tố có bảo vệ `/api/` cho hai vai. Cổng kiểm vai ở mức tiền tố; app kiểm lại từng đường dẫn (người dẫn gọi đường dẫn của trưởng HTX nhận 403).
+
+Quy tắc điểm danh qua API:
+
+- `ticket_text` có dạng `OPENTEA-TOUR:<htx>:<mã>` (`<htx>` gồm 1–20 ký tự chữ, số, `_`, `-`; `<mã>` là mã đặt chỗ 8 ký tự). Chuỗi này là định danh, không phải bí mật: điểm danh luôn cần người của HTX đã đăng nhập, và màn hình kết quả hiện tên khách để đối chiếu.
+- Vé của HTX khác với HTX của token trả 404 `NOT_FOUND`. Người dẫn quét vé của chuyến không giao cho mình nhận 403 `NOT_YOUR_DEPARTURE`. Mọi tài khoản vai `farmer` gọi được các đường dẫn này nhưng chỉ thấy chuyến được giao.
+- Khoảng thời gian điểm danh tính theo giờ máy chủ; lỗi `OUTSIDE_WINDOW` nêu khoảng thời gian hợp lệ.
+- `ALREADY_CHECKED_IN` trả kèm lượt đặt (thời điểm, số người, ai điểm danh), nên quét lại sau khi mất phản hồi cho thấy lượt đã được ghi.
+- Bảng `payments` thêm cột `request_key` (duy nhất, cho phép trống) bằng migration `003`; form ghi khoản thu trên web cũng gửi kèm khoá này, để bấm hai lần không ghi hai khoản.
 
 ### 4.3 Bộ mẫu hợp đồng
 
@@ -73,10 +86,14 @@ Kiểm thử của API ghi mỗi dạng phản hồi thành một tệp JSON m�
 
 ## 5. Thay đổi ở lõi
 
-1. **Proxy nhận token từ app di động.** Yêu cầu tới đường dẫn có bảo vệ mang `Authorization: Bearer <token>` thì proxy chuyển đúng token đó tới cổng, không đọc phiên đăng nhập của web. Mã HTX để kiểm app có bật cho HTX hay không lấy từ claim `htx_code` của token mà không kiểm chữ ký: giá trị này chỉ dùng để chọn dòng bật app, còn cổng vẫn kiểm chữ ký, đối tượng và vai trước khi app nhận yêu cầu. Token sai dạng trả 401. Trang "Phiên đăng nhập đã hết hạn" chỉ dành cho yêu cầu không có header này.
-2. **Danh bạ HTX của một app:** `GET /api/apps/<id>/tenants` (công khai, dùng bộ đếm đọc công khai) trả các HTX đang bật app đó, gồm mã, tên và địa chỉ, chỉ khi app có đường dẫn công khai. App không tồn tại trả 404.
+1. **Proxy nhận token từ app di động.** Yêu cầu tới đường dẫn có bảo vệ mang `Authorization: Bearer <token>` thì proxy chuyển đúng token đó tới cổng, không đọc phiên đăng nhập của web. Trên đường dẫn công khai header này bị bỏ qua và không được chuyển tiếp. Thứ tự kiểm không đổi: đường dẫn (400), nguồn gửi form (403), cỡ thân (413), rồi mới tới token; token không có `htx_code` hoặc HTX chưa bật app trả 404; token hết hạn, sai chữ ký (401) hoặc sai vai (403) do cổng trả và được chuyển nguyên về app. Yêu cầu có token không bị tính vào giới hạn công khai theo IP. Mã HTX để kiểm app có bật cho HTX hay không lấy từ claim `htx_code` của token mà không kiểm chữ ký: giá trị này chỉ dùng để chọn dòng bật app, còn cổng vẫn kiểm chữ ký, đối tượng và vai trước khi app nhận yêu cầu. Token sai dạng trả 401. Trang "Phiên đăng nhập đã hết hạn" chỉ dành cho yêu cầu không có header này.
+2. **Danh bạ HTX của một app:** `GET /api/apps/<id>/tenants` (công khai, dùng bộ đếm đọc công khai) trả các HTX đang bật app đó, gồm mã, tên và địa chỉ, chỉ khi app có đường dẫn công khai. App bật cho mọi HTX thì trả mọi HTX. Tối đa 200 dòng, xếp theo tên, không phân trang. App không tồn tại trả 404. Tên và địa chỉ HTX vốn đã công khai ở trang hồ sơ `/htx/<mã>`.
+   - **Cấu hình cho app di động:** `GET /api/mobile/config` (công khai) trả địa chỉ issuer công khai của Keycloak, `client_id` (`dxos-mobile`), địa chỉ quay về và phiên bản lõi. App chỉ cần một ô "địa chỉ máy chủ"; địa chỉ Keycloak lấy từ đây.
 3. **Client Keycloak `dxos-mobile`:** client công khai, luồng Authorization Code, bắt buộc PKCE `S256`, không cấp bằng mật khẩu, địa chỉ quay về `vn.opentea.dxos.tour:/oauth2redirect`, cùng các scope mặc định với client của web (để token có đối tượng `dx-os-core`, claim `htx_code` và vai). Có trong tệp realm cho máy mới; `make mobile-client` thêm client vào realm đang chạy bằng `kcadm` trong container Keycloak, chạy lại không gây lỗi.
 4. Trưởng HTX vẫn phải nhập mã TOTP: việc đó diễn ra trên trang đăng nhập của Keycloak trong trình duyệt của máy.
+   - Thời hạn phiên giữ theo realm: access token 5 phút, phiên đăng nhập 8 giờ, làm mới bằng refresh token; không dùng `offline_access`. Người của HTX đăng nhập lại mỗi ngày làm việc.
+   - Token của `dxos-mobile` có `aud` chứa `dx-os-core`, `htx_code` (chuỗi) và `realm_access.roles`, nhờ scope `dx-os-core` và `roles`; kiểm thử realm khẳng định điều này.
+   - Điện thoại phải tới được Keycloak bằng đúng địa chỉ issuer: máy ảo và máy cắm USB dùng `adb reverse`; máy trong mạng nội bộ cần `KC_HOSTNAME_URL` và `AUTH_URL` đặt theo địa chỉ nội bộ của máy chủ (realm cho phép HTTP với địa chỉ mạng riêng); máy chủ công khai cần HTTPS.
 5. Phiên bản web thành `1.14.0`; `tea-tour` thành `1.1.0` với `requires.core: ">=1.14.0"`.
 
 ## 6. App Android
@@ -100,7 +117,9 @@ Kiểm thử của API ghi mỗi dạng phản hồi thành một tệp JSON m�
 1. Vé và lượt đặt đã mở được lưu trong máy (mã, khoá truy cập, bản JSON gần nhất): màn hình Vé mở được khi mất mạng và ghi rõ dữ liệu được cập nhật lúc nào.
 2. Khoá truy cập của lượt đặt và token đăng nhập không ghi vào log; token lưu bằng kho lưu được mã hoá của AppAuth/Android Keystore.
 3. Mọi lời gọi có ba trạng thái hiển thị: đang tải, lỗi (kèm nút thử lại và câu lỗi của máy chủ), trống.
-4. Token hết hạn thì app làm mới bằng refresh token; không làm mới được thì đưa về màn hình đăng nhập, không mất dữ liệu của khách.
+4. Token hết hạn thì app làm mới bằng refresh token; không làm mới được thì đưa về màn hình đăng nhập, không mất dữ liệu của khách. Thao tác đang dở (một lần quét, một khoản thu) không tự chạy lại: sau khi đăng nhập app quay về đúng màn hình để người dùng làm lại.
+   - Mất mạng lúc quét: app báo "Không có mạng, chưa điểm danh được", hiện tên khách nếu mã có trong danh sách đoàn đã tải, và nút thử lại. Không có hàng đợi điểm danh ngoại tuyến.
+   - Vé đã lưu ghi kèm phiên bản cấu trúc dữ liệu; bản ghi không đọc được sau khi nâng cấp app vẫn giữ mã và khoá để tải lại. Khi có mạng, mở vé là tải lại; lượt đã huỷ thì ẩn mã QR và ghi rõ đã huỷ. Giữ tối đa 100 vé, vé của chuyến đã qua lâu nhất bị bỏ trước; người dùng tự xoá được vé.
 5. Bản debug cho phép HTTP không mã hoá (máy chủ thử nghiệm trong mạng nội bộ); bản release chỉ cho HTTPS.
 6. Giao diện theo màu và phông của `DESIGN.md` (xanh chè, Be Vietnam Pro đóng gói trong app), sáng và tối, cỡ chữ theo cài đặt của máy, vùng chạm tối thiểu 48 dp, có nhãn cho trình đọc màn hình.
 7. Toàn bộ chữ trong app là tiếng Việt, nằm trong `strings.xml`.
@@ -118,7 +137,8 @@ Kiểm thử của API ghi mỗi dạng phản hồi thành một tệp JSON m�
 
 - Dựng từ mã nguồn: `cd apps/tour-android && ./gradlew assembleDebug` (cần JDK 17 và Android SDK 35); ghi trong README. `make android-build` và `make android-test` gọi đúng các lệnh đó.
 - CI thêm job `android`: kiểm tệp Gradle wrapper, chạy kiểm thử JVM, dựng APK debug, tải APK và ảnh màn hình lên làm artifact.
-- Luồng phát hành đính kèm `opentea-tour-<phiên bản>-debug.apk` và mã băm vào GitHub Release. Bản debug cài được trên điện thoại để thử nhưng không phải bản ký chính thức; ghi rõ trong ghi chú phát hành.
+- Luồng phát hành: nếu repo có secret chứa khoá ký (`ANDROID_KEYSTORE_BASE64` và các mật khẩu đi kèm) thì dựng và đính kèm bản release đã ký `opentea-tour-<phiên bản>.apk`; nếu chưa có thì đính kèm `opentea-tour-<phiên bản>-debug.apk`. Bản debug dùng khoá sinh trong từng lần chạy CI, nên cài bản mới đè lên bản cũ phải gỡ app trước (vé đưa lại vào app bằng Tra cứu); ghi rõ trong ghi chú phát hành. Không đưa khoá ký nào vào repo.
+- CI dựng cả bản release chưa ký để kiểm rằng cấu hình chỉ cho HTTPS của bản release biên dịch được; HTTP không mã hoá chỉ được khai trong thư mục nguồn `debug`.
 - `DEPENDENCIES.md` thêm mục Android: từng thư viện, phiên bản, giấy phép.
 
 ## 9. Rủi ro
