@@ -36,6 +36,8 @@ class NewBooking {
     required this.phone,
     required this.adults,
     required this.children,
+    this.email = '',
+    this.note = '',
   });
   final String customerId;
   final String tourId;
@@ -44,6 +46,10 @@ class NewBooking {
   final String phone;
   final int adults;
   final int children;
+
+  /// Optional contact details the customer may add.
+  final String email;
+  final String note;
 }
 
 /// Thrown for business-rule failures; [message] is Vietnamese and safe to show.

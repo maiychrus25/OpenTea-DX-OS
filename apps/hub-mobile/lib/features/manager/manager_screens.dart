@@ -222,6 +222,8 @@ class ManagerBookingDetailScreen extends StatelessWidget {
               DetailRow('Tour', b.tourName),
               DetailRow('Ngày đi', formatDateLong(b.departureDate)),
               DetailRow('Liên hệ', '${b.contactName} · ${b.phone}'),
+              if (b.email.isNotEmpty) DetailRow('Email', b.email),
+              if (b.note.isNotEmpty) DetailRow('Ghi chú', b.note),
               DetailRow('Số khách', '${b.adults} người lớn, ${b.children} trẻ em'),
               DetailRow('Tổng tiền', formatVnd(b.total)),
               DetailRow('Thanh toán', b.paymentStatus.label),

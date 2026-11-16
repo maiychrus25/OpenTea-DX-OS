@@ -43,6 +43,8 @@ class Booking {
     required this.paymentStatus,
     required this.createdAt,
     this.checkedIn = false,
+    this.email = '',
+    this.note = '',
   });
 
   final String id;
@@ -66,6 +68,10 @@ class Booking {
   /// Set by the farmer when the group arrives at the household.
   final bool checkedIn;
 
+  /// Optional details the customer gave when booking.
+  final String email;
+  final String note;
+
   int get guests => adults + children;
 
   Booking copyWith({BookingStatus? status, PaymentStatus? paymentStatus, bool? checkedIn}) => Booking(
@@ -87,6 +93,8 @@ class Booking {
     paymentStatus: paymentStatus ?? this.paymentStatus,
     createdAt: createdAt,
     checkedIn: checkedIn ?? this.checkedIn,
+    email: email,
+    note: note,
   );
 
   Map<String, Object?> toJson() => {
@@ -108,6 +116,8 @@ class Booking {
     'paymentStatus': paymentStatus.name,
     'createdAt': createdAt.toIso8601String(),
     'checkedIn': checkedIn,
+    'email': email,
+    'note': note,
   };
 
   factory Booking.fromJson(Map<String, Object?> j) => Booking(
@@ -129,6 +139,8 @@ class Booking {
     paymentStatus: PaymentStatus.values.byName(j['paymentStatus']! as String),
     createdAt: DateTime.parse(j['createdAt']! as String),
     checkedIn: (j['checkedIn'] as bool?) ?? false,
+    email: (j['email'] as String?) ?? '',
+    note: (j['note'] as String?) ?? '',
   );
 }
 

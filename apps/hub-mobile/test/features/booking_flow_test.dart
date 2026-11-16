@@ -36,7 +36,7 @@ void main() {
   group('booking screen: date, people, contact, then the price and continue', () {
     testWidgets('shows dates, both guest types and the estimate', (tester) async {
       await _openBooking(tester);
-      expect(find.text('Ngày đi'), findsOneWidget);
+      expect(find.text('Chọn ngày đi'), findsOneWidget);
       expect(find.byKey(const Key('date-dep-01')), findsOneWidget);
       expect(find.text('Số khách'), findsOneWidget);
       expect(find.text('Người lớn'), findsOneWidget);
@@ -84,6 +84,32 @@ void main() {
       await tester.tap(find.byKey(const Key('booking-on-behalf')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('booking-guest-name')), findsOneWidget);
+    });
+
+    testWidgets('the three highlights and the optional email and note are on the screen', (tester) async {
+      await _openBooking(tester);
+      expect(find.text('Trải nghiệm thực tế'), findsOneWidget);
+      expect(find.text('An toàn, uy tín'), findsOneWidget);
+      expect(find.text('Khám phá văn hóa trà'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('booking-note')));
+      expect(find.byKey(const Key('booking-email')), findsOneWidget);
+      expect(find.byKey(const Key('booking-note')), findsOneWidget);
+      expect(find.text('0/200'), findsOneWidget);
+    });
+
+    testWidgets('a wrong email is refused, a right one and a note travel with the booking', (tester) async {
+      await _openBooking(tester);
+      await tester.enterText(find.byKey(const Key('booking-phone')), '0912345678');
+      await tester.enterText(find.byKey(const Key('booking-email')), 'khong-hop-le');
+      await tester.ensureVisible(find.byKey(const Key('booking-submit')));
+      await tester.tap(find.byKey(const Key('booking-submit')));
+      await tester.pumpAndSettle();
+      expect(find.text('Email không hợp lệ'), findsOneWidget);
+      await tester.enterText(find.byKey(const Key('booking-email')), 'ha@example.com');
+      await tester.enterText(find.byKey(const Key('booking-note')), 'Đi cùng một em bé');
+      await tester.tap(find.byKey(const Key('booking-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('pay-qr')), findsOneWidget);
     });
 
     testWidgets('contact details are required, then Continue leads to the payment page', (tester) async {

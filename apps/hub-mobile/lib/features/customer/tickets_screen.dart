@@ -104,6 +104,8 @@ class TicketScreen extends StatelessWidget {
                   InfoRow('Ngày đi', formatDateLong(b.departureDate)),
                   InfoRow('Khách', '${b.adults} người lớn, ${b.children} trẻ em'),
                   InfoRow('Liên hệ', '${b.contactName} · ${b.phone}'),
+                  if (b.email.isNotEmpty) InfoRow('Email', b.email),
+                  if (b.note.isNotEmpty) InfoRow('Ghi chú', b.note),
                   InfoRow('Tổng tiền', formatVnd(b.total)),
                   InfoRow('Thanh toán', b.paymentStatus.label),
                 ],

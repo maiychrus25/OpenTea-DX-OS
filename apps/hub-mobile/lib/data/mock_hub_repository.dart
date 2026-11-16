@@ -190,6 +190,8 @@ class MockHubRepository implements HubRepository {
       departureDate: dep.date,
       customerId: draft.customerId,
       contactName: draft.contactName,
+      email: draft.email,
+      note: draft.note,
       phone: draft.phone,
       adults: draft.adults,
       children: draft.children,
