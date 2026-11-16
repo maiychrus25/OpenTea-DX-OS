@@ -43,72 +43,54 @@ class HomeTab extends StatelessWidget {
                 child: ListView(
                   padding: EdgeInsets.zero,
                   children: [
-                    _hero(context),
-                    Transform.translate(
-                      offset: const Offset(0, -30),
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: AppColors.cream,
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-                        ),
-                        padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _categories(context, htxs),
-                            const _AccountLinks(),
-                            const SectionTitle('Điểm đến nổi bật'),
-                            for (var i = 0; i < htxs.length; i++) _destination(context, htxs[i], i),
-                            const SectionTitle('Tour nổi bật'),
-                          ],
-                        ),
+                    _FeaturedCarousel(tours: tours.take(4).toList(), htxs: htxs),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _categories(context, htxs),
+                          const _AccountLinks(),
+                          const SectionTitle('Điểm đến nổi bật'),
+                          for (var i = 0; i < htxs.length; i++) _destination(context, htxs[i], i),
+                          const SectionTitle('Tour nổi bật'),
+                        ],
                       ),
                     ),
-                    Transform.translate(offset: const Offset(0, -30), child: _tourCarousel(context, tours)),
-                    Transform.translate(
-                      offset: const Offset(0, -30),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Expanded(child: SectionTitle('Sản phẩm')),
-                                TextButton(
-                                  key: const Key('home-all-products'),
-                                  onPressed: () => context.push('/shop/products'),
-                                  child: const Text('Xem tất cả ›'),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                    _tourCarousel(context, tours),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: Row(
+                        children: [
+                          const Expanded(child: SectionTitle('Sản phẩm')),
+                          TextButton(
+                            key: const Key('home-all-products'),
+                            onPressed: () => context.push('/shop/products'),
+                            child: const Text('Xem tất cả ›'),
+                          ),
+                        ],
                       ),
                     ),
-                    Transform.translate(offset: const Offset(0, -30), child: _productStrip(context, products)),
-                    Transform.translate(
-                      offset: const Offset(0, -30),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SectionTitle('Tin từ hợp tác xã'),
-                            for (final a in articles.take(2)) _newsCard(context, a),
-                            const SizedBox(height: 4),
-                            SizedBox(
-                              height: 52,
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                key: const Key('home-all-news'),
-                                onPressed: () => context.push('/shop/news'),
-                                child: const Text('Xem tất cả tin'),
-                              ),
+                    _productStrip(context, products),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SectionTitle('Tin từ hợp tác xã'),
+                          for (final a in articles.take(2)) _newsCard(context, a),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            height: 52,
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              key: const Key('home-all-news'),
+                              onPressed: () => context.push('/shop/news'),
+                              child: const Text('Xem tất cả tin'),
                             ),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
                       ),
                     ),
                   ],
@@ -120,48 +102,6 @@ class HomeTab extends StatelessWidget {
       },
     );
   }
-
-  Widget _hero(BuildContext context) => SizedBox(
-    height: 330,
-    child: TeaPhoto(
-      asset: 'assets/images/hero2.jpg',
-      alignment: const Alignment(0.6, 0),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xC70F3A27), Color(0x590F3A27), Color(0x000F3A27)],
-                stops: [0, 0.48, 0.75],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 0, 22, 52),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FilledButton(
-                  key: const Key('home-explore'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.limeButton,
-                    foregroundColor: AppColors.teaDark,
-                    minimumSize: const Size(0, 50),
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
-                    textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () => context.push('/shop/tours'),
-                  child: const Text('Khám phá ngay ›'),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 
   Widget _categories(BuildContext context, List<Htx> htxs) {
     Widget tile(Key key, Widget icon, String label, VoidCallback onTap) => Expanded(
@@ -530,6 +470,137 @@ class _AccountLinks extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// The top of the home page: featured tours as swipeable photo cards (name, cooperative, duration and price over the
+/// photo), page dots and a link to all tours.
+class _FeaturedCarousel extends StatefulWidget {
+  const _FeaturedCarousel({required this.tours, required this.htxs});
+  final List<Tour> tours;
+  final List<Htx> htxs;
+
+  @override
+  State<_FeaturedCarousel> createState() => _FeaturedCarouselState();
+}
+
+class _FeaturedCarouselState extends State<_FeaturedCarousel> {
+  final _controller = PageController(viewportFraction: 0.9);
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _htxName(String code) {
+    for (final h in widget.htxs) {
+      if (h.code == code) return shortHtxName(h);
+    }
+    return '';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tours = widget.tours;
+    return Column(
+      children: [
+        SizedBox(
+          height: 250,
+          child: PageView.builder(
+            key: const Key('home-carousel'),
+            controller: _controller,
+            itemCount: tours.length,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemBuilder: (context, i) {
+              final t = tours[i];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: InkWell(
+                  key: Key('home-hero-${t.id}'),
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: () => context.push('/shop/tours/${t.id}'),
+                  child: TeaPhoto(
+                    asset: teaPhotoFor(t.gradientSeed),
+                    radius: 24,
+                    shade: true,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [Flexible(child: PhotoBadge(_htxName(t.htxCode)))]),
+                          const SizedBox(height: 8),
+                          Text(
+                            t.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: serif(23, color: Colors.white, height: 1.2),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${t.durationLabel} · Từ ${formatVnd(t.adultPrice)} /người',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                child: const Icon(Icons.arrow_forward, size: 18, color: AppColors.teaDark),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
+          child: Row(
+            children: [
+              for (var i = 0; i < tours.length; i++)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.only(right: 6),
+                  width: i == _page ? 20 : 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: i == _page ? AppColors.teaDark : const Color(0xFFC9D5C8),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              const Spacer(),
+              TextButton(
+                key: const Key('home-explore'),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 40),
+                ),
+                onPressed: () => context.push('/shop/tours'),
+                child: const Text('Khám phá ngay ›', style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

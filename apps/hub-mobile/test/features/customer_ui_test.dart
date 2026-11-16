@@ -132,6 +132,19 @@ void main() {
       expect((account - logo).abs(), lessThan(24));
     });
 
+    testWidgets('the top of the home page shows featured tours as swipeable cards', (tester) async {
+      await _pump(tester);
+      await _guest(tester);
+      expect(find.byKey(const Key('home-carousel')), findsOneWidget);
+      expect(find.byKey(const Key('home-hero-tour-01')), findsOneWidget);
+      await tester.drag(find.byKey(const Key('home-carousel')), const Offset(-400, 0));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('home-hero-tour-02')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('home-hero-tour-02')));
+      await tester.pumpAndSettle();
+      expect(find.text('Giá từ'), findsOneWidget);
+    });
+
     testWidgets('the first bottom tab uses a house icon', (tester) async {
       await _pump(tester);
       await _guest(tester);
