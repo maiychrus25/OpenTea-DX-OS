@@ -7,8 +7,8 @@ import 'package:flutter/material.dart';
 /// serif headings (system serif, no bundled font) and pill shaped controls.
 class AppColors {
   AppColors._();
-  static const cream = Color(0xFFFAF6EE);
-  static const paper = Color(0xFFFFFDF8);
+  static const cream = Color(0xFFF2F6F1);
+  static const paper = Color(0xFFFBFDFA);
   static const ink = Color(0xFF123F2B);
   static const teaDark = Color(0xFF17452F);
   static const teaDeeper = Color(0xFF0F3A27);
@@ -23,7 +23,7 @@ class AppColors {
   static const amberSoft = Color(0xFFFDE8D2);
   static const noteBg = Color(0xFFFFF8E1);
   static const noteBorder = Color(0xFFC5B88F);
-  static const border = Color(0xFFE8DFCA);
+  static const border = Color(0xFFDDE6DC);
   static const muted = Color(0xFF3B5A48);
   static const faint = Color(0xFF5D6F63);
   static const danger = Color(0xFFB3261E);

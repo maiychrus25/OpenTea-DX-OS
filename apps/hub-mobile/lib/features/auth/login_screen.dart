@@ -284,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       key: Key('demo-${e.key}'),
                       visualDensity: VisualDensity.compact,
                       backgroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0xFFD9D2BD)),
+                      side: const BorderSide(color: Color(0xFFD3DDD2)),
                       label: Text(_shortRole[e.key] ?? e.key, style: const TextStyle(fontSize: 12)),
                       onPressed: () => _fill(e.key),
                     ),
@@ -302,7 +302,7 @@ class _LoginScreenState extends State<LoginScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFD9D2BD)),
+        border: Border.all(color: const Color(0xFFD3DDD2)),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(text, style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),

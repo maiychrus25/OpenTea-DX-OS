@@ -161,7 +161,7 @@ class SourceChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFFD9D2BD)),
+          border: Border.all(color: const Color(0xFFD3DDD2)),
         ),
         child: Text(text, style: const TextStyle(fontSize: 11, color: AppColors.faint)),
       ),

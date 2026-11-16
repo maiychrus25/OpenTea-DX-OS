@@ -440,7 +440,7 @@ class _BrandBarState extends State<_BrandBar> {
             decoration: BoxDecoration(
               color: AppColors.paper,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFD9D2BD), width: 1.5),
+              border: Border.all(color: const Color(0xFFD3DDD2), width: 1.5),
             ),
             child: Row(
               children: [
