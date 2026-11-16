@@ -95,7 +95,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
             children: [
               const Text(
                 'Chọn ngày khởi hành',
-                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.ink),
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: AppColors.ink),
               ),
               const SizedBox(height: 8),
               for (final d in open)
@@ -349,7 +349,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                               child: Text(
                                 formatVnd(total),
                                 key: const Key('booking-bar-total'),
-                                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.black),
+                                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.black),
                               ),
                             ),
                           ],
@@ -366,7 +366,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                             backgroundColor: AppColors.teaDark,
                             shape: const StadiumBorder(),
                             padding: const EdgeInsets.symmetric(horizontal: 24),
-                            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                            textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
                           ),
                           onPressed: _busy ? null : () => _submit(tour, dep),
                           icon: const Icon(Icons.arrow_forward),
@@ -414,7 +414,7 @@ class _Header extends StatelessWidget {
                   const SizedBox(width: 18),
                   const Text(
                     'Đặt tour',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.ink),
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.ink),
                   ),
                 ],
               ),
@@ -433,9 +433,9 @@ class _Header extends StatelessWidget {
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            height: 1.2,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w700,
+                            height: 1.25,
                             color: AppColors.ink,
                           ),
                         ),
@@ -569,7 +569,7 @@ class _Card extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: AppColors.ink),
+          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: AppColors.ink),
         ),
         const SizedBox(height: 16),
         child,
@@ -601,7 +601,7 @@ class _DateBox extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.ink),
             ),
             const SizedBox(height: 8),
             Row(
@@ -612,12 +612,12 @@ class _DateBox extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       value,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.ink),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.ink),
                     ),
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Icon(Icons.calendar_today_outlined, size: 22, color: AppColors.ink),
+                const Icon(Icons.calendar_today_outlined, size: 20, color: AppColors.ink),
               ],
             ),
           ],
@@ -657,7 +657,7 @@ class _GuestRow extends StatelessWidget {
       style: IconButton.styleFrom(
         backgroundColor: Colors.white,
         disabledBackgroundColor: Colors.white,
-        side: BorderSide(color: onTap == null ? const Color(0xFFB7D3AF) : AppColors.teaDark, width: 2),
+        side: BorderSide(color: onTap == null ? const Color(0xFFB7D3AF) : AppColors.teaDark, width: 1.4),
         foregroundColor: AppColors.ink,
         disabledForegroundColor: const Color(0xFF8DB485),
       ),
@@ -671,7 +671,7 @@ class _GuestRow extends StatelessWidget {
     decoration: BoxDecoration(color: _soft, borderRadius: BorderRadius.circular(20)),
     child: Row(
       children: [
-        Icon(icon, size: 26, color: AppColors.ink),
+        Icon(icon, size: 24, color: AppColors.ink),
         const SizedBox(width: 12),
         Container(width: 1, height: 34, color: _line),
         const SizedBox(width: 12),
@@ -681,7 +681,7 @@ class _GuestRow extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink),
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.ink),
               ),
               Text(
                 subtitle,
@@ -699,7 +699,7 @@ class _GuestRow extends StatelessWidget {
             '$value',
             key: Key('$keyPrefix-count'),
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
           ),
         ),
         _button(Key('$keyPrefix-plus'), Icons.add, canIncrease ? () => onChanged(value + 1) : null),
@@ -731,7 +731,7 @@ class _Field extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final multi = maxLines > 1;
-    OutlineInputBorder border(Color c, [double w = 1.2]) => OutlineInputBorder(
+    OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
       borderRadius: BorderRadius.circular(multi ? 26 : 999),
       borderSide: BorderSide(color: c, width: w),
     );
@@ -742,10 +742,10 @@ class _Field extends StatelessWidget {
       maxLines: maxLines,
       minLines: maxLines,
       maxLength: maxLength,
-      style: const TextStyle(fontSize: 17),
+      style: const TextStyle(fontSize: 16),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.muted, fontSize: 17),
+        hintStyle: const TextStyle(color: AppColors.muted, fontSize: 16),
         errorText: error,
         filled: true,
         fillColor: Colors.white,
@@ -754,7 +754,7 @@ class _Field extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: AppColors.ink, size: 24),
+              Icon(icon, color: AppColors.ink, size: 21),
               const SizedBox(width: 14),
               Container(width: 1, height: 30, color: _line),
             ],

@@ -60,7 +60,12 @@ ThemeData buildAppTheme() {
         error: AppColors.danger,
       );
   const pill = StadiumBorder();
-  final base = ThemeData(useMaterial3: true, colorScheme: scheme, scaffoldBackgroundColor: AppColors.cream);
+  final base = ThemeData(
+    useMaterial3: true,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: AppColors.cream,
+    fontFamily: 'BeVietnamPro',
+  );
   return base.copyWith(
     textTheme: base.textTheme
         .apply(bodyColor: AppColors.ink, displayColor: AppColors.ink)
