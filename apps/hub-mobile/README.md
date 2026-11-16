@@ -111,7 +111,7 @@ Lúc dựng (`--dart-define`), mặc định là dữ liệu mẫu để bản d
 | `HUB_USE_MOCK=true` (mặc định) | Mọi thứ do `MockHubRepository` phục vụ |
 | `HUB_USE_MOCK=false` | Màn hình lõi đọc từ lõi thật và đăng nhập bằng Keycloak; Gian hàng vẫn là mẫu. Bắt buộc có `HUB_API_BASE_URL` và `HUB_KEYCLOAK_ISSUER` (hoặc `HUB_DEV_TOKEN` ở bản debug), thiếu thì app báo "Cấu hình chưa đúng" thay vì lặng lẽ dùng dữ liệu mẫu |
 | `HUB_API_BASE_URL=https://...` | Địa chỉ gốc của cổng (APISIX) và của web. App đọc qua `POST {gốc}/api/data/graphql` và ghi qua `{gốc}/api/journal`, `{gốc}/api/notifications` |
-| `HUB_KEYCLOAK_ISSUER=https://.../realms/agrimarket` | Địa chỉ realm Keycloak. Client cố định `dxos-mobile`, chuyển hướng `vn.opentea.hub_mobile:/oauth2redirect`, phạm vi `openid profile email`. Không có bí mật nào trong app (client công khai) |
+| `HUB_KEYCLOAK_ISSUER=https://.../realms/agrimarket` | Địa chỉ realm Keycloak. Client cố định `dxos-mobile`, chuyển hướng `vn.opentea.hubmobile:/oauth2redirect`, phạm vi `openid profile email`. Không có bí mật nào trong app (client công khai) |
 | `HUB_DEV_TOKEN=...` | Token truy cập lấy từ stack phát triển, **chỉ được nhận trong bản debug** (bản release bỏ qua). Dùng thử bằng tay, không phải đăng nhập. Có biến này thì app vẫn dùng tài khoản dùng thử như trước, không dùng Keycloak |
 | `HUB_DEV_HOUSEHOLD_ID=...` | Chỉ cùng với `HUB_DEV_TOKEN` ở bản debug: mã hộ thật thay cho mã hộ bịa `hh-01` của tài khoản `farmer@demo.vn` |
 
@@ -181,7 +181,7 @@ và cả các trang lõi khi chạy chế độ mẫu. Trang lõi chạy chế �
 ## Chạy chế độ thật với stack dev
 
 Cần trước: hai PR của nền tảng **phải được gộp và triển khai** (hoặc chạy từ nhánh của chúng): **#41** (client công khai Keycloak `dxos-mobile`, chuyển hướng
-`vn.opentea.hub_mobile:/oauth2redirect`) và **#43** (các đường `/api/journal/**` và `/api/notifications/**` nhận `Authorization: Bearer` của `dxos-mobile`).
+`vn.opentea.hubmobile:/oauth2redirect`) và **#43** (các đường `/api/journal/**` và `/api/notifications/**` nhận `Authorization: Bearer` của `dxos-mobile`).
 Chưa có hai PR đó thì đăng nhập hoặc ghi sẽ thất bại.
 
 ```bash
@@ -203,7 +203,7 @@ Cách app xử lý đăng nhập (`lib/data/keycloak_auth_service.dart`):
   `manager` > `officer` > `farmer`. Người dùng không có vai nào trong số đó chỉ được vào nếu token ghi rõ vai `customer`; ngược lại bị từ chối (và không lưu gì). Vai `operator` chưa chốt tên nên chưa nhận.
 - Access và refresh token chỉ nằm trong `flutter_secure_storage` (Android Keystore / iOS Keychain) và bộ nhớ, không ở `shared_preferences`, không vào nhật ký hay thông báo lỗi.
 - Token được làm mới trước khi hết hạn (còn dưới 60 giây) và một lần sau mỗi 401. Refresh token bị từ chối (`invalid_grant`) thì xoá token, đăng xuất và về màn hình đầu; lỗi mạng thì giữ phiên.
-- Android: `manifestPlaceholders["appAuthRedirectScheme"] = "vn.opentea.hub_mobile"` trong `android/app/build.gradle.kts`. iOS: scheme `vn.opentea.hub_mobile` trong `ios/Runner/Info.plist`.
+- Android: `manifestPlaceholders["appAuthRedirectScheme"] = "vn.opentea.hubmobile"` trong `android/app/build.gradle.kts`. iOS: scheme `vn.opentea.hubmobile` trong `ios/Runner/Info.plist`.
 
 Chưa gộp #41/#43 thì chế độ dùng thử (`HUB_USE_MOCK=true`, mặc định) và `HUB_DEV_TOKEN` ở bản debug vẫn chạy như cũ.
 
@@ -214,7 +214,7 @@ APK/iOS và chưa mở trình duyệt đăng nhập trên máy thật. Những g
 schema (thử nghiệm đối chiếu), cách ghép yêu cầu và ánh xạ lỗi với máy chủ giả, phân tích dữ liệu bằng JSON viết tay có hình dạng như Hasura trả
 về (không ghi lại từ máy chủ thật); với phần mới: hình dạng yêu cầu ghi (phương thức, đường dẫn, tiêu đề, thân) so với zod schema trong mã web, luồng làm mới token khi gặp 401 bằng kho token và máy chủ giả,
 ánh xạ lỗi, đọc vai từ JWT không ký dựng tay, và bản web của chế độ dùng thử vẫn dựng và chạy (có chụp màn hình đăng nhập ở cả hai chế độ). Chưa kiểm: toàn bộ luồng PKCE trên Android/iOS (mã lỗi
-`PlatformException` của AppAuth khi huỷ hoặc `invalid_grant` là suy đoán, nên mọi lỗi lạ được coi là tạm thời để không đăng xuất nhầm), redirect `vn.opentea.hub_mobile:/oauth2redirect` với Keycloak thật,
+`PlatformException` của AppAuth khi huỷ hoặc `invalid_grant` là suy đoán, nên mọi lỗi lạ được coi là tạm thời để không đăng xuất nhầm), redirect `vn.opentea.hubmobile:/oauth2redirect` với Keycloak thật,
 issuer khớp `iss`, Keycloak/Hasura chấp nhận `x-hasura-role` và audience `dx-os-core` với token của `dxos-mobile`, dạng thân trả về `{data}` của các đường ghi, ID nhật ký/thông báo từ Hasura khớp ID web nhận,
 việc dựng Android với `jni`/`jni_flutter` (kéo theo bởi `path_provider_android`, cần NDK), HTTP thường trên Android debug, hạ tầng khác. Còn chưa kiểm: Hasura chấp nhận đúng các truy vấn này với từng vai, giá trị `x-hasura-role`, định dạng ngày giờ
 thật, CORS khi chạy trên web, quá thời gian và chứng chỉ TLS trên máy thật, hiệu năng với dữ liệu thật.
@@ -224,3 +224,5 @@ thật, CORS khi chạy trên web, quá thời gian và chứng chỉ TLS trên 
 Từ chối nhật ký, đổi ngày thu hoạch và ảnh nhật ký trong app (xem trên), màn hình gửi thông báo, API Gian hàng, tạo/sửa tour, ngày khởi hành, sản phẩm và bài viết trong app HTX (chỉ xem, gửi duyệt),
 đánh giá sau chuyến, lưu địa chỉ, chatbot, video, đồng bộ ngoại tuyến hai chiều (hiện chỉ đọc lại bản lưu), ảnh thật,
 chạy thử trên máy ảo Android/iOS.
+
+> Lưu ý: scheme của địa chỉ chuyển hướng là `vn.opentea.hubmobile`, không có dấu gạch dưới, vì RFC 3986 không cho phép `_` trong scheme và Keycloak từ chối cả realm nếu gặp (xem PR #41).

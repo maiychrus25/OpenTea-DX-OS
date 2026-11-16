@@ -33,7 +33,7 @@
 			<string>vn.opentea.hub_mobile.oauth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>vn.opentea.hub_mobile</string>
+				<string>vn.opentea.hubmobile</string>
 			</array>
 		</dict>
 	</array>

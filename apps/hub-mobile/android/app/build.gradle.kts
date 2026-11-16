@@ -31,9 +31,9 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         // flutter_appauth (AppAuth-Android) receives the Keycloak redirect
-        // `vn.opentea.hub_mobile:/oauth2redirect` on this scheme. Same value as
+        // `vn.opentea.hubmobile:/oauth2redirect` on this scheme. Same value as
         // keycloakRedirectUri in lib/data/auth/appauth_oidc_client.dart.
-        manifestPlaceholders["appAuthRedirectScheme"] = "vn.opentea.hub_mobile"
+        manifestPlaceholders["appAuthRedirectScheme"] = "vn.opentea.hubmobile"
     }
 
     buildTypes {

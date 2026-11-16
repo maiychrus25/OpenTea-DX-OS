@@ -12,7 +12,7 @@ const keycloakClientId = 'dxos-mobile';
 /// Redirect URI registered for this app on the client; the same value is the
 /// `appAuthRedirectScheme` placeholder in android/app/build.gradle.kts and a
 /// URL scheme in ios/Runner/Info.plist.
-const keycloakRedirectUri = 'vn.opentea.hub_mobile:/oauth2redirect';
+const keycloakRedirectUri = 'vn.opentea.hubmobile:/oauth2redirect';
 const keycloakScopes = ['openid', 'profile', 'email'];
 
 /// [OidcClient] on the native AppAuth libraries (AppAuth-Android, AppAuth-iOS).
