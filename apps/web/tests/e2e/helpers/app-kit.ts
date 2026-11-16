@@ -74,13 +74,15 @@ export async function expectFrameUrl(page: Page, frameTitle: string, fragment: s
 /**
  * True once every row of the frame's table holds `text` (and, unless `allowEmpty`, there is at least one row). A read
  * that fails because a form just replaced the frame's document counts as "not yet", so a poll over it retries
- * instead of failing on the navigation.
+ * instead of failing on the navigation. Any other error is rethrown.
  */
 export async function allRowsInclude(app: FrameLocator, text: string, { allowEmpty = false } = {}): Promise<boolean> {
   try {
     const rows = await app.locator('tbody tr').allInnerTexts()
     return (allowEmpty || rows.length > 0) && rows.every(row => row.includes(text))
-  } catch {
-    return false
+  } catch (error) {
+    // Only the navigation this helper exists for is retried; a bad selector or a closed page must show its own error.
+    if (/Execution context was destroyed/.test(String(error))) return false
+    throw error
   }
 }
