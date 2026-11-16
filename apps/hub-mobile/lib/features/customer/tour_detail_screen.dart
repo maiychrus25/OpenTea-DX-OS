@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../app/app_state.dart';
 import '../../core/format/formatting.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/app_theme.dart';
@@ -99,7 +100,7 @@ class TourDetailScreen extends StatelessWidget {
       },
       builder: (context, data, reload) {
         final (tour, htx, departures, host) = data;
-        return ListView(
+        final page = ListView(
           padding: EdgeInsets.zero,
           children: [
             TeaPhoto(
@@ -134,11 +135,6 @@ class TourDetailScreen extends StatelessWidget {
                     style: const TextStyle(fontSize: 13, color: AppColors.faint),
                   ),
                   const SizedBox(height: 16),
-                  AmberButton(
-                    buttonKey: const Key('tour-visit-request'),
-                    label: 'Gửi yêu cầu tham quan trực tiếp',
-                    onPressed: () => context.push('/shop/visit?household=${tour.householdId}&tour=${tour.id}'),
-                  ),
                   const SectionTitle('Lịch khởi hành và đặt chỗ'),
                   const SourceChip('Nguồn: tea-tour · ngày khởi hành và số chỗ'),
                   if (departures.isEmpty) const Text('Chưa mở ngày khởi hành.'),
@@ -183,6 +179,12 @@ class TourDetailScreen extends StatelessWidget {
                   const SourceChip('Nguồn: app du lịch · các điểm dừng nối tới HTX và hộ trong lõi'),
                   for (final day in tour.itinerary) _Timeline(day: day),
                   const SectionTitle('Gặp ai trong chuyến đi'),
+                  OutlinedButton(
+                    key: const Key('tour-visit-request'),
+                    onPressed: () => context.push('/shop/visit?household=${tour.householdId}&tour=${tour.id}'),
+                    child: const Text('Muốn ghé thăm hộ nông dân? Gửi yêu cầu tham quan'),
+                  ),
+                  const SizedBox(height: 10),
                   LinkRow(
                     kind: 'Hợp tác xã · nguồn lõi',
                     title: shortHtxName(htx),
@@ -203,7 +205,110 @@ class TourDetailScreen extends StatelessWidget {
             ),
           ],
         );
+        return Column(
+          children: [
+            Expanded(child: page),
+            _BookBar(tour: tour, departures: departures),
+          ],
+        );
       },
+    );
+  }
+}
+
+/// Sticky bar of the tour page: the price and the main action, booking a departure.
+class _BookBar extends StatelessWidget {
+  const _BookBar({required this.tour, required this.departures});
+  final Tour tour;
+  final List<Departure> departures;
+
+  void _pick(BuildContext context) {
+    // A guest signs in first and comes back to this page, then picks the date.
+    if (context.read<AppState>().claims == null) {
+      final here = GoRouterState.of(context).uri.toString();
+      context.push('/login?from=${Uri.encodeComponent(here)}');
+      return;
+    }
+    final open = departures.where((d) => d.seatsLeft > 0).toList();
+    if (open.length == 1) {
+      context.push('/shop/booking/${tour.id}?dep=${open.first.id}');
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.cream,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Chọn ngày khởi hành', style: serif(22)),
+              const SizedBox(height: 12),
+              for (final d in open)
+                ListTile(
+                  key: Key('pick-${d.id}'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(formatDateLong(d.date), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text('Còn ${d.seatsLeft} chỗ'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(sheet).pop();
+                    context.push('/shop/booking/${tour.id}?dep=${d.id}');
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasSeats = departures.any((d) => d.seatsLeft > 0);
+    final signedIn = context.watch<AppState>().claims != null;
+    return Material(
+      color: Colors.white,
+      elevation: 6,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    signedIn ? 'Từ' : 'Từ · đăng nhập để đặt',
+                    style: const TextStyle(fontSize: 12, color: AppColors.faint),
+                  ),
+                  Text(
+                    '${formatVnd(tour.adultPrice)} /người',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.amber),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 50,
+              child: FilledButton(
+                key: const Key('tour-book'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.amber,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                onPressed: hasSeats ? () => _pick(context) : null,
+                child: Text(hasSeats ? 'Đặt tour' : 'Hết chỗ'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
