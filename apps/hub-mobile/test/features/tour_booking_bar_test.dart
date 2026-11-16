@@ -46,7 +46,7 @@ void main() {
       await _openTour(tester, email: 'customer@demo.vn');
       await tester.tap(find.byKey(const Key('tour-book')));
       await tester.pumpAndSettle();
-      expect(find.text('Chọn ngày đi'), findsOneWidget);
+      expect(find.text('Ngày đi'), findsOneWidget);
       expect(find.text('Tạm tính'), findsOneWidget);
       expect(find.byKey(const Key('booking-bar-total')), findsOneWidget);
       expect(find.byKey(const Key('tour-book')), findsNothing);
@@ -57,7 +57,7 @@ void main() {
       await tester.tap(find.byKey(const Key('tour-book')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('login-submit')), findsOneWidget);
-      expect(find.text('Chọn ngày đi'), findsNothing);
+      expect(find.text('Ngày đi'), findsNothing);
     });
 
     testWidgets('the household visit request stays reachable as a secondary action', (tester) async {

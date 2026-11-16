@@ -36,7 +36,7 @@ void main() {
   group('booking screen: date, people, contact, then the price and continue', () {
     testWidgets('shows dates, both guest types and the estimate', (tester) async {
       await _openBooking(tester);
-      expect(find.text('Chọn ngày đi'), findsOneWidget);
+      expect(find.text('Ngày đi'), findsOneWidget);
       expect(find.byKey(const Key('date-dep-01')), findsOneWidget);
       expect(find.text('Số khách'), findsOneWidget);
       expect(find.text('Người lớn'), findsOneWidget);
@@ -66,11 +66,10 @@ void main() {
       expect(find.byKey(const Key('booking-submit')), findsOneWidget);
     });
 
-    testWidgets('more dates opens the full list', (tester) async {
+    testWidgets('every open date is in one scrollable row', (tester) async {
       await _openBooking(tester);
-      await tester.tap(find.byKey(const Key('booking-more-dates')));
-      await tester.pumpAndSettle();
-      expect(find.text('Tất cả ngày khởi hành'), findsOneWidget);
+      expect(find.byKey(const Key('booking-dates')), findsOneWidget);
+      expect(find.byKey(const Key('booking-more-dates')), findsNothing);
     });
 
     testWidgets('at least one adult is kept', (tester) async {
