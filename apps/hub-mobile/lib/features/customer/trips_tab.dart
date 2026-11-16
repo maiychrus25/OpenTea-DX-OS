@@ -90,37 +90,69 @@ class _TripsTabState extends State<TripsTab> {
                 ),
               ),
             ),
-          const SizedBox(height: 4),
-          if (signedIn && bookings.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: SizedBox(
-                height: 52,
-                child: OutlinedButton(
-                  key: const Key('trips-tickets'),
-                  onPressed: () => context.push('/shop/tickets'),
-                  child: const Text('Xem tất cả vé'),
-                ),
-              ),
-            ),
+          const SizedBox(height: 6),
           if (signedIn)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: SizedBox(
-                height: 52,
-                child: OutlinedButton(
-                  key: const Key('trips-orders'),
-                  onPressed: () => context.push('/shop/orders'),
-                  child: const Text('Đơn hàng của tôi'),
-                ),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _QuickTile(
+                      key: const Key('trips-tickets'),
+                      icon: Icons.confirmation_number_outlined,
+                      title: 'Vé của tôi',
+                      subtitle: bookings.isEmpty ? 'Chưa có vé' : '${bookings.length} chuyến',
+                      onTap: () => context.push('/shop/tickets'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickTile(
+                      key: const Key('trips-orders'),
+                      icon: Icons.receipt_long_outlined,
+                      title: 'Đơn hàng',
+                      subtitle: 'Mua chè, đặc sản',
+                      onTap: () => context.push('/shop/orders'),
+                    ),
+                  ),
+                ],
               ),
             ),
-          SizedBox(
-            height: 52,
-            child: FilledButton(
+          const SizedBox(height: 12),
+          Material(
+            color: AppColors.teaDark,
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
               key: const Key('trips-find'),
-              onPressed: () => context.push('/shop/tours'),
-              child: const Text('Tìm thêm tour'),
+              borderRadius: BorderRadius.circular(20),
+              onTap: () => context.push('/shop/tours'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.16), shape: BoxShape.circle),
+                      child: const Icon(Icons.hiking, color: Colors.white),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tìm thêm tour',
+                            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                          ),
+                          Text('Chọn ngày và đặt chỗ ngay', style: TextStyle(color: Color(0xCCFFFFFF), fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward, color: Colors.white),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -137,5 +169,46 @@ class _TripsTabState extends State<TripsTab> {
       border: Border.all(color: AppColors.border),
     ),
     child: Text(text, style: const TextStyle(color: AppColors.muted, height: 1.4)),
+  );
+}
+
+/// A rounded tile with an icon, a title and a short line: a shortcut under the list of trips.
+class _QuickTile extends StatelessWidget {
+  const _QuickTile({super.key, required this.icon, required this.title, required this.subtitle, required this.onTap});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.tileLight,
+    borderRadius: BorderRadius.circular(20),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 30, color: AppColors.teaDark),
+                const Spacer(),
+                const Icon(Icons.chevron_right, color: AppColors.teaDark),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: AppColors.ink),
+            ),
+            const SizedBox(height: 2),
+            Text(subtitle, style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+          ],
+        ),
+      ),
+    ),
   );
 }
