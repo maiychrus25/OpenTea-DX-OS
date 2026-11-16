@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../app/app_state.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/customer/booking_form_screen.dart';
+import '../../features/customer/notifications_screen.dart';
 import '../../features/customer/cart_tab.dart';
 import '../../features/customer/home_tab.dart';
 import '../../features/customer/household_screen.dart';
@@ -69,6 +70,7 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         tab('/shop/products', const InnerPage(title: 'Sản phẩm', child: ProductsTab())),
         tab('/shop/cart', const InnerPage(title: 'Giỏ hàng', child: CartTab())),
         tab('/shop/me', const InnerPage(title: 'Tài khoản', child: CustomerAccountTab())),
+        tab('/shop/notifications', const CustomerNotificationsScreen()),
         tab('/shop/news', const NewsScreen()),
         GoRoute(
           path: '/shop/tours/:id',

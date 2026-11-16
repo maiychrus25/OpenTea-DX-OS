@@ -86,7 +86,7 @@ void main() {
       await _openHome(tester, width: 640);
       expect(tester.takeException(), isNull);
       expect(find.byKey(const Key('home-menu')), findsOneWidget);
-      expect(find.byKey(const Key('home-account')), findsOneWidget);
+      expect(find.byKey(const Key('home-notifications')), findsOneWidget);
     });
   });
 }

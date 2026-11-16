@@ -70,7 +70,7 @@ void main() {
       await _pump(tester);
       await _guest(tester);
       expect(find.text('Về Xứ Chè'), findsNothing);
-      expect(find.byKey(const Key('home-account')), findsOneWidget);
+      expect(find.byKey(const Key('home-notifications')), findsOneWidget);
       expect(find.text('Tìm đồi chè, trải nghiệm'), findsOneWidget);
       expect(find.text('Khám phá ngay ›'), findsOneWidget);
       expect(find.text('Khám phá ngay ›'), findsOneWidget);
@@ -98,7 +98,7 @@ void main() {
       await _guest(tester);
       expect(find.byKey(const Key('home-cart')), findsOneWidget);
       expect(find.byKey(const Key('home-orders')), findsNothing);
-      await tester.tap(find.byKey(const Key('home-account')));
+      await tester.tap(find.text('Tài khoản').first);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('account-login')));
       await tester.pumpAndSettle();
@@ -127,7 +127,7 @@ void main() {
       expect(tester.takeException(), isNull);
       final logo = tester.getTopLeft(find.byType(LeafLogo).first).dy;
       final search = tester.getTopLeft(find.byKey(const Key('home-search'))).dy;
-      final account = tester.getTopLeft(find.byKey(const Key('home-account'))).dy;
+      final account = tester.getTopLeft(find.byKey(const Key('home-notifications'))).dy;
       expect((search - logo).abs(), lessThan(24));
       expect((account - logo).abs(), lessThan(24));
     });
@@ -159,7 +159,7 @@ void main() {
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
       await tester.pumpAndSettle();
       expect(tester.getTopLeft(find.byKey(const Key('home-search'))), before);
-      expect(find.byKey(const Key('home-account')), findsOneWidget);
+      expect(find.byKey(const Key('home-notifications')), findsOneWidget);
     });
 
     testWidgets('submitting the search bar lists the matching tours', (tester) async {

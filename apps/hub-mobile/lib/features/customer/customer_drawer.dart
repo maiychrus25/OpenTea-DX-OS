@@ -106,6 +106,7 @@ class CustomerDrawer extends StatelessWidget {
                   group('CỦA TÔI'),
                   item('cart', Icons.shopping_basket_outlined, 'Giỏ hàng', '/shop/cart', badge: cart),
                   item('trips', Icons.event_note_outlined, 'Lịch trình', '/shop/trips'),
+                  item('notifications', Icons.notifications_none, 'Thông báo', '/shop/notifications'),
                   if (signedIn) ...[
                     item('tickets', Icons.confirmation_number_outlined, 'Vé của tôi', '/shop/tickets', push: true),
                     item('orders', Icons.receipt_long_outlined, 'Đơn hàng', '/shop/orders', push: true),

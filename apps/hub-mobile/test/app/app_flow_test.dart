@@ -113,6 +113,7 @@ void main() {
     for (final e in expected.entries) {
       await _pump(tester);
       await _login(tester, e.key);
+      if (e.key == 'farmer@demo.vn') await tester.scrollUntilVisible(find.text(e.value), 300);
       expect(find.text(e.value), findsWidgets, reason: e.key);
     }
   });
@@ -144,6 +145,7 @@ void main() {
   testWidgets('farmer checks in a confirmed group of own household', (tester) async {
     await _pump(tester);
     await _login(tester, 'farmer@demo.vn');
+    await tester.scrollUntilVisible(find.byKey(const Key('visit-bk-01')), 300);
     await tester.tap(find.byKey(const Key('visit-bk-01')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('farmer-checkin')));
@@ -165,7 +167,7 @@ void main() {
   testWidgets('sign out returns to the first screen', (tester) async {
     await _pump(tester);
     await _login(tester, 'customer@demo.vn');
-    await tester.tap(find.byKey(const Key('home-account')));
+    await tester.tap(find.text('Tài khoản').first);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('account-logout')));
     await tester.pumpAndSettle();

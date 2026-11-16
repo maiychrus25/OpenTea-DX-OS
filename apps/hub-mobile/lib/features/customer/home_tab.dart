@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../app/activity_controller.dart';
 import '../../app/app_state.dart';
 import '../../app/cart_controller.dart';
 import '../../core/format/formatting.dart';
@@ -13,6 +14,7 @@ import '../../core/theme/app_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/catalog.dart';
 import '../../shared/widgets.dart';
+import 'notifications_screen.dart';
 import 'tour_widgets.dart';
 
 typedef _HomeData = (List<Tour>, List<Htx>, List<Product>, List<Article>);
@@ -355,67 +357,76 @@ class _BrandBarState extends State<_BrandBar> {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-    color: AppColors.cream,
-    padding: const EdgeInsets.fromLTRB(4, 10, 4, 10),
-    child: Row(
-      children: [
-        IconButton(
-          key: const Key('home-menu'),
-          tooltip: 'Menu',
-          iconSize: 28,
-          onPressed: () => Scaffold.of(context).openDrawer(),
-          icon: const Icon(Icons.menu),
-        ),
-        const LeafLogo(size: 36),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Container(
-            height: 46,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: AppColors.paper,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFD3DDD2), width: 1.5),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.search, size: 22, color: AppColors.teaDark),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    key: const Key('home-search'),
-                    controller: _query,
-                    textInputAction: TextInputAction.search,
-                    style: const TextStyle(fontSize: 15),
-                    onSubmitted: _submit,
-                    decoration: const InputDecoration(
-                      hintText: 'Tìm đồi chè, trải nghiệm',
-                      hintMaxLines: 1,
-                      hintStyle: TextStyle(color: AppColors.faint, fontSize: 15, overflow: TextOverflow.ellipsis),
-                      isDense: true,
-                      filled: false,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
+  Widget build(BuildContext context) {
+    final activity = context.watch<ActivityController>();
+    final badge = customerNoticeBadge(activity.bookings, activity.orders);
+    return Container(
+      color: AppColors.cream,
+      padding: const EdgeInsets.fromLTRB(4, 10, 4, 10),
+      child: Row(
+        children: [
+          IconButton(
+            key: const Key('home-menu'),
+            tooltip: 'Menu',
+            iconSize: 28,
+            onPressed: () => Scaffold.of(context).openDrawer(),
+            icon: const Icon(Icons.menu),
+          ),
+          const LeafLogo(size: 36),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: AppColors.paper,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0xFFD3DDD2), width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search, size: 22, color: AppColors.teaDark),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      key: const Key('home-search'),
+                      controller: _query,
+                      textInputAction: TextInputAction.search,
+                      style: const TextStyle(fontSize: 15),
+                      onSubmitted: _submit,
+                      decoration: const InputDecoration(
+                        hintText: 'Tìm đồi chè, trải nghiệm',
+                        hintMaxLines: 1,
+                        hintStyle: TextStyle(color: AppColors.faint, fontSize: 15, overflow: TextOverflow.ellipsis),
+                        isDense: true,
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        IconButton(
-          key: const Key('home-account'),
-          tooltip: 'Tài khoản',
-          iconSize: 30,
-          onPressed: () => context.push('/shop/me'),
-          icon: const Icon(Icons.person_outline),
-        ),
-      ],
-    ),
-  );
+          IconButton(
+            key: const Key('home-notifications'),
+            tooltip: 'Thông báo',
+            iconSize: 28,
+            onPressed: () => context.push('/shop/notifications'),
+            icon: Badge(
+              isLabelVisible: badge > 0,
+              label: Text('$badge'),
+              backgroundColor: AppColors.danger,
+              child: const Icon(Icons.notifications_none),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Quick links to cart, orders and tickets under the category tiles.
