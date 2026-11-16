@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/format/formatting.dart';
 import '../../core/theme/staff_theme.dart';
+import '../../data/core/core_exception.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/staff.dart';
 import '../../shared/widgets.dart' show LoadView, showMessage;
@@ -155,7 +156,9 @@ class _JournalFormPageState extends State<JournalFormPage> {
       showMessage(context, 'Đã gửi nhật ký, đang chờ duyệt');
       context.pop();
     } on HubException catch (e) {
-      if (mounted) showMessage(context, e.message);
+      if (mounted) {
+        showMessage(context, e.message, onRetry: e is CoreException && e.retryable ? () => _submit(scope) : null);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/format/formatting.dart';
 import '../../core/theme/staff_theme.dart';
+import '../../data/core/core_exception.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/staff.dart';
 import '../../shared/widgets.dart' show LoadView, showMessage;
@@ -22,7 +23,9 @@ Future<void> _guard(BuildContext context, Future<Object?> Function() action) asy
   try {
     await action();
   } on HubException catch (e) {
-    if (context.mounted) showMessage(context, e.message);
+    if (!context.mounted) return;
+    // A passing failure (offline, 503) offers to try the same call again.
+    showMessage(context, e.message, onRetry: e is CoreException && e.retryable ? () => _guard(context, action) : null);
   }
 }
 
@@ -70,7 +73,9 @@ class _SchedulePageState extends State<SchedulePage> {
         return _list(reload, [
           PageHead(
             'Lịch thu hoạch dự kiến',
-            subtitle: scope.canWrite ? 'Chạm vào một thửa để đổi ngày dự kiến.' : 'Các thửa đang chờ đến kỳ thu hái.',
+            subtitle: scope.canReschedule
+                ? 'Chạm vào một thửa để đổi ngày dự kiến.'
+                : 'Các thửa đang chờ đến kỳ thu hái.',
           ),
           SectionCard(
             title: 'Tháng ${_month.month}/${_month.year}',
@@ -141,7 +146,7 @@ class _SchedulePageState extends State<SchedulePage> {
                   subtitle: '${p.householdName} · ${fmtHa(p.areaHa)} · dự kiến ${fmtTon(p.expectedKg)}',
                   meta: _dueText(p.estimatedHarvestDate!, now),
                   trailing: Pill(p.status.label, tone: parcelTone(p.status)),
-                  footer: scope.canWrite
+                  footer: scope.canReschedule
                       ? Align(
                           alignment: Alignment.centerRight,
                           child: OutlinedButton.icon(
@@ -523,22 +528,24 @@ class _ReviewButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Expanded(
-        child: OutlinedButton(
-          key: Key('journal-reject-${entry.id}'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: StaffColors.bad,
-            side: const BorderSide(color: StaffColors.bad),
-            minimumSize: const Size(0, 42),
+      if (scope.repo.canRejectJournal) ...[
+        Expanded(
+          child: OutlinedButton(
+            key: Key('journal-reject-${entry.id}'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: StaffColors.bad,
+              side: const BorderSide(color: StaffColors.bad),
+              minimumSize: const Size(0, 42),
+            ),
+            onPressed: () async {
+              await _guard(context, () => scope.repo.reviewJournal(entry.id, approve: false));
+              await onDone();
+            },
+            child: const Text('Từ chối'),
           ),
-          onPressed: () async {
-            await _guard(context, () => scope.repo.reviewJournal(entry.id, approve: false));
-            await onDone();
-          },
-          child: const Text('Từ chối'),
         ),
-      ),
-      const SizedBox(width: 10),
+        const SizedBox(width: 10),
+      ],
       Expanded(
         child: FilledButton(
           key: Key('journal-approve-${entry.id}'),

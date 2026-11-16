@@ -423,10 +423,16 @@ class InfoRow extends StatelessWidget {
   );
 }
 
-void showMessage(BuildContext context, String text) {
+void showMessage(BuildContext context, String text, {VoidCallback? onRetry}) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(text), behavior: SnackBarBehavior.floating));
+    ..showSnackBar(
+      SnackBar(
+        content: Text(text),
+        behavior: SnackBarBehavior.floating,
+        action: onRetry == null ? null : SnackBarAction(label: 'Thử lại', onPressed: onRetry),
+      ),
+    );
 }
 
 /// Loads a future and shows spinner, error with retry, or the data.

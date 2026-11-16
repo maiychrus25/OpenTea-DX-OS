@@ -133,70 +133,8 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: EdgeInsets.only(bottom: 10),
             child: Center(child: StatusChip('Cần đăng nhập để tiếp tục')),
           ),
-        _demoBox(),
-        const SizedBox(height: 14),
-        _PillField(
-          fieldKey: const Key('login-email'),
-          controller: _email,
-          hint: 'Email',
-          keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 14),
-        _PillField(
-          fieldKey: const Key('login-password'),
-          controller: _password,
-          hint: 'Mật khẩu',
-          obscure: _hidden,
-          trailing: IconButton(
-            key: const Key('login-eye'),
-            tooltip: _hidden ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
-            onPressed: () => setState(() => _hidden = !_hidden),
-            icon: Icon(_hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-          ),
-        ),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
-            child: Text(
-              _error!,
-              key: const Key('login-error'),
-              style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
-            ),
-          ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: () => showMessage(context, 'Bản chính thức sẽ khôi phục mật khẩu qua Keycloak.'),
-            child: const Text('Quên mật khẩu?', style: TextStyle(fontSize: 15)),
-          ),
-        ),
-        const SizedBox(height: 6),
-        SizedBox(
-          height: 56,
-          child: FilledButton(
-            key: const Key('login-submit'),
-            onPressed: _busy ? null : _submit,
-            style: FilledButton.styleFrom(textStyle: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
-            child: Text(_busy ? 'Đang đăng nhập...' : 'Đăng nhập'),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            children: [
-              const Text('Chưa có tài khoản? ', style: TextStyle(fontSize: 16)),
-              InkWell(
-                key: const Key('login-register'),
-                onTap: () => showMessage(context, 'Bản chính thức sẽ cho đăng ký tài khoản qua Keycloak.'),
-                child: const Text(
-                  'Đăng ký',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.teaGreen),
-                ),
-              ),
-            ],
-          ),
-        ),
+        if (!_browser) ...[_demoBox(), const SizedBox(height: 14), ..._passwordFields()],
+        if (_browser) ...[..._browserButton(), const SizedBox(height: 12)],
         SizedBox(
           height: 52,
           child: OutlinedButton(
@@ -207,6 +145,102 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ],
     );
+  }
+
+  /// True when sign-in opens the system browser (Keycloak): no demo box, no password field.
+  bool get _browser => !context.read<AppState>().usesPasswordForm;
+
+  List<Widget> _browserButton() => [
+    const SizedBox(height: 8),
+    SizedBox(
+      height: 56,
+      child: FilledButton(
+        key: const Key('login-keycloak'),
+        onPressed: _busy ? null : _submit,
+        style: FilledButton.styleFrom(
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+        child: Text(_busy ? 'Đang mở trang đăng nhập...' : 'Đăng nhập bằng tài khoản HTX'),
+      ),
+    ),
+    if (_error != null)
+      Padding(
+        padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
+        child: Text(
+          _error!,
+          key: const Key('login-error'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+        ),
+      ),
+  ];
+
+  List<Widget> _passwordFields() {
+    return [
+      _PillField(
+        fieldKey: const Key('login-email'),
+        controller: _email,
+        hint: 'Email',
+        keyboardType: TextInputType.emailAddress,
+      ),
+      const SizedBox(height: 14),
+      _PillField(
+        fieldKey: const Key('login-password'),
+        controller: _password,
+        hint: 'Mật khẩu',
+        obscure: _hidden,
+        trailing: IconButton(
+          key: const Key('login-eye'),
+          tooltip: _hidden ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+          onPressed: () => setState(() => _hidden = !_hidden),
+          icon: Icon(_hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+        ),
+      ),
+      if (_error != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
+          child: Text(
+            _error!,
+            key: const Key('login-error'),
+            style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+          ),
+        ),
+      Align(
+        alignment: Alignment.centerRight,
+        child: TextButton(
+          onPressed: () => showMessage(context, 'Bản chính thức sẽ khôi phục mật khẩu qua Keycloak.'),
+          child: const Text('Quên mật khẩu?', style: TextStyle(fontSize: 15)),
+        ),
+      ),
+      const SizedBox(height: 6),
+      SizedBox(
+        height: 56,
+        child: FilledButton(
+          key: const Key('login-submit'),
+          onPressed: _busy ? null : _submit,
+          style: FilledButton.styleFrom(textStyle: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600)),
+          child: Text(_busy ? 'Đang đăng nhập...' : 'Đăng nhập'),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          children: [
+            const Text('Chưa có tài khoản? ', style: TextStyle(fontSize: 16)),
+            InkWell(
+              key: const Key('login-register'),
+              onTap: () => showMessage(context, 'Bản chính thức sẽ cho đăng ký tài khoản qua Keycloak.'),
+              child: const Text(
+                'Đăng ký',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.teaGreen),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
   }
 
   Widget _demoBox() {

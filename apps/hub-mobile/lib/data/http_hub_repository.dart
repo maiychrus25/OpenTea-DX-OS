@@ -5,6 +5,7 @@ import 'core/core_exception.dart';
 import 'core/core_mappers.dart';
 import 'core/core_queries.dart';
 import 'core/graphql_client.dart';
+import 'core/hub_api_client.dart';
 import 'hub_repository.dart';
 import 'models/booking.dart';
 import 'models/catalog.dart';
@@ -16,8 +17,14 @@ import 'models/staff.dart';
 /// [_shop], which is the sample repository until the Gian hàng mini-app exists
 /// (tours, products, orders, payments, articles, bulletins, weather, reports).
 ///
-/// NOT verified against a running Hasura/Keycloak: it follows the metadata in
-/// `platform/hasura/metadata` and the web's gateway readers, nothing more.
+/// Writes go to the web API with the same Bearer token ([HubApiClient]), only
+/// through the routes the web opens to mobile apps (`docs/api-contract.md`,
+/// "Bearer token (mobile apps)"): journal create and batch-approve, notification
+/// mark-read and announce. Rejecting an entry and changing a harvest date have no
+/// such route, so they stay unsupported and the screens hide them.
+///
+/// NOT verified against a running Hasura/Keycloak/web: it follows the metadata in
+/// `platform/hasura/metadata`, the web's gateway readers and the route sources.
 ///
 /// Scoping: the `htxCode` arguments are ignored on purpose. Hasura picks the
 /// HTX from the token's `htx_code`; a client-side code would add nothing. For a
@@ -25,18 +32,31 @@ import 'models/staff.dart';
 /// but the real guard is Hasura's row permission on `keycloak_user_id`: a
 /// farmer token gets only its own household whatever this client sends.
 class HttpHubRepository implements HubRepository {
-  HttpHubRepository({required GraphqlClient core, required HubRepository shop}) : _core = core, _shop = shop;
+  /// Without [api] the repository is read-only (every write is unsupported).
+  HttpHubRepository({required GraphqlClient core, required HubRepository shop, HubApiClient? api})
+    : _core = core,
+      _shop = shop,
+      _api = api;
 
   final GraphqlClient _core;
   final HubRepository _shop;
+  final HubApiClient? _api;
 
   @override
   bool get coreIsSample => false;
 
-  /// Hasura has no insert/update permission on these tables, and the web's
-  /// write routes need the web session. No write endpoint is invented here.
+  /// Hasura has no insert/update permission on these tables; writes use the web
+  /// API's Bearer routes, so they exist only when an [HubApiClient] is given.
   @override
-  bool get coreWritable => false;
+  bool get coreWritable => _api != null;
+
+  /// `PUT /api/journal/{id}` changes content, not status: no reject route for Bearer callers.
+  @override
+  bool get canRejectJournal => false;
+
+  /// The harvest schedule routes (`/api/schedule/harvest`) do not accept Bearer tokens.
+  @override
+  bool get canRescheduleHarvest => false;
 
   @override
   Future<HtxProfile> getHtxProfile(String htxCode) async {
@@ -100,24 +120,89 @@ class HttpHubRepository implements HubRepository {
           },
         };
 
-  // ---- Reads only: no write permission exists in Hasura for these roles ----
+  // ---- Writes through the web API's Bearer routes ----
 
-  @override
-  Future<JournalEntry> reviewJournal(String entryId, {required bool approve}) async =>
-      throw const CoreException.unsupported();
+  HubApiClient get _write => _api ?? (throw const CoreException.unsupported());
 
+  /// `POST /api/journal/batch-approve` `{entry_ids: [id]}`; manager or officer.
+  /// Rejecting has no Bearer route.
   @override
-  Future<JournalEntry> addJournal(NewJournalEntry draft) async => throw const CoreException.unsupported();
+  Future<void> reviewJournal(String entryId, {required bool approve}) async {
+    if (!approve) throw const CoreException.unsupported();
+    final data = await _write.send(
+      'POST',
+      '/api/journal/batch-approve',
+      body: {
+        'entry_ids': [entryId],
+      },
+    );
+    final failed = data is Map ? data['failed_ids'] : null;
+    final approved = data is Map ? data['approved_count'] : null;
+    if (failed is List && failed.isNotEmpty || approved is num && approved < 1) {
+      throw const CoreException.conflict();
+    }
+  }
+
+  /// `POST /api/journal` with the web's `journalCreateSchema`: one activity,
+  /// `entry_date` as `yyyy-MM-dd`, `observation` = the notes. No photo (see README).
+  /// The author is the token's user, not a field of the body.
+  @override
+  Future<void> addJournal(NewJournalEntry draft) async {
+    await _write.send('POST', '/api/journal', body: journalCreateBody(draft));
+  }
 
   @override
   Future<Parcel> rescheduleHarvest(String parcelId, DateTime date) async => throw const CoreException.unsupported();
 
+  /// `PUT /api/notifications` `{id, action: "mark-read"}`.
   @override
-  Future<void> markNotificationRead(String id) async => throw const CoreException.unsupported();
+  Future<void> markNotificationRead(String id) async {
+    await _write.send('PUT', '/api/notifications', body: {'id': id, 'action': 'mark-read'});
+  }
 
+  /// `PUT /api/notifications` `{action: "mark-all-read"}` (all of the caller's notifications).
   @override
-  Future<void> markAllNotificationsRead(String htxCode, {String? householdId}) async =>
-      throw const CoreException.unsupported();
+  Future<void> markAllNotificationsRead(String htxCode, {String? householdId}) async {
+    await _write.send('PUT', '/api/notifications', body: {'action': 'mark-all-read'});
+  }
+
+  /// `POST /api/notifications/announce` `{title, body}`; manager or officer (201).
+  @override
+  Future<void> announce({required String title, required String body}) async {
+    await _write.send('POST', '/api/notifications/announce', body: {'title': title.trim(), 'body': body.trim()});
+  }
+
+  /// Body of `POST /api/journal`; mirrors `journalCreateSchema` in `apps/web/src/lib/validations/journal.schema.ts`.
+  static Map<String, Object?> journalCreateBody(NewJournalEntry d) {
+    String? text(String? v) => v == null || v.trim().isEmpty ? null : v.trim();
+    final product = text(d.productName);
+    final dosage = text(d.dosage);
+    final notes = text(d.notes);
+    final days = d.withdrawalDays;
+    String two(int n) => n.toString().padLeft(2, '0');
+    return {
+      'parcel_id': d.parcelId,
+      'entry_date': '${d.entryDate.year.toString().padLeft(4, '0')}-${two(d.entryDate.month)}-${two(d.entryDate.day)}',
+      'observation': ?notes,
+      'activities': [
+        {
+          'activity_type': _activityTypeCode(d.activityType),
+          'product_name': ?product,
+          'dosage': ?dosage,
+          if (days != null && days >= 0) 'withdrawal_days': days,
+        },
+      ],
+    };
+  }
+
+  static String _activityTypeCode(ActivityType t) => switch (t) {
+    ActivityType.sowing => 'SOWING',
+    ActivityType.fertilizing => 'FERTILIZING',
+    ActivityType.spraying => 'SPRAYING',
+    ActivityType.irrigation => 'IRRIGATION',
+    ActivityType.harvest => 'HARVEST',
+    ActivityType.other => 'OTHER',
+  };
 
   // ---- Gian hàng and the rest: sample until the mini-app exists ----
 

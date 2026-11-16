@@ -63,10 +63,17 @@ abstract class HubRepository {
   /// notifications, HTX profile) are served by sample data, so screens can say so.
   bool get coreIsSample;
 
-  /// Whether the core pages can change data from the phone. The real repository
-  /// reads only: Hasura has no insert/update permission for these roles and the
-  /// web's write endpoints use the web session, not a bearer token.
+  /// Whether the core pages can change data from the phone: the farmer's diary
+  /// entry, approving an entry, marking notifications read. False when the real
+  /// repository has no write client (read-only). Single calls the server has no
+  /// Bearer route for are reported by the getters below.
   bool get coreWritable;
+
+  /// False when rejecting a diary entry has no Bearer route (real repository).
+  bool get canRejectJournal;
+
+  /// False when changing a harvest date has no Bearer route (real repository).
+  bool get canRescheduleHarvest;
 
   // Public (guest and everyone)
   Future<List<Htx>> listHtxs();
@@ -119,9 +126,10 @@ abstract class HubRepository {
   Future<List<Member>> listMembers(String htxCode);
   Future<List<JournalEntry>> listJournal(String htxCode, {String? householdId});
 
-  /// Manager approves or rejects a pending diary entry.
-  Future<JournalEntry> reviewJournal(String entryId, {required bool approve});
-  Future<JournalEntry> addJournal(NewJournalEntry draft);
+  /// Manager approves or rejects a pending diary entry. Screens reload the list
+  /// afterwards, so the real repository returns nothing.
+  Future<void> reviewJournal(String entryId, {required bool approve});
+  Future<void> addJournal(NewJournalEntry draft);
 
   /// Manager changes the expected harvest date of a parcel.
   Future<Parcel> rescheduleHarvest(String parcelId, DateTime date);
@@ -129,6 +137,9 @@ abstract class HubRepository {
   Future<List<AppNotification>> listNotifications(String htxCode, {String? householdId});
   Future<void> markNotificationRead(String id);
   Future<void> markAllNotificationsRead(String htxCode, {String? householdId});
+
+  /// Manager or officer sends an announcement to the members of their HTX.
+  Future<void> announce({required String title, required String body});
   Future<List<BulletinItem>> listBulletins();
   Future<List<MarketPrice>> listMarketPrices();
   Future<WeatherNow> currentWeather(String htxCode);

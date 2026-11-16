@@ -25,9 +25,46 @@ void main() {
       expect(const HubConfig(useMock: false).problem, contains('HUB_API_BASE_URL'));
       expect(const HubConfig(useMock: false, baseUrl: 'gateway').problem, isNotNull);
       expect(const HubConfig(useMock: false, baseUrl: 'ftp://x').problem, isNotNull);
-      const ok = HubConfig(useMock: false, baseUrl: 'https://gateway.example');
+      const ok = HubConfig(
+        useMock: false,
+        baseUrl: 'https://gateway.example',
+        keycloakIssuer: 'https://sso.example/realms/agrimarket',
+      );
       expect(ok.problem, isNull);
       expect(ok.useReal, isTrue);
+    });
+
+    test('real mode signs in through Keycloak when an issuer is given', () {
+      const c = HubConfig(useMock: false, baseUrl: 'https://g.example', keycloakIssuer: 'https://sso.example/realms/a');
+      expect(c.useKeycloak, isTrue);
+      expect(c.problem, isNull);
+    });
+
+    test('real mode without issuer or dev token is a configuration problem', () {
+      const c = HubConfig(useMock: false, baseUrl: 'https://g.example');
+      expect(c.useKeycloak, isFalse);
+      expect(c.problem, contains('HUB_KEYCLOAK_ISSUER'));
+    });
+
+    test('a dev token keeps the demo accounts even with an issuer', () {
+      const c = HubConfig(
+        useMock: false,
+        baseUrl: 'https://g.example',
+        keycloakIssuer: 'https://sso.example/realms/a',
+        devToken: 't',
+      );
+      expect(c.useKeycloak, isFalse);
+      expect(c.problem, isNull);
+      expect(const HubConfig(useMock: false, baseUrl: 'https://g.example', devToken: 't').problem, isNull);
+    });
+
+    test('mock mode never uses Keycloak', () {
+      expect(const HubConfig(keycloakIssuer: 'https://sso.example/realms/a').useKeycloak, isFalse);
+    });
+
+    test('the issuer must be a full http(s) address', () {
+      const c = HubConfig(useMock: false, baseUrl: 'https://g.example', keycloakIssuer: 'sso/realms/a');
+      expect(c.problem, contains('HUB_KEYCLOAK_ISSUER'));
     });
 
     test('an address alone does not switch off the sample data', () {

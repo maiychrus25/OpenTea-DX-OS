@@ -13,6 +13,9 @@ import 'core_exception.dart';
 /// token of client `dxos-mobile` (not implemented yet, see [AuthService]).
 typedef BearerProvider = Future<BearerToken?> Function();
 
+/// Asks the auth service for a new token after a 401; null when the session is over.
+typedef BearerRefresher = Future<BearerToken?> Function();
+
 /// GraphQL over HTTP to the core: Hasura behind the APISIX gateway.
 ///
 /// Same contract as `apps/web/src/infrastructure/core/core-gateway.client.ts`:
@@ -29,22 +32,39 @@ class GraphqlClient {
     required String baseUrl,
     required http.Client client,
     required BearerProvider bearer,
+    BearerRefresher? refresh,
     this.timeout = const Duration(seconds: 10),
   }) : _client = client,
        _bearer = bearer,
+       _refresh = refresh,
        endpoint = Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/api/data/graphql');
 
   final Uri endpoint;
   final Duration timeout;
   final http.Client _client;
   final BearerProvider _bearer;
+  final BearerRefresher? _refresh;
 
   /// Runs [query] and returns its `data` object. Throws [CoreException] with a
   /// Vietnamese message for every failure.
+  ///
+  /// On a 401 (or a Hasura invalid-jwt error) it asks for a new token once and
+  /// repeats the request; if that fails too the user must sign in again.
   Future<Map<String, Object?>> query(String query, {Map<String, Object?> variables = const {}}) async {
     final bearer = await _bearer();
     if (bearer == null || bearer.token.isEmpty) throw const CoreException.unauthorized();
+    try {
+      return await _run(bearer, query, variables);
+    } on CoreException catch (e) {
+      final refresh = _refresh;
+      if (e.kind != CoreErrorKind.unauthorized || refresh == null) rethrow;
+      final fresh = await refresh();
+      if (fresh == null || fresh.token.isEmpty) rethrow;
+      return _run(fresh, query, variables);
+    }
+  }
 
+  Future<Map<String, Object?>> _run(BearerToken bearer, String query, Map<String, Object?> variables) async {
     final http.Response response;
     try {
       response = await _client

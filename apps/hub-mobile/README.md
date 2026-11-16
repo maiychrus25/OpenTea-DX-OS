@@ -10,8 +10,8 @@ Một app Flutter (Dart) cho Android và iOS, nhiều vai trong một mã nguồ
 sự thật; chỗ khác nhau thì bản 2026-11-16 thắng.
 
 > **Trạng thái:** mặc định chạy trên **dữ liệu mẫu trong bộ nhớ** và **tài khoản dùng thử**. Đã viết sẵn phần đọc dữ liệu lõi thật
-> (Hasura) cho màn hình cán bộ, trưởng HTX và nông dân, **nhưng chưa từng chạy với Hasura/Keycloak thật** (xem "Dữ liệu lõi thật" và
-> "Chưa kiểm chứng"). Chưa có đăng nhập Keycloak.
+> (Hasura) cho màn hình cán bộ, trưởng HTX và nông dân, đăng nhập Keycloak (PKCE) và vài lệnh ghi qua API web bằng Bearer token,
+> **nhưng chưa từng chạy với Keycloak, Hasura hay web thật** (xem "Chạy chế độ thật" và "Chưa kiểm chứng").
 
 Danh sách chức năng từng vai, và cái nào bỏ, nằm ở `docs/specs/2026-11-16-multirole-app-features.md`. Bản này đã **bỏ** các mục
 giả theo §7 của tài liệu đó: tab "Đã lưu" (tim yêu thích), tab "Bản đồ" vẽ minh hoạ, "Chỉ đạo và nhiệm vụ" của công ty du lịch, và các
@@ -78,7 +78,9 @@ lib/
   data/      hub_repository.dart (giao diện), mock_hub_repository.dart + seed_data.dart (dữ liệu mẫu),
              http_hub_repository.dart (lõi thật qua GraphQL + phần còn lại giao cho bản mẫu), hub_config.dart (--dart-define),
              core/ (graphql_client, core_queries, core_mappers, core_exception),
-             auth_service.dart (giao diện, có `bearerToken()`), demo_auth_service.dart, local_store.dart (lưu trong máy), models/
+             auth_service.dart (giao diện: `bearerToken()`, `refreshBearer()`), demo_auth_service.dart, keycloak_auth_service.dart,
+             auth/ (oidc_client, appauth_oidc_client, token_store, jwt_claims), core/hub_api_client.dart (lệnh ghi bằng Bearer),
+             local_store.dart (lưu trong máy), models/
   app/       AppState (phiên), CartController, ActivityController (đơn và vé), HubApp
   features/  auth, customer, farmer, manager, operator, common
   shared/    widget dùng chung
@@ -93,9 +95,9 @@ Quy ước: tên trong mã bằng tiếng Anh, chữ hiển thị bằng tiếng
 
 | Phần | Hiện tại |
 | --- | --- |
-| Dữ liệu lõi (thành viên/hộ, thửa đất, nhật ký, lịch thu hái, lô, thông báo, hồ sơ HTX) | **Mẫu** theo mặc định; **thật nhưng chưa kiểm chứng** khi bật `HUB_USE_MOCK=false` (xem mục dưới). Chỉ đọc |
+| Dữ liệu lõi (thành viên/hộ, thửa đất, nhật ký, lịch thu hái, lô, thông báo, hồ sơ HTX) | **Mẫu** theo mặc định; **thật nhưng chưa kiểm chứng** khi bật `HUB_USE_MOCK=false` (xem mục dưới). Đọc qua GraphQL; ghi qua các đường Bearer của web (bảng "Ghi dữ liệu"), trừ từ chối nhật ký, đổi ngày thu hoạch, ảnh |
 | Dữ liệu Gian hàng (tour, sản phẩm, đơn, lượt đặt, bài viết, sổ thu) | **Giả**: `MockHubRepository` trong bộ nhớ, mất khi tắt app. Quy tắc (tồn kho, chỗ trống, chuyển trạng thái, sổ thu chỉ thêm) viết theo hướng dẫn nhưng máy chủ mới là nơi giữ quy tắc thật |
-| Đăng nhập | **Giả**: `DemoAuthService`, tài khoản cố định. Bản thật dùng **Keycloak OIDC, luồng mã xác thực có PKCE, client công khai `dxos-mobile`**, mở bằng trình duyệt hệ thống, token cất trong kho an toàn của hệ điều hành (chưa làm). Phiên dùng thử lưu trong `shared_preferences` |
+| Đăng nhập | Mặc định **giả**: `DemoAuthService`, tài khoản cố định, phiên lưu trong `shared_preferences`. Chế độ thật: `KeycloakAuthService`, **Keycloak OIDC, mã xác thực có PKCE (S256), client công khai `dxos-mobile`**, mở bằng trình duyệt hệ thống, token cất trong kho an toàn của hệ điều hành (Android Keystore, iOS Keychain). Đã viết và thử bằng máy chủ giả, **chưa chạy với Keycloak thật** |
 | Giỏ hàng, đơn và vé của khách | **Thật** (lưu trong máy bằng `shared_preferences`, mở được khi mất mạng). Khi có mạng, danh sách từ máy chủ ghi đè bản cùng `id` trong máy, mục chỉ có trong máy được giữ lại |
 | Mã VietQR | **Thật** về cấu trúc và CRC (cùng thuật toán và vectơ với `tea-tour`). **Chưa ai quét thử bằng app ngân hàng thật.** Tài khoản ngân hàng trong dữ liệu mẫu là bịa |
 | API Gian hàng | **Chưa có** (mini-app Gian hàng chưa làm). Tour, sản phẩm, đơn, thanh toán, bài viết, bản tin, thời tiết, báo cáo vẫn do `MockHubRepository` phục vụ và có nhãn "Dữ liệu mẫu". Không bịa đường dẫn API |
@@ -107,9 +109,10 @@ Lúc dựng (`--dart-define`), mặc định là dữ liệu mẫu để bản d
 | Biến | Ý nghĩa |
 | --- | --- |
 | `HUB_USE_MOCK=true` (mặc định) | Mọi thứ do `MockHubRepository` phục vụ |
-| `HUB_USE_MOCK=false` | Màn hình lõi đọc từ lõi thật; Gian hàng vẫn là mẫu. Bắt buộc có `HUB_API_BASE_URL`, thiếu thì app báo "Cấu hình chưa đúng" thay vì lặng lẽ dùng dữ liệu mẫu |
-| `HUB_API_BASE_URL=https://...` | Địa chỉ gốc của cổng (APISIX). App gọi `POST {gốc}/api/data/graphql` |
-| `HUB_DEV_TOKEN=...` | Token truy cập lấy từ stack phát triển, **chỉ được nhận trong bản debug** (bản release bỏ qua). Dùng thử bằng tay, không phải đăng nhập |
+| `HUB_USE_MOCK=false` | Màn hình lõi đọc từ lõi thật và đăng nhập bằng Keycloak; Gian hàng vẫn là mẫu. Bắt buộc có `HUB_API_BASE_URL` và `HUB_KEYCLOAK_ISSUER` (hoặc `HUB_DEV_TOKEN` ở bản debug), thiếu thì app báo "Cấu hình chưa đúng" thay vì lặng lẽ dùng dữ liệu mẫu |
+| `HUB_API_BASE_URL=https://...` | Địa chỉ gốc của cổng (APISIX) và của web. App đọc qua `POST {gốc}/api/data/graphql` và ghi qua `{gốc}/api/journal`, `{gốc}/api/notifications` |
+| `HUB_KEYCLOAK_ISSUER=https://.../realms/agrimarket` | Địa chỉ realm Keycloak. Client cố định `dxos-mobile`, chuyển hướng `vn.opentea.hub_mobile:/oauth2redirect`, phạm vi `openid profile email`. Không có bí mật nào trong app (client công khai) |
+| `HUB_DEV_TOKEN=...` | Token truy cập lấy từ stack phát triển, **chỉ được nhận trong bản debug** (bản release bỏ qua). Dùng thử bằng tay, không phải đăng nhập. Có biến này thì app vẫn dùng tài khoản dùng thử như trước, không dùng Keycloak |
 | `HUB_DEV_HOUSEHOLD_ID=...` | Chỉ cùng với `HUB_DEV_TOKEN` ở bản debug: mã hộ thật thay cho mã hộ bịa `hh-01` của tài khoản `farmer@demo.vn` |
 
 ```bash
@@ -120,7 +123,7 @@ flutter run --dart-define=HUB_USE_MOCK=false --dart-define=HUB_API_BASE_URL=http
 Vai gửi lên Hasura (`x-hasura-role`) lấy từ tài khoản dùng thử đã đăng nhập (`manager`, `officer`, `farmer`) và phải là một vai có trong
 token. Không có token thì màn hình lõi hiện "Phiên đăng nhập đã hết hạn hoặc chưa hợp lệ" kèm nút Thử lại, không gọi máy chủ.
 
-## Dữ liệu lõi thật (chỉ đọc)
+## Dữ liệu lõi thật
 
 `HttpHubRepository` (`lib/data/http_hub_repository.dart`) đọc lõi theo cách `apps/web` đọc
 (`apps/web/src/infrastructure/core/gateway-*-reader.ts`): GraphQL tới Hasura qua cổng, tiêu đề `Authorization: Bearer`, `x-hasura-role`.
@@ -146,10 +149,26 @@ Mã HTX không được gửi: Hasura lấy từ `htx_code` trong token.
 tiếng Việt cố định (`lib/data/core/core_exception.dart`), không chứa token hay nội dung thô của máy chủ. Màn hình hiện vòng quay khi tải,
 trạng thái rỗng khi không có dòng, và nút "Thử lại" khi lỗi.
 
-**Chỉ đọc, vì sao.** Trong metadata Hasura, ba vai này **không có quyền insert/update** và các đường ghi của web (`/api/journal`,
-`/api/notifications`...) dùng phiên đăng nhập web, không nhận bearer token. Nên với bản thật: duyệt nhật ký, nông dân ghi nhật ký, đổi ngày
-thu hái và đánh dấu đã đọc **chưa làm được trên app**; các nút đó được ẩn và có dòng "dùng bản web DX-OS". Ở chế độ mẫu các nút vẫn hoạt động.
-Không bịa điểm ghi; cần quyết định phía lõi (mở API ghi chấp nhận bearer) trước.
+**Ghi dữ liệu.** Hasura không cho ba vai này insert/update, nên lệnh ghi đi qua API web bằng `Authorization: Bearer <access token>`, chỉ ở các
+đường mà web đã mở cho app di động (phần "Bearer token (mobile apps)" trong `docs/api-contract.md`). Web tự kiểm token (chữ ký RS256, `iss`, `exp`, `azp`
+= `dxos-mobile`, vai) và kiểm vai, HTX, hộ như với phiên đăng nhập web; app không tự kiểm gì về quyền.
+
+| Việc trong app | Vai | Lệnh gọi | Thân yêu cầu |
+| --- | --- | --- | --- |
+| Nông dân ghi nhật ký | nông dân | `POST /api/journal` | `{parcel_id, entry_date: "yyyy-MM-dd", observation?, activities: [{activity_type, product_name?, dosage?, withdrawal_days?}]}` (đúng `journalCreateSchema`; người ghi lấy từ token) |
+| Duyệt nhật ký | trưởng HTX (web cũng cho cán bộ duyệt; app giữ quy ước "cán bộ chỉ xem") | `POST /api/journal/batch-approve` | `{entry_ids: [id]}`; trả `{approved_count, failed_ids}` |
+| Đánh dấu đã đọc một thông báo | mọi vai có token | `PUT /api/notifications` | `{id, action: "mark-read"}` |
+| Đánh dấu đã đọc tất cả | mọi vai có token | `PUT /api/notifications` | `{action: "mark-all-read"}` |
+| Gửi thông báo cho HTX | trưởng HTX, cán bộ | `POST /api/notifications/announce` | `{title, body}` (có hàm `announce` trong repository và thử nghiệm, **chưa có màn hình** gọi nó) |
+
+**Chưa làm được, nên nút bị ẩn:** *từ chối* nhật ký (web chỉ có duyệt hàng loạt cho token Bearer; `PUT /api/journal/{id}` sửa nội dung, không đổi trạng thái)
+và *đổi ngày thu hoạch* (`/api/schedule/harvest` chưa nhận Bearer). Repository báo `canRejectJournal` và `canRescheduleHarvest` là sai nên màn hình không vẽ các nút đó.
+**Ảnh nhật ký chưa làm:** `POST /api/journal/upload` `{filename, contentType}` trả `{uploadUrl, key}` (PUT thẳng lên URL ký sẵn rồi gửi `photo_minio_key`), hợp đồng đơn giản,
+nhưng cần thêm thư viện chọn ảnh/máy ảnh và quyền camera nên để lại.
+
+**Lỗi ghi** đổi thành câu tiếng Việt cố định, chỉ dựa vào mã HTTP (và `error.code` cho `NO_HTX`), không chép chữ của máy chủ, không chứa token hay nội dung đã gửi:
+401 thử làm mới token đúng một lần rồi mới báo "Hãy đăng nhập lại"; 403 "Bạn không có quyền thực hiện thao tác này."; 404 "Không tìm thấy dữ liệu này"; 400/422 "Dữ liệu chưa hợp lệ";
+409 "Dữ liệu này đã tồn tại..."; 503 "Hệ thống tạm thời không khả dụng. Hãy thử lại sau." (kèm nút "Thử lại" trên thanh thông báo, cũng cho mất mạng và 5xx).
 
 Ở chế độ thật, các phần của tổng quan lấy từ Gian hàng/thị trường/thời tiết (khối "Gian hàng", "Chỉ số giá nông sản", thời tiết, lịch tham quan)
 bị ẩn thay vì trộn số mẫu cạnh số thật.
@@ -159,22 +178,49 @@ bị ẩn thay vì trộn số mẫu cạnh số thật.
 Chip "Dữ liệu mẫu" ở đầu màn hình cho biết màn hình đó do `MockHubRepository` phục vụ: toàn bộ phần khách, các trang Gian hàng và công ty du lịch,
 và cả các trang lõi khi chạy chế độ mẫu. Trang lõi chạy chế độ thật thì không có chip.
 
-## Bước tiếp theo: đăng nhập Keycloak (chưa làm)
+## Chạy chế độ thật với stack dev
 
-`AuthService.bearerToken()` là điểm cắm. Bản thật cần: Keycloak OIDC, luồng mã xác thực có PKCE, **client công khai `dxos-mobile`**, mở bằng trình
-duyệt hệ thống, token cất trong kho an toàn của hệ điều hành và làm mới khi hết hạn, vai đọc từ token. Audience của token phải là `dx-os-core`
-(Hasura từ chối token khác) và token cần claim `htx_code`. Client `dxos-mobile` **chưa có** trong `docker/keycloak/realm-agrimarket.json` (realm hiện chỉ có `nextjs-web`): phải thêm vào realm,
-kèm mapper audience `dx-os-core` và claim `htx_code`, rồi mới đăng nhập được. Trong lúc đó chỉ có thể thử bằng `HUB_DEV_TOKEN` ở bản debug.
+Cần trước: hai PR của nền tảng **phải được gộp và triển khai** (hoặc chạy từ nhánh của chúng): **#41** (client công khai Keycloak `dxos-mobile`, chuyển hướng
+`vn.opentea.hub_mobile:/oauth2redirect`) và **#43** (các đường `/api/journal/**` và `/api/notifications/**` nhận `Authorization: Bearer` của `dxos-mobile`).
+Chưa có hai PR đó thì đăng nhập hoặc ghi sẽ thất bại.
+
+```bash
+make mobile-client      # ở thư mục gốc repo, stack đang chạy: tạo client dxos-mobile nếu realm cũ chưa có
+flutter run \
+  --dart-define=HUB_USE_MOCK=false \
+  --dart-define=HUB_API_BASE_URL=http://<máy-dev>:<cổng-cổng-vào> \
+  --dart-define=HUB_KEYCLOAK_ISSUER=http://<máy-dev>:8080/realms/agrimarket
+```
+
+Máy ảo/điện thoại phải tới được cả hai địa chỉ (trên máy ảo Android, máy chủ trên máy dựng là `10.0.2.2`). Issuer phải **trùng chữ** với `KEYCLOAK_ISSUER` của web
+(web so khớp `iss` của token). Địa chỉ `http://` chỉ chạy ở bản debug (AppAuth bị bật `allowInsecureConnections`) và Android còn có thể chặn HTTP thường; bản release phải là `https`.
+Trước khi dùng cần: một người dùng trong realm có vai `farmer`, `officer` hoặc `manager` và thuộc tính `htx_code`; token cần audience `dx-os-core` (client `dxos-mobile` đã có phạm vi `dx-os-core`).
+
+Cách app xử lý đăng nhập (`lib/data/keycloak_auth_service.dart`):
+
+- Nút "Đăng nhập bằng tài khoản HTX" mở trình duyệt hệ thống (không có ô mật khẩu trong app); mã xác thực có PKCE S256, không có bí mật nào.
+- Vai, tên, `htx_code` đọc từ phần thân access token **không kiểm chữ ký**, chỉ để hiển thị và chọn giao diện. Web kiểm token thật; Hasura giữ quyền theo hàng. Thứ tự vai như web:
+  `manager` > `officer` > `farmer`. Người dùng không có vai nào trong số đó chỉ được vào nếu token ghi rõ vai `customer`; ngược lại bị từ chối (và không lưu gì). Vai `operator` chưa chốt tên nên chưa nhận.
+- Access và refresh token chỉ nằm trong `flutter_secure_storage` (Android Keystore / iOS Keychain) và bộ nhớ, không ở `shared_preferences`, không vào nhật ký hay thông báo lỗi.
+- Token được làm mới trước khi hết hạn (còn dưới 60 giây) và một lần sau mỗi 401. Refresh token bị từ chối (`invalid_grant`) thì xoá token, đăng xuất và về màn hình đầu; lỗi mạng thì giữ phiên.
+- Android: `manifestPlaceholders["appAuthRedirectScheme"] = "vn.opentea.hub_mobile"` trong `android/app/build.gradle.kts`. iOS: scheme `vn.opentea.hub_mobile` trong `ios/Runner/Info.plist`.
+
+Chưa gộp #41/#43 thì chế độ dùng thử (`HUB_USE_MOCK=true`, mặc định) và `HUB_DEV_TOKEN` ở bản debug vẫn chạy như cũ.
 
 ## Chưa kiểm chứng
 
-**Chưa có lần gọi nào tới Hasura hay Keycloak thật.** Docker không chạy được trên máy dựng. Những gì đã kiểm tra là: truy vấn khớp metadata và
+**Chưa có lần gọi nào tới Keycloak, Hasura hay web thật, cả đăng nhập lẫn đọc lẫn ghi.** Docker không chạy được trên máy dựng, cũng không có Android SDK hay Xcode, nên chưa dựng
+APK/iOS và chưa mở trình duyệt đăng nhập trên máy thật. Những gì đã kiểm tra là: truy vấn khớp metadata và
 schema (thử nghiệm đối chiếu), cách ghép yêu cầu và ánh xạ lỗi với máy chủ giả, phân tích dữ liệu bằng JSON viết tay có hình dạng như Hasura trả
-về (không ghi lại từ máy chủ thật). Chưa kiểm: Hasura chấp nhận đúng các truy vấn này với từng vai, giá trị `x-hasura-role`, định dạng ngày giờ
+về (không ghi lại từ máy chủ thật); với phần mới: hình dạng yêu cầu ghi (phương thức, đường dẫn, tiêu đề, thân) so với zod schema trong mã web, luồng làm mới token khi gặp 401 bằng kho token và máy chủ giả,
+ánh xạ lỗi, đọc vai từ JWT không ký dựng tay, và bản web của chế độ dùng thử vẫn dựng và chạy (có chụp màn hình đăng nhập ở cả hai chế độ). Chưa kiểm: toàn bộ luồng PKCE trên Android/iOS (mã lỗi
+`PlatformException` của AppAuth khi huỷ hoặc `invalid_grant` là suy đoán, nên mọi lỗi lạ được coi là tạm thời để không đăng xuất nhầm), redirect `vn.opentea.hub_mobile:/oauth2redirect` với Keycloak thật,
+issuer khớp `iss`, Keycloak/Hasura chấp nhận `x-hasura-role` và audience `dx-os-core` với token của `dxos-mobile`, dạng thân trả về `{data}` của các đường ghi, ID nhật ký/thông báo từ Hasura khớp ID web nhận,
+việc dựng Android với `jni`/`jni_flutter` (kéo theo bởi `path_provider_android`, cần NDK), HTTP thường trên Android debug, hạ tầng khác. Còn chưa kiểm: Hasura chấp nhận đúng các truy vấn này với từng vai, giá trị `x-hasura-role`, định dạng ngày giờ
 thật, CORS khi chạy trên web, quá thời gian và chứng chỉ TLS trên máy thật, hiệu năng với dữ liệu thật.
 
 ## Chưa làm trong khung sườn
 
-Đăng nhập Keycloak, ghi dữ liệu lõi từ app, API Gian hàng, tạo/sửa tour, ngày khởi hành, sản phẩm và bài viết trong app HTX (chỉ xem, gửi duyệt),
+Từ chối nhật ký, đổi ngày thu hoạch và ảnh nhật ký trong app (xem trên), màn hình gửi thông báo, API Gian hàng, tạo/sửa tour, ngày khởi hành, sản phẩm và bài viết trong app HTX (chỉ xem, gửi duyệt),
 đánh giá sau chuyến, lưu địa chỉ, chatbot, video, đồng bộ ngoại tuyến hai chiều (hiện chỉ đọc lại bản lưu), ảnh thật,
 chạy thử trên máy ảo Android/iOS.

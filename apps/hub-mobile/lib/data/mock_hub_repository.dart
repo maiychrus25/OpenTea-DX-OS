@@ -19,6 +19,12 @@ class MockHubRepository implements HubRepository {
   @override
   bool get coreWritable => true;
 
+  @override
+  bool get canRejectJournal => true;
+
+  @override
+  bool get canRescheduleHarvest => true;
+
   MockHubRepository({DateTime? now}) : _now = now ?? DateTime.now() {
     final today = DateTime(_now.year, _now.month, _now.day);
     _departures.addAll(SeedData.departures(today));
@@ -470,6 +476,20 @@ class MockHubRepository implements HubRepository {
     for (final n in await listNotifications(htxCode, householdId: householdId)) {
       await markNotificationRead(n.id);
     }
+  }
+
+  @override
+  Future<void> announce({required String title, required String body}) async {
+    if (title.trim().isEmpty || body.trim().isEmpty) throw const HubException('Cần nhập tiêu đề và nội dung.');
+    _notifications.add(
+      AppNotification(
+        id: 'nt-announce-${_notifications.length + 1}',
+        kind: NotificationKind.announcement,
+        title: title.trim(),
+        body: body.trim(),
+        createdAt: _now,
+      ),
+    );
   }
 
   @override

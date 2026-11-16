@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
+import '../../core/role/role.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/booking.dart';
 import '../../data/models/catalog.dart' show ArticleStatus;
@@ -83,7 +84,7 @@ class StaffScope {
       coreWritable = context.read<HubRepository>().coreWritable,
       coreIsSample = context.read<HubRepository>().coreIsSample,
       _household = context.read<AppState>().claims?.householdId,
-      isFarmer = context.read<AppState>().claims?.householdId != null;
+      isFarmer = context.read<AppState>().role == AppRole.farmer;
 
   final HubRepository repo;
   final String htx;
@@ -91,6 +92,9 @@ class StaffScope {
 
   /// Manager who may change core data: needs the manager role and a repository that can write.
   final bool canWrite;
+
+  /// Manager who may change the harvest date: [canWrite] and a route that allows it.
+  bool get canReschedule => canWrite && repo.canRescheduleHarvest;
 
   /// False with the real repository: the core pages are read-only on the phone.
   final bool coreWritable;

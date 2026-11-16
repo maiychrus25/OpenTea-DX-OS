@@ -34,6 +34,16 @@ class DemoAuthService implements AuthService {
       : c;
   Claims? _claims;
 
+  @override
+  bool get usesPasswordForm => true;
+
+  @override
+  void Function()? onSessionLost;
+
+  /// A demo account has no refresh token: nothing to renew.
+  @override
+  Future<BearerToken?> refreshBearer() async => null;
+
   static const demoPassword = 'Demo@2026';
 
   static const accounts = <String, Claims>{

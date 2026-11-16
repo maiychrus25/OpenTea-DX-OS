@@ -175,6 +175,8 @@ All versions are pinned exactly in `pubspec.yaml`; `pubspec.lock` pins the trans
 | [provider](https://pub.dev/packages/provider) | 6.1.5+1 | MIT | State management (session, cart, orders) |
 | [shared_preferences](https://pub.dev/packages/shared_preferences) | 2.5.6 | BSD-3-Clause | Cart, orders and tickets kept on the device |
 | [qr_flutter](https://pub.dev/packages/qr_flutter) | 4.1.0 | BSD-3-Clause | VietQR payment code and ticket QR (pulls `qr` 3.0.3, BSD-3-Clause) |
+| [flutter_appauth](https://pub.dev/packages/flutter_appauth) | 12.1.0 | BSD-3-Clause | Keycloak sign-in: OIDC authorization code flow with PKCE in the system browser. Wraps the native AppAuth libraries: [AppAuth-Android](https://github.com/openid/AppAuth-Android) 0.11.1 (Apache-2.0; depends only on `androidx.annotation`, `androidx.appcompat`, `androidx.browser`) and AppAuth-iOS (Apache-2.0). No Google Play services. Pulls `flutter_appauth_platform_interface` 12.1.0 (BSD-3-Clause) |
+| [flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage) | 11.2.0 | BSD-3-Clause | Refresh and access tokens in Android Keystore (AES key managed with [Tink](https://github.com/tink-crypto/tink-java) `tink-android` 1.23.0, Apache-2.0, no Play services) and the iOS Keychain. Pulls `flutter_secure_storage_darwin` 0.4.3, `_linux` 3.0.3, `_platform_interface` 2.1.1, `_web` 2.1.1 and `_windows` 4.2.2 (BSD-3-Clause) |
 | [http](https://pub.dev/packages/http) | 1.6.0 | BSD-3-Clause | HTTP client of `HttpHubRepository` (GraphQL calls to the core through the gateway); tests use its `MockClient` (pulls `http_parser` 4.1.2 and `typed_data` 1.4.0, BSD-3-Clause) |
 
 ### Dev Dependencies
@@ -184,7 +186,7 @@ All versions are pinned exactly in `pubspec.yaml`; `pubspec.lock` pins the trans
 | flutter_test (Flutter SDK) | 3.41.7 | BSD-3-Clause | Unit and widget tests |
 | [flutter_lints](https://pub.dev/packages/flutter_lints) | 6.0.0 | BSD-3-Clause | Lint rules for `flutter analyze` |
 
-Transitive packages (all BSD-3-Clause or MIT, checked from their LICENSE files): `characters`, `collection`, `ffi`, `file`, `http_parser`, `logging`, `material_color_utilities`, `meta`, `nested` (MIT), `path`, `path_provider_linux`, `path_provider_platform_interface`, `path_provider_windows`, `platform`, `plugin_platform_interface`, `qr`, `shared_preferences_android`, `shared_preferences_foundation`, `shared_preferences_linux`, `shared_preferences_platform_interface`, `shared_preferences_web`, `shared_preferences_windows`, `typed_data`, `vector_math`, `web`, `xdg_directories`.
+Transitive packages (all BSD-3-Clause or MIT, checked from their LICENSE files; added with `flutter_secure_storage`: `args` 2.7.0, `code_assets` 1.2.1, `crypto` 3.0.8, `ffi_leak_tracker` 0.1.2, `hooks` 2.0.2, `jni` 1.1.2, `jni_flutter` 1.0.4+1, `jni_util` 1.0.0, `objective_c` 9.5.0, `package_config` 3.0.0, `path_provider` 2.1.6, `path_provider_android` 2.3.1, `path_provider_foundation` 2.6.0, `pub_semver` 2.2.1, `record_use` 0.6.0, `win32` 6.4.0, `yaml` 3.1.4): `characters`, `collection`, `ffi`, `file`, `http_parser`, `logging`, `material_color_utilities`, `meta`, `nested` (MIT), `path`, `path_provider_linux`, `path_provider_platform_interface`, `path_provider_windows`, `platform`, `plugin_platform_interface`, `qr`, `shared_preferences_android`, `shared_preferences_foundation`, `shared_preferences_linux`, `shared_preferences_platform_interface`, `shared_preferences_web`, `shared_preferences_windows`, `typed_data`, `vector_math`, `web`, `xdg_directories`.
 
 ---
 
