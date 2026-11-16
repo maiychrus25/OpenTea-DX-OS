@@ -28,25 +28,25 @@ Future<void> _openBooking(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('tour-book')));
   await tester.pumpAndSettle();
-  await tester.tap(find.byKey(const Key('pick-dep-01')).first);
-  await tester.pumpAndSettle();
 }
 
 String _text(WidgetTester tester, String key) => tester.widget<Text>(find.byKey(Key(key))).data!;
 
 void main() {
-  group('booking form: ticket, people, price, then book', () {
-    testWidgets('shows both ticket types, the cost and the total before booking', (tester) async {
+  group('booking screen: date, people, contact, then the price and continue', () {
+    testWidgets('shows dates, both guest types and the estimate', (tester) async {
       await _openBooking(tester);
-      expect(find.text('Vé người lớn'), findsOneWidget);
-      expect(find.text('Vé trẻ em'), findsOneWidget);
+      expect(find.text('Chọn ngày đi'), findsOneWidget);
+      expect(find.byKey(const Key('date-dep-01')), findsOneWidget);
+      expect(find.text('Số khách'), findsOneWidget);
+      expect(find.text('Người lớn'), findsOneWidget);
+      expect(find.text('Trẻ em'), findsOneWidget);
       expect(_text(tester, 'adult-count'), '1');
       expect(_text(tester, 'child-count'), '0');
-      expect(find.byKey(const Key('booking-total')), findsOneWidget);
-      expect(find.byKey(const Key('booking-submit')), findsOneWidget);
+      expect(find.text('Tạm tính'), findsOneWidget);
     });
 
-    testWidgets('changing the number of people changes the total', (tester) async {
+    testWidgets('changing the number of people changes the estimate', (tester) async {
       await _openBooking(tester);
       final before = _text(tester, 'booking-bar-total');
       await tester.tap(find.byKey(const Key('adult-plus')));
@@ -55,8 +55,22 @@ void main() {
       await tester.pump();
       expect(_text(tester, 'adult-count'), '2');
       expect(_text(tester, 'child-count'), '1');
-      expect(find.byKey(const Key('cost-children')), findsOneWidget);
       expect(_text(tester, 'booking-bar-total'), isNot(before));
+    });
+
+    testWidgets('picking another date keeps the booking screen and marks it selected', (tester) async {
+      await _openBooking(tester);
+      await tester.tap(find.byKey(const Key('date-dep-02')));
+      await tester.pump();
+      expect(find.byKey(const Key('date-dep-02')), findsOneWidget);
+      expect(find.byKey(const Key('booking-submit')), findsOneWidget);
+    });
+
+    testWidgets('more dates opens the full list', (tester) async {
+      await _openBooking(tester);
+      await tester.tap(find.byKey(const Key('booking-more-dates')));
+      await tester.pumpAndSettle();
+      expect(find.text('Tất cả ngày khởi hành'), findsOneWidget);
     });
 
     testWidgets('at least one adult is kept', (tester) async {
@@ -64,7 +78,16 @@ void main() {
       expect(tester.widget<IconButton>(find.byKey(const Key('adult-minus'))).onPressed, isNull);
     });
 
-    testWidgets('contact details are required, then booking leads to the payment page', (tester) async {
+    testWidgets('booking for someone else asks for the traveller name', (tester) async {
+      await _openBooking(tester);
+      expect(find.byKey(const Key('booking-guest-name')), findsNothing);
+      await tester.ensureVisible(find.byKey(const Key('booking-on-behalf')));
+      await tester.tap(find.byKey(const Key('booking-on-behalf')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('booking-guest-name')), findsOneWidget);
+    });
+
+    testWidgets('contact details are required, then Continue leads to the payment page', (tester) async {
       await _openBooking(tester);
       await tester.tap(find.byKey(const Key('booking-submit')));
       await tester.pumpAndSettle();
@@ -73,6 +96,7 @@ void main() {
       await tester.tap(find.byKey(const Key('booking-submit')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('booking-submit')), findsNothing);
+      expect(find.byKey(const Key('pay-qr')), findsOneWidget);
     });
   });
 }

@@ -34,31 +34,30 @@ Future<void> _openTour(WidgetTester tester, {String? email}) async {
 
 void main() {
   group('Book tour bar', () {
-    testWidgets('is visible without scrolling and shows the price', (tester) async {
+    testWidgets('is visible without scrolling and does not show a price yet', (tester) async {
       await _openTour(tester, email: 'customer@demo.vn');
       expect(find.byKey(const Key('tour-book')), findsOneWidget);
       expect(find.text('Đặt tour'), findsWidgets);
-      expect(find.textContaining('/người'), findsWidgets);
+      expect(find.byKey(const Key('booking-bar-total')), findsNothing);
+      expect(find.text('Tạm tính'), findsNothing);
     });
 
-    testWidgets('a signed-in customer picks a date and reaches the booking form', (tester) async {
+    testWidgets('a signed-in customer opens the booking screen, where the price appears', (tester) async {
       await _openTour(tester, email: 'customer@demo.vn');
       await tester.tap(find.byKey(const Key('tour-book')));
       await tester.pumpAndSettle();
-      expect(find.text('Chọn ngày khởi hành'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('pick-dep-01')).first);
-      await tester.pumpAndSettle();
-      expect(find.text('Chọn ngày khởi hành'), findsNothing);
+      expect(find.text('Chọn ngày đi'), findsOneWidget);
+      expect(find.text('Tạm tính'), findsOneWidget);
+      expect(find.byKey(const Key('booking-bar-total')), findsOneWidget);
       expect(find.byKey(const Key('tour-book')), findsNothing);
     });
 
     testWidgets('a guest is sent to sign in first', (tester) async {
       await _openTour(tester);
-      expect(find.textContaining('đăng nhập để đặt'), findsOneWidget);
       await tester.tap(find.byKey(const Key('tour-book')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('login-submit')), findsOneWidget);
-      expect(find.text('Chọn ngày khởi hành'), findsNothing);
+      expect(find.text('Chọn ngày đi'), findsNothing);
     });
 
     testWidgets('the household visit request stays reachable as a secondary action', (tester) async {

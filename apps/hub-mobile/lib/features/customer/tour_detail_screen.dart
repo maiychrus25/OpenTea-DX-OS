@@ -216,97 +216,44 @@ class TourDetailScreen extends StatelessWidget {
   }
 }
 
-/// Sticky bar of the tour page: the price and the main action, booking a departure.
+/// Sticky bar of the tour page: only the main action. The price and the date are chosen on the booking screen.
 class _BookBar extends StatelessWidget {
   const _BookBar({required this.tour, required this.departures});
   final Tour tour;
   final List<Departure> departures;
 
-  void _pick(BuildContext context) {
-    // A guest signs in first and comes back to this page, then picks the date.
+  void _book(BuildContext context) {
+    final open = departures.where((d) => d.seatsLeft > 0).toList();
+    if (open.isEmpty) return;
+    // A guest signs in first and comes back to this page.
     if (context.read<AppState>().claims == null) {
       final here = GoRouterState.of(context).uri.toString();
       context.push('/login?from=${Uri.encodeComponent(here)}');
       return;
     }
-    final open = departures.where((d) => d.seatsLeft > 0).toList();
-    if (open.length == 1) {
-      context.push('/shop/booking/${tour.id}?dep=${open.first.id}');
-      return;
-    }
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.cream,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Chọn ngày khởi hành', style: serif(22)),
-              const SizedBox(height: 12),
-              for (final d in open)
-                ListTile(
-                  key: Key('pick-${d.id}'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(formatDateLong(d.date), style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text('Còn ${d.seatsLeft} chỗ'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.of(sheet).pop();
-                    context.push('/shop/booking/${tour.id}?dep=${d.id}');
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
+    context.push('/shop/booking/${tour.id}?dep=${open.first.id}');
   }
 
   @override
   Widget build(BuildContext context) {
     final hasSeats = departures.any((d) => d.seatsLeft > 0);
-    final signedIn = context.watch<AppState>().claims != null;
     return Material(
       color: Colors.white,
       elevation: 6,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    signedIn ? 'Từ' : 'Từ · đăng nhập để đặt',
-                    style: const TextStyle(fontSize: 12, color: AppColors.faint),
-                  ),
-                  Text(
-                    '${formatVnd(tour.adultPrice)} /người',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.amber),
-                  ),
-                ],
-              ),
+        child: SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: FilledButton(
+            key: const Key('tour-book'),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.amber,
+              textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
-            SizedBox(
-              height: 50,
-              child: FilledButton(
-                key: const Key('tour-book'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.amber,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-                onPressed: hasSeats ? () => _pick(context) : null,
-                child: Text(hasSeats ? 'Đặt tour' : 'Hết chỗ'),
-              ),
-            ),
-          ],
+            onPressed: hasSeats ? () => _book(context) : null,
+            child: Text(hasSeats ? 'Đặt tour' : 'Hết chỗ'),
+          ),
         ),
       ),
     );
