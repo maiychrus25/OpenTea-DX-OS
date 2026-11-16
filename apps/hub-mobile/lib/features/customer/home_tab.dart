@@ -58,10 +58,8 @@ class HomeTab extends StatelessWidget {
                             _categories(context, htxs),
                             const _AccountLinks(),
                             const SectionTitle('Điểm đến nổi bật'),
-                            const SourceChip('Nguồn: lõi · hồ sơ HTX'),
                             for (var i = 0; i < htxs.length; i++) _destination(context, htxs[i], i),
                             const SectionTitle('Tour nổi bật'),
-                            const SourceChip('Nguồn: app du lịch · chỗ trống và đặt chỗ: tea-tour'),
                           ],
                         ),
                       ),
@@ -84,7 +82,6 @@ class HomeTab extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            const SourceChip('Nguồn: app bán hàng · tồn kho của HTX'),
                           ],
                         ),
                       ),
@@ -98,7 +95,6 @@ class HomeTab extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SectionTitle('Tin từ hợp tác xã'),
-                            const SourceChip('Nguồn: bài viết HTX · công ty du lịch duyệt'),
                             for (final a in articles.take(2)) _newsCard(context, a),
                             const SizedBox(height: 4),
                             SizedBox(

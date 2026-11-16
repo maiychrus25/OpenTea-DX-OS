@@ -26,7 +26,6 @@ class ProductsTab extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
             const PageTitle('Sản phẩm'),
-            const SourceChip('Nguồn: app bán hàng · tồn kho của HTX'),
             for (final p in products) ...[
               Card(
                 child: Padding(

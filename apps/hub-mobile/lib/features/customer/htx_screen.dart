@@ -32,7 +32,6 @@ class HtxScreen extends StatelessWidget {
               const SizedBox(height: 14),
               TeaPhoto(asset: teaPhotoFor(code.length), height: 190, radius: 20),
               PageTitle(shortHtxName(htx), subtitle: htx.province),
-              const SourceChip('Nguồn: lõi · hồ sơ HTX'),
               FactsGrid([
                 ('Tỉnh', htx.province),
                 ('Hộ đón khách', '${households.length} hộ'),
@@ -40,7 +39,6 @@ class HtxScreen extends StatelessWidget {
                 ('Cây trồng', 'Chè'),
               ]),
               const SectionTitle('Hộ nông dân đón khách'),
-              const SourceChip('Nguồn: lõi · hộ tự nguyện đồng ý công khai'),
               for (final h in households)
                 LinkRow(
                   kind: '${h.village} · ${h.certificate}',

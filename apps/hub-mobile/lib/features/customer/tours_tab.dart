@@ -81,7 +81,6 @@ class _ToursTabState extends State<ToursTab> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const SourceChip('Nguồn: app du lịch (gói trải nghiệm) · lịch khởi hành và chỗ trống: tea-tour'),
                 if (widget.query.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),

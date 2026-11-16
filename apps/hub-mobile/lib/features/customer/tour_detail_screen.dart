@@ -136,7 +136,6 @@ class TourDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   const SectionTitle('Lịch khởi hành và đặt chỗ'),
-                  const SourceChip('Nguồn: tea-tour · ngày khởi hành và số chỗ'),
                   if (departures.isEmpty) const Text('Chưa mở ngày khởi hành.'),
                   for (final d in departures)
                     Container(
@@ -176,7 +175,6 @@ class TourDetailScreen extends StatelessWidget {
                       ),
                     ),
                   const SectionTitle('Lịch trình'),
-                  const SourceChip('Nguồn: app du lịch · các điểm dừng nối tới HTX và hộ trong lõi'),
                   for (final day in tour.itinerary) _Timeline(day: day),
                   const SectionTitle('Gặp ai trong chuyến đi'),
                   OutlinedButton(

@@ -30,7 +30,6 @@ class NewsScreen extends StatelessWidget {
                 'Tin từ hợp tác xã',
                 subtitle: 'Bài viết về khu vực, văn hoá chè và nông hộ do chính các hợp tác xã đăng.',
               ),
-              const SourceChip('Nguồn: bài viết HTX · công ty du lịch liên kết duyệt'),
               if (articles.isEmpty) const SizedBox(height: 240, child: EmptyState('Chưa có bài viết nào')),
               for (final a in articles) ...[
                 Container(

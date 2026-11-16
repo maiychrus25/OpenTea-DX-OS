@@ -130,8 +130,6 @@ class _StepCard extends StatelessWidget {
               Text(step.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5)),
               const SizedBox(height: 4),
               Text(step.description, style: const TextStyle(color: AppColors.muted, height: 1.45, fontSize: 14)),
-              const SizedBox(height: 8),
-              SourceChip('Nguồn: ${step.source}'),
             ],
           ),
         ),

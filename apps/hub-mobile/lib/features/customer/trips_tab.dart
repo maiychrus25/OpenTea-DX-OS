@@ -46,7 +46,6 @@ class _TripsTabState extends State<TripsTab> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               children: [
                 const PageTitle('Lịch trình của tôi'),
-                const SourceChip('Nguồn: đặt chỗ ở tea-tour · yêu cầu tham quan'),
                 if (!signedIn)
                   _note('Đăng nhập để xem các chuyến đã đặt, mã vé và trạng thái thanh toán.')
                 else if (bookings.isEmpty)
