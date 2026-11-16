@@ -162,6 +162,31 @@ Python standard library only (`http.server`, `unittest`); no third-party package
 
 No new package: each app's `requirements.txt` and `requirements-dev.txt` are identical to `tea-tour`'s (the packages and pins in the table above), and each stores its data in its own schema (`app_leaf_purchase`, `app_tea_shop`, `app_farm_supply`).
 
+## Mobile app (`apps/hub-mobile`, Flutter 3.41.7 / Dart 3.11.5)
+
+All versions are pinned exactly in `pubspec.yaml`; `pubspec.lock` pins the transitive packages (installed with `flutter pub get --enforce-lockfile`). No Google Play services, Firebase, Maps SDK or analytics.
+
+### Runtime Dependencies
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| [Flutter SDK](https://github.com/flutter/flutter) (build toolchain, `flutter` package) | 3.41.7 | BSD-3-Clause | UI framework |
+| [go_router](https://pub.dev/packages/go_router) | 17.5.0 | BSD-3-Clause | Role-based routing and redirects |
+| [provider](https://pub.dev/packages/provider) | 6.1.5+1 | MIT | State management (session, cart, orders) |
+| [shared_preferences](https://pub.dev/packages/shared_preferences) | 2.5.6 | BSD-3-Clause | Cart, orders and tickets kept on the device |
+| [qr_flutter](https://pub.dev/packages/qr_flutter) | 4.1.0 | BSD-3-Clause | VietQR payment code and ticket QR (pulls `qr` 3.0.3, BSD-3-Clause) |
+
+### Dev Dependencies
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| flutter_test (Flutter SDK) | 3.41.7 | BSD-3-Clause | Unit and widget tests |
+| [flutter_lints](https://pub.dev/packages/flutter_lints) | 6.0.0 | BSD-3-Clause | Lint rules for `flutter analyze` |
+
+Transitive packages (all BSD-3-Clause or MIT, checked from their LICENSE files): `characters`, `collection`, `ffi`, `file`, `logging`, `material_color_utilities`, `meta`, `nested` (MIT), `path`, `path_provider_linux`, `path_provider_platform_interface`, `path_provider_windows`, `platform`, `plugin_platform_interface`, `qr`, `shared_preferences_android`, `shared_preferences_foundation`, `shared_preferences_linux`, `shared_preferences_platform_interface`, `shared_preferences_web`, `shared_preferences_windows`, `vector_math`, `web`, `xdg_directories`.
+
+---
+
 > **\* n8n License Note:** n8n uses the Sustainable Use License (fair-code, source-available,
 > not OSI-approved). DX-AgriMarket does NOT import, link, or bundle n8n source code.
 > Communication is exclusively via HTTP API. n8n is an optional, replaceable component.

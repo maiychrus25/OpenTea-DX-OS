@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **App `hub-mobile` (skeleton, `apps/hub-mobile`)**: one Flutter (Dart) app for Android and iOS with five roles chosen from the token claims after sign-in: guest, customer, farmer, HTX manager (officer read-only) and tour-company staff. Guest browses news, tours and products; customer books tours, buys products, pays by VietQR, and keeps orders and tickets on the device (open offline); farmer, manager and tour-company screens work on in-memory demo data with one status action each (check-in, confirm payment and order steps, approve article). Runs on a mock `HubRepository` and a demo `AuthService` (Keycloak OIDC PKCE, client `dxos-mobile`, is planned, not implemented); no backend endpoints yet. No Google Play services, Firebase, Maps or analytics. Build: `apps/hub-mobile/tool/build.sh`. Not yet built as an APK or run on iOS, and the VietQR code has not been scanned by a real banking app. See `apps/hub-mobile/README.md`.
+
 ---
 
 ## [1.12.0] - 2026-11-14
