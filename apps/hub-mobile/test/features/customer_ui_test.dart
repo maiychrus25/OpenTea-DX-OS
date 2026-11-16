@@ -68,14 +68,9 @@ void main() {
     testWidgets('shows search, hero, three tiles and the bottom navigation', (tester) async {
       await _pump(tester);
       await _guest(tester);
-      expect(find.byKey(const Key('home-search-open')), findsOneWidget);
       expect(find.text('Về Xứ Chè'), findsNothing);
-      await tester.tap(find.byKey(const Key('home-search-open')));
-      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('home-account')), findsOneWidget);
       expect(find.text('Tìm đồi chè, trải nghiệm'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('home-search-close')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('home-search-open')), findsOneWidget);
       expect(find.text('Khám phá ngay ›'), findsOneWidget);
       expect(find.text('Khám phá ngay ›'), findsOneWidget);
       for (final t in ['Đồi chè', 'Trải nghiệm', 'Đặc sản']) {
@@ -124,11 +119,9 @@ void main() {
       expect(tours.where((t) => tourMatches(t)).length, 3);
     });
 
-    testWidgets('the search icon opens the field and submitting lists the matching tours', (tester) async {
+    testWidgets('submitting the search bar lists the matching tours', (tester) async {
       await _pump(tester);
       await _guest(tester);
-      await tester.tap(find.byKey(const Key('home-search-open')));
-      await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const Key('home-search')), 'shan tuyet');
       await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();

@@ -389,8 +389,8 @@ class HomeTab extends StatelessWidget {
   );
 }
 
-/// Top row of the home page: the logo with a search icon and the account icon. Tapping the search icon opens the
-/// search field in place of the logo; submitting it lists the matching tours.
+/// Top of the home page: the logo (no name) and the account icon, then the search bar.
+/// Submitting the search lists the matching tours.
 class _BrandBar extends StatefulWidget {
   const _BrandBar();
   @override
@@ -398,7 +398,6 @@ class _BrandBar extends StatefulWidget {
 }
 
 class _BrandBarState extends State<_BrandBar> {
-  bool _searching = false;
   final _query = TextEditingController();
 
   @override
@@ -409,85 +408,65 @@ class _BrandBarState extends State<_BrandBar> {
 
   void _submit(String q) {
     context.push('/shop/tours?q=${Uri.encodeQueryComponent(q.trim())}');
-    setState(() {
-      _searching = false;
-      _query.clear();
-    });
+    _query.clear();
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(18, 8, 10, 14),
-    child: _searching
-        ? Row(
+  Widget build(BuildContext context) => Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(18, 8, 10, 0),
+        child: Row(
+          children: [
+            const LeafLogo(size: 44),
+            const Spacer(),
+            IconButton(
+              key: const Key('home-account'),
+              tooltip: 'Tài khoản',
+              iconSize: 30,
+              onPressed: () => context.push('/shop/me'),
+              icon: const Icon(Icons.person_outline),
+            ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
+        child: Container(
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: AppColors.paper,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0xFFD9D2BD), width: 1.5),
+          ),
+          child: Row(
             children: [
+              const Icon(Icons.search, size: 24, color: AppColors.teaDark),
+              const SizedBox(width: 10),
               Expanded(
-                child: Container(
-                  height: 50,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.paper,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0xFFD9D2BD), width: 1.5),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.search, size: 24, color: AppColors.teaDark),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          key: const Key('home-search'),
-                          controller: _query,
-                          autofocus: true,
-                          textInputAction: TextInputAction.search,
-                          style: const TextStyle(fontSize: 16),
-                          onSubmitted: _submit,
-                          decoration: const InputDecoration(
-                            hintText: 'Tìm đồi chè, trải nghiệm',
-                            hintStyle: TextStyle(color: AppColors.faint),
-                            filled: false,
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ),
-                    ],
+                child: TextField(
+                  key: const Key('home-search'),
+                  controller: _query,
+                  textInputAction: TextInputAction.search,
+                  style: const TextStyle(fontSize: 16),
+                  onSubmitted: _submit,
+                  decoration: const InputDecoration(
+                    hintText: 'Tìm đồi chè, trải nghiệm',
+                    hintStyle: TextStyle(color: AppColors.faint),
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
               ),
-              IconButton(
-                key: const Key('home-search-close'),
-                tooltip: 'Đóng tìm kiếm',
-                onPressed: () => setState(() {
-                  _searching = false;
-                  _query.clear();
-                }),
-                icon: const Icon(Icons.close),
-              ),
-            ],
-          )
-        : Row(
-            children: [
-              const LeafLogo(size: 44),
-              const Spacer(),
-              IconButton(
-                key: const Key('home-search-open'),
-                tooltip: 'Tìm kiếm',
-                iconSize: 30,
-                onPressed: () => setState(() => _searching = true),
-                icon: const Icon(Icons.search),
-              ),
-              IconButton(
-                key: const Key('home-account'),
-                tooltip: 'Tài khoản',
-                iconSize: 30,
-                onPressed: () => context.push('/shop/me'),
-                icon: const Icon(Icons.person_outline),
-              ),
             ],
           ),
+        ),
+      ),
+    ],
   );
 }
 
