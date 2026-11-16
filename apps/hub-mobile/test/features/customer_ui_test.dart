@@ -69,7 +69,7 @@ void main() {
       await _pump(tester);
       await _guest(tester);
       expect(find.text('Tìm đồi chè, trải nghiệm'), findsOneWidget);
-      expect(find.text('Hẹn nhau ở đồi chè'), findsOneWidget);
+      expect(find.text('Khám phá ngay ›'), findsOneWidget);
       expect(find.text('Khám phá ngay ›'), findsOneWidget);
       for (final t in ['Đồi chè', 'Trải nghiệm', 'Đặc sản']) {
         expect(find.text(t), findsOneWidget);

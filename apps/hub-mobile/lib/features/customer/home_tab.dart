@@ -165,11 +165,6 @@ class HomeTab extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 220,
-                  child: Text('Hẹn nhau ở đồi chè', style: serif(38, color: Colors.white, height: 1.1)),
-                ),
-                const SizedBox(height: 14),
                 FilledButton(
                   key: const Key('home-explore'),
                   style: FilledButton.styleFrom(

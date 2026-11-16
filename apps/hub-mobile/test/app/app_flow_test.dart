@@ -38,7 +38,7 @@ void main() {
     await _pump(tester);
     await tester.tap(find.byKey(const Key('login-guest')));
     await tester.pumpAndSettle();
-    expect(find.text('Hẹn nhau ở đồi chè'), findsOneWidget);
+    expect(find.text('Khám phá ngay ›'), findsOneWidget);
     await tester.tap(find.byKey(const Key('home-explore')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('tour-tour-01')), findsOneWidget);
@@ -105,7 +105,7 @@ void main() {
 
   testWidgets('each demo account lands on its own interface', (tester) async {
     final expected = {
-      'customer@demo.vn': 'Hẹn nhau ở đồi chè',
+      'customer@demo.vn': 'Khám phá ngay ›',
       'farmer@demo.vn': 'Lịch tham quan',
       'manager@demo.vn': 'Tổng quan',
       'operator@demo.vn': 'Duyệt bài',
