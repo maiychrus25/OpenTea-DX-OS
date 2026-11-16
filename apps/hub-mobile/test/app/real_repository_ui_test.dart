@@ -31,6 +31,39 @@ Future<void> _open(WidgetTester tester, FakeCore core, String email) async {
 }
 
 void main() {
+  group('real dashboard responsive stress', () {
+    for (final width in [320.0, 1280.0]) {
+      for (final role in ['manager', 'officer', 'farmer']) {
+        testWidgets('$role keeps real data boundaries and account claims at $width px', (tester) async {
+          final core = FakeCore.byRoot(rootFixtures);
+          await _open(tester, core, '$role@demo.vn');
+          tester.view.physicalSize = Size(width, 900);
+          tester.view.devicePixelRatio = 1;
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
+          while (scroll.position.pixels < scroll.position.maxScrollExtent) {
+            scroll.position.jumpTo((scroll.position.pixels + 400).clamp(0, scroll.position.maxScrollExtent));
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+            for (final sampleSection in ['Gian hàng', 'Chỉ số giá nông sản', 'Thời tiết hiện tại', 'Lịch tham quan']) {
+              expect(find.text(sampleSection), findsNothing);
+            }
+          }
+          expect(find.byKey(const Key('sample-chip')), findsNothing);
+          expect(find.byKey(const Key('farmer-new-journal')), findsNothing);
+          expect(core.seen.every((call) => call.headers['x-hasura-role'] == role), isTrue);
+          await tester.tap(find.byKey(const Key('staff-avatar')));
+          await tester.pumpAndSettle();
+          expect(find.text('$role@demo.vn'), findsOneWidget);
+          expect(find.text('Mã HTX · tan-cuong'), findsOneWidget);
+          expect(find.byKey(const Key('sample-chip')), findsNothing);
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+  });
+
   testWidgets('manager dashboard shows real counts, no sample chip, no storefront numbers', (tester) async {
     final core = FakeCore.byRoot(rootFixtures);
     await _open(tester, core, 'manager@demo.vn');

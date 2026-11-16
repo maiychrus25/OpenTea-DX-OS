@@ -40,7 +40,8 @@ class Pill extends StatelessWidget {
 
 /// Page heading like the web's `h1` + subtitle, with an optional green eyebrow pill above.
 class PageHead extends StatelessWidget {
-  const PageHead(this.title, {super.key, this.subtitle, this.eyebrow, this.action});
+  const PageHead(this.title, {super.key, this.subtitle, this.eyebrow, this.action, this.compact = false});
+  final bool compact;
   final String title;
   final String? subtitle;
   final Widget? eyebrow;
@@ -48,7 +49,7 @@ class PageHead extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(2, 4, 2, 14),
+    padding: compact ? const EdgeInsets.only(bottom: 16) : const EdgeInsets.fromLTRB(2, 4, 2, 14),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -59,12 +60,20 @@ class PageHead extends StatelessWidget {
               ?(eyebrow == null ? null : Padding(padding: const EdgeInsets.only(bottom: 6), child: eyebrow)),
               Text(
                 title,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: StaffColors.ink, height: 1.2),
+                style: TextStyle(
+                  fontSize: compact ? 22 : 24,
+                  fontWeight: compact ? FontWeight.w600 : FontWeight.w800,
+                  color: StaffColors.ink,
+                  height: 1.3,
+                ),
               ),
               if (subtitle != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: Text(subtitle!, style: const TextStyle(fontSize: 14, color: StaffColors.muted, height: 1.4)),
+                  child: Text(
+                    subtitle!,
+                    style: TextStyle(fontSize: compact ? 13 : 14, color: StaffColors.muted, height: 1.4),
+                  ),
                 ),
             ],
           ),
@@ -84,7 +93,11 @@ class SectionCard extends StatelessWidget {
     this.onSeeAll,
     this.seeAllLabel = 'Xem tất cả',
     this.padded = true,
+    this.divided = false,
   });
+
+  /// Quiet header and divider for overview and account sections.
+  final bool divided;
   final String title;
   final Widget child;
   final VoidCallback? onSeeAll;
@@ -103,17 +116,22 @@ class SectionCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+          padding: divided
+              ? EdgeInsets.fromLTRB(16, onSeeAll == null ? 16 : 4, 8, onSeeAll == null ? 16 : 4)
+              : const EdgeInsets.fromLTRB(16, 14, 8, 8),
           child: Row(
             children: [
               Expanded(
-                child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                child: Text(
+                  title,
+                  style: TextStyle(fontSize: 16, fontWeight: divided ? FontWeight.w600 : FontWeight.w800, height: 1.35),
+                ),
               ),
               if (onSeeAll != null)
                 TextButton(
                   onPressed: onSeeAll,
                   style: TextButton.styleFrom(
-                    minimumSize: const Size(0, 36),
+                    minimumSize: Size(44, divided ? 44 : 36),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
                   child: Text('$seeAllLabel ›', style: const TextStyle(fontSize: 13)),
@@ -121,7 +139,13 @@ class SectionCard extends StatelessWidget {
             ],
           ),
         ),
-        Padding(padding: padded ? const EdgeInsets.fromLTRB(16, 0, 16, 14) : EdgeInsets.zero, child: child),
+        if (divided) const Divider(height: 1, thickness: 1),
+        Padding(
+          padding: padded
+              ? (divided ? const EdgeInsets.all(16) : const EdgeInsets.fromLTRB(16, 0, 16, 14))
+              : EdgeInsets.zero,
+          child: child,
+        ),
       ],
     ),
   );
@@ -179,12 +203,44 @@ class MetricCard extends StatelessWidget {
 }
 
 class MetricGrid extends StatelessWidget {
-  const MetricGrid(this.cards, {super.key});
+  const MetricGrid(this.cards, {super.key, this.compact = false});
   final List<MetricCard> cards;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, c) {
+      if (compact) {
+        return Material(
+          color: StaffColors.card,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(staffRadius),
+            side: const BorderSide(color: StaffColors.border),
+          ),
+          child: Column(
+            children: [
+              for (var i = 0; i < cards.length; i += 2) ...[
+                if (i > 0) const Divider(height: 1, thickness: 1),
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _MetricCell(cards[i], key: cards[i].key)),
+                      const VerticalDivider(width: 1, thickness: 1),
+                      Expanded(
+                        child: i + 1 < cards.length
+                            ? _MetricCell(cards[i + 1], key: cards[i + 1].key)
+                            : const SizedBox(),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      }
       final w = (c.maxWidth - 12) / 2;
       return Wrap(
         spacing: 12,
@@ -192,6 +248,318 @@ class MetricGrid extends StatelessWidget {
         children: [for (final m in cards) SizedBox(width: w, child: m)],
       );
     },
+  );
+}
+
+class _MetricCell extends StatelessWidget {
+  const _MetricCell(this.metric, {super.key});
+  final MetricCard metric;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: metric.onTap != null,
+    child: InkWell(
+      onTap: metric.onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              metric.value,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+                color: StaffColors.ink,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(height: 4),
+            ConstrainedBox(
+              constraints: BoxConstraints(minHeight: MediaQuery.textScalerOf(context).scale(13) * 2.8),
+              child: Text(metric.label, style: const TextStyle(fontSize: 13, height: 1.4, color: StaffColors.muted)),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Three or four headline figures, with a vertical fallback for enlarged text.
+class SummaryStrip extends StatelessWidget {
+  const SummaryStrip(this.figures, {super.key});
+  final List<MetricCard> figures;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: StaffColors.card,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(staffRadius),
+      side: const BorderSide(color: StaffColors.border),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final stacked = constraints.maxWidth / figures.length < MediaQuery.textScalerOf(context).scale(88);
+        Widget cell(MetricCard figure) => InkWell(
+          key: figure.key,
+          onTap: figure.onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  figure.value,
+                  style: const TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(figure.label, style: const TextStyle(fontSize: 12, height: 1.4, color: StaffColors.muted)),
+              ],
+            ),
+          ),
+        );
+        if (stacked) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < figures.length; i++) ...[if (i > 0) const Divider(height: 1), cell(figures[i])],
+            ],
+          );
+        }
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < figures.length; i++) ...[
+                if (i > 0) const VerticalDivider(width: 1),
+                Expanded(child: cell(figures[i])),
+              ],
+            ],
+          ),
+        );
+      },
+    ),
+  );
+}
+
+/// Counts are attention signals, not status colours. Zero rows stay out of the way.
+class AttentionCard extends StatelessWidget {
+  const AttentionCard({super.key, required this.items, this.action, this.title = 'Cần xử lý hôm nay'});
+  final List<({String label, int count, VoidCallback onTap})> items;
+  final Widget? action;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = items.where((item) => item.count > 0).toList();
+    return SectionCard(
+      title: title,
+      divided: true,
+      padded: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (active.isEmpty)
+            const StaffListRow(title: 'Không có việc cần xử lý', subtitle: 'Mọi việc đã được cập nhật.')
+          else
+            for (var i = 0; i < active.length; i++) ...[
+              if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: active[i].onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(active[i].label, style: const TextStyle(fontSize: 14, height: 1.4))),
+                        const SizedBox(width: 12),
+                        Pill('${active[i].count}'),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right, size: 18, color: StaffColors.muted),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          if (action != null) Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 16), child: action),
+        ],
+      ),
+    );
+  }
+}
+
+/// Direct-labelled proportions; the denominator is always visible, never a made-up target.
+class ProportionLine extends StatelessWidget {
+  const ProportionLine({super.key, required this.label, required this.detail, required this.value});
+  final String label;
+  final String detail;
+  final double value;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: '$label: $detail',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 13, color: StaffColors.muted)),
+        const SizedBox(height: 4),
+        Text(
+          detail,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: value.clamp(0, 1),
+          minHeight: 4,
+          borderRadius: BorderRadius.circular(4),
+          color: StaffColors.primary,
+          backgroundColor: StaffColors.secondary,
+          semanticsLabel: '$label: $detail',
+        ),
+      ],
+    ),
+  );
+}
+
+/// Today plus six calendar days. Cells wrap at large text sizes rather than clip.
+class HarvestWeekStrip extends StatelessWidget {
+  const HarvestWeekStrip({super.key, required this.now, required this.dates});
+  final DateTime now;
+  final List<DateTime> dates;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final large = MediaQuery.textScalerOf(context).scale(12) > 16;
+      final columns = large && constraints.maxWidth < 400 ? 4 : 7;
+      return Wrap(
+        spacing: 4,
+        runSpacing: 8,
+        children: [
+          for (var i = 0; i < 7; i++)
+            SizedBox(
+              width: (constraints.maxWidth - (columns - 1) * 4) / columns,
+              child: _day(DateTime(now.year, now.month, now.day + i), i == 0),
+            ),
+        ],
+      );
+    },
+  );
+
+  Widget _day(DateTime date, bool today) {
+    final count = dates.where((d) => d.year == date.year && d.month == date.month && d.day == date.day).length;
+    return Semantics(
+      label: '${today ? 'Hôm nay, ' : ''}${date.day}/${date.month}, $count thửa thu hái',
+      child: ExcludeSemantics(
+        child: Tooltip(
+          message: '${date.day}/${date.month}: $count thửa thu hái',
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: today ? StaffColors.secondary : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  date.weekday == 7 ? 'CN' : 'T${date.weekday + 1}',
+                  style: const TextStyle(fontSize: 11, color: StaffColors.muted),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${date.day}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: today ? FontWeight.w700 : FontWeight.w500,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: count > 0 ? StaffColors.primary : Colors.transparent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A borderless row inside a section. Long text wraps, never competes with status.
+class StaffListRow extends StatelessWidget {
+  const StaffListRow({super.key, required this.title, this.subtitle, this.trailing, this.onTap});
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 64, minWidth: double.infinity),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final text = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.4)),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 4),
+                    Text(subtitle!, style: const TextStyle(fontSize: 13, color: StaffColors.muted, height: 1.4)),
+                  ],
+                ],
+              );
+              final end =
+                  trailing ??
+                  (onTap == null ? null : const Icon(Icons.chevron_right, size: 20, color: StaffColors.muted));
+              if (end == null) return text;
+              if (constraints.maxWidth < 280 || MediaQuery.textScalerOf(context).scale(15) > 20) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [text, const SizedBox(height: 8), end],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: text),
+                  const SizedBox(width: 12),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: constraints.maxWidth * .45),
+                    child: end,
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    ),
   );
 }
 
@@ -319,38 +687,37 @@ class BarList extends StatelessWidget {
       children: [
         for (final (label, value) in rows)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 96,
-                  child: Text(
-                    label,
-                    style: const TextStyle(fontSize: 13),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Tooltip(
+              message: '$label: $value$unit',
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: Text(label, style: const TextStyle(fontSize: 14, height: 1.4))),
+                      const SizedBox(width: 12),
+                      Text(
+                        '$value$unit',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: (value / max).toDouble(),
-                      minHeight: 10,
-                      backgroundColor: StaffColors.secondary,
-                      color: StaffColors.primary,
-                    ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: (value / max).toDouble().clamp(0, 1),
+                    minHeight: 4,
+                    borderRadius: BorderRadius.circular(4),
+                    backgroundColor: StaffColors.secondary,
+                    color: StaffColors.primary,
+                    semanticsLabel: '$label: $value$unit',
                   ),
-                ),
-                SizedBox(
-                  width: 48,
-                  child: Text(
-                    '$value$unit',
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
       ],

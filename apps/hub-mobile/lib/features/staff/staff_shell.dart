@@ -216,25 +216,21 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
             icon: const Icon(Icons.menu, size: 26),
           ),
           Expanded(
-            child: Row(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Flexible(
-                  child: Text(
-                    'OpenTea DX-OS',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: StaffColors.primary),
-                  ),
+                const Text(
+                  'OpenTea DX-OS',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: StaffColors.ink),
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                  decoration: BoxDecoration(color: StaffColors.secondary, borderRadius: BorderRadius.circular(999)),
-                  child: Text(
-                    nav.roleName,
-                    maxLines: 1,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: StaffColors.primary),
-                  ),
+                Text(
+                  nav.roleName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: StaffColors.muted),
                 ),
               ],
             ),
@@ -257,16 +253,17 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(right: 12, left: 2),
-            child: InkResponse(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
               key: const Key('staff-avatar'),
-              onTap: onAvatar,
-              child: CircleAvatar(
+              tooltip: 'Hồ sơ tài khoản',
+              onPressed: onAvatar,
+              icon: CircleAvatar(
                 radius: 17,
-                backgroundColor: StaffColors.secondary,
+                backgroundColor: StaffColors.neutralSoft,
                 child: Text(
                   initialsOf(name),
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: StaffColors.primary),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: StaffColors.ink),
                 ),
               ),
             ),

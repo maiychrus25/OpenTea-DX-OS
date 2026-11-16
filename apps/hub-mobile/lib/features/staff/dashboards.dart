@@ -15,119 +15,251 @@ import 'farmer_pages.dart' show withdrawalDaysLeft;
 import 'staff_format.dart';
 import 'staff_widgets.dart';
 
-Widget _scroll(Future<void> Function() reload, List<Widget> children) => RefreshIndicator(
-  onRefresh: reload,
-  child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 28), children: children),
+Widget _scroll(Future<void> Function() reload, List<Widget> children) => LayoutBuilder(
+  builder: (context, constraints) => RefreshIndicator(
+    onRefresh: reload,
+    child: ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        constraints.maxWidth > 1032 ? (constraints.maxWidth - 1000) / 2 : 16,
+        16,
+        constraints.maxWidth > 1032 ? (constraints.maxWidth - 1000) / 2 : 16,
+        28,
+      ),
+      children: children,
+    ),
+  ),
 );
 
-Widget _hero(BuildContext context, String name, {Widget? eyebrow, String? subtitle}) {
+Widget _hero(StaffScope scope, String role) {
   final now = DateTime.now();
   return PageHead(
-    '${greeting(now)}, $name',
-    eyebrow: eyebrow,
-    subtitle: subtitle ?? '${_weekday(now)}, ${formatDate(now)}',
+    '${greeting(now)}, ${scope.userName}',
+    compact: true,
+    subtitle: '${_weekday(now)}, ${formatDate(now)} · $role${scope.htx.isEmpty ? '' : ' · ${scope.htx}'}',
   );
 }
 
 String _weekday(DateTime d) =>
     const ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ nhật'][d.weekday - 1];
 
-/// Small summary of the storefront work (orders, bookings, money).
+MetricCard _figure(BuildContext context, String label, String value, String? path) => MetricCard(
+  label: label,
+  value: value,
+  icon: Icons.circle_outlined,
+  onTap: path == null ? null : () => context.go(path),
+);
+
+({String label, int count, VoidCallback onTap}) _attention(
+  BuildContext context,
+  String label,
+  int count,
+  String path,
+) => (label: label, count: count, onTap: () => context.go(path));
+
+/// Related sections share a row on desktop, without stretching cards to a fixed height.
+Widget _pair(Widget first, Widget second) => LayoutBuilder(
+  builder: (context, c) {
+    if (c.maxWidth < 760) {
+      return Column(children: [first, const SizedBox(height: 12), second]);
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 12),
+        Expanded(child: second),
+      ],
+    );
+  },
+);
+
+List<Parcel> _upcoming(List<Parcel> parcels, DateTime now) => [
+  for (final p in parcels)
+    if (p.status.isActive && p.estimatedHarvestDate != null && daysUntil(p.estimatedHarvestDate!, now) >= 0) p,
+]..sort((a, b) => a.estimatedHarvestDate!.compareTo(b.estimatedHarvestDate!));
+
+// Seven calendar days, including today, matches the seven cells of the strip.
+int _weekCount(List<Parcel> parcels, DateTime now) =>
+    parcels.where((p) => daysUntil(p.estimatedHarvestDate!, now) < 7).length;
+
+class _HarvestCard extends StatelessWidget {
+  const _HarvestCard({required this.parcels, required this.now, required this.path});
+  final List<Parcel> parcels;
+  final DateTime now;
+  final String path;
+
+  @override
+  Widget build(BuildContext context) => SectionCard(
+    title: 'Lịch thu hái sắp tới',
+    divided: true,
+    padded: false,
+    onSeeAll: () => context.go(path),
+    child: Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: HarvestWeekStrip(now: now, dates: parcels.map((p) => p.estimatedHarvestDate!).toList()),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '7 ngày tới · Chấm xanh: có lịch thu hái',
+              style: TextStyle(fontSize: 12, color: StaffColors.muted),
+            ),
+          ),
+        ),
+        if (parcels.isEmpty)
+          const StaffListRow(title: 'Chưa có lịch thu hái', subtitle: 'Lịch mới sẽ hiển thị tại đây.')
+        else
+          for (final p in parcels.take(3)) ...[
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            StaffListRow(
+              title: '${p.code} · ${p.cropType}',
+              subtitle: '${fmtTon(p.expectedKg)} · ${_harvestDistance(p, now)}',
+              trailing: Text(
+                formatDate(p.estimatedHarvestDate!).substring(0, 5),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+              onTap: () => context.go(path),
+            ),
+          ],
+      ],
+    ),
+  );
+}
+
+String _harvestDistance(Parcel p, DateTime now) {
+  if (!p.status.isActive || p.estimatedHarvestDate == null) return 'Chưa có lịch thu hái';
+  final days = daysUntil(p.estimatedHarvestDate!, now);
+  if (days < 0) return 'Quá lịch ${-days} ngày';
+  return days == 0 ? 'Thu hái hôm nay' : 'Còn $days ngày';
+}
+
+class _CultivationCard extends StatelessWidget {
+  const _CultivationCard(this.parcels);
+  final List<Parcel> parcels;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = parcels.where((p) => p.status.isActive);
+    final area = parcels.fold<double>(0, (sum, p) => sum + p.areaHa);
+    final activeArea = active.fold<double>(0, (sum, p) => sum + p.areaHa);
+    final yieldKg = active.fold<double>(0, (sum, p) => sum + p.expectedKg);
+    final approvedKg = active
+        .where((p) => p.status == ParcelStatus.harvestApproved)
+        .fold<double>(0, (sum, p) => sum + p.expectedKg);
+    return SectionCard(
+      title: 'Sản lượng kỳ vọng',
+      divided: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            fmtTon(yieldKg),
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+          Text(
+            'Từ ${active.length} thửa đang canh tác',
+            style: const TextStyle(fontSize: 13, color: StaffColors.muted),
+          ),
+          const SizedBox(height: 16),
+          ProportionLine(
+            label: 'Sản lượng được phép thu hoạch',
+            detail: '${fmtTon(approvedKg)} / ${fmtTon(yieldKg)}',
+            value: yieldKg > 0 ? approvedKg / yieldKg : 0,
+          ),
+          const SizedBox(height: 16),
+          ProportionLine(
+            label: 'Diện tích đang canh tác',
+            detail: '${fmtHa(activeArea)} / ${fmtHa(area)}',
+            value: area > 0 ? activeArea / area : 0,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ShopSummary extends StatelessWidget {
   const _ShopSummary({required this.summary, required this.base});
   final HtxSummary summary;
   final String base;
-
   @override
   Widget build(BuildContext context) => SectionCard(
     title: 'Gian hàng',
+    divided: true,
+    padded: false,
+    onSeeAll: () => context.go('$base/bookings'),
     child: Column(
       children: [
-        _line(context, Icons.receipt_long_outlined, 'Đơn chờ xác nhận', '${summary.pendingOrders}', '$base/orders'),
-        _line(
-          context,
-          Icons.hourglass_bottom,
-          'Lượt đặt tour chờ xác nhận',
-          '${summary.pendingBookings}',
-          '$base/bookings',
+        StaffListRow(
+          title: 'Lượt đặt tour đã xác nhận',
+          subtitle: '${summary.confirmedBookings} lượt',
+          onTap: () => context.go('$base/bookings'),
         ),
-        _line(
-          context,
-          Icons.event_available,
-          'Lượt đặt tour đã xác nhận',
-          '${summary.confirmedBookings}',
-          '$base/bookings',
-        ),
-        _line(context, Icons.payments_outlined, 'Đã thu', formatVnd(summary.revenue), '$base/payments'),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        StaffListRow(title: 'Đã thu', subtitle: formatVnd(summary.revenue), onTap: () => context.go('$base/payments')),
       ],
-    ),
-  );
-
-  Widget _line(BuildContext context, IconData icon, String label, String value, String path) => InkWell(
-    onTap: () => context.go(path),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: StaffColors.primary),
-          const SizedBox(width: 12),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
-        ],
-      ),
     ),
   );
 }
 
 class _JournalPreview extends StatelessWidget {
-  const _JournalPreview({required this.entries, required this.seeAllPath});
+  const _JournalPreview({required this.entries, required this.seeAllPath, this.title = 'Nhật ký gần đây'});
   final List<JournalEntry> entries;
   final String seeAllPath;
-
+  final String title;
   @override
   Widget build(BuildContext context) => SectionCard(
-    title: 'Nhật ký gần đây',
+    title: title,
+    divided: true,
+    padded: false,
     onSeeAll: () => context.go(seeAllPath),
     child: entries.isEmpty
-        ? const StaffEmpty('Chưa có nhật ký nào')
+        ? const StaffListRow(title: 'Không có nhật ký nào cần xem', subtitle: 'Nhật ký mới sẽ hiển thị tại đây.')
         : Column(
             children: [
-              for (final e in entries)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 7),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${e.parcelCode} · ${e.activityType.label}',
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                            ),
-                            Text(
-                              '${e.cropType} · ${formatDate(e.entryDate)}',
-                              style: const TextStyle(fontSize: 12.5, color: StaffColors.muted),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Pill(e.status.label, tone: journalTone(e.status)),
-                    ],
-                  ),
+              for (var i = 0; i < entries.length && i < 3; i++) ...[
+                if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+                StaffListRow(
+                  title: '${entries[i].parcelCode} · ${entries[i].activityType.label}',
+                  subtitle: '${entries[i].performedBy} · ${formatDate(entries[i].entryDate)}',
+                  trailing: Pill(entries[i].status.label, tone: journalTone(entries[i].status)),
+                  onTap: () => context.go('$seeAllPath/${entries[i].id}'),
                 ),
+              ],
             ],
           ),
   );
 }
 
-// ---------------------------------------------------------------------------
-// Manager (trưởng HTX)
-// ---------------------------------------------------------------------------
-
 class ManagerDashboard extends StatelessWidget {
   const ManagerDashboard({super.key});
+  @override
+  Widget build(BuildContext context) => _HtxDashboard(officer: false);
+}
 
+class OfficerDashboard extends StatelessWidget {
+  const OfficerDashboard({super.key});
+  @override
+  Widget build(BuildContext context) => _HtxDashboard(officer: true);
+}
+
+/// Shared HTX data, but officer destinations remain read-only.
+class _HtxDashboard extends StatelessWidget {
+  const _HtxDashboard({required this.officer});
+  final bool officer;
   @override
   Widget build(BuildContext context) {
     final scope = StaffScope(context);
@@ -139,160 +271,73 @@ class ManagerDashboard extends StatelessWidget {
         journal: await scope.repo.listJournal(scope.htx),
         lots: await scope.repo.listLots(scope.htx),
         notes: await scope.repo.listNotifications(scope.htx),
-        // Storefront and market numbers are sample data; with the real core they are left out.
-        prices: scope.coreIsSample ? await scope.repo.listMarketPrices() : null,
+        prices: !officer && scope.coreIsSample ? await scope.repo.listMarketPrices() : null,
         summary: scope.coreIsSample ? await scope.repo.summary(scope.htx) : null,
       ),
       builder: (context, d, reload) {
-        final active = d.parcels.where((p) => p.status.isActive).toList();
-        final area = d.parcels.fold<double>(0, (s, p) => s + p.areaHa);
-        final yieldKg = active.fold<double>(0, (s, p) => s + p.expectedKg);
-        final upcoming = [
-          for (final p in d.parcels)
-            if (p.estimatedHarvestDate != null &&
-                p.status != ParcelStatus.harvested &&
-                daysUntil(p.estimatedHarvestDate!, now) >= 0)
-              p,
-        ]..sort((a, b) => a.estimatedHarvestDate!.compareTo(b.estimatedHarvestDate!));
+        final upcoming = _upcoming(d.parcels, now);
         final pending = d.journal.where((e) => e.status == JournalStatus.pendingApproval).toList();
-        final readyLots = d.lots.where((l) => l.status == LotStatus.ready).length;
-        final unread = d.notes.where((n) => !n.isRead).length;
-        final weekHarvest = upcoming.where((p) => daysUntil(p.estimatedHarvestDate!, now) <= 7).length;
+        final journalPath = officer ? '/manager/journal' : '/manager/journal-approve';
+        final recent = [...d.journal]..sort((a, b) => b.entryDate.compareTo(a.entryDate));
         return _scroll(reload, [
-          _hero(context, scope.userName, eyebrow: const Pill('Đang hoạt động', tone: Tone.ok)),
-          MetricGrid([
-            MetricCard(
-              label: 'Thành viên',
-              value: '${d.members.length}',
-              icon: Icons.groups_outlined,
-              onTap: () => context.go('/manager/members'),
+          _hero(scope, officer ? 'Cán bộ KT' : 'Trưởng HTX'),
+          AttentionCard(
+            title: officer ? 'Cần theo dõi' : 'Cần xử lý hôm nay',
+            items: [
+              _attention(context, 'Nhật ký chờ duyệt', pending.length, journalPath),
+              _attention(context, 'Thu hái trong 7 ngày', _weekCount(upcoming, now), '/manager/schedule'),
+              _attention(
+                context,
+                'Thông báo chưa đọc',
+                d.notes.where((n) => !n.isRead).length,
+                '/manager/notifications',
+              ),
+              if (d.summary != null) ...[
+                _attention(context, 'Đơn chờ xác nhận', d.summary!.pendingOrders, '/manager/orders'),
+                _attention(context, 'Lượt đặt chờ xác nhận', d.summary!.pendingBookings, '/manager/bookings'),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          SummaryStrip([
+            _figure(
+              context,
+              officer ? 'Nông hộ quản lý' : 'Thành viên',
+              '${officer ? d.members.where((m) => m.role == MemberRole.farmer).length : d.members.length}',
+              officer ? '/manager/households' : '/manager/members',
             ),
-            MetricCard(
-              label: 'Vùng canh tác',
-              value: fmtHa(area),
-              icon: Icons.eco_outlined,
-              onTap: () => context.go('/manager/zones'),
+            _figure(
+              context,
+              officer ? 'Thửa đang canh tác' : 'Vùng canh tác',
+              officer
+                  ? '${d.parcels.where((p) => p.status.isActive).length}'
+                  : fmtHa(d.parcels.fold<double>(0, (s, p) => s + p.areaHa)),
+              '/manager/zones',
             ),
-            MetricCard(
-              label: 'Thu hái trong 7 ngày',
-              value: '$weekHarvest thửa',
-              icon: Icons.calendar_month_outlined,
-              tone: Tone.warn,
-              onTap: () => context.go('/manager/schedule'),
-            ),
-            MetricCard(
-              label: 'Nhật ký chờ duyệt',
-              value: '${pending.length}',
-              icon: Icons.fact_check_outlined,
-              tone: Tone.warn,
-              onTap: () => context.go('/manager/journal-approve'),
-            ),
-            MetricCard(
-              label: 'Lô sẵn sàng',
-              value: '$readyLots',
-              icon: Icons.inventory_2_outlined,
-              onTap: () => context.go('/manager/lots'),
-            ),
-            MetricCard(
-              label: 'Thông báo chưa đọc',
-              value: '$unread',
-              icon: Icons.notifications_none,
-              tone: Tone.neutral,
-              onTap: () => context.go('/manager/notifications'),
+            _figure(
+              context,
+              'Lô sẵn sàng',
+              '${d.lots.where((l) => l.status == LotStatus.ready).length}',
+              '/manager/lots',
             ),
           ]),
-          const SizedBox(height: 14),
-          SectionCard(
-            title: 'Sản lượng kỳ vọng',
-            child: Row(
-              children: [
-                const Icon(Icons.scale_outlined, color: StaffColors.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '${fmtTon(yieldKg)} từ ${active.length} thửa đang canh tác',
-                    style: const TextStyle(fontSize: 14.5),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 16),
+          _pair(_HarvestCard(parcels: upcoming, now: now, path: '/manager/schedule'), _CultivationCard(d.parcels)),
+          const SizedBox(height: 12),
+          _JournalPreview(
+            entries: officer ? recent : pending,
+            seeAllPath: journalPath,
+            title: officer ? 'Nhật ký gần đây' : 'Nhật ký chờ duyệt',
+          ),
+          if (d.summary != null) ...[const SizedBox(height: 12), _ShopSummary(summary: d.summary!, base: '/manager')],
+          if (d.prices != null) ...[const SizedBox(height: 12), _MarketCard(prices: d.prices!)],
+          if (officer) ...[
+            const SizedBox(height: 12),
+            const Text(
+              'Tài khoản cán bộ chỉ xem, không có nút duyệt hay chỉnh sửa.',
+              style: TextStyle(fontSize: 13, color: StaffColors.muted, height: 1.4),
             ),
-          ),
-          const SizedBox(height: 14),
-          SectionCard(
-            title: 'Nhật ký chờ duyệt',
-            onSeeAll: () => context.go('/manager/journal-approve'),
-            child: pending.isEmpty
-                ? const StaffEmpty('Không có nhật ký nào chờ duyệt')
-                : Column(
-                    children: [
-                      for (final e in pending.take(3))
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 7),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${e.parcelCode} · ${e.activityType.label}',
-                                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                                    ),
-                                    Text(
-                                      '${e.performedBy} · ${formatDate(e.entryDate)}',
-                                      style: const TextStyle(fontSize: 12.5, color: StaffColors.muted),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Pill('Chờ duyệt', tone: Tone.warn),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-          ),
-          const SizedBox(height: 14),
-          SectionCard(
-            title: 'Lịch thu hái sắp tới',
-            onSeeAll: () => context.go('/manager/schedule'),
-            child: upcoming.isEmpty
-                ? const StaffEmpty('Chưa có lịch thu hái')
-                : Column(
-                    children: [
-                      for (final p in upcoming.take(3))
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 7),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${p.code} · ${p.cropType}',
-                                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                                    ),
-                                    Text(
-                                      'Hộ ${p.householdName} · ${fmtTon(p.expectedKg)}',
-                                      style: const TextStyle(fontSize: 12.5, color: StaffColors.muted),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                formatDate(p.estimatedHarvestDate!).substring(0, 5),
-                                style: const TextStyle(fontWeight: FontWeight.w800, color: StaffColors.primary),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-          ),
-          const SizedBox(height: 14),
-          if (d.summary != null) ...[_ShopSummary(summary: d.summary!, base: '/manager'), const SizedBox(height: 14)],
-          if (d.prices != null) _MarketCard(prices: d.prices!),
+          ],
         ]);
       },
     );
@@ -324,112 +369,31 @@ class _MarketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SectionCard(
     title: 'Chỉ số giá nông sản',
+    divided: true,
+    padded: false,
     onSeeAll: () => context.go('/manager/bulletin'),
-    seeAllLabel: 'Bản tin',
     child: Column(
       children: [
-        for (final m in prices)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(m.commodity, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      Text(m.metric, style: const TextStyle(fontSize: 12.5, color: StaffColors.muted)),
-                    ],
-                  ),
-                ),
-                Pill(m.level, tone: m.index >= 110 ? Tone.warn : (m.index >= 100 ? Tone.ok : Tone.neutral)),
-              ],
-            ),
+        for (final m in prices.take(3))
+          StaffListRow(
+            title: m.commodity,
+            subtitle: m.metric,
+            trailing: Pill(m.level, tone: m.index >= 110 ? Tone.warn : (m.index >= 100 ? Tone.ok : Tone.neutral)),
           ),
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text('Nguồn mô phỏng: số liệu mẫu', style: TextStyle(fontSize: 11.5, color: StaffColors.faint)),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text('Nguồn mô phỏng: số liệu mẫu', style: TextStyle(fontSize: 13, color: StaffColors.muted)),
+          ),
         ),
       ],
     ),
   );
 }
 
-// ---------------------------------------------------------------------------
-// Officer (cán bộ, read-only)
-// ---------------------------------------------------------------------------
-
-class OfficerDashboard extends StatelessWidget {
-  const OfficerDashboard({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final scope = StaffScope(context);
-    return LoadView<(List<Member>, List<Parcel>, List<JournalEntry>, List<Lot>, HtxSummary?)>(
-      load: () async => (
-        await scope.repo.listMembers(scope.htx),
-        await scope.repo.listParcels(scope.htx),
-        await scope.repo.listJournal(scope.htx),
-        await scope.repo.listLots(scope.htx),
-        scope.coreIsSample ? await scope.repo.summary(scope.htx) : null,
-      ),
-      builder: (context, d, reload) {
-        final pending = d.$3.where((e) => e.status == JournalStatus.pendingApproval).length;
-        final active = d.$2.where((p) => p.status.isActive).length;
-        final ready = d.$4.where((l) => l.status == LotStatus.ready).length;
-        final households = d.$1.where((m) => m.role == MemberRole.farmer).length;
-        return _scroll(reload, [
-          _hero(
-            context,
-            scope.userName,
-            eyebrow: pending > 0 ? Pill('$pending nhật ký chờ duyệt', tone: Tone.warn) : null,
-          ),
-          MetricGrid([
-            MetricCard(
-              label: 'Chờ duyệt',
-              value: '$pending',
-              icon: Icons.error_outline,
-              tone: Tone.warn,
-              onTap: () => context.go('/manager/journal'),
-            ),
-            MetricCard(
-              label: 'Thửa đất đang canh tác',
-              value: '$active',
-              icon: Icons.map_outlined,
-              onTap: () => context.go('/manager/zones'),
-            ),
-            MetricCard(
-              label: 'Lô sẵn sàng',
-              value: '$ready',
-              icon: Icons.inventory_2_outlined,
-              tone: Tone.neutral,
-              onTap: () => context.go('/manager/lots'),
-            ),
-            MetricCard(
-              label: 'Nông hộ quản lý',
-              value: '$households',
-              icon: Icons.groups_outlined,
-              onTap: () => context.go('/manager/households'),
-            ),
-          ]),
-          const SizedBox(height: 14),
-          _JournalPreview(entries: d.$3.take(6).toList(), seeAllPath: '/manager/journal'),
-          const SizedBox(height: 14),
-          if (d.$5 != null) ...[_ShopSummary(summary: d.$5!, base: '/manager'), const SizedBox(height: 12)],
-          const InfoNote('Tài khoản cán bộ chỉ xem, không có nút duyệt hay chỉnh sửa.'),
-        ]);
-      },
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Farmer
-// ---------------------------------------------------------------------------
-
 class FarmerDashboard extends StatelessWidget {
   const FarmerDashboard({super.key});
-
   @override
   Widget build(BuildContext context) {
     final scope = StaffScope(context);
@@ -442,167 +406,120 @@ class FarmerDashboard extends StatelessWidget {
         visits: scope.coreIsSample ? await scope.repo.listHouseholdVisits(scope.household ?? '') : null,
       ),
       builder: (context, d, reload) {
-        final upcoming = [
-          for (final p in d.parcels)
-            if (p.estimatedHarvestDate != null &&
-                p.status != ParcelStatus.harvested &&
-                daysUntil(p.estimatedHarvestDate!, now) >= 0)
-              p,
-        ]..sort((a, b) => a.estimatedHarvestDate!.compareTo(b.estimatedHarvestDate!));
-        final todayTasks =
-            d.journal.where((e) => e.status == JournalStatus.rejected).length +
-            upcoming.where((p) => daysUntil(p.estimatedHarvestDate!, now) <= 2).length;
-        final pendingJournal = d.journal.where((e) => e.status == JournalStatus.pendingApproval).length;
-        final nextHarvest = upcoming.isEmpty ? '—' : formatDate(upcoming.first.estimatedHarvestDate!).substring(0, 5);
-        final withdrawals = [
-          for (final p in d.parcels)
-            if (withdrawalDaysLeft(p.id, d.journal, now) > 0) (p.code, withdrawalDaysLeft(p.id, d.journal, now)),
-        ];
+        final upcoming = _upcoming(d.parcels, now);
+        final todayTasks = upcoming.where((p) => daysUntil(p.estimatedHarvestDate!, now) == 0).length;
+        final needsChanges = d.journal
+            .where((e) => e.status == JournalStatus.rejected || e.status == JournalStatus.requestChanges)
+            .length;
         final visits = [
           for (final v in d.visits ?? const <Booking>[])
             if (!v.departureDate.isBefore(dayOf(now))) v,
-        ];
+        ]..sort((a, b) => a.departureDate.compareTo(b.departureDate));
+        final parcels = [...d.parcels]
+          ..sort((a, b) {
+            final aDate = a.status.isActive ? a.estimatedHarvestDate : null;
+            final bDate = b.status.isActive ? b.estimatedHarvestDate : null;
+            if (aDate == null) return bDate == null ? a.code.compareTo(b.code) : 1;
+            if (bDate == null) return -1;
+            return aDate.compareTo(bDate);
+          });
         return _scroll(reload, [
-          PageHead('${greeting(now)}, ${scope.userName}', subtitle: 'Chúc bạn một ngày làm việc hiệu quả!'),
-          Row(
-            children: [
-              if (scope.coreWritable) ...[
-                Expanded(
-                  child: FilledButton(
+          _hero(scope, 'Nông dân'),
+          AttentionCard(
+            items: [
+              _attention(context, 'Việc hôm nay', todayTasks, '/farmer/schedule'),
+              _attention(context, 'Nhật ký cần sửa', needsChanges, '/farmer/journal'),
+              _attention(
+                context,
+                'Nhật ký chờ duyệt',
+                d.journal.where((e) => e.status == JournalStatus.pendingApproval).length,
+                '/farmer/journal',
+              ),
+              _attention(context, 'Thu hái tới', _weekCount(upcoming, now), '/farmer/schedule'),
+            ],
+            action: scope.coreWritable
+                ? FilledButton.icon(
                     key: const Key('farmer-new-journal'),
                     onPressed: () => context.push('/farmer/journal/new'),
-                    child: const Text('Ghi nhật ký mới', textAlign: TextAlign.center, style: TextStyle(fontSize: 14)),
-                  ),
-                ),
-                const SizedBox(width: 10),
-              ],
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => context.go('/farmer/journal'),
-                  child: const Text('Xem lịch sử', style: TextStyle(fontSize: 14)),
-                ),
-              ),
-            ],
+                    icon: const Icon(Icons.add, size: 20),
+                    label: const Text('Ghi nhật ký mới'),
+                  )
+                : null,
           ),
-          const SizedBox(height: 14),
-          MetricGrid([
-            MetricCard(
-              label: 'Thửa đất của tôi',
-              value: '${d.parcels.length}',
-              icon: Icons.eco_outlined,
-              onTap: () => context.go('/farmer/parcels'),
-            ),
-            MetricCard(
-              label: 'Việc hôm nay',
-              value: '$todayTasks',
-              icon: Icons.checklist,
-              tone: Tone.warn,
-              onTap: () => context.go('/farmer/schedule'),
-            ),
-            MetricCard(
-              label: 'Thu hái tới',
-              value: nextHarvest,
-              icon: Icons.calendar_month_outlined,
-              onTap: () => context.go('/farmer/schedule'),
-            ),
-            MetricCard(
-              label: 'Nhật ký chờ duyệt',
-              value: '$pendingJournal',
-              icon: Icons.hourglass_bottom,
-              tone: Tone.neutral,
-              onTap: () => context.go('/farmer/journal'),
+          const SizedBox(height: 12),
+          SummaryStrip([
+            _figure(context, 'Thửa đất của tôi', '${d.parcels.length}', '/farmer/parcels'),
+            _figure(context, 'Diện tích', fmtHa(d.parcels.fold<double>(0, (s, p) => s + p.areaHa)), '/farmer/parcels'),
+            _figure(
+              context,
+              'Thu hái tới',
+              upcoming.isEmpty ? '—' : formatDate(upcoming.first.estimatedHarvestDate!).substring(0, 5),
+              '/farmer/schedule',
             ),
           ]),
-          const SizedBox(height: 14),
-          SectionCard(
-            title: 'Tình trạng thửa đất',
-            onSeeAll: () => context.go('/farmer/parcels'),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (withdrawals.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        for (final w in withdrawals) Pill('Thửa ${w.$1} còn ${w.$2} ngày cách ly', tone: Tone.warn),
-                      ],
-                    ),
-                  ),
-                if (d.parcels.isEmpty)
-                  const StaffEmpty('Bạn chưa có thửa đất nào được phân công.')
-                else
-                  for (final p in d.parcels)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 7),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(p.code, style: const TextStyle(fontWeight: FontWeight.w700)),
-                                Text(
-                                  '${p.cropType} • ${fmtHa(p.areaHa)}',
-                                  style: const TextStyle(fontSize: 12.5, color: StaffColors.muted),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Pill(p.status.label, tone: parcelTone(p.status)),
-                        ],
-                      ),
-                    ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
           if (d.weather case final w?) ...[
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                '${fmtNum(w.temperatureC, digits: 0)}°C · ${w.condition} · Ẩm ${w.humidityPct}% · Mưa ${fmtNum(w.precipitationMm)} mm',
+                style: const TextStyle(fontSize: 13, height: 1.5, color: StaffColors.muted),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          _pair(
             SectionCard(
-              title: 'Thời tiết hiện tại',
-              child: Row(
+              title: 'Tình trạng thửa đất',
+              divided: true,
+              padded: false,
+              onSeeAll: () => context.go('/farmer/parcels'),
+              child: Column(
                 children: [
-                  const Icon(Icons.cloud_outlined, size: 44, color: StaffColors.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${fmtNum(w.temperatureC, digits: 0)}°C',
-                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
-                        ),
-                        Text(w.condition, style: const TextStyle(color: StaffColors.muted)),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('Độ ẩm ${w.humidityPct}%', style: const TextStyle(fontSize: 13.5)),
-                      const SizedBox(height: 2),
-                      Text('Mưa ${fmtNum(w.precipitationMm)} mm', style: const TextStyle(fontSize: 13.5)),
+                  if (parcels.isEmpty)
+                    const StaffListRow(title: 'Bạn chưa có thửa đất nào được phân công.')
+                  else
+                    for (var i = 0; i < parcels.length && i < 3; i++) ...[
+                      if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+                      StaffListRow(
+                        title: parcels[i].code,
+                        subtitle:
+                            '${parcels[i].cropType} · ${fmtHa(parcels[i].areaHa)}\n${_harvestDistance(parcels[i], now)}',
+                        trailing: Pill(parcels[i].status.label, tone: parcelTone(parcels[i].status)),
+                        onTap: () => context.go('/farmer/parcels'),
+                      ),
                     ],
-                  ),
+                  // Safety notices are not truncated with the three-row parcel preview.
+                  for (final p in parcels)
+                    if (withdrawalDaysLeft(p.id, d.journal, now) > 0)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Pill(
+                            'Thửa ${p.code} còn ${withdrawalDaysLeft(p.id, d.journal, now)} ngày cách ly',
+                            tone: Tone.warn,
+                          ),
+                        ),
+                      ),
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-          ],
+            _HarvestCard(parcels: upcoming, now: now, path: '/farmer/schedule'),
+          ),
+          const SizedBox(height: 12),
           if (d.visits != null)
             SectionCard(
               title: 'Lịch tham quan',
-              onSeeAll: () => context.go('/farmer/visits'),
+              divided: true,
               padded: false,
+              onSeeAll: () => context.go('/farmer/visits'),
               child: visits.isEmpty
-                  ? const StaffEmpty('Chưa có đoàn khách nào')
-                  : Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      child: Stack10([
+                  ? const StaffListRow(title: 'Chưa có đoàn khách nào')
+                  : Column(
+                      children: [
                         for (final v in visits.take(3))
-                          RowCard(
+                          StaffListRow(
                             key: Key('visit-${v.id}'),
                             title: v.tourName,
                             subtitle: '${formatDateLong(v.departureDate)}\n${v.contactName} · ${v.guests} khách',
@@ -611,9 +528,10 @@ class FarmerDashboard extends StatelessWidget {
                                 : Pill(v.status.label, tone: bookingTone(v.status)),
                             onTap: () => context.push('/farmer/visits/${v.id}'),
                           ),
-                      ]),
+                      ],
                     ),
             ),
+          TextButton(onPressed: () => context.go('/farmer/journal'), child: const Text('Xem lịch sử nhật ký ›')),
         ]);
       },
     );
@@ -628,13 +546,8 @@ class _FarmerData {
   final List<Booking>? visits;
 }
 
-// ---------------------------------------------------------------------------
-// Operator (công ty du lịch)
-// ---------------------------------------------------------------------------
-
 class OperatorDashboard extends StatelessWidget {
   const OperatorDashboard({super.key});
-
   @override
   Widget build(BuildContext context) {
     final scope = StaffScope(context);
@@ -647,110 +560,84 @@ class OperatorDashboard extends StatelessWidget {
       ),
       builder: (context, d, reload) {
         final linked = d.$1;
-        final revenue = linked.fold<int>(0, (s, h) => s + h.revenueMillion);
-        final needSupport = linked.where((h) => h.state == 'warn').toList();
-        final pendingBookings = d.$2.where((b) => b.status == BookingStatus.pending).length;
+        final ranked = [...linked]..sort((a, b) => b.guestsThisMonth.compareTo(a.guestsThisMonth));
         return _scroll(reload, [
-          PageHead(
-            'Tổng quan toàn vùng',
-            subtitle: 'Số liệu gộp của các HTX liên kết, không có dữ liệu cá nhân khách hay hộ.',
-          ),
-          MetricGrid([
-            MetricCard(
-              label: 'HTX liên kết',
-              value: '${linked.length}',
-              icon: Icons.account_balance_outlined,
-              onTap: () => context.go('/operator/htx'),
-            ),
-            MetricCard(
-              label: 'Lượt đặt tour',
-              value: '${d.$2.length}',
-              icon: Icons.confirmation_number_outlined,
-              tone: Tone.neutral,
-              onTap: () => context.go('/operator/bookings'),
-            ),
-            MetricCard(
-              label: 'Bài chờ duyệt',
-              value: '${d.$3.length}',
-              icon: Icons.fact_check_outlined,
-              tone: Tone.warn,
-              onTap: () => context.go('/operator/articles'),
-            ),
-            MetricCard(label: 'Doanh thu tháng', value: '$revenue tr ₫', icon: Icons.payments_outlined),
-          ]),
-          const SizedBox(height: 14),
-          SectionCard(
-            title: 'Cần xử lý hôm nay',
-            child: Column(
-              children: [
-                _todo(
-                  Tone.bad,
-                  needSupport.isEmpty
-                      ? 'Không có HTX cần hỗ trợ'
-                      : '${needSupport.length} HTX cần hỗ trợ: ${needSupport.map((h) => h.name.replaceFirst('HTX Chè ', '')).join(', ')}',
-                ),
-                _todo(Tone.warn, '$pendingBookings lượt đặt tour đang chờ HTX xác nhận'),
-                _todo(Tone.warn, '${d.$3.length} bài viết chờ duyệt'),
-                _todo(Tone.ok, 'Báo cáo tháng trước đã xuất'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          SectionCard(
-            title: 'Khách theo hợp tác xã',
-            onSeeAll: () => context.go('/operator/htx'),
-            child: BarList([
-              for (final h in linked.where((h) => h.guestsThisMonth > 0).take(4))
-                (h.name.replaceFirst('HTX Chè ', ''), h.guestsThisMonth),
-            ]),
-          ),
-          const SizedBox(height: 14),
-          SectionCard(
-            title: 'Tour toàn vùng',
-            onSeeAll: () => context.go('/operator/tours'),
-            child: Column(
-              children: [
-                for (final t in d.$4)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(t.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                        ),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 140),
-                          child: Pill(t.stateLabel, tone: toneOfState(t.state)),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
+          _hero(scope, 'Công ty du lịch'),
+          AttentionCard(
+            items: [
+              _attention(context, 'HTX cần hỗ trợ', linked.where((h) => h.state == 'warn').length, '/operator/htx'),
+              _attention(
+                context,
+                'Lượt đặt chờ xác nhận',
+                d.$2.where((b) => b.status == BookingStatus.pending).length,
+                '/operator/bookings',
+              ),
+              _attention(context, 'Bài chờ duyệt', d.$3.length, '/operator/articles'),
+            ],
           ),
           const SizedBox(height: 12),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Số liệu mẫu cho bản trình diễn.', style: TextStyle(fontSize: 11.5, color: StaffColors.faint)),
+          SummaryStrip([
+            _figure(context, 'HTX liên kết', '${linked.length}', '/operator/htx'),
+            _figure(context, 'Lượt đặt tour', '${d.$2.length}', '/operator/bookings'),
+            _figure(
+              context,
+              'Doanh thu tháng',
+              '${linked.fold<int>(0, (s, h) => s + h.revenueMillion)} tr ₫',
+              '/operator/reports',
+            ),
+          ]),
+          const SizedBox(height: 16),
+          _pair(
+            SectionCard(
+              title: 'Khách theo hợp tác xã',
+              divided: true,
+              onSeeAll: () => context.go('/operator/htx'),
+              child: ranked.isEmpty
+                  ? const Text('Chưa có hợp tác xã liên kết')
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Trong tháng · Đơn vị: khách',
+                          style: TextStyle(fontSize: 12, color: StaffColors.muted),
+                        ),
+                        const SizedBox(height: 4),
+                        BarList([
+                          for (final h in ranked.take(3)) (h.name.replaceFirst('HTX Chè ', ''), h.guestsThisMonth),
+                        ]),
+                      ],
+                    ),
+            ),
+            SectionCard(
+              title: 'Tour toàn vùng',
+              divided: true,
+              padded: false,
+              onSeeAll: () => context.go('/operator/tours'),
+              child: d.$4.isEmpty
+                  ? const StaffListRow(title: 'Chưa có tour nào')
+                  : Column(
+                      children: [
+                        for (var i = 0; i < d.$4.length && i < 3; i++) ...[
+                          if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+                          StaffListRow(
+                            title: d.$4[i].name,
+                            trailing: Pill(d.$4[i].stateLabel, tone: toneOfState(d.$4[i].state)),
+                            onTap: () => context.go('/operator/tours'),
+                          ),
+                        ],
+                      ],
+                    ),
+            ),
           ),
+          const SizedBox(height: 16),
+          const Text(
+            'Số liệu gộp của các HTX liên kết, không có dữ liệu cá nhân khách hay hộ.',
+            style: TextStyle(fontSize: 13, color: StaffColors.muted, height: 1.4),
+          ),
+          const SizedBox(height: 8),
+          const Text('Số liệu mẫu cho bản trình diễn.', style: TextStyle(fontSize: 13, color: StaffColors.muted)),
         ]);
       },
     );
   }
-
-  Widget _todo(Tone tone, String text) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          margin: const EdgeInsets.only(top: 5, right: 10),
-          decoration: BoxDecoration(color: toneColor(tone), shape: BoxShape.circle),
-        ),
-        Expanded(child: Text(text, style: const TextStyle(fontSize: 14, height: 1.35))),
-      ],
-    ),
-  );
 }

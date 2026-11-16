@@ -32,6 +32,15 @@ Sau đăng nhập app đọc vai trong claims và chuyển tới giao diện c�
 
 Tên vai `operator` là tên tạm: vai của công ty du lịch chưa được chốt (xem `2026-11-15-operator-and-articles-design.md`).
 
+## Bố cục tổng quan nhân sự
+
+- Việc cần xử lý đứng đầu: chỉ hiện hàng có số lượng lớn hơn 0, mỗi hàng mở trang nghiệp vụ tương ứng. Cán bộ dùng đường nhật ký chỉ xem. Không có việc thì hiện trạng thái trống; nông dân vẫn có nút ghi nhật ký nếu nguồn dữ liệu cho phép ghi.
+- Dải tóm tắt có ba số chính; ở chữ lớn tự chuyển bố cục để không cắt số. Lịch thu hái dùng **hôm nay và sáu ngày kế tiếp**, chỉ tính thửa đang canh tác có lịch chưa qua. “Việc hôm nay” là số thửa dự kiến thu hôm nay; nhật ký từ chối/cần sửa hiển thị riêng, không gộp thành việc hôm nay.
+- Sản lượng kỳ vọng lấy từ diện tích × năng suất dự kiến của thửa đang canh tác. Hai thanh tỷ lệ là sản lượng được phép thu / tổng kỳ vọng và diện tích đang canh tác / tổng diện tích, không phải phần trăm hoàn thành mục tiêu.
+- Biểu đồ khách theo HTX sắp giảm dần, dùng chung thang theo giá trị lớn nhất. Danh sách xem trước tối đa ba hàng và có “Xem tất cả”; cảnh báo cách ly không bị cắt theo giới hạn xem trước.
+- Hồ sơ dùng tên, vai trò, mã HTX và email từ claims, mỗi trường chỉ xuất hiện một lần trong nội dung. Các lối tắt dùng route sẵn có; không tạo thông tin phiên giả. Đăng xuất giữ nguyên hành vi.
+- Dashboard giữ kéo để làm mới; dữ liệu gian hàng/thời tiết/giá vẫn chỉ xuất hiện theo ranh giới thật/mẫu hiện có. Không thêm API hoặc dependency.
+
 ## Tài khoản dùng thử
 
 Mật khẩu chung `Demo@2026` (đây là tài khoản công khai của bản demo, không phải bí mật):
