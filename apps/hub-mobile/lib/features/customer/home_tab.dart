@@ -13,6 +13,7 @@ import '../../core/money/money.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/catalog.dart';
+import '../../shared/product_image.dart';
 import '../../shared/widgets.dart';
 import 'notifications_screen.dart';
 import 'tour_widgets.dart';
@@ -284,7 +285,7 @@ class HomeTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GradientBanner(seed: p.gradientSeed, icon: Icons.emoji_food_beverage_outlined, height: 78, radius: 12),
+                ProductImage(key: Key('home-product-image-${p.id}'), seed: p.gradientSeed, height: 78, radius: 12),
                 const SizedBox(height: 8),
                 Text(
                   p.name,

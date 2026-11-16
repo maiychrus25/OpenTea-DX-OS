@@ -10,6 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/cart.dart';
 import '../../data/models/catalog.dart';
+import '../../shared/product_image.dart';
 import '../../shared/widgets.dart';
 
 class ProductsTab extends StatelessWidget {
@@ -34,9 +35,9 @@ class ProductsTab extends StatelessWidget {
                     children: [
                       SizedBox(
                         width: 84,
-                        child: GradientBanner(
+                        child: ProductImage(
+                          key: Key('product-image-${p.id}'),
                           seed: p.gradientSeed,
-                          icon: Icons.local_cafe_outlined,
                           height: 84,
                           radius: 16,
                         ),
