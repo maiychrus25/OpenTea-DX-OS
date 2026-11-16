@@ -35,16 +35,13 @@ class TagPill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
     decoration: BoxDecoration(
-      color: amber ? AppColors.amberSoft : const Color(0xFFE9EFDF),
+      // The highlighted pill ('Xem lịch trình ›') is a light green tile like the other soft surfaces, not orange.
+      color: amber ? AppColors.tileLight : const Color(0xFFE9EFDF),
       borderRadius: BorderRadius.circular(999),
     ),
     child: Text(
       text,
-      style: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: amber ? const Color(0xFF8A3D06) : AppColors.teaDark,
-      ),
+      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.teaDark),
     ),
   );
 }
