@@ -41,7 +41,7 @@ class HomeTab extends StatelessWidget {
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 10, 16, 0),
                 child: NoticeBanner(
-                  'Dữ liệu mẫu. Các nhãn "Nguồn" cho biết phần nào lấy từ lõi hoặc app khác khi cắm vào hệ sinh thái.',
+                  'Các nhãn "Nguồn" cho biết phần nào lấy từ lõi hoặc app khác khi cắm vào hệ sinh thái.',
                 ),
               ),
               _brandRow(context),
@@ -215,7 +215,7 @@ class HomeTab extends StatelessWidget {
           const Key('cat-hills'),
           const LeafLogo(size: 44),
           'Đồi chè',
-          () => htxs.isEmpty ? context.go('/shop/map') : context.push('/shop/htx/${htxs.first.code}'),
+          () => htxs.isEmpty ? context.push('/shop/tours') : context.push('/shop/htx/${htxs.first.code}'),
         ),
         const SizedBox(width: 12),
         tile(

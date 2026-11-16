@@ -59,16 +59,6 @@ void main() {
     expect((await repo.listNotifications('tan-cuong')).firstWhere((n) => n.id == 'nt-01').isRead, isTrue);
   });
 
-  test('directives: an empty title is refused, a new one goes first and covers every HTX', () async {
-    expect(
-      () => repo.createDirective(NewDirective(title: '  ', dueDate: DateTime(2027))),
-      throwsA(isA<HubException>()),
-    );
-    final d = await repo.createDirective(NewDirective(title: 'Mở thêm hộ đón khách', dueDate: DateTime(2027)));
-    expect((await repo.listDirectives()).first.id, d.id);
-    expect(d.assignments.length, greaterThan(1));
-  });
-
   test('rescheduling a harvest changes the date; a harvested parcel cannot be moved', () async {
     final p = await repo.rescheduleHarvest('pc-01', DateTime(2026, 12, 1));
     expect(p.estimatedHarvestDate, DateTime(2026, 12, 1));
@@ -83,18 +73,14 @@ void main() {
       'Quản lý thành viên',
       'Bản tin',
       'Duyệt nhật ký',
-      'Chatbot',
-      'Bản đồ đối tác',
       'Vùng trồng',
       'Lô hàng',
       'Thông báo',
       'Hồ sơ HTX',
-      'Kho ứng dụng',
     ]);
     expect(labels(StaffKind.operator), [
       'Tổng quan',
       'Hợp tác xã liên kết',
-      'Chỉ đạo và nhiệm vụ',
       'Tour toàn vùng',
       'Bài viết HTX',
       'Báo cáo tổng hợp',

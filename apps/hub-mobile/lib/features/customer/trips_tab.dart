@@ -103,6 +103,18 @@ class _TripsTabState extends State<TripsTab> {
                 ),
               ),
             ),
+          if (signedIn)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: SizedBox(
+                height: 52,
+                child: OutlinedButton(
+                  key: const Key('trips-orders'),
+                  onPressed: () => context.push('/shop/orders'),
+                  child: const Text('Đơn hàng của tôi'),
+                ),
+              ),
+            ),
           SizedBox(
             height: 52,
             child: FilledButton(

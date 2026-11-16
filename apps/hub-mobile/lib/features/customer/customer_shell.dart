@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../shared/widgets.dart';
 
-/// Bottom navigation of guest and customer: Khám phá, Bản đồ, Lịch trình, Đã lưu.
+/// Bottom navigation of guest and customer: Khám phá, Tour, Lịch trình, Tài khoản.
 /// Cart, orders, tours and products live under "Khám phá".
 class CustomerShell extends StatelessWidget {
   const CustomerShell({super.key, required this.location, required this.child});
@@ -14,19 +14,30 @@ class CustomerShell extends StatelessWidget {
 
   static const destinations = [
     NavDestination('Khám phá', Icons.explore_outlined, '/shop'),
-    NavDestination('Bản đồ', Icons.place_outlined, '/shop/map'),
+    NavDestination('Tour', Icons.hiking, '/shop/tours'),
     NavDestination('Lịch trình', Icons.event_note_outlined, '/shop/trips'),
-    NavDestination('Đã lưu', Icons.bookmark_border, '/shop/saved'),
+    NavDestination('Tài khoản', Icons.person_outline, '/shop/me'),
   ];
 
   static int indexFor(String location) {
-    if (location.startsWith('/shop/map')) return 1;
+    if (location.startsWith('/shop/tours')) return 1;
     if (location.startsWith('/shop/trips')) return 2;
-    if (location.startsWith('/shop/saved')) return 3;
+    if (location.startsWith('/shop/me')) return 3;
     return 0;
   }
 
+  /// Every storefront screen is served by the sample repository until the
+  /// Gian hàng mini-app exists; only the account page holds no shop data.
   @override
-  Widget build(BuildContext context) =>
-      RoleShell(destinations: destinations, location: location, indexFor: indexFor, child: child);
+  Widget build(BuildContext context) => RoleShell(
+    destinations: destinations,
+    location: location,
+    indexFor: indexFor,
+    child: Column(
+      children: [
+        if (!location.startsWith('/shop/me')) const SampleDataChip(),
+        Expanded(child: child),
+      ],
+    ),
+  );
 }

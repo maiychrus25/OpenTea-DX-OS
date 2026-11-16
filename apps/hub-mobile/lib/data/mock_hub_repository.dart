@@ -13,6 +13,12 @@ import 'seed_data.dart';
 /// process; it never touches a network. Mirrors the rules the server will own
 /// (stock, status transitions, append-only ledger).
 class MockHubRepository implements HubRepository {
+  @override
+  bool get coreIsSample => true;
+
+  @override
+  bool get coreWritable => true;
+
   MockHubRepository({DateTime? now}) : _now = now ?? DateTime.now() {
     final today = DateTime(_now.year, _now.month, _now.day);
     _departures.addAll(SeedData.departures(today));
@@ -23,7 +29,6 @@ class MockHubRepository implements HubRepository {
     _journal.addAll(StaffSeed.journal(today));
     _lots.addAll(StaffSeed.lots(today));
     _notifications.addAll(StaffSeed.notifications(_now));
-    _directives.addAll(StaffSeed.directives(today));
   }
 
   final DateTime _now;
@@ -37,7 +42,6 @@ class MockHubRepository implements HubRepository {
   final _journal = <JournalEntry>[];
   final _lots = <Lot>[];
   final _notifications = <AppNotification>[];
-  final _directives = <Directive>[];
   final _stock = <String, int>{for (final p in SeedData.products) p.id: p.stock};
 
   String _nextId(String prefix) => '$prefix-${_serial++}';
@@ -482,25 +486,6 @@ class MockHubRepository implements HubRepository {
 
   @override
   Future<List<RegionTour>> listRegionTours() async => StaffSeed.regionTours;
-
-  @override
-  Future<List<Directive>> listDirectives() async => List.of(_directives);
-
-  @override
-  Future<Directive> createDirective(NewDirective draft) async {
-    if (draft.title.trim().isEmpty) throw const HubException('Cần nhập nội dung nhiệm vụ');
-    final targets = draft.htxName == null
-        ? [for (final h in StaffSeed.linkedHtxs) h.name.replaceFirst('HTX Chè ', '').replaceFirst('Shan Tuyết ', '')]
-        : [draft.htxName!];
-    final directive = Directive(
-      id: _nextId('dr'),
-      title: draft.title.trim(),
-      dueDate: draft.dueDate,
-      assignments: [for (final t in targets) DirectiveAssignment(t, DirectiveState.notReceived)],
-    );
-    _directives.insert(0, directive);
-    return directive;
-  }
 
   @override
   Future<List<ReportRow>> reportRows() async => StaffSeed.reportRows;

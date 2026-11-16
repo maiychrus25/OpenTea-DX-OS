@@ -175,6 +175,7 @@ All versions are pinned exactly in `pubspec.yaml`; `pubspec.lock` pins the trans
 | [provider](https://pub.dev/packages/provider) | 6.1.5+1 | MIT | State management (session, cart, orders) |
 | [shared_preferences](https://pub.dev/packages/shared_preferences) | 2.5.6 | BSD-3-Clause | Cart, orders and tickets kept on the device |
 | [qr_flutter](https://pub.dev/packages/qr_flutter) | 4.1.0 | BSD-3-Clause | VietQR payment code and ticket QR (pulls `qr` 3.0.3, BSD-3-Clause) |
+| [http](https://pub.dev/packages/http) | 1.6.0 | BSD-3-Clause | HTTP client of `HttpHubRepository` (GraphQL calls to the core through the gateway); tests use its `MockClient` (pulls `http_parser` 4.1.2 and `typed_data` 1.4.0, BSD-3-Clause) |
 
 ### Dev Dependencies
 
@@ -183,7 +184,7 @@ All versions are pinned exactly in `pubspec.yaml`; `pubspec.lock` pins the trans
 | flutter_test (Flutter SDK) | 3.41.7 | BSD-3-Clause | Unit and widget tests |
 | [flutter_lints](https://pub.dev/packages/flutter_lints) | 6.0.0 | BSD-3-Clause | Lint rules for `flutter analyze` |
 
-Transitive packages (all BSD-3-Clause or MIT, checked from their LICENSE files): `characters`, `collection`, `ffi`, `file`, `logging`, `material_color_utilities`, `meta`, `nested` (MIT), `path`, `path_provider_linux`, `path_provider_platform_interface`, `path_provider_windows`, `platform`, `plugin_platform_interface`, `qr`, `shared_preferences_android`, `shared_preferences_foundation`, `shared_preferences_linux`, `shared_preferences_platform_interface`, `shared_preferences_web`, `shared_preferences_windows`, `vector_math`, `web`, `xdg_directories`.
+Transitive packages (all BSD-3-Clause or MIT, checked from their LICENSE files): `characters`, `collection`, `ffi`, `file`, `http_parser`, `logging`, `material_color_utilities`, `meta`, `nested` (MIT), `path`, `path_provider_linux`, `path_provider_platform_interface`, `path_provider_windows`, `platform`, `plugin_platform_interface`, `qr`, `shared_preferences_android`, `shared_preferences_foundation`, `shared_preferences_linux`, `shared_preferences_platform_interface`, `shared_preferences_web`, `shared_preferences_windows`, `typed_data`, `vector_math`, `web`, `xdg_directories`.
 
 ---
 

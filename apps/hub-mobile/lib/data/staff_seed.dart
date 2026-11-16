@@ -606,33 +606,6 @@ class StaffSeed {
     ),
   ];
 
-  static List<Directive> directives(DateTime today) => [
-    Directive(
-      id: 'dr-01',
-      title: 'Chuẩn bị mùa hái chè xuân 2027: mở thêm tối thiểu 3 hộ đón khách',
-      dueDate: DateTime(today.year + 1, 1, 20),
-      assignments: const [
-        DirectiveAssignment('Tân Cương', DirectiveState.done),
-        DirectiveAssignment('Suối Giàng', DirectiveState.done),
-        DirectiveAssignment('Trại Cài', DirectiveState.doing),
-        DirectiveAssignment('Phúc Xuân', DirectiveState.unconfirmed),
-      ],
-    ),
-    Directive(
-      id: 'dr-02',
-      title: 'Cập nhật bài giới thiệu khu vực theo mẫu chuẩn của công ty',
-      dueDate: DateTime(today.year, 11, 30).isBefore(today)
-          ? today.add(const Duration(days: 14))
-          : DateTime(today.year, 11, 30),
-      assignments: const [
-        DirectiveAssignment('Tân Cương', DirectiveState.done),
-        DirectiveAssignment('Suối Giàng', DirectiveState.doing),
-        DirectiveAssignment('Trại Cài', DirectiveState.doing),
-        DirectiveAssignment('Hoàng Nông', DirectiveState.notReceived),
-      ],
-    ),
-  ];
-
   static const regionTours = <RegionTour>[
     RegionTour(
       id: 'rt-01',

@@ -61,13 +61,10 @@ void main() {
         'Quản lý thành viên',
         'Bản tin',
         'Duyệt nhật ký',
-        'Chatbot',
-        'Bản đồ đối tác',
         'Vùng trồng',
         'Lô hàng',
         'Thông báo',
         'Hồ sơ HTX',
-        'Kho ứng dụng',
         'Gian hàng',
       ]);
       await tester.tap(find.byKey(const Key('drawer-shop-toggle')));
@@ -82,14 +79,10 @@ void main() {
       _expectAll([
         'Tổng quan',
         'Lịch thu hái',
-        'Bản đồ',
+        'Vùng trồng',
         'Nông hộ',
         'Nhật ký',
         'Lô hàng',
-        'Nhật ký bệnh',
-        'Tài liệu',
-        'Chatbot KT',
-        'Trợ lý TT',
         'Thông báo',
         'Tài khoản',
         'Cán bộ KT',
@@ -124,7 +117,6 @@ void main() {
       _expectAll([
         'Tổng quan',
         'Hợp tác xã liên kết',
-        'Chỉ đạo và nhiệm vụ',
         'Tour toàn vùng',
         'Bài viết HTX',
         'Báo cáo tổng hợp',
@@ -224,12 +216,22 @@ void main() {
       expect(find.byKey(const Key('harvest-pc-02')), findsOneWidget);
     });
 
-    testWidgets('unbuilt pages show the Sắp có placeholder with what the web does', (tester) async {
-      await _openAs(tester, 'manager@demo.vn');
-      for (final p in ['/manager/chat', '/manager/partner-map', '/manager/app-store']) {
-        await _goTo(tester, p);
-        expect(find.text('Sắp có'), findsWidgets);
-        expect(find.text('Trên bản web'), findsOneWidget);
+    testWidgets('no drawer lists a "Sắp có" placeholder', (tester) async {
+      for (final email in ['manager@demo.vn', 'officer@demo.vn', 'farmer@demo.vn', 'operator@demo.vn']) {
+        await _openAs(tester, email);
+        await _openDrawer(tester);
+        expect(find.text('Sắp có'), findsNothing, reason: email);
+        for (final gone in [
+          'Chatbot',
+          'Bản đồ đối tác',
+          'Kho ứng dụng',
+          'Tài liệu',
+          'Chẩn đoán',
+          'Nhật ký bệnh',
+          'Chỉ đạo và nhiệm vụ',
+        ]) {
+          expect(find.text(gone), findsNothing, reason: '$email $gone');
+        }
       }
     });
 
@@ -259,15 +261,8 @@ void main() {
       expect(find.text('Phun thuốc cần ghi tên sản phẩm'), findsOneWidget);
     });
 
-    testWidgets('operator creates a directive and approves an article from the new menu', (tester) async {
+    testWidgets('operator approves an article and opens the linked pages from the menu', (tester) async {
       await _openAs(tester, 'operator@demo.vn');
-      await _goTo(tester, '/operator/directives');
-      await tester.tap(find.byKey(const Key('directive-new')));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('directive-title')), 'Chuẩn bị lễ hội chè');
-      await tester.tap(find.byKey(const Key('directive-send')));
-      await tester.pumpAndSettle();
-      expect(find.text('Chuẩn bị lễ hội chè'), findsOneWidget);
       await _goTo(tester, '/operator/articles');
       await tester.tap(find.byKey(const Key('approve-art-03')));
       await tester.pumpAndSettle();

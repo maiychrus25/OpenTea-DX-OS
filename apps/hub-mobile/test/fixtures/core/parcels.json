@@ -1,0 +1,10 @@
+{"data":{"parcels":[
+{"id":"clx0pc0002","parcel_code":"P-TC-002","household_id":"clx0hh0002","area_ha":0.8,"crop_type":"Chè Kim Tuyên","status":"HARVEST_APPROVED","estimated_yield_per_ha":9000,
+ "household":{"id":"clx0hh0002","name":"Hộ ông Sáng","address":"Xóm 3"},
+ "crop_cycles":[{"season":"Lứa 4/2026","sowed_at":"2026-01-10T00:00:00","harvested_at":null,"estimated_harvest_date":"2026-11-20T00:00:00"}]},
+{"id":"clx0pc0001","parcel_code":"P-TC-001","household_id":"clx0hh0001","area_ha":1.25,"crop_type":"Chè Trung du","status":"HARVESTED","estimated_yield_per_ha":null,
+ "household":{"id":"clx0hh0001","name":"Hộ bà Lan","address":null},
+ "crop_cycles":[{"season":"Lứa 3/2026","sowed_at":null,"harvested_at":"2026-09-01T00:00:00","estimated_harvest_date":"2026-08-30T00:00:00"}]},
+{"id":"clx0pc0003","parcel_code":"P-TC-003","household_id":"clx0hh0001","area_ha":0.3,"crop_type":"Chè Trung du","status":"DRAFT","estimated_yield_per_ha":8000,
+ "household":{"id":"clx0hh0001","name":"Hộ bà Lan","address":null},"crop_cycles":[]}
+]}}

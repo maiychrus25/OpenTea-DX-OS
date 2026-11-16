@@ -10,6 +10,7 @@ import '../../core/format/formatting.dart';
 import '../../core/theme/staff_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/staff.dart';
+import '../../shared/widgets.dart' show SampleDataChip;
 import 'staff_nav.dart';
 import 'staff_widgets.dart';
 
@@ -128,11 +129,45 @@ class _StaffShellState extends State<StaffShell> {
           onAvatar: () => context.go(nav.accountPath),
         ),
         drawer: _StaffDrawer(nav: nav, location: widget.location, counts: _counts, onGo: _go),
-        body: widget.child,
+        body: Column(
+          children: [
+            if (_showsSample(context, widget.location)) const SampleDataChip(),
+            Expanded(child: widget.child),
+          ],
+        ),
         bottomNavigationBar: _BottomBar(nav: nav, location: widget.location, onGo: (p) => context.go(p)),
       ),
     );
   }
+}
+
+/// Pages served by the core ("Lõi"): real with the real repository, sample with the mock.
+const _corePaths = {
+  '/farmer',
+  '/farmer/journal',
+  '/farmer/schedule',
+  '/farmer/notifications',
+  '/farmer/parcels',
+  '/manager',
+  '/manager/schedule',
+  '/manager/members',
+  '/manager/households',
+  '/manager/journal',
+  '/manager/journal-approve',
+  '/manager/zones',
+  '/manager/lots',
+  '/manager/notifications',
+  '/manager/profile',
+};
+
+/// Whether the page at [location] shows sample data, so it carries the "Dữ liệu mẫu" chip.
+/// Account pages hold no data; everything outside the core is sample until its mini-app exists.
+bool _showsSample(BuildContext context, String location) {
+  if (location.endsWith('/me')) return false;
+  final isCore = _corePaths.any(
+    (p) => location == p || (p != '/farmer' && p != '/manager' && location.startsWith('$p/')),
+  );
+  return !isCore || context.read<HubRepository>().coreIsSample;
 }
 
 String initialsOf(String name) {
@@ -536,7 +571,6 @@ class _StaffDrawerState extends State<_StaffDrawer> {
                     ),
                   ),
                 ),
-                if (m.soon) Text('Sắp có', style: TextStyle(color: _dim.withValues(alpha: 0.55), fontSize: 11)),
                 if (badge > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
@@ -656,7 +690,6 @@ class _MenuSearch extends SearchDelegate<String> {
                   ListTile(
                     leading: Icon(m.icon, color: StaffColors.primary),
                     title: Text(m.label),
-                    subtitle: m.soon ? const Text('Sắp có') : null,
                     onTap: () => close(context, m.path),
                   ),
               ],

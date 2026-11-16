@@ -110,7 +110,7 @@ class TourDetailScreen extends StatelessWidget {
                 child: Align(alignment: Alignment.topLeft, child: PhotoBadge(tour.durationLabel)),
               ),
             ),
-            PageHeader(tour.name, trailing: SaveHeart(tour.id, filledBackground: false)),
+            PageHeader(tour.name),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
               child: Column(

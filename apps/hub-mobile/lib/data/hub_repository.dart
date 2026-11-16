@@ -59,6 +59,15 @@ class HubException implements Exception {
 /// platform gateway, with the OIDC bearer token) plugs in here later; the API
 /// is milestone M2 and its endpoints are not defined yet, so none are invented.
 abstract class HubRepository {
+  /// True while the staff "core" pages (members, parcels, diary, lots,
+  /// notifications, HTX profile) are served by sample data, so screens can say so.
+  bool get coreIsSample;
+
+  /// Whether the core pages can change data from the phone. The real repository
+  /// reads only: Hasura has no insert/update permission for these roles and the
+  /// web's write endpoints use the web session, not a bearer token.
+  bool get coreWritable;
+
   // Public (guest and everyone)
   Future<List<Htx>> listHtxs();
   Future<Htx> getHtx(String code);
@@ -127,7 +136,5 @@ abstract class HubRepository {
   // Tour-company staff
   Future<List<LinkedHtx>> listLinkedHtxs();
   Future<List<RegionTour>> listRegionTours();
-  Future<List<Directive>> listDirectives();
-  Future<Directive> createDirective(NewDirective draft);
   Future<List<ReportRow>> reportRows();
 }

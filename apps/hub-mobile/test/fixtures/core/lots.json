@@ -1,0 +1,5 @@
+{"data":{"lots":[
+{"id":"clx0lt0001","lot_code":"TC-CHE-20261110-001","commodity":"Chè xanh","quality_grade":"Grade 1","harvest_date":"2026-11-10T00:00:00","estimated_weight_kg":500,"actual_weight_kg":480.5,"total_weight_kg":null,"packaging_type":"Túi 500 g","destination":"Hà Nội","buyer_name":null,"status":"QR_EXPORTED",
+ "lot_parcels":[{"id":"clx0lp0001","parcel":{"parcel_code":"P-TC-001"}},{"id":"clx0lp0002","parcel":{"parcel_code":"P-TC-002"}}]},
+{"id":"clx0lt0002","lot_code":"TC-CHE-20261112-002","commodity":"Chè xanh","quality_grade":null,"harvest_date":"2026-11-12T00:00:00","estimated_weight_kg":null,"actual_weight_kg":null,"total_weight_kg":null,"packaging_type":null,"destination":null,"buyer_name":null,"status":"DRAFT","lot_parcels":[]}
+]}}

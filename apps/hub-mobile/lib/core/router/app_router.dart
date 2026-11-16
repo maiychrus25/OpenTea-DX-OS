@@ -12,8 +12,6 @@ import '../../features/customer/cart_tab.dart';
 import '../../features/customer/home_tab.dart';
 import '../../features/customer/household_screen.dart';
 import '../../features/customer/htx_screen.dart';
-import '../../features/customer/map_tab.dart';
-import '../../features/customer/saved_tab.dart';
 import '../../features/customer/trips_tab.dart';
 import '../../features/customer/visit_screens.dart';
 import '../../features/customer/checkout_screen.dart';
@@ -30,7 +28,6 @@ import '../../features/farmer/farmer_screens.dart';
 import '../../features/manager/manager_screens.dart';
 import '../../features/operator/operator_screens.dart';
 import '../../features/staff/account_page.dart';
-import '../../features/staff/coming_soon.dart';
 import '../../features/staff/dashboards.dart';
 import '../../features/staff/farmer_pages.dart';
 import '../../features/staff/htx_pages.dart';
@@ -64,9 +61,7 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
       ),
       shell((loc, child) => CustomerShell(location: loc, child: child), [
         tab('/shop', const HomeTab()),
-        tab('/shop/map', const MapTab()),
         tab('/shop/trips', const TripsTab()),
-        tab('/shop/saved', const SavedTab()),
         GoRoute(
           path: '/shop/tours',
           pageBuilder: (c, s) => _noAnim(ToursTab(query: s.uri.queryParameters['q'] ?? ''), s),
@@ -128,7 +123,6 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         tab('/farmer/bulletin', const BulletinPage()),
         tab('/farmer/notifications', const NotificationsPage()),
         tab('/farmer/parcels', const FarmerParcelsPage()),
-        tab('/farmer/diagnosis', comingSoonFor('diagnosis')),
         tab('/farmer/me', const StaffAccountPage()),
         tab('/farmer/visits', const VisitsTab()),
         tab('/farmer/products', const FarmerProductsTab()),
@@ -154,12 +148,6 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
           '/manager/journal',
           const JournalPage(title: 'Nhật ký canh tác', subtitle: 'Nhật ký của các nông hộ trong HTX.'),
         ),
-        tab('/manager/chat', comingSoonFor('chat')),
-        tab('/manager/partner-map', comingSoonFor('partner-map')),
-        tab('/manager/app-store', comingSoonFor('app-store')),
-        tab('/manager/documents', comingSoonFor('documents')),
-        tab('/manager/diseases', comingSoonFor('diseases')),
-        tab('/manager/assistant', comingSoonFor('assistant')),
         tab('/manager/zones', const ZonesPage()),
         tab('/manager/lots', const LotsPage()),
         tab('/manager/notifications', const NotificationsPage()),
@@ -198,7 +186,6 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
       shell((loc, child) => StaffShell(location: loc, child: child), [
         tab('/operator', const OperatorDashboard()),
         tab('/operator/htx', const OperatorHtxPage()),
-        tab('/operator/directives', const OperatorDirectivesPage()),
         tab('/operator/tours', const OperatorToursPage()),
         tab('/operator/articles', const OperatorArticlesTab()),
         tab('/operator/reports', const OperatorReportsPage()),

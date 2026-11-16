@@ -23,13 +23,15 @@ class FarmerJournalPage extends StatelessWidget {
     title: 'Nhật ký của tôi',
     subtitle: 'Ghi lại việc đã làm trên từng thửa, cán bộ HTX sẽ duyệt.',
     detailBase: '/farmer/journal',
-    action: FilledButton.icon(
-      key: const Key('journal-new'),
-      style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
-      onPressed: () => context.push('/farmer/journal/new'),
-      icon: const Icon(Icons.add, size: 20),
-      label: const Text('Ghi mới'),
-    ),
+    action: StaffScope(context).coreWritable
+        ? FilledButton.icon(
+            key: const Key('journal-new'),
+            style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+            onPressed: () => context.push('/farmer/journal/new'),
+            icon: const Icon(Icons.add, size: 20),
+            label: const Text('Ghi mới'),
+          )
+        : null,
   );
 }
 

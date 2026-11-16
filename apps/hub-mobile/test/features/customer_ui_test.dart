@@ -74,8 +74,8 @@ void main() {
       for (final t in ['Đồi chè', 'Trải nghiệm', 'Đặc sản']) {
         expect(find.text(t), findsOneWidget);
       }
-      for (final t in ['Khám phá', 'Bản đồ', 'Lịch trình', 'Đã lưu']) {
-        expect(find.text(t), findsOneWidget);
+      for (final t in ['Khám phá', 'Tour', 'Lịch trình', 'Tài khoản']) {
+        expect(find.descendant(of: find.byType(NavigationBar), matching: find.text(t)), findsOneWidget);
       }
     });
 
@@ -159,25 +159,18 @@ void main() {
       expect(find.byKey(const Key('visit-code')), findsOneWidget);
     });
 
-    testWidgets('heart saves a tour and it shows under "Đã lưu"', (tester) async {
+    testWidgets('bottom bar is Khám phá, Tour, Lịch trình, Tài khoản with no map or saved tab', (tester) async {
       await _pump(tester);
       await _guest(tester);
+      for (final label in ['Khám phá', 'Tour', 'Lịch trình', 'Tài khoản']) {
+        expect(find.descendant(of: find.byType(NavigationBar), matching: find.text(label)), findsOneWidget);
+      }
+      expect(find.text('Bản đồ'), findsNothing);
+      expect(find.text('Đã lưu'), findsNothing);
+      expect(find.byIcon(Icons.favorite_border), findsNothing);
       await tester.tap(find.byKey(const Key('home-explore')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('save-tour-01')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Đã lưu'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('saved-tour-01')), findsOneWidget);
-    });
-
-    testWidgets('map tab lists places', (tester) async {
-      await _pump(tester);
-      await _guest(tester);
-      await tester.tap(find.text('Bản đồ'));
-      await tester.pumpAndSettle();
-      expect(find.text('Điểm đến trên bản đồ'), findsOneWidget);
-      expect(find.text('Hộ bà Lan'), findsOneWidget);
+      expect(find.byKey(const Key('save-tour-01')), findsNothing);
     });
   });
 }

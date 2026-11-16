@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Network for HttpHubRepository (the core through the gateway). The sample repository needs none. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Về Xứ Chè"
         android:name="${applicationName}"

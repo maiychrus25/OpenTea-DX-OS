@@ -3,47 +3,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
-import '../../app/saved_controller.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/catalog.dart';
 import '../../shared/widgets.dart';
-
-/// Heart button that saves or unsaves a tour.
-class SaveHeart extends StatelessWidget {
-  const SaveHeart(this.tourId, {super.key, this.filledBackground = true});
-  final String tourId;
-  final bool filledBackground;
-
-  @override
-  Widget build(BuildContext context) {
-    final saved = context.watch<SavedController>().isSaved(tourId);
-    return Semantics(
-      button: true,
-      label: saved ? 'Bỏ lưu tour' : 'Lưu tour',
-      child: InkResponse(
-        key: Key('save-$tourId'),
-        onTap: () => context.read<SavedController>().toggle(tourId),
-        child: Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: filledBackground ? Colors.white.withValues(alpha: 0.92) : Colors.transparent,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            saved ? Icons.favorite : Icons.favorite_border,
-            size: 20,
-            color: saved ? AppColors.amber : AppColors.teaDark,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// White rounded badge laid over a photo.
 class PhotoBadge extends StatelessWidget {
@@ -111,10 +75,7 @@ class TourCard extends StatelessWidget {
               height: 170,
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [PhotoBadge(htxName), const Spacer(), SaveHeart(tour.id)],
-                ),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [PhotoBadge(htxName)]),
               ),
             ),
             Padding(

@@ -51,6 +51,7 @@ Tone journalTone(JournalStatus s) => switch (s) {
   JournalStatus.pendingApproval => Tone.warn,
   JournalStatus.approved => Tone.ok,
   JournalStatus.rejected => Tone.bad,
+  JournalStatus.requestChanges => Tone.warn,
 };
 
 Tone lotTone(LotStatus s) => switch (s) {
@@ -72,29 +73,39 @@ Tone toneOfState(String s) => switch (s) {
   _ => Tone.neutral,
 };
 
-Tone directiveTone(DirectiveState s) => switch (s) {
-  DirectiveState.done => Tone.ok,
-  DirectiveState.doing => Tone.warn,
-  DirectiveState.unconfirmed => Tone.bad,
-  DirectiveState.notReceived => Tone.neutral,
-};
-
 /// What every staff page needs to know about the signed-in user.
 class StaffScope {
   StaffScope(BuildContext context)
     : repo = context.read<HubRepository>(),
       htx = context.read<AppState>().claims?.htxCode ?? '',
       userName = context.read<AppState>().claims?.name ?? '',
-      canWrite = context.read<AppState>().claims?.canWriteHtx ?? false,
+      canWrite = (context.read<AppState>().claims?.canWriteHtx ?? false) && context.read<HubRepository>().coreWritable,
+      coreWritable = context.read<HubRepository>().coreWritable,
+      coreIsSample = context.read<HubRepository>().coreIsSample,
       _household = context.read<AppState>().claims?.householdId,
       isFarmer = context.read<AppState>().claims?.householdId != null;
 
   final HubRepository repo;
   final String htx;
   final String userName;
+
+  /// Manager who may change core data: needs the manager role and a repository that can write.
   final bool canWrite;
+
+  /// False with the real repository: the core pages are read-only on the phone.
+  final bool coreWritable;
+
+  /// True while the core pages show sample data (mock repository).
+  final bool coreIsSample;
   final bool isFarmer;
   final String? _household;
+
+  /// Why this user cannot change core data here, or null when they can.
+  String? get readOnlyNote {
+    if (!coreWritable) return 'Bản này chỉ xem dữ liệu thật. Duyệt, ghi nhật ký và đổi lịch: dùng bản web DX-OS.';
+    if (!canWrite && !isFarmer) return 'Chỉ xem (cán bộ)';
+    return null;
+  }
 
   /// Set for farmers only, so their queries return their own household.
   String? get household => isFarmer ? _household : null;

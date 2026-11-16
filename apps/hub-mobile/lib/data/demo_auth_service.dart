@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import 'package:flutter/foundation.dart';
+
 import '../core/role/role.dart';
 import 'auth_service.dart';
 import 'local_store.dart';
@@ -8,8 +10,29 @@ import 'local_store.dart';
 /// Offline demo accounts, one per role. These are public demo credentials for
 /// the skeleton, not secrets; production replaces this class with Keycloak.
 class DemoAuthService implements AuthService {
-  DemoAuthService(this._store);
+  /// [devToken] (from `--dart-define=HUB_DEV_TOKEN`) is only used when
+  /// [debugBuild] is true, so a release build can never carry one.
+  ///
+  /// [devHouseholdId] (`HUB_DEV_HOUSEHOLD_ID`) replaces the demo farmer's
+  /// made-up household with a real one, only while a dev token is active.
+  DemoAuthService(this._store, {String devToken = '', String devHouseholdId = '', bool debugBuild = kDebugMode})
+    : _devToken = debugBuild ? devToken : '',
+      _devHouseholdId = debugBuild && devToken.isNotEmpty ? devHouseholdId : '';
   final LocalStore _store;
+  final String _devToken;
+  final String _devHouseholdId;
+
+  Claims _adapt(Claims c) => _devHouseholdId.isNotEmpty && c.householdId != null
+      ? Claims(
+          subject: c.subject,
+          name: c.name,
+          email: c.email,
+          roles: c.roles,
+          htxCode: c.htxCode,
+          householdId: _devHouseholdId,
+        )
+      : c;
+  Claims? _claims;
 
   static const demoPassword = 'Demo@2026';
 
@@ -52,20 +75,37 @@ class DemoAuthService implements AuthService {
 
   @override
   Future<Session?> restore() async {
-    final claims = _store.loadSession();
+    final stored = _store.loadSession();
+    final claims = stored == null ? null : _adapt(stored);
+    _claims = claims;
     return claims == null ? null : Session(claims: claims);
   }
 
   @override
   Future<Session> signIn(String email, String password) async {
-    final claims = accounts[email.trim().toLowerCase()];
-    if (claims == null || password != demoPassword) {
+    final account = accounts[email.trim().toLowerCase()];
+    if (account == null || password != demoPassword) {
       throw const AuthException('Email hoặc mật khẩu không đúng');
     }
+    final claims = _adapt(account);
     await _store.saveSession(claims);
+    _claims = claims;
     return Session(claims: claims);
   }
 
   @override
-  Future<void> signOut() => _store.clearSession();
+  Future<void> signOut() {
+    _claims = null;
+    return _store.clearSession();
+  }
+
+  /// Debug builds only: a token pasted from a dev stack, to try the real
+  /// repository by hand. Not a login; Keycloak PKCE replaces this (README).
+  @override
+  Future<BearerToken?> bearerToken() async {
+    final claims = _claims;
+    if (_devToken.isEmpty || claims == null) return null;
+    final role = [roleManager, roleOfficer, roleFarmer].where(claims.hasRole).firstOrNull;
+    return role == null ? null : BearerToken(_devToken, hasuraRole: role);
+  }
 }

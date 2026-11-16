@@ -19,13 +19,10 @@ StaffKind? staffKindOf(Claims? claims) {
 }
 
 class MenuItem {
-  const MenuItem(this.label, this.icon, this.path, {this.soon = false, this.bottomLabel});
+  const MenuItem(this.label, this.icon, this.path, {this.bottomLabel});
   final String label;
   final IconData icon;
   final String path;
-
-  /// Page is a "Sắp có" placeholder (the web page is not built on the phone yet).
-  final bool soon;
 
   /// Shorter text for the bottom bar when [label] is too long.
   final String? bottomLabel;
@@ -79,13 +76,10 @@ const _manager = StaffNav(
     MenuItem('Quản lý thành viên', Icons.groups_outlined, '/manager/members'),
     MenuItem('Bản tin', Icons.newspaper_outlined, '/manager/bulletin'),
     MenuItem('Duyệt nhật ký', Icons.fact_check_outlined, '/manager/journal-approve'),
-    MenuItem('Chatbot', Icons.chat_bubble_outline, '/manager/chat', soon: true),
-    MenuItem('Bản đồ đối tác', Icons.map_outlined, '/manager/partner-map', soon: true),
     MenuItem('Vùng trồng', Icons.eco_outlined, '/manager/zones'),
     MenuItem('Lô hàng', Icons.inventory_2_outlined, '/manager/lots'),
     MenuItem('Thông báo', Icons.notifications_none, '/manager/notifications'),
     MenuItem('Hồ sơ HTX', Icons.account_balance_outlined, '/manager/profile'),
-    MenuItem('Kho ứng dụng', Icons.storefront_outlined, '/manager/app-store', soon: true),
   ],
   shop: [
     MenuItem('Tour và sản phẩm', Icons.hiking, '/manager/catalog'),
@@ -112,14 +106,10 @@ const _officer = StaffNav(
   main: [
     MenuItem('Tổng quan', Icons.home_outlined, '/manager'),
     MenuItem('Lịch thu hái', Icons.calendar_month_outlined, '/manager/schedule'),
-    MenuItem('Bản đồ', Icons.map_outlined, '/manager/zones'),
+    MenuItem('Vùng trồng', Icons.eco_outlined, '/manager/zones'),
     MenuItem('Nông hộ', Icons.groups_outlined, '/manager/households'),
     MenuItem('Nhật ký', Icons.description_outlined, '/manager/journal'),
     MenuItem('Lô hàng', Icons.inventory_2_outlined, '/manager/lots'),
-    MenuItem('Nhật ký bệnh', Icons.healing_outlined, '/manager/diseases', soon: true),
-    MenuItem('Tài liệu', Icons.folder_open_outlined, '/manager/documents', soon: true),
-    MenuItem('Chatbot KT', Icons.chat_bubble_outline, '/manager/chat', soon: true),
-    MenuItem('Trợ lý TT', Icons.smart_toy_outlined, '/manager/assistant', soon: true),
     MenuItem('Thông báo', Icons.notifications_none, '/manager/notifications'),
     MenuItem('Tài khoản', Icons.person_outline, '/manager/me'),
   ],
@@ -151,7 +141,6 @@ const _farmer = StaffNav(
     MenuItem('Bản tin', Icons.newspaper_outlined, '/farmer/bulletin'),
     MenuItem('Thông báo', Icons.notifications_none, '/farmer/notifications'),
     MenuItem('Thửa đất của tôi', Icons.eco_outlined, '/farmer/parcels'),
-    MenuItem('Chẩn đoán', Icons.healing_outlined, '/farmer/diagnosis', soon: true),
     MenuItem('Hồ sơ', Icons.person_outline, '/farmer/me'),
   ],
   shop: [
@@ -176,7 +165,6 @@ const _operator = StaffNav(
   main: [
     MenuItem('Tổng quan', Icons.home_outlined, '/operator'),
     MenuItem('Hợp tác xã liên kết', Icons.account_balance_outlined, '/operator/htx'),
-    MenuItem('Chỉ đạo và nhiệm vụ', Icons.campaign_outlined, '/operator/directives'),
     MenuItem('Tour toàn vùng', Icons.route_outlined, '/operator/tours'),
     MenuItem('Bài viết HTX', Icons.article_outlined, '/operator/articles'),
     MenuItem('Báo cáo tổng hợp', Icons.bar_chart_outlined, '/operator/reports'),
@@ -185,7 +173,7 @@ const _operator = StaffNav(
   bottom: [
     MenuItem('Tổng quan', Icons.home_outlined, '/operator'),
     MenuItem('Hợp tác xã liên kết', Icons.account_balance_outlined, '/operator/htx', bottomLabel: 'HTX'),
-    MenuItem('Chỉ đạo và nhiệm vụ', Icons.campaign_outlined, '/operator/directives', bottomLabel: 'Chỉ đạo'),
+    MenuItem('Tour toàn vùng', Icons.route_outlined, '/operator/tours', bottomLabel: 'Tour'),
     MenuItem('Bài viết HTX', Icons.fact_check_outlined, '/operator/articles', bottomLabel: 'Duyệt bài'),
     MenuItem('Báo cáo tổng hợp', Icons.bar_chart_outlined, '/operator/reports', bottomLabel: 'Báo cáo'),
   ],

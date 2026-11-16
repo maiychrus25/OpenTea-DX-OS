@@ -28,7 +28,7 @@ class HouseholdScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
               children: [
-                const NoticeBanner('Dữ liệu mẫu. Hộ chỉ công khai những gì đã đồng ý.'),
+                const NoticeBanner('Hộ chỉ công khai những gì đã đồng ý.'),
                 const SizedBox(height: 14),
                 Container(
                   padding: const EdgeInsets.all(16),

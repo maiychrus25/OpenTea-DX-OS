@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/theme/app_theme.dart';
+import '../data/hub_repository.dart' show HubException;
 
 /// Bundled demo photos (assets/images). Each falls back to a gradient if the
 /// file is missing, so the app never shows a broken image.
@@ -168,6 +169,31 @@ class SourceChip extends StatelessWidget {
   );
 }
 
+/// Small "Dữ liệu mẫu" chip: the screen under it is served by the sample
+/// repository, not by the real backend. Shown only where that is true.
+class SampleDataChip extends StatelessWidget {
+  const SampleDataChip({super.key});
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('sample-chip'),
+    width: double.infinity,
+    padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
+    alignment: Alignment.centerRight,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4D6),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE6C979)),
+      ),
+      child: const Text(
+        'Dữ liệu mẫu',
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF7A5A00)),
+      ),
+    ),
+  );
+}
+
 /// Pale yellow dashed notice banner.
 class NoticeBanner extends StatelessWidget {
   const NoticeBanner(this.text, {super.key});
@@ -325,7 +351,7 @@ class PageHeader extends StatelessWidget {
           Expanded(
             child: Text(title, style: serif(19), maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
-          trailing ?? const Icon(Icons.favorite_border, size: 20, color: AppColors.teaDark),
+          ?trailing,
         ],
       ),
     );
@@ -437,14 +463,22 @@ class _LoadViewState<T> extends State<LoadView<T>> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
+          // Only Vietnamese messages written for the user are shown; raw errors never are.
+          final error = snapshot.error;
+          final message = error is HubException ? error.message : 'Không tải được dữ liệu. Thử lại sau.';
           return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Không tải được dữ liệu: ${snapshot.error}', textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                OutlinedButton(onPressed: _reload, child: const Text('Thử lại')),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off_outlined, size: 40, color: AppColors.faint),
+                  const SizedBox(height: 10),
+                  Text(message, key: const Key('load-error'), textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  OutlinedButton(key: const Key('load-retry'), onPressed: _reload, child: const Text('Thử lại')),
+                ],
+              ),
             ),
           );
         }

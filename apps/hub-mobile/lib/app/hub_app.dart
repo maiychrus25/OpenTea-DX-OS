@@ -13,7 +13,6 @@ import '../data/local_store.dart';
 import 'activity_controller.dart';
 import 'app_state.dart';
 import 'cart_controller.dart';
-import 'saved_controller.dart';
 
 /// Root widget. Everything it needs is passed in, so tests and the real
 /// backend can swap the implementations behind the interfaces.
@@ -30,7 +29,6 @@ class HubApp extends StatefulWidget {
 class _HubAppState extends State<HubApp> {
   late final AppState _state = AppState(widget.auth);
   late final CartController _cart = CartController(widget.store);
-  late final SavedController _saved = SavedController(widget.store);
   late final ActivityController _activity = ActivityController(widget.repository, widget.store);
   late final GoRouter _router = buildRouter(_state);
   late final Future<void> _restored = _state.restore();
@@ -49,7 +47,6 @@ class _HubAppState extends State<HubApp> {
     _router.dispose();
     _state.dispose();
     _cart.dispose();
-    _saved.dispose();
     _activity.dispose();
     super.dispose();
   }
@@ -61,7 +58,6 @@ class _HubAppState extends State<HubApp> {
         Provider<HubRepository>.value(value: widget.repository),
         ChangeNotifierProvider<AppState>.value(value: _state),
         ChangeNotifierProvider<CartController>.value(value: _cart),
-        ChangeNotifierProvider<SavedController>.value(value: _saved),
         ChangeNotifierProvider<ActivityController>.value(value: _activity),
       ],
       child: FutureBuilder<void>(

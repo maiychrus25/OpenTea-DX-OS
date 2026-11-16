@@ -139,8 +139,9 @@ class ManagerDashboard extends StatelessWidget {
         journal: await scope.repo.listJournal(scope.htx),
         lots: await scope.repo.listLots(scope.htx),
         notes: await scope.repo.listNotifications(scope.htx),
-        prices: await scope.repo.listMarketPrices(),
-        summary: await scope.repo.summary(scope.htx),
+        // Storefront and market numbers are sample data; with the real core they are left out.
+        prices: scope.coreIsSample ? await scope.repo.listMarketPrices() : null,
+        summary: scope.coreIsSample ? await scope.repo.summary(scope.htx) : null,
       ),
       builder: (context, d, reload) {
         final active = d.parcels.where((p) => p.status.isActive).toList();
@@ -290,9 +291,8 @@ class ManagerDashboard extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: 14),
-          _ShopSummary(summary: d.summary, base: '/manager'),
-          const SizedBox(height: 14),
-          _MarketCard(prices: d.prices),
+          if (d.summary != null) ...[_ShopSummary(summary: d.summary!, base: '/manager'), const SizedBox(height: 14)],
+          if (d.prices != null) _MarketCard(prices: d.prices!),
         ]);
       },
     );
@@ -314,8 +314,8 @@ class _ManagerData {
   final List<JournalEntry> journal;
   final List<Lot> lots;
   final List<AppNotification> notes;
-  final List<MarketPrice> prices;
-  final HtxSummary summary;
+  final List<MarketPrice>? prices;
+  final HtxSummary? summary;
 }
 
 class _MarketCard extends StatelessWidget {
@@ -365,13 +365,13 @@ class OfficerDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = StaffScope(context);
-    return LoadView<(List<Member>, List<Parcel>, List<JournalEntry>, List<Lot>, HtxSummary)>(
+    return LoadView<(List<Member>, List<Parcel>, List<JournalEntry>, List<Lot>, HtxSummary?)>(
       load: () async => (
         await scope.repo.listMembers(scope.htx),
         await scope.repo.listParcels(scope.htx),
         await scope.repo.listJournal(scope.htx),
         await scope.repo.listLots(scope.htx),
-        await scope.repo.summary(scope.htx),
+        scope.coreIsSample ? await scope.repo.summary(scope.htx) : null,
       ),
       builder: (context, d, reload) {
         final pending = d.$3.where((e) => e.status == JournalStatus.pendingApproval).length;
@@ -415,8 +415,7 @@ class OfficerDashboard extends StatelessWidget {
           const SizedBox(height: 14),
           _JournalPreview(entries: d.$3.take(6).toList(), seeAllPath: '/manager/journal'),
           const SizedBox(height: 14),
-          _ShopSummary(summary: d.$5, base: '/manager'),
-          const SizedBox(height: 12),
+          if (d.$5 != null) ...[_ShopSummary(summary: d.$5!, base: '/manager'), const SizedBox(height: 12)],
           const InfoNote('Tài khoản cán bộ chỉ xem, không có nút duyệt hay chỉnh sửa.'),
         ]);
       },
@@ -439,8 +438,8 @@ class FarmerDashboard extends StatelessWidget {
       load: () async => _FarmerData(
         parcels: await scope.repo.listParcels(scope.htx, householdId: scope.household),
         journal: await scope.repo.listJournal(scope.htx, householdId: scope.household),
-        weather: await scope.repo.currentWeather(scope.htx),
-        visits: await scope.repo.listHouseholdVisits(scope.household ?? ''),
+        weather: scope.coreIsSample ? await scope.repo.currentWeather(scope.htx) : null,
+        visits: scope.coreIsSample ? await scope.repo.listHouseholdVisits(scope.household ?? '') : null,
       ),
       builder: (context, d, reload) {
         final upcoming = [
@@ -460,21 +459,23 @@ class FarmerDashboard extends StatelessWidget {
             if (withdrawalDaysLeft(p.id, d.journal, now) > 0) (p.code, withdrawalDaysLeft(p.id, d.journal, now)),
         ];
         final visits = [
-          for (final v in d.visits)
+          for (final v in d.visits ?? const <Booking>[])
             if (!v.departureDate.isBefore(dayOf(now))) v,
         ];
         return _scroll(reload, [
           PageHead('${greeting(now)}, ${scope.userName}', subtitle: 'Chúc bạn một ngày làm việc hiệu quả!'),
           Row(
             children: [
-              Expanded(
-                child: FilledButton(
-                  key: const Key('farmer-new-journal'),
-                  onPressed: () => context.push('/farmer/journal/new'),
-                  child: const Text('Ghi nhật ký mới', textAlign: TextAlign.center, style: TextStyle(fontSize: 14)),
+              if (scope.coreWritable) ...[
+                Expanded(
+                  child: FilledButton(
+                    key: const Key('farmer-new-journal'),
+                    onPressed: () => context.push('/farmer/journal/new'),
+                    child: const Text('Ghi nhật ký mới', textAlign: TextAlign.center, style: TextStyle(fontSize: 14)),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
+                const SizedBox(width: 10),
+              ],
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => context.go('/farmer/journal'),
@@ -558,58 +559,61 @@ class FarmerDashboard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          SectionCard(
-            title: 'Thời tiết hiện tại',
-            child: Row(
-              children: [
-                const Icon(Icons.cloud_outlined, size: 44, color: StaffColors.primary),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          if (d.weather case final w?) ...[
+            SectionCard(
+              title: 'Thời tiết hiện tại',
+              child: Row(
+                children: [
+                  const Icon(Icons.cloud_outlined, size: 44, color: StaffColors.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${fmtNum(w.temperatureC, digits: 0)}°C',
+                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                        ),
+                        Text(w.condition, style: const TextStyle(color: StaffColors.muted)),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        '${fmtNum(d.weather.temperatureC, digits: 0)}°C',
-                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
-                      ),
-                      Text(d.weather.condition, style: const TextStyle(color: StaffColors.muted)),
+                      Text('Độ ẩm ${w.humidityPct}%', style: const TextStyle(fontSize: 13.5)),
+                      const SizedBox(height: 2),
+                      Text('Mưa ${fmtNum(w.precipitationMm)} mm', style: const TextStyle(fontSize: 13.5)),
                     ],
                   ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('Độ ẩm ${d.weather.humidityPct}%', style: const TextStyle(fontSize: 13.5)),
-                    const SizedBox(height: 2),
-                    Text('Mưa ${fmtNum(d.weather.precipitationMm)} mm', style: const TextStyle(fontSize: 13.5)),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-          SectionCard(
-            title: 'Lịch tham quan',
-            onSeeAll: () => context.go('/farmer/visits'),
-            padded: false,
-            child: visits.isEmpty
-                ? const StaffEmpty('Chưa có đoàn khách nào')
-                : Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                    child: Stack10([
-                      for (final v in visits.take(3))
-                        RowCard(
-                          key: Key('visit-${v.id}'),
-                          title: v.tourName,
-                          subtitle: '${formatDateLong(v.departureDate)}\n${v.contactName} · ${v.guests} khách',
-                          trailing: v.checkedIn
-                              ? const Pill('Đã điểm danh', tone: Tone.ok)
-                              : Pill(v.status.label, tone: bookingTone(v.status)),
-                          onTap: () => context.push('/farmer/visits/${v.id}'),
-                        ),
-                    ]),
-                  ),
-          ),
+            const SizedBox(height: 14),
+          ],
+          if (d.visits != null)
+            SectionCard(
+              title: 'Lịch tham quan',
+              onSeeAll: () => context.go('/farmer/visits'),
+              padded: false,
+              child: visits.isEmpty
+                  ? const StaffEmpty('Chưa có đoàn khách nào')
+                  : Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      child: Stack10([
+                        for (final v in visits.take(3))
+                          RowCard(
+                            key: Key('visit-${v.id}'),
+                            title: v.tourName,
+                            subtitle: '${formatDateLong(v.departureDate)}\n${v.contactName} · ${v.guests} khách',
+                            trailing: v.checkedIn
+                                ? const Pill('Đã điểm danh', tone: Tone.ok)
+                                : Pill(v.status.label, tone: bookingTone(v.status)),
+                            onTap: () => context.push('/farmer/visits/${v.id}'),
+                          ),
+                      ]),
+                    ),
+            ),
         ]);
       },
     );
@@ -620,8 +624,8 @@ class _FarmerData {
   _FarmerData({required this.parcels, required this.journal, required this.weather, required this.visits});
   final List<Parcel> parcels;
   final List<JournalEntry> journal;
-  final WeatherNow weather;
-  final List<Booking> visits;
+  final WeatherNow? weather;
+  final List<Booking>? visits;
 }
 
 // ---------------------------------------------------------------------------

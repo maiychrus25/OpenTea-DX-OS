@@ -475,8 +475,8 @@ class _JournalPageState extends State<JournalPage> {
         final pending = entries.where((e) => e.status == JournalStatus.pendingApproval).length;
         return _list(reload, [
           PageHead(widget.title, subtitle: widget.subtitle ?? '$pending nhật ký chờ duyệt', action: widget.action),
-          if (!scope.canWrite && !scope.isFarmer) const InfoNote('Chỉ xem (cán bộ)'),
-          if (!scope.canWrite && !scope.isFarmer) const SizedBox(height: 10),
+          if (scope.readOnlyNote != null) InfoNote(scope.readOnlyNote!),
+          if (scope.readOnlyNote != null) const SizedBox(height: 10),
           FilterChips<JournalStatus?>(
             options: const [
               (null, 'Tất cả'),
@@ -595,10 +595,7 @@ class JournalDetailPage extends StatelessWidget {
               if (e.withdrawalDays != null)
                 DetailRow('Cách ly', '${e.withdrawalDays} ngày (an toàn từ ${formatDate(safe!)})'),
               if (e.notes != null) DetailRow('Ghi chú', e.notes!),
-              if (!scope.canWrite && !scope.isFarmer) ...[
-                const SizedBox(height: 12),
-                const InfoNote('Chỉ xem (cán bộ)'),
-              ],
+              if (scope.readOnlyNote != null) ...[const SizedBox(height: 12), InfoNote(scope.readOnlyNote!)],
               if (scope.canWrite && e.status == JournalStatus.pendingApproval) ...[
                 const SizedBox(height: 16),
                 _ReviewButtons(entry: e, scope: scope, onDone: reload),
@@ -821,7 +818,7 @@ class NotificationsPage extends StatelessWidget {
           PageHead(
             'Thông báo',
             subtitle: unread == 0 ? 'Bạn đã đọc hết thông báo' : '$unread thông báo chưa đọc',
-            action: unread == 0
+            action: unread == 0 || !scope.coreWritable
                 ? null
                 : TextButton(
                     key: const Key('notif-read-all'),
@@ -851,7 +848,7 @@ class NotificationsPage extends StatelessWidget {
                   title: n.title,
                   subtitle: n.body,
                   meta: '${n.kind.label} · ${relativeTime(n.createdAt, now)}',
-                  onTap: n.isRead
+                  onTap: n.isRead || !scope.coreWritable
                       ? null
                       : () async {
                           await scope.repo.markNotificationRead(n.id);

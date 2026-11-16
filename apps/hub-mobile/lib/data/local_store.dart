@@ -20,7 +20,6 @@ class LocalStore {
   static Future<LocalStore> open() async => LocalStore(await SharedPreferences.getInstance());
 
   static const _cartKey = 'cart.v1';
-  static const _savedKey = 'saved.v1';
   static const _sessionKey = 'session.v1';
   static String _ordersKey(String userId) => 'orders.v1.$userId';
   static String _bookingsKey(String userId) => 'bookings.v1.$userId';
@@ -47,14 +46,6 @@ class LocalStore {
   List<Booking> loadBookings(String userId) => _readList(_bookingsKey(userId), Booking.fromJson);
   Future<void> saveBookings(String userId, List<Booking> bookings) =>
       _writeList(_bookingsKey(userId), [for (final b in bookings) b.toJson()]);
-
-  /// Ids of the tours the visitor saved with the heart.
-  Set<String> loadSavedTours() {
-    final raw = _prefs.getStringList(_savedKey);
-    return raw == null ? <String>{} : raw.toSet();
-  }
-
-  Future<void> saveSavedTours(Set<String> ids) => _prefs.setStringList(_savedKey, ids.toList()..sort());
 
   /// Demo session only. A real session keeps tokens in secure storage, not here.
   Claims? loadSession() {

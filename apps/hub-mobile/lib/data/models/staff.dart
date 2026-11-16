@@ -121,14 +121,15 @@ extension ActivityLabels on ActivityType {
   };
 }
 
-/// Web values: PENDING_APPROVAL, APPROVED, REJECTED (+ REQUEST_CHANGES on the officer page).
-enum JournalStatus { pendingApproval, approved, rejected }
+/// Web values: PENDING_APPROVAL, APPROVED, REJECTED, REQUEST_CHANGES.
+enum JournalStatus { pendingApproval, approved, rejected, requestChanges }
 
 extension JournalStatusLabels on JournalStatus {
   String get label => switch (this) {
     JournalStatus.pendingApproval => 'Chờ duyệt',
     JournalStatus.approved => 'Đã duyệt',
     JournalStatus.rejected => 'Từ chối',
+    JournalStatus.requestChanges => 'Cần sửa',
   };
 }
 
@@ -366,42 +367,6 @@ class WeatherNow {
 }
 
 // ---- Tour company ---------------------------------------------------------
-
-enum DirectiveState { done, doing, unconfirmed, notReceived }
-
-extension DirectiveStateLabels on DirectiveState {
-  String get label => switch (this) {
-    DirectiveState.done => 'Đã xong',
-    DirectiveState.doing => 'Đang làm',
-    DirectiveState.unconfirmed => 'Chưa xác nhận',
-    DirectiveState.notReceived => 'Chưa nhận',
-  };
-}
-
-class DirectiveAssignment {
-  const DirectiveAssignment(this.htxName, this.state);
-  final String htxName;
-  final DirectiveState state;
-}
-
-class Directive {
-  const Directive({required this.id, required this.title, required this.dueDate, required this.assignments});
-  final String id;
-  final String title;
-  final DateTime dueDate;
-  final List<DirectiveAssignment> assignments;
-
-  int get doneCount => assignments.where((a) => a.state == DirectiveState.done).length;
-}
-
-class NewDirective {
-  const NewDirective({required this.title, required this.dueDate, this.htxName});
-  final String title;
-  final DateTime dueDate;
-
-  /// Null means every linked cooperative.
-  final String? htxName;
-}
 
 /// A cooperative that agreed to link with the tour company (web: HtxProfile + counts).
 class LinkedHtx {
