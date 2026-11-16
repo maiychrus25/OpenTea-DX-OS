@@ -31,7 +31,12 @@ class ManagerShell extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) => RoleShell(destinations: destinations, location: location, child: child);
+  Widget build(BuildContext context) => RoleShell(
+    destinations: destinations,
+    location: location,
+    roleLabel: context.read<AppState>().claims?.canWriteHtx == false ? 'Cán bộ HTX' : 'Hợp tác xã',
+    child: child,
+  );
 }
 
 String _htx(BuildContext context) => context.read<AppState>().claims?.htxCode ?? '';
@@ -58,39 +63,21 @@ class OverviewTab extends StatelessWidget {
       builder: (context, s, reload) => RefreshIndicator(
         onRefresh: reload,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Text(s.htx, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 12),
-            _Stat('Đơn chờ xác nhận', '${s.pendingOrders}', Icons.receipt_long_outlined),
-            _Stat('Lượt đặt chờ xác nhận', '${s.pendingBookings}', Icons.hourglass_bottom),
-            _Stat('Lượt đặt đã xác nhận', '${s.confirmedBookings}', Icons.event_available),
-            _Stat('Đã thu', formatVnd(s.revenue), Icons.payments_outlined),
+            PageTitle(s.htx.replaceAll(' (demo)', '')),
+            StatGrid([
+              StatTile('Đơn chờ xác nhận', '${s.pendingOrders}', Icons.receipt_long_outlined),
+              StatTile('Lượt đặt chờ xác nhận', '${s.pendingBookings}', Icons.hourglass_bottom),
+              StatTile('Lượt đặt đã xác nhận', '${s.confirmedBookings}', Icons.event_available),
+              StatTile('Đã thu', formatVnd(s.revenue), Icons.payments_outlined),
+            ]),
             if (!_canWrite(context)) const _ReadOnlyNote(),
           ],
         ),
       ),
     );
   }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat(this.label, this.value, this.icon);
-  final String label;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Card(
-      child: ListTile(
-        leading: Icon(icon, color: AppColors.teaGreen),
-        title: Text(label),
-        trailing: Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-      ),
-    ),
-  );
 }
 
 class OrdersTab extends StatelessWidget {
@@ -105,10 +92,9 @@ class OrdersTab extends StatelessWidget {
       builder: (context, orders, reload) => RefreshIndicator(
         onRefresh: reload,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Text('Đơn hàng', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 12),
+            PageTitle('Đơn hàng'),
             if (orders.isEmpty) const SizedBox(height: 240, child: EmptyState('Chưa có đơn hàng')),
             for (final o in orders)
               Card(
@@ -157,7 +143,7 @@ class ManagerOrderDetailScreen extends StatelessWidget {
 
           final forward = o.status.forward;
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             children: [
               Row(
                 children: [
@@ -224,13 +210,9 @@ class BookingsTab extends StatelessWidget {
       builder: (context, bookings, reload) => RefreshIndicator(
         onRefresh: reload,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Text(
-              'Lượt đặt tour',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
+            PageTitle('Lượt đặt tour'),
             if (bookings.isEmpty) const SizedBox(height: 240, child: EmptyState('Chưa có lượt đặt')),
             for (final b in bookings)
               Card(
@@ -272,7 +254,7 @@ class ManagerBookingDetailScreen extends StatelessWidget {
         builder: (context, b, reload) {
           if (b == null) return const EmptyState('Không tìm thấy lượt đặt');
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             children: [
               Row(
                 children: [
@@ -327,10 +309,9 @@ class MoreTab extends StatelessWidget {
       ),
     );
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
-        Text('Quản lý', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
+        PageTitle('Quản lý'),
         tile(Icons.article_outlined, 'Tin tức', '/manager/articles'),
         const SizedBox(height: 8),
         tile(Icons.payments_outlined, 'Sổ thu tiền', '/manager/payments'),
@@ -354,7 +335,7 @@ class ManagerArticlesScreen extends StatelessWidget {
       body: LoadView<List<Article>>(
         load: () => repo.listArticles(code),
         builder: (context, articles, reload) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
             for (final a in articles)
               Card(
@@ -410,7 +391,7 @@ class ManagerPaymentsScreen extends StatelessWidget {
         builder: (context, payments, _) => payments.isEmpty
             ? const EmptyState('Chưa có khoản thu nào')
             : ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 children: [
                   for (final p in payments)
                     Card(
@@ -439,7 +420,7 @@ class ManagerCatalogScreen extends StatelessWidget {
       body: LoadView<(List<Tour>, List<Product>)>(
         load: () async => (await repo.listTours(htxCode: code), await repo.listProducts(htxCode: code)),
         builder: (context, data, _) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
             const Text('Chỉnh sửa tour, ngày khởi hành và sản phẩm sẽ làm cùng API ở mốc M2; hiện chỉ xem.'),
             const SectionTitle('Tour'),

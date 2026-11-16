@@ -6,13 +6,19 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/app_state.dart';
 import '../../features/auth/login_screen.dart';
-import '../../features/auth/welcome_screen.dart';
 import '../../features/customer/booking_form_screen.dart';
 import '../../features/customer/cart_tab.dart';
+import '../../features/customer/home_tab.dart';
+import '../../features/customer/household_screen.dart';
+import '../../features/customer/htx_screen.dart';
+import '../../features/customer/map_tab.dart';
+import '../../features/customer/saved_tab.dart';
+import '../../features/customer/trips_tab.dart';
+import '../../features/customer/visit_screens.dart';
 import '../../features/customer/checkout_screen.dart';
 import '../../features/customer/customer_account_tab.dart';
 import '../../features/customer/customer_shell.dart';
-import '../../features/customer/news_tab.dart';
+import '../../features/customer/news_screen.dart';
 import '../../features/customer/orders_screen.dart';
 import '../../features/customer/payment_screen.dart';
 import '../../features/customer/products_tab.dart';
@@ -22,13 +28,13 @@ import '../../features/customer/tours_tab.dart';
 import '../../features/farmer/farmer_screens.dart';
 import '../../features/manager/manager_screens.dart';
 import '../../features/operator/operator_screens.dart';
+import '../../shared/widgets.dart' show InnerPage;
 import '../role/role.dart';
 
-/// Decides redirects for the router: welcome screen first, then role rules.
+/// Decides redirects for the router: login page first, then role rules.
 String? appRedirect(AppState state, Uri uri) {
   final path = uri.path;
-  if (!state.welcomeDone && path != '/welcome' && path != '/login') return '/welcome';
-  if (state.welcomeDone && path == '/welcome') return homeRouteFor(state.role);
+  if (!state.welcomeDone && path != '/login') return '/login';
   return redirectFor(state.role, uri.toString());
 }
 
@@ -45,21 +51,47 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
     refreshListenable: state,
     redirect: (context, st) => appRedirect(state, st.uri),
     routes: [
-      GoRoute(path: '/welcome', builder: (c, s) => const WelcomeScreen()),
       GoRoute(
         path: '/login',
         builder: (c, s) => LoginScreen(from: s.uri.queryParameters['from']),
       ),
       shell((loc, child) => CustomerShell(location: loc, child: child), [
-        tab('/shop', const NewsTab()),
-        tab('/shop/tours', const ToursTab()),
-        tab('/shop/products', const ProductsTab()),
-        tab('/shop/cart', const CartTab()),
-        tab('/shop/me', const CustomerAccountTab()),
+        tab('/shop', const HomeTab()),
+        tab('/shop/map', const MapTab()),
+        tab('/shop/trips', const TripsTab()),
+        tab('/shop/saved', const SavedTab()),
+        GoRoute(
+          path: '/shop/tours',
+          pageBuilder: (c, s) => _noAnim(ToursTab(query: s.uri.queryParameters['q'] ?? ''), s),
+        ),
+        tab('/shop/products', const InnerPage(title: 'Sản phẩm', child: ProductsTab())),
+        tab('/shop/cart', const InnerPage(title: 'Giỏ hàng', child: CartTab())),
+        tab('/shop/me', const InnerPage(title: 'Tài khoản', child: CustomerAccountTab())),
+        tab('/shop/news', const NewsScreen()),
+        GoRoute(
+          path: '/shop/tours/:id',
+          pageBuilder: (c, s) => _noAnim(TourDetailScreen(tourId: s.pathParameters['id']!), s),
+        ),
+        GoRoute(
+          path: '/shop/htx/:code',
+          pageBuilder: (c, s) => _noAnim(HtxScreen(code: s.pathParameters['code']!), s),
+        ),
+        GoRoute(
+          path: '/shop/farm/:id',
+          pageBuilder: (c, s) => _noAnim(HouseholdScreen(id: s.pathParameters['id']!), s),
+        ),
       ]),
       GoRoute(
-        path: '/shop/tours/:id',
-        builder: (c, s) => TourDetailScreen(tourId: s.pathParameters['id']!),
+        path: '/shop/visit',
+        builder: (c, s) =>
+            VisitRequestScreen(householdId: s.uri.queryParameters['household'], tourId: s.uri.queryParameters['tour']),
+      ),
+      GoRoute(
+        path: '/shop/visit/sent',
+        builder: (c, s) => VisitSentScreen(
+          code: s.uri.queryParameters['code'] ?? '',
+          target: s.uri.queryParameters['to'] ?? 'HTX Chè Tân Cương',
+        ),
       ),
       GoRoute(
         path: '/shop/booking/:tourId',

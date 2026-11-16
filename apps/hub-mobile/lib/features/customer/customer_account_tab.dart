@@ -16,6 +16,7 @@ class CustomerAccountTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final signedIn = context.watch<AppState>().claims != null;
     return AccountTab(
+      showTitle: false,
       extra: [
         if (signedIn) ...[
           Card(

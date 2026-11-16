@@ -39,6 +39,10 @@ class SeedData {
       adultPrice: 350000,
       childPrice: 200000,
       gradientSeed: 0,
+      tags: ['Hái chè', 'Sao chè', 'Trà đạo'],
+      bestMonths: 'Th3 – Th5, Th9 – Th11',
+      level: 'Dễ, hợp gia đình',
+      maxGuests: 12,
       itinerary: [
         ItineraryDay(
           title: 'Một ngày tại đồi chè',
@@ -63,6 +67,10 @@ class SeedData {
       adultPrice: 890000,
       childPrice: 500000,
       gradientSeed: 1,
+      tags: ['Homestay', 'Nông trại', 'Gia đình'],
+      bestMonths: 'Quanh năm',
+      level: 'Dễ',
+      maxGuests: 8,
       itinerary: [
         ItineraryDay(
           title: 'Ngày 1: Đến đồi chè',
@@ -93,6 +101,10 @@ class SeedData {
       adultPrice: 420000,
       childPrice: 250000,
       gradientSeed: 2,
+      tags: ['Hái chè', 'Trekking'],
+      bestMonths: 'Th4 – Th6, Th10',
+      level: 'Vừa sức',
+      maxGuests: 15,
       itinerary: [
         ItineraryDay(
           title: 'Rừng chè cổ thụ',
@@ -103,6 +115,92 @@ class SeedData {
             '14:00 Xem sao chè và mua chè khô',
           ],
         ),
+      ],
+    ),
+  ];
+
+  static const households = <Household>[
+    Household(
+      id: 'hh-01',
+      htxCode: 'tan-cuong',
+      name: 'Hộ bà Lan',
+      village: 'Thôn Soi, xã Tân Cương',
+      crop: 'Chè Trung du · 0,8 ha',
+      certificate: 'VietGAP',
+      experience: 'Làm chè 25 năm',
+      hosting: 'Đón tối đa 8 khách/lượt',
+      process: [
+        ProcessStep(
+          title: 'Chăm sóc và bón phân',
+          description: 'Bón phân hữu cơ đợt đầu xuân, tỉa cành sau vụ đông.',
+          source: 'Nhật ký canh tác đã duyệt · 03/2026',
+        ),
+        ProcessStep(
+          title: 'Thu hái',
+          description: 'Hái một tôm hai lá lúc sáng sớm, mỗi đợt cách nhau khoảng 7 – 10 ngày.',
+          source: 'Nhật ký canh tác đã duyệt · 04/2026',
+        ),
+        ProcessStep(
+          title: 'Làm héo',
+          description: 'Trải chè trong nhà thoáng 4 – 6 giờ cho bớt nước.',
+          source: 'Do hộ mô tả',
+        ),
+        ProcessStep(
+          title: 'Diệt men và vò',
+          description: 'Sao chảo gang 280°C rồi vò nhẹ tay cho chè săn lại.',
+          source: 'Do hộ mô tả',
+        ),
+        ProcessStep(
+          title: 'Sấy và đóng gói',
+          description: 'Sấy lửa nhỏ đến khô giòn, đóng gói theo lô có mã QR.',
+          source: 'Lô TC-2026-014',
+        ),
+      ],
+    ),
+    Household(
+      id: 'hh-02',
+      htxCode: 'tan-cuong',
+      name: 'Hộ ông Hải',
+      village: 'Thôn Đồng Chùa, xã Tân Cương',
+      crop: 'Chè Kim Tuyên · 0,5 ha',
+      certificate: 'Hữu cơ',
+      experience: 'Làm chè 12 năm',
+      hosting: 'Đón tối đa 6 khách/lượt',
+      process: [
+        ProcessStep(
+          title: 'Chăm sóc',
+          description: 'Không dùng thuốc trừ sâu hoá học, bẫy côn trùng.',
+          source: 'Nhật ký canh tác đã duyệt · 03/2026',
+        ),
+        ProcessStep(
+          title: 'Thu hái',
+          description: 'Hái búp non, bán chè tươi cho HTX.',
+          source: 'Nhật ký canh tác đã duyệt · 05/2026',
+        ),
+        ProcessStep(title: 'Chế biến', description: 'Sao thủ công tại nhà, chia mẻ nhỏ.', source: 'Do hộ mô tả'),
+      ],
+    ),
+    Household(
+      id: 'hh-03',
+      htxCode: 'suoi-giang',
+      name: 'Hộ bà Mai',
+      village: 'Bản Suối Giàng, xã Suối Giàng',
+      crop: 'Chè Shan Tuyết cổ thụ · 1,2 ha',
+      certificate: 'Chè cổ thụ',
+      experience: 'Làm chè 30 năm',
+      hosting: 'Đón tối đa 10 khách/lượt',
+      process: [
+        ProcessStep(
+          title: 'Chăm sóc gốc chè cổ',
+          description: 'Giữ nguyên cây chè trăm tuổi, không bón phân hoá học.',
+          source: 'Do hộ mô tả',
+        ),
+        ProcessStep(
+          title: 'Thu hái',
+          description: 'Hái búp tuyết phủ trắng vào sáng sớm, mỗi vụ vài lần.',
+          source: 'Nhật ký canh tác đã duyệt · 04/2026',
+        ),
+        ProcessStep(title: 'Sao và vò', description: 'Sao chảo gang củi, vò tay trên nong.', source: 'Do hộ mô tả'),
       ],
     ),
   ];

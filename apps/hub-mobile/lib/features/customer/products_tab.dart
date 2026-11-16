@@ -23,10 +23,10 @@ class ProductsTab extends StatelessWidget {
       builder: (context, products, reload) => RefreshIndicator(
         onRefresh: reload,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Text('Sản phẩm', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 12),
+            const PageTitle('Sản phẩm'),
+            const SourceChip('Nguồn: app bán hàng · tồn kho của HTX'),
             for (final p in products) ...[
               Card(
                 child: Padding(
@@ -52,7 +52,7 @@ class ProductsTab extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               formatVnd(p.price),
-                              style: const TextStyle(color: AppColors.teaDark, fontWeight: FontWeight.w700),
+                              style: const TextStyle(color: Color(0xFF8A3D06), fontWeight: FontWeight.w800),
                             ),
                             if (p.stock == 0) const StatusChip('Hết hàng', color: AppColors.danger),
                             if (p.stock > 0 && p.stock <= 5) StatusChip('Chỉ còn ${p.stock}', color: AppColors.amber),
@@ -60,6 +60,7 @@ class ProductsTab extends StatelessWidget {
                         ),
                       ),
                       IconButton.filled(
+                        style: IconButton.styleFrom(backgroundColor: AppColors.teaDark, foregroundColor: Colors.white),
                         key: Key('add-${p.id}'),
                         onPressed: p.stock == 0 ? null : () => _add(context, p),
                         icon: const Icon(Icons.add_shopping_cart),

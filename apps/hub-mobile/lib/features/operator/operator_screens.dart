@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/format/formatting.dart';
 import '../../core/money/money.dart';
+import '../../core/theme/app_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/booking.dart';
 import '../../data/models/catalog.dart';
@@ -27,7 +28,8 @@ class OperatorShell extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) => RoleShell(destinations: destinations, location: location, child: child);
+  Widget build(BuildContext context) =>
+      RoleShell(destinations: destinations, location: location, roleLabel: 'Công ty du lịch', child: child);
 }
 
 class OperatorOverviewTab extends StatelessWidget {
@@ -41,13 +43,16 @@ class OperatorOverviewTab extends StatelessWidget {
       builder: (context, list, reload) => RefreshIndicator(
         onRefresh: reload,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Text(
-              'Các HTX liên kết',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
+            const PageTitle('Tổng quan', subtitle: 'Số liệu gộp của các HTX liên kết'),
+            StatGrid([
+              StatTile('HTX liên kết', '${list.length}', Icons.account_balance_outlined),
+              StatTile('Đơn chờ', '${list.fold(0, (a, s) => a + s.pendingOrders)}', Icons.receipt_long_outlined),
+              StatTile('Đặt tour chờ', '${list.fold(0, (a, s) => a + s.pendingBookings)}', Icons.hourglass_bottom),
+              StatTile('Đã thu', formatVnd(list.fold(0, (a, s) => a + s.revenue)), Icons.payments_outlined),
+            ]),
+            const SectionTitle('Các HTX liên kết'),
             for (final s in list)
               Card(
                 child: Padding(
@@ -55,7 +60,7 @@ class OperatorOverviewTab extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(s.htx, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                      Text(s.htx, style: serif(17)),
                       const SizedBox(height: 8),
                       InfoRow('Đơn chờ', '${s.pendingOrders}'),
                       InfoRow('Đặt tour chờ', '${s.pendingBookings}'),
@@ -83,13 +88,9 @@ class OperatorArticlesTab extends StatelessWidget {
       builder: (context, articles, reload) => RefreshIndicator(
         onRefresh: reload,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Text(
-              'Bài chờ duyệt',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
+            PageTitle('Bài chờ duyệt'),
             if (articles.isEmpty) const SizedBox(height: 240, child: EmptyState('Không có bài nào chờ duyệt')),
             for (final a in articles)
               Card(
@@ -148,13 +149,9 @@ class OperatorBookingsTab extends StatelessWidget {
       builder: (context, bookings, reload) => RefreshIndicator(
         onRefresh: reload,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Text(
-              'Theo dõi đặt tour',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
+            PageTitle('Theo dõi đặt tour'),
             for (final b in bookings)
               Card(
                 child: ListTile(

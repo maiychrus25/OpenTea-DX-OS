@@ -28,7 +28,8 @@ class FarmerShell extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) => RoleShell(destinations: destinations, location: location, child: child);
+  Widget build(BuildContext context) =>
+      RoleShell(destinations: destinations, location: location, roleLabel: 'Nông dân', child: child);
 }
 
 String _householdOf(BuildContext context) => context.read<AppState>().claims?.householdId ?? '';
@@ -46,13 +47,9 @@ class VisitsTab extends StatelessWidget {
       builder: (context, visits, reload) => RefreshIndicator(
         onRefresh: reload,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Text(
-              'Lịch tham quan tại hộ',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
+            PageTitle('Lịch tham quan tại hộ'),
             if (visits.isEmpty) const SizedBox(height: 240, child: EmptyState('Chưa có đoàn khách nào')),
             for (final v in visits)
               Card(
@@ -90,7 +87,7 @@ class VisitDetailScreen extends StatelessWidget {
           if (b == null) return const EmptyState('Không tìm thấy đoàn khách');
           final canCheckIn = b.status == BookingStatus.confirmed && !b.checkedIn;
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             children: [
               Text(b.tourName, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
@@ -139,13 +136,9 @@ class FarmerProductsTab extends StatelessWidget {
       builder: (context, products, reload) => RefreshIndicator(
         onRefresh: reload,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
-            Text(
-              'Sản phẩm của hộ',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
+            PageTitle('Sản phẩm của hộ'),
             if (products.isEmpty) const SizedBox(height: 240, child: EmptyState('Hộ chưa có sản phẩm')),
             for (final p in products)
               Card(

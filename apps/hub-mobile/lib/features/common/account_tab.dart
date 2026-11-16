@@ -8,11 +8,13 @@ import 'package:provider/provider.dart';
 import '../../app/app_state.dart';
 import '../../core/role/role.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets.dart';
 
 /// "Tài khoản" tab used by every role. [extra] adds role specific entries.
 class AccountTab extends StatelessWidget {
-  const AccountTab({super.key, this.extra = const []});
+  const AccountTab({super.key, this.extra = const [], this.showTitle = true});
   final List<Widget> extra;
+  final bool showTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -21,8 +23,7 @@ class AccountTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Tài khoản', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 16),
+        if (showTitle) const PageTitle('Tài khoản') else const SizedBox(height: 4),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -30,7 +31,7 @@ class AccountTab extends StatelessWidget {
               children: [
                 const CircleAvatar(
                   radius: 28,
-                  backgroundColor: AppColors.leaf,
+                  backgroundColor: AppColors.teaDark,
                   child: Icon(Icons.person, color: Colors.white),
                 ),
                 const SizedBox(width: 16),

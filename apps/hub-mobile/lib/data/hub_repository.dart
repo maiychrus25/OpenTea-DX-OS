@@ -65,6 +65,8 @@ abstract class HubRepository {
   Future<Tour> getTour(String id);
   Future<List<Departure>> listDepartures(String tourId);
   Future<List<Product>> listProducts({String? htxCode});
+  Future<List<Household>> listHouseholds({String? htxCode});
+  Future<Household> getHousehold(String id);
   Future<List<Article>> listPublishedArticles();
 
   // Customer

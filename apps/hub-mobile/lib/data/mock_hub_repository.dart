@@ -62,6 +62,16 @@ class MockHubRepository implements HubRepository {
       SeedData.htxs.firstWhere((h) => h.code == code, orElse: () => throw const HubException('Không tìm thấy HTX'));
 
   @override
+  Future<List<Household>> listHouseholds({String? htxCode}) async => [
+    for (final h in SeedData.households)
+      if (htxCode == null || h.htxCode == htxCode) h,
+  ];
+
+  @override
+  Future<Household> getHousehold(String id) async =>
+      SeedData.households.firstWhere((h) => h.id == id, orElse: () => throw const HubException('Không tìm thấy hộ'));
+
+  @override
   Future<List<Tour>> listTours({String? htxCode}) async => [
     for (final t in SeedData.tours)
       if (htxCode == null || t.htxCode == htxCode) t,

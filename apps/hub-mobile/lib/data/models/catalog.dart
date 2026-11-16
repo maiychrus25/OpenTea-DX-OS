@@ -54,6 +54,10 @@ class Tour {
     required this.childPrice,
     required this.itinerary,
     required this.gradientSeed,
+    this.tags = const [],
+    this.bestMonths = 'Quanh năm',
+    this.level = 'Dễ',
+    this.maxGuests = 12,
   });
   final String id;
   final String htxCode;
@@ -67,8 +71,50 @@ class Tour {
   final int childPrice;
   final List<ItineraryDay> itinerary;
 
-  /// Picks the placeholder gradient (no photos in the skeleton).
+  /// Picks the demo photo (and the fallback gradient).
   final int gradientSeed;
+
+  /// Filter labels, e.g. "Hái chè", "Homestay".
+  final List<String> tags;
+  final String bestMonths;
+  final String level;
+  final int maxGuests;
+
+  /// Whole-day or shorter tours; used by the "Trong ngày" filter.
+  bool get isSameDay => !durationLabel.contains('đêm');
+}
+
+/// One step of a household's tea production, with where the statement comes from.
+class ProcessStep {
+  const ProcessStep({required this.title, required this.description, required this.source});
+  final String title;
+  final String description;
+  final String source;
+}
+
+/// A farming household that welcomes visitors. Only what the household agreed
+/// to publish (no phone number, no plot location).
+class Household {
+  const Household({
+    required this.id,
+    required this.htxCode,
+    required this.name,
+    required this.village,
+    required this.crop,
+    required this.certificate,
+    required this.experience,
+    required this.hosting,
+    required this.process,
+  });
+  final String id;
+  final String htxCode;
+  final String name;
+  final String village;
+  final String crop;
+  final String certificate;
+  final String experience;
+  final String hosting;
+  final List<ProcessStep> process;
 }
 
 class Product {

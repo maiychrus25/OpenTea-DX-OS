@@ -19,10 +19,9 @@ class CartTab extends StatelessWidget {
     final signedIn = context.watch<AppState>().claims != null;
     if (cart.isEmpty) return const EmptyState('Giỏ hàng đang trống', icon: Icons.shopping_basket_outlined);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
-        Text('Giỏ hàng', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
+        const PageTitle('Giỏ hàng'),
         for (final l in cart.lines)
           Card(
             child: ListTile(

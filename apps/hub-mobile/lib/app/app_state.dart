@@ -19,7 +19,7 @@ class AppState extends ChangeNotifier {
   Claims? get claims => _session?.claims;
   AppRole get role => roleFromClaims(claims);
 
-  /// The first screen ("Xem với tư cách khách" / "Đăng nhập") is shown until
+  /// The first screen (login, or "Tiếp tục khám phá") is shown until
   /// the user picks one, unless a session was restored.
   bool get welcomeDone => _welcomeDone;
 

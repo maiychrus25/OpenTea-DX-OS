@@ -12,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future<void> _pump(WidgetTester tester, {Map<String, Object> prefs = const {}}) async {
   SharedPreferences.setMockInitialValues(prefs);
   final store = await LocalStore.open();
-  tester.view.physicalSize = const Size(800, 1800);
+  tester.view.physicalSize = const Size(800, 2800);
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(const SizedBox()); // dispose any previous app
@@ -21,8 +21,6 @@ Future<void> _pump(WidgetTester tester, {Map<String, Object> prefs = const {}}) 
 }
 
 Future<void> _login(WidgetTester tester, String email) async {
-  await tester.tap(find.byKey(const Key('welcome-login')));
-  await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('login-email')), email);
   await tester.enterText(find.byKey(const Key('login-password')), DemoAuthService.demoPassword);
   await tester.tap(find.byKey(const Key('login-submit')));
@@ -32,32 +30,41 @@ Future<void> _login(WidgetTester tester, String email) async {
 void main() {
   testWidgets('first screen offers guest or login', (tester) async {
     await _pump(tester);
-    expect(find.text('Xem với tư cách khách'), findsOneWidget);
-    expect(find.text('Đăng nhập'), findsOneWidget);
+    expect(find.text('Tiếp tục khám phá'), findsOneWidget);
+    expect(find.byKey(const Key('login-submit')), findsOneWidget);
   });
 
-  testWidgets('guest browses news, tours and products', (tester) async {
+  testWidgets('guest browses home, tours, products and news', (tester) async {
     await _pump(tester);
-    await tester.tap(find.byKey(const Key('welcome-guest')));
+    await tester.tap(find.byKey(const Key('login-guest')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Vào vụ chè xuân'), findsOneWidget);
-    await tester.tap(find.text('Tour').last);
+    expect(find.text('Hẹn nhau ở đồi chè'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('home-explore')));
     await tester.pumpAndSettle();
-    expect(find.text('Một ngày làm người hái chè'), findsOneWidget);
-    await tester.tap(find.text('Sản phẩm').last);
+    expect(find.byKey(const Key('tour-tour-01')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('back')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cat-products')));
     await tester.pumpAndSettle();
     expect(find.text('Chè móc câu'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('back')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('home-news')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Vào vụ chè xuân'), findsOneWidget);
   });
 
   testWidgets('guest can fill the cart but checkout asks to log in, then continues to checkout', (tester) async {
     await _pump(tester);
-    await tester.tap(find.byKey(const Key('welcome-guest')));
+    await tester.tap(find.byKey(const Key('login-guest')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sản phẩm').last);
+    await tester.tap(find.byKey(const Key('cat-products')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('add-prod-01')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Giỏ hàng').last);
+    await tester.tap(find.byKey(const Key('back')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('home-cart')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('cart-total')), findsOneWidget);
     await tester.tap(find.byKey(const Key('cart-checkout')));
@@ -75,11 +82,13 @@ void main() {
   testWidgets('customer checks out with VietQR and sees the QR and the order', (tester) async {
     await _pump(tester);
     await _login(tester, 'customer@demo.vn');
-    await tester.tap(find.text('Sản phẩm').last);
+    await tester.tap(find.byKey(const Key('cat-products')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('add-prod-01')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Giỏ hàng').last);
+    await tester.tap(find.byKey(const Key('back')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('home-cart')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('cart-checkout')));
     await tester.pumpAndSettle();
@@ -96,7 +105,7 @@ void main() {
 
   testWidgets('each demo account lands on its own interface', (tester) async {
     final expected = {
-      'customer@demo.vn': 'Tin tức',
+      'customer@demo.vn': 'Hẹn nhau ở đồi chè',
       'farmer@demo.vn': 'Lịch tham quan',
       'manager@demo.vn': 'Tổng quan',
       'operator@demo.vn': 'Duyệt bài',
@@ -156,10 +165,10 @@ void main() {
   testWidgets('sign out returns to the first screen', (tester) async {
     await _pump(tester);
     await _login(tester, 'customer@demo.vn');
-    await tester.tap(find.text('Tài khoản').last);
+    await tester.tap(find.byKey(const Key('home-account')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('account-logout')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('welcome-guest')), findsOneWidget);
+    expect(find.byKey(const Key('login-guest')), findsOneWidget);
   });
 }
