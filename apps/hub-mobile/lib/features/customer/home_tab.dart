@@ -389,7 +389,7 @@ class HomeTab extends StatelessWidget {
   );
 }
 
-/// Top of the home page: the logo (no name) and the account icon, then the search bar.
+/// Top of the home page, on one row: the logo, the search bar that takes the remaining width, and the account icon.
 /// Submitting the search lists the matching tours.
 class _BrandBar extends StatefulWidget {
   const _BrandBar();
@@ -412,61 +412,58 @@ class _BrandBarState extends State<_BrandBar> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 10, 0),
-        child: Row(
-          children: [
-            const LeafLogo(size: 44),
-            const Spacer(),
-            IconButton(
-              key: const Key('home-account'),
-              tooltip: 'Tài khoản',
-              iconSize: 30,
-              onPressed: () => context.push('/shop/me'),
-              icon: const Icon(Icons.person_outline),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 10, 6, 14),
+    child: Row(
+      children: [
+        const LeafLogo(size: 42),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0xFFD9D2BD), width: 1.5),
             ),
-          ],
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
-        child: Container(
-          height: 50,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: AppColors.paper,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: const Color(0xFFD9D2BD), width: 1.5),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.search, size: 24, color: AppColors.teaDark),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  key: const Key('home-search'),
-                  controller: _query,
-                  textInputAction: TextInputAction.search,
-                  style: const TextStyle(fontSize: 16),
-                  onSubmitted: _submit,
-                  decoration: const InputDecoration(
-                    hintText: 'Tìm đồi chè, trải nghiệm',
-                    hintStyle: TextStyle(color: AppColors.faint),
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
+            child: Row(
+              children: [
+                const Icon(Icons.search, size: 22, color: AppColors.teaDark),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    key: const Key('home-search'),
+                    controller: _query,
+                    textInputAction: TextInputAction.search,
+                    style: const TextStyle(fontSize: 15),
+                    onSubmitted: _submit,
+                    decoration: const InputDecoration(
+                      hintText: 'Tìm đồi chè, trải nghiệm',
+                      hintMaxLines: 1,
+                      hintStyle: TextStyle(color: AppColors.faint, fontSize: 15, overflow: TextOverflow.ellipsis),
+                      isDense: true,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    ],
+        IconButton(
+          key: const Key('home-account'),
+          tooltip: 'Tài khoản',
+          iconSize: 30,
+          onPressed: () => context.push('/shop/me'),
+          icon: const Icon(Icons.person_outline),
+        ),
+      ],
+    ),
   );
 }
 
