@@ -29,3 +29,18 @@ export function isMiniAppPath(pathname: string): boolean {
   // The id pattern of the manifest (dxos/v1).
   return /^\/apps\/[a-z][a-z0-9-]{1,30}(?:\/|$)/.test(pathname)
 }
+
+/**
+ * API routes that also accept a mobile app's `Authorization: Bearer` token. The middleware lets a Bearer request
+ * through to them without a cookie; the route verifies the token itself (lib/auth/request-user) and answers 401/403.
+ */
+export function isBearerApiPath(pathname: string): boolean {
+  try {
+    pathname = decodeURIComponent(pathname)
+  } catch {
+    return false
+  }
+  const normalized = pathname.split('?')[0].replace(/\/+$/, '')
+  if (!normalized || normalized.length > 300) return false
+  return /^\/api\/journal(?:\/[^/]+)?$/.test(normalized) || /^\/api\/notifications(?:\/announce)?$/.test(normalized)
+}

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The journal and notification API accepts the mobile app's Keycloak access token as `Authorization: Bearer <token>` (client `dxos-mobile` only), in addition to the browser session: `/api/journal` (list, create), `/api/journal/[id]` (update, delete), `/api/journal/batch-approve`, `/api/journal/upload`, `/api/notifications` (list, mark read) and `/api/notifications/announce`. The web verifies the RS256 signature against the realm key set, the issuer, the expiry, the client and the role itself; the user, role, cooperative and Hasura scoping are the same as for a session. A Bearer header that is not valid is a 401 and never falls back to the cookie.
+
 ---
 
 ## [1.12.0] - 2026-11-14

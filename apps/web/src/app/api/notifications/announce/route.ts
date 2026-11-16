@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireTenant } from '@/lib/api/tenant';
+import { authFromRequest } from '@/lib/auth/request-user';
 import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter';
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository';
 import { BroadcastAnnouncementUseCase } from '@/application/notification/broadcast-announcement-usecase';
@@ -18,7 +19,7 @@ const announceSchema = z.object({
 });
 
 async function postAnnounce(req: Request) {
-  const tenant = await requireTenant();
+  const tenant = await requireTenant((await authFromRequest(req))?.user);
 
   if (tenant.role !== 'officer' && tenant.role !== 'manager') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 });

@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { authFromRequest, coreTokenOf } from '@/lib/auth/request-user'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
@@ -25,10 +25,11 @@ async function getFarmerHouseholdId(userId?: string) {
 }
 
 async function getJournalEntries(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
+  const caller = await authFromRequest(request)
+  if (!caller) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
+  const user = caller.user
 
   const url = new URL(request.url)
   const parcelId = url.searchParams.get('parcel_id') ?? undefined
@@ -39,17 +40,17 @@ async function getJournalEntries(request: Request) {
   })
 
   // Lấy tạm role do NextAuth type chưa extend
-  const role = (session.user as any).role
+  const role = user.role
   // Farmer can only see their own household's entries
   // Officer/Manager can optionally filter by householdId query param
   let householdId: string | undefined
   if (role === 'farmer') {
-    householdId = await getFarmerHouseholdId((session.user as any).id)
+    householdId = await getFarmerHouseholdId(user.id)
   } else {
     householdId = url.searchParams.get('householdId') ?? undefined
   }
 
-  const useCase = new ListJournalEntriesUseCase(new GatewayJournalReader(new CoreGatewayClient(role)))
+  const useCase = new ListJournalEntriesUseCase(new GatewayJournalReader(new CoreGatewayClient(role, coreTokenOf(caller))))
   const result = await useCase.execute({
     parcel_id: parcelId,
     status,
@@ -61,7 +62,7 @@ async function getJournalEntries(request: Request) {
   // Attach presigned url for photos
   const { MinioDocumentAdapter } = await import('@/infrastructure/storage/minio-document.adapter')
   const storage = new MinioDocumentAdapter()
-  const htxCode = session.user.htxCode
+  const htxCode = user.htxCode
   for (const entry of result.entries) {
     if (entry.photo_minio_key) {
       // Older rows may hold a key posted by a client, so only a journal photo of the caller's HTX is signed.
@@ -75,12 +76,12 @@ async function getJournalEntries(request: Request) {
 }
 
 async function postJournalEntry(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
+  const caller = await authFromRequest(request)
+  if (!caller) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
-  // Lấy tạm role do NextAuth type chưa extend
-  const role = (session.user as any).role
+  const user = caller.user
+  const role = user.role
   if (role !== 'officer' && role !== 'farmer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Only officer/farmer can create journal entries' } }, { status: 403 })
   }
@@ -91,7 +92,7 @@ async function postJournalEntry(request: Request) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parse.error.message } }, { status: 400 })
   }
 
-  const tenant = await requireTenant()
+  const tenant = await requireTenant(user)
   await new TenantGuard(tenant).parcel(parse.data.parcel_id)
   assertJournalPhotoKey(parse.data.photo_minio_key, tenant.htxCode)
 
@@ -102,14 +103,14 @@ async function postJournalEntry(request: Request) {
     parcel_id: parse.data.parcel_id,
     entry_date: new Date(parse.data.entry_date),
     activity_type: parse.data.activities[0]?.activity_type ?? 'OTHER',
-    performed_by: (session.user as any).name ?? 'Unknown',
-    submitted_by_id: (session.user as any).id ?? '',
+    performed_by: user.name ?? 'Unknown',
+    submitted_by_id: user.id ?? '',
     submitted_role: role.toUpperCase() as 'OFFICER' | 'FARMER',
     activities: parse.data.activities,
     observation: parse.data.observation,
     photo_url: parse.data.photo_url,
     photo_minio_key: parse.data.photo_minio_key,
-  }, role.toUpperCase(), role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined)
+  }, role.toUpperCase(), role === 'farmer' ? await getFarmerHouseholdId(user.id) : undefined)
   
   return NextResponse.json({ data }, { status: 201 })
 }

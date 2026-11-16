@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/auth'
+import { authFromRequest } from '@/lib/auth/request-user'
 import { requireTenant } from '@/lib/api/tenant'
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository'
 import { GetNotificationsUseCase } from '@/application/notification/get-notifications-usecase'
@@ -26,7 +27,7 @@ const putBodySchema = z.object({
 })
 
 async function getNotifications(req: Request) {
-  const { userId, htxProfileId } = await requireTenant()
+  const { userId, htxProfileId } = await requireTenant((await authFromRequest(req))?.user)
 
   const { searchParams } = new URL(req.url)
   const validationResult = getQuerySchema.safeParse({ limit: searchParams.get('limit'), filter: searchParams.get('filter') })
@@ -40,8 +41,8 @@ async function getNotifications(req: Request) {
 export const GET = withErrorHandler(getNotifications)
 
 async function putNotifications(req: Request) {
-  const session = await auth()
-  if (!session || !session.user || !session.user.id) {
+  const user = (await authFromRequest(req))?.user
+  if (!user?.id) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
 
@@ -55,11 +56,11 @@ async function putNotifications(req: Request) {
   const { id, action, preferences } = validationResult.data
 
   if (action === 'mark-all-read') {
-    await markNotificationReadUseCase.execute(session.user.id)
+    await markNotificationReadUseCase.execute(user.id)
   } else if (action === 'mark-read' && id) {
-    await markNotificationReadUseCase.execute(session.user.id, id)
+    await markNotificationReadUseCase.execute(user.id, id)
   } else if (action === 'update-preferences') {
-    await notificationRepo.updatePreferences(session.user.id, preferences)
+    await notificationRepo.updatePreferences(user.id, preferences)
   }
 
   return NextResponse.json({ data: { success: true } }, { status: 200 })

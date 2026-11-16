@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireTenant } from '@/lib/api/tenant'
+import { authFromRequest } from '@/lib/auth/request-user'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { ForbiddenError } from '@/domain/errors'
 import { assertJournalPhotoKey, journalPhotoRoot } from '@/domain/document/document-namespace'
@@ -33,7 +34,7 @@ function safeFileName(filename: string, contentType: keyof typeof EXTENSIONS): s
 }
 
 async function createUploadUrl(req: Request) {
-  const { role, htxCode } = await requireTenant()
+  const { role, htxCode } = await requireTenant((await authFromRequest(req))?.user)
   if (role !== 'farmer' && role !== 'officer') throw new ForbiddenError('Only officer/farmer can upload journal photos')
 
   const body = await req.json().catch(() => ({}))

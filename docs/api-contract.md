@@ -16,6 +16,22 @@ Returns current session (NextAuth built-in).
 { "user": { "id": "uuid", "email": "...", "role": "manager|officer|farmer", "name": "..." } }
 ```
 
+### Bearer token (mobile apps)
+
+A mobile app signs in with the public Keycloak client `dxos-mobile` (Authorization Code + PKCE) and sends `Authorization: Bearer <access token>` instead of the session cookie. Only these routes accept it; every other route is cookie-only:
+
+- `GET`, `POST /api/journal`; `PUT`, `DELETE /api/journal/{id}`; `POST /api/journal/batch-approve`; `POST /api/journal/upload`
+- `GET`, `PUT /api/notifications`; `POST /api/notifications/announce`
+
+The web verifies the token itself: RS256 signature against the realm JWKS (fetched from the internal Keycloak URL, cached 10 minutes), `iss` equal to `KEYCLOAK_ISSUER`, `exp` and `nbf` (30 s tolerance), `azp` equal to `dxos-mobile` (tokens of other clients, including service accounts, are refused), a non-empty `sub`, and a realm role `manager`, `officer` or `farmer`. The user is `sub`, the strongest of those roles, the `htx_code` claim and `name`; role checks, the cooperative (HTX) check and Hasura role scoping are the same as for a session, and the token itself is the credential sent to the core gateway. There is no CORS header: native apps do not need one.
+
+| Status | Code | When |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Bearer header present but empty, malformed, badly signed, expired, not yet valid, wrong issuer or not issued to `dxos-mobile`. The cookie is not tried. |
+| 403 | `FORBIDDEN` | Valid token whose roles include none of manager/officer/farmer (for example `customer`), or a role the route does not allow. |
+| 403 | `NO_HTX` | Valid token without an `htx_code`, or one that matches no cooperative. |
+| 503 | `CORE_UNAVAILABLE` | The Keycloak key set cannot be fetched and no cached key matches. The token is not trusted; retry later. |
+
 ---
 
 ## Bulletin (Manager)

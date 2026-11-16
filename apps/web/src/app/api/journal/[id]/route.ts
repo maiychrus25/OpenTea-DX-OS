@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { authFromRequest } from '@/lib/auth/request-user'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
@@ -21,18 +21,19 @@ async function getFarmerHouseholdId(userId?: string) {
 }
 
 async function putJournalEntry(request: Request, context: unknown) {
-  const session = await auth()
-  if (!session?.user) {
+  const caller = await authFromRequest(request)
+  if (!caller) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
-  const role = (session.user as any).role
+  const user = caller.user
+  const role = user.role
   if (role !== 'officer' && role !== 'farmer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
 
   const { params } = context as { params: Promise<{ id: string }> }
   const { id } = await params
-  await new TenantGuard(await requireTenant()).journalEntry(id)
+  await new TenantGuard(await requireTenant(user)).journalEntry(id)
 
   const body = await request.json().catch(() => ({}))
   const parse = journalUpdateSchema.safeParse(body)
@@ -42,28 +43,29 @@ async function putJournalEntry(request: Request, context: unknown) {
 
   const repo = new PrismaJournalRepository()
   const useCase = new UpdateJournalEntryUseCase(repo)
-  const householdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined
+  const householdId = role === 'farmer' ? await getFarmerHouseholdId(user.id) : undefined
   const data = await useCase.execute(id, parse.data, role.toUpperCase(), householdId)
   return NextResponse.json({ data })
 }
 
-async function deleteJournalEntry(_request: Request, context: unknown) {
-  const session = await auth()
-  if (!session?.user) {
+async function deleteJournalEntry(request: Request, context: unknown) {
+  const caller = await authFromRequest(request)
+  if (!caller) {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
-  const role = (session.user as any).role
+  const user = caller.user
+  const role = user.role
   if (role !== 'officer' && role !== 'farmer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
 
   const { params } = context as { params: Promise<{ id: string }> }
   const { id } = await params
-  await new TenantGuard(await requireTenant()).journalEntry(id)
+  await new TenantGuard(await requireTenant(user)).journalEntry(id)
 
   const repo = new PrismaJournalRepository()
   const useCase = new DeleteJournalEntryUseCase(repo)
-  const householdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined
+  const householdId = role === 'farmer' ? await getFarmerHouseholdId(user.id) : undefined
   await useCase.execute(id, role.toUpperCase(), householdId)
   return NextResponse.json({ data: { deleted: true, withdrawn: role === 'farmer' } })
 }

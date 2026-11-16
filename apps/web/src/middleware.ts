@@ -3,7 +3,7 @@
 
 import { auth } from "./auth"
 import { NextResponse } from "next/server"
-import { isPublicResourcePath, isPublicApiPath, isMiniAppPath } from '@/lib/contracts/public-resource-path'
+import { isPublicResourcePath, isPublicApiPath, isMiniAppPath, isBearerApiPath } from '@/lib/contracts/public-resource-path'
 
 export { isPublicResourcePath, isPublicApiPath } from '@/lib/contracts/public-resource-path'
 
@@ -90,6 +90,8 @@ export default auth((req) => {
 
   const redirect = resolveAuthRedirect(pathname, isLoggedIn, role)
   if (redirect === 'UNAUTHORIZED_API') {
+    // A mobile app has no cookie: its Bearer token is verified by the route itself, which answers 401/403.
+    if (isBearerApiPath(pathname) && /^bearer\b/i.test(req.headers.get('authorization') ?? '')) return NextResponse.next()
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized access' } }, { status: 401 })
   }
   if (redirect) return NextResponse.redirect(new URL(redirect, req.url))
