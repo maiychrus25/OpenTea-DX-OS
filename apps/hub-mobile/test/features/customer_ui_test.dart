@@ -147,6 +147,18 @@ void main() {
       expect(find.text('Giá từ'), findsOneWidget);
     });
 
+    testWidgets('the cart button of the header is a shopping cart with the item count', (tester) async {
+      await _pump(tester);
+      await _guest(tester);
+      expect(
+        find.descendant(of: find.byKey(const Key('header-cart')), matching: find.byIcon(Icons.shopping_cart_outlined)),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('header-cart')));
+      await tester.pumpAndSettle();
+      expect(find.text('Giỏ hàng đang trống'), findsOneWidget);
+    });
+
     testWidgets('the first bottom tab uses a house icon', (tester) async {
       await _pump(tester);
       await _guest(tester);

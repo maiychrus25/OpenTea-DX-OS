@@ -403,7 +403,7 @@ class _BrandBarState extends State<_BrandBar> {
               _HeaderButton(
                 key: const Key('header-cart'),
                 tooltip: 'Giỏ hàng',
-                icon: Icons.shopping_basket_outlined,
+                icon: Icons.shopping_cart_outlined,
                 badge: cartCount,
                 badgeColor: AppColors.teaDark,
                 onPressed: () => context.go('/shop/cart'),
@@ -494,7 +494,7 @@ class _HeaderButton extends StatelessWidget {
               isLabelVisible: badge > 0,
               label: Text('$badge'),
               backgroundColor: badgeColor,
-              child: Icon(icon, size: 22, color: AppColors.teaDark),
+              child: Icon(icon, size: 24, color: AppColors.teaDark),
             ),
           ),
         ),
@@ -541,7 +541,7 @@ class _AccountLinks extends StatelessWidget {
         children: [
           link(
             const Key('home-cart'),
-            Icons.shopping_basket_outlined,
+            Icons.shopping_cart_outlined,
             cartCount > 0 ? 'Giỏ hàng ($cartCount)' : 'Giỏ hàng',
             '/shop/cart',
           ),

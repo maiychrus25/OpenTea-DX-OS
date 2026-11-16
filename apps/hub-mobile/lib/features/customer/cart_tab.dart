@@ -18,7 +18,7 @@ class CartTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final cart = context.watch<CartController>();
     final signedIn = context.watch<AppState>().claims != null;
-    if (cart.isEmpty) return const EmptyState('Giỏ hàng đang trống', icon: Icons.shopping_basket_outlined);
+    if (cart.isEmpty) return const EmptyState('Giỏ hàng đang trống', icon: Icons.shopping_cart_outlined);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
