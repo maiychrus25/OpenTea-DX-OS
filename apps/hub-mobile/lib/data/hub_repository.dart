@@ -4,6 +4,7 @@
 import 'models/booking.dart';
 import 'models/catalog.dart';
 import 'models/order.dart';
+import 'models/staff.dart';
 
 class NewOrder {
   const NewOrder({
@@ -101,4 +102,32 @@ abstract class HubRepository {
   Future<List<Article>> listPendingArticles();
   Future<Article> reviewArticle(String articleId, {required bool approve});
   Future<List<Booking>> listAllBookings();
+
+  // Staff pages of the DX-OS web app (manager, officer, farmer). Farmers pass
+  // their household id so they only ever see their own rows.
+  Future<HtxProfile> getHtxProfile(String htxCode);
+  Future<List<Parcel>> listParcels(String htxCode, {String? householdId});
+  Future<List<Member>> listMembers(String htxCode);
+  Future<List<JournalEntry>> listJournal(String htxCode, {String? householdId});
+
+  /// Manager approves or rejects a pending diary entry.
+  Future<JournalEntry> reviewJournal(String entryId, {required bool approve});
+  Future<JournalEntry> addJournal(NewJournalEntry draft);
+
+  /// Manager changes the expected harvest date of a parcel.
+  Future<Parcel> rescheduleHarvest(String parcelId, DateTime date);
+  Future<List<Lot>> listLots(String htxCode);
+  Future<List<AppNotification>> listNotifications(String htxCode, {String? householdId});
+  Future<void> markNotificationRead(String id);
+  Future<void> markAllNotificationsRead(String htxCode, {String? householdId});
+  Future<List<BulletinItem>> listBulletins();
+  Future<List<MarketPrice>> listMarketPrices();
+  Future<WeatherNow> currentWeather(String htxCode);
+
+  // Tour-company staff
+  Future<List<LinkedHtx>> listLinkedHtxs();
+  Future<List<RegionTour>> listRegionTours();
+  Future<List<Directive>> listDirectives();
+  Future<Directive> createDirective(NewDirective draft);
+  Future<List<ReportRow>> reportRows();
 }

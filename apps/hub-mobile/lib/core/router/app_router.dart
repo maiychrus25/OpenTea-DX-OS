@@ -3,6 +3,7 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
 import '../../features/auth/login_screen.dart';
@@ -28,6 +29,12 @@ import '../../features/customer/tours_tab.dart';
 import '../../features/farmer/farmer_screens.dart';
 import '../../features/manager/manager_screens.dart';
 import '../../features/operator/operator_screens.dart';
+import '../../features/staff/account_page.dart';
+import '../../features/staff/coming_soon.dart';
+import '../../features/staff/dashboards.dart';
+import '../../features/staff/farmer_pages.dart';
+import '../../features/staff/htx_pages.dart';
+import '../../features/staff/staff_shell.dart';
 import '../../shared/widgets.dart' show InnerPage;
 import '../role/role.dart';
 
@@ -113,21 +120,56 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         path: '/shop/tickets/:id',
         builder: (c, s) => TicketScreen(bookingId: s.pathParameters['id']!),
       ),
-      shell((loc, child) => FarmerShell(location: loc, child: child), [
-        tab('/farmer', const VisitsTab()),
+      // Farmer: pages inside the staff shell, then pages pushed on top of it.
+      shell((loc, child) => StaffShell(location: loc, child: child), [
+        tab('/farmer', const FarmerDashboard()),
+        tab('/farmer/journal', const FarmerJournalPage()),
+        tab('/farmer/schedule', const SchedulePage()),
+        tab('/farmer/bulletin', const BulletinPage()),
+        tab('/farmer/notifications', const NotificationsPage()),
+        tab('/farmer/parcels', const FarmerParcelsPage()),
+        tab('/farmer/diagnosis', comingSoonFor('diagnosis')),
+        tab('/farmer/me', const StaffAccountPage()),
+        tab('/farmer/visits', const VisitsTab()),
         tab('/farmer/products', const FarmerProductsTab()),
-        tab('/farmer/me', const FarmerAccountTab()),
       ]),
+      GoRoute(path: '/farmer/journal/new', builder: (c, s) => const JournalFormPage()),
+      GoRoute(
+        path: '/farmer/journal/:id',
+        builder: (c, s) => JournalDetailPage(entryId: s.pathParameters['id']!),
+      ),
       GoRoute(
         path: '/farmer/visits/:id',
         builder: (c, s) => VisitDetailScreen(bookingId: s.pathParameters['id']!),
       ),
-      shell((loc, child) => ManagerShell(location: loc, child: child), [
-        tab('/manager', const OverviewTab()),
+      // Manager and officer share the /manager routes; the menu and the buttons depend on the role.
+      shell((loc, child) => StaffShell(location: loc, child: child), [
+        tab('/manager', const _ManagerHome()),
+        tab('/manager/schedule', const SchedulePage()),
+        tab('/manager/members', const MembersPage()),
+        tab('/manager/households', const HouseholdsPage()),
+        tab('/manager/bulletin', const BulletinPage()),
+        tab('/manager/journal-approve', const JournalPage(title: 'Duyệt nhật ký', startPending: true)),
+        tab(
+          '/manager/journal',
+          const JournalPage(title: 'Nhật ký canh tác', subtitle: 'Nhật ký của các nông hộ trong HTX.'),
+        ),
+        tab('/manager/chat', comingSoonFor('chat')),
+        tab('/manager/partner-map', comingSoonFor('partner-map')),
+        tab('/manager/app-store', comingSoonFor('app-store')),
+        tab('/manager/documents', comingSoonFor('documents')),
+        tab('/manager/diseases', comingSoonFor('diseases')),
+        tab('/manager/assistant', comingSoonFor('assistant')),
+        tab('/manager/zones', const ZonesPage()),
+        tab('/manager/lots', const LotsPage()),
+        tab('/manager/notifications', const NotificationsPage()),
+        tab('/manager/profile', const HtxProfilePage()),
+        tab('/manager/me', const StaffAccountPage()),
         tab('/manager/orders', const OrdersTab()),
         tab('/manager/bookings', const BookingsTab()),
-        tab('/manager/more', const MoreTab()),
-        tab('/manager/me', const ManagerAccountTab()),
+        tab('/manager/payments', const ManagerPaymentsScreen()),
+        tab('/manager/catalog', const ManagerCatalogScreen()),
+        tab('/manager/articles', const ManagerArticlesScreen()),
       ]),
       GoRoute(
         path: '/manager/orders/:id',
@@ -137,15 +179,40 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         path: '/manager/bookings/:id',
         builder: (c, s) => ManagerBookingDetailScreen(bookingId: s.pathParameters['id']!),
       ),
-      GoRoute(path: '/manager/articles', builder: (c, s) => const ManagerArticlesScreen()),
-      GoRoute(path: '/manager/payments', builder: (c, s) => const ManagerPaymentsScreen()),
-      GoRoute(path: '/manager/catalog', builder: (c, s) => const ManagerCatalogScreen()),
-      shell((loc, child) => OperatorShell(location: loc, child: child), [
-        tab('/operator', const OperatorOverviewTab()),
+      GoRoute(
+        path: '/manager/journal/:id',
+        builder: (c, s) => JournalDetailPage(entryId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/manager/journal-approve/:id',
+        builder: (c, s) => JournalDetailPage(entryId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/manager/households/:id',
+        builder: (c, s) => HouseholdDetailPage(householdId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/manager/lots/:id',
+        builder: (c, s) => LotDetailPage(lotId: s.pathParameters['id']!),
+      ),
+      shell((loc, child) => StaffShell(location: loc, child: child), [
+        tab('/operator', const OperatorDashboard()),
+        tab('/operator/htx', const OperatorHtxPage()),
+        tab('/operator/directives', const OperatorDirectivesPage()),
+        tab('/operator/tours', const OperatorToursPage()),
         tab('/operator/articles', const OperatorArticlesTab()),
+        tab('/operator/reports', const OperatorReportsPage()),
         tab('/operator/bookings', const OperatorBookingsTab()),
-        tab('/operator/me', const OperatorAccountTab()),
+        tab('/operator/me', const StaffAccountPage()),
       ]),
     ],
   );
+}
+
+/// `/manager` shows the manager's or the officer's dashboard depending on who is signed in.
+class _ManagerHome extends StatelessWidget {
+  const _ManagerHome();
+  @override
+  Widget build(BuildContext context) =>
+      context.read<AppState>().claims?.canWriteHtx == true ? const ManagerDashboard() : const OfficerDashboard();
 }

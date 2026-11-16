@@ -5,6 +5,8 @@ import 'hub_repository.dart';
 import 'models/booking.dart';
 import 'models/catalog.dart';
 import 'models/order.dart';
+import 'models/staff.dart';
+import 'staff_seed.dart';
 import 'seed_data.dart';
 
 /// In-memory implementation over [SeedData]. State lives only as long as the
@@ -17,6 +19,11 @@ class MockHubRepository implements HubRepository {
     _articles.addAll(SeedData.articles(_now));
     _bookings.addAll(SeedData.bookings(today));
     _orders.addAll(SeedData.orders(_now));
+    _parcels.addAll(StaffSeed.parcels(today));
+    _journal.addAll(StaffSeed.journal(today));
+    _lots.addAll(StaffSeed.lots(today));
+    _notifications.addAll(StaffSeed.notifications(_now));
+    _directives.addAll(StaffSeed.directives(today));
   }
 
   final DateTime _now;
@@ -26,6 +33,11 @@ class MockHubRepository implements HubRepository {
   final _bookings = <Booking>[];
   final _orders = <Order>[];
   final _payments = <Payment>[];
+  final _parcels = <Parcel>[];
+  final _journal = <JournalEntry>[];
+  final _lots = <Lot>[];
+  final _notifications = <AppNotification>[];
+  final _directives = <Directive>[];
   final _stock = <String, int>{for (final p in SeedData.products) p.id: p.stock};
 
   String _nextId(String prefix) => '$prefix-${_serial++}';
@@ -354,4 +366,142 @@ class MockHubRepository implements HubRepository {
 
   @override
   Future<List<Booking>> listAllBookings() async => _bookings.reversed.toList();
+
+  @override
+  Future<HtxProfile> getHtxProfile(String htxCode) async => StaffSeed.htxProfiles.firstWhere(
+    (h) => h.code == htxCode,
+    orElse: () => throw const HubException('Không tìm thấy HTX'),
+  );
+
+  bool _inHtx(String householdId, String htxCode) =>
+      StaffSeed.members.any((m) => m.householdId == householdId && m.htxCode == htxCode);
+
+  @override
+  Future<List<Parcel>> listParcels(String htxCode, {String? householdId}) async => [
+    for (final p in _parcels)
+      if (_inHtx(p.householdId, htxCode) && (householdId == null || p.householdId == householdId)) p,
+  ];
+
+  @override
+  Future<List<Member>> listMembers(String htxCode) async => [
+    for (final m in StaffSeed.members)
+      if (m.htxCode == htxCode) m,
+  ];
+
+  @override
+  Future<List<JournalEntry>> listJournal(String htxCode, {String? householdId}) async {
+    final list = [
+      for (final e in _journal)
+        if (_inHtx(e.householdId, htxCode) && (householdId == null || e.householdId == householdId)) e,
+    ]..sort((a, b) => b.entryDate.compareTo(a.entryDate));
+    return list;
+  }
+
+  @override
+  Future<JournalEntry> reviewJournal(String entryId, {required bool approve}) async {
+    final i = _journal.indexWhere((e) => e.id == entryId);
+    if (i < 0) throw const HubException('Không tìm thấy nhật ký');
+    if (_journal[i].status != JournalStatus.pendingApproval) {
+      throw const HubException('Nhật ký này không ở trạng thái chờ duyệt');
+    }
+    return _journal[i] = _journal[i].copyWith(status: approve ? JournalStatus.approved : JournalStatus.rejected);
+  }
+
+  @override
+  Future<JournalEntry> addJournal(NewJournalEntry draft) async {
+    final pi = _parcels.indexWhere((p) => p.id == draft.parcelId);
+    if (pi < 0) throw const HubException('Chưa chọn thửa đất');
+    final parcel = _parcels[pi];
+    if (draft.activityType == ActivityType.spraying && (draft.productName ?? '').trim().isEmpty) {
+      throw const HubException('Phun thuốc cần ghi tên sản phẩm');
+    }
+    final entry = JournalEntry(
+      id: _nextId('jr'),
+      parcelId: parcel.id,
+      parcelCode: parcel.code,
+      cropType: parcel.cropType,
+      householdId: parcel.householdId,
+      entryDate: draft.entryDate,
+      activityType: draft.activityType,
+      performedBy: draft.performedBy,
+      status: JournalStatus.pendingApproval,
+      activityDetail: draft.activityType.label,
+      productName: draft.productName,
+      dosage: draft.dosage,
+      withdrawalDays: draft.withdrawalDays,
+      notes: draft.notes,
+    );
+    _journal.add(entry);
+    return entry;
+  }
+
+  @override
+  Future<Parcel> rescheduleHarvest(String parcelId, DateTime date) async {
+    final i = _parcels.indexWhere((p) => p.id == parcelId);
+    if (i < 0) throw const HubException('Không tìm thấy thửa đất');
+    if (_parcels[i].status == ParcelStatus.harvested) throw const HubException('Thửa đã thu hoạch xong');
+    return _parcels[i] = _parcels[i].copyWith(estimatedHarvestDate: date);
+  }
+
+  @override
+  Future<List<Lot>> listLots(String htxCode) async => htxCode == 'tan-cuong' ? List.of(_lots) : const [];
+
+  @override
+  Future<List<AppNotification>> listNotifications(String htxCode, {String? householdId}) async {
+    final list = [
+      for (final n in _notifications)
+        if (householdId == null ? n.forStaff : (n.householdId == null || n.householdId == householdId)) n,
+    ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return htxCode == 'tan-cuong' ? list : const [];
+  }
+
+  @override
+  Future<void> markNotificationRead(String id) async {
+    final i = _notifications.indexWhere((n) => n.id == id);
+    if (i >= 0) _notifications[i] = _notifications[i].copyWith(isRead: true);
+  }
+
+  @override
+  Future<void> markAllNotificationsRead(String htxCode, {String? householdId}) async {
+    for (final n in await listNotifications(htxCode, householdId: householdId)) {
+      await markNotificationRead(n.id);
+    }
+  }
+
+  @override
+  Future<List<BulletinItem>> listBulletins() async => StaffSeed.bulletins(_now);
+
+  @override
+  Future<List<MarketPrice>> listMarketPrices() async => StaffSeed.marketPrices;
+
+  @override
+  Future<WeatherNow> currentWeather(String htxCode) async => StaffSeed.weather;
+
+  @override
+  Future<List<LinkedHtx>> listLinkedHtxs() async => StaffSeed.linkedHtxs;
+
+  @override
+  Future<List<RegionTour>> listRegionTours() async => StaffSeed.regionTours;
+
+  @override
+  Future<List<Directive>> listDirectives() async => List.of(_directives);
+
+  @override
+  Future<Directive> createDirective(NewDirective draft) async {
+    if (draft.title.trim().isEmpty) throw const HubException('Cần nhập nội dung nhiệm vụ');
+    final targets = draft.htxName == null
+        ? [for (final h in StaffSeed.linkedHtxs) h.name.replaceFirst('HTX Chè ', '').replaceFirst('Shan Tuyết ', '')]
+        : [draft.htxName!];
+    final directive = Directive(
+      id: _nextId('dr'),
+      title: draft.title.trim(),
+      dueDate: draft.dueDate,
+      assignments: [for (final t in targets) DirectiveAssignment(t, DirectiveState.notReceived)],
+    );
+    _directives.insert(0, directive);
+    return directive;
+  }
+
+  @override
+  Future<List<ReportRow>> reportRows() async => StaffSeed.reportRows;
 }
