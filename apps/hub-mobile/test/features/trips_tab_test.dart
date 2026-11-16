@@ -63,6 +63,15 @@ void main() {
       expect(find.byKey(const Key('tour-tour-01')), findsOneWidget);
     });
 
+    testWidgets('the shortcuts stay at the top however many trips are listed', (tester) async {
+      await _openTrips(tester, email: 'customer@demo.vn');
+      final before = tester.getTopLeft(find.byKey(const Key('trips-tickets')));
+      await tester.drag(find.byType(ListView).last, const Offset(0, -600));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.byKey(const Key('trips-tickets'))), before);
+      expect(find.byKey(const Key('trips-find')), findsOneWidget);
+    });
+
     testWidgets('a guest only gets the find-tour card', (tester) async {
       await _openTrips(tester);
       expect(find.byKey(const Key('trips-tickets')), findsNothing);
