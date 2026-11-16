@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hub_mobile/app/hub_app.dart';
 import 'package:hub_mobile/data/demo_auth_service.dart';
@@ -32,6 +33,20 @@ void main() {
     }
   });
 
+  testWidgets('without the file the drawing stays and nothing fails', (tester) async {
+    await tester.pumpWidget(
+      DefaultAssetBundle(
+        bundle: _OneAssetBundle(),
+        child: const MaterialApp(
+          home: Center(child: ProductImage(seed: 1, productId: 'prod-02', height: 80, width: 80)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.descendant(of: find.byType(ProductImage), matching: find.byType(RawImage)), findsNothing);
+  });
+
   group('products have a picture', () {
     Future<void> openShop(WidgetTester tester) async {
       SharedPreferences.setMockInitialValues({});
@@ -58,4 +73,10 @@ void main() {
       }
     });
   });
+}
+
+/// An asset bundle with no assets at all: every product picture is "missing".
+class _OneAssetBundle extends CachingAssetBundle {
+  @override
+  Future<ByteData> load(String key) async => throw FlutterError('Unable to load asset: $key');
 }

@@ -30,6 +30,7 @@ class CartTab extends StatelessWidget {
                 width: 52,
                 child: ProductImage(
                   key: Key('product-image-${l.productId}'),
+                  productId: l.productId,
                   seed: productSeedFromId(l.productId),
                   height: 52,
                   radius: 10,

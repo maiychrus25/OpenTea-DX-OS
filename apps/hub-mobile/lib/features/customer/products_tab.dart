@@ -37,6 +37,7 @@ class ProductsTab extends StatelessWidget {
                         width: 84,
                         child: ProductImage(
                           key: Key('product-image-${p.id}'),
+                          productId: p.id,
                           seed: p.gradientSeed,
                           height: 84,
                           radius: 16,

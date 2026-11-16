@@ -15,8 +15,12 @@ int productSeedFromId(String id) {
 /// A demo picture of a tea product, drawn in code (no image file): a pouch, a tin or a cup, chosen by [seed].
 /// It stands in for the photo a cooperative will upload for each product.
 class ProductImage extends StatelessWidget {
-  const ProductImage({super.key, required this.seed, this.height, this.width, this.radius = 14});
+  const ProductImage({super.key, required this.seed, this.productId, this.height, this.width, this.radius = 14});
   final int seed;
+
+  /// When a picture named after the product exists in assets/images/products (prod-01.png), it is shown instead of the
+  /// drawing; without the file the drawing stays.
+  final String? productId;
   final double? height;
   final double? width;
   final double radius;
@@ -27,7 +31,13 @@ class ProductImage extends StatelessWidget {
     child: SizedBox(
       height: height,
       width: width ?? double.infinity,
-      child: CustomPaint(painter: _ProductPainter(seed.abs())),
+      child: productId == null
+          ? CustomPaint(painter: _ProductPainter(seed.abs()))
+          : Image.asset(
+              'assets/images/products/$productId.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stack) => CustomPaint(painter: _ProductPainter(seed.abs())),
+            ),
     ),
   );
 }

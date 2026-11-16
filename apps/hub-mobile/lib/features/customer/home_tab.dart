@@ -305,7 +305,13 @@ class HomeTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ProductImage(key: Key('home-product-image-${p.id}'), seed: p.gradientSeed, height: 78, radius: 12),
+                ProductImage(
+                  key: Key('home-product-image-${p.id}'),
+                  productId: p.id,
+                  seed: p.gradientSeed,
+                  height: 78,
+                  radius: 12,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   p.name,
