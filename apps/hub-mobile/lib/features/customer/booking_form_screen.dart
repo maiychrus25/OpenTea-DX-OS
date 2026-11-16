@@ -23,9 +23,15 @@ class BookingFormScreen extends StatefulWidget {
   State<BookingFormScreen> createState() => _BookingFormScreenState();
 }
 
-const _dayNames = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'];
-String _dayName(DateTime d) => _dayNames[d.weekday - 1];
-String _dayMonth(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
+String _two(int n) => n.toString().padLeft(2, '0');
+String _dayMonth(DateTime d) => '${_two(d.day)}/${_two(d.month)}';
+String _fullDate(DateTime d) => '${_two(d.day)}/${_two(d.month)}/${d.year}';
+
+// Page colours of this screen (the approved booking design).
+const _page = Color(0xFFE6EFE3);
+const _band = Color(0xFFF1F6EF);
+const _soft = Color(0xFFEDF3EA);
+const _line = Color(0xFFCFE0CA);
 
 class _BookingFormScreenState extends State<BookingFormScreen> {
   late final _name = TextEditingController(text: context.read<AppState>().claims?.name ?? '');
@@ -74,6 +80,42 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     });
   }
 
+  /// The open departures of the tour, to pick the start date from.
+  Future<void> _pickDate(List<Departure> open) async {
+    final picked = await showModalBottomSheet<Departure>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Chọn ngày khởi hành',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.ink),
+              ),
+              const SizedBox(height: 8),
+              for (final d in open)
+                ListTile(
+                  key: Key('pick-${d.id}'),
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.calendar_month_outlined, color: AppColors.teaDark),
+                  title: Text(_fullDate(d.date), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text('Còn ${d.seatsLeft} chỗ'),
+                  trailing: d.id == _depId ? const Icon(Icons.check_circle, color: AppColors.teaDark) : null,
+                  onTap: () => Navigator.of(sheet).pop(d),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked != null) _selectDeparture(picked);
+  }
+
   Future<void> _submit(Tour tour, Departure dep) async {
     if (_invalid) {
       setState(() => _showErrors = true);
@@ -112,278 +154,374 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   Widget build(BuildContext context) {
     final repo = context.read<HubRepository>();
     return Scaffold(
-      backgroundColor: AppColors.cream,
-      body: Stack(
-        children: [
-          const Positioned(top: 0, right: 0, child: IgnorePointer(child: _LeafDecor())),
-          SafeArea(
-            child: LoadView<(Tour, Htx, List<Departure>)>(
-              load: () async {
-                final tour = await repo.getTour(widget.tourId);
-                return (tour, await repo.getHtx(tour.htxCode), await repo.listDepartures(widget.tourId));
-              },
-              builder: (context, data, _) {
-                final (tour, htx, all) = data;
-                final open = all.where((d) => d.seatsLeft > 0).toList();
-                final dep = all.firstWhere(
-                  (d) => d.id == _depId,
-                  orElse: () => throw const HubException('Không tìm thấy ngày khởi hành'),
-                );
-                final dates = open.any((d) => d.id == dep.id) ? open : [dep, ...open];
-                final guests = _adults + _children;
-                final canAdd = guests < dep.seatsLeft;
-                final total = _adults * tour.adultPrice + _children * tour.childPrice;
-                return Column(
-                  children: [
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                        children: [
-                          Row(
-                            children: [
-                              const BackCircle(),
-                              const SizedBox(width: 14),
-                              const Text(
-                                'Đặt tour',
-                                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.ink),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                flex: 11,
-                                child: TeaPhoto(asset: teaPhotoFor(tour.gradientSeed), height: 150, radius: 20),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                flex: 10,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      tour.name,
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 21,
-                                        fontWeight: FontWeight.w800,
-                                        height: 1.2,
-                                        color: AppColors.ink,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Icon(Icons.location_on, size: 18, color: AppColors.teaDark),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            '${shortHtxName(htx)}, ${htx.province}',
-                                            style: const TextStyle(fontSize: 13.5, color: AppColors.muted, height: 1.3),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          const _Highlights(),
-                          const _Step(1, 'Chọn ngày đi'),
-                          LayoutBuilder(
-                            builder: (context, c) {
-                              final w = (c.maxWidth - 12) / 2;
-                              return Wrap(
-                                key: const Key('booking-dates'),
-                                spacing: 12,
-                                runSpacing: 12,
-                                children: [
-                                  for (final d in dates)
-                                    SizedBox(
-                                      width: w,
-                                      child: _DateCard(
-                                        key: Key('date-${d.id}'),
-                                        day: _dayName(d.date),
-                                        date: _dayMonth(d.date),
-                                        selected: d.id == dep.id,
-                                        onTap: () => _selectDeparture(d),
-                                      ),
-                                    ),
-                                ],
-                              );
-                            },
-                          ),
-                          const _Step(2, 'Số khách'),
-                          _GuestRow(
-                            keyPrefix: 'adult',
-                            icon: Icons.person,
-                            title: 'Người lớn',
-                            price: formatVnd(tour.adultPrice),
-                            value: _adults,
-                            min: 1,
-                            canIncrease: canAdd,
-                            onChanged: (v) => setState(() => _adults = v),
-                          ),
-                          const SizedBox(height: 10),
-                          _GuestRow(
-                            keyPrefix: 'child',
-                            icon: Icons.groups,
-                            title: 'Trẻ em',
-                            price: formatVnd(tour.childPrice),
-                            value: _children,
-                            min: 0,
-                            canIncrease: canAdd,
-                            onChanged: (v) => setState(() => _children = v),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
-                            child: Text(
-                              'Còn ${dep.seatsLeft} chỗ ngày ${_dayMonth(dep.date)}',
-                              style: const TextStyle(color: AppColors.faint, fontSize: 12.5),
-                            ),
-                          ),
-                          const _Step(3, 'Thông tin liên hệ'),
-                          _Field(
-                            fieldKey: const Key('booking-name'),
-                            hint: 'Họ và tên',
-                            icon: Icons.person,
-                            controller: _name,
-                            error: _showErrors && _name.text.trim().isEmpty ? 'Nhập họ tên' : null,
-                          ),
-                          const SizedBox(height: 10),
-                          _Field(
-                            fieldKey: const Key('booking-phone'),
-                            hint: 'Số điện thoại',
-                            icon: Icons.phone,
-                            controller: _phone,
-                            keyboard: TextInputType.phone,
-                            error: _showErrors && _phone.text.trim().length < 9 ? 'Nhập số điện thoại hợp lệ' : null,
-                          ),
-                          const SizedBox(height: 10),
-                          _Field(
-                            fieldKey: const Key('booking-email'),
-                            hint: 'Email (tuỳ chọn)',
-                            icon: Icons.mail,
-                            controller: _email,
-                            keyboard: TextInputType.emailAddress,
-                            error: _showErrors && _emailBad ? 'Email không hợp lệ' : null,
-                          ),
-                          const SizedBox(height: 10),
-                          _Field(
-                            fieldKey: const Key('booking-note'),
-                            hint: 'Ghi chú (tuỳ chọn)',
-                            icon: Icons.chat_outlined,
-                            controller: _note,
-                            maxLines: 3,
-                            maxLength: 200,
-                          ),
-                          InkWell(
-                            key: const Key('booking-on-behalf'),
-                            borderRadius: BorderRadius.circular(8),
-                            onTap: () => setState(() => _onBehalf = !_onBehalf),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Row(
-                                children: [
-                                  SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: Checkbox(
-                                      value: _onBehalf,
-                                      onChanged: (v) => setState(() => _onBehalf = v ?? false),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Text('Đặt hộ người khác', style: TextStyle(fontSize: 14.5)),
-                                ],
+      backgroundColor: _page,
+      body: LoadView<(Tour, Htx, List<Departure>)>(
+        load: () async {
+          final tour = await repo.getTour(widget.tourId);
+          return (tour, await repo.getHtx(tour.htxCode), await repo.listDepartures(widget.tourId));
+        },
+        builder: (context, data, _) {
+          final (tour, htx, all) = data;
+          final open = all.where((d) => d.seatsLeft > 0).toList();
+          final dep = all.firstWhere(
+            (d) => d.id == _depId,
+            orElse: () => throw const HubException('Không tìm thấy ngày khởi hành'),
+          );
+          final days = tour.days;
+          final end = dep.date.add(Duration(days: days - 1));
+          final guests = _adults + _children;
+          final canAdd = guests < dep.seatsLeft;
+          final total = _adults * tour.adultPrice + _children * tour.childPrice;
+          return Stack(
+            children: [
+              ListView(
+                padding: EdgeInsets.only(bottom: 120 + MediaQuery.paddingOf(context).bottom),
+                children: [
+                  _Header(tour: tour, htx: htx),
+                  _Card(
+                    title: 'Ngày đi',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _DateBox(
+                                key: const Key('booking-from'),
+                                label: 'Từ ngày',
+                                value: _fullDate(dep.date),
+                                onTap: () => _pickDate(open),
                               ),
                             ),
-                          ),
-                          if (_onBehalf) ...[
-                            const SizedBox(height: 6),
-                            _Field(
-                              fieldKey: const Key('booking-guest-name'),
-                              hint: 'Họ tên người đi tour',
-                              icon: Icons.badge_outlined,
-                              controller: _guestName,
-                              error: _showErrors && _guestName.text.trim().isEmpty ? 'Nhập họ tên người đi' : null,
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: _DateBox(
+                                key: const Key('booking-to'),
+                                label: 'Đến ngày',
+                                value: _fullDate(end),
+                                onTap: () => _pickDate(open),
+                              ),
                             ),
                           ],
-                        ],
-                      ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
+                          child: Text(
+                            '$days ngày · ${_dayMonth(dep.date)} → ${_dayMonth(end)}',
+                            key: const Key('booking-span'),
+                            style: const TextStyle(fontSize: 14, color: AppColors.muted),
+                          ),
+                        ),
+                      ],
                     ),
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        border: Border(top: BorderSide(color: AppColors.border)),
-                      ),
-                      padding: const EdgeInsets.fromLTRB(20, 12, 16, 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
+                  ),
+                  _Card(
+                    title: 'Số khách',
+                    child: Column(
+                      children: [
+                        _GuestRow(
+                          keyPrefix: 'adult',
+                          icon: Icons.person,
+                          title: 'Người lớn',
+                          subtitle: 'Từ 12 tuổi trở lên',
+                          value: _adults,
+                          min: 1,
+                          canIncrease: canAdd,
+                          onChanged: (v) => setState(() => _adults = v),
+                        ),
+                        const SizedBox(height: 12),
+                        _GuestRow(
+                          keyPrefix: 'child',
+                          icon: Icons.groups,
+                          title: 'Trẻ em',
+                          subtitle: 'Từ 6 – 11 tuổi',
+                          value: _children,
+                          min: 0,
+                          canIncrease: canAdd,
+                          onChanged: (v) => setState(() => _children = v),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _Card(
+                    title: 'Thông tin liên hệ',
+                    child: Column(
+                      children: [
+                        _Field(
+                          fieldKey: const Key('booking-name'),
+                          hint: 'Họ và tên *',
+                          icon: Icons.person,
+                          controller: _name,
+                          error: _showErrors && _name.text.trim().isEmpty ? 'Nhập họ tên' : null,
+                        ),
+                        const SizedBox(height: 14),
+                        _Field(
+                          fieldKey: const Key('booking-phone'),
+                          hint: 'Số điện thoại *',
+                          icon: Icons.phone,
+                          controller: _phone,
+                          keyboard: TextInputType.phone,
+                          error: _showErrors && _phone.text.trim().length < 9 ? 'Nhập số điện thoại hợp lệ' : null,
+                        ),
+                        const SizedBox(height: 14),
+                        _Field(
+                          fieldKey: const Key('booking-email'),
+                          hint: 'Email (tuỳ chọn)',
+                          icon: Icons.mail,
+                          controller: _email,
+                          keyboard: TextInputType.emailAddress,
+                          error: _showErrors && _emailBad ? 'Email không hợp lệ' : null,
+                        ),
+                        const SizedBox(height: 14),
+                        _Field(
+                          fieldKey: const Key('booking-note'),
+                          hint: 'Ghi chú (tuỳ chọn)',
+                          icon: Icons.chat_outlined,
+                          controller: _note,
+                          maxLines: 3,
+                          maxLength: 200,
+                        ),
+                        InkWell(
+                          key: const Key('booking-on-behalf'),
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => setState(() => _onBehalf = !_onBehalf),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
                               children: [
-                                const Text('Tạm tính', style: TextStyle(fontSize: 14, color: AppColors.muted)),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    formatVnd(total),
-                                    key: const Key('booking-bar-total'),
-                                    style: const TextStyle(
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.teaDark,
-                                    ),
+                                SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: Checkbox(
+                                    value: _onBehalf,
+                                    onChanged: (v) => setState(() => _onBehalf = v ?? false),
                                   ),
                                 ),
+                                const SizedBox(width: 10),
+                                const Text('Đặt hộ người khác', style: TextStyle(fontSize: 14.5)),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Container(width: 1, height: 46, color: AppColors.border),
-                          const SizedBox(width: 14),
-                          SizedBox(
-                            height: 54,
-                            child: FilledButton.icon(
-                              key: const Key('booking-submit'),
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 24),
-                                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                              ),
-                              onPressed: _busy ? null : () => _submit(tour, dep),
-                              icon: const Icon(Icons.arrow_forward),
-                              iconAlignment: IconAlignment.end,
-                              label: const Text('Tiếp tục'),
-                            ),
+                        ),
+                        if (_onBehalf) ...[
+                          const SizedBox(height: 8),
+                          _Field(
+                            fieldKey: const Key('booking-guest-name'),
+                            hint: 'Họ tên người đi tour *',
+                            icon: Icons.badge_outlined,
+                            controller: _guestName,
+                            error: _showErrors && _guestName.text.trim().isEmpty ? 'Nhập họ tên người đi' : null,
                           ),
                         ],
-                      ),
+                      ],
                     ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
+                  ),
+                ],
+              ),
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 12 + MediaQuery.paddingOf(context).bottom,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 12, 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: const [BoxShadow(color: Color(0x1A143C2D), blurRadius: 18, offset: Offset(0, 6))],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Tạm tính · $days ngày · $guests khách',
+                              key: const Key('booking-bar-label'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13, color: AppColors.ink),
+                            ),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                formatVnd(total),
+                                key: const Key('booking-bar-total'),
+                                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.black),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(width: 1, height: 52, color: _line),
+                      const SizedBox(width: 14),
+                      SizedBox(
+                        height: 58,
+                        child: FilledButton.icon(
+                          key: const Key('booking-submit'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.teaDark,
+                            shape: const StadiumBorder(),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                          ),
+                          onPressed: _busy ? null : () => _submit(tour, dep),
+                          icon: const Icon(Icons.arrow_forward),
+                          iconAlignment: IconAlignment.end,
+                          label: const Text('Tiếp tục'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-/// Two soft leaves in the top right corner.
+/// The top of the screen: a lighter band with hills and two leaves, the back button and title, then the tour.
+class _Header extends StatelessWidget {
+  const _Header({required this.tour, required this.htx});
+  final Tour tour;
+  final Htx htx;
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    return Stack(
+      children: [
+        Positioned.fill(bottom: 90, child: CustomPaint(painter: _HillsPainter())),
+        Positioned(
+          top: top,
+          right: 0,
+          child: const IgnorePointer(child: _LeafDecor()),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(20, top + 14, 20, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const _RoundBack(),
+                  const SizedBox(width: 18),
+                  const Text(
+                    'Đặt tour',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.ink),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Expanded(flex: 11, child: TeaPhoto(asset: teaPhotoFor(tour.gradientSeed), height: 150, radius: 22)),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    flex: 10,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tour.name,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            height: 1.2,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.location_on, size: 20, color: AppColors.ink),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '${shortHtxName(htx)}, ${htx.province}',
+                                style: const TextStyle(fontSize: 15, color: AppColors.ink, height: 1.35),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RoundBack extends StatelessWidget {
+  const _RoundBack();
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'Quay lại',
+    child: Material(
+      color: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 1,
+      shadowColor: const Color(0x22143C2D),
+      child: InkWell(
+        key: const Key('back'),
+        customBorder: const CircleBorder(),
+        onTap: () => context.canPop() ? context.pop() : context.go('/shop'),
+        child: const SizedBox(width: 56, height: 56, child: Icon(Icons.chevron_left, size: 30, color: AppColors.ink)),
+      ),
+    ),
+  );
+}
+
+class _HillsPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    canvas.drawRect(Offset.zero & size, Paint()..color = _band);
+    final far = Path()
+      ..moveTo(0, h * 0.55)
+      ..lineTo(w * 0.18, h * 0.32)
+      ..lineTo(w * 0.36, h * 0.5)
+      ..lineTo(w * 0.55, h * 0.22)
+      ..lineTo(w * 0.78, h * 0.48)
+      ..lineTo(w, h * 0.3)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+    canvas.drawPath(far, Paint()..color = const Color(0xFFE3EDDF));
+    final near = Path()
+      ..moveTo(0, h * 0.78)
+      ..quadraticBezierTo(w * 0.3, h * 0.6, w * 0.55, h * 0.74)
+      ..quadraticBezierTo(w * 0.8, h * 0.86, w, h * 0.7)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+    canvas.drawPath(near, Paint()..color = const Color(0xFFDCE8D7));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Two leaves in the top right corner.
 class _LeafDecor extends StatelessWidget {
   const _LeafDecor();
   @override
-  Widget build(BuildContext context) => CustomPaint(size: const Size(150, 120), painter: _LeafPainter());
+  Widget build(BuildContext context) => CustomPaint(size: const Size(140, 130), painter: _LeafPainter());
 }
 
 class _LeafPainter extends CustomPainter {
@@ -400,7 +538,7 @@ class _LeafPainter extends CustomPainter {
       Offset(0, -len / 2),
       Offset(0, len / 2),
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.45)
+        ..color = Colors.white.withValues(alpha: 0.4)
         ..strokeWidth = len * 0.03,
     );
     canvas.restore();
@@ -408,140 +546,80 @@ class _LeafPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    _leaf(canvas, Offset(size.width * 0.78, size.height * 0.3), 86, 0.75, AppColors.leaf.withValues(alpha: 0.55));
-    _leaf(canvas, Offset(size.width * 0.9, size.height * 0.5), 70, 0.25, AppColors.leafDark.withValues(alpha: 0.5));
+    _leaf(canvas, Offset(size.width * 0.5, size.height * 0.36), 80, 1.1, AppColors.leaf);
+    _leaf(canvas, Offset(size.width * 0.82, size.height * 0.5), 92, 0.25, AppColors.leafDark);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// A slim strip of three reassuring points under the tour summary. The three share one scale, so their text stays the
-/// same size on a narrow phone.
-class _Highlights extends StatelessWidget {
-  const _Highlights();
-
-  Widget _item(IconData icon, String text) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(icon, size: 18, color: AppColors.teaDark),
-      const SizedBox(width: 6),
-      Text(text, style: const TextStyle(fontSize: 13, color: AppColors.ink)),
-    ],
-  );
-
+/// A white rounded block with a bold title.
+class _Card extends StatelessWidget {
+  const _Card({required this.title, required this.child});
+  final String title;
+  final Widget child;
   @override
   Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.85),
-      borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: AppColors.border),
-    ),
-    child: FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _item(Icons.eco_outlined, 'Trải nghiệm thực tế'),
-          const SizedBox(width: 18),
-          _item(Icons.verified_user, 'An toàn, uy tín'),
-          const SizedBox(width: 18),
-          _item(Icons.star, 'Khám phá văn hóa trà'),
-        ],
-      ),
-    ),
-  );
-}
-
-/// A numbered section title ("1  Chọn ngày đi").
-class _Step extends StatelessWidget {
-  const _Step(this.number, this.title);
-  final int number;
-  final String title;
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(2, 22, 2, 12),
-    child: Row(
+    margin: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+    padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28)),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 28,
-          height: 28,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(color: AppColors.teaDark, shape: BoxShape.circle),
-          child: Text(
-            '$number',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
-          ),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: AppColors.ink),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.teaDark),
-          ),
-        ),
+        const SizedBox(height: 16),
+        child,
       ],
     ),
   );
 }
 
-class _DateCard extends StatelessWidget {
-  const _DateCard({super.key, required this.day, required this.date, required this.selected, required this.onTap});
-  final String day;
-  final String date;
-  final bool selected;
+class _DateBox extends StatelessWidget {
+  const _DateBox({super.key, required this.label, required this.value, required this.onTap});
+  final String label;
+  final String value;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Material(
-    color: selected ? AppColors.teaDark : Colors.white,
+    color: _soft,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(18),
-      side: BorderSide(color: selected ? AppColors.teaDark : AppColors.border),
+      borderRadius: BorderRadius.circular(22),
+      side: const BorderSide(color: _line),
     ),
     child: InkWell(
-      customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
+        padding: const EdgeInsets.fromLTRB(18, 14, 14, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.calendar_month_outlined, size: 30, color: selected ? Colors.white : AppColors.teaDark),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    day,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14, color: selected ? Colors.white : AppColors.muted),
-                  ),
-                  Text(
-                    date,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      height: 1.15,
-                      color: selected ? Colors.white : AppColors.ink,
+            Text(
+              label,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.ink),
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.calendar_today_outlined, size: 22, color: AppColors.ink),
+              ],
             ),
-            if (selected)
-              Container(
-                width: 26,
-                height: 26,
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: const Icon(Icons.check, size: 18, color: AppColors.teaDark),
-              ),
           ],
         ),
       ),
@@ -554,7 +632,7 @@ class _GuestRow extends StatelessWidget {
     required this.keyPrefix,
     required this.icon,
     required this.title,
-    required this.price,
+    required this.subtitle,
     required this.value,
     required this.min,
     required this.canIncrease,
@@ -563,23 +641,25 @@ class _GuestRow extends StatelessWidget {
   final String keyPrefix;
   final IconData icon;
   final String title;
-  final String price;
+  final String subtitle;
   final int value;
   final int min;
   final bool canIncrease;
   final ValueChanged<int> onChanged;
 
   Widget _button(Key key, IconData icon, VoidCallback? onTap) => SizedBox(
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     child: IconButton(
       key: key,
       padding: EdgeInsets.zero,
       onPressed: onTap,
       style: IconButton.styleFrom(
-        side: BorderSide(color: onTap == null ? AppColors.border : AppColors.teaDark, width: 1.5),
-        foregroundColor: AppColors.teaDark,
-        disabledForegroundColor: AppColors.faint,
+        backgroundColor: Colors.white,
+        disabledBackgroundColor: Colors.white,
+        side: BorderSide(color: onTap == null ? const Color(0xFFB7D3AF) : AppColors.teaDark, width: 2),
+        foregroundColor: AppColors.ink,
+        disabledForegroundColor: const Color(0xFF8DB485),
       ),
       icon: Icon(icon, size: 22),
     ),
@@ -587,35 +667,39 @@ class _GuestRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: AppColors.border),
-    ),
+    padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+    decoration: BoxDecoration(color: _soft, borderRadius: BorderRadius.circular(20)),
     child: Row(
       children: [
-        Icon(icon, size: 30, color: AppColors.teaDark),
+        Icon(icon, size: 26, color: AppColors.ink),
         const SizedBox(width: 12),
-        Container(width: 1, height: 38, color: AppColors.border),
+        Container(width: 1, height: 34, color: _line),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700)),
-              Text('$price/người', style: const TextStyle(fontSize: 13.5, color: AppColors.muted)),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink),
+              ),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 14, color: AppColors.muted),
+              ),
             ],
           ),
         ),
         _button(Key('$keyPrefix-minus'), Icons.remove, value > min ? () => onChanged(value - 1) : null),
         SizedBox(
-          width: 40,
+          width: 32,
           child: Text(
             '$value',
             key: Key('$keyPrefix-count'),
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
           ),
         ),
         _button(Key('$keyPrefix-plus'), Icons.add, canIncrease ? () => onChanged(value + 1) : null),
@@ -646,34 +730,42 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
+    final multi = maxLines > 1;
+    OutlineInputBorder border(Color c, [double w = 1.2]) => OutlineInputBorder(
+      borderRadius: BorderRadius.circular(multi ? 26 : 999),
       borderSide: BorderSide(color: c, width: w),
     );
     return TextField(
       key: fieldKey,
       controller: controller,
-      keyboardType: maxLines > 1 ? TextInputType.multiline : keyboard,
+      keyboardType: multi ? TextInputType.multiline : keyboard,
       maxLines: maxLines,
       minLines: maxLines,
       maxLength: maxLength,
-      style: const TextStyle(fontSize: 16),
+      style: const TextStyle(fontSize: 17),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.faint),
+        hintStyle: const TextStyle(color: AppColors.muted, fontSize: 17),
         errorText: error,
         filled: true,
         fillColor: Colors.white,
         prefixIcon: Padding(
-          padding: EdgeInsets.only(bottom: maxLines > 1 ? 52 : 0),
-          child: Icon(icon, color: AppColors.teaDark, size: 22),
+          padding: EdgeInsets.fromLTRB(20, 0, 14, multi ? 52 : 0),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: AppColors.ink, size: 24),
+              const SizedBox(width: 14),
+              Container(width: 1, height: 30, color: _line),
+            ],
+          ),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
-        border: border(AppColors.border),
-        enabledBorder: border(AppColors.border),
-        focusedBorder: border(AppColors.teaDark, 1.5),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        border: border(_line),
+        enabledBorder: border(_line),
+        focusedBorder: border(AppColors.teaDark, 1.6),
         errorBorder: border(AppColors.danger),
-        focusedErrorBorder: border(AppColors.danger, 1.5),
+        focusedErrorBorder: border(AppColors.danger, 1.6),
       ),
     );
   }

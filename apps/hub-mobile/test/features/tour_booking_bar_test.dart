@@ -39,7 +39,7 @@ void main() {
       expect(find.byKey(const Key('tour-book')), findsOneWidget);
       expect(find.text('Đặt tour'), findsWidgets);
       expect(find.byKey(const Key('booking-bar-total')), findsNothing);
-      expect(find.text('Tạm tính'), findsNothing);
+      expect(find.textContaining('Tạm tính'), findsNothing);
     });
 
     testWidgets('a signed-in customer opens the booking screen, where the price appears', (tester) async {
@@ -47,7 +47,7 @@ void main() {
       await tester.tap(find.byKey(const Key('tour-book')));
       await tester.pumpAndSettle();
       expect(find.text('Ngày đi'), findsOneWidget);
-      expect(find.text('Tạm tính'), findsOneWidget);
+      expect(find.textContaining('Tạm tính'), findsOneWidget);
       expect(find.byKey(const Key('booking-bar-total')), findsOneWidget);
       expect(find.byKey(const Key('tour-book')), findsNothing);
     });

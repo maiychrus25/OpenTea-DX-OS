@@ -82,6 +82,14 @@ class Tour {
 
   /// Whole-day or shorter tours; used by the "Trong ngày" filter.
   bool get isSameDay => !durationLabel.contains('đêm');
+
+  /// Number of days of the tour: the number at the start of [durationLabel] ('2 ngày 1 đêm' gives 2), else the
+  /// itinerary length, at least 1.
+  int get days {
+    final n = int.tryParse(RegExp(r'^\s*(\d+)').firstMatch(durationLabel)?.group(1) ?? '');
+    if (n != null && n > 0) return n;
+    return itinerary.isEmpty ? 1 : itinerary.length;
+  }
 }
 
 /// One step of a household's tea production, with where the statement comes from.

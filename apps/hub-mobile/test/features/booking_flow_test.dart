@@ -36,14 +36,15 @@ void main() {
   group('booking screen: date, people, contact, then the price and continue', () {
     testWidgets('shows dates, both guest types and the estimate', (tester) async {
       await _openBooking(tester);
-      expect(find.text('Chọn ngày đi'), findsOneWidget);
-      expect(find.byKey(const Key('date-dep-01')), findsOneWidget);
+      expect(find.text('Ngày đi'), findsOneWidget);
+      expect(find.byKey(const Key('booking-from')), findsOneWidget);
+      expect(find.byKey(const Key('booking-to')), findsOneWidget);
       expect(find.text('Số khách'), findsOneWidget);
       expect(find.text('Người lớn'), findsOneWidget);
       expect(find.text('Trẻ em'), findsOneWidget);
       expect(_text(tester, 'adult-count'), '1');
       expect(_text(tester, 'child-count'), '0');
-      expect(find.text('Tạm tính'), findsOneWidget);
+      expect(find.textContaining('Tạm tính · 1 ngày · 1 khách'), findsOneWidget);
     });
 
     testWidgets('changing the number of people changes the estimate', (tester) async {
@@ -58,18 +59,36 @@ void main() {
       expect(_text(tester, 'booking-bar-total'), isNot(before));
     });
 
-    testWidgets('picking another date keeps the booking screen and marks it selected', (tester) async {
+    testWidgets('the start date is picked from the open departures and the end date follows the tour length', (
+      tester,
+    ) async {
       await _openBooking(tester);
-      await tester.tap(find.byKey(const Key('date-dep-02')));
-      await tester.pump();
-      expect(find.byKey(const Key('date-dep-02')), findsOneWidget);
-      expect(find.byKey(const Key('booking-submit')), findsOneWidget);
+      // tour-01 lasts one day: the start and the end are the same day.
+      final from = tester
+          .widget<Text>(find.descendant(of: find.byKey(const Key('booking-from')), matching: find.byType(Text)).last)
+          .data;
+      final to = tester
+          .widget<Text>(find.descendant(of: find.byKey(const Key('booking-to')), matching: find.byType(Text)).last)
+          .data;
+      expect(from, to);
+      expect(tester.widget<Text>(find.byKey(const Key('booking-span'))).data, startsWith('1 ngày · '));
+      await tester.tap(find.byKey(const Key('booking-from')));
+      await tester.pumpAndSettle();
+      expect(find.text('Chọn ngày khởi hành'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('pick-dep-02')));
+      await tester.pumpAndSettle();
+      expect(find.text('Chọn ngày khởi hành'), findsNothing);
+      final after = tester
+          .widget<Text>(find.descendant(of: find.byKey(const Key('booking-from')), matching: find.byType(Text)).last)
+          .data;
+      expect(after, isNot(from));
     });
 
-    testWidgets('every open date is in one scrollable row', (tester) async {
+    testWidgets('the bar shows the number of guests', (tester) async {
       await _openBooking(tester);
-      expect(find.byKey(const Key('booking-dates')), findsOneWidget);
-      expect(find.byKey(const Key('booking-more-dates')), findsNothing);
+      await tester.tap(find.byKey(const Key('adult-plus')));
+      await tester.pump();
+      expect(tester.widget<Text>(find.byKey(const Key('booking-bar-label'))).data, 'Tạm tính · 1 ngày · 2 khách');
     });
 
     testWidgets('at least one adult is kept', (tester) async {
@@ -86,11 +105,10 @@ void main() {
       expect(find.byKey(const Key('booking-guest-name')), findsOneWidget);
     });
 
-    testWidgets('the three highlights and the optional email and note are on the screen', (tester) async {
+    testWidgets('the age groups and the optional email and note are on the screen', (tester) async {
       await _openBooking(tester);
-      expect(find.text('Trải nghiệm thực tế'), findsOneWidget);
-      expect(find.text('An toàn, uy tín'), findsOneWidget);
-      expect(find.text('Khám phá văn hóa trà'), findsOneWidget);
+      expect(find.text('Từ 12 tuổi trở lên'), findsOneWidget);
+      expect(find.text('Từ 6 – 11 tuổi'), findsOneWidget);
       await tester.ensureVisible(find.byKey(const Key('booking-note')));
       expect(find.byKey(const Key('booking-email')), findsOneWidget);
       expect(find.byKey(const Key('booking-note')), findsOneWidget);
