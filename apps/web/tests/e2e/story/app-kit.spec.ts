@@ -10,7 +10,7 @@
 //     the same with E2E_APP_KIT=tea-tour
 import { test, expect, Browser, BrowserContext, BrowserContextOptions, Page } from '@playwright/test'
 import { SMOKE_PASSWORD, keycloakLogin } from '../helpers/keycloak-login'
-import { appFrame, downloadCsv, expectFrameUrl, expectNoOverflow, optionValues, postForm, printAndGoBack } from '../helpers/app-kit'
+import { allRowsInclude, appFrame, downloadCsv, expectFrameUrl, expectNoOverflow, optionValues, postForm, printAndGoBack } from '../helpers/app-kit'
 
 test.skip(!process.env.E2E_CORE, 'Needs the real stack: set E2E_CORE=1')
 
@@ -182,10 +182,7 @@ test.describe('app kit: business apps', () => {
     await app.locator('input[name=q]').fill('Trần Thị Mai')
     await app.locator('select[name=status]').selectOption('NEW')
     await app.getByRole('button', { name: 'Lọc' }).click()
-    await expect.poll(async () => {
-      const rows = await app.locator('tbody tr').allInnerTexts()
-      return rows.length > 0 && rows.every(row => row.includes('Trần Thị Mai'))
-    }).toBe(true)
+    await expect.poll(() => allRowsInclude(app, 'Trần Thị Mai')).toBe(true)
     await app.locator('input[name=q]').fill('100%')
     await app.getByRole('button', { name: 'Lọc' }).click()
     await expect(app.locator('.empty')).toBeVisible()
@@ -195,7 +192,7 @@ test.describe('app kit: business apps', () => {
     await app.getByRole('button', { name: 'Lọc' }).click()
     await expect(app.locator('input[name=q]')).toHaveValue('Trần Thị Mai')
     await expect(app.locator('tbody tr').first()).toContainText('Trần Thị Mai')
-    await expect.poll(async () => (await app.locator('tbody tr').allInnerTexts()).every(row => row.includes('Trần Thị Mai'))).toBe(true)
+    await expect.poll(() => allRowsInclude(app, 'Trần Thị Mai')).toBe(true)
     const filtered = await downloadCsv(manager, app.getByRole('link', { name: 'Tải CSV' }))
     expect(filtered.name).toMatch(/^tea-shop-TC-/)
     const filteredLines = filtered.text.trim().split('\r\n')
@@ -288,7 +285,8 @@ test.describe('app kit: business apps', () => {
     await app.locator('select[name=status]').selectOption('closed')
     await app.getByRole('button', { name: 'Lọc' }).click()
     await expect(app.locator('select[name=status]')).toHaveValue('closed')
-    await expect.poll(async () => (await app.locator('tbody tr').allInnerTexts()).every(row => row.includes('Đã đóng'))).toBe(true)
+    // An empty list passed before this change too, so it stays allowed: what must hold is that no other row is left.
+    await expect.poll(() => allRowsInclude(app, 'Đã đóng', { allowEmpty: true })).toBe(true)
     await expectNoOverflow(manager, title)
 
     // The round: close it, mark one delivery, both CSV files, then the delivery sheet.
@@ -426,10 +424,7 @@ test.describe('app kit: tea-tour', () => {
     await expect(app.locator('.pagination-status')).toContainText('Trang 1/')
     await app.locator('input[name=q]').fill('Lê Quốc Bảo')
     await app.getByRole('button', { name: 'Lọc' }).click()
-    await expect.poll(async () => {
-      const rows = await app.locator('tbody tr').allInnerTexts()
-      return rows.length > 0 && rows.every(row => row.includes('Lê Quốc Bảo'))
-    }).toBe(true)
+    await expect.poll(() => allRowsInclude(app, 'Lê Quốc Bảo')).toBe(true)
     await app.locator('input[name=q]').fill('100%')
     await app.getByRole('button', { name: 'Lọc' }).click()
     await expect(app.locator('.empty')).toBeVisible()

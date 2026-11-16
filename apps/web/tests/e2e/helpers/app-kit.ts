@@ -70,3 +70,17 @@ export async function expectFrameUrl(page: Page, frameTitle: string, fragment: s
     .poll(async () => (await (await page.locator(`iframe[title="${frameTitle}"]`).elementHandle())?.contentFrame())?.url() ?? '')
     .toContain(fragment)
 }
+
+/**
+ * True once every row of the frame's table holds `text` (and, unless `allowEmpty`, there is at least one row). A read
+ * that fails because a form just replaced the frame's document counts as "not yet", so a poll over it retries
+ * instead of failing on the navigation.
+ */
+export async function allRowsInclude(app: FrameLocator, text: string, { allowEmpty = false } = {}): Promise<boolean> {
+  try {
+    const rows = await app.locator('tbody tr').allInnerTexts()
+    return (allowEmpty || rows.length > 0) && rows.every(row => row.includes(text))
+  } catch {
+    return false
+  }
+}
