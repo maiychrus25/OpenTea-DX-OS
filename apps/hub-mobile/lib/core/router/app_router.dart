@@ -135,17 +135,12 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         tab('/farmer/notifications', const NotificationsPage()),
         tab('/farmer/parcels', const FarmerParcelsPage()),
         tab('/farmer/me', const StaffAccountPage()),
-        tab('/farmer/visits', const VisitsTab()),
         tab('/farmer/products', const FarmerProductsTab()),
       ]),
       GoRoute(path: '/farmer/journal/new', builder: (c, s) => const JournalFormPage()),
       GoRoute(
         path: '/farmer/journal/:id',
         builder: (c, s) => JournalDetailPage(entryId: s.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/farmer/visits/:id',
-        builder: (c, s) => VisitDetailScreen(bookingId: s.pathParameters['id']!),
       ),
       // Manager and officer share the /manager routes; the menu and the buttons depend on the role.
       shell((loc, child) => StaffShell(location: loc, child: child), [
@@ -165,18 +160,13 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         tab('/manager/profile', const HtxProfilePage()),
         tab('/manager/me', const StaffAccountPage()),
         tab('/manager/orders', const OrdersTab()),
-        tab('/manager/bookings', const BookingsTab()),
         tab('/manager/payments', const ManagerPaymentsScreen()),
-        tab('/manager/catalog', const ManagerCatalogScreen()),
+        tab('/manager/products', const ManagerProductsScreen()),
         tab('/manager/articles', const ManagerArticlesScreen()),
       ]),
       GoRoute(
         path: '/manager/orders/:id',
         builder: (c, s) => ManagerOrderDetailScreen(orderId: s.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/manager/bookings/:id',
-        builder: (c, s) => ManagerBookingDetailScreen(bookingId: s.pathParameters['id']!),
       ),
       GoRoute(
         path: '/manager/journal/:id',
@@ -201,8 +191,14 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         tab('/operator/articles', const OperatorArticlesTab()),
         tab('/operator/reports', const OperatorReportsPage()),
         tab('/operator/bookings', const OperatorBookingsTab()),
+        tab('/operator/payments', const OperatorTourPaymentsPage()),
         tab('/operator/me', const StaffAccountPage()),
       ]),
+      // Tours are the travel company's business: booking detail, payment, cancel, check-in.
+      GoRoute(
+        path: '/operator/bookings/:id',
+        builder: (c, s) => OperatorBookingDetailScreen(bookingId: s.pathParameters['id']!),
+      ),
     ],
   );
 }

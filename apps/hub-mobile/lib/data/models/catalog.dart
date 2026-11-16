@@ -20,6 +20,21 @@ class Htx {
   final String accountHolder;
 }
 
+/// The travel company that runs every tour: prices, bookings, check-in and the
+/// money. Customers pay a booking into this account, not the cooperative's.
+class TourCompany {
+  const TourCompany({
+    required this.name,
+    required this.bankBin,
+    required this.bankAccount,
+    required this.accountHolder,
+  });
+  final String name;
+  final String bankBin;
+  final String bankAccount;
+  final String accountHolder;
+}
+
 class ItineraryDay {
   const ItineraryDay({required this.title, required this.steps});
   final String title;

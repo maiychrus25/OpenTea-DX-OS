@@ -97,7 +97,7 @@ class TicketScreen extends StatelessWidget {
                       child: QrImageView(key: const Key('ticket-qr'), data: b.code, size: 220),
                     )
                   else
-                    const Text('Vé có mã QR sau khi HTX xác nhận thanh toán.'),
+                    const Text('Vé có mã QR sau khi công ty du lịch xác nhận thanh toán.'),
                   const SizedBox(height: 12),
                   Text(b.code, style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 12),

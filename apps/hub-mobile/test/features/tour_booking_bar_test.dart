@@ -7,6 +7,7 @@ import 'package:hub_mobile/app/hub_app.dart';
 import 'package:hub_mobile/data/demo_auth_service.dart';
 import 'package:hub_mobile/data/local_store.dart';
 import 'package:hub_mobile/data/mock_hub_repository.dart';
+import 'package:hub_mobile/features/customer/tour_detail_screen.dart' show LinkRow;
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> _openTour(WidgetTester tester, {String? email}) async {
@@ -61,13 +62,20 @@ void main() {
       expect(find.text('Ngày đi'), findsNothing);
     });
 
-    testWidgets('the household visit request stays reachable as a secondary action', (tester) async {
+    testWidgets('the overview names the HTX and the host household as plain lines, no cards or buttons', (
+      tester,
+    ) async {
       await _openTour(tester, email: 'customer@demo.vn');
       await tester.tap(find.byKey(const Key('tour-tab-0')));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('tour-visit-request')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('tour-visit-request')), findsOneWidget);
+      expect(find.text('Hợp tác xã'), findsOneWidget);
+      expect(find.text('HTX Chè Tân Cương (demo), Thái Nguyên'), findsOneWidget);
+      expect(find.text('Hộ đón khách'), findsOneWidget);
+      expect(find.byKey(const Key('tour-info-host')), findsOneWidget);
+      expect(find.byType(LinkRow), findsNothing);
+      expect(find.text('Hộ nông dân đón khách'), findsNothing);
+      expect(find.byKey(const Key('tour-visit-request')), findsNothing);
+      expect(find.textContaining('Gửi yêu cầu tham quan'), findsNothing);
     });
 
     testWidgets('the itinerary tab is open first and the tabs switch the content', (tester) async {

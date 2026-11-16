@@ -3,10 +3,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hub_mobile/app/activity_controller.dart';
 import 'package:hub_mobile/app/hub_app.dart';
 import 'package:hub_mobile/data/demo_auth_service.dart';
 import 'package:hub_mobile/data/local_store.dart';
 import 'package:hub_mobile/data/mock_hub_repository.dart';
+import 'package:hub_mobile/data/seed_data.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> _pump(WidgetTester tester, {Map<String, Object> prefs = const {}}) async {
@@ -98,15 +102,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('pay-qr')), findsOneWidget);
     expect(find.byKey(const Key('pay-amount')), findsOneWidget);
+    // A product order is paid to the cooperative.
+    expect(find.text('HTX CHE TAN CUONG'), findsOneWidget);
+    expect(find.text('8600201001234'), findsOneWidget);
+    expect(find.textContaining('Hợp tác xã xác nhận khi tiền về'), findsOneWidget);
+    expect(find.text(SeedData.tourCompany.bankAccount), findsNothing);
     await tester.tap(find.byKey(const Key('pay-claim')));
     await tester.pumpAndSettle();
     expect(find.text('Khách báo đã chuyển khoản'), findsOneWidget);
   });
 
+  testWidgets('a tour booking is paid to the travel company, not to the cooperative', (tester) async {
+    await _pump(tester);
+    await _login(tester, 'customer@demo.vn');
+    final context = tester.element(find.byType(Scaffold).first);
+    await tester.runAsync(() => context.read<ActivityController>().refresh()); // bookings of the demo customer
+    GoRouter.of(context).go('/shop/pay/${Uri.encodeComponent('TOUR K7M2QX')}');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pay-qr')), findsOneWidget);
+    expect(find.text(SeedData.tourCompany.name), findsOneWidget);
+    expect(find.text(SeedData.tourCompany.accountHolder), findsOneWidget);
+    expect(find.text(SeedData.tourCompany.bankAccount), findsOneWidget);
+    expect(find.text('MB'), findsOneWidget);
+    expect(find.textContaining('Công ty du lịch xác nhận khi tiền về'), findsOneWidget);
+    expect(find.text('HTX CHE TAN CUONG'), findsNothing);
+    expect(find.text('8600201001234'), findsNothing);
+  });
+
   testWidgets('each demo account lands on its own interface', (tester) async {
     final expected = {
       'customer@demo.vn': 'Khám phá ngay ›',
-      'farmer@demo.vn': 'Lịch tham quan',
+      'farmer@demo.vn': 'Tình trạng thửa đất',
       'manager@demo.vn': 'Tổng quan',
       'operator@demo.vn': 'Duyệt bài',
     };
@@ -142,16 +168,70 @@ void main() {
     expect(find.text('Chỉ xem (cán bộ)'), findsOneWidget);
   });
 
-  testWidgets('farmer checks in a confirmed group of own household', (tester) async {
+  testWidgets('farmer has no tour pages: no visits, no check-in', (tester) async {
     await _pump(tester);
     await _login(tester, 'farmer@demo.vn');
-    await tester.scrollUntilVisible(find.byKey(const Key('visit-bk-01')), 300);
-    await tester.tap(find.byKey(const Key('visit-bk-01')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('farmer-checkin')));
+    expect(find.text('Lịch tham quan'), findsNothing);
+    expect(find.byKey(const Key('visit-bk-01')), findsNothing);
+    final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
+    router.go('/farmer/visits/bk-01');
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('farmer-checkin')), findsNothing);
+    expect(find.byKey(const Key('operator-checkin')), findsNothing);
+  });
+
+  testWidgets('operator checks in a confirmed group', (tester) async {
+    await _pump(tester);
+    await _login(tester, 'operator@demo.vn');
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/operator/bookings');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('op-booking-bk-01')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('confirm-payment')), findsNothing); // already paid
+    await tester.tap(find.byKey(const Key('operator-checkin')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('operator-checkin')), findsNothing);
     expect(find.text('Đã đến'), findsOneWidget);
+    expect(find.byKey(const Key('cancel-booking')), findsNothing); // a group that arrived cannot be cancelled
+  });
+
+  testWidgets('operator confirms the money of a booking and it shows in the tour ledger', (tester) async {
+    await _pump(tester);
+    await _login(tester, 'operator@demo.vn');
+    final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
+    router.go('/operator/bookings');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('op-booking-bk-02')));
+    await tester.pumpAndSettle();
+    expect(find.text('Trần Minh Đức · 0987654321'), findsOneWidget);
+    expect(find.byKey(const Key('operator-checkin')), findsNothing); // not confirmed yet
+    await tester.tap(find.byKey(const Key('confirm-payment')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('confirm-payment')), findsNothing);
+    expect(find.text('Đã xác nhận'), findsWidgets);
+    expect(find.byKey(const Key('operator-checkin')), findsOneWidget);
+    router.go('/operator/payments');
+    await tester.pumpAndSettle();
+    expect(find.text('TOUR P3N8ZD'), findsOneWidget);
+  });
+
+  testWidgets('operator cancels a booking after confirming in the dialog', (tester) async {
+    await _pump(tester);
+    await _login(tester, 'operator@demo.vn');
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/operator/bookings/bk-03');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cancel-booking')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cancel-booking-keep')));
+    await tester.pumpAndSettle();
+    expect(find.text('Chờ xác nhận'), findsOneWidget); // "Không" keeps it
+    await tester.tap(find.byKey(const Key('cancel-booking')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cancel-booking-confirm')));
+    await tester.pumpAndSettle();
+    expect(find.text('Đã huỷ'), findsOneWidget);
+    expect(find.byKey(const Key('cancel-booking')), findsNothing);
+    expect(find.byKey(const Key('confirm-payment')), findsNothing);
   });
 
   testWidgets('operator approves a pending article', (tester) async {

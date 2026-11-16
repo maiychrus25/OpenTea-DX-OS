@@ -22,10 +22,10 @@ màn "Sắp có" (Chatbot, Bản đồ đối tác, Kho ứng dụng, Tài liệ
 | Vai | Vào bằng | Giao diện (`lib/features/...`) |
 | --- | --- | --- |
 | Khách vãng lai | "Xem với tư cách khách" | `customer`: thanh dưới là Khám phá, Tour, Lịch trình, Tài khoản. Tin tức, tour, sản phẩm, giỏ hàng xem tự do; thanh toán, đặt tour, đơn, vé yêu cầu đăng nhập |
-| Khách có tài khoản (`customer`) | Đăng nhập | `customer`: đặt tour, mua hàng, thanh toán VietQR, đơn và vé lưu trong máy |
-| Nông dân (`farmer`) | Đăng nhập | `farmer`: lịch tham quan tại hộ mình, điểm danh, sản phẩm của hộ |
-| HTX (`manager`; `officer` chỉ xem) | Đăng nhập | `manager`: tổng quan, đơn, lượt đặt, xác nhận thu tiền, tin tức, sổ thu |
-| Công ty du lịch (`operator`) | Đăng nhập | `operator`: tổng quan các HTX liên kết, tour toàn vùng, duyệt bài, báo cáo tổng hợp, theo dõi đặt tour |
+| Khách có tài khoản (`customer`) | Đăng nhập | `customer`: đặt tour, mua hàng, thanh toán VietQR (tiền tour vào tài khoản công ty du lịch, tiền hàng vào tài khoản HTX), đơn và vé lưu trong máy |
+| Nông dân (`farmer`) | Đăng nhập | `farmer`: nhật ký, lịch, thửa đất, sản phẩm của hộ. Không có gì về tour |
+| HTX (`manager`; `officer` chỉ xem) | Đăng nhập | `manager`: tổng quan, sản phẩm, đơn hàng, xác nhận tiền đơn hàng, tin tức, sổ thu đơn hàng. Không có gì về tour |
+| Công ty du lịch (`operator`) | Đăng nhập | `operator`: toàn bộ việc tour: lượt đặt (xác nhận tiền về, huỷ, điểm danh đoàn), thu tiền tour, tour toàn vùng; cùng tổng quan các HTX liên kết, duyệt bài, báo cáo tổng hợp |
 
 Sau đăng nhập app đọc vai trong claims và chuyển tới giao diện của vai đó (`lib/core/role/role.dart`,
 `lib/core/router/app_router.dart`). Ẩn màn hình chỉ để gọn; **quyền thật do máy chủ kiểm trên mỗi lệnh gọi**.
@@ -179,7 +179,7 @@ nhưng cần thêm thư viện chọn ảnh/máy ảnh và quyền camera nên �
 401 thử làm mới token đúng một lần rồi mới báo "Hãy đăng nhập lại"; 403 "Bạn không có quyền thực hiện thao tác này."; 404 "Không tìm thấy dữ liệu này"; 400/422 "Dữ liệu chưa hợp lệ";
 409 "Dữ liệu này đã tồn tại..."; 503 "Hệ thống tạm thời không khả dụng. Hãy thử lại sau." (kèm nút "Thử lại" trên thanh thông báo, cũng cho mất mạng và 5xx).
 
-Ở chế độ thật, các phần của tổng quan lấy từ Gian hàng/thị trường/thời tiết (khối "Gian hàng", "Chỉ số giá nông sản", thời tiết, lịch tham quan)
+Ở chế độ thật, các phần của tổng quan lấy từ Gian hàng/thị trường/thời tiết (khối "Gian hàng", "Chỉ số giá nông sản", thời tiết)
 bị ẩn thay vì trộn số mẫu cạnh số thật.
 
 ## Nhãn "Dữ liệu mẫu"

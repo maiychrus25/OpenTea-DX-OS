@@ -12,12 +12,15 @@ import '../../core/money/money.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/vietqr/vietqr.dart';
 import '../../data/hub_repository.dart';
-import '../../data/models/catalog.dart';
 import '../../data/models/order.dart';
 import '../../shared/widgets.dart';
 
+/// Who receives the money of a payment and confirms it.
+typedef _Payee = ({String name, String bankBin, String bankAccount, String accountHolder});
+
 /// VietQR payment of an order or a booking, identified by its [code].
-/// Money goes straight to the cooperative's account; the manager confirms it.
+/// Product orders are paid to the cooperative, which confirms the money.
+/// Tour bookings are paid to the travel company, which confirms the money.
 class PaymentScreen extends StatelessWidget {
   const PaymentScreen({super.key, required this.code});
   final String code;
@@ -37,17 +40,27 @@ class PaymentScreen extends StatelessWidget {
       ),
       body: amount == null || htxCode == null
           ? const EmptyState('Không tìm thấy đơn hoặc lượt đặt này')
-          : LoadView<Htx>(
-              load: () => context.read<HubRepository>().getHtx(htxCode),
-              builder: (context, htx, _) {
+          : LoadView<_Payee>(
+              load: () async {
+                final repo = context.read<HubRepository>();
+                if (booking != null && order == null) {
+                  final c = await repo.getTourCompany();
+                  return (name: c.name, bankBin: c.bankBin, bankAccount: c.bankAccount, accountHolder: c.accountHolder);
+                }
+                final h = await repo.getHtx(htxCode);
+                return (name: h.name, bankBin: h.bankBin, bankAccount: h.bankAccount, accountHolder: h.accountHolder);
+              },
+              builder: (context, payee, _) {
+                final isBooking = order == null;
                 final payload = buildVietQrPayload(
-                  bankBin: htx.bankBin,
-                  account: htx.bankAccount,
+                  bankBin: payee.bankBin,
+                  account: payee.bankAccount,
                   amountVnd: amount,
                   content: code,
                 );
-                final bank = bankByBin(htx.bankBin);
+                final bank = bankByBin(payee.bankBin);
                 final unpaid = status == PaymentStatus.unpaid;
+                final who = isBooking ? 'Công ty du lịch' : 'Hợp tác xã';
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -72,9 +85,10 @@ class PaymentScreen extends StatelessWidget {
                               child: QrImageView(key: const Key('pay-qr'), data: payload, size: 240),
                             ),
                             const SizedBox(height: 12),
-                            InfoRow('Ngân hàng', bank?.name ?? htx.bankBin),
-                            InfoRow('Số tài khoản', htx.bankAccount),
-                            InfoRow('Chủ tài khoản', htx.accountHolder),
+                            InfoRow('Người nhận', payee.name),
+                            InfoRow('Ngân hàng', bank?.name ?? payee.bankBin),
+                            InfoRow('Số tài khoản', payee.bankAccount),
+                            InfoRow('Chủ tài khoản', payee.accountHolder),
                             InfoRow('Nội dung', code),
                           ],
                         ),
@@ -90,7 +104,14 @@ class PaymentScreen extends StatelessWidget {
                       label: const Text('Sao chép nội dung chuyển khoản'),
                     ),
                     const SizedBox(height: 8),
-                    const Text('Tiền chuyển thẳng vào tài khoản của HTX. HTX sẽ xác nhận khi nhận được tiền.'),
+                    Text(
+                      isBooking
+                          ? 'Tiền tour chuyển thẳng vào tài khoản của ${payee.name}. '
+                                'Công ty du lịch xác nhận khi tiền về.'
+                          : 'Tiền hàng chuyển thẳng vào tài khoản của ${payee.name}. '
+                                'Hợp tác xã xác nhận khi tiền về.',
+                      key: const Key('pay-receiver-note'),
+                    ),
                     const SizedBox(height: 12),
                     if (unpaid)
                       FilledButton(
@@ -101,8 +122,8 @@ class PaymentScreen extends StatelessWidget {
                             showMessage(
                               context,
                               sent
-                                  ? 'Đã báo HTX. HTX sẽ xác nhận khi nhận được tiền.'
-                                  : 'Chưa có mạng: đã lưu trong máy, sẽ báo HTX sau.',
+                                  ? 'Đã báo $who. $who sẽ xác nhận khi tiền về.'
+                                  : 'Chưa có mạng: đã lưu trong máy, sẽ báo ${who.toLowerCase()} sau.',
                             );
                           }
                         },

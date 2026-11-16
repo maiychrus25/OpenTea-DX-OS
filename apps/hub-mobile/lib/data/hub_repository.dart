@@ -101,34 +101,47 @@ abstract class HubRepository {
   Future<Order> placeOrder(NewOrder draft);
   Future<Booking> createBooking(NewBooking draft);
 
-  /// The "Tôi đã chuyển khoản" button; the manager still has to confirm the money.
+  /// The "Tôi đã chuyển khoản" button. The cooperative confirms the money of an
+  /// order; the travel company confirms the money of a booking.
   Future<void> claimPayment(String reference);
   Future<List<Order>> listMyOrders(String customerId);
   Future<List<Booking>> listMyBookings(String customerId);
 
-  // Farmer (own household only)
-  Future<List<Booking>> listHouseholdVisits(String householdId);
-  Future<Booking> checkIn(String bookingId);
+  /// The travel company that sells the tours and receives the booking money.
+  Future<TourCompany> getTourCompany();
+
+  // Farmer (own household only). Farmers have nothing to do with tours.
   Future<List<Product>> listHouseholdProducts(String householdId);
 
-  // HTX manager / officer
+  // HTX manager / officer: products and product orders, never tours.
   Future<List<Order>> listOrders(String htxCode);
   Future<Order> updateOrderStatus(String orderId, OrderStatus target);
-  Future<List<Booking>> listBookings(String htxCode);
 
   /// Appends a ledger entry for the order or booking with this code and
-  /// settles it when fully paid.
+  /// settles it when fully paid. Orders are confirmed by the cooperative,
+  /// bookings by the travel company.
   Future<Payment> recordPayment({required String reference, required int amount, required String recordedBy});
+
+  /// The cooperative's ledger: product-order payments only.
   Future<List<Payment>> listPayments(String htxCode);
   Future<List<Article>> listArticles(String htxCode);
   Future<Article> submitArticle(String articleId);
   Future<HtxSummary> summary(String htxCode);
 
-  // Tour-company staff (linked cooperatives)
+  // Tour-company staff: all tour work (bookings, money, check-in) and articles.
   Future<List<HtxSummary>> listLinkedSummaries();
   Future<List<Article>> listPendingArticles();
   Future<Article> reviewArticle(String articleId, {required bool approve});
   Future<List<Booking>> listAllBookings();
+
+  /// Cancels a pending or confirmed booking and gives its seats back.
+  Future<Booking> cancelBooking(String bookingId);
+
+  /// Marks a confirmed group as arrived.
+  Future<Booking> checkIn(String bookingId);
+
+  /// The tour part of the payment ledger (references that are booking codes).
+  Future<List<Payment>> listTourPayments();
 
   // Staff pages of the DX-OS web app (manager, officer, farmer). Farmers pass
   // their household id so they only ever see their own rows.

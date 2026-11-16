@@ -28,6 +28,14 @@ class SeedData {
     ),
   ];
 
+  /// Receives the money of every tour booking. Demo account, not a real one.
+  static const tourCompany = TourCompany(
+    name: 'Công ty Lữ hành Xứ Chè (demo)',
+    bankBin: '970422',
+    bankAccount: '0000123456789',
+    accountHolder: 'CONG TY LU HANH XU CHE DEMO',
+  );
+
   static const tours = <Tour>[
     Tour(
       id: 'tour-01',

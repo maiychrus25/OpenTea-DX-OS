@@ -400,37 +400,25 @@ class _Overview extends StatelessWidget {
         label: 'Giá',
         value: 'Người lớn ${formatVnd(tour.adultPrice)} · Trẻ em ${formatVnd(tour.childPrice)}',
       ),
-      const SizedBox(height: 12),
-      LinkRow(
-        kind: 'Hợp tác xã',
-        title: shortHtxName(htx),
-        subtitle: 'Hồ sơ HTX · các hộ đón khách',
+      _InfoLine(
+        key: const Key('tour-info-htx'),
         icon: Icons.account_balance_outlined,
-        route: '/shop/htx/${htx.code}',
+        label: 'Hợp tác xã',
+        value: '${htx.name}, ${htx.province}',
       ),
       if (host != null)
-        LinkRow(
-          kind: 'Hộ nông dân đón khách',
-          title: '${host!.name} · ${host!.village.split(',').first}',
-          subtitle: 'Xem quy trình sản xuất chè của hộ',
+        _InfoLine(
+          key: const Key('tour-info-host'),
           icon: Icons.home_work_outlined,
-          route: '/shop/farm/${host!.id}',
+          label: 'Hộ đón khách',
+          value: '${host!.name} · ${host!.village}',
         ),
-      const SizedBox(height: 4),
-      SizedBox(
-        width: double.infinity,
-        child: OutlinedButton(
-          key: const Key('tour-visit-request'),
-          onPressed: () => context.push('/shop/visit?household=${tour.householdId}&tour=${tour.id}'),
-          child: const Text('Muốn ghé thăm hộ nông dân? Gửi yêu cầu tham quan'),
-        ),
-      ),
     ],
   );
 }
 
 class _InfoLine extends StatelessWidget {
-  const _InfoLine({required this.icon, required this.label, required this.value});
+  const _InfoLine({super.key, required this.icon, required this.label, required this.value});
   final IconData icon;
   final String label;
   final String value;
@@ -443,7 +431,7 @@ class _InfoLine extends StatelessWidget {
         Icon(icon, size: 20, color: AppColors.teaDark),
         const SizedBox(width: 10),
         SizedBox(
-          width: 82,
+          width: 96, // fits "Hộ đón khách" on one line
           child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.muted)),
         ),
         Expanded(

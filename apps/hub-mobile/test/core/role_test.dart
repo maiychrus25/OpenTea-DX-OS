@@ -64,13 +64,16 @@ void main() {
     test('customer may buy but not enter staff areas', () {
       expect(redirectFor(AppRole.customer, '/shop/checkout'), isNull);
       expect(redirectFor(AppRole.customer, '/manager'), '/shop');
-      expect(redirectFor(AppRole.customer, '/farmer/visits/x'), '/shop');
+      expect(redirectFor(AppRole.customer, '/farmer/journal/x'), '/shop');
     });
     test('each staff role stays in its own area', () {
       expect(redirectFor(AppRole.farmer, '/farmer'), isNull);
       expect(redirectFor(AppRole.farmer, '/manager'), '/farmer');
       expect(redirectFor(AppRole.farmer, '/shop'), '/farmer');
-      expect(redirectFor(AppRole.manager, '/manager/bookings'), isNull);
+      expect(redirectFor(AppRole.manager, '/manager/orders'), isNull);
+      expect(redirectFor(AppRole.operator, '/operator/bookings/bk-01'), isNull);
+      expect(redirectFor(AppRole.manager, '/operator/bookings'), '/manager');
+      expect(redirectFor(AppRole.farmer, '/operator/bookings'), '/farmer');
       expect(redirectFor(AppRole.manager, '/operator'), '/manager');
       expect(redirectFor(AppRole.operator, '/operator/articles'), isNull);
       expect(redirectFor(AppRole.operator, '/farmer'), '/operator');

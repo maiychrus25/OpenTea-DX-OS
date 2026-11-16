@@ -3,11 +3,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hub_mobile/app/hub_app.dart';
 import 'package:hub_mobile/data/demo_auth_service.dart';
 import 'package:hub_mobile/data/local_store.dart';
 import 'package:hub_mobile/data/mock_hub_repository.dart';
 import 'package:hub_mobile/data/seed_data.dart';
+import 'package:hub_mobile/features/customer/tour_detail_screen.dart' show LinkRow;
 import 'package:hub_mobile/features/customer/tours_tab.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -203,9 +205,22 @@ void main() {
       await tester.tap(find.byKey(const Key('tour-tab-0')));
       await tester.pumpAndSettle();
       expect(find.text('Mức độ'), findsOneWidget);
+      // The overview is plain text now: the HTX and the host household are info lines, not links.
+      expect(find.byKey(const Key('tour-info-htx')), findsOneWidget);
+      expect(find.byKey(const Key('tour-info-host')), findsOneWidget);
+      expect(find.byType(LinkRow), findsNothing);
+      expect(find.byKey(const Key('tour-visit-request')), findsNothing);
+      // The household page is still reached from the cooperative's page.
+      GoRouter.of(tester.element(find.byKey(const Key('tour-info-htx')))).go('/shop');
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('dest-tan-cuong')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.byKey(const Key('dest-tan-cuong')));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.textContaining('Hộ bà Lan'));
-      // Lift the row above the floating booking bar before tapping it.
-      await tester.drag(find.byType(ListView).first, const Offset(0, -200));
       await tester.pumpAndSettle();
       await tester.tap(find.textContaining('Hộ bà Lan'));
       await tester.pumpAndSettle();
@@ -228,7 +243,8 @@ void main() {
       await tester.tap(find.byKey(const Key('visit-submit')));
       await tester.pumpAndSettle();
       expect(find.text('Đã gửi yêu cầu tham quan'), findsOneWidget);
-      expect(find.text('HTX xem và duyệt'), findsOneWidget);
+      expect(find.text('Công ty du lịch xem và duyệt'), findsOneWidget);
+      expect(find.textContaining('HTX'), findsNothing);
       expect(find.byKey(const Key('visit-code')), findsOneWidget);
     });
 

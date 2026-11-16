@@ -250,12 +250,30 @@ class MockHubRepository implements HubRepository {
   ];
 
   @override
-  Future<List<Booking>> listHouseholdVisits(String householdId) async {
-    final list = [
-      for (final b in _bookings)
-        if (b.householdId == householdId && b.status != BookingStatus.cancelled) b,
-    ]..sort((a, b) => a.departureDate.compareTo(b.departureDate));
-    return list;
+  Future<TourCompany> getTourCompany() async => SeedData.tourCompany;
+
+  @override
+  Future<Booking> cancelBooking(String bookingId) async {
+    final i = _bookings.indexWhere((b) => b.id == bookingId);
+    if (i < 0) throw const HubException('Không tìm thấy lượt đặt');
+    final b = _bookings[i];
+    if (!b.status.canMoveTo(BookingStatus.cancelled)) {
+      throw const HubException('Không thể huỷ lượt đặt này');
+    }
+    if (b.checkedIn) throw const HubException('Đoàn đã điểm danh, không huỷ được');
+    // Give the seats back to the departure.
+    final di = _departures.indexWhere((d) => d.id == b.departureId);
+    if (di >= 0) {
+      final d = _departures[di];
+      _departures[di] = Departure(
+        id: d.id,
+        tourId: d.tourId,
+        date: d.date,
+        seatsTotal: d.seatsTotal,
+        seatsTaken: (d.seatsTaken - b.guests).clamp(0, d.seatsTotal),
+      );
+    }
+    return _bookings[i] = b.copyWith(status: BookingStatus.cancelled);
   }
 
   @override
@@ -301,12 +319,6 @@ class MockHubRepository implements HubRepository {
   }
 
   @override
-  Future<List<Booking>> listBookings(String htxCode) async => [
-    for (final b in _bookings.reversed)
-      if (b.htxCode == htxCode) b,
-  ];
-
-  @override
   Future<Payment> recordPayment({required String reference, required int amount, required String recordedBy}) async {
     if (amount == 0) throw const HubException('Số tiền phải khác 0');
     final oi = _orders.indexWhere((o) => o.code == reference);
@@ -345,7 +357,13 @@ class MockHubRepository implements HubRepository {
   @override
   Future<List<Payment>> listPayments(String htxCode) async => [
     for (final p in _payments.reversed)
-      if (p.htxCode == htxCode) p,
+      if (p.htxCode == htxCode && !isTourReference(p.reference)) p,
+  ];
+
+  @override
+  Future<List<Payment>> listTourPayments() async => [
+    for (final p in _payments.reversed)
+      if (isTourReference(p.reference)) p,
   ];
 
   @override
@@ -370,9 +388,9 @@ class MockHubRepository implements HubRepository {
     return HtxSummary(
       htx: htx.name,
       pendingOrders: _orders.where((o) => o.htxCode == htxCode && o.status == OrderStatus.pending).length,
-      pendingBookings: _bookings.where((b) => b.htxCode == htxCode && b.status == BookingStatus.pending).length,
-      confirmedBookings: _bookings.where((b) => b.htxCode == htxCode && b.status == BookingStatus.confirmed).length,
-      revenue: _payments.where((p) => p.htxCode == htxCode).fold(0, (s, p) => s + p.amount),
+      revenue: _payments
+          .where((p) => p.htxCode == htxCode && !isTourReference(p.reference))
+          .fold(0, (s, p) => s + p.amount),
     );
   }
 

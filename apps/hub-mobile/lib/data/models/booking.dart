@@ -65,7 +65,7 @@ class Booking {
   final PaymentStatus paymentStatus;
   final DateTime createdAt;
 
-  /// Set by the farmer when the group arrives at the household.
+  /// Set by the travel company when the group arrives on the day.
   final bool checkedIn;
 
   /// Optional details the customer gave when booking.
@@ -144,6 +144,10 @@ class Booking {
   );
 }
 
+/// Booking codes start with "TOUR"; order codes with "DH". Tour money belongs to
+/// the travel company, so the cooperative's ledger leaves these references out.
+bool isTourReference(String reference) => reference.startsWith('TOUR');
+
 /// Append-only ledger entry (direction doc §5.4): refunds are negative amounts.
 class Payment {
   const Payment({
@@ -164,18 +168,13 @@ class Payment {
   final DateTime recordedAt;
 }
 
-/// Counts for the manager report and the operator overview.
+/// Shop counts of one cooperative: product orders only. Tours are the travel
+/// company's business and never appear here.
 class HtxSummary {
-  const HtxSummary({
-    required this.htx,
-    required this.pendingOrders,
-    required this.pendingBookings,
-    required this.confirmedBookings,
-    required this.revenue,
-  });
+  const HtxSummary({required this.htx, required this.pendingOrders, required this.revenue});
   final String htx;
   final int pendingOrders;
-  final int pendingBookings;
-  final int confirmedBookings;
+
+  /// Money received for product orders.
   final int revenue;
 }

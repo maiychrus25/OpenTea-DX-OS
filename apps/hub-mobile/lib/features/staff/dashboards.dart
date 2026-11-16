@@ -191,6 +191,7 @@ class _CultivationCard extends StatelessWidget {
   }
 }
 
+/// Product orders only: tours belong to the travel company.
 class _ShopSummary extends StatelessWidget {
   const _ShopSummary({required this.summary, required this.base});
   final HtxSummary summary;
@@ -200,16 +201,20 @@ class _ShopSummary extends StatelessWidget {
     title: 'Gian hàng',
     divided: true,
     padded: false,
-    onSeeAll: () => context.go('$base/bookings'),
+    onSeeAll: () => context.go('$base/orders'),
     child: Column(
       children: [
         StaffListRow(
-          title: 'Lượt đặt tour đã xác nhận',
-          subtitle: '${summary.confirmedBookings} lượt',
-          onTap: () => context.go('$base/bookings'),
+          title: 'Đơn hàng chờ xác nhận',
+          subtitle: '${summary.pendingOrders} đơn',
+          onTap: () => context.go('$base/orders'),
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
-        StaffListRow(title: 'Đã thu', subtitle: formatVnd(summary.revenue), onTap: () => context.go('$base/payments')),
+        StaffListRow(
+          title: 'Đã thu từ đơn hàng',
+          subtitle: formatVnd(summary.revenue),
+          onTap: () => context.go('$base/payments'),
+        ),
       ],
     ),
   );
@@ -292,10 +297,8 @@ class _HtxDashboard extends StatelessWidget {
                 d.notes.where((n) => !n.isRead).length,
                 '/manager/notifications',
               ),
-              if (d.summary != null) ...[
+              if (d.summary != null)
                 _attention(context, 'Đơn chờ xác nhận', d.summary!.pendingOrders, '/manager/orders'),
-                _attention(context, 'Lượt đặt chờ xác nhận', d.summary!.pendingBookings, '/manager/bookings'),
-              ],
             ],
           ),
           const SizedBox(height: 12),
@@ -403,7 +406,6 @@ class FarmerDashboard extends StatelessWidget {
         parcels: await scope.repo.listParcels(scope.htx, householdId: scope.household),
         journal: await scope.repo.listJournal(scope.htx, householdId: scope.household),
         weather: scope.coreIsSample ? await scope.repo.currentWeather(scope.htx) : null,
-        visits: scope.coreIsSample ? await scope.repo.listHouseholdVisits(scope.household ?? '') : null,
       ),
       builder: (context, d, reload) {
         final upcoming = _upcoming(d.parcels, now);
@@ -411,10 +413,6 @@ class FarmerDashboard extends StatelessWidget {
         final needsChanges = d.journal
             .where((e) => e.status == JournalStatus.rejected || e.status == JournalStatus.requestChanges)
             .length;
-        final visits = [
-          for (final v in d.visits ?? const <Booking>[])
-            if (!v.departureDate.isBefore(dayOf(now))) v,
-        ]..sort((a, b) => a.departureDate.compareTo(b.departureDate));
         final parcels = [...d.parcels]
           ..sort((a, b) {
             final aDate = a.status.isActive ? a.estimatedHarvestDate : null;
@@ -508,29 +506,6 @@ class FarmerDashboard extends StatelessWidget {
             _HarvestCard(parcels: upcoming, now: now, path: '/farmer/schedule'),
           ),
           const SizedBox(height: 12),
-          if (d.visits != null)
-            SectionCard(
-              title: 'Lịch tham quan',
-              divided: true,
-              padded: false,
-              onSeeAll: () => context.go('/farmer/visits'),
-              child: visits.isEmpty
-                  ? const StaffListRow(title: 'Chưa có đoàn khách nào')
-                  : Column(
-                      children: [
-                        for (final v in visits.take(3))
-                          StaffListRow(
-                            key: Key('visit-${v.id}'),
-                            title: v.tourName,
-                            subtitle: '${formatDateLong(v.departureDate)}\n${v.contactName} · ${v.guests} khách',
-                            trailing: v.checkedIn
-                                ? const Pill('Đã điểm danh', tone: Tone.ok)
-                                : Pill(v.status.label, tone: bookingTone(v.status)),
-                            onTap: () => context.push('/farmer/visits/${v.id}'),
-                          ),
-                      ],
-                    ),
-            ),
           TextButton(onPressed: () => context.go('/farmer/journal'), child: const Text('Xem lịch sử nhật ký ›')),
         ]);
       },
@@ -539,11 +514,10 @@ class FarmerDashboard extends StatelessWidget {
 }
 
 class _FarmerData {
-  _FarmerData({required this.parcels, required this.journal, required this.weather, required this.visits});
+  _FarmerData({required this.parcels, required this.journal, required this.weather});
   final List<Parcel> parcels;
   final List<JournalEntry> journal;
   final WeatherNow? weather;
-  final List<Booking>? visits;
 }
 
 class OperatorDashboard extends StatelessWidget {
@@ -568,7 +542,7 @@ class OperatorDashboard extends StatelessWidget {
               _attention(context, 'HTX cần hỗ trợ', linked.where((h) => h.state == 'warn').length, '/operator/htx'),
               _attention(
                 context,
-                'Lượt đặt chờ xác nhận',
+                'Lượt đặt chờ công ty xác nhận',
                 d.$2.where((b) => b.status == BookingStatus.pending).length,
                 '/operator/bookings',
               ),

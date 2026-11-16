@@ -249,10 +249,7 @@ class HttpHubRepository implements HubRepository {
   Future<List<Booking>> listMyBookings(String customerId) => _shop.listMyBookings(customerId);
 
   @override
-  Future<List<Booking>> listHouseholdVisits(String householdId) => _shop.listHouseholdVisits(householdId);
-
-  @override
-  Future<Booking> checkIn(String bookingId) => _shop.checkIn(bookingId);
+  Future<TourCompany> getTourCompany() => _shop.getTourCompany();
 
   @override
   Future<List<Product>> listHouseholdProducts(String householdId) => _shop.listHouseholdProducts(householdId);
@@ -262,9 +259,6 @@ class HttpHubRepository implements HubRepository {
 
   @override
   Future<Order> updateOrderStatus(String orderId, OrderStatus target) => _shop.updateOrderStatus(orderId, target);
-
-  @override
-  Future<List<Booking>> listBookings(String htxCode) => _shop.listBookings(htxCode);
 
   @override
   Future<Payment> recordPayment({required String reference, required int amount, required String recordedBy}) =>
@@ -294,6 +288,15 @@ class HttpHubRepository implements HubRepository {
 
   @override
   Future<List<Booking>> listAllBookings() => _shop.listAllBookings();
+
+  @override
+  Future<Booking> cancelBooking(String bookingId) => _shop.cancelBooking(bookingId);
+
+  @override
+  Future<Booking> checkIn(String bookingId) => _shop.checkIn(bookingId);
+
+  @override
+  Future<List<Payment>> listTourPayments() => _shop.listTourPayments();
 
   @override
   Future<List<BulletinItem>> listBulletins() => _shop.listBulletins();

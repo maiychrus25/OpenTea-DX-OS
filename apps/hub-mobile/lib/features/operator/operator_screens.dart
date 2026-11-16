@@ -2,20 +2,24 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../app/app_state.dart';
 import '../../core/format/formatting.dart';
 import '../../core/money/money.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/booking.dart';
 import '../../data/models/catalog.dart';
+import '../../data/models/order.dart';
 import '../../data/models/staff.dart';
-import '../../shared/widgets.dart' show LoadView;
+import '../../shared/widgets.dart' show LoadView, showMessage;
 import '../staff/staff_format.dart';
 import '../staff/staff_shell.dart';
 import '../staff/staff_widgets.dart';
 
 // Pages of the tour company (operator). Mock data only; see the repository.
+// All tour work lives here: bookings, tour money and check-in.
 
 Widget _page(Future<void> Function() reload, List<Widget> children) => RefreshIndicator(
   onRefresh: reload,
@@ -119,7 +123,7 @@ class OperatorToursPage extends StatelessWidget {
       builder: (context, tours, reload) => _page(reload, [
         const PageHead(
           'Tour toàn vùng',
-          subtitle: 'Tour tuyến nối nhiều HTX. Lịch khởi hành và đặt chỗ vẫn nằm ở từng HTX.',
+          subtitle: 'Tour tuyến nối nhiều HTX. Công ty quản lý giá, lịch khởi hành và đặt chỗ.',
         ),
         Stack10([
           for (final t in tours)
@@ -243,7 +247,8 @@ class OperatorReportsPage extends StatelessWidget {
   }
 }
 
-/// "Lượt đặt tour" across every linked cooperative.
+/// "Lượt đặt tour": every tour booking. Tours are the company's business, so the
+/// company confirms the money, cancels and checks groups in.
 class OperatorBookingsTab extends StatelessWidget {
   const OperatorBookingsTab({super.key});
 
@@ -253,16 +258,174 @@ class OperatorBookingsTab extends StatelessWidget {
     return LoadView<List<Booking>>(
       load: repo.listAllBookings,
       builder: (context, bookings, reload) => _page(reload, [
-        const PageHead('Theo dõi đặt tour', subtitle: 'Tất cả lượt đặt của các HTX liên kết.'),
-        Stack10([
-          for (final b in bookings)
-            RowCard(
-              title: '${b.code} · ${b.htxCode}',
-              subtitle: b.tourName,
-              meta: '${formatDate(b.departureDate)} · ${b.guests} khách · ${formatVnd(b.total)}',
-              trailing: Pill(b.status.label, tone: bookingTone(b.status)),
-            ),
-        ]),
+        PageHead(
+          'Lượt đặt tour',
+          subtitle: '${bookings.where((b) => b.status == BookingStatus.pending).length} lượt chờ công ty xác nhận',
+        ),
+        if (bookings.isEmpty)
+          const StaffEmpty('Chưa có lượt đặt', icon: Icons.confirmation_number_outlined)
+        else
+          Stack10([
+            for (final b in bookings)
+              RowCard(
+                key: Key('op-booking-${b.id}'),
+                title: '${b.code} · ${b.contactName}',
+                subtitle: b.tourName,
+                meta:
+                    '${formatDate(b.departureDate)} · ${b.guests} khách · ${formatVnd(b.total)} · ${b.paymentStatus.label}',
+                trailing: b.checkedIn
+                    ? const Pill('Đã điểm danh', tone: Tone.ok)
+                    : Pill(b.status.label, tone: bookingTone(b.status)),
+                onTap: () async {
+                  await context.push('/operator/bookings/${b.id}');
+                  await reload();
+                },
+              ),
+          ]),
+      ]),
+    );
+  }
+}
+
+class OperatorBookingDetailScreen extends StatelessWidget {
+  const OperatorBookingDetailScreen({super.key, required this.bookingId});
+  final String bookingId;
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.read<HubRepository>();
+    final user = context.read<AppState>().claims?.name ?? '';
+    return DetailScaffold(
+      title: 'Chi tiết lượt đặt',
+      body: LoadView<Booking?>(
+        load: () async => (await repo.listAllBookings()).where((b) => b.id == bookingId).firstOrNull,
+        builder: (context, b, reload) {
+          if (b == null) return const StaffEmpty('Không tìm thấy lượt đặt');
+          Future<void> run(Future<Object?> Function() action, String done) async {
+            try {
+              await action();
+              if (context.mounted) showMessage(context, done);
+              await reload();
+            } on HubException catch (e) {
+              if (context.mounted) showMessage(context, e.message);
+            }
+          }
+
+          final open = b.status != BookingStatus.cancelled && b.status != BookingStatus.completed;
+          final canConfirm = open && b.paymentStatus != PaymentStatus.paid;
+          final canCheckIn = b.status == BookingStatus.confirmed && !b.checkedIn;
+          final canCancel = b.status.canMoveTo(BookingStatus.cancelled) && !b.checkedIn;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(b.code, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                  ),
+                  Pill(b.status.label, tone: bookingTone(b.status)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              DetailRow('Tour', b.tourName),
+              DetailRow('Ngày đi', formatDateLong(b.departureDate)),
+              DetailRow('Liên hệ', '${b.contactName} · ${b.phone}'),
+              if (b.email.isNotEmpty) DetailRow('Email', b.email),
+              if (b.note.isNotEmpty) DetailRow('Ghi chú', b.note),
+              DetailRow('Số khách', '${b.adults} người lớn, ${b.children} trẻ em'),
+              DetailRow('Tổng tiền', formatVnd(b.total)),
+              DetailRow('Thanh toán', b.paymentStatus.label),
+              DetailRow('Điểm danh', b.checkedIn ? 'Đã đến' : 'Chưa'),
+              const SizedBox(height: 12),
+              const InfoNote('Khách chuyển khoản vào tài khoản của công ty du lịch.', tone: Tone.neutral),
+              if (canConfirm) ...[
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  key: const Key('confirm-payment'),
+                  icon: const Icon(Icons.price_check),
+                  onPressed: () => run(
+                    () => repo.recordPayment(reference: b.code, amount: b.total, recordedBy: user),
+                    'Đã ghi nhận tiền về',
+                  ),
+                  label: Text('Xác nhận đã nhận ${formatVnd(b.total)}'),
+                ),
+              ],
+              if (canCheckIn) ...[
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  key: const Key('operator-checkin'),
+                  icon: const Icon(Icons.how_to_reg),
+                  onPressed: () => run(() => repo.checkIn(b.id), 'Đã điểm danh'),
+                  label: const Text('Điểm danh đoàn đã đến'),
+                ),
+              ] else if (open && !b.checkedIn) ...[
+                const SizedBox(height: 8),
+                const InfoNote('Điểm danh được khi lượt đặt đã xác nhận (đã nhận tiền).', tone: Tone.neutral),
+              ],
+              if (canCancel) ...[
+                const SizedBox(height: 8),
+                TextButton(
+                  key: const Key('cancel-booking'),
+                  style: TextButton.styleFrom(foregroundColor: const Color(0xFFB3261E)),
+                  onPressed: () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (dialog) => AlertDialog(
+                        title: const Text('Huỷ lượt đặt?'),
+                        content: Text('Huỷ ${b.code} của ${b.contactName}. Chỗ sẽ được trả lại cho ngày khởi hành.'),
+                        actions: [
+                          TextButton(
+                            key: const Key('cancel-booking-keep'),
+                            onPressed: () => Navigator.of(dialog).pop(false),
+                            child: const Text('Không'),
+                          ),
+                          FilledButton(
+                            key: const Key('cancel-booking-confirm'),
+                            onPressed: () => Navigator.of(dialog).pop(true),
+                            child: const Text('Huỷ lượt đặt'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (ok == true) await run(() => repo.cancelBooking(b.id), 'Đã huỷ lượt đặt');
+                  },
+                  child: const Text('Huỷ lượt đặt'),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// "Thu tiền tour": the tour part of the payment ledger. Append-only.
+class OperatorTourPaymentsPage extends StatelessWidget {
+  const OperatorTourPaymentsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.read<HubRepository>();
+    return LoadView<List<Payment>>(
+      load: repo.listTourPayments,
+      builder: (context, payments, reload) => _page(reload, [
+        PageHead(
+          'Thu tiền tour',
+          subtitle: 'Đã nhận ${formatVnd(payments.fold<int>(0, (s, p) => s + p.amount))}. Sổ chỉ thêm, không sửa.',
+        ),
+        if (payments.isEmpty)
+          const StaffEmpty('Chưa có khoản thu tour nào', icon: Icons.payments_outlined)
+        else
+          Stack10([
+            for (final p in payments)
+              RowCard(
+                key: Key('op-payment-${p.id}'),
+                title: p.reference,
+                subtitle: '${formatDateTime(p.recordedAt)} · ${p.recordedBy}',
+                trailing: Text(formatVnd(p.amount), style: const TextStyle(fontWeight: FontWeight.w800)),
+              ),
+          ]),
       ]),
     );
   }

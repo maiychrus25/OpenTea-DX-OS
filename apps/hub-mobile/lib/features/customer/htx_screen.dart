@@ -47,7 +47,7 @@ class HtxScreen extends StatelessWidget {
                   icon: Icons.home_work_outlined,
                   route: '/shop/farm/${h.id}',
                 ),
-              const SectionTitle('Tour của HTX'),
+              const SectionTitle('Tour ghé HTX'),
               for (final t in tours)
                 LinkRow(
                   kind: t.durationLabel,

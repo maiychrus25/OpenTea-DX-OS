@@ -17,8 +17,9 @@ import '../staff/staff_format.dart';
 import '../staff/staff_shell.dart';
 import '../staff/staff_widgets.dart';
 
-// The storefront work of a cooperative ("Gian hàng" in the drawer): orders,
-// tour bookings, payments, news submitted for approval, tours and products.
+// The storefront work of a cooperative ("Gian hàng" in the drawer): products,
+// product orders, their payments and news submitted for approval. Tours are the
+// travel company's business and have no page here.
 
 String _htx(BuildContext context) => context.read<AppState>().claims?.htxCode ?? '';
 bool _canWrite(BuildContext context) => context.read<AppState>().claims?.canWriteHtx ?? false;
@@ -155,105 +156,7 @@ class ManagerOrderDetailScreen extends StatelessWidget {
   }
 }
 
-class BookingsTab extends StatelessWidget {
-  const BookingsTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final repo = context.read<HubRepository>();
-    final code = _htx(context);
-    return LoadView<List<Booking>>(
-      load: () => repo.listBookings(code),
-      builder: (context, bookings, reload) => _page(reload, [
-        PageHead(
-          'Lượt đặt tour',
-          subtitle: '${bookings.where((b) => b.status == BookingStatus.pending).length} lượt chờ xác nhận',
-        ),
-        if (bookings.isEmpty)
-          const StaffEmpty('Chưa có lượt đặt', icon: Icons.confirmation_number_outlined)
-        else
-          Stack10([
-            for (final b in bookings)
-              RowCard(
-                key: Key('m-booking-${b.id}'),
-                title: '${b.code} · ${b.contactName}',
-                subtitle: b.tourName,
-                meta: '${formatDate(b.departureDate)} · ${b.guests} khách · ${formatVnd(b.total)}',
-                trailing: Pill(b.status.label, tone: bookingTone(b.status)),
-                onTap: () async {
-                  await context.push('/manager/bookings/${b.id}');
-                  await reload();
-                },
-              ),
-          ]),
-      ]),
-    );
-  }
-}
-
-class ManagerBookingDetailScreen extends StatelessWidget {
-  const ManagerBookingDetailScreen({super.key, required this.bookingId});
-  final String bookingId;
-
-  @override
-  Widget build(BuildContext context) {
-    final repo = context.read<HubRepository>();
-    final code = _htx(context);
-    final canWrite = _canWrite(context);
-    final user = context.read<AppState>().claims?.name ?? '';
-    return DetailScaffold(
-      title: 'Chi tiết lượt đặt',
-      body: LoadView<Booking?>(
-        load: () async => (await repo.listBookings(code)).where((b) => b.id == bookingId).firstOrNull,
-        builder: (context, b, reload) {
-          if (b == null) return const StaffEmpty('Không tìm thấy lượt đặt');
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(b.code, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                  ),
-                  Pill(b.status.label, tone: bookingTone(b.status)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              DetailRow('Tour', b.tourName),
-              DetailRow('Ngày đi', formatDateLong(b.departureDate)),
-              DetailRow('Liên hệ', '${b.contactName} · ${b.phone}'),
-              if (b.email.isNotEmpty) DetailRow('Email', b.email),
-              if (b.note.isNotEmpty) DetailRow('Ghi chú', b.note),
-              DetailRow('Số khách', '${b.adults} người lớn, ${b.children} trẻ em'),
-              DetailRow('Tổng tiền', formatVnd(b.total)),
-              DetailRow('Thanh toán', b.paymentStatus.label),
-              DetailRow('Điểm danh', b.checkedIn ? 'Đã đến' : 'Chưa'),
-              if (!canWrite) ...[const SizedBox(height: 12), const InfoNote('Chỉ xem (cán bộ)')],
-              if (canWrite && b.paymentStatus != PaymentStatus.paid && b.status != BookingStatus.cancelled) ...[
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  key: const Key('confirm-payment'),
-                  icon: const Icon(Icons.price_check),
-                  onPressed: () async {
-                    try {
-                      await repo.recordPayment(reference: b.code, amount: b.total, recordedBy: user);
-                      await reload();
-                    } on HubException catch (e) {
-                      if (context.mounted) showMessage(context, e.message);
-                    }
-                  },
-                  label: Text('Xác nhận đã nhận ${formatVnd(b.total)}'),
-                ),
-              ],
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// Tour-related news a cooperative submits to the tour company for approval.
+/// News a cooperative submits to the travel company for approval.
 class ManagerArticlesScreen extends StatelessWidget {
   const ManagerArticlesScreen({super.key});
 
@@ -301,9 +204,13 @@ class ManagerPaymentsScreen extends StatelessWidget {
     final repo = context.read<HubRepository>();
     final code = _htx(context);
     return LoadView<List<Payment>>(
-      load: () => repo.listPayments(code),
+      // Tour money goes to the travel company; the cooperative's ledger shows orders only.
+      load: () async => [
+        for (final p in await repo.listPayments(code))
+          if (!isTourReference(p.reference)) p,
+      ],
       builder: (context, payments, reload) => _page(reload, [
-        const PageHead('Thu tiền', subtitle: 'Sổ ghi các khoản đã nhận, chỉ thêm không sửa.'),
+        const PageHead('Thu tiền', subtitle: 'Tiền đơn hàng sản phẩm đã nhận. Sổ chỉ thêm, không sửa.'),
         if (payments.isEmpty)
           const StaffEmpty('Chưa có khoản thu nào', icon: Icons.payments_outlined)
         else
@@ -320,74 +227,32 @@ class ManagerPaymentsScreen extends StatelessWidget {
   }
 }
 
-class ManagerCatalogScreen extends StatelessWidget {
-  const ManagerCatalogScreen({super.key});
+/// "Sản phẩm": the cooperative's products. Tours are listed by the travel company.
+class ManagerProductsScreen extends StatelessWidget {
+  const ManagerProductsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final repo = context.read<HubRepository>();
     final code = _htx(context);
-    return LoadView<(List<Tour>, List<Product>)>(
-      load: () async => (await repo.listTours(htxCode: code), await repo.listProducts(htxCode: code)),
-      builder: (context, data, reload) => _page(reload, [
-        const PageHead(
-          'Tour và sản phẩm',
-          subtitle: 'Chỉnh sửa tour, ngày khởi hành và sản phẩm sẽ làm cùng API ở mốc M2; hiện chỉ xem.',
-        ),
-        SectionCard(
-          title: 'Tour',
-          child: Column(
-            children: [
-              for (final t in data.$1)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(t.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                            Text(t.durationLabel, style: const TextStyle(fontSize: 12.5, color: Color(0xFF5B6B62))),
-                          ],
-                        ),
-                      ),
-                      Text(formatVnd(t.adultPrice), style: const TextStyle(fontWeight: FontWeight.w700)),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'Sản phẩm',
-          child: Column(
-            children: [
-              for (final p in data.$2)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                            Text(
-                              '${formatVnd(p.price)} · ${p.unit}',
-                              style: const TextStyle(fontSize: 12.5, color: Color(0xFF5B6B62)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text('Kho: ${p.stock}'),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
+    return LoadView<List<Product>>(
+      load: () => repo.listProducts(htxCode: code),
+      builder: (context, products, reload) => _page(reload, [
+        const PageHead('Sản phẩm', subtitle: 'Chỉnh sửa sản phẩm sẽ làm cùng API ở mốc M2; hiện chỉ xem.'),
+        if (products.isEmpty)
+          const StaffEmpty('HTX chưa có sản phẩm', icon: Icons.local_cafe_outlined)
+        else
+          Stack10([
+            for (final p in products)
+              RowCard(
+                key: Key('m-product-${p.id}'),
+                title: p.name,
+                subtitle: '${formatVnd(p.price)} · ${p.unit}',
+                trailing: p.stock == 0
+                    ? const Pill('Hết hàng', tone: Tone.bad)
+                    : Text('Kho: ${p.stock}', style: const TextStyle(fontWeight: FontWeight.w700)),
+              ),
+          ]),
       ]),
     );
   }

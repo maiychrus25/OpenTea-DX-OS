@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hub_mobile/core/role/role.dart';
 import 'package:hub_mobile/app/hub_app.dart';
 import 'package:hub_mobile/core/theme/staff_theme.dart';
+import 'package:hub_mobile/features/staff/staff_nav.dart';
 import 'package:hub_mobile/features/staff/staff_widgets.dart';
 import 'package:hub_mobile/data/demo_auth_service.dart';
 import 'package:hub_mobile/data/local_store.dart';
@@ -404,7 +405,10 @@ void main() {
       ]);
       await tester.tap(find.byKey(const Key('drawer-shop-toggle')));
       await tester.pumpAndSettle();
-      _expectAll(['Đơn hàng', 'Lượt đặt tour', 'Thu tiền', 'Tour và sản phẩm']);
+      _expectAll(['Sản phẩm', 'Đơn hàng', 'Thu tiền', 'Bài gửi duyệt']);
+      for (final gone in ['Lượt đặt tour', 'Tour và sản phẩm', 'Thu tiền tour', 'Lịch tham quan']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
       expect(find.text('Trưởng HTX'), findsWidgets);
     });
 
@@ -423,6 +427,11 @@ void main() {
         'Cán bộ KT',
       ]);
       expect(find.text('Duyệt nhật ký'), findsNothing);
+      await tester.tap(find.byKey(const Key('drawer-shop-toggle')));
+      await tester.pumpAndSettle();
+      _expectAll(['Sản phẩm', 'Đơn hàng', 'Thu tiền']);
+      expect(find.text('Lượt đặt tour'), findsNothing);
+      expect(find.text('Tour và sản phẩm'), findsNothing);
     });
 
     testWidgets('farmer drawer lists the farmer pages and the storefront items', (tester) async {
@@ -438,10 +447,10 @@ void main() {
         'Thông báo',
         'Thửa đất của tôi',
         'Hồ sơ',
-        'Lịch tham quan',
         'Sản phẩm của hộ',
         'Nông dân',
       ]);
+      expect(find.text('Lịch tham quan'), findsNothing);
     });
 
     testWidgets('operator drawer lists the tour company pages', (tester) async {
@@ -456,8 +465,43 @@ void main() {
         'Bài viết HTX',
         'Báo cáo tổng hợp',
         'Lượt đặt tour',
+        'Thu tiền tour',
         'Công ty du lịch',
       ]);
+    });
+
+    test('only the operator menu has tour items', () {
+      bool isTour(MenuItem m) =>
+          m.label.toLowerCase().contains('tour') ||
+          m.label.contains('tham quan') ||
+          m.path.contains('booking') ||
+          m.path.contains('visit') ||
+          m.path.contains('catalog');
+      for (final kind in [StaffKind.manager, StaffKind.officer, StaffKind.farmer]) {
+        final nav = navFor(kind);
+        expect([...nav.all, ...nav.bottom].where(isTour), isEmpty, reason: kind.name);
+      }
+      final op = navFor(StaffKind.operator);
+      expect(op.all.map((m) => m.path), containsAll(['/operator/bookings', '/operator/payments', '/operator/tours']));
+    });
+
+    testWidgets('the router has no tour routes for HTX or farmers', (tester) async {
+      await _openAs(tester, 'manager@demo.vn');
+      final router = GoRouter.of(tester.element(find.byType(SummaryStrip)));
+      final paths = <String>[];
+      void walk(List<RouteBase> routes) {
+        for (final r in routes) {
+          if (r is GoRoute) paths.add(r.path);
+          walk(r.routes);
+        }
+      }
+
+      walk(router.configuration.routes);
+      expect(paths, containsAll(['/operator/bookings', '/operator/bookings/:id', '/operator/payments']));
+      expect(paths, contains('/manager/products'));
+      for (final p in paths.where((p) => p.startsWith('/manager') || p.startsWith('/farmer'))) {
+        expect(p.contains('booking') || p.contains('visit') || p.contains('catalog'), isFalse, reason: p);
+      }
     });
 
     testWidgets('search finds a page and opens it', (tester) async {
@@ -485,6 +529,10 @@ void main() {
       ]);
       await tester.scrollUntilVisible(find.text('Gian hàng'), 300);
       expect(find.text('Lịch thu hái sắp tới'), findsWidgets);
+      expect(find.text('Đơn hàng chờ xác nhận'), findsOneWidget);
+      for (final gone in ['Lượt đặt chờ xác nhận', 'Lượt đặt tour đã xác nhận', 'Lượt đặt tour']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
     });
 
     testWidgets('officer dashboard is read-only', (tester) async {
@@ -497,14 +545,22 @@ void main() {
     testWidgets('farmer dashboard shows own parcels, tasks and next harvest', (tester) async {
       await _openAs(tester, 'farmer@demo.vn');
       _expectAll(['Thửa đất của tôi', 'Nhật ký chờ duyệt', 'Thu hái tới', 'Tình trạng thửa đất', 'P-TC-001']);
-      await tester.scrollUntilVisible(find.text('Lịch tham quan'), 300);
-      expect(find.text('Lịch tham quan'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Xem lịch sử nhật ký ›'), 300);
+      expect(find.text('Lịch tham quan'), findsNothing);
+      expect(find.byKey(const Key('visit-bk-01')), findsNothing);
       expect(find.text('P-TC-003'), findsNothing); // another household
     });
 
     testWidgets('operator dashboard shows linked HTXs, bookings, articles and revenue', (tester) async {
       await _openAs(tester, 'operator@demo.vn');
-      _expectAll(['HTX liên kết', 'Lượt đặt tour', 'Bài chờ duyệt', 'Doanh thu tháng', 'Cần xử lý hôm nay']);
+      _expectAll([
+        'HTX liên kết',
+        'Lượt đặt tour',
+        'Lượt đặt chờ công ty xác nhận',
+        'Bài chờ duyệt',
+        'Doanh thu tháng',
+        'Cần xử lý hôm nay',
+      ]);
     });
   });
 
@@ -608,10 +664,17 @@ void main() {
 
     testWidgets('the storefront items stay reachable from the drawer', (tester) async {
       await _openAs(tester, 'manager@demo.vn');
-      await _goTo(tester, '/manager/bookings');
-      await tester.tap(find.byKey(const Key('m-booking-bk-02')));
+      await _goTo(tester, '/manager/products');
+      expect(find.byKey(const Key('m-product-prod-01')), findsOneWidget);
+      expect(find.textContaining('Một ngày làm người hái chè'), findsNothing); // no tours
+      await _goTo(tester, '/manager/payments');
+      expect(find.text('Chưa có khoản thu nào'), findsOneWidget);
+      await _openAs(tester, 'operator@demo.vn');
+      await _goTo(tester, '/operator/bookings');
+      await tester.tap(find.byKey(const Key('op-booking-bk-02')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('confirm-payment')), findsOneWidget);
+      expect(find.byKey(const Key('cancel-booking')), findsOneWidget);
     });
   });
 }

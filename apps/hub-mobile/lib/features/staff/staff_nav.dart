@@ -47,6 +47,7 @@ class StaffNav {
   final List<MenuItem> main;
 
   /// The "Gian hàng" entries: storefront work that already existed before the redesign.
+  /// Tour work (bookings, tour money, check-in) is only ever in the operator's.
   final List<MenuItem> shop;
   final List<MenuItem> bottom;
   final String notificationsPath;
@@ -82,9 +83,8 @@ const _manager = StaffNav(
     MenuItem('Hồ sơ HTX', Icons.account_balance_outlined, '/manager/profile'),
   ],
   shop: [
-    MenuItem('Tour và sản phẩm', Icons.hiking, '/manager/catalog'),
+    MenuItem('Sản phẩm', Icons.local_cafe_outlined, '/manager/products'),
     MenuItem('Đơn hàng', Icons.receipt_long_outlined, '/manager/orders'),
-    MenuItem('Lượt đặt tour', Icons.confirmation_number_outlined, '/manager/bookings'),
     MenuItem('Thu tiền', Icons.payments_outlined, '/manager/payments'),
     MenuItem('Bài gửi duyệt', Icons.article_outlined, '/manager/articles'),
   ],
@@ -114,9 +114,8 @@ const _officer = StaffNav(
     MenuItem('Tài khoản', Icons.person_outline, '/manager/me'),
   ],
   shop: [
-    MenuItem('Tour và sản phẩm', Icons.hiking, '/manager/catalog'),
+    MenuItem('Sản phẩm', Icons.local_cafe_outlined, '/manager/products'),
     MenuItem('Đơn hàng', Icons.receipt_long_outlined, '/manager/orders'),
-    MenuItem('Lượt đặt tour', Icons.confirmation_number_outlined, '/manager/bookings'),
     MenuItem('Thu tiền', Icons.payments_outlined, '/manager/payments'),
   ],
   bottom: [
@@ -143,10 +142,7 @@ const _farmer = StaffNav(
     MenuItem('Thửa đất của tôi', Icons.eco_outlined, '/farmer/parcels'),
     MenuItem('Hồ sơ', Icons.person_outline, '/farmer/me'),
   ],
-  shop: [
-    MenuItem('Lịch tham quan', Icons.event_note_outlined, '/farmer/visits'),
-    MenuItem('Sản phẩm của hộ', Icons.local_cafe_outlined, '/farmer/products'),
-  ],
+  shop: [MenuItem('Sản phẩm của hộ', Icons.local_cafe_outlined, '/farmer/products')],
   bottom: [
     MenuItem('Tổng quan', Icons.home_outlined, '/farmer'),
     MenuItem('Nhật ký đồng ruộng', Icons.description_outlined, '/farmer/journal', bottomLabel: 'Nhật ký'),
@@ -169,7 +165,10 @@ const _operator = StaffNav(
     MenuItem('Bài viết HTX', Icons.article_outlined, '/operator/articles'),
     MenuItem('Báo cáo tổng hợp', Icons.bar_chart_outlined, '/operator/reports'),
   ],
-  shop: [MenuItem('Lượt đặt tour', Icons.confirmation_number_outlined, '/operator/bookings')],
+  shop: [
+    MenuItem('Lượt đặt tour', Icons.confirmation_number_outlined, '/operator/bookings'),
+    MenuItem('Thu tiền tour', Icons.payments_outlined, '/operator/payments'),
+  ],
   bottom: [
     MenuItem('Tổng quan', Icons.home_outlined, '/operator'),
     MenuItem('Hợp tác xã liên kết', Icons.account_balance_outlined, '/operator/htx', bottomLabel: 'HTX'),

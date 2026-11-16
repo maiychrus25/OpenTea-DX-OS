@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hub_mobile/core/vietqr/vietqr.dart';
 import 'package:hub_mobile/data/hub_repository.dart';
 import 'package:hub_mobile/data/mock_hub_repository.dart';
 import 'package:hub_mobile/data/models/booking.dart';
@@ -107,7 +108,7 @@ void main() {
       );
     });
 
-    test('booking takes seats, confirms on payment, then the farmer can check in', () async {
+    test('booking takes seats, confirms on payment, then the travel company can check in', () async {
       final repo = MockHubRepository();
       final before = (await repo.listDepartures('tour-01')).firstWhere((d) => d.id == 'dep-02').seatsLeft;
       final b = await repo.createBooking(
@@ -148,12 +149,52 @@ void main() {
       );
     });
 
-    test('farmer sees only the visits of their own household', () async {
+    test('the travel company cancels a booking and the seats go back', () async {
       final repo = MockHubRepository();
-      final own = await repo.listHouseholdVisits('hh-01');
-      expect(own, isNotEmpty);
-      expect(own.every((b) => b.householdId == 'hh-01'), isTrue);
-      expect(await repo.listHouseholdVisits('hh-02'), isEmpty);
+      final before = (await repo.listDepartures('tour-01')).firstWhere((d) => d.id == 'dep-02').seatsLeft;
+      final b = await repo.createBooking(
+        const NewBooking(
+          customerId: 'c1',
+          tourId: 'tour-01',
+          departureId: 'dep-02',
+          contactName: 'A',
+          phone: '0912345678',
+          adults: 2,
+          children: 0,
+        ),
+      );
+      final cancelled = await repo.cancelBooking(b.id);
+      expect(cancelled.status, BookingStatus.cancelled);
+      expect((await repo.listDepartures('tour-01')).firstWhere((d) => d.id == 'dep-02').seatsLeft, before);
+      await expectLater(repo.cancelBooking(b.id), throwsA(isA<HubException>()));
+      await expectLater(repo.checkIn(b.id), throwsA(isA<HubException>()));
+    });
+
+    test('a checked-in group cannot be cancelled', () async {
+      final repo = MockHubRepository();
+      await repo.checkIn('bk-01');
+      await expectLater(repo.cancelBooking('bk-01'), throwsA(isA<HubException>()));
+    });
+
+    test('tour money is in the tour ledger, never in the cooperative ledger or revenue', () async {
+      final repo = MockHubRepository();
+      final order = await repo.placeOrder(_draft(qty: 1));
+      await repo.recordPayment(reference: order.code, amount: order.total, recordedBy: 'Hoa');
+      await repo.recordPayment(reference: 'TOUR P3N8ZD', amount: 1400000, recordedBy: 'Công ty');
+      final htxLedger = await repo.listPayments('tan-cuong');
+      expect(htxLedger.map((p) => p.reference), [order.code]);
+      expect((await repo.summary('tan-cuong')).revenue, order.total);
+      final tourLedger = await repo.listTourPayments();
+      expect(tourLedger.map((p) => p.reference), ['TOUR P3N8ZD']);
+      expect(isTourReference('TOUR P3N8ZD'), isTrue);
+      expect(isTourReference(order.code), isFalse);
+    });
+
+    test('the demo travel company has a VietQR bank from the app list', () async {
+      final company = await MockHubRepository().getTourCompany();
+      expect(company.name, 'Công ty Lữ hành Xứ Chè (demo)');
+      expect(bankByBin(company.bankBin), isNotNull);
+      expect(company.bankAccount, isNot((await MockHubRepository().getHtx('tan-cuong')).bankAccount));
     });
 
     test('article review: only pending articles can be approved or rejected', () async {
