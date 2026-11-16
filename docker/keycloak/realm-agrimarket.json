@@ -824,7 +824,7 @@
       "publicClient": true,
       "redirectUris": [
         "vn.opentea.dxos.tour:/oauth2redirect",
-        "vn.opentea.hub_mobile:/oauth2redirect"
+        "vn.opentea.hubmobile:/oauth2redirect"
       ],
       "webOrigins": [],
       "protocol": "openid-connect",

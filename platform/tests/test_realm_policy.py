@@ -53,7 +53,20 @@ class RealmPolicyTest(unittest.TestCase):
         self.assertIs(client["implicitFlowEnabled"], False)
         self.assertNotIn("secret", client)
         self.assertEqual(client["attributes"]["pkce.code.challenge.method"], "S256")
-        self.assertEqual(client["redirectUris"], ["vn.opentea.dxos.tour:/oauth2redirect", "vn.opentea.hub_mobile:/oauth2redirect"])
+        self.assertEqual(client["redirectUris"], ["vn.opentea.dxos.tour:/oauth2redirect", "vn.opentea.hubmobile:/oauth2redirect"])
+
+    def test_mobile_redirect_uris_are_valid_uris(self):
+        # Keycloak refuses the whole realm import ("A redirect URI is not a valid URI") when a scheme has a character
+        # RFC 3986 does not allow, such as an underscore. Check every redirect URI of every client the same way.
+        import re
+        scheme = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*$")
+        for client in REALM["clients"]:
+            for uri in client.get("redirectUris", []):
+                if uri.startswith("/") or uri == "*":
+                    continue
+                name = uri.split(":", 1)[0]
+                self.assertRegex(name, scheme, f"{client['clientId']}: {uri}")
+                self.assertNotRegex(uri, r"\s", f"{client['clientId']}: {uri}")
 
     def test_mobile_client_has_no_password_grant(self):
         client = by_key(REALM["clients"], "clientId", "dxos-mobile")
