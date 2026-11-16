@@ -132,6 +132,13 @@ void main() {
       expect((account - logo).abs(), lessThan(24));
     });
 
+    testWidgets('the first bottom tab uses a house icon', (tester) async {
+      await _pump(tester);
+      await _guest(tester);
+      expect(find.byIcon(Icons.home_outlined), findsWidgets);
+      expect(find.byIcon(Icons.explore_outlined), findsNothing);
+    });
+
     testWidgets('the header stays at the top while the page scrolls', (tester) async {
       await _pump(tester);
       await _guest(tester);

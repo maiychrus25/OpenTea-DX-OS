@@ -13,7 +13,7 @@ class CustomerShell extends StatelessWidget {
   final Widget child;
 
   static const destinations = [
-    NavDestination('Khám phá', Icons.explore_outlined, '/shop'),
+    NavDestination('Khám phá', Icons.home_outlined, '/shop'),
     NavDestination('Tour', Icons.hiking, '/shop/tours'),
     NavDestination('Lịch trình', Icons.event_note_outlined, '/shop/trips'),
     NavDestination('Tài khoản', Icons.person_outline, '/shop/me'),
