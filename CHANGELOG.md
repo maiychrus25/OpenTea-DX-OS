@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Keycloak client `dxos-mobile`**: a public PKCE client (S256; no password grant, no service account) for mobile apps, with the same scopes and roles as `nextjs-web` and the redirect URIs of the Android tour app and of the Flutter hub-mobile app (`docker/keycloak/realm-agrimarket.json`). `make mobile-client` adds it to a running realm and does nothing if it exists. Covered by `platform/tests/test_realm_policy.py`.
+
 ---
 
 ## [1.12.0] - 2026-11-14

@@ -123,7 +123,7 @@ mobile-client:
 	  if [ -n "$$($$K get clients -r agrimarket -q clientId=dxos-mobile --fields id --format csv --noquotes)" ]; then echo "dxos-mobile already exists"; exit 0; fi; \
 	  $$K create clients -r agrimarket -s clientId=dxos-mobile -s enabled=true -s publicClient=true -s protocol=openid-connect \
 	    -s standardFlowEnabled=true -s implicitFlowEnabled=false -s directAccessGrantsEnabled=false -s serviceAccountsEnabled=false \
-	    -s "redirectUris=[\"vn.opentea.dxos.tour:/oauth2redirect\"]" \
+	    -s "redirectUris=[\"vn.opentea.dxos.tour:/oauth2redirect\",\"vn.opentea.hub_mobile:/oauth2redirect\"]" \
 	    -s "defaultClientScopes=[\"web-origins\",\"acr\",\"profile\",\"roles\",\"email\",\"dx-os-core\"]" \
 	    -s "optionalClientScopes=[]" \
 	    -s "attributes.\"pkce.code.challenge.method\"=S256"; \

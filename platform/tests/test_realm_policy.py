@@ -53,7 +53,7 @@ class RealmPolicyTest(unittest.TestCase):
         self.assertIs(client["implicitFlowEnabled"], False)
         self.assertNotIn("secret", client)
         self.assertEqual(client["attributes"]["pkce.code.challenge.method"], "S256")
-        self.assertEqual(client["redirectUris"], ["vn.opentea.dxos.tour:/oauth2redirect"])
+        self.assertEqual(client["redirectUris"], ["vn.opentea.dxos.tour:/oauth2redirect", "vn.opentea.hub_mobile:/oauth2redirect"])
 
     def test_mobile_client_has_no_password_grant(self):
         client = by_key(REALM["clients"], "clientId", "dxos-mobile")
