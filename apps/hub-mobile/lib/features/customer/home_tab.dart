@@ -33,86 +33,93 @@ class HomeTab extends StatelessWidget {
       ),
       builder: (context, data, reload) {
         final (tours, htxs, products, articles) = data;
-        return RefreshIndicator(
-          onRefresh: reload,
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              const _BrandBar(),
-              _hero(context),
-              Transform.translate(
-                offset: const Offset(0, -30),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: AppColors.cream,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _categories(context, htxs),
-                      const _AccountLinks(),
-                      const SectionTitle('Điểm đến nổi bật'),
-                      const SourceChip('Nguồn: lõi · hồ sơ HTX'),
-                      for (var i = 0; i < htxs.length; i++) _destination(context, htxs[i], i),
-                      const SectionTitle('Tour nổi bật'),
-                      const SourceChip('Nguồn: app du lịch · chỗ trống và đặt chỗ: tea-tour'),
-                    ],
-                  ),
-                ),
-              ),
-              Transform.translate(offset: const Offset(0, -30), child: _tourCarousel(context, tours)),
-              Transform.translate(
-                offset: const Offset(0, -30),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Expanded(child: SectionTitle('Sản phẩm')),
-                          TextButton(
-                            key: const Key('home-all-products'),
-                            onPressed: () => context.push('/shop/products'),
-                            child: const Text('Xem tất cả ›'),
-                          ),
-                        ],
-                      ),
-                      const SourceChip('Nguồn: app bán hàng · tồn kho của HTX'),
-                    ],
-                  ),
-                ),
-              ),
-              Transform.translate(offset: const Offset(0, -30), child: _productStrip(context, products)),
-              Transform.translate(
-                offset: const Offset(0, -30),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SectionTitle('Tin từ hợp tác xã'),
-                      const SourceChip('Nguồn: bài viết HTX · công ty du lịch duyệt'),
-                      for (final a in articles.take(2)) _newsCard(context, a),
-                      const SizedBox(height: 4),
-                      SizedBox(
-                        height: 52,
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          key: const Key('home-all-news'),
-                          onPressed: () => context.push('/shop/news'),
-                          child: const Text('Xem tất cả tin'),
+        // The header stays pinned while the page scrolls under it.
+        return Column(
+          children: [
+            const _BrandBar(),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: reload,
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _hero(context),
+                    Transform.translate(
+                      offset: const Offset(0, -30),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: AppColors.cream,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _categories(context, htxs),
+                            const _AccountLinks(),
+                            const SectionTitle('Điểm đến nổi bật'),
+                            const SourceChip('Nguồn: lõi · hồ sơ HTX'),
+                            for (var i = 0; i < htxs.length; i++) _destination(context, htxs[i], i),
+                            const SectionTitle('Tour nổi bật'),
+                            const SourceChip('Nguồn: app du lịch · chỗ trống và đặt chỗ: tea-tour'),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+                    ),
+                    Transform.translate(offset: const Offset(0, -30), child: _tourCarousel(context, tours)),
+                    Transform.translate(
+                      offset: const Offset(0, -30),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Expanded(child: SectionTitle('Sản phẩm')),
+                                TextButton(
+                                  key: const Key('home-all-products'),
+                                  onPressed: () => context.push('/shop/products'),
+                                  child: const Text('Xem tất cả ›'),
+                                ),
+                              ],
+                            ),
+                            const SourceChip('Nguồn: app bán hàng · tồn kho của HTX'),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Transform.translate(offset: const Offset(0, -30), child: _productStrip(context, products)),
+                    Transform.translate(
+                      offset: const Offset(0, -30),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SectionTitle('Tin từ hợp tác xã'),
+                            const SourceChip('Nguồn: bài viết HTX · công ty du lịch duyệt'),
+                            for (final a in articles.take(2)) _newsCard(context, a),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              height: 52,
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                key: const Key('home-all-news'),
+                                onPressed: () => context.push('/shop/news'),
+                                child: const Text('Xem tất cả tin'),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -412,8 +419,9 @@ class _BrandBarState extends State<_BrandBar> {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 10, 6, 14),
+  Widget build(BuildContext context) => Container(
+    color: AppColors.cream,
+    padding: const EdgeInsets.fromLTRB(16, 10, 6, 10),
     child: Row(
       children: [
         const LeafLogo(size: 42),

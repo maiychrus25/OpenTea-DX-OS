@@ -132,6 +132,16 @@ void main() {
       expect((account - logo).abs(), lessThan(24));
     });
 
+    testWidgets('the header stays at the top while the page scrolls', (tester) async {
+      await _pump(tester);
+      await _guest(tester);
+      final before = tester.getTopLeft(find.byKey(const Key('home-search')));
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.byKey(const Key('home-search'))), before);
+      expect(find.byKey(const Key('home-account')), findsOneWidget);
+    });
+
     testWidgets('submitting the search bar lists the matching tours', (tester) async {
       await _pump(tester);
       await _guest(tester);
