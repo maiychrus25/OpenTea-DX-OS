@@ -335,7 +335,7 @@ class HomeTab extends StatelessWidget {
   );
 }
 
-/// Top of the home page, on one row: the menu button, the search bar that takes the remaining width, and the bell.
+/// Top of the home page: a greeting between the menu button and the cart and bell buttons, then the search bar.
 /// Submitting the search lists the matching tours.
 class _BrandBar extends StatefulWidget {
   const _BrandBar();
@@ -361,71 +361,146 @@ class _BrandBarState extends State<_BrandBar> {
   Widget build(BuildContext context) {
     final activity = context.watch<ActivityController>();
     final badge = customerNoticeBadge(activity.bookings, activity.orders);
+    final cartCount = context.watch<CartController>().itemCount;
+    final name = context.watch<AppState>().claims?.name;
+    final firstName = name == null || name.trim().isEmpty ? null : name.trim().split(RegExp(r'\s+')).last;
     return Container(
       color: AppColors.cream,
-      padding: const EdgeInsets.fromLTRB(4, 10, 4, 10),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            key: const Key('home-menu'),
-            tooltip: 'Menu',
-            iconSize: 28,
-            onPressed: () => Scaffold.of(context).openDrawer(),
-            icon: const Icon(Icons.menu),
-          ),
-          Expanded(
-            child: Container(
-              height: 46,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: AppColors.paper,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: const Color(0xFFD3DDD2), width: 1.5),
+          Row(
+            children: [
+              _HeaderButton(
+                key: const Key('home-menu'),
+                tooltip: 'Menu',
+                icon: Icons.menu,
+                onPressed: () => Scaffold.of(context).openDrawer(),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.search, size: 22, color: AppColors.teaDark),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      key: const Key('home-search'),
-                      controller: _query,
-                      textInputAction: TextInputAction.search,
-                      style: const TextStyle(fontSize: 15),
-                      onSubmitted: _submit,
-                      decoration: const InputDecoration(
-                        hintText: 'Tìm đồi chè, trải nghiệm',
-                        hintMaxLines: 1,
-                        hintStyle: TextStyle(color: AppColors.faint, fontSize: 15, overflow: TextOverflow.ellipsis),
-                        isDense: true,
-                        filled: false,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      firstName == null ? 'Xin chào' : 'Xin chào, $firstName',
+                      key: const Key('home-greeting'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, color: AppColors.faint),
+                    ),
+                    Text(
+                      'Khám phá xứ chè',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: serif(20, height: 1.15),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _HeaderButton(
+                key: const Key('header-cart'),
+                tooltip: 'Giỏ hàng',
+                icon: Icons.shopping_basket_outlined,
+                badge: cartCount,
+                badgeColor: AppColors.teaDark,
+                onPressed: () => context.go('/shop/cart'),
+              ),
+              const SizedBox(width: 8),
+              _HeaderButton(
+                key: const Key('home-notifications'),
+                tooltip: 'Thông báo',
+                icon: Icons.notifications_none,
+                badge: badge,
+                badgeColor: AppColors.danger,
+                onPressed: () => context.push('/shop/notifications'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0xFFD3DDD2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.search, size: 22, color: AppColors.faint),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    key: const Key('home-search'),
+                    controller: _query,
+                    textInputAction: TextInputAction.search,
+                    style: const TextStyle(fontSize: 15),
+                    onSubmitted: _submit,
+                    decoration: const InputDecoration(
+                      hintText: 'Tìm đồi chè, trải nghiệm',
+                      hintMaxLines: 1,
+                      hintStyle: TextStyle(color: AppColors.faint, fontSize: 15, overflow: TextOverflow.ellipsis),
+                      isDense: true,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          IconButton(
-            key: const Key('home-notifications'),
-            tooltip: 'Thông báo',
-            iconSize: 28,
-            onPressed: () => context.push('/shop/notifications'),
-            icon: Badge(
-              isLabelVisible: badge > 0,
-              label: Text('$badge'),
-              backgroundColor: AppColors.danger,
-              child: const Icon(Icons.notifications_none),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+}
+
+/// A round tonal icon button of the home header, with an optional count badge.
+class _HeaderButton extends StatelessWidget {
+  const _HeaderButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+    this.badge = 0,
+    this.badgeColor = AppColors.danger,
+  });
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String? tooltip;
+  final int badge;
+  final Color badgeColor;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip ?? '',
+    child: Material(
+      color: Colors.white,
+      shape: const CircleBorder(side: BorderSide(color: Color(0xFFD3DDD2))),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Badge(
+              isLabelVisible: badge > 0,
+              label: Text('$badge'),
+              backgroundColor: badgeColor,
+              child: Icon(icon, size: 22, color: AppColors.teaDark),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Quick links to cart, orders and tickets under the category tiles.

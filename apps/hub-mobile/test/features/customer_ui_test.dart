@@ -119,16 +119,19 @@ void main() {
       expect(tours.where((t) => tourMatches(t)).length, 3);
     });
 
-    testWidgets('menu, search bar and bell share one row even on a narrow phone', (tester) async {
+    testWidgets('the header has a greeting row and a search bar below it, even on a narrow phone', (tester) async {
       await _pump(tester);
       tester.view.physicalSize = const Size(640, 2800);
       await _guest(tester);
       expect(tester.takeException(), isNull);
-      final logo = tester.getTopLeft(find.byKey(const Key('home-menu'))).dy;
+      final menu = tester.getTopLeft(find.byKey(const Key('home-menu'))).dy;
+      final cart = tester.getTopLeft(find.byKey(const Key('header-cart'))).dy;
+      final bell = tester.getTopLeft(find.byKey(const Key('home-notifications'))).dy;
       final search = tester.getTopLeft(find.byKey(const Key('home-search'))).dy;
-      final account = tester.getTopLeft(find.byKey(const Key('home-notifications'))).dy;
-      expect((search - logo).abs(), lessThan(24));
-      expect((account - logo).abs(), lessThan(24));
+      expect((cart - menu).abs(), lessThan(4));
+      expect((bell - menu).abs(), lessThan(4));
+      expect(search, greaterThan(menu + 40));
+      expect(find.text('Xin chào'), findsOneWidget);
     });
 
     testWidgets('the top of the home page shows featured tours as swipeable cards', (tester) async {
