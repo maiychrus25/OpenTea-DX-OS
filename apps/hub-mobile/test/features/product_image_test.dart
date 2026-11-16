@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +32,14 @@ void main() {
         );
         expect(tester.takeException(), isNull, reason: 'seed $seed size $size');
       }
+    }
+  });
+
+  test('the five demo products have a picture file', () {
+    for (var n = 1; n <= 5; n++) {
+      final f = File('assets/images/products/prod-0$n.jpg');
+      expect(f.existsSync(), isTrue, reason: f.path);
+      expect(f.lengthSync(), greaterThan(50 * 1024));
     }
   });
 

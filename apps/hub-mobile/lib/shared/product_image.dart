@@ -18,7 +18,7 @@ class ProductImage extends StatelessWidget {
   const ProductImage({super.key, required this.seed, this.productId, this.height, this.width, this.radius = 14});
   final int seed;
 
-  /// When a picture named after the product exists in assets/images/products (prod-01.png), it is shown instead of the
+  /// When a picture named after the product exists in assets/images/products (prod-01.jpg), it is shown instead of the
   /// drawing; without the file the drawing stays.
   final String? productId;
   final double? height;
@@ -34,7 +34,7 @@ class ProductImage extends StatelessWidget {
       child: productId == null
           ? CustomPaint(painter: _ProductPainter(seed.abs()))
           : Image.asset(
-              'assets/images/products/$productId.png',
+              'assets/images/products/$productId.jpg',
               fit: BoxFit.cover,
               errorBuilder: (context, error, stack) => CustomPaint(painter: _ProductPainter(seed.abs())),
             ),
