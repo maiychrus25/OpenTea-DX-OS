@@ -80,40 +80,42 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     });
   }
 
-  /// The open departures of the tour, to pick the start date from.
-  Future<void> _pickDate(List<Departure> open) async {
-    final picked = await showModalBottomSheet<Departure>(
+  /// A month calendar where only the days of the open departures can be chosen. With [end] the calendar picks the
+  /// last day of the tour (start + length - 1); either way the choice sets the departure.
+  Future<void> _pickDate(List<Departure> open, Departure current, int days, {required bool end}) async {
+    if (open.isEmpty) return;
+    DateTime dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
+    final shift = Duration(days: end ? days - 1 : 0);
+    final byDay = {for (final d in open) dayOf(d.date.add(shift)): d};
+    final days0 = byDay.keys.toList()..sort();
+    final now = dayOf(current.date.add(shift));
+    final picked = await showDatePicker(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Chọn ngày khởi hành',
-                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: AppColors.ink),
-              ),
-              const SizedBox(height: 8),
-              for (final d in open)
-                ListTile(
-                  key: Key('pick-${d.id}'),
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_month_outlined, color: AppColors.teaDark),
-                  title: Text(_fullDate(d.date), style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text('Còn ${d.seatsLeft} chỗ'),
-                  trailing: d.id == _depId ? const Icon(Icons.check_circle, color: AppColors.teaDark) : null,
-                  onTap: () => Navigator.of(sheet).pop(d),
-                ),
-            ],
+      initialDate: byDay.containsKey(now) ? now : days0.first,
+      firstDate: days0.first,
+      lastDate: days0.last,
+      selectableDayPredicate: (d) => byDay.containsKey(dayOf(d)),
+      helpText: end ? 'Chọn ngày về' : 'Chọn ngày đi',
+      cancelText: 'Huỷ',
+      confirmText: 'Chọn',
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: Theme.of(context).colorScheme.copyWith(primary: AppColors.teaDark, onPrimary: Colors.white),
+          datePickerTheme: DatePickerThemeData(
+            backgroundColor: Colors.white,
+            headerBackgroundColor: _band,
+            headerForegroundColor: AppColors.ink,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           ),
         ),
+        child: child!,
       ),
     );
-    if (picked != null) _selectDeparture(picked);
+    if (picked != null) {
+      final d = byDay[dayOf(picked)];
+      if (d != null) _selectDeparture(d);
+    }
   }
 
   Future<void> _submit(Tour tour, Departure dep) async {
@@ -190,7 +192,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                                 key: const Key('booking-from'),
                                 label: 'Từ ngày',
                                 value: _fullDate(dep.date),
-                                onTap: () => _pickDate(open),
+                                onTap: () => _pickDate(open, dep, days, end: false),
                               ),
                             ),
                             const SizedBox(width: 14),
@@ -199,7 +201,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                                 key: const Key('booking-to'),
                                 label: 'Đến ngày',
                                 value: _fullDate(end),
-                                onTap: () => _pickDate(open),
+                                onTap: () => _pickDate(open, dep, days, end: true),
                               ),
                             ),
                           ],

@@ -179,6 +179,7 @@ All versions are pinned exactly in `pubspec.yaml`; `pubspec.lock` pins the trans
 | [flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage) | 11.2.0 | BSD-3-Clause | Refresh and access tokens in Android Keystore (AES key managed with [Tink](https://github.com/tink-crypto/tink-java) `tink-android` 1.23.0, Apache-2.0, no Play services) and the iOS Keychain. Pulls `flutter_secure_storage_darwin` 0.4.3, `_linux` 3.0.3, `_platform_interface` 2.1.1, `_web` 2.1.1 and `_windows` 4.2.2 (BSD-3-Clause) |
 | [http](https://pub.dev/packages/http) | 1.6.0 | BSD-3-Clause | HTTP client of `HttpHubRepository` (GraphQL calls to the core through the gateway); tests use its `MockClient` (pulls `http_parser` 4.1.2 and `typed_data` 1.4.0, BSD-3-Clause) |
 | [Be Vietnam Pro](https://github.com/bettergui/BeVietnamPro) font (Regular, Medium, SemiBold, Bold), bundled in `apps/hub-mobile/assets/fonts` | 1.002 (Google Fonts `ofl/bevietnampro`, fetched 2026-11-17) | OFL-1.1 | The sans-serif of the whole app; license text in `assets/fonts/OFL.txt` |
+| [flutter_localizations](https://api.flutter.dev/flutter/flutter_localizations/flutter_localizations-library.html) (Flutter SDK) | 3.41.7 | BSD-3-Clause | Vietnamese labels of the built-in widgets (the date picker of the booking screen). Pulls [intl](https://pub.dev/packages/intl) 0.20.2 (BSD-3-Clause) |
 
 ### Dev Dependencies
 

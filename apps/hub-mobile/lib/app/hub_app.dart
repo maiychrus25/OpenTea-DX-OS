@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -74,6 +75,10 @@ class _HubAppState extends State<HubApp> {
             debugShowCheckedModeBanner: false,
             theme: buildAppTheme(),
             routerConfig: _router,
+            // Vietnamese for the built-in widgets (date picker, text fields, dialogs).
+            locale: const Locale('vi'),
+            supportedLocales: const [Locale('vi'), Locale('en')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
           );
         },
       ),

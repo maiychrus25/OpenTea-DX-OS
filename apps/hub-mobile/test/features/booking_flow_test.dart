@@ -59,29 +59,48 @@ void main() {
       expect(_text(tester, 'booking-bar-total'), isNot(before));
     });
 
-    testWidgets('the start date is picked from the open departures and the end date follows the tour length', (
-      tester,
-    ) async {
+    testWidgets('the date boxes open a month calendar where only departure days can be chosen', (tester) async {
       await _openBooking(tester);
-      // tour-01 lasts one day: the start and the end are the same day.
-      final from = tester
+      String fromText() => tester
           .widget<Text>(find.descendant(of: find.byKey(const Key('booking-from')), matching: find.byType(Text)).last)
-          .data;
-      final to = tester
+          .data!;
+      String toText() => tester
           .widget<Text>(find.descendant(of: find.byKey(const Key('booking-to')), matching: find.byType(Text)).last)
-          .data;
-      expect(from, to);
+          .data!;
+      // tour-01 lasts one day: the start and the end are the same day.
+      expect(fromText(), toText());
       expect(tester.widget<Text>(find.byKey(const Key('booking-span'))).data, startsWith('1 ngày · '));
+
+      final deps = await MockHubRepository().listDepartures('tour-01');
+      final first = deps.firstWhere((d) => d.id == 'dep-01').date;
+      final second = deps.firstWhere((d) => d.id == 'dep-02').date;
+
       await tester.tap(find.byKey(const Key('booking-from')));
       await tester.pumpAndSettle();
-      expect(find.text('Chọn ngày khởi hành'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('pick-dep-02')));
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+      expect(find.text('Chọn ngày đi'), findsOneWidget);
+      if (second.month != first.month) {
+        await tester.tap(find.byIcon(Icons.chevron_right));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.descendant(of: find.byType(DatePickerDialog), matching: find.text('${second.day}')).last);
+      await tester.pump();
+      await tester.tap(find.text('Chọn'));
       await tester.pumpAndSettle();
-      expect(find.text('Chọn ngày khởi hành'), findsNothing);
-      final after = tester
-          .widget<Text>(find.descendant(of: find.byKey(const Key('booking-from')), matching: find.byType(Text)).last)
-          .data;
-      expect(after, isNot(from));
+      expect(find.byType(DatePickerDialog), findsNothing);
+      String two(int n) => n.toString().padLeft(2, '0');
+      expect(fromText(), '${two(second.day)}/${two(second.month)}/${second.year}');
+      expect(toText(), fromText());
+    });
+
+    testWidgets('the end date box opens the same calendar, titled for the return day', (tester) async {
+      await _openBooking(tester);
+      await tester.tap(find.byKey(const Key('booking-to')));
+      await tester.pumpAndSettle();
+      expect(find.text('Chọn ngày về'), findsOneWidget);
+      await tester.tap(find.text('Huỷ'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DatePickerDialog), findsNothing);
     });
 
     testWidgets('the bar shows the number of guests', (tester) async {

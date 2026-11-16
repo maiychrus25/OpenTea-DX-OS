@@ -55,7 +55,7 @@ void main() {
       await tester.tap(find.byKey(const Key('trips-orders')));
       await tester.pumpAndSettle();
       expect(find.text('Đơn hàng của tôi'), findsWidgets);
-      await tester.pageBack();
+      await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('trips-find')));
       await tester.tap(find.byKey(const Key('trips-find')));
