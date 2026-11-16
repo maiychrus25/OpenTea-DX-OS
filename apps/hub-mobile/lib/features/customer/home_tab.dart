@@ -184,80 +184,100 @@ class HomeTab extends StatelessWidget {
     ),
   );
 
-  Widget _tourCarousel(BuildContext context, List<Tour> tours) => SizedBox(
-    height: 292,
-    child: ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      itemCount: tours.length,
-      separatorBuilder: (_, _) => const SizedBox(width: 14),
-      itemBuilder: (context, i) {
-        final t = tours[i];
-        return SizedBox(
-          width: 270,
-          child: InkWell(
-            key: Key('home-tour-${t.id}'),
-            borderRadius: BorderRadius.circular(22),
-            onTap: () => context.push('/shop/tours/${t.id}'),
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TeaPhoto(
-                    asset: teaPhotoFor(t.gradientSeed),
-                    height: 140,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Align(alignment: Alignment.topLeft, child: PhotoBadge(t.durationLabel)),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(t.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: serif(17, height: 1.25)),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text.rich(
-                                TextSpan(
-                                  children: [
-                                    const TextSpan(
-                                      text: 'Từ ',
-                                      style: TextStyle(color: AppColors.faint, fontSize: 12),
-                                    ),
-                                    TextSpan(
-                                      text: formatVnd(t.adultPrice),
-                                      style: const TextStyle(
-                                        color: Color(0xFF8A3D06),
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const TagPill('Xem ›', amber: true),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+  /// Tour cards in a horizontal row. The row is as tall as its tallest card (no fixed height), so no card is left with
+  /// empty space under its content, and every card holds the same lines: name, months, price.
+  Widget _tourCarousel(BuildContext context, List<Tour> tours) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    padding: const EdgeInsets.symmetric(horizontal: 18),
+    child: IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < tours.length; i++) ...[
+            if (i > 0) const SizedBox(width: 14),
+            SizedBox(width: 270, child: _tourCard(context, tours[i])),
+          ],
+        ],
+      ),
+    ),
+  );
+
+  Widget _tourCard(BuildContext context, Tour t) => InkWell(
+    key: Key('home-tour-${t.id}'),
+    borderRadius: BorderRadius.circular(22),
+    onTap: () => context.push('/shop/tours/${t.id}'),
+    child: Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TeaPhoto(
+            asset: teaPhotoFor(t.gradientSeed),
+            height: 140,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Align(alignment: Alignment.topLeft, child: PhotoBadge(t.durationLabel)),
             ),
           ),
-        );
-      },
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(t.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: serif(17, height: 1.25)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_month_outlined, size: 15, color: AppColors.muted),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        t.bestMonths,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            const TextSpan(
+                              text: 'Từ ',
+                              style: TextStyle(color: AppColors.faint, fontSize: 12),
+                            ),
+                            TextSpan(
+                              text: formatVnd(t.adultPrice),
+                              style: const TextStyle(
+                                color: Color(0xFF8A3D06),
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const TagPill('Xem ›', amber: true),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     ),
   );
 
