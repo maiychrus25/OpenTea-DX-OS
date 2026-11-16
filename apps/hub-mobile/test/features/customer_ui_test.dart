@@ -200,8 +200,12 @@ void main() {
       await tester.tap(find.byKey(const Key('tour-tour-01')));
       await tester.pumpAndSettle();
       expect(find.text('Giá từ'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('tour-tab-0')));
+      await tester.pumpAndSettle();
       expect(find.text('Mức độ'), findsOneWidget);
       await tester.ensureVisible(find.textContaining('Hộ bà Lan'));
+      // Lift the row above the floating booking bar before tapping it.
+      await tester.drag(find.byType(ListView).first, const Offset(0, -200));
       await tester.pumpAndSettle();
       await tester.tap(find.textContaining('Hộ bà Lan'));
       await tester.pumpAndSettle();

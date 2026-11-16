@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -35,6 +35,7 @@ import '../../features/staff/htx_pages.dart';
 import '../../features/staff/staff_shell.dart';
 import '../../shared/widgets.dart' show InnerPage;
 import '../role/role.dart';
+import '../theme/app_theme.dart';
 
 /// Decides redirects for the router: login page first, then role rules.
 String? appRedirect(AppState state, Uri uri) {
@@ -42,6 +43,12 @@ String? appRedirect(AppState state, Uri uri) {
   if (!state.welcomeDone && path != '/login') return '/login';
   return redirectFor(state.role, uri.toString());
 }
+
+/// A full-screen page for a screen made to live inside the shell (it brings no Scaffold of its own).
+Widget _page(Widget child) => Scaffold(
+  backgroundColor: AppColors.cream,
+  body: SafeArea(child: child),
+);
 
 Page<void> _noAnim(Widget child, GoRouterState s) => NoTransitionPage(key: s.pageKey, child: child);
 
@@ -72,18 +79,6 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         tab('/shop/me', const InnerPage(title: 'Tài khoản', child: CustomerAccountTab())),
         tab('/shop/notifications', const CustomerNotificationsScreen()),
         tab('/shop/news', const NewsScreen()),
-        GoRoute(
-          path: '/shop/tours/:id',
-          pageBuilder: (c, s) => _noAnim(TourDetailScreen(tourId: s.pathParameters['id']!), s),
-        ),
-        GoRoute(
-          path: '/shop/htx/:code',
-          pageBuilder: (c, s) => _noAnim(HtxScreen(code: s.pathParameters['code']!), s),
-        ),
-        GoRoute(
-          path: '/shop/farm/:id',
-          pageBuilder: (c, s) => _noAnim(HouseholdScreen(id: s.pathParameters['id']!), s),
-        ),
       ]),
       GoRoute(
         path: '/shop/visit',
@@ -96,6 +91,20 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
           code: s.uri.queryParameters['code'] ?? '',
           target: s.uri.queryParameters['to'] ?? 'HTX Chè Tân Cương',
         ),
+      ),
+      // Pages opened from a tour are full screen too, so they stack above it.
+      GoRoute(
+        path: '/shop/htx/:code',
+        builder: (c, s) => _page(HtxScreen(code: s.pathParameters['code']!)),
+      ),
+      GoRoute(
+        path: '/shop/farm/:id',
+        builder: (c, s) => _page(HouseholdScreen(id: s.pathParameters['id']!)),
+      ),
+      // Full screen, without the bottom bar, like the approved design.
+      GoRoute(
+        path: '/shop/tours/:id',
+        builder: (c, s) => TourDetailScreen(tourId: s.pathParameters['id']!),
       ),
       GoRoute(
         path: '/shop/booking/:tourId',

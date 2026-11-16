@@ -57,6 +57,7 @@ class _HubAppState extends State<HubApp> {
     return MultiProvider(
       providers: [
         Provider<HubRepository>.value(value: widget.repository),
+        Provider<LocalStore>.value(value: widget.store),
         ChangeNotifierProvider<AppState>.value(value: _state),
         ChangeNotifierProvider<CartController>.value(value: _cart),
         ChangeNotifierProvider<ActivityController>.value(value: _activity),

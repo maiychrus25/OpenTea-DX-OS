@@ -34,10 +34,11 @@ Future<void> _openTour(WidgetTester tester, {String? email}) async {
 
 void main() {
   group('Book tour bar', () {
-    testWidgets('is visible without scrolling and does not show a price yet', (tester) async {
+    testWidgets('floats at the bottom with the starting price and Đặt ngay', (tester) async {
       await _openTour(tester, email: 'customer@demo.vn');
       expect(find.byKey(const Key('tour-book')), findsOneWidget);
-      expect(find.text('Đặt tour'), findsWidgets);
+      expect(find.text('Đặt ngay'), findsOneWidget);
+      expect(find.text('Giá từ'), findsOneWidget);
       expect(find.byKey(const Key('booking-bar-total')), findsNothing);
       expect(find.textContaining('Tạm tính'), findsNothing);
     });
@@ -62,9 +63,48 @@ void main() {
 
     testWidgets('the household visit request stays reachable as a secondary action', (tester) async {
       await _openTour(tester, email: 'customer@demo.vn');
+      await tester.tap(find.byKey(const Key('tour-tab-0')));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('tour-visit-request')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('tour-visit-request')), findsOneWidget);
+    });
+
+    testWidgets('the itinerary tab is open first and the tabs switch the content', (tester) async {
+      await _openTour(tester, email: 'customer@demo.vn');
+      expect(find.byKey(const Key('tour-itinerary')), findsOneWidget);
+      expect(find.text('Đón khách tại nhà văn hoá HTX'), findsOneWidget);
+      expect(find.text('Sáng sớm · 08:00'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('tour-tab-2')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('tour-includes')), findsOneWidget);
+      expect(find.text('Cơm trưa món địa phương'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('tour-tab-0')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('tour-itinerary')), findsNothing);
+      expect(find.text('Tháng đẹp'), findsOneWidget);
+    });
+
+    testWidgets('no fact cards for duration, pickup time or group size', (tester) async {
+      await _openTour(tester, email: 'customer@demo.vn');
+      expect(find.text('Thời lượng'), findsNothing);
+      expect(find.text('Giờ đón'), findsNothing);
+      expect(find.text('Nhóm tối đa'), findsNothing);
+    });
+
+    testWidgets('the heart saves the tour on the device and can be undone', (tester) async {
+      await _openTour(tester, email: 'customer@demo.vn');
+      expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+      await tester.tap(find.byKey(const Key('tour-save')));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.favorite), findsOneWidget);
+      expect(find.text('Đã lưu tour vào mục yêu thích'), findsOneWidget);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getStringList('saved-tours.v1'), ['tour-01']);
+      await tester.tap(find.byKey(const Key('tour-save')));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+      expect(prefs.getStringList('saved-tours.v1'), isEmpty);
     });
   });
 }

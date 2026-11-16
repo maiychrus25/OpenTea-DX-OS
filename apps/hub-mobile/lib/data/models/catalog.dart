@@ -58,6 +58,7 @@ class Tour {
     this.bestMonths = 'Quanh năm',
     this.level = 'Dễ',
     this.maxGuests = 12,
+    this.includes = const [],
   });
   final String id;
   final String htxCode;
@@ -79,6 +80,9 @@ class Tour {
   final String bestMonths;
   final String level;
   final int maxGuests;
+
+  /// What the price covers, as the cooperative lists it (shown under 'Bao gồm').
+  final List<String> includes;
 
   /// Whole-day or shorter tours; used by the "Trong ngày" filter.
   bool get isSameDay => !durationLabel.contains('đêm');

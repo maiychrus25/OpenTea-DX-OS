@@ -43,6 +43,14 @@ class SeedData {
       bestMonths: 'Th3 – Th5, Th9 – Th11',
       level: 'Dễ, hợp gia đình',
       maxGuests: 12,
+      includes: [
+        'Người dẫn của HTX suốt chuyến',
+        'Nón lá, gùi tre để hái chè',
+        'Sao chè, vò chè cùng gia đình nông dân',
+        'Cơm trưa món địa phương',
+        'Thưởng trà tại vườn',
+        'Đưa khách về điểm đón',
+      ],
       itinerary: [
         ItineraryDay(
           title: 'Một ngày tại đồi chè',
@@ -71,6 +79,13 @@ class SeedData {
       bestMonths: 'Quanh năm',
       level: 'Dễ',
       maxGuests: 8,
+      includes: [
+        'Một đêm homestay tại nhà vườn',
+        'Bữa tối và bữa sáng cùng gia đình',
+        'Người dẫn của HTX',
+        'Hái chè và sao chè',
+        'Thưởng trà buổi sáng',
+      ],
       itinerary: [
         ItineraryDay(
           title: 'Ngày 1: Đến đồi chè',
@@ -105,6 +120,13 @@ class SeedData {
       bestMonths: 'Th4 – Th6, Th10',
       level: 'Vừa sức',
       maxGuests: 15,
+      includes: [
+        'Người dẫn địa phương',
+        'Đi bộ lên vùng chè Shan Tuyết cổ thụ',
+        'Hái búp chè cổ thụ',
+        'Bữa trưa trên bản',
+        'Thưởng trà Shan Tuyết',
+      ],
       itinerary: [
         ItineraryDay(
           title: 'Rừng chè cổ thụ',
