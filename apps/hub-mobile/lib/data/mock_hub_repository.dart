@@ -166,7 +166,24 @@ class MockHubRepository implements HubRepository {
   @override
   Future<Booking> createBooking(NewBooking draft) async {
     final tour = await getTour(draft.tourId);
-    final index = _departures.indexWhere((d) => d.id == draft.departureId && d.tourId == draft.tourId);
+    var index = _departures.indexWhere((d) => d.id == draft.departureId && d.tourId == draft.tourId);
+    if (index < 0 && draft.date != null) {
+      // A day the customer picked: reuse the tour's departure on that day, or open one with the tour's capacity.
+      final day = DateTime(draft.date!.year, draft.date!.month, draft.date!.day);
+      final now = DateTime.now();
+      if (!day.isAfter(DateTime(now.year, now.month, now.day))) {
+        throw const HubException('Hãy chọn một ngày từ ngày mai trở đi');
+      }
+      index = _departures.indexWhere(
+        (d) => d.tourId == tour.id && d.date.year == day.year && d.date.month == day.month && d.date.day == day.day,
+      );
+      if (index < 0) {
+        _departures.add(
+          Departure(id: _nextId('dep'), tourId: tour.id, date: day, seatsTotal: tour.maxGuests, seatsTaken: 0),
+        );
+        index = _departures.length - 1;
+      }
+    }
     if (index < 0) throw const HubException('Không tìm thấy ngày khởi hành');
     final dep = _departures[index];
     final guests = draft.adults + draft.children;

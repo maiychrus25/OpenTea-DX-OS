@@ -38,6 +38,7 @@ class NewBooking {
     required this.children,
     this.email = '',
     this.note = '',
+    this.date,
   });
   final String customerId;
   final String tourId;
@@ -50,6 +51,10 @@ class NewBooking {
   /// Optional contact details the customer may add.
   final String email;
   final String note;
+
+  /// The day the customer wants to go. Used when [departureId] is empty: the tour then gets a departure on that day
+  /// (any day from tomorrow on), so customers are not tied to the dates the cooperative opened.
+  final DateTime? date;
 }
 
 /// Thrown for business-rule failures; [message] is Vietnamese and safe to show.

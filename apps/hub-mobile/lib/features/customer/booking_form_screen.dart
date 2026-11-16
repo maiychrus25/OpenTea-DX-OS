@@ -39,7 +39,9 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   final _phone = TextEditingController();
   final _note = TextEditingController();
   final _guestName = TextEditingController();
-  late String _depId = widget.departureId;
+
+  /// The first day of the trip. Any day from tomorrow on; null until the tour is loaded.
+  DateTime? _start;
   int _adults = 1;
   int _children = 0;
   bool _onBehalf = false;
@@ -67,34 +69,48 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       _emailBad ||
       (_onBehalf && _guestName.text.trim().isEmpty);
 
-  void _selectDeparture(Departure d) {
+  static DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
+  static DateTime get _tomorrow {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day + 1);
+  }
+
+  /// The tour's departure on [day], if the cooperative already opened one.
+  static Departure? _departureOn(List<Departure> all, DateTime day) {
+    for (final d in all) {
+      if (_dayOf(d.date) == day) return d;
+    }
+    return null;
+  }
+
+  static int _seatsOn(List<Departure> all, Tour tour, DateTime day) =>
+      _departureOn(all, day)?.seatsLeft ?? tour.maxGuests;
+
+  void _selectStart(DateTime day, List<Departure> all, Tour tour) {
+    final seats = _seatsOn(all, tour, day);
     setState(() {
-      _depId = d.id;
-      // Never keep more guests than the chosen date has seats.
-      while (_adults + _children > d.seatsLeft && _children > 0) {
+      _start = day;
+      // Never keep more guests than the chosen day has seats.
+      while (_adults + _children > seats && _children > 0) {
         _children--;
       }
-      while (_adults + _children > d.seatsLeft && _adults > 1) {
+      while (_adults + _children > seats && _adults > 1) {
         _adults--;
       }
     });
   }
 
-  /// A month calendar where only the days of the open departures can be chosen. With [end] the calendar picks the
-  /// last day of the tour (start + length - 1); either way the choice sets the departure.
-  Future<void> _pickDate(List<Departure> open, Departure current, int days, {required bool end}) async {
-    if (open.isEmpty) return;
-    DateTime dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
-    final shift = Duration(days: end ? days - 1 : 0);
-    final byDay = {for (final d in open) dayOf(d.date.add(shift)): d};
-    final days0 = byDay.keys.toList()..sort();
-    final now = dayOf(current.date.add(shift));
+  /// A month calendar from tomorrow on. With [end] it picks the last day of the tour and the first day follows.
+  Future<void> _pickDate(List<Departure> all, Tour tour, DateTime start, {required bool end}) async {
+    final shift = Duration(days: end ? tour.days - 1 : 0);
+    final first = _tomorrow.add(shift);
+    final last = _tomorrow.add(const Duration(days: 365));
+    final current = start.add(shift);
     final picked = await showDatePicker(
       context: context,
-      initialDate: byDay.containsKey(now) ? now : days0.first,
-      firstDate: days0.first,
-      lastDate: days0.last,
-      selectableDayPredicate: (d) => byDay.containsKey(dayOf(d)),
+      initialDate: current.isBefore(first) ? first : current,
+      firstDate: first,
+      lastDate: last,
       helpText: end ? 'Chọn ngày về' : 'Chọn ngày đi',
       cancelText: 'Huỷ',
       confirmText: 'Chọn',
@@ -112,13 +128,10 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         child: child!,
       ),
     );
-    if (picked != null) {
-      final d = byDay[dayOf(picked)];
-      if (d != null) _selectDeparture(d);
-    }
+    if (picked != null) _selectStart(_dayOf(picked).subtract(shift), all, tour);
   }
 
-  Future<void> _submit(Tour tour, Departure dep) async {
+  Future<void> _submit(Tour tour, Departure? dep, DateTime start) async {
     if (_invalid) {
       setState(() => _showErrors = true);
       return;
@@ -135,7 +148,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         NewBooking(
           customerId: userId,
           tourId: tour.id,
-          departureId: dep.id,
+          departureId: dep?.id ?? '',
+          date: start,
           contactName: contact,
           phone: _phone.text.trim(),
           email: _email.text.trim(),
@@ -164,15 +178,16 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         },
         builder: (context, data, _) {
           final (tour, htx, all) = data;
-          final open = all.where((d) => d.seatsLeft > 0).toList();
-          final dep = all.firstWhere(
-            (d) => d.id == _depId,
-            orElse: () => throw const HubException('Không tìm thấy ngày khởi hành'),
-          );
+          // The first day: the departure the customer came from, else tomorrow; then whatever they pick.
+          final opened = all.where((d) => d.id == widget.departureId).map((d) => _dayOf(d.date));
+          final start =
+              _start ?? (opened.isNotEmpty && opened.first.isAfter(DateTime.now()) ? opened.first : _tomorrow);
+          final dep = _departureOn(all, start);
+          final seats = _seatsOn(all, tour, start);
           final days = tour.days;
-          final end = dep.date.add(Duration(days: days - 1));
+          final end = start.add(Duration(days: days - 1));
           final guests = _adults + _children;
-          final canAdd = guests < dep.seatsLeft;
+          final canAdd = guests < seats;
           final total = _adults * tour.adultPrice + _children * tour.childPrice;
           return Stack(
             children: [
@@ -191,8 +206,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                               child: _DateBox(
                                 key: const Key('booking-from'),
                                 label: 'Từ ngày',
-                                value: _fullDate(dep.date),
-                                onTap: () => _pickDate(open, dep, days, end: false),
+                                value: _fullDate(start),
+                                onTap: () => _pickDate(all, tour, start, end: false),
                               ),
                             ),
                             const SizedBox(width: 14),
@@ -201,7 +216,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                                 key: const Key('booking-to'),
                                 label: 'Đến ngày',
                                 value: _fullDate(end),
-                                onTap: () => _pickDate(open, dep, days, end: true),
+                                onTap: () => _pickDate(all, tour, start, end: true),
                               ),
                             ),
                           ],
@@ -209,7 +224,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
                           child: Text(
-                            '$days ngày · ${_dayMonth(dep.date)} → ${_dayMonth(end)}',
+                            '$days ngày · ${_dayMonth(start)} → ${_dayMonth(end)}',
                             key: const Key('booking-span'),
                             style: const TextStyle(fontSize: 14, color: AppColors.muted),
                           ),
@@ -370,7 +385,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
                           ),
-                          onPressed: _busy ? null : () => _submit(tour, dep),
+                          onPressed: _busy ? null : () => _submit(tour, dep, start),
                           icon: const Icon(Icons.arrow_forward),
                           iconAlignment: IconAlignment.end,
                           label: const Text('Tiếp tục'),

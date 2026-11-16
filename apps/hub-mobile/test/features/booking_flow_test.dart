@@ -59,7 +59,7 @@ void main() {
       expect(_text(tester, 'booking-bar-total'), isNot(before));
     });
 
-    testWidgets('the date boxes open a month calendar where only departure days can be chosen', (tester) async {
+    testWidgets('the date boxes open a month calendar and a departure day can be chosen', (tester) async {
       await _openBooking(tester);
       String fromText() => tester
           .widget<Text>(find.descendant(of: find.byKey(const Key('booking-from')), matching: find.byType(Text)).last)
@@ -91,6 +91,33 @@ void main() {
       String two(int n) => n.toString().padLeft(2, '0');
       expect(fromText(), '${two(second.day)}/${two(second.month)}/${second.year}');
       expect(toText(), fromText());
+    });
+
+    testWidgets('a day without a departure can be chosen too, and the booking goes on that day', (tester) async {
+      await _openBooking(tester);
+      final deps = await MockHubRepository().listDepartures('tour-01');
+      final first = deps.firstWhere((d) => d.id == 'dep-01').date;
+      final free = first.add(const Duration(days: 1));
+      await tester.tap(find.byKey(const Key('booking-from')));
+      await tester.pumpAndSettle();
+      if (free.month != first.month) {
+        await tester.tap(find.byIcon(Icons.chevron_right));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.descendant(of: find.byType(DatePickerDialog), matching: find.text('${free.day}')).last);
+      await tester.pump();
+      await tester.tap(find.text('Chọn'));
+      await tester.pumpAndSettle();
+      String two(int n) => n.toString().padLeft(2, '0');
+      final from = tester
+          .widget<Text>(find.descendant(of: find.byKey(const Key('booking-from')), matching: find.byType(Text)).last)
+          .data;
+      expect(from, '${two(free.day)}/${two(free.month)}/${free.year}');
+      await tester.enterText(find.byKey(const Key('booking-phone')), '0912345678');
+      await tester.ensureVisible(find.byKey(const Key('booking-submit')));
+      await tester.tap(find.byKey(const Key('booking-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('pay-qr')), findsOneWidget);
     });
 
     testWidgets('the end date box opens the same calendar, titled for the return day', (tester) async {
