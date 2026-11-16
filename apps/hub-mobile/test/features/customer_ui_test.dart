@@ -9,7 +9,6 @@ import 'package:hub_mobile/data/local_store.dart';
 import 'package:hub_mobile/data/mock_hub_repository.dart';
 import 'package:hub_mobile/data/seed_data.dart';
 import 'package:hub_mobile/features/customer/tours_tab.dart';
-import 'package:hub_mobile/shared/widgets.dart' show LeafLogo;
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> _pump(WidgetTester tester) async {
@@ -120,12 +119,12 @@ void main() {
       expect(tours.where((t) => tourMatches(t)).length, 3);
     });
 
-    testWidgets('logo, search bar and account icon share one row even on a narrow phone', (tester) async {
+    testWidgets('menu, search bar and bell share one row even on a narrow phone', (tester) async {
       await _pump(tester);
       tester.view.physicalSize = const Size(640, 2800);
       await _guest(tester);
       expect(tester.takeException(), isNull);
-      final logo = tester.getTopLeft(find.byType(LeafLogo).first).dy;
+      final logo = tester.getTopLeft(find.byKey(const Key('home-menu'))).dy;
       final search = tester.getTopLeft(find.byKey(const Key('home-search'))).dy;
       final account = tester.getTopLeft(find.byKey(const Key('home-notifications'))).dy;
       expect((search - logo).abs(), lessThan(24));

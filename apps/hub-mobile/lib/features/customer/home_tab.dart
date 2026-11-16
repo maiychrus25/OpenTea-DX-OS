@@ -335,7 +335,7 @@ class HomeTab extends StatelessWidget {
   );
 }
 
-/// Top of the home page, on one row: the logo, the search bar that takes the remaining width, and the account icon.
+/// Top of the home page, on one row: the menu button, the search bar that takes the remaining width, and the bell.
 /// Submitting the search lists the matching tours.
 class _BrandBar extends StatefulWidget {
   const _BrandBar();
@@ -373,8 +373,6 @@ class _BrandBarState extends State<_BrandBar> {
             onPressed: () => Scaffold.of(context).openDrawer(),
             icon: const Icon(Icons.menu),
           ),
-          const LeafLogo(size: 36),
-          const SizedBox(width: 8),
           Expanded(
             child: Container(
               height: 46,
