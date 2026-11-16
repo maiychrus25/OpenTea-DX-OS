@@ -38,12 +38,6 @@ class HomeTab extends StatelessWidget {
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 10, 16, 0),
-                child: NoticeBanner(
-                  'Các nhãn "Nguồn" cho biết phần nào lấy từ lõi hoặc app khác khi cắm vào hệ sinh thái.',
-                ),
-              ),
               _brandRow(context),
               const _SearchPill(),
               _hero(context),

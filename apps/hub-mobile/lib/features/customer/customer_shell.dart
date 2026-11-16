@@ -29,15 +29,6 @@ class CustomerShell extends StatelessWidget {
   /// Every storefront screen is served by the sample repository until the
   /// Gian hàng mini-app exists; only the account page holds no shop data.
   @override
-  Widget build(BuildContext context) => RoleShell(
-    destinations: destinations,
-    location: location,
-    indexFor: indexFor,
-    child: Column(
-      children: [
-        if (!location.startsWith('/shop/me')) const SampleDataChip(),
-        Expanded(child: child),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) =>
+      RoleShell(destinations: destinations, location: location, indexFor: indexFor, child: child);
 }
