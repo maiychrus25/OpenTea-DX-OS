@@ -511,8 +511,12 @@ class RoleShell extends StatelessWidget {
     this.badges = const {},
     this.indexFor,
     this.roleLabel,
+    this.drawer,
   });
   final List<NavDestination> destinations;
+
+  /// Optional side menu opened with Scaffold.of(context).openDrawer().
+  final Widget? drawer;
 
   /// Overrides which tab is highlighted for [location] (pages under a tab).
   final int Function(String location)? indexFor;
@@ -534,6 +538,7 @@ class RoleShell extends StatelessWidget {
     if (index < 0) index = 0;
     return Scaffold(
       backgroundColor: AppColors.cream,
+      drawer: drawer,
       body: roleLabel == null
           ? SafeArea(bottom: false, child: child)
           : Column(

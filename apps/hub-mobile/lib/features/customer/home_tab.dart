@@ -421,11 +421,18 @@ class _BrandBarState extends State<_BrandBar> {
   @override
   Widget build(BuildContext context) => Container(
     color: AppColors.cream,
-    padding: const EdgeInsets.fromLTRB(16, 10, 6, 10),
+    padding: const EdgeInsets.fromLTRB(4, 10, 4, 10),
     child: Row(
       children: [
-        const LeafLogo(size: 42),
-        const SizedBox(width: 10),
+        IconButton(
+          key: const Key('home-menu'),
+          tooltip: 'Menu',
+          iconSize: 28,
+          onPressed: () => Scaffold.of(context).openDrawer(),
+          icon: const Icon(Icons.menu),
+        ),
+        const LeafLogo(size: 36),
+        const SizedBox(width: 8),
         Expanded(
           child: Container(
             height: 46,

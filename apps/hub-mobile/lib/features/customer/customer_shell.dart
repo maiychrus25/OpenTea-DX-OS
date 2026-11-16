@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../../shared/widgets.dart';
+import 'customer_drawer.dart';
 
 /// Bottom navigation of guest and customer: Khám phá, Tour, Lịch trình, Tài khoản.
 /// Cart, orders, tours and products live under "Khám phá".
@@ -29,6 +30,11 @@ class CustomerShell extends StatelessWidget {
   /// Every storefront screen is served by the sample repository until the
   /// Gian hàng mini-app exists; only the account page holds no shop data.
   @override
-  Widget build(BuildContext context) =>
-      RoleShell(destinations: destinations, location: location, indexFor: indexFor, child: child);
+  Widget build(BuildContext context) => RoleShell(
+    destinations: destinations,
+    location: location,
+    indexFor: indexFor,
+    drawer: CustomerDrawer(location: location),
+    child: child,
+  );
 }
