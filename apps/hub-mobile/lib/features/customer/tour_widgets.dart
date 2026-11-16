@@ -19,6 +19,8 @@ class PhotoBadge extends StatelessWidget {
     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(999)),
     child: Text(
       text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.ink),
     ),
   );
@@ -75,7 +77,10 @@ class TourCard extends StatelessWidget {
               height: 170,
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [PhotoBadge(htxName)]),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [Flexible(child: PhotoBadge(htxName))],
+                ),
               ),
             ),
             Padding(
