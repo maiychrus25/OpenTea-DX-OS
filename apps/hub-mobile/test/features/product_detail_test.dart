@@ -116,13 +116,30 @@ void main() {
       expect(find.textContaining('360.000'), findsWidgets);
     });
 
-    testWidgets('the page has the Order button only: no cart button and no arrow', (tester) async {
+    testWidgets('the product page has a cart button that opens the cart', (tester) async {
+      await _openProducts(tester, email: 'customer@demo.vn');
+      await tester.tap(find.byKey(const Key('product-prod-01')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('detail-cart')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('detail-cart')));
+      await tester.pumpAndSettle();
+      expect(find.text('Giỏ hàng đang trống'), findsOneWidget);
+    });
+
+    testWidgets('the order bar has the Order button only: no add-to-cart button and no arrow', (tester) async {
       await _openProducts(tester, email: 'customer@demo.vn');
       await tester.tap(find.byKey(const Key('product-prod-01')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('product-add')), findsNothing);
       expect(find.byKey(const Key('product-cart')), findsNothing);
-      expect(find.byIcon(Icons.shopping_cart_outlined), findsNothing);
+      // The cart icon lives in the page header, not in the order bar.
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('product-order')),
+          matching: find.byIcon(Icons.shopping_cart_outlined),
+        ),
+        findsNothing,
+      );
       expect(find.byIcon(Icons.add_shopping_cart), findsNothing);
       expect(
         find.descendant(of: find.byKey(const Key('product-order')), matching: find.byIcon(Icons.arrow_forward)),

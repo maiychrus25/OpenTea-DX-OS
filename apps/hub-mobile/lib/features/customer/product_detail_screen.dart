@@ -12,6 +12,7 @@ import '../../core/theme/app_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/cart.dart';
 import '../../data/models/catalog.dart';
+import '../../shared/cart_button.dart';
 import '../../shared/product_image.dart';
 import '../../shared/widgets.dart';
 import 'tour_widgets.dart';
@@ -108,6 +109,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               ),
                             ),
                           ),
+                        ),
+                        Positioned(
+                          top: top + 14,
+                          right: 16,
+                          child: const CartButton(size: 50, buttonKey: Key('detail-cart')),
                         ),
                       ],
                     ),
