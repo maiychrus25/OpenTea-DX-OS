@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import 'dart:typed_data';
+
 import 'hub_repository.dart';
 import 'models/booking.dart';
 import 'models/catalog.dart';
+import 'models/diagnosis.dart';
 import 'models/order.dart';
 import 'models/staff.dart';
 import 'staff_seed.dart';
@@ -24,6 +27,39 @@ class MockHubRepository implements HubRepository {
 
   @override
   bool get canRescheduleHarvest => true;
+
+  @override
+  bool get canDiagnose => true;
+
+  final _diagnoses = <DiagnosisReport>[];
+
+  // Sample classes of the tea model. The pick depends on the photo, so it is the same for the same picture; it is NOT
+  // a real classification.
+  static const _sampleDiseases = <(String, double)>[
+    ('Đốm nâu (Brown blight)', 0.91),
+    ('Thối búp (Bud blight)', 0.84),
+    ('Rầy xanh gây cháy lá', 0.72),
+    ('Lá khoẻ', 0.95),
+    ('Chưa chắc chắn', 0.41),
+  ];
+
+  @override
+  Future<DiagnosisReport> submitDiagnosis(Uint8List image, {String? parcelCode}) async {
+    final pick = _sampleDiseases[image.length % _sampleDiseases.length];
+    final report = DiagnosisReport(
+      id: 'dg-${_diagnoses.length + 1}',
+      diseaseName: pick.$1,
+      confidence: pick.$2,
+      submittedAt: _now,
+      parcelCode: parcelCode,
+      image: image,
+    );
+    _diagnoses.insert(0, report);
+    return report;
+  }
+
+  @override
+  Future<List<DiagnosisReport>> listDiagnoses() async => List.unmodifiable(_diagnoses);
 
   MockHubRepository({DateTime? now}) : _now = now ?? DateTime.now() {
     final today = DateTime(_now.year, _now.month, _now.day);

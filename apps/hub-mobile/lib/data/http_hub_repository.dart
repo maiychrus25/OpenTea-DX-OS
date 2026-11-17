@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import 'dart:typed_data';
+
 import 'core/core_exception.dart';
 import 'core/core_mappers.dart';
 import 'core/core_queries.dart';
@@ -9,6 +11,7 @@ import 'core/hub_api_client.dart';
 import 'hub_repository.dart';
 import 'models/booking.dart';
 import 'models/catalog.dart';
+import 'models/diagnosis.dart';
 import 'models/order.dart';
 import 'models/staff.dart';
 
@@ -57,6 +60,17 @@ class HttpHubRepository implements HubRepository {
   /// The harvest schedule routes (`/api/schedule/harvest`) do not accept Bearer tokens.
   @override
   bool get canRescheduleHarvest => false;
+
+  /// `/api/diagnosis` accepts the web session only: no photo is sent until the server takes the app's Bearer token.
+  @override
+  bool get canDiagnose => false;
+
+  @override
+  Future<DiagnosisReport> submitDiagnosis(Uint8List image, {String? parcelCode}) =>
+      throw const HubException('Chẩn đoán bằng ảnh chưa dùng được: máy chủ chưa nhận ảnh từ ứng dụng.');
+
+  @override
+  Future<List<DiagnosisReport>> listDiagnoses() async => const [];
 
   @override
   Future<HtxProfile> getHtxProfile(String htxCode) async {

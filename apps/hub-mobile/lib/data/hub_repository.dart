@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import 'dart:typed_data';
+
 import 'models/booking.dart';
 import 'models/catalog.dart';
+import 'models/diagnosis.dart';
 import 'models/order.dart';
 import 'models/staff.dart';
 
@@ -83,6 +86,10 @@ abstract class HubRepository {
   /// False when rejecting a diary entry has no Bearer route (real repository).
   bool get canRejectJournal;
 
+  /// Whether a leaf photo can be sent for diagnosis. False with the real repository until the server accepts the
+  /// app's Bearer token on `/api/diagnosis`.
+  bool get canDiagnose;
+
   /// False when changing a harvest date has no Bearer route (real repository).
   bool get canRescheduleHarvest;
 
@@ -115,6 +122,12 @@ abstract class HubRepository {
 
   // Farmer (own household only). Farmers have nothing to do with tours.
   Future<List<Product>> listHouseholdProducts(String householdId);
+
+  /// Sends a leaf photo and returns the disease name with its confidence. Never a treatment.
+  Future<DiagnosisReport> submitDiagnosis(Uint8List image, {String? parcelCode});
+
+  /// The reports this device sent in this session, newest first.
+  Future<List<DiagnosisReport>> listDiagnoses();
 
   // HTX manager / officer: products and product orders, never tours.
   Future<List<Order>> listOrders(String htxCode);

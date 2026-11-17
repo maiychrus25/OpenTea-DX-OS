@@ -11,6 +11,7 @@ import '../core/theme/app_theme.dart';
 import '../data/auth_service.dart';
 import '../data/hub_repository.dart';
 import '../data/local_store.dart';
+import '../shared/photo_source.dart';
 import 'activity_controller.dart';
 import 'app_state.dart';
 import 'cart_controller.dart';
@@ -18,10 +19,13 @@ import 'cart_controller.dart';
 /// Root widget. Everything it needs is passed in, so tests and the real
 /// backend can swap the implementations behind the interfaces.
 class HubApp extends StatefulWidget {
-  const HubApp({super.key, required this.repository, required this.auth, required this.store});
+  const HubApp({super.key, required this.repository, required this.auth, required this.store, this.photoSource});
   final HubRepository repository;
   final AuthService auth;
   final LocalStore store;
+
+  /// Camera and gallery. The system pickers by default; tests pass a fake.
+  final PhotoSource? photoSource;
 
   @override
   State<HubApp> createState() => _HubAppState();
@@ -29,6 +33,7 @@ class HubApp extends StatefulWidget {
 
 class _HubAppState extends State<HubApp> {
   late final AppState _state = AppState(widget.auth);
+  late final PhotoSource _photos = widget.photoSource ?? SystemPhotoSource();
   late final CartController _cart = CartController(widget.store);
   late final ActivityController _activity = ActivityController(widget.repository, widget.store);
   late final GoRouter _router = buildRouter(_state);
@@ -58,6 +63,7 @@ class _HubAppState extends State<HubApp> {
       providers: [
         Provider<HubRepository>.value(value: widget.repository),
         Provider<LocalStore>.value(value: widget.store),
+        Provider<PhotoSource>.value(value: _photos),
         ChangeNotifierProvider<AppState>.value(value: _state),
         ChangeNotifierProvider<CartController>.value(value: _cart),
         ChangeNotifierProvider<ActivityController>.value(value: _activity),

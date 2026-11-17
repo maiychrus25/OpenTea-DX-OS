@@ -39,6 +39,10 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Dùng camera để chụp ảnh lá chè nhận biết bệnh cây.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Chọn ảnh lá chè có sẵn trong máy để nhận biết bệnh cây.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

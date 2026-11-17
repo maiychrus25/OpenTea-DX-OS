@@ -27,6 +27,7 @@ import '../../features/customer/products_tab.dart';
 import '../../features/customer/tickets_screen.dart';
 import '../../features/customer/tour_detail_screen.dart';
 import '../../features/customer/tours_tab.dart';
+import '../../features/farmer/diagnosis_page.dart';
 import '../../features/farmer/farmer_screens.dart';
 import '../../features/manager/manager_screens.dart';
 import '../../features/operator/operator_screens.dart';
@@ -139,6 +140,7 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         tab('/farmer', const FarmerDashboard()),
         tab('/farmer/journal', const FarmerJournalPage()),
         tab('/farmer/schedule', const SchedulePage()),
+        tab('/farmer/scan', const DiagnosisPage()),
         tab('/farmer/bulletin', const BulletinPage()),
         tab('/farmer/notifications', const NotificationsPage()),
         tab('/farmer/parcels', const FarmerParcelsPage()),

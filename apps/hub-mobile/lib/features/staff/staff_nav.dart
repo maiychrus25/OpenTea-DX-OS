@@ -136,6 +136,7 @@ const _farmer = StaffNav(
   main: [
     MenuItem('Tổng quan', Icons.home_outlined, '/farmer'),
     MenuItem('Nhật ký đồng ruộng', Icons.description_outlined, '/farmer/journal'),
+    MenuItem('Quét bệnh cây', Icons.photo_camera_outlined, '/farmer/scan'),
     MenuItem('Lịch', Icons.calendar_month_outlined, '/farmer/schedule'),
     MenuItem('Bản tin', Icons.newspaper_outlined, '/farmer/bulletin'),
     MenuItem('Thông báo', Icons.notifications_none, '/farmer/notifications'),
@@ -146,7 +147,7 @@ const _farmer = StaffNav(
   bottom: [
     MenuItem('Tổng quan', Icons.home_outlined, '/farmer'),
     MenuItem('Nhật ký đồng ruộng', Icons.description_outlined, '/farmer/journal', bottomLabel: 'Nhật ký'),
-    MenuItem('Lịch', Icons.calendar_month_outlined, '/farmer/schedule'),
+    MenuItem('Quét bệnh cây', Icons.photo_camera_outlined, '/farmer/scan', bottomLabel: 'Quét'),
     MenuItem('Thông báo', Icons.notifications_none, '/farmer/notifications'),
     MenuItem('Hồ sơ', Icons.person_outline, '/farmer/me'),
   ],
