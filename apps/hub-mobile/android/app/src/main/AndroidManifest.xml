@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Network for HttpHubRepository (the core through the gateway). The sample repository needs none. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Live camera preview for the leaf scan (asked at run time, only when the farmer opens the camera). -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="Về Xứ Chè"
         android:name="${applicationName}"

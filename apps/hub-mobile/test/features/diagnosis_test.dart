@@ -91,7 +91,7 @@ class _FakePhotos implements PhotoSource {
   bool cancel = false;
 
   @override
-  Future<PickedPhoto?> takePhoto() async {
+  Future<PickedPhoto?> takePhoto(BuildContext context) async {
     camera++;
     return cancel ? null : PickedPhoto(bytes: _png, name: 'leaf.png');
   }

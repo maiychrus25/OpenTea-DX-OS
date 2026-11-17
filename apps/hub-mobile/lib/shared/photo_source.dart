@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/hub_repository.dart';
+import 'camera_capture_screen.dart';
 
 /// A photo taken with the camera or chosen from the gallery.
 class PickedPhoto {
@@ -15,15 +17,14 @@ class PickedPhoto {
 
 /// Where photos come from. The app uses the system camera; tests pass a fake.
 abstract class PhotoSource {
-  /// Opens the camera. Null when the person cancels.
-  Future<PickedPhoto?> takePhoto();
+  /// Opens the camera with a live preview. Null when the person cancels.
+  Future<PickedPhoto?> takePhoto(BuildContext context);
 
   /// Opens the gallery. Null when the person cancels.
   Future<PickedPhoto?> pickPhoto();
 }
 
-/// Uses the system camera and gallery pickers: no photo library permission is asked on Android, and iOS shows its own
-/// camera permission prompt (text in Info.plist).
+/// The camera shows a live preview inside the app (see [LiveCamera]); the gallery uses the system picker.
 class SystemPhotoSource implements PhotoSource {
   final ImagePicker _picker = ImagePicker();
 
@@ -39,7 +40,13 @@ class SystemPhotoSource implements PhotoSource {
   }
 
   @override
-  Future<PickedPhoto?> takePhoto() => _get(ImageSource.camera);
+  Future<PickedPhoto?> takePhoto(BuildContext context) {
+    // The root navigator, so the camera covers the whole screen, above the bars of the staff shell.
+    return Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push<PickedPhoto>(MaterialPageRoute(fullscreenDialog: true, builder: (_) => const CameraCaptureScreen()));
+  }
 
   @override
   Future<PickedPhoto?> pickPhoto() => _get(ImageSource.gallery);

@@ -55,7 +55,7 @@ class _DiagnosisPageState extends State<DiagnosisPage> {
     final source = context.read<PhotoSource>();
     setState(() => _busy = true);
     try {
-      final photo = await (camera ? source.takePhoto() : source.pickPhoto());
+      final photo = await (camera ? source.takePhoto(context) : source.pickPhoto());
       if (photo == null) return;
       final report = await repo.submitDiagnosis(photo.bytes, parcelCode: _parcelCode);
       if (!mounted) return;
