@@ -14,6 +14,7 @@ import '../../data/hub_repository.dart';
 import '../../data/models/catalog.dart';
 import '../../data/models/order.dart';
 import '../../shared/product_image.dart';
+import '../../shared/soft_card.dart';
 import '../../shared/widgets.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -79,7 +80,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget build(BuildContext context) {
     final cart = context.watch<CartController>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Thanh toán')),
+      appBar: AppBar(
+        leading: const SafeBackButton(fallback: '/shop/cart'),
+        title: const Text('Thanh toán'),
+      ),
       body: cart.isEmpty
           ? const EmptyState('Giỏ hàng đang trống')
           : ListView(

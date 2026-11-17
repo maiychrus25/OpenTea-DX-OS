@@ -83,6 +83,16 @@ void main() {
     expect(find.text('Tình trạng'), findsNothing);
   });
 
+  testWidgets('a ticket opened with go (right after paying) still has a way back', (tester) async {
+    await _open(tester, '/shop/tickets/bk-01');
+    expect(find.byKey(const Key('ticket-qr')), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('ticket-qr')), findsNothing);
+    expect(find.text('Lịch trình của tôi'), findsWidgets);
+  });
+
   testWidgets('the account page shows the counters and the shortcuts', (tester) async {
     await _open(tester, '/shop/me');
     // The counters are loaded when the page opens: the demo customer has one order and one ticket.

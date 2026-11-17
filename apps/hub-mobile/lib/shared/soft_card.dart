@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/theme/app_theme.dart';
 
@@ -103,4 +104,15 @@ class KeyValueRow extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Back button for a page that may have been opened with `go` (nothing to pop, e.g. right after paying):
+/// it then goes to [fallback] instead of doing nothing.
+class SafeBackButton extends StatelessWidget {
+  const SafeBackButton({super.key, required this.fallback});
+  final String fallback;
+
+  @override
+  Widget build(BuildContext context) =>
+      BackButton(onPressed: () => context.canPop() ? context.pop() : context.go(fallback));
 }

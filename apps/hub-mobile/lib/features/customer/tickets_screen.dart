@@ -34,7 +34,10 @@ class _TicketsScreenState extends State<TicketsScreen> {
   Widget build(BuildContext context) {
     final activity = context.watch<ActivityController>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Vé của tôi')),
+      appBar: AppBar(
+        leading: const SafeBackButton(fallback: '/shop/me'),
+        title: const Text('Vé của tôi'),
+      ),
       body: Column(
         children: [
           if (activity.offline) offlineBanner(),
@@ -168,7 +171,12 @@ class _TicketScreenState extends State<TicketScreen> {
   @override
   Widget build(BuildContext context) {
     final b = context.watch<ActivityController>().bookingById(bookingId);
-    if (b == null) return Scaffold(appBar: AppBar(), body: const EmptyState('Không tìm thấy vé'));
+    if (b == null) {
+      return Scaffold(
+        appBar: AppBar(leading: const SafeBackButton(fallback: '/shop/trips')),
+        body: const EmptyState('Không tìm thấy vé'),
+      );
+    }
     final cancelled = b.status == BookingStatus.cancelled;
     final valid =
         !cancelled &&
@@ -177,7 +185,10 @@ class _TicketScreenState extends State<TicketScreen> {
             b.status == BookingStatus.completed);
     final needsPay = b.paymentStatus == PaymentStatus.unpaid && b.status != BookingStatus.cancelled;
     return Scaffold(
-      appBar: AppBar(title: const Text('Vé tham quan')),
+      appBar: AppBar(
+        leading: const SafeBackButton(fallback: '/shop/trips'),
+        title: const Text('Vé tham quan'),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [

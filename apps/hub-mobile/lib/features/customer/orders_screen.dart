@@ -33,7 +33,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Widget build(BuildContext context) {
     final activity = context.watch<ActivityController>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Đơn hàng của tôi')),
+      appBar: AppBar(
+        leading: const SafeBackButton(fallback: '/shop/me'),
+        title: const Text('Đơn hàng của tôi'),
+      ),
       body: Column(
         children: [
           if (activity.offline) const _OfflineBanner(),
@@ -192,12 +195,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final order = context.watch<ActivityController>().orderById(orderId);
-    if (order == null) return Scaffold(appBar: AppBar(), body: const EmptyState('Không tìm thấy đơn hàng'));
+    if (order == null) {
+      return Scaffold(
+        appBar: AppBar(leading: const SafeBackButton(fallback: '/shop/orders')),
+        body: const EmptyState('Không tìm thấy đơn hàng'),
+      );
+    }
     final cancelled = order.status == OrderStatus.cancelled;
     final current = _steps.indexOf(order.status);
     final needsPay = order.method == PaymentMethod.vietQr && order.paymentStatus == PaymentStatus.unpaid && !cancelled;
     return Scaffold(
-      appBar: AppBar(title: Text(order.code)),
+      appBar: AppBar(
+        leading: const SafeBackButton(fallback: '/shop/orders'),
+        title: Text(order.code),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
