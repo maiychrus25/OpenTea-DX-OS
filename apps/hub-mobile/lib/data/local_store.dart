@@ -21,7 +21,6 @@ class LocalStore {
 
   static const _cartKey = 'cart.v1';
   static const _sessionKey = 'session.v1';
-  static const _savedToursKey = 'saved-tours.v1';
   static String _ordersKey(String userId) => 'orders.v1.$userId';
   static String _bookingsKey(String userId) => 'bookings.v1.$userId';
 
@@ -36,14 +35,6 @@ class LocalStore {
   }
 
   Future<void> _writeList(String key, List<Map<String, Object?>> items) => _prefs.setString(key, jsonEncode(items));
-
-  /// Tours the customer marked with the heart on the tour page, kept on this device.
-  Set<String> savedTours() => (_prefs.getStringList(_savedToursKey) ?? const []).toSet();
-  Future<void> setTourSaved(String tourId, bool saved) {
-    final ids = savedTours();
-    saved ? ids.add(tourId) : ids.remove(tourId);
-    return _prefs.setStringList(_savedToursKey, ids.toList()..sort());
-  }
 
   List<CartLine> loadCart() => _readList(_cartKey, CartLine.fromJson);
   Future<void> saveCart(List<CartLine> lines) => _writeList(_cartKey, [for (final l in lines) l.toJson()]);

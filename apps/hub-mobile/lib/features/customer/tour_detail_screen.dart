@@ -9,7 +9,6 @@ import '../../app/app_state.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/hub_repository.dart';
-import '../../data/local_store.dart';
 import '../../data/models/catalog.dart';
 import '../../shared/cart_button.dart';
 import '../../shared/widgets.dart';
@@ -240,11 +239,6 @@ class _Hero extends StatelessWidget {
           Positioned(
             top: top + 14,
             right: 16,
-            child: _SaveButton(tourId: tour.id),
-          ),
-          Positioned(
-            top: top + 14,
-            right: 76,
             child: const CartButton(size: 50, buttonKey: Key('tour-cart')),
           ),
           const Positioned(right: 4, bottom: 18, child: IgnorePointer(child: _Leaves())),
@@ -255,18 +249,11 @@ class _Hero extends StatelessWidget {
 }
 
 class _RoundButton extends StatelessWidget {
-  const _RoundButton({
-    required this.buttonKey,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.color,
-  });
+  const _RoundButton({required this.buttonKey, required this.icon, required this.label, required this.onTap});
   final Key buttonKey;
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -279,40 +266,9 @@ class _RoundButton extends StatelessWidget {
         key: buttonKey,
         customBorder: const CircleBorder(),
         onTap: onTap,
-        child: SizedBox(width: 50, height: 50, child: Icon(icon, size: 26, color: color ?? AppColors.ink)),
+        child: SizedBox(width: 50, height: 50, child: Icon(icon, size: 26, color: AppColors.ink)),
       ),
     ),
-  );
-}
-
-/// The heart: keeps the tour among the customer's saved tours on this device.
-class _SaveButton extends StatefulWidget {
-  const _SaveButton({required this.tourId});
-  final String tourId;
-  @override
-  State<_SaveButton> createState() => _SaveButtonState();
-}
-
-class _SaveButtonState extends State<_SaveButton> {
-  late bool _saved = context.read<LocalStore>().savedTours().contains(widget.tourId);
-
-  Future<void> _toggle() async {
-    final store = context.read<LocalStore>();
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _saved = !_saved);
-    await store.setTourSaved(widget.tourId, _saved);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(_saved ? 'Đã lưu tour vào mục yêu thích' : 'Đã bỏ khỏi mục yêu thích')));
-  }
-
-  @override
-  Widget build(BuildContext context) => _RoundButton(
-    buttonKey: const Key('tour-save'),
-    icon: _saved ? Icons.favorite : Icons.favorite_border,
-    color: _saved ? AppColors.danger : AppColors.ink,
-    label: _saved ? 'Bỏ yêu thích' : 'Yêu thích',
-    onTap: _toggle,
   );
 }
 
