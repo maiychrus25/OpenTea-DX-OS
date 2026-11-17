@@ -48,6 +48,16 @@ Tone parcelTone(ParcelStatus s) => switch (s) {
   ParcelStatus.draft => Tone.neutral,
 };
 
+/// The icon of a field activity in the diary.
+IconData activityIcon(ActivityType t) => switch (t) {
+  ActivityType.sowing => Icons.grass,
+  ActivityType.fertilizing => Icons.compost,
+  ActivityType.spraying => Icons.water_drop_outlined,
+  ActivityType.irrigation => Icons.shower_outlined,
+  ActivityType.harvest => Icons.content_cut,
+  ActivityType.other => Icons.edit_note,
+};
+
 Tone journalTone(JournalStatus s) => switch (s) {
   JournalStatus.pendingApproval => Tone.warn,
   JournalStatus.approved => Tone.ok,

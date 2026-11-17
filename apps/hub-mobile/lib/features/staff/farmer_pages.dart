@@ -64,12 +64,13 @@ class FarmerParcelsPage extends StatelessWidget {
                   for (final p in d.$1)
                     RowCard(
                       key: Key('parcel-${p.id}'),
+                      leading: const IconBadge(Icons.eco_outlined),
                       title: p.code,
                       subtitle: '${p.cropType} • ${fmtHa(p.areaHa)}',
                       meta: [
                         p.zone,
                         if (p.estimatedHarvestDate != null && p.status != ParcelStatus.harvested)
-                          'Thu hái dự kiến ${formatDate(p.estimatedHarvestDate!)}',
+                          'Thu hái dự kiến ${formatDate(p.estimatedHarvestDate!)} (${_inDays(p.estimatedHarvestDate!, now)})',
                       ].join(' · '),
                       trailing: Pill(p.status.label, tone: parcelTone(p.status)),
                       footer: _withdrawal(p, d.$2, now),
@@ -80,6 +81,12 @@ class FarmerParcelsPage extends StatelessWidget {
         );
       },
     );
+  }
+
+  static String _inDays(DateTime d, DateTime now) {
+    final n = daysUntil(d, now);
+    if (n < 0) return 'quá ${-n} ngày';
+    return n == 0 ? 'hôm nay' : 'còn $n ngày';
   }
 
   Widget? _withdrawal(Parcel p, List<JournalEntry> entries, DateTime now) {

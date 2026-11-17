@@ -500,6 +500,10 @@ class _JournalPageState extends State<JournalPage> {
               for (final e in shown)
                 RowCard(
                   key: Key('journal-${e.id}'),
+                  leading: IconBadge(
+                    activityIcon(e.activityType),
+                    tone: e.activityType == ActivityType.spraying ? Tone.warn : Tone.ok,
+                  ),
                   title: '${e.parcelCode} · ${e.activityType.label}',
                   subtitle: [e.cropType, if (e.activityDetail.isNotEmpty) e.activityDetail].join(' · '),
                   meta: '${formatDate(e.entryDate)} · ${e.performedBy}',

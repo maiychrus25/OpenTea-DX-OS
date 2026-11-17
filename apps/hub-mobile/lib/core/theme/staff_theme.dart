@@ -39,7 +39,12 @@ ThemeData buildStaffTheme() {
     surface: StaffColors.background,
     error: StaffColors.bad,
   );
-  final base = ThemeData(useMaterial3: true, colorScheme: scheme, scaffoldBackgroundColor: StaffColors.background);
+  final base = ThemeData(
+    useMaterial3: true,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: StaffColors.background,
+    fontFamily: 'BeVietnamPro',
+  );
   final rounded = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
   return base.copyWith(
     textTheme: base.textTheme.apply(bodyColor: StaffColors.ink, displayColor: StaffColors.ink),

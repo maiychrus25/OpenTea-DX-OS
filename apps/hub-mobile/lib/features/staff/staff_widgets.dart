@@ -22,6 +22,21 @@ Color toneSoft(Tone t) => switch (t) {
   Tone.neutral => StaffColors.neutralSoft,
 };
 
+/// A round soft-green badge holding an icon: the leading mark of a row (an activity, a parcel).
+class IconBadge extends StatelessWidget {
+  const IconBadge(this.icon, {super.key, this.tone = Tone.ok});
+  final IconData icon;
+  final Tone tone;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 42,
+    height: 42,
+    decoration: BoxDecoration(color: toneSoft(tone), shape: BoxShape.circle),
+    child: Icon(icon, size: 22, color: toneColor(tone)),
+  );
+}
+
 class Pill extends StatelessWidget {
   const Pill(this.label, {super.key, this.tone = Tone.neutral});
   final String label;
