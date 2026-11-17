@@ -186,6 +186,14 @@ void main() {
     expect(find.text('Chờ cán bộ HTX xác nhận'), findsOneWidget);
     expect(find.textContaining('không đưa ra cách chữa'), findsOneWidget);
     expect(find.byKey(const Key('scan-sample-note')), findsOneWidget);
+    // The frame stops on the photo taken; "Chụp lại" brings the live picture back.
+    expect(find.byKey(const Key('scan-frozen')), findsOneWidget);
+    expect(find.byKey(const Key('scan-camera')), findsNothing);
+    await tester.tap(find.byKey(const Key('scan-retake')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('scan-frozen')), findsNothing);
+    expect(find.byKey(const Key('scan-result')), findsNothing);
+    expect(find.byKey(const Key('scan-camera')), findsOneWidget);
   });
 
   testWidgets('when the camera cannot start the frame says why and can retry', (tester) async {

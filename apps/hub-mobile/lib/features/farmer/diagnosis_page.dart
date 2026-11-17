@@ -30,6 +30,9 @@ class DiagnosisPage extends StatefulWidget {
 class _DiagnosisPageState extends State<DiagnosisPage> {
   String? _parcelCode;
   DiagnosisReport? _result;
+
+  /// The photo just taken: it freezes the frame until the farmer chooses to take another.
+  Uint8List? _shot;
   bool _busy = false;
   List<DiagnosisReport> _history = const [];
   late final Future<List<Parcel>> _parcels;
@@ -87,6 +90,7 @@ class _DiagnosisPageState extends State<DiagnosisPage> {
         bytes = (await source.pickPhoto())?.bytes;
       }
       if (bytes == null) return;
+      if (mounted) setState(() => _shot = bytes);
       final report = await repo.submitDiagnosis(bytes, parcelCode: _parcelCode);
       if (!mounted) return;
       setState(() => _result = report);
@@ -140,7 +144,12 @@ class _DiagnosisPageState extends State<DiagnosisPage> {
             camera: _camera,
             ready: _cameraReady,
             error: _cameraError,
+            shot: _shot,
             busy: _busy,
+            onRetake: () => setState(() {
+              _shot = null;
+              _result = null;
+            }),
             onRetry: _startCamera,
             onShutter: () => _scan(camera: true),
             onGallery: () => _scan(camera: false),
@@ -187,7 +196,9 @@ class _Viewfinder extends StatelessWidget {
     required this.camera,
     required this.ready,
     required this.error,
+    required this.shot,
     required this.busy,
+    required this.onRetake,
     required this.onRetry,
     required this.onShutter,
     required this.onGallery,
@@ -195,7 +206,9 @@ class _Viewfinder extends StatelessWidget {
   final LiveCamera? camera;
   final bool ready;
   final String? error;
+  final Uint8List? shot;
   final bool busy;
+  final VoidCallback onRetake;
   final VoidCallback onRetry;
   final VoidCallback onShutter;
   final VoidCallback onGallery;
@@ -222,6 +235,7 @@ class _Viewfinder extends StatelessWidget {
                 children: [
                   const ColoredBox(color: Colors.black),
                   if (ready && camera != null) camera!.preview(),
+                  if (shot != null) Image.memory(shot!, key: const Key('scan-frozen'), fit: BoxFit.cover),
                   if (!ready && error == null) const Center(child: CircularProgressIndicator(color: StaffColors.lime)),
                   if (error != null)
                     Center(
@@ -262,30 +276,46 @@ class _Viewfinder extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          busy ? 'Đang phân tích ảnh…' : 'Đặt lá chè vào khung, chụp rõ nét, đủ sáng',
+          busy
+              ? 'Đang phân tích ảnh…'
+              : shot != null
+              ? 'Đã chụp. Chụp lại nếu ảnh chưa rõ.'
+              : 'Đặt lá chè vào khung, chụp rõ nét, đủ sáng',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white, height: 1.4),
         ),
         const SizedBox(height: 12),
-        GestureDetector(
-          key: const Key('scan-camera'),
-          onTap: ready && !busy ? onShutter : null,
-          child: Container(
-            width: 72,
-            height: 72,
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 4),
+        if (shot != null)
+          SizedBox(
+            height: 52,
+            child: FilledButton.icon(
+              key: const Key('scan-retake'),
+              style: FilledButton.styleFrom(backgroundColor: StaffColors.lime, foregroundColor: StaffColors.sidebar),
+              onPressed: busy ? null : onRetake,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Chụp lại'),
             ),
-            child: DecoratedBox(
+          )
+        else
+          GestureDetector(
+            key: const Key('scan-camera'),
+            onTap: ready && !busy ? onShutter : null,
+            child: Container(
+              width: 72,
+              height: 72,
+              padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: ready && !busy ? StaffColors.lime : Colors.white38,
+                border: Border.all(color: Colors.white, width: 4),
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ready && !busy ? StaffColors.lime : Colors.white38,
+                ),
               ),
             ),
           ),
-        ),
         TextButton.icon(
           key: const Key('scan-gallery'),
           style: TextButton.styleFrom(foregroundColor: Colors.white),
