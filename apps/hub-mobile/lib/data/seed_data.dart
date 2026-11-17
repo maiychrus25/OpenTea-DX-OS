@@ -149,6 +149,40 @@ class SeedData {
     ),
   ];
 
+  /// Demo notable places; the real ones come from the cooperative's own list.
+  static const sites = <Site>[
+    Site(
+      id: 'site-01',
+      htxCode: 'tan-cuong',
+      name: 'Đồi chè Tân Cương',
+      description: 'Những triền chè xanh xếp bậc thang, nơi du khách học cách hái một tôm hai lá.',
+    ),
+    Site(
+      id: 'site-02',
+      htxCode: 'tan-cuong',
+      name: 'Nhà văn hoá HTX',
+      description: 'Điểm đón khách, thưởng trà và nghe kể về nghề chè của vùng.',
+    ),
+    Site(
+      id: 'site-03',
+      htxCode: 'tan-cuong',
+      name: 'Xưởng sao chè của các hộ',
+      description: 'Xem sao chè trên chảo gang và vò chè thủ công cùng gia đình nông dân.',
+    ),
+    Site(
+      id: 'site-04',
+      htxCode: 'suoi-giang',
+      name: 'Rừng chè Shan Tuyết cổ thụ',
+      description: 'Những gốc chè hàng trăm tuổi mọc giữa sương núi, được bà con giữ gìn qua nhiều thế hệ.',
+    ),
+    Site(
+      id: 'site-05',
+      htxCode: 'suoi-giang',
+      name: 'Điểm ngắm mây Suối Giàng',
+      description: 'Nơi nhìn xuống biển mây buổi sáng sớm, hợp để dừng chân trước khi lên đồi chè.',
+    ),
+  ];
+
   static const households = <Household>[
     Household(
       id: 'hh-01',

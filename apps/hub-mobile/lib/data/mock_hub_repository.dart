@@ -85,6 +85,12 @@ class MockHubRepository implements HubRepository {
   Future<List<Htx>> listHtxs() async => SeedData.htxs;
 
   @override
+  Future<List<Site>> listSites(String htxCode) async => [
+    for (final s in SeedData.sites)
+      if (s.htxCode == htxCode) s,
+  ];
+
+  @override
   Future<Htx> getHtx(String code) async =>
       SeedData.htxs.firstWhere((h) => h.code == code, orElse: () => throw const HubException('Không tìm thấy HTX'));
 

@@ -20,6 +20,16 @@ class Htx {
   final String accountHolder;
 }
 
+/// A notable place a cooperative shows to visitors (a hill, a tea workshop, a viewpoint).
+/// It mirrors the `sites` of the tea-experience mini-app, without the coordinates.
+class Site {
+  const Site({required this.id, required this.htxCode, required this.name, required this.description});
+  final String id;
+  final String htxCode;
+  final String name;
+  final String description;
+}
+
 /// The travel company that runs every tour: prices, bookings, check-in and the
 /// money. Customers pay a booking into this account, not the cooperative's.
 class TourCompany {

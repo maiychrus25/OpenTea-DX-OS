@@ -212,6 +212,10 @@ class HttpHubRepository implements HubRepository {
   @override
   Future<Htx> getHtx(String code) => _shop.getHtx(code);
 
+  // Like the rest of the storefront, from the sample repository until the tea-experience mini-app serves JSON.
+  @override
+  Future<List<Site>> listSites(String htxCode) => _shop.listSites(htxCode);
+
   @override
   Future<List<Tour>> listTours({String? htxCode}) => _shop.listTours(htxCode: htxCode);
 

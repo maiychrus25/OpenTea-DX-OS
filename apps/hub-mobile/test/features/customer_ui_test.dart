@@ -259,6 +259,8 @@ void main() {
       expect(find.byKey(const Key('htx-tan-cuong')), findsOneWidget);
       await tester.tap(find.byKey(const Key('htx-tan-cuong')));
       await tester.pumpAndSettle();
+      expect(find.text('Điểm tham quan tiêu biểu'), findsOneWidget);
+      expect(find.byKey(const Key('site-site-01')), findsOneWidget);
       expect(find.text('Hộ nông dân'), findsOneWidget);
       // Information only: no links, no tours and no buttons to pick.
       expect(find.byType(LinkRow), findsNothing);

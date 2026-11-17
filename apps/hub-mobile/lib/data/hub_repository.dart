@@ -89,6 +89,9 @@ abstract class HubRepository {
   // Public (guest and everyone)
   Future<List<Htx>> listHtxs();
   Future<Htx> getHtx(String code);
+
+  /// Notable places of a cooperative that it chose to show publicly.
+  Future<List<Site>> listSites(String htxCode);
   Future<List<Tour>> listTours({String? htxCode});
   Future<Tour> getTour(String id);
   Future<List<Departure>> listDepartures(String tourId);
