@@ -33,6 +33,18 @@ Future<void> _openProducts(WidgetTester tester, {String? email}) async {
 }
 
 void main() {
+  testWidgets('the products page has a cart button with the item count that opens the cart', (tester) async {
+    await _openProducts(tester, email: 'customer@demo.vn');
+    expect(find.byKey(const Key('page-cart')), findsOneWidget);
+    expect(find.byType(Badge), findsWidgets);
+    await tester.tap(find.byKey(const Key('add-prod-01')));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byKey(const Key('page-cart')), matching: find.text('1')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('page-cart')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('cart-checkout')), findsOneWidget);
+  });
+
   group('product page with an order button', () {
     testWidgets('a product card opens the product page', (tester) async {
       await _openProducts(tester, email: 'customer@demo.vn');

@@ -34,6 +34,7 @@ import '../../features/staff/dashboards.dart';
 import '../../features/staff/farmer_pages.dart';
 import '../../features/staff/htx_pages.dart';
 import '../../features/staff/staff_shell.dart';
+import '../../shared/cart_button.dart';
 import '../../shared/widgets.dart' show InnerPage;
 import '../role/role.dart';
 import '../theme/app_theme.dart';
@@ -75,7 +76,7 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
           path: '/shop/tours',
           pageBuilder: (c, s) => _noAnim(ToursTab(query: s.uri.queryParameters['q'] ?? ''), s),
         ),
-        tab('/shop/products', const InnerPage(title: 'Sản phẩm', child: ProductsTab())),
+        tab('/shop/products', const InnerPage(title: 'Sản phẩm', trailing: CartButton(), child: ProductsTab())),
         tab('/shop/cart', const InnerPage(title: 'Giỏ hàng', child: CartTab())),
         tab('/shop/me', const InnerPage(title: 'Tài khoản', child: CustomerAccountTab())),
         tab('/shop/notifications', const CustomerNotificationsScreen()),
