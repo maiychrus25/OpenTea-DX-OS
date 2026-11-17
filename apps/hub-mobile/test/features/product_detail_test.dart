@@ -45,6 +45,15 @@ void main() {
       expect(find.byKey(const Key('product-total')), findsOneWidget);
     });
 
+    testWidgets('the unit sits on the same line as the price', (tester) async {
+      await _openProducts(tester, email: 'customer@demo.vn');
+      await tester.tap(find.byKey(const Key('product-prod-01')));
+      await tester.pumpAndSettle();
+      final price = tester.widget<Text>(find.byKey(const Key('product-price')));
+      expect(price.textSpan!.toPlainText(), contains(' / hộp 200 g'));
+      expect(find.text('/ hộp 200 g'), findsNothing);
+    });
+
     testWidgets('the quantity changes the total', (tester) async {
       await _openProducts(tester, email: 'customer@demo.vn');
       await tester.tap(find.byKey(const Key('product-prod-01')));

@@ -160,12 +160,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ],
                           ),
                           const SizedBox(height: 14),
-                          Text(
-                            formatVnd(p.price),
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: formatVnd(p.price),
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.teaDark,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: ' / ${p.unit}',
+                                  style: const TextStyle(fontSize: 16, color: AppColors.muted),
+                                ),
+                              ],
+                            ),
                             key: const Key('product-price'),
-                            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.teaDark),
                           ),
-                          Text('/ ${p.unit}', style: const TextStyle(fontSize: 14, color: AppColors.muted)),
                           const SizedBox(height: 16),
                           Container(
                             width: double.infinity,
