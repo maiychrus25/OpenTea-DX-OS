@@ -57,6 +57,26 @@ void main() {
     expect(find.descendant(of: find.byType(ProductImage), matching: find.byType(RawImage)), findsNothing);
   });
 
+  testWidgets('a home product card is as tall as its content, with the price right under the name', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    tester.view.physicalSize = const Size(800, 2800);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(HubApp(repository: MockHubRepository(), auth: DemoAuthService(store), store: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('login-guest')));
+    await tester.pumpAndSettle();
+    final list = find.descendant(of: find.byType(RefreshIndicator), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.byKey(const Key('home-product-prod-01')), 300, scrollable: list);
+    final card = tester.getSize(find.byKey(const Key('home-product-prod-01')));
+    final image = tester.getSize(find.byKey(const Key('home-product-image-prod-01')));
+    // The picture is a full square, and the card is not much taller than picture + name + unit + price.
+    expect(image.width, image.height);
+    expect(card.height, lessThan(image.height + 160));
+  });
+
   group('products have a picture', () {
     Future<void> openShop(WidgetTester tester) async {
       SharedPreferences.setMockInitialValues({});

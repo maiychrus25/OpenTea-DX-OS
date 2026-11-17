@@ -281,54 +281,64 @@ class HomeTab extends StatelessWidget {
     ),
   );
 
-  Widget _productStrip(BuildContext context, List<Product> products) => SizedBox(
-    height: 186,
-    child: ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      itemCount: products.length,
-      separatorBuilder: (_, _) => const SizedBox(width: 12),
-      itemBuilder: (context, i) {
-        final p = products[i];
-        return InkWell(
-          key: Key('home-product-${p.id}'),
-          borderRadius: BorderRadius.circular(18),
-          onTap: () => context.push('/shop/products/${p.id}'),
-          child: Container(
-            width: 148,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ProductImage(
-                  key: Key('home-product-image-${p.id}'),
-                  productId: p.id,
-                  seed: p.gradientSeed,
-                  height: 78,
-                  radius: 12,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  p.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, height: 1.2),
-                ),
-                const Spacer(),
-                Text(
-                  formatVnd(p.price),
-                  style: const TextStyle(color: Color(0xFF8A3D06), fontWeight: FontWeight.w800),
-                ),
-              ],
+  /// Product cards in a horizontal row: the whole picture, then the name, the unit and the price right under it. The
+  /// row is as tall as its tallest card, so there is no fixed height and no empty band inside a card.
+  Widget _productStrip(BuildContext context, List<Product> products) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    padding: const EdgeInsets.symmetric(horizontal: 18),
+    child: IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < products.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            SizedBox(width: 156, child: _productCard(context, products[i])),
+          ],
+        ],
+      ),
+    ),
+  );
+
+  Widget _productCard(BuildContext context, Product p) => InkWell(
+    key: Key('home-product-${p.id}'),
+    borderRadius: BorderRadius.circular(20),
+    onTap: () => context.push('/shop/products/${p.id}'),
+    child: Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: ProductImage(
+              key: Key('home-product-image-${p.id}'),
+              productId: p.id,
+              seed: p.gradientSeed,
+              radius: 14,
             ),
           ),
-        );
-      },
+          const SizedBox(height: 10),
+          Text(
+            p.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, height: 1.25, color: AppColors.ink),
+          ),
+          const SizedBox(height: 4),
+          Text(p.unit, style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+          const SizedBox(height: 4),
+          Text(
+            formatVnd(p.price),
+            style: const TextStyle(color: Color(0xFF8A3D06), fontWeight: FontWeight.w700, fontSize: 16),
+          ),
+        ],
+      ),
     ),
   );
 
