@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/cart_controller.dart';
@@ -29,44 +30,52 @@ class ProductsTab extends StatelessWidget {
             const PageTitle('Sản phẩm'),
             for (final p in products) ...[
               Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 84,
-                        child: ProductImage(
-                          key: Key('product-image-${p.id}'),
-                          productId: p.id,
-                          seed: p.gradientSeed,
-                          height: 84,
-                          radius: 16,
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  key: Key('product-${p.id}'),
+                  onTap: () => context.push('/shop/products/${p.id}'),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 84,
+                          child: ProductImage(
+                            key: Key('product-image-${p.id}'),
+                            productId: p.id,
+                            seed: p.gradientSeed,
+                            height: 84,
+                            radius: 16,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                            Text(p.unit, style: Theme.of(context).textTheme.bodySmall),
-                            const SizedBox(height: 4),
-                            Text(
-                              formatVnd(p.price),
-                              style: const TextStyle(color: Color(0xFF8A3D06), fontWeight: FontWeight.w800),
-                            ),
-                            if (p.stock == 0) const StatusChip('Hết hàng', color: AppColors.danger),
-                            if (p.stock > 0 && p.stock <= 5) StatusChip('Chỉ còn ${p.stock}', color: AppColors.amber),
-                          ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                              Text(p.unit, style: Theme.of(context).textTheme.bodySmall),
+                              const SizedBox(height: 4),
+                              Text(
+                                formatVnd(p.price),
+                                style: const TextStyle(color: Color(0xFF8A3D06), fontWeight: FontWeight.w800),
+                              ),
+                              if (p.stock == 0) const StatusChip('Hết hàng', color: AppColors.danger),
+                              if (p.stock > 0 && p.stock <= 5) StatusChip('Chỉ còn ${p.stock}', color: AppColors.amber),
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton.filled(
-                        style: IconButton.styleFrom(backgroundColor: AppColors.teaDark, foregroundColor: Colors.white),
-                        key: Key('add-${p.id}'),
-                        onPressed: p.stock == 0 ? null : () => _add(context, p),
-                        icon: const Icon(Icons.add_shopping_cart),
-                      ),
-                    ],
+                        IconButton.filled(
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppColors.teaDark,
+                            foregroundColor: Colors.white,
+                          ),
+                          key: Key('add-${p.id}'),
+                          onPressed: p.stock == 0 ? null : () => _add(context, p),
+                          icon: const Icon(Icons.add_shopping_cart),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

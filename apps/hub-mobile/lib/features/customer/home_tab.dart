@@ -293,7 +293,7 @@ class HomeTab extends StatelessWidget {
         return InkWell(
           key: Key('home-product-${p.id}'),
           borderRadius: BorderRadius.circular(18),
-          onTap: () => context.push('/shop/products'),
+          onTap: () => context.push('/shop/products/${p.id}'),
           child: Container(
             width: 148,
             padding: const EdgeInsets.all(10),

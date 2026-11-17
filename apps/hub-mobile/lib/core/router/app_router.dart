@@ -9,6 +9,7 @@ import '../../app/app_state.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/customer/booking_form_screen.dart';
 import '../../features/customer/notifications_screen.dart';
+import '../../features/customer/product_detail_screen.dart';
 import '../../features/customer/cart_tab.dart';
 import '../../features/customer/home_tab.dart';
 import '../../features/customer/household_screen.dart';
@@ -100,6 +101,10 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
       GoRoute(
         path: '/shop/farm/:id',
         builder: (c, s) => _page(HouseholdScreen(id: s.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/shop/products/:id',
+        builder: (c, s) => ProductDetailScreen(productId: s.pathParameters['id']!),
       ),
       // Full screen, without the bottom bar, like the approved design.
       GoRoute(
