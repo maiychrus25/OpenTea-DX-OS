@@ -149,7 +149,7 @@ void main() {
     expect(find.text(SeedData.tourCompany.accountHolder), findsOneWidget);
     expect(find.text(SeedData.tourCompany.bankAccount), findsOneWidget);
     expect(find.text('MB'), findsOneWidget);
-    expect(find.textContaining('Công ty du lịch xác nhận khi tiền về'), findsOneWidget);
+    expect(find.textContaining('Vé được xác nhận ngay'), findsOneWidget);
     expect(find.text('HTX CHE TAN CUONG'), findsNothing);
     expect(find.text('8600201001234'), findsNothing);
   });

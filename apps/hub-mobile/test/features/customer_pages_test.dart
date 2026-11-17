@@ -69,6 +69,20 @@ void main() {
     expect(find.text('Thông tin đặt chỗ'), findsOneWidget);
   });
 
+  testWidgets('the ticket page has no status chip or status row', (tester) async {
+    await _open(tester, '/shop/tickets');
+    await tester.tap(
+      find
+          .byWidgetPredicate(
+            (w) => w.key is ValueKey<String> && (w.key as ValueKey<String>).value.startsWith('ticket-'),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Đã xác nhận'), findsNothing);
+    expect(find.text('Tình trạng'), findsNothing);
+  });
+
   testWidgets('the account page shows the counters and the shortcuts', (tester) async {
     await _open(tester, '/shop/me');
     // The counters are loaded when the page opens: the demo customer has one order and one ticket.

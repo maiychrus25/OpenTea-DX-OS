@@ -9,9 +9,7 @@ import '../../app/activity_controller.dart';
 import '../../app/app_state.dart';
 import '../../core/format/formatting.dart';
 import '../../core/theme/app_theme.dart';
-import '../../data/models/booking.dart';
 import '../../shared/widgets.dart';
-import '../common/status_colors.dart';
 
 /// "Lịch trình": the customer's own bookings (tickets).
 class TripsTab extends StatefulWidget {
@@ -93,8 +91,6 @@ class _TripsTabState extends State<TripsTab> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
-                            StatusChip(b.status.label, color: bookingStatusColor(b.status)),
                           ],
                         ),
                       ),

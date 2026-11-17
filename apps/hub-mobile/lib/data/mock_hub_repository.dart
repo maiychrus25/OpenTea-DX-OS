@@ -243,8 +243,9 @@ class MockHubRepository implements HubRepository {
     }
     final bi = _bookings.indexWhere((b) => b.code == reference);
     if (bi < 0) throw const HubException('Không tìm thấy mã');
+    // A tour booking is confirmed as soon as the customer says the money was sent.
     if (_bookings[bi].paymentStatus == PaymentStatus.unpaid) {
-      _bookings[bi] = _bookings[bi].copyWith(paymentStatus: PaymentStatus.claimed);
+      _bookings[bi] = _bookings[bi].copyWith(paymentStatus: PaymentStatus.paid, status: BookingStatus.confirmed);
     }
   }
 

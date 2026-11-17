@@ -107,7 +107,7 @@ class PaymentScreen extends StatelessWidget {
                     Text(
                       isBooking
                           ? 'Tiền tour chuyển thẳng vào tài khoản của ${payee.name}. '
-                                'Công ty du lịch xác nhận khi tiền về.'
+                                'Vé được xác nhận ngay khi bạn bấm "Tôi đã chuyển khoản".'
                           : 'Tiền hàng chuyển thẳng vào tài khoản của ${payee.name}. '
                                 'Hợp tác xã xác nhận khi tiền về.',
                       key: const Key('pay-receiver-note'),
@@ -118,18 +118,23 @@ class PaymentScreen extends StatelessWidget {
                         key: const Key('pay-claim'),
                         onPressed: () async {
                           final sent = await context.read<ActivityController>().claimPayment(code);
-                          if (context.mounted) {
-                            showMessage(
-                              context,
-                              sent
-                                  ? 'Đã báo $who. $who sẽ xác nhận khi tiền về.'
-                                  : 'Chưa có mạng: đã lưu trong máy, sẽ báo ${who.toLowerCase()} sau.',
-                            );
+                          if (!context.mounted) return;
+                          if (isBooking) {
+                            // A tour ticket is confirmed at once: go and show it.
+                            showMessage(context, 'Đã xác nhận. Vé của bạn đã sẵn sàng.');
+                            context.go('/shop/tickets/${booking!.id}');
+                            return;
                           }
+                          showMessage(
+                            context,
+                            sent
+                                ? 'Đã báo $who. $who sẽ xác nhận khi tiền về.'
+                                : 'Chưa có mạng: đã lưu trong máy, sẽ báo ${who.toLowerCase()} sau.',
+                          );
                         },
                         child: const Text('Tôi đã chuyển khoản'),
                       )
-                    else
+                    else if (!isBooking)
                       Center(child: StatusChip(status!.label)),
                     TextButton(
                       onPressed: () =>

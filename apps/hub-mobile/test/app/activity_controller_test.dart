@@ -6,6 +6,7 @@ import 'package:hub_mobile/app/activity_controller.dart';
 import 'package:hub_mobile/data/hub_repository.dart';
 import 'package:hub_mobile/data/local_store.dart';
 import 'package:hub_mobile/data/mock_hub_repository.dart';
+import 'package:hub_mobile/data/models/booking.dart';
 import 'package:hub_mobile/data/models/order.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,6 +38,31 @@ NewOrder _draft() => const NewOrder(
 );
 
 void main() {
+  test('paying a tour booking confirms it at once, in the app and in the repository', () async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final repo = MockHubRepository();
+    final activity = ActivityController(repo, store)..bind('cus-demo');
+    final booking = await activity.createBooking(
+      const NewBooking(
+        customerId: 'cus-demo',
+        tourId: 'tour-01',
+        departureId: 'dep-02',
+        contactName: 'A',
+        phone: '0912345678',
+        adults: 1,
+        children: 0,
+      ),
+    );
+    expect(booking.paymentStatus, PaymentStatus.unpaid);
+    await activity.claimPayment(booking.code);
+    final mine = activity.bookingById(booking.id)!;
+    expect(mine.paymentStatus, PaymentStatus.paid);
+    expect(mine.status, BookingStatus.confirmed);
+    final fromRepo = (await repo.listMyBookings('cus-demo')).firstWhere((b) => b.id == booking.id);
+    expect(fromRepo.status, BookingStatus.confirmed);
+  });
+
   late _FlakyRepo repo;
   late LocalStore store;
 

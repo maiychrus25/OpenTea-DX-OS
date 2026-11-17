@@ -80,8 +80,9 @@ class ActivityController extends ChangeNotifier {
     ];
     _bookings = [
       for (final b in _bookings)
+        // A tour booking is confirmed as soon as the money is reported.
         b.code == reference && b.paymentStatus == PaymentStatus.unpaid
-            ? b.copyWith(paymentStatus: PaymentStatus.claimed)
+            ? b.copyWith(paymentStatus: PaymentStatus.paid, status: BookingStatus.confirmed)
             : b,
     ];
     await _persist();

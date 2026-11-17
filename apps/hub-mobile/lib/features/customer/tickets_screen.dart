@@ -11,10 +11,9 @@ import '../../core/format/formatting.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/booking.dart';
-import '../../data/models/order.dart' show PaymentStatus, PaymentLabels;
+import '../../data/models/order.dart' show PaymentStatus;
 import '../../shared/soft_card.dart';
 import '../../shared/widgets.dart';
-import '../common/status_colors.dart';
 import 'orders_screen.dart' show offlineBanner;
 
 class TicketsScreen extends StatefulWidget {
@@ -79,30 +78,7 @@ class _TicketCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TeaPhoto(
-                asset: teaPhotoFor(b.tourId.hashCode),
-                height: 110,
-                radius: 0,
-                shade: true,
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Align(
-                    alignment: Alignment.topRight,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
-                      child: Text(
-                        b.status.label,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: bookingStatusColor(b.status),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              TeaPhoto(asset: teaPhotoFor(b.tourId.hashCode), height: 110, radius: 0, shade: true),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                 child: Column(
@@ -193,7 +169,12 @@ class _TicketScreenState extends State<TicketScreen> {
   Widget build(BuildContext context) {
     final b = context.watch<ActivityController>().bookingById(bookingId);
     if (b == null) return Scaffold(appBar: AppBar(), body: const EmptyState('Không tìm thấy vé'));
-    final valid = b.status == BookingStatus.confirmed || b.status == BookingStatus.completed;
+    final cancelled = b.status == BookingStatus.cancelled;
+    final valid =
+        !cancelled &&
+        (b.paymentStatus == PaymentStatus.paid ||
+            b.status == BookingStatus.confirmed ||
+            b.status == BookingStatus.completed);
     final needsPay = b.paymentStatus == PaymentStatus.unpaid && b.status != BookingStatus.cancelled;
     return Scaffold(
       appBar: AppBar(title: const Text('Vé tham quan')),
@@ -220,22 +201,7 @@ class _TicketScreenState extends State<TicketScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(b.tourName, style: serif(22, color: Colors.white, height: 1.2)),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
-                          child: Text(
-                            b.status.label,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                              color: bookingStatusColor(b.status),
-                            ),
-                          ),
-                        ),
-                      ],
+                      children: [Text(b.tourName, style: serif(22, color: Colors.white, height: 1.2))],
                     ),
                   ),
                 ),
@@ -271,8 +237,8 @@ class _TicketScreenState extends State<TicketScreen> {
                             color: const Color(0xFFEAF3E4),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: const Text(
-                            'Vé có mã QR sau khi công ty du lịch xác nhận thanh toán.',
+                          child: Text(
+                            cancelled ? 'Vé này đã huỷ.' : 'Vé có mã QR ngay sau khi bạn chuyển khoản.',
                             textAlign: TextAlign.center,
                             style: TextStyle(height: 1.4),
                           ),
@@ -312,8 +278,6 @@ class _TicketScreenState extends State<TicketScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const BlockTitle(Icons.account_balance_wallet_outlined, 'Thanh toán'),
-                KeyValueRow('Tình trạng', b.paymentStatus.label),
-                const Divider(height: 20),
                 KeyValueRow('Tổng tiền', formatVnd(b.total), strong: true),
               ],
             ),
