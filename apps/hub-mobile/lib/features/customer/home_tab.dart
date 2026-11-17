@@ -8,13 +8,13 @@ import 'package:provider/provider.dart';
 import '../../app/activity_controller.dart';
 import '../../app/app_state.dart';
 import '../../app/cart_controller.dart';
-import '../../core/format/formatting.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/catalog.dart';
 import '../../shared/product_image.dart';
 import '../../shared/widgets.dart';
+import 'news_card.dart';
 import 'notifications_screen.dart';
 import 'tour_widgets.dart';
 
@@ -80,18 +80,25 @@ class HomeTab extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SectionTitle('Tin từ hợp tác xã'),
-                          for (final a in articles.take(2)) _newsCard(context, a),
-                          const SizedBox(height: 4),
-                          SizedBox(
-                            height: 52,
-                            width: double.infinity,
-                            child: OutlinedButton(
-                              key: const Key('home-all-news'),
-                              onPressed: () => context.push('/shop/news'),
-                              child: const Text('Xem tất cả tin'),
-                            ),
+                          Row(
+                            children: [
+                              const Expanded(child: SectionTitle('Tin từ hợp tác xã')),
+                              TextButton(
+                                key: const Key('home-all-news'),
+                                onPressed: () => context.push('/shop/news'),
+                                child: const Text('Xem tất cả ›'),
+                              ),
+                            ],
                           ),
+                          for (final a in articles.take(3)) ...[
+                            NewsCard(
+                              key: Key('home-news-${a.id}'),
+                              article: a,
+                              htxName: _htxShort(htxs, a.htxCode),
+                              onTap: () => context.push('/shop/news'),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           const SizedBox(height: 24),
                         ],
                       ),
@@ -342,33 +349,12 @@ class HomeTab extends StatelessWidget {
     ),
   );
 
-  Widget _newsCard(BuildContext context, Article a) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(a.title, style: serif(18, height: 1.25)),
-          const SizedBox(height: 6),
-          Text(
-            a.body,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppColors.muted, height: 1.4),
-          ),
-          const SizedBox(height: 6),
-          Text(formatDate(a.createdAt), style: const TextStyle(fontSize: 12, color: AppColors.faint)),
-        ],
-      ),
-    ),
-  );
+  static String _htxShort(List<Htx> htxs, String code) {
+    for (final h in htxs) {
+      if (h.code == code) return shortHtxName(h);
+    }
+    return '';
+  }
 }
 
 /// Top of the home page: a greeting between the menu button and the cart and bell buttons, then the search bar.
