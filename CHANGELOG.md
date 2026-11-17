@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `POST /api/diagnosis` accepts the mobile app's Keycloak Bearer token (client `dxos-mobile`) as well as the browser session, so a farmer can send a leaf photo from the app to the same disease classifier the web uses (the `tea` model for tea parcels). Same checks as the other Bearer routes; farmers only, JPEG or PNG up to 5 MB, a parcel of the caller's cooperative. The answer is still the disease name and the confidence, never a treatment.
 - The journal and notification API accepts the mobile app's Keycloak access token as `Authorization: Bearer <token>` (client `dxos-mobile` only), in addition to the browser session: `/api/journal` (list, create), `/api/journal/[id]` (update, delete), `/api/journal/batch-approve`, `/api/journal/upload`, `/api/notifications` (list, mark read) and `/api/notifications/announce`. The web verifies the RS256 signature against the realm key set, the issuer, the expiry, the client and the role itself; the user, role, cooperative and Hasura scoping are the same as for a session. A Bearer header that is not valid is a 401 and never falls back to the cookie.
 
 ---

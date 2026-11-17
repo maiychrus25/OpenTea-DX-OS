@@ -2,10 +2,17 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { authFromRequest, coreTokenOf } from '@/lib/auth/request-user'
 import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
-import { CoreUnauthorizedError, CoreUnavailableError, ForbiddenError, NoHtxError, NotFoundError } from '@/domain/errors'
+import {
+  CoreUnauthorizedError,
+  CoreUnavailableError,
+  ForbiddenError,
+  NoHtxError,
+  NotFoundError,
+  UnauthorizedError,
+} from '@/domain/errors'
 import { SubmitDiagnosisUseCase } from '@/application/disease/submit-diagnosis.usecase'
 import { DiseaseApiAdapter } from '@/infrastructure/disease-api/disease-api.adapter'
 import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
@@ -21,8 +28,26 @@ const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png'])
 
 export async function POST(req: Request) {
   // ── Auth check (server-side) — rules-and-limits.md §4 ───────────────
-  const session = await auth()
-  if (!session || !session.user) {
+  // A browser session (cookie) or a mobile app's Keycloak Bearer token (client dxos-mobile), verified here.
+  let caller: Awaited<ReturnType<typeof authFromRequest>>
+  try {
+    caller = await authFromRequest(req)
+  } catch (error: unknown) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } }, { status: 401 })
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
+    }
+    if (error instanceof CoreUnavailableError) {
+      return NextResponse.json(
+        { error: { code: 'CORE_UNAVAILABLE', message: 'Authentication service unavailable' } },
+        { status: 503 },
+      )
+    }
+    throw error
+  }
+  if (!caller) {
     return NextResponse.json(
       { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
       { status: 401 },
@@ -30,7 +55,7 @@ export async function POST(req: Request) {
   }
 
   // Farmer role required
-  if (session.user.role !== 'farmer') {
+  if (caller.user.role !== 'farmer') {
     return NextResponse.json(
       { error: { code: 'FORBIDDEN', message: 'Only farmers can submit disease diagnosis' } },
       { status: 403 },
@@ -75,7 +100,7 @@ export async function POST(req: Request) {
     }
 
     const { parcel_id } = parseResult.data
-    const tenant = await requireTenant()
+    const tenant = await requireTenant(caller.user)
     await new TenantGuard(tenant).parcel(parcel_id)
 
     // ── Convert File to Buffer and Blob ───────────────────────────────
@@ -84,7 +109,7 @@ export async function POST(req: Request) {
     const blob = new Blob([arrayBuffer], { type: file.type })
 
     // ── Instantiate Adapters & Use Case ───────────────────────────────
-    const diseaseAdapter = new DiseaseApiAdapter(await getCoreToken())
+    const diseaseAdapter = new DiseaseApiAdapter((await coreTokenOf(caller)?.()) ?? (await getCoreToken()))
     const storageAdapter = new MinioStorageAdapter()
     const parcelPort = new PrismaParcelRepository()
     const diseaseReportPort = new PrismaDiseaseReportRepository()
@@ -99,7 +124,7 @@ export async function POST(req: Request) {
 
     // ── Execute Use Case ──────────────────────────────────────────────
     const result = await useCase.execute({
-      farmerUserId: session.user.id!,
+      farmerUserId: caller.user.id,
       htxCode: tenant.htxCode,
       parcelId: parcel_id,
       imageBlob: blob,

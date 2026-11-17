@@ -22,6 +22,7 @@ A mobile app signs in with the public Keycloak client `dxos-mobile` (Authorizati
 
 - `GET`, `POST /api/journal`; `PUT`, `DELETE /api/journal/{id}`; `POST /api/journal/batch-approve`; `POST /api/journal/upload`
 - `GET`, `PUT /api/notifications`; `POST /api/notifications/announce`
+- `POST /api/diagnosis` (farmers only): the app sends a leaf photo and gets the disease name and confidence; the token is also what the route sends to the disease service
 
 The web verifies the token itself: RS256 signature against the realm JWKS (fetched from the internal Keycloak URL, cached 10 minutes), `iss` equal to `KEYCLOAK_ISSUER`, `exp` and `nbf` (30 s tolerance), `azp` equal to `dxos-mobile` (tokens of other clients, including service accounts, are refused), a non-empty `sub`, and a realm role `manager`, `officer` or `farmer`. The user is `sub`, the strongest of those roles, the `htx_code` claim and `name`; role checks, the cooperative (HTX) check and Hasura role scoping are the same as for a session, and the token itself is the credential sent to the core gateway. There is no CORS header: native apps do not need one.
 

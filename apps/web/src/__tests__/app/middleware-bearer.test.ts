@@ -16,10 +16,10 @@ const run = (path: string, authorization?: string) =>
   })
 
 describe('isBearerApiPath', () => {
-  test.each(['/api/journal', '/api/journal/', '/api/journal/e1', '/api/journal/batch-approve', '/api/journal/upload', '/api/notifications', '/api/notifications/announce'])('%s', (path) => {
+  test.each(['/api/journal', '/api/journal/', '/api/journal/e1', '/api/journal/batch-approve', '/api/journal/upload', '/api/notifications', '/api/notifications/announce', '/api/diagnosis', '/api/diagnosis/'])('%s', (path) => {
     expect(isBearerApiPath(path)).toBe(true)
   })
-  test.each(['/api/notifications/stream', '/api/journal/e1/x', '/api/members', '/api/parcels', '/api/journalx', '/api/notifications/other', '/apps/x/api/journal'])('%s is not', (path) => {
+  test.each(['/api/notifications/stream', '/api/journal/e1/x', '/api/members', '/api/parcels', '/api/journalx', '/api/notifications/other', '/apps/x/api/journal', '/api/diagnosis/x'])('%s is not', (path) => {
     expect(isBearerApiPath(path)).toBe(false)
   })
 })

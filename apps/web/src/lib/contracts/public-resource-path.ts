@@ -42,5 +42,9 @@ export function isBearerApiPath(pathname: string): boolean {
   }
   const normalized = pathname.split('?')[0].replace(/\/+$/, '')
   if (!normalized || normalized.length > 300) return false
-  return /^\/api\/journal(?:\/[^/]+)?$/.test(normalized) || /^\/api\/notifications(?:\/announce)?$/.test(normalized)
+  return (
+    /^\/api\/journal(?:\/[^/]+)?$/.test(normalized) ||
+    /^\/api\/notifications(?:\/announce)?$/.test(normalized) ||
+    normalized === '/api/diagnosis'
+  )
 }
