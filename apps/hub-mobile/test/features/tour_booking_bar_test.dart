@@ -100,6 +100,14 @@ void main() {
       expect(find.text('Nhóm tối đa'), findsNothing);
     });
 
+    testWidgets('the tour page has a cart button next to the heart that opens the cart', (tester) async {
+      await _openTour(tester, email: 'customer@demo.vn');
+      expect(find.byKey(const Key('tour-cart')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('tour-cart')));
+      await tester.pumpAndSettle();
+      expect(find.text('Giỏ hàng đang trống'), findsOneWidget);
+    });
+
     testWidgets('the heart saves the tour on the device and can be undone', (tester) async {
       await _openTour(tester, email: 'customer@demo.vn');
       expect(find.byIcon(Icons.favorite_border), findsOneWidget);

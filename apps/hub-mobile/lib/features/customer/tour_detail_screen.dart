@@ -11,6 +11,7 @@ import '../../core/theme/app_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/local_store.dart';
 import '../../data/models/catalog.dart';
+import '../../shared/cart_button.dart';
 import '../../shared/widgets.dart';
 import 'tour_widgets.dart';
 
@@ -240,6 +241,11 @@ class _Hero extends StatelessWidget {
             top: top + 14,
             right: 16,
             child: _SaveButton(tourId: tour.id),
+          ),
+          Positioned(
+            top: top + 14,
+            right: 76,
+            child: const CartButton(size: 50, buttonKey: Key('tour-cart')),
           ),
           const Positioned(right: 4, bottom: 18, child: IgnorePointer(child: _Leaves())),
         ],
