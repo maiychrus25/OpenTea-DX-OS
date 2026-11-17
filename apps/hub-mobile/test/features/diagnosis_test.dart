@@ -9,6 +9,7 @@ import 'package:hub_mobile/app/hub_app.dart';
 import 'package:hub_mobile/data/demo_auth_service.dart';
 import 'package:hub_mobile/data/local_store.dart';
 import 'package:hub_mobile/data/mock_hub_repository.dart';
+import 'package:hub_mobile/shared/live_camera.dart';
 import 'package:hub_mobile/shared/photo_source.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -85,28 +86,55 @@ final _png = Uint8List.fromList([
   0x82,
 ]);
 
-class _FakePhotos implements PhotoSource {
-  int camera = 0;
-  int gallery = 0;
-  bool cancel = false;
+class _FakeCamera implements LiveCamera {
+  _FakeCamera(this.failWith);
+  final String? failWith;
+  int shots = 0;
+  bool disposed = false;
 
   @override
-  Future<PickedPhoto?> takePhoto(BuildContext context) async {
-    camera++;
-    return cancel ? null : PickedPhoto(bytes: _png, name: 'leaf.png');
+  Future<void> start() async {
+    if (failWith != null) throw LiveCameraException(failWith!);
+  }
+
+  @override
+  Widget preview() => const ColoredBox(key: Key('fake-preview'), color: Colors.green);
+
+  @override
+  Future<Uint8List> capture() async {
+    shots++;
+    return _png;
+  }
+
+  @override
+  Future<void> dispose() async => disposed = true;
+}
+
+class _FakePhotos implements PhotoSource {
+  _FakePhotos({this.cameraError});
+  final String? cameraError;
+  final cameras = <_FakeCamera>[];
+  int gallery = 0;
+  bool cancelGallery = false;
+
+  @override
+  LiveCamera createCamera() {
+    final c = _FakeCamera(cameraError);
+    cameras.add(c);
+    return c;
   }
 
   @override
   Future<PickedPhoto?> pickPhoto() async {
     gallery++;
-    return cancel ? null : PickedPhoto(bytes: _png, name: 'leaf.png');
+    return cancelGallery ? null : PickedPhoto(bytes: _png, name: 'leaf.png');
   }
 }
 
-Future<_FakePhotos> _openFarmer(WidgetTester tester, {bool cancel = false}) async {
+Future<_FakePhotos> _openFarmer(WidgetTester tester, {String? cameraError}) async {
   SharedPreferences.setMockInitialValues({});
   final store = await LocalStore.open();
-  final photos = _FakePhotos()..cancel = cancel;
+  final photos = _FakePhotos(cameraError: cameraError);
   tester.view.physicalSize = const Size(390, 1600);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -132,13 +160,27 @@ void main() {
     expect(_tab('/farmer/schedule'), findsNothing);
   });
 
-  testWidgets('tapping the camera tab opens the camera at once and shows the result without treatment advice', (
-    tester,
-  ) async {
+  testWidgets('the camera tab shows the live picture in the frame, not full screen', (tester) async {
     final photos = await _openFarmer(tester);
     await tester.tap(_tab('/farmer/scan'));
     await tester.pumpAndSettle();
-    expect(photos.camera, 1);
+    expect(photos.cameras, hasLength(1));
+    expect(
+      find.descendant(of: find.byKey(const Key('scan-frame')), matching: find.byKey(const Key('fake-preview'))),
+      findsOneWidget,
+    );
+    // The page and its tab bar stay around the frame.
+    expect(_tab('/farmer/scan'), findsOneWidget);
+    expect(find.byKey(const Key('scan-result')), findsNothing);
+  });
+
+  testWidgets('the shutter sends the picture and shows the result without treatment advice', (tester) async {
+    final photos = await _openFarmer(tester);
+    await tester.tap(_tab('/farmer/scan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('scan-camera')));
+    await tester.pumpAndSettle();
+    expect(photos.cameras.single.shots, 1);
     expect(find.byKey(const Key('scan-result')), findsOneWidget);
     expect(find.byKey(const Key('scan-disease')), findsOneWidget);
     expect(find.text('Chờ cán bộ HTX xác nhận'), findsOneWidget);
@@ -146,27 +188,34 @@ void main() {
     expect(find.byKey(const Key('scan-sample-note')), findsOneWidget);
   });
 
-  testWidgets('cancelling the camera leaves the page ready for another try', (tester) async {
-    final photos = await _openFarmer(tester, cancel: true);
+  testWidgets('when the camera cannot start the frame says why and can retry', (tester) async {
+    final photos = await _openFarmer(tester, cameraError: 'Chưa được phép dùng camera.');
     await tester.tap(_tab('/farmer/scan'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('scan-result')), findsNothing);
-    photos.cancel = false;
-    await tester.tap(find.byKey(const Key('scan-camera')));
+    expect(find.text('Chưa được phép dùng camera.'), findsOneWidget);
+    expect(find.byKey(const Key('fake-preview')), findsNothing);
+    await tester.tap(find.byKey(const Key('camera-retry')));
     await tester.pumpAndSettle();
-    expect(photos.camera, 2);
-    expect(find.byKey(const Key('scan-result')), findsOneWidget);
+    expect(photos.cameras, hasLength(2));
   });
 
   testWidgets('a photo can also be chosen from the gallery', (tester) async {
-    final photos = await _openFarmer(tester, cancel: true);
+    final photos = await _openFarmer(tester);
     await tester.tap(_tab('/farmer/scan'));
     await tester.pumpAndSettle();
-    photos.cancel = false;
     await tester.tap(find.byKey(const Key('scan-gallery')));
     await tester.pumpAndSettle();
     expect(photos.gallery, 1);
     expect(find.byKey(const Key('scan-result')), findsOneWidget);
+  });
+
+  testWidgets('leaving the tab turns the camera off', (tester) async {
+    final photos = await _openFarmer(tester);
+    await tester.tap(_tab('/farmer/scan'));
+    await tester.pumpAndSettle();
+    await tester.tap(_tab('/farmer'));
+    await tester.pumpAndSettle();
+    expect(photos.cameras.single.disposed, isTrue);
   });
 
   test('the sample repository reports the disease name and confidence only', () async {

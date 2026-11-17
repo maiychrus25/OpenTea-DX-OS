@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +11,7 @@ import '../../core/theme/staff_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/diagnosis.dart';
 import '../../data/models/staff.dart';
+import '../../shared/live_camera.dart';
 import '../../shared/photo_source.dart';
 import '../../shared/widgets.dart' show showMessage;
 import '../staff/staff_format.dart';
@@ -30,6 +33,9 @@ class _DiagnosisPageState extends State<DiagnosisPage> {
   bool _busy = false;
   List<DiagnosisReport> _history = const [];
   late final Future<List<Parcel>> _parcels;
+  LiveCamera? _camera;
+  bool _cameraReady = false;
+  String? _cameraError;
 
   @override
   void initState() {
@@ -37,12 +43,31 @@ class _DiagnosisPageState extends State<DiagnosisPage> {
     final scope = StaffScope(context);
     _parcels = scope.repo.listParcels(scope.htx, householdId: scope.household);
     _loadHistory();
-    // "Quét luôn": the camera opens at once when the farmer taps the tab.
-    if (scope.repo.canDiagnose) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _scan(camera: true);
-      });
+    // "Quét luôn": the camera starts as soon as the tab opens and its picture is in the frame.
+    if (scope.repo.canDiagnose) _startCamera();
+  }
+
+  Future<void> _startCamera() async {
+    final camera = context.read<PhotoSource>().createCamera();
+    _camera = camera;
+    setState(() {
+      _cameraReady = false;
+      _cameraError = null;
+    });
+    try {
+      await camera.start();
+      if (mounted && _camera == camera) setState(() => _cameraReady = true);
+    } on LiveCameraException catch (e) {
+      if (mounted) setState(() => _cameraError = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _cameraError = 'Không mở được camera.');
     }
+  }
+
+  @override
+  void dispose() {
+    _camera?.dispose();
+    super.dispose();
   }
 
   Future<void> _loadHistory() async {
@@ -55,14 +80,21 @@ class _DiagnosisPageState extends State<DiagnosisPage> {
     final source = context.read<PhotoSource>();
     setState(() => _busy = true);
     try {
-      final photo = await (camera ? source.takePhoto(context) : source.pickPhoto());
-      if (photo == null) return;
-      final report = await repo.submitDiagnosis(photo.bytes, parcelCode: _parcelCode);
+      final Uint8List? bytes;
+      if (camera) {
+        bytes = await _camera!.capture();
+      } else {
+        bytes = (await source.pickPhoto())?.bytes;
+      }
+      if (bytes == null) return;
+      final report = await repo.submitDiagnosis(bytes, parcelCode: _parcelCode);
       if (!mounted) return;
       setState(() => _result = report);
       await _loadHistory();
     } on HubException catch (e) {
       if (mounted) showMessage(context, e.message);
+    } catch (_) {
+      if (mounted) showMessage(context, 'Không chụp được ảnh. Hãy thử lại.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -104,7 +136,15 @@ class _DiagnosisPageState extends State<DiagnosisPage> {
               );
             },
           ),
-          _Viewfinder(busy: _busy, onCamera: () => _scan(camera: true), onGallery: () => _scan(camera: false)),
+          _Viewfinder(
+            camera: _camera,
+            ready: _cameraReady,
+            error: _cameraError,
+            busy: _busy,
+            onRetry: _startCamera,
+            onShutter: () => _scan(camera: true),
+            onGallery: () => _scan(camera: false),
+          ),
           if (_result != null) _ResultCard(report: _result!, sample: repo.coreIsSample),
           if (_history.length > (_result == null ? 0 : 1)) ...[
             const SizedBox(height: 18),
@@ -141,46 +181,109 @@ class _Note extends StatelessWidget {
   );
 }
 
-/// The big camera block: a frame, a round shutter button and a link to the gallery.
+/// The camera block: the live picture inside a rounded frame, a round shutter button under it and a link to the gallery.
 class _Viewfinder extends StatelessWidget {
-  const _Viewfinder({required this.busy, required this.onCamera, required this.onGallery});
+  const _Viewfinder({
+    required this.camera,
+    required this.ready,
+    required this.error,
+    required this.busy,
+    required this.onRetry,
+    required this.onShutter,
+    required this.onGallery,
+  });
+  final LiveCamera? camera;
+  final bool ready;
+  final String? error;
   final bool busy;
-  final VoidCallback onCamera;
+  final VoidCallback onRetry;
+  final VoidCallback onShutter;
   final VoidCallback onGallery;
 
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-    decoration: BoxDecoration(color: StaffColors.sidebar, borderRadius: BorderRadius.circular(22)),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(color: StaffColors.sidebar, borderRadius: BorderRadius.circular(24)),
     child: Column(
       children: [
-        Container(
-          width: 150,
-          height: 150,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: StaffColors.lime, width: 2),
+        AspectRatio(
+          aspectRatio: 1,
+          child: Container(
+            key: const Key('scan-frame'),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: StaffColors.lime, width: 2.5),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(17),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  const ColoredBox(color: Colors.black),
+                  if (ready && camera != null) camera!.preview(),
+                  if (!ready && error == null) const Center(child: CircularProgressIndicator(color: StaffColors.lime)),
+                  if (error != null)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              error!,
+                              key: const Key('camera-error'),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white, height: 1.45),
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton(
+                              key: const Key('camera-retry'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: StaffColors.lime,
+                                side: const BorderSide(color: StaffColors.lime),
+                              ),
+                              onPressed: onRetry,
+                              child: const Text('Thử lại'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (busy)
+                    const ColoredBox(
+                      color: Colors.black54,
+                      child: Center(child: CircularProgressIndicator(color: StaffColors.lime)),
+                    ),
+                ],
+              ),
+            ),
           ),
-          child: busy
-              ? const Center(child: CircularProgressIndicator(color: StaffColors.lime))
-              : const Icon(Icons.eco_outlined, size: 64, color: StaffColors.lime),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Text(
           busy ? 'Đang phân tích ảnh…' : 'Đặt lá chè vào khung, chụp rõ nét, đủ sáng',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white, height: 1.4),
         ),
-        const SizedBox(height: 18),
-        SizedBox(
-          height: 56,
-          child: FilledButton.icon(
-            key: const Key('scan-camera'),
-            style: FilledButton.styleFrom(backgroundColor: StaffColors.lime, foregroundColor: StaffColors.sidebar),
-            onPressed: busy ? null : onCamera,
-            icon: const Icon(Icons.photo_camera_outlined),
-            label: const Text('Chụp ảnh lá'),
+        const SizedBox(height: 12),
+        GestureDetector(
+          key: const Key('scan-camera'),
+          onTap: ready && !busy ? onShutter : null,
+          child: Container(
+            width: 72,
+            height: 72,
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 4),
+            ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: ready && !busy ? StaffColors.lime : Colors.white38,
+              ),
+            ),
           ),
         ),
         TextButton.icon(

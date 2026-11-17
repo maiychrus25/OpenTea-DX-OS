@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/hub_repository.dart';
-import 'camera_capture_screen.dart';
+import 'live_camera.dart';
 
 /// A photo taken with the camera or chosen from the gallery.
 class PickedPhoto {
@@ -15,39 +14,31 @@ class PickedPhoto {
   final String name;
 }
 
-/// Where photos come from. The app uses the system camera; tests pass a fake.
+/// Where photos come from. The app uses the device camera and gallery; tests pass a fake.
 abstract class PhotoSource {
-  /// Opens the camera with a live preview. Null when the person cancels.
-  Future<PickedPhoto?> takePhoto(BuildContext context);
+  /// A new live camera for the scan page. The page starts it, shows its preview and disposes it.
+  LiveCamera createCamera();
 
   /// Opens the gallery. Null when the person cancels.
   Future<PickedPhoto?> pickPhoto();
 }
 
-/// The camera shows a live preview inside the app (see [LiveCamera]); the gallery uses the system picker.
+/// The device camera (see [LiveCamera]); the gallery uses the system picker.
 class SystemPhotoSource implements PhotoSource {
   final ImagePicker _picker = ImagePicker();
 
-  Future<PickedPhoto?> _get(ImageSource source) async {
+  @override
+  LiveCamera createCamera() => LiveCamera();
+
+  @override
+  Future<PickedPhoto?> pickPhoto() async {
     try {
       // 1600 px and quality 85 keep a leaf photo well under the 5 MB the server accepts.
-      final file = await _picker.pickImage(source: source, maxWidth: 1600, imageQuality: 85);
+      final file = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 1600, imageQuality: 85);
       if (file == null) return null;
       return PickedPhoto(bytes: await file.readAsBytes(), name: file.name);
     } on PlatformException {
-      throw const HubException('Không mở được camera. Hãy cho phép dùng camera trong phần cài đặt của máy.');
+      throw const HubException('Không mở được thư viện ảnh. Hãy cho phép truy cập ảnh trong phần cài đặt của máy.');
     }
   }
-
-  @override
-  Future<PickedPhoto?> takePhoto(BuildContext context) {
-    // The root navigator, so the camera covers the whole screen, above the bars of the staff shell.
-    return Navigator.of(
-      context,
-      rootNavigator: true,
-    ).push<PickedPhoto>(MaterialPageRoute(fullscreenDialog: true, builder: (_) => const CameraCaptureScreen()));
-  }
-
-  @override
-  Future<PickedPhoto?> pickPhoto() => _get(ImageSource.gallery);
 }
