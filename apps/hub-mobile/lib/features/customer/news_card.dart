@@ -30,12 +30,13 @@ class NewsCard extends StatelessWidget {
   Widget _photo(double? height, double radius) =>
       TeaPhoto(asset: teaPhotoFor(article.id.hashCode), height: height, radius: radius);
 
-  Widget _chips() => Wrap(
-    spacing: 6,
-    runSpacing: 6,
+  Widget _chips() => Row(
     children: [
-      if (article.pinned) const _Chip('Ghim', color: Color(0xFFFDE8D2), textColor: AppColors.amber),
-      if (htxName.isNotEmpty) _Chip(htxName),
+      if (article.pinned) ...[
+        const _Chip('Ghim', color: Color(0xFFFDE8D2), textColor: AppColors.amber),
+        const SizedBox(width: 6),
+      ],
+      if (htxName.isNotEmpty) Flexible(child: _Chip(htxName)),
     ],
   );
 
@@ -115,6 +116,8 @@ class _Chip extends StatelessWidget {
     decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
     child: Text(
       text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
     ),
   );
