@@ -14,6 +14,7 @@ class DiagnosisReport {
     this.parcelCode,
     this.image,
     this.confirmed = false,
+    this.serverUncertain,
   });
   final String id;
   final String diseaseName;
@@ -29,6 +30,9 @@ class DiagnosisReport {
   /// True once the cooperative's officer confirmed the name.
   final bool confirmed;
 
-  /// Below this the model is not sure and the farmer is asked to take a clearer photo.
-  bool get uncertain => confidence < 0.6;
+  /// The classifier's own verdict when the server gave one.
+  final bool? serverUncertain;
+
+  /// The model is not sure and the farmer is asked to take a clearer photo: the server's verdict, or below 60%.
+  bool get uncertain => serverUncertain ?? confidence < 0.6;
 }

@@ -124,7 +124,9 @@ abstract class HubRepository {
   Future<List<Product>> listHouseholdProducts(String householdId);
 
   /// Sends a leaf photo and returns the disease name with its confidence. Never a treatment.
-  Future<DiagnosisReport> submitDiagnosis(Uint8List image, {String? parcelCode});
+  ///
+  /// The web classifier needs the parcel ([parcelId]); [parcelCode] is only its label on the result.
+  Future<DiagnosisReport> submitDiagnosis(Uint8List image, {String? parcelId, String? parcelCode});
 
   /// The reports this device sent in this session, newest first.
   Future<List<DiagnosisReport>> listDiagnoses();

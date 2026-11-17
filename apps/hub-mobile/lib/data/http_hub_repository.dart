@@ -61,16 +61,57 @@ class HttpHubRepository implements HubRepository {
   @override
   bool get canRescheduleHarvest => false;
 
-  /// `/api/diagnosis` accepts the web session only: no photo is sent until the server takes the app's Bearer token.
+  /// `POST /api/diagnosis` is the web's own route (the same classifier, the `tea` model for tea parcels): the app sends
+  /// the photo with its Bearer token. Needs the Bearer client, like every write.
   @override
-  bool get canDiagnose => false;
+  bool get canDiagnose => _api != null;
+
+  final _diagnoses = <DiagnosisReport>[];
 
   @override
-  Future<DiagnosisReport> submitDiagnosis(Uint8List image, {String? parcelCode}) =>
-      throw const HubException('Chẩn đoán bằng ảnh chưa dùng được: máy chủ chưa nhận ảnh từ ứng dụng.');
+  Future<DiagnosisReport> submitDiagnosis(Uint8List image, {String? parcelId, String? parcelCode}) async {
+    if (parcelId == null || parcelId.isEmpty) throw const HubException('Hãy chọn thửa đất của ảnh này.');
+    final png = image.length > 4 && image[0] == 0x89 && image[1] == 0x50 && image[2] == 0x4E && image[3] == 0x47;
+    final Object? data;
+    try {
+      data = await _write.sendFile(
+        '/api/diagnosis',
+        fields: {'parcel_id': parcelId},
+        fileField: 'image',
+        bytes: image,
+        filename: png ? 'leaf.png' : 'leaf.jpg',
+        contentType: png ? 'image/png' : 'image/jpeg',
+      );
+    } on CoreException catch (e) {
+      if (e.kind == CoreErrorKind.unavailable) {
+        throw const HubException('Dịch vụ chẩn đoán bệnh đang bảo trì. Hãy thử lại sau.');
+      }
+      if (e.kind == CoreErrorKind.validation) {
+        throw const HubException('Ảnh hoặc thửa đất chưa hợp lệ. Dùng ảnh JPEG hoặc PNG nhỏ hơn 5 MB.');
+      }
+      rethrow;
+    }
+    if (data is! Map) throw const CoreException.badResponse();
+    final name = data['disease_name'];
+    final score = data['confidence_score'];
+    final id = data['report_id'];
+    if (name is! String || score is! num || id is! String) throw const CoreException.badResponse();
+    final submitted = data['submitted_at'];
+    final report = DiagnosisReport(
+      id: id,
+      diseaseName: name,
+      confidence: score.toDouble().clamp(0.0, 1.0),
+      submittedAt: (submitted is String ? DateTime.tryParse(submitted) : null)?.toLocal() ?? DateTime.now(),
+      parcelCode: parcelCode,
+      image: image,
+      serverUncertain: data['uncertain'] is bool ? data['uncertain'] as bool : null,
+    );
+    _diagnoses.insert(0, report);
+    return report;
+  }
 
   @override
-  Future<List<DiagnosisReport>> listDiagnoses() async => const [];
+  Future<List<DiagnosisReport>> listDiagnoses() async => List.unmodifiable(_diagnoses);
 
   @override
   Future<HtxProfile> getHtxProfile(String htxCode) async {

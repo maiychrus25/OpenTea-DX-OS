@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' show MediaType;
 
 import '../auth_service.dart';
 import 'core_exception.dart';
@@ -51,6 +52,43 @@ class HubApiClient {
       final fresh = refresh == null ? null : await refresh();
       if (fresh == null || fresh.token.isEmpty) throw const CoreException.unauthorized();
       response = await _once(fresh, method, path, body);
+    }
+    return _result(response);
+  }
+
+  /// Sends a `multipart/form-data` POST with text [fields] and one file, and returns the `data` of the answer.
+  /// Same token handling as [send]: one refresh on 401.
+  Future<Object?> sendFile(
+    String path, {
+    required Map<String, String> fields,
+    required String fileField,
+    required List<int> bytes,
+    required String filename,
+    required String contentType,
+  }) async {
+    Future<http.Response> once(BearerToken bearer) async {
+      final request = http.MultipartRequest('POST', Uri.parse('$_base$path'))
+        ..headers.addAll({'Authorization': 'Bearer ${bearer.token}', 'Accept': 'application/json'})
+        ..fields.addAll(fields)
+        ..files.add(
+          http.MultipartFile.fromBytes(fileField, bytes, filename: filename, contentType: MediaType.parse(contentType)),
+        );
+      try {
+        // A photo takes longer than a JSON call: twice the usual wait.
+        return await http.Response.fromStream(await _client.send(request).timeout(timeout * 2));
+      } catch (_) {
+        throw const CoreException.network();
+      }
+    }
+
+    final first = await _bearer();
+    if (first == null || first.token.isEmpty) throw const CoreException.unauthorized();
+    var response = await once(first);
+    if (response.statusCode == 401) {
+      final refresh = _refresh;
+      final fresh = refresh == null ? null : await refresh();
+      if (fresh == null || fresh.token.isEmpty) throw const CoreException.unauthorized();
+      response = await once(fresh);
     }
     return _result(response);
   }

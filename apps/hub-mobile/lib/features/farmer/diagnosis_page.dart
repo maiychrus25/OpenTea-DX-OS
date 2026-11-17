@@ -28,7 +28,7 @@ class DiagnosisPage extends StatefulWidget {
 }
 
 class _DiagnosisPageState extends State<DiagnosisPage> {
-  String? _parcelCode;
+  Parcel? _parcel;
   DiagnosisReport? _result;
 
   /// The photo just taken: it freezes the frame until the farmer chooses to take another.
@@ -91,7 +91,7 @@ class _DiagnosisPageState extends State<DiagnosisPage> {
       }
       if (bytes == null) return;
       if (mounted) setState(() => _shot = bytes);
-      final report = await repo.submitDiagnosis(bytes, parcelCode: _parcelCode);
+      final report = await repo.submitDiagnosis(bytes, parcelId: _parcel?.id, parcelCode: _parcel?.code);
       if (!mounted) return;
       setState(() => _result = report);
       await _loadHistory();
@@ -114,8 +114,7 @@ class _DiagnosisPageState extends State<DiagnosisPage> {
         if (!repo.canDiagnose)
           const _Note(
             Icons.info_outline,
-            'Chức năng này chưa dùng được với dữ liệu thật: máy chủ chưa nhận ảnh từ ứng dụng. '
-            'Hãy dùng bản web DX-OS để chẩn đoán.',
+            'Chưa gửi được ảnh: bản này chưa có quyền ghi lên máy chủ. Hãy dùng bản web DX-OS để chẩn đoán.',
           )
         else ...[
           FutureBuilder<List<Parcel>>(
@@ -123,19 +122,20 @@ class _DiagnosisPageState extends State<DiagnosisPage> {
             builder: (context, snap) {
               final parcels = snap.data ?? const <Parcel>[];
               if (parcels.isEmpty) return const SizedBox.shrink();
+              // The classifier needs the parcel (it picks the tea model for tea parcels): the first one is the default.
+              _parcel ??= parcels.first;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 14),
-                child: DropdownButtonFormField<String?>(
+                child: DropdownButtonFormField<Parcel>(
                   key: const Key('scan-parcel'),
                   isExpanded: true,
-                  initialValue: _parcelCode,
-                  decoration: const InputDecoration(labelText: 'Thửa đất (không bắt buộc)'),
+                  initialValue: _parcel,
+                  decoration: const InputDecoration(labelText: 'Thửa đất của ảnh này'),
                   items: [
-                    const DropdownMenuItem<String?>(value: null, child: Text('Không chọn thửa')),
                     for (final p in parcels)
-                      DropdownMenuItem<String?>(value: p.code, child: Text('${p.code} — ${p.cropType}')),
+                      DropdownMenuItem<Parcel>(value: p, child: Text('${p.code} — ${p.cropType}')),
                   ],
-                  onChanged: (v) => setState(() => _parcelCode = v),
+                  onChanged: (v) => setState(() => _parcel = v),
                 ),
               );
             },

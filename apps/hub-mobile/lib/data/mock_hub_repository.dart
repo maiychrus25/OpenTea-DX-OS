@@ -44,7 +44,7 @@ class MockHubRepository implements HubRepository {
   ];
 
   @override
-  Future<DiagnosisReport> submitDiagnosis(Uint8List image, {String? parcelCode}) async {
+  Future<DiagnosisReport> submitDiagnosis(Uint8List image, {String? parcelId, String? parcelCode}) async {
     final pick = _sampleDiseases[image.length % _sampleDiseases.length];
     final report = DiagnosisReport(
       id: 'dg-${_diagnoses.length + 1}',
