@@ -134,12 +134,7 @@ class HomeTab extends StatelessWidget {
     );
     return Row(
       children: [
-        tile(
-          const Key('cat-hills'),
-          const LeafLogo(size: 44),
-          'Đồi chè',
-          () => htxs.isEmpty ? context.push('/shop/tours') : context.push('/shop/htx/${htxs.first.code}'),
-        ),
+        tile(const Key('cat-hills'), const LeafLogo(size: 44), 'Đồi chè', () => context.push('/shop/htxs')),
         const SizedBox(width: 12),
         tile(
           const Key('cat-tours'),

@@ -4,14 +4,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/money/money.dart';
+import '../../core/theme/app_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/catalog.dart';
 import '../../shared/widgets.dart';
-import 'tour_detail_screen.dart';
 import 'tour_widgets.dart';
 
-/// Public profile of a cooperative: its farming households and its tours.
+/// Public profile of a cooperative: information only, nothing to pick. Tours belong to the travel company, so none
+/// are listed here.
 class HtxScreen extends StatelessWidget {
   const HtxScreen({super.key, required this.code});
   final String code;
@@ -21,11 +21,10 @@ class HtxScreen extends StatelessWidget {
     final repo = context.read<HubRepository>();
     return InnerPage(
       title: 'Hợp tác xã',
-      child: LoadView<(Htx, List<Household>, List<Tour>)>(
-        load: () async =>
-            (await repo.getHtx(code), await repo.listHouseholds(htxCode: code), await repo.listTours(htxCode: code)),
+      child: LoadView<(Htx, List<Household>)>(
+        load: () async => (await repo.getHtx(code), await repo.listHouseholds(htxCode: code)),
         builder: (context, data, reload) {
-          final (htx, households, tours) = data;
+          final (htx, households) = data;
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             children: [
@@ -34,27 +33,36 @@ class HtxScreen extends StatelessWidget {
               PageTitle(shortHtxName(htx), subtitle: htx.province),
               FactsGrid([
                 ('Tỉnh', htx.province),
-                ('Hộ đón khách', '${households.length} hộ'),
-                ('Tour', '${tours.length} tour'),
                 ('Cây trồng', 'Chè'),
+                ('Hộ thành viên', '${households.length} hộ'),
+                ('Chứng nhận', {for (final h in households) h.certificate}.join(', ')),
               ]),
-              const SectionTitle('Hộ nông dân đón khách'),
+              const SectionTitle('Hộ nông dân'),
               for (final h in households)
-                LinkRow(
-                  kind: '${h.village} · ${h.certificate}',
-                  title: h.name,
-                  subtitle: '${h.crop} · ${h.hosting}',
-                  icon: Icons.home_work_outlined,
-                  route: '/shop/farm/${h.id}',
-                ),
-              const SectionTitle('Tour ghé HTX'),
-              for (final t in tours)
-                LinkRow(
-                  kind: t.durationLabel,
-                  title: t.name,
-                  subtitle: 'Từ ${formatVnd(t.adultPrice)}',
-                  icon: Icons.explore_outlined,
-                  route: '/shop/tours/${t.id}',
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(h.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${h.village} · ${h.crop} · ${h.certificate}',
+                        style: const TextStyle(color: AppColors.muted, height: 1.4),
+                      ),
+                      if (h.experience.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(h.experience, style: const TextStyle(color: AppColors.muted, height: 1.45)),
+                      ],
+                    ],
+                  ),
                 ),
             ],
           );

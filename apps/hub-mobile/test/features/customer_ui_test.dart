@@ -210,19 +210,8 @@ void main() {
       expect(find.byKey(const Key('tour-info-host')), findsOneWidget);
       expect(find.byType(LinkRow), findsNothing);
       expect(find.byKey(const Key('tour-visit-request')), findsNothing);
-      // The household page is still reached from the cooperative's page.
-      GoRouter.of(tester.element(find.byKey(const Key('tour-info-htx')))).go('/shop');
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.byKey(const Key('dest-tan-cuong')),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.tap(find.byKey(const Key('dest-tan-cuong')));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.textContaining('Hộ bà Lan'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('Hộ bà Lan'));
+      // The household page is still there (route kept) and its visit request works.
+      GoRouter.of(tester.element(find.byKey(const Key('tour-info-htx')))).go('/shop/farm/hh-01');
       await tester.pumpAndSettle();
       expect(find.text('Quy trình sản xuất chè'), findsOneWidget);
       expect(find.text('Chăm sóc và bón phân'), findsOneWidget);
@@ -260,6 +249,21 @@ void main() {
       await tester.tap(find.byKey(const Key('home-explore')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('save-tour-01')), findsNothing);
+    });
+
+    testWidgets('Đồi chè lists the cooperatives and each opens a plain information page', (tester) async {
+      await _pump(tester);
+      await _guest(tester);
+      await tester.tap(find.byKey(const Key('cat-hills')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('htx-tan-cuong')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('htx-tan-cuong')));
+      await tester.pumpAndSettle();
+      expect(find.text('Hộ nông dân'), findsOneWidget);
+      // Information only: no links, no tours and no buttons to pick.
+      expect(find.byType(LinkRow), findsNothing);
+      expect(find.text('Tour ghé HTX'), findsNothing);
+      expect(find.byType(FilledButton), findsNothing);
     });
   });
 }

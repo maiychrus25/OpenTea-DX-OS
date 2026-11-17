@@ -13,6 +13,7 @@ import '../../features/customer/product_detail_screen.dart';
 import '../../features/customer/cart_tab.dart';
 import '../../features/customer/home_tab.dart';
 import '../../features/customer/household_screen.dart';
+import '../../features/customer/htx_list_screen.dart';
 import '../../features/customer/htx_screen.dart';
 import '../../features/customer/trips_tab.dart';
 import '../../features/customer/visit_screens.dart';
@@ -95,6 +96,7 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         ),
       ),
       // Pages opened from a tour are full screen too, so they stack above it.
+      GoRoute(path: '/shop/htxs', builder: (c, s) => _page(const HtxListScreen())),
       GoRoute(
         path: '/shop/htx/:code',
         builder: (c, s) => _page(HtxScreen(code: s.pathParameters['code']!)),
