@@ -78,14 +78,19 @@ void main() {
       expect(find.textContaining('360.000'), findsWidgets);
     });
 
-    testWidgets('the cart button only adds the product and stays on the page', (tester) async {
+    testWidgets('the page has the Order button only: no cart button and no arrow', (tester) async {
       await _openProducts(tester, email: 'customer@demo.vn');
       await tester.tap(find.byKey(const Key('product-prod-01')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('product-add')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('product-order')), findsOneWidget);
-      expect(find.textContaining('vào giỏ'), findsOneWidget);
+      expect(find.byKey(const Key('product-add')), findsNothing);
+      expect(find.byKey(const Key('product-cart')), findsNothing);
+      expect(find.byIcon(Icons.shopping_cart_outlined), findsNothing);
+      expect(find.byIcon(Icons.add_shopping_cart), findsNothing);
+      expect(
+        find.descendant(of: find.byKey(const Key('product-order')), matching: find.byIcon(Icons.arrow_forward)),
+        findsNothing,
+      );
+      expect(find.text('Đặt hàng'), findsOneWidget);
     });
 
     testWidgets('a guest who orders is sent to sign in', (tester) async {
@@ -103,7 +108,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Hết hàng'), findsWidgets);
       expect(tester.widget<FilledButton>(find.byKey(const Key('product-order'))).onPressed, isNull);
-      expect(tester.widget<OutlinedButton>(find.byKey(const Key('product-add'))).onPressed, isNull);
     });
   });
 }

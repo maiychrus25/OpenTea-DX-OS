@@ -46,10 +46,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return result == CartAddResult.added;
   }
 
-  Future<void> _addOnly(Product p) async {
-    if (await _addToCart(p) && mounted) showMessage(context, 'Đã thêm "${p.name}" vào giỏ');
-  }
-
   Future<void> _orderNow(Product p) async {
     if (context.read<AppState>().claims == null) {
       final here = GoRouterState.of(context).uri.toString();
@@ -109,31 +105,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 width: 50,
                                 height: 50,
                                 child: Icon(Icons.chevron_left, size: 26, color: AppColors.ink),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: top + 14,
-                          right: 16,
-                          child: Material(
-                            color: Colors.white,
-                            shape: const CircleBorder(),
-                            child: InkWell(
-                              key: const Key('product-cart'),
-                              customBorder: const CircleBorder(),
-                              onTap: () => context.go('/shop/cart'),
-                              child: SizedBox(
-                                width: 50,
-                                height: 50,
-                                child: Center(
-                                  child: Badge(
-                                    isLabelVisible: context.watch<CartController>().itemCount > 0,
-                                    label: Text('${context.watch<CartController>().itemCount}'),
-                                    backgroundColor: AppColors.teaDark,
-                                    child: const Icon(Icons.shopping_cart_outlined, size: 24, color: AppColors.ink),
-                                  ),
-                                ),
                               ),
                             ),
                           ),
@@ -286,23 +257,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                       ),
                       SizedBox(
-                        height: 52,
-                        width: 52,
-                        child: OutlinedButton(
-                          key: const Key('product-add'),
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            shape: const CircleBorder(),
-                            side: const BorderSide(color: AppColors.teaDark, width: 1.4),
-                          ),
-                          onPressed: inStock ? () => _addOnly(p) : null,
-                          child: const Icon(Icons.add_shopping_cart, size: 22),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      SizedBox(
                         height: 54,
-                        child: FilledButton.icon(
+                        child: FilledButton(
                           key: const Key('product-order'),
                           style: FilledButton.styleFrom(
                             backgroundColor: AppColors.teaDark,
@@ -311,9 +267,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
                           ),
                           onPressed: inStock ? () => _orderNow(p) : null,
-                          icon: const Icon(Icons.arrow_forward),
-                          iconAlignment: IconAlignment.end,
-                          label: Text(inStock ? 'Đặt hàng' : 'Hết hàng'),
+                          child: Text(inStock ? 'Đặt hàng' : 'Hết hàng'),
                         ),
                       ),
                     ],
