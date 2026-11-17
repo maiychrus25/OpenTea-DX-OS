@@ -370,7 +370,7 @@ class _InfoRow extends StatelessWidget {
       Icon(icon, size: 20, color: AppColors.teaDark),
       const SizedBox(width: 12),
       SizedBox(
-        width: 78,
+        width: 92,
         child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.muted)),
       ),
       Expanded(
