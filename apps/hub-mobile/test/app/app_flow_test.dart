@@ -83,6 +83,31 @@ void main() {
     expect(find.byKey(const Key('checkout-submit')), findsOneWidget);
   });
 
+  testWidgets('customer checks out paying on delivery: no QR, goes to the order', (tester) async {
+    await _pump(tester);
+    await _login(tester, 'customer@demo.vn');
+    await tester.tap(find.byKey(const Key('cat-products')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-prod-01')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('back')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('home-cart')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cart-checkout')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('checkout-total')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('checkout-phone')), '0912345678');
+    await tester.enterText(find.byKey(const Key('checkout-address')), '12 Nguyễn Trãi, Hà Nội');
+    await tester.ensureVisible(find.byKey(const Key('method-cod')));
+    await tester.tap(find.byKey(const Key('method-cod')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('checkout-submit')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pay-qr')), findsNothing);
+    expect(find.byKey(const Key('checkout-submit')), findsNothing);
+  });
+
   testWidgets('customer checks out with VietQR and sees the QR and the order', (tester) async {
     await _pump(tester);
     await _login(tester, 'customer@demo.vn');
