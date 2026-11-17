@@ -74,6 +74,11 @@ class MockHubRepository implements HubRepository {
     description: p.description,
     gradientSeed: p.gradientSeed,
     householdId: p.householdId,
+    origin: p.origin,
+    harvest: p.harvest,
+    shelfLife: p.shelfLife,
+    storage: p.storage,
+    brewing: p.brewing,
   );
 
   @override

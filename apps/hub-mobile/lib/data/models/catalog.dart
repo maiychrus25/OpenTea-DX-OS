@@ -155,6 +155,11 @@ class Product {
     required this.description,
     required this.gradientSeed,
     this.householdId,
+    this.origin = '',
+    this.harvest = '',
+    this.shelfLife = '',
+    this.storage = '',
+    this.brewing = '',
   });
   final String id;
   final String htxCode;
@@ -167,6 +172,13 @@ class Product {
 
   /// Producing household, when a single household produces it.
   final String? householdId;
+
+  /// Details the cooperative writes for the product page; an empty one is not shown.
+  final String origin;
+  final String harvest;
+  final String shelfLife;
+  final String storage;
+  final String brewing;
 }
 
 enum ArticleStatus { draft, pending, published, rejected }

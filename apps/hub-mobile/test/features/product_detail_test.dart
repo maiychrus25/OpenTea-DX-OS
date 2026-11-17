@@ -45,6 +45,23 @@ void main() {
       expect(find.byKey(const Key('product-total')), findsOneWidget);
     });
 
+    testWidgets('the description is followed by the product information and the brewing tips', (tester) async {
+      await _openProducts(tester, email: 'customer@demo.vn');
+      await tester.tap(find.byKey(const Key('product-prod-01')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('hái vào sáng sớm trên đồi Tân Cương'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('product-info')));
+      await tester.pumpAndSettle();
+      for (final label in ['Quy cách', 'Xuất xứ', 'Thu hái', 'Hạn dùng', 'Bảo quản', 'Đơn vị bán']) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+      expect(find.text('Đồi chè Tân Cương, Thái Nguyên'), findsWidgets);
+      await tester.ensureVisible(find.byKey(const Key('product-brewing')));
+      await tester.pumpAndSettle();
+      expect(find.text('Cách thưởng trà'), findsOneWidget);
+      expect(find.textContaining('150 ml nước 80 đến 85 độ C'), findsOneWidget);
+    });
+
     testWidgets('the unit sits on the same line as the price', (tester) async {
       await _openProducts(tester, email: 'customer@demo.vn');
       await tester.tap(find.byKey(const Key('product-prod-01')));

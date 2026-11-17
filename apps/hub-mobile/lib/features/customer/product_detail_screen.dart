@@ -181,25 +181,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                           const SizedBox(height: 16),
                           Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(26)),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Giới thiệu', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 8),
-                                Text(
-                                  p.description.isEmpty
-                                      ? 'Hợp tác xã chưa viết giới thiệu cho sản phẩm này.'
-                                      : p.description,
-                                  style: const TextStyle(fontSize: 15.5, height: 1.5, color: AppColors.ink),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Container(
                             padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
                             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
                             child: Row(
@@ -232,6 +213,55 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               ],
                             ),
                           ),
+                          const SizedBox(height: 16),
+                          _Section(
+                            title: 'Giới thiệu',
+                            child: Text(
+                              p.description.isEmpty
+                                  ? 'Hợp tác xã chưa viết giới thiệu cho sản phẩm này.'
+                                  : p.description,
+                              style: const TextStyle(fontSize: 15.5, height: 1.55, color: AppColors.ink),
+                            ),
+                          ),
+                          if (_infoRows(p, htx).isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            _Section(
+                              title: 'Thông tin sản phẩm',
+                              child: Column(
+                                key: const Key('product-info'),
+                                children: [
+                                  for (var i = 0; i < _infoRows(p, htx).length; i++) ...[
+                                    if (i > 0) const Divider(height: 18, color: Color(0xFFE1ECDD)),
+                                    _InfoRow(
+                                      icon: _infoRows(p, htx)[i].$1,
+                                      label: _infoRows(p, htx)[i].$2,
+                                      value: _infoRows(p, htx)[i].$3,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                          if (p.brewing.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            _Section(
+                              key: const Key('product-brewing'),
+                              title: 'Cách thưởng trà',
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.emoji_food_beverage_outlined, size: 22, color: AppColors.teaDark),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      p.brewing,
+                                      style: const TextStyle(fontSize: 15, height: 1.5, color: AppColors.ink),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -293,6 +323,61 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
     );
   }
+}
+
+/// The rows of the 'Thông tin sản phẩm' block: only what the cooperative wrote.
+List<(IconData, String, String)> _infoRows(Product p, Htx htx) => [
+  (Icons.inventory_2_outlined, 'Quy cách', p.unit),
+  if (p.origin.isNotEmpty) (Icons.place_outlined, 'Xuất xứ', p.origin),
+  if (p.harvest.isNotEmpty) (Icons.eco_outlined, 'Thu hái', p.harvest),
+  if (p.shelfLife.isNotEmpty) (Icons.event_available_outlined, 'Hạn dùng', p.shelfLife),
+  if (p.storage.isNotEmpty) (Icons.thermostat_outlined, 'Bảo quản', p.storage),
+  (Icons.storefront_outlined, 'Đơn vị bán', shortHtxName(htx)),
+];
+
+class _Section extends StatelessWidget {
+  const _Section({super.key, required this.title, required this.child});
+  final String title;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(26)),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.ink),
+        ),
+        const SizedBox(height: 10),
+        child,
+      ],
+    ),
+  );
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.icon, required this.label, required this.value});
+  final IconData icon;
+  final String label;
+  final String value;
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, size: 20, color: AppColors.teaDark),
+      const SizedBox(width: 12),
+      SizedBox(
+        width: 78,
+        child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+      ),
+      Expanded(
+        child: Text(value, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, height: 1.4)),
+      ),
+    ],
+  );
 }
 
 class _Pill extends StatelessWidget {
