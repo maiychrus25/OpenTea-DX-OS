@@ -124,6 +124,10 @@ class _StaffShellState extends State<StaffShell> {
           name: name,
           unread: _counts.unread,
           onMenu: () => _scaffoldKey.currentState?.openDrawer(),
+          // A page opened from the menu or a card (not the home or a bottom bar tab) has a way back.
+          onBack: _isSubPage(nav, widget.location)
+              ? () => context.canPop() ? context.pop() : context.go(nav.home)
+              : null,
           onSearch: _search,
           onBell: () => context.go(nav.notificationsPath),
           onAvatar: () => context.go(nav.accountPath),
@@ -170,6 +174,9 @@ bool _showsSample(BuildContext context, String location) {
   return !isCore || context.read<HubRepository>().coreIsSample;
 }
 
+/// True for a page inside the shell that is neither the role's home nor a bottom bar tab.
+bool _isSubPage(StaffNav nav, String location) => location != nav.home && !nav.bottom.any((m) => m.path == location);
+
 String initialsOf(String name) {
   final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
   if (parts.isEmpty) return 'U';
@@ -183,6 +190,7 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
     required this.name,
     required this.unread,
     required this.onMenu,
+    this.onBack,
     required this.onSearch,
     required this.onBell,
     required this.onAvatar,
@@ -191,6 +199,9 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
   final String name;
   final int unread;
   final VoidCallback onMenu;
+
+  /// Set on pages that are not the home or a bottom bar tab: an arrow before the menu button.
+  final VoidCallback? onBack;
   final VoidCallback onSearch;
   final VoidCallback onBell;
   final VoidCallback onAvatar;
@@ -209,6 +220,13 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
       height: 60 + MediaQuery.paddingOf(context).top,
       child: Row(
         children: [
+          if (onBack != null)
+            IconButton(
+              key: const Key('staff-back'),
+              tooltip: 'Quay lại',
+              onPressed: onBack,
+              icon: const Icon(Icons.arrow_back, size: 26),
+            ),
           IconButton(
             key: const Key('menu-button'),
             tooltip: 'Mở menu',

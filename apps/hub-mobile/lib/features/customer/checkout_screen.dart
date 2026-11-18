@@ -25,12 +25,18 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  late final _recipient = TextEditingController(text: context.read<AppState>().claims?.name ?? '');
+  final _recipient = TextEditingController();
   final _phone = TextEditingController();
   final _address = TextEditingController();
   final _note = TextEditingController();
   PaymentMethod _method = PaymentMethod.vietQr;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _recipient.text = context.read<AppState>().claims?.name ?? '';
+  }
 
   @override
   void dispose() {
