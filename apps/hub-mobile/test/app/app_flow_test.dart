@@ -228,7 +228,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('op-booking-bk-02')));
     await tester.pumpAndSettle();
-    expect(find.text('Trần Minh Đức · 0987654321'), findsOneWidget);
+    expect(find.text('Trần Minh Đức'), findsWidgets);
+    expect(find.text('0987654321'), findsOneWidget);
     expect(find.byKey(const Key('operator-checkin')), findsNothing); // not confirmed yet
     await tester.tap(find.byKey(const Key('confirm-payment')));
     await tester.pumpAndSettle();

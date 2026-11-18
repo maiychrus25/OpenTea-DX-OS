@@ -13,6 +13,7 @@ import '../../data/models/staff.dart';
 import '../../shared/widgets.dart' show LoadView;
 import 'farmer_pages.dart' show withdrawalDaysLeft;
 import 'staff_format.dart';
+import '../operator/operator_widgets.dart';
 import 'staff_widgets.dart';
 
 Widget _scroll(Future<void> Function() reload, List<Widget> children) => LayoutBuilder(
@@ -586,6 +587,8 @@ class OperatorDashboard extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 16),
+          _UpcomingGroups(bookings: d.$2),
+          const SizedBox(height: 16),
           _pair(
             SectionCard(
               title: 'Khách theo hợp tác xã',
@@ -637,6 +640,69 @@ class OperatorDashboard extends StatelessWidget {
           const Text('Số liệu mẫu cho bản trình diễn.', style: TextStyle(fontSize: 13, color: StaffColors.muted)),
         ]);
       },
+    );
+  }
+}
+
+/// "Đoàn sắp tới": the next groups of the tour company, nearest first, each opening its booking.
+class _UpcomingGroups extends StatelessWidget {
+  const _UpcomingGroups({required this.bookings});
+  final List<Booking> bookings;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final next = bookings.where((b) => b.status != BookingStatus.cancelled && !b.departureDate.isBefore(today)).toList()
+      ..sort((a, b) => a.departureDate.compareTo(b.departureDate));
+    return SectionCard(
+      key: const Key('upcoming-groups'),
+      title: 'Đoàn sắp tới',
+      divided: true,
+      padded: false,
+      onSeeAll: () => context.go('/operator/bookings'),
+      child: next.isEmpty
+          ? const StaffListRow(title: 'Chưa có đoàn nào sắp đi')
+          : Column(
+              children: [
+                for (var i = 0; i < next.length && i < 3; i++) ...[
+                  if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+                  InkWell(
+                    key: Key('upcoming-${next[i].id}'),
+                    onTap: () => context.push('/operator/bookings/${next[i].id}'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          DateBlock(next[i].departureDate),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  next[i].tourName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${next[i].guests} khách · ${next[i].contactName}',
+                                  style: const TextStyle(fontSize: 13, color: StaffColors.muted),
+                                ),
+                                const SizedBox(height: 6),
+                                Pill(next[i].status.label, tone: bookingTone(next[i].status)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
     );
   }
 }
