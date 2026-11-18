@@ -14,6 +14,12 @@ import 'package:hub_mobile/data/local_store.dart';
 import 'package:hub_mobile/data/mock_hub_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// The "Cần xử lý hôm nay" list is closed until opened: open it.
+Future<void> _openAttention(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('attention-toggle')));
+  await tester.pumpAndSettle();
+}
+
 Future<void> _openAs(WidgetTester tester, String email) async {
   SharedPreferences.setMockInitialValues({});
   final store = await LocalStore.open();
@@ -165,6 +171,11 @@ void main() {
             ),
           ),
         );
+        // Closed at first: only the total shows; the list opens with the header.
+        expect(find.text('123 việc'), findsOneWidget);
+        expect(find.text('Nhật ký chờ duyệt của hợp tác xã'), findsNothing);
+        await tester.tap(find.byKey(const Key('attention-toggle')));
+        await tester.pumpAndSettle();
         expect(find.text('Không cần hiển thị'), findsNothing);
         expect(find.text('123'), findsOneWidget);
         expect(find.text('1'), findsOneWidget); // calendar crosses the year boundary
@@ -192,6 +203,10 @@ void main() {
           ),
         ),
       );
+      expect(find.text('Xong hết'), findsOneWidget);
+      expect(find.text('Không có việc cần xử lý'), findsNothing);
+      await tester.tap(find.byKey(const Key('attention-toggle')));
+      await tester.pumpAndSettle();
       expect(find.text('Không có việc cần xử lý'), findsOneWidget);
       expect(find.text('Nhật ký chờ duyệt'), findsNothing);
       await tester.tap(find.text('Ghi nhật ký mới'));
@@ -368,6 +383,7 @@ void main() {
     };
     for (final entry in routes.entries) {
       await _openAs(tester, '${entry.key}@demo.vn');
+      await _openAttention(tester);
       final home = entry.key == 'officer' ? '/manager' : '/${entry.key}';
       final router = GoRouter.of(tester.element(find.byType(SummaryStrip)));
       for (final (path, text) in entry.value) {
@@ -378,6 +394,7 @@ void main() {
         expect(router.routeInformationProvider.value.uri.path, path);
         router.go(home);
         await tester.pumpAndSettle();
+        await _openAttention(tester);
       }
     }
   });
@@ -519,6 +536,7 @@ void main() {
   group('dashboards', () {
     testWidgets('manager dashboard shows the stat cards and lists', (tester) async {
       await _openAs(tester, 'manager@demo.vn');
+      await _openAttention(tester);
       _expectAll([
         'Thành viên',
         'Vùng canh tác',
@@ -537,6 +555,7 @@ void main() {
 
     testWidgets('officer dashboard is read-only', (tester) async {
       await _openAs(tester, 'officer@demo.vn');
+      await _openAttention(tester);
       _expectAll(['Nhật ký chờ duyệt', 'Thửa đang canh tác', 'Lô sẵn sàng', 'Nông hộ quản lý']);
       await tester.scrollUntilVisible(find.text('Nhật ký gần đây'), 300);
       expect(find.byKey(const Key('journal-approve-jr-01')), findsNothing);
@@ -544,6 +563,7 @@ void main() {
 
     testWidgets('farmer dashboard shows own parcels, tasks and next harvest', (tester) async {
       await _openAs(tester, 'farmer@demo.vn');
+      await _openAttention(tester);
       _expectAll(['Thửa đất của tôi', 'Nhật ký chờ duyệt', 'Thu hái tới', 'Tình trạng thửa đất', 'P-TC-001']);
       await tester.scrollUntilVisible(find.text('Xem lịch sử nhật ký ›'), 300);
       expect(find.text('Lịch tham quan'), findsNothing);
@@ -553,6 +573,7 @@ void main() {
 
     testWidgets('operator dashboard shows linked HTXs, bookings, articles and revenue', (tester) async {
       await _openAs(tester, 'operator@demo.vn');
+      await _openAttention(tester);
       _expectAll([
         'HTX liên kết',
         'Lượt đặt tour',

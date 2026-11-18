@@ -365,48 +365,84 @@ class SummaryStrip extends StatelessWidget {
   );
 }
 
-/// Counts are attention signals, not status colours. Zero rows stay out of the way.
-class AttentionCard extends StatelessWidget {
+/// "Cần xử lý hôm nay": a compact header with the total, and the list only after the person opens it.
+/// Counts are attention signals, not status colours. Zero rows stay out of the way. The main action stays in view.
+class AttentionCard extends StatefulWidget {
   const AttentionCard({super.key, required this.items, this.action, this.title = 'Cần xử lý hôm nay'});
   final List<({String label, int count, VoidCallback onTap})> items;
   final Widget? action;
   final String title;
 
   @override
+  State<AttentionCard> createState() => _AttentionCardState();
+}
+
+class _AttentionCardState extends State<AttentionCard> {
+  bool _open = false;
+
+  @override
   Widget build(BuildContext context) {
-    final active = items.where((item) => item.count > 0).toList();
-    return SectionCard(
-      title: title,
-      divided: true,
-      padded: false,
+    final active = widget.items.where((item) => item.count > 0).toList();
+    final total = active.fold<int>(0, (n, item) => n + item.count);
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(staffRadius),
+        border: Border.all(color: StaffColors.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (active.isEmpty)
-            const StaffListRow(title: 'Không có việc cần xử lý', subtitle: 'Mọi việc đã được cập nhật.')
-          else
-            for (var i = 0; i < active.length; i++) ...[
-              if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: active[i].onTap,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        Expanded(child: Text(active[i].label, style: const TextStyle(fontSize: 14, height: 1.4))),
-                        const SizedBox(width: 12),
-                        Pill('${active[i].count}'),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.chevron_right, size: 18, color: StaffColors.muted),
-                      ],
+          InkWell(
+            key: const Key('attention-toggle'),
+            borderRadius: BorderRadius.circular(staffRadius),
+            onTap: () => setState(() => _open = !_open),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: StaffColors.ink),
+                    ),
+                  ),
+                  if (total > 0) Pill('$total việc', tone: Tone.warn) else const Pill('Xong hết', tone: Tone.ok),
+                  const SizedBox(width: 4),
+                  Icon(_open ? Icons.expand_less : Icons.expand_more, color: StaffColors.muted),
+                ],
+              ),
+            ),
+          ),
+          if (_open) ...[
+            const Divider(height: 1),
+            if (active.isEmpty)
+              const StaffListRow(title: 'Không có việc cần xử lý', subtitle: 'Mọi việc đã được cập nhật.')
+            else
+              for (var i = 0; i < active.length; i++) ...[
+                if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: active[i].onTap,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(active[i].label, style: const TextStyle(fontSize: 14, height: 1.4))),
+                          const SizedBox(width: 12),
+                          Pill('${active[i].count}'),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.chevron_right, size: 18, color: StaffColors.muted),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          if (action != null) Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 16), child: action),
+              ],
+          ],
+          if (widget.action != null) Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), child: widget.action),
         ],
       ),
     );
