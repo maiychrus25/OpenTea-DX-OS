@@ -273,6 +273,19 @@ class _HtxDashboard extends StatelessWidget {
         final journalPath = officer ? '/manager/journal' : '/manager/journal-approve';
         final recent = [...d.journal]..sort((a, b) => b.entryDate.compareTo(a.entryDate));
         return _scroll(reload, [
+          DayBanner(
+            day: dayLabel(now),
+            headline: pending.isEmpty ? 'Mọi nhật ký đã được duyệt' : '${pending.length} nhật ký chờ duyệt',
+            caption: officer
+                ? 'Cán bộ kỹ thuật theo dõi nhật ký và lô hàng'
+                : 'Trưởng HTX · duyệt nhật ký và điều hành',
+            chips: [
+              (Icons.content_cut, 'Thu hái 7 ngày tới: ${_weekCount(upcoming, now)}'),
+              (Icons.groups_outlined, '${d.members.length} thành viên'),
+              (Icons.inventory_2_outlined, '${d.lots.length} lô hàng'),
+            ],
+          ),
+          const SizedBox(height: 12),
           AttentionCard(
             title: officer ? 'Cần theo dõi' : 'Cần xử lý hôm nay',
             items: [
@@ -408,7 +421,32 @@ class FarmerDashboard extends StatelessWidget {
             if (bDate == null) return -1;
             return aDate.compareTo(bDate);
           });
+        Parcel? next;
+        for (final p in parcels) {
+          if (p.status.isActive && p.estimatedHarvestDate != null) {
+            next = p;
+            break;
+          }
+        }
+        final nextText = next == null ? null : 'Thu hái ${next.code}: ${_harvestDistance(next, now).toLowerCase()}';
+        final weather = d.weather;
         return _scroll(reload, [
+          DayBanner(
+            day: dayLabel(now),
+            headline: weather == null
+                ? (nextText ?? 'Hôm nay ở vườn chè')
+                : '${fmtNum(weather.temperatureC, digits: 0)}°C · ${weather.condition}',
+            caption: weather != null ? nextText : null,
+            chips: [
+              if (weather != null) (Icons.water_drop_outlined, 'Ẩm ${weather.humidityPct}%'),
+              if (weather != null) (Icons.grain, 'Mưa ${fmtNum(weather.precipitationMm)} mm'),
+              (
+                Icons.eco_outlined,
+                '${d.parcels.length} thửa · ${fmtHa(d.parcels.fold<double>(0, (s, p) => s + p.areaHa))}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           AttentionCard(
             items: [
               _attention(context, 'Việc hôm nay', todayTasks, '/farmer/schedule'),
@@ -441,16 +479,6 @@ class FarmerDashboard extends StatelessWidget {
               '/farmer/schedule',
             ),
           ]),
-          if (d.weather case final w?) ...[
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                '${fmtNum(w.temperatureC, digits: 0)}°C · ${w.condition} · Ẩm ${w.humidityPct}% · Mưa ${fmtNum(w.precipitationMm)} mm',
-                style: const TextStyle(fontSize: 13, height: 1.5, color: StaffColors.muted),
-              ),
-            ),
-          ],
           const SizedBox(height: 16),
           _pair(
             SectionCard(
@@ -521,7 +549,19 @@ class OperatorDashboard extends StatelessWidget {
       builder: (context, d, reload) {
         final linked = d.$1;
         final ranked = [...linked]..sort((a, b) => b.guestsThisMonth.compareTo(a.guestsThisMonth));
+        final waiting = d.$2.where((b) => b.status == BookingStatus.pending).length;
         return _scroll(reload, [
+          DayBanner(
+            day: dayLabel(DateTime.now()),
+            headline: waiting == 0 ? 'Không có lượt đặt chờ xác nhận' : '$waiting lượt đặt chờ xác nhận',
+            caption: 'Công ty du lịch · điều phối tour toàn vùng',
+            chips: [
+              (Icons.account_balance_outlined, '${linked.length} HTX liên kết'),
+              (Icons.confirmation_number_outlined, '${d.$2.length} lượt đặt'),
+              (Icons.article_outlined, '${d.$3.length} bài chờ duyệt'),
+            ],
+          ),
+          const SizedBox(height: 12),
           AttentionCard(
             items: [
               _attention(context, 'HTX cần hỗ trợ', linked.where((h) => h.state == 'warn').length, '/operator/htx'),

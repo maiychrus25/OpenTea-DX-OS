@@ -366,6 +366,87 @@ class SummaryStrip extends StatelessWidget {
 }
 
 /// "Cần xử lý hôm nay": a compact header with the total, and the list only after the person opens it.
+/// The banner at the top of a dashboard: today's date, one headline that matters now, and a few facts as chips.
+class DayBanner extends StatelessWidget {
+  const DayBanner({super.key, required this.day, required this.headline, this.caption, this.chips = const []});
+  final String day;
+  final String headline;
+  final String? caption;
+  final List<(IconData, String)> chips;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('day-banner'),
+    width: double.infinity,
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [StaffColors.sidebar, Color(0xFF1D5A40)],
+      ),
+      borderRadius: BorderRadius.circular(22),
+    ),
+    child: Stack(
+      children: [
+        Positioned(
+          right: -18,
+          bottom: -22,
+          child: Icon(Icons.eco, size: 130, color: Colors.white.withValues(alpha: 0.07)),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                day,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: StaffColors.lime),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                headline,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, height: 1.25),
+              ),
+              if (caption != null) ...[
+                const SizedBox(height: 4),
+                Text(caption!, style: const TextStyle(fontSize: 14, color: Colors.white70, height: 1.4)),
+              ],
+              if (chips.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final c in chips)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(c.$1, size: 15, color: StaffColors.lime),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(c.$2, style: const TextStyle(fontSize: 12.5, color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 /// Counts are attention signals, not status colours. Zero rows stay out of the way. The main action stays in view.
 class AttentionCard extends StatefulWidget {
   const AttentionCard({super.key, required this.items, this.action, this.title = 'Cần xử lý hôm nay'});

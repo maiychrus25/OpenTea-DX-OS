@@ -554,6 +554,28 @@ void main() {
       }
     });
 
+    testWidgets('each dashboard opens with a day banner instead of a greeting', (tester) async {
+      for (final email in ['manager@demo.vn', 'officer@demo.vn', 'farmer@demo.vn', 'operator@demo.vn']) {
+        await _openAs(tester, email);
+        expect(find.byKey(const Key('day-banner')), findsOneWidget, reason: email);
+        expect(find.textContaining('Chào buổi'), findsNothing, reason: email);
+        // The banner is above the attention card.
+        expect(
+          tester.getTopLeft(find.byKey(const Key('day-banner'))).dy,
+          lessThan(tester.getTopLeft(find.byType(AttentionCard)).dy),
+          reason: email,
+        );
+      }
+    });
+
+    testWidgets('the farmer banner carries the weather and the next harvest', (tester) async {
+      await _openAs(tester, 'farmer@demo.vn');
+      final banner = find.byKey(const Key('day-banner'));
+      expect(find.descendant(of: banner, matching: find.textContaining('°C')), findsOneWidget);
+      expect(find.descendant(of: banner, matching: find.textContaining('Ẩm')), findsOneWidget);
+      expect(find.descendant(of: banner, matching: find.textContaining('Thu hái P-TC-')), findsOneWidget);
+    });
+
     testWidgets('officer dashboard is read-only', (tester) async {
       await _openAs(tester, 'officer@demo.vn');
       await _openAttention(tester);

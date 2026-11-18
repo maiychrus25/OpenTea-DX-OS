@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
+import '../../core/format/formatting.dart';
 import '../../core/role/role.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/booking.dart';
@@ -26,6 +27,11 @@ String fmtTon(double kg) => '${fmtNum(kg / 1000)} tấn';
 DateTime dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
 int daysUntil(DateTime date, DateTime now) => dayOf(date).difference(dayOf(now)).inDays;
+
+const _weekdays = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ nhật'];
+
+/// "Thứ Tư, 18/11" for the day banner.
+String dayLabel(DateTime d) => '${_weekdays[d.weekday - 1]}, ${formatDate(d).substring(0, 5)}';
 
 String relativeTime(DateTime t, DateTime now) {
   final d = now.difference(t);
