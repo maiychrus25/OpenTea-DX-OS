@@ -272,7 +272,8 @@ void main() {
             tester.getTopLeft(find.byType(AttentionCard)).dy,
             lessThan(tester.getTopLeft(find.byType(SummaryStrip)).dy),
           );
-          expect(find.textContaining(DemoAuthService.accounts[email]!.name), findsWidgets);
+          // No greeting on the dashboard: the name is on the account page (checked below).
+          expect(find.textContaining('Chào buổi'), findsNothing);
           expect(find.text('Đang hoạt động'), findsNothing);
           expect(tester.takeException(), isNull, reason: errors.map((e) => e.toString()).join('\n'));
           // Walk the entire dashboard, including sections below the first viewport.
@@ -333,7 +334,7 @@ void main() {
           addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
           await tester.pumpWidget(HubApp(repository: MockHubRepository(), auth: DemoAuthService(store), store: store));
           await tester.pumpAndSettle();
-          expect(find.textContaining(fullName), findsOneWidget);
+          expect(find.textContaining('Chào buổi'), findsNothing);
           expect(tester.takeException(), isNull);
           final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
           while (scroll.position.pixels < scroll.position.maxScrollExtent) {

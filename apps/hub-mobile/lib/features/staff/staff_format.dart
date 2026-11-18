@@ -27,12 +27,6 @@ DateTime dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
 int daysUntil(DateTime date, DateTime now) => dayOf(date).difference(dayOf(now)).inDays;
 
-String greeting(DateTime now) {
-  if (now.hour < 12) return 'Chào buổi sáng';
-  if (now.hour < 18) return 'Chào buổi chiều';
-  return 'Chào buổi tối';
-}
-
 String relativeTime(DateTime t, DateTime now) {
   final d = now.difference(t);
   if (d.inMinutes < 60) return '${d.inMinutes.clamp(1, 59)} phút trước';

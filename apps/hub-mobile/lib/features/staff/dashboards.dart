@@ -31,18 +31,6 @@ Widget _scroll(Future<void> Function() reload, List<Widget> children) => LayoutB
   ),
 );
 
-Widget _hero(StaffScope scope, String role) {
-  final now = DateTime.now();
-  return PageHead(
-    '${greeting(now)}, ${scope.userName}',
-    compact: true,
-    subtitle: '${_weekday(now)}, ${formatDate(now)} · $role${scope.htx.isEmpty ? '' : ' · ${scope.htx}'}',
-  );
-}
-
-String _weekday(DateTime d) =>
-    const ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ nhật'][d.weekday - 1];
-
 MetricCard _figure(BuildContext context, String label, String value, String? path) => MetricCard(
   label: label,
   value: value,
@@ -285,7 +273,6 @@ class _HtxDashboard extends StatelessWidget {
         final journalPath = officer ? '/manager/journal' : '/manager/journal-approve';
         final recent = [...d.journal]..sort((a, b) => b.entryDate.compareTo(a.entryDate));
         return _scroll(reload, [
-          _hero(scope, officer ? 'Cán bộ KT' : 'Trưởng HTX'),
           AttentionCard(
             title: officer ? 'Cần theo dõi' : 'Cần xử lý hôm nay',
             items: [
@@ -422,7 +409,6 @@ class FarmerDashboard extends StatelessWidget {
             return aDate.compareTo(bDate);
           });
         return _scroll(reload, [
-          _hero(scope, 'Nông dân'),
           AttentionCard(
             items: [
               _attention(context, 'Việc hôm nay', todayTasks, '/farmer/schedule'),
@@ -536,7 +522,6 @@ class OperatorDashboard extends StatelessWidget {
         final linked = d.$1;
         final ranked = [...linked]..sort((a, b) => b.guestsThisMonth.compareTo(a.guestsThisMonth));
         return _scroll(reload, [
-          _hero(scope, 'Công ty du lịch'),
           AttentionCard(
             items: [
               _attention(context, 'HTX cần hỗ trợ', linked.where((h) => h.state == 'warn').length, '/operator/htx'),
