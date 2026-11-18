@@ -10,7 +10,8 @@ import '../../core/theme/staff_theme.dart';
 import '../../data/models/booking.dart';
 import '../../data/models/catalog.dart';
 import '../../data/models/staff.dart';
-import '../../shared/widgets.dart' show LoadView;
+import '../../data/models/order.dart' show PaymentStatus;
+import '../../shared/widgets.dart' show LoadView, TeaPhoto, teaPhotoFor;
 import 'farmer_pages.dart' show withdrawalDaysLeft;
 import 'staff_format.dart';
 import '../operator/operator_widgets.dart';
@@ -550,12 +551,18 @@ class OperatorDashboard extends StatelessWidget {
       builder: (context, d, reload) {
         final linked = d.$1;
         final ranked = [...linked]..sort((a, b) => b.guestsThisMonth.compareTo(a.guestsThisMonth));
+        final byRevenue = [...linked]..sort((a, b) => b.revenueMillion.compareTo(a.revenueMillion));
+        final revenue = linked.fold<int>(0, (s, h) => s + h.revenueMillion);
         final waiting = d.$2.where((b) => b.status == BookingStatus.pending).length;
+        final unpaid = d.$2
+            .where((b) => b.status != BookingStatus.cancelled && b.paymentStatus != PaymentStatus.paid)
+            .length;
         return _scroll(reload, [
           DayBanner(
             day: dayLabel(DateTime.now()),
             headline: waiting == 0 ? 'Không có lượt đặt chờ xác nhận' : '$waiting lượt đặt chờ xác nhận',
             caption: 'Công ty du lịch · điều phối tour toàn vùng',
+            photo: teaPhotoFor(1),
             chips: [
               (Icons.account_balance_outlined, '${linked.length} HTX liên kết'),
               (Icons.confirmation_number_outlined, '${d.$2.length} lượt đặt'),
@@ -566,12 +573,7 @@ class OperatorDashboard extends StatelessWidget {
           AttentionCard(
             items: [
               _attention(context, 'HTX cần hỗ trợ', linked.where((h) => h.state == 'warn').length, '/operator/htx'),
-              _attention(
-                context,
-                'Lượt đặt chờ công ty xác nhận',
-                d.$2.where((b) => b.status == BookingStatus.pending).length,
-                '/operator/bookings',
-              ),
+              _attention(context, 'Lượt đặt chờ công ty xác nhận', waiting, '/operator/bookings'),
               _attention(context, 'Bài chờ duyệt', d.$3.length, '/operator/articles'),
             ],
           ),
@@ -579,72 +581,184 @@ class OperatorDashboard extends StatelessWidget {
           SummaryStrip([
             _figure(context, 'HTX liên kết', '${linked.length}', '/operator/htx'),
             _figure(context, 'Lượt đặt tour', '${d.$2.length}', '/operator/bookings'),
-            _figure(
-              context,
-              'Doanh thu tháng',
-              '${linked.fold<int>(0, (s, h) => s + h.revenueMillion)} tr ₫',
-              '/operator/reports',
-            ),
+            _figure(context, 'Doanh thu tháng', '$revenue tr ₫', '/operator/reports'),
           ]),
-          const SizedBox(height: 16),
-          _UpcomingGroups(bookings: d.$2),
-          const SizedBox(height: 16),
-          _pair(
-            SectionCard(
-              title: 'Khách theo hợp tác xã',
-              divided: true,
-              onSeeAll: () => context.go('/operator/htx'),
-              child: ranked.isEmpty
-                  ? const Text('Chưa có hợp tác xã liên kết')
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Trong tháng · Đơn vị: khách',
-                          style: TextStyle(fontSize: 12, color: StaffColors.muted),
-                        ),
-                        const SizedBox(height: 4),
-                        BarList([
-                          for (final h in ranked.take(3)) (h.name.replaceFirst('HTX Chè ', ''), h.guestsThisMonth),
-                        ]),
-                      ],
-                    ),
-            ),
-            SectionCard(
-              title: 'Tour toàn vùng',
-              divided: true,
-              padded: false,
-              onSeeAll: () => context.go('/operator/tours'),
-              child: d.$4.isEmpty
-                  ? const StaffListRow(title: 'Chưa có tour nào')
-                  : Column(
-                      children: [
-                        for (var i = 0; i < d.$4.length && i < 3; i++) ...[
-                          if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
-                          StaffListRow(
-                            title: d.$4[i].name,
-                            trailing: Pill(d.$4[i].stateLabel, tone: toneOfState(d.$4[i].state)),
-                            onTap: () => context.go('/operator/tours'),
-                          ),
-                        ],
-                      ],
-                    ),
-            ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: QuickAction(
+                  key: const Key('quick-bookings'),
+                  icon: Icons.confirmation_number_outlined,
+                  label: 'Lượt đặt',
+                  count: waiting,
+                  onTap: () => context.go('/operator/bookings'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: QuickAction(
+                  key: const Key('quick-payments'),
+                  icon: Icons.payments_outlined,
+                  label: 'Thu tiền',
+                  count: unpaid,
+                  onTap: () => context.go('/operator/payments'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: QuickAction(
+                  key: const Key('quick-articles'),
+                  icon: Icons.fact_check_outlined,
+                  label: 'Duyệt bài',
+                  count: d.$3.length,
+                  onTap: () => context.go('/operator/articles'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: QuickAction(
+                  key: const Key('quick-reports'),
+                  icon: Icons.bar_chart_outlined,
+                  label: 'Báo cáo',
+                  onTap: () => context.go('/operator/reports'),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 20),
+          _UpcomingGroups(bookings: d.$2),
+          const SizedBox(height: 20),
+          SectionCard(
+            key: const Key('revenue-share'),
+            title: 'Doanh thu theo hợp tác xã',
+            divided: true,
+            onSeeAll: () => context.go('/operator/reports'),
+            child: linked.isEmpty
+                ? const Text('Chưa có hợp tác xã liên kết')
+                : RevenueShare(linked: byRevenue, total: revenue),
+          ),
+          const SizedBox(height: 12),
+          SectionCard(
+            title: 'Khách theo hợp tác xã',
+            divided: true,
+            onSeeAll: () => context.go('/operator/htx'),
+            child: ranked.isEmpty
+                ? const Text('Chưa có hợp tác xã liên kết')
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Trong tháng · Đơn vị: khách',
+                        style: TextStyle(fontSize: 12, color: StaffColors.muted),
+                      ),
+                      const SizedBox(height: 4),
+                      BarList([
+                        for (final h in ranked.take(3)) (h.name.replaceFirst('HTX Chè ', ''), h.guestsThisMonth),
+                      ]),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 20),
+          StripTitle('Tour toàn vùng', onSeeAll: () => context.go('/operator/tours')),
+          if (d.$4.isEmpty)
+            const StaffListRow(title: 'Chưa có tour nào')
+          else
+            SizedBox(
+              height: 118 + 96 * MediaQuery.textScalerOf(context).scale(1),
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: d.$4.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (context, i) => SizedBox(
+                  width: 250,
+                  child: _TourMini(tour: d.$4[i], photo: i, onTap: () => context.go('/operator/tours')),
+                ),
+              ),
+            ),
           const SizedBox(height: 16),
           const Text(
-            'Số liệu gộp của các HTX liên kết, không có dữ liệu cá nhân khách hay hộ.',
-            style: TextStyle(fontSize: 13, color: StaffColors.muted, height: 1.4),
+            'Số liệu gộp của các HTX liên kết, không có dữ liệu cá nhân khách hay hộ. Số liệu mẫu cho bản trình diễn.',
+            style: TextStyle(fontSize: 12.5, color: StaffColors.muted, height: 1.4),
           ),
-          const SizedBox(height: 8),
-          const Text('Số liệu mẫu cho bản trình diễn.', style: TextStyle(fontSize: 13, color: StaffColors.muted)),
         ]);
       },
     );
   }
 }
 
-/// "Đoàn sắp tới": the next groups of the tour company, nearest first, each opening its booking.
+/// A small photo card of a route tour, for the dashboard carousel.
+class _TourMini extends StatelessWidget {
+  const _TourMini({required this.tour, required this.photo, required this.onTap});
+  final RegionTour tour;
+  final int photo;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => OpCard(
+    key: Key('dash-tour-${tour.id}'),
+    padding: EdgeInsets.zero,
+    onTap: onTap,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TeaPhoto(
+          asset: teaPhotoFor(photo),
+          height: 112,
+          shade: true,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 220),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
+                child: Text(
+                  tour.stateLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: toneColor(toneOfState(tour.state)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+          child: Text(
+            tour.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 2, 12, 0),
+          child: Text(
+            tour.route,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12.5, color: StaffColors.muted),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+          child: Text(
+            formatVnd(tour.price),
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: StaffColors.primary),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// "Đoàn sắp tới": the next groups of the tour company as photo cards in a row, nearest first.
 class _UpcomingGroups extends StatelessWidget {
   const _UpcomingGroups({required this.bookings});
   final List<Booking> bookings;
@@ -655,54 +769,111 @@ class _UpcomingGroups extends StatelessWidget {
     final today = DateTime(now.year, now.month, now.day);
     final next = bookings.where((b) => b.status != BookingStatus.cancelled && !b.departureDate.isBefore(today)).toList()
       ..sort((a, b) => a.departureDate.compareTo(b.departureDate));
-    return SectionCard(
+    return Column(
       key: const Key('upcoming-groups'),
-      title: 'Đoàn sắp tới',
-      divided: true,
-      padded: false,
-      onSeeAll: () => context.go('/operator/bookings'),
-      child: next.isEmpty
-          ? const StaffListRow(title: 'Chưa có đoàn nào sắp đi')
-          : Column(
-              children: [
-                for (var i = 0; i < next.length && i < 3; i++) ...[
-                  if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
-                  InkWell(
-                    key: Key('upcoming-${next[i].id}'),
-                    onTap: () => context.push('/operator/bookings/${next[i].id}'),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Row(
-                        children: [
-                          DateBlock(next[i].departureDate),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        StripTitle('Đoàn sắp tới', onSeeAll: () => context.go('/operator/bookings')),
+        if (next.isEmpty)
+          const OpCard(child: Text('Chưa có đoàn nào sắp đi'))
+        else
+          SizedBox(
+            // Taller with large text, so the cards never cut their last line.
+            height: 112 + 96 * MediaQuery.textScalerOf(context).scale(1),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: next.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, i) {
+                final b = next[i];
+                final days = DateTime(
+                  b.departureDate.year,
+                  b.departureDate.month,
+                  b.departureDate.day,
+                ).difference(today).inDays;
+                return SizedBox(
+                  width: 236,
+                  child: OpCard(
+                    key: Key('upcoming-${b.id}'),
+                    padding: EdgeInsets.zero,
+                    onTap: () => context.push('/operator/bookings/${b.id}'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TeaPhoto(
+                          asset: teaPhotoFor(b.tourId.hashCode),
+                          height: 104,
+                          shade: true,
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
                               children: [
-                                Text(
-                                  next[i].tourName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: StaffColors.lime,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    days == 0 ? 'Hôm nay' : (days == 1 ? 'Ngày mai' : 'Còn $days ngày'),
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: StaffColors.sidebarDeep,
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${next[i].guests} khách · ${next[i].contactName}',
-                                  style: const TextStyle(fontSize: 13, color: StaffColors.muted),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    dayLabel(b.departureDate),
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: StaffColors.ink,
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(height: 6),
-                                Pill(next[i].status.label, tone: bookingTone(next[i].status)),
                               ],
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                          child: Text(
+                            b.tourName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 2, 12, 0),
+                          child: Text(
+                            '${b.guests} khách · ${b.contactName}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12.5, color: StaffColors.muted),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                          child: Pill(b.status.label, tone: bookingTone(b.status)),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ],
+                );
+              },
             ),
+          ),
+      ],
     );
   }
 }

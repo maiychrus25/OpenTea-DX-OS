@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -45,6 +46,7 @@ class OperatorHtxPage extends StatelessWidget {
         for (final h in list) ...[
           OpCard(
             key: Key('htx-${h.code}'),
+            padding: EdgeInsets.zero,
             onTap: () => showModalBottomSheet<void>(
               context: context,
               showDragHandle: true,
@@ -54,71 +56,109 @@ class OperatorHtxPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    HtxMark(code: h.code, name: h.name),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            h.name,
-                            style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, height: 1.25),
+                SizedBox(
+                  height: 96,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      TeaPhoto(asset: teaPhotoFor(h.code.length + list.indexOf(h)), height: 76),
+                      Positioned(
+                        right: 12,
+                        top: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
+                          child: Text(
+                            h.stateLabel,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: toneColor(toneOfState(h.state)),
+                            ),
                           ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              const Icon(Icons.place_outlined, size: 14, color: StaffColors.muted),
-                              const SizedBox(width: 3),
-                              Expanded(
-                                child: Text(
-                                  h.location,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 13, color: StaffColors.muted),
+                        ),
+                      ),
+                      Positioned(
+                        left: 14,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(17)),
+                          child: HtxMark(code: h.code, name: h.name, size: 50),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  h.name,
+                                  style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, height: 1.25),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.place_outlined, size: 14, color: StaffColors.muted),
+                                    const SizedBox(width: 3),
+                                    Expanded(
+                                      child: Text(
+                                        h.location,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 13, color: StaffColors.muted),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Pill(h.stateLabel, tone: toneOfState(h.state)),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _Count('${h.households}', 'hộ'),
-                    _Count('${h.hosting}', 'đón khách'),
-                    _Count('${h.tours}', 'tour'),
-                    _Count('${h.guestsThisMonth}', 'khách/tháng'),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Sẵn sàng đón khách',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12.5, color: StaffColors.muted),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          _Count('${h.households}', 'hộ'),
+                          _Count('${h.hosting}', 'đón khách'),
+                          _Count('${h.tours}', 'tour'),
+                          _Count('${h.guestsThisMonth}', 'khách/tháng'),
+                        ],
                       ),
-                    ),
-                    Text('${h.readiness}%', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: h.readiness / 100,
-                    minHeight: 7,
-                    backgroundColor: StaffColors.neutralSoft,
-                    color: h.readiness >= 70 ? StaffColors.primary : StaffColors.warn,
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Sẵn sàng đón khách',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12.5, color: StaffColors.muted),
+                            ),
+                          ),
+                          Text('${h.readiness}%', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: h.readiness / 100,
+                          minHeight: 7,
+                          backgroundColor: StaffColors.neutralSoft,
+                          color: h.readiness >= 70 ? StaffColors.primary : StaffColors.warn,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -496,6 +536,16 @@ class OperatorReportsPage extends StatelessWidget {
           if (ranked.isNotEmpty) ...[
             const SizedBox(height: 16),
             SectionCard(
+              key: const Key('report-revenue-share'),
+              title: 'Doanh thu theo hợp tác xã',
+              divided: true,
+              child: RevenueShare(
+                linked: [...linked]..sort((a, b) => b.revenueMillion.compareTo(a.revenueMillion)),
+                total: linked.fold<int>(0, (s, h) => s + h.revenueMillion),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SectionCard(
               title: 'Khách theo hợp tác xã',
               divided: true,
               child: BarList([for (final h in ranked) (h.name.replaceFirst('HTX Chè ', ''), h.guestsThisMonth)]),
@@ -545,8 +595,33 @@ class _OperatorBookingsTabState extends State<OperatorBookingsTab> {
             return aPast ? b.departureDate.compareTo(a.departureDate) : a.departureDate.compareTo(b.departureDate);
           });
         final pending = all.where((b) => b.status == BookingStatus.pending).length;
+        final coming = all.where((b) => b.status != BookingStatus.cancelled && !b.departureDate.isBefore(day));
+        final value = all.where((b) => b.status != BookingStatus.cancelled).fold<int>(0, (s, b) => s + b.total);
+        final perDay = <DateTime, int>{};
+        for (final b in bookings) {
+          final k = DateTime(b.departureDate.year, b.departureDate.month, b.departureDate.day);
+          perDay[k] = (perDay[k] ?? 0) + 1;
+        }
+        // A date header above the first booking of each day.
+        final firstOfDay = <String>{};
+        DateTime? previous;
+        for (final b in bookings) {
+          final k = DateTime(b.departureDate.year, b.departureDate.month, b.departureDate.day);
+          if (k != previous) firstOfDay.add(b.id);
+          previous = k;
+        }
         return _page(reload, [
           PageHead('Lượt đặt tour', subtitle: '$pending lượt chờ công ty xác nhận'),
+          Row(
+            children: [
+              Expanded(child: _MiniStat(Icons.hourglass_top, '$pending', 'Chờ xác nhận', warn: pending > 0)),
+              const SizedBox(width: 8),
+              Expanded(child: _MiniStat(Icons.flight_takeoff, '${coming.length}', 'Đoàn sắp đi')),
+              const SizedBox(width: 8),
+              Expanded(child: _MiniStat(Icons.payments_outlined, _short(value), 'Giá trị đặt')),
+            ],
+          ),
+          const SizedBox(height: 14),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -577,6 +652,25 @@ class _OperatorBookingsTabState extends State<OperatorBookingsTab> {
             const StaffEmpty('Không có lượt đặt nào', icon: Icons.confirmation_number_outlined)
           else
             for (final b in bookings) ...[
+              if (firstOfDay.contains(b.id))
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: dayLabel(b.departureDate),
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: StaffColors.ink),
+                        ),
+                        TextSpan(
+                          text:
+                              '  ·  ${perDay[DateTime(b.departureDate.year, b.departureDate.month, b.departureDate.day)]} đoàn',
+                          style: const TextStyle(fontSize: 13, color: StaffColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               OpCard(
                 key: Key('op-booking-${b.id}'),
                 onTap: () async {
@@ -657,6 +751,47 @@ class _OperatorBookingsTabState extends State<OperatorBookingsTab> {
   }
 }
 
+/// 1.260.000 ₫ as "1,26 tr ₫" for a small tile.
+String _short(int vnd) {
+  if (vnd >= 1000000) {
+    final m = vnd / 1000000;
+    return '${m.toStringAsFixed(m >= 100 ? 0 : 1).replaceAll('.', ',')} tr ₫';
+  }
+  return formatVnd(vnd);
+}
+
+class _MiniStat extends StatelessWidget {
+  const _MiniStat(this.icon, this.value, this.label, {this.warn = false});
+  final IconData icon;
+  final String value;
+  final String label;
+  final bool warn;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: warn ? StaffColors.warnSoft : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: warn ? StaffColors.warnSoft : StaffColors.border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: warn ? StaffColors.warn : StaffColors.primary),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: warn ? StaffColors.warn : StaffColors.ink),
+        ),
+        Text(label, maxLines: 2, style: const TextStyle(fontSize: 12, color: StaffColors.muted, height: 1.25)),
+      ],
+    ),
+  );
+}
+
 class OperatorBookingDetailScreen extends StatelessWidget {
   const OperatorBookingDetailScreen({super.key, required this.bookingId});
   final String bookingId;
@@ -732,6 +867,27 @@ class OperatorBookingDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               OpCard(
+                key: const Key('booking-steps'),
+                padding: const EdgeInsets.fromLTRB(8, 14, 8, 12),
+                child: b.status == BookingStatus.cancelled
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6),
+                        child: Text(
+                          'Lượt đặt đã huỷ, chỗ đã được trả lại cho ngày khởi hành.',
+                          style: TextStyle(color: StaffColors.bad, fontWeight: FontWeight.w600),
+                        ),
+                      )
+                    : StepTrack(
+                        steps: const ['Đặt chỗ', 'Nhận tiền', 'Xác nhận', 'Đón đoàn'],
+                        done:
+                            1 +
+                            (b.paymentStatus == PaymentStatus.paid ? 1 : 0) +
+                            (b.status == BookingStatus.confirmed || b.status == BookingStatus.completed ? 1 : 0) +
+                            (b.checkedIn || b.status == BookingStatus.completed ? 1 : 0),
+                      ),
+              ),
+              const SizedBox(height: 12),
+              OpCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -740,6 +896,18 @@ class OperatorBookingDetailScreen extends StatelessWidget {
                     OpRow('Số khách', '${b.adults} người lớn, ${b.children} trẻ em'),
                     OpRow('Liên hệ', b.contactName),
                     OpRow('Điện thoại', b.phone),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        key: const Key('copy-phone'),
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: b.phone));
+                          if (context.mounted) showMessage(context, 'Đã sao chép số điện thoại');
+                        },
+                        icon: const Icon(Icons.copy, size: 16),
+                        label: const Text('Sao chép số điện thoại'),
+                      ),
+                    ),
                     if (b.email.isNotEmpty) OpRow('Email', b.email),
                     if (b.note.isNotEmpty) OpRow('Ghi chú', b.note),
                     OpRow('Điểm danh', b.checkedIn ? 'Đã đến' : 'Chưa'),

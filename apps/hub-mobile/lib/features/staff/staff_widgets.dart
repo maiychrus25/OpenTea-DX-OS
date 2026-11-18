@@ -368,11 +368,21 @@ class SummaryStrip extends StatelessWidget {
 /// "Cần xử lý hôm nay": a compact header with the total, and the list only after the person opens it.
 /// The banner at the top of a dashboard: today's date, one headline that matters now, and a few facts as chips.
 class DayBanner extends StatelessWidget {
-  const DayBanner({super.key, required this.day, required this.headline, this.caption, this.chips = const []});
+  const DayBanner({
+    super.key,
+    required this.day,
+    required this.headline,
+    this.caption,
+    this.chips = const [],
+    this.photo,
+  });
   final String day;
   final String headline;
   final String? caption;
   final List<(IconData, String)> chips;
+
+  /// An image asset behind a dark green veil; the plain gradient when null.
+  final String? photo;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -389,11 +399,30 @@ class DayBanner extends StatelessWidget {
     ),
     child: Stack(
       children: [
-        Positioned(
-          right: -18,
-          bottom: -22,
-          child: Icon(Icons.eco, size: 130, color: Colors.white.withValues(alpha: 0.07)),
-        ),
+        if (photo != null) ...[
+          Positioned.fill(
+            child: Image.asset(photo!, fit: BoxFit.cover, errorBuilder: (c, e, st) => const SizedBox.shrink()),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    StaffColors.sidebarDeep.withValues(alpha: 0.92),
+                    StaffColors.sidebar.withValues(alpha: 0.62),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ] else
+          Positioned(
+            right: -18,
+            bottom: -22,
+            child: Icon(Icons.eco, size: 130, color: Colors.white.withValues(alpha: 0.07)),
+          ),
         Padding(
           padding: const EdgeInsets.all(18),
           child: Column(

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hub_mobile/app/hub_app.dart';
@@ -44,6 +45,53 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Chi tiết lượt đặt'), findsOneWidget);
     expect(router, isNotNull);
+  });
+
+  testWidgets('the dashboard has shortcuts with waiting counts and the revenue share by cooperative', (tester) async {
+    final router = await _open(tester);
+    expect(find.byKey(const Key('revenue-share')), findsOneWidget);
+    expect(find.text('tháng này'), findsOneWidget); // donut caption
+    for (final (key, path) in [
+      ('quick-bookings', '/operator/bookings'),
+      ('quick-payments', '/operator/payments'),
+      ('quick-articles', '/operator/articles'),
+      ('quick-reports', '/operator/reports'),
+    ]) {
+      router.go('/operator');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(Key(key)));
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, path, reason: key);
+    }
+  });
+
+  testWidgets('a booking shows its progress and the phone can be copied', (tester) async {
+    final router = await _open(tester);
+    router.go('/operator');
+    await tester.pumpAndSettle();
+    router.push('/operator/bookings/bk-02');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('booking-steps')), findsOneWidget);
+    expect(find.text('Đón đoàn'), findsOneWidget);
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String?;
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    await tester.tap(find.byKey(const Key('copy-phone')));
+    await tester.pumpAndSettle();
+    expect(copied, '0987654321');
+    expect(find.text('Đã sao chép số điện thoại'), findsOneWidget);
+  });
+
+  testWidgets('bookings are grouped under their day', (tester) async {
+    final router = await _open(tester);
+    router.go('/operator/bookings');
+    await tester.pumpAndSettle();
+    expect(find.text('Chờ xác nhận'), findsWidgets);
+    expect(find.textContaining('đoàn'), findsWidgets);
+    expect(find.text('Đoàn sắp đi'), findsOneWidget);
   });
 
   testWidgets('bookings can be filtered by state', (tester) async {
