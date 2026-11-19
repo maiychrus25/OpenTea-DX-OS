@@ -234,6 +234,19 @@ Mọi truy cập API đi qua gateway `http://localhost:9080`:
 > [!WARNING]
 > Không publish cổng `9081` ra ngoài mạng Docker. Cổng này không có giới hạn tần suất theo IP, chỉ an toàn khi chỉ có container `web` gọi được.
 
+### Quản lý nhân sự HTX: máy tính và điện thoại
+
+Hai ứng dụng client dùng chung quy ước của lõi (một tài khoản Keycloak, mỗi bảng có `htx_code`, schema riêng trong PostgreSQL, bộ màu của `DESIGN.md`):
+
+| Ứng dụng | Thư mục | Công nghệ | Người dùng |
+| --- | --- | --- | --- |
+| **Tea Staff Manager** | [`apps/staff-desktop`](apps/staff-desktop) | C# .NET 10, WPF, MVVM, EF Core | Chủ HTX: hồ sơ nhân viên, tổ, giao việc, chấm công, duyệt nghỉ phép, tính lương |
+| **Tea Work** | [`apps/staff-mobile`](apps/staff-mobile) | Kotlin, Jetpack Compose, MVVM | Nhân viên: nhận việc, báo tiến độ, chấm công vào/ra, xin nghỉ, xem phiếu lương |
+
+- App máy tính chạy offline bằng SQLite hoặc dùng schema `app_staff_work` trong database `agrimarket` của lõi (DDL ở `apps/staff-desktop/database/postgres/001_init.sql`), đăng nhập bằng tài khoản trên máy hoặc tài khoản Keycloak realm `agrimarket` (vai trò `manager`, claim `htx_code`). Hướng dẫn: [`apps/staff-desktop/docs/core-integration.md`](apps/staff-desktop/docs/core-integration.md).
+- App máy tính mở một API cho điện thoại trong mạng LAN (cổng 5080), hợp đồng ở [`apps/staff-desktop/docs/mobile-api.md`](apps/staff-desktop/docs/mobile-api.md); app Android gọi API này và có chế độ dùng thử offline.
+- Build: `dotnet build apps/staff-desktop/AppManageStaff.sln` (Windows, .NET SDK 10) và `cd apps/staff-mobile && ./gradlew assembleRelease` (JDK 17+, Android SDK 37). Bản chạy thử (EXE, APK) có trong Releases của [appManageStaff](https://github.com/Vudinhdat02/appManageStaff/releases) và [appReceiveWork](https://github.com/Vudinhdat02/appReceiveWork/releases).
+- Tài khoản dữ liệu mẫu: chủ HTX `admin` / `Admin@123`, nhân viên `nv001`…`nv008` / `123456` (tên và số điện thoại đều là dữ liệu giả).
 ### Dữ liệu demo chè và tài khoản
 
 `npm run seed` tạo hai HTX chè Thái Nguyên: Tân Cương (`TC`) và La Bằng (`LB`), mỗi HTX vài nông hộ và thửa giống Trung du, LDP1, Kim Tuyên. Tên, số điện thoại và toạ độ đều là dữ liệu giả (toạ độ nằm trong vùng chè, không phải ranh giới đất thật). Thửa `TC-A3` có lịch sử tính theo ngày chạy seed: bón phân, phun thuốc còn 4 ngày cách ly (cách ly 7 ngày), lứa trước đã thu hoạch và lô `TC-CHE-A3-001` đã xuất QR (trang công khai `/q/TC-CHE-A3-001`), một ảnh bệnh chè chờ cán bộ duyệt.
@@ -477,7 +490,9 @@ Mọi Pull Request vào `main` đều phải qua **CI Quality Gate** trên GitHu
 OpenTea-DX-OS/
 ├── apps/
 │   ├── web/                # Next.js 14 — giao diện, API routes, Prisma schema & migrations
-│   └── disease-api/        # FastAPI — dịch vụ nhận diện bệnh hại cây trồng
+│   ├── disease-api/        # FastAPI — dịch vụ nhận diện bệnh hại cây trồng
+│   ├── staff-desktop/      # C# WPF — quản lý nhân sự, giao việc, chấm công, tính lương (chủ HTX)
+│   └── staff-mobile/       # Kotlin Compose — ứng dụng nhận việc cho nhân viên (Android)
 ├── miniapps/               # Mini-app cắm thêm qua app.yaml và ./dxos (tea-tour, hello)
 ├── ai-models/              # Script thiết lập mô hình AI
 ├── database/               # Schema & dữ liệu mẫu PostgreSQL

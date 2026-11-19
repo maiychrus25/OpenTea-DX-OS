@@ -1,0 +1,24 @@
+<!-- SPDX-License-Identifier: MIT -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>TeaStaff.Desktop</RootNamespace>
+    <AssemblyName>TeaStaffManager</AssemblyName>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\logo.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TeaStaff.Core\TeaStaff.Core.csproj" />
+    <ProjectReference Include="..\TeaStaff.Infrastructure\TeaStaff.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

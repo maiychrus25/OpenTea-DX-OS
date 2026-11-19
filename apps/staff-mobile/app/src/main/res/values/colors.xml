@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<resources>
+    <color name="tea_primary">#176C4B</color>
+    <color name="tea_lime">#D6F05C</color>
+    <color name="tea_background">#F5F7F3</color>
+    <color name="white">#FFFFFF</color>
+</resources>

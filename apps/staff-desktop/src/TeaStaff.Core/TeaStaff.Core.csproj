@@ -1,0 +1,7 @@
+<!-- SPDX-License-Identifier: MIT -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>TeaStaff.Core</RootNamespace>
+  </PropertyGroup>
+</Project>

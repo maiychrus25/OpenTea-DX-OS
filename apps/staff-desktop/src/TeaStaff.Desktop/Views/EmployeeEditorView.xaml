@@ -1,0 +1,121 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 Vu Dinh Dat -->
+<UserControl x:Class="TeaStaff.Desktop.Views.EmployeeEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="Field" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,0,12,14" />
+        </Style>
+        <Style x:Key="Group" TargetType="TextBlock" BasedOn="{StaticResource SectionTitle}">
+            <Setter Property="Margin" Value="0,6,0,12" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+        </Style>
+    </UserControl.Resources>
+    <StackPanel Margin="0,0,-12,0">
+        <TextBlock Text="Thông tin cá nhân" Style="{StaticResource Group}" Margin="0,0,0,12" />
+        <UniformGrid Columns="3">
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Mã nhân viên *" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}" CharacterCasing="Upper" MaxLength="20" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Họ và tên *" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding FullName, UpdateSourceTrigger=PropertyChanged}" MaxLength="120" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Giới tính" Style="{StaticResource FieldLabel}" />
+                <ComboBox ItemsSource="{Binding Genders}" SelectedItem="{Binding Gender}" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Ngày sinh" Style="{StaticResource FieldLabel}" />
+                <DatePicker SelectedDate="{Binding DateOfBirth}" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Số điện thoại" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding Phone, UpdateSourceTrigger=PropertyChanged}" MaxLength="20" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Email" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" MaxLength="120" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Số CCCD" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding IdentityNumber, UpdateSourceTrigger=PropertyChanged}" MaxLength="20" />
+            </StackPanel>
+        </UniformGrid>
+        <StackPanel Style="{StaticResource Field}">
+            <TextBlock Text="Địa chỉ" Style="{StaticResource FieldLabel}" />
+            <TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" MaxLength="200" />
+        </StackPanel>
+
+        <TextBlock Text="Công việc &amp; hợp đồng" Style="{StaticResource Group}" />
+        <UniformGrid Columns="3">
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Tổ / phòng ban" Style="{StaticResource FieldLabel}" />
+                <ComboBox ItemsSource="{Binding Departments}" SelectedItem="{Binding Department}" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Chức vụ" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding Position, UpdateSourceTrigger=PropertyChanged}" MaxLength="80" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Ngày vào làm" Style="{StaticResource FieldLabel}" />
+                <DatePicker SelectedDate="{Binding HireDate}" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Loại hợp đồng" Style="{StaticResource FieldLabel}" />
+                <ComboBox ItemsSource="{Binding Contracts}" SelectedItem="{Binding Contract}" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Trạng thái" Style="{StaticResource FieldLabel}" />
+                <ComboBox ItemsSource="{Binding Statuses}" SelectedItem="{Binding Status}" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Ngày phép năm" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding AnnualLeaveDays, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+        </UniformGrid>
+
+        <TextBlock Text="Lương &amp; thanh toán" Style="{StaticResource Group}" />
+        <UniformGrid Columns="3">
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Hình thức lương" Style="{StaticResource FieldLabel}" />
+                <ComboBox ItemsSource="{Binding SalaryTypes}" SelectedItem="{Binding SalaryType}" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="{Binding SalaryHint}" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding BaseSalary, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Right" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Phụ cấp / tháng (₫)" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding Allowance, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Right" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Ngân hàng" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding BankName, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Số tài khoản" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding BankAccount, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+        </UniformGrid>
+
+        <TextBlock Text="Tài khoản ứng dụng nhận việc" Style="{StaticResource Group}" />
+        <UniformGrid Columns="3">
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Tên đăng nhập" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" CharacterCasing="Lower" MaxLength="40" />
+            </StackPanel>
+            <StackPanel Style="{StaticResource Field}">
+                <TextBlock Text="Mật khẩu mới" Style="{StaticResource FieldLabel}" />
+                <TextBox Text="{Binding NewPassword, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+            <TextBlock Text="{Binding PasswordHint}" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,8,12,0" />
+        </UniformGrid>
+        <StackPanel Style="{StaticResource Field}">
+            <TextBlock Text="Ghi chú" Style="{StaticResource FieldLabel}" />
+            <TextBox Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MultilineTextBox}" MinHeight="60" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

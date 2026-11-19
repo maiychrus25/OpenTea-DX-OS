@@ -1,0 +1,125 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 Vu Dinh Dat -->
+<UserControl x:Class="TeaStaff.Desktop.Views.LeavesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="clr-namespace:TeaStaff.Core.Domain;assembly=TeaStaff.Core">
+    <UserControl.Resources>
+        <Style x:Key="FilterChip" TargetType="RadioButton" BasedOn="{StaticResource Chip}">
+            <Setter Property="GroupName" Value="LeaveFilter" />
+            <Setter Property="Command" Value="{Binding DataContext.SetFilterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+            <Setter Property="CommandParameter" Value="{Binding Tag, RelativeSource={RelativeSource Self}}" />
+        </Style>
+    </UserControl.Resources>
+    <Grid Margin="32,24,32,28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <DockPanel Margin="0,0,0,16">
+            <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Command="{Binding AddCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE710;" Style="{StaticResource Icon}" FontSize="14" />
+                    <TextBlock Margin="8,0,0,0" Text="Ghi đơn nghỉ" />
+                </StackPanel>
+            </Button>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <RadioButton Style="{StaticResource FilterChip}" Tag="pending" IsChecked="True">
+                    <TextBlock><Run Text="Chờ duyệt (" /><Run Text="{Binding PendingCount, Mode=OneWay}" /><Run Text=")" /></TextBlock>
+                </RadioButton>
+                <RadioButton Style="{StaticResource FilterChip}" Tag="approved" Content="Đã duyệt" />
+                <RadioButton Style="{StaticResource FilterChip}" Tag="rejected" Content="Từ chối / Huỷ" />
+                <RadioButton Style="{StaticResource FilterChip}" Tag="all" Content="Tất cả" />
+            </StackPanel>
+        </DockPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="0" ClipToBounds="True">
+            <Grid>
+                <DataGrid ItemsSource="{Binding Items}" RowHeight="60">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="Nhân viên" Width="1.6*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Employee.FullName}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Employee.Position}" FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Loại nghỉ" Width="1.2*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Type, Converter={StaticResource Label}}" VerticalAlignment="Center" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Thời gian" Width="1.4*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock>
+                                            <Run Text="{Binding FromDate, StringFormat='dd/MM/yyyy', Mode=OneWay}" /><Run Text=" – " /><Run Text="{Binding ToDate, StringFormat='dd/MM/yyyy', Mode=OneWay}" />
+                                        </TextBlock>
+                                        <TextBlock FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" Text="{Binding Days, StringFormat='{}{0} ngày'}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Lý do" Width="2.2*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Reason}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Reason}" />
+                                        <TextBlock FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" TextTrimming="CharacterEllipsis"
+                                                   Text="{Binding ReviewNote, StringFormat='Phản hồi: {0}'}" Visibility="{Binding ReviewNote, Converter={StaticResource Visible}}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Gửi từ" Width="0.9*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Source, Converter={StaticResource Label}}" VerticalAlignment="Center" Foreground="{StaticResource InkSecondaryBrush}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Trạng thái" Width="1*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ContentControl Content="{Binding Status}" ContentTemplate="{StaticResource PillTemplate}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="" Width="200">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static d:LeaveStatus.Pending}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                        <Button Style="{StaticResource SecondaryButton}" Height="32" Padding="12,0" Content="Từ chối" Margin="0,0,8,0"
+                                                Command="{Binding DataContext.RejectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                        <Button Style="{StaticResource PrimaryButton}" Height="32" Padding="14,0" Content="Duyệt"
+                                                Command="{Binding DataContext.ApproveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding Items.Count, Converter={StaticResource Hidden}}">
+                    <TextBlock Text="&#xE709;" Style="{StaticResource Icon}" FontSize="32" HorizontalAlignment="Center" Foreground="{StaticResource BorderBrush}" />
+                    <TextBlock Margin="0,10,0,0" Text="Không có đơn nghỉ nào trong mục này." Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

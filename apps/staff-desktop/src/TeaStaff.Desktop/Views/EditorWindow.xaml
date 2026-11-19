@@ -1,0 +1,45 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 Vu Dinh Dat -->
+<Window x:Class="TeaStaff.Desktop.Views.EditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="{Binding Width}" SizeToContent="Height" MaxHeight="900"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
+        Background="{StaticResource CardBrush}" FontFamily="{StaticResource AppFont}">
+    <DockPanel>
+        <!-- Header -->
+        <Border DockPanel.Dock="Top" Padding="28,22,28,14">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource PrimarySubtleBrush}">
+                    <Viewbox Width="18" Height="18">
+                        <Canvas Width="24" Height="24">
+                            <Path Data="{StaticResource LeafGeometry}" Fill="{StaticResource PrimaryBrush}" />
+                        </Canvas>
+                    </Viewbox>
+                </Border>
+                <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Footer -->
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource LeafLightBrush}" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="28,14">
+            <DockPanel LastChildFill="False">
+                <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Content="{Binding SaveText}" Command="{Binding SaveCommand}" IsDefault="True" MinWidth="110" />
+                <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Huỷ" Command="{Binding CancelCommand}" IsCancel="True" Margin="0,0,10,0" MinWidth="90" />
+            </DockPanel>
+        </Border>
+
+        <!-- Error banner -->
+        <Border DockPanel.Dock="Bottom" Margin="28,0,28,14" Padding="12,10" CornerRadius="{StaticResource RadiusMd}" Background="{StaticResource DangerSubtleBrush}"
+                Visibility="{Binding Error, Converter={StaticResource Visible}}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE783;" Style="{StaticResource Icon}" Foreground="{StaticResource DangerBrush}" FontSize="14" VerticalAlignment="Top" Margin="0,1,0,0" />
+                <TextBlock Margin="8,0,0,0" Text="{Binding Error}" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" MaxWidth="560" />
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,4,28,18" MaxHeight="680">
+            <ContentControl Content="{Binding}" Focusable="False" />
+        </ScrollViewer>
+    </DockPanel>
+</Window>

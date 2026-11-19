@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Tea leaf mark (same geometry as the desktop logo), centred in the 108dp adaptive-icon safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:translateX="33" android:translateY="33" android:scaleX="1.75" android:scaleY="1.75">
+        <path
+            android:fillColor="#D6F05C"
+            android:pathData="M12,2 C5,6 3,12 5,19 C5.5,20.5 6.5,21.5 8,22 C15,22 20,16 20,8 C20,5 18,3 12,2 Z" />
+        <path
+            android:strokeColor="#176C4B"
+            android:strokeWidth="1.3"
+            android:strokeLineCap="round"
+            android:pathData="M7,20 C9,15 12,10 17,6" />
+    </group>
+</vector>
