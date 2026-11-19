@@ -1,0 +1,246 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 Vu Dinh Dat -->
+<UserControl x:Class="TeaStaff.Desktop.Views.AttendanceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="clr-namespace:TeaStaff.Core.Domain;assembly=TeaStaff.Core">
+    <UserControl.Resources>
+        <Style x:Key="TotalHeader" TargetType="TextBlock">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource InkSecondaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="TotalCell" TargetType="TextBlock">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+        </Style>
+    </UserControl.Resources>
+    <Grid Margin="32,24,32,28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Margin="0,0,0,16">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Style="{StaticResource SecondaryButton}" Command="{Binding ExportCommand}" Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" FontSize="14" />
+                        <TextBlock Margin="8,0,0,0" Text="Xuất CSV" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource PrimaryButton}" Command="{Binding MarkAllTodayCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE73E;" Style="{StaticResource Icon}" FontSize="14" />
+                        <TextBlock Margin="8,0,0,0" Text="Chấm có mặt cả HTX hôm nay" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource SecondaryButton}" Width="38" Padding="0" Command="{Binding PreviousMonthCommand}" ToolTip="Tháng trước">
+                    <TextBlock Text="&#xE76B;" Style="{StaticResource Icon}" FontSize="13" />
+                </Button>
+                <TextBlock Text="{Binding MonthLabel}" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" Margin="14,0" MinWidth="120" TextAlignment="Center" />
+                <Button Style="{StaticResource SecondaryButton}" Width="38" Padding="0" Command="{Binding NextMonthCommand}" ToolTip="Tháng sau">
+                    <TextBlock Text="&#xE76C;" Style="{StaticResource Icon}" FontSize="13" />
+                </Button>
+                <Button Style="{StaticResource GhostButton}" Margin="8,0,0,0" Content="Tháng này" Command="{Binding ThisMonthCommand}" />
+                <TextBlock Text="{Binding Summary}" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="16,0,0,0" />
+            </StackPanel>
+        </DockPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="0" ClipToBounds="True">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!-- Header -->
+                    <Border Background="{StaticResource LeafLightBrush}" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1" Padding="16,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Width="158" Text="Nhân viên" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource InkSecondaryBrush}" VerticalAlignment="Center" />
+                            <ItemsControl ItemsSource="{Binding Days}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="23" Margin="1,0" CornerRadius="6" Padding="0,2">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Day}" HorizontalAlignment="Center" FontSize="12" FontWeight="SemiBold">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSunday}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                                    <Setter Property="Foreground" Value="White" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Weekday}" HorizontalAlignment="Center" FontSize="9.5">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{StaticResource InkTertiaryBrush}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#E7F0EA" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Style="{StaticResource TotalHeader}" Text="Công" />
+                            <TextBlock Style="{StaticResource TotalHeader}" Text="Nghỉ" />
+                            <TextBlock Style="{StaticResource TotalHeader}" Text="Vắng" />
+                            <TextBlock Style="{StaticResource TotalHeader}" Text="Giờ TC" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Rows -->
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,0,0,1" Padding="16,7">
+                                    <StackPanel Orientation="Horizontal">
+                                        <StackPanel Width="158" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Employee.FullName}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                                            <TextBlock FontSize="11.5" Foreground="{StaticResource InkTertiaryBrush}">
+                                                <Run Text="{Binding Employee.Code, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding Employee.SalaryType, Converter={StaticResource Label}, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Cells}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Width="23" Height="28" Margin="1,0" Cursor="Hand" ToolTip="{Binding Tooltip}" FocusVisualStyle="{x:Null}"
+                                                            Command="{Binding DataContext.EditCellCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border x:Name="Bd" CornerRadius="6" BorderThickness="1" BorderBrush="Transparent">
+                                                                    <Border.Style>
+                                                                        <Style TargetType="Border">
+                                                                            <Setter Property="Background" Value="{StaticResource LeafLightBrush}" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsSunday}" Value="True">
+                                                                                    <Setter Property="Background" Value="{StaticResource AccentSubtleBrush}" />
+                                                                                </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding Status}" Value="{x:Static d:AttendanceStatus.Present}">
+                                                                                    <Setter Property="Background" Value="{StaticResource SuccessSubtleBrush}" />
+                                                                                </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding Status}" Value="{x:Static d:AttendanceStatus.HalfDay}">
+                                                                                    <Setter Property="Background" Value="{StaticResource WarningSubtleBrush}" />
+                                                                                </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding Status}" Value="{x:Static d:AttendanceStatus.PaidLeave}">
+                                                                                    <Setter Property="Background" Value="{StaticResource InfoSubtleBrush}" />
+                                                                                </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding Status}" Value="{x:Static d:AttendanceStatus.UnpaidLeave}">
+                                                                                    <Setter Property="Background" Value="{StaticResource MutedBrush}" />
+                                                                                </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding Status}" Value="{x:Static d:AttendanceStatus.Absent}">
+                                                                                    <Setter Property="Background" Value="{StaticResource DangerSubtleBrush}" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Border.Style>
+                                                                    <TextBlock Text="{Binding Symbol}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12.5" FontWeight="Bold">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static d:AttendanceStatus.HalfDay}">
+                                                                                        <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                                                                    </DataTrigger>
+                                                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static d:AttendanceStatus.PaidLeave}">
+                                                                                        <Setter Property="Foreground" Value="{StaticResource InfoBrush}" />
+                                                                                    </DataTrigger>
+                                                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static d:AttendanceStatus.UnpaidLeave}">
+                                                                                        <Setter Property="Foreground" Value="{StaticResource InkSecondaryBrush}" />
+                                                                                    </DataTrigger>
+                                                                                    <DataTrigger Binding="{Binding Status}" Value="{x:Static d:AttendanceStatus.Absent}">
+                                                                                        <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Style="{StaticResource TotalCell}" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" Text="{Binding WorkDays, StringFormat='0.#'}" />
+                                        <TextBlock Style="{StaticResource TotalCell}" Text="{Binding LeaveDays}" />
+                                        <TextBlock Style="{StaticResource TotalCell}" Text="{Binding AbsentDays}" />
+                                        <TextBlock Style="{StaticResource TotalCell}" Text="{Binding Overtime, StringFormat='0.# g'}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Legend -->
+        <WrapPanel Grid.Row="2" Margin="0,12,0,0">
+            <WrapPanel.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="Width" Value="20" />
+                    <Setter Property="Height" Value="20" />
+                    <Setter Property="CornerRadius" Value="5" />
+                    <Setter Property="Margin" Value="0,0,6,0" />
+                </Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="FontSize" Value="12" />
+                    <Setter Property="Margin" Value="0,0,18,0" />
+                    <Setter Property="VerticalAlignment" Value="Center" />
+                    <Setter Property="Foreground" Value="{StaticResource InkSecondaryBrush}" />
+                </Style>
+            </WrapPanel.Resources>
+            <Border Background="{StaticResource SuccessSubtleBrush}"><TextBlock Text="✓" Margin="0" HorizontalAlignment="Center" Foreground="{StaticResource SuccessBrush}" FontWeight="Bold" /></Border>
+            <TextBlock Text="Có mặt (+ có tăng ca)" />
+            <Border Background="{StaticResource WarningSubtleBrush}"><TextBlock Text="½" Margin="0" HorizontalAlignment="Center" Foreground="{StaticResource WarningBrush}" FontWeight="Bold" /></Border>
+            <TextBlock Text="Nửa ngày" />
+            <Border Background="{StaticResource InfoSubtleBrush}"><TextBlock Text="P" Margin="0" HorizontalAlignment="Center" Foreground="{StaticResource InfoBrush}" FontWeight="Bold" /></Border>
+            <TextBlock Text="Nghỉ có lương" />
+            <Border Background="{StaticResource MutedBrush}"><TextBlock Text="K" Margin="0" HorizontalAlignment="Center" FontWeight="Bold" /></Border>
+            <TextBlock Text="Nghỉ không lương" />
+            <Border Background="{StaticResource DangerSubtleBrush}"><TextBlock Text="✕" Margin="0" HorizontalAlignment="Center" Foreground="{StaticResource DangerBrush}" FontWeight="Bold" /></Border>
+            <TextBlock Text="Vắng" />
+            <Border Background="{StaticResource AccentSubtleBrush}" />
+            <TextBlock Text="Chủ nhật" />
+        </WrapPanel>
+    </Grid>
+</UserControl>
