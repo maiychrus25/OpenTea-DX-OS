@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Vu Dinh Dat
+# Builds and tests the staff management clients only when their files change.
+
+name: Staff Apps
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: [ "apps/staff-desktop/**", ".github/workflows/staff-apps.yml" ]
+  pull_request:
+    branches: [ "main" ]
+    paths: [ "apps/staff-desktop/**", ".github/workflows/staff-apps.yml" ]
+
+permissions:
+  contents: read
+
+jobs:
+  staff-desktop:
+    name: Staff Desktop (.NET)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/staff-desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        run: dotnet build AppManageStaff.sln -c Release
+
+      - name: Test
+        run: dotnet test AppManageStaff.sln -c Release --no-build
