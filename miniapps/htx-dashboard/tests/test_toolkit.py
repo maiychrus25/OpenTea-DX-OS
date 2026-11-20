@@ -12,6 +12,10 @@ D0 = date(2026, 11, 2)  # a Monday
 TODAY = date(2026, 11, 20)
 
 
+def pts(values, start=D0):
+    return [charts.Point(start + timedelta(days=i), v, v - 1.0, v + 1.0) for i, v in enumerate(values)]
+
+
 def coords(text: str) -> list[tuple[float, float]]:
     return [tuple(float(n) for n in pair.split(",")) for pair in text.split()]
 
@@ -258,3 +262,46 @@ def test_column_labels_never_run_into_each_other():
     chart = charts.column_chart(labels, [[float(i + 1) for i in range(12)]], ["n"])
     xs = [t.pos for t in chart.labels]
     assert len(xs) >= 2 and all(b - a >= 54 for a, b in zip(xs, xs[1:]))
+
+
+# ---------- width: a chart spans the width it is asked for, its marks stay thin, its labels thin with the room ----------
+
+def test_a_line_chart_spans_the_width_it_is_asked_for():
+    chart = charts.line_chart(pts([float(i) for i in range(5)]), width=1056)
+    assert chart.width == 1056 and chart.plot_right == 1056 - charts.RIGHT
+    last_x = coords(chart.segments[0])[-1][0]
+    assert abs(last_x - chart.plot_right) < 0.5
+
+
+def test_a_scatter_spans_the_width_it_is_asked_for():
+    sc = charts.scatter([(1.0, 1.0, "a"), (9.0, 9.0, "b")], width=1056)
+    assert max(d.x for d in sc.dots) <= sc.plot_right + 0.01 and sc.plot_right == 1056 - charts.RIGHT
+
+
+def test_wide_columns_keep_their_bars_thin_and_distribute_the_space():
+    wide = charts.column_chart(["a", "b", "c"], [[1, 2, 3]], ["x"], width=1056)
+    assert wide.marks and all(m.width <= charts.MAX_STACK_BAR + 0.01 for m in wide.marks)
+    grouped = charts.column_chart(["a", "b"], [[1, 2], [3, 4]], ["x", "y"], stacked=False, width=1056)
+    assert all(m.width <= charts.MAX_GROUP_BAR + 0.01 for m in grouped.marks)
+    centres = [m.x + m.width / 2 for m in wide.marks]
+    assert len(set(round(c) for c in centres)) == 3  # three categories, three centres across the width
+
+
+def test_x_labels_thin_with_the_room_the_chart_has():
+    days = pts([float(i) for i in range(30)])
+    narrow = charts.line_chart(days, width=326)
+    wide = charts.line_chart(days, width=1056)
+    assert len(narrow.x_ticks) <= 3 and len(wide.x_ticks) > len(narrow.x_ticks)
+    xs = [t.pos for t in narrow.x_ticks]
+    assert all(b - a >= 60 for a, b in zip(xs, xs[1:]))
+
+
+def test_paired_draws_the_desktop_width_and_the_phone_width():
+    pair = charts.paired(charts.column_chart, 677, ["a"], [[1.0]], ["x"])
+    assert pair.desktop.width == 677 and pair.phone.width == charts.PHONE_WIDTH
+    assert not pair.desktop.empty and pair.desktop.names == pair.phone.names
+
+
+def test_a_scatter_knows_the_drawing_it_was_made_for():
+    sc = charts.scatter([(1.0, 1.0, "a")], width=326)
+    assert sc.width == 326 and sc.height == charts.HEIGHT

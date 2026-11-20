@@ -14,6 +14,8 @@ from htx_dashboard import metrics as m
 PERIODS = (7, 30, 90)
 DEFAULT_DAYS = 30
 SENSOR_DAYS_MAX = 30  # the hot store keeps readings 30 days (DXOS_HOT_RETENTION_DAYS)
+SENSOR_MINI_WIDTH = 341  # a sensor card of the overview's grid of three, at 1280 px
+SENSOR_CARD_WIDTH = 488  # a sensor card of the parcel page, two to a row, at 1280 px
 PARCEL_CODE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$")
 ERROR_TEXT = "Chưa lấy được dữ liệu, thử tải lại"
 STATUS_CLASS = {"SOWING": "sowing", "TENDING": "tending", "HARVEST_APPROVED": "harvest-approved", "HARVESTED": "harvested",
@@ -87,7 +89,7 @@ def line_of(rows: dict[str, list] | None, sensor: str):
     """A daily line for one sensor from the coop-wide averages (no band: one number per day)."""
     if not rows or sensor not in rows:
         return None
-    return charts.line_chart([charts.Point(d, v, v, v) for d, v in rows[sensor]], area=True)
+    return charts.paired(charts.line_chart, SENSOR_MINI_WIDTH, [charts.Point(d, v, v, v) for d, v in rows[sensor]], area=True)
 
 
 def status_items(parcels) -> list[tuple[str, int]]:
@@ -230,13 +232,13 @@ def overview(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> di
     activity = None
     if journals:
         weeks, names, series = m.activity_by_week(journals, now, days)
-        activity = charts.column_chart([m.week_label(w) for w in weeks], series, names, digits=0) if names else None
+        activity = charts.paired(charts.column_chart, charts.CARD_WIDTH[8], [m.week_label(w) for w in weeks], series, names, digits=0) if names else None
     coop_days = m.sensor_day_averages(sensors) if sensors is not None else None
     sensor_cards = [sensor_card(s, coop_days.get(s, []) if coop_days else None) for s in m.SENSOR]
     disease_chart = None
     if diseases:
         weeks, names, series = m.disease_by_week(diseases, now, days)
-        disease_chart = charts.column_chart([m.week_label(w) for w in weeks], series, names, digits=0) if names else None
+        disease_chart = charts.paired(charts.column_chart, charts.CARD_WIDTH[5], [m.week_label(w) for w in weeks], series, names, digits=0) if names else None
     timeline = None
     if harvest is not None:
         lanes = [charts.Lane(f"{p.code} · {p.household_name}", None, m.harvest_date(p), "overdue" if m.harvest_date(p) < m.vn_day(now) else "plan")
@@ -255,7 +257,7 @@ def overview(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> di
         "funnel": charts.funnel_steps(m.lots_funnel(lots)) if lots else None, "lots_empty": lots is not None and not lots,
         "timeline": timeline, "harvest_count": len(harvest.upcoming_30) + len(harvest.overdue) if harvest else 0,
         "harvest_extra": max(0, len(harvest.upcoming_30) + len(harvest.overdue) - GANTT_LANES) if harvest else 0,
-        "price": charts.line_chart(price_points, area=True) if len(price_points) > 1 else None,
+        "price": charts.paired(charts.line_chart, charts.CARD_WIDTH[4], price_points, area=True) if len(price_points) > 1 else None,
         "prices": latest_prices,
         "notes": [n for n in (cap_note(parcels, "thửa"), cap_note(journals, "nhật ký"), cap_note(diseases, "báo cáo bệnh"),
                               cap_note(lots, "lô chè")) if n],
@@ -303,7 +305,7 @@ def production(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> 
         calendar_summary = (f"Tổng {appkit.number(len(journals), 0)} nhật ký trong {days} ngày."
                             + (f" Ngày nhiều nhất: {busiest[0]:%d/%m/%Y} ({appkit.number(busiest[1], 0)} nhật ký)." if busiest else ""))
         weeks = m.weekly_counts([j.entry_date for j in journals], now, days)
-        weekly_entries = charts.column_chart([m.week_label(w) for w, _ in weeks], [[n for _, n in weeks]], ["Nhật ký"], digits=0)
+        weekly_entries = charts.paired(charts.column_chart, charts.CARD_WIDTH[5], [m.week_label(w) for w, _ in weeks], [[n for _, n in weeks]], ["Nhật ký"], digits=0)
     mix = charts.donut(m.by_activity(journals), appkit.number(len(journals), 0)) if journals else None
 
     # Crop cycles: sowing to the expected harvest, the overdue ones marked; the nearest GANTT_LANES first.
@@ -313,7 +315,7 @@ def production(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> 
                          m.harvest_date(p), "overdue" if m.harvest_date(p) < today else "plan") for p in cycles[:GANTT_LANES]]
     gantt = charts.timeline(lanes, today) if lanes else None
     months = m.expected_by_month(parcels) if parcels is not None else []
-    month_chart = charts.column_chart([label for label, _ in months], [[kg / 1000 for _, kg in months]], ["Sản lượng (tấn)"],
+    month_chart = charts.paired(charts.column_chart, charts.CARD_WIDTH[7], [label for label, _ in months], [[kg / 1000 for _, kg in months]], ["Sản lượng (tấn)"],
                                       digits=1) if months else None
     crops = [(crop, kg / 1000) for crop, kg in m.expected_by_crop(parcels or [])]
     return {
@@ -425,7 +427,7 @@ def parcel_page(core: cc.Core, auth: str, htx: str, code: str, now: datetime, da
                 "name": name, "label": label, "unit": unit, "reading": reading, "silent": silent, "stats": stats,
                 "age": m.age_text(reading.ts, now) if reading else None,
                 "gauge": charts.gauge(reading.value, stats.min, stats.max) if reading and stats else None,
-                "chart": charts.line_chart([charts.Point(d.day, d.avg, d.min, d.max) for d in rows])})
+                "chart": charts.paired(charts.line_chart, SENSOR_CARD_WIDTH, [charts.Point(d.day, d.avg, d.min, d.max) for d in rows])})
     combined = parcel_combined(daily) if daily is not None else None
     return {"r": r, "days": days, "code": code, "parcel": ok(r, "parcel"), "sensors": sensors, "sensor_days": sensor_days,
             "capped_sensors": days > SENSOR_DAYS_MAX, "weather": ok(r, "weather"), "journals": ok(r, "journals"),
@@ -441,8 +443,8 @@ def parcel_combined(daily: list[m.Daily]) -> dict:
     rain = [(f"{d:%d/%m}", avg.get(("rainfall", d))) for d in days]
     rain_chart = None
     if any(v is not None for _, v in rain):
-        rain_chart = charts.column_chart([label for label, _ in rain], [[v or 0.0 for _, v in rain]], ["Lượng mưa, trung bình các lần đo"], digits=1)
-    return {"scatter": charts.scatter(dots) if dots else None, "rain": rain_chart, "dots": len(dots)}
+        rain_chart = charts.paired(charts.column_chart, charts.CARD_WIDTH[6], [label for label, _ in rain], [[v or 0.0 for _, v in rain]], ["Lượng mưa, trung bình các lần đo"], digits=1)
+    return {"scatter": charts.paired(charts.scatter, charts.CARD_WIDTH[6], dots) if dots else None, "rain": rain_chart, "dots": len(dots)}
 
 
 # ---------------------------------------------------------------- health
@@ -454,8 +456,8 @@ def health(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> dict
     weekly = None
     if mine:
         weeks, names, series = m.disease_by_week(mine, now, days)
-        weekly = charts.column_chart([m.week_label(w) for w in weeks], series, names, digits=0) if names else None
-    confidence = charts.column_chart([label for label, _ in m.confidence_bins(mine)], [[n for _, n in m.confidence_bins(mine)]],
+        weekly = charts.paired(charts.column_chart, charts.CARD_WIDTH[8], [m.week_label(w) for w in weeks], series, names, digits=0) if names else None
+    confidence = charts.paired(charts.column_chart, charts.CARD_WIDTH[5], [label for label, _ in m.confidence_bins(mine)], [[n for _, n in m.confidence_bins(mine)]],
                                      ["Báo cáo"], digits=0) if mine else None
     status = charts.donut(m.disease_by_status(mine) if mine else [], appkit.number(len(mine or []), 0))
     return {
@@ -482,11 +484,11 @@ def lots_page(core: cc.Core, auth: str, htx: str, now: datetime, days: int, quer
     stacked = None
     if rows:
         labels, names, series = m.lots_by_month_status(rows, now, 6)
-        stacked = charts.column_chart(labels, series, names, digits=0)
+        stacked = charts.paired(charts.column_chart, charts.CARD_WIDTH[8], labels, series, names, digits=0)
     pairs = m.lot_pairs(rows) if rows else []
     weights = None
     if pairs:
-        weights = charts.column_chart([m.week_label(m.vn_day(lot.harvest_date)) for lot in pairs],
+        weights = charts.paired(charts.column_chart, charts.CARD_WIDTH[8], [m.week_label(m.vn_day(lot.harvest_date)) for lot in pairs],
                                       [[lot.estimated_kg for lot in pairs], [lot.actual_kg for lot in pairs]],
                                       ["Dự kiến (kg)", "Thực tế (kg)"], stacked=False, digits=0)
     return {
@@ -524,11 +526,11 @@ def data_page(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> d
     volume = m.run_volume(runs) if runs is not None else []
     moved = None
     if volume:
-        moved = charts.column_chart([f"{v.day:%d/%m}" + (" ✕" if v.failed else "") for v in volume],
+        moved = charts.paired(charts.column_chart, charts.CARD_WIDTH[12], [f"{v.day:%d/%m}" + (" ✕" if v.failed else "") for v in volume],
                                     [[float(v.rows) for v in volume]], ["Số dòng chuyển"], digits=0)
     return {
         "r": r, "days": days, "hot": hot,
-        "hot_chart": charts.line_chart([charts.Point(d, n, n, n) for d, n in hot], area=True) if hot else None,
+        "hot_chart": charts.paired(charts.line_chart, charts.CARD_WIDTH[12], [charts.Point(d, n, n, n) for d, n in hot], area=True) if hot else None,
         "hot_total": sum(n for _, n in hot) if hot else 0, "summary": m.sensor_summary(latest, now) if latest is not None else None,
         "silent": [{"reading": x, "label": m.sensor_label(x.sensor)[0], "age": m.age_text(x.ts, now)} for x in silent] if silent is not None else None,
         "runs": run_rows, "failed": len(m.failed_runs(runs, now)) if runs is not None else None,

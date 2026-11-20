@@ -575,15 +575,44 @@
   margin: 0;
 }
 
+/* Two drawings of each chart: the desktop one fills its card (its width is the card's content width), the phone one is
+   the card's width on a 390 px screen. Text is in user units of the drawing's own width, so both keep one size. */
 .col-chart,
 .scatter,
 .line-chart,
 .calendar {
   display: block;
   width: 100%;
-  max-width: 480px;
   height: auto;
   overflow: visible;
+}
+
+.chart-phone {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .chart-desktop {
+    display: none;
+  }
+  .chart-phone {
+    display: block;
+  }
+  .col-chart-phone,
+  .scatter-phone,
+  .line-chart-phone {
+    display: block;
+    width: 100%;
+    max-width: 326px;
+    height: auto;
+    overflow: visible;
+  }
+}
+
+.col-chart-phone,
+.scatter-phone,
+.line-chart-phone {
+  display: block;
 }
 
 .col-chart rect,
@@ -597,14 +626,14 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* Axis text is in user units of a 480-wide chart: 16 units is about 11.7px in a card of 350px (the scale of a 4-column card). */
+/* Axis text is 14 user units of a drawing that is as wide as its card: 14px on a desktop and on a phone. */
 .tick {
   fill: var(--color-ink-tertiary);
-  font-size: 16px;
+  font-size: 14px;
   font-family: inherit;
 }
 
-/* The dashboard is wider than the shared 960px column: the charts need the room, and they never grow past their drawing. */
+/* The dashboard is wider than the shared 960px column: the charts need the room for the cards' widths. */
 main.dashboard-main {
   max-width: 1120px;
 }

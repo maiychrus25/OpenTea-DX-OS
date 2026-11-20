@@ -27,24 +27,31 @@
 </ul>
 {%- endmacro %}
 
-{# charts.Columns: stacked or grouped columns with a table of the same numbers. #}
-{% macro columns(c, title, empty_text) -%}
-{%- if c is none or c.empty %}{{ empty_chart(empty_text) }}{% else %}
+{# One drawing per width: the desktop one fills the card, the phone one is the card's width on a 390 px screen. The CSS shows
+   one of them; the hidden one leaves the accessibility tree with display:none. The legend and the table are printed once. #}
+{% macro col_svg(c, title, cls) -%}
+<svg class="{{ cls }}" viewBox="0 0 {{ c.width }} {{ c.height }}" role="img" aria-label="{{ title }}">
+  {%- for t in c.y_ticks %}
+  <line class="grid" x1="{{ c.plot_left }}" x2="{{ c.plot_right }}" y1="{{ t.y }}" y2="{{ t.y }}"/>
+  <text class="tick" x="{{ c.plot_left - 6 }}" y="{{ t.y }}" text-anchor="end" dominant-baseline="middle">{{ t.label }}</text>
+  {%- endfor %}
+  {%- for mark in c.marks %}
+  <rect class="tone-{{ mark.tone }}" x="{{ mark.x }}" y="{{ mark.y }}" width="{{ mark.width }}" height="{{ mark.height }}" rx="3"><title>{{ mark.title }}</title></rect>
+  {%- endfor %}
+  {%- for t in c.labels %}
+  <text class="tick" x="{{ t.pos }}" y="{{ c.height - 6 }}" text-anchor="middle">{{ t.label }}</text>
+  {%- endfor %}
+</svg>
+{%- endmacro %}
+
+{# charts.Pair of columns: a chart with its legend and the table of its numbers. #}
+{% macro columns(p, title, empty_text) -%}
+{%- if p is none or p.desktop.empty %}{{ empty_chart(empty_text) }}{% else %}
 <figure class="chart-figure">
-  <svg class="col-chart" viewBox="0 0 {{ c.width }} {{ c.height }}" role="img" aria-label="{{ title }}">
-    {%- for t in c.y_ticks %}
-    <line class="grid" x1="{{ c.plot_left }}" x2="{{ c.plot_right }}" y1="{{ t.y }}" y2="{{ t.y }}"/>
-    <text class="tick" x="{{ c.plot_left - 6 }}" y="{{ t.y }}" text-anchor="end" dominant-baseline="middle">{{ t.label }}</text>
-    {%- endfor %}
-    {%- for mark in c.marks %}
-    <rect class="tone-{{ mark.tone }}" x="{{ mark.x }}" y="{{ mark.y }}" width="{{ mark.width }}" height="{{ mark.height }}" rx="3"><title>{{ mark.title }}</title></rect>
-    {%- endfor %}
-    {%- for t in c.labels %}
-    <text class="tick" x="{{ t.pos }}" y="{{ c.height - 6 }}" text-anchor="middle">{{ t.label }}</text>
-    {%- endfor %}
-  </svg>
-  {%- if c.names | length > 1 %}{{ legend(c.names) }}{% endif %}
-  {{ table_twin(["Mốc"] + c.names, c.rows, "Bảng số liệu của biểu đồ") }}
+  <div class="chart-desktop">{{ col_svg(p.desktop, title, "col-chart") }}</div>
+  <div class="chart-phone">{{ col_svg(p.phone, title, "col-chart-phone") }}</div>
+  {%- if p.desktop.names | length > 1 %}{{ legend(p.desktop.names) }}{% endif %}
+  {{ table_twin(["Mốc"] + p.desktop.names, p.desktop.rows, "Bảng số liệu của biểu đồ") }}
 </figure>
 {%- endif %}
 {%- endmacro %}
@@ -169,21 +176,25 @@
 {%- endif %}
 {%- endmacro %}
 
-{# charts.Scatter: each dot is a day; both axes have round ticks. #}
-{% macro scatter(s, title, x_label, y_label, empty_text) -%}
-{%- if s is none or s.empty %}{{ empty_chart(empty_text) }}{% else %}
+{% macro scatter_svg(sc, title, x_label, y_label, cls) -%}
+<svg class="{{ cls }}" viewBox="0 0 {{ sc.width }} {{ sc.height }}" role="img" aria-label="{{ title }}">
+  {%- for t in sc.y_ticks %}
+  <line class="grid" x1="{{ sc.plot_left }}" x2="{{ sc.plot_right }}" y1="{{ t.y }}" y2="{{ t.y }}"/>
+  <text class="tick" x="{{ sc.plot_left - 6 }}" y="{{ t.y }}" text-anchor="end" dominant-baseline="middle">{{ t.label }}</text>
+  {%- endfor %}
+  {%- for t in sc.x_ticks %}<text class="tick" x="{{ t.pos }}" y="{{ sc.height - 6 }}" text-anchor="middle">{{ t.label }}</text>{% endfor %}
+  <text class="tick axis-label" x="{{ sc.plot_right }}" y="{{ sc.plot_top + 8 }}" text-anchor="end">{{ y_label }}</text>
+  <text class="tick axis-label" x="{{ sc.plot_right }}" y="{{ sc.plot_bottom - 6 }}" text-anchor="end">{{ x_label }}</text>
+  {%- for d in sc.dots %}<circle class="dot tone-0" cx="{{ d.x }}" cy="{{ d.y }}" r="4"><title>{{ d.label }}</title></circle>{% endfor %}
+</svg>
+{%- endmacro %}
+
+{% macro scatter(p, title, x_label, y_label, empty_text) -%}
+{%- if p is none or p.desktop.empty %}{{ empty_chart(empty_text) }}{% else %}
 <figure class="chart-figure">
-  <svg class="scatter" viewBox="0 0 480 220" role="img" aria-label="{{ title }}">
-    {%- for t in s.y_ticks %}
-    <line class="grid" x1="{{ s.plot_left }}" x2="{{ s.plot_right }}" y1="{{ t.y }}" y2="{{ t.y }}"/>
-    <text class="tick" x="{{ s.plot_left - 6 }}" y="{{ t.y }}" text-anchor="end" dominant-baseline="middle">{{ t.label }}</text>
-    {%- endfor %}
-    {%- for t in s.x_ticks %}<text class="tick" x="{{ t.pos }}" y="214" text-anchor="middle">{{ t.label }}</text>{% endfor %}
-    <text class="tick axis-label" x="{{ s.plot_right }}" y="{{ s.plot_top + 8 }}" text-anchor="end">{{ y_label }}</text>
-    <text class="tick axis-label" x="{{ s.plot_right }}" y="{{ s.plot_bottom - 6 }}" text-anchor="end">{{ x_label }}</text>
-    {%- for d in s.dots %}<circle class="dot tone-0" cx="{{ d.x }}" cy="{{ d.y }}" r="4"><title>{{ d.label }}</title></circle>{% endfor %}
-  </svg>
-  {{ table_twin(["Ngày", x_label, y_label], s.rows, "Bảng số liệu của biểu đồ") }}
+  <div class="chart-desktop">{{ scatter_svg(p.desktop, title, x_label, y_label, "scatter") }}</div>
+  <div class="chart-phone">{{ scatter_svg(p.phone, title, x_label, y_label, "scatter-phone") }}</div>
+  {{ table_twin(["Ngày", x_label, y_label], p.desktop.rows, "Bảng số liệu của biểu đồ") }}
 </figure>
 {%- endif %}
 {%- endmacro %}

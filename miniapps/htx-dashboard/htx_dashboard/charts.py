@@ -22,6 +22,11 @@ PITCH, CELL = 30, 24  # calendar cell pitch and size in user units
 HEAD, ROW_LABEL = 18, 52  # room for the weekday names above the grid and the week's first day at its left
 DONUT_CENTRE, DONUT_OUTER, DONUT_INNER = 100, 92, 62
 LABEL_WIDTH = 54  # user units a column label of up to six characters takes at the axis text size
+MAX_STACK_BAR, MAX_GROUP_BAR = 40, 56  # a wide chart spreads its categories instead of fattening its bars
+PHONE_WIDTH = 326  # the drawing of a phone: the content width of a card on a 390 px screen
+# The drawing width of a card's content at 1280 px, by its span of the twelve columns (the text stays the same size).
+CARD_WIDTH = {3: 224, 4: 315, 5: 405, 6: 496, 7: 587, 8: 677, 12: 1056}
+X_LABEL_WIDTH = 100  # user units a line chart's date label needs, so ticks thin as the chart narrows
 GANTT_SPAN = 1000  # a timeline is drawn on 0..1000 and stretched by the page
 
 
@@ -219,6 +224,8 @@ class Scatter:
     plot_bottom: float
     empty: bool
     rows: list[tuple[str, str, str]] = field(default_factory=list)  # label, x, y: the same dots as text
+    width: int = WIDTH
+    height: int = HEIGHT
 
 
 def nice_ticks(low: float, high: float, target: int = 4) -> list[float]:
@@ -255,13 +262,13 @@ def _runs(indexed: Sequence[tuple[int, float | None]]) -> list[list[tuple[int, f
 
 # ---------- line and area (one daily series) ----------
 
-def line_chart(points: list[Point], area: bool = False) -> LineChart:
+def line_chart(points: list[Point], area: bool = False, width: int = WIDTH) -> LineChart:
     if not points:
-        return LineChart()
+        return LineChart(width=width, plot_right=width - RIGHT)
     points = sorted(points, key=lambda p: p.day)
     ticks = nice_ticks(min(p.min for p in points), max(p.max for p in points), target=3)  # few ticks: readable text
     low, high = ticks[0], ticks[-1]
-    right, bottom = WIDTH - RIGHT, HEIGHT - BOTTOM
+    right, bottom = width - RIGHT, HEIGHT - BOTTOM
     first, span = points[0].day, (points[-1].day - points[0].day).days
 
     def x_of(day: date) -> float:
@@ -291,11 +298,14 @@ def line_chart(points: list[Point], area: bool = False) -> LineChart:
 
     step = max(1, math.ceil(span / 5)) if span else 1
     x_ticks = [Tick(x_of(p.day), p.day.strftime("%d/%m")) for p in points if span == 0 or (p.day - first).days % step == 0]
+    room = max(2, min(6, (width - LEFT - RIGHT) // X_LABEL_WIDTH))  # labels that fit the width, never more than six
+    x_ticks = x_ticks[::max(1, math.ceil(len(x_ticks) / room))]
     return LineChart(
+        width=width, plot_right=right,
         segments=lines, fills=fills, band=band,
         dots=[Dot(x_of(p.day), y_of(p.avg), f"{p.day:%d/%m}: {_fmt(p.avg)}") for p in points],
         y_ticks=[Tick(y_of(v), _fmt(v), v) for v in ticks],
-        x_ticks=x_ticks[:4],
+        x_ticks=x_ticks,
         rows=[(f"{p.day:%d/%m}", _fmt(p.avg), _fmt(p.min), _fmt(p.max)) for p in points],
         empty=False)
 
@@ -323,7 +333,7 @@ def column_chart(labels: Sequence[str], series: Sequence[Sequence[float]], names
     for i, label in enumerate(labels):
         centre = left + (i + 0.5) * slot
         if stacked:
-            bar = min(slot * 0.7, 56)
+            bar = min(slot * 0.7, MAX_STACK_BAR)
             base = 0.0
             for s, values in enumerate(series):
                 v = values[i]
@@ -333,7 +343,7 @@ def column_chart(labels: Sequence[str], series: Sequence[Sequence[float]], names
                                   f"{label} · {names[s]}: {_fmt(v, digits)}", s % TONES))
                 base += v
         else:
-            group = min(slot * 0.8, 72)
+            group = min(slot * 0.8, MAX_GROUP_BAR)
             sub = group / len(series)
             for s, values in enumerate(series):
                 v = values[i]
@@ -511,10 +521,10 @@ def delta(current: float, previous: float) -> Delta:
 
 # ---------- scatter: two numbers per day ----------
 
-def scatter(points: Sequence[tuple[float, float, str]]) -> Scatter:
-    left, right, top, bottom = LEFT, WIDTH - RIGHT, TOP, HEIGHT - BOTTOM
+def scatter(points: Sequence[tuple[float, float, str]], width: int = WIDTH) -> Scatter:
+    left, right, top, bottom = LEFT, width - RIGHT, TOP, HEIGHT - BOTTOM
     if not points:
-        return Scatter([], [], [], left, right, top, bottom, True)
+        return Scatter([], [], [], left, right, top, bottom, True, [], width, HEIGHT)
     xs, ys = [p[0] for p in points], [p[1] for p in points]
     x_ticks, y_ticks = nice_ticks(min(xs), max(xs)), nice_ticks(min(ys), max(ys))
     x_lo, x_hi, y_lo, y_hi = x_ticks[0], x_ticks[-1], y_ticks[0], y_ticks[-1]
@@ -527,4 +537,17 @@ def scatter(points: Sequence[tuple[float, float, str]]) -> Scatter:
 
     dots = [Dot(x_of(x), y_of(y), label) for x, y, label in points]
     return Scatter(dots, [Tick(x_of(v), _fmt(v)) for v in x_ticks], [Tick(y_of(v), _fmt(v), v) for v in y_ticks],
-                   left, right, top, bottom, False, [(label, _fmt(x), _fmt(y)) for x, y, label in points])
+                   left, right, top, bottom, False, [(label, _fmt(x), _fmt(y)) for x, y, label in points], width, HEIGHT)
+
+
+# ---------- pairs: the same chart drawn for the card's width on a desktop and for a phone's width ----------
+
+@dataclass(frozen=True)
+class Pair:
+    desktop: object  # drawn for the card's width at 1280 px
+    phone: object  # drawn for the phone's card width, so its text keeps its size on a 390 px screen
+
+
+def paired(draw, width: int, *args, **kwargs) -> Pair:
+    """draw(*args, width=...) twice: the card's width and the phone's. Text is in user units, so the two keep one size."""
+    return Pair(draw(*args, width=width, **kwargs), draw(*args, width=PHONE_WIDTH, **kwargs))
