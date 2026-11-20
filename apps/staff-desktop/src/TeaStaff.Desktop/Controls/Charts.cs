@@ -92,7 +92,8 @@ public sealed class BarChart : ChartBase
     protected override void OnRender(DrawingContext dc)
     {
         var points = Items?.OfType<ChartPoint>().ToList() ?? [];
-        var (max, step) = NiceScale(points.Count == 0 ? 0 : points.Max(p => p.Value));
+        // Headroom keeps the value label of the tallest bar inside the chart.
+        var (max, step) = NiceScale(points.Count == 0 ? 0 : points.Max(p => p.Value) * 1.15);
         var plot = DrawGrid(dc, max, step, 22);
         if (points.Count == 0) return;
         var slot = plot.Width / points.Count;
