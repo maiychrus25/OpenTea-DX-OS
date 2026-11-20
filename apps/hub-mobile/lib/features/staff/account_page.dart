@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
 import '../../core/theme/staff_theme.dart';
-import '../shorts/shorts_section.dart';
 import 'staff_nav.dart';
 import 'staff_shell.dart';
 import 'staff_widgets.dart';
@@ -99,7 +98,6 @@ class StaffAccountPage extends StatelessWidget {
                 ],
               ),
             ),
-            if (claims != null) const ShortsSection(),
             const SizedBox(height: 24),
             OutlinedButton.icon(
               key: const Key('account-logout'),

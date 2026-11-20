@@ -309,6 +309,18 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage> {
                 icon: const Icon(Icons.arrow_back),
               ),
             ),
+            if (widget.feed && context.watch<AppState>().claims != null)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton.filledTonal(
+                  key: const Key('reel-mine'),
+                  tooltip: 'Video của tôi',
+                  onPressed: () => context.push(shortsBase(context)),
+                  style: IconButton.styleFrom(backgroundColor: Colors.black54, foregroundColor: Colors.white),
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+              ),
             if (widget.feed)
               Positioned(
                 top: 10,

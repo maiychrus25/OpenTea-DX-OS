@@ -22,6 +22,7 @@ Future<GoRouter> openShortsAccount(
   double width = 390,
   double height = 1200,
   double scale = 1,
+  String start = 'me',
 }) async {
   SharedPreferences.setMockInitialValues({});
   final store = await LocalStore.open();
@@ -35,7 +36,7 @@ Future<GoRouter> openShortsAccount(
   await tester.pumpAndSettle();
   final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
   final home = homeRouteFor(roleFromClaims(DemoAuthService.accounts['$role@demo.vn']!));
-  router.go('$home/me');
+  router.go('$home/$start');
   await tester.pumpAndSettle();
   return router;
 }
@@ -51,10 +52,10 @@ Future<void> tapVisible(WidgetTester tester, String key) async {
 
 void main() {
   for (final role in ['customer', 'farmer', 'manager', 'officer', 'guide']) {
-    testWidgets('$role account shows shorts and opens its selected clip with a working back', (tester) async {
+    testWidgets('$role own video page shows clips and opens its selected clip with a working back', (tester) async {
       final videos = FakeVideoSource();
       final repo = MockHubRepository();
-      final router = await openShortsAccount(tester, role, videos, repo);
+      final router = await openShortsAccount(tester, role, videos, repo, start: 'shorts');
       final accountPath = router.routeInformationProvider.value.uri.path;
       expect(find.byKey(const Key('shorts-section')), findsOneWidget);
       final clips = await repo.listShorts(shortChannel(DemoAuthService.accounts['$role@demo.vn']!));
@@ -73,7 +74,7 @@ void main() {
   testWidgets('swipe changes player, tap pauses, views counted once per start and back disposes', (tester) async {
     final videos = FakeVideoSource();
     final repo = MockHubRepository();
-    await openShortsAccount(tester, 'farmer', videos, repo);
+    await openShortsAccount(tester, 'farmer', videos, repo, start: 'shorts');
     final channel = shortChannel(DemoAuthService.accounts['farmer@demo.vn']!);
     final clips = await repo.listShorts(channel);
     await tapVisible(tester, 'short-${clips.first.id}');
@@ -96,7 +97,7 @@ void main() {
   testWidgets('post requires a title, adds first, then confirmed delete removes it', (tester) async {
     final videos = FakeVideoSource();
     final repo = MockHubRepository();
-    await openShortsAccount(tester, 'customer', videos, repo);
+    await openShortsAccount(tester, 'customer', videos, repo, start: 'shorts');
     await tapVisible(tester, 'shorts-post');
     expect(find.byKey(const Key('short-title')), findsOneWidget);
     await tapVisible(tester, 'short-submit');
@@ -115,10 +116,9 @@ void main() {
     expect(find.byKey(const Key('shorts-section')), findsOneWidget);
   });
 
-  testWidgets('officer has no post action on account or grid', (tester) async {
-    await openShortsAccount(tester, 'officer', FakeVideoSource(), MockHubRepository());
+  testWidgets('officer has no post action on the own video page', (tester) async {
+    await openShortsAccount(tester, 'officer', FakeVideoSource(), MockHubRepository(), start: 'shorts');
     expect(find.byKey(const Key('shorts-post')), findsNothing);
-    await tapVisible(tester, 'shorts-all');
     expect(find.byKey(const Key('shorts-grid')), findsOneWidget);
     expect(find.byKey(const Key('shorts-post')), findsNothing);
   });
@@ -129,8 +129,23 @@ void main() {
     for (final clip in await repo.listShorts(shortChannel(customer))) {
       await repo.deleteShort(clip.id, actor: customer);
     }
-    await openShortsAccount(tester, 'customer', FakeVideoSource(), repo);
+    await openShortsAccount(tester, 'customer', FakeVideoSource(), repo, start: 'shorts');
     expect(find.byKey(const Key('shorts-empty')), findsOneWidget);
     expect(find.byKey(const Key('shorts-post')), findsOneWidget);
+  });
+
+  testWidgets('the account pages no longer show a video section, the Reels feed opens the own videos', (tester) async {
+    for (final role in ['customer', 'guide']) {
+      final router = await openShortsAccount(tester, role, FakeVideoSource(), MockHubRepository(), start: 'shorts');
+      final home = homeRouteFor(roleFromClaims(DemoAuthService.accounts['$role@demo.vn']!));
+      router.go('$home/me');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('shorts-section')), findsNothing, reason: role);
+      router.go('$home/videos');
+      await tester.pumpAndSettle();
+      await tapVisible(tester, 'reel-mine');
+      expect(find.byKey(const Key('shorts-grid')), findsOneWidget, reason: role);
+      await tester.pumpWidget(const SizedBox());
+    }
   });
 }

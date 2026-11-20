@@ -41,7 +41,7 @@ class ShortsGridPage extends StatelessWidget {
     Scaffold(
       appBar: AppBar(
         leading: BackButton(onPressed: () => shortsBack(context)),
-        title: const Text('Video ngắn'),
+        title: const Text('Video của tôi'),
       ),
       body: SingleChildScrollView(
         key: const Key('shorts-grid'),
@@ -142,12 +142,6 @@ class _ShortsSectionState extends State<ShortsSection> {
                       onPressed: _picking ? null : _post,
                       icon: const Icon(Icons.add, size: 20),
                       label: Text(_picking ? 'Đang mở…' : 'Đăng video'),
-                    ),
-                  if (!widget.grid)
-                    TextButton(
-                      key: const Key('shorts-all'),
-                      onPressed: () => _open(shortsBase(context)),
-                      child: const Text('Xem tất cả'),
                     ),
                 ],
               ),
