@@ -165,7 +165,12 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory,
 
         db.Leaves.AddRange(
             new LeaveRequest { HtxCode = htx, EmployeeId = employees[4].Id, FromDate = today.AddDays(3), ToDate = today.AddDays(4), Type = LeaveType.Annual, Reason = "Về quê dự đám cưới em gái", Status = LeaveStatus.Pending, Source = RecordSource.Mobile },
-            new LeaveRequest { HtxCode = htx, EmployeeId = employees[2].Id, FromDate = today.AddDays(1), ToDate = today.AddDays(1), Type = LeaveType.Personal, Reason = "Đưa con đi tiêm chủng", Status = LeaveStatus.Pending, Source = RecordSource.Mobile });
+            new LeaveRequest { HtxCode = htx, EmployeeId = employees[2].Id, FromDate = today.AddDays(1), ToDate = today.AddDays(1), Type = LeaveType.Personal, Reason = "Đưa con đi tiêm chủng", Status = LeaveStatus.Pending, Source = RecordSource.Mobile },
+            // History so the leave charts have something to show (approved, earlier months).
+            new LeaveRequest { HtxCode = htx, EmployeeId = employees[0].Id, FromDate = today.AddMonths(-1).AddDays(-3), ToDate = today.AddMonths(-1).AddDays(-2), Type = LeaveType.Annual, Reason = "Việc gia đình", Status = LeaveStatus.Approved, ReviewedBy = "Chủ nhiệm HTX", Source = RecordSource.Mobile },
+            new LeaveRequest { HtxCode = htx, EmployeeId = employees[3].Id, FromDate = today.AddMonths(-2), ToDate = today.AddMonths(-2).AddDays(2), Type = LeaveType.Sick, Reason = "Sốt xuất huyết", Status = LeaveStatus.Approved, ReviewedBy = "Chủ nhiệm HTX", Source = RecordSource.Mobile },
+            new LeaveRequest { HtxCode = htx, EmployeeId = employees[5].Id, FromDate = today.AddMonths(-3), ToDate = today.AddMonths(-3), Type = LeaveType.Unpaid, Reason = "Việc riêng", Status = LeaveStatus.Approved, ReviewedBy = "Chủ nhiệm HTX", Source = RecordSource.Desktop },
+            new LeaveRequest { HtxCode = htx, EmployeeId = employees[6].Id, FromDate = today.AddMonths(-4), ToDate = today.AddMonths(-4).AddDays(1), Type = LeaveType.Personal, Reason = "Dự đám cưới", Status = LeaveStatus.Approved, ReviewedBy = "Chủ nhiệm HTX", Source = RecordSource.Mobile });
 
         await db.SaveChangesAsync(ct);
     }

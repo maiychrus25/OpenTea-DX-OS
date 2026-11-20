@@ -23,6 +23,10 @@ public sealed partial class LeavesViewModel(IDialogService dialogs, ILeaveReposi
 
     [ObservableProperty] private string _filter = "pending";
     [ObservableProperty] private int _pendingCount;
+    [ObservableProperty] private IReadOnlyList<Controls.ChartPoint> _typeShare = [];
+    [ObservableProperty] private IReadOnlyList<LegendItem> _typeLegend = [];
+    [ObservableProperty] private IReadOnlyList<Controls.ChartPoint> _monthBars = [];
+    [ObservableProperty] private string _evidenceRate = "–";
 
     partial void OnFilterChanged(string value) => Apply();
 
@@ -30,6 +34,19 @@ public sealed partial class LeavesViewModel(IDialogService dialogs, ILeaveReposi
     {
         _all = await leaves.ListAsync();
         PendingCount = _all.Count(l => l.Status == LeaveStatus.Pending);
+
+        // Approved leave this year: days by type, and days per month for the last six months.
+        var year = DateTime.Today.Year;
+        var approved = _all.Where(l => l.Status == LeaveStatus.Approved).ToList();
+        var colors = new[] { 0, 1, 2, 5 };
+        var types = Enum.GetValues<LeaveType>();
+        TypeShare = types.Select((t, i) => new Controls.ChartPoint(Labels.Of(t), approved.Where(l => l.Type == t && l.FromDate.Year == year).Sum(l => l.Days), Controls.ChartBase.Palette[colors[i]])).ToList();
+        TypeLegend = types.Select((t, i) => new LegendItem(Labels.Of(t), $"{approved.Where(l => l.Type == t && l.FromDate.Year == year).Sum(l => l.Days)} ngày", Controls.ChartBase.Palette[colors[i]])).ToList();
+        var first = new DateOnly(year, DateTime.Today.Month, 1).AddMonths(-5);
+        MonthBars = Enumerable.Range(0, 6).Select(i => first.AddMonths(i)).Select(m => new Controls.ChartPoint($"T{m.Month}",
+            approved.Where(l => l.FromDate.Year == m.Year && l.FromDate.Month == m.Month).Sum(l => l.Days), Controls.ChartBase.Palette[0])).ToList();
+        var sick = _all.Where(l => l.Type == LeaveType.Sick && l.Status != LeaveStatus.Cancelled).ToList();
+        EvidenceRate = sick.Count == 0 ? "–" : $"{sick.Count(l => l.HasAttachment) * 100 / sick.Count}%";
         Apply();
     }
 
