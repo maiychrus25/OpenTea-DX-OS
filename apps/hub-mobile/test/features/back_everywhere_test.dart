@@ -10,6 +10,8 @@ import 'package:hub_mobile/data/local_store.dart';
 import 'package:hub_mobile/data/mock_hub_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/fake_video_source.dart';
+
 /// A page the person opened by tapping always has a way back: the round arrow, the AppBar back button, the staff
 /// arrow or a close cross.
 Finder get _back => find.byWidgetPredicate(
@@ -26,7 +28,9 @@ Future<GoRouter> _open(WidgetTester tester, String email) async {
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(const SizedBox());
-  await tester.pumpWidget(HubApp(repository: MockHubRepository(), auth: DemoAuthService(store), store: store));
+  await tester.pumpWidget(
+    HubApp(repository: MockHubRepository(), auth: DemoAuthService(store), store: store, videoSource: FakeVideoSource()),
+  );
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('login-email')), email);
   await tester.enterText(find.byKey(const Key('login-password')), DemoAuthService.demoPassword);
@@ -42,6 +46,9 @@ void main() {
     '/shop/products',
     '/shop/cart',
     '/shop/me',
+    '/shop/shorts',
+    '/shop/shorts/new',
+    '/shop/shorts/watch/demo-short-1',
     '/shop/notifications',
     '/shop/news',
     '/shop/htxs',
@@ -81,6 +88,9 @@ void main() {
       '/farmer/bulletin',
       '/farmer/parcels',
       '/farmer/products',
+      '/farmer/shorts',
+      '/farmer/shorts/new',
+      '/farmer/shorts/watch/demo-short-2',
     ],
     'manager@demo.vn': [
       '/manager/members',
@@ -96,13 +106,24 @@ void main() {
       '/manager/orders/ord-01',
       '/manager/journal/jr-01',
       '/manager/me',
+      '/manager/shorts',
+      '/manager/shorts/new',
+      '/manager/shorts/watch/demo-short-4',
     ],
-    'operator@demo.vn': ['/operator/payments', '/operator/bookings/bk-01', '/operator/me'],
+    'operator@demo.vn': [
+      '/operator/payments',
+      '/operator/bookings/bk-01',
+      '/operator/me',
+      '/operator/shorts',
+      '/operator/shorts/new',
+      '/operator/shorts/watch/demo-short-6',
+    ],
+    'officer@demo.vn': ['/manager/shorts', '/manager/shorts/new', '/manager/shorts/watch/demo-short-4'],
   };
   for (final entry in staffPages.entries) {
     testWidgets('${entry.key} pages opened from the home have a way back', (tester) async {
       final router = await _open(tester, entry.key);
-      final home = '/${entry.key.split('@').first}';
+      final home = entry.key == 'officer@demo.vn' ? '/manager' : '/${entry.key.split('@').first}';
       final missing = <String>[];
       for (final path in entry.value) {
         router.go(home);

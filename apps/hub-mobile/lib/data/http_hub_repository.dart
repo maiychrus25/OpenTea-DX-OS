@@ -4,6 +4,8 @@
 import 'dart:typed_data';
 import 'dart:convert';
 
+import '../core/role/role.dart';
+import 'models/short_video.dart';
 import 'local_chat_answerer.dart';
 import 'models/chat.dart';
 
@@ -39,6 +41,24 @@ import 'models/staff.dart';
 /// but the real guard is Hasura's row permission on `keycloak_user_id`: a
 /// farmer token gets only its own household whatever this client sends.
 class HttpHubRepository implements HubRepository {
+  @override
+  bool get shortsAreSample => _shop.shortsAreSample;
+  @override
+  bool get canPostShorts => _shop.canPostShorts;
+  @override
+  Future<List<ShortVideo>> listShorts(String channel) => _shop.listShorts(channel);
+  @override
+  Future<ShortVideo> postShort(
+    Claims actor, {
+    required String title,
+    required String source,
+    required int durationSeconds,
+  }) => _shop.postShort(actor, title: title, source: source, durationSeconds: durationSeconds);
+  @override
+  Future<void> deleteShort(String id, {required Claims actor}) => _shop.deleteShort(id, actor: actor);
+  @override
+  Future<ShortVideo> recordShortView(String id) => _shop.recordShortView(id);
+
   /// Without [api] the repository is read-only (every write is unsupported).
   HttpHubRepository({required GraphqlClient core, required HubRepository shop, HubApiClient? api})
     : _core = core,

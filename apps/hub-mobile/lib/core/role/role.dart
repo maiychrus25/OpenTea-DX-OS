@@ -89,7 +89,14 @@ String homeRouteFor(AppRole role) => switch (role) {
 };
 
 /// Routes of the storefront that need an account (guest is sent to login).
-const customerOnlyPrefixes = ['/shop/checkout', '/shop/orders', '/shop/tickets', '/shop/booking', '/shop/pay'];
+const customerOnlyPrefixes = [
+  '/shop/checkout',
+  '/shop/orders',
+  '/shop/tickets',
+  '/shop/booking',
+  '/shop/pay',
+  '/shop/shorts',
+];
 
 /// Where to send [role] when it asks for [location], or null to let it through.
 /// Pure function so the routing rules can be unit-tested without a widget tree.

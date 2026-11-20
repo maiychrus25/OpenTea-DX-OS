@@ -56,6 +56,9 @@ void _expectAll(Iterable<String> labels) {
   }
 }
 
+/// The page's vertical scroll view; the account page also holds a horizontal row of short videos.
+final _vertical = find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down).first;
+
 void main() {
   group('compact shared components', () {
     testWidgets('metrics keep equal cells, keys and actions without decorative icons', (tester) async {
@@ -294,7 +297,7 @@ void main() {
           expect(find.byType(Pill), findsOneWidget);
           expect(find.text('Vai trò'), findsNothing);
           expect(find.byType(SectionCard), findsOneWidget);
-          await tester.scrollUntilVisible(find.byKey(const Key('account-logout')), 250);
+          await tester.scrollUntilVisible(find.byKey(const Key('account-logout')), 250, scrollable: _vertical);
           await tester.pumpAndSettle();
           expect(tester.getSize(find.byKey(const Key('account-logout'))).height, greaterThanOrEqualTo(44));
           expect(tester.takeException(), isNull);
@@ -346,7 +349,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.text(fullName), findsOneWidget);
           expect(find.text(email), findsOneWidget);
-          await tester.scrollUntilVisible(find.byKey(const Key('account-logout')), 250);
+          await tester.scrollUntilVisible(find.byKey(const Key('account-logout')), 250, scrollable: _vertical);
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         });

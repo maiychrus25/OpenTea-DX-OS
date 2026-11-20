@@ -4,10 +4,43 @@
 import 'models/booking.dart';
 import 'models/catalog.dart';
 import 'models/order.dart';
+import 'models/short_video.dart';
 
 /// Demo data in Vietnamese. All names, accounts and numbers are invented.
 class SeedData {
   SeedData._();
+
+  static List<ShortVideo> shorts(DateTime now) {
+    // (channel, channel name, title, clip, views, days ago)
+    const clips = [
+      ('cus-demo', 'Nguyễn Thu Hà', 'Một chiều bình yên ở xứ chè', 1, 864, 2),
+      ('cus-demo', 'Nguyễn Thu Hà', 'Lần đầu tự tay sao chè', 11, 412, 9),
+      ('farmer-demo', 'Nông hộ Hoàng Văn Sáng', 'Hái chè sớm trên đồi', 2, 3240, 1),
+      ('farmer-demo', 'Nông hộ Hoàng Văn Sáng', 'Sao chè bằng chảo gang', 4, 5870, 4),
+      ('farmer-demo', 'Nông hộ Hoàng Văn Sáng', 'Một vòng thửa chè sau mưa', 10, 1975, 8),
+      ('tan-cuong', 'HTX Chè Tân Cương', 'Từ búp chè đến chén trà thơm', 5, 12400, 3),
+      ('tan-cuong', 'HTX Chè Tân Cương', 'Một mùa chè xanh', 6, 8650, 6),
+      ('tan-cuong', 'HTX Chè Tân Cương', 'Trà hoa nhài mới ra lò', 8, 4310, 12),
+      ('operator-demo', 'Công ty Lữ hành Xứ Chè', 'Một ngày làm người hái chè', 3, 21300, 2),
+      ('operator-demo', 'Công ty Lữ hành Xứ Chè', 'Hẹn nhau trên đồi chè', 9, 9780, 5),
+      ('operator-demo', 'Công ty Lữ hành Xứ Chè', 'Hành trình chè Shan Tuyết cổ thụ', 7, 6420, 10),
+      ('operator-demo', 'Công ty Lữ hành Xứ Chè', 'Thưởng trà bên bếp lửa', 12, 3150, 15),
+    ];
+    return [
+      for (var i = 0; i < clips.length; i++)
+        ShortVideo(
+          id: 'demo-short-${i + 1}',
+          ownerId: clips[i].$1,
+          ownerName: clips[i].$2,
+          title: clips[i].$3,
+          source: 'assets/videos/short-${clips[i].$4}.mp4',
+          poster: 'assets/videos/short-${clips[i].$4}.jpg',
+          views: clips[i].$5,
+          createdAt: now.subtract(Duration(days: clips[i].$6)),
+          durationSeconds: 6,
+        ),
+    ];
+  }
 
   static const htxs = <Htx>[
     Htx(

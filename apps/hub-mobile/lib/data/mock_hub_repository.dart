@@ -3,6 +3,11 @@
 
 import 'dart:typed_data';
 
+import 'package:flutter/widgets.dart';
+
+import '../core/role/role.dart';
+import 'models/short_video.dart';
+
 import 'hub_repository.dart';
 import 'local_chat_answerer.dart';
 import 'models/chat.dart';
@@ -18,6 +23,70 @@ import 'seed_data.dart';
 /// process; it never touches a network. Mirrors the rules the server will own
 /// (stock, status transitions, append-only ledger).
 class MockHubRepository implements HubRepository {
+  final _shorts = <ShortVideo>[];
+
+  @override
+  bool get shortsAreSample => true;
+  @override
+  bool get canPostShorts => true;
+
+  @override
+  Future<List<ShortVideo>> listShorts(String channel) async =>
+      List.unmodifiable(_shorts.where((v) => v.ownerId == channel));
+
+  @override
+  Future<ShortVideo> postShort(
+    Claims actor, {
+    required String title,
+    required String source,
+    required int durationSeconds,
+  }) async {
+    if (!canPostShorts || !canManageShorts(actor)) throw const HubException('Bạn không có quyền đăng video.');
+    final cleanTitle = title.trim();
+    if (cleanTitle.isEmpty || cleanTitle.characters.length > 80) {
+      throw const HubException('Hãy nhập tiêu đề từ 1 đến 80 ký tự.');
+    }
+    if (durationSeconds <= 0 || durationSeconds > 60) throw const HubException('Hãy chọn video dài tối đa 60 giây.');
+    if (source.trim().isEmpty) throw const HubException('Không đọc được video. Hãy chọn lại từ thư viện.');
+    final channel = shortChannel(actor);
+    final ownerName = roleFromClaims(actor) == AppRole.manager
+        ? SeedData.htxs.where((h) => h.code == channel).firstOrNull?.name ?? 'HTX $channel'
+        : actor.name;
+    final clip = ShortVideo(
+      id: _nextId('short'),
+      ownerId: channel,
+      ownerName: ownerName,
+      title: cleanTitle,
+      source: source,
+      views: 0,
+      createdAt: DateTime.now(),
+      durationSeconds: durationSeconds,
+    );
+    _shorts.insert(0, clip);
+    return clip;
+  }
+
+  int _shortIndex(String id) {
+    final index = _shorts.indexWhere((v) => v.id == id);
+    if (index < 0) throw const HubException('Video không còn tồn tại.');
+    return index;
+  }
+
+  @override
+  Future<void> deleteShort(String id, {required Claims actor}) async {
+    final index = _shortIndex(id);
+    if (!canManageShorts(actor) || _shorts[index].ownerId != shortChannel(actor)) {
+      throw const HubException('Bạn không có quyền xoá video này.');
+    }
+    _shorts.removeAt(index);
+  }
+
+  @override
+  Future<ShortVideo> recordShortView(String id) async {
+    final index = _shortIndex(id);
+    return _shorts[index] = _shorts[index].withViews(_shorts[index].views + 1);
+  }
+
   @override
   bool get canChatOnline => false;
 
@@ -67,6 +136,7 @@ class MockHubRepository implements HubRepository {
 
   MockHubRepository({DateTime? now}) : _now = now ?? DateTime.now() {
     final today = DateTime(_now.year, _now.month, _now.day);
+    _shorts.addAll(SeedData.shorts(_now));
     _departures.addAll(SeedData.departures(today));
     _articles.addAll(SeedData.articles(_now));
     _bookings.addAll(SeedData.bookings(today));

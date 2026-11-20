@@ -3,6 +3,8 @@
 
 import 'dart:typed_data';
 
+import '../core/role/role.dart';
+import 'models/short_video.dart';
 import 'models/booking.dart';
 import 'models/catalog.dart';
 import 'models/diagnosis.dart';
@@ -74,6 +76,19 @@ class HubException implements Exception {
 /// platform gateway, with the OIDC bearer token) plugs in here later; the API
 /// is milestone M2 and its endpoints are not defined yet, so none are invented.
 abstract class HubRepository {
+  /// Shorts are currently session-only sample data, including in HTTP mode.
+  bool get shortsAreSample;
+  bool get canPostShorts;
+  Future<List<ShortVideo>> listShorts(String channel);
+  Future<ShortVideo> postShort(
+    Claims actor, {
+    required String title,
+    required String source,
+    required int durationSeconds,
+  });
+  Future<void> deleteShort(String id, {required Claims actor});
+  Future<ShortVideo> recordShortView(String id);
+
   /// Online transport is configured; server authorization is still required.
   bool get canChatOnline;
 

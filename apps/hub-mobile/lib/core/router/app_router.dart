@@ -33,6 +33,10 @@ import '../../features/farmer/farmer_screens.dart';
 import '../../features/manager/manager_screens.dart';
 import '../../features/operator/operator_screens.dart';
 import '../../features/staff/account_page.dart';
+import '../../features/shorts/shorts_section.dart';
+import '../../features/shorts/shorts_player_page.dart';
+import '../../features/shorts/short_post_page.dart';
+import '../../shared/video_source.dart';
 import '../../features/staff/dashboards.dart';
 import '../../features/staff/farmer_pages.dart';
 import '../../features/staff/htx_pages.dart';
@@ -68,6 +72,18 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
     refreshListenable: state,
     redirect: (context, st) => appRedirect(state, st.uri),
     routes: [
+      // Root-navigator routes: watching hides both customer and staff bottom bars.
+      for (final base in ['/shop', '/farmer', '/manager', '/operator']) ...[
+        GoRoute(path: '$base/shorts', builder: (c, s) => const ShortsGridPage()),
+        GoRoute(
+          path: '$base/shorts/new',
+          builder: (c, s) => ShortPostPage(picked: s.extra is PickedVideo ? s.extra as PickedVideo : null),
+        ),
+        GoRoute(
+          path: '$base/shorts/watch/:id',
+          builder: (c, s) => ShortsPlayerPage(initialId: s.pathParameters['id']!),
+        ),
+      ],
       GoRoute(
         path: '/login',
         builder: (c, s) => LoginScreen(from: s.uri.queryParameters['from']),

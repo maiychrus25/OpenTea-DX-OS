@@ -11,6 +11,7 @@ import '../../app/cart_controller.dart';
 import '../../core/role/role.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/soft_card.dart';
+import '../shorts/shorts_section.dart';
 
 /// Account tab of guest and customer: the profile, shortcuts to orders, tickets and the cart, and sign out.
 class CustomerAccountTab extends StatefulWidget {
@@ -131,6 +132,7 @@ class _CustomerAccountTabState extends State<CustomerAccountTab> {
               ],
             ),
           ),
+          const ShortsSection(),
           const SizedBox(height: 4),
           SizedBox(
             height: 52,
