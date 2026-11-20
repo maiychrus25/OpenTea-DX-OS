@@ -3,6 +3,7 @@
 
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
@@ -31,6 +32,23 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage> {
   bool _deleting = false;
   String? _error;
 
+  /// The feed's two tabs: clips of the channels the viewer follows, or every channel ("Dành cho bạn").
+  bool _followingTab = false;
+  bool _firstLoad = true;
+
+  Future<void> _switchTab(bool following) async {
+    if (following == _followingTab) return;
+    _pages?.dispose();
+    setState(() {
+      _followingTab = following;
+      _clips = null;
+      _pages = null;
+      _error = null;
+      _index = 0;
+    });
+    await _load();
+  }
+
   /// Double taps on the video, passed to the heart button; [_heart] shows the big heart for a moment.
   final _likeRequests = ValueNotifier<int>(0);
   bool _heart = false;
@@ -53,11 +71,20 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage> {
     try {
       final repository = context.read<HubRepository>();
       final claims = context.read<AppState>().claims;
-      final clips = widget.feed ? await repository.listAllShorts() : await repository.listShorts(shortChannel(claims!));
+      var clips = widget.feed ? await repository.listAllShorts() : await repository.listShorts(shortChannel(claims!));
+      if (widget.feed && _followingTab) {
+        final followed = claims == null ? const <String>{} : await repository.followedChannels(claims);
+        clips = [
+          for (final v in clips)
+            if (followed.contains(v.ownerId)) v,
+        ];
+      }
       if (!mounted) return;
-      if (clips.isEmpty) throw const HubException('Chưa có video nào.');
+      final wantsInitial = _firstLoad && widget.initialId != null;
+      _firstLoad = false;
+      if (clips.isEmpty && !(widget.feed && _followingTab)) throw const HubException('Chưa có video nào.');
       final found = clips.indexWhere((v) => v.id == widget.initialId);
-      final index = widget.initialId == null && widget.feed ? 0 : found;
+      final index = !wantsInitial && widget.feed || clips.isEmpty ? 0 : found;
       if (index < 0) throw const HubException('Video không còn tồn tại trong kênh này.');
       setState(() {
         _clips = clips;
@@ -121,7 +148,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage> {
   Widget build(BuildContext context) {
     final claims = context.watch<AppState>().claims;
     final clips = _clips;
-    final clip = clips == null ? null : clips[_index];
+    final clip = clips == null || clips.isEmpty ? null : clips[_index];
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -153,6 +180,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage> {
               )
             else if (clips == null)
               const Center(child: CircularProgressIndicator(color: Colors.white))
+            else if (clips.isEmpty)
+              _FollowingEmpty(signedIn: claims != null, onSignIn: () => context.go('/login'))
             else
               // Dragging with a mouse also turns the page (the browser demo on a computer).
               ScrollConfiguration(
@@ -280,12 +309,24 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage> {
                 icon: const Icon(Icons.arrow_back),
               ),
             ),
-            if (context.read<HubRepository>().shortsAreSample)
-              const Positioned(
-                top: 20,
+            if (widget.feed)
+              Positioned(
+                top: 10,
                 left: 64,
                 right: 64,
-                child: IgnorePointer(
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: _FeedTabs(following: _followingTab, onChanged: _switchTab),
+                  ),
+                ),
+              ),
+            if (context.read<HubRepository>().shortsAreSample)
+              Positioned(
+                top: widget.feed ? 52 : 20,
+                left: 64,
+                right: 64,
+                child: const IgnorePointer(
                   child: Text(
                     'Dữ liệu mẫu',
                     textAlign: TextAlign.center,
@@ -302,4 +343,85 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage> {
       ),
     );
   }
+}
+
+/// "Theo dõi | Dành cho bạn" at the top of the feed, the selected one underlined (TikTok style).
+class _FeedTabs extends StatelessWidget {
+  const _FeedTabs({required this.following, required this.onChanged});
+  final bool following;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      _tab('Theo dõi', const Key('feed-tab-following'), following, () => onChanged(true)),
+      const SizedBox(width: 22),
+      _tab('Dành cho bạn', const Key('feed-tab-foryou'), !following, () => onChanged(false)),
+    ],
+  );
+
+  Widget _tab(String label, Key key, bool selected, VoidCallback onTap) => GestureDetector(
+    key: key,
+    behavior: HitTestBehavior.opaque,
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: selected ? 1 : 0.66),
+              fontSize: 16,
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              shadows: const [Shadow(blurRadius: 8, color: Colors.black54)],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: 26,
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: selected ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _FollowingEmpty extends StatelessWidget {
+  const _FollowingEmpty({required this.signedIn, required this.onSignIn});
+  final bool signedIn;
+  final VoidCallback onSignIn;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    key: const Key('feed-empty'),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.person_add_alt_1_outlined, color: Colors.white70, size: 44),
+          const SizedBox(height: 14),
+          Text(
+            signedIn
+                ? 'Bạn chưa theo dõi kênh nào. Mở "Dành cho bạn" và bấm dấu + trên ảnh kênh để theo dõi.'
+                : 'Đăng nhập để theo dõi những kênh bạn thích và xem video của họ ở đây.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.4),
+          ),
+          if (!signedIn) ...[
+            const SizedBox(height: 12),
+            FilledButton(onPressed: onSignIn, child: const Text('Đăng nhập')),
+          ],
+        ],
+      ),
+    ),
+  );
 }

@@ -65,6 +65,10 @@ class HttpHubRepository implements HubRepository {
   @override
   Future<ShortReactions> toggleShortLike(String id, Claims actor) => _shop.toggleShortLike(id, actor);
   @override
+  Future<Set<String>> followedChannels(Claims actor) => _shop.followedChannels(actor);
+  @override
+  Future<bool> toggleFollowChannel(String channel, Claims actor) => _shop.toggleFollowChannel(channel, actor);
+  @override
   Future<List<ShortComment>> listShortComments(String id) => _shop.listShortComments(id);
   @override
   Future<ShortComment> addShortComment(String id, Claims actor, String text) => _shop.addShortComment(id, actor, text);

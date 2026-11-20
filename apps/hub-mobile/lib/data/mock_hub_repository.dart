@@ -30,6 +30,15 @@ class MockHubRepository implements HubRepository {
   final _likers = <String, Set<String>>{};
   final _comments = <String, List<ShortComment>>{};
 
+  /// Channels each demo account follows (by account subject), so the "Theo dõi" tab is not empty in the demo.
+  final _follows = <String, Set<String>>{
+    'cus-demo': {'tan-cuong', 'operator-demo'},
+    'farmer-demo': {'tan-cuong'},
+    'manager-demo': {'farmer-demo', 'operator-demo'},
+    'officer-demo': {'farmer-demo', 'operator-demo'},
+    'operator-demo': {'tan-cuong', 'farmer-demo'},
+  };
+
   @override
   bool get shortsAreSample => true;
   @override
@@ -117,6 +126,17 @@ class MockHubRepository implements HubRepository {
     final likers = _likers.putIfAbsent(id, () => <String>{});
     if (!likers.remove(actor.subject)) likers.add(actor.subject);
     return _reactions(id, actor);
+  }
+
+  @override
+  Future<Set<String>> followedChannels(Claims actor) async => Set.unmodifiable(_follows[actor.subject] ?? const {});
+
+  @override
+  Future<bool> toggleFollowChannel(String channel, Claims actor) async {
+    if (channel.isEmpty || !_shorts.any((v) => v.ownerId == channel)) throw const HubException('Kênh không tồn tại.');
+    if (channel == shortChannel(actor)) throw const HubException('Đây là kênh của bạn.');
+    final mine = _follows.putIfAbsent(actor.subject, () => <String>{});
+    return mine.remove(channel) ? false : mine.add(channel);
   }
 
   @override

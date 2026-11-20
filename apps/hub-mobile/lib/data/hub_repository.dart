@@ -98,6 +98,12 @@ abstract class HubRepository {
   /// Adds or removes [actor]'s heart; one heart per account.
   Future<ShortReactions> toggleShortLike(String id, Claims actor);
 
+  /// Channels [actor] follows (the ids used by [ShortVideo.ownerId]).
+  Future<Set<String>> followedChannels(Claims actor);
+
+  /// Follows or unfollows [channel]; returns whether [actor] follows it now. Your own channel cannot be followed.
+  Future<bool> toggleFollowChannel(String channel, Claims actor);
+
   /// Comments of a clip, newest first.
   Future<List<ShortComment>> listShortComments(String id);
 

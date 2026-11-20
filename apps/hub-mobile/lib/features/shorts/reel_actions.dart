@@ -24,6 +24,7 @@ class ReelActions extends StatefulWidget {
 
 class _ReelActionsState extends State<ReelActions> {
   ShortReactions? _reactions;
+  bool _following = false;
   bool _busy = false;
 
   @override
@@ -57,8 +58,16 @@ class _ReelActionsState extends State<ReelActions> {
   Future<void> _load() async {
     final id = widget.video.id;
     try {
-      final r = await context.read<HubRepository>().shortReactions(id, viewer: _viewer);
-      if (mounted && widget.video.id == id) setState(() => _reactions = r);
+      final repository = context.read<HubRepository>();
+      final viewer = _viewer;
+      final r = await repository.shortReactions(id, viewer: viewer);
+      final followed = viewer == null ? const <String>{} : await repository.followedChannels(viewer);
+      if (mounted && widget.video.id == id) {
+        setState(() {
+          _reactions = r;
+          _following = followed.contains(widget.video.ownerId);
+        });
+      }
     } catch (_) {
       // The clip still plays without its counters; nothing is invented.
     }
@@ -68,6 +77,34 @@ class _ReelActionsState extends State<ReelActions> {
   void _onDoubleTap() {
     if (_reactions?.liked ?? false) return;
     _toggleLike();
+  }
+
+  bool get _own {
+    final viewer = _viewer;
+    return viewer != null && shortChannel(viewer) == widget.video.ownerId;
+  }
+
+  Future<void> _toggleFollow() async {
+    final viewer = _viewer;
+    if (viewer == null) return _askToSignIn('theo dõi kênh');
+    if (_own || _busy) return;
+    final before = _following;
+    setState(() {
+      _busy = true;
+      _following = !before;
+    });
+    try {
+      final now = await context.read<HubRepository>().toggleFollowChannel(widget.video.ownerId, viewer);
+      if (!mounted) return;
+      setState(() => _following = now);
+      _snack(now ? 'Đã theo dõi ${widget.video.ownerName}.' : 'Đã bỏ theo dõi ${widget.video.ownerName}.');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _following = before);
+      _snack(error is HubException ? error.message : 'Không theo dõi được. Hãy thử lại.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _toggleLike() async {
@@ -134,6 +171,8 @@ class _ReelActionsState extends State<ReelActions> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        _ChannelFollow(name: widget.video.ownerName, own: _own, following: _following, onTap: _toggleFollow),
+        const SizedBox(height: 16),
         _ActionButton(
           key: const Key('reel-like'),
           icon: r?.liked ?? false ? Icons.favorite : Icons.favorite_border,
@@ -163,6 +202,60 @@ class _ReelActionsState extends State<ReelActions> {
       ],
     );
   }
+}
+
+/// The channel's avatar with a "+" (follow) or a check (following) on its lower edge, as on TikTok.
+class _ChannelFollow extends StatelessWidget {
+  const _ChannelFollow({required this.name, required this.own, required this.following, required this.onTap});
+  final String name;
+  final bool own;
+  final bool following;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: own ? name : (following ? 'Bỏ theo dõi' : 'Theo dõi'),
+    child: InkResponse(
+      key: const Key('reel-follow'),
+      onTap: own ? null : onTap,
+      radius: 30,
+      child: SizedBox(
+        width: 56,
+        height: 62,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            CircleAvatar(
+              radius: 23,
+              backgroundColor: Colors.white,
+              child: CircleAvatar(
+                radius: 21,
+                backgroundColor: const Color(0xFF17452F),
+                child: Text(
+                  name.characters.firstOrNull ?? 'V',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17),
+                ),
+              ),
+            ),
+            if (!own)
+              Positioned(
+                bottom: 2,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: following ? const Color(0xFF3F7D1A) : const Color(0xFFFF3B5C),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: Icon(following ? Icons.check : Icons.add, size: 14, color: Colors.white),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _ActionButton extends StatelessWidget {
