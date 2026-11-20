@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `make platform-smoke` gives 131 PASS (was 124): five checks for the daily view and two for the `officer` role. The daily-view readings are dated yesterday and today instead of March 2026, so the lifecycle job cannot archive them between the insert and the query.
 - Web package version `1.13.0`.
+- **`htx-dashboard` 0.2.0, a chart dashboard**: the app draws its figures as charts instead of tiles, with a server-side SVG toolkit of its own (line and area, stacked and grouped columns, donut, sparkline, gauge, ring, calendar and matrix heatmaps, funnel, timeline, scatter) and one palette for both themes. The overview has a KPI strip with the change against the previous period, cooperative-wide sensor charts, a sensor freshness matrix and a harvest timeline; every other tab gains charts of its own. A rejected disease report is no longer listed as a kind of disease. Still no JavaScript and no new dependency. Upgrade an installed copy with `./dxos upgrade miniapps/htx-dashboard`; a preview with sample data runs with `python tests/preview.py` in the app's folder.
 
 ---
 
