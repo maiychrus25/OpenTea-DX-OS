@@ -31,6 +31,11 @@ public sealed partial class EmployeesViewModel(
     [ObservableProperty] private Option<EmployeeStatus?>? _statusFilter;
     [ObservableProperty] private Employee? _selected;
     [ObservableProperty] private string _summary = string.Empty;
+    private static readonly int[] TeamColors = [0, 1, 2, 7, 5, 4];
+    [ObservableProperty] private IReadOnlyList<Controls.ChartPoint> _teamShare = [];
+    [ObservableProperty] private IReadOnlyList<LegendItem> _teamLegend = [];
+    [ObservableProperty] private IReadOnlyList<Controls.ChartPoint> _contractBars = [];
+    [ObservableProperty] private string _salaryFund = string.Empty;
 
     partial void OnSearchChanged(string value) => Apply();
     partial void OnDepartmentFilterChanged(Option<int?>? value) => Apply();
@@ -58,6 +63,16 @@ public sealed partial class EmployeesViewModel(
         Items.Clear();
         foreach (var e in list) Items.Add(e);
         Summary = $"{list.Count} / {_all.Count} nhân viên · {_all.Count(e => e.Status == EmployeeStatus.Active)} đang làm";
+
+        // Structure of the active workforce (independent of the search box).
+        var active = _all.Where(e => e.Status == EmployeeStatus.Active).ToList();
+        var teams = active.GroupBy(e => e.Department?.Name ?? "Chưa phân tổ").OrderByDescending(g => g.Count()).ToList();
+        TeamShare = teams.Select((g, i) => new Controls.ChartPoint(g.Key, g.Count(), Controls.ChartBase.Palette[TeamColors[i % TeamColors.Length]])).ToList();
+        TeamLegend = teams.Select((g, i) => new LegendItem(g.Key, $"{g.Count()} người", Controls.ChartBase.Palette[TeamColors[i % TeamColors.Length]])).ToList();
+        ContractBars = Enum.GetValues<ContractType>()
+            .Select((c, i) => new Controls.ChartPoint(Labels.Of(c), active.Count(e => e.ContractType == c), Controls.ChartBase.Palette[new[] { 0, 1, 2, 5 }[i % 4]]))
+            .ToList();
+        SalaryFund = Converters.MoneyConverter.Format(active.Where(e => e.SalaryType == SalaryType.Monthly).Sum(e => e.BaseSalary + e.Allowance));
     }
 
     /// <summary>Accent-insensitive search, so "nguyen" finds "Nguyễn".</summary>
