@@ -15,3 +15,10 @@ public sealed class DataChangeNotifier : IDataChangeNotifier
 
     public void Notify(string area) => Changed?.Invoke(this, area);
 }
+
+public sealed class ActivityFeed : IActivityFeed
+{
+    public event EventHandler<ActivityEvent>? Raised;
+
+    public void Raise(string area, string message) => Raised?.Invoke(this, new ActivityEvent(area, message));
+}

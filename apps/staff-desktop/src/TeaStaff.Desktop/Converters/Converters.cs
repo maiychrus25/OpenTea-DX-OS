@@ -30,6 +30,7 @@ public sealed class StatusToneConverter : IValueConverter
             WorkTaskStatus.Assigned or LeaveStatus.Pending or PayslipStatus.Draft or EmployeeStatus.OnLeave or AttendanceStatus.HalfDay => "Warning",
             WorkTaskStatus.Rejected or LeaveStatus.Rejected or AttendanceStatus.Absent or TaskPriority.Urgent => "Danger",
             TaskPriority.High => "Warning",
+            string name when name is "Success" or "Info" or "Warning" or "Danger" or "Accent" => name,
             _ => "Neutral",
         };
         var key = parameter as string == "fg"

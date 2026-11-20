@@ -26,22 +26,25 @@ Both apps follow the conventions of the OpenTea DX-OS core so they can later sha
 | Module | What it does |
 | --- | --- |
 | **Dashboard** | Active staff, open and overdue tasks, pending leave, payroll fund, today's attendance and progress per team. |
+| **Reports** | KPI tiles (overdue, not yet accepted, due in 3 days, pending leave, not checked in today, incomplete profiles) and charts drawn natively in WPF: task status bars, priority donut, daily task and attendance trends, six-month payroll fund and completed work per team, plus lists of what needs the owner. Period: 7, 30 or 90 days. |
+| **Live activity** | When staff accept, reject or finish a task, check in or send a leave request from the phone, the owner sees a toast, hears the system sound, the taskbar flashes and red counters appear on *Giao việc* and *Nghỉ phép*. |
 | **Employees** | Full HR profile: personal data, team, position, contract type, monthly or daily wage, allowance, bank account, annual leave quota, status. Accent-insensitive search (`nguyen` finds `Nguyễn`), filters, CSV export, mobile account and password reset. |
 | **Teams / departments** | Group staff into production teams (picking, processing, garden care, warehouse, office). |
-| **Task assignment** | Assign work with location, priority, start and due time. Staff accept, reject (with a reason), report progress and complete from their phone; the list refreshes live. Duplicate, reassign, cancel, export. |
+| **Task assignment** | Kanban board (Mới giao, Đã nhận, Đang làm, Hoàn thành, Từ chối/Huỷ) or list view. Assign work with location, priority, start and due time. Staff accept, reject (with a reason), report progress and complete from their phone; the list refreshes live. Duplicate, reassign, cancel, export. |
 | **Attendance** | Monthly timesheet grid. Staff check in/out on the phone (half day and overtime are computed automatically); the owner edits any cell, marks the whole cooperative present in one click, and exports CSV. |
-| **Leave** | Annual, sick, personal and unpaid leave with balance checking. Approving a request writes the days into the timesheet. |
+| **Leave** | Annual, sick, personal and unpaid leave with balance checking and **evidence** (photo or PDF, up to 5 MB; required for sick leave of 2 days or more). Files are recognised by content, stored under the data folder and opened from the review list. Approving a request writes the days into the timesheet. |
 | **Payroll** | Generates payslips from the timesheet: prorated monthly salary or daily wage, overtime (×1.5 by default), allowance, bonus, compulsory insurance (10.5% for full-time contracts), other deductions and advances. Draft → Approved → Paid workflow; approved payslips appear on the worker's phone. CSV export for bank transfer. |
-| **Settings** | Cooperative code and name, payroll rules, the built-in server for phones, and the connection to the DX-OS core (Keycloak + PostgreSQL). |
+| **Settings** | Cooperative code and name, payroll rules, the built-in server for phones with a **connection self-test** and a one-click **firewall rule**, and the connection to the DX-OS core (Keycloak + PostgreSQL) with a **connection check**. |
 
 <details>
 <summary><b>More screenshots</b></summary>
 
 | | |
 | --- | --- |
-| ![Login](docs/screenshots/00-login.png) | ![Employees](docs/screenshots/02-employees.png) |
-| ![Tasks](docs/screenshots/04-tasks.png) | ![Attendance](docs/screenshots/05-attendance.png) |
-| ![Payroll](docs/screenshots/07-payroll.png) | ![Settings](docs/screenshots/08-settings.png) |
+| ![Reports](docs/screenshots/02-reports.png) | ![Kanban](docs/screenshots/05-tasks.png) |
+| ![Login](docs/screenshots/00-login.png) | ![Employees](docs/screenshots/03-employees.png) |
+| ![Leave](docs/screenshots/07-leaves.png) | ![Attendance](docs/screenshots/06-attendance.png) |
+| ![Payroll](docs/screenshots/08-payroll.png) | ![Settings](docs/screenshots/09-settings.png) |
 
 </details>
 
@@ -49,7 +52,7 @@ Both apps follow the conventions of the OpenTea DX-OS core so they can later sha
 
 Grab the latest build from [**Releases**](https://github.com/Vudinhdat02/appManageStaff/releases):
 
-- `TeaStaffManager-1.0.0-win-x64.exe` — self-contained, single file, no .NET installation needed (Windows 10/11 x64).
+- `TeaStaffManager-1.1.0-win-x64.exe` — self-contained, single file, no .NET installation needed (Windows 10/11 x64).
 
 On first launch the app creates a demo cooperative (HTX code `TC`) with eight fictitious employees, a month of attendance, tasks and leave requests.
 
@@ -58,13 +61,14 @@ On first launch the app creates a demo cooperative (HTX code `TC`) with eight fi
 | `admin` | `Admin@123` | Owner login on the desktop app (change it in **Settings**) |
 | `nv001` … `nv008` | `123456` | Staff login on the Tea Work Android app |
 
-Data and configuration live in `%LOCALAPPDATA%\TeaStaff` (`teastaff.db`, `config.json`). Delete that folder to start over.
+Data and configuration live in `%LOCALAPPDATA%\TeaStaff` (`teastaff.db`, `config.json`, `attachments\`); set the `TEASTAFF_DATA` environment variable to use another folder. Delete the folder to start over. Databases created by 1.0.0 are upgraded automatically.
 
 ### Connect the phones
 
 1. Keep the PC and the phones on the same Wi-Fi network.
 2. The address to type into the phone is shown at the top right of the window, e.g. `http://192.168.1.88:5080`.
-3. On first start Windows may ask for firewall permission — allow **Private networks**.
+3. If the phone cannot connect, open **Settings → Kiểm tra kết nối**. On a Wi-Fi marked *Public*, Windows blocks incoming connections: press **Cho phép qua tường lửa** (Windows asks for administrator approval). Also make sure the phone is on Wi-Fi, not mobile data, and that the router does not isolate clients.
+4. A yellow banner on the phone means it is in offline demo mode; nothing is sent to the PC until you sign out and enter the server address.
 
 ## Build from source
 

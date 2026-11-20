@@ -49,7 +49,15 @@
 
         <DockPanel Grid.Row="1" Margin="0,0,0,14">
             <TextBlock DockPanel.Dock="Right" Text="{Binding Counts}" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-            <StackPanel Orientation="Horizontal">
+            <Border DockPanel.Dock="Left" Padding="3" CornerRadius="10" Background="{StaticResource MutedBrush}" Margin="0,0,14,0">
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton Style="{StaticResource Segment}" GroupName="TaskView" Content="Bảng Kanban" Tag="&#xE8A9;" IsChecked="True"
+                                 Command="{Binding SetViewCommand}" CommandParameter="board" />
+                    <RadioButton Style="{StaticResource Segment}" GroupName="TaskView" Content="Danh sách" Tag="&#xE8FD;"
+                                 Command="{Binding SetViewCommand}" CommandParameter="list" />
+                </StackPanel>
+            </Border>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Visibility="{Binding IsBoard, Converter={StaticResource Hidden}}">
                 <RadioButton Style="{StaticResource FilterChip}" Tag="open" Content="Đang thực hiện" IsChecked="True" />
                 <RadioButton Style="{StaticResource FilterChip}" Tag="overdue" Content="Quá hạn" />
                 <RadioButton Style="{StaticResource FilterChip}" Tag="done" Content="Hoàn thành" />
@@ -58,7 +66,7 @@
             </StackPanel>
         </DockPanel>
 
-        <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0" ClipToBounds="True">
+        <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0" ClipToBounds="True" Visibility="{Binding IsBoard, Converter={StaticResource Hidden}}">
             <Grid>
                 <DataGrid ItemsSource="{Binding Items}" RowHeight="62" x:Name="Grid">
                     <DataGrid.InputBindings>
@@ -168,5 +176,78 @@
                 </StackPanel>
             </Grid>
         </Border>
-    </Grid>
+        <!-- Kanban board -->
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled" Visibility="{Binding IsBoard, Converter={StaticResource Visible}}">
+            <ItemsControl ItemsSource="{Binding Columns}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,12,0" CornerRadius="{StaticResource RadiusLg}" BorderThickness="1"
+                                BorderBrush="{StaticResource BorderBrush}" Background="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=bg}">
+                            <DockPanel>
+                                <DockPanel DockPanel.Dock="Top" Margin="14,12,12,8">
+                                    <Border DockPanel.Dock="Right" MinWidth="24" Padding="7,1" CornerRadius="10" Background="{StaticResource CardBrush}">
+                                        <TextBlock Text="{Binding Count}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"
+                                                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=fg}" />
+                                    </Border>
+                                    <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="13.5" Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=fg}" />
+                                </DockPanel>
+                                <Button DockPanel.Dock="Bottom" Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Margin="8,0,8,10" Height="32"
+                                        Content="+ Giao việc" Command="{Binding DataContext.AddCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Visibility="{Binding CanAdd, Converter={StaticResource Visible}}" />
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8,0,8,4">
+                                    <ItemsControl ItemsSource="{Binding Cards}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Margin="0,0,0,8" Cursor="Hand" FocusVisualStyle="{x:Null}" ToolTip="Bấm để xem, sửa hoặc giao lại"
+                                                        Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="Bd" Background="{StaticResource CardBrush}" CornerRadius="10" BorderThickness="1" BorderBrush="{StaticResource BorderSubtleBrush}" Padding="12,10">
+                                                                <ContentPresenter />
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                    <StackPanel>
+                                                        <DockPanel>
+                                                            <ContentControl DockPanel.Dock="Right" Content="{Binding Task.Priority}" ContentTemplate="{StaticResource PillTemplate}" Margin="6,0,0,0" VerticalAlignment="Top" />
+                                                            <TextBlock Text="{Binding Task.Title}" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" />
+                                                        </DockPanel>
+                                                        <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" TextTrimming="CharacterEllipsis">
+                                                            <Run Text="&#xE77B;" FontFamily="{StaticResource IconFont}" /> <Run Text="{Binding AssigneeName, Mode=OneWay}" />
+                                                        </TextBlock>
+                                                        <TextBlock Margin="0,2,0,0" FontSize="12" TextTrimming="CharacterEllipsis">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Foreground" Value="{StaticResource InkTertiaryBrush}" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Overdue}" Value="True">
+                                                                            <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                            <Run Text="&#xE823;" FontFamily="{StaticResource IconFont}" /> <Run Text="{Binding DueText, Mode=OneWay}" />
+                                                        </TextBlock>
+                                                        <ProgressBar Margin="0,8,0,0" Value="{Binding Task.Progress, Mode=OneWay}" Maximum="100" Height="5" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>    </Grid>
 </UserControl>

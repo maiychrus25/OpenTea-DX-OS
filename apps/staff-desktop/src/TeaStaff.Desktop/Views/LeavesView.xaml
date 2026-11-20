@@ -54,7 +54,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Thời gian" Width="1.4*">
+                        <DataGridTemplateColumn Header="Thời gian" Width="1.8*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel VerticalAlignment="Center">
@@ -66,7 +66,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Lý do" Width="2.2*">
+                        <DataGridTemplateColumn Header="Lý do" Width="1.7*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel VerticalAlignment="Center">
@@ -77,14 +77,28 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Gửi từ" Width="0.9*">
+                        <DataGridTemplateColumn Header="Minh chứng" Width="1*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid VerticalAlignment="Center">
+                                        <Button Style="{StaticResource SecondaryButton}" Height="32" Padding="10,0" HorizontalAlignment="Left" ToolTip="{Binding AttachmentName}"
+                                                Command="{Binding DataContext.OpenAttachmentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
+                                                Visibility="{Binding HasAttachment, Converter={StaticResource Visible}}">
+                                            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE723;" Style="{StaticResource Icon}" FontSize="13" /><TextBlock Margin="6,0,0,0" Text="Xem" /></StackPanel>
+                                        </Button>
+                                        <TextBlock Text="—" Foreground="{StaticResource InkTertiaryBrush}" Visibility="{Binding HasAttachment, Converter={StaticResource Hidden}}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Gửi từ" Width="0.85*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding Source, Converter={StaticResource Label}}" VerticalAlignment="Center" Foreground="{StaticResource InkSecondaryBrush}" />
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Trạng thái" Width="1*">
+                        <DataGridTemplateColumn Header="Trạng thái" Width="1.15*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <ContentControl Content="{Binding Status}" ContentTemplate="{StaticResource PillTemplate}" />

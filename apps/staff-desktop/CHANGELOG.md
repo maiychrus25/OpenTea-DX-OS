@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-11-20
+
+### Added
+- **Reports** page with KPI tiles and native WPF charts (task status, priority share, daily task and attendance trends, payroll fund, completed work per team) and lists of items that need the owner.
+- **Kanban board** for task assignment, alongside the existing list view.
+- **Leave evidence**: photo or PDF attached from the phone or the desktop (max 5 MB, type checked by content); mandatory for sick leave of two days or more; opened from the leave list. API: `attachment` on `POST /api/leaves` and `GET /api/leaves/{id}/attachment`.
+- **Live activity**: toasts, sound, taskbar flash and red counters when staff act on their phones.
+- Settings: phone connection self-test, one-click firewall rule for the API port, and a DX-OS core connection check (Keycloak discovery and the `app_staff_work` schema).
+- `TEASTAFF_DATA` environment variable to choose the data folder.
+
+### Changed
+- Databases created by 1.0.0 gain the new leave columns on start-up (`database/postgres/002_leave_attachments.sql` for PostgreSQL).
+- Leave dates in the API are parsed strictly as `yyyy-MM-dd`.
+
 ## [1.0.0] - 2026-11-16
 
 ### Added
@@ -14,4 +28,5 @@ All notable changes to this project are documented here. The format follows [Kee
 - Command-line modes `--serve`, `--screenshots` and `--postgres-script`.
 - Demo cooperative seeded on first run; xUnit tests for payroll and the task state machine.
 
+[1.1.0]: https://github.com/Vudinhdat02/appManageStaff/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Vudinhdat02/appManageStaff/releases/tag/v1.0.0

@@ -32,6 +32,7 @@
 
             <!-- Page view models -->
             <DataTemplate DataType="{x:Type vm:DashboardViewModel}"><v:DashboardView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ReportsViewModel}"><v:ReportsView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:EmployeesViewModel}"><v:EmployeesView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:DepartmentsViewModel}"><v:DepartmentsView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:TasksViewModel}"><v:TasksView /></DataTemplate>

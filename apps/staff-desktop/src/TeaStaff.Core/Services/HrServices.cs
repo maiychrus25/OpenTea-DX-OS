@@ -99,7 +99,7 @@ public sealed class EmployeeService(IEmployeeRepository employees, IPasswordHash
     }
 }
 
-public sealed class TaskService(ITaskRepository tasks, IEmployeeRepository employees, IClock clock, IDataChangeNotifier notifier)
+public sealed class TaskService(ITaskRepository tasks, IEmployeeRepository employees, IClock clock, IDataChangeNotifier notifier, IActivityFeed activity)
 {
     public async Task<WorkTask> SaveAsync(WorkTask task, CancellationToken ct = default)
     {
@@ -129,11 +129,19 @@ public sealed class TaskService(ITaskRepository tasks, IEmployeeRepository emplo
         TaskWorkflow.ApplyStaffUpdate(task, to, progress, note, clock.Now);
         var saved = await tasks.SaveAsync(task, ct);
         notifier.Notify(DataAreas.Tasks);
+        var who = task.Assignee?.FullName ?? (await employees.GetAsync(employeeId, ct))?.FullName ?? "Nhân viên";
+        activity.Raise(DataAreas.Tasks, to switch
+        {
+            WorkTaskStatus.Accepted => $"{who} đã nhận việc \"{task.Title}\".",
+            WorkTaskStatus.Rejected => $"{who} từ chối việc \"{task.Title}\": {task.ReportNote}",
+            WorkTaskStatus.Completed => $"{who} đã hoàn thành \"{task.Title}\".",
+            _ => $"{who} báo tiến độ {task.Progress}% cho \"{task.Title}\".",
+        });
         return saved;
     }
 }
 
-public sealed class AttendanceService(IAttendanceRepository attendance, IEmployeeRepository employees, IClock clock, IDataChangeNotifier notifier)
+public sealed class AttendanceService(IAttendanceRepository attendance, IEmployeeRepository employees, IClock clock, IDataChangeNotifier notifier, IActivityFeed activity)
 {
     public const decimal StandardHours = 8m;
 
@@ -151,6 +159,8 @@ public sealed class AttendanceService(IAttendanceRepository attendance, IEmploye
         record.Source = source;
         var saved = await attendance.SaveAsync(record, ct);
         notifier.Notify(DataAreas.Attendance);
+        if (source == RecordSource.Mobile)
+            activity.Raise(DataAreas.Attendance, $"{(await employees.GetAsync(employeeId, ct))?.FullName ?? "Nhân viên"} chấm công vào lúc {now:HH:mm}.");
         return saved;
     }
 
@@ -208,9 +218,54 @@ public sealed class AttendanceService(IAttendanceRepository attendance, IEmploye
     }
 }
 
-public sealed class LeaveService(ILeaveRepository leaves, IAttendanceRepository attendance, IEmployeeRepository employees, ITenantContext tenant, IClock clock, IDataChangeNotifier notifier)
+/// <summary>Evidence uploaded with a leave request (photo of a sick note, wedding invitation…).</summary>
+public sealed record LeaveAttachment(string FileName, byte[] Content);
+
+public sealed class LeaveService(ILeaveRepository leaves, IAttendanceRepository attendance, IEmployeeRepository employees, ITenantContext tenant,
+    IClock clock, IDataChangeNotifier notifier, IAttachmentStore files, IActivityFeed activity)
 {
-    public async Task<LeaveRequest> SubmitAsync(LeaveRequest request, CancellationToken ct = default)
+    public const int MaxAttachmentBytes = 5 * 1024 * 1024;
+
+    /// <summary>Sick leave of this many days or more needs evidence.</summary>
+    public const int SickDaysNeedingEvidence = 2;
+
+    public async Task<LeaveRequest> SubmitAsync(LeaveRequest request, LeaveAttachment? attachment = null, CancellationToken ct = default)
+    {
+        if (request.Type == LeaveType.Sick && request.Days >= SickDaysNeedingEvidence && attachment is null && !request.HasAttachment)
+            throw new DomainException($"Nghỉ ốm từ {SickDaysNeedingEvidence} ngày cần kèm ảnh giấy khám bệnh hoặc giấy ra viện.");
+        if (attachment is not null)
+        {
+            var (ext, mime) = DetectFile(attachment.Content)
+                ?? throw new DomainException("Minh chứng phải là ảnh JPG, PNG, WEBP hoặc tệp PDF.");
+            if (attachment.Content.Length > MaxAttachmentBytes) throw new DomainException("Minh chứng tối đa 5 MB.");
+            request.AttachmentPath = await files.SaveAsync(tenant.HtxCode, ext, attachment.Content, ct);
+            request.AttachmentContentType = mime;
+            var name = Path.GetFileName(attachment.FileName ?? string.Empty);
+            request.AttachmentName = string.IsNullOrWhiteSpace(name) ? "minh-chung" + ext : name[..Math.Min(name.Length, 120)];
+        }
+        var saved = await SubmitCoreAsync(request, ct);
+        var employee = await employees.GetAsync(saved.EmployeeId, ct);
+        activity.Raise(DataAreas.Leaves, $"{employee?.FullName ?? "Nhân viên"} gửi đơn {Labels.Of(saved.Type).ToLowerInvariant()} {saved.Days} ngày ({saved.FromDate:dd/MM})"
+                                         + (saved.HasAttachment ? " kèm minh chứng." : "."));
+        return saved;
+    }
+
+    /// <summary>Identifies uploads by their first bytes, never by the name the client sent.</summary>
+    public static (string Extension, string ContentType)? DetectFile(byte[] b)
+    {
+        if (b.Length >= 3 && b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF) return (".jpg", "image/jpeg");
+        if (b.Length >= 8 && b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47) return (".png", "image/png");
+        if (b.Length >= 12 && b[0] == 0x52 && b[1] == 0x49 && b[2] == 0x46 && b[3] == 0x46 && b[8] == 0x57 && b[9] == 0x45 && b[10] == 0x42 && b[11] == 0x50) return (".webp", "image/webp");
+        if (b.Length >= 5 && b[0] == 0x25 && b[1] == 0x50 && b[2] == 0x44 && b[3] == 0x46 && b[4] == 0x2D) return (".pdf", "application/pdf");
+        return null;
+    }
+
+    public Task<byte[]?> ReadAttachmentAsync(LeaveRequest request, CancellationToken ct = default) =>
+        request.HasAttachment ? files.ReadAsync(request.AttachmentPath!, ct) : Task.FromResult<byte[]?>(null);
+
+    public string? AttachmentFile(LeaveRequest request) => request.HasAttachment ? files.LocalPath(request.AttachmentPath!) : null;
+
+    private async Task<LeaveRequest> SubmitCoreAsync(LeaveRequest request, CancellationToken ct)
     {
         if (request.ToDate < request.FromDate) throw new DomainException("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.");
         if (request.Days > 30) throw new DomainException("Mỗi đơn nghỉ tối đa 30 ngày.");

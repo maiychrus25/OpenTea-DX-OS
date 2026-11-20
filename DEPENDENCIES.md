@@ -200,6 +200,7 @@ affect the project's MIT licensing.
 | AndroidX Core KTX, Activity Compose, Lifecycle, SplashScreen | 1.19.1 / 1.13.0 / 2.11.0 / 1.2.0 | Apache-2.0 | Android platform support |
 | Jetpack Compose BOM (ui, material3, icons-extended) | 2026.09.00 | Apache-2.0 | UI toolkit |
 | [kotlinx.serialization JSON](https://github.com/Kotlin/kotlinx.serialization) | 1.12.0 | Apache-2.0 | JSON models |
+| AndroidX ExifInterface | 1.4.2 | Apache-2.0 | Upright evidence photos |
 | Android Gradle Plugin / Kotlin / Gradle wrapper (build) | 9.5.1 / 2.4.21 / 9.9.0 | Apache-2.0 | Build toolchain |
 | [Robolectric](https://github.com/robolectric/robolectric) (test) | 4.17 | MIT | JVM UI tests |
 | JUnit 4 (test) | 4.13.2 | EPL-1.0 | Unit tests |

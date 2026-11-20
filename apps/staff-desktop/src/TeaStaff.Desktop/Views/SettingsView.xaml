@@ -98,8 +98,16 @@
                                 <TextBox Text="{Binding ApiPort, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                         </Grid>
-                        <TextBlock Text="Lần đầu bật, Windows có thể hỏi quyền tường lửa: chọn cho phép mạng riêng (Private)." Style="{StaticResource Caption}" Margin="0,10,0,0" />
+                        <TextBlock Text="Điện thoại không kết nối được? Bấm Kiểm tra kết nối. Nếu Wi-Fi của máy đang là mạng Công cộng (Public), bấm Cho phép qua tường lửa." Style="{StaticResource Caption}" Margin="0,10,0,0" />
                         <Button Margin="0,14,0,0" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Content="Áp dụng và khởi động lại máy chủ" Command="{Binding SaveApiCommand}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Style="{StaticResource SecondaryButton}" Command="{Binding TestPhoneCommand}">
+                                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8EA;" Style="{StaticResource Icon}" FontSize="13" /><TextBlock Margin="8,0,0,0" Text="Kiểm tra kết nối" /></StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource SecondaryButton}" Command="{Binding AllowFirewallCommand}" Margin="10,0,0,0" ToolTip="Windows sẽ hỏi quyền quản trị">
+                                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE83D;" Style="{StaticResource Icon}" FontSize="13" /><TextBlock Margin="8,0,0,0" Text="Cho phép qua tường lửa" /></StackPanel>
+                            </Button>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
@@ -135,7 +143,10 @@
                         <ComboBox ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}" />
                         <TextBlock Margin="0,12,0,0" Text="Chuỗi kết nối PostgreSQL" Style="{StaticResource FieldLabel}" />
                         <TextBox Text="{Binding PostgresConnection, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" FontSize="12.5" />
-                        <Button Margin="0,16,0,0" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Content="Lưu cấu hình kết nối" Command="{Binding SaveCoreCommand}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                            <Button Style="{StaticResource PrimaryButton}" Content="Lưu cấu hình kết nối" Command="{Binding SaveCoreCommand}" />
+                            <Button Style="{StaticResource SecondaryButton}" Content="Kiểm tra kết nối lõi" Command="{Binding TestCoreCommand}" Margin="10,0,0,0" />
+                        </StackPanel>
                     </StackPanel>
                 </Border>
             </StackPanel>

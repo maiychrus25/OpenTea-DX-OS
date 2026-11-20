@@ -38,6 +38,26 @@ public static class DataAreas
     public const string Payroll = "payroll";
 }
 
+/// <summary>
+/// File storage for leave evidence. The desktop keeps files on disk; a DX-OS deployment can
+/// swap in the core's S3 storage (SeaweedFS) behind the same port.
+/// </summary>
+public interface IAttachmentStore
+{
+    Task<string> SaveAsync(string htxCode, string extension, byte[] content, CancellationToken ct = default);
+    Task<byte[]?> ReadAsync(string path, CancellationToken ct = default);
+    string? LocalPath(string path);
+}
+
+/// <summary>A user-visible event worth announcing in the owner's app (e.g. a new leave request from a phone).</summary>
+public sealed record ActivityEvent(string Area, string Message);
+
+public interface IActivityFeed
+{
+    event EventHandler<ActivityEvent>? Raised;
+    void Raise(string area, string message);
+}
+
 public sealed record SignInResult(bool Success, string? Error, string HtxCode = "", string UserName = "", string DisplayName = "");
 
 /// <summary>

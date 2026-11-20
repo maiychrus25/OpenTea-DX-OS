@@ -14,8 +14,37 @@ using TeaStaff.Infrastructure.MobileApi;
 namespace TeaStaff.Desktop.ViewModels;
 
 public sealed partial class SettingsViewModel(IDialogService dialogs, AppConfig config, PolicyService policies, MobileApiServer api,
-    IOwnerAccountRepository owners, IPasswordHasher hasher, ITenantContext tenant) : PageViewModel(dialogs)
+    IOwnerAccountRepository owners, IPasswordHasher hasher, ITenantContext tenant, Infrastructure.Diagnostics.ConnectionChecker checker) : PageViewModel(dialogs)
 {
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private async Task TestPhone()
+    {
+        var r = await checker.CheckPhoneApiAsync(api.IsRunning);
+        if (r.Ok) Dialogs.Info("Kiểm tra kết nối điện thoại", r.Message);
+        else Dialogs.Error(r.Message);
+    }
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void AllowFirewall()
+    {
+        var r = checker.AllowThroughFirewall();
+        if (r.Ok) Dialogs.Info("Tường lửa Windows", r.Message);
+        else Dialogs.Error(r.Message);
+    }
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private async Task TestCore()
+    {
+        IsBusy = true;
+        try
+        {
+            var r = await checker.CheckCoreAsync(KeycloakUrl, KeycloakRealm, PostgresConnection);
+            if (r.Ok) Dialogs.Info("Kết nối lõi OpenTea DX-OS", r.Message);
+            else Dialogs.Error(r.Message);
+        }
+        finally { IsBusy = false; }
+    }
+
     public override string Title => "Cài đặt";
     public override string Subtitle => "Thông tin HTX, quy tắc tính lương, máy chủ cho điện thoại và kết nối lõi OpenTea DX-OS.";
 

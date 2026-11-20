@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.onNodeWithTag
 import java.io.File
 import org.junit.Rule
 import org.junit.Test
@@ -64,6 +65,11 @@ class ScreenshotTest {
         click("Nghỉ phép")
         waitFor("Phép năm còn lại")
         shot("05-leaves")
+        rule.onNodeWithTag("leave-fab").performClick()
+        waitFor("Minh chứng")
+        shot("08-leave-form")
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        rule.waitForIdle()
 
         click("Lương")
         waitFor("Lương tháng")

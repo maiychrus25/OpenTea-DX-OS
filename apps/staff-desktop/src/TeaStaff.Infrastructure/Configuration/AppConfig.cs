@@ -39,8 +39,11 @@ public sealed class MobileApiOptions
 /// <summary>Machine-level configuration stored in %LOCALAPPDATA%\TeaStaff\config.json.</summary>
 public sealed class AppConfig
 {
+    /// <summary>Data root; override with the TEASTAFF_DATA environment variable (portable installs, demos, tests).</summary>
     public static string DataFolder { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TeaStaff");
+        Environment.GetEnvironmentVariable("TEASTAFF_DATA") is { Length: > 0 } custom
+            ? Path.GetFullPath(custom)
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TeaStaff");
 
     public static string FilePath => Path.Combine(DataFolder, "config.json");
 

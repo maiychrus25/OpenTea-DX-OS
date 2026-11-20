@@ -15,7 +15,10 @@ public sealed record ChangePasswordRequest(string? CurrentPassword, string? NewP
 
 public sealed record TaskStatusRequest(WorkTaskStatus Status, int? Progress, string? Note);
 
-public sealed record LeaveCreateRequest(string FromDate, string ToDate, LeaveType Type, string? Reason);
+/// <summary>Evidence travels as base64 inside the JSON body (max 5 MB decoded).</summary>
+public sealed record AttachmentUpload(string? FileName, string? DataBase64);
+
+public sealed record LeaveCreateRequest(string FromDate, string ToDate, LeaveType Type, string? Reason, AttachmentUpload? Attachment = null);
 
 public sealed record ProfileDto(
     int Id, string Code, string FullName, string Position, string? Department, string? Phone, string? Email,
@@ -46,11 +49,11 @@ public sealed record AttendanceDto(string WorkDate, string? CheckIn, string? Che
 
 public sealed record AttendanceMonthDto(string Month, decimal WorkDays, int LeaveDays, int AbsentDays, decimal OvertimeHours, IReadOnlyList<AttendanceDto> Records);
 
-public sealed record LeaveDto(int Id, string FromDate, string ToDate, int Days, LeaveType Type, string TypeLabel, string? Reason, LeaveStatus Status, string StatusLabel, string? ReviewNote)
+public sealed record LeaveDto(int Id, string FromDate, string ToDate, int Days, LeaveType Type, string TypeLabel, string? Reason, LeaveStatus Status, string StatusLabel, string? ReviewNote, bool HasAttachment, string? AttachmentName)
 {
     public static LeaveDto From(LeaveRequest l) => new(
         l.Id, l.FromDate.ToString("yyyy-MM-dd"), l.ToDate.ToString("yyyy-MM-dd"), l.Days, l.Type, Labels.Of(l.Type),
-        l.Reason, l.Status, Labels.Of(l.Status), l.ReviewNote);
+        l.Reason, l.Status, Labels.Of(l.Status), l.ReviewNote, l.HasAttachment, l.AttachmentName);
 }
 
 public sealed record LeaveListDto(int RemainingAnnualDays, IReadOnlyList<LeaveDto> Items);

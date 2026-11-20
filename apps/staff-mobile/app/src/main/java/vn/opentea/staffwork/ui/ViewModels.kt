@@ -19,6 +19,7 @@ import vn.opentea.staffwork.data.AttendanceMonth
 import vn.opentea.staffwork.data.AttendanceRecord
 import vn.opentea.staffwork.data.LeaveCreateRequest
 import vn.opentea.staffwork.data.LeaveList
+import vn.opentea.staffwork.data.LeaveStatus
 import vn.opentea.staffwork.data.Payslip
 import vn.opentea.staffwork.data.Profile
 import vn.opentea.staffwork.data.TaskItem
@@ -152,11 +153,15 @@ class TasksViewModel(container: AppContainer) : BaseViewModel(container) {
 
     init { refresh() }
 
-    fun refresh() {
-        _state.update { it.copy(loading = true) }
+    /** [silent] refreshes in the background (no spinner) and announces tasks that were not there before. */
+    fun refresh(silent: Boolean = false) {
+        if (!silent) _state.update { it.copy(loading = true) }
         viewModelScope.launch {
-            val tasks = guard { container.repository.tasks() }
+            val before = _state.value.tasks.map { it.id }.toSet()
+            val tasks = if (silent) runCatching { container.repository.tasks() }.getOrNull() else guard { container.repository.tasks() }
             _state.update { it.copy(loading = false, tasks = tasks ?: it.tasks) }
+            val fresh = tasks?.count { it.id !in before && it.isOpen } ?: 0
+            if (silent && before.isNotEmpty() && fresh > 0) show("Chủ HTX vừa giao $fresh việc mới cho bạn.")
         }
     }
 
@@ -242,11 +247,15 @@ class LeavesViewModel(container: AppContainer) : BaseViewModel(container) {
 
     init { refresh() }
 
-    fun refresh() {
-        _state.update { it.copy(loading = true) }
+    fun refresh(silent: Boolean = false) {
+        if (!silent) _state.update { it.copy(loading = true) }
         viewModelScope.launch {
-            val data = guard { container.repository.leaves() }
+            val pendingBefore = _state.value.data?.items?.filter { it.status == LeaveStatus.Pending }?.map { it.id }?.toSet().orEmpty()
+            val data = if (silent) runCatching { container.repository.leaves() }.getOrNull() else guard { container.repository.leaves() }
             _state.update { it.copy(loading = false, data = data ?: it.data) }
+            data?.items?.firstOrNull { it.id in pendingBefore && it.status != LeaveStatus.Pending }?.let {
+                show("Đơn ${it.typeLabel.lowercase()} từ ngày ${vn.opentea.staffwork.ui.components.Fmt.fullDate(it.fromDate)}: ${it.statusLabel.lowercase()}.")
+            }
         }
     }
 

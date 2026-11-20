@@ -19,7 +19,8 @@ All endpoints except `/api/health` and `/api/auth/login` need `Authorization: Be
 | POST | `/api/attendance/check-in` | – | `AttendanceRecord` |
 | POST | `/api/attendance/check-out` | – | `AttendanceRecord` |
 | GET | `/api/leaves` | – | `{remainingAnnualDays, items: Leave[]}` |
-| POST | `/api/leaves` | `{fromDate, toDate, type, reason}` (dates `yyyy-MM-dd`) | `Leave` |
+| POST | `/api/leaves` | `{fromDate, toDate, type, reason, attachment?: {fileName, dataBase64}}` (dates `yyyy-MM-dd`; evidence JPG/PNG/WEBP/PDF ≤ 5 MB, required for sick leave ≥ 2 days) | `Leave` (with `hasAttachment`, `attachmentName`) |
+| GET | `/api/leaves/{id}/attachment` | – | the evidence file of the caller's own request |
 | POST | `/api/leaves/{id}/cancel` | – | 204 (pending requests only) |
 | GET | `/api/payslips` | – | `Payslip[]` (approved and paid only) |
 

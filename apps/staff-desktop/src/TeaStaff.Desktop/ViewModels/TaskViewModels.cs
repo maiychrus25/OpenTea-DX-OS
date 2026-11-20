@@ -19,6 +19,11 @@ public sealed class TaskRow(WorkTask task, DateTime now)
     public string AssigneeCode => Task.Assignee?.Code ?? string.Empty;
 }
 
+public sealed record KanbanColumn(string Title, string Tone, IReadOnlyList<TaskRow> Cards, bool CanAdd)
+{
+    public int Count => Cards.Count;
+}
+
 public sealed partial class TasksViewModel(IDialogService dialogs, ITaskRepository tasks, IEmployeeRepository employees, TaskService service,
     ITenantContext tenant, IClock clock) : PageViewModel(dialogs)
 {
@@ -29,7 +34,25 @@ public sealed partial class TasksViewModel(IDialogService dialogs, ITaskReposito
     public override IReadOnlyCollection<string> WatchedAreas => [DataAreas.Tasks];
 
     public ObservableCollection<TaskRow> Items { get; } = [];
+    public ObservableCollection<KanbanColumn> Columns { get; } = [];
     public ObservableCollection<Option<int?>> AssigneeFilters { get; } = [];
+
+    private static readonly (string Title, string Tone, WorkTaskStatus[] Statuses)[] KanbanLayout =
+    [
+        ("Mới giao", "Warning", [WorkTaskStatus.Assigned]),
+        ("Đã nhận", "Info", [WorkTaskStatus.Accepted]),
+        ("Đang làm", "Info", [WorkTaskStatus.InProgress]),
+        ("Hoàn thành", "Success", [WorkTaskStatus.Completed]),
+        ("Từ chối / Huỷ", "Danger", [WorkTaskStatus.Rejected, WorkTaskStatus.Cancelled]),
+    ];
+
+    /// <summary>"list" or "board".</summary>
+    [ObservableProperty] private string _viewMode = "board";
+    public bool IsBoard => ViewMode == "board";
+    partial void OnViewModeChanged(string value) => OnPropertyChanged(nameof(IsBoard));
+
+    [RelayCommand]
+    private void SetView(string mode) => ViewMode = mode;
 
     [ObservableProperty] private string _search = string.Empty;
     [ObservableProperty] private string _statusFilter = "open";
@@ -72,7 +95,21 @@ public sealed partial class TasksViewModel(IDialogService dialogs, ITaskReposito
              || (t.Assignee?.FullName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)));
         Items.Clear();
         foreach (var t in list) Items.Add(new TaskRow(t, now));
-        Counts = $"{_all.Count(t => t.IsOpen)} đang làm · {_all.Count(t => t.IsOverdue(now))} quá hạn · {_all.Count(t => t.Status == WorkTaskStatus.Completed)} hoàn thành";
+
+        // Kanban shows every status, so it ignores the status chips but keeps search and assignee.
+        var board = _all.Where(t =>
+            (AssigneeFilter?.Value is null || t.AssigneeId == AssigneeFilter.Value) &&
+            (q.Length == 0 || t.Title.Contains(q, StringComparison.OrdinalIgnoreCase) || (t.Location ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)
+             || (t.Assignee?.FullName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase))).ToList();
+        Columns.Clear();
+        foreach (var (title, tone, statuses) in KanbanLayout)
+        {
+            var cards = board.Where(t => statuses.Contains(t.Status))
+                .OrderBy(t => t.IsOverdue(now) ? 0 : 1).ThenByDescending(t => t.Priority).ThenBy(t => t.DueDate)
+                .Select(t => new TaskRow(t, now)).ToList();
+            Columns.Add(new KanbanColumn(title, tone, cards, statuses.Contains(WorkTaskStatus.Assigned)));
+        }
+        Counts =$"{_all.Count(t => t.IsOpen)} đang làm · {_all.Count(t => t.IsOverdue(now))} quá hạn · {_all.Count(t => t.Status == WorkTaskStatus.Completed)} hoàn thành";
     }
 
     [RelayCommand]
