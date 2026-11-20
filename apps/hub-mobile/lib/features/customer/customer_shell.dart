@@ -17,7 +17,7 @@ class CustomerShell extends StatelessWidget {
   static const destinations = [
     NavDestination('Khám phá', Icons.home_outlined, '/shop'),
     NavDestination('Tour', Icons.hiking, '/shop/tours'),
-    NavDestination('Video', Icons.play_arrow_rounded, '/shop/videos', opensOnTop: true),
+    NavDestination('Video', Icons.smart_display_outlined, '/shop/videos', opensOnTop: true),
     NavDestination('Lịch trình', Icons.event_note_outlined, '/shop/trips'),
     NavDestination('Tài khoản', Icons.person_outline, '/shop/me'),
   ];

@@ -10,7 +10,7 @@ import '../../core/format/formatting.dart';
 import '../../core/theme/staff_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/staff.dart';
-import '../../shared/widgets.dart' show SampleDataChip, VideoNavIcon;
+import '../../shared/widgets.dart' show SampleDataChip;
 import 'staff_nav.dart';
 import 'staff_widgets.dart';
 
@@ -356,15 +356,20 @@ class _BottomBar extends StatelessWidget {
     child: InkWell(
       key: const Key('bottom-videos'),
       onTap: () => context.push(nav.videosPath),
+      // Same look as the tabs beside it: it opens a page on top, so it is never shown as selected.
       child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          VideoNavIcon(size: 34),
-          SizedBox(height: 3),
+          SizedBox(
+            width: 44,
+            height: 26,
+            child: Icon(Icons.smart_display_outlined, size: 21, color: StaffColors.muted),
+          ),
+          SizedBox(height: 2),
           Text(
             'Video',
             maxLines: 1,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: StaffColors.primary),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: StaffColors.muted),
           ),
         ],
       ),
