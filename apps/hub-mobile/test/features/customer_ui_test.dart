@@ -232,7 +232,7 @@ void main() {
       await tester.tap(find.byKey(const Key('visit-submit')));
       await tester.pumpAndSettle();
       expect(find.text('Đã gửi yêu cầu tham quan'), findsOneWidget);
-      expect(find.text('HTX xem và duyệt'), findsOneWidget);
+      expect(find.text('Đơn vị tổ chức xem và duyệt'), findsOneWidget);
       expect(find.textContaining('HTX'), findsNothing);
       expect(find.byKey(const Key('visit-code')), findsOneWidget);
     });
