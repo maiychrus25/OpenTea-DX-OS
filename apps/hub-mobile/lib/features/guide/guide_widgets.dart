@@ -170,7 +170,7 @@ class GuideTripCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       'Do ${trip.htxName} giao',
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 13, color: StaffColors.muted),
                     ),
