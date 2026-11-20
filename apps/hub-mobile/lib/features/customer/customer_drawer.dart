@@ -103,6 +103,7 @@ class CustomerDrawer extends StatelessWidget {
                   item('tours', Icons.hiking, 'Tour trải nghiệm', '/shop/tours'),
                   item('products', Icons.local_mall_outlined, 'Sản phẩm', '/shop/products'),
                   item('news', Icons.newspaper_outlined, 'Tin tức', '/shop/news'),
+                  item('chat', Icons.smart_toy_outlined, 'Trợ lý AI', '/shop/chat', push: true),
                   group('CỦA TÔI'),
                   item('cart', Icons.shopping_cart_outlined, 'Giỏ hàng', '/shop/cart', badge: cart),
                   item('trips', Icons.event_note_outlined, 'Lịch trình', '/shop/trips'),

@@ -167,7 +167,8 @@ const _corePaths = {
 /// Whether the page at [location] shows sample data, so it carries the "Dữ liệu mẫu" chip.
 /// Account pages hold no data; everything outside the core is sample until its mini-app exists.
 bool _showsSample(BuildContext context, String location) {
-  if (location.endsWith('/me')) return false;
+  // Chat owns its sample/online label; the storefront fallback is not its data source online.
+  if (location.endsWith('/me') || location.endsWith('/chat')) return false;
   final isCore = _corePaths.any(
     (p) => location == p || (p != '/farmer' && p != '/manager' && location.startsWith('$p/')),
   );

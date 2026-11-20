@@ -54,6 +54,22 @@ class HomeTab extends StatelessWidget {
                         children: [
                           _categories(context, htxs),
                           const _AccountLinks(),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Material(
+                              color: AppColors.tile,
+                              borderRadius: BorderRadius.circular(14),
+                              child: ListTile(
+                                key: const Key('home-chat'),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                leading: const Icon(Icons.smart_toy_outlined, color: AppColors.teaDark),
+                                title: const Text('Hỏi trợ lý', style: TextStyle(fontWeight: FontWeight.w700)),
+                                subtitle: const Text('Tìm tour, đặc sản và cách đặt hàng'),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () => context.push('/shop/chat'),
+                              ),
+                            ),
+                          ),
                           const SectionTitle('Điểm đến nổi bật'),
                           for (var i = 0; i < htxs.length; i++) _destination(context, htxs[i], i),
                           const SectionTitle('Tour nổi bật'),
@@ -170,13 +186,25 @@ class HomeTab extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(shortHtxName(h), style: serif(24, color: Colors.white, height: 1.15)),
+              Text(
+                shortHtxName(h),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: serif(24, color: Colors.white, height: 1.15),
+              ),
               const SizedBox(height: 2),
               Row(
                 children: [
                   const Icon(Icons.place, size: 16, color: Colors.white),
                   const SizedBox(width: 4),
-                  Text(h.province, style: const TextStyle(color: Colors.white, fontSize: 15)),
+                  Flexible(
+                    child: Text(
+                      h.province,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -678,26 +706,40 @@ class _FeaturedCarouselState extends State<_FeaturedCarousel> {
           padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
           child: Row(
             children: [
-              for (var i = 0; i < tours.length; i++)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.only(right: 6),
-                  width: i == _page ? 20 : 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: i == _page ? AppColors.teaDark : const Color(0xFFC9D5C8),
-                    borderRadius: BorderRadius.circular(99),
+              Expanded(
+                flex: 2,
+                child: Wrap(
+                  runSpacing: 6,
+                  children: [
+                    for (var i = 0; i < tours.length; i++)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(right: 6),
+                        width: i == _page ? 20 : 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: i == _page ? AppColors.teaDark : const Color(0xFFC9D5C8),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Flexible(
+                flex: 3,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    key: const Key('home-explore'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 40),
+                    ),
+                    onPressed: () => context.push('/shop/tours'),
+                    child: const Text('Khám phá ngay ›', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
-              const Spacer(),
-              TextButton(
-                key: const Key('home-explore'),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: const Size(0, 40),
-                ),
-                onPressed: () => context.push('/shop/tours'),
-                child: const Text('Khám phá ngay ›', style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ],
           ),

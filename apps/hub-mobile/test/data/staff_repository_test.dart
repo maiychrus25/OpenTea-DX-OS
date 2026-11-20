@@ -73,6 +73,7 @@ void main() {
       'Quản lý thành viên',
       'Bản tin',
       'Duyệt nhật ký',
+      'Trợ lý AI',
       'Vùng trồng',
       'Lô hàng',
       'Thông báo',
@@ -84,6 +85,7 @@ void main() {
       'Tour toàn vùng',
       'Bài viết HTX',
       'Báo cáo tổng hợp',
+      'Trợ lý AI',
     ]);
     expect(labels(StaffKind.officer), contains('Nông hộ'));
     expect(labels(StaffKind.farmer), contains('Thửa đất của tôi'));

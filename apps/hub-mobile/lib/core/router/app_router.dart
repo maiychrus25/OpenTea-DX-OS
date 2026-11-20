@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/common/chat_page.dart';
 import '../../features/customer/booking_form_screen.dart';
 import '../../features/customer/notifications_screen.dart';
 import '../../features/customer/product_detail_screen.dart';
@@ -125,6 +126,7 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         path: '/shop/pay/:code',
         builder: (c, s) => PaymentScreen(code: s.pathParameters['code']!),
       ),
+      GoRoute(path: '/shop/chat', builder: (c, s) => const ChatPage(customer: true)),
       GoRoute(path: '/shop/orders', builder: (c, s) => const OrdersScreen()),
       GoRoute(
         path: '/shop/orders/:id',
@@ -138,6 +140,7 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
       // Farmer: pages inside the staff shell, then pages pushed on top of it.
       shell((loc, child) => StaffShell(location: loc, child: child), [
         tab('/farmer', const FarmerDashboard()),
+        tab('/farmer/chat', const ChatPage()),
         tab('/farmer/journal', const FarmerJournalPage()),
         tab('/farmer/schedule', const SchedulePage()),
         tab('/farmer/scan', const DiagnosisPage()),
@@ -155,6 +158,7 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
       // Manager and officer share the /manager routes; the menu and the buttons depend on the role.
       shell((loc, child) => StaffShell(location: loc, child: child), [
         tab('/manager', const _ManagerHome()),
+        tab('/manager/chat', const ChatPage()),
         tab('/manager/schedule', const SchedulePage()),
         tab('/manager/members', const MembersPage()),
         tab('/manager/households', const HouseholdsPage()),
@@ -196,6 +200,7 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
       ),
       shell((loc, child) => StaffShell(location: loc, child: child), [
         tab('/operator', const OperatorDashboard()),
+        tab('/operator/chat', const ChatPage()),
         tab('/operator/htx', const OperatorHtxPage()),
         tab('/operator/tours', const OperatorToursPage()),
         tab('/operator/articles', const OperatorArticlesTab()),

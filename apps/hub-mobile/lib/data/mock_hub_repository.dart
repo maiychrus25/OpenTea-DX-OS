@@ -4,6 +4,8 @@
 import 'dart:typed_data';
 
 import 'hub_repository.dart';
+import 'local_chat_answerer.dart';
+import 'models/chat.dart';
 import 'models/booking.dart';
 import 'models/catalog.dart';
 import 'models/diagnosis.dart';
@@ -16,6 +18,18 @@ import 'seed_data.dart';
 /// process; it never touches a network. Mirrors the rules the server will own
 /// (stock, status transitions, append-only ledger).
 class MockHubRepository implements HubRepository {
+  @override
+  bool get canChatOnline => false;
+
+  @override
+  Stream<ChatEvent> chat({
+    required ChatTopic topic,
+    required String message,
+    required List<ChatTurn> history,
+    String? sessionId,
+    ChatContext context = const ChatContext(),
+  }) => LocalChatAnswerer(this, now: _now).chat(topic: topic, message: message, context: context);
+
   @override
   bool get coreIsSample => true;
 
@@ -33,19 +47,9 @@ class MockHubRepository implements HubRepository {
 
   final _diagnoses = <DiagnosisReport>[];
 
-  // Sample classes of the tea model. The pick depends on the photo, so it is the same for the same picture; it is NOT
-  // a real classification.
-  static const _sampleDiseases = <(String, double)>[
-    ('Đốm nâu (Brown blight)', 0.91),
-    ('Thối búp (Bud blight)', 0.84),
-    ('Rầy xanh gây cháy lá', 0.72),
-    ('Lá khoẻ', 0.95),
-    ('Chưa chắc chắn', 0.41),
-  ];
-
   @override
   Future<DiagnosisReport> submitDiagnosis(Uint8List image, {String? parcelId, String? parcelCode}) async {
-    final pick = _sampleDiseases[image.length % _sampleDiseases.length];
+    final pick = sampleDiseases[image.length % sampleDiseases.length];
     final report = DiagnosisReport(
       id: 'dg-${_diagnoses.length + 1}',
       diseaseName: pick.$1,

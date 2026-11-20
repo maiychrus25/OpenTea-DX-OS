@@ -3,6 +3,15 @@
 
 import 'dart:typed_data';
 
+/// Shared sample classes, not a real classification or treatment guide.
+const sampleDiseases = <(String, double)>[
+  ('Đốm nâu (Brown blight)', 0.91),
+  ('Thối búp (Bud blight)', 0.84),
+  ('Rầy xanh gây cháy lá', 0.72),
+  ('Lá khoẻ', 0.95),
+  ('Chưa chắc chắn', 0.41),
+];
+
 /// Result of sending a leaf photo to the disease classifier (web: `POST /api/diagnosis`).
 /// It carries the disease NAME and the CONFIDENCE only: never a treatment (AI invariant).
 class DiagnosisReport {

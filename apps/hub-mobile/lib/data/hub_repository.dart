@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'models/booking.dart';
 import 'models/catalog.dart';
 import 'models/diagnosis.dart';
+import 'models/chat.dart';
 import 'models/order.dart';
 import 'models/staff.dart';
 
@@ -73,6 +74,19 @@ class HubException implements Exception {
 /// platform gateway, with the OIDC bearer token) plugs in here later; the API
 /// is milestone M2 and its endpoints are not defined yet, so none are invented.
 abstract class HubRepository {
+  /// Online transport is configured; server authorization is still required.
+  bool get canChatOnline;
+
+  /// History excludes the new message. One terminal done/error follows text deltas.
+  /// Return the done event's sessionId on subsequent turns of this topic only.
+  Stream<ChatEvent> chat({
+    required ChatTopic topic,
+    required String message,
+    required List<ChatTurn> history,
+    String? sessionId,
+    ChatContext context = const ChatContext(),
+  });
+
   /// True while the staff "core" pages (members, parcels, diary, lots,
   /// notifications, HTX profile) are served by sample data, so screens can say so.
   bool get coreIsSample;

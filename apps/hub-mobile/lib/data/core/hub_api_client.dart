@@ -8,6 +8,8 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' show MediaType;
 
 import '../auth_service.dart';
+import '../hub_repository.dart';
+import '../models/chat.dart' show chatUnavailable;
 import 'core_exception.dart';
 import 'graphql_client.dart' show BearerProvider, BearerRefresher;
 
@@ -141,6 +143,51 @@ class HubApiClient {
       return jsonDecode(utf8.decode(response.bodyBytes));
     } catch (_) {
       return null;
+    }
+  }
+
+  /// The chatbot uses NDJSON, NOT SSE `data:` frames, despite its content type.
+  /// UTF-8 and line boundaries may both span network chunks. Cancelling the
+  /// subscription also cancels the response stream, without closing the shared client.
+  Stream<({String line, String? sessionId})> postLines(String path, {required Map<String, Object?> body}) async* {
+    Future<http.StreamedResponse> once(BearerToken bearer) => _client
+        .send(
+          http.Request('POST', Uri.parse('$_base$path'))
+            ..followRedirects = false
+            ..headers.addAll({
+              'Authorization': 'Bearer ${bearer.token}',
+              'Content-Type': 'application/json',
+              'Accept': 'text/event-stream',
+            })
+            ..body = jsonEncode(body),
+        )
+        .timeout(timeout);
+
+    try {
+      final first = await _bearer();
+      if (first == null || first.token.isEmpty) throw const CoreException.unauthorized();
+      var response = await once(first);
+      if (response.statusCode == 401) {
+        await response.stream.listen(null).cancel();
+        final fresh = await _refresh?.call();
+        if (fresh == null || fresh.token.isEmpty) throw const CoreException.unauthorized();
+        response = await once(fresh);
+      }
+      if (response.statusCode != 200) {
+        await response.stream.listen(null).cancel();
+        if (response.statusCode == 401) throw const CoreException.unauthorized();
+        if (response.statusCode == 403) throw const HubException('Vai của bạn chưa được dùng trợ lý trên máy chủ');
+        throw const HubException(chatUnavailable);
+      }
+      final sessionId = response.headers['x-chat-session-id'];
+      await for (final line
+          in response.stream.timeout(timeout * 4).transform(utf8.decoder).transform(const LineSplitter())) {
+        if (line.trim().isNotEmpty) yield (line: line, sessionId: sessionId);
+      }
+    } on HubException {
+      rethrow;
+    } catch (_) {
+      throw const HubException(chatUnavailable);
     }
   }
 

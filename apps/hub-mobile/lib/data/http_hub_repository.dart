@@ -2,6 +2,10 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import 'dart:typed_data';
+import 'dart:convert';
+
+import 'local_chat_answerer.dart';
+import 'models/chat.dart';
 
 import 'core/core_exception.dart';
 import 'core/core_mappers.dart';
@@ -65,6 +69,60 @@ class HttpHubRepository implements HubRepository {
   /// the photo with its Bearer token. Needs the Bearer client, like every write.
   @override
   bool get canDiagnose => _api != null;
+
+  @override
+  bool get canChatOnline => _api != null;
+
+  @override
+  Stream<ChatEvent> chat({
+    required ChatTopic topic,
+    required String message,
+    required List<ChatTurn> history,
+    String? sessionId,
+    ChatContext context = const ChatContext(),
+  }) async* {
+    if (_api == null || context.localOnly) {
+      yield* LocalChatAnswerer(_shop).chat(topic: topic, message: message, context: context);
+      return;
+    }
+    try {
+      await for (final frame in _api.postLines(
+        '/api/chatbot',
+        body: {
+          'message': message,
+          'type': topic.wireValue,
+          'session_id': ?sessionId,
+          'history': history.map((turn) => turn.toJson()).toList(),
+        },
+      )) {
+        final value = jsonDecode(frame.line);
+        if (value is! Map<String, dynamic>) throw const FormatException();
+        if (value['error'] == true) {
+          // Never expose arbitrary server diagnostics, tokens or HTML in an error bubble.
+          yield const ChatError(chatUnavailable);
+          return;
+        }
+        if (value['done'] == true) {
+          final sources = value['sources'];
+          final model = value['model'];
+          if (sources is! List || sources.any((s) => s is! String) || model is! String) {
+            throw const FormatException();
+          }
+          yield ChatDone(sources: List<String>.unmodifiable(sources), model: model, sessionId: frame.sessionId);
+          return;
+        }
+        final text = value['text'];
+        if (text is! String) throw const FormatException();
+        yield ChatText(text);
+      }
+      // An interrupted response is not a successfully completed answer.
+      yield const ChatError(chatUnavailable);
+    } on HubException catch (e) {
+      yield ChatError(e.message);
+    } catch (_) {
+      yield const ChatError(chatUnavailable);
+    }
+  }
 
   final _diagnoses = <DiagnosisReport>[];
 

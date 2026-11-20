@@ -15,6 +15,7 @@ import '../shared/photo_source.dart';
 import 'activity_controller.dart';
 import 'app_state.dart';
 import 'cart_controller.dart';
+import 'chat_controller.dart';
 
 /// Root widget. Everything it needs is passed in, so tests and the real
 /// backend can swap the implementations behind the interfaces.
@@ -39,7 +40,12 @@ class _HubAppState extends State<HubApp> {
   late final GoRouter _router = buildRouter(_state);
   late final Future<void> _restored = _state.restore();
 
-  void _syncUser() => _activity.bind(_state.claims?.subject);
+  late final ChatController _chat = ChatController(widget.repository);
+
+  void _syncUser() {
+    _activity.bind(_state.claims?.subject);
+    _chat.bind(_state.claims);
+  }
 
   @override
   void initState() {
@@ -54,6 +60,7 @@ class _HubAppState extends State<HubApp> {
     _state.dispose();
     _cart.dispose();
     _activity.dispose();
+    _chat.dispose();
     super.dispose();
   }
 
@@ -67,6 +74,7 @@ class _HubAppState extends State<HubApp> {
         ChangeNotifierProvider<AppState>.value(value: _state),
         ChangeNotifierProvider<CartController>.value(value: _cart),
         ChangeNotifierProvider<ActivityController>.value(value: _activity),
+        ChangeNotifierProvider<ChatController>.value(value: _chat),
       ],
       child: FutureBuilder<void>(
         future: _restored,
