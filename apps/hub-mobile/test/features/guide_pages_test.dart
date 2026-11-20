@@ -262,6 +262,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('ticket-guides')), findsOneWidget);
     expect(find.text('Người dẫn tour'), findsOneWidget);
+    expect(find.text('Nguyễn Minh An'), findsOneWidget);
     expect(find.textContaining('HTX'), findsNothing);
   });
 

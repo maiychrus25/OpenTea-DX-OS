@@ -461,7 +461,7 @@ class MockHubRepository implements HubRepository {
   @override
   Future<List<GuideStaff>> listTourGuides(String tourId) async {
     final tour = await getTour(tourId);
-    return _guides.where((g) => tour.guideIds.contains(g.id)).toList();
+    return _guides.where((g) => g.htxCode == tour.htxCode && tour.guideIds.contains(g.id)).toList();
   }
 
   @override
