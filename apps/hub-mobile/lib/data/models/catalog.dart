@@ -81,6 +81,7 @@ class Tour {
     this.maxGuests = 12,
     this.includes = const [],
     this.guideIds = const [],
+    this.briefing = '',
   });
   final String id;
   final String htxCode;
@@ -109,7 +110,17 @@ class Tour {
   /// Account subjects assigned by this tour's cooperative.
   final List<String> guideIds;
 
-  Tour copyWith({String? name, int? adultPrice, int? childPrice, int? maxGuests, List<String>? guideIds}) => Tour(
+  /// What the cooperative tells the assigned guides before the trip (meeting point, what to prepare).
+  final String briefing;
+
+  Tour copyWith({
+    String? name,
+    int? adultPrice,
+    int? childPrice,
+    int? maxGuests,
+    List<String>? guideIds,
+    String? briefing,
+  }) => Tour(
     id: id,
     htxCode: htxCode,
     householdId: householdId,
@@ -126,6 +137,7 @@ class Tour {
     maxGuests: maxGuests ?? this.maxGuests,
     includes: includes,
     guideIds: List.unmodifiable(guideIds ?? this.guideIds),
+    briefing: briefing ?? this.briefing,
   );
 
   /// Whole-day or shorter tours; used by the "Trong ngày" filter.

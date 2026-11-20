@@ -144,6 +144,8 @@ class _GuideTourDetailPageState extends State<GuideTourDetailPage> {
                 ],
               ),
             ),
+            if (data.$1.briefing.isNotEmpty)
+              SectionCard(key: const Key('guide-briefing'), title: 'Dặn dò của HTX', child: Text(data.$1.briefing)),
             for (final dep in data.$2) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -163,6 +165,22 @@ class _GuideTourDetailPageState extends State<GuideTourDetailPage> {
                       children: [
                         Text(booking.code, style: const TextStyle(fontWeight: FontWeight.w700)),
                         Text('${booking.contactName} · ${booking.guests} khách'),
+                        if (booking.phone.isNotEmpty)
+                          Row(
+                            children: [
+                              Expanded(child: Text(booking.phone)),
+                              IconButton(
+                                key: Key('guide-copy-phone-${booking.id}'),
+                                tooltip: 'Sao chép số điện thoại khách',
+                                icon: const Icon(Icons.copy, size: 20),
+                                onPressed: () async {
+                                  await Clipboard.setData(ClipboardData(text: booking.phone));
+                                  if (context.mounted) showMessage(context, 'Đã sao chép số điện thoại khách');
+                                },
+                              ),
+                            ],
+                          ),
+                        if (booking.note.isNotEmpty) Text('Ghi chú của khách: ${booking.note}'),
                         Text(booking.paymentStatus.label),
                         Text(booking.status.label),
                         if (booking.checkedIn) const Text('Đã điểm danh'),

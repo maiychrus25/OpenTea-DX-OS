@@ -459,6 +459,12 @@ class MockHubRepository implements HubRepository {
   Future<List<GuideStaff>> listHtxGuides(String htxCode) async => _guides.where((g) => g.htxCode == htxCode).toList();
 
   @override
+  Future<List<GuideStaff>> listTourGuides(String tourId) async {
+    final tour = await getTour(tourId);
+    return _guides.where((g) => tour.guideIds.contains(g.id)).toList();
+  }
+
+  @override
   Future<GuideStaff> addHtxGuide({required String name, required String phone, required Claims actor}) async {
     final code = actor.htxCode ?? '';
     _requireManager(actor, code);
@@ -533,6 +539,7 @@ class MockHubRepository implements HubRepository {
       maxGuests: draft.maxGuests,
       itinerary: const [],
       gradientSeed: 0,
+      briefing: draft.briefing.trim(),
     );
     _tours.add(tour);
     for (final date in dates) {
@@ -576,6 +583,7 @@ class MockHubRepository implements HubRepository {
       adultPrice: draft.adultPrice,
       childPrice: draft.childPrice,
       maxGuests: draft.maxGuests,
+      briefing: draft.briefing.trim(),
     );
     _tours[_tours.indexOf(tour)] = updated;
     _departures.removeWhere((d) => d.tourId == tourId);

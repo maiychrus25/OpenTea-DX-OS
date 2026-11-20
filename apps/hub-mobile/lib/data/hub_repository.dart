@@ -20,7 +20,9 @@ class NewTour {
     required this.childPrice,
     required this.maxGuests,
     required this.dates,
+    this.briefing = '',
   });
+  final String briefing;
   final String name;
   final int adultPrice;
   final int childPrice;
@@ -186,6 +188,9 @@ abstract class HubRepository {
   // HTX-owned tours; mutations check the manager's cooperative or guide assignment.
   Future<List<Tour>> listGuideTours(String guideId);
   Future<List<GuideStaff>> listHtxGuides(String htxCode);
+
+  /// The guides the cooperative assigned to a tour; a customer with a ticket may see their name and phone.
+  Future<List<GuideStaff>> listTourGuides(String tourId);
   Future<GuideStaff> addHtxGuide({required String name, required String phone, required Claims actor});
   Future<Tour> createTour(NewTour draft, {required Claims actor});
   Future<Tour> updateTour(String tourId, NewTour draft, {required Claims actor});

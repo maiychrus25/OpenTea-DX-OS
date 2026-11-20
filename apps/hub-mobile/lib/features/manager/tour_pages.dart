@@ -151,6 +151,7 @@ class _TourFormState extends State<_TourForm> {
   late final _adult = TextEditingController(text: '${widget.tour?.adultPrice ?? 350000}');
   late final _child = TextEditingController(text: '${widget.tour?.childPrice ?? 200000}');
   late final _seats = TextEditingController(text: '${widget.tour?.maxGuests ?? 12}');
+  late final _briefing = TextEditingController(text: widget.tour?.briefing ?? '');
   late final _dates = [...widget.departures.map((d) => d.date)];
   bool _saving = false;
 
@@ -174,6 +175,7 @@ class _TourFormState extends State<_TourForm> {
         childPrice: int.parse(_child.text),
         maxGuests: int.parse(_seats.text),
         dates: _dates,
+        briefing: _briefing.text,
       );
       if (widget.tour == null) {
         await repo.createTour(draft, actor: actor);
@@ -222,7 +224,21 @@ class _TourFormState extends State<_TourForm> {
               },
             ),
           ),
-        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: TextFormField(
+            key: const Key('tour-briefing'),
+            controller: _briefing,
+            maxLength: 500,
+            minLines: 2,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              labelText: 'Dặn dò cho nhân viên dẫn tour',
+              hintText: 'Điểm hẹn, giờ đón, việc cần chuẩn bị',
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
         const Text('Ngày khởi hành', style: TextStyle(fontWeight: FontWeight.w700)),
         const Text('Ngày đã có lượt đặt không thể xoá. Số chỗ không được nhỏ hơn số khách đã đặt.'),
         Wrap(

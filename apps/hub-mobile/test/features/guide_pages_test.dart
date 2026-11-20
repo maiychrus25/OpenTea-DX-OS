@@ -218,4 +218,58 @@ void main() {
       }
     }
   }
+
+  testWidgets('guide sees the HTX briefing and can copy a guest phone', (tester) async {
+    final router = await _open(tester);
+    router.push('/guide/tours/tour-01');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('guide-briefing')), findsOneWidget);
+    expect(find.textContaining('Tập trung 7h30'), findsOneWidget);
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String?;
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    final copy = find.byKey(const Key('guide-copy-phone-bk-01'));
+    await tester.ensureVisible(copy);
+    await tester.tap(copy);
+    await tester.pumpAndSettle();
+    expect(copied, isNotNull);
+    expect(find.text('Đã sao chép số điện thoại khách'), findsOneWidget);
+  });
+
+  testWidgets('the manager writes a briefing and the assigned guide reads it', (tester) async {
+    final repo = MockHubRepository();
+    final router = await _open(tester, role: 'manager', repo: repo);
+    router.go('/manager/tours');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('edit-tour-tour-01')));
+    await tester.pumpAndSettle();
+    final field = find.byKey(const Key('tour-briefing'));
+    await tester.ensureVisible(field);
+    await tester.enterText(field, 'Hẹn 6h30 ở cổng HTX');
+    final save = find.byKey(const Key('save-tour'));
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect((await repo.getTour('tour-01')).briefing, 'Hẹn 6h30 ở cổng HTX');
+  });
+
+  testWidgets('a customer with a valid ticket sees the guide name and phone', (tester) async {
+    final router = await _open(tester, role: 'customer');
+    router.push('/shop/tickets/bk-01');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('ticket-guides')), findsOneWidget);
+    expect(find.text('Người dẫn tour'), findsOneWidget);
+    expect(find.textContaining('HTX'), findsNothing);
+  });
+
+  testWidgets('new link cards do not overflow at 320 px with 130% text', (tester) async {
+    final router = await _open(tester, width: 320, text: 1.3);
+    router.push('/guide/tours/tour-01');
+    await tester.pumpAndSettle();
+    await _walk(tester);
+    expect(tester.takeException(), isNull);
+  });
 }

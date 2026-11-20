@@ -10,7 +10,9 @@ import '../../app/activity_controller.dart';
 import '../../core/format/formatting.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/hub_repository.dart';
 import '../../data/models/booking.dart';
+import '../../data/models/catalog.dart' show GuideStaff;
 import '../../data/models/order.dart' show PaymentStatus;
 import '../../shared/soft_card.dart';
 import '../../shared/widgets.dart';
@@ -284,6 +286,7 @@ class _TicketScreenState extends State<TicketScreen> {
               ],
             ),
           ),
+          if (valid) _GuideCard(tourId: b.tourId),
           SoftCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,6 +309,31 @@ class _TicketScreenState extends State<TicketScreen> {
       ),
     );
   }
+}
+
+/// The guides assigned to the tour of this ticket, so the customer knows who to call on the day.
+class _GuideCard extends StatelessWidget {
+  const _GuideCard({required this.tourId});
+  final String tourId;
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<GuideStaff>>(
+    future: context.read<HubRepository>().listTourGuides(tourId),
+    builder: (context, snapshot) {
+      final guides = snapshot.data ?? const <GuideStaff>[];
+      if (guides.isEmpty) return const SizedBox.shrink();
+      return SoftCard(
+        key: const Key('ticket-guides'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const BlockTitle(Icons.hiking, 'Người dẫn tour'),
+            for (final g in guides) KeyValueRow(g.name, g.phone),
+          ],
+        ),
+      );
+    },
+  );
 }
 
 class _Fact extends StatelessWidget {

@@ -100,6 +100,7 @@ class SeedData {
     Tour(
       id: 'tour-01',
       guideIds: ['guide-demo', 'guide-tc-02'],
+      briefing: 'Tập trung 7h30 tại nhà văn hoá xóm. Nhắc khách mang mũ nón, giày thể thao và nước uống.',
       htxCode: 'tan-cuong',
       householdId: 'hh-01',
       name: 'Một ngày làm người hái chè',
@@ -178,6 +179,7 @@ class SeedData {
     Tour(
       id: 'tour-03',
       guideIds: ['guide-demo', 'guide-sg-02'],
+      briefing: 'Đón khách tại cổng HTX lúc 8h. Có suất ăn chay, hỏi trước khi khởi hành.',
       htxCode: 'suoi-giang',
       householdId: 'hh-03',
       name: 'Hành trình chè Shan Tuyết cổ thụ',

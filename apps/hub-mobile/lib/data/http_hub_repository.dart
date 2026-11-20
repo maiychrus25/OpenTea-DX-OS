@@ -404,6 +404,8 @@ class HttpHubRepository implements HubRepository {
   @override
   Future<List<GuideStaff>> listHtxGuides(String htxCode) => _shop.listHtxGuides(htxCode);
   @override
+  Future<List<GuideStaff>> listTourGuides(String tourId) => _shop.listTourGuides(tourId);
+  @override
   Future<GuideStaff> addHtxGuide({required String name, required String phone, required Claims actor}) =>
       _shop.addHtxGuide(name: name, phone: phone, actor: actor);
   @override
