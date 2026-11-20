@@ -34,6 +34,7 @@ import '../../features/manager/manager_screens.dart';
 import '../../features/manager/tour_booking_pages.dart';
 import '../../features/manager/tour_pages.dart';
 import '../../features/guide/guide_screens.dart';
+import '../../features/guide/tour_roster_page.dart';
 import '../../features/staff/account_page.dart';
 import '../../features/shorts/shorts_section.dart';
 import '../../features/shorts/shorts_player_page.dart';
@@ -231,6 +232,14 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         tab('/guide/notifications', const GuideNotificationsPage()),
         tab('/guide/me', const StaffAccountPage()),
       ]),
+      GoRoute(
+        path: '/guide/tours/:id/members',
+        builder: (c, s) => TourRosterPage(tourId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/manager/tours/:id/members',
+        builder: (c, s) => TourRosterPage(tourId: s.pathParameters['id']!),
+      ),
       GoRoute(
         path: '/guide/tours/:id',
         builder: (c, s) => GuideTourDetailPage(tourId: s.pathParameters['id']!),

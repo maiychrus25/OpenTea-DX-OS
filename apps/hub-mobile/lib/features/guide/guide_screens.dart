@@ -318,6 +318,15 @@ class _GuideTourDetailPageState extends State<GuideTourDetailPage> {
                 ],
               ),
             ),
+            OutlinedButton.icon(
+              key: const Key('guide-roster'),
+              icon: const Icon(Icons.groups_outlined),
+              label: const Text('Danh sách thành viên'),
+              onPressed: () async {
+                await context.push('/guide/tours/${data.$1.id}/members');
+                await reload();
+              },
+            ),
             if (data.$1.briefing.isNotEmpty)
               SectionCard(key: const Key('guide-briefing'), title: 'Dặn dò của HTX', child: Text(data.$1.briefing)),
             if (data.$1.itinerary.isNotEmpty)

@@ -305,4 +305,59 @@ void main() {
     await _walk(tester);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('guide opens the member list of a tour, searches it and checks a group in', (tester) async {
+    final repo = MockHubRepository();
+    final router = await _open(tester, repo: repo);
+    router.push('/guide/tours/tour-01');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('guide-roster')));
+    await tester.pumpAndSettle();
+    expect(find.text('Thành viên của tour'), findsOneWidget);
+    expect(find.byKey(const Key('roster-booking-bk-01')), findsOneWidget);
+    expect(find.text('Nguyễn Thu Hà'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('roster-search')), 'Thu Hà');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('roster-booking-bk-01')), findsOneWidget);
+    expect(find.byKey(const Key('roster-booking-bk-02')), findsNothing);
+    await tester.enterText(find.byKey(const Key('roster-search')), 'không có ai');
+    await tester.pumpAndSettle();
+    expect(find.text('Không có khách nào khớp'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('roster-search')), '');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('roster-checkin-bk-01')));
+    await tester.tap(find.byKey(const Key('roster-checkin-bk-01')));
+    await tester.pumpAndSettle();
+    expect((await repo.listBookings('tan-cuong')).firstWhere((b) => b.id == 'bk-01').checkedIn, isTrue);
+    expect(find.byKey(const Key('roster-checkin-bk-01')), findsNothing);
+  });
+
+  testWidgets('guide cannot open the members of a tour assigned to someone else', (tester) async {
+    final router = await _open(tester);
+    router.push('/guide/tours/tour-02/members');
+    await tester.pumpAndSettle();
+    expect(find.text('Tour này chưa được giao cho bạn.'), findsOneWidget);
+    expect(find.byKey(const Key('roster-search')), findsNothing);
+  });
+
+  testWidgets('manager and officer see the members of their own tour, only the manager can check in', (tester) async {
+    for (final role in ['manager', 'officer']) {
+      final router = await _open(tester, role: role);
+      router.go('/manager/tours');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('tour-roster-tour-01')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('roster-booking-bk-01')), findsOneWidget, reason: role);
+      expect(find.byKey(const Key('roster-checkin-bk-01')), role == 'manager' ? findsOneWidget : findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
+
+  testWidgets('member list fits 320 px with 130% text', (tester) async {
+    final router = await _open(tester, width: 320, text: 1.3);
+    router.push('/guide/tours/tour-01/members');
+    await tester.pumpAndSettle();
+    await _walk(tester);
+    expect(tester.takeException(), isNull);
+  });
 }

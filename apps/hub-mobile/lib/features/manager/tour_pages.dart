@@ -78,6 +78,12 @@ class ManagerToursPage extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(tour.guideIds.isEmpty ? 'Chưa có nhân viên dẫn tour' : 'Nhân viên dẫn tour:'),
                       for (final guide in data.$2.where((g) => tour.guideIds.contains(g.id))) Text('• ${guide.name}'),
+                      TextButton.icon(
+                        key: Key('tour-roster-${tour.id}'),
+                        icon: const Icon(Icons.groups_outlined),
+                        label: const Text('Thành viên của tour'),
+                        onPressed: () => context.push('/manager/tours/${tour.id}/members'),
+                      ),
                       if (actor.canWriteHtx)
                         Wrap(
                           spacing: 8,

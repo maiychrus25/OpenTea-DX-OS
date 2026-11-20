@@ -106,11 +106,18 @@ void main() {
       '/manager/orders/ord-01',
       '/manager/journal/jr-01',
       '/manager/me',
+      '/manager/tours/tour-01/members',
       '/manager/shorts',
       '/manager/shorts/new',
       '/manager/shorts/watch/demo-short-4',
     ],
-    'guide@demo.vn': ['/guide/tours/tour-01', '/guide/shorts', '/guide/shorts/new', '/guide/shorts/watch/demo-short-6'],
+    'guide@demo.vn': [
+      '/guide/tours/tour-01',
+      '/guide/tours/tour-01/members',
+      '/guide/shorts',
+      '/guide/shorts/new',
+      '/guide/shorts/watch/demo-short-6',
+    ],
     'officer@demo.vn': ['/manager/shorts', '/manager/shorts/new', '/manager/shorts/watch/demo-short-4'],
   };
   for (final entry in staffPages.entries) {
