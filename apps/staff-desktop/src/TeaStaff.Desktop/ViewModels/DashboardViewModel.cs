@@ -5,6 +5,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TeaStaff.Core.Abstractions;
 using TeaStaff.Core.Domain;
+using TeaStaff.Core.Services;
+using TeaStaff.Desktop.Controls;
 using TeaStaff.Desktop.Converters;
 using TeaStaff.Desktop.Services;
 
@@ -31,6 +33,9 @@ public sealed partial class DashboardViewModel(
     [ObservableProperty] private int _activeEmployees;
     [ObservableProperty] private double _presentRatio;
     [ObservableProperty] private string _todayLabel = string.Empty;
+    [ObservableProperty] private IReadOnlyList<ChartPoint> _statusBars = [];
+    [ObservableProperty] private IReadOnlyList<ChartSeries> _weekSeries = [];
+    [ObservableProperty] private IReadOnlyList<string> _weekLabels = [];
 
     public event EventHandler<string>? NavigateRequested;
 
@@ -43,6 +48,25 @@ public sealed partial class DashboardViewModel(
         var todayRecords = await attendance.ListAsync(today, today);
         var allLeaves = await leaves.ListAsync();
         var lastMonth = now.AddMonths(-1);
+        var since = today.AddDays(-13);
+        var recent = await attendance.ListAsync(since, today);
+
+        // Charts: task status now, and the last 14 days of work days and completed tasks.
+        StatusBars =
+        [
+            new("Mới giao", allTasks.Count(t => t.Status == WorkTaskStatus.Assigned), ChartBase.Palette[2]),
+            new("Đã nhận", allTasks.Count(t => t.Status == WorkTaskStatus.Accepted), ChartBase.Palette[1]),
+            new("Đang làm", allTasks.Count(t => t.Status == WorkTaskStatus.InProgress), ChartBase.Palette[7]),
+            new("Hoàn thành", allTasks.Count(t => t.Status == WorkTaskStatus.Completed), ChartBase.Palette[3]),
+            new("Từ chối", allTasks.Count(t => t.Status == WorkTaskStatus.Rejected), ChartBase.Palette[5]),
+        ];
+        var days = Enumerable.Range(0, 14).Select(i => since.AddDays(i)).ToList();
+        WeekLabels = days.Select(d => d.ToString("dd/MM")).ToList();
+        WeekSeries =
+        [
+            new("Số công", ChartBase.Palette[3], days.Select(d => (double)recent.Where(r => r.WorkDate == d).Sum(r => PayrollCalculator.WorkDayValue(r.Status))).ToList()),
+            new("Việc hoàn thành", ChartBase.Palette[1], days.Select(d => (double)allTasks.Count(t => t.CompletedAt is { } c && DateOnly.FromDateTime(c) == d)).ToList()),
+        ];
         var slips = await payslips.ListAsync(now.Year, now.Month);
         if (slips.Count == 0) slips = await payslips.ListAsync(lastMonth.Year, lastMonth.Month);
 
