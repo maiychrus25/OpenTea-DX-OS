@@ -459,6 +459,28 @@ jobs:
           docker ps -aq --filter label=com.docker.compose.service=app-custom-books | xargs docker start
           exit "$rc"
 
+      # A read-only app with no database of its own: the readings it shows are inserted by the seed file, which the apps-smoke block reuses.
+      - name: Install HTX Dashboard App
+        run: |
+          ./dxos install miniapps/htx-dashboard
+          docker compose -f docker/docker-compose.yml exec -T postgres psql -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -q < miniapps/htx-dashboard/tests/seed-readings.sql
+
+      - name: HTX Dashboard Story Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_HTX_DASHBOARD: installed
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/story/htx-dashboard.spec.ts --project=chromium --no-deps --reporter=list --trace retain-on-failure
+
+      - name: HTX Dashboard Screens Browser Test
+        working-directory: apps/web
+        env:
+          E2E_CORE: "1"
+          E2E_HTX_DASHBOARD: installed
+          E2E_BASE_URL: http://localhost:3000
+        run: npx playwright test tests/e2e/visual/screens.spec.ts --project=chromium --no-deps --reporter=list --trace retain-on-failure --grep 'htx-dashboard'
+
       - name: Upload Screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -487,12 +509,18 @@ jobs:
           echo "worker did not stop within 40 s" >&2
           exit 1
 
+      # apps-smoke installs htx-dashboard itself and refuses to start while it is installed.
+      - name: Remove HTX Dashboard App
+        run: |
+          ./dxos remove htx-dashboard
+          docker compose -f docker/docker-compose.yml exec -T postgres psql -U agrimarket -d agrimarket -c "delete from telemetry.sensor_readings where parcel_code in ('TC-A1','TC-B1','TC-B2','LB-A1')"
+
       # apps-smoke purges these apps and refuses to start while one is installed.
       - name: Remove Business Apps
         run: |
           for app in tea-shop leaf-purchase farm-supply custom-books; do ./dxos remove "$app"; done
 
-      # Installs hello, tea-tour, the three business apps and the CLI fixtures, runs the store queue with a worker of its own,
+      # Installs hello, tea-tour, htx-dashboard, the three business apps and the CLI fixtures, runs the store queue with a worker of its own,
       # re-runs platform-up, removes them all, then runs platform-smoke.
       - name: Mini-app Smoke Test
         run: make apps-smoke

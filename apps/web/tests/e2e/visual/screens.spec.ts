@@ -8,6 +8,7 @@
 // pages hold a tour) it adds the tea-tour pages, and runs the same checks inside the app's frame.
 // With E2E_BUSINESS_APPS=installed (leaf-purchase and farm-supply installed with `./dxos install`, tea-shop installed for TC from the
 // App Store, best after tests/e2e/story/app-store.spec.ts and business-apps.spec.ts) it adds one screen per business app and role.
+// With E2E_HTX_DASHBOARD=installed (htx-dashboard installed and its readings seeded) it adds the seven pages of the dashboard.
 // The App Store screens (list, history tab, detail page of tea-shop) need no app installed, only a catalog-sync (make platform-up does it).
 import { test, expect, Page } from '@playwright/test'
 import { DEMO_PASSWORD, SMOKE_PASSWORD, keycloakLogin } from '../helpers/keycloak-login'
@@ -209,6 +210,23 @@ if (process.env.E2E_CUSTOM_BOOKS === 'installed') {
       },
     },
     { name: 'custom-books-farmer', role: 'farmer', user: ['smoke_farmer_tc', SMOKE_PASSWORD], frame: BOOKS, open: p => openBook(p, '/farmer/apps/custom-books') },
+  )
+}
+
+// With E2E_HTX_DASHBOARD=installed (htx-dashboard installed with `./dxos install` and the readings of
+// miniapps/htx-dashboard/tests/seed-readings.sql in place) it adds every tab and the page of a parcel with readings.
+if (process.env.E2E_HTX_DASHBOARD === 'installed') {
+  const DASH = 'iframe[title="Bảng điều hành HTX"]'
+  const dash = (name: string, path: string, heading: string) =>
+    ({ name: `htx-dashboard-${name}`, role: 'manager', frame: DASH, open: (p: Page) => visitApp(p, `/manager/apps/htx-dashboard${path}`, heading, DASH) }) satisfies Screen
+  SCREENS.push(
+    dash('overview', '', 'Tổng quan HTX TC'),
+    dash('production', '/production', 'Sản xuất'),
+    dash('parcels', '/parcels', 'Vùng trồng'),
+    dash('parcel', '/parcels/TC-A1', 'Thửa TC-A1'),
+    dash('health', '/health', 'Sức khoẻ cây'),
+    dash('lots', '/lots', 'Lô chè'),
+    dash('data', '/data', 'Dữ liệu cảm biến'),
   )
 }
 
