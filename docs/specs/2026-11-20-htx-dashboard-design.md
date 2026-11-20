@@ -37,17 +37,17 @@ Mọi trang dưới `/apps/htx-dashboard`, vai `manager`, hiện trong khung c�
 
 | Tab | Đường dẫn | Nội dung |
 | --- | --- | --- |
-| Tổng quan | `/` | Dải chỉ số (§5.1); khối "Cần chú ý" (§5.2); biểu đồ nhật ký theo tuần và lô theo trạng thái; thời tiết và giá chè mới nhất kèm nguồn và giờ cập nhật; liên kết sang trang nghiệp vụ tương ứng của lõi |
+| Tổng quan | `/` | Dải chỉ số (§5.1); khối "Cần chú ý" (§5.2); biểu đồ nhật ký theo tuần và lô theo trạng thái; giá chè mới nhất kèm nguồn và giờ cập nhật (cùng quy tắc chọn và cùng nhãn "mô phỏng" như trang `/manager/dashboard` của lõi); liên kết sang trang nghiệp vụ tương ứng của lõi |
 | Sản xuất | `/production` | Thửa theo trạng thái; vụ đang canh tác và lịch thu hoạch 30 ngày tới; sản lượng kỳ vọng theo tháng; nhật ký theo tuần và theo loại hoạt động; 10 hộ ghi nhật ký nhiều nhất và các hộ chưa ghi trong kỳ |
 | Vùng trồng | `/parcels` | Bảng mọi thửa: mã, hộ, diện tích, cây, trạng thái vụ, số đo mới nhất của từng cảm biến kèm tuổi của số đo, báo cáo bệnh gần nhất. Lọc theo trạng thái, theo "có cảm biến", tìm theo mã thửa hoặc tên hộ; phân trang 25 |
-| Thửa | `/parcels/<mã thửa>` | Bản sao số của một thửa: thông tin thửa và hộ; vụ hiện tại; với mỗi cảm biến: số đo mới nhất, nhỏ nhất, lớn nhất và trung bình trong kỳ, biểu đồ đường theo ngày; 10 nhật ký và 5 báo cáo bệnh gần nhất; các lô có thửa này |
-| Sức khoẻ cây | `/health` | Báo cáo bệnh theo tuần, theo loại bệnh, theo trạng thái xử lý; thửa có nhiều báo cáo nhất |
-| Lô chè | `/lots` | Lô theo trạng thái, lô tạo theo tháng, thời gian trung bình từ lúc tạo tới lúc sẵn sàng; danh sách lô mới nhất |
-| Dữ liệu | `/data` | Vòng đời và chất lượng dữ liệu cảm biến: số dòng đang ở kho nóng theo ngày; các lần chuyển sang kho lạnh (ngày, số dòng, dung lượng, mã băm SHA-256, kết quả kiểm chất lượng, trạng thái); cảm biến không gửi số đo quá 6 giờ |
+| Thửa | `/parcels/<mã thửa>` | Bản sao số của một thửa: thông tin thửa và hộ; vụ hiện tại; với mỗi cảm biến: số đo mới nhất, nhỏ nhất, lớn nhất và trung bình trong kỳ, biểu đồ đường theo ngày; thời tiết mới nhất của thửa (bảng `weather_cache`) kèm giờ cập nhật; 10 nhật ký và 5 báo cáo bệnh gần nhất; các lô có thửa này |
+| Sức khoẻ cây | `/health` | Báo cáo bệnh theo tuần, theo loại bệnh, theo trạng thái xử lý; thửa có nhiều báo cáo nhất. Loại bệnh là chẩn đoán đã được cán bộ xác nhận; báo cáo chưa xác nhận dùng tên do AI dự đoán và được ghi rõ "AI dự đoán" |
+| Lô chè | `/lots` | Lô theo trạng thái, lô tạo theo tháng, khối lượng dự kiến theo trạng thái; danh sách lô mới nhất. (Lõi không lưu thời điểm lô sẵn sàng, nên không tính thời gian xử lý lô) |
+| Dữ liệu | `/data` | Vòng đời và chất lượng dữ liệu cảm biến: số dòng đang ở kho nóng theo ngày; các lần chuyển sang kho lạnh (ngày, số dòng, dung lượng, mã băm SHA-256, kết quả kiểm chất lượng theo đúng các khoá mà tiến trình lưu trữ của nền tảng ghi vào cột `quality`, trạng thái); cảm biến không gửi số đo quá 6 giờ |
 
 Quy tắc chung:
 
-1. Kỳ xem chọn bằng `?days=7|30|90` (mặc định 30), đi theo mọi liên kết trong app, cùng với `?theme=`.
+1. Kỳ xem chọn bằng `?days=7|30|90` (mặc định 30), đi theo mọi liên kết trong app, cùng với `?theme=`. Kho nóng chỉ giữ số đo cảm biến 30 ngày (`DXOS_HOT_RETENTION_DAYS`), nên biểu đồ cảm biến dùng tối đa 30 ngày và ghi rõ điều đó khi kỳ xem là 90 ngày.
 2. Mỗi con số ghi rõ kỳ và nguồn; số đo cảm biến luôn kèm thời điểm đo. Không có dữ liệu thì hiện trạng thái trống có lời giải thích, không hiện số 0 gây hiểu lầm (ví dụ "Chưa có cảm biến nào gửi số đo").
 3. Lõi không trả lời hoặc hết giờ (5 giây cho mỗi truy vấn): trang vẫn hiện khung và các khối khác, khối bị lỗi ghi "Chưa lấy được dữ liệu, thử tải lại"; không có trang lỗi trắng.
 4. Mỗi tab có "Tải CSV" cho bảng chính và "Bản in" (mở ngoài khung, có liên kết quay lại) theo cách của bộ giao diện chung; CSV có BOM, CRLF và chống công thức.
@@ -60,7 +60,16 @@ Quy tắc chung:
 
 Số hộ; số thửa và tổng diện tích; số thửa đang canh tác; sản lượng kỳ vọng của các vụ đang canh tác; lô theo từng trạng thái; nhật ký ghi trong kỳ và nhật ký chờ duyệt; báo cáo bệnh trong kỳ và số đang chờ xử lý; số thửa có cảm biến và số cảm biến đang im lặng.
 
-Định nghĩa từng chỉ số (bảng nào, điều kiện nào) nằm trong một module riêng của app, có kiểm thử trên dữ liệu mẫu cố định; trang chỉ hiển thị. Tên trạng thái lấy đúng theo `apps/web/prisma/schema.prisma`.
+Định nghĩa từng chỉ số (bảng nào, điều kiện nào) nằm trong một module riêng của app, có kiểm thử trên dữ liệu mẫu cố định; trang chỉ hiển thị. Tên trạng thái lấy đúng theo `apps/web/prisma/schema.prisma`; trạng thái nhật ký là chuỗi dùng trong mã của web (`PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `REQUEST_CHANGES`).
+
+Định nghĩa đã chốt:
+
+- **Chỉ số nào trang `/manager/dashboard` của lõi đã tính thì dùng đúng định nghĩa đó**, để hai màn hình không lệch nhau.
+- **Vụ đang canh tác** của một thửa là chu kỳ có `harvested_at` trống (mới nhất nếu có nhiều). **Thửa đang canh tác** là thửa có vụ như vậy. Trạng thái của thửa (`status`) được hiện nguyên như lõi lưu ở biểu đồ "thửa theo trạng thái".
+- **Sản lượng kỳ vọng** = tổng `area_ha × estimated_yield_per_ha` của các thửa đang canh tác. Thửa chưa khai năng suất không được tính và được đếm riêng ("N thửa chưa khai năng suất").
+- **Ngày thu hoạch dự kiến** là `estimated_harvest_date` của vụ đang canh tác. Vụ chưa có ngày này được đếm riêng, không vào cảnh báo. **Quá hạn** là vụ đang canh tác có ngày dự kiến trước hôm nay (giờ Việt Nam).
+- **Nhật ký chờ duyệt** chỉ gồm `PENDING_APPROVAL`, tuổi tính từ `created_at`; `REQUEST_CHANGES` đếm riêng ("cần sửa").
+- **Đếm:** nhật ký đếm bằng truy vấn gộp sẵn có của `journal_entries`. Các bảng khác đếm trên danh sách tải về với giới hạn 5.000 dòng; chạm giới hạn thì con số được ghi kèm "chỉ tính trên 5.000 dòng mới nhất".
 
 ### 5.2 "Cần chú ý"
 
@@ -68,7 +77,7 @@ Mỗi dòng nêu việc gì, bao nhiêu, và dẫn tới trang xử lý của l�
 
 - Nhật ký chờ duyệt quá 3 ngày.
 - Báo cáo bệnh chờ xử lý, và báo cáo mới trong 7 ngày.
-- Cảm biến im lặng: thửa từng có số đo trong 30 ngày nhưng không có số đo nào trong 6 giờ gần nhất.
+- Cảm biến im lặng: cặp (thửa, cảm biến) có số đo trong kho nóng nhưng không có số đo nào trong 6 giờ gần nhất. Lõi không có danh mục cảm biến, nên cảm biến im lặng quá 30 ngày sẽ không còn hiện; trang ghi rõ giới hạn này.
 - Vụ có ngày thu hoạch dự kiến trong 7 ngày tới, và vụ đã quá ngày dự kiến mà chưa thu.
 - Lần chuyển dữ liệu sang kho lạnh bị lỗi trong 7 ngày.
 
@@ -77,6 +86,8 @@ Các mốc 3 ngày, 6 giờ, 7 ngày là hằng số của app trong đợt 1.
 ## 6. Kiến trúc
 
 - Cùng khuôn với các mini-app hiện có: FastAPI và Jinja2, dựng trang phía máy chủ, không JavaScript, không cookie, container chỉ đọc. Manifest không khai `database`.
+- Vai và HTX đọc từ claim của token như các mini-app hiện có (`claims.py`); thiếu vai `manager` hoặc `htx_code` trống thì trả 403.
+- Không thêm thư viện: truy vấn song song bằng nhóm luồng của thư viện chuẩn, gọi lõi bằng cách các app hiện có đang dùng.
 - Ba phần: `core_client` (gọi `http://apisix:9081/api/data/graphql` với header `Authorization` của người xem và `x-hasura-role: manager`; mỗi truy vấn là một hằng, không ghép chuỗi từ dữ liệu người dùng), `metrics` (hàm thuần: nhận các dòng lõi trả về, cho ra chỉ số, chuỗi theo tuần hoặc ngày, danh sách cảnh báo), `routes` (kiểm vai, gọi hai phần trên, dựng trang).
 - Biểu đồ: cột dùng macro của bộ giao diện chung; đường là SVG do app dựng (toạ độ tính ở Python, không thuộc tính `style`, màu qua lớp CSS).
 - Các truy vấn của một trang chạy song song; một truy vấn hỏng không làm hỏng trang (§4 quy tắc 3).
@@ -86,21 +97,21 @@ Các mốc 3 ngày, 6 giờ, 7 ngày là hằng số của app trong đợt 1.
 
 Số đo cảm biến có thể tới hàng chục nghìn dòng mỗi thửa trong kho nóng, không thể tải thô về để vẽ biểu đồ theo ngày. Thêm:
 
-1. View `telemetry.sensor_daily`: mỗi dòng là một (`htx_code`, `parcel_code`, `sensor`, `day`) với `day` là ngày theo giờ Việt Nam, và `reading_count`, `min_value`, `max_value`, `avg_value`, `first_ts`, `last_ts`. View đọc `telemetry.sensor_readings`; không lưu gì.
+1. View `telemetry.sensor_daily`: mỗi dòng là một (`htx_code`, `parcel_code`, `sensor`, `day`) với `day` (kiểu `date`) là ngày theo giờ Việt Nam, và `reading_count`, `min_value`, `max_value`, `avg_value`, `first_ts`, `last_ts`. View đọc `telemetry.sensor_readings`; không lưu gì. View được tạo bằng `CREATE OR REPLACE VIEW` trong một tệp khởi tạo của `platform/postgres/init/`: `platform-init` áp lại các tệp này lên database đã có, nên máy đang chạy nhận view sau `make platform-up` (lệnh này cũng khởi động lại Hasura để nạp metadata). View chạy bằng quyền của chủ sở hữu; việc lọc theo HTX do Hasura áp, như với bảng gốc.
 2. Hasura theo dõi view này với quyền `select` cho `manager` và `officer`, cùng bộ lọc `htx_code` như `telemetry_sensor_readings` (không có quyền cho `farmer`, như bảng gốc).
 3. Số đo mới nhất của từng cảm biến lấy từ bảng gốc bằng `distinct_on`, không cần thay đổi gì.
-4. Các bộ kiểm của nền tảng (`platform-smoke`, kiểm thử quyền theo dòng) thêm kiểm tra cho view: trưởng HTX `TC` không đọc được dòng của `LB`; `farmer` không đọc được.
+4. Bộ kiểm dữ liệu của nền tảng (`platform/tests/smoke-dataops.sh`, nơi đang kiểm quyền trên `telemetry`) thêm kiểm tra cho view: trưởng HTX `TC` không đọc được dòng của `LB`; `farmer` không đọc được.
 
 Không đổi quyền nào khác, không bật thêm phép gộp (`aggregate`) cho bảng nào: các bảng nghiệp vụ của một HTX đủ nhỏ để app đếm trên danh sách đã giới hạn.
 
 ## 8. Manifest và Kho ứng dụng
 
-`id: htx-dashboard`, `version: 0.1.0`, `license: MIT`, `requires.core` là phiên bản lõi có view ở §7. Đường dẫn có bảo vệ `/` cho `manager`; không có đường dẫn công khai. Khối `store`: nhóm `production`, một biểu tượng trong danh sách cho phép, mô tả, mục dữ liệu ("App không lưu dữ liệu"), dữ liệu cá nhân ("Hiện tên hộ và mã thửa của HTX cho trưởng HTX; không lưu"), `core_reads` liệt kê các nhóm dữ liệu ở §4, tối đa 4 ảnh màn hình.
+`id: htx-dashboard`, `version: 0.1.0`, `license: MIT`, `requires.core: ">=1.13.0"` (phiên bản lõi có view ở §7; web lên `1.13.0` trong cùng thay đổi). Đường dẫn có bảo vệ `/` cho `manager`; không có đường dẫn công khai. Khối `store`: nhóm `production`, một biểu tượng trong danh sách cho phép, mô tả, mục dữ liệu ("App không lưu dữ liệu"), dữ liệu cá nhân ("Hiện tên hộ và mã thửa của HTX cho trưởng HTX; không lưu"), `core_reads` liệt kê các nhóm dữ liệu ở §4, tối đa 4 ảnh màn hình.
 
 ## 9. Kiểm thử và nghiệm thu
 
 - **pytest của app:** từng chỉ số và từng cảnh báo ở §5 trên dữ liệu mẫu cố định, kể cả biên (đúng 3 ngày, đúng 6 giờ, kỳ không có dòng nào); chuỗi theo tuần và theo ngày tính theo giờ Việt Nam qua nửa đêm UTC; lõi trả lỗi, trả sai dạng hoặc hết giờ ở từng truy vấn; token thiếu vai hoặc thiếu mã HTX bị từ chối; mã thửa sai mẫu; văn bản thù địch trong tên hộ hoặc ghi chú hiện ra như chữ và bị vô hiệu trong CSV; trang không có `<script>` và không có thuộc tính `style`.
-- **Nền tảng:** kiểm tra ở §7.4; `make platform-smoke` giữ mọi kiểm tra cũ.
+- **Nền tảng:** kiểm tra ở §7.4; `make platform-smoke` và bộ kiểm dữ liệu giữ mọi kiểm tra cũ.
 - **`make apps-smoke`:** cài app; trưởng HTX mở được từng tab (200) và trang thửa của một thửa có số đo; `officer` và `farmer` bị cổng từ chối; không token nhận 401; CSV đúng dạng; gỡ app sạch (app không có schema).
 - **Trình duyệt:** một câu chuyện (trưởng HTX mở Tổng quan, sang Vùng trồng, mở một thửa có số đo, thấy biểu đồ và số mới nhất khớp với dữ liệu gieo sẵn); ảnh màn hình các tab ở 1280 và 390 px, sáng và tối, không cuộn ngang, không chồng chữ.
 - **Dữ liệu thử:** số đo cảm biến gieo bằng công cụ mô phỏng sẵn có của nền tảng hoặc chèn thẳng trong bước chuẩn bị của bộ kiểm; không thêm dữ liệu giả vào lõi khi chạy thật.
