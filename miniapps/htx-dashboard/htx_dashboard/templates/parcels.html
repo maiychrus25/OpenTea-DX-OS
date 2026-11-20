@@ -1,0 +1,54 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Vùng trồng{% endblock %}
+{% block head %}{% call kit.app_header("Vùng trồng", "Mọi thửa của HTX " ~ htx ~ " và số đo cảm biến mới nhất") %}{{ parts.actions(link, here, days, keep) }}{% endcall %}{% endblock %}
+{% block main %}
+{{ parts.period_nav(link, here, days, keep) }}
+<form class="toolbar" method="get" action="{{ prefix }}/parcels">
+  <label>Tìm mã thửa hoặc tên hộ <input type="search" name="q" value="{{ q }}" maxlength="60"></label>
+  <label>Trạng thái
+    <select name="status"><option value="">Tất cả</option>
+    {% for key, label in statuses %}<option value="{{ key }}"{% if key == status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  </label>
+  <label><input type="checkbox" name="sensor" value="1"{% if with_sensor %} checked{% endif %}> Chỉ thửa có cảm biến</label>
+  {% if days != 30 %}<input type="hidden" name="days" value="{{ days }}">{% endif %}
+  {% if theme %}<input type="hidden" name="theme" value="{{ theme }}">{% endif %}
+  <button type="submit">Lọc</button>
+</form>
+
+{% if r.parcels.ok %}
+  {% if parcels_empty %}{{ kit.empty("Chưa có thửa nào trong HTX.") }}
+  {% elif not rows %}{{ kit.empty("Không có thửa nào khớp bộ lọc.", "Xoá bộ lọc", link('/parcels')) }}
+  {% else %}
+  <table role="table">
+    <thead role="rowgroup"><tr role="row"><th role="columnheader">Thửa</th><th role="columnheader">Hộ</th><th role="columnheader">Diện tích</th><th role="columnheader">Cây</th><th role="columnheader">Trạng thái</th><th role="columnheader">Số đo mới nhất</th><th role="columnheader">Báo cáo bệnh gần nhất</th></tr></thead>
+    <tbody role="rowgroup">
+    {% for row in rows %}
+      <tr role="row">
+        <td role="cell" data-label="Thửa"><a href="{{ link('/parcels/' ~ row.parcel.code) }}">{{ row.parcel.code }}</a></td>
+        <td role="cell" data-label="Hộ">{{ row.parcel.household_name }}</td>
+        <td role="cell" data-label="Diện tích">{{ row.parcel.area_ha | num(1) }} ha</td>
+        <td role="cell" data-label="Cây">{{ row.parcel.crop_type }}</td>
+        <td role="cell" data-label="Trạng thái"><span class="status-dot {{ status_class.get(row.parcel.status, 'draft') }}"></span>{{ parcel_status.get(row.parcel.status, row.parcel.status) }}</td>
+        <td role="cell" data-label="Số đo mới nhất">
+          {% if not r.latest.ok %}<span class="note">{{ ERROR_TEXT }}</span>
+          {% elif row.readings %}
+          <ul class="readings">{% for x in row.readings %}<li{% if x.silent %} class="silent"{% endif %}><span>{{ x.label }}</span> <strong>{{ x.value }}{% if x.unit %} {{ x.unit }}{% endif %}</strong> <span class="age">{{ x.age }}</span></li>{% endfor %}</ul>
+          {% else %}<span class="note">Chưa có cảm biến</span>{% endif %}
+        </td>
+        <td role="cell" data-label="Báo cáo bệnh gần nhất">
+          {% if not r.diseases.ok %}<span class="note">{{ ERROR_TEXT }}</span>
+          {% elif row.disease %}{{ row.disease.detection_date | vn_day }} · {{ kind(row.disease) }}
+          {% else %}<span class="note">Chưa có</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% set filt = filter %}
+  {{ kit.pagination(page, link('/parcels', page=page.number - 1, **filt) if page.has_prev else None, link('/parcels', page=page.number + 1, **filt) if page.has_next else None) }}
+  {% endif %}
+{% else %}{{ parts.error() }}{% endif %}
+{{ parts.notes([note] if note else []) }}
+{% endblock %}

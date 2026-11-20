@@ -1,0 +1,119 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Tổng quan{% endblock %}
+{% block head %}{{ kit.app_header("Tổng quan HTX " ~ htx, "Số liệu lúc " ~ generated ~ " · chỉ đọc, lấy từ hệ thống lõi") }}{% endblock %}
+{% block main %}
+{{ parts.period_nav(link, here, days, keep) }}
+
+<section class="attention" aria-labelledby="attention-title">
+  <h2 id="attention-title">Cần chú ý</h2>
+  {% if attention %}
+  <ul class="attention-list">
+    {% for a in attention %}
+    <li data-attention="{{ a.key }}">
+      <span class="attention-count">{{ a.count }}</span>
+      {% if a.target in ("health", "data") %}
+      <a class="attention-text" href="{{ link('/' ~ a.target) }}">{{ a.text }}<span class="attention-go" aria-hidden="true">›</span></a>
+      {% else %}
+      <a class="attention-text" href="{{ core_link(a.target) }}" target="_top">{{ a.text }}<span class="attention-go" aria-hidden="true">›</span></a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% elif not unchecked %}
+  <p class="all-clear">Không có việc nào cần chú ý.</p>
+  {% else %}
+  <p class="all-clear">Không có việc nào cần chú ý trong phần đã kiểm tra được.</p>
+  {% endif %}
+  {% if unchecked %}<p class="note">Chưa kiểm được: {{ unchecked | join(", ") }}. {{ ERROR_TEXT }}.</p>{% endif %}
+  <p class="note">{{ sensor_note }}</p>
+</section>
+
+{% for title, tiles in groups %}
+<section class="group" aria-label="{{ title }}">
+  <h2>{{ title }}</h2>
+  {{ kit.stats(tiles) }}
+</section>
+{% endfor %}
+{{ parts.notes(notes) }}
+
+<section class="group" aria-labelledby="grid-title">
+  <h2 id="grid-title">Các thửa</h2>
+  {% if r.parcels.ok %}
+    {% if grid %}
+    <ul class="legend" aria-label="Chú giải màu">
+      {% for key, label in parcel_status.items() %}<li><span class="swatch {{ status_class[key] }}"></span>{{ label }}</li>{% endfor %}
+      <li><span class="swatch alert"></span>Có cảm biến im lặng</li>
+    </ul>
+    <ul class="parcel-grid">
+      {% for c in grid %}
+      <li><a class="parcel-cell {{ c.cls }}{% if c.alert %} alert{% endif %}" href="{{ link('/parcels/' ~ c.code) }}"
+             aria-label="{{ c.code }}, {{ c.household }}, {{ c.label }}, {{ c.area }} ha{% if c.alert %}, có cảm biến im lặng{% endif %}">{{ c.short }}</a></li>
+      {% endfor %}
+    </ul>
+    <p class="note">Bấm một ô để mở bản sao số của thửa. Ô có viền đỏ là thửa có cảm biến không gửi số đo quá {{ sensor_silent_hours }} giờ.</p>
+    {% else %}
+    {{ kit.empty("Chưa có thửa nào trong HTX.") }}
+    {% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+
+<div class="two-up">
+  <section aria-label="Nhật ký theo tuần">
+    {% if r.journals.ok %}
+      {% if journals_empty %}{{ kit.empty("Chưa có nhật ký nào trong " ~ days ~ " ngày qua.") }}
+      {% else %}{{ kit.chart("Nhật ký ghi theo tuần (" ~ days ~ " ngày)", journal_weeks, "nhật ký") }}{% endif %}
+    {% else %}{{ parts.error() }}{% endif %}
+  </section>
+  <section aria-label="Lô theo trạng thái">
+    {% if r.lots.ok %}
+      {% if lots_empty %}{{ kit.empty("Chưa có lô chè nào.") }}
+      {% else %}{{ kit.chart("Lô chè theo trạng thái", lots_chart, "lô") }}{% endif %}
+    {% else %}{{ parts.error() }}{% endif %}
+  </section>
+</div>
+
+<section class="group" aria-labelledby="price-title">
+  <h2 id="price-title">Giá thị trường mới nhất</h2>
+  {% if r.prices.ok %}
+    {% if prices %}
+    <ul class="price-list">
+      {% for p in prices %}
+      <li>
+        <span class="price-name">{{ commodity_vn.get(p.commodity, p.commodity) }} <span class="price-metric">{{ metric_vn(p.metric) }}</span></span>
+        <span class="price-value">{{ p.value | num(2) }} {{ p.unit }}</span>
+        <span class="price-source">{{ p.source }} · cập nhật {{ p.fetched_at | vn_datetime }}{% if p.simulated %} <span class="pill warn">giá mô phỏng</span>{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}{{ kit.empty("Chưa có dữ liệu giá. Hệ thống cập nhật tự động mỗi ngày.") }}{% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+
+<section class="group" aria-labelledby="go-title">
+  <h2 id="go-title">Đi tới</h2>
+  <ul class="go-list">
+    <li><a class="go-card" href="{{ core_link('journal_approve') }}" target="_top"><strong>Duyệt nhật ký</strong><span>Xử lý nhật ký chờ duyệt</span></a></li>
+    <li><a class="go-card" href="{{ core_link('lots') }}" target="_top"><strong>Lô hàng</strong><span>Lô chè và mã QR</span></a></li>
+    <li><a class="go-card" href="{{ core_link('schedule') }}" target="_top"><strong>Lịch thu hái</strong><span>Vụ sắp thu hoạch</span></a></li>
+    <li><a class="go-card" href="{{ core_link('farm_zones') }}" target="_top"><strong>Vùng trồng (bản đồ)</strong><span>Các thửa trên bản đồ</span></a></li>
+    <li><a class="go-card" href="{{ link('/parcels') }}"><strong>Danh sách thửa</strong><span>Số đo cảm biến từng thửa</span></a></li>
+    <li><a class="go-card" href="{{ link('/data') }}"><strong>Dữ liệu cảm biến</strong><span>Vòng đời và chất lượng</span></a></li>
+  </ul>
+</section>
+
+<details class="disclosure definitions">
+  <summary>Cách tính các chỉ số</summary>
+  <dl>
+    <dt>Hộ thành viên, thửa chè, vùng canh tác</dt><dd>Mọi hộ và mọi thửa của HTX; tổng diện tích là tổng diện tích các thửa (ha), như trang Tổng quan của hệ thống lõi.</dd>
+    <dt>Đang canh tác</dt><dd>Thửa có vụ chưa ghi ngày thu hoạch (harvested_at trống).</dd>
+    <dt>Sản lượng kỳ vọng</dt><dd>Tổng diện tích × năng suất ước tính mỗi ha của các thửa chưa thu hoạch và không ở trạng thái khởi tạo, đúng định nghĩa của trang Tổng quan của hệ thống lõi. Thửa chưa khai năng suất không được tính và được đếm riêng.</dd>
+    <dt>Nhật ký</dt><dd>Nhật ký ghi trong kỳ xem theo ngày nhật ký. "Chờ duyệt" chỉ gồm nhật ký đang chờ duyệt; nhật ký cần sửa đếm riêng. Tuổi của nhật ký tính từ lúc tạo.</dd>
+    <dt>Báo cáo bệnh</dt><dd>Báo cáo tạo trong kỳ xem; "chờ xử lý" là báo cáo chưa được cán bộ xác nhận hay bác bỏ.</dd>
+    <dt>Cảm biến im lặng</dt><dd>Cặp (thửa, cảm biến) có số đo trong kho nóng nhưng không có số đo nào trong {{ sensor_silent_hours }} giờ gần nhất.</dd>
+    <dt>Lô chè</dt><dd>Lô theo trạng thái lõi lưu: nháp, sẵn sàng, đã xuất QR.</dd>
+    <dt>Giá thị trường</dt><dd>Giá chè mới nhất, bổ sung bằng mặt hàng khác khi chưa đủ ba dòng chè; nguồn mô phỏng được ghi rõ.</dd>
+  </dl>
+</details>
+{% endblock %}

@@ -67,6 +67,27 @@ assert_eq "$(ids "$(gql "$TL" "$TQ" manager)" '.data.telemetry_sensor_readings[]
 gql "$TM" '{telemetry_lifecycle_runs{id}}' manager | jq -e 'has("errors")|not' >/dev/null && pass "manager can query telemetry_lifecycle_runs" || fail "manager cannot query telemetry_lifecycle_runs"
 gql "$TF" "$TQ" farmer | jq -e 'has("errors")' >/dev/null && pass "farmer gets an error on telemetry_sensor_readings" || fail "farmer can query telemetry_sensor_readings"
 
+echo "[telemetry daily view]"
+# Own sensor name and timestamps relative to now: the readings stay inside the 30-day hot retention, so the lifecycle job cannot
+# archive them between the insert and the query. D is yesterday and T today (UTC dates); 16:59 UTC on D is still D in Vietnam,
+# 18:30 UTC on D is already T there, and 02:00 UTC on T is T.
+psql_app "delete from telemetry.sensor_readings where sensor='smoke_daily'" >/dev/null
+D=$(psql_app "select (now() at time zone 'UTC')::date - 1"); T=$(psql_app "select (now() at time zone 'UTC')::date")
+psql_app "insert into telemetry.sensor_readings (htx_code, parcel_code, sensor, ts, value) values
+  ('TC','P-TC-001','smoke_daily','${D}T16:59:00Z',5), ('TC','P-TC-001','smoke_daily','${D}T18:30:00Z',10),
+  ('TC','P-TC-001','smoke_daily','${T}T02:00:00Z',20), ('LB','P-LB-001','smoke_daily','${D}T18:30:00Z',99)" >/dev/null
+TO=$(user_token smoke_officer_tc); [ -n "$TO" ] || fail "officer token empty"
+DQ='{telemetry_sensor_daily(where:{sensor:{_eq:"smoke_daily"}},order_by:{day:asc}){htx_code day reading_count min_value max_value avg_value}}'
+assert_eq "$(ids "$(gql "$TM" "$DQ" manager)" '.data.telemetry_sensor_daily[].htx_code | select(. != "TC")')" "" "manager TC sees no non-TC daily rows"
+assert_eq "$(ids "$(gql "$TL" "$DQ" manager)" '.data.telemetry_sensor_daily[].htx_code')" "LB" "manager LB sees only its daily row"
+assert_eq "$(ids "$(gql "$TO" "$DQ" officer)" '.data.telemetry_sensor_daily[].htx_code | select(. != "TC")')" "" "officer TC sees no non-TC daily rows"
+assert_eq "$(ids "$(gql "$TO" "$DQ" officer)" '.data.telemetry_sensor_daily|length')" "2" "officer TC reads the 2 daily rows of its own cooperative"
+assert_eq "$(ids "$(gql "$TM" "$DQ" manager)" '.data.telemetry_sensor_daily[] | "\(.day)=\(.reading_count)"')" "$D=1,$T=2" "a reading at 18:30 UTC lands on the next Vietnam day"
+RAW=$(psql_app "select count(*)||':'||min(value)||':'||max(value)||':'||avg(value) from telemetry.sensor_readings where htx_code='TC' and parcel_code='P-TC-001' and sensor='smoke_daily' and (ts at time zone 'Asia/Ho_Chi_Minh')::date='$T'")
+assert_eq "$(ids "$(gql "$TM" "$DQ" manager)" '.data.telemetry_sensor_daily[] | select(.day=="'"$T"'") | "\(.reading_count):\(.min_value):\(.max_value):\(.avg_value)"')" "$RAW" "daily count, min, max, avg match the raw readings"
+gql "$TF" "$DQ" farmer | jq -e 'has("errors")' >/dev/null && pass "farmer gets an error on telemetry_sensor_daily" || fail "farmer can query telemetry_sensor_daily"
+psql_app "delete from telemetry.sensor_readings where sensor='smoke_daily'" >/dev/null
+
 echo "[ingest db error]"
 DBERR_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 readings_restore() { psql_app "alter table if exists telemetry.sensor_readings_held rename to sensor_readings" >/dev/null 2>&1 || true; }

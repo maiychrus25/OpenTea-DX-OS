@@ -1,0 +1,37 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Lô chè{% endblock %}
+{% block head %}{% call kit.app_header("Lô chè", "Lô của HTX " ~ htx ~ " theo trạng thái") %}{{ parts.actions(link, here, days, keep) }}{% endcall %}{% endblock %}
+{% block main %}
+{% if r.lots.ok %}
+  {% if empty %}{{ kit.empty("Chưa có lô chè nào.") }}
+  {% else %}
+  <div class="two-up">
+    {{ kit.chart("Lô theo trạng thái", status_chart, "lô") }}
+    {{ kit.chart("Khối lượng dự kiến theo trạng thái", weight_chart) }}
+  </div>
+  {{ kit.chart("Lô tạo theo tháng (6 tháng gần nhất)", month_chart, "lô") }}
+  <h2>Các lô mới nhất</h2>
+  <table role="table">
+    <thead role="rowgroup"><tr role="row"><th role="columnheader">Mã lô</th><th role="columnheader">Mặt hàng</th><th role="columnheader">Hạng</th><th role="columnheader">Thu hoạch</th><th role="columnheader">Khối lượng dự kiến</th><th role="columnheader">Trạng thái</th><th role="columnheader">Ngày tạo</th></tr></thead>
+    <tbody role="rowgroup">
+    {% for lot in rows %}
+      <tr role="row">
+        <td role="cell" data-label="Mã lô">{{ lot.code }}</td>
+        <td role="cell" data-label="Mặt hàng">{{ lot.commodity }}</td>
+        <td role="cell" data-label="Hạng">{{ lot.grade or "Chưa phân hạng" }}</td>
+        <td role="cell" data-label="Thu hoạch">{{ lot.harvest_date | vn_day }}</td>
+        <td role="cell" data-label="Khối lượng dự kiến">{% if lot.estimated_kg is none %}chưa khai{% else %}{{ lot.estimated_kg | kg }}{% endif %}</td>
+        <td role="cell" data-label="Trạng thái"><span class="{{ pill(lot.status) }}">{{ labels.get(lot.status, lot.status) }}</span></td>
+        <td role="cell" data-label="Ngày tạo">{{ lot.created_at | vn_day }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {{ kit.pagination(page, link('/lots', page=page.number - 1) if page.has_prev else None, link('/lots', page=page.number + 1) if page.has_next else None) }}
+  <p class="note">Lõi không lưu thời điểm lô sẵn sàng nên trang này không tính thời gian xử lý lô.</p>
+  {% endif %}
+{% else %}{{ parts.error() }}{% endif %}
+{{ parts.notes([note] if note else []) }}
+{% endblock %}

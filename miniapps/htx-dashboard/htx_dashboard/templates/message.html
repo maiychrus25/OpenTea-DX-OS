@@ -1,0 +1,8 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Thông báo{% endblock %}
+{% block main %}
+<p class="notice" role="status">{{ message }}</p>
+<p><a class="button secondary" href="{{ link('/') }}">Về Tổng quan</a></p>
+{% endblock %}
