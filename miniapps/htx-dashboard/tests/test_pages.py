@@ -119,6 +119,29 @@ def test_overview_strip_and_prices(client):
     assert "Cách tính các chỉ số" in html
 
 
+def test_prices_show_vietnamese_metric_names_and_only_the_tea_query_is_sent(client, spy):
+    html = client.get("/", headers=MANAGER).text
+    assert "Chỉ số giá sản xuất" in html and "Giá xuất khẩu" in html
+    assert "producer price index" not in html and "export price" not in html
+    sent = next(q for q in spy.queries if q["query"] == cc.PRICES)
+    assert '"Tea"' in sent["query"] and "_neq" not in sent["query"]
+
+
+def test_no_tea_price_shows_the_empty_state(monkeypatch):
+    use(monkeypatch, **{cc.PRICES: lambda p: {"data": {"market_data": []}}})
+    assert "Chưa có dữ liệu giá" in TestClient(main.app).get("/", headers=MANAGER).text
+
+
+def test_data_tab_asks_two_columns_with_a_limit_that_fits_and_says_when_cut(monkeypatch):
+    spy = use(monkeypatch)
+    TestClient(main.app).get("/data", headers=MANAGER)
+    sent = next(q for q in spy.queries if q["query"] == cc.DAILY_TOTALS)
+    assert sent["variables"]["limit"] == cc.HOT_LIMIT == 50000 and "{ day reading_count }" in cc.DAILY_TOTALS
+    monkeypatch.setattr(cc, "HOT_LIMIT", 3)
+    html = TestClient(main.app).get("/data", headers=MANAGER).text
+    assert "chỉ tính trên 3 dòng mới nhất của số đo theo ngày" in html.lower()
+
+
 def test_calm_cooperative_says_nothing_needs_attention(monkeypatch):
     use(monkeypatch, **{cc.JOURNALS_PENDING: lambda p: {"data": {"journal_entries": []}},
                         cc.DISEASES: lambda p: {"data": {"disease_reports": []}},
@@ -134,8 +157,8 @@ def test_empty_cooperative_has_explaining_empty_states_not_zeros(monkeypatch):
              cc.JOURNALS: lambda p: {"data": {"journal_entries": []}}, cc.JOURNALS_PENDING: lambda p: {"data": {"journal_entries": []}},
              cc.DISEASES: lambda p: {"data": {"disease_reports": []}}, cc.LOTS: lambda p: {"data": {"lots": []}},
              cc.LATEST_READINGS: lambda p: {"data": {"telemetry_sensor_readings": []}},
-             cc.DAILY: lambda p: {"data": {"telemetry_sensor_daily": []}}, cc.RUNS: lambda p: {"data": {"telemetry_lifecycle_runs": []}},
-             cc.PRICES: lambda p: {"data": {"tea": [], "others": []}}}
+             cc.DAILY_TOTALS: lambda p: {"data": {"telemetry_sensor_daily": []}}, cc.RUNS: lambda p: {"data": {"telemetry_lifecycle_runs": []}},
+             cc.PRICES: lambda p: {"data": {"market_data": []}}}
     use(monkeypatch, **empty)
     client = TestClient(main.app)
     for path in TABS[:3] + TABS[4:]:

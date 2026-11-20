@@ -74,8 +74,8 @@ WEATHER = """query ($code: String!) { weather_cache(where: {parcel: {parcel_code
 
 PRICE_FIELDS = "commodity metric value unit source fetched_at"
 
-PRICES = """query { tea: market_data(where: {commodity: {_eq: "Tea"}}, order_by: {fetched_at: desc}, limit: 3) { """ + PRICE_FIELDS + """ }
-  others: market_data(where: {commodity: {_neq: "Tea"}}, order_by: {fetched_at: desc}, limit: 3) { """ + PRICE_FIELDS + " } }"
+# Tea rows only: the other commodities of the table are cereals and the like, of no use to a tea cooperative.
+PRICES = """query { market_data(where: {commodity: {_eq: "Tea"}}, order_by: {fetched_at: desc}, limit: 3) { """ + PRICE_FIELDS + " } }"
 
 # The newest reading of each (parcel, sensor); distinct_on needs the same columns first in order_by.
 LATEST_READINGS = """query ($htx: String!, $limit: Int!) { telemetry_sensor_readings(
@@ -88,8 +88,11 @@ PARCEL_LATEST = """query ($htx: String!, $code: String!) { telemetry_sensor_read
 
 DAILY_FIELDS = "parcel_code sensor day reading_count min_value max_value avg_value first_ts last_ts"
 
-DAILY = """query ($htx: String!, $from: date!, $limit: Int!) { telemetry_sensor_daily(
-  where: {htx_code: {_eq: $htx}, day: {_gte: $from}}, order_by: [{day: asc}], limit: $limit) { """ + DAILY_FIELDS + " } }"
+# The Data tab needs only the stored readings per day, so it asks two columns of the whole grid (parcels x sensors x days)
+# instead of eight. 50,000 rows hold 330 parcels with 5 sensors over 30 days; past that the page says it is cut.
+HOT_LIMIT = 50000
+DAILY_TOTALS = """query ($htx: String!, $from: date!, $limit: Int!) { telemetry_sensor_daily(
+  where: {htx_code: {_eq: $htx}, day: {_gte: $from}}, order_by: [{day: asc}], limit: $limit) { day reading_count } }"""
 
 PARCEL_DAILY = """query ($htx: String!, $code: String!, $from: date!) { telemetry_sensor_daily(
   where: {htx_code: {_eq: $htx}, parcel_code: {_eq: $code}, day: {_gte: $from}},
@@ -297,7 +300,7 @@ def _price(r: dict) -> m.Price:
 
 
 def parse_prices(data: dict) -> list[m.Price]:
-    return m.choose_prices([_price(r) for r in _rows(data, "tea")], [_price(r) for r in _rows(data, "others")])
+    return [_price(r) for r in _rows(data, "market_data")]
 
 
 def parse_readings(data: dict) -> list[m.Reading]:
@@ -309,6 +312,10 @@ def parse_daily(data: dict) -> list[m.Daily]:
     return [m.Daily(_str(r["parcel_code"]), _str(r["sensor"]), date.fromisoformat(_str(r["day"])), _int(r["reading_count"]),
                     _float(r["min_value"]), _float(r["max_value"]), _float(r["avg_value"]),
                     parse_ts(_str(r["first_ts"])), parse_ts(_str(r["last_ts"]))) for r in _rows(data, "telemetry_sensor_daily")]
+
+
+def parse_daily_totals(data: dict) -> list[tuple[date, int]]:
+    return [(date.fromisoformat(_str(r["day"])), _int(r["reading_count"])) for r in _rows(data, "telemetry_sensor_daily")]
 
 
 def parse_runs(data: dict) -> list[m.Run]:

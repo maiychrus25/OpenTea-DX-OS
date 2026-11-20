@@ -172,8 +172,7 @@ def weather() -> list[dict]:
 
 def prices() -> dict:
     row = lambda c, m_, v, u, s, h: {"commodity": c, "metric": m_, "value": v, "unit": u, "source": s, "fetched_at": naive(NOW - timedelta(hours=h))}
-    return {"tea": [row("Tea", "export_price", 3.4, "USD/kg", "Mô phỏng (Toàn quốc)", 5), row("Tea", "producer_price_index", 108.2, "index", "FAOSTAT", 30)],
-            "others": [row("Rice", "cereal_yield", 5400.0, "kg/ha", "FAOSTAT", 31)]}
+    return {"market_data": [row("Tea", "export_price", 3.4, "USD/kg", "Mô phỏng (Toàn quốc)", 5), row("Tea", "producer_price_index", 108.2, "index", "FAOSTAT", 30)]}
 
 
 def _count(n: int) -> dict:
@@ -221,8 +220,8 @@ def answer(payload: dict) -> dict:
         return {"data": {"telemetry_sensor_readings": latest_readings()}}
     if query == cc.PARCEL_LATEST:
         return {"data": {"telemetry_sensor_readings": latest_readings(code_of)}}
-    if query == cc.DAILY:
-        return {"data": {"telemetry_sensor_daily": daily(since=v["from"])}}
+    if query == cc.DAILY_TOTALS:
+        return {"data": {"telemetry_sensor_daily": [{"day": r["day"], "reading_count": r["reading_count"]} for r in daily(since=v["from"])]}}
     if query == cc.PARCEL_DAILY:
         return {"data": {"telemetry_sensor_daily": daily(code_of, v["from"])}}
     if query == cc.RUNS:

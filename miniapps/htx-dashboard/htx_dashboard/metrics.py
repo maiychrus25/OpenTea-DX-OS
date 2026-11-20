@@ -413,10 +413,11 @@ def sensor_stats(daily: Sequence[Daily]) -> SensorStats | None:
     return SensorStats(min(d.min for d in daily), max(d.max for d in daily), avg, count)
 
 
-def hot_rows_by_day(daily: Sequence[Daily]) -> list[tuple[date, int]]:
+def hot_rows_by_day(daily: Sequence[tuple[date, int]]) -> list[tuple[date, int]]:
+    """Stored readings per Vietnam day; the view has one row per parcel and sensor, so a day comes in many rows."""
     count: Counter = Counter()
-    for d in daily:
-        count[d.day] += d.count
+    for day, n in daily:
+        count[day] += n
     return sorted(count.items())
 
 
@@ -444,8 +445,16 @@ def attention(*, pending_stale: int, disease_pending: int, disease_recent: int, 
     return [Attention(key, text, count, target) for key, count, text, target in rules if count > 0]
 
 
-# ---------- prices (as /manager/dashboard: tea first, topped up with the newest other commodities) ----------
+# ---------- prices (tea rows only) ----------
 
-def choose_prices(tea: Sequence[Price], others: Sequence[Price], count: int = 3) -> list[Price]:
-    chosen = list(tea[:count])
-    return chosen + list(others[: count - len(chosen)])
+# The names the core dashboard (apps/web/src/app/manager/dashboard/page.tsx) gives the metrics, plus the three the
+# market_data schema comment lists that it leaves out; any other name is shown with its underscores as spaces.
+METRIC_VN = {"crop_production_index": "Chỉ số SX nông nghiệp", "food_production_index": "Chỉ số SX lương thực",
+             "fertilizer_consumption": "Tiêu thụ phân bón", "cereal_production": "Sản lượng ngũ cốc",
+             "cereal_yield": "Năng suất ngũ cốc", "producer_price_index": "Chỉ số giá sản xuất",
+             "consumer_price_index": "Chỉ số giá tiêu dùng", "export_price": "Giá xuất khẩu", "import_tariff": "Thuế nhập khẩu",
+             "production_volume": "Sản lượng"}
+
+
+def metric_vn(metric: str) -> str:
+    return METRIC_VN.get(metric, metric.replace("_", " "))

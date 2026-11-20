@@ -52,9 +52,10 @@ def tile(label: str, value, hint: str = "", missing: bool = False) -> dict:
     return {"label": label, "value": value, "hint": hint}
 
 
-def cap_note(rows, what: str) -> str | None:
-    if rows is not None and m.capped(len(rows), cc.LIMIT):
-        return f"Chỉ tính trên {appkit.number(cc.LIMIT, 0)} dòng mới nhất của {what}."
+def cap_note(rows, what: str, limit: int | None = None) -> str | None:
+    limit = limit or cc.LIMIT
+    if rows is not None and m.capped(len(rows), limit):
+        return f"Chỉ tính trên {appkit.number(limit, 0)} dòng mới nhất của {what}."
     return None
 
 
@@ -339,7 +340,7 @@ def data_page(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> d
     first = m.vn_day(now) - timedelta(days=SENSOR_DAYS_MAX - 1)
     r = core.run(auth, {
         "runs": block(cc.RUNS, cc.parse_runs, htx=htx, limit=60),
-        "daily": block(cc.DAILY, cc.parse_daily, htx=htx, limit=cc.LIMIT, **{"from": first.isoformat()}),
+        "daily": block(cc.DAILY_TOTALS, cc.parse_daily_totals, htx=htx, limit=cc.HOT_LIMIT, **{"from": first.isoformat()}),
         "latest": block(cc.LATEST_READINGS, cc.parse_readings, htx=htx, **limited()),
     })
     runs, daily, latest = ok(r, "runs"), ok(r, "daily"), ok(r, "latest")
@@ -352,7 +353,7 @@ def data_page(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> d
         "hot_total": sum(n for _, n in hot) if hot else 0, "summary": m.sensor_summary(latest, now) if latest is not None else None,
         "silent": [{"reading": x, "label": m.sensor_label(x.sensor)[0], "age": m.age_text(x.ts, now)} for x in silent] if silent is not None else None,
         "runs": run_rows, "failed": len(m.failed_runs(runs, now)) if runs is not None else None,
-        "note": cap_note(daily, "số đo theo ngày"),
+        "note": cap_note(daily, "số đo theo ngày", cc.HOT_LIMIT),
         "export": ("du-lieu", "Các lần chuyển dữ liệu cảm biến sang kho lạnh",
                    ("Ngày dữ liệu", "Trạng thái", "Số dòng", "Dung lượng (byte)", "SHA-256", "Số dòng kiểm chất lượng", "Dòng bị loại", "Lỗi"),
                    [(day_text(x["run"].partition_date), x["label"], "" if x["run"].row_count is None else x["run"].row_count,

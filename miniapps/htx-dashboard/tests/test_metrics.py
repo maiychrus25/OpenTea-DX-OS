@@ -267,9 +267,7 @@ def test_quality_summary_reads_the_dataops_keys_and_tolerates_other_shapes():
 
 
 def test_hot_rows_by_day_sums_the_daily_view():
-    daily = [m.Daily("P1", "a", date(2026, 11, 19), 10, 1.0, 2.0, 1.5, at(1), at(1)),
-             m.Daily("P2", "a", date(2026, 11, 19), 5, 1.0, 2.0, 1.5, at(1), at(1)),
-             m.Daily("P1", "a", date(2026, 11, 18), 7, 1.0, 2.0, 1.5, at(2), at(2))]
+    daily = [(date(2026, 11, 19), 10), (date(2026, 11, 19), 5), (date(2026, 11, 18), 7)]
     assert m.hot_rows_by_day(daily) == [(date(2026, 11, 18), 7), (date(2026, 11, 19), 15)]
 
 
@@ -292,18 +290,9 @@ def test_attention_rows_name_the_count_and_a_target():
 
 # ---- prices ----
 
-def test_prices_take_tea_first_then_top_up_with_the_newest_others():
-    tea = [m.Price("Tea", "export_price", 1.0, "usd", "Mô phỏng (Toàn quốc)", at(1))]
-    others = [m.Price("Rice", "m", 2.0, "u", "FAO", at(2)), m.Price("Maize", "m", 3.0, "u", "FAO", at(3)),
-              m.Price("Wheat", "m", 4.0, "u", "FAO", at(4))]
-    chosen = m.choose_prices(tea, others, 3)
-    assert [p.commodity for p in chosen] == ["Tea", "Rice", "Maize"]
-    assert chosen[0].simulated and not chosen[1].simulated
-
-
-def test_prices_with_enough_tea_ignore_others():
-    tea = [m.Price("Tea", "m", float(i), "u", "FAO", at(i)) for i in range(3)]
-    assert len(m.choose_prices(tea, [m.Price("Rice", "m", 1, "u", "FAO", at(0))], 3)) == 3
+def test_metric_names_are_vietnamese_and_unknown_ones_lose_their_underscores():
+    assert m.metric_vn("producer_price_index") == "Chỉ số giá sản xuất" and m.metric_vn("export_price") == "Giá xuất khẩu"
+    assert m.metric_vn("some_new_metric") == "some new metric"
 
 
 # ---- caps ----

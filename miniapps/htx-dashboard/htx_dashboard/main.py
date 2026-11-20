@@ -65,7 +65,7 @@ templates.env.globals.update(prefix=PREFIX, tabs_def=TABS, ERROR_TEXT=pages.ERRO
                              parcel_status=metrics.PARCEL_STATUS, status_class=pages.STATUS_CLASS, sensor_label=metrics.sensor_label,
                              periods=pages.PERIODS, sensor_silent_hours=metrics.SENSOR_SILENT_HOURS, kind=metrics.disease_kind,
                              activity=metrics.ACTIVITY, journal_status=JOURNAL_LABEL, disease_status=metrics.DISEASE_STATUS,
-                             lot_status=metrics.LOT_STATUS, commodity_vn=metrics.COMMODITY_VN)
+                             lot_status=metrics.LOT_STATUS, commodity_vn=metrics.COMMODITY_VN, metric_vn=metrics.metric_vn)
 templates.env.filters["num"] = lambda v, digits=1: appkit.number(v, digits)
 templates.env.filters["vn_date"] = appkit.vn_date
 templates.env.filters["vn_datetime"] = appkit.vn_datetime

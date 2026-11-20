@@ -98,7 +98,7 @@ def test_a_row_with_a_bad_number_is_a_block_error_not_a_crash():
     bad = {"data": {"telemetry_sensor_daily": [{"parcel_code": "P1", "sensor": "a", "day": "2026-11-19", "reading_count": "x",
                                                 "min_value": 1, "max_value": 2, "avg_value": 1.5,
                                                 "first_ts": "2026-11-19T00:00:00+00:00", "last_ts": "2026-11-19T01:00:00+00:00"}]}}
-    out = cc.Core(lambda *a: bad).run("Bearer t", {"d": cc.Block(cc.DAILY, {"htx": "TC", "from": "2026-11-01", "limit": 1}, cc.parse_daily)})
+    out = cc.Core(lambda *a: bad).run("Bearer t", {"d": cc.Block(cc.PARCEL_DAILY, {"htx": "TC", "code": "P1", "from": "2026-11-01"}, cc.parse_daily)})
     assert not out["d"].ok
 
 
@@ -106,5 +106,5 @@ def test_bigint_and_numeric_strings_are_accepted():
     raw = {"data": {"telemetry_sensor_daily": [{"parcel_code": "P1", "sensor": "a", "day": "2026-11-19", "reading_count": "12",
                                                 "min_value": 1, "max_value": 2, "avg_value": 1.5,
                                                 "first_ts": "2026-11-19T00:00:00+00:00", "last_ts": "2026-11-19T01:00:00+00:00"}]}}
-    out = cc.Core(lambda *a: raw).run("Bearer t", {"d": cc.Block(cc.DAILY, {"htx": "TC", "from": "2026-11-01", "limit": 1}, cc.parse_daily)})
+    out = cc.Core(lambda *a: raw).run("Bearer t", {"d": cc.Block(cc.PARCEL_DAILY, {"htx": "TC", "code": "P1", "from": "2026-11-01"}, cc.parse_daily)})
     assert out["d"].value[0].count == 12 and out["d"].value[0].day == date(2026, 11, 19)

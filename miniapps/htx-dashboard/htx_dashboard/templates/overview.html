@@ -81,7 +81,7 @@
     <ul class="price-list">
       {% for p in prices %}
       <li>
-        <span class="price-name">{{ commodity_vn.get(p.commodity, p.commodity) }} <span class="price-metric">{{ p.metric | replace("_", " ") }}</span></span>
+        <span class="price-name">{{ commodity_vn.get(p.commodity, p.commodity) }} <span class="price-metric">{{ metric_vn(p.metric) }}</span></span>
         <span class="price-value">{{ p.value | num(2) }} {{ p.unit }}</span>
         <span class="price-source">{{ p.source }} · cập nhật {{ p.fetched_at | vn_datetime }}{% if p.simulated %} <span class="pill warn">giá mô phỏng</span>{% endif %}</span>
       </li>
