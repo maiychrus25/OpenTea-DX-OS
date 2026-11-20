@@ -24,28 +24,29 @@ Tea Work is the **staff side** of a two-app system for agricultural cooperatives
 
 - **Tasks** — see what was assigned, with location, priority, deadline and requirements; accept or reject (with a reason), start, report progress with a slider and a note, and mark it done. Overdue work is highlighted; pull to refresh.
 - **Attendance** — live clock and one-tap check-in / check-out; monthly summary of work days, leave and overtime with a day-by-day history.
-- **Leave** — remaining annual leave, request annual, sick, personal or unpaid leave with date pickers, follow the approval status and cancel pending requests.
+- **Leave** — remaining annual leave, request annual, sick, personal or unpaid leave with date pickers and **evidence** (take a photo or attach an image/PDF; required for sick leave of 2 days or more), follow the approval status and cancel pending requests.
+- **Stays up to date** — tasks and leave decisions refresh every 30 seconds with a notice when something new arrives.
 - **Payslips** — approved and paid payslips with the full breakdown (earned salary, overtime, allowance, bonus, insurance, deductions, advances, net pay).
 - **Profile** — personal and contract details, change password, sign out.
-- **Offline demo** — "Dùng thử với dữ liệu mẫu" runs the whole app on sample data without a server.
+- **Offline demo** — "Dùng thử với dữ liệu mẫu" runs the whole app on sample data without a server; a yellow banner reminds that nothing is sent to the owner in this mode.
 
 <details>
 <summary><b>More screenshots</b></summary>
 
-<img src="docs/screenshots/01-login.png" width="200" /> <img src="docs/screenshots/05-leaves.png" width="200" /> <img src="docs/screenshots/06-payslips.png" width="200" /> <img src="docs/screenshots/07-profile.png" width="200" />
+<img src="docs/screenshots/01-login.png" width="200" /> <img src="docs/screenshots/05-leaves.png" width="200" /> <img src="docs/screenshots/08-leave-form.png" width="200" /> <img src="docs/screenshots/06-payslips.png" width="200" /> <img src="docs/screenshots/07-profile.png" width="200" />
 
 </details>
 
 ## Download
 
-Get `TeaWork-1.0.0.apk` from [**Releases**](https://github.com/Vudinhdat02/appReceiveWork/releases) and install it on Android 8.0 or newer (allow installing from this source when asked).
+Get `TeaWork-1.1.0.apk` from [**Releases**](https://github.com/Vudinhdat02/appReceiveWork/releases) and install it on Android 8.0 or newer (allow installing from this source when asked).
 
 ### Try it
 
 | Mode | How |
 | --- | --- |
 | Without a server | Tap **Dùng thử với dữ liệu mẫu** on the login screen. |
-| With the owner's PC | Start Tea Staff Manager, keep phone and PC on the same Wi-Fi, enter the address shown in the desktop app (e.g. `192.168.1.88:5080`) and sign in as `nv001` … `nv008`, password `123456`. |
+| With the owner's PC | Start Tea Staff Manager, keep phone and PC on the same Wi-Fi (if it does not connect, use **Settings → Kiểm tra kết nối / Cho phép qua tường lửa** on the PC), enter the address shown in the desktop app (e.g. `192.168.1.88:5080`) and sign in as `nv001` … `nv008`, password `123456`. |
 | Android emulator | Use server `10.0.2.2:5080` to reach the PC running Tea Staff Manager. |
 
 ## Build from source

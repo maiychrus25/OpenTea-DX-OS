@@ -10,6 +10,7 @@ Libraries are resolved by Gradle from Google Maven and Maven Central (see `gradl
 | AndroidX Core SplashScreen | 1.2.0 | Apache-2.0 | Launch screen |
 | Jetpack Compose BOM (ui, material3, material-icons-extended) | 2026.09.00 | Apache-2.0 | UI toolkit and icons |
 | kotlinx.serialization JSON | 1.12.0 | Apache-2.0 | JSON encoding of API models |
+| AndroidX ExifInterface | 1.4.2 | Apache-2.0 | Rotate evidence photos upright before upload |
 | Kotlin standard library | 2.4.21 | Apache-2.0 | Language runtime |
 
 Build and test only:
