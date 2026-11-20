@@ -54,6 +54,16 @@ class RemoteApiContractTest {
         assertEquals(leaves.items.size + 1, repo.leaves().items.size)
         repo.cancelLeave(leave.id)
 
+        // Sick leave of two days needs evidence; a tiny PNG is accepted and flagged.
+        val day = java.time.LocalDate.now().plusDays(12).toString()
+        val two = java.time.LocalDate.now().plusDays(13).toString()
+        val refused = runCatching { repo.submitLeave(LeaveCreateRequest(day, two, LeaveType.Sick, "Ốm")) }
+        assertTrue(refused.isFailure)
+        val png = android.util.Base64.encodeToString(byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0), android.util.Base64.NO_WRAP)
+        val sick = repo.submitLeave(LeaveCreateRequest(day, two, LeaveType.Sick, "Ốm", vn.opentea.staffwork.data.AttachmentUpload("giay-kham.png", png)))
+        assertTrue(sick.hasAttachment)
+        repo.cancelLeave(sick.id)
+
         repo.payslips()
         repo.logout()
     }

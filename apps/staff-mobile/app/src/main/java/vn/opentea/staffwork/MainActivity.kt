@@ -8,7 +8,9 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -157,7 +159,26 @@ private fun MainShell(factory: androidx.lifecycle.ViewModelProvider.Factory, ses
             }
         },
     ) { padding ->
-        androidx.compose.foundation.layout.Box(Modifier.padding(padding)) {
+        // Poll quietly so new tasks and leave decisions from the owner show up without pulling to refresh.
+        LaunchedEffect(tab) {
+            while (true) {
+                kotlinx.coroutines.delay(30_000)
+                when (tab) {
+                    Tab.Tasks -> tasks.refresh(silent = true)
+                    Tab.Leaves -> leaves.refresh(silent = true)
+                    else -> Unit
+                }
+            }
+        }
+        Column(Modifier.padding(padding)) {
+            if (sessionState.demo) {
+                Text(
+                    "Đang dùng dữ liệu mẫu trên điện thoại: thao tác không gửi về máy tính của chủ HTX. Đăng xuất và nhập địa chỉ máy chủ để dùng thật.",
+                    style = MaterialTheme.typography.bodySmall, color = Tea.Warning,
+                    modifier = Modifier.fillMaxWidth().background(Tea.WarningSubtle).padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) {
             when (tab) {
                 Tab.Tasks -> {
                     val s by tasks.state.collectAsStateWithLifecycle()
@@ -177,6 +198,7 @@ private fun MainShell(factory: androidx.lifecycle.ViewModelProvider.Factory, ses
                 }
                 Tab.Profile -> ProfileScreen(sessionState, session::changePassword, session::logout)
             }
+        }
         }
     }
 }

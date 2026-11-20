@@ -145,7 +145,11 @@ class DemoStaffRepository(private val session: SessionStore) : StaffRepository {
         if (request.reason.isBlank()) throw ApiException("Vui lòng ghi lý do nghỉ.")
         val days = ChronoUnit.DAYS.between(from, to).toInt() + 1
         if (request.type == LeaveType.Annual && days > leaves().remainingAnnualDays) throw ApiException("Không đủ ngày phép năm.")
-        val item = LeaveItem((leaves.maxOfOrNull { it.id } ?: 0) + 1, request.fromDate, request.toDate, days, request.type, label(request.type), request.reason, LeaveStatus.Pending, "Chờ duyệt")
+        if (request.type == LeaveType.Sick && days >= 2 && request.attachment == null) throw ApiException("Nghỉ ốm từ 2 ngày cần kèm ảnh giấy khám bệnh hoặc giấy ra viện.")
+        val item = LeaveItem(
+            (leaves.maxOfOrNull { it.id } ?: 0) + 1, request.fromDate, request.toDate, days, request.type, label(request.type), request.reason,
+            LeaveStatus.Pending, "Chờ duyệt", hasAttachment = request.attachment != null, attachmentName = request.attachment?.fileName,
+        )
         leaves.add(item)
         return item
     }

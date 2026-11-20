@@ -106,13 +106,25 @@ data class LeaveItem(
     val status: LeaveStatus,
     val statusLabel: String = "",
     val reviewNote: String? = null,
+    val hasAttachment: Boolean = false,
+    val attachmentName: String? = null,
 )
 
 @Serializable
 data class LeaveList(val remainingAnnualDays: Int, val items: List<LeaveItem>)
 
 @Serializable
-data class LeaveCreateRequest(val fromDate: String, val toDate: String, val type: LeaveType, val reason: String)
+data class LeaveCreateRequest(
+    val fromDate: String,
+    val toDate: String,
+    val type: LeaveType,
+    val reason: String,
+    val attachment: AttachmentUpload? = null,
+)
+
+/** Evidence (sick note, invitation…) sent as base64; the server checks type by content and limits it to 5 MB. */
+@Serializable
+data class AttachmentUpload(val fileName: String, val dataBase64: String)
 
 @Serializable
 enum class PayslipStatus { Draft, Approved, Paid }
