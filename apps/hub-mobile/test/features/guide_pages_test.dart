@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:hub_mobile/core/role/role.dart';
+import 'package:hub_mobile/data/models/booking.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -82,6 +86,27 @@ class _TourLayoutRepository extends MockHubRepository {
   ];
 }
 
+class _FailingGuideRepository extends MockHubRepository {
+  bool failRead = false;
+  bool failWrite = false;
+  int checkIns = 0;
+  Completer<void>? pendingCheckIn;
+
+  @override
+  Future<List<Tour>> listGuideTours(String guideId) async {
+    if (failRead) throw StateError('private server failure');
+    return super.listGuideTours(guideId);
+  }
+
+  @override
+  Future<Booking> checkIn(String bookingId, {required Claims actor}) async {
+    checkIns++;
+    if (failWrite) throw StateError('private server failure');
+    await pendingCheckIn?.future;
+    return super.checkIn(bookingId, actor: actor);
+  }
+}
+
 Future<void> _walk(WidgetTester tester) async {
   final scrolls = find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down);
   if (scrolls.evaluate().isEmpty) return;
@@ -94,6 +119,110 @@ Future<void> _walk(WidgetTester tester) async {
 }
 
 void main() {
+  test('QA countdown uses calendar dates even just before midnight', () {
+    expect(guideCountdown(DateTime(2026, 12, 1), DateTime(2026, 11, 30, 23, 59)), 'Ngày mai');
+    expect(guideCountdown(DateTime(2026, 11, 30, 0, 1), DateTime(2026, 12, 1)), 'Đã qua');
+    expect(guideCountdown(DateTime(2027, 1, 1), DateTime(2026, 12, 31, 23, 59)), 'Ngày mai');
+  });
+
+  for (final suffix in ['', '/members']) {
+    testWidgets('QA route changes cannot retain a previously assigned tour $suffix', (tester) async {
+      final router = await _open(tester);
+      router.go('/guide/tours/tour-01$suffix');
+      await tester.pumpAndSettle();
+      expect(find.text('Nguyễn Thu Hà'), suffix.isEmpty ? findsNothing : findsOneWidget);
+      router.go('/guide/tours/tour-02$suffix');
+      await tester.pumpAndSettle();
+      expect(find.text('Tour này chưa được giao cho bạn.'), findsOneWidget);
+      expect(find.textContaining('Nguyễn Thu Hà'), findsNothing);
+    });
+
+    testWidgets('QA guide deep link has a back button $suffix', (tester) async {
+      final router = await _open(tester);
+      router.go('/guide/tours/tour-01$suffix');
+      await tester.pumpAndSettle();
+      expect(find.byType(BackButton), findsOneWidget);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, '/guide');
+    });
+
+    testWidgets('QA unexpected check-in failure is recoverable $suffix', (tester) async {
+      final repo = _FailingGuideRepository()..failWrite = true;
+      final router = await _open(tester, repo: repo);
+      router.push('/guide/tours/tour-01$suffix');
+      await tester.pumpAndSettle();
+      final button = find.byKey(Key('${suffix.isEmpty ? 'guide' : 'roster'}-checkin-bk-01'));
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Không thể điểm danh. Hãy thử lại.'), findsOneWidget);
+      repo.failWrite = false;
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(button, findsNothing);
+      expect((await repo.listGuideBookings('guide-demo')).firstWhere((b) => b.id == 'bk-01').checkedIn, isTrue);
+    });
+
+    testWidgets('QA double tap submits check-in once $suffix', (tester) async {
+      final repo = _FailingGuideRepository()..pendingCheckIn = Completer<void>();
+      final router = await _open(tester, repo: repo);
+      router.push('/guide/tours/tour-01$suffix');
+      await tester.pumpAndSettle();
+      final button = find.byKey(Key('${suffix.isEmpty ? 'guide' : 'roster'}-checkin-bk-01'));
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.tap(button);
+      expect(repo.checkIns, 1);
+      repo.pendingCheckIn!.complete();
+      await tester.pumpAndSettle();
+      expect(button, findsNothing);
+    });
+  }
+
+  testWidgets('QA roster check-in refreshes arrived totals on detail and manager roster', (tester) async {
+    final repo = MockHubRepository();
+    final bookings = await repo.listGuideBookings('guide-demo', tourId: 'tour-01');
+    final booking = bookings.firstWhere((b) => b.id == 'bk-01');
+    final total = bookings.where((b) => b.departureId == booking.departureId).fold<int>(0, (n, b) => n + b.guests);
+    var router = await _open(tester, repo: repo);
+    router.push('/guide/tours/tour-01');
+    await tester.pumpAndSettle();
+    expect(find.text('Đã đến 0/$total'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('guide-roster')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('roster-checkin-bk-01')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byWidgetPredicate((w) => w is GuideStat && w.label == 'Đã đến' && w.value == '${booking.guests}/$total'),
+      findsOneWidget,
+    );
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.text('Đã đến ${booking.guests}/$total'), findsOneWidget);
+    router = await _open(tester, role: 'manager', repo: repo);
+    router.push('/manager/tours/tour-01/members');
+    await tester.pumpAndSettle();
+    expect(
+      find.byWidgetPredicate((w) => w is GuideStat && w.label == 'Đã đến' && w.value == '${booking.guests}/$total'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('QA detail refresh revokes visible booking data', (tester) async {
+    final repo = MockHubRepository();
+    final router = await _open(tester, repo: repo);
+    router.push('/guide/tours/tour-01');
+    await tester.pumpAndSettle();
+    await repo.removeGuideFromTour('tour-01', 'guide-demo', actor: DemoAuthService.accounts['manager@demo.vn']!);
+    expect(find.byType(RefreshIndicator), findsOneWidget);
+    tester.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show();
+    await tester.pumpAndSettle();
+    expect(find.text('Tour này chưa được giao cho bạn.'), findsOneWidget);
+    expect(find.byKey(const Key('guide-booking-bk-01')), findsNothing);
+  });
+
   testWidgets('guide sees assigned tours and both assigning HTXs, never an unassigned tour', (tester) async {
     final repo = MockHubRepository();
     final router = await _open(tester, repo: repo);

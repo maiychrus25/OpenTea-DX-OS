@@ -20,7 +20,11 @@ class GuideTrip {
 
 /// "Hôm nay", "Ngày mai", "Còn 3 ngày" or "Đã qua", counted from [today].
 String guideCountdown(DateTime date, DateTime today) {
-  final days = DateUtils.dateOnly(date).difference(today).inDays;
+  final days = DateTime.utc(
+    date.year,
+    date.month,
+    date.day,
+  ).difference(DateTime.utc(today.year, today.month, today.day)).inDays;
   if (days < 0) return 'Đã qua';
   if (days == 0) return 'Hôm nay';
   if (days == 1) return 'Ngày mai';

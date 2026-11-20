@@ -40,7 +40,9 @@ class _TourRosterPageState extends State<TourRosterPage> {
     final canCheckIn = isGuide || actor.canWriteHtx;
     return DetailScaffold(
       title: 'Thành viên của tour',
+      backFallback: isGuide ? '/guide' : '/manager/tours',
       body: LoadView<(Tour, List<Departure>, List<Booking>)>(
+        key: ValueKey(widget.tourId),
         load: () async {
           final tour = await repo.getTour(widget.tourId);
           final all = isGuide
@@ -139,12 +141,15 @@ class _TourRosterPageState extends State<TourRosterPage> {
                         onCheckIn: !canCheckIn || b.status != BookingStatus.confirmed || b.checkedIn
                             ? null
                             : () async {
+                                if (_checking.contains(b.id)) return;
                                 setState(() => _checking.add(b.id));
                                 try {
                                   await repo.checkIn(b.id, actor: actor);
                                   await reload();
                                 } on HubException catch (error) {
                                   if (context.mounted) showMessage(context, error.message);
+                                } catch (_) {
+                                  if (context.mounted) showMessage(context, 'Không thể điểm danh. Hãy thử lại.');
                                 } finally {
                                   if (mounted) setState(() => _checking.remove(b.id));
                                 }

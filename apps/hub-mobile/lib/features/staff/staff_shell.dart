@@ -11,6 +11,7 @@ import '../../core/theme/staff_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/staff.dart';
 import '../../shared/widgets.dart' show SampleDataChip;
+import '../../shared/soft_card.dart' show SafeBackButton;
 import 'staff_nav.dart';
 import 'staff_widgets.dart';
 
@@ -26,7 +27,15 @@ class StaffTheme extends StatelessWidget {
 
 /// Pushed page (detail, form) with a back arrow, in the staff look.
 class DetailScaffold extends StatelessWidget {
-  const DetailScaffold({super.key, required this.title, required this.body, this.actions, this.floating});
+  const DetailScaffold({
+    super.key,
+    required this.title,
+    required this.body,
+    this.actions,
+    this.floating,
+    this.backFallback,
+  });
+  final String? backFallback;
   final String title;
   final Widget body;
   final List<Widget>? actions;
@@ -35,7 +44,11 @@ class DetailScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) => StaffTheme(
     child: Scaffold(
-      appBar: AppBar(title: Text(title), actions: actions),
+      appBar: AppBar(
+        leading: backFallback == null ? null : SafeBackButton(fallback: backFallback!),
+        title: Text(title),
+        actions: actions,
+      ),
       floatingActionButton: floating,
       body: body,
     ),

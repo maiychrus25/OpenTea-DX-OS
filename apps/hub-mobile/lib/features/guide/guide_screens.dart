@@ -278,7 +278,9 @@ class _GuideTourDetailPageState extends State<GuideTourDetailPage> {
     final actor = context.read<AppState>().claims!;
     return DetailScaffold(
       title: 'Chi tiết tour',
+      backFallback: '/guide',
       body: LoadView<(Tour, List<Departure>, List<Booking>, Htx)>(
+        key: ValueKey(widget.tourId),
         load: () async {
           final tour = (await repo.listGuideTours(actor.subject)).where((t) => t.id == widget.tourId).firstOrNull;
           if (tour == null) throw const HubException('Tour này chưa được giao cho bạn.');
@@ -289,137 +291,148 @@ class _GuideTourDetailPageState extends State<GuideTourDetailPage> {
             await repo.getHtx(tour.htxCode),
           );
         },
-        builder: (context, data, reload) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            GuideCover(
-              tour: data.$1,
-              height: 160,
-              footer: Text('Do ${data.$4.name} giao', style: const TextStyle(color: Colors.white, fontSize: 13.5)),
-            ),
-            const SizedBox(height: 12),
-            SectionCard(
-              title: 'Liên hệ HTX',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(data.$4.name),
-                  Text(data.$4.province),
-                  Text(data.$4.contactPhone),
-                  if (data.$4.contactPhone.isNotEmpty)
-                    TextButton.icon(
-                      icon: const Icon(Icons.copy),
-                      label: const Text('Sao chép số điện thoại'),
-                      onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: data.$4.contactPhone));
-                        if (context.mounted) showMessage(context, 'Đã sao chép số điện thoại HTX');
-                      },
-                    ),
-                ],
+        builder: (context, data, reload) => RefreshIndicator(
+          onRefresh: reload,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: [
+              GuideCover(
+                tour: data.$1,
+                height: 160,
+                footer: Text('Do ${data.$4.name} giao', style: const TextStyle(color: Colors.white, fontSize: 13.5)),
               ),
-            ),
-            OutlinedButton.icon(
-              key: const Key('guide-roster'),
-              icon: const Icon(Icons.groups_outlined),
-              label: const Text('Danh sách thành viên'),
-              onPressed: () async {
-                await context.push('/guide/tours/${data.$1.id}/members');
-                await reload();
-              },
-            ),
-            if (data.$1.briefing.isNotEmpty)
-              SectionCard(key: const Key('guide-briefing'), title: 'Dặn dò của HTX', child: Text(data.$1.briefing)),
-            if (data.$1.itinerary.isNotEmpty)
+              const SizedBox(height: 12),
               SectionCard(
-                key: const Key('guide-itinerary'),
-                title: 'Lộ trình tour',
+                title: 'Liên hệ HTX',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final day in data.$1.itinerary) ...[
-                      Text(day.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      for (final step in day.steps)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(top: 3, right: 8),
-                                child: Icon(Icons.circle, size: 7, color: StaffColors.primary),
-                              ),
-                              Expanded(child: Text(step)),
-                            ],
-                          ),
-                        ),
-                      const SizedBox(height: 10),
-                    ],
+                    Text(data.$4.name),
+                    Text(data.$4.province),
+                    Text(data.$4.contactPhone),
+                    if (data.$4.contactPhone.isNotEmpty)
+                      TextButton.icon(
+                        icon: const Icon(Icons.copy),
+                        label: const Text('Sao chép số điện thoại'),
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: data.$4.contactPhone));
+                          if (context.mounted) showMessage(context, 'Đã sao chép số điện thoại HTX');
+                        },
+                      ),
                   ],
                 ),
               ),
-            for (final dep in data.$2) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(
-                  'Khởi hành ${formatDate(dep.date)}',
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                ),
+              OutlinedButton.icon(
+                key: const Key('guide-roster'),
+                icon: const Icon(Icons.groups_outlined),
+                label: const Text('Danh sách thành viên'),
+                onPressed: () async {
+                  await context.push('/guide/tours/${data.$1.id}/members');
+                  await reload();
+                },
               ),
-              if (!data.$3.any((b) => b.departureId == dep.id)) const Text('Chưa có đoàn đặt chỗ'),
-              for (final booking in data.$3.where((b) => b.departureId == dep.id))
-                Card(
-                  key: Key('guide-booking-${booking.id}'),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(booking.code, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        Text('${booking.contactName} · ${booking.guests} khách'),
-                        if (booking.phone.isNotEmpty)
-                          Row(
-                            children: [
-                              Expanded(child: Text(booking.phone)),
-                              IconButton(
-                                key: Key('guide-copy-phone-${booking.id}'),
-                                tooltip: 'Sao chép số điện thoại khách',
-                                icon: const Icon(Icons.copy, size: 20),
-                                onPressed: () async {
-                                  await Clipboard.setData(ClipboardData(text: booking.phone));
-                                  if (context.mounted) showMessage(context, 'Đã sao chép số điện thoại khách');
-                                },
-                              ),
-                            ],
+              if (data.$1.briefing.isNotEmpty)
+                SectionCard(key: const Key('guide-briefing'), title: 'Dặn dò của HTX', child: Text(data.$1.briefing)),
+              if (data.$1.itinerary.isNotEmpty)
+                SectionCard(
+                  key: const Key('guide-itinerary'),
+                  title: 'Lộ trình tour',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final day in data.$1.itinerary) ...[
+                        Text(day.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        for (final step in day.steps)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 3, right: 8),
+                                  child: Icon(Icons.circle, size: 7, color: StaffColors.primary),
+                                ),
+                                Expanded(child: Text(step)),
+                              ],
+                            ),
                           ),
-                        if (booking.note.isNotEmpty) Text('Ghi chú của khách: ${booking.note}'),
-                        Text(booking.paymentStatus.label),
-                        Text(booking.status.label),
-                        if (booking.checkedIn) const Text('Đã điểm danh'),
-                        if (booking.status == BookingStatus.confirmed && !booking.checkedIn)
-                          FilledButton.icon(
-                            key: Key('guide-checkin-${booking.id}'),
-                            icon: const Icon(Icons.how_to_reg),
-                            label: const Text('Điểm danh đoàn đã đến'),
-                            onPressed: _checking.contains(booking.id)
-                                ? null
-                                : () async {
-                                    setState(() => _checking.add(booking.id));
-                                    try {
-                                      await repo.checkIn(booking.id, actor: actor);
-                                      await reload();
-                                    } on HubException catch (error) {
-                                      if (context.mounted) showMessage(context, error.message);
-                                    } finally {
-                                      if (mounted) setState(() => _checking.remove(booking.id));
-                                    }
-                                  },
-                          ),
+                        const SizedBox(height: 10),
                       ],
-                    ),
+                    ],
                   ),
                 ),
+              for (final dep in data.$2) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(
+                    'Khởi hành ${formatDate(dep.date)}',
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Text(
+                  'Đã đến ${data.$3.where((b) => b.departureId == dep.id && b.status != BookingStatus.cancelled && b.checkedIn).fold<int>(0, (n, b) => n + b.guests)}'
+                  '/${data.$3.where((b) => b.departureId == dep.id && b.status != BookingStatus.cancelled).fold<int>(0, (n, b) => n + b.guests)}',
+                ),
+                if (!data.$3.any((b) => b.departureId == dep.id)) const Text('Chưa có đoàn đặt chỗ'),
+                for (final booking in data.$3.where((b) => b.departureId == dep.id))
+                  Card(
+                    key: Key('guide-booking-${booking.id}'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(booking.code, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          Text('${booking.contactName} · ${booking.guests} khách'),
+                          if (booking.phone.isNotEmpty)
+                            Row(
+                              children: [
+                                Expanded(child: Text(booking.phone)),
+                                IconButton(
+                                  key: Key('guide-copy-phone-${booking.id}'),
+                                  tooltip: 'Sao chép số điện thoại khách',
+                                  icon: const Icon(Icons.copy, size: 20),
+                                  onPressed: () async {
+                                    await Clipboard.setData(ClipboardData(text: booking.phone));
+                                    if (context.mounted) showMessage(context, 'Đã sao chép số điện thoại khách');
+                                  },
+                                ),
+                              ],
+                            ),
+                          if (booking.note.isNotEmpty) Text('Ghi chú của khách: ${booking.note}'),
+                          Text(booking.paymentStatus.label),
+                          Text(booking.status.label),
+                          if (booking.checkedIn) const Text('Đã điểm danh'),
+                          if (booking.status == BookingStatus.confirmed && !booking.checkedIn)
+                            FilledButton.icon(
+                              key: Key('guide-checkin-${booking.id}'),
+                              icon: const Icon(Icons.how_to_reg),
+                              label: const Text('Điểm danh đoàn đã đến'),
+                              onPressed: _checking.contains(booking.id)
+                                  ? null
+                                  : () async {
+                                      if (_checking.contains(booking.id)) return;
+                                      setState(() => _checking.add(booking.id));
+                                      try {
+                                        await repo.checkIn(booking.id, actor: actor);
+                                        await reload();
+                                      } on HubException catch (error) {
+                                        if (context.mounted) showMessage(context, error.message);
+                                      } catch (_) {
+                                        if (context.mounted) showMessage(context, 'Không thể điểm danh. Hãy thử lại.');
+                                      } finally {
+                                        if (mounted) setState(() => _checking.remove(booking.id));
+                                      }
+                                    },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
