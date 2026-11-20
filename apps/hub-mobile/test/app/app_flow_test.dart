@@ -212,6 +212,7 @@ void main() {
 
   testWidgets('guide checks in an assigned confirmed group without payment controls', (tester) async {
     await _pump(tester);
+    tester.view.physicalSize = const Size(800, 4200); // the detail page now has a cover, itinerary and briefing
     await _login(tester, 'guide@demo.vn');
     GoRouter.of(tester.element(find.byType(Scaffold).first)).push('/guide/tours/tour-01');
     await tester.pumpAndSettle();
