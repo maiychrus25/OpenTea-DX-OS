@@ -14,7 +14,7 @@ sự thật; chỗ khác nhau thì bản 2026-11-16 thắng.
 > **nhưng chưa từng chạy với Keycloak, Hasura hay web thật** (xem "Chạy chế độ thật" và "Chưa kiểm chứng").
 
 Danh sách chức năng từng vai, và cái nào bỏ, nằm ở `docs/specs/2026-11-16-multirole-app-features.md`. Bản này đã **bỏ** các mục
-giả theo §7 của tài liệu đó: tab "Đã lưu" (tim yêu thích), tab "Bản đồ" vẽ minh hoạ, "Chỉ đạo và nhiệm vụ" của công ty du lịch, và các
+giả theo §7 của tài liệu đó: tab "Đã lưu" (tim yêu thích), tab "Bản đồ" vẽ minh hoạ, "Chỉ đạo và nhiệm vụ" của công ty du lịch (vai này không còn: tour do HTX tạo, xem dưới), và các
 màn "Sắp có" (Chatbot, Bản đồ đối tác, Kho ứng dụng, Tài liệu, Chẩn đoán, Nhật ký bệnh, Trợ lý). Chúng chỉ làm trên web.
 
 ## Năm vai
@@ -22,15 +22,15 @@ màn "Sắp có" (Chatbot, Bản đồ đối tác, Kho ứng dụng, Tài liệ
 | Vai | Vào bằng | Giao diện (`lib/features/...`) |
 | --- | --- | --- |
 | Khách vãng lai | "Xem với tư cách khách" | `customer`: thanh dưới là Khám phá, Tour, Lịch trình, Tài khoản. Tin tức, tour, sản phẩm, giỏ hàng xem tự do; thanh toán, đặt tour, đơn, vé yêu cầu đăng nhập |
-| Khách có tài khoản (`customer`) | Đăng nhập | `customer`: đặt tour, mua hàng, thanh toán VietQR (tiền tour vào tài khoản công ty du lịch, tiền hàng vào tài khoản HTX), đơn và vé lưu trong máy |
+| Khách có tài khoản (`customer`) | Đăng nhập | `customer`: đặt tour, mua hàng, thanh toán VietQR (tiền tour và tiền hàng vào tài khoản của HTX tổ chức), vé hiện tên và số điện thoại người dẫn tour, đơn và vé lưu trong máy |
 | Nông dân (`farmer`) | Đăng nhập | `farmer`: nhật ký, lịch, thửa đất, sản phẩm của hộ. Không có gì về tour |
-| HTX (`manager`; `officer` chỉ xem) | Đăng nhập | `manager`: tổng quan, sản phẩm, đơn hàng, xác nhận tiền đơn hàng, tin tức, sổ thu đơn hàng. Không có gì về tour |
-| Công ty du lịch (`operator`) | Đăng nhập | `operator`: toàn bộ việc tour: lượt đặt (xác nhận tiền về, huỷ, điểm danh đoàn), thu tiền tour, tour toàn vùng; cùng tổng quan các HTX liên kết, duyệt bài, báo cáo tổng hợp |
+| HTX (`manager`; `officer` chỉ xem) | Đăng nhập | `manager`: tổng quan, sản phẩm, đơn hàng, tin tức, sổ thu. **Tour của HTX**: tạo, sửa tour (có dặn dò cho nhân viên dẫn tour), thêm hoặc gỡ nhân viên dẫn tour, danh sách thành viên từng tour, lượt đặt, thu tiền tour, điểm danh. Cán bộ chỉ xem |
+| Nhân viên dẫn tour (`guide`) | Đăng nhập | `guide`: chỉ thấy các tour HTX đã giao và HTX nào giao; Tổng quan, Lộ trình (đường thời gian theo ngày), chi tiết tour (liên hệ và dặn dò của HTX, lộ trình, các đoàn kèm số điện thoại), danh sách thành viên có tìm kiếm, điểm danh đoàn. Không tạo hay sửa tour, không xác nhận tiền |
 
 Sau đăng nhập app đọc vai trong claims và chuyển tới giao diện của vai đó (`lib/core/role/role.dart`,
 `lib/core/router/app_router.dart`). Ẩn màn hình chỉ để gọn; **quyền thật do máy chủ kiểm trên mỗi lệnh gọi**.
 
-Tên vai `operator` là tên tạm: vai của công ty du lịch chưa được chốt (xem `2026-11-15-operator-and-articles-design.md`).
+Không còn vai công ty du lịch (`operator`): tour thuộc HTX, nhân viên dẫn tour chỉ là một tài khoản nhân viên do HTX thêm vào tour. Tên vai Keycloak của nhân viên dẫn tour là `guide` (cần tạo trong realm khi chạy thật).
 
 ## Bố cục tổng quan nhân sự
 
@@ -51,7 +51,7 @@ Mật khẩu chung `Demo@2026` (đây là tài khoản công khai của bản de
 | `farmer@demo.vn` | Nông dân (hộ `hh-01`) |
 | `manager@demo.vn` | HTX (ghi được) |
 | `officer@demo.vn` | Cán bộ HTX (chỉ xem) |
-| `operator@demo.vn` | Công ty du lịch |
+| `guide@demo.vn` | Nhân viên dẫn tour (được hai HTX giao tour) |
 
 ## Dựng và chạy
 
@@ -91,7 +91,7 @@ lib/
              auth/ (oidc_client, appauth_oidc_client, token_store, jwt_claims), core/hub_api_client.dart (lệnh ghi bằng Bearer),
              local_store.dart (lưu trong máy), models/
   app/       AppState (phiên), CartController, ActivityController (đơn và vé), HubApp
-  features/  auth, customer, farmer, manager, operator, common
+  features/  auth, customer, farmer, manager, guide, shorts, staff, common
   shared/    widget dùng chung
 test/        thử nghiệm đơn vị và widget (money, VietQR, vai/định tuyến, giỏ hàng, trạng thái đơn, lưu trong máy, luồng màn hình,
              test/data/core: máy khách GraphQL, ánh xạ lỗi, phân tích dữ liệu, đối chiếu cột với metadata Hasura và schema.prisma;
@@ -184,7 +184,7 @@ bị ẩn thay vì trộn số mẫu cạnh số thật.
 
 ## Nhãn "Dữ liệu mẫu"
 
-Chip "Dữ liệu mẫu" ở đầu màn hình cho biết màn hình đó do `MockHubRepository` phục vụ: toàn bộ phần khách, các trang Gian hàng và công ty du lịch,
+Chip "Dữ liệu mẫu" ở đầu màn hình cho biết màn hình đó do `MockHubRepository` phục vụ: toàn bộ phần khách, các trang Gian hàng, tour, nhân viên dẫn tour và Reels,
 và cả các trang lõi khi chạy chế độ mẫu. Trang lõi chạy chế độ thật thì không có chip.
 
 ## Chạy chế độ thật với stack dev
@@ -209,7 +209,7 @@ Cách app xử lý đăng nhập (`lib/data/keycloak_auth_service.dart`):
 
 - Nút "Đăng nhập bằng tài khoản HTX" mở trình duyệt hệ thống (không có ô mật khẩu trong app); mã xác thực có PKCE S256, không có bí mật nào.
 - Vai, tên, `htx_code` đọc từ phần thân access token **không kiểm chữ ký**, chỉ để hiển thị và chọn giao diện. Web kiểm token thật; Hasura giữ quyền theo hàng. Thứ tự vai như web:
-  `manager` > `officer` > `farmer`. Người dùng không có vai nào trong số đó chỉ được vào nếu token ghi rõ vai `customer`; ngược lại bị từ chối (và không lưu gì). Vai `operator` chưa chốt tên nên chưa nhận.
+  `manager` > `officer` > `farmer`. Người dùng không có vai nào trong số đó chỉ được vào nếu token ghi rõ vai `customer`; ngược lại bị từ chối (và không lưu gì). Vai `guide` (nhân viên dẫn tour) được nhận; vai `operator` cũ không còn.
 - Access và refresh token chỉ nằm trong `flutter_secure_storage` (Android Keystore / iOS Keychain) và bộ nhớ, không ở `shared_preferences`, không vào nhật ký hay thông báo lỗi.
 - Token được làm mới trước khi hết hạn (còn dưới 60 giây) và một lần sau mỗi 401. Refresh token bị từ chối (`invalid_grant`) thì xoá token, đăng xuất và về màn hình đầu; lỗi mạng thì giữ phiên.
 - Android: `manifestPlaceholders["appAuthRedirectScheme"] = "vn.opentea.hubmobile"` trong `android/app/build.gradle.kts`. iOS: scheme `vn.opentea.hubmobile` trong `ios/Runner/Info.plist`.
