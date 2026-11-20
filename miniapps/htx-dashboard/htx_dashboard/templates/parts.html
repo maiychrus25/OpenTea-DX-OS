@@ -25,7 +25,7 @@
 {%- endmacro %}
 
 {# One daily series as a server-drawn SVG: the band is min..max of each day, the area and the line the average. #}
-{% macro line_chart(chart, title, unit) -%}
+{% macro line_chart(chart, title, unit, table=True) -%}
 {%- if chart.empty %}<p class="empty chart-empty">Không có số đo trong kỳ này.</p>{% else %}
 <figure class="line-figure">
   <svg class="line-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-label="{{ title }}, theo ngày">
@@ -41,6 +41,7 @@
     {%- for s in chart.segments %}<polyline class="series" points="{{ s }}"/>{% endfor %}
     {%- for d in chart.dots %}<circle class="dot" cx="{{ d.x }}" cy="{{ d.y }}" r="3"><title>{{ d.label }}{% if unit %} {{ unit }}{% endif %}</title></circle>{% endfor %}
   </svg>
+  {%- if table %}
   <details class="disclosure">
     <summary>Bảng số liệu của biểu đồ</summary>
     <table role="table">
@@ -52,6 +53,7 @@
       </tbody>
     </table>
   </details>
+  {%- endif %}
 </figure>
 {%- endif %}
 {%- endmacro %}

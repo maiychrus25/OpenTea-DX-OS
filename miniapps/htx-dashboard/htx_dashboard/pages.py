@@ -66,10 +66,12 @@ def sensor_window(now: datetime, days: int) -> tuple[date, date, int]:
     return end - timedelta(days=window - 1), end, window
 
 
-def tile(label: str, value, hint: str = "", missing: bool = False, delta=None, spark=None) -> dict:
+def tile(label: str, value, hint: str = "", missing: bool = False, delta=None, spark=None, share=None) -> dict:
+    """A key figure: value, context line, a visual (a sparkline of the weeks or a share bar) and a caption (the change
+    against the period before, or 'không có kỳ trước' when it has none). Every tile has all four parts."""
     if missing:
-        return {"label": label, "value": "—", "hint": ERROR_TEXT, "delta": None, "spark": None}
-    return {"label": label, "value": value, "hint": hint, "delta": delta, "spark": spark}
+        return {"label": label, "value": "—", "hint": ERROR_TEXT, "delta": None, "spark": None, "share": None}
+    return {"label": label, "value": value, "hint": hint, "delta": delta, "spark": spark, "share": share}
 
 
 def weekly_values(timestamps, now, days) -> list[int]:
@@ -128,6 +130,30 @@ def freshness_matrix(latest, now) -> dict | None:
             "ring_text": f"{appkit.number(share, 0)} %"}
 
 
+def _share(part, whole) -> float | None:
+    """The part as a percentage of the whole, for a share bar; None when there is no whole."""
+    return None if not whole else round(100 * part / whole, 1)
+
+
+def parcels_growing(parcels) -> list:
+    return [p for p in parcels or [] if p.status not in ("HARVESTED", "DRAFT")]
+
+
+def sensor_card(sensor: str, daily: list[tuple] | None) -> dict:
+    """One cooperative-wide sensor: its name and unit, the latest average of the parcels, the range of the window and the
+    daily line. An empty window keeps the card with its name, so the five always show."""
+    label, unit = m.sensor_label(sensor)
+    if not daily:
+        return {"label": label, "unit": unit, "chart": None, "latest": "—", "when": "chưa có số đo", "low": "—", "high": "—"}
+    values = [v for _, v in daily]
+    return {"label": label, "unit": unit, "chart": line_of({sensor: daily}, sensor), "latest": _fmt_value(values[-1]),
+            "when": f"ngày {daily[-1][0]:%d/%m}", "low": _fmt_value(min(values)), "high": _fmt_value(max(values))}
+
+
+def _fmt_value(v: float) -> str:
+    return appkit.number(v, 1)
+
+
 # ---------------------------------------------------------------- overview: the command centre
 
 def overview(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> dict:
@@ -173,12 +199,16 @@ def overview(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> di
     disease_weeks = weekly_values([d.created_at for d in diseases], now, days) if diseases is not None else None
     lot_weeks = weekly_values([lot.created_at for lot in lots], now, days) if lots is not None else None
     journal_weeks = weekly_values([j.entry_date for j in journals], now, days) if journals is not None else None
+    lots_in_period = sum(1 for lot in lots if m.in_period(lot.created_at, now, days)) if lots is not None else None
+    cultivating = m.cultivating(parcels) if parcels is not None else None
+    known_yield = (len(parcels_growing(parcels)) - yield_.missing) if yield_ is not None else None
     kpis = [
         tile("Thửa chè", appkit.number(len(parcels), 0) if parcels is not None else 0,
-             f"tổng {appkit.number(m.total_area(parcels), 1)} ha" if parcels is not None else "", parcels is None),
+             f"tổng {appkit.number(m.total_area(parcels), 1)} ha, {appkit.number(cultivating, 0)} thửa đang canh tác" if parcels is not None else "",
+             parcels is None, share=_share(cultivating, len(parcels)) if parcels else None),
         tile("Sản lượng kỳ vọng", kg_text(yield_.kg) if yield_ else 0,
-             (f"{yield_.missing} thửa chưa khai năng suất" if yield_.missing else f"{yield_.parcels} thửa đang chăm sóc") if yield_ else "",
-             yield_ is None),
+             f"{yield_.parcels} thửa đang chăm sóc" if yield_ else "", yield_ is None,
+             share=_share(known_yield, yield_.parcels) if yield_ and yield_.parcels else None),
         tile(f"Nhật ký {days} ngày", appkit.number(counts.in_period, 0) if counts else 0,
              f"{counts.pending} chờ duyệt" if counts else "", counts is None,
              charts.delta(counts.in_period, counts.previous) if counts else None, spark_of(journal_weeks)),
@@ -187,14 +217,13 @@ def overview(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> di
              charts.delta(len(in_period), m.previous_count([d.created_at for d in diseases], now, days)) if in_period is not None else None,
              spark_of(disease_weeks)),
         tile("Cảm biến im lặng", appkit.number(summary.silent, 0) if summary else 0,
-             f"trên {summary.parcels} thửa, {summary.sensors} cảm biến" if summary else "", summary is None),
-        tile(f"Lô chè {days} ngày", appkit.number(sum(1 for lot in lots if m.in_period(lot.created_at, now, days)), 0)
-             if lots is not None else 0, "lô chè được tạo trong kỳ", lots is None,
-             charts.delta(sum(1 for lot in lots if m.in_period(lot.created_at, now, days)),
-                          m.previous_count([lot.created_at for lot in lots], now, days)) if lots is not None else None,
+             f"trên {summary.sensors} cảm biến của {summary.parcels} thửa" if summary else "", summary is None,
+             share=_share(summary.silent, summary.sensors) if summary and summary.sensors else None),
+        tile(f"Lô chè {days} ngày", appkit.number(lots_in_period, 0) if lots is not None else 0,
+             "lô chè được tạo trong kỳ", lots is None,
+             charts.delta(lots_in_period, m.previous_count([lot.created_at for lot in lots], now, days)) if lots is not None else None,
              spark_of(lot_weeks)),
     ]
-
     # The charts of the grid.
     status = charts.donut(status_items(parcels), appkit.number(len(parcels), 0)) if parcels else None
     crops = [(crop, ha) for crop, ha in m.area_by_crop(parcels)] if parcels else []
@@ -203,7 +232,7 @@ def overview(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> di
         weeks, names, series = m.activity_by_week(journals, now, days)
         activity = charts.column_chart([m.week_label(w) for w in weeks], series, names, digits=0) if names else None
     coop_days = m.sensor_day_averages(sensors) if sensors is not None else None
-    sensor_lines = [(m.sensor_label(s)[0], m.sensor_label(s)[1], line_of(coop_days, s)) for s in m.SENSOR]
+    sensor_cards = [sensor_card(s, coop_days.get(s, []) if coop_days else None) for s in m.SENSOR]
     disease_chart = None
     if diseases:
         weeks, names, series = m.disease_by_week(diseases, now, days)
@@ -220,7 +249,8 @@ def overview(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> di
         "r": r, "days": days, "attention": items, "unchecked": unchecked, "kpis": kpis,
         "status": status, "status_items": status_items(parcels) if parcels else [], "crops_rows": charts.bar_rows(crops, digits=1),
         "activity": activity, "activity_empty": journals is not None and not journals,
-        "sensor_lines": sensor_lines, "sensor_days": sensor_window(now, days)[2], "sensor_empty": sensors is not None and not sensors,
+        "sensor_cards": sensor_cards, "sensor_days": sensor_window(now, days)[2], "sensor_empty": sensors is not None and not sensors,
+        "sensor_rows": [(c["label"], f'{c["latest"]} {c["unit"]}'.strip(), c["low"], c["high"]) for c in sensor_cards],
         "matrix": freshness_matrix(latest, now), "disease": disease_chart, "diseases_empty": diseases is not None and not diseases,
         "funnel": charts.funnel_steps(m.lots_funnel(lots)) if lots else None, "lots_empty": lots is not None and not lots,
         "timeline": timeline, "harvest_count": len(harvest.upcoming_30) + len(harvest.overdue) if harvest else 0,
@@ -265,9 +295,15 @@ def production(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> 
                                            p.area_ha * p.yield_per_ha if p.yield_per_ha is not None else None, due < today))
     yield_ = m.expected_yield(parcels) if parcels is not None else None
 
-    calendar = None
+    calendar, calendar_summary, weekly_entries = None, "", None
     if journals is not None:
-        calendar = charts.calendar(m.calendar_counts([j.entry_date for j in journals], now, days), today - timedelta(days=days - 1), today)
+        counts = m.calendar_counts([j.entry_date for j in journals], now, days)
+        calendar = charts.calendar(counts, today - timedelta(days=days - 1), today)
+        busiest = m.busiest_day(counts)
+        calendar_summary = (f"Tổng {appkit.number(len(journals), 0)} nhật ký trong {days} ngày."
+                            + (f" Ngày nhiều nhất: {busiest[0]:%d/%m/%Y} ({appkit.number(busiest[1], 0)} nhật ký)." if busiest else ""))
+        weeks = m.weekly_counts([j.entry_date for j in journals], now, days)
+        weekly_entries = charts.column_chart([m.week_label(w) for w, _ in weeks], [[n for _, n in weeks]], ["Nhật ký"], digits=0)
     mix = charts.donut(m.by_activity(journals), appkit.number(len(journals), 0)) if journals else None
 
     # Crop cycles: sowing to the expected harvest, the overdue ones marked; the nearest GANTT_LANES first.
@@ -283,7 +319,7 @@ def production(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> 
     return {
         "r": r, "days": days, "harvest": harvest, "harvest_rows": harvest_rows, "yield": yield_,
         "cultivating": m.cultivating(parcels) if parcels is not None else None, "parcels_empty": parcels is not None and not parcels,
-        "calendar": calendar, "calendar_total": len(journals) if journals is not None else 0,
+        "calendar": calendar, "calendar_summary": calendar_summary, "weekly_entries": weekly_entries,
         "mix": mix, "mix_items": m.by_activity(journals or []),
         "journals_empty": journals is not None and not journals,
         "top": charts.bar_rows(m.top_households(journals, 10)) if journals is not None else None,
@@ -405,7 +441,7 @@ def parcel_combined(daily: list[m.Daily]) -> dict:
     rain = [(f"{d:%d/%m}", avg.get(("rainfall", d))) for d in days]
     rain_chart = None
     if any(v is not None for _, v in rain):
-        rain_chart = charts.column_chart([label for label, _ in rain], [[v or 0.0 for _, v in rain]], ["Lượng mưa TB (mm)"], digits=1)
+        rain_chart = charts.column_chart([label for label, _ in rain], [[v or 0.0 for _, v in rain]], ["Lượng mưa, trung bình các lần đo"], digits=1)
     return {"scatter": charts.scatter(dots) if dots else None, "rain": rain_chart, "dots": len(dots)}
 
 

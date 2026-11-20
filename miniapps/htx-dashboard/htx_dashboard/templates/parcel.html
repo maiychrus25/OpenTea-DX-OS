@@ -63,7 +63,7 @@
     {% call parts.card("Nhiệt độ và độ ẩm không khí, mỗi điểm một ngày", 6, "t-scatter") %}
       {{ ch.scatter(combined.scatter, "Nhiệt độ không khí và độ ẩm không khí theo ngày", "Nhiệt độ (°C)", "Độ ẩm (%)", "Cần cả nhiệt độ và độ ẩm không khí của cùng một ngày để vẽ.") }}
     {% endcall %}
-    {% call parts.card("Lượng mưa trung bình theo ngày (mm)", 6, "t-rain") %}
+    {% call parts.card("Lượng mưa, trung bình các lần đo trong ngày", 6, "t-rain") %}
       {{ ch.columns(combined.rain, "Lượng mưa trung bình theo ngày", "Chưa có số đo lượng mưa trong kỳ.") }}
     {% endcall %}
   </div>

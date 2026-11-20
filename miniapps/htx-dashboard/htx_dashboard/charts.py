@@ -18,9 +18,10 @@ WIDTH, HEIGHT = 480, 220
 LEFT, RIGHT, TOP, BOTTOM = 44, 14, 12, 26
 TONES = 8  # categorical colours tone-0 .. tone-7
 SEQUENCE = 5  # sequential levels seq-0 (none) .. seq-4 (most)
-PITCH, CELL = 16, 12  # calendar cell pitch and size in user units
-TOP_LABEL = 16  # room above the calendar for its month labels
+PITCH, CELL = 30, 24  # calendar cell pitch and size in user units
+HEAD, ROW_LABEL = 18, 52  # room for the weekday names above the grid and the week's first day at its left
 DONUT_CENTRE, DONUT_OUTER, DONUT_INNER = 100, 92, 62
+LABEL_WIDTH = 54  # user units a column label of up to six characters takes at the axis text size
 GANTT_SPAN = 1000  # a timeline is drawn on 0..1000 and stretched by the page
 
 
@@ -152,7 +153,8 @@ class Cell:
 @dataclass(frozen=True)
 class Calendar:
     cells: list[Cell]
-    months: list[Tick]
+    row_labels: list[Tick]  # the Monday that starts each row of weeks
+    col_labels: list[Tick]  # the weekday names, T2 to CN
     width: int
     height: int
     empty: bool
@@ -257,7 +259,7 @@ def line_chart(points: list[Point], area: bool = False) -> LineChart:
     if not points:
         return LineChart()
     points = sorted(points, key=lambda p: p.day)
-    ticks = nice_ticks(min(p.min for p in points), max(p.max for p in points))
+    ticks = nice_ticks(min(p.min for p in points), max(p.max for p in points), target=3)  # few ticks: readable text
     low, high = ticks[0], ticks[-1]
     right, bottom = WIDTH - RIGHT, HEIGHT - BOTTOM
     first, span = points[0].day, (points[-1].day - points[0].day).days
@@ -293,7 +295,7 @@ def line_chart(points: list[Point], area: bool = False) -> LineChart:
         segments=lines, fills=fills, band=band,
         dots=[Dot(x_of(p.day), y_of(p.avg), f"{p.day:%d/%m}: {_fmt(p.avg)}") for p in points],
         y_ticks=[Tick(y_of(v), _fmt(v), v) for v in ticks],
-        x_ticks=x_ticks[:6],
+        x_ticks=x_ticks[:4],
         rows=[(f"{p.day:%d/%m}", _fmt(p.avg), _fmt(p.min), _fmt(p.max)) for p in points],
         empty=False)
 
@@ -339,7 +341,7 @@ def column_chart(labels: Sequence[str], series: Sequence[Sequence[float]], names
                     continue
                 marks.append(Mark(round(centre - group / 2 + s * sub + 1, 1), y_of(v), round(max(sub - 2, 2), 1),
                                   round(y_of(0) - y_of(v), 1), f"{label} · {names[s]}: {_fmt(v, digits)}", s % TONES))
-    step = max(1, math.ceil(len(labels) / 12))
+    step = max(1, math.ceil(LABEL_WIDTH / slot))  # keep every label that fits its slot and skip the rest
     label_ticks = [Tick(round(left + (i + 0.5) * slot, 1), label) for i, label in enumerate(labels) if i % step == 0]
     rows = [(label, *[_fmt(s[i], digits) for s in series]) for i, label in enumerate(labels)]
     return Columns(width=width, height=height, marks=marks, labels=label_ticks,
@@ -423,20 +425,22 @@ def ring(share: float) -> Ring:
 # ---------- calendar heatmap: days in weeks ----------
 
 def calendar(counts: Mapping[date, int], start: date, end: date, unit: str = "nhật ký") -> Calendar:
-    """One cell per day from start to end; weeks run down the columns from Monday, days across the rows."""
+    """One cell per day from start to end: a row per week (from Monday), a column per weekday."""
     days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
     first = start - timedelta(days=start.weekday())
     peak = max((counts.get(d, 0) for d in days), default=0)
-    cells, months = [], []
+    cells, rows = [], {}
     for day in days:
-        col, row = (day - first).days // 7, day.weekday()
+        week, col = (day - first).days // 7, day.weekday()
         n = counts.get(day, 0)
         level = 0 if n <= 0 else max(1, min(SEQUENCE - 1, math.ceil(n / peak * (SEQUENCE - 1))))
-        cells.append(Cell(col * PITCH, TOP_LABEL + row * PITCH, CELL, level, f"{day:%d/%m/%Y}: {_fmt(n, 0)} {unit}"))
-        if day == start or day.day == 1:
-            months.append(Tick(col * PITCH, f"{day:%m/%Y}"))
-    width = ((end - first).days // 7 + 1) * PITCH
-    return Calendar(cells, months, width, TOP_LABEL + 7 * PITCH, not days)
+        cells.append(Cell(ROW_LABEL + col * PITCH, HEAD + week * PITCH, CELL, level, f"{day:%d/%m/%Y}: {_fmt(n, 0)} {unit}"))
+        rows.setdefault(week, first + timedelta(days=7 * week))
+    weeks = (end - first).days // 7 + 1
+    row_labels = [Tick(HEAD + week * PITCH + CELL / 2, f"{monday:%d/%m}") for week, monday in sorted(rows.items())]
+    names = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+    col_labels = [Tick(ROW_LABEL + i * PITCH + CELL / 2, name) for i, name in enumerate(names)]
+    return Calendar(cells, row_labels, col_labels, ROW_LABEL + 7 * PITCH, HEAD + weeks * PITCH, not days)
 
 
 # ---------- matrix levels (the table is drawn in the template) ----------

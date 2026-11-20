@@ -401,3 +401,15 @@ def test_empty_cooperative_says_so_on_every_chart(monkeypatch):
     use(monkeypatch, **empty)
     html = TestClient(main.app).get("/", headers=MANAGER).text
     assert "Chưa có thửa nào trong HTX." in html and "Chưa có lô chè nào." in html
+
+
+def test_the_overview_sensor_cards_name_the_unit_and_the_latest_value(client):
+    html = client.get("/", headers=MANAGER).text
+    assert 'class="sensor-mini"' in html and html.count('class="sensor-mini"') == 5
+    assert "Độ ẩm đất" in html and "mới nhất" in html
+    assert html.count('class="disclosure"') < 6  # one shared table for the group, not one per chart
+
+
+def test_every_kpi_tile_has_the_same_parts(client):
+    html = client.get("/", headers=MANAGER).text
+    assert html.count('class="kpi-visual"') == 6 and html.count('class="kpi-caption"') == 6

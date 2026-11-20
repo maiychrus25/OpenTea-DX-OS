@@ -139,11 +139,20 @@ def test_ring_dash_is_the_share_out_of_one_hundred():
 
 # ---------- calendar heatmap ----------
 
-def test_calendar_has_one_cell_per_day_in_monday_first_weeks():
+def test_calendar_is_a_grid_of_weeks_down_and_weekdays_across():
     cal = charts.calendar({}, D0, D0 + timedelta(days=13))
     assert len(cal.cells) == 14 and all(c.tone == 0 for c in cal.cells)
-    assert cal.cells[1].y == cal.cells[0].y + charts.PITCH and cal.cells[1].x == cal.cells[0].x  # Tuesday below Monday
-    assert cal.cells[7].x == charts.PITCH and cal.cells[7].y == cal.cells[0].y  # Monday of the second week
+    mon0, tue0, mon1 = cal.cells[0], cal.cells[1], cal.cells[7]
+    assert tue0.x == mon0.x + charts.PITCH and tue0.y == mon0.y  # Tuesday to the right of Monday
+    assert mon1.x == mon0.x and mon1.y == mon0.y + charts.PITCH  # the next Monday on the next row
+    assert [t.label for t in cal.row_labels] == ["02/11", "09/11"]  # the Monday that starts each row
+    assert [t.label for t in cal.col_labels] == ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+
+
+def test_calendar_rows_are_labelled_once_each_and_never_by_month():
+    cal = charts.calendar({}, D0, D0 + timedelta(days=29))
+    assert len(cal.row_labels) == 5 and len({t.pos for t in cal.row_labels}) == 5
+    assert not any("/2026" in t.label for t in cal.row_labels)
 
 
 def test_calendar_levels_scale_to_the_busiest_day_and_title_says_the_count():
@@ -241,3 +250,11 @@ def test_tone_and_level_helpers_are_within_the_css_classes():
     assert charts.TONES == 8 and charts.SEQUENCE == 5
     assert all(0 <= c.tone <= 4 for c in charts.calendar({D0: 9}, D0, TODAY).cells)
     assert math.isfinite(charts.gauge(1.0, 0.0, 2.0).percent)
+
+
+def test_column_labels_never_run_into_each_other():
+    """A label is about 54 units wide: labels are thinned until neighbours are at least that far apart."""
+    labels = [f"{d:02d}/10" for d in range(9, 21)]  # twelve runs, as the data tab shows them
+    chart = charts.column_chart(labels, [[float(i + 1) for i in range(12)]], ["n"])
+    xs = [t.pos for t in chart.labels]
+    assert len(xs) >= 2 and all(b - a >= 54 for a, b in zip(xs, xs[1:]))

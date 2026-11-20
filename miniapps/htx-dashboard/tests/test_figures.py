@@ -163,3 +163,8 @@ def test_readings_by_sensor_sums_the_stored_counts_in_sensor_order():
 def test_area_by_crop_sums_every_parcel_largest_first():
     parcels = [plot("A", crop="Chè Shan", area=2.0), plot("B", crop="Chè Trung du", area=1.5), plot("C", crop="Chè Shan", area=0.5)]
     assert m.area_by_crop(parcels) == [("Chè Shan", 2.5), ("Chè Trung du", 1.5)]
+
+
+def test_busiest_day_is_the_largest_count_and_the_earliest_on_a_tie():
+    assert m.busiest_day({date(2026, 11, 3): 4, date(2026, 11, 9): 9, date(2026, 11, 12): 9}) == (date(2026, 11, 9), 9)
+    assert m.busiest_day({}) is None

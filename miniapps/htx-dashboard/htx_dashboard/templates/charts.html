@@ -115,21 +115,17 @@
 </figure>
 {%- endmacro %}
 
-{# charts.Calendar: one cell per day, weeks as columns, Monday on top. The text summary is the number of entries. #}
+{# charts.Calendar: a row per week from Monday, a column per weekday, the week's first day at the left. The summary is text. #}
 {% macro calendar(c, title, empty_text, summary) -%}
 {%- if c is none or c.empty %}{{ empty_chart(empty_text) }}{% else %}
 <figure class="calendar-figure">
-  <svg class="calendar" viewBox="0 0 {{ c.width + 28 }} {{ c.height }}" role="img" aria-label="{{ title }}">
-    <text class="tick" x="22" y="{{ 16 + 9 }}" text-anchor="end">T2</text>
-    <text class="tick" x="22" y="{{ 16 + 2 * 16 + 9 }}" text-anchor="end">T4</text>
-    <text class="tick" x="22" y="{{ 16 + 4 * 16 + 9 }}" text-anchor="end">T6</text>
-    <g transform="translate(28 0)">
-      {%- for t in c.months %}<text class="tick" x="{{ t.pos }}" y="10">{{ t.label }}</text>{% endfor %}
-      {%- for cell in c.cells %}<rect class="seq-{{ cell.tone }}" x="{{ cell.x }}" y="{{ cell.y }}" width="{{ cell.size }}" height="{{ cell.size }}" rx="2"><title>{{ cell.title }}</title></rect>{% endfor %}
-    </g>
+  <svg class="calendar" viewBox="0 0 {{ c.width }} {{ c.height }}" role="img" aria-label="{{ title }}">
+    {%- for t in c.col_labels %}<text class="tick calendar-head" x="{{ t.pos }}" y="12" text-anchor="middle">{{ t.label }}</text>{% endfor %}
+    {%- for t in c.row_labels %}<text class="tick calendar-row" x="46" y="{{ t.pos }}" text-anchor="end" dominant-baseline="middle">{{ t.label }}</text>{% endfor %}
+    {%- for cell in c.cells %}<rect class="seq-{{ cell.tone }}" x="{{ cell.x }}" y="{{ cell.y }}" width="{{ cell.size }}" height="{{ cell.size }}" rx="3"><title>{{ cell.title }}</title></rect>{% endfor %}
   </svg>
+  <p class="calendar-summary">{{ summary }}</p>
   <p class="calendar-scale" aria-hidden="true"><span>Ít</span><span class="seq-0"></span><span class="seq-1"></span><span class="seq-2"></span><span class="seq-3"></span><span class="seq-4"></span><span>Nhiều</span></p>
-  <p class="note">{{ summary }}</p>
 </figure>
 {%- endif %}
 {%- endmacro %}

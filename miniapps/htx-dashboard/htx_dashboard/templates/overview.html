@@ -12,9 +12,13 @@
   <li class="kpi">
     <span class="stat-label">{{ k.label }}</span>
     <span class="stat-value">{{ k.value }}</span>
-    {%- if k.hint %}<span class="stat-hint">{{ k.hint }}</span>{% endif %}
-    {%- if k.delta %}{{ ch.delta(k.delta) }}{% endif %}
-    {%- if k.spark %}{{ ch.spark(k.spark, k.label ~ ", các tuần trong kỳ") }}{% endif %}
+    <span class="kpi-context">{{ k.hint }}</span>
+    <span class="kpi-visual">
+      {%- if k.spark %}{{ ch.spark(k.spark, k.label ~ ", các tuần trong kỳ") }}
+      {%- elif k.share is not none %}<svg class="share-bar" viewBox="0 0 100 6" preserveAspectRatio="none" role="img" aria-label="{{ k.label }}: {{ k.share | num(0) }} %"><rect class="share-track" x="0" y="0" width="100" height="6"/><rect class="tone-0" x="0" y="0" width="{{ k.share }}" height="6"/></svg>
+      {%- endif %}
+    </span>
+    <span class="kpi-caption">{% if k.delta %}{{ ch.delta(k.delta) }}{% else %}không có kỳ trước{% endif %}</span>
   </li>
   {%- endfor %}
 </ul>
@@ -88,11 +92,17 @@
       {% if sensor_empty %}{{ ch.empty_chart("Chưa có cảm biến nào gửi số đo trong " ~ sensor_days ~ " ngày qua.") }}
       {% else %}
       <div class="small-multiples">
-        {% for label, unit, chart in sensor_lines %}
-          {% if chart %}{{ parts.line_chart(chart, label, unit) }}
-          {% else %}{{ ch.empty_chart("Không có số đo " ~ label.lower()) }}{% endif %}
+        {% for c in sensor_cards %}
+        <figure class="sensor-mini">
+          <figcaption class="sensor-mini-head"><span class="sensor-mini-name">{{ c.label }}</span><span class="sensor-mini-unit">{{ c.unit }}</span></figcaption>
+          <p class="sensor-mini-value">{{ c.latest }} <span class="sensor-unit">{{ c.unit }}</span></p>
+          <p class="note">trung bình các thửa, {{ c.when }}</p>
+          {% if c.chart %}{{ parts.line_chart(c.chart, c.label, c.unit, table=False) }}
+          {% else %}{{ ch.empty_chart("Không có số đo trong kỳ.") }}{% endif %}
+        </figure>
         {% endfor %}
       </div>
+      {{ ch.table_twin(["Cảm biến", "Mới nhất", "Thấp nhất", "Cao nhất"], sensor_rows, "Bảng số liệu các cảm biến trong " ~ sensor_days ~ " ngày") }}
       {% endif %}
     {% else %}{{ parts.error() }}{% endif %}
   {% endcall %}

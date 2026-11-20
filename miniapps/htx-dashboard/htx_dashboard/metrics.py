@@ -292,11 +292,8 @@ def disease_recent(rows: Sequence[Disease], now: datetime, days: int = RECENT_DA
 
 
 def disease_kind(d: Disease) -> str:
-    if d.confirmed:
-        return d.confirmed
-    if d.status == "REJECTED":
-        return "Báo cáo bị bác bỏ"
-    return f"{d.ai_name} (AI dự đoán)"
+    """The kind of a report: the confirmed diagnosis, else the AI's name marked as a guess. Rejection is a status, not a kind."""
+    return d.confirmed or f"{d.ai_name} (AI dự đoán)"
 
 
 def disease_kinds(rows: Sequence[Disease]) -> list[tuple[str, int]]:
@@ -629,3 +626,11 @@ def area_by_crop(parcels: Sequence[Parcel]) -> list[tuple[str, float]]:
     for p in parcels:
         ha[p.crop_type] = ha.get(p.crop_type, 0.0) + p.area_ha
     return sorted(ha.items(), key=lambda kv: (-kv[1], kv[0]))
+
+
+def busiest_day(counts: dict[date, int]) -> tuple[date, int] | None:
+    """The day with the most rows; the earlier day wins a tie."""
+    if not counts:
+        return None
+    day = max(sorted(counts), key=lambda d: counts[d])
+    return day, counts[day]

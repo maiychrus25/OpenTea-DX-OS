@@ -9,8 +9,13 @@
 
 <div class="grid-cards" aria-label="Biểu đồ sản xuất">
 
-  {% call parts.card("Nhật ký theo ngày", 12, "p-calendar") %}
-    {% if r.journals.ok %}{{ ch.calendar(calendar, "Số nhật ký mỗi ngày trong " ~ days ~ " ngày", "Chưa có nhật ký nào trong " ~ days ~ " ngày qua.", "Tổng " ~ (calendar_total | num(0)) ~ " nhật ký trong " ~ days ~ " ngày. Mỗi ô là một ngày, cột là tuần, từ thứ Hai.") }}
+  {% call parts.card("Nhật ký theo ngày", 7, "p-calendar") %}
+    {% if r.journals.ok %}{{ ch.calendar(calendar, "Số nhật ký mỗi ngày trong " ~ days ~ " ngày", "Chưa có nhật ký nào trong " ~ days ~ " ngày qua.", calendar_summary) }}
+    {% else %}{{ parts.error() }}{% endif %}
+  {% endcall %}
+
+  {% call parts.card("Nhật ký mỗi tuần", 5, "p-weekly") %}
+    {% if r.journals.ok %}{{ ch.columns(weekly_entries, "Số nhật ký mỗi tuần", "Chưa có nhật ký nào trong " ~ days ~ " ngày qua.") }}
     {% else %}{{ parts.error() }}{% endif %}
   {% endcall %}
 
