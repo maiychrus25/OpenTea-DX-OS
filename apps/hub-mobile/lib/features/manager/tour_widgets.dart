@@ -3,7 +3,164 @@
 
 import 'package:flutter/material.dart';
 
+import '../../core/format/formatting.dart';
+import '../../core/money/money.dart';
 import '../../core/theme/staff_theme.dart';
+import '../../data/models/catalog.dart';
+import '../guide/guide_widgets.dart';
+
+/// Equal-width actions on wide screens; full-width touch targets on phones.
+class TourActionRow extends StatelessWidget {
+  const TourActionRow({super.key, required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final scale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+      if (constraints.maxWidth < children.length * 240 * scale) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[if (i > 0) const SizedBox(height: 8), children[i]],
+          ],
+        );
+      }
+      return Row(
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(child: children[i]),
+          ],
+        ],
+      );
+    },
+  );
+}
+
+/// The manager's existing tour data, presented in the guide pages' visual language.
+class ManagerTourCard extends StatelessWidget {
+  const ManagerTourCard({
+    super.key,
+    required this.tour,
+    required this.departures,
+    required this.guides,
+    required this.actions,
+  });
+  final Tour tour;
+  final List<Departure> departures;
+  final List<GuideStaff> guides;
+  final Widget actions;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    clipBehavior: Clip.antiAlias,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GuideCover(tour: tour, height: 160),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 6,
+                runSpacing: 8,
+                children: [
+                  GuideChip('${formatVnd(tour.adultPrice)} / người lớn', icon: Icons.payments_outlined),
+                  GuideChip('${tour.maxGuests} chỗ', icon: Icons.event_seat_outlined),
+                  GuideChip('${guides.length} nhân viên', icon: Icons.badge_outlined),
+                  GuideChip('${departures.length} lượt khởi hành', icon: Icons.event_outlined),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Trẻ em: ${formatVnd(tour.childPrice)}',
+                style: const TextStyle(color: StaffColors.muted, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              const Text('Lịch khởi hành', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              if (departures.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text('Chưa có lịch khởi hành', style: TextStyle(color: StaffColors.muted)),
+                ),
+              for (final departure in departures)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Row(
+                    children: [
+                      GuideDateBadge(departure.date),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(formatDate(departure.date), style: const TextStyle(fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 4),
+                            Text(
+                              'còn ${departure.seatsLeft}/${departure.seatsTotal} chỗ',
+                              style: const TextStyle(color: StaffColors.muted, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
+              const Text('Nhân viên dẫn tour', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              if (guides.isEmpty)
+                const Text('Chưa có nhân viên dẫn tour', style: TextStyle(color: StaffColors.muted, fontSize: 13))
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final guide in guides)
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+                        decoration: BoxDecoration(
+                          color: StaffColors.secondary,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: StaffColors.card,
+                              child: Text(
+                                guide.name.trim().isEmpty ? '?' : guide.name.trim().characters.first.toUpperCase(),
+                                style: const TextStyle(
+                                  color: StaffColors.primary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(guide.name, style: const TextStyle(color: StaffColors.ink, fontSize: 13)),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 12),
+              actions,
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
 /// White rounded card with a thin border; tappable when [onTap] is set.
 class OpCard extends StatelessWidget {

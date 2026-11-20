@@ -7,12 +7,13 @@ import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
 import '../../core/format/formatting.dart';
-import '../../core/money/money.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/catalog.dart';
 import '../../shared/widgets.dart' show LoadView, showMessage;
+import '../guide/guide_widgets.dart';
 import '../staff/staff_shell.dart';
 import '../staff/staff_widgets.dart';
+import 'tour_widgets.dart';
 
 class ManagerToursPage extends StatelessWidget {
   const ManagerToursPage({super.key});
@@ -31,89 +32,100 @@ class ManagerToursPage extends StatelessWidget {
           [for (final tour in tours) ...await repo.listDepartures(tour.id)],
         );
       },
-      builder: (context, data, reload) => RefreshIndicator(
-        onRefresh: reload,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            const PageHead('Tour của HTX', subtitle: 'Quản lý lịch khởi hành và nhân viên dẫn tour.'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (actor.canWriteHtx)
-                  FilledButton.icon(
-                    key: const Key('create-tour'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Tạo tour'),
-                    onPressed: () async {
-                      await context.push('/manager/tours/new');
-                      await reload();
-                    },
+      builder: (context, data, reload) {
+        final today = DateUtils.dateOnly(DateTime.now());
+        final upcoming = data.$3.where((d) => !DateUtils.dateOnly(d.date).isBefore(today)).length;
+        final guests = data.$3.fold<int>(0, (total, d) => total + d.seatsTotal - d.seatsLeft);
+        return RefreshIndicator(
+          onRefresh: reload,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const PageHead('Tour của HTX', subtitle: 'Quản lý lịch khởi hành và nhân viên dẫn tour.'),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: GuideStat(value: '${data.$1.length}', label: 'Tour', icon: Icons.route_outlined),
                   ),
-                OutlinedButton(onPressed: () => context.push('/manager/bookings'), child: const Text('Lượt đặt tour')),
-                OutlinedButton(
-                  onPressed: () => context.push('/manager/tour-payments'),
-                  child: const Text('Thu tiền tour'),
-                ),
-              ],
-            ),
-            if (!actor.canWriteHtx)
-              const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('Chế độ chỉ xem')),
-            if (data.$1.isEmpty) const StaffEmpty('HTX chưa có tour nào'),
-            for (final tour in data.$1)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: SectionCard(
-                  key: Key('manager-tour-${tour.id}'),
-                  title: tour.name,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${formatVnd(tour.adultPrice)} / người lớn · ${tour.maxGuests} chỗ'),
-                      Text('Trẻ em: ${formatVnd(tour.childPrice)}'),
-                      const SizedBox(height: 8),
-                      for (final dep in data.$3.where((d) => d.tourId == tour.id))
-                        Text('${formatDate(dep.date)} · còn ${dep.seatsLeft}/${dep.seatsTotal} chỗ'),
-                      const SizedBox(height: 8),
-                      Text(tour.guideIds.isEmpty ? 'Chưa có nhân viên dẫn tour' : 'Nhân viên dẫn tour:'),
-                      for (final guide in data.$2.where((g) => tour.guideIds.contains(g.id))) Text('• ${guide.name}'),
-                      TextButton.icon(
-                        key: Key('tour-roster-${tour.id}'),
-                        icon: const Icon(Icons.groups_outlined),
-                        label: const Text('Thành viên của tour'),
-                        onPressed: () => context.push('/manager/tours/${tour.id}/members'),
-                      ),
-                      if (actor.canWriteHtx)
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            TextButton(
-                              key: Key('edit-tour-${tour.id}'),
-                              child: const Text('Sửa tour'),
-                              onPressed: () async {
-                                await context.push('/manager/tours/${tour.id}/edit');
-                                await reload();
-                              },
-                            ),
-                            TextButton(
-                              key: Key('tour-guides-${tour.id}'),
-                              child: const Text('Thêm nhân viên dẫn tour'),
-                              onPressed: () async {
-                                await context.push('/manager/tours/${tour.id}/guides');
-                                await reload();
-                              },
-                            ),
-                          ],
-                        ),
-                    ],
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GuideStat(value: '$upcoming', label: 'Chuyến sắp tới', icon: Icons.event_outlined),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GuideStat(value: '$guests', label: 'Khách đã đặt', icon: Icons.groups_outlined),
+                  ),
+                ],
               ),
-          ],
-        ),
-      ),
+              const SizedBox(height: 16),
+              TourActionRow(
+                children: [
+                  if (actor.canWriteHtx)
+                    FilledButton.icon(
+                      key: const Key('create-tour'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Tạo tour'),
+                      onPressed: () async {
+                        await context.push('/manager/tours/new');
+                        await reload();
+                      },
+                    ),
+                  OutlinedButton(
+                    onPressed: () => context.push('/manager/bookings'),
+                    child: const Text('Lượt đặt tour', textAlign: TextAlign.center),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => context.push('/manager/tour-payments'),
+                    child: const Text('Thu tiền tour', textAlign: TextAlign.center),
+                  ),
+                ],
+              ),
+              if (!actor.canWriteHtx)
+                const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('Chế độ chỉ xem')),
+              if (data.$1.isEmpty) const StaffEmpty('HTX chưa có tour nào'),
+              for (final tour in data.$1)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: ManagerTourCard(
+                    key: Key('manager-tour-${tour.id}'),
+                    tour: tour,
+                    departures: data.$3.where((d) => d.tourId == tour.id).toList(),
+                    guides: data.$2.where((g) => tour.guideIds.contains(g.id)).toList(),
+                    actions: TourActionRow(
+                      children: [
+                        FilledButton.icon(
+                          key: Key('tour-roster-${tour.id}'),
+                          icon: const Icon(Icons.groups_outlined),
+                          label: const Text('Thành viên của tour', textAlign: TextAlign.center),
+                          onPressed: () => context.push('/manager/tours/${tour.id}/members'),
+                        ),
+                        if (actor.canWriteHtx) ...[
+                          OutlinedButton(
+                            key: Key('edit-tour-${tour.id}'),
+                            child: const Text('Sửa tour'),
+                            onPressed: () async {
+                              await context.push('/manager/tours/${tour.id}/edit');
+                              await reload();
+                            },
+                          ),
+                          TextButton(
+                            key: Key('tour-guides-${tour.id}'),
+                            child: const Text('Thêm nhân viên dẫn tour', textAlign: TextAlign.center),
+                            onPressed: () async {
+                              await context.push('/manager/tours/${tour.id}/guides');
+                              await reload();
+                            },
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

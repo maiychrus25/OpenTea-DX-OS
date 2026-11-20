@@ -9,6 +9,11 @@ import 'package:hub_mobile/app/hub_app.dart';
 import 'package:hub_mobile/data/demo_auth_service.dart';
 import 'package:hub_mobile/data/local_store.dart';
 import 'package:hub_mobile/data/mock_hub_repository.dart';
+import 'package:hub_mobile/data/models/catalog.dart';
+import 'package:hub_mobile/core/format/formatting.dart';
+import 'package:hub_mobile/core/money/money.dart';
+import 'package:hub_mobile/features/guide/guide_widgets.dart';
+import 'package:hub_mobile/shared/widgets.dart' show TeaPhoto, teaPhotoFor;
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<GoRouter> _open(
@@ -33,6 +38,48 @@ Future<GoRouter> _open(
   await tester.pumpWidget(HubApp(repository: repo ?? MockHubRepository(), auth: DemoAuthService(store), store: store));
   await tester.pumpAndSettle();
   return GoRouter.of(tester.element(find.byType(Scaffold).first));
+}
+
+class _TourLayoutRepository extends MockHubRepository {
+  _TourLayoutRepository({this.empty = false});
+  final bool empty;
+
+  @override
+  Future<List<Tour>> listTours({String? htxCode}) async => empty
+      ? []
+      : [
+          for (final tour in await super.listTours(htxCode: htxCode))
+            tour.copyWith(
+              name:
+                  'Trải nghiệm văn hóa chè cùng bà con hợp tác xã trên những đồi chè xanh và thưởng thức đặc sản địa phương',
+              guideIds: tour.id == 'tour-01' ? tour.guideIds : [],
+            ),
+        ];
+
+  @override
+  Future<List<Departure>> listDepartures(String tourId) async => tourId != 'tour-01'
+      ? []
+      : [
+          for (var i = 0; i < 18; i++)
+            Departure(
+              id: 'stress-departure-$i',
+              tourId: tourId,
+              date: DateUtils.dateOnly(DateTime.now()).add(Duration(days: i - 1)),
+              seatsTotal: 24,
+              seatsTaken: i.isEven ? 24 : 0,
+            ),
+        ];
+
+  @override
+  Future<List<GuideStaff>> listHtxGuides(String htxCode) async => [
+    for (final guide in await super.listHtxGuides(htxCode))
+      GuideStaff(
+        id: guide.id,
+        name: '${guide.name} — Nhân viên phụ trách trải nghiệm văn hóa và thu hái chè tại hợp tác xã',
+        phone: guide.phone,
+        htxCode: guide.htxCode,
+      ),
+  ];
 }
 
 Future<void> _walk(WidgetTester tester) async {
@@ -170,6 +217,82 @@ void main() {
     expect((await repo.listDepartures('tour-01')).every((d) => d.seatsTotal == 30), isTrue);
   });
 
+  for (final role in ['manager', 'officer']) {
+    testWidgets('$role sees tour covers, summary, departures and role-appropriate actions', (tester) async {
+      final repo = MockHubRepository();
+      final router = await _open(tester, role: role, repo: repo);
+      router.go('/manager/tours');
+      await tester.pumpAndSettle();
+      final tours = await repo.listTours(htxCode: 'tan-cuong');
+      final departures = [for (final tour in tours) ...await repo.listDepartures(tour.id)];
+      final today = DateUtils.dateOnly(DateTime.now());
+      for (final stat in [
+        ('Tour', '${tours.length}'),
+        ('Chuyến sắp tới', '${departures.where((d) => !DateUtils.dateOnly(d.date).isBefore(today)).length}'),
+        ('Khách đã đặt', '${departures.fold<int>(0, (n, d) => n + d.seatsTotal - d.seatsLeft)}'),
+      ]) {
+        expect(
+          find.byWidgetPredicate((w) => w is GuideStat && w.label == stat.$1 && w.value == stat.$2),
+          findsOneWidget,
+        );
+      }
+      expect(find.byKey(const Key('create-tour')), role == 'manager' ? findsOneWidget : findsNothing);
+      expect(find.text('Chế độ chỉ xem'), role == 'officer' ? findsOneWidget : findsNothing);
+      for (final tour in tours) {
+        final card = find.byKey(Key('manager-tour-${tour.id}'));
+        await tester.scrollUntilVisible(card, 300, scrollable: find.byType(Scrollable).last);
+        expect(find.descendant(of: card, matching: find.text(tour.name)), findsOneWidget);
+        expect(
+          find.descendant(
+            of: card,
+            matching: find.byWidgetPredicate((w) => w is TeaPhoto && w.asset == teaPhotoFor(tour.gradientSeed)),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: card, matching: find.text('${formatVnd(tour.adultPrice)} / người lớn')),
+          findsOneWidget,
+        );
+        expect(find.descendant(of: card, matching: find.text('Trẻ em: ${formatVnd(tour.childPrice)}')), findsOneWidget);
+        for (final dep in departures.where((d) => d.tourId == tour.id)) {
+          expect(find.descendant(of: card, matching: find.text(formatDate(dep.date))), findsOneWidget);
+          expect(
+            find.descendant(of: card, matching: find.text('còn ${dep.seatsLeft}/${dep.seatsTotal} chỗ')),
+            findsWidgets,
+          );
+        }
+        final guides = (await repo.listHtxGuides('tan-cuong')).where((g) => tour.guideIds.contains(g.id));
+        expect(find.descendant(of: card, matching: find.byType(CircleAvatar)), findsNWidgets(guides.length));
+        for (final guide in guides) {
+          expect(find.descendant(of: card, matching: find.text(guide.name)), findsOneWidget);
+        }
+        for (final prefix in ['edit-tour', 'tour-guides']) {
+          expect(find.byKey(Key('$prefix-${tour.id}')), role == 'manager' ? findsOneWidget : findsNothing);
+        }
+        expect(find.byKey(Key('tour-roster-${tour.id}')), findsOneWidget);
+      }
+      expect(find.byKey(const Key('manager-tour-tour-03')), findsNothing);
+    });
+  }
+
+  testWidgets('tour list shortcuts keep their existing destinations', (tester) async {
+    final router = await _open(tester, role: 'manager');
+    for (final action in [
+      ('Lượt đặt tour', '/manager/bookings'),
+      ('Thu tiền tour', '/manager/tour-payments'),
+      ('Sửa tour', '/manager/tours/tour-01/edit'),
+      ('Thêm nhân viên dẫn tour', '/manager/tours/tour-01/guides'),
+    ]) {
+      router.go('/manager/tours');
+      await tester.pumpAndSettle();
+      final button = find.text(action.$1).first;
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(GoRouterState.of(tester.element(find.byType(Scaffold).last)).uri.path, action.$2);
+    }
+  });
+
   testWidgets('officer can read tours but direct editor, assignments and booking cannot write', (tester) async {
     final router = await _open(tester, role: 'officer');
     router.go('/manager/tours');
@@ -218,6 +341,63 @@ void main() {
       }
     }
   }
+
+  for (final width in [320.0, 1280.0]) {
+    for (final brightness in Brightness.values) {
+      testWidgets('manager tour stress with long names and many departures at $width px ${brightness.name}', (
+        tester,
+      ) async {
+        final repo = _TourLayoutRepository();
+        final router = await _open(
+          tester,
+          role: 'manager',
+          repo: repo,
+          width: width,
+          text: 1.3,
+          brightness: brightness,
+        );
+        router.go('/manager/tours');
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        // The fixture includes yesterday, today, future departures and a tour without a schedule.
+        expect(
+          find.byWidgetPredicate((w) => w is GuideStat && w.label == 'Chuyến sắp tới' && w.value == '17'),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate((w) => w is GuideStat && w.label == 'Khách đã đặt' && w.value == '216'),
+          findsOneWidget,
+        );
+        await _walk(tester);
+        expect(find.text('Chưa có lịch khởi hành'), findsOneWidget);
+        expect(find.text('Chưa có nhân viên dẫn tour'), findsOneWidget);
+        final roster = find.byKey(const Key('tour-roster-tour-02'));
+        await tester.ensureVisible(roster);
+        await tester.tap(roster);
+        await tester.pumpAndSettle();
+        expect(GoRouterState.of(tester.element(find.byType(Scaffold).last)).uri.path, '/manager/tours/tour-02/members');
+        expect(find.text('Tour chưa có ngày khởi hành'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets('empty manager tour list keeps zero stats and create action', (tester) async {
+    final router = await _open(
+      tester,
+      role: 'manager',
+      repo: _TourLayoutRepository(empty: true),
+      width: 320,
+      text: 1.3,
+    );
+    router.go('/manager/tours');
+    await tester.pumpAndSettle();
+    expect(find.byWidgetPredicate((w) => w is GuideStat && w.value == '0'), findsNWidgets(3));
+    expect(find.text('HTX chưa có tour nào'), findsOneWidget);
+    expect(find.byKey(const Key('create-tour')), findsOneWidget);
+    await _walk(tester);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('guide sees the HTX briefing and can copy a guest phone', (tester) async {
     final router = await _open(tester);
