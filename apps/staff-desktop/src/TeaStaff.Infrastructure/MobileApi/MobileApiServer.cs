@@ -118,7 +118,7 @@ public sealed class MobileApiServer(IServiceProvider services, AppConfig config)
     {
         var api = app.MapGroup("/api");
 
-        api.MapGet("/health", () => Results.Ok(new { status = "ok", htxCode = config.HtxCode, htxName = config.HtxName, version = "1.1.0" }));
+        api.MapGet("/health", () => Results.Ok(new { status = "ok", htxCode = config.HtxCode, htxName = config.HtxName, version = "1.2.0" }));
 
         api.MapPost("/auth/login", async (LoginRequest body) =>
         {

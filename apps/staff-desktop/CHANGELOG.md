@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-11-20
+
+### Added
+- Charts on every page where they help: dashboard (task status, 14-day work days and completed tasks), employees (staff by team and contract type, base salary fund), attendance (daily work days, absences and overtime in the month), leave (approved days by type and per month, share of sick leave with evidence) and payroll (composition of gross pay, net pay per employee).
+- Demo data includes approved leave history.
+
+### Fixed
+- Bar value labels no longer overlap the chart title.
+
 ## [1.1.0] - 2026-11-20
 
 ### Added
@@ -28,5 +37,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - Command-line modes `--serve`, `--screenshots` and `--postgres-script`.
 - Demo cooperative seeded on first run; xUnit tests for payroll and the task state machine.
 
+[1.2.0]: https://github.com/Vudinhdat02/appManageStaff/releases/tag/v1.2.0
 [1.1.0]: https://github.com/Vudinhdat02/appManageStaff/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Vudinhdat02/appManageStaff/releases/tag/v1.0.0
