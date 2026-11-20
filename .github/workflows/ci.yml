@@ -463,7 +463,7 @@ jobs:
       - name: Install HTX Dashboard App
         run: |
           ./dxos install miniapps/htx-dashboard
-          docker compose -f docker/docker-compose.yml exec -T postgres psql -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -q < miniapps/htx-dashboard/tests/seed-readings.sql
+          docker compose -f docker/docker-compose.yml exec -T postgres psql -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -q < platform/tests/fixtures/htx-dashboard-readings.sql
 
       - name: HTX Dashboard Story Browser Test
         working-directory: apps/web

@@ -214,7 +214,7 @@ if (process.env.E2E_CUSTOM_BOOKS === 'installed') {
 }
 
 // With E2E_HTX_DASHBOARD=installed (htx-dashboard installed with `./dxos install` and the readings of
-// miniapps/htx-dashboard/tests/seed-readings.sql in place) it adds every tab and the page of a parcel with readings.
+// platform/tests/fixtures/htx-dashboard-readings.sql in place) it adds every tab and the page of a parcel with readings.
 if (process.env.E2E_HTX_DASHBOARD === 'installed') {
   const DASH = 'iframe[title="Bảng điều hành HTX"]'
   const dash = (name: string, path: string, heading: string) =>

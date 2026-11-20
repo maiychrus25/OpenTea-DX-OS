@@ -542,7 +542,7 @@ ensure_user smoke_manager_lb manager LB
 HD=/apps/htx-dashboard
 BLOCK_ERROR='Chưa lấy được dữ liệu'
 # 3 parcels x 5 sensors x 10 days for TC, one LB reading; the newest soil moisture of TC-A1 is 47.3 and TC-B2's rainfall is silent.
-seed_readings() { $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -q <miniapps/htx-dashboard/tests/seed-readings.sql >/dev/null; }
+seed_readings() { $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -q <platform/tests/fixtures/htx-dashboard-readings.sql >/dev/null; }
 seed_readings && pass "sensor readings seeded for TC-A1, TC-B1, TC-B2 and LB-A1" || fail "seed sensor readings"
 assert_eq "$(psql_app "select count(*) from telemetry.sensor_readings where htx_code='TC' and parcel_code in ('TC-A1','TC-B1','TC-B2')")" 596 "seeded 596 readings (3 parcels x 5 sensors x 40, minus 4 of the silent sensor)"
 assert_eq "$(psql_app "select count(*) from pg_namespace where nspname='app_htx_dashboard'")" 0 "the app has no schema before the install"

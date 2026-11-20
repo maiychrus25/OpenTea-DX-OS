@@ -5,7 +5,7 @@
 // Tổng quan from the menu, goes to Vùng trồng, opens a parcel that has readings and finds the newest figure and the daily charts of the
 // seeded data; the silent sensor shows in Dữ liệu; CSV and print work; a parcel of another cooperative is not found; the other roles
 // get no menu entry. After `npm run seed`, `make platform-up`, `make platform-smoke` (smoke_ users), `make web-up`,
-// `./dxos install miniapps/htx-dashboard` and the readings of miniapps/htx-dashboard/tests/seed-readings.sql:
+// `./dxos install miniapps/htx-dashboard` and the readings of platform/tests/fixtures/htx-dashboard-readings.sql:
 //   E2E_CORE=1 E2E_HTX_DASHBOARD=installed E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/story/htx-dashboard.spec.ts --project=chromium --no-deps
 // The figures are those of the seed: TC-A1's newest soil moisture is 47,3 and 40 readings of it lie in the last 10 days; the rainfall sensor
 // of TC-B2 has been silent for 24 hours. The spec never installs or removes the app: CI and the operator run ./dxos around it.
