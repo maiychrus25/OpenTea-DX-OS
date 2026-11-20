@@ -80,6 +80,8 @@ public sealed partial class AttendanceViewModel(IDialogService dialogs, IEmploye
     [ObservableProperty] private DateOnly _month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     [ObservableProperty] private string _monthLabel = string.Empty;
     [ObservableProperty] private string _summary = string.Empty;
+    [ObservableProperty] private IReadOnlyList<Controls.ChartSeries> _dailySeries = [];
+    [ObservableProperty] private IReadOnlyList<string> _dailyLabels = [];
 
     public override async Task LoadAsync()
     {
@@ -99,6 +101,16 @@ public sealed partial class AttendanceViewModel(IDialogService dialogs, IEmploye
             var cells = Days.Select(h => new DayCell(e, h.Date, map.GetValueOrDefault((e.Id, h.Date)), today)).ToList();
             Rows.Add(new AttendanceRow(e, cells));
         }
+        // Daily totals for the month chart (days after today stay empty).
+        var shown = Days.Where(d => d.Date <= today).ToList();
+        DailyLabels = shown.Select(d => d.Date.ToString("dd/MM")).ToList();
+        DailySeries =
+        [
+            new("Số công", Controls.ChartBase.Palette[3], shown.Select(d => (double)records.Where(r => r.WorkDate == d.Date).Sum(r => PayrollCalculator.WorkDayValue(r.Status))).ToList()),
+            new("Nghỉ / vắng", Controls.ChartBase.Palette[2], shown.Select(d => (double)records.Count(r => r.WorkDate == d.Date && r.Status is AttendanceStatus.Absent or AttendanceStatus.PaidLeave or AttendanceStatus.UnpaidLeave)).ToList()),
+            new("Giờ tăng ca", Controls.ChartBase.Palette[1], shown.Select(d => (double)records.Where(r => r.WorkDate == d.Date).Sum(r => r.OvertimeHours)).ToList()),
+        ];
+
         var todayCount = records.Count(r => r.WorkDate == today && r.Status is AttendanceStatus.Present or AttendanceStatus.HalfDay);
         Summary = Month.Month == today.Month && Month.Year == today.Year
             ? $"Hôm nay có mặt {todayCount}/{staff.Count(e => e.Status == EmployeeStatus.Active)} người · tổng {Rows.Sum(r => r.WorkDays):0.#} công trong tháng"
