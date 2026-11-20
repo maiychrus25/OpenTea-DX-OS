@@ -46,6 +46,41 @@ class RealmPolicyTest(unittest.TestCase):
         client = by_key(REALM["clients"], "clientId", "nextjs-web")
         self.assertIn("dx-os-core", client.get("defaultClientScopes", []))
 
+    def test_mobile_client_is_public_with_pkce_s256(self):
+        client = by_key(REALM["clients"], "clientId", "dxos-mobile")
+        self.assertIs(client["publicClient"], True)
+        self.assertIs(client["standardFlowEnabled"], True)
+        self.assertIs(client["implicitFlowEnabled"], False)
+        self.assertNotIn("secret", client)
+        self.assertEqual(client["attributes"]["pkce.code.challenge.method"], "S256")
+        self.assertEqual(client["redirectUris"], ["vn.opentea.dxos.tour:/oauth2redirect", "vn.opentea.hubmobile:/oauth2redirect"])
+
+    def test_mobile_redirect_uris_are_valid_uris(self):
+        # Keycloak refuses the whole realm import ("A redirect URI is not a valid URI") when a scheme has a character
+        # RFC 3986 does not allow, such as an underscore. Check every redirect URI of every client the same way.
+        import re
+        scheme = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*$")
+        for client in REALM["clients"]:
+            for uri in client.get("redirectUris", []):
+                if uri.startswith("/") or uri == "*":
+                    continue
+                name = uri.split(":", 1)[0]
+                self.assertRegex(name, scheme, f"{client['clientId']}: {uri}")
+                self.assertNotRegex(uri, r"\s", f"{client['clientId']}: {uri}")
+
+    def test_mobile_client_has_no_password_grant(self):
+        client = by_key(REALM["clients"], "clientId", "dxos-mobile")
+        self.assertIs(client["directAccessGrantsEnabled"], False)
+        self.assertIs(client.get("serviceAccountsEnabled", False), False)
+
+    def test_mobile_client_uses_the_core_scope_and_roles(self):
+        web = by_key(REALM["clients"], "clientId", "nextjs-web")
+        client = by_key(REALM["clients"], "clientId", "dxos-mobile")
+        self.assertEqual(client["defaultClientScopes"], web["defaultClientScopes"])
+        self.assertIn("dx-os-core", client["defaultClientScopes"])
+        self.assertIn("roles", client["defaultClientScopes"])
+        self.assertNotIn("offline_access", client["defaultClientScopes"])
+
     def test_demo_users_belong_to_their_cooperative(self):
         for name, (role, code) in DEMO_USERS.items():
             user = by_key(REALM["users"], "username", name)

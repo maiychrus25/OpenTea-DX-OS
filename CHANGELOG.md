@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Staff management clients** (`apps/staff-desktop`, `apps/staff-mobile`): *Tea Staff Manager*, a C# .NET 10 WPF app (MVVM) where the HTX owner manages employee records, teams, task assignment, a monthly timesheet, leave approval and payroll (prorated monthly salary or daily wage, overtime, allowance, bonus, compulsory insurance, advances; Draft, Approved, Paid), and *Tea Work*, a Kotlin Jetpack Compose app (MVVM) where staff accept and report tasks, check in and out, request leave and read payslips. The desktop app serves the phones over a small REST API (`docs/mobile-api.md`), stores data in SQLite or in the core schema `app_staff_work` (every table has `htx_code`), and signs in with a local owner account or the shared Keycloak account (realm `agrimarket`, role `manager`). Both follow `DESIGN.md`. Tests: xUnit for payroll and the task state machine, a Robolectric walkthrough of every mobile screen and an API contract test between the two apps.
+- **Keycloak client `dxos-mobile`**: a public PKCE client (S256; no password grant, no service account) for mobile apps, with the same scopes and roles as `nextjs-web` and the redirect URIs of the Android tour app and of the Flutter hub-mobile app (`docker/keycloak/realm-agrimarket.json`). `make mobile-client` adds it to a running realm and does nothing if it exists. Covered by `platform/tests/test_realm_policy.py`.
 
 ---
 
