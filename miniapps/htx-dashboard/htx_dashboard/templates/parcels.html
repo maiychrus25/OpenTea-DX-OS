@@ -1,10 +1,23 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "charts.html" as ch %}
 {% block title %}Vùng trồng{% endblock %}
 {% block head %}{% call kit.app_header("Vùng trồng", "Mọi thửa của HTX " ~ htx ~ " và số đo cảm biến mới nhất") %}{{ parts.actions(link, here, days, keep) }}{% endcall %}{% endblock %}
 {% block main %}
 {{ parts.period_nav(link, here, days, keep) }}
+
+{% if r.parcels.ok and not parcels_empty %}
+<div class="grid-cards" aria-label="Phân bố thửa">
+  {% call parts.card("Thửa theo trạng thái", 5, "v-status") %}
+    {{ ch.donut(status_donut, "Thửa theo trạng thái", "Chưa có thửa nào.") }}
+  {% endcall %}
+  {% call parts.card("Diện tích theo cây trồng (ha)", 7, "v-crops") %}
+    {{ ch.bars(crop_bars, "Diện tích theo cây trồng", "Chưa có thửa nào.") }}
+  {% endcall %}
+</div>
+{% endif %}
+
 <form class="toolbar" method="get" action="{{ prefix }}/parcels">
   <label>Tìm mã thửa hoặc tên hộ <input type="search" name="q" value="{{ q }}" maxlength="60"></label>
   <label>Trạng thái
@@ -21,8 +34,9 @@
   {% if parcels_empty %}{{ kit.empty("Chưa có thửa nào trong HTX.") }}
   {% elif not rows %}{{ kit.empty("Không có thửa nào khớp bộ lọc.", "Xoá bộ lọc", link('/parcels')) }}
   {% else %}
-  <table role="table">
-    <thead role="rowgroup"><tr role="row"><th role="columnheader">Thửa</th><th role="columnheader">Hộ</th><th role="columnheader">Diện tích</th><th role="columnheader">Cây</th><th role="columnheader">Trạng thái</th><th role="columnheader">Số đo mới nhất</th><th role="columnheader">Báo cáo bệnh gần nhất</th></tr></thead>
+  <div class="table-wrap">
+  <table role="table" class="parcel-table">
+    <thead role="rowgroup"><tr role="row"><th role="columnheader">Thửa</th><th role="columnheader">Hộ</th><th role="columnheader">Diện tích</th><th role="columnheader">Cây</th><th role="columnheader">Trạng thái</th><th role="columnheader">Số đo mới nhất và xu hướng 30 ngày gần đây</th><th role="columnheader">Báo cáo bệnh gần nhất</th></tr></thead>
     <tbody role="rowgroup">
     {% for row in rows %}
       <tr role="row">
@@ -34,7 +48,11 @@
         <td role="cell" data-label="Số đo mới nhất">
           {% if not r.latest.ok %}<span class="note">{{ ERROR_TEXT }}</span>
           {% elif row.readings %}
-          <ul class="readings">{% for x in row.readings %}<li{% if x.silent %} class="silent"{% endif %}><span>{{ x.label }}</span> <strong>{{ x.value }}{% if x.unit %} {{ x.unit }}{% endif %}</strong> <span class="age">{{ x.age }}</span></li>{% endfor %}</ul>
+          <ul class="readings">{% for x in row.readings %}
+            <li{% if x.silent %} class="silent"{% endif %}>
+              <span class="reading-name">{{ x.label }}</span> <strong>{{ x.value }}{% if x.unit %} {{ x.unit }}{% endif %}</strong> <span class="age">{{ x.age }}</span>
+              {{ ch.spark(x.spark, x.label ~ " " ~ row.parcel.code) }}
+            </li>{% endfor %}</ul>
           {% else %}<span class="note">Chưa có cảm biến</span>{% endif %}
         </td>
         <td role="cell" data-label="Báo cáo bệnh gần nhất">
@@ -46,6 +64,7 @@
     {% endfor %}
     </tbody>
   </table>
+  </div>
   {% set filt = filter %}
   {{ kit.pagination(page, link('/parcels', page=page.number - 1, **filt) if page.has_prev else None, link('/parcels', page=page.number + 1, **filt) if page.has_next else None) }}
   {% endif %}

@@ -58,19 +58,27 @@ def parcels() -> list[dict]:
     return rows
 
 
+WEEKDAY_ENTRIES = (3, 2, 2, 4, 2, 1, 0)  # Monday to Sunday: the cooperative's rhythm of writing journals
+WEEKDAY_ACTIVITY = (["IRRIGATION", "SPRAYING"], ["FERTILIZING"], ["SPRAYING", "OTHER"], ["IRRIGATION", "HARVEST"],
+                    ["FERTILIZING", "SOWING"], ["HARVEST"], ["OTHER"])
+
+
 def journals() -> list[dict]:
     rng = random.Random(3)
-    rows, kinds = [], ["IRRIGATION", "FERTILIZING", "SPRAYING", "HARVEST", "SOWING", "OTHER"]
-    for i in range(240):
-        n = rng.randint(1, PARCEL_COUNT)
-        if (n - 1) % 12 in (10, 11):  # these two households never write
-            n -= 2
-        days = rng.uniform(0, 85) if i > 30 else rng.uniform(0, 12)
-        entry = NOW - timedelta(days=days)
-        rows.append({"id": f"j{i:03d}", "entry_date": naive(entry), "activity_type": rng.choice(kinds), "status": "APPROVED",
-                     "created_at": naive(entry + timedelta(hours=2)), "performed_by": household_of(n)["name"],
-                     "notes": "Tưới sáng, đất còn ẩm." if i % 5 == 0 else None,
-                     "parcel": {"parcel_code": code(n), "household": household_of(n)}})
+    rows = []
+    for back in range(89, -1, -1):
+        day = NOW - timedelta(days=back)
+        for k in range(WEEKDAY_ENTRIES[day.weekday()] + (1 if rng.random() < 0.3 else 0)):
+            n = rng.randint(1, PARCEL_COUNT)
+            if (n - 1) % 12 in (10, 11):  # these two households never write
+                n -= 2
+            entry = day - timedelta(hours=rng.uniform(0, 9) + k)
+            kind = rng.choice(WEEKDAY_ACTIVITY[day.weekday()])
+            rows.append({"id": f"j{len(rows):03d}", "entry_date": naive(entry), "activity_type": kind, "status": "APPROVED",
+                         "created_at": naive(entry + timedelta(hours=2)), "performed_by": household_of(n)["name"],
+                         "notes": "Tưới sáng, đất còn ẩm." if len(rows) % 5 == 0 else None,
+                         "parcel": {"parcel_code": code(n), "household": household_of(n)}})
+    rows.sort(key=lambda j: j["entry_date"], reverse=True)
     # pending: three older than 3 days, the rest fresh
     for i, age in enumerate([9.5, 5.2, 3.4, 2.0, 1.1, 0.4, 0.1]):
         row = rows[i]
@@ -92,6 +100,16 @@ def diseases() -> list[dict]:
         rows.append({"id": f"d{i:02d}", "detection_date": naive(at), "ai_disease_name": names[i % 4], "ai_confidence": 0.62 + (i % 5) / 20,
                      "confirmed_diagnosis": names[(i + 1) % 4] if status == "CONFIRMED" else None, "status": status,
                      "created_at": naive(at), "parcel": {"parcel_code": code(n)}, "household": household_of(n)})
+    rng = random.Random(5)  # 36 older reports, none pending: weekly bursts of the four kinds, and a rising share of confirmed ones
+    for i in range(36):
+        at = NOW - timedelta(days=rng.uniform(14, 88))
+        n = rng.randint(1, PARCEL_COUNT)
+        confirmed = rng.random() < 0.7
+        status = ("CONFIRMED" if confirmed else "REJECTED") if rng.random() < 0.9 else "CONFIRMED"
+        rows.append({"id": f"d{14 + i:02d}", "detection_date": naive(at), "ai_disease_name": names[rng.randrange(4)],
+                     "ai_confidence": round(0.55 + rng.random() * 0.42, 2),
+                     "confirmed_diagnosis": names[rng.randrange(4)] if status == "CONFIRMED" else None, "status": status,
+                     "created_at": naive(at), "parcel": {"parcel_code": code(n)}, "household": household_of(n)})
     return rows
 
 
@@ -100,7 +118,8 @@ def lots() -> list[dict]:
     for i, (status, back, kg) in enumerate([("DRAFT", 2, 420.0), ("DRAFT", 9, 310.0), ("READY", 12, 880.0), ("READY", 25, 640.0),
                                             ("READY", 41, None), ("QR_EXPORTED", 33, 1200.0), ("QR_EXPORTED", 47, 760.0),
                                             ("QR_EXPORTED", 61, 905.5), ("QR_EXPORTED", 75, 530.0), ("QR_EXPORTED", 99, 410.0),
-                                            ("READY", 5, 150.0)]):
+                                            ("READY", 5, 150.0)] + [
+            (("QR_EXPORTED", "READY", "DRAFT")[i % 3], 12 + i * 11, round(300 + (i * 137) % 700, 1)) for i in range(15)]):
         at = NOW - timedelta(days=back)
         rows.append({"lot_code": f"TC-CHE-{at:%Y%m%d}-{i + 1:03d}", "commodity": "Chè xanh", "quality_grade": ["Grade 1", "Grade 2", None][i % 3],
                      "harvest_date": naive(at - timedelta(days=3)), "estimated_weight_kg": kg,
@@ -172,7 +191,9 @@ def weather() -> list[dict]:
 
 def prices() -> dict:
     row = lambda c, m_, v, u, s, h: {"commodity": c, "metric": m_, "value": v, "unit": u, "source": s, "fetched_at": naive(NOW - timedelta(hours=h))}
-    return {"market_data": [row("Tea", "export_price", 3.4, "USD/kg", "Mô phỏng (Toàn quốc)", 5), row("Tea", "producer_price_index", 108.2, "index", "FAOSTAT", 30)]}
+    history = [row("Tea", "export_price", round(3.3 + 0.25 * math.sin(d / 9.0) + d * 0.002, 2), "USD/kg", "Mô phỏng (Toàn quốc)", d * 24 + 5)
+               for d in range(90)]
+    return {"market_data": [row("Tea", "producer_price_index", 108.2, "index", "FAOSTAT", 30)] + history}
 
 
 def _count(n: int) -> dict:
@@ -198,7 +219,9 @@ def answer(payload: dict) -> dict:
     if query == cc.JOURNAL_COUNTS:
         since = cc.parse_ts(v["since"])
         rows = journals()
+        low = cc.parse_ts(v["from_previous"])
         return {"data": {"in_period": _count(sum(cc.parse_ts(j["entry_date"]) >= since for j in rows)),
+                         "previous": _count(sum(low <= cc.parse_ts(j["entry_date"]) < since for j in rows)),
                          "pending": _count(sum(j["status"] == "PENDING_APPROVAL" for j in rows)),
                          "changes": _count(sum(j["status"] == "REQUEST_CHANGES" for j in rows))}}
     if query == cc.PARCEL_JOURNALS:
@@ -222,6 +245,8 @@ def answer(payload: dict) -> dict:
         return {"data": {"telemetry_sensor_readings": latest_readings(code_of)}}
     if query == cc.DAILY_TOTALS:
         return {"data": {"telemetry_sensor_daily": [{"day": r["day"], "reading_count": r["reading_count"]} for r in daily(since=v["from"])]}}
+    if query == cc.SENSOR_DAILY:
+        return {"data": {"telemetry_sensor_daily": daily(since=v["from"])}}
     if query == cc.PARCEL_DAILY:
         return {"data": {"telemetry_sensor_daily": daily(code_of, v["from"])}}
     if query == cc.RUNS:

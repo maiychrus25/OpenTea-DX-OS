@@ -1,6 +1,6 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
-{#- Pieces of this app only; the shared ones are in kit.html. -#}
+{#- Pieces of this app only; the shared ones are in kit.html and the chart toolkit in charts.html. -#}
 {% import "kit.html" as kit %}
 
 {% macro error() -%}
@@ -24,8 +24,9 @@
 </span>
 {%- endmacro %}
 
-{# One daily series as a server-drawn SVG: the band is min..max of each day, the line the average. The table is the same data. #}
+{# One daily series as a server-drawn SVG: the band is min..max of each day, the area and the line the average. #}
 {% macro line_chart(chart, title, unit) -%}
+{%- if chart.empty %}<p class="empty chart-empty">Không có số đo trong kỳ này.</p>{% else %}
 <figure class="line-figure">
   <svg class="line-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-label="{{ title }}, theo ngày">
     {%- for t in chart.y_ticks %}
@@ -35,6 +36,7 @@
     {%- for t in chart.x_ticks %}
     <text class="tick" x="{{ t.pos }}" y="{{ chart.height - 6 }}" text-anchor="middle">{{ t.label }}</text>
     {%- endfor %}
+    {%- for f in chart.fills %}<polygon class="area" points="{{ f }}"/>{% endfor %}
     {%- if chart.band %}<polygon class="band" points="{{ chart.band }}"/>{% endif %}
     {%- for s in chart.segments %}<polyline class="series" points="{{ s }}"/>{% endfor %}
     {%- for d in chart.dots %}<circle class="dot" cx="{{ d.x }}" cy="{{ d.y }}" r="3"><title>{{ d.label }}{% if unit %} {{ unit }}{% endif %}</title></circle>{% endfor %}
@@ -51,8 +53,17 @@
     </table>
   </details>
 </figure>
+{%- endif %}
 {%- endmacro %}
 
 {% macro notes(items) -%}
 {%- for n in items %}<p class="note">{{ n }}</p>{% endfor -%}
+{%- endmacro %}
+
+{# A card of the chart grid: a title, a note under it and the chart. span is the number of the 12 columns it takes. #}
+{% macro card(title, span, id) -%}
+<section class="card span-{{ span }}" aria-labelledby="{{ id }}">
+  <h2 id="{{ id }}">{{ title }}</h2>
+  {{ caller() }}
+</section>
 {%- endmacro %}

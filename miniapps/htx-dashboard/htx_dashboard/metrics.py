@@ -325,14 +325,8 @@ def lot_weight_by_status(rows: Sequence[Lot]) -> list[tuple[str, float]]:
 
 
 def lots_by_month(rows: Sequence[Lot], now: datetime, months: int = 6) -> list[tuple[str, int]]:
-    today = vn_day(now)
-    keys = []
-    year, month = today.year, today.month
-    for _ in range(months):
-        keys.append((year, month))
-        year, month = (year, month - 1) if month > 1 else (year - 1, 12)
     count = Counter((vn_day(lot.created_at).year, vn_day(lot.created_at).month) for lot in rows)
-    return [(f"{m:02d}/{y}", count.get((y, m), 0)) for y, m in reversed(keys)]
+    return [(f"{m:02d}/{y}", count.get((y, m), 0)) for y, m in _month_keys(now, months)]
 
 
 # ---------- sensors and data lifecycle ----------
@@ -458,3 +452,180 @@ METRIC_VN = {"crop_production_index": "Chỉ số SX nông nghiệp", "food_prod
 
 def metric_vn(metric: str) -> str:
     return METRIC_VN.get(metric, metric.replace("_", " "))
+
+
+# ---------- 0.2.0 figures: previous period, weekly stacks, daily averages, freshness, funnels, prices, runs ----------
+
+def previous_count(timestamps: Iterable[datetime], now: datetime, days: int) -> int:
+    """Rows of the period before the current one, the same length: [start - days, start)."""
+    low, high = period_start(now, 2 * days), period_start(now, days)
+    return sum(1 for t in timestamps if low <= t < high)
+
+
+def calendar_counts(timestamps: Iterable[datetime], now: datetime, days: int) -> dict[date, int]:
+    """Rows per Vietnam day inside the period, for the calendar heatmap."""
+    return dict(Counter(vn_day(t) for t in timestamps if in_period(t, now, days)))
+
+
+def _stacked(pairs: Iterable[tuple[date, str]], weeks: list[date], names: Sequence[str]) -> tuple[list[date], list[str], list[list[int]]]:
+    count = Counter(pairs)
+    kept = [n for n in names if any(count.get((w, n), 0) for w in weeks)]
+    return weeks, kept, [[count.get((w, n), 0) for w in weeks] for n in kept]
+
+
+def activity_by_week(rows: Sequence[Journal], now: datetime, days: int) -> tuple[list[date], list[str], list[list[int]]]:
+    """Journal entries per week stacked by activity type, in the order of ACTIVITY; activities with no entry are left out."""
+    weeks = [w for w, _ in weekly_counts([e.entry_date for e in rows], now, days)]
+    pairs = [(week_start(vn_day(e.entry_date)), ACTIVITY.get(e.activity_type, e.activity_type)) for e in rows
+             if in_period(e.entry_date, now, days)]
+    return _stacked(pairs, weeks, list(ACTIVITY.values()))
+
+
+def disease_by_week(rows: Sequence[Disease], now: datetime, days: int, top: int = 4) -> tuple[list[date], list[str], list[list[int]]]:
+    """Reports per week stacked by kind: the `top` most reported kinds of the period, the rest as one 'Khác'."""
+    inside = [d for d in rows if in_period(d.created_at, now, days)]
+    weeks = [w for w, _ in weekly_counts([d.created_at for d in inside], now, days)]
+    kinds = [k for k, _ in disease_kinds(inside)]
+    named = kinds[:top]
+    pairs = [(week_start(vn_day(d.created_at)), disease_kind(d) if disease_kind(d) in named else "Khác") for d in inside]
+    return _stacked(pairs, weeks, named + (["Khác"] if len(kinds) > top else []))
+
+
+CONFIDENCE_BINS = (("dưới 60%", 0.0, 0.6), ("60–69%", 0.6, 0.7), ("70–79%", 0.7, 0.8), ("80–89%", 0.8, 0.9), ("từ 90%", 0.9, 1.01))
+
+
+def confidence_bins(rows: Sequence[Disease]) -> list[tuple[str, int]]:
+    """How sure the AI was: each report falls into one bin (confidence is a share from 0 to 1)."""
+    return [(label, sum(1 for d in rows if low <= d.confidence < high)) for label, low, high in CONFIDENCE_BINS]
+
+
+def confirmed_vs_ai(rows: Sequence[Disease]) -> list[tuple[str, int]]:
+    return [("Đã xác nhận", sum(1 for d in rows if d.status == "CONFIRMED")),
+            ("Chỉ AI, chưa xác nhận", sum(1 for d in rows if d.status == "PENDING")),
+            ("Bị bác bỏ", sum(1 for d in rows if d.status == "REJECTED"))]
+
+
+def expected_by_crop(parcels: Sequence[Parcel]) -> list[tuple[str, float]]:
+    """Expected kg per crop of the growing parcels, the core's definition (see expected_yield), largest first."""
+    growing = [p for p in parcels if p.status not in ("HARVESTED", "DRAFT")]
+    kg: dict[str, float] = {}
+    for p in growing:
+        kg[p.crop_type] = kg.get(p.crop_type, 0.0) + (p.area_ha * p.yield_per_ha if p.yield_per_ha is not None else 0.0)
+    return sorted(kg.items(), key=lambda kv: (-kv[1], kv[0]))
+
+
+def lots_funnel(rows: Sequence[Lot]) -> list[tuple[str, int]]:
+    """Lots that reached each stage: a lot is counted at every stage it passed (DRAFT, READY, QR_EXPORTED in that order)."""
+    return [("Đã tạo", len(rows)), ("Sẵn sàng", sum(1 for lot in rows if lot.status in ("READY", "QR_EXPORTED"))),
+            ("Đã xuất QR", sum(1 for lot in rows if lot.status == "QR_EXPORTED"))]
+
+
+def _month_keys(now: datetime, months: int) -> list[tuple[int, int]]:
+    today = vn_day(now)
+    keys, year, month = [], today.year, today.month
+    for _ in range(months):
+        keys.append((year, month))
+        year, month = (year, month - 1) if month > 1 else (year - 1, 12)
+    return list(reversed(keys))
+
+
+def lots_by_month_status(rows: Sequence[Lot], now: datetime, months: int = 6) -> tuple[list[str], list[str], list[list[int]]]:
+    keys = _month_keys(now, months)
+    count = Counter(((vn_day(lot.created_at).year, vn_day(lot.created_at).month), lot.status) for lot in rows)
+    names = list(LOT_STATUS.values())
+    return ([f"{m:02d}/{y}" for y, m in keys], names,
+            [[count.get((k, status), 0) for k in keys] for status in LOT_STATUS])
+
+
+def lot_pairs(rows: Sequence[Lot], n: int = 12) -> list[Lot]:
+    """The newest lots that have both an estimated and an actual weight."""
+    return [lot for lot in rows if lot.estimated_kg is not None and lot.actual_kg is not None][:n]
+
+
+def lot_grades(rows: Sequence[Lot]) -> list[tuple[str, int]]:
+    return _ranked(Counter(lot.grade or "Chưa phân hạng" for lot in rows))
+
+
+def sensor_day_averages(rows: Sequence[Daily]) -> dict[str, list[tuple[date, float]]]:
+    """Per sensor and day, the average of the parcels' daily averages, each weighted by its reading count."""
+    total: dict[tuple[str, date], list[float]] = {}
+    for d in rows:
+        acc = total.setdefault((d.sensor, d.day), [0.0, 0.0])
+        acc[0] += d.avg * d.count
+        acc[1] += d.count
+    out: dict[str, list[tuple[date, float]]] = {}
+    for (sensor, day), (weighted, count) in sorted(total.items()):
+        if count > 0:
+            out.setdefault(sensor, []).append((day, weighted / count))
+    return out
+
+
+def series_by_day(rows: Sequence[Daily], start: date, end: date) -> dict[tuple[str, str], list[float | None]]:
+    """Per (parcel, sensor), the weighted average of each day from start to end; a day without readings is None."""
+    days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
+    total: dict[tuple[str, str, date], list[float]] = {}
+    for d in rows:
+        if start <= d.day <= end:
+            acc = total.setdefault((d.parcel_code, d.sensor, d.day), [0.0, 0.0])
+            acc[0] += d.avg * d.count
+            acc[1] += d.count
+    series: dict[tuple[str, str], list[float | None]] = {}
+    for (parcel, sensor, day), (weighted, count) in total.items():
+        values = series.setdefault((parcel, sensor), [None] * len(days))
+        if count > 0:
+            values[(day - start).days] = weighted / count
+    return series
+
+
+def sensor_parcels(latest: Sequence[Reading]) -> list[str]:
+    return sorted({r.parcel_code for r in latest})
+
+
+def freshness(codes: Sequence[str], latest: Sequence[Reading], now: datetime) -> dict[tuple[str, str], str]:
+    """For every parcel and every sensor the platform accepts: 'fresh', 'silent' (no reading within the silent window) or
+    'none' (no reading in the hot store)."""
+    last = {}
+    for r in latest:
+        last[(r.parcel_code, r.sensor)] = max(r.ts, last.get((r.parcel_code, r.sensor), r.ts))
+    state = {}
+    for code in codes:
+        for sensor in SENSOR:
+            ts = last.get((code, sensor))
+            state[(code, sensor)] = "none" if ts is None else (
+                "silent" if now - ts > timedelta(hours=SENSOR_SILENT_HOURS) else "fresh")
+    return state
+
+
+def readings_by_sensor(rows: Sequence[Daily]) -> list[tuple[str, int]]:
+    """Stored readings per sensor over the hot store, in the order of SENSOR."""
+    count = Counter()
+    for d in rows:
+        count[d.sensor] += d.count
+    return [(sensor_label(s)[0], count[s]) for s in SENSOR if count.get(s)]
+
+
+def price_series(rows: Sequence[Price], metric: str) -> list[tuple[datetime, float]]:
+    """The values of one metric over time, oldest first."""
+    return sorted(((p.fetched_at, p.value) for p in rows if p.metric == metric), key=lambda x: x[0])
+
+
+@dataclass(frozen=True)
+class RunVolume:
+    day: date
+    rows: int
+    size_bytes: int
+    failed: bool
+
+
+def run_volume(rows: Sequence[Run]) -> list[RunVolume]:
+    """One entry per lifecycle run, by the day of its data; a failed run has no rows and is marked."""
+    return sorted((RunVolume(r.partition_date, r.row_count or 0, r.size_bytes or 0, r.status == "failed") for r in rows),
+                  key=lambda v: v.day)
+
+
+def area_by_crop(parcels: Sequence[Parcel]) -> list[tuple[str, float]]:
+    """Hectares per crop of every parcel (any status), largest first."""
+    ha: dict[str, float] = {}
+    for p in parcels:
+        ha[p.crop_type] = ha.get(p.crop_type, 0.0) + p.area_ha
+    return sorted(ha.items(), key=lambda kv: (-kv[1], kv[0]))

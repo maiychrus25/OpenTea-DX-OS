@@ -46,8 +46,9 @@ JOURNALS = """query ($since: timestamp!, $limit: Int!) { journal_entries(where: 
 JOURNALS_PENDING = """query ($limit: Int!) { journal_entries(where: {status: {_eq: "PENDING_APPROVAL"}},
   order_by: {created_at: asc}, limit: $limit) { """ + JOURNAL_FIELDS + " } }"
 
-JOURNAL_COUNTS = """query ($since: timestamp!) {
+JOURNAL_COUNTS = """query ($since: timestamp!, $from_previous: timestamp!) {
   in_period: journal_entries_aggregate(where: {entry_date: {_gte: $since}}) { aggregate { count } }
+  previous: journal_entries_aggregate(where: {entry_date: {_gte: $from_previous, _lt: $since}}) { aggregate { count } }
   pending: journal_entries_aggregate(where: {status: {_eq: "PENDING_APPROVAL"}}) { aggregate { count } }
   changes: journal_entries_aggregate(where: {status: {_eq: "REQUEST_CHANGES"}}) { aggregate { count } } }"""
 
@@ -75,7 +76,8 @@ WEATHER = """query ($code: String!) { weather_cache(where: {parcel: {parcel_code
 PRICE_FIELDS = "commodity metric value unit source fetched_at"
 
 # Tea rows only: the other commodities of the table are cereals and the like, of no use to a tea cooperative.
-PRICES = """query { market_data(where: {commodity: {_eq: "Tea"}}, order_by: {fetched_at: desc}, limit: 3) { """ + PRICE_FIELDS + " } }"
+# The history of the tea prices (about four months of daily rows) draws their trend; the page shows the newest of each metric.
+PRICES = """query { market_data(where: {commodity: {_eq: "Tea"}}, order_by: {fetched_at: desc}, limit: 120) { """ + PRICE_FIELDS + " } }"
 
 # The newest reading of each (parcel, sensor); distinct_on needs the same columns first in order_by.
 LATEST_READINGS = """query ($htx: String!, $limit: Int!) { telemetry_sensor_readings(
@@ -91,6 +93,10 @@ DAILY_FIELDS = "parcel_code sensor day reading_count min_value max_value avg_val
 # The Data tab needs only the stored readings per day, so it asks two columns of the whole grid (parcels x sensors x days)
 # instead of eight. 50,000 rows hold 330 parcels with 5 sensors over 30 days; past that the page says it is cut.
 HOT_LIMIT = 50000
+# Every parcel and sensor of the cooperative per day over the window: the sensor charts, the sparklines and the readings per sensor.
+SENSOR_DAILY = """query ($htx: String!, $from: date!, $limit: Int!) { telemetry_sensor_daily(
+  where: {htx_code: {_eq: $htx}, day: {_gte: $from}}, order_by: [{parcel_code: asc}, {sensor: asc}, {day: asc}], limit: $limit) { """ + DAILY_FIELDS + " } }"
+
 DAILY_TOTALS = """query ($htx: String!, $from: date!, $limit: Int!) { telemetry_sensor_daily(
   where: {htx_code: {_eq: $htx}, day: {_gte: $from}}, order_by: [{day: asc}], limit: $limit) { day reading_count } }"""
 
@@ -235,10 +241,11 @@ class JournalCounts:
     in_period: int
     pending: int
     changes: int
+    previous: int
 
 
 def parse_journal_counts(data: dict) -> JournalCounts:
-    return JournalCounts(_count(data, "in_period"), _count(data, "pending"), _count(data, "changes"))
+    return JournalCounts(_count(data, "in_period"), _count(data, "pending"), _count(data, "changes"), _count(data, "previous"))
 
 
 def _journal(row: dict) -> m.Journal:

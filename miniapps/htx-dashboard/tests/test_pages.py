@@ -371,3 +371,33 @@ def test_a_formula_in_a_household_name_gets_a_leading_quote_in_the_parcel_csv(mo
     hostile(monkeypatch, FORMULA)
     body = TestClient(main.app).get("/parcels/export.csv", headers=MANAGER).content.decode("utf-8-sig")
     assert "'=HYPERLINK" in body
+
+
+# ---------- 0.2.0: the charts of each tab are drawn on the server, and every chart has its numbers as text ----------
+
+@pytest.mark.parametrize("path, drawn", [
+    ("/", ['kpi-strip', 'class="donut', 'class="col-chart', 'class="matrix', 'class="funnel', 'class="gantt']),
+    ("/production", ['class="calendar', 'class="donut', 'class="hbars', 'class="gantt', 'class="col-chart']),
+    ("/parcels", ['class="donut', 'class="hbars', 'class="spark']),
+    ("/parcels/P-TC-003", ['class="scatter', 'class="col-chart', 'class="gauge', 'class="line-chart']),
+    ("/health", ['class="col-chart', 'class="donut', 'class="hbars']),
+    ("/lots", ['class="funnel', 'class="col-chart', 'class="hbars']),
+    ("/data", ['class="line-chart', 'class="col-chart', 'class="hbars', 'class="matrix', 'class="ring']),
+])
+def test_each_tab_draws_its_charts_on_the_server(client, path, drawn):
+    html = client.get(path, headers=MANAGER).text
+    for marker in drawn:
+        assert marker in html, marker
+    assert "<script" not in html and 'style="' not in html
+
+
+def test_the_calendar_has_its_total_as_text(client):
+    assert "Tổng 71 nhật ký trong 30 ngày" in client.get("/production", headers=MANAGER).text
+
+
+def test_empty_cooperative_says_so_on_every_chart(monkeypatch):
+    empty = {cc.PARCELS: lambda p: {"data": {"parcels": []}}, cc.JOURNALS: lambda p: {"data": {"journal_entries": []}},
+             cc.DISEASES: lambda p: {"data": {"disease_reports": []}}, cc.LOTS: lambda p: {"data": {"lots": []}}}
+    use(monkeypatch, **empty)
+    html = TestClient(main.app).get("/", headers=MANAGER).text
+    assert "Chưa có thửa nào trong HTX." in html and "Chưa có lô chè nào." in html

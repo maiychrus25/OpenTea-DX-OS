@@ -1,83 +1,74 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "charts.html" as ch %}
 {% block title %}Sản xuất{% endblock %}
-{% block head %}{% call kit.app_header("Sản xuất", "Thửa, vụ canh tác, lịch thu hoạch và nhật ký của HTX " ~ htx) %}{{ parts.actions(link, here, days, keep) }}{% endcall %}{% endblock %}
+{% block head %}{% call kit.app_header("Sản xuất", "Nhật ký, hộ ghi chép, vụ đang canh tác và sản lượng kỳ vọng của HTX " ~ htx) %}{{ parts.actions(link, here, days, keep) }}{% endcall %}{% endblock %}
 {% block main %}
 {{ parts.period_nav(link, here, days, keep) }}
 
-<div class="two-up">
-  <section aria-label="Thửa theo trạng thái">
+<div class="grid-cards" aria-label="Biểu đồ sản xuất">
+
+  {% call parts.card("Nhật ký theo ngày", 12, "p-calendar") %}
+    {% if r.journals.ok %}{{ ch.calendar(calendar, "Số nhật ký mỗi ngày trong " ~ days ~ " ngày", "Chưa có nhật ký nào trong " ~ days ~ " ngày qua.", "Tổng " ~ (calendar_total | num(0)) ~ " nhật ký trong " ~ days ~ " ngày. Mỗi ô là một ngày, cột là tuần, từ thứ Hai.") }}
+    {% else %}{{ parts.error() }}{% endif %}
+  {% endcall %}
+
+  {% call parts.card("Loại hoạt động", 4, "p-mix") %}
+    {% if r.journals.ok %}{{ ch.donut(mix, "Loại hoạt động trong kỳ", "Chưa có nhật ký nào trong " ~ days ~ " ngày qua.") }}
+    {% else %}{{ parts.error() }}{% endif %}
+  {% endcall %}
+
+  {% call parts.card("Hộ ghi nhật ký nhiều nhất", 8, "p-households") %}
+    {% if r.journals.ok %}
+      {{ ch.bars(top, "Số nhật ký của từng hộ", "Chưa có nhật ký nào trong " ~ days ~ " ngày qua.") }}
+      {% if silent_households is not none %}
+        {% if silent_households %}<p class="note">Chưa có nhật ký trong kỳ: {{ silent_households | join(", ") }}.</p>
+        {% else %}<p class="note">Mọi hộ đều có ít nhất một nhật ký trong kỳ.</p>{% endif %}
+      {% endif %}
+    {% else %}{{ parts.error() }}{% endif %}
+  {% endcall %}
+
+  {% call parts.card("Vụ đang canh tác: gieo đến ngày thu hoạch dự kiến", 12, "p-gantt") %}
     {% if r.parcels.ok %}
-      {% if parcels_empty %}{{ kit.empty("Chưa có thửa nào trong HTX.") }}
-      {% else %}{{ kit.chart("Thửa theo trạng thái", status_chart, "thửa") }}{% endif %}
+      {{ ch.timeline(gantt, "Vụ đang canh tác từ ngày gieo đến ngày thu hoạch dự kiến", "Chưa có vụ nào có ngày thu hoạch dự kiến.", gantt_extra) }}
     {% else %}{{ parts.error() }}{% endif %}
-  </section>
-  <section aria-label="Vụ đang canh tác">
-    <h2>Vụ đang canh tác</h2>
-    {% if r.parcels.ok and yield %}
-    {{ kit.stats([
-      {"label": "Thửa có vụ đang canh tác", "value": cultivating | num(0), "hint": "vụ chưa ghi ngày thu hoạch"},
-      {"label": "Sản lượng kỳ vọng", "value": yield.kg | kg, "hint": (yield.missing ~ " thửa chưa khai năng suất") if yield.missing else (yield.parcels ~ " thửa chưa thu hoạch")}
-    ]) }}
-    {% if harvest.without_date %}<p class="note">{{ harvest.without_date }} vụ chưa có ngày thu hoạch dự kiến.</p>{% endif %}
+  {% endcall %}
+
+  {% call parts.card("Sản lượng kỳ vọng theo tháng (tấn)", 7, "p-months") %}
+    {% if r.parcels.ok %}{{ ch.columns(month_chart, "Sản lượng kỳ vọng theo tháng thu hoạch", "Chưa có thửa nào có cả ngày thu hoạch và năng suất ước tính.") }}
     {% else %}{{ parts.error() }}{% endif %}
-  </section>
+  {% endcall %}
+
+  {% call parts.card("Sản lượng kỳ vọng theo cây (tấn)", 5, "p-crops") %}
+    {% if r.parcels.ok %}{{ ch.bars(crops, "Sản lượng kỳ vọng theo cây", "Chưa có thửa đang chăm sóc.") }}
+    {% else %}{{ parts.error() }}{% endif %}
+  {% endcall %}
+
 </div>
 
-<h2>Lịch thu hoạch</h2>
-{% if r.parcels.ok %}
-  {% if harvest_rows %}
-  <table role="table">
-    <thead role="rowgroup"><tr role="row"><th role="columnheader">Thửa</th><th role="columnheader">Hộ</th><th role="columnheader">Ngày dự kiến</th><th role="columnheader">Còn</th><th role="columnheader">Sản lượng kỳ vọng</th></tr></thead>
-    <tbody role="rowgroup">
-    {% for h in harvest_rows %}
-      <tr role="row">
-        <td role="cell" data-label="Thửa"><a href="{{ link('/parcels/' ~ h.code) }}">{{ h.code }}</a></td>
-        <td role="cell" data-label="Hộ">{{ h.household }}</td>
-        <td role="cell" data-label="Ngày dự kiến">{{ h.due | vn_date }}</td>
-        <td role="cell" data-label="Còn">{% if h.overdue %}<span class="pill danger">quá hạn {{ -h.days_left }} ngày</span>{% elif h.days_left == 0 %}<span class="pill warn">hôm nay</span>{% else %}{{ h.days_left }} ngày{% endif %}</td>
-        <td role="cell" data-label="Sản lượng kỳ vọng">{% if h.kg is none %}chưa khai năng suất{% else %}{{ h.kg | kg }}{% endif %}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}{{ kit.empty("Không có vụ nào dự kiến thu hoạch trong 30 ngày tới và không có vụ quá hạn.") }}{% endif %}
-  {% if month_chart %}{{ kit.chart("Sản lượng kỳ vọng theo tháng thu hoạch", month_chart) }}{% endif %}
-{% else %}{{ parts.error() }}{% endif %}
+<section class="group" aria-labelledby="harvest-title">
+  <h2 id="harvest-title">Lịch thu hoạch dự kiến</h2>
+  {% if r.parcels.ok %}
+    {% if harvest_rows %}
+    <table role="table">
+      <thead role="rowgroup"><tr role="row"><th role="columnheader">Thửa</th><th role="columnheader">Hộ</th><th role="columnheader">Ngày dự kiến</th><th role="columnheader">Còn</th><th role="columnheader">Sản lượng kỳ vọng</th><th role="columnheader">Tình trạng</th></tr></thead>
+      <tbody role="rowgroup">
+      {% for h in harvest_rows %}
+        <tr role="row"{% if h.overdue %} class="row-overdue"{% endif %}>
+          <td role="cell" data-label="Thửa"><a href="{{ link('/parcels/' ~ h.code) }}">{{ h.code }}</a></td>
+          <td role="cell" data-label="Hộ">{{ h.household }}</td>
+          <td role="cell" data-label="Ngày dự kiến">{{ h.due | vn_date }}</td>
+          <td role="cell" data-label="Còn">{% if h.overdue %}{{ -h.days_left }} ngày quá hạn{% elif h.days_left == 0 %}hôm nay{% else %}{{ h.days_left }} ngày{% endif %}</td>
+          <td role="cell" data-label="Sản lượng kỳ vọng">{% if h.kg is none %}Chưa khai năng suất{% else %}{{ h.kg | kg }}{% endif %}</td>
+          <td role="cell" data-label="Tình trạng"><span class="pill{% if h.overdue %} danger{% endif %}">{% if h.overdue %}Quá hạn{% else %}Sắp tới{% endif %}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}{{ kit.empty("Không có vụ nào quá hạn hoặc sắp thu hoạch trong 30 ngày tới.") }}{% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
 
-<h2>Nhật ký canh tác</h2>
-{% if r.counts.ok %}
-{{ kit.stats([
-  {"label": "Ghi trong " ~ days ~ " ngày", "value": counts.in_period | num(0)},
-  {"label": "Chờ duyệt", "value": counts.pending | num(0), "hint": "trên toàn bộ nhật ký"},
-  {"label": "Cần sửa", "value": counts.changes | num(0), "hint": "trên toàn bộ nhật ký"}
-]) }}
-{% else %}{{ parts.error() }}{% endif %}
-{% if r.journals.ok %}
-  {% if journals_empty %}{{ kit.empty("Chưa có nhật ký nào trong " ~ days ~ " ngày qua.") }}
-  {% else %}
-  <div class="two-up">
-    {{ kit.chart("Nhật ký theo tuần", week_chart, "nhật ký") }}
-    {{ kit.chart("Nhật ký theo loại hoạt động", activity_chart, "nhật ký") }}
-  </div>
-  <h3>10 hộ ghi nhật ký nhiều nhất</h3>
-  <table role="table">
-    <thead role="rowgroup"><tr role="row"><th role="columnheader">Hạng</th><th role="columnheader">Hộ</th><th role="columnheader">Số nhật ký</th></tr></thead>
-    <tbody role="rowgroup">
-    {% for name, n in top %}
-      <tr role="row"><td role="cell" data-label="Hạng">{{ loop.index }}</td><td role="cell" data-label="Hộ">{{ name }}</td><td role="cell" data-label="Số nhật ký">{{ n }}</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
-  {% if r.households.ok %}
-  <h3>Hộ chưa ghi nhật ký trong {{ days }} ngày</h3>
-  {% if silent_households %}
-  <ul class="name-list">{% for name in silent_households %}<li>{{ name }}</li>{% endfor %}</ul>
-  {% else %}<p class="note">Mọi hộ đều đã ghi nhật ký trong kỳ.</p>{% endif %}
-  {% endif %}
-{% else %}{{ parts.error() }}{% endif %}
 {{ parts.notes([note] if note else []) }}
-<p class="note">Bảng chính để tải CSV và in: lịch thu hoạch (vụ quá hạn và 30 ngày tới). Sản lượng kỳ vọng tính như trang Tổng quan của hệ thống lõi.</p>
 {% endblock %}
