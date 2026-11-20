@@ -109,7 +109,7 @@ ImageNet weights it downloads are credited in `ai-models/ATTRIBUTION.md`.
 | n8n | `n8nio/n8n:2.47.2` | Sustainable Use License* | Workflow automation |
 | SeaweedFS | `chrislusf/seaweedfs:4.50` | Apache-2.0 | S3-compatible object storage (replaces MinIO); started with `-volume.max=100` so more than one bucket fits |
 | ClamAV | `clamav/clamav-debian:1.4.6` | GPL-2.0 | Antivirus daemon (network service, not linked) |
-| Python | `python:3.12.15-slim-bookworm` | PSF | Base image of `dxos-scanner`, `dxos-dataops`, `dxos-cli` and the mini-apps `hello`, `tea-tour`, `leaf-purchase`, `tea-shop` and `farm-supply`, and of `ai-models/tea` training (not a Compose service) |
+| Python | `python:3.12.15-slim-bookworm` | PSF | Base image of `dxos-scanner`, `dxos-dataops`, `dxos-cli` and the mini-apps `hello`, `tea-tour`, `leaf-purchase`, `tea-shop`, `farm-supply`, `custom-books` and `htx-dashboard`, and of `ai-models/tea` training (not a Compose service) |
 | Mosquitto | `eclipse-mosquitto:2.1.2-alpine` | EPL-2.0 | MQTT broker (network service, not linked) |
 | Ollama | `ollama/ollama:0.40.15` | MIT | Local LLM runtime (network service, no host port) |
 | qwen2.5:0.5b | pulled by `ollama-init`, pinned by digest ID | Apache-2.0 | Default in-house LLM (model weights, not bundled in any image) |
@@ -196,6 +196,16 @@ All versions are pinned exactly in `pubspec.yaml`; `pubspec.lock` pins the trans
 Transitive packages (all BSD-3-Clause or MIT, checked from their LICENSE files; added with `flutter_secure_storage`: `args` 2.7.0, `code_assets` 1.2.1, `crypto` 3.0.8, `ffi_leak_tracker` 0.1.2, `hooks` 2.0.2, `jni` 1.1.2, `jni_flutter` 1.0.4+1, `jni_util` 1.0.0, `objective_c` 9.5.0, `package_config` 3.0.0, `path_provider` 2.1.6, `path_provider_android` 2.3.1, `path_provider_foundation` 2.6.0, `pub_semver` 2.2.1, `record_use` 0.6.0, `win32` 6.4.0, `yaml` 3.1.4): `characters`, `collection`, `ffi`, `file`, `http_parser`, `logging`, `material_color_utilities`, `meta`, `nested` (MIT), `path`, `path_provider_linux`, `path_provider_platform_interface`, `path_provider_windows`, `platform`, `plugin_platform_interface`, `qr`, `shared_preferences_android`, `shared_preferences_foundation`, `shared_preferences_linux`, `shared_preferences_platform_interface`, `shared_preferences_web`, `shared_preferences_windows`, `typed_data`, `vector_math`, `web`, `xdg_directories`.
 
 ---
+### Mini-app `htx-dashboard` (`miniapps/htx-dashboard`)
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| [fastapi](https://github.com/fastapi/fastapi) | 0.162.2 | MIT | Web framework (same pin as `tea-tour`) |
+| [uvicorn](https://github.com/encode/uvicorn) | 0.54.0 | BSD-3-Clause | ASGI server |
+| [Jinja2](https://github.com/pallets/jinja) | 3.1.6 | BSD-3-Clause | HTML templates (autoescaped) |
+| pytest, httpx2 (`requirements-dev.txt`) | 9.1.1, 2.16.0 | MIT, BSD-3-Clause | Unit tests (dev only) |
+
+No database driver and no form parser: the app has no database and no form that writes. It reads the core with the standard library (`urllib`).
 
 > **\* n8n License Note:** n8n uses the Sustainable Use License (fair-code, source-available,
 > not OSI-approved). DX-AgriMarket does NOT import, link, or bundle n8n source code.

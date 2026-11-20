@@ -1,0 +1,46 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Sức khoẻ cây{% endblock %}
+{% block head %}{% call kit.app_header("Sức khoẻ cây", "Báo cáo bệnh của HTX " ~ htx ~ " trong " ~ days ~ " ngày") %}{{ parts.actions(link, here, days, keep) }}{% endcall %}{% endblock %}
+{% block main %}
+{{ parts.period_nav(link, here, days, keep) }}
+{% if r.diseases.ok %}
+{{ kit.stats([
+  {"label": "Báo cáo trong " ~ days ~ " ngày", "value": rows | length | num(0), "hint": "theo ngày tạo báo cáo"},
+  {"label": "Chờ xử lý", "value": pending | num(0), "hint": "chưa được xác nhận, mọi kỳ"},
+  {"label": "Mới trong 7 ngày", "value": recent | num(0)}
+]) }}
+{% if empty %}
+{{ kit.empty("Chưa có báo cáo bệnh nào trong " ~ days ~ " ngày qua.") }}
+{% else %}
+<div class="two-up">
+  {{ kit.chart("Báo cáo theo tuần", week_chart, "báo cáo") }}
+  {{ kit.chart("Theo trạng thái xử lý", status_chart, "báo cáo") }}
+</div>
+<div class="two-up">
+  {{ kit.chart("Theo loại bệnh", kind_chart, "báo cáo") }}
+  {{ kit.chart("Thửa có nhiều báo cáo nhất", parcel_chart, "báo cáo") }}
+</div>
+<p class="note">Loại bệnh là chẩn đoán đã được cán bộ xác nhận. Báo cáo chưa xác nhận dùng tên do AI dự đoán và được ghi rõ "AI dự đoán".</p>
+<h2>Các báo cáo</h2>
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Ngày</th><th role="columnheader">Thửa</th><th role="columnheader">Hộ</th><th role="columnheader">Loại bệnh</th><th role="columnheader">Độ tin cậy AI</th><th role="columnheader">Trạng thái</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for d in rows[:50] %}
+    <tr role="row">
+      <td role="cell" data-label="Ngày">{{ d.detection_date | vn_day }}</td>
+      <td role="cell" data-label="Thửa"><a href="{{ link('/parcels/' ~ d.parcel_code) }}">{{ d.parcel_code }}</a></td>
+      <td role="cell" data-label="Hộ">{{ d.household_name }}</td>
+      <td role="cell" data-label="Loại bệnh">{{ kind(d) }}</td>
+      <td role="cell" data-label="Độ tin cậy AI">{{ (d.confidence * 100) | num(0) }} %</td>
+      <td role="cell" data-label="Trạng thái"><span class="{{ pill(d.status) }}">{{ labels.get(d.status, d.status) }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if rows | length > 50 %}<p class="note">Hiển thị 50 báo cáo mới nhất; tệp CSV và bản in có đủ {{ rows | length }} báo cáo.</p>{% endif %}
+{% endif %}
+{% else %}{{ parts.error() }}{% endif %}
+{{ parts.notes([note] if note else []) }}
+{% endblock %}

@@ -11,12 +11,12 @@ source platform/tests/tokens.sh
 
 command -v jq >/dev/null || { echo "jq is required (brew/apt install jq)"; exit 1; }
 
-# This smoke purges the data of tea-tour, hello, the three business apps and custom-books, so it must never run on a stack where one is really installed.
+# This smoke purges the data of tea-tour, hello, the three business apps and custom-books and removes htx-dashboard, so it must never run on a stack where one is really installed.
 # Checked before the EXIT trap below, which would otherwise remove them on the way out.
 LISTED=$(./dxos list) || { echo "./dxos list failed; apps-smoke did not start"; exit 1; }
-for id in tea-tour hello leaf-purchase tea-shop farm-supply custom-books; do
+for id in tea-tour hello leaf-purchase tea-shop farm-supply custom-books htx-dashboard; do
   if grep -qxF "$id" <<<"$(cut -f1 <<<"$LISTED")"; then
-    echo "apps-smoke xoá dữ liệu của tea-tour, hello, leaf-purchase, tea-shop, farm-supply và custom-books, nhưng stack này đang cài $id. Không chạy trên stack có dữ liệu thật;" \
+    echo "apps-smoke xoá dữ liệu của tea-tour, hello, leaf-purchase, tea-shop, farm-supply và custom-books và gỡ htx-dashboard, nhưng stack này đang cài $id. Không chạy trên stack có dữ liệu thật;" \
       "hãy chạy trên stack riêng (COMPOSE_PROJECT_NAME=dxos-clean make platform-up) hoặc gỡ $id trước." >&2
     exit 1
   fi
@@ -30,6 +30,8 @@ cleanup_store() {
   [ -z "$WORKER_PID" ] || kill "$WORKER_PID" 2>/dev/null || true
   rm -r -f miniapps/broken-health miniapps/bad-shot
   for app in leaf-purchase tea-shop farm-supply custom-books; do ./dxos remove "$app" --purge >/dev/null 2>&1 || true; done
+  ./dxos remove htx-dashboard >/dev/null 2>&1 || true  # an app without a schema: nothing to purge
+  psql_app "delete from telemetry.sensor_readings where parcel_code in ('TC-A1','TC-B1','TC-B2','LB-A1')" >/dev/null 2>&1 || true
 }
 
 # Whatever fails, leave no app behind (the registry, docker/runtime/<project> and the containers outlive this script).
@@ -532,6 +534,102 @@ assert_eq "$(get_page "$TO" $CB/feed | jq -r --arg p "/b/$BOOK" '[.entries[] | s
 assert_eq "$(psql_app "select count(*) from app_custom_books.records")" 2 "remove without --purge keeps the rows"
 purged custom-books app_custom_books
 
+echo "[htx-dashboard]"
+# Read-only app without a database: the checks are the gateway's roles, every tab against the real core (Hasura names, variable
+# types and permissions that the app's stubbed tests cannot prove) and the figures of the readings seeded below.
+ensure_user smoke_manager_lb manager LB
+./dxos remove htx-dashboard >/dev/null 2>&1 || true
+HD=/apps/htx-dashboard
+BLOCK_ERROR='Chưa lấy được dữ liệu'
+# 3 parcels x 5 sensors x 10 days for TC, one LB reading; the newest soil moisture of TC-A1 is 47.3 and TC-B2's rainfall is silent.
+seed_readings() { $COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -q <platform/tests/fixtures/htx-dashboard-readings.sql >/dev/null; }
+seed_readings && pass "sensor readings seeded for TC-A1, TC-B1, TC-B2 and LB-A1" || fail "seed sensor readings"
+assert_eq "$(psql_app "select count(*) from telemetry.sensor_readings where htx_code='TC' and parcel_code in ('TC-A1','TC-B1','TC-B2')")" 596 "seeded 596 readings (3 parcels x 5 sensors x 40, minus 4 of the silent sensor)"
+assert_eq "$(psql_app "select count(*) from pg_namespace where nspname='app_htx_dashboard'")" 0 "the app has no schema before the install"
+./dxos install miniapps/htx-dashboard && pass "./dxos install miniapps/htx-dashboard exits 0" || fail "./dxos install miniapps/htx-dashboard"
+fresh_tokens
+wait_http 200 "manager token -> 200 on $HD/" -- -H "Authorization: Bearer $TM" "$APP_GW$HD/"
+assert_app_http 401 "no token -> 401 on $HD/" -- "$APP_GW$HD/"
+assert_http 404 "published port 9080 -> 404 on $HD/ (R23)" -- -H "Authorization: Bearer $TM" "$GATEWAY$HD/"
+refused "$TO" $HD/ smoke_officer_tc
+refused "$TF" $HD/ smoke_farmer_tc
+refused "$TO" $HD/data smoke_officer_tc
+refused "$TF" $HD/parcels/TC-A1 smoke_farmer_tc
+
+# dash_get <path> <label>: 200 for the TC manager and no block-error text, the page in $DASH_BODY. A wrong root field, variable type or
+# column in a query makes the app show that text in place of the block, with the status still 200.
+DASH_BODY=""
+dash_get() {
+  local out code
+  out="$(app_curl -s -w $'\n%{http_code}' -H "Authorization: Bearer $TM" "$APP_GW$HD$1")"; code="${out##*$'\n'}"; DASH_BODY="${out%$'\n'*}"
+  assert_eq "$code" 200 "$2 -> 200"
+  if grep -qF "$BLOCK_ERROR" <<<"$DASH_BODY"; then fail "$2 shows the block-error text '$BLOCK_ERROR'"; else pass "$2 shows no block-error text"; fi
+}
+dash_has() { grep -qF -- "$1" <<<"$DASH_BODY" && pass "$2" || fail "$2 (no '$1' in the page)"; }
+dash_get / "overview"
+dash_has "HTX TC" "overview names the cooperative"
+dash_has 'data-attention="sensor"' "overview lists the silent sensor among the things to watch"
+dash_has "Giá thị trường mới nhất" "overview has the market block"
+dash_get /production "production tab"
+dash_get /parcels "parcels tab"
+for code in TC-A1 TC-B1 TC-B2; do dash_get "/parcels?q=$code" "parcels tab filtered on $code"; dash_has ">$code<" "parcels tab lists the seeded parcel $code"; done
+dash_get "/parcels?q=TC-A1" "parcels tab filtered on TC-A1"
+dash_has "47,3" "parcels tab shows the newest seeded soil moisture 47,3"
+dash_get /parcels "parcels tab"
+if grep -qF 'LB-A1' <<<"$DASH_BODY"; then fail "parcels tab lists the LB parcel to the TC manager"; else pass "parcels tab lists no parcel of LB"; fi
+dash_get /health "health tab"
+dash_get /lots "lots tab"
+dash_get /data "data tab"
+dash_has "TC-B2" "data tab lists the silent sensor's parcel"
+dash_has "Lượng mưa" "data tab names the silent sensor"
+HOT=$(psql_app "select count(*) from telemetry.sensor_readings where htx_code='TC' and (ts at time zone 'Asia/Ho_Chi_Minh')::date >= (now() at time zone 'Asia/Ho_Chi_Minh')::date - 29" | sed -E ':a;s/([0-9])([0-9]{3})($|\.)/\1.\2\3/;ta')
+dash_has ">$HOT<" "data tab counts the hot readings of the last 30 days: $HOT"
+dash_get /parcels/TC-A1 "parcel page of TC-A1"
+dash_has "47,3" "parcel page shows the newest soil moisture 47,3"
+dash_has "Độ ẩm đất" "parcel page names the sensor"
+assert_eq "$(grep -o 'class="line-chart"' <<<"$DASH_BODY" | wc -l | tr -d ' ')" 5 "parcel page draws one chart for each of the 5 sensors"
+dash_get /parcels/TC-B2 "parcel page of TC-B2 (silent rainfall)"
+dash_has "Không gửi số đo quá 6 giờ" "parcel page flags the silent sensor"
+# The parcel of another cooperative is filtered out by Hasura: the app answers not-found, as for a code that does not exist.
+OUT="$(app_curl -s -w $'\n%{http_code}' -H "Authorization: Bearer $TM" "$APP_GW$HD/parcels/LB-A1")"
+assert_eq "${OUT##*$'\n'}" 404 "a parcel of another HTX -> 404 for the TC manager"
+grep -qF 'Không tìm thấy thửa LB-A1' <<<"${OUT%$'\n'*}" && pass "...with the not-found page" || fail "the LB parcel page is not the not-found page"
+grep -qF '47' <<<"${OUT%$'\n'*}" && fail "the not-found page leaks a figure" || pass "the not-found page carries no reading"
+assert_app_http 404 "a code that is not a parcel code -> 404" -- -H "Authorization: Bearer $TM" "$APP_GW$HD/parcels/x.y"
+for tab in production parcels health lots data; do
+  csv_check "$TM" "$HD/$tab/export.csv" "$tab CSV"
+  page_ok "$TM" "$HD/$tab/print" "$tab print page"
+done
+assert_eq "$(app_curl -s -H "Authorization: Bearer $TM" "$APP_GW$HD/parcels/print" | grep -cF "$BLOCK_ERROR")" 0 "the print page shows no block-error text"
+fresh_tokens
+TL=$(user_token smoke_manager_lb); [ -n "$TL" ] && [ "$TL" != null ] || fail "smoke_manager_lb token empty"
+# The same view, asked from Hasura as the platform tests ask it: only the caller's cooperative, and not for a farmer.
+hasura() { # <token> <role> <query>
+  app_curl -s -X POST "$APP_GW/api/data/graphql" -H "Authorization: Bearer $1" -H "x-hasura-role: $2" -H 'Content-Type: application/json' \
+    -d "$(jq -nc --arg q "$3" '{query:$q}')"
+}
+VQ='{telemetry_sensor_daily(where:{parcel_code:{_in:["TC-A1","LB-A1"]}}){htx_code parcel_code}}'
+assert_eq "$(hasura "$TM" manager "$VQ" | jq -r '[.data.telemetry_sensor_daily[].htx_code] | unique | join(",")')" TC "manager TC reads daily rows of TC and none of LB"
+assert_eq "$(hasura "$TL" manager "$VQ" | jq -r '[.data.telemetry_sensor_daily[].htx_code] | unique | join(",")')" LB "manager LB reads only the daily row of LB"
+assert_eq "$(hasura "$TO" officer "$VQ" | jq -r '[.data.telemetry_sensor_daily[].htx_code] | unique | join(",")')" TC "officer TC reads the daily rows of its own cooperative"
+hasura "$TF" farmer "$VQ" | jq -e 'has("errors")' >/dev/null && pass "farmer gets an error on telemetry_sensor_daily" || fail "farmer can query telemetry_sensor_daily"
+
+# Time of each tab on the seeded data, printed (not asserted): the first request after the install and the second.
+for tab in "" production parcels health lots data parcels/TC-A1; do
+  t1=$(app_curl -s -o /dev/null -w '%{time_total}' -H "Authorization: Bearer $TM" "$APP_GW$HD/$tab")
+  t2=$(app_curl -s -o /dev/null -w '%{time_total}' -H "Authorization: Bearer $TM" "$APP_GW$HD/$tab")
+  echo "  timing htx-dashboard /${tab:-overview}: first ${t1} s, second ${t2} s"
+done
+
+./dxos remove htx-dashboard >/dev/null && pass "./dxos remove htx-dashboard exits 0" || fail "./dxos remove htx-dashboard"
+wait_http 404 "removed htx-dashboard route -> 404" -- -H "Authorization: Bearer $TM" "$APP_GW$HD/"
+assert_eq "$(app_containers htx-dashboard)" 0 "app-htx-dashboard container removed"
+assert_eq "$(psql_app "select count(*) from platform.installed_apps where id='htx-dashboard'")" 0 "no htx-dashboard row in the registry"
+assert_eq "$(grep -c 'htx-dashboard' "$GW_FILE" || true)" 0 "no htx-dashboard route left in the gateway file"
+assert_eq "$(psql_app "select count(*) from pg_namespace where nspname='app_htx_dashboard'")" 0 "remove left no schema behind"
+assert_eq "$(psql_app "select count(*) from pg_roles where rolname='app_htx_dashboard'")" 0 "remove left no role behind"
+psql_app "delete from telemetry.sensor_readings where parcel_code in ('TC-A1','TC-B1','TC-B2','LB-A1')" >/dev/null
+
 echo "[store queue]"
 fresh_tokens
 # The App Store page queues rows in platform.app_requests; ./dxos worker installs, enables and removes per HTX.
@@ -750,6 +848,6 @@ wait_http 200 "hello still answers after the worker restart" -- -H "Authorizatio
 stop_worker
 ./dxos remove hello >/dev/null && pass "hello removed after the upgrade checks" || fail "remove hello after the upgrade checks"
 OUT=$(make platform-smoke 2>&1) || { tail -20 <<<"$OUT" >&2; fail "make platform-smoke after remove"; }
-assert_eq "$(grep -c '^PASS' <<<"$OUT")" 124 "platform smoke still gives 124 PASS without apps"
+assert_eq "$(grep -c '^PASS' <<<"$OUT")" 131 "platform smoke still gives 131 PASS without apps"
 
 echo "apps smoke: all checks passed"

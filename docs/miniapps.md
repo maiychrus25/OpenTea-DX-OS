@@ -10,6 +10,7 @@ Các app mẫu trong repo:
 - [`miniapps/hello`](../miniapps/hello/README.md): khoảng 80 dòng Python, chỉ dùng thư viện chuẩn, không có database. Nên đọc trước.
 - [`miniapps/tea-tour`](../miniapps/tea-tour/): FastAPI và Jinja2, có database, route công khai và route theo vai trò.
 - Ba app nghiệp vụ cùng khuôn với `tea-tour` (mỗi app có README riêng): [`miniapps/leaf-purchase`](../miniapps/leaf-purchase/README.md) (thu mua búp tươi, route theo ba vai trò, đọc nông hộ qua Hasura bằng token của người gọi), [`miniapps/tea-shop`](../miniapps/tea-shop/README.md) (cửa hàng, đặt hàng công khai, tồn kho) và [`miniapps/farm-supply`](../miniapps/farm-supply/README.md) (đợt mua chung vật tư).
+- [`miniapps/htx-dashboard`](../miniapps/htx-dashboard/README.md): app chỉ đọc, **không có database** (xem "App chỉ đọc không database" ở §5): đọc số liệu của HTX từ lõi qua Hasura bằng token của người gọi và vẽ biểu đồ bằng SVG dựng ở server.
 
 App có `description` trong manifest sẽ hiện thành thẻ trong **Kho ứng dụng** của trưởng HTX (§8). Chỉ app nằm trong `miniapps/` của repo mới có thẻ.
 
@@ -53,7 +54,7 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `version` | có | SemVer, ví dụ `0.1.0` |
 | `license` | có | thuộc danh sách OSI của CLI: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `LGPL-3.0-or-later`, `GPL-2.0-only`, `GPL-3.0-only`, `GPL-3.0-or-later`, `AGPL-3.0-only`, `AGPL-3.0-or-later` |
 | `publisher` | có | 1–80 ký tự |
-| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.12.0`) |
+| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.13.0`) |
 | `runtime.build` / `runtime.image` | đúng một trong hai | `build`: thư mục tương đối trong thư mục app (thường là `.`). `image`: phải ghim digest, dạng `<ref>@sha256:<64 ký tự hex>` |
 | `runtime.port` | có | 1–65535, cổng app nghe trong container |
 | `runtime.health` | có | đường dẫn health check (đã cắt tiền tố), ví dụ `/healthz`, phải trả 2xx |
@@ -170,7 +171,7 @@ Thêm `<link rel="stylesheet" href="/dxos-app.css">` vào mọi trang. Tệp do 
 
 Bản gốc nằm ở `platform/appkit/` (`appkit.py`, `kit.html`, `showcase.html`) và `apps/web/public/dxos-app.css`. Mỗi app tự đủ vì image dựng từ thư mục của chính nó, nên hai tệp được **chép** vào gói của app: `<gói>/appkit.py` và `<gói>/templates/kit.html`.
 
-- `make appkit-sync` chép bản gốc vào bốn app (`leaf-purchase`, `tea-shop`, `farm-supply`, `tea-tour`; danh sách nằm trong `scripts/appkit-sync.sh`). `make lint` chạy `scripts/appkit-sync.sh --check` và báo lỗi nếu một bản chép lệch hoặc thiếu.
+- `make appkit-sync` chép bản gốc vào các app có giao diện (`leaf-purchase`, `tea-shop`, `farm-supply`, `tea-tour`, `custom-books`, `htx-dashboard`; danh sách nằm trong `scripts/appkit-sync.sh`). `make lint` chạy `scripts/appkit-sync.sh --check` và báo lỗi nếu một bản chép lệch hoặc thiếu.
 - Không sửa bản chép trong app: sửa bản gốc rồi chạy `make appkit-sync`. Xem mọi thành phần với dữ liệu mẫu ở `platform/appkit/showcase.html`.
 - Dùng trong template: `{% import "kit.html" as kit %}`. Trong CSS và HTML không có `style=` hay `<script`; chiều dài thanh biểu đồ là thuộc tính SVG.
 
@@ -249,6 +250,17 @@ Khi manifest khai `database`, `dxos install`:
   - xoá tệp env.
 - CLI từ chối xoá schema (không xoá gì) khi có đối tượng ngoài schema phụ thuộc vào nó. Phép kiểm này chỉ xét phụ thuộc vào bảng, kiểu và hàm của schema.
 
+### App chỉ đọc không database: `htx-dashboard`
+
+Manifest không khai `database` thì `./dxos install` không tạo role hay schema, không ghi `DXOS_APP_DB_URL` và `remove` không còn gì để xoá (`--purge` không cần). App chỉ đọc dữ liệu lõi qua gateway (`http://apisix:9081/api/data/graphql`) bằng chính token và vai của người gọi, như phần "đọc nông hộ qua Hasura" của `leaf-purchase`, nên Hasura lọc theo `htx_code` của token và app không thể đọc nhiều hơn người xem. Khuôn của `htx-dashboard`:
+
+- Mỗi truy vấn là một hằng, biến đi riêng (không ghép chuỗi). Các khối chạy song song, mỗi khối có hạn giờ riêng và kết thúc bằng giá trị hoặc lỗi: một khối hỏng chỉ làm khối đó hiện "Chưa lấy được dữ liệu, thử tải lại".
+- Truy vấn danh sách có `limit` và trang nói rõ khi danh sách có thể đã bị cắt; truy vấn chỉ cần vài cột thì chỉ xin các cột đó.
+- Tên trường gốc theo quy ước mặc định của Hasura: bảng schema `public` là tên bảng, bảng của schema khác là `<schema>_<bảng>` (ví dụ `telemetry_sensor_daily`). Kiểu của biến phải đúng kiểu cột: cột Prisma là `timestamp` (UTC, không có múi giờ), cột `telemetry` là `timestamptz`, `day` là `date`.
+- Bộ kiểm `make apps-smoke` có một khối cho app: mọi tab trả 200 cho trưởng HTX, không trang nào chứa chữ báo lỗi khối, các con số gieo sẵn xuất hiện, `officer` và `farmer` bị gateway từ chối, thửa của HTX khác cho trang không tìm thấy.
+
+**View `telemetry.sensor_daily`** (`platform/postgres/init/07-telemetry-views.sql`, lõi `>=1.13.0`): số đo cảm biến có thể lên hàng chục nghìn dòng mỗi thửa trong kho nóng, nên lõi có sẵn một view tóm tắt theo (`htx_code`, `parcel_code`, `sensor`, ngày giờ Việt Nam) với `reading_count`, `min_value`, `max_value`, `avg_value`, `first_ts`, `last_ts`. View không lưu gì, được Hasura theo dõi như `telemetry_sensor_daily` với cùng bộ lọc `htx_code` của bảng gốc cho `manager` và `officer`, `farmer` không có quyền. App khác cần biểu đồ theo ngày dùng view này, không tải số đo thô.
+
 ## 6. Origin, CSRF và giới hạn tần suất công khai
 
 - **Chống gửi form chéo trang (R18):** web gắn token của người dùng vào route cần đăng nhập, nên một request không phải `GET`/`HEAD` dưới `/apps/` bị trả **403** và không được chuyển tiếp khi:
@@ -325,7 +337,7 @@ Tệp đang được git theo dõi không bao giờ bị sửa lúc chạy. `mak
 
 **Kiểm thử tích hợp:** `make apps-smoke` (sau `npm run seed` và `make platform-smoke`) cài và gỡ `hello`, `tea-tour`, ba app nghiệp vụ và các fixture của CLI, kiểm route, quyền (kể cả `/tickets/*` và `/periods/*` của `leaf-purchase`), việc đọc nông hộ qua Hasura với vai trò cán bộ và nông hộ, một thao tác ghi cho mỗi app, rollback, idempotent và `--purge`; chạy hàng đợi của kho với worker thật (bật cho một HTX, gỡ, bật lại giữ dữ liệu, cài hỏng, worker bị kill giữa chừng, nâng cấp từ stack chưa có kho); rồi chạy lại `make platform-smoke` trên stack không có app.
 
-> **Cảnh báo:** `make apps-smoke` xoá dữ liệu của `tea-tour`, `leaf-purchase`, `tea-shop`, `farm-supply` (`--purge`) và của các fixture. Không chạy nó trên stack có dữ liệu thật; hãy dùng stack riêng như `COMPOSE_PROJECT_NAME=dxos-clean`. Script tự dừng với mã 1 khi `./dxos list` cho thấy một trong các app đó hoặc `hello` đang được cài, và tự bật `./dxos worker` của riêng nó nên không chạy được khi đã có một worker khác.
+> **Cảnh báo:** `make apps-smoke` xoá dữ liệu của `tea-tour`, `leaf-purchase`, `tea-shop`, `farm-supply` (`--purge`), gỡ `htx-dashboard` cùng số đo cảm biến mẫu của nó và xoá dữ liệu của các fixture. Không chạy nó trên stack có dữ liệu thật; hãy dùng stack riêng như `COMPOSE_PROJECT_NAME=dxos-clean`. Script tự dừng với mã 1 khi `./dxos list` cho thấy một trong các app đó hoặc `hello` đang được cài, và tự bật `./dxos worker` của riêng nó nên không chạy được khi đã có một worker khác.
 
 ## 9. Mười phút với `hello`
 

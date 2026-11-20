@@ -817,6 +817,33 @@
       "attributes": {
         "post.logout.redirect.uris": "http://localhost:3000/login"
       }
+    },
+    {
+      "clientId": "dxos-mobile",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": [
+        "vn.opentea.dxos.tour:/oauth2redirect",
+        "vn.opentea.hubmobile:/oauth2redirect"
+      ],
+      "webOrigins": [],
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "email",
+        "dx-os-core"
+      ],
+      "optionalClientScopes": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
     }
   ],
   "components": {

@@ -1,0 +1,79 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Dữ liệu{% endblock %}
+{% block head %}{% call kit.app_header("Dữ liệu cảm biến", "Vòng đời và chất lượng số đo của HTX " ~ htx) %}{{ parts.actions(link, here, days, keep) }}{% endcall %}{% endblock %}
+{% block main %}
+<p class="note">Số đo mới nằm ở kho nóng 30 ngày, rồi được chuyển sang kho lạnh theo từng ngày kèm mã băm SHA-256 và kết quả kiểm chất lượng. Trang này luôn dùng 30 ngày gần nhất của kho nóng.</p>
+
+<section class="group" aria-labelledby="hot-title">
+  <h2 id="hot-title">Kho nóng</h2>
+  {% if r.daily.ok and r.latest.ok %}
+    {% if hot %}
+    {{ kit.stats([
+      {"label": "Số đo ở kho nóng", "value": hot_total | num(0), "hint": "trong 30 ngày gần nhất"},
+      {"label": "Thửa có cảm biến", "value": summary.parcels | num(0)},
+      {"label": "Cảm biến", "value": summary.sensors | num(0)},
+      {"label": "Im lặng", "value": summary.silent | num(0), "hint": "quá " ~ sensor_silent_hours ~ " giờ không gửi"}
+    ]) }}
+    <h3>Số đo mỗi ngày</h3>
+    {{ parts.line_chart(hot_chart, "Số đo ở kho nóng mỗi ngày", "số đo") }}
+    {% else %}{{ kit.empty("Chưa có cảm biến nào gửi số đo.") }}{% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+
+<section class="group" aria-labelledby="silent-title">
+  <h2 id="silent-title">Cảm biến không gửi số đo quá {{ sensor_silent_hours }} giờ</h2>
+  {% if r.latest.ok %}
+    {% if silent %}
+    <table role="table">
+      <thead role="rowgroup"><tr role="row"><th role="columnheader">Thửa</th><th role="columnheader">Cảm biến</th><th role="columnheader">Số đo cuối</th><th role="columnheader">Cách đây</th></tr></thead>
+      <tbody role="rowgroup">
+      {% for s in silent %}
+        <tr role="row">
+          <td role="cell" data-label="Thửa"><a href="{{ link('/parcels/' ~ s.reading.parcel_code) }}">{{ s.reading.parcel_code }}</a></td>
+          <td role="cell" data-label="Cảm biến">{{ s.label }}</td>
+          <td role="cell" data-label="Số đo cuối">{{ s.reading.ts | vn_datetime }}</td>
+          <td role="cell" data-label="Cách đây"><span class="pill danger">{{ s.age }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="all-clear">Mọi cảm biến đều đã gửi số đo trong {{ sensor_silent_hours }} giờ qua.</p>{% endif %}
+    <p class="note">Hệ thống không có danh mục cảm biến, nên cảm biến im lặng quá 30 ngày không còn hiện ở đây.</p>
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+
+<section class="group" aria-labelledby="runs-title">
+  <h2 id="runs-title">Chuyển sang kho lạnh</h2>
+  {% if r.runs.ok %}
+    {% if runs %}
+    {% if failed %}<p class="error" role="status">{{ failed }} lần chuyển dữ liệu bị lỗi trong 7 ngày qua.</p>{% endif %}
+    <table role="table">
+      <thead role="rowgroup"><tr role="row"><th role="columnheader">Ngày dữ liệu</th><th role="columnheader">Trạng thái</th><th role="columnheader">Số dòng</th><th role="columnheader">Dung lượng</th><th role="columnheader">SHA-256</th><th role="columnheader">Kiểm chất lượng</th></tr></thead>
+      <tbody role="rowgroup">
+      {% for x in runs %}
+        <tr role="row">
+          <td role="cell" data-label="Ngày dữ liệu">{{ x.run.partition_date | vn_date }}</td>
+          <td role="cell" data-label="Trạng thái"><span class="pill{{ x.tone }}">{{ x.label }}</span></td>
+          <td role="cell" data-label="Số dòng">{% if x.run.row_count is none %}—{% else %}{{ x.run.row_count | num(0) }}{% endif %}</td>
+          <td role="cell" data-label="Dung lượng">{% if x.run.size_bytes is none %}—{% else %}{{ (x.run.size_bytes / 1024) | num(1) }} KB{% endif %}</td>
+          <td role="cell" data-label="SHA-256">{% if x.run.sha256 %}<code class="hash">{{ x.run.sha256 }}</code>{% else %}—{% endif %}</td>
+          <td role="cell" data-label="Kiểm chất lượng">
+            {% if x.run.error %}<span class="note">Lỗi: {{ x.run.error }}</span>
+            {% elif x.quality %}
+            <details class="quality">
+              <summary>{{ x.quality.rows | num(0) }} dòng · {{ x.quality.sensors | length }} cảm biến · {{ x.quality.rejects | num(0) }} bị loại</summary>
+              <ul>{% for name, count, low, high, avg in x.quality.sensors %}<li>{{ sensor_label(name)[0] }}: {{ count | num(0) }} số đo, nhỏ nhất {{ low | num(1) }}, lớn nhất {{ high | num(1) }}, trung bình {{ avg | num(1) }}</li>{% endfor %}</ul>
+            </details>
+            {% else %}<span class="note">Chưa có kết quả</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}{{ kit.empty("Chưa có lần chuyển dữ liệu nào sang kho lạnh.") }}{% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+{{ parts.notes([note] if note else []) }}
+{% endblock %}
