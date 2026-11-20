@@ -23,6 +23,8 @@ public static class ServiceRegistration
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IDataChangeNotifier, DataChangeNotifier>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+        services.AddSingleton<IActivityFeed, ActivityFeed>();
+        services.AddSingleton<IAttachmentStore>(_ => new Storage.LocalAttachmentStore());
 
         services.AddDbContextFactory<AppDbContext>(options =>
         {
@@ -57,6 +59,7 @@ public static class ServiceRegistration
 
         services.AddSingleton<DatabaseInitializer>();
         services.AddSingleton<MobileApiServer>();
+        services.AddSingleton<Diagnostics.ConnectionChecker>();
         return services;
     }
 }

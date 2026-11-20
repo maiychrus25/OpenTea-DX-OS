@@ -20,6 +20,7 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory,
 
         await using var db = await factory.CreateDbContextAsync(ct);
         await db.Database.EnsureCreatedAsync(ct);
+        await UpgradeAsync(db, ct);
 
         if (!await db.Owners.AnyAsync(ct))
         {
@@ -35,6 +36,27 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory,
 
         if (!await db.Employees.IgnoreQueryFilters().AnyAsync(ct)) await SeedDemoAsync(db, ct);
     }
+
+    /// <summary>
+    /// Adds columns introduced after 1.0.0 to databases created by an older version
+    /// (EnsureCreated never alters an existing schema). Mirrors database/postgres/002_leave_attachments.sql.
+    /// </summary>
+    // Column names are compile-time constants, never user input.
+#pragma warning disable EF1002
+    private async Task UpgradeAsync(AppDbContext db, CancellationToken ct)
+    {
+        string[] columns = ["attachment_path", "attachment_name", "attachment_content_type"];
+        if (config.Database.Provider == DatabaseProvider.Postgres)
+        {
+            foreach (var c in columns)
+                await db.Database.ExecuteSqlRawAsync($"ALTER TABLE {AppDbContext.CoreSchema}.leave_requests ADD COLUMN IF NOT EXISTS {c} text NULL", ct);
+            return;
+        }
+        var existing = await db.Database.SqlQueryRaw<string>("SELECT name AS \"Value\" FROM pragma_table_info('leave_requests')").ToListAsync(ct);
+        foreach (var c in columns.Where(c => !existing.Contains(c)))
+            await db.Database.ExecuteSqlRawAsync($"ALTER TABLE leave_requests ADD COLUMN {c} TEXT NULL", ct);
+    }
+#pragma warning restore EF1002
 
     private async Task SeedDemoAsync(AppDbContext db, CancellationToken ct)
     {
@@ -61,6 +83,7 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory,
             Phone = $"09{n:00}{(n * 7919) % 1000000:000000}",
             Email = $"nv{n:000}@htxchetancuong.example",
             Address = "Xã Tân Cương, TP Thái Nguyên",
+            IdentityNumber = n == 8 ? null : $"0192{n:00}{(n * 7331) % 1000000:000000}",
             DepartmentId = departments[dept].Id,
             Position = position,
             HireDate = DateOnly.FromDateTime(clock.Now.AddMonths(-hiredMonthsAgo)),

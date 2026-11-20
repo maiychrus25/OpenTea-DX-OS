@@ -73,6 +73,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.ToTable("leave_requests");
             e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId).OnDelete(DeleteBehavior.Cascade);
             e.Ignore(x => x.Days);
+            e.Ignore(x => x.HasAttachment);
+            e.Property(x => x.AttachmentPath).HasMaxLength(260);
+            e.Property(x => x.AttachmentName).HasMaxLength(120);
+            e.Property(x => x.AttachmentContentType).HasMaxLength(60);
             e.HasQueryFilter(x => x.HtxCode == Htx);
         });
         b.Entity<Payslip>(e =>

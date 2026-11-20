@@ -118,7 +118,7 @@ public sealed class MobileApiServer(IServiceProvider services, AppConfig config)
     {
         var api = app.MapGroup("/api");
 
-        api.MapGet("/health", () => Results.Ok(new { status = "ok", htxCode = config.HtxCode, htxName = config.HtxName, version = "1.0.0" }));
+        api.MapGet("/health", () => Results.Ok(new { status = "ok", htxCode = config.HtxCode, htxName = config.HtxName, version = "1.1.0" }));
 
         api.MapPost("/auth/login", async (LoginRequest body) =>
         {
@@ -204,13 +204,27 @@ public sealed class MobileApiServer(IServiceProvider services, AppConfig config)
 
         api.MapPost("/leaves", (HttpContext http, LeaveCreateRequest body) => Guard(http, async id =>
         {
-            if (!DateOnly.TryParse(body.FromDate, out var from) || !DateOnly.TryParse(body.ToDate, out var to))
+            if (!DateOnly.TryParseExact(body.FromDate, "yyyy-MM-dd", out var from) || !DateOnly.TryParseExact(body.ToDate, "yyyy-MM-dd", out var to))
                 throw new DomainException("Ngày nghỉ không hợp lệ (định dạng yyyy-MM-dd).");
+            LeaveAttachment? file = null;
+            if (!string.IsNullOrEmpty(body.Attachment?.DataBase64))
+            {
+                try { file = new LeaveAttachment(body.Attachment.FileName ?? "", Convert.FromBase64String(body.Attachment.DataBase64)); }
+                catch (FormatException) { throw new DomainException("Tệp minh chứng bị lỗi, vui lòng chọn lại."); }
+            }
             var saved = await Get<LeaveService>().SubmitAsync(new LeaveRequest
             {
                 EmployeeId = id, FromDate = from, ToDate = to, Type = body.Type, Reason = body.Reason, Source = RecordSource.Mobile,
-            });
+            }, file);
             return Results.Ok(LeaveDto.From(saved));
+        }));
+
+        api.MapGet("/leaves/{leaveId:int}/attachment", (HttpContext http, int leaveId, CancellationToken ct) => Guard(http, async id =>
+        {
+            var leave = await Get<ILeaveRepository>().GetAsync(leaveId);
+            if (leave is null || leave.EmployeeId != id || !leave.HasAttachment) return Results.NotFound();
+            var bytes = await Get<LeaveService>().ReadAttachmentAsync(leave);
+            return bytes is null ? Results.NotFound() : Results.File(bytes, leave.AttachmentContentType ?? "application/octet-stream", leave.AttachmentName);
         }));
 
         api.MapPost("/leaves/{leaveId:int}/cancel", (HttpContext http, int leaveId) => Guard(http, async id =>

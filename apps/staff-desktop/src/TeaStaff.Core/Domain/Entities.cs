@@ -102,7 +102,13 @@ public class LeaveRequest : TenantEntity
     public DateTime? ReviewedAt { get; set; }
     public RecordSource Source { get; set; }
 
+    /// <summary>Stored file name of the evidence (sick note, invitation…), relative to the attachment store.</summary>
+    public string? AttachmentPath { get; set; }
+    public string? AttachmentName { get; set; }
+    public string? AttachmentContentType { get; set; }
+
     public int Days => ToDate.DayNumber - FromDate.DayNumber + 1;
+    public bool HasAttachment => !string.IsNullOrEmpty(AttachmentPath);
 }
 
 public class Payslip : TenantEntity
