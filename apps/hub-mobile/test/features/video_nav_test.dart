@@ -9,12 +9,12 @@ import '../helpers/fake_video_source.dart';
 import 'shorts_test.dart' show openShortsAccount;
 
 void main() {
-  testWidgets('customer: the Video button sits in the middle and opens the feed of every channel', (tester) async {
+  testWidgets('customer: the Video button sits next to Khám phá and opens the feed of every channel', (tester) async {
     final videos = FakeVideoSource();
     final repo = MockHubRepository();
     final router = await openShortsAccount(tester, 'customer', videos, repo);
     final labels = tester.widgetList<NavigationDestination>(find.byType(NavigationDestination)).map((d) => d.label);
-    expect(labels, ['Khám phá', 'Tour', 'Video', 'Lịch trình', 'Tài khoản']);
+    expect(labels, ['Khám phá', 'Reels', 'Tour', 'Lịch trình', 'Tài khoản']);
 
     await tester.tap(find.byKey(const Key('nav-video')));
     await tester.pumpAndSettle();
@@ -34,7 +34,7 @@ void main() {
   });
 
   for (final role in ['farmer', 'manager', 'officer', 'operator']) {
-    testWidgets('$role: four tabs around the Video button, which opens the feed', (tester) async {
+    testWidgets('$role: Video sits next to Tổng quan and opens the feed', (tester) async {
       final videos = FakeVideoSource();
       await openShortsAccount(tester, role, videos, MockHubRepository());
       final tabs = find.byWidgetPredicate(
@@ -43,7 +43,7 @@ void main() {
       expect(tabs, findsNWidgets(4));
       final video = tester.getCenter(find.byKey(const Key('bottom-videos'))).dx;
       final xs = [for (final e in tabs.evaluate()) tester.getCenter(find.byWidget(e.widget)).dx]..sort();
-      expect(xs[1] < video && video < xs[2], isTrue, reason: 'the Video button is in the middle');
+      expect(xs[0] < video && video < xs[1], isTrue, reason: 'the Video button is right after Tổng quan');
 
       await tester.tap(find.byKey(const Key('bottom-videos')));
       await tester.pumpAndSettle();

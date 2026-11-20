@@ -50,7 +50,7 @@ class StaffNav {
   /// Tour work (bookings, tour money, check-in) is only ever in the operator's.
   final List<MenuItem> shop;
 
-  /// Four tabs; the bar puts the "Video" button between the second and the third.
+  /// Four tabs; the bar puts the "Video" button right after the first (Tổng quan).
   final List<MenuItem> bottom;
 
   /// The full-screen feed opened by the "Video" button in the middle of the bottom bar.

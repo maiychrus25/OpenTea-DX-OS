@@ -314,7 +314,7 @@ class _BottomBar extends StatelessWidget {
       child: Row(
         children: [
           for (final (i, m) in nav.bottom.indexed) ...[
-            if (i == nav.bottom.length ~/ 2) _videoButton(context),
+            if (i == 1) _videoButton(context),
             Expanded(
               child: InkWell(
                 key: Key('bottom-${m.path}'),
@@ -367,7 +367,7 @@ class _BottomBar extends StatelessWidget {
           ),
           SizedBox(height: 2),
           Text(
-            'Video',
+            'Reels',
             maxLines: 1,
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: StaffColors.muted),
           ),

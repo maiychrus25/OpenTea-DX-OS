@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import '../../shared/widgets.dart';
 import 'customer_drawer.dart';
 
-/// Bottom navigation of guest and customer: Khám phá, Tour, Video (full-screen feed, in the middle), Lịch trình,
-/// Tài khoản.
+/// Bottom navigation of guest and customer: Khám phá, Reels (full-screen video feed, next to the home tab), Tour,
+/// Lịch trình, Tài khoản.
 /// Cart, orders, tours and products live under "Khám phá".
 class CustomerShell extends StatelessWidget {
   const CustomerShell({super.key, required this.location, required this.child});
@@ -16,14 +16,14 @@ class CustomerShell extends StatelessWidget {
 
   static const destinations = [
     NavDestination('Khám phá', Icons.home_outlined, '/shop'),
+    NavDestination('Reels', Icons.smart_display_outlined, '/shop/videos', opensOnTop: true),
     NavDestination('Tour', Icons.hiking, '/shop/tours'),
-    NavDestination('Video', Icons.smart_display_outlined, '/shop/videos', opensOnTop: true),
     NavDestination('Lịch trình', Icons.event_note_outlined, '/shop/trips'),
     NavDestination('Tài khoản', Icons.person_outline, '/shop/me'),
   ];
 
   static int indexFor(String location) {
-    if (location.startsWith('/shop/tours')) return 1;
+    if (location.startsWith('/shop/tours')) return 2;
     if (location.startsWith('/shop/trips')) return 3;
     if (location.startsWith('/shop/me')) return 4;
     return 0;

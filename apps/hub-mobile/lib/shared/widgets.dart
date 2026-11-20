@@ -563,7 +563,7 @@ class RoleShell extends StatelessWidget {
             for (final d in destinations)
               NavigationDestination(
                 icon: d.opensOnTop
-                    ? Icon(d.icon, key: Key('nav-${d.label.toLowerCase()}'))
+                    ? Icon(d.icon, key: const Key('nav-video'))
                     : Badge(
                         isLabelVisible: (badges[d.location] ?? 0) > 0,
                         label: Text('${badges[d.location] ?? 0}'),
