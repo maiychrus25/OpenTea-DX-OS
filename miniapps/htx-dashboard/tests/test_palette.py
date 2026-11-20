@@ -55,3 +55,11 @@ def test_neighbours_in_a_stack_differ_in_hue():
 
 def test_the_palette_has_the_eight_tones_the_toolkit_wraps_to():
     assert charts.TONES == 8 and all(len(t) == 8 for t in palettes().values())
+
+
+def test_the_print_bar_is_hidden_only_when_printing():
+    # kit.print_bar is a .no-print paragraph: on screen it tells the reader how to print and links back to the app.
+    css = (Path(__file__).resolve().parents[1] / "htx_dashboard" / "static" / "dashboard.css").read_text(encoding="utf-8")
+    on_screen = re.sub(r"@media\s+print\s*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
+    hiding = [rule for rule in re.findall(r"([^{}]*\.no-print[^{}]*)\{([^{}]*)\}", on_screen) if "display" in rule[1]]
+    assert hiding == []

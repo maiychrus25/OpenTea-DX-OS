@@ -1302,10 +1302,6 @@ main.dashboard-main {
   padding-left: var(--spacing-4);
 }
 
-.print-sheet .no-print {
-  display: none;
-}
-
 @media print {
   .period-nav,
   .actions,
