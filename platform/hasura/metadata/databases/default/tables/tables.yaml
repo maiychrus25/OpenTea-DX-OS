@@ -16,4 +16,5 @@
 - "!include public_bulletins.yaml"
 - "!include public_fx_rates.yaml"
 - "!include telemetry_sensor_readings.yaml"
+- "!include telemetry_sensor_daily.yaml"
 - "!include telemetry_lifecycle_runs.yaml"
