@@ -25,7 +25,8 @@ Both apps follow the conventions of the OpenTea DX-OS core so they can later sha
 
 | Module | What it does |
 | --- | --- |
-| **Dashboard** | Active staff, open and overdue tasks, pending leave, payroll fund, today's attendance and progress per team. |
+| **Dashboard** | Active staff, open and overdue tasks, pending leave, payroll fund, today's attendance, progress per team, and charts of task status and the last 14 days (work days, completed tasks). |
+| **Charts per module** | Employees: staff by team and contract type, base salary fund. Attendance: daily work days, absences and overtime in the month. Leave: approved days by type and per month, share of sick leave with evidence. Payroll: composition of gross pay and net pay per employee. |
 | **Reports** | KPI tiles (overdue, not yet accepted, due in 3 days, pending leave, not checked in today, incomplete profiles) and charts drawn natively in WPF: task status bars, priority donut, daily task and attendance trends, six-month payroll fund and completed work per team, plus lists of what needs the owner. Period: 7, 30 or 90 days. |
 | **Live activity** | When staff accept, reject or finish a task, check in or send a leave request from the phone, the owner sees a toast, hears the system sound, the taskbar flashes and red counters appear on *Giao việc* and *Nghỉ phép*. |
 | **Employees** | Full HR profile: personal data, team, position, contract type, monthly or daily wage, allowance, bank account, annual leave quota, status. Accent-insensitive search (`nguyen` finds `Nguyễn`), filters, CSV export, mobile account and password reset. |
@@ -52,7 +53,7 @@ Both apps follow the conventions of the OpenTea DX-OS core so they can later sha
 
 Grab the latest build from [**Releases**](https://github.com/Vudinhdat02/appManageStaff/releases):
 
-- `TeaStaffManager-1.1.0-win-x64.exe` — self-contained, single file, no .NET installation needed (Windows 10/11 x64).
+- `TeaStaffManager-1.2.0-win-x64.exe` — self-contained, single file, no .NET installation needed (Windows 10/11 x64).
 
 On first launch the app creates a demo cooperative (HTX code `TC`) with eight fictitious employees, a month of attendance, tasks and leave requests.
 
