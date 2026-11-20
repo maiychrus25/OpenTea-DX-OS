@@ -178,6 +178,9 @@ public sealed partial class PayrollViewModel(IDialogService dialogs, IPayslipRep
     [ObservableProperty] private string _statusSummary = string.Empty;
     [ObservableProperty] private string _policyText = string.Empty;
     [ObservableProperty] private bool _isEmpty;
+    [ObservableProperty] private IReadOnlyList<Controls.ChartPoint> _composition = [];
+    [ObservableProperty] private IReadOnlyList<LegendItem> _compositionLegend = [];
+    [ObservableProperty] private IReadOnlyList<Controls.ChartPoint> _netBars = [];
 
     public override async Task LoadAsync()
     {
@@ -188,12 +191,27 @@ public sealed partial class PayrollViewModel(IDialogService dialogs, IPayslipRep
         Items.Clear();
         foreach (var p in list) Items.Add(p);
         IsEmpty = list.Count == 0;
+        // Where the gross pay comes from (donut) and what is taken out (last legend line).
+        var parts = new (string Label, decimal Amount, int Color)[]
+        {
+            ("Lương theo công", list.Sum(p => p.EarnedSalary), 0),
+            ("Tăng ca", list.Sum(p => p.OvertimePay), 1),
+            ("Phụ cấp, thưởng", list.Sum(p => p.Allowance + p.Bonus), 2),
+            ("Trừ: bảo hiểm, khấu trừ, tạm ứng", list.Sum(p => p.Insurance + p.Deduction + p.Advance), 5),
+        };
+        Composition = parts.Take(3).Select(x => new Controls.ChartPoint(x.Label, (double)x.Amount, Controls.ChartBase.Palette[x.Color])).ToList();
+        CompositionLegend = parts.Select(x => new LegendItem(x.Label, MoneyConverter.Format(x.Amount), Controls.ChartBase.Palette[x.Color])).ToList();
+        NetBars = list.OrderByDescending(p => p.NetPay).Take(10)
+            .Select(p => new Controls.ChartPoint(ShortName(p.Employee?.FullName), (double)p.NetPay, Controls.ChartBase.Palette[0])).ToList();
         TotalGross = MoneyConverter.Format(list.Sum(p => p.GrossPay));
         TotalNet = MoneyConverter.Format(list.Sum(p => p.NetPay));
         TotalInsurance = MoneyConverter.Format(list.Sum(p => p.Insurance));
         StatusSummary = list.Count == 0 ? "Chưa có phiếu lương"
             : $"{list.Count(p => p.Status == PayslipStatus.Draft)} nháp · {list.Count(p => p.Status == PayslipStatus.Approved)} đã duyệt · {list.Count(p => p.Status == PayslipStatus.Paid)} đã trả";
     }
+
+    /// <summary>Given name only ("Nguyễn Văn An" → "An"), so bar labels stay readable.</summary>
+    private static string ShortName(string? full) => full?.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? "?";
 
     [RelayCommand]
     private Task PreviousMonth() { Month = Month.AddMonths(-1); return RunAsync(LoadAsync); }

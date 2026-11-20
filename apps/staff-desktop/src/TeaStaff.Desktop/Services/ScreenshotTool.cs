@@ -40,6 +40,9 @@ public static class ScreenshotTool
         };
         shell.Show();
         await vm.StartAsync();
+        // Payroll screens look empty before the first run, so compute the current month for the pictures.
+        var now = DateTime.Now;
+        await services.GetRequiredService<Core.Services.PayrollService>().GenerateAsync(now.Year, now.Month);
         var index = 1;
         foreach (var item in vm.Navigation)
         {
