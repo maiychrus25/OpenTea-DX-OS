@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Bảng điều hành HTX: mini-app theo dõi tổng thể hợp tác xã
 
-> **Trạng thái:** Bản thiết kế (2026-11-20), chưa triển khai. Chủ dự án giao việc ngày 2026-11-20: một app chuyên về dashboard để ban quản trị HTX có góc nhìn tổng thể và theo dõi hợp tác xã của mình. Bước gộp vào `main` vẫn hỏi lại chủ dự án.
+> **Trạng thái:** Đã triển khai trên nhánh `feat/htx-dashboard` (2026-11-20), chờ merge và gắn tag; xem "Ghi chú sau triển khai" ở cuối tài liệu. Bản thiết kế (2026-11-20). Chủ dự án giao việc ngày 2026-11-20: một app chuyên về dashboard để ban quản trị HTX có góc nhìn tổng thể và theo dõi hợp tác xã của mình. Bước gộp vào `main` vẫn hỏi lại chủ dự án.
 > **Phạm vi:** đợt 1, mini-app `htx-dashboard` 0.1.0 và một thay đổi nhỏ, dùng chung, ở tầng dữ liệu lõi (§7). Đợt 2 (số liệu của các app khác) chỉ nêu hướng ở §10.
 > **Căn cứ:** Trang "Tổng quan" hiện có của trưởng HTX (`/manager/dashboard`) là trang "hôm nay": bốn con số và giá thị trường, không có chuỗi thời gian, không có cảm biến. Đề thi yêu cầu nguyên lý "IT/OT: cảm biến tới bản sao số" và "vòng đời, dòng dõi và chất lượng dữ liệu"; lõi đã thu và lưu số đo cảm biến nhưng chưa có màn hình nào hiện chúng.
 
@@ -129,3 +129,13 @@ Không đổi quyền nào khác, không bật thêm phép gộp (`aggregate`) c
 | Chỉ số bị hiểu sai (ví dụ sản lượng kỳ vọng) | Mỗi chỉ số có một dòng định nghĩa ngay trên trang |
 | View mới làm lệch bộ kiểm nền tảng đang đếm số bảng | Người triển khai đọc các bộ kiểm trước, cập nhật con số có chủ đích và ghi rõ trong PR |
 | Stack sạch không có số đo cảm biến để kiểm | Bước chuẩn bị của bộ kiểm tự gieo số đo (§9) |
+
+## Ghi chú sau triển khai
+
+Chỗ mã khác với thân tài liệu ở trên (thân tài liệu giữ nguyên):
+
+- **Sản lượng kỳ vọng (§5.1).** §5.1 vừa nói "chu kỳ mở" vừa nói "dùng đúng định nghĩa của `/manager/dashboard`". Đã chốt theo lõi: **các thửa có `status` không phải `HARVESTED` và không phải `DRAFT`**, cộng `area_ha × estimated_yield_per_ha`; thửa chưa khai năng suất được đếm riêng. Nhờ vậy hai màn hình cho cùng một số.
+- **Giá thị trường (§4).** Khối "Giá thị trường mới nhất" chỉ hiện các dòng của chè (`commodity = "Tea"`, tối đa 3 dòng mới nhất); không còn bổ sung bằng hàng hoá khác như trang của lõi (gạo, ngũ cốc không có ý nghĩa với HTX chè). Không có dòng chè thì hiện trạng thái trống. Tên chỉ số dịch bằng bảng của `apps/web/src/app/manager/dashboard/page.tsx`, thêm `export_price`, `import_tariff`, `production_volume`, là các chỉ số lõi chưa có tên tiếng Việt.
+- **Truy vấn của tab Dữ liệu (§6).** Tab này chỉ cần số dòng theo ngày nên xin hai cột (`day`, `reading_count`) của view với giới hạn 50.000 dòng (330 thửa × 5 cảm biến × 30 ngày); quá giới hạn thì trang nói số đã bị cắt. Truy vấn một thửa (`PARCEL_DAILY`) giới hạn 1.000 dòng (một thửa × cảm biến × 30 ngày). Các danh sách còn lại giữ giới hạn 5.000 dòng.
+- **Bộ kiểm nền tảng (§7.4, §11).** `smoke-platform.sh` nạp `smoke-dataops.sh`, nên CI chạy các kiểm tra của view: thêm kiểm tra cho `officer` và đổi ngày số đo thử sang hôm qua và hôm nay (cố định giờ 16:59Z và 18:30Z của ngày hôm trước để qua nửa đêm Việt Nam), vì ngày 2026-03-10 cũ hơn thời hạn kho nóng 30 ngày. Số PASS của `make platform-smoke` từ 124 thành 131 (5 của view và 2 của `officer`); `make apps-smoke` kiểm lại số này.
+- **Ảnh cho Kho ứng dụng.** Bốn ảnh trong `miniapps/htx-dashboard/store/` được chụp từ bản xem trước với dữ liệu mẫu, không chụp lại trên runner.

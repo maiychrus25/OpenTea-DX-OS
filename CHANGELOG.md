@@ -13,8 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **View `telemetry.sensor_daily`** (`platform/postgres/init/07-telemetry-views.sql`): read-only daily summary of `telemetry.sensor_readings` per (`htx_code`, `parcel_code`, `sensor`, Vietnam day) with `reading_count`, `min_value`, `max_value`, `avg_value`, `first_ts`, `last_ts`. Tracked in Hasura as `telemetry_sensor_daily` with the same `htx_code` filter as the raw table for `manager` and `officer`; `farmer` has no access. Covered by `platform/tests/smoke-dataops.sh`.
 
+- **Mini-app `htx-dashboard` ("Bảng điều hành HTX", 0.1.0)**: a read-only overall view of a cooperative for its manager, with no database of its own. Tổng quan lists what needs attention (journals waiting more than 3 days, disease reports waiting, sensors silent for 6 hours, harvests due or overdue, failed transfers to the cold store) over a strip of figures, a grid of parcels, journals per week, lots and the newest tea prices; the tabs Sản xuất, Vùng trồng, Sức khoẻ cây, Lô chè and Dữ liệu have a CSV file and a print page; each parcel has a page with the newest reading and the daily chart of each sensor, the crop round, weather, journal, disease reports and lots. Every figure is read from the core through Hasura with the viewer's own token, so a manager sees only their cooperative. Lists ask for at most 5,000 rows and say when cut; sensor charts cover at most 30 days. Requires core 1.13.0. Covered by the app's pytest suite, a block of `make apps-smoke` (every tab against the real core, the figures of seeded readings, the gateway's refusal of other roles, the view's permissions asked from Hasura), a browser story and the screens at 1280 and 390 px in light and dark.
+
 ### Changed
 
+- `make platform-smoke` gives 131 PASS (was 124): five checks for the daily view and two for the `officer` role. The daily-view readings are dated yesterday and today instead of March 2026, so the lifecycle job cannot archive them between the insert and the query.
 - Web package version `1.13.0`.
 
 ---
