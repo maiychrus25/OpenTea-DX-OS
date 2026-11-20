@@ -1,0 +1,22 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block body_attrs %} class="print-sheet"{% endblock %}
+{% block main %}
+{{ kit.print_bar(back) }}
+<h1>{{ title }}</h1>
+<p>HTX <strong>{{ htx }}</strong> · In ngày {{ today | vn_date }}</p>
+{% if rows %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row">{% for h in header %}<th role="columnheader">{{ h }}</th>{% endfor %}</tr></thead>
+  <tbody role="rowgroup">
+  {% for row in rows %}
+    <tr role="row">{% for cell in row %}<td role="cell" data-label="{{ header[loop.index0] }}">{{ cell }}</td>{% endfor %}</tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">Không có dòng nào trong kỳ này.</p>
+{% endif %}
+{% endblock %}

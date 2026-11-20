@@ -1,0 +1,19 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% import "kit.html" as kit -%}
+{% import "parts.html" as parts -%}
+<!doctype html>
+<html lang="vi"{% if theme %} data-theme="{{ theme }}"{% endif %}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{% endblock %} · Bảng điều hành HTX</title>
+<link rel="stylesheet" href="/dxos-app.css">
+<link rel="stylesheet" href="{{ prefix }}/assets/{{ css_name }}">
+</head>
+<body{% block body_attrs %}{% endblock %}><main>
+{% block head %}{% endblock %}
+{% if tabs %}{{ kit.tabs(tabs, current) }}{% endif %}
+{% block main %}{% endblock %}
+</main></body>
+</html>

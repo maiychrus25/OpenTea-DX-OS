@@ -1,0 +1,122 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% block title %}Thửa {{ code }}{% endblock %}
+{% block head %}{% call kit.app_header("Thửa " ~ code, "Bản sao số: số đo cảm biến, vụ canh tác, nhật ký và báo cáo bệnh") %}<a class="button secondary" href="{{ link('/parcels') }}">‹ Các thửa</a>{% endcall %}{% endblock %}
+{% block main %}
+{{ parts.period_nav(link, here, days, keep) }}
+
+<section class="group" aria-labelledby="info-title">
+  <h2 id="info-title">Thông tin thửa</h2>
+  {% if r.parcel.ok %}
+  <dl class="facts">
+    <div><dt>Hộ</dt><dd>{{ parcel.household_name }}</dd></div>
+    <div><dt>Diện tích</dt><dd>{{ parcel.area_ha | num(1) }} ha</dd></div>
+    <div><dt>Cây trồng</dt><dd>{{ parcel.crop_type }}</dd></div>
+    <div><dt>Trạng thái</dt><dd><span class="status-dot {{ status_class.get(parcel.status, 'draft') }}"></span>{{ parcel_status.get(parcel.status, parcel.status) }}</dd></div>
+    <div><dt>Vụ hiện tại</dt><dd>{% if parcel.cycle %}{{ parcel.cycle.season or "Chưa đặt tên vụ" }}{% if parcel.cycle.sowed_at %} · gieo {{ parcel.cycle.sowed_at | vn_day }}{% endif %}{% else %}Không có vụ đang canh tác{% endif %}</dd></div>
+    <div><dt>Thu hoạch dự kiến</dt><dd>{% if parcel.cycle and parcel.cycle.estimated_harvest_date %}{{ parcel.cycle.estimated_harvest_date | vn_day }}{% else %}Chưa có{% endif %}</dd></div>
+    <div><dt>Năng suất ước tính</dt><dd>{% if parcel.yield_per_ha is none %}Chưa khai{% else %}{{ parcel.yield_per_ha | num(0) }} kg/ha{% endif %}</dd></div>
+  </dl>
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+
+<section class="group" aria-labelledby="sensor-title">
+  <h2 id="sensor-title">Cảm biến</h2>
+  {% if capped_sensors %}<p class="note">Kho nóng chỉ giữ số đo cảm biến tối đa 30 ngày, nên biểu đồ cảm biến dùng {{ sensor_days }} ngày dù kỳ xem là {{ days }} ngày.</p>{% endif %}
+  {% if r.latest.ok and r.daily.ok %}
+    {% if sensors %}
+    <div class="sensor-grid">
+      {% for s in sensors %}
+      <article class="sensor-card{% if s.silent %} silent{% endif %}">
+        <header>
+          <h3>{{ s.label }}</h3>
+          {% if s.silent %}<span class="pill danger">Không gửi số đo quá {{ sensor_silent_hours }} giờ</span>
+          {% elif s.age %}<span class="pill">{{ s.age }}</span>{% endif %}
+        </header>
+        {% if s.reading %}
+        <p class="sensor-value">{{ s.reading.value | num(1) }}<span class="sensor-unit"> {{ s.unit }}</span></p>
+        <p class="sensor-when">Số đo lúc {{ s.reading.ts | vn_datetime }}</p>
+        {% endif %}
+        {% if s.stats %}
+        <dl class="stat-row">
+          <div><dt>Nhỏ nhất</dt><dd>{{ s.stats.min | num(1) }} {{ s.unit }}</dd></div>
+          <div><dt>Lớn nhất</dt><dd>{{ s.stats.max | num(1) }} {{ s.unit }}</dd></div>
+          <div><dt>Trung bình</dt><dd>{{ s.stats.avg | num(1) }} {{ s.unit }}</dd></div>
+        </dl>
+        <p class="note">Trong {{ sensor_days }} ngày qua, {{ s.stats.count | num(0) }} số đo.</p>
+        {{ parts.line_chart(s.chart, s.label, s.unit) }}
+        {% else %}<p class="note">Không có số đo trong {{ sensor_days }} ngày qua.</p>{% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}{{ kit.empty("Thửa này chưa có cảm biến nào gửi số đo.") }}{% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+
+<section class="group" aria-labelledby="weather-title">
+  <h2 id="weather-title">Thời tiết mới nhất</h2>
+  {% if r.weather.ok %}
+    {% if weather %}
+    {{ kit.stats([
+      {"label": "Thời tiết", "value": weather.condition, "hint": "cập nhật " ~ (weather.recorded_at | vn_datetime)},
+      {"label": "Nhiệt độ", "value": (weather.temperature_c | num(1)) ~ " °C"},
+      {"label": "Độ ẩm", "value": (weather.humidity_pct | num(0)) ~ " %"},
+      {"label": "Lượng mưa", "value": (weather.precipitation_mm | num(1)) ~ " mm"}
+    ]) }}
+    {% else %}{{ kit.empty("Chưa có dữ liệu thời tiết của thửa này.") }}{% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+
+<section class="group" aria-labelledby="journal-title">
+  <h2 id="journal-title">Nhật ký gần đây</h2>
+  {% if r.journals.ok %}
+    {% if journals %}
+    <table role="table">
+      <thead role="rowgroup"><tr role="row"><th role="columnheader">Ngày</th><th role="columnheader">Hoạt động</th><th role="columnheader">Người ghi</th><th role="columnheader">Trạng thái</th><th role="columnheader">Ghi chú</th></tr></thead>
+      <tbody role="rowgroup">
+      {% for j in journals %}
+        <tr role="row">
+          <td role="cell" data-label="Ngày">{{ j.entry.entry_date | vn_day }}</td>
+          <td role="cell" data-label="Hoạt động">{{ activity.get(j.entry.activity_type, j.entry.activity_type) }}</td>
+          <td role="cell" data-label="Người ghi">{{ j.entry.performed_by }}</td>
+          <td role="cell" data-label="Trạng thái"><span class="pill{% if j.entry.status == 'PENDING_APPROVAL' or j.entry.status == 'REQUEST_CHANGES' %} warn{% elif j.entry.status == 'REJECTED' %} neutral{% endif %}">{{ journal_status.get(j.entry.status, j.entry.status) }}</span></td>
+          <td role="cell" data-label="Ghi chú">{{ j.notes or "—" }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}{{ kit.empty("Thửa này chưa có nhật ký nào.") }}{% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+
+<section class="group" aria-labelledby="disease-title">
+  <h2 id="disease-title">Báo cáo bệnh gần đây</h2>
+  {% if r.diseases.ok %}
+    {% if diseases %}
+    <table role="table">
+      <thead role="rowgroup"><tr role="row"><th role="columnheader">Ngày</th><th role="columnheader">Loại bệnh</th><th role="columnheader">Độ tin cậy AI</th><th role="columnheader">Trạng thái</th></tr></thead>
+      <tbody role="rowgroup">
+      {% for d in diseases %}
+        <tr role="row">
+          <td role="cell" data-label="Ngày">{{ d.detection_date | vn_day }}</td>
+          <td role="cell" data-label="Loại bệnh">{{ kind(d) }}</td>
+          <td role="cell" data-label="Độ tin cậy AI">{{ (d.confidence * 100) | num(0) }} %</td>
+          <td role="cell" data-label="Trạng thái"><span class="{{ pill(d.status) }}">{{ disease_status.get(d.status, d.status) }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}{{ kit.empty("Thửa này chưa có báo cáo bệnh nào.") }}{% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+
+<section class="group" aria-labelledby="lots-title">
+  <h2 id="lots-title">Lô chè có thửa này</h2>
+  {% if r.lots.ok %}
+    {% if lots %}
+    <ul class="name-list">{% for lot in lots %}<li><strong>{{ lot.code }}</strong> · {{ lot_status.get(lot.status, lot.status) }} · thu hoạch {{ lot.harvest_date | vn_day }}</li>{% endfor %}</ul>
+    {% else %}{{ kit.empty("Chưa có lô chè nào có thửa này.") }}{% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+{% endblock %}
