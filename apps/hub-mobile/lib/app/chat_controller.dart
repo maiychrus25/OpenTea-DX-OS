@@ -42,10 +42,10 @@ class ChatController extends ChangeNotifier {
   List<ChatTopic> get topics => switch (roleFromClaims(_claims)) {
     AppRole.manager =>
       _claims!.canWriteHtx
-          ? const [ChatTopic.market, ChatTopic.technical]
+          ? const [ChatTopic.market, ChatTopic.technical, ChatTopic.tour]
           : const [ChatTopic.technical, ChatTopic.market],
     AppRole.farmer => const [ChatTopic.technical],
-    AppRole.operator => const [ChatTopic.tour],
+    AppRole.guide => const [ChatTopic.tour],
     _ => const [ChatTopic.shop],
   };
   ChatConversation get conversation => _conversations.putIfAbsent(topic, ChatConversation.new);
@@ -103,6 +103,7 @@ class ChatController extends ChangeNotifier {
           sessionId: c.sessionId,
           context: ChatContext(
             localOnly: _claims == null,
+            guideId: roleFromClaims(_claims) == AppRole.guide ? _claims?.subject : null,
             htxCode: _claims?.htxCode,
             householdId: _claims?.householdId,
           ),

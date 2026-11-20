@@ -50,7 +50,7 @@ Future<void> tapVisible(WidgetTester tester, String key) async {
 }
 
 void main() {
-  for (final role in ['customer', 'farmer', 'manager', 'officer', 'operator']) {
+  for (final role in ['customer', 'farmer', 'manager', 'officer', 'guide']) {
     testWidgets('$role account shows shorts and opens its selected clip with a working back', (tester) async {
       final videos = FakeVideoSource();
       final repo = MockHubRepository();

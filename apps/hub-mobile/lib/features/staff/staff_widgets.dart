@@ -835,7 +835,7 @@ class StaffEmpty extends StatelessWidget {
   );
 }
 
-/// Horizontal bars (operator dashboard): label, track, value.
+/// Horizontal bars (guide dashboard): label, track, value.
 class BarList extends StatelessWidget {
   const BarList(this.rows, {super.key, this.unit = ''});
   final List<(String, num)> rows;

@@ -36,7 +36,12 @@ void main() {
       expect(claimsFromAccessToken(fakeJwt(roles: ['offline_access', 'uma_authorization'])), isNull);
       expect(claimsFromAccessToken(fakeJwt(roles: null)), isNull);
       expect(claimsFromAccessToken(fakeJwt(roles: 'farmer')), isNull, reason: 'roles must be a list');
-      expect(claimsFromAccessToken(fakeJwt(roles: ['operator'])), isNull, reason: 'operator role is not decided yet');
+      expect(
+        claimsFromAccessToken(fakeJwt(roles: ['operator'])),
+        isNull,
+        reason: 'the travel company role no longer exists',
+      );
+      expect(claimsFromAccessToken(fakeJwt(roles: ['guide'])), isNotNull);
     });
 
     test('falls back to preferred_username, then email, for the display name', () {

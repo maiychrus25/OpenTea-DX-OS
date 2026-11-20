@@ -46,7 +46,7 @@ List<CustomerNotice> customerNotices(List<Booking> bookings, List<Order> orders)
         title: switch (b.status) {
           BookingStatus.pending when b.paymentStatus == PaymentStatus.unpaid =>
             'Lượt đặt ${b.code} đang chờ thanh toán',
-          BookingStatus.pending => 'Lượt đặt ${b.code} đang chờ công ty du lịch xác nhận',
+          BookingStatus.pending => 'Lượt đặt ${b.code} đang chờ HTX xác nhận',
           BookingStatus.confirmed => 'Lượt đặt ${b.code} đã được xác nhận',
           BookingStatus.completed => 'Chuyến đi ${b.code} đã hoàn tất',
           BookingStatus.cancelled => 'Lượt đặt ${b.code} đã huỷ',

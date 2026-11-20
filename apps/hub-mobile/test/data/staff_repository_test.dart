@@ -79,14 +79,7 @@ void main() {
       'Thông báo',
       'Hồ sơ HTX',
     ]);
-    expect(labels(StaffKind.operator), [
-      'Tổng quan',
-      'Hợp tác xã liên kết',
-      'Tour toàn vùng',
-      'Bài viết HTX',
-      'Báo cáo tổng hợp',
-      'Trợ lý AI',
-    ]);
+    expect(labels(StaffKind.guide), ['Tour được giao', 'Trợ lý AI', 'Reels', 'Thông báo', 'Tài khoản']);
     expect(labels(StaffKind.officer), contains('Nông hộ'));
     expect(labels(StaffKind.farmer), contains('Thửa đất của tôi'));
   });

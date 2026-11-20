@@ -110,14 +110,7 @@ void main() {
       '/manager/shorts/new',
       '/manager/shorts/watch/demo-short-4',
     ],
-    'operator@demo.vn': [
-      '/operator/payments',
-      '/operator/bookings/bk-01',
-      '/operator/me',
-      '/operator/shorts',
-      '/operator/shorts/new',
-      '/operator/shorts/watch/demo-short-6',
-    ],
+    'guide@demo.vn': ['/guide/tours/tour-01', '/guide/shorts', '/guide/shorts/new', '/guide/shorts/watch/demo-short-6'],
     'officer@demo.vn': ['/manager/shorts', '/manager/shorts/new', '/manager/shorts/watch/demo-short-4'],
   };
   for (final entry in staffPages.entries) {

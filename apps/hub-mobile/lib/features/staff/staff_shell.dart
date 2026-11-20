@@ -82,7 +82,7 @@ class _StaffShellState extends State<StaffShell> {
     final claims = context.read<AppState>().claims;
     final repo = context.read<HubRepository>();
     final nav = _nav;
-    if (claims == null || nav.kind == StaffKind.operator) return;
+    if (claims == null || nav.kind == StaffKind.guide) return;
     final code = claims.htxCode ?? '';
     final household = nav.kind == StaffKind.farmer ? claims.householdId : null;
     try {
@@ -404,7 +404,7 @@ class _StaffDrawerState extends State<_StaffDrawer> {
     final state = context.watch<AppState>();
     final claims = state.claims;
     final active = nav.itemFor(location);
-    final isOperator = nav.kind == StaffKind.operator;
+    final isGuide = nav.kind == StaffKind.guide;
     return Drawer(
       width: 300,
       backgroundColor: StaffColors.sidebar,
@@ -457,11 +457,11 @@ class _StaffDrawerState extends State<_StaffDrawer> {
               // HTX block
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                child: isOperator
+                child: isGuide
                     ? _CoopBlock(
-                        badge: 'CTY',
-                        name: claims?.name ?? 'Công ty du lịch',
-                        place: 'Điều phối các HTX liên kết',
+                        badge: 'NV',
+                        name: claims?.name ?? 'Nhân viên dẫn tour',
+                        place: 'Dẫn các tour do HTX giao',
                       )
                     : _HtxBlock(code: claims?.htxCode ?? ''),
               ),
@@ -574,7 +574,7 @@ class _StaffDrawerState extends State<_StaffDrawer> {
   }
 
   int _badgeFor(MenuItem m) {
-    if (m.path == nav.notificationsPath && nav.kind != StaffKind.operator) return counts.unread;
+    if (m.path == nav.notificationsPath && nav.kind != StaffKind.guide) return counts.unread;
     if (m.path == '/manager/journal-approve') return counts.pendingJournal;
     return 0;
   }

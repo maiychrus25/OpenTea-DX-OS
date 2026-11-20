@@ -27,7 +27,7 @@ const _shortRole = {
   'farmer@demo.vn': 'Nông dân',
   'manager@demo.vn': 'Quản lý HTX',
   'officer@demo.vn': 'Cán bộ HTX',
-  'operator@demo.vn': 'Công ty du lịch',
+  'guide@demo.vn': 'Nhân viên dẫn tour',
 };
 
 class _LoginScreenState extends State<LoginScreen> {

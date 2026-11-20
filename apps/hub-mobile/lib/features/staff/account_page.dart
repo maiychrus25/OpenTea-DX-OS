@@ -75,7 +75,7 @@ class StaffAccountPage extends StatelessWidget {
               child: Column(
                 children: [
                   StaffListRow(title: 'Email', subtitle: claims?.email ?? ''),
-                  if (kind != StaffKind.operator) ...[
+                  if (kind != StaffKind.guide) ...[
                     const Divider(height: 1, indent: 16, endIndent: 16),
                     StaffListRow(
                       title: 'Thông báo',
@@ -87,11 +87,14 @@ class StaffAccountPage extends StatelessWidget {
                     const Divider(height: 1, indent: 16, endIndent: 16),
                     StaffListRow(title: 'Hồ sơ HTX', onTap: () => context.go('/manager/profile')),
                   ],
-                  if (kind == StaffKind.operator) ...[
+                  if (kind == StaffKind.manager || kind == StaffKind.officer) ...[
                     const Divider(height: 1, indent: 16, endIndent: 16),
-                    StaffListRow(title: 'Hợp tác xã liên kết', onTap: () => context.go('/operator/htx')),
+                    StaffListRow(title: 'Tour', onTap: () => context.push('/manager/tours')),
+                  ],
+                  if (kind == StaffKind.guide) ...[
                     const Divider(height: 1, indent: 16, endIndent: 16),
-                    StaffListRow(title: 'Báo cáo tổng hợp', onTap: () => context.go('/operator/reports')),
+                    StaffListRow(title: 'Tour được giao', onTap: () => context.go('/guide')),
+                    StaffListRow(title: 'Thông báo', onTap: () => context.go('/guide/notifications')),
                   ],
                 ],
               ),

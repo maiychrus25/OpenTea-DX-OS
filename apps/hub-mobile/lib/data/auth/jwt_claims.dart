@@ -5,9 +5,8 @@ import 'dart:convert';
 
 import '../../core/role/role.dart';
 
-/// Realm roles this app accepts from a token. The `operator` role is left out on
-/// purpose: the tour-company role name is not decided (see [roleOperator]).
-const acceptedRealmRoles = [roleManager, roleOfficer, roleFarmer, roleCustomer];
+/// Realm roles accepted for navigation; servers validate actual permissions.
+const acceptedRealmRoles = [roleManager, roleOfficer, roleGuide, roleFarmer, roleCustomer];
 
 /// The staff role to act as in Hasura (`x-hasura-role`), by the same priority
 /// as the web's `roleFromRealmRoles`: manager > officer > farmer. Null for a

@@ -3,15 +3,14 @@
 
 /// What the user can do in the app. Hiding screens is for tidiness only; the
 /// server must check the real permission on every call (direction doc §3).
-enum AppRole { guest, customer, farmer, manager, operator }
+enum AppRole { guest, customer, farmer, manager, guide }
 
 /// Keycloak realm roles the app understands.
 const roleCustomer = 'customer';
 const roleFarmer = 'farmer';
 const roleManager = 'manager';
 const roleOfficer = 'officer';
-// TODO: the operator realm role name is not decided (operator-and-articles design, Q-OP-1..5).
-const roleOperator = 'operator';
+const roleGuide = 'guide';
 
 /// Token-like claims. In production these come from the Keycloak ID/access
 /// token (client `dxos-mobile`); the demo auth service builds them locally.
@@ -61,11 +60,11 @@ class Claims {
 }
 
 /// Picks the single interface for a set of claims. Highest privilege wins:
-/// operator, manager/officer, farmer, customer. No claims means guest.
+/// manager/officer, guide, farmer, customer. No claims means guest.
 AppRole roleFromClaims(Claims? claims) {
   if (claims == null) return AppRole.guest;
-  if (claims.hasRole(roleOperator)) return AppRole.operator;
   if (claims.hasRole(roleManager) || claims.hasRole(roleOfficer)) return AppRole.manager;
+  if (claims.hasRole(roleGuide)) return AppRole.guide;
   if (claims.hasRole(roleFarmer)) return AppRole.farmer;
   if (claims.hasRole(roleCustomer)) return AppRole.customer;
   return AppRole.guest;
@@ -76,7 +75,7 @@ String roleLabel(AppRole role) => switch (role) {
   AppRole.customer => 'Khách hàng',
   AppRole.farmer => 'Nông dân',
   AppRole.manager => 'Hợp tác xã',
-  AppRole.operator => 'Công ty du lịch',
+  AppRole.guide => 'Nhân viên dẫn tour',
 };
 
 /// Home route of each role; also the prefix every screen of that role lives under.
@@ -85,7 +84,7 @@ String homeRouteFor(AppRole role) => switch (role) {
   AppRole.customer => '/shop',
   AppRole.farmer => '/farmer',
   AppRole.manager => '/manager',
-  AppRole.operator => '/operator',
+  AppRole.guide => '/guide',
 };
 
 /// Routes of the storefront that need an account (guest is sent to login).
@@ -101,7 +100,7 @@ const customerOnlyPrefixes = [
 /// Where to send [role] when it asks for [location], or null to let it through.
 /// Pure function so the routing rules can be unit-tested without a widget tree.
 String? redirectFor(AppRole role, String location) {
-  const staff = {'/farmer': AppRole.farmer, '/manager': AppRole.manager, '/operator': AppRole.operator};
+  const staff = {'/farmer': AppRole.farmer, '/manager': AppRole.manager, '/guide': AppRole.guide};
   for (final entry in staff.entries) {
     if (location.startsWith(entry.key)) {
       return role == entry.value ? null : (role == AppRole.guest ? '/login' : homeRouteFor(role));

@@ -21,10 +21,10 @@ class SeedData {
       ('tan-cuong', 'HTX Chè Tân Cương', 'Từ búp chè đến chén trà thơm', 5, 12400, 3),
       ('tan-cuong', 'HTX Chè Tân Cương', 'Một mùa chè xanh', 6, 8650, 6),
       ('tan-cuong', 'HTX Chè Tân Cương', 'Trà hoa nhài mới ra lò', 8, 4310, 12),
-      ('operator-demo', 'Công ty Lữ hành Xứ Chè', 'Một ngày làm người hái chè', 3, 21300, 2),
-      ('operator-demo', 'Công ty Lữ hành Xứ Chè', 'Hẹn nhau trên đồi chè', 9, 9780, 5),
-      ('operator-demo', 'Công ty Lữ hành Xứ Chè', 'Hành trình chè Shan Tuyết cổ thụ', 7, 6420, 10),
-      ('operator-demo', 'Công ty Lữ hành Xứ Chè', 'Thưởng trà bên bếp lửa', 12, 3150, 15),
+      ('guide-demo', 'Nguyễn Minh An', 'Một ngày làm người hái chè', 3, 21300, 2),
+      ('guide-demo', 'Nguyễn Minh An', 'Hẹn nhau trên đồi chè', 9, 9780, 5),
+      ('guide-demo', 'Nguyễn Minh An', 'Hành trình chè Shan Tuyết cổ thụ', 7, 6420, 10),
+      ('guide-demo', 'Nguyễn Minh An', 'Thưởng trà bên bếp lửa', 12, 3150, 15),
     ];
     return [
       for (var i = 0; i < clips.length; i++)
@@ -75,6 +75,7 @@ class SeedData {
       bankBin: '970405',
       bankAccount: '8600201001234',
       accountHolder: 'HTX CHE TAN CUONG',
+      contactPhone: '02083860001',
     ),
     Htx(
       code: 'suoi-giang',
@@ -83,20 +84,22 @@ class SeedData {
       bankBin: '970436',
       bankAccount: '0011004567890',
       accountHolder: 'HTX CHE SUOI GIANG',
+      contactPhone: '02163860002',
     ),
   ];
 
-  /// Receives the money of every tour booking. Demo account, not a real one.
-  static const tourCompany = TourCompany(
-    name: 'Công ty Lữ hành Xứ Chè (demo)',
-    bankBin: '970422',
-    bankAccount: '0000123456789',
-    accountHolder: 'CONG TY LU HANH XU CHE DEMO',
-  );
+  static const guides = <GuideStaff>[
+    GuideStaff(id: 'guide-demo', name: 'Nguyễn Minh An', phone: '0900000011', htxCode: 'tan-cuong'),
+    GuideStaff(id: 'guide-tc-02', name: 'Trần Thu Mai', phone: '0900000012', htxCode: 'tan-cuong'),
+    GuideStaff(id: 'guide-demo', name: 'Nguyễn Minh An', phone: '0900000011', htxCode: 'suoi-giang'),
+    GuideStaff(id: 'guide-sg-02', name: 'Hoàng Văn Sơn', phone: '0900000013', htxCode: 'suoi-giang'),
+    GuideStaff(id: 'guide-sg-03', name: 'Lý Thu Hà', phone: '0900000014', htxCode: 'suoi-giang'),
+  ];
 
   static const tours = <Tour>[
     Tour(
       id: 'tour-01',
+      guideIds: ['guide-demo', 'guide-tc-02'],
       htxCode: 'tan-cuong',
       householdId: 'hh-01',
       name: 'Một ngày làm người hái chè',
@@ -174,6 +177,7 @@ class SeedData {
     ),
     Tour(
       id: 'tour-03',
+      guideIds: ['guide-demo', 'guide-sg-02'],
       htxCode: 'suoi-giang',
       householdId: 'hh-03',
       name: 'Hành trình chè Shan Tuyết cổ thụ',

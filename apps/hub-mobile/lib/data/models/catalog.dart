@@ -11,7 +11,9 @@ class Htx {
     required this.bankBin,
     required this.bankAccount,
     required this.accountHolder,
+    this.contactPhone = '',
   });
+  final String contactPhone;
   final String code;
   final String name;
   final String province;
@@ -30,19 +32,13 @@ class Site {
   final String description;
 }
 
-/// The travel company that runs every tour: prices, bookings, check-in and the
-/// money. Customers pay a booking into this account, not the cooperative's.
-class TourCompany {
-  const TourCompany({
-    required this.name,
-    required this.bankBin,
-    required this.bankAccount,
-    required this.accountHolder,
-  });
+/// A guide can be on the staff list of more than one cooperative.
+class GuideStaff {
+  const GuideStaff({required this.id, required this.name, required this.phone, required this.htxCode});
+  final String id;
   final String name;
-  final String bankBin;
-  final String bankAccount;
-  final String accountHolder;
+  final String phone;
+  final String htxCode;
 }
 
 class ItineraryDay {
@@ -84,6 +80,7 @@ class Tour {
     this.level = 'Dễ',
     this.maxGuests = 12,
     this.includes = const [],
+    this.guideIds = const [],
   });
   final String id;
   final String htxCode;
@@ -108,6 +105,28 @@ class Tour {
 
   /// What the price covers, as the cooperative lists it (shown under 'Bao gồm').
   final List<String> includes;
+
+  /// Account subjects assigned by this tour's cooperative.
+  final List<String> guideIds;
+
+  Tour copyWith({String? name, int? adultPrice, int? childPrice, int? maxGuests, List<String>? guideIds}) => Tour(
+    id: id,
+    htxCode: htxCode,
+    householdId: householdId,
+    name: name ?? this.name,
+    summary: summary,
+    durationLabel: durationLabel,
+    adultPrice: adultPrice ?? this.adultPrice,
+    childPrice: childPrice ?? this.childPrice,
+    itinerary: itinerary,
+    gradientSeed: gradientSeed,
+    tags: tags,
+    bestMonths: bestMonths,
+    level: level,
+    maxGuests: maxGuests ?? this.maxGuests,
+    includes: includes,
+    guideIds: List.unmodifiable(guideIds ?? this.guideIds),
+  );
 
   /// Whole-day or shorter tours; used by the "Trong ngày" filter.
   bool get isSameDay => !durationLabel.contains('đêm');

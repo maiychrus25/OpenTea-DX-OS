@@ -58,7 +58,7 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
 
   Future<void> _submit() async {
     if (_name.text.trim().isEmpty || _phone.text.trim().length < 8) {
-      setState(() => _error = 'Nhập họ tên và số điện thoại để công ty du lịch liên hệ lại.');
+      setState(() => _error = 'Nhập họ tên và số điện thoại để HTX liên hệ lại.');
       return;
     }
     final repo = context.read<HubRepository>();
@@ -80,7 +80,7 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
                 children: [
                   const PageTitle(
                     'Gửi yêu cầu tham quan trực tiếp',
-                    subtitle: 'Công ty du lịch sẽ xem và trả lời bạn. Không cần tài khoản.',
+                    subtitle: 'HTX sẽ xem và trả lời bạn. Không cần tài khoản.',
                   ),
                   TextField(
                     key: const Key('visit-name'),
@@ -143,9 +143,7 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
                   const SizedBox(height: 16),
                   AmberButton(buttonKey: const Key('visit-submit'), label: 'Gửi yêu cầu', onPressed: _submit),
                   const SizedBox(height: 12),
-                  const SourceChip(
-                    'Sau khi gửi: công ty du lịch xem, sắp lịch đón, rồi chuyển sang đặt chỗ ở tea-tour',
-                  ),
+                  const SourceChip('Sau khi gửi: HTX xem, sắp lịch đón, rồi chuyển sang đặt chỗ ở tea-tour'),
                 ],
               ),
             ),
@@ -164,8 +162,8 @@ class VisitSentScreen extends StatelessWidget {
 
   static const _steps = [
     ('Đã gửi', 'Vừa xong'),
-    ('Công ty du lịch xem và duyệt', 'Thường trả lời trong 24 giờ'),
-    ('Công ty du lịch sắp lịch đón', 'Báo bạn ngày phù hợp'),
+    ('HTX xem và duyệt', 'Thường trả lời trong 24 giờ'),
+    ('HTX sắp lịch đón', 'Báo bạn ngày phù hợp'),
     ('Đặt chỗ ở tea-tour', 'Giữ chỗ và nhận mã đặt chỗ'),
     ('Sau chuyến đi: mua chè, xem nguồn gốc lô', 'tea-shop và trang truy xuất'),
   ];

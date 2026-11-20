@@ -303,9 +303,8 @@ List<_Suggestion> _suggestionsFor(ChatTopic topic) => switch (topic) {
   ],
   ChatTopic.tour => const [
     (Icons.groups_outlined, 'Các đoàn sắp đi'),
-    (Icons.account_balance_outlined, 'HTX liên kết'),
-    (Icons.route_outlined, 'Tour toàn vùng'),
-    (Icons.bar_chart_outlined, 'Báo cáo doanh thu'),
+    (Icons.account_balance_outlined, 'HTX nào giao tour cho tôi'),
+    (Icons.route_outlined, 'Các tour được giao'),
   ],
 };
 
@@ -313,7 +312,7 @@ String _introFor(ChatTopic topic) => switch (topic) {
   ChatTopic.shop => 'Hỏi về đặc sản chè, tour trải nghiệm, hợp tác xã và cách đặt hàng.',
   ChatTopic.market => 'Hỏi về giá trong danh mục, đơn hàng và số liệu thị trường có nguồn.',
   ChatTopic.technical => 'Hỏi về bệnh chè, nhật ký đồng ruộng và lịch thu hái của thửa đất.',
-  ChatTopic.tour => 'Hỏi về đoàn khách sắp đến, HTX liên kết, tour và doanh thu.',
+  ChatTopic.tour => 'Hỏi về đoàn khách sắp đến, HTX giao tour và các tour của bạn.',
 };
 
 class _Welcome extends StatelessWidget {

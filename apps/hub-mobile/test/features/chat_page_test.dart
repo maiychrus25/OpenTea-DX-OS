@@ -172,12 +172,12 @@ void main() {
     expect(find.textContaining('Thửa đất của hộ'), findsOneWidget);
   });
 
-  testWidgets('the tour company asks about its next groups', (tester) async {
-    await _open(tester, email: 'operator@demo.vn');
-    await _openFromStaffMenu(tester, '/operator/chat');
+  testWidgets('a tour guide asks which HTX assigned them', (tester) async {
+    await _open(tester, email: 'guide@demo.vn');
+    await _openFromStaffMenu(tester, '/guide/chat');
     await tester.tap(find.byKey(const Key('chat-suggest-1')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('HTX liên kết trong dữ liệu mẫu'), findsOneWidget);
+    expect(find.textContaining('HTX tổ chức các tour của bạn'), findsOneWidget);
   });
 
   testWidgets('a failed answer can be retried', (tester) async {
@@ -203,7 +203,7 @@ void main() {
   for (final (email, path) in [
     (null, '/shop/chat'),
     ('manager@demo.vn', '/manager/chat'),
-    ('operator@demo.vn', '/operator/chat'),
+    ('guide@demo.vn', '/guide/chat'),
   ]) {
     testWidgets('no overflow at 320 px with large text: ${email ?? 'guest'}', (tester) async {
       final router = await _open(tester, email: email, width: 320, text: 1.3);

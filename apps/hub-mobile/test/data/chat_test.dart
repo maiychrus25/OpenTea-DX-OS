@@ -63,11 +63,22 @@ void main() {
       expect(await answer(ChatTopic.market, question), contains('Tôi không có dữ liệu cập nhật cho câu hỏi này.'));
     }
   });
-  test('tour reads groups linked cooperatives region tours and reports', () async {
-    expect(await answer(ChatTopic.tour, 'Đoàn sắp đi'), contains((await repo.listAllBookings()).first.tourName));
-    expect(await answer(ChatTopic.tour, 'HTX liên kết'), contains((await repo.listLinkedHtxs()).first.name));
-    expect(await answer(ChatTopic.tour, 'Tour toàn vùng'), contains((await repo.listRegionTours()).first.name));
-    expect(await answer(ChatTopic.tour, 'Doanh thu'), contains((await repo.reportRows()).first.value));
+  test('tour answers only assigned guide or own cooperative data', () async {
+    const guide = ChatContext(guideId: 'guide-demo');
+    final tours = await repo.listGuideTours('guide-demo');
+    expect(await answer(ChatTopic.tour, 'Đoàn sắp đi', context: guide), contains(tours.first.name));
+    expect(
+      await answer(ChatTopic.tour, 'HTX giao tour', context: guide),
+      contains((await repo.getHtx(tours.first.htxCode)).name),
+    );
+    final text = await answer(ChatTopic.tour, 'Tour của tôi', context: guide);
+    expect(text, contains(tours.first.name));
+    expect(text, isNot(contains((await repo.getTour('tour-02')).name)));
+    expect(
+      await answer(ChatTopic.tour, 'Tour', context: const ChatContext(htxCode: 'tan-cuong')),
+      isNot(contains((await repo.getTour('tour-03')).name)),
+    );
+    expect(await answer(ChatTopic.tour, 'Doanh thu'), contains('Tôi không có dữ liệu cập nhật'));
   });
   test('all topics refuse buy sell decisions', () async {
     for (final topic in ChatTopic.values) {

@@ -35,7 +35,7 @@ void main() {
 
   test('follow and unfollow a channel; your own channel and unknown ones are refused', () async {
     final repo = MockHubRepository();
-    expect(await repo.followedChannels(customer), {'tan-cuong', 'operator-demo'});
+    expect(await repo.followedChannels(customer), {'tan-cuong', 'guide-demo'});
     expect(await repo.toggleFollowChannel('farmer-demo', customer), isTrue);
     expect(await repo.followedChannels(customer), contains('farmer-demo'));
     expect(await repo.toggleFollowChannel('farmer-demo', customer), isFalse);

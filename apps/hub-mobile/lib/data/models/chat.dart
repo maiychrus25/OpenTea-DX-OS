@@ -24,7 +24,8 @@ class ChatTurn {
 /// Local-data scope only, never sent as authorization to the server.
 /// Guests must use [localOnly] even when the app has an HTTP client configured.
 class ChatContext {
-  const ChatContext({this.localOnly = false, this.htxCode, this.householdId});
+  const ChatContext({this.localOnly = false, this.htxCode, this.householdId, this.guideId});
+  final String? guideId;
   final bool localOnly;
   final String? htxCode;
   final String? householdId;

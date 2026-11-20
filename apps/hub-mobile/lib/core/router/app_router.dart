@@ -31,7 +31,9 @@ import '../../features/customer/tours_tab.dart';
 import '../../features/farmer/diagnosis_page.dart';
 import '../../features/farmer/farmer_screens.dart';
 import '../../features/manager/manager_screens.dart';
-import '../../features/operator/operator_screens.dart';
+import '../../features/manager/tour_booking_pages.dart';
+import '../../features/manager/tour_pages.dart';
+import '../../features/guide/guide_screens.dart';
 import '../../features/staff/account_page.dart';
 import '../../features/shorts/shorts_section.dart';
 import '../../features/shorts/shorts_player_page.dart';
@@ -73,7 +75,7 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
     redirect: (context, st) => appRedirect(state, st.uri),
     routes: [
       // Root-navigator routes: watching hides both customer and staff bottom bars.
-      for (final base in ['/shop', '/farmer', '/manager', '/operator']) ...[
+      for (final base in ['/shop', '/farmer', '/manager', '/guide']) ...[
         GoRoute(path: '$base/shorts', builder: (c, s) => const ShortsGridPage()),
         GoRoute(
           path: '$base/shorts/new',
@@ -198,6 +200,9 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         tab('/manager/payments', const ManagerPaymentsScreen()),
         tab('/manager/products', const ManagerProductsScreen()),
         tab('/manager/articles', const ManagerArticlesScreen()),
+        tab('/manager/tours', const ManagerToursPage()),
+        tab('/manager/bookings', const ManagerBookingsTab()),
+        tab('/manager/tour-payments', const ManagerTourPaymentsPage()),
       ]),
       GoRoute(
         path: '/manager/orders/:id',
@@ -220,20 +225,27 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
         builder: (c, s) => LotDetailPage(lotId: s.pathParameters['id']!),
       ),
       shell((loc, child) => StaffShell(location: loc, child: child), [
-        tab('/operator', const OperatorDashboard()),
-        tab('/operator/chat', const ChatPage()),
-        tab('/operator/htx', const OperatorHtxPage()),
-        tab('/operator/tours', const OperatorToursPage()),
-        tab('/operator/articles', const OperatorArticlesTab()),
-        tab('/operator/reports', const OperatorReportsPage()),
-        tab('/operator/bookings', const OperatorBookingsTab()),
-        tab('/operator/payments', const OperatorTourPaymentsPage()),
-        tab('/operator/me', const StaffAccountPage()),
+        tab('/guide', const GuideHomePage()),
+        tab('/guide/chat', const ChatPage()),
+        tab('/guide/notifications', const GuideNotificationsPage()),
+        tab('/guide/me', const StaffAccountPage()),
       ]),
-      // Tours are the travel company's business: booking detail, payment, cancel, check-in.
       GoRoute(
-        path: '/operator/bookings/:id',
-        builder: (c, s) => OperatorBookingDetailScreen(bookingId: s.pathParameters['id']!),
+        path: '/guide/tours/:id',
+        builder: (c, s) => GuideTourDetailPage(tourId: s.pathParameters['id']!),
+      ),
+      GoRoute(path: '/manager/tours/new', builder: (c, s) => const TourEditorPage()),
+      GoRoute(
+        path: '/manager/tours/:id/edit',
+        builder: (c, s) => TourEditorPage(tourId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/manager/tours/:id/guides',
+        builder: (c, s) => TourGuidesPage(tourId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/manager/bookings/:id',
+        builder: (c, s) => ManagerBookingDetailScreen(bookingId: s.pathParameters['id']!),
       ),
     ],
   );

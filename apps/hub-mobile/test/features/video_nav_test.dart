@@ -33,7 +33,7 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, '/shop/me');
   });
 
-  for (final role in ['farmer', 'manager', 'officer', 'operator']) {
+  for (final role in ['farmer', 'manager', 'officer', 'guide']) {
     testWidgets('$role: Video sits next to Tổng quan and opens the feed', (tester) async {
       final videos = FakeVideoSource();
       await openShortsAccount(tester, role, videos, MockHubRepository());
@@ -56,7 +56,7 @@ void main() {
   }
 
   testWidgets('the bottom bars fit 320 px with large text', (tester) async {
-    for (final role in ['customer', 'farmer', 'manager', 'operator']) {
+    for (final role in ['customer', 'farmer', 'manager', 'guide']) {
       await openShortsAccount(tester, role, FakeVideoSource(), MockHubRepository(), width: 320, scale: 1.3);
       expect(tester.takeException(), isNull, reason: role);
     }

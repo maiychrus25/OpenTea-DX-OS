@@ -20,7 +20,7 @@ typedef _Payee = ({String name, String bankBin, String bankAccount, String accou
 
 /// VietQR payment of an order or a booking, identified by its [code].
 /// Product orders are paid to the cooperative, which confirms the money.
-/// Tour bookings are paid to the travel company, which confirms the money.
+/// Tour bookings are paid to the cooperative that owns the tour.
 class PaymentScreen extends StatelessWidget {
   const PaymentScreen({super.key, required this.code});
   final String code;
@@ -43,10 +43,6 @@ class PaymentScreen extends StatelessWidget {
           : LoadView<_Payee>(
               load: () async {
                 final repo = context.read<HubRepository>();
-                if (booking != null && order == null) {
-                  final c = await repo.getTourCompany();
-                  return (name: c.name, bankBin: c.bankBin, bankAccount: c.bankAccount, accountHolder: c.accountHolder);
-                }
                 final h = await repo.getHtx(htxCode);
                 return (name: h.name, bankBin: h.bankBin, bankAccount: h.bankAccount, accountHolder: h.accountHolder);
               },
@@ -60,7 +56,7 @@ class PaymentScreen extends StatelessWidget {
                 );
                 final bank = bankByBin(payee.bankBin);
                 final unpaid = status == PaymentStatus.unpaid;
-                final who = isBooking ? 'Công ty du lịch' : 'Hợp tác xã';
+                const who = 'Hợp tác xã';
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: [

@@ -98,12 +98,12 @@ void main() {
       expect(await auth.bearerToken(), isNull);
     });
 
-    test('signed out, a customer or an operator get no token', () async {
+    test('signed out, a customer or an guide get no token', () async {
       final auth = await _auth(token: 'dev-token');
       expect(await auth.bearerToken(), isNull);
       await auth.signIn('customer@demo.vn', DemoAuthService.demoPassword);
       expect(await auth.bearerToken(), isNull);
-      await auth.signIn('operator@demo.vn', DemoAuthService.demoPassword);
+      await auth.signIn('guide@demo.vn', DemoAuthService.demoPassword);
       expect(await auth.bearerToken(), isNull);
       await auth.signOut();
       expect(await auth.bearerToken(), isNull);

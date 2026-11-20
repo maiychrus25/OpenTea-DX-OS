@@ -3,7 +3,7 @@
 
 import 'dart:typed_data';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import '../core/role/role.dart';
 import 'models/short_video.dart';
@@ -24,6 +24,8 @@ import 'seed_data.dart';
 /// (stock, status transitions, append-only ledger).
 class MockHubRepository implements HubRepository {
   final _shorts = <ShortVideo>[];
+  final _tours = [...SeedData.tours];
+  final _guides = [...SeedData.guides];
 
   /// Hearts given before this session (seed) and the accounts that gave one in it.
   final _baseLikes = <String, int>{};
@@ -32,11 +34,11 @@ class MockHubRepository implements HubRepository {
 
   /// Channels each demo account follows (by account subject), so the "Theo dõi" tab is not empty in the demo.
   final _follows = <String, Set<String>>{
-    'cus-demo': {'tan-cuong', 'operator-demo'},
+    'cus-demo': {'tan-cuong', 'guide-demo'},
     'farmer-demo': {'tan-cuong'},
-    'manager-demo': {'farmer-demo', 'operator-demo'},
-    'officer-demo': {'farmer-demo', 'operator-demo'},
-    'operator-demo': {'tan-cuong', 'farmer-demo'},
+    'manager-demo': {'farmer-demo', 'guide-demo'},
+    'officer-demo': {'farmer-demo', 'guide-demo'},
+    'guide-demo': {'tan-cuong', 'farmer-demo'},
   };
 
   @override
@@ -289,13 +291,13 @@ class MockHubRepository implements HubRepository {
 
   @override
   Future<List<Tour>> listTours({String? htxCode}) async => [
-    for (final t in SeedData.tours)
+    for (final t in _tours)
       if (htxCode == null || t.htxCode == htxCode) t,
   ];
 
   @override
   Future<Tour> getTour(String id) async =>
-      SeedData.tours.firstWhere((t) => t.id == id, orElse: () => throw const HubException('Không tìm thấy tour'));
+      _tours.firstWhere((t) => t.id == id, orElse: () => throw const HubException('Không tìm thấy tour'));
 
   @override
   Future<List<Departure>> listDepartures(String tourId) async {
@@ -444,14 +446,159 @@ class MockHubRepository implements HubRepository {
       if (b.customerId == customerId) b,
   ];
 
-  @override
-  Future<TourCompany> getTourCompany() async => SeedData.tourCompany;
+  void _requireManager(Claims? actor, String htxCode) {
+    if (actor == null || !actor.canWriteHtx || actor.htxCode != htxCode || htxCode.isEmpty) {
+      throw const HubException('Bạn không có quyền quản lý tour của HTX này.');
+    }
+  }
 
   @override
-  Future<Booking> cancelBooking(String bookingId) async {
+  Future<List<Tour>> listGuideTours(String guideId) async => _tours.where((t) => t.guideIds.contains(guideId)).toList();
+
+  @override
+  Future<List<GuideStaff>> listHtxGuides(String htxCode) async => _guides.where((g) => g.htxCode == htxCode).toList();
+
+  @override
+  Future<GuideStaff> addHtxGuide({required String name, required String phone, required Claims actor}) async {
+    final code = actor.htxCode ?? '';
+    _requireManager(actor, code);
+    await getHtx(code);
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s.-]'), '');
+    if (name.trim().isEmpty || name.trim().length > 100 || !RegExp(r'^\+?[0-9]{9,15}$').hasMatch(cleanPhone)) {
+      throw const HubException('Hãy nhập tên và số điện thoại hợp lệ.');
+    }
+    // In the demo, the same phone identifies the same guide across HTXs.
+    final existing = _guides.where((g) => g.phone == cleanPhone).firstOrNull;
+    final member = _guides.where((g) => g.phone == cleanPhone && g.htxCode == code).firstOrNull;
+    if (member != null) return member;
+    final guide = GuideStaff(
+      id: existing?.id ?? _nextId('guide'),
+      name: existing?.name ?? name.trim(),
+      phone: cleanPhone,
+      htxCode: code,
+    );
+    _guides.add(guide);
+    return guide;
+  }
+
+  @override
+  Future<void> addGuideToTour(String tourId, String guideId, {required Claims actor}) async {
+    final tour = await getTour(tourId);
+    _requireManager(actor, tour.htxCode);
+    if (!_guides.any((g) => g.id == guideId && g.htxCode == tour.htxCode)) {
+      throw const HubException('Nhân viên chưa được HTX thêm vào danh sách.');
+    }
+    _tours[_tours.indexOf(tour)] = tour.copyWith(guideIds: {...tour.guideIds, guideId}.toList());
+  }
+
+  @override
+  Future<void> removeGuideFromTour(String tourId, String guideId, {required Claims actor}) async {
+    final tour = await getTour(tourId);
+    _requireManager(actor, tour.htxCode);
+    _tours[_tours.indexOf(tour)] = tour.copyWith(guideIds: tour.guideIds.where((id) => id != guideId).toList());
+  }
+
+  List<DateTime> _validateTour(NewTour draft) {
+    final dates = draft.dates.map((d) => DateTime(d.year, d.month, d.day)).toList();
+    if (draft.name.trim().isEmpty ||
+        draft.name.trim().length > 120 ||
+        draft.adultPrice <= 0 ||
+        draft.childPrice < 0 ||
+        draft.maxGuests < 1 ||
+        draft.maxGuests > 1000 ||
+        dates.isEmpty ||
+        dates.toSet().length != dates.length) {
+      throw const HubException('Hãy nhập tên, giá, số chỗ và các ngày khởi hành hợp lệ, không trùng nhau.');
+    }
+    return dates..sort();
+  }
+
+  @override
+  Future<Tour> createTour(NewTour draft, {required Claims actor}) async {
+    final code = actor.htxCode ?? '';
+    _requireManager(actor, code);
+    await getHtx(code);
+    final dates = _validateTour(draft);
+    final today = DateTime(_now.year, _now.month, _now.day);
+    if (dates.any((d) => d.isBefore(today))) throw const HubException('Ngày khởi hành không được ở quá khứ.');
+    final tour = Tour(
+      id: _nextId('tour'),
+      htxCode: code,
+      householdId: '',
+      name: draft.name.trim(),
+      summary: 'Trải nghiệm do HTX tổ chức.',
+      durationLabel: '1 ngày',
+      adultPrice: draft.adultPrice,
+      childPrice: draft.childPrice,
+      maxGuests: draft.maxGuests,
+      itinerary: const [],
+      gradientSeed: 0,
+    );
+    _tours.add(tour);
+    for (final date in dates) {
+      _departures.add(
+        Departure(id: _nextId('dep'), tourId: tour.id, date: date, seatsTotal: draft.maxGuests, seatsTaken: 0),
+      );
+    }
+    return tour;
+  }
+
+  @override
+  Future<Tour> updateTour(String tourId, NewTour draft, {required Claims actor}) async {
+    final tour = await getTour(tourId);
+    _requireManager(actor, tour.htxCode);
+    final dates = _validateTour(draft);
+    final old = await listDepartures(tourId);
+    final today = DateTime(_now.year, _now.month, _now.day);
+    for (final date in dates) {
+      if (date.isBefore(today) && !old.any((d) => DateUtils.isSameDay(d.date, date))) {
+        throw const HubException('Ngày khởi hành mới không được ở quá khứ.');
+      }
+    }
+    for (final dep in old) {
+      final retained = dates.any((date) => DateUtils.isSameDay(dep.date, date));
+      if (dep.seatsTaken > draft.maxGuests || (!retained && _bookings.any((b) => b.departureId == dep.id))) {
+        throw const HubException('Không thể bỏ ngày đã có lượt đặt hoặc giảm chỗ dưới số khách đã đặt.');
+      }
+    }
+    final departures = [
+      for (final date in dates)
+        Departure(
+          id: old.where((d) => DateUtils.isSameDay(d.date, date)).firstOrNull?.id ?? _nextId('dep'),
+          tourId: tourId,
+          date: date,
+          seatsTotal: draft.maxGuests,
+          seatsTaken: old.where((d) => DateUtils.isSameDay(d.date, date)).firstOrNull?.seatsTaken ?? 0,
+        ),
+    ];
+    final updated = tour.copyWith(
+      name: draft.name.trim(),
+      adultPrice: draft.adultPrice,
+      childPrice: draft.childPrice,
+      maxGuests: draft.maxGuests,
+    );
+    _tours[_tours.indexOf(tour)] = updated;
+    _departures.removeWhere((d) => d.tourId == tourId);
+    _departures.addAll(departures);
+    return updated;
+  }
+
+  @override
+  Future<List<Booking>> listBookings(String htxCode) async =>
+      _bookings.reversed.where((b) => b.htxCode == htxCode).toList();
+
+  @override
+  Future<List<Booking>> listGuideBookings(String guideId, {String? tourId}) async {
+    final ids = (await listGuideTours(guideId)).map((t) => t.id).toSet();
+    return _bookings.reversed.where((b) => ids.contains(b.tourId) && (tourId == null || b.tourId == tourId)).toList();
+  }
+
+  @override
+  Future<Booking> cancelBooking(String bookingId, {required Claims actor}) async {
     final i = _bookings.indexWhere((b) => b.id == bookingId);
     if (i < 0) throw const HubException('Không tìm thấy lượt đặt');
     final b = _bookings[i];
+    _requireManager(actor, b.htxCode);
     if (!b.status.canMoveTo(BookingStatus.cancelled)) {
       throw const HubException('Không thể huỷ lượt đặt này');
     }
@@ -472,9 +619,13 @@ class MockHubRepository implements HubRepository {
   }
 
   @override
-  Future<Booking> checkIn(String bookingId) async {
+  Future<Booking> checkIn(String bookingId, {required Claims actor}) async {
     final i = _bookings.indexWhere((b) => b.id == bookingId);
     if (i < 0) throw const HubException('Không tìm thấy lượt đặt');
+    final tour = await getTour(_bookings[i].tourId);
+    if (!(roleFromClaims(actor) == AppRole.guide && tour.guideIds.contains(actor.subject))) {
+      _requireManager(actor, tour.htxCode);
+    }
     if (_bookings[i].status != BookingStatus.confirmed) {
       throw const HubException('Chỉ điểm danh được lượt đặt đã xác nhận');
     }
@@ -514,12 +665,18 @@ class MockHubRepository implements HubRepository {
   }
 
   @override
-  Future<Payment> recordPayment({required String reference, required int amount, required String recordedBy}) async {
+  Future<Payment> recordPayment({
+    required String reference,
+    required int amount,
+    required String recordedBy,
+    Claims? actor,
+  }) async {
     if (amount == 0) throw const HubException('Số tiền phải khác 0');
     final oi = _orders.indexWhere((o) => o.code == reference);
     final bi = oi >= 0 ? -1 : _bookings.indexWhere((b) => b.code == reference);
     if (oi < 0 && bi < 0) throw const HubException('Không tìm thấy mã');
     final htx = oi >= 0 ? _orders[oi].htxCode : _bookings[bi].htxCode;
+    if (bi >= 0 || actor != null) _requireManager(actor, htx);
     final payment = Payment(
       id: _nextId('pay'),
       htxCode: htx,
@@ -556,9 +713,9 @@ class MockHubRepository implements HubRepository {
   ];
 
   @override
-  Future<List<Payment>> listTourPayments() async => [
+  Future<List<Payment>> listTourPayments(String htxCode) async => [
     for (final p in _payments.reversed)
-      if (isTourReference(p.reference)) p,
+      if (p.htxCode == htxCode && isTourReference(p.reference)) p,
   ];
 
   @override
@@ -588,26 +745,6 @@ class MockHubRepository implements HubRepository {
           .fold(0, (s, p) => s + p.amount),
     );
   }
-
-  @override
-  Future<List<HtxSummary>> listLinkedSummaries() async => [for (final h in SeedData.htxs) await summary(h.code)];
-
-  @override
-  Future<List<Article>> listPendingArticles() async => [
-    for (final a in _articles)
-      if (a.status == ArticleStatus.pending) a,
-  ];
-
-  @override
-  Future<Article> reviewArticle(String articleId, {required bool approve}) async {
-    final i = _articles.indexWhere((a) => a.id == articleId);
-    if (i < 0) throw const HubException('Không tìm thấy bài');
-    if (_articles[i].status != ArticleStatus.pending) throw const HubException('Bài này không ở trạng thái chờ duyệt');
-    return _articles[i] = _articles[i].copyWith(status: approve ? ArticleStatus.published : ArticleStatus.rejected);
-  }
-
-  @override
-  Future<List<Booking>> listAllBookings() async => _bookings.reversed.toList();
 
   @override
   Future<HtxProfile> getHtxProfile(String htxCode) async => StaffSeed.htxProfiles.firstWhere(
@@ -732,13 +869,4 @@ class MockHubRepository implements HubRepository {
 
   @override
   Future<WeatherNow> currentWeather(String htxCode) async => StaffSeed.weather;
-
-  @override
-  Future<List<LinkedHtx>> listLinkedHtxs() async => StaffSeed.linkedHtxs;
-
-  @override
-  Future<List<RegionTour>> listRegionTours() async => StaffSeed.regionTours;
-
-  @override
-  Future<List<ReportRow>> reportRows() async => StaffSeed.reportRows;
 }

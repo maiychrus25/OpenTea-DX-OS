@@ -400,7 +400,28 @@ class HttpHubRepository implements HubRepository {
   Future<List<Booking>> listMyBookings(String customerId) => _shop.listMyBookings(customerId);
 
   @override
-  Future<TourCompany> getTourCompany() => _shop.getTourCompany();
+  Future<List<Tour>> listGuideTours(String guideId) => _shop.listGuideTours(guideId);
+  @override
+  Future<List<GuideStaff>> listHtxGuides(String htxCode) => _shop.listHtxGuides(htxCode);
+  @override
+  Future<GuideStaff> addHtxGuide({required String name, required String phone, required Claims actor}) =>
+      _shop.addHtxGuide(name: name, phone: phone, actor: actor);
+  @override
+  Future<Tour> createTour(NewTour draft, {required Claims actor}) => _shop.createTour(draft, actor: actor);
+  @override
+  Future<Tour> updateTour(String tourId, NewTour draft, {required Claims actor}) =>
+      _shop.updateTour(tourId, draft, actor: actor);
+  @override
+  Future<void> addGuideToTour(String tourId, String guideId, {required Claims actor}) =>
+      _shop.addGuideToTour(tourId, guideId, actor: actor);
+  @override
+  Future<void> removeGuideFromTour(String tourId, String guideId, {required Claims actor}) =>
+      _shop.removeGuideFromTour(tourId, guideId, actor: actor);
+  @override
+  Future<List<Booking>> listBookings(String htxCode) => _shop.listBookings(htxCode);
+  @override
+  Future<List<Booking>> listGuideBookings(String guideId, {String? tourId}) =>
+      _shop.listGuideBookings(guideId, tourId: tourId);
 
   @override
   Future<List<Product>> listHouseholdProducts(String householdId) => _shop.listHouseholdProducts(householdId);
@@ -412,8 +433,12 @@ class HttpHubRepository implements HubRepository {
   Future<Order> updateOrderStatus(String orderId, OrderStatus target) => _shop.updateOrderStatus(orderId, target);
 
   @override
-  Future<Payment> recordPayment({required String reference, required int amount, required String recordedBy}) =>
-      _shop.recordPayment(reference: reference, amount: amount, recordedBy: recordedBy);
+  Future<Payment> recordPayment({
+    required String reference,
+    required int amount,
+    required String recordedBy,
+    Claims? actor,
+  }) => _shop.recordPayment(reference: reference, amount: amount, recordedBy: recordedBy, actor: actor);
 
   @override
   Future<List<Payment>> listPayments(String htxCode) => _shop.listPayments(htxCode);
@@ -428,26 +453,14 @@ class HttpHubRepository implements HubRepository {
   Future<HtxSummary> summary(String htxCode) => _shop.summary(htxCode);
 
   @override
-  Future<List<HtxSummary>> listLinkedSummaries() => _shop.listLinkedSummaries();
+  Future<Booking> cancelBooking(String bookingId, {required Claims actor}) =>
+      _shop.cancelBooking(bookingId, actor: actor);
 
   @override
-  Future<List<Article>> listPendingArticles() => _shop.listPendingArticles();
+  Future<Booking> checkIn(String bookingId, {required Claims actor}) => _shop.checkIn(bookingId, actor: actor);
 
   @override
-  Future<Article> reviewArticle(String articleId, {required bool approve}) =>
-      _shop.reviewArticle(articleId, approve: approve);
-
-  @override
-  Future<List<Booking>> listAllBookings() => _shop.listAllBookings();
-
-  @override
-  Future<Booking> cancelBooking(String bookingId) => _shop.cancelBooking(bookingId);
-
-  @override
-  Future<Booking> checkIn(String bookingId) => _shop.checkIn(bookingId);
-
-  @override
-  Future<List<Payment>> listTourPayments() => _shop.listTourPayments();
+  Future<List<Payment>> listTourPayments(String htxCode) => _shop.listTourPayments(htxCode);
 
   @override
   Future<List<BulletinItem>> listBulletins() => _shop.listBulletins();
@@ -457,13 +470,4 @@ class HttpHubRepository implements HubRepository {
 
   @override
   Future<WeatherNow> currentWeather(String htxCode) => _shop.currentWeather(htxCode);
-
-  @override
-  Future<List<LinkedHtx>> listLinkedHtxs() => _shop.listLinkedHtxs();
-
-  @override
-  Future<List<RegionTour>> listRegionTours() => _shop.listRegionTours();
-
-  @override
-  Future<List<ReportRow>> reportRows() => _shop.reportRows();
 }

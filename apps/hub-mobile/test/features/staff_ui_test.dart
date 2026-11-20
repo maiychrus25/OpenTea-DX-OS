@@ -216,19 +216,12 @@ void main() {
       expect(taps, 1);
     });
 
-    testWidgets('operator bars are sorted, limited to three and proportional', (tester) async {
-      await _openAs(tester, 'operator@demo.vn');
-      final bars = tester.widget<BarList>(find.byType(BarList));
-      final linked = [...await MockHubRepository().listLinkedHtxs()];
-      linked.sort((a, b) => b.guestsThisMonth.compareTo(a.guestsThisMonth));
-      expect(bars.rows, [for (final h in linked.take(3)) (h.name.replaceFirst('HTX Chè ', ''), h.guestsThisMonth)]);
-      final indicators = tester
-          .widgetList<LinearProgressIndicator>(
-            find.descendant(of: find.byType(BarList), matching: find.byType(LinearProgressIndicator)),
-          )
-          .toList();
-      expect(indicators.first.value, 1);
-      expect(indicators[1].value, closeTo(bars.rows[1].$2 / bars.rows.first.$2, .001));
+    testWidgets('guide home replaces company metrics with assignments', (tester) async {
+      await _openAs(tester, 'guide@demo.vn');
+      expect(find.byType(BarList), findsNothing);
+      expect(find.text('Tour được giao'), findsWidgets);
+      expect(find.text('Sắp tới'), findsOneWidget);
+      expect(find.textContaining('Do HTX'), findsWidgets);
     });
 
     testWidgets('account shortcuts use existing routes and show identity once', (tester) async {
@@ -237,7 +230,7 @@ void main() {
         ('manager', 'Thông báo', '/manager/notifications'),
         ('officer', 'Thông báo', '/manager/notifications'),
         ('farmer', 'Thông báo', '/farmer/notifications'),
-        ('operator', 'Báo cáo tổng hợp', '/operator/reports'),
+        ('guide', 'Thông báo', '/guide/notifications'),
       ]) {
         await _openAs(tester, '$role@demo.vn');
         await tester.tap(find.byKey(const Key('staff-avatar')));
@@ -254,7 +247,7 @@ void main() {
 
   group('dashboard and account responsive stress', () {
     for (final width in [320.0, 390.0, 1280.0]) {
-      for (final role in ['manager', 'officer', 'farmer', 'operator']) {
+      for (final role in ['manager', 'officer', 'farmer', 'guide']) {
         testWidgets('$role dashboard and account fit at $width px and sign out', (tester) async {
           final email = '$role@demo.vn';
           await _openAs(tester, email);
@@ -268,13 +261,17 @@ void main() {
           tester.view.physicalSize = Size(width, 900);
           tester.view.devicePixelRatio = 1;
           await tester.pumpAndSettle();
-          final strip = tester.widget<SummaryStrip>(find.byType(SummaryStrip));
-          expect(strip.figures, hasLength(3));
-          expect(find.descendant(of: find.byType(SummaryStrip), matching: find.byType(Icon)), findsNothing);
-          expect(
-            tester.getTopLeft(find.byType(AttentionCard)).dy,
-            lessThan(tester.getTopLeft(find.byType(SummaryStrip)).dy),
-          );
+          if (role != 'guide') {
+            final strip = tester.widget<SummaryStrip>(find.byType(SummaryStrip));
+            expect(strip.figures, hasLength(3));
+            expect(find.descendant(of: find.byType(SummaryStrip), matching: find.byType(Icon)), findsNothing);
+            expect(
+              tester.getTopLeft(find.byType(AttentionCard)).dy,
+              lessThan(tester.getTopLeft(find.byType(SummaryStrip)).dy),
+            );
+          } else {
+            expect(find.text('Tour được giao'), findsWidgets);
+          }
           // No greeting on the dashboard: the name is on the account page (checked below).
           expect(find.textContaining('Chào buổi'), findsNothing);
           expect(find.text('Đang hoạt động'), findsNothing);
@@ -292,7 +289,7 @@ void main() {
           expect(find.text('Hồ sơ tài khoản'), findsOneWidget);
           expect(find.text(DemoAuthService.accounts[email]!.name), findsOneWidget);
           expect(find.text(email), findsOneWidget);
-          expect(find.textContaining('Mã HTX ·'), role == 'operator' ? findsNothing : findsOneWidget);
+          expect(find.textContaining('Mã HTX ·'), role == 'guide' ? findsNothing : findsOneWidget);
           expect(find.byKey(const Key('sample-chip')), findsNothing);
           expect(find.byType(Pill), findsOneWidget);
           expect(find.text('Vai trò'), findsNothing);
@@ -314,7 +311,7 @@ void main() {
 
   group('large text and long claims stress', () {
     for (final width in [320.0, 1280.0]) {
-      for (final role in ['manager', 'officer', 'farmer', 'operator']) {
+      for (final role in ['manager', 'officer', 'farmer', 'guide']) {
         testWidgets('$role preserves long identity at $width px and 130 percent text', (tester) async {
           SharedPreferences.setMockInitialValues({});
           final store = await LocalStore.open();
@@ -326,7 +323,7 @@ void main() {
               name: fullName,
               email: email,
               roles: [role],
-              htxCode: role == 'operator' ? null : 'tan-cuong',
+              htxCode: role == 'guide' ? null : 'tan-cuong',
               householdId: role == 'farmer' ? 'hh-01' : null,
             ),
           );
@@ -378,12 +375,6 @@ void main() {
         ('/farmer/schedule', 'Thu hái tới'),
         ('/farmer/journal', 'Nhật ký chờ duyệt'),
       ],
-      'operator': [
-        ('/operator/htx', 'HTX liên kết'),
-        ('/operator/bookings', 'Lượt đặt tour'),
-        ('/operator/articles', 'Bài chờ duyệt'),
-        ('/operator/reports', 'Doanh thu tháng'),
-      ],
     };
     for (final entry in routes.entries) {
       await _openAs(tester, '${entry.key}@demo.vn');
@@ -427,7 +418,7 @@ void main() {
       await tester.tap(find.byKey(const Key('drawer-shop-toggle')));
       await tester.pumpAndSettle();
       _expectAll(['Sản phẩm', 'Đơn hàng', 'Thu tiền', 'Bài gửi duyệt']);
-      for (final gone in ['Lượt đặt tour', 'Tour và sản phẩm', 'Thu tiền tour', 'Lịch tham quan']) {
+      for (final gone in ['Tour và sản phẩm', 'Lịch tham quan']) {
         expect(find.text(gone), findsNothing, reason: gone);
       }
       expect(find.text('Trưởng HTX'), findsWidgets);
@@ -451,7 +442,7 @@ void main() {
       await tester.tap(find.byKey(const Key('drawer-shop-toggle')));
       await tester.pumpAndSettle();
       _expectAll(['Sản phẩm', 'Đơn hàng', 'Thu tiền']);
-      expect(find.text('Lượt đặt tour'), findsNothing);
+      expect(find.text('Lượt đặt tour'), findsOneWidget);
       expect(find.text('Tour và sản phẩm'), findsNothing);
     });
 
@@ -474,39 +465,34 @@ void main() {
       expect(find.text('Lịch tham quan'), findsNothing);
     });
 
-    testWidgets('operator drawer lists the tour company pages', (tester) async {
-      await _openAs(tester, 'operator@demo.vn');
+    testWidgets('guide drawer lists only assignments and staff utilities', (tester) async {
+      await _openAs(tester, 'guide@demo.vn');
       await _openDrawer(tester);
-      await tester.tap(find.byKey(const Key('drawer-shop-toggle')));
-      await tester.pumpAndSettle();
-      _expectAll([
-        'Tổng quan',
+      _expectAll(['Tour được giao', 'Trợ lý AI', 'Reels', 'Thông báo', 'Tài khoản', 'Nhân viên dẫn tour']);
+      expect(find.byKey(const Key('drawer-shop-toggle')), findsNothing);
+      for (final retired in [
         'Hợp tác xã liên kết',
         'Tour toàn vùng',
         'Bài viết HTX',
         'Báo cáo tổng hợp',
-        'Lượt đặt tour',
         'Thu tiền tour',
-        'Công ty du lịch',
-      ]);
-    });
-
-    test('only the operator menu has tour items', () {
-      bool isTour(MenuItem m) =>
-          m.label.toLowerCase().contains('tour') ||
-          m.label.contains('tham quan') ||
-          m.path.contains('booking') ||
-          m.path.contains('visit') ||
-          m.path.contains('catalog');
-      for (final kind in [StaffKind.manager, StaffKind.officer, StaffKind.farmer]) {
-        final nav = navFor(kind);
-        expect([...nav.all, ...nav.bottom].where(isTour), isEmpty, reason: kind.name);
+      ]) {
+        expect(find.text(retired), findsNothing);
       }
-      final op = navFor(StaffKind.operator);
-      expect(op.all.map((m) => m.path), containsAll(['/operator/bookings', '/operator/payments', '/operator/tours']));
     });
 
-    testWidgets('the router has no tour routes for HTX or farmers', (tester) async {
+    test('HTX manages tours, guide has no management menu, farmers remain separate', () {
+      for (final kind in [StaffKind.manager, StaffKind.officer]) {
+        expect(
+          navFor(kind).all.map((m) => m.path),
+          containsAll(['/manager/tours', '/manager/bookings', '/manager/tour-payments']),
+        );
+      }
+      expect(navFor(StaffKind.guide).shop, isEmpty);
+      expect(navFor(StaffKind.farmer).all.where((m) => m.path.contains('tour') || m.path.contains('booking')), isEmpty);
+    });
+
+    testWidgets('the router moves tour management to HTX and leaves farmers separate', (tester) async {
       await _openAs(tester, 'manager@demo.vn');
       final router = GoRouter.of(tester.element(find.byType(SummaryStrip)));
       final paths = <String>[];
@@ -518,9 +504,13 @@ void main() {
       }
 
       walk(router.configuration.routes);
-      expect(paths, containsAll(['/operator/bookings', '/operator/bookings/:id', '/operator/payments']));
+      expect(
+        paths,
+        containsAll(['/manager/bookings', '/manager/bookings/:id', '/manager/tour-payments', '/guide/tours/:id']),
+      );
+      expect(paths, isNot(contains('/guide/payments')));
       expect(paths, contains('/manager/products'));
-      for (final p in paths.where((p) => p.startsWith('/manager') || p.startsWith('/farmer'))) {
+      for (final p in paths.where((p) => p.startsWith('/farmer'))) {
         expect(p.contains('booking') || p.contains('visit') || p.contains('catalog'), isFalse, reason: p);
       }
     });
@@ -558,8 +548,12 @@ void main() {
     });
 
     testWidgets('each dashboard opens with a day banner instead of a greeting', (tester) async {
-      for (final email in ['manager@demo.vn', 'officer@demo.vn', 'farmer@demo.vn', 'operator@demo.vn']) {
+      for (final email in ['manager@demo.vn', 'officer@demo.vn', 'farmer@demo.vn', 'guide@demo.vn']) {
         await _openAs(tester, email);
+        if (email == 'guide@demo.vn') {
+          expect(find.text('Tour được giao'), findsWidgets);
+          continue;
+        }
         expect(find.byKey(const Key('day-banner')), findsOneWidget, reason: email);
         expect(find.textContaining('Chào buổi'), findsNothing, reason: email);
         // The banner is above the attention card.
@@ -597,17 +591,12 @@ void main() {
       expect(find.text('P-TC-003'), findsNothing); // another household
     });
 
-    testWidgets('operator dashboard shows linked HTXs, bookings, articles and revenue', (tester) async {
-      await _openAs(tester, 'operator@demo.vn');
-      await _openAttention(tester);
-      _expectAll([
-        'HTX liên kết',
-        'Lượt đặt tour',
-        'Lượt đặt chờ công ty xác nhận',
-        'Bài chờ duyệt',
-        'Doanh thu tháng',
-        'Cần xử lý hôm nay',
-      ]);
+    testWidgets('guide home shows current assignments instead of company reports', (tester) async {
+      await _openAs(tester, 'guide@demo.vn');
+      _expectAll(['Sắp tới', 'Đã qua']);
+      expect(find.textContaining('Do HTX'), findsWidgets);
+      expect(find.text('Doanh thu tháng'), findsNothing);
+      expect(find.text('Bài chờ duyệt'), findsNothing);
     });
   });
 
@@ -651,7 +640,7 @@ void main() {
     });
 
     testWidgets('no drawer lists a "Sắp có" placeholder', (tester) async {
-      for (final email in ['manager@demo.vn', 'officer@demo.vn', 'farmer@demo.vn', 'operator@demo.vn']) {
+      for (final email in ['manager@demo.vn', 'officer@demo.vn', 'farmer@demo.vn', 'guide@demo.vn']) {
         await _openAs(tester, email);
         await _openDrawer(tester);
         expect(find.text('Sắp có'), findsNothing, reason: email);
@@ -695,18 +684,12 @@ void main() {
       expect(find.text('Phun thuốc cần ghi tên sản phẩm'), findsOneWidget);
     });
 
-    testWidgets('operator approves an article and opens the linked pages from the menu', (tester) async {
-      await _openAs(tester, 'operator@demo.vn');
-      await _goTo(tester, '/operator/articles');
-      await tester.tap(find.byKey(const Key('approve-art-03')));
-      await tester.pumpAndSettle();
-      expect(find.text('Không có bài nào chờ duyệt'), findsOneWidget);
-      await _goTo(tester, '/operator/htx');
-      expect(find.byKey(const Key('htx-tan-cuong')), findsOneWidget);
-      await _goTo(tester, '/operator/tours');
-      expect(find.byKey(const Key('region-rt-01')), findsOneWidget);
-      await _goTo(tester, '/operator/reports');
-      expect(find.text('Khách đã xác nhận'), findsOneWidget);
+    testWidgets('guide opens notifications and account from menu', (tester) async {
+      await _openAs(tester, 'guide@demo.vn');
+      await _goTo(tester, '/guide/notifications');
+      expect(find.text('Các phân công hiện tại của bạn từ HTX.'), findsOneWidget);
+      await _goTo(tester, '/guide/me');
+      expect(find.text('Hồ sơ tài khoản'), findsOneWidget);
     });
 
     testWidgets('the storefront items stay reachable from the drawer', (tester) async {
@@ -716,8 +699,8 @@ void main() {
       expect(find.textContaining('Một ngày làm người hái chè'), findsNothing); // no tours
       await _goTo(tester, '/manager/payments');
       expect(find.text('Chưa có khoản thu nào'), findsOneWidget);
-      await _openAs(tester, 'operator@demo.vn');
-      await _goTo(tester, '/operator/bookings');
+      await _openAs(tester, 'manager@demo.vn');
+      await _goTo(tester, '/manager/bookings');
       await tester.tap(find.byKey(const Key('op-booking-bk-02')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('confirm-payment')), findsOneWidget);

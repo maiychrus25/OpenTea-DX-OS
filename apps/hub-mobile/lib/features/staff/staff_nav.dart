@@ -7,13 +7,13 @@ import '../../core/role/role.dart';
 
 /// The four staff interfaces. Officers share the `/manager` routes with
 /// managers (see `roleFromClaims`) but have the menu of the web's officer app.
-enum StaffKind { manager, officer, farmer, operator }
+enum StaffKind { manager, officer, farmer, guide }
 
 StaffKind? staffKindOf(Claims? claims) {
   if (claims == null) return null;
-  if (claims.hasRole(roleOperator)) return StaffKind.operator;
   if (claims.hasRole(roleManager)) return StaffKind.manager;
   if (claims.hasRole(roleOfficer)) return StaffKind.officer;
+  if (claims.hasRole(roleGuide)) return StaffKind.guide;
   if (claims.hasRole(roleFarmer)) return StaffKind.farmer;
   return null;
 }
@@ -47,7 +47,7 @@ class StaffNav {
   final List<MenuItem> main;
 
   /// The "Gian hàng" entries: storefront work that already existed before the redesign.
-  /// Tour work (bookings, tour money, check-in) is only ever in the operator's.
+  /// The HTX owns tour management; guides only see their assignments.
   final List<MenuItem> shop;
 
   /// Four tabs; the bar puts the "Video" button right after the first (Tổng quan).
@@ -92,6 +92,9 @@ const _manager = StaffNav(
     MenuItem('Sản phẩm', Icons.local_cafe_outlined, '/manager/products'),
     MenuItem('Đơn hàng', Icons.receipt_long_outlined, '/manager/orders'),
     MenuItem('Thu tiền', Icons.payments_outlined, '/manager/payments'),
+    MenuItem('Tour', Icons.route_outlined, '/manager/tours'),
+    MenuItem('Lượt đặt tour', Icons.confirmation_number_outlined, '/manager/bookings'),
+    MenuItem('Thu tiền tour', Icons.payments_outlined, '/manager/tour-payments'),
     MenuItem('Bài gửi duyệt', Icons.article_outlined, '/manager/articles'),
   ],
   bottom: [
@@ -123,6 +126,9 @@ const _officer = StaffNav(
     MenuItem('Sản phẩm', Icons.local_cafe_outlined, '/manager/products'),
     MenuItem('Đơn hàng', Icons.receipt_long_outlined, '/manager/orders'),
     MenuItem('Thu tiền', Icons.payments_outlined, '/manager/payments'),
+    MenuItem('Tour', Icons.route_outlined, '/manager/tours'),
+    MenuItem('Lượt đặt tour', Icons.confirmation_number_outlined, '/manager/bookings'),
+    MenuItem('Thu tiền tour', Icons.payments_outlined, '/manager/tour-payments'),
   ],
   bottom: [
     MenuItem('Tổng quan', Icons.home_outlined, '/manager'),
@@ -158,29 +164,25 @@ const _farmer = StaffNav(
   ],
 );
 
-const _operator = StaffNav(
-  kind: StaffKind.operator,
-  roleName: 'Công ty du lịch',
-  home: '/operator',
-  notificationsPath: '/operator/articles',
-  accountPath: '/operator/me',
+const _guide = StaffNav(
+  kind: StaffKind.guide,
+  roleName: 'Nhân viên dẫn tour',
+  home: '/guide',
+  notificationsPath: '/guide/notifications',
+  accountPath: '/guide/me',
   main: [
-    MenuItem('Tổng quan', Icons.home_outlined, '/operator'),
-    MenuItem('Hợp tác xã liên kết', Icons.account_balance_outlined, '/operator/htx'),
-    MenuItem('Tour toàn vùng', Icons.route_outlined, '/operator/tours'),
-    MenuItem('Bài viết HTX', Icons.article_outlined, '/operator/articles'),
-    MenuItem('Báo cáo tổng hợp', Icons.bar_chart_outlined, '/operator/reports'),
-    MenuItem('Trợ lý AI', Icons.auto_awesome_outlined, '/operator/chat'),
+    MenuItem('Tour được giao', Icons.home_outlined, '/guide'),
+    MenuItem('Trợ lý AI', Icons.auto_awesome_outlined, '/guide/chat'),
+    MenuItem('Reels', Icons.video_library_outlined, '/guide/videos'),
+    MenuItem('Thông báo', Icons.notifications_none, '/guide/notifications'),
+    MenuItem('Tài khoản', Icons.person_outline, '/guide/me'),
   ],
-  shop: [
-    MenuItem('Lượt đặt tour', Icons.confirmation_number_outlined, '/operator/bookings'),
-    MenuItem('Thu tiền tour', Icons.payments_outlined, '/operator/payments'),
-  ],
+  shop: [],
   bottom: [
-    MenuItem('Tổng quan', Icons.home_outlined, '/operator'),
-    MenuItem('Hợp tác xã liên kết', Icons.account_balance_outlined, '/operator/htx', bottomLabel: 'HTX'),
-    MenuItem('Tour toàn vùng', Icons.route_outlined, '/operator/tours', bottomLabel: 'Tour'),
-    MenuItem('Báo cáo tổng hợp', Icons.bar_chart_outlined, '/operator/reports', bottomLabel: 'Báo cáo'),
+    MenuItem('Tour được giao', Icons.home_outlined, '/guide', bottomLabel: 'Tour'),
+    MenuItem('Trợ lý AI', Icons.auto_awesome_outlined, '/guide/chat', bottomLabel: 'Trợ lý'),
+    MenuItem('Thông báo', Icons.notifications_none, '/guide/notifications'),
+    MenuItem('Tài khoản', Icons.person_outline, '/guide/me'),
   ],
 );
 
@@ -188,5 +190,5 @@ StaffNav navFor(StaffKind kind) => switch (kind) {
   StaffKind.manager => _manager,
   StaffKind.officer => _officer,
   StaffKind.farmer => _farmer,
-  StaffKind.operator => _operator,
+  StaffKind.guide => _guide,
 };

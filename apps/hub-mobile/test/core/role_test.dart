@@ -15,12 +15,12 @@ void main() {
       expect(roleFromClaims(_claims([roleFarmer])), AppRole.farmer);
       expect(roleFromClaims(_claims([roleManager])), AppRole.manager);
       expect(roleFromClaims(_claims([roleOfficer])), AppRole.manager);
-      expect(roleFromClaims(_claims([roleOperator])), AppRole.operator);
+      expect(roleFromClaims(_claims([roleGuide])), AppRole.guide);
     });
     test('unknown roles fall back to guest', () => expect(roleFromClaims(_claims(['admin'])), AppRole.guest));
     test('highest privilege wins', () {
       expect(roleFromClaims(_claims([roleCustomer, roleManager])), AppRole.manager);
-      expect(roleFromClaims(_claims([roleFarmer, roleOperator])), AppRole.operator);
+      expect(roleFromClaims(_claims([roleFarmer, roleGuide])), AppRole.guide);
     });
     test('only manager can write; officer is read only', () {
       expect(_claims([roleManager]).canWriteHtx, isTrue);
@@ -57,7 +57,7 @@ void main() {
       }
     });
     test('guest cannot open staff areas', () {
-      for (final p in ['/farmer', '/manager/orders', '/operator']) {
+      for (final p in ['/farmer', '/manager/orders', '/guide']) {
         expect(redirectFor(AppRole.guest, p), '/login', reason: p);
       }
     });
@@ -71,12 +71,12 @@ void main() {
       expect(redirectFor(AppRole.farmer, '/manager'), '/farmer');
       expect(redirectFor(AppRole.farmer, '/shop'), '/farmer');
       expect(redirectFor(AppRole.manager, '/manager/orders'), isNull);
-      expect(redirectFor(AppRole.operator, '/operator/bookings/bk-01'), isNull);
-      expect(redirectFor(AppRole.manager, '/operator/bookings'), '/manager');
-      expect(redirectFor(AppRole.farmer, '/operator/bookings'), '/farmer');
-      expect(redirectFor(AppRole.manager, '/operator'), '/manager');
-      expect(redirectFor(AppRole.operator, '/operator/articles'), isNull);
-      expect(redirectFor(AppRole.operator, '/farmer'), '/operator');
+      expect(redirectFor(AppRole.guide, '/guide/bookings/bk-01'), isNull);
+      expect(redirectFor(AppRole.manager, '/guide/bookings'), '/manager');
+      expect(redirectFor(AppRole.farmer, '/guide/bookings'), '/farmer');
+      expect(redirectFor(AppRole.manager, '/guide'), '/manager');
+      expect(redirectFor(AppRole.guide, '/guide/articles'), isNull);
+      expect(redirectFor(AppRole.guide, '/farmer'), '/guide');
     });
     test('a signed in user skips the login screen', () {
       expect(redirectFor(AppRole.manager, '/login'), '/manager');
@@ -90,7 +90,7 @@ void main() {
     expect(roles['farmer@demo.vn'], AppRole.farmer);
     expect(roles['manager@demo.vn'], AppRole.manager);
     expect(roles['officer@demo.vn'], AppRole.manager);
-    expect(roles['operator@demo.vn'], AppRole.operator);
+    expect(roles['guide@demo.vn'], AppRole.guide);
     expect(DemoAuthService.accounts['customer@demo.vn']!.htxCode, isNull);
   });
 }

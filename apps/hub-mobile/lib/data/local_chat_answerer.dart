@@ -72,18 +72,24 @@ class LocalChatAnswerer {
       return noData;
     }
     if (topic == ChatTopic.tour) {
-      if (has(['doanh thu', 'bao cao'])) {
-        final rows = await repository.reportRows();
-        return 'Báo cáo mẫu, không phải doanh thu thời gian thực:\n${rows.map((r) => '• ${r.metric}: ${r.value} (${r.source})').join('\n')}';
-      }
-      if (has(['htx', 'hop tac xa', 'lien ket'])) {
-        final htxs = await repository.listLinkedHtxs();
-        return 'HTX liên kết trong dữ liệu mẫu:\n${htxs.map((h) => '• ${h.name} — ${h.location}, ${h.tours} tour').join('\n')}';
+      if (context.guideId == null && context.htxCode == null) return noData;
+      final tours = context.guideId != null
+          ? await repository.listGuideTours(context.guideId!)
+          : await repository.listTours(htxCode: context.htxCode);
+      if (has(['htx', 'hop tac xa', 'giao'])) {
+        final names = <String>[];
+        for (final code in tours.map((t) => t.htxCode).toSet()) {
+          names.add((await repository.getHtx(code)).name);
+        }
+        return 'HTX tổ chức các tour của bạn:\n${names.join('\n')}';
       }
       if (has(['doan', 'dat', 'sap di'])) {
+        final all = context.guideId != null
+            ? await repository.listGuideBookings(context.guideId!)
+            : await repository.listBookings(context.htxCode!);
         final today = DateTime(now.year, now.month, now.day);
         final bookings =
-            (await repository.listAllBookings())
+            all
                 .where(
                   (b) =>
                       !b.departureDate.isBefore(today) &&
@@ -94,15 +100,14 @@ class LocalChatAnswerer {
         if (bookings.isEmpty) return 'Chưa có đoàn sắp đi trong dữ liệu mẫu.';
         return 'Các đoàn sắp đi trong dữ liệu mẫu:\n${bookings.map((b) => '• ${b.tourName}: ${b.guests} khách, ${b.departureDate.day}/${b.departureDate.month}/${b.departureDate.year}, ${b.status.label}').join('\n')}';
       }
-      if (has(['tour', 'vung', 'tuyen'])) {
-        final tours = await repository.listRegionTours();
-        return 'Tour toàn vùng (giá mẫu):\n${tours.map((t) => '• ${t.name} — ${t.route}: ${formatVnd(t.price)}').join('\n')}';
+      if (has(['tour', 'tuyen'])) {
+        return 'Tour của bạn (giá mẫu):\n${tours.map((t) => '• ${t.name}: ${formatVnd(t.adultPrice)}').join('\n')}';
       }
       return noData;
     }
     if (has(['thanh toan', 'dat hang', 'vietqr', 'cod'])) {
       return 'Chọn sản phẩm vào giỏ, đăng nhập rồi thanh toán. Đơn sản phẩm hỗ trợ VietQR hoặc COD (trả khi nhận hàng). '
-          'Tiền hàng về HTX; tiền tour qua VietQR về công ty du lịch. '
+          'Tiền hàng về HTX; tiền tour qua VietQR về HTX tổ chức. '
           'Sau khi chuyển khoản, bấm “Tôi đã chuyển khoản”: vé tour được xác nhận ngay, đơn hàng chờ HTX xác nhận. '
           'Tài khoản ngân hàng demo không dùng để chuyển tiền thật.';
     }

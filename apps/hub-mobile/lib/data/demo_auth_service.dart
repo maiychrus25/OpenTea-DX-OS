@@ -75,12 +75,7 @@ class DemoAuthService implements AuthService {
       roles: [roleOfficer],
       htxCode: 'tan-cuong',
     ),
-    'operator@demo.vn': Claims(
-      subject: 'operator-demo',
-      name: 'Công ty Lữ hành Xứ Chè',
-      email: 'operator@demo.vn',
-      roles: [roleOperator],
-    ),
+    'guide@demo.vn': Claims(subject: 'guide-demo', name: 'Nguyễn Minh An', email: 'guide@demo.vn', roles: [roleGuide]),
   };
 
   @override
