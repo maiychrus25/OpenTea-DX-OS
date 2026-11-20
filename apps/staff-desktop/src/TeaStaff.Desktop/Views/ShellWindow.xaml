@@ -60,9 +60,16 @@
                 <ItemsControl ItemsSource="{Binding Navigation}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="{Binding Label}" Tag="{Binding Glyph}"
+                            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="{Binding Glyph}"
                                          Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                          CommandParameter="{Binding Key}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                    <Border Margin="8,0,0,0" MinWidth="20" Height="20" Padding="6,0" CornerRadius="10" Background="{StaticResource DangerBrush}"
+                                            VerticalAlignment="Center" Visibility="{Binding Badge, Converter={StaticResource Visible}}">
+                                        <TextBlock Text="{Binding Badge}" Foreground="White" FontSize="11.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                </StackPanel>
                                 <RadioButton.IsChecked>
                                     <MultiBinding Converter="{StaticResource EqualsMulti}" Mode="OneWay">
                                         <Binding Path="Key" />
@@ -129,6 +136,30 @@
             <!-- Busy bar -->
             <ProgressBar Grid.Row="1" VerticalAlignment="Top" Height="3" IsIndeterminate="True"
                          Visibility="{Binding CurrentPage.IsBusy, Converter={StaticResource Visible}}" />
+
+            <!-- Activity from staff phones -->
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,24">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Toast}" Margin="0,8,0,0" Cursor="Hand">
+                            <Border.InputBindings>
+                                <MouseBinding Gesture="LeftClick" Command="{Binding DataContext.OpenToastCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                            </Border.InputBindings>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Style="{StaticResource RowIconButton}" Content="&#xE711;" Foreground="#C9D4CD" Width="26" Height="26" Margin="10,-4,-6,0"
+                                        VerticalAlignment="Top" ToolTip="Ẩn" Command="{Binding DataContext.DismissToastCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                <Border DockPanel.Dock="Left" Width="34" Height="34" CornerRadius="17" Background="{StaticResource PrimaryBrush}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE8EA;" Style="{StaticResource Icon}" FontSize="15" Foreground="{StaticResource LimeBrush}" HorizontalAlignment="Center" />
+                                </Border>
+                                <StackPanel>
+                                    <TextBlock FontSize="11.5" Foreground="#9FB4A8"><Run Text="Từ điện thoại · " /><Run Text="{Binding Time, Mode=OneWay}" /></TextBlock>
+                                    <TextBlock Text="{Binding Text}" Foreground="White" FontSize="13.5" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </Grid>
     </Grid>
 </Window>

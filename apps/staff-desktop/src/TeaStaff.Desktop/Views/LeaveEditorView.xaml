@@ -26,6 +26,16 @@
         </Grid>
         <TextBlock Margin="0,14,0,0" Text="Lý do *" Style="{StaticResource FieldLabel}" />
         <TextBox Text="{Binding Reason, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MultilineTextBox}" />
+        <TextBlock Margin="0,14,0,0" Text="Minh chứng (giấy khám bệnh, thiệp mời…)" Style="{StaticResource FieldLabel}" />
+        <DockPanel>
+            <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="Bỏ" Command="{Binding ClearAttachmentCommand}" Visibility="{Binding AttachmentFile, Converter={StaticResource Visible}}" />
+            <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Margin="10,0,0,0" Command="{Binding PickAttachmentCommand}">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE723;" Style="{StaticResource Icon}" FontSize="13" /><TextBlock Margin="8,0,0,0" Text="Chọn tệp" /></StackPanel>
+            </Button>
+            <Border Height="38" Padding="12,0" CornerRadius="{StaticResource RadiusMd}" Background="{StaticResource LeafLightBrush}" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                <TextBlock Text="{Binding AttachmentLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{StaticResource InkSecondaryBrush}" />
+            </Border>
+        </DockPanel>
         <TextBlock Margin="0,8,0,0" Style="{StaticResource Caption}" Text="Đơn do chủ HTX ghi được duyệt ngay và ghi vào bảng chấm công (bỏ qua Chủ nhật)." />
     </StackPanel>
 </UserControl>

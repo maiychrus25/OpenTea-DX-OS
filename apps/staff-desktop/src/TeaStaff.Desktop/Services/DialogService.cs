@@ -15,6 +15,7 @@ public interface IDialogService
     void Error(string message);
     string? Prompt(string title, string message, string? initial = null, bool required = false);
     string? SaveFile(string defaultName, string filter);
+    string? OpenFile(string filter);
 }
 
 public sealed class DialogService : IDialogService
@@ -41,6 +42,12 @@ public sealed class DialogService : IDialogService
     public string? SaveFile(string defaultName, string filter)
     {
         var dialog = new Microsoft.Win32.SaveFileDialog { FileName = defaultName, Filter = filter, AddExtension = true };
+        return dialog.ShowDialog(Owner) == true ? dialog.FileName : null;
+    }
+
+    public string? OpenFile(string filter)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = filter, CheckFileExists = true };
         return dialog.ShowDialog(Owner) == true ? dialog.FileName : null;
     }
 }

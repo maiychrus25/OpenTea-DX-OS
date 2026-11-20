@@ -71,17 +71,31 @@ public sealed partial class LeavesViewModel(IDialogService dialogs, ILeaveReposi
     {
         var staff = (await employees.ListAsync()).Where(e => e.IsActive).ToList();
         if (staff.Count == 0) return;
-        if (Dialogs.ShowEditor(new LeaveEditorViewModel(service, staff))) await RunAsync(LoadAsync);
+        if (Dialogs.ShowEditor(new LeaveEditorViewModel(service, staff, Dialogs))) await RunAsync(LoadAsync);
+    }
+
+    [RelayCommand]
+    private void OpenAttachment(LeaveRequest? request)
+    {
+        var path = request is null ? null : service.AttachmentFile(request);
+        if (path is null || !System.IO.File.Exists(path))
+        {
+            Dialogs.Error("Không tìm thấy tệp minh chứng trên máy này.");
+            return;
+        }
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
     }
 }
 
 public sealed partial class LeaveEditorViewModel : EditorViewModel
 {
     private readonly LeaveService _service;
+    private readonly IDialogService _dialogs;
 
-    public LeaveEditorViewModel(LeaveService service, IReadOnlyList<Employee> staff)
+    public LeaveEditorViewModel(LeaveService service, IReadOnlyList<Employee> staff, IDialogService dialogs)
     {
         _service = service;
+        _dialogs = dialogs;
         Employees = staff.Select(e => new Option<int>(e.Id, $"{e.FullName} ({e.Code})")).ToList();
         Employee = Employees[0];
         Type = Types[0];
@@ -100,6 +114,16 @@ public sealed partial class LeaveEditorViewModel : EditorViewModel
     [ObservableProperty] private DateTime _toDate = DateTime.Today;
     [ObservableProperty] private string? _reason;
     [ObservableProperty] private string _remaining = string.Empty;
+    [ObservableProperty] private string? _attachmentFile;
+
+    public string AttachmentLabel => AttachmentFile is null ? "Chưa chọn tệp (ảnh JPG/PNG hoặc PDF, tối đa 5 MB)" : System.IO.Path.GetFileName(AttachmentFile);
+    partial void OnAttachmentFileChanged(string? value) => OnPropertyChanged(nameof(AttachmentLabel));
+
+    [RelayCommand]
+    private void PickAttachment() => AttachmentFile = _dialogs.OpenFile("Ảnh hoặc PDF|*.jpg;*.jpeg;*.png;*.webp;*.pdf") ?? AttachmentFile;
+
+    [RelayCommand]
+    private void ClearAttachment() => AttachmentFile = null;
 
     partial void OnEmployeeChanged(Option<int> value) => _ = LoadRemainingAsync();
 
@@ -115,7 +139,7 @@ public sealed partial class LeaveEditorViewModel : EditorViewModel
         {
             EmployeeId = Employee.Value, Type = Type.Value, FromDate = DateOnly.FromDateTime(FromDate), ToDate = DateOnly.FromDateTime(ToDate),
             Reason = Reason, Source = RecordSource.Desktop,
-        });
+        }, AttachmentFile is null ? null : new LeaveAttachment(System.IO.Path.GetFileName(AttachmentFile), await System.IO.File.ReadAllBytesAsync(AttachmentFile)));
         await _service.ReviewAsync(saved.Id, true, "Ghi bởi chủ HTX");
     }
 }
