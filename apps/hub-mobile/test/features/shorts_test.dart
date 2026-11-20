@@ -44,6 +44,8 @@ Future<void> tapVisible(WidgetTester tester, String key) async {
   await tester.ensureVisible(find.byKey(Key(key)));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(Key(key)));
+  // A single tap on the video waits for a possible double tap (a heart) before it counts.
+  await tester.pump(const Duration(milliseconds: 400));
   await tester.pumpAndSettle();
 }
 

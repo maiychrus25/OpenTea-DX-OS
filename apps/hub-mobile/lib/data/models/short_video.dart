@@ -57,3 +57,28 @@ String shortViewsLabel(int views) {
   final value = (views / divisor).toStringAsFixed(1).replaceAll('.0', '').replaceAll('.', ',');
   return '$value $unit lượt xem';
 }
+
+/// A comment under a short video.
+class ShortComment {
+  const ShortComment({required this.id, required this.authorName, required this.text, required this.createdAt});
+  final String id;
+  final String authorName;
+  final String text;
+  final DateTime createdAt;
+}
+
+/// Hearts and comments of one clip, as seen by the viewer ([liked] is false for guests).
+class ShortReactions {
+  const ShortReactions({required this.likes, required this.liked, required this.comments});
+  final int likes;
+  final bool liked;
+  final int comments;
+}
+
+/// "1,2 N" style count for the buttons beside the video.
+String shortCountLabel(int n) {
+  if (n < 1000) return '$n';
+  final divisor = n < 1000000 ? 1000 : 1000000;
+  final unit = n < 1000000 ? 'N' : 'Tr';
+  return '${(n / divisor).toStringAsFixed(1).replaceAll('.0', '').replaceAll('.', ',')} $unit';
+}

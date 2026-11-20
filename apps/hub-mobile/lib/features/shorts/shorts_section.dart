@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -198,15 +199,21 @@ class _ShortsSectionState extends State<ShortsSection> {
               else
                 SizedBox(
                   height: 256,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: clips.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 12),
-                    itemBuilder: (context, i) => SizedBox(
-                      width: 144,
-                      child: ShortTile(
-                        video: clips[i],
-                        onTap: () => _open('${shortsBase(context)}/watch/${clips[i].id}'),
+                  // The row also scrolls with a mouse drag (the browser demo on a computer).
+                  child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(
+                      dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad},
+                    ),
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: clips.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 12),
+                      itemBuilder: (context, i) => SizedBox(
+                        width: 144,
+                        child: ShortTile(
+                          video: clips[i],
+                          onTap: () => _open('${shortsBase(context)}/watch/${clips[i].id}'),
+                        ),
                       ),
                     ),
                   ),

@@ -19,8 +19,12 @@ class ShortPlayback extends StatefulWidget {
     this.onStarted,
     this.onReady,
     this.validateUpload = false,
+    this.onDoubleTap,
   });
   final ShortVideo video;
+
+  /// Double tap on the video (the player gives a heart, like Reels).
+  final VoidCallback? onDoubleTap;
   final bool suspended;
   final VoidCallback? onStarted;
   final ValueChanged<Duration?>? onReady;
@@ -176,6 +180,7 @@ class _ShortPlaybackState extends State<ShortPlayback> with WidgetsBindingObserv
             color: Colors.transparent,
             child: InkWell(
               key: const Key('short-toggle'),
+              onDoubleTap: widget.onDoubleTap,
               onTap: () {
                 _wantsPlay = !player.isPlaying;
                 unawaited(_syncPlayback());

@@ -92,6 +92,18 @@ abstract class HubRepository {
   Future<void> deleteShort(String id, {required Claims actor});
   Future<ShortVideo> recordShortView(String id);
 
+  /// Hearts and comment count of a clip for [viewer] (null for a guest, who never "liked").
+  Future<ShortReactions> shortReactions(String id, {Claims? viewer});
+
+  /// Adds or removes [actor]'s heart; one heart per account.
+  Future<ShortReactions> toggleShortLike(String id, Claims actor);
+
+  /// Comments of a clip, newest first.
+  Future<List<ShortComment>> listShortComments(String id);
+
+  /// 1 to 300 characters; signed-in accounts only.
+  Future<ShortComment> addShortComment(String id, Claims actor, String text);
+
   /// Online transport is configured; server authorization is still required.
   bool get canChatOnline;
 

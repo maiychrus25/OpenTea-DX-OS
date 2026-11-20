@@ -42,6 +42,31 @@ class SeedData {
     ];
   }
 
+  /// Two to four invented comments per demo clip, the same for the same clip.
+  static List<ShortComment> shortComments(String clipId, DateTime now) {
+    const pool = [
+      ('Lan Anh', 'Đồi chè đẹp quá, cuối tuần này em lên chơi!'),
+      ('Minh Tuấn', 'Nhìn là thấy thơm mùi chè mới rồi.'),
+      ('Thu Trang', 'Cho mình hỏi tour này đi mấy người thì được ạ?'),
+      ('Quốc Bảo', 'Chè Tân Cương uống quen rồi không bỏ được 😄'),
+      ('Hồng Nhung', 'Video nhẹ nhàng, xem mà muốn đi ngay.'),
+      ('Đức Anh', 'Bà con làm chè vất vả quá, ủng hộ HTX!'),
+      ('Mai Phương', 'Sáng sương mù thế này đẹp thật.'),
+      ('Văn Hùng', 'Chảo gang sao chè giữ được hương lâu hơn đúng không ạ?'),
+    ];
+    final seed = clipId.codeUnits.fold<int>(0, (a, c) => a + c);
+    final count = 2 + seed % 3;
+    return [
+      for (var i = 0; i < count; i++)
+        ShortComment(
+          id: '$clipId-c$i',
+          authorName: pool[(seed + i * 3) % pool.length].$1,
+          text: pool[(seed + i * 3) % pool.length].$2,
+          createdAt: now.subtract(Duration(hours: 3 + i * 7)),
+        ),
+    ];
+  }
+
   static const htxs = <Htx>[
     Htx(
       code: 'tan-cuong',

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/short_video.dart';
+import 'reel_actions.dart';
 import 'short_playback.dart';
 import 'shorts_section.dart';
 
@@ -28,6 +30,18 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage> {
   int _index = 0;
   bool _deleting = false;
   String? _error;
+
+  /// Double taps on the video, passed to the heart button; [_heart] shows the big heart for a moment.
+  final _likeRequests = ValueNotifier<int>(0);
+  bool _heart = false;
+
+  void _doubleTap() {
+    _likeRequests.value++;
+    setState(() => _heart = true);
+    Future<void>.delayed(const Duration(milliseconds: 650), () {
+      if (mounted) setState(() => _heart = false);
+    });
+  }
 
   @override
   void initState() {
@@ -98,6 +112,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage> {
 
   @override
   void dispose() {
+    _likeRequests.dispose();
     _pages?.dispose();
     super.dispose();
   }
@@ -139,23 +154,55 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage> {
             else if (clips == null)
               const Center(child: CircularProgressIndicator(color: Colors.white))
             else
-              PageView.builder(
-                key: const Key('shorts-player'),
-                controller: _pages,
-                scrollDirection: Axis.vertical,
-                physics: _deleting ? const NeverScrollableScrollPhysics() : null,
-                itemCount: clips.length,
-                onPageChanged: (index) => setState(() => _index = index),
-                itemBuilder: (context, index) => index == _index
-                    ? ShortPlayback(
-                        key: ValueKey(clips[index].id),
-                        video: clips[index],
-                        suspended: _deleting,
-                        onStarted: () => _view(clips[index]),
-                      )
-                    : const ColoredBox(color: Colors.black),
+              // Dragging with a mouse also turns the page (the browser demo on a computer).
+              ScrollConfiguration(
+                behavior: ScrollConfiguration.of(
+                  context,
+                ).copyWith(dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad}),
+                child: PageView.builder(
+                  key: const Key('shorts-player'),
+                  controller: _pages,
+                  scrollDirection: Axis.vertical,
+                  physics: _deleting ? const NeverScrollableScrollPhysics() : null,
+                  itemCount: clips.length,
+                  onPageChanged: (index) => setState(() => _index = index),
+                  itemBuilder: (context, index) => index == _index
+                      ? ShortPlayback(
+                          key: ValueKey(clips[index].id),
+                          video: clips[index],
+                          suspended: _deleting,
+                          onStarted: () => _view(clips[index]),
+                          onDoubleTap: _doubleTap,
+                        )
+                      : const ColoredBox(color: Colors.black),
+                ),
               ),
             if (clip != null) ...[
+              IgnorePointer(
+                child: Center(
+                  child: AnimatedScale(
+                    scale: _heart ? 1 : 0.4,
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutBack,
+                    child: AnimatedOpacity(
+                      opacity: _heart ? 1 : 0,
+                      duration: const Duration(milliseconds: 220),
+                      child: const Icon(
+                        Icons.favorite,
+                        key: Key('reel-big-heart'),
+                        size: 110,
+                        color: Color(0xFFFF3B5C),
+                        shadows: [Shadow(blurRadius: 16, color: Colors.black38)],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 4,
+                bottom: 84,
+                child: ReelActions(video: clip, likeRequests: _likeRequests),
+              ),
               Positioned(
                 left: 0,
                 right: 0,

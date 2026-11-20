@@ -25,6 +25,11 @@ import 'seed_data.dart';
 class MockHubRepository implements HubRepository {
   final _shorts = <ShortVideo>[];
 
+  /// Hearts given before this session (seed) and the accounts that gave one in it.
+  final _baseLikes = <String, int>{};
+  final _likers = <String, Set<String>>{};
+  final _comments = <String, List<ShortComment>>{};
+
   @override
   bool get shortsAreSample => true;
   @override
@@ -91,6 +96,46 @@ class MockHubRepository implements HubRepository {
     return _shorts[index] = _shorts[index].withViews(_shorts[index].views + 1);
   }
 
+  ShortReactions _reactions(String id, Claims? viewer) {
+    final likers = _likers[id] ?? const <String>{};
+    return ShortReactions(
+      likes: (_baseLikes[id] ?? 0) + likers.length,
+      liked: viewer != null && likers.contains(viewer.subject),
+      comments: _comments[id]?.length ?? 0,
+    );
+  }
+
+  @override
+  Future<ShortReactions> shortReactions(String id, {Claims? viewer}) async {
+    _shortIndex(id);
+    return _reactions(id, viewer);
+  }
+
+  @override
+  Future<ShortReactions> toggleShortLike(String id, Claims actor) async {
+    _shortIndex(id);
+    final likers = _likers.putIfAbsent(id, () => <String>{});
+    if (!likers.remove(actor.subject)) likers.add(actor.subject);
+    return _reactions(id, actor);
+  }
+
+  @override
+  Future<List<ShortComment>> listShortComments(String id) async {
+    _shortIndex(id);
+    return List.unmodifiable(_comments[id] ?? const <ShortComment>[]);
+  }
+
+  @override
+  Future<ShortComment> addShortComment(String id, Claims actor, String text) async {
+    _shortIndex(id);
+    final clean = text.trim();
+    if (clean.isEmpty) throw const HubException('Hãy viết bình luận.');
+    if (clean.characters.length > 300) throw const HubException('Bình luận tối đa 300 ký tự.');
+    final comment = ShortComment(id: _nextId('cmt'), authorName: actor.name, text: clean, createdAt: DateTime.now());
+    _comments.putIfAbsent(id, () => <ShortComment>[]).insert(0, comment);
+    return comment;
+  }
+
   @override
   bool get canChatOnline => false;
 
@@ -141,6 +186,10 @@ class MockHubRepository implements HubRepository {
   MockHubRepository({DateTime? now}) : _now = now ?? DateTime.now() {
     final today = DateTime(_now.year, _now.month, _now.day);
     _shorts.addAll(SeedData.shorts(_now));
+    for (final clip in _shorts) {
+      _baseLikes[clip.id] = clip.views ~/ 9;
+      _comments[clip.id] = SeedData.shortComments(clip.id, _now);
+    }
     _departures.addAll(SeedData.departures(today));
     _articles.addAll(SeedData.articles(_now));
     _bookings.addAll(SeedData.bookings(today));

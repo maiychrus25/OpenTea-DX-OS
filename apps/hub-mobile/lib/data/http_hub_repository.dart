@@ -60,6 +60,14 @@ class HttpHubRepository implements HubRepository {
   Future<void> deleteShort(String id, {required Claims actor}) => _shop.deleteShort(id, actor: actor);
   @override
   Future<ShortVideo> recordShortView(String id) => _shop.recordShortView(id);
+  @override
+  Future<ShortReactions> shortReactions(String id, {Claims? viewer}) => _shop.shortReactions(id, viewer: viewer);
+  @override
+  Future<ShortReactions> toggleShortLike(String id, Claims actor) => _shop.toggleShortLike(id, actor);
+  @override
+  Future<List<ShortComment>> listShortComments(String id) => _shop.listShortComments(id);
+  @override
+  Future<ShortComment> addShortComment(String id, Claims actor, String text) => _shop.addShortComment(id, actor, text);
 
   /// Without [api] the repository is read-only (every write is unsupported).
   HttpHubRepository({required GraphqlClient core, required HubRepository shop, HubApiClient? api})
