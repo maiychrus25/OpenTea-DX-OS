@@ -1,6 +1,7 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "charts.html" as ch %}
 {% block title %}Dữ liệu{% endblock %}
 {% block head %}{% call kit.app_header("Dữ liệu cảm biến", "Vòng đời và chất lượng số đo của HTX " ~ htx) %}{{ parts.actions(link, here, days, keep) }}{% endcall %}{% endblock %}
 {% block main %}
@@ -10,14 +11,39 @@
   <h2 id="hot-title">Kho nóng</h2>
   {% if r.daily.ok and r.latest.ok %}
     {% if hot %}
-    {{ kit.stats([
-      {"label": "Số đo ở kho nóng", "value": hot_total | num(0), "hint": "trong 30 ngày gần nhất"},
-      {"label": "Thửa có cảm biến", "value": summary.parcels | num(0)},
-      {"label": "Cảm biến", "value": summary.sensors | num(0)},
-      {"label": "Im lặng", "value": summary.silent | num(0), "hint": "quá " ~ sensor_silent_hours ~ " giờ không gửi"}
-    ]) }}
-    <h3>Số đo mỗi ngày</h3>
-    {{ parts.line_chart(hot_chart, "Số đo ở kho nóng mỗi ngày", "số đo") }}
+    <div class="hot-head">
+      {% if matrix and matrix.rows %}{{ ch.ring(matrix.ring, matrix.ring_text, "Cặp thửa và cảm biến còn gửi số đo") }}{% endif %}
+      <ul class="stats">
+        <li><span class="stat-label">Số đo ở kho nóng</span><span class="stat-value">{{ hot_total | num(0) }}</span><span class="stat-hint">trong 30 ngày gần nhất</span></li>
+        <li><span class="stat-label">Thửa có cảm biến</span><span class="stat-value">{{ summary.parcels | num(0) }}</span></li>
+        <li><span class="stat-label">Cảm biến</span><span class="stat-value">{{ summary.sensors | num(0) }}</span></li>
+        <li><span class="stat-label">Im lặng</span><span class="stat-value">{{ summary.silent | num(0) }}</span><span class="stat-hint">quá {{ sensor_silent_hours }} giờ không gửi</span></li>
+      </ul>
+    </div>
+    <div class="grid-cards">
+      {% call parts.card("Số đo mỗi ngày trong kho nóng", 12, "d-hot") %}
+        {{ parts.line_chart(hot_chart, "Số đo ở kho nóng mỗi ngày", "số đo") }}
+      {% endcall %}
+      {% call parts.card("Số đo theo loại cảm biến (30 ngày)", 5, "d-sensors") %}
+        {{ ch.bars(by_sensor, "Số đo theo loại cảm biến", "Chưa có cảm biến nào gửi số đo.") }}
+      {% endcall %}
+      {% call parts.card("Cảm biến gửi số đo theo thửa", 7, "d-matrix") %}
+        {% if matrix and matrix.rows %}
+        <div class="matrix-wrap">
+        <table class="matrix" role="table">
+          <thead role="rowgroup"><tr role="row"><th role="columnheader">Thửa</th>{% for c in matrix.columns %}<th role="columnheader">{{ c }}</th>{% endfor %}</tr></thead>
+          <tbody role="rowgroup">
+          {% for code, cells in matrix.rows %}
+            <tr role="row"><th role="rowheader" scope="row"><a href="{{ link('/parcels/' ~ code) }}">{{ code }}</a></th>
+            {% for cell in cells %}<td role="cell" class="cell-{{ cell.state }}" title="{{ cell.title }}"><span class="cell-text">{{ cell.text }}</span><span class="visually-hidden">{{ cell.title }}</span></td>{% endfor %}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        {% else %}{{ kit.empty("Chưa có cảm biến nào gửi số đo.") }}{% endif %}
+      {% endcall %}
+    </div>
     {% else %}{{ kit.empty("Chưa có cảm biến nào gửi số đo.") }}{% endif %}
   {% else %}{{ parts.error() }}{% endif %}
 </section>
@@ -49,6 +75,11 @@
   {% if r.runs.ok %}
     {% if runs %}
     {% if failed %}<p class="error" role="status">{{ failed }} lần chuyển dữ liệu bị lỗi trong 7 ngày qua.</p>{% endif %}
+    <div class="grid-cards">
+      {% call parts.card("Số dòng chuyển mỗi lần (✕ là lần bị lỗi)", 12, "d-moved") %}
+        {{ ch.columns(moved, "Số dòng chuyển sang kho lạnh theo lần chuyển", "Chưa có lần chuyển dữ liệu nào sang kho lạnh.") }}
+      {% endcall %}
+    </div>
     <table role="table">
       <thead role="rowgroup"><tr role="row"><th role="columnheader">Ngày dữ liệu</th><th role="columnheader">Trạng thái</th><th role="columnheader">Số dòng</th><th role="columnheader">Dung lượng</th><th role="columnheader">SHA-256</th><th role="columnheader">Kiểm chất lượng</th></tr></thead>
       <tbody role="rowgroup">

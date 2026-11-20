@@ -1,6 +1,7 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "charts.html" as ch %}
 {% block title %}Thửa {{ code }}{% endblock %}
 {% block head %}{% call kit.app_header("Thửa " ~ code, "Bản sao số: số đo cảm biến, vụ canh tác, nhật ký và báo cáo bệnh") %}<a class="button secondary" href="{{ link('/parcels') }}">‹ Các thửa</a>{% endcall %}{% endblock %}
 {% block main %}
@@ -39,6 +40,7 @@
         <p class="sensor-when">Số đo lúc {{ s.reading.ts | vn_datetime }}</p>
         {% endif %}
         {% if s.stats %}
+        {{ ch.gauge(s.gauge, s.label ~ " so với khoảng " ~ sensor_days ~ " ngày") }}
         <dl class="stat-row">
           <div><dt>Nhỏ nhất</dt><dd>{{ s.stats.min | num(1) }} {{ s.unit }}</dd></div>
           <div><dt>Lớn nhất</dt><dd>{{ s.stats.max | num(1) }} {{ s.unit }}</dd></div>
@@ -53,6 +55,20 @@
     {% else %}{{ kit.empty("Thửa này chưa có cảm biến nào gửi số đo.") }}{% endif %}
   {% else %}{{ parts.error() }}{% endif %}
 </section>
+
+{% if r.daily.ok and combined %}
+<section class="group" aria-labelledby="combined-title">
+  <h2 id="combined-title">Các số đo đặt cạnh nhau</h2>
+  <div class="grid-cards">
+    {% call parts.card("Nhiệt độ và độ ẩm không khí, mỗi điểm một ngày", 6, "t-scatter") %}
+      {{ ch.scatter(combined.scatter, "Nhiệt độ không khí và độ ẩm không khí theo ngày", "Nhiệt độ (°C)", "Độ ẩm (%)", "Cần cả nhiệt độ và độ ẩm không khí của cùng một ngày để vẽ.") }}
+    {% endcall %}
+    {% call parts.card("Lượng mưa, trung bình các lần đo trong ngày", 6, "t-rain") %}
+      {{ ch.columns(combined.rain, "Lượng mưa trung bình theo ngày", "Chưa có số đo lượng mưa trong kỳ.") }}
+    {% endcall %}
+  </div>
+</section>
+{% endif %}
 
 <section class="group" aria-labelledby="weather-title">
   <h2 id="weather-title">Thời tiết mới nhất</h2>
