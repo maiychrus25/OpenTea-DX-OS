@@ -1,0 +1,155 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 Vu Dinh Dat -->
+<UserControl x:Class="TeaStaff.Desktop.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="32,24,32,32" MaxWidth="1200" HorizontalAlignment="Left">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="20" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <!-- HTX -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Hợp tác xã" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Mã HTX phải trùng claim htx_code của tài khoản OpenTea DX-OS để dữ liệu nằm đúng HTX." Style="{StaticResource Caption}" Margin="0,2,0,14" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="130" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Mã HTX" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding HtxCode, UpdateSourceTrigger=PropertyChanged}" CharacterCasing="Upper" MaxLength="20" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Tên HTX" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding HtxName, UpdateSourceTrigger=PropertyChanged}" MaxLength="120" />
+                            </StackPanel>
+                        </Grid>
+                        <Button Margin="0,16,0,0" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Content="Lưu thông tin HTX" Command="{Binding SaveHtxCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Payroll policy -->
+                <Border Style="{StaticResource Card}" Margin="0,20,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Quy tắc tính lương" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Lương tháng = lương cơ bản × (ngày công + nghỉ có lương) / công chuẩn. Bảo hiểm chỉ trừ với hợp đồng chính thức hưởng lương tháng." Style="{StaticResource Caption}" Margin="0,2,0,14" />
+                        <UniformGrid Columns="3">
+                            <StackPanel Margin="0,0,12,0">
+                                <TextBlock Text="Công chuẩn / tháng" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding StandardDays, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,0,12,0">
+                                <TextBlock Text="BHXH, BHYT, BHTN (%)" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding InsuranceRate, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Hệ số tăng ca" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding OvertimeMultiplier, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                        </UniformGrid>
+                        <Button Margin="0,16,0,0" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Content="Lưu quy tắc lương" Command="{Binding SavePayrollCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Account -->
+                <Border Style="{StaticResource Card}" Margin="0,20,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Tài khoản &amp; dữ liệu" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Style="{StaticResource Caption}" Margin="0,2,0,14">
+                            <Run Text="Dữ liệu và cấu hình nằm tại" /> <Run Text="{Binding DataFolder, Mode=OneWay}" FontFamily="Consolas" />
+                        </TextBlock>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource SecondaryButton}" Content="Đổi mật khẩu chủ HTX" Command="{Binding ChangePasswordCommand}" Margin="0,0,10,0"
+                                    Visibility="{Binding IsLocalOwner, Converter={StaticResource Visible}}" />
+                            <Button Style="{StaticResource SecondaryButton}" Content="Mở thư mục dữ liệu" Command="{Binding OpenDataFolderCommand}" />
+                        </StackPanel>
+                        <TextBlock Margin="0,16,0,0" Style="{StaticResource Caption}">
+                            <Run Text="Tea Staff Manager" /> <Run Text="{Binding Version, Mode=OneWay}" /> <Run Text="· Giấy phép MIT · Mã nguồn: github.com/Vudinhdat02/appManageStaff" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2">
+                <!-- Mobile API -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Máy chủ cho ứng dụng điện thoại" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Điện thoại của nhân viên kết nối cùng mạng Wi-Fi với máy tính này. Nhập một địa chỉ dưới đây vào màn hình đăng nhập của ứng dụng nhận việc." Style="{StaticResource Caption}" Margin="0,2,0,14" />
+                        <Border Padding="12,10" CornerRadius="{StaticResource RadiusMd}" Background="{StaticResource LeafLightBrush}" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <TextBlock Text="{Binding ApiAddresses}" FontFamily="Consolas" FontSize="13.5" Foreground="{StaticResource PrimaryBrush}" TextWrapping="Wrap" />
+                        </Border>
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="130" />
+                            </Grid.ColumnDefinitions>
+                            <CheckBox Content="Bật máy chủ khi mở ứng dụng" IsChecked="{Binding ApiEnabled}" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Cổng" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding ApiPort, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="Điện thoại không kết nối được? Bấm Kiểm tra kết nối. Nếu Wi-Fi của máy đang là mạng Công cộng (Public), bấm Cho phép qua tường lửa." Style="{StaticResource Caption}" Margin="0,10,0,0" />
+                        <Button Margin="0,14,0,0" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Content="Áp dụng và khởi động lại máy chủ" Command="{Binding SaveApiCommand}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Style="{StaticResource SecondaryButton}" Command="{Binding TestPhoneCommand}">
+                                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8EA;" Style="{StaticResource Icon}" FontSize="13" /><TextBlock Margin="8,0,0,0" Text="Kiểm tra kết nối" /></StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource SecondaryButton}" Command="{Binding AllowFirewallCommand}" Margin="10,0,0,0" ToolTip="Windows sẽ hỏi quyền quản trị">
+                                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE83D;" Style="{StaticResource Icon}" FontSize="13" /><TextBlock Margin="8,0,0,0" Text="Cho phép qua tường lửa" /></StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Core integration -->
+                <Border Style="{StaticResource Card}" Margin="0,20,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Kết nối lõi OpenTea DX-OS" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Dùng chung tài khoản (Keycloak SSO) và cơ sở dữ liệu PostgreSQL của lõi. Áp dụng ở lần mở ứng dụng sau." Style="{StaticResource Caption}" Margin="0,2,0,14" />
+                        <TextBlock Text="Đăng nhập bằng" Style="{StaticResource FieldLabel}" />
+                        <ComboBox ItemsSource="{Binding AuthModes}" SelectedItem="{Binding SelectedAuthMode}" />
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Địa chỉ Keycloak" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding KeycloakUrl, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Realm" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding KeycloakRealm, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="Client ID" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding KeycloakClient, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Margin="0,14,0,0" Text="Cơ sở dữ liệu" Style="{StaticResource FieldLabel}" />
+                        <ComboBox ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}" />
+                        <TextBlock Margin="0,12,0,0" Text="Chuỗi kết nối PostgreSQL" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding PostgresConnection, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" FontSize="12.5" />
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                            <Button Style="{StaticResource PrimaryButton}" Content="Lưu cấu hình kết nối" Command="{Binding SaveCoreCommand}" />
+                            <Button Style="{StaticResource SecondaryButton}" Content="Kiểm tra kết nối lõi" Command="{Binding TestCoreCommand}" Margin="10,0,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

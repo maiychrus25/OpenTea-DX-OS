@@ -1,0 +1,120 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 Vu Dinh Dat -->
+<Window x:Class="TeaStaff.Desktop.Views.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Tea Staff Manager · Đăng nhập" Width="980" Height="620" MinWidth="860" MinHeight="560"
+        WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize"
+        Background="{StaticResource CardBrush}" FontFamily="{StaticResource AppFont}" Icon="/Assets/app.ico">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1.05*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Brand panel -->
+        <Border Grid.Column="0" ClipToBounds="True">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#EAF4EC" Offset="0" />
+                    <GradientStop Color="#D7EBDD" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
+            <Grid>
+                <!-- Decorative leaves -->
+                <Viewbox Width="420" Height="420" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-110,-120" Opacity="0.35">
+                    <Canvas Width="24" Height="24">
+                        <Path Data="{StaticResource LeafGeometry}" Fill="#9CCBA9" />
+                        <Path Data="{StaticResource LeafVeinGeometry}" Stroke="#EAF4EC" StrokeThickness="0.6" StrokeEndLineCap="Round" StrokeStartLineCap="Round" />
+                    </Canvas>
+                </Viewbox>
+                <Viewbox Width="200" Height="200" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,40,40,0" Opacity="0.25" RenderTransformOrigin="0.5,0.5">
+                    <Viewbox.RenderTransform><RotateTransform Angle="-35" /></Viewbox.RenderTransform>
+                    <Canvas Width="24" Height="24">
+                        <Path Data="{StaticResource LeafGeometry}" Fill="#7FB98F" />
+                    </Canvas>
+                </Viewbox>
+
+                <StackPanel Margin="56,56,56,0" VerticalAlignment="Top">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="52" Height="52" CornerRadius="14" Background="{StaticResource PrimaryBrush}">
+                            <Viewbox Width="30" Height="30">
+                                <Canvas Width="24" Height="24">
+                                    <Path Data="{StaticResource LeafGeometry}" Fill="{StaticResource LimeBrush}" />
+                                    <Path Data="{StaticResource LeafVeinGeometry}" Stroke="{StaticResource PrimaryBrush}" StrokeThickness="1.1" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                </Canvas>
+                            </Viewbox>
+                        </Border>
+                        <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Tea Staff Manager" FontSize="20" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
+                            <TextBlock Text="trên nền OpenTea DX-OS" FontSize="13" Foreground="{StaticResource InkSecondaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Margin="0,64,0,0" Text="Quản lý nhân sự và giao việc cho hợp tác xã chè" FontSize="28" FontWeight="Bold"
+                               TextWrapping="Wrap" Foreground="{StaticResource InkBrush}" LineHeight="38" MaxWidth="400" HorizontalAlignment="Left" />
+                    <TextBlock Margin="0,16,0,0" FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource InkSecondaryBrush}" MaxWidth="400"
+                               HorizontalAlignment="Left" LineHeight="22"
+                               Text="Hồ sơ nhân viên, giao việc tới điện thoại, chấm công, duyệt nghỉ phép và tính lương hàng tháng ở cùng một nơi." />
+
+                    <StackPanel Margin="0,28,0,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <TextBlock Text="&#xE73E;" Style="{StaticResource Icon}" Foreground="{StaticResource PrimaryBrush}" FontSize="13" />
+                            <TextBlock Margin="10,0,0,0" Text="Nhân viên nhận việc qua ứng dụng Android" Foreground="{StaticResource InkBrush}" FontSize="13.5" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <TextBlock Text="&#xE73E;" Style="{StaticResource Icon}" Foreground="{StaticResource PrimaryBrush}" FontSize="13" />
+                            <TextBlock Margin="10,0,0,0" Text="Lương tự tính từ bảng chấm công" Foreground="{StaticResource InkBrush}" FontSize="13.5" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE73E;" Style="{StaticResource Icon}" Foreground="{StaticResource PrimaryBrush}" FontSize="13" />
+                            <TextBlock Margin="10,0,0,0" Text="Sẵn sàng dùng chung tài khoản và dữ liệu DX-OS" Foreground="{StaticResource InkBrush}" FontSize="13.5" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock Margin="56,0,0,28" VerticalAlignment="Bottom" FontSize="12" Foreground="{StaticResource InkTertiaryBrush}"
+                           Text="Phần mềm nguồn mở · Giấy phép MIT" />
+            </Grid>
+        </Border>
+
+        <!-- Sign-in form -->
+        <Grid Grid.Column="1">
+            <StackPanel Width="340" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="Đăng nhập" FontSize="26" FontWeight="Bold" Foreground="{StaticResource InkBrush}" />
+                <TextBlock Margin="0,6,0,0" Foreground="{StaticResource InkSecondaryBrush}" FontSize="13.5" TextWrapping="Wrap">
+                    <Run Text="{Binding HtxName, Mode=OneWay}" FontWeight="SemiBold" />
+                    <Run Text="·" />
+                    <Run Text="{Binding ProviderName, Mode=OneWay}" />
+                </TextBlock>
+
+                <TextBlock Margin="0,28,0,0" Text="Tên đăng nhập" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="UserBox" Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}" Height="42" />
+
+                <TextBlock Margin="0,16,0,0" Text="Mật khẩu" Style="{StaticResource FieldLabel}" />
+                <PasswordBox x:Name="PasswordBox" Height="42" />
+
+                <Border Margin="0,16,0,0" Padding="12,10" CornerRadius="{StaticResource RadiusMd}" Background="{StaticResource DangerSubtleBrush}"
+                        Visibility="{Binding Error, Converter={StaticResource Visible}}">
+                    <TextBlock Text="{Binding Error}" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" FontSize="13" />
+                </Border>
+
+                <Button Margin="0,22,0,0" Height="44" Style="{StaticResource PrimaryButton}" Click="OnSignIn" IsDefault="True">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Đăng nhập" />
+                        <TextBlock Margin="8,0,0,0" Text="&#xE72A;" Style="{StaticResource Icon}" FontSize="13" />
+                    </StackPanel>
+                </Button>
+
+                <Border Margin="0,24,0,0" Padding="14,12" CornerRadius="{StaticResource RadiusMd}" Background="{StaticResource LeafLightBrush}"
+                        BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                        Visibility="{Binding IsLocalMode, Converter={StaticResource Visible}}">
+                    <StackPanel>
+                        <TextBlock Text="Tài khoản dùng thử" FontWeight="SemiBold" FontSize="12.5" Foreground="{StaticResource PrimaryBrush}" />
+                        <TextBlock Margin="0,4,0,0" FontSize="12.5" Foreground="{StaticResource InkSecondaryBrush}" TextWrapping="Wrap"
+                                   Text="admin / Admin@123 — đổi mật khẩu trong Cài đặt sau khi đăng nhập." />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

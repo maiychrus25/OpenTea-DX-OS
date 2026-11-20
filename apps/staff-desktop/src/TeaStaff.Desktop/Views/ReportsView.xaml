@@ -1,0 +1,181 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 Vu Dinh Dat -->
+<UserControl x:Class="TeaStaff.Desktop.Views.ReportsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ch="clr-namespace:TeaStaff.Desktop.Controls"
+             xmlns:vm="clr-namespace:TeaStaff.Desktop.ViewModels">
+    <UserControl.Resources>
+        <Style x:Key="ChartTitle" TargetType="TextBlock" BasedOn="{StaticResource SectionTitle}">
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+        <DataTemplate x:Key="AttentionTemplate">
+            <Border Padding="12,9" Margin="0,0,0,8" CornerRadius="{StaticResource RadiusMd}" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                <DockPanel>
+                    <Border DockPanel.Dock="Left" Width="4" CornerRadius="2" Margin="0,0,10,0" Background="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=fg}" />
+                    <StackPanel>
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=fg}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+        <DataTemplate x:Key="SeriesLegend">
+            <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
+                <Ellipse Width="9" Height="9" Fill="{Binding Brush}" VerticalAlignment="Center" />
+                <TextBlock Margin="6,0,0,0" Text="{Binding Name}" FontSize="12" Foreground="{StaticResource InkSecondaryBrush}" />
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,24,32,32">
+            <DockPanel Margin="0,0,0,16">
+                <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Command="{Binding RefreshCommand}" Margin="10,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="13" />
+                        <TextBlock Margin="8,0,0,0" Text="Làm mới" />
+                    </StackPanel>
+                </Button>
+                <ComboBox DockPanel.Dock="Right" Width="170" ItemsSource="{Binding Periods}" SelectedItem="{Binding Period}" />
+                <TextBlock Text="Báo cáo nhân sự trực quan" Style="{StaticResource SectionTitle}" FontSize="16" VerticalAlignment="Center" />
+            </DockPanel>
+
+            <!-- KPI tiles: 3 per row -->
+            <ItemsControl ItemsSource="{Binding Kpis}" Margin="0,0,-16,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,16,16" Padding="18,14">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Label}" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource InkTertiaryBrush}" />
+                                <TextBlock Margin="0,6,0,0" Text="{Binding Value}" FontSize="26" FontWeight="Bold"
+                                           Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=fg}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Row 1: status bars + priority donut -->
+            <Grid Margin="0,4,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Phân bố trạng thái công việc" Style="{StaticResource ChartTitle}" />
+                        <ch:BarChart Height="230" Items="{Binding StatusBars}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Tỷ trọng độ ưu tiên (việc đang mở)" Style="{StaticResource ChartTitle}" />
+                        <Grid Height="230">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="200" />
+                            </Grid.ColumnDefinitions>
+                            <ch:DonutChart Items="{Binding PriorityShare}" CenterLabel="việc đang mở" Margin="0,0,16,0" />
+                            <ItemsControl Grid.Column="1" ItemsSource="{Binding PriorityLegend}" VerticalAlignment="Center">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <DockPanel Margin="0,6">
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Value}" FontWeight="SemiBold" />
+                                            <Rectangle Width="12" Height="12" RadiusX="3" RadiusY="3" Fill="{Binding Brush}" VerticalAlignment="Center" />
+                                            <TextBlock Margin="8,0,0,0" Text="{Binding Label}" Foreground="{StaticResource InkSecondaryBrush}" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Row 2: trends -->
+            <Grid Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Xu hướng công việc theo ngày" Style="{StaticResource ChartTitle}" />
+                        <ch:LineChart Height="230" Series="{Binding TrendSeries}" Labels="{Binding TrendLabels}" />
+                        <ItemsControl ItemsSource="{Binding TrendSeries}" ItemTemplate="{StaticResource SeriesLegend}" HorizontalAlignment="Center" Margin="0,10,0,0">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Chấm công theo ngày (số công)" Style="{StaticResource ChartTitle}" />
+                        <ch:LineChart Height="230" Series="{Binding AttendanceSeries}" Labels="{Binding AttendanceLabels}" />
+                        <ItemsControl ItemsSource="{Binding AttendanceSeries}" ItemTemplate="{StaticResource SeriesLegend}" HorizontalAlignment="Center" Margin="0,10,0,0">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Row 3: payroll + teams -->
+            <Grid Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Quỹ lương thực lĩnh 6 tháng gần nhất" Style="{StaticResource ChartTitle}" />
+                        <ch:BarChart Height="210" Items="{Binding PayrollBars}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Việc hoàn thành theo tổ trong kỳ" Style="{StaticResource ChartTitle}" />
+                        <ch:BarChart Height="210" Items="{Binding TeamBars}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Row 4: attention lists -->
+            <Grid Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}" VerticalAlignment="Top">
+                    <StackPanel>
+                        <TextBlock Text="Việc cần theo dõi" Style="{StaticResource ChartTitle}" />
+                        <ItemsControl ItemsSource="{Binding TaskAttention}" ItemTemplate="{StaticResource AttentionTemplate}" />
+                        <TextBlock Text="Không có việc nổi bật cần theo dõi." Style="{StaticResource Caption}" Visibility="{Binding TaskAttention.Count, Converter={StaticResource Hidden}}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top">
+                    <StackPanel>
+                        <TextBlock Text="Nhân sự cần xử lý" Style="{StaticResource ChartTitle}" />
+                        <ItemsControl ItemsSource="{Binding StaffAttention}" ItemTemplate="{StaticResource AttentionTemplate}" />
+                        <TextBlock Text="Mọi nhân viên đều ổn." Style="{StaticResource Caption}" Visibility="{Binding StaffAttention.Count, Converter={StaticResource Hidden}}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="4" Style="{StaticResource Card}" VerticalAlignment="Top">
+                    <StackPanel>
+                        <TextBlock Text="Nghỉ phép chờ duyệt" Style="{StaticResource ChartTitle}" />
+                        <ItemsControl ItemsSource="{Binding LeaveAttention}" ItemTemplate="{StaticResource AttentionTemplate}" />
+                        <TextBlock Text="Không có đơn nghỉ cần duyệt." Style="{StaticResource Caption}" Visibility="{Binding LeaveAttention.Count, Converter={StaticResource Hidden}}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
