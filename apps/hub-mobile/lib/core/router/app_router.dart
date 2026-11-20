@@ -83,6 +83,11 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
           path: '$base/shorts/watch/:id',
           builder: (c, s) => ShortsPlayerPage(initialId: s.pathParameters['id']!),
         ),
+        // The "Video" button in the middle of the bottom bar: every channel's clips.
+        GoRoute(
+          path: '$base/videos',
+          builder: (c, s) => ShortsPlayerPage.feed(initialId: s.uri.queryParameters['id']),
+        ),
       ],
       GoRoute(
         path: '/login',

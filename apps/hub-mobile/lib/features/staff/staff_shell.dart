@@ -10,7 +10,7 @@ import '../../core/format/formatting.dart';
 import '../../core/theme/staff_theme.dart';
 import '../../data/hub_repository.dart';
 import '../../data/models/staff.dart';
-import '../../shared/widgets.dart' show SampleDataChip;
+import '../../shared/widgets.dart' show SampleDataChip, VideoNavIcon;
 import 'staff_nav.dart';
 import 'staff_widgets.dart';
 
@@ -313,7 +313,8 @@ class _BottomBar extends StatelessWidget {
       height: 62,
       child: Row(
         children: [
-          for (final m in nav.bottom)
+          for (final (i, m) in nav.bottom.indexed) ...[
+            if (i == nav.bottom.length ~/ 2) _videoButton(context),
             Expanded(
               child: InkWell(
                 key: Key('bottom-${m.path}'),
@@ -345,6 +346,26 @@ class _BottomBar extends StatelessWidget {
                 ),
               ),
             ),
+          ],
+        ],
+      ),
+    ),
+  );
+
+  Widget _videoButton(BuildContext context) => Expanded(
+    child: InkWell(
+      key: const Key('bottom-videos'),
+      onTap: () => context.push(nav.videosPath),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          VideoNavIcon(size: 34),
+          SizedBox(height: 3),
+          Text(
+            'Video',
+            maxLines: 1,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: StaffColors.primary),
+          ),
         ],
       ),
     ),

@@ -35,6 +35,10 @@ class MockHubRepository implements HubRepository {
       List.unmodifiable(_shorts.where((v) => v.ownerId == channel));
 
   @override
+  Future<List<ShortVideo>> listAllShorts() async =>
+      List.unmodifiable([..._shorts]..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+
+  @override
   Future<ShortVideo> postShort(
     Claims actor, {
     required String title,

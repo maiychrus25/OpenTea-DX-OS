@@ -496,10 +496,35 @@ class _LoadViewState<T> extends State<LoadView<T>> {
 
 /// Bottom navigation shell shared by every role.
 class NavDestination {
-  const NavDestination(this.label, this.icon, this.location);
+  const NavDestination(this.label, this.icon, this.location, {this.opensOnTop = false});
   final String label;
   final IconData icon;
   final String location;
+
+  /// Pushed over the shell instead of switching tab (the full-screen "Video" feed), so back returns here.
+  final bool opensOnTop;
+}
+
+/// The "Video" button of the bottom bars: a small play tile in the brand green, like a shorts icon.
+class VideoNavIcon extends StatelessWidget {
+  const VideoNavIcon({super.key, this.size = 30});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size * 0.8,
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [Color(0xFF2F7A1D), Color(0xFF143C2D)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(size * 0.28),
+      boxShadow: const [BoxShadow(color: Color(0x33143C2D), blurRadius: 6, offset: Offset(0, 2))],
+    ),
+    child: Icon(Icons.play_arrow_rounded, color: const Color(0xFFD6F05C), size: size * 0.62),
+  );
 }
 
 class RoleShell extends StatelessWidget {
@@ -553,15 +578,19 @@ class RoleShell extends StatelessWidget {
         ),
         child: NavigationBar(
           selectedIndex: index,
-          onDestinationSelected: (i) => context.go(destinations[i].location),
+          onDestinationSelected: (i) => destinations[i].opensOnTop
+              ? context.push(destinations[i].location)
+              : context.go(destinations[i].location),
           destinations: [
             for (final d in destinations)
               NavigationDestination(
-                icon: Badge(
-                  isLabelVisible: (badges[d.location] ?? 0) > 0,
-                  label: Text('${badges[d.location] ?? 0}'),
-                  child: Icon(d.icon),
-                ),
+                icon: d.opensOnTop
+                    ? VideoNavIcon(key: Key('nav-video'))
+                    : Badge(
+                        isLabelVisible: (badges[d.location] ?? 0) > 0,
+                        label: Text('${badges[d.location] ?? 0}'),
+                        child: Icon(d.icon),
+                      ),
                 label: d.label,
               ),
           ],

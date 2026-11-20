@@ -11,8 +11,13 @@ import 'short_playback.dart';
 import 'shorts_section.dart';
 
 class ShortsPlayerPage extends StatefulWidget {
-  const ShortsPlayerPage({super.key, required this.initialId});
-  final String initialId;
+  const ShortsPlayerPage({super.key, required this.initialId}) : feed = false;
+
+  /// The bottom bar's "Video" feed: every channel, newest first, starting at [initialId] or the first clip.
+  const ShortsPlayerPage.feed({super.key, this.initialId}) : feed = true;
+
+  final String? initialId;
+  final bool feed;
   @override
   State<ShortsPlayerPage> createState() => _ShortsPlayerPageState();
 }
@@ -32,10 +37,13 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage> {
 
   Future<void> _load() async {
     try {
-      final claims = context.read<AppState>().claims!;
-      final clips = await context.read<HubRepository>().listShorts(shortChannel(claims));
+      final repository = context.read<HubRepository>();
+      final claims = context.read<AppState>().claims;
+      final clips = widget.feed ? await repository.listAllShorts() : await repository.listShorts(shortChannel(claims!));
       if (!mounted) return;
-      final index = clips.indexWhere((v) => v.id == widget.initialId);
+      if (clips.isEmpty) throw const HubException('Chưa có video nào.');
+      final found = clips.indexWhere((v) => v.id == widget.initialId);
+      final index = widget.initialId == null && widget.feed ? 0 : found;
       if (index < 0) throw const HubException('Video không còn tồn tại trong kênh này.');
       setState(() {
         _clips = clips;

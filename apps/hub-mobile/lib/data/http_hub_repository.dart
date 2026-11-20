@@ -48,6 +48,8 @@ class HttpHubRepository implements HubRepository {
   @override
   Future<List<ShortVideo>> listShorts(String channel) => _shop.listShorts(channel);
   @override
+  Future<List<ShortVideo>> listAllShorts() => _shop.listAllShorts();
+  @override
   Future<ShortVideo> postShort(
     Claims actor, {
     required String title,

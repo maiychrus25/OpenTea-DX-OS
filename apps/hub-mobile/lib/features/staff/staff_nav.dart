@@ -49,7 +49,12 @@ class StaffNav {
   /// The "Gian hàng" entries: storefront work that already existed before the redesign.
   /// Tour work (bookings, tour money, check-in) is only ever in the operator's.
   final List<MenuItem> shop;
+
+  /// Four tabs; the bar puts the "Video" button between the second and the third.
   final List<MenuItem> bottom;
+
+  /// The full-screen feed opened by the "Video" button in the middle of the bottom bar.
+  String get videosPath => '$home/videos';
   final String notificationsPath;
   final String accountPath;
 
@@ -94,7 +99,6 @@ const _manager = StaffNav(
     MenuItem('Lịch thu hái', Icons.calendar_month_outlined, '/manager/schedule', bottomLabel: 'Thu hái'),
     MenuItem('Duyệt nhật ký', Icons.fact_check_outlined, '/manager/journal-approve'),
     MenuItem('Đơn hàng', Icons.receipt_long_outlined, '/manager/orders'),
-    MenuItem('Thông báo', Icons.notifications_none, '/manager/notifications'),
   ],
 );
 
@@ -125,7 +129,6 @@ const _officer = StaffNav(
     MenuItem('Nông hộ', Icons.groups_outlined, '/manager/households'),
     MenuItem('Nhật ký', Icons.description_outlined, '/manager/journal'),
     MenuItem('Lô hàng', Icons.inventory_2_outlined, '/manager/lots'),
-    MenuItem('Đơn hàng', Icons.receipt_long_outlined, '/manager/orders'),
   ],
 );
 
@@ -151,7 +154,6 @@ const _farmer = StaffNav(
     MenuItem('Tổng quan', Icons.home_outlined, '/farmer'),
     MenuItem('Nhật ký đồng ruộng', Icons.description_outlined, '/farmer/journal', bottomLabel: 'Nhật ký'),
     MenuItem('Quét bệnh cây', Icons.photo_camera_outlined, '/farmer/scan', bottomLabel: 'Quét'),
-    MenuItem('Thông báo', Icons.notifications_none, '/farmer/notifications'),
     MenuItem('Hồ sơ', Icons.person_outline, '/farmer/me'),
   ],
 );
@@ -178,7 +180,6 @@ const _operator = StaffNav(
     MenuItem('Tổng quan', Icons.home_outlined, '/operator'),
     MenuItem('Hợp tác xã liên kết', Icons.account_balance_outlined, '/operator/htx', bottomLabel: 'HTX'),
     MenuItem('Tour toàn vùng', Icons.route_outlined, '/operator/tours', bottomLabel: 'Tour'),
-    MenuItem('Bài viết HTX', Icons.fact_check_outlined, '/operator/articles', bottomLabel: 'Duyệt bài'),
     MenuItem('Báo cáo tổng hợp', Icons.bar_chart_outlined, '/operator/reports', bottomLabel: 'Báo cáo'),
   ],
 );

@@ -185,7 +185,14 @@ void main() {
   testWidgets('officer sees no write buttons', (tester) async {
     await _pump(tester);
     await _login(tester, 'officer@demo.vn');
-    await tester.tap(find.text('Đơn hàng').last);
+    // The officer's orders are in the menu (the bottom bar keeps four tabs around the Video button).
+    await tester.tap(find.byKey(const Key('menu-button')));
+    await tester.pumpAndSettle();
+    if (find.byKey(const Key('menu-/manager/orders')).evaluate().isEmpty) {
+      await tester.tap(find.byKey(const Key('drawer-shop-toggle')));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.byKey(const Key('menu-/manager/orders')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('m-order-ord-01')));
     await tester.pumpAndSettle();

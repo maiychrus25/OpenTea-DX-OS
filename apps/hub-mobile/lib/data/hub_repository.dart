@@ -80,6 +80,9 @@ abstract class HubRepository {
   bool get shortsAreSample;
   bool get canPostShorts;
   Future<List<ShortVideo>> listShorts(String channel);
+
+  /// The "Video" feed of the bottom bar: every channel's clips, newest first.
+  Future<List<ShortVideo>> listAllShorts();
   Future<ShortVideo> postShort(
     Claims actor, {
     required String title,
