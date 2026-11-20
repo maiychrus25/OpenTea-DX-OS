@@ -305,3 +305,11 @@ def test_paired_draws_the_desktop_width_and_the_phone_width():
 def test_a_scatter_knows_the_drawing_it_was_made_for():
     sc = charts.scatter([(1.0, 1.0, "a")], width=326)
     assert sc.width == 326 and sc.height == charts.HEIGHT
+
+
+def test_wide_columns_draw_their_grid_lines_across_the_whole_plot():
+    # The grid line runs from plot_left to plot_right: a wide drawing left at the default right edge stops mid-chart.
+    wide = charts.column_chart(["a", "b", "c"], [[1, 2, 3]], ["n"], width=1056)
+    assert wide.plot_right == 1056 - charts.RIGHT
+    for empty in (charts.column_chart([], [], [], width=1056), charts.column_chart(["a"], [[0]], ["n"], width=1056)):
+        assert empty.plot_right == 1056 - charts.RIGHT

@@ -316,11 +316,11 @@ def column_chart(labels: Sequence[str], series: Sequence[Sequence[float]], names
                  digits: int = 0, width: int = WIDTH, height: int = HEIGHT) -> Columns:
     """series[s][i] is series s at category i. Stacked columns add up to the total; grouped ones sit side by side."""
     if not labels or not series:
-        return Columns(width=width, height=height, names=list(names))
+        return Columns(width=width, height=height, plot_right=width - RIGHT, names=list(names))
     totals = [sum(s[i] for s in series) for i in range(len(labels))]
     peak = max(totals) if stacked else max(v for s in series for v in s)
     if peak <= 0:
-        return Columns(width=width, height=height, names=list(names))
+        return Columns(width=width, height=height, plot_right=width - RIGHT, names=list(names))
     ticks = nice_ticks(0, peak)
     high = ticks[-1]
     left, right, top, bottom = LEFT, width - RIGHT, TOP, height - BOTTOM
@@ -354,7 +354,7 @@ def column_chart(labels: Sequence[str], series: Sequence[Sequence[float]], names
     step = max(1, math.ceil(LABEL_WIDTH / slot))  # keep every label that fits its slot and skip the rest
     label_ticks = [Tick(round(left + (i + 0.5) * slot, 1), label) for i, label in enumerate(labels) if i % step == 0]
     rows = [(label, *[_fmt(s[i], digits) for s in series]) for i, label in enumerate(labels)]
-    return Columns(width=width, height=height, marks=marks, labels=label_ticks,
+    return Columns(width=width, height=height, plot_right=width - RIGHT, marks=marks, labels=label_ticks,
                    y_ticks=[Tick(y_of(v), _fmt(v, digits), v) for v in ticks], names=list(names), rows=rows, empty=False)
 
 
