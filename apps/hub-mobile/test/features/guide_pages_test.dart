@@ -51,7 +51,7 @@ void main() {
     final repo = MockHubRepository();
     final router = await _open(tester, repo: repo);
     expect(find.text('Sắp tới'), findsOneWidget);
-    expect(find.text('Đã qua'), findsOneWidget);
+    expect(find.byKey(const Key('guide-next-dep-01')), findsWidgets);
     expect(find.textContaining('Do HTX Chè Tân Cương'), findsWidgets);
     expect(find.textContaining('Do HTX Chè Shan Tuyết Suối Giàng'), findsWidgets);
     expect(find.text((await repo.getTour('tour-02')).name), findsNothing);
@@ -138,7 +138,7 @@ void main() {
     await tester.pumpAndSettle();
     expect((await repo.getTour(tour.id)).guideIds, contains('guide-demo'));
     router = await _open(tester, repo: repo);
-    expect(find.text('Tour kiểm thử của HTX'), findsOneWidget);
+    expect(find.text('Tour kiểm thử của HTX'), findsWidgets);
     router = await _open(tester, role: 'manager', repo: repo);
     router.push('/manager/tours/${tour.id}/guides');
     await tester.pumpAndSettle();
@@ -269,6 +269,38 @@ void main() {
   testWidgets('new link cards do not overflow at 320 px with 130% text', (tester) async {
     final router = await _open(tester, width: 320, text: 1.3);
     router.push('/guide/tours/tour-01');
+    await tester.pumpAndSettle();
+    await _walk(tester);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Lộ trình lists every assigned tour by date, with a filter for past trips and a way into each tour', (
+    tester,
+  ) async {
+    final router = await _open(tester);
+    await tester.tap(find.byKey(const Key('guide-see-schedule')));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/guide/schedule');
+    expect(find.text('Lộ trình'), findsWidgets);
+    expect(find.textContaining('Sắp tới ('), findsOneWidget);
+    expect(find.textContaining('Đã qua ('), findsOneWidget);
+    final trip = find.byWidgetPredicate(
+      (w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('guide-departure-'),
+    );
+    expect(trip, findsWidgets);
+    await tester.tap(trip.first);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('guide-itinerary')), findsOneWidget);
+    router.pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Đã qua ('));
+    await tester.pumpAndSettle();
+    expect(find.text('Chưa có chuyến đã qua'), findsOneWidget);
+  });
+
+  testWidgets('Lộ trình fits 320 px with 130% text', (tester) async {
+    final router = await _open(tester, width: 320, text: 1.3);
+    router.go('/guide/schedule');
     await tester.pumpAndSettle();
     await _walk(tester);
     expect(tester.takeException(), isNull);

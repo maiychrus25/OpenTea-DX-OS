@@ -593,7 +593,7 @@ void main() {
 
     testWidgets('guide home shows current assignments instead of company reports', (tester) async {
       await _openAs(tester, 'guide@demo.vn');
-      _expectAll(['Sắp tới', 'Đã qua']);
+      _expectAll(['Sắp tới', 'Xem lộ trình']);
       expect(find.textContaining('Do HTX'), findsWidgets);
       expect(find.text('Doanh thu tháng'), findsNothing);
       expect(find.text('Bài chờ duyệt'), findsNothing);

@@ -171,7 +171,8 @@ const _guide = StaffNav(
   notificationsPath: '/guide/notifications',
   accountPath: '/guide/me',
   main: [
-    MenuItem('Tour được giao', Icons.home_outlined, '/guide'),
+    MenuItem('Tổng quan', Icons.home_outlined, '/guide'),
+    MenuItem('Lộ trình', Icons.route_outlined, '/guide/schedule'),
     MenuItem('Trợ lý AI', Icons.auto_awesome_outlined, '/guide/chat'),
     MenuItem('Reels', Icons.video_library_outlined, '/guide/videos'),
     MenuItem('Thông báo', Icons.notifications_none, '/guide/notifications'),
@@ -179,8 +180,8 @@ const _guide = StaffNav(
   ],
   shop: [],
   bottom: [
-    MenuItem('Tour được giao', Icons.home_outlined, '/guide', bottomLabel: 'Tour'),
-    MenuItem('Trợ lý AI', Icons.auto_awesome_outlined, '/guide/chat', bottomLabel: 'Trợ lý'),
+    MenuItem('Tổng quan', Icons.home_outlined, '/guide'),
+    MenuItem('Lộ trình', Icons.route_outlined, '/guide/schedule'),
     MenuItem('Thông báo', Icons.notifications_none, '/guide/notifications'),
     MenuItem('Tài khoản', Icons.person_outline, '/guide/me'),
   ],

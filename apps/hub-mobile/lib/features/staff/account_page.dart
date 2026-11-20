@@ -93,7 +93,7 @@ class StaffAccountPage extends StatelessWidget {
                   ],
                   if (kind == StaffKind.guide) ...[
                     const Divider(height: 1, indent: 16, endIndent: 16),
-                    StaffListRow(title: 'Tour được giao', onTap: () => context.go('/guide')),
+                    StaffListRow(title: 'Lộ trình các tour được giao', onTap: () => context.go('/guide/schedule')),
                     StaffListRow(title: 'Thông báo', onTap: () => context.go('/guide/notifications')),
                   ],
                 ],

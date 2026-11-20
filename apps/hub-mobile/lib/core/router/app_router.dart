@@ -226,6 +226,7 @@ GoRouter buildRouter(AppState state, {String initialLocation = '/shop'}) {
       ),
       shell((loc, child) => StaffShell(location: loc, child: child), [
         tab('/guide', const GuideHomePage()),
+        tab('/guide/schedule', const GuideSchedulePage()),
         tab('/guide/chat', const ChatPage()),
         tab('/guide/notifications', const GuideNotificationsPage()),
         tab('/guide/me', const StaffAccountPage()),
