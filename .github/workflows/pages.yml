@@ -13,6 +13,17 @@ on:
       - "apps/staff-desktop/docs/screenshots/*.png"
       - "apps/staff-mobile/docs/screenshots/*.png"
       - "apps/web/public/icon-*.png"
+      - "scripts/build-docs.py"
+      - "docs/**"
+      - "DESIGN.md"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "DEPENDENCIES.md"
+      - "LICENSE"
+      - "apps/hub-mobile/README.md"
+      - "apps/staff-desktop/README.md"
+      - "apps/staff-mobile/README.md"
+      - "miniapps/*/README.md"
   workflow_dispatch:
 
 permissions:
@@ -27,6 +38,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the Markdown build tool (Python-Markdown, BSD-3-Clause)
+        run: python3 -m pip install "markdown==3.7"
       - name: Assemble the site
         run: bash scripts/build-site.sh "$RUNNER_TEMP/site"
       - uses: actions/configure-pages@v5

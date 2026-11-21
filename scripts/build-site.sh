@@ -38,4 +38,12 @@ copy_media docs/screenshots/web/app-store.png web-app-store.png
 copy_media apps/web/public/icon-512x512.png icon-512.png
 copy_media apps/web/public/icon-192x192.png icon-192.png
 
+# documentation pages, generated from the repository's Markdown (needs Python-Markdown, see DEPENDENCIES.md)
+rm -rf "$OUT/docs-src"
+if ! python3 -c "import markdown" 2>/dev/null; then
+  echo "Missing Python-Markdown: pip install markdown==3.7" >&2
+  exit 1
+fi
+python3 "$ROOT/scripts/build-docs.py" "$OUT"
+
 echo "Site assembled in $OUT ($(find "$OUT" -type f | wc -l | tr -d ' ') files)"
