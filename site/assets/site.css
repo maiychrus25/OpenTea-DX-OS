@@ -879,8 +879,16 @@ section.band { background: var(--surface-sunken); }
 .site-header .hdr-gh:hover { background: #e7f1eb; color: #0f2a20; }
 .site-header .nav-toggle { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; }
 .site-header .nav-btn { display: none; }
+:root[data-theme="dark"] .site-header .hdr-gh, :root[data-theme="dark"] .site-header .hdr-gh { background: var(--primary); color: var(--primary-foreground); }
+@media (prefers-color-scheme: dark) {
+
 :root[data-theme="dark"] .site-header .hdr-gh, :root:not([data-theme="light"]) .site-header .hdr-gh { background: var(--primary); color: var(--primary-foreground); }
+}
+:root[data-theme="dark"] .site-header .hdr-gh:hover, :root[data-theme="dark"] .site-header .hdr-gh:hover { background: #e2f67f; color: var(--primary-foreground); }
+@media (prefers-color-scheme: dark) {
+
 :root[data-theme="dark"] .site-header .hdr-gh:hover, :root:not([data-theme="light"]) .site-header .hdr-gh:hover { background: #e2f67f; color: var(--primary-foreground); }
+}
 @media (max-width: 1099px) {
   .site-header .nav-btn { display: inline-flex; align-items: center; min-height: 40px; padding: 6px 14px; margin-left: auto; margin-right: 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.16); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
   .site-header .nav-links { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; gap: 2px; margin: 0; padding: 8px 16px 18px; background: rgba(7, 19, 14, 0.96); border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
@@ -1037,29 +1045,77 @@ section.band { background: var(--surface-sunken); }
 
 /* R5 dark: capability tiles, tier cards and guarantees get a hairline edge instead of a light shadow */
 :root[data-theme="dark"] .bento-card, :root[data-theme="dark"] .tier-card, :root[data-theme="dark"] .guar,
+:root[data-theme="dark"] .bento-card, :root[data-theme="dark"] .tier-card, :root[data-theme="dark"] .guar {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 48px -28px rgba(0, 0, 0, 0.7);
+}
+@media (prefers-color-scheme: dark) {
+
+
+/* R5 dark: capability tiles, tier cards and guarantees get a hairline edge instead of a light shadow */
+:root[data-theme="dark"] .bento-card, :root[data-theme="dark"] .tier-card, :root[data-theme="dark"] .guar,
 :root:not([data-theme="light"]) .bento-card, :root:not([data-theme="light"]) .tier-card, :root:not([data-theme="light"]) .guar {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 48px -28px rgba(0, 0, 0, 0.7);
 }
+}
+
+/* R5 dark: the story stage is an elevated surface with a hairline; the active step is lime-tinted */
+:root[data-theme="dark"] .story-panel, :root[data-theme="dark"] .story-panel {
+  background: #0d1d16; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 40px 80px -36px rgba(0, 0, 0, 0.8);
+}
+@media (prefers-color-scheme: dark) {
+
 
 /* R5 dark: the story stage is an elevated surface with a hairline; the active step is lime-tinted */
 :root[data-theme="dark"] .story-panel, :root:not([data-theme="light"]) .story-panel {
   background: #0d1d16; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 40px 80px -36px rgba(0, 0, 0, 0.8);
 }
+}
+:root[data-theme="dark"] .js .story-step.is-current, :root[data-theme="dark"] .js .story-step.is-current { background: rgba(214, 240, 92, 0.08); }
+@media (prefers-color-scheme: dark) {
+
 :root[data-theme="dark"] .js .story-step.is-current, :root:not([data-theme="light"]) .js .story-step.is-current { background: rgba(214, 240, 92, 0.08); }
+}
+:root[data-theme="dark"] .js .story-step.is-current .step-no, :root[data-theme="dark"] .js .story-step.is-current .step-no { background: #d6f05c; color: #0b1712; }
+@media (prefers-color-scheme: dark) {
+
 :root[data-theme="dark"] .js .story-step.is-current .step-no, :root:not([data-theme="light"]) .js .story-step.is-current .step-no { background: #d6f05c; color: #0b1712; }
+}
+
+/* R5 dark: the closing band gets a faint lime glow instead of a flat fill; the showcase frames get the same hairline */
+:root[data-theme="dark"] .closing, :root[data-theme="dark"] .closing {
+  background: radial-gradient(70% 90% at 90% 0%, rgba(214, 240, 92, 0.07), transparent 60%), linear-gradient(180deg, #0a1a13 0%, #06120d 100%);
+}
+@media (prefers-color-scheme: dark) {
+
 
 /* R5 dark: the closing band gets a faint lime glow instead of a flat fill; the showcase frames get the same hairline */
 :root[data-theme="dark"] .closing, :root:not([data-theme="light"]) .closing {
   background: radial-gradient(70% 90% at 90% 0%, rgba(214, 240, 92, 0.07), transparent 60%), linear-gradient(180deg, #0a1a13 0%, #06120d 100%);
 }
+}
+:root[data-theme="dark"] .sc-panel .zoom, :root[data-theme="dark"] .sc-panel .zoom {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 40px 80px -36px rgba(0, 0, 0, 0.8);
+}
+@media (prefers-color-scheme: dark) {
+
 :root[data-theme="dark"] .sc-panel .zoom, :root:not([data-theme="light"]) .sc-panel .zoom {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 40px 80px -36px rgba(0, 0, 0, 0.8);
 }
+}
+
+/* R5 dark: the service chips sit one step lighter than their layer, so they stay readable on the glass */
+:root[data-theme="dark"] .t-chip, :root[data-theme="dark"] .t-chip-core, :root[data-theme="dark"] .t-chip-mini,
+:root[data-theme="dark"] .t-chip, :root[data-theme="dark"] .t-chip-core, :root[data-theme="dark"] .t-chip-mini {
+  fill: #15301f;
+}
+@media (prefers-color-scheme: dark) {
+
 
 /* R5 dark: the service chips sit one step lighter than their layer, so they stay readable on the glass */
 :root[data-theme="dark"] .t-chip, :root[data-theme="dark"] .t-chip-core, :root[data-theme="dark"] .t-chip-mini,
 :root:not([data-theme="light"]) .t-chip, :root:not([data-theme="light"]) .t-chip-core, :root:not([data-theme="light"]) .t-chip-mini {
   fill: #15301f;
+}
 }
 
 /* R5 hero: the floating lot card stays inside the stage column, so it cannot run into the copy */
