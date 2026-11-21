@@ -212,7 +212,7 @@
     <div class="section-head">
       <span class="eyebrow">Nhà phát triển</span>
       <h2 id="dev-title">Thêm một mini-app mà không sửa lõi</h2>
-      <p>Mini-app là một container riêng, khai báo bằng manifest và cài bằng lệnh ./dxos. Lõi không được build lại. Các đoạn dưới đây là nội dung thật từ repo.</p>
+      <p>Mini-app là một container riêng, cài bằng ./dxos. Lõi không được build lại.</p>
     </div>
     <div class="dev-stack">
       <div class="term" role="group" aria-label="Lệnh cài mini-app và các bước của lệnh">
@@ -249,7 +249,7 @@ make web-up
 ./dxos remove htx-dashboard</pre><button class="cbtn" type="button" hidden>Sao chép</button></div></div></div>
       </div>
     </div>
-    <div class="guarantees"><article class="guar"><h3>Container khoá chặt</h3><p>Không cổng ra máy chủ, hệ tệp chỉ đọc, bỏ hết quyền Linux, 256 MB RAM và 0,5 CPU, mạng nội bộ không ra internet.</p></article><article class="guar"><h3>Dữ liệu theo HTX lấy từ token</h3><p>Mọi truy vấn lọc theo mã HTX trong token, không theo URL hay form. Mỗi trang vẫn kiểm vai trò.</p></article><article class="guar"><h3>Ranh giới tin cậy có giới hạn</h3><p>Các app đã cài dùng chung một mạng nội bộ và gọi được nhau. Chỉ cài app tin cậy; tài liệu ghi đây là giới hạn đã biết.</p></article></div>
+    <div class="guarantees"><article class="guar"><h3>Container khoá chặt</h3><p>Không cổng ra máy chủ, không ra internet, hệ tệp chỉ đọc.</p></article><article class="guar"><h3>Dữ liệu theo HTX</h3><p>Mọi truy vấn lọc theo mã HTX trong token.</p></article><article class="guar"><h3>Ranh giới tin cậy</h3><p>Các app đã cài chung một mạng nội bộ; chỉ cài app tin cậy.</p></article></div>
     <p class="devdocs"><a href="docs/miniapp-guide/">Đọc hướng dẫn đầy đủ</a></p>
   </div>
 </section>

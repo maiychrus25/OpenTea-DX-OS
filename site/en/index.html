@@ -212,7 +212,7 @@
     <div class="section-head">
       <span class="eyebrow">Developers</span>
       <h2 id="dev-title">Add a mini-app without changing the core</h2>
-      <p>A mini-app is its own container, declared with a manifest and installed with the ./dxos command. The core is not rebuilt. The snippets below are real content from the repository.</p>
+      <p>A mini-app is its own container, installed with ./dxos. The core is not rebuilt.</p>
     </div>
     <div class="dev-stack">
       <div class="term" role="group" aria-label="Install command for a mini-app and its steps">
@@ -249,7 +249,7 @@ make web-up
 ./dxos remove htx-dashboard</pre><button class="cbtn" type="button" hidden>Copy</button></div></div></div>
       </div>
     </div>
-    <div class="guarantees"><article class="guar"><h3>Locked-down container</h3><p>No host port, read-only file system, all Linux capabilities dropped, 256 MB of memory, 0.5 CPU and an internal network with no internet access.</p></article><article class="guar"><h3>Cooperative data comes from the token</h3><p>Every query is filtered by the cooperative code in the token, never by a URL or form value. Each page still checks the role.</p></article><article class="guar"><h3>Trust boundary with a known limit</h3><p>Installed apps share one internal network and can call each other. Install only trusted apps; the documentation lists this as a known limit.</p></article></div>
+    <div class="guarantees"><article class="guar"><h3>Locked-down container</h3><p>No host port, read-only files, no internet access.</p></article><article class="guar"><h3>Data by cooperative</h3><p>Every query is filtered by the cooperative code in the token.</p></article><article class="guar"><h3>Trust boundary</h3><p>Installed apps share one network; install only trusted apps.</p></article></div>
     <p class="devdocs"><a href="../docs/miniapp-guide/" lang="vi">Read the full guide</a></p>
   </div>
 </section>
