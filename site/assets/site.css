@@ -1040,3 +1040,10 @@ section.band { background: var(--surface-sunken); }
 :root:not([data-theme="light"]) .bento-card, :root:not([data-theme="light"]) .tier-card, :root:not([data-theme="light"]) .guar {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 48px -28px rgba(0, 0, 0, 0.7);
 }
+
+/* R5 dark: the story stage is an elevated surface with a hairline; the active step is lime-tinted */
+:root[data-theme="dark"] .story-panel, :root:not([data-theme="light"]) .story-panel {
+  background: #0d1d16; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 40px 80px -36px rgba(0, 0, 0, 0.8);
+}
+:root[data-theme="dark"] .js .story-step.is-current, :root:not([data-theme="light"]) .js .story-step.is-current { background: rgba(214, 240, 92, 0.08); }
+:root[data-theme="dark"] .js .story-step.is-current .step-no, :root:not([data-theme="light"]) .js .story-step.is-current .step-no { background: #d6f05c; color: #0b1712; }
