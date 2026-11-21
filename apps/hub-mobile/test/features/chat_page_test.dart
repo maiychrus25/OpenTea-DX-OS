@@ -109,8 +109,7 @@ void main() {
     expect(find.textContaining('Dữ liệu mẫu'), findsWidgets);
     expect(find.byKey(const Key('chat-topic-market')), findsNothing); // one topic only
 
-    await tester.tap(find.byKey(const Key('chat-suggest-1'))); // tours
-    await tester.pumpAndSettle();
+    await _ask(tester, 'Có tour trải nghiệm nào?');
     expect(find.text('Có tour trải nghiệm nào?'), findsOneWidget);
     expect(find.textContaining('Tour trong app'), findsOneWidget);
     expect(find.text('Dữ liệu mẫu trong app'), findsOneWidget); // source chip
@@ -239,7 +238,7 @@ void main() {
     await tester.tap(find.byKey(const Key('chat-topic-technical')));
     await tester.pumpAndSettle();
     expect(find.text('Giá thị trường hôm nay?'), findsNothing);
-    expect(find.byKey(const Key('chat-suggest-0')), findsOneWidget);
+    expect(find.text('Bạn muốn tìm hiểu điều gì?'), findsOneWidget);
     await _ask(tester, 'Giá thuốc bao nhiêu?');
     expect(find.textContaining('Chủ đề Kỹ thuật không trả lời giá cả'), findsOneWidget);
 
@@ -250,7 +249,7 @@ void main() {
     await tester.tap(find.byKey(const Key('chat-clear')));
     await tester.pumpAndSettle();
     expect(find.text('Giá thị trường hôm nay?'), findsNothing);
-    expect(find.byKey(const Key('chat-suggest-0')), findsOneWidget);
+    expect(find.text('Bạn muốn tìm hiểu điều gì?'), findsOneWidget);
   });
 
   testWidgets('an officer starts on the technical topic', (tester) async {
@@ -263,16 +262,14 @@ void main() {
     await _open(tester, email: 'farmer@demo.vn');
     await _openFromStaffMenu(tester, '/farmer/chat');
     expect(find.byKey(const Key('chat-topic-market')), findsNothing);
-    await tester.tap(find.byKey(const Key('chat-suggest-2')));
-    await tester.pumpAndSettle();
+    await _ask(tester, 'Thửa đất và lịch thu hái của tôi');
     expect(find.textContaining('Thửa đất của hộ'), findsOneWidget);
   });
 
   testWidgets('a tour guide asks which HTX assigned them', (tester) async {
     await _open(tester, email: 'guide@demo.vn');
     await _openFromStaffMenu(tester, '/guide/chat');
-    await tester.tap(find.byKey(const Key('chat-suggest-1')));
-    await tester.pumpAndSettle();
+    await _ask(tester, 'HTX nào giao tour cho tôi');
     expect(find.textContaining('HTX tổ chức các tour của bạn'), findsOneWidget);
   });
 
@@ -313,14 +310,6 @@ void main() {
           router.go(path);
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
-          final first = tester.getRect(find.byKey(const Key('chat-suggest-0')));
-          final second = tester.getRect(find.byKey(const Key('chat-suggest-1')));
-          if (width > 600) {
-            expect(first.top, second.top);
-            expect(second.left, greaterThan(first.right));
-          } else {
-            expect(second.top, greaterThan(first.bottom));
-          }
           // Both existing themes deliberately remain light under a dark OS preference.
           expect(Theme.of(tester.element(find.byType(ChatPage))).brightness, Brightness.light);
           for (final key in ['chat-send', 'chat-clear']) {
@@ -330,15 +319,8 @@ void main() {
           }
           tester.view.physicalSize = Size(width, 800);
           await tester.pumpAndSettle();
-          await tester.scrollUntilVisible(
-            find.byKey(const Key('chat-suggest-0')),
-            150,
-            scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)).first,
-          );
-          await tester.pumpAndSettle();
-          await tester.tap(find.byKey(const Key('chat-suggest-0')));
-          await tester.pumpAndSettle();
-          expect(find.byKey(const Key('chat-suggest-0')), findsNothing);
+          await _ask(tester, 'Xin chào');
+          expect(find.text('Bạn muốn tìm hiểu điều gì?'), findsNothing);
           expect(tester.takeException(), isNull);
           tester.view.viewInsets = const FakeViewPadding(bottom: 280);
           await tester.enterText(
@@ -383,14 +365,7 @@ void main() {
         expect(tester.takeException(), isNull);
         await tester.tap(find.byKey(const Key('chat-clear')));
         await tester.pumpAndSettle();
-        await tester.scrollUntilVisible(
-          find.byKey(const Key('chat-suggest-0')),
-          150,
-          scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)).first,
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('chat-suggest-0')));
-        await tester.pumpAndSettle();
+        await _ask(tester, 'Xin chào');
         final longSource = List.filled(15, 'Tài liệu tham khảo của hợp tác xã').join(' ');
         repository.events.add(const ChatText('Câu trả lời có nguồn tham khảo.'));
         repository.events.add(ChatDone(sources: [longSource, 'Danh mục trong app'], model: 'test'));
@@ -412,8 +387,7 @@ void main() {
       router.go(path);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      await tester.tap(find.byKey(const Key('chat-suggest-0')));
-      await tester.pumpAndSettle();
+      await _ask(tester, 'Xin chào');
       expect(tester.takeException(), isNull);
       await _ask(tester, 'Một câu hỏi rất dài để kiểm tra khung trò chuyện khi chữ lớn trên màn hình hẹp');
       expect(tester.takeException(), isNull);

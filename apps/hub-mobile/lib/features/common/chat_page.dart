@@ -158,7 +158,7 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                   Expanded(
                     child: replies.isEmpty
-                        ? _Welcome(palette: p, topic: chat.topic, onSend: (q) => _send(chat, q))
+                        ? _Welcome(palette: p, topic: chat.topic)
                         : Stack(
                             children: [
                               NotificationListener<ScrollMetricsNotification>(
@@ -171,7 +171,7 @@ class _ChatPageState extends State<ChatPage> {
                                   child: ListView.builder(
                                     key: ValueKey('chat-messages-${chat.topic.name}'),
                                     controller: _scroll,
-                                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                                     itemCount: replies.length,
                                     itemBuilder: (context, index) => _Exchange(
                                       key: ObjectKey(replies[index]),
@@ -264,30 +264,23 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = palette;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
-      decoration: BoxDecoration(
-        color: p.surface,
-        border: Border.all(color: p.border),
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _BotAvatar(palette: p, size: 40),
-              const SizedBox(width: 12),
+              _BotAvatar(palette: p, size: 32),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Trợ lý OpenTea',
-                      style: TextStyle(color: p.ink, fontSize: 16, fontWeight: FontWeight.w700),
+                      style: TextStyle(color: p.ink, fontSize: 17, fontWeight: FontWeight.w700),
                     ),
-                    const SizedBox(height: 4),
                     Text(
                       chat.conversation.streaming
                           ? 'Đang trả lời…'
@@ -304,17 +297,17 @@ class _Header extends StatelessWidget {
                 key: const Key('chat-clear'),
                 tooltip: 'Xoá hội thoại',
                 onPressed: onClear,
-                color: p.deep,
-                disabledColor: p.muted,
+                color: p.ink,
+                disabledColor: p.muted.withValues(alpha: 0.5),
                 constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-                icon: const Icon(Icons.playlist_remove_rounded),
+                icon: const Icon(Icons.edit_square),
               ),
             ],
           ),
-          if (chat.topics.length > 1) ...[
-            const SizedBox(height: 12),
+          if (chat.topics.length > 1)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(top: 4, bottom: 4, right: 12),
               child: Row(
                 children: [
                   for (final topic in chat.topics)
@@ -327,11 +320,11 @@ class _Header extends StatelessWidget {
                           key: Key('chat-topic-${topic.wireValue}'),
                           onPressed: () => onTopic(topic),
                           style: TextButton.styleFrom(
-                            foregroundColor: chat.topic == topic ? p.deep : p.muted,
-                            backgroundColor: chat.topic == topic ? p.soft : p.surface,
+                            foregroundColor: chat.topic == topic ? Colors.white : p.ink,
+                            backgroundColor: chat.topic == topic ? p.ink : p.soft,
                             minimumSize: const Size(44, 44),
                             textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
                             shape: const StadiumBorder(),
                           ),
                           child: Text(topic.label),
@@ -341,39 +334,11 @@ class _Header extends StatelessWidget {
                 ],
               ),
             ),
-          ],
         ],
       ),
     );
   }
 }
-
-// The prompt is kept separate from display copy: visual edits never change what is sent.
-typedef _Suggestion = (IconData, String, String, String);
-
-List<_Suggestion> _suggestionsFor(ChatTopic topic) => switch (topic) {
-  ChatTopic.shop => const [
-    (Icons.local_cafe_outlined, 'Sản phẩm và giá trong app', 'Khám phá đặc sản', 'Sản phẩm và giá trong app'),
-    (Icons.hiking, 'Có tour trải nghiệm nào?', 'Một chuyến về xứ chè', 'Tìm tour trải nghiệm trong app'),
-    (Icons.place_outlined, 'HTX và điểm đến nổi bật', 'Ghé thăm hợp tác xã', 'HTX và những điểm đến nổi bật'),
-    (Icons.qr_code_2, 'Cách đặt hàng và thanh toán', 'Đặt hàng dễ dàng', 'Tìm hiểu đặt hàng và thanh toán'),
-  ],
-  ChatTopic.market => const [
-    (Icons.sell_outlined, 'Giá sản phẩm trong danh mục', 'Giá trong danh mục', 'Tra cứu sản phẩm đang có'),
-    (Icons.receipt_long_outlined, 'HTX có bao nhiêu đơn hàng?', 'Đơn hàng của HTX', 'Xem số liệu đơn hàng'),
-    (Icons.trending_up, 'Có giá thị trường hôm nay không?', 'Thông tin thị trường', 'Chỉ dùng số liệu có nguồn'),
-  ],
-  ChatTopic.technical => const [
-    (Icons.coronavirus_outlined, 'Các bệnh lá chè trong mẫu', 'Tìm hiểu bệnh chè', 'Các bệnh lá chè trong mẫu'),
-    (Icons.description_outlined, 'Cách ghi nhật ký đồng ruộng', 'Nhật ký đồng ruộng', 'Hướng dẫn cách ghi nhật ký'),
-    (Icons.eco_outlined, 'Thửa đất và lịch thu hái của tôi', 'Thăm nương chè', 'Thửa đất và lịch thu hái của tôi'),
-  ],
-  ChatTopic.tour => const [
-    (Icons.groups_outlined, 'Các đoàn sắp đi', 'Đón đoàn sắp tới', 'Xem các đoàn khách sắp đi'),
-    (Icons.account_balance_outlined, 'HTX nào giao tour cho tôi', 'HTX đồng hành', 'HTX nào giao tour cho tôi'),
-    (Icons.route_outlined, 'Các tour được giao', 'Lịch tour của bạn', 'Tìm các tour được phân công'),
-  ],
-};
 
 String _introFor(ChatTopic topic) => switch (topic) {
   ChatTopic.shop => 'Hỏi về đặc sản chè, tour trải nghiệm, hợp tác xã và cách đặt hàng.',
@@ -383,104 +348,50 @@ String _introFor(ChatTopic topic) => switch (topic) {
 };
 
 class _Welcome extends StatelessWidget {
-  const _Welcome({required this.palette, required this.topic, required this.onSend});
+  const _Welcome({required this.palette, required this.topic});
   final _Palette palette;
   final ChatTopic topic;
-  final ValueChanged<String> onSend;
 
   @override
   Widget build(BuildContext context) {
     final p = palette;
-    final suggestions = _suggestionsFor(topic);
     final name = (context.select<AppState, String?>((app) => app.claims?.name) ?? '').trim();
     final firstName = name.isEmpty ? 'bạn' : name.split(RegExp(r'\s+')).last;
     return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 600 ? 2 : 1;
-        final width = (constraints.maxWidth - 32 - (columns - 1) * 12) / columns;
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 28, 16, 16),
-          children: [
-            Text(
-              'Chào $firstName!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: p.ink),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Bạn muốn tìm hiểu điều gì?',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: p.ink),
-            ),
-            const SizedBox(height: 8),
-            Text(_introFor(topic), style: TextStyle(color: p.muted, height: 1.5)),
-            const SizedBox(height: 24),
-            Text(
-              'Gợi ý cho bạn',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.muted),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                for (var i = 0; i < suggestions.length; i++)
-                  SizedBox(
-                    width: width,
-                    child: _SuggestionCard(
-                      key: Key('chat-suggest-$i'),
-                      palette: p,
-                      suggestion: suggestions[i],
-                      onTap: () => onSend(suggestions[i].$2),
-                    ),
-                  ),
+                _BotAvatar(palette: p, size: 56),
+                const SizedBox(height: 20),
+                Text(
+                  'Chào $firstName!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: p.ink),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Bạn muốn tìm hiểu điều gì?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: p.ink),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _introFor(topic),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: p.muted, height: 1.5),
+                ),
               ],
             ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _SuggestionCard extends StatelessWidget {
-  const _SuggestionCard({super.key, required this.palette, required this.suggestion, required this.onTap});
-  final _Palette palette;
-  final _Suggestion suggestion;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: palette.surface,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(14),
-      side: BorderSide(color: palette.border),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(suggestion.$1, size: 24, color: palette.deep),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    suggestion.$3,
-                    style: TextStyle(fontWeight: FontWeight.w600, color: palette.ink, height: 1.4),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(suggestion.$4, style: TextStyle(fontSize: 12, color: palette.muted, height: 1.4)),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _Exchange extends StatelessWidget {
@@ -515,81 +426,57 @@ class _Exchange extends StatelessWidget {
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: p.deep,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                        bottomLeft: Radius.circular(20),
-                        bottomRight: Radius.circular(4),
-                      ),
-                    ),
-                    child: SelectableText(reply.question, style: const TextStyle(color: Colors.white, height: 1.5)),
+                    decoration: BoxDecoration(color: p.soft, borderRadius: BorderRadius.circular(22)),
+                    child: SelectableText(reply.question, style: TextStyle(color: p.ink, height: 1.5)),
                   ),
                 ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: 24),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _BotAvatar(palette: p, size: 28),
-                  const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.82),
-                    child: Semantics(
-                      label: 'Trợ lý OpenTea',
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
+              child: Semantics(
+                label: 'Trợ lý OpenTea',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (shown.isNotEmpty)
+                      SelectableText(shown, style: TextStyle(color: p.ink, height: 1.6, fontSize: 15.5)),
+                    if (waiting && reply.text.isEmpty) _TypingDots(key: const Key('chat-typing'), color: p.muted),
+                    if (reply.sources.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _Sources(palette: p, sources: reply.sources),
+                    ],
+                    if (error != null) ...[
+                      if (shown.isNotEmpty) const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: p.surface,
-                          border: Border.all(color: error != null ? p.error.withValues(alpha: 0.3) : p.border),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(4),
-                            topRight: Radius.circular(20),
-                            bottomLeft: Radius.circular(20),
-                            bottomRight: Radius.circular(20),
-                          ),
+                          color: p.error.withValues(alpha: 0.07),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Column(
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (shown.isNotEmpty) SelectableText(shown, style: TextStyle(color: p.ink, height: 1.55)),
-                            if (waiting && reply.text.isEmpty)
-                              _TypingDots(key: const Key('chat-typing'), color: p.muted),
-                            if (reply.sources.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              _Sources(palette: p, sources: reply.sources),
-                            ],
-                            if (error != null) ...[
-                              if (shown.isNotEmpty) const SizedBox(height: 12),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(Icons.error_outline, size: 18, color: p.error),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(error, style: TextStyle(color: p.error, height: 1.5)),
-                                  ),
-                                ],
-                              ),
-                              if (onRetry != null)
-                                TextButton.icon(
-                                  key: const Key('chat-retry'),
-                                  onPressed: onRetry,
-                                  style: TextButton.styleFrom(foregroundColor: p.deep, minimumSize: const Size(44, 44)),
-                                  icon: const Icon(Icons.refresh, size: 18),
-                                  label: const Text('Thử lại'),
-                                ),
-                            ],
+                            Icon(Icons.error_outline, size: 18, color: p.error),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(error, style: TextStyle(color: p.error, height: 1.5)),
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                  ),
-                ],
+                      if (onRetry != null)
+                        TextButton.icon(
+                          key: const Key('chat-retry'),
+                          onPressed: onRetry,
+                          style: TextButton.styleFrom(foregroundColor: p.ink, minimumSize: const Size(44, 44)),
+                          icon: const Icon(Icons.refresh, size: 18),
+                          label: const Text('Thử lại'),
+                        ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -721,20 +608,13 @@ class _Composer extends StatelessWidget {
     final p = palette;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      decoration: BoxDecoration(
-        color: p.page,
-        border: Border(top: BorderSide(color: p.border)),
-      ),
+      color: p.page,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
-            decoration: BoxDecoration(
-              color: p.surface,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: p.border),
-            ),
+            padding: const EdgeInsets.fromLTRB(18, 4, 6, 4),
+            decoration: BoxDecoration(color: p.soft, borderRadius: BorderRadius.circular(28)),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -775,10 +655,10 @@ class _Composer extends StatelessWidget {
                       onPressed: enabled ? onSend : null,
                       style: IconButton.styleFrom(
                         minimumSize: const Size(48, 48),
-                        backgroundColor: p.deep,
+                        backgroundColor: p.ink,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: p.soft,
-                        disabledForegroundColor: p.muted,
+                        disabledBackgroundColor: p.muted.withValues(alpha: 0.25),
+                        disabledForegroundColor: Colors.white,
                       ),
                       icon: busy
                           ? SizedBox(
@@ -786,7 +666,7 @@ class _Composer extends StatelessWidget {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: p.deep,
+                                color: p.ink,
                                 value: MediaQuery.disableAnimationsOf(context) ? 0.75 : null,
                               ),
                             )
@@ -804,7 +684,7 @@ class _Composer extends StatelessWidget {
                 : 'Đang trả lời bằng dữ liệu mẫu · Trợ lý chỉ cung cấp thông tin, không quyết định thay bạn.',
             key: const Key('chat-note'),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: p.muted, height: 1.4),
+            style: TextStyle(fontSize: 11, color: p.muted.withValues(alpha: 0.85), height: 1.4),
           ),
         ],
       ),
