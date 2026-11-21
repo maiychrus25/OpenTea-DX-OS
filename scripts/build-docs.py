@@ -288,6 +288,7 @@ def header_html(root, lang):
       <img src="%(root)smedia/icon-192.png" width="34" height="34" alt="">
       <span>OpenTea DX-OS</span>
     </a>
+    <input class="nav-toggle" type="checkbox" id="nav-toggle" aria-label="%(navlabel)s">
     <nav class="nav-links" aria-label="Điều hướng chính">
       <a href="%(root)s#why">%(why)s</a>
       <a href="%(root)s#story">%(story)s</a>
@@ -298,6 +299,7 @@ def header_html(root, lang):
       <a href="%(root)s#status">%(status)s</a>
     </nav>
     <div class="header-tools">
+      <label class="nav-btn" for="nav-toggle">%(navbtn)s</label>
       <a class="tool" href="%(lang_href)s" lang="%(other_lang)s" hreflang="%(other_lang)s">%(lang_label)s</a>
       <button class="tool" type="button" id="theme-toggle" hidden>%(theme)s</button>
       <a class="tool tool-gh" href="%(github)s">GitHub</a>
@@ -305,6 +307,8 @@ def header_html(root, lang):
   </div>
 </header>""" % dict(
         skip="Bỏ qua và đi tới nội dung" if lang == "vi" else "Skip to content",
+        navlabel="Mở mục điều hướng" if lang == "vi" else "Open the navigation menu",
+        navbtn="Mục" if lang == "vi" else "Menu",
         root=root, why="Vì sao" if lang == "vi" else "Why", story="Một ngày" if lang == "vi" else "A day",
         tiers="Ba tầng" if lang == "vi" else "Three tiers", features="Tính năng" if lang == "vi" else "Features",
         docs="Tài liệu" if lang == "vi" else "Docs", docscur="page", status="Tình trạng" if lang == "vi" else "Status",

@@ -819,3 +819,38 @@ section.band { background: var(--surface-sunken); }
 .viz .bar-s { fill: var(--viz-dim); opacity: 0.6; } .viz .bar-off { fill: var(--viz-track); }
 .viz text { font-size: 14px; }
 .man { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Round 4: navigation fits from 360 to 1920 px. Seven links inline from 1280 px; below that a menu button
+   (a checkbox, so it works without JavaScript) opens the same list under the header. */
+.nav-toggle { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; }
+.nav-btn {
+  display: none; align-items: center; min-height: 44px; padding: 8px 14px; border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.22); color: var(--sidebar-foreground); font-weight: 600; font-size: 0.875rem; cursor: pointer;
+}
+.nav-btn:hover { background: rgba(255, 255, 255, 0.08); }
+@media (max-width: 1279px) {
+  .site-header .wrap { flex-wrap: wrap; row-gap: 0; }
+  .header-tools { order: 2; }
+  .nav-btn { display: inline-flex; }
+  .nav-links { display: none; order: 3; width: 100%; flex-wrap: wrap; margin: 0; padding: 0 0 12px; gap: 4px; }
+  .nav-toggle:checked ~ .nav-links { display: flex; }
+  .nav-toggle:checked ~ .header-tools .nav-btn { background: rgba(255, 255, 255, 0.12); }
+  .nav-toggle:focus-visible ~ .header-tools .nav-btn { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .nav-links a { padding: 10px 12px; }
+}
+@media (min-width: 1280px) { .nav-links { display: flex; } }
+@media (max-width: 639px) {
+  #theme-toggle { font-size: 0; }
+  #theme-toggle::before { content: "\25D0"; font-size: 17px; line-height: 1; }
+}
+/* Access diagram: intrinsic size on the card, labels at body size */
+.bento-card.full .viz { max-width: 420px; margin: 0 auto; }
+@media (min-width: 1280px) {
+  .site-header .nav-links { margin-left: 8px; }
+  .site-header .nav-links a { padding: 8px 7px; }
+}
+/* Round 4: story panels centre their content in the sticky stage (no empty band under short panels) */
+@media (min-width: 1024px) {
+  .js .story-stage { height: 500px; }
+  .js .story-panel { display: flex; flex-direction: column; justify-content: center; }
+}
