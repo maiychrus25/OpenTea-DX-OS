@@ -1,0 +1,4 @@
+{"data":{"notifications":[
+{"id":"clx0nt0002","type":"JOURNAL_SUBMITTED","title":"Nhật ký mới","body":"Hộ ông Sáng vừa gửi nhật ký phun thuốc.","is_read":false,"created_at":"2026-11-14T03:00:05","household_id":null},
+{"id":"clx0nt0001","type":"BROADCAST","title":"Họp HTX","body":"Họp tổng kết lứa 4 vào thứ bảy.","is_read":true,"created_at":"2026-11-01T01:00:00","household_id":"clx0hh0001"}
+]}}

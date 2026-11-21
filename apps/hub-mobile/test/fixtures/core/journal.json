@@ -1,0 +1,8 @@
+{"data":{"journal_entries":[
+{"id":"clx0je0002","parcel_id":"clx0pc0002","entry_date":"2026-11-14T00:00:00","activity_type":"SPRAYING","performed_by":"Hoàng Văn Sáng","status":"PENDING_APPROVAL","notes":"Phun buổi sáng","created_at":"2026-11-14T03:00:00",
+ "activities":[{"id":"clx0ja0001","activity_detail":"Phun thuốc sâu sinh học","product_name":"Bt 32000","dosage":"20 g/bình 16 l","withdrawal_days":7,"safe_harvest_date":"2026-11-21T00:00:00"}],
+ "parcel":{"id":"clx0pc0002","parcel_code":"P-TC-002","crop_type":"Chè Kim Tuyên","household_id":"clx0hh0002"}},
+{"id":"clx0je0001","parcel_id":"clx0pc0001","entry_date":"2026-11-10T00:00:00","activity_type":"IRRIGATION","performed_by":"Bà Lan","status":"REQUEST_CHANGES","notes":null,"created_at":"2026-11-10T03:00:00",
+ "activities":[],
+ "parcel":{"id":"clx0pc0001","parcel_code":"P-TC-001","crop_type":"Chè Trung du","household_id":"clx0hh0001"}}
+]}}

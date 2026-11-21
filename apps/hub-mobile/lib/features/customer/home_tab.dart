@@ -1,0 +1,750 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 OpenTea Developers
+
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../../app/activity_controller.dart';
+import '../../app/app_state.dart';
+import '../../app/cart_controller.dart';
+import '../../core/money/money.dart';
+import '../../core/theme/app_theme.dart';
+import '../../data/hub_repository.dart';
+import '../../data/models/catalog.dart';
+import '../../shared/product_image.dart';
+import '../../shared/widgets.dart';
+import 'news_card.dart';
+import 'notifications_screen.dart';
+import 'tour_widgets.dart';
+
+typedef _HomeData = (List<Tour>, List<Htx>, List<Product>, List<Article>);
+
+/// "Khám phá": the landing page of guests and customers.
+class HomeTab extends StatelessWidget {
+  const HomeTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.read<HubRepository>();
+    return LoadView<_HomeData>(
+      load: () async => (
+        await repo.listTours(),
+        await repo.listHtxs(),
+        await repo.listProducts(),
+        await repo.listPublishedArticles(),
+      ),
+      builder: (context, data, reload) {
+        final (tours, htxs, products, articles) = data;
+        // The header stays pinned while the page scrolls under it.
+        return Column(
+          children: [
+            const _BrandBar(),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: reload,
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _FeaturedCarousel(tours: tours.take(4).toList(), htxs: htxs),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _categories(context, htxs),
+                          const _AccountLinks(),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Material(
+                              color: AppColors.tile,
+                              borderRadius: BorderRadius.circular(14),
+                              child: ListTile(
+                                key: const Key('home-chat'),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                leading: const Icon(Icons.smart_toy_outlined, color: AppColors.teaDark),
+                                title: const Text('Hỏi trợ lý', style: TextStyle(fontWeight: FontWeight.w700)),
+                                subtitle: const Text('Tìm tour, đặc sản và cách đặt hàng'),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () => context.push('/shop/chat'),
+                              ),
+                            ),
+                          ),
+                          const SectionTitle('Điểm đến nổi bật'),
+                          for (var i = 0; i < htxs.length; i++) _destination(context, htxs[i], i),
+                          const SectionTitle('Tour nổi bật'),
+                        ],
+                      ),
+                    ),
+                    _tourCarousel(context, tours),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: Row(
+                        children: [
+                          const Expanded(child: SectionTitle('Sản phẩm')),
+                          TextButton(
+                            key: const Key('home-all-products'),
+                            onPressed: () => context.push('/shop/products'),
+                            child: const Text('Xem tất cả ›'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _productStrip(context, products),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Expanded(child: SectionTitle('Tin từ hợp tác xã')),
+                              TextButton(
+                                key: const Key('home-all-news'),
+                                onPressed: () => context.push('/shop/news'),
+                                child: const Text('Xem tất cả ›'),
+                              ),
+                            ],
+                          ),
+                          for (final a in articles.take(3)) ...[
+                            NewsCard(
+                              key: Key('home-news-${a.id}'),
+                              article: a,
+                              htxName: _htxShort(htxs, a.htxCode),
+                              onTap: () => context.push('/shop/news'),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _categories(BuildContext context, List<Htx> htxs) {
+    Widget tile(Key key, Widget icon, String label, VoidCallback onTap) => Expanded(
+      child: InkWell(
+        key: key,
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(4, 16, 4, 12),
+          decoration: BoxDecoration(color: AppColors.tile, borderRadius: BorderRadius.circular(18)),
+          child: Column(
+            children: [
+              icon,
+              const SizedBox(height: 8),
+              Text(label, style: const TextStyle(fontSize: 15, color: AppColors.teaDark)),
+            ],
+          ),
+        ),
+      ),
+    );
+    return Row(
+      children: [
+        tile(const Key('cat-hills'), const LeafLogo(size: 44), 'Đồi chè', () => context.push('/shop/htxs')),
+        const SizedBox(width: 12),
+        tile(
+          const Key('cat-tours'),
+          const Icon(Icons.hiking, size: 44, color: AppColors.leafDark),
+          'Trải nghiệm',
+          () => context.push('/shop/tours'),
+        ),
+        const SizedBox(width: 12),
+        tile(
+          const Key('cat-products'),
+          const Icon(Icons.emoji_food_beverage_outlined, size: 44, color: AppColors.leafDark),
+          'Đặc sản',
+          () => context.push('/shop/products'),
+        ),
+      ],
+    );
+  }
+
+  Widget _destination(BuildContext context, Htx h, int i) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: InkWell(
+      key: Key('dest-${h.code}'),
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => context.push('/shop/htx/${h.code}'),
+      child: TeaPhoto(
+        asset: i.isEven ? 'assets/images/dest.jpg' : 'assets/images/hero.jpg',
+        height: 190,
+        radius: 20,
+        shade: true,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                shortHtxName(h),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: serif(24, color: Colors.white, height: 1.15),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  const Icon(Icons.place, size: 16, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      h.province,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  /// Tour cards in a horizontal row. The row is as tall as its tallest card (no fixed height), so no card is left with
+  /// empty space under its content, and every card holds the same lines: name, months, price.
+  Widget _tourCarousel(BuildContext context, List<Tour> tours) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    padding: const EdgeInsets.symmetric(horizontal: 18),
+    child: IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < tours.length; i++) ...[
+            if (i > 0) const SizedBox(width: 14),
+            SizedBox(width: 270, child: _tourCard(context, tours[i])),
+          ],
+        ],
+      ),
+    ),
+  );
+
+  Widget _tourCard(BuildContext context, Tour t) => InkWell(
+    key: Key('home-tour-${t.id}'),
+    borderRadius: BorderRadius.circular(22),
+    onTap: () => context.push('/shop/tours/${t.id}'),
+    child: Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TeaPhoto(
+            asset: teaPhotoFor(t.gradientSeed),
+            height: 140,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Align(alignment: Alignment.topLeft, child: PhotoBadge(t.durationLabel)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(t.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: serif(17, height: 1.25)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_month_outlined, size: 15, color: AppColors.muted),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        t.bestMonths,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            const TextSpan(
+                              text: 'Từ ',
+                              style: TextStyle(color: AppColors.faint, fontSize: 12),
+                            ),
+                            TextSpan(
+                              text: formatVnd(t.adultPrice),
+                              style: const TextStyle(
+                                color: Color(0xFF8A3D06),
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const TagPill('Xem ›', amber: true),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  /// Product cards in a horizontal row: the whole picture, then the name, the unit and the price right under it. The
+  /// row is as tall as its tallest card, so there is no fixed height and no empty band inside a card.
+  Widget _productStrip(BuildContext context, List<Product> products) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    padding: const EdgeInsets.symmetric(horizontal: 18),
+    child: IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < products.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            SizedBox(width: 156, child: _productCard(context, products[i])),
+          ],
+        ],
+      ),
+    ),
+  );
+
+  Widget _productCard(BuildContext context, Product p) => InkWell(
+    key: Key('home-product-${p.id}'),
+    borderRadius: BorderRadius.circular(20),
+    onTap: () => context.push('/shop/products/${p.id}'),
+    child: Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: ProductImage(
+              key: Key('home-product-image-${p.id}'),
+              productId: p.id,
+              seed: p.gradientSeed,
+              radius: 14,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            p.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, height: 1.25, color: AppColors.ink),
+          ),
+          const SizedBox(height: 4),
+          Text(p.unit, style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+          const SizedBox(height: 4),
+          Text(
+            formatVnd(p.price),
+            style: const TextStyle(color: Color(0xFF8A3D06), fontWeight: FontWeight.w700, fontSize: 16),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  static String _htxShort(List<Htx> htxs, String code) {
+    for (final h in htxs) {
+      if (h.code == code) return shortHtxName(h);
+    }
+    return '';
+  }
+}
+
+/// Top of the home page: a greeting between the menu button and the cart and bell buttons, then the search bar.
+/// Submitting the search lists the matching tours.
+class _BrandBar extends StatefulWidget {
+  const _BrandBar();
+  @override
+  State<_BrandBar> createState() => _BrandBarState();
+}
+
+class _BrandBarState extends State<_BrandBar> {
+  final _query = TextEditingController();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  void _submit(String q) {
+    context.push('/shop/tours?q=${Uri.encodeQueryComponent(q.trim())}');
+    _query.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final activity = context.watch<ActivityController>();
+    final badge = customerNoticeBadge(activity.bookings, activity.orders);
+    final cartCount = context.watch<CartController>().itemCount;
+    final name = context.watch<AppState>().claims?.name;
+    final firstName = name == null || name.trim().isEmpty ? null : name.trim().split(RegExp(r'\s+')).last;
+    return Container(
+      color: AppColors.cream,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              _HeaderButton(
+                key: const Key('home-menu'),
+                tooltip: 'Menu',
+                icon: Icons.menu,
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      firstName == null ? 'Xin chào' : 'Xin chào, $firstName',
+                      key: const Key('home-greeting'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, color: AppColors.faint),
+                    ),
+                    Text(
+                      'Khám phá xứ chè',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: serif(20, height: 1.15),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _HeaderButton(
+                key: const Key('header-cart'),
+                tooltip: 'Giỏ hàng',
+                icon: Icons.shopping_cart_outlined,
+                badge: cartCount,
+                badgeColor: AppColors.teaDark,
+                onPressed: () => context.go('/shop/cart'),
+              ),
+              const SizedBox(width: 8),
+              _HeaderButton(
+                key: const Key('home-notifications'),
+                tooltip: 'Thông báo',
+                icon: Icons.notifications_none,
+                badge: badge,
+                badgeColor: AppColors.danger,
+                onPressed: () => context.push('/shop/notifications'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0xFFD3DDD2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.search, size: 22, color: AppColors.faint),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    key: const Key('home-search'),
+                    controller: _query,
+                    textInputAction: TextInputAction.search,
+                    style: const TextStyle(fontSize: 15),
+                    onSubmitted: _submit,
+                    decoration: const InputDecoration(
+                      hintText: 'Tìm đồi chè, trải nghiệm',
+                      hintMaxLines: 1,
+                      hintStyle: TextStyle(color: AppColors.faint, fontSize: 15, overflow: TextOverflow.ellipsis),
+                      isDense: true,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A round tonal icon button of the home header, with an optional count badge.
+class _HeaderButton extends StatelessWidget {
+  const _HeaderButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+    this.badge = 0,
+    this.badgeColor = AppColors.danger,
+  });
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String? tooltip;
+  final int badge;
+  final Color badgeColor;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip ?? '',
+    child: Material(
+      color: Colors.white,
+      shape: const CircleBorder(side: BorderSide(color: Color(0xFFD3DDD2))),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Badge(
+              isLabelVisible: badge > 0,
+              label: Text('$badge'),
+              backgroundColor: badgeColor,
+              child: Icon(icon, size: 24, color: AppColors.teaDark),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Quick links to cart, orders and tickets under the category tiles.
+class _AccountLinks extends StatelessWidget {
+  const _AccountLinks();
+  @override
+  Widget build(BuildContext context) {
+    final signedIn = context.watch<AppState>().claims != null;
+    final cartCount = context.watch<CartController>().itemCount;
+    Widget link(Key key, IconData icon, String label, String route) => Expanded(
+      child: InkWell(
+        key: key,
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => context.push(route),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 22, color: AppColors.teaDark),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.teaDark),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        children: [
+          link(
+            const Key('home-cart'),
+            Icons.shopping_cart_outlined,
+            cartCount > 0 ? 'Giỏ hàng ($cartCount)' : 'Giỏ hàng',
+            '/shop/cart',
+          ),
+          const SizedBox(width: 10),
+          link(const Key('home-news'), Icons.newspaper_outlined, 'Tin tức', '/shop/news'),
+          if (signedIn) ...[
+            const SizedBox(width: 10),
+            link(const Key('home-orders'), Icons.receipt_long_outlined, 'Đơn hàng', '/shop/orders'),
+            const SizedBox(width: 10),
+            link(const Key('home-tickets'), Icons.confirmation_number_outlined, 'Vé của tôi', '/shop/tickets'),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The top of the home page: featured tours as swipeable photo cards (name, cooperative, duration and price over the
+/// photo), page dots and a link to all tours.
+class _FeaturedCarousel extends StatefulWidget {
+  const _FeaturedCarousel({required this.tours, required this.htxs});
+  final List<Tour> tours;
+  final List<Htx> htxs;
+
+  @override
+  State<_FeaturedCarousel> createState() => _FeaturedCarouselState();
+}
+
+class _FeaturedCarouselState extends State<_FeaturedCarousel> {
+  final _controller = PageController(viewportFraction: 0.9);
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _htxName(String code) {
+    for (final h in widget.htxs) {
+      if (h.code == code) return shortHtxName(h);
+    }
+    return '';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tours = widget.tours;
+    return Column(
+      children: [
+        SizedBox(
+          height: 250,
+          child: PageView.builder(
+            key: const Key('home-carousel'),
+            controller: _controller,
+            itemCount: tours.length,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemBuilder: (context, i) {
+              final t = tours[i];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: InkWell(
+                  key: Key('home-hero-${t.id}'),
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: () => context.push('/shop/tours/${t.id}'),
+                  child: TeaPhoto(
+                    asset: teaPhotoFor(t.gradientSeed),
+                    radius: 24,
+                    shade: true,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [Flexible(child: PhotoBadge(_htxName(t.htxCode)))]),
+                          const SizedBox(height: 8),
+                          Text(
+                            t.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: serif(23, color: Colors.white, height: 1.2),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${t.durationLabel} · Từ ${formatVnd(t.adultPrice)} /người',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                child: const Icon(Icons.arrow_forward, size: 18, color: AppColors.teaDark),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: Wrap(
+                  runSpacing: 6,
+                  children: [
+                    for (var i = 0; i < tours.length; i++)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(right: 6),
+                        width: i == _page ? 20 : 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: i == _page ? AppColors.teaDark : const Color(0xFFC9D5C8),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Flexible(
+                flex: 3,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    key: const Key('home-explore'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 40),
+                    ),
+                    onPressed: () => context.push('/shop/tours'),
+                    child: const Text('Khám phá ngay ›', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
