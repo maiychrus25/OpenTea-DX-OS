@@ -223,3 +223,31 @@ The only non-OSI dependency is **n8n** (Sustainable Use License), which is used 
 external Docker service communicating via HTTP API only — no source code is imported or bundled.
 This follows the same integration pattern as using any external SaaS API and does not
 affect the project's MIT licensing.
+
+---
+
+## Staff Desktop App (`apps/staff-desktop`)
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | 8.4.2 | MIT | MVVM base classes, source-generated properties and commands |
+| [Microsoft.Extensions.DependencyInjection](https://github.com/dotnet/runtime) | 10.0.4 | MIT | Dependency injection |
+| [Microsoft.EntityFrameworkCore.Sqlite](https://github.com/dotnet/efcore) | 10.0.4 | MIT | Offline SQLite storage |
+| [SQLitePCLRaw.lib.e_sqlite3](https://github.com/ericsink/SQLitePCL.raw) | 3.53.3 | Apache-2.0 | Native SQLite build |
+| [Npgsql.EntityFrameworkCore.PostgreSQL](https://github.com/npgsql/efcore.pg) | 10.0.3 | PostgreSQL | Storage in the core schema `app_staff_work` |
+| Microsoft.AspNetCore.App (shared framework) | 10.0 | MIT | REST API for the mobile app |
+| xunit / xunit.runner.visualstudio (test) | 2.9.3 / 3.1.4 | Apache-2.0 | Unit tests |
+
+## Staff Mobile App (`apps/staff-mobile`)
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| AndroidX Core KTX, Activity Compose, Lifecycle, SplashScreen | 1.19.1 / 1.13.0 / 2.11.0 / 1.2.0 | Apache-2.0 | Android platform support |
+| Jetpack Compose BOM (ui, material3, icons-extended) | 2026.09.00 | Apache-2.0 | UI toolkit |
+| [kotlinx.serialization JSON](https://github.com/Kotlin/kotlinx.serialization) | 1.12.0 | Apache-2.0 | JSON models |
+| AndroidX ExifInterface | 1.4.2 | Apache-2.0 | Upright evidence photos |
+| Android Gradle Plugin / Kotlin / Gradle wrapper (build) | 9.5.1 / 2.4.21 / 9.9.0 | Apache-2.0 | Build toolchain |
+| [Robolectric](https://github.com/robolectric/robolectric) (test) | 4.17 | MIT | JVM UI tests |
+| JUnit 4 (test) | 4.13.2 | EPL-1.0 | Unit tests |
+
+Full lists with notes: `apps/staff-desktop/DEPENDENCIES.md` and `apps/staff-mobile/DEPENDENCIES.md`.

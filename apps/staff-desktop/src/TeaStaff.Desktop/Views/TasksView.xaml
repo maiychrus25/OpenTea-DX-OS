@@ -1,0 +1,253 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 Vu Dinh Dat -->
+<UserControl x:Class="TeaStaff.Desktop.Views.TasksView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="FilterChip" TargetType="RadioButton" BasedOn="{StaticResource Chip}">
+            <Setter Property="GroupName" Value="TaskFilter" />
+            <Setter Property="Command" Value="{Binding DataContext.FilterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+            <Setter Property="CommandParameter" Value="{Binding Tag, RelativeSource={RelativeSource Self}}" />
+        </Style>
+    </UserControl.Resources>
+    <Grid Margin="32,24,32,28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320" />
+                <ColumnDefinition Width="260" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid>
+                <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" Padding="34,0,10,0" />
+                <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" Margin="12,0,0,0" FontSize="14" Foreground="{StaticResource InkTertiaryBrush}" IsHitTestVisible="False" />
+                <TextBlock Text="Tìm công việc, địa điểm, người nhận…" Margin="35,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource InkTertiaryBrush}" IsHitTestVisible="False"
+                           Visibility="{Binding Search, Converter={StaticResource Hidden}}" />
+            </Grid>
+            <ComboBox Grid.Column="1" Margin="10,0,0,0" ItemsSource="{Binding AssigneeFilters}" SelectedItem="{Binding AssigneeFilter}" />
+            <StackPanel Grid.Column="3" Orientation="Horizontal">
+                <Button Style="{StaticResource SecondaryButton}" Command="{Binding ExportCommand}" Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" FontSize="14" />
+                        <TextBlock Margin="8,0,0,0" Text="Xuất CSV" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource PrimaryButton}" Command="{Binding AddCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE710;" Style="{StaticResource Icon}" FontSize="14" />
+                        <TextBlock Margin="8,0,0,0" Text="Giao việc mới" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <DockPanel Grid.Row="1" Margin="0,0,0,14">
+            <TextBlock DockPanel.Dock="Right" Text="{Binding Counts}" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+            <Border DockPanel.Dock="Left" Padding="3" CornerRadius="10" Background="{StaticResource MutedBrush}" Margin="0,0,14,0">
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton Style="{StaticResource Segment}" GroupName="TaskView" Content="Bảng Kanban" Tag="&#xE8A9;" IsChecked="True"
+                                 Command="{Binding SetViewCommand}" CommandParameter="board" />
+                    <RadioButton Style="{StaticResource Segment}" GroupName="TaskView" Content="Danh sách" Tag="&#xE8FD;"
+                                 Command="{Binding SetViewCommand}" CommandParameter="list" />
+                </StackPanel>
+            </Border>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Visibility="{Binding IsBoard, Converter={StaticResource Hidden}}">
+                <RadioButton Style="{StaticResource FilterChip}" Tag="open" Content="Đang thực hiện" IsChecked="True" />
+                <RadioButton Style="{StaticResource FilterChip}" Tag="overdue" Content="Quá hạn" />
+                <RadioButton Style="{StaticResource FilterChip}" Tag="done" Content="Hoàn thành" />
+                <RadioButton Style="{StaticResource FilterChip}" Tag="closed" Content="Từ chối / Huỷ" />
+                <RadioButton Style="{StaticResource FilterChip}" Tag="all" Content="Tất cả" />
+            </StackPanel>
+        </DockPanel>
+
+        <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0" ClipToBounds="True" Visibility="{Binding IsBoard, Converter={StaticResource Hidden}}">
+            <Grid>
+                <DataGrid ItemsSource="{Binding Items}" RowHeight="62" x:Name="Grid">
+                    <DataGrid.InputBindings>
+                        <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditCommand}" CommandParameter="{Binding SelectedItem, ElementName=Grid}" />
+                    </DataGrid.InputBindings>
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="Công việc" Width="2.4*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Task.Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" TextTrimming="CharacterEllipsis">
+                                            <Run Text="&#xE707;" FontFamily="{StaticResource IconFont}" />
+                                            <Run Text="{Binding Task.Location, TargetNullValue='Không ghi địa điểm', Mode=OneWay}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Người nhận" Width="1.8*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Width="30" Height="30" CornerRadius="15" Background="{StaticResource PrimarySubtleBrush}">
+                                            <TextBlock Text="{Binding AssigneeName, Converter={StaticResource Initials}}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Margin="8,0,0,0" Text="{Binding AssigneeName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Ưu tiên" Width="1.25*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ContentControl Content="{Binding Task.Priority}" ContentTemplate="{StaticResource PillTemplate}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Hạn" Width="1*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DueText}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Overdue}" Value="True">
+                                                            <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="Quá hạn" FontSize="11.5" Foreground="{StaticResource DangerBrush}" Visibility="{Binding Overdue, Converter={StaticResource Visible}}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Tiến độ" Width="1.1*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <ProgressBar Value="{Binding Task.Progress, Mode=OneWay}" Maximum="100" />
+                                        <TextBlock Margin="0,4,0,0" FontSize="11.5" Foreground="{StaticResource InkTertiaryBrush}" Text="{Binding Task.Progress, StringFormat='{}{0}%'}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Trạng thái" Width="1.1*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ContentControl Content="{Binding Task.Status}" ContentTemplate="{StaticResource PillTemplate}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Báo cáo của nhân viên" Width="1.5*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Task.ReportNote, TargetNullValue='—'}" TextWrapping="Wrap" MaxHeight="36" TextTrimming="CharacterEllipsis"
+                                               FontSize="12.5" Foreground="{StaticResource InkSecondaryBrush}" VerticalAlignment="Center" ToolTip="{Binding Task.ReportNote}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="" Width="160">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <Button Style="{StaticResource RowIconButton}" Content="&#xE70F;" ToolTip="Sửa / giao lại"
+                                                Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                        <Button Style="{StaticResource RowIconButton}" Content="&#xE8C8;" ToolTip="Nhân bản việc này"
+                                                Command="{Binding DataContext.DuplicateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                        <Button Style="{StaticResource RowIconButton}" Content="&#xE711;" ToolTip="Huỷ việc"
+                                                Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                        <Button Style="{StaticResource RowDangerIconButton}" Content="&#xE74D;" ToolTip="Xoá"
+                                                Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding Items.Count, Converter={StaticResource Hidden}}">
+                    <TextBlock Text="&#xE8FD;" Style="{StaticResource Icon}" FontSize="32" HorizontalAlignment="Center" Foreground="{StaticResource BorderBrush}" />
+                    <TextBlock Margin="0,10,0,0" Text="Không có công việc nào trong mục này." Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+        </Border>
+        <!-- Kanban board -->
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled" Visibility="{Binding IsBoard, Converter={StaticResource Visible}}">
+            <ItemsControl ItemsSource="{Binding Columns}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,12,0" CornerRadius="{StaticResource RadiusLg}" BorderThickness="1"
+                                BorderBrush="{StaticResource BorderBrush}" Background="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=bg}">
+                            <DockPanel>
+                                <DockPanel DockPanel.Dock="Top" Margin="14,12,12,8">
+                                    <Border DockPanel.Dock="Right" MinWidth="24" Padding="7,1" CornerRadius="10" Background="{StaticResource CardBrush}">
+                                        <TextBlock Text="{Binding Count}" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"
+                                                   Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=fg}" />
+                                    </Border>
+                                    <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="13.5" Foreground="{Binding Tone, Converter={StaticResource Tone}, ConverterParameter=fg}" />
+                                </DockPanel>
+                                <Button DockPanel.Dock="Bottom" Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Margin="8,0,8,10" Height="32"
+                                        Content="+ Giao việc" Command="{Binding DataContext.AddCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Visibility="{Binding CanAdd, Converter={StaticResource Visible}}" />
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8,0,8,4">
+                                    <ItemsControl ItemsSource="{Binding Cards}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Margin="0,0,0,8" Cursor="Hand" FocusVisualStyle="{x:Null}" ToolTip="Bấm để xem, sửa hoặc giao lại"
+                                                        Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="Bd" Background="{StaticResource CardBrush}" CornerRadius="10" BorderThickness="1" BorderBrush="{StaticResource BorderSubtleBrush}" Padding="12,10">
+                                                                <ContentPresenter />
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                    <StackPanel>
+                                                        <DockPanel>
+                                                            <ContentControl DockPanel.Dock="Right" Content="{Binding Task.Priority}" ContentTemplate="{StaticResource PillTemplate}" Margin="6,0,0,0" VerticalAlignment="Top" />
+                                                            <TextBlock Text="{Binding Task.Title}" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" />
+                                                        </DockPanel>
+                                                        <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" TextTrimming="CharacterEllipsis">
+                                                            <Run Text="&#xE77B;" FontFamily="{StaticResource IconFont}" /> <Run Text="{Binding AssigneeName, Mode=OneWay}" />
+                                                        </TextBlock>
+                                                        <TextBlock Margin="0,2,0,0" FontSize="12" TextTrimming="CharacterEllipsis">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Foreground" Value="{StaticResource InkTertiaryBrush}" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Overdue}" Value="True">
+                                                                            <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                            <Run Text="&#xE823;" FontFamily="{StaticResource IconFont}" /> <Run Text="{Binding DueText, Mode=OneWay}" />
+                                                        </TextBlock>
+                                                        <ProgressBar Margin="0,8,0,0" Value="{Binding Task.Progress, Mode=OneWay}" Maximum="100" Height="5" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>    </Grid>
+</UserControl>

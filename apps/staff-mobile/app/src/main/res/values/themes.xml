@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<resources>
+    <style name="Theme.TeaWork" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/tea_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.TeaWork.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/tea_primary</item>
+        <item name="postSplashScreenTheme">@style/Theme.TeaWork</item>
+    </style>
+</resources>

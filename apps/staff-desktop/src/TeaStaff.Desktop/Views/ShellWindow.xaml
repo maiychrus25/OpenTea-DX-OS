@@ -1,0 +1,165 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 Vu Dinh Dat -->
+<Window x:Class="TeaStaff.Desktop.Views.ShellWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="clr-namespace:TeaStaff.Desktop.Converters"
+        Title="Tea Staff Manager · Quản lý nhân sự HTX" Width="1360" Height="840" MinWidth="1120" MinHeight="680"
+        WindowStartupLocation="CenterScreen" WindowState="Maximized"
+        Background="{StaticResource BackgroundBrush}" FontFamily="{StaticResource AppFont}" Icon="/Assets/app.ico"
+        TextOptions.TextFormattingMode="Ideal">
+    <Window.Resources>
+        <c:EqualsMultiConverter x:Key="EqualsMulti" />
+    </Window.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="248" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+            <DockPanel Margin="16,20,16,16">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6,0,0,26">
+                    <Border Width="40" Height="40" CornerRadius="11" Background="{StaticResource PrimaryBrush}">
+                        <Viewbox Width="24" Height="24">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{StaticResource LeafGeometry}" Fill="{StaticResource LimeBrush}" />
+                                <Path Data="{StaticResource LeafVeinGeometry}" Stroke="{StaticResource PrimaryBrush}" StrokeThickness="1.1" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            </Canvas>
+                        </Viewbox>
+                    </Border>
+                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Tea Staff" FontSize="16" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
+                        <TextBlock Text="{Binding Config.HtxName}" FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" TextTrimming="CharacterEllipsis" MaxWidth="150" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- User card -->
+                <Border DockPanel.Dock="Bottom" Padding="10" CornerRadius="{StaticResource RadiusMd}" Background="{StaticResource LeafLightBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="36" Height="36" CornerRadius="18" Background="{StaticResource PrimarySubtleBrush}">
+                            <TextBlock Text="{Binding Tenant.DisplayName, Converter={StaticResource Initials}}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="10,0,4,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Tenant.DisplayName}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" Foreground="{StaticResource InkBrush}" />
+                            <TextBlock FontSize="11.5" Foreground="{StaticResource InkTertiaryBrush}">
+                                <Run Text="Mã HTX" /> <Run Text="{Binding Tenant.HtxCode, Mode=OneWay}" FontWeight="SemiBold" />
+                            </TextBlock>
+                        </StackPanel>
+                        <Button Grid.Column="2" Style="{StaticResource RowIconButton}" Content="&#xE7E8;" ToolTip="Đăng xuất" Command="{Binding SignOutCommand}" />
+                    </Grid>
+                </Border>
+
+                <ItemsControl ItemsSource="{Binding Navigation}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Tag="{Binding Glyph}"
+                                         Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                         CommandParameter="{Binding Key}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                    <Border Margin="8,0,0,0" MinWidth="20" Height="20" Padding="6,0" CornerRadius="10" Background="{StaticResource DangerBrush}"
+                                            VerticalAlignment="Center" Visibility="{Binding Badge, Converter={StaticResource Visible}}">
+                                        <TextBlock Text="{Binding Badge}" Foreground="White" FontSize="11.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                </StackPanel>
+                                <RadioButton.IsChecked>
+                                    <MultiBinding Converter="{StaticResource EqualsMulti}" Mode="OneWay">
+                                        <Binding Path="Key" />
+                                        <Binding Path="DataContext.CurrentKey" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                    </MultiBinding>
+                                </RadioButton.IsChecked>
+                            </RadioButton>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+        </Border>
+
+        <!-- Main area -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="32,18">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding CurrentPage.Title}" Style="{StaticResource PageTitle}" />
+                        <TextBlock Margin="0,3,0,0" Text="{Binding CurrentPage.Subtitle}" FontSize="13" Foreground="{StaticResource InkSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <Border Grid.Column="1" VerticalAlignment="Center" Padding="12,7" CornerRadius="16" Margin="16,0,0,0">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{StaticResource NeutralSubtleBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ApiRunning}" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource SuccessSubtleBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{StaticResource InkTertiaryBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ApiRunning}" Value="True">
+                                                <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Margin="8,0,0,0" Text="&#xE8EA;" Style="{StaticResource Icon}" FontSize="13" Foreground="{StaticResource InkSecondaryBrush}" />
+                            <TextBlock Margin="6,0,0,0" Text="{Binding ApiStatus}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource InkSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <ContentControl Grid.Row="1" Content="{Binding CurrentPage}" Focusable="False" />
+
+            <!-- Busy bar -->
+            <ProgressBar Grid.Row="1" VerticalAlignment="Top" Height="3" IsIndeterminate="True"
+                         Visibility="{Binding CurrentPage.IsBusy, Converter={StaticResource Visible}}" />
+
+            <!-- Activity from staff phones -->
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,24">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Toast}" Margin="0,8,0,0" Cursor="Hand">
+                            <Border.InputBindings>
+                                <MouseBinding Gesture="LeftClick" Command="{Binding DataContext.OpenToastCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                            </Border.InputBindings>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Style="{StaticResource RowIconButton}" Content="&#xE711;" Foreground="#C9D4CD" Width="26" Height="26" Margin="10,-4,-6,0"
+                                        VerticalAlignment="Top" ToolTip="Ẩn" Command="{Binding DataContext.DismissToastCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                <Border DockPanel.Dock="Left" Width="34" Height="34" CornerRadius="17" Background="{StaticResource PrimaryBrush}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE8EA;" Style="{StaticResource Icon}" FontSize="15" Foreground="{StaticResource LimeBrush}" HorizontalAlignment="Center" />
+                                </Border>
+                                <StackPanel>
+                                    <TextBlock FontSize="11.5" Foreground="#9FB4A8"><Run Text="Từ điện thoại · " /><Run Text="{Binding Time, Mode=OneWay}" /></TextBlock>
+                                    <TextBlock Text="{Binding Text}" Foreground="White" FontSize="13.5" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+    </Grid>
+</Window>
