@@ -890,3 +890,19 @@ section.band { background: var(--surface-sunken); }
   .site-header .nav-toggle:focus-visible ~ .nav-btn { outline: 3px solid var(--focus); outline-offset: 3px; }
 }
 @media (max-width: 639px) { .site-header .brand span { display: none; } .site-header .hdr-gh { display: none; } }
+
+/* R5 hero: one headline, one sentence, two actions; the lime accent is the only accent in the hero */
+.hero-deep { --hero-accent: #d6f05c; background: radial-gradient(120% 80% at 80% 0%, rgba(76, 195, 138, 0.14), transparent 60%), linear-gradient(180deg, #0f2a20 0%, #0a1f17 100%); padding: 96px 0 120px; }
+@media (min-width: 1024px) { .hero-deep { padding: 128px 0 160px; } }
+.hero-deep .eyebrow { color: rgba(255, 255, 255, 0.62); font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; margin-bottom: 24px; }
+.hero-deep h1 { font-size: clamp(2.5rem, 1.6rem + 3.4vw, 4rem); font-weight: 700; letter-spacing: -0.035em; line-height: 1.04; color: #fff; max-width: 13em; }
+.hero-deep .hl { color: var(--hero-accent); }
+.hero-deep .hero-lead { margin-top: 24px; font-size: 20px; line-height: 1.5; color: #c9dcd1; max-width: 32em; }
+.hero-deep .hero-actions { margin-top: 36px; display: flex; flex-wrap: wrap; gap: 12px; }
+.hero-deep .btn { min-height: 48px; padding: 12px 22px; border-radius: 999px; font-size: 16px; }
+.hero-deep .btn-solid-light { background: var(--hero-accent); color: #0b1712; border-color: transparent; font-weight: 600; }
+.hero-deep .btn-solid-light:hover { background: #e2f67f; color: #0b1712; }
+.hero-deep .btn-light { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.24); }
+.hero-deep .btn-light:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.hero-deep .stage3d { margin-top: 72px; }
+@media (min-width: 1024px) { .hero-deep .stage3d { margin-top: 0; } }
