@@ -906,3 +906,11 @@ section.band { background: var(--surface-sunken); }
 .hero-deep .btn-light:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
 .hero-deep .stage3d { margin-top: 72px; }
 @media (min-width: 1024px) { .hero-deep .stage3d { margin-top: 0; } }
+
+/* R5 proof strip: three countable facts, no cards */
+.proof-strip { padding: 48px 0; background: var(--background); border-bottom: 1px solid var(--border); }
+.proof-grid { display: grid; gap: 32px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.proof-grid > div { display: grid; gap: 6px; }
+.proof-grid strong { font-size: clamp(2.25rem, 1.6rem + 1.6vw, 3rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: var(--foreground); }
+.proof-grid span { font-size: 15px; color: var(--muted-foreground); line-height: 1.45; max-width: 16em; }
+@media (max-width: 639px) { .proof-grid { grid-template-columns: 1fr; gap: 24px; } }
