@@ -166,39 +166,7 @@
       <p class="legend-item legend-a" tabindex="0"><span class="sw sw-a" aria-hidden="true"></span><span>Yêu cầu tới mini-app: trình duyệt → web → cổng API → app.</span></p>
       <p class="legend-item legend-b" tabindex="0"><span class="sw sw-b" aria-hidden="true"></span><span>Đọc dữ liệu lõi: app và web → cổng API → Hasura.</span></p>
           </div>
-    <div class="tier-cards">
-      <article class="card tier-card">
-        <p class="tier-no">Tầng 1</p>
-        <h3>Lõi dùng chung</h3>
-        <ul>
-          <li>Đăng nhập một lần qua Keycloak, ba vai trò: quản trị, cán bộ kỹ thuật, nông hộ.</li>
-          <li>Hasura chỉ đọc, lọc theo mã HTX của token: người dùng thấy dữ liệu của HTX mình.</li>
-          <li>Cảm biến qua MQTT, lưu nóng rồi chuyển sang kho lạnh Parquet.</li>
-          <li>Nhật ký kiểm toán dạng chuỗi băm, có lệnh kiểm tra toàn vẹn.</li>
-          <li>Tệp trong kho được quét bằng ClamAV; tệp nhiễm hoặc không quét được bị cách ly.</li>
-        </ul>
-      </article>
-      <article class="card tier-card">
-        <p class="tier-no">Tầng 2</p>
-        <h3>Ứng dụng cho HTX</h3>
-        <ul>
-          <li>Web app Next.js: nhật ký đồng ruộng, bản đồ thửa, lô và mã QR, bản tin âm thanh.</li>
-          <li>Chẩn đoán bệnh lá chè bằng ảnh. Mọi kết quả đều vào hàng chờ cán bộ kỹ thuật.</li>
-          <li>Staff desktop (WPF, Windows) và staff mobile (Android) cho nhân sự, giao việc, chấm công.</li>
-          <li>Hub mobile (Flutter) cho Android, iOS và web.</li>
-        </ul>
-      </article>
-      <article class="card tier-card">
-        <p class="tier-no">Tầng 3</p>
-        <h3>Mini-app cài thêm</h3>
-        <ul>
-          <li>Khai báo bằng <code>app.yaml</code>, cài bằng <code>./dxos install</code>.</li>
-          <li>Mỗi HTX tự bật app trong Kho ứng dụng và thấy app trong menu của mình.</li>
-          <li>Chạy trong container khoá chặt, giao diện không có JavaScript.</li>
-          <li>Có sẵn bảy app, trong đó Sổ tự tạo cho phép trưởng HTX làm sổ mà không cần lập trình.</li>
-        </ul>
-      </article>
-    </div>
+    <div class="tier-cards"><article class="tier-card"><p class="tier-no">Tầng 1</p><h3>Lõi dùng chung</h3><ul><li>Đăng nhập một lần và phân quyền theo HTX.</li><li>Nhật ký kiểm toán dạng chuỗi băm.</li></ul></article><article class="tier-card"><p class="tier-no">Tầng 2</p><h3>Ứng dụng cho HTX</h3><ul><li>Web app: nhật ký, thửa, lô và QR.</li><li>Ứng dụng di động và máy tính cho nhân sự.</li></ul></article><article class="tier-card"><p class="tier-no">Tầng 3</p><h3>Mini-app cài thêm</h3><ul><li>Khai báo bằng app.yaml, cài bằng ./dxos.</li><li>Bật theo từng HTX trong Kho ứng dụng.</li></ul></article></div>
   </div>
 </section>
 

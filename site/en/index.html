@@ -166,39 +166,7 @@
       <p class="legend-item legend-a" tabindex="0"><span class="sw sw-a" aria-hidden="true"></span><span>Requests to a mini-app: browser → web → API gateway → app.</span></p>
       <p class="legend-item legend-b" tabindex="0"><span class="sw sw-b" aria-hidden="true"></span><span>Reading core data: apps and web → gateway → Hasura.</span></p>
           </div>
-    <div class="tier-cards">
-      <article class="card tier-card">
-        <p class="tier-no">Tier 1</p>
-        <h3>Shared core</h3>
-        <ul>
-          <li>Single sign-on with Keycloak and three roles: manager, technical officer, farming household.</li>
-          <li>Hasura serves read-only data filtered by the cooperative code in the token, so users see their own cooperative's data.</li>
-          <li>Sensor readings arrive over MQTT, sit in a hot store and move to a Parquet cold store.</li>
-          <li>Audit log as a hash chain, with a command that verifies its integrity.</li>
-          <li>Files in storage are scanned with ClamAV; infected or unscannable files are quarantined.</li>
-        </ul>
-      </article>
-      <article class="card tier-card">
-        <p class="tier-no">Tier 2</p>
-        <h3>Cooperative apps</h3>
-        <ul>
-          <li>Next.js web app: field journal, parcel map, lots and QR codes, audio news bulletins.</li>
-          <li>Tea leaf disease check from a photo. Every result goes to the technical officers' queue.</li>
-          <li>Staff desktop (WPF, Windows) and staff mobile (Android) for staff, tasks and attendance.</li>
-          <li>Hub mobile (Flutter) for Android, iOS and the web.</li>
-        </ul>
-      </article>
-      <article class="card tier-card">
-        <p class="tier-no">Tier 3</p>
-        <h3>Installed mini-apps</h3>
-        <ul>
-          <li>Declared with <code>app.yaml</code>, installed with <code>./dxos install</code>.</li>
-          <li>Each cooperative turns apps on in the App Store and sees them in its own menu.</li>
-          <li>Each runs in a locked-down container; its pages contain no JavaScript.</li>
-          <li>Seven apps ship in the repository, including the no-code record book builder.</li>
-        </ul>
-      </article>
-    </div>
+    <div class="tier-cards"><article class="tier-card"><p class="tier-no">Tier 1</p><h3>Shared core</h3><ul><li>Single sign-on and roles per cooperative.</li><li>Audit log as a hash chain.</li></ul></article><article class="tier-card"><p class="tier-no">Tier 2</p><h3>Cooperative apps</h3><ul><li>Web app: journal, plots, lots and QR.</li><li>Mobile and desktop apps for staff.</li></ul></article><article class="tier-card"><p class="tier-no">Tier 3</p><h3>Mini-apps</h3><ul><li>Declared in app.yaml, installed with ./dxos.</li><li>Turned on per cooperative in the App Store.</li></ul></article></div>
   </div>
 </section>
 
