@@ -1126,3 +1126,7 @@ section.band { background: var(--surface-sunken); }
 
 /* R5 hero: the accent phrase stays on one line */
 .hero-deep .hl { white-space: nowrap; }
+
+/* Hero headline: two lines by design ("… số" / "cho hợp tác xã chè"); sized so the second line fits its column. */
+.hero-deep h1 { font-size: clamp(2.05rem, 1.15rem + 2.75vw, 3.3rem); }
+.hero-deep h1 .hl { white-space: nowrap; }
