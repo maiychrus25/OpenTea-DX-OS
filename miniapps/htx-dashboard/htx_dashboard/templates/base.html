@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="/dxos-app.css">
 <link rel="stylesheet" href="{{ prefix }}/assets/{{ css_name }}">
 </head>
-<body{% block body_attrs %}{% endblock %}><main>
+<body{% block body_attrs %}{% endblock %}><main class="dashboard-main">
 {% block head %}{% endblock %}
 {% if tabs %}{{ kit.tabs(tabs, current) }}{% endif %}
 {% block main %}{% endblock %}

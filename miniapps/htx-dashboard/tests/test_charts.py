@@ -83,3 +83,8 @@ def test_x_ticks_are_day_month_labels_and_at_most_six():
 def test_table_rows_mirror_the_points_for_screen_readers():
     chart = charts.line_chart(pts([1.0, 2.0]))
     assert [r[0] for r in chart.rows] == ["01/11", "02/11"] and len(chart.rows[0]) == 4
+
+
+def test_a_line_chart_asks_for_few_ticks_so_its_labels_stay_readable():
+    chart = charts.line_chart(pts([float(i) for i in range(30)]))
+    assert len(chart.y_ticks) <= 4 and len(chart.x_ticks) <= 4

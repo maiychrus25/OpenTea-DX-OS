@@ -139,3 +139,12 @@ Chỗ mã khác với thân tài liệu ở trên (thân tài liệu giữ nguy�
 - **Truy vấn của tab Dữ liệu (§6).** Tab này chỉ cần số dòng theo ngày nên xin hai cột (`day`, `reading_count`) của view với giới hạn 50.000 dòng (330 thửa × 5 cảm biến × 30 ngày); quá giới hạn thì trang nói số đã bị cắt. Truy vấn một thửa (`PARCEL_DAILY`) giới hạn 1.000 dòng (một thửa × cảm biến × 30 ngày). Các danh sách còn lại giữ giới hạn 5.000 dòng.
 - **Bộ kiểm nền tảng (§7.4, §11).** `smoke-platform.sh` nạp `smoke-dataops.sh`, nên CI chạy các kiểm tra của view: thêm kiểm tra cho `officer` và đổi ngày số đo thử sang hôm qua và hôm nay (cố định giờ 16:59Z và 18:30Z của ngày hôm trước để qua nửa đêm Việt Nam), vì ngày 2026-03-10 cũ hơn thời hạn kho nóng 30 ngày. Số PASS của `make platform-smoke` từ 124 thành 131 (5 của view và 2 của `officer`); `make apps-smoke` kiểm lại số này.
 - **Ảnh cho Kho ứng dụng.** Bốn ảnh trong `miniapps/htx-dashboard/store/` được chụp từ bản xem trước với dữ liệu mẫu, không chụp lại trên runner.
+
+### 0.2.0: bảng điều hành biểu đồ
+
+- **Giao diện.** Mỗi tab là một lưới biểu đồ phục vụ trên máy chủ (SVG và HTML/CSS, không JavaScript, không thuộc tính `style`). Bộ vẽ nằm ở `charts.py` (cột xếp chồng hoặc ghép, bánh donut, sparkline, đồng hồ đo, vòng tiến độ, lịch nhiệt, phễu, lịch Gantt, phân tán, chênh lệch so với kỳ trước); mỗi biểu đồ có bảng số liệu hoặc chú giải bằng chữ. Bảng màu danh mục `tone-N` và dải tuần tự `seq-N` định nghĩa một lần trong `dashboard.css`, cho cả hai giao diện sáng và tối.
+- **Truy vấn mới.** `JOURNAL_COUNTS` đếm thêm kỳ trước (`previous`), `SENSOR_DAILY` xin số đo theo ngày của mọi thửa và cảm biến, `PRICES` lấy lịch sử giá chè (tối đa 120 dòng) để vẽ xu hướng. Vẫn là hằng số, vẫn lọc theo `htx_code` từ token.
+- **Giá thị trường.** Thay cho "tối đa 3 dòng mới nhất" của 0.1.0: trang hiện giá mới nhất của mỗi chỉ số (tối đa 3) và vẽ xu hướng giá xuất khẩu khi có ít nhất hai điểm.
+- **Số liệu mới.** So sánh kỳ trước dùng cùng độ dài kỳ xem; sparkline không vẽ khi kỳ không có số nào; phễu lô đếm mỗi lô ở mọi giai đoạn nó đã qua, giả định trạng thái lô đi theo thứ tự nháp, sẵn sàng, đã xuất QR.
+- **Xem trước.** `python tests/preview.py [cổng] [--empty]` phục vụ app với dữ liệu mẫu dưới CSP của sản phẩm.
+

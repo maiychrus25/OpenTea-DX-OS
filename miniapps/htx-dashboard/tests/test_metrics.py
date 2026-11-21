@@ -176,7 +176,9 @@ def test_disease_kinds_use_confirmed_diagnosis_and_label_the_ai_guess():
     rows = [disease("1", status="CONFIRMED", confirmed="Thối búp"), disease("2", status="PENDING", ai="Rầy xanh"),
             disease("3", status="CONFIRMED", confirmed="Thối búp")]
     assert m.disease_kinds(rows) == [("Thối búp", 2), ("Rầy xanh (AI dự đoán)", 1)]
-    assert m.disease_kinds([disease("4", status="REJECTED")]) == [("Báo cáo bị bác bỏ", 1)]
+    # A rejection is a handling status, never a kind: a rejected report counts under the AI's name, marked as a guess.
+    assert m.disease_kinds([disease("4", status="REJECTED", ai="Rầy xanh")]) == [("Rầy xanh (AI dự đoán)", 1)]
+    assert m.disease_kind(disease("5", status="REJECTED", ai="Rầy xanh")) == "Rầy xanh (AI dự đoán)"
 
 
 def test_disease_pending_and_recent_week_boundary():
