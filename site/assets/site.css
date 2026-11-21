@@ -932,3 +932,15 @@ section.band { background: var(--surface-sunken); }
 .section-head h2 { font-size: clamp(2rem, 1.4rem + 1.6vw, 2.75rem); letter-spacing: -0.03em; line-height: 1.1; }
 .section-head p { font-size: 18px; line-height: 1.5; color: var(--muted-foreground); }
 .section-head .eyebrow { color: var(--muted-foreground); font-size: 13px; font-weight: 600; letter-spacing: 0.02em; text-transform: none; }
+
+/* R5 capabilities: tiles on the surface tint, no outlines, one radius and one shadow */
+.bento-sec { background: var(--background); padding: 120px 0; }
+@media (min-width: 1024px) { .bento-sec { padding: 144px 0; } }
+.bento-sec .section-head { margin-bottom: 56px; }
+.bento { gap: 20px; }
+.bento-card { background: var(--card); border: 0; border-radius: var(--radius-xl); padding: 28px; box-shadow: var(--shadow-card); }
+.bento-card:hover, .bento-card:focus-within { transform: translate3d(0, -3px, 0); border-color: transparent; box-shadow: 0 24px 48px -24px rgba(10, 31, 23, 0.28); }
+.bento-card h3 { font-size: 20px; letter-spacing: -0.015em; margin-bottom: 6px; }
+.bento-card p { font-size: 16px; line-height: 1.5; color: var(--muted-foreground); max-width: 34em; }
+.bento-ic { display: none; }
+.bento-vis { margin-top: 24px; }
