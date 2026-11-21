@@ -1067,3 +1067,6 @@ section.band { background: var(--surface-sunken); }
 
 /* R5 hero: the copy follows its column; fixed measures no longer push the sentence under the stage */
 .hero-deep .hero-lead, .hero-deep h1 { max-width: 100%; }
+
+/* R5 hero: the accent phrase stays on one line */
+.hero-deep .hl { white-space: nowrap; }
