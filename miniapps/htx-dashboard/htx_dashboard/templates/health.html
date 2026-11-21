@@ -1,46 +1,68 @@
 {#- SPDX-License-Identifier: MIT -#}
 {#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
 {% extends "base.html" %}
+{% import "charts.html" as ch %}
 {% block title %}Sức khoẻ cây{% endblock %}
 {% block head %}{% call kit.app_header("Sức khoẻ cây", "Báo cáo bệnh của HTX " ~ htx ~ " trong " ~ days ~ " ngày") %}{{ parts.actions(link, here, days, keep) }}{% endcall %}{% endblock %}
 {% block main %}
 {{ parts.period_nav(link, here, days, keep) }}
+
 {% if r.diseases.ok %}
-{{ kit.stats([
-  {"label": "Báo cáo trong " ~ days ~ " ngày", "value": rows | length | num(0), "hint": "theo ngày tạo báo cáo"},
-  {"label": "Chờ xử lý", "value": pending | num(0), "hint": "chưa được xác nhận, mọi kỳ"},
-  {"label": "Mới trong 7 ngày", "value": recent | num(0)}
-]) }}
-{% if empty %}
-{{ kit.empty("Chưa có báo cáo bệnh nào trong " ~ days ~ " ngày qua.") }}
-{% else %}
-<div class="two-up">
-  {{ kit.chart("Báo cáo theo tuần", week_chart, "báo cáo") }}
-  {{ kit.chart("Theo trạng thái xử lý", status_chart, "báo cáo") }}
-</div>
-<div class="two-up">
-  {{ kit.chart("Theo loại bệnh", kind_chart, "báo cáo") }}
-  {{ kit.chart("Thửa có nhiều báo cáo nhất", parcel_chart, "báo cáo") }}
-</div>
-<p class="note">Loại bệnh là chẩn đoán đã được cán bộ xác nhận. Báo cáo chưa xác nhận dùng tên do AI dự đoán và được ghi rõ "AI dự đoán".</p>
-<h2>Các báo cáo</h2>
-<table role="table">
-  <thead role="rowgroup"><tr role="row"><th role="columnheader">Ngày</th><th role="columnheader">Thửa</th><th role="columnheader">Hộ</th><th role="columnheader">Loại bệnh</th><th role="columnheader">Độ tin cậy AI</th><th role="columnheader">Trạng thái</th></tr></thead>
-  <tbody role="rowgroup">
-  {% for d in rows[:50] %}
-    <tr role="row">
-      <td role="cell" data-label="Ngày">{{ d.detection_date | vn_day }}</td>
-      <td role="cell" data-label="Thửa"><a href="{{ link('/parcels/' ~ d.parcel_code) }}">{{ d.parcel_code }}</a></td>
-      <td role="cell" data-label="Hộ">{{ d.household_name }}</td>
-      <td role="cell" data-label="Loại bệnh">{{ kind(d) }}</td>
-      <td role="cell" data-label="Độ tin cậy AI">{{ (d.confidence * 100) | num(0) }} %</td>
-      <td role="cell" data-label="Trạng thái"><span class="{{ pill(d.status) }}">{{ labels.get(d.status, d.status) }}</span></td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% if rows | length > 50 %}<p class="note">Hiển thị 50 báo cáo mới nhất; tệp CSV và bản in có đủ {{ rows | length }} báo cáo.</p>{% endif %}
+<ul class="stats kpi-strip" aria-label="Chỉ số sức khoẻ cây">
+  <li class="kpi"><span class="stat-label">Báo cáo trong {{ days }} ngày</span><span class="stat-value">{{ rows | length if rows is not none else 0 }}</span></li>
+  <li class="kpi"><span class="stat-label">Chờ xử lý</span><span class="stat-value">{{ pending | num(0) }}</span><span class="stat-hint">báo cáo chưa được xác nhận</span></li>
+  <li class="kpi"><span class="stat-label">Trong 7 ngày gần nhất</span><span class="stat-value">{{ recent | num(0) }}</span><span class="stat-hint">báo cáo mới</span></li>
+</ul>
 {% endif %}
-{% else %}{{ parts.error() }}{% endif %}
+
+<div class="grid-cards" aria-label="Biểu đồ sức khoẻ cây">
+  {% call parts.card("Báo cáo bệnh theo tuần và loại", 8, "h-weekly") %}
+    {% if r.diseases.ok %}{{ ch.columns(weekly, "Báo cáo bệnh theo tuần và loại", "Chưa có báo cáo bệnh nào trong " ~ days ~ " ngày.") }}
+    {% else %}{{ parts.error() }}{% endif %}
+  {% endcall %}
+  {% call parts.card("Trạng thái xử lý", 4, "h-status") %}
+    {% if r.diseases.ok %}{{ ch.donut(status, "Trạng thái xử lý báo cáo", "Chưa có báo cáo bệnh nào trong " ~ days ~ " ngày.") }}
+    {% else %}{{ parts.error() }}{% endif %}
+  {% endcall %}
+  {% call parts.card("Độ tin cậy của AI", 5, "h-confidence") %}
+    {% if r.diseases.ok %}{{ ch.columns(confidence, "Số báo cáo theo độ tin cậy của AI", "Chưa có báo cáo bệnh nào trong " ~ days ~ " ngày.") }}
+    {% else %}{{ parts.error() }}{% endif %}
+  {% endcall %}
+  {% call parts.card("Xác nhận và chỉ có AI", 3, "h-confirmed") %}
+    {% if r.diseases.ok %}{{ ch.bars(confirmed, "Đã xác nhận, chỉ AI và bị bác bỏ", "Chưa có báo cáo bệnh nào trong " ~ days ~ " ngày.") }}
+    {% else %}{{ parts.error() }}{% endif %}
+  {% endcall %}
+  {% call parts.card("Loại bệnh trong kỳ", 4, "h-kinds") %}
+    {% if r.diseases.ok %}{{ ch.bars(kinds, "Loại bệnh trong kỳ", "Chưa có báo cáo bệnh nào trong " ~ days ~ " ngày.") }}
+    {% else %}{{ parts.error() }}{% endif %}
+  {% endcall %}
+  {% call parts.card("Thửa bị báo cáo nhiều nhất", 12, "h-parcels") %}
+    {% if r.diseases.ok %}{{ ch.bars(parcels, "Thửa bị báo cáo nhiều nhất", "Chưa có báo cáo bệnh nào trong " ~ days ~ " ngày.") }}
+    {% else %}{{ parts.error() }}{% endif %}
+  {% endcall %}
+</div>
+
+<section class="group" aria-labelledby="reports-title">
+  <h2 id="reports-title">Các báo cáo trong kỳ</h2>
+  {% if r.diseases.ok %}
+    {% if rows %}
+    <table role="table">
+      <thead role="rowgroup"><tr role="row"><th role="columnheader">Ngày phát hiện</th><th role="columnheader">Thửa</th><th role="columnheader">Hộ</th><th role="columnheader">Loại bệnh</th><th role="columnheader">Độ tin cậy AI</th><th role="columnheader">Trạng thái</th></tr></thead>
+      <tbody role="rowgroup">
+      {% for d in rows %}
+        <tr role="row">
+          <td role="cell" data-label="Ngày phát hiện">{{ d.detection_date | vn_day }}</td>
+          <td role="cell" data-label="Thửa"><a href="{{ link('/parcels/' ~ d.parcel_code) }}">{{ d.parcel_code }}</a></td>
+          <td role="cell" data-label="Hộ">{{ d.household_name }}</td>
+          <td role="cell" data-label="Loại bệnh">{{ kind(d) }}</td>
+          <td role="cell" data-label="Độ tin cậy AI">{{ (d.confidence * 100) | num(0) }} %</td>
+          <td role="cell" data-label="Trạng thái"><span class="{{ pill(d.status) }}">{{ labels.get(d.status, d.status) }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}{{ kit.empty("Chưa có báo cáo bệnh nào trong " ~ days ~ " ngày.") }}{% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
 {{ parts.notes([note] if note else []) }}
 {% endblock %}

@@ -3,8 +3,8 @@
 apiVersion: dxos/v1
 id: htx-dashboard
 name: Bảng điều hành HTX
-description: "Một góc nhìn tổng thể về hợp tác xã: việc cần chú ý, sản xuất, thửa chè với số đo cảm biến, sức khoẻ cây, lô chè và vòng đời dữ liệu."
-version: 0.1.0
+description: "Bảng điều hành biểu đồ cho trưởng HTX: việc cần chú ý, xu hướng so với kỳ trước, sản xuất, cảm biến, sức khoẻ cây, lô chè và vòng đời dữ liệu."
+version: 0.2.0
 license: MIT
 publisher: OpenTea Developers
 requires: { core: ">=1.13.0" }
@@ -21,11 +21,11 @@ store:
   category: production
   icon: clipboard-list
   about: |
-    Ứng dụng giúp trưởng HTX theo dõi tổng thể hợp tác xã của mình trên một màn hình, chỉ để xem.
+    Ứng dụng giúp trưởng HTX nhìn ra tình hình hợp tác xã bằng biểu đồ, trên một màn hình, chỉ để xem.
 
-    Trang Tổng quan nêu ngay những việc cần chú ý: nhật ký chờ duyệt quá lâu, báo cáo bệnh chờ xử lý, cảm biến ngừng gửi số đo, vụ sắp hoặc đã quá ngày thu hoạch, lần chuyển dữ liệu bị lỗi. Phía dưới là các chỉ số về quy mô, nhật ký, sức khoẻ cây, cảm biến và lô chè, cùng lưới các thửa để mở nhanh.
+    Trang Tổng quan mở đầu bằng các chỉ số kèm xu hướng so với kỳ trước, rồi đến những việc cần chú ý: nhật ký chờ duyệt quá lâu, báo cáo bệnh chờ xử lý, cảm biến ngừng gửi số đo, vụ sắp hoặc đã quá ngày thu hoạch, lần chuyển dữ liệu bị lỗi. Phía dưới là lưới biểu đồ: thửa theo trạng thái và cây trồng, hoạt động theo tuần, lô chè qua các giai đoạn, số đo cảm biến theo ngày, sức khoẻ cảm biến từng thửa, báo cáo bệnh, lịch thu hoạch và giá xuất khẩu.
 
-    Mỗi thửa có một trang bản sao số: số đo mới nhất của từng cảm biến, biểu đồ theo ngày, vụ hiện tại, thời tiết, nhật ký, báo cáo bệnh và các lô có thửa đó. Các tab Sản xuất, Vùng trồng, Sức khoẻ cây, Lô chè và Dữ liệu đều có tệp CSV và bản in.
+    Mỗi thửa có một trang bản sao số: số đo mới nhất trong khoảng 30 ngày, biểu đồ theo ngày, nhiệt độ đặt cạnh độ ẩm, lượng mưa, vụ hiện tại, thời tiết, nhật ký, báo cáo bệnh và các lô có thửa đó. Các tab Sản xuất, Vùng trồng, Sức khoẻ cây, Lô chè và Dữ liệu đều có biểu đồ, tệp CSV và bản in.
 
     Ứng dụng không lưu gì: mọi con số được đọc từ hệ thống lõi bằng chính quyền của người đang xem, nên chỉ thấy dữ liệu của HTX mình. Trang không tự cập nhật; tải lại để thấy số mới.
   data:
@@ -39,7 +39,7 @@ store:
     - "Các lần chuyển dữ liệu cảm biến sang kho lạnh và kết quả kiểm chất lượng"
     - "Thời tiết mới nhất của thửa và giá thị trường"
   screenshots:
-    - { file: store/overview.png, caption: "Tổng quan: việc cần chú ý, chỉ số và lưới các thửa" }
-    - { file: store/parcel.png, caption: "Bản sao số của một thửa: số đo mới nhất và biểu đồ theo ngày" }
-    - { file: store/parcels.png, caption: "Vùng trồng: mọi thửa kèm số đo cảm biến mới nhất" }
-    - { file: store/data.png, caption: "Dữ liệu: vòng đời, mã băm và chất lượng số đo cảm biến" }
+    - { file: store/overview.png, caption: "Tổng quan: chỉ số kèm xu hướng, việc cần chú ý và lưới biểu đồ" }
+    - { file: store/parcel.png, caption: "Bản sao số của một thửa: số đo, thang giá trị, nhiệt độ đặt cạnh độ ẩm và lượng mưa" }
+    - { file: store/parcels.png, caption: "Vùng trồng: phân bố thửa và số đo cảm biến kèm xu hướng 30 ngày" }
+    - { file: store/data.png, caption: "Dữ liệu: số đo mỗi ngày, lần chuyển sang kho lạnh và sức khoẻ cảm biến" }

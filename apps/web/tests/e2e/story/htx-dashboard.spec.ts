@@ -81,7 +81,8 @@ test.describe('htx-dashboard installed', () => {
     // Dữ liệu: the silent sensor of TC-B2 is listed, and its parcel page says so.
     await manager.goto(`${BASE}/data`)
     await heading(app, 'Dữ liệu cảm biến')
-    const silent = app.locator('tbody tr', { hasText: 'TC-B2' }).filter({ hasText: 'Lượng mưa' })
+    // Scoped to the list of silent sensors: the freshness matrix of 0.2.0 has a row for TC-B2 as well.
+    const silent = app.locator('section[aria-labelledby="silent-title"] tbody tr', { hasText: 'TC-B2' }).filter({ hasText: 'Lượng mưa' })
     await expect(silent).toHaveCount(1)
     await noBlockError(app)
     await silent.getByRole('link', { name: 'TC-B2', exact: true }).click()

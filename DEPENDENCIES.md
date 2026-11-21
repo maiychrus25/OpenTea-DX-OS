@@ -162,6 +162,40 @@ Python standard library only (`http.server`, `unittest`); no third-party package
 
 No new package: each app's `requirements.txt` and `requirements-dev.txt` are identical to `tea-tour`'s (the packages and pins in the table above), and each stores its data in its own schema (`app_leaf_purchase`, `app_tea_shop`, `app_farm_supply`).
 
+## Mobile app (`apps/hub-mobile`, Flutter 3.41.7 / Dart 3.11.5)
+
+All versions are pinned exactly in `pubspec.yaml`; `pubspec.lock` pins the transitive packages (installed with `flutter pub get --enforce-lockfile`). No Google Play services, Firebase, Maps SDK or analytics.
+
+### Runtime Dependencies
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| [Flutter SDK](https://github.com/flutter/flutter) (build toolchain, `flutter` package) | 3.41.7 | BSD-3-Clause | UI framework |
+| [go_router](https://pub.dev/packages/go_router) | 17.5.0 | BSD-3-Clause | Role-based routing and redirects |
+| [provider](https://pub.dev/packages/provider) | 6.1.5+1 | MIT | State management (session, cart, orders) |
+| [shared_preferences](https://pub.dev/packages/shared_preferences) | 2.5.6 | BSD-3-Clause | Cart, orders and tickets kept on the device |
+| [qr_flutter](https://pub.dev/packages/qr_flutter) | 4.1.0 | BSD-3-Clause | VietQR payment code and ticket QR (pulls `qr` 3.0.3, BSD-3-Clause) |
+| [flutter_appauth](https://pub.dev/packages/flutter_appauth) | 12.1.0 | BSD-3-Clause | Keycloak sign-in: OIDC authorization code flow with PKCE in the system browser. Wraps the native AppAuth libraries: [AppAuth-Android](https://github.com/openid/AppAuth-Android) 0.11.1 (Apache-2.0; depends only on `androidx.annotation`, `androidx.appcompat`, `androidx.browser`) and AppAuth-iOS (Apache-2.0). No Google Play services. Pulls `flutter_appauth_platform_interface` 12.1.0 (BSD-3-Clause) |
+| [flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage) | 11.2.0 | BSD-3-Clause | Refresh and access tokens in Android Keystore (AES key managed with [Tink](https://github.com/tink-crypto/tink-java) `tink-android` 1.23.0, Apache-2.0, no Play services) and the iOS Keychain. Pulls `flutter_secure_storage_darwin` 0.4.3, `_linux` 3.0.3, `_platform_interface` 2.1.1, `_web` 2.1.1 and `_windows` 4.2.2 (BSD-3-Clause) |
+| [image_picker](https://pub.dev/packages/image_picker) | 1.1.2 | BSD-3-Clause | Camera and gallery pickers for the leaf photo (disease scan). Uses the system camera app (no camera permission on Android) and the iOS picker; no Google Play services. Pulls `image_picker_android` 0.8.13+17, `_ios` 0.8.13+10, `_for_web` 3.1.1, `_linux` 0.2.2, `_macos` 0.2.2+1, `_windows` 0.2.2, `_platform_interface` 2.11.2, `cross_file` 0.3.5+5, `file_selector_linux` 0.9.4+1, `_macos` 0.9.5+1, `_windows` 0.9.3+6, `_platform_interface` 2.7.0, `flutter_plugin_android_lifecycle` 2.0.35 (all BSD-3-Clause, Flutter authors) and `mime` 2.1.0 (BSD-3-Clause, Dart project authors) |
+| [camera](https://pub.dev/packages/camera) | 0.12.0+2 | BSD-3-Clause | Live camera preview and shutter for the leaf scan on phones (the browser demo uses `web` instead). Uses CameraX on Android (AndroidX, no Google Play services) and AVFoundation on iOS. Pulls `camera_android_camerax` 0.7.2, `camera_avfoundation` 0.10.3+1, `camera_platform_interface` 2.15.0, `camera_web` 0.3.6 (BSD-3-Clause, Flutter authors) and `stream_transform` 2.1.2 (BSD-3-Clause, Dart project authors) |
+| [video_player](https://pub.dev/packages/video_player) | 2.11.1 | BSD-3-Clause | Plays the short videos ("Video ngắn") on the account pages: bundled demo clips and clips picked from the gallery. Uses ExoPlayer (AndroidX Media3) on Android, AVPlayer on iOS and the browser's `<video>` on web; no Google Play services. Pulls `video_player_android` 2.9.5, `video_player_avfoundation` 2.12.1, `video_player_web` 2.4.0, `video_player_platform_interface` 6.9.0 (BSD-3-Clause, Flutter authors), `html` 0.15.7 and `csslib` 1.0.2 (BSD-3-Clause, Dart project authors) |
+| [web](https://pub.dev/packages/web) | 1.1.1 | BSD-3-Clause | Browser APIs for the leaf scan in the web demo (`getUserMedia`, canvas); already a transitive package, now pinned as a direct one (Dart project authors) |
+| [http_parser](https://pub.dev/packages/http_parser) | 4.1.2 | BSD-3-Clause | Media type of the leaf photo in the multipart upload; already a transitive package of `http`, now pinned as a direct one (Dart project authors) |
+| [http](https://pub.dev/packages/http) | 1.6.0 | BSD-3-Clause | HTTP client of `HttpHubRepository` (GraphQL calls to the core through the gateway); tests use its `MockClient` (pulls `http_parser` 4.1.2 and `typed_data` 1.4.0, BSD-3-Clause) |
+| [Be Vietnam Pro](https://github.com/bettergui/BeVietnamPro) font (Regular, Medium, SemiBold, Bold), bundled in `apps/hub-mobile/assets/fonts` | 1.002 (Google Fonts `ofl/bevietnampro`, fetched 2026-11-17) | OFL-1.1 | The sans-serif of the whole app; license text in `assets/fonts/OFL.txt` |
+| [flutter_localizations](https://api.flutter.dev/flutter/flutter_localizations/flutter_localizations-library.html) (Flutter SDK) | 3.41.7 | BSD-3-Clause | Vietnamese labels of the built-in widgets (the date picker of the booking screen). Pulls [intl](https://pub.dev/packages/intl) 0.20.2 (BSD-3-Clause) |
+
+### Dev Dependencies
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| flutter_test (Flutter SDK) | 3.41.7 | BSD-3-Clause | Unit and widget tests |
+| [flutter_lints](https://pub.dev/packages/flutter_lints) | 6.0.0 | BSD-3-Clause | Lint rules for `flutter analyze` |
+
+Transitive packages (all BSD-3-Clause or MIT, checked from their LICENSE files; added with `flutter_secure_storage`: `args` 2.7.0, `code_assets` 1.2.1, `crypto` 3.0.8, `ffi_leak_tracker` 0.1.2, `hooks` 2.0.2, `jni` 1.1.2, `jni_flutter` 1.0.4+1, `jni_util` 1.0.0, `objective_c` 9.5.0, `package_config` 3.0.0, `path_provider` 2.1.6, `path_provider_android` 2.3.1, `path_provider_foundation` 2.6.0, `pub_semver` 2.2.1, `record_use` 0.6.0, `win32` 6.4.0, `yaml` 3.1.4): `characters`, `collection`, `ffi`, `file`, `http_parser`, `logging`, `material_color_utilities`, `meta`, `nested` (MIT), `path`, `path_provider_linux`, `path_provider_platform_interface`, `path_provider_windows`, `platform`, `plugin_platform_interface`, `qr`, `shared_preferences_android`, `shared_preferences_foundation`, `shared_preferences_linux`, `shared_preferences_platform_interface`, `shared_preferences_web`, `shared_preferences_windows`, `typed_data`, `vector_math`, `web`, `xdg_directories`.
+
+---
 ### Mini-app `htx-dashboard` (`miniapps/htx-dashboard`)
 
 | Package | Version | License | Purpose |

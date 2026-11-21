@@ -1,0 +1,1 @@
+{"errors":[{"extensions":{"path":"$.selectionSet.lots","code":"validation-failed"},"message":"field 'lots' not found in type: 'query_root'"}]}
