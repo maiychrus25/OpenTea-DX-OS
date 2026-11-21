@@ -1,0 +1,4 @@
+{"data":{"households":[
+{"id":"clx0hh0002","name":"Hộ ông Sáng","phone":"0912000002","address":"Xóm 3","keycloak_user_id":"7f1b0c1e-0000-4000-8000-000000000002","created_at":"2026-03-02T08:15:00.123456"},
+{"id":"clx0hh0001","name":"Hộ bà Lan","phone":"0912000001","address":null,"keycloak_user_id":null,"created_at":"2026-03-01T08:15:00"}
+]}}

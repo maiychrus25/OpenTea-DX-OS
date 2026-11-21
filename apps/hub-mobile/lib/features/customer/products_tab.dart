@@ -1,0 +1,99 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 OpenTea Developers
+
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../../app/cart_controller.dart';
+import '../../core/money/money.dart';
+import '../../core/theme/app_theme.dart';
+import '../../data/hub_repository.dart';
+import '../../data/models/cart.dart';
+import '../../data/models/catalog.dart';
+import '../../shared/product_image.dart';
+import '../../shared/widgets.dart';
+
+class ProductsTab extends StatelessWidget {
+  const ProductsTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.read<HubRepository>();
+    return LoadView<List<Product>>(
+      load: repo.listProducts,
+      builder: (context, products, reload) => RefreshIndicator(
+        onRefresh: reload,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          children: [
+            const PageTitle('Sản phẩm'),
+            for (final p in products) ...[
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  key: Key('product-${p.id}'),
+                  onTap: () => context.push('/shop/products/${p.id}'),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 84,
+                          child: ProductImage(
+                            key: Key('product-image-${p.id}'),
+                            productId: p.id,
+                            seed: p.gradientSeed,
+                            height: 84,
+                            radius: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                              Text(p.unit, style: Theme.of(context).textTheme.bodySmall),
+                              const SizedBox(height: 4),
+                              Text(
+                                formatVnd(p.price),
+                                style: const TextStyle(color: Color(0xFF8A3D06), fontWeight: FontWeight.w800),
+                              ),
+                              if (p.stock == 0) const StatusChip('Hết hàng', color: AppColors.danger),
+                              if (p.stock > 0 && p.stock <= 5) StatusChip('Chỉ còn ${p.stock}', color: AppColors.amber),
+                            ],
+                          ),
+                        ),
+                        IconButton.filled(
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppColors.teaDark,
+                            foregroundColor: Colors.white,
+                          ),
+                          key: Key('add-${p.id}'),
+                          onPressed: p.stock == 0 ? null : () => _add(context, p),
+                          icon: const Icon(Icons.add_shopping_cart),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _add(BuildContext context, Product p) async {
+    final result = await context.read<CartController>().add(p);
+    if (!context.mounted) return;
+    showMessage(context, switch (result) {
+      CartAddResult.added => 'Đã thêm "${p.name}" vào giỏ',
+      CartAddResult.otherHtx => 'Giỏ hàng chỉ chứa sản phẩm của một HTX. Hãy thanh toán hoặc xoá giỏ trước.',
+      CartAddResult.outOfStock => 'Không đủ hàng trong kho',
+    });
+  }
+}
