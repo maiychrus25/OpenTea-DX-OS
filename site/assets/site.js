@@ -34,6 +34,7 @@
       entries.forEach(function (entry) {
         if (!entry.isIntersecting) return;
         var el = entry.target, end = Number(el.getAttribute("data-count")), t0 = performance.now();
+        if (!isFinite(end)) return; // placeholder not yet filled: keep the text as it is
         countObs.unobserve(el);
         var step = function (now) {
           var k = Math.min(1, (now - t0) / 900), eased = 1 - Math.pow(1 - k, 3);
@@ -101,7 +102,7 @@
 
   var dialog = document.getElementById("lightbox");
   if (dialog && typeof dialog.showModal === "function") {
-    var img = document.getElementById("lightbox-img");
+    var slot = document.getElementById("lightbox-slot");
     var caption = document.getElementById("lightbox-caption");
     var closeButton = document.getElementById("lightbox-close");
     document.querySelectorAll("a.zoom").forEach(function (link) {
@@ -109,10 +110,14 @@
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
         var target = link.querySelector("img");
+        // the image element is created only when the viewer opens it, so the markup never holds an empty img
+        var img = document.createElement("img");
         img.src = link.getAttribute("href");
         img.alt = target ? target.alt : "";
         img.width = target ? target.width : 1280;
         img.height = target ? target.height : 800;
+        slot.textContent = "";
+        slot.appendChild(img);
         caption.textContent = link.getAttribute("data-caption") || "";
         dialog.showModal();
       });

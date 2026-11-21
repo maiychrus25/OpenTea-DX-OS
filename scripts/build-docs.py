@@ -293,8 +293,9 @@ def header_html(root, lang):
       <a href="%(root)s#story">%(story)s</a>
       <a href="%(root)s#tiers">%(tiers)s</a>
       <a href="%(root)s#features">%(features)s</a>
-      <a href="%(root)sdocs/" aria-current="%(docscur)s">%(docs)s</a>
+      <a href="%(root)sdocs/" aria-current="page">%(docs)s</a>
       <a href="%(root)s#open-source">%(source)s</a>
+      <a href="%(root)s#status">%(status)s</a>
     </nav>
     <div class="header-tools">
       <a class="tool" href="%(lang_href)s" lang="%(other_lang)s" hreflang="%(other_lang)s">%(lang_label)s</a>
@@ -306,7 +307,7 @@ def header_html(root, lang):
         skip="Bỏ qua và đi tới nội dung" if lang == "vi" else "Skip to content",
         root=root, why="Vì sao" if lang == "vi" else "Why", story="Một ngày" if lang == "vi" else "A day",
         tiers="Ba tầng" if lang == "vi" else "Three tiers", features="Tính năng" if lang == "vi" else "Features",
-        docs="Tài liệu" if lang == "vi" else "Docs", docscur="page",
+        docs="Tài liệu" if lang == "vi" else "Docs", docscur="page", status="Tình trạng" if lang == "vi" else "Status",
         source="Mã nguồn" if lang == "vi" else "Source",
         lang_href=other, other_lang="en" if lang == "vi" else "vi",
         lang_label="English" if lang == "vi" else "Tiếng Việt",
