@@ -977,3 +977,8 @@ section.band { background: var(--surface-sunken); }
 
 .legend-item:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .arch-legend { gap: 8px; }
+.arch:has(.legend-a:focus-visible) .flow-b, .arch:has(.legend-a:hover) .flow-b { opacity: 0.3; }
+.arch:has(.legend-b:focus-visible) .flow-a, .arch:has(.legend-b:hover) .flow-a { opacity: 0.3; }
+.arch:has(.legend-a:focus-visible) .flow-a line.t-link, .arch:has(.legend-a:hover) .flow-a line.t-link,
+.arch:has(.legend-b:focus-visible) .flow-b line.t-link, .arch:has(.legend-b:hover) .flow-b line.t-link { stroke-width: 3.5; }
+.arch .flow { transition: opacity 200ms cubic-bezier(0.2, 0, 0, 1); }
