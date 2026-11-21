@@ -280,42 +280,42 @@ def relpath_from_root(out_path):
 
 
 def header_html(root, lang):
-    other = ("%sen/docs/" % root) if lang == "vi" else ("%sdocs/" % root.replace("../", "../", 1))
-    return """<a class="skip-link" href="#main">%(skip)s</a>
-<header class="site-header" data-header>
-  <div class="wrap bar">
-    <a class="brand" href="%(root)s" aria-label="OpenTea DX-OS">
-      <img src="%(root)smedia/icon-192.png" width="34" height="34" alt="">
-      <span>OpenTea DX-OS</span>
-    </a>
-    <input class="nav-toggle" type="checkbox" id="nav-toggle" aria-label="%(navlabel)s">
-    <nav class="nav-links" aria-label="Điều hướng chính">
-      <a href="%(root)s#why">%(why)s</a>
-      <a href="%(root)s#story">%(story)s</a>
-      <a href="%(root)s#tiers">%(tiers)s</a>
-      <a href="%(root)s#features">%(features)s</a>
-      <a href="%(root)sdocs/" aria-current="page">%(docs)s</a>
-      <a href="%(root)s#open-source">%(source)s</a>
-      <a href="%(root)s#status">%(status)s</a>
-    </nav>
-    <div class="header-tools">
-      <label class="nav-btn" for="nav-toggle">%(navbtn)s</label>
-      <a class="tool" href="%(lang_href)s" lang="%(other_lang)s" hreflang="%(other_lang)s">%(lang_label)s</a>
-      <button class="tool" type="button" id="theme-toggle" hidden>%(theme)s</button>
-      <a class="tool tool-gh" href="%(github)s">GitHub</a>
-    </div>
-  </div>
-</header>""" % dict(
-        skip="Bỏ qua và đi tới nội dung" if lang == "vi" else "Skip to content",
-        navlabel="Mở mục điều hướng" if lang == "vi" else "Open the navigation menu",
-        navbtn="Mục" if lang == "vi" else "Menu",
-        root=root, why="Vì sao" if lang == "vi" else "Why", story="Một ngày" if lang == "vi" else "A day",
-        tiers="Ba tầng" if lang == "vi" else "Three tiers", features="Tính năng" if lang == "vi" else "Features",
-        docs="Tài liệu" if lang == "vi" else "Docs", docscur="page", status="Tình trạng" if lang == "vi" else "Status",
-        source="Mã nguồn" if lang == "vi" else "Source",
-        lang_href=other, other_lang="en" if lang == "vi" else "vi",
-        lang_label="English" if lang == "vi" else "Tiếng Việt",
-        theme="Giao diện: hệ thống" if lang == "vi" else "Theme: system", github=GITHUB)
+    """The same header as the landing page (one navigation model for the whole site)."""
+    vi = lang == "vi"
+    labels = dict(
+        skip="Bỏ qua và đi tới nội dung" if vi else "Skip to content",
+        home="OpenTea DX-OS, trang chủ" if vi else "OpenTea DX-OS, home",
+        navlabel="Điều hướng chính" if vi else "Main",
+        opentoggle="Mở mục điều hướng" if vi else "Open the navigation menu",
+        menu="Mục" if vi else "Menu",
+        story="Một ngày" if vi else "A day",
+        feat="Tính năng" if vi else "Features",
+        arch="Kiến trúc" if vi else "Architecture",
+        docs="Tài liệu" if vi else "Docs",
+        status="Tình trạng" if vi else "Status",
+        langlabel="Ngôn ngữ" if vi else "Language",
+        theme="Đổi giao diện: hệ thống" if vi else "Change theme: system",
+        gh="GitHub",
+    )
+    vi_href = root if vi else root
+    en_href = root + "en/docs/" if vi else root + "docs/"
+    icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+    return ('<a class="skip-link" href="#main">%(skip)s</a>\n'
+            '<header class="site-header" data-header>\n'
+            '  <div class="wrap bar">\n'
+            '    <a class="brand" href="%(root)s" aria-label="%(home)s"><img src="%(root)smedia/icon-192.png" width="28" height="28" alt=""><span>OpenTea DX-OS</span></a>\n'
+            '    <input class="nav-toggle" type="checkbox" id="nav-toggle" aria-label="%(opentoggle)s">\n'
+            '    <label class="nav-btn" for="nav-toggle">%(menu)s</label>\n'
+            '    <nav class="nav-links" aria-label="%(navlabel)s">\n'
+            '      <a href="%(root)s#story">%(story)s</a><a href="%(root)s#features">%(feat)s</a><a href="%(root)s#tiers">%(arch)s</a><a href="%(root)sdocs/" aria-current="page">%(docs)s</a><a href="%(root)s#status">%(status)s</a>\n'
+            '    </nav>\n'
+            '    <div class="header-tools">\n'
+            '      <nav class="lang" aria-label="%(langlabel)s"><a href="%(vi_href)s" lang="vi" hreflang="vi"%(vi_cur)s>VI</a><span aria-hidden="true">/</span><a href="%(en_href)s" lang="en" hreflang="en"%(en_cur)s>EN</a></nav>\n'
+            '      <button class="icon-btn" type="button" id="theme-toggle" hidden aria-label="%(theme)s" title="%(theme)s">%(icon)s</button>\n'
+            '      <a class="hdr-gh" href="%(github)s">%(gh)s</a>\n'
+            '    </div>\n'
+            '  </div>\n'
+            '</header>') % dict(labels, root=root, vi_href=vi_href, en_href=en_href, vi_cur=' aria-current="page"' if vi else "", en_cur="" if vi else ' aria-current="page"', icon=icon, github=GITHUB)
 
 
 def footer_html(root, lang):
