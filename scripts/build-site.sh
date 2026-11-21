@@ -40,10 +40,13 @@ copy_media apps/web/public/icon-192x192.png icon-192.png
 
 # documentation pages, generated from the repository's Markdown (needs Python-Markdown, see DEPENDENCIES.md)
 rm -rf "$OUT/docs-src"
+rm -f "$OUT/README.md"
 if ! python3 -c "import markdown" 2>/dev/null; then
   echo "Missing Python-Markdown: pip install markdown==3.7" >&2
   exit 1
 fi
 python3 "$ROOT/scripts/build-docs.py" "$OUT"
+# release values read from the repository (version, latest release, release count, mini-apps)
+python3 "$ROOT/scripts/inject-site-values.py" "$OUT"
 
 echo "Site assembled in $OUT ($(find "$OUT" -type f | wc -l | tr -d ' ') files)"
