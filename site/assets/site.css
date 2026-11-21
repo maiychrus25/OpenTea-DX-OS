@@ -1047,3 +1047,11 @@ section.band { background: var(--surface-sunken); }
 }
 :root[data-theme="dark"] .js .story-step.is-current, :root:not([data-theme="light"]) .js .story-step.is-current { background: rgba(214, 240, 92, 0.08); }
 :root[data-theme="dark"] .js .story-step.is-current .step-no, :root:not([data-theme="light"]) .js .story-step.is-current .step-no { background: #d6f05c; color: #0b1712; }
+
+/* R5 dark: the closing band gets a faint lime glow instead of a flat fill; the showcase frames get the same hairline */
+:root[data-theme="dark"] .closing, :root:not([data-theme="light"]) .closing {
+  background: radial-gradient(70% 90% at 90% 0%, rgba(214, 240, 92, 0.07), transparent 60%), linear-gradient(180deg, #0a1a13 0%, #06120d 100%);
+}
+:root[data-theme="dark"] .sc-panel .zoom, :root:not([data-theme="light"]) .sc-panel .zoom {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 40px 80px -36px rgba(0, 0, 0, 0.8);
+}
