@@ -1132,4 +1132,5 @@ section.band { background: var(--surface-sunken); }
   .js .story-panel > img, .js .story-panel > svg, .js .story-panel > .frame-top { flex: 1 1 auto; min-height: 0; }
   .js .story-panel > img, .js .story-panel > .frame-top img { object-fit: cover; object-position: top; height: 100%; }
   .js .story-panel figcaption { flex: none; }
+  .js .story-panel > .qr-stage { margin-block: auto; }
 }
