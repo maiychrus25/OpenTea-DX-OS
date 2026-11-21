@@ -944,3 +944,20 @@ section.band { background: var(--surface-sunken); }
 .bento-card p { font-size: 16px; line-height: 1.5; color: var(--muted-foreground); max-width: 34em; }
 .bento-ic { display: none; }
 .bento-vis { margin-top: 24px; }
+
+/* R5 showcase: one large frame per screen, one shadow, quiet tabs */
+.showcase-sec { background: var(--background); padding: 0 0 120px; }
+@media (min-width: 1024px) { .showcase-sec { padding-bottom: 144px; } }
+.showcase { gap: 28px; }
+.sc-tabs { gap: 6px; }
+.sc-tab { min-height: 40px; padding: 8px 16px; border-radius: 999px; border: 0; background: var(--surface-sunken); color: var(--ink-secondary); font-size: 15px; font-weight: 600; }
+.sc-tab:hover { background: var(--border); color: var(--foreground); }
+#sc1:checked ~ .sc-tabs label[for="sc1"], #sc2:checked ~ .sc-tabs label[for="sc2"], #sc3:checked ~ .sc-tabs label[for="sc3"],
+#sc4:checked ~ .sc-tabs label[for="sc4"], #sc5:checked ~ .sc-tabs label[for="sc5"], #sc6:checked ~ .sc-tabs label[for="sc6"] {
+  background: var(--primary); color: var(--primary-foreground); border-color: transparent;
+}
+.sc-panel { border-radius: var(--radius-xl); }
+.sc-panel .zoom { display: block; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-stage); background: var(--card); }
+.sc-panel .zoom img { display: block; width: 100%; height: auto; }
+.sc-panel figcaption { margin-top: 16px; font-size: 15px; color: var(--muted-foreground); }
+.sc-panels { min-height: 0; }
