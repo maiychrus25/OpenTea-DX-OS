@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:hub_mobile/app/app_state.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hub_mobile/app/hub_app.dart';
@@ -28,6 +32,19 @@ class _FlakyRepository extends MockHubRepository {
     if (calls == 1) return Stream.value(const ChatError(chatUnavailable));
     return super.chat(topic: topic, message: message, history: history, sessionId: sessionId, context: context);
   }
+}
+
+class _ControlledRepository extends MockHubRepository {
+  final events = StreamController<ChatEvent>.broadcast();
+
+  @override
+  Stream<ChatEvent> chat({
+    required ChatTopic topic,
+    required String message,
+    required List<ChatTurn> history,
+    String? sessionId,
+    ChatContext context = const ChatContext(),
+  }) => events.stream;
 }
 
 Future<GoRouter> _open(
@@ -130,6 +147,85 @@ void main() {
     expect(send().onPressed, isNotNull);
   });
 
+  testWidgets('welcome greets the signed-in user by given name and guests without a fake name', (tester) async {
+    var router = await _open(tester, email: 'customer@demo.vn');
+    router.push('/shop/chat');
+    await tester.pumpAndSettle();
+    final name = tester.element(find.byType(ChatPage)).read<AppState>().claims!.name.split(' ').last;
+    expect(find.text('Chào $name!'), findsOneWidget);
+    expect(find.text('Trợ lý OpenTea'), findsOneWidget);
+    router = await _open(tester);
+    router.push('/shop/chat');
+    await tester.pumpAndSettle();
+    expect(find.text('Chào bạn!'), findsOneWidget);
+  });
+
+  testWidgets('streaming locks the composer, shows progress and restores sending after source chips', (tester) async {
+    final repository = _ControlledRepository();
+    addTearDown(repository.events.close);
+    final router = await _open(tester, repository: repository);
+    router.push('/shop/chat');
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('chat-input')), 'Tour');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('chat-send')));
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(tester.widget<TextField>(find.byKey(const Key('chat-input'))).enabled, isFalse);
+    expect(find.text('Đang trả lời…'), findsWidgets);
+    expect(find.byKey(const Key('chat-typing')), findsOneWidget);
+    expect(
+      find.descendant(of: find.byKey(const Key('chat-send')), matching: find.byType(CircularProgressIndicator)),
+      findsOneWidget,
+    );
+    repository.events.add(const ChatText('Thông tin tour.\nNguồn: Tài liệu HTX'));
+    repository.events.add(const ChatDone(sources: ['Tài liệu HTX', 'Danh mục tour'], model: 'test'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Nguồn:'), findsNothing);
+    for (final source in ['Tài liệu HTX', 'Danh mục tour']) {
+      final chip = find.bySemanticsLabel('Nguồn: $source');
+      expect(chip, findsOneWidget);
+      expect(find.descendant(of: chip, matching: find.byIcon(Icons.menu_book_outlined)), findsOneWidget);
+    }
+    expect(tester.widget<TextField>(find.byKey(const Key('chat-input'))).enabled, isTrue);
+    expect(tester.widget<IconButton>(find.byKey(const Key('chat-send'))).onPressed, isNull);
+    await tester.enterText(find.byKey(const Key('chat-input')), 'Hỏi tiếp');
+    await tester.pump();
+    expect(tester.widget<IconButton>(find.byKey(const Key('chat-send'))).onPressed, isNotNull);
+  });
+
+  testWidgets('streaming follows the bottom but preserves reading position until jump is tapped', (tester) async {
+    final repository = _ControlledRepository();
+    addTearDown(repository.events.close);
+    final router = await _open(tester, repository: repository);
+    router.push('/shop/chat');
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('chat-input')), 'Tour');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('chat-send')));
+    await tester.pump(const Duration(milliseconds: 250));
+    repository.events.add(ChatText(List.filled(90, 'Thông tin có nguồn về tour.').join('\n')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final list = find.byKey(const Key('chat-messages-shop'));
+    final scroll = tester.state<ScrollableState>(find.descendant(of: list, matching: find.byType(Scrollable)).first);
+    expect(scroll.position.extentAfter, lessThan(2));
+    await tester.drag(list, const Offset(0, 500));
+    await tester.pump(const Duration(milliseconds: 300));
+    final offset = scroll.position.pixels;
+    expect(find.byKey(const Key('chat-jump-bottom')), findsOneWidget);
+    repository.events.add(const ChatText('\nNội dung mới khi đang đọc phía trên.'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(scroll.position.pixels, closeTo(offset, 1));
+    await tester.tap(find.byKey(const Key('chat-jump-bottom')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
+    expect(scroll.position.extentAfter, lessThan(2));
+    expect(find.byKey(const Key('chat-jump-bottom')), findsNothing);
+    repository.events.add(const ChatDone(sources: [], model: 'test'));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('a manager switches between market and technical, each with its own conversation', (tester) async {
     await _open(tester, email: 'manager@demo.vn');
     await _openFromStaffMenu(tester, '/manager/chat');
@@ -199,6 +295,112 @@ void main() {
     expect(find.text(chatUnavailable), findsNothing);
     expect(find.textContaining('Tour trong app'), findsOneWidget);
   });
+
+  for (final (email, path) in [
+    (null, '/shop/chat'),
+    ('customer@demo.vn', '/shop/chat'),
+    ('farmer@demo.vn', '/farmer/chat'),
+    ('manager@demo.vn', '/manager/chat'),
+    ('officer@demo.vn', '/manager/chat'),
+    ('guide@demo.vn', '/guide/chat'),
+  ]) {
+    for (final width in [320.0, 1280.0]) {
+      for (final brightness in Brightness.values) {
+        testWidgets('stress round one: $email at $width, $brightness, large text and keyboard', (tester) async {
+          tester.platformDispatcher.platformBrightnessTestValue = brightness;
+          addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+          final router = await _open(tester, email: email, width: width, text: 1.3);
+          router.go(path);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          final first = tester.getRect(find.byKey(const Key('chat-suggest-0')));
+          final second = tester.getRect(find.byKey(const Key('chat-suggest-1')));
+          if (width > 600) {
+            expect(first.top, second.top);
+            expect(second.left, greaterThan(first.right));
+          } else {
+            expect(second.top, greaterThan(first.bottom));
+          }
+          // Both existing themes deliberately remain light under a dark OS preference.
+          expect(Theme.of(tester.element(find.byType(ChatPage))).brightness, Brightness.light);
+          for (final key in ['chat-send', 'chat-clear']) {
+            final size = tester.getSize(find.byKey(Key(key)));
+            expect(size.width, greaterThanOrEqualTo(44));
+            expect(size.height, greaterThanOrEqualTo(44));
+          }
+          tester.view.physicalSize = Size(width, 800);
+          await tester.pumpAndSettle();
+          await tester.scrollUntilVisible(
+            find.byKey(const Key('chat-suggest-0')),
+            150,
+            scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)).first,
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const Key('chat-suggest-0')));
+          await tester.pumpAndSettle();
+          expect(find.byKey(const Key('chat-suggest-0')), findsNothing);
+          expect(tester.takeException(), isNull);
+          tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+          await tester.enterText(
+            find.byKey(const Key('chat-input')),
+            'Dòng một\nDòng hai\nDòng ba\nDòng bốn\nDòng năm',
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(tester.getRect(find.byKey(const Key('chat-send'))).bottom, lessThanOrEqualTo(520));
+          await tester.tap(find.byKey(const Key('chat-send')));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+        });
+      }
+      testWidgets('stress round two: $email at $width, reduced motion, long sources and inline error', (tester) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+          disableAnimations: true,
+        );
+        addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+        final repository = _ControlledRepository();
+        addTearDown(repository.events.close);
+        final router = await _open(tester, email: email, repository: repository, width: width, text: 1.3);
+        router.go(path);
+        tester.view.physicalSize = Size(width, 800);
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('chat-input')),
+          'Một câu hỏi dài về thông tin đã có nguồn trong app',
+        );
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('chat-send')));
+        await tester.pumpAndSettle(); // No perpetual animations with reduced motion, even while waiting.
+        expect(find.byKey(const Key('chat-typing')), findsOneWidget);
+        expect(tester.binding.hasScheduledFrame, isFalse);
+        repository.events.add(ChatText(List.filled(35, 'Thông tin đang được trả lời.').join('\n')));
+        await tester.pumpAndSettle();
+        repository.events.add(const ChatError(chatUnavailable));
+        await tester.pumpAndSettle();
+        expect(find.text(chatUnavailable), findsOneWidget);
+        expect(find.byKey(const Key('chat-retry')), findsOneWidget);
+        expect(find.byType(SnackBar), findsNothing);
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.byKey(const Key('chat-clear')));
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.byKey(const Key('chat-suggest-0')),
+          150,
+          scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)).first,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('chat-suggest-0')));
+        await tester.pumpAndSettle();
+        final longSource = List.filled(15, 'Tài liệu tham khảo của hợp tác xã').join(' ');
+        repository.events.add(const ChatText('Câu trả lời có nguồn tham khảo.'));
+        repository.events.add(ChatDone(sources: [longSource, 'Danh mục trong app'], model: 'test'));
+        await tester.pumpAndSettle();
+        expect(find.text(longSource), findsOneWidget);
+        expect(find.byIcon(Icons.menu_book_outlined), findsNWidgets(2));
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
 
   for (final (email, path) in [
     (null, '/shop/chat'),

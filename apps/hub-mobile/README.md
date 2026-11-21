@@ -41,6 +41,23 @@ Không còn vai công ty du lịch (`operator`): tour thuộc HTX, nhân viên d
 - Hồ sơ dùng tên, vai trò, mã HTX và email từ claims, mỗi trường chỉ xuất hiện một lần trong nội dung. Các lối tắt dùng route sẵn có; không tạo thông tin phiên giả. Đăng xuất giữ nguyên hành vi.
 - Dashboard giữ kéo để làm mới; dữ liệu gian hàng/thời tiết/giá vẫn chỉ xuất hiện theo ranh giới thật/mẫu hiện có. Không thêm API hoặc dependency.
 
+## Giao diện trợ lý
+
+Trang chat dùng chung ở `/shop/chat`, `/farmer/chat`, `/manager/chat`, `/guide/chat`; khách dùng
+`AppColors`, nhân sự dùng `StaffColors`. Header “Trợ lý OpenTea” hiển thị chủ đề/chế độ dữ liệu hoặc
+“Đang trả lời…”. Lời chào lấy tên gọi cuối từ tên trong phiên (không có tên thì “Chào bạn!”); gợi ý
+một cột trên điện thoại, hai cột từ 600 px. Nhãn gợi ý ngắn hơn nhưng câu hỏi gửi đi không thay đổi.
+
+- Tin nhắn hai phía đều chọn/sao chép được, rộng tối đa khoảng 82%; nguồn là chip có biểu tượng,
+  nguồn dài rút gọn hai dòng với tooltip và tên đầy đủ cho trình đọc màn hình. Lỗi và “Thử lại” nằm trong hội thoại.
+- Khi đang ở cuối, trang theo nội dung streaming; cuộn lên để đọc sẽ dừng tự cuộn và hiện “↓ Tin mới” để về cuối.
+- Ô nhập 1–5 dòng giới hạn chiều cao theo vùng còn lại khi có bàn phím. Trong lúc trả lời, ô nhập/nút gửi khóa,
+  có trạng thái chờ; yêu cầu giảm chuyển động tắt hoạt ảnh bubble, chấm chờ và spinner liên tục.
+- `ChatController.online == false` nghĩa là trả lời bằng dữ liệu cục bộ/mẫu, **không** là tín hiệu mất mạng:
+  khách vẫn hỏi được. Không thêm kiểm tra kết nối hoặc thay chính sách AI, chủ đề, lịch sử, retry hay repository.
+- Không tự tạo thời gian tin nhắn: model hiện chưa có timestamp. Hai theme hiện cố định sáng, kể cả khi
+  hệ điều hành chọn tối; trang chat giữ nguyên hợp đồng này thay vì thêm dark mode riêng.
+
 ## Tài khoản dùng thử
 
 Mật khẩu chung `Demo@2026` (đây là tài khoản công khai của bản demo, không phải bí mật):
