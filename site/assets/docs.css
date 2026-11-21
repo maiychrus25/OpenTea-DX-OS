@@ -102,6 +102,8 @@
 }
 .codebox .copy:hover { background: rgba(0, 0, 0, 0.55); }
 .codebox .copy[hidden] { display: none; }
+/* The button sits in the top-right corner: when it is shown, the first code line starts below it instead of under it. */
+.codebox:has(.copy:not([hidden])) pre { padding-top: 52px; }
 .prose table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
 .table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card); }
 .table-wrap table { margin: 0; min-width: 480px; }
