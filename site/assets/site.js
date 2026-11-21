@@ -75,12 +75,14 @@
   if (toggle) {
     var current = readTheme();
     toggle.hidden = false;
-    toggle.textContent = LABELS[current];
+    toggle.setAttribute("aria-label", LABELS[current]);
+    toggle.title = LABELS[current];
     toggle.addEventListener("click", function () {
       current = NEXT[current];
       applyTheme(current);
       writeTheme(current);
-      toggle.textContent = LABELS[current];
+      toggle.setAttribute("aria-label", LABELS[current]);
+      toggle.title = LABELS[current];
     });
   }
 
