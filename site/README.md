@@ -14,9 +14,11 @@ Hai trang chủ có cùng cấu trúc. Khi sửa một mục, hãy sửa cả ha
 
 ## Cấu trúc trang chủ
 
-Thứ tự mục: tiêu đề và hero, dải số liệu, "Một ngày của lô chè A3" (câu chuyện), "Vì sao", ba tầng (sơ đồ SVG với hai luồng có thể làm nổi), "Có thể làm gì" (bento và trình chiếu màn hình thật), thư viện ảnh, nhà phát triển, mã nguồn mở, tình trạng, chân trang.
+Bảy mục, theo thứ tự: hero (tiêu đề, một câu, hai nút), dải số liệu (ba con số đếm từ repo), "Từ thửa chè đến mã QR" (câu chuyện A3 với các bước), "Một HTX làm được gì" (sáu năng lực), màn hình thật (sáu tab, mở ảnh lớn), kiến trúc ba tầng (ba lớp và hai luồng có thể chọn), nhà phát triển (terminal và ba đảm bảo), dải đóng (giấy phép, phiên bản, giới hạn đã biết), chân trang.
 
-Thanh điều hướng có cùng các mục và cùng thứ tự ở trang chủ và ở trang tài liệu.
+Thanh điều hướng có năm mục giống nhau ở trang chủ và trang tài liệu. Trên màn hình dưới 1100 px, các mục mở từ nút "Mục" (một checkbox, không cần JavaScript).
+
+Ghi chú về ảnh minh hoạ: nhật ký và chẩn đoán bệnh chưa có ảnh chụp trong repo, nên câu chuyện dùng minh hoạ SVG có nhãn.
 
 ## Giá trị được điền lúc xây dựng
 
