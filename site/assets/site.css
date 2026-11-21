@@ -1034,3 +1034,9 @@ section.band { background: var(--surface-sunken); }
 .site-footer .foot-grid nav a:hover { color: #fff; text-decoration: none; }
 .site-footer p { font-size: 15px; line-height: 1.55; }
 .site-footer .foot-lic { color: #8fa89b; font-size: 14px; }
+
+/* R5 dark: capability tiles, tier cards and guarantees get a hairline edge instead of a light shadow */
+:root[data-theme="dark"] .bento-card, :root[data-theme="dark"] .tier-card, :root[data-theme="dark"] .guar,
+:root:not([data-theme="light"]) .bento-card, :root:not([data-theme="light"]) .tier-card, :root:not([data-theme="light"]) .guar {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 48px -28px rgba(0, 0, 0, 0.7);
+}
