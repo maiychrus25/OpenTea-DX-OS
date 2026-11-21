@@ -412,7 +412,7 @@ def build(out_dir, lang_checks=False):
     for slug in flat:
         if slug == "start":
             out_rel = "docs/index.html"
-            text = read_author("site/docs-src/start.md")
+            text = drop_first_h1(read_author("site/docs-src/start.md"))[0]
             src_dir, edit = "site/docs-src", GITHUB + "/blob/" + BRANCH + "/site/docs-src/start.md"
             title, desc, group, source_label = START["title"], START["desc"], "Bắt đầu", "Trang tổng quan của tài liệu"
             prev_next_slugs = None
@@ -495,7 +495,7 @@ def adr_index_text():
 
 
 def build_en_start(slug_to_out, flat):
-    text = read_author("site/docs-src/start-en.md")
+    text = drop_first_h1(read_author("site/docs-src/start-en.md"))[0]
     links = Links("en/docs", slug_to_out, set())
     text = rewrite_links(text, "site/docs-src", links)
     body_html, toc_tokens = render_markdown(text)
