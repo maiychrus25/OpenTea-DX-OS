@@ -1,0 +1,455 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 OpenTea Developers -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenTea DX-OS: a digital operating system for tea cooperatives</title>
+<meta name="description" content="OpenTea DX-OS is an open-source (MIT) digital operating system for tea cooperatives in Vietnam: field journals, QR lot traceability, a charts dashboard and mini-apps installed with app.yaml.">
+<meta name="theme-color" content="#143c2d">
+<link rel="canonical" href="https://maiychrus25.github.io/OpenTea-DX-OS/en/">
+<link rel="alternate" hreflang="vi" href="https://maiychrus25.github.io/OpenTea-DX-OS/">
+<link rel="alternate" hreflang="en" href="https://maiychrus25.github.io/OpenTea-DX-OS/en/">
+<link rel="alternate" hreflang="x-default" href="https://maiychrus25.github.io/OpenTea-DX-OS/en/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OpenTea DX-OS">
+<meta property="og:title" content="OpenTea DX-OS: a digital operating system for tea cooperatives">
+<meta property="og:description" content="Open source (MIT) for tea cooperatives: field journals, QR lot traceability, a charts dashboard and mini-apps installed with app.yaml.">
+<meta property="og:url" content="https://maiychrus25.github.io/OpenTea-DX-OS/en/">
+<meta property="og:image" content="https://maiychrus25.github.io/OpenTea-DX-OS/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenTea DX-OS logo and a cooperative dashboard screenshot">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="vi_VN">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="512x512" href="../media/icon-512.png">
+<link rel="apple-touch-icon" sizes="192x192" href="../media/icon-192.png">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+  /* Applies the saved theme before first paint; skipped silently if storage is blocked. */
+  (function () {
+    try {
+      var t = localStorage.getItem("opentea-theme");
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="OpenTea DX-OS, home">
+      <img src="../media/icon-192.png" width="34" height="34" alt="">
+      <span>OpenTea DX-OS<small>Digital operating system for tea HTX</small></span>
+    </a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#why">Why</a>
+      <a href="#tiers">Three tiers</a>
+      <a href="#features">Features</a>
+      <a href="#developers">Developers</a>
+      <a href="#open-source">Open source</a>
+      <a href="#status">Status</a>
+    </nav>
+    <div class="header-tools">
+      <a class="tool" href="../" lang="vi" hreflang="vi">Tiếng Việt</a>
+      <button class="tool" type="button" id="theme-toggle" hidden aria-label="Change theme: light, dark or follow the system">Theme: system</button>
+      <a class="tool tool-gh" href="https://github.com/maiychrus25/OpenTea-DX-OS">GitHub</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero" aria-labelledby="hero-title">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">Open source · MIT licence</span>
+      <h1 id="hero-title">A digital operating system for tea cooperatives</h1>
+      <p class="hero-lead">Keep field journals, follow each tea plot and lot through to its QR code, close the payment period for farming households and see the whole cooperative on one dashboard. One system, and each person sees only their own part.</p>
+      <p class="hero-dev">For developers: a headless core with single sign-on, an API gateway, data per cooperative, storage and an audit log. Mini-apps are declared in an <code>app.yaml</code> manifest and installed with <code>./dxos install</code>.</p>
+      <div class="hero-actions">
+        <a class="btn btn-solid-light" href="https://github.com/maiychrus25/OpenTea-DX-OS">View the source on GitHub</a>
+        <a class="btn btn-light" href="https://github.com/maiychrus25/OpenTea-DX-OS/releases/latest">Latest release</a>
+        <a class="btn btn-light" href="https://github.com/maiychrus25/OpenTea-DX-OS/tree/main/docs">Read the docs</a>
+      </div>
+      <ul class="hero-facts" aria-label="Quick facts">
+        <li>3 roles: manager, technical officer, farming household</li>
+        <li>7 mini-apps in the repository</li>
+        <li>MIT licence</li>
+      </ul>
+    </div>
+
+    <figure class="hero-stage-wrap" style="margin:0">
+      <div class="stage">
+        <div class="browser">
+          <div class="browser-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <img src="../media/htx-overview.png" width="1280" height="1100" alt="Cooperative dashboard: six figures with change from the previous period, a list of items needing attention, parcel status and area by crop charts. Sample data." fetchpriority="high">
+        </div>
+        <div class="phone">
+          <img src="../media/mobile-tasks.png" width="1233" height="2673" alt="The Tea Work app on a phone: a staff member's task list with an overdue task and an urgent task. Sample data.">
+        </div>
+      </div>
+      <figcaption class="stage-caption">Real screenshots: the dashboard mini-app (htx-dashboard) and the Tea Work Android app, with sample data.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="why" aria-labelledby="why-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Why</span>
+      <h2 id="why-title">One shared base for managers, officers and households</h2>
+      <p>DX-OS aims to remove the information gap between the cooperative's management board, its technical officers and its farming households. It also brings the production cycle, from the plot and the journal to the lot, into one digital record that supports daily decisions.</p>
+    </div>
+    <div class="cards-3">
+      <article class="card">
+        <span class="icon-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><path d="M8 12h8M8 16h5"/></svg></span>
+        <h3>Records scattered across places</h3>
+        <p>Journals, weighing tickets, orders and attendance are often kept in separate books. When a period closes, someone has to piece them together by hand. DX-OS keeps them in one database owned by the cooperative.</p>
+      </article>
+      <article class="card">
+        <span class="icon-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v7h-7"/></svg></span>
+        <h3>Traceability needs the right links</h3>
+        <p>Each lot gets a QR code and a certificate. The project digitises the production chain, from the plot and the field journal to the lot.</p>
+      </article>
+      <article class="card">
+        <span class="icon-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5l3 8M16 7.5l-3 8M8.5 6h7"/></svg></span>
+        <h3>Apps that share one core</h3>
+        <p>Every app uses the same sign-in, the same role checks and the same data, filtered by cooperative. Adding a tool means installing a mini-app. The core does not change.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="tiers" aria-labelledby="tiers-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Architecture</span>
+      <h2 id="tiers-title">Three tiers, one core</h2>
+      <p>The shared core sits at the bottom. Cooperative apps are in the middle. Installed mini-apps are at the top and reach the core through the API gateway. Nothing in the core depends on any app.</p>
+    </div>
+    <svg class="tiers-desktop" viewBox="0 0 960 416" role="img" aria-labelledby="td-title td-desc" xmlns="http://www.w3.org/2000/svg"><title id="td-title">Three-tier diagram of OpenTea DX-OS</title><desc id="td-desc">Tier 1 is the shared core: single sign-on, API gateway, data per cooperative, storage, file scanning, audit log and sensors. Tier 2 is the cooperative apps that use the core. Tier 3 is mini-apps installed into the core with app.yaml.</desc><rect x="0" y="0" width="960" height="116" rx="20" class="t-band-mini"/><text x="22" y="50" font-size="17" font-weight="700" class="t-font t-label-mini">Tier 3 · Mini-apps</text><text x="22" y="72" font-size="13" class="t-font t-desc">Installed with ./dxos</text><rect x="240" y="14" width="167" height="46" rx="10" class="t-chip-mini"/><text x="250" y="33" font-size="13" font-weight="700" class="t-font t-title">leaf-purchase</text><text x="250" y="49" font-size="11.5" class="t-font t-desc">Fresh leaf purchase</text><rect x="417" y="14" width="167" height="46" rx="10" class="t-chip-mini"/><text x="427" y="33" font-size="13" font-weight="700" class="t-font t-title">tea-shop</text><text x="427" y="49" font-size="11.5" class="t-font t-desc">Tea shop</text><rect x="594" y="14" width="167" height="46" rx="10" class="t-chip-mini"/><text x="604" y="33" font-size="13" font-weight="700" class="t-font t-title">farm-supply</text><text x="604" y="49" font-size="11.5" class="t-font t-desc">Group supply orders</text><rect x="771" y="14" width="167" height="46" rx="10" class="t-chip-mini"/><text x="781" y="33" font-size="13" font-weight="700" class="t-font t-title">tea-tour</text><text x="781" y="49" font-size="11.5" class="t-font t-desc">Tea hill tours</text><rect x="240" y="68" width="167" height="46" rx="10" class="t-chip-mini"/><text x="250" y="87" font-size="13" font-weight="700" class="t-font t-title">custom-books</text><text x="250" y="103" font-size="11.5" class="t-font t-desc">No-code record books</text><rect x="417" y="68" width="167" height="46" rx="10" class="t-chip-mini"/><text x="427" y="87" font-size="13" font-weight="700" class="t-font t-title">htx-dashboard</text><text x="427" y="103" font-size="11.5" class="t-font t-desc">Charts dashboard</text><rect x="594" y="68" width="167" height="46" rx="10" class="t-chip-mini"/><text x="604" y="87" font-size="13" font-weight="700" class="t-font t-title">hello</text><text x="604" y="103" font-size="11.5" class="t-font t-desc">Sample app</text><rect x="0" y="150" width="960" height="116" rx="20" class="t-band-app"/><text x="22" y="200" font-size="17" font-weight="700" class="t-font t-label">Tier 2 · HTX apps</text><text x="22" y="222" font-size="13" class="t-font t-desc">Interfaces by role</text><rect x="240" y="185" width="132" height="46" rx="10" class="t-chip"/><text x="250" y="204" font-size="13" font-weight="700" class="t-font t-title">Web app</text><text x="250" y="220" font-size="11.5" class="t-font t-desc">Journal, parcels, QR</text><rect x="382" y="185" width="132" height="46" rx="10" class="t-chip"/><text x="392" y="204" font-size="13" font-weight="700" class="t-font t-title">Tea disease check</text><text x="392" y="220" font-size="11.5" class="t-font t-desc">Photo diagnosis</text><rect x="524" y="185" width="132" height="46" rx="10" class="t-chip"/><text x="534" y="204" font-size="13" font-weight="700" class="t-font t-title">Hub mobile</text><text x="534" y="220" font-size="11.5" class="t-font t-desc">Unreleased</text><rect x="666" y="185" width="132" height="46" rx="10" class="t-chip"/><text x="676" y="204" font-size="13" font-weight="700" class="t-font t-title">Staff desktop</text><text x="676" y="220" font-size="11.5" class="t-font t-desc">Payroll, staff</text><rect x="808" y="185" width="132" height="46" rx="10" class="t-chip"/><text x="818" y="204" font-size="13" font-weight="700" class="t-font t-title">Staff mobile</text><text x="818" y="220" font-size="11.5" class="t-font t-desc">Tasks, attendance</text><rect x="0" y="300" width="960" height="116" rx="20" class="t-band-core"/><text x="22" y="350" font-size="17" font-weight="700" class="t-font t-title-core">Tier 1 · Core</text><text x="22" y="372" font-size="13" class="t-font t-desc-core">Shared services</text><rect x="240" y="314" width="132" height="46" rx="10" class="t-chip-core"/><text x="250" y="333" font-size="13" font-weight="700" class="t-font t-title-core">Keycloak</text><text x="250" y="349" font-size="11.5" class="t-font t-desc-core">Single sign-on</text><rect x="382" y="314" width="132" height="46" rx="10" class="t-chip-core"/><text x="392" y="333" font-size="13" font-weight="700" class="t-font t-title-core">APISIX</text><text x="392" y="349" font-size="11.5" class="t-font t-desc-core">API gateway</text><rect x="524" y="314" width="132" height="46" rx="10" class="t-chip-core"/><text x="534" y="333" font-size="13" font-weight="700" class="t-font t-title-core">Hasura</text><text x="534" y="349" font-size="11.5" class="t-font t-desc-core">GraphQL, per HTX</text><rect x="666" y="314" width="132" height="46" rx="10" class="t-chip-core"/><text x="676" y="333" font-size="13" font-weight="700" class="t-font t-title-core">PostgreSQL</text><text x="676" y="349" font-size="11.5" class="t-font t-desc-core">PostGIS, pgvector</text><rect x="808" y="314" width="132" height="46" rx="10" class="t-chip-core"/><text x="818" y="333" font-size="13" font-weight="700" class="t-font t-title-core">SeaweedFS</text><text x="818" y="349" font-size="11.5" class="t-font t-desc-core">S3 storage</text><rect x="240" y="368" width="132" height="46" rx="10" class="t-chip-core"/><text x="250" y="387" font-size="13" font-weight="700" class="t-font t-title-core">ClamAV</text><text x="250" y="403" font-size="11.5" class="t-font t-desc-core">File quarantine</text><rect x="382" y="368" width="132" height="46" rx="10" class="t-chip-core"/><text x="392" y="387" font-size="13" font-weight="700" class="t-font t-title-core">Audit</text><text x="392" y="403" font-size="11.5" class="t-font t-desc-core">Hash-chained log</text><rect x="524" y="368" width="132" height="46" rx="10" class="t-chip-core"/><text x="534" y="387" font-size="13" font-weight="700" class="t-font t-title-core">Mosquitto</text><text x="534" y="403" font-size="11.5" class="t-font t-desc-core">Sensors, cold store</text><rect x="666" y="368" width="132" height="46" rx="10" class="t-chip-core"/><text x="676" y="387" font-size="13" font-weight="700" class="t-font t-title-core">n8n</text><text x="676" y="403" font-size="11.5" class="t-font t-desc-core">Data workflows</text><rect x="808" y="368" width="132" height="46" rx="10" class="t-chip-core"/><text x="818" y="387" font-size="13" font-weight="700" class="t-font t-title-core">Ollama</text><text x="818" y="403" font-size="11.5" class="t-font t-desc-core">Local models</text><line x1="480" y1="116" x2="480" y2="150" class="t-link"/><polygon points="474,146 486,146 480,150" class="t-link" style="fill:var(--primary)"/><text x="494" y="138" font-size="12" class="t-font t-link-text">gateway with JWT check</text><line x1="480" y1="266" x2="480" y2="300" class="t-link"/><polygon points="474,296 486,296 480,300" class="t-link" style="fill:var(--primary)"/><text x="494" y="288" font-size="12" class="t-font t-link-text">data per HTX over GraphQL</text></svg>
+    <svg class="tiers-mobile" viewBox="0 0 360 914" role="img" aria-labelledby="tm-title tm-desc" xmlns="http://www.w3.org/2000/svg"><title id="tm-title">Three-tier diagram of OpenTea DX-OS</title><desc id="tm-desc">Tier 1 is the shared core: single sign-on, API gateway, data per cooperative, storage, file scanning, audit log and sensors. Tier 2 is the cooperative apps that use the core. Tier 3 is mini-apps installed into the core with app.yaml.</desc><rect x="8" y="0" width="344" height="274" rx="18" class="t-band-mini"/><text x="22" y="26" font-size="15" font-weight="700" class="t-font t-label-mini">Tier 3 · Mini-apps</text><text x="22" y="42" font-size="12.5" class="t-font t-desc">Installed with ./dxos</text><rect x="20" y="54" width="155" height="46" rx="10" class="t-chip-mini"/><text x="30" y="73" font-size="12.5" font-weight="700" class="t-font t-title">leaf-purchase</text><text x="30" y="89" font-size="11" class="t-font t-desc">Fresh leaf purchase</text><rect x="185" y="54" width="155" height="46" rx="10" class="t-chip-mini"/><text x="195" y="73" font-size="12.5" font-weight="700" class="t-font t-title">tea-shop</text><text x="195" y="89" font-size="11" class="t-font t-desc">Tea shop</text><rect x="20" y="108" width="155" height="46" rx="10" class="t-chip-mini"/><text x="30" y="127" font-size="12.5" font-weight="700" class="t-font t-title">farm-supply</text><text x="30" y="143" font-size="11" class="t-font t-desc">Group supply orders</text><rect x="185" y="108" width="155" height="46" rx="10" class="t-chip-mini"/><text x="195" y="127" font-size="12.5" font-weight="700" class="t-font t-title">tea-tour</text><text x="195" y="143" font-size="11" class="t-font t-desc">Tea hill tours</text><rect x="20" y="162" width="155" height="46" rx="10" class="t-chip-mini"/><text x="30" y="181" font-size="12.5" font-weight="700" class="t-font t-title">custom-books</text><text x="30" y="197" font-size="11" class="t-font t-desc">No-code record books</text><rect x="185" y="162" width="155" height="46" rx="10" class="t-chip-mini"/><text x="195" y="181" font-size="12.5" font-weight="700" class="t-font t-title">htx-dashboard</text><text x="195" y="197" font-size="11" class="t-font t-desc">Charts dashboard</text><rect x="20" y="216" width="155" height="46" rx="10" class="t-chip-mini"/><text x="30" y="235" font-size="12.5" font-weight="700" class="t-font t-title">hello</text><text x="30" y="251" font-size="11" class="t-font t-desc">Sample app</text><rect x="8" y="314" width="344" height="220" rx="18" class="t-band-app"/><text x="22" y="340" font-size="15" font-weight="700" class="t-font t-label">Tier 2 · HTX apps</text><text x="22" y="356" font-size="12.5" class="t-font t-desc">Interfaces by role</text><rect x="20" y="368" width="155" height="46" rx="10" class="t-chip"/><text x="30" y="387" font-size="12.5" font-weight="700" class="t-font t-title">Web app</text><text x="30" y="403" font-size="11" class="t-font t-desc">Journal, parcels, QR</text><rect x="185" y="368" width="155" height="46" rx="10" class="t-chip"/><text x="195" y="387" font-size="12.5" font-weight="700" class="t-font t-title">Tea disease check</text><text x="195" y="403" font-size="11" class="t-font t-desc">Photo diagnosis</text><rect x="20" y="422" width="155" height="46" rx="10" class="t-chip"/><text x="30" y="441" font-size="12.5" font-weight="700" class="t-font t-title">Hub mobile</text><text x="30" y="457" font-size="11" class="t-font t-desc">Unreleased</text><rect x="185" y="422" width="155" height="46" rx="10" class="t-chip"/><text x="195" y="441" font-size="12.5" font-weight="700" class="t-font t-title">Staff desktop</text><text x="195" y="457" font-size="11" class="t-font t-desc">Payroll, staff</text><rect x="20" y="476" width="155" height="46" rx="10" class="t-chip"/><text x="30" y="495" font-size="12.5" font-weight="700" class="t-font t-title">Staff mobile</text><text x="30" y="511" font-size="11" class="t-font t-desc">Tasks, attendance</text><rect x="8" y="574" width="344" height="328" rx="18" class="t-band-core"/><text x="22" y="600" font-size="15" font-weight="700" class="t-font t-title-core">Tier 1 · Core</text><text x="22" y="616" font-size="12.5" class="t-font t-desc-core">Shared services</text><rect x="20" y="628" width="155" height="46" rx="10" class="t-chip-core"/><text x="30" y="647" font-size="12.5" font-weight="700" class="t-font t-title-core">Keycloak</text><text x="30" y="663" font-size="11" class="t-font t-desc-core">Single sign-on</text><rect x="185" y="628" width="155" height="46" rx="10" class="t-chip-core"/><text x="195" y="647" font-size="12.5" font-weight="700" class="t-font t-title-core">APISIX</text><text x="195" y="663" font-size="11" class="t-font t-desc-core">API gateway</text><rect x="20" y="682" width="155" height="46" rx="10" class="t-chip-core"/><text x="30" y="701" font-size="12.5" font-weight="700" class="t-font t-title-core">Hasura</text><text x="30" y="717" font-size="11" class="t-font t-desc-core">GraphQL, per HTX</text><rect x="185" y="682" width="155" height="46" rx="10" class="t-chip-core"/><text x="195" y="701" font-size="12.5" font-weight="700" class="t-font t-title-core">PostgreSQL</text><text x="195" y="717" font-size="11" class="t-font t-desc-core">PostGIS, pgvector</text><rect x="20" y="736" width="155" height="46" rx="10" class="t-chip-core"/><text x="30" y="755" font-size="12.5" font-weight="700" class="t-font t-title-core">SeaweedFS</text><text x="30" y="771" font-size="11" class="t-font t-desc-core">S3 storage</text><rect x="185" y="736" width="155" height="46" rx="10" class="t-chip-core"/><text x="195" y="755" font-size="12.5" font-weight="700" class="t-font t-title-core">ClamAV</text><text x="195" y="771" font-size="11" class="t-font t-desc-core">File quarantine</text><rect x="20" y="790" width="155" height="46" rx="10" class="t-chip-core"/><text x="30" y="809" font-size="12.5" font-weight="700" class="t-font t-title-core">Audit</text><text x="30" y="825" font-size="11" class="t-font t-desc-core">Hash-chained log</text><rect x="185" y="790" width="155" height="46" rx="10" class="t-chip-core"/><text x="195" y="809" font-size="12.5" font-weight="700" class="t-font t-title-core">Mosquitto</text><text x="195" y="825" font-size="11" class="t-font t-desc-core">Sensors, cold store</text><rect x="20" y="844" width="155" height="46" rx="10" class="t-chip-core"/><text x="30" y="863" font-size="12.5" font-weight="700" class="t-font t-title-core">n8n</text><text x="30" y="879" font-size="11" class="t-font t-desc-core">Data workflows</text><rect x="185" y="844" width="155" height="46" rx="10" class="t-chip-core"/><text x="195" y="863" font-size="12.5" font-weight="700" class="t-font t-title-core">Ollama</text><text x="195" y="879" font-size="11" class="t-font t-desc-core">Local models</text><line x1="180" y1="274" x2="180" y2="308" class="t-link"/><polygon points="174,306 186,306 180,314" class="t-link" style="fill:var(--primary)"/><text x="192" y="298" font-size="11.5" class="t-font t-link-text">gateway with JWT check</text><line x1="180" y1="534" x2="180" y2="568" class="t-link"/><polygon points="174,566 186,566 180,574" class="t-link" style="fill:var(--primary)"/><text x="192" y="558" font-size="11.5" class="t-font t-link-text">data per HTX over GraphQL</text></svg>
+    <div class="tier-cards">
+      <article class="card tier-card">
+        <p class="tier-no">Tier 1</p>
+        <h3>Shared core</h3>
+        <ul>
+          <li>Single sign-on with Keycloak and three roles: manager, technical officer, farming household.</li>
+          <li>Hasura serves read-only data filtered by the cooperative code in the token, so users see their own cooperative's data.</li>
+          <li>Sensor readings arrive over MQTT, sit in a hot store and move to a Parquet cold store.</li>
+          <li>Audit log as a hash chain, with a command that verifies its integrity.</li>
+          <li>Files in storage are scanned with ClamAV; infected or unscannable files are quarantined.</li>
+        </ul>
+      </article>
+      <article class="card tier-card">
+        <p class="tier-no">Tier 2</p>
+        <h3>Cooperative apps</h3>
+        <ul>
+          <li>Next.js web app: field journal, parcel map, lots and QR codes, audio news bulletins.</li>
+          <li>Tea leaf disease check from a photo. Every result goes to the technical officers' queue.</li>
+          <li>Staff desktop (WPF, Windows) and staff mobile (Android) for staff, tasks and attendance.</li>
+          <li>Hub mobile (Flutter) is in development and not yet released.</li>
+        </ul>
+      </article>
+      <article class="card tier-card">
+        <p class="tier-no">Tier 3</p>
+        <h3>Installed mini-apps</h3>
+        <ul>
+          <li>Declared with <code>app.yaml</code>, installed with <code>./dxos install</code>.</li>
+          <li>Each cooperative turns apps on in the App Store and sees them in its own menu.</li>
+          <li>Each runs in a locked-down container; its pages contain no JavaScript.</li>
+          <li>Seven apps ship in the repository, including the no-code record book builder.</li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Features</span>
+      <h2 id="features-title">What a cooperative can do today</h2>
+      <p>The images below are screenshots of the apps in the repository, with sample data. Where a group has no screenshot in the repository, the page says so.</p>
+    </div>
+
+    <div class="feature">
+      <div>
+        <h3>Fresh leaf purchase and payment periods</h3>
+        <p>Officers record each household's weighing tickets by tea type. The manager follows the kilograms of the day and the month, closes a payment period and prints the statement.</p>
+        <ul>
+          <li>Input errors appear right under the wrong field, and typed text is kept.</li>
+          <li>Overview: kilograms, amount still unpaid and a 14-day chart.</li>
+          <li>Close the period, print the statement, download CSV, record each household as paid.</li>
+          <li>A household sees its own tickets and payments.</li>
+        </ul>
+        <span class="tag">mini-app leaf-purchase 0.2.0</span>
+      </div>
+      <div class="feature-media">
+        <figure class="shot"><img src="../media/leaf-period.png" width="1280" height="800" loading="lazy" alt="Payment period for fresh leaf purchase: total amount, number of households and a table of households with paid or unpaid status. Sample data."><figcaption>Payment period: total, households and each household's status.</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="feature reverse">
+      <div>
+        <h3>A digital profile for each plot</h3>
+        <p>Each plot has a summary page: sensor readings by day, weather, the current crop cycle, journal entries, disease reports and the lots that use the plot. The manager dashboard shows the whole cooperative on one screen.</p>
+        <ul>
+          <li>Items needing attention: journals waiting more than 3 days, disease reports waiting, sensors silent for more than 6 hours.</li>
+          <li>Figures with change from the previous period, plot status donut, area by crop.</li>
+          <li>Read-only: the app stores nothing, and each figure is read from the core with the viewer's own permissions.</li>
+        </ul>
+        <span class="tag">mini-app htx-dashboard 0.2.0</span>
+      </div>
+      <div class="feature-media">
+        <figure class="shot"><img src="../media/htx-parcel.png" width="1280" height="1100" loading="lazy" alt="Digital profile of one tea plot: plot details, air humidity and air temperature sensors with 30-day charts, and a silent-sensor warning. Sample data."><figcaption>A plot's digital profile: sensors, crop cycle and warnings on one page.</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div>
+        <h3>Shop, group supplies and tours</h3>
+        <p>Three mini-apps help a cooperative sell and organise. Customers need no account to order or book; a customer's personal details are visible only to the manager of that cooperative.</p>
+        <ul>
+          <li>Tea shop: customers order and pay on delivery; orders are tracked with the order code and phone number.</li>
+          <li>Group supplies: open a sign-up round, mark each household delivered and paid, print a delivery sheet with signature column.</li>
+          <li>Tea hill tours: bookings, check-in and a printable list of each group.</li>
+        </ul>
+        <span class="tag">mini-apps tea-shop, farm-supply, tea-tour 0.2.0</span>
+      </div>
+      <div class="feature-media">
+        <div class="pair landscape">
+          <figure class="shot"><img src="../media/shop-public-order.png" width="1280" height="800" loading="lazy" alt="Public order page of a cooperative tea shop: products, remaining stock and quantity fields. Sample data."><figcaption>Public order page, no sign-in needed.</figcaption></figure>
+          <figure class="shot"><img src="../media/tour-manager.png" width="1280" height="800" loading="lazy" alt="Tea hill tour manager page: tour status, seats held, the list of bookings and check-in buttons. Sample data."><figcaption>Tour bookings and the group list.</figcaption></figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature reverse">
+      <div>
+        <h3>Record books without code</h3>
+        <p>A manager starts from one of eight templates, such as picking attendance, spraying log, cash book or a blank book, then names the fields and sets who can use the book.</p>
+        <ul>
+          <li>Eight field types: text, long text, number, money, date, choice, yes/no, household.</li>
+          <li>Separate access for officers and farming households, with optional approval of each row.</li>
+          <li>Monthly summary, CSV download and printing.</li>
+        </ul>
+        <span class="tag">mini-app custom-books 0.1.0</span>
+      </div>
+      <div class="feature-media">
+        <div class="pair landscape">
+          <figure class="shot"><img src="../media/books-designer.png" width="1280" height="800" loading="lazy" alt="Book designer: a table to name fields, pick types, choices, units and the required, shown in list and summed flags. Sample data."><figcaption>The book designer is a form.</figcaption></figure>
+          <figure class="shot"><img src="../media/books-in-use.png" width="1280" height="800" loading="lazy" alt="A picking attendance book in use: total workers and kilograms, and a list of entries with search and filters. Sample data."><figcaption>A book in use: entries, filters, totals.</figcaption></figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div>
+        <h3>Staff, tasks and attendance</h3>
+        <p>The cooperative owner manages staff on a Windows computer. Staff accept tasks, report progress, clock in and out and request leave on an Android phone. Data reaches the owner's computer over the local network.</p>
+        <ul>
+          <li>Staff desktop: staff records, teams, task assignment, attendance, leave approval and payroll.</li>
+          <li>Staff mobile: tasks to do, clock in and out, leave requests, payslips.</li>
+        </ul>
+        <span class="tag">apps/staff-desktop, apps/staff-mobile</span>
+      </div>
+      <div class="feature-media">
+        <div class="pair">
+          <figure class="shot"><img src="../media/desktop-payroll.png" width="1782" height="1055" loading="lazy" alt="Payroll screen of the desktop app: total payroll for the month, a chart and a list of payslips. Sample data."><figcaption>Payroll on the owner's computer.</figcaption></figure>
+          <figure class="shot phone-shot"><img src="../media/mobile-attendance.png" width="1233" height="2673" loading="lazy" alt="Attendance screen on the phone: working days, days off and overtime by month, with the day list. Sample data."></figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature reverse">
+      <div>
+        <h3>Journal, QR traceability and disease check</h3>
+        <p>These features live in the core web app. The repository has no screenshots of this group yet, so this page shows no stand-in image.</p>
+        <ul>
+          <li>Field journal: role-based approval, and withdrawal days calculated automatically.</li>
+          <li>Lots: a QR code and certificate for each lot.</li>
+          <li>Tea leaf disease check from a photo: accuracy on Thai Nguyen tea photos has not been measured; see the status section.</li>
+        </ul>
+        <span class="tag">No screenshots in the repository yet</span>
+      </div>
+      <div class="feature-media">
+        <div class="no-shot">Screenshots of the web app (journal, lots, QR, diagnosis) will be added when they exist in the repository. This page does not use stand-in images that do not come from the product.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="gallery" aria-labelledby="gallery-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Gallery</span>
+      <h2 id="gallery-title">Screenshots from the apps</h2>
+      <p>Select an image to view it large. The images come from the <code>store/</code> folders of the mini-apps and the <code>docs/screenshots/</code> folders of the staff apps. The data is sample data; names and phone numbers are fictional.</p>
+    </div>
+    <ul class="gallery">
+      <li><figure><a class="zoom" href="../media/htx-overview.png" data-caption="Cooperative dashboard: figures and items needing attention."><img src="../media/htx-overview.png" width="1280" height="1100" loading="lazy" alt="Cooperative dashboard: figures, items needing attention, parcel status and area by crop."></a><figcaption>Cooperative dashboard. <span class="zoom-hint">View large</span></figcaption></figure></li>
+      <li><figure><a class="zoom" href="../media/htx-parcels.png" data-caption="The plots of the cooperative by growing area, with crop health and sensors."><img src="../media/htx-parcels.png" width="1280" height="1100" loading="lazy" alt="Plots page of the cooperative: parcel status donut, area by crop and a table of plots with crop health."></a><figcaption>Plots by growing area.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="../media/htx-data.png" data-caption="Data tab: storage readings, sensors by plot, with CSV download and printing."><img src="../media/htx-data.png" width="1280" height="1100" loading="lazy" alt="Data tab of the dashboard: storage readings, a chart of readings and a table of sensors by plot."></a><figcaption>Sensor data, with CSV and print.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="../media/leaf-tickets.png" data-caption="One day's weighing tickets, filtered by household, tea type and status."><img src="../media/leaf-tickets.png" width="1280" height="800" loading="lazy" alt="Fresh leaf weighing tickets: date, household, tea type, kilograms, amount and status."></a><figcaption>Weighing tickets, by day, household and tea type.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="../media/shop-orders.png" data-caption="Tea shop orders, filtered by date and status, with CSV download and a delivery sheet."><img src="../media/shop-orders.png" width="1280" height="800" loading="lazy" alt="Tea shop order list: order code, customer, total, status and actions."></a><figcaption>Orders: filter, CSV, delivery sheet.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="../media/supply-round.png" data-caption="A group supply round: products, sign-ups and total amount."><img src="../media/supply-round.png" width="1280" height="800" loading="lazy" alt="One group supply round: number of products, households signed up, total amount and the product table."></a><figcaption>A group supply round.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="../media/tour-manager.png" data-caption="Tea hill tour: status, seats held and the list of bookings."><img src="../media/tour-manager.png" width="1280" height="800" loading="lazy" alt="Tea hill tour manager page: tour status, seats held and the bookings list."></a><figcaption>Tour bookings and check-in.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="../media/books-designer.png" data-caption="Book designer: field names, types, choices, units and flags."><img src="../media/books-designer.png" width="1280" height="800" loading="lazy" alt="Book designer: field names, types, choices and flags."></a><figcaption>Designing a book with a form.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="../media/books-in-use.png" data-caption="A picking attendance book in use: entries, search, filters and totals."><img src="../media/books-in-use.png" width="1280" height="800" loading="lazy" alt="Picking attendance book in use: total workers and kilograms, entry list."></a><figcaption>A book in use: picking attendance.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="../media/desktop-payroll.png" data-caption="Monthly payroll on the desktop app."><img src="../media/desktop-payroll.png" width="1782" height="1055" loading="lazy" alt="Monthly payroll on the desktop app: total, chart and payslip list."></a><figcaption>Payroll on the desktop.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="../media/mobile-tasks.png" data-caption="My tasks in Tea Work: tasks to do, overdue and done."><img src="../media/mobile-tasks.png" width="1233" height="2673" loading="lazy" alt="My tasks screen in Tea Work: tasks to do, overdue, done and the task list."></a><figcaption>Tea Work: a staff member's tasks.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="../media/mobile-attendance.png" data-caption="Attendance on the phone: working days, days off and overtime by month."><img src="../media/mobile-attendance.png" width="1233" height="2673" loading="lazy" alt="Attendance screen in Tea Work: working days, days off, overtime and the day list."></a><figcaption>Tea Work: attendance.</figcaption></figure></li>
+    </ul>
+  </div>
+</section>
+
+<section id="developers" aria-labelledby="dev-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Developers</span>
+      <h2 id="dev-title">Add a mini-app without changing the core</h2>
+      <p>A mini-app is its own container, plugged into the core with a manifest and the <code>./dxos</code> command. The core is not rebuilt. The example below is the real manifest of <code>miniapps/htx-dashboard</code>, with the store description block removed.</p>
+    </div>
+    <div class="dev-grid">
+      <div>
+        <pre class="code"><span class="c"># miniapps/htx-dashboard/app.yaml (shortened)</span>
+<span class="k">apiVersion</span>: dxos/v1            <span class="c"># manifest schema version, fixed</span>
+<span class="k">id</span>: htx-dashboard             <span class="c"># unique among installed apps</span>
+<span class="k">name</span>: Bảng điều hành HTX     <span class="c"># shown to users</span>
+<span class="k">version</span>: 0.2.0                <span class="c"># SemVer</span>
+<span class="k">license</span>: MIT
+<span class="k">requires</span>: { core: <span class="s">"&gt;=1.13.0"</span> }  <span class="c"># minimum core version</span>
+<span class="k">runtime</span>:
+  <span class="k">build</span>: .                    <span class="c"># build from the app folder, or a pinned image</span>
+  <span class="k">port</span>: 8080                  <span class="c"># port the app listens on in its container</span>
+  <span class="k">health</span>: /healthz            <span class="c"># must return 2xx</span>
+<span class="k">routes</span>:
+  <span class="k">protected</span>:
+    <span class="s">/</span>: [manager]              <span class="c"># path → roles allowed</span>
+<span class="k">menu</span>:
+  - { <span class="k">label</span>: Bảng điều hành, <span class="k">path</span>: /, <span class="k">roles</span>: [manager] }</pre>
+        <p class="small muted" style="margin-top:10px">Install command, after <code>make platform-up</code> and <code>make web-up</code>:</p>
+        <div class="cmd" role="region" aria-label="Install command">./dxos install miniapps/htx-dashboard</div>
+      </div>
+      <div>
+        <p>One install checks the manifest, creates the database schema and role if the app declares them, generates the gateway routes and starts the container. If a step fails, the earlier steps are rolled back.</p>
+        <ul class="bullets">
+          <li><strong>Locked-down container</strong>No host port, read-only file system, all Linux capabilities dropped, 256 MB of memory, 0.5 CPU and an internal network with no internet access.</li>
+          <li><strong>Cooperative data comes from the token</strong>Every query is filtered by the cooperative code in the token, never by a URL or form value. Each page still checks the role.</li>
+          <li><strong>Trust boundary, with a known limit</strong>Installed apps share one internal network and can call each other. Install only trusted apps. The docs list this as a known limit.</li>
+        </ul>
+        <h3 style="margin-top:28px;font-size:1.125rem">Technology stack</h3>
+        <dl class="stack-list">
+          <div><dt>Web app</dt><dd>Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS 4, Prisma 5, Zod, Leaflet</dd></div>
+          <div><dt>Sign-in</dt><dd>Keycloak 24 (OIDC), NextAuth.js v5</dd></div>
+          <div><dt>Data</dt><dd>PostgreSQL 16 with PostGIS and pgvector, Hasura, SeaweedFS (S3)</dd></div>
+          <div><dt>AI and automation</dt><dd>FastAPI with TensorFlow for the disease service, Ollama, n8n, Piper TTS</dd></div>
+          <div><dt>Mobile and desktop</dt><dd>Flutter (hub mobile), Kotlin Jetpack Compose (staff mobile), C# .NET 10 WPF (staff desktop)</dd></div>
+          <div><dt>Infrastructure and tests</dt><dd>Docker Compose, GitHub Actions, GitHub Container Registry, Jest, Playwright</dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="open-source" aria-labelledby="os-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Open source</span>
+      <h2 id="os-title">Licence, source and how to take part</h2>
+      <p>The project is released under the MIT licence. The source code, release notes, changelog and issue tracker are on GitHub.</p>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <h3>Links</h3>
+        <div class="link-list">
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS"><span>Source code</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/releases"><span>Releases and container images</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CHANGELOG.md"><span>Changelog (CHANGELOG.md)</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/issues"><span>Report a bug or request a feature</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CONTRIBUTING.md"><span>Contributing guide</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/SECURITY.md"><span>Report a security issue</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/DEPENDENCIES.md"><span>Third-party components and licences</span><span aria-hidden="true">→</span></a>
+        </div>
+        <p class="small muted" style="margin-top:14px">Note: n8n uses the Sustainable Use License, which is not an OSI licence. The project does not import, link or bundle n8n code; n8n runs as a separate service and can be replaced. See DEPENDENCIES.md.</p>
+      </div>
+      <div class="card">
+        <h3>Run from source</h3>
+        <p class="small muted" style="margin-top:6px">Requires Docker and Docker Compose v2. The full stack has 16 containers and uses about 3.6 GiB of RAM.</p>
+        <div class="cmd" role="region" aria-label="Commands to run from source">cp .env.example .env.local
+cp docker/.env.local.example docker/.env.local
+docker compose -f docker/docker-compose.yml up -d
+bash scripts/smoke-test.sh</div>
+        <p class="small muted" style="margin-top:12px">To use mini-apps, run <code>make platform-up</code> (or <code>make up</code>) instead of the bare <code>docker compose</code> command, which loads no app routes. Web app: http://localhost:3000.</p>
+        <h3 style="margin-top:22px;font-size:1.0625rem">Contribute</h3>
+        <p class="small" style="margin-top:6px">Read CONTRIBUTING.md before opening a pull request. Commit messages follow Conventional Commits in English. Every PR to main must pass the CI Quality Gate.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="status" aria-labelledby="status-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Status</span>
+      <h2 id="status-title">Current version and known limits</h2>
+      <p>This section lists only what the repository documents. Version numbers come from <code>apps/web/package.json</code>, <code>CHANGELOG.md</code> and the GitHub release tags.</p>
+    </div>
+    <div class="status">
+      <div class="version-row">
+        <span class="pill">Core version in source: 1.13.0</span>
+        <span class="pill">Latest release: v1.12.0 (14 Nov 2026)</span>
+        <span class="pill warn">Not yet released: staff apps, hub mobile, htx-dashboard 0.2.0</span>
+      </div>
+      <h3 style="margin-top:18px;font-size:1.125rem">Known limits</h3>
+      <ul>
+        <li><strong>Tea leaf disease check:</strong> accuracy is 0.87 on a test set from the same source, but only 0.12 to 0.35 when checked across image sources. Accuracy on Thai Nguyen tea photos has not been measured. Every result, including healthy leaves, goes to the officers' queue.</li>
+        <li><strong>File storage:</strong> the <code>/storage/*</code> route does not yet verify S3 SigV4 signatures; this waits for tier 2.</li>
+        <li><strong>Mini-apps:</strong> installed apps trust each other over one internal network; per-app isolation is not built yet. The public pages of mini-apps allow 10 requests per minute per IP, counted inside each process.</li>
+        <li><strong>Record books:</strong> no image or file fields, no formulas, one approval step; each cooperative can have at most 50 books and each book at most 20 fields.</li>
+        <li><strong>Sensors:</strong> Mosquitto saves its state to disk every 60 seconds, so messages queued in the last 60 seconds can be lost if the broker crashes.</li>
+        <li><strong>Desktop staff app:</strong> built for Windows only; building it needs the .NET 10 SDK.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <a class="brand" href="./">
+        <img src="../media/icon-192.png" width="30" height="30" alt="">
+        <span>OpenTea DX-OS</span>
+      </a>
+      <p style="margin-top:8px">Developed by OpenTea Developers. MIT licence.</p>
+    </div>
+    <nav aria-label="Footer links">
+      <a href="https://github.com/maiychrus25/OpenTea-DX-OS">Source</a>
+      <a href="https://github.com/maiychrus25/OpenTea-DX-OS/releases">Releases</a>
+      <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/maiychrus25/OpenTea-DX-OS/issues">Issues</a>
+      <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/LICENSE">Licence</a>
+      <a href="../" lang="vi" hreflang="vi">Tiếng Việt</a>
+    </nav>
+  </div>
+</footer>
+
+<dialog class="lightbox" id="lightbox" aria-label="Large image">
+  <div class="lightbox-inner">
+    <button class="close" type="button" id="lightbox-close">Close</button>
+    <img id="lightbox-img" src="" alt="" width="1280" height="800">
+    <p id="lightbox-caption"></p>
+  </div>
+</dialog>
+
+<script src="../assets/site.js" defer></script>
+</body>
+</html>

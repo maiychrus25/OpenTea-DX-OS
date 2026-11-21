@@ -162,6 +162,14 @@ Python standard library only (`http.server`, `unittest`); no third-party package
 
 No new package: each app's `requirements.txt` and `requirements-dev.txt` are identical to `tea-tour`'s (the packages and pins in the table above), and each stores its data in its own schema (`app_leaf_purchase`, `app_tea_shop`, `app_farm_supply`).
 
+## Project site (`site/`)
+
+| Component | Version | License | Purpose |
+|-----------|---------|---------|---------|
+| [Be Vietnam Pro](https://github.com/bettergui/BeVietnamPro) font (latin and vietnamese subsets, weights 400, 600, 700), self-hosted in `site/assets/fonts` as woff2 | 5.3.0 (`@fontsource/be-vietnam-pro`) | OFL-1.1 | Page typeface; licence text in `site/assets/fonts/OFL-1.1.txt` |
+
+The site has no JavaScript dependency, no build toolchain and no external requests at run time.
+
 ## Mobile app (`apps/hub-mobile`, Flutter 3.41.7 / Dart 3.11.5)
 
 All versions are pinned exactly in `pubspec.yaml`; `pubspec.lock` pins the transitive packages (installed with `flutter pub get --enforce-lockfile`). No Google Play services, Firebase, Maps SDK or analytics.

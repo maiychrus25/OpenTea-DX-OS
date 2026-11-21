@@ -520,6 +520,7 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 - 🧩 **[Mini-app](./docs/miniapps.md)** — Hướng dẫn viết mini-app: manifest, bảo mật, database, giao diện và lệnh `./dxos`.
 - 🎨 **[DESIGN.md](./DESIGN.md)** — Hệ thống thiết kế: token màu sáng/tối, chữ, khoảng cách và quy tắc tương phản.
 - 📦 **[Dependencies](./DEPENDENCIES.md)** — Danh mục thư viện và giấy phép phụ thuộc.
+- 🌐 **[Trang giới thiệu dự án](https://maiychrus25.github.io/OpenTea-DX-OS/)** — Bản tiếng Việt và tiếng Anh, nguồn nằm ở `site/`, dựng bằng `bash scripts/build-site.sh`.
 - 🤖 **[AGENTS.md](./AGENTS.md)** — Quy tắc làm việc cho AI agents và developers.
 
 ## 🐛 Báo lỗi & Đóng góp

@@ -1,0 +1,455 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 OpenTea Developers -->
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenTea DX-OS: hệ điều hành số cho hợp tác xã chè</title>
+<meta name="description" content="OpenTea DX-OS là hệ điều hành số mã nguồn mở (MIT) cho hợp tác xã chè: nhật ký đồng ruộng, truy xuất lô chè bằng mã QR, bảng điều hành và mini-app cài thêm bằng app.yaml.">
+<meta name="theme-color" content="#143c2d">
+<link rel="canonical" href="https://maiychrus25.github.io/OpenTea-DX-OS/">
+<link rel="alternate" hreflang="vi" href="https://maiychrus25.github.io/OpenTea-DX-OS/">
+<link rel="alternate" hreflang="en" href="https://maiychrus25.github.io/OpenTea-DX-OS/en/">
+<link rel="alternate" hreflang="x-default" href="https://maiychrus25.github.io/OpenTea-DX-OS/en/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OpenTea DX-OS">
+<meta property="og:title" content="OpenTea DX-OS: hệ điều hành số cho hợp tác xã chè">
+<meta property="og:description" content="Mã nguồn mở (MIT) cho hợp tác xã chè: nhật ký đồng ruộng, truy xuất lô chè, bảng điều hành và mini-app cài thêm bằng app.yaml.">
+<meta property="og:url" content="https://maiychrus25.github.io/OpenTea-DX-OS/">
+<meta property="og:image" content="https://maiychrus25.github.io/OpenTea-DX-OS/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Logo OpenTea DX-OS và ảnh bảng điều hành HTX chè">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="512x512" href="media/icon-512.png">
+<link rel="apple-touch-icon" sizes="192x192" href="media/icon-192.png">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+  /* Applies the saved theme before first paint; skipped silently if storage is blocked. */
+  (function () {
+    try {
+      var t = localStorage.getItem("opentea-theme");
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Bỏ qua và đi tới nội dung</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="OpenTea DX-OS, trang chủ">
+      <img src="media/icon-192.png" width="34" height="34" alt="">
+      <span>OpenTea DX-OS<small>Hệ điều hành số cho HTX chè</small></span>
+    </a>
+    <nav class="nav-links" aria-label="Điều hướng chính">
+      <a href="#why">Vì sao</a>
+      <a href="#tiers">Ba tầng</a>
+      <a href="#features">Tính năng</a>
+      <a href="#developers">Nhà phát triển</a>
+      <a href="#open-source">Mã nguồn</a>
+      <a href="#status">Tình trạng</a>
+    </nav>
+    <div class="header-tools">
+      <a class="tool" href="en/" lang="en" hreflang="en">English</a>
+      <button class="tool" type="button" id="theme-toggle" hidden aria-label="Đổi giao diện sáng, tối hoặc theo hệ thống">Giao diện: hệ thống</button>
+      <a class="tool tool-gh" href="https://github.com/maiychrus25/OpenTea-DX-OS">GitHub</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero" aria-labelledby="hero-title">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">Mã nguồn mở · Giấy phép MIT</span>
+      <h1 id="hero-title">Hệ điều hành số cho hợp tác xã chè</h1>
+      <p class="hero-lead">Ghi nhật ký đồng ruộng, theo dõi thửa và lô chè đến mã QR, tính kỳ thanh toán cho nông hộ và xem tình hình cả hợp tác xã trên một bảng điều hành. Một hệ thống chung, mỗi người chỉ thấy phần việc của mình.</p>
+      <p class="hero-dev">Với lập trình viên: lõi headless gồm đăng nhập một lần, cổng API, dữ liệu theo từng HTX, lưu trữ và nhật ký kiểm toán. Mini-app được khai báo bằng một tệp <code>app.yaml</code> và cài bằng <code>./dxos install</code>.</p>
+      <div class="hero-actions">
+        <a class="btn btn-solid-light" href="https://github.com/maiychrus25/OpenTea-DX-OS">Xem mã nguồn trên GitHub</a>
+        <a class="btn btn-light" href="https://github.com/maiychrus25/OpenTea-DX-OS/releases/latest">Bản phát hành mới nhất</a>
+        <a class="btn btn-light" href="https://github.com/maiychrus25/OpenTea-DX-OS/tree/main/docs">Đọc tài liệu</a>
+      </div>
+      <ul class="hero-facts" aria-label="Thông tin nhanh">
+        <li>3 vai trò: quản trị, cán bộ kỹ thuật, nông hộ</li>
+        <li>7 mini-app trong repo</li>
+        <li>Giấy phép MIT</li>
+      </ul>
+    </div>
+
+    <figure class="hero-stage-wrap" style="margin:0">
+      <div class="stage">
+        <div class="browser">
+          <div class="browser-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <img src="media/htx-overview.png" width="1280" height="1100" alt="Bảng điều hành HTX: sáu chỉ số kèm xu hướng so với kỳ trước, danh sách việc cần chú ý, biểu đồ trạng thái thửa và diện tích theo cây trồng. Dữ liệu mẫu." fetchpriority="high">
+        </div>
+        <div class="phone">
+          <img src="media/mobile-tasks.png" width="1233" height="2673" alt="Ứng dụng Tea Work trên điện thoại: danh sách việc của nhân viên, có việc quá hạn và việc khẩn cấp. Dữ liệu mẫu.">
+        </div>
+      </div>
+      <figcaption class="stage-caption">Ảnh chụp thật: bảng điều hành (mini-app htx-dashboard) và ứng dụng Android Tea Work, dữ liệu mẫu.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="why" aria-labelledby="why-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Vì sao</span>
+      <h2 id="why-title">Một nền chung cho ban quản trị, cán bộ và nông hộ</h2>
+      <p>DX-OS nhắm tới ba việc: xoá rào cản thông tin giữa ban quản trị HTX, cán bộ kỹ thuật và nông hộ, số hoá vòng đời sản xuất từ thửa đất và nhật ký đến lô hàng, và đưa dữ liệu đó vào các quyết định hằng ngày.</p>
+    </div>
+    <div class="cards-3">
+      <article class="card">
+        <span class="icon-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><path d="M8 12h8M8 16h5"/></svg></span>
+        <h3>Số liệu nằm ở nhiều nơi</h3>
+        <p>Nhật ký, phiếu cân, đơn hàng và chấm công thường được ghi ở những sổ khác nhau. Khi cần tổng hợp cuối kỳ, người làm phải ghép lại bằng tay. DX-OS đưa chúng về một cơ sở dữ liệu của chính HTX.</p>
+      </article>
+      <article class="card">
+        <span class="icon-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v7h-7"/></svg></span>
+        <h3>Truy xuất cần đúng liên kết</h3>
+        <p>Lô chè được xuất mã QR và chứng nhận cho từng lô, nằm trong chuỗi số hoá từ thửa đến nhật ký canh tác.</p>
+      </article>
+      <article class="card">
+        <span class="icon-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5l3 8M16 7.5l-3 8M8.5 6h7"/></svg></span>
+        <h3>Công cụ dùng chung một lõi</h3>
+        <p>Mọi ứng dụng dùng chung đăng nhập, phân quyền theo HTX và cùng một nguồn dữ liệu. Thêm một công cụ mới là cài thêm một mini-app, không phải sửa lõi.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="tiers" aria-labelledby="tiers-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Kiến trúc</span>
+      <h2 id="tiers-title">Ba tầng, một lõi</h2>
+      <p>Lõi dùng chung nằm ở dưới. Ứng dụng cho HTX nằm ở giữa. Mini-app cài thêm nằm ở trên, đi qua cổng API. Tầng dưới không phụ thuộc vào ứng dụng nào.</p>
+    </div>
+    <svg class="tiers-desktop" viewBox="0 0 960 416" role="img" aria-labelledby="td-title td-desc" xmlns="http://www.w3.org/2000/svg"><title id="td-title">Sơ đồ ba tầng của OpenTea DX-OS</title><desc id="td-desc">Tầng 1 là lõi dùng chung: đăng nhập, cổng API, dữ liệu theo HTX, lưu trữ, kiểm dịch, nhật ký kiểm toán và cảm biến. Tầng 2 là các ứng dụng cho HTX dùng lõi. Tầng 3 là mini-app cài thêm vào lõi bằng app.yaml.</desc><rect x="0" y="0" width="960" height="116" rx="20" class="t-band-mini"/><text x="22" y="50" font-size="17" font-weight="700" class="t-font t-label-mini">Tầng 3 · Mini-app</text><text x="22" y="72" font-size="13" class="t-font t-desc">Cài bằng ./dxos</text><rect x="240" y="14" width="167" height="46" rx="10" class="t-chip-mini"/><text x="250" y="33" font-size="13" font-weight="700" class="t-font t-title">leaf-purchase</text><text x="250" y="49" font-size="11.5" class="t-font t-desc">Thu mua búp tươi</text><rect x="417" y="14" width="167" height="46" rx="10" class="t-chip-mini"/><text x="427" y="33" font-size="13" font-weight="700" class="t-font t-title">tea-shop</text><text x="427" y="49" font-size="11.5" class="t-font t-desc">Cửa hàng chè</text><rect x="594" y="14" width="167" height="46" rx="10" class="t-chip-mini"/><text x="604" y="33" font-size="13" font-weight="700" class="t-font t-title">farm-supply</text><text x="604" y="49" font-size="11.5" class="t-font t-desc">Vật tư mua chung</text><rect x="771" y="14" width="167" height="46" rx="10" class="t-chip-mini"/><text x="781" y="33" font-size="13" font-weight="700" class="t-font t-title">tea-tour</text><text x="781" y="49" font-size="11.5" class="t-font t-desc">Tour đồi chè</text><rect x="240" y="68" width="167" height="46" rx="10" class="t-chip-mini"/><text x="250" y="87" font-size="13" font-weight="700" class="t-font t-title">custom-books</text><text x="250" y="103" font-size="11.5" class="t-font t-desc">Sổ tự tạo</text><rect x="417" y="68" width="167" height="46" rx="10" class="t-chip-mini"/><text x="427" y="87" font-size="13" font-weight="700" class="t-font t-title">htx-dashboard</text><text x="427" y="103" font-size="11.5" class="t-font t-desc">Bảng điều hành</text><rect x="594" y="68" width="167" height="46" rx="10" class="t-chip-mini"/><text x="604" y="87" font-size="13" font-weight="700" class="t-font t-title">hello</text><text x="604" y="103" font-size="11.5" class="t-font t-desc">Ứng dụng mẫu</text><rect x="0" y="150" width="960" height="116" rx="20" class="t-band-app"/><text x="22" y="200" font-size="17" font-weight="700" class="t-font t-label">Tầng 2 · Ứng dụng HTX</text><text x="22" y="222" font-size="13" class="t-font t-desc">Giao diện cho từng vai trò</text><rect x="240" y="185" width="132" height="46" rx="10" class="t-chip"/><text x="250" y="204" font-size="13" font-weight="700" class="t-font t-title">Web HTX</text><text x="250" y="220" font-size="11.5" class="t-font t-desc">Nhật ký, thửa, lô, QR</text><rect x="382" y="185" width="132" height="46" rx="10" class="t-chip"/><text x="392" y="204" font-size="13" font-weight="700" class="t-font t-title">Bệnh lá chè</text><text x="392" y="220" font-size="11.5" class="t-font t-desc">Chẩn đoán qua ảnh</text><rect x="524" y="185" width="132" height="46" rx="10" class="t-chip"/><text x="534" y="204" font-size="13" font-weight="700" class="t-font t-title">Hub mobile</text><text x="534" y="220" font-size="11.5" class="t-font t-desc">Chưa phát hành</text><rect x="666" y="185" width="132" height="46" rx="10" class="t-chip"/><text x="676" y="204" font-size="13" font-weight="700" class="t-font t-title">Staff desktop</text><text x="676" y="220" font-size="11.5" class="t-font t-desc">Nhân sự, lương</text><rect x="808" y="185" width="132" height="46" rx="10" class="t-chip"/><text x="818" y="204" font-size="13" font-weight="700" class="t-font t-title">Staff mobile</text><text x="818" y="220" font-size="11.5" class="t-font t-desc">Việc, chấm công</text><rect x="0" y="300" width="960" height="116" rx="20" class="t-band-core"/><text x="22" y="350" font-size="17" font-weight="700" class="t-font t-title-core">Tầng 1 · Lõi</text><text x="22" y="372" font-size="13" class="t-font t-desc-core">Dịch vụ dùng chung</text><rect x="240" y="314" width="132" height="46" rx="10" class="t-chip-core"/><text x="250" y="333" font-size="13" font-weight="700" class="t-font t-title-core">Keycloak</text><text x="250" y="349" font-size="11.5" class="t-font t-desc-core">Đăng nhập một lần</text><rect x="382" y="314" width="132" height="46" rx="10" class="t-chip-core"/><text x="392" y="333" font-size="13" font-weight="700" class="t-font t-title-core">APISIX</text><text x="392" y="349" font-size="11.5" class="t-font t-desc-core">Cổng API</text><rect x="524" y="314" width="132" height="46" rx="10" class="t-chip-core"/><text x="534" y="333" font-size="13" font-weight="700" class="t-font t-title-core">Hasura</text><text x="534" y="349" font-size="11.5" class="t-font t-desc-core">GraphQL theo HTX</text><rect x="666" y="314" width="132" height="46" rx="10" class="t-chip-core"/><text x="676" y="333" font-size="13" font-weight="700" class="t-font t-title-core">PostgreSQL</text><text x="676" y="349" font-size="11.5" class="t-font t-desc-core">PostGIS, pgvector</text><rect x="808" y="314" width="132" height="46" rx="10" class="t-chip-core"/><text x="818" y="333" font-size="13" font-weight="700" class="t-font t-title-core">SeaweedFS</text><text x="818" y="349" font-size="11.5" class="t-font t-desc-core">Lưu trữ S3</text><rect x="240" y="368" width="132" height="46" rx="10" class="t-chip-core"/><text x="250" y="387" font-size="13" font-weight="700" class="t-font t-title-core">ClamAV</text><text x="250" y="403" font-size="11.5" class="t-font t-desc-core">Kiểm dịch tệp</text><rect x="382" y="368" width="132" height="46" rx="10" class="t-chip-core"/><text x="392" y="387" font-size="13" font-weight="700" class="t-font t-title-core">Kiểm toán</text><text x="392" y="403" font-size="11.5" class="t-font t-desc-core">Nhật ký chuỗi băm</text><rect x="524" y="368" width="132" height="46" rx="10" class="t-chip-core"/><text x="534" y="387" font-size="13" font-weight="700" class="t-font t-title-core">Mosquitto</text><text x="534" y="403" font-size="11.5" class="t-font t-desc-core">Cảm biến, kho lạnh</text><rect x="666" y="368" width="132" height="46" rx="10" class="t-chip-core"/><text x="676" y="387" font-size="13" font-weight="700" class="t-font t-title-core">n8n</text><text x="676" y="403" font-size="11.5" class="t-font t-desc-core">Quy trình dữ liệu</text><rect x="808" y="368" width="132" height="46" rx="10" class="t-chip-core"/><text x="818" y="387" font-size="13" font-weight="700" class="t-font t-title-core">Ollama</text><text x="818" y="403" font-size="11.5" class="t-font t-desc-core">LLM cục bộ</text><line x1="480" y1="116" x2="480" y2="150" class="t-link"/><polygon points="474,146 486,146 480,150" class="t-link" style="fill:var(--primary)"/><text x="494" y="138" font-size="12" class="t-font t-link-text">gateway có xác thực JWT</text><line x1="480" y1="266" x2="480" y2="300" class="t-link"/><polygon points="474,296 486,296 480,300" class="t-link" style="fill:var(--primary)"/><text x="494" y="288" font-size="12" class="t-font t-link-text">dữ liệu theo HTX qua GraphQL</text></svg>
+    <svg class="tiers-mobile" viewBox="0 0 360 914" role="img" aria-labelledby="tm-title tm-desc" xmlns="http://www.w3.org/2000/svg"><title id="tm-title">Sơ đồ ba tầng của OpenTea DX-OS</title><desc id="tm-desc">Tầng 1 là lõi dùng chung: đăng nhập, cổng API, dữ liệu theo HTX, lưu trữ, kiểm dịch, nhật ký kiểm toán và cảm biến. Tầng 2 là các ứng dụng cho HTX dùng lõi. Tầng 3 là mini-app cài thêm vào lõi bằng app.yaml.</desc><rect x="8" y="0" width="344" height="274" rx="18" class="t-band-mini"/><text x="22" y="26" font-size="15" font-weight="700" class="t-font t-label-mini">Tầng 3 · Mini-app</text><text x="22" y="42" font-size="12.5" class="t-font t-desc">Cài bằng ./dxos</text><rect x="20" y="54" width="155" height="46" rx="10" class="t-chip-mini"/><text x="30" y="73" font-size="12.5" font-weight="700" class="t-font t-title">leaf-purchase</text><text x="30" y="89" font-size="11" class="t-font t-desc">Thu mua búp tươi</text><rect x="185" y="54" width="155" height="46" rx="10" class="t-chip-mini"/><text x="195" y="73" font-size="12.5" font-weight="700" class="t-font t-title">tea-shop</text><text x="195" y="89" font-size="11" class="t-font t-desc">Cửa hàng chè</text><rect x="20" y="108" width="155" height="46" rx="10" class="t-chip-mini"/><text x="30" y="127" font-size="12.5" font-weight="700" class="t-font t-title">farm-supply</text><text x="30" y="143" font-size="11" class="t-font t-desc">Vật tư mua chung</text><rect x="185" y="108" width="155" height="46" rx="10" class="t-chip-mini"/><text x="195" y="127" font-size="12.5" font-weight="700" class="t-font t-title">tea-tour</text><text x="195" y="143" font-size="11" class="t-font t-desc">Tour đồi chè</text><rect x="20" y="162" width="155" height="46" rx="10" class="t-chip-mini"/><text x="30" y="181" font-size="12.5" font-weight="700" class="t-font t-title">custom-books</text><text x="30" y="197" font-size="11" class="t-font t-desc">Sổ tự tạo</text><rect x="185" y="162" width="155" height="46" rx="10" class="t-chip-mini"/><text x="195" y="181" font-size="12.5" font-weight="700" class="t-font t-title">htx-dashboard</text><text x="195" y="197" font-size="11" class="t-font t-desc">Bảng điều hành</text><rect x="20" y="216" width="155" height="46" rx="10" class="t-chip-mini"/><text x="30" y="235" font-size="12.5" font-weight="700" class="t-font t-title">hello</text><text x="30" y="251" font-size="11" class="t-font t-desc">Ứng dụng mẫu</text><rect x="8" y="314" width="344" height="220" rx="18" class="t-band-app"/><text x="22" y="340" font-size="15" font-weight="700" class="t-font t-label">Tầng 2 · Ứng dụng HTX</text><text x="22" y="356" font-size="12.5" class="t-font t-desc">Giao diện cho từng vai trò</text><rect x="20" y="368" width="155" height="46" rx="10" class="t-chip"/><text x="30" y="387" font-size="12.5" font-weight="700" class="t-font t-title">Web HTX</text><text x="30" y="403" font-size="11" class="t-font t-desc">Nhật ký, thửa, lô, QR</text><rect x="185" y="368" width="155" height="46" rx="10" class="t-chip"/><text x="195" y="387" font-size="12.5" font-weight="700" class="t-font t-title">Bệnh lá chè</text><text x="195" y="403" font-size="11" class="t-font t-desc">Chẩn đoán qua ảnh</text><rect x="20" y="422" width="155" height="46" rx="10" class="t-chip"/><text x="30" y="441" font-size="12.5" font-weight="700" class="t-font t-title">Hub mobile</text><text x="30" y="457" font-size="11" class="t-font t-desc">Chưa phát hành</text><rect x="185" y="422" width="155" height="46" rx="10" class="t-chip"/><text x="195" y="441" font-size="12.5" font-weight="700" class="t-font t-title">Staff desktop</text><text x="195" y="457" font-size="11" class="t-font t-desc">Nhân sự, lương</text><rect x="20" y="476" width="155" height="46" rx="10" class="t-chip"/><text x="30" y="495" font-size="12.5" font-weight="700" class="t-font t-title">Staff mobile</text><text x="30" y="511" font-size="11" class="t-font t-desc">Việc, chấm công</text><rect x="8" y="574" width="344" height="328" rx="18" class="t-band-core"/><text x="22" y="600" font-size="15" font-weight="700" class="t-font t-title-core">Tầng 1 · Lõi</text><text x="22" y="616" font-size="12.5" class="t-font t-desc-core">Dịch vụ dùng chung</text><rect x="20" y="628" width="155" height="46" rx="10" class="t-chip-core"/><text x="30" y="647" font-size="12.5" font-weight="700" class="t-font t-title-core">Keycloak</text><text x="30" y="663" font-size="11" class="t-font t-desc-core">Đăng nhập một lần</text><rect x="185" y="628" width="155" height="46" rx="10" class="t-chip-core"/><text x="195" y="647" font-size="12.5" font-weight="700" class="t-font t-title-core">APISIX</text><text x="195" y="663" font-size="11" class="t-font t-desc-core">Cổng API</text><rect x="20" y="682" width="155" height="46" rx="10" class="t-chip-core"/><text x="30" y="701" font-size="12.5" font-weight="700" class="t-font t-title-core">Hasura</text><text x="30" y="717" font-size="11" class="t-font t-desc-core">GraphQL theo HTX</text><rect x="185" y="682" width="155" height="46" rx="10" class="t-chip-core"/><text x="195" y="701" font-size="12.5" font-weight="700" class="t-font t-title-core">PostgreSQL</text><text x="195" y="717" font-size="11" class="t-font t-desc-core">PostGIS, pgvector</text><rect x="20" y="736" width="155" height="46" rx="10" class="t-chip-core"/><text x="30" y="755" font-size="12.5" font-weight="700" class="t-font t-title-core">SeaweedFS</text><text x="30" y="771" font-size="11" class="t-font t-desc-core">Lưu trữ S3</text><rect x="185" y="736" width="155" height="46" rx="10" class="t-chip-core"/><text x="195" y="755" font-size="12.5" font-weight="700" class="t-font t-title-core">ClamAV</text><text x="195" y="771" font-size="11" class="t-font t-desc-core">Kiểm dịch tệp</text><rect x="20" y="790" width="155" height="46" rx="10" class="t-chip-core"/><text x="30" y="809" font-size="12.5" font-weight="700" class="t-font t-title-core">Kiểm toán</text><text x="30" y="825" font-size="11" class="t-font t-desc-core">Nhật ký chuỗi băm</text><rect x="185" y="790" width="155" height="46" rx="10" class="t-chip-core"/><text x="195" y="809" font-size="12.5" font-weight="700" class="t-font t-title-core">Mosquitto</text><text x="195" y="825" font-size="11" class="t-font t-desc-core">Cảm biến, kho lạnh</text><rect x="20" y="844" width="155" height="46" rx="10" class="t-chip-core"/><text x="30" y="863" font-size="12.5" font-weight="700" class="t-font t-title-core">n8n</text><text x="30" y="879" font-size="11" class="t-font t-desc-core">Quy trình dữ liệu</text><rect x="185" y="844" width="155" height="46" rx="10" class="t-chip-core"/><text x="195" y="863" font-size="12.5" font-weight="700" class="t-font t-title-core">Ollama</text><text x="195" y="879" font-size="11" class="t-font t-desc-core">LLM cục bộ</text><line x1="180" y1="274" x2="180" y2="308" class="t-link"/><polygon points="174,306 186,306 180,314" class="t-link" style="fill:var(--primary)"/><text x="192" y="298" font-size="11.5" class="t-font t-link-text">gateway có xác thực JWT</text><line x1="180" y1="534" x2="180" y2="568" class="t-link"/><polygon points="174,566 186,566 180,574" class="t-link" style="fill:var(--primary)"/><text x="192" y="558" font-size="11.5" class="t-font t-link-text">dữ liệu theo HTX qua GraphQL</text></svg>
+    <div class="tier-cards">
+      <article class="card tier-card">
+        <p class="tier-no">Tầng 1</p>
+        <h3>Lõi dùng chung</h3>
+        <ul>
+          <li>Đăng nhập một lần qua Keycloak, ba vai trò: quản trị, cán bộ kỹ thuật, nông hộ.</li>
+          <li>Hasura chỉ đọc, lọc theo mã HTX của token: người dùng thấy dữ liệu của HTX mình.</li>
+          <li>Cảm biến qua MQTT, lưu nóng rồi chuyển sang kho lạnh Parquet.</li>
+          <li>Nhật ký kiểm toán dạng chuỗi băm, có lệnh kiểm tra toàn vẹn.</li>
+          <li>Tệp trong kho được quét bằng ClamAV; tệp nhiễm hoặc không quét được bị cách ly.</li>
+        </ul>
+      </article>
+      <article class="card tier-card">
+        <p class="tier-no">Tầng 2</p>
+        <h3>Ứng dụng cho HTX</h3>
+        <ul>
+          <li>Web app Next.js: nhật ký đồng ruộng, bản đồ thửa, lô và mã QR, bản tin âm thanh.</li>
+          <li>Chẩn đoán bệnh lá chè bằng ảnh. Mọi kết quả đều vào hàng chờ cán bộ kỹ thuật.</li>
+          <li>Staff desktop (WPF, Windows) và staff mobile (Android) cho nhân sự, giao việc, chấm công.</li>
+          <li>Hub mobile (Flutter) đang phát triển, chưa phát hành.</li>
+        </ul>
+      </article>
+      <article class="card tier-card">
+        <p class="tier-no">Tầng 3</p>
+        <h3>Mini-app cài thêm</h3>
+        <ul>
+          <li>Khai báo bằng <code>app.yaml</code>, cài bằng <code>./dxos install</code>.</li>
+          <li>Mỗi HTX tự bật app trong Kho ứng dụng và thấy app trong menu của mình.</li>
+          <li>Chạy trong container khoá chặt, giao diện không có JavaScript.</li>
+          <li>Có sẵn bảy app, trong đó Sổ tự tạo cho phép trưởng HTX làm sổ mà không cần lập trình.</li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Tính năng</span>
+      <h2 id="features-title">Một HTX có thể làm gì hôm nay</h2>
+      <p>Các ảnh dưới đây là ảnh chụp từ ứng dụng trong repo, với dữ liệu mẫu. Nhóm nào chưa có ảnh chụp trong repo được ghi rõ.</p>
+    </div>
+
+    <div class="feature">
+      <div>
+        <h3>Thu mua búp và kỳ thanh toán</h3>
+        <p>Cán bộ ghi phiếu cân của từng nông hộ theo loại chè. Trưởng HTX theo dõi số ký trong ngày và trong tháng, chốt kỳ thanh toán rồi in bảng kê.</p>
+        <ul>
+          <li>Lỗi nhập hiện ngay dưới ô sai, chữ đã gõ được giữ nguyên.</li>
+          <li>Tổng quan: số ký, tiền chưa trả và biểu đồ 14 ngày.</li>
+          <li>Chốt kỳ, in bảng kê, tải CSV, ghi nhận từng hộ đã nhận tiền.</li>
+          <li>Nông hộ xem phiếu cân và khoản chi trả của chính mình.</li>
+        </ul>
+        <span class="tag">mini-app leaf-purchase 0.2.0</span>
+      </div>
+      <div class="feature-media">
+        <figure class="shot"><img src="media/leaf-period.png" width="1280" height="800" loading="lazy" alt="Kỳ thanh toán thu mua búp: tổng tiền, số hộ, bảng các hộ với trạng thái đã trả hay chưa trả. Dữ liệu mẫu."><figcaption>Kỳ thanh toán: tổng tiền kỳ, số hộ, trạng thái từng hộ.</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="feature reverse">
+      <div>
+        <h3>Bản sao số của từng thửa</h3>
+        <p>Mỗi thửa có một trang tổng hợp: số đo cảm biến theo ngày, thời tiết, vụ canh tác, nhật ký, báo cáo bệnh và các lô có thửa đó. Bảng điều hành cho trưởng HTX thấy toàn cảnh trên cùng một màn hình.</p>
+        <ul>
+          <li>Việc cần chú ý: nhật ký chờ duyệt quá 3 ngày, báo cáo bệnh chờ xử lý, cảm biến im lặng quá 6 giờ.</li>
+          <li>Chỉ số kèm xu hướng so với kỳ trước, biểu đồ trạng thái thửa, diện tích theo cây trồng.</li>
+          <li>Chỉ đọc: ứng dụng không lưu dữ liệu, mọi số liệu đọc từ lõi bằng quyền của người đang xem.</li>
+        </ul>
+        <span class="tag">mini-app htx-dashboard 0.2.0</span>
+      </div>
+      <div class="feature-media">
+        <figure class="shot"><img src="media/htx-parcel.png" width="1280" height="1100" loading="lazy" alt="Trang bản sao số của một thửa chè: thông tin thửa, các cảm biến độ ẩm và nhiệt độ không khí với biểu đồ 30 ngày, cảnh báo cảm biến im lặng. Dữ liệu mẫu."><figcaption>Bản sao số một thửa: cảm biến, vụ và cảnh báo trên cùng một trang.</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div>
+        <h3>Cửa hàng, vật tư và tour</h3>
+        <p>Ba mini-app bán hàng và tổ chức cho HTX. Khách không cần tài khoản để đặt hàng hay đặt chỗ; thông tin cá nhân của khách chỉ trưởng HTX của đúng HTX xem được.</p>
+        <ul>
+          <li>Cửa hàng chè: khách đặt hàng, thanh toán khi nhận; tra đơn bằng mã đơn và số điện thoại.</li>
+          <li>Vật tư mua chung: mở đợt đăng ký, đánh dấu đã giao và đã thanh toán theo hộ, in bảng kê có cột ký tên.</li>
+          <li>Tour đồi chè: lượt đặt chỗ, điểm danh và danh sách đoàn in được.</li>
+        </ul>
+        <span class="tag">mini-app tea-shop, farm-supply, tea-tour 0.2.0</span>
+      </div>
+      <div class="feature-media">
+        <div class="pair landscape">
+          <figure class="shot"><img src="media/shop-public-order.png" width="1280" height="800" loading="lazy" alt="Trang đặt hàng công khai của Cửa hàng chè HTX TC: danh sách sản phẩm, số lượng còn lại và ô nhập số lượng. Dữ liệu mẫu."><figcaption>Trang đặt hàng công khai, không cần đăng nhập.</figcaption></figure>
+          <figure class="shot"><img src="media/tour-manager.png" width="1280" height="800" loading="lazy" alt="Trang quản lý tour đồi chè: trạng thái tour, chỗ đã giữ, danh sách lượt đặt chỗ và nút điểm danh. Dữ liệu mẫu."><figcaption>Tour: lượt đặt chỗ và danh sách đoàn.</figcaption></figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature reverse">
+      <div>
+        <h3>Sổ tự tạo, không cần lập trình</h3>
+        <p>Trưởng HTX chọn một trong tám mẫu có sẵn, chẳng hạn chấm công hái chè, sổ phun thuốc hay thu chi, hoặc bắt đầu từ sổ trắng, rồi tự đặt tên ô và quyền truy cập.</p>
+        <ul>
+          <li>Tám kiểu ô: chữ, số, tiền, ngày, lựa chọn, có/không, nông hộ.</li>
+          <li>Quyền riêng cho cán bộ và nông dân, có thể bắt buộc duyệt từng dòng.</li>
+          <li>Tổng hợp theo tháng, tải CSV, in bản giấy.</li>
+        </ul>
+        <span class="tag">mini-app custom-books 0.1.0</span>
+      </div>
+      <div class="feature-media">
+        <div class="pair landscape">
+          <figure class="shot"><img src="media/books-designer.png" width="1280" height="800" loading="lazy" alt="Trình thiết kế sổ: bảng đặt tên ô, chọn kiểu, lựa chọn, đơn vị và các cờ bắt buộc, hiện trong danh sách, cộng tổng. Dữ liệu mẫu."><figcaption>Trình thiết kế sổ dạng biểu mẫu.</figcaption></figure>
+          <figure class="shot"><img src="media/books-in-use.png" width="1280" height="800" loading="lazy" alt="Sổ chấm công hái chè đang dùng: số công, tổng số kg, danh sách dòng ghi có tìm kiếm và lọc. Dữ liệu mẫu."><figcaption>Sổ đang dùng: ghi dòng, lọc, tổng hợp.</figcaption></figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div>
+        <h3>Nhân sự, giao việc và chấm công</h3>
+        <p>Chủ HTX quản lý nhân sự trên máy tính Windows. Nhân viên nhận việc, báo tiến độ và chấm công trên điện thoại Android, dữ liệu gửi về máy của chủ HTX qua mạng nội bộ.</p>
+        <ul>
+          <li>Staff desktop: hồ sơ nhân viên, tổ, giao việc, chấm công, duyệt nghỉ phép, tính lương.</li>
+          <li>Staff mobile: việc cần làm, chấm công vào ra, xin nghỉ, xem phiếu lương.</li>
+        </ul>
+        <span class="tag">apps/staff-desktop, apps/staff-mobile</span>
+      </div>
+      <div class="feature-media">
+        <div class="pair">
+          <figure class="shot"><img src="media/desktop-payroll.png" width="1782" height="1055" loading="lazy" alt="Bảng lương của ứng dụng máy tính: tổng quỹ lương tháng, biểu đồ và danh sách phiếu lương. Dữ liệu mẫu."><figcaption>Bảng lương trên máy tính của chủ HTX.</figcaption></figure>
+          <figure class="shot phone-shot"><img src="media/mobile-attendance.png" width="1233" height="2673" loading="lazy" alt="Màn hình chấm công trên điện thoại: ngày công, ngày nghỉ, giờ tăng ca theo tháng và danh sách ngày công. Dữ liệu mẫu."></figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature reverse">
+      <div>
+        <h3>Nhật ký, truy xuất QR và chẩn đoán bệnh</h3>
+        <p>Các chức năng này nằm trong web app của lõi. Repo chưa có ảnh chụp màn hình cho nhóm này, nên trang không đưa ảnh minh hoạ thay thế.</p>
+        <ul>
+          <li>Nhật ký đồng ruộng: phê duyệt theo vai trò, thời gian cách ly tự tính.</li>
+          <li>Lô chè: xuất mã QR và chứng nhận cho từng lô.</li>
+          <li>Chẩn đoán bệnh lá chè bằng ảnh: với ảnh chè Thái Nguyên độ chính xác chưa đo được; mọi kết quả vào hàng chờ cán bộ (xem mục tình trạng).</li>
+        </ul>
+        <span class="tag">Chưa có ảnh chụp trong repo</span>
+      </div>
+      <div class="feature-media">
+        <div class="no-shot">Ảnh chụp của web app (nhật ký, lô, QR, chẩn đoán) sẽ được thêm khi có trong repo. Trang này không dùng ảnh minh hoạ không phải của sản phẩm.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="gallery" aria-labelledby="gallery-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Thư viện ảnh</span>
+      <h2 id="gallery-title">Ảnh chụp từ ứng dụng</h2>
+      <p>Nhấn vào ảnh để xem lớn. Ảnh lấy từ thư mục <code>store/</code> của mini-app và thư mục <code>docs/screenshots/</code> của ứng dụng nhân sự. Dữ liệu là dữ liệu mẫu, tên người và số điện thoại là giả.</p>
+    </div>
+    <ul class="gallery">
+      <li><figure><a class="zoom" href="media/htx-overview.png" data-caption="Bảng điều hành HTX: chỉ số kèm xu hướng và việc cần chú ý."><img src="media/htx-overview.png" width="1280" height="1100" loading="lazy" alt="Bảng điều hành HTX: chỉ số, việc cần chú ý, trạng thái thửa và diện tích theo cây trồng."></a><figcaption>Bảng điều hành HTX: chỉ số và việc cần chú ý. <span class="zoom-hint">Xem lớn</span></figcaption></figure></li>
+      <li><figure><a class="zoom" href="media/htx-parcels.png" data-caption="Danh sách thửa theo vùng trồng, với sức khoẻ cây và cảm biến."><img src="media/htx-parcels.png" width="1280" height="1100" loading="lazy" alt="Trang các thửa của HTX: biểu đồ trạng thái thửa, diện tích theo cây và bảng thửa với sức khoẻ cây."></a><figcaption>Các thửa theo vùng trồng.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="media/htx-data.png" data-caption="Tab Dữ liệu: số đo kho nóng, cảm biến theo thửa, có tệp CSV và bản in."><img src="media/htx-data.png" width="1280" height="1100" loading="lazy" alt="Tab Dữ liệu của bảng điều hành: số đo kho nóng, biểu đồ số đo và bảng cảm biến theo thửa."></a><figcaption>Dữ liệu cảm biến, có tải CSV và bản in.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="media/leaf-tickets.png" data-caption="Phiếu cân của một ngày: lọc theo hộ, loại chè và tình trạng."><img src="media/leaf-tickets.png" width="1280" height="800" loading="lazy" alt="Danh sách phiếu cân thu mua búp: ngày, hộ, loại chè, số ký, số tiền và tình trạng chốt."></a><figcaption>Phiếu cân, lọc theo ngày, hộ và loại chè.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="media/shop-orders.png" data-caption="Đơn hàng của Cửa hàng chè: lọc theo ngày và trạng thái, tải CSV, in phiếu giao."><img src="media/shop-orders.png" width="1280" height="800" loading="lazy" alt="Danh sách đơn hàng của cửa hàng chè: mã đơn, khách, tổng tiền, trạng thái và thao tác."></a><figcaption>Đơn hàng: lọc, tải CSV, in phiếu giao.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="media/supply-round.png" data-caption="Đợt vật tư mua chung: mặt hàng, số đơn đăng ký và tổng tiền."><img src="media/supply-round.png" width="1280" height="800" loading="lazy" alt="Chi tiết một đợt vật tư mua chung: số mặt hàng, số hộ đăng ký, tổng tiền và bảng mặt hàng."></a><figcaption>Đợt vật tư mua chung.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="media/tour-manager.png" data-caption="Tour đồi chè: trạng thái tour, chỗ đã giữ và danh sách lượt đặt chỗ."><img src="media/tour-manager.png" width="1280" height="800" loading="lazy" alt="Quản lý tour đồi chè: trạng thái tour, chỗ đã giữ và danh sách lượt đặt chỗ."></a><figcaption>Tour đồi chè: lượt đặt chỗ và điểm danh.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="media/books-designer.png" data-caption="Trình thiết kế sổ tự tạo: tên ô, kiểu ô, lựa chọn, đơn vị, cờ bắt buộc và thứ tự."><img src="media/books-designer.png" width="1280" height="800" loading="lazy" alt="Trình thiết kế sổ tự tạo: bảng đặt tên ô, kiểu ô và cờ hiển thị."></a><figcaption>Thiết kế sổ bằng biểu mẫu.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="media/books-in-use.png" data-caption="Sổ chấm công hái chè đang dùng: ghi dòng, tìm kiếm, lọc và tổng hợp."><img src="media/books-in-use.png" width="1280" height="800" loading="lazy" alt="Sổ chấm công hái chè đang dùng: tổng số công và số kg, danh sách dòng ghi."></a><figcaption>Sổ đang dùng: chấm công hái chè.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="media/desktop-payroll.png" data-caption="Bảng lương tháng trên ứng dụng máy tính."><img src="media/desktop-payroll.png" width="1782" height="1055" loading="lazy" alt="Bảng lương tháng trên ứng dụng máy tính: tổng quỹ lương, biểu đồ và danh sách phiếu lương."></a><figcaption>Bảng lương trên máy tính.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="media/mobile-tasks.png" data-caption="Việc của tôi trên Tea Work: việc cần làm, quá hạn và đã xong."><img src="media/mobile-tasks.png" width="1233" height="2673" loading="lazy" alt="Màn hình việc của tôi trên Tea Work: số việc cần làm, quá hạn, đã xong và danh sách việc."></a><figcaption>Tea Work: việc của nhân viên.</figcaption></figure></li>
+      <li><figure><a class="zoom" href="media/mobile-attendance.png" data-caption="Chấm công trên điện thoại: ngày công, ngày nghỉ và giờ tăng ca theo tháng."><img src="media/mobile-attendance.png" width="1233" height="2673" loading="lazy" alt="Màn hình chấm công trên Tea Work: ngày công, ngày nghỉ, giờ tăng ca và danh sách ngày công."></a><figcaption>Tea Work: chấm công.</figcaption></figure></li>
+    </ul>
+  </div>
+</section>
+
+<section id="developers" aria-labelledby="dev-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Nhà phát triển</span>
+      <h2 id="dev-title">Thêm một mini-app mà không sửa lõi</h2>
+      <p>Mini-app là một container riêng, cắm vào lõi bằng manifest và lệnh <code>./dxos</code>. Lõi không được build lại. Ví dụ dưới đây là manifest thật của <code>miniapps/htx-dashboard</code>, bỏ bớt khối mô tả cửa hàng.</p>
+    </div>
+    <div class="dev-grid">
+      <div>
+        <pre class="code"><span class="c"># miniapps/htx-dashboard/app.yaml (rút gọn)</span>
+<span class="k">apiVersion</span>: dxos/v1            <span class="c"># phiên bản schema manifest, cố định</span>
+<span class="k">id</span>: htx-dashboard             <span class="c"># định danh duy nhất trong các app đã cài</span>
+<span class="k">name</span>: Bảng điều hành HTX
+<span class="k">version</span>: 0.2.0                <span class="c"># SemVer</span>
+<span class="k">license</span>: MIT
+<span class="k">requires</span>: { core: <span class="s">"&gt;=1.13.0"</span> }  <span class="c"># phiên bản lõi tối thiểu</span>
+<span class="k">runtime</span>:
+  <span class="k">build</span>: .                    <span class="c"># build từ thư mục app, hoặc image đã ghim digest</span>
+  <span class="k">port</span>: 8080                  <span class="c"># cổng app nghe trong container</span>
+  <span class="k">health</span>: /healthz            <span class="c"># phải trả 2xx</span>
+<span class="k">routes</span>:
+  <span class="k">protected</span>:
+    <span class="s">/</span>: [manager]              <span class="c"># đường dẫn → vai trò được phép</span>
+<span class="k">menu</span>:
+  - { <span class="k">label</span>: Bảng điều hành, <span class="k">path</span>: /, <span class="k">roles</span>: [manager] }</pre>
+        <p class="small muted" style="margin-top:10px">Lệnh cài, sau khi chạy <code>make platform-up</code> và <code>make web-up</code>:</p>
+        <div class="cmd" role="region" aria-label="Lệnh cài mini-app">./dxos install miniapps/htx-dashboard</div>
+      </div>
+      <div>
+        <p>Một lần cài làm bốn việc: kiểm manifest, tạo schema và vai trò database nếu app khai báo, sinh route cho gateway, rồi chạy container. Bước nào hỏng thì mọi bước trước được hoàn tác.</p>
+        <ul class="bullets">
+          <li><strong>Container khoá chặt</strong>Không có cổng ra máy chủ, hệ tệp chỉ đọc, bỏ hết quyền Linux, 256 MB RAM và 0,5 CPU, mạng nội bộ không ra internet.</li>
+          <li><strong>Dữ liệu theo HTX lấy từ token</strong>Mọi truy vấn lọc theo mã HTX trong token, không theo URL hay form. App vẫn kiểm vai trò ở từng trang.</li>
+          <li><strong>Ranh giới tin cậy có giới hạn</strong>Các app đã cài dùng chung một mạng nội bộ và gọi được nhau. Chỉ cài app tin cậy; tài liệu <code>docs/miniapps.md</code> ghi đây là giới hạn đã biết.</li>
+        </ul>
+        <h3 style="margin-top:28px;font-size:1.125rem">Ngăn xếp công nghệ</h3>
+        <dl class="stack-list">
+          <div><dt>Web app</dt><dd>Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS 4, Prisma 5, Zod, Leaflet</dd></div>
+          <div><dt>Xác thực</dt><dd>Keycloak 24 (OIDC), NextAuth.js v5</dd></div>
+          <div><dt>Dữ liệu</dt><dd>PostgreSQL 16 với PostGIS và pgvector, Hasura, SeaweedFS (S3)</dd></div>
+          <div><dt>AI và tự động hoá</dt><dd>FastAPI với TensorFlow cho dịch vụ bệnh lá, Ollama, n8n, Piper TTS</dd></div>
+          <div><dt>Di động và máy tính</dt><dd>Flutter (hub mobile), Kotlin Jetpack Compose (staff mobile), C# .NET 10 WPF (staff desktop)</dd></div>
+          <div><dt>Hạ tầng và kiểm thử</dt><dd>Docker Compose, GitHub Actions, GitHub Container Registry, Jest, Playwright</dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="open-source" aria-labelledby="os-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Mã nguồn mở</span>
+      <h2 id="os-title">Giấy phép, mã nguồn và cách tham gia</h2>
+      <p>Dự án được phát hành theo giấy phép MIT. Mã nguồn, ghi chú phát hành, nhật ký thay đổi và danh sách lỗi nằm trên GitHub.</p>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <h3>Liên kết</h3>
+        <div class="link-list">
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS"><span>Mã nguồn</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/releases"><span>Bản phát hành và ảnh container</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CHANGELOG.md"><span>Nhật ký thay đổi (CHANGELOG.md)</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/issues"><span>Báo lỗi và đề xuất tính năng</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CONTRIBUTING.md"><span>Hướng dẫn đóng góp</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/SECURITY.md"><span>Báo lỗ hổng bảo mật</span><span aria-hidden="true">→</span></a>
+          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/DEPENDENCIES.md"><span>Thư viện bên thứ ba và giấy phép</span><span aria-hidden="true">→</span></a>
+        </div>
+        <p class="small muted" style="margin-top:14px">Lưu ý: n8n dùng Sustainable Use License, không phải giấy phép OSI. Dự án không đóng gói hay import mã của n8n; n8n chạy như một dịch vụ riêng và có thể thay thế. Chi tiết trong DEPENDENCIES.md.</p>
+      </div>
+      <div class="card">
+        <h3>Chạy từ mã nguồn</h3>
+        <p class="small muted" style="margin-top:6px">Yêu cầu Docker và Docker Compose v2. Stack đầy đủ có 16 container, dùng khoảng 3,6 GiB RAM.</p>
+        <div class="cmd" role="region" aria-label="Lệnh chạy từ mã nguồn">cp .env.example .env.local
+cp docker/.env.local.example docker/.env.local
+docker compose -f docker/docker-compose.yml up -d
+bash scripts/smoke-test.sh</div>
+        <p class="small muted" style="margin-top:12px">Muốn dùng mini-app, chạy <code>make platform-up</code> (hoặc <code>make up</code>) thay cho lệnh <code>docker compose</code>; lệnh trần không nạp route của app. Web app: http://localhost:3000.</p>
+        <h3 style="margin-top:22px;font-size:1.0625rem">Tham gia</h3>
+        <p class="small" style="margin-top:6px">Đọc CONTRIBUTING.md trước khi gửi pull request. Commit theo Conventional Commits bằng tiếng Anh. Mọi PR vào main phải qua CI Quality Gate.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="status" aria-labelledby="status-title">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Tình trạng</span>
+      <h2 id="status-title">Phiên bản hiện tại và giới hạn đã biết</h2>
+      <p>Trang này chỉ nêu những gì tài liệu trong repo ghi nhận. Số phiên bản đọc từ <code>apps/web/package.json</code>, <code>CHANGELOG.md</code> và thẻ phát hành của GitHub.</p>
+    </div>
+    <div class="status">
+      <div class="version-row">
+        <span class="pill">Phiên bản lõi trong mã nguồn: 1.13.0</span>
+        <span class="pill">Bản phát hành mới nhất: v1.12.0 (14/11/2026)</span>
+        <span class="pill warn">Chưa phát hành: staff apps, hub mobile, htx-dashboard 0.2.0</span>
+      </div>
+      <h3 style="margin-top:18px;font-size:1.125rem">Giới hạn đã biết</h3>
+      <ul>
+        <li><strong>Chẩn đoán bệnh lá chè:</strong> độ chính xác là 0,87 trên tập kiểm tra cùng nguồn, nhưng chỉ 0,12 đến 0,35 khi kiểm tra chéo giữa các nguồn ảnh. Với ảnh chè Thái Nguyên, độ chính xác thực tế chưa đo được. Mọi kết quả, kể cả lá khoẻ, đều vào hàng chờ cán bộ.</li>
+        <li><strong>Lưu trữ tệp:</strong> đường dẫn <code>/storage/*</code> chưa xác thực chữ ký SigV4 của S3, chờ tầng 2.</li>
+        <li><strong>Mini-app:</strong> các app đã cài tin cậy lẫn nhau qua một mạng nội bộ; cách ly riêng cho từng app chưa có. Giới hạn 10 yêu cầu mỗi phút cho mỗi IP trên trang công khai tính trong từng tiến trình.</li>
+        <li><strong>Sổ tự tạo:</strong> không có ô ảnh hay tệp, không có công thức, duyệt một bước; mỗi HTX tối đa 50 sổ, mỗi sổ tối đa 20 ô.</li>
+        <li><strong>Cảm biến:</strong> Mosquitto ghi trạng thái xuống đĩa mỗi 60 giây, nên bản tin xếp hàng trong 60 giây cuối có thể mất nếu broker sập.</li>
+        <li><strong>Ứng dụng nhân sự máy tính:</strong> chỉ chạy trên Windows, cần .NET 10 khi tự build.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <a class="brand" href="./">
+        <img src="media/icon-192.png" width="30" height="30" alt="">
+        <span>OpenTea DX-OS</span>
+      </a>
+      <p style="margin-top:8px">Phát triển bởi OpenTea Developers. Giấy phép MIT.</p>
+    </div>
+    <nav aria-label="Liên kết chân trang">
+      <a href="https://github.com/maiychrus25/OpenTea-DX-OS">Mã nguồn</a>
+      <a href="https://github.com/maiychrus25/OpenTea-DX-OS/releases">Bản phát hành</a>
+      <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CHANGELOG.md">Nhật ký thay đổi</a>
+      <a href="https://github.com/maiychrus25/OpenTea-DX-OS/issues">Báo lỗi</a>
+      <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/LICENSE">Giấy phép</a>
+      <a href="en/" lang="en" hreflang="en">English</a>
+    </nav>
+  </div>
+</footer>
+
+<dialog class="lightbox" id="lightbox" aria-label="Xem ảnh lớn">
+  <div class="lightbox-inner">
+    <button class="close" type="button" id="lightbox-close">Đóng</button>
+    <img id="lightbox-img" src="" alt="" width="1280" height="800">
+    <p id="lightbox-caption"></p>
+  </div>
+</dialog>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>
