@@ -992,3 +992,17 @@ section.band { background: var(--surface-sunken); }
 .tier-card ul { gap: 8px; margin-top: 0; }
 .tier-card li { font-size: 16px; line-height: 1.5; color: var(--muted-foreground); padding-left: 16px; }
 .tier-card li::before { background: var(--primary); opacity: 0.6; }
+
+/* R5 developers: no wave dividers; the terminal and tabs share the card radius; guarantees are borderless */
+.band::before { display: none; }
+.band { background: var(--background); }
+.developers-sec { background: var(--background); padding: 120px 0; }
+#developers { padding: 120px 0; }
+@media (min-width: 1024px) { #developers { padding: 144px 0; } }
+.term, .code-x, .codebox pre { border-radius: var(--radius-xl); }
+.term { box-shadow: var(--shadow-stage); border: 0; }
+.guar { border: 0 !important; border-top: 0 !important; border-radius: var(--radius-xl); background: var(--card); box-shadow: var(--shadow-card); padding: 26px; }
+.guar h3 { font-size: 18px; letter-spacing: -0.01em; margin-bottom: 6px; }
+.guar p { font-size: 16px; line-height: 1.5; color: var(--muted-foreground); }
+.guarantees { gap: 20px; }
+.devdocs a { color: var(--primary); }
