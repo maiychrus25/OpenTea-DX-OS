@@ -961,3 +961,16 @@ section.band { background: var(--surface-sunken); }
 .sc-panel .zoom img { display: block; width: 100%; height: auto; }
 .sc-panel figcaption { margin-top: 16px; font-size: 15px; color: var(--muted-foreground); }
 .sc-panels { min-height: 0; }
+
+/* R5 architecture: three neutral glass layers, quiet chips, the accent only on the flows */
+.t-band-core, .t-band-app, .t-band-mini { fill: var(--card); stroke: var(--border); stroke-width: 1; }
+.t-chip, .t-chip-core, .t-chip-mini { fill: var(--surface-sunken); stroke: none; }
+.t-title, .t-title-core, .t-label, .t-label-mini { fill: var(--foreground); }
+.t-desc, .t-desc-core { fill: var(--muted-foreground); }
+.t-link { stroke: var(--accent); }
+.tiers-desktop polygon { fill: var(--accent) !important; }
+.tiers-desktop .flow-a line.t-link, .tiers-desktop .flow-b line.t-link { stroke-width: 2; }
+.tiers-desktop .flow-a:hover line, .tiers-desktop .flow-a:focus-visible line,
+.tiers-desktop .flow-b:hover line, .tiers-desktop .flow-b:focus-visible line { stroke-width: 3; }
+.tiers-desktop text.t-link-text { fill: var(--muted-foreground); }
+.tiers-mobile .t-link { stroke: var(--accent); }
