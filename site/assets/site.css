@@ -1126,3 +1126,10 @@ section.band { background: var(--surface-sunken); }
 /* Hero headline: two lines by design ("… số" / "cho hợp tác xã chè"); sized so the second line fits its column. */
 .hero-deep h1 { font-size: clamp(2.05rem, 1.15rem + 2.75vw, 3.3rem); }
 .hero-deep h1 .hl { white-space: nowrap; }
+/* Story stage: the picture takes the room that is left, so the caption is never cut off at the bottom of the card. */
+@media (min-width: 1024px) {
+  .js .story-panel { justify-content: flex-start; overflow: hidden; }
+  .js .story-panel > img, .js .story-panel > svg, .js .story-panel > .frame-top { flex: 1 1 auto; min-height: 0; }
+  .js .story-panel > img, .js .story-panel > .frame-top img { object-fit: cover; object-position: top; height: 100%; }
+  .js .story-panel figcaption { flex: none; }
+}
