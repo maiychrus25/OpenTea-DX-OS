@@ -3,6 +3,33 @@
 /* Optional enhancements only: theme switch and large-image viewer. The page works without this file. */
 (function () {
   "use strict";
+  // Header condenses after scrolling (a class only; the header works without it).
+  var header = document.querySelector(".site-header");
+  var onScroll = function () { if (header) header.classList.toggle("scrolled", window.scrollY > 24); };
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  // Count-up for the stats strip: the final numbers are already in the HTML.
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var counters = document.querySelectorAll("[data-count]");
+  if (counters.length && !reduce && "IntersectionObserver" in window) {
+    var countObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        var el = entry.target, end = Number(el.getAttribute("data-count")), t0 = performance.now();
+        countObs.unobserve(el);
+        var step = function (now) {
+          var k = Math.min(1, (now - t0) / 900), eased = 1 - Math.pow(1 - k, 3);
+          el.textContent = String(Math.round(end * eased));
+          if (k < 1) requestAnimationFrame(step);
+        };
+        el.textContent = "0";
+        requestAnimationFrame(step);
+      });
+    }, { threshold: 0.6 });
+    counters.forEach(function (el) { countObs.observe(el); });
+  }
+
   var KEY = "opentea-theme";
   var root = document.documentElement;
   var isVi = root.lang === "vi";
