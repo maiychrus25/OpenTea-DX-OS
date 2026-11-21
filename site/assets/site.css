@@ -914,3 +914,21 @@ section.band { background: var(--surface-sunken); }
 .proof-grid strong { font-size: clamp(2.25rem, 1.6rem + 1.6vw, 3rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: var(--foreground); }
 .proof-grid span { font-size: 15px; color: var(--muted-foreground); line-height: 1.45; max-width: 16em; }
 @media (max-width: 639px) { .proof-grid { grid-template-columns: 1fr; gap: 24px; } }
+
+/* R5 story: borderless steps; the current step takes the accent tint; the stage is one soft card */
+.story-sec { background: var(--background); padding: 120px 0; }
+@media (min-width: 1024px) { .story-sec { padding: 144px 0; } }
+.story { gap: 56px; }
+.story-steps { gap: 4px; }
+.story-step { padding: 18px 20px; border-radius: var(--radius-lg); border: 0; background: transparent; gap: 16px; }
+.story-step h3 { font-size: 18px; margin-bottom: 4px; letter-spacing: -0.01em; }
+.story-step p { font-size: 16px; line-height: 1.5; color: var(--muted-foreground); }
+.step-no { width: 32px; height: 32px; font-size: 14px; background: var(--surface-sunken); color: var(--ink-secondary); }
+.story-panel { border: 0; border-radius: var(--radius-xl); background: var(--card); box-shadow: var(--shadow-card); padding: 20px; }
+.story-panel figcaption { font-size: 14px; color: var(--muted-foreground); }
+.js .story-step.is-current { background: var(--primary-subtle); border-color: transparent; box-shadow: none; }
+.js .story-step.is-current .step-no { background: var(--primary); color: var(--primary-foreground); }
+.story-sec .section-head { margin-bottom: 56px; }
+.section-head h2 { font-size: clamp(2rem, 1.4rem + 1.6vw, 2.75rem); letter-spacing: -0.03em; line-height: 1.1; }
+.section-head p { font-size: 18px; line-height: 1.5; color: var(--muted-foreground); }
+.section-head .eyebrow { color: var(--muted-foreground); font-size: 13px; font-weight: 600; letter-spacing: 0.02em; text-transform: none; }
