@@ -1061,3 +1061,6 @@ section.band { background: var(--surface-sunken); }
 :root:not([data-theme="light"]) .t-chip, :root:not([data-theme="light"]) .t-chip-core, :root:not([data-theme="light"]) .t-chip-mini {
   fill: #15301f;
 }
+
+/* R5 hero: the floating lot card stays inside the stage column, so it cannot run into the copy */
+.hero-deep .card-qr { left: 0; }
