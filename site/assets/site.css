@@ -974,3 +974,6 @@ section.band { background: var(--surface-sunken); }
 .tiers-desktop .flow-b:hover line, .tiers-desktop .flow-b:focus-visible line { stroke-width: 3; }
 .tiers-desktop text.t-link-text { fill: var(--muted-foreground); }
 .tiers-mobile .t-link { stroke: var(--accent); }
+
+.legend-item:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.arch-legend { gap: 8px; }
