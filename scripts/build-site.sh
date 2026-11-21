@@ -33,6 +33,8 @@ copy_media miniapps/custom-books/store/book-in-use.png books-in-use.png
 copy_media apps/staff-desktop/docs/screenshots/08-payroll.png desktop-payroll.png
 copy_media apps/staff-mobile/docs/screenshots/02-tasks.png mobile-tasks.png
 copy_media apps/staff-mobile/docs/screenshots/04-attendance.png mobile-attendance.png
+copy_media docs/screenshots/web/lot-trace.png web-lot-trace.png
+copy_media docs/screenshots/web/app-store.png web-app-store.png
 copy_media apps/web/public/icon-512x512.png icon-512.png
 copy_media apps/web/public/icon-192x192.png icon-192.png
 

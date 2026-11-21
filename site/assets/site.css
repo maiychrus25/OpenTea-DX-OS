@@ -212,7 +212,12 @@ section { padding: 56px 0; }
 .brand span small { display: block; font-weight: 500; font-size: 0.75rem; color: var(--sidebar-muted); white-space: nowrap; }
 @media (max-width: 1239px) { .brand span small { display: none; } }
 .brand span { white-space: nowrap; }
-.nav-links { display: none; gap: 4px; margin-left: 16px; }
+.nav-links { display: flex; gap: 2px; margin-left: 16px; overflow-x: auto; scrollbar-width: none; }
+.nav-links::-webkit-scrollbar { display: none; }
+@media (max-width: 1199px) {
+  .site-header .wrap { flex-wrap: wrap; row-gap: 0; }
+  .nav-links { order: 3; width: 100%; margin: 0; padding: 0 0 10px; }
+}
 .nav-links a { white-space: nowrap; color: var(--sidebar-muted); text-decoration: none; padding: 8px 9px; border-radius: var(--radius-sm); font-weight: 500; font-size: 0.9rem; }
 .nav-links a:hover { color: var(--sidebar-foreground); background: rgba(255, 255, 255, 0.07); }
 .header-tools { margin-left: auto; display: flex; align-items: center; gap: 8px; }
@@ -226,7 +231,6 @@ section { padding: 56px 0; }
 .tool[hidden] { display: none; }
 .tool-gh { display: none; }
 @media (min-width: 880px) { .tool-gh { display: inline-flex; } }
-@media (min-width: 1200px) { .nav-links { display: flex; } }
 @media (max-width: 879px) {
   .tool-gh { display: none; }
 }
@@ -235,6 +239,12 @@ section { padding: 56px 0; }
   .brand span { display: none; }
   .tool { padding: 8px 10px; font-size: 0.8125rem; }
   .site-header .wrap { gap: 8px; }
+}
+
+/* Hero phone: beside the dashboard on wide screens, below it on narrow ones (never covering it) */
+@media (max-width: 1199px) {
+  .stage { display: flex; flex-direction: column; gap: 16px; }
+  .phone { position: relative; right: auto; bottom: auto; width: 46%; min-width: 0; max-width: 220px; align-self: flex-end; }
 }
 
 /* Hero */
@@ -464,3 +474,20 @@ pre.code .s { color: #9be3b9; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* Round 1: stats strip, section bands, tall traceability frame, notes */
+.stats { background: var(--card); border-bottom: 1px solid var(--border); }
+.stats ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; padding: 22px 0; }
+@media (min-width: 840px) { .stats ul { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.stats li { padding: 8px 14px; border-left: 3px solid var(--primary); margin: 6px 0; }
+.stats strong { display: block; font-size: clamp(1.6rem, 1.2rem + 1.2vw, 2.1rem); line-height: 1.1; color: var(--primary); font-weight: 700; }
+.stats span { display: block; font-size: 0.875rem; color: var(--ink-secondary); margin-top: 4px; }
+section.band { background: var(--surface-sunken); }
+.shot.tall .frame-top { position: relative; max-height: 560px; overflow: hidden; }
+.shot.tall .frame-top::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 120px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), var(--card));
+}
+.shot.tall .frame-top img { width: 100%; height: auto; }
+.shot.tall a.zoom { display: block; }
+.feature-note { margin-top: 14px; font-size: 0.9rem; color: var(--muted-foreground); }
