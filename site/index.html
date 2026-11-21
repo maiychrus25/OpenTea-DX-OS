@@ -253,70 +253,23 @@ make web-up
     <p class="devdocs"><a href="docs/miniapp-guide/">Đọc hướng dẫn đầy đủ</a></p>
   </div>
 </section>
-<section id="open-source" class="band" aria-labelledby="os-title">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="eyebrow">Mã nguồn mở</span>
-      <h2 id="os-title">Giấy phép, mã nguồn và cách tham gia</h2>
-      <p>Dự án được phát hành theo giấy phép MIT. Mã nguồn, ghi chú phát hành, nhật ký thay đổi và danh sách lỗi nằm trên GitHub.</p>
+<section id="status" class="closing" aria-label="Mã nguồn và tình trạng">
+  <div class="wrap closing-grid">
+    <div>
+      <h2>Mã nguồn mở, và giới hạn đã biết</h2>
+      <p class="closing-lead">Giấy phép MIT · phiên bản <span data-inject="version">vX.Y.Z</span></p>
+      <div class="closing-actions">
+        <a class="btn btn-primary" href="docs/">Đọc tài liệu</a>
+        <a class="btn btn-ghost" href="https://github.com/maiychrus25/OpenTea-DX-OS">Mã nguồn trên GitHub</a>
+        <a class="btn btn-ghost" href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CHANGELOG.md">Nhật ký thay đổi</a>
+      </div>
     </div>
-    <div class="two-col">
-      <div class="card">
-        <h3>Liên kết</h3>
-        <div class="link-list">
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS"><span>Mã nguồn</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/releases"><span>Bản phát hành và ảnh container</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CHANGELOG.md"><span>Nhật ký thay đổi (CHANGELOG.md)</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/issues"><span>Báo lỗi và đề xuất tính năng</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CONTRIBUTING.md"><span>Hướng dẫn đóng góp</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/SECURITY.md"><span>Báo lỗ hổng bảo mật</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/DEPENDENCIES.md"><span>Thư viện bên thứ ba và giấy phép</span><span aria-hidden="true">→</span></a>
-        </div>
-        <p class="small muted" style="margin-top:14px">Lưu ý: n8n dùng Sustainable Use License, không phải giấy phép OSI. Dự án không đóng gói hay import mã của n8n; n8n chạy như một dịch vụ riêng và có thể thay thế. Chi tiết trong DEPENDENCIES.md.</p>
-      </div>
-      <div class="card">
-        <h3>Chạy từ mã nguồn</h3>
-        <p class="small muted" style="margin-top:6px">Yêu cầu Docker và Docker Compose v2. Stack đầy đủ có 16 container, dùng khoảng 3,6 GiB RAM.</p>
-        <div class="cmd" role="region" aria-label="Lệnh chạy từ mã nguồn">cp .env.example .env.local
-cp docker/.env.local.example docker/.env.local
-docker compose -f docker/docker-compose.yml up -d
-bash scripts/smoke-test.sh</div>
-        <p class="small muted" style="margin-top:12px">Muốn dùng mini-app, chạy <code>make platform-up</code> (hoặc <code>make up</code>) thay cho lệnh <code>docker compose</code>; lệnh trần không nạp route của app. Web app: http://localhost:3000.</p>
-        <h3 style="margin-top:22px;font-size:1.0625rem">Tham gia</h3>
-        <p class="small" style="margin-top:6px">Đọc CONTRIBUTING.md trước khi gửi pull request. Commit theo Conventional Commits bằng tiếng Anh. Mọi PR vào main phải qua CI Quality Gate.</p>
-      </div>
+    <div class="closing-limits">
+      <h3>Giới hạn đã biết</h3>
+      <ul><li>Chẩn đoán bệnh lá chè: 0,87 trên tập cùng nguồn, 0,12 đến 0,35 khi kiểm tra chéo; ảnh chè Thái Nguyên chưa đo.</li><li>Đường dẫn /storage/* chưa xác thực chữ ký SigV4 của S3.</li><li>Các mini-app đã cài dùng chung một mạng nội bộ.</li><li>Mosquitto ghi trạng thái xuống đĩa mỗi 60 giây.</li></ul>
     </div>
   </div>
 </section>
-
-<section id="status" aria-labelledby="status-title">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="eyebrow">Tình trạng</span>
-      <h2 id="status-title">Phiên bản hiện tại và giới hạn đã biết</h2>
-      <p>Trang này chỉ nêu những gì tài liệu trong repo ghi nhận. Số phiên bản đọc từ <code>apps/web/package.json</code>, <code>CHANGELOG.md</code> và thẻ phát hành của GitHub.</p>
-    </div>
-    <div class="status">
-      <div class="version-row">
-        <span class="pill">Phiên bản trong mã nguồn: <span data-inject="version">vX.Y.Z</span></span>
-        <span class="pill">Phát hành mới nhất: <span data-inject="latest">vX.Y.Z · YYYY-MM-DD</span></span>
-        <span class="pill warn">Thay đổi chờ phát hành: xem mục Unreleased trong CHANGELOG.md</span>
-      </div>
-      <h3 style="margin-top:18px;font-size:1.125rem">Giới hạn đã biết</h3>
-      <ul>
-        <li><strong>Chẩn đoán bệnh lá chè:</strong> độ chính xác là 0,87 trên tập kiểm tra cùng nguồn, nhưng chỉ 0,12 đến 0,35 khi kiểm tra chéo giữa các nguồn ảnh. Với ảnh chè Thái Nguyên, độ chính xác thực tế chưa đo được. Mọi kết quả, kể cả lá khoẻ, đều vào hàng chờ cán bộ.</li>
-        <li><strong>Lưu trữ tệp:</strong> đường dẫn <code>/storage/*</code> chưa xác thực chữ ký SigV4 của S3, chờ tầng 2.</li>
-        <li><strong>Mini-app:</strong> các app đã cài tin cậy lẫn nhau qua một mạng nội bộ; cách ly riêng cho từng app chưa có. Giới hạn 10 yêu cầu mỗi phút cho mỗi IP trên trang công khai tính trong từng tiến trình.</li>
-        <li><strong>Sổ tự tạo:</strong> không có ô ảnh hay tệp, không có công thức, duyệt một bước; mỗi HTX tối đa 50 sổ, mỗi sổ tối đa 20 ô.</li>
-        <li><strong>Cảm biến:</strong> Mosquitto ghi trạng thái xuống đĩa mỗi 60 giây, nên bản tin xếp hàng trong 60 giây cuối có thể mất nếu broker sập.</li>
-        <li><strong>Ứng dụng nhân sự máy tính:</strong> chỉ chạy trên Windows, cần .NET 10 khi tự build.</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-</main>
-
 <footer class="site-footer">
   <div class="wrap foot-grid">
     <div class="foot-brand">

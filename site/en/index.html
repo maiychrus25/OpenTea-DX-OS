@@ -253,70 +253,23 @@ make web-up
     <p class="devdocs"><a href="../docs/miniapp-guide/" lang="vi">Read the full guide</a></p>
   </div>
 </section>
-<section id="open-source" class="band" aria-labelledby="os-title">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="eyebrow">Open source</span>
-      <h2 id="os-title">Licence, source and how to take part</h2>
-      <p>The project is released under the MIT licence. The source code, release notes, changelog and issue tracker are on GitHub.</p>
+<section id="status" class="closing" aria-label="Source and status">
+  <div class="wrap closing-grid">
+    <div>
+      <h2>Open source, and the known limits</h2>
+      <p class="closing-lead">MIT licence · version <span data-inject="version">vX.Y.Z</span></p>
+      <div class="closing-actions">
+        <a class="btn btn-primary" href="docs/">Read the docs</a>
+        <a class="btn btn-ghost" href="https://github.com/maiychrus25/OpenTea-DX-OS">Source on GitHub</a>
+        <a class="btn btn-ghost" href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CHANGELOG.md">Changelog</a>
+      </div>
     </div>
-    <div class="two-col">
-      <div class="card">
-        <h3>Links</h3>
-        <div class="link-list">
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS"><span>Source code</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/releases"><span>Releases and container images</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CHANGELOG.md"><span>Changelog (CHANGELOG.md)</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/issues"><span>Report a bug or request a feature</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/CONTRIBUTING.md"><span>Contributing guide</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/SECURITY.md"><span>Report a security issue</span><span aria-hidden="true">→</span></a>
-          <a href="https://github.com/maiychrus25/OpenTea-DX-OS/blob/main/DEPENDENCIES.md"><span>Third-party components and licences</span><span aria-hidden="true">→</span></a>
-        </div>
-        <p class="small muted" style="margin-top:14px">Note: n8n uses the Sustainable Use License, which is not an OSI licence. The project does not import, link or bundle n8n code; n8n runs as a separate service and can be replaced. See DEPENDENCIES.md.</p>
-      </div>
-      <div class="card">
-        <h3>Run from source</h3>
-        <p class="small muted" style="margin-top:6px">Requires Docker and Docker Compose v2. The full stack has 16 containers and uses about 3.6 GiB of RAM.</p>
-        <div class="cmd" role="region" aria-label="Commands to run from source">cp .env.example .env.local
-cp docker/.env.local.example docker/.env.local
-docker compose -f docker/docker-compose.yml up -d
-bash scripts/smoke-test.sh</div>
-        <p class="small muted" style="margin-top:12px">To use mini-apps, run <code>make platform-up</code> (or <code>make up</code>) instead of the bare <code>docker compose</code> command, which loads no app routes. Web app: http://localhost:3000.</p>
-        <h3 style="margin-top:22px;font-size:1.0625rem">Contribute</h3>
-        <p class="small" style="margin-top:6px">Read CONTRIBUTING.md before opening a pull request. Commit messages follow Conventional Commits in English. Every PR to main must pass the CI Quality Gate.</p>
-      </div>
+    <div class="closing-limits">
+      <h3>Known limits</h3>
+      <ul><li>Tea leaf disease check: 0.87 on the same-source test set, 0.12 to 0.35 across sources; Thai Nguyen photos not measured.</li><li>The /storage/* route does not yet verify S3 SigV4 signatures.</li><li>Installed mini-apps share one internal network.</li><li>Mosquitto saves its state to disk every 60 seconds.</li></ul>
     </div>
   </div>
 </section>
-
-<section id="status" aria-labelledby="status-title">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="eyebrow">Status</span>
-      <h2 id="status-title">Current version and known limits</h2>
-      <p>This section lists only what the repository documents. Version numbers come from <code>apps/web/package.json</code>, <code>CHANGELOG.md</code> and the GitHub release tags.</p>
-    </div>
-    <div class="status">
-      <div class="version-row">
-        <span class="pill">Version in source: <span data-inject="version">vX.Y.Z</span></span>
-        <span class="pill">Latest release: <span data-inject="latest">vX.Y.Z · YYYY-MM-DD</span></span>
-        <span class="pill warn">Pending release: see the Unreleased section of CHANGELOG.md</span>
-      </div>
-      <h3 style="margin-top:18px;font-size:1.125rem">Known limits</h3>
-      <ul>
-        <li><strong>Tea leaf disease check:</strong> accuracy is 0.87 on a test set from the same source, but only 0.12 to 0.35 when checked across image sources. Accuracy on Thai Nguyen tea photos has not been measured. Every result, including healthy leaves, goes to the officers' queue.</li>
-        <li><strong>File storage:</strong> the <code>/storage/*</code> route does not yet verify S3 SigV4 signatures; this waits for tier 2.</li>
-        <li><strong>Mini-apps:</strong> installed apps trust each other over one internal network; per-app isolation is not built yet. The public pages of mini-apps allow 10 requests per minute per IP, counted inside each process.</li>
-        <li><strong>Record books:</strong> no image or file fields, no formulas, one approval step; each cooperative can have at most 50 books and each book at most 20 fields.</li>
-        <li><strong>Sensors:</strong> Mosquitto saves its state to disk every 60 seconds, so messages queued in the last 60 seconds can be lost if the broker crashes.</li>
-        <li><strong>Desktop staff app:</strong> built for Windows only; building it needs the .NET 10 SDK.</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-</main>
-
 <footer class="site-footer">
   <div class="wrap foot-grid">
     <div class="foot-brand">
