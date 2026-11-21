@@ -839,10 +839,6 @@ section.band { background: var(--surface-sunken); }
   .nav-links a { padding: 10px 12px; }
 }
 @media (min-width: 1280px) { .nav-links { display: flex; } }
-@media (max-width: 639px) {
-  #theme-toggle { font-size: 0; }
-  #theme-toggle::before { content: "\25D0"; font-size: 17px; line-height: 1; }
-}
 /* Access diagram: intrinsic size on the card, labels at body size */
 .bento-card.full .viz { max-width: 420px; margin: 0 auto; }
 @media (min-width: 1280px) {
