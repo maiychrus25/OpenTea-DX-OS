@@ -9,6 +9,23 @@
   window.addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
+  // Story: the step in the middle of the viewport shows its panel (sticky mode only exists with JavaScript).
+  var steps = document.querySelectorAll(".story-step");
+  var panels = document.querySelectorAll(".story-panel");
+  if (steps.length && panels.length && "IntersectionObserver" in window) {
+    var setStep = function (n) {
+      steps.forEach(function (s) { s.classList.toggle("is-current", s.getAttribute("data-step") === n); });
+      panels.forEach(function (p) { p.classList.toggle("is-active", p.getAttribute("data-panel") === n); });
+    };
+    setStep("1");
+    var storyObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) setStep(entry.target.getAttribute("data-step"));
+      });
+    }, { rootMargin: "-40% 0px -45% 0px" });
+    steps.forEach(function (s) { storyObs.observe(s); });
+  }
+
   // Count-up for the stats strip: the final numbers are already in the HTML.
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var counters = document.querySelectorAll("[data-count]");
@@ -65,6 +82,22 @@
       toggle.textContent = LABELS[current];
     });
   }
+
+  // Copy buttons on the landing page code samples (shown only where the clipboard API exists).
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    document.querySelectorAll(".cbtn").forEach(function (button) {
+      button.hidden = false;
+      button.addEventListener("click", function () {
+        var text = button.parentNode.querySelector("pre").innerText;
+        navigator.clipboard.writeText(text).then(function () {
+          var old = button.textContent;
+          button.textContent = root_copied();
+          setTimeout(function () { button.textContent = old; }, 1600);
+        });
+      });
+    });
+  }
+  function root_copied() { return document.documentElement.lang === "en" ? "Copied" : "Đã chép"; }
 
   var dialog = document.getElementById("lightbox");
   if (dialog && typeof dialog.showModal === "function") {
