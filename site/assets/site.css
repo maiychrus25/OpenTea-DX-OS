@@ -1025,3 +1025,12 @@ section.band { background: var(--surface-sunken); }
 .closing-limits ul { display: grid; gap: 12px; }
 .closing-limits li { font-size: 16px; line-height: 1.5; color: #bcd3c6; padding-left: 18px; position: relative; }
 .closing-limits li::before { content: ""; position: absolute; left: 0; top: 0.65em; width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.35); }
+
+/* R5 footer: quiet, four columns, hairline top edge */
+.site-footer { background: var(--sidebar-darker); color: var(--sidebar-muted); padding: 72px 0 56px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.site-footer .foot-grid { gap: 40px; }
+.site-footer .foot-h { font-size: 13px; font-weight: 600; color: #e8efe9; margin-bottom: 8px; }
+.site-footer .foot-grid nav a { font-size: 15px; color: #a9c2b4; }
+.site-footer .foot-grid nav a:hover { color: #fff; text-decoration: none; }
+.site-footer p { font-size: 15px; line-height: 1.55; }
+.site-footer .foot-lic { color: #8fa89b; font-size: 14px; }
