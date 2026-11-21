@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.13.0] - 2026-11-22
+
+A cooperative manager gets a chart dashboard over the core's data and sensor readings, and three client apps join the repository: the multi-role Flutter app `hub-mobile` and the staff management pair `staff-desktop` and `staff-mobile`.
+
 ### Added
 
 - **App `hub-mobile` (`apps/hub-mobile`)**: one Flutter (Dart) app for Android, iOS and the web demo with roles chosen from the token claims after sign-in: guest, customer, farmer, HTX manager (officer read-only) and tour guide (`guide`, a staff account of an HTX). Tours belong to the HTX: the manager creates and edits tours (with a briefing for the guides), adds or removes guides, reads the member list of each tour and checks groups in; a guide sees only the tours an HTX assigned, with the HTX that assigned it, the schedule (Lộ trình), the itinerary, the groups with phone numbers and a check-in; a customer's ticket shows the guides of the tour. Guest browses news, tours and products; customer books tours, buys products, pays by VietQR, and keeps orders and tickets on the device (open offline). Leaf diagnosis sends a photo (gallery or live camera) to the web classifier with the app token. AI assistant pages per role (market, technical, shop, tour topics) with a local keyword answerer for guests and the web `POST /api/chatbot` stream for signed-in users. Reels: short videos with a For-you and Following feed, hearts, comments, share and follow, posted from the phone gallery (own videos on a page opened from the + button of Reels). Runs on a mock `HubRepository` and a demo `AuthService` or, with an issuer configured, on Keycloak OIDC PKCE (client `dxos-mobile`) and the web API through `HttpHubRepository`; storefront, tours and Reels still use sample data. No Google Play services, Firebase, Maps or analytics. Build: `apps/hub-mobile/tool/build.sh`. Not yet built as a release APK or run on iOS, and the VietQR code has not been scanned by a real banking app. See `apps/hub-mobile/README.md`.
@@ -26,6 +32,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `make platform-smoke` gives 131 PASS (was 124): five checks for the daily view and two for the `officer` role. The daily-view readings are dated yesterday and today instead of March 2026, so the lifecycle job cannot archive them between the insert and the query.
 - Web package version `1.13.0`.
 - **`htx-dashboard` 0.2.0, a chart dashboard**: the app draws its figures as charts instead of tiles, with a server-side SVG toolkit of its own (line and area, stacked and grouped columns, donut, sparkline, gauge, ring, calendar and matrix heatmaps, funnel, timeline, scatter) and one palette for both themes. The overview has a KPI strip with the change against the previous period, cooperative-wide sensor charts, a sensor freshness matrix and a harvest timeline; every other tab gains charts of its own. A rejected disease report is no longer listed as a kind of disease. Still no JavaScript and no new dependency. Upgrade an installed copy with `./dxos upgrade miniapps/htx-dashboard`; a preview with sample data runs with `python tests/preview.py` in the app's folder.
+
+### Upgrade notes
+
+- `make platform-up`, then `make web-up`: the first creates the view `telemetry.sensor_daily` and restarts Hasura so it loads the new metadata; the second rebuilds the web app at `1.13.0`. No data migration.
+- `./dxos install miniapps/htx-dashboard` (or install "Bảng điều hành HTX" from the App Store with a worker running). A copy of 0.1.0 installed from `main` before this release is replaced with `./dxos upgrade miniapps/htx-dashboard`.
+- A realm that already exists gets the mobile client with `make mobile-client`; a new realm has it from the realm file.
+- `apps/hub-mobile`, `apps/staff-desktop` and `apps/staff-mobile` are built from source with their own toolchains (Flutter, .NET, Gradle); see the README of each. The release workflow does not publish them as images.
+
+### Known limits
+
+- `htx-dashboard` shows the core's data only: figures of other mini-apps and of the staff apps are not included. Its charts are drawn on the server, so they do not update while the page is open. Sensor charts cover at most the 30 days the hot store keeps. Rainfall is shown as the average of a day's readings.
+- The staff apps keep their data in a schema of their own and are not installed through `./dxos`.
+- What `hub-mobile` reads from a real server and what it still shows from sample data is listed in `apps/hub-mobile/README.md`.
+- The browser checks of `app-kit.spec.ts` can fail on a frame that is still navigating (issue #44); a failed `Platform Smoke Test` job on that spec is re-run.
 
 ---
 
@@ -538,7 +558,8 @@ The `v1.8.0` tag has no GitHub Release, images or bundle: the release workflow's
 > Phiên bản đầu tiên sẽ chính thức được đánh số **v1.0.0** khi hệ thống được triển khai
 > hoàn chỉnh với đầy đủ các tính năng MVP theo PRD.
 
-[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.12.0...HEAD
+[Unreleased]: https://github.com/maiychrus25/OpenTea-DX-OS/compare/v1.13.0...HEAD
+[1.13.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.13.0
 [1.12.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.12.0
 [1.11.0]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.11.0
 [1.10.1]: https://github.com/maiychrus25/OpenTea-DX-OS/releases/tag/v1.10.1
