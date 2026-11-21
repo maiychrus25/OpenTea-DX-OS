@@ -1,0 +1,145 @@
+/* SPDX-License-Identifier: MIT */
+/* SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+/* Documentation layout. Tokens come from site.css, so both themes stay in step with the landing page. */
+.docs-shell { padding: 24px 0 72px; }
+.docs-grid { display: grid; gap: 32px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) {
+  .docs-grid { grid-template-columns: 232px minmax(0, 1fr); }
+}
+@media (min-width: 1200px) {
+  .docs-grid { grid-template-columns: 232px minmax(0, 1fr) 200px; gap: 40px; }
+}
+.docs-grid > * { min-width: 0; }
+
+/* Sidebar: a disclosure menu on phones, a sticky column on desktop */
+.docs-side { position: relative; }
+.side-mobile { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); }
+.side-mobile > summary {
+  min-height: 44px; display: flex; align-items: center; padding: 10px 14px; cursor: pointer;
+  font-weight: 600; list-style: none;
+}
+.side-mobile > summary::-webkit-details-marker { display: none; }
+.side-mobile > summary::after { content: "+"; margin-left: auto; font-weight: 700; color: var(--primary); }
+.side-mobile[open] > summary::after { content: "−"; }
+.side-mobile .side-nav { padding: 4px 14px 14px; max-height: 60vh; overflow-y: auto; }
+.side-desktop { display: none; }
+@media (min-width: 900px) {
+  .side-mobile { display: none; }
+  .side-desktop { display: block; position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; padding-right: 6px; }
+}
+.side-nav { font-size: 0.9rem; }
+.side-title { font-weight: 700; margin: 0 0 6px; }
+.side-title a { color: var(--foreground); text-decoration: none; }
+.side-group {
+  margin: 18px 0 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted-foreground);
+}
+.side-nav ul { display: grid; gap: 1px; }
+.side-nav li a {
+  display: block; padding: 6px 10px; border-radius: var(--radius-sm); color: var(--ink-secondary);
+  text-decoration: none; line-height: 1.35;
+}
+.side-nav li.sub a { padding-left: 22px; font-size: 0.85rem; }
+.side-nav li a:hover { color: var(--foreground); background: var(--surface-sunken); }
+.side-nav li a[aria-current="page"] {
+  color: var(--primary); background: var(--primary-subtle); font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+.side-search { margin-top: 16px; }
+.side-search input {
+  width: 100%; min-height: 44px; padding: 8px 12px; border-radius: var(--radius-md);
+  border: 1px solid var(--border); background: var(--card); color: var(--foreground); font: inherit;
+}
+.side-search label { display: block; margin-bottom: 6px; }
+.results { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.results a { display: block; padding: 8px 10px; border-radius: var(--radius-md); background: var(--card); border: 1px solid var(--border); text-decoration: none; color: var(--foreground); }
+.results small { display: block; color: var(--muted-foreground); font-size: 0.8rem; margin-top: 2px; }
+.results .empty { color: var(--muted-foreground); padding: 8px 2px; }
+
+/* Main column */
+.doc-main { max-width: 760px; width: 100%; }
+.crumbs { font-size: 0.85rem; color: var(--muted-foreground); margin-bottom: 14px; }
+.crumbs a { color: var(--muted-foreground); }
+.doc-head h1 { font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.5rem); font-weight: 700; letter-spacing: -0.02em; }
+.doc-desc { margin-top: 10px; font-size: 1.0625rem; color: var(--ink-secondary); }
+.doc-meta { margin-top: 12px; font-size: 0.85rem; color: var(--muted-foreground); }
+.doc-meta a { color: var(--primary); }
+.doc-head { padding-bottom: 22px; margin-bottom: 26px; border-bottom: 1px solid var(--border); }
+
+/* Prose: measure, rhythm on an 8-point scale */
+.prose { font-size: 1rem; line-height: 1.7; }
+.prose > * + * { margin-top: 16px; }
+.prose h2 { font-size: 1.5rem; font-weight: 700; margin-top: 44px; padding-top: 4px; letter-spacing: -0.01em; }
+.prose h3 { font-size: 1.2rem; font-weight: 700; margin-top: 32px; }
+.prose h4 { font-size: 1.05rem; font-weight: 700; margin-top: 24px; }
+.prose h2 + *, .prose h3 + * { margin-top: 12px; }
+.prose a { color: var(--primary); }
+.prose ul, .prose ol { padding-left: 24px; }
+.prose li + li { margin-top: 6px; }
+.prose li > p { margin-top: 6px; }
+.prose img { border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--card); margin: 8px auto; }
+.prose blockquote {
+  margin-left: 0; padding: 12px 16px; border-left: 4px solid var(--accent); background: var(--accent-subtle);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0; color: var(--foreground);
+}
+.prose blockquote p { margin-top: 0; }
+.prose code {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875em;
+  background: var(--surface-sunken); padding: 1px 6px; border-radius: 6px; overflow-wrap: anywhere;
+}
+.prose pre { margin: 0; }
+.codebox { position: relative; margin-top: 16px; }
+.codebox pre {
+  background: var(--code-bg); color: var(--code-fg); border-radius: var(--radius-lg); border: 1px solid var(--border);
+  padding: 16px 18px; overflow-x: auto; font-size: 0.8125rem; line-height: 1.6;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.codebox pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+.codebox .copy {
+  position: absolute; top: 8px; right: 8px; min-height: 36px; padding: 4px 12px; border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.24); background: rgba(0, 0, 0, 0.35); color: #e3ece6; font: inherit; font-size: 0.8rem; cursor: pointer;
+}
+.codebox .copy:hover { background: rgba(0, 0, 0, 0.55); }
+.codebox .copy[hidden] { display: none; }
+/* The button sits in the top-right corner: when it is shown, the first code line starts below it instead of under it. */
+.codebox:has(.copy:not([hidden])) pre { padding-top: 52px; }
+.prose table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+.table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card); }
+.table-wrap table { margin: 0; min-width: 480px; }
+.prose th, .prose td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+.prose th { background: var(--surface-sunken); font-weight: 600; }
+.prose tr:last-child td { border-bottom: 0; }
+.prose hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+.prose .anchor {
+  margin-left: 8px; color: var(--muted-foreground); text-decoration: none; opacity: 0; font-weight: 400;
+}
+.prose h2:hover .anchor, .prose h3:hover .anchor, .prose .anchor:focus-visible { opacity: 1; }
+.prose h2, .prose h3 { scroll-margin-top: 96px; }
+
+/* Previous and next */
+.prev-next { display: grid; gap: 12px; margin-top: 56px; grid-template-columns: 1fr 1fr; }
+.prev-next a {
+  display: block; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--card); text-decoration: none; color: var(--foreground); font-weight: 600; min-height: 44px;
+}
+.prev-next a span { display: block; font-size: 0.8rem; font-weight: 500; color: var(--muted-foreground); margin-bottom: 2px; }
+.prev-next a:hover { border-color: var(--primary); }
+.prev-next .next { text-align: right; grid-column: 2; }
+.prev-next a.prev { grid-column: 1; }
+@media (max-width: 599px) { .prev-next { grid-template-columns: 1fr; } .prev-next .next, .prev-next a.prev { grid-column: auto; text-align: left; } }
+
+/* Table of contents on wide screens */
+.doc-toc { display: none; }
+@media (min-width: 1200px) {
+  .doc-toc { display: block; position: sticky; top: 84px; align-self: start; max-height: calc(100vh - 100px); overflow-y: auto; }
+}
+.toc-title { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground); margin-bottom: 8px; }
+.toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.toc a { display: block; padding: 4px 8px; border-radius: var(--radius-sm); color: var(--ink-secondary); text-decoration: none; font-size: 0.85rem; line-height: 1.35; }
+.toc a:hover { color: var(--foreground); }
+.toc li.lvl3 a { padding-left: 18px; font-size: 0.8rem; }
+.toc a.is-current { color: var(--primary); font-weight: 600; box-shadow: inset 2px 0 0 var(--primary); }
+
+/* Motion: none beyond colour changes */
+@media (prefers-reduced-motion: reduce) { .docs-page * { scroll-behavior: auto !important; } }
