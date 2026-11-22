@@ -6,6 +6,8 @@
 
   <p><em>"Kết nối Nông hộ — Tối ưu Sản xuất — Minh bạch Thị trường"</em></p>
 
+  <p>🌐 <a href="https://maiychrus25.github.io/OpenTea-DX-OS/"><strong>Trang giới thiệu dự án</strong></a> · <a href="https://maiychrus25.github.io/OpenTea-DX-OS/en/">English</a> · <a href="https://maiychrus25.github.io/OpenTea-DX-OS/docs/">Tài liệu trực tuyến</a></p>
+
   <br>
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](./LICENSE)
