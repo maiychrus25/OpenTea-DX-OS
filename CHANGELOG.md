@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Mini-app `hub-mobile` (`miniapps/hub-mobile`)**: a card in the app store and an open page (`/public/<htxCode>`) with the download link of the Android APK and the steps to add the web build to an iPhone home screen. Links come from `HUB_APK_URL` and `HUB_WEB_URL`; the app stores and reads nothing. The 67 MB APK itself is not in the repository.
+
 ---
 
 ## [1.13.0] - 2026-11-22
