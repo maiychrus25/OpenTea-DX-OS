@@ -10,26 +10,37 @@
 
 ### 1.1 AI Principle Invariant
 ```
-AI CHỈ tổng hợp và trình bày sự thật có trích dẫn nguồn.
-AI KHÔNG ra quyết định thay người dùng.
-AI KHÔNG khuyến nghị hành động cụ thể.
-Mọi số liệu phải kèm citation: (Nguồn: USDA, ngày DD/MM/YYYY).
+Chế độ thường:
+- AI được đề xuất hành động nằm trong danh mục hành động (action catalogue).
+- AI KHÔNG bao giờ tự thực thi.
+- Mọi đề xuất kèm lý do và nguồn; người duyệt chịu trách nhiệm quyết định.
+
+Chế độ tự vận hành (tuỳ chọn, mặc định tắt, do manager bật và chịu trách nhiệm):
+- AI tự thực thi hành động trong danh mục trong các ngưỡng và 5 giới hạn cứng H1–H5 của đặc tả §11.
+
+Giữ nguyên cho chatbot, bản tin, hỏi đáp và nhận diện bệnh:
+- Chatbot, bản tin và hỏi đáp CHỈ tổng hợp và trình bày sự thật có trích dẫn nguồn.
+- Mọi số liệu phải kèm citation: (Nguồn: USDA, ngày DD/MM/YYYY).
+- FastAPI /predict KHÔNG trả về treatment recommendation — chỉ disease_name + confidence.
 ```
 
 **Enforcement trong code:**
-- Ollama system prompt PHẢI chứa đủ 4 quy tắc trên (xem ARCHITECTURE-SPINE §7.4)
+- Ollama system prompt PHẢI chứa quy tắc chỉ tổng hợp sự thật có trích dẫn nguồn (xem ARCHITECTURE-SPINE §7.4)
 - Response từ `/api/chatbot` và `/api/bulletin` PHẢI chứa `sources` array
 - FastAPI `/predict` KHÔNG trả về treatment recommendation — chỉ `disease_name` + `confidence`
+- Mọi đề xuất hành động đi qua danh mục hành động và bước duyệt trong `apps/web`, được ghi vào `audit.events` (xem [ADR 0003](./adr/0003-agentic-layer.md) và đặc tả `docs/specs/2026-11-23-agentic-layer-design.md`)
 
 ### 1.2 MNM (Mã Nguồn Mở) Invariant
 ```
 100% thành phần phải có license MNM-compatible.
-KHÔNG sử dụng API keys trả phí ở bất kỳ đâu.
+Không có phụ thuộc bắt buộc nào vào dịch vụ trả phí. Provider trả phí là tuỳ chọn, mặc định tắt, bật theo từng HTX. Dựng và chạy thử từ mã nguồn không cần khoá nào.
 KHÔNG bundle binary proprietary vào source code.
 KHÔNG hardcode credentials vào bất kỳ file nào được commit.
 ```
 
-**Verified MNM stack:** Xem PRD §8 License Compliance Matrix
+**Verified MNM stack:** Xem PRD §8 License Compliance Matrix và [ADR 0004](./adr/0004-external-llm-providers.md).
+
+> **Lưu ý chuyển tiếp:** Chatbot hiện tại tự chuyển sang Groq khi có `GROQ_API_KEY`; cơ chế này có từ trước khi lớp provider dùng chung được thiết kế và sẽ chuyển sang dùng chung lớp provider cùng chính sách dữ liệu trong đặc tả §3, §8.3.
 
 ### 1.3 Security Invariant
 ```
