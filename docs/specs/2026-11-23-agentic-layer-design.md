@@ -91,6 +91,7 @@ Telegram Mini App ──────────────── HTTPS, phiên
 - **`dxos-telegram` (`platform/telegram`, mới)** nói chuyện với Telegram: gửi tin từ hộp thư đi của web, chuyển nút bấm và câu hỏi của người dùng về web. Dịch vụ này không gọi LLM.
 - **Câu chat của người dùng** đi vào web. Web nhờ `dxos-agent` hiểu câu đó (agent `assistant`), rồi tự làm phần đọc với quyền của chính người chat, hoặc dựng thẻ xác nhận cho phần ghi (§13.5).
 - **Telegram Mini App** mở các trang web hiện có ngay trong Telegram (§13.6). Phần này phủ các thao tác không hợp làm bằng chat (vẽ thửa trên bản đồ, mini-app, tải tài liệu, xác nhận việc rủi ro cao) mà không phải viết lại giao diện.
+- **`dxos-builder` (`platform/builder`, mới)** là vùng thứ tư, kém tin nhất: nơi công cụ viết mã xây mini-app theo yêu cầu (§12). Dịch vụ này không đọc dữ liệu nghiệp vụ, không có khoá nào của lõi, và mã nó viết chỉ được cài sau các cổng kiểm tra và bước duyệt.
 
 Lý do tách ba vùng: phần gọi LLM là phần dễ bị dụ, vì nó đọc chữ do người dùng nhập (ghi chú nhật ký, mô tả bệnh). Nếu bị dụ, tệ nhất nó chỉ sinh ra đề xuất rác. Nó không thể tự duyệt, vì web chỉ nhận quyết định từ phiên đăng nhập web của người thật hoặc từ `dxos-telegram`.
 
@@ -100,6 +101,7 @@ Lý do tách ba vùng: phần gọi LLM là phần dễ bị dụ, vì nó đọ
 |---|---|---|
 | `dxos-agent-<htx>`, mỗi hợp tác xã một client | Keycloak client credentials, claim `htx_code` cố định, vai trò `agent` | đọc Hasura bằng vai `agent`; gọi `/api/internal/agent/*` |
 | `dxos-telegram` | Keycloak client credentials | gọi `/api/internal/telegram/*` |
+| `dxos-builder` | Keycloak client credentials | gọi `/api/internal/builder/*`: nhận đặc tả đã duyệt, báo tiến độ và kết quả; không đọc dữ liệu nghiệp vụ |
 | Người duyệt | tài khoản Keycloak sẵn có | duyệt đúng loại hành động mà vai trò của mình được phép (§6) |
 | Người chat qua Telegram | tài khoản Keycloak đã liên kết (§13.2) | đúng quyền vai trò hiện tại của người đó, như trên web |
 
@@ -148,6 +150,9 @@ Danh mục ban đầu:
 | `staff.task.create` | giao việc cho nhân sự | medium | manager | web, telegram | app nhân sự (§9, đang phụ thuộc) | auto |
 | `agent.settings.update` | đổi cài đặt agent (ngưỡng, lịch) theo một đề xuất cải tiến | medium | manager | web, telegram | bảng `agent_settings` (§10.3) | auto, chỉ ngưỡng và lịch (H2) |
 | `strategy.adopt` | áp dụng kế hoạch mùa vụ của A11 | medium | manager | web, telegram | bảng `strategy_plans` (§10.6) | auto, chờ 48 giờ |
+| `app.spec.approve` | duyệt đặc tả của một mini-app do AI xây | medium | manager | web, telegram | A12 (§12.3) | auto |
+| `miniapp.install` | cài và bật một mini-app cho hợp tác xã | high | manager | web | `app-store/requests`, `./dxos worker` (§12.6) | unlockable |
+| `miniapp.remove` | tắt hoặc gỡ một mini-app | high | manager | web | như trên | unlockable |
 
 - Thêm một loại mới phải đi bằng một PR vào danh mục, kèm test. Không có cách thêm loại mới lúc hệ thống đang chạy.
 - Bảng trên là phần dành cho agent (`origins: agent`). Danh mục còn phủ dần mọi thao tác ghi của web cho người dùng (`origins: user`), theo bảng §13.7; mini-app thêm hành động của mình qua `app.yaml` (§10.2).
@@ -210,6 +215,7 @@ Một giao diện chung và ba adapter:
 | `ollama` (mặc định) | gateway `/api/ai/llm/v1/chat/completions` | dữ liệu không rời máy chủ của hợp tác xã |
 | `anthropic` | API của Anthropic (Claude), dùng SDK chính thức | tuỳ chọn |
 | `openai` | API của OpenAI (Codex, GPT), dùng SDK chính thức | tuỳ chọn; adapter này dùng được cho cả dịch vụ tương thích OpenAI khác |
+| `claude-code`, `codex-cli` | công cụ viết mã chạy không cần người ngồi, trong `dxos-builder` | chỉ dùng cho xưởng mini-app (§12); cần khoá của provider tương ứng, Ollama không thay được |
 
 - Đầu vào là các tin nhắn kèm khuôn JSON của đầu ra. Đầu ra là JSON đã được kiểm theo khuôn. Lệch khuôn thì thử lại một lần, vẫn lệch thì coi là lỗi.
 - Tên model lấy từ cấu hình, không viết cứng trong mã.
@@ -253,6 +259,7 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 | A9 `daily-campaign` Điều phối chiến dịch ngày | phát hiện và đề xuất đang mở của A1 tới A5, A8 và agent của mini-app; lịch thu hoạch; thời tiết; số người có mặt | — | một chiến dịch ngày gồm các mục trong danh mục (§10.1) | 05:30 mỗi ngày |
 | A10 `improvement` Cải tiến | kết quả các chiến dịch, lý do bị từ chối, thời gian chờ duyệt, chỉ số bảng điều hành, số liệu mini-app | mục tiêu trượt lặp lại, đề xuất bị từ chối nhiều, chỉ số xấu đi | đề xuất cải tiến (§10.3) | thứ Hai hằng tuần |
 | A11 `strategy` Định hướng phát triển | lịch sử sản lượng và chất lượng, giá thị trường, thời tiết theo mùa, kết quả chiến dịch và cải tiến, số liệu mini-app | — | kế hoạch mùa vụ: mục tiêu, ưu tiên, việc phát triển (`strategy.adopt`, §10.6) | đầu mỗi vụ và mỗi quý |
+| A12 `app-builder` Xưởng mini-app | yêu cầu của người dùng hoặc của A11, danh sách mini-app hiện có, mẫu `hello`, bộ kit | — | bật app sẵn có, mẫu Sổ tự tạo, hoặc một mini-app mới (§12) | khi có yêu cầu |
 
 - Các ngưỡng (6 giờ, bán kính, số báo cáo) là cấu hình theo hợp tác xã. Giá trị mặc định ghi trong mã và trong `rules-and-limits.md`.
 - **Bản tin:** thêm cột `status` (`draft`, `published`, `rejected`) cho bảng `bulletins`. Trang công khai chỉ đọc bản `published`. Thay đổi bảng đi theo luồng migration hiện có của web.
