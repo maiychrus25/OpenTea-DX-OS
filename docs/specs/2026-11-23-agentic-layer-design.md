@@ -4,13 +4,13 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Lớp AI vận hành có người duyệt
 
-> **Trạng thái:** Bản định hướng (2026-11-23), chưa triển khai, chưa giao người làm.
+> **Trạng thái:** Bản định hướng (2026-11-23, bản 2), chưa triển khai, chưa giao người làm. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7).
 > **Yêu cầu của chủ dự án (2026-11-23):** thêm một lớp AI vận hành trên hệ thống, luôn còn người phê duyệt. Làm đầy đủ, không cắt phạm vi theo hạn nộp bài. Được gọi provider bên ngoài như Claude và Codex. Báo cáo, hỏi đáp và phê duyệt được qua Telegram, để không phụ thuộc hoàn toàn vào website.
 > **Người đọc:** người sẽ xây lớp này (thành viên nhóm hoặc một phiên AI lập trình). Tài liệu nói cần gì, vì sao, và chốt các quyết định kiến trúc. Chi tiết cài đặt do người làm quyết, trong khuôn khổ ở đây. Mỗi lần gộp vào `main` vẫn hỏi chủ dự án.
 
 ## 1. Mục tiêu
 
-AI theo dõi dữ liệu của hợp tác xã, phát hiện việc cần làm và soạn sẵn hành động. Người có thẩm quyền duyệt trên web hoặc Telegram. Hệ thống thực thi bằng các chức năng đã có và ghi vào sổ audit.
+AI theo dõi dữ liệu của hợp tác xã, phát hiện việc cần làm và soạn sẵn hành động. Người có thẩm quyền duyệt trên web hoặc Telegram. Hệ thống thực thi bằng các chức năng đã có và ghi vào sổ audit. Người dùng ở mọi vai trò làm việc với hệ thống qua Telegram như qua web, và mỗi ngày hợp tác xã có một chiến dịch do các agent soạn.
 
 Lớp này coi là xong khi:
 
@@ -19,6 +19,8 @@ Lớp này coi là xong khi:
 3. Tắt hết provider bên ngoài thì hệ thống vẫn chạy đủ bằng Ollama nội bộ, chỉ chậm hơn hoặc kém hơn.
 4. Không có đường nào để AI tự ghi vào dữ liệu nghiệp vụ.
 5. Mỗi đề xuất, quyết định và lần thực thi đều tra được trong `audit.events`.
+6. Mọi thông tin và mọi thao tác của hệ thống làm được từ Telegram, đúng theo quyền của người dùng (§11.7).
+7. Mỗi sáng hợp tác xã nhận một chiến dịch ngày có mục tiêu đo được, mỗi tối có kết quả so với mục tiêu, và mỗi tuần có đề xuất cải tiến dựa trên kết quả các chiến dịch trước (§10).
 
 ## 2. Quyết định của chủ dự án (không đổi nếu chưa hỏi lại)
 
@@ -27,8 +29,10 @@ Lớp này coi là xong khi:
 | D1 | Luôn có người duyệt. Không có chế độ tự duyệt, kể cả với hành động rủi ro thấp. |
 | D2 | Làm đầy đủ các phần trong tài liệu này, theo thứ tự các mốc ở §15. |
 | D3 | Được gọi provider bên ngoài: Anthropic (Claude) và OpenAI (Codex và các model GPT). Ollama nội bộ vẫn là mặc định. |
-| D4 | Telegram là kênh thứ hai, ngang hàng với web: nhận báo cáo, hỏi đáp, phê duyệt. |
+| D4 | Telegram là cửa vào ngang hàng với web: nhận báo cáo, hỏi đáp, phê duyệt, thao tác (xem D6). |
 | D5 | Nhóm viết tài liệu, người khác xây. |
+| D6 | Mọi thông tin và thao tác trên hệ thống đều làm được qua bot Telegram, cho mọi vai trò. |
+| D7 | Các agent vận hành hằng ngày: đưa ra chiến dịch ngày cho hợp tác xã, theo dõi kết quả và đề xuất cải tiến. |
 
 Cách hiểu cần xác nhận: "Codex" ở D3 được hiểu là API của OpenAI. Nếu chủ dự án muốn chạy chính công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống thì đó là phạm vi khác, ghi ở §17.
 
