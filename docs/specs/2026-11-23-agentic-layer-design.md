@@ -73,7 +73,7 @@ Chế độ tự vận hành (D8) đi xa hơn bản sửa ở trên: khi đượ
 | Duyệt nhật ký, duyệt thu hoạch, duyệt bệnh | `/api/journal/batch-approve`, `/api/parcels/[id]/approve-harvest`, `/api/officer/diseases/[id]/review` | hành động trong danh mục |
 | Bản tin AI lúc 04:00 | `workflows/bulletin-synthesis.json`, bảng `bulletins` | agent bản tin (§9) |
 | Bảng điều hành HTX | `miniapps/htx-dashboard` | chỉ số cho báo cáo; tab chỉ số của lớp AI (§15) |
-| Khuôn dịch vụ Python của lõi | `platform/dataops`, `platform/scanner` (gói `dxos_*`, Dockerfile, requirements, tests) | khuôn cho hai dịch vụ mới |
+| Khuôn dịch vụ Python của lõi | `platform/dataops`, `platform/scanner` (gói `dxos_*`, Dockerfile, requirements, tests) | khuôn cho ba dịch vụ mới |
 | Gói `openai` trong web | `apps/web/package.json` | chatbot hiện tại |
 
 Mô hình nội bộ đang cài chỉ có `qwen2.5:0.5b`. Bản này đủ cho chatbot đơn giản nhưng không đủ để chọn hành động (§8.4).
@@ -242,7 +242,7 @@ Một giao diện chung và ba adapter:
 
 ### 8.2 Khoá và chi phí
 
-- Khoá API đặt ở mức máy chủ, trong biến môi trường hoặc tệp bí mật của Docker do người vận hành quản lý. Khoá không lưu trong cơ sở dữ liệu, không commit, và không hiện lại trên giao diện.
+- Khoá API đặt ở mức máy chủ, trong biến môi trường hoặc tệp bí mật của Docker do người vận hành quản lý. Khoá không lưu trong cơ sở dữ liệu, không commit, và không hiện lại trên giao diện (D13).
 - Mỗi hợp tác xã có ngân sách tháng (số tiền ước tính hoặc số token). Chạm 80% thì báo qua Telegram. Chạm 100% thì tự chuyển về Ollama đến hết tháng.
 - Mỗi lượt chạy ghi số token và chi phí ước tính vào `agent_runs`.
 
@@ -508,7 +508,7 @@ App do AI xây là app riêng của hợp tác xã đã yêu cầu. Muốn mọi
 - Mỗi bản cài DX-OS có một bot (không phải mỗi hợp tác xã một bot). Người vận hành tạo bot qua BotFather và đặt token vào biến môi trường của `dxos-telegram`.
 - Mặc định dùng **long polling** (`getUpdates`), nên chạy được cả ở hợp tác xã không có địa chỉ công khai. Webhook là tuỳ chọn; khi dùng webhook phải đặt `secret_token` và kiểm header `X-Telegram-Bot-Api-Secret-Token`.
 - Gọi thẳng Bot API qua HTTP, không thêm thư viện bot.
-- Mini App (§13.6) cần web có địa chỉ HTTPS mà điện thoại mở được. Hợp tác xã không có địa chỉ công khai vẫn dùng được toàn bộ phần chat, chỉ thiếu Mini App.
+- Mini App (§13.6) cần web có địa chỉ HTTPS mà điện thoại mở được; mỗi bản cài có tên miền và chứng chỉ TLS (D17, §16). Lúc địa chỉ đó tạm thời không mở được, phần chat vẫn đủ, chỉ thiếu Mini App.
 
 ### 13.2 Liên kết tài khoản
 
@@ -581,7 +581,7 @@ Các app ngoài web (`apps/hub-mobile`, `apps/staff-desktop`, `apps/staff-mobile
 
 ### 13.8 Kênh khác
 
-Mattermost giữ nguyên như hiện tại. Có cần thêm Zalo hay không là điểm còn mở (§19).
+Mattermost giữ nguyên như hiện tại. Không làm Zalo (D15).
 
 ## 14. Khi một thành phần lỗi
 
@@ -672,10 +672,11 @@ Kịch bản được cập nhật ở mỗi mốc và chạy trong CI bằng pr
 
 ## 16. Triển khai và vận hành
 
-- Hai dịch vụ mới trong `docker/docker-compose.yml`: ảnh ghim phiên bản, có healthcheck, giới hạn bộ nhớ, theo mẫu `platform/dataops`.
+- Ba dịch vụ mới trong `docker/docker-compose.yml`: `dxos-agent` và `dxos-telegram` từ M0, `dxos-builder` từ M13. Mỗi dịch vụ có ảnh ghim phiên bản, healthcheck và giới hạn bộ nhớ, theo mẫu `platform/dataops`.
 - Lệnh `./dxos agent enable <htx>` và `./dxos agent disable <htx>`: tạo hoặc xoá client Keycloak `dxos-agent-<htx>`, bật cài đặt mặc định.
 - Biến môi trường mới (tên gợi ý): `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`. Thêm vào `.env.example` với giá trị trống; không commit giá trị thật.
-- Workflow release dựng thêm hai ảnh mới.
+- Workflow release dựng thêm ba ảnh mới.
+- Mỗi bản cài có một tên miền và chứng chỉ TLS miễn phí (ví dụ Let's Encrypt) đặt trước APISIX, dùng cho cả Mini App lẫn trang truy xuất lô công khai mà người mua mở từ mã QR (D17). Cách cài ghi trong tài liệu triển khai.
 - BotFather: đặt nút menu mở Mini App và đặt tên miền web cho bot.
 - Client Keycloak chỉ đọc người dùng và vai trò cho web (§5.2).
 - Công tắc khẩn: manager tắt được lớp AI của hợp tác xã mình, người vận hành tắt được toàn hệ thống, đều từ web. Khi tắt, đề xuất đang mở chuyển `expired`.
@@ -713,6 +714,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 - Hướng dẫn dùng bot cho từng vai trò (quản trị, cán bộ, nông hộ), tiếng Việt, có ảnh chụp màn hình.
 - `docs/rules-and-limits.md`: hai chế độ vận hành và năm giới hạn cứng (§11.1); hướng dẫn bật, dừng và đọc báo cáo của chế độ tự vận hành.
 - `docs/api-contract.md`: máy chủ MCP (§8.5); bảng kết quả bộ đo trong `docs/` (§15); kịch bản trình diễn (§15.1).
+- Tài liệu triển khai: tên miền và chứng chỉ TLS cho mỗi bản cài (D17).
 
 ## 19. Điểm còn mở
 
