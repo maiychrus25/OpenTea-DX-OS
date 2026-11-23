@@ -120,6 +120,7 @@ Agent chỉ được đề xuất các loại hành động có trong danh mục
 | `risk` | `low`, `medium` hoặc `high` |
 | `approverRoles` | vai trò được duyệt |
 | `origins` | ai được khởi tạo: `agent` (agent đề xuất), `user` (người dùng yêu cầu qua chat hoặc Mini App) |
+| `autonomy` | ở chế độ tự vận hành (§11): `auto` tự chạy; `unlockable` vẫn cần người, trừ khi manager mở loại này lúc bật; `never` luôn cần người |
 | `channels` | `web`, `telegram`; hành động `high` chỉ có `web`, tức là trên trình duyệt hoặc trong Mini App (§12.6) |
 | `payloadSchema` | khuôn zod; web từ chối đề xuất sai khuôn |
 | `editableFields` | trường người duyệt được sửa trước khi duyệt, ví dụ nội dung thông báo |
@@ -130,22 +131,23 @@ Agent chỉ được đề xuất các loại hành động có trong danh mục
 
 Danh mục ban đầu:
 
-| `kind` | Việc | `risk` | Người duyệt | Kênh | Dựa trên |
-|---|---|---|---|---|---|
-| `journal.approve` | duyệt nhật ký đang chờ | medium | officer, manager | web, telegram | luồng duyệt nhật ký (`rules-and-limits.md` §3.3), `batch-approve`, tối đa 50 |
-| `journal.reject` | trả lại nhật ký kèm lý do | medium | officer, manager | web, telegram | như trên |
-| `notification.internal` | báo cho cán bộ hoặc ban quản trị | low | manager | web, telegram | `Notification` |
-| `notification.households` | báo cho một nhóm nông hộ (theo thửa, theo vùng) | medium | manager | web, telegram | `/api/notifications/announce` |
-| `notification.broadcast` | báo cho toàn hợp tác xã | high | manager | web | như trên |
-| `harvest.approve` | duyệt thu hoạch thửa đã hết thời gian cách ly | high | manager | web | `approve-harvest` |
-| `bulletin.publish` | đăng bản tin AI | medium | manager | web, telegram | cần thêm trạng thái cho `bulletins` (§9) |
-| `disease.inspection` | yêu cầu cán bộ kiểm tra một vùng | medium | officer, manager | web, telegram | thông báo có liên kết tới thửa |
-| `staff.task.create` | giao việc cho nhân sự | medium | manager | web, telegram | app nhân sự (§9, đang phụ thuộc) |
-| `agent.settings.update` | đổi cài đặt agent (ngưỡng, lịch) theo một đề xuất cải tiến | medium | manager | web, telegram | bảng `agent_settings` (§10.3) |
+| `kind` | Việc | `risk` | Người duyệt | Kênh | Dựa trên | Tự vận hành |
+|---|---|---|---|---|---|---|
+| `journal.approve` | duyệt nhật ký đang chờ | medium | officer, manager | web, telegram | luồng duyệt nhật ký (`rules-and-limits.md` §3.3), `batch-approve`, tối đa 50 | auto |
+| `journal.reject` | trả lại nhật ký kèm lý do | medium | officer, manager | web, telegram | như trên | auto |
+| `notification.internal` | báo cho cán bộ hoặc ban quản trị | low | manager | web, telegram | `Notification` | auto |
+| `notification.households` | báo cho một nhóm nông hộ (theo thửa, theo vùng) | medium | manager | web, telegram | `/api/notifications/announce` | auto |
+| `notification.broadcast` | báo cho toàn hợp tác xã | high | manager | web | như trên | unlockable |
+| `harvest.approve` | duyệt thu hoạch thửa đã hết thời gian cách ly | high | manager | web | `approve-harvest` | unlockable |
+| `bulletin.publish` | đăng bản tin AI | medium | manager | web, telegram | cần thêm trạng thái cho `bulletins` (§9) | auto |
+| `disease.inspection` | yêu cầu cán bộ kiểm tra một vùng | medium | officer, manager | web, telegram | thông báo có liên kết tới thửa | auto |
+| `staff.task.create` | giao việc cho nhân sự | medium | manager | web, telegram | app nhân sự (§9, đang phụ thuộc) | auto |
+| `agent.settings.update` | đổi cài đặt agent (ngưỡng, lịch) theo một đề xuất cải tiến | medium | manager | web, telegram | bảng `agent_settings` (§10.3) | auto, chỉ ngưỡng và lịch (H2) |
+| `strategy.adopt` | áp dụng kế hoạch mùa vụ của A11 | medium | manager | web, telegram | bảng `strategy_plans` (§10.6) | auto, chờ 48 giờ |
 
 - Thêm một loại mới phải đi bằng một PR vào danh mục, kèm test. Không có cách thêm loại mới lúc hệ thống đang chạy.
 - Bảng trên là phần dành cho agent (`origins: agent`). Danh mục còn phủ dần mọi thao tác ghi của web cho người dùng (`origins: user`), theo bảng §12.7; mini-app thêm hành động của mình qua `app.yaml` (§10.2).
-- **Agent không bao giờ được đề xuất:** kết nạp hoặc xoá thành viên, sửa lô đã xuất QR, cài hoặc gỡ mini-app, đổi quyền, thao tác liên quan đến tiền. Những việc này chỉ do người dùng tự khởi tạo (`origins: user`): trong chat có thẻ xác nhận hoặc trong Mini App, tuỳ mức rủi ro (§12.7).
+- **Ở chế độ thường, agent không bao giờ được đề xuất:** kết nạp hoặc xoá thành viên, sửa lô đã xuất QR, cài hoặc gỡ mini-app, đổi quyền, thao tác liên quan đến tiền. Những việc này chỉ do người dùng tự khởi tạo (`origins: user`): trong chat có thẻ xác nhận hoặc trong Mini App, tuỳ mức rủi ro (§12.7). Ở chế độ tự vận hành, manager mở được kết nạp thành viên, cài gỡ mini-app và hành động dính tiền (§11.1); xoá dữ liệu, đổi quyền và sửa lô đã xuất QR thì không bao giờ.
 
 ## 7. Đề xuất và phê duyệt
 
@@ -156,10 +158,12 @@ Các bảng nằm trong schema `platform` và có cùng trigger audit như các 
 | Bảng | Cột chính |
 |---|---|
 | `agent_runs` | `id`, `htx_code`, `agent`, `trigger` (`schedule`, `event`, `manual`), `started_at`, `finished_at`, `status` (`ok`, `failed`, `skipped`), `provider`, `model`, `tokens_in`, `tokens_out`, `cost_estimate`, `error` |
-| `agent_proposals` | `id`, `htx_code`, `run_id`, `kind`, `payload`, `reason_vi`, `evidence` (nguồn: bảng, mã dòng, giá trị, thời điểm), `risk`, `status`, `created_at`, `expires_at`, `decided_by`, `decided_at`, `decision_channel`, `decision_note`, `edited_payload`, `executed_at`, `result`, `dedupe_key`, `origin` (`agent`, `user`), `requested_by` (người yêu cầu, khi `origin` là `user`), `campaign_id` |
+| `agent_proposals` | `id`, `htx_code`, `run_id`, `kind`, `payload`, `reason_vi`, `evidence` (nguồn: bảng, mã dòng, giá trị, thời điểm), `risk`, `status`, `created_at`, `expires_at`, `decided_by`, `decided_at`, `decision_channel`, `decision_note`, `edited_payload`, `executed_at`, `result`, `dedupe_key`, `origin` (`agent`, `user`), `requested_by` (người yêu cầu, khi `origin` là `user`), `campaign_id`, `autopilot` và `run_at` (chế độ tự vận hành, §11.3), `shadow_auto` (chạy bóng, §11.5) |
 | `agent_settings` | `htx_code`, `agent`, `enabled`, `schedule`, `provider`, `thresholds`, `monthly_budget` |
 | `telegram_links`, `telegram_outbox`, `telegram_conversations` | §12 |
 | `campaigns`, `campaign_items`, `campaign_outcomes`, `improvements` | §10.4 |
+| `strategy_plans` | §10.6 |
+| `autopilot_settings` | `htx_code`, `enabled`, `enabled_by`, `enabled_at`, `unlocked_kinds`, `money_limits`, `daily_cap`, `paused_at`, `paused_reason` (§11) |
 
 ### 7.2 Trạng thái
 
@@ -168,7 +172,9 @@ proposed ──duyệt──▶ approved ──thực thi──▶ executed
    │                    └──lỗi──▶ failed ──người bấm chạy lại──▶ approved
    ├──từ chối──▶ rejected
    ├──quá hạn──▶ expired
-   └──dữ liệu gốc đã đổi (kiểm lúc duyệt)──▶ stale
+   ├──dữ liệu gốc đã đổi (kiểm lúc duyệt)──▶ stale
+   └──chế độ tự vận hành (§11)──▶ scheduled ──hết cửa sổ chặn──▶ approved
+                                     └──có người bấm Chặn──▶ vetoed
 ```
 
 - Từ chối bắt buộc có lý do. Lý do được lưu để đo chất lượng agent (§14) và đưa vào ngữ cảnh lượt sau, để agent không đề xuất lại y hệt.
