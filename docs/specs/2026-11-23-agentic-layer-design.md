@@ -436,12 +436,16 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 | Mốc | Nội dung | Xong khi |
 |---|---|---|
 | M0 | sửa hai bất biến ở §3; viết ADR; dựng khung `platform/agent` và `platform/telegram` (chạy được, chưa làm gì) | PR tài liệu được duyệt; hai dịch vụ lên được trong compose |
-| M1 | danh mục, bảng, trạng thái, API nội bộ, thực thi, audit; hộp duyệt web; vai `agent` trên Hasura và client Keycloak; provider `ollama`; agent A1 | một nhật ký sai thời gian cách ly được đề xuất trả lại và được duyệt trên web; các kiểm thử 1–7 ở §13 qua |
-| M2 | Telegram: liên kết tài khoản, hộp thư đi, báo cáo ngày và tuần (A6), duyệt qua Telegram | chủ dự án nhận tóm tắt ngày và duyệt được đề xuất của A1 trên điện thoại |
+| M1 | danh mục, bảng, trạng thái, API nội bộ, thực thi, audit; hộp duyệt web; vai `agent` trên Hasura và client Keycloak; provider `ollama`; agent A1 | một nhật ký sai thời gian cách ly được đề xuất trả lại và được duyệt trên web; kiểm thử 1–7 ở §13 qua |
+| M2 | Telegram nền: liên kết tài khoản, hộp thư đi, báo cáo ngày và tuần (A6), duyệt bằng nút, báo cáo sức khoẻ, nối báo lỗi n8n | chủ dự án nhận tóm tắt ngày và duyệt được đề xuất của A1 trên điện thoại |
 | M3 | provider `anthropic` và `openai`; chính sách dữ liệu; ngân sách; dự phòng | đổi provider cho từng agent trên web; cắt mạng ra ngoài vẫn chạy; kiểm thử 8–9 qua |
 | M4 | agent A2, A3, A4, A5, kèm trạng thái cho bản tin | mỗi agent có kịch bản trong bộ thử ở §13 |
-| M5 | hỏi đáp A7 qua Telegram; tab chỉ số trên `htx-dashboard`; nối báo lỗi n8n | hỏi một câu trên Telegram và nhận câu trả lời kèm nguồn |
-| M6 | agent A8 giao việc nhân sự | sau khi chốt cách nhận việc với app nhân sự |
+| M5 | trợ lý hội thoại A7: công cụ đọc, thẻ xác nhận, ảnh, vị trí, luồng nhiều bước; phủ hai nhóm "trong chat" của bảng §11.7 | một nông hộ ghi được nhật ký có ảnh chỉ bằng Telegram; kiểm thử 10–12 và 17 qua |
+| M6 | Mini App: đăng nhập, khung hiển thị, nhóm "Mini App" của bảng §11.7, xác nhận hành động `high` | mọi dòng của bảng §11.7 làm được từ Telegram; kiểm thử 13 qua |
+| M7 | chiến dịch ngày A9 và đo kết quả | manager duyệt chiến dịch lúc 06:00 và nhận kết quả lúc 18:00; kiểm thử 14–15 qua |
+| M8 | cải tiến A10; hành động `agent.settings.update`; tab chỉ số trên `htx-dashboard` | báo cáo cải tiến đầu tiên có bằng chứng |
+| M9 | khối `agent` trong `app.yaml`; chiến dịch kinh doanh của `tea-shop`, `tea-tour`, `leaf-purchase` | một khuyến mãi của cửa hàng được đề xuất, duyệt và chạy; kiểm thử 16 qua |
+| M10 | agent A8 giao việc nhân sự | sau khi chốt cách nhận việc với app nhân sự |
 
 ## 16. Tài liệu phải cập nhật cùng mã
 
@@ -449,6 +453,8 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 - ADR `0003-agentic-layer` (ba vùng tin cậy, luôn có người duyệt) và ADR `0004-external-llm-providers` (tuỳ chọn, chính sách dữ liệu, khoá).
 - `docs/api-contract.md` (API nội bộ), `docs/database-schema.md` (bảng mới), `DEPENDENCIES.md` (SDK, model), `CHANGELOG.md`, một mục ngắn trong README. Trang tài liệu của site tự lấy từ `docs/`.
 - Ghi chú quyền riêng tư: dữ liệu nào đi tới Telegram và tới provider ngoài.
+- `docs/miniapps.md`: khối `agent` trong `app.yaml` (§10.2).
+- Hướng dẫn dùng bot cho từng vai trò (quản trị, cán bộ, nông hộ), tiếng Việt, có ảnh chụp màn hình.
 
 ## 17. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
 
@@ -457,6 +463,9 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 3. App nhân sự nhận việc từ bên ngoài bằng cách nào: chốt với người phụ trách app trước M6.
 4. Có cần Zalo ngoài Telegram không? Chốt sau M2.
 5. Ai làm từng mốc.
+6. Có nhận tin nhắn thoại không? Cần một mô hình chuyển giọng nói thành chữ chạy nội bộ, giấy phép thuộc OSI. Chốt trước M5.
+7. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì không có Mini App (§11.6). Chốt trước M6.
+8. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7.
 
 ## 18. Quy tắc làm việc trong repo
 
