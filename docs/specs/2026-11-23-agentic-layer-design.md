@@ -136,7 +136,7 @@ Agent chỉ được đề xuất các loại hành động có trong danh mục
 | `approverRoles` | vai trò được duyệt |
 | `origins` | ai được khởi tạo: `agent` (agent đề xuất), `user` (người dùng yêu cầu qua chat hoặc Mini App) |
 | `autonomy` | ở chế độ tự vận hành (§11): `auto` tự chạy; `unlockable` vẫn cần người, trừ khi manager mở loại này lúc bật; `never` luôn cần người |
-| `channels` | `web`, `telegram`; hành động `high` chỉ có `web`, tức là trên trình duyệt hoặc trong Mini App (§13.6) |
+| `channels` | `web`, `telegram`; hành động `high` qua Telegram luôn xác nhận hai bước (§13.4) |
 | `payloadSchema` | khuôn zod; web từ chối đề xuất sai khuôn |
 | `editableFields` | trường người duyệt được sửa trước khi duyệt, ví dụ nội dung thông báo |
 | `expiresAfter` | đề xuất tự hết hạn sau bao lâu |
@@ -152,16 +152,16 @@ Danh mục ban đầu:
 | `journal.reject` | trả lại nhật ký kèm lý do | medium | officer, manager | web, telegram | như trên | auto |
 | `notification.internal` | báo cho cán bộ hoặc ban quản trị | low | manager | web, telegram | `Notification` | auto |
 | `notification.households` | báo cho một nhóm nông hộ (theo thửa, theo vùng) | medium | manager | web, telegram | `/api/notifications/announce` | auto |
-| `notification.broadcast` | báo cho toàn hợp tác xã | high | manager | web | như trên | unlockable |
-| `harvest.approve` | duyệt thu hoạch thửa đã hết thời gian cách ly | high | manager | web | `approve-harvest` | unlockable |
+| `notification.broadcast` | báo cho toàn hợp tác xã | high | manager | web, telegram | như trên | unlockable |
+| `harvest.approve` | duyệt thu hoạch thửa đã hết thời gian cách ly | high | manager | web, telegram | `approve-harvest` | unlockable |
 | `bulletin.publish` | đăng bản tin AI | medium | manager | web, telegram | cần thêm trạng thái cho `bulletins` (§9) | auto |
 | `disease.inspection` | yêu cầu cán bộ kiểm tra một vùng | medium | officer, manager | web, telegram | thông báo có liên kết tới thửa | auto |
 | `staff.task.create` | giao việc cho nhân sự | medium | manager | web, telegram | app nhân sự (§9, đang phụ thuộc) | auto |
 | `agent.settings.update` | đổi cài đặt agent (ngưỡng, lịch) theo một đề xuất cải tiến | medium | manager | web, telegram | bảng `agent_settings` (§10.3) | auto, chỉ siết ngưỡng và đổi lịch; nới ngưỡng luôn cần người (§11.1) |
 | `strategy.adopt` | áp dụng kế hoạch mùa vụ của A11 | medium | manager | web, telegram | bảng `strategy_plans` (§10.6) | unlockable, chờ 48 giờ |
 | `app.spec.approve` | duyệt đặc tả của một mini-app do AI xây | medium | manager | web, telegram | A12 (§12.3) | auto |
-| `miniapp.install` | cài và bật một mini-app cho hợp tác xã | high | manager | web | `app-store/requests`, `./dxos worker` (§12.6) | unlockable |
-| `miniapp.remove` | tắt hoặc gỡ một mini-app | high | manager | web | như trên | unlockable |
+| `miniapp.install` | cài và bật một mini-app cho hợp tác xã | high | manager | web, telegram | `app-store/requests`, `./dxos worker` (§12.6) | unlockable |
+| `miniapp.remove` | tắt hoặc gỡ một mini-app | high | manager | web, telegram | như trên | unlockable |
 
 - Thêm một loại mới phải đi bằng một PR vào danh mục, kèm test. Không có cách thêm loại mới lúc hệ thống đang chạy.
 - Tin gửi nông hộ do agent tạo (`notification.households`, `notification.broadcast`) dùng mẫu soạn sẵn với các ô có kiểu: mã thửa, ngày, số lượng, tên bệnh trong danh mục bệnh. LLM chỉ điền ô, không viết chữ tự do, và không bao giờ chép chữ từ ghi chú của nông hộ, để một ghi chú bị chèn lệnh không lan tới cả vùng. Người duyệt vẫn sửa được nội dung.
