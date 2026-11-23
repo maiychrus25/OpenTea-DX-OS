@@ -205,3 +205,22 @@ Một giao diện chung và ba adapter:
 - Kiểm giấy phép từng kích cỡ trước khi chọn: không phải kích cỡ nào của một họ model cũng dùng giấy phép OSI. Ví dụ bản 3B của Qwen2.5 có giấy phép riêng. Tránh các model có giấy phép không thuộc OSI.
 - Model tải về lúc cài, không commit; ghi vào `DEPENDENCIES.md` kèm giấy phép.
 - Thứ tự dự phòng: provider đã chọn, rồi Ollama, rồi luật cứng (nếu agent có), cuối cùng là bỏ lượt.
+
+## 9. Các agent
+
+Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để đề xuất ổn định và kiểm thử được. LLM dùng cho phần cần đọc chữ (ghi chú nhật ký, mô tả bệnh), gom nhóm và viết lý do.
+
+| Agent | Đọc | Phát hiện | Đề xuất | Khi nào chạy |
+|---|---|---|---|---|
+| A1 `journal-review` Soát nhật ký | nhật ký `pending_approval`, hoạt động, thuốc, thời gian cách ly, thời tiết đính kèm | sai thời gian cách ly, liều bất thường, thiếu thông tin, ghi chú mâu thuẫn | `journal.approve` (gom loạt nhật ký sạch), `journal.reject` kèm lý do | mỗi giờ trong giờ làm việc, và khi có nhật ký mới |
+| A2 `field-watch` Cảm biến và thời tiết | `telemetry.sensor_daily`, số đo mới nhất, dự báo thời tiết, lịch phun | cảm biến im lặng quá 6 giờ (như bảng điều hành), vượt ngưỡng, mưa lớn sắp tới khi có lịch phun | `notification.internal`, `notification.households` | 30 phút một lần |
+| A3 `disease-watch` Dịch bệnh | báo cáo bệnh đã và chưa xác nhận, vị trí thửa | nhiều báo cáo cùng một bệnh trong một bán kính, trong một tuần | `disease.inspection`, `notification.households` | mỗi ngày, và khi có báo cáo mới |
+| A4 `harvest-ready` Thu hoạch | thửa, chu kỳ cây trồng, nhật ký phun | thửa đã qua thời gian cách ly và đến kỳ hái | `harvest.approve` | mỗi sáng |
+| A5 `bulletin` Bản tin | như workflow bản tin hiện tại | — | `bulletin.publish` | thay workflow `bulletin-synthesis`; tắt workflow cũ khi agent chạy ổn |
+| A6 `digest` Báo cáo | chỉ số của bảng điều hành, đề xuất đang mở, lỗi hệ thống | — | không đề xuất; gửi báo cáo (§10.3) | hằng ngày và hằng tuần |
+| A7 `assistant` Hỏi đáp | như A6, cộng phần dữ liệu được hỏi | — | không đề xuất; trả lời kèm nguồn (§10.5) | khi có câu hỏi |
+| A8 `staff-tasks` Giao việc nhân sự | lịch canh tác, đề xuất đã duyệt của A2 tới A4, danh sách nhân sự | việc cần người làm | `staff.task.create`; agent gợi ý người nhận, manager sửa được | mỗi sáng |
+
+- Các ngưỡng (6 giờ, bán kính, số báo cáo) là cấu hình theo hợp tác xã. Giá trị mặc định ghi trong mã và trong `rules-and-limits.md`.
+- **Bản tin:** thêm cột `status` (`draft`, `published`, `rejected`) cho bảng `bulletins`. Trang công khai chỉ đọc bản `published`. Thay đổi bảng đi theo luồng migration hiện có của web.
+- **A8 đang phụ thuộc app nhân sự** (`apps/staff-desktop`, `apps/staff-mobile`). App này dùng cơ sở dữ liệu riêng (SQLite trên máy chủ HTX, hoặc schema `app_staff_work`). Cần app nhân sự cung cấp một cách nhận việc từ bên ngoài; chốt với người phụ trách app trước khi làm (§16). Đến lúc đó, `staff.task.create` để ở trạng thái chưa bật.
