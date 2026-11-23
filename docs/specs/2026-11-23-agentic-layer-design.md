@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Lớp AI vận hành có người duyệt
 
-> **Trạng thái:** Bản định hướng (2026-11-23, bản 2), chưa triển khai, chưa giao người làm. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7).
+> **Trạng thái:** Bản định hướng (2026-11-23, bản 3), chưa triển khai, chưa giao người làm. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11).
 > **Yêu cầu của chủ dự án (2026-11-23):** thêm một lớp AI vận hành trên hệ thống, luôn còn người phê duyệt. Làm đầy đủ, không cắt phạm vi theo hạn nộp bài. Được gọi provider bên ngoài như Claude và Codex. Báo cáo, hỏi đáp và phê duyệt được qua Telegram, để không phụ thuộc hoàn toàn vào website.
 > **Người đọc:** người sẽ xây lớp này (thành viên nhóm hoặc một phiên AI lập trình). Tài liệu nói cần gì, vì sao, và chốt các quyết định kiến trúc. Chi tiết cài đặt do người làm quyết, trong khuôn khổ ở đây. Mỗi lần gộp vào `main` vẫn hỏi chủ dự án.
 
@@ -15,24 +15,26 @@ AI theo dõi dữ liệu của hợp tác xã, phát hiện việc cần làm v�
 Lớp này coi là xong khi:
 
 1. Mỗi ngày ban quản trị nhận một bản tóm tắt hợp tác xã qua Telegram mà không cần mở web.
-2. Mọi hành động AI đề xuất đều có lý do và bằng chứng có nguồn, và chỉ chạy sau khi một người đủ quyền bấm duyệt.
+2. Mọi hành động AI đề xuất đều có lý do và bằng chứng có nguồn. Ở chế độ thường, hành động chỉ chạy sau khi một người đủ quyền bấm duyệt. Ở chế độ tự vận hành, hành động chạy sau cửa sổ chặn và trong các ngưỡng ở §11.
 3. Tắt hết provider bên ngoài thì hệ thống vẫn chạy đủ bằng Ollama nội bộ, chỉ chậm hơn hoặc kém hơn.
-4. Không có đường nào để AI tự ghi vào dữ liệu nghiệp vụ.
+4. AI không ghi thẳng vào dữ liệu nghiệp vụ: mọi thay đổi đi qua danh mục hành động và use case của web, ở cả hai chế độ.
 5. Mỗi đề xuất, quyết định và lần thực thi đều tra được trong `audit.events`.
 6. Mọi thông tin và mọi thao tác của hệ thống làm được từ Telegram, đúng theo quyền của người dùng (§12.7).
 7. Mỗi sáng hợp tác xã nhận một chiến dịch ngày có mục tiêu đo được, mỗi tối có kết quả so với mục tiêu, và mỗi tuần có đề xuất cải tiến dựa trên kết quả các chiến dịch trước (§10).
+8. Manager bật được chế độ tự vận hành. Khi bật, hợp tác xã chạy theo định hướng và chiến dịch do agent đặt ra; con người giám sát, chặn khi cần, dừng bất cứ lúc nào; các ngưỡng cứng ở §11.1 vẫn giữ.
 
 ## 2. Quyết định của chủ dự án (không đổi nếu chưa hỏi lại)
 
 | # | Quyết định |
 |---|---|
-| D1 | Luôn có người duyệt. Không có chế độ tự duyệt, kể cả với hành động rủi ro thấp. |
+| D1 | Ở chế độ thường luôn có người duyệt, kể cả với hành động rủi ro thấp. Ngoại lệ duy nhất là chế độ tự vận hành do manager bật (D8). |
 | D2 | Làm đầy đủ các phần trong tài liệu này, theo thứ tự các mốc ở §16. |
 | D3 | Được gọi provider bên ngoài: Anthropic (Claude) và OpenAI (Codex và các model GPT). Ollama nội bộ vẫn là mặc định. |
 | D4 | Telegram là cửa vào ngang hàng với web: nhận báo cáo, hỏi đáp, phê duyệt, thao tác (xem D6). |
 | D5 | Nhóm viết tài liệu, người khác xây. |
 | D6 | Mọi thông tin và thao tác trên hệ thống đều làm được qua bot Telegram, cho mọi vai trò. |
 | D7 | Các agent vận hành hằng ngày: đưa ra chiến dịch ngày cho hợp tác xã, theo dõi kết quả và đề xuất cải tiến. |
+| D8 | Có tuỳ chọn "bỏ qua phê duyệt" (bypass permissions): khi manager bật, các agent tự vận hành toàn bộ hợp tác xã, từ định hướng phát triển tới việc hằng ngày, không chờ người duyệt (§11). |
 
 Cách hiểu cần xác nhận: "Codex" ở D3 được hiểu là API của OpenAI. Nếu chủ dự án muốn chạy chính công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống thì đó là phạm vi khác, ghi ở §18.
 
@@ -46,6 +48,8 @@ Hai bất biến trong `docs/rules-and-limits.md` mâu thuẫn trực tiếp v�
 | §1.2 "KHÔNG sử dụng API keys trả phí ở bất kỳ đâu." | Không có phụ thuộc bắt buộc nào vào dịch vụ trả phí. Provider trả phí là tuỳ chọn, mặc định tắt, bật theo từng hợp tác xã. Dựng và chạy thử từ mã nguồn không cần khoá nào. |
 
 Chatbot hiện đã tự chuyển sang Groq khi có `GROQ_API_KEY`, tức là đã lệch §1.2 của `rules-and-limits.md` từ trước tài liệu này. Khi lớp provider ở §8 xong, chatbot chuyển sang dùng chung lớp provider và chính sách dữ liệu ở §8.3.
+
+Chế độ tự vận hành (D8) đi xa hơn bản sửa ở trên: khi được bật, AI tự thực thi hành động trong danh mục. Bất biến §1.1 của `rules-and-limits.md` phải ghi rõ cả hai chế độ: chế độ thường (AI chỉ đề xuất, người duyệt) và chế độ tự vận hành (AI tự thực thi trong các ngưỡng ở §11, do manager bật và chịu trách nhiệm).
 
 ## 4. Hiện có gì (dùng lại, không viết lại)
 
