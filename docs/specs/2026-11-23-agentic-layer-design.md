@@ -295,13 +295,14 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 
 Các agent không trò chuyện tự do với nhau. Agent chuyên trách (A1 tới A5, A8, agent của mini-app) ghi phát hiện và đề xuất; A9 đọc những thứ đó để dựng chiến dịch; A10 đọc kết quả để đề xuất cải tiến. Mọi thứ đi qua bảng của web, nên tra lại được và kiểm thử được.
 
-## 11. Telegram
+## 11. Telegram: cửa vào đầy đủ
 
 ### 11.1 Cách kết nối
 
 - Mỗi bản cài DX-OS có một bot (không phải mỗi hợp tác xã một bot). Người vận hành tạo bot qua BotFather và đặt token vào biến môi trường của `dxos-telegram`.
 - Mặc định dùng **long polling** (`getUpdates`), nên chạy được cả ở hợp tác xã không có địa chỉ công khai. Webhook là tuỳ chọn; khi dùng webhook phải đặt `secret_token` và kiểm header `X-Telegram-Bot-Api-Secret-Token`.
 - Gọi thẳng Bot API qua HTTP, không thêm thư viện bot.
+- Mini App (§11.6) cần web có địa chỉ HTTPS mà điện thoại mở được. Hợp tác xã không có địa chỉ công khai vẫn dùng được toàn bộ phần chat, chỉ thiếu Mini App.
 
 ### 11.2 Liên kết tài khoản
 
@@ -309,38 +310,65 @@ Các agent không trò chuyện tự do với nhau. Agent chuyên trách (A1 t�
 2. Người dùng mở liên kết và bấm Start. `dxos-telegram` gửi mã cùng `telegram_user_id` về web; web gắn Telegram vào tài khoản Keycloak.
 3. Gỡ liên kết trên web, hoặc gõ `/stop` trong bot.
 
-- Chỉ tài khoản đã liên kết mới được duyệt hoặc hỏi.
-- Nông hộ (`farmer`) liên kết để nhận thông báo của chính mình; không hỏi đáp, không duyệt.
-- Manager có thể gắn một nhóm Telegram của hợp tác xã để nhận báo cáo. **Không duyệt trong nhóm**: duyệt cần danh tính của từng người, nên chỉ làm trong chat riêng.
+- Chỉ tài khoản đã liên kết mới hỏi, thao tác hoặc duyệt được. Mỗi người làm được đúng những gì vai trò của mình làm được trên web, kể cả nông hộ.
+- Lúc liên kết, bot nói rõ: tin nhắn đi qua máy chủ của Telegram; nếu hợp tác xã bật provider ngoài cho trợ lý thì nội dung chat cũng đi tới provider đó (§8.3).
+- Manager có thể gắn một nhóm Telegram của hợp tác xã để nhận báo cáo. **Không duyệt và không thao tác trong nhóm**: những việc đó cần danh tính của từng người, nên chỉ làm trong chat riêng.
 
 ### 11.3 Báo cáo
 
 | Loại | Khi nào | Nội dung |
 |---|---|---|
-| Tóm tắt ngày | giờ do hợp tác xã chọn, mặc định 18:00 giờ Việt Nam | sản lượng, nhật ký mới và đã duyệt, cảnh báo cảm biến, bệnh, đề xuất đang chờ, lỗi hệ thống; kèm liên kết sang web |
-| Tóm tắt tuần | thứ Hai, 07:00 | xu hướng trong tuần, so với tuần trước |
+| Chiến dịch ngày | 06:00 | các mục của chiến dịch, nút duyệt (§10.1) |
+| Tóm tắt ngày | giờ do hợp tác xã chọn, mặc định 18:00 giờ Việt Nam | kết quả chiến dịch hôm nay, sản lượng, nhật ký mới và đã duyệt, cảnh báo cảm biến, bệnh, đề xuất đang chờ, lỗi hệ thống; kèm liên kết sang web |
+| Tóm tắt tuần và cải tiến | thứ Hai, 07:00 | xu hướng trong tuần, so với tuần trước; đề xuất cải tiến và kết quả của các cải tiến trước (§10.3) |
 | Cảnh báo ngay | khi có đề xuất `high` hoặc sự cố | một dòng, kèm nút |
 | Kết quả | sau khi thực thi | sửa lại chính tin nhắn đề xuất thành "Đã được X duyệt, đã thực hiện", không gửi tin mới |
 | Sức khoẻ hệ thống | agent hoặc provider lỗi liên tiếp, chạm ngân sách, workflow n8n lỗi | xem §12 |
 
-Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân (§8.3). Muốn xem chi tiết thì bấm liên kết sang web.
+Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân (§8.3). Muốn xem chi tiết thì bấm liên kết sang web hoặc mở Mini App.
 
 ### 11.4 Duyệt qua Telegram
 
-- Đề xuất có `telegram` trong `channels` được gửi tới những người đã liên kết và có vai trò được duyệt, kèm các nút Duyệt, Từ chối và Mở trên web.
+- Đề xuất có `telegram` trong `channels` được gửi tới những người đã liên kết và có vai trò được duyệt, kèm các nút Duyệt, Từ chối và Mở chi tiết.
 - `callback_data` chỉ chứa mã đề xuất rút gọn, quyết định, và chữ ký HMAC do web tạo; tất cả nằm trong giới hạn 64 byte của Telegram. Web kiểm chữ ký, rồi kiểm người bấm còn đủ quyền ở thời điểm bấm.
 - Từ chối: bot hỏi lý do, người dùng trả lời bằng một tin nhắn. Chưa có lý do thì chưa từ chối.
-- Sửa rồi duyệt chỉ làm trên web.
-- Hành động `high` chỉ có nút "Mở trên web".
+- Sửa rồi duyệt làm trong Mini App.
+- Hành động `high` không duyệt bằng nút trong chat. Tin nhắn có nút mở đúng trang duyệt trong Mini App, và người duyệt xác nhận ở đó.
 
-### 11.5 Hỏi đáp
+### 11.5 Hội thoại và thao tác
 
-- Lệnh `/tomtat` (tóm tắt hôm nay), `/cho` (đề xuất đang chờ), `/hoi <câu hỏi>`, hoặc nhắn câu hỏi thẳng.
-- Đường đi của câu hỏi: Telegram, `dxos-telegram`, web (kiểm người, vai trò, giới hạn tần suất), agent `assistant` trong `dxos-agent`; câu trả lời đi theo đường ngược lại.
-- Câu trả lời theo bất biến §1.1 của `rules-and-limits.md`: chỉ sự thật lấy từ dữ liệu, kèm nguồn. Câu hỏi không tự sinh ra đề xuất; người hỏi muốn làm gì thì vào web.
-- Chỉ `manager` và `officer` được hỏi; mỗi người tối đa 20 câu mỗi giờ.
+- Người dùng nhắn tự do bằng tiếng Việt, có dấu hay không dấu, hoặc dùng lệnh: `/tomtat`, `/cho`, `/chiendich`, `/nhatky`, `/benh`, `/hoi`, `/menu` (mở Mini App), `/huy`.
+- Agent `assistant` hiểu câu chat và làm một trong hai việc:
+  - **Trả lời** (phần đọc): gọi các công cụ đọc. Mỗi công cụ là một API GET sẵn có của web, chạy với quyền của người hỏi, nên nông hộ chỉ thấy dữ liệu của mình như trên web. Câu trả lời kèm nguồn.
+  - **Thẻ xác nhận** (phần ghi): chọn một hành động `origins: user` trong danh mục và điền dữ liệu; web gửi một thẻ ghi rõ sẽ làm gì, trên đối tượng nào, với các trường nào. Thẻ có nút Xác nhận, Sửa (mở Mini App với form điền sẵn) và Huỷ, và hết hạn sau 10 phút. Không bấm Xác nhận thì không có gì xảy ra.
+- Vai trò của người chat lấy từ Keycloak lúc thực thi. Câu như "tôi là quản trị" trong chat không có tác dụng gì.
+- Nhập liệu ngoài chữ:
+  - **Ảnh.** Ảnh lá chè trong luồng `/benh`, hoặc gửi kèm chữ "bệnh", đi tới `/api/diagnosis` như trên web và vào hàng chờ cán bộ. Ảnh trong luồng `/nhatky` thành ảnh minh chứng của nhật ký (`/api/journal/upload`).
+  - **Vị trí.** Chia sẻ vị trí thì bot tìm thửa gần nhất của người đó và thời tiết tại chỗ.
+  - **Tin nhắn thoại.** Còn mở (§17), vì cần một mô hình chuyển giọng nói thành chữ chạy nội bộ.
+- Luồng nhiều bước (ví dụ ghi nhật ký: thửa, hoạt động, thuốc, liều, ảnh) giữ trạng thái trong `telegram_conversations`, hết hạn sau 30 phút; gõ `/huy` để bỏ.
+- Giới hạn: 60 tin nhắn mỗi người mỗi giờ. Câu cần gọi LLM tính vào ngân sách của hợp tác xã.
 
-### 11.6 Kênh khác
+### 11.6 Telegram Mini App
+
+- Nút menu của bot mở web ngay trong Telegram. Phần này phủ mọi thao tác không hợp làm bằng chat: bản đồ và vẽ thửa, tải tài liệu, Kho ứng dụng, các mini-app, hộp duyệt đầy đủ, cài đặt lớp AI, và xác nhận các hành động `high`.
+- Đăng nhập: lần đầu người dùng đăng nhập Keycloak như trên web, và webview của Telegram giữ phiên. Web kiểm `initData` do Telegram ký và chỉ cho dùng khi tài khoản Telegram trùng với tài khoản đã liên kết. `initData` không thay cho đăng nhập.
+- Trang web phải chạy tốt trong khung Mini App: vừa bề ngang điện thoại, theo màu sáng hoặc tối của Telegram, và dùng nút Back của Telegram.
+
+### 11.7 Bảng phủ thao tác
+
+Mỗi API của web thuộc đúng một nhóm dưới đây. Thêm API mới thì phải xếp nó vào bảng này trong cùng PR. Quyền của từng thao tác giữ nguyên như API hiện có.
+
+| Nhóm | Thao tác (API hiện có trong `apps/web/src/app/api`) |
+|---|---|
+| Trong chat, chỉ đọc | tra cứu (`search`); thời tiết (`weather`, `weather/forecast`); giá thị trường (`market-data`, `market-data/fx`); bản tin (`bulletin`); thông báo (`notifications`); lô (`lots`, `lots/[id]`, `lot/[lot_code]/certificate`); lịch thu hoạch (`schedule/harvest`, `schedule/unscheduled`); thửa (`farm/parcels`, `farm/parcels/[id]/soil-health`, `parcels/[id]/latest-photo`); hộ (`farm/households`, `farm/households/[id]`); thành viên (`members`); báo cáo bệnh (`officer/diseases`); hồ sơ (`profile`); tài liệu (`documents`, `documents/url`); đối tác (`partners`) |
+| Trong chat, có thẻ xác nhận | ghi, sửa, xoá nhật ký nháp (`journal`, `journal/[id]`, `journal/upload`); gửi ảnh bệnh (`diagnosis`); duyệt nhật ký (`journal/batch-approve`); duyệt báo cáo bệnh (`officer/diseases/[id]/review`); bắt đầu đợt hái (`parcels/[id]/start-round`); xếp lịch thu hoạch (`schedule/harvest/[cycle_id]`); tạo lô (`lots`); gửi thông báo cho một nhóm hộ (`notifications/announce`); đánh dấu thông báo đã đọc (`notifications`); mời và duyệt thành viên (`members/invite`, `members/[id]/approve`); sửa hồ sơ (`profile`, `farm/households/[id]`); thêm hộ (`farm/households`) |
+| Mini App | vẽ và sửa thửa (`farm/parcels`, `farm/parcels/[id]`); tải tài liệu (`documents/upload`); Kho ứng dụng (`app-store` và các API con); mọi mini-app; thêm, sửa, xoá đối tác (`partners`, `partners/[id]`); và mọi hành động `high`: xuất QR lô (`lots/[id]/export-qr`), duyệt thu hoạch (`parcels/[id]/approve-harvest`), thông báo toàn hợp tác xã, xoá thành viên (`members/[id]`), xoá thửa (`farm/parcels/[id]`) |
+| Không qua Telegram | đăng ký tài khoản mới (`register`, vì chưa có tài khoản để liên kết); đăng nhập (`auth`); API chỉ dùng khi phát triển (`dev-login`, `debug/session`, `seed-farmer`); API phục vụ trang web (`health`, `notifications/stream`, `tts`, `tts/status`, `geocode`); chatbot cũ (`chatbot`, `chatbot/sessions`), được thay bằng trợ lý |
+
+Các app ngoài web (`apps/hub-mobile`, `apps/staff-desktop`, `apps/staff-mobile`) không nằm trong bảng này. Thao tác của app nhân sự đi qua A8 khi đã chốt cách nhận việc (§17).
+
+### 11.8 Kênh khác
 
 Mattermost giữ nguyên như hiện tại. Có cần thêm Zalo hay không là điểm còn mở (§17).
 
