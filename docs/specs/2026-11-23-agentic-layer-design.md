@@ -710,12 +710,12 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 
 ## 19. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
 
-1. Một bộ khoá provider cho cả bản cài (như §8.2), hay mỗi hợp tác xã tự nhập khoá của mình? Chốt trước M3.
-2. App nhân sự nhận việc từ bên ngoài bằng cách nào: chốt với người phụ trách app trước M10.
-3. Có cần Zalo ngoài Telegram không? Chốt sau M2.
-4. Có nhận tin nhắn thoại không? Cần một mô hình chuyển giọng nói thành chữ chạy nội bộ, giấy phép thuộc OSI. Chốt trước M5.
-5. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì thiếu nhóm Mini App ở §13.7 (bản đồ, tài liệu, Kho ứng dụng, mini-app); các thao tác trong chat vẫn đủ, kể cả hành động `high`. Chốt trước M6.
-6. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7.
+1. Một bộ khoá provider cho cả bản cài (như §8.2), hay mỗi hợp tác xã tự nhập khoá của mình? Chốt trước M3. Issue #56.
+2. App nhân sự nhận việc từ bên ngoài bằng cách nào: chốt với người phụ trách app trước M10. Issue #57.
+3. Có cần Zalo ngoài Telegram không? Chốt sau M2. Issue #58.
+4. Có nhận tin nhắn thoại không? Cần một mô hình chuyển giọng nói thành chữ chạy nội bộ, giấy phép thuộc OSI. Chốt trước M5. Issue #59.
+5. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì thiếu nhóm Mini App ở §13.7 (bản đồ, tài liệu, Kho ứng dụng, mini-app); các thao tác trong chat vẫn đủ, kể cả hành động `high`. Chốt trước M6. Issue #60.
+6. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7. Issue #61.
 
 Đã chốt ngày 2026-11-23: ý nghĩa của "Codex" và của "định hướng phát triển" (D10), các loại mở sẵn khi bật tự vận hành (D9), chế độ khi chấm thi (D11), năm giới hạn cứng (D12), người làm (giao qua issue theo dõi trên GitHub).
 
