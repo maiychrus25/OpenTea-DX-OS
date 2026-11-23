@@ -248,6 +248,7 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 | A8 `staff-tasks` Giao việc nhân sự | lịch canh tác, đề xuất đã duyệt của A2 tới A4, danh sách nhân sự | việc cần người làm | `staff.task.create`; agent gợi ý người nhận, manager sửa được | mỗi sáng |
 | A9 `daily-campaign` Điều phối chiến dịch ngày | phát hiện và đề xuất đang mở của A1 tới A5, A8 và agent của mini-app; lịch thu hoạch; thời tiết; số người có mặt | — | một chiến dịch ngày gồm các mục trong danh mục (§10.1) | 05:30 mỗi ngày |
 | A10 `improvement` Cải tiến | kết quả các chiến dịch, lý do bị từ chối, thời gian chờ duyệt, chỉ số bảng điều hành, số liệu mini-app | mục tiêu trượt lặp lại, đề xuất bị từ chối nhiều, chỉ số xấu đi | đề xuất cải tiến (§10.3) | thứ Hai hằng tuần |
+| A11 `strategy` Định hướng phát triển | lịch sử sản lượng và chất lượng, giá thị trường, thời tiết theo mùa, kết quả chiến dịch và cải tiến, số liệu mini-app | — | kế hoạch mùa vụ: mục tiêu, ưu tiên, việc phát triển (`strategy.adopt`, §10.6) | đầu mỗi vụ và mỗi quý |
 
 - Các ngưỡng (6 giờ, bán kính, số báo cáo) là cấu hình theo hợp tác xã. Giá trị mặc định ghi trong mã và trong `rules-and-limits.md`.
 - **Bản tin:** thêm cột `status` (`draft`, `published`, `rejected`) cho bảng `bulletins`. Trang công khai chỉ đọc bản `published`. Thay đổi bảng đi theo luồng migration hiện có của web.
@@ -303,7 +304,17 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 
 ### 10.5 Điều phối giữa các agent
 
-Các agent không trò chuyện tự do với nhau. Agent chuyên trách (A1 tới A5, A8, agent của mini-app) ghi phát hiện và đề xuất; A9 đọc những thứ đó để dựng chiến dịch; A10 đọc kết quả để đề xuất cải tiến. Mọi thứ đi qua bảng của web, nên tra lại được và kiểm thử được.
+Các agent không trò chuyện tự do với nhau. Agent chuyên trách (A1 tới A5, A8, agent của mini-app) ghi phát hiện và đề xuất; A9 đọc những thứ đó để dựng chiến dịch; A10 đọc kết quả để đề xuất cải tiến; A11 đặt mục tiêu của vụ, và A9, A10 bám theo mục tiêu đó. Mọi thứ đi qua bảng của web, nên tra lại được và kiểm thử được.
+
+### 10.6 Định hướng phát triển
+
+- Đầu mỗi vụ và mỗi quý, A11 viết một **kế hoạch mùa vụ** cho hợp tác xã:
+  - mục tiêu đo được: sản lượng, tỉ lệ nhật ký đúng hạn, tỉ lệ thửa có bệnh, doanh thu cửa hàng, số khách tour, thu nhập bình quân hộ khi có dữ liệu;
+  - ưu tiên của vụ;
+  - việc phát triển: mở rộng vùng, cài thêm mini-app, đào tạo nông hộ, tìm đối tác.
+- Kế hoạch được áp dụng bằng hành động `strategy.adopt`. Kế hoạch đang hiệu lực là nguồn mục tiêu cho A9 (chiến dịch ngày phục vụ mục tiêu vụ) và A10 (cải tiến đo theo mục tiêu vụ). Báo cáo tuần có tiến độ so với mục tiêu vụ.
+- Việc nằm ngoài hệ thống (vay vốn, đầu tư, ký hợp đồng, quyết định của đại hội thành viên) chỉ được viết thành đề xuất bằng chữ; hệ thống không thực hiện.
+- Bảng `strategy_plans`: `id`, `htx_code`, `season`, `goals`, `priorities`, `initiatives`, `status` (`draft`, `adopted`, `superseded`), `adopted_by`, `adopted_at`.
 
 ## 12. Telegram: cửa vào đầy đủ
 
