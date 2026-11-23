@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Lớp AI vận hành có người duyệt
 
-> **Trạng thái:** Bản định hướng (2026-11-23, bản 5), chưa triển khai, chưa giao người làm. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12). Bản 5 đưa vào kết quả một lượt đánh giá độc lập và các cải tiến: bốn nguyên lý của đề thi (§5.4), MCP (§8.5), kiểm chứng trên trang lô, bộ đo công khai và kịch bản trình diễn (§15).
+> **Trạng thái:** Bản định hướng (2026-11-24, bản 6), chưa triển khai; việc triển khai được theo dõi ở issue #55. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12). Bản 5 đưa vào kết quả một lượt đánh giá độc lập và các cải tiến: bốn nguyên lý của đề thi (§5.4), MCP (§8.5), kiểm chứng trên trang lô, bộ đo công khai và kịch bản trình diễn (§15). Bản 6 ghi câu trả lời cho các câu hỏi mở (D13 tới D18, issue #56 tới #61).
 > **Yêu cầu của chủ dự án (2026-11-23):** thêm một lớp AI vận hành trên hệ thống, luôn còn người phê duyệt. Làm đầy đủ, không cắt phạm vi theo hạn nộp bài. Được gọi provider bên ngoài như Claude và Codex. Báo cáo, hỏi đáp và phê duyệt được qua Telegram, để không phụ thuộc hoàn toàn vào website.
 > **Người đọc:** người sẽ xây lớp này (thành viên nhóm hoặc một phiên AI lập trình). Tài liệu nói cần gì, vì sao, và chốt các quyết định kiến trúc. Chi tiết cài đặt do người làm quyết, trong khuôn khổ ở đây. Mỗi lần gộp vào `main` vẫn hỏi chủ dự án.
 
@@ -39,6 +39,12 @@ Lớp này coi là xong khi:
 | D10 | "Định hướng phát triển" gồm cả hai: định hướng của hợp tác xã (A11, §10.6) và AI tự xây phần mềm khi có yêu cầu, dưới dạng mini-app cắm vào hệ thống (A12, §12). Vì vậy "Claude" và "Codex" ở D3 gồm cả API lẫn công cụ viết mã (Claude Code, Codex CLI). |
 | D11 | Bản nộp thi để chế độ tự vận hành tắt mặc định. Buổi trình diễn bật chế độ này trên hợp tác xã mẫu, sau khi cho xem số liệu chạy bóng (§11.5). |
 | D12 | Giữ nguyên năm giới hạn cứng H1 tới H5 (§11.1). |
+| D13 | Một bộ khoá provider cho cả bản cài; mỗi hợp tác xã có ngân sách tháng (§8.2). Issue #56. |
+| D14 | App nhân sự kéo việc về: app hỏi lõi định kỳ để lấy các đề xuất `staff.task.create` đã duyệt, tự tạo việc rồi báo lại (§9). Issue #57. |
+| D15 | Chỉ dùng Telegram, không làm Zalo (§13.8). Issue #58. |
+| D16 | Bot nhận tin nhắn thoại, chuyển thành chữ ngay trên máy chủ của hợp tác xã, nhắc lại và chờ xác nhận (§13.5). Issue #59. |
+| D17 | Mỗi bản cài có tên miền và chứng chỉ TLS, nên Mini App dùng được ở mọi hợp tác xã (§16). Issue #60. |
+| D18 | Chiến dịch gồm cả sản xuất và kinh doanh (§10.1, §10.2). Issue #61. |
 
 Đã xác nhận ở D10: "Claude" và "Codex" ở D3 gồm cả API (cho các agent, §8.1) lẫn công cụ viết mã Claude Code và Codex CLI (chỉ dùng trong xưởng mini-app, §12).
 
@@ -708,16 +714,12 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 - `docs/rules-and-limits.md`: hai chế độ vận hành và năm giới hạn cứng (§11.1); hướng dẫn bật, dừng và đọc báo cáo của chế độ tự vận hành.
 - `docs/api-contract.md`: máy chủ MCP (§8.5); bảng kết quả bộ đo trong `docs/` (§15); kịch bản trình diễn (§15.1).
 
-## 19. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
+## 19. Điểm còn mở
 
-1. Một bộ khoá provider cho cả bản cài (như §8.2), hay mỗi hợp tác xã tự nhập khoá của mình? Chốt trước M3. Issue #56.
-2. App nhân sự nhận việc từ bên ngoài bằng cách nào: chốt với người phụ trách app trước M10. Issue #57.
-3. Có cần Zalo ngoài Telegram không? Chốt sau M2. Issue #58.
-4. Có nhận tin nhắn thoại không? Cần một mô hình chuyển giọng nói thành chữ chạy nội bộ, giấy phép thuộc OSI. Chốt trước M5. Issue #59.
-5. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì thiếu nhóm Mini App ở §13.7 (bản đồ, tài liệu, Kho ứng dụng, mini-app); các thao tác trong chat vẫn đủ, kể cả hành động `high`. Chốt trước M6. Issue #60.
-6. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7. Issue #61.
+Hiện không còn câu nào mở. Câu mới phát sinh khi làm thì mở issue trên GitHub, ghi câu trả lời thành một quyết định ở §2, rồi đóng issue.
 
-Đã chốt ngày 2026-11-23: ý nghĩa của "Codex" và của "định hướng phát triển" (D10), các loại mở sẵn khi bật tự vận hành (D9), chế độ khi chấm thi (D11), năm giới hạn cứng (D12), người làm (giao qua issue theo dõi trên GitHub).
+- Đã chốt ngày 2026-11-23: ý nghĩa của "Codex" và của "định hướng phát triển" (D10), các loại mở sẵn khi bật tự vận hành (D9), chế độ khi chấm thi (D11), năm giới hạn cứng (D12), người làm (issue #55).
+- Đã chốt ngày 2026-11-24: khoá provider (D13), cách app nhân sự nhận việc (D14), Zalo (D15), tin nhắn thoại (D16), địa chỉ HTTPS (D17), phạm vi chiến dịch (D18).
 
 ## 20. Quy tắc làm việc trong repo
 
