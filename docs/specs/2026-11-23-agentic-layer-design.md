@@ -115,6 +115,7 @@ Agent chỉ được đề xuất các loại hành động có trong danh mục
 | `titleVi` | tên hiện cho người duyệt |
 | `risk` | `low`, `medium` hoặc `high` |
 | `approverRoles` | vai trò được duyệt |
+| `origins` | ai được khởi tạo: `agent` (agent đề xuất), `user` (người dùng yêu cầu qua chat hoặc Mini App) |
 | `channels` | `web`, `telegram`; hành động `high` chỉ có `web` |
 | `payloadSchema` | khuôn zod; web từ chối đề xuất sai khuôn |
 | `editableFields` | trường người duyệt được sửa trước khi duyệt, ví dụ nội dung thông báo |
@@ -136,9 +137,11 @@ Danh mục ban đầu:
 | `bulletin.publish` | đăng bản tin AI | medium | manager | web, telegram | cần thêm trạng thái cho `bulletins` (§9) |
 | `disease.inspection` | yêu cầu cán bộ kiểm tra một vùng | medium | officer, manager | web, telegram | thông báo có liên kết tới thửa |
 | `staff.task.create` | giao việc cho nhân sự | medium | manager | web, telegram | app nhân sự (§9, đang phụ thuộc) |
+| `agent.settings.update` | đổi cài đặt agent (ngưỡng, lịch) theo một đề xuất cải tiến | medium | manager | web, telegram | bảng `agent_settings` (§10.3) |
 
 - Thêm một loại mới phải đi bằng một PR vào danh mục, kèm test. Không có cách thêm loại mới lúc hệ thống đang chạy.
-- **Không bao giờ đưa vào danh mục:** kết nạp hoặc xoá thành viên, sửa lô đã xuất QR, cài hoặc gỡ mini-app, đổi quyền, tiền. Những việc này luôn do người làm trực tiếp.
+- Bảng trên là phần dành cho agent (`origins: agent`). Danh mục còn phủ dần mọi thao tác ghi của web cho người dùng (`origins: user`), theo bảng §11.7; mini-app thêm hành động của mình qua `app.yaml` (§10.2).
+- **Agent không bao giờ được đề xuất:** kết nạp hoặc xoá thành viên, sửa lô đã xuất QR, cài hoặc gỡ mini-app, đổi quyền, thao tác liên quan đến tiền. Những việc này chỉ do người dùng tự khởi tạo (`origins: user`): trong chat có thẻ xác nhận hoặc trong Mini App, tuỳ mức rủi ro (§11.7).
 
 ## 7. Đề xuất và phê duyệt
 
@@ -149,9 +152,10 @@ Các bảng nằm trong schema `platform` và có cùng trigger audit như các 
 | Bảng | Cột chính |
 |---|---|
 | `agent_runs` | `id`, `htx_code`, `agent`, `trigger` (`schedule`, `event`, `manual`), `started_at`, `finished_at`, `status` (`ok`, `failed`, `skipped`), `provider`, `model`, `tokens_in`, `tokens_out`, `cost_estimate`, `error` |
-| `agent_proposals` | `id`, `htx_code`, `run_id`, `kind`, `payload`, `reason_vi`, `evidence` (nguồn: bảng, mã dòng, giá trị, thời điểm), `risk`, `status`, `created_at`, `expires_at`, `decided_by`, `decided_at`, `decision_channel`, `decision_note`, `edited_payload`, `executed_at`, `result`, `dedupe_key` |
+| `agent_proposals` | `id`, `htx_code`, `run_id`, `kind`, `payload`, `reason_vi`, `evidence` (nguồn: bảng, mã dòng, giá trị, thời điểm), `risk`, `status`, `created_at`, `expires_at`, `decided_by`, `decided_at`, `decision_channel`, `decision_note`, `edited_payload`, `executed_at`, `result`, `dedupe_key`, `origin` (`agent`, `user`), `requested_by` (người yêu cầu, khi `origin` là `user`), `campaign_id` |
 | `agent_settings` | `htx_code`, `agent`, `enabled`, `schedule`, `provider`, `thresholds`, `monthly_budget` |
-| `telegram_links`, `telegram_outbox` | §11 |
+| `telegram_links`, `telegram_outbox`, `telegram_conversations` | §11 |
+| `campaigns`, `campaign_items`, `campaign_outcomes`, `improvements` | §10.4 |
 
 ### 7.2 Trạng thái
 
@@ -169,12 +173,14 @@ proposed ──duyệt──▶ approved ──thực thi──▶ executed
 - Thực thi chạy ngay sau khi duyệt, trong web, dưới danh nghĩa người duyệt. Audit ghi `actor` là người duyệt, kèm `proposal_id` và tên agent.
 - Thực thi không chạy hai lần cho cùng `proposal_id`. Nếu web và Telegram cùng bấm duyệt, chỉ một lần chạy; người bấm sau nhận "đã được X duyệt lúc …".
 - Duyệt loạt chỉ cho `low` và `medium`, cùng một `kind`, trên web, tối đa 50 đề xuất (theo giới hạn duyệt nhật ký).
-- Không có tự duyệt (D1). Người đề xuất luôn là agent, người duyệt luôn là người.
+- Không có tự duyệt (D1). Đề xuất của agent luôn cần một người duyệt. Thao tác người dùng tự yêu cầu, qua chat hoặc Mini App, cần chính người đó bấm Xác nhận trên thẻ xác nhận. AI không bao giờ thực thi chỉ từ câu chữ.
+- Thao tác người dùng yêu cầu vẫn đi đúng luồng nghiệp vụ hiện có. Ví dụ nông hộ ghi nhật ký qua chat thì nhật ký vẫn chờ cán bộ duyệt, như khi ghi trên web.
 
 ### 7.3 Hộp duyệt trên web
 
 - Trang `/manager/ai` và `/officer/ai`: danh sách đề xuất đang mở, lọc theo loại, rủi ro và agent. Mỗi thẻ có lý do, bằng chứng (liên kết tới thửa, nhật ký, số đo), phần xem trước, và các nút Duyệt, Sửa rồi duyệt, Từ chối.
 - Tab Lịch sử: ai duyệt gì, qua kênh nào, kết quả thực thi ra sao.
+- Tab Chiến dịch: chiến dịch hôm nay và các ngày trước, mục tiêu và kết quả (§10.1). Tab Cải tiến: đề xuất cải tiến và kết quả đo lại (§10.3).
 - Tab Cài đặt (chỉ `manager`): bật hoặc tắt từng agent, lịch chạy, provider, ngưỡng, ngân sách, liên kết Telegram, nhóm nhận báo cáo.
 - Số đề xuất đang mở hiện trên menu như các bộ đếm khác.
 - Giao diện theo `DESIGN.md` và bộ thành phần sẵn có; chạy tốt trên desktop và điện thoại, chế độ sáng và tối.
@@ -207,6 +213,7 @@ Một giao diện chung và ba adapter:
 - Chỉ gửi đi dữ liệu mà agent cần. Không gửi cột cá nhân (vai `agent` vốn không đọc được), không gửi ảnh nông hộ. Tên thửa và nông hộ thay bằng mã.
 - Mỗi lần gọi ra ngoài ghi một dòng vào `audit.events`: provider, model, agent, số bản ghi gửi đi. Không ghi nội dung.
 - Chatbot hiện tại chuyển sang dùng chung chính sách này (§3).
+- Tin nhắn chat có thể chứa thông tin cá nhân. Agent `assistant` mặc định dùng Ollama. Nếu manager bật provider ngoài cho `assistant`, người dùng được báo lúc liên kết Telegram (§11.2), và số điện thoại, số giấy tờ trong tin nhắn được che trước khi gửi đi.
 
 ### 8.4 Mô hình nội bộ
 
