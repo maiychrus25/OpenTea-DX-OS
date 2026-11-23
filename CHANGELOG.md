@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Agentic layer milestone M0 skeletons (`platform/agent`, `platform/telegram`)**: stdlib-only heartbeat skeleton containers (`dxos-agent`, `dxos-telegram`) added to `docker/docker-compose.yml`, `docker/docker-compose.release.yml`, `Makefile` (`make up-agent`, `stop-extras`, `platform-up`), CI unit test jobs, and release/edge image matrices. They start and report health without running agents or connecting to Telegram yet.
+- **Architecture Decision Records**: [ADR 0003](./docs/adr/0003-agentic-layer.md) (agentic layer with human approval and trust-zone separation) and [ADR 0004](./docs/adr/0004-external-llm-providers.md) (optional external LLM providers with local-first fallback).
 - **Mini-app `hub-mobile` (`miniapps/hub-mobile`)**: a card in the app store and an open page (`/public/<htxCode>`) with the download link of the Android APK and the steps to add the web build to an iPhone home screen. Links come from `HUB_APK_URL` and `HUB_WEB_URL`; the app stores and reads nothing. The 67 MB APK itself is not in the repository.
+
+### Changed
+
+- **`docs/rules-and-limits.md`**: amended §1.1 (AI Principle Invariant) and §1.2 (MNM Invariant) per milestone M0 to permit typed catalogue action proposals (with human approval in normal mode, or manager-enabled bounded autonomous mode) and optional per-cooperative external LLM providers while keeping local Ollama as the zero-key default.
 
 ---
 

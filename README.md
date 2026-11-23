@@ -146,7 +146,7 @@ Các bước thiết lập bổ sung (bucket S3, import n8n workflows, Ollama mo
 
 ### Chạy stack nhỏ hơn khi máy ít RAM
 
-Stack đầy đủ có 16 container và dùng khoảng 3,6 GiB RAM. Khi chỉ cần đăng nhập, bảng điều khiển, Kho ứng dụng và các mini-app, chạy phần lõi và tắt các nhóm tuỳ chọn:
+Stack đầy đủ có 18 container và dùng khoảng 3,6 GiB RAM. Khi chỉ cần đăng nhập, bảng điều khiển, Kho ứng dụng và các mini-app, chạy phần lõi và tắt các nhóm tuỳ chọn:
 
 ```bash
 make platform-up   # một lần đầu (khởi tạo và migrate cơ sở dữ liệu), rồi:
@@ -163,12 +163,13 @@ make stop-extras   # dừng (không xoá) mọi nhóm tuỳ chọn; dữ liệu 
 | `make up-voice` | piper | Không có giọng đọc cho bản tin | khoảng 40 MiB |
 | `make up-workflow` | n8n | Các workflow (báo cáo thị trường, đẩy sự kiện) không chạy; các trang vẫn mở | khoảng 0,4 GiB |
 | `make up-chat` | mattermost | Không nhận được thông báo đẩy sang Mattermost (không có build arm64, chỉ chạy trên máy x86) | chưa đo |
+| `make up-agent` | dxos-agent, dxos-telegram | Lớp AI vận hành (M0: khung dịch vụ, chưa chạy agent hay nối Telegram); tắt không ảnh hưởng chức năng nào | chưa đo |
 
 Mini-app cài bằng `./dxos` là các container riêng, mỗi cái khoảng 50 MB, vẫn chạy khi bạn dừng các nhóm trên. Các số RAM là số đo `docker stats` trên một máy phát triển và thay đổi theo tải.
 
 ## 🧱 Tier 1: Nền tảng lõi (Headless Core)
 
-Tier 1 gồm PostgreSQL (PostGIS, pgvector), SeaweedFS S3, Keycloak, Hasura (chỉ đọc, phân quyền theo `htx_code`), n8n, cổng API APISIX, ClamAV và `dxos-scanner` (kiểm dịch file), cùng Mosquitto (MQTT), `dxos-ingest`, `dxos-lifecycle` (kho lạnh Parquet) và Ollama (LLM nội bộ).
+Tier 1 gồm PostgreSQL (PostGIS, pgvector), SeaweedFS S3, Keycloak, Hasura (chỉ đọc, phân quyền theo `htx_code`), n8n, cổng API APISIX, ClamAV và `dxos-scanner` (kiểm dịch file), cùng Mosquitto (MQTT), `dxos-ingest`, `dxos-lifecycle` (kho lạnh Parquet) và Ollama (LLM nội bộ). Ngoài ra có hai khung dịch vụ của lớp AI vận hành là `dxos-agent` và `dxos-telegram` (mốc M0, xem [ADR 0003](./docs/adr/0003-agentic-layer.md) và đặc tả ở PR #54).
 
 **Yêu cầu:** Docker + Compose ≥ 2.24, GNU make, bash, Node ≥ 20 (kèm npm), `jq`, `curl`, Python 3.
 
@@ -536,7 +537,7 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 
 - Phiên bản được đánh số theo [Semantic Versioning](https://semver.org/) và ghi nhận trong [CHANGELOG.md](./CHANGELOG.md) theo chuẩn [Keep a Changelog](https://keepachangelog.com/).
 - Các bản phát hành chính thức được công bố tại [GitHub Releases](https://github.com/maiychrus25/OpenTea-DX-OS/releases), mỗi bản gồm ghi chú phát hành, gói triển khai `opentea-dx-os-X.Y.Z.tar.gz` (kèm `SHA256SUMS`) và image trên GHCR:
-  `ghcr.io/maiychrus25/opentea-dx-os-web:X.Y.Z`, `-api`, `-postgres`, `-scanner`, `-migrate` và `-dataops` (cùng tiền tố, cùng tag).
+  `ghcr.io/maiychrus25/opentea-dx-os-web:X.Y.Z`, `-api`, `-postgres`, `-scanner`, `-migrate`, `-dataops`, `-agent` và `-telegram` (cùng tiền tố, cùng tag).
 
 **Phát hành phiên bản mới (maintainer):**
 
@@ -554,7 +555,7 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 tar -xzf opentea-dx-os-X.Y.Z.tar.gz && cd opentea-dx-os-X.Y.Z
 cp .env.example .env.local && cp docker/.env.local.example docker/.env.local   # rồi điền secret production
 export OPENTEA_VERSION=X.Y.Z
-docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner dxos-ingest dxos-lifecycle
+docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner dxos-ingest dxos-lifecycle dxos-agent dxos-telegram
 # Điền DXOS_MQTT_DEVICES và DXOS_MQTT_INGEST_PASSWORD (không để change_me*) trong docker/.env.local: broker từ chối khởi động nếu còn placeholder
 # Điền MINIO_ACCESS_KEY và MINIO_SECRET_KEY: SeaweedFS từ chối khởi động nếu còn rỗng hoặc placeholder (your_minio*, change_me*)
 # Mọi lệnh đều cần --env-file docker/.env.local: thiếu cờ này Compose dùng giá trị mặc định công khai trong repo thay vì secret của anh
