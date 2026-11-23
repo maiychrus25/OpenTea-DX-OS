@@ -163,7 +163,7 @@ make stop-extras   # dừng (không xoá) mọi nhóm tuỳ chọn; dữ liệu 
 | `make up-voice` | piper | Không có giọng đọc cho bản tin | khoảng 40 MiB |
 | `make up-workflow` | n8n | Các workflow (báo cáo thị trường, đẩy sự kiện) không chạy; các trang vẫn mở | khoảng 0,4 GiB |
 | `make up-chat` | mattermost | Không nhận được thông báo đẩy sang Mattermost (không có build arm64, chỉ chạy trên máy x86) | chưa đo |
-| `make up-agent` | dxos-agent, dxos-telegram | Lớp AI vận hành (M0: khung dịch vụ, chưa chạy agent hay nối Telegram); tắt không ảnh hưởng chức năng nào | chưa đo |
+| `make up-agent` | dxos-agent, dxos-telegram | Lớp AI vận hành (M0: khung dịch vụ, chưa chạy agent hay nối Telegram); tắt không ảnh hưởng chức năng nào | khoảng 35 MiB |
 
 Mini-app cài bằng `./dxos` là các container riêng, mỗi cái khoảng 50 MB, vẫn chạy khi bạn dừng các nhóm trên. Các số RAM là số đo `docker stats` trên một máy phát triển và thay đổi theo tải.
 
