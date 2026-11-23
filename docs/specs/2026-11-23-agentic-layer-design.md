@@ -59,3 +59,39 @@ Chatbot hiện đã tự chuyển sang Groq khi có `GROQ_API_KEY`, tức là đ
 | Gói `openai` trong web | `apps/web/package.json` | chatbot hiện tại |
 
 Mô hình nội bộ đang cài chỉ có `qwen2.5:0.5b`. Bản này đủ cho chatbot đơn giản nhưng không đủ để chọn hành động (§8.4).
+
+## 5. Kiến trúc
+
+### 5.1 Ba vùng tin cậy
+
+```
+              đọc (Hasura, vai agent)                   đề xuất, báo cáo (API nội bộ)
+Dữ liệu lõi ─────────────────────▶  dxos-agent  ──────────────────────────────▶  web (thẩm quyền)
+                                    (gọi LLM)                                     danh mục, đề xuất, duyệt,
+                                                                                  thực thi, audit, hộp duyệt
+Telegram ◀──── long polling ─────  dxos-telegram  ◀──── hộp thư đi ────────────────  │
+         ───── bấm duyệt, hỏi ───▶  (kênh chat)   ───── quyết định, câu hỏi ───────▶  │
+```
+
+- **Web (`apps/web`) là nơi có thẩm quyền duy nhất.** Web giữ danh mục hành động, lưu đề xuất, nhận quyết định, thực thi, ghi audit, và có giao diện hộp duyệt cùng phần cài đặt.
+- **`dxos-agent` (`platform/agent`, mới)** chạy các agent theo lịch và theo sự kiện, đọc dữ liệu, gọi LLM, rồi gửi đề xuất và báo cáo cho web. Dịch vụ này không có quyền ghi dữ liệu nghiệp vụ và không có quyền duyệt.
+- **`dxos-telegram` (`platform/telegram`, mới)** nói chuyện với Telegram: gửi tin từ hộp thư đi của web, chuyển nút bấm và câu hỏi của người dùng về web. Dịch vụ này không gọi LLM.
+
+Lý do tách ba vùng: phần gọi LLM là phần dễ bị dụ, vì nó đọc chữ do người dùng nhập (ghi chú nhật ký, mô tả bệnh). Nếu bị dụ, tệ nhất nó chỉ sinh ra đề xuất rác. Nó không thể tự duyệt, vì web chỉ nhận quyết định từ phiên đăng nhập web của người thật hoặc từ `dxos-telegram`.
+
+### 5.2 Danh tính và quyền
+
+| Danh tính | Loại | Quyền |
+|---|---|---|
+| `dxos-agent-<htx>`, mỗi hợp tác xã một client | Keycloak client credentials, claim `htx_code` cố định, vai trò `agent` | đọc Hasura bằng vai `agent`; gọi `/api/internal/agent/*` |
+| `dxos-telegram` | Keycloak client credentials | gọi `/api/internal/telegram/*` |
+| Người duyệt | tài khoản Keycloak sẵn có | duyệt đúng loại hành động mà vai trò của mình được phép (§6) |
+
+- Hasura có thêm vai `agent`: chỉ được `select`, cùng bộ lọc `htx_code` như `manager`, và **không thấy cột cá nhân**: `households.name`, `households.phone`, `households.address`, cùng các cột tương tự ở bảng khác. Agent nhắc tới nông hộ bằng mã (`id`). Khi hiện cho người duyệt, web thay mã bằng tên.
+- Mỗi hợp tác xã một client, để token của agent không đọc được dữ liệu của hợp tác xã khác (Hasura lấy `htx_code` từ token). Client được tạo khi hợp tác xã bật lớp AI (§13).
+- `/api/internal/*` chỉ mở trong mạng Docker, không đi qua gateway công khai. Web kiểm token và kiểm đúng client: client agent không gọi được API của Telegram và ngược lại.
+
+### 5.3 Vì sao không chạy agent trong n8n hay trong web
+
+- **n8n:** giấy phép fair-code (ADR 0001 đã ghi lối thoát), khó kiểm thử đơn vị, và khó giữ ranh giới quyền ở §5.1.
+- **Web:** một lượt agent có thể kéo dài vài phút vì chờ LLM, không hợp với route handler. Web lại là vùng có thẩm quyền, không nên chứa phần dễ bị dụ.
