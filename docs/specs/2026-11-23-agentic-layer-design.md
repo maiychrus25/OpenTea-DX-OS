@@ -69,17 +69,20 @@ Mô hình nội bộ đang cài chỉ có `qwen2.5:0.5b`. Bản này đủ cho c
 ### 5.1 Ba vùng tin cậy
 
 ```
-              đọc (Hasura, vai agent)                   đề xuất, báo cáo (API nội bộ)
-Dữ liệu lõi ─────────────────────▶  dxos-agent  ──────────────────────────────▶  web (thẩm quyền)
-                                    (gọi LLM)                                     danh mục, đề xuất, duyệt,
-                                                                                  thực thi, audit, hộp duyệt
-Telegram ◀──── long polling ─────  dxos-telegram  ◀──── hộp thư đi ────────────────  │
-         ───── bấm duyệt, hỏi ───▶  (kênh chat)   ───── quyết định, câu hỏi ───────▶  │
+              đọc (Hasura, vai agent)                     đề xuất, báo cáo, chiến dịch
+Dữ liệu lõi ─────────────────────▶  dxos-agent  ──────────────────────────────────▶  web (thẩm quyền)
+                                    (gọi LLM)   ◀──── hiểu câu chat, trả lời ──────  danh mục, đề xuất, duyệt,
+                                                                                     thực thi, audit, hộp duyệt
+Telegram ◀──── long polling ─────  dxos-telegram  ◀──── hộp thư đi ──────────────────  │
+         ──── tin nhắn, ảnh, nút ─▶  (kênh chat)   ──── tin nhắn, quyết định ────────▶  │
+Telegram Mini App ──────────────── HTTPS, phiên đăng nhập web như bình thường ───────▶  web
 ```
 
 - **Web (`apps/web`) là nơi có thẩm quyền duy nhất.** Web giữ danh mục hành động, lưu đề xuất, nhận quyết định, thực thi, ghi audit, và có giao diện hộp duyệt cùng phần cài đặt.
 - **`dxos-agent` (`platform/agent`, mới)** chạy các agent theo lịch và theo sự kiện, đọc dữ liệu, gọi LLM, rồi gửi đề xuất và báo cáo cho web. Dịch vụ này không có quyền ghi dữ liệu nghiệp vụ và không có quyền duyệt.
 - **`dxos-telegram` (`platform/telegram`, mới)** nói chuyện với Telegram: gửi tin từ hộp thư đi của web, chuyển nút bấm và câu hỏi của người dùng về web. Dịch vụ này không gọi LLM.
+- **Câu chat của người dùng** đi vào web. Web nhờ `dxos-agent` hiểu câu đó (agent `assistant`), rồi tự làm phần đọc với quyền của chính người chat, hoặc dựng thẻ xác nhận cho phần ghi (§11.5).
+- **Telegram Mini App** mở các trang web hiện có ngay trong Telegram (§11.6). Phần này phủ các thao tác không hợp làm bằng chat (vẽ thửa trên bản đồ, mini-app, tải tài liệu, xác nhận việc rủi ro cao) mà không phải viết lại giao diện.
 
 Lý do tách ba vùng: phần gọi LLM là phần dễ bị dụ, vì nó đọc chữ do người dùng nhập (ghi chú nhật ký, mô tả bệnh). Nếu bị dụ, tệ nhất nó chỉ sinh ra đề xuất rác. Nó không thể tự duyệt, vì web chỉ nhận quyết định từ phiên đăng nhập web của người thật hoặc từ `dxos-telegram`.
 
@@ -90,10 +93,12 @@ Lý do tách ba vùng: phần gọi LLM là phần dễ bị dụ, vì nó đọ
 | `dxos-agent-<htx>`, mỗi hợp tác xã một client | Keycloak client credentials, claim `htx_code` cố định, vai trò `agent` | đọc Hasura bằng vai `agent`; gọi `/api/internal/agent/*` |
 | `dxos-telegram` | Keycloak client credentials | gọi `/api/internal/telegram/*` |
 | Người duyệt | tài khoản Keycloak sẵn có | duyệt đúng loại hành động mà vai trò của mình được phép (§6) |
+| Người chat qua Telegram | tài khoản Keycloak đã liên kết (§11.2) | đúng quyền vai trò hiện tại của người đó, như trên web |
 
 - Hasura có thêm vai `agent`: chỉ được `select`, cùng bộ lọc `htx_code` như `manager`, và **không thấy cột cá nhân**: `households.name`, `households.phone`, `households.address`, cùng các cột tương tự ở bảng khác. Agent nhắc tới nông hộ bằng mã (`id`). Khi hiện cho người duyệt, web thay mã bằng tên.
 - Mỗi hợp tác xã một client, để token của agent không đọc được dữ liệu của hợp tác xã khác (Hasura lấy `htx_code` từ token). Client được tạo khi hợp tác xã bật lớp AI (§14).
 - `/api/internal/*` chỉ mở trong mạng Docker, không đi qua gateway công khai. Web kiểm token và kiểm đúng client: client agent không gọi được API của Telegram và ngược lại.
+- Với người chat, web đọc vai trò hiện tại từ Keycloak lúc thực thi, không tin vai trò nói trong câu chat. Web cần thêm một client Keycloak chỉ được đọc người dùng và vai trò (`view-users`).
 
 ### 5.3 Vì sao không chạy agent trong n8n hay trong web
 
