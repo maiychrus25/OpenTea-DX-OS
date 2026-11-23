@@ -556,6 +556,8 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 | M8 | cải tiến A10; hành động `agent.settings.update`; tab chỉ số trên `htx-dashboard` | báo cáo cải tiến đầu tiên có bằng chứng |
 | M9 | khối `agent` trong `app.yaml`; chiến dịch kinh doanh của `tea-shop`, `tea-tour`, `leaf-purchase` | một khuyến mãi của cửa hàng được đề xuất, duyệt và chạy; kiểm thử 16 qua |
 | M10 | agent A8 giao việc nhân sự | sau khi chốt cách nhận việc với app nhân sự |
+| M11 | định hướng phát triển A11 và `strategy.adopt`; mục tiêu vụ cho A9, A10 | một kế hoạch vụ được áp dụng, và chiến dịch ngày bám theo mục tiêu của kế hoạch đó |
+| M12 | chế độ tự vận hành: trường `autonomy`, ngưỡng cứng, bật và dừng, cửa sổ chặn, hạn mức, phanh, chạy bóng, nhãn minh bạch | kiểm thử 18–25 qua; có ít nhất 30 ngày số liệu chạy bóng trước khi bật ở một hợp tác xã thật |
 
 ## 17. Tài liệu phải cập nhật cùng mã
 
@@ -565,6 +567,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 - Ghi chú quyền riêng tư: dữ liệu nào đi tới Telegram và tới provider ngoài.
 - `docs/miniapps.md`: khối `agent` trong `app.yaml` (§10.2).
 - Hướng dẫn dùng bot cho từng vai trò (quản trị, cán bộ, nông hộ), tiếng Việt, có ảnh chụp màn hình.
+- `docs/rules-and-limits.md`: hai chế độ vận hành và năm ngưỡng cứng (§11.1); hướng dẫn bật, dừng và đọc báo cáo của chế độ tự vận hành.
 
 ## 18. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
 
@@ -576,6 +579,10 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 6. Có nhận tin nhắn thoại không? Cần một mô hình chuyển giọng nói thành chữ chạy nội bộ, giấy phép thuộc OSI. Chốt trước M5.
 7. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì không có Mini App (§12.6). Chốt trước M6.
 8. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7.
+9. Trong nhóm "manager mở được" (§11.1), loại nào nên được mở sẵn khi bật? Hiện mặc định đóng hết.
+10. "Định hướng phát triển" ở D8 được hiểu là định hướng của hợp tác xã (A11). Nếu ý là AI tự phát triển cả phần mềm (viết mã bằng Codex hoặc Claude Code) thì đó là phạm vi khác, liên quan câu 1.
+11. Khi chấm thi và trình diễn, chế độ tự vận hành bật hay tắt? Bất biến về AI trong `rules-and-limits.md` là một phần hồ sơ dự thi.
+12. Năm ngưỡng cứng H1–H5 hiện không mở được. Muốn mở ngưỡng nào thì cần một quyết định riêng của chủ dự án, kèm lý do.
 
 ## 19. Quy tắc làm việc trong repo
 
