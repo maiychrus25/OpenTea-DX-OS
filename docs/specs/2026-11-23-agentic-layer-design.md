@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Lớp AI vận hành có người duyệt
 
-> **Trạng thái:** Bản định hướng (2026-11-23, bản 4), chưa triển khai, chưa giao người làm. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12).
+> **Trạng thái:** Bản định hướng (2026-11-23, bản 5), chưa triển khai, chưa giao người làm. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12). Bản 5 đưa vào kết quả một lượt đánh giá độc lập và các cải tiến: bốn nguyên lý của đề thi (§5.4), MCP (§8.5), kiểm chứng trên trang lô, bộ đo công khai và kịch bản trình diễn (§15).
 > **Yêu cầu của chủ dự án (2026-11-23):** thêm một lớp AI vận hành trên hệ thống, luôn còn người phê duyệt. Làm đầy đủ, không cắt phạm vi theo hạn nộp bài. Được gọi provider bên ngoài như Claude và Codex. Báo cáo, hỏi đáp và phê duyệt được qua Telegram, để không phụ thuộc hoàn toàn vào website.
 > **Người đọc:** người sẽ xây lớp này (thành viên nhóm hoặc một phiên AI lập trình). Tài liệu nói cần gì, vì sao, và chốt các quyết định kiến trúc. Chi tiết cài đặt do người làm quyết, trong khuôn khổ ở đây. Mỗi lần gộp vào `main` vẫn hỏi chủ dự án.
 
@@ -282,6 +282,7 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 | A12 `app-builder` Xưởng mini-app | yêu cầu của người dùng hoặc của A11, danh sách mini-app hiện có, mẫu `hello`, bộ kit | — | bật app sẵn có, mẫu Sổ tự tạo, hoặc một mini-app mới (§12) | khi có yêu cầu |
 
 - Các ngưỡng (6 giờ, bán kính, số báo cáo) là cấu hình theo hợp tác xã. Giá trị mặc định ghi trong mã và trong `rules-and-limits.md`.
+- Agent học theo từng hợp tác xã: các đề xuất đã duyệt và bị từ chối (kèm lý do) của chính hợp tác xã đó được tìm lại theo độ giống và đưa vào ngữ cảnh làm ví dụ. Không dùng dữ liệu của hợp tác xã khác. Mỗi đề xuất có `confidence`; A10 kiểm độ tin có khớp với tỉ lệ được duyệt thật không.
 - **Bản tin:** thêm cột `status` (`draft`, `published`, `rejected`) cho bảng `bulletins`. Trang công khai chỉ đọc bản `published`. Thay đổi bảng đi theo luồng migration hiện có của web.
 - **A8 đang phụ thuộc app nhân sự** (`apps/staff-desktop`, `apps/staff-mobile`). App này dùng cơ sở dữ liệu riêng (SQLite trên máy chủ HTX, hoặc schema `app_staff_work`). Cần app nhân sự cung cấp một cách nhận việc từ bên ngoài; chốt với người phụ trách app trước khi làm (§19). Đến lúc đó, `staff.task.create` để ở trạng thái chưa bật.
 
@@ -600,8 +601,10 @@ Nguyên tắc: lỗi ở lớp AI không bao giờ chặn việc người dùng 
 
 ## 15. Đo chất lượng và kiểm thử
 
-- Bộ kịch bản `platform/agent/tests/scenarios/`: dữ liệu mẫu (dựa trên câu chuyện lô A3) cùng đề xuất mong đợi. Trong CI chạy với provider giả; khi chọn model thì chạy với Ollama thật.
+- Bộ kịch bản `platform/agent/tests/scenarios/`: dữ liệu mẫu (dựa trên câu chuyện lô A3) cùng đề xuất mong đợi. Trong CI chạy với provider `replay`; khi chọn model thì chạy với model thật.
+- Bộ kịch bản là một bộ đo công khai: kết quả chạy với từng model (các model Ollama, Claude, GPT) được công bố trong `docs/` thành một bảng gồm độ đúng của đề xuất, độ trễ và chi phí. Ai cũng chạy lại được bằng một lệnh.
 - Chỉ số của từng agent: tỉ lệ được duyệt, tỉ lệ bị từ chối theo từng lý do, thời gian chờ duyệt, số lượt lỗi, chi phí. Các chỉ số này hiện ở một tab mới của `htx-dashboard`, đọc qua Hasura như các tab khác.
+- Số liệu giá trị cho ban quản trị, có trong báo cáo tuần: giờ công ước tính tiết kiệm được, thời gian từ lúc phát hiện tới lúc xử lý, số vi phạm thời gian cách ly bị chặn trước khi thu hoạch.
 
 Kiểm thử bắt buộc, ngoài test đơn vị:
 
@@ -635,8 +638,31 @@ Kiểm thử bắt buộc, ngoài test đơn vị:
 28. Phiên bản chưa qua mọi cổng, hoặc đặc tả chưa được duyệt: không có đường cài.
 29. App do AI xây khai hành động trong khối `agent`: bị từ chối (H2).
 30. Trong buồng xây không đọc được biến môi trường hay khoá nào của lõi.
+31. Ở chế độ tự vận hành, đổi ngưỡng theo chiều nới hoặc tắt một agent luôn thành đề xuất chờ người duyệt.
+32. Tin gửi nông hộ do agent tạo mà có chữ tự do ngoài các ô của mẫu: bị từ chối.
+33. Sửa một giá trị trong dòng nguồn sau khi đề xuất: sha256 lệch, đề xuất chuyển `stale`.
+34. Gọi API nội bộ không qua gateway, hoặc bằng token của client khác: bị từ chối.
+35. Gateway trả 429 cho tuyến của agent: agent chờ ít nhất 60 giây, và câu hỏi của người dùng trên Telegram vẫn được trả lời.
+36. Hành động `high` trong chat cần đủ hai bước; bước hai quá 10 phút thì hết hạn.
+37. Kế hoạch mùa vụ có mục tiêu thấp hơn cùng kỳ vụ trước: bị gắn cảnh báo và không áp dụng tự động được.
+38. Client MCP chỉ tạo được đề xuất, không thực thi được, kể cả khi bật chế độ tự vận hành.
+39. Trang truy xuất lô chỉ hiện dòng kiểm chứng khi quyết định nằm trong chuỗi audit và sha256 khớp.
 
 Smoke test đặt trong `platform/tests` theo mẫu sẵn có; hộp duyệt có test Playwright.
+
+### 15.1 Kịch bản trình diễn
+
+Một kịch bản chạy được, dùng cho buổi chấm thi và cho người mới vào dự án. Đồng hồ cố định, dữ liệu mẫu của một hợp tác xã có 30 ngày lịch sử, provider `replay` để mỗi lần chạy ra cùng kết quả; khi có mạng thật thì chuyển sang Ollama. Toàn bộ khoảng 10 phút:
+
+1. 06:00, chiến dịch ngày tới Telegram của quản trị; quản trị duyệt cả chiến dịch bằng một nút.
+2. Nông hộ gửi ảnh lá chè; cán bộ xác nhận bệnh ngay trong chat; A3 đề xuất báo cho các hộ quanh đó bằng tin theo mẫu.
+3. Nhật ký phun của lô A3 sai thời gian cách ly: A1 đề xuất trả lại; các nhật ký sạch được duyệt gộp một lần.
+4. Mở trang truy xuất lô A3: dòng "AI đề xuất, cán bộ đã duyệt, kiểm chứng trong sổ audit".
+5. Cắt mạng ra ngoài: agent chuyển sang Ollama, báo cáo sức khoẻ ghi lại.
+6. Mở số liệu chạy bóng (ghi rõ là dữ liệu mẫu), bật chế độ tự vận hành, chặn một việc bằng nút Chặn, rồi gõ `/dung`.
+7. Gửi "cần app theo dõi kho phân bón": xưởng mini-app đề xuất một mẫu Sổ tự tạo hoặc xây app, ảnh chụp gửi về Telegram. Một lần xây đầy đủ mất nhiều phút, nên buổi trình diễn dùng bản đã xây từ trước và nói rõ điều đó.
+
+Kịch bản được cập nhật ở mỗi mốc và chạy trong CI bằng provider `replay`.
 
 ## 16. Triển khai và vận hành
 
@@ -655,7 +681,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 | Mốc | Nội dung | Xong khi |
 |---|---|---|
 | M0 | sửa hai bất biến ở §3; viết ADR; dựng khung `platform/agent` và `platform/telegram` (chạy được, chưa làm gì) | PR tài liệu được duyệt; hai dịch vụ lên được trong compose |
-| M1 | danh mục, bảng, trạng thái, API nội bộ, thực thi, audit; hộp duyệt web; vai `agent` trên Hasura và client Keycloak; provider `ollama`; agent A1 | một nhật ký sai thời gian cách ly được đề xuất trả lại và được duyệt trên web; kiểm thử 1–7 ở §15 qua |
+| M1 | danh mục, bảng, trạng thái, API nội bộ, thực thi, audit; hộp duyệt web; vai `agent` trên Hasura và client Keycloak; provider `ollama` và `replay`; agent A1 | một nhật ký sai thời gian cách ly được đề xuất trả lại và được duyệt trên web; kiểm thử 1–7 ở §15 qua |
 | M2 | Telegram nền: liên kết tài khoản, hộp thư đi, báo cáo ngày và tuần (A6), duyệt bằng nút, báo cáo sức khoẻ, nối báo lỗi n8n | chủ dự án nhận tóm tắt ngày và duyệt được đề xuất của A1 trên điện thoại |
 | M3 | provider `anthropic` và `openai`; chính sách dữ liệu; ngân sách; dự phòng | đổi provider cho từng agent trên web; cắt mạng ra ngoài vẫn chạy; kiểm thử 8–9 qua |
 | M4 | agent A2, A3, A4, A5, kèm trạng thái cho bản tin | mỗi agent có kịch bản trong bộ thử ở §15 |
@@ -666,8 +692,9 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 | M9 | khối `agent` trong `app.yaml`; chiến dịch kinh doanh của `tea-shop`, `tea-tour`, `leaf-purchase` | một khuyến mãi của cửa hàng được đề xuất, duyệt và chạy; kiểm thử 16 qua |
 | M10 | agent A8 giao việc nhân sự | sau khi chốt cách nhận việc với app nhân sự |
 | M11 | định hướng phát triển A11 và `strategy.adopt`; mục tiêu vụ cho A9, A10 | một kế hoạch vụ được áp dụng, và chiến dịch ngày bám theo mục tiêu của kế hoạch đó |
-| M12 | chế độ tự vận hành: trường `autonomy`, giới hạn cứng, bật và dừng, cửa sổ chặn, hạn mức, phanh, chạy bóng, nhãn minh bạch | kiểm thử 18–25 qua; có ít nhất 30 ngày số liệu chạy bóng trước khi bật ở một hợp tác xã thật |
+| M12 | chế độ tự vận hành, theo thứ tự: trước hết cho `notification.internal` và `bulletin.publish`, cùng lệnh dừng và phanh; các loại khác sau khi có số liệu chạy bóng. Gồm trường `autonomy`, giới hạn cứng, bật và dừng, cửa sổ chặn, hạn mức, phanh, chạy bóng, nhãn minh bạch | kiểm thử 18–25 và 31 qua; có ít nhất 30 ngày số liệu chạy bóng trước khi bật ở một hợp tác xã thật |
 | M13 | xưởng mini-app A12: `dxos-builder`, cổng kiểm tra, xem thử, cài riêng cho một hợp tác xã, mạng riêng cho app do AI xây | từ một câu yêu cầu trên Telegram, một app kho phân bón được xây, qua mọi cổng, được duyệt và chạy; kiểm thử 26–30 qua |
+| M14 | máy chủ MCP cho agent bên ngoài; dòng kiểm chứng trên trang truy xuất lô; bảng kết quả của bộ đo công khai | một client MCP tạo được đề xuất và người dùng xác nhận trên Telegram; kiểm thử 38–39 qua |
 
 ## 18. Tài liệu phải cập nhật cùng mã
 
@@ -679,6 +706,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 - `docs/miniapps.md`: app do AI xây (§12.7, §12.8); hướng dẫn gửi yêu cầu cho xưởng mini-app.
 - Hướng dẫn dùng bot cho từng vai trò (quản trị, cán bộ, nông hộ), tiếng Việt, có ảnh chụp màn hình.
 - `docs/rules-and-limits.md`: hai chế độ vận hành và năm giới hạn cứng (§11.1); hướng dẫn bật, dừng và đọc báo cáo của chế độ tự vận hành.
+- `docs/api-contract.md`: máy chủ MCP (§8.5); bảng kết quả bộ đo trong `docs/` (§15); kịch bản trình diễn (§15.1).
 
 ## 19. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
 
