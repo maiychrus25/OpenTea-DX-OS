@@ -224,3 +224,52 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 - Các ngưỡng (6 giờ, bán kính, số báo cáo) là cấu hình theo hợp tác xã. Giá trị mặc định ghi trong mã và trong `rules-and-limits.md`.
 - **Bản tin:** thêm cột `status` (`draft`, `published`, `rejected`) cho bảng `bulletins`. Trang công khai chỉ đọc bản `published`. Thay đổi bảng đi theo luồng migration hiện có của web.
 - **A8 đang phụ thuộc app nhân sự** (`apps/staff-desktop`, `apps/staff-mobile`). App này dùng cơ sở dữ liệu riêng (SQLite trên máy chủ HTX, hoặc schema `app_staff_work`). Cần app nhân sự cung cấp một cách nhận việc từ bên ngoài; chốt với người phụ trách app trước khi làm (§16). Đến lúc đó, `staff.task.create` để ở trạng thái chưa bật.
+
+## 10. Telegram
+
+### 10.1 Cách kết nối
+
+- Mỗi bản cài DX-OS có một bot (không phải mỗi hợp tác xã một bot). Người vận hành tạo bot qua BotFather và đặt token vào biến môi trường của `dxos-telegram`.
+- Mặc định dùng **long polling** (`getUpdates`), nên chạy được cả ở hợp tác xã không có địa chỉ công khai. Webhook là tuỳ chọn; khi dùng webhook phải đặt `secret_token` và kiểm header `X-Telegram-Bot-Api-Secret-Token`.
+- Gọi thẳng Bot API qua HTTP, không thêm thư viện bot.
+
+### 10.2 Liên kết tài khoản
+
+1. Người dùng vào web, mở Hồ sơ, bấm "Kết nối Telegram". Web tạo một mã dùng một lần, hết hạn sau 10 phút, và hiện liên kết `https://t.me/<bot>?start=<mã>`.
+2. Người dùng mở liên kết và bấm Start. `dxos-telegram` gửi mã cùng `telegram_user_id` về web; web gắn Telegram vào tài khoản Keycloak.
+3. Gỡ liên kết trên web, hoặc gõ `/stop` trong bot.
+
+- Chỉ tài khoản đã liên kết mới được duyệt hoặc hỏi.
+- Nông hộ (`farmer`) liên kết để nhận thông báo của chính mình; không hỏi đáp, không duyệt.
+- Manager có thể gắn một nhóm Telegram của hợp tác xã để nhận báo cáo. **Không duyệt trong nhóm**: duyệt cần danh tính của từng người, nên chỉ làm trong chat riêng.
+
+### 10.3 Báo cáo
+
+| Loại | Khi nào | Nội dung |
+|---|---|---|
+| Tóm tắt ngày | giờ do hợp tác xã chọn, mặc định 18:00 giờ Việt Nam | sản lượng, nhật ký mới và đã duyệt, cảnh báo cảm biến, bệnh, đề xuất đang chờ, lỗi hệ thống; kèm liên kết sang web |
+| Tóm tắt tuần | thứ Hai, 07:00 | xu hướng trong tuần, so với tuần trước |
+| Cảnh báo ngay | khi có đề xuất `high` hoặc sự cố | một dòng, kèm nút |
+| Kết quả | sau khi thực thi | sửa lại chính tin nhắn đề xuất thành "Đã được X duyệt, đã thực hiện", không gửi tin mới |
+| Sức khoẻ hệ thống | agent hoặc provider lỗi liên tiếp, chạm ngân sách, workflow n8n lỗi | xem §11 |
+
+Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân (§8.3). Muốn xem chi tiết thì bấm liên kết sang web.
+
+### 10.4 Duyệt qua Telegram
+
+- Đề xuất có `telegram` trong `channels` được gửi tới những người đã liên kết và có vai trò được duyệt, kèm các nút Duyệt, Từ chối và Mở trên web.
+- `callback_data` chỉ chứa mã đề xuất rút gọn, quyết định, và chữ ký HMAC do web tạo; tất cả nằm trong giới hạn 64 byte của Telegram. Web kiểm chữ ký, rồi kiểm người bấm còn đủ quyền ở thời điểm bấm.
+- Từ chối: bot hỏi lý do, người dùng trả lời bằng một tin nhắn. Chưa có lý do thì chưa từ chối.
+- Sửa rồi duyệt chỉ làm trên web.
+- Hành động `high` chỉ có nút "Mở trên web".
+
+### 10.5 Hỏi đáp
+
+- Lệnh `/tomtat` (tóm tắt hôm nay), `/cho` (đề xuất đang chờ), `/hoi <câu hỏi>`, hoặc nhắn câu hỏi thẳng.
+- Đường đi của câu hỏi: Telegram, `dxos-telegram`, web (kiểm người, vai trò, giới hạn tần suất), agent `assistant` trong `dxos-agent`; câu trả lời đi theo đường ngược lại.
+- Câu trả lời theo bất biến §1.1: chỉ sự thật lấy từ dữ liệu, kèm nguồn. Câu hỏi không tự sinh ra đề xuất; người hỏi muốn làm gì thì vào web.
+- Chỉ `manager` và `officer` được hỏi; mỗi người tối đa 20 câu mỗi giờ.
+
+### 10.6 Kênh khác
+
+Mattermost giữ nguyên như hiện tại. Có cần thêm Zalo hay không là điểm còn mở (§16).
