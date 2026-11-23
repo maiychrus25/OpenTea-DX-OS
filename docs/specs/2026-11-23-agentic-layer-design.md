@@ -403,6 +403,72 @@ Các loại còn lại (`autonomy: auto`) tự chạy ngay khi bật.
 
 Lớp AI không thay hợp tác xã chịu trách nhiệm trước pháp luật. Người bật chế độ chịu trách nhiệm như khi tự mình duyệt từng việc. Các quyết định mà pháp luật hoặc điều lệ giao cho đại hội thành viên hay hội đồng quản trị nằm ngoài hệ thống; A11 chỉ viết đề xuất cho các quyết định đó.
 
+## 12. Xưởng mini-app: AI xây phần mềm theo yêu cầu
+
+Khi hợp tác xã cần một chức năng hệ thống chưa có, A12 xây một mini-app và cắm vào qua nền tảng mini-app sẵn có. Mô hình plugin (`app.yaml`, `./dxos`, proxy cách ly, container khoá chặt) là lý do việc này làm được an toàn: app do AI viết bị khoá trong cùng khuôn với mọi mini-app khác, cộng thêm các giới hạn ở §12.7.
+
+### 12.1 Nhận yêu cầu
+
+- Manager gửi yêu cầu bằng chat hoặc trên web, ví dụ "Cần một app theo dõi kho phân bón của hợp tác xã". A12 hỏi lại tối đa 5 câu để làm rõ: ai dùng, ghi dữ liệu gì, cần xem báo cáo gì.
+- A11 cũng có thể đề xuất một app mới trong kế hoạch mùa vụ; đề xuất đó đi cùng đường.
+- Mỗi hợp tác xã có tối đa một yêu cầu đang xây cùng lúc.
+
+### 12.2 Chọn cách rẻ nhất
+
+1. Kho ứng dụng đã có app làm được việc này: đề xuất bật app đó.
+2. Làm được bằng Sổ tự tạo (`miniapps/custom-books`): đề xuất một mẫu sổ, tức là cấu hình, không có mã.
+3. Hai cách trên không được thì mới viết mã.
+
+### 12.3 Đặc tả trước, mã sau
+
+- A12 viết một đặc tả ngắn bằng tiếng Việt: màn hình, dữ liệu, vai trò, số liệu chỉ đọc cho agent. Manager duyệt đặc tả bằng hành động `app.spec.approve`.
+- Đặc tả đã duyệt là đầu vào duy nhất của bước viết mã.
+
+### 12.4 Viết mã trong buồng cách ly
+
+- Công cụ viết mã (Claude Code hoặc Codex CLI, theo provider hợp tác xã đã bật) chạy trong `dxos-builder`. Mỗi lần xây là một container mới: không có khoá nào ngoài khoá của công cụ viết mã; không chạm cơ sở dữ liệu thật; mạng ra ngoài chỉ tới API của provider và kho gói đã ghim; tối đa 30 phút và một ngân sách riêng.
+- Điểm xuất phát luôn là app mẫu `miniapps/hello` và bộ kit. Chỉ được dùng thư viện đã có trong các mini-app hiện tại (danh sách cho phép).
+- Mỗi app là một kho git riêng trong `generated-apps/<htx>/<id>`, mỗi phiên bản một tag. Chỉ dựng từ tag đã qua mọi cổng kiểm tra.
+
+### 12.5 Cổng kiểm tra
+
+Các cổng chạy tự động và không bỏ qua được, kể cả ở chế độ tự vận hành.
+
+| Kiểm tra | Bằng gì |
+|---|---|
+| manifest hợp lệ, CSP, không JavaScript, không `style` inline | `./dxos validate` |
+| kit đúng phiên bản | `scripts/appkit-sync.sh --check` |
+| test của app chạy xanh, mỗi route có test | pytest trong buồng |
+| chỉ thư viện trong danh sách cho phép, giấy phép thuộc OSI | so `requirements.txt` với danh sách |
+| có dòng SPDX, không có khoá hay tệp `.env` | quét tệp |
+| một AI thứ hai đọc mã tìm lỗi bảo mật, dùng provider khác với AI viết nếu có | báo cáo đính kèm |
+| chạy thử với dữ liệu mẫu, chụp màn hình desktop và điện thoại, sáng và tối | Playwright trong buồng |
+
+Trượt cổng nào thì A12 sửa, tối đa 3 vòng; vẫn trượt thì dừng và báo người yêu cầu.
+
+### 12.6 Xem thử, cài, nâng cấp, gỡ
+
+- Manager nhận ảnh chụp qua Telegram và dùng thử bản xem trước trong Mini App, chạy trên dữ liệu mẫu.
+- Cài là hành động `miniapp.install`: đi qua đường cài sẵn có (`platform.app_requests`, `./dxos worker`) và **chỉ bật cho hợp tác xã yêu cầu**.
+- Góp ý sau khi dùng (ví dụ "thêm cột số lô") tạo phiên bản mới qua cùng đường và nâng cấp bằng `./dxos upgrade`, giữ dữ liệu.
+- Gỡ bằng `miniapp.remove`, như mọi app.
+
+### 12.7 Giới hạn riêng cho app do AI xây
+
+- App do AI xây không được khai hành động trong khối `agent` của `app.yaml`, chỉ được khai số liệu chỉ đọc. Nếu không, AI tự thêm được hành động vào danh mục của chính nó, trái ngưỡng cứng H2.
+- App do AI xây chạy trên mạng riêng, chỉ thấy `apisix` và `postgres`. Hiện mọi mini-app dùng chung `dxos-apps-net` và gọi thẳng được nhau (`docs/miniapps.md` §7).
+- Kho ứng dụng và trang chi tiết gắn nhãn "App do AI xây", kèm liên kết tới đặc tả và báo cáo kiểm tra.
+
+### 12.8 Thay đổi cần ở nền tảng mini-app
+
+- `./dxos install --only <htx>`: bật app cho một hợp tác xã, thay vì cho mọi hợp tác xã như hiện nay.
+- `dxos-cli` đọc được `generated-apps/` bên cạnh `miniapps/` (hiện chỉ thấy thư mục trong repo).
+- Mạng riêng cho từng app do AI xây (§12.7).
+
+### 12.9 Đưa lên Kho chung
+
+App do AI xây là app riêng của hợp tác xã đã yêu cầu. Muốn mọi hợp tác xã dùng được thì người duy trì dự án mở PR đưa app vào `miniapps/`, qua review và CI như mọi mã khác. Không có đường tự động.
+
 ## 13. Telegram: cửa vào đầy đủ
 
 ### 13.1 Cách kết nối
