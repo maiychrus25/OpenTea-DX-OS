@@ -316,6 +316,82 @@ Các agent không trò chuyện tự do với nhau. Agent chuyên trách (A1 t�
 - Việc nằm ngoài hệ thống (vay vốn, đầu tư, ký hợp đồng, quyết định của đại hội thành viên) chỉ được viết thành đề xuất bằng chữ; hệ thống không thực hiện.
 - Bảng `strategy_plans`: `id`, `htx_code`, `season`, `goals`, `priorities`, `initiatives`, `status` (`draft`, `adopted`, `superseded`), `adopted_by`, `adopted_at`.
 
+## 11. Chế độ tự vận hành (bỏ qua phê duyệt)
+
+Chế độ này là tuỳ chọn và mặc định tắt. Khi manager bật, các agent tự thực thi hành động mà không chờ người duyệt, từ kế hoạch mùa vụ (A11) tới chiến dịch hằng ngày (A9). Con người chuyển từ duyệt từng việc sang giám sát: xem báo cáo, chặn khi cần, dừng bất cứ lúc nào.
+
+### 11.1 Bỏ qua gì, không bỏ qua gì
+
+Chế độ này chỉ bỏ **bước duyệt**. Năm ngưỡng cứng dưới đây giữ nguyên kể cả khi bật, và không có cài đặt nào mở được:
+
+| # | Ngưỡng cứng | Lý do |
+|---|---|---|
+| H1 | Kiểm tra nghiệp vụ trong use case vẫn chạy: thời gian cách ly, luồng nhật ký, quy tắc lô và QR, giới hạn duyệt loạt | hành động tự chạy đi qua đúng use case như khi người làm, nên sai nghiệp vụ vẫn bị từ chối |
+| H2 | AI không tự mở rộng quyền của mình: không bật, tắt hay đổi chế độ này; không đổi danh mục, ngưỡng cứng, vai trò, khoá provider, ngân sách, chính sách dữ liệu, sổ audit | AI đổi được giới hạn của chính nó thì mọi giới hạn khác vô nghĩa |
+| H3 | AI không tự xác nhận kết quả của AI: duyệt báo cáo bệnh luôn do cán bộ | bước cán bộ xác nhận là lý do kết quả nhận diện bệnh đáng tin |
+| H4 | Không xoá dữ liệu: thành viên, thửa, đối tác, nhật ký | vận hành không cần xoá, và xoá không hoàn tác được |
+| H5 | Mọi hành động vẫn ghi audit và vẫn báo qua Telegram | có giám sát thì mới bỏ được bước duyệt |
+
+Các loại sau mặc định vẫn cần người; manager mở từng loại lúc bật (`autonomy: unlockable`):
+
+| Loại | Điều kiện khi mở |
+|---|---|
+| hành động `high`: xuất QR lô, duyệt thu hoạch, thông báo toàn hợp tác xã | — |
+| hành động dính tiền của mini-app: đơn mua chung, giá thu mua, khuyến mãi | hạn mức theo ngày và theo tháng |
+| kết nạp thành viên | kiểm điều lệ của hợp tác xã trước khi mở |
+| cài, gỡ mini-app | — |
+
+Các loại còn lại (`autonomy: auto`) tự chạy ngay khi bật.
+
+### 11.2 Bật, dừng và tự dừng
+
+- Chỉ manager bật được, trên web hoặc trong Mini App, và phải đăng nhập lại ngay lúc bật. Màn hình bật liệt kê loại nào sẽ tự chạy, loại nào được mở thêm, các hạn mức, và tỉ lệ khớp khi chạy bóng (§11.5) của từng loại. Người bật đánh dấu đã đọc; nội dung màn hình lúc đó được lưu vào audit.
+- Mọi hành động tự chạy đều nằm trong quyền của manager đã bật. Audit ghi `actor = autopilot:<agent>` kèm người đã bật. Hành động chỉ cán bộ mới được làm thì không tự chạy.
+- Mọi manager và cán bộ của hợp tác xã nhận tin báo khi chế độ được bật, đổi hoặc dừng.
+- Dừng dễ hơn bật: bất kỳ manager hay cán bộ nào gõ `/dung` trên Telegram hoặc bấm nút trên web. Lệnh có hiệu lực ngay; mọi hành động đang chờ cửa sổ chặn quay về trạng thái chờ duyệt như chế độ thường. Bật lại chỉ làm trên web hoặc Mini App.
+- Chế độ tự dừng khi:
+  - người đã bật mất vai trò manager hoặc bị khoá tài khoản;
+  - 7 ngày liền không manager nào tương tác với báo cáo, hộp duyệt hay bot;
+  - phanh bất thường kích hoạt (§11.4).
+
+### 11.3 Cửa sổ chặn
+
+| Mức | Chờ trước khi chạy |
+|---|---|
+| `low` | chạy ngay |
+| `medium` | 15 phút |
+| `high` đã được mở, hành động dính tiền | 2 giờ |
+| `strategy.adopt` | 48 giờ |
+
+- Trong lúc chờ, manager (và cán bộ, với việc thuộc phần mình) nhận tin Telegram "Sẽ tự chạy lúc …" kèm nút Chặn và Xem. Chặn không cần lý do; mỗi lần chặn được tính như một lần từ chối khi đo chất lượng agent.
+- Chiến dịch ngày ở chế độ này: tin 06:00 đổi thành "Chiến dịch hôm nay sẽ tự chạy", từng mục có nút Chặn theo cửa sổ của mục đó.
+- Web quyết định đề xuất nào được tự chạy ngay lúc nhận đề xuất, và đặt `run_at`. Việc chạy khi đến giờ do một nhịp gọi `/api/internal/autopilot/tick` mỗi phút. Nơi gọi nhịp không quan trọng, vì web kiểm lại mọi điều kiện ngay lúc chạy.
+
+### 11.4 Hạn mức và phanh bất thường
+
+- Hạn mức mặc định: tối đa 50 hành động tự chạy mỗi ngày cho mỗi hợp tác xã; mỗi nông hộ nhận tối đa 2 thông báo tự động mỗi ngày; hạn mức tiền do manager đặt; ngân sách provider như §8.2.
+- Phanh bất thường đưa chế độ về duyệt thường và báo ngay cho mọi manager và cán bộ, khi có một trong các dấu hiệu:
+  - 3 lần thực thi lỗi trong một giờ;
+  - chạm hạn mức ngày;
+  - hơn 30% số hành động trong ngày bị chặn;
+  - một agent sinh số đề xuất gấp 3 lần trung bình 14 ngày.
+- Khi LLM lỗi và agent chạy bằng luật cứng, chỉ những hành động do luật cứng phát hiện mới được tự chạy.
+
+### 11.5 Chạy bóng trước khi bật
+
+- Ở chế độ thường, với mỗi đề xuất, web ghi lại "nếu đang bật chế độ tự vận hành thì đề xuất này có tự chạy không" (`shadow_auto`). Đối chiếu với quyết định thật của người duyệt, hệ thống có tỉ lệ khớp của từng loại hành động trong 30 ngày.
+- Màn hình bật hiện tỉ lệ này và cảnh báo loại nào dưới 90%. Cảnh báo không chặn việc bật; quyết định là của manager.
+
+### 11.6 Minh bạch
+
+- Mọi thay đổi do chế độ này thực hiện mang nhãn "AI tự thực hiện" trên web, trong lịch sử và trong audit.
+- Tin tự động gửi nông hộ ghi rõ là do AI của hợp tác xã gửi.
+- Tóm tắt ngày có phần "Tự vận hành": số việc đã tự chạy, số việc bị chặn, số lần phanh, chi phí.
+
+### 11.7 Trách nhiệm
+
+Lớp AI không thay hợp tác xã chịu trách nhiệm trước pháp luật. Người bật chế độ chịu trách nhiệm như khi tự mình duyệt từng việc. Các quyết định mà pháp luật hoặc điều lệ giao cho đại hội thành viên hay hội đồng quản trị nằm ngoài hệ thống; A11 chỉ viết đề xuất cho các quyết định đó.
+
 ## 12. Telegram: cửa vào đầy đủ
 
 ### 12.1 Cách kết nối
