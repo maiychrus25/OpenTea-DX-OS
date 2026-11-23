@@ -317,3 +317,44 @@ Smoke test đặt trong `platform/tests` theo mẫu sẵn có; hộp duyệt có
 - Biến môi trường mới (tên gợi ý): `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`. Thêm vào `.env.example` với giá trị trống; không commit giá trị thật.
 - Workflow release dựng thêm hai ảnh mới.
 - Công tắc khẩn: manager tắt được lớp AI của hợp tác xã mình, người vận hành tắt được toàn hệ thống, đều từ web. Khi tắt, đề xuất đang mở chuyển `expired`.
+
+## 14. Các mốc
+
+Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và tài liệu.
+
+| Mốc | Nội dung | Xong khi |
+|---|---|---|
+| M0 | sửa hai bất biến ở §3; viết ADR; dựng khung `platform/agent` và `platform/telegram` (chạy được, chưa làm gì) | PR tài liệu được duyệt; hai dịch vụ lên được trong compose |
+| M1 | danh mục, bảng, trạng thái, API nội bộ, thực thi, audit; hộp duyệt web; vai `agent` trên Hasura và client Keycloak; provider `ollama`; agent A1 | một nhật ký sai thời gian cách ly được đề xuất trả lại và được duyệt trên web; các kiểm thử 1–7 ở §12 qua |
+| M2 | Telegram: liên kết tài khoản, hộp thư đi, báo cáo ngày và tuần (A6), duyệt qua Telegram | chủ dự án nhận tóm tắt ngày và duyệt được đề xuất của A1 trên điện thoại |
+| M3 | provider `anthropic` và `openai`; chính sách dữ liệu; ngân sách; dự phòng | đổi provider cho từng agent trên web; cắt mạng ra ngoài vẫn chạy; kiểm thử 8–9 qua |
+| M4 | agent A2, A3, A4, A5, kèm trạng thái cho bản tin | mỗi agent có kịch bản trong bộ thử ở §12 |
+| M5 | hỏi đáp A7 qua Telegram; tab chỉ số trên `htx-dashboard`; nối báo lỗi n8n | hỏi một câu trên Telegram và nhận câu trả lời kèm nguồn |
+| M6 | agent A8 giao việc nhân sự | sau khi chốt cách nhận việc với app nhân sự |
+
+## 15. Tài liệu phải cập nhật cùng mã
+
+- `docs/rules-and-limits.md`: sửa §1.1 và §1.2; thêm giới hạn của lớp AI (số đề xuất, hỏi đáp, ngân sách).
+- ADR `0003-agentic-layer` (ba vùng tin cậy, luôn có người duyệt) và ADR `0004-external-llm-providers` (tuỳ chọn, chính sách dữ liệu, khoá).
+- `docs/api-contract.md` (API nội bộ), `docs/database-schema.md` (bảng mới), `DEPENDENCIES.md` (SDK, model), `CHANGELOG.md`, một mục ngắn trong README. Trang tài liệu của site tự lấy từ `docs/`.
+- Ghi chú quyền riêng tư: dữ liệu nào đi tới Telegram và tới provider ngoài.
+
+## 16. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
+
+1. "Codex" là API của OpenAI như §8 (cách hiểu hiện tại), hay là chạy công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống? Cách sau là phạm vi khác. Chốt trước M3.
+2. Một bộ khoá provider cho cả bản cài (như §8.2), hay mỗi hợp tác xã tự nhập khoá của mình? Chốt trước M3.
+3. App nhân sự nhận việc từ bên ngoài bằng cách nào: chốt với người phụ trách app trước M6.
+4. Có cần Zalo ngoài Telegram không? Chốt sau M2.
+5. Ai làm từng mốc.
+
+## 17. Quy tắc làm việc trong repo
+
+Theo `AGENTS.md`:
+
+- Mỗi mốc một nhánh riêng, PR nhỏ; không đẩy thẳng vào `main`.
+- Commit theo Conventional Commits bằng tiếng Anh; mã định danh bằng tiếng Anh.
+- Tệp mới có dòng SPDX.
+- Không commit khoá hay tệp `.env`.
+- `make build`, `make test`, `make lint` phải sạch.
+- Thay đổi hành vi thì cập nhật tài liệu trong cùng PR.
+- Giao diện theo `DESIGN.md`; kiểm trên desktop và điện thoại, chế độ sáng và tối.
