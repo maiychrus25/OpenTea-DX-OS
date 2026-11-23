@@ -116,7 +116,7 @@ Agent chỉ được đề xuất các loại hành động có trong danh mục
 | `risk` | `low`, `medium` hoặc `high` |
 | `approverRoles` | vai trò được duyệt |
 | `origins` | ai được khởi tạo: `agent` (agent đề xuất), `user` (người dùng yêu cầu qua chat hoặc Mini App) |
-| `channels` | `web`, `telegram`; hành động `high` chỉ có `web` |
+| `channels` | `web`, `telegram`; hành động `high` chỉ có `web`, tức là trên trình duyệt hoặc trong Mini App (§11.6) |
 | `payloadSchema` | khuôn zod; web từ chối đề xuất sai khuôn |
 | `editableFields` | trường người duyệt được sửa trước khi duyệt, ví dụ nội dung thông báo |
 | `expiresAfter` | đề xuất tự hết hạn sau bao lâu |
@@ -357,14 +357,14 @@ Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân
 
 ### 11.7 Bảng phủ thao tác
 
-Mỗi API của web thuộc đúng một nhóm dưới đây. Thêm API mới thì phải xếp nó vào bảng này trong cùng PR. Quyền của từng thao tác giữ nguyên như API hiện có.
+Mỗi cặp API và phương thức của web thuộc đúng một nhóm dưới đây; API vừa đọc vừa ghi có phần đọc và phần ghi ở hai nhóm khác nhau. Thêm API mới thì phải xếp nó vào bảng này trong cùng PR. Quyền của từng thao tác giữ nguyên như API hiện có.
 
-| Nhóm | Thao tác (API hiện có trong `apps/web/src/app/api`) |
+| Nhóm | Thao tác (API trong `apps/web/src/app/api`, kèm phương thức) |
 |---|---|
-| Trong chat, chỉ đọc | tra cứu (`search`); thời tiết (`weather`, `weather/forecast`); giá thị trường (`market-data`, `market-data/fx`); bản tin (`bulletin`); thông báo (`notifications`); lô (`lots`, `lots/[id]`, `lot/[lot_code]/certificate`); lịch thu hoạch (`schedule/harvest`, `schedule/unscheduled`); thửa (`farm/parcels`, `farm/parcels/[id]/soil-health`, `parcels/[id]/latest-photo`); hộ (`farm/households`, `farm/households/[id]`); thành viên (`members`); báo cáo bệnh (`officer/diseases`); hồ sơ (`profile`); tài liệu (`documents`, `documents/url`); đối tác (`partners`) |
-| Trong chat, có thẻ xác nhận | ghi, sửa, xoá nhật ký nháp (`journal`, `journal/[id]`, `journal/upload`); gửi ảnh bệnh (`diagnosis`); duyệt nhật ký (`journal/batch-approve`); duyệt báo cáo bệnh (`officer/diseases/[id]/review`); bắt đầu đợt hái (`parcels/[id]/start-round`); xếp lịch thu hoạch (`schedule/harvest/[cycle_id]`); tạo lô (`lots`); gửi thông báo cho một nhóm hộ (`notifications/announce`); đánh dấu thông báo đã đọc (`notifications`); mời và duyệt thành viên (`members/invite`, `members/[id]/approve`); sửa hồ sơ (`profile`, `farm/households/[id]`); thêm hộ (`farm/households`) |
-| Mini App | vẽ và sửa thửa (`farm/parcels`, `farm/parcels/[id]`); tải tài liệu (`documents/upload`); Kho ứng dụng (`app-store` và các API con); mọi mini-app; thêm, sửa, xoá đối tác (`partners`, `partners/[id]`); và mọi hành động `high`: xuất QR lô (`lots/[id]/export-qr`), duyệt thu hoạch (`parcels/[id]/approve-harvest`), thông báo toàn hợp tác xã, xoá thành viên (`members/[id]`), xoá thửa (`farm/parcels/[id]`) |
-| Không qua Telegram | đăng ký tài khoản mới (`register`, vì chưa có tài khoản để liên kết); đăng nhập (`auth`); API chỉ dùng khi phát triển (`dev-login`, `debug/session`, `seed-farmer`); API phục vụ trang web (`health`, `notifications/stream`, `tts`, `tts/status`, `geocode`); chatbot cũ (`chatbot`, `chatbot/sessions`), được thay bằng trợ lý |
+| Trong chat, chỉ đọc | tra cứu (`search` GET); thời tiết (`weather` GET, `weather/forecast` GET); giá thị trường (`market-data` GET, `market-data/fx` GET); bản tin (`bulletin` GET); thông báo (`notifications` GET); nhật ký (`journal` GET); lô (`lots` GET, `lots/[id]` GET, `lot/[lot_code]/certificate` GET); lịch thu hoạch (`schedule/harvest` GET, `schedule/unscheduled` GET); thửa (`farm/parcels` GET, `farm/parcels/[id]/soil-health` GET, `parcels/[id]/latest-photo` GET); hộ (`farm/households` GET, `farm/households/[id]` GET); thành viên (`members` GET); báo cáo bệnh (`officer/diseases` GET); hồ sơ (`profile` GET); tài liệu (`documents` GET, `documents/url` GET); đối tác (`partners` GET) |
+| Trong chat, có thẻ xác nhận | ghi nhật ký (`journal` POST, `journal/upload` POST); sửa, xoá nhật ký nháp (`journal/[id]` PUT, `journal/[id]` DELETE); gửi ảnh bệnh (`diagnosis` POST); duyệt nhật ký (`journal/batch-approve` POST); duyệt báo cáo bệnh (`officer/diseases/[id]/review` PUT); bắt đầu đợt hái (`parcels/[id]/start-round` POST); xếp lịch thu hoạch (`schedule/harvest/[cycle_id]` PATCH); tạo lô (`lots` POST); gửi thông báo (`notifications/announce` POST; thông báo cho một nhóm hộ xác nhận trong chat, thông báo toàn hợp tác xã là `high` nên xác nhận trong Mini App); đánh dấu đã đọc, xoá thông báo (`notifications` PUT, `notifications` DELETE); mời và duyệt thành viên (`members/invite` POST, `members/[id]/approve` POST); sửa hồ sơ (`profile` PUT, `farm/households/[id]` PUT); thêm hộ (`farm/households` POST) |
+| Mini App | vẽ thửa mới (`farm/parcels` POST); sửa thửa (`farm/parcels/[id]` PUT); tải tài liệu (`documents/upload` POST); Kho ứng dụng (`app-store` GET, `app-store/apps/[id]` GET, `app-store/apps/[id]/screenshots/[position]` GET, `app-store/history` GET, `app-store/requests` POST); mọi mini-app; thêm, sửa, xoá đối tác (`partners` POST, `partners/[id]` PUT, `partners/[id]` DELETE); các hành động `high`: xuất QR lô (`lots/[id]/export-qr` POST), duyệt thu hoạch (`parcels/[id]/approve-harvest` POST), xoá thành viên (`members/[id]` DELETE), xoá thửa (`farm/parcels/[id]` DELETE) |
+| Không qua Telegram | đăng ký tài khoản mới (`register` POST, vì chưa có tài khoản để liên kết); đăng nhập (`auth/[...nextauth]`); API chỉ dùng khi phát triển (`dev-login` GET, `debug/session` GET, `seed-farmer` GET); API phục vụ trang web (`health` GET, `notifications/stream` GET, `tts` GET, `tts` POST, `tts/status` GET, `geocode` GET); chatbot cũ, được thay bằng trợ lý (`chatbot` GET, `chatbot` POST, `chatbot/sessions` GET) |
 
 Các app ngoài web (`apps/hub-mobile`, `apps/staff-desktop`, `apps/staff-mobile`) không nằm trong bảng này. Thao tác của app nhân sự đi qua A8 khi đã chốt cách nhận việc (§17).
 
@@ -415,7 +415,7 @@ Kiểm thử bắt buộc, ngoài test đơn vị:
 14. Duyệt cả chiến dịch chỉ thực thi các mục trong quyền của người duyệt; mục `high` vẫn chờ xác nhận riêng.
 15. Chiến dịch không chứa mục mâu thuẫn với luật cứng (phun trước mưa, giao quá số người, hái thửa đang cách ly), kiểm bằng bộ kịch bản.
 16. Gỡ mini-app thì hành động của nó biến khỏi danh mục, và đề xuất đang mở của nó chuyển `expired`.
-17. Mỗi API của web có mặt đúng một lần trong bảng §11.7 (test đọc danh sách route và so với bảng).
+17. Mỗi cặp API và phương thức của web có mặt đúng một lần trong bảng §11.7 (test đọc danh sách route cùng phương thức và so với bảng).
 
 Smoke test đặt trong `platform/tests` theo mẫu sẵn có; hộp duyệt có test Playwright.
 
