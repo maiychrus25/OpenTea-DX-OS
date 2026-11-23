@@ -139,7 +139,7 @@ Danh mục ban đầu:
 
 | `kind` | Việc | `risk` | Người duyệt | Kênh | Dựa trên | Tự vận hành |
 |---|---|---|---|---|---|---|
-| `journal.approve` | duyệt nhật ký đang chờ | medium | officer, manager | web, telegram | luồng duyệt nhật ký (`rules-and-limits.md` §3.3), `batch-approve`, tối đa 50 | auto |
+| `journal.approve` | duyệt nhật ký đang chờ | medium | officer, manager | web, telegram | luồng duyệt nhật ký (`rules-and-limits.md` §3.3), `batch-approve`, tối đa 50 | unlockable |
 | `journal.reject` | trả lại nhật ký kèm lý do | medium | officer, manager | web, telegram | như trên | auto |
 | `notification.internal` | báo cho cán bộ hoặc ban quản trị | low | manager | web, telegram | `Notification` | auto |
 | `notification.households` | báo cho một nhóm nông hộ (theo thửa, theo vùng) | medium | manager | web, telegram | `/api/notifications/announce` | auto |
@@ -149,7 +149,7 @@ Danh mục ban đầu:
 | `disease.inspection` | yêu cầu cán bộ kiểm tra một vùng | medium | officer, manager | web, telegram | thông báo có liên kết tới thửa | auto |
 | `staff.task.create` | giao việc cho nhân sự | medium | manager | web, telegram | app nhân sự (§9, đang phụ thuộc) | auto |
 | `agent.settings.update` | đổi cài đặt agent (ngưỡng, lịch) theo một đề xuất cải tiến | medium | manager | web, telegram | bảng `agent_settings` (§10.3) | auto, chỉ siết ngưỡng và đổi lịch; nới ngưỡng luôn cần người (§11.1) |
-| `strategy.adopt` | áp dụng kế hoạch mùa vụ của A11 | medium | manager | web, telegram | bảng `strategy_plans` (§10.6) | auto, chờ 48 giờ |
+| `strategy.adopt` | áp dụng kế hoạch mùa vụ của A11 | medium | manager | web, telegram | bảng `strategy_plans` (§10.6) | unlockable, chờ 48 giờ |
 | `app.spec.approve` | duyệt đặc tả của một mini-app do AI xây | medium | manager | web, telegram | A12 (§12.3) | auto |
 | `miniapp.install` | cài và bật một mini-app cho hợp tác xã | high | manager | web | `app-store/requests`, `./dxos worker` (§12.6) | unlockable |
 | `miniapp.remove` | tắt hoặc gỡ một mini-app | high | manager | web | như trên | unlockable |
@@ -323,7 +323,8 @@ Các agent không trò chuyện tự do với nhau. Agent chuyên trách (A1 t�
   - mục tiêu đo được: sản lượng, tỉ lệ nhật ký đúng hạn, tỉ lệ thửa có bệnh, doanh thu cửa hàng, số khách tour, thu nhập bình quân hộ khi có dữ liệu;
   - ưu tiên của vụ;
   - việc phát triển: mở rộng vùng, cài thêm mini-app, đào tạo nông hộ, tìm đối tác.
-- Kế hoạch được áp dụng bằng hành động `strategy.adopt`. Kế hoạch đang hiệu lực là nguồn mục tiêu cho A9 (chiến dịch ngày phục vụ mục tiêu vụ) và A10 (cải tiến đo theo mục tiêu vụ). Báo cáo tuần có tiến độ so với mục tiêu vụ.
+- Kế hoạch được áp dụng bằng hành động `strategy.adopt`. Kế hoạch đang hiệu lực là nguồn mục tiêu cho A9 (chiến dịch ngày phục vụ mục tiêu vụ) và A10 (cải tiến hướng tới mục tiêu vụ). Báo cáo tuần có tiến độ so với mục tiêu vụ.
+- A11 không được tự chấm điểm chính nó. A9, A10 và A11 được đo bằng kết quả thực tế lấy từ dữ liệu (sản lượng, tỉ lệ nhật ký đúng hạn, tỉ lệ thửa có bệnh, doanh thu) so với cùng kỳ vụ trước, không so với mục tiêu do A11 đặt. Kế hoạch có mục tiêu thấp hơn cùng kỳ vụ trước bị gắn cảnh báo và không áp dụng tự động được.
 - Việc nằm ngoài hệ thống (vay vốn, đầu tư, ký hợp đồng, quyết định của đại hội thành viên) chỉ được viết thành đề xuất bằng chữ; hệ thống không thực hiện.
 - Bảng `strategy_plans`: `id`, `htx_code`, `season`, `goals`, `priorities`, `initiatives`, `status` (`draft`, `adopted`, `superseded`), `adopted_by`, `adopted_at`.
 
@@ -351,6 +352,8 @@ Các loại sau mặc định vẫn cần người; manager mở từng loại l
 | hành động dính tiền của mini-app: đơn mua chung, giá thu mua, khuyến mãi | hạn mức theo ngày và theo tháng |
 | kết nạp thành viên | kiểm điều lệ của hợp tác xã trước khi mở |
 | cài, gỡ mini-app | — |
+| duyệt nhật ký (`journal.approve`) | chỉ nhật ký mà bộ kiểm luật cứng không có cảnh báo nào; nhật ký có cảnh báo luôn chờ cán bộ, vì nhật ký là hồ sơ an toàn thực phẩm |
+| áp dụng kế hoạch mùa vụ (`strategy.adopt`) | mục tiêu không thấp hơn kết quả cùng kỳ vụ trước; cửa sổ chặn 48 giờ |
 
 Các loại còn lại (`autonomy: auto`) tự chạy ngay khi bật.
 
