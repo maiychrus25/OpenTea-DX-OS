@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Lớp AI vận hành có người duyệt
 
-> **Trạng thái:** Bản định hướng (2026-11-23, bản 3), chưa triển khai, chưa giao người làm. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11).
+> **Trạng thái:** Bản định hướng (2026-11-23, bản 4), chưa triển khai, chưa giao người làm. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12).
 > **Yêu cầu của chủ dự án (2026-11-23):** thêm một lớp AI vận hành trên hệ thống, luôn còn người phê duyệt. Làm đầy đủ, không cắt phạm vi theo hạn nộp bài. Được gọi provider bên ngoài như Claude và Codex. Báo cáo, hỏi đáp và phê duyệt được qua Telegram, để không phụ thuộc hoàn toàn vào website.
 > **Người đọc:** người sẽ xây lớp này (thành viên nhóm hoặc một phiên AI lập trình). Tài liệu nói cần gì, vì sao, và chốt các quyết định kiến trúc. Chi tiết cài đặt do người làm quyết, trong khuôn khổ ở đây. Mỗi lần gộp vào `main` vẫn hỏi chủ dự án.
 
@@ -35,6 +35,10 @@ Lớp này coi là xong khi:
 | D6 | Mọi thông tin và thao tác trên hệ thống đều làm được qua bot Telegram, cho mọi vai trò. |
 | D7 | Các agent vận hành hằng ngày: đưa ra chiến dịch ngày cho hợp tác xã, theo dõi kết quả và đề xuất cải tiến. |
 | D8 | Có tuỳ chọn "bỏ qua phê duyệt" (bypass permissions): khi manager bật, các agent tự vận hành toàn bộ hợp tác xã, từ định hướng phát triển tới việc hằng ngày, không chờ người duyệt (§11). |
+| D9 | Ở chế độ tự vận hành, nhóm "manager mở được" mặc định đóng hết (§11.1). |
+| D10 | "Định hướng phát triển" gồm cả hai: định hướng của hợp tác xã (A11, §10.6) và AI tự xây phần mềm khi có yêu cầu, dưới dạng mini-app cắm vào hệ thống (A12, §12). Vì vậy "Claude" và "Codex" ở D3 gồm cả API lẫn công cụ viết mã (Claude Code, Codex CLI). |
+| D11 | Bản nộp thi để chế độ tự vận hành tắt mặc định. Buổi trình diễn bật chế độ này trên hợp tác xã mẫu, sau khi cho xem số liệu chạy bóng (§11.5). |
+| D12 | Giữ nguyên năm ngưỡng cứng H1 tới H5 (§11.1). |
 
 Cách hiểu cần xác nhận: "Codex" ở D3 được hiểu là API của OpenAI. Nếu chủ dự án muốn chạy chính công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống thì đó là phạm vi khác, ghi ở §19.
 
@@ -571,18 +575,15 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 
 ## 19. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
 
-1. "Codex" là API của OpenAI như §8 (cách hiểu hiện tại), hay là chạy công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống? Cách sau là phạm vi khác. Chốt trước M3.
-2. Một bộ khoá provider cho cả bản cài (như §8.2), hay mỗi hợp tác xã tự nhập khoá của mình? Chốt trước M3.
-3. App nhân sự nhận việc từ bên ngoài bằng cách nào: chốt với người phụ trách app trước M6.
-4. Có cần Zalo ngoài Telegram không? Chốt sau M2.
-5. Ai làm từng mốc.
-6. Có nhận tin nhắn thoại không? Cần một mô hình chuyển giọng nói thành chữ chạy nội bộ, giấy phép thuộc OSI. Chốt trước M5.
-7. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì không có Mini App (§13.6). Chốt trước M6.
-8. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7.
-9. Trong nhóm "manager mở được" (§11.1), loại nào nên được mở sẵn khi bật? Hiện mặc định đóng hết.
-10. "Định hướng phát triển" ở D8 được hiểu là định hướng của hợp tác xã (A11). Nếu ý là AI tự phát triển cả phần mềm (viết mã bằng Codex hoặc Claude Code) thì đó là phạm vi khác, liên quan câu 1.
-11. Khi chấm thi và trình diễn, chế độ tự vận hành bật hay tắt? Bất biến về AI trong `rules-and-limits.md` là một phần hồ sơ dự thi.
-12. Năm ngưỡng cứng H1–H5 hiện không mở được. Muốn mở ngưỡng nào thì cần một quyết định riêng của chủ dự án, kèm lý do.
+1. Một bộ khoá provider cho cả bản cài (như §8.2), hay mỗi hợp tác xã tự nhập khoá của mình? Chốt trước M3.
+2. App nhân sự nhận việc từ bên ngoài bằng cách nào: chốt với người phụ trách app trước M10.
+3. Có cần Zalo ngoài Telegram không? Chốt sau M2.
+4. Ai làm từng mốc.
+5. Có nhận tin nhắn thoại không? Cần một mô hình chuyển giọng nói thành chữ chạy nội bộ, giấy phép thuộc OSI. Chốt trước M5.
+6. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì không có Mini App (§13.6). Chốt trước M6.
+7. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7.
+
+Đã chốt ngày 2026-11-23: ý nghĩa của "Codex" và của "định hướng phát triển" (D10), các loại mở sẵn khi bật tự vận hành (D9), chế độ khi chấm thi (D11), năm ngưỡng cứng (D12).
 
 ## 20. Quy tắc làm việc trong repo
 
