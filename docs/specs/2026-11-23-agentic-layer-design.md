@@ -204,6 +204,7 @@ proposed ──duyệt──▶ approved ──thực thi──▶ executed
 - Duyệt loạt chỉ cho `low` và `medium`, cùng một `kind`, trên web, tối đa 50 đề xuất (theo giới hạn duyệt nhật ký).
 - Không có tự duyệt (D1). Đề xuất của agent luôn cần một người duyệt. Thao tác người dùng tự yêu cầu, qua chat hoặc Mini App, cần chính người đó bấm Xác nhận trên thẻ xác nhận. AI không bao giờ thực thi chỉ từ câu chữ.
 - Thao tác người dùng yêu cầu vẫn đi đúng luồng nghiệp vụ hiện có. Ví dụ nông hộ ghi nhật ký qua chat thì nhật ký vẫn chờ cán bộ duyệt, như khi ghi trên web.
+- Quyết định về một lô (duyệt thu hoạch, xuất QR) được ghi vào sổ audit cùng sha256 của `evidence` và vai trò người duyệt. Trang truy xuất lô công khai hiện dòng "AI đề xuất, <vai trò> đã duyệt ngày …, kiểm chứng trong sổ audit" khi chuỗi băm khớp, không hiện tên người. Người mua kiểm được vai trò của AI và của con người trong lô chè họ cầm.
 
 ### 7.3 Hộp duyệt trên web
 
@@ -253,6 +254,13 @@ Một giao diện chung và ba adapter:
 - Kiểm giấy phép từng kích cỡ trước khi chọn: không phải kích cỡ nào của một họ model cũng dùng giấy phép OSI. Ví dụ bản 3B của Qwen2.5 có giấy phép riêng. Tránh các model có giấy phép không thuộc OSI.
 - Model tải về lúc cài, không commit; ghi vào `DEPENDENCIES.md` kèm giấy phép.
 - Thứ tự dự phòng: provider đã chọn, rồi Ollama, rồi luật cứng (nếu agent có), cuối cùng là bỏ lượt.
+
+### 8.5 Agent bên ngoài kết nối qua MCP
+
+- Web mở một máy chủ MCP (Model Context Protocol) đi qua gateway. Công cụ đọc của nó chính là các công cụ đọc của trợ lý (§13.5); công cụ ghi duy nhất là "tạo đề xuất" cho một `kind` trong danh mục.
+- Người dùng nối một client MCP (Claude Desktop, Claude Code, Codex, hay client nào khác) bằng tài khoản Keycloak của mình qua OAuth. Client chỉ có đúng quyền của người đó.
+- Đề xuất từ MCP mang `origin: user` và `requested_by` là người đó, và vẫn cần người đó bấm Xác nhận trên web hoặc Telegram. Ở chế độ tự vận hành cũng vậy: agent bên ngoài không bao giờ tự thực thi.
+- Ý nghĩa: hợp tác xã dùng được bất kỳ agent nào mình muốn, nhưng mọi agent, trong hay ngoài, đều đi qua cùng một danh mục, cùng bước duyệt và cùng sổ audit.
 
 ## 9. Các agent
 
