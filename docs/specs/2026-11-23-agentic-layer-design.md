@@ -107,13 +107,22 @@ Lý do tách ba vùng: phần gọi LLM là phần dễ bị dụ, vì nó đọ
 
 - Hasura có thêm vai `agent`: chỉ được `select`, cùng bộ lọc `htx_code` như `manager`, và **không thấy cột cá nhân**: `households.name`, `households.phone`, `households.address`, cùng các cột tương tự ở bảng khác. Agent nhắc tới nông hộ bằng mã (`id`). Khi hiện cho người duyệt, web thay mã bằng tên.
 - Mỗi hợp tác xã một client, để token của agent không đọc được dữ liệu của hợp tác xã khác (Hasura lấy `htx_code` từ token). Client được tạo khi hợp tác xã bật lớp AI (§16).
-- `/api/internal/*` chỉ mở trong mạng Docker, không đi qua gateway công khai. Web kiểm token và kiểm đúng client: client agent không gọi được API của Telegram và ngược lại.
+- `/api/internal/*` không dựa vào vị trí mạng (Zero-Trust). Các API này đi qua APISIX trên một tuyến nội bộ: gateway kiểm token client credentials và phạm vi của từng client trước khi chuyển vào web, và web kiểm lại một lần nữa. Client agent không gọi được API của Telegram hay của xưởng mini-app, và ngược lại.
 - Với người chat, web đọc vai trò hiện tại từ Keycloak lúc thực thi, không tin vai trò nói trong câu chat. Web cần thêm một client Keycloak chỉ được đọc người dùng và vai trò (`view-users`).
 
 ### 5.3 Vì sao không chạy agent trong n8n hay trong web
 
 - **n8n:** giấy phép fair-code (ADR 0001 đã ghi lối thoát), khó kiểm thử đơn vị, và khó giữ ranh giới quyền ở §5.1.
 - **Web:** một lượt agent có thể kéo dài vài phút vì chờ LLM, không hợp với route handler. Web lại là vùng có thẩm quyền, không nên chứa phần dễ bị dụ.
+
+### 5.4 Bốn nguyên lý thiết kế của đề thi
+
+| Nguyên lý | Lớp AI làm gì | Dựa trên phần đã có |
+|---|---|---|
+| Vòng đời dữ liệu, từ kho nóng tới hồ dữ liệu | `agent_runs`, `agent_proposals` và kết quả chiến dịch giữ nóng 90 ngày rồi chuyển sang Parquet bằng cùng cơ chế lưu trữ của telemetry. Tin chat (`telegram_conversations`) xoá sau 30 ngày vì có thể chứa thông tin cá nhân. A10 và A11 đọc lịch sử dài hạn từ hồ dữ liệu thay vì từ kho nóng. | `platform/dataops/dxos_dataops/lifecycle.py`, `telemetry.lifecycle_runs` |
+| IT/OT tới bản sao số | A2 đọc cảm biến qua `telemetry.sensor_daily`. Mọi đề xuất về một thửa có liên kết tới trang bản sao số của thửa đó, nên người duyệt thấy số đo, nhật ký và ảnh ngay cạnh đề xuất. | trang `/parcels/{code}` của `miniapps/htx-dashboard` |
+| Dòng dõi và chất lượng dữ liệu | `evidence` do mã dựng, kèm sha256 của các dòng nguồn; lúc duyệt, web băm lại và chuyển `stale` nếu lệch. Chuỗi "dữ liệu nguồn, phát hiện, đề xuất, quyết định, thực thi, kết quả" nằm trong sổ audit có chuỗi băm và hiện thành một dòng thời gian "Vì sao có việc này?". Agent chỉ dùng số đo đã qua kiểm tra chất lượng; cảm biến đang bị loại nhiều thì agent báo về chất lượng dữ liệu thay vì đề xuất hành động. | `audit.events`, `platform/dataops/dxos_dataops/quality.py`, `telemetry.ingest_rejects` |
+| Zero-Trust và GitOps | Không tin vị trí mạng: API nội bộ đi qua APISIX với token và phạm vi riêng của từng client (§5.2). Danh mục hành động, prompt, giá trị mặc định của ngưỡng và lịch nằm trong repo và chỉ đổi bằng PR. Mỗi lượt chạy ghi `prompt_version` và model, nên tái hiện được vì sao agent đề xuất như vậy. | `platform/gateway/apisix.yaml`, ADR |
 
 ## 6. Danh mục hành động
 
@@ -132,7 +141,7 @@ Agent chỉ được đề xuất các loại hành động có trong danh mục
 | `editableFields` | trường người duyệt được sửa trước khi duyệt, ví dụ nội dung thông báo |
 | `expiresAfter` | đề xuất tự hết hạn sau bao lâu |
 | `preview(payload)` | mô tả thay đổi cho người duyệt xem trước |
-| `isStale(payload)` | dữ liệu gốc còn như lúc đề xuất không (so `updated_at`) |
+| `isStale(payload)` | dữ liệu gốc còn như lúc đề xuất không: băm lại các dòng nguồn và so với sha256 trong `evidence` |
 | `execute(payload, approver)` | gọi đúng use case đang có, dưới danh nghĩa người duyệt |
 
 Danh mục ban đầu:
@@ -166,8 +175,8 @@ Các bảng nằm trong schema `platform` và có cùng trigger audit như các 
 
 | Bảng | Cột chính |
 |---|---|
-| `agent_runs` | `id`, `htx_code`, `agent`, `trigger` (`schedule`, `event`, `manual`), `started_at`, `finished_at`, `status` (`ok`, `failed`, `skipped`), `provider`, `model`, `tokens_in`, `tokens_out`, `cost_estimate`, `error` |
-| `agent_proposals` | `id`, `htx_code`, `run_id`, `kind`, `payload`, `reason_vi`, `evidence` (nguồn: bảng, mã dòng, giá trị, thời điểm), `risk`, `status`, `created_at`, `expires_at`, `decided_by`, `decided_at`, `decision_channel`, `decision_note`, `edited_payload`, `executed_at`, `result`, `dedupe_key`, `origin` (`agent`, `user`), `requested_by` (người yêu cầu, khi `origin` là `user`), `campaign_id`, `autopilot` và `run_at` (chế độ tự vận hành, §11.3), `shadow_auto` (chạy bóng, §11.5) |
+| `agent_runs` | `id`, `htx_code`, `agent`, `trigger` (`schedule`, `event`, `manual`), `started_at`, `finished_at`, `status` (`ok`, `failed`, `skipped`), `provider`, `model`, `tokens_in`, `tokens_out`, `cost_estimate`, `error`, `prompt_version` (mã commit của prompt), `input_hash` |
+| `agent_proposals` | `id`, `htx_code`, `run_id`, `kind`, `payload`, `reason_vi`, `evidence` (do mã dựng từ kết quả truy vấn, không do LLM viết: bảng, mã dòng, giá trị, thời điểm, sha256 của các dòng nguồn), `confidence`, `risk`, `status`, `created_at`, `expires_at`, `decided_by`, `decided_at`, `decision_channel`, `decision_note`, `edited_payload`, `executed_at`, `result`, `dedupe_key`, `origin` (`agent`, `user`), `requested_by` (người yêu cầu, khi `origin` là `user`), `campaign_id`, `autopilot` và `run_at` (chế độ tự vận hành, §11.3), `shadow_auto` (chạy bóng, §11.5) |
 | `agent_settings` | `htx_code`, `agent`, `enabled`, `schedule`, `provider`, `thresholds`, `monthly_budget` |
 | `telegram_links`, `telegram_outbox`, `telegram_conversations` | §13 |
 | `campaigns`, `campaign_items`, `campaign_outcomes`, `improvements` | §10.4 |
