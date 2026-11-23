@@ -40,7 +40,7 @@ Lớp này coi là xong khi:
 | D11 | Bản nộp thi để chế độ tự vận hành tắt mặc định. Buổi trình diễn bật chế độ này trên hợp tác xã mẫu, sau khi cho xem số liệu chạy bóng (§11.5). |
 | D12 | Giữ nguyên năm giới hạn cứng H1 tới H5 (§11.1). |
 
-Cách hiểu cần xác nhận: "Codex" ở D3 được hiểu là API của OpenAI. Nếu chủ dự án muốn chạy chính công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống thì đó là phạm vi khác, ghi ở §19.
+Đã xác nhận ở D10: "Claude" và "Codex" ở D3 gồm cả API (cho các agent, §8.1) lẫn công cụ viết mã Claude Code và Codex CLI (chỉ dùng trong xưởng mini-app, §12).
 
 ## 3. Hệ quả với quy tắc hiện hành
 
@@ -681,17 +681,17 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 | Mốc | Nội dung | Xong khi |
 |---|---|---|
 | M0 | sửa hai bất biến ở §3; viết ADR; dựng khung `platform/agent` và `platform/telegram` (chạy được, chưa làm gì) | PR tài liệu được duyệt; hai dịch vụ lên được trong compose |
-| M1 | danh mục, bảng, trạng thái, API nội bộ, thực thi, audit; hộp duyệt web; vai `agent` trên Hasura và client Keycloak; provider `ollama` và `replay`; agent A1 | một nhật ký sai thời gian cách ly được đề xuất trả lại và được duyệt trên web; kiểm thử 1–7 ở §15 qua |
+| M1 | danh mục, bảng, trạng thái, API nội bộ, thực thi, audit; hộp duyệt web; vai `agent` trên Hasura và client Keycloak; provider `ollama` và `replay`; agent A1 | một nhật ký sai thời gian cách ly được đề xuất trả lại và được duyệt trên web; kiểm thử 1–7, 33 và 34 ở §15 qua |
 | M2 | Telegram nền: liên kết tài khoản, hộp thư đi, báo cáo ngày và tuần (A6), duyệt bằng nút, báo cáo sức khoẻ, nối báo lỗi n8n | chủ dự án nhận tóm tắt ngày và duyệt được đề xuất của A1 trên điện thoại |
-| M3 | provider `anthropic` và `openai`; chính sách dữ liệu; ngân sách; dự phòng | đổi provider cho từng agent trên web; cắt mạng ra ngoài vẫn chạy; kiểm thử 8–9 qua |
-| M4 | agent A2, A3, A4, A5, kèm trạng thái cho bản tin | mỗi agent có kịch bản trong bộ thử ở §15 |
-| M5 | trợ lý hội thoại A7: công cụ đọc, thẻ xác nhận, ảnh, vị trí, luồng nhiều bước; phủ hai nhóm "trong chat" của bảng §13.7 | một nông hộ ghi được nhật ký có ảnh chỉ bằng Telegram; kiểm thử 10–12 và 17 qua |
+| M3 | provider `anthropic` và `openai`; chính sách dữ liệu; ngân sách; dự phòng | đổi provider cho từng agent trên web; cắt mạng ra ngoài vẫn chạy; kiểm thử 8–9 và 35 qua |
+| M4 | agent A2, A3, A4, A5, kèm trạng thái cho bản tin | mỗi agent có kịch bản trong bộ thử ở §15; kiểm thử 32 qua |
+| M5 | trợ lý hội thoại A7: công cụ đọc, thẻ xác nhận, ảnh, vị trí, luồng nhiều bước; phủ hai nhóm "trong chat" của bảng §13.7 | một nông hộ ghi được nhật ký có ảnh chỉ bằng Telegram; kiểm thử 10–12, 17 và 36 qua |
 | M6 | Mini App: đăng nhập, khung hiển thị, nhóm "Mini App" của bảng §13.7, xác nhận hành động `high` | mọi dòng của bảng §13.7 làm được từ Telegram; kiểm thử 13 qua |
 | M7 | chiến dịch ngày A9 và đo kết quả | manager duyệt chiến dịch lúc 06:00 và nhận kết quả lúc 18:00; kiểm thử 14–15 qua |
 | M8 | cải tiến A10; hành động `agent.settings.update`; tab chỉ số trên `htx-dashboard` | báo cáo cải tiến đầu tiên có bằng chứng |
 | M9 | khối `agent` trong `app.yaml`; chiến dịch kinh doanh của `tea-shop`, `tea-tour`, `leaf-purchase` | một khuyến mãi của cửa hàng được đề xuất, duyệt và chạy; kiểm thử 16 qua |
 | M10 | agent A8 giao việc nhân sự | sau khi chốt cách nhận việc với app nhân sự |
-| M11 | định hướng phát triển A11 và `strategy.adopt`; mục tiêu vụ cho A9, A10 | một kế hoạch vụ được áp dụng, và chiến dịch ngày bám theo mục tiêu của kế hoạch đó |
+| M11 | định hướng phát triển A11 và `strategy.adopt`; mục tiêu vụ cho A9, A10 | một kế hoạch vụ được áp dụng, và chiến dịch ngày bám theo mục tiêu của kế hoạch đó; kiểm thử 37 qua |
 | M12 | chế độ tự vận hành, theo thứ tự: trước hết cho `notification.internal` và `bulletin.publish`, cùng lệnh dừng và phanh; các loại khác sau khi có số liệu chạy bóng. Gồm trường `autonomy`, giới hạn cứng, bật và dừng, cửa sổ chặn, hạn mức, phanh, chạy bóng, nhãn minh bạch | kiểm thử 18–25 và 31 qua; có ít nhất 30 ngày số liệu chạy bóng trước khi bật ở một hợp tác xã thật |
 | M13 | xưởng mini-app A12: `dxos-builder`, cổng kiểm tra, xem thử, cài riêng cho một hợp tác xã, mạng riêng cho app do AI xây | từ một câu yêu cầu trên Telegram, một app kho phân bón được xây, qua mọi cổng, được duyệt và chạy; kiểm thử 26–30 qua |
 | M14 | máy chủ MCP cho agent bên ngoài; dòng kiểm chứng trên trang truy xuất lô; bảng kết quả của bộ đo công khai | một client MCP tạo được đề xuất và người dùng xác nhận trên Telegram; kiểm thử 38–39 qua |
@@ -713,12 +713,11 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 1. Một bộ khoá provider cho cả bản cài (như §8.2), hay mỗi hợp tác xã tự nhập khoá của mình? Chốt trước M3.
 2. App nhân sự nhận việc từ bên ngoài bằng cách nào: chốt với người phụ trách app trước M10.
 3. Có cần Zalo ngoài Telegram không? Chốt sau M2.
-4. Ai làm từng mốc.
-5. Có nhận tin nhắn thoại không? Cần một mô hình chuyển giọng nói thành chữ chạy nội bộ, giấy phép thuộc OSI. Chốt trước M5.
-6. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì thiếu nhóm Mini App ở §13.7 (bản đồ, tài liệu, Kho ứng dụng, mini-app); các thao tác trong chat vẫn đủ, kể cả hành động `high`. Chốt trước M6.
-7. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7.
+4. Có nhận tin nhắn thoại không? Cần một mô hình chuyển giọng nói thành chữ chạy nội bộ, giấy phép thuộc OSI. Chốt trước M5.
+5. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì thiếu nhóm Mini App ở §13.7 (bản đồ, tài liệu, Kho ứng dụng, mini-app); các thao tác trong chat vẫn đủ, kể cả hành động `high`. Chốt trước M6.
+6. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7.
 
-Đã chốt ngày 2026-11-23: ý nghĩa của "Codex" và của "định hướng phát triển" (D10), các loại mở sẵn khi bật tự vận hành (D9), chế độ khi chấm thi (D11), năm giới hạn cứng (D12).
+Đã chốt ngày 2026-11-23: ý nghĩa của "Codex" và của "định hướng phát triển" (D10), các loại mở sẵn khi bật tự vận hành (D9), chế độ khi chấm thi (D11), năm giới hạn cứng (D12), người làm (giao qua issue theo dõi trên GitHub).
 
 ## 20. Quy tắc làm việc trong repo
 
