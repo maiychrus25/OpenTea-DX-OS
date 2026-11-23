@@ -557,7 +557,7 @@ Mỗi tin tối đa khoảng 8 dòng. Tin tóm tắt và câu trả lời có n�
 - Nhập liệu ngoài chữ:
   - **Ảnh.** Ảnh lá chè trong luồng `/benh`, hoặc gửi kèm chữ "bệnh", đi tới `/api/diagnosis` như trên web và vào hàng chờ cán bộ. Ảnh trong luồng `/nhatky` thành ảnh minh chứng của nhật ký (`/api/journal/upload`).
   - **Vị trí.** Chia sẻ vị trí thì bot tìm thửa gần nhất của người đó và thời tiết tại chỗ.
-  - **Tin nhắn thoại.** Còn mở (§19), vì cần một mô hình chuyển giọng nói thành chữ chạy nội bộ.
+  - **Tin nhắn thoại** (D16). Bot chuyển tin thoại thành chữ ngay trên máy chủ của hợp tác xã, không gửi âm thanh ra ngoài. Bot trả lời "Em nghe được: …" kèm nút Đúng, Sửa, Huỷ; bấm Đúng thì câu chữ đó đi tiếp như một tin nhắn gõ tay, nên thao tác ghi vẫn phải qua thẻ xác nhận. Tin thoại không bao giờ tự làm gì. Mỗi tin tối đa 60 giây; tệp âm thanh bị xoá ngay sau khi chuyển thành chữ. Mô hình: đo whisper.cpp với các model Whisper và chọn model nhỏ nhất hiểu được bản ghi của hợp tác xã thí điểm; kiểm giấy phép của từng model trước khi chọn (§8.4).
 - Luồng nhiều bước (ví dụ ghi nhật ký: thửa, hoạt động, thuốc, liều, ảnh) giữ trạng thái trong `telegram_conversations`, hết hạn sau 30 phút; gõ `/huy` để bỏ.
 - Giới hạn: 60 tin nhắn mỗi người mỗi giờ. Câu cần gọi LLM tính vào ngân sách của hợp tác xã.
 
@@ -654,6 +654,9 @@ Kiểm thử bắt buộc, ngoài test đơn vị:
 37. Kế hoạch mùa vụ có mục tiêu thấp hơn cùng kỳ vụ trước: bị gắn cảnh báo và không áp dụng tự động được.
 38. Client MCP chỉ tạo được đề xuất, không thực thi được, kể cả khi bật chế độ tự vận hành.
 39. Trang truy xuất lô chỉ hiện dòng kiểm chứng khi quyết định nằm trong chuỗi audit và sha256 khớp.
+40. Tin nhắn thoại chỉ dẫn tới câu "Em nghe được: …"; không có thao tác nào chạy khi người dùng chưa bấm Đúng và chưa xác nhận thẻ.
+41. Tệp âm thanh bị xoá ngay sau khi chuyển thành chữ, và không có request nào mang âm thanh ra ngoài máy chủ của hợp tác xã.
+42. API kéo việc của app nhân sự chỉ trả việc đã duyệt của đúng hợp tác xã của client gọi; client của hợp tác xã khác nhận danh sách rỗng.
 
 Smoke test đặt trong `platform/tests` theo mẫu sẵn có; hộp duyệt có test Playwright.
 
@@ -703,6 +706,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 | M12 | chế độ tự vận hành, theo thứ tự: trước hết cho `notification.internal` và `bulletin.publish`, cùng lệnh dừng và phanh; các loại khác sau khi có số liệu chạy bóng. Gồm trường `autonomy`, giới hạn cứng, bật và dừng, cửa sổ chặn, hạn mức, phanh, chạy bóng, nhãn minh bạch | kiểm thử 18–25 và 31 qua; có ít nhất 30 ngày số liệu chạy bóng trước khi bật ở một hợp tác xã thật |
 | M13 | xưởng mini-app A12: `dxos-builder`, cổng kiểm tra, xem thử, cài riêng cho một hợp tác xã, mạng riêng cho app do AI xây | từ một câu yêu cầu trên Telegram, một app kho phân bón được xây, qua mọi cổng, được duyệt và chạy; kiểm thử 26–30 qua |
 | M14 | máy chủ MCP cho agent bên ngoài; dòng kiểm chứng trên trang truy xuất lô; bảng kết quả của bộ đo công khai | một client MCP tạo được đề xuất và người dùng xác nhận trên Telegram; kiểm thử 38–39 qua |
+| M15 | tin nhắn thoại (D16): chuyển giọng nói thành chữ trên máy chủ, nhắc lại và chờ xác nhận; làm sau M5 | một nông hộ nói "ghi nhật ký bón phân thửa A3" và nhận đúng thẻ xác nhận; kiểm thử 40–41 qua |
 
 ## 18. Tài liệu phải cập nhật cùng mã
 
@@ -716,6 +720,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 - `docs/rules-and-limits.md`: hai chế độ vận hành và năm giới hạn cứng (§11.1); hướng dẫn bật, dừng và đọc báo cáo của chế độ tự vận hành.
 - `docs/api-contract.md`: máy chủ MCP (§8.5); bảng kết quả bộ đo trong `docs/` (§15); kịch bản trình diễn (§15.1).
 - Tài liệu triển khai: tên miền và chứng chỉ TLS cho mỗi bản cài (D17).
+- `DEPENDENCIES.md`: công cụ và model chuyển giọng nói thành chữ, kèm giấy phép (D16).
 
 ## 19. Điểm còn mở
 
