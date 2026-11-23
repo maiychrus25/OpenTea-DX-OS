@@ -19,7 +19,7 @@ Lớp này coi là xong khi:
 3. Tắt hết provider bên ngoài thì hệ thống vẫn chạy đủ bằng Ollama nội bộ, chỉ chậm hơn hoặc kém hơn.
 4. AI không ghi thẳng vào dữ liệu nghiệp vụ: mọi thay đổi đi qua danh mục hành động và use case của web, ở cả hai chế độ.
 5. Mỗi đề xuất, quyết định và lần thực thi đều tra được trong `audit.events`.
-6. Mọi thông tin và mọi thao tác của hệ thống làm được từ Telegram, đúng theo quyền của người dùng (§12.7).
+6. Mọi thông tin và mọi thao tác của hệ thống làm được từ Telegram, đúng theo quyền của người dùng (§13.7).
 7. Mỗi sáng hợp tác xã nhận một chiến dịch ngày có mục tiêu đo được, mỗi tối có kết quả so với mục tiêu, và mỗi tuần có đề xuất cải tiến dựa trên kết quả các chiến dịch trước (§10).
 8. Manager bật được chế độ tự vận hành. Khi bật, hợp tác xã chạy theo định hướng và chiến dịch do agent đặt ra; con người giám sát, chặn khi cần, dừng bất cứ lúc nào; các ngưỡng cứng ở §11.1 vẫn giữ.
 
@@ -28,7 +28,7 @@ Lớp này coi là xong khi:
 | # | Quyết định |
 |---|---|
 | D1 | Ở chế độ thường luôn có người duyệt, kể cả với hành động rủi ro thấp. Ngoại lệ duy nhất là chế độ tự vận hành do manager bật (D8). |
-| D2 | Làm đầy đủ các phần trong tài liệu này, theo thứ tự các mốc ở §16. |
+| D2 | Làm đầy đủ các phần trong tài liệu này, theo thứ tự các mốc ở §17. |
 | D3 | Được gọi provider bên ngoài: Anthropic (Claude) và OpenAI (Codex và các model GPT). Ollama nội bộ vẫn là mặc định. |
 | D4 | Telegram là cửa vào ngang hàng với web: nhận báo cáo, hỏi đáp, phê duyệt, thao tác (xem D6). |
 | D5 | Nhóm viết tài liệu, người khác xây. |
@@ -36,11 +36,11 @@ Lớp này coi là xong khi:
 | D7 | Các agent vận hành hằng ngày: đưa ra chiến dịch ngày cho hợp tác xã, theo dõi kết quả và đề xuất cải tiến. |
 | D8 | Có tuỳ chọn "bỏ qua phê duyệt" (bypass permissions): khi manager bật, các agent tự vận hành toàn bộ hợp tác xã, từ định hướng phát triển tới việc hằng ngày, không chờ người duyệt (§11). |
 
-Cách hiểu cần xác nhận: "Codex" ở D3 được hiểu là API của OpenAI. Nếu chủ dự án muốn chạy chính công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống thì đó là phạm vi khác, ghi ở §18.
+Cách hiểu cần xác nhận: "Codex" ở D3 được hiểu là API của OpenAI. Nếu chủ dự án muốn chạy chính công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống thì đó là phạm vi khác, ghi ở §19.
 
 ## 3. Hệ quả với quy tắc hiện hành
 
-Hai bất biến trong `docs/rules-and-limits.md` mâu thuẫn trực tiếp với D1 và D3. Sửa hai bất biến này là việc đầu tiên của mốc M0, cùng với ADR (§17).
+Hai bất biến trong `docs/rules-and-limits.md` mâu thuẫn trực tiếp với D1 và D3. Sửa hai bất biến này là việc đầu tiên của mốc M0, cùng với ADR (§18).
 
 | Bất biến hiện tại | Sửa thành |
 |---|---|
@@ -62,7 +62,7 @@ Chế độ tự vận hành (D8) đi xa hơn bản sửa ở trên: khi đượ
 | Thông báo trong web và đẩy sang Mattermost | model `Notification`, `/api/notifications/announce`, `workflows/mattermost-push.json` | kênh web |
 | Duyệt nhật ký, duyệt thu hoạch, duyệt bệnh | `/api/journal/batch-approve`, `/api/parcels/[id]/approve-harvest`, `/api/officer/diseases/[id]/review` | hành động trong danh mục |
 | Bản tin AI lúc 04:00 | `workflows/bulletin-synthesis.json`, bảng `bulletins` | agent bản tin (§9) |
-| Bảng điều hành HTX | `miniapps/htx-dashboard` | chỉ số cho báo cáo; tab chỉ số của lớp AI (§14) |
+| Bảng điều hành HTX | `miniapps/htx-dashboard` | chỉ số cho báo cáo; tab chỉ số của lớp AI (§15) |
 | Khuôn dịch vụ Python của lõi | `platform/dataops`, `platform/scanner` (gói `dxos_*`, Dockerfile, requirements, tests) | khuôn cho hai dịch vụ mới |
 | Gói `openai` trong web | `apps/web/package.json` | chatbot hiện tại |
 
@@ -85,8 +85,8 @@ Telegram Mini App ──────────────── HTTPS, phiên
 - **Web (`apps/web`) là nơi có thẩm quyền duy nhất.** Web giữ danh mục hành động, lưu đề xuất, nhận quyết định, thực thi, ghi audit, và có giao diện hộp duyệt cùng phần cài đặt.
 - **`dxos-agent` (`platform/agent`, mới)** chạy các agent theo lịch và theo sự kiện, đọc dữ liệu, gọi LLM, rồi gửi đề xuất và báo cáo cho web. Dịch vụ này không có quyền ghi dữ liệu nghiệp vụ và không có quyền duyệt.
 - **`dxos-telegram` (`platform/telegram`, mới)** nói chuyện với Telegram: gửi tin từ hộp thư đi của web, chuyển nút bấm và câu hỏi của người dùng về web. Dịch vụ này không gọi LLM.
-- **Câu chat của người dùng** đi vào web. Web nhờ `dxos-agent` hiểu câu đó (agent `assistant`), rồi tự làm phần đọc với quyền của chính người chat, hoặc dựng thẻ xác nhận cho phần ghi (§12.5).
-- **Telegram Mini App** mở các trang web hiện có ngay trong Telegram (§12.6). Phần này phủ các thao tác không hợp làm bằng chat (vẽ thửa trên bản đồ, mini-app, tải tài liệu, xác nhận việc rủi ro cao) mà không phải viết lại giao diện.
+- **Câu chat của người dùng** đi vào web. Web nhờ `dxos-agent` hiểu câu đó (agent `assistant`), rồi tự làm phần đọc với quyền của chính người chat, hoặc dựng thẻ xác nhận cho phần ghi (§13.5).
+- **Telegram Mini App** mở các trang web hiện có ngay trong Telegram (§13.6). Phần này phủ các thao tác không hợp làm bằng chat (vẽ thửa trên bản đồ, mini-app, tải tài liệu, xác nhận việc rủi ro cao) mà không phải viết lại giao diện.
 
 Lý do tách ba vùng: phần gọi LLM là phần dễ bị dụ, vì nó đọc chữ do người dùng nhập (ghi chú nhật ký, mô tả bệnh). Nếu bị dụ, tệ nhất nó chỉ sinh ra đề xuất rác. Nó không thể tự duyệt, vì web chỉ nhận quyết định từ phiên đăng nhập web của người thật hoặc từ `dxos-telegram`.
 
@@ -97,10 +97,10 @@ Lý do tách ba vùng: phần gọi LLM là phần dễ bị dụ, vì nó đọ
 | `dxos-agent-<htx>`, mỗi hợp tác xã một client | Keycloak client credentials, claim `htx_code` cố định, vai trò `agent` | đọc Hasura bằng vai `agent`; gọi `/api/internal/agent/*` |
 | `dxos-telegram` | Keycloak client credentials | gọi `/api/internal/telegram/*` |
 | Người duyệt | tài khoản Keycloak sẵn có | duyệt đúng loại hành động mà vai trò của mình được phép (§6) |
-| Người chat qua Telegram | tài khoản Keycloak đã liên kết (§12.2) | đúng quyền vai trò hiện tại của người đó, như trên web |
+| Người chat qua Telegram | tài khoản Keycloak đã liên kết (§13.2) | đúng quyền vai trò hiện tại của người đó, như trên web |
 
 - Hasura có thêm vai `agent`: chỉ được `select`, cùng bộ lọc `htx_code` như `manager`, và **không thấy cột cá nhân**: `households.name`, `households.phone`, `households.address`, cùng các cột tương tự ở bảng khác. Agent nhắc tới nông hộ bằng mã (`id`). Khi hiện cho người duyệt, web thay mã bằng tên.
-- Mỗi hợp tác xã một client, để token của agent không đọc được dữ liệu của hợp tác xã khác (Hasura lấy `htx_code` từ token). Client được tạo khi hợp tác xã bật lớp AI (§15).
+- Mỗi hợp tác xã một client, để token của agent không đọc được dữ liệu của hợp tác xã khác (Hasura lấy `htx_code` từ token). Client được tạo khi hợp tác xã bật lớp AI (§16).
 - `/api/internal/*` chỉ mở trong mạng Docker, không đi qua gateway công khai. Web kiểm token và kiểm đúng client: client agent không gọi được API của Telegram và ngược lại.
 - Với người chat, web đọc vai trò hiện tại từ Keycloak lúc thực thi, không tin vai trò nói trong câu chat. Web cần thêm một client Keycloak chỉ được đọc người dùng và vai trò (`view-users`).
 
@@ -121,7 +121,7 @@ Agent chỉ được đề xuất các loại hành động có trong danh mục
 | `approverRoles` | vai trò được duyệt |
 | `origins` | ai được khởi tạo: `agent` (agent đề xuất), `user` (người dùng yêu cầu qua chat hoặc Mini App) |
 | `autonomy` | ở chế độ tự vận hành (§11): `auto` tự chạy; `unlockable` vẫn cần người, trừ khi manager mở loại này lúc bật; `never` luôn cần người |
-| `channels` | `web`, `telegram`; hành động `high` chỉ có `web`, tức là trên trình duyệt hoặc trong Mini App (§12.6) |
+| `channels` | `web`, `telegram`; hành động `high` chỉ có `web`, tức là trên trình duyệt hoặc trong Mini App (§13.6) |
 | `payloadSchema` | khuôn zod; web từ chối đề xuất sai khuôn |
 | `editableFields` | trường người duyệt được sửa trước khi duyệt, ví dụ nội dung thông báo |
 | `expiresAfter` | đề xuất tự hết hạn sau bao lâu |
@@ -146,8 +146,8 @@ Danh mục ban đầu:
 | `strategy.adopt` | áp dụng kế hoạch mùa vụ của A11 | medium | manager | web, telegram | bảng `strategy_plans` (§10.6) | auto, chờ 48 giờ |
 
 - Thêm một loại mới phải đi bằng một PR vào danh mục, kèm test. Không có cách thêm loại mới lúc hệ thống đang chạy.
-- Bảng trên là phần dành cho agent (`origins: agent`). Danh mục còn phủ dần mọi thao tác ghi của web cho người dùng (`origins: user`), theo bảng §12.7; mini-app thêm hành động của mình qua `app.yaml` (§10.2).
-- **Ở chế độ thường, agent không bao giờ được đề xuất:** kết nạp hoặc xoá thành viên, sửa lô đã xuất QR, cài hoặc gỡ mini-app, đổi quyền, thao tác liên quan đến tiền. Những việc này chỉ do người dùng tự khởi tạo (`origins: user`): trong chat có thẻ xác nhận hoặc trong Mini App, tuỳ mức rủi ro (§12.7). Ở chế độ tự vận hành, manager mở được kết nạp thành viên, cài gỡ mini-app và hành động dính tiền (§11.1); xoá dữ liệu, đổi quyền và sửa lô đã xuất QR thì không bao giờ.
+- Bảng trên là phần dành cho agent (`origins: agent`). Danh mục còn phủ dần mọi thao tác ghi của web cho người dùng (`origins: user`), theo bảng §13.7; mini-app thêm hành động của mình qua `app.yaml` (§10.2).
+- **Ở chế độ thường, agent không bao giờ được đề xuất:** kết nạp hoặc xoá thành viên, sửa lô đã xuất QR, cài hoặc gỡ mini-app, đổi quyền, thao tác liên quan đến tiền. Những việc này chỉ do người dùng tự khởi tạo (`origins: user`): trong chat có thẻ xác nhận hoặc trong Mini App, tuỳ mức rủi ro (§13.7). Ở chế độ tự vận hành, manager mở được kết nạp thành viên, cài gỡ mini-app và hành động dính tiền (§11.1); xoá dữ liệu, đổi quyền và sửa lô đã xuất QR thì không bao giờ.
 
 ## 7. Đề xuất và phê duyệt
 
@@ -160,7 +160,7 @@ Các bảng nằm trong schema `platform` và có cùng trigger audit như các 
 | `agent_runs` | `id`, `htx_code`, `agent`, `trigger` (`schedule`, `event`, `manual`), `started_at`, `finished_at`, `status` (`ok`, `failed`, `skipped`), `provider`, `model`, `tokens_in`, `tokens_out`, `cost_estimate`, `error` |
 | `agent_proposals` | `id`, `htx_code`, `run_id`, `kind`, `payload`, `reason_vi`, `evidence` (nguồn: bảng, mã dòng, giá trị, thời điểm), `risk`, `status`, `created_at`, `expires_at`, `decided_by`, `decided_at`, `decision_channel`, `decision_note`, `edited_payload`, `executed_at`, `result`, `dedupe_key`, `origin` (`agent`, `user`), `requested_by` (người yêu cầu, khi `origin` là `user`), `campaign_id`, `autopilot` và `run_at` (chế độ tự vận hành, §11.3), `shadow_auto` (chạy bóng, §11.5) |
 | `agent_settings` | `htx_code`, `agent`, `enabled`, `schedule`, `provider`, `thresholds`, `monthly_budget` |
-| `telegram_links`, `telegram_outbox`, `telegram_conversations` | §12 |
+| `telegram_links`, `telegram_outbox`, `telegram_conversations` | §13 |
 | `campaigns`, `campaign_items`, `campaign_outcomes`, `improvements` | §10.4 |
 | `strategy_plans` | §10.6 |
 | `autopilot_settings` | `htx_code`, `enabled`, `enabled_by`, `enabled_at`, `unlocked_kinds`, `money_limits`, `daily_cap`, `paused_at`, `paused_reason` (§11) |
@@ -177,7 +177,7 @@ proposed ──duyệt──▶ approved ──thực thi──▶ executed
                                      └──có người bấm Chặn──▶ vetoed
 ```
 
-- Từ chối bắt buộc có lý do. Lý do được lưu để đo chất lượng agent (§14) và đưa vào ngữ cảnh lượt sau, để agent không đề xuất lại y hệt.
+- Từ chối bắt buộc có lý do. Lý do được lưu để đo chất lượng agent (§15) và đưa vào ngữ cảnh lượt sau, để agent không đề xuất lại y hệt.
 - `dedupe_key`: cùng hợp tác xã, cùng `kind`, cùng đối tượng thì không tạo đề xuất mới khi đề xuất cũ còn mở.
 - Quyền được kiểm **lúc bấm duyệt** theo vai trò hiện tại trong token, không phải lúc agent đề xuất.
 - Thực thi chạy ngay sau khi duyệt, trong web, dưới danh nghĩa người duyệt. Audit ghi `actor` là người duyệt, kèm `proposal_id` và tên agent.
@@ -223,11 +223,11 @@ Một giao diện chung và ba adapter:
 - Chỉ gửi đi dữ liệu mà agent cần. Không gửi cột cá nhân (vai `agent` vốn không đọc được), không gửi ảnh nông hộ. Tên thửa và nông hộ thay bằng mã.
 - Mỗi lần gọi ra ngoài ghi một dòng vào `audit.events`: provider, model, agent, số bản ghi gửi đi. Không ghi nội dung.
 - Chatbot hiện tại chuyển sang dùng chung chính sách này (§3).
-- Tin nhắn chat có thể chứa thông tin cá nhân. Agent `assistant` mặc định dùng Ollama. Nếu manager bật provider ngoài cho `assistant`, người dùng được báo lúc liên kết Telegram (§12.2), và số điện thoại, số giấy tờ trong tin nhắn được che trước khi gửi đi.
+- Tin nhắn chat có thể chứa thông tin cá nhân. Agent `assistant` mặc định dùng Ollama. Nếu manager bật provider ngoài cho `assistant`, người dùng được báo lúc liên kết Telegram (§13.2), và số điện thoại, số giấy tờ trong tin nhắn được che trước khi gửi đi.
 
 ### 8.4 Mô hình nội bộ
 
-- `qwen2.5:0.5b` không đủ. Người làm đo trên máy 16 GB của nhóm bằng bộ kịch bản ở §14, rồi chọn model nhỏ nhất đạt ngưỡng.
+- `qwen2.5:0.5b` không đủ. Người làm đo trên máy 16 GB của nhóm bằng bộ kịch bản ở §15, rồi chọn model nhỏ nhất đạt ngưỡng.
 - Kiểm giấy phép từng kích cỡ trước khi chọn: không phải kích cỡ nào của một họ model cũng dùng giấy phép OSI. Ví dụ bản 3B của Qwen2.5 có giấy phép riêng. Tránh các model có giấy phép không thuộc OSI.
 - Model tải về lúc cài, không commit; ghi vào `DEPENDENCIES.md` kèm giấy phép.
 - Thứ tự dự phòng: provider đã chọn, rồi Ollama, rồi luật cứng (nếu agent có), cuối cùng là bỏ lượt.
@@ -243,8 +243,8 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 | A3 `disease-watch` Dịch bệnh | báo cáo bệnh đã và chưa xác nhận, vị trí thửa | nhiều báo cáo cùng một bệnh trong một bán kính, trong một tuần | `disease.inspection`, `notification.households` | mỗi ngày, và khi có báo cáo mới |
 | A4 `harvest-ready` Thu hoạch | thửa, chu kỳ cây trồng, nhật ký phun | thửa đã qua thời gian cách ly và đến kỳ hái | `harvest.approve` | mỗi sáng |
 | A5 `bulletin` Bản tin | như workflow bản tin hiện tại | — | `bulletin.publish` | thay workflow `bulletin-synthesis`; tắt workflow cũ khi agent chạy ổn |
-| A6 `digest` Báo cáo | chỉ số của bảng điều hành, đề xuất đang mở, lỗi hệ thống | — | không đề xuất; gửi báo cáo (§12.3) | hằng ngày và hằng tuần |
-| A7 `assistant` Trợ lý hội thoại | dữ liệu mà người chat được xem, qua chính các API của web, với quyền của người đó | — | hiểu câu chat: trả lời kèm nguồn, hoặc dựng thẻ xác nhận cho thao tác (§12.5) | khi có tin nhắn |
+| A6 `digest` Báo cáo | chỉ số của bảng điều hành, đề xuất đang mở, lỗi hệ thống | — | không đề xuất; gửi báo cáo (§13.3) | hằng ngày và hằng tuần |
+| A7 `assistant` Trợ lý hội thoại | dữ liệu mà người chat được xem, qua chính các API của web, với quyền của người đó | — | hiểu câu chat: trả lời kèm nguồn, hoặc dựng thẻ xác nhận cho thao tác (§13.5) | khi có tin nhắn |
 | A8 `staff-tasks` Giao việc nhân sự | lịch canh tác, đề xuất đã duyệt của A2 tới A4, danh sách nhân sự | việc cần người làm | `staff.task.create`; agent gợi ý người nhận, manager sửa được | mỗi sáng |
 | A9 `daily-campaign` Điều phối chiến dịch ngày | phát hiện và đề xuất đang mở của A1 tới A5, A8 và agent của mini-app; lịch thu hoạch; thời tiết; số người có mặt | — | một chiến dịch ngày gồm các mục trong danh mục (§10.1) | 05:30 mỗi ngày |
 | A10 `improvement` Cải tiến | kết quả các chiến dịch, lý do bị từ chối, thời gian chờ duyệt, chỉ số bảng điều hành, số liệu mini-app | mục tiêu trượt lặp lại, đề xuất bị từ chối nhiều, chỉ số xấu đi | đề xuất cải tiến (§10.3) | thứ Hai hằng tuần |
@@ -252,7 +252,7 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 
 - Các ngưỡng (6 giờ, bán kính, số báo cáo) là cấu hình theo hợp tác xã. Giá trị mặc định ghi trong mã và trong `rules-and-limits.md`.
 - **Bản tin:** thêm cột `status` (`draft`, `published`, `rejected`) cho bảng `bulletins`. Trang công khai chỉ đọc bản `published`. Thay đổi bảng đi theo luồng migration hiện có của web.
-- **A8 đang phụ thuộc app nhân sự** (`apps/staff-desktop`, `apps/staff-mobile`). App này dùng cơ sở dữ liệu riêng (SQLite trên máy chủ HTX, hoặc schema `app_staff_work`). Cần app nhân sự cung cấp một cách nhận việc từ bên ngoài; chốt với người phụ trách app trước khi làm (§18). Đến lúc đó, `staff.task.create` để ở trạng thái chưa bật.
+- **A8 đang phụ thuộc app nhân sự** (`apps/staff-desktop`, `apps/staff-mobile`). App này dùng cơ sở dữ liệu riêng (SQLite trên máy chủ HTX, hoặc schema `app_staff_work`). Cần app nhân sự cung cấp một cách nhận việc từ bên ngoài; chốt với người phụ trách app trước khi làm (§19). Đến lúc đó, `staff.task.create` để ở trạng thái chưa bật.
 
 ## 10. Chiến dịch hằng ngày và cải tiến
 
@@ -265,7 +265,7 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
   - Duyệt cả chiến dịch là duyệt từng mục mà người duyệt đủ quyền.
   - Mục `high` vẫn phải xác nhận riêng trong Mini App hoặc trên web.
   - Mục ngoài quyền của manager được chuyển cho người đủ quyền (ví dụ cán bộ duyệt báo cáo bệnh).
-- Trong ngày, mỗi mục xong thì tiến độ cập nhật. 18:00 tóm tắt ngày (§12.3) có phần "Chiến dịch hôm nay": mục tiêu, thực tế, mục chưa xong.
+- Trong ngày, mỗi mục xong thì tiến độ cập nhật. 18:00 tóm tắt ngày (§13.3) có phần "Chiến dịch hôm nay": mục tiêu, thực tế, mục chưa xong.
 - Mỗi hợp tác xã một chiến dịch mỗi ngày. Chiến dịch chưa duyệt thì không mục nào chạy.
 
 ### 10.2 Chiến dịch kinh doanh từ mini-app
@@ -392,16 +392,16 @@ Các loại còn lại (`autonomy: auto`) tự chạy ngay khi bật.
 
 Lớp AI không thay hợp tác xã chịu trách nhiệm trước pháp luật. Người bật chế độ chịu trách nhiệm như khi tự mình duyệt từng việc. Các quyết định mà pháp luật hoặc điều lệ giao cho đại hội thành viên hay hội đồng quản trị nằm ngoài hệ thống; A11 chỉ viết đề xuất cho các quyết định đó.
 
-## 12. Telegram: cửa vào đầy đủ
+## 13. Telegram: cửa vào đầy đủ
 
-### 12.1 Cách kết nối
+### 13.1 Cách kết nối
 
 - Mỗi bản cài DX-OS có một bot (không phải mỗi hợp tác xã một bot). Người vận hành tạo bot qua BotFather và đặt token vào biến môi trường của `dxos-telegram`.
 - Mặc định dùng **long polling** (`getUpdates`), nên chạy được cả ở hợp tác xã không có địa chỉ công khai. Webhook là tuỳ chọn; khi dùng webhook phải đặt `secret_token` và kiểm header `X-Telegram-Bot-Api-Secret-Token`.
 - Gọi thẳng Bot API qua HTTP, không thêm thư viện bot.
-- Mini App (§12.6) cần web có địa chỉ HTTPS mà điện thoại mở được. Hợp tác xã không có địa chỉ công khai vẫn dùng được toàn bộ phần chat, chỉ thiếu Mini App.
+- Mini App (§13.6) cần web có địa chỉ HTTPS mà điện thoại mở được. Hợp tác xã không có địa chỉ công khai vẫn dùng được toàn bộ phần chat, chỉ thiếu Mini App.
 
-### 12.2 Liên kết tài khoản
+### 13.2 Liên kết tài khoản
 
 1. Người dùng vào web, mở Hồ sơ, bấm "Kết nối Telegram". Web tạo một mã dùng một lần, hết hạn sau 10 phút, và hiện liên kết `https://t.me/<bot>?start=<mã>`.
 2. Người dùng mở liên kết và bấm Start. `dxos-telegram` gửi mã cùng `telegram_user_id` về web; web gắn Telegram vào tài khoản Keycloak.
@@ -411,7 +411,7 @@ Lớp AI không thay hợp tác xã chịu trách nhiệm trước pháp luật.
 - Lúc liên kết, bot nói rõ: tin nhắn đi qua máy chủ của Telegram; nếu hợp tác xã bật provider ngoài cho trợ lý thì nội dung chat cũng đi tới provider đó (§8.3).
 - Manager có thể gắn một nhóm Telegram của hợp tác xã để nhận báo cáo. **Không duyệt và không thao tác trong nhóm**: những việc đó cần danh tính của từng người, nên chỉ làm trong chat riêng.
 
-### 12.3 Báo cáo
+### 13.3 Báo cáo
 
 | Loại | Khi nào | Nội dung |
 |---|---|---|
@@ -420,13 +420,13 @@ Lớp AI không thay hợp tác xã chịu trách nhiệm trước pháp luật.
 | Tóm tắt tuần và cải tiến | thứ Hai, 07:00 | xu hướng trong tuần, so với tuần trước; đề xuất cải tiến và kết quả của các cải tiến trước (§10.3) |
 | Cảnh báo ngay | khi có đề xuất `high` hoặc sự cố | một dòng, kèm nút |
 | Kết quả | sau khi thực thi | sửa lại chính tin nhắn đề xuất thành "Đã được X duyệt, đã thực hiện", không gửi tin mới |
-| Sức khoẻ hệ thống | agent hoặc provider lỗi liên tiếp, chạm ngân sách, workflow n8n lỗi | xem §13 |
+| Sức khoẻ hệ thống | agent hoặc provider lỗi liên tiếp, chạm ngân sách, workflow n8n lỗi | xem §14 |
 | Sắp tự chạy | khi một hành động vào cửa sổ chặn (§11.3) | việc gì, chạy lúc nào, nút Chặn và Xem |
 | Tự vận hành | trong tóm tắt ngày, khi chế độ đang bật | số việc đã tự chạy, bị chặn, số lần phanh, chi phí (§11.6) |
 
 Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân (§8.3). Muốn xem chi tiết thì bấm liên kết sang web hoặc mở Mini App.
 
-### 12.4 Duyệt qua Telegram
+### 13.4 Duyệt qua Telegram
 
 - Đề xuất có `telegram` trong `channels` được gửi tới những người đã liên kết và có vai trò được duyệt, kèm các nút Duyệt, Từ chối và Mở chi tiết.
 - `callback_data` chỉ chứa mã đề xuất rút gọn, quyết định, và chữ ký HMAC do web tạo; tất cả nằm trong giới hạn 64 byte của Telegram. Web kiểm chữ ký, rồi kiểm người bấm còn đủ quyền ở thời điểm bấm.
@@ -435,7 +435,7 @@ Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân
 - Hành động `high` không duyệt bằng nút trong chat. Tin nhắn có nút mở đúng trang duyệt trong Mini App, và người duyệt xác nhận ở đó.
 - Ở chế độ tự vận hành, tin xin duyệt được thay bằng tin "Sẽ tự chạy" có nút Chặn (§11.3).
 
-### 12.5 Hội thoại và thao tác
+### 13.5 Hội thoại và thao tác
 
 - Người dùng nhắn tự do bằng tiếng Việt, có dấu hay không dấu, hoặc dùng lệnh: `/tomtat`, `/cho`, `/chiendich`, `/nhatky`, `/benh`, `/hoi`, `/menu` (mở Mini App), `/huy`, `/tuvanhanh` (trạng thái chế độ tự vận hành), `/dung` (dừng chế độ tự vận hành ngay, §11.2).
 - Agent `assistant` hiểu câu chat và làm một trong hai việc:
@@ -445,17 +445,17 @@ Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân
 - Nhập liệu ngoài chữ:
   - **Ảnh.** Ảnh lá chè trong luồng `/benh`, hoặc gửi kèm chữ "bệnh", đi tới `/api/diagnosis` như trên web và vào hàng chờ cán bộ. Ảnh trong luồng `/nhatky` thành ảnh minh chứng của nhật ký (`/api/journal/upload`).
   - **Vị trí.** Chia sẻ vị trí thì bot tìm thửa gần nhất của người đó và thời tiết tại chỗ.
-  - **Tin nhắn thoại.** Còn mở (§18), vì cần một mô hình chuyển giọng nói thành chữ chạy nội bộ.
+  - **Tin nhắn thoại.** Còn mở (§19), vì cần một mô hình chuyển giọng nói thành chữ chạy nội bộ.
 - Luồng nhiều bước (ví dụ ghi nhật ký: thửa, hoạt động, thuốc, liều, ảnh) giữ trạng thái trong `telegram_conversations`, hết hạn sau 30 phút; gõ `/huy` để bỏ.
 - Giới hạn: 60 tin nhắn mỗi người mỗi giờ. Câu cần gọi LLM tính vào ngân sách của hợp tác xã.
 
-### 12.6 Telegram Mini App
+### 13.6 Telegram Mini App
 
 - Nút menu của bot mở web ngay trong Telegram. Phần này phủ mọi thao tác không hợp làm bằng chat: bản đồ và vẽ thửa, tải tài liệu, Kho ứng dụng, các mini-app, hộp duyệt đầy đủ, cài đặt lớp AI, và xác nhận các hành động `high`.
 - Đăng nhập: lần đầu người dùng đăng nhập Keycloak như trên web, và webview của Telegram giữ phiên. Web kiểm `initData` do Telegram ký và chỉ cho dùng khi tài khoản Telegram trùng với tài khoản đã liên kết. `initData` không thay cho đăng nhập.
 - Trang web phải chạy tốt trong khung Mini App: vừa bề ngang điện thoại, theo màu sáng hoặc tối của Telegram, và dùng nút Back của Telegram.
 
-### 12.7 Bảng phủ thao tác
+### 13.7 Bảng phủ thao tác
 
 Mỗi cặp API và phương thức của web thuộc đúng một nhóm dưới đây; API vừa đọc vừa ghi có phần đọc và phần ghi ở hai nhóm khác nhau. Thêm API mới thì phải xếp nó vào bảng này trong cùng PR. Quyền của từng thao tác giữ nguyên như API hiện có.
 
@@ -466,13 +466,13 @@ Mỗi cặp API và phương thức của web thuộc đúng một nhóm dưới
 | Mini App | vẽ thửa mới (`farm/parcels` POST); sửa thửa (`farm/parcels/[id]` PUT); tải tài liệu (`documents/upload` POST); Kho ứng dụng (`app-store` GET, `app-store/apps/[id]` GET, `app-store/apps/[id]/screenshots/[position]` GET, `app-store/history` GET, `app-store/requests` POST); mọi mini-app; thêm, sửa, xoá đối tác (`partners` POST, `partners/[id]` PUT, `partners/[id]` DELETE); các hành động `high`: xuất QR lô (`lots/[id]/export-qr` POST), duyệt thu hoạch (`parcels/[id]/approve-harvest` POST), xoá thành viên (`members/[id]` DELETE), xoá thửa (`farm/parcels/[id]` DELETE) |
 | Không qua Telegram | đăng ký tài khoản mới (`register` POST, vì chưa có tài khoản để liên kết); đăng nhập (`auth/[...nextauth]`); API chỉ dùng khi phát triển (`dev-login` GET, `debug/session` GET, `seed-farmer` GET); API phục vụ trang web (`health` GET, `notifications/stream` GET, `tts` GET, `tts` POST, `tts/status` GET, `geocode` GET); chatbot cũ, được thay bằng trợ lý (`chatbot` GET, `chatbot` POST, `chatbot/sessions` GET) |
 
-Các app ngoài web (`apps/hub-mobile`, `apps/staff-desktop`, `apps/staff-mobile`) không nằm trong bảng này. Thao tác của app nhân sự đi qua A8 khi đã chốt cách nhận việc (§18).
+Các app ngoài web (`apps/hub-mobile`, `apps/staff-desktop`, `apps/staff-mobile`) không nằm trong bảng này. Thao tác của app nhân sự đi qua A8 khi đã chốt cách nhận việc (§19).
 
-### 12.8 Kênh khác
+### 13.8 Kênh khác
 
-Mattermost giữ nguyên như hiện tại. Có cần thêm Zalo hay không là điểm còn mở (§18).
+Mattermost giữ nguyên như hiện tại. Có cần thêm Zalo hay không là điểm còn mở (§19).
 
-## 13. Khi một thành phần lỗi
+## 14. Khi một thành phần lỗi
 
 Nguyên tắc: lỗi ở lớp AI không bao giờ chặn việc người dùng làm trực tiếp trên web.
 
@@ -494,7 +494,7 @@ Nguyên tắc: lỗi ở lớp AI không bao giờ chặn việc người dùng 
 | Phanh bất thường kích hoạt (§11.4) | chế độ tự vận hành về duyệt thường; hành động đang chờ cửa sổ chặn quay về chờ duyệt | mọi manager và cán bộ, qua Telegram và web |
 | Nhịp `autopilot/tick` dừng | hành động đã đến giờ chưa chạy; không có gì chạy sai giờ; web báo sức khoẻ khi quá 5 phút không có nhịp | manager |
 
-## 14. Đo chất lượng và kiểm thử
+## 15. Đo chất lượng và kiểm thử
 
 - Bộ kịch bản `platform/agent/tests/scenarios/`: dữ liệu mẫu (dựa trên câu chuyện lô A3) cùng đề xuất mong đợi. Trong CI chạy với provider giả; khi chọn model thì chạy với Ollama thật.
 - Chỉ số của từng agent: tỉ lệ được duyệt, tỉ lệ bị từ chối theo từng lý do, thời gian chờ duyệt, số lượt lỗi, chi phí. Các chỉ số này hiện ở một tab mới của `htx-dashboard`, đọc qua Hasura như các tab khác.
@@ -517,7 +517,7 @@ Kiểm thử bắt buộc, ngoài test đơn vị:
 14. Duyệt cả chiến dịch chỉ thực thi các mục trong quyền của người duyệt; mục `high` vẫn chờ xác nhận riêng.
 15. Chiến dịch không chứa mục mâu thuẫn với luật cứng (phun trước mưa, giao quá số người, hái thửa đang cách ly), kiểm bằng bộ kịch bản.
 16. Gỡ mini-app thì hành động của nó biến khỏi danh mục, và đề xuất đang mở của nó chuyển `expired`.
-17. Mỗi cặp API và phương thức của web có mặt đúng một lần trong bảng §12.7 (test đọc danh sách route cùng phương thức và so với bảng).
+17. Mỗi cặp API và phương thức của web có mặt đúng một lần trong bảng §13.7 (test đọc danh sách route cùng phương thức và so với bảng).
 18. Bật chế độ tự vận hành, rồi cho agent đề xuất từng loại `never` và từng loại `unlockable` chưa mở: không loại nào tự chạy.
 19. Không hành động nào trong danh mục đổi được chế độ tự vận hành, ngưỡng cứng, danh mục, vai trò, khoá, ngân sách hay chính sách dữ liệu (H2).
 20. Bấm Chặn trong cửa sổ chặn thì không thực thi; bấm sau khi đã chạy thì nhận thông báo "đã chạy".
@@ -529,7 +529,7 @@ Kiểm thử bắt buộc, ngoài test đơn vị:
 
 Smoke test đặt trong `platform/tests` theo mẫu sẵn có; hộp duyệt có test Playwright.
 
-## 15. Triển khai và vận hành
+## 16. Triển khai và vận hành
 
 - Hai dịch vụ mới trong `docker/docker-compose.yml`: ảnh ghim phiên bản, có healthcheck, giới hạn bộ nhớ, theo mẫu `platform/dataops`.
 - Lệnh `./dxos agent enable <htx>` và `./dxos agent disable <htx>`: tạo hoặc xoá client Keycloak `dxos-agent-<htx>`, bật cài đặt mặc định.
@@ -539,19 +539,19 @@ Smoke test đặt trong `platform/tests` theo mẫu sẵn có; hộp duyệt có
 - Client Keycloak chỉ đọc người dùng và vai trò cho web (§5.2).
 - Công tắc khẩn: manager tắt được lớp AI của hợp tác xã mình, người vận hành tắt được toàn hệ thống, đều từ web. Khi tắt, đề xuất đang mở chuyển `expired`.
 
-## 16. Các mốc
+## 17. Các mốc
 
 Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và tài liệu.
 
 | Mốc | Nội dung | Xong khi |
 |---|---|---|
 | M0 | sửa hai bất biến ở §3; viết ADR; dựng khung `platform/agent` và `platform/telegram` (chạy được, chưa làm gì) | PR tài liệu được duyệt; hai dịch vụ lên được trong compose |
-| M1 | danh mục, bảng, trạng thái, API nội bộ, thực thi, audit; hộp duyệt web; vai `agent` trên Hasura và client Keycloak; provider `ollama`; agent A1 | một nhật ký sai thời gian cách ly được đề xuất trả lại và được duyệt trên web; kiểm thử 1–7 ở §14 qua |
+| M1 | danh mục, bảng, trạng thái, API nội bộ, thực thi, audit; hộp duyệt web; vai `agent` trên Hasura và client Keycloak; provider `ollama`; agent A1 | một nhật ký sai thời gian cách ly được đề xuất trả lại và được duyệt trên web; kiểm thử 1–7 ở §15 qua |
 | M2 | Telegram nền: liên kết tài khoản, hộp thư đi, báo cáo ngày và tuần (A6), duyệt bằng nút, báo cáo sức khoẻ, nối báo lỗi n8n | chủ dự án nhận tóm tắt ngày và duyệt được đề xuất của A1 trên điện thoại |
 | M3 | provider `anthropic` và `openai`; chính sách dữ liệu; ngân sách; dự phòng | đổi provider cho từng agent trên web; cắt mạng ra ngoài vẫn chạy; kiểm thử 8–9 qua |
-| M4 | agent A2, A3, A4, A5, kèm trạng thái cho bản tin | mỗi agent có kịch bản trong bộ thử ở §14 |
-| M5 | trợ lý hội thoại A7: công cụ đọc, thẻ xác nhận, ảnh, vị trí, luồng nhiều bước; phủ hai nhóm "trong chat" của bảng §12.7 | một nông hộ ghi được nhật ký có ảnh chỉ bằng Telegram; kiểm thử 10–12 và 17 qua |
-| M6 | Mini App: đăng nhập, khung hiển thị, nhóm "Mini App" của bảng §12.7, xác nhận hành động `high` | mọi dòng của bảng §12.7 làm được từ Telegram; kiểm thử 13 qua |
+| M4 | agent A2, A3, A4, A5, kèm trạng thái cho bản tin | mỗi agent có kịch bản trong bộ thử ở §15 |
+| M5 | trợ lý hội thoại A7: công cụ đọc, thẻ xác nhận, ảnh, vị trí, luồng nhiều bước; phủ hai nhóm "trong chat" của bảng §13.7 | một nông hộ ghi được nhật ký có ảnh chỉ bằng Telegram; kiểm thử 10–12 và 17 qua |
+| M6 | Mini App: đăng nhập, khung hiển thị, nhóm "Mini App" của bảng §13.7, xác nhận hành động `high` | mọi dòng của bảng §13.7 làm được từ Telegram; kiểm thử 13 qua |
 | M7 | chiến dịch ngày A9 và đo kết quả | manager duyệt chiến dịch lúc 06:00 và nhận kết quả lúc 18:00; kiểm thử 14–15 qua |
 | M8 | cải tiến A10; hành động `agent.settings.update`; tab chỉ số trên `htx-dashboard` | báo cáo cải tiến đầu tiên có bằng chứng |
 | M9 | khối `agent` trong `app.yaml`; chiến dịch kinh doanh của `tea-shop`, `tea-tour`, `leaf-purchase` | một khuyến mãi của cửa hàng được đề xuất, duyệt và chạy; kiểm thử 16 qua |
@@ -559,7 +559,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 | M11 | định hướng phát triển A11 và `strategy.adopt`; mục tiêu vụ cho A9, A10 | một kế hoạch vụ được áp dụng, và chiến dịch ngày bám theo mục tiêu của kế hoạch đó |
 | M12 | chế độ tự vận hành: trường `autonomy`, ngưỡng cứng, bật và dừng, cửa sổ chặn, hạn mức, phanh, chạy bóng, nhãn minh bạch | kiểm thử 18–25 qua; có ít nhất 30 ngày số liệu chạy bóng trước khi bật ở một hợp tác xã thật |
 
-## 17. Tài liệu phải cập nhật cùng mã
+## 18. Tài liệu phải cập nhật cùng mã
 
 - `docs/rules-and-limits.md`: sửa §1.1 và §1.2; thêm giới hạn của lớp AI (số đề xuất, hỏi đáp, ngân sách).
 - ADR `0003-agentic-layer` (ba vùng tin cậy, luôn có người duyệt) và ADR `0004-external-llm-providers` (tuỳ chọn, chính sách dữ liệu, khoá).
@@ -569,7 +569,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 - Hướng dẫn dùng bot cho từng vai trò (quản trị, cán bộ, nông hộ), tiếng Việt, có ảnh chụp màn hình.
 - `docs/rules-and-limits.md`: hai chế độ vận hành và năm ngưỡng cứng (§11.1); hướng dẫn bật, dừng và đọc báo cáo của chế độ tự vận hành.
 
-## 18. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
+## 19. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
 
 1. "Codex" là API của OpenAI như §8 (cách hiểu hiện tại), hay là chạy công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống? Cách sau là phạm vi khác. Chốt trước M3.
 2. Một bộ khoá provider cho cả bản cài (như §8.2), hay mỗi hợp tác xã tự nhập khoá của mình? Chốt trước M3.
@@ -577,14 +577,14 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 4. Có cần Zalo ngoài Telegram không? Chốt sau M2.
 5. Ai làm từng mốc.
 6. Có nhận tin nhắn thoại không? Cần một mô hình chuyển giọng nói thành chữ chạy nội bộ, giấy phép thuộc OSI. Chốt trước M5.
-7. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì không có Mini App (§12.6). Chốt trước M6.
+7. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì không có Mini App (§13.6). Chốt trước M6.
 8. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7.
 9. Trong nhóm "manager mở được" (§11.1), loại nào nên được mở sẵn khi bật? Hiện mặc định đóng hết.
 10. "Định hướng phát triển" ở D8 được hiểu là định hướng của hợp tác xã (A11). Nếu ý là AI tự phát triển cả phần mềm (viết mã bằng Codex hoặc Claude Code) thì đó là phạm vi khác, liên quan câu 1.
 11. Khi chấm thi và trình diễn, chế độ tự vận hành bật hay tắt? Bất biến về AI trong `rules-and-limits.md` là một phần hồ sơ dự thi.
 12. Năm ngưỡng cứng H1–H5 hiện không mở được. Muốn mở ngưỡng nào thì cần một quyết định riêng của chủ dự án, kèm lý do.
 
-## 19. Quy tắc làm việc trong repo
+## 20. Quy tắc làm việc trong repo
 
 Theo `AGENTS.md`:
 
