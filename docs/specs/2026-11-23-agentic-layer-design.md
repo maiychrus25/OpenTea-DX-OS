@@ -164,6 +164,7 @@ Danh mục ban đầu:
 | `miniapp.remove` | tắt hoặc gỡ một mini-app | high | manager | web | như trên | unlockable |
 
 - Thêm một loại mới phải đi bằng một PR vào danh mục, kèm test. Không có cách thêm loại mới lúc hệ thống đang chạy.
+- Tin gửi nông hộ do agent tạo (`notification.households`, `notification.broadcast`) dùng mẫu soạn sẵn với các ô có kiểu: mã thửa, ngày, số lượng, tên bệnh trong danh mục bệnh. LLM chỉ điền ô, không viết chữ tự do, và không bao giờ chép chữ từ ghi chú của nông hộ, để một ghi chú bị chèn lệnh không lan tới cả vùng. Người duyệt vẫn sửa được nội dung.
 - Bảng trên là phần dành cho agent (`origins: agent`). Danh mục còn phủ dần mọi thao tác ghi của web cho người dùng (`origins: user`), theo bảng §13.7; mini-app thêm hành động của mình qua `app.yaml` (§10.2).
 - **Ở chế độ thường, agent không bao giờ được đề xuất:** kết nạp hoặc xoá thành viên, sửa lô đã xuất QR, cài hoặc gỡ mini-app, đổi quyền, thao tác liên quan đến tiền. Những việc này chỉ do người dùng tự khởi tạo (`origins: user`): trong chat có thẻ xác nhận hoặc trong Mini App, tuỳ mức rủi ro (§13.7). Ở chế độ tự vận hành, manager mở được kết nạp thành viên, cài gỡ mini-app và hành động dính tiền (§11.1); xoá dữ liệu, đổi quyền và sửa lô đã xuất QR thì không bao giờ.
 
@@ -225,9 +226,11 @@ Một giao diện chung và ba adapter:
 | `anthropic` | API của Anthropic (Claude), dùng SDK chính thức | tuỳ chọn |
 | `openai` | API của OpenAI (Codex, GPT), dùng SDK chính thức | tuỳ chọn; adapter này dùng được cho cả dịch vụ tương thích OpenAI khác |
 | `claude-code`, `codex-cli` | công cụ viết mã chạy không cần người ngồi, trong `dxos-builder` | chỉ dùng cho xưởng mini-app (§12); cần khoá của provider tương ứng, Ollama không thay được |
+| `replay` | đọc câu trả lời đã ghi sẵn | chỉ cho CI và buổi trình diễn: cùng đầu vào thì cùng đầu ra, không cần mạng hay GPU |
 
 - Đầu vào là các tin nhắn kèm khuôn JSON của đầu ra. Đầu ra là JSON đã được kiểm theo khuôn. Lệch khuôn thì thử lại một lần, vẫn lệch thì coi là lỗi.
 - Tên model lấy từ cấu hình, không viết cứng trong mã.
+- `dxos-agent` gọi Ollama qua một tuyến gateway riêng, không dùng chung tuyến của web. Tuyến LLM hiện có giới hạn 30 lượt mỗi 60 giây (`platform/gateway/apisix.yaml`), nên tuyến riêng có hạn mức riêng và một hàng đợi trong `dxos-agent`. Gặp 429 thì chờ ít nhất 60 giây. Câu hỏi của người dùng (A7) được ưu tiên hơn các lượt chạy nền.
 - Kiểm giấy phép của từng SDK khi ghi vào `DEPENDENCIES.md`.
 
 ### 8.2 Khoá và chi phí
@@ -286,7 +289,7 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
   - Mục `high` vẫn phải xác nhận riêng trong Mini App hoặc trên web.
   - Mục ngoài quyền của manager được chuyển cho người đủ quyền (ví dụ cán bộ duyệt báo cáo bệnh).
 - Trong ngày, mỗi mục xong thì tiến độ cập nhật. 18:00 tóm tắt ngày (§13.3) có phần "Chiến dịch hôm nay": mục tiêu, thực tế, mục chưa xong.
-- Mỗi hợp tác xã một chiến dịch mỗi ngày. Chiến dịch chưa duyệt thì không mục nào chạy.
+- Mỗi hợp tác xã một chiến dịch mỗi ngày. Đề xuất đã nằm trong chiến dịch chỉ được duyệt qua chiến dịch: hộp duyệt và Telegram hiện nó như một mục của chiến dịch, và duyệt nó là duyệt mục đó. Đề xuất phát sinh trong ngày (ví dụ cảnh báo cảm biến lúc 14:00) đi đường duyệt thường. Chiến dịch chưa duyệt thì không mục nào của nó chạy.
 
 ### 10.2 Chiến dịch kinh doanh từ mini-app
 
@@ -569,7 +572,7 @@ Nguyên tắc: lỗi ở lớp AI không bao giờ chặn việc người dùng 
 
 | Lỗi | Hệ thống làm gì | Ai biết |
 |---|---|---|
-| Provider ngoài lỗi, quá thời gian, hoặc hết ngân sách | thử lại một lần sau 2 giây, rồi chuyển sang Ollama | ghi vào `agent_runs`; báo sức khoẻ hệ thống nếu lỗi 3 lượt liền |
+| Provider ngoài lỗi, quá thời gian, hoặc hết ngân sách | gặp 429 thì chờ theo hạn mức (ít nhất 60 giây với tuyến Ollama); lỗi khác thử lại một lần sau 2 giây; vẫn lỗi thì chuyển sang Ollama | ghi vào `agent_runs`; báo sức khoẻ hệ thống nếu lỗi 3 lượt liền |
 | Ollama lỗi | agent có luật cứng thì vẫn tạo đề xuất với lý do soạn sẵn; agent không có luật cứng thì bỏ lượt | như trên |
 | LLM trả sai khuôn | thử lại một lần, rồi bỏ lượt; không bao giờ tạo đề xuất từ đầu ra sai khuôn | ghi log |
 | `dxos-agent` dừng | không có đề xuất mới; mọi phần khác chạy bình thường; Docker tự khởi động lại | web báo sức khoẻ khi quá 2 chu kỳ không có lượt chạy |
