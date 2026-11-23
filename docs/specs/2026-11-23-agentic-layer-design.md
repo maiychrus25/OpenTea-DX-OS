@@ -234,8 +234,10 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 | A4 `harvest-ready` Thu hoạch | thửa, chu kỳ cây trồng, nhật ký phun | thửa đã qua thời gian cách ly và đến kỳ hái | `harvest.approve` | mỗi sáng |
 | A5 `bulletin` Bản tin | như workflow bản tin hiện tại | — | `bulletin.publish` | thay workflow `bulletin-synthesis`; tắt workflow cũ khi agent chạy ổn |
 | A6 `digest` Báo cáo | chỉ số của bảng điều hành, đề xuất đang mở, lỗi hệ thống | — | không đề xuất; gửi báo cáo (§11.3) | hằng ngày và hằng tuần |
-| A7 `assistant` Hỏi đáp | như A6, cộng phần dữ liệu được hỏi | — | không đề xuất; trả lời kèm nguồn (§11.5) | khi có câu hỏi |
+| A7 `assistant` Trợ lý hội thoại | dữ liệu mà người chat được xem, qua chính các API của web, với quyền của người đó | — | hiểu câu chat: trả lời kèm nguồn, hoặc dựng thẻ xác nhận cho thao tác (§11.5) | khi có tin nhắn |
 | A8 `staff-tasks` Giao việc nhân sự | lịch canh tác, đề xuất đã duyệt của A2 tới A4, danh sách nhân sự | việc cần người làm | `staff.task.create`; agent gợi ý người nhận, manager sửa được | mỗi sáng |
+| A9 `daily-campaign` Điều phối chiến dịch ngày | phát hiện và đề xuất đang mở của A1 tới A5, A8 và agent của mini-app; lịch thu hoạch; thời tiết; số người có mặt | — | một chiến dịch ngày gồm các mục trong danh mục (§10.1) | 05:30 mỗi ngày |
+| A10 `improvement` Cải tiến | kết quả các chiến dịch, lý do bị từ chối, thời gian chờ duyệt, chỉ số bảng điều hành, số liệu mini-app | mục tiêu trượt lặp lại, đề xuất bị từ chối nhiều, chỉ số xấu đi | đề xuất cải tiến (§10.3) | thứ Hai hằng tuần |
 
 - Các ngưỡng (6 giờ, bán kính, số báo cáo) là cấu hình theo hợp tác xã. Giá trị mặc định ghi trong mã và trong `rules-and-limits.md`.
 - **Bản tin:** thêm cột `status` (`draft`, `published`, `rejected`) cho bảng `bulletins`. Trang công khai chỉ đọc bản `published`. Thay đổi bảng đi theo luồng migration hiện có của web.
