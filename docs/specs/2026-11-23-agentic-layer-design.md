@@ -108,6 +108,7 @@ Lý do tách ba vùng: phần gọi LLM là phần dễ bị dụ, vì nó đọ
 | `dxos-agent-<htx>`, mỗi hợp tác xã một client | Keycloak client credentials, claim `htx_code` cố định, vai trò `agent` | đọc Hasura bằng vai `agent`; gọi `/api/internal/agent/*` |
 | `dxos-telegram` | Keycloak client credentials | gọi `/api/internal/telegram/*` |
 | `dxos-builder` | Keycloak client credentials | gọi `/api/internal/builder/*`: nhận đặc tả đã duyệt, báo tiến độ và kết quả; không đọc dữ liệu nghiệp vụ |
+| `dxos-staff` (app nhân sự), mỗi hợp tác xã một client | Keycloak client credentials | gọi `/api/internal/staff/*`: lấy việc đã duyệt của đúng hợp tác xã mình, báo đã tạo việc (D14) |
 | Người duyệt | tài khoản Keycloak sẵn có | duyệt đúng loại hành động mà vai trò của mình được phép (§6) |
 | Người chat qua Telegram | tài khoản Keycloak đã liên kết (§13.2) | đúng quyền vai trò hiện tại của người đó, như trên web |
 
@@ -162,7 +163,7 @@ Danh mục ban đầu:
 | `harvest.approve` | duyệt thu hoạch thửa đã hết thời gian cách ly | high | manager | web, telegram | `approve-harvest` | unlockable |
 | `bulletin.publish` | đăng bản tin AI | medium | manager | web, telegram | cần thêm trạng thái cho `bulletins` (§9) | auto |
 | `disease.inspection` | yêu cầu cán bộ kiểm tra một vùng | medium | officer, manager | web, telegram | thông báo có liên kết tới thửa | auto |
-| `staff.task.create` | giao việc cho nhân sự | medium | manager | web, telegram | app nhân sự (§9, đang phụ thuộc) | auto |
+| `staff.task.create` | giao việc cho nhân sự | medium | manager | web, telegram | app nhân sự kéo việc đã duyệt về (§9, D14) | auto |
 | `agent.settings.update` | đổi cài đặt agent (ngưỡng, lịch) theo một đề xuất cải tiến | medium | manager | web, telegram | bảng `agent_settings` (§10.3) | auto, chỉ siết ngưỡng và đổi lịch; nới ngưỡng luôn cần người (§11.1) |
 | `strategy.adopt` | áp dụng kế hoạch mùa vụ của A11 | medium | manager | web, telegram | bảng `strategy_plans` (§10.6) | unlockable, chờ 48 giờ |
 | `app.spec.approve` | duyệt đặc tả của một mini-app do AI xây | medium | manager | web, telegram | A12 (§12.3) | auto |
@@ -290,7 +291,7 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 - Các ngưỡng (6 giờ, bán kính, số báo cáo) là cấu hình theo hợp tác xã. Giá trị mặc định ghi trong mã và trong `rules-and-limits.md`.
 - Agent học theo từng hợp tác xã: các đề xuất đã duyệt và bị từ chối (kèm lý do) của chính hợp tác xã đó được tìm lại theo độ giống và đưa vào ngữ cảnh làm ví dụ. Không dùng dữ liệu của hợp tác xã khác. Mỗi đề xuất có `confidence`; A10 kiểm độ tin có khớp với tỉ lệ được duyệt thật không.
 - **Bản tin:** thêm cột `status` (`draft`, `published`, `rejected`) cho bảng `bulletins`. Trang công khai chỉ đọc bản `published`. Thay đổi bảng đi theo luồng migration hiện có của web.
-- **A8 đang phụ thuộc app nhân sự** (`apps/staff-desktop`, `apps/staff-mobile`). App này dùng cơ sở dữ liệu riêng (SQLite trên máy chủ HTX, hoặc schema `app_staff_work`). Cần app nhân sự cung cấp một cách nhận việc từ bên ngoài; chốt với người phụ trách app trước khi làm (§19). Đến lúc đó, `staff.task.create` để ở trạng thái chưa bật.
+- **A8 và app nhân sự** (`apps/staff-desktop`, `apps/staff-mobile`). App nhân sự dùng cơ sở dữ liệu riêng (SQLite trên máy của hợp tác xã, hoặc schema `app_staff_work`), và máy đó có thể không có địa chỉ mà lõi gọi tới được. Vì vậy app nhân sự kéo việc về (D14): app hỏi lõi định kỳ qua `/api/internal/staff/*` để lấy các đề xuất `staff.task.create` đã duyệt của hợp tác xã mình, tự tạo việc trong cơ sở dữ liệu của nó, rồi báo lại mã việc. Trong lúc chờ, đề xuất hiện "đã gửi app nhân sự"; khi app báo lại thì chuyển `executed`. Hình dạng API và chu kỳ hỏi (gợi ý: mỗi phút) chốt với người phụ trách app nhân sự trong PR của M10.
 
 ## 10. Chiến dịch hằng ngày và cải tiến
 
@@ -577,7 +578,7 @@ Mỗi cặp API và phương thức của web thuộc đúng một nhóm dưới
 | Mini App | vẽ thửa mới (`farm/parcels` POST); sửa thửa (`farm/parcels/[id]` PUT); tải tài liệu (`documents/upload` POST); Kho ứng dụng (`app-store` GET, `app-store/apps/[id]` GET, `app-store/apps/[id]/screenshots/[position]` GET, `app-store/history` GET, `app-store/requests` POST); mọi mini-app; thêm, sửa, xoá đối tác (`partners` POST, `partners/[id]` PUT, `partners/[id]` DELETE) |
 | Không qua Telegram | đăng ký tài khoản mới (`register` POST, vì chưa có tài khoản để liên kết); đăng nhập (`auth/[...nextauth]`); API chỉ dùng khi phát triển (`dev-login` GET, `debug/session` GET, `seed-farmer` GET); API phục vụ trang web (`health` GET, `notifications/stream` GET, `tts` GET, `tts` POST, `tts/status` GET, `geocode` GET); chatbot cũ, được thay bằng trợ lý (`chatbot` GET, `chatbot` POST, `chatbot/sessions` GET) |
 
-Các app ngoài web (`apps/hub-mobile`, `apps/staff-desktop`, `apps/staff-mobile`) không nằm trong bảng này. Thao tác của app nhân sự đi qua A8 khi đã chốt cách nhận việc (§19).
+Các app ngoài web (`apps/hub-mobile`, `apps/staff-desktop`, `apps/staff-mobile`) không nằm trong bảng này. Việc giao cho nhân sự đi qua A8, và app nhân sự kéo việc về (D14).
 
 ### 13.8 Kênh khác
 
@@ -697,7 +698,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 | M7 | chiến dịch ngày A9 và đo kết quả | manager duyệt chiến dịch lúc 06:00 và nhận kết quả lúc 18:00; kiểm thử 14–15 qua |
 | M8 | cải tiến A10; hành động `agent.settings.update`; tab chỉ số trên `htx-dashboard` | báo cáo cải tiến đầu tiên có bằng chứng |
 | M9 | khối `agent` trong `app.yaml`; chiến dịch kinh doanh của `tea-shop`, `tea-tour`, `leaf-purchase` | một khuyến mãi của cửa hàng được đề xuất, duyệt và chạy; kiểm thử 16 qua |
-| M10 | agent A8 giao việc nhân sự | sau khi chốt cách nhận việc với app nhân sự |
+| M10 | agent A8 giao việc nhân sự; API kéo việc cho app nhân sự (D14); PR được người phụ trách app nhân sự review | một việc được duyệt trên Telegram hiện ra trong app nhân sự trên điện thoại; kiểm thử 42 qua |
 | M11 | định hướng phát triển A11 và `strategy.adopt`; mục tiêu vụ cho A9, A10 | một kế hoạch vụ được áp dụng, và chiến dịch ngày bám theo mục tiêu của kế hoạch đó; kiểm thử 37 qua |
 | M12 | chế độ tự vận hành, theo thứ tự: trước hết cho `notification.internal` và `bulletin.publish`, cùng lệnh dừng và phanh; các loại khác sau khi có số liệu chạy bóng. Gồm trường `autonomy`, giới hạn cứng, bật và dừng, cửa sổ chặn, hạn mức, phanh, chạy bóng, nhãn minh bạch | kiểm thử 18–25 và 31 qua; có ít nhất 30 ngày số liệu chạy bóng trước khi bật ở một hợp tác xã thật |
 | M13 | xưởng mini-app A12: `dxos-builder`, cổng kiểm tra, xem thử, cài riêng cho một hợp tác xã, mạng riêng cho app do AI xây | từ một câu yêu cầu trên Telegram, một app kho phân bón được xây, qua mọi cổng, được duyệt và chạy; kiểm thử 26–30 qua |
