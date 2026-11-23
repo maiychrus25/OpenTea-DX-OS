@@ -264,6 +264,12 @@ jobs:
       - name: Dataops Unit Tests
         run: cd platform/dataops && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
 
+      - name: Agent Unit Tests
+        run: cd platform/agent && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
+
+      - name: Telegram Unit Tests
+        run: cd platform/telegram && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
+
       # The registry tests start a throwaway Postgres from this image; Start Platform reuses its build cache.
       - name: DXOS CLI Unit Tests
         run: |

@@ -65,6 +65,10 @@ jobs:
             context: ./apps/web/prisma
           - service: dataops
             context: ./platform/dataops
+          - service: agent
+            context: ./platform/agent
+          - service: telegram
+            context: ./platform/telegram
     steps:
       - uses: actions/checkout@v4
 
@@ -133,6 +137,8 @@ jobs:
           - \`${prefix}-scanner:${VERSION}\`
           - \`${prefix}-migrate:${VERSION}\`
           - \`${prefix}-dataops:${VERSION}\`
+          - \`${prefix}-agent:${VERSION}\`
+          - \`${prefix}-telegram:${VERSION}\`
 
           ## Deploy
 
