@@ -41,7 +41,7 @@ Hai bất biến trong `docs/rules-and-limits.md` mâu thuẫn trực tiếp v�
 | §1.1 "AI KHÔNG ra quyết định thay người dùng. AI KHÔNG khuyến nghị hành động cụ thể." | AI được đề xuất hành động nằm trong danh mục (§6). AI không bao giờ tự thực thi. Mọi đề xuất kèm lý do và nguồn. Người duyệt chịu trách nhiệm quyết định. Quy tắc "chỉ tổng hợp sự thật có trích dẫn" giữ nguyên cho chatbot, bản tin và phần hỏi đáp. `/predict` vẫn không trả cách chữa. |
 | §1.2 "KHÔNG sử dụng API keys trả phí ở bất kỳ đâu." | Không có phụ thuộc bắt buộc nào vào dịch vụ trả phí. Provider trả phí là tuỳ chọn, mặc định tắt, bật theo từng hợp tác xã. Dựng và chạy thử từ mã nguồn không cần khoá nào. |
 
-Chatbot hiện đã tự chuyển sang Groq khi có `GROQ_API_KEY`, tức là đã lệch §1.2 từ trước tài liệu này. Khi lớp provider ở §8 xong, chatbot chuyển sang dùng chung lớp provider và chính sách dữ liệu ở §8.3.
+Chatbot hiện đã tự chuyển sang Groq khi có `GROQ_API_KEY`, tức là đã lệch §1.2 của `rules-and-limits.md` từ trước tài liệu này. Khi lớp provider ở §8 xong, chatbot chuyển sang dùng chung lớp provider và chính sách dữ liệu ở §8.3.
 
 ## 4. Hiện có gì (dùng lại, không viết lại)
 
@@ -267,7 +267,7 @@ Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân
 
 - Lệnh `/tomtat` (tóm tắt hôm nay), `/cho` (đề xuất đang chờ), `/hoi <câu hỏi>`, hoặc nhắn câu hỏi thẳng.
 - Đường đi của câu hỏi: Telegram, `dxos-telegram`, web (kiểm người, vai trò, giới hạn tần suất), agent `assistant` trong `dxos-agent`; câu trả lời đi theo đường ngược lại.
-- Câu trả lời theo bất biến §1.1: chỉ sự thật lấy từ dữ liệu, kèm nguồn. Câu hỏi không tự sinh ra đề xuất; người hỏi muốn làm gì thì vào web.
+- Câu trả lời theo bất biến §1.1 của `rules-and-limits.md`: chỉ sự thật lấy từ dữ liệu, kèm nguồn. Câu hỏi không tự sinh ra đề xuất; người hỏi muốn làm gì thì vào web.
 - Chỉ `manager` và `officer` được hỏi; mỗi người tối đa 20 câu mỗi giờ.
 
 ### 10.6 Kênh khác
