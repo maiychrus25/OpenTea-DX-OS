@@ -603,6 +603,11 @@ Kiểm thử bắt buộc, ngoài test đơn vị:
 23. Hành động tự chạy vẫn bị use case từ chối khi sai nghiệp vụ, ví dụ duyệt thu hoạch thửa chưa hết thời gian cách ly (H1).
 24. Audit ghi `autopilot:<agent>` và người đã bật cho mọi hành động tự chạy.
 25. Tỉ lệ khớp khi chạy bóng tính đúng trên bộ kịch bản.
+26. App do AI xây có `<script>` hoặc thư viện ngoài danh sách cho phép: trượt cổng kiểm tra, không có đường cài.
+27. App do AI xây gọi một app khác qua mạng: không tới được.
+28. Phiên bản chưa qua mọi cổng, hoặc đặc tả chưa được duyệt: không có đường cài.
+29. App do AI xây khai hành động trong khối `agent`: bị từ chối (H2).
+30. Trong buồng xây không đọc được biến môi trường hay khoá nào của lõi.
 
 Smoke test đặt trong `platform/tests` theo mẫu sẵn có; hộp duyệt có test Playwright.
 
@@ -635,6 +640,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 | M10 | agent A8 giao việc nhân sự | sau khi chốt cách nhận việc với app nhân sự |
 | M11 | định hướng phát triển A11 và `strategy.adopt`; mục tiêu vụ cho A9, A10 | một kế hoạch vụ được áp dụng, và chiến dịch ngày bám theo mục tiêu của kế hoạch đó |
 | M12 | chế độ tự vận hành: trường `autonomy`, ngưỡng cứng, bật và dừng, cửa sổ chặn, hạn mức, phanh, chạy bóng, nhãn minh bạch | kiểm thử 18–25 qua; có ít nhất 30 ngày số liệu chạy bóng trước khi bật ở một hợp tác xã thật |
+| M13 | xưởng mini-app A12: `dxos-builder`, cổng kiểm tra, xem thử, cài riêng cho một hợp tác xã, mạng riêng cho app do AI xây | từ một câu yêu cầu trên Telegram, một app kho phân bón được xây, qua mọi cổng, được duyệt và chạy; kiểm thử 26–30 qua |
 
 ## 18. Tài liệu phải cập nhật cùng mã
 
@@ -643,6 +649,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 - `docs/api-contract.md` (API nội bộ), `docs/database-schema.md` (bảng mới), `DEPENDENCIES.md` (SDK, model), `CHANGELOG.md`, một mục ngắn trong README. Trang tài liệu của site tự lấy từ `docs/`.
 - Ghi chú quyền riêng tư: dữ liệu nào đi tới Telegram và tới provider ngoài.
 - `docs/miniapps.md`: khối `agent` trong `app.yaml` (§10.2).
+- `docs/miniapps.md`: app do AI xây (§12.7, §12.8); hướng dẫn gửi yêu cầu cho xưởng mini-app.
 - Hướng dẫn dùng bot cho từng vai trò (quản trị, cán bộ, nông hộ), tiếng Việt, có ảnh chụp màn hình.
 - `docs/rules-and-limits.md`: hai chế độ vận hành và năm ngưỡng cứng (§11.1); hướng dẫn bật, dừng và đọc báo cáo của chế độ tự vận hành.
 
