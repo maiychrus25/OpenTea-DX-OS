@@ -95,3 +95,77 @@ Lý do tách ba vùng: phần gọi LLM là phần dễ bị dụ, vì nó đọ
 
 - **n8n:** giấy phép fair-code (ADR 0001 đã ghi lối thoát), khó kiểm thử đơn vị, và khó giữ ranh giới quyền ở §5.1.
 - **Web:** một lượt agent có thể kéo dài vài phút vì chờ LLM, không hợp với route handler. Web lại là vùng có thẩm quyền, không nên chứa phần dễ bị dụ.
+
+## 6. Danh mục hành động
+
+Agent chỉ được đề xuất các loại hành động có trong danh mục. Danh mục nằm trong web (TypeScript). Mỗi loại khai báo:
+
+| Trường | Ý nghĩa |
+|---|---|
+| `kind` | mã, ví dụ `journal.approve` |
+| `titleVi` | tên hiện cho người duyệt |
+| `risk` | `low`, `medium` hoặc `high` |
+| `approverRoles` | vai trò được duyệt |
+| `channels` | `web`, `telegram`; hành động `high` chỉ có `web` |
+| `payloadSchema` | khuôn zod; web từ chối đề xuất sai khuôn |
+| `editableFields` | trường người duyệt được sửa trước khi duyệt, ví dụ nội dung thông báo |
+| `expiresAfter` | đề xuất tự hết hạn sau bao lâu |
+| `preview(payload)` | mô tả thay đổi cho người duyệt xem trước |
+| `isStale(payload)` | dữ liệu gốc còn như lúc đề xuất không (so `updated_at`) |
+| `execute(payload, approver)` | gọi đúng use case đang có, dưới danh nghĩa người duyệt |
+
+Danh mục ban đầu:
+
+| `kind` | Việc | `risk` | Người duyệt | Kênh | Dựa trên |
+|---|---|---|---|---|---|
+| `journal.approve` | duyệt nhật ký đang chờ | medium | officer, manager | web, telegram | luồng duyệt nhật ký (`rules-and-limits.md` §3.3), `batch-approve`, tối đa 50 |
+| `journal.reject` | trả lại nhật ký kèm lý do | medium | officer, manager | web, telegram | như trên |
+| `notification.internal` | báo cho cán bộ hoặc ban quản trị | low | manager | web, telegram | `Notification` |
+| `notification.households` | báo cho một nhóm nông hộ (theo thửa, theo vùng) | medium | manager | web, telegram | `/api/notifications/announce` |
+| `notification.broadcast` | báo cho toàn hợp tác xã | high | manager | web | như trên |
+| `harvest.approve` | duyệt thu hoạch thửa đã hết thời gian cách ly | high | manager | web | `approve-harvest` |
+| `bulletin.publish` | đăng bản tin AI | medium | manager | web, telegram | cần thêm trạng thái cho `bulletins` (§9) |
+| `disease.inspection` | yêu cầu cán bộ kiểm tra một vùng | medium | officer, manager | web, telegram | thông báo có liên kết tới thửa |
+| `staff.task.create` | giao việc cho nhân sự | medium | manager | web, telegram | app nhân sự (§9, đang phụ thuộc) |
+
+- Thêm một loại mới phải đi bằng một PR vào danh mục, kèm test. Không có cách thêm loại mới lúc hệ thống đang chạy.
+- **Không bao giờ đưa vào danh mục:** kết nạp hoặc xoá thành viên, sửa lô đã xuất QR, cài hoặc gỡ mini-app, đổi quyền, tiền. Những việc này luôn do người làm trực tiếp.
+
+## 7. Đề xuất và phê duyệt
+
+### 7.1 Bảng
+
+Các bảng nằm trong schema `platform` và có cùng trigger audit như các bảng lõi khác. Tên bảng là gợi ý; người làm có thể đổi tên nhưng giữ nghĩa.
+
+| Bảng | Cột chính |
+|---|---|
+| `agent_runs` | `id`, `htx_code`, `agent`, `trigger` (`schedule`, `event`, `manual`), `started_at`, `finished_at`, `status` (`ok`, `failed`, `skipped`), `provider`, `model`, `tokens_in`, `tokens_out`, `cost_estimate`, `error` |
+| `agent_proposals` | `id`, `htx_code`, `run_id`, `kind`, `payload`, `reason_vi`, `evidence` (nguồn: bảng, mã dòng, giá trị, thời điểm), `risk`, `status`, `created_at`, `expires_at`, `decided_by`, `decided_at`, `decision_channel`, `decision_note`, `edited_payload`, `executed_at`, `result`, `dedupe_key` |
+| `agent_settings` | `htx_code`, `agent`, `enabled`, `schedule`, `provider`, `thresholds`, `monthly_budget` |
+| `telegram_links`, `telegram_outbox` | §10 |
+
+### 7.2 Trạng thái
+
+```
+proposed ──duyệt──▶ approved ──thực thi──▶ executed
+   │                    └──lỗi──▶ failed ──người bấm chạy lại──▶ approved
+   ├──từ chối──▶ rejected
+   ├──quá hạn──▶ expired
+   └──dữ liệu gốc đã đổi (kiểm lúc duyệt)──▶ stale
+```
+
+- Từ chối bắt buộc có lý do. Lý do được lưu để đo chất lượng agent (§12) và đưa vào ngữ cảnh lượt sau, để agent không đề xuất lại y hệt.
+- `dedupe_key`: cùng hợp tác xã, cùng `kind`, cùng đối tượng thì không tạo đề xuất mới khi đề xuất cũ còn mở.
+- Quyền được kiểm **lúc bấm duyệt** theo vai trò hiện tại trong token, không phải lúc agent đề xuất.
+- Thực thi chạy ngay sau khi duyệt, trong web, dưới danh nghĩa người duyệt. Audit ghi `actor` là người duyệt, kèm `proposal_id` và tên agent.
+- Thực thi không chạy hai lần cho cùng `proposal_id`. Nếu web và Telegram cùng bấm duyệt, chỉ một lần chạy; người bấm sau nhận "đã được X duyệt lúc …".
+- Duyệt loạt chỉ cho `low` và `medium`, cùng một `kind`, trên web, tối đa 50 đề xuất (theo giới hạn duyệt nhật ký).
+- Không có tự duyệt (D1). Người đề xuất luôn là agent, người duyệt luôn là người.
+
+### 7.3 Hộp duyệt trên web
+
+- Trang `/manager/ai` và `/officer/ai`: danh sách đề xuất đang mở, lọc theo loại, rủi ro và agent. Mỗi thẻ có lý do, bằng chứng (liên kết tới thửa, nhật ký, số đo), phần xem trước, và các nút Duyệt, Sửa rồi duyệt, Từ chối.
+- Tab Lịch sử: ai duyệt gì, qua kênh nào, kết quả thực thi ra sao.
+- Tab Cài đặt (chỉ `manager`): bật hoặc tắt từng agent, lịch chạy, provider, ngưỡng, ngân sách, liên kết Telegram, nhóm nhận báo cáo.
+- Số đề xuất đang mở hiện trên menu như các bộ đếm khác.
+- Giao diện theo `DESIGN.md` và bộ thành phần sẵn có; chạy tốt trên desktop và điện thoại, chế độ sáng và tối.
