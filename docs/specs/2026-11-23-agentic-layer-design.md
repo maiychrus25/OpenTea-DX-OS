@@ -520,18 +520,20 @@ App do AI xây là app riêng của hợp tác xã đã yêu cầu. Muốn mọi
 
 Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân (§8.3). Muốn xem chi tiết thì bấm liên kết sang web hoặc mở Mini App.
 
+Mỗi tin tối đa khoảng 8 dòng. Tin tóm tắt và câu trả lời có nút **Nghe**: web gọi `/api/tts` sẵn có và gửi lại một tin thoại, cho người lớn tuổi hoặc mắt kém. Nông hộ không nhận tin tự động từ 21:00 đến 06:00, trừ cảnh báo khẩn (mưa đá, dịch bệnh).
+
 ### 13.4 Duyệt qua Telegram
 
 - Đề xuất có `telegram` trong `channels` được gửi tới những người đã liên kết và có vai trò được duyệt, kèm các nút Duyệt, Từ chối và Mở chi tiết.
 - `callback_data` chỉ chứa mã đề xuất rút gọn, quyết định, và chữ ký HMAC do web tạo; tất cả nằm trong giới hạn 64 byte của Telegram. Web kiểm chữ ký, rồi kiểm người bấm còn đủ quyền ở thời điểm bấm.
 - Từ chối: bot hỏi lý do, người dùng trả lời bằng một tin nhắn. Chưa có lý do thì chưa từ chối.
 - Sửa rồi duyệt làm trong Mini App.
-- Hành động `high` không duyệt bằng nút trong chat. Tin nhắn có nút mở đúng trang duyệt trong Mini App, và người duyệt xác nhận ở đó.
+- Hành động `high` xác nhận được ngay trong chat bằng hai bước. Thẻ thứ nhất ghi đầy đủ thay đổi; bấm Tiếp tục thì bot gửi thẻ thứ hai nhắc lại hậu quả (ví dụ "mã QR của lô sẽ công khai cho người mua") với nút Xác nhận lần cuối, hết hạn sau 10 phút. Web kiểm lại quyền ở bước cuối. Có Mini App thì thẻ có thêm nút mở trang chi tiết; không có Mini App vẫn làm đủ.
 - Ở chế độ tự vận hành, tin xin duyệt được thay bằng tin "Sẽ tự chạy" có nút Chặn (§11.3).
 
 ### 13.5 Hội thoại và thao tác
 
-- Người dùng nhắn tự do bằng tiếng Việt, có dấu hay không dấu, hoặc dùng lệnh: `/tomtat`, `/cho`, `/chiendich`, `/nhatky`, `/benh`, `/hoi`, `/menu` (mở Mini App), `/huy`, `/tuvanhanh` (trạng thái chế độ tự vận hành), `/dung` (dừng chế độ tự vận hành ngay, §11.2).
+- Màn hình đầu là một menu nút bấm, không bắt người dùng nhớ lệnh: Hôm nay, Việc cần duyệt, Ghi nhật ký, Báo bệnh, Hỏi, Mở ứng dụng (Mini App). Người dùng cũng nhắn tự do bằng tiếng Việt, có dấu hay không dấu. Lệnh gõ vẫn dùng được cho người quen: `/tomtat`, `/cho`, `/chiendich`, `/nhatky`, `/benh`, `/hoi`, `/menu`, `/huy`, `/tuvanhanh` (trạng thái chế độ tự vận hành), `/dung` (dừng chế độ tự vận hành ngay, §11.2).
 - Agent `assistant` hiểu câu chat và làm một trong hai việc:
   - **Trả lời** (phần đọc): gọi các công cụ đọc. Mỗi công cụ là một API GET sẵn có của web, chạy với quyền của người hỏi, nên nông hộ chỉ thấy dữ liệu của mình như trên web. Câu trả lời kèm nguồn.
   - **Thẻ xác nhận** (phần ghi): chọn một hành động `origins: user` trong danh mục và điền dữ liệu; web gửi một thẻ ghi rõ sẽ làm gì, trên đối tượng nào, với các trường nào. Thẻ có nút Xác nhận, Sửa (mở Mini App với form điền sẵn) và Huỷ, và hết hạn sau 10 phút. Không bấm Xác nhận thì không có gì xảy ra.
@@ -545,7 +547,7 @@ Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân
 
 ### 13.6 Telegram Mini App
 
-- Nút menu của bot mở web ngay trong Telegram. Phần này phủ mọi thao tác không hợp làm bằng chat: bản đồ và vẽ thửa, tải tài liệu, Kho ứng dụng, các mini-app, hộp duyệt đầy đủ, cài đặt lớp AI, và xác nhận các hành động `high`.
+- Nút menu của bot mở web ngay trong Telegram. Phần này phủ mọi thao tác không hợp làm bằng chat: bản đồ và vẽ thửa, tải tài liệu, Kho ứng dụng, các mini-app, hộp duyệt đầy đủ, cài đặt lớp AI, và trang chi tiết của các hành động `high`.
 - Đăng nhập: lần đầu người dùng đăng nhập Keycloak như trên web, và webview của Telegram giữ phiên. Web kiểm `initData` do Telegram ký và chỉ cho dùng khi tài khoản Telegram trùng với tài khoản đã liên kết. `initData` không thay cho đăng nhập.
 - Trang web phải chạy tốt trong khung Mini App: vừa bề ngang điện thoại, theo màu sáng hoặc tối của Telegram, và dùng nút Back của Telegram.
 
@@ -556,8 +558,8 @@ Mỗi cặp API và phương thức của web thuộc đúng một nhóm dưới
 | Nhóm | Thao tác (API trong `apps/web/src/app/api`, kèm phương thức) |
 |---|---|
 | Trong chat, chỉ đọc | tra cứu (`search` GET); thời tiết (`weather` GET, `weather/forecast` GET); giá thị trường (`market-data` GET, `market-data/fx` GET); bản tin (`bulletin` GET); thông báo (`notifications` GET); nhật ký (`journal` GET); lô (`lots` GET, `lots/[id]` GET, `lot/[lot_code]/certificate` GET); lịch thu hoạch (`schedule/harvest` GET, `schedule/unscheduled` GET); thửa (`farm/parcels` GET, `farm/parcels/[id]/soil-health` GET, `parcels/[id]/latest-photo` GET); hộ (`farm/households` GET, `farm/households/[id]` GET); thành viên (`members` GET); báo cáo bệnh (`officer/diseases` GET); hồ sơ (`profile` GET); tài liệu (`documents` GET, `documents/url` GET); đối tác (`partners` GET) |
-| Trong chat, có thẻ xác nhận | ghi nhật ký (`journal` POST, `journal/upload` POST); sửa, xoá nhật ký nháp (`journal/[id]` PUT, `journal/[id]` DELETE); gửi ảnh bệnh (`diagnosis` POST); duyệt nhật ký (`journal/batch-approve` POST); duyệt báo cáo bệnh (`officer/diseases/[id]/review` PUT); bắt đầu đợt hái (`parcels/[id]/start-round` POST); xếp lịch thu hoạch (`schedule/harvest/[cycle_id]` PATCH); tạo lô (`lots` POST); gửi thông báo (`notifications/announce` POST; thông báo cho một nhóm hộ xác nhận trong chat, thông báo toàn hợp tác xã là `high` nên xác nhận trong Mini App); đánh dấu đã đọc, xoá thông báo (`notifications` PUT, `notifications` DELETE); mời và duyệt thành viên (`members/invite` POST, `members/[id]/approve` POST); sửa hồ sơ (`profile` PUT, `farm/households/[id]` PUT); thêm hộ (`farm/households` POST) |
-| Mini App | vẽ thửa mới (`farm/parcels` POST); sửa thửa (`farm/parcels/[id]` PUT); tải tài liệu (`documents/upload` POST); Kho ứng dụng (`app-store` GET, `app-store/apps/[id]` GET, `app-store/apps/[id]/screenshots/[position]` GET, `app-store/history` GET, `app-store/requests` POST); mọi mini-app; thêm, sửa, xoá đối tác (`partners` POST, `partners/[id]` PUT, `partners/[id]` DELETE); các hành động `high`: xuất QR lô (`lots/[id]/export-qr` POST), duyệt thu hoạch (`parcels/[id]/approve-harvest` POST), xoá thành viên (`members/[id]` DELETE), xoá thửa (`farm/parcels/[id]` DELETE) |
+| Trong chat, có thẻ xác nhận | ghi nhật ký (`journal` POST, `journal/upload` POST); sửa, xoá nhật ký nháp (`journal/[id]` PUT, `journal/[id]` DELETE); gửi ảnh bệnh (`diagnosis` POST); duyệt nhật ký (`journal/batch-approve` POST); duyệt báo cáo bệnh (`officer/diseases/[id]/review` PUT); bắt đầu đợt hái (`parcels/[id]/start-round` POST); xếp lịch thu hoạch (`schedule/harvest/[cycle_id]` PATCH); tạo lô (`lots` POST); gửi thông báo (`notifications/announce` POST; thông báo cho một nhóm hộ xác nhận trong chat, thông báo toàn hợp tác xã là `high` nên xác nhận hai bước); đánh dấu đã đọc, xoá thông báo (`notifications` PUT, `notifications` DELETE); mời và duyệt thành viên (`members/invite` POST, `members/[id]/approve` POST); sửa hồ sơ (`profile` PUT, `farm/households/[id]` PUT); thêm hộ (`farm/households` POST); các hành động `high`, xác nhận hai bước (§13.4): xuất QR lô (`lots/[id]/export-qr` POST), duyệt thu hoạch (`parcels/[id]/approve-harvest` POST), xoá thành viên (`members/[id]` DELETE), xoá thửa (`farm/parcels/[id]` DELETE) |
+| Mini App | vẽ thửa mới (`farm/parcels` POST); sửa thửa (`farm/parcels/[id]` PUT); tải tài liệu (`documents/upload` POST); Kho ứng dụng (`app-store` GET, `app-store/apps/[id]` GET, `app-store/apps/[id]/screenshots/[position]` GET, `app-store/history` GET, `app-store/requests` POST); mọi mini-app; thêm, sửa, xoá đối tác (`partners` POST, `partners/[id]` PUT, `partners/[id]` DELETE) |
 | Không qua Telegram | đăng ký tài khoản mới (`register` POST, vì chưa có tài khoản để liên kết); đăng nhập (`auth/[...nextauth]`); API chỉ dùng khi phát triển (`dev-login` GET, `debug/session` GET, `seed-farmer` GET); API phục vụ trang web (`health` GET, `notifications/stream` GET, `tts` GET, `tts` POST, `tts/status` GET, `geocode` GET); chatbot cũ, được thay bằng trợ lý (`chatbot` GET, `chatbot` POST, `chatbot/sessions` GET) |
 
 Các app ngoài web (`apps/hub-mobile`, `apps/staff-desktop`, `apps/staff-mobile`) không nằm trong bảng này. Thao tác của app nhân sự đi qua A8 khi đã chốt cách nhận việc (§19).
@@ -677,7 +679,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 3. Có cần Zalo ngoài Telegram không? Chốt sau M2.
 4. Ai làm từng mốc.
 5. Có nhận tin nhắn thoại không? Cần một mô hình chuyển giọng nói thành chữ chạy nội bộ, giấy phép thuộc OSI. Chốt trước M5.
-6. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì không có Mini App (§13.6). Chốt trước M6.
+6. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì thiếu nhóm Mini App ở §13.7 (bản đồ, tài liệu, Kho ứng dụng, mini-app); các thao tác trong chat vẫn đủ, kể cả hành động `high`. Chốt trước M6.
 7. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7.
 
 Đã chốt ngày 2026-11-23: ý nghĩa của "Codex" và của "định hướng phát triển" (D10), các loại mở sẵn khi bật tự vận hành (D9), chế độ khi chấm thi (D11), năm giới hạn cứng (D12).
