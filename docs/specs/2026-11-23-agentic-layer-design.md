@@ -169,3 +169,39 @@ proposed ──duyệt──▶ approved ──thực thi──▶ executed
 - Tab Cài đặt (chỉ `manager`): bật hoặc tắt từng agent, lịch chạy, provider, ngưỡng, ngân sách, liên kết Telegram, nhóm nhận báo cáo.
 - Số đề xuất đang mở hiện trên menu như các bộ đếm khác.
 - Giao diện theo `DESIGN.md` và bộ thành phần sẵn có; chạy tốt trên desktop và điện thoại, chế độ sáng và tối.
+
+## 8. Provider LLM
+
+### 8.1 Lớp provider (trong `dxos-agent`)
+
+Một giao diện chung và ba adapter:
+
+| Provider | Gọi qua | Ghi chú |
+|---|---|---|
+| `ollama` (mặc định) | gateway `/api/ai/llm/v1/chat/completions` | dữ liệu không rời máy chủ của hợp tác xã |
+| `anthropic` | API của Anthropic (Claude), dùng SDK chính thức | tuỳ chọn |
+| `openai` | API của OpenAI (Codex, GPT), dùng SDK chính thức | tuỳ chọn; adapter này dùng được cho cả dịch vụ tương thích OpenAI khác |
+
+- Đầu vào là các tin nhắn kèm khuôn JSON của đầu ra. Đầu ra là JSON đã được kiểm theo khuôn. Lệch khuôn thì thử lại một lần, vẫn lệch thì coi là lỗi.
+- Tên model lấy từ cấu hình, không viết cứng trong mã.
+- Kiểm giấy phép của từng SDK khi ghi vào `DEPENDENCIES.md`.
+
+### 8.2 Khoá và chi phí
+
+- Khoá API đặt ở mức máy chủ, trong biến môi trường hoặc tệp bí mật của Docker do người vận hành quản lý. Khoá không lưu trong cơ sở dữ liệu, không commit, và không hiện lại trên giao diện.
+- Mỗi hợp tác xã có ngân sách tháng (số tiền ước tính hoặc số token). Chạm 80% thì báo qua Telegram. Chạm 100% thì tự chuyển về Ollama đến hết tháng.
+- Mỗi lượt chạy ghi số token và chi phí ước tính vào `agent_runs`.
+
+### 8.3 Chính sách dữ liệu khi gửi ra ngoài
+
+- Mặc định mọi agent dùng `ollama`. Manager bật provider ngoài cho từng agent. Khi bật, giao diện nói rõ dữ liệu nào sẽ rời khỏi máy chủ của hợp tác xã.
+- Chỉ gửi đi dữ liệu mà agent cần. Không gửi cột cá nhân (vai `agent` vốn không đọc được), không gửi ảnh nông hộ. Tên thửa và nông hộ thay bằng mã.
+- Mỗi lần gọi ra ngoài ghi một dòng vào `audit.events`: provider, model, agent, số bản ghi gửi đi. Không ghi nội dung.
+- Chatbot hiện tại chuyển sang dùng chung chính sách này (§3).
+
+### 8.4 Mô hình nội bộ
+
+- `qwen2.5:0.5b` không đủ. Người làm đo trên máy 16 GB của nhóm bằng bộ kịch bản ở §12, rồi chọn model nhỏ nhất đạt ngưỡng.
+- Kiểm giấy phép từng kích cỡ trước khi chọn: không phải kích cỡ nào của một họ model cũng dùng giấy phép OSI. Ví dụ bản 3B của Qwen2.5 có giấy phép riêng. Tránh các model có giấy phép không thuộc OSI.
+- Model tải về lúc cài, không commit; ghi vào `DEPENDENCIES.md` kèm giấy phép.
+- Thứ tự dự phòng: provider đã chọn, rồi Ollama, rồi luật cứng (nếu agent có), cuối cùng là bỏ lượt.
