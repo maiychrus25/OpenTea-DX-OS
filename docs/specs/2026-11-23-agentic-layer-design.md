@@ -243,6 +243,58 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 - **Bản tin:** thêm cột `status` (`draft`, `published`, `rejected`) cho bảng `bulletins`. Trang công khai chỉ đọc bản `published`. Thay đổi bảng đi theo luồng migration hiện có của web.
 - **A8 đang phụ thuộc app nhân sự** (`apps/staff-desktop`, `apps/staff-mobile`). App này dùng cơ sở dữ liệu riêng (SQLite trên máy chủ HTX, hoặc schema `app_staff_work`). Cần app nhân sự cung cấp một cách nhận việc từ bên ngoài; chốt với người phụ trách app trước khi làm (§17). Đến lúc đó, `staff.task.create` để ở trạng thái chưa bật.
 
+## 10. Chiến dịch hằng ngày và cải tiến
+
+### 10.1 Chiến dịch ngày
+
+- Mỗi sáng A9 gom các phát hiện và đề xuất đang mở thành một **chiến dịch ngày**: danh sách việc ưu tiên của hợp tác xã hôm nay. Mỗi mục là một hành động trong danh mục và gắn với một mục tiêu đo được. Ví dụ: "Hái 3 thửa đã hết thời gian cách ly, ước 120 kg", "Duyệt hết 14 nhật ký tồn", "Báo nông hộ vùng B hoãn phun vì chiều mưa lớn".
+- A9 xếp thứ tự và bỏ các mục mâu thuẫn bằng luật cứng: không xếp phun trước giờ mưa, không giao quá số người có mặt, không xếp hái thửa đang trong thời gian cách ly. LLM chỉ viết lời và gom nhóm.
+- Tối đa 15 mục để đọc được trên điện thoại; mục dư chuyển sang ngày sau.
+- 06:00 manager nhận chiến dịch qua Telegram và chọn: duyệt cả chiến dịch, duyệt từng mục, sửa (trong Mini App), hoặc bỏ.
+  - Duyệt cả chiến dịch là duyệt từng mục mà người duyệt đủ quyền.
+  - Mục `high` vẫn phải xác nhận riêng trong Mini App hoặc trên web.
+  - Mục ngoài quyền của manager được chuyển cho người đủ quyền (ví dụ cán bộ duyệt báo cáo bệnh).
+- Trong ngày, mỗi mục xong thì tiến độ cập nhật. 18:00 tóm tắt ngày (§11.3) có phần "Chiến dịch hôm nay": mục tiêu, thực tế, mục chưa xong.
+- Mỗi hợp tác xã một chiến dịch mỗi ngày. Chiến dịch chưa duyệt thì không mục nào chạy.
+
+### 10.2 Chiến dịch kinh doanh từ mini-app
+
+- Mini-app khai báo trong `app.yaml` một khối `agent` mới, gồm:
+  - số liệu agent được đọc: endpoint chỉ đọc của app;
+  - hành động agent được đề xuất: tên, khuôn dữ liệu, `risk`, vai trò duyệt, endpoint thực thi.
+- Ví dụ: `tea-shop` tạo khuyến mãi; `tea-tour` mở thêm suất tour cuối tuần; `leaf-purchase` báo giá thu mua mới cho nông hộ.
+- Khi cài app, nền tảng đưa các hành động này vào danh mục của hợp tác xã đó; gỡ app thì gỡ khỏi danh mục, và đề xuất đang mở của app chuyển `expired`.
+- Thực thi đi qua proxy mini-app hiện có, dưới danh nghĩa người duyệt. App tự kiểm dữ liệu như khi người dùng thao tác trên giao diện của app.
+- `./dxos validate` kiểm khối `agent`; `docs/miniapps.md` có hướng dẫn. Đây là phần mở rộng của mô hình plugin, không phải tính năng riêng của từng app.
+- A9 đưa được các hành động này vào chiến dịch ngày. Ví dụ: cuối tuần trời nắng và tour còn chỗ thì đề xuất mở bán thêm.
+
+### 10.3 Cải tiến
+
+- Thứ Hai hằng tuần, A10 xem kết quả các chiến dịch, lý do bị từ chối, thời gian chờ duyệt, chỉ số bảng điều hành và số liệu mini-app. Từ đó A10 đưa ra tối đa 5 đề xuất cải tiến, mỗi đề xuất kèm bằng chứng.
+- Ba loại cải tiến:
+
+| Loại | Ví dụ | Khi được chấp nhận |
+|---|---|---|
+| Cài đặt | hạ ngưỡng cảnh báo độ ẩm; dời giờ gửi tóm tắt ngày | hành động `agent.settings.update` đổi cài đặt |
+| Quy trình | "40% nhật ký bị trả lại vì thiếu liều: nên bắt buộc ô liều" | ghi nhận và báo người phụ trách qua Telegram; không có gì tự đổi |
+| Mẫu chiến dịch | thêm mục kiểm tra đầu vụ vào chiến dịch thứ Hai | A9 dùng mẫu này từ tuần sau |
+
+- Cải tiến đã chấp nhận được đo lại sau 2 tuần và 4 tuần. Kết quả vào báo cáo tuần: "đã giúp", "chưa thấy tác dụng" hoặc "nên bỏ".
+- A10 không đề xuất đổi danh mục hành động, quyền hay chính sách provider. Những thứ đó chỉ đổi bằng PR.
+
+### 10.4 Bảng
+
+| Bảng | Cột chính |
+|---|---|
+| `campaigns` | `id`, `htx_code`, `day`, `status` (`draft`, `approved`, `partial`, `done`, `dropped`), `goals`, `summary_vi`, `approved_by`, `approved_at` |
+| `campaign_items` | `campaign_id`, `proposal_id`, `position`, `goal_key` |
+| `campaign_outcomes` | `campaign_id`, `goal_key`, `target`, `actual`, `measured_at` |
+| `improvements` | `id`, `htx_code`, `kind` (`setting`, `process`, `template`), `rationale_vi`, `evidence`, `status` (`proposed`, `adopted`, `declined`, `measured`), `decided_by`, `adopted_at`, `effect` |
+
+### 10.5 Điều phối giữa các agent
+
+Các agent không trò chuyện tự do với nhau. Agent chuyên trách (A1 tới A5, A8, agent của mini-app) ghi phát hiện và đề xuất; A9 đọc những thứ đó để dựng chiến dịch; A10 đọc kết quả để đề xuất cải tiến. Mọi thứ đi qua bảng của web, nên tra lại được và kiểm thử được.
+
 ## 11. Telegram
 
 ### 11.1 Cách kết nối
