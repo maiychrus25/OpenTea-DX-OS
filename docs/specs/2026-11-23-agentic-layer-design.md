@@ -21,7 +21,7 @@ Lớp này coi là xong khi:
 5. Mỗi đề xuất, quyết định và lần thực thi đều tra được trong `audit.events`.
 6. Mọi thông tin và mọi thao tác của hệ thống làm được từ Telegram, đúng theo quyền của người dùng (§13.7).
 7. Mỗi sáng hợp tác xã nhận một chiến dịch ngày có mục tiêu đo được, mỗi tối có kết quả so với mục tiêu, và mỗi tuần có đề xuất cải tiến dựa trên kết quả các chiến dịch trước (§10).
-8. Manager bật được chế độ tự vận hành. Khi bật, hợp tác xã chạy theo định hướng và chiến dịch do agent đặt ra; con người giám sát, chặn khi cần, dừng bất cứ lúc nào; các ngưỡng cứng ở §11.1 vẫn giữ.
+8. Manager bật được chế độ tự vận hành. Khi bật, hợp tác xã chạy theo định hướng và chiến dịch do agent đặt ra; con người giám sát, chặn khi cần, dừng bất cứ lúc nào; các giới hạn cứng ở §11.1 vẫn giữ.
 
 ## 2. Quyết định của chủ dự án (không đổi nếu chưa hỏi lại)
 
@@ -38,7 +38,7 @@ Lớp này coi là xong khi:
 | D9 | Ở chế độ tự vận hành, nhóm "manager mở được" mặc định đóng hết (§11.1). |
 | D10 | "Định hướng phát triển" gồm cả hai: định hướng của hợp tác xã (A11, §10.6) và AI tự xây phần mềm khi có yêu cầu, dưới dạng mini-app cắm vào hệ thống (A12, §12). Vì vậy "Claude" và "Codex" ở D3 gồm cả API lẫn công cụ viết mã (Claude Code, Codex CLI). |
 | D11 | Bản nộp thi để chế độ tự vận hành tắt mặc định. Buổi trình diễn bật chế độ này trên hợp tác xã mẫu, sau khi cho xem số liệu chạy bóng (§11.5). |
-| D12 | Giữ nguyên năm ngưỡng cứng H1 tới H5 (§11.1). |
+| D12 | Giữ nguyên năm giới hạn cứng H1 tới H5 (§11.1). |
 
 Cách hiểu cần xác nhận: "Codex" ở D3 được hiểu là API của OpenAI. Nếu chủ dự án muốn chạy chính công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống thì đó là phạm vi khác, ghi ở §19.
 
@@ -148,7 +148,7 @@ Danh mục ban đầu:
 | `bulletin.publish` | đăng bản tin AI | medium | manager | web, telegram | cần thêm trạng thái cho `bulletins` (§9) | auto |
 | `disease.inspection` | yêu cầu cán bộ kiểm tra một vùng | medium | officer, manager | web, telegram | thông báo có liên kết tới thửa | auto |
 | `staff.task.create` | giao việc cho nhân sự | medium | manager | web, telegram | app nhân sự (§9, đang phụ thuộc) | auto |
-| `agent.settings.update` | đổi cài đặt agent (ngưỡng, lịch) theo một đề xuất cải tiến | medium | manager | web, telegram | bảng `agent_settings` (§10.3) | auto, chỉ ngưỡng và lịch (H2) |
+| `agent.settings.update` | đổi cài đặt agent (ngưỡng, lịch) theo một đề xuất cải tiến | medium | manager | web, telegram | bảng `agent_settings` (§10.3) | auto, chỉ siết ngưỡng và đổi lịch; nới ngưỡng luôn cần người (§11.1) |
 | `strategy.adopt` | áp dụng kế hoạch mùa vụ của A11 | medium | manager | web, telegram | bảng `strategy_plans` (§10.6) | auto, chờ 48 giờ |
 | `app.spec.approve` | duyệt đặc tả của một mini-app do AI xây | medium | manager | web, telegram | A12 (§12.3) | auto |
 | `miniapp.install` | cài và bật một mini-app cho hợp tác xã | high | manager | web | `app-store/requests`, `./dxos worker` (§12.6) | unlockable |
@@ -333,12 +333,12 @@ Chế độ này là tuỳ chọn và mặc định tắt. Khi manager bật, c�
 
 ### 11.1 Bỏ qua gì, không bỏ qua gì
 
-Chế độ này chỉ bỏ **bước duyệt**. Năm ngưỡng cứng dưới đây giữ nguyên kể cả khi bật, và không có cài đặt nào mở được:
+Chế độ này chỉ bỏ **bước duyệt**. Năm giới hạn cứng dưới đây giữ nguyên kể cả khi bật, và không có cài đặt nào mở được:
 
-| # | Ngưỡng cứng | Lý do |
+| # | Giới hạn cứng | Lý do |
 |---|---|---|
 | H1 | Kiểm tra nghiệp vụ trong use case vẫn chạy: thời gian cách ly, luồng nhật ký, quy tắc lô và QR, giới hạn duyệt loạt | hành động tự chạy đi qua đúng use case như khi người làm, nên sai nghiệp vụ vẫn bị từ chối |
-| H2 | AI không tự mở rộng quyền của mình: không bật, tắt hay đổi chế độ này; không đổi danh mục, ngưỡng cứng, vai trò, khoá provider, ngân sách, chính sách dữ liệu, sổ audit | AI đổi được giới hạn của chính nó thì mọi giới hạn khác vô nghĩa |
+| H2 | AI không tự mở rộng quyền của mình: không bật, tắt hay đổi chế độ này; không đổi danh mục, giới hạn cứng, vai trò, khoá provider, ngân sách, chính sách dữ liệu, sổ audit | AI đổi được giới hạn của chính nó thì mọi giới hạn khác vô nghĩa |
 | H3 | AI không tự xác nhận kết quả của AI: duyệt báo cáo bệnh luôn do cán bộ | bước cán bộ xác nhận là lý do kết quả nhận diện bệnh đáng tin |
 | H4 | Không xoá dữ liệu: thành viên, thửa, đối tác, nhật ký | vận hành không cần xoá, và xoá không hoàn tác được |
 | H5 | Mọi hành động vẫn ghi audit và vẫn báo qua Telegram | có giám sát thì mới bỏ được bước duyệt |
@@ -353,6 +353,8 @@ Các loại sau mặc định vẫn cần người; manager mở từng loại l
 | cài, gỡ mini-app | — |
 
 Các loại còn lại (`autonomy: auto`) tự chạy ngay khi bật.
+
+Ở chế độ tự vận hành, đổi cài đặt agent chỉ được theo chiều siết: ngưỡng cảnh báo nhạy hơn, lịch chạy dày hơn hoặc dời giờ. Mọi thay đổi theo chiều nới (ngưỡng kém nhạy hơn, tắt một agent, chạy thưa hơn) luôn cần người duyệt, để AI không tự làm mình bớt bị soi.
 
 ### 11.2 Bật, dừng và tự dừng
 
@@ -455,7 +457,7 @@ Trượt cổng nào thì A12 sửa, tối đa 3 vòng; vẫn trượt thì dừ
 
 ### 12.7 Giới hạn riêng cho app do AI xây
 
-- App do AI xây không được khai hành động trong khối `agent` của `app.yaml`, chỉ được khai số liệu chỉ đọc. Nếu không, AI tự thêm được hành động vào danh mục của chính nó, trái ngưỡng cứng H2.
+- App do AI xây không được khai hành động trong khối `agent` của `app.yaml`, chỉ được khai số liệu chỉ đọc. Nếu không, AI tự thêm được hành động vào danh mục của chính nó, trái giới hạn cứng H2.
 - App do AI xây chạy trên mạng riêng, chỉ thấy `apisix` và `postgres`. Hiện mọi mini-app dùng chung `dxos-apps-net` và gọi thẳng được nhau (`docs/miniapps.md` §7).
 - Kho ứng dụng và trang chi tiết gắn nhãn "App do AI xây", kèm liên kết tới đặc tả và báo cáo kiểm tra.
 
@@ -596,7 +598,7 @@ Kiểm thử bắt buộc, ngoài test đơn vị:
 16. Gỡ mini-app thì hành động của nó biến khỏi danh mục, và đề xuất đang mở của nó chuyển `expired`.
 17. Mỗi cặp API và phương thức của web có mặt đúng một lần trong bảng §13.7 (test đọc danh sách route cùng phương thức và so với bảng).
 18. Bật chế độ tự vận hành, rồi cho agent đề xuất từng loại `never` và từng loại `unlockable` chưa mở: không loại nào tự chạy.
-19. Không hành động nào trong danh mục đổi được chế độ tự vận hành, ngưỡng cứng, danh mục, vai trò, khoá, ngân sách hay chính sách dữ liệu (H2).
+19. Không hành động nào trong danh mục đổi được chế độ tự vận hành, giới hạn cứng, danh mục, vai trò, khoá, ngân sách hay chính sách dữ liệu (H2).
 20. Bấm Chặn trong cửa sổ chặn thì không thực thi; bấm sau khi đã chạy thì nhận thông báo "đã chạy".
 21. Một cán bộ gõ `/dung`: chế độ dừng ngay, hành động đang chờ cửa sổ quay về chờ duyệt.
 22. Mỗi điều kiện tự dừng ở §11.2 và mỗi dấu hiệu phanh ở §11.4 kích hoạt đúng.
@@ -639,7 +641,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 | M9 | khối `agent` trong `app.yaml`; chiến dịch kinh doanh của `tea-shop`, `tea-tour`, `leaf-purchase` | một khuyến mãi của cửa hàng được đề xuất, duyệt và chạy; kiểm thử 16 qua |
 | M10 | agent A8 giao việc nhân sự | sau khi chốt cách nhận việc với app nhân sự |
 | M11 | định hướng phát triển A11 và `strategy.adopt`; mục tiêu vụ cho A9, A10 | một kế hoạch vụ được áp dụng, và chiến dịch ngày bám theo mục tiêu của kế hoạch đó |
-| M12 | chế độ tự vận hành: trường `autonomy`, ngưỡng cứng, bật và dừng, cửa sổ chặn, hạn mức, phanh, chạy bóng, nhãn minh bạch | kiểm thử 18–25 qua; có ít nhất 30 ngày số liệu chạy bóng trước khi bật ở một hợp tác xã thật |
+| M12 | chế độ tự vận hành: trường `autonomy`, giới hạn cứng, bật và dừng, cửa sổ chặn, hạn mức, phanh, chạy bóng, nhãn minh bạch | kiểm thử 18–25 qua; có ít nhất 30 ngày số liệu chạy bóng trước khi bật ở một hợp tác xã thật |
 | M13 | xưởng mini-app A12: `dxos-builder`, cổng kiểm tra, xem thử, cài riêng cho một hợp tác xã, mạng riêng cho app do AI xây | từ một câu yêu cầu trên Telegram, một app kho phân bón được xây, qua mọi cổng, được duyệt và chạy; kiểm thử 26–30 qua |
 
 ## 18. Tài liệu phải cập nhật cùng mã
@@ -651,7 +653,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 - `docs/miniapps.md`: khối `agent` trong `app.yaml` (§10.2).
 - `docs/miniapps.md`: app do AI xây (§12.7, §12.8); hướng dẫn gửi yêu cầu cho xưởng mini-app.
 - Hướng dẫn dùng bot cho từng vai trò (quản trị, cán bộ, nông hộ), tiếng Việt, có ảnh chụp màn hình.
-- `docs/rules-and-limits.md`: hai chế độ vận hành và năm ngưỡng cứng (§11.1); hướng dẫn bật, dừng và đọc báo cáo của chế độ tự vận hành.
+- `docs/rules-and-limits.md`: hai chế độ vận hành và năm giới hạn cứng (§11.1); hướng dẫn bật, dừng và đọc báo cáo của chế độ tự vận hành.
 
 ## 19. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
 
@@ -663,7 +665,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 6. Web của từng hợp tác xã có địa chỉ HTTPS công khai không? Không có thì không có Mini App (§13.6). Chốt trước M6.
 7. "Chiến dịch" ở D7 gồm cả chiến dịch sản xuất (§10.1) và chiến dịch kinh doanh qua mini-app (§10.2): đúng ý chủ dự án chưa? Chốt trước M7.
 
-Đã chốt ngày 2026-11-23: ý nghĩa của "Codex" và của "định hướng phát triển" (D10), các loại mở sẵn khi bật tự vận hành (D9), chế độ khi chấm thi (D11), năm ngưỡng cứng (D12).
+Đã chốt ngày 2026-11-23: ý nghĩa của "Codex" và của "định hướng phát triển" (D10), các loại mở sẵn khi bật tự vận hành (D9), chế độ khi chấm thi (D11), năm giới hạn cứng (D12).
 
 ## 20. Quy tắc làm việc trong repo
 
