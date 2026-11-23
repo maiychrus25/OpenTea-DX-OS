@@ -421,6 +421,8 @@ Lớp AI không thay hợp tác xã chịu trách nhiệm trước pháp luật.
 | Cảnh báo ngay | khi có đề xuất `high` hoặc sự cố | một dòng, kèm nút |
 | Kết quả | sau khi thực thi | sửa lại chính tin nhắn đề xuất thành "Đã được X duyệt, đã thực hiện", không gửi tin mới |
 | Sức khoẻ hệ thống | agent hoặc provider lỗi liên tiếp, chạm ngân sách, workflow n8n lỗi | xem §13 |
+| Sắp tự chạy | khi một hành động vào cửa sổ chặn (§11.3) | việc gì, chạy lúc nào, nút Chặn và Xem |
+| Tự vận hành | trong tóm tắt ngày, khi chế độ đang bật | số việc đã tự chạy, bị chặn, số lần phanh, chi phí (§11.6) |
 
 Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân (§8.3). Muốn xem chi tiết thì bấm liên kết sang web hoặc mở Mini App.
 
@@ -431,10 +433,11 @@ Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân
 - Từ chối: bot hỏi lý do, người dùng trả lời bằng một tin nhắn. Chưa có lý do thì chưa từ chối.
 - Sửa rồi duyệt làm trong Mini App.
 - Hành động `high` không duyệt bằng nút trong chat. Tin nhắn có nút mở đúng trang duyệt trong Mini App, và người duyệt xác nhận ở đó.
+- Ở chế độ tự vận hành, tin xin duyệt được thay bằng tin "Sẽ tự chạy" có nút Chặn (§11.3).
 
 ### 12.5 Hội thoại và thao tác
 
-- Người dùng nhắn tự do bằng tiếng Việt, có dấu hay không dấu, hoặc dùng lệnh: `/tomtat`, `/cho`, `/chiendich`, `/nhatky`, `/benh`, `/hoi`, `/menu` (mở Mini App), `/huy`.
+- Người dùng nhắn tự do bằng tiếng Việt, có dấu hay không dấu, hoặc dùng lệnh: `/tomtat`, `/cho`, `/chiendich`, `/nhatky`, `/benh`, `/hoi`, `/menu` (mở Mini App), `/huy`, `/tuvanhanh` (trạng thái chế độ tự vận hành), `/dung` (dừng chế độ tự vận hành ngay, §11.2).
 - Agent `assistant` hiểu câu chat và làm một trong hai việc:
   - **Trả lời** (phần đọc): gọi các công cụ đọc. Mỗi công cụ là một API GET sẵn có của web, chạy với quyền của người hỏi, nên nông hộ chỉ thấy dữ liệu của mình như trên web. Câu trả lời kèm nguồn.
   - **Thẻ xác nhận** (phần ghi): chọn một hành động `origins: user` trong danh mục và điền dữ liệu; web gửi một thẻ ghi rõ sẽ làm gì, trên đối tượng nào, với các trường nào. Thẻ có nút Xác nhận, Sửa (mở Mini App với form điền sẵn) và Huỷ, và hết hạn sau 10 phút. Không bấm Xác nhận thì không có gì xảy ra.
@@ -488,6 +491,8 @@ Nguyên tắc: lỗi ở lớp AI không bao giờ chặn việc người dùng 
 | Mini App không mở được (web không có địa chỉ công khai, hoặc web dừng) | bot báo lỗi; nếu thao tác có trong chat thì chỉ cách làm bằng chat | người dùng |
 | Trợ lý không hiểu câu chat | hỏi lại một lần, kèm gợi ý lệnh; vẫn không hiểu thì gợi ý `/menu` | người dùng |
 | A9 lỗi lúc 05:30 | thử lại lúc 06:30; vẫn lỗi thì gửi danh sách đề xuất đang mở thay cho chiến dịch, kèm ghi chú | manager |
+| Phanh bất thường kích hoạt (§11.4) | chế độ tự vận hành về duyệt thường; hành động đang chờ cửa sổ chặn quay về chờ duyệt | mọi manager và cán bộ, qua Telegram và web |
+| Nhịp `autopilot/tick` dừng | hành động đã đến giờ chưa chạy; không có gì chạy sai giờ; web báo sức khoẻ khi quá 5 phút không có nhịp | manager |
 
 ## 14. Đo chất lượng và kiểm thử
 
@@ -513,6 +518,14 @@ Kiểm thử bắt buộc, ngoài test đơn vị:
 15. Chiến dịch không chứa mục mâu thuẫn với luật cứng (phun trước mưa, giao quá số người, hái thửa đang cách ly), kiểm bằng bộ kịch bản.
 16. Gỡ mini-app thì hành động của nó biến khỏi danh mục, và đề xuất đang mở của nó chuyển `expired`.
 17. Mỗi cặp API và phương thức của web có mặt đúng một lần trong bảng §12.7 (test đọc danh sách route cùng phương thức và so với bảng).
+18. Bật chế độ tự vận hành, rồi cho agent đề xuất từng loại `never` và từng loại `unlockable` chưa mở: không loại nào tự chạy.
+19. Không hành động nào trong danh mục đổi được chế độ tự vận hành, ngưỡng cứng, danh mục, vai trò, khoá, ngân sách hay chính sách dữ liệu (H2).
+20. Bấm Chặn trong cửa sổ chặn thì không thực thi; bấm sau khi đã chạy thì nhận thông báo "đã chạy".
+21. Một cán bộ gõ `/dung`: chế độ dừng ngay, hành động đang chờ cửa sổ quay về chờ duyệt.
+22. Mỗi điều kiện tự dừng ở §11.2 và mỗi dấu hiệu phanh ở §11.4 kích hoạt đúng.
+23. Hành động tự chạy vẫn bị use case từ chối khi sai nghiệp vụ, ví dụ duyệt thu hoạch thửa chưa hết thời gian cách ly (H1).
+24. Audit ghi `autopilot:<agent>` và người đã bật cho mọi hành động tự chạy.
+25. Tỉ lệ khớp khi chạy bóng tính đúng trên bộ kịch bản.
 
 Smoke test đặt trong `platform/tests` theo mẫu sẵn có; hộp duyệt có test Playwright.
 
