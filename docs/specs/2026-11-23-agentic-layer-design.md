@@ -25,16 +25,16 @@ Lớp này coi là xong khi:
 | # | Quyết định |
 |---|---|
 | D1 | Luôn có người duyệt. Không có chế độ tự duyệt, kể cả với hành động rủi ro thấp. |
-| D2 | Làm đầy đủ các phần trong tài liệu này, theo thứ tự các mốc ở §14. |
+| D2 | Làm đầy đủ các phần trong tài liệu này, theo thứ tự các mốc ở §15. |
 | D3 | Được gọi provider bên ngoài: Anthropic (Claude) và OpenAI (Codex và các model GPT). Ollama nội bộ vẫn là mặc định. |
 | D4 | Telegram là kênh thứ hai, ngang hàng với web: nhận báo cáo, hỏi đáp, phê duyệt. |
 | D5 | Nhóm viết tài liệu, người khác xây. |
 
-Cách hiểu cần xác nhận: "Codex" ở D3 được hiểu là API của OpenAI. Nếu chủ dự án muốn chạy chính công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống thì đó là phạm vi khác, ghi ở §16.
+Cách hiểu cần xác nhận: "Codex" ở D3 được hiểu là API của OpenAI. Nếu chủ dự án muốn chạy chính công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống thì đó là phạm vi khác, ghi ở §17.
 
 ## 3. Hệ quả với quy tắc hiện hành
 
-Hai bất biến trong `docs/rules-and-limits.md` mâu thuẫn trực tiếp với D1 và D3. Sửa hai bất biến này là việc đầu tiên của mốc M0, cùng với ADR (§15).
+Hai bất biến trong `docs/rules-and-limits.md` mâu thuẫn trực tiếp với D1 và D3. Sửa hai bất biến này là việc đầu tiên của mốc M0, cùng với ADR (§16).
 
 | Bất biến hiện tại | Sửa thành |
 |---|---|
@@ -54,7 +54,7 @@ Chatbot hiện đã tự chuyển sang Groq khi có `GROQ_API_KEY`, tức là đ
 | Thông báo trong web và đẩy sang Mattermost | model `Notification`, `/api/notifications/announce`, `workflows/mattermost-push.json` | kênh web |
 | Duyệt nhật ký, duyệt thu hoạch, duyệt bệnh | `/api/journal/batch-approve`, `/api/parcels/[id]/approve-harvest`, `/api/officer/diseases/[id]/review` | hành động trong danh mục |
 | Bản tin AI lúc 04:00 | `workflows/bulletin-synthesis.json`, bảng `bulletins` | agent bản tin (§9) |
-| Bảng điều hành HTX | `miniapps/htx-dashboard` | chỉ số cho báo cáo; tab chỉ số của lớp AI (§12) |
+| Bảng điều hành HTX | `miniapps/htx-dashboard` | chỉ số cho báo cáo; tab chỉ số của lớp AI (§13) |
 | Khuôn dịch vụ Python của lõi | `platform/dataops`, `platform/scanner` (gói `dxos_*`, Dockerfile, requirements, tests) | khuôn cho hai dịch vụ mới |
 | Gói `openai` trong web | `apps/web/package.json` | chatbot hiện tại |
 
@@ -88,7 +88,7 @@ Lý do tách ba vùng: phần gọi LLM là phần dễ bị dụ, vì nó đọ
 | Người duyệt | tài khoản Keycloak sẵn có | duyệt đúng loại hành động mà vai trò của mình được phép (§6) |
 
 - Hasura có thêm vai `agent`: chỉ được `select`, cùng bộ lọc `htx_code` như `manager`, và **không thấy cột cá nhân**: `households.name`, `households.phone`, `households.address`, cùng các cột tương tự ở bảng khác. Agent nhắc tới nông hộ bằng mã (`id`). Khi hiện cho người duyệt, web thay mã bằng tên.
-- Mỗi hợp tác xã một client, để token của agent không đọc được dữ liệu của hợp tác xã khác (Hasura lấy `htx_code` từ token). Client được tạo khi hợp tác xã bật lớp AI (§13).
+- Mỗi hợp tác xã một client, để token của agent không đọc được dữ liệu của hợp tác xã khác (Hasura lấy `htx_code` từ token). Client được tạo khi hợp tác xã bật lớp AI (§14).
 - `/api/internal/*` chỉ mở trong mạng Docker, không đi qua gateway công khai. Web kiểm token và kiểm đúng client: client agent không gọi được API của Telegram và ngược lại.
 
 ### 5.3 Vì sao không chạy agent trong n8n hay trong web
@@ -142,7 +142,7 @@ Các bảng nằm trong schema `platform` và có cùng trigger audit như các 
 | `agent_runs` | `id`, `htx_code`, `agent`, `trigger` (`schedule`, `event`, `manual`), `started_at`, `finished_at`, `status` (`ok`, `failed`, `skipped`), `provider`, `model`, `tokens_in`, `tokens_out`, `cost_estimate`, `error` |
 | `agent_proposals` | `id`, `htx_code`, `run_id`, `kind`, `payload`, `reason_vi`, `evidence` (nguồn: bảng, mã dòng, giá trị, thời điểm), `risk`, `status`, `created_at`, `expires_at`, `decided_by`, `decided_at`, `decision_channel`, `decision_note`, `edited_payload`, `executed_at`, `result`, `dedupe_key` |
 | `agent_settings` | `htx_code`, `agent`, `enabled`, `schedule`, `provider`, `thresholds`, `monthly_budget` |
-| `telegram_links`, `telegram_outbox` | §10 |
+| `telegram_links`, `telegram_outbox` | §11 |
 
 ### 7.2 Trạng thái
 
@@ -154,7 +154,7 @@ proposed ──duyệt──▶ approved ──thực thi──▶ executed
    └──dữ liệu gốc đã đổi (kiểm lúc duyệt)──▶ stale
 ```
 
-- Từ chối bắt buộc có lý do. Lý do được lưu để đo chất lượng agent (§12) và đưa vào ngữ cảnh lượt sau, để agent không đề xuất lại y hệt.
+- Từ chối bắt buộc có lý do. Lý do được lưu để đo chất lượng agent (§13) và đưa vào ngữ cảnh lượt sau, để agent không đề xuất lại y hệt.
 - `dedupe_key`: cùng hợp tác xã, cùng `kind`, cùng đối tượng thì không tạo đề xuất mới khi đề xuất cũ còn mở.
 - Quyền được kiểm **lúc bấm duyệt** theo vai trò hiện tại trong token, không phải lúc agent đề xuất.
 - Thực thi chạy ngay sau khi duyệt, trong web, dưới danh nghĩa người duyệt. Audit ghi `actor` là người duyệt, kèm `proposal_id` và tên agent.
@@ -201,7 +201,7 @@ Một giao diện chung và ba adapter:
 
 ### 8.4 Mô hình nội bộ
 
-- `qwen2.5:0.5b` không đủ. Người làm đo trên máy 16 GB của nhóm bằng bộ kịch bản ở §12, rồi chọn model nhỏ nhất đạt ngưỡng.
+- `qwen2.5:0.5b` không đủ. Người làm đo trên máy 16 GB của nhóm bằng bộ kịch bản ở §13, rồi chọn model nhỏ nhất đạt ngưỡng.
 - Kiểm giấy phép từng kích cỡ trước khi chọn: không phải kích cỡ nào của một họ model cũng dùng giấy phép OSI. Ví dụ bản 3B của Qwen2.5 có giấy phép riêng. Tránh các model có giấy phép không thuộc OSI.
 - Model tải về lúc cài, không commit; ghi vào `DEPENDENCIES.md` kèm giấy phép.
 - Thứ tự dự phòng: provider đã chọn, rồi Ollama, rồi luật cứng (nếu agent có), cuối cùng là bỏ lượt.
@@ -217,23 +217,23 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 | A3 `disease-watch` Dịch bệnh | báo cáo bệnh đã và chưa xác nhận, vị trí thửa | nhiều báo cáo cùng một bệnh trong một bán kính, trong một tuần | `disease.inspection`, `notification.households` | mỗi ngày, và khi có báo cáo mới |
 | A4 `harvest-ready` Thu hoạch | thửa, chu kỳ cây trồng, nhật ký phun | thửa đã qua thời gian cách ly và đến kỳ hái | `harvest.approve` | mỗi sáng |
 | A5 `bulletin` Bản tin | như workflow bản tin hiện tại | — | `bulletin.publish` | thay workflow `bulletin-synthesis`; tắt workflow cũ khi agent chạy ổn |
-| A6 `digest` Báo cáo | chỉ số của bảng điều hành, đề xuất đang mở, lỗi hệ thống | — | không đề xuất; gửi báo cáo (§10.3) | hằng ngày và hằng tuần |
-| A7 `assistant` Hỏi đáp | như A6, cộng phần dữ liệu được hỏi | — | không đề xuất; trả lời kèm nguồn (§10.5) | khi có câu hỏi |
+| A6 `digest` Báo cáo | chỉ số của bảng điều hành, đề xuất đang mở, lỗi hệ thống | — | không đề xuất; gửi báo cáo (§11.3) | hằng ngày và hằng tuần |
+| A7 `assistant` Hỏi đáp | như A6, cộng phần dữ liệu được hỏi | — | không đề xuất; trả lời kèm nguồn (§11.5) | khi có câu hỏi |
 | A8 `staff-tasks` Giao việc nhân sự | lịch canh tác, đề xuất đã duyệt của A2 tới A4, danh sách nhân sự | việc cần người làm | `staff.task.create`; agent gợi ý người nhận, manager sửa được | mỗi sáng |
 
 - Các ngưỡng (6 giờ, bán kính, số báo cáo) là cấu hình theo hợp tác xã. Giá trị mặc định ghi trong mã và trong `rules-and-limits.md`.
 - **Bản tin:** thêm cột `status` (`draft`, `published`, `rejected`) cho bảng `bulletins`. Trang công khai chỉ đọc bản `published`. Thay đổi bảng đi theo luồng migration hiện có của web.
-- **A8 đang phụ thuộc app nhân sự** (`apps/staff-desktop`, `apps/staff-mobile`). App này dùng cơ sở dữ liệu riêng (SQLite trên máy chủ HTX, hoặc schema `app_staff_work`). Cần app nhân sự cung cấp một cách nhận việc từ bên ngoài; chốt với người phụ trách app trước khi làm (§16). Đến lúc đó, `staff.task.create` để ở trạng thái chưa bật.
+- **A8 đang phụ thuộc app nhân sự** (`apps/staff-desktop`, `apps/staff-mobile`). App này dùng cơ sở dữ liệu riêng (SQLite trên máy chủ HTX, hoặc schema `app_staff_work`). Cần app nhân sự cung cấp một cách nhận việc từ bên ngoài; chốt với người phụ trách app trước khi làm (§17). Đến lúc đó, `staff.task.create` để ở trạng thái chưa bật.
 
-## 10. Telegram
+## 11. Telegram
 
-### 10.1 Cách kết nối
+### 11.1 Cách kết nối
 
 - Mỗi bản cài DX-OS có một bot (không phải mỗi hợp tác xã một bot). Người vận hành tạo bot qua BotFather và đặt token vào biến môi trường của `dxos-telegram`.
 - Mặc định dùng **long polling** (`getUpdates`), nên chạy được cả ở hợp tác xã không có địa chỉ công khai. Webhook là tuỳ chọn; khi dùng webhook phải đặt `secret_token` và kiểm header `X-Telegram-Bot-Api-Secret-Token`.
 - Gọi thẳng Bot API qua HTTP, không thêm thư viện bot.
 
-### 10.2 Liên kết tài khoản
+### 11.2 Liên kết tài khoản
 
 1. Người dùng vào web, mở Hồ sơ, bấm "Kết nối Telegram". Web tạo một mã dùng một lần, hết hạn sau 10 phút, và hiện liên kết `https://t.me/<bot>?start=<mã>`.
 2. Người dùng mở liên kết và bấm Start. `dxos-telegram` gửi mã cùng `telegram_user_id` về web; web gắn Telegram vào tài khoản Keycloak.
@@ -243,7 +243,7 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 - Nông hộ (`farmer`) liên kết để nhận thông báo của chính mình; không hỏi đáp, không duyệt.
 - Manager có thể gắn một nhóm Telegram của hợp tác xã để nhận báo cáo. **Không duyệt trong nhóm**: duyệt cần danh tính của từng người, nên chỉ làm trong chat riêng.
 
-### 10.3 Báo cáo
+### 11.3 Báo cáo
 
 | Loại | Khi nào | Nội dung |
 |---|---|---|
@@ -251,11 +251,11 @@ Nguyên tắc: luật cứng quyết định "có vấn đề hay không", để
 | Tóm tắt tuần | thứ Hai, 07:00 | xu hướng trong tuần, so với tuần trước |
 | Cảnh báo ngay | khi có đề xuất `high` hoặc sự cố | một dòng, kèm nút |
 | Kết quả | sau khi thực thi | sửa lại chính tin nhắn đề xuất thành "Đã được X duyệt, đã thực hiện", không gửi tin mới |
-| Sức khoẻ hệ thống | agent hoặc provider lỗi liên tiếp, chạm ngân sách, workflow n8n lỗi | xem §11 |
+| Sức khoẻ hệ thống | agent hoặc provider lỗi liên tiếp, chạm ngân sách, workflow n8n lỗi | xem §12 |
 
 Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân (§8.3). Muốn xem chi tiết thì bấm liên kết sang web.
 
-### 10.4 Duyệt qua Telegram
+### 11.4 Duyệt qua Telegram
 
 - Đề xuất có `telegram` trong `channels` được gửi tới những người đã liên kết và có vai trò được duyệt, kèm các nút Duyệt, Từ chối và Mở trên web.
 - `callback_data` chỉ chứa mã đề xuất rút gọn, quyết định, và chữ ký HMAC do web tạo; tất cả nằm trong giới hạn 64 byte của Telegram. Web kiểm chữ ký, rồi kiểm người bấm còn đủ quyền ở thời điểm bấm.
@@ -263,18 +263,18 @@ Tin nhắn ngắn, tiếng Việt có dấu, không chứa dữ liệu cá nhân
 - Sửa rồi duyệt chỉ làm trên web.
 - Hành động `high` chỉ có nút "Mở trên web".
 
-### 10.5 Hỏi đáp
+### 11.5 Hỏi đáp
 
 - Lệnh `/tomtat` (tóm tắt hôm nay), `/cho` (đề xuất đang chờ), `/hoi <câu hỏi>`, hoặc nhắn câu hỏi thẳng.
 - Đường đi của câu hỏi: Telegram, `dxos-telegram`, web (kiểm người, vai trò, giới hạn tần suất), agent `assistant` trong `dxos-agent`; câu trả lời đi theo đường ngược lại.
 - Câu trả lời theo bất biến §1.1 của `rules-and-limits.md`: chỉ sự thật lấy từ dữ liệu, kèm nguồn. Câu hỏi không tự sinh ra đề xuất; người hỏi muốn làm gì thì vào web.
 - Chỉ `manager` và `officer` được hỏi; mỗi người tối đa 20 câu mỗi giờ.
 
-### 10.6 Kênh khác
+### 11.6 Kênh khác
 
-Mattermost giữ nguyên như hiện tại. Có cần thêm Zalo hay không là điểm còn mở (§16).
+Mattermost giữ nguyên như hiện tại. Có cần thêm Zalo hay không là điểm còn mở (§17).
 
-## 11. Khi một thành phần lỗi
+## 12. Khi một thành phần lỗi
 
 Nguyên tắc: lỗi ở lớp AI không bao giờ chặn việc người dùng làm trực tiếp trên web.
 
@@ -291,7 +291,7 @@ Nguyên tắc: lỗi ở lớp AI không bao giờ chặn việc người dùng 
 | Dữ liệu gốc đổi trước khi duyệt | chuyển `stale`, không thực thi | người duyệt thấy ngay |
 | Workflow n8n lỗi | nối `errorWorkflow` của 12 workflow vào một workflow báo lỗi chung, đẩy vào báo cáo sức khoẻ. Hiện cả 12 workflow có nút bắt lỗi nhưng chưa đặt `errorWorkflow`, nên theo tệp JSON thì nút này không bao giờ chạy. | Telegram và web |
 
-## 12. Đo chất lượng và kiểm thử
+## 13. Đo chất lượng và kiểm thử
 
 - Bộ kịch bản `platform/agent/tests/scenarios/`: dữ liệu mẫu (dựa trên câu chuyện lô A3) cùng đề xuất mong đợi. Trong CI chạy với provider giả; khi chọn model thì chạy với Ollama thật.
 - Chỉ số của từng agent: tỉ lệ được duyệt, tỉ lệ bị từ chối theo từng lý do, thời gian chờ duyệt, số lượt lỗi, chi phí. Các chỉ số này hiện ở một tab mới của `htx-dashboard`, đọc qua Hasura như các tab khác.
@@ -310,7 +310,7 @@ Kiểm thử bắt buộc, ngoài test đơn vị:
 
 Smoke test đặt trong `platform/tests` theo mẫu sẵn có; hộp duyệt có test Playwright.
 
-## 13. Triển khai và vận hành
+## 14. Triển khai và vận hành
 
 - Hai dịch vụ mới trong `docker/docker-compose.yml`: ảnh ghim phiên bản, có healthcheck, giới hạn bộ nhớ, theo mẫu `platform/dataops`.
 - Lệnh `./dxos agent enable <htx>` và `./dxos agent disable <htx>`: tạo hoặc xoá client Keycloak `dxos-agent-<htx>`, bật cài đặt mặc định.
@@ -318,28 +318,28 @@ Smoke test đặt trong `platform/tests` theo mẫu sẵn có; hộp duyệt có
 - Workflow release dựng thêm hai ảnh mới.
 - Công tắc khẩn: manager tắt được lớp AI của hợp tác xã mình, người vận hành tắt được toàn hệ thống, đều từ web. Khi tắt, đề xuất đang mở chuyển `expired`.
 
-## 14. Các mốc
+## 15. Các mốc
 
 Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và tài liệu.
 
 | Mốc | Nội dung | Xong khi |
 |---|---|---|
 | M0 | sửa hai bất biến ở §3; viết ADR; dựng khung `platform/agent` và `platform/telegram` (chạy được, chưa làm gì) | PR tài liệu được duyệt; hai dịch vụ lên được trong compose |
-| M1 | danh mục, bảng, trạng thái, API nội bộ, thực thi, audit; hộp duyệt web; vai `agent` trên Hasura và client Keycloak; provider `ollama`; agent A1 | một nhật ký sai thời gian cách ly được đề xuất trả lại và được duyệt trên web; các kiểm thử 1–7 ở §12 qua |
+| M1 | danh mục, bảng, trạng thái, API nội bộ, thực thi, audit; hộp duyệt web; vai `agent` trên Hasura và client Keycloak; provider `ollama`; agent A1 | một nhật ký sai thời gian cách ly được đề xuất trả lại và được duyệt trên web; các kiểm thử 1–7 ở §13 qua |
 | M2 | Telegram: liên kết tài khoản, hộp thư đi, báo cáo ngày và tuần (A6), duyệt qua Telegram | chủ dự án nhận tóm tắt ngày và duyệt được đề xuất của A1 trên điện thoại |
 | M3 | provider `anthropic` và `openai`; chính sách dữ liệu; ngân sách; dự phòng | đổi provider cho từng agent trên web; cắt mạng ra ngoài vẫn chạy; kiểm thử 8–9 qua |
-| M4 | agent A2, A3, A4, A5, kèm trạng thái cho bản tin | mỗi agent có kịch bản trong bộ thử ở §12 |
+| M4 | agent A2, A3, A4, A5, kèm trạng thái cho bản tin | mỗi agent có kịch bản trong bộ thử ở §13 |
 | M5 | hỏi đáp A7 qua Telegram; tab chỉ số trên `htx-dashboard`; nối báo lỗi n8n | hỏi một câu trên Telegram và nhận câu trả lời kèm nguồn |
 | M6 | agent A8 giao việc nhân sự | sau khi chốt cách nhận việc với app nhân sự |
 
-## 15. Tài liệu phải cập nhật cùng mã
+## 16. Tài liệu phải cập nhật cùng mã
 
 - `docs/rules-and-limits.md`: sửa §1.1 và §1.2; thêm giới hạn của lớp AI (số đề xuất, hỏi đáp, ngân sách).
 - ADR `0003-agentic-layer` (ba vùng tin cậy, luôn có người duyệt) và ADR `0004-external-llm-providers` (tuỳ chọn, chính sách dữ liệu, khoá).
 - `docs/api-contract.md` (API nội bộ), `docs/database-schema.md` (bảng mới), `DEPENDENCIES.md` (SDK, model), `CHANGELOG.md`, một mục ngắn trong README. Trang tài liệu của site tự lấy từ `docs/`.
 - Ghi chú quyền riêng tư: dữ liệu nào đi tới Telegram và tới provider ngoài.
 
-## 16. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
+## 17. Điểm còn mở (cần chủ dự án chốt trước mốc liên quan)
 
 1. "Codex" là API của OpenAI như §8 (cách hiểu hiện tại), hay là chạy công cụ Codex CLI hoặc Claude Code như một tác tử làm việc trên hệ thống? Cách sau là phạm vi khác. Chốt trước M3.
 2. Một bộ khoá provider cho cả bản cài (như §8.2), hay mỗi hợp tác xã tự nhập khoá của mình? Chốt trước M3.
@@ -347,7 +347,7 @@ Mỗi mốc là một hoặc vài PR, chạy được độc lập, có test và
 4. Có cần Zalo ngoài Telegram không? Chốt sau M2.
 5. Ai làm từng mốc.
 
-## 17. Quy tắc làm việc trong repo
+## 18. Quy tắc làm việc trong repo
 
 Theo `AGENTS.md`:
 
