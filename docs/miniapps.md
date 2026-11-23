@@ -8,6 +8,7 @@ Mini-app là một dịch vụ riêng (container, schema Postgres, route gateway
 
 Các app mẫu trong repo:
 - [`miniapps/hello`](../miniapps/hello/README.md): khoảng 80 dòng Python, chỉ dùng thư viện chuẩn, không có database. Nên đọc trước.
+- [`miniapps/hub-mobile`](../miniapps/hub-mobile/README.md): trang tải app OpenTea trên điện thoại (APK Android, thêm bản web vào màn hình chính trên iPhone); chỉ hiển thị liên kết, không lưu dữ liệu.
 - [`miniapps/tea-tour`](../miniapps/tea-tour/): FastAPI và Jinja2, có database, route công khai và route theo vai trò.
 - Ba app nghiệp vụ cùng khuôn với `tea-tour` (mỗi app có README riêng): [`miniapps/leaf-purchase`](../miniapps/leaf-purchase/README.md) (thu mua búp tươi, route theo ba vai trò, đọc nông hộ qua Hasura bằng token của người gọi), [`miniapps/tea-shop`](../miniapps/tea-shop/README.md) (cửa hàng, đặt hàng công khai, tồn kho) và [`miniapps/farm-supply`](../miniapps/farm-supply/README.md) (đợt mua chung vật tư).
 - [`miniapps/htx-dashboard`](../miniapps/htx-dashboard/README.md): app chỉ đọc, **không có database** (xem "App chỉ đọc không database" ở §5): đọc số liệu của HTX từ lõi qua Hasura bằng token của người gọi và vẽ biểu đồ bằng SVG dựng ở server.

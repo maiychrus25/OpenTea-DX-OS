@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+apiVersion: dxos/v1
+id: hub-mobile
+name: OpenTea trên điện thoại
+description: Tải app OpenTea cho khách, nông dân, trưởng HTX và hướng dẫn viên; có hướng dẫn cài trên Android và iPhone.
+version: 0.1.0
+license: MIT
+publisher: OpenTea Developers
+requires: { core: ">=1.10.0" }
+runtime:
+  build: .
+  port: 8080
+  health: /healthz
+routes:
+  public: [/public/]
+  protected:
+    /: [farmer, officer, manager]
+menu:
+  - { label: App điện thoại, path: /, roles: [farmer, officer, manager] }
+store:
+  category: sample
+  icon: sparkles
+  about: |
+    Trang tải và cài app OpenTea trên điện thoại. Một app dùng cho nhiều vai trò: khách du lịch, người mua, nông dân, trưởng HTX, cán bộ HTX và hướng dẫn viên; mỗi người thấy đúng phần việc của mình sau khi đăng nhập.
+
+    Trang có nút tải bản Android (APK) và hướng dẫn thêm bản web vào màn hình chính trên iPhone. HTX có thể gửi đường dẫn công khai của trang này cho khách và nông hộ.
+
+    Ứng dụng này chỉ hiển thị liên kết, không lưu và không đọc dữ liệu nào của HTX.
