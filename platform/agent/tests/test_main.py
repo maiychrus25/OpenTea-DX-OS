@@ -114,7 +114,11 @@ class FakeHasuraGateway:
         del query, variables
         return {"journal_entries": self.entries}
 
-    def heartbeat(self, version):
+    def get_settings(self):
+        return {}
+
+    def heartbeat(self, version, providers):
+        del providers
         self.heartbeats.append(version)
 
     def start_run(self, **kwargs):
@@ -221,16 +225,18 @@ def test_rate_limited_cooperative_keeps_rule_proposals_never_sleeps_and_heartbea
         urlopen_calls.append(req.full_url)
         raise urllib.error.HTTPError(req.full_url, 429, "Too Many Requests", email.message.Message(), io.BytesIO(b""))
 
-    def build_provider(_cfg, token_client):
+    def build_providers(_cfg, token_client):
         del token_client
-        return OllamaProvider(
-            gateway_url=cfg.gateway_url,
-            token_provider=lambda: "token",
-            sleep_fn=sleeps.append,
-            urlopen_fn=always_429,
-        )
+        return {
+            "ollama": OllamaProvider(
+                gateway_url=cfg.gateway_url,
+                token_provider=lambda: "token",
+                sleep_fn=sleeps.append,
+                urlopen_fn=always_429,
+            )
+        }
 
-    monkeypatch.setattr(agent_main, "_build_provider", build_provider)
+    monkeypatch.setattr(agent_main, "_build_providers", build_providers)
     stop = _RoundsStop(rounds=2, on_wait=lambda: gateway.entries.append(_flagged_entry("je_2")))
     monkeypatch.setattr(agent_main.signal, "signal", lambda *a: None)
     monkeypatch.setenv("DXOS_AGENT_ENV_DIR", str(cfg.env_dir))

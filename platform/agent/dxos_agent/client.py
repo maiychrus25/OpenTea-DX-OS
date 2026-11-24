@@ -6,7 +6,7 @@ import json
 import logging
 from pathlib import Path
 import time
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Sequence
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -182,16 +182,23 @@ class CoreGatewayClient:
         )
         return str(res["data"]["id"])
 
+    def get_settings(self) -> dict[str, Any]:
+        """Read this cooperative's agent settings (contract C1); the `data` object of the answer."""
+        return dict(self._request_json("GET", "/api/internal/agent/settings").get("data") or {})
+
     def finish_run(
         self,
         run_id: str,
         status: str,
         tokens_in: int = 0,
         tokens_out: int = 0,
-        cost_estimate: float = 0.0,
+        cost_estimate_usd: float = 0.0,
         error: str | None = None,
+        provider: str | None = None,
+        model: str | None = None,
+        external_calls: int = 0,
     ) -> None:
-        """Complete an active agent run record."""
+        """Complete an active agent run record with the provider that produced its output (contract C2)."""
         self._request_json(
             "PATCH",
             f"/api/internal/agent/runs/{run_id}",
@@ -199,7 +206,10 @@ class CoreGatewayClient:
                 "status": status,
                 "tokens_in": tokens_in,
                 "tokens_out": tokens_out,
-                "cost_estimate": cost_estimate,
+                "cost_estimate_usd": cost_estimate_usd,
+                "external_calls": external_calls,
+                "provider": provider,
+                "model": model,
                 "error": error,
             },
         )
@@ -213,6 +223,10 @@ class CoreGatewayClient:
         """Hand a digest report (C5 figures) to the web, which renders and queues it."""
         self._request_json("POST", "/api/internal/agent/reports", report)
 
-    def heartbeat(self, version: str) -> None:
-        """Tell the web this agent is alive, for the health alerts."""
-        self._request_json("POST", "/api/internal/agent/heartbeat", {"version": version})
+    def heartbeat(self, version: str, providers: Sequence[str]) -> None:
+        """Tell the web this agent is alive and which LLM providers its keys allow (contract C3)."""
+        self._request_json(
+            "POST",
+            "/api/internal/agent/heartbeat",
+            {"version": version, "providers": list(providers)},
+        )

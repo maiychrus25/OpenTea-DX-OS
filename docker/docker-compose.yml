@@ -128,6 +128,9 @@ services:
     # Supplies HASURA_GRAPHQL_ADMIN_SECRET; Hasura refuses to start with a JWT secret but no admin secret.
     env_file: .env.local
     environment:
+      # env_file loads .env.local into this service; the provider keys belong to dxos-agent only (ADR 0004)
+      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
       HASURA_GRAPHQL_DATABASE_URL: postgres://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
       HASURA_GRAPHQL_ENABLE_CONSOLE: "false"
       HASURA_GRAPHQL_DEV_MODE: "false"
@@ -153,6 +156,9 @@ services:
     restart: always
     env_file: .env.local
     environment:
+      # env_file loads .env.local into this service; the provider keys belong to dxos-agent only (ADR 0004)
+      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
       # Internal URL cho token/userinfo exchange (container-to-container)
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/realms/agrimarket
       KEYCLOAK_ISSUER: ${KC_PUBLIC_ISSUER:-http://localhost:8080/realms/agrimarket}
@@ -191,6 +197,9 @@ services:
     restart: always
     env_file: .env.local
     environment:
+      # env_file loads .env.local into this service; the provider keys belong to dxos-agent only (ADR 0004)
+      - ANTHROPIC_API_KEY=
+      - OPENAI_API_KEY=
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
@@ -318,6 +327,10 @@ services:
     restart: always
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
     env_file: .env.local
+    environment:
+      # env_file loads .env.local into this service; the provider keys belong to dxos-agent only (ADR 0004)
+      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
     volumes:
       - ../platform/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - ../platform/mosquitto/acl:/mosquitto/config/acl:ro
@@ -340,6 +353,9 @@ services:
     command: ["python", "-m", "dxos_dataops", "ingest"]
     env_file: .env.local
     environment:
+      # env_file loads .env.local into this service; the provider keys belong to dxos-agent only (ADR 0004)
+      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
       DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
     healthcheck:
       # Healthy while the heartbeat (touched per message and every 30 s while connected) is younger than 90 s.
@@ -395,6 +411,9 @@ services:
     command: ["python", "-m", "dxos_dataops", "simulate"]
     env_file: .env.local
     environment:
+      # env_file loads .env.local into this service; the provider keys belong to dxos-agent only (ADR 0004)
+      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
       DXOS_DB_URL: postgresql://${POSTGRES_USER:-agrimarket}:${POSTGRES_PASSWORD:-your_password_here}@postgres:5432/agrimarket
     depends_on:
       postgres:
@@ -423,6 +442,13 @@ services:
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/realms/agrimarket
       DXOS_AGENT_ENV_DIR: /run/dxos-agent
       DXOS_LLM_MODEL: ${DXOS_LLM_MODEL:-qwen2.5:0.5b}
+      # External LLM providers (ADR 0004). The keys exist only in this container; empty keys leave every agent on Ollama.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_BASE: ${ANTHROPIC_API_BASE:-https://api.anthropic.com}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-https://api.openai.com}
+      DXOS_ANTHROPIC_MODEL: ${DXOS_ANTHROPIC_MODEL:-claude-haiku-5-5}
+      DXOS_OPENAI_MODEL: ${DXOS_OPENAI_MODEL:-}
     volumes:
       - dxos-agent-env:/run/dxos-agent:ro
     healthcheck:
@@ -502,6 +528,27 @@ services:
     command: ["python", "-m", "dxos_telegram.stub_bot_api"]
     ports:
       - "127.0.0.1:8081:8081"
+    networks:
+      - agrimarket-net
+
+  # Test-only stand-in for the Anthropic and OpenAI APIs (platform/tests/stub_llm.py). The agentic smoke points dxos-agent
+  # at it with ANTHROPIC_API_BASE; it is never in the release bundle.
+  llm-test-stub:
+    image: python:3.12.15-slim-bookworm
+    profiles: ["llm-test"]
+    restart: "no"
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    user: "65534:65534"
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ../platform/tests/stub_llm.py:/app/stub_llm.py:ro
+    command: ["python", "-u", "/app/stub_llm.py"]
+    ports:
+      - "127.0.0.1:8082:8082"
     networks:
       - agrimarket-net
 

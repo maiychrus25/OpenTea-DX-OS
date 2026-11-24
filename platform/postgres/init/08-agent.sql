@@ -72,6 +72,9 @@ CREATE TABLE IF NOT EXISTS platform.agent_settings (
   PRIMARY KEY (htx_code, agent)
 );
 
+-- Model chosen by the manager for an external provider (M3); null means the provider's default.
+ALTER TABLE platform.agent_settings ADD COLUMN IF NOT EXISTS model text;
+
 CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.agent_runs
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
 CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.agent_proposals

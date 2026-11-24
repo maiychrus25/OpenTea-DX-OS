@@ -17,7 +17,8 @@ from ..evidence import (
     journal_entry_evidence_row,
     sha256_hex,
 )
-from ..providers.base import LLMMessage, LLMProvider, ProviderError
+from ..providers.base import LLMMessage, LLMProvider, LLMResult, ProviderError
+from ..providers.pricing import estimate_cost_usd
 
 log = logging.getLogger("dxos_agent")
 
@@ -357,6 +358,37 @@ def _approve_reason_vi(batch: Sequence[Mapping[str, Any]]) -> str:
     return " ".join(lines)
 
 
+@dataclass
+class _LlmUsage:
+    """What the run reports on finish: the provider and model that produced its output, and their cost."""
+
+    provider: str
+    model: str
+    tokens_in: int = 0
+    tokens_out: int = 0
+    cost_estimate_usd: float = 0.0
+
+
+def _external_requests(chain: Sequence[LLMProvider]) -> int:
+    return sum(getattr(provider, "requests_sent", 0) for provider in chain if provider.external)
+
+
+def _complete_with_fallback(
+    chain: Sequence[LLMProvider],
+    messages: Sequence[LLMMessage],
+) -> tuple[LLMProvider, LLMResult]:
+    """Try each provider in order; the last ProviderError is raised when all of them fail."""
+    last_error: ProviderError | None = None
+    for candidate in chain:
+        try:
+            return candidate, candidate.complete_json(messages, JOURNAL_REVIEW_LLM_SCHEMA)
+        except ProviderError as exc:
+            log.warning("A1 provider %s unavailable: %s", candidate.name, type(exc).__name__)
+            last_error = exc
+    assert last_error is not None
+    raise last_error
+
+
 def run_journal_review(
     gateway: CoreGatewayClient,
     provider: LLMProvider,
@@ -364,8 +396,12 @@ def run_journal_review(
     thresholds: Mapping[str, Any] | None = None,
     now: datetime | None = None,
     entries: Sequence[Mapping[str, Any]] | None = None,
+    fallback: LLMProvider | None = None,
 ) -> JournalReviewOutcome:
-    """Execute one A1 `journal-review` cycle; `entries` is the pending queue when the caller already read it."""
+    """Execute one A1 `journal-review` cycle; `entries` is the pending queue when the caller already read it.
+
+    `provider` is the one the cooperative chose; `fallback` (Ollama when `provider` is external) is tried next.
+    """
     if entries is None:
         entries = fetch_pending_entries(gateway)
     if not entries:
@@ -381,6 +417,9 @@ def run_journal_review(
             used_llm=False,
         )
 
+    chain = [provider] if fallback is None else [provider, fallback]
+    external_before = _external_requests(chain)
+    usage = _LlmUsage(provider=provider.name, model=provider.model)
     run_id = gateway.start_run(
         agent=AGENT_NAME,
         trigger=trigger,
@@ -389,6 +428,19 @@ def run_journal_review(
         prompt_version=PROMPT_VERSION,
         input_hash=pending_evidence_hash(entries),
     )
+
+    def finish(status: str, error: str | None = None) -> None:
+        gateway.finish_run(
+            run_id,
+            status=status,
+            tokens_in=usage.tokens_in,
+            tokens_out=usage.tokens_out,
+            cost_estimate_usd=usage.cost_estimate_usd,
+            error=error,
+            provider=usage.provider,
+            model=usage.model,
+            external_calls=_external_requests(chain) - external_before,
+        )
 
     rejected: list[tuple[Mapping[str, Any], RuleViolation]] = []
     clean: list[Mapping[str, Any]] = []
@@ -407,19 +459,26 @@ def run_journal_review(
                 clean.append(entry)
 
         llm_reasons: dict[str, Any] = {}
-        tokens_in = 0
-        tokens_out = 0
         used_llm = False
         if rejected:
             try:
-                llm_res = provider.complete_json(_build_llm_messages(rejected), JOURNAL_REVIEW_LLM_SCHEMA)
+                used, llm_res = _complete_with_fallback(chain, _build_llm_messages(rejected))
                 llm_reasons = dict(llm_res.data.get("reject_reasons") or {})
-                tokens_in = llm_res.tokens_in
-                tokens_out = llm_res.tokens_out
                 used_llm = True
-            except ProviderError as exc:
+                usage = _LlmUsage(
+                    provider=used.name,
+                    model=llm_res.model,
+                    tokens_in=llm_res.tokens_in,
+                    tokens_out=llm_res.tokens_out,
+                    cost_estimate_usd=(
+                        estimate_cost_usd(llm_res.model, llm_res.tokens_in, llm_res.tokens_out)
+                        if used.external
+                        else 0.0
+                    ),
+                )
+            except ProviderError:
                 # Rule-based fallback per spec §8.4: never lose safety proposals when LLM fails.
-                log.warning("A1 LLM unavailable, using rule reasons: %s", type(exc).__name__)
+                log.warning("A1 LLM unavailable, using rule reasons")
 
         submitted = 0
         deduped = 0
@@ -474,7 +533,7 @@ def run_journal_review(
             else:
                 submitted += 1
 
-        gateway.finish_run(run_id, status="ok", tokens_in=tokens_in, tokens_out=tokens_out, cost_estimate=0.0)
+        finish("ok")
         return JournalReviewOutcome(
             run_id=run_id,
             status="ok",
@@ -486,5 +545,5 @@ def run_journal_review(
             used_llm=used_llm,
         )
     except Exception as exc:
-        gateway.finish_run(run_id, status="failed", error=str(exc)[:1000])
+        finish("failed", error=str(exc)[:1000])
         raise

@@ -10,11 +10,17 @@ import threading
 
 from . import __version__
 from .agents.digest import DigestSchedule, run_digest
-from .agents.journal_review import fetch_pending_entries, pending_evidence_hash, run_journal_review
+from .agents.journal_review import (
+    AGENT_NAME as JOURNAL_REVIEW_AGENT,
+    fetch_pending_entries,
+    pending_evidence_hash,
+    run_journal_review,
+)
 from .client import AgentCredentials, CoreGatewayClient, KeycloakTokenClient, load_all_agent_credentials
 from .config import Config
-from .providers import LLMProvider, OllamaProvider, ReplayProvider
+from .providers import AnthropicProvider, LLMProvider, OllamaProvider, OpenAIProvider, ReplayProvider
 from .schedule import ReviewSchedule
+from .settings import AgentSettings, OLLAMA, choose_providers, fetch_settings
 
 HEARTBEAT_INTERVAL = timedelta(minutes=5)
 
@@ -27,20 +33,37 @@ class _CooperativeRuntime:
 
     creds: AgentCredentials
     gateway: CoreGatewayClient
-    provider: LLMProvider
+    # Keyed by provider name; "ollama" is always present (Ollama, or the replay provider in CI).
+    providers: dict[str, LLMProvider]
     schedule: ReviewSchedule = field(default_factory=ReviewSchedule)
     digest: DigestSchedule = field(default_factory=DigestSchedule)
     heartbeat_at: datetime | None = None
 
 
-def _build_provider(cfg: Config, token_client: KeycloakTokenClient) -> LLMProvider:
+def _build_providers(cfg: Config, token_client: KeycloakTokenClient) -> dict[str, LLMProvider]:
+    """Internal provider first; external ones only where this container holds their key."""
     if cfg.provider_name == "replay":
-        return ReplayProvider(replay_dir=cfg.replay_dir, model=cfg.llm_model)
-    return OllamaProvider(
-        gateway_url=cfg.gateway_url,
-        token_provider=token_client.get_token,
-        model=cfg.llm_model,
-    )
+        return {OLLAMA: ReplayProvider(replay_dir=cfg.replay_dir, model=cfg.llm_model)}
+    providers: dict[str, LLMProvider] = {
+        OLLAMA: OllamaProvider(
+            gateway_url=cfg.gateway_url,
+            token_provider=token_client.get_token,
+            model=cfg.llm_model,
+        ),
+    }
+    if cfg.anthropic_api_key:
+        providers["anthropic"] = AnthropicProvider(
+            api_key=cfg.anthropic_api_key,
+            default_model=cfg.anthropic_model,
+            base_url=cfg.anthropic_api_base,
+        )
+    if cfg.openai_api_key:
+        providers["openai"] = OpenAIProvider(
+            api_key=cfg.openai_api_key,
+            default_model=cfg.openai_model,
+            base_url=cfg.openai_api_base,
+        )
+    return providers
 
 
 def _runtime_for(
@@ -54,21 +77,21 @@ def _runtime_for(
         runtime = _CooperativeRuntime(
             creds=creds,
             gateway=CoreGatewayClient(cfg.gateway_url, token_client.get_token),
-            provider=_build_provider(cfg, token_client),
+            providers=_build_providers(cfg, token_client),
         )
         runtimes[creds.htx_code] = runtime
     return runtime
 
 
-def _digest_and_heartbeat(runtime: _CooperativeRuntime, now: datetime) -> None:
+def _digest_and_heartbeat(runtime: _CooperativeRuntime, now: datetime, settings: AgentSettings) -> None:
     """A6 and the heartbeat never affect A1: each failure is logged here and the cycle goes on."""
     try:
-        run_digest(runtime.gateway, runtime.digest, now)
+        run_digest(runtime.gateway, runtime.digest, now, daily_at=settings.report_time_of_day())
     except Exception:
         log.exception("A6 digest failed for htx=%s", runtime.creds.htx_code)
     if runtime.heartbeat_at is None or now - runtime.heartbeat_at >= HEARTBEAT_INTERVAL:
         try:
-            runtime.gateway.heartbeat(__version__)
+            runtime.gateway.heartbeat(__version__, list(runtime.providers))
             runtime.heartbeat_at = now
         except Exception:
             log.warning("Agent heartbeat failed for htx=%s", runtime.creds.htx_code)
@@ -89,7 +112,8 @@ def run_once(
     for creds in credentials_list:
         try:
             runtime = _runtime_for(cfg, runtimes, creds)
-            _digest_and_heartbeat(runtime, now)
+            settings = fetch_settings(runtime.gateway)
+            _digest_and_heartbeat(runtime, now, settings)
             entries = fetch_pending_entries(runtime.gateway)
             input_hash = pending_evidence_hash(entries)
             # Nothing pending means no run row and no LLM call, even on the first cycle.
@@ -97,12 +121,14 @@ def run_once(
             runtime.schedule.record(now, input_hash, ran=due)
             if not due:
                 continue
+            provider, fallback = choose_providers(settings, JOURNAL_REVIEW_AGENT, runtime.providers)
             outcome = run_journal_review(
                 gateway=runtime.gateway,
-                provider=runtime.provider,
+                provider=provider,
                 trigger="schedule",
                 now=now,
                 entries=entries,
+                fallback=fallback,
             )
             log.info(
                 "A1 journal-review htx=%s run=%s status=%s scanned=%d submitted=%d deduped=%d",

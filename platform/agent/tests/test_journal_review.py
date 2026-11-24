@@ -48,17 +48,8 @@ class FakeGatewayClient:
         )
         return run_id
 
-    def finish_run(self, run_id, status, tokens_in=0, tokens_out=0, cost_estimate=0.0, error=None):
-        self.runs_finished.append(
-            {
-                "id": run_id,
-                "status": status,
-                "tokens_in": tokens_in,
-                "tokens_out": tokens_out,
-                "cost_estimate": cost_estimate,
-                "error": error,
-            }
-        )
+    def finish_run(self, run_id, status, **usage):
+        self.runs_finished.append({"id": run_id, "status": status, **usage})
 
     def submit_proposal(self, proposal):
         self.proposals.append(dict(proposal))

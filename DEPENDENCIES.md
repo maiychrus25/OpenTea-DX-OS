@@ -232,6 +232,17 @@ No database driver and no form parser: the app has no database and no form that 
 
 ---
 
+## Agent external providers (`platform/agent`, optional)
+
+| Service | Version | License | Purpose |
+|---------|---------|---------|---------|
+| Anthropic Messages API | API version `2023-06-01` | Commercial API, opt-in | Optional provider of one agent (ADR 0004), called over HTTPS |
+| OpenAI Chat Completions API | - | Commercial API, opt-in | Optional provider of one agent (ADR 0004), called over HTTPS |
+
+No package is installed for these: the agent calls both APIs with `urllib` from the Python standard library. Both services are paid and off unless a manager turns them on for a cooperative; their keys come from the operator's environment only.
+
+---
+
 ## License Compatibility
 
 All direct dependencies use OSI-approved licenses (MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC)

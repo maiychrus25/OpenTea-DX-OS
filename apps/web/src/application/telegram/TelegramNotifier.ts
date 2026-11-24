@@ -259,6 +259,24 @@ export class TelegramNotifier {
     await this.repo.markAlertsNotified(alerts.map((a) => a.id), now)
   }
 
+  /** The 80% and 100% warnings of the monthly agent budget: once per cooperative, threshold and Vietnam month. */
+  async queueBudgetAlert(
+    htxCode: string,
+    month: string,
+    percent: 80 | 100,
+    spent: number,
+    limit: number,
+    monthStart: Date
+  ): Promise<void> {
+    const healthKey = `budget:${htxCode}:${month}:${percent}`
+    if (await this.repo.healthRecentlyQueued(healthKey, monthStart)) return
+    const usage = `Đã dùng ${spent.toFixed(2)} / ${limit.toFixed(2)} USD trong tháng ${month}`
+    const [title, detail] = percent === 100
+      ? ['Ngân sách AI đã hết', `${usage}. Agent dùng Ollama đến hết tháng.`]
+      : ['Ngân sách AI sắp hết', `${usage}, đã qua 80% ngân sách.`]
+    await this.queueHealth(healthKey, htxCode, title, detail, this.now(), false)
+  }
+
   /** Managers of the cooperative (all cooperatives when htxCode is null), at most once per condition per six hours. */
   private async queueHealth(
     healthKey: string,

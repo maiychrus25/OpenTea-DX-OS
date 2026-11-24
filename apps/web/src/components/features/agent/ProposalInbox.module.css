@@ -46,6 +46,10 @@
 }
 
 .tab {
+  /* The settings tab is a link: centre its text like the button tabs. */
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
   min-height: 40px;
   padding: 0 var(--spacing-4);
   border-radius: var(--rounded-md);
