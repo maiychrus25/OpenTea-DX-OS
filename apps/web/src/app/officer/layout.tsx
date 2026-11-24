@@ -5,7 +5,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
-import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, Bot, MessageCircle, User, Users, Bell, Calendar } from 'lucide-react'
+import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, Bot, MessageCircle, User, Users, Bell, Calendar, Sparkles } from 'lucide-react'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
@@ -27,6 +27,7 @@ export default async function OfficerLayout({ children }: { children: React.Reac
     { label: 'Bản đồ', href: '/officer/farm-zones', icon: <Map size={20} /> },
     { label: 'Nông hộ', href: '/officer/households', icon: <Users size={20} /> },
     { label: 'Nhật ký', href: '/officer/journal', icon: <FileText size={20} /> },
+    { label: 'Đề xuất AI', href: '/officer/ai', icon: <Sparkles size={20} /> },
     { label: 'Lô hàng', href: '/officer/lots', icon: <PackageCheck size={20} /> },
     { label: 'Nhật ký bệnh', href: '/officer/diseases', icon: <Stethoscope size={20} /> },
     { label: 'Tài liệu', href: '/officer/documents', icon: <FolderOpen size={20} /> },
