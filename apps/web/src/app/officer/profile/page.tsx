@@ -5,6 +5,7 @@ import React from 'react'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { AccountSection } from '@/components/ui'
+import { TelegramLinkCard } from '@/components/features/telegram/TelegramLinkCard'
 import styles from './page.module.css'
 
 export default async function OfficerProfilePage() {
@@ -17,6 +18,8 @@ export default async function OfficerProfilePage() {
         <h1 className={styles.title}>Tài khoản của tôi</h1>
         <p className={styles.description}>Quản lý thông tin cá nhân và cài đặt bảo mật.</p>
       </div>
+
+      <TelegramLinkCard role="officer" />
 
       <AccountSection name={session.user.name || 'Cán bộ Kỹ thuật'} role="officer" />
     </div>

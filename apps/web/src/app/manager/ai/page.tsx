@@ -4,11 +4,22 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { ProposalInbox } from '@/components/features/agent/ProposalInbox'
+import { TelegramHealthBanner } from '@/components/features/telegram/TelegramHealthBanner'
+import { cooperativeHealth } from '@/application/telegram/telegram-services'
+import { requireTenant } from '@/lib/api/tenant'
 
 export default async function ManagerAiInboxPage() {
   const session = await auth()
   if (!session) redirect('/login')
   if (session.user?.role !== 'manager') redirect('/unauthorized')
 
-  return <ProposalInbox role="manager" />
+  const tenant = await requireTenant()
+  const health = await cooperativeHealth(tenant.htxCode)
+
+  return (
+    <>
+      <TelegramHealthBanner {...health} />
+      <ProposalInbox role="manager" />
+    </>
+  )
 }
