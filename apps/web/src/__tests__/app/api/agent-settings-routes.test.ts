@@ -64,8 +64,8 @@ function put(body: unknown) {
 
 const validSave = {
   agents: {
-    'journal-review': { enabled: true, provider: 'anthropic', model: null },
-    digest: { enabled: false, provider: 'ollama', model: null },
+    'journal-review': { provider: 'anthropic', model: null },
+    digest: { provider: 'ollama', model: null },
   },
   report_time: '07:30',
   monthly_limit_usd: 10,
@@ -186,6 +186,21 @@ describe('Agent settings routes (C1, C2, C3 and the manager tab)', () => {
     expect(saveMock).not.toHaveBeenCalled()
   })
 
+  test('tab: saving never turns an agent on or off; that stays with ./dxos agent enable', async () => {
+    ;(requireTenant as jest.Mock).mockResolvedValue(tenant('manager', 'TC'))
+    const body = {
+      ...validSave,
+      agents: {
+        'journal-review': { enabled: false, provider: 'ollama', model: null },
+        digest: { enabled: true, provider: 'ollama', model: null },
+      },
+    }
+    expect((await putSettingsCall(put(body))).status).toBe(200)
+    const saved = saveMock.mock.calls[0][1]
+    expect(saved.agents['journal-review']).toEqual({ provider: 'ollama', model: null })
+    expect(saved.agents.digest).toEqual({ provider: 'ollama', model: null })
+  })
+
   test('tab: the manager saves for their own cooperative, audited as the user', async () => {
     ;(requireTenant as jest.Mock).mockResolvedValue(tenant('manager', 'LB'))
     const res = await putSettingsCall(put(validSave))
@@ -202,7 +217,7 @@ describe('Agent settings routes (C1, C2, C3 and the manager tab)', () => {
     ;(requireTenant as jest.Mock).mockResolvedValue(tenant('manager'))
     const res = await putSettingsCall(put({
       ...validSave,
-      agents: { ...validSave.agents, 'journal-review': { enabled: true, provider: 'openai', model: 'gpt-x' } },
+      agents: { ...validSave.agents, 'journal-review': { provider: 'openai', model: 'gpt-x' } },
     }))
     const body = await res.json()
     expect(res.status).toBe(400)
@@ -215,7 +230,7 @@ describe('Agent settings routes (C1, C2, C3 and the manager tab)', () => {
     availableMock.mockResolvedValueOnce(['ollama', 'openai'])
     const res = await putSettingsCall(put({
       ...validSave,
-      agents: { ...validSave.agents, digest: { enabled: true, provider: 'openai', model: null } },
+      agents: { ...validSave.agents, digest: { provider: 'openai', model: null } },
     }))
     expect(res.status).toBe(400)
     expect(saveMock).not.toHaveBeenCalled()

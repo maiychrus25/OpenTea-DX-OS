@@ -77,7 +77,7 @@ describe('AgentSettingsPanel (settings tab)', () => {
     expect(url).toBe('/api/agent/settings')
     expect(init.method).toBe('PUT')
     const body = JSON.parse(init.body)
-    expect(body.agents['journal-review']).toEqual({ enabled: true, provider: 'anthropic', model: null })
+    expect(body.agents['journal-review']).toEqual({ provider: 'anthropic', model: null })
     expect(body.monthly_limit_usd).toBe(10)
     expect(body.report_time).toBe('18:00')
   })

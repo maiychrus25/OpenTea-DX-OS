@@ -20,7 +20,7 @@ import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import styles from './AgentSettingsPanel.module.css'
 
 interface AgentSettingsResponse {
-  agents: Record<ConfigurableAgent, { enabled: boolean; provider: AgentProvider; model: string | null }>
+  agents: Record<ConfigurableAgent, { provider: AgentProvider; model: string | null }>
   report_time: string
   budget: { monthly_limit_usd: number | null; spent_usd: number; month: string; exhausted: boolean }
   providers: AgentProvider[]
@@ -28,7 +28,6 @@ interface AgentSettingsResponse {
 }
 
 interface AgentForm {
-  enabled: boolean
   provider: AgentProvider
   model: string
 }
@@ -70,7 +69,7 @@ function draftFrom(data: AgentSettingsResponse): Draft {
   const agents = Object.fromEntries(
     CONFIGURABLE_AGENTS.map((agent) => [
       agent,
-      { enabled: data.agents[agent].enabled, provider: data.agents[agent].provider, model: data.agents[agent].model ?? '' },
+      { provider: data.agents[agent].provider, model: data.agents[agent].model ?? '' },
     ])
   ) as Record<ConfigurableAgent, AgentForm>
   return {
@@ -159,7 +158,7 @@ export function AgentSettingsPanel({ role }: AgentSettingsPanelProps) {
           agents: Object.fromEntries(
             CONFIGURABLE_AGENTS.map((agent) => [
               agent,
-              { enabled: draft.agents[agent].enabled, provider: draft.agents[agent].provider, model: draft.agents[agent].model.trim() || null },
+              { provider: draft.agents[agent].provider, model: draft.agents[agent].model.trim() || null },
             ])
           ),
           report_time: draft.reportTime,
@@ -227,15 +226,6 @@ export function AgentSettingsPanel({ role }: AgentSettingsPanelProps) {
           return (
             <fieldset key={agent} className={styles.agentRow}>
               <legend className={styles.legend}>{AGENT_LABEL[agent]}</legend>
-              <label className={styles.checkRow}>
-                <input
-                  type="checkbox"
-                  checked={choice.enabled}
-                  disabled={readOnly}
-                  onChange={(e) => patchAgent(agent, { enabled: e.target.checked })}
-                />
-                Bật agent
-              </label>
               <div className={styles.fields}>
                 <label className={styles.field}>
                   <span className={styles.fieldLabel}>Nhà cung cấp mô hình</span>

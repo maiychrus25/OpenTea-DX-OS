@@ -16,8 +16,8 @@ export interface AgentSettingsSnapshot {
   monthlyLimit: number | null
 }
 
+/** What a manager chooses per agent; turning the agent on or off stays with `./dxos agent enable`. */
 export interface AgentChoice {
-  enabled: boolean
   provider: AgentProvider
   model: string | null
 }

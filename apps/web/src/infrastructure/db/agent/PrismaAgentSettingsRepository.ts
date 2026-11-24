@@ -78,16 +78,14 @@ export class PrismaAgentSettingsRepository implements AgentSettingsRepository {
         const choice = input.agents[agent]
         const schedule = agent === 'digest' ? input.reportTime : null
         await tx.$executeRaw`
-          INSERT INTO platform.agent_settings (htx_code, agent, enabled, provider, model, schedule)
-          VALUES (${htxCode}, ${agent}, ${choice.enabled}, ${choice.provider}, ${choice.model}, ${schedule})
+          INSERT INTO platform.agent_settings (htx_code, agent, provider, model, schedule)
+          VALUES (${htxCode}, ${agent}, ${choice.provider}, ${choice.model}, ${schedule})
           ON CONFLICT (htx_code, agent) DO UPDATE
-            SET enabled = EXCLUDED.enabled,
-                provider = EXCLUDED.provider,
+            SET provider = EXCLUDED.provider,
                 model = EXCLUDED.model,
                 schedule = EXCLUDED.schedule
-          WHERE (platform.agent_settings.enabled, platform.agent_settings.provider,
-                 platform.agent_settings.model, platform.agent_settings.schedule)
-            IS DISTINCT FROM (EXCLUDED.enabled, EXCLUDED.provider, EXCLUDED.model, EXCLUDED.schedule)
+          WHERE (platform.agent_settings.provider, platform.agent_settings.model, platform.agent_settings.schedule)
+            IS DISTINCT FROM (EXCLUDED.provider, EXCLUDED.model, EXCLUDED.schedule)
         `
       }
       await tx.$executeRaw`

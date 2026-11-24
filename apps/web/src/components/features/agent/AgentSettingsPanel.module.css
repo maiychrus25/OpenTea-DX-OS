@@ -89,14 +89,6 @@
   color: var(--color-ink-primary);
 }
 
-.checkRow {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  min-height: 44px;
-  font-size: var(--font-size-body);
-  color: var(--color-ink-primary);
-}
 
 .fields {
   display: grid;

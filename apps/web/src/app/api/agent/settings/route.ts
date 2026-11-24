@@ -12,7 +12,6 @@ import { withErrorHandler } from '@/lib/api/withErrorHandler'
 // The web cannot see whether the installation has a default OpenAI model, so the manager names one.
 const agentChoiceSchema = z
   .object({
-    enabled: z.boolean(),
     provider: z.enum(AGENT_PROVIDERS),
     model: z.string().trim().min(1).max(128).nullable(),
   })
