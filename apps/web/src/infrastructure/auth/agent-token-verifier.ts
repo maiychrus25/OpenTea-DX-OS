@@ -3,6 +3,11 @@
 
 import { createPublicKey, verify as cryptoVerify, type JsonWebKey, type KeyObject } from 'node:crypto'
 import type { AgentTokenVerifier, VerifiedAgentToken } from '@/domain/agent/ports/AgentTokenVerifier'
+import {
+  TELEGRAM_CLIENT_ID,
+  type TelegramTokenVerifier,
+  type VerifiedTelegramToken,
+} from '@/domain/telegram/ports/TelegramTokenVerifier'
 import { ForbiddenError, UnauthorizedError } from '@/domain/errors'
 
 const TEN_MINUTES_MS = 10 * 60 * 1000
@@ -21,7 +26,7 @@ interface JwksCache {
   fetchedAt: number
 }
 
-export interface KeycloakAgentTokenVerifierOptions {
+export interface KeycloakJwtVerifierOptions {
   jwksUrl?: string
   expectedIssuer?: string
   expectedAudience?: string
@@ -59,8 +64,13 @@ function hasAudience(aud: unknown, expected: string): boolean {
   return false
 }
 
-/** Verifies Keycloak RS256 service-account JWTs issued to per-HTX `dxos-agent-<htx>` clients. */
-export class KeycloakAgentTokenVerifier implements AgentTokenVerifier {
+export interface VerifiedClaims {
+  payload: Record<string, unknown>
+  roles: string[]
+}
+
+/** Checks the signature, issuer, audience, expiry and subject of Keycloak RS256 service-account JWTs. */
+export class KeycloakJwtVerifier {
   private readonly jwksUrl: string
   private readonly expectedIssuer: string
   private readonly expectedAudience: string
@@ -70,7 +80,7 @@ export class KeycloakAgentTokenVerifier implements AgentTokenVerifier {
   private cache: JwksCache | null = null
   private inFlight: Promise<JwksCache> | null = null
 
-  constructor(options: KeycloakAgentTokenVerifierOptions = {}) {
+  constructor(options: KeycloakJwtVerifierOptions = {}) {
     this.jwksUrl = options.jwksUrl ?? `${defaultKeycloakInternal()}/protocol/openid-connect/certs`
     this.expectedIssuer = options.expectedIssuer ?? defaultKeycloakIssuer()
     this.expectedAudience = options.expectedAudience ?? 'dx-os-core'
@@ -142,7 +152,7 @@ export class KeycloakAgentTokenVerifier implements AgentTokenVerifier {
     throw new UnauthorizedError('Unknown signing key')
   }
 
-  async verify(token: string): Promise<VerifiedAgentToken> {
+  async verifyClaims(token: string): Promise<VerifiedClaims> {
     const parts = token.split('.')
     if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) {
       throw new UnauthorizedError('Invalid token format')
@@ -192,6 +202,20 @@ export class KeycloakAgentTokenVerifier implements AgentTokenVerifier {
     const roles = Array.isArray(realmAccess?.roles)
       ? realmAccess.roles.filter((r): r is string => typeof r === 'string')
       : []
+    return { payload, roles }
+  }
+}
+
+/** Verifies Keycloak RS256 service-account JWTs issued to per-HTX `dxos-agent-<htx>` clients. */
+export class KeycloakAgentTokenVerifier implements AgentTokenVerifier {
+  private readonly jwt: KeycloakJwtVerifier
+
+  constructor(options: KeycloakJwtVerifierOptions = {}) {
+    this.jwt = new KeycloakJwtVerifier(options)
+  }
+
+  async verify(token: string): Promise<VerifiedAgentToken> {
+    const { payload, roles } = await this.jwt.verifyClaims(token)
     if (!roles.includes('agent')) {
       throw new ForbiddenError('Agent role required')
     }
@@ -206,10 +230,30 @@ export class KeycloakAgentTokenVerifier implements AgentTokenVerifier {
     }
 
     return {
-      sub: payload.sub,
+      sub: payload.sub as string,
       azp: payload.azp,
       htxCode: payload.htx_code,
       roles,
     }
+  }
+}
+
+/** Verifies the `dxos-telegram` service account: realm role `telegram`, no cooperative claim. */
+export class KeycloakTelegramTokenVerifier implements TelegramTokenVerifier {
+  private readonly jwt: KeycloakJwtVerifier
+
+  constructor(options: KeycloakJwtVerifierOptions = {}) {
+    this.jwt = new KeycloakJwtVerifier(options)
+  }
+
+  async verify(token: string): Promise<VerifiedTelegramToken> {
+    const { payload, roles } = await this.jwt.verifyClaims(token)
+    if (!roles.includes('telegram')) {
+      throw new ForbiddenError('Telegram role required')
+    }
+    if (payload.azp !== TELEGRAM_CLIENT_ID) {
+      throw new ForbiddenError('Invalid telegram client binding')
+    }
+    return { sub: payload.sub as string, azp: TELEGRAM_CLIENT_ID, roles }
   }
 }
