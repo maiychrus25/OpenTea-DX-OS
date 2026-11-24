@@ -165,3 +165,43 @@ def test_release_pulls_the_agent_helper_from_the_registry():
     helper = load_compose(RELEASE)["dxos-agent-env"]
     assert helper["image"].startswith("${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-agent:")
     assert helper["build"] is None
+
+
+def test_llm_stub_is_test_only_loopback_published_and_hardened():
+    stub = load_compose(COMPOSE)["llm-test-stub"]
+    assert stub["profiles"] == ["llm-test"]
+    assert stub["ports"] == ["127.0.0.1:8082:8082"]
+    assert stub["read_only"] is True and stub["cap_drop"] == ["ALL"]
+    assert stub["volumes"] == ["../platform/tests/stub_llm.py:/app/stub_llm.py:ro"]
+    assert "llm-test-stub" not in load_compose(RELEASE)
+
+
+PROVIDER_KEYS = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY")
+
+
+def environment_of(svc):
+    env = svc.get("environment") or {}
+    if isinstance(env, list):
+        return dict(item.split("=", 1) if "=" in item else (item, None) for item in env)
+    return env
+
+
+def test_provider_keys_reach_only_the_agent_container():
+    services = load_compose(COMPOSE)
+    agent_env = environment_of(services["dxos-agent"])
+    assert agent_env["ANTHROPIC_API_KEY"] == "${ANTHROPIC_API_KEY:-}"
+    assert agent_env["OPENAI_API_KEY"] == "${OPENAI_API_KEY:-}"
+    for name, svc in services.items():
+        if name == "dxos-agent":
+            continue
+        env = environment_of(svc)
+        for key in PROVIDER_KEYS:
+            assert env.get(key) in (None, ""), (name, key)  # no service gets a real key from its environment
+        if svc.get("env_file"):  # env_file loads .env.local, which may hold the keys: blank them here
+            for key in PROVIDER_KEYS:
+                assert key in env, (name, key)
+
+
+def test_env_example_lists_the_provider_keys_empty():
+    lines = (ROOT / "docker" / ".env.local.example").read_text(encoding="utf-8").splitlines()
+    assert "ANTHROPIC_API_KEY=" in lines and "OPENAI_API_KEY=" in lines
