@@ -3,16 +3,17 @@
 
 import type { z } from 'zod'
 import type { DecisionChannel, Evidence, Origin, Risk } from '@/domain/agent/proposal'
-import type { JournalPort } from '@/domain/journal/ports/JournalPort'
 import type { Tenant } from '@/lib/api/tenant'
 import { journalApproveAction } from './actions/journal-approve.action'
 import { journalRejectAction } from './actions/journal-reject.action'
+import type { EvidenceLoaders } from './actions/journal-evidence'
 
 export type ApproverRole = 'manager' | 'officer'
 export type AutonomyMode = 'auto' | 'unlockable' | 'never'
 
 export interface ActionStalenessContext {
-  journalRepo?: Pick<JournalPort, 'findById'>
+  htxCode: string
+  loaders?: EvidenceLoaders
 }
 
 export interface ActionDefinition<P extends Record<string, unknown> = Record<string, unknown>> {
@@ -27,7 +28,7 @@ export interface ActionDefinition<P extends Record<string, unknown> = Record<str
   editableFields: readonly (keyof P & string)[]
   expiresAfterHours: number
   preview(payload: P): string[]
-  isStale(payload: P, evidence: Evidence, ctx?: ActionStalenessContext): Promise<boolean>
+  isStale(payload: P, evidence: Evidence, ctx: ActionStalenessContext): Promise<boolean>
   execute(payload: P, approver: Tenant): Promise<Record<string, unknown>>
 }
 

@@ -5,7 +5,8 @@ import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository
 import type { DecisionChannel, ProposalStatus } from '@/domain/agent/proposal'
 import { ForbiddenError, NotFoundError, ValidationError } from '@/domain/errors'
 import type { Tenant } from '@/lib/api/tenant'
-import { getAction, type ActionDefinition, type ActionStalenessContext, type ApproverRole } from './action-catalog'
+import { getAction, type ActionDefinition, type ApproverRole } from './action-catalog'
+import type { EvidenceLoaders } from './actions/journal-evidence'
 
 export interface DecideProposalInput {
   proposalId: string
@@ -32,7 +33,7 @@ export class DecideProposalUseCase {
       ProposalRepository,
       'findById' | 'claim' | 'markRejected' | 'markStale' | 'markExpired' | 'markExecuted' | 'markFailed'
     >,
-    private readonly stalenessCtx?: ActionStalenessContext,
+    private readonly loaders?: EvidenceLoaders,
     private readonly runExecute?: (
       definition: ActionDefinition<any>,
       payload: Record<string, unknown>,
@@ -106,7 +107,10 @@ export class DecideProposalUseCase {
       throw new ValidationError('INVALID_PAYLOAD')
     }
 
-    const stale = await definition.isStale(parsedPayload.data, proposal.evidence, this.stalenessCtx)
+    const stale = await definition.isStale(parsedPayload.data, proposal.evidence, {
+      htxCode: input.tenant.htxCode,
+      loaders: this.loaders,
+    })
     if (stale) {
       await this.repo.markStale(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })
       return { outcome: 'stale' }

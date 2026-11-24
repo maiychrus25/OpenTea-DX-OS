@@ -2,44 +2,31 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { journalEntryEvidence } from '@/application/agent/actions/journal-evidence'
+import { journalEntryEvidence, journalEntryValues, type EvidenceJournalEntry } from '@/application/agent/actions/journal-evidence'
 import { DecideProposalUseCase } from '@/application/agent/DecideProposalUseCase'
 import { evidenceDigest } from '@/domain/agent/evidence'
 import type { Proposal } from '@/domain/agent/proposal'
 import { ForbiddenError, ValidationError } from '@/domain/errors'
-import type { JournalEntryData } from '@/domain/journal/ports/JournalPort'
 import type { Tenant } from '@/lib/api/tenant'
 
 const officerTenant: Tenant = { userId: 'off-1', role: 'officer', htxCode: 'TC', htxProfileId: 'htx-tc' }
 const farmerTenant: Tenant = { userId: 'far-1', role: 'farmer', htxCode: 'TC', htxProfileId: 'htx-tc' }
 
-function makeEntry(overrides: Partial<JournalEntryData> = {}): JournalEntryData {
+function makeEntry(overrides: Partial<EvidenceJournalEntry> = {}): EvidenceJournalEntry {
   return {
     id: 'entry-1',
     parcel_id: 'parcel-1',
-    parcel_code: 'TC-A3',
     entry_date: new Date('2026-11-20T00:00:00.000Z'),
     activity_type: 'SPRAYING',
-    performed_by: 'Nông hộ A',
-    submitted_by_id: 'far-1',
-    submitted_role: 'FARMER',
     status: 'PENDING_APPROVAL',
-    approved_by_id: null,
-    approved_at: null,
     notes: null,
-    weather_temperature: null,
-    weather_precipitation: null,
-    weather_humidity: null,
-    weather_condition: null,
-    photo_url: null,
-    photo_minio_key: null,
-    created_at: new Date('2026-11-20T00:00:00.000Z'),
+    updated_at: new Date('2026-11-20T00:00:00.000Z'),
     activities: [{ id: 'act-1', activity_detail: 'Phun', product_name: 'Bio', dosage: '10ml', withdrawal_days: 7, safe_harvest_date: null }],
     ...overrides,
   }
 }
 
-function makeProposal(entry: JournalEntryData, overrides: Partial<Proposal> = {}): Proposal {
+function makeProposal(entry: EvidenceJournalEntry, overrides: Partial<Proposal> = {}): Proposal {
   const row = journalEntryEvidence(entry)
   return {
     id: '00000000-0000-0000-0000-000000000001',
@@ -76,7 +63,7 @@ function makeProposal(entry: JournalEntryData, overrides: Partial<Proposal> = {}
 }
 
 describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
-  let entry: JournalEntryData
+  let entry: EvidenceJournalEntry
   let proposal: Proposal
   let repo: {
     findById: jest.Mock
@@ -87,7 +74,7 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
     markExecuted: jest.Mock
     markFailed: jest.Mock
   }
-  let journalRepo: { findById: jest.Mock }
+  let loaders: { journal_entries: jest.Mock }
   let executeSpy: jest.Mock
 
   beforeEach(() => {
@@ -112,12 +99,12 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
       markExecuted: jest.fn(async () => undefined),
       markFailed: jest.fn(async () => undefined),
     }
-    journalRepo = { findById: jest.fn(async () => entry) }
+    loaders = { journal_entries: jest.fn(async () => journalEntryValues(entry)) }
     executeSpy = jest.fn(async () => ({ entry_id: entry.id, status: 'REQUEST_CHANGES' }))
   })
 
   test('forbids farmer without approver role before mutating state', async () => {
-    const useCase = new DecideProposalUseCase(repo, { journalRepo }, executeSpy)
+    const useCase = new DecideProposalUseCase(repo, loaders, executeSpy)
     await expect(
       useCase.execute({ proposalId: proposal.id, tenant: farmerTenant, userName: 'Farmer', decision: 'approve', channel: 'web' })
     ).rejects.toThrow(ForbiddenError)
@@ -126,7 +113,7 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
   })
 
   test('executes exactly once when two approvals race', async () => {
-    const useCase = new DecideProposalUseCase(repo, { journalRepo }, executeSpy)
+    const useCase = new DecideProposalUseCase(repo, loaders, executeSpy)
     const [first, second] = await Promise.all([
       useCase.execute({ proposalId: proposal.id, tenant: officerTenant, userName: 'Cán bộ 1', decision: 'approve', channel: 'web' }),
       useCase.execute({ proposalId: proposal.id, tenant: officerTenant, userName: 'Cán bộ 2', decision: 'approve', channel: 'telegram' }),
@@ -137,8 +124,8 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
   })
 
   test('marks proposal stale and skips execution when source row changed', async () => {
-    journalRepo.findById.mockResolvedValueOnce(makeEntry({ status: 'APPROVED' }))
-    const useCase = new DecideProposalUseCase(repo, { journalRepo }, executeSpy)
+    loaders.journal_entries.mockResolvedValueOnce(journalEntryValues(makeEntry({ status: 'APPROVED' })))
+    const useCase = new DecideProposalUseCase(repo, loaders, executeSpy)
 
     const outcome = await useCase.execute({
       proposalId: proposal.id,
@@ -155,7 +142,7 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
   })
 
   test('marks proposal expired when expiresAt has passed', async () => {
-    const useCase = new DecideProposalUseCase(repo, { journalRepo }, executeSpy)
+    const useCase = new DecideProposalUseCase(repo, loaders, executeSpy)
     const outcome = await useCase.execute({
       proposalId: proposal.id,
       tenant: officerTenant,
@@ -171,7 +158,7 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
   })
 
   test('reject requires a non-empty note', async () => {
-    const useCase = new DecideProposalUseCase(repo, { journalRepo }, executeSpy)
+    const useCase = new DecideProposalUseCase(repo, loaders, executeSpy)
     await expect(
       useCase.execute({ proposalId: proposal.id, tenant: officerTenant, userName: 'Cán bộ', decision: 'reject', note: '   ', channel: 'web' })
     ).rejects.toThrow(ValidationError)
@@ -179,7 +166,7 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
   })
 
   test('rejects edits to non-editable payload fields and applies editable reason_vi', async () => {
-    const useCase = new DecideProposalUseCase(repo, { journalRepo }, executeSpy)
+    const useCase = new DecideProposalUseCase(repo, loaders, executeSpy)
     await expect(
       useCase.execute({
         proposalId: proposal.id,
@@ -209,7 +196,7 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
 
   test('marks failed when execution throws', async () => {
     executeSpy.mockRejectedValueOnce(new Error('DB write error'))
-    const useCase = new DecideProposalUseCase(repo, { journalRepo }, executeSpy)
+    const useCase = new DecideProposalUseCase(repo, loaders, executeSpy)
 
     const outcome = await useCase.execute({
       proposalId: proposal.id,

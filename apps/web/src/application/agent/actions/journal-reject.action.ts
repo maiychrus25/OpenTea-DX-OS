@@ -6,7 +6,7 @@ import { RejectJournalEntryUseCase } from '@/application/journal/RejectJournalEn
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { TenantGuard } from '@/lib/api/tenant-guard'
 import type { ActionDefinition } from '../action-catalog'
-import { isJournalEntriesStale } from './journal-evidence'
+import { isEvidenceStale } from './journal-evidence'
 
 const journalRejectPayloadSchema = z.object({
   entry_id: z.string().min(1),
@@ -32,8 +32,8 @@ export const journalRejectAction: ActionDefinition<JournalRejectPayload> = {
     const verb = payload.decision === 'REJECTED' ? 'Từ chối' : 'Yêu cầu sửa'
     return [`${verb} nhật ký ${payload.entry_id}: ${payload.reason_vi}`]
   },
-  async isStale(payload, evidence, ctx) {
-    return isJournalEntriesStale([payload.entry_id], evidence, ctx?.journalRepo ?? new PrismaJournalRepository())
+  async isStale(_payload, evidence, ctx) {
+    return isEvidenceStale(evidence, ctx.htxCode, ctx.loaders)
   },
   async execute(payload, approver) {
     await new TenantGuard(approver).journalEntry(payload.entry_id)
