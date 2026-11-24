@@ -397,7 +397,7 @@ services:
     networks:
       - agrimarket-net
 
-  # Agentic layer (docs/specs/2026-11-23-agentic-layer-design.md, ADR 0003). M0 skeleton: starts, keeps a heartbeat, does nothing yet.
+  # Agentic layer (docs/specs/2026-11-23-agentic-layer-design.md, ADR 0003).
   dxos-agent:
     build: ../platform/agent
     image: opentea-dx-os/agent:local
@@ -405,7 +405,13 @@ services:
     restart: always
     mem_limit: 128m
     environment:
-      DXOS_AGENT_INTERVAL_SECONDS: "30"
+      DXOS_AGENT_INTERVAL_SECONDS: ${DXOS_AGENT_INTERVAL_SECONDS:-30}
+      DXOS_GATEWAY_URL: http://apisix:9081
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/realms/agrimarket
+      DXOS_AGENT_ENV_DIR: /run/dxos-agent
+      DXOS_LLM_MODEL: ${DXOS_LLM_MODEL:-qwen2.5:0.5b}
+    volumes:
+      - ./runtime/${COMPOSE_PROJECT_NAME:-docker}/agent:/run/dxos-agent:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime(os.environ.get('DXOS_HEARTBEAT_PATH','/tmp/dxos-agent.heartbeat')) < max(3*float(os.environ.get('DXOS_AGENT_INTERVAL_SECONDS','30')),60) else 1)"]
       interval: 10s

@@ -657,9 +657,9 @@ All errors use `{ "error": { "code", "message" } }`.
 
 ---
 
-## Agentic Layer & Journal Review (M1a–M1b)
+## Agentic Layer & Journal Review (M1a–M1c)
 
-### Internal agent API (M1b)
+### Internal agent API (M1b–M1c)
 Only reachable through the APISIX internal listener (`apisix:9081`, unreachable on host port `9080`), which overwrites `X-Dxos-Gateway` with `DXOS_INTERNAL_GATEWAY_SECRET` after verifying the caller's Keycloak RS256 bearer JWT (`aud` includes `dx-os-core`, `realm_access.roles` includes `agent`, `htx_code` matches `^[A-Z0-9_-]{1,20}$`, and `azp = dxos-agent-<htx lowercase>`). Both APISIX and `apps/web` enforce these checks (`X-Dxos-Gateway` compared via constant-time HMAC/SHA-256 digest; unauthenticated `/api/internal/*` bypasses browser session redirect only to enter this route-level verification).
 
 `htx_code` always comes from the verified token — any `htx_code` (or `origin`) in the request body is ignored.
@@ -676,6 +676,7 @@ Only reachable through the APISIX internal listener (`apisix:9081`, unreachable 
   - **201** `{ "data": { "id": uuid, "deduped": false } }` — new proposal inserted.
   - **200** `{ "data": { "id": null, "deduped": true } }` — open proposal with the same `(htx_code, kind, dedupe_key)` already exists.
   - **400** `VALIDATION_ERROR` — invalid body, `UNKNOWN_KIND`, `INVALID_ORIGIN`, `INVALID_PAYLOAD`, `INVALID_EVIDENCE`, `INVALID_REASON`, or `INVALID_RUN_ID` (`run_id` missing or owned by another HTX).
+- **`POST /api/internal/agent/llm/v1/chat/completions`** *(M1c, APISIX `:9081` -> `ollama:11434/v1/chat/completions`)* — dedicated Ollama completion route for `dxos-agent` with separate `30 req / 60s` rate limit per agent bearer token (`429` triggers `>= 60s` backoff inside `OllamaProvider`).
 
 | HTTP | code | When |
 |------|------|------|

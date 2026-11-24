@@ -95,13 +95,16 @@ routes:
     plugins:
       proxy-rewrite:
         regex_uri: ["^/storage/(.*)", "/$1"]
-  # Internal-only route for AI agents: unreachable on host port 9080, requires Keycloak agent role + HTX binding.
-  - id: internal-agent
-    uri: /api/internal/agent/*
-    upstream_id: web
+  # Dedicated internal LLM route for dxos-agent so agent traffic has its own rate budget (spec §8.1).
+  - id: internal-agent-llm
+    uri: /api/internal/agent/llm/v1/chat/completions
+    methods: [POST]
+    priority: 10
+    upstream_id: ollama
+    timeout: { connect: 5, send: 120, read: 120 }
     vars: [["server_port", "==", "9081"]]
     plugins:
-      openid-connect:
+      openid-connect: &oidc_agent
         <<: *oidc
         claim_schema:
           required: [aud, azp, realm_access, htx_code]
@@ -122,6 +125,21 @@ routes:
             htx_code:
               type: string
               pattern: "^[A-Z0-9_-]{1,20}$"
+      limit-count:
+        count: 30
+        time_window: 60
+        key_type: var_combination
+        key: "$remote_addr $http_authorization"
+        rejected_code: 429
+      proxy-rewrite:
+        uri: /v1/chat/completions
+  # Internal-only route for AI agents: unreachable on host port 9080, requires Keycloak agent role + HTX binding.
+  - id: internal-agent
+    uri: /api/internal/agent/*
+    upstream_id: web
+    vars: [["server_port", "==", "9081"]]
+    plugins:
+      openid-connect: *oidc_agent
       proxy-rewrite:
         headers:
           set:
