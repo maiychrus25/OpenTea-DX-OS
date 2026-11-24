@@ -228,5 +228,8 @@
         ]
       ]
     }
+  },
+  "settings": {
+    "errorWorkflow": "system-error-alert"
   }
 }
