@@ -9,6 +9,7 @@ import { Home, Newspaper, MessageCircle, Map as MapIcon, Sprout, Package, Landma
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
+import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
 import { loadAppNavItems } from '@/lib/apps/app-nav'
 import { loadAppFeed } from '@/lib/apps/feed-loader'
@@ -22,13 +23,15 @@ export default async function ManagerLayout({ children }: { children: React.Reac
   // Without an HTX the pages would only show empty data; the shell stays so sign-out is reachable.
   const htxProfile = session.user.htxCode ? await profileRepo.getProfile(session.user.htxCode) : null
 
+  const openProposals = session.user.htxCode ? await new PrismaProposalRepository().countOpen(session.user.htxCode) : 0
+
   const navItems = [
     { label: 'Tổng quan', href: '/manager/dashboard', icon: <Home size={20} /> },
     { label: 'Lịch thu hái', href: '/manager/schedule', icon: <Calendar size={20} /> },
     { label: 'Quản lý thành viên', href: '/manager/members', icon: <Users size={20} /> },
     { label: 'Bản tin', href: '/manager/bulletin', icon: <Newspaper size={20} /> },
     { label: 'Duyệt nhật ký', href: '/manager/journal-approve', icon: <CheckSquare size={20} /> },
-    { label: 'Đề xuất AI', href: '/manager/ai', icon: <Sparkles size={20} /> },
+    { label: 'Đề xuất AI', href: '/manager/ai', icon: <Sparkles size={20} />, badge: openProposals || undefined },
     { label: 'Chatbot', href: '/manager/chat', icon: <MessageCircle size={20} /> },
     { label: 'Bản đồ đối tác', href: '/manager/partner-map', icon: <MapIcon size={20} /> },
     { label: 'Vùng trồng', href: '/manager/farm-zones', icon: <Sprout size={20} /> },

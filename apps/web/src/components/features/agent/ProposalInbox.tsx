@@ -3,7 +3,8 @@
 
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button, Card, Modal, Pill, Skeleton } from '@/components/ui'
 import type { DecisionChannel, Evidence, ProposalStatus, Risk } from '@/domain/agent/proposal'
@@ -22,6 +23,8 @@ export interface ProposalInboxItem {
   expiresAt: string
   preview: string[]
   canDecide: boolean
+  editableFields: string[]
+  payload: Record<string, unknown>
   subjects?: { id: string; label: string }[]
   evidence: Evidence
   decidedByName?: string | null
@@ -51,6 +54,28 @@ const STATUS_LABEL: Record<ProposalStatus, { label: string; tone: 'green' | 'amb
   stale: { label: 'Dữ liệu đã đổi', tone: 'amber' },
 }
 
+const KIND_LABEL: Record<string, string> = {
+  'journal.approve': 'Duyệt nhật ký',
+  'journal.reject': 'Trả lại nhật ký',
+}
+
+const FIELD_LABEL: Record<string, string> = {
+  reason_vi: 'Nội dung lý do gửi nông hộ',
+}
+
+const DECISION_ERROR = 'Không thể xử lý đề xuất'
+
+/** Where an evidence row can be checked by hand; rows without a page get no link. */
+function evidenceLink(role: 'manager' | 'officer', table: string): { href: string; label: string } | null {
+  if (table === 'journal_entries') {
+    return { href: role === 'manager' ? '/manager/journal-approve' : '/officer/journal', label: 'Mở nhật ký' }
+  }
+  if (table === 'parcel_crop_cycles') {
+    return { href: role === 'manager' ? '/manager/farm-zones' : '/officer/farm-zones', label: 'Mở bản đồ thửa' }
+  }
+  return null
+}
+
 function formatDateTime(raw: string | null | undefined): string {
   if (!raw) return '—'
   const date = new Date(raw)
@@ -75,18 +100,28 @@ function formatValue(val: unknown): string {
 export function ProposalInbox({ role }: ProposalInboxProps) {
   const [view, setView] = useState<'open' | 'history'>('open')
   const [items, setItems] = useState<ProposalInboxItem[]>([])
+  const [kindFilter, setKindFilter] = useState('all')
+  const [riskFilter, setRiskFilter] = useState<'all' | Risk>('all')
   const [isLoading, setIsLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [rejectTarget, setRejectTarget] = useState<ProposalInboxItem | null>(null)
   const [rejectNote, setRejectNote] = useState('')
   const [rejectError, setRejectError] = useState<string | null>(null)
+  const [editTarget, setEditTarget] = useState<ProposalInboxItem | null>(null)
+  const [editValues, setEditValues] = useState<Record<string, string>>({})
+  const [editError, setEditError] = useState<string | null>(null)
+  // Once items are on screen a refresh keeps them, so the focused control stays in place.
+  const hasItems = useRef(false)
 
   const load = useCallback(async () => {
-    setIsLoading(true)
+    if (!hasItems.current) setIsLoading(true)
     try {
       const json = await fetchJson<{ data?: ProposalInboxItem[] }>(`/api/agent/proposals?view=${view}`)
-      setItems(json.data ?? [])
+      const next = json.data ?? []
+      hasItems.current = next.length > 0
+      setItems(next)
+      setKindFilter((current) => (current === 'all' || next.some((i) => i.kind === current) ? current : 'all'))
       setLoadFailed(false)
     } catch {
       setLoadFailed(true)
@@ -99,30 +134,79 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
     load()
   }, [load])
 
-  const handleApprove = async (item: ProposalInboxItem) => {
+  const changeView = (next: 'open' | 'history') => {
+    if (next === view) return
+    hasItems.current = false
+    setItems([])
+    setView(next)
+  }
+
+  const postDecision = async (item: ProposalInboxItem, body: Record<string, unknown>) => {
+    const res = await fetch(`/api/agent/proposals/${item.id}/decision`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const json = await res.json().catch(() => ({}))
+    return { ok: res.ok, json }
+  }
+
+  /** Approves, optionally with edited fields. Returns the error message to show, or null on success. */
+  const approve = async (item: ProposalInboxItem, edited?: Record<string, string>): Promise<string | null> => {
     setBusyId(item.id)
     try {
-      const res = await fetch(`/api/agent/proposals/${item.id}/decision`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ decision: 'approve' }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        toast.error(json?.error?.message || 'Không thể xử lý đề xuất')
+      const { ok, json } = await postDecision(item, edited ? { decision: 'approve', edited_payload: edited } : { decision: 'approve' })
+      if (!ok) {
+        const message = json?.error?.message || DECISION_ERROR
+        toast.error(message)
         await load()
-        return
+        return message
       }
       if (json?.data?.outcome === 'failed') {
         toast.error(`Thực thi thất bại: ${json.data.error || 'Lỗi không xác định'}`)
       } else {
-        toast.success('Đã duyệt và thực hiện')
+        toast.success(edited ? 'Đã sửa và duyệt' : 'Đã duyệt và thực hiện')
       }
       await load()
+      return null
     } catch {
       toast.error('Lỗi kết nối khi duyệt đề xuất')
+      return 'Lỗi kết nối khi duyệt đề xuất'
     } finally {
       setBusyId(null)
+    }
+  }
+
+  const openEditModal = (item: ProposalInboxItem) => {
+    setEditTarget(item)
+    setEditValues(Object.fromEntries(item.editableFields.map((f) => [f, String(item.payload[f] ?? '')])))
+    setEditError(null)
+  }
+
+  const closeEditModal = () => {
+    setEditTarget(null)
+    setEditValues({})
+    setEditError(null)
+  }
+
+  const submitEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editTarget) return
+    const edited: Record<string, string> = {}
+    for (const field of editTarget.editableFields) {
+      const value = (editValues[field] ?? '').trim()
+      if (!value) {
+        setEditError('Vui lòng điền đầy đủ các trường')
+        return
+      }
+      edited[field] = value
+    }
+    setEditError(null)
+    const error = await approve(editTarget, edited)
+    if (error) {
+      setEditError(error)
+    } else {
+      closeEditModal()
     }
   }
 
@@ -149,13 +233,8 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
     setBusyId(rejectTarget.id)
     setRejectError(null)
     try {
-      const res = await fetch(`/api/agent/proposals/${rejectTarget.id}/decision`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ decision: 'reject', note: trimmed }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) {
+      const { ok, json } = await postDecision(rejectTarget, { decision: 'reject', note: trimmed })
+      if (!ok) {
         setRejectError(json?.error?.message || 'Không thể từ chối đề xuất')
         return
       }
@@ -169,6 +248,11 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
     }
   }
 
+  const kindOptions = Array.from(new Set(items.map((i) => i.kind)))
+  const visible = items.filter(
+    (i) => (kindFilter === 'all' || i.kind === kindFilter) && (riskFilter === 'all' || i.risk === riskFilter)
+  )
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -181,28 +265,67 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
         </div>
       </header>
 
-      <div className={styles.tabs} role="tablist" aria-label="Bộ lọc đề xuất">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'open'}
-          className={`${styles.tab} ${view === 'open' ? styles.tabActive : ''}`}
-          onClick={() => setView('open')}
-        >
-          Đang chờ duyệt
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'history'}
-          className={`${styles.tab} ${view === 'history' ? styles.tabActive : ''}`}
-          onClick={() => setView('history')}
-        >
-          Lịch sử
-        </button>
+      <div className={styles.toolbar}>
+        <div className={styles.tabs} role="group" aria-label="Chế độ xem">
+          <button
+            type="button"
+            aria-pressed={view === 'open'}
+            className={`${styles.tab} ${view === 'open' ? styles.tabActive : ''}`}
+            onClick={() => changeView('open')}
+          >
+            Đang chờ duyệt
+          </button>
+          <button
+            type="button"
+            aria-pressed={view === 'history'}
+            className={`${styles.tab} ${view === 'history' ? styles.tabActive : ''}`}
+            onClick={() => changeView('history')}
+          >
+            Lịch sử
+          </button>
+        </div>
+
+        <div className={styles.filters}>
+          <div className={styles.filterField}>
+            <label htmlFor="proposal-kind-filter" className={styles.filterLabel}>
+              Loại đề xuất
+            </label>
+            <select
+              id="proposal-kind-filter"
+              className={styles.select}
+              value={kindFilter}
+              onChange={(e) => setKindFilter(e.target.value)}
+            >
+              <option value="all">Tất cả loại</option>
+              {kindOptions.map((kind) => (
+                <option key={kind} value={kind}>
+                  {KIND_LABEL[kind] ?? kind}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className={styles.filterField}>
+            <label htmlFor="proposal-risk-filter" className={styles.filterLabel}>
+              Mức rủi ro
+            </label>
+            <select
+              id="proposal-risk-filter"
+              className={styles.select}
+              value={riskFilter}
+              onChange={(e) => setRiskFilter(e.target.value as 'all' | Risk)}
+            >
+              <option value="all">Tất cả mức</option>
+              {(Object.keys(RISK_LABEL) as Risk[]).map((risk) => (
+                <option key={risk} value={risk}>
+                  {RISK_LABEL[risk]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && items.length === 0 ? (
         <div className={styles.list} aria-busy="true" aria-label="Đang tải đề xuất">
           {[1, 2].map((idx) => (
             <Card key={idx} className={styles.card}>
@@ -223,9 +346,13 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
         <Card className={styles.stateCard}>
           <p className={styles.emptyText}>Chưa có đề xuất nào</p>
         </Card>
+      ) : visible.length === 0 ? (
+        <Card className={styles.stateCard}>
+          <p className={styles.emptyText}>Không có đề xuất khớp bộ lọc</p>
+        </Card>
       ) : (
         <div className={styles.list}>
-          {items.map((item) => {
+          {visible.map((item) => {
             const statusInfo = STATUS_LABEL[item.status]
             const subjectById = new Map((item.subjects ?? []).map((s) => [s.id, s.label]))
 
@@ -273,6 +400,7 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
                   <ul className={styles.evidenceList}>
                     {(item.evidence?.rows ?? []).map((row, idx) => {
                       const label = subjectById.get(row.id) ?? `${row.table} · ${row.id}`
+                      const link = evidenceLink(role, row.table)
                       return (
                         <li key={`${row.table}-${row.id}-${idx}`} className={styles.evidenceItem}>
                           <div className={styles.evidenceLabel}>{label}</div>
@@ -285,6 +413,11 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
                                 </div>
                               ))}
                             </dl>
+                          )}
+                          {link && (
+                            <Link href={link.href} className={styles.inlineLink}>
+                              {link.label}
+                            </Link>
                           )}
                         </li>
                       )
@@ -311,10 +444,15 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
                       variant="primary"
                       isLoading={busyId === item.id}
                       disabled={busyId !== null}
-                      onClick={() => handleApprove(item)}
+                      onClick={() => approve(item)}
                     >
                       Duyệt
                     </Button>
+                    {item.editableFields.length > 0 && (
+                      <Button variant="secondary" disabled={busyId !== null} onClick={() => openEditModal(item)}>
+                        Sửa rồi duyệt
+                      </Button>
+                    )}
                     <Button
                       variant="danger"
                       disabled={busyId !== null}
@@ -330,6 +468,41 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
         </div>
       )}
 
+      <Modal isOpen={editTarget !== null} onClose={closeEditModal} title="Sửa rồi duyệt" size="sm">
+        <form onSubmit={submitEdit} className={styles.modalForm}>
+          {editTarget?.editableFields.map((field) => (
+            <div key={field} className={styles.fieldGroup}>
+              <label htmlFor={`proposal-edit-${field}`} className={styles.modalLabel}>
+                {FIELD_LABEL[field] ?? field}
+              </label>
+              <textarea
+                id={`proposal-edit-${field}`}
+                className={styles.textarea}
+                rows={3}
+                maxLength={500}
+                value={editValues[field] ?? ''}
+                aria-invalid={editError ? true : undefined}
+                aria-describedby={editError ? 'proposal-edit-error' : undefined}
+                onChange={(e) => setEditValues((prev) => ({ ...prev, [field]: e.target.value }))}
+              />
+            </div>
+          ))}
+          {editError && (
+            <p id="proposal-edit-error" className={styles.errorText} role="alert">
+              {editError}
+            </p>
+          )}
+          <div className={styles.modalActions}>
+            <Button variant="secondary" onClick={closeEditModal}>
+              Huỷ
+            </Button>
+            <Button type="submit" variant="primary" isLoading={busyId === editTarget?.id}>
+              Duyệt bản đã sửa
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
       <Modal isOpen={rejectTarget !== null} onClose={closeRejectModal} title="Từ chối đề xuất AI" size="sm">
         <form onSubmit={submitReject} className={styles.modalForm}>
           <label htmlFor="proposal-reject-note" className={styles.modalLabel}>
@@ -341,11 +514,13 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
             rows={4}
             maxLength={500}
             value={rejectNote}
+            aria-invalid={rejectError ? true : undefined}
+            aria-describedby={rejectError ? 'proposal-reject-error' : undefined}
             onChange={(e) => setRejectNote(e.target.value)}
             placeholder="Nhập lý do từ chối (bắt buộc)..."
           />
           {rejectError && (
-            <p className={styles.errorText} role="alert">
+            <p id="proposal-reject-error" className={styles.errorText} role="alert">
               {rejectError}
             </p>
           )}

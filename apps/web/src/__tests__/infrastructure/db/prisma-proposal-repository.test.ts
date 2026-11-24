@@ -163,4 +163,13 @@ describe('PrismaProposalRepository', () => {
     const details = JSON.parse((mockPrisma.__tx.$executeRaw.mock.calls[2] as unknown[])[2] as string)
     expect(details).toMatchObject({ actor: 'user:u1', agent: 'journal-review', kind: 'journal.approve', subject_ids: ['e1'] })
   })
+
+  test('countOpen counts only proposals still awaiting a decision', async () => {
+    mockPrisma.$queryRaw.mockResolvedValueOnce([{ count: 3 }])
+    const repo = new PrismaProposalRepository()
+
+    await expect(repo.countOpen('TC')).resolves.toBe(3)
+    const sql = sqlOf(mockPrisma.$queryRaw.mock.calls[0])
+    expect(sql).toContain("status = 'proposed' AND expires_at > now()")
+  })
 })

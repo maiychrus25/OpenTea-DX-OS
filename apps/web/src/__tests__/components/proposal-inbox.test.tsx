@@ -26,6 +26,8 @@ const sampleItem: ProposalInboxItem = {
   expiresAt: '2026-11-27T01:00:00.000Z',
   preview: ['Yêu cầu sửa nhật ký e1: Cần ghi 7 ngày'],
   canDecide: true,
+  editableFields: ['reason_vi'],
+  payload: { entry_id: 'e1', decision: 'REQUEST_CHANGES', reason_code: 'WITHDRAWAL_PERIOD', reason_vi: 'Cần ghi 7 ngày' },
   subjects: [{ id: 'e1', label: 'Thửa TC-A3 · SPRAYING · 23/11' }],
   evidence: {
     rows: [{ table: 'journal_entries', id: 'e1', sha256: 'abc', values: { status: 'PENDING_APPROVAL' } }],
@@ -81,5 +83,86 @@ describe('ProposalInbox', () => {
     expect(await screen.findByText('Trả lại nhật ký canh tác')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Duyệt' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Từ chối' })).not.toBeInTheDocument()
+  })
+
+  test('filters the open list by kind and by risk', async () => {
+    const other: ProposalInboxItem = {
+      ...sampleItem,
+      id: '00000000-0000-0000-0000-000000000002',
+      kind: 'journal.approve',
+      titleVi: 'Duyệt nhật ký canh tác',
+      risk: 'high',
+      editableFields: [],
+    }
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [sampleItem, other] }),
+    }) as unknown as typeof fetch
+
+    render(<ProposalInbox role="manager" />)
+    expect(await screen.findByText('Trả lại nhật ký canh tác')).toBeInTheDocument()
+    expect(screen.getByText('Duyệt nhật ký canh tác')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Mức rủi ro'), { target: { value: 'high' } })
+    expect(screen.queryByText('Trả lại nhật ký canh tác')).not.toBeInTheDocument()
+    expect(screen.getByText('Duyệt nhật ký canh tác')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Mức rủi ro'), { target: { value: 'all' } })
+    fireEvent.change(screen.getByLabelText('Loại đề xuất'), { target: { value: 'journal.reject' } })
+    expect(screen.getByText('Trả lại nhật ký canh tác')).toBeInTheDocument()
+    expect(screen.queryByText('Duyệt nhật ký canh tác')).not.toBeInTheDocument()
+  })
+
+  test('edits the editable field and approves with edited_payload', async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: [sampleItem] }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: { outcome: 'executed', result: {} } }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: [] }) })
+    global.fetch = fetchMock as unknown as typeof fetch
+
+    render(<ProposalInbox role="officer" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Sửa rồi duyệt' }))
+
+    const field = screen.getByLabelText('Nội dung lý do gửi nông hộ')
+    expect(field).toHaveValue('Cần ghi 7 ngày')
+    fireEvent.change(field, { target: { value: 'Vui lòng ghi rõ 7 ngày cách ly' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Duyệt bản đã sửa' }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        `/api/agent/proposals/${sampleItem.id}/decision`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ decision: 'approve', edited_payload: { reason_vi: 'Vui lòng ghi rõ 7 ngày cách ly' } }),
+        })
+      )
+    })
+  })
+
+  test('marks the active view with aria-pressed and links evidence to its page', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: [sampleItem] }) }) as unknown as typeof fetch
+
+    render(<ProposalInbox role="officer" />)
+    expect(await screen.findByText('Trả lại nhật ký canh tác')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Đang chờ duyệt' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('link', { name: 'Mở nhật ký' })).toHaveAttribute('href', '/officer/journal')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lịch sử' }))
+    expect(screen.getByRole('button', { name: 'Lịch sử' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('flags the reject note as invalid and points it at the error', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: [sampleItem] }) }) as unknown as typeof fetch
+
+    render(<ProposalInbox role="officer" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Từ chối' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận từ chối' }))
+
+    const note = screen.getByLabelText('Lý do từ chối')
+    expect(note).toHaveAttribute('aria-invalid', 'true')
+    expect(note).toHaveAttribute('aria-describedby', 'proposal-reject-error')
+    expect(screen.getByRole('alert')).toHaveAttribute('id', 'proposal-reject-error')
   })
 })
