@@ -23,6 +23,7 @@ services:
       - ../platform/postgres/init/05-apps.sql:/docker-entrypoint-initdb.d/05-apps.sql
       - ../platform/postgres/init/06-app-store.sql:/docker-entrypoint-initdb.d/06-app-store.sql
       - ../platform/postgres/init/07-telemetry-views.sql:/docker-entrypoint-initdb.d/07-telemetry-views.sql
+      - ../platform/postgres/init/08-agent.sql:/docker-entrypoint-initdb.d/08-agent.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrimarket"]
       interval: 5s
@@ -404,6 +405,12 @@ services:
     container_name: agrimarket-agent
     restart: always
     mem_limit: 128m
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]  # heartbeat file
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    cpus: "0.5"
     environment:
       DXOS_AGENT_INTERVAL_SECONDS: ${DXOS_AGENT_INTERVAL_SECONDS:-30}
       DXOS_GATEWAY_URL: http://apisix:9081
@@ -411,7 +418,7 @@ services:
       DXOS_AGENT_ENV_DIR: /run/dxos-agent
       DXOS_LLM_MODEL: ${DXOS_LLM_MODEL:-qwen2.5:0.5b}
     volumes:
-      - ./runtime/${COMPOSE_PROJECT_NAME:-docker}/agent:/run/dxos-agent:ro
+      - dxos-agent-env:/run/dxos-agent:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime(os.environ.get('DXOS_HEARTBEAT_PATH','/tmp/dxos-agent.heartbeat')) < max(3*float(os.environ.get('DXOS_AGENT_INTERVAL_SECONDS','30')),60) else 1)"]
       interval: 10s
@@ -421,12 +428,30 @@ services:
     networks:
       - agrimarket-net
 
+  # Writes and removes the agent credential files for ./dxos agent (tools profile only). Root with no network: the files
+  # are owned by the agent's uid 10001, so the agent reads them and no other host user can.
+  dxos-agent-env:
+    build: ../platform/agent
+    image: opentea-dx-os/agent:local
+    profiles: ["tools"]
+    restart: "no"
+    user: "0:0"
+    network_mode: none
+    volumes:
+      - dxos-agent-env:/run/dxos-agent
+
   dxos-telegram:
     build: ../platform/telegram
     image: opentea-dx-os/telegram:local
     container_name: agrimarket-telegram
     restart: always
     mem_limit: 128m
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]  # heartbeat file
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    cpus: "0.5"
     environment:
       DXOS_TELEGRAM_INTERVAL_SECONDS: "30"
     healthcheck:
@@ -553,6 +578,7 @@ volumes:
   ollama_data:
   mattermost_data:
   mattermost_config:
+  dxos-agent-env:
 
 networks:
   agrimarket-net:

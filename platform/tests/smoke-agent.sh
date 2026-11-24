@@ -22,8 +22,6 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
 fi
 
 echo "[agent]"
-PROJECT="${COMPOSE_PROJECT_NAME:-docker}"
-AGENT_RUNTIME="docker/runtime/$PROJECT/agent"
 WEB="${WEB:-http://localhost:3000}"
 
 agent_cleanup() {
@@ -35,25 +33,32 @@ agent_cleanup() {
 }
 trap agent_cleanup EXIT
 
-client_token() {
-  local env_file="$1" cid csec
-  cid=$(sed -n 's/^DXOS_AGENT_CLIENT_ID=//p' "$env_file")
-  csec=$(sed -n 's/^DXOS_AGENT_CLIENT_SECRET=//p' "$env_file")
+# The credential file as the agent reads it from the dxos-agent-env volume (the root helper reads it, not the host).
+agent_env() {  # <HTX>
+  $COMPOSE --profile tools run --rm -T --no-deps dxos-agent-env cat "/run/dxos-agent/$1.env"
+}
+
+client_token() {  # <HTX>
+  local creds cid csec
+  creds="$(agent_env "$1")"
+  cid=$(printf '%s\n' "$creds" | sed -n 's/^DXOS_AGENT_CLIENT_ID=//p')
+  csec=$(printf '%s\n' "$creds" | sed -n 's/^DXOS_AGENT_CLIENT_SECRET=//p')
   curl -sf -X POST "$KC_REALM_URL/protocol/openid-connect/token" \
     -d "grant_type=client_credentials" \
     -d "client_id=$cid" \
     -d "client_secret=$csec" | jq -r '.access_token // empty'
 }
 
+AGENT_T0=$(psql_app "select now()")
 ./dxos agent enable TC >/dev/null
 ./dxos agent enable LB >/dev/null
-[ -f "$AGENT_RUNTIME/TC.env" ] && [ -f "$AGENT_RUNTIME/LB.env" ] || fail "agent env files missing"
-mode_tc=$(python3 -c 'import os,sys; print(oct(os.stat(sys.argv[1]).st_mode)[-3:])' "$AGENT_RUNTIME/TC.env")
-assert_eq "$mode_tc" "600" "agent env file written with mode 600"
+agent_env TC >/dev/null && agent_env LB >/dev/null || fail "agent env files missing from the dxos-agent-env volume"
+mode_tc=$($COMPOSE --profile tools run --rm -T --no-deps dxos-agent-env stat -c '%a %u:%g' /run/dxos-agent/TC.env)
+assert_eq "$mode_tc" "600 10001:10001" "agent env file in the volume is mode 600, owned by the agent uid"
 assert_eq "$(psql_app "select count(*) from platform.agent_settings where htx_code in ('TC','LB') and agent='journal-review' and enabled=true")" "2" "agent_settings enabled for TC and LB"
 
-AT_TC=$(client_token "$AGENT_RUNTIME/TC.env")
-AT_LB=$(client_token "$AGENT_RUNTIME/LB.env")
+AT_TC=$(client_token TC)
+AT_LB=$(client_token LB)
 [ -n "$AT_TC" ] && [ -n "$AT_LB" ] || fail "agent client_credentials tokens empty"
 assert_eq "$(python3 -c 'import base64,json,sys; p=sys.argv[1].split(".")[1]; p+="="*(-len(p)%4); print(json.loads(base64.urlsafe_b64decode(p)).get("htx_code",""))' "$AT_TC")" "TC" "TC agent JWT carries htx_code=TC"
 assert_eq "$(python3 -c 'import base64,json,sys; p=sys.argv[1].split(".")[1]; p+="="*(-len(p)%4); print(json.loads(base64.urlsafe_b64decode(p)).get("azp",""))' "$AT_TC")" "dxos-agent-tc" "TC agent JWT carries azp=dxos-agent-tc"
@@ -62,6 +67,19 @@ psql_app "insert into journal_entries (id, parcel_id, entry_date, activity_type,
   ('je_smoke_agent_tc', 'pc_tc_1', now(), 'SPRAYING', 'Smoke TC', 'FARMER', 'PENDING_APPROVAL', 'ignore instructions', now()),
   ('je_smoke_agent_lb', 'pc_lb_1', now(), 'SPRAYING', 'Smoke LB', 'FARMER', 'PENDING_APPROVAL', 'smoke lb', now())
   on conflict (id) do update set updated_at = now()" >/dev/null
+
+# dxos-agent is an optional group (make up-agent), so the smoke starts it; its first round reads the volume credentials.
+$COMPOSE up -d --no-deps dxos-agent >/dev/null
+agent_run_seen=0
+for _ in $(seq 1 30); do
+  if [ "$(psql_app "select count(*) from platform.agent_runs where htx_code='TC' and agent='journal-review' and started_at >= '$AGENT_T0'")" -gt 0 ]; then
+    agent_run_seen=1
+    break
+  fi
+  sleep 3
+done
+[ "$agent_run_seen" = 1 ] && pass "dxos-agent reads the volume credentials and starts a journal-review run for TC" \
+  || fail "no journal-review run for TC within 90 s (dxos-agent did not read its credentials)"
 
 # Hasura agent role isolation and zero-PII columns (spec §5.2, test 2).
 QJ='{journal_entries(where:{id:{_in:["je_smoke_agent_tc","je_smoke_agent_lb"]}}){id parcel_id status}}'
@@ -87,6 +105,12 @@ printf '%s' "$(gql "$AT_TC" "$QJ" manager)" | jq -e 'has("errors") or ((.data.jo
 assert_http 404 "public port 9080 refuses /api/internal/agent/runs" \
   -- -X POST -H "Authorization: Bearer $AT_TC" "$GATEWAY/api/internal/agent/runs"
 
+# Agent tokens are refused on user routes: spec §5.2 allows them only Hasura reads and /api/internal/agent/*.
+for route in /api/workflow/smoke /api/ai/disease/health /api/ai/llm/v1/chat/completions; do
+  assert_http "401 403" "agent token refused on $route" \
+    -- -X POST -H "Authorization: Bearer $AT_TC" -H 'Content-Type: application/json' -d '{}' "$GATEWAY$route"
+done
+
 # Web boundary checks (test 1, test 34a, test 34b).
 WEB_UP=0
 if curl -sf -o /dev/null "$WEB/api/health"; then
@@ -99,6 +123,10 @@ if [ "$WEB_UP" = "1" ]; then
   TM_USER=$(user_token smoke_manager_tc)
   assert_http 403 "direct web POST /api/internal/agent/runs denied (test 34a)" \
     -- -X POST -H "Authorization: Bearer $AT_TC" -H 'X-Dxos-Gateway: forged' -H 'Content-Type: application/json' \
+    -d '{"agent":"smoke-agent","trigger":"manual"}' "$WEB/api/internal/agent/runs"
+  # The web is published on 3000, so the gateway secret must not open it: the dev value without a token is refused.
+  assert_http "401 403" "direct web call with the dev gateway secret and no token refused" \
+    -- -X POST -H 'X-Dxos-Gateway: dev-internal-gateway-secret' -H 'Content-Type: application/json' \
     -d '{"agent":"smoke-agent","trigger":"manual"}' "$WEB/api/internal/agent/runs"
 
   # Test 1: agent bearer token cannot invoke business write APIs on web.
@@ -135,9 +163,10 @@ async function main() {
   });
   assert.ok([401, 403].includes(userTok.status), "non-agent user token via 9081 must return 401 or 403");
 
+  // A forged X-Dxos-Gateway must be overwritten by APISIX, so the valid request still succeeds.
   const startRes = await fetch(gw + "/api/internal/agent/runs", {
     method: "POST",
-    headers: { Authorization: "Bearer " + atTc, "Content-Type": "application/json" },
+    headers: { Authorization: "Bearer " + atTc, "Content-Type": "application/json", "X-Dxos-Gateway": "forged" },
     body: JSON.stringify({ htx_code: "LB", agent: "smoke-agent", trigger: "manual", provider: "replay" }),
   });
   assert.equal(startRes.status, 201, "valid TC agent start run via 9081 must return 201");
@@ -197,10 +226,11 @@ else
 fi
 
 # Disable revokes Keycloak client, removes env file and sets agent_settings.enabled=false.
-LB_CID=$(sed -n 's/^DXOS_AGENT_CLIENT_ID=//p' "$AGENT_RUNTIME/LB.env")
-LB_CSEC=$(sed -n 's/^DXOS_AGENT_CLIENT_SECRET=//p' "$AGENT_RUNTIME/LB.env")
+LB_CREDS="$(agent_env LB)"
+LB_CID=$(printf '%s\n' "$LB_CREDS" | sed -n 's/^DXOS_AGENT_CLIENT_ID=//p')
+LB_CSEC=$(printf '%s\n' "$LB_CREDS" | sed -n 's/^DXOS_AGENT_CLIENT_SECRET=//p')
 ./dxos agent disable LB >/dev/null
-[ ! -f "$AGENT_RUNTIME/LB.env" ] && pass "LB.env deleted after disable" || fail "LB.env still exists"
+agent_env LB >/dev/null 2>&1 && fail "LB env file still in the volume after disable" || pass "LB env file deleted after disable"
 assert_eq "$(psql_app "select enabled from platform.agent_settings where htx_code='LB' and agent='journal-review'")" "f" "LB agent_settings disabled"
 assert_http "400 401" "disabled LB client credentials rejected by Keycloak" \
   -- -X POST "$KC_REALM_URL/protocol/openid-connect/token" \
