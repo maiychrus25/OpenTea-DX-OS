@@ -46,7 +46,7 @@ test('shows the days left of the latest withdrawal period of a parcel', async ()
   const { where } = db.journalActivity.findMany.mock.calls[0][0]
   expect(where.safe_harvest_date).toEqual({ gt: NOW })
   expect(where.journal_entry.parcel.household).toEqual({ id: 'hh1', htx_profile_id: 'htx-tc' })
-  expect(where.journal_entry.status).toEqual({ not: 'REJECTED' })
+  expect(where.journal_entry.status).toEqual({ not: 'DRAFT' })
 })
 
 test('shows nothing when no safe harvest date is in the future', async () => {

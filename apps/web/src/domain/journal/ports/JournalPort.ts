@@ -68,7 +68,7 @@ export interface JournalPort {
   findAll(filters: JournalFilters): Promise<{ entries: JournalEntryData[]; total: number }>
   findById(id: string): Promise<JournalEntryData | null>
   create(data: CreateJournalData): Promise<JournalEntryData>
-  update(id: string, data: Partial<CreateJournalData>): Promise<JournalEntryData>
+  update(id: string, data: Partial<CreateJournalData>, resubmit?: boolean): Promise<JournalEntryData>
   delete(id: string): Promise<void>
   batchApprove(entryIds: string[], approvedById: string): Promise<{ approved: number; failed: string[] }>
   review(entryId: string, decision: JournalReviewDecision, reason: string, reviewerId: string): Promise<{ status: JournalReviewDecision }>

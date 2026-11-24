@@ -21,6 +21,12 @@ describe('agent evidence canonical hashing', () => {
     expect(() => canonicalJson({ x: Number.POSITIVE_INFINITY })).toThrow()
   })
 
+  test('throws on non-integer numbers, as the contract only allows integers', () => {
+    expect(() => canonicalJson({ x: 1.5 })).toThrow()
+    expect(() => canonicalJson([0.1])).toThrow()
+    expect(canonicalJson({ x: -3 })).toBe('{"x":-3}')
+  })
+
   test('evidenceDigest depends only on table, id, sha256 in order', () => {
     const d1 = evidenceDigest([{ table: 'journal_entries', id: 'j1', sha256: 'abc', values: { x: 1 } }])
     const d2 = evidenceDigest([{ table: 'journal_entries', id: 'j1', sha256: 'abc', values: { x: 999 } }])

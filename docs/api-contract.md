@@ -665,17 +665,18 @@ Only reachable through the APISIX internal listener (`apisix:9081`, unreachable 
 `htx_code` always comes from the verified token — any `htx_code` (or `origin`) in the request body is ignored.
 
 - **`POST /api/internal/agent/runs`** — start an agent run record:
-  - **Request:** `{ "agent": string, "trigger": "schedule" | "event" | "manual", "provider"?: string | null, "model"?: string | null, "prompt_version"?: string | null, "input_hash"?: string | null }`.
+  - **Request:** `{ "agent": "journal-review" (known agents only), "trigger": "schedule" | "event" | "manual", "provider"?: string | null, "model"?: string | null, "prompt_version"?: string | null, "input_hash"?: string | null }`.
   - **201** `{ "data": { "id": uuid } }`.
 - **`PATCH /api/internal/agent/runs/[id]`** — finish a run record owned by the caller's HTX:
   - **Request:** `{ "status": "ok" | "failed" | "skipped", "tokens_in"?: int >= 0 | null, "tokens_out"?: int >= 0 | null, "cost_estimate"?: number >= 0 | null, "error"?: string (max 2000) | null }`.
   - **200** `{ "data": { "id": uuid, "status": "ok" | "failed" | "skipped" } }`.
   - **404** `NOT_FOUND` — unknown run `id` or run belongs to another HTX.
 - **`POST /api/internal/agent/proposals`** — ingest an `agent`-origin proposal verified against the action catalogue:
-  - **Request:** `{ "run_id"?: uuid | null, "agent": string, "kind": string, "payload": Record<string, unknown>, "reason_vi": string (1–1000), "evidence": { "rows": [...], "sha256": string }, "confidence"?: number (0–1) | null, "dedupe_key"?: string }`.
-  - **201** `{ "data": { "id": uuid, "deduped": false } }` — new proposal inserted.
-  - **200** `{ "data": { "id": null, "deduped": true } }` — open proposal with the same `(htx_code, kind, dedupe_key)` already exists.
-  - **400** `VALIDATION_ERROR` — invalid body, `UNKNOWN_KIND`, `INVALID_ORIGIN`, `INVALID_PAYLOAD`, `INVALID_EVIDENCE`, `INVALID_REASON`, or `INVALID_RUN_ID` (`run_id` missing or owned by another HTX).
+  - **Request:** `{ "run_id"?: uuid | null, "agent": "journal-review" (known agents only), "kind": string, "payload": Record<string, unknown>, "reason_vi": string (1–1000), "evidence": { "rows": [...], "sha256": string }, "confidence"?: number (0–1) | null }`. Body size is capped at 256 KiB. A `dedupe_key` sent by the agent is ignored: duplicates are judged by the subjects the proposal acts on.
+  - **Evidence rules:** at most 50 rows; `table` is `journal_entries` or `parcel_crop_cycles`; a row with `values` must hash to its `sha256` (canonical JSON, see below); every row must exist in the caller's HTX (checked by the server, not by the agent); every subject (`entry_ids` for `journal.approve`, `entry_id` for `journal.reject`) needs its own `journal_entries` row in `evidence.rows`.
+  - **201** `{ "data": { "id": uuid, "deduped": false } }` — new proposal inserted. Overdue open proposals that cover the same subjects are marked `expired` first.
+  - **200** `{ "data": { "id": null, "deduped": true } }` — an open (`proposed` or `approved`) `journal.*` proposal of the HTX already covers one of the subjects (`subject_ids`).
+  - **400** `VALIDATION_ERROR` — invalid body, `UNKNOWN_KIND`, `INVALID_ORIGIN`, `INVALID_PAYLOAD`, `INVALID_EVIDENCE`, `INVALID_EVIDENCE_TABLE`, `EVIDENCE_NOT_IN_HTX`, `SUBJECT_NOT_IN_EVIDENCE`, `TOO_MANY_EVIDENCE_ROWS` (over 50), `PAYLOAD_TOO_LARGE`, `INVALID_REASON`, or `INVALID_RUN_ID` (`run_id` missing or owned by another HTX).
 - **`POST /api/internal/agent/llm/v1/chat/completions`** *(M1c, APISIX `:9081` -> `ollama:11434/v1/chat/completions`)* — dedicated Ollama completion route for `dxos-agent` with separate `30 req / 60s` rate limit per agent bearer token (`429` triggers `>= 60s` backoff inside `OllamaProvider`).
 
 | HTTP | code | When |
@@ -689,20 +690,24 @@ Only reachable through the APISIX internal listener (`apisix:9081`, unreachable 
 List agent proposals for the caller's HTX (`manager` or `officer` only; `farmer` returns 403).
 
 - **Query:** `?view=open|history&kind=<optional>` (default `open`, limit 100).
-- **200** `{ "data": ProposalInboxItem[] }` — each item is enriched server-side with `titleVi`, `preview` lines, `canDecide` (`role ∈ approverRoles`), and `subjects` (`[{ id, label }]` tenant-checked for `journal.*` entries).
+- **open** lists only `proposed` rows that have not passed `expires_at`. Each request first fails `approved` rows with no `executed_at` that were decided more than 10 minutes ago, with error `interrupted` and an audit event.
+- **200** `{ "data": ProposalInboxItem[] }` — each item carries `payload`, `titleVi`, `preview` lines, `canDecide` (`role ∈ approverRoles`), `editableFields` (the fields "Sửa rồi duyệt" may change), and `subjects` (`[{ id, label }]`, loaded in one query scoped to the caller's HTX for `journal.*` entries).
 
 ### `POST /api/agent/proposals/[id]/decision`
 Approve or reject an open proposal (`manager` or `officer` with matching `approverRoles`).
 
-- **Request:** `{ "decision": "approve" | "reject", "note"?: string (1–500 required for reject), "edited_payload"?: Record<string, unknown> }` (edits restricted to `editableFields`).
-- **200** `{ "data": { "outcome": "executed" | "rejected" | "failed", ... } }`.
+- **Request:** `{ "decision": "approve" | "reject", "note"?: string (1–500 required for reject), "edited_payload"?: Record<string, unknown> }` (approve only; edits restricted to `editableFields`).
+- **200** `{ "data": { "outcome": "executed" | "rejected" | "failed" | "stale" | "expired" | "already_decided", ... } }`. `failed` carries `error`: the domain message when the action raised one, otherwise a generic Vietnamese message (the detail is logged). `executed` is answered even when recording the execution fails afterwards (logged).
 - **403** `FORBIDDEN` — caller role cannot approve this action kind.
 - **404** `NOT_FOUND` — proposal not found in caller's HTX.
-- **409** `PROPOSAL_STALE` | `PROPOSAL_EXPIRED` | `ALREADY_DECIDED` — source rows changed, expired, or concurrently decided.
+- **409** `PROPOSAL_STALE` | `PROPOSAL_EXPIRED` | `ALREADY_DECIDED` — source rows changed, expired, or concurrently decided. A stale or expired mark that changes no row answers `ALREADY_DECIDED` with who decided and when.
+- **Journal actions** return `422 DOMAIN_ERROR` when the journal refuses the change. A batch that approves nothing is a domain error that names the failed entry ids.
 
 #### Evidence canonical JSON format
 For cross-language SHA-256 verification between TypeScript and Python (`dxos-agent` in M1c):
-- Object keys sorted lexicographically recursively, no whitespace, arrays preserve order, `undefined` object properties dropped, non-finite numbers rejected.
+- Object keys sorted lexicographically recursively, no whitespace, arrays preserve order, `undefined` object properties dropped. Only integers, booleans, strings and null are allowed: any non-integer number is rejected.
+- Contract version 2 (`platform/agent/tests/fixtures/evidence-vectors.json`): `journal_entries` values are `{ id, parcel_id, status, entry_date, activity_type, notes, updated_at, activities: [{ id, activity_detail, product_name, dosage, withdrawal_days, safe_harvest_date }] }` with activities sorted by `id` in plain code-point order; `parcel_crop_cycles` values are `{ id, parcel_id, season, sowed_at, estimated_harvest_date, harvested_at }`. Timestamps are UTC `YYYY-MM-DDTHH:MM:SS.mmmZ`; a value without an offset is UTC. Missing values are `null`.
+- Staleness is checked at decision time: every evidence row is re-hashed from the current record of the caller's HTX; a missing row is stale.
 - Equivalent Python call: `json.dumps(v, sort_keys=True, separators=(',', ':'), ensure_ascii=False)`.
 - Fixed vector: `{"b": 1, "a": [{"d": "é", "c": null}]}` → `{"a":[{"c":null,"d":"é"}],"b":1}` → SHA-256 `2d39a9eff5fc38971ac13f9187b86e18b6531fd0fe2c17e45a200a5948144ae7`.
 

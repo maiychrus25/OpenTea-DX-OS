@@ -13,7 +13,7 @@ export function canonicalJson(value: unknown): string {
   if (value === null) return 'null'
   if (typeof value === 'boolean' || typeof value === 'string') return JSON.stringify(value)
   if (typeof value === 'number') {
-    if (!Number.isFinite(value)) throw new Error('Non-finite number in canonicalJson')
+    if (!Number.isSafeInteger(value)) throw new Error('Non-integer number in canonicalJson')
     return JSON.stringify(value)
   }
   if (value instanceof Date) return JSON.stringify(value.toISOString())
@@ -32,6 +32,14 @@ export function canonicalJson(value: unknown): string {
     return `{${parts.join(',')}}`
   }
   throw new Error(`Unsupported value type in canonicalJson: ${typeof value}`)
+}
+
+/** UTC with milliseconds; a value without an offset (as Hasura returns it) is already UTC. */
+export function utcTimestamp(value: Date | string | null | undefined): string | null {
+  if (value === null || value === undefined) return null
+  if (value instanceof Date) return value.toISOString()
+  const hasOffset = /(Z|[+-]\d{2}:?\d{2})$/i.test(value)
+  return new Date(hasOffset ? value : `${value}Z`).toISOString()
 }
 
 export function sha256Hex(text: string): string {

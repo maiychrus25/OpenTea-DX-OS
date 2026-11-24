@@ -137,6 +137,25 @@ export class PrismaJournalRepository implements JournalPort {
     return mapEntry(e)
   }
 
+  /** Entries of one cooperative, loaded in a single query; ids of other cooperatives are simply absent. */
+  async findManyScoped(ids: string[], htxProfileId: string): Promise<JournalEntryData[]> {
+    if (ids.length === 0) return []
+    const rows = await prisma.journalEntry.findMany({
+      where: { id: { in: ids }, parcel: { household: { htx_profile_id: htxProfileId } } },
+      include: {
+        activities: true,
+        parcel: {
+          select: {
+            household_id: true,
+            parcel_code: true,
+            household: { select: { keycloak_user_id: true } },
+          },
+        },
+      },
+    })
+    return rows.map(mapEntry)
+  }
+
   async create(data: CreateJournalData): Promise<JournalEntryData> {
     // Auto-attach weather from weather_cache
     let weatherData: { temperature: number | null; precipitation: number | null; humidity: number | null; condition: string | null } = {
@@ -247,10 +266,15 @@ export class PrismaJournalRepository implements JournalPort {
     return mapEntry(e)
   }
 
-  async update(id: string, data: Partial<CreateJournalData>): Promise<JournalEntryData> {
+  async update(id: string, data: Partial<CreateJournalData>, resubmit = false): Promise<JournalEntryData> {
     const updateData: Record<string, unknown> = {}
     if (data.entry_date) updateData.entry_date = data.entry_date
     if (data.observation !== undefined) updateData.notes = data.observation
+    // A returned entry goes back to the queue with its old reason cleared.
+    if (resubmit) {
+      updateData.status = 'PENDING_APPROVAL'
+      updateData.review_note = null
+    }
 
     const e = await prisma.journalEntry.update({
       where: { id },
@@ -314,6 +338,8 @@ export class PrismaJournalRepository implements JournalPort {
     let approved = 0
 
     await prisma.$transaction(async (tx) => {
+      // Row audit events of these updates name the approver.
+      await tx.$executeRaw`SELECT set_config('dxos.actor', ${`user:${approvedById}`}, true)`
       for (const entryId of entryIds) {
         const entry = await tx.journalEntry.findUnique({
           where: { id: entryId },
@@ -332,14 +358,20 @@ export class PrismaJournalRepository implements JournalPort {
           continue
         }
 
-        await tx.journalEntry.update({
-          where: { id: entryId },
+        // Conditional on the status so a concurrent review cannot be overwritten.
+        const { count } = await tx.journalEntry.updateMany({
+          where: { id: entryId, status: 'PENDING_APPROVAL' },
           data: {
             status: 'APPROVED',
             approved_by_id: approvedById,
             approved_at: new Date(),
+            reviewed_by_id: approvedById,
           },
         })
+        if (count === 0) {
+          failed.push(entryId)
+          continue
+        }
         
         await applyParcelStatus(tx, entry.parcel_id, entry.activity_type, entry.entry_date)
         if (entry.submitted_role === 'FARMER' && entry.parcel.household.keycloak_user_id) {
@@ -375,6 +407,7 @@ export class PrismaJournalRepository implements JournalPort {
   ): Promise<{ status: JournalReviewDecision }> {
     const trimmedReason = reason.trim()
     await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('dxos.actor', ${`user:${reviewerId}`}, true)`
       const entry = await tx.journalEntry.findUnique({
         where: { id: entryId },
         include: {
@@ -391,13 +424,18 @@ export class PrismaJournalRepository implements JournalPort {
         throw new ValidationError('Nhật ký không còn ở trạng thái chờ duyệt')
       }
 
-      await tx.journalEntry.update({
-        where: { id: entryId },
+      // Conditional on the status so a concurrent review cannot be overwritten.
+      const { count } = await tx.journalEntry.updateMany({
+        where: { id: entryId, status: 'PENDING_APPROVAL' },
         data: {
           status: decision,
           review_note: trimmedReason,
+          reviewed_by_id: reviewerId,
         },
       })
+      if (count === 0) {
+        throw new ValidationError('Nhật ký không còn ở trạng thái chờ duyệt')
+      }
 
       if (entry.submitted_role === 'FARMER' && entry.parcel.household.keycloak_user_id) {
         const notif = await tx.notification.create({

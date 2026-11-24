@@ -10,7 +10,8 @@ import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJourn
 
 jest.mock('@/infrastructure/db/prisma.client', () => {
   const tx = {
-    journalEntry: { findUnique: jest.fn(), update: jest.fn() },
+    $executeRaw: jest.fn(),
+    journalEntry: { findUnique: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     notification: { create: jest.fn() },
   }
   return {
@@ -46,7 +47,7 @@ describe('RejectJournalEntryUseCase & PrismaJournalRepository.review', () => {
     tx.journalEntry.findUnique.mockResolvedValueOnce({ id: 'e1', status: 'APPROVED' })
     const repo = new PrismaJournalRepository()
     await expect(repo.review('e1', 'REJECTED', 'Sai ngày', 'off-1')).rejects.toThrow(ValidationError)
-    expect(tx.journalEntry.update).not.toHaveBeenCalled()
+    expect(tx.journalEntry.updateMany).not.toHaveBeenCalled()
   })
 
   test('saves review_note and notifies farmer when submitted_role is FARMER', async () => {
@@ -71,9 +72,9 @@ describe('RejectJournalEntryUseCase & PrismaJournalRepository.review', () => {
     })
 
     expect(res).toEqual({ status: 'REQUEST_CHANGES' })
-    expect(tx.journalEntry.update).toHaveBeenCalledWith({
-      where: { id: 'e1' },
-      data: { status: 'REQUEST_CHANGES', review_note: 'Cần ghi rõ 7 ngày cách ly' },
+    expect(tx.journalEntry.updateMany).toHaveBeenCalledWith({
+      where: { id: 'e1', status: 'PENDING_APPROVAL' },
+      data: { status: 'REQUEST_CHANGES', review_note: 'Cần ghi rõ 7 ngày cách ly', reviewed_by_id: 'off-1' },
     })
     expect(tx.notification.create).toHaveBeenCalledWith(
       expect.objectContaining({

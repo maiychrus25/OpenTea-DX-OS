@@ -10,7 +10,7 @@ import { requireTenant } from '@/lib/api/tenant'
 
 const listExecute = jest.fn()
 const decideExecute = jest.fn()
-const findJournalById = jest.fn()
+const findManyScoped = jest.fn()
 const guardJournalEntry = jest.fn()
 
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
@@ -28,7 +28,7 @@ jest.mock('@/application/agent/DecideProposalUseCase', () => ({
 }))
 jest.mock('@/infrastructure/db/agent/PrismaProposalRepository', () => ({ PrismaProposalRepository: jest.fn() }))
 jest.mock('@/infrastructure/db/journal/PrismaJournalRepository', () => ({
-  PrismaJournalRepository: jest.fn().mockImplementation(() => ({ findById: findJournalById })),
+  PrismaJournalRepository: jest.fn().mockImplementation(() => ({ findManyScoped })),
 }))
 
 const VALID_ID = '00000000-0000-0000-0000-000000000001'
@@ -68,13 +68,15 @@ describe('Agent proposals HTTP routes', () => {
         expiresAt: new Date('2026-11-27T00:00:00.000Z'),
       },
     ])
-    findJournalById.mockResolvedValueOnce({
-      id: 'e1',
-      parcel_id: 'p1',
-      parcel_code: 'TC-A3',
-      activity_type: 'FERTILIZING',
-      entry_date: new Date('2026-11-23T00:00:00.000Z'),
-    })
+    findManyScoped.mockResolvedValueOnce([
+      {
+        id: 'e1',
+        parcel_id: 'p1',
+        parcel_code: 'TC-A3',
+        activity_type: 'FERTILIZING',
+        entry_date: new Date('2026-11-23T00:00:00.000Z'),
+      },
+    ])
 
     const res = await listProposals(new Request('http://web/api/agent/proposals?view=open'), undefined)
     expect(res.status).toBe(200)
@@ -85,6 +87,24 @@ describe('Agent proposals HTTP routes', () => {
       preview: ['Duyệt nhật ký e1'],
       subjects: [{ id: 'e1', label: 'Thửa TC-A3 · FERTILIZING · 23/11' }],
     })
+  })
+
+  test('GET /api/agent/proposals loads the entries of all proposals with one scoped query', async () => {
+    const proposal = (id: string, ids: string[]) => ({
+      id,
+      htxCode: 'TC',
+      kind: 'journal.approve',
+      payload: { entry_ids: ids },
+      evidence: { rows: ids.map((e) => ({ table: 'journal_entries', id: e, sha256: 'abc' })), sha256: 'def' },
+      status: 'proposed',
+    })
+    listExecute.mockResolvedValueOnce([proposal(VALID_ID, ['e1', 'e2']), proposal('00000000-0000-0000-0000-000000000002', ['e2', 'e3'])])
+    findManyScoped.mockResolvedValueOnce([])
+
+    const res = await listProposals(new Request('http://web/api/agent/proposals?view=open'), undefined)
+    expect(res.status).toBe(200)
+    expect(findManyScoped).toHaveBeenCalledTimes(1)
+    expect(findManyScoped).toHaveBeenCalledWith(['e1', 'e2', 'e3'], 'htx-tc')
   })
 
   test('POST /api/agent/proposals/[id]/decision maps 200, 400, 403 and 409 outcomes', async () => {

@@ -4,15 +4,19 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { CreateProposalUseCase } from '@/application/agent/CreateProposalUseCase'
+import { KNOWN_AGENTS } from '@/domain/agent/proposal'
 import { ValidationError } from '@/domain/errors'
 import { PrismaAgentRunRepository } from '@/infrastructure/db/agent/PrismaAgentRunRepository'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
+// Evidence rows of up to 50 journal entries with their activities stay far below this.
+const MAX_PROPOSAL_BYTES = 256 * 1024
+
 const createProposalSchema = z.object({
   run_id: z.string().uuid().optional().nullable(),
-  agent: z.string().trim().min(1).max(64),
+  agent: z.enum(KNOWN_AGENTS),
   kind: z.string().trim().min(1).max(128),
   payload: z.record(z.unknown()),
   reason_vi: z.string().trim().min(1).max(1000),
@@ -28,12 +32,20 @@ const createProposalSchema = z.object({
     sha256: z.string().min(1),
   }),
   confidence: z.number().min(0).max(1).optional().nullable(),
-  dedupe_key: z.string().trim().min(1).max(255).optional(),
 })
 
 async function postInternalAgentProposal(request: Request) {
   const caller = await requireAgentCaller(request)
-  const rawBody = await request.json().catch(() => null)
+  const raw = await request.text()
+  if (Buffer.byteLength(raw) > MAX_PROPOSAL_BYTES) {
+    throw new ValidationError('PAYLOAD_TOO_LARGE')
+  }
+  let rawBody: unknown = null
+  try {
+    rawBody = JSON.parse(raw)
+  } catch {
+    // Left as null: the schema below rejects it with a validation error.
+  }
   const body = createProposalSchema.parse(rawBody)
 
   if (body.run_id) {
@@ -54,7 +66,6 @@ async function postInternalAgentProposal(request: Request) {
     evidence: body.evidence,
     confidence: body.confidence ?? null,
     origin: 'agent',
-    dedupeKey: body.dedupe_key,
   })
 
   if (!created) {

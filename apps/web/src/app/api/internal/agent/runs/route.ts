@@ -3,12 +3,13 @@
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { KNOWN_AGENTS } from '@/domain/agent/proposal'
 import { PrismaAgentRunRepository } from '@/infrastructure/db/agent/PrismaAgentRunRepository'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
 const startRunSchema = z.object({
-  agent: z.string().trim().min(1).max(64),
+  agent: z.enum(KNOWN_AGENTS),
   trigger: z.enum(['schedule', 'event', 'manual']),
   provider: z.string().trim().min(1).max(64).optional().nullable(),
   model: z.string().trim().min(1).max(128).optional().nullable(),

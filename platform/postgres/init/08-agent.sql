@@ -55,6 +55,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS agent_proposals_one_open
 CREATE INDEX IF NOT EXISTS agent_proposals_htx_status
   ON platform.agent_proposals (htx_code, status, created_at DESC);
 
+-- Entries (or other subjects) each proposal acts on; a new journal proposal is refused while an open one covers any of them.
+ALTER TABLE platform.agent_proposals ADD COLUMN IF NOT EXISTS subject_ids text[] NOT NULL DEFAULT '{}';
+CREATE INDEX IF NOT EXISTS agent_proposals_subject_ids
+  ON platform.agent_proposals USING GIN (subject_ids);
+
 CREATE TABLE IF NOT EXISTS platform.agent_settings (
   id             uuid          NOT NULL DEFAULT gen_random_uuid() UNIQUE,
   htx_code       text          NOT NULL,
