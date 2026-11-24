@@ -70,3 +70,14 @@ public class AssignmentAdvisorTests
         Assert.Equal(1, AssignmentAdvisor.Similarity(AssignmentAdvisor.Tokens("Hái chè lứa 6"), AssignmentAdvisor.Tokens("hai che")));
     }
 }
+
+public class RecurringTaskTests
+{
+    [Theory]
+    [InlineData("1,2,3,4,5,6", 2026, 11, 23, true)]  // Monday
+    [InlineData("1,2,3,4,5,6", 2026, 11, 29, false)] // Sunday
+    [InlineData("7", 2026, 11, 29, true)]
+    [InlineData(" 3 , x ,9", 2026, 11, 25, true)]    // Wednesday, invalid parts ignored
+    public void Runs_on_listed_iso_weekdays(string days, int y, int m, int d, bool expected) =>
+        Assert.Equal(expected, new TeaStaff.Core.Domain.RecurringTask { Weekdays = days }.RunsOn(new DateOnly(y, m, d)));
+}
