@@ -17,11 +17,11 @@ public static class Sensors
 {
     public static readonly IReadOnlyList<SensorInfo> All =
     [
-        new(SensorKind.SoilMoisture, "soil_moisture", "Độ ẩm đất", "%", 0, 100, ""),
-        new(SensorKind.SoilTemperature, "soil_temperature", "Nhiệt độ đất", "°C", -10, 60, ""),
-        new(SensorKind.AirTemperature, "air_temperature", "Nhiệt độ không khí", "°C", -10, 55, ""),
-        new(SensorKind.AirHumidity, "air_humidity", "Độ ẩm không khí", "%", 0, 100, ""),
-        new(SensorKind.Rainfall, "rainfall", "Lượng mưa", "mm", 0, 500, ""),
+        new(SensorKind.SoilMoisture, "soil_moisture", "Độ ẩm đất", "%", 0, 100, "\uE913"),
+        new(SensorKind.SoilTemperature, "soil_temperature", "Nhiệt độ đất", "°C", -10, 60, "\uE9CA"),
+        new(SensorKind.AirTemperature, "air_temperature", "Nhiệt độ không khí", "°C", -10, 55, "\uE9CA"),
+        new(SensorKind.AirHumidity, "air_humidity", "Độ ẩm không khí", "%", 0, 100, "\uEB42"),
+        new(SensorKind.Rainfall, "rainfall", "Lượng mưa", "mm", 0, 500, "\uE753"),
     ];
 
     public static SensorInfo Of(SensorKind kind) => All.First(s => s.Kind == kind);
