@@ -24,13 +24,37 @@ const sampleItem: ProposalInboxItem = {
   status: 'proposed',
   createdAt: '2026-11-24T01:00:00.000Z',
   expiresAt: '2026-11-27T01:00:00.000Z',
-  preview: ['Yêu cầu sửa nhật ký e1: Cần ghi 7 ngày'],
+  preview: ['Yêu cầu sửa nhật ký thửa TC-A3 (23/11): Cần ghi 7 ngày'],
   canDecide: true,
   editableFields: ['reason_vi'],
   payload: { entry_id: 'e1', decision: 'REQUEST_CHANGES', reason_code: 'WITHDRAWAL_PERIOD', reason_vi: 'Cần ghi 7 ngày' },
-  subjects: [{ id: 'e1', label: 'Thửa TC-A3 · SPRAYING · 23/11' }],
+  subjects: [{ id: 'e1', parcel: 'TC-A3', activity: 'Phun thuốc', day: '23/11' }],
   evidence: {
-    rows: [{ table: 'journal_entries', id: 'e1', sha256: 'abc', values: { status: 'PENDING_APPROVAL' } }],
+    rows: [
+      {
+        table: 'journal_entries',
+        id: 'e1',
+        sha256: 'abc',
+        values: {
+          id: 'e1',
+          status: 'PENDING_APPROVAL',
+          notes: null,
+          updated_at: '2026-11-23T03:00:00.000Z',
+          entry_date: '2026-11-23T00:00:00.000Z',
+          activity_type: 'SPRAYING',
+          activities: [
+            {
+              id: 'a1',
+              activity_detail: 'Phun ngừa sâu',
+              product_name: 'Actara 25WG',
+              dosage: '1.200 ml/bình 16L',
+              withdrawal_days: 3,
+              safe_harvest_date: '2026-11-26T00:00:00.000Z',
+            },
+          ],
+        },
+      },
+    ],
     sha256: 'def',
   },
 }
@@ -51,7 +75,11 @@ describe('ProposalInbox', () => {
     render(<ProposalInbox role="officer" />)
 
     expect(await screen.findByText('Trả lại nhật ký canh tác')).toBeInTheDocument()
-    expect(screen.getByText('Thửa TC-A3 · SPRAYING · 23/11')).toBeInTheDocument()
+    expect(screen.getByText('Thửa TC-A3 · Phun thuốc · 23/11/2026')).toBeInTheDocument()
+    expect(screen.getByText('Trạng thái: Chờ duyệt')).toBeInTheDocument()
+    expect(screen.getByText('Ghi chú: Không có ghi chú')).toBeInTheDocument()
+    expect(screen.getByText('Actara 25WG — 1.200 ml/bình 16L — cách ly 3 ngày (an toàn từ 26/11/2026)')).toBeInTheDocument()
+    expect(screen.queryByText(/activity_type|PENDING_APPROVAL|e1|updated_at|\{/)).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Từ chối' }))
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận từ chối' }))

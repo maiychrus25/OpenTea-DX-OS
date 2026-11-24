@@ -7,6 +7,12 @@ import Link from 'next/link'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button, Card, Modal, Pill, Skeleton } from '@/components/ui'
+import {
+  ACTIVITY_LABEL,
+  formatVnDate,
+  JOURNAL_STATUS_LABEL,
+  type JournalSubject,
+} from '@/application/agent/actions/journal-labels'
 import type { DecisionChannel, Evidence, ProposalStatus, Risk } from '@/domain/agent/proposal'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import styles from './ProposalInbox.module.css'
@@ -25,7 +31,7 @@ export interface ProposalInboxItem {
   canDecide: boolean
   editableFields: string[]
   payload: Record<string, unknown>
-  subjects?: { id: string; label: string }[]
+  subjects?: JournalSubject[]
   evidence: Evidence
   decidedByName?: string | null
   decidedAt?: string | null
@@ -91,10 +97,89 @@ function formatDateTime(raw: string | null | undefined): string {
   }).format(date)
 }
 
+const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/
+
 function formatValue(val: unknown): string {
-  if (val === null || val === undefined) return '—'
-  if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val)
-  return JSON.stringify(val)
+  if (val === null || val === undefined || val === '') return '—'
+  if (typeof val === 'string') return ISO_TIMESTAMP.test(val) ? (formatVnDate(val) ?? val) : val
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val)
+  if (Array.isArray(val)) return val.length > 0 ? val.map(formatValue).join(', ') : '—'
+  if (typeof val === 'object') {
+    return Object.entries(val).map(([key, inner]) => `${key}: ${formatValue(inner)}`).join('; ')
+  }
+  return String(val)
+}
+
+interface EvidenceView {
+  title: string
+  lines: string[]
+  items?: string[]
+}
+
+interface JournalActivityValues {
+  activity_detail?: string | null
+  product_name?: string | null
+  dosage?: string | null
+  withdrawal_days?: number | null
+  safe_harvest_date?: string | null
+}
+
+function asText(val: unknown): string | null {
+  return typeof val === 'string' && val !== '' ? val : null
+}
+
+/** "<product> — <dosage> — cách ly n ngày (an toàn từ …)", leaving out what is missing. */
+function journalActivityLine(activity: JournalActivityValues): string {
+  const head = activity.product_name || activity.activity_detail || null
+  const safe = formatVnDate(asText(activity.safe_harvest_date))
+  let withdrawal: string | null = null
+  if (activity.withdrawal_days !== null && activity.withdrawal_days !== undefined) {
+    withdrawal = `cách ly ${activity.withdrawal_days} ngày${safe ? ` (an toàn từ ${safe})` : ''}`
+  } else if (safe) {
+    withdrawal = `an toàn từ ${safe}`
+  }
+  return [head, asText(activity.dosage), withdrawal].filter((part): part is string => Boolean(part)).join(' — ')
+}
+
+function journalEntryView(values: Record<string, unknown>, subject?: JournalSubject): EvidenceView {
+  const activityKey = asText(values.activity_type)
+  const status = asText(values.status)
+  const activities = Array.isArray(values.activities) ? (values.activities as JournalActivityValues[]) : []
+  const items = activities.map(journalActivityLine).filter(Boolean)
+  const header = [
+    subject ? `Thửa ${subject.parcel}` : 'Nhật ký canh tác',
+    activityKey ? (ACTIVITY_LABEL[activityKey] ?? activityKey) : (subject?.activity ?? null),
+    formatVnDate(asText(values.entry_date)),
+  ]
+  return {
+    title: header.filter((part): part is string => Boolean(part)).join(' · '),
+    lines: [
+      `Trạng thái: ${status ? (JOURNAL_STATUS_LABEL[status] ?? status) : '—'}`,
+      `Ghi chú: ${asText(values.notes) ?? 'Không có ghi chú'}`,
+      ...(items.length > 0 ? ['Hoạt động:'] : []),
+    ],
+    items,
+  }
+}
+
+function cropCycleView(values: Record<string, unknown>): EvidenceView {
+  const season = asText(values.season)
+  const lines: string[] = []
+  const estimated = formatVnDate(asText(values.estimated_harvest_date))
+  if (estimated) lines.push(`Thu hoạch dự kiến: ${estimated}`)
+  const harvested = formatVnDate(asText(values.harvested_at))
+  if (harvested) lines.push(`Đã thu hoạch: ${harvested}`)
+  return { title: season ? `Vụ ${season}` : 'Vụ trồng', lines }
+}
+
+function evidenceView(row: Evidence['rows'][number], subject?: JournalSubject): EvidenceView {
+  const values = row.values ?? {}
+  if (row.table === 'journal_entries') return journalEntryView(values, subject)
+  if (row.table === 'parcel_crop_cycles') return cropCycleView(values)
+  return {
+    title: row.table,
+    lines: Object.entries(values).map(([key, val]) => `${key}: ${formatValue(val)}`),
+  }
 }
 
 export function ProposalInbox({ role }: ProposalInboxProps) {
@@ -354,7 +439,7 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
         <div className={styles.list}>
           {visible.map((item) => {
             const statusInfo = STATUS_LABEL[item.status]
-            const subjectById = new Map((item.subjects ?? []).map((s) => [s.id, s.label]))
+            const subjectById = new Map((item.subjects ?? []).map((s) => [s.id, s]))
 
             return (
               <Card key={item.id} className={styles.card}>
@@ -371,13 +456,13 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
                     {item.risk === 'high' ? (
                       <span className={styles.dangerPill}>{RISK_LABEL[item.risk]}</span>
                     ) : (
-                      <Pill tone={item.risk === 'low' ? 'green' : 'amber'}>{RISK_LABEL[item.risk]}</Pill>
+                      <Pill tone={item.risk === 'low' ? 'green' : 'amber'} size="md">{RISK_LABEL[item.risk]}</Pill>
                     )}
                     {view === 'history' &&
                       (statusInfo.tone === 'danger' ? (
                         <span className={styles.dangerPill}>{statusInfo.label}</span>
                       ) : (
-                        <Pill tone={statusInfo.tone}>{statusInfo.label}</Pill>
+                        <Pill tone={statusInfo.tone} size="md">{statusInfo.label}</Pill>
                       ))}
                   </div>
                 </div>
@@ -399,20 +484,26 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
                   <h3 className={styles.sectionTitle}>Bằng chứng</h3>
                   <ul className={styles.evidenceList}>
                     {(item.evidence?.rows ?? []).map((row, idx) => {
-                      const label = subjectById.get(row.id) ?? `${row.table} · ${row.id}`
+                      const view = evidenceView(row, subjectById.get(row.id))
                       const link = evidenceLink(role, row.table)
                       return (
                         <li key={`${row.table}-${row.id}-${idx}`} className={styles.evidenceItem}>
-                          <div className={styles.evidenceLabel}>{label}</div>
-                          {row.values && Object.keys(row.values).length > 0 && (
-                            <dl className={styles.kvList}>
-                              {Object.entries(row.values).map(([k, v]) => (
-                                <div key={k} className={styles.kvRow}>
-                                  <dt className={styles.kvKey}>{k}:</dt>
-                                  <dd className={styles.kvVal}>{formatValue(v)}</dd>
-                                </div>
+                          <div className={styles.evidenceLabel}>{view.title}</div>
+                          {view.lines.length > 0 && (
+                            <div className={styles.evidenceLines}>
+                              {view.lines.map((line, i) => (
+                                <p key={i} className={styles.evidenceLine}>
+                                  {line}
+                                </p>
                               ))}
-                            </dl>
+                            </div>
+                          )}
+                          {view.items && view.items.length > 0 && (
+                            <ul className={styles.evidenceItems}>
+                              {view.items.map((line, i) => (
+                                <li key={i}>{line}</li>
+                              ))}
+                            </ul>
                           )}
                           {link && (
                             <Link href={link.href} className={styles.inlineLink}>
