@@ -51,6 +51,7 @@ public static class ServiceRegistration
         services.AddSingleton<AttendanceService>();
         services.AddSingleton<LeaveService>();
         services.AddSingleton<PayrollService>();
+        services.AddSingleton<AutomationEngine>();
 
         services.AddSingleton(new HttpClient { Timeout = TimeSpan.FromSeconds(15) });
         services.AddSingleton<LocalIdentityProvider>();
