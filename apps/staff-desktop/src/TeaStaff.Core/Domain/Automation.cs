@@ -35,7 +35,7 @@ public class RecurringTask : TenantEntity
     public bool RunsOn(DateOnly day) => Days.Contains(day.DayOfWeek == DayOfWeek.Sunday ? 7 : (int)day.DayOfWeek);
 }
 
-public enum SuggestionKind { AssignRecurring, ReassignRejected, ReassignLeave, ApproveLeave }
+public enum SuggestionKind { AssignRecurring, ReassignRejected, ReassignLeave, ApproveLeave, FieldAlert }
 
 public enum SuggestionStatus { Pending, Accepted, Dismissed }
 
@@ -57,6 +57,10 @@ public class AutomationSuggestion : TenantEntity
     public int? EmployeeId { get; set; }
     public Employee? Employee { get; set; }
     public DateOnly? ForDate { get; set; }
+
+    /// <summary>Work proposed by a field sensor alert (Tea IoT Station): what to do and where.</summary>
+    public string? TaskTitle { get; set; }
+    public string? TaskLocation { get; set; }
     public DateTime? ResolvedAt { get; set; }
     public string? ResolvedBy { get; set; }
 }
