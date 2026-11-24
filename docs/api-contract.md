@@ -657,9 +657,32 @@ All errors use `{ "error": { "code", "message" } }`.
 
 ---
 
-## Agentic Layer & Journal Review (M1a)
+## Agentic Layer & Journal Review (M1a–M1b)
 
-> **Note:** Internal agent ingestion endpoints (`/api/internal/agent/*`) arrive in milestone M1b.
+### Internal agent API (M1b)
+Only reachable through the APISIX internal listener (`apisix:9081`, unreachable on host port `9080`), which overwrites `X-Dxos-Gateway` with `DXOS_INTERNAL_GATEWAY_SECRET` after verifying the caller's Keycloak RS256 bearer JWT (`aud` includes `dx-os-core`, `realm_access.roles` includes `agent`, `htx_code` matches `^[A-Z0-9_-]{1,20}$`, and `azp = dxos-agent-<htx lowercase>`). Both APISIX and `apps/web` enforce these checks (`X-Dxos-Gateway` compared via constant-time HMAC/SHA-256 digest; unauthenticated `/api/internal/*` bypasses browser session redirect only to enter this route-level verification).
+
+`htx_code` always comes from the verified token — any `htx_code` (or `origin`) in the request body is ignored.
+
+- **`POST /api/internal/agent/runs`** — start an agent run record:
+  - **Request:** `{ "agent": string, "trigger": "schedule" | "event" | "manual", "provider"?: string | null, "model"?: string | null, "prompt_version"?: string | null, "input_hash"?: string | null }`.
+  - **201** `{ "data": { "id": uuid } }`.
+- **`PATCH /api/internal/agent/runs/[id]`** — finish a run record owned by the caller's HTX:
+  - **Request:** `{ "status": "ok" | "failed" | "skipped", "tokens_in"?: int >= 0 | null, "tokens_out"?: int >= 0 | null, "cost_estimate"?: number >= 0 | null, "error"?: string (max 2000) | null }`.
+  - **200** `{ "data": { "id": uuid, "status": "ok" | "failed" | "skipped" } }`.
+  - **404** `NOT_FOUND` — unknown run `id` or run belongs to another HTX.
+- **`POST /api/internal/agent/proposals`** — ingest an `agent`-origin proposal verified against the action catalogue:
+  - **Request:** `{ "run_id"?: uuid | null, "agent": string, "kind": string, "payload": Record<string, unknown>, "reason_vi": string (1–1000), "evidence": { "rows": [...], "sha256": string }, "confidence"?: number (0–1) | null, "dedupe_key"?: string }`.
+  - **201** `{ "data": { "id": uuid, "deduped": false } }` — new proposal inserted.
+  - **200** `{ "data": { "id": null, "deduped": true } }` — open proposal with the same `(htx_code, kind, dedupe_key)` already exists.
+  - **400** `VALIDATION_ERROR` — invalid body, `UNKNOWN_KIND`, `INVALID_ORIGIN`, `INVALID_PAYLOAD`, `INVALID_EVIDENCE`, `INVALID_REASON`, or `INVALID_RUN_ID` (`run_id` missing or owned by another HTX).
+
+| HTTP | code | When |
+|------|------|------|
+| 400 | VALIDATION_ERROR | Invalid path UUID, JSON body, catalogue payload/evidence/reason, or foreign `run_id` |
+| 401 | UNAUTHORIZED | Missing/malformed bearer token, bad signature, expired `exp`/`nbf`, wrong `iss`/`aud`, or unknown JWKS `kid` |
+| 403 | FORBIDDEN | Missing/mismatched `X-Dxos-Gateway` (`INTERNAL_GATEWAY_REQUIRED`), missing `agent` role, missing `htx_code`, or `azp` mismatch |
+| 404 | NOT_FOUND | Run `id` does not exist for the caller's HTX |
 
 ### `GET /api/agent/proposals`
 List agent proposals for the caller's HTX (`manager` or `officer` only; `farmer` returns 403).

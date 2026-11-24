@@ -237,6 +237,8 @@ When journal entry is created:
 | View notifications | own only | own only | own only |
 | View QR public page | ✅ (no auth) | ✅ (no auth) | ✅ (no auth) |
 
+> **AI Agents (`agent` role, M1b):** Service accounts `dxos-agent-<htx>` read HTX-scoped non-PII tables only through the read-only Hasura `agent` role (personal columns such as farmer `name`, `phone`, `address`, `performed_by`, and user IDs are hidden), ingest runs and proposals only through `/api/internal/agent/*` on internal gateway port `9081`, and cannot call any business write API.
+
 ### 4.3 Data Privacy
 ```
 - Farmer personal data (name, phone) visible only to manager and officer

@@ -402,6 +402,15 @@ make web-up
 make apps-smoke                         # kiểm thử tích hợp (sau npm run seed và make platform-smoke)
 ```
 
+### Bật / tắt lớp AI cho từng HTX (`./dxos agent`)
+
+```bash
+./dxos agent enable TC                  # tạo client Keycloak dxos-agent-tc, vai agent, lưu secret (mode 600) và bật agent_settings
+./dxos agent disable TC                 # xoá client dxos-agent-tc, xoá tệp env, tắt agent_settings và hết hạn đề xuất đang chờ
+```
+
+- Lệnh tạo hoặc thu hồi client `dxos-agent-<htx viết thường>` trong Keycloak (gán claim `htx_code` viết hoa và vai trò realm `agent`), ghi `docker/runtime/<project>/agent/<HTX>.env` (quyền `600`, git-ignored) và cập nhật `platform.agent_settings`. Khi tắt, mọi đề xuất ở trạng thái `proposed` của HTX đó chuyển sang `expired`.
+
 > [!WARNING]
 > `make apps-smoke` xoá dữ liệu của `tea-tour`, `leaf-purchase`, `tea-shop`, `farm-supply`, `custom-books` (`--purge`), gỡ `htx-dashboard`, xoá số đo cảm biến của bốn thửa mẫu (TC-A1, TC-B1, TC-B2, LB-A1) và xoá dữ liệu của các fixture, và tự bật một `./dxos worker` của riêng nó. Không chạy nó trên stack có dữ liệu thật, ví dụ stack demo sau khi đã chuẩn bị dữ liệu; hãy dùng stack riêng (`COMPOSE_PROJECT_NAME=dxos-clean`). Script tự dừng với mã 1 khi `tea-tour`, `hello`, `htx-dashboard` hoặc một app nghiệp vụ đang được cài, và cũng không chạy được khi một worker khác đang chạy.
 
