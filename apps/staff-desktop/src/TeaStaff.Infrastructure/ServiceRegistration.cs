@@ -56,6 +56,7 @@ public static class ServiceRegistration
         services.AddSingleton(new HttpClient { Timeout = TimeSpan.FromSeconds(15) });
         services.AddSingleton<LocalIdentityProvider>();
         services.AddSingleton<KeycloakIdentityProvider>();
+        services.AddSingleton<CoreStaffAuthenticator>();
         services.AddSingleton<IIdentityProvider>(sp => config.AuthMode == AuthMode.Keycloak
             ? sp.GetRequiredService<KeycloakIdentityProvider>()
             : sp.GetRequiredService<LocalIdentityProvider>());
