@@ -10,6 +10,7 @@ import type {
   TelegramLink,
   TelegramRepository,
 } from '@/domain/telegram/ports/TelegramRepository'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/infrastructure/db/prisma.client'
 
 type LinkRow = {
@@ -40,12 +41,13 @@ type OutboxDbRow = {
   telegram_message_id: string | null
 }
 
-const LINK_COLUMNS = `id::text AS id, kind, user_id, user_name, role, htx_code,
-  telegram_user_id::text AS telegram_user_id, chat_id::text AS chat_id, linked_at`
+// Prisma.raw: a plain string inside a $queryRaw template is sent as a bound value, not as SQL.
+const LINK_COLUMNS = Prisma.raw(`id::text AS id, kind, user_id, user_name, role, htx_code,
+  telegram_user_id::text AS telegram_user_id, chat_id::text AS chat_id, linked_at`)
 
-const OUTBOX_COLUMNS = `id::text AS id, htx_code, chat_id::text AS chat_id, op, text, buttons,
+const OUTBOX_COLUMNS = Prisma.raw(`id::text AS id, htx_code, chat_id::text AS chat_id, op, text, buttons,
   edit_message_id::text AS edit_message_id, proposal_id::text AS proposal_id, purpose, health_key,
-  status, attempts, telegram_message_id::text AS telegram_message_id`
+  status, attempts, telegram_message_id::text AS telegram_message_id`)
 
 function mapLink(r: LinkRow): TelegramLink {
   return {
