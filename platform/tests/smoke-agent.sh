@@ -68,34 +68,6 @@ psql_app "insert into journal_entries (id, parcel_id, entry_date, activity_type,
   ('je_smoke_agent_lb', 'pc_lb_1', now(), 'SPRAYING', 'Smoke LB', 'FARMER', 'PENDING_APPROVAL', 'smoke lb', now())
   on conflict (id) do update set updated_at = now()" >/dev/null
 
-# dxos-agent is an optional group (make up-agent), so the smoke starts it; its first round reads the volume credentials.
-$COMPOSE up -d --no-deps dxos-agent >/dev/null
-agent_run_seen=0
-for _ in $(seq 1 30); do
-  if [ "$(psql_app "select count(*) from platform.agent_runs where htx_code='TC' and agent='journal-review' and started_at >= '$AGENT_T0'")" -gt 0 ]; then
-    agent_run_seen=1
-    break
-  fi
-  sleep 3
-done
-[ "$agent_run_seen" = 1 ] && pass "dxos-agent reads the volume credentials and starts a journal-review run for TC" \
-  || fail "no journal-review run for TC within 90 s (dxos-agent did not read its credentials)"
-
-# M1 end to end: the seeded TC spraying entry has no activity details, so A1 proposes to return it (rule-only when no LLM).
-agent_prop_seen=0
-for _ in $(seq 1 20); do
-  if [ "$(psql_app "select count(*) from platform.agent_proposals where htx_code='TC' and agent='journal-review' and 'je_smoke_agent_tc' = any(subject_ids)")" -gt 0 ]; then
-    agent_prop_seen=1
-    break
-  fi
-  sleep 3
-done
-[ "$agent_prop_seen" = 1 ] && pass "dxos-agent proposes on the seeded TC journal entry (M1 end to end)" \
-  || fail "dxos-agent made no proposal for je_smoke_agent_tc within 60 s"
-assert_eq "$(psql_app "select count(*) from platform.agent_proposals where 'je_smoke_agent_lb' = any(subject_ids) and htx_code <> 'LB'")" "0" "no proposal for an LB entry is filed under another cooperative"
-# Stop the agent so the manual internal-API checks below do not race with it on the same entry.
-$COMPOSE stop dxos-agent >/dev/null
-psql_app "delete from platform.agent_proposals where subject_ids && array['je_smoke_agent_tc','je_smoke_agent_lb']" >/dev/null
 
 # Hasura agent role isolation and zero-PII columns (spec §5.2, test 2).
 QJ='{journal_entries(where:{id:{_in:["je_smoke_agent_tc","je_smoke_agent_lb"]}}){id parcel_id status}}'
@@ -136,6 +108,36 @@ elif [ "${SMOKE_REQUIRE_WEB:-0}" = "1" ]; then
 fi
 
 if [ "$WEB_UP" = "1" ]; then
+  # The agent reaches the web through APISIX, so its end-to-end checks need the web (CI runs them after make web-up).
+  # dxos-agent is an optional group (make up-agent), so the smoke starts it; its first round reads the volume credentials.
+  $COMPOSE up -d --no-deps dxos-agent >/dev/null
+  agent_run_seen=0
+  for _ in $(seq 1 30); do
+    if [ "$(psql_app "select count(*) from platform.agent_runs where htx_code='TC' and agent='journal-review' and started_at >= '$AGENT_T0'")" -gt 0 ]; then
+      agent_run_seen=1
+      break
+    fi
+    sleep 3
+  done
+  [ "$agent_run_seen" = 1 ] && pass "dxos-agent reads the volume credentials and starts a journal-review run for TC" \
+    || fail "no journal-review run for TC within 90 s (dxos-agent did not read its credentials)"
+
+  # M1 end to end: the seeded TC spraying entry has no activity details, so A1 proposes to return it (rule-only when no LLM).
+  agent_prop_seen=0
+  for _ in $(seq 1 20); do
+    if [ "$(psql_app "select count(*) from platform.agent_proposals where htx_code='TC' and agent='journal-review' and 'je_smoke_agent_tc' = any(subject_ids)")" -gt 0 ]; then
+      agent_prop_seen=1
+      break
+    fi
+    sleep 3
+  done
+  [ "$agent_prop_seen" = 1 ] && pass "dxos-agent proposes on the seeded TC journal entry (M1 end to end)" \
+    || fail "dxos-agent made no proposal for je_smoke_agent_tc within 60 s"
+  assert_eq "$(psql_app "select count(*) from platform.agent_proposals where 'je_smoke_agent_lb' = any(subject_ids) and htx_code <> 'LB'")" "0" "no proposal for an LB entry is filed under another cooperative"
+  # Stop the agent so the manual internal-API checks below do not race with it on the same entry.
+  $COMPOSE stop dxos-agent >/dev/null
+  psql_app "delete from platform.agent_proposals where subject_ids && array['je_smoke_agent_tc','je_smoke_agent_lb']" >/dev/null
+
   TM_USER=$(user_token smoke_manager_tc)
   assert_http 403 "direct web POST /api/internal/agent/runs denied (test 34a)" \
     -- -X POST -H "Authorization: Bearer $AT_TC" -H 'X-Dxos-Gateway: forged' -H 'Content-Type: application/json' \
