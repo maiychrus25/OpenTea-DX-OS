@@ -519,6 +519,7 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 - 🧪 **[Testing Strategy](./docs/testing-strategy.md)** — Công cụ và chiến lược kiểm thử.
 - 🛠️ **[Dev Setup](./docs/dev-setup.md)** — Hướng dẫn cài đặt môi trường phát triển.
 - 📝 **[Deviation Register](./docs/deviation-register.md)** — Sổ ghi nhận các điểm sai lệch so với đặc tả.
+- 🤝 **[Lớp AI vận hành có người duyệt](./docs/specs/2026-11-23-agentic-layer-design.md)** — Đặc tả định hướng (chưa triển khai): agent đề xuất, người duyệt trên web hoặc Telegram, chiến dịch hằng ngày, chế độ tự vận hành tuỳ chọn, provider nội bộ và bên ngoài.
 - 🧩 **[Mini-app](./docs/miniapps.md)** — Hướng dẫn viết mini-app: manifest, bảo mật, database, giao diện và lệnh `./dxos`.
 - 🎨 **[DESIGN.md](./DESIGN.md)** — Hệ thống thiết kế: token màu sáng/tối, chữ, khoảng cách và quy tắc tương phản.
 - 📦 **[Dependencies](./DEPENDENCIES.md)** — Danh mục thư viện và giấy phép phụ thuộc.
