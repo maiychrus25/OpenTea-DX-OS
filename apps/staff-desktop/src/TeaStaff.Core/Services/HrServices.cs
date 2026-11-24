@@ -292,14 +292,14 @@ public sealed class LeaveService(ILeaveRepository leaves, IAttendanceRepository 
         return Math.Max(0, employee.AnnualLeaveDays - used);
     }
 
-    public async Task ReviewAsync(int id, bool approve, string? note, CancellationToken ct = default)
+    public async Task ReviewAsync(int id, bool approve, string? note, CancellationToken ct = default, string? reviewer = null)
     {
         var request = await leaves.GetAsync(id, ct) ?? throw new DomainException("Không tìm thấy đơn nghỉ.");
         if (request.Status != LeaveStatus.Pending) throw new DomainException("Đơn này đã được xử lý.");
         if (!approve && string.IsNullOrWhiteSpace(note)) throw new DomainException("Vui lòng ghi lý do từ chối.");
         request.Status = approve ? LeaveStatus.Approved : LeaveStatus.Rejected;
         request.ReviewNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
-        request.ReviewedBy = tenant.DisplayName;
+        request.ReviewedBy = reviewer ?? tenant.DisplayName;
         request.ReviewedAt = clock.Now;
         await leaves.SaveAsync(request, ct);
 
