@@ -30,6 +30,8 @@ upstreams:
     nodes: { "minio:9000": 1 }
   - id: ollama
     nodes: { "ollama:11434": 1 }
+  - id: web
+    nodes: { "web:3000": 1 }
 
 routes:
   - id: data-graphql
@@ -93,4 +95,35 @@ routes:
     plugins:
       proxy-rewrite:
         regex_uri: ["^/storage/(.*)", "/$1"]
+  # Internal-only route for AI agents: unreachable on host port 9080, requires Keycloak agent role + HTX binding.
+  - id: internal-agent
+    uri: /api/internal/agent/*
+    upstream_id: web
+    vars: [["server_port", "==", "9081"]]
+    plugins:
+      openid-connect:
+        <<: *oidc
+        claim_schema:
+          required: [aud, azp, realm_access, htx_code]
+          properties:
+            aud:
+              anyOf:
+                - { enum: ["dx-os-core"] }
+                - { type: array, contains: { enum: ["dx-os-core"] } }
+            azp:
+              type: string
+              pattern: "^dxos-agent-[a-z0-9_-]{1,20}$"
+            realm_access:
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  contains: { enum: ["agent"] }
+            htx_code:
+              type: string
+              pattern: "^[A-Z0-9_-]{1,20}$"
+      proxy-rewrite:
+        headers:
+          set:
+            X-Dxos-Gateway: "${{DXOS_INTERNAL_GATEWAY_SECRET:=dev-internal-gateway-secret}}"
 #END

@@ -101,6 +101,7 @@ services:
     environment:
       DXOS_CORS_ORIGIN: ${DXOS_CORS_ORIGIN:-http://localhost:3000}
       DXOS_GATEWAY_CLIENT_SECRET: ${DXOS_GATEWAY_CLIENT_SECRET:-dev-gateway-secret}
+      DXOS_INTERNAL_GATEWAY_SECRET: ${DXOS_INTERNAL_GATEWAY_SECRET:-dev-internal-gateway-secret}
     volumes:
       - ../platform/gateway/config.yaml:/usr/local/apisix/conf/config.yaml:ro
       # Defaults to the tracked base file (release bundle, bare compose: no app routes); make sets the gateway-sync output.
@@ -154,6 +155,7 @@ services:
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/realms/agrimarket
       KEYCLOAK_ISSUER: ${KC_PUBLIC_ISSUER:-http://localhost:8080/realms/agrimarket}
       CORE_GATEWAY_URL: http://apisix:9081
+      DXOS_INTERNAL_GATEWAY_SECRET: ${DXOS_INTERNAL_GATEWAY_SECRET:-dev-internal-gateway-secret}
       # Without it the login redirect_uri is built from HOSTNAME (0.0.0.0) and Keycloak refuses it.
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       # Public mini-app requests per minute per client IP (spec §6.5); CI and a Docker Desktop demo raise it (README).
