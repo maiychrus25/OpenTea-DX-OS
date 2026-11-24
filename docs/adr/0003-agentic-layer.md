@@ -68,6 +68,16 @@ the sole authority, and gate every action through a typed catalogue:
   - Internal `/api/internal/*` endpoints route through APISIX with token and
     client-scope verification at both gateway and `web`.
 
+## Hasura exposure of the agent role
+
+- The `agent` role reads parcel geometry, which the disease agent needs for
+  its radius rule, and journal notes, which the journal-review agent (A1)
+  needs to read what a farmer wrote.
+- It never reads household names, phone numbers or addresses; those columns
+  stay hidden from the role.
+- External model providers receive these fields only under the data policy
+  of spec §8.3, which is delivered in milestone M3.
+
 ## Alternatives considered
 
 - **Running agents inside n8n workflows:** rejected. n8n uses a
