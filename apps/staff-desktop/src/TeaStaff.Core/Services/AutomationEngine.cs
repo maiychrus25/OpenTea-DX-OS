@@ -345,6 +345,16 @@ public sealed class AutomationEngine(
                 await taskService.SaveAsync(NewTask(t, start, due, employee.Id, $"duyệt bởi {by}"), ct);
                 break;
             }
+            case SuggestionKind.FieldAlert:
+            {
+                var start = clock.Now;
+                await taskService.SaveAsync(new WorkTask
+                {
+                    Title = s.TaskTitle ?? s.Title, Location = s.TaskLocation, Priority = TaskPriority.High, StartDate = start, DueDate = start.AddHours(4),
+                    Description = s.Detail, AssigneeId = employee.Id, AssignedBy = $"{AutomationName} · cảnh báo cảm biến, duyệt bởi {by}",
+                }, ct);
+                break;
+            }
             case SuggestionKind.ReassignRejected:
             case SuggestionKind.ReassignLeave:
             {
@@ -364,6 +374,39 @@ public sealed class AutomationEngine(
         await store.SaveSuggestionAsync(s, ct);
         await store.AddLogAsync("Chủ HTX duyệt", $"{by} đồng ý: {s.Title}", ct);
         notifier.Notify(DataAreas.Automation);
+    }
+
+    /// <summary>
+    /// Turns a field sensor alert into a suggestion: the proposed work goes to the best-ranked
+    /// person, with the sensor evidence and the ranking facts. Repeated alerts for the same work
+    /// while a suggestion is still pending return that suggestion instead of a new one.
+    /// </summary>
+    public async Task<AutomationSuggestion?> SuggestFromFieldAlertAsync(string parcelName, string message, string evidence, string taskTitle, CancellationToken ct = default)
+    {
+        var title = taskTitle.Trim();
+        if (title.Length is 0 or > 200) throw new DomainException("Công việc đề xuất không hợp lệ.");
+        var pending = (await store.ListSuggestionsAsync(SuggestionStatus.Pending, ct))
+            .FirstOrDefault(s => s.Kind == SuggestionKind.FieldAlert && s.TaskTitle == title);
+        if (pending is not null) return pending;
+        var now = clock.Now;
+        var ranked = await RankAsync(new AssignmentRequest(title, parcelName, now, now.AddHours(4)), ct);
+        var pick = ranked.FirstOrDefault(r => r.Available);
+        if (pick is null)
+        {
+            await store.AddLogAsync("Cảnh báo cảm biến", $"{message} ({evidence}). Không có ai rảnh để làm \"{title}\".", ct);
+            activity.Raise(DataAreas.Automation, $"{message}: không có ai rảnh để làm \"{title}\".");
+            return null;
+        }
+        var suggestion = await store.SaveSuggestionAsync(new AutomationSuggestion
+        {
+            Kind = SuggestionKind.FieldAlert, EmployeeId = pick.Employee.Id, TaskTitle = title, TaskLocation = parcelName,
+            Title = $"{message}. Giao \"{title}\" cho {pick.Employee.FullName} ({pick.Percent}%)?",
+            Detail = $"Cảm biến: {evidence}\n" + Facts(pick),
+        }, ct);
+        await store.AddLogAsync("Cảnh báo cảm biến", $"{message} ({evidence}). Đã gợi ý giao \"{title}\" cho {pick.Employee.FullName}.", ct);
+        activity.Raise(DataAreas.Automation, $"{message} ({evidence}). Có gợi ý giao việc chờ duyệt.");
+        notifier.Notify(DataAreas.Automation);
+        return suggestion;
     }
 
     public async Task DismissAsync(int suggestionId, string by, CancellationToken ct = default)
