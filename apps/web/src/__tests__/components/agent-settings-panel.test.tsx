@@ -42,7 +42,7 @@ describe('AgentSettingsPanel (settings tab)', () => {
     render(<AgentSettingsPanel role="manager" />)
     const select = (await screen.findAllByLabelText(/Nhà cung cấp mô hình/i))[0] as HTMLSelectElement
     const options = within(select).getAllByRole('option').map((o) => o.textContent)
-    expect(options).toEqual(['Ollama (trong máy chủ của HTX)', 'Claude (Anthropic)'])
+    expect(options).toEqual(['Ollama (máy chủ HTX)', 'Claude (Anthropic)'])
     expect(screen.getByText(/Đã dùng tháng 11\/2026: 8\.20 USD trên 10\.00 USD/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Lưu cài đặt' })).toBeEnabled()
   })

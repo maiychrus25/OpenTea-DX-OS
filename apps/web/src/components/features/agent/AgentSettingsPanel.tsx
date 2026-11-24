@@ -56,7 +56,7 @@ const AGENT_SHARES: Record<ConfigurableAgent, string> = {
 }
 
 const PROVIDER_LABEL: Record<AgentProvider, string> = {
-  ollama: 'Ollama (trong máy chủ của HTX)',
+  ollama: 'Ollama (máy chủ HTX)',
   anthropic: 'Claude (Anthropic)',
   openai: 'OpenAI',
 }
