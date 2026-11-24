@@ -128,16 +128,23 @@ export class DecideProposalUseCase {
       return this.readConflict(input.tenant.htxCode, proposal.id)
     }
 
+    let result: Record<string, unknown>
     try {
       const executor = this.runExecute ?? ((def, payload, approver) => def.execute(payload, approver))
-      const result = await executor(definition, parsedPayload.data, input.tenant)
-      await this.repo.markExecuted(proposal.id, result, { actorId: input.tenant.userId })
-      return { outcome: 'executed', result }
+      result = await executor(definition, parsedPayload.data, input.tenant)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Execution failed'
       await this.repo.markFailed(proposal.id, message, { actorId: input.tenant.userId })
       return { outcome: 'failed', error: message }
     }
+
+    // The journal change is already committed; a bookkeeping error must not turn it into a failure answer.
+    try {
+      await this.repo.markExecuted(proposal.id, result, { actorId: input.tenant.userId })
+    } catch (err) {
+      console.error('[DecideProposal] could not record execution of proposal', proposal.id, err)
+    }
+    return { outcome: 'executed', result }
   }
 
   private async readConflict(htxCode: string, proposalId: string): Promise<DecideProposalOutcome> {

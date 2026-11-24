@@ -209,4 +209,24 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
     expect(outcome).toEqual({ outcome: 'failed', error: 'DB write error' })
     expect(repo.markFailed).toHaveBeenCalledWith(proposal.id, 'DB write error', { actorId: 'off-1' })
   })
+
+  test('still answers executed when recording the execution fails, and logs it', async () => {
+    repo.markExecuted.mockRejectedValueOnce(new Error('connection reset'))
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    const useCase = new DecideProposalUseCase(repo, loaders, executeSpy)
+
+    const outcome = await useCase.execute({
+      proposalId: proposal.id,
+      tenant: officerTenant,
+      userName: 'Cán bộ',
+      decision: 'approve',
+      channel: 'web',
+    })
+
+    expect(executeSpy).toHaveBeenCalledTimes(1)
+    expect(outcome.outcome).toBe('executed')
+    expect(repo.markFailed).not.toHaveBeenCalled()
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('could not record execution'), proposal.id, expect.any(Error))
+    errorSpy.mockRestore()
+  })
 })
