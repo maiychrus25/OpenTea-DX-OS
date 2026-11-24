@@ -231,10 +231,16 @@ kc_exec() {
 }
 
 agent_enable() {
-  local htx="$1" htx_lower client_id secret env_dir env_file
+  local htx="$1" htx_lower client_id secret env_dir env_file found
   [[ "$htx" =~ $HTX_RE ]] || { echo "Mã HTX '$htx' không hợp lệ (chỉ gồm A-Z, 0-9, _, -, tối đa 20 ký tự)" >&2; exit 1; }
   htx_lower="$(printf '%s' "$htx" | tr '[:upper:]' '[:lower:]')"
   client_id="dxos-agent-$htx_lower"
+  # Checked before Keycloak is touched, so an unknown cooperative leaves no client behind.
+  found="$(compose exec -T postgres psql -U agrimarket -d agrimarket -tA -v ON_ERROR_STOP=1 -v "htx=$htx" <<'SQL'
+SELECT 1 FROM htx_profiles WHERE htx_code = :'htx';
+SQL
+)"
+  [ "$found" = 1 ] || { echo "Không có HTX $htx trong bảng htx_profiles; hãy tạo HTX trước khi bật lớp AI" >&2; exit 1; }
 
   secret="$(kc_exec '
     set -eu

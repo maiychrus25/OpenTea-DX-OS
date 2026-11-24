@@ -98,3 +98,17 @@ def test_upgrade_failure_keeps_the_old_version_and_says_so(tmp_path):
 
 def test_usage_lists_upgrade():
     assert "upgrade <dir>" in DXOS.read_text()
+
+
+def test_agent_enable_refuses_an_unknown_cooperative_before_keycloak(tmp_path):
+    """Source the real agent_enable() with stubs: no cooperative row means no Keycloak call."""
+    body = subprocess.run(["sed", "-n", "/^agent_enable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    snippet = (f"set -e\nRUNTIME='docker/runtime/docker'\nHTX_RE='^[A-Z0-9_-]{{1,20}}$'\n"
+               f"compose() {{ echo \"$@\" >>{tmp_path}/calls; }}\n"
+               f"kc_exec() {{ echo keycloak >>{tmp_path}/calls; echo secret; }}\n"
+               f"{body}\nagent_enable TC\necho still-running\n")
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 1 and "still-running" not in run.stdout
+    assert "htx_profiles" in run.stderr
+    calls = (tmp_path / "calls").read_text()
+    assert "psql" in calls and "keycloak" not in calls
