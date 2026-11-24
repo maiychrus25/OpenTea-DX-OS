@@ -233,12 +233,37 @@ public sealed class MobileApiServer(IServiceProvider services, AppConfig config)
             return Results.NoContent();
         }));
 
+        // Field sensors: a station posts an alert, the owner gets a one-click task suggestion.
+        api.MapPost("/iot/alerts", async (HttpContext http, IotAlertRequest body) =>
+        {
+            if (!config.Iot.Enabled) return Results.NotFound();
+            var key = http.Request.Headers["X-Device-Key"].ToString();
+            if (key.Length == 0 || !CryptographicOperations.FixedTimeEquals(System.Text.Encoding.UTF8.GetBytes(key), System.Text.Encoding.UTF8.GetBytes(config.Iot.DeviceKey)))
+                return Results.Json(new ApiError("Khoá thiết bị không đúng."), statusCode: 401);
+            if (!string.Equals(body.HtxCode, config.HtxCode, StringComparison.OrdinalIgnoreCase))
+                return Results.Json(new ApiError("Trạm thuộc HTX khác."), statusCode: 403);
+            if (string.IsNullOrWhiteSpace(body.SuggestedTask) || string.IsNullOrWhiteSpace(body.Message))
+                return Results.Json(new ApiError("Thiếu nội dung cảnh báo."), statusCode: 400);
+            try
+            {
+                var s = await Get<AutomationEngine>().SuggestFromFieldAlertAsync(
+                    Clip(body.ParcelName ?? body.ParcelCode, 80), Clip(body.Message, 160), Clip(body.Evidence, 200), Clip(body.SuggestedTask, 200));
+                return Results.Accepted(value: new { suggestionId = s?.Id, assignee = s?.EmployeeId });
+            }
+            catch (DomainException e)
+            {
+                return Results.Json(new ApiError(e.Message), statusCode: 400);
+            }
+        });
+
         api.MapGet("/payslips", (HttpContext http, CancellationToken ct) => Guard(http, async id =>
         {
             var list = await Get<IPayslipRepository>().ListForEmployeeAsync(id);
             return Results.Ok(list.Where(p => p.Status != PayslipStatus.Draft).Select(PayslipDto.From));
         }));
     }
+
+    private static string Clip(string? s, int max) => (s ?? string.Empty).Trim() is var t && t.Length > max ? t[..max] : (s ?? string.Empty).Trim();
 
     private static (DateOnly From, DateOnly To) MonthRange(string? month)
     {
