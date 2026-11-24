@@ -25,8 +25,8 @@ echo "[agent]"
 WEB="${WEB:-http://localhost:3000}"
 
 agent_cleanup() {
-  psql_app "delete from platform.agent_proposals where agent='smoke-agent'" >/dev/null 2>&1 || true
-  psql_app "delete from platform.agent_runs where agent='smoke-agent'" >/dev/null 2>&1 || true
+  psql_app "delete from platform.agent_proposals where subject_ids && array['je_smoke_agent_tc','je_smoke_agent_lb']" >/dev/null 2>&1 || true
+  [ -n "${AGENT_T0:-}" ] && psql_app "delete from platform.agent_runs where htx_code in ('TC','LB') and started_at >= '$AGENT_T0'" >/dev/null 2>&1 || true
   psql_app "delete from journal_entries where id in ('je_smoke_agent_tc','je_smoke_agent_lb')" >/dev/null 2>&1 || true
   ./dxos agent disable TC >/dev/null 2>&1 || true
   ./dxos agent disable LB >/dev/null 2>&1 || true
@@ -80,6 +80,22 @@ for _ in $(seq 1 30); do
 done
 [ "$agent_run_seen" = 1 ] && pass "dxos-agent reads the volume credentials and starts a journal-review run for TC" \
   || fail "no journal-review run for TC within 90 s (dxos-agent did not read its credentials)"
+
+# M1 end to end: the seeded TC spraying entry has no activity details, so A1 proposes to return it (rule-only when no LLM).
+agent_prop_seen=0
+for _ in $(seq 1 20); do
+  if [ "$(psql_app "select count(*) from platform.agent_proposals where htx_code='TC' and agent='journal-review' and 'je_smoke_agent_tc' = any(subject_ids)")" -gt 0 ]; then
+    agent_prop_seen=1
+    break
+  fi
+  sleep 3
+done
+[ "$agent_prop_seen" = 1 ] && pass "dxos-agent proposes on the seeded TC journal entry (M1 end to end)" \
+  || fail "dxos-agent made no proposal for je_smoke_agent_tc within 60 s"
+assert_eq "$(psql_app "select count(*) from platform.agent_proposals where 'je_smoke_agent_lb' = any(subject_ids) and htx_code <> 'LB'")" "0" "no proposal for an LB entry is filed under another cooperative"
+# Stop the agent so the manual internal-API checks below do not race with it on the same entry.
+$COMPOSE stop dxos-agent >/dev/null
+psql_app "delete from platform.agent_proposals where subject_ids && array['je_smoke_agent_tc','je_smoke_agent_lb']" >/dev/null
 
 # Hasura agent role isolation and zero-PII columns (spec §5.2, test 2).
 QJ='{journal_entries(where:{id:{_in:["je_smoke_agent_tc","je_smoke_agent_lb"]}}){id parcel_id status}}'
@@ -138,6 +154,23 @@ if [ "$WEB_UP" = "1" ]; then
     *) fail "agent token on /api/journal/batch-approve returned $approve_code";;
   esac
 
+  # Evidence version 2 values of the seeded entry, in the shape the web re-hashes (platform/agent/tests/fixtures/evidence-vectors.json).
+  JE_VALUES="$(psql_app "$(cat <<'SQL'
+select json_build_object(
+  'id', e.id, 'parcel_id', e.parcel_id, 'status', e.status,
+  'entry_date', to_char(e.entry_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+  'activity_type', e.activity_type::text, 'notes', e.notes,
+  'updated_at', to_char(e.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+  'activities', coalesce((select json_agg(json_build_object(
+      'id', a.id, 'activity_detail', a.activity_detail, 'product_name', a.product_name, 'dosage', a.dosage,
+      'withdrawal_days', a.withdrawal_days,
+      'safe_harvest_date', to_char(a.safe_harvest_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')) order by a.id collate "C")
+    from journal_activities a where a.journal_entry_id = e.id), '[]'::json))
+from journal_entries e where e.id = 'je_smoke_agent_tc'
+SQL
+)")"
+  [ -n "$JE_VALUES" ] || fail "could not read evidence values of je_smoke_agent_tc"
+
   # Test 34b: internal APISIX port 9081 adds X-Dxos-Gateway and verifies claims before forwarding to web.
   $COMPOSE exec -T web node -e '
 const assert = require("node:assert/strict");
@@ -150,7 +183,7 @@ function canonical(v) {
 }
 
 async function main() {
-  const [atTc, atLb, tmUser] = process.argv.slice(1);
+  const [atTc, atLb, tmUser, jeValues] = process.argv.slice(1);
   const gw = "http://apisix:9081";
 
   const noTok = await fetch(gw + "/api/internal/agent/runs", { method: "POST" });
@@ -159,7 +192,7 @@ async function main() {
   const userTok = await fetch(gw + "/api/internal/agent/runs", {
     method: "POST",
     headers: { Authorization: "Bearer " + tmUser, "Content-Type": "application/json" },
-    body: JSON.stringify({ agent: "smoke-agent", trigger: "manual" }),
+    body: JSON.stringify({ agent: "journal-review", trigger: "manual" }),
   });
   assert.ok([401, 403].includes(userTok.status), "non-agent user token via 9081 must return 401 or 403");
 
@@ -167,7 +200,7 @@ async function main() {
   const startRes = await fetch(gw + "/api/internal/agent/runs", {
     method: "POST",
     headers: { Authorization: "Bearer " + atTc, "Content-Type": "application/json", "X-Dxos-Gateway": "forged" },
-    body: JSON.stringify({ htx_code: "LB", agent: "smoke-agent", trigger: "manual", provider: "replay" }),
+    body: JSON.stringify({ htx_code: "LB", agent: "journal-review", trigger: "manual", provider: "replay" }),
   });
   assert.equal(startRes.status, 201, "valid TC agent start run via 9081 must return 201");
   const runId = (await startRes.json()).data.id;
@@ -187,17 +220,29 @@ async function main() {
   });
   assert.equal(finishRes.status, 200, "same-HTX PATCH run must return 200");
 
-  const rows = [{ table: "journal_entries", id: "je_smoke_agent_tc", sha256: "smoke-row-hash" }];
-  const digest = crypto.createHash("sha256").update(canonical(rows)).digest("hex");
+  const values = JSON.parse(jeValues);
+  const sha = (v) => crypto.createHash("sha256").update(canonical(v), "utf8").digest("hex");
+  const rows = [{ table: "journal_entries", id: "je_smoke_agent_tc", sha256: sha(values), values }];
+  const digest = sha(rows.map((r) => ({ table: r.table, id: r.id, sha256: r.sha256 })));
+
+  // A row whose values do not match its hash is refused (the reviewer must see what was hashed).
+  const forged = await fetch(gw + "/api/internal/agent/proposals", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + atTc, "Content-Type": "application/json" },
+    body: JSON.stringify({ run_id: runId, agent: "journal-review", kind: "journal.approve",
+      payload: { entry_ids: ["je_smoke_agent_tc"] }, reason_vi: "Kiểm thử",
+      evidence: { rows: [{ ...rows[0], values: { ...values, notes: "changed" } }], sha256: digest } }),
+  });
+  assert.equal(forged.status, 400, "a proposal whose evidence values do not match their hash must return 400");
+
   const propBody = {
     htx_code: "LB",
     run_id: runId,
-    agent: "smoke-agent",
+    agent: "journal-review",
     kind: "journal.approve",
     payload: { entry_ids: ["je_smoke_agent_tc"] },
     reason_vi: "Khớp chuẩn kiểm thử M1b",
     evidence: { rows, sha256: digest },
-    dedupe_key: "smoke-agent-m1b-tc-1",
   };
   const propRes = await fetch(gw + "/api/internal/agent/proposals", {
     method: "POST",
@@ -218,9 +263,9 @@ async function main() {
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });
-' "$AT_TC" "$AT_LB" "$TM_USER" && pass "apisix:9081 internal agent flow + tenant isolation (test 34b)" || fail "apisix:9081 internal agent flow"
+' "$AT_TC" "$AT_LB" "$TM_USER" "$JE_VALUES" && pass "apisix:9081 internal agent flow + tenant isolation (test 34b)" || fail "apisix:9081 internal agent flow"
 
-  assert_eq "$(psql_app "select htx_code from platform.agent_proposals where agent='smoke-agent' and dedupe_key='smoke-agent-m1b-tc-1'")" "TC" "proposal stored under token htx_code=TC (body spoof ignored)"
+  assert_eq "$(psql_app "select htx_code from platform.agent_proposals where agent='journal-review' and status='proposed' and 'je_smoke_agent_tc' = any(subject_ids)")" "TC" "proposal stored under token htx_code=TC (body spoof ignored)"
 else
   echo "SKIP: web not reachable at $WEB (run make web-up && SMOKE_REQUIRE_WEB=1 bash platform/tests/smoke-agent.sh)"
 fi
