@@ -145,6 +145,13 @@ routes:
     vars: [["server_port", "==", "9081"]]
     plugins:
       openid-connect: *oidc_agent
+      # Runs and proposals per agent token; the LLM routes above keep their own budget.
+      limit-count:
+        count: 120
+        time_window: 60
+        key_type: var_combination
+        key: "$http_authorization"
+        rejected_code: 429
       proxy-rewrite:
         headers:
           set:

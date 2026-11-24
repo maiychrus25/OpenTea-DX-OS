@@ -25,3 +25,14 @@ def test_user_routes_refuse_agent_tokens():
 def test_llm_chat_stays_reachable_on_the_internal_port():
     # The web chatbot calls it through CORE_GATEWAY_URL (apisix:9081), so it must not be limited to 9080.
     assert "vars" not in load_routes()["llm-chat"]
+
+
+def test_internal_agent_route_has_its_own_budget_per_token():
+    limit = load_routes()["internal-agent"]["plugins"]["limit-count"]
+    assert limit == {
+        "count": 120,
+        "time_window": 60,
+        "key_type": "var_combination",
+        "key": "$http_authorization",
+        "rejected_code": 429,
+    }
