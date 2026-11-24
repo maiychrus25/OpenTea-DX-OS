@@ -1,12 +1,28 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Static checks of the gateway and compose files, for settings the smoke test only sees on a running stack."""
+import os
+import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 GATEWAY = ROOT / "platform" / "gateway" / "apisix.yaml"
+COMPOSE = ROOT / "docker" / "docker-compose.yml"
+RELEASE = ROOT / "docker" / "docker-compose.release.yml"
+
+
+class ComposeLoader(yaml.SafeLoader):
+    """Compose override files use !reset tags, which plain YAML does not know."""
+
+
+ComposeLoader.add_multi_constructor("!", lambda loader, suffix, node: None)
+
+
+def load_compose(path):
+    return yaml.load(path.read_text(encoding="utf-8"), Loader=ComposeLoader)["services"]
 
 
 def load_routes():
@@ -36,3 +52,18 @@ def test_internal_agent_route_has_its_own_budget_per_token():
         "key": "$http_authorization",
         "rejected_code": 429,
     }
+
+
+@pytest.mark.parametrize("service", ["web", "apisix"])
+def test_release_refuses_empty_or_dev_gateway_secret(service):
+    svc = load_compose(RELEASE)[service]
+    assert svc["environment"]["DXOS_INTERNAL_GATEWAY_SECRET"].startswith("${DXOS_INTERNAL_GATEWAY_SECRET:?")
+    # Compose escapes $ as $$; the wrapper's exec is swapped for echo so the test can see the decision.
+    script = svc["entrypoint"][2].replace("$$", "$").replace("exec ", "echo started ")
+    env = {"PATH": os.environ["PATH"]}
+    refused = subprocess.run(["/bin/sh", "-c", script, "sh", "true"], capture_output=True, text=True,
+                             env={**env, "DXOS_INTERNAL_GATEWAY_SECRET": "dev-internal-gateway-secret"})
+    assert refused.returncode == 1 and "Refusing to start" in refused.stderr and "started" not in refused.stdout
+    started = subprocess.run(["/bin/sh", "-c", script, "sh", "true"], capture_output=True, text=True,
+                             env={**env, "DXOS_INTERNAL_GATEWAY_SECRET": "long-random-value"})
+    assert started.returncode == 0 and "started" in started.stdout

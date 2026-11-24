@@ -14,9 +14,22 @@
 # Requires Docker Compose >= 2.24 for the !reset tag.
 
 services:
+  # Refuse to start without the internal gateway secret or with the public dev value (web and APISIX share it, spec §5.4).
   web:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-web:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
     build: !reset null
+    environment:
+      DXOS_INTERNAL_GATEWAY_SECRET: ${DXOS_INTERNAL_GATEWAY_SECRET:?Set DXOS_INTERNAL_GATEWAY_SECRET in docker/.env.local to a long random value}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        case "$$DXOS_INTERNAL_GATEWAY_SECRET" in
+          dev-internal-gateway-secret) echo "Refusing to start: set a long random DXOS_INTERNAL_GATEWAY_SECRET in docker/.env.local" >&2; exit 1;;
+        esac
+        exec "$$@"
+      - sh
+    command: ["node", "server.js"]
 
   disease-api:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-api:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
@@ -87,6 +100,22 @@ services:
         esac
         exec /opt/keycloak/bin/kc.sh "$$@"
       - kc.sh
+
+  # Same gateway secret check as web: the gateway signs the internal header with it. The image's entrypoint
+  # and default command are repeated because overriding the entrypoint drops the command.
+  apisix:
+    environment:
+      DXOS_INTERNAL_GATEWAY_SECRET: ${DXOS_INTERNAL_GATEWAY_SECRET:?Set DXOS_INTERNAL_GATEWAY_SECRET in docker/.env.local to a long random value}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        case "$$DXOS_INTERNAL_GATEWAY_SECRET" in
+          dev-internal-gateway-secret) echo "Refusing to start: set a long random DXOS_INTERNAL_GATEWAY_SECRET in docker/.env.local" >&2; exit 1;;
+        esac
+        exec /docker-entrypoint.sh "$$@"
+      - sh
+    command: ["docker-start"]
 
   # Published on the host: apisix:9080, web:3000, keycloak:8080 and seaweedfs:9000.
   # SeaweedFS 9000 stays public because the web app hands browsers presigned URLs on it
