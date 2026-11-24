@@ -8,6 +8,7 @@ import { KNOWN_AGENTS } from '@/domain/agent/proposal'
 import { ValidationError } from '@/domain/errors'
 import { PrismaAgentRunRepository } from '@/infrastructure/db/agent/PrismaAgentRunRepository'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
+import { notifyProposalCreated } from '@/application/telegram/telegram-services'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
@@ -72,6 +73,7 @@ async function postInternalAgentProposal(request: Request) {
     return NextResponse.json({ data: { id: null, deduped: true } }, { status: 200 })
   }
 
+  await notifyProposalCreated(caller.htxCode, created.id)
   return NextResponse.json({ data: { id: created.id, deduped: false } }, { status: 201 })
 }
 

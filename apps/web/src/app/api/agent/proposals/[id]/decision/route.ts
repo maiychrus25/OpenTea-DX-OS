@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/auth'
 import { DecideProposalUseCase } from '@/application/agent/DecideProposalUseCase'
+import { notifyProposalDecided } from '@/application/telegram/telegram-services'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
@@ -60,6 +61,10 @@ async function postProposalDecision(request: Request, context: unknown) {
     editedPayload: parsed.data.edited_payload,
     channel: 'web',
   })
+
+  if (['executed', 'failed', 'rejected', 'stale', 'expired'].includes(outcome.outcome)) {
+    await notifyProposalDecided(tenant.htxCode, id)
+  }
 
   if (outcome.outcome === 'stale') {
     return NextResponse.json(

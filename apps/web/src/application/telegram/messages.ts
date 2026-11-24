@@ -1,0 +1,124 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 OpenTea Developers
+
+// Vietnamese message wording for Telegram. Pure: no personal data, only codes, counts and dates (spec §8.3).
+import { formatVnDate } from '@/application/agent/actions/journal-labels'
+import type { Proposal } from '@/domain/agent/proposal'
+
+const VN_TIMEZONE = 'Asia/Ho_Chi_Minh'
+const MAX_PREVIEW_LINES = 5
+const MAX_REASON_CHARS = 160
+
+export function formatVnClock(date: Date): string {
+  return new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: VN_TIMEZONE }).format(date)
+}
+
+/** `2026-11-24` to `24/11/2026`, without any timezone conversion. */
+export function formatIsoDate(iso: string): string {
+  const [year, month, day] = iso.split('-')
+  return `${day}/${month}/${year}`
+}
+
+function truncate(text: string, max: number): string {
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`
+}
+
+export const TELEGRAM_TEXT = {
+  welcome: (name: string) =>
+    `Đã kết nối tài khoản ${name}. Tin nhắn từ hệ thống sẽ được gửi qua máy chủ của Telegram.`,
+  openFromProfile: 'Vui lòng mở liên kết từ trang Hồ sơ trong ứng dụng để lấy mã kết nối.',
+  invalidCode: 'Mã kết nối không đúng hoặc đã hết hạn. Vui lòng tạo mã mới trong trang Hồ sơ.',
+  unlinked: 'Đã gỡ liên kết Telegram với tài khoản này.',
+  notLinked: 'Tài khoản Telegram này chưa được liên kết.',
+  groupLinked: 'Đã kết nối nhóm này với HTX. Nhóm sẽ nhận báo cáo tự động.',
+  rejectPrompt: 'Nhập lý do từ chối đề xuất (tối đa 500 ký tự). Gửi /huy để hủy.',
+  rejectCancelled: 'Đã hủy từ chối đề xuất.',
+  rejectNoReason: 'Vui lòng nhập lý do từ 1 đến 500 ký tự, hoặc gửi /huy để hủy.',
+  invalidButton: 'Nút không hợp lệ.',
+  groupCallback: 'Vui lòng bấm nút trong tin nhắn riêng với bot.',
+  noLongerApprover: 'Bạn không còn quyền duyệt đề xuất này.',
+  roleCheckUnavailable: 'Chưa kiểm tra được quyền của bạn. Vui lòng thử lại sau.',
+  otherCooperative: 'Đề xuất này không thuộc HTX của bạn.',
+  approved: 'Đã duyệt đề xuất.',
+  executed: 'Đã duyệt và thực hiện đề xuất.',
+  failedExecution: 'Đã duyệt nhưng thực hiện lỗi. Xem chi tiết trên web.',
+  rejected: 'Đã từ chối đề xuất.',
+  stale: 'Dữ liệu nguồn đã thay đổi, đề xuất không còn hiệu lực.',
+  expired: 'Đề xuất đã hết hạn.',
+  alreadyDecided: (by: string | null) => `Đề xuất đã được ${by ?? 'người khác'} xử lý.`,
+}
+
+/** Proposal message: title, up to five preview lines, a short reason and the expiry. */
+export function proposalText(proposal: Proposal, titleVi: string, preview: string[]): string {
+  const lines = [`Đề xuất: ${titleVi}`]
+  preview.slice(0, MAX_PREVIEW_LINES).forEach((line) => lines.push(line))
+  if (preview.length > MAX_PREVIEW_LINES) lines.push(`… và ${preview.length - MAX_PREVIEW_LINES} mục khác`)
+  lines.push(`Lý do: ${truncate(proposal.reasonVi, MAX_REASON_CHARS)}`)
+  lines.push(`Hết hạn: ${formatVnDate(proposal.expiresAt)?.slice(0, 5)} ${formatVnClock(proposal.expiresAt)}`)
+  return lines.join('\n')
+}
+
+/** The line every sent proposal message is edited to once the proposal leaves the open state. */
+export function proposalResultText(proposal: Proposal): string | null {
+  const by = proposal.decidedByName ?? 'người duyệt'
+  const at = proposal.decidedAt ? formatVnClock(proposal.decidedAt) : ''
+  switch (proposal.status) {
+    case 'executed':
+      return `Đã được ${by} duyệt lúc ${at}, đã thực hiện.`
+    case 'failed':
+      return `Đã được ${by} duyệt lúc ${at}, thực hiện lỗi.`
+    case 'rejected':
+      return `Đã từ chối: ${proposal.decisionNote ?? ''}`
+    case 'stale':
+      return TELEGRAM_TEXT.stale
+    case 'expired':
+      return TELEGRAM_TEXT.expired
+    default:
+      return null
+  }
+}
+
+export interface ReportFigures {
+  journals_new?: number
+  journals_approved?: number
+  journals_pending?: number
+  proposals_open?: number
+  proposals_decided?: number
+  disease_reports?: number
+  lots_created?: number
+}
+
+/** At most four lines: a header and up to three lines of figures. Missing figures are left out. */
+export function reportText(
+  kind: 'daily' | 'weekly',
+  periodStart: string,
+  periodEnd: string,
+  figures: ReportFigures
+): string {
+  const range = periodStart === periodEnd ? formatIsoDate(periodStart) : `${formatIsoDate(periodStart)} – ${formatIsoDate(periodEnd)}`
+  const lines = [`Báo cáo ${kind === 'daily' ? 'ngày' : 'tuần'} ${range}`]
+  const part = (label: string, value: number | undefined, suffix = '') =>
+    value === undefined ? null : `${label}: ${value}${suffix}`
+
+  const journals = [
+    part('Nhật ký mới', figures.journals_new),
+    part('đã duyệt', figures.journals_approved),
+    part('chờ duyệt', figures.journals_pending),
+  ].filter(Boolean)
+  if (journals.length) lines.push(journals.join(' · '))
+
+  const proposals = [
+    part('Đề xuất đang mở', figures.proposals_open),
+    part('đã xử lý', figures.proposals_decided),
+  ].filter(Boolean)
+  if (proposals.length) lines.push(proposals.join(' · '))
+
+  const others = [part('Báo cáo bệnh hại', figures.disease_reports), part('Lô mới', figures.lots_created)].filter(Boolean)
+  if (others.length) lines.push(others.join(' · '))
+
+  return lines.join('\n')
+}
+
+export function healthText(condition: string, detail: string): string {
+  return `Cảnh báo hệ thống: ${condition}\n${detail}`
+}
