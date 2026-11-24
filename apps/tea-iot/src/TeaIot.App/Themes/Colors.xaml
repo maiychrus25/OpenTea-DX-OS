@@ -1,0 +1,52 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 Vu Dinh Dat -->
+<!-- Tokens follow OpenTea DX-OS DESIGN.md: tea green primary, one amber accent, white cards on a soft green-tinted background. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="PrimaryColor">#176C4B</Color>
+    <Color x:Key="PrimaryHoverColor">#125C3F</Color>
+    <Color x:Key="PrimarySubtleColor">#E7F0EA</Color>
+    <Color x:Key="LeafLightColor">#F1F7F2</Color>
+
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}" />
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="{StaticResource PrimaryHoverColor}" />
+    <SolidColorBrush x:Key="PrimarySubtleBrush" Color="{StaticResource PrimarySubtleColor}" />
+    <SolidColorBrush x:Key="LeafLightBrush" Color="{StaticResource LeafLightColor}" />
+    <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="LimeBrush" Color="#D6F05C" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#B45309" />
+    <SolidColorBrush x:Key="AccentSubtleBrush" Color="#FEF3C7" />
+
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#F5F7F3" />
+    <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="MutedBrush" Color="#EEF1ED" />
+    <SolidColorBrush x:Key="BorderBrush" Color="#DCE3DD" />
+    <SolidColorBrush x:Key="BorderSubtleBrush" Color="#E8EEE9" />
+    <SolidColorBrush x:Key="RowHoverBrush" Color="#F4F8F5" />
+
+    <SolidColorBrush x:Key="InkBrush" Color="#19231E" />
+    <SolidColorBrush x:Key="InkSecondaryBrush" Color="#475569" />
+    <SolidColorBrush x:Key="InkTertiaryBrush" Color="#5F6B7A" />
+
+    <SolidColorBrush x:Key="SuccessBrush" Color="#15803D" />
+    <SolidColorBrush x:Key="SuccessSubtleBrush" Color="#DCFCE7" />
+    <SolidColorBrush x:Key="WarningBrush" Color="#854D0E" />
+    <SolidColorBrush x:Key="WarningSubtleBrush" Color="#FEF3C7" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#B91C1C" />
+    <SolidColorBrush x:Key="DangerHoverBrush" Color="#991B1B" />
+    <SolidColorBrush x:Key="DangerSubtleBrush" Color="#FEE2E2" />
+    <SolidColorBrush x:Key="InfoBrush" Color="#1D4ED8" />
+    <SolidColorBrush x:Key="InfoSubtleBrush" Color="#DBEAFE" />
+    <SolidColorBrush x:Key="NeutralSubtleBrush" Color="#EEF1ED" />
+
+    <FontFamily x:Key="AppFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+    <CornerRadius x:Key="RadiusSm">6</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">10</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">14</CornerRadius>
+
+    <!-- Tea leaf mark used for the logo. -->
+    <Geometry x:Key="LeafGeometry">M 12,2 C 5,6 3,12 5,19 C 5.5,20.5 6.5,21.5 8,22 C 15,22 20,16 20,8 C 20,5 18,3 12,2 Z</Geometry>
+    <Geometry x:Key="LeafVeinGeometry">M 7,20 C 9,15 12,10 17,6 M 10.5,14 L 14.5,14.2 M 9,16.8 L 12,17.2 M 12.5,11 L 15.5,10.6</Geometry>
+</ResourceDictionary>

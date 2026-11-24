@@ -109,6 +109,7 @@ fun LoginScreen(
             OutlinedTextField(
                 value = username, onValueChange = { username = it },
                 label = { Text("Tên đăng nhập") }, placeholder = { Text("ví dụ nv003") },
+                supportingText = { Text("Dùng tài khoản Tea Work hoặc tài khoản chung OpenTea DX-OS của HTX.") },
                 leadingIcon = { Icon(Icons.Outlined.Person, null) },
                 singleLine = true, colors = fieldColors, shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),

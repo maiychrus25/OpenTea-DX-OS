@@ -7,6 +7,9 @@ namespace TeaStaff.Infrastructure.MobileApi;
 
 public sealed record ApiError(string Message);
 
+/// <summary>Alert posted by Tea IoT Station.</summary>
+public sealed record IotAlertRequest(string? HtxCode, string? ParcelCode, string? ParcelName, string? Kind, string? Message, string? Evidence, string? SuggestedTask);
+
 public sealed record LoginRequest(string? Username, string? Password);
 
 public sealed record LoginResponse(string Token, ProfileDto Profile);

@@ -35,6 +35,28 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory,
         }
 
         if (!await db.Employees.IgnoreQueryFilters().AnyAsync(ct)) await SeedDemoAsync(db, ct);
+        if (!await db.RecurringTasks.IgnoreQueryFilters().AnyAsync(ct)) await SeedRecurringAsync(db, ct);
+    }
+
+    /// <summary>Recurring work of the demo cooperative; also added to databases created before 1.3.0.</summary>
+    private async Task SeedRecurringAsync(AppDbContext db, CancellationToken ct)
+    {
+        var htx = config.HtxCode;
+        var departments = await db.Departments.IgnoreQueryFilters().Where(d => d.HtxCode == htx).ToDictionaryAsync(d => d.Name, d => d.Id, ct);
+        var staff = await db.Employees.IgnoreQueryFilters().Where(e => e.HtxCode == htx).ToDictionaryAsync(e => e.Code, e => e.Id, ct);
+        if (departments.Count == 0) return;
+        int? Dept(string name) => departments.TryGetValue(name, out var id) ? id : null;
+        int? Who(string code) => staff.TryGetValue(code, out var id) ? id : null;
+        db.RecurringTasks.AddRange(
+            new RecurringTask { HtxCode = htx, Title = "Hái chè đồi A3", Description = "Hái 1 tôm 2 lá, giao búp về xưởng trước 11h.", Location = "Đồi A3 - Tân Cương",
+                DepartmentId = Dept("Tổ hái chè"), Weekdays = "1,2,3,4,5,6", StartMinute = 6 * 60 + 30, DueMinute = 23 * 60, Priority = TaskPriority.High, AutoAssign = true },
+            new RecurringTask { HtxCode = htx, Title = "Kiểm tra máy sao chè đầu ca", Location = "Xưởng chế biến", DepartmentId = Dept("Tổ chế biến"), PreferredAssigneeId = Who("NV002"),
+                Weekdays = "1,2,3,4,5,6", StartMinute = 7 * 60, DueMinute = 23 * 60 + 30 },
+            new RecurringTask { HtxCode = htx, Title = "Tưới giữ ẩm đồi B1", Description = "Tưới gốc khi độ ẩm đất dưới 35%.", Location = "Đồi B1", DepartmentId = Dept("Tổ chăm sóc vườn"),
+                Weekdays = "1,3,5", StartMinute = 14 * 60, DueMinute = 23 * 60 + 45 },
+            new RecurringTask { HtxCode = htx, Title = "Kiểm kê kho thành phẩm", Location = "Kho thành phẩm", DepartmentId = Dept("Kho vận & bán hàng"),
+                Weekdays = "6", StartMinute = 15 * 60, DueMinute = 17 * 60, IsActive = false });
+        await db.SaveChangesAsync(ct);
     }
 
     /// <summary>
@@ -50,12 +72,48 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory,
         {
             foreach (var c in columns)
                 await db.Database.ExecuteSqlRawAsync($"ALTER TABLE {AppDbContext.CoreSchema}.leave_requests ADD COLUMN IF NOT EXISTS {c} text NULL", ct);
-            return;
         }
-        var existing = await db.Database.SqlQueryRaw<string>("SELECT name AS \"Value\" FROM pragma_table_info('leave_requests')").ToListAsync(ct);
-        foreach (var c in columns.Where(c => !existing.Contains(c)))
-            await db.Database.ExecuteSqlRawAsync($"ALTER TABLE leave_requests ADD COLUMN {c} TEXT NULL", ct);
+        else
+        {
+            var existing = await db.Database.SqlQueryRaw<string>("SELECT name AS \"Value\" FROM pragma_table_info('leave_requests')").ToListAsync(ct);
+            foreach (var c in columns.Where(c => !existing.Contains(c)))
+                await db.Database.ExecuteSqlRawAsync($"ALTER TABLE leave_requests ADD COLUMN {c} TEXT NULL", ct);
+        }
+        foreach (var statement in MissingTableStatements(db.Database.GenerateCreateScript(), AutomationTables))
+            await db.Database.ExecuteSqlRawAsync(statement, ct);
     }
+#pragma warning restore EF1002
+
+    /// <summary>Tables added in 1.3.0 (automation). Mirrors database/postgres/003_automation.sql.</summary>
+    internal static readonly string[] AutomationTables = ["recurring_tasks", "automation_suggestions", "automation_logs"];
+
+    /// <summary>
+    /// Picks the CREATE TABLE / CREATE INDEX statements of the given tables from EF Core's own
+    /// create script and makes them idempotent, so older databases gain the tables unchanged.
+    /// </summary>
+    internal static IEnumerable<string> MissingTableStatements(string createScript, IReadOnlyCollection<string> tables)
+    {
+        foreach (var raw in createScript.Split(';'))
+        {
+            var sql = raw.Trim();
+            if (sql.Length == 0) continue;
+            var mentions = tables.Any(t => sql.Contains($"\"{t}\"", StringComparison.Ordinal) || sql.Contains($" {t} ", StringComparison.Ordinal) || sql.Contains($".{t}", StringComparison.Ordinal));
+            if (!mentions) continue;
+            if (sql.StartsWith("CREATE TABLE ", StringComparison.Ordinal))
+            {
+                var head = sql[..sql.IndexOf('(')];
+                if (!tables.Any(t => head.Contains(t, StringComparison.Ordinal))) continue;
+                yield return "CREATE TABLE IF NOT EXISTS " + sql["CREATE TABLE ".Length..];
+            }
+            else if (sql.StartsWith("CREATE INDEX ", StringComparison.Ordinal) || sql.StartsWith("CREATE UNIQUE INDEX ", StringComparison.Ordinal))
+            {
+                var on = sql.IndexOf(" ON ", StringComparison.Ordinal);
+                if (on < 0 || !tables.Any(t => sql[on..].Contains(t, StringComparison.Ordinal))) continue;
+                yield return sql.Replace("CREATE INDEX ", "CREATE INDEX IF NOT EXISTS ").Replace("CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ");
+            }
+        }
+    }
+#pragma warning disable EF1002
 #pragma warning restore EF1002
 
     private async Task SeedDemoAsync(AppDbContext db, CancellationToken ct)
@@ -161,7 +219,28 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory,
             new WorkTask { HtxCode = htx, Title = "Phun chế phẩm sinh học thửa A3", Description = "Ghi nhật ký phun và thời gian cách ly 7 ngày vào DX-OS.", Location = "Thửa TC-A3", AssigneeId = employees[3].Id, Priority = TaskPriority.Urgent, StartDate = now.Date.AddDays(-3), DueDate = now.Date.AddDays(-1).AddHours(17), Status = WorkTaskStatus.InProgress, Progress = 70, AssignedBy = "Chủ nhiệm HTX" },
             new WorkTask { HtxCode = htx, Title = "Đóng gói 50 hộp quà Tết", Description = "Hộp 200g, dán tem QR truy xuất lô TC-CHE-A3-001.", Location = "Kho thành phẩm", AssigneeId = employees[5].Id, Priority = TaskPriority.Normal, StartDate = now.Date.AddHours(7), DueDate = now.Date.AddDays(3).AddHours(17), Status = WorkTaskStatus.Assigned, AssignedBy = "Chủ nhiệm HTX" },
             new WorkTask { HtxCode = htx, Title = "Đối chiếu công nợ thu mua tháng trước", Location = "Văn phòng", AssigneeId = employees[6].Id, Priority = TaskPriority.Normal, StartDate = now.Date.AddDays(-5), DueDate = now.Date.AddDays(-2).AddHours(17), Status = WorkTaskStatus.Completed, Progress = 100, CompletedAt = now.AddDays(-2), ReportNote = "Đã đối chiếu xong, chênh lệch 0 đồng.", AssignedBy = "Chủ nhiệm HTX" },
-            new WorkTask { HtxCode = htx, Title = "Làm cỏ, xới gốc đồi C2", Location = "Đồi C2", AssigneeId = employees[7].Id, Priority = TaskPriority.Low, StartDate = now.Date.AddDays(1), DueDate = now.Date.AddDays(4).AddHours(17), Status = WorkTaskStatus.Assigned, AssignedBy = "Chủ nhiệm HTX" });
+            new WorkTask { HtxCode = htx, Title = "Làm cỏ, xới gốc đồi C2", Location = "Đồi C2", AssigneeId = employees[7].Id, Priority = TaskPriority.Low, StartDate = now.Date.AddDays(1), DueDate = now.Date.AddDays(4).AddHours(17), Status = WorkTaskStatus.Assigned, AssignedBy = "Chủ nhiệm HTX" },
+            new WorkTask { HtxCode = htx, Title = "Tưới giữ ẩm đồi C2", Description = "Tưới gốc buổi chiều, đất đang khô.", Location = "Đồi C2", AssigneeId = employees[7].Id, Priority = TaskPriority.Normal, StartDate = now.Date.AddHours(13), DueDate = now.Date.AddDays(1).AddHours(17), Status = WorkTaskStatus.Rejected, ReportNote = "Máy bơm khu C2 hỏng, em chưa biết sửa.", AssignedBy = "Chủ nhiệm HTX" });
+
+        // Finished work of the last weeks: what the assignment advisor learns from.
+        (int Who, string Title, string Place, int DaysAgo, bool Late)[] history =
+        [
+            (0, "Hái chè lứa 5 đồi A3", "Đồi A3 - Tân Cương", 6, false), (0, "Hái chè đồi A3", "Đồi A3 - Tân Cương", 13, false),
+            (2, "Hái chè đồi B1", "Đồi B1", 5, false), (2, "Hái chè lứa 5 đồi A3", "Đồi A3 - Tân Cương", 7, true),
+            (7, "Hái chè đồi B1", "Đồi B1", 4, false), (3, "Tưới giữ ẩm đồi C2", "Đồi C2", 3, false), (3, "Bón phân hữu cơ đồi C2", "Đồi C2", 9, false),
+            (3, "Tưới giữ ẩm đồi A3", "Đồi A3 - Tân Cương", 10, true), (4, "Sao mẻ chè đinh 15kg", "Xưởng chế biến", 2, false),
+            (1, "Kiểm tra máy sao chè", "Xưởng chế biến", 1, false), (1, "Sao mẻ chè móc câu 20kg", "Xưởng chế biến", 8, false),
+            (5, "Đóng gói 30 hộp chè 100g", "Kho thành phẩm", 5, false),
+        ];
+        foreach (var (who, title, place, ago, late) in history)
+        {
+            var day = now.Date.AddDays(-ago);
+            db.Tasks.Add(new WorkTask
+            {
+                HtxCode = htx, Title = title, Location = place, AssigneeId = employees[who].Id, StartDate = day.AddHours(7), DueDate = day.AddHours(17),
+                Status = WorkTaskStatus.Completed, Progress = 100, CompletedAt = day.AddHours(late ? 18.5 : 15.5), AssignedBy = "Chủ nhiệm HTX",
+            });
+        }
 
         db.Leaves.AddRange(
             new LeaveRequest { HtxCode = htx, EmployeeId = employees[4].Id, FromDate = today.AddDays(3), ToDate = today.AddDays(4), Type = LeaveType.Annual, Reason = "Về quê dự đám cưới em gái", Status = LeaveStatus.Pending, Source = RecordSource.Mobile },

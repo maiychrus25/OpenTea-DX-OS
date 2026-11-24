@@ -152,7 +152,7 @@
                                     <TextBlock Text="&#xE8EA;" Style="{StaticResource Icon}" FontSize="15" Foreground="{StaticResource LimeBrush}" HorizontalAlignment="Center" />
                                 </Border>
                                 <StackPanel>
-                                    <TextBlock FontSize="11.5" Foreground="#9FB4A8"><Run Text="Từ điện thoại · " /><Run Text="{Binding Time, Mode=OneWay}" /></TextBlock>
+                                    <TextBlock FontSize="11.5" Foreground="#9FB4A8"><Run Text="{Binding Source, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding Time, Mode=OneWay}" /></TextBlock>
                                     <TextBlock Text="{Binding Text}" Foreground="White" FontSize="13.5" TextWrapping="Wrap" Margin="0,2,0,0" />
                                 </StackPanel>
                             </DockPanel>

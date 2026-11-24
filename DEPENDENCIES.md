@@ -279,4 +279,12 @@ affect the project's MIT licensing.
 | [Robolectric](https://github.com/robolectric/robolectric) (test) | 4.17 | MIT | JVM UI tests |
 | JUnit 4 (test) | 4.13.2 | EPL-1.0 | Unit tests |
 
+## Tea IoT Station (`apps/tea-iot`)
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| [MQTTnet](https://github.com/dotnet/MQTTnet) | 4.3.7.1207 | MIT | MQTT client publishing to the core broker |
+| [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | 8.4.2 | MIT | MVVM base classes |
+| xUnit, Microsoft.NET.Test.Sdk, coverlet (test) | 2.9.3 / 17.14.1 / 6.0.4 | Apache-2.0 / MIT / MIT | Unit tests |
+
 Full lists with notes: `apps/staff-desktop/DEPENDENCIES.md` and `apps/staff-mobile/DEPENDENCIES.md`.

@@ -42,6 +42,8 @@ public static class ServiceRegistration
         services.AddSingleton<IPayslipRepository, PayslipRepository>();
         services.AddSingleton<ISettingsRepository, SettingsRepository>();
         services.AddSingleton<IOwnerAccountRepository, OwnerAccountRepository>();
+        services.AddSingleton<IRecurringTaskRepository, RecurringTaskRepository>();
+        services.AddSingleton<IAutomationRepository, AutomationRepository>();
 
         services.AddSingleton<PolicyService>();
         services.AddSingleton<EmployeeService>();
@@ -49,10 +51,12 @@ public static class ServiceRegistration
         services.AddSingleton<AttendanceService>();
         services.AddSingleton<LeaveService>();
         services.AddSingleton<PayrollService>();
+        services.AddSingleton<AutomationEngine>();
 
         services.AddSingleton(new HttpClient { Timeout = TimeSpan.FromSeconds(15) });
         services.AddSingleton<LocalIdentityProvider>();
         services.AddSingleton<KeycloakIdentityProvider>();
+        services.AddSingleton<CoreStaffAuthenticator>();
         services.AddSingleton<IIdentityProvider>(sp => config.AuthMode == AuthMode.Keycloak
             ? sp.GetRequiredService<KeycloakIdentityProvider>()
             : sp.GetRequiredService<LocalIdentityProvider>());
