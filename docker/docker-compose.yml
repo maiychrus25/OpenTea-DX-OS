@@ -161,7 +161,12 @@ services:
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       # Public mini-app requests per minute per client IP (spec §6.5); CI and a Docker Desktop demo raise it (README).
       DXOS_APP_PUBLIC_LIMIT: ${DXOS_APP_PUBLIC_LIMIT:-10}
+      # Signs the Telegram callback buttons (C3). The release override refuses the dev value.
+      DXOS_TELEGRAM_CALLBACK_KEY: ${DXOS_TELEGRAM_CALLBACK_KEY:-dev-telegram-callback-key}
       HOSTNAME: "0.0.0.0"
+    volumes:
+      # Client credentials of dxos-web-roles (realm-management view-users), written by ./dxos telegram enable.
+      - dxos-web-env:/run/dxos-web:ro
     ports:
       - "3000:3000"
     depends_on:
@@ -454,12 +459,48 @@ services:
     cpus: "0.5"
     environment:
       DXOS_TELEGRAM_INTERVAL_SECONDS: "30"
+      # Set in docker/.env.local (or the shell). Without it the relay idles and the rest of the stack is unaffected.
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_API_BASE: ${TELEGRAM_API_BASE:-https://api.telegram.org}
+      DXOS_GATEWAY_URL: http://apisix:9081
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/realms/agrimarket
+      DXOS_TELEGRAM_ENV_DIR: /run/dxos-telegram
+    volumes:
+      - dxos-telegram-env:/run/dxos-telegram:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime(os.environ.get('DXOS_HEARTBEAT_PATH','/tmp/dxos-telegram.heartbeat')) < max(3*float(os.environ.get('DXOS_TELEGRAM_INTERVAL_SECONDS','30')),60) else 1)"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 30s
+    networks:
+      - agrimarket-net
+
+  # Writes the relay and roles credential files for ./dxos telegram (tools profile only). Root with no network, like dxos-agent-env.
+  dxos-telegram-env:
+    build: ../platform/telegram
+    image: opentea-dx-os/telegram:local
+    profiles: ["tools"]
+    restart: "no"
+    user: "0:0"
+    network_mode: none
+    volumes:
+      - dxos-telegram-env:/run/dxos-telegram
+      - dxos-web-env:/run/dxos-web
+
+  # Test double of the Bot API for the platform smoke test (profile telegram-test only). Host port is loopback-only.
+  dxos-telegram-stub:
+    build: ../platform/telegram
+    image: opentea-dx-os/telegram:local
+    profiles: ["telegram-test"]
+    restart: "no"
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    command: ["python", "-m", "dxos_telegram.stub_bot_api"]
+    ports:
+      - "127.0.0.1:8081:8081"
     networks:
       - agrimarket-net
 
@@ -579,6 +620,8 @@ volumes:
   mattermost_data:
   mattermost_config:
   dxos-agent-env:
+  dxos-telegram-env:
+  dxos-web-env:
 
 networks:
   agrimarket-net:
