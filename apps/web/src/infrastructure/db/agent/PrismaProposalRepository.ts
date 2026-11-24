@@ -276,9 +276,9 @@ export class PrismaProposalRepository implements ProposalRepository {
     })
   }
 
-  async markStale(htxCode: string, id: string, meta?: { actorId?: string }): Promise<void> {
+  async markStale(htxCode: string, id: string, meta?: { actorId?: string }): Promise<boolean> {
     const actor = meta?.actorId ? `user:${meta.actorId}` : 'system:web'
-    await prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('dxos.actor', ${actor}, true)`
       const count = await tx.$executeRaw`
         UPDATE platform.agent_proposals
@@ -290,12 +290,13 @@ export class PrismaProposalRepository implements ProposalRepository {
           SELECT audit.record_event('web', 'agent.proposal.stale', ${id}, ${JSON.stringify({ actor })}::jsonb)
         `
       }
+      return count > 0
     })
   }
 
-  async markExpired(htxCode: string, id: string, meta?: { actorId?: string }): Promise<void> {
+  async markExpired(htxCode: string, id: string, meta?: { actorId?: string }): Promise<boolean> {
     const actor = meta?.actorId ? `user:${meta.actorId}` : 'system:web'
-    await prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('dxos.actor', ${actor}, true)`
       const count = await tx.$executeRaw`
         UPDATE platform.agent_proposals
@@ -307,6 +308,7 @@ export class PrismaProposalRepository implements ProposalRepository {
           SELECT audit.record_event('web', 'agent.proposal.expired', ${id}, ${JSON.stringify({ actor })}::jsonb)
         `
       }
+      return count > 0
     })
   }
 

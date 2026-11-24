@@ -41,8 +41,8 @@ export interface ProposalRepository {
   findById(htxCode: string, id: string): Promise<Proposal | null>
   claim(htxCode: string, id: string, decision: ProposalDecisionRecord): Promise<Proposal | null>
   markRejected(htxCode: string, id: string, decision: ProposalDecisionRecord): Promise<Proposal | null>
-  markStale(htxCode: string, id: string, meta?: { actorId?: string }): Promise<void>
-  markExpired(htxCode: string, id: string, meta?: { actorId?: string }): Promise<void>
+  markStale(htxCode: string, id: string, meta?: { actorId?: string }): Promise<boolean>
+  markExpired(htxCode: string, id: string, meta?: { actorId?: string }): Promise<boolean>
   markExecuted(id: string, result: Record<string, unknown>, meta?: { actorId?: string }): Promise<void>
   markFailed(id: string, error: string, meta?: { actorId?: string }): Promise<void>
 }

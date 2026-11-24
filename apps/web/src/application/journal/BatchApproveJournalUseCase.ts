@@ -4,6 +4,7 @@
 import { JournalPort } from '@/domain/journal/ports/JournalPort'
 import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port'
 import { documentRoot } from '@/domain/document/document-namespace'
+import { DomainError } from '@/domain/errors'
 
 export class BatchApproveJournalUseCase {
   constructor(
@@ -13,6 +14,10 @@ export class BatchApproveJournalUseCase {
 
   async execute(entryIds: string[], approvedById: string, htxCode: string) {
     const result = await this.journalPort.batchApprove(entryIds, approvedById)
+    if (result.approved === 0) {
+      const failed = result.failed.length ? `. Không duyệt được: ${result.failed.join(', ')}` : ''
+      throw new DomainError(`Không có nhật ký nào được duyệt${failed}`)
+    }
 
     // Generate PARA HTML document for each approved entry
     // Doing this outside DB transaction to avoid blocking

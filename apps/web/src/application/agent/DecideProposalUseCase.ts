@@ -3,10 +3,12 @@
 
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
 import type { DecisionChannel, ProposalStatus } from '@/domain/agent/proposal'
-import { ForbiddenError, NotFoundError, ValidationError } from '@/domain/errors'
+import { DomainError, ForbiddenError, NotFoundError, ValidationError } from '@/domain/errors'
 import type { Tenant } from '@/lib/api/tenant'
 import { getAction, type ActionDefinition, type ApproverRole } from './action-catalog'
 import type { EvidenceLoaders } from './actions/journal-evidence'
+
+const GENERIC_EXECUTION_FAILURE = 'Không thể thực hiện đề xuất. Vui lòng thử lại sau.'
 
 export interface DecideProposalInput {
   proposalId: string
@@ -67,8 +69,8 @@ export class DecideProposalUseCase {
 
     const now = input.now ?? new Date()
     if (proposal.expiresAt.getTime() <= now.getTime()) {
-      await this.repo.markExpired(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })
-      return { outcome: 'expired' }
+      const changed = await this.repo.markExpired(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })
+      return changed ? { outcome: 'expired' } : this.readConflict(input.tenant.htxCode, proposal.id)
     }
 
     if (input.decision === 'reject') {
@@ -112,8 +114,9 @@ export class DecideProposalUseCase {
       loaders: this.loaders,
     })
     if (stale) {
-      await this.repo.markStale(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })
-      return { outcome: 'stale' }
+      const changed = await this.repo.markStale(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })
+      // Nothing changed means someone decided it first, which is the more useful answer.
+      return changed ? { outcome: 'stale' } : this.readConflict(input.tenant.htxCode, proposal.id)
     }
 
     const claimed = await this.repo.claim(input.tenant.htxCode, proposal.id, {
@@ -133,7 +136,11 @@ export class DecideProposalUseCase {
       const executor = this.runExecute ?? ((def, payload, approver) => def.execute(payload, approver))
       result = await executor(definition, parsedPayload.data, input.tenant)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Execution failed'
+      // Domain errors are meant for the user; anything else is logged and shown as a generic message.
+      const message = err instanceof DomainError ? err.message : GENERIC_EXECUTION_FAILURE
+      if (!(err instanceof DomainError)) {
+        console.error('[DecideProposal] execution failed for proposal', proposal.id, err)
+      }
       await this.repo.markFailed(proposal.id, message, { actorId: input.tenant.userId })
       return { outcome: 'failed', error: message }
     }

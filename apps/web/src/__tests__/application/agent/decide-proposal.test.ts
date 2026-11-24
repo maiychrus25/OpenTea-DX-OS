@@ -6,7 +6,7 @@ import { journalEntryEvidence, journalEntryValues, type EvidenceJournalEntry } f
 import { DecideProposalUseCase } from '@/application/agent/DecideProposalUseCase'
 import { evidenceDigest } from '@/domain/agent/evidence'
 import type { Proposal } from '@/domain/agent/proposal'
-import { ForbiddenError, ValidationError } from '@/domain/errors'
+import { DomainError, ForbiddenError, ValidationError } from '@/domain/errors'
 import type { Tenant } from '@/lib/api/tenant'
 
 const officerTenant: Tenant = { userId: 'off-1', role: 'officer', htxCode: 'TC', htxProfileId: 'htx-tc' }
@@ -94,8 +94,8 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
         return proposal
       }),
       markRejected: jest.fn(async () => ({ ...proposal, status: 'rejected' as const })),
-      markStale: jest.fn(async () => undefined),
-      markExpired: jest.fn(async () => undefined),
+      markStale: jest.fn(async () => true),
+      markExpired: jest.fn(async () => true),
       markExecuted: jest.fn(async () => undefined),
       markFailed: jest.fn(async () => undefined),
     }
@@ -206,8 +206,33 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
       channel: 'web',
     })
 
-    expect(outcome).toEqual({ outcome: 'failed', error: 'DB write error' })
-    expect(repo.markFailed).toHaveBeenCalledWith(proposal.id, 'DB write error', { actorId: 'off-1' })
+    expect(outcome).toEqual({ outcome: 'failed', error: 'Không thể thực hiện đề xuất. Vui lòng thử lại sau.' })
+    expect(repo.markFailed).toHaveBeenCalledWith(proposal.id, 'Không thể thực hiện đề xuất. Vui lòng thử lại sau.', { actorId: 'off-1' })
+  })
+
+  test('stores and shows a domain error message as it is', async () => {
+    executeSpy.mockRejectedValueOnce(new DomainError('Chưa qua thời gian cách ly'))
+    const useCase = new DecideProposalUseCase(repo, loaders, executeSpy)
+
+    const outcome = await useCase.execute({
+      proposalId: proposal.id, tenant: officerTenant, userName: 'Cán bộ', decision: 'approve', channel: 'web',
+    })
+
+    expect(outcome).toEqual({ outcome: 'failed', error: 'Chưa qua thời gian cách ly' })
+    expect(repo.markFailed).toHaveBeenCalledWith(proposal.id, 'Chưa qua thời gian cách ly', { actorId: 'off-1' })
+  })
+
+  test('answers already decided, not stale, when another decision got there first', async () => {
+    loaders.journal_entries.mockResolvedValueOnce(journalEntryValues(makeEntry({ status: 'APPROVED' })))
+    repo.markStale.mockResolvedValueOnce(false)
+    const useCase = new DecideProposalUseCase(repo, loaders, executeSpy)
+
+    const outcome = await useCase.execute({
+      proposalId: proposal.id, tenant: officerTenant, userName: 'Cán bộ', decision: 'approve', channel: 'web',
+    })
+
+    expect(outcome.outcome).toBe('already_decided')
+    expect(executeSpy).not.toHaveBeenCalled()
   })
 
   test('still answers executed when recording the execution fails, and logs it', async () => {
