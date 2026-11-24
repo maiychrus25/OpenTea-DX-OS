@@ -1,0 +1,148 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 OpenTea Developers
+
+import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
+import type { DecisionChannel, ProposalStatus } from '@/domain/agent/proposal'
+import { ForbiddenError, NotFoundError, ValidationError } from '@/domain/errors'
+import type { Tenant } from '@/lib/api/tenant'
+import { getAction, type ActionDefinition, type ActionStalenessContext, type ApproverRole } from './action-catalog'
+
+export interface DecideProposalInput {
+  proposalId: string
+  tenant: Tenant
+  userName: string
+  decision: 'approve' | 'reject'
+  note?: string
+  editedPayload?: Record<string, unknown>
+  channel: DecisionChannel
+  now?: Date
+}
+
+export type DecideProposalOutcome =
+  | { outcome: 'executed'; result: Record<string, unknown> }
+  | { outcome: 'failed'; error: string }
+  | { outcome: 'rejected' }
+  | { outcome: 'stale' }
+  | { outcome: 'expired' }
+  | { outcome: 'already_decided'; by: string | null; at: Date | null; status: ProposalStatus }
+
+export class DecideProposalUseCase {
+  constructor(
+    private readonly repo: Pick<
+      ProposalRepository,
+      'findById' | 'claim' | 'markRejected' | 'markStale' | 'markExpired' | 'markExecuted' | 'markFailed'
+    >,
+    private readonly stalenessCtx?: ActionStalenessContext,
+    private readonly runExecute?: (
+      definition: ActionDefinition<any>,
+      payload: Record<string, unknown>,
+      tenant: Tenant
+    ) => Promise<Record<string, unknown>>
+  ) {}
+
+  async execute(input: DecideProposalInput): Promise<DecideProposalOutcome> {
+    const proposal = await this.repo.findById(input.tenant.htxCode, input.proposalId)
+    if (!proposal) {
+      throw new NotFoundError('Không tìm thấy đề xuất')
+    }
+
+    const definition = getAction(proposal.kind)
+    if (!definition) {
+      throw new ValidationError('UNKNOWN_KIND')
+    }
+
+    if (!definition.approverRoles.includes(input.tenant.role as ApproverRole)) {
+      throw new ForbiddenError('Bạn không có quyền duyệt loại đề xuất này')
+    }
+
+    if (proposal.status !== 'proposed') {
+      return {
+        outcome: 'already_decided',
+        by: proposal.decidedByName,
+        at: proposal.decidedAt,
+        status: proposal.status,
+      }
+    }
+
+    const now = input.now ?? new Date()
+    if (proposal.expiresAt.getTime() <= now.getTime()) {
+      await this.repo.markExpired(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })
+      return { outcome: 'expired' }
+    }
+
+    if (input.decision === 'reject') {
+      const note = input.note?.trim() ?? ''
+      if (!note || note.length > 500) {
+        throw new ValidationError('Vui lòng nhập lý do từ chối (từ 1 đến 500 ký tự)')
+      }
+      const rejected = await this.repo.markRejected(input.tenant.htxCode, proposal.id, {
+        userId: input.tenant.userId,
+        userName: input.userName,
+        role: input.tenant.role,
+        channel: input.channel,
+        note,
+        editedPayload: null,
+      })
+      if (!rejected) {
+        return this.readConflict(input.tenant.htxCode, proposal.id)
+      }
+      return { outcome: 'rejected' }
+    }
+
+    let effectiveRaw: Record<string, unknown> = { ...proposal.payload }
+    let editedForDb: Record<string, unknown> | null = null
+    if (input.editedPayload && Object.keys(input.editedPayload).length > 0) {
+      for (const key of Object.keys(input.editedPayload)) {
+        if (!definition.editableFields.includes(key)) {
+          throw new ValidationError(`Trường '${key}' không được phép chỉnh sửa`)
+        }
+      }
+      effectiveRaw = { ...effectiveRaw, ...input.editedPayload }
+      editedForDb = input.editedPayload
+    }
+
+    const parsedPayload = definition.payloadSchema.safeParse(effectiveRaw)
+    if (!parsedPayload.success) {
+      throw new ValidationError('INVALID_PAYLOAD')
+    }
+
+    const stale = await definition.isStale(parsedPayload.data, proposal.evidence, this.stalenessCtx)
+    if (stale) {
+      await this.repo.markStale(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })
+      return { outcome: 'stale' }
+    }
+
+    const claimed = await this.repo.claim(input.tenant.htxCode, proposal.id, {
+      userId: input.tenant.userId,
+      userName: input.userName,
+      role: input.tenant.role,
+      channel: input.channel,
+      note: input.note?.trim() || null,
+      editedPayload: editedForDb,
+    })
+    if (!claimed) {
+      return this.readConflict(input.tenant.htxCode, proposal.id)
+    }
+
+    try {
+      const executor = this.runExecute ?? ((def, payload, approver) => def.execute(payload, approver))
+      const result = await executor(definition, parsedPayload.data, input.tenant)
+      await this.repo.markExecuted(proposal.id, result, { actorId: input.tenant.userId })
+      return { outcome: 'executed', result }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Execution failed'
+      await this.repo.markFailed(proposal.id, message, { actorId: input.tenant.userId })
+      return { outcome: 'failed', error: message }
+    }
+  }
+
+  private async readConflict(htxCode: string, proposalId: string): Promise<DecideProposalOutcome> {
+    const latest = await this.repo.findById(htxCode, proposalId)
+    return {
+      outcome: 'already_decided',
+      by: latest?.decidedByName ?? null,
+      at: latest?.decidedAt ?? null,
+      status: latest?.status ?? 'approved',
+    }
+  }
+}
