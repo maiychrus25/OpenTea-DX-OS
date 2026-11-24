@@ -18,9 +18,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Agent credentials (`./dxos agent enable|disable`, `docker/docker-compose.yml`)**: the per-cooperative credentials now live in the `dxos-agent-env` volume, written by a short-lived root helper that receives them on stdin and stores them as uid 10001, so the agent can read them on Linux. Upgrade note: run `./dxos agent enable <HTX>` once for every cooperative that had the agent enabled; the old files under `docker/runtime/<project>/agent/` are no longer read. `enable` now refuses a cooperative that does not exist.
+- **Agent evidence version 2 (`apps/web`, `platform/agent`)**: proposals carry every column the rules read (journal entry, its activities and the crop cycles compared), hashed with one canonical JSON shared by TypeScript and Python (`platform/agent/tests/fixtures/evidence-vectors.json`). Open proposals made with version 1 answer stale on decision.
+- **Agent schedule (`platform/agent`)**: journal review runs on the first cycle, when the pending entries change, or hourly between 06:00 and 20:00 Vietnam time; an empty queue no longer writes a run row. Out-of-range dosage and a missing withdrawal period now ask for a correction (`REQUEST_CHANGES`) instead of a rejection. Thresholds are documented in `docs/rules-and-limits.md` §3.8.
+- **Proposal dedupe (`apps/web`, `08-agent.sql`)**: duplicates are judged by the journal entries a proposal acts on (`subject_ids`), not by the key the agent sends.
+- **Release override**: the web and APISIX refuse to start when `DXOS_INTERNAL_GATEWAY_SECRET` is missing or still the public development value.
 - **`docs/rules-and-limits.md`**: amended §1.1 (AI Principle Invariant) and §1.2 (MNM Invariant) per milestone M0 to permit typed catalogue action proposals (with human approval in normal mode, or manager-enabled bounded autonomous mode) and optional per-cooperative external LLM providers while keeping local Ollama as the zero-key default.
 
 ### Fixed
+
+- **Withdrawal checks fail closed (`approve-harvest`, `CreateLotUseCase`, lot trace, farmer dashboard)**: spraying recorded in a rejected, returned or pending journal entry still blocks harvest approval, lot creation and QR export; only drafts are ignored. Without this, rejecting a journal through the new review flow would have hidden a real spray from the withdrawal period.
+- **Agent A1 withdrawal rule**: compares Vietnam calendar days (a harvest on the spraying day is a violation, a harvest on the safe day is allowed) instead of UTC timestamps; the invented 7-day minimum is removed; Vietnamese numbers such as "1.200 ml" and "0,5 kg" are read correctly.
+- **Agent tokens limited to their routes (APISIX)**: tokens of the `agent` role are refused on the workflow, disease and chat LLM routes; the internal agent route is rate-limited per token.
+- **Proposal creation checks**: evidence values must match their hashes, referenced rows must belong to the caller's cooperative, at most 50 rows, known agent names only, bounded body size.
+- **Journal review races**: review and batch approval change only entries that are still pending and record the reviewer; a returned or rejected entry can be edited and goes back to pending.
+- **Agent containers**: `dxos-agent` and `dxos-telegram` run read-only, without capabilities, with process and CPU limits; `08-agent.sql` is mounted for fresh databases.
+- **Agent resilience**: provider failures of any kind fall back to rule-only reasons, HTTP 429 no longer blocks the agent loop, and one malformed credentials file or journal entry no longer stops the others.
 
 - **Journal reject/request-changes flow (`officer-journal-approval.tsx`, `POST /api/journal/[id]/review`)**: officer "Từ chối" / "Yêu cầu sửa" actions previously posted ignored `isApproved` / `rejectionReason` fields to `/api/journal/batch-approve` and approved the entry; they now invoke the dedicated review endpoint, record `review_note`, and keep rejected entries out of `APPROVED`.
 
