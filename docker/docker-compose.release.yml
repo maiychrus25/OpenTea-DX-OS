@@ -20,12 +20,16 @@ services:
     build: !reset null
     environment:
       DXOS_INTERNAL_GATEWAY_SECRET: ${DXOS_INTERNAL_GATEWAY_SECRET:?Set DXOS_INTERNAL_GATEWAY_SECRET in docker/.env.local to a long random value}
+      DXOS_TELEGRAM_CALLBACK_KEY: ${DXOS_TELEGRAM_CALLBACK_KEY:?Set DXOS_TELEGRAM_CALLBACK_KEY in docker/.env.local to a long random value}
     entrypoint:
       - /bin/sh
       - -c
       - |
         case "$$DXOS_INTERNAL_GATEWAY_SECRET" in
           dev-internal-gateway-secret) echo "Refusing to start: set a long random DXOS_INTERNAL_GATEWAY_SECRET in docker/.env.local" >&2; exit 1;;
+        esac
+        case "$$DXOS_TELEGRAM_CALLBACK_KEY" in
+          ""|dev-telegram-callback-key) echo "Refusing to start: set a long random DXOS_TELEGRAM_CALLBACK_KEY in docker/.env.local" >&2; exit 1;;
         esac
         exec "$$@"
       - sh
@@ -66,6 +70,10 @@ services:
     build: !reset null
 
   dxos-telegram:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-telegram:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+    build: !reset null
+
+  dxos-telegram-env:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-telegram:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
     build: !reset null
 
