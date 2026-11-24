@@ -21,8 +21,12 @@ class ComposeLoader(yaml.SafeLoader):
 ComposeLoader.add_multi_constructor("!", lambda loader, suffix, node: None)
 
 
+def load_document(path):
+    return yaml.load(path.read_text(encoding="utf-8"), Loader=ComposeLoader)
+
+
 def load_compose(path):
-    return yaml.load(path.read_text(encoding="utf-8"), Loader=ComposeLoader)["services"]
+    return load_document(path)["services"]
 
 
 def load_routes():
@@ -88,3 +92,18 @@ def test_every_init_script_is_mounted_into_fresh_databases():
     mounts = load_compose(COMPOSE)["postgres"]["volumes"]
     for name in init:
         assert f"../platform/postgres/init/{name}:/docker-entrypoint-initdb.d/{name}" in mounts, name
+
+
+def test_agent_credentials_live_in_a_named_volume_written_by_a_root_helper():
+    doc = load_document(COMPOSE)
+    assert "dxos-agent-env:/run/dxos-agent:ro" in doc["services"]["dxos-agent"]["volumes"]
+    helper = doc["services"]["dxos-agent-env"]
+    assert helper["profiles"] == ["tools"] and helper["user"] == "0:0" and helper["network_mode"] == "none"
+    assert helper["volumes"] == ["dxos-agent-env:/run/dxos-agent"]
+    assert "dxos-agent-env" in doc["volumes"]
+
+
+def test_release_pulls_the_agent_helper_from_the_registry():
+    helper = load_compose(RELEASE)["dxos-agent-env"]
+    assert helper["image"].startswith("${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-agent:")
+    assert helper["build"] is None

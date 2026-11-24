@@ -418,7 +418,7 @@ services:
       DXOS_AGENT_ENV_DIR: /run/dxos-agent
       DXOS_LLM_MODEL: ${DXOS_LLM_MODEL:-qwen2.5:0.5b}
     volumes:
-      - ./runtime/${COMPOSE_PROJECT_NAME:-docker}/agent:/run/dxos-agent:ro
+      - dxos-agent-env:/run/dxos-agent:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime(os.environ.get('DXOS_HEARTBEAT_PATH','/tmp/dxos-agent.heartbeat')) < max(3*float(os.environ.get('DXOS_AGENT_INTERVAL_SECONDS','30')),60) else 1)"]
       interval: 10s
@@ -427,6 +427,18 @@ services:
       start_period: 30s
     networks:
       - agrimarket-net
+
+  # Writes and removes the agent credential files for ./dxos agent (tools profile only). Root with no network: the files
+  # are owned by the agent's uid 10001, so the agent reads them and no other host user can.
+  dxos-agent-env:
+    build: ../platform/agent
+    image: opentea-dx-os/agent:local
+    profiles: ["tools"]
+    restart: "no"
+    user: "0:0"
+    network_mode: none
+    volumes:
+      - dxos-agent-env:/run/dxos-agent
 
   dxos-telegram:
     build: ../platform/telegram
@@ -566,6 +578,7 @@ volumes:
   ollama_data:
   mattermost_data:
   mattermost_config:
+  dxos-agent-env:
 
 networks:
   agrimarket-net:

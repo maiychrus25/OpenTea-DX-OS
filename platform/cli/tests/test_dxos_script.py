@@ -112,3 +112,16 @@ def test_agent_enable_refuses_an_unknown_cooperative_before_keycloak(tmp_path):
     assert "htx_profiles" in run.stderr
     calls = (tmp_path / "calls").read_text()
     assert "psql" in calls and "keycloak" not in calls
+
+
+def test_agent_credentials_reach_the_helper_on_stdin_only(tmp_path):
+    """The secret must never appear in the helper's argv, so `ps` cannot show it."""
+    body = subprocess.run(["sed", "-n", "/^agent_env_write()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    stub = f"compose() {{ echo \"$@\" >{tmp_path}/args; cat >{tmp_path}/stdin; }}"
+    snippet = (f"set -e\n{stub}\n{body}\n"
+               "printf 'DXOS_AGENT_CLIENT_SECRET=s3cret\\n' | agent_env_write TC.env\n")
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    args = (tmp_path / "args").read_text()
+    assert "s3cret" not in args and "TC.env" in args
+    assert (tmp_path / "stdin").read_text() == "DXOS_AGENT_CLIENT_SECRET=s3cret\n"

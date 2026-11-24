@@ -61,6 +61,10 @@ services:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-agent:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
     build: !reset null
 
+  dxos-agent-env:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-agent:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+    build: !reset null
+
   dxos-telegram:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-telegram:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
     build: !reset null

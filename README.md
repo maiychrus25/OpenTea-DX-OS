@@ -409,7 +409,7 @@ make apps-smoke                         # kiểm thử tích hợp (sau npm run 
 ./dxos agent disable TC                 # xoá client dxos-agent-tc, xoá tệp env, tắt agent_settings và hết hạn đề xuất đang chờ
 ```
 
-- Lệnh tạo hoặc thu hồi client `dxos-agent-<htx viết thường>` trong Keycloak (gán claim `htx_code` viết hoa và vai trò realm `agent`), ghi `docker/runtime/<project>/agent/<HTX>.env` (quyền `600`, git-ignored) và cập nhật `platform.agent_settings`. Khi tắt, mọi đề xuất ở trạng thái `proposed` của HTX đó chuyển sang `expired`.
+- Lệnh tạo hoặc thu hồi client `dxos-agent-<htx viết thường>` trong Keycloak (gán claim `htx_code` viết hoa và vai trò realm `agent`), ghi tệp env của HTX vào volume Docker `dxos-agent-env` của project (tệp thuộc uid `10001` của dxos-agent, quyền `600`, không nằm trên thư mục host) và cập nhật `platform.agent_settings`. Với HTX đã bật trước đó, chạy lại `./dxos agent enable <HTX>` để ghi tệp vào volume; tệp cũ dưới `docker/runtime/<project>/agent/` không còn được đọc. Khi tắt, mọi đề xuất ở trạng thái `proposed` của HTX đó chuyển sang `expired`.
 - `./dxos agent enable` kiểm tra HTX có trong `platform.htx_profiles` trước khi gọi Keycloak; HTX không tồn tại thì lệnh dừng với lỗi và không tạo client nào.
 - `./dxos agent disable` xoá client nhưng không thu hồi token đã cấp: token phát hành trước đó còn dùng được đến khi hết hạn. Thời hạn access token là 5 phút (300 giây, mặc định của Keycloak vì realm `agrimarket` không đặt riêng và client agent không ghi đè).
 
