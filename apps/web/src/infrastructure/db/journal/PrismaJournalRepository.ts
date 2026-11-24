@@ -332,14 +332,20 @@ export class PrismaJournalRepository implements JournalPort {
           continue
         }
 
-        await tx.journalEntry.update({
-          where: { id: entryId },
+        // Conditional on the status so a concurrent review cannot be overwritten.
+        const { count } = await tx.journalEntry.updateMany({
+          where: { id: entryId, status: 'PENDING_APPROVAL' },
           data: {
             status: 'APPROVED',
             approved_by_id: approvedById,
             approved_at: new Date(),
+            reviewed_by_id: approvedById,
           },
         })
+        if (count === 0) {
+          failed.push(entryId)
+          continue
+        }
         
         await applyParcelStatus(tx, entry.parcel_id, entry.activity_type, entry.entry_date)
         if (entry.submitted_role === 'FARMER' && entry.parcel.household.keycloak_user_id) {
@@ -391,13 +397,18 @@ export class PrismaJournalRepository implements JournalPort {
         throw new ValidationError('Nhật ký không còn ở trạng thái chờ duyệt')
       }
 
-      await tx.journalEntry.update({
-        where: { id: entryId },
+      // Conditional on the status so a concurrent review cannot be overwritten.
+      const { count } = await tx.journalEntry.updateMany({
+        where: { id: entryId, status: 'PENDING_APPROVAL' },
         data: {
           status: decision,
           review_note: trimmedReason,
+          reviewed_by_id: reviewerId,
         },
       })
+      if (count === 0) {
+        throw new ValidationError('Nhật ký không còn ở trạng thái chờ duyệt')
+      }
 
       if (entry.submitted_role === 'FARMER' && entry.parcel.household.keycloak_user_id) {
         const notif = await tx.notification.create({

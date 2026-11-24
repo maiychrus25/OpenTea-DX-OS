@@ -171,6 +171,7 @@ model JournalEntry {
   approved_by_id  String? // keycloak user ID of officer
   approved_at     DateTime?
   review_note     String? // reason given when an officer rejects or asks for changes
+  reviewed_by_id  String? // keycloak user ID of the officer who approved, rejected or asked for changes
   notes           String?
 
   // Weather auto-attach
