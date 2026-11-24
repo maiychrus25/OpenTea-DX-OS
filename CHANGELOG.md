@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Tea IoT Station (`apps/tea-iot`)**: a WPF sensor station simulator for tea hills that publishes soil moisture, soil and air temperature, air humidity and rainfall to the core broker (`htx/<HTX>/plot/<parcel>/<sensor>`, QoS 1, store and forward while offline), with drought, heavy rain, frost and faulty-sensor scenarios. Field alerts (dry soil, frost, heat) become task suggestions in Tea Staff Manager. `apps/tea-iot/docker/mqtt-port.override.yml` publishes the broker on 127.0.0.1 for local development.
+- **Tea Staff Manager 1.3.0**: Automation page (recurring work, cover for rejected work and approved leave, forgotten check-outs, overdue warnings, draft payroll), an explainable ranking of who fits a task shown with its facts, `POST /api/iot/alerts`, and Tea Work sign-in with the shared Keycloak account. **Tea Work 1.2.0** documents the shared account on its sign-in screen.
+
+### Fixed
+
+- **Mosquitto restart loop**: on kernels with `fs.protected_regular` (including WSL 2) a restarted broker container failed with "can't create /tmp/mosquitto.passwd: Permission denied"; the entrypoint now removes the old password file first.
+- The PostgreSQL scripts of the staff app (`apps/staff-desktop/database/postgres`) were hidden by the root `*.sql` ignore rule.
+
 - **Mini-app `hub-mobile` (`miniapps/hub-mobile`)**: a card in the app store and an open page (`/public/<htxCode>`) with the download link of the Android APK and the steps to add the web build to an iPhone home screen. Links come from `HUB_APK_URL` and `HUB_WEB_URL`; the app stores and reads nothing. The 67 MB APK itself is not in the repository.
 
 ---
