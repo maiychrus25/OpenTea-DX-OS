@@ -7,6 +7,7 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { requireTenant } from '@/lib/api/tenant'
 import { ProfileForm } from './_components/ProfileForm'
 import { AccountSection } from '@/components/ui'
+import { TelegramLinkCard } from '@/components/features/telegram/TelegramLinkCard'
 import { CertificateManager } from '@/components/features/certificate/CertificateManager'
 import styles from './page.module.css'
 
@@ -54,6 +55,8 @@ export default async function HtxProfilePage() {
         <CertificateManager mode="manage" />
       </section>
       
+      <TelegramLinkCard role="manager" />
+
       <AccountSection name="Nguyễn Văn An" role="manager" />
     </div>
   )

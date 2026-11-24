@@ -3,6 +3,7 @@
 
 import React from 'react'
 import { AccountSection } from '@/components/ui'
+import { TelegramLinkCard } from '@/components/features/telegram/TelegramLinkCard'
 import styles from './page.module.css'
 
 export default function FarmerProfilePage() {
@@ -12,6 +13,8 @@ export default function FarmerProfilePage() {
         <h1 className={styles.title}>Tài khoản của tôi</h1>
         <p className={styles.description}>Quản lý thông tin cá nhân và cài đặt bảo mật.</p>
       </div>
+
+      <TelegramLinkCard role="farmer" />
 
       <AccountSection name="Lê Văn Bình" role="farmer" />
     </div>
