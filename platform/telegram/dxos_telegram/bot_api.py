@@ -71,4 +71,6 @@ def _error_body(exc: urllib.error.HTTPError) -> dict[str, Any]:
         body = json.loads(exc.read().decode("utf-8"))
     except (OSError, ValueError):
         return {}
+    finally:
+        exc.close()  # CI runs the tests with -W error: an unclosed HTTP error response warns when collected
     return body if isinstance(body, dict) else {}
