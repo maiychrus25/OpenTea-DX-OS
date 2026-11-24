@@ -657,6 +657,41 @@ All errors use `{ "error": { "code", "message" } }`.
 
 ---
 
+## Agentic Layer & Journal Review (M1a)
+
+> **Note:** Internal agent ingestion endpoints (`/api/internal/agent/*`) arrive in milestone M1b.
+
+### `GET /api/agent/proposals`
+List agent proposals for the caller's HTX (`manager` or `officer` only; `farmer` returns 403).
+
+- **Query:** `?view=open|history&kind=<optional>` (default `open`, limit 100).
+- **200** `{ "data": ProposalInboxItem[] }` — each item is enriched server-side with `titleVi`, `preview` lines, `canDecide` (`role ∈ approverRoles`), and `subjects` (`[{ id, label }]` tenant-checked for `journal.*` entries).
+
+### `POST /api/agent/proposals/[id]/decision`
+Approve or reject an open proposal (`manager` or `officer` with matching `approverRoles`).
+
+- **Request:** `{ "decision": "approve" | "reject", "note"?: string (1–500 required for reject), "edited_payload"?: Record<string, unknown> }` (edits restricted to `editableFields`).
+- **200** `{ "data": { "outcome": "executed" | "rejected" | "failed", ... } }`.
+- **403** `FORBIDDEN` — caller role cannot approve this action kind.
+- **404** `NOT_FOUND` — proposal not found in caller's HTX.
+- **409** `PROPOSAL_STALE` | `PROPOSAL_EXPIRED` | `ALREADY_DECIDED` — source rows changed, expired, or concurrently decided.
+
+#### Evidence canonical JSON format
+For cross-language SHA-256 verification between TypeScript and Python (`dxos-agent` in M1c):
+- Object keys sorted lexicographically recursively, no whitespace, arrays preserve order, `undefined` object properties dropped, non-finite numbers rejected.
+- Equivalent Python call: `json.dumps(v, sort_keys=True, separators=(',', ':'), ensure_ascii=False)`.
+- Fixed vector: `{"b": 1, "a": [{"d": "é", "c": null}]}` → `{"a":[{"c":null,"d":"é"}],"b":1}` → SHA-256 `2d39a9eff5fc38971ac13f9187b86e18b6531fd0fe2c17e45a200a5948144ae7`.
+
+### `POST /api/journal/[id]/review`
+Reject or request changes on a `PENDING_APPROVAL` journal entry (`officer` or `manager`, tenant-guarded).
+
+- **Request:** `{ "decision": "REJECTED" | "REQUEST_CHANGES", "reason": string (trimmed, 1–500) }`.
+- **200** `{ "data": { "status": "REJECTED" | "REQUEST_CHANGES" } }` — stores `review_note` and notifies the submitting farmer if `submitted_role = FARMER`.
+- **400** `VALIDATION_ERROR` — invalid body or entry no longer `PENDING_APPROVAL`.
+- **403** `FORBIDDEN` / **404** `NOT_FOUND` — wrong role or foreign HTX.
+
+---
+
 ## Error Codes
 
 | HTTP | code | Meaning |

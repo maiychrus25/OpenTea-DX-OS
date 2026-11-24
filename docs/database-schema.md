@@ -152,6 +152,7 @@ Nhật ký canh tác. Officer ghi, Manager duyệt.
 | status | ENUM('draft','pending_approval','approved','rejected') | NOT NULL, DEFAULT 'draft' | |
 | approved_at | TIMESTAMPTZ | | |
 | rejection_reason | TEXT | | |
+| review_note | TEXT | nullable | Lý do cán bộ nhập khi từ chối hoặc yêu cầu sửa (`20261124120000_journal_review_note`) |
 | photo_minio_keys | TEXT[] | | Mảng MinIO keys |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
@@ -347,6 +348,15 @@ Tỷ giá USD/VND (Frankfurter API).
 | id | UUID | PK | |
 | rates | JSONB | NOT NULL | Toàn bộ tỷ giá thế giới (VND, CNY, JPY...) |
 | fetched_at | TIMESTAMPTZ | NOT NULL | |
+
+---
+
+### Agentic Layer (`platform` schema — `platform/postgres/init/08-agent.sql`, M1a)
+Tất cả ba bảng đều gắn trigger `dxos_audit_row` ghi vào `audit.events`.
+
+- **`platform.agent_runs`**: lịch sử các lượt chạy agent (`id`, `htx_code`, `agent`, `trigger` ∈ `schedule|event|manual`, `started_at`, `finished_at`, `status` ∈ `running|ok|failed|skipped`, `provider`, `model`, `tokens_in`, `tokens_out`, `cost_estimate`, `error`, `prompt_version`, `input_hash`).
+- **`platform.agent_proposals`**: hàng đợi đề xuất hành động và vết kiểm duyệt (`id`, `htx_code`, `run_id`, `agent`, `kind`, `payload` JSONB, `reason_vi`, `evidence` JSONB, `confidence`, `risk` ∈ `low|medium|high`, `status` ∈ `proposed|approved|executed|failed|rejected|expired|stale`, `origin` ∈ `agent|user`, `requested_by`, `dedupe_key`, `created_at`, `expires_at`, `decided_by`, `decided_by_name`, `decided_at`, `decision_channel` ∈ `web|telegram`, `decision_note`, `edited_payload` JSONB, `executed_at`, `result` JSONB). Partial unique index `agent_proposals_one_open` trên `(htx_code, kind, dedupe_key)` khi `status IN ('proposed', 'approved')`.
+- **`platform.agent_settings`**: cấu hình agent theo từng HTX (`id` UUID UNIQUE, `htx_code`, `agent`, `enabled`, `schedule`, `provider`, `thresholds` JSONB, `monthly_budget`; PK `(htx_code, agent)`).
 
 ---
 

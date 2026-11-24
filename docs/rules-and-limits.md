@@ -158,6 +158,7 @@ Rules:
 - Only officer/farmer can CREATE (status = draft)
 - Only officer can SUBMIT for approval (draft → pending_approval)
 - Officer and manager can APPROVE or REJECT (pending_approval → approved/rejected)
+- Rejecting or requesting changes keeps the entry out of APPROVED (`REJECTED` or `REQUEST_CHANGES`) and stores the reason in `review_note`
 - APPROVED entry cannot be edited or deleted
 - REJECTED entry can be edited and re-submitted
 - Batch approve: max 50 entries per request
