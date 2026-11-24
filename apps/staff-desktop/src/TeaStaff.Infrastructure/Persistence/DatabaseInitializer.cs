@@ -50,12 +50,48 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory,
         {
             foreach (var c in columns)
                 await db.Database.ExecuteSqlRawAsync($"ALTER TABLE {AppDbContext.CoreSchema}.leave_requests ADD COLUMN IF NOT EXISTS {c} text NULL", ct);
-            return;
         }
-        var existing = await db.Database.SqlQueryRaw<string>("SELECT name AS \"Value\" FROM pragma_table_info('leave_requests')").ToListAsync(ct);
-        foreach (var c in columns.Where(c => !existing.Contains(c)))
-            await db.Database.ExecuteSqlRawAsync($"ALTER TABLE leave_requests ADD COLUMN {c} TEXT NULL", ct);
+        else
+        {
+            var existing = await db.Database.SqlQueryRaw<string>("SELECT name AS \"Value\" FROM pragma_table_info('leave_requests')").ToListAsync(ct);
+            foreach (var c in columns.Where(c => !existing.Contains(c)))
+                await db.Database.ExecuteSqlRawAsync($"ALTER TABLE leave_requests ADD COLUMN {c} TEXT NULL", ct);
+        }
+        foreach (var statement in MissingTableStatements(db.Database.GenerateCreateScript(), AutomationTables))
+            await db.Database.ExecuteSqlRawAsync(statement, ct);
     }
+#pragma warning restore EF1002
+
+    /// <summary>Tables added in 1.3.0 (automation). Mirrors database/postgres/003_automation.sql.</summary>
+    internal static readonly string[] AutomationTables = ["recurring_tasks", "automation_suggestions", "automation_logs"];
+
+    /// <summary>
+    /// Picks the CREATE TABLE / CREATE INDEX statements of the given tables from EF Core's own
+    /// create script and makes them idempotent, so older databases gain the tables unchanged.
+    /// </summary>
+    internal static IEnumerable<string> MissingTableStatements(string createScript, IReadOnlyCollection<string> tables)
+    {
+        foreach (var raw in createScript.Split(';'))
+        {
+            var sql = raw.Trim();
+            if (sql.Length == 0) continue;
+            var mentions = tables.Any(t => sql.Contains($"\"{t}\"", StringComparison.Ordinal) || sql.Contains($" {t} ", StringComparison.Ordinal) || sql.Contains($".{t}", StringComparison.Ordinal));
+            if (!mentions) continue;
+            if (sql.StartsWith("CREATE TABLE ", StringComparison.Ordinal))
+            {
+                var head = sql[..sql.IndexOf('(')];
+                if (!tables.Any(t => head.Contains(t, StringComparison.Ordinal))) continue;
+                yield return "CREATE TABLE IF NOT EXISTS " + sql["CREATE TABLE ".Length..];
+            }
+            else if (sql.StartsWith("CREATE INDEX ", StringComparison.Ordinal) || sql.StartsWith("CREATE UNIQUE INDEX ", StringComparison.Ordinal))
+            {
+                var on = sql.IndexOf(" ON ", StringComparison.Ordinal);
+                if (on < 0 || !tables.Any(t => sql[on..].Contains(t, StringComparison.Ordinal))) continue;
+                yield return sql.Replace("CREATE INDEX ", "CREATE INDEX IF NOT EXISTS ").Replace("CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ");
+            }
+        }
+    }
+#pragma warning disable EF1002
 #pragma warning restore EF1002
 
     private async Task SeedDemoAsync(AppDbContext db, CancellationToken ct)
