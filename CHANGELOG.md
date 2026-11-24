@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.14.0] - 2026-11-25
+
+The agentic layer arrives. One AI agent per cooperative reviews pending journal entries and proposes; a manager or officer approves on the web or from Telegram, and every step is in the audit chain. A cooperative can switch an agent to Claude or OpenAI within a monthly budget, with personal data masked first. Staff work gains automation and AI-ranked suggestions, and a sensor station simulator joins the repository.
+
 ### Added
 
 - **Agentic layer milestone M3: external LLM providers (`platform/agent`, `apps/web`, `docker`)**: a manager can switch each agent of the cooperative (A1 journal review, A6 digest) from the local Ollama to Claude (Anthropic) or OpenAI on a new settings page (`/manager/ai/settings`, read only for officers), with a confirmation that lists what leaves the server; only providers whose key the agent container holds are offered, and every change is audited. The agent calls both APIs over plain HTTP from the standard library, masks phone numbers, e-mails and identity numbers before any external call, and falls back to Ollama, then to the rules, on any failure (cut network, 5xx, timeout, refusal, malformed output; a 429 pauses the provider for at least 60 s). Runs report provider, model, tokens and estimated cost; a run that called an external provider writes one `agent.external_call` audit event without content. A monthly budget per cooperative warns the managers at 80% and stops external calls at 100% until the Vietnam month ends (Telegram message once per threshold and month, banner in the inbox). A6 sends the daily report at the cooperative's report time. The keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, optional `DXOS_ANTHROPIC_MODEL`, `DXOS_OPENAI_MODEL`) reach only `dxos-agent`; a test-only LLM stub (profile `llm-test`) and `platform/tests/smoke-llm.sh` cover the path in CI.
@@ -22,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Web package version `1.14.0`.
 - **Agent credentials (`./dxos agent enable|disable`, `docker/docker-compose.yml`)**: the per-cooperative credentials now live in the `dxos-agent-env` volume, written by a short-lived root helper that receives them on stdin and stores them as uid 10001, so the agent can read them on Linux. Upgrade note: run `./dxos agent enable <HTX>` once for every cooperative that had the agent enabled; the old files under `docker/runtime/<project>/agent/` are no longer read. `enable` now refuses a cooperative that does not exist.
 - **Agent evidence version 2 (`apps/web`, `platform/agent`)**: proposals carry every column the rules read (journal entry, its activities and the crop cycles compared), hashed with one canonical JSON shared by TypeScript and Python (`platform/agent/tests/fixtures/evidence-vectors.json`). Open proposals made with version 1 answer stale on decision.
 - **Agent schedule (`platform/agent`)**: journal review runs on the first cycle, when the pending entries change, or hourly between 06:00 and 20:00 Vietnam time; an empty queue no longer writes a run row. Out-of-range dosage and a missing withdrawal period now ask for a correction (`REQUEST_CHANGES`) instead of a rejection. Thresholds are documented in `docs/rules-and-limits.md` §3.8.
@@ -43,6 +50,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Agent resilience**: provider failures of any kind fall back to rule-only reasons, HTTP 429 no longer blocks the agent loop, and one malformed credentials file or journal entry no longer stops the others.
 
 - **Journal reject/request-changes flow (`officer-journal-approval.tsx`, `POST /api/journal/[id]/review`)**: officer "Từ chối" / "Yêu cầu sửa" actions previously posted ignored `isApproved` / `rejectionReason` fields to `/api/journal/batch-approve` and approved the entry; they now invoke the dedicated review endpoint, record `review_note`, and keep rejected entries out of `APPROVED`.
+
+### Upgrade notes
+
+- Set `DXOS_INTERNAL_GATEWAY_SECRET` and `DXOS_TELEGRAM_CALLBACK_KEY` in `docker/.env.local` to long random values. With the release override the web does not start while either is missing or still the development value, and APISIX does not start without the first.
+- `make platform-up`, then `make web-up`: the first creates the agent and Telegram tables (`08-agent.sql`, `09-telegram.sql`), applies the database migrations and starts `dxos-agent` and `dxos-telegram`; the second rebuilds the web app at `1.14.0`. No data migration.
+- AI layer: `./dxos agent enable <HTX>` for each cooperative that should get it; the running agent picks it up on its next cycle, and the command creates the realm role `agent` when it is missing (on a smaller stack, `make up-agent` starts the agent). A cooperative enabled from `main` before this release runs `enable` once more: the credentials moved to the `dxos-agent-env` volume.
+- Telegram (optional): set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` from BotFather, run `./dxos telegram enable`, then link a phone from the profile page.
+- External LLM providers (optional): set `ANTHROPIC_API_KEY` (and `DXOS_ANTHROPIC_MODEL` to change the default `claude-haiku-5-5`) or `OPENAI_API_KEY` with `DXOS_OPENAI_MODEL`, restart `dxos-agent`, then choose the provider for an agent on `/manager/ai/settings`. Without a key everything runs on Ollama as before.
+- n8n: import the workflows again (`n8n import:workflow`, see `docs/dev-setup.md`); every workflow now names `workflows/system-error-alert.json` as its error workflow, so failures reach managers.
+- Withdrawal checks now count every journal entry that is not a draft: a harvest or a lot that passed before because the spraying entry was rejected, returned or pending is blocked until the withdrawal period ends. Open AI proposals made before the upgrade answer stale when decided.
+- Tea Staff Manager's shared sign-in needs a Keycloak client created by hand: see `apps/staff-desktop/docs/core-integration.md`.
+
+### Known limits
+
+- The withdrawal checks read at most 100 journal entries of a parcel (issue #67).
+- A farmer cannot yet edit a returned journal entry from the web form (issue #68).
+- Telegram delivery is at least once: a message can arrive twice if the relay stops between Telegram's answer and reporting it.
+- With an external provider, names a farmer writes inside a note are not masked; the confirmation on the settings page says so. Costs are estimated from a small price table in code; a model not in the table counts as 0.
+- The browser checks of `app-kit.spec.ts` can fail on a frame that is still navigating (issue #44); a failed `Platform Smoke Test` job on that spec is re-run.
 
 ---
 
