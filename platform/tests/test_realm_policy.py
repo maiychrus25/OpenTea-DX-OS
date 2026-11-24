@@ -116,6 +116,12 @@ class RealmPolicyTest(unittest.TestCase):
             if client.get("serviceAccountsEnabled"):
                 self.assertTrue(client["clientId"].startswith("dxos-agent-"), client["clientId"])
 
+    def test_telegram_realm_role_exists_and_only_its_client_may_hold_it(self):
+        names = {role["name"] for role in REALM["roles"]["realm"]}
+        self.assertIn("telegram", names)
+        for client in REALM["clients"]:
+            self.assertNotIn("telegram", client.get("defaultRoles", []), client["clientId"])
+
     def test_sso_session_matches_app_session(self):
         self.assertEqual(REALM.get("ssoSessionIdleTimeout"), 28800)
         self.assertEqual(REALM.get("ssoSessionMaxLifespan"), 28800)
