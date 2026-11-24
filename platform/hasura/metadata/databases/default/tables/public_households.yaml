@@ -28,3 +28,12 @@ select_permissions:
     permission:
       columns: '*'
       filter: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}
+  - role: agent
+    permission:
+      columns:
+        - id
+        - htx_profile_id
+        - created_at
+        - updated_at
+      allow_aggregations: true
+      filter: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}

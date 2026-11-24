@@ -6,7 +6,7 @@ import { CoreGatewayClient, parseCoreTimestamp } from './core-gateway.client'
 
 const ENTRY_FIELDS = `
   id parcel_id entry_date activity_type performed_by submitted_by_id submitted_role status approved_by_id approved_at
-  notes weather_temperature weather_precipitation weather_humidity weather_condition photo_url photo_minio_key created_at
+  review_note notes weather_temperature weather_precipitation weather_humidity weather_condition photo_url photo_minio_key created_at
   activities { id activity_detail product_name dosage withdrawal_days safe_harvest_date }
   parcel { household_id parcel_code household { keycloak_user_id } }
 `
@@ -22,6 +22,7 @@ interface EntryRow {
   status: string
   approved_by_id: string | null
   approved_at: string | null
+  review_note?: string | null
   notes: string | null
   weather_temperature: number | null
   weather_precipitation: number | null
@@ -56,6 +57,7 @@ function toJournalEntry(row: EntryRow): JournalEntryData {
     status: row.status,
     approved_by_id: row.approved_by_id,
     approved_at: row.approved_at ? parseCoreTimestamp(row.approved_at) : null,
+    review_note: row.review_note ?? null,
     notes: row.notes,
     weather_temperature: row.weather_temperature,
     weather_precipitation: row.weather_precipitation,

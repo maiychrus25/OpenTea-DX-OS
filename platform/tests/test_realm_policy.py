@@ -109,6 +109,13 @@ class RealmPolicyTest(unittest.TestCase):
         names = {role["name"].lower() for role in REALM["roles"]["realm"]}
         self.assertFalse(names & {"admin", "hasura-admin"}, names)
 
+    def test_agent_realm_role_exists_and_no_static_service_accounts(self):
+        names = {role["name"] for role in REALM["roles"]["realm"]}
+        self.assertIn("agent", names)
+        for client in REALM["clients"]:
+            if client.get("serviceAccountsEnabled"):
+                self.assertTrue(client["clientId"].startswith("dxos-agent-"), client["clientId"])
+
     def test_sso_session_matches_app_session(self):
         self.assertEqual(REALM.get("ssoSessionIdleTimeout"), 28800)
         self.assertEqual(REALM.get("ssoSessionMaxLifespan"), 28800)

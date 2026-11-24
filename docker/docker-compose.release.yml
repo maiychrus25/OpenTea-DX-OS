@@ -1,10 +1,10 @@
 # Copyright (c) 2026 OpenTea Developers
 # Licensed under the MIT License. See LICENSE file in the project root for full license information.
 #
-# Release override: run web, disease-api, postgres, migrate, dxos-scanner and the dataops services (dxos-ingest, dxos-lifecycle, dxos-simulator) from prebuilt GHCR images instead of building from source.
+# Release override: run web, disease-api, postgres, migrate, dxos-scanner, the dataops services (dxos-ingest, dxos-lifecycle, dxos-simulator), dxos-agent and dxos-telegram from prebuilt GHCR images instead of building from source.
 # Usage (from the release bundle root):
 #   export OPENTEA_VERSION=1.2.0
-#   docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner dxos-ingest dxos-lifecycle
+#   docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner dxos-ingest dxos-lifecycle dxos-agent dxos-telegram
 #   (dxos-simulator, profile demo, shares the dataops image; add it to pull only when running the demo)
 #   (see README "Bản phát hành" for the order: postgres, platform-init, migrate, platform-init again, rest, then `--profile tools run --rm ollama-init`;
 #   set the secrets in docker/.env.local first: the broker refuses change_me* passwords and SeaweedFS refuses placeholder MINIO_* keys;
@@ -14,9 +14,22 @@
 # Requires Docker Compose >= 2.24 for the !reset tag.
 
 services:
+  # Refuse to start without the internal gateway secret or with the public dev value (web and APISIX share it, spec §5.4).
   web:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-web:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
     build: !reset null
+    environment:
+      DXOS_INTERNAL_GATEWAY_SECRET: ${DXOS_INTERNAL_GATEWAY_SECRET:?Set DXOS_INTERNAL_GATEWAY_SECRET in docker/.env.local to a long random value}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        case "$$DXOS_INTERNAL_GATEWAY_SECRET" in
+          dev-internal-gateway-secret) echo "Refusing to start: set a long random DXOS_INTERNAL_GATEWAY_SECRET in docker/.env.local" >&2; exit 1;;
+        esac
+        exec "$$@"
+      - sh
+    command: ["node", "server.js"]
 
   disease-api:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-api:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
@@ -42,6 +55,18 @@ services:
 
   dxos-simulator:
     image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-dataops:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+    build: !reset null
+
+  dxos-agent:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-agent:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+    build: !reset null
+
+  dxos-agent-env:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-agent:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
+    build: !reset null
+
+  dxos-telegram:
+    image: ${OPENTEA_IMAGE_PREFIX:-ghcr.io/maiychrus25/opentea-dx-os}-telegram:${OPENTEA_VERSION:?Set OPENTEA_VERSION to the release version, e.g. 1.2.0}
     build: !reset null
 
   # Refuse to start with placeholder (change_me*) broker passwords.
@@ -79,6 +104,22 @@ services:
         esac
         exec /opt/keycloak/bin/kc.sh "$$@"
       - kc.sh
+
+  # Same gateway secret check as web: the gateway signs the internal header with it. The image's entrypoint
+  # and default command are repeated because overriding the entrypoint drops the command.
+  apisix:
+    environment:
+      DXOS_INTERNAL_GATEWAY_SECRET: ${DXOS_INTERNAL_GATEWAY_SECRET:?Set DXOS_INTERNAL_GATEWAY_SECRET in docker/.env.local to a long random value}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        case "$$DXOS_INTERNAL_GATEWAY_SECRET" in
+          dev-internal-gateway-secret) echo "Refusing to start: set a long random DXOS_INTERNAL_GATEWAY_SECRET in docker/.env.local" >&2; exit 1;;
+        esac
+        exec /docker-entrypoint.sh "$$@"
+      - sh
+    command: ["docker-start"]
 
   # Published on the host: apisix:9080, web:3000, keycloak:8080 and seaweedfs:9000.
   # SeaweedFS 9000 stays public because the web app hands browsers presigned URLs on it

@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 OpenTea Developers
+
+export type ProposalStatus =
+  | 'proposed'
+  | 'approved'
+  | 'executed'
+  | 'failed'
+  | 'rejected'
+  | 'expired'
+  | 'stale'
+
+export const KNOWN_AGENTS = ['journal-review'] as const
+export type KnownAgent = (typeof KNOWN_AGENTS)[number]
+
+export type Risk = 'low' | 'medium' | 'high'
+export type Origin = 'agent' | 'user'
+export type DecisionChannel = 'web' | 'telegram'
+
+export interface EvidenceRow {
+  table: string
+  id: string
+  sha256: string
+  values?: Record<string, unknown>
+}
+
+export interface Evidence {
+  rows: EvidenceRow[]
+  sha256: string
+}
+
+export interface Proposal {
+  id: string
+  htxCode: string
+  runId: string | null
+  agent: string
+  kind: string
+  payload: Record<string, unknown>
+  reasonVi: string
+  evidence: Evidence
+  confidence: number | null
+  risk: Risk
+  status: ProposalStatus
+  origin: Origin
+  requestedBy: string | null
+  dedupeKey: string
+  createdAt: Date
+  expiresAt: Date
+  decidedBy: string | null
+  decidedByName: string | null
+  decidedAt: Date | null
+  decisionChannel: DecisionChannel | null
+  decisionNote: string | null
+  editedPayload: Record<string, unknown> | null
+  executedAt: Date | null
+  result: Record<string, unknown> | null
+}

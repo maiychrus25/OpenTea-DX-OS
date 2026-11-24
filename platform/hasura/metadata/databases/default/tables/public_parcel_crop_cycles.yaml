@@ -20,3 +20,15 @@ select_permissions:
     permission:
       columns: '*'
       filter: {parcel: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}}
+  - role: agent
+    permission:
+      columns:
+        - id
+        - parcel_id
+        - season
+        - sowed_at
+        - harvested_at
+        - estimated_harvest_date
+        - created_at
+      allow_aggregations: true
+      filter: {parcel: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}}

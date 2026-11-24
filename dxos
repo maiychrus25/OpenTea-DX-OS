@@ -14,9 +14,10 @@ export DXOS_GATEWAY_FILE="../$RUNTIME/gateway/apisix.yaml"
 # Same as the Makefile: no build attestation, so rebuilding an unchanged app image keeps its ID and its container.
 export BUILDX_NO_DEFAULT_ATTESTATIONS=1
 ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.json
+HTX_RE='^[A-Z0-9_-]{1,20}$'
 
 usage() {
-  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker" >&2
+  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | agent <enable|disable> <HTX>" >&2
   exit 2
 }
 
@@ -224,6 +225,93 @@ worker() {
   worker_log "worker stopped"
 }
 
+kc_exec() {
+  local script="$1"; shift
+  compose exec -T keycloak sh -c "$script" sh "$@"
+}
+
+# The agent reads its credentials from the dxos-agent-env volume as uid 10001. The tools helper runs as root with no network;
+# the secret comes on stdin, never in argv.
+agent_env_write() {  # <file name>: content on stdin
+  compose --profile tools run --rm -T --no-deps dxos-agent-env \
+    sh -c 'umask 077 && cat > "/run/dxos-agent/$1" && chown 10001:10001 "/run/dxos-agent/$1" && chmod 600 "/run/dxos-agent/$1"' sh "$1"
+}
+agent_env_remove() {  # <file name>
+  compose --profile tools run --rm -T --no-deps dxos-agent-env rm -f "/run/dxos-agent/$1"
+}
+
+agent_enable() {
+  local htx="$1" htx_lower client_id secret found
+  [[ "$htx" =~ $HTX_RE ]] || { echo "Mã HTX '$htx' không hợp lệ (chỉ gồm A-Z, 0-9, _, -, tối đa 20 ký tự)" >&2; exit 1; }
+  htx_lower="$(printf '%s' "$htx" | tr '[:upper:]' '[:lower:]')"
+  client_id="dxos-agent-$htx_lower"
+  # Checked before Keycloak is touched, so an unknown cooperative leaves no client behind.
+  found="$(compose exec -T postgres psql -U agrimarket -d agrimarket -tA -v ON_ERROR_STOP=1 -v "htx=$htx" <<'SQL'
+SELECT 1 FROM htx_profiles WHERE htx_code = :'htx';
+SQL
+)"
+  [ "$found" = 1 ] || { echo "Không có HTX $htx trong bảng htx_profiles; hãy tạo HTX trước khi bật lớp AI" >&2; exit 1; }
+
+  secret="$(kc_exec '
+    set -eu
+    K=/opt/keycloak/bin/kcadm.sh
+    HTX="$1"
+    CLIENT_ID="$2"
+    SA_USER="service-account-$CLIENT_ID"
+    "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+    if ! "$K" get roles/agent -r agrimarket >/dev/null 2>&1; then
+      "$K" create roles -r agrimarket -s name=agent -s "description=AI operational agent" >/dev/null
+    fi
+    CID="$("$K" get clients -r agrimarket -q "clientId=$CLIENT_ID" --fields id --format csv --noquotes | head -n 1)"
+    if [ -z "$CID" ]; then
+      "$K" create clients -r agrimarket \
+        -s "clientId=$CLIENT_ID" -s enabled=true -s publicClient=false -s serviceAccountsEnabled=true \
+        -s standardFlowEnabled=false -s implicitFlowEnabled=false -s directAccessGrantsEnabled=false \
+        -s "defaultClientScopes=[\"roles\",\"dx-os-core\"]" -s "optionalClientScopes=[]" >/dev/null
+      CID="$("$K" get clients -r agrimarket -q "clientId=$CLIENT_ID" --fields id --format csv --noquotes | head -n 1)"
+    fi
+    UID_SA="$("$K" get "clients/$CID/service-account-user" -r agrimarket --fields id --format csv --noquotes | head -n 1)"
+    "$K" update "users/$UID_SA" -r agrimarket -s "attributes.htx_code=[\"$HTX\"]" >/dev/null
+    "$K" add-roles -r agrimarket --uusername "$SA_USER" --rolename agent >/dev/null
+    "$K" get "clients/$CID/client-secret" -r agrimarket --fields value --format csv --noquotes | head -n 1
+  ' "$htx" "$client_id")"
+
+  [ -n "$secret" ] || { echo "Không lấy được client secret cho $client_id" >&2; exit 1; }
+  printf 'DXOS_AGENT_CLIENT_ID=%s\nDXOS_AGENT_CLIENT_SECRET=%s\nDXOS_AGENT_HTX=%s\n' "$client_id" "$secret" "$htx" | agent_env_write "$htx.env"
+
+  compose exec -T postgres psql -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -v "htx=$htx" -q <<'SQL' >/dev/null
+INSERT INTO platform.agent_settings (htx_code, agent, enabled)
+VALUES (:'htx', 'journal-review', true)
+ON CONFLICT (htx_code, agent) DO UPDATE SET enabled = true;
+SQL
+  echo "Đã bật lớp AI cho HTX $htx"
+}
+
+agent_disable() {
+  local htx="$1" htx_lower client_id
+  [[ "$htx" =~ $HTX_RE ]] || { echo "Mã HTX '$htx' không hợp lệ" >&2; exit 1; }
+  htx_lower="$(printf '%s' "$htx" | tr '[:upper:]' '[:lower:]')"
+  client_id="dxos-agent-$htx_lower"
+
+  kc_exec '
+    set -eu
+    K=/opt/keycloak/bin/kcadm.sh
+    CLIENT_ID="$1"
+    "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+    CID="$("$K" get clients -r agrimarket -q "clientId=$CLIENT_ID" --fields id --format csv --noquotes | head -n 1)"
+    if [ -n "$CID" ]; then
+      "$K" delete "clients/$CID" -r agrimarket >/dev/null
+    fi
+  ' "$client_id"
+
+  agent_env_remove "$htx.env"
+  compose exec -T postgres psql -U agrimarket -d agrimarket -v ON_ERROR_STOP=1 -v "htx=$htx" -q <<'SQL' >/dev/null
+UPDATE platform.agent_settings SET enabled = false WHERE htx_code = :'htx';
+UPDATE platform.agent_proposals SET status = 'expired' WHERE htx_code = :'htx' AND status = 'proposed';
+SQL
+  echo "Đã tắt lớp AI cho HTX $htx"
+}
+
 [ $# -ge 1 ] || usage
 cmd="$1"; shift
 case "$cmd" in
@@ -246,5 +334,13 @@ case "$cmd" in
   worker)
     [ $# -eq 0 ] || usage
     cd "$ROOT"; worker ;;
+  agent)
+    [ $# -eq 2 ] || usage
+    subcmd="$1"; htx="$2"
+    case "$subcmd" in
+      enable) cd "$ROOT"; agent_enable "$htx" ;;
+      disable) cd "$ROOT"; agent_disable "$htx" ;;
+      *) usage ;;
+    esac ;;
   *) usage ;;
 esac

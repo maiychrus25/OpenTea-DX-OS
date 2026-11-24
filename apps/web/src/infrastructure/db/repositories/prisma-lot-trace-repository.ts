@@ -37,8 +37,8 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
                 household: true,
                 journal_entries: {
                   include: { activities: true },
-                  // R5 optimal: only APPROVED journals are official trace (exclude REJECTED)
-                  where: { status: 'APPROVED' },
+                  // Every entry that is not a draft drives the withdrawal check; only APPROVED ones are shown (see journal_summaries)
+                  where: { status: { not: 'DRAFT' } },
                   orderBy: { entry_date: 'asc' },
                   take: 100,
                 }
@@ -93,7 +93,7 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
         status: lp.parcel.status
       })),
       journal_summaries: lot.lot_parcels.flatMap(lp =>
-        lp.parcel.journal_entries.flatMap(e => {
+        lp.parcel.journal_entries.filter(e => e.status === 'APPROVED').flatMap(e => {
           if (e.activities.length === 0) {
             return [{
               entry_date: e.entry_date,

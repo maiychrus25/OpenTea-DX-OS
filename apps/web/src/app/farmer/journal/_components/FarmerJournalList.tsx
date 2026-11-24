@@ -19,7 +19,7 @@ interface JournalEntry {
   notes: string | null
   activities: { activity_detail: string; product_name: string | null; dosage?: string; performer?: string; withdrawal_days?: number }[]
   history?: { date: string, action: string, note?: string }[]
-  rejectReason?: string
+  review_note?: string | null
   photo_url?: string
 }
 
@@ -28,6 +28,7 @@ const STATUS_MAP: Record<string, { label: string; tone: 'amber' | 'green' | 'neu
   APPROVED: { label: 'Đã duyệt', tone: 'green' },
   DRAFT: { label: 'Bản nháp', tone: 'neutral' },
   REJECTED: { label: 'Từ chối', tone: 'blue' },
+  REQUEST_CHANGES: { label: 'Yêu cầu sửa', tone: 'blue' },
 }
 
 const ACTIVITY_MAP: Record<string, string> = {
@@ -177,10 +178,10 @@ export function FarmerJournalList() {
                 </div>
               )}
 
-              {selectedEntry.rejectReason && (
+              {selectedEntry.review_note && (
                 <div className={styles.rejectBox}>
-                  <strong>Lý do từ chối:</strong>
-                  <p>{selectedEntry.rejectReason}</p>
+                  <strong>{selectedEntry.status === 'REQUEST_CHANGES' ? 'Yêu cầu sửa:' : 'Lý do từ chối:'}</strong>
+                  <p>{selectedEntry.review_note}</p>
                 </div>
               )}
 

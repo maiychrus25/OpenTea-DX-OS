@@ -10,26 +10,37 @@
 
 ### 1.1 AI Principle Invariant
 ```
-AI CHỈ tổng hợp và trình bày sự thật có trích dẫn nguồn.
-AI KHÔNG ra quyết định thay người dùng.
-AI KHÔNG khuyến nghị hành động cụ thể.
-Mọi số liệu phải kèm citation: (Nguồn: USDA, ngày DD/MM/YYYY).
+Chế độ thường:
+- AI được đề xuất hành động nằm trong danh mục hành động (action catalogue).
+- AI KHÔNG bao giờ tự thực thi.
+- Mọi đề xuất kèm lý do và nguồn; người duyệt chịu trách nhiệm quyết định.
+
+Chế độ tự vận hành (tuỳ chọn, mặc định tắt, do manager bật và chịu trách nhiệm):
+- AI tự thực thi hành động trong danh mục trong các ngưỡng và 5 giới hạn cứng H1–H5 của đặc tả §11.
+
+Giữ nguyên cho chatbot, bản tin, hỏi đáp và nhận diện bệnh:
+- Chatbot, bản tin và hỏi đáp CHỈ tổng hợp và trình bày sự thật có trích dẫn nguồn.
+- Mọi số liệu phải kèm citation: (Nguồn: USDA, ngày DD/MM/YYYY).
+- FastAPI /predict KHÔNG trả về treatment recommendation — chỉ disease_name + confidence.
 ```
 
 **Enforcement trong code:**
-- Ollama system prompt PHẢI chứa đủ 4 quy tắc trên (xem ARCHITECTURE-SPINE §7.4)
+- Ollama system prompt PHẢI chứa quy tắc chỉ tổng hợp sự thật có trích dẫn nguồn (xem ARCHITECTURE-SPINE §7.4)
 - Response từ `/api/chatbot` và `/api/bulletin` PHẢI chứa `sources` array
 - FastAPI `/predict` KHÔNG trả về treatment recommendation — chỉ `disease_name` + `confidence`
+- Mọi đề xuất hành động đi qua danh mục hành động và bước duyệt trong `apps/web`, được ghi vào `audit.events` (xem [ADR 0003](./adr/0003-agentic-layer.md) và đặc tả `docs/specs/2026-11-23-agentic-layer-design.md`)
 
 ### 1.2 MNM (Mã Nguồn Mở) Invariant
 ```
 100% thành phần phải có license MNM-compatible.
-KHÔNG sử dụng API keys trả phí ở bất kỳ đâu.
+Không có phụ thuộc bắt buộc nào vào dịch vụ trả phí. Provider trả phí là tuỳ chọn, mặc định tắt, bật theo từng HTX. Dựng và chạy thử từ mã nguồn không cần khoá nào.
 KHÔNG bundle binary proprietary vào source code.
 KHÔNG hardcode credentials vào bất kỳ file nào được commit.
 ```
 
-**Verified MNM stack:** Xem PRD §8 License Compliance Matrix
+**Verified MNM stack:** Xem PRD §8 License Compliance Matrix và [ADR 0004](./adr/0004-external-llm-providers.md).
+
+> **Lưu ý chuyển tiếp:** Chatbot hiện tại tự chuyển sang Groq khi có `GROQ_API_KEY`; cơ chế này có từ trước khi lớp provider dùng chung được thiết kế và sẽ chuyển sang dùng chung lớp provider cùng chính sách dữ liệu trong đặc tả §3, §8.3.
 
 ### 1.3 Security Invariant
 ```
@@ -147,6 +158,7 @@ Rules:
 - Only officer/farmer can CREATE (status = draft)
 - Only officer can SUBMIT for approval (draft → pending_approval)
 - Officer and manager can APPROVE or REJECT (pending_approval → approved/rejected)
+- Rejecting or requesting changes keeps the entry out of APPROVED (`REJECTED` or `REQUEST_CHANGES`) and stores the reason in `review_note`
 - APPROVED entry cannot be edited or deleted
 - REJECTED entry can be edited and re-submitted
 - Batch approve: max 50 entries per request
@@ -193,6 +205,21 @@ When journal entry is created:
 - Officer can manually override temperature_c and rainfall_mm
 ```
 
+### 3.8 Ngưỡng mặc định của agent soát nhật ký (A1)
+
+Agent A1 (`platform/agent/dxos_agent/agents/journal_review.py`) giữ các ngưỡng mặc định trong `DEFAULT_THRESHOLDS`. Tham số `thresholds` khi chạy có thể ghi đè từng ngưỡng.
+
+| Ngưỡng | Mặc định | Quyết định khi kích hoạt |
+|---|---|---|
+| `max_dosage_value` | 500 | Liều lượng có số ngoài khoảng (0, 500] → REQUEST_CHANGES, mã DOSAGE, đề nghị kiểm tra lại. Không từ chối, vì ngưỡng không có đơn vị. |
+| `heavy_rain_mm` | 20 mm | Phun thuốc khi lượng mưa từ 20 mm trở lên → REQUEST_CHANGES, mã INCONSISTENT |
+| `future_entry_tolerance_hours` | 1 giờ | Ngày ghi nhật ký vượt thời điểm hiện tại quá 1 giờ → REQUEST_CHANGES, mã INCONSISTENT |
+| Số ngày cách ly (`withdrawal_days`) | Không có mức tối thiểu | Thiếu hoặc âm → REQUEST_CHANGES, mã MISSING_INFO. Số ngày ngắn hợp lệ không bị loại. |
+| Kiểm tra cách ly | Theo ngày lịch Việt Nam | Phun thuốc bị REJECTED, mã WITHDRAWAL_PERIOD khi ngày thu hoạch (thực tế hoặc dự kiến) nằm trong khoảng từ ngày phun đến trước ngày an toàn. Thu hoạch đúng ngày an toàn được phép. |
+| `MAX_BATCH_APPROVE` | 50 | Giới hạn kỹ thuật, không phải quyết định nghiệp vụ. Lô duyệt lớn hơn được chia thành nhiều đề xuất. |
+
+Liều lượng được đọc theo định dạng tiếng Việt: "1.200 ml" và "1 200 ml" là 1200, dấu phẩy là dấu thập phân ("1,5 kg" là 1,5). Dấu chấm theo sau bởi một hoặc hai chữ số cũng là dấu thập phân ("0.5 kg" là 0,5), vì nông hộ gõ cả hai kiểu.
+
 ---
 
 ## 4. Security Rules
@@ -224,6 +251,8 @@ When journal entry is created:
 | View disease results | ✅ | ✅ | ✅ (own) |
 | View notifications | own only | own only | own only |
 | View QR public page | ✅ (no auth) | ✅ (no auth) | ✅ (no auth) |
+
+> **AI Agents (`agent` role, M1b):** Service accounts `dxos-agent-<htx>` read HTX-scoped non-PII tables only through the read-only Hasura `agent` role (personal columns such as farmer `name`, `phone`, `address`, `performed_by`, and user IDs are hidden), ingest runs and proposals only through `/api/internal/agent/*` on internal gateway port `9081`, and cannot call any business write API.
 
 ### 4.3 Data Privacy
 ```

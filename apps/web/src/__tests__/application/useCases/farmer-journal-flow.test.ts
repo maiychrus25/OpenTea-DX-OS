@@ -29,6 +29,7 @@ describe('Farmer journal production flow', () => {
       update: jest.fn(),
       delete: jest.fn().mockResolvedValue(undefined),
       batchApprove: jest.fn(),
+      review: jest.fn(),
     }
     parcelPort = {
       findById: jest.fn(),

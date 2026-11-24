@@ -35,6 +35,10 @@ jobs:
             context: ./apps/web/prisma
           - service: dataops
             context: ./platform/dataops
+          - service: agent
+            context: ./platform/agent
+          - service: telegram
+            context: ./platform/telegram
 
     steps:
       - name: Checkout the commit that passed CI

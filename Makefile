@@ -12,7 +12,7 @@ export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 # keycloak on every platform-up. Without the attestation the same inputs give the same ID, so nothing is recreated.
 export BUILDX_NO_DEFAULT_ATTESTATIONS := 1
 
-.PHONY: gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice up-workflow up-chat stop-extras platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync mobile-client
+.PHONY: gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice up-workflow up-chat up-agent stop-extras platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync mobile-client
 
 # APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
 gateway-sync:
@@ -29,7 +29,7 @@ platform-up: gateway-sync
 # stack needs a restart. A fresh start must not get one: it would hide a wrong migrate order from the smoke test.
 # gateway-sync writes the runtime route file in place (same inode), so later app routes reach APISIX without one.
 	@running="$$($(COMPOSE) ps -q --status running hasura apisix)"; \
-	$(COMPOSE) up -d --build --wait postgres keycloak seaweedfs n8n hasura apisix clamav dxos-scanner mosquitto dxos-ingest dxos-lifecycle ollama || exit 1; \
+	$(COMPOSE) up -d --build --wait postgres keycloak seaweedfs n8n hasura apisix clamav dxos-scanner mosquitto dxos-ingest dxos-lifecycle ollama dxos-agent dxos-telegram || exit 1; \
 	[ -z "$$running" ] && exit 0; \
 	$(COMPOSE) restart hasura apisix || exit 1; \
 	for _ in $$(seq 1 60); do \
@@ -59,6 +59,7 @@ EXTRAS_AI := disease-api ollama
 EXTRAS_VOICE := piper
 EXTRAS_WORKFLOW := n8n
 EXTRAS_CHAT := mattermost
+EXTRAS_AGENT := dxos-agent dxos-telegram
 
 up-docs: gateway-sync
 	$(COMPOSE) up -d --no-deps $(EXTRAS_DOCS)
@@ -78,9 +79,12 @@ up-workflow: gateway-sync
 up-chat: gateway-sync
 	$(COMPOSE) up -d --no-deps $(EXTRAS_CHAT)
 
+up-agent: gateway-sync
+	$(COMPOSE) up -d --no-deps $(EXTRAS_AGENT)
+
 # Stop, never down: containers, volumes and data stay; the matching up-<group> starts them again.
 stop-extras:
-	$(COMPOSE) stop $(EXTRAS_DOCS) $(EXTRAS_SENSORS) $(EXTRAS_AI) $(EXTRAS_VOICE) $(EXTRAS_WORKFLOW) $(EXTRAS_CHAT)
+	$(COMPOSE) stop $(EXTRAS_DOCS) $(EXTRAS_SENSORS) $(EXTRAS_AI) $(EXTRAS_VOICE) $(EXTRAS_WORKFLOW) $(EXTRAS_CHAT) $(EXTRAS_AGENT)
 
 platform-smoke:
 	bash platform/tests/smoke-platform.sh
