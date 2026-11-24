@@ -7,11 +7,16 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { ValidationError } from '@/domain/errors'
 
 jest.mock('@/infrastructure/db/prisma.client', () => {
-  const tx = { journalEntry: { findUnique: jest.fn(), updateMany: jest.fn() } }
+  const tx = { $executeRaw: jest.fn(), journalEntry: { findUnique: jest.fn(), updateMany: jest.fn() } }
   return { prisma: { $transaction: jest.fn(async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx)), __tx: tx } }
 })
 
-const tx = (prisma as unknown as { __tx: { journalEntry: { findUnique: jest.Mock; updateMany: jest.Mock } } }).__tx
+const tx = (prisma as unknown as {
+  __tx: { $executeRaw: jest.Mock; journalEntry: { findUnique: jest.Mock; updateMany: jest.Mock } }
+}).__tx
+
+// Interpolated values of a tagged-template call, to check the actor passed to set_config.
+const valuesOf = (call: unknown[]) => call.slice(1)
 
 const pendingEntry = {
   id: 'entry-1',
@@ -38,6 +43,16 @@ describe('PrismaJournalRepository status updates are conditional', () => {
       where: { id: 'entry-1', status: 'PENDING_APPROVAL' },
       data: { status: 'REJECTED', review_note: 'Sai liều', reviewed_by_id: 'off-1' },
     })
+    expect(valuesOf(tx.$executeRaw.mock.calls[0])).toEqual(['user:off-1'])
+  })
+
+  test('batch approval names the approver as audit actor before any update', async () => {
+    tx.journalEntry.updateMany.mockResolvedValueOnce({ count: 0 })
+    const repo = new PrismaJournalRepository()
+
+    await repo.batchApprove(['entry-1'], 'off-1')
+    expect(valuesOf(tx.$executeRaw.mock.calls[0])).toEqual(['user:off-1'])
+    expect(tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(tx.journalEntry.updateMany.mock.invocationCallOrder[0])
   })
 
   test('review reports a domain error when the entry was no longer pending', async () => {

@@ -148,4 +148,19 @@ describe('PrismaProposalRepository', () => {
     expect(sqlOf(mockPrisma.__tx.$executeRaw.mock.calls[0])).toContain("set_config('dxos.actor'")
     expect(sqlOf(mockPrisma.__tx.$executeRaw.mock.calls[1])).toContain("audit.record_event('web', 'agent.proposal.approved'")
   })
+
+  test('markExecuted records agent, kind and subjects with the approver as actor', async () => {
+    const repo = new PrismaProposalRepository()
+
+    await repo.markExecuted('prop-1', { approved_count: 1 }, {
+      actorId: 'u1',
+      agent: 'journal-review',
+      kind: 'journal.approve',
+      subjectIds: ['e1'],
+    })
+
+    // Third statement is the audit call: values are the proposal id and the JSON details.
+    const details = JSON.parse((mockPrisma.__tx.$executeRaw.mock.calls[2] as unknown[])[2] as string)
+    expect(details).toMatchObject({ actor: 'user:u1', agent: 'journal-review', kind: 'journal.approve', subject_ids: ['e1'] })
+  })
 })

@@ -35,6 +35,14 @@ export interface ProposalDecisionRecord {
   editedPayload: Record<string, unknown> | null
 }
 
+/** Who acted and on what, recorded in the audit details of an execution outcome. */
+export interface ExecutionAuditMeta {
+  actorId?: string
+  agent?: string
+  kind?: string
+  subjectIds?: string[]
+}
+
 export interface ProposalRepository {
   create(input: CreateProposalRecord): Promise<{ id: string } | null>
   list(htxCode: string, filter: ProposalFilter): Promise<Proposal[]>
@@ -43,6 +51,6 @@ export interface ProposalRepository {
   markRejected(htxCode: string, id: string, decision: ProposalDecisionRecord): Promise<Proposal | null>
   markStale(htxCode: string, id: string, meta?: { actorId?: string }): Promise<boolean>
   markExpired(htxCode: string, id: string, meta?: { actorId?: string }): Promise<boolean>
-  markExecuted(id: string, result: Record<string, unknown>, meta?: { actorId?: string }): Promise<void>
-  markFailed(id: string, error: string, meta?: { actorId?: string }): Promise<void>
+  markExecuted(id: string, result: Record<string, unknown>, meta?: ExecutionAuditMeta): Promise<void>
+  markFailed(id: string, error: string, meta?: ExecutionAuditMeta): Promise<void>
 }

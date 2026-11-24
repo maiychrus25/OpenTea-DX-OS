@@ -338,6 +338,8 @@ export class PrismaJournalRepository implements JournalPort {
     let approved = 0
 
     await prisma.$transaction(async (tx) => {
+      // Row audit events of these updates name the approver.
+      await tx.$executeRaw`SELECT set_config('dxos.actor', ${`user:${approvedById}`}, true)`
       for (const entryId of entryIds) {
         const entry = await tx.journalEntry.findUnique({
           where: { id: entryId },
@@ -405,6 +407,7 @@ export class PrismaJournalRepository implements JournalPort {
   ): Promise<{ status: JournalReviewDecision }> {
     const trimmedReason = reason.trim()
     await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('dxos.actor', ${`user:${reviewerId}`}, true)`
       const entry = await tx.journalEntry.findUnique({
         where: { id: entryId },
         include: {

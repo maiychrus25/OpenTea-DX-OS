@@ -131,6 +131,12 @@ export class DecideProposalUseCase {
       return this.readConflict(input.tenant.htxCode, proposal.id)
     }
 
+    const audit = {
+      actorId: input.tenant.userId,
+      agent: proposal.agent,
+      kind: proposal.kind,
+      subjectIds: definition.subjects(parsedPayload.data),
+    }
     let result: Record<string, unknown>
     try {
       const executor = this.runExecute ?? ((def, payload, approver) => def.execute(payload, approver))
@@ -141,13 +147,13 @@ export class DecideProposalUseCase {
       if (!(err instanceof DomainError)) {
         console.error('[DecideProposal] execution failed for proposal', proposal.id, err)
       }
-      await this.repo.markFailed(proposal.id, message, { actorId: input.tenant.userId })
+      await this.repo.markFailed(proposal.id, message, audit)
       return { outcome: 'failed', error: message }
     }
 
     // The journal change is already committed; a bookkeeping error must not turn it into a failure answer.
     try {
-      await this.repo.markExecuted(proposal.id, result, { actorId: input.tenant.userId })
+      await this.repo.markExecuted(proposal.id, result, audit)
     } catch (err) {
       console.error('[DecideProposal] could not record execution of proposal', proposal.id, err)
     }

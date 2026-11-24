@@ -4,6 +4,7 @@
 import { Prisma } from '@prisma/client'
 import type {
   CreateProposalRecord,
+  ExecutionAuditMeta,
   ProposalDecisionRecord,
   ProposalFilter,
   ProposalRepository,
@@ -148,18 +149,19 @@ export class PrismaProposalRepository implements ProposalRepository {
   private async failInterrupted(htxCode: string): Promise<void> {
     await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('dxos.actor', 'system:web', true)`
-      const rows = await tx.$queryRaw<{ id: string }[]>`
+      const rows = await tx.$queryRaw<{ id: string; agent: string; kind: string; subject_ids: string[] }[]>`
         UPDATE platform.agent_proposals
         SET status = 'failed', executed_at = now(), result = ${JSON.stringify({ error: 'interrupted' })}::jsonb
         WHERE htx_code = ${htxCode}
           AND status = 'approved'
           AND executed_at IS NULL
           AND decided_at < now() - interval '10 minutes'
-        RETURNING id::text AS id
+        RETURNING id::text AS id, agent, kind, subject_ids
       `
       for (const row of rows) {
+        const details = { actor: 'system:web', agent: row.agent, kind: row.kind, subject_ids: row.subject_ids, error: 'interrupted' }
         await tx.$executeRaw`
-          SELECT audit.record_event('web', 'agent.proposal.failed', ${row.id}, ${JSON.stringify({ actor: 'system:web', error: 'interrupted' })}::jsonb)
+          SELECT audit.record_event('web', 'agent.proposal.failed', ${row.id}, ${JSON.stringify(details)}::jsonb)
         `
       }
     })
@@ -312,7 +314,7 @@ export class PrismaProposalRepository implements ProposalRepository {
     })
   }
 
-  async markExecuted(id: string, result: Record<string, unknown>, meta?: { actorId?: string }): Promise<void> {
+  async markExecuted(id: string, result: Record<string, unknown>, meta?: ExecutionAuditMeta): Promise<void> {
     const actor = meta?.actorId ? `user:${meta.actorId}` : 'system:web'
     const resultJson = JSON.stringify(result)
     await prisma.$transaction(async (tx) => {
@@ -322,14 +324,14 @@ export class PrismaProposalRepository implements ProposalRepository {
         SET status = 'executed', executed_at = now(), result = ${resultJson}::jsonb
         WHERE id = ${id}::uuid AND status = 'approved'
       `
-      const details = { actor, result: truncateText(resultJson) }
+      const details = { actor, agent: meta?.agent, kind: meta?.kind, subject_ids: meta?.subjectIds, result: truncateText(resultJson) }
       await tx.$executeRaw`
         SELECT audit.record_event('web', 'agent.proposal.executed', ${id}, ${JSON.stringify(details)}::jsonb)
       `
     })
   }
 
-  async markFailed(id: string, error: string, meta?: { actorId?: string }): Promise<void> {
+  async markFailed(id: string, error: string, meta?: ExecutionAuditMeta): Promise<void> {
     const actor = meta?.actorId ? `user:${meta.actorId}` : 'system:web'
     const truncated = truncateText(error)
     const resultJson = JSON.stringify({ error: truncated })
@@ -340,7 +342,7 @@ export class PrismaProposalRepository implements ProposalRepository {
         SET status = 'failed', executed_at = now(), result = ${resultJson}::jsonb
         WHERE id = ${id}::uuid AND status = 'approved'
       `
-      const details = { actor, error: truncated }
+      const details = { actor, agent: meta?.agent, kind: meta?.kind, subject_ids: meta?.subjectIds, error: truncated }
       await tx.$executeRaw`
         SELECT audit.record_event('web', 'agent.proposal.failed', ${id}, ${JSON.stringify(details)}::jsonb)
       `

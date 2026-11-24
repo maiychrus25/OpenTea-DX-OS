@@ -207,7 +207,11 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
     })
 
     expect(outcome).toEqual({ outcome: 'failed', error: 'Không thể thực hiện đề xuất. Vui lòng thử lại sau.' })
-    expect(repo.markFailed).toHaveBeenCalledWith(proposal.id, 'Không thể thực hiện đề xuất. Vui lòng thử lại sau.', { actorId: 'off-1' })
+    expect(repo.markFailed).toHaveBeenCalledWith(
+      proposal.id,
+      'Không thể thực hiện đề xuất. Vui lòng thử lại sau.',
+      expect.objectContaining({ actorId: 'off-1', agent: 'journal-review', kind: 'journal.reject', subjectIds: ['entry-1'] })
+    )
   })
 
   test('stores and shows a domain error message as it is', async () => {
@@ -219,7 +223,7 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
     })
 
     expect(outcome).toEqual({ outcome: 'failed', error: 'Chưa qua thời gian cách ly' })
-    expect(repo.markFailed).toHaveBeenCalledWith(proposal.id, 'Chưa qua thời gian cách ly', { actorId: 'off-1' })
+    expect(repo.markFailed).toHaveBeenCalledWith(proposal.id, 'Chưa qua thời gian cách ly', expect.objectContaining({ actorId: 'off-1' }))
   })
 
   test('answers already decided, not stale, when another decision got there first', async () => {
