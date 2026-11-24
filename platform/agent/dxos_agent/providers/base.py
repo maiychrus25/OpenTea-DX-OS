@@ -64,6 +64,17 @@ def compute_input_hash(messages: Sequence[LLMMessage], schema: Mapping[str, Any]
     return sha256_hex(canonical_json(payload))
 
 
+SCHEMA_INSTRUCTION = "Chỉ trả lời bằng một đối tượng JSON đúng schema sau, không thêm trường nào khác:"
+
+
+def schema_message(schema: Mapping[str, Any]) -> LLMMessage:
+    """System message carrying the output JSON schema, sent ahead of every prompt."""
+    return LLMMessage(
+        role="system",
+        content=f"{SCHEMA_INSTRUCTION}\n{json.dumps(schema, ensure_ascii=False, sort_keys=True)}",
+    )
+
+
 def _check_value(value: Any, schema: Mapping[str, Any], path: str) -> None:
     expected_type = schema.get("type")
     if expected_type == "object":
@@ -154,6 +165,8 @@ class LLMProvider(ABC):
 
     name: str
     model: str
+    # True for providers outside the cooperative's server: their calls are redacted, priced and audited.
+    external: bool = False
 
     def complete_json(self, messages: Sequence[LLMMessage], schema: Mapping[str, Any]) -> LLMResult:
         """Request JSON conforming to *schema*, retrying once if validation fails."""
