@@ -11,6 +11,7 @@ import pytest
 from dxos_agent.providers import (
     LLMMessage,
     OllamaProvider,
+    ProviderError,
     RateLimitError,
     ReplayProvider,
     SchemaValidationError,
@@ -73,62 +74,115 @@ def test_replay_provider_raises_after_second_invalid_schema_attempt():
         provider.complete_json(messages, SAMPLE_SCHEMA)
 
 
-def test_ollama_provider_waits_at_least_60s_on_http_429_and_succeeds_on_retry():
-    calls = []
-    sleeps = []
+class _FakeClock:
+    def __init__(self) -> None:
+        self.now = 1000.0
 
-    def fake_urlopen(req, timeout):
-        calls.append((req.full_url, req.get_header("Authorization"), timeout))
-        if len(calls) == 1:
-            hdrs = email.message.Message()
-            hdrs["Retry-After"] = "15"
-            raise urllib.error.HTTPError(
-                req.full_url,
-                429,
-                "Too Many Requests",
-                hdrs,
-                io.BytesIO(b"rate limited"),
-            )
-        return _FakeHTTPResponse(
-            {
-                "model": "qwen2.5:0.5b",
-                "choices": [{"message": {"content": '{"ok": true, "reason": "Sau 60s"}'}}],
-                "usage": {"prompt_tokens": 11, "completion_tokens": 7},
-            }
-        )
+    def __call__(self) -> float:
+        return self.now
 
-    provider = OllamaProvider(
+
+def _provider(urlopen_fn, clock=None, sleep_fn=None):
+    return OllamaProvider(
         gateway_url="http://apisix:9081",
         token_provider=lambda: "agent-jwt",
         model="qwen2.5:0.5b",
-        sleep_fn=sleeps.append,
-        urlopen_fn=fake_urlopen,
+        sleep_fn=sleep_fn or (lambda _: None),
+        urlopen_fn=urlopen_fn,
+        clock=clock or _FakeClock(),
     )
 
-    result = provider.complete_json([LLMMessage(role="user", content="hi")], SAMPLE_SCHEMA)
-    assert result.data == {"ok": True, "reason": "Sau 60s"}
-    assert result.tokens_in == 11
-    assert result.tokens_out == 7
-    assert len(sleeps) == 1
-    assert sleeps[0] >= 60.0
-    assert calls[0][0] == "http://apisix:9081/api/internal/agent/llm/v1/chat/completions"
-    assert calls[0][1] == "Bearer agent-jwt"
+
+def _rate_limited(req, timeout, retry_after=None):
+    del timeout
+    headers = email.message.Message()
+    if retry_after is not None:
+        headers["Retry-After"] = retry_after
+    raise urllib.error.HTTPError(req.full_url, 429, "Too Many Requests", headers, io.BytesIO(b""))
 
 
-def test_ollama_provider_raises_rate_limit_error_when_429_persists():
+def test_ollama_provider_429_records_cool_down_without_sleeping_and_blocks_until_it_passes():
+    clock = _FakeClock()
     sleeps = []
+    calls = []
 
-    def always_429(req, timeout):
+    def urlopen(req, timeout):
+        calls.append(req.full_url)
+        if len(calls) == 1:
+            return _rate_limited(req, timeout, retry_after="15")
+        return _FakeHTTPResponse(
+            {"model": "qwen2.5:0.5b", "choices": [{"message": {"content": '{"ok": true, "reason": "Sau khi hết chờ"}'}}]}
+        )
+
+    provider = _provider(urlopen, clock=clock, sleep_fn=sleeps.append)
+    messages = [LLMMessage(role="user", content="hi")]
+
+    with pytest.raises(RateLimitError) as exc_info:
+        provider.complete_json(messages, SAMPLE_SCHEMA)
+    assert sleeps == []
+    assert exc_info.value.retry_after_seconds == 60.0
+    assert provider.next_allowed_at == clock.now + 60.0
+
+    # Inside the window: rule-only callers get RateLimitError without any HTTP request.
+    clock.now += 30.0
+    with pytest.raises(RateLimitError):
+        provider.complete_json(messages, SAMPLE_SCHEMA)
+    assert len(calls) == 1
+
+    # After the window the provider calls the gateway again.
+    clock.now += 31.0
+    assert provider.complete_json(messages, SAMPLE_SCHEMA).data == {"ok": True, "reason": "Sau khi hết chờ"}
+    assert len(calls) == 2
+    assert sleeps == []
+
+
+def test_ollama_provider_sends_the_output_schema_in_the_system_prompt():
+    captured = {}
+
+    def urlopen(req, timeout):
         del timeout
-        raise urllib.error.HTTPError(req.full_url, 429, "Too Many Requests", email.message.Message(), io.BytesIO(b""))
+        captured["body"] = json.loads(req.data.decode("utf-8"))
+        return _FakeHTTPResponse({"choices": [{"message": {"content": '{"ok": true, "reason": "Hợp lệ"}'}}]})
+
+    provider = _provider(urlopen)
+    provider.complete_json([LLMMessage(role="system", content="Bạn là trợ lý"), LLMMessage(role="user", content="hi")], SAMPLE_SCHEMA)
+
+    schema_text = json.dumps(SAMPLE_SCHEMA, ensure_ascii=False, sort_keys=True)
+    system_texts = [m["content"] for m in captured["body"]["messages"] if m["role"] == "system"]
+    assert any(schema_text in text for text in system_texts)
+
+
+def test_ollama_provider_retries_once_after_two_seconds_on_connection_reset_then_fails_as_provider_error():
+    sleeps = []
+    calls = []
+
+    def reset(req, timeout):
+        del req, timeout
+        calls.append(1)
+        raise ConnectionResetError("reset by peer")
+
+    provider = _provider(reset, sleep_fn=sleeps.append)
+    with pytest.raises(ProviderError):
+        provider.complete_json([LLMMessage(role="user", content="hi")], SAMPLE_SCHEMA)
+    assert len(calls) == 2
+    assert sleeps == [2.0]
+
+
+def test_ollama_provider_turns_token_failure_into_provider_error():
+    def failing_token():
+        raise RuntimeError("Keycloak token response missing access_token")
 
     provider = OllamaProvider(
         gateway_url="http://apisix:9081",
-        token_provider=lambda: "agent-jwt",
-        sleep_fn=sleeps.append,
-        urlopen_fn=always_429,
+        token_provider=failing_token,
+        sleep_fn=lambda _: None,
+        urlopen_fn=lambda req, timeout: pytest.fail("no request without a token"),
     )
-    with pytest.raises(RateLimitError) as exc_info:
+    with pytest.raises(ProviderError):
         provider.complete_json([LLMMessage(role="user", content="hi")], SAMPLE_SCHEMA)
-    assert sleeps == [60.0]
-    assert exc_info.value.retry_after_seconds >= 60.0
+
+
+def test_ollama_provider_rejects_malformed_gateway_output_as_provider_error():
+    provider = _provider(lambda req, timeout: _FakeHTTPResponse({"choices": []}))
+    with pytest.raises(ProviderError):
+        provider.complete_json([LLMMessage(role="user", content="hi")], SAMPLE_SCHEMA)

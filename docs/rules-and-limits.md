@@ -205,6 +205,21 @@ When journal entry is created:
 - Officer can manually override temperature_c and rainfall_mm
 ```
 
+### 3.8 Ngưỡng mặc định của agent soát nhật ký (A1)
+
+Agent A1 (`platform/agent/dxos_agent/agents/journal_review.py`) giữ các ngưỡng mặc định trong `DEFAULT_THRESHOLDS`. Tham số `thresholds` khi chạy có thể ghi đè từng ngưỡng.
+
+| Ngưỡng | Mặc định | Quyết định khi kích hoạt |
+|---|---|---|
+| `max_dosage_value` | 500 | Liều lượng có số ngoài khoảng (0, 500] → REQUEST_CHANGES, mã DOSAGE, đề nghị kiểm tra lại. Không từ chối, vì ngưỡng không có đơn vị. |
+| `heavy_rain_mm` | 20 mm | Phun thuốc khi lượng mưa từ 20 mm trở lên → REQUEST_CHANGES, mã INCONSISTENT |
+| `future_entry_tolerance_hours` | 1 giờ | Ngày ghi nhật ký vượt thời điểm hiện tại quá 1 giờ → REQUEST_CHANGES, mã INCONSISTENT |
+| Số ngày cách ly (`withdrawal_days`) | Không có mức tối thiểu | Thiếu hoặc âm → REQUEST_CHANGES, mã MISSING_INFO. Số ngày ngắn hợp lệ không bị loại. |
+| Kiểm tra cách ly | Theo ngày lịch Việt Nam | Phun thuốc bị REJECTED, mã WITHDRAWAL_PERIOD khi ngày thu hoạch (thực tế hoặc dự kiến) nằm trong khoảng từ ngày phun đến trước ngày an toàn. Thu hoạch đúng ngày an toàn được phép. |
+| `MAX_BATCH_APPROVE` | 50 | Giới hạn kỹ thuật, không phải quyết định nghiệp vụ. Lô duyệt lớn hơn được chia thành nhiều đề xuất. |
+
+Liều lượng được đọc theo định dạng tiếng Việt: "1.200 ml" và "1 200 ml" là 1200, dấu phẩy là dấu thập phân ("1,5 kg" là 1,5).
+
 ---
 
 ## 4. Security Rules
