@@ -404,6 +404,12 @@ services:
     container_name: agrimarket-agent
     restart: always
     mem_limit: 128m
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]  # heartbeat file
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    cpus: "0.5"
     environment:
       DXOS_AGENT_INTERVAL_SECONDS: ${DXOS_AGENT_INTERVAL_SECONDS:-30}
       DXOS_GATEWAY_URL: http://apisix:9081
@@ -427,6 +433,12 @@ services:
     container_name: agrimarket-telegram
     restart: always
     mem_limit: 128m
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]  # heartbeat file
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    cpus: "0.5"
     environment:
       DXOS_TELEGRAM_INTERVAL_SECONDS: "30"
     healthcheck:

@@ -67,3 +67,16 @@ def test_release_refuses_empty_or_dev_gateway_secret(service):
     started = subprocess.run(["/bin/sh", "-c", script, "sh", "true"], capture_output=True, text=True,
                              env={**env, "DXOS_INTERNAL_GATEWAY_SECRET": "long-random-value"})
     assert started.returncode == 0 and "started" in started.stdout
+
+
+@pytest.mark.parametrize("service", ["dxos-agent", "dxos-telegram"])
+def test_agent_containers_are_hardened(service):
+    svc = load_compose(COMPOSE)[service]
+    assert svc["read_only"] is True
+    assert svc["tmpfs"] == ["/tmp:size=16m"]
+    assert svc["cap_drop"] == ["ALL"]
+    assert svc["security_opt"] == ["no-new-privileges:true"]
+    assert svc["pids_limit"] == 64
+    assert svc["cpus"] == "0.5"
+    # The healthcheck heartbeat lives in /tmp, which stays writable through the tmpfs.
+    assert f"/tmp/{service}.heartbeat" in svc["healthcheck"]["test"][3]
