@@ -32,8 +32,9 @@ policy-governed adapters:
     leave the platform buildable, testable, and operational (with deterministic
     `replay` adapter support for CI and demo runs).
 - **Optional external adapters (`anthropic`, `openai`):**
-  - Enabled per cooperative and per agent by a manager, using official SDKs
-    whose licenses are recorded in `DEPENDENCIES.md`.
+  - Enabled per cooperative and per agent by a manager. The adapters call the
+    provider's HTTPS JSON API with the Python standard library (`urllib`) instead
+    of an SDK, so the agent gains no third-party package (see Consequences).
   - Coding CLIs (`claude-code`, `codex-cli`) are restricted solely to the
     isolated `dxos-builder` zone in milestone M13.
 - **Installation-wide keys and per-cooperative budgets (D13):**
@@ -50,6 +51,10 @@ policy-governed adapters:
   - When external providers are enabled for conversational chat (`assistant`),
     phone numbers and ID numbers are masked before transmission, and users
     are notified upon linking Telegram.
+  - Before any external call, the agent replaces Vietnamese phone numbers (`0` or
+    `+84` followed by 9 to 10 digits, with spaces or dots), e-mail addresses and
+    9- or 12-digit identity numbers with `[đã ẩn]`. Ollama calls are not redacted:
+    the data stays on the server.
   - Every external LLM call logs an entry in `audit.events` with provider,
     model, agent, and record count (without logging prompt content).
 - **Fallback chain:**
@@ -80,3 +85,11 @@ policy-governed adapters:
   updating `DEPENDENCIES.md`.
 - CI and reproducible demos use the `replay` provider with no network or GPU
   dependency.
+- The provider adapters need no SDK, so `DEPENDENCIES.md` lists no package for
+  them.
+- `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` reach only `dxos-agent`. Services that
+  load `.env.local` through `env_file` set both to empty, so the keys never enter
+  the web, Hasura, n8n, the broker, or the ingest and simulator workers.
+- The provider smoke (`platform/tests/smoke-llm.sh`) runs the Anthropic path
+  against `llm-test-stub` with a fake key, and checks the redaction on what the
+  stub received.

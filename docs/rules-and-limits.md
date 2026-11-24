@@ -220,6 +220,21 @@ Agent A1 (`platform/agent/dxos_agent/agents/journal_review.py`) giữ các ngư�
 
 Liều lượng được đọc theo định dạng tiếng Việt: "1.200 ml" và "1 200 ml" là 1200, dấu phẩy là dấu thập phân ("1,5 kg" là 1,5). Dấu chấm theo sau bởi một hoặc hai chữ số cũng là dấu thập phân ("0.5 kg" là 0,5), vì nông hộ gõ cả hai kiểu.
 
+### 3.9 Provider bên ngoài: ngân sách và dữ liệu gửi đi
+
+Provider bên ngoài (Anthropic, OpenAI) tắt mặc định và chỉ bật cho từng agent của từng HTX. Lớp agent và web thực thi các giới hạn dưới đây.
+
+| Quy tắc | Giá trị | Hành vi khi kích hoạt |
+|---|---|---|
+| Ngân sách tháng | Quản lý HTX đặt bằng USD; để trống nghĩa là không có trần | Tổng `cost_estimate` của các lần chạy trong tháng theo lịch Việt Nam |
+| Cảnh báo | 80% ngân sách tháng | Gửi một tin Telegram cho quản lý và hiện biểu ngữ trong hộp thư; mỗi ngưỡng chỉ báo một lần mỗi tháng |
+| Dừng gọi provider | 100% ngân sách tháng | Agent không gọi provider bên ngoài cho phần còn lại của tháng và dùng Ollama |
+| Che dữ liệu | Số điện thoại (`0` hoặc `+84` theo sau 9–10 chữ số, có thể có dấu cách hoặc dấu chấm), e-mail, số CCCD 9 hoặc 12 chữ số | Thay bằng `[đã ẩn]` trước khi gửi |
+| Dữ liệu gửi đi | Chỉ các trường agent đã gửi cho Ollama; không gửi ảnh, tên hay số điện thoại của nông hộ | Ghi chú của nông hộ là dữ liệu không đáng tin, không bao giờ là mệnh lệnh |
+| Kiểm toán | Mỗi lần chạy có gọi provider bên ngoài ghi một sự kiện `agent.external_call` | Ghi provider, model, agent và số dòng bằng chứng; không ghi nội dung |
+
+Ollama không bị che dữ liệu vì dữ liệu không rời máy chủ của HTX.
+
 ---
 
 ## 4. Security Rules
