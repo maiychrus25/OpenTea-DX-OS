@@ -125,6 +125,14 @@ public sealed class MobileApiServer(IServiceProvider services, AppConfig config)
             if (string.IsNullOrWhiteSpace(body.Username) || string.IsNullOrEmpty(body.Password))
                 return Results.Json(new ApiError("Vui lòng nhập tên đăng nhập và mật khẩu."), statusCode: 400);
             var employee = await Get<EmployeeService>().AuthenticateAsync(body.Username, body.Password);
+            var core = Get<Identity.CoreStaffAuthenticator>();
+            if (employee is null && core.Enabled)
+            {
+                // One account for every cooperative app: fall back to the shared DX-OS (Keycloak) account.
+                var result = await core.SignInAsync(body.Username.Trim(), body.Password);
+                if (result.Error is not null) return Results.Json(new ApiError(result.Error), statusCode: 401);
+                employee = result.Employee;
+            }
             if (employee is null) return Results.Json(new ApiError("Tên đăng nhập hoặc mật khẩu không đúng."), statusCode: 401);
             var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).Replace('+', '-').Replace('/', '_').TrimEnd('=');
             _sessions[token] = new Session(employee.Id, DateTime.UtcNow.Add(SessionLifetime));
