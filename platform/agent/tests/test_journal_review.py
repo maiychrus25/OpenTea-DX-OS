@@ -360,6 +360,10 @@ def test_short_withdrawal_period_without_a_conflict_is_not_rejected():
         ("1,5 kg", False),
         ("0 ml", True),
         ("12 ml/bình 16L", False),
+        ("0.5 kg", False),
+        ("1.5 lít", False),
+        ("0.25 kg", False),
+        ("12.500 ml", True),
     ],
 )
 def test_dosage_numbers_use_vietnamese_format(dosage, flagged):

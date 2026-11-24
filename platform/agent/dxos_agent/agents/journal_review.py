@@ -31,8 +31,11 @@ DEFAULT_THRESHOLDS: dict[str, float] = {
     "heavy_rain_mm": 20.0,
     "future_entry_tolerance_hours": 1.0,
 }
-# Thousands grouping ("1.200", "1 200") or a plain number, with a comma as the decimal mark.
-NUMBER_RE = re.compile(r"[-+]?(?:\d{1,3}(?:[.\s]\d{3})+|\d+)(?:,\d+)?")
+# Thousands grouping ("1.200", "1 200") or a plain number. A comma is the decimal mark; a dot followed by
+# one or two digits ("0.5", "1.25") is read as a decimal too, since farmers type both.
+NUMBER_RE = re.compile(
+    r"(?P<int>[-+]?(?:\d{1,3}(?:[.\s]\d{3})+(?!\d)|\d+))(?:,(?P<comma>\d+)|\.(?P<dot>\d{1,2})(?!\d))?"
+)
 
 PENDING_JOURNALS_QUERY = """
 query PendingJournalEntries {
@@ -134,7 +137,9 @@ def _extract_first_number(text: str | None) -> float | None:
     match = NUMBER_RE.search(text)
     if not match:
         return None
-    return float(re.sub(r"[.\s]", "", match.group(0)).replace(",", "."))
+    whole = re.sub(r"[.\s]", "", match.group("int"))
+    fraction = match.group("comma") or match.group("dot")
+    return float(f"{whole}.{fraction}" if fraction else whole)
 
 
 def _parcel_label(entry: Mapping[str, Any]) -> str:
