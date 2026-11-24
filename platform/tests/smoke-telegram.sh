@@ -187,6 +187,9 @@ async function status(token) {
 ./dxos agent disable TC >/dev/null
 $COMPOSE up -d --no-deps dxos-telegram >/dev/null
 $COMPOSE stop dxos-telegram-stub >/dev/null
+# Messages and reject-reason conversations reference the proposal, so they go first.
+psql_app "delete from platform.telegram_outbox where proposal_id='$TG_PROPOSAL' or chat_id in ($TG_OWNER, $TG_STRANGER, $TG_GROUP)" >/dev/null
+psql_app "delete from platform.telegram_conversations where proposal_id='$TG_PROPOSAL'" >/dev/null
 psql_app "delete from platform.agent_proposals where id='$TG_PROPOSAL'" >/dev/null
 psql_app "delete from journal_entries where id='je_smoke_telegram_tc'" >/dev/null
 psql_app "delete from platform.telegram_links where telegram_user_id in ($TG_OWNER, $TG_STRANGER)" >/dev/null
