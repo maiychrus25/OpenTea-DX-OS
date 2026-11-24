@@ -31,6 +31,7 @@ describe('ApproveHarvestUseCase', () => {
       update: jest.fn(),
       delete: jest.fn(),
       batchApprove: jest.fn(),
+      review: jest.fn(),
     } as any
 
     mockNotificationPort = {

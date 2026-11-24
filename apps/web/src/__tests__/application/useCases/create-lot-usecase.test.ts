@@ -36,6 +36,7 @@ describe('CreateLotUseCase', () => {
       update: jest.fn(),
       delete: jest.fn(),
       batchApprove: jest.fn(),
+      review: jest.fn(),
     }
     useCase = new CreateLotUseCase(lotPort, parcelPort, journalPort)
   })

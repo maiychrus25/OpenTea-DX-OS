@@ -7,7 +7,9 @@ import {
   JournalEntryData,
   CreateJournalData,
   JournalFilters,
+  JournalReviewDecision,
 } from '@/domain/journal/ports/JournalPort'
+import { ValidationError } from '@/domain/errors'
 import { ActivityType, NotificationType, ParcelStatus } from '@prisma/client'
 import { sseEmitter, SSE_EVENTS } from '@/lib/sse-emitter'
 
@@ -26,6 +28,7 @@ function mapEntry(e: any): JournalEntryData {
     status: e.status,
     approved_by_id: e.approved_by_id,
     approved_at: e.approved_at,
+    review_note: e.review_note ?? null,
     notes: e.notes,
     weather_temperature: e.weather_temperature,
     weather_precipitation: e.weather_precipitation,
@@ -362,5 +365,61 @@ export class PrismaJournalRepository implements JournalPort {
     })
 
     return { approved, failed }
+  }
+
+  async review(
+    entryId: string,
+    decision: JournalReviewDecision,
+    reason: string,
+    reviewerId: string
+  ): Promise<{ status: JournalReviewDecision }> {
+    const trimmedReason = reason.trim()
+    await prisma.$transaction(async (tx) => {
+      const entry = await tx.journalEntry.findUnique({
+        where: { id: entryId },
+        include: {
+          parcel: {
+            select: {
+              parcel_code: true,
+              household_id: true,
+              household: { select: { keycloak_user_id: true, htx_profile_id: true } },
+            },
+          },
+        },
+      })
+      if (!entry || entry.status !== 'PENDING_APPROVAL') {
+        throw new ValidationError('Nhật ký không còn ở trạng thái chờ duyệt')
+      }
+
+      await tx.journalEntry.update({
+        where: { id: entryId },
+        data: {
+          status: decision,
+          review_note: trimmedReason,
+        },
+      })
+
+      if (entry.submitted_role === 'FARMER' && entry.parcel.household.keycloak_user_id) {
+        const notif = await tx.notification.create({
+          data: {
+            type: NotificationType.SYSTEM,
+            title: decision === 'REQUEST_CHANGES' ? 'Nhật ký cần chỉnh sửa' : 'Nhật ký bị từ chối',
+            body: `Nhật ký ${entry.activity_type} cho thửa ${entry.parcel.parcel_code}: ${trimmedReason}`,
+            recipient_id: entry.parcel.household.keycloak_user_id,
+            household_id: entry.parcel.household_id,
+            htx_profile_id: entry.parcel.household.htx_profile_id,
+            sender_id: reviewerId,
+            deep_link_url: '/farmer/journal',
+          },
+        })
+        if (notif.recipient_id) {
+          sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { userId: notif.recipient_id })
+        } else {
+          sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { broadcast: true })
+        }
+      }
+    })
+
+    return { status: decision }
   }
 }

@@ -89,7 +89,7 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
       const res = await fetch('/api/journal/batch-approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entry_ids: [id], isApproved: true })
+        body: JSON.stringify({ entry_ids: [id] })
       })
       if (res.ok) {
         setEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'APPROVED' } : e))
@@ -114,10 +114,10 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
   const confirmReject = async () => {
     if (!rejectEntryId || !rejectReason.trim()) return
     try {
-      const res = await fetch('/api/journal/batch-approve', {
+      const res = await fetch(`/api/journal/${rejectEntryId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entry_ids: [rejectEntryId], isApproved: false, rejectionReason: rejectReason })
+        body: JSON.stringify({ decision: rejectType, reason: rejectReason.trim() })
       })
       if (res.ok) {
         setEntries(prev => prev.map(e => e.id === rejectEntryId ? { ...e, status: rejectType } : e))

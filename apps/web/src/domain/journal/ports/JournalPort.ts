@@ -8,6 +8,8 @@ export interface JournalActivityData {
   withdrawal_days?: number
 }
 
+export type JournalReviewDecision = 'REJECTED' | 'REQUEST_CHANGES'
+
 export interface JournalEntryData {
   id: string
   parcel_id: string
@@ -22,6 +24,7 @@ export interface JournalEntryData {
   status: string
   approved_by_id: string | null
   approved_at: Date | null
+  review_note?: string | null
   notes: string | null
   weather_temperature: number | null
   weather_precipitation: number | null
@@ -68,4 +71,5 @@ export interface JournalPort {
   update(id: string, data: Partial<CreateJournalData>): Promise<JournalEntryData>
   delete(id: string): Promise<void>
   batchApprove(entryIds: string[], approvedById: string): Promise<{ approved: number; failed: string[] }>
+  review(entryId: string, decision: JournalReviewDecision, reason: string, reviewerId: string): Promise<{ status: JournalReviewDecision }>
 }
