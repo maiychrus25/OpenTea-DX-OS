@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS platform.service_heartbeats (
   last_seen_at timestamptz NOT NULL DEFAULT now(),
   version      text
 );
+-- Agent heartbeats list the external LLM providers whose keys the agent container holds (M3).
+ALTER TABLE platform.service_heartbeats ADD COLUMN IF NOT EXISTS details jsonb;
 
 CREATE TABLE IF NOT EXISTS platform.system_alerts (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
