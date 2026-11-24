@@ -247,10 +247,15 @@ export class PrismaJournalRepository implements JournalPort {
     return mapEntry(e)
   }
 
-  async update(id: string, data: Partial<CreateJournalData>): Promise<JournalEntryData> {
+  async update(id: string, data: Partial<CreateJournalData>, resubmit = false): Promise<JournalEntryData> {
     const updateData: Record<string, unknown> = {}
     if (data.entry_date) updateData.entry_date = data.entry_date
     if (data.observation !== undefined) updateData.notes = data.observation
+    // A returned entry goes back to the queue with its old reason cleared.
+    if (resubmit) {
+      updateData.status = 'PENDING_APPROVAL'
+      updateData.review_note = null
+    }
 
     const e = await prisma.journalEntry.update({
       where: { id },
