@@ -44,6 +44,9 @@ docker cp workflows/officer-reminder.json agrimarket-n8n:/tmp/
 docker cp workflows/mattermost-push.json agrimarket-n8n:/tmp/
 docker exec -it agrimarket-n8n n8n import:workflow --input=/tmp/officer-reminder.json
 docker exec -it agrimarket-n8n n8n import:workflow --input=/tmp/mattermost-push.json
+# Every workflow sends its failures to this one (settings.errorWorkflow), which records them in platform.system_alerts.
+docker cp workflows/system-error-alert.json agrimarket-n8n:/tmp/
+docker exec -it agrimarket-n8n n8n import:workflow --input=/tmp/system-error-alert.json
 ```
 
 ## Bước 4: Kiểm tra Sức khỏe Hệ thống (Smoke Test)

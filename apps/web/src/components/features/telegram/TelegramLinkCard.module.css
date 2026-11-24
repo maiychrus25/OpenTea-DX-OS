@@ -1,0 +1,76 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--rounded-lg);
+  padding: var(--spacing-4);
+  min-width: 0;
+  margin-top: var(--spacing-5);
+}
+
+.title {
+  font-size: var(--font-size-h3);
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.description,
+.hint {
+  font-size: var(--font-size-label);
+  color: var(--muted-foreground);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding-top: var(--spacing-3);
+  border-top: 1px solid var(--border);
+}
+
+.link {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.code {
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.error {
+  font-size: var(--font-size-label);
+  color: var(--color-warning);
+  margin: 0;
+}
+
+.banner {
+  font-size: var(--font-size-label);
+  color: var(--color-warning);
+  background: var(--color-warning-subtle);
+  border-radius: var(--rounded-md);
+  padding: var(--spacing-2) var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+  overflow-wrap: anywhere;
+}

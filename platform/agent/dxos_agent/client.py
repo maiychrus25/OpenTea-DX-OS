@@ -208,3 +208,11 @@ class CoreGatewayClient:
         """Submit a validated proposal to `POST /api/internal/agent/proposals`."""
         res = self._request_json("POST", "/api/internal/agent/proposals", proposal)
         return dict(res.get("data") or {})
+
+    def post_report(self, report: Mapping[str, Any]) -> None:
+        """Hand a digest report (C5 figures) to the web, which renders and queues it."""
+        self._request_json("POST", "/api/internal/agent/reports", report)
+
+    def heartbeat(self, version: str) -> None:
+        """Tell the web this agent is alive, for the health alerts."""
+        self._request_json("POST", "/api/internal/agent/heartbeat", {"version": version})

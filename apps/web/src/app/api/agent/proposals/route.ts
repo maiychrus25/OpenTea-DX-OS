@@ -6,36 +6,10 @@ import { auth } from '@/auth'
 import { getAction, type ApproverRole } from '@/application/agent/action-catalog'
 import { ListProposalsUseCase } from '@/application/agent/ListProposalsUseCase'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
-import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
-import type { Proposal } from '@/domain/agent/proposal'
-import { ACTIVITY_LABEL, formatVnDayMonth, type JournalSubject } from '@/application/agent/actions/journal-labels'
+import { type JournalSubject } from '@/application/agent/actions/journal-labels'
+import { journalEntryIds, loadJournalSubjects } from '@/application/agent/journal-subjects'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
-
-function journalEntryIds(proposal: Proposal): string[] {
-  if (!proposal.kind.startsWith('journal.')) return []
-  return proposal.evidence?.rows?.filter((r) => r.table === 'journal_entries').map((r) => r.id) ?? []
-}
-
-/** One scoped query for every journal entry the listed proposals mention; foreign or deleted ids get no label. */
-async function loadJournalSubjects(
-  proposals: Proposal[],
-  htxProfileId: string
-): Promise<Map<string, JournalSubject>> {
-  const ids = Array.from(new Set(proposals.flatMap(journalEntryIds)))
-  const entries = await new PrismaJournalRepository().findManyScoped(ids, htxProfileId)
-  return new Map(
-    entries.map((entry) => [
-      entry.id,
-      {
-        id: entry.id,
-        parcel: entry.parcel_code || entry.parcel_id,
-        activity: ACTIVITY_LABEL[entry.activity_type] ?? entry.activity_type,
-        day: formatVnDayMonth(entry.entry_date) ?? '',
-      },
-    ])
-  )
-}
 
 async function getAgentProposals(request: Request) {
   const session = await auth()

@@ -721,6 +721,39 @@ Reject or request changes on a `PENDING_APPROVAL` journal entry (`officer` or `m
 
 ---
 
+
+## Telegram base (M2)
+
+Telegram is optional. It is active only when `TELEGRAM_BOT_USERNAME` and `DXOS_TELEGRAM_CALLBACK_KEY` are set on the web; without them no message is queued and the rest of the web works as before. The relay `dxos-telegram` long-polls the Bot API and calls the internal routes below through APISIX `:9081`; every decision is made here. Messages are plain text, at most 4096 characters, with no personal data (parcel codes, counts and dates only).
+
+### Internal Telegram API (`dxos-telegram` client, realm role `telegram`)
+
+Bearer token of client `dxos-telegram` plus the gateway header (`X-Dxos-Gateway`); the agent verifier refuses these tokens and this verifier refuses agent tokens. Responses are `{ "data": ... }` or `{ "error": { "code", "message" } }`.
+
+- **`POST /api/internal/telegram/updates`**: forwards one update, stripped to `update_id`, `message` (`message_id`, `chat`, `from`, `text`) and `callback_query` (`id`, `from`, `message.chat`, `data`). Answer: `{ "replies": [OutboxMessage], "answer_callback"?: { "text", "show_alert" } }`. Idempotent per `update_id`: a repeat returns no replies. A failure forgets the `update_id` so the relay can retry.
+  - `/start <code>` (private): consumes a user link code (single use, 10 minutes, stored as SHA-256) and links the Telegram account.
+  - `/stop`: unlinks the account. `/huy`: cancels a pending rejection reason.
+  - `/nhom <code>` (group or supergroup): links the cooperative's group, which receives reports only.
+  - Callbacks: `callback_data` is checked against the HMAC of `DXOS_TELEGRAM_CALLBACK_KEY`; callbacks from groups are refused; the account must be linked; the role, enabled flag and `htx_code` are read live from Keycloak (`dxos-web-roles`) at tap time; the proposal must belong to the account's cooperative; the decision then goes through `DecideProposalUseCase` with channel `telegram`.
+  - Reject: the button asks for a reason; the next private text within 10 minutes is the reason (500 characters at most).
+- **`GET /api/internal/telegram/outbox?limit=20`** (limit 1–50): leases up to `limit` due messages for 60 seconds and returns `{ "data": [{ "id", "op", "chat_id", "text", "buttons"?, "edit_message_id"? }] }`. Also runs the health checks at most once a minute.
+- **`POST /api/internal/telegram/outbox/{id}/result`**: `{ "ok": true, "telegram_message_id"? }` or `{ "ok": false, "error", "retry_after_seconds"?, "permanent"? }`. A failure is retried with backoff (`retry_after_seconds` when given, otherwise 5 s doubling up to 15 min, 10 attempts). An edit answered with "message is not modified" counts as sent.
+- **`POST /api/internal/telegram/heartbeat`**: `{ "version"? }`, every minute from the relay.
+
+`OutboxMessage`: `{ "op": "send" | "edit", "chat_id", "text", "buttons"?: [[{ "text", "callback_data" } | { "text", "url" }]], "edit_message_id"? }`. `callback_data` is `v1|<proposal id, base64url>|<a|r>|<HMAC prefix>`.
+
+### Agent reports and heartbeat (agent token)
+
+- **`POST /api/internal/agent/reports`**: `{ "kind": "daily" | "weekly", "period_start": "YYYY-MM-DD", "period_end": "YYYY-MM-DD", "figures": { "journals_new"?, "journals_approved"?, "journals_pending"?, "disease_reports"?, "lots_created"? } }`. The web counts `proposals_open` and `proposals_decided` itself and ignores any other figure. Recorded once per `(cooperative, kind, period_start)`; the answer is `201 { "queued": true }` when new and `200 { "queued": false }` when already recorded. Sent to the cooperative's managers and officers and to its group.
+- **`POST /api/internal/agent/heartbeat`**: `{ "version"? }`, every 5 minutes per enabled cooperative. The health check raises a stale-agent alert only for cooperatives with the agent enabled (10 minutes without a heartbeat). Health messages go to managers, at most once per condition every six hours.
+
+### User routes (session)
+
+- **`GET /api/telegram/status`** (manager, officer, farmer): `{ "configured", "linked", "linked_at", "group_linked", "agent_stale", "telegram_stale" }`. `group_linked` is meaningful for managers only.
+- **`POST /api/telegram/link`**: creates a single-use link code and returns `{ "url": "https://t.me/<bot>?start=<code>", "expires_at" }` (201). `409 TELEGRAM_NOT_CONFIGURED` when Telegram is off.
+- **`DELETE /api/telegram/link`**: unlinks the caller's Telegram account.
+- **`POST /api/telegram/group-link`** (manager only): `{ "command": "/nhom <code>", "expires_at" }` (201).
+
 ## Error Codes
 
 | HTTP | code | Meaning |

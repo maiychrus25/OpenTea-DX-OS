@@ -125,3 +125,35 @@ def test_agent_credentials_reach_the_helper_on_stdin_only(tmp_path):
     args = (tmp_path / "args").read_text()
     assert "s3cret" not in args and "TC.env" in args
     assert (tmp_path / "stdin").read_text() == "DXOS_AGENT_CLIENT_SECRET=s3cret\n"
+
+
+def test_telegram_credentials_reach_the_helper_on_stdin_only(tmp_path):
+    """The relay and roles secrets must never appear in the helper's argv."""
+    body = subprocess.run(["sed", "-n", "/^telegram_env_write()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    stub = f"compose() {{ echo \"$@\" >{tmp_path}/args; cat >{tmp_path}/stdin; }}"
+    snippet = (f"set -e\n{stub}\n{body}\n"
+               "printf 'DXOS_TELEGRAM_CLIENT_SECRET=s3cret\\n' | telegram_env_write /run/dxos-telegram telegram.env\n")
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    args = (tmp_path / "args").read_text()
+    assert "s3cret" not in args and "telegram.env" in args and "dxos-telegram-env" in args
+    assert (tmp_path / "stdin").read_text() == "DXOS_TELEGRAM_CLIENT_SECRET=s3cret\n"
+
+
+def test_telegram_disable_removes_both_credential_files_and_clients(tmp_path):
+    body = subprocess.run(["sed", "-n", "/^telegram_disable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    snippet = (f"set -e\nkc_exec() {{ echo kc >>{tmp_path}/calls; }}\n"
+               f"telegram_env_remove() {{ echo \"rm $1/$2\" >>{tmp_path}/calls; }}\n"
+               "telegram_restart() { echo restart >>" f"{tmp_path}/calls; }}\n"
+               f"{body}\ntelegram_disable\n")
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    assert (tmp_path / "calls").read_text().splitlines() == [
+        "kc", "rm /run/dxos-telegram/telegram.env", "rm /run/dxos-web/roles.env", "restart",
+    ]
+
+
+def test_telegram_is_in_usage_and_takes_one_action():
+    text = DXOS.read_text()
+    assert "telegram <enable|disable>" in text
+    assert "telegram)" in text and "[ $# -eq 1 ] || usage" in text

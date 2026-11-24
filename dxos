@@ -17,7 +17,7 @@ ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.
 HTX_RE='^[A-Z0-9_-]{1,20}$'
 
 usage() {
-  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | agent <enable|disable> <HTX>" >&2
+  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | agent <enable|disable> <HTX> | telegram <enable|disable>" >&2
   exit 2
 }
 
@@ -312,6 +312,80 @@ SQL
   echo "Đã tắt lớp AI cho HTX $htx"
 }
 
+# Telegram relay credentials: dxos-telegram reads its file from dxos-telegram-env, dxos-web reads roles.env from dxos-web-env.
+telegram_env_write() {  # <dir in the helper> <file name>: content on stdin
+  compose --profile tools run --rm -T --no-deps dxos-telegram-env \
+    sh -c 'umask 077 && cat > "$1/$2" && chown 10001:10001 "$1/$2" && chmod 600 "$1/$2"' sh "$1" "$2"
+}
+telegram_env_remove() {  # <dir in the helper> <file name>
+  compose --profile tools run --rm -T --no-deps dxos-telegram-env rm -f "$1/$2"
+}
+# A running relay keeps the credentials it started with; restart it so the new ones (or none) take effect.
+telegram_restart() {
+  if [ -n "$(compose ps -q dxos-telegram 2>/dev/null)" ]; then compose restart dxos-telegram >/dev/null; fi
+}
+
+telegram_enable() {
+  local secrets telegram_secret roles_secret
+  # One Keycloak script makes both clients; it prints the telegram client secret, then the roles client secret.
+  secrets="$(kc_exec '
+    set -eu
+    K=/opt/keycloak/bin/kcadm.sh
+    TG_SCOPES="$1"
+    RL_SCOPES="$2"
+    "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+    if ! "$K" get roles/telegram -r agrimarket >/dev/null 2>&1; then
+      "$K" create roles -r agrimarket -s name=telegram -s "description=Rơle Telegram (client credentials, chỉ gọi /api/internal/telegram/*)" >/dev/null
+    fi
+    ensure_client() {  # <clientId> <default scopes json>: creates the confidential service-account client if missing, prints its id
+      local cid
+      cid="$("$K" get clients -r agrimarket -q "clientId=$1" --fields id --format csv --noquotes | head -n 1)"
+      if [ -z "$cid" ]; then
+        "$K" create clients -r agrimarket \
+          -s "clientId=$1" -s enabled=true -s publicClient=false -s serviceAccountsEnabled=true \
+          -s standardFlowEnabled=false -s implicitFlowEnabled=false -s directAccessGrantsEnabled=false \
+          -s "defaultClientScopes=$2" -s "optionalClientScopes=[]" >/dev/null
+        cid="$("$K" get clients -r agrimarket -q "clientId=$1" --fields id --format csv --noquotes | head -n 1)"
+      fi
+      printf "%s" "$cid"
+    }
+    client_secret() {  # <clientId> <clientuuid>
+      "$K" get "clients/$2/client-secret" -r agrimarket --fields value --format csv --noquotes | head -n 1
+    }
+    TG_CID="$(ensure_client dxos-telegram "$TG_SCOPES")"
+    "$K" add-roles -r agrimarket --uusername service-account-dxos-telegram --rolename telegram >/dev/null
+    client_secret dxos-telegram "$TG_CID"
+    RL_CID="$(ensure_client dxos-web-roles "$RL_SCOPES")"
+    "$K" add-roles -r agrimarket --uusername service-account-dxos-web-roles --cclientid realm-management --rolename view-users >/dev/null
+    client_secret dxos-web-roles "$RL_CID"
+  ' '["roles","dx-os-core"]' '["roles"]')"
+  telegram_secret="$(sed -n 1p <<<"$secrets")"
+  roles_secret="$(sed -n 2p <<<"$secrets")"
+  [ -n "$telegram_secret" ] && [ -n "$roles_secret" ] || { echo "Không lấy được client secret của Telegram" >&2; exit 1; }
+  printf 'DXOS_TELEGRAM_CLIENT_ID=dxos-telegram\nDXOS_TELEGRAM_CLIENT_SECRET=%s\n' "$telegram_secret" | telegram_env_write /run/dxos-telegram telegram.env
+  printf 'DXOS_ROLES_CLIENT_ID=dxos-web-roles\nDXOS_ROLES_CLIENT_SECRET=%s\n' "$roles_secret" | telegram_env_write /run/dxos-web roles.env
+  telegram_restart
+  echo "Đã bật Telegram: client dxos-telegram và dxos-web-roles (cần TELEGRAM_BOT_TOKEN trong docker/.env.local để rơle nhận tin)"
+}
+
+telegram_disable() {
+  kc_exec '
+    set -eu
+    K=/opt/keycloak/bin/kcadm.sh
+    "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+    for CLIENT_ID in dxos-telegram dxos-web-roles; do
+      CID="$("$K" get clients -r agrimarket -q "clientId=$CLIENT_ID" --fields id --format csv --noquotes | head -n 1)"
+      if [ -n "$CID" ]; then
+        "$K" delete "clients/$CID" -r agrimarket >/dev/null
+      fi
+    done
+  '
+  telegram_env_remove /run/dxos-telegram telegram.env
+  telegram_env_remove /run/dxos-web roles.env
+  telegram_restart
+  echo "Đã tắt Telegram: đã xoá client dxos-telegram và dxos-web-roles"
+}
+
 [ $# -ge 1 ] || usage
 cmd="$1"; shift
 case "$cmd" in
@@ -340,6 +414,14 @@ case "$cmd" in
     case "$subcmd" in
       enable) cd "$ROOT"; agent_enable "$htx" ;;
       disable) cd "$ROOT"; agent_disable "$htx" ;;
+      *) usage ;;
+    esac ;;
+  telegram)
+    [ $# -eq 1 ] || usage
+    subcmd="$1"
+    case "$subcmd" in
+      enable) cd "$ROOT"; telegram_enable ;;
+      disable) cd "$ROOT"; telegram_disable ;;
       *) usage ;;
     esac ;;
   *) usage ;;
