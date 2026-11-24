@@ -1,0 +1,211 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: 2026 Vu Dinh Dat -->
+<UserControl x:Class="TeaStaff.Desktop.Views.AutomationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="KpiValue" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,8,0,0" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+        </Style>
+        <Style x:Key="RuleText" TargetType="TextBlock">
+            <Setter Property="Margin" Value="28,2,0,12" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{StaticResource InkTertiaryBrush}" />
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,24,32,32">
+            <!-- KPI row -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}" Padding="18,16">
+                    <StackPanel>
+                        <TextBlock Text="Gợi ý chờ anh chị duyệt" FontSize="13" Foreground="{StaticResource InkSecondaryBrush}" />
+                        <TextBlock Text="{Binding PendingCount}" Style="{StaticResource KpiValue}" />
+                        <TextBlock Margin="0,6,0,0" Text="Mỗi gợi ý kèm lý do lấy từ dữ liệu HTX" FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}" Padding="18,16">
+                    <StackPanel>
+                        <TextBlock Text="Việc hệ thống tự làm hôm nay" FontSize="13" Foreground="{StaticResource InkSecondaryBrush}" />
+                        <TextBlock Text="{Binding ActionsToday}" Style="{StaticResource KpiValue}" />
+                        <TextBlock Margin="0,6,0,0" Text="Giao việc định kỳ, chấm ra, cảnh báo, lương nháp" FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="4" Style="{StaticResource Card}" Padding="18,16">
+                    <StackPanel>
+                        <TextBlock Text="Việc định kỳ đang bật" FontSize="13" Foreground="{StaticResource InkSecondaryBrush}" />
+                        <TextBlock Text="{Binding ActiveTemplates}" Style="{StaticResource KpiValue}" />
+                        <TextBlock Margin="0,6,0,0" Text="{Binding LastRun}" FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.55*" />
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+                    <!-- Suggestions -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Gợi ý chờ duyệt" Style="{StaticResource SectionTitle}" />
+                            <TextBlock Margin="0,4,0,8" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                       Text="Hệ thống xếp hạng nhân viên theo việc đã làm, tỉ lệ đúng hạn, việc đang có, tổ và nơi làm. Người quyết định vẫn là anh chị." />
+                            <ItemsControl ItemsSource="{Binding Suggestions}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,8,0,0" Padding="14,12" CornerRadius="{StaticResource RadiusMd}" Background="{StaticResource LeafLightBrush}"
+                                                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                            <DockPanel>
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
+                                                    <Button Style="{StaticResource PrimaryButton}" Height="32" Padding="14,0" Content="Đồng ý"
+                                                            Command="{Binding DataContext.AcceptCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                                    <Button Margin="8,0,0,0" Style="{StaticResource SecondaryButton}" Height="32" Padding="12,0" Content="Bỏ qua"
+                                                            Command="{Binding DataContext.DismissCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                                </StackPanel>
+                                                <StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Border Style="{StaticResource Pill}" Background="{StaticResource PrimarySubtleBrush}">
+                                                            <TextBlock Text="{Binding KindLabel}" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
+                                                        </Border>
+                                                        <TextBlock Margin="8,0,0,0" Text="{Binding Time}" FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <TextBlock Margin="0,8,0,0" Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                    <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding Facts}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding}" FontSize="12.5" Foreground="{StaticResource InkSecondaryBrush}" TextWrapping="Wrap" Margin="0,1,0,0" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Margin="0,8,0,0" Style="{StaticResource Caption}" Text="Không có gợi ý nào đang chờ."
+                                       Visibility="{Binding Suggestions.Count, Converter={StaticResource Hidden}}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Recurring templates -->
+                    <Border Margin="0,20,0,0" Style="{StaticResource Card}">
+                        <StackPanel>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Height="32" Command="{Binding AddTemplateCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE710;" Style="{StaticResource Icon}" FontSize="12" />
+                                        <TextBlock Margin="8,0,0,0" Text="Thêm việc định kỳ" />
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock Text="Việc định kỳ" Style="{StaticResource SectionTitle}" VerticalAlignment="Center" />
+                            </DockPanel>
+                            <TextBlock Margin="0,4,0,8" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                       Text="Mỗi ngày phù hợp, hệ thống tự tạo việc. &quot;Tự giao&quot;: giao ngay cho người hợp nhất. &quot;Chờ chủ duyệt&quot;: hiện thành gợi ý ở trên." />
+                            <ItemsControl ItemsSource="{Binding Templates}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="0,10" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,1,0,0">
+                                            <DockPanel>
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Button Style="{StaticResource RowIconButton}" Content="&#xE768;" ToolTip="Bật / tắt"
+                                                            Command="{Binding DataContext.ToggleTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                                    <Button Style="{StaticResource RowIconButton}" Content="&#xE70F;" ToolTip="Sửa"
+                                                            Command="{Binding DataContext.EditTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                                    <Button Style="{StaticResource RowDangerIconButton}" Content="&#xE74D;" ToolTip="Xoá"
+                                                            Command="{Binding DataContext.DeleteTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                                </StackPanel>
+                                                <Border DockPanel.Dock="Right" Margin="0,0,12,0" Style="{StaticResource Pill}" VerticalAlignment="Center"
+                                                        Background="{StaticResource NeutralSubtleBrush}">
+                                                    <TextBlock Text="{Binding ModeText}" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource InkSecondaryBrush}" />
+                                                </Border>
+                                                <StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                                        <TextBlock Margin="8,0,0,0" Text="(đang tắt)" FontSize="12" Foreground="{StaticResource WarningBrush}"
+                                                                   Visibility="{Binding IsActive, Converter={StaticResource Hidden}}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <TextBlock Margin="0,3,0,0" FontSize="12.5" Foreground="{StaticResource InkSecondaryBrush}" TextTrimming="CharacterEllipsis">
+                                                        <Run Text="{Binding DaysText, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding TimeText, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding AssigneeText, Mode=OneWay}" />
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Margin="0,8,0,0" Style="{StaticResource Caption}" Text="Chưa có việc định kỳ."
+                                       Visibility="{Binding Templates.Count, Converter={StaticResource Hidden}}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <!-- Rules -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Height="32" Content="Chạy ngay" Command="{Binding RunNowCommand}" />
+                                <TextBlock Text="Quy tắc tự động" Style="{StaticResource SectionTitle}" VerticalAlignment="Center" />
+                            </DockPanel>
+                            <TextBlock Margin="0,4,0,12" Style="{StaticResource Caption}" TextWrapping="Wrap" Text="Chạy mỗi phút khi ứng dụng mở." />
+                            <CheckBox Content="Tạo việc định kỳ mỗi ngày" IsChecked="{Binding GenerateRecurring}" />
+                            <TextBlock Style="{StaticResource RuleText}" Text="Từ danh sách việc định kỳ bên trái." />
+                            <CheckBox Content="Gợi ý người thay khi nhân viên nghỉ phép" IsChecked="{Binding CoverLeave}" />
+                            <TextBlock Style="{StaticResource RuleText}" Text="Việc còn mở của người có đơn nghỉ đã duyệt." />
+                            <CheckBox Content="Tự giao lại việc bị từ chối" IsChecked="{Binding AutoReassignRejected}" />
+                            <TextBlock Style="{StaticResource RuleText}" Text="Tắt: chỉ gợi ý người thay. Bật: giao ngay cho người hợp nhất và báo anh chị." />
+                            <CheckBox Content="Tự duyệt nghỉ phép năm 1 ngày" IsChecked="{Binding AutoApproveShortLeave}" />
+                            <TextBlock Style="{StaticResource RuleText}" Text="Chỉ khi còn đủ phép và hôm đó người xin không có việc ưu tiên cao." />
+                            <CheckBox Content="Tự chấm ra cho người quên" IsChecked="{Binding AutoCheckOut}" />
+                            <TextBlock Style="{StaticResource RuleText}" Text="Sau 18:30, ghi giờ ra 17:00 và để lại ghi chú." />
+                            <CheckBox Content="Báo khi việc quá hạn" IsChecked="{Binding WarnOverdue}" />
+                            <TextBlock Style="{StaticResource RuleText}" Text="Mỗi việc báo một lần." />
+                            <CheckBox Content="Lập bảng lương nháp đầu tháng" IsChecked="{Binding DraftPayroll}" />
+                            <TextBlock Style="{StaticResource RuleText}" Margin="28,2,0,0" Text="Ngày 1–3 hằng tháng, từ bảng công tháng trước. Anh chị vẫn duyệt và trả lương." />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Log -->
+                    <Border Margin="0,20,0,0" Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Nhật ký tự động" Style="{StaticResource SectionTitle}" />
+                            <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Logs}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="0,8" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="0,1,0,0">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Time}" FontSize="11.5" Foreground="{StaticResource InkTertiaryBrush}" />
+                                                    <TextBlock Text="{Binding Rule}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
+                                                </DockPanel>
+                                                <TextBlock Margin="0,2,0,0" Text="{Binding Message}" FontSize="12.5" TextWrapping="Wrap" Foreground="{StaticResource InkSecondaryBrush}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Margin="0,8,0,0" Style="{StaticResource Caption}" Text="Chưa có hoạt động."
+                                       Visibility="{Binding Logs.Count, Converter={StaticResource Hidden}}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

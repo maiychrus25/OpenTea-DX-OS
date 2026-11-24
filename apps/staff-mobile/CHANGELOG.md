@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-11-24
+
+### Added
+- Staff can sign in with their shared OpenTea DX-OS account (the same one used on the cooperative's web and mini-apps); requires Tea Staff Manager 1.3.0.
+- Tasks created by the owner's automation rules (recurring work, field sensor alerts) arrive like any other task.
+
 ## [1.1.0] - 2026-11-20
 
 ### Added

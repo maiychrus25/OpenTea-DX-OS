@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using TeaStaff.Core.Abstractions;
 using TeaStaff.Core.Domain;
+using TeaStaff.Core.Services;
 using TeaStaff.Infrastructure;
 using TeaStaff.Infrastructure.MobileApi;
 
@@ -63,6 +64,7 @@ public sealed partial class NavItem(string key, string label, string glyph) : Ob
 public sealed record ToastMessage(string Text, string Area, DateTime At)
 {
     public string Time => At.ToString("HH:mm");
+    public string Source => Area == TeaStaff.Core.Abstractions.DataAreas.Automation ? "Tự động hoá" : "Từ điện thoại";
 }
 
 public sealed partial class MainViewModel : ObservableObject
@@ -72,11 +74,16 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IActivityFeed _activity;
     private readonly ILeaveRepository _leaves;
     private readonly ITaskRepository _tasks;
+    private readonly IAutomationRepository _automation;
+    private readonly AutomationEngine _engine;
+    private System.Windows.Threading.DispatcherTimer? _timer;
     private readonly Dictionary<string, PageViewModel> _pages = new();
 
     public MainViewModel(IServiceProvider services, ITenantContext tenant, AppConfig config, MobileApiServer api, IDataChangeNotifier notifier,
-        IActivityFeed activity, ILeaveRepository leaves, ITaskRepository tasks)
+        IActivityFeed activity, ILeaveRepository leaves, ITaskRepository tasks, IAutomationRepository automation, AutomationEngine engine)
     {
+        _automation = automation;
+        _engine = engine;
         _services = services;
         _notifier = notifier;
         _activity = activity;
@@ -100,6 +107,7 @@ public sealed partial class MainViewModel : ObservableObject
         new("employees", "Nhân viên", "\uE716"),
         new("departments", "Tổ / Phòng ban", "\uE8B7"),
         new("tasks", "Giao việc", "\uE8FD"),
+        new("automation", "Tự động hoá", "\uE945"),
         new("attendance", "Chấm công", "\uE787"),
         new("leaves", "Nghỉ phép", "\uE709"),
         new("payroll", "Bảng lương", "\uE8C7"),
@@ -122,6 +130,29 @@ public sealed partial class MainViewModel : ObservableObject
         UpdateApiStatus();
         await UpdateBadgesAsync();
         await NavigateAsync("dashboard");
+        StartAutomation();
+    }
+
+    /// <summary>Runs the automation rules a few seconds after sign-in and then every minute.</summary>
+    private void StartAutomation()
+    {
+        _timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+        _timer.Tick += async (_, _) => await RunAutomationAsync();
+        _timer.Start();
+        _ = Task.Delay(TimeSpan.FromSeconds(3)).ContinueWith(_ => UiThread.Post(async () => await RunAutomationAsync()));
+    }
+
+    private async Task RunAutomationAsync()
+    {
+        try
+        {
+            await Task.Run(() => _engine.RunAsync());
+            await UpdateBadgesAsync();
+        }
+        catch (Exception)
+        {
+            // A failing rule (for example a database hiccup) is retried on the next tick.
+        }
     }
 
     public void UpdateApiStatus()
@@ -156,6 +187,7 @@ public sealed partial class MainViewModel : ObservableObject
                 "leaves" => _services.GetRequiredService<LeavesViewModel>(),
                 "payroll" => _services.GetRequiredService<PayrollViewModel>(),
                 "settings" => _services.GetRequiredService<SettingsViewModel>(),
+                "automation" => _services.GetRequiredService<AutomationViewModel>(),
                 _ => _services.GetRequiredService<DashboardViewModel>(),
             };
             if (page is DashboardViewModel dash) dash.NavigateRequested += async (_, k) => await NavigateAsync(k);
@@ -168,7 +200,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void OnDataChanged(object? sender, string area) => UiThread.Post(async () =>
     {
-        if (area is DataAreas.Leaves or DataAreas.Tasks) await UpdateBadgesAsync();
+        if (area is DataAreas.Leaves or DataAreas.Tasks or DataAreas.Automation) await UpdateBadgesAsync();
         if (CurrentPage is { } page && page.WatchedAreas.Contains(area) && !page.IsBusy)
             await page.RefreshCommand.ExecuteAsync(null);
     });
@@ -181,6 +213,7 @@ public sealed partial class MainViewModel : ObservableObject
             var rejected = (await _tasks.ListAsync()).Count(t => t.Status == WorkTaskStatus.Rejected || t.IsOverdue(DateTime.Now));
             Navigation.First(n => n.Key == "leaves").Badge = pending;
             Navigation.First(n => n.Key == "tasks").Badge = rejected;
+            Navigation.First(n => n.Key == "automation").Badge = (await _automation.ListSuggestionsAsync(SuggestionStatus.Pending)).Count;
         }
         catch (Exception)
         {
@@ -211,6 +244,7 @@ public sealed partial class MainViewModel : ObservableObject
             DataAreas.Leaves => "leaves",
             DataAreas.Tasks => "tasks",
             DataAreas.Attendance => "attendance",
+            DataAreas.Automation => "automation",
             _ => "dashboard",
         });
     }
@@ -224,6 +258,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void SignOut()
     {
+        _timer?.Stop();
         _notifier.Changed -= OnDataChanged;
         _activity.Raised -= OnActivity;
         SignOutRequested?.Invoke(this, EventArgs.Empty);

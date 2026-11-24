@@ -16,6 +16,9 @@ check() {
 
 [ -n "${DXOS_MQTT_DEVICES:-}" ] || die "DXOS_MQTT_DEVICES is empty"
 check dxos-ingest "${DXOS_MQTT_INGEST_PASSWORD:-}"
+# protected_regular stops even root from truncating a file another user owns in sticky /tmp, so a restarted
+# container (file already chowned to mosquitto) must remove it first.
+rm -f "$PASSWD"
 : > "$PASSWD"
 mosquitto_passwd -b "$PASSWD" dxos-ingest "$DXOS_MQTT_INGEST_PASSWORD"
 OLD_IFS=$IFS; IFS=,

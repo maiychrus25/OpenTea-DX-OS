@@ -36,6 +36,7 @@ public static class DataAreas
     public const string Attendance = "attendance";
     public const string Leaves = "leaves";
     public const string Payroll = "payroll";
+    public const string Automation = "automation";
 }
 
 /// <summary>

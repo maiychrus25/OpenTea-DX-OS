@@ -40,6 +40,7 @@
             <DataTemplate DataType="{x:Type vm:LeavesViewModel}"><v:LeavesView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:PayrollViewModel}"><v:PayrollView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><v:SettingsView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:AutomationViewModel}"><v:AutomationView /></DataTemplate>
 
             <!-- Editor view models -->
             <DataTemplate DataType="{x:Type vm:EmployeeEditorViewModel}"><v:EmployeeEditorView /></DataTemplate>
@@ -48,6 +49,7 @@
             <DataTemplate DataType="{x:Type vm:AttendanceEditorViewModel}"><v:AttendanceEditorView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:LeaveEditorViewModel}"><v:LeaveEditorView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:PayslipEditorViewModel}"><v:PayslipEditorView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:RecurringTaskEditorViewModel}"><v:RecurringTaskEditorView /></DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
