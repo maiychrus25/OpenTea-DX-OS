@@ -104,19 +104,16 @@ CREATE TABLE IF NOT EXISTS platform.agent_reports (
   PRIMARY KEY (htx_code, kind, period_start)
 );
 
+-- Row audit only where a row is a decision worth keeping and has an id (audit.capture_row reads NEW.id):
+-- who linked which Telegram account, and system alerts. The other tables are operational (codes, outbox leases,
+-- conversations, update ids, heartbeats every minute, report markers) and would flood the hash chain.
 CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.telegram_links
-  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
-CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.telegram_link_codes
-  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
-CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.telegram_outbox
-  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
-CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.telegram_conversations
-  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
-CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.telegram_updates_seen
-  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
-CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.service_heartbeats
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
 CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.system_alerts
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
-CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.agent_reports
-  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
+DROP TRIGGER IF EXISTS dxos_audit_row ON platform.telegram_link_codes;
+DROP TRIGGER IF EXISTS dxos_audit_row ON platform.telegram_outbox;
+DROP TRIGGER IF EXISTS dxos_audit_row ON platform.telegram_conversations;
+DROP TRIGGER IF EXISTS dxos_audit_row ON platform.telegram_updates_seen;
+DROP TRIGGER IF EXISTS dxos_audit_row ON platform.service_heartbeats;
+DROP TRIGGER IF EXISTS dxos_audit_row ON platform.agent_reports;
