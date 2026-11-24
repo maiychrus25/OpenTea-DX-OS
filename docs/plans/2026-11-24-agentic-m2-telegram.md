@@ -51,7 +51,7 @@ Through APISIX `:9081` like `/api/internal/agent/*`: token of client `dxos-teleg
 
 `v1|<proposal id as 22-char base64url>|<op>|<sig>`; `op` is `a` (approve) or `r` (reject, then ask for a reason); `sig` is the first 12 bytes of `HMAC-SHA256(DXOS_TELEGRAM_CALLBACK_KEY, "v1|<id>|<op>")` in base64url (16 characters). Total under 64 bytes. Room for later ops (`c`, `f` for two-step confirmation in M5).
 
-### C4. Tables (schema `platform`, new init file `platform/postgres/init/09-telegram.sql`, idempotent, audit trigger on each)
+### C4. Tables (schema `platform`, new init file `platform/postgres/init/09-telegram.sql`, idempotent; row audit on `telegram_links` and `system_alerts` only, see the note in the SQL)
 
 - `telegram_links`: `id uuid`, `kind` (`user` | `group`), `user_id` (Keycloak sub; null for groups), `user_name`, `role` (at link time, used only to choose recipients), `htx_code`, `telegram_user_id bigint` (null for groups), `chat_id bigint`, `linked_at`, `unlinked_at`. One active link per Telegram account and per user.
 - `telegram_link_codes`: `code_hash` (sha256 hex, primary key), `kind`, `user_id`, `user_name`, `role`, `htx_code`, `expires_at`, `used_at`.
