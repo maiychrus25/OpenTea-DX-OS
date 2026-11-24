@@ -7,8 +7,8 @@ import { getAction, type ApproverRole } from '@/application/agent/action-catalog
 import { ListProposalsUseCase } from '@/application/agent/ListProposalsUseCase'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
+import type { Proposal } from '@/domain/agent/proposal'
 import { requireTenant } from '@/lib/api/tenant'
-import { TenantGuard } from '@/lib/api/tenant-guard'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
 function formatDayMonth(date: Date): string {
@@ -22,35 +22,27 @@ function formatDayMonth(date: Date): string {
   return `${day}/${month}`
 }
 
-async function resolveJournalSubjects(
-  kind: string,
-  evidenceRows: { table: string; id: string }[],
-  journalRepo: PrismaJournalRepository,
-  guard: TenantGuard
-): Promise<{ id: string; label: string }[]> {
-  if (!kind.startsWith('journal.')) return []
-  const ids = Array.from(
-    new Set(evidenceRows.filter((r) => r.table === 'journal_entries').map((r) => r.id))
-  )
-  const subjects: { id: string; label: string }[] = []
-  for (const id of ids) {
-    try {
-      await guard.journalEntry(id)
-      const entry = await journalRepo.findById(id)
-      if (!entry) continue
+function journalEntryIds(proposal: Proposal): string[] {
+  if (!proposal.kind.startsWith('journal.')) return []
+  return proposal.evidence?.rows?.filter((r) => r.table === 'journal_entries').map((r) => r.id) ?? []
+}
+
+/** One scoped query for every journal entry the listed proposals mention; foreign or deleted ids get no label. */
+async function loadJournalSubjects(
+  proposals: Proposal[],
+  htxProfileId: string
+): Promise<Map<string, { id: string; label: string }>> {
+  const ids = Array.from(new Set(proposals.flatMap(journalEntryIds)))
+  const entries = await new PrismaJournalRepository().findManyScoped(ids, htxProfileId)
+  return new Map(
+    entries.map((entry) => {
       const parcelLabel = entry.parcel_code || entry.parcel_id
       const dateStr = formatDayMonth(
         entry.entry_date instanceof Date ? entry.entry_date : new Date(entry.entry_date)
       )
-      subjects.push({
-        id,
-        label: `Thửa ${parcelLabel} · ${entry.activity_type} · ${dateStr}`,
-      })
-    } catch {
-      // Foreign or deleted entry IDs are omitted from subject enrichment.
-    }
-  }
-  return subjects
+      return [entry.id, { id: entry.id, label: `Thửa ${parcelLabel} · ${entry.activity_type} · ${dateStr}` }]
+    })
+  )
 }
 
 async function getAgentProposals(request: Request) {
@@ -72,22 +64,21 @@ async function getAgentProposals(request: Request) {
     kind,
   })
 
-  const journalRepo = new PrismaJournalRepository()
-  const guard = new TenantGuard(tenant)
+  const labels = await loadJournalSubjects(proposals, tenant.htxProfileId)
 
-  const data = await Promise.all(
-    proposals.map(async (p) => {
-      const def = getAction(p.kind)
-      const subjects = await resolveJournalSubjects(p.kind, p.evidence?.rows ?? [], journalRepo, guard)
-      return {
-        ...p,
-        titleVi: def?.titleVi ?? p.kind,
-        preview: def ? def.preview(p.payload) : [],
-        canDecide: Boolean(def && def.approverRoles.includes(tenant.role as ApproverRole)),
-        subjects,
-      }
-    })
-  )
+  const data = proposals.map((p) => {
+    const def = getAction(p.kind)
+    const subjects = Array.from(new Set(journalEntryIds(p)))
+      .map((id) => labels.get(id))
+      .filter((subject): subject is { id: string; label: string } => Boolean(subject))
+    return {
+      ...p,
+      titleVi: def?.titleVi ?? p.kind,
+      preview: def ? def.preview(p.payload) : [],
+      canDecide: Boolean(def && def.approverRoles.includes(tenant.role as ApproverRole)),
+      subjects,
+    }
+  })
 
   return NextResponse.json({ data })
 }

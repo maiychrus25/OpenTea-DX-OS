@@ -137,6 +137,25 @@ export class PrismaJournalRepository implements JournalPort {
     return mapEntry(e)
   }
 
+  /** Entries of one cooperative, loaded in a single query; ids of other cooperatives are simply absent. */
+  async findManyScoped(ids: string[], htxProfileId: string): Promise<JournalEntryData[]> {
+    if (ids.length === 0) return []
+    const rows = await prisma.journalEntry.findMany({
+      where: { id: { in: ids }, parcel: { household: { htx_profile_id: htxProfileId } } },
+      include: {
+        activities: true,
+        parcel: {
+          select: {
+            household_id: true,
+            parcel_code: true,
+            household: { select: { keycloak_user_id: true } },
+          },
+        },
+      },
+    })
+    return rows.map(mapEntry)
+  }
+
   async create(data: CreateJournalData): Promise<JournalEntryData> {
     // Auto-attach weather from weather_cache
     let weatherData: { temperature: number | null; precipitation: number | null; humidity: number | null; condition: string | null } = {
