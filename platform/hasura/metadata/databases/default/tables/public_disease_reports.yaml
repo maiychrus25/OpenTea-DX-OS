@@ -23,3 +23,15 @@ select_permissions:
     permission:
       columns: '*'
       filter: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}
+  - role: agent
+    permission:
+      columns:
+        - id
+        - parcel_id
+        - household_id
+        - status
+        - detection_date
+        - created_at
+        - updated_at
+      allow_aggregations: true
+      filter: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}
