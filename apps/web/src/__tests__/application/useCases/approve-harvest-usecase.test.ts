@@ -73,6 +73,36 @@ describe('ApproveHarvestUseCase', () => {
     await expect(useCase.execute('parcel-1', 'officer-1', 'officer')).rejects.toThrow('Chưa qua thời gian cách ly')
   })
 
+  it.each(['REJECTED', 'PENDING_APPROVAL'])('should still block harvest for a %s spraying within its withdrawal period', async (status) => {
+    mockParcelPort.findById.mockResolvedValue({ id: 'parcel-1', parcel_code: 'P1' } as any)
+
+    const futureDate = new Date()
+    futureDate.setDate(futureDate.getDate() + 5)
+
+    mockJournalPort.findAll.mockResolvedValue({
+      entries: [{ status, activities: [{ safe_harvest_date: futureDate }] }],
+      total: 1,
+    } as any)
+
+    await expect(useCase.execute('parcel-1', 'officer-1', 'officer')).rejects.toThrow('Chưa qua thời gian cách ly')
+    expect(mockParcelPort.approveHarvest).not.toHaveBeenCalled()
+  })
+
+  it('should ignore a draft entry when checking the withdrawal period', async () => {
+    mockParcelPort.findById.mockResolvedValue({ id: 'parcel-1', parcel_code: 'P1' } as any)
+
+    const futureDate = new Date()
+    futureDate.setDate(futureDate.getDate() + 5)
+
+    mockJournalPort.findAll.mockResolvedValue({
+      entries: [{ status: 'DRAFT', activities: [{ safe_harvest_date: futureDate }] }],
+      total: 1,
+    } as any)
+    mockParcelPort.approveHarvest.mockResolvedValue({ id: 'parcel-1', status: 'HARVEST_APPROVED' } as any)
+
+    await expect(useCase.execute('parcel-1', 'officer-1', 'officer')).resolves.toMatchObject({ status: 'HARVEST_APPROVED' })
+  })
+
   it('should approve harvest and notify manager if safe', async () => {
     mockParcelPort.findById.mockResolvedValue({ id: 'parcel-1', parcel_code: 'P1' } as any)
     

@@ -96,6 +96,24 @@ describe('CreateLotUseCase', () => {
     })).rejects.toThrow(/WITHDRAWAL_NOT_PASSED/)
   })
 
+  it.each(['REJECTED', 'PENDING_APPROVAL'])('blocks the lot when a %s spraying is still within its withdrawal period', async (status) => {
+    parcelPort.findById.mockResolvedValue({ status: 'HARVESTED', parcel_code: 'P01' } as Partial<ParcelSummary> as any)
+
+    journalPort.findAll.mockResolvedValue({
+      entries: [{ status, activities: [{ safe_harvest_date: new Date('2026-08-30') }] } as any],
+      total: 1,
+    })
+
+    await expect(useCase.execute({
+      commodity: 'Chè',
+      harvest_date: new Date('2026-08-25'),
+      parcel_ids: ['p1'],
+      htx_profile_id: 'htx1',
+      created_by_id: 'user1'
+    })).rejects.toThrow(/WITHDRAWAL_NOT_PASSED/)
+    expect(lotPort.create).not.toHaveBeenCalled()
+  })
+
   it('creates lot if all valid', async () => {
     parcelPort.findById.mockResolvedValue({ status: 'HARVEST_APPROVED', parcel_code: 'P01' } as Partial<ParcelSummary> as any)
     

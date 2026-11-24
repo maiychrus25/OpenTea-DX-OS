@@ -36,7 +36,7 @@ export class CreateLotUseCase {
         
         let maxSafeDate: Date | null = null
         for (const entry of journals.entries) {
-          if (entry.status === 'REJECTED') continue
+          if (entry.status === 'DRAFT') continue
           
           for (const act of entry.activities) {
             if (act.safe_harvest_date) {

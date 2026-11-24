@@ -25,11 +25,12 @@ export class ApproveHarvestUseCase {
       throw new NotFoundError('Không tìm thấy thửa đất')
     }
 
-    // Check withdrawal period
-    const { entries } = await this.journalPort.findAll({ parcel_id: parcelId, status: 'APPROVED' })
+    // Check withdrawal period: every entry that is not a draft counts, rejected and pending ones too
+    const { entries } = await this.journalPort.findAll({ parcel_id: parcelId, limit: 100 })
     let maxSafeDate: Date | null = null
 
     for (const entry of entries) {
+      if (entry.status === 'DRAFT') continue
       for (const activity of entry.activities) {
         if (activity.safe_harvest_date) {
           const date = new Date(activity.safe_harvest_date)
