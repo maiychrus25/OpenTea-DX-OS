@@ -163,7 +163,7 @@ make stop-extras   # dừng (không xoá) mọi nhóm tuỳ chọn; dữ liệu 
 | `make up-voice` | piper | Không có giọng đọc cho bản tin | khoảng 40 MiB |
 | `make up-workflow` | n8n | Các workflow (báo cáo thị trường, đẩy sự kiện) không chạy; các trang vẫn mở | khoảng 0,4 GiB |
 | `make up-chat` | mattermost | Không nhận được thông báo đẩy sang Mattermost (không có build arm64, chỉ chạy trên máy x86) | chưa đo |
-| `make up-agent` | dxos-agent, dxos-telegram | Lớp AI vận hành (M0: khung dịch vụ, chưa chạy agent hay nối Telegram); tắt không ảnh hưởng chức năng nào | khoảng 35 MiB |
+| `make up-agent` | dxos-agent, dxos-telegram | Lớp AI vận hành: agent đề xuất việc, dxos-telegram chỉ chạy khi có `TELEGRAM_BOT_TOKEN` và `./dxos telegram enable`; tắt không ảnh hưởng chức năng nào | khoảng 35 MiB |
 
 Mini-app cài bằng `./dxos` là các container riêng, mỗi cái khoảng 50 MB, vẫn chạy khi bạn dừng các nhóm trên. Các số RAM là số đo `docker stats` trên một máy phát triển và thay đổi theo tải.
 
@@ -401,6 +401,19 @@ make web-up
 ./dxos remove tea-tour --purge          # gỡ và xoá toàn bộ dữ liệu của app
 make apps-smoke                         # kiểm thử tích hợp (sau npm run seed và make platform-smoke)
 ```
+
+### Nối Telegram (`./dxos telegram`)
+
+Telegram là tuỳ chọn. Đặt `TELEGRAM_BOT_TOKEN` (token BotFather tạo) và `TELEGRAM_BOT_USERNAME` trong `docker/.env.local`, rồi chạy:
+
+```bash
+./dxos telegram enable                  # tạo client dxos-telegram (vai telegram) và dxos-web-roles (đọc vai trò người dùng), ghi secret vào volume
+./dxos telegram disable                 # xoá hai client và hai tệp secret; dxos-telegram trở về trạng thái chờ
+```
+
+- `dxos-telegram` chỉ là rơle: nhận tin nhắn của bot qua long polling, chuyển sang web và gửi lại phản hồi. Mọi quyết định (liên kết, kiểm tra vai trò, chữ ký nút bấm, nội dung tin) nằm ở web. Tin nhắn đi qua máy chủ của Telegram, nên không gửi dữ liệu cá nhân (tên hộ, số điện thoại, địa chỉ) vào đó.
+- Khi chưa có token hoặc chưa chạy `enable`, dxos-telegram chỉ ghi nhịp tim và chờ; web vẫn hoạt động như trước.
+- Bản phát hành bắt buộc `DXOS_TELEGRAM_CALLBACK_KEY` (khoá ký nút bấm) khác giá trị mặc định công khai.
 
 ### Bật / tắt lớp AI cho từng HTX (`./dxos agent`)
 
