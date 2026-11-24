@@ -28,6 +28,7 @@ export interface ActionDefinition<P extends Record<string, unknown> = Record<str
   editableFields: readonly (keyof P & string)[]
   expiresAfterHours: number
   preview(payload: P): string[]
+  subjects(payload: P): string[]
   isStale(payload: P, evidence: Evidence, ctx: ActionStalenessContext): Promise<boolean>
   execute(payload: P, approver: Tenant): Promise<Record<string, unknown>>
 }

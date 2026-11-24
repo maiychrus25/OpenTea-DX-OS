@@ -16,6 +16,7 @@ export interface CreateProposalRecord {
   origin: Origin
   requestedBy: string | null
   dedupeKey: string
+  subjects: string[]
   expiresAt: Date
 }
 

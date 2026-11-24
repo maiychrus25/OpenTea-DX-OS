@@ -32,6 +32,9 @@ export const journalRejectAction: ActionDefinition<JournalRejectPayload> = {
     const verb = payload.decision === 'REJECTED' ? 'Từ chối' : 'Yêu cầu sửa'
     return [`${verb} nhật ký ${payload.entry_id}: ${payload.reason_vi}`]
   },
+  subjects(payload) {
+    return [payload.entry_id]
+  },
   async isStale(_payload, evidence, ctx) {
     return isEvidenceStale(evidence, ctx.htxCode, ctx.loaders)
   },

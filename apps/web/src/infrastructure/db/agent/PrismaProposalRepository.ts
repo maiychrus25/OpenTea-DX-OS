@@ -82,19 +82,46 @@ function truncateText(value: string, maxLen = 500): string {
 export class PrismaProposalRepository implements ProposalRepository {
   async create(input: CreateProposalRecord): Promise<{ id: string } | null> {
     const actor = input.requestedBy ? `user:${input.requestedBy}` : `agent:${input.agent}`
+    const isJournal = input.kind.startsWith('journal.')
     return prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('dxos.actor', ${actor}, true)`
+      // One creation at a time per cooperative, so the subject check below cannot race with another insert.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${input.htxCode}))`
+
+      const overdue = await tx.$queryRaw<{ id: string }[]>`
+        UPDATE platform.agent_proposals
+        SET status = 'expired'
+        WHERE htx_code = ${input.htxCode}
+          AND status = 'proposed'
+          AND expires_at <= now()
+          AND ((kind = ${input.kind} AND dedupe_key = ${input.dedupeKey})
+            OR (${isJournal}::boolean AND kind LIKE 'journal.%' AND subject_ids && ${input.subjects}::text[]))
+        RETURNING id::text AS id
+      `
+      for (const row of overdue) {
+        await tx.$executeRaw`
+          SELECT audit.record_event('web', 'agent.proposal.expired', ${row.id}, ${JSON.stringify({ actor })}::jsonb)
+        `
+      }
+
       const rows = await tx.$queryRaw<{ id: string }[]>`
         INSERT INTO platform.agent_proposals (
           htx_code, run_id, agent, kind, payload, reason_vi, evidence, confidence,
-          risk, origin, requested_by, dedupe_key, expires_at
-        ) VALUES (
+          risk, origin, requested_by, dedupe_key, expires_at, subject_ids
+        )
+        SELECT
           ${input.htxCode}, ${input.runId}::uuid, ${input.agent}, ${input.kind},
           ${JSON.stringify(input.payload)}::jsonb, ${input.reasonVi},
           ${JSON.stringify(input.evidence)}::jsonb, ${input.confidence},
           ${input.risk}, ${input.origin}, ${input.requestedBy},
-          ${input.dedupeKey}, ${input.expiresAt}
-        )
+          ${input.dedupeKey}, ${input.expiresAt}, ${input.subjects}::text[]
+        WHERE NOT (${isJournal}::boolean AND EXISTS (
+          SELECT 1 FROM platform.agent_proposals
+          WHERE htx_code = ${input.htxCode}
+            AND status IN ('proposed', 'approved')
+            AND kind LIKE 'journal.%'
+            AND subject_ids && ${input.subjects}::text[]
+        ))
         ON CONFLICT (htx_code, kind, dedupe_key) WHERE status IN ('proposed', 'approved')
         DO NOTHING
         RETURNING id::text AS id
@@ -107,6 +134,7 @@ export class PrismaProposalRepository implements ProposalRepository {
         agent: input.agent,
         kind: input.kind,
         origin: input.origin,
+        subject_ids: input.subjects,
         evidence_sha256: input.evidence.sha256,
       }
       await tx.$executeRaw`
@@ -116,11 +144,34 @@ export class PrismaProposalRepository implements ProposalRepository {
     })
   }
 
+  /** Approved rows that never reached markExecuted or markFailed within ten minutes are failed as interrupted. */
+  private async failInterrupted(htxCode: string): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('dxos.actor', 'system:web', true)`
+      const rows = await tx.$queryRaw<{ id: string }[]>`
+        UPDATE platform.agent_proposals
+        SET status = 'failed', executed_at = now(), result = ${JSON.stringify({ error: 'interrupted' })}::jsonb
+        WHERE htx_code = ${htxCode}
+          AND status = 'approved'
+          AND executed_at IS NULL
+          AND decided_at < now() - interval '10 minutes'
+        RETURNING id::text AS id
+      `
+      for (const row of rows) {
+        await tx.$executeRaw`
+          SELECT audit.record_event('web', 'agent.proposal.failed', ${row.id}, ${JSON.stringify({ actor: 'system:web', error: 'interrupted' })}::jsonb)
+        `
+      }
+    })
+  }
+
   async list(htxCode: string, filter: ProposalFilter): Promise<Proposal[]> {
+    await this.failInterrupted(htxCode)
     const statuses = filter.statuses && filter.statuses.length > 0 ? filter.statuses : null
     const statusClause = statuses ? Prisma.sql`AND status = ANY(${statuses}::text[])` : Prisma.empty
     const kindClause = filter.kind ? Prisma.sql`AND kind = ${filter.kind}` : Prisma.empty
 
+    // A proposal past its expiry no longer waits for a decision, even before the create path marks it expired.
     const rows = await prisma.$queryRaw<ProposalRow[]>`
       SELECT id::text AS id, htx_code, run_id::text AS run_id, agent, kind, payload, reason_vi,
              evidence, confidence, risk, status, origin, requested_by, dedupe_key,
@@ -128,6 +179,7 @@ export class PrismaProposalRepository implements ProposalRepository {
              decision_channel, decision_note, edited_payload, executed_at, result
       FROM platform.agent_proposals
       WHERE htx_code = ${htxCode} ${statusClause} ${kindClause}
+        AND NOT (status = 'proposed' AND expires_at <= now())
       ORDER BY created_at DESC
       LIMIT ${filter.limit}
     `

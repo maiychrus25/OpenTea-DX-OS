@@ -35,7 +35,7 @@ describe('PrismaProposalRepository', () => {
   })
 
   test('create uses ON CONFLICT DO NOTHING and records audit event', async () => {
-    mockPrisma.__tx.$queryRaw.mockResolvedValueOnce([{ id: 'prop-1' }])
+    mockPrisma.__tx.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: 'prop-1' }])
     const repo = new PrismaProposalRepository()
 
     const res = await repo.create({
@@ -51,15 +51,54 @@ describe('PrismaProposalRepository', () => {
       origin: 'agent',
       requestedBy: null,
       dedupeKey: 'k1',
+      subjects: ['e1'],
       expiresAt: new Date('2026-11-27T00:00:00.000Z'),
     })
 
     expect(res).toEqual({ id: 'prop-1' })
-    const insertSql = sqlOf(mockPrisma.__tx.$queryRaw.mock.calls[0])
+    const insertSql = sqlOf(mockPrisma.__tx.$queryRaw.mock.calls[1])
     expect(insertSql).toContain('ON CONFLICT (htx_code, kind, dedupe_key)')
     expect(insertSql).toContain("WHERE status IN ('proposed', 'approved')")
+    expect(insertSql).toContain('AND subject_ids && ')
     expect(sqlOf(mockPrisma.__tx.$executeRaw.mock.calls[0])).toContain("set_config('dxos.actor'")
-    expect(sqlOf(mockPrisma.__tx.$executeRaw.mock.calls[1])).toContain("audit.record_event('web', 'agent.proposal.created'")
+    expect(sqlOf(mockPrisma.__tx.$executeRaw.mock.calls[1])).toContain('pg_advisory_xact_lock(hashtext(')
+    expect(sqlOf(mockPrisma.__tx.$executeRaw.mock.calls[2])).toContain("audit.record_event('web', 'agent.proposal.created'")
+  })
+
+  test('create expires overdue proposals that cover the same subjects, with an audit event', async () => {
+    mockPrisma.__tx.$queryRaw.mockResolvedValueOnce([{ id: 'old-1' }]).mockResolvedValueOnce([{ id: 'prop-2' }])
+    const repo = new PrismaProposalRepository()
+
+    await repo.create({
+      htxCode: 'TC',
+      runId: null,
+      agent: 'journal-review',
+      kind: 'journal.approve',
+      payload: { entry_ids: ['e1'] },
+      reasonVi: 'OK',
+      evidence: { rows: [], sha256: 'abc' },
+      confidence: null,
+      risk: 'medium',
+      origin: 'agent',
+      requestedBy: null,
+      dedupeKey: 'k1',
+      subjects: ['e1'],
+      expiresAt: new Date('2026-11-27T00:00:00.000Z'),
+    })
+
+    expect(sqlOf(mockPrisma.__tx.$queryRaw.mock.calls[0])).toContain("SET status = 'expired'")
+    expect(sqlOf(mockPrisma.__tx.$executeRaw.mock.calls[2])).toContain("audit.record_event('web', 'agent.proposal.expired'")
+  })
+
+  test('list fails approvals stuck for ten minutes and leaves out overdue proposals', async () => {
+    mockPrisma.__tx.$queryRaw.mockResolvedValueOnce([{ id: 'stuck-1' }])
+    mockPrisma.$queryRaw.mockResolvedValueOnce([])
+    const repo = new PrismaProposalRepository()
+
+    await expect(repo.list('TC', { statuses: ['proposed'], limit: 10 })).resolves.toEqual([])
+    expect(sqlOf(mockPrisma.__tx.$queryRaw.mock.calls[0])).toContain("interval '10 minutes'")
+    expect(sqlOf(mockPrisma.__tx.$executeRaw.mock.calls[1])).toContain("audit.record_event('web', 'agent.proposal.failed'")
+    expect(sqlOf(mockPrisma.$queryRaw.mock.calls[0])).toContain("NOT (status = 'proposed' AND expires_at <= now())")
   })
 
   test('claim guards on status=proposed, sets actor and records approved audit event', async () => {

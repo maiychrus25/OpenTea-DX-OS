@@ -29,6 +29,9 @@ export const journalApproveAction: ActionDefinition<JournalApprovePayload> = {
   preview(payload) {
     return payload.entry_ids.map((id) => `Duyệt nhật ký ${id}`)
   },
+  subjects(payload) {
+    return payload.entry_ids
+  },
   async isStale(_payload, evidence, ctx) {
     return isEvidenceStale(evidence, ctx.htxCode, ctx.loaders)
   },
