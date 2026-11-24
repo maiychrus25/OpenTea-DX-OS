@@ -3,12 +3,15 @@
 """Keycloak client-credentials auth, Hasura GraphQL reader, and internal web client."""
 from dataclasses import dataclass
 import json
+import logging
 from pathlib import Path
 import time
 from typing import Any, Callable, Mapping
 import urllib.error
 import urllib.parse
 import urllib.request
+
+log = logging.getLogger("dxos_agent")
 
 
 @dataclass(frozen=True)
@@ -48,7 +51,11 @@ def load_all_agent_credentials(env_dir: Path) -> list[AgentCredentials]:
         return []
     creds: list[AgentCredentials] = []
     for path in sorted(env_dir.glob("*.env")):
-        creds.append(load_credentials_from_env_file(path))
+        try:
+            creds.append(load_credentials_from_env_file(path))
+        except (OSError, ValueError):
+            # Only the file name is logged: the file holds secrets, and its error text may echo them.
+            log.warning("Skipping invalid agent credentials file: %s", path.name)
     return creds
 
 
