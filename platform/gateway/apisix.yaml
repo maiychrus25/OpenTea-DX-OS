@@ -56,7 +56,7 @@ routes:
       openid-connect: &oidc_aud
         <<: *oidc
         # Hasura checks the audience itself; n8n and disease-api do not, so require dx-os-core here.
-        # Agent tokens carry dx-os-core too, so user routes also refuse the agent role (spec §5.2).
+        # Agent and Telegram relay tokens carry dx-os-core too, so user routes also refuse both service roles (spec §5.2).
         claim_schema:
           required: [aud]
           properties:
@@ -67,7 +67,7 @@ routes:
             realm_access:
               properties:
                 roles:
-                  not: { contains: { enum: ["agent"] } }
+                  not: { contains: { enum: ["agent", "telegram"] } }
       proxy-rewrite:
         regex_uri: ["^/api/workflow/(.*)", "/webhook/$1"]
   - id: disease
@@ -138,6 +138,39 @@ routes:
         rejected_code: 429
       proxy-rewrite:
         uri: /v1/chat/completions
+  # Internal-only route for the Telegram relay (dxos-telegram): unreachable on 9080, requires its client and the telegram role.
+  - id: internal-telegram
+    uri: /api/internal/telegram/*
+    upstream_id: web
+    vars: [["server_port", "==", "9081"]]
+    plugins:
+      openid-connect: &oidc_telegram
+        <<: *oidc
+        claim_schema:
+          required: [aud, azp, realm_access]
+          properties:
+            aud:
+              anyOf:
+                - { enum: ["dx-os-core"] }
+                - { type: array, contains: { enum: ["dx-os-core"] } }
+            azp:
+              enum: ["dxos-telegram"]
+            realm_access:
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  contains: { enum: ["telegram"] }
+      limit-count:
+        count: 120
+        time_window: 60
+        key_type: var_combination
+        key: "$http_authorization"
+        rejected_code: 429
+      proxy-rewrite:
+        headers:
+          set:
+            X-Dxos-Gateway: "${{DXOS_INTERNAL_GATEWAY_SECRET:=dev-internal-gateway-secret}}"
   # Internal-only route for AI agents: unreachable on host port 9080, requires Keycloak agent role + HTX binding.
   - id: internal-agent
     uri: /api/internal/agent/*

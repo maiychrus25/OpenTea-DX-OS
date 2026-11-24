@@ -33,13 +33,30 @@ def load_routes():
     return {route["id"]: route for route in yaml.safe_load(GATEWAY.read_text(encoding="utf-8"))["routes"]}
 
 
-def test_user_routes_refuse_agent_tokens():
+def test_user_routes_refuse_agent_and_telegram_tokens():
     routes = load_routes()
     for route_id in ("workflow", "disease", "llm-chat"):
         schema = routes[route_id]["plugins"]["openid-connect"]["claim_schema"]
         assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-            "not": {"contains": {"enum": ["agent"]}}
+            "not": {"contains": {"enum": ["agent", "telegram"]}}
         }, route_id
+
+
+def test_telegram_route_needs_the_relay_client_and_role_on_the_internal_port():
+    route = load_routes()["internal-telegram"]
+    assert route["uri"] == "/api/internal/telegram/*"
+    assert route["vars"] == [["server_port", "==", "9081"]]
+    schema = route["plugins"]["openid-connect"]["claim_schema"]
+    assert schema["properties"]["azp"] == {"enum": ["dxos-telegram"]}
+    assert schema["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["telegram"]}
+    assert route["plugins"]["limit-count"]["key"] == "$http_authorization"
+    assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]
+
+
+def test_agent_route_refuses_telegram_tokens_by_claims():
+    # The agent route requires htx_code and the agent role; a relay token has neither.
+    schema = load_routes()["internal-agent"]["plugins"]["openid-connect"]["claim_schema"]
+    assert "htx_code" in schema["required"]
 
 
 def test_llm_chat_stays_reachable_on_the_internal_port():
