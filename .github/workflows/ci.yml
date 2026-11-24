@@ -325,9 +325,9 @@ jobs:
           DXOS_APP_PUBLIC_LIMIT: "1000"
         run: make web-up
 
-      - name: Agent Smoke With Web
-        # Platform Smoke runs before the web starts, so it skips the agent's web checks; run them now that the web is up.
-        run: SMOKE_REQUIRE_WEB=1 bash platform/tests/smoke-agent.sh
+      - name: Agentic Smoke With Web
+        # Platform Smoke runs before the web starts, so it skips the agent and Telegram web checks; run them now.
+        run: bash platform/tests/smoke-agentic.sh
 
       - name: Install Chromium
         working-directory: apps/web
