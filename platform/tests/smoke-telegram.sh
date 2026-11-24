@@ -11,6 +11,11 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
 fi
 
 echo "[telegram]"
+# The relay talks to the web through APISIX, so without the web there is nothing to check (CI runs this after make web-up).
+if [ "${WEB_UP:-0}" != "1" ]; then
+  echo "SKIP: telegram smoke needs the web (run make web-up && SMOKE_REQUIRE_WEB=1 bash platform/tests/smoke-agentic.sh)"
+  return 0
+fi
 STUB="http://127.0.0.1:8081"
 TG_TOKEN_VALUE="123456:smoke-telegram-token"
 TG_OWNER=900001      # Telegram account linked to smoke_manager_tc
@@ -62,6 +67,10 @@ tg_callback() {  # <from id> <chat id> <chat type> <callback data> <callback que
   stub_inject "{\"update_id\": __UPDATE_ID__, \"callback_query\": {\"id\": \"$5\", \"from\": {\"id\": $1}, \"message\": {\"message_id\": 1, \"chat\": {\"id\": $2, \"type\": \"$3\"}}, \"data\": \"$4\"}}"
 }
 
+# Its own TC agent client: the agent smoke disables TC at its end, so its token must not be reused here.
+./dxos agent enable TC >/dev/null
+AT_TC=$(client_token TC)
+[ -n "$AT_TC" ] || fail "TC agent token empty for the telegram smoke"
 psql_app "update platform.telegram_links set unlinked_at = now() where telegram_user_id in ($TG_OWNER, $TG_STRANGER) and unlinked_at is null" >/dev/null
 ./dxos telegram enable >/dev/null
 $COMPOSE --profile telegram-test up -d --no-deps dxos-telegram-stub >/dev/null
@@ -175,6 +184,7 @@ async function status(token) {
 
 # Cleanup: remove the relay credentials and the smoke rows; the operator's own relay settings come back.
 ./dxos telegram disable >/dev/null
+./dxos agent disable TC >/dev/null
 $COMPOSE up -d --no-deps dxos-telegram >/dev/null
 $COMPOSE stop dxos-telegram-stub >/dev/null
 psql_app "delete from platform.agent_proposals where id='$TG_PROPOSAL'" >/dev/null
