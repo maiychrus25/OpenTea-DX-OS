@@ -27,6 +27,21 @@ public partial class App : Application
         MainWindow = window;
         window.Show();
 
+        // --connect: connect to the broker on start (for an unattended field PC).
+        if (e.Args.Contains("--connect")) await _vm.ConnectCommand.ExecuteAsync(null);
+
+        // --smoke <file.txt>: connect, send three rounds, write the counters and quit (end-to-end check against a running core).
+        var s = Array.IndexOf(e.Args, "--smoke");
+        if (s >= 0 && s + 1 < e.Args.Length)
+        {
+            if (!_vm.IsConnected) await _vm.ConnectCommand.ExecuteAsync(null);
+            for (var n = 0; n < 3; n++) await _vm.StepCommand.ExecuteAsync(null);
+            File.WriteAllText(e.Args[s + 1], $"connected={_vm.IsConnected}\nsent={_vm.Sent}\npending={_vm.Pending}\nerror={_vm.ConnectionError}\n"
+                + string.Join("\n", _vm.Log.Select(l => $"{l.Time} {l.Title}: {l.Detail}")));
+            Shutdown(_vm.IsConnected && _vm.Pending == 0 ? 0 : 1);
+            return;
+        }
+
         // --screenshot <file.png>: renders the console once (used for the README and visual checks).
         var i = Array.IndexOf(e.Args, "--screenshot");
         if (i >= 0 && i + 1 < e.Args.Length)
