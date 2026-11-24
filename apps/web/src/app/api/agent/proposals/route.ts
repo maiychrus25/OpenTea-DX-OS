@@ -8,19 +8,9 @@ import { ListProposalsUseCase } from '@/application/agent/ListProposalsUseCase'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import type { Proposal } from '@/domain/agent/proposal'
+import { ACTIVITY_LABEL, formatVnDayMonth, type JournalSubject } from '@/application/agent/actions/journal-labels'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
-
-function formatDayMonth(date: Date): string {
-  const parts = new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: 'Asia/Ho_Chi_Minh',
-  }).formatToParts(date)
-  const day = parts.find((p) => p.type === 'day')?.value ?? ''
-  const month = parts.find((p) => p.type === 'month')?.value ?? ''
-  return `${day}/${month}`
-}
 
 function journalEntryIds(proposal: Proposal): string[] {
   if (!proposal.kind.startsWith('journal.')) return []
@@ -31,17 +21,19 @@ function journalEntryIds(proposal: Proposal): string[] {
 async function loadJournalSubjects(
   proposals: Proposal[],
   htxProfileId: string
-): Promise<Map<string, { id: string; label: string }>> {
+): Promise<Map<string, JournalSubject>> {
   const ids = Array.from(new Set(proposals.flatMap(journalEntryIds)))
   const entries = await new PrismaJournalRepository().findManyScoped(ids, htxProfileId)
   return new Map(
-    entries.map((entry) => {
-      const parcelLabel = entry.parcel_code || entry.parcel_id
-      const dateStr = formatDayMonth(
-        entry.entry_date instanceof Date ? entry.entry_date : new Date(entry.entry_date)
-      )
-      return [entry.id, { id: entry.id, label: `Thửa ${parcelLabel} · ${entry.activity_type} · ${dateStr}` }]
-    })
+    entries.map((entry) => [
+      entry.id,
+      {
+        id: entry.id,
+        parcel: entry.parcel_code || entry.parcel_id,
+        activity: ACTIVITY_LABEL[entry.activity_type] ?? entry.activity_type,
+        day: formatVnDayMonth(entry.entry_date) ?? '',
+      },
+    ])
   )
 }
 
@@ -70,11 +62,11 @@ async function getAgentProposals(request: Request) {
     const def = getAction(p.kind)
     const subjects = Array.from(new Set(journalEntryIds(p)))
       .map((id) => labels.get(id))
-      .filter((subject): subject is { id: string; label: string } => Boolean(subject))
+      .filter((subject): subject is JournalSubject => Boolean(subject))
     return {
       ...p,
       titleVi: def?.titleVi ?? p.kind,
-      preview: def ? def.preview(p.payload) : [],
+      preview: def ? def.preview(p.payload, labels) : [],
       canDecide: Boolean(def && def.approverRoles.includes(tenant.role as ApproverRole)),
       editableFields: def?.editableFields ?? [],
       subjects,

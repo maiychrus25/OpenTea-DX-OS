@@ -7,6 +7,7 @@ import type { Tenant } from '@/lib/api/tenant'
 import { journalApproveAction } from './actions/journal-approve.action'
 import { journalRejectAction } from './actions/journal-reject.action'
 import type { EvidenceLoaders } from './actions/journal-evidence'
+import type { JournalSubject } from './actions/journal-labels'
 
 export type ApproverRole = 'manager' | 'officer'
 export type AutonomyMode = 'auto' | 'unlockable' | 'never'
@@ -27,7 +28,7 @@ export interface ActionDefinition<P extends Record<string, unknown> = Record<str
   payloadSchema: z.ZodType<P, z.ZodTypeDef, unknown>
   editableFields: readonly (keyof P & string)[]
   expiresAfterHours: number
-  preview(payload: P): string[]
+  preview(payload: P, subjects?: ReadonlyMap<string, JournalSubject>): string[]
   subjects(payload: P): string[]
   isStale(payload: P, evidence: Evidence, ctx: ActionStalenessContext): Promise<boolean>
   execute(payload: P, approver: Tenant): Promise<Record<string, unknown>>

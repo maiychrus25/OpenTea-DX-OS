@@ -28,9 +28,11 @@ export const journalRejectAction: ActionDefinition<JournalRejectPayload> = {
   payloadSchema: journalRejectPayloadSchema,
   editableFields: ['reason_vi'],
   expiresAfterHours: 72,
-  preview(payload) {
+  preview(payload, subjects) {
     const verb = payload.decision === 'REJECTED' ? 'Từ chối' : 'Yêu cầu sửa'
-    return [`${verb} nhật ký ${payload.entry_id}: ${payload.reason_vi}`]
+    const subject = subjects?.get(payload.entry_id)
+    const ref = subject ? ` thửa ${subject.parcel} (${subject.day})` : ''
+    return [`${verb} nhật ký${ref}: ${payload.reason_vi}`]
   },
   subjects(payload) {
     return [payload.entry_id]

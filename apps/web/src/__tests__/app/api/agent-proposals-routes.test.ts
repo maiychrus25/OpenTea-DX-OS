@@ -84,8 +84,8 @@ describe('Agent proposals HTTP routes', () => {
     expect(body.data[0]).toMatchObject({
       titleVi: 'Duyệt nhật ký canh tác',
       canDecide: true,
-      preview: ['Duyệt nhật ký e1'],
-      subjects: [{ id: 'e1', label: 'Thửa TC-A3 · FERTILIZING · 23/11' }],
+      preview: ['Duyệt nhật ký thửa TC-A3 · Bón phân · 23/11'],
+      subjects: [{ id: 'e1', parcel: 'TC-A3', activity: 'Bón phân', day: '23/11' }],
     })
   })
 

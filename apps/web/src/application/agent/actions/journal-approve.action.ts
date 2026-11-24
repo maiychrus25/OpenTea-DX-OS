@@ -26,8 +26,13 @@ export const journalApproveAction: ActionDefinition<JournalApprovePayload> = {
   payloadSchema: journalApprovePayloadSchema,
   editableFields: [],
   expiresAfterHours: 72,
-  preview(payload) {
-    return payload.entry_ids.map((id) => `Duyệt nhật ký ${id}`)
+  preview(payload, subjects) {
+    return payload.entry_ids.map((id) => {
+      const subject = subjects?.get(id)
+      return subject
+        ? `Duyệt nhật ký thửa ${subject.parcel} · ${subject.activity} · ${subject.day}`
+        : 'Duyệt nhật ký'
+    })
   },
   subjects(payload) {
     return payload.entry_ids
