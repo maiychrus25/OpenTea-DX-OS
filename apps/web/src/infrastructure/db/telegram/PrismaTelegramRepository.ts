@@ -334,11 +334,13 @@ export class PrismaTelegramRepository implements TelegramRepository {
     return rows.length > 0
   }
 
-  async touchHeartbeat(service: string, version: string | null): Promise<void> {
+  async touchHeartbeat(service: string, version: string | null, details?: Record<string, unknown> | null): Promise<void> {
+    const detailsJson = details ? JSON.stringify(details) : null
     await this.write(`service:${service}`, (tx) => tx.$executeRaw`
-      INSERT INTO platform.service_heartbeats (service, last_seen_at, version)
-      VALUES (${service}, now(), ${version})
-      ON CONFLICT (service) DO UPDATE SET last_seen_at = now(), version = EXCLUDED.version
+      INSERT INTO platform.service_heartbeats (service, last_seen_at, version, details)
+      VALUES (${service}, now(), ${version}, ${detailsJson}::jsonb)
+      ON CONFLICT (service) DO UPDATE SET last_seen_at = now(), version = EXCLUDED.version,
+        details = COALESCE(EXCLUDED.details, platform.service_heartbeats.details)
     `)
   }
 

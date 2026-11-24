@@ -16,9 +16,13 @@ export interface StartAgentRunInput {
 
 export interface FinishAgentRunInput {
   status: AgentRunTerminalStatus
+  provider?: string | null
+  model?: string | null
   tokensIn?: number | null
   tokensOut?: number | null
   costEstimate?: number | null
+  /** Provider calls that left the server during the run; each run with calls gets one audit event. */
+  externalCalls?: number | null
   error?: string | null
 }
 
@@ -26,4 +30,6 @@ export interface AgentRunRepository {
   start(input: StartAgentRunInput): Promise<{ id: string }>
   finish(htxCode: string, id: string, input: FinishAgentRunInput): Promise<boolean>
   existsForHtx(htxCode: string, id: string): Promise<boolean>
+  /** Sum of the estimated cost of the cooperative's runs started in [start, end). */
+  spentBetween(htxCode: string, start: Date, end: Date): Promise<number>
 }
