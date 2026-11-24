@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS app_staff_work.automation_suggestions (
     leave_id integer,
     employee_id integer,
     for_date date,
+    task_title text,
+    task_location text,
     resolved_at timestamp without time zone,
     resolved_by text,
     htx_code character varying(20) NOT NULL,
