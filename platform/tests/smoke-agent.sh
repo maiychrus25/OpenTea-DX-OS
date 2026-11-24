@@ -106,6 +106,10 @@ if [ "$WEB_UP" = "1" ]; then
   assert_http 403 "direct web POST /api/internal/agent/runs denied (test 34a)" \
     -- -X POST -H "Authorization: Bearer $AT_TC" -H 'X-Dxos-Gateway: forged' -H 'Content-Type: application/json' \
     -d '{"agent":"smoke-agent","trigger":"manual"}' "$WEB/api/internal/agent/runs"
+  # The web is published on 3000, so the gateway secret must not open it: the dev value without a token is refused.
+  assert_http "401 403" "direct web call with the dev gateway secret and no token refused" \
+    -- -X POST -H 'X-Dxos-Gateway: dev-internal-gateway-secret' -H 'Content-Type: application/json' \
+    -d '{"agent":"smoke-agent","trigger":"manual"}' "$WEB/api/internal/agent/runs"
 
   # Test 1: agent bearer token cannot invoke business write APIs on web.
   approve_code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
@@ -141,9 +145,10 @@ async function main() {
   });
   assert.ok([401, 403].includes(userTok.status), "non-agent user token via 9081 must return 401 or 403");
 
+  // A forged X-Dxos-Gateway must be overwritten by APISIX, so the valid request still succeeds.
   const startRes = await fetch(gw + "/api/internal/agent/runs", {
     method: "POST",
-    headers: { Authorization: "Bearer " + atTc, "Content-Type": "application/json" },
+    headers: { Authorization: "Bearer " + atTc, "Content-Type": "application/json", "X-Dxos-Gateway": "forged" },
     body: JSON.stringify({ htx_code: "LB", agent: "smoke-agent", trigger: "manual", provider: "replay" }),
   });
   assert.equal(startRes.status, 201, "valid TC agent start run via 9081 must return 201");
