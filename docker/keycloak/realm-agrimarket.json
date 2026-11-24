@@ -107,6 +107,10 @@
       {
         "name": "agent",
         "description": "Dịch vụ AI vận hành (client credentials, chỉ đọc qua Hasura và gửi đề xuất)"
+      },
+      {
+        "name": "telegram",
+        "description": "Rơle Telegram (client credentials, chỉ gọi /api/internal/telegram/*)"
       }
     ]
   },
