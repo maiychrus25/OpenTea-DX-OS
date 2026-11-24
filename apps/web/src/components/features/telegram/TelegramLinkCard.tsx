@@ -94,13 +94,15 @@ export function TelegramLinkCard({ role }: TelegramLinkCardProps) {
     )
   }
 
+  // Farmers get only notices about their own work; proposals and reports go to managers and officers.
+  const what = role === 'farmer' ? 'thông báo của HTX' : 'đề xuất và báo cáo của HTX'
   return (
     <section aria-label="Kết nối Telegram" className={styles.card}>
       <h2 className={styles.title}>Kết nối Telegram</h2>
       <p className={styles.description}>
         {status.linked
-          ? 'Đã kết nối. Bạn sẽ nhận đề xuất và báo cáo của HTX qua Telegram.'
-          : 'Nhận đề xuất và báo cáo của HTX qua Telegram. Tin nhắn được gửi qua máy chủ của Telegram.'}
+          ? `Đã kết nối. Bạn sẽ nhận ${what} qua Telegram.`
+          : `Nhận ${what} qua Telegram. Tin nhắn được gửi qua máy chủ của Telegram.`}
       </p>
       <div className={styles.actions}>
         {status.linked ? (
