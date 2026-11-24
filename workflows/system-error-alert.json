@@ -1,0 +1,50 @@
+{
+  "id": "system-error-alert",
+  "name": "System Error Alert",
+  "note": "Error workflow of the other n8n workflows (settings.errorWorkflow). Writes one row to platform.system_alerts; the web turns it into a health alert for managers.",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "5e2a0000-0000-4a00-8000-000000000001",
+      "name": "Workflow Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const quote = (text) => `'${String(text).replace(/'/g, \"''\")}'`;\nconst data = $input.first().json;\nconst name = data.workflow?.name || 'không rõ tên';\nconst error = data.execution?.error?.message || 'không có thông báo lỗi';\nconst node = data.execution?.lastNodeExecuted || 'không rõ nút';\nconst title = `Quy trình n8n lỗi: ${name}`.slice(0, 200);\nconst detail = `Nút lỗi: ${node}. ${error}`.slice(0, 500);\nreturn [{ json: { title_sql: quote(title), detail_sql: quote(detail) } }];"
+      },
+      "id": "5e2a0000-0000-4a00-8000-000000000002",
+      "name": "Build Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [250, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO platform.system_alerts (id, source, title, detail, created_at) VALUES (gen_random_uuid(), 'n8n', {{ $json.title_sql }}, {{ $json.detail_sql }}, now());"
+      },
+      "id": "5e2a0000-0000-4a00-8000-000000000003",
+      "name": "Insert System Alert",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [500, 0],
+      "credentials": {
+        "postgres": { "id": "creds_postgres_new", "name": "Postgres account" }
+      }
+    }
+  ],
+  "connections": {
+    "Workflow Error Trigger": {
+      "main": [[{ "node": "Build Alert", "type": "main", "index": 0 }]]
+    },
+    "Build Alert": {
+      "main": [[{ "node": "Insert System Alert", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

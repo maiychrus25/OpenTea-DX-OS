@@ -108,10 +108,14 @@ class FakeHasuraGateway:
         self.entries = entries
         self.runs_started = 0
         self.proposals: list[dict] = []
+        self.heartbeats: list[str] = []
 
     def graphql(self, query, variables=None):
         del query, variables
         return {"journal_entries": self.entries}
+
+    def heartbeat(self, version):
+        self.heartbeats.append(version)
 
     def start_run(self, **kwargs):
         del kwargs
@@ -148,6 +152,18 @@ def cooperative(monkeypatch, tmp_path):
     monkeypatch.setattr(agent_main, "CoreGatewayClient", lambda *a, **k: gateway)
     cfg = Config(interval_seconds=5.0, heartbeat_path=str(tmp_path / "hb"), env_dir=env_dir)
     return cfg, gateway
+
+
+def test_heartbeat_is_sent_at_most_every_five_minutes(cooperative):
+    cfg, gateway = cooperative
+    runtimes: dict = {}
+    t0 = datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc)
+
+    agent_main.run_once(cfg, runtimes, now=t0)
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(minutes=4))
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(minutes=5))
+
+    assert gateway.heartbeats == [agent_main.__version__, agent_main.__version__]
 
 
 def test_empty_queue_creates_no_run_and_the_token_client_is_reused(cooperative):

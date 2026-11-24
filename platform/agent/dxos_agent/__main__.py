@@ -2,17 +2,21 @@
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Entrypoint for dxos-agent executing scheduled per-cooperative operational agents."""
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 from pathlib import Path
 import signal
 import threading
 
+from . import __version__
+from .agents.digest import DigestSchedule, run_digest
 from .agents.journal_review import fetch_pending_entries, pending_evidence_hash, run_journal_review
 from .client import AgentCredentials, CoreGatewayClient, KeycloakTokenClient, load_all_agent_credentials
 from .config import Config
 from .providers import LLMProvider, OllamaProvider, ReplayProvider
 from .schedule import ReviewSchedule
+
+HEARTBEAT_INTERVAL = timedelta(minutes=5)
 
 log = logging.getLogger("dxos_agent")
 
@@ -25,6 +29,8 @@ class _CooperativeRuntime:
     gateway: CoreGatewayClient
     provider: LLMProvider
     schedule: ReviewSchedule = field(default_factory=ReviewSchedule)
+    digest: DigestSchedule = field(default_factory=DigestSchedule)
+    heartbeat_at: datetime | None = None
 
 
 def _build_provider(cfg: Config, token_client: KeycloakTokenClient) -> LLMProvider:
@@ -54,6 +60,20 @@ def _runtime_for(
     return runtime
 
 
+def _digest_and_heartbeat(runtime: _CooperativeRuntime, now: datetime) -> None:
+    """A6 and the heartbeat never affect A1: each failure is logged here and the cycle goes on."""
+    try:
+        run_digest(runtime.gateway, runtime.digest, now)
+    except Exception:
+        log.exception("A6 digest failed for htx=%s", runtime.creds.htx_code)
+    if runtime.heartbeat_at is None or now - runtime.heartbeat_at >= HEARTBEAT_INTERVAL:
+        try:
+            runtime.gateway.heartbeat(__version__)
+            runtime.heartbeat_at = now
+        except Exception:
+            log.warning("Agent heartbeat failed for htx=%s", runtime.creds.htx_code)
+
+
 def run_once(
     cfg: Config,
     runtimes: dict[str, _CooperativeRuntime],
@@ -69,6 +89,7 @@ def run_once(
     for creds in credentials_list:
         try:
             runtime = _runtime_for(cfg, runtimes, creds)
+            _digest_and_heartbeat(runtime, now)
             entries = fetch_pending_entries(runtime.gateway)
             input_hash = pending_evidence_hash(entries)
             # Nothing pending means no run row and no LLM call, even on the first cycle.

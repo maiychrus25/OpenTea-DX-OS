@@ -122,5 +122,8 @@
         { "node": "Log Error to Postgres", "type": "main", "index": 0 }
       ]]
     }
+  },
+  "settings": {
+    "errorWorkflow": "system-error-alert"
   }
 }
