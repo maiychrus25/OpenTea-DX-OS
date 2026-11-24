@@ -87,6 +87,12 @@ printf '%s' "$(gql "$AT_TC" "$QJ" manager)" | jq -e 'has("errors") or ((.data.jo
 assert_http 404 "public port 9080 refuses /api/internal/agent/runs" \
   -- -X POST -H "Authorization: Bearer $AT_TC" "$GATEWAY/api/internal/agent/runs"
 
+# Agent tokens are refused on user routes: spec §5.2 allows them only Hasura reads and /api/internal/agent/*.
+for route in /api/workflow/smoke /api/ai/disease/health /api/ai/llm/v1/chat/completions; do
+  assert_http "401 403" "agent token refused on $route" \
+    -- -X POST -H "Authorization: Bearer $AT_TC" -H 'Content-Type: application/json' -d '{}' "$GATEWAY$route"
+done
+
 # Web boundary checks (test 1, test 34a, test 34b).
 WEB_UP=0
 if curl -sf -o /dev/null "$WEB/api/health"; then
