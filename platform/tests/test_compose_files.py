@@ -80,3 +80,11 @@ def test_agent_containers_are_hardened(service):
     assert svc["cpus"] == "0.5"
     # The healthcheck heartbeat lives in /tmp, which stays writable through the tmpfs.
     assert f"/tmp/{service}.heartbeat" in svc["healthcheck"]["test"][3]
+
+
+def test_every_init_script_is_mounted_into_fresh_databases():
+    # Postgres runs only what is mounted in docker-entrypoint-initdb.d; platform-init applies the whole directory.
+    init = sorted(path.name for path in (ROOT / "platform" / "postgres" / "init").glob("*.sql"))
+    mounts = load_compose(COMPOSE)["postgres"]["volumes"]
+    for name in init:
+        assert f"../platform/postgres/init/{name}:/docker-entrypoint-initdb.d/{name}" in mounts, name
