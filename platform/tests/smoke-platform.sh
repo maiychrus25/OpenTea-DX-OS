@@ -239,6 +239,7 @@ done
 q_cleanup; trap - EXIT
 
 source platform/tests/smoke-dataops.sh
+source platform/tests/smoke-agent.sh
 
 echo "[pins]"
 unpinned=$(grep -nE '^\s*image:\s*(\S+:latest|[^:[:space:]#]+)(\s|$)' docker/docker-compose.yml || true)
