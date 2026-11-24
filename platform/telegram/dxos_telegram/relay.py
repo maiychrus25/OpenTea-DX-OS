@@ -1,0 +1,227 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+"""The relay: forwards Telegram updates to the web, sends what the web returns, and drains the web's outbox."""
+import logging
+import threading
+from typing import Any, Callable, Mapping, Optional
+
+from .bot_api import BotApi, BotApiError
+from .gateway import GatewayError, WebGateway
+
+log = logging.getLogger("dxos_telegram")
+
+OUTBOX_LIMIT = 20
+OUTBOX_INTERVAL_SECONDS = 2.0
+HEARTBEAT_INTERVAL_SECONDS = 60.0
+POLL_TIMEOUT_SECONDS = 30
+
+
+class Backoff:
+    """Doubling wait from 1 s up to 60 s, reset after a success."""
+
+    def __init__(self) -> None:
+        self._next = 1.0
+
+    def next(self) -> float:
+        wait = self._next
+        self._next = min(self._next * 2, 60.0)
+        return wait
+
+    def reset(self) -> None:
+        self._next = 1.0
+
+
+def forwardable_update(update: Mapping[str, Any]) -> dict[str, Any]:
+    """Keep only the fields the web reads (C2); everything else the relay drops."""
+    out: dict[str, Any] = {"update_id": update["update_id"]}
+    if "message" in update:
+        out["message"] = _drop_none(
+            {
+                "message_id": update["message"]["message_id"],
+                "chat": _chat(update["message"]["chat"]),
+                "from": _user(update["message"].get("from")),
+                "text": update["message"].get("text"),
+            }
+        )
+    if "callback_query" in update:
+        query = update["callback_query"]
+        message = query.get("message")
+        out["callback_query"] = _drop_none(
+            {
+                "id": query["id"],
+                "from": _user(query.get("from")),
+                "message": _drop_none(
+                    {"message_id": message["message_id"], "chat": _chat(message["chat"])} if message else None
+                ),
+                "data": query.get("data"),
+            }
+        )
+    return out
+
+
+def message_call(item: Mapping[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Bot API method and parameters for one OutboxMessage (C2). An edit always sends its keyboard, so a decided message loses its buttons."""
+    markup = {"inline_keyboard": item.get("buttons") or []}
+    if item["op"] == "edit":
+        return "editMessageText", {
+            "chat_id": item["chat_id"],
+            "message_id": item["edit_message_id"],
+            "text": item["text"],
+            "reply_markup": markup,
+        }
+    params: dict[str, Any] = {"chat_id": item["chat_id"], "text": item["text"]}
+    if item.get("buttons"):
+        params["reply_markup"] = markup
+    return "sendMessage", params
+
+
+class Relay:
+    """Three loops (updates, outbox, heartbeat) on daemon threads; `process_update` and `deliver` do the work and are testable alone."""
+
+    def __init__(self, bot: BotApi, web: WebGateway, version: str) -> None:
+        self._bot = bot
+        self._web = web
+        self._version = version
+        self._stop = threading.Event()
+        self._threads: list[threading.Thread] = []
+
+    def start(self) -> None:
+        for target in (self._poll_loop, self._outbox_loop, self._heartbeat_loop):
+            thread = threading.Thread(target=target, name=target.__name__, daemon=True)
+            thread.start()
+            self._threads.append(thread)
+
+    def stop(self) -> None:
+        self._stop.set()
+        for thread in self._threads:
+            thread.join(timeout=5)
+
+    def _poll_loop(self) -> None:
+        offset = 0
+        backoff = Backoff()
+        while not self._stop.is_set():
+            try:
+                updates = self._bot.call(
+                    "getUpdates",
+                    {"offset": offset, "timeout": POLL_TIMEOUT_SECONDS, "allowed_updates": ["message", "callback_query"]},
+                    timeout=POLL_TIMEOUT_SECONDS + 10,
+                )
+            except BotApiError as exc:
+                log.warning("getUpdates failed (%s); retrying", exc.description)
+                self._stop.wait(backoff.next())
+                continue
+            backoff.reset()
+            for update in updates or []:
+                if not self.process_update(update):
+                    # The web did not take it: keep it unacknowledged and fetch it again after a pause.
+                    self._stop.wait(backoff.next())
+                    break
+                offset = update["update_id"] + 1
+
+    def process_update(self, update: Mapping[str, Any]) -> bool:
+        """Forward one update and send the web's replies. False means the web did not accept it (retry later)."""
+        try:
+            forwarded = forwardable_update(update)
+        except (KeyError, TypeError):
+            log.warning("dropping a malformed update %s", update.get("update_id"))
+            return True
+        try:
+            data = self._web.forward_update(forwarded)
+        except GatewayError as exc:
+            log.warning("web refused update: %s", exc)
+            return False
+        answer = data.get("answer_callback")
+        if answer and "callback_query" in update:
+            self._send_best_effort(
+                "answerCallbackQuery",
+                {
+                    "callback_query_id": update["callback_query"]["id"],
+                    "text": answer.get("text", ""),
+                    "show_alert": bool(answer.get("show_alert", False)),
+                },
+            )
+        for reply in data.get("replies") or []:
+            self._send_best_effort(*message_call(reply))
+        return True
+
+    def _send_best_effort(self, method: str, params: Mapping[str, Any]) -> None:
+        # Replies are answers to a user's action, not queued proposals: a failed one is logged, not retried.
+        try:
+            self._bot.call(method, params)
+        except BotApiError as exc:
+            log.warning("%s failed: %s", method, exc.description)
+
+    def _outbox_loop(self) -> None:
+        backoff = Backoff()
+        while not self._stop.is_set():
+            try:
+                items = self._web.lease_outbox(OUTBOX_LIMIT)
+            except GatewayError as exc:
+                log.warning("outbox unavailable: %s", exc)
+                self._stop.wait(backoff.next())
+                continue
+            backoff.reset()
+            pause = self.deliver(items) if items else 0.0
+            self._stop.wait(pause or OUTBOX_INTERVAL_SECONDS)
+
+    def deliver(self, items: list[Mapping[str, Any]]) -> float:
+        """Send leased messages in order and report each result. Returns how long to pause before the next lease (0 = none)."""
+        for item in items:
+            if self._stop.is_set():
+                return 0.0  # the leases expire and the next start sends them again
+            try:
+                method, params = message_call(item)
+                message_id = self._bot_message_id(method, params, item)
+            except BotApiError as exc:
+                if exc.permanent:
+                    self._report(item, {"ok": False, "error": exc.description, "permanent": True})
+                    continue
+                self._report(item, {"ok": False, "error": exc.description, **_retry(exc)})
+                return float(exc.retry_after or 5)
+            if message_id is None:
+                self._report(item, {"ok": False, "error": "no message id", "permanent": False})
+                return 5.0
+            self._report(item, {"ok": True, "telegram_message_id": message_id})
+        return 0.0
+
+    def _bot_message_id(self, method: str, params: Mapping[str, Any], item: Mapping[str, Any]) -> Optional[int]:
+        try:
+            result = self._bot.call(method, params)
+        except BotApiError as exc:
+            if method == "editMessageText" and "not modified" in exc.description:
+                return int(item["edit_message_id"])  # the text is already what the web wants
+            raise
+        if method == "editMessageText" and isinstance(result, bool):
+            return int(item["edit_message_id"])
+        return int(result["message_id"]) if isinstance(result, dict) and "message_id" in result else None
+
+    def _report(self, item: Mapping[str, Any], result: Mapping[str, Any]) -> None:
+        try:
+            self._web.report_result(str(item["id"]), dict(result))
+        except GatewayError as exc:
+            log.warning("could not report outbox result: %s", exc)
+
+    def _heartbeat_loop(self) -> None:
+        while True:
+            try:
+                self._web.heartbeat(self._version)
+            except GatewayError as exc:
+                log.warning("heartbeat failed: %s", exc)
+            if self._stop.wait(HEARTBEAT_INTERVAL_SECONDS):
+                return
+
+
+def _retry(exc: BotApiError) -> dict[str, Any]:
+    return {"retry_after_seconds": exc.retry_after} if exc.retry_after is not None else {}
+
+
+def _chat(chat: Mapping[str, Any]) -> dict[str, Any]:
+    return {"id": chat["id"], "type": chat["type"]}
+
+
+def _user(user: Optional[Mapping[str, Any]]) -> Optional[dict[str, Any]]:
+    return {"id": user["id"]} if user else None
+
+
+def _drop_none(values: Optional[Mapping[str, Any]]) -> dict[str, Any]:
+    return {key: value for key, value in (values or {}).items() if value is not None}
