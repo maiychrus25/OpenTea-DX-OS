@@ -3,7 +3,7 @@
 """The relay: forwards Telegram updates to the web, sends what the web returns, and drains the web's outbox."""
 import logging
 import threading
-from typing import Any, Callable, Mapping, Optional
+from typing import Any, Mapping, Optional
 
 from .bot_api import BotApi, BotApiError
 from .gateway import GatewayError, WebGateway
