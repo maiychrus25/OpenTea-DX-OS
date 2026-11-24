@@ -368,6 +368,9 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
           >
             Lịch sử
           </button>
+          <Link href={`/${role}/ai/settings`} className={styles.tab}>
+            Cài đặt
+          </Link>
         </div>
 
         <div className={styles.filters}>

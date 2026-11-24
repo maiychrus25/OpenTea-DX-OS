@@ -85,7 +85,8 @@ export interface TelegramRepository {
   updateUnsentText(id: string, text: string): Promise<void>
   healthRecentlyQueued(healthKey: string, since: Date): Promise<boolean>
 
-  touchHeartbeat(service: string, version: string | null): Promise<void>
+  /** `details` replaces the stored details only when given (the agent sends its provider list). */
+  touchHeartbeat(service: string, version: string | null, details?: Record<string, unknown> | null): Promise<void>
   heartbeatLastSeen(service: string): Promise<Date | null>
   heartbeatServices(prefix: string): Promise<string[]>
   /** Whether the latest `count` runs of this cooperative all failed (fewer runs never qualify). */
