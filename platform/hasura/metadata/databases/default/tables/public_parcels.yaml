@@ -28,3 +28,21 @@ select_permissions:
     permission:
       columns: '*'
       filter: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}
+  - role: agent
+    permission:
+      columns:
+        - id
+        - parcel_code
+        - household_id
+        - crop_type
+        - area_ha
+        - centroid_lat
+        - centroid_lng
+        - polygon_geojson
+        - status
+        - estimated_yield_per_ha
+        - harvest_approved_at
+        - created_at
+        - updated_at
+      allow_aggregations: true
+      filter: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}

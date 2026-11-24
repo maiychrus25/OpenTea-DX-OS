@@ -31,3 +31,23 @@ select_permissions:
       columns: '*'
       allow_aggregations: true
       filter: {parcel: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}}
+  - role: agent
+    permission:
+      columns:
+        - id
+        - parcel_id
+        - entry_date
+        - activity_type
+        - submitted_role
+        - status
+        - approved_at
+        - review_note
+        - notes
+        - weather_condition
+        - weather_temperature
+        - weather_precipitation
+        - weather_humidity
+        - created_at
+        - updated_at
+      allow_aggregations: true
+      filter: {parcel: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}}

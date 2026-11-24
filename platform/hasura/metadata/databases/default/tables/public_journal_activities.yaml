@@ -20,3 +20,16 @@ select_permissions:
     permission:
       columns: '*'
       filter: {journal_entry: {parcel: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}}}
+  - role: agent
+    permission:
+      columns:
+        - id
+        - journal_entry_id
+        - activity_detail
+        - product_name
+        - dosage
+        - withdrawal_days
+        - safe_harvest_date
+        - created_at
+      allow_aggregations: true
+      filter: {journal_entry: {parcel: {household: {htx_profile: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}}}}}

@@ -146,7 +146,7 @@ Các bước thiết lập bổ sung (bucket S3, import n8n workflows, Ollama mo
 
 ### Chạy stack nhỏ hơn khi máy ít RAM
 
-Stack đầy đủ có 16 container và dùng khoảng 3,6 GiB RAM. Khi chỉ cần đăng nhập, bảng điều khiển, Kho ứng dụng và các mini-app, chạy phần lõi và tắt các nhóm tuỳ chọn:
+Stack đầy đủ có 18 container và dùng khoảng 3,6 GiB RAM. Khi chỉ cần đăng nhập, bảng điều khiển, Kho ứng dụng và các mini-app, chạy phần lõi và tắt các nhóm tuỳ chọn:
 
 ```bash
 make platform-up   # một lần đầu (khởi tạo và migrate cơ sở dữ liệu), rồi:
@@ -163,12 +163,13 @@ make stop-extras   # dừng (không xoá) mọi nhóm tuỳ chọn; dữ liệu 
 | `make up-voice` | piper | Không có giọng đọc cho bản tin | khoảng 40 MiB |
 | `make up-workflow` | n8n | Các workflow (báo cáo thị trường, đẩy sự kiện) không chạy; các trang vẫn mở | khoảng 0,4 GiB |
 | `make up-chat` | mattermost | Không nhận được thông báo đẩy sang Mattermost (không có build arm64, chỉ chạy trên máy x86) | chưa đo |
+| `make up-agent` | dxos-agent, dxos-telegram | Lớp AI vận hành (M0: khung dịch vụ, chưa chạy agent hay nối Telegram); tắt không ảnh hưởng chức năng nào | khoảng 35 MiB |
 
 Mini-app cài bằng `./dxos` là các container riêng, mỗi cái khoảng 50 MB, vẫn chạy khi bạn dừng các nhóm trên. Các số RAM là số đo `docker stats` trên một máy phát triển và thay đổi theo tải.
 
 ## 🧱 Tier 1: Nền tảng lõi (Headless Core)
 
-Tier 1 gồm PostgreSQL (PostGIS, pgvector), SeaweedFS S3, Keycloak, Hasura (chỉ đọc, phân quyền theo `htx_code`), n8n, cổng API APISIX, ClamAV và `dxos-scanner` (kiểm dịch file), cùng Mosquitto (MQTT), `dxos-ingest`, `dxos-lifecycle` (kho lạnh Parquet) và Ollama (LLM nội bộ).
+Tier 1 gồm PostgreSQL (PostGIS, pgvector), SeaweedFS S3, Keycloak, Hasura (chỉ đọc, phân quyền theo `htx_code`), n8n, cổng API APISIX, ClamAV và `dxos-scanner` (kiểm dịch file), cùng Mosquitto (MQTT), `dxos-ingest`, `dxos-lifecycle` (kho lạnh Parquet) và Ollama (LLM nội bộ). Ngoài ra có hai khung dịch vụ của lớp AI vận hành là `dxos-agent` và `dxos-telegram` (mốc M0, xem [ADR 0003](./docs/adr/0003-agentic-layer.md) và đặc tả ở PR #54).
 
 **Yêu cầu:** Docker + Compose ≥ 2.24, GNU make, bash, Node ≥ 20 (kèm npm), `jq`, `curl`, Python 3.
 
@@ -401,6 +402,17 @@ make web-up
 make apps-smoke                         # kiểm thử tích hợp (sau npm run seed và make platform-smoke)
 ```
 
+### Bật / tắt lớp AI cho từng HTX (`./dxos agent`)
+
+```bash
+./dxos agent enable TC                  # tạo client Keycloak dxos-agent-tc, vai agent, lưu secret (mode 600) và bật agent_settings
+./dxos agent disable TC                 # xoá client dxos-agent-tc, xoá tệp env, tắt agent_settings và hết hạn đề xuất đang chờ
+```
+
+- Lệnh tạo hoặc thu hồi client `dxos-agent-<htx viết thường>` trong Keycloak (gán claim `htx_code` viết hoa và vai trò realm `agent`), ghi tệp env của HTX vào volume Docker `dxos-agent-env` của project (tệp thuộc uid `10001` của dxos-agent, quyền `600`, không nằm trên thư mục host) và cập nhật `platform.agent_settings`. Với HTX đã bật trước đó, chạy lại `./dxos agent enable <HTX>` để ghi tệp vào volume; tệp cũ dưới `docker/runtime/<project>/agent/` không còn được đọc. Khi tắt, mọi đề xuất ở trạng thái `proposed` của HTX đó chuyển sang `expired`.
+- `./dxos agent enable` kiểm tra HTX có trong `platform.htx_profiles` trước khi gọi Keycloak; HTX không tồn tại thì lệnh dừng với lỗi và không tạo client nào.
+- `./dxos agent disable` xoá client nhưng không thu hồi token đã cấp: token phát hành trước đó còn dùng được đến khi hết hạn. Thời hạn access token là 5 phút (300 giây, mặc định của Keycloak vì realm `agrimarket` không đặt riêng và client agent không ghi đè).
+
 > [!WARNING]
 > `make apps-smoke` xoá dữ liệu của `tea-tour`, `leaf-purchase`, `tea-shop`, `farm-supply`, `custom-books` (`--purge`), gỡ `htx-dashboard`, xoá số đo cảm biến của bốn thửa mẫu (TC-A1, TC-B1, TC-B2, LB-A1) và xoá dữ liệu của các fixture, và tự bật một `./dxos worker` của riêng nó. Không chạy nó trên stack có dữ liệu thật, ví dụ stack demo sau khi đã chuẩn bị dữ liệu; hãy dùng stack riêng (`COMPOSE_PROJECT_NAME=dxos-clean`). Script tự dừng với mã 1 khi `tea-tour`, `hello`, `htx-dashboard` hoặc một app nghiệp vụ đang được cài, và cũng không chạy được khi một worker khác đang chạy.
 
@@ -519,6 +531,7 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 - 🧪 **[Testing Strategy](./docs/testing-strategy.md)** — Công cụ và chiến lược kiểm thử.
 - 🛠️ **[Dev Setup](./docs/dev-setup.md)** — Hướng dẫn cài đặt môi trường phát triển.
 - 📝 **[Deviation Register](./docs/deviation-register.md)** — Sổ ghi nhận các điểm sai lệch so với đặc tả.
+- 🤝 **[Lớp AI vận hành có người duyệt](./docs/specs/2026-11-23-agentic-layer-design.md)** — Đặc tả định hướng (chưa triển khai): agent đề xuất, người duyệt trên web hoặc Telegram, chiến dịch hằng ngày, chế độ tự vận hành tuỳ chọn, provider nội bộ và bên ngoài.
 - 🧩 **[Mini-app](./docs/miniapps.md)** — Hướng dẫn viết mini-app: manifest, bảo mật, database, giao diện và lệnh `./dxos`.
 - 🎨 **[DESIGN.md](./DESIGN.md)** — Hệ thống thiết kế: token màu sáng/tối, chữ, khoảng cách và quy tắc tương phản.
 - 📦 **[Dependencies](./DEPENDENCIES.md)** — Danh mục thư viện và giấy phép phụ thuộc.
@@ -536,7 +549,7 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 
 - Phiên bản được đánh số theo [Semantic Versioning](https://semver.org/) và ghi nhận trong [CHANGELOG.md](./CHANGELOG.md) theo chuẩn [Keep a Changelog](https://keepachangelog.com/).
 - Các bản phát hành chính thức được công bố tại [GitHub Releases](https://github.com/maiychrus25/OpenTea-DX-OS/releases), mỗi bản gồm ghi chú phát hành, gói triển khai `opentea-dx-os-X.Y.Z.tar.gz` (kèm `SHA256SUMS`) và image trên GHCR:
-  `ghcr.io/maiychrus25/opentea-dx-os-web:X.Y.Z`, `-api`, `-postgres`, `-scanner`, `-migrate` và `-dataops` (cùng tiền tố, cùng tag).
+  `ghcr.io/maiychrus25/opentea-dx-os-web:X.Y.Z`, `-api`, `-postgres`, `-scanner`, `-migrate`, `-dataops`, `-agent` và `-telegram` (cùng tiền tố, cùng tag).
 
 **Phát hành phiên bản mới (maintainer):**
 
@@ -554,7 +567,7 @@ Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 tar -xzf opentea-dx-os-X.Y.Z.tar.gz && cd opentea-dx-os-X.Y.Z
 cp .env.example .env.local && cp docker/.env.local.example docker/.env.local   # rồi điền secret production
 export OPENTEA_VERSION=X.Y.Z
-docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner dxos-ingest dxos-lifecycle
+docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml pull web disease-api postgres migrate dxos-scanner dxos-ingest dxos-lifecycle dxos-agent dxos-telegram
 # Điền DXOS_MQTT_DEVICES và DXOS_MQTT_INGEST_PASSWORD (không để change_me*) trong docker/.env.local: broker từ chối khởi động nếu còn placeholder
 # Điền MINIO_ACCESS_KEY và MINIO_SECRET_KEY: SeaweedFS từ chối khởi động nếu còn rỗng hoặc placeholder (your_minio*, change_me*)
 # Mọi lệnh đều cần --env-file docker/.env.local: thiếu cờ này Compose dùng giá trị mặc định công khai trong repo thay vì secret của anh
@@ -573,7 +586,7 @@ docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f dock
 > Hasura phải khởi động sau migration (thiếu bảng thì không phục vụ dữ liệu). Cổng mở ra host: `apisix:9080`, `web:3000`, `keycloak:8080` và `seaweedfs:9000` (trình duyệt tải/xem file qua presigned URL trên cổng 9000 nên chưa thể đóng cho tới khi Tầng 2 đưa storage ra sau gateway).
 
 > [!WARNING]
-> Bắt buộc đặt `HASURA_GRAPHQL_ADMIN_SECRET` mạnh trong `docker/.env.local` trước khi triển khai: override release khiến Hasura từ chối khởi động nếu giá trị rỗng hoặc còn là placeholder `change_me*`. Cũng phải đổi `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` (SeaweedFS từ chối khởi động nếu còn placeholder, cổng 9000 mở công khai) và `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD` (cổng 8080 mở công khai, override release khiến Keycloak từ chối khởi động nếu mật khẩu rỗng, còn là `admin` hoặc `change_me*`). Keycloak chỉ đọc hai biến này khi database còn mới, nên với hệ thống đang chạy phải đổi thêm mật khẩu admin ngay trong Keycloak.
+> Bắt buộc đặt `HASURA_GRAPHQL_ADMIN_SECRET` mạnh trong `docker/.env.local` trước khi triển khai: override release khiến Hasura từ chối khởi động nếu giá trị rỗng hoặc còn là placeholder `change_me*`. Cũng phải đổi `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` (SeaweedFS từ chối khởi động nếu còn placeholder, cổng 9000 mở công khai) và `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD` (cổng 8080 mở công khai, override release khiến Keycloak từ chối khởi động nếu mật khẩu rỗng, còn là `admin` hoặc `change_me*`). Keycloak chỉ đọc hai biến này khi database còn mới, nên với hệ thống đang chạy phải đổi thêm mật khẩu admin ngay trong Keycloak. Cũng phải đặt `DXOS_INTERNAL_GATEWAY_SECRET` là một chuỗi ngẫu nhiên dài: web và APISIX từ chối khởi động nếu biến này rỗng hoặc bằng giá trị công khai `dev-internal-gateway-secret`.
 
 > [!IMPORTANT]
 > Nâng cấp một bản đang chạy lên Tier 1c: (1) chạy `docker compose --env-file docker/.env.local -f docker/docker-compose.yml -f docker/docker-compose.release.yml restart hasura apisix` sau `up -d --no-build`, vì Hasura chỉ nạp metadata lúc khởi động và APISIX giữ inode cũ của file route; (2) `--env-file` khiến các giá trị trong `docker/.env.local` lần đầu có hiệu lực cho `POSTGRES_PASSWORD`, `KEYCLOAK_DB_PASSWORD` và `N8N_ENCRYPTION_KEY`: chúng phải khớp với giá trị mà volume hiện có đã được khởi tạo (trước đây là mặc định trong `docker-compose.yml`), nếu không dịch vụ sẽ không kết nối được hoặc không giải mã được dữ liệu.

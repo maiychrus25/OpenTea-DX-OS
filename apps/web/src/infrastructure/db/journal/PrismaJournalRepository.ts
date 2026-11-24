@@ -7,7 +7,9 @@ import {
   JournalEntryData,
   CreateJournalData,
   JournalFilters,
+  JournalReviewDecision,
 } from '@/domain/journal/ports/JournalPort'
+import { ValidationError } from '@/domain/errors'
 import { ActivityType, NotificationType, ParcelStatus } from '@prisma/client'
 import { sseEmitter, SSE_EVENTS } from '@/lib/sse-emitter'
 
@@ -26,6 +28,7 @@ function mapEntry(e: any): JournalEntryData {
     status: e.status,
     approved_by_id: e.approved_by_id,
     approved_at: e.approved_at,
+    review_note: e.review_note ?? null,
     notes: e.notes,
     weather_temperature: e.weather_temperature,
     weather_precipitation: e.weather_precipitation,
@@ -132,6 +135,25 @@ export class PrismaJournalRepository implements JournalPort {
     })
     if (!e) return null
     return mapEntry(e)
+  }
+
+  /** Entries of one cooperative, loaded in a single query; ids of other cooperatives are simply absent. */
+  async findManyScoped(ids: string[], htxProfileId: string): Promise<JournalEntryData[]> {
+    if (ids.length === 0) return []
+    const rows = await prisma.journalEntry.findMany({
+      where: { id: { in: ids }, parcel: { household: { htx_profile_id: htxProfileId } } },
+      include: {
+        activities: true,
+        parcel: {
+          select: {
+            household_id: true,
+            parcel_code: true,
+            household: { select: { keycloak_user_id: true } },
+          },
+        },
+      },
+    })
+    return rows.map(mapEntry)
   }
 
   async create(data: CreateJournalData): Promise<JournalEntryData> {
@@ -244,10 +266,15 @@ export class PrismaJournalRepository implements JournalPort {
     return mapEntry(e)
   }
 
-  async update(id: string, data: Partial<CreateJournalData>): Promise<JournalEntryData> {
+  async update(id: string, data: Partial<CreateJournalData>, resubmit = false): Promise<JournalEntryData> {
     const updateData: Record<string, unknown> = {}
     if (data.entry_date) updateData.entry_date = data.entry_date
     if (data.observation !== undefined) updateData.notes = data.observation
+    // A returned entry goes back to the queue with its old reason cleared.
+    if (resubmit) {
+      updateData.status = 'PENDING_APPROVAL'
+      updateData.review_note = null
+    }
 
     const e = await prisma.journalEntry.update({
       where: { id },
@@ -311,6 +338,8 @@ export class PrismaJournalRepository implements JournalPort {
     let approved = 0
 
     await prisma.$transaction(async (tx) => {
+      // Row audit events of these updates name the approver.
+      await tx.$executeRaw`SELECT set_config('dxos.actor', ${`user:${approvedById}`}, true)`
       for (const entryId of entryIds) {
         const entry = await tx.journalEntry.findUnique({
           where: { id: entryId },
@@ -329,14 +358,20 @@ export class PrismaJournalRepository implements JournalPort {
           continue
         }
 
-        await tx.journalEntry.update({
-          where: { id: entryId },
+        // Conditional on the status so a concurrent review cannot be overwritten.
+        const { count } = await tx.journalEntry.updateMany({
+          where: { id: entryId, status: 'PENDING_APPROVAL' },
           data: {
             status: 'APPROVED',
             approved_by_id: approvedById,
             approved_at: new Date(),
+            reviewed_by_id: approvedById,
           },
         })
+        if (count === 0) {
+          failed.push(entryId)
+          continue
+        }
         
         await applyParcelStatus(tx, entry.parcel_id, entry.activity_type, entry.entry_date)
         if (entry.submitted_role === 'FARMER' && entry.parcel.household.keycloak_user_id) {
@@ -362,5 +397,67 @@ export class PrismaJournalRepository implements JournalPort {
     })
 
     return { approved, failed }
+  }
+
+  async review(
+    entryId: string,
+    decision: JournalReviewDecision,
+    reason: string,
+    reviewerId: string
+  ): Promise<{ status: JournalReviewDecision }> {
+    const trimmedReason = reason.trim()
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('dxos.actor', ${`user:${reviewerId}`}, true)`
+      const entry = await tx.journalEntry.findUnique({
+        where: { id: entryId },
+        include: {
+          parcel: {
+            select: {
+              parcel_code: true,
+              household_id: true,
+              household: { select: { keycloak_user_id: true, htx_profile_id: true } },
+            },
+          },
+        },
+      })
+      if (!entry || entry.status !== 'PENDING_APPROVAL') {
+        throw new ValidationError('Nhật ký không còn ở trạng thái chờ duyệt')
+      }
+
+      // Conditional on the status so a concurrent review cannot be overwritten.
+      const { count } = await tx.journalEntry.updateMany({
+        where: { id: entryId, status: 'PENDING_APPROVAL' },
+        data: {
+          status: decision,
+          review_note: trimmedReason,
+          reviewed_by_id: reviewerId,
+        },
+      })
+      if (count === 0) {
+        throw new ValidationError('Nhật ký không còn ở trạng thái chờ duyệt')
+      }
+
+      if (entry.submitted_role === 'FARMER' && entry.parcel.household.keycloak_user_id) {
+        const notif = await tx.notification.create({
+          data: {
+            type: NotificationType.SYSTEM,
+            title: decision === 'REQUEST_CHANGES' ? 'Nhật ký cần chỉnh sửa' : 'Nhật ký bị từ chối',
+            body: `Nhật ký ${entry.activity_type} cho thửa ${entry.parcel.parcel_code}: ${trimmedReason}`,
+            recipient_id: entry.parcel.household.keycloak_user_id,
+            household_id: entry.parcel.household_id,
+            htx_profile_id: entry.parcel.household.htx_profile_id,
+            sender_id: reviewerId,
+            deep_link_url: '/farmer/journal',
+          },
+        })
+        if (notif.recipient_id) {
+          sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { userId: notif.recipient_id })
+        } else {
+          sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { broadcast: true })
+        }
+      }
+    })
+
+    return { status: decision }
   }
 }

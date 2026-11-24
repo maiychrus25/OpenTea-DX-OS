@@ -167,7 +167,9 @@ assert_eq "$LLM_OTHER" "400" "llm rate limit is per user (upstream answers the u
 
 echo "[release guards]"
 # `--version` makes kc.sh exit at once, so only the guard decides the exit code.
-kc_guard() { OPENTEA_VERSION=0.0.0 $COMPOSE -f docker/docker-compose.release.yml run --rm --no-deps -e "KEYCLOAK_ADMIN_PASSWORD=$1" keycloak --version >/dev/null 2>&1; }
+# The release override requires DXOS_INTERNAL_GATEWAY_SECRET for every service; give it a value so compose
+# reaches the Keycloak guard (without it compose stops first and every case below fails for the wrong reason).
+kc_guard() { DXOS_INTERNAL_GATEWAY_SECRET=smoke-release-guard-0123456789abcdef OPENTEA_VERSION=0.0.0 $COMPOSE -f docker/docker-compose.release.yml run --rm --no-deps -e "KEYCLOAK_ADMIN_PASSWORD=$1" keycloak --version >/dev/null 2>&1; }
 for weak in "" admin ADMIN change_me_x CHANGE_ME_Y; do
   kc_guard "$weak" && fail "release keycloak accepted weak admin password '$weak'" || pass "release keycloak refuses admin password '$weak'"
 done

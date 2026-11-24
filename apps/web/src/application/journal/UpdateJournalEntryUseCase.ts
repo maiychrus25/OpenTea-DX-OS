@@ -15,9 +15,10 @@ export class UpdateJournalEntryUseCase {
         throw new ForbiddenError('Bạn không có quyền sửa nhật ký này')
       }
     }
-    if (existing.status !== 'DRAFT' && existing.status !== 'PENDING_APPROVAL') {
-      throw new DomainError('Only draft/pending entries can be updated')
+    const returned = existing.status === 'REJECTED' || existing.status === 'REQUEST_CHANGES'
+    if (!returned && existing.status !== 'DRAFT' && existing.status !== 'PENDING_APPROVAL') {
+      throw new DomainError('Only draft, pending or returned entries can be updated')
     }
-    return this.journalPort.update(id, data as any)
+    return this.journalPort.update(id, data as any, returned)
   }
 }

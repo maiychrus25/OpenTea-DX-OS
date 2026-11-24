@@ -14,6 +14,9 @@ const list = jest.fn()
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 jest.mock('next/navigation', () => ({ redirect: jest.fn() }))
 jest.mock('@/infrastructure/db/prisma.client', () => ({ prisma: {} }))
+jest.mock('@/infrastructure/db/agent/PrismaProposalRepository', () => ({
+  PrismaProposalRepository: jest.fn().mockImplementation(() => ({ countOpen: jest.fn().mockResolvedValue(0) })),
+}))
 jest.mock('@/infrastructure/db/repositories/PrismaHtxProfileRepository', () => ({
   PrismaHtxProfileRepository: jest.fn().mockImplementation(() => ({ getProfile: async () => ({ name: 'HTX', address: 'A' }) })),
 }))

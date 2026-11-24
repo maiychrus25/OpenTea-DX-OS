@@ -264,6 +264,12 @@ jobs:
       - name: Dataops Unit Tests
         run: cd platform/dataops && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
 
+      - name: Agent Unit Tests
+        run: cd platform/agent && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
+
+      - name: Telegram Unit Tests
+        run: cd platform/telegram && python -m pip install -r requirements-dev.txt && python -m pytest tests -q -W error
+
       # The registry tests start a throwaway Postgres from this image; Start Platform reuses its build cache.
       - name: DXOS CLI Unit Tests
         run: |
@@ -318,6 +324,10 @@ jobs:
           # Every browser spec comes from one IP, so a Playwright retry must not hit the public 10/min limit.
           DXOS_APP_PUBLIC_LIMIT: "1000"
         run: make web-up
+
+      - name: Agent Smoke With Web
+        # Platform Smoke runs before the web starts, so it skips the agent's web checks; run them now that the web is up.
+        run: SMOKE_REQUIRE_WEB=1 bash platform/tests/smoke-agent.sh
 
       - name: Install Chromium
         working-directory: apps/web

@@ -41,6 +41,7 @@ export function resolveAuthRedirect(
         lowerPath.startsWith('/api/health') ||
         lowerPath === '/api/health/' ||
         lowerPath.startsWith('/api/dev-login') ||
+        lowerPath.startsWith('/api/internal/') ||
         isPublicApiPath(pathname)
       )
         return null

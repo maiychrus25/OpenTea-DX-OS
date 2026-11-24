@@ -71,14 +71,14 @@ export default async function FarmerDashboard() {
     }
   })
 
-  // Rejected entries are left out, as when a lot is created; pending ones still warn the farmer.
+  // Drafts are left out; rejected and pending entries still warn the farmer, as they block harvest.
   const now = new Date()
   const withdrawals = household
     ? activeWithdrawals(
         (await prisma.journalActivity.findMany({
           where: {
             safe_harvest_date: { gt: now },
-            journal_entry: { status: { not: 'REJECTED' }, parcel: { household: { id: household.id, htx_profile_id: htxProfileId } } },
+            journal_entry: { status: { not: 'DRAFT' }, parcel: { household: { id: household.id, htx_profile_id: htxProfileId } } },
           },
           select: { safe_harvest_date: true, journal_entry: { select: { parcel: { select: { parcel_code: true } } } } },
         })).map((a) => ({ parcel_code: a.journal_entry.parcel.parcel_code, safe_harvest_date: a.safe_harvest_date! })),

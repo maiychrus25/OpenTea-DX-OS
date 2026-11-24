@@ -103,6 +103,10 @@
       {
         "name": "farmer",
         "description": "Nông dân"
+      },
+      {
+        "name": "agent",
+        "description": "Dịch vụ AI vận hành (client credentials, chỉ đọc qua Hasura và gửi đề xuất)"
       }
     ]
   },

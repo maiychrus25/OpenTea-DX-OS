@@ -31,3 +31,12 @@ select_permissions:
     permission:
       columns: '*'
       filter: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}
+  - role: agent
+    permission:
+      columns:
+        - id
+        - htx_code
+        - crop_types
+        - season_label
+      allow_aggregations: true
+      filter: {_and: [{'htx_code': {'_eq': 'X-Hasura-Htx-Code'}}, {'htx_code': {'_neq': ''}}]}
