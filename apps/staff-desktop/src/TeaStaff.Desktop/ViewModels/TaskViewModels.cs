@@ -25,7 +25,7 @@ public sealed record KanbanColumn(string Title, string Tone, IReadOnlyList<TaskR
 }
 
 public sealed partial class TasksViewModel(IDialogService dialogs, ITaskRepository tasks, IEmployeeRepository employees, TaskService service,
-    ITenantContext tenant, IClock clock) : PageViewModel(dialogs)
+    ITenantContext tenant, IClock clock, AutomationEngine engine) : PageViewModel(dialogs)
 {
     private IReadOnlyList<WorkTask> _all = [];
 
@@ -129,7 +129,7 @@ public sealed partial class TasksViewModel(IDialogService dialogs, ITaskReposito
             AssignedBy = tenant.DisplayName,
             AssigneeId = AssigneeFilter?.Value ?? staff[0].Id,
         };
-        if (Dialogs.ShowEditor(new TaskEditorViewModel(service, staff, task))) await RunAsync(LoadAsync);
+        if (Dialogs.ShowEditor(new TaskEditorViewModel(service, staff, task, engine.RankAsync))) await RunAsync(LoadAsync);
     }
 
     [RelayCommand]
@@ -139,7 +139,7 @@ public sealed partial class TasksViewModel(IDialogService dialogs, ITaskReposito
         var fresh = await tasks.GetAsync(row.Task.Id);
         if (fresh is null) return;
         var staff = (await employees.ListAsync()).Where(e => e.IsActive || e.Id == fresh.AssigneeId).ToList();
-        if (Dialogs.ShowEditor(new TaskEditorViewModel(service, staff, fresh))) await RunAsync(LoadAsync);
+        if (Dialogs.ShowEditor(new TaskEditorViewModel(service, staff, fresh, engine.RankAsync))) await RunAsync(LoadAsync);
     }
 
     [RelayCommand]
@@ -154,7 +154,7 @@ public sealed partial class TasksViewModel(IDialogService dialogs, ITaskReposito
             AssigneeId = t.AssigneeId, AssignedBy = tenant.DisplayName,
             StartDate = clock.Now.Date.AddHours(7), DueDate = clock.Now.Date.AddHours(17),
         };
-        if (Dialogs.ShowEditor(new TaskEditorViewModel(service, staff, copy))) await RunAsync(LoadAsync);
+        if (Dialogs.ShowEditor(new TaskEditorViewModel(service, staff, copy, engine.RankAsync))) await RunAsync(LoadAsync);
     }
 
     [RelayCommand]
@@ -200,11 +200,14 @@ public sealed partial class TaskEditorViewModel : EditorViewModel
 {
     private readonly TaskService _service;
     private readonly WorkTask _task;
+    private readonly Func<AssignmentRequest, CancellationToken, Task<IReadOnlyList<AssignmentCandidate>>>? _rank;
 
-    public TaskEditorViewModel(TaskService service, IReadOnlyList<Employee> staff, WorkTask task)
+    public TaskEditorViewModel(TaskService service, IReadOnlyList<Employee> staff, WorkTask task,
+        Func<AssignmentRequest, CancellationToken, Task<IReadOnlyList<AssignmentCandidate>>>? rank = null)
     {
         _service = service;
         _task = task;
+        _rank = rank;
         Assignees = staff.Select(e => new Option<int>(e.Id, $"{e.FullName} · {e.Position}")).ToList();
         Assignee = Assignees.FirstOrDefault(a => a.Value == task.AssigneeId) ?? Assignees.FirstOrDefault();
         TaskTitle = task.Title;
@@ -240,6 +243,43 @@ public sealed partial class TaskEditorViewModel : EditorViewModel
     [ObservableProperty] private DateTime _dueDate;
     [ObservableProperty] private string _dueTime;
 
+    public bool CanSuggest => _rank is not null;
+    public ObservableCollection<CandidateRow> Candidates { get; } = [];
+    [ObservableProperty] private string? _suggestNote;
+
+    /// <summary>Ranks the active staff for the task as currently typed, with the facts behind each score.</summary>
+    [RelayCommand]
+    private async Task Suggest()
+    {
+        if (_rank is null) return;
+        Error = null;
+        if (string.IsNullOrWhiteSpace(TaskTitle))
+        {
+            Error = "Nhập tên công việc trước để hệ thống tìm người phù hợp.";
+            return;
+        }
+        try
+        {
+            var start = StartDate.Date + ParseTime(StartTime, "Giờ bắt đầu");
+            var due = DueDate.Date + ParseTime(DueTime, "Giờ hạn chót");
+            var ranked = await _rank(new AssignmentRequest(TaskTitle, Location, start, due, ExcludeEmployeeId: _task.Status == WorkTaskStatus.Rejected ? _task.AssigneeId : null), CancellationToken.None);
+            Candidates.Clear();
+            foreach (var c in ranked.Where(c => Assignees.Any(a => a.Value == c.Employee.Id)).Take(4)) Candidates.Add(new CandidateRow(c));
+            SuggestNote = Candidates.Count == 0 ? "Không có ai phù hợp." : "Xếp theo việc tương tự đã làm, tỉ lệ đúng hạn, việc đang có và nơi làm. Bấm Chọn để giao.";
+        }
+        catch (DomainException e)
+        {
+            Error = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private void Pick(CandidateRow? row)
+    {
+        if (row is null) return;
+        Assignee = Assignees.FirstOrDefault(a => a.Value == row.Candidate.Employee.Id) ?? Assignee;
+    }
+
     protected override async Task SaveCoreAsync()
     {
         _task.Title = TaskTitle ?? string.Empty;
@@ -259,4 +299,13 @@ public sealed partial class TaskEditorViewModel : EditorViewModel
         TimeSpan.TryParseExact(text?.Trim(), [@"hh\:mm", @"h\:mm"], null, out var t) && t < TimeSpan.FromDays(1)
             ? t
             : throw new DomainException($"{field} phải có dạng HH:mm, ví dụ 07:30.");
+}
+
+public sealed class CandidateRow(AssignmentCandidate c)
+{
+    public AssignmentCandidate Candidate { get; } = c;
+    public string Name => Candidate.Employee.FullName;
+    public string Percent => Candidate.Available ? $"{Candidate.Percent}%" : "Bận";
+    public bool Available => Candidate.Available;
+    public string Facts => Candidate.Summary;
 }

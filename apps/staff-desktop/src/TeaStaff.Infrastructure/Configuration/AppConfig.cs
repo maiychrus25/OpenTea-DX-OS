@@ -34,6 +34,18 @@ public sealed class MobileApiOptions
 {
     public bool Enabled { get; set; } = true;
     public int Port { get; set; } = 5080;
+
+    /// <summary>Staff may also sign in to Tea Work with their OpenTea DX-OS (Keycloak) account.</summary>
+    public bool AllowCoreAccounts { get; set; } = true;
+}
+
+/// <summary>Field sensors (Tea IoT Station) that may post alerts to /api/iot/alerts.</summary>
+public sealed class IotOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Shared key sent by the station in the X-Device-Key header.</summary>
+    public string DeviceKey { get; set; } = "tea-iot-demo";
 }
 
 /// <summary>Machine-level configuration stored in %LOCALAPPDATA%\TeaStaff\config.json.</summary>
@@ -54,6 +66,7 @@ public sealed class AppConfig
     public DatabaseOptions Database { get; set; } = new();
     public KeycloakOptions Keycloak { get; set; } = new();
     public MobileApiOptions MobileApi { get; set; } = new();
+    public IotOptions Iot { get; set; } = new();
 
     private static readonly JsonSerializerOptions Json = new()
     {

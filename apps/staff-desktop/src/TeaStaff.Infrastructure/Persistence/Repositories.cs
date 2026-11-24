@@ -171,3 +171,35 @@ public sealed class OwnerAccountRepository(IDbContextFactory<AppDbContext> f) : 
 
     public Task<bool> AnyAsync(CancellationToken ct = default) => RunAsync(db => db.Owners.AnyAsync(ct), ct);
 }
+
+public sealed class RecurringTaskRepository(IDbContextFactory<AppDbContext> f) : EfRepository(f), IRecurringTaskRepository
+{
+    public Task<IReadOnlyList<RecurringTask>> ListAsync(CancellationToken ct = default) =>
+        RunAsync<IReadOnlyList<RecurringTask>>(async db => await db.RecurringTasks.AsNoTracking()
+            .Include(r => r.Department).Include(r => r.PreferredAssignee).OrderBy(r => r.StartMinute).ThenBy(r => r.Title).ToListAsync(ct), ct);
+
+    public Task<RecurringTask?> GetAsync(int id, CancellationToken ct = default) =>
+        RunAsync(db => db.RecurringTasks.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, ct), ct);
+
+    public Task<RecurringTask> SaveAsync(RecurringTask template, CancellationToken ct = default) => UpsertAsync(template, ct);
+
+    public Task DeleteAsync(int id, CancellationToken ct = default) => RemoveAsync<RecurringTask>(id, ct);
+}
+
+public sealed class AutomationRepository(IDbContextFactory<AppDbContext> f) : EfRepository(f), IAutomationRepository
+{
+    public Task<IReadOnlyList<AutomationSuggestion>> ListSuggestionsAsync(SuggestionStatus? status = null, CancellationToken ct = default) =>
+        RunAsync<IReadOnlyList<AutomationSuggestion>>(async db => await db.Suggestions.AsNoTracking().Include(s => s.Employee)
+            .Where(s => status == null || s.Status == status).OrderByDescending(s => s.CreatedAt).ToListAsync(ct), ct);
+
+    public Task<AutomationSuggestion?> GetSuggestionAsync(int id, CancellationToken ct = default) =>
+        RunAsync(db => db.Suggestions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id, ct), ct);
+
+    public Task<AutomationSuggestion> SaveSuggestionAsync(AutomationSuggestion suggestion, CancellationToken ct = default) => UpsertAsync(suggestion, ct);
+
+    public Task AddLogAsync(string rule, string message, CancellationToken ct = default) =>
+        UpsertAsync(new AutomationLog { Rule = rule, Message = message }, ct);
+
+    public Task<IReadOnlyList<AutomationLog>> ListLogsAsync(int take = 50, CancellationToken ct = default) =>
+        RunAsync<IReadOnlyList<AutomationLog>>(async db => await db.AutomationLogs.AsNoTracking().OrderByDescending(l => l.CreatedAt).Take(take).ToListAsync(ct), ct);
+}

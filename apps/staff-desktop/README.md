@@ -28,10 +28,12 @@ Both apps follow the conventions of the OpenTea DX-OS core so they can later sha
 | **Dashboard** | Active staff, open and overdue tasks, pending leave, payroll fund, today's attendance, progress per team, and charts of task status and the last 14 days (work days, completed tasks). |
 | **Charts per module** | Employees: staff by team and contract type, base salary fund. Attendance: daily work days, absences and overtime in the month. Leave: approved days by type and per month, share of sick leave with evidence. Payroll: composition of gross pay and net pay per employee. |
 | **Reports** | KPI tiles (overdue, not yet accepted, due in 3 days, pending leave, not checked in today, incomplete profiles) and charts drawn natively in WPF: task status bars, priority donut, daily task and attendance trends, six-month payroll fund and completed work per team, plus lists of what needs the owner. Period: 7, 30 or 90 days. |
+| **Automation and AI suggestions** | An *Automation* page runs the cooperative's routine every minute: recurring work (picking rounds, machine checks, watering) becomes the day's tasks; rejected tasks and tasks of staff on approved leave get a replacement; forgotten check-outs are closed at 17:00; overdue work is flagged once; draft payslips are prepared on the first days of the month; one-day annual leave can be approved by rule. An explainable ranking scores who fits a task from the cooperative's own history (similar work done, on-time rate, overlapping work, team, place, past rejections, leave, today's attendance) and shows those facts. Following the DX-OS AI rule, changes of who does what are either rules the owner switched on or one-click suggestions. |
+| **Field sensors** | Alerts from **[Tea IoT Station](https://github.com/maiychrus25/OpenTea-DX-OS/tree/main/apps/tea-iot)** (dry soil, frost, heat) arrive on `POST /api/iot/alerts` and become task suggestions with the sensor evidence and the best-placed worker. |
 | **Live activity** | When staff accept, reject or finish a task, check in or send a leave request from the phone, the owner sees a toast, hears the system sound, the taskbar flashes and red counters appear on *Giao việc* and *Nghỉ phép*. |
 | **Employees** | Full HR profile: personal data, team, position, contract type, monthly or daily wage, allowance, bank account, annual leave quota, status. Accent-insensitive search (`nguyen` finds `Nguyễn`), filters, CSV export, mobile account and password reset. |
 | **Teams / departments** | Group staff into production teams (picking, processing, garden care, warehouse, office). |
-| **Task assignment** | Kanban board (Mới giao, Đã nhận, Đang làm, Hoàn thành, Từ chối/Huỷ) or list view. Assign work with location, priority, start and due time. Staff accept, reject (with a reason), report progress and complete from their phone; the list refreshes live. Duplicate, reassign, cancel, export. |
+| **Task assignment** | Kanban board (Mới giao, Đã nhận, Đang làm, Hoàn thành, Từ chối/Huỷ) or list view. Assign work with location, priority, start and due time; **Gợi ý** ranks who fits the task and why. Staff accept, reject (with a reason), report progress and complete from their phone; the list refreshes live. Duplicate, reassign, cancel, export. |
 | **Attendance** | Monthly timesheet grid. Staff check in/out on the phone (half day and overtime are computed automatically); the owner edits any cell, marks the whole cooperative present in one click, and exports CSV. |
 | **Leave** | Annual, sick, personal and unpaid leave with balance checking and **evidence** (photo or PDF, up to 5 MB; required for sick leave of 2 days or more). Files are recognised by content, stored under the data folder and opened from the review list. Approving a request writes the days into the timesheet. |
 | **Payroll** | Generates payslips from the timesheet: prorated monthly salary or daily wage, overtime (×1.5 by default), allowance, bonus, compulsory insurance (10.5% for full-time contracts), other deductions and advances. Draft → Approved → Paid workflow; approved payslips appear on the worker's phone. CSV export for bank transfer. |
@@ -42,10 +44,11 @@ Both apps follow the conventions of the OpenTea DX-OS core so they can later sha
 
 | | |
 | --- | --- |
-| ![Reports](docs/screenshots/02-reports.png) | ![Kanban](docs/screenshots/05-tasks.png) |
-| ![Login](docs/screenshots/00-login.png) | ![Employees](docs/screenshots/03-employees.png) |
-| ![Leave](docs/screenshots/07-leaves.png) | ![Attendance](docs/screenshots/06-attendance.png) |
-| ![Payroll](docs/screenshots/08-payroll.png) | ![Settings](docs/screenshots/09-settings.png) |
+| ![Automation](docs/screenshots/06-automation.png) | ![Kanban](docs/screenshots/05-tasks.png) |
+| ![Reports](docs/screenshots/02-reports.png) | ![Employees](docs/screenshots/03-employees.png) |
+| ![Leave](docs/screenshots/08-leaves.png) | ![Attendance](docs/screenshots/07-attendance.png) |
+| ![Payroll](docs/screenshots/09-payroll.png) | ![Settings](docs/screenshots/10-settings.png) |
+| ![Login](docs/screenshots/00-login.png) | |
 
 </details>
 
@@ -53,14 +56,14 @@ Both apps follow the conventions of the OpenTea DX-OS core so they can later sha
 
 Grab the latest build from [**Releases**](https://github.com/Vudinhdat02/appManageStaff/releases):
 
-- `TeaStaffManager-1.2.0-win-x64.exe` — self-contained, single file, no .NET installation needed (Windows 10/11 x64).
+- `TeaStaffManager-1.3.0-win-x64.exe` — self-contained, single file, no .NET installation needed (Windows 10/11 x64).
 
 On first launch the app creates a demo cooperative (HTX code `TC`) with eight fictitious employees, a month of attendance, tasks and leave requests.
 
 | Account | Password | Where |
 | --- | --- | --- |
 | `admin` | `Admin@123` | Owner login on the desktop app (change it in **Settings**) |
-| `nv001` … `nv008` | `123456` | Staff login on the Tea Work Android app |
+| `nv001` … `nv008` | `123456` | Staff login on the Tea Work Android app (or the staff member's OpenTea DX-OS account, see below) |
 
 Data and configuration live in `%LOCALAPPDATA%\TeaStaff` (`teastaff.db`, `config.json`, `attachments\`); set the `TEASTAFF_DATA` environment variable to use another folder. Delete the folder to start over. Databases created by 1.0.0 are upgraded automatically.
 
@@ -120,10 +123,12 @@ More detail: [docs/architecture.md](docs/architecture.md) · staff API contract:
 
 | DX-OS concept | How this app follows it |
 | --- | --- |
-| Single account (Keycloak SSO, realm `agrimarket`) | `KeycloakIdentityProvider` signs the owner in with the shared account and reads `htx_code`, `name` and `realm_access.roles` (role `manager` required). |
+| Single account (Keycloak SSO, realm `agrimarket`) | `KeycloakIdentityProvider` signs the owner in with the shared account and reads `htx_code`, `name` and `realm_access.roles` (role `manager` required). Staff can sign in to Tea Work with their DX-OS account too: the staff API checks it against Keycloak and links it to the employee profile. |
 | Shared PostgreSQL, one schema per app | Provider `Postgres` maps the same model onto schema `app_staff_work`; DDL in `database/postgres`. |
 | `htx_code` on every table, tenant isolation | Enforced by EF Core global query filters. |
 | Design tokens | Same palette and spacing as `DESIGN.md`. |
+| AI invariant (facts, never decisions) | Rankings list their facts; anything that changes who does what is an owner-enabled rule or a suggestion awaiting one click. |
+| Sensor data (MQTT, `telemetry`) | Field alerts from Tea IoT Station, which publishes to the core broker, turn into task suggestions. |
 
 Step-by-step guide (Keycloak client, database role, switching the app over): [docs/core-integration.md](docs/core-integration.md).
 

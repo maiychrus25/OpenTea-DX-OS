@@ -24,6 +24,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<Payslip> Payslips => Set<Payslip>();
     public DbSet<AppSetting> Settings => Set<AppSetting>();
     public DbSet<OwnerAccount> Owners => Set<OwnerAccount>();
+    public DbSet<RecurringTask> RecurringTasks => Set<RecurringTask>();
+    public DbSet<AutomationSuggestion> Suggestions => Set<AutomationSuggestion>();
+    public DbSet<AutomationLog> AutomationLogs => Set<AutomationLog>();
 
     private string Htx => tenant.HtxCode;
 
@@ -92,6 +95,31 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         {
             e.ToTable("app_settings");
             e.HasIndex(x => new { x.HtxCode, x.Key }).IsUnique();
+            e.HasQueryFilter(x => x.HtxCode == Htx);
+        });
+        b.Entity<RecurringTask>(e =>
+        {
+            e.ToTable("recurring_tasks");
+            e.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Weekdays).HasMaxLength(20);
+            e.HasOne(x => x.Department).WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.PreferredAssignee).WithMany().HasForeignKey(x => x.PreferredAssigneeId).OnDelete(DeleteBehavior.SetNull);
+            e.Ignore(x => x.Days);
+            e.HasQueryFilter(x => x.HtxCode == Htx);
+        });
+        b.Entity<AutomationSuggestion>(e =>
+        {
+            e.ToTable("automation_suggestions");
+            e.Property(x => x.Title).HasMaxLength(240).IsRequired();
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.HtxCode, x.Status });
+            e.HasQueryFilter(x => x.HtxCode == Htx);
+        });
+        b.Entity<AutomationLog>(e =>
+        {
+            e.ToTable("automation_logs");
+            e.Property(x => x.Rule).HasMaxLength(60);
+            e.HasIndex(x => new { x.HtxCode, x.CreatedAt });
             e.HasQueryFilter(x => x.HtxCode == Htx);
         });
         b.Entity<OwnerAccount>(e =>

@@ -28,13 +28,48 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="Giao cho *" Style="{StaticResource FieldLabel}" />
-                <ComboBox ItemsSource="{Binding Assignees}" SelectedItem="{Binding Assignee}" MaxDropDownHeight="300" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}" Padding="10,0" Command="{Binding SuggestCommand}"
+                            ToolTip="Xếp hạng nhân viên phù hợp cho việc này" Visibility="{Binding CanSuggest, Converter={StaticResource Visible}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE945;" Style="{StaticResource Icon}" FontSize="12" />
+                            <TextBlock Margin="6,0,0,0" Text="Gợi ý" />
+                        </StackPanel>
+                    </Button>
+                    <ComboBox ItemsSource="{Binding Assignees}" SelectedItem="{Binding Assignee}" MaxDropDownHeight="300" />
+                </DockPanel>
             </StackPanel>
             <StackPanel Grid.Column="2">
                 <TextBlock Text="Mức ưu tiên" Style="{StaticResource FieldLabel}" />
                 <ComboBox ItemsSource="{Binding Priorities}" SelectedItem="{Binding Priority}" />
             </StackPanel>
         </Grid>
+
+        <!-- Ranked candidates with the facts behind each score -->
+        <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="{StaticResource RadiusMd}" Background="{StaticResource LeafLightBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1" Visibility="{Binding Candidates.Count, Converter={StaticResource Visible}}">
+            <StackPanel>
+                <TextBlock Text="{Binding SuggestNote}" Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding Candidates}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel Margin="0,6,0,0">
+                                <Button DockPanel.Dock="Right" Margin="8,0,0,0" Style="{StaticResource GhostButton}" Height="28" Padding="10,0" Content="Chọn" VerticalAlignment="Top"
+                                        IsEnabled="{Binding Available}"
+                                        Command="{Binding DataContext.PickCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                <Border DockPanel.Dock="Left" Width="46" Height="24" Margin="0,0,10,0" CornerRadius="12" Background="{StaticResource PrimarySubtleBrush}" VerticalAlignment="Top">
+                                    <TextBlock Text="{Binding Percent}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Facts}" FontSize="12" Foreground="{StaticResource InkSecondaryBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
 
         <TextBlock Margin="0,14,0,0" Text="Địa điểm (đồi, thửa, xưởng…)" Style="{StaticResource FieldLabel}" />
         <TextBox Text="{Binding Location, UpdateSourceTrigger=PropertyChanged}" MaxLength="160" />

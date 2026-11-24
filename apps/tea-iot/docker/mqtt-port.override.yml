@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Vu Dinh Dat
+# Development only: publishes the core MQTT broker on the loopback interface so Tea IoT Station
+# on the same PC can reach it. The broker still requires a device account (DXOS_MQTT_DEVICES)
+# and its ACL still limits each account to htx/<its HTX>/plot/+/+.
+#   docker compose -f docker/docker-compose.yml -f apps/tea-iot/docker/mqtt-port.override.yml up -d mosquitto
+services:
+  mosquitto:
+    ports:
+      - "127.0.0.1:1883:1883"

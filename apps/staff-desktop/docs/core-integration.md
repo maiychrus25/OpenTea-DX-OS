@@ -44,7 +44,14 @@ Set **Mã HTX** to the cooperative's `htx_code` (for example `TC`) and restart t
 
 ## 4. Linking employees to DX-OS accounts
 
-`employees.core_user_id` holds the Keycloak `sub` of a staff member. Once filled, the mobile API can accept Keycloak tokens instead of its own sessions (see the mapping section of [mobile-api.md](mobile-api.md)), so staff sign in to Tea Work with the same account they use for the DX-OS web app.
+Staff sign in to Tea Work with the same account they use for the DX-OS web app and mini-apps (since 1.3.0, `MobileApi.AllowCoreAccounts`, on by default):
+
+1. The phone sends user name and password to `POST /api/auth/login` as before.
+2. If they do not match a local Tea Work password, the desktop asks Keycloak (password grant of the `staff-desktop` client, 5 s timeout) and reads `sub`, `preferred_username` and `htx_code`.
+3. `htx_code` must equal the cooperative's code. The account is matched to an employee by `employees.core_user_id` (the Keycloak `sub`) or, the first time, by the employee's mobile login name equal to `preferred_username`; `core_user_id` is then stored, so renaming the login later does not break the link.
+4. The phone receives a normal Tea Work session. When Keycloak is unreachable, local passwords keep working.
+
+Create a staff account in the realm with the same user name as the employee's mobile login (for example `nv001`), realm role `farmer` and attribute `htx_code`. Accounts with mandatory TOTP cannot use the password grant.
 
 ## What is not done yet
 

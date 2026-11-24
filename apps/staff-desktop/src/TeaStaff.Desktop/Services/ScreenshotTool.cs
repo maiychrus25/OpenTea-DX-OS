@@ -43,6 +43,8 @@ public static class ScreenshotTool
         // Payroll screens look empty before the first run, so compute the current month for the pictures.
         var now = DateTime.Now;
         await services.GetRequiredService<Core.Services.PayrollService>().GenerateAsync(now.Year, now.Month);
+        // Let the automation rules make their first pass so the Automation page shows real suggestions.
+        await services.GetRequiredService<Core.Services.AutomationEngine>().RunAsync();
         var index = 1;
         foreach (var item in vm.Navigation)
         {

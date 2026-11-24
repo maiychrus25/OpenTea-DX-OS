@@ -57,6 +57,7 @@ public partial class App : Application
         services.AddTransient<LeavesViewModel>();
         services.AddTransient<PayrollViewModel>();
         services.AddTransient<SettingsViewModel>();
+        services.AddTransient<AutomationViewModel>();
         _services = services.BuildServiceProvider();
 
         try
