@@ -84,7 +84,7 @@ import json, sys
 calls = json.load(sys.stdin)["calls"]
 text = json.dumps(calls, ensure_ascii=False)
 ok = bool(calls) and all(
-    c["path"] == "/v1/messages" and c["x-api-key"] == sys.argv[1] and c["anthropic-version"] == "2023-06-01"
+    c["path"] == "/v1/messages" and c["x-api-key"] == sys.argv[1] and c["anthropic-version"] == "2026-10-21"
     and c["body"].get("model") == "claude-haiku-5-5" for c in calls
 ) and "0912" not in text and "345 678" not in text and "example.com" not in text and "[đã ẩn]" in text
 print("ok" if ok else "bad")' "$LLM_KEY")" "ok" "anthropic request has the expected shape and no phone number or e-mail (C4, C5, spec test 9)"

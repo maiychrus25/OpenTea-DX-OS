@@ -42,7 +42,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 ### C4. Provider HTTP calls (agent)
 
-- Anthropic: `POST {ANTHROPIC_API_BASE:-https://api.anthropic.com}/v1/messages`, headers `x-api-key`, `anthropic-version: 2023-06-01`, `content-type: application/json`; body `{ model, max_tokens, system, messages }`; the JSON answer is the text of the first content block. Default model `claude-haiku-5-5`, overridable by `DXOS_ANTHROPIC_MODEL` and by the cooperative's `model`.
+- Anthropic: `POST {ANTHROPIC_API_BASE:-https://api.anthropic.com}/v1/messages`, headers `x-api-key`, `anthropic-version: 2026-10-21`, `content-type: application/json`; body `{ model, max_tokens, system, messages }` with no sampling parameters; the JSON answer is the first block of type `text` (current models put thinking blocks first), and `stop_reason: "refusal"` is a `ProviderError`. Default model `claude-haiku-5-5`, overridable by `DXOS_ANTHROPIC_MODEL` and by the cooperative's `model`.
 - OpenAI: `POST {OPENAI_API_BASE:-https://api.openai.com}/v1/chat/completions`, header `Authorization: Bearer`; body `{ model, messages, response_format: { "type": "json_object" } }`. No default model: `DXOS_OPENAI_MODEL` or the cooperative's `model` must be set, otherwise the provider is not offered.
 - Both reuse the provider base: the schema is sent in the system message, one repair retry, one retry after 2 s for non-429 errors, 429 sets `next_allowed_at` from `retry-after` (at least 60 s), every failure becomes `ProviderError` and the run falls back to Ollama, then to the rules.
 - Prices for the cost estimate: a small table in code per model (input and output price per million tokens) with a comment naming the date and source; unknown models cost 0 and log a warning.

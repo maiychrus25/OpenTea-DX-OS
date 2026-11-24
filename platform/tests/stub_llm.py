@@ -47,7 +47,8 @@ def _anthropic_answer(body):
         "type": "message",
         "role": "assistant",
         "model": body.get("model", ""),
-        "content": [{"type": "text", "text": text}],
+        # Like current Claude models: a (hidden) thinking block comes before the answer.
+        "content": [{"type": "thinking", "thinking": "", "signature": "stub"}, {"type": "text", "text": text}],
         "stop_reason": "end_turn",
         "usage": {"input_tokens": USAGE_IN, "output_tokens": USAGE_OUT},
     }

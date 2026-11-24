@@ -89,13 +89,42 @@ def test_anthropic_request_matches_the_messages_api(anthropic_api):
     body = json.loads(request["body"])
     assert request["path"] == "/v1/messages"
     assert request["headers"]["x-api-key"] == "sk-test-key"
-    assert request["headers"]["anthropic-version"] == "2023-06-01"
+    assert request["headers"]["anthropic-version"] == "2026-10-21"
     assert body["model"] == "claude-haiku-5-5"
     assert body["max_tokens"] > 0
     assert "Bạn là trợ lý" in body["system"] and '"ok"' in body["system"]
     assert [m["role"] for m in body["messages"]] == ["user"]
     assert res.data == {"ok": True}
     assert (res.provider, res.model, res.tokens_in, res.tokens_out) == ("anthropic", "claude-haiku-5-5", 120, 15)
+
+
+def test_anthropic_answer_is_the_first_text_block_after_thinking(anthropic_api):
+    # Current Claude models think by default, so the answer is not always the first block.
+    anthropic_api.respond = lambda path, body: (
+        200,
+        {
+            "model": "claude-haiku-5-5",
+            "stop_reason": "end_turn",
+            "content": [{"type": "thinking", "thinking": "", "signature": "sig"}, {"type": "text", "text": ANSWER}],
+            "usage": {"input_tokens": 120, "output_tokens": 40},
+        },
+        {},
+    )
+    res = _anthropic(anthropic_api).complete_json([LLMMessage(role="user", content="hi")], SAMPLE_SCHEMA)
+    body = json.loads(anthropic_api.requests[0]["body"])
+    assert res.data == {"ok": True} and res.tokens_out == 40
+    assert body["max_tokens"] >= 8192
+    assert not {"temperature", "top_p", "top_k", "thinking"} & body.keys()
+
+
+def test_anthropic_refusal_becomes_a_provider_error(anthropic_api):
+    anthropic_api.respond = lambda path, body: (
+        200,
+        {"model": "claude-haiku-5-5", "stop_reason": "refusal", "content": [], "usage": {"input_tokens": 120, "output_tokens": 0}},
+        {},
+    )
+    with pytest.raises(ProviderError):
+        _anthropic(anthropic_api).complete_json([LLMMessage(role="user", content="hi")], SAMPLE_SCHEMA)
 
 
 def test_openai_request_matches_the_chat_completions_api():

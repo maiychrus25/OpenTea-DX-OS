@@ -51,10 +51,10 @@ def test_anthropic_shape_returns_reasons_in_the_first_text_block(stub):
         stub + "/v1/messages",
         {"model": "claude-haiku-5-5", "max_tokens": 512, "system": "rà soát",
          "messages": [{"role": "user", "content": review_message()}]},
-        {"x-api-key": "fake-key", "anthropic-version": "2023-06-01"},
+        {"x-api-key": "fake-key", "anthropic-version": "2026-10-21"},
     )
-    assert answer["content"][0]["type"] == "text"
-    reasons = json.loads(answer["content"][0]["text"])["reject_reasons"]
+    assert [b["type"] for b in answer["content"]] == ["thinking", "text"]
+    reasons = json.loads(answer["content"][1]["text"])["reject_reasons"]
     assert "TC-A1" in reasons["je_1"] and len(reasons["je_1"]) >= 5
     assert answer["usage"] == {"input_tokens": 123, "output_tokens": 45}
 
@@ -73,15 +73,15 @@ def test_openai_shape_returns_reasons_in_the_choice_message(stub):
 
 def test_no_rejected_entries_gives_empty_reasons(stub):
     answer = post(stub + "/v1/messages", {"model": "m", "messages": [{"role": "user", "content": "{}"}]})
-    assert json.loads(answer["content"][0]["text"]) == {"reject_reasons": {}}
+    assert json.loads(answer["content"][1]["text"]) == {"reject_reasons": {}}
 
 
 def test_requests_are_recorded_with_their_headers_and_cleared_by_reset(stub):
-    post(stub + "/v1/messages", {"model": "m", "messages": []}, {"x-api-key": "fake-key", "anthropic-version": "2023-06-01"})
+    post(stub + "/v1/messages", {"model": "m", "messages": []}, {"x-api-key": "fake-key", "anthropic-version": "2026-10-21"})
     post(stub + "/v1/chat/completions", {"model": "m", "messages": []}, {"Authorization": "Bearer fake-key"})
     calls = get(stub + "/control/calls")["calls"]
     assert [call["path"] for call in calls] == ["/v1/messages", "/v1/chat/completions"]
-    assert calls[0]["x-api-key"] == "fake-key" and calls[0]["anthropic-version"] == "2023-06-01"
+    assert calls[0]["x-api-key"] == "fake-key" and calls[0]["anthropic-version"] == "2026-10-21"
     assert calls[1]["authorization"] == "Bearer fake-key"
     assert calls[0]["body"] == {"model": "m", "messages": []}
     post(stub + "/control/reset", {})

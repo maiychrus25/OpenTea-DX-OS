@@ -8,8 +8,9 @@ from .http import JsonHttpProvider
 from .redaction import redact_messages
 
 DEFAULT_BASE_URL = "https://api.anthropic.com"
-API_VERSION = "2023-06-01"
-MAX_TOKENS = 2048
+API_VERSION = "2026-10-21"
+# Current models think before answering by default and the thinking counts toward this cap.
+MAX_TOKENS = 8192
 
 
 class AnthropicProvider(JsonHttpProvider):
@@ -39,8 +40,11 @@ class AnthropicProvider(JsonHttpProvider):
             headers=lambda: {"x-api-key": self._api_key, "anthropic-version": API_VERSION},
         )
 
+        if data.get("stop_reason") == "refusal":
+            raise ProviderError("Anthropic declined the request")
         try:
-            text = data["content"][0]["text"]
+            # A response can start with thinking blocks: the answer is the first text block.
+            text = next(block["text"] for block in data["content"] if block.get("type") == "text")
             if not isinstance(text, str):
                 raise ProviderError("Anthropic response missing text")
             usage = data.get("usage") or {}
@@ -50,5 +54,5 @@ class AnthropicProvider(JsonHttpProvider):
                 tokens_in=int(usage.get("input_tokens") or 0),
                 tokens_out=int(usage.get("output_tokens") or 0),
             )
-        except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
+        except (AttributeError, KeyError, StopIteration, TypeError, ValueError) as exc:
             raise ProviderError(f"Anthropic response malformed: {type(exc).__name__}") from exc
