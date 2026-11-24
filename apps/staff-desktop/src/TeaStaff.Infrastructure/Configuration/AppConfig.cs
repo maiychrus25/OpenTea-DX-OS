@@ -34,6 +34,9 @@ public sealed class MobileApiOptions
 {
     public bool Enabled { get; set; } = true;
     public int Port { get; set; } = 5080;
+
+    /// <summary>Staff may also sign in to Tea Work with their OpenTea DX-OS (Keycloak) account.</summary>
+    public bool AllowCoreAccounts { get; set; } = true;
 }
 
 /// <summary>Field sensors (Tea IoT Station) that may post alerts to /api/iot/alerts.</summary>
