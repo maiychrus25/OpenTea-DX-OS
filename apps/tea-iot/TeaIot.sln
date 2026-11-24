@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TeaIot.Core.Tests", "tests\TeaIot.Core.Tests\TeaIot.Core.Tests.csproj", "{7779BE77-BF26-4ECE-B6A9-FA8FD7673E50}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TeaIot.App", "src\TeaIot.App\TeaIot.App.csproj", "{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,18 @@ Global
 		{7779BE77-BF26-4ECE-B6A9-FA8FD7673E50}.Release|x64.Build.0 = Release|Any CPU
 		{7779BE77-BF26-4ECE-B6A9-FA8FD7673E50}.Release|x86.ActiveCfg = Release|Any CPU
 		{7779BE77-BF26-4ECE-B6A9-FA8FD7673E50}.Release|x86.Build.0 = Release|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Debug|x64.Build.0 = Debug|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Debug|x86.Build.0 = Debug|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Release|x64.ActiveCfg = Release|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Release|x64.Build.0 = Release|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Release|x86.ActiveCfg = Release|Any CPU
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -52,5 +66,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{AB2B351E-F2FF-4C62-A285-13DA39B560F1} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{7779BE77-BF26-4ECE-B6A9-FA8FD7673E50} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{0758E76A-3EB3-4BAA-B449-7FC41CEF400D} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal
