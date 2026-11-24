@@ -9,7 +9,7 @@ import type { Proposal } from '@/domain/agent/proposal'
 import { signCallbackData } from '@/domain/telegram/callback-data'
 import type { OutboxInsert, OutboxRow, TelegramRepository } from '@/domain/telegram/ports/TelegramRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
-import { isTelegramConfigured, telegramCallbackKey } from './telegram-config'
+import { telegramCallbackKey } from './telegram-config'
 import {
   healthText,
   proposalResultText,
@@ -82,7 +82,8 @@ export class TelegramNotifier {
   async enqueueProposal(proposal: Proposal): Promise<void> {
     const key = telegramCallbackKey()
     const definition = getAction(proposal.kind)
-    if (!isTelegramConfigured() || !key || !definition) return
+    // Only the callback key is needed to sign the buttons; the bot username only builds link URLs.
+    if (!key || !definition) return
 
     const recipients = await this.repo.userLinkRecipients(proposal.htxCode, definition.approverRoles)
     if (recipients.length === 0) return
@@ -113,7 +114,6 @@ export class TelegramNotifier {
    * sent messages are edited. Messages still leased are caught up in recordResult.
    */
   async syncDecision(htxCode: string, proposalId: string): Promise<void> {
-    if (!isTelegramConfigured()) return
     const proposal = await this.proposals.findById(htxCode, proposalId)
     const text = proposal ? proposalResultText(proposal) : null
     if (!proposal || !text) return
@@ -193,7 +193,6 @@ export class TelegramNotifier {
     periodEnd: string,
     figures: ReportFigures
   ): Promise<boolean> {
-    if (!isTelegramConfigured()) return false
     const fresh = await this.repo.insertReportIfNew(htxCode, kind, periodStart)
     if (!fresh) return false
 
@@ -222,7 +221,7 @@ export class TelegramNotifier {
     const now = this.now().getTime()
     const enabled = (await this.repo.enabledAgentCooperatives()).includes(htxCode)
     const agentSeen = await this.repo.heartbeatLastSeen(`agent:${htxCode}`)
-    const telegramSeen = isTelegramConfigured() ? await this.repo.heartbeatLastSeen('telegram') : null
+    const telegramSeen = await this.repo.heartbeatLastSeen('telegram')
     return {
       agentStale: enabled && (!agentSeen || now - agentSeen.getTime() > AGENT_STALE_MS),
       telegramStale: Boolean(telegramSeen) && now - telegramSeen!.getTime() > TELEGRAM_STALE_MS,
@@ -231,7 +230,6 @@ export class TelegramNotifier {
 
   /** Runs at most once a minute (it is called from the relay's outbox poll). */
   async runHealthChecks(): Promise<void> {
-    if (!isTelegramConfigured()) return
     const now = this.now()
     if (now.getTime() - lastHealthCheckAt < HEALTH_CHECK_EVERY_MS) return
     lastHealthCheckAt = now.getTime()

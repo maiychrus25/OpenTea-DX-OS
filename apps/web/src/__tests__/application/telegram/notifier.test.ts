@@ -80,11 +80,18 @@ describe('TelegramNotifier', () => {
     expect(rows[0].text).toContain('Đề xuất: Duyệt nhật ký canh tác')
   })
 
-  test('nothing is queued when Telegram is not configured', async () => {
-    process.env.TELEGRAM_BOT_USERNAME = ''
+  test('nothing is queued without a callback key (the buttons could not be signed)', async () => {
+    process.env.DXOS_TELEGRAM_CALLBACK_KEY = ''
     const repo = fakeRepo()
     await notifierWith(repo).enqueueProposal(proposal)
     expect(repo.enqueue).not.toHaveBeenCalled()
+  })
+
+  test('linked approvers still get the proposal when the bot username is not set (it only builds link URLs)', async () => {
+    process.env.TELEGRAM_BOT_USERNAME = ''
+    const repo = fakeRepo()
+    await notifierWith(repo).enqueueProposal(proposal)
+    expect(repo.enqueue).toHaveBeenCalledTimes(1)
   })
 
   test('a sent message is edited, and an unsent one is rewritten before it goes out', async () => {
