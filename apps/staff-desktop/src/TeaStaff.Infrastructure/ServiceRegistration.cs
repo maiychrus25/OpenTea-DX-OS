@@ -42,6 +42,8 @@ public static class ServiceRegistration
         services.AddSingleton<IPayslipRepository, PayslipRepository>();
         services.AddSingleton<ISettingsRepository, SettingsRepository>();
         services.AddSingleton<IOwnerAccountRepository, OwnerAccountRepository>();
+        services.AddSingleton<IRecurringTaskRepository, RecurringTaskRepository>();
+        services.AddSingleton<IAutomationRepository, AutomationRepository>();
 
         services.AddSingleton<PolicyService>();
         services.AddSingleton<EmployeeService>();
