@@ -12,7 +12,7 @@ from .journal_review import VN_TZ
 log = logging.getLogger("dxos_agent")
 
 AGENT_NAME = "digest"
-DAILY_HOUR = 18  # 18:00 Vietnam time, covers the day
+DEFAULT_DAILY_AT = time(18, 0)  # Vietnam time, covers the day; the cooperative can change it in settings (C1)
 WEEKLY_HOUR = 7  # Monday 07:00 Vietnam time, covers the week before
 FIGURES = ("journals_new", "journals_approved", "journals_pending", "disease_reports", "lots_created")
 
@@ -33,11 +33,11 @@ class DigestSchedule:
     last_daily: date | None = None
     last_weekly: date | None = None
 
-    def due_reports(self, now: datetime) -> list[ReportPeriod]:
+    def due_reports(self, now: datetime, daily_at: time = DEFAULT_DAILY_AT) -> list[ReportPeriod]:
         local = now.astimezone(VN_TZ)
         today = local.date()
         due: list[ReportPeriod] = []
-        if local.hour >= DAILY_HOUR and self.last_daily != today:
+        if local.time() >= daily_at and self.last_daily != today:
             due.append(ReportPeriod("daily", today, today))
         last_monday = today - timedelta(days=7)
         if today.weekday() == 0 and local.hour >= WEEKLY_HOUR and self.last_weekly != last_monday:
@@ -78,10 +78,15 @@ def collect_figures(gateway: CoreGatewayClient, period: ReportPeriod) -> dict[st
     return {name: int(data[name]["aggregate"]["count"]) for name in FIGURES}
 
 
-def run_digest(gateway: CoreGatewayClient, schedule: DigestSchedule, now: datetime) -> list[ReportPeriod]:
+def run_digest(
+    gateway: CoreGatewayClient,
+    schedule: DigestSchedule,
+    now: datetime,
+    daily_at: time = DEFAULT_DAILY_AT,
+) -> list[ReportPeriod]:
     """Post every report that is due; a failed one stays due and is retried on the next cycle."""
     posted: list[ReportPeriod] = []
-    for report in schedule.due_reports(now):
+    for report in schedule.due_reports(now, daily_at):
         try:
             figures = collect_figures(gateway, report)
             gateway.post_report(
