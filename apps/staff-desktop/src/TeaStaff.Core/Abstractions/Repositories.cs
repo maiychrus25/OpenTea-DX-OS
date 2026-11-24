@@ -65,6 +65,23 @@ public interface ISettingsRepository
     Task SetAsync(string key, string value, CancellationToken ct = default);
 }
 
+public interface IRecurringTaskRepository
+{
+    Task<IReadOnlyList<RecurringTask>> ListAsync(CancellationToken ct = default);
+    Task<RecurringTask?> GetAsync(int id, CancellationToken ct = default);
+    Task<RecurringTask> SaveAsync(RecurringTask template, CancellationToken ct = default);
+    Task DeleteAsync(int id, CancellationToken ct = default);
+}
+
+public interface IAutomationRepository
+{
+    Task<IReadOnlyList<AutomationSuggestion>> ListSuggestionsAsync(SuggestionStatus? status = null, CancellationToken ct = default);
+    Task<AutomationSuggestion?> GetSuggestionAsync(int id, CancellationToken ct = default);
+    Task<AutomationSuggestion> SaveSuggestionAsync(AutomationSuggestion suggestion, CancellationToken ct = default);
+    Task AddLogAsync(string rule, string message, CancellationToken ct = default);
+    Task<IReadOnlyList<AutomationLog>> ListLogsAsync(int take = 50, CancellationToken ct = default);
+}
+
 public interface IOwnerAccountRepository
 {
     Task<OwnerAccount?> FindAsync(string username, CancellationToken ct = default);
