@@ -123,6 +123,13 @@ if [ "$WEB_UP" = "1" ]; then
     fi
     sleep 3
   done
+  if [ "$agent_run_seen" != 1 ]; then
+    # Diagnostics for a loop that stopped moving: every thread's stack (faulthandler on SIGUSR1), resources, last log lines.
+    $COMPOSE kill -s SIGUSR1 dxos-agent >/dev/null 2>&1 || true
+    sleep 2
+    docker stats --no-stream --format '{{.Name}} cpu={{.CPUPerc}} mem={{.MemUsage}} pids={{.PIDs}}' "$($COMPOSE ps -q dxos-agent)" || true
+    $COMPOSE logs --no-log-prefix --tail 80 dxos-agent || true
+  fi
   [ "$agent_run_seen" = 1 ] && pass "dxos-agent reads the volume credentials and starts a journal-review run for TC" \
     || fail "no journal-review run for TC within 90 s (dxos-agent did not read its credentials)"
 
