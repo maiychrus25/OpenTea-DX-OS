@@ -70,3 +70,15 @@ export async function expectFrameUrl(page: Page, frameTitle: string, fragment: s
     .poll(async () => (await (await page.locator(`iframe[title="${frameTitle}"]`).elementHandle())?.contentFrame())?.url() ?? '')
     .toContain(fragment)
 }
+
+/**
+ * After a filter submit: waits until the frame has landed on the filtered URL (`query` as the form encodes it), then
+ * checks that every table row holds `text` with retrying locator assertions. Reading the rows directly (for example
+ * `allInnerTexts` inside `expect.poll`) throws when the frame's document is replaced between two reads (#44).
+ */
+export async function expectFilteredRows(page: Page, frameTitle: string, query: Record<string, string>, text: string) {
+  await expectFrameUrl(page, frameTitle, new URLSearchParams(query).toString())
+  const rows = appFrame(page, frameTitle).locator('tbody tr')
+  await expect(rows.first()).toBeVisible()
+  await expect(rows.filter({ hasNotText: text })).toHaveCount(0)
+}
