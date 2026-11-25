@@ -252,6 +252,49 @@ def test_rate_limited_cooperative_keeps_rule_proposals_never_sleeps_and_heartbea
     assert (tmp_path / "hb").exists()
 
 
+def test_one_failing_m4_agent_does_not_stop_the_others_or_a1(monkeypatch, cooperative):
+    cfg, gateway = cooperative
+    gateway.entries = [_clean_entry("je_1")]
+    harvest_runs = []
+
+    def failing_field_watch(*args, **kwargs):
+        del args, kwargs
+        raise RuntimeError("field watch broke")
+
+    monkeypatch.setattr(agent_main.field_watch, "run_field_watch", failing_field_watch)
+    monkeypatch.setattr(agent_main.harvest_ready, "run_harvest_ready", lambda *a, **k: harvest_runs.append(a))
+
+    agent_main.run_once(cfg, {}, now=datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc))
+
+    assert len(harvest_runs) == 1
+    assert [p["kind"] for p in gateway.proposals] == ["journal.approve"]
+
+
+def test_disease_watch_runs_on_first_cycle_on_a_changed_window_and_once_a_day(monkeypatch, cooperative):
+    cfg, gateway = cooperative
+    reports = [
+        {"id": "dr-1", "parcel_id": "pc_1", "status": "PENDING", "detection_date": "2026-11-24T00:00:00+00:00",
+         "ai_disease_name": "helopeltis", "confirmed_diagnosis": None, "updated_at": "2026-11-24T00:00:00+00:00"}
+    ]
+    gateway.graphql = lambda query, variables=None: {"disease_reports": reports, "parcels": []}
+    calls = []
+    monkeypatch.setattr(agent_main.disease_watch, "run_disease_watch", lambda *a, **k: calls.append(a[1]))
+    runtimes: dict = {}  # one runtime across cycles, as the loop keeps it
+    t0 = datetime(2026, 11, 24, 0, 30, tzinfo=timezone.utc)  # 07:30 Vietnam time
+
+    agent_main.run_once(cfg, runtimes, now=t0)  # first cycle
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(minutes=1))  # unchanged, same day
+    assert len(calls) == 1
+
+    reports.append({"id": "dr-2", "parcel_id": "pc_2", "status": "PENDING", "detection_date": "2026-11-24T00:50:00+00:00",
+                    "ai_disease_name": "helopeltis", "confirmed_diagnosis": None, "updated_at": "2026-11-24T00:50:00+00:00"})
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(minutes=2))  # the window changed
+    assert len(calls) == 2
+
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(days=1, minutes=10))  # next day, 07:40, unchanged
+    assert len(calls) == 3
+
+
 class _RoundsStop:
     """Stop event that runs a hook between cycles and stops after `rounds` waits."""
 
