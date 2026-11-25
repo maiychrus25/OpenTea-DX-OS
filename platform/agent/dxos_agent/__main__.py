@@ -3,6 +3,7 @@
 """Entrypoint for dxos-agent executing scheduled per-cooperative operational agents."""
 from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta, timezone
+import faulthandler
 import logging
 from pathlib import Path
 import signal
@@ -123,13 +124,13 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
 
     def field_watch_cycle() -> None:
         if runtime.field_watch.is_due(now):
-            runtime.field_watch.record(now)
             field_watch.run_field_watch(gateway, now, settings.thresholds_for(field_watch.AGENT_NAME))
+            runtime.field_watch.record(now)  # only after a run that did not fail, so a failed run is retried
 
     def harvest_cycle() -> None:
         if runtime.harvest_ready.is_due(now):
-            runtime.harvest_ready.record(now)
             harvest_ready.run_harvest_ready(gateway, now, settings.thresholds_for(harvest_ready.AGENT_NAME))
+            runtime.harvest_ready.record(now)
 
     def disease_cycle() -> None:
         # The reports are read every cycle; A3 runs on its daily time or when the window's reports changed.
@@ -139,16 +140,16 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
         daily_due = runtime.disease_watch.is_due(now)
         if not daily_due and fingerprint == runtime.disease_fingerprint:
             return
+        disease_watch.run_disease_watch(gateway, now, thresholds, window=window)
         if daily_due:
             runtime.disease_watch.record(now)
         runtime.disease_fingerprint = fingerprint
-        disease_watch.run_disease_watch(gateway, now, thresholds, window=window)
 
     def bulletin_cycle() -> None:
         if runtime.bulletin.is_due(now):
-            runtime.bulletin.record(now)
             provider, fallback = choose_providers(settings, bulletin.AGENT_NAME, runtime.providers)
             bulletin.run_bulletin(gateway, now, provider, settings.thresholds_for(bulletin.AGENT_NAME), fallback)
+            runtime.bulletin.record(now)
 
     _guarded("A2 field-watch", htx, field_watch_cycle)
     _guarded("A4 harvest-ready", htx, harvest_cycle)
@@ -211,6 +212,8 @@ def main(stop: threading.Event | None = None) -> None:
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: stop.set())
     heartbeat = Path(cfg.heartbeat_path)
+    # `docker kill -s SIGUSR1 <container>` prints every thread's stack to the log, for a loop that stops moving.
+    faulthandler.register(signal.SIGUSR1, all_threads=True)
     log.info("dxos-agent started (provider=%s, env_dir=%s)", cfg.provider_name, cfg.env_dir)
 
     runtimes: dict[str, _CooperativeRuntime] = {}

@@ -270,6 +270,33 @@ def test_one_failing_m4_agent_does_not_stop_the_others_or_a1(monkeypatch, cooper
     assert [p["kind"] for p in gateway.proposals] == ["journal.approve"]
 
 
+def test_an_m4_run_that_fails_keeps_its_turn_for_the_next_cycle(monkeypatch, cooperative):
+    # The web can be down when the agent starts (503 on run start): a daily agent must not lose its day to that.
+    cfg, gateway = cooperative
+    attempts = {"harvest": 0, "bulletin": 0, "field": 0}
+    web_up = {"value": False}
+
+    def counted(name):
+        def run(*args, **kwargs):
+            del args, kwargs
+            attempts[name] += 1
+            if not web_up["value"]:
+                raise RuntimeError("Gateway POST /api/internal/agent/runs failed (503)")
+        return run
+
+    monkeypatch.setattr(agent_main.harvest_ready, "run_harvest_ready", counted("harvest"))
+    monkeypatch.setattr(agent_main.bulletin, "run_bulletin", counted("bulletin"))
+    monkeypatch.setattr(agent_main.field_watch, "run_field_watch", counted("field"))
+    runtimes: dict = {}
+    t0 = datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc)
+
+    agent_main.run_once(cfg, runtimes, now=t0)  # web down: every run fails
+    web_up["value"] = True
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(seconds=30))  # retried, now they succeed
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(seconds=60))  # done for now
+    assert attempts == {"harvest": 2, "bulletin": 2, "field": 2}
+
+
 def test_disease_watch_runs_on_first_cycle_on_a_changed_window_and_once_a_day(monkeypatch, cooperative):
     cfg, gateway = cooperative
     reports = [
