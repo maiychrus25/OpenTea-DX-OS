@@ -52,10 +52,14 @@ export async function findSensorReadingForEvidence(htxCode: string, id: string) 
   const [parcelCode, sensor, rawTs] = parts
   const ts = new Date(rawTs)
   if (Number.isNaN(ts.getTime())) return null
+  // The id names the reading to the millisecond, as evidence timestamps are; Postgres keeps microseconds.
+  const until = new Date(ts.getTime() + 1)
   const rows = await prisma.$queryRaw<{ parcel_code: string; sensor: string; ts: Date; value: number }[]>`
     SELECT parcel_code, sensor, ts, value
     FROM telemetry.sensor_readings
-    WHERE htx_code = ${htxCode} AND parcel_code = ${parcelCode} AND sensor = ${sensor} AND ts = ${ts}
+    WHERE htx_code = ${htxCode} AND parcel_code = ${parcelCode} AND sensor = ${sensor}
+      AND ts >= ${ts} AND ts < ${until}
+    ORDER BY ts
     LIMIT 1
   `
   return rows[0] ?? null

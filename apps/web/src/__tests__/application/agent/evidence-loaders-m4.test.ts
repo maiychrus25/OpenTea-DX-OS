@@ -3,6 +3,8 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 // Fake Prisma: a row is found only when its id matches and the cooperative filter in the query (if any) names its HTX.
+const sensorQueryValues: unknown[] = []
+
 jest.mock('@/infrastructure/db/prisma.client', () => {
   function htxFilter(where: unknown): string | undefined {
     if (!where || typeof where !== 'object') return undefined
@@ -67,8 +69,10 @@ jest.mock('@/infrastructure/db/prisma.client', () => {
     weatherCache: { findFirst: findOne([weatherRow]) },
     marketData: { findUnique: findOne([marketRow]) },
     // Raw SQL: the cooperative code is the first bound value, so a row is returned only when it is among them.
-    $queryRaw: async (_strings: TemplateStringsArray, ...values: unknown[]) =>
-      values.includes(sensorRow.htx_code) ? [sensorRow] : [],
+    $queryRaw: async (_strings: TemplateStringsArray, ...values: unknown[]) => {
+      sensorQueryValues.splice(0, sensorQueryValues.length, ...values)
+      return values.includes(sensorRow.htx_code) ? [sensorRow] : []
+    },
   }
   return { prisma }
 })
@@ -98,6 +102,12 @@ describe('evidence loaders are scoped to the cooperative (C2)', () => {
     const id = 'P-LB-001|soil_moisture|2026-11-24T02:00:00.000Z'
     await expect(EVIDENCE_LOADERS.sensor_readings('TC', id)).resolves.toBeNull()
     await expect(EVIDENCE_LOADERS.sensor_readings('LB', id)).resolves.toMatchObject({ value_milli: 20500 })
+  })
+
+  test('sensor_readings: the id names the reading to the millisecond; Postgres keeps microseconds', async () => {
+    await EVIDENCE_LOADERS.sensor_readings('LB', 'P-LB-001|soil_moisture|2026-11-24T02:00:00.681Z')
+    const dates = sensorQueryValues.filter((v): v is Date => v instanceof Date).map((d) => d.toISOString())
+    expect(dates).toEqual(['2026-11-24T02:00:00.681Z', '2026-11-24T02:00:00.682Z'])
   })
 
   test('sensor_readings: a malformed id reads as missing', async () => {
