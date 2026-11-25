@@ -76,3 +76,26 @@ export async function refreshAccessToken(token: JWT, fetchImpl: typeof fetch = f
   if (expiresAt > now) return token
   return { ...token, accessToken: undefined, refreshToken: undefined, error: 'RefreshFailed' }
 }
+
+/**
+ * Ends the user's Keycloak session from the server (back-channel logout of a confidential client), so the next
+ * sign-in asks for credentials again. Best effort: a Keycloak that cannot be reached never blocks the sign-out.
+ */
+export async function endKeycloakSession(refreshToken: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  try {
+    const response = await fetchImpl(`${KEYCLOAK_INTERNAL}/protocol/openid-connect/logout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: KEYCLOAK_CLIENT_ID,
+        client_secret: KEYCLOAK_CLIENT_SECRET,
+        refresh_token: refreshToken,
+      }).toString(),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(REFRESH_TIMEOUT_MS),
+    })
+    if (!response.ok) logger.error('Keycloak logout failed', { status: response.status })
+  } catch {
+    logger.error('Keycloak logout failed', { status: 'unreachable' })
+  }
+}
