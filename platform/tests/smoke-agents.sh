@@ -1,25 +1,41 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
-# M4 agents (field-watch, disease-watch, harvest-ready, bulletin): one open proposal of each kind for TC, and test 32
-# (an agent-written note_vi is refused). Sourced by smoke-agentic.sh after smoke-llm.sh; it does not run on its own.
-# It adds no PASS line to make platform-smoke, so smoke-apps.sh keeps its count.
+# M4 agents (field-watch, disease-watch, harvest-ready, bulletin) for TC: one open proposal of each kind, the two
+# approvals through Telegram (harvest and household notice), and test 32 (an agent-written note_vi is refused).
+# Sourced by smoke-agentic.sh after smoke-llm.sh; it does not run on its own. It adds no PASS line to make
+# platform-smoke, so smoke-apps.sh keeps its count.
 echo "[agents]"
+source platform/tests/lib-telegram.sh
 
 M4_T0=$(psql_app "select now()")
 M4_PAIR="pc_tc_1"   # the disease cluster: three reports on one parcel, so the distance is 0 whatever the centroids are
 M4_READY="pc_tc_2"  # the ready parcel for harvest-ready
 M4_READY_STATUS=$(psql_app "select status from parcels where id='$M4_READY'")
+M4_READY_APPROVED_AT=$(psql_app "select coalesce(harvest_approved_at::text, '') from parcels where id='$M4_READY'")
+M4_BULLETIN_PROVIDER=$(psql_app "select provider from platform.agent_settings where htx_code='TC' and agent='bulletin'")
+M4_AGENTS="'field-watch','disease-watch','harvest-ready','bulletin'"
 
 m4_cleanup() {
-  psql_app "delete from platform.agent_proposals where htx_code='TC' and created_at >= '$M4_T0' and agent in ('field-watch','disease-watch','harvest-ready','bulletin')" >/dev/null 2>&1 || true
-  psql_app "delete from platform.agent_runs where htx_code='TC' and started_at >= '$M4_T0' and agent in ('field-watch','disease-watch','harvest-ready','bulletin')" >/dev/null 2>&1 || true
+  local rows="select id from platform.agent_proposals where htx_code='TC' and created_at >= '$M4_T0' and agent in ($M4_AGENTS)"
+  psql_app "delete from platform.telegram_conversations where proposal_id in ($rows)" >/dev/null 2>&1 || true
+  psql_app "delete from platform.telegram_outbox where proposal_id in ($rows) or (chat_id=$TG_OWNER and created_at >= '$M4_T0')" >/dev/null 2>&1 || true
+  psql_app "delete from platform.telegram_links where telegram_user_id=$TG_OWNER" >/dev/null 2>&1 || true
+  psql_app "delete from platform.telegram_link_codes where code_hash='${TG_HASH:-none}'" >/dev/null 2>&1 || true
+  telegram_relay_down >/dev/null 2>&1 || true
+  psql_app "delete from platform.agent_proposals where id in ($rows)" >/dev/null 2>&1 || true
+  psql_app "delete from platform.agent_runs where htx_code='TC' and started_at >= '$M4_T0' and agent in ($M4_AGENTS)" >/dev/null 2>&1 || true
+  psql_app "delete from notifications where created_at >= '$M4_T0' and recipient_id=(select keycloak_user_id from households where id='hh_tc_1')" >/dev/null 2>&1 || true
   psql_app "delete from telemetry.sensor_readings where htx_code='TC' and ingested_at >= '$M4_T0' and parcel_code='P-TC-001'" >/dev/null 2>&1 || true
   psql_app "delete from disease_reports where id like 'dr_smoke_m4_%'" >/dev/null 2>&1 || true
   psql_app "delete from parcel_crop_cycles where id='pcc_smoke_m4_tc_2'" >/dev/null 2>&1 || true
-  [ -n "${M4_READY_STATUS:-}" ] && psql_app "update parcels set status='$M4_READY_STATUS' where id='$M4_READY'" >/dev/null 2>&1 || true
+  [ -n "${M4_READY_STATUS:-}" ] && psql_app "update parcels set status='$M4_READY_STATUS', harvest_approved_at=nullif('$M4_READY_APPROVED_AT','')::timestamptz where id='$M4_READY'" >/dev/null 2>&1 || true
   psql_app "delete from market_data where source='SMOKE_M4'" >/dev/null 2>&1 || true
-  psql_app "update platform.agent_settings set provider='ollama' where htx_code='TC' and agent='bulletin'" >/dev/null 2>&1 || true
+  if [ -n "${M4_BULLETIN_PROVIDER:-}" ]; then
+    psql_app "update platform.agent_settings set provider='$M4_BULLETIN_PROVIDER' where htx_code='TC' and agent='bulletin'" >/dev/null 2>&1 || true
+  else
+    psql_app "delete from platform.agent_settings where htx_code='TC' and agent='bulletin'" >/dev/null 2>&1 || true
+  fi
 }
 # The EXIT trap of smoke-llm stays in place: this one runs first, then its cleanup.
 trap 'm4_cleanup; llm_cleanup' EXIT
@@ -40,14 +56,18 @@ psql_app "insert into market_data (id, source, commodity, metric, value, unit, p
   (gen_random_uuid(), 'SMOKE_M4', 'Tea', 'export_price', 3.2, 'USD/kg', 'smoke-m4-1', now()),
   (gen_random_uuid(), 'SMOKE_M4', 'Tea', 'export_price', 3.1, 'USD/kg', 'smoke-m4-2', now())
   on conflict do nothing" >/dev/null
+# The agents run for every cooperative with credentials (like A1), so only the bulletin provider is set here.
+psql_app "insert into platform.agent_settings (htx_code, agent, provider) values ('TC', 'bulletin', 'anthropic')
+  on conflict (htx_code, agent) do update set provider = 'anthropic'" >/dev/null
 
-# The four agents are enabled per cooperative here; ./dxos agent enable writes only journal-review. Bulletin uses the
-# M3 stub as its provider, which llm_stub brings up (the same stub and key as the provider smoke).
-psql_app "insert into platform.agent_settings (htx_code, agent, enabled) values
-  ('TC', 'field-watch', true), ('TC', 'disease-watch', true), ('TC', 'harvest-ready', true)
-  on conflict (htx_code, agent) do update set enabled = true" >/dev/null
-psql_app "insert into platform.agent_settings (htx_code, agent, enabled, provider) values ('TC', 'bulletin', true, 'anthropic')
-  on conflict (htx_code, agent) do update set enabled = true, provider = 'anthropic'" >/dev/null
+# Telegram first, so every proposal the restarted agents file is queued to the linked manager with signed buttons.
+telegram_relay_up
+telegram_link_owner
+wait_stub "any(x['method'] == 'sendMessage' and x['params'].get('chat_id') == $TG_OWNER for x in c)" \
+  && pass "manager's Telegram account linked before the M4 agents run" || fail "no welcome message after /start within 60 s (M4)"
+assert_eq "$(psql_app "select count(*) from platform.telegram_links where telegram_user_id=$TG_OWNER and user_id='$TG_SUB' and unlinked_at is null")" "1" "M4 link stored for the owner's Telegram account"
+
+# The M3 stub is the bulletin provider; llm_stub brings it up, and the agent restarts with the fake key and the stub URL.
 llm_stub up
 ANTHROPIC_API_KEY="$LLM_KEY" ANTHROPIC_API_BASE="http://llm-test-stub:8082" $COMPOSE up -d --no-deps --force-recreate dxos-agent >/dev/null
 
@@ -88,5 +108,24 @@ main().catch((err) => { console.error(err); process.exit(1); });
 ' "$M4_AT" "$M4_RUN" && pass "agent-written note_vi in a household message is refused (test 32 end to end)" \
   || fail "test 32: agent-written note_vi was not refused with 400 INVALID_PAYLOAD"
 
-# Still open: approving harvest.approve and the household notice. The decision route reads a NextAuth session, which
-# the smoke cannot open with a Keycloak token, so those two checks are not in this smoke yet.
+# Approvals through Telegram: the signed approve button of the proposal, pressed by the linked owner, runs the decision.
+approve_by_telegram() {  # <label> <proposal id>
+  local data=""
+  for _ in $(seq 1 45); do data="$(telegram_approve_data_for "$2" 2>/dev/null)" && [ -n "$data" ] && break; sleep 2; done
+  [ -n "$data" ] || fail "$1: no approve button for the proposal within 90 s"
+  tg_callback "$TG_OWNER" "$TG_OWNER" private "$data" "cq-m4-$1"
+  wait_psql "select status from platform.agent_proposals where id='$2'" "executed" 45 \
+    && pass "$1 approved from Telegram and executed" || fail "$1 proposal not executed after the Telegram approval"
+}
+
+HARVEST_ID=$(psql_app "select id from platform.agent_proposals where htx_code='TC' and kind='harvest.approve' and status='proposed' and created_at >= '$M4_T0' order by created_at desc limit 1")
+NOTICE_ID=$(psql_app "select id from platform.agent_proposals where htx_code='TC' and kind='notification.households' and status='proposed' and created_at >= '$M4_T0' order by created_at desc limit 1")
+[ -n "$HARVEST_ID" ] && [ -n "$NOTICE_ID" ] || fail "no open harvest or household proposal to approve"
+
+approve_by_telegram harvest "$HARVEST_ID"
+assert_eq "$(psql_app "select status from parcels where id='$M4_READY'")" "HARVEST_APPROVED" "the ready parcel is HARVEST_APPROVED after the Telegram approval"
+
+approve_by_telegram households "$NOTICE_ID"
+wait_psql "select exists(select 1 from notifications where created_at >= '$M4_T0' and recipient_id=(select keycloak_user_id from households where id='hh_tc_1'))" "t" 45 \
+  && pass "the household of the seeded parcel gets a notification row" \
+  || fail "no notification row for the household of pc_tc_1 after the approval"
