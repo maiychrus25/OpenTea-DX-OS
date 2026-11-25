@@ -328,9 +328,12 @@ model Bulletin {
   sources_json Json // [{source, metric, value, date}]
   model_used   String
   is_latest    Boolean  @default(false)
+  status       String   @default("published") // draft | published | rejected, checked in the migration
+  htx_code     String? // owning cooperative; null is a shared bulletin written by the n8n workflow
   created_at   DateTime @default(now())
 
   @@index([commodity, is_latest])
+  @@index([htx_code, commodity, is_latest])
   @@map("bulletins")
 }
 

@@ -7,7 +7,7 @@ import { z } from 'zod'
 
 export type NotificationAudience = 'internal' | 'households'
 
-export interface TemplatePayload {
+export type TemplatePayload = {
   template: string
   slots: Record<string, unknown>
   subjects: string[]

@@ -44,7 +44,7 @@ export const notificationHouseholdsAction: ActionDefinition<TemplatePayload> = {
       throw new ValidationError('Có thửa không thuộc hợp tác xã của bạn')
     }
 
-    const accountByHousehold = [...new Map(parcels.map((p) => [p.household.id, p.household.keycloak_user_id])).values()]
+    const accountByHousehold = Array.from(new Map(parcels.map((p) => [p.household.id, p.household.keycloak_user_id])).values())
     const recipientIds = Array.from(new Set(accountByHousehold.filter((id): id is string => Boolean(id)))).sort()
     const skippedWithoutAccount = accountByHousehold.filter((id) => !id).length
 

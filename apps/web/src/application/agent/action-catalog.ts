@@ -6,6 +6,7 @@ import type { DecisionChannel, Evidence, Origin, Risk } from '@/domain/agent/pro
 import type { Tenant } from '@/lib/api/tenant'
 import { journalApproveAction } from './actions/journal-approve.action'
 import { journalRejectAction } from './actions/journal-reject.action'
+import { bulletinPublishAction } from './actions/bulletin-publish.action'
 import { diseaseInspectionAction } from './actions/disease-inspection.action'
 import { harvestApproveAction } from './actions/harvest-approve.action'
 import { notificationHouseholdsAction } from './actions/notification-households.action'
@@ -51,6 +52,7 @@ export const ACTION_CATALOG: Readonly<Record<string, ActionDefinition<any>>> = O
   'notification.households': notificationHouseholdsAction,
   'disease.inspection': diseaseInspectionAction,
   'harvest.approve': harvestApproveAction,
+  'bulletin.publish': bulletinPublishAction,
 })
 
 export function getAction(kind: string): ActionDefinition<any> | undefined {

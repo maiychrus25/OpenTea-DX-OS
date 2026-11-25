@@ -8,6 +8,7 @@ import { BulletinCard } from '@/components/features/bulletin/BulletinCard'
 import { WeatherSection } from '@/components/features/bulletin/WeatherSection'
 import { ListenBulletinButton } from '@/components/features/bulletin/ListenBulletinButton'
 import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
+import { auth } from '@/auth'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { ArrowRight, ChevronUp } from 'lucide-react'
 import styles from '@/components/features/bulletin/bulletin.module.css'
@@ -47,8 +48,10 @@ export default async function ManagerBulletinPage({ searchParams }: ManagerBulle
   const isViewAll = searchParams?.view === 'all'
   const selectedCategory = searchParams?.category || 'all'
 
-  // Load bulletins from DB with dynamic take
+  // Load bulletins from DB with dynamic take: published, and the cooperative's own or shared rows
+  const htxCode = (await auth())?.user?.htxCode ?? ''
   const dbBulletins = await prisma.bulletin.findMany({
+    where: { status: 'published', OR: [{ htx_code: htxCode }, { htx_code: null }] },
     orderBy: { created_at: 'desc' },
     take: isViewAll ? 50 : 10,
   })

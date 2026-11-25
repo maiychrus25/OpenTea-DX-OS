@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react';
+import { auth } from '@/auth';
 import { prisma } from '@/infrastructure/db/prisma.client';
 import { PrismaBulletinRepository } from '@/infrastructure/db/repositories/PrismaBulletinRepository';
 import { GetLatestBulletinUseCase } from '@/application/useCases/GetLatestBulletinUseCase';
@@ -23,7 +24,8 @@ export default async function FarmerBulletinPage({
   const repo = new PrismaBulletinRepository(prisma);
   const useCase = new GetLatestBulletinUseCase(repo);
   
-  const bulletin = await useCase.execute(toEnglishCommodity(commodity));
+  const htxCode = (await auth())?.user?.htxCode ?? '';
+  const bulletin = await useCase.execute(toEnglishCommodity(commodity), htxCode);
 
   return (
     <div>

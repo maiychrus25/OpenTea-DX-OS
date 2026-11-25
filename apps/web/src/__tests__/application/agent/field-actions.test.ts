@@ -75,7 +75,7 @@ function proposalRepo(kind: string, payload: Record<string, unknown>) {
 
 describe('harvest.approve', () => {
   test('executes ApproveHarvestUseCase as the approver, after the tenant guard', async () => {
-    const action = getAction('harvest.approve')
+    const action = getAction('harvest.approve')!
 
     const result = await action.execute({ parcel_id: 'parcel-1' }, manager)
 
@@ -107,7 +107,7 @@ describe('harvest.approve', () => {
   })
 
   test('preview names the parcel from the evidence row, with no internal id', () => {
-    const action = getAction('harvest.approve')
+    const action = getAction('harvest.approve')!
     const evidence = {
       rows: [{ table: 'parcels', id: 'parcel-1', sha256: 'h', values: { parcel_code: 'P-TC-003' } }],
       sha256: 'unused',
@@ -128,7 +128,7 @@ describe('disease.inspection', () => {
   }
 
   test('notifies officers and managers with the deep link', async () => {
-    const action = getAction('disease.inspection')
+    const action = getAction('disease.inspection')!
 
     await action.execute(payload, manager)
 
@@ -144,7 +144,7 @@ describe('disease.inspection', () => {
   })
 
   test('a disease outside the label set, such as healthy, is not a valid payload', () => {
-    const action = getAction('disease.inspection')
+    const action = getAction('disease.inspection')!
     expect(action.payloadSchema.safeParse({ ...payload, disease: 'healthy' }).success).toBe(false)
     expect(action.payloadSchema.safeParse(payload).success).toBe(true)
   })

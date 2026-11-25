@@ -160,7 +160,7 @@ describe('notification actions', () => {
       { parcel_code: 'P-TC-001', household: { id: 'h1', keycloak_user_id: 'user-h1' } },
       { parcel_code: 'P-TC-003', household: { id: 'h2', keycloak_user_id: 'user-h2' } },
     ])
-    const action = getAction('notification.households')
+    const action = getAction('notification.households')!
 
     const result = await action.execute(
       {
@@ -188,7 +188,7 @@ describe('notification actions', () => {
       { parcel_code: 'P-TC-001', household: { id: 'h1', keycloak_user_id: 'user-h1' } },
       { parcel_code: 'P-TC-003', household: { id: 'h2', keycloak_user_id: null } },
     ])
-    const action = getAction('notification.households')
+    const action = getAction('notification.households')!
 
     const result = await action.execute(
       {
@@ -206,7 +206,7 @@ describe('notification actions', () => {
   test('a parcel code of another cooperative makes execute refuse and send nothing', async () => {
     // The query is scoped to the approver's cooperative, so the LB parcel is not returned.
     findParcels.mockResolvedValueOnce([{ parcel_code: 'P-TC-001', household: { id: 'h1', keycloak_user_id: 'user-h1' } }])
-    const action = getAction('notification.households')
+    const action = getAction('notification.households')!
 
     await expect(
       action.execute(
@@ -222,7 +222,7 @@ describe('notification actions', () => {
   })
 
   test('the internal notification goes to officers and managers through the broadcast use case', async () => {
-    const action = getAction('notification.internal')
+    const action = getAction('notification.internal')!
 
     await action.execute(
       { template: 'sensor_silent', slots: { parcel_code: 'P-TC-003', sensor: 'soil_moisture', hours: 8 }, subjects: ['sensor_silent:r1'] },

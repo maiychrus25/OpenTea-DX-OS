@@ -7,6 +7,7 @@ import { AiNote } from '@/components/ui/AiNote'
 import { BulletinCard } from '@/components/features/bulletin/BulletinCard'
 import { ListenBulletinButton } from '@/components/features/bulletin/ListenBulletinButton'
 import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
+import { auth } from '@/auth'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { ArrowRight, ChevronUp } from 'lucide-react'
 import styles from '@/components/features/bulletin/bulletin.module.css'
@@ -45,8 +46,10 @@ export default async function OfficerBulletinPage({ searchParams }: OfficerBulle
   const isViewAll = searchParams?.view === 'all'
   const selectedCategory = searchParams?.category || 'all'
 
-  // Load bulletins from DB
+  // Load bulletins from DB: published, and the cooperative's own or shared rows
+  const htxCode = (await auth())?.user?.htxCode ?? ''
   const dbBulletins = await prisma.bulletin.findMany({
+    where: { status: 'published', OR: [{ htx_code: htxCode }, { htx_code: null }] },
     orderBy: { created_at: 'desc' },
     take: isViewAll ? 50 : 10,
   })

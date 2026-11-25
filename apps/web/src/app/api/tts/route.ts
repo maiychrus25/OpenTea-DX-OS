@@ -59,8 +59,14 @@ async function getTtsHandler(request: Request) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'bulletinId is required' } }, { status: 400 })
   }
 
-  const bulletin = await prisma.bulletin.findUnique({
-    where: { id: bulletinId },
+  // Same visibility as the bulletin readers: published, and the cooperative's own or a shared row.
+  const htxCode = session.user.htxCode
+  const bulletin = await prisma.bulletin.findFirst({
+    where: {
+      id: bulletinId,
+      status: 'published',
+      OR: [{ htx_code: null }, ...(htxCode ? [{ htx_code: htxCode }] : [])],
+    },
   })
 
   if (!bulletin) {

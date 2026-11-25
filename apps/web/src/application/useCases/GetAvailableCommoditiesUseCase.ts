@@ -6,7 +6,7 @@ import { IBulletinRepository } from '../../domain/repositories/IBulletinReposito
 export class GetAvailableCommoditiesUseCase {
   constructor(private repository: IBulletinRepository) {}
 
-  async execute(): Promise<string[]> {
-    return this.repository.getAvailableCommodities();
+  async execute(htxCode: string): Promise<string[]> {
+    return this.repository.getAvailableCommodities(htxCode);
   }
 }

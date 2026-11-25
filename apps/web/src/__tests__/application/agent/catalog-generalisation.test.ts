@@ -5,7 +5,6 @@
 import { z } from 'zod'
 import { evidenceDigest } from '@/domain/agent/evidence'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
-import { ValidationError } from '@/domain/errors'
 
 // Fake actions that exercise the generalised catalogue fields (C1); the real catalogue stays untouched.
 const mockFakeActions: Record<string, Record<string, unknown>> = {}

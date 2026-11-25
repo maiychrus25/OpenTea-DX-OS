@@ -7,9 +7,9 @@ import { NotFoundError } from '@/domain/errors/NotFoundError'
 export class GetLatestBulletinUseCase {
   constructor(private readonly bulletinRepo: IBulletinRepository) {}
 
-  async execute(commodity: string): Promise<Bulletin> {
-    const bulletin = await this.bulletinRepo.getLatestBulletin(commodity)
-    
+  async execute(commodity: string, htxCode: string): Promise<Bulletin> {
+    const bulletin = await this.bulletinRepo.getLatestBulletin(commodity, htxCode)
+
     if (!bulletin) {
       throw new NotFoundError(`Không tìm thấy bản tin cho nông sản: ${commodity}`)
     }
