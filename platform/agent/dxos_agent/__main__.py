@@ -50,6 +50,8 @@ class _CooperativeRuntime:
     disease_watch: DailySchedule = field(default_factory=lambda: DailySchedule(DISEASE_WATCH_AT))
     disease_fingerprint: str | None = None
     bulletin: DailySchedule = field(default_factory=lambda: DailySchedule(BULLETIN_AT))
+    # The bulletin's LLM call can take minutes on a CPU server, so it runs on its own thread (one at a time).
+    bulletin_thread: threading.Thread | None = None
 
 
 def _build_providers(cfg: Config, token_client: KeycloakTokenClient) -> dict[str, LLMProvider]:
@@ -146,10 +148,23 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
         runtime.disease_fingerprint = fingerprint
 
     def bulletin_cycle() -> None:
-        if runtime.bulletin.is_due(now):
-            provider, fallback = choose_providers(settings, bulletin.AGENT_NAME, runtime.providers)
-            bulletin.run_bulletin(gateway, now, provider, settings.thresholds_for(bulletin.AGENT_NAME), fallback)
-            runtime.bulletin.record(now)
+        if runtime.bulletin_thread is not None and runtime.bulletin_thread.is_alive():
+            return  # still writing the last one
+        if not runtime.bulletin.is_due(now):
+            return
+        provider, fallback = choose_providers(settings, bulletin.AGENT_NAME, runtime.providers)
+        thresholds = settings.thresholds_for(bulletin.AGENT_NAME)
+
+        def write() -> None:
+            try:
+                bulletin.run_bulletin(gateway, now, provider, thresholds, fallback)
+            except Exception:
+                log.exception("A5 bulletin failed for htx=%s", htx)
+                return
+            runtime.bulletin.record(now)  # only after a run that did not fail, so a failed run is retried
+
+        runtime.bulletin_thread = threading.Thread(target=write, name=f"bulletin-{htx}", daemon=True)
+        runtime.bulletin_thread.start()
 
     _guarded("A2 field-watch", htx, field_watch_cycle)
     _guarded("A4 harvest-ready", htx, harvest_cycle)
