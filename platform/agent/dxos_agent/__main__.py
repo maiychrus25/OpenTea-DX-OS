@@ -20,7 +20,15 @@ from .agents.journal_review import (
 )
 from .client import AgentCredentials, CoreGatewayClient, KeycloakTokenClient, load_all_agent_credentials
 from .config import Config
-from .providers import AnthropicProvider, LLMProvider, OllamaProvider, OpenAIProvider, ReplayProvider
+from .providers import (
+    AnthropicProvider,
+    LLMProvider,
+    LLMResponse,
+    OllamaProvider,
+    OpenAIProvider,
+    ProviderError,
+    ReplayProvider,
+)
 from .schedule import DailySchedule, IntervalSchedule, ReviewSchedule
 from .settings import AgentSettings, OLLAMA, choose_providers, fetch_settings
 
@@ -31,6 +39,30 @@ DISEASE_WATCH_AT = time(7, 0)  # Vietnam time
 BULLETIN_AT = time(5, 0)  # Vietnam time
 
 log = logging.getLogger("dxos_agent")
+
+
+# The cooperative's server runs one local model, and on a CPU it serves one request at a time. A bulletin keeps it busy
+# for minutes, so bulletins are written one at a time, and A1 does not queue behind one: it uses its rule reasons.
+_BULLETIN_LOCK = threading.Lock()
+_bulletin_on_local_model = threading.Event()
+
+
+class _LocalModelBusy(LLMProvider):
+    """Stands in for the local model while a bulletin is written on it; fails at once so A1 falls back to its rules."""
+
+    def __init__(self, model: str) -> None:
+        self.name = OLLAMA
+        self.model = model
+
+    def _generate(self, messages, schema) -> LLMResponse:
+        del messages, schema
+        raise ProviderError("the local model is writing a bulletin")
+
+
+def _local_unless_busy(provider: LLMProvider | None) -> LLMProvider | None:
+    if provider is not None and provider.name == OLLAMA and _bulletin_on_local_model.is_set():
+        return _LocalModelBusy(provider.model)
+    return provider
 
 
 @dataclass
@@ -156,11 +188,17 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
         thresholds = settings.thresholds_for(bulletin.AGENT_NAME)
 
         def write() -> None:
-            try:
-                bulletin.run_bulletin(gateway, now, provider, thresholds, fallback)
-            except Exception:
-                log.exception("A5 bulletin failed for htx=%s", htx)
-                return
+            with _BULLETIN_LOCK:  # one bulletin at a time on the shared server
+                on_local_model = OLLAMA in {provider.name, fallback.name if fallback is not None else None}
+                if on_local_model:
+                    _bulletin_on_local_model.set()
+                try:
+                    bulletin.run_bulletin(gateway, now, provider, thresholds, fallback)
+                except Exception:
+                    log.exception("A5 bulletin failed for htx=%s", htx)
+                    return
+                finally:
+                    _bulletin_on_local_model.clear()
             runtime.bulletin.record(now)  # only after a run that did not fail, so a failed run is retried
 
         runtime.bulletin_thread = threading.Thread(target=write, name=f"bulletin-{htx}", daemon=True)
@@ -206,6 +244,7 @@ def _journal_review_cycle(runtime: _CooperativeRuntime, now: datetime, settings:
     if not due:
         return
     provider, fallback = choose_providers(settings, JOURNAL_REVIEW_AGENT, runtime.providers)
+    provider, fallback = _local_unless_busy(provider), _local_unless_busy(fallback)
     outcome = run_journal_review(
         gateway=runtime.gateway,
         provider=provider,

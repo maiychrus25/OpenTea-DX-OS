@@ -10,6 +10,7 @@ import urllib.error
 import pytest
 
 from dxos_agent import __main__ as agent_main
+from dxos_agent.agents.journal_review import JournalReviewOutcome
 from dxos_agent.config import Config
 from dxos_agent.providers import OllamaProvider
 
@@ -274,6 +275,45 @@ def test_one_failing_m4_agent_does_not_stop_the_others_or_a1(monkeypatch, cooper
 
     assert len(harvest_runs) == 1
     assert [p["kind"] for p in gateway.proposals] == ["journal.approve"]
+
+
+def test_while_a_bulletin_is_written_on_the_local_model_a1_uses_its_rule_reasons(monkeypatch, cooperative):
+    # CI 2026-11-25: the CPU Ollama serves one request at a time; A1 waited behind the bulletin and held the loop.
+    cfg, gateway = cooperative
+    release = threading.Event()
+    seen = []
+
+    def slow_bulletin(*args, **kwargs):
+        del args, kwargs
+        release.wait(5)
+
+    def capture_review(**kwargs):
+        seen.append((kwargs["provider"].name, type(kwargs["provider"]).__name__))
+        return JournalReviewOutcome("run", "ok", 1, 0, 0, 0, 0, False)
+
+    monkeypatch.setattr(agent_main.bulletin, "run_bulletin", slow_bulletin)
+    monkeypatch.setattr(agent_main, "run_journal_review", capture_review)
+    runtimes: dict = {}
+    t0 = datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc)
+
+    gateway.entries = [_clean_entry("je_1")]
+    agent_main.run_once(cfg, runtimes, now=t0)  # A1 first, then the bulletin starts on the local model
+    gateway.entries = [_clean_entry("je_2")]
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(seconds=30))  # the bulletin is still being written
+    release.set()
+    _join_bulletins(runtimes)
+    gateway.entries = [_clean_entry("je_3")]
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(seconds=60))  # the local model is free again
+    _join_bulletins(runtimes)
+
+    assert seen[0] == ("ollama", "OllamaProvider")
+    assert seen[1] == ("ollama", "_LocalModelBusy")
+    assert seen[2] == ("ollama", "OllamaProvider")
+
+
+def test_the_local_model_busy_stand_in_fails_at_once_so_a1_falls_back_to_rules():
+    with pytest.raises(agent_main.ProviderError):
+        agent_main._LocalModelBusy("qwen2.5:0.5b").complete_json([], {"type": "object"})
 
 
 def test_a_slow_bulletin_runs_in_the_background_and_never_holds_the_loop(monkeypatch, cooperative):
