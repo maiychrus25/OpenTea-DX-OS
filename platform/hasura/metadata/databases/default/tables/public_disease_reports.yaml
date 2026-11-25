@@ -31,6 +31,8 @@ select_permissions:
         - household_id
         - status
         - detection_date
+        - ai_disease_name
+        - confirmed_diagnosis
         - created_at
         - updated_at
       allow_aggregations: true

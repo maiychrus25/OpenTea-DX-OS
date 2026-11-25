@@ -16,3 +16,15 @@ select_permissions:
     permission:
       columns: '*'
       filter: {}
+  - role: agent
+    permission:
+      columns:
+        - id
+        - source
+        - commodity
+        - metric
+        - value
+        - unit
+        - period
+        - fetched_at
+      filter: {}

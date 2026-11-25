@@ -25,4 +25,5 @@ export SMOKE_REQUIRE_WEB=1
 source platform/tests/smoke-agent.sh
 source platform/tests/smoke-telegram.sh
 source platform/tests/smoke-llm.sh
+source platform/tests/smoke-agents.sh
 echo "agentic smoke passed"

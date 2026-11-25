@@ -416,6 +416,15 @@ Telegram là tuỳ chọn. Đặt `TELEGRAM_BOT_TOKEN` (token BotFather tạo) v
 - Khi chưa có token hoặc chưa chạy `enable`, dxos-telegram chỉ ghi nhịp tim và chờ; web vẫn hoạt động như trước.
 - Bản phát hành bắt buộc `DXOS_TELEGRAM_CALLBACK_KEY` (khoá ký nút bấm) khác giá trị mặc định công khai.
 
+### Các agent của lớp AI
+
+- `field-watch` (A2): cảnh báo cảm biến mất tín hiệu, đất khô, nắng nóng, sương muối và mưa sau khi phun, mỗi 30 phút.
+- `disease-watch` (A3): gom báo cáo bệnh cùng loại trong 2 km thành đề nghị kiểm tra và thông báo cho nông hộ, hằng ngày lúc 07:00.
+- `harvest-ready` (A4): đề nghị duyệt thu hoạch khi thửa sẵn sàng và đã qua thời gian cách ly, hằng ngày lúc 06:30.
+- `bulletin` (A5): soạn bản tin thị trường chè từ dữ liệu giá, hằng ngày lúc 05:00; bản tin chỉ đăng khi quản lý duyệt.
+
+Ngưỡng và quy tắc mẫu tin: mục 3.10 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
+
 ### Bật / tắt lớp AI cho từng HTX (`./dxos agent`)
 
 ```bash
