@@ -30,7 +30,7 @@ copy_media miniapps/tea-tour/store/manager-tour.png tour-manager.png
 copy_media miniapps/farm-supply/store/manager-round.png supply-round.png
 copy_media miniapps/custom-books/store/designer.png books-designer.png
 copy_media miniapps/custom-books/store/book-in-use.png books-in-use.png
-copy_media apps/staff-desktop/docs/screenshots/08-payroll.png desktop-payroll.png
+copy_media apps/staff-desktop/docs/screenshots/09-payroll.png desktop-payroll.png
 copy_media apps/staff-mobile/docs/screenshots/02-tasks.png mobile-tasks.png
 copy_media apps/staff-mobile/docs/screenshots/04-attendance.png mobile-attendance.png
 copy_media docs/screenshots/web/lot-trace.png web-lot-trace.png
