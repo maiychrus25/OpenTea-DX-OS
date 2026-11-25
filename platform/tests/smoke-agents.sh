@@ -44,6 +44,13 @@ m4_cleanup() {
 # The EXIT trap of smoke-llm stays in place: this one runs first, then its cleanup.
 trap 'm4_cleanup; llm_cleanup' EXIT
 
+# Clean slate: the agent has run the four M4 agents on the CI data through the earlier smokes, and their 24-hour repeat
+# window would dedupe today's warnings (CI 2026-11-25). Their TC proposals go first, with the messages that reference them.
+M4_OLD="select id from platform.agent_proposals where htx_code='TC' and agent in ($M4_AGENTS)"
+psql_app "delete from platform.telegram_outbox where proposal_id in ($M4_OLD)" >/dev/null
+psql_app "delete from platform.telegram_conversations where proposal_id in ($M4_OLD)" >/dev/null
+psql_app "delete from platform.agent_proposals where htx_code='TC' and agent in ($M4_AGENTS)" >/dev/null
+
 # Seeds: a sensor silent for 8 h, three helopeltis reports on one cooperative parcel, one ready TC parcel, two market rows.
 psql_app "insert into telemetry.sensor_readings (htx_code, parcel_code, sensor, ts, value) values
   ('TC', 'P-TC-001', 'soil_moisture', now() - interval '8 hours', 41.5) on conflict do nothing" >/dev/null
