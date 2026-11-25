@@ -16,6 +16,8 @@ OPENAI_PATH = "/v1/chat/completions"
 USAGE_IN = 123
 USAGE_OUT = 45
 MAX_RECORDED_CALLS = 200
+BULLETIN_KEY = "bulletin_vi"
+BULLETIN_TEXT = "Giá chè trên thị trường tuần này đi ngang, nhu cầu ổn định. Bà con tiếp tục theo dõi thị trường trước khi bán."
 
 _lock = threading.Lock()
 _calls: list[dict] = []
@@ -40,8 +42,27 @@ def _reply_text(messages):
     return json.dumps({"reject_reasons": reasons}, ensure_ascii=False)
 
 
+def _system_text(body):
+    """The system prompt as plain text, for both API shapes."""
+    system = body.get("system")
+    parts = []
+    if isinstance(system, str):
+        parts.append(system)
+    elif isinstance(system, list):
+        parts += [b.get("text", "") for b in system if isinstance(b, dict)]
+    parts += [m.get("content") for m in body.get("messages") or [] if m.get("role") == "system" and isinstance(m.get("content"), str)]
+    return "\n".join(p for p in parts if isinstance(p, str))
+
+
+def _answer_text(body):
+    # The bulletin agent (A5) asks for the bulletin_vi key in its system message; every other request keeps the review answer.
+    if BULLETIN_KEY in _system_text(body):
+        return json.dumps({BULLETIN_KEY: BULLETIN_TEXT}, ensure_ascii=False)
+    return _reply_text(body.get("messages") or [])
+
+
 def _anthropic_answer(body):
-    text = _reply_text(body.get("messages") or [])
+    text = _answer_text(body)
     return {
         "id": "msg_stub",
         "type": "message",
@@ -55,7 +76,7 @@ def _anthropic_answer(body):
 
 
 def _openai_answer(body):
-    text = _reply_text(body.get("messages") or [])
+    text = _answer_text(body)
     return {
         "id": "chatcmpl-stub",
         "object": "chat.completion",

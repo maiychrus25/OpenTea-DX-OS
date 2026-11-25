@@ -1,0 +1,157 @@
+[
+  {
+    "name": "three reports within 2 km",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "DiseaseWatchReports": {"disease_reports": [
+        {"id": "dr-a3", "parcel_id": "pc_a3", "status": "PENDING", "detection_date": "2026-11-23T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-23T03:30:00+00:00"},
+        {"id": "dr-a1", "parcel_id": "pc_a1", "status": "PENDING", "detection_date": "2026-11-22T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-22T03:30:00+00:00"},
+        {"id": "dr-a2", "parcel_id": "pc_a2", "status": "PENDING", "detection_date": "2026-11-21T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-21T03:30:00+00:00"}
+      ]},
+      "DiseaseWatchParcels": {"parcels": [
+        {"id": "pc_a1", "parcel_code": "TC-A1", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.605, "centroid_lng": 108.0},
+        {"id": "pc_a2", "parcel_code": "TC-A2", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.61, "centroid_lng": 108.0},
+        {"id": "pc_a3", "parcel_code": "TC-A3", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.6, "centroid_lng": 108.0},
+        {"id": "pc_a4", "parcel_code": "TC-A4", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.595, "centroid_lng": 108.0},
+        {"id": "pc_b1", "parcel_code": "TC-B1", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.65, "centroid_lng": 108.0},
+        {"id": "pc_nogeo", "parcel_code": "TC-NOGEO", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": null, "centroid_lng": null}
+      ]}
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "disease.inspection",
+          "subjects": ["dr-a1", "dr-a2", "dr-a3"],
+          "payload": {"disease": "helopeltis", "report_ids": ["dr-a1", "dr-a2", "dr-a3"], "parcel_codes": ["TC-A1", "TC-A2", "TC-A3"], "radius_m": 2000, "days": 7}
+        },
+        {
+          "kind": "notification.households",
+          "subjects": ["disease_nearby:helopeltis:dr-a1"],
+          "payload": {
+            "template": "disease_nearby",
+            "slots": {"disease": "helopeltis", "parcel_codes": ["TC-A1", "TC-A2", "TC-A3", "TC-A4"], "count": 3, "days": 7},
+            "subjects": ["disease_nearby:helopeltis:dr-a1"]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "three reports of different diseases",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "DiseaseWatchReports": {"disease_reports": [
+        {"id": "dr-a3", "parcel_id": "pc_a3", "status": "PENDING", "detection_date": "2026-11-23T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-23T03:30:00+00:00"},
+        {"id": "dr-a1", "parcel_id": "pc_a1", "status": "CONFIRMED", "detection_date": "2026-11-22T03:20:00+00:00", "ai_disease_name": "gray_blight", "confirmed_diagnosis": "Bệnh chấm xám", "updated_at": "2026-11-22T03:30:00+00:00"},
+        {"id": "dr-a2", "parcel_id": "pc_a2", "status": "PENDING", "detection_date": "2026-11-21T03:20:00+00:00", "ai_disease_name": "brown_blight", "confirmed_diagnosis": null, "updated_at": "2026-11-21T03:30:00+00:00"}
+      ]},
+      "DiseaseWatchParcels": {"parcels": [
+        {"id": "pc_a1", "parcel_code": "TC-A1", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.605, "centroid_lng": 108.0},
+        {"id": "pc_a2", "parcel_code": "TC-A2", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.61, "centroid_lng": 108.0},
+        {"id": "pc_a3", "parcel_code": "TC-A3", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.6, "centroid_lng": 108.0}
+      ]}
+    },
+    "expected": {"proposals": []}
+  },
+  {
+    "name": "two reports only",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "DiseaseWatchReports": {"disease_reports": [
+        {"id": "dr-a3", "parcel_id": "pc_a3", "status": "PENDING", "detection_date": "2026-11-23T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-23T03:30:00+00:00"},
+        {"id": "dr-a1", "parcel_id": "pc_a1", "status": "PENDING", "detection_date": "2026-11-22T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-22T03:30:00+00:00"}
+      ]},
+      "DiseaseWatchParcels": {"parcels": [
+        {"id": "pc_a1", "parcel_code": "TC-A1", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.605, "centroid_lng": 108.0},
+        {"id": "pc_a3", "parcel_code": "TC-A3", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.6, "centroid_lng": 108.0}
+      ]}
+    },
+    "expected": {"proposals": []}
+  },
+  {
+    "name": "a report labelled healthy is not a disease",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "DiseaseWatchReports": {"disease_reports": [
+        {"id": "dr-a3", "parcel_id": "pc_a3", "status": "PENDING", "detection_date": "2026-11-23T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-23T03:30:00+00:00"},
+        {"id": "dr-a1", "parcel_id": "pc_a1", "status": "PENDING", "detection_date": "2026-11-22T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-22T03:30:00+00:00"},
+        {"id": "dr-a2", "parcel_id": "pc_a2", "status": "PENDING", "detection_date": "2026-11-21T03:20:00+00:00", "ai_disease_name": "healthy", "confirmed_diagnosis": null, "updated_at": "2026-11-21T03:30:00+00:00"}
+      ]},
+      "DiseaseWatchParcels": {"parcels": [
+        {"id": "pc_a1", "parcel_code": "TC-A1", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.605, "centroid_lng": 108.0},
+        {"id": "pc_a2", "parcel_code": "TC-A2", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.61, "centroid_lng": 108.0},
+        {"id": "pc_a3", "parcel_code": "TC-A3", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.6, "centroid_lng": 108.0}
+      ]}
+    },
+    "expected": {"proposals": []}
+  },
+  {
+    "name": "a report matched by its Vietnamese label",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "DiseaseWatchReports": {"disease_reports": [
+        {"id": "dr-a3", "parcel_id": "pc_a3", "status": "PENDING", "detection_date": "2026-11-23T03:20:00+00:00", "ai_disease_name": "Bọ xít muỗi", "confirmed_diagnosis": null, "updated_at": "2026-11-23T03:30:00+00:00"},
+        {"id": "dr-a1", "parcel_id": "pc_a1", "status": "PENDING", "detection_date": "2026-11-22T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-22T03:30:00+00:00"},
+        {"id": "dr-a2", "parcel_id": "pc_a2", "status": "PENDING", "detection_date": "2026-11-21T03:20:00+00:00", "ai_disease_name": "  BỌ XÍT MUỖI  ", "confirmed_diagnosis": null, "updated_at": "2026-11-21T03:30:00+00:00"}
+      ]},
+      "DiseaseWatchParcels": {"parcels": [
+        {"id": "pc_a1", "parcel_code": "TC-A1", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.605, "centroid_lng": 108.0},
+        {"id": "pc_a2", "parcel_code": "TC-A2", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.61, "centroid_lng": 108.0},
+        {"id": "pc_a3", "parcel_code": "TC-A3", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.6, "centroid_lng": 108.0},
+        {"id": "pc_a4", "parcel_code": "TC-A4", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.595, "centroid_lng": 108.0}
+      ]}
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "disease.inspection",
+          "subjects": ["dr-a1", "dr-a2", "dr-a3"],
+          "payload": {"disease": "helopeltis", "report_ids": ["dr-a1", "dr-a2", "dr-a3"], "parcel_codes": ["TC-A1", "TC-A2", "TC-A3"], "radius_m": 2000, "days": 7}
+        },
+        {
+          "kind": "notification.households",
+          "subjects": ["disease_nearby:helopeltis:dr-a1"],
+          "payload": {
+            "template": "disease_nearby",
+            "slots": {"disease": "helopeltis", "parcel_codes": ["TC-A1", "TC-A2", "TC-A3", "TC-A4"], "count": 3, "days": 7},
+            "subjects": ["disease_nearby:helopeltis:dr-a1"]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "a parcel without a centroid is ignored",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "DiseaseWatchReports": {"disease_reports": [
+        {"id": "dr-a3", "parcel_id": "pc_a3", "status": "PENDING", "detection_date": "2026-11-23T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-23T03:30:00+00:00"},
+        {"id": "dr-a1", "parcel_id": "pc_a1", "status": "PENDING", "detection_date": "2026-11-22T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-22T03:30:00+00:00"},
+        {"id": "dr-nogeo", "parcel_id": "pc_nogeo", "status": "PENDING", "detection_date": "2026-11-21T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-21T03:30:00+00:00"}
+      ]},
+      "DiseaseWatchParcels": {"parcels": [
+        {"id": "pc_a1", "parcel_code": "TC-A1", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.605, "centroid_lng": 108.0},
+        {"id": "pc_a3", "parcel_code": "TC-A3", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.6, "centroid_lng": 108.0},
+        {"id": "pc_nogeo", "parcel_code": "TC-NOGEO", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": null, "centroid_lng": null}
+      ]}
+    },
+    "expected": {"proposals": []}
+  },
+  {
+    "name": "reports older than seven days are not in the window",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "DiseaseWatchReports": {"disease_reports": [
+        {"id": "dr-a3", "parcel_id": "pc_a3", "status": "PENDING", "detection_date": "2026-11-23T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-23T03:30:00+00:00"},
+        {"id": "dr-a1", "parcel_id": "pc_a1", "status": "PENDING", "detection_date": "2026-11-22T03:20:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-22T03:30:00+00:00"},
+        {"id": "dr-a2", "parcel_id": "pc_a2", "status": "PENDING", "detection_date": "2026-11-16T10:00:00+00:00", "ai_disease_name": "helopeltis", "confirmed_diagnosis": null, "updated_at": "2026-11-16T10:30:00+00:00"}
+      ]},
+      "DiseaseWatchParcels": {"parcels": [
+        {"id": "pc_a1", "parcel_code": "TC-A1", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.605, "centroid_lng": 108.0},
+        {"id": "pc_a2", "parcel_code": "TC-A2", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.61, "centroid_lng": 108.0},
+        {"id": "pc_a3", "parcel_code": "TC-A3", "status": "TENDING", "harvest_approved_at": null, "updated_at": "2026-11-20T02:00:00+00:00", "centroid_lat": 12.6, "centroid_lng": 108.0}
+      ]}
+    },
+    "expected": {"proposals": []}
+  }
+]

@@ -11,8 +11,28 @@ export interface Bulletin {
   created_at: Date;
 }
 
+// A type alias (not an interface) so the list can be stored as JSON.
+export type BulletinSource = {
+  source: string;
+  metric: string;
+  value: number;
+  unit: string;
+  period: string;
+};
+
+export interface PublishBulletinRecord {
+  commodity: string;
+  bulletinVi: string;
+  sources: BulletinSource[];
+  modelUsed: string;
+}
+
 export interface IBulletinRepository {
-  getLatestBulletin(commodity: string): Promise<Bulletin | null>;
-  getAllLatestBulletins(): Promise<Bulletin[]>;
-  getAvailableCommodities(): Promise<string[]>;
+  /** Published rows the cooperative may read: its own row first, otherwise the latest shared row. */
+  getLatestBulletin(commodity: string, htxCode: string): Promise<Bulletin | null>;
+  /** One bulletin per commodity, the cooperative's own row over a shared one. */
+  getAllLatestBulletins(htxCode: string): Promise<Bulletin[]>;
+  getAvailableCommodities(htxCode: string): Promise<string[]>;
+  /** Marks the cooperative's earlier rows of the commodity not latest, then stores the new published row. */
+  publish(htxCode: string, record: PublishBulletinRecord): Promise<{ id: string }>;
 }

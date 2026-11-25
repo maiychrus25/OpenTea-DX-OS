@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Agentic layer milestone M4: field, disease, harvest and bulletin agents (`platform/agent`, `apps/web`, Hasura)**: four agents per cooperative propose, and a person approves on the web or in Telegram. `field-watch` (every 30 minutes) warns officers about a sensor silent for 6 hours and households about dry soil, heat, frost and heavy rain forecast after a recent spraying. `disease-watch` (daily and on new reports) asks officers to inspect when 3 reports of one disease fall within 2 km in 7 days, and warns the households around them. `harvest-ready` (each morning) proposes approving the harvest of parcels past their withdrawal period and due for picking. `bulletin` (each morning) writes a market bulletin for the cooperative with the provider chosen in the settings. Messages to households use fixed templates with typed slots: an agent cannot add text of its own, and only the approver can add a note (spec test 32). A warning that was approved or rejected is not proposed again within 24 hours. Bulletins gain a status and a cooperative, and readers show only published ones. Thresholds are per-cooperative settings, with defaults in `docs/rules-and-limits.md` §3.10.
+
 ### Fixed
 
 - **Random sign-outs right after sign-in (`apps/web`, #75)**: the session no longer keeps the Keycloak id token, so it fits in one cookie (3593 characters for the CI user, under the 3936 Auth.js chunk size). With two cookies, responses arriving a few milliseconds apart could leave the browser with mismatched halves and the next requests sent the user to the login page. Sign-out ends the Keycloak session with a back-channel logout using the refresh token. Sessions made before this change drop the id token on their next request.

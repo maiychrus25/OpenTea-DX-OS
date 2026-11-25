@@ -117,6 +117,26 @@ export class PrismaNotificationRepository implements NotificationPort {
     void senderId;
   }
 
+  /** The same text for each recipient, one row each; the recipients get a live notification event. */
+  async notifyRecipients(
+    recipientIds: string[],
+    message: { type: string; title: string; body: string; deepLinkUrl?: string }
+  ): Promise<void> {
+    if (recipientIds.length === 0) return;
+    await prisma.notification.createMany({
+      data: recipientIds.map((recipient_id) => ({
+        type: message.type as NotificationType,
+        title: message.title,
+        body: message.body,
+        recipient_id,
+        deep_link_url: message.deepLinkUrl ?? null,
+      })),
+    });
+    for (const userId of recipientIds) {
+      sseEmitter.emit(SSE_EVENTS.NEW_NOTIFICATION, { userId });
+    }
+  }
+
   async updatePreferences(userId: string, preferences?: Record<string, unknown>): Promise<void> {
     // Notification preferences — MVP placeholder
     void userId;

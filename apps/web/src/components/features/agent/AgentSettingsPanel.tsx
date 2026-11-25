@@ -45,10 +45,13 @@ interface AgentSettingsPanelProps {
 const AGENT_LABEL: Record<ConfigurableAgent, string> = {
   'journal-review': 'Soát nhật ký (A1)',
   digest: 'Báo cáo tóm tắt (A6)',
+  bulletin: 'Bản tin thị trường (A5)',
 }
 
 /** What leaves the server when the agent uses an external provider. */
 const AGENT_SHARES: Record<ConfigurableAgent, string> = {
+  bulletin:
+    'Dòng giá thị trường của mặt hàng: nguồn, chỉ số, giá trị, đơn vị và kỳ. Không có dữ liệu của nông hộ.',
   'journal-review':
     'Nhật ký chờ duyệt: mã thửa, ngày, hoạt động, thuốc, liều, số ngày cách ly và ghi chú. Số điện thoại, e-mail và số giấy tờ trong ghi chú được che; tên người viết trong ghi chú không được che. Không gửi ảnh nông hộ.',
   digest:

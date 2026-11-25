@@ -10,7 +10,7 @@ export type ProposalStatus =
   | 'expired'
   | 'stale'
 
-export const KNOWN_AGENTS = ['journal-review'] as const
+export const KNOWN_AGENTS = ['journal-review', 'field-watch', 'disease-watch', 'harvest-ready', 'bulletin'] as const
 export type KnownAgent = (typeof KNOWN_AGENTS)[number]
 
 export type Risk = 'low' | 'medium' | 'high'

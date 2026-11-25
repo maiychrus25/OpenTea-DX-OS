@@ -4,6 +4,7 @@
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 from typing import Any, Mapping, Sequence
 
 
@@ -88,6 +89,82 @@ def crop_cycle_evidence_row(cycle: Mapping[str, Any]) -> dict[str, Any]:
         "harvested_at": normalize_iso_millis(cycle.get("harvested_at")),
     }
     return _row("parcel_crop_cycles", cycle["id"], values)
+
+
+def _milli(value: Any) -> int | None:
+    """Thousandths of a measurement, floored in IEEE double arithmetic (evidence contract v2); null stays null."""
+    if value is None:
+        return None
+    return math.floor(float(value) * 1000)
+
+
+def parcel_evidence_row(parcel: Mapping[str, Any]) -> dict[str, Any]:
+    """Build a verifiable `parcels` evidence row (contract C2 of the M4 plan)."""
+    values = {
+        "id": parcel["id"],
+        "parcel_code": parcel["parcel_code"],
+        "status": parcel["status"],
+        "harvest_approved_at": normalize_iso_millis(parcel.get("harvest_approved_at")),
+        "updated_at": normalize_iso_millis(parcel.get("updated_at")),
+    }
+    return _row("parcels", parcel["id"], values)
+
+
+def disease_report_evidence_row(report: Mapping[str, Any]) -> dict[str, Any]:
+    """Build a verifiable `disease_reports` evidence row."""
+    values = {
+        "id": report["id"],
+        "parcel_id": report["parcel_id"],
+        "status": report["status"],
+        "detection_date": normalize_iso_millis(report.get("detection_date")),
+        "ai_disease_name": report.get("ai_disease_name"),
+        "confirmed_diagnosis": report.get("confirmed_diagnosis"),
+        "updated_at": normalize_iso_millis(report.get("updated_at")),
+    }
+    return _row("disease_reports", report["id"], values)
+
+
+def sensor_reading_evidence_row(reading: Mapping[str, Any]) -> dict[str, Any]:
+    """Build a `sensor_readings` evidence row; the table has no id column, so the id is parcel|sensor|ts."""
+    ts = normalize_iso_millis(reading["ts"])
+    row_id = f"{reading['parcel_code']}|{reading['sensor']}|{ts}"
+    values = {
+        "id": row_id,
+        "parcel_code": reading["parcel_code"],
+        "sensor": reading["sensor"],
+        "ts": ts,
+        "value_milli": _milli(reading.get("value")),
+    }
+    return _row("sensor_readings", row_id, values)
+
+
+def weather_evidence_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Build a `weather_cache` evidence row; a null forecast gives two empty arrays."""
+    forecast = row.get("forecast_json") or {}
+    values = {
+        "id": row["id"],
+        "parcel_id": row["parcel_id"],
+        "recorded_at": normalize_iso_millis(row.get("recorded_at")),
+        "precipitation_milli": _milli(row.get("precipitation_mm")),
+        "forecast_days": list(forecast.get("time") or []),
+        "forecast_precipitation_milli": [_milli(value) for value in forecast.get("precipitation_sum") or []],
+    }
+    return _row("weather_cache", row["id"], values)
+
+
+def market_evidence_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Build a `market_data` evidence row; shared reference data, so it has no cooperative in its values."""
+    values = {
+        "id": row["id"],
+        "source": row["source"],
+        "commodity": row["commodity"],
+        "metric": row["metric"],
+        "value_milli": _milli(row.get("value")),
+        "unit": row.get("unit"),
+        "period": row.get("period"),
+        "fetched_at": normalize_iso_millis(row.get("fetched_at")),
+    }
+    return _row("market_data", row["id"], values)
 
 
 def build_evidence(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:

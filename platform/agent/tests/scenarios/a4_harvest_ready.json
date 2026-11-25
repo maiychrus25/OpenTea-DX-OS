@@ -1,0 +1,119 @@
+[
+  {
+    "name": "ready parcel with a spraying that cleared withdrawal",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "HarvestReadyParcels": {"parcels": [
+        {
+          "id": "pc_r1", "parcel_code": "TC-R1", "status": "TENDING", "harvest_approved_at": null,
+          "updated_at": "2026-11-20T02:00:00+00:00",
+          "crop_cycles": [
+            {"id": "cc_r1", "parcel_id": "pc_r1", "season": "Vụ đông 2026", "sowed_at": "2026-07-01T00:00:00+00:00", "estimated_harvest_date": "2026-11-26T00:00:00+00:00", "harvested_at": null}
+          ]
+        }
+      ]},
+      "HarvestReadySprayings": {"journal_entries": [
+        {
+          "id": "je_r1_spray", "parcel_id": "pc_r1", "entry_date": "2026-11-10T03:00:00+00:00", "activity_type": "SPRAYING",
+          "status": "APPROVED", "notes": null, "updated_at": "2026-11-10T04:00:00+00:00",
+          "activities": [
+            {"id": "act_r1", "activity_detail": "Phun", "product_name": "Matrine 0.5SL", "dosage": "5 ml/bình 16L", "withdrawal_days": 7, "safe_harvest_date": "2026-11-20T00:00:00+00:00"}
+          ]
+        }
+      ]}
+    },
+    "expected": {
+      "proposals": [
+        {"kind": "harvest.approve", "subjects": ["pc_r1"], "payload": {"parcel_id": "pc_r1"}}
+      ]
+    }
+  },
+  {
+    "name": "sprayed yesterday, safe tomorrow",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "HarvestReadyParcels": {"parcels": [
+        {
+          "id": "pc_r2", "parcel_code": "TC-R2", "status": "TENDING", "harvest_approved_at": null,
+          "updated_at": "2026-11-20T02:00:00+00:00",
+          "crop_cycles": [
+            {"id": "cc_r2", "parcel_id": "pc_r2", "season": "Vụ đông 2026", "sowed_at": "2026-07-01T00:00:00+00:00", "estimated_harvest_date": "2026-11-26T00:00:00+00:00", "harvested_at": null}
+          ]
+        }
+      ]},
+      "HarvestReadySprayings": {"journal_entries": [
+        {
+          "id": "je_r2_spray", "parcel_id": "pc_r2", "entry_date": "2026-11-23T03:00:00+00:00", "activity_type": "SPRAYING",
+          "status": "APPROVED", "notes": null, "updated_at": "2026-11-23T04:00:00+00:00",
+          "activities": [
+            {"id": "act_r2", "activity_detail": "Phun", "product_name": "Matrine 0.5SL", "dosage": "5 ml/bình 16L", "withdrawal_days": 7, "safe_harvest_date": "2026-11-25T00:00:00+00:00"}
+          ]
+        }
+      ]}
+    },
+    "expected": {"proposals": []}
+  },
+  {
+    "name": "harvest date five days away",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "HarvestReadyParcels": {"parcels": [
+        {
+          "id": "pc_r3", "parcel_code": "TC-R3", "status": "TENDING", "harvest_approved_at": null,
+          "updated_at": "2026-11-20T02:00:00+00:00",
+          "crop_cycles": [
+            {"id": "cc_r3", "parcel_id": "pc_r3", "season": "Vụ đông 2026", "sowed_at": "2026-07-01T00:00:00+00:00", "estimated_harvest_date": "2026-11-29T00:00:00+00:00", "harvested_at": null}
+          ]
+        }
+      ]},
+      "HarvestReadySprayings": {"journal_entries": []}
+    },
+    "expected": {"proposals": []}
+  },
+  {
+    "name": "already harvest approved is not proposed again",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "HarvestReadyParcels": {"parcels": [
+        {
+          "id": "pc_r4", "parcel_code": "TC-R4", "status": "HARVEST_APPROVED", "harvest_approved_at": "2026-11-23T01:00:00+00:00",
+          "updated_at": "2026-11-23T01:00:00+00:00",
+          "crop_cycles": [
+            {"id": "cc_r4", "parcel_id": "pc_r4", "season": "Vụ đông 2026", "sowed_at": "2026-07-01T00:00:00+00:00", "estimated_harvest_date": "2026-11-25T00:00:00+00:00", "harvested_at": null}
+          ]
+        }
+      ]},
+      "HarvestReadySprayings": {"journal_entries": []}
+    },
+    "expected": {"proposals": []}
+  },
+  {
+    "name": "a draft spraying entry is ignored",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "HarvestReadyParcels": {"parcels": [
+        {
+          "id": "pc_r5", "parcel_code": "TC-R5", "status": "TENDING", "harvest_approved_at": null,
+          "updated_at": "2026-11-20T02:00:00+00:00",
+          "crop_cycles": [
+            {"id": "cc_r5", "parcel_id": "pc_r5", "season": "Vụ đông 2026", "sowed_at": "2026-07-01T00:00:00+00:00", "estimated_harvest_date": "2026-11-25T00:00:00+00:00", "harvested_at": null}
+          ]
+        }
+      ]},
+      "HarvestReadySprayings": {"journal_entries": [
+        {
+          "id": "je_r5_draft", "parcel_id": "pc_r5", "entry_date": "2026-11-23T03:00:00+00:00", "activity_type": "SPRAYING",
+          "status": "DRAFT", "notes": null, "updated_at": "2026-11-23T04:00:00+00:00",
+          "activities": [
+            {"id": "act_r5", "activity_detail": "Phun", "product_name": "Matrine 0.5SL", "dosage": "5 ml/bình 16L", "withdrawal_days": 7, "safe_harvest_date": "2026-11-28T00:00:00+00:00"}
+          ]
+        }
+      ]}
+    },
+    "expected": {
+      "proposals": [
+        {"kind": "harvest.approve", "subjects": ["pc_r5"], "payload": {"parcel_id": "pc_r5"}}
+      ]
+    }
+  }
+]

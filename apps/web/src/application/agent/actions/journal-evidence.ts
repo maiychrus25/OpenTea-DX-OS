@@ -5,8 +5,20 @@ import { canonicalJson, sha256Hex, utcTimestamp } from '@/domain/agent/evidence'
 import type { Evidence, EvidenceRow } from '@/domain/agent/proposal'
 import {
   findCropCycleForEvidence,
+  findDiseaseReportForEvidence,
   findJournalEntryForEvidence,
+  findMarketDataForEvidence,
+  findParcelForEvidence,
+  findSensorReadingForEvidence,
+  findWeatherCacheForEvidence,
 } from '@/infrastructure/db/agent/PrismaEvidenceReader'
+import {
+  diseaseReportValues,
+  marketDataValues,
+  parcelValues,
+  sensorReadingValues,
+  weatherCacheValues,
+} from './field-evidence'
 
 // Evidence contract version 2, see platform/agent/tests/fixtures/evidence-vectors.json.
 export interface EvidenceJournalEntry {
@@ -91,6 +103,27 @@ export const EVIDENCE_LOADERS: EvidenceLoaders = {
   parcel_crop_cycles: async (htxCode, id) => {
     const cycle = await findCropCycleForEvidence(htxCode, id)
     return cycle ? cropCycleValues(cycle) : null
+  },
+  parcels: async (htxCode, id) => {
+    const parcel = await findParcelForEvidence(htxCode, id)
+    return parcel ? parcelValues(parcel) : null
+  },
+  disease_reports: async (htxCode, id) => {
+    const report = await findDiseaseReportForEvidence(htxCode, id)
+    return report ? diseaseReportValues(report) : null
+  },
+  sensor_readings: async (htxCode, id) => {
+    const reading = await findSensorReadingForEvidence(htxCode, id)
+    return reading ? sensorReadingValues(reading) : null
+  },
+  weather_cache: async (htxCode, id) => {
+    const row = await findWeatherCacheForEvidence(htxCode, id)
+    return row ? weatherCacheValues(row) : null
+  },
+  // Shared reference data: every cooperative reads the same rows, so the cooperative is not checked.
+  market_data: async (_htxCode, id) => {
+    const row = await findMarketDataForEvidence(id)
+    return row ? marketDataValues(row) : null
   },
 }
 

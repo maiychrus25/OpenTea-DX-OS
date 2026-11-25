@@ -123,12 +123,21 @@ if [ "$WEB_UP" = "1" ]; then
     fi
     sleep 3
   done
+  if [ "$agent_run_seen" != 1 ]; then
+    # Diagnostics for a loop that stopped moving: every thread's stack (faulthandler on SIGUSR1), resources, last log lines.
+    $COMPOSE kill -s SIGUSR1 dxos-agent >/dev/null 2>&1 || true
+    sleep 2
+    docker stats --no-stream --format '{{.Name}} cpu={{.CPUPerc}} mem={{.MemUsage}} pids={{.PIDs}}' "$($COMPOSE ps -q dxos-agent)" || true
+    $COMPOSE logs --no-log-prefix --tail 80 dxos-agent || true
+  fi
   [ "$agent_run_seen" = 1 ] && pass "dxos-agent reads the volume credentials and starts a journal-review run for TC" \
     || fail "no journal-review run for TC within 90 s (dxos-agent did not read its credentials)"
 
   # M1 end to end: the seeded TC spraying entry has no activity details, so A1 proposes to return it (rule-only when no LLM).
+  # 180 s, not 60: a bulletin written on the same CPU Ollama makes A1's LLM call wait; A1 then times out (60 s), retries
+  # once (60 s) and falls back to its rule reasons, so the proposal can take about two minutes (CI 2026-11-25).
   agent_prop_seen=0
-  for _ in $(seq 1 20); do
+  for _ in $(seq 1 60); do
     if [ "$(psql_app "select count(*) from platform.agent_proposals where htx_code='TC' and agent='journal-review' and 'je_smoke_agent_tc' = any(subject_ids)")" -gt 0 ]; then
       agent_prop_seen=1
       break
@@ -136,7 +145,7 @@ if [ "$WEB_UP" = "1" ]; then
     sleep 3
   done
   [ "$agent_prop_seen" = 1 ] && pass "dxos-agent proposes on the seeded TC journal entry (M1 end to end)" \
-    || fail "dxos-agent made no proposal for je_smoke_agent_tc within 60 s"
+    || fail "dxos-agent made no proposal for je_smoke_agent_tc within 180 s"
   assert_eq "$(psql_app "select count(*) from platform.agent_proposals where 'je_smoke_agent_lb' = any(subject_ids) and htx_code <> 'LB'")" "0" "no proposal for an LB entry is filed under another cooperative"
   # Stop the agent so the manual internal-API checks below do not race with it on the same entry.
   $COMPOSE stop dxos-agent >/dev/null

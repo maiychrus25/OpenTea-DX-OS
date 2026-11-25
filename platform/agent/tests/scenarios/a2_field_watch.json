@@ -1,0 +1,245 @@
+[
+  {
+    "name": "silent sensor for seven hours",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "FieldWatchLatestReadings": {
+        "telemetry_sensor_readings": [
+          {"parcel_code": "TC-A3", "sensor": "soil_moisture", "ts": "2026-11-24T01:00:00+00:00", "value": 40.2}
+        ]
+      },
+      "FieldWatchSprayings": {"journal_entries": []},
+      "FieldWatchWeather": {"weather_cache": []}
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.internal",
+          "subjects": ["sensor_silent:TC-A3|soil_moisture|2026-11-24T01:00:00.000Z"],
+          "payload": {
+            "template": "sensor_silent",
+            "slots": {"parcel_code": "TC-A3", "sensor": "soil_moisture", "hours": 7},
+            "subjects": ["sensor_silent:TC-A3|soil_moisture|2026-11-24T01:00:00.000Z"]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "dry soil on two parcels",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "FieldWatchLatestReadings": {
+        "telemetry_sensor_readings": [
+          {"parcel_code": "TC-A3", "sensor": "soil_moisture", "ts": "2026-11-24T07:30:00+00:00", "value": 28.4},
+          {"parcel_code": "TC-B1", "sensor": "soil_moisture", "ts": "2026-11-24T07:45:00+00:00", "value": 31.9}
+        ]
+      },
+      "FieldWatchSprayings": {"journal_entries": []},
+      "FieldWatchWeather": {"weather_cache": []}
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.households",
+          "subjects": ["dry_soil:2026-11-24"],
+          "payload": {
+            "template": "dry_soil",
+            "slots": {"parcel_codes": ["TC-A3", "TC-B1"], "value_pct": 28, "threshold_pct": 35},
+            "subjects": ["dry_soil:2026-11-24"]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "heat in the middle of the day",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "FieldWatchLatestReadings": {
+        "telemetry_sensor_readings": [
+          {"parcel_code": "TC-A3", "sensor": "air_temperature", "ts": "2026-11-24T07:50:00+00:00", "value": 36.7}
+        ]
+      },
+      "FieldWatchSprayings": {"journal_entries": []},
+      "FieldWatchWeather": {"weather_cache": []}
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.households",
+          "subjects": ["heat:2026-11-24"],
+          "payload": {
+            "template": "heat",
+            "slots": {"parcel_codes": ["TC-A3"], "value_c": 36},
+            "subjects": ["heat:2026-11-24"]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "frost at night in Vietnam",
+    "now": "2026-11-24T19:00:00Z",
+    "graphql": {
+      "FieldWatchLatestReadings": {
+        "telemetry_sensor_readings": [
+          {"parcel_code": "TC-B1", "sensor": "air_temperature", "ts": "2026-11-24T18:50:00+00:00", "value": -1.4}
+        ]
+      },
+      "FieldWatchSprayings": {"journal_entries": []},
+      "FieldWatchWeather": {"weather_cache": []}
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.households",
+          "subjects": ["frost:2026-11-25"],
+          "payload": {
+            "template": "frost",
+            "slots": {"parcel_codes": ["TC-B1"], "value_c": -2},
+            "subjects": ["frost:2026-11-25"]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "rain the day after spraying",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "FieldWatchLatestReadings": {"telemetry_sensor_readings": []},
+      "FieldWatchSprayings": {
+        "journal_entries": [
+          {
+            "id": "je_spray_a3",
+            "parcel_id": "pc_a3",
+            "entry_date": "2026-11-23T03:00:00+00:00",
+            "activity_type": "SPRAYING",
+            "status": "APPROVED",
+            "notes": "Phun thuốc cuối tuần",
+            "updated_at": "2026-11-23T04:00:00+00:00",
+            "parcel": {"id": "pc_a3", "parcel_code": "TC-A3"},
+            "activities": [
+              {
+                "id": "act_spray_a3",
+                "activity_detail": "Phun thuốc",
+                "product_name": "Matrine 0.5SL",
+                "dosage": "5 ml/bình 16L",
+                "withdrawal_days": 7,
+                "safe_harvest_date": null
+              }
+            ]
+          }
+        ]
+      },
+      "FieldWatchWeather": {
+        "weather_cache": [
+          {
+            "id": "6f1d0c9e-0000-4000-8000-00000000a001",
+            "parcel_id": "pc_a3",
+            "recorded_at": "2026-11-24T06:00:00+00:00",
+            "precipitation_mm": 0.0,
+            "forecast_json": {
+              "time": ["2026-11-24", "2026-11-25", "2026-11-26"],
+              "precipitation_sum": [0.0, 23.7, 4.15]
+            }
+          }
+        ]
+      }
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.households",
+          "subjects": ["rain_after_spray:2026-11-25"],
+          "payload": {
+            "template": "rain_after_spray",
+            "slots": {"parcel_codes": ["TC-A3"], "date": "2026-11-25", "rain_mm": 23},
+            "subjects": ["rain_after_spray:2026-11-25"]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "no forecast gives no proposal",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "FieldWatchLatestReadings": {"telemetry_sensor_readings": []},
+      "FieldWatchSprayings": {
+        "journal_entries": [
+          {
+            "id": "je_spray_b1",
+            "parcel_id": "pc_b1",
+            "entry_date": "2026-11-23T03:00:00+00:00",
+            "activity_type": "SPRAYING",
+            "status": "APPROVED",
+            "notes": null,
+            "updated_at": "2026-11-23T04:00:00+00:00",
+            "parcel": {"id": "pc_b1", "parcel_code": "TC-B1"},
+            "activities": [
+              {
+                "id": "act_spray_b1",
+                "activity_detail": "Phun thuốc",
+                "product_name": "Matrine 0.5SL",
+                "dosage": "5 ml/bình 16L",
+                "withdrawal_days": 7,
+                "safe_harvest_date": null
+              }
+            ]
+          }
+        ]
+      },
+      "FieldWatchWeather": {
+        "weather_cache": [
+          {
+            "id": "6f1d0c9e-0000-4000-8000-00000000a002",
+            "parcel_id": "pc_b1",
+            "recorded_at": "2026-11-24T06:00:00+00:00",
+            "precipitation_mm": 1.2,
+            "forecast_json": null
+          }
+        ]
+      }
+    },
+    "expected": {"proposals": []}
+  },
+  {
+    "name": "no sensors and no spraying gives nothing",
+    "now": "2026-11-24T08:00:00Z",
+    "graphql": {
+      "FieldWatchLatestReadings": {"telemetry_sensor_readings": []},
+      "FieldWatchSprayings": {"journal_entries": []},
+      "FieldWatchWeather": {"weather_cache": []}
+    },
+    "expected": {"proposals": []}
+  },
+  {
+    "name": "second cycle after a decision proposes the same subjects",
+    "now": "2026-11-24T08:30:00Z",
+    "graphql": {
+      "FieldWatchLatestReadings": {
+        "telemetry_sensor_readings": [
+          {"parcel_code": "TC-A3", "sensor": "soil_moisture", "ts": "2026-11-24T07:30:00+00:00", "value": 28.4},
+          {"parcel_code": "TC-B1", "sensor": "soil_moisture", "ts": "2026-11-24T07:45:00+00:00", "value": 31.9}
+        ]
+      },
+      "FieldWatchSprayings": {"journal_entries": []},
+      "FieldWatchWeather": {"weather_cache": []}
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "notification.households",
+          "subjects": ["dry_soil:2026-11-24"],
+          "payload": {
+            "template": "dry_soil",
+            "slots": {"parcel_codes": ["TC-A3", "TC-B1"], "value_pct": 28, "threshold_pct": 35},
+            "subjects": ["dry_soil:2026-11-24"]
+          }
+        }
+      ]
+    }
+  }
+]

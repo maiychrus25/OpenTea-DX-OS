@@ -52,6 +52,7 @@ const RUN_UUID = '00000000-0000-0000-0000-000000000010'
 const savedSettings = {
   'journal-review': { enabled: true, provider: 'anthropic', model: 'claude-haiku-5-5', schedule: null, thresholds: {} },
   digest: { enabled: false, provider: 'ollama', model: null, schedule: '07:30', thresholds: {} },
+  bulletin: { enabled: false, provider: 'ollama', model: null, schedule: null, thresholds: {} },
 }
 
 function tenant(role: 'manager' | 'officer' | 'farmer', htxCode = 'TC') {
@@ -66,6 +67,7 @@ const validSave = {
   agents: {
     'journal-review': { provider: 'anthropic', model: null },
     digest: { provider: 'ollama', model: null },
+    bulletin: { provider: 'ollama', model: null },
   },
   report_time: '07:30',
   monthly_limit_usd: 10,
@@ -191,6 +193,7 @@ describe('Agent settings routes (C1, C2, C3 and the manager tab)', () => {
     const body = {
       ...validSave,
       agents: {
+        ...validSave.agents,
         'journal-review': { enabled: false, provider: 'ollama', model: null },
         digest: { enabled: true, provider: 'ollama', model: null },
       },

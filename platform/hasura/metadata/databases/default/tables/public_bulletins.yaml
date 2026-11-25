@@ -4,15 +4,31 @@ table:
   name: bulletins
   schema: public
 select_permissions:
+  # Published rows only; a cooperative's own rows are visible to that cooperative, shared rows (htx_code null) to all.
   - role: farmer
     permission:
       columns: '*'
-      filter: {}
+      filter:
+        _and:
+          - status: {_eq: published}
+          - _or:
+              - htx_code: {_is_null: true}
+              - htx_code: {_eq: X-Hasura-Htx-Code}
   - role: manager
     permission:
       columns: '*'
-      filter: {}
+      filter:
+        _and:
+          - status: {_eq: published}
+          - _or:
+              - htx_code: {_is_null: true}
+              - htx_code: {_eq: X-Hasura-Htx-Code}
   - role: officer
     permission:
       columns: '*'
-      filter: {}
+      filter:
+        _and:
+          - status: {_eq: published}
+          - _or:
+              - htx_code: {_is_null: true}
+              - htx_code: {_eq: X-Hasura-Htx-Code}
