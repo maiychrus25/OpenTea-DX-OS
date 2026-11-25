@@ -6,6 +6,8 @@ import type { DecisionChannel, Evidence, Origin, Risk } from '@/domain/agent/pro
 import type { Tenant } from '@/lib/api/tenant'
 import { journalApproveAction } from './actions/journal-approve.action'
 import { journalRejectAction } from './actions/journal-reject.action'
+import { diseaseInspectionAction } from './actions/disease-inspection.action'
+import { harvestApproveAction } from './actions/harvest-approve.action'
 import { notificationHouseholdsAction } from './actions/notification-households.action'
 import { notificationInternalAction } from './actions/notification-internal.action'
 import type { EvidenceLoaders } from './actions/journal-evidence'
@@ -36,7 +38,7 @@ export interface ActionDefinition<P extends Record<string, unknown> = Record<str
   /** Repeat window: a proposal with the same dedupe key created this recently is not proposed again. */
   repeatAfterHours: number | null
   expiresAfterHours: number
-  preview(payload: P, subjects?: ReadonlyMap<string, JournalSubject>): string[]
+  preview(payload: P, subjects?: ReadonlyMap<string, JournalSubject>, evidence?: Evidence): string[]
   subjects(payload: P): string[]
   isStale(payload: P, evidence: Evidence, ctx: ActionStalenessContext): Promise<boolean>
   execute(payload: P, approver: Tenant): Promise<Record<string, unknown>>
@@ -47,6 +49,8 @@ export const ACTION_CATALOG: Readonly<Record<string, ActionDefinition<any>>> = O
   'journal.reject': journalRejectAction,
   'notification.internal': notificationInternalAction,
   'notification.households': notificationHouseholdsAction,
+  'disease.inspection': diseaseInspectionAction,
+  'harvest.approve': harvestApproveAction,
 })
 
 export function getAction(kind: string): ActionDefinition<any> | undefined {

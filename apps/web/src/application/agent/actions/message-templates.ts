@@ -20,7 +20,7 @@ export interface RenderedNotification {
 }
 
 // Mirrors the `vi` labels of ai-models/tea_class_names_vi.json (healthy is never a template slot).
-const DISEASE_LABEL_VI = {
+export const DISEASE_LABEL_VI = {
   algal_leaf_spot: 'Bệnh đốm tảo',
   birds_eye_spot: 'Bệnh đốm mắt chim (bird\'s eye spot)',
   brown_blight: 'Brown blight',
