@@ -45,6 +45,8 @@ export interface ExecutionAuditMeta {
 
 export interface ProposalRepository {
   create(input: CreateProposalRecord): Promise<{ id: string } | null>
+  /** Whether a proposal with this dedupe key was created at or after `since`, in any status. */
+  createdSince(htxCode: string, dedupeKey: string, since: Date): Promise<boolean>
   list(htxCode: string, filter: ProposalFilter): Promise<Proposal[]>
   findById(htxCode: string, id: string): Promise<Proposal | null>
   claim(htxCode: string, id: string, decision: ProposalDecisionRecord): Promise<Proposal | null>

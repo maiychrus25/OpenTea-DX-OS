@@ -13,6 +13,7 @@ import {
   JOURNAL_STATUS_LABEL,
   type JournalSubject,
 } from '@/application/agent/actions/journal-labels'
+import { DISEASE_LABEL_VI } from '@/application/agent/actions/disease-labels'
 import type { DecisionChannel, Evidence, ProposalStatus, Risk } from '@/domain/agent/proposal'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import styles from './ProposalInbox.module.css'
@@ -63,10 +64,45 @@ const STATUS_LABEL: Record<ProposalStatus, { label: string; tone: 'green' | 'amb
 const KIND_LABEL: Record<string, string> = {
   'journal.approve': 'Duyệt nhật ký',
   'journal.reject': 'Trả lại nhật ký',
+  'notification.internal': 'Thông báo nội bộ',
+  'notification.households': 'Thông báo nông hộ',
+  'disease.inspection': 'Đề nghị kiểm tra dịch bệnh',
+  'harvest.approve': 'Duyệt thu hoạch',
+  'bulletin.publish': 'Đăng bản tin thị trường',
 }
 
 const FIELD_LABEL: Record<string, string> = {
   reason_vi: 'Nội dung lý do gửi nông hộ',
+  note_vi: 'Lời nhắn thêm cho nông hộ',
+  bulletin_vi: 'Nội dung bản tin',
+}
+
+const PARCEL_STATUS_LABEL: Record<string, string> = {
+  DRAFT: 'Nháp',
+  SOWING: 'Gieo trồng',
+  TENDING: 'Đang chăm sóc',
+  HARVEST_APPROVED: 'Đã duyệt thu hoạch',
+  HARVESTED: 'Đã thu hoạch',
+}
+
+const DISEASE_STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Chờ xác nhận',
+  CONFIRMED: 'Đã xác nhận',
+  REJECTED: 'Từ chối',
+}
+
+const SENSOR_LABEL: Record<string, { label: string; unit: string }> = {
+  soil_moisture: { label: 'Độ ẩm đất', unit: '%' },
+  soil_temperature: { label: 'Nhiệt độ đất', unit: '°C' },
+  air_temperature: { label: 'Nhiệt độ không khí', unit: '°C' },
+  air_humidity: { label: 'Độ ẩm không khí', unit: '%' },
+  rainfall: { label: 'Lượng mưa', unit: 'mm' },
+}
+
+const METRIC_LABEL: Record<string, string> = {
+  export_price: 'Giá xuất khẩu',
+  import_tariff: 'Thuế nhập khẩu',
+  production_volume: 'Sản lượng',
 }
 
 const DECISION_ERROR = 'Không thể xử lý đề xuất'
@@ -172,10 +208,84 @@ function cropCycleView(values: Record<string, unknown>): EvidenceView {
   return { title: season ? `Vụ ${season}` : 'Vụ trồng', lines }
 }
 
+/** A `*_milli` value (floor of value times 1000) shown in its unit, without the raw integer. */
+function milliText(val: unknown, unit: string): string {
+  if (typeof val !== 'number') return '—'
+  const shown = (val / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 3 })
+  return unit ? `${shown} ${unit}` : shown
+}
+
+function parcelView(values: Record<string, unknown>): EvidenceView {
+  const code = asText(values.parcel_code)
+  const status = asText(values.status)
+  const approved = formatVnDate(asText(values.harvest_approved_at))
+  return {
+    title: code ? `Thửa ${code}` : 'Thửa',
+    lines: [
+      `Trạng thái: ${status ? (PARCEL_STATUS_LABEL[status] ?? status) : '—'}`,
+      `Duyệt thu hoạch: ${approved ?? 'chưa duyệt'}`,
+    ],
+  }
+}
+
+function diseaseReportView(values: Record<string, unknown>): EvidenceView {
+  const key = asText(values.confirmed_diagnosis) ?? asText(values.ai_disease_name)
+  const status = asText(values.status)
+  const day = formatVnDate(asText(values.detection_date))
+  return {
+    title: day ? `Báo cáo bệnh · ${day}` : 'Báo cáo bệnh',
+    lines: [
+      `Bệnh: ${key ? (DISEASE_LABEL_VI[key] ?? key) : 'Chưa rõ'}`,
+      `Trạng thái: ${status ? (DISEASE_STATUS_LABEL[status] ?? status) : '—'}`,
+    ],
+  }
+}
+
+function sensorReadingView(values: Record<string, unknown>): EvidenceView {
+  const sensor = SENSOR_LABEL[asText(values.sensor) ?? ''] ?? { label: 'Cảm biến', unit: '' }
+  const code = asText(values.parcel_code)
+  return {
+    title: code ? `${sensor.label} · thửa ${code}` : sensor.label,
+    lines: [`Giá trị: ${milliText(values.value_milli, sensor.unit)}`, `Lúc: ${formatDateTime(asText(values.ts))}`],
+  }
+}
+
+function weatherView(values: Record<string, unknown>): EvidenceView {
+  const days = Array.isArray(values.forecast_days) ? values.forecast_days : []
+  const sums = Array.isArray(values.forecast_precipitation_milli) ? values.forecast_precipitation_milli : []
+  return {
+    title: `Thời tiết · ${formatDateTime(asText(values.recorded_at))}`,
+    lines: [
+      `Lượng mưa: ${milliText(values.precipitation_milli, 'mm')}`,
+      ...(days.length > 0 ? ['Dự báo mưa:'] : []),
+    ],
+    items: days.map((day, i) => `${formatVnDate(String(day)) ?? String(day)}: ${milliText(sums[i], 'mm')}`),
+  }
+}
+
+function marketView(values: Record<string, unknown>): EvidenceView {
+  const metric = asText(values.metric)
+  const source = asText(values.source)
+  const period = asText(values.period)
+  return {
+    title: `Giá thị trường · ${asText(values.commodity) ?? ''}`.trim(),
+    lines: [
+      `${metric ? (METRIC_LABEL[metric] ?? metric) : 'Chỉ số'}: ${milliText(values.value_milli, asText(values.unit) ?? '')}`,
+      `Nguồn: ${source ?? '—'} · kỳ ${period ?? '—'}`,
+      `Cập nhật: ${formatDateTime(asText(values.fetched_at))}`,
+    ],
+  }
+}
+
 function evidenceView(row: Evidence['rows'][number], subject?: JournalSubject): EvidenceView {
   const values = row.values ?? {}
   if (row.table === 'journal_entries') return journalEntryView(values, subject)
   if (row.table === 'parcel_crop_cycles') return cropCycleView(values)
+  if (row.table === 'parcels') return parcelView(values)
+  if (row.table === 'disease_reports') return diseaseReportView(values)
+  if (row.table === 'sensor_readings') return sensorReadingView(values)
+  if (row.table === 'weather_cache') return weatherView(values)
+  if (row.table === 'market_data') return marketView(values)
   return {
     title: row.table,
     lines: Object.entries(values).map(([key, val]) => `${key}: ${formatValue(val)}`),

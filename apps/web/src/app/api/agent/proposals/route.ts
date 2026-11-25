@@ -40,7 +40,7 @@ async function getAgentProposals(request: Request) {
     return {
       ...p,
       titleVi: def?.titleVi ?? p.kind,
-      preview: def ? def.preview(p.payload, labels) : [],
+      preview: def ? def.preview(p.payload, labels, p.evidence) : [],
       canDecide: Boolean(def && def.approverRoles.includes(tenant.role as ApproverRole)),
       editableFields: def?.editableFields ?? [],
       subjects,

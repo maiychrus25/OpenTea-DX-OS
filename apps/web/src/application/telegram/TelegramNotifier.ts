@@ -89,7 +89,7 @@ export class TelegramNotifier {
     if (recipients.length === 0) return
 
     const labels = await this.labelsFor(proposal.htxCode, [proposal])
-    const text = proposalText(proposal, definition.titleVi, definition.preview(proposal.payload, labels))
+    const text = proposalText(proposal, definition.titleVi, definition.preview(proposal.payload, labels, proposal.evidence))
     const buttons = [
       [
         { text: 'Duyệt', callback_data: signCallbackData(key, proposal.id, 'a') },

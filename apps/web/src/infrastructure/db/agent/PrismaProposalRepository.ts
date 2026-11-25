@@ -198,6 +198,16 @@ export class PrismaProposalRepository implements ProposalRepository {
     return rows[0]?.count ?? 0
   }
 
+  async createdSince(htxCode: string, dedupeKey: string, since: Date): Promise<boolean> {
+    const rows = await prisma.$queryRaw<{ found: boolean }[]>`
+      SELECT EXISTS (
+        SELECT 1 FROM platform.agent_proposals
+        WHERE htx_code = ${htxCode} AND dedupe_key = ${dedupeKey} AND created_at >= ${since}
+      ) AS found
+    `
+    return rows[0]?.found === true
+  }
+
   async findById(htxCode: string, id: string): Promise<Proposal | null> {
     const rows = await prisma.$queryRaw<ProposalRow[]>`
       SELECT id::text AS id, htx_code, run_id::text AS run_id, agent, kind, payload, reason_vi,

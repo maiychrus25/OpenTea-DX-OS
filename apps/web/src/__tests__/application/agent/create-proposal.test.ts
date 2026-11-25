@@ -14,10 +14,10 @@ const validEvidence = { rows: validRows, sha256: evidenceDigest(validRows) }
 const loaders = { journal_entries: jest.fn(async () => ({ id: 'entry-1' })), parcel_crop_cycles: jest.fn(async () => ({})) }
 
 describe('CreateProposalUseCase (spec tests 3 & 7)', () => {
-  let repo: jest.Mocked<Pick<ProposalRepository, 'create'>>
+  let repo: jest.Mocked<Pick<ProposalRepository, 'create' | 'createdSince'>>
 
   beforeEach(() => {
-    repo = { create: jest.fn().mockResolvedValue({ id: 'prop-1' }) }
+    repo = { create: jest.fn().mockResolvedValue({ id: 'prop-1' }), createdSince: jest.fn().mockResolvedValue(false) }
   })
 
   test('rejects unknown action kind', async () => {

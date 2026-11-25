@@ -31,7 +31,7 @@ async function getBulletin(request: Request) {
   const repo = new PrismaBulletinRepository(prisma)
   const useCase = new GetLatestBulletinUseCase(repo)
   
-  const data = await useCase.execute(commodity)
+  const data = await useCase.execute(commodity, htxCode)
   
   return NextResponse.json({ data })
 }

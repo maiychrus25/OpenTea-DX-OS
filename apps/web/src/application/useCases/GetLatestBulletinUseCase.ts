@@ -6,7 +6,7 @@ import { IBulletinRepository, Bulletin } from '../../domain/repositories/IBullet
 export class GetLatestBulletinUseCase {
   constructor(private readonly repository: IBulletinRepository) {}
 
-  async execute(commodity: string): Promise<Bulletin | null> {
-    return this.repository.getLatestBulletin(commodity);
+  async execute(commodity: string, htxCode: string): Promise<Bulletin | null> {
+    return this.repository.getLatestBulletin(commodity, htxCode);
   }
 }
