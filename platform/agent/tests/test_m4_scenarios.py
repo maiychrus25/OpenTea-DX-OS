@@ -11,6 +11,7 @@ import pytest
 
 from dxos_agent.agents.disease_watch import run_disease_watch
 from dxos_agent.agents.field_watch import run_field_watch
+from dxos_agent.agents.harvest_ready import run_harvest_ready
 
 SCENARIOS = Path(__file__).parent / "scenarios"
 OPERATION = re.compile(r"\s*query\s+(\w+)")
@@ -64,6 +65,9 @@ RUNNERS: dict[str, Callable[[ScenarioGateway, dict[str, Any]], Any]] = {
         gateway, _parse(case["now"]), case.get("thresholds")
     ),
     "a3_disease_watch.json": lambda gateway, case: run_disease_watch(
+        gateway, _parse(case["now"]), case.get("thresholds")
+    ),
+    "a4_harvest_ready.json": lambda gateway, case: run_harvest_ready(
         gateway, _parse(case["now"]), case.get("thresholds")
     ),
 }
