@@ -49,12 +49,14 @@ class IntervalSchedule:
 
 @dataclass
 class DailySchedule:
-    """Due once per Vietnam day, at or after `at` (Vietnam time)."""
+    """Due on the first cycle after start, then once per Vietnam day at or after `at` (Vietnam time)."""
 
     at: time
     last_day: date | None = None
 
     def is_due(self, now: datetime) -> bool:
+        if self.last_day is None:  # first cycle after start, at any hour
+            return True
         local = now.astimezone(VN_TZ)
         return local.time() >= self.at and self.last_day != local.date()
 
