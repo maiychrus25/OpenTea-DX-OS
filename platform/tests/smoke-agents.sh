@@ -13,11 +13,15 @@ M4_PAIR="pc_tc_1"   # the disease cluster: three reports on one parcel, so the d
 M4_READY="pc_tc_2"  # the ready parcel for harvest-ready
 M4_READY_STATUS=$(psql_app "select status from parcels where id='$M4_READY'")
 M4_READY_APPROVED_AT=$(psql_app "select coalesce(harvest_approved_at::text, '') from parcels where id='$M4_READY'")
+# The two-HTX fixture gives pc_tc_1 no centroid, and disease-watch ignores reports on a parcel it cannot place (contract
+# C6), so the cluster parcel gets one inside the TC area for this smoke; the previous values come back at cleanup.
+M4_PAIR_CENTROID=$(psql_app "select coalesce(centroid_lat::text, '') || ',' || coalesce(centroid_lng::text, '') from parcels where id='$M4_PAIR'")
 M4_BULLETIN_PROVIDER=$(psql_app "select provider from platform.agent_settings where htx_code='TC' and agent='bulletin'")
 M4_REVIEW_PROVIDER=$(psql_app "select provider from platform.agent_settings where htx_code='TC' and agent='journal-review'")
 M4_AGENTS="'field-watch','disease-watch','harvest-ready','bulletin'"
 
 m4_cleanup() {
+  psql_app "update parcels set centroid_lat=nullif('${M4_PAIR_CENTROID%%,*}','')::float8, centroid_lng=nullif('${M4_PAIR_CENTROID#*,}','')::float8 where id='$M4_PAIR'" >/dev/null 2>&1 || true
   local rows="select id from platform.agent_proposals where htx_code='TC' and created_at >= '$M4_T0' and agent in ($M4_AGENTS)"
   psql_app "delete from platform.telegram_conversations where proposal_id in ($rows)" >/dev/null 2>&1 || true
   psql_app "delete from platform.telegram_outbox where proposal_id in ($rows) or (chat_id=$TG_OWNER and created_at >= '$M4_T0')" >/dev/null 2>&1 || true
@@ -51,6 +55,7 @@ psql_app "delete from platform.telegram_outbox where proposal_id in ($M4_OLD)" >
 psql_app "delete from platform.telegram_conversations where proposal_id in ($M4_OLD)" >/dev/null
 psql_app "delete from platform.agent_proposals where htx_code='TC' and agent in ($M4_AGENTS)" >/dev/null
 
+psql_app "update parcels set centroid_lat = coalesce(centroid_lat, 21.58), centroid_lng = coalesce(centroid_lng, 105.77) where id='$M4_PAIR'" >/dev/null
 # Seeds: a sensor silent for 8 h, three helopeltis reports on one cooperative parcel, one ready TC parcel, two market rows.
 psql_app "insert into telemetry.sensor_readings (htx_code, parcel_code, sensor, ts, value) values
   ('TC', 'P-TC-001', 'soil_moisture', now() - interval '8 hours', 41.5) on conflict do nothing" >/dev/null
