@@ -14,6 +14,7 @@ M4_READY="pc_tc_2"  # the ready parcel for harvest-ready
 M4_READY_STATUS=$(psql_app "select status from parcels where id='$M4_READY'")
 M4_READY_APPROVED_AT=$(psql_app "select coalesce(harvest_approved_at::text, '') from parcels where id='$M4_READY'")
 M4_BULLETIN_PROVIDER=$(psql_app "select provider from platform.agent_settings where htx_code='TC' and agent='bulletin'")
+M4_REVIEW_PROVIDER=$(psql_app "select provider from platform.agent_settings where htx_code='TC' and agent='journal-review'")
 M4_AGENTS="'field-watch','disease-watch','harvest-ready','bulletin'"
 
 m4_cleanup() {
@@ -31,6 +32,9 @@ m4_cleanup() {
   psql_app "delete from parcel_crop_cycles where id='pcc_smoke_m4_tc_2'" >/dev/null 2>&1 || true
   [ -n "${M4_READY_STATUS:-}" ] && psql_app "update parcels set status='$M4_READY_STATUS', harvest_approved_at=nullif('$M4_READY_APPROVED_AT','')::timestamptz where id='$M4_READY'" >/dev/null 2>&1 || true
   psql_app "delete from market_data where source='SMOKE_M4'" >/dev/null 2>&1 || true
+  if [ -n "${M4_REVIEW_PROVIDER:-}" ]; then
+    psql_app "update platform.agent_settings set provider='$M4_REVIEW_PROVIDER' where htx_code='TC' and agent='journal-review'" >/dev/null 2>&1 || true
+  fi
   if [ -n "${M4_BULLETIN_PROVIDER:-}" ]; then
     psql_app "update platform.agent_settings set provider='$M4_BULLETIN_PROVIDER' where htx_code='TC' and agent='bulletin'" >/dev/null 2>&1 || true
   else
@@ -59,6 +63,8 @@ psql_app "insert into market_data (id, source, commodity, metric, value, unit, p
 # The agents run for every cooperative with credentials (like A1), so only the bulletin provider is set here.
 psql_app "insert into platform.agent_settings (htx_code, agent, provider) values ('TC', 'bulletin', 'anthropic')
   on conflict (htx_code, agent) do update set provider = 'anthropic'" >/dev/null
+# A1 runs first in each cycle: on the stub too, so a slow CPU Ollama in CI cannot hold the M4 agents past the waits below.
+psql_app "update platform.agent_settings set provider = 'anthropic' where htx_code='TC' and agent='journal-review'" >/dev/null
 
 # Telegram first, so every proposal the restarted agents file is queued to the linked manager with signed buttons.
 telegram_relay_up
