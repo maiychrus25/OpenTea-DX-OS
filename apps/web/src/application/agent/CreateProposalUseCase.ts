@@ -26,7 +26,7 @@ export interface CreateProposalInput {
 
 export class CreateProposalUseCase {
   constructor(
-    private readonly repo: Pick<ProposalRepository, 'create'>,
+    private readonly repo: Pick<ProposalRepository, 'create' | 'createdSince'>,
     private readonly loaders: EvidenceLoaders = EVIDENCE_LOADERS
   ) {}
 
@@ -41,6 +41,10 @@ export class CreateProposalUseCase {
 
     const parsedPayload = definition.payloadSchema.safeParse(input.payload)
     if (!parsedPayload.success) {
+      throw new ValidationError('INVALID_PAYLOAD')
+    }
+    // Text a human adds when deciding (for example a note to households) is never written by an agent.
+    if (input.origin === 'agent' && definition.humanOnlyFields.some((key) => key in input.payload)) {
       throw new ValidationError('INVALID_PAYLOAD')
     }
 
@@ -64,11 +68,13 @@ export class CreateProposalUseCase {
       }
     }
 
-    // Subjects are journal entries for every kind in the catalogue, so each must have its evidence row.
+    // With a subjectTable every subject must have its evidence row in that table; null means dedupe key only.
     const subjects = Array.from(new Set(definition.subjects(parsedPayload.data)))
-    for (const subject of subjects) {
-      if (!rows.some((r) => r.table === 'journal_entries' && r.id === subject)) {
-        throw new ValidationError('SUBJECT_NOT_IN_EVIDENCE')
+    if (definition.subjectTable !== null) {
+      for (const subject of subjects) {
+        if (!rows.some((r) => r.table === definition.subjectTable && r.id === subject)) {
+          throw new ValidationError('SUBJECT_NOT_IN_EVIDENCE')
+        }
       }
     }
 
@@ -81,6 +87,16 @@ export class CreateProposalUseCase {
     const expiresAt = new Date(now.getTime() + definition.expiresAfterHours * 3_600_000)
     // The agent's own dedupe key is ignored: duplicates are judged by the subjects they act on.
     const dedupeKey = `${definition.kind}:${canonicalJson(subjects)}`
+    if (
+      definition.repeatAfterHours !== null &&
+      (await this.repo.createdSince(
+        input.htxCode,
+        dedupeKey,
+        new Date(now.getTime() - definition.repeatAfterHours * 3_600_000)
+      ))
+    ) {
+      return null
+    }
 
     return this.repo.create({
       htxCode: input.htxCode,

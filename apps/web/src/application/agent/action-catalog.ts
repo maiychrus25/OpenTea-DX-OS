@@ -27,6 +27,12 @@ export interface ActionDefinition<P extends Record<string, unknown> = Record<str
   channels: readonly DecisionChannel[]
   payloadSchema: z.ZodType<P, z.ZodTypeDef, unknown>
   editableFields: readonly (keyof P & string)[]
+  /** Agent-supplied payloads may not carry these keys; a human adds them when deciding. Must be editable. */
+  humanOnlyFields: readonly string[]
+  /** Table every subject must be a row of; null when subjects are only the dedupe key. */
+  subjectTable: string | null
+  /** Repeat window: a proposal with the same dedupe key created this recently is not proposed again. */
+  repeatAfterHours: number | null
   expiresAfterHours: number
   preview(payload: P, subjects?: ReadonlyMap<string, JournalSubject>): string[]
   subjects(payload: P): string[]

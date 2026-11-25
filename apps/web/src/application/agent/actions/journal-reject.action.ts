@@ -27,6 +27,9 @@ export const journalRejectAction: ActionDefinition<JournalRejectPayload> = {
   channels: ['web', 'telegram'],
   payloadSchema: journalRejectPayloadSchema,
   editableFields: ['reason_vi'],
+  humanOnlyFields: [],
+  subjectTable: 'journal_entries',
+  repeatAfterHours: null,
   expiresAfterHours: 72,
   preview(payload, subjects) {
     const verb = payload.decision === 'REJECTED' ? 'Từ chối' : 'Yêu cầu sửa'

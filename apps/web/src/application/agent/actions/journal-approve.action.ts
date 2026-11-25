@@ -25,6 +25,9 @@ export const journalApproveAction: ActionDefinition<JournalApprovePayload> = {
   channels: ['web', 'telegram'],
   payloadSchema: journalApprovePayloadSchema,
   editableFields: [],
+  humanOnlyFields: [],
+  subjectTable: 'journal_entries',
+  repeatAfterHours: null,
   expiresAfterHours: 72,
   preview(payload, subjects) {
     return payload.entry_ids.map((id) => {
