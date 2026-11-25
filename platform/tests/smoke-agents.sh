@@ -48,6 +48,10 @@ m4_cleanup() {
 # The EXIT trap of smoke-llm stays in place: this one runs first, then its cleanup.
 trap 'm4_cleanup; llm_cleanup' EXIT
 
+# The agent stays stopped until Telegram is linked: a cycle of the running one after the clean slate files the warnings
+# with no message to the manager, and the restarted agent then dedupes them (main CI 2026-11-25).
+$COMPOSE stop dxos-agent >/dev/null
+
 # Clean slate: the agent has run the four M4 agents on the CI data through the earlier smokes, and their 24-hour repeat
 # window would dedupe today's warnings (CI 2026-11-25). Their TC proposals go first, with the messages that reference them.
 M4_OLD="select id from platform.agent_proposals where htx_code='TC' and agent in ($M4_AGENTS)"
