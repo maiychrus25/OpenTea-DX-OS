@@ -22,7 +22,9 @@ import { refreshAccessToken } from '@/lib/auth/token-refresh'
 import { getCoreToken } from '@/lib/auth/core-token'
 import { CoreUnauthorizedError } from '@/domain/errors'
 
-const { jwt: jwtCallback, session: sessionCallback } = (NextAuth as unknown as jest.Mock).mock.calls[0][0].callbacks
+const authConfig = (NextAuth as unknown as jest.Mock).mock.calls[0][0]
+const { jwt: jwtCallback, session: sessionCallback } = authConfig.callbacks
+const signOutEvent = authConfig.events.signOut as (message: { token: JWT | null }) => Promise<void>
 const handler = middleware as unknown as (req: unknown, ctx: unknown) => Response
 
 const nowSeconds = () => Math.floor(Date.now() / 1000)
@@ -216,6 +218,22 @@ describe('auth callbacks', () => {
     })
   })
 
+  it('does not keep the Keycloak id token: the session must fit in one cookie (#75)', async () => {
+    const token = await jwtCallback({
+      token: {},
+      account: { id_token: 'id-token', access_token: accessTokenWith({}), refresh_token: 'refresh', expires_at: nowSeconds() + 300 },
+    })
+
+    expect(token).not.toHaveProperty('idToken')
+  })
+
+  it('drops the id token from a session made before the change', async () => {
+    const token = await jwtCallback({ token: { ...tokenExpiringIn(120), idToken: 'id-token' } })
+
+    expect(token).not.toHaveProperty('idToken')
+    expect(token.accessToken).toBe('old-access')
+  })
+
   it('session callback exposes htxCode and no token field', async () => {
     const session = await sessionCallback({
       session: { user: { name: 'A' }, expires: 'later' },
@@ -233,6 +251,42 @@ describe('auth callbacks', () => {
 
     expect(session.user.htxCode).toBeNull()
     expect(session).not.toHaveProperty('error')
+  })
+})
+
+describe('sign-out', () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  it('ends the Keycloak session with the refresh token (back-channel logout)', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+
+    await signOutEvent({ token: { ...tokenExpiringIn(120) } })
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect(url).toMatch(/\/realms\/agrimarket\/protocol\/openid-connect\/logout$/)
+    expect(init.method).toBe('POST')
+    const body = new URLSearchParams(String(init.body))
+    expect(body.get('refresh_token')).toBe('old-refresh')
+    expect(body.get('client_id')).toBeTruthy()
+    expect(body.get('client_secret')).toBeTruthy()
+  })
+
+  it('makes no call for a session without a refresh token', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch')
+
+    await signOutEvent({ token: { sub: 'dev' } })
+    await signOutEvent({ token: null })
+
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('a Keycloak that cannot be reached does not stop the sign-out', async () => {
+    jest.spyOn(global, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'))
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined)
+
+    await expect(signOutEvent({ token: { ...tokenExpiringIn(120) } })).resolves.toBeUndefined()
+    expect(errorSpy).toHaveBeenCalledWith('Keycloak logout failed', { status: 'unreachable' })
   })
 })
 

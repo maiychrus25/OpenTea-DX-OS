@@ -8,7 +8,7 @@ import { signOut } from '@/auth'
 /**
  * Server action to handle user sign out.
  * This ensures the sign-out process is executed server-side, 
- * terminating the NextAuth session and triggering the Keycloak OIDC end_session_endpoint via events.signOut.
+ * terminating the NextAuth session and ending the Keycloak session (back-channel logout with the refresh token) via events.signOut.
  */
 export async function signOutAction() {
   await signOut({ redirectTo: '/login' })
