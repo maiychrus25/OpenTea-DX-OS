@@ -102,3 +102,16 @@ def test_unknown_path_and_bad_json_are_refused(stub):
 
 def test_health_endpoint_answers(stub):
     assert get(stub + "/healthz") == {"ok": True}
+
+
+def test_bulletin_request_gets_a_bulletin_text_key(stub):
+    # A5 asks for {"bulletin_vi": ...} in the system message; the answer carries that key with a text of 50+ characters.
+    answer = post(
+        stub + "/v1/messages",
+        {"model": "claude-haiku-5-5", "max_tokens": 512,
+         "system": "Viết bản tin thị trường. Trả về JSON {\"bulletin_vi\": \"...\"}.",
+         "messages": [{"role": "user", "content": json.dumps({"rows": []}, ensure_ascii=False)}]},
+        {"x-api-key": "fake-key", "anthropic-version": "2026-10-21"},
+    )
+    text = json.loads(answer["content"][1]["text"])["bulletin_vi"]
+    assert len(text) >= 50 and not any(ch.isdigit() for ch in text)
