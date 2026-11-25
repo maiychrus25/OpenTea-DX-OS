@@ -9,9 +9,11 @@ from typing import Any, Callable, Mapping
 
 import pytest
 
+from dxos_agent.agents.bulletin import run_bulletin
 from dxos_agent.agents.disease_watch import run_disease_watch
 from dxos_agent.agents.field_watch import run_field_watch
 from dxos_agent.agents.harvest_ready import run_harvest_ready
+from dxos_agent.providers import ProviderError, ReplayProvider
 
 SCENARIOS = Path(__file__).parent / "scenarios"
 OPERATION = re.compile(r"\s*query\s+(\w+)")
@@ -60,7 +62,34 @@ def _parse(ts: str) -> datetime:
     return datetime.fromisoformat(ts.replace("Z", "+00:00"))
 
 
+class FailingExternal(ReplayProvider):
+    """An external provider whose every call fails, as when its key or network is down."""
+
+    name = "anthropic"
+    external = True
+
+    def _generate(self, messages, schema):
+        del messages, schema
+        raise ProviderError("upstream unavailable")
+
+
+class OllamaReplay(ReplayProvider):
+    """The internal fallback, served from the case's replay response."""
+
+    name = "ollama"
+
+
+def _run_bulletin(gateway: ScenarioGateway, case: dict[str, Any]) -> Any:
+    fixtures = {"default": case.get("replay_response", {})}
+    if case.get("primary_error"):
+        return run_bulletin(
+            gateway, _parse(case["now"]), FailingExternal(fixtures=fixtures), case.get("thresholds"), OllamaReplay(fixtures=fixtures)
+        )
+    return run_bulletin(gateway, _parse(case["now"]), ReplayProvider(fixtures=fixtures), case.get("thresholds"))
+
+
 RUNNERS: dict[str, Callable[[ScenarioGateway, dict[str, Any]], Any]] = {
+    "a5_bulletin.json": _run_bulletin,
     "a2_field_watch.json": lambda gateway, case: run_field_watch(
         gateway, _parse(case["now"]), case.get("thresholds")
     ),
