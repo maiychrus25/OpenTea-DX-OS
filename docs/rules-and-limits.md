@@ -235,6 +235,27 @@ Provider bên ngoài (Anthropic, OpenAI) tắt mặc định và chỉ bật cho
 
 Ollama không bị che dữ liệu vì dữ liệu không rời máy chủ của HTX.
 
+### 3.10 Ngưỡng và mẫu tin của agent M4 (A2–A5)
+
+Các ngưỡng mặc định nằm trong `thresholds` của từng agent và có thể ghi đè theo HTX. Giá trị này trùng với ngưỡng cảnh báo của Tea IoT Station (`apps/tea-iot/src/TeaIot.Core/Alerts.cs`) và ngưỡng mất tín hiệu của bảng điều khiển HTX.
+
+| Agent | Ngưỡng | Mặc định | Quyết định khi kích hoạt |
+|---|---|---|---|
+| A2 `field-watch` | `silent_hours` | 6 giờ | Cảm biến không gửi số đo quá ngưỡng → đề nghị `notification.internal` (mẫu `sensor_silent`) |
+| A2 | `dry_soil_pct` | 35 % | Độ ẩm đất dưới ngưỡng → `notification.households` (mẫu `dry_soil`) |
+| A2 | `heat_c` | 35 °C | Nhiệt độ không khí trên ngưỡng → mẫu `heat` |
+| A2 | `frost_c` | 4 °C | Nhiệt độ không khí dưới ngưỡng → mẫu `frost` |
+| A2 | `heavy_rain_mm` | 15 mm | Dự báo mưa từ ngưỡng trở lên trong ngày sau lần phun gần đây → mẫu `rain_after_spray` |
+| A2 | `spray_lookback_days`, `forecast_days` | 2 ngày, 2 ngày | Phạm vi xét lần phun gần đây và dự báo |
+| A2 | `fresh_reading_hours` | 2 giờ | Chỉ số đo trong khoảng này mới được xét ngưỡng |
+| A3 `disease-watch` | `radius_m`, `window_days`, `min_reports` | 2000 m, 7 ngày, 3 báo cáo | Từ 3 báo cáo cùng bệnh trong 2 km → `disease.inspection` và `notification.households` (mẫu `disease_nearby`). Chạy hằng ngày lúc 07:00 và khi tập báo cáo trong cửa sổ thay đổi |
+| A4 `harvest-ready` | `harvest_window_days` | 3 ngày | Thửa đang `TENDING`, vụ có ngày thu hoạch dự kiến trong 3 ngày tới, và mọi hoạt động phun thuốc không nháp đã qua ngày an toàn → `harvest.approve`. Chạy hằng ngày lúc 06:30 |
+| A5 `bulletin` | `commodity`, `market_hours` | `Tea`, 48 giờ | Không có dữ liệu thị trường trong 48 giờ thì không chạy. Chạy hằng ngày lúc 05:00 |
+
+Quy tắc mẫu tin: tin gửi nông hộ và cán bộ không bao giờ là văn bản tự do của agent. Agent chỉ gửi mã mẫu và các slot có kiểu xác định; web dựng nội dung tiếng Việt từ mẫu. Agent không được gửi `note_vi`, `body`, mã mẫu lạ hoặc slot sai kiểu: các trường này bị từ chối với mã `INVALID_PAYLOAD` (HTTP 400). Quản lý hoặc cán bộ có thể thêm `note_vi` khi duyệt; ghi chú này được nối vào cuối nội dung như một đoạn mới.
+
+Dữ liệu thiếu không tạo đề xuất: thửa không có cảm biến, bản ghi thời tiết không có `forecast_json`, báo cáo bệnh có tên không nhận diện được hoặc là `healthy`, và không có dữ liệu thị trường trong 48 giờ đều chỉ bỏ qua, không gây lỗi.
+
 ---
 
 ## 4. Security Rules
