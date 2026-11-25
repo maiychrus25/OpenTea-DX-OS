@@ -1,0 +1,83 @@
+[
+  {
+    "name": "bulletin from four market rows",
+    "now": "2026-11-24T08:00:00Z",
+    "replay_response": {"bulletin_vi": "Giá chè xuất khẩu tháng 10 đạt 2,35 USD/kg, giá thu mua tại vườn ở mức 52.000 VND/kg theo số liệu mới nhất. Số liệu lấy từ nguồn thị trường trong 48 giờ qua."},
+    "graphql": {
+      "BulletinMarketRows": {"market_data": [
+        {"id": "md-1", "source": "FAOSTAT", "commodity": "Tea", "metric": "export_price", "value": 2.35, "unit": "USD/kg", "period": "2026-10", "fetched_at": "2026-11-24T03:00:00+00:00"},
+        {"id": "md-3", "source": "VN_MARKET", "commodity": "Tea", "metric": "farmgate_price", "value": 52000, "unit": "VND/kg", "period": "2026-11", "fetched_at": "2026-11-23T15:00:00+00:00"},
+        {"id": "md-2", "source": "FAOSTAT", "commodity": "Tea", "metric": "export_price", "value": 2.41, "unit": "USD/kg", "period": "2026-09", "fetched_at": "2026-11-23T03:00:00+00:00"},
+        {"id": "md-4", "source": "VN_MARKET", "commodity": "Tea", "metric": "farmgate_price", "value": 48500, "unit": "VND/kg", "period": "2026-10", "fetched_at": "2026-11-22T15:00:00+00:00"}
+      ]}
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "bulletin.publish",
+          "subjects": ["Tea:2026-11-24"],
+          "payload": {
+            "commodity": "Tea",
+            "period_day": "2026-11-24",
+            "bulletin_vi": "Giá chè xuất khẩu tháng 10 đạt 2,35 USD/kg, giá thu mua tại vườn ở mức 52.000 VND/kg theo số liệu mới nhất. Số liệu lấy từ nguồn thị trường trong 48 giờ qua.",
+            "sources": [
+              {"source": "FAOSTAT", "metric": "export_price", "value": 2.35, "unit": "USD/kg", "period": "2026-10"},
+              {"source": "VN_MARKET", "metric": "farmgate_price", "value": 52000, "unit": "VND/kg", "period": "2026-11"},
+              {"source": "FAOSTAT", "metric": "export_price", "value": 2.41, "unit": "USD/kg", "period": "2026-09"},
+              {"source": "VN_MARKET", "metric": "farmgate_price", "value": 48500, "unit": "VND/kg", "period": "2026-10"}
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "no market rows in 48 hours gives no run",
+    "now": "2026-11-24T08:00:00Z",
+    "replay_response": {"bulletin_vi": "Giá chè xuất khẩu tháng 10 đạt 2,35 USD/kg, giá thu mua tại vườn ở mức 52.000 VND/kg theo số liệu mới nhất. Số liệu lấy từ nguồn thị trường trong 48 giờ qua."},
+    "graphql": {
+      "BulletinMarketRows": {"market_data": [
+        {"id": "md-old", "source": "FAOSTAT", "commodity": "Tea", "metric": "export_price", "value": 2.35, "unit": "USD/kg", "period": "2026-09", "fetched_at": "2026-11-20T03:00:00+00:00"}
+      ]}
+    },
+    "expected": {"proposals": []}
+  },
+  {
+    "name": "malformed output twice gives a skipped run",
+    "now": "2026-11-24T08:00:00Z",
+    "replay_response": {"bulletin_vi": "Ngắn gọn"},
+    "graphql": {
+      "BulletinMarketRows": {"market_data": [
+        {"id": "md-1", "source": "FAOSTAT", "commodity": "Tea", "metric": "export_price", "value": 2.35, "unit": "USD/kg", "period": "2026-10", "fetched_at": "2026-11-24T03:00:00+00:00"}
+      ]}
+    },
+    "expected": {"proposals": []}
+  },
+  {
+    "name": "a provider error falls back to Ollama",
+    "now": "2026-11-24T08:00:00Z",
+    "primary_error": true,
+    "replay_response": {"bulletin_vi": "Giá chè xuất khẩu tháng 10 đạt 2,35 USD/kg, giá thu mua tại vườn ở mức 52.000 VND/kg theo số liệu mới nhất. Số liệu lấy từ nguồn thị trường trong 48 giờ qua."},
+    "graphql": {
+      "BulletinMarketRows": {"market_data": [
+        {"id": "md-1", "source": "FAOSTAT", "commodity": "Tea", "metric": "export_price", "value": 2.35, "unit": "USD/kg", "period": "2026-10", "fetched_at": "2026-11-24T03:00:00+00:00"}
+      ]}
+    },
+    "expected": {
+      "proposals": [
+        {
+          "kind": "bulletin.publish",
+          "subjects": ["Tea:2026-11-24"],
+          "payload": {
+            "commodity": "Tea",
+            "period_day": "2026-11-24",
+            "bulletin_vi": "Giá chè xuất khẩu tháng 10 đạt 2,35 USD/kg, giá thu mua tại vườn ở mức 52.000 VND/kg theo số liệu mới nhất. Số liệu lấy từ nguồn thị trường trong 48 giờ qua.",
+            "sources": [
+              {"source": "FAOSTAT", "metric": "export_price", "value": 2.35, "unit": "USD/kg", "period": "2026-10"}
+            ]
+          }
+        }
+      ]
+    }
+  }
+]

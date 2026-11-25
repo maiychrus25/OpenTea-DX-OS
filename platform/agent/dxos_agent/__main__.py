@@ -2,13 +2,14 @@
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Entrypoint for dxos-agent executing scheduled per-cooperative operational agents."""
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 import logging
 from pathlib import Path
 import signal
 import threading
 
 from . import __version__
+from .agents import bulletin, disease_watch, field_watch, harvest_ready
 from .agents.digest import DigestSchedule, run_digest
 from .agents.journal_review import (
     AGENT_NAME as JOURNAL_REVIEW_AGENT,
@@ -19,10 +20,14 @@ from .agents.journal_review import (
 from .client import AgentCredentials, CoreGatewayClient, KeycloakTokenClient, load_all_agent_credentials
 from .config import Config
 from .providers import AnthropicProvider, LLMProvider, OllamaProvider, OpenAIProvider, ReplayProvider
-from .schedule import ReviewSchedule
+from .schedule import DailySchedule, IntervalSchedule, ReviewSchedule
 from .settings import AgentSettings, OLLAMA, choose_providers, fetch_settings
 
 HEARTBEAT_INTERVAL = timedelta(minutes=5)
+FIELD_WATCH_INTERVAL = timedelta(minutes=30)
+HARVEST_READY_AT = time(6, 30)  # Vietnam time
+DISEASE_WATCH_AT = time(7, 0)  # Vietnam time
+BULLETIN_AT = time(5, 0)  # Vietnam time
 
 log = logging.getLogger("dxos_agent")
 
@@ -38,6 +43,12 @@ class _CooperativeRuntime:
     schedule: ReviewSchedule = field(default_factory=ReviewSchedule)
     digest: DigestSchedule = field(default_factory=DigestSchedule)
     heartbeat_at: datetime | None = None
+    # M4 agents: each has its own clock, so one failing agent never delays the others.
+    field_watch: IntervalSchedule = field(default_factory=lambda: IntervalSchedule(FIELD_WATCH_INTERVAL))
+    harvest_ready: DailySchedule = field(default_factory=lambda: DailySchedule(HARVEST_READY_AT))
+    disease_watch: DailySchedule = field(default_factory=lambda: DailySchedule(DISEASE_WATCH_AT))
+    disease_fingerprint: str | None = None
+    bulletin: DailySchedule = field(default_factory=lambda: DailySchedule(BULLETIN_AT))
 
 
 def _build_providers(cfg: Config, token_client: KeycloakTokenClient) -> dict[str, LLMProvider]:
@@ -97,6 +108,54 @@ def _digest_and_heartbeat(runtime: _CooperativeRuntime, now: datetime, settings:
             log.warning("Agent heartbeat failed for htx=%s", runtime.creds.htx_code)
 
 
+def _guarded(label: str, htx_code: str, run) -> None:
+    """Run one M4 agent; its failure is logged and the other agents and A1 go on."""
+    try:
+        run()
+    except Exception:
+        log.exception("%s failed for htx=%s", label, htx_code)
+
+
+def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentSettings) -> None:
+    """A2 to A5 (rules, plus the bulletin's LLM). They run for every cooperative with credentials, as A1 does."""
+    htx = runtime.creds.htx_code
+    gateway = runtime.gateway
+
+    def field_watch_cycle() -> None:
+        if runtime.field_watch.is_due(now):
+            runtime.field_watch.record(now)
+            field_watch.run_field_watch(gateway, now, settings.thresholds_for(field_watch.AGENT_NAME))
+
+    def harvest_cycle() -> None:
+        if runtime.harvest_ready.is_due(now):
+            runtime.harvest_ready.record(now)
+            harvest_ready.run_harvest_ready(gateway, now, settings.thresholds_for(harvest_ready.AGENT_NAME))
+
+    def disease_cycle() -> None:
+        # The reports are read every cycle; A3 runs on its daily time or when the window's reports changed.
+        thresholds = settings.thresholds_for(disease_watch.AGENT_NAME)
+        window = disease_watch.fetch_window(gateway, now, thresholds)
+        fingerprint = disease_watch.window_fingerprint(window[0])
+        daily_due = runtime.disease_watch.is_due(now)
+        if not daily_due and fingerprint == runtime.disease_fingerprint:
+            return
+        if daily_due:
+            runtime.disease_watch.record(now)
+        runtime.disease_fingerprint = fingerprint
+        disease_watch.run_disease_watch(gateway, now, thresholds, window=window)
+
+    def bulletin_cycle() -> None:
+        if runtime.bulletin.is_due(now):
+            runtime.bulletin.record(now)
+            provider, fallback = choose_providers(settings, bulletin.AGENT_NAME, runtime.providers)
+            bulletin.run_bulletin(gateway, now, provider, settings.thresholds_for(bulletin.AGENT_NAME), fallback)
+
+    _guarded("A2 field-watch", htx, field_watch_cycle)
+    _guarded("A4 harvest-ready", htx, harvest_cycle)
+    _guarded("A3 disease-watch", htx, disease_cycle)
+    _guarded("A5 bulletin", htx, bulletin_cycle)
+
+
 def run_once(
     cfg: Config,
     runtimes: dict[str, _CooperativeRuntime],
@@ -114,6 +173,7 @@ def run_once(
             runtime = _runtime_for(cfg, runtimes, creds)
             settings = fetch_settings(runtime.gateway)
             _digest_and_heartbeat(runtime, now, settings)
+            _run_m4_agents(runtime, now, settings)
             entries = fetch_pending_entries(runtime.gateway)
             input_hash = pending_evidence_hash(entries)
             # Nothing pending means no run row and no LLM call, even on the first cycle.
