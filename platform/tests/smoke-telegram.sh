@@ -16,76 +16,17 @@ if [ "${WEB_UP:-0}" != "1" ]; then
   echo "SKIP: telegram smoke needs the web (run make web-up && SMOKE_REQUIRE_WEB=1 bash platform/tests/smoke-agentic.sh)"
   return 0
 fi
-STUB="http://127.0.0.1:8081"
-TG_TOKEN_VALUE="123456:smoke-telegram-token"
-TG_OWNER=900001      # Telegram account linked to smoke_manager_tc
-TG_STRANGER=900002   # Telegram account that never linked
-TG_GROUP=-1009000003 # group chat of the same cooperative
-TG_UPDATE_ID=$(( $(date +%s) * 10 ))
-
-stub_calls() { curl -sf "$STUB/control/calls"; }
-# Client-credentials token of dxos-telegram, read from its volume the way the relay reads it.
-telegram_client_token() {
-  local creds cid csec
-  creds="$($COMPOSE --profile tools run --rm -T --no-deps dxos-telegram-env cat /run/dxos-telegram/telegram.env)"
-  cid=$(printf '%s\n' "$creds" | sed -n 's/^DXOS_TELEGRAM_CLIENT_ID=//p')
-  csec=$(printf '%s\n' "$creds" | sed -n 's/^DXOS_TELEGRAM_CLIENT_SECRET=//p')
-  curl -sf -X POST "$KC_REALM_URL/protocol/openid-connect/token" \
-    -d "grant_type=client_credentials" -d "client_id=$cid" -d "client_secret=$csec" | jq -r '.access_token // empty'
-}
-stub_reset() { curl -sf -X POST "$STUB/control/reset" >/dev/null; }
-stub_inject() {  # <update json>
-  TG_UPDATE_ID=$((TG_UPDATE_ID + 1))
-  curl -sf -X POST "$STUB/control/updates" -H 'Content-Type: application/json' \
-    -d "$(printf '%s' "$1" | sed "s/__UPDATE_ID__/$TG_UPDATE_ID/")" >/dev/null
-}
-# wait_stub <python condition over the list "c" of recorded calls> [tries, 2 s each]
-wait_stub() {
-  local i
-  for i in $(seq 1 "${2:-30}"); do
-    stub_calls | python3 -c "import json,sys; c=json.load(sys.stdin); sys.exit(0 if ($1) else 1)" && return 0
-    sleep 2
-  done
-  return 1
-}
-# The first "approve" button sent to the owner after the last stub reset.
-owner_approve_data() {
-  stub_calls | python3 -c '
-import json, sys
-for call in json.load(sys.stdin):
-    if call["method"] != "sendMessage" or call["params"].get("chat_id") != '"$TG_OWNER"':
-        continue
-    for row in call["params"].get("reply_markup", {}).get("inline_keyboard", []):
-        for button in row:
-            data = button.get("callback_data", "")
-            if data.startswith("v1|") and data.split("|")[2] == "a":
-                print(data)
-                sys.exit(0)
-sys.exit(1)'
-}
-tg_callback() {  # <from id> <chat id> <chat type> <callback data> <callback query id>
-  stub_inject "{\"update_id\": __UPDATE_ID__, \"callback_query\": {\"id\": \"$5\", \"from\": {\"id\": $1}, \"message\": {\"message_id\": 1, \"chat\": {\"id\": $2, \"type\": \"$3\"}}, \"data\": \"$4\"}}"
-}
+source platform/tests/lib-telegram.sh
 
 # Its own TC agent client: the agent smoke disables TC at its end, so its token must not be reused here.
 ./dxos agent enable TC >/dev/null
 AT_TC=$(client_token TC)
 [ -n "$AT_TC" ] || fail "TC agent token empty for the telegram smoke"
 psql_app "update platform.telegram_links set unlinked_at = now() where telegram_user_id in ($TG_OWNER, $TG_STRANGER) and unlinked_at is null" >/dev/null
-./dxos telegram enable >/dev/null
-$COMPOSE --profile telegram-test up -d --no-deps dxos-telegram-stub >/dev/null
-for _ in $(seq 1 30); do stub_calls >/dev/null 2>&1 && break; sleep 1; done
-stub_reset
-TELEGRAM_BOT_TOKEN="$TG_TOKEN_VALUE" TELEGRAM_API_BASE="http://dxos-telegram-stub:8081" \
-  $COMPOSE --profile telegram-test up -d --no-deps dxos-telegram >/dev/null
+telegram_relay_up
 
-# Link: the code is stored only as its SHA-256, as the web does (C4).
-TG_CODE="$(python3 -c 'import secrets; print(secrets.token_hex(4).upper())')"
-TG_HASH="$(python3 -c 'import hashlib, sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest())' "$TG_CODE")"
-TG_SUB="$(python3 -c 'import base64, json, sys; p = sys.argv[1].split(".")[1]; p += "=" * (-len(p) % 4); print(json.loads(base64.urlsafe_b64decode(p))["sub"])' "$(user_token smoke_manager_tc)")"
-psql_app "insert into platform.telegram_link_codes (code_hash, kind, user_id, user_name, role, htx_code, expires_at)
-  values ('$TG_HASH', 'user', '$TG_SUB', 'Smoke Manager TC', 'manager', 'TC', now() + interval '10 minutes')" >/dev/null
-stub_inject "{\"update_id\": __UPDATE_ID__, \"message\": {\"message_id\": 1, \"chat\": {\"id\": $TG_OWNER, \"type\": \"private\"}, \"from\": {\"id\": $TG_OWNER}, \"text\": \"/start $TG_CODE\"}}"
+# Link: one-time code, then /start (helpers in lib-telegram.sh).
+telegram_link_owner
 wait_stub "any(x['method'] == 'sendMessage' and x['params'].get('chat_id') == $TG_OWNER for x in c)" \
   && pass "/start code answered by the web through the relay (welcome sent)" || fail "no welcome message after /start within 60 s"
 assert_eq "$(psql_app "select count(*) from platform.telegram_links where telegram_user_id=$TG_OWNER and user_id='$TG_SUB' and unlinked_at is null")" "1" "link stored for the owner's Telegram account"
@@ -183,10 +124,8 @@ async function status(token) {
   || fail "telegram internal route claim checks"
 
 # Cleanup: remove the relay credentials and the smoke rows; the operator's own relay settings come back.
-./dxos telegram disable >/dev/null
+telegram_relay_down
 ./dxos agent disable TC >/dev/null
-$COMPOSE up -d --no-deps dxos-telegram >/dev/null
-$COMPOSE stop dxos-telegram-stub >/dev/null
 # Messages and reject-reason conversations reference the proposal, so they go first.
 psql_app "delete from platform.telegram_outbox where proposal_id='$TG_PROPOSAL' or chat_id in ($TG_OWNER, $TG_STRANGER, $TG_GROUP)" >/dev/null
 psql_app "delete from platform.telegram_conversations where proposal_id='$TG_PROPOSAL'" >/dev/null
