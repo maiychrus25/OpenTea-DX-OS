@@ -6,6 +6,8 @@ import type { DecisionChannel, Evidence, Origin, Risk } from '@/domain/agent/pro
 import type { Tenant } from '@/lib/api/tenant'
 import { journalApproveAction } from './actions/journal-approve.action'
 import { journalRejectAction } from './actions/journal-reject.action'
+import { notificationHouseholdsAction } from './actions/notification-households.action'
+import { notificationInternalAction } from './actions/notification-internal.action'
 import type { EvidenceLoaders } from './actions/journal-evidence'
 import type { JournalSubject } from './actions/journal-labels'
 
@@ -43,6 +45,8 @@ export interface ActionDefinition<P extends Record<string, unknown> = Record<str
 export const ACTION_CATALOG: Readonly<Record<string, ActionDefinition<any>>> = Object.freeze({
   'journal.approve': journalApproveAction,
   'journal.reject': journalRejectAction,
+  'notification.internal': notificationInternalAction,
+  'notification.households': notificationHouseholdsAction,
 })
 
 export function getAction(kind: string): ActionDefinition<any> | undefined {
