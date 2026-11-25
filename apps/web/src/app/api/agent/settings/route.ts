@@ -21,7 +21,7 @@ const agentChoiceSchema = z
   })
 
 const saveSettingsSchema = z.object({
-  agents: z.object({ 'journal-review': agentChoiceSchema, digest: agentChoiceSchema }),
+  agents: z.object({ 'journal-review': agentChoiceSchema, digest: agentChoiceSchema, bulletin: agentChoiceSchema }),
   report_time: z.string().regex(REPORT_TIME_PATTERN),
   monthly_limit_usd: z.number().positive().max(1_000_000).nullable(),
 })
