@@ -1,0 +1,249 @@
+{
+  "version": 2,
+  "rules": [
+    "Same canonical JSON and sha256 rules as evidence-vectors.json (version 2).",
+    "A non-integer measurement is carried as <field>_milli: floor(value * 1000) computed in IEEE double arithmetic (Math.floor in TypeScript, math.floor in Python); null stays null.",
+    "sensor_readings rows have no id column: the evidence id is '<parcel_code>|<sensor>|<ts>' with ts normalised like every timestamp.",
+    "weather_cache: forecast_days and forecast_precipitation_milli come from forecast_json.time and forecast_json.precipitation_sum in order; a null forecast_json gives two empty arrays; other forecast fields are left out.",
+    "market_data is shared by every cooperative; its loader does not filter by cooperative."
+  ],
+  "cases": [
+    {
+      "name": "parcel tending, never approved, naive Prisma timestamp",
+      "table": "parcels",
+      "source": {
+        "id": "cmpaTC_A3",
+        "parcel_code": "P-TC-003",
+        "status": "TENDING",
+        "harvest_approved_at": null,
+        "updated_at": "2026-11-24T09:15:30.5"
+      },
+      "values": {
+        "id": "cmpaTC_A3",
+        "parcel_code": "P-TC-003",
+        "status": "TENDING",
+        "harvest_approved_at": null,
+        "updated_at": "2026-11-24T09:15:30.500Z"
+      },
+      "canonical": "{\"harvest_approved_at\":null,\"id\":\"cmpaTC_A3\",\"parcel_code\":\"P-TC-003\",\"status\":\"TENDING\",\"updated_at\":\"2026-11-24T09:15:30.500Z\"}",
+      "sha256": "785f3579ea6eefe7dd4b430e1f4bd40d9ac91632571c47943a7310979b580af7"
+    },
+    {
+      "name": "parcel approved, timestamps with offsets",
+      "table": "parcels",
+      "source": {
+        "id": "cmpaTC_B1",
+        "parcel_code": "P-TC-011",
+        "status": "HARVEST_APPROVED",
+        "harvest_approved_at": "2026-11-24T08:00:00+07:00",
+        "updated_at": "2026-11-24T01:00:00.123+00:00"
+      },
+      "values": {
+        "id": "cmpaTC_B1",
+        "parcel_code": "P-TC-011",
+        "status": "HARVEST_APPROVED",
+        "harvest_approved_at": "2026-11-24T01:00:00.000Z",
+        "updated_at": "2026-11-24T01:00:00.123Z"
+      },
+      "canonical": "{\"harvest_approved_at\":\"2026-11-24T01:00:00.000Z\",\"id\":\"cmpaTC_B1\",\"parcel_code\":\"P-TC-011\",\"status\":\"HARVEST_APPROVED\",\"updated_at\":\"2026-11-24T01:00:00.123Z\"}",
+      "sha256": "1010a55261f3bd148e33efb7374d356647d72f060952a83023d21c36c5ed0b6b"
+    },
+    {
+      "name": "disease report with a Vietnamese label and no confirmation",
+      "table": "disease_reports",
+      "source": {
+        "id": "cmdrA1",
+        "parcel_id": "cmpaTC_A3",
+        "status": "PENDING",
+        "detection_date": "2026-11-23T03:20:00",
+        "ai_disease_name": "Bọ xít muỗi",
+        "confirmed_diagnosis": null,
+        "updated_at": "2026-11-23T03:20:01.7"
+      },
+      "values": {
+        "id": "cmdrA1",
+        "parcel_id": "cmpaTC_A3",
+        "status": "PENDING",
+        "detection_date": "2026-11-23T03:20:00.000Z",
+        "ai_disease_name": "Bọ xít muỗi",
+        "confirmed_diagnosis": null,
+        "updated_at": "2026-11-23T03:20:01.700Z"
+      },
+      "canonical": "{\"ai_disease_name\":\"Bọ xít muỗi\",\"confirmed_diagnosis\":null,\"detection_date\":\"2026-11-23T03:20:00.000Z\",\"id\":\"cmdrA1\",\"parcel_id\":\"cmpaTC_A3\",\"status\":\"PENDING\",\"updated_at\":\"2026-11-23T03:20:01.700Z\"}",
+      "sha256": "2a35c393e9fd54c1aba4b7bb41b6520c2e615f9c46c069fbcdb956852b28d227"
+    },
+    {
+      "name": "disease report confirmed by an officer",
+      "table": "disease_reports",
+      "source": {
+        "id": "cmdrA2",
+        "parcel_id": "cmpaTC_B1",
+        "status": "CONFIRMED",
+        "detection_date": "2026-11-22T00:00:00+07:00",
+        "ai_disease_name": "gray_blight",
+        "confirmed_diagnosis": "Bệnh chấm xám",
+        "updated_at": "2026-11-23T10:00:00Z"
+      },
+      "values": {
+        "id": "cmdrA2",
+        "parcel_id": "cmpaTC_B1",
+        "status": "CONFIRMED",
+        "detection_date": "2026-11-21T17:00:00.000Z",
+        "ai_disease_name": "gray_blight",
+        "confirmed_diagnosis": "Bệnh chấm xám",
+        "updated_at": "2026-11-23T10:00:00.000Z"
+      },
+      "canonical": "{\"ai_disease_name\":\"gray_blight\",\"confirmed_diagnosis\":\"Bệnh chấm xám\",\"detection_date\":\"2026-11-21T17:00:00.000Z\",\"id\":\"cmdrA2\",\"parcel_id\":\"cmpaTC_B1\",\"status\":\"CONFIRMED\",\"updated_at\":\"2026-11-23T10:00:00.000Z\"}",
+      "sha256": "12410a26f6f701995b52fb5e17798d512d1b57d8a25dadddb45fb93e36a22945"
+    },
+    {
+      "name": "soil moisture 16.022 floors to 16021 (the IEEE product is 16021.999999999998)",
+      "table": "sensor_readings",
+      "source": {
+        "parcel_code": "P-TC-003",
+        "sensor": "soil_moisture",
+        "ts": "2026-11-24T02:00:00+00:00",
+        "value": 16.022
+      },
+      "values": {
+        "id": "P-TC-003|soil_moisture|2026-11-24T02:00:00.000Z",
+        "parcel_code": "P-TC-003",
+        "sensor": "soil_moisture",
+        "ts": "2026-11-24T02:00:00.000Z",
+        "value_milli": 16021
+      },
+      "canonical": "{\"id\":\"P-TC-003|soil_moisture|2026-11-24T02:00:00.000Z\",\"parcel_code\":\"P-TC-003\",\"sensor\":\"soil_moisture\",\"ts\":\"2026-11-24T02:00:00.000Z\",\"value_milli\":16021}",
+      "sha256": "17d0d1092a181a927923479b7158378447c21a9221ad4118801d7aa75a421bf8"
+    },
+    {
+      "name": "air temperature below zero and an integer-valued reading",
+      "table": "sensor_readings",
+      "source": {
+        "parcel_code": "P-TC-011",
+        "sensor": "air_temperature",
+        "ts": "2026-11-24T21:30:00.25+00:00",
+        "value": -2.5
+      },
+      "values": {
+        "id": "P-TC-011|air_temperature|2026-11-24T21:30:00.250Z",
+        "parcel_code": "P-TC-011",
+        "sensor": "air_temperature",
+        "ts": "2026-11-24T21:30:00.250Z",
+        "value_milli": -2500
+      },
+      "canonical": "{\"id\":\"P-TC-011|air_temperature|2026-11-24T21:30:00.250Z\",\"parcel_code\":\"P-TC-011\",\"sensor\":\"air_temperature\",\"ts\":\"2026-11-24T21:30:00.250Z\",\"value_milli\":-2500}",
+      "sha256": "f4a724fe611812df9a7aa28b3f58c2e254bef5734abca241b45fced0f4d8d961"
+    },
+    {
+      "name": "air temperature 35.0",
+      "table": "sensor_readings",
+      "source": {
+        "parcel_code": "P-TC-011",
+        "sensor": "air_temperature",
+        "ts": "2026-11-24T06:00:00+00:00",
+        "value": 35.0
+      },
+      "values": {
+        "id": "P-TC-011|air_temperature|2026-11-24T06:00:00.000Z",
+        "parcel_code": "P-TC-011",
+        "sensor": "air_temperature",
+        "ts": "2026-11-24T06:00:00.000Z",
+        "value_milli": 35000
+      },
+      "canonical": "{\"id\":\"P-TC-011|air_temperature|2026-11-24T06:00:00.000Z\",\"parcel_code\":\"P-TC-011\",\"sensor\":\"air_temperature\",\"ts\":\"2026-11-24T06:00:00.000Z\",\"value_milli\":35000}",
+      "sha256": "85671d136bcf2226a8296e3179aa43060f5eae9a824c0e57d12ef520bb41e3db"
+    },
+    {
+      "name": "weather row with a 3-day forecast",
+      "table": "weather_cache",
+      "source": {
+        "id": "6f1d0c9e-0000-4000-8000-00000000a001",
+        "parcel_id": "cmpaTC_A3",
+        "recorded_at": "2026-11-24T08:00:00",
+        "precipitation_mm": 0.0,
+        "forecast_json": {
+          "time": [
+            "2026-11-24",
+            "2026-11-25",
+            "2026-11-26"
+          ],
+          "precipitation_sum": [
+            0.0,
+            23.7,
+            4.15
+          ],
+          "temperature_2m_max": [
+            24.1,
+            21.0,
+            22.3
+          ]
+        }
+      },
+      "values": {
+        "id": "6f1d0c9e-0000-4000-8000-00000000a001",
+        "parcel_id": "cmpaTC_A3",
+        "recorded_at": "2026-11-24T08:00:00.000Z",
+        "precipitation_milli": 0,
+        "forecast_days": [
+          "2026-11-24",
+          "2026-11-25",
+          "2026-11-26"
+        ],
+        "forecast_precipitation_milli": [
+          0,
+          23700,
+          4150
+        ]
+      },
+      "canonical": "{\"forecast_days\":[\"2026-11-24\",\"2026-11-25\",\"2026-11-26\"],\"forecast_precipitation_milli\":[0,23700,4150],\"id\":\"6f1d0c9e-0000-4000-8000-00000000a001\",\"parcel_id\":\"cmpaTC_A3\",\"precipitation_milli\":0,\"recorded_at\":\"2026-11-24T08:00:00.000Z\"}",
+      "sha256": "1a50542e1db312d24ca64a72fc9a9bc8dbf0e7e5eb5b22ca345c007f0ea380e5"
+    },
+    {
+      "name": "weather row without a forecast",
+      "table": "weather_cache",
+      "source": {
+        "id": "6f1d0c9e-0000-4000-8000-00000000a002",
+        "parcel_id": "cmpaTC_B1",
+        "recorded_at": "2026-11-24T08:00:00",
+        "precipitation_mm": 1.2,
+        "forecast_json": null
+      },
+      "values": {
+        "id": "6f1d0c9e-0000-4000-8000-00000000a002",
+        "parcel_id": "cmpaTC_B1",
+        "recorded_at": "2026-11-24T08:00:00.000Z",
+        "precipitation_milli": 1200,
+        "forecast_days": [],
+        "forecast_precipitation_milli": []
+      },
+      "canonical": "{\"forecast_days\":[],\"forecast_precipitation_milli\":[],\"id\":\"6f1d0c9e-0000-4000-8000-00000000a002\",\"parcel_id\":\"cmpaTC_B1\",\"precipitation_milli\":1200,\"recorded_at\":\"2026-11-24T08:00:00.000Z\"}",
+      "sha256": "88573c69a0280d02cd27ad1c415f55a95d9293939be1dc2d6dae6c68cc4b46ca"
+    },
+    {
+      "name": "market price 2.35 USD per kg",
+      "table": "market_data",
+      "source": {
+        "id": "0b4e9f8a-0000-4000-8000-0000000000b1",
+        "source": "FAOSTAT",
+        "commodity": "Tea",
+        "metric": "export_price",
+        "value": 2.35,
+        "unit": "USD/kg",
+        "period": "2026-10",
+        "fetched_at": "2026-11-24T21:00:05.004+00:00"
+      },
+      "values": {
+        "id": "0b4e9f8a-0000-4000-8000-0000000000b1",
+        "source": "FAOSTAT",
+        "commodity": "Tea",
+        "metric": "export_price",
+        "value_milli": 2350,
+        "unit": "USD/kg",
+        "period": "2026-10",
+        "fetched_at": "2026-11-24T21:00:05.004Z"
+      },
+      "canonical": "{\"commodity\":\"Tea\",\"fetched_at\":\"2026-11-24T21:00:05.004Z\",\"id\":\"0b4e9f8a-0000-4000-8000-0000000000b1\",\"metric\":\"export_price\",\"period\":\"2026-10\",\"source\":\"FAOSTAT\",\"unit\":\"USD/kg\",\"value_milli\":2350}",
+      "sha256": "71f5790de4b40240c16441319f2481afa4077085e9251749436a225c70702a68"
+    }
+  ]
+}
