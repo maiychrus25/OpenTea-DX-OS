@@ -7,6 +7,7 @@ import {
   KEYCLOAK_CLIENT_ID,
   KEYCLOAK_CLIENT_SECRET,
   KEYCLOAK_INTERNAL,
+  endKeycloakSession,
   readHtxCode,
   refreshAccessToken,
   roleFromRealmRoles,
@@ -54,10 +55,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, profile, account }) {
-      // Lưu idToken để dùng cho Keycloak logout (xóa SSO session)
-      if (account?.id_token) {
-        token.idToken = account.id_token
-      }
+      // The id token is not kept: with it the session needs two cookies, and concurrent responses can mix them (#75).
+      // Sign-out ends the Keycloak session with the refresh token instead. Older sessions lose it on their next request.
+      delete token.idToken
 
       // CRITICAL: Ghi đè token.sub bằng Keycloak user ID thực
       // NextAuth v5 có thể tự tạo internal sub khác với OIDC sub claim
@@ -114,14 +114,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   events: {
     async signOut(message) {
-      if ('token' in message && message.token?.idToken) {
-        const issuer = process.env.KEYCLOAK_INTERNAL_URL || process.env.KEYCLOAK_ISSUER || "http://keycloak:8080/realms/agrimarket"
-        const logoutUrl = `${issuer}/protocol/openid-connect/logout`
-        const redirectUri = encodeURIComponent(
-          `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/login`
-        )
-        await fetch(`${logoutUrl}?id_token_hint=${message.token.idToken}&post_logout_redirect_uri=${redirectUri}`)
-          .catch(() => {}) // best-effort, don't throw if Keycloak is unreachable
+      if ('token' in message && message.token?.refreshToken) {
+        await endKeycloakSession(message.token.refreshToken)
       }
     }
   }

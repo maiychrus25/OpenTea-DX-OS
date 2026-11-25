@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Random sign-outs right after sign-in (`apps/web`, #75)**: the session no longer keeps the Keycloak id token, so it fits in one cookie (3593 characters for the CI user, under the 3936 Auth.js chunk size). With two cookies, responses arriving a few milliseconds apart could leave the browser with mismatched halves and the next requests sent the user to the login page. Sign-out ends the Keycloak session with a back-channel logout using the refresh token. Sessions made before this change drop the id token on their next request.
+
 ---
 
 ## [1.14.0] - 2026-11-25
