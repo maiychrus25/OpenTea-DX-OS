@@ -270,6 +270,26 @@ def test_one_failing_m4_agent_does_not_stop_the_others_or_a1(monkeypatch, cooper
     assert [p["kind"] for p in gateway.proposals] == ["journal.approve"]
 
 
+def test_a1_runs_before_the_m4_agents_so_a_slow_bulletin_llm_cannot_delay_it(monkeypatch, cooperative):
+    # CI 2026-11-25: the bulletin's Ollama call took minutes and A1 did not run for the whole smoke.
+    cfg, gateway = cooperative
+    gateway.entries = [_clean_entry("je_1")]
+    order = []
+    start_run = gateway.start_run
+
+    def recording_start_run(*args, **kwargs):
+        order.append(kwargs.get("agent"))
+        return start_run(*args, **kwargs)
+
+    gateway.start_run = recording_start_run
+    monkeypatch.setattr(agent_main.bulletin, "run_bulletin", lambda *a, **k: order.append("bulletin"))
+    monkeypatch.setattr(agent_main.field_watch, "run_field_watch", lambda *a, **k: order.append("field-watch"))
+
+    agent_main.run_once(cfg, {}, now=datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc))
+
+    assert order.index("journal-review") < order.index("field-watch") < order.index("bulletin")
+
+
 def test_an_m4_run_that_fails_keeps_its_turn_for_the_next_cycle(monkeypatch, cooperative):
     # The web can be down when the agent starts (503 on run start): a daily agent must not lose its day to that.
     cfg, gateway = cooperative

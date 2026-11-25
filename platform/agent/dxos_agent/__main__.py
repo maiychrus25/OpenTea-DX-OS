@@ -174,34 +174,40 @@ def run_once(
             runtime = _runtime_for(cfg, runtimes, creds)
             settings = fetch_settings(runtime.gateway)
             _digest_and_heartbeat(runtime, now, settings)
-            _run_m4_agents(runtime, now, settings)
-            entries = fetch_pending_entries(runtime.gateway)
-            input_hash = pending_evidence_hash(entries)
-            # Nothing pending means no run row and no LLM call, even on the first cycle.
-            due = bool(entries) and runtime.schedule.is_due(now, input_hash)
-            runtime.schedule.record(now, input_hash, ran=due)
-            if not due:
-                continue
-            provider, fallback = choose_providers(settings, JOURNAL_REVIEW_AGENT, runtime.providers)
-            outcome = run_journal_review(
-                gateway=runtime.gateway,
-                provider=provider,
-                trigger="schedule",
-                now=now,
-                entries=entries,
-                fallback=fallback,
-            )
-            log.info(
-                "A1 journal-review htx=%s run=%s status=%s scanned=%d submitted=%d deduped=%d",
-                creds.htx_code,
-                outcome.run_id,
-                outcome.status,
-                outcome.entries_scanned,
-                outcome.proposals_submitted,
-                outcome.proposals_deduped,
-            )
         except Exception:
             log.exception("A1 journal-review failed for htx=%s", creds.htx_code)
+            continue
+        _guarded("A1 journal-review", creds.htx_code, lambda: _journal_review_cycle(runtime, now, settings))
+        # The M4 agents come after A1: the bulletin's LLM call can take minutes and must not delay the journal review.
+        _run_m4_agents(runtime, now, settings)
+
+
+def _journal_review_cycle(runtime: _CooperativeRuntime, now: datetime, settings: AgentSettings) -> None:
+    entries = fetch_pending_entries(runtime.gateway)
+    input_hash = pending_evidence_hash(entries)
+    # Nothing pending means no run row and no LLM call, even on the first cycle.
+    due = bool(entries) and runtime.schedule.is_due(now, input_hash)
+    runtime.schedule.record(now, input_hash, ran=due)
+    if not due:
+        return
+    provider, fallback = choose_providers(settings, JOURNAL_REVIEW_AGENT, runtime.providers)
+    outcome = run_journal_review(
+        gateway=runtime.gateway,
+        provider=provider,
+        trigger="schedule",
+        now=now,
+        entries=entries,
+        fallback=fallback,
+    )
+    log.info(
+        "A1 journal-review htx=%s run=%s status=%s scanned=%d submitted=%d deduped=%d",
+        runtime.creds.htx_code,
+        outcome.run_id,
+        outcome.status,
+        outcome.entries_scanned,
+        outcome.proposals_submitted,
+        outcome.proposals_deduped,
+    )
 
 
 def main(stop: threading.Event | None = None) -> None:
