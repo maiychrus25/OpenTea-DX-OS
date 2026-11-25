@@ -120,7 +120,9 @@ async function main() {
   });
   const body = await res.json().catch(() => ({}));
   assert.equal(res.status, 400, "an agent note_vi must return 400");
-  assert.equal(body?.error?.code, "INVALID_PAYLOAD", "the refusal must be INVALID_PAYLOAD");
+  // withErrorHandler answers every ValidationError as code VALIDATION_ERROR with the reason in message.
+  assert.equal(body?.error?.code, "VALIDATION_ERROR", "the refusal must be a validation error");
+  assert.equal(body?.error?.message, "INVALID_PAYLOAD", "the refusal must be INVALID_PAYLOAD");
 }
 main().catch((err) => { console.error(err); process.exit(1); });
 ' "$M4_AT" "$M4_RUN" && pass "agent-written note_vi in a household message is refused (test 32 end to end)" \
@@ -136,8 +138,9 @@ approve_by_telegram() {  # <label> <proposal id>
     && pass "$1 approved from Telegram and executed" || fail "$1 proposal not executed after the Telegram approval"
 }
 
-HARVEST_ID=$(psql_app "select id from platform.agent_proposals where htx_code='TC' and kind='harvest.approve' and status='proposed' and created_at >= '$M4_T0' order by created_at desc limit 1")
-NOTICE_ID=$(psql_app "select id from platform.agent_proposals where htx_code='TC' and kind='notification.households' and status='proposed' and created_at >= '$M4_T0' order by created_at desc limit 1")
+# The seeded parcel's proposal and the disease cluster's warning: the CI data can hold other due parcels and other warnings.
+HARVEST_ID=$(psql_app "select id from platform.agent_proposals where htx_code='TC' and kind='harvest.approve' and status='proposed' and created_at >= '$M4_T0' and payload->>'parcel_id' = '$M4_READY' order by created_at desc limit 1")
+NOTICE_ID=$(psql_app "select id from platform.agent_proposals where htx_code='TC' and kind='notification.households' and status='proposed' and created_at >= '$M4_T0' and payload->>'template' = 'disease_nearby' and payload->'slots'->'parcel_codes' ? 'P-TC-001' order by created_at desc limit 1")
 [ -n "$HARVEST_ID" ] && [ -n "$NOTICE_ID" ] || fail "no open harvest or household proposal to approve"
 
 approve_by_telegram harvest "$HARVEST_ID"
