@@ -6,7 +6,7 @@ import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.ad
 import { PrismaNotificationRepository } from '@/infrastructure/db/notification/prisma-notification-repository'
 import type { ActionDefinition } from '../action-catalog'
 import { isEvidenceStale } from './journal-evidence'
-import { DISEASE_LABEL_VI } from './message-templates'
+import { DISEASE_LABEL_VI } from './disease-labels'
 
 const diseaseKeys = Object.keys(DISEASE_LABEL_VI) as [keyof typeof DISEASE_LABEL_VI, ...(keyof typeof DISEASE_LABEL_VI)[]]
 

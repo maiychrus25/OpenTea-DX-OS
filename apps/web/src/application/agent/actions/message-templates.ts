@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { z } from 'zod'
+import { DISEASE_LABEL_VI } from './disease-labels'
 
 // The agent only sends a template id and typed slots; the web renders the Vietnamese copy (spec §6, test 32).
 
@@ -18,17 +19,6 @@ export interface RenderedNotification {
   title: string
   body: string
 }
-
-// Mirrors the `vi` labels of ai-models/tea_class_names_vi.json (healthy is never a template slot).
-export const DISEASE_LABEL_VI = {
-  algal_leaf_spot: 'Bệnh đốm tảo',
-  birds_eye_spot: 'Bệnh đốm mắt chim (bird\'s eye spot)',
-  brown_blight: 'Brown blight',
-  gray_blight: 'Bệnh chấm xám',
-  helopeltis: 'Bọ xít muỗi',
-  red_leaf_spot: 'Bệnh đốm đỏ (red leaf spot)',
-  white_spot: 'Bệnh đốm trắng (white spot)',
-} as const
 
 const SENSOR_LABEL_VI = {
   soil_moisture: 'độ ẩm đất',
