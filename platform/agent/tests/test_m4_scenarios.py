@@ -9,6 +9,7 @@ from typing import Any, Callable, Mapping
 
 import pytest
 
+from dxos_agent.agents.disease_watch import run_disease_watch
 from dxos_agent.agents.field_watch import run_field_watch
 
 SCENARIOS = Path(__file__).parent / "scenarios"
@@ -60,6 +61,9 @@ def _parse(ts: str) -> datetime:
 
 RUNNERS: dict[str, Callable[[ScenarioGateway, dict[str, Any]], Any]] = {
     "a2_field_watch.json": lambda gateway, case: run_field_watch(
+        gateway, _parse(case["now"]), case.get("thresholds")
+    ),
+    "a3_disease_watch.json": lambda gateway, case: run_disease_watch(
         gateway, _parse(case["now"]), case.get("thresholds")
     ),
 }
