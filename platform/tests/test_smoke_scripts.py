@@ -63,3 +63,10 @@ def test_m4_smoke_enables_no_agent_and_only_sets_the_bulletin_provider():
     for agent in ("field-watch", "disease-watch", "harvest-ready", "bulletin"):
         assert f"'{agent}', true" not in text, agent
     assert "'bulletin'" in text and "'anthropic'" in text
+
+
+def test_m4_smoke_stops_the_agent_before_the_clean_slate_and_restarts_it_after_the_link():
+    # A cycle of the running agent between the clean slate and the Telegram link files the warnings with no message
+    # to the manager, and the restarted agent then dedupes them (main CI 2026-11-25).
+    text = (TESTS / "smoke-agents.sh").read_text(encoding="utf-8")
+    assert text.index("$COMPOSE stop dxos-agent") < text.index("M4_OLD=") < text.index("telegram_link_owner") < text.index("--force-recreate dxos-agent")
