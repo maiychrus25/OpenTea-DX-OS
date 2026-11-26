@@ -3,16 +3,17 @@
 
 import React from 'react'
 import { redirect } from 'next/navigation'
-import { Cloud, Sprout, Leaf, Clock, Calendar, PenLine, Camera, FileText, History } from 'lucide-react'
+import Link from 'next/link'
+import { Cloud, CloudRain, Droplet, Sprout, PenLine, Camera, FileText, History, Sparkles, BookOpen, Store } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
-import { Pill, HeroBanner, Panel, MetricCard, AlertBar, EmptyState } from '@/components/ui'
+import { HeroBanner, AlertBar, EmptyState } from '@/components/ui'
 import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 
-import layout from '@/components/features/dashboard/dashboard.module.css'
+import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from './farmer-dashboard.module.css'
 
 function getGreeting(): string {
@@ -34,32 +35,28 @@ const ACTIVITY_LABELS: Record<string, string> = {
 }
 
 const ENTRY_STATUS = {
-  DRAFT: { label: 'Bản nháp', tone: 'muted' },
-  PENDING_APPROVAL: { label: 'Chờ duyệt', tone: 'wait' },
-  APPROVED: { label: 'Đã duyệt', tone: 'ok' },
-  REJECTED: { label: 'Từ chối', tone: 'bad' },
-  REQUEST_CHANGES: { label: 'Cần sửa', tone: 'info' },
+  DRAFT: { label: 'Bản nháp', tone: 'mu' },
+  PENDING_APPROVAL: { label: 'Chờ duyệt', tone: 'wt' },
+  APPROVED: { label: 'Đã duyệt', tone: 'soft' },
+  REJECTED: { label: 'Từ chối', tone: 'bd' },
+  REQUEST_CHANGES: { label: 'Cần sửa', tone: 'in' },
 } as const
 
-const PARCEL_STATUS_CLASS: Record<string, string> = {
-  SOWING: 'sowing',
-  TENDING: 'tending',
-  HARVEST_APPROVED: 'harvestApproved',
-  HARVESTED: 'harvested',
+const PARCEL_TONE: Record<string, string> = {
+  SOWING: 'in',
+  TENDING: 'soft',
+  HARVEST_APPROVED: 'amber',
+  HARVESTED: 'mu',
 }
+
+const SHORTCUTS = [
+  { href: '/farmer/ai', icon: Sparkles, tone: 'dark', title: 'Hỏi đáp AI', detail: 'Hỏi về bón phân, sâu bệnh, thu hái' },
+  { href: '/farmer/handbook', icon: BookOpen, tone: 'soft', title: 'Cẩm nang canh tác', detail: 'Việc theo mùa và cách phòng trị bệnh' },
+  { href: '/farmer/supplies', icon: Store, tone: 'amber', title: 'Vật tư mua chung', detail: 'Đăng ký mua chung phân bón, thuốc BVTV' },
+]
 
 function dayMonth(date: Date): string {
   return date.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit' })
-}
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('vi-VN', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  }).format(date)
 }
 
 function getParcelStatusLabel(status: string) {
@@ -117,8 +114,8 @@ export default async function FarmerDashboard() {
     })
   }
 
-  // A farmer without a household has no parcels, journals or schedule to read.
-  const [entries, pendingCount, cycles, htx] = household
+  // A farmer without a household has no parcels or journals to read.
+  const [entries, htx] = household
     ? await Promise.all([
         prisma.journalEntry.findMany({
           where: { parcel: { household_id: household.id } },
@@ -130,41 +127,39 @@ export default async function FarmerDashboard() {
             entry_date: true,
             status: true,
             parcel: { select: { parcel_code: true } },
-            activities: { select: { activity_detail: true, product_name: true }, take: 1 },
           },
-        }),
-        prisma.journalEntry.count({ where: { parcel: { household_id: household.id }, status: 'PENDING_APPROVAL' } }),
-        prisma.parcelCropCycle.findMany({
-          where: { parcel: { household_id: household.id }, estimated_harvest_date: { gte: now } },
-          orderBy: { estimated_harvest_date: 'asc' },
-          take: 3,
-          select: { id: true, estimated_harvest_date: true, parcel: { select: { parcel_code: true } } },
         }),
         prisma.htxProfile.findUnique({ where: { id: htxProfileId }, select: { name: true } }),
       ])
-    : [[], 0, [], null]
+    : [[], null]
 
   const parcels = household?.parcels ?? []
   const totalHa = parcels.reduce((sum, p) => sum + p.area_ha, 0)
-  const expectedKg = parcels
-    .filter(p => p.status !== 'HARVESTED' && p.status !== 'DRAFT')
-    .reduce((sum, p) => sum + p.area_ha * (p.estimated_yield_per_ha ?? 0), 0)
-  const nextHarvest = cycles[0]
   const condition = weather && (/^\d+$/.test(weather.condition) ? weatherCodeToCondition(Number(weather.condition)) : weather.condition)
+  const hectares = (value: number) => value.toLocaleString('vi-VN', { maximumFractionDigits: 2 })
 
   return (
-    <main className={`${layout.page} ${styles.page}`}>
+    <main className={`${kit.page} ${styles.page}`}>
       <div className={styles.hero}>
         <HeroBanner
           eyebrow={['Nông hộ', htx?.name].filter(Boolean).join(' · ')}
           title={`${getGreeting()}, ${session.user.name || 'Nông dân'}`}
-          subtitle={`${formatDate(now)}${pendingCount > 0 ? ` · ${pendingCount} nhật ký đang chờ cán bộ duyệt` : ''}`}
+          subtitle="Chúc bạn một ngày làm việc hiệu quả!"
           actions={[
-            { href: '/farmer/journal/new', label: 'Ghi nhật ký', icon: <PenLine size={18} aria-hidden="true" /> },
-            { href: '/farmer/diagnosis', label: 'Chẩn đoán lá', icon: <Camera size={18} aria-hidden="true" /> },
-            { href: '/farmer/journal', label: 'Xem lịch sử', icon: <History size={18} aria-hidden="true" /> },
+            { href: '/farmer/journal/new', label: 'Ghi nhật ký mới', icon: <PenLine size={16} aria-hidden="true" /> },
+            { href: '/farmer/journal', label: 'Xem lịch sử', icon: <History size={16} aria-hidden="true" /> },
+            { href: '/farmer/diagnosis', label: 'Chẩn đoán bệnh', icon: <Camera size={16} aria-hidden="true" /> },
           ]}
         />
+      </div>
+
+      <div className={styles.shortcuts}>
+        {SHORTCUTS.map(({ href, icon: Icon, tone, title, detail }) => (
+          <Link key={href} href={href} className={`${kit.pn} ${styles.shortcut}`}>
+            <span className={`${kit.ico} ${kit[tone]}`}><Icon size={22} aria-hidden="true" /></span>
+            <span><strong>{title}</strong><small>{detail}</small></span>
+          </Link>
+        ))}
       </div>
 
       {withdrawals.length > 0 && (
@@ -179,94 +174,65 @@ export default async function FarmerDashboard() {
         </div>
       )}
 
-      <div className={`${layout.metrics} ${styles.metrics}`}>
-        <MetricCard icon={<Sprout />} label="Thửa của tôi" value={parcels.length} detail={`${totalHa.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha`} />
-        <MetricCard icon={<Leaf />} label="Sản lượng dự kiến" value={`${(expectedKg / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} tấn`} tone="blue" />
-        <MetricCard icon={<Clock />} label="Nhật ký chờ duyệt" value={pendingCount} tone="amber" />
-        <MetricCard
-          icon={<Calendar />}
-          label="Lần hái tới"
-          value={nextHarvest ? dayMonth(nextHarvest.estimated_harvest_date!) : '—'}
-          detail={nextHarvest?.parcel.parcel_code}
-        />
-      </div>
+      <div className={`${kit.cols} ${styles.columns}`}>
+        <section className={`${kit.pn} ${styles.parcels}`} aria-label="Tình trạng thửa đất">
+          <div className={kit.ph}><h2>Tình trạng thửa đất</h2><span className={`${kit.tag} ${kit.mu}`}>{parcels.length} thửa · {hectares(totalHa)} ha</span></div>
+          {parcels.length === 0 ? (
+            <EmptyState icon={<Sprout />} title="Bạn chưa có thửa đất nào được phân công." />
+          ) : (
+            <ul className={kit.list}>
+              {parcels.map(parcel => (
+                <li key={parcel.id} className={`${kit.row} ${styles.parcel}`}>
+                  <span className={`${kit.ico} ${kit.soft}`}><Sprout size={22} aria-hidden="true" /></span>
+                  <span className={kit.grow}>
+                    <strong className={kit.mono}>{parcel.parcel_code}</strong><br />
+                    <span className={kit.muted}>{parcel.crop_type} • {hectares(parcel.area_ha)} ha</span>
+                  </span>
+                  <span className={`${kit.tag} ${kit[PARCEL_TONE[parcel.status] ?? 'mu']}`}>{getParcelStatusLabel(parcel.status)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-      <div className={`${layout.columns} ${styles.columns}`}>
-        <div className={`${layout.stack} ${styles.main}`}>
-          <Panel title="Thửa của tôi" className={styles.parcels}>
-            {parcels.length === 0 ? (
-              <EmptyState icon={<Sprout />} title="Bạn chưa có thửa đất nào được phân công." />
+        <div className={`${kit.stack} ${styles.side}`}>
+          <section className={`${kit.pn} ${styles.weather}`} data-testid="weather-widget">
+            <div className={kit.ph}><h2>Thời tiết hiện tại</h2></div>
+            {!weather ? (
+              <p className={styles.empty}>Chưa có dữ liệu thời tiết cho khu vực của bạn.</p>
             ) : (
-              <ul className={layout.list}>
-                {parcels.map(parcel => (
-                  <li key={parcel.id} className={styles.parcel}>
-                    <strong className={layout.code}>{parcel.parcel_code}</strong>
-                    <span className={styles.crop}>{parcel.crop_type} · {parcel.area_ha.toLocaleString('vi-VN')} ha</span>
-                    <span className={`${styles.status} ${styles[PARCEL_STATUS_CLASS[parcel.status] ?? 'draft']}`}>
-                      {getParcelStatusLabel(parcel.status)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div className={styles.weatherBody}>
+                <div className={styles.now}>
+                  <Cloud size={52} aria-hidden="true" />
+                  <span><strong>{weather.temperature_c.toLocaleString('vi-VN')}°C</strong><br />{condition}</span>
+                </div>
+                <div className={styles.readings}>
+                  <div><span>Độ ẩm</span><strong><Droplet size={16} aria-hidden="true" />{weather.humidity_pct}%</strong></div>
+                  <div><span>Lượng mưa</span><strong><CloudRain size={16} aria-hidden="true" />{weather.precipitation_mm} mm</strong></div>
+                </div>
+              </div>
             )}
-          </Panel>
+          </section>
 
-          <Panel title="Nhật ký gần đây" href="/farmer/journal" className={styles.recent}>
+          <section className={`${kit.pn} ${styles.recent}`} aria-label="Nhật ký gần đây">
+            <div className={kit.ph}><h2>Nhật ký gần đây</h2><Link href="/farmer/journal">Xem tất cả</Link></div>
             {entries.length === 0 ? (
               <EmptyState icon={<FileText />} title="Chưa có nhật ký nào" />
             ) : (
-              <ul className={layout.list}>
+              <ul className={kit.list}>
                 {entries.map(entry => {
                   const status = ENTRY_STATUS[entry.status as keyof typeof ENTRY_STATUS] ?? ENTRY_STATUS.DRAFT
-                  const activity = entry.activities[0]
                   return (
-                    <li key={entry.id} className={layout.row}>
-                      <div className={layout.rowMain}>
-                        <strong>{ACTIVITY_LABELS[entry.activity_type] ?? entry.activity_type} · {entry.parcel.parcel_code}</strong>
-                        <small>{[activity?.product_name || activity?.activity_detail, dayMonth(entry.entry_date)].filter(Boolean).join(' · ')}</small>
-                      </div>
-                      <Pill tone={status.tone}>{status.label}</Pill>
+                    <li key={entry.id} className={kit.row}>
+                      <span className={`${kit.mono} ${styles.date}`}>{dayMonth(entry.entry_date)}</span>
+                      <strong className={kit.grow}>{ACTIVITY_LABELS[entry.activity_type] ?? entry.activity_type} · {entry.parcel.parcel_code}</strong>
+                      <span className={`${kit.tag} ${kit[status.tone]}`}>{status.label}</span>
                     </li>
                   )
                 })}
               </ul>
             )}
-          </Panel>
-        </div>
-
-        <div className={`${layout.stack} ${styles.side}`}>
-          <div className={styles.weather} data-testid="weather-widget">
-            <Panel title="Thời tiết hiện tại">
-              {!weather ? (
-                <p className={layout.body}>Chưa có dữ liệu thời tiết cho khu vực của bạn.</p>
-              ) : (
-                <div className={`${layout.body} ${styles.weatherBody}`}>
-                  <Cloud size={40} aria-hidden="true" />
-                  <div>
-                    <p className={styles.temperature}>
-                      <strong>{weather.temperature_c.toLocaleString('vi-VN')}°C</strong> <span>{condition}</span>
-                    </p>
-                    <p className={styles.weatherMeta}>Độ ẩm {weather.humidity_pct}% · Mưa {weather.precipitation_mm} mm</p>
-                  </div>
-                </div>
-              )}
-            </Panel>
-          </div>
-
-          <Panel title="Lịch hái sắp tới" href="/farmer/schedule" linkLabel="Xem lịch" className={styles.upcoming}>
-            {cycles.length === 0 ? (
-              <EmptyState icon={<Calendar />} title="Chưa có lịch thu hái" />
-            ) : (
-              <ul className={layout.list}>
-                {cycles.map(cycle => (
-                  <li key={cycle.id} className={layout.row}>
-                    <strong className={layout.rowDate}>{dayMonth(cycle.estimated_harvest_date!)}</strong>
-                    <span>Thửa {cycle.parcel.parcel_code}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
+          </section>
         </div>
       </div>
     </main>

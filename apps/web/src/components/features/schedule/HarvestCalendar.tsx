@@ -9,6 +9,8 @@ import { Calendar, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Edit2,
 import { PageHeader } from '@/components/ui/PageHeader'
 import kit from '@/components/features/dashboard/page-kit.module.css'
 import styles from './HarvestCalendar.module.css'
+import { FarmerScheduleAside } from './FarmerScheduleAside'
+import farmer from '@/components/features/farmer-web/kit.module.css'
 import { Button } from '@/components/ui/Button/Button'
 
 export interface HarvestEvent {
@@ -42,6 +44,7 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
   const endDateIso = lastDay.toISOString()
 
   const isManager = userRole === 'MANAGER'
+  const isFarmer = userRole === 'FARMER'
 
   const { data, mutate } = useSWR<{ data: HarvestEvent[] }>(
     `/api/schedule/harvest?start_date=${startDateIso}&end_date=${endDateIso}`,
@@ -113,13 +116,20 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
     <div className={kit.page}>
       <PageHeader
         icon={<Calendar size={28} />}
-        title="Lịch thu hái"
-        description="Lịch dự kiến thu hoạch theo thửa, có cảnh báo thời gian cách ly"
-        actions={isManager ? <Button onClick={() => setIsAddModalOpen(true)}>+ Thêm lịch</Button> : undefined}
+        title={isFarmer ? 'Lịch dự kiến thu hoạch' : 'Lịch thu hái'}
+        description={isFarmer ? 'Ngày hái dự kiến từng thửa — màu cho biết đã đủ thời gian cách ly hay chưa' : 'Lịch dự kiến thu hoạch theo thửa, có cảnh báo thời gian cách ly'}
+        actions={isManager ? <Button onClick={() => setIsAddModalOpen(true)}>+ Thêm lịch</Button> : isFarmer ? (
+          <div className="flex gap-2 items-center">
+            <h2 className={styles.month}>Tháng {currentDate.getMonth() + 1} / {currentDate.getFullYear()}</h2>
+            <Button variant="secondary" onClick={handlePrevMonth} aria-label="Tháng trước"><ChevronLeft size={16} /></Button>
+            <Button variant="secondary" onClick={handleNextMonth} aria-label="Tháng sau"><ChevronRight size={16} /></Button>
+          </div>
+        ) : undefined}
       />
 
-      <div className={styles.calendarContainer}>
-      <div className={styles.header}>
+      <div className={isFarmer ? farmer.cols : undefined}>
+      <div className={`${styles.calendarContainer} ${isFarmer ? styles.beside : ''}`}>
+      {!isFarmer && <div className={styles.header}>
         <h2 className={styles.title}>
           Tháng {currentDate.getMonth() + 1} / {currentDate.getFullYear()}
         </h2>
@@ -127,10 +137,10 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
           <Button variant="secondary" onClick={handlePrevMonth} aria-label="Tháng trước"><ChevronLeft size={16} /></Button>
           <Button variant="secondary" onClick={handleNextMonth} aria-label="Tháng sau"><ChevronRight size={16} /></Button>
         </div>
-      </div>
+      </div>}
 
       <div className={styles.gridScroll}>
-      <div className={styles.grid}>
+      <div className={`${styles.grid} ${isFarmer ? styles.farmerGrid : ''}`}>
         {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(day => (
           <div key={day} className={styles.dayHeader}>{day}</div>
         ))}
@@ -147,7 +157,7 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
           }) || []
 
           return (
-            <div key={day} className={styles.cell}>
+            <div key={day} className={`${styles.cell} ${isFarmer && new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString() === new Date().toDateString() ? styles.today : ''}`}>
               <div className={styles.cellDate}>{day}</div>
               <div className="flex flex-col gap-1 overflow-y-auto">
                 {eventsForDay.map(ev => (
@@ -166,7 +176,7 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
                     {ev.status === 'SAFE' && <CheckCircle size={12} aria-hidden="true" />}
                     {ev.status === 'WARNING' && <AlertTriangle size={12} aria-hidden="true" />}
                     {ev.status === 'DANGER' && <ShieldAlert size={12} aria-hidden="true" />}
-                    <span className="truncate">{ev.parcelName || 'N/A'} - {ev.cropType}</span>
+                    <span className="truncate">{ev.parcelName || 'N/A'}{isFarmer ? '' : ` - ${ev.cropType}`}</span>
                     {isManager && <Edit2 size={10} className="ml-auto opacity-50" aria-hidden="true" />}
                   </div>
                 ))}
@@ -176,6 +186,8 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
         })}
       </div>
       </div>
+      </div>
+      {isFarmer && <FarmerScheduleAside />}
       </div>
 
       {/* Edit Modal */}

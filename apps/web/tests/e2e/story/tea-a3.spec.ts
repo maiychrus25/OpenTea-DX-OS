@@ -76,7 +76,7 @@ test('một ngày của lô chè A3', async ({ browser }) => {
   await test.step('the farmer adds a journal entry with a photo, uploaded to storage through the presigned PUT', async () => {
     await farmer.goto('/farmer/journal/new')
     await selectParcel(farmer.locator('select').first(), 'TC-A3')
-    await farmer.locator('select').nth(1).selectOption({ label: 'Bón phân' })
+    await farmer.getByRole('button', { name: 'Bón phân', exact: true }).click()
     await farmer.getByPlaceholder('VD: Phân NPK 16-16-8').fill('Phân hữu cơ vi sinh')
     await farmer.getByPlaceholder('Chè đang ra búp đều...').fill(note)
     await farmer.locator('input[type="file"]').setInputFiles(await leafPhoto(farmer, 'la-che-a3.png'))

@@ -316,6 +316,9 @@
 
 
 .offlineBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background-color: var(--color-warning-subtle);
   color: var(--color-warning);
   padding: 1rem;
@@ -325,6 +328,9 @@
 }
 
 .syncBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background-color: var(--color-info-subtle);
   color: var(--color-info);
   padding: 1rem;
@@ -343,3 +349,26 @@
   font-size: 0.875rem;
   width: 100%;
 }
+
+/* Laid out as designed: photo and result on the left, past reports on the right. */
+.mainColumn { flex: 3 1 520px; }
+.historyColumn { flex: 2 1 340px; }
+.panelBody { display: flex; flex-direction: column; gap: 14px; padding: 18px; }
+.panelBody .select { height: 44px; }
+.preview { position: relative; display: flex; align-items: center; justify-content: center; height: 280px; overflow: hidden; border-radius: 14px; background: var(--color-primary-subtle); color: var(--color-ink-secondary); font-size: 13px; cursor: pointer; }
+.preview span { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.preview img { width: 100%; height: 100%; object-fit: contain; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.actions .pick { flex: 1; height: 44px; }
+.actions .go { flex: 2; height: 44px; }
+.actions .go:disabled { opacity: 0.5; }
+.hint { font-size: 12.5px; color: var(--color-ink-secondary); }
+.verdict { display: flex; align-items: baseline; gap: 10px; }
+.verdict strong { flex: 1; font-size: 24px; color: var(--color-ink-heading); }
+.bar { width: 100%; height: 8px; accent-color: var(--color-success); }
+.barLow { accent-color: var(--color-accent); }
+.past { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
+.thumb { position: relative; width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 10px; background: var(--color-primary-subtle); color: var(--color-ink-secondary); }
+.pastMeta { display: block; color: var(--color-ink-secondary); }
+.advice { display: block; margin-top: 6px; padding: 8px; border-radius: 8px; background: var(--color-info-subtle); }
+.past + .past { margin-top: 0; }

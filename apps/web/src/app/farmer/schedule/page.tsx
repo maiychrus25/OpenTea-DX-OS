@@ -5,9 +5,5 @@ import React from 'react'
 import { HarvestCalendar } from '@/components/features/schedule/HarvestCalendar'
 
 export default function FarmerSchedulePage() {
-  return (
-    <div>
-      <HarvestCalendar userRole="FARMER" />
-    </div>
-  )
+  return <HarvestCalendar userRole="FARMER" />
 }

@@ -1,0 +1,13 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--color-border); }
+.tab { display: flex; align-items: center; gap: 8px; margin-bottom: -1px; padding: 10px 20px; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--color-ink-secondary); font: inherit; font-weight: 500; cursor: pointer; }
+.tab[aria-pressed='true'] { border-bottom-color: var(--color-primary); color: var(--color-primary); font-weight: 700; }
+.articles { flex: 3 1 560px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.article { display: flex; flex-direction: column; gap: 10px; padding: 18px; }
+.article > span { align-self: flex-start; }
+.article h2 { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.35; color: var(--color-ink-heading); }
+.article p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--color-ink-tertiary); }
+.article footer { display: flex; gap: 10px; margin-top: auto; font-size: 12.5px; color: var(--color-ink-secondary); }
+.article footer svg { display: inline; vertical-align: -2px; }

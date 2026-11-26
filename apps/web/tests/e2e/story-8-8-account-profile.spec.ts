@@ -72,14 +72,11 @@ test.describe('Story 8.8: Account Profile Page', () => {
 
     test('T4: Farmer /farmer/profile render và có logout button', async ({ page }) => {
       await page.goto('/farmer/profile')
-      
-      const accountSection = page.locator('section', { hasText: 'Tài khoản cá nhân' })
-      await expect(accountSection).toBeVisible()
-      await expect(accountSection.getByText('Farmer', { exact: true })).toBeVisible()
-      await expect(accountSection.getByText('Nông dân')).toBeVisible()
 
-      const logoutBtn = accountSection.getByRole('button', { name: 'Đăng xuất' })
-      await expect(logoutBtn).toBeVisible()
+      const identity = page.getByRole('region', { name: 'Tài khoản cá nhân' })
+      await expect(identity.getByText('Farmer', { exact: true })).toBeVisible()
+      await expect(identity.getByText('Nông dân', { exact: true })).toBeVisible()
+      await expect(page.getByRole('region', { name: 'Hỗ trợ và đăng xuất' }).getByRole('button', { name: 'Đăng xuất' })).toBeVisible()
     })
 
     test('T9: Role guard — farmer không vào được /manager/profile', async ({ page }) => {
@@ -107,7 +104,7 @@ test.describe('Story 8.8: Account Profile Page', () => {
     await expect(accountSection).toBeVisible()
     
     // Just a smoke check for responsiveness, if elements remain in viewport
-    const boundingBox = await accountSection.boundingBox()
-    expect(boundingBox?.width).toBeLessThanOrEqual(375)
+    // Polled: the page can still be hydrating, when a box is briefly unavailable.
+    await expect.poll(async () => (await accountSection.boundingBox())?.width ?? Infinity).toBeLessThanOrEqual(375)
   })
 })

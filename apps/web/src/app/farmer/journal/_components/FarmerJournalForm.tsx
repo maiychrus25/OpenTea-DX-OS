@@ -5,6 +5,8 @@
 
 import React, { useEffect, useState } from 'react'
 import styles from '../journal.module.css'
+import kit from '@/components/features/farmer-web/kit.module.css'
+import { ImageIcon, Send, TriangleAlert } from 'lucide-react'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface Parcel {
@@ -31,7 +33,7 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
   const [parcels, setParcels] = useState<Parcel[]>([])
   const [parcelId, setParcelId] = useState('')
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10))
-  const [activityType, setActivityType] = useState('OTHER')
+  const [activityType, setActivityType] = useState('SPRAYING')
   const [productName, setProductName] = useState('')
   const [hasChemicals, setHasChemicals] = useState(true)
   const [dosage, setDosage] = useState('')
@@ -124,63 +126,54 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
     }
   }
 
-  return (
-    <form onSubmit={handleSubmit}>
-      <h2 className={styles.modalTitle}>Ghi nhật ký</h2>
+  const field = (label: string, control: React.ReactNode) => (
+    <label className={kit.fl}>{label}{control}</label>
+  )
 
+  return (
+    <form onSubmit={handleSubmit} className={styles.entryForm} aria-label="Ghi nhật ký">
       {error && <p className={styles.errorText}>{error}</p>}
 
-      <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Thửa đất</label>
-        <select className={styles.formSelect} value={parcelId} onChange={e => setParcelId(e.target.value)} disabled={parcels.length === 0}>
-          {parcels.length === 0 && <option value="">Chưa có thửa đất được phân công</option>}
-          {parcels.map(p => (
-            <option key={p.id} value={p.id}>{p.parcel_code} — {p.crop_type}</option>
+      <div className={`${styles.two} ${kit.two}`}>
+        {field('Thửa đất', (
+          <select className={`${kit.inp} ${styles.tall}`} value={parcelId} onChange={e => setParcelId(e.target.value)} disabled={parcels.length === 0}>
+            {parcels.length === 0 && <option value="">Chưa có thửa đất được phân công</option>}
+            {parcels.map(p => (
+              <option key={p.id} value={p.id}>{p.parcel_code} — {p.crop_type}</option>
+            ))}
+          </select>
+        ))}
+        {field('Ngày', <input className={`${kit.inp} ${styles.tall}`} type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} />)}
+      </div>
+
+      <div className={kit.fl}>
+        <span id="activity-label">Hoạt động</span>
+        <div className={styles.filters} role="group" aria-labelledby="activity-label">
+          {ACTIVITY_TYPES.map(t => (
+            <button key={t.value} type="button" className={`${kit.seg} ${styles.tallChip}`} aria-pressed={activityType === t.value} onClick={() => setActivityType(t.value)}>{t.label}</button>
           ))}
-        </select>
+        </div>
       </div>
 
-      <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Ngày</label>
-        <input className={styles.formInput} type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} />
-      </div>
-
-      <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Hoạt động</label>
-        <select className={styles.formSelect} value={activityType} onChange={e => setActivityType(e.target.value)}>
-          {ACTIVITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-        </select>
-      </div>
-
-      <div className={styles.checkboxRow}>
-        <input type="checkbox" id="noChem" checked={!hasChemicals} onChange={e => setHasChemicals(!e.target.checked)} />
-        <label htmlFor="noChem">Không sử dụng thuốc / phân bón trong lần ghi này</label>
-      </div>
+      <label className={styles.check}>
+        <input type="checkbox" checked={!hasChemicals} onChange={e => setHasChemicals(!e.target.checked)} />
+        Không sử dụng thuốc / phân bón trong lần ghi này
+      </label>
 
       {hasChemicals && (
         <>
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Sản phẩm sử dụng</label>
-            <input className={styles.formInput} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />
-          </div>
-
+          {field('Sản phẩm sử dụng', <input className={`${kit.inp} ${styles.tall}`} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />)}
           {activityType === 'SPRAYING' && (
             <>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Liều lượng</label>
-                <input className={styles.formInput} value={dosage} onChange={e => setDosage(e.target.value)} placeholder="VD: 50ml/bình 16L" />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Người thực hiện</label>
-                <input className={styles.formInput} value={performer} onChange={e => setPerformer(e.target.value)} placeholder="VD: Nguyễn Văn A" />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Thời gian cách ly (ngày)</label>
-                <input className={styles.formInput} type="number" value={withdrawalDays} onChange={e => setWithdrawalDays(Number(e.target.value))} />
+              <div className={`${styles.three} ${kit.three}`}>
+                {field('Liều lượng', <input className={`${kit.inp} ${styles.tall}`} value={dosage} onChange={e => setDosage(e.target.value)} placeholder="VD: 50ml/bình 16L" />)}
+                {field('Người thực hiện', <input className={`${kit.inp} ${styles.tall}`} value={performer} onChange={e => setPerformer(e.target.value)} placeholder="VD: Nguyễn Văn A" />)}
+                {field('Thời gian cách ly (ngày)', <input className={`${kit.inp} ${styles.tall}`} type="number" value={withdrawalDays} onChange={e => setWithdrawalDays(Number(e.target.value))} />)}
               </div>
               {withdrawalDays < 14 && (
-                <div className={styles.warningBox}>
-                  Cảnh báo vi phạm: Thời gian cách ly tiêu chuẩn là &gt;= 14 ngày. Hãy đảm bảo an toàn!
+                <div className={kit.warn} role="alert">
+                  <TriangleAlert size={20} aria-hidden="true" />
+                  <span><strong>Cảnh báo vi phạm:</strong> thời gian cách ly tiêu chuẩn là từ 14 ngày. Hãy đảm bảo an toàn!</span>
                 </div>
               )}
             </>
@@ -188,25 +181,21 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
         </>
       )}
 
-      <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Ghi chú</label>
-        <textarea className={styles.formTextarea} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Chè đang ra búp đều..." />
-      </div>
+      {field('Ghi chú', <textarea className={`${kit.inp} ${styles.area}`} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Chè đang ra búp đều..." />)}
 
-      <div className={styles.formGroup}>
-        <label className={styles.formLabel}>Hình ảnh thực tế (Tùy chọn)</label>
-        <input 
-          type="file" 
-          accept="image/jpeg, image/png"
-          className={styles.formInput} 
-          onChange={e => e.target.files && setPhoto(e.target.files[0])} 
-        />
-        {photo && <p className={styles.formDetail}>Đã chọn: {photo.name}</p>}
-      </div>
+      <label className={kit.fl}>
+        Hình ảnh thực tế (tùy chọn)
+        <span className={styles.drop}>
+          <ImageIcon size={22} aria-hidden="true" />
+          {photo ? `Đã chọn: ${photo.name}` : 'Nhấn để chọn ảnh (JPEG, PNG)'}
+          <input type="file" accept="image/jpeg, image/png" className={styles.fileInput} onChange={e => e.target.files && setPhoto(e.target.files[0])} />
+        </span>
+      </label>
 
-      <div className={styles.formActions}>
-        <button type="button" className={styles.cancelBtn} onClick={onCancel}>Hủy</button>
-        <button type="submit" className={styles.submitBtn} disabled={submitting || uploadingPhoto || !parcelId}>
+      <div className={styles.entryActions}>
+        <button type="button" className={`${kit.btn2} ${styles.tall}`} onClick={onCancel}>Hủy</button>
+        <button type="submit" className={`${kit.btn} ${styles.tall}`} disabled={submitting || uploadingPhoto || !parcelId}>
+          <Send size={16} aria-hidden="true" />
           {submitting || uploadingPhoto ? 'Đang gửi...' : 'Gửi chờ duyệt'}
         </button>
       </div>

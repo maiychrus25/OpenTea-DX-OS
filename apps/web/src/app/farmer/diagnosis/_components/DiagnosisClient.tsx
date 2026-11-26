@@ -3,10 +3,11 @@
 
 'use client'
 
-import { PageHeader } from '@/components/ui/PageHeader'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Pill } from '@/components/ui'
-import { WifiOff, RefreshCw, AlertTriangle, ScanLine } from 'lucide-react'
+import { WifiOff, RefreshCw, AlertTriangle, BookOpen, ImageIcon, Sparkles, Stethoscope } from 'lucide-react'
+import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from '../diagnosis.module.css'
 import { getDiagnosisHistory } from '../actions'
 import { DiagnosisHistoryItem } from '@/domain/disease/ports/disease-report.port'
@@ -48,6 +49,15 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
       setErrorMsg(null)
     }
   }
+
+  // A local preview of the chosen photo, released when it changes.
+  const [preview, setPreview] = useState<string | null>(null)
+  useEffect(() => {
+    if (!selectedFile || typeof URL.createObjectURL !== 'function') { setPreview(null); return }
+    const url = URL.createObjectURL(selectedFile)
+    setPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [selectedFile])
 
   const handleAnalyze = async () => {
     if (!selectedFile || !selectedParcelId) {
@@ -112,138 +122,131 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
     setSuccessMsg(null)
   }
 
+  const percent = result ? result.confidence * 100 : 0
+  const unsure = percent < 70
+
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <PageHeader
-          icon={<ScanLine size={28} />}
-          title="Chẩn đoán bệnh tự động"
-          description="Tải ảnh lá bệnh lên để AI hỗ trợ nhận diện. Kết quả sẽ tự động được lưu và thông báo cho Cán bộ Kỹ thuật."
-        />
-        
-        {!isOnline && (
-          <div className={styles.offlineBanner}>
-            <WifiOff size={16} className="inline-block mr-1.5 text-warning align-text-bottom" />
-            Bạn đang ngoại tuyến. Hình ảnh sẽ được lưu vào máy và tự động tải lên khi có mạng (Đang chờ: {queueCount}).
-          </div>
-        )}
-        {isOnline && queueCount > 0 && (
-          <div className={styles.syncBanner}>
-            <RefreshCw size={16} className="inline-block mr-1.5 animate-spin text-info align-text-bottom" />
-            Đang đồng bộ {queueCount} hình ảnh từ bộ nhớ tạm... {isSyncing ? '(Đang xử lý)' : ''}
-          </div>
-        )}
+    <div className={kit.page}>
+      <div className={kit.hd}>
+        <span className={kit.hico}><Stethoscope size={28} aria-hidden="true" /></span>
+        <div className={kit.hdText}>
+          <h1 className={kit.h1}>Chẩn đoán bệnh tự động</h1>
+          <p className={kit.sub}>Tải ảnh lá bệnh để AI nhận diện. Kết quả được lưu và báo cho cán bộ kỹ thuật.</p>
+        </div>
       </div>
 
-      <div className={styles.layout}>
-        {/* Left Column: Upload & Result */}
-        <div className={styles.mainPanel}>
-          <div className={styles.uploadArea}>
-            <div className={styles.inputGroup}>
-              <label className={styles.label}>Chọn thửa đất:</label>
-              <select 
-                className={styles.select}
-                value={selectedParcelId}
-                onChange={(e) => setSelectedParcelId(e.target.value)}
-              >
-                {initialParcels.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.parcel_code})</option>
-                ))}
-              </select>
+      {!isOnline && (
+        <div className={styles.offlineBanner}>
+          <WifiOff size={16} aria-hidden="true" />
+          Bạn đang ngoại tuyến. Hình ảnh sẽ được lưu vào máy và tự động tải lên khi có mạng (Đang chờ: {queueCount}).
+        </div>
+      )}
+      {isOnline && queueCount > 0 && (
+        <div className={styles.syncBanner}>
+          <RefreshCw size={16} className="animate-spin" aria-hidden="true" />
+          Đang đồng bộ {queueCount} hình ảnh từ bộ nhớ tạm... {isSyncing ? '(Đang xử lý)' : ''}
+        </div>
+      )}
+
+      <div className={kit.cols}>
+        <div className={`${kit.stack} ${styles.mainColumn}`}>
+          <section className={kit.pn} aria-label="Ảnh lá chè">
+            <div className={kit.ph}><h2>Ảnh lá chè</h2></div>
+            <div className={styles.panelBody}>
+              <label className={kit.fl}>
+                Chọn thửa đất
+                <select className={`${kit.inp} ${styles.select}`} value={selectedParcelId} onChange={(e) => setSelectedParcelId(e.target.value)}>
+                  {initialParcels.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.parcel_code})</option>
+                  ))}
+                </select>
+              </label>
+
+              <input type="file" id="fileInput" accept="image/jpeg, image/png" className={styles.fileInput} onChange={handleFileSelect} />
+              <label htmlFor="fileInput" className={styles.preview}>
+                {preview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={preview} alt="Ảnh lá chè đã chọn" />
+                ) : (
+                  <span>
+                    <ImageIcon size={28} aria-hidden="true" />
+                    {selectedFile ? `Đã chọn: ${selectedFile.name}` : 'Nhấn để chọn ảnh lá chè'}
+                  </span>
+                )}
+              </label>
+
+              {errorMsg && <div className={styles.errorBox}>{errorMsg}</div>}
+              {successMsg && <div className={styles.successBox}>{successMsg}</div>}
+
+              <div className={styles.actions}>
+                <label htmlFor="fileInput" className={`${kit.btn2} ${styles.pick}`}>
+                  <ImageIcon size={16} aria-hidden="true" />
+                  {selectedFile ? 'Chọn ảnh khác' : 'Chọn ảnh'}
+                </label>
+                {result ? (
+                  <button type="button" className={`${kit.btn} ${styles.go}`} onClick={resetForm}>Chẩn đoán hình ảnh khác</button>
+                ) : (
+                  <button type="button" className={`${kit.btn} ${styles.go}`} onClick={handleAnalyze} disabled={!selectedFile || isAnalyzing}>
+                    {isAnalyzing ? 'Đang phân tích và gửi cho CBKT...' : 'Bắt đầu chẩn đoán'}
+                  </button>
+                )}
+              </div>
+              <span className={styles.hint}>Ảnh JPEG hoặc PNG, tối đa 5 MB. Chụp một lá rõ nét, đủ sáng.</span>
             </div>
-
-            <input type="file" id="fileInput" accept="image/jpeg, image/png" className={styles.fileInput} onChange={handleFileSelect} />
-            <label htmlFor="fileInput" className={styles.uploadLabel}>
-              {selectedFile ? (
-                <span>Đã chọn: <strong>{selectedFile.name}</strong></span>
-              ) : (
-                <span>Nhấn để chọn ảnh (JPEG, PNG. Tối đa 5MB)</span>
-              )}
-            </label>
-
-            {errorMsg && (
-              <div className={styles.errorBox}>
-                {errorMsg}
-              </div>
-            )}
-            {successMsg && (
-              <div className={styles.successBox}>
-                {successMsg}
-              </div>
-            )}
-
-            {selectedFile && !result && (
-              <button className={styles.analyzeBtn} onClick={handleAnalyze} disabled={isAnalyzing}>
-                {isAnalyzing ? 'Đang phân tích và gửi cho CBKT...' : 'Bắt đầu chẩn đoán'}
-              </button>
-            )}
-          </div>
+          </section>
 
           {result && (
-            <div className={styles.resultArea}>
-              <h3>Kết quả AI gợi ý (chưa phải chẩn đoán cuối cùng):</h3>
-              {result.confidence * 100 < 70 && (
-                <div className={styles.warningBox}>
-                  <AlertTriangle size={16} className="inline-block mr-1.5 text-warning align-text-bottom" />
-                  <strong>Độ tự tin thấp:</strong> Hình ảnh có thể mờ hoặc không rõ triệu chứng. Cán bộ Kỹ thuật đã nhận được thông báo và sẽ kiểm tra thêm.
+            <section className={kit.pn} aria-label="Kết quả AI gợi ý">
+              <div className={kit.ph}><h2>Kết quả AI gợi ý</h2><span className={`${kit.tag} ${kit.amber}`}>Chưa phải chẩn đoán cuối cùng</span></div>
+              <div className={styles.panelBody}>
+                <div className={styles.verdict}>
+                  <strong>{result.disease}</strong>
+                  {!result.uncertain && <span className={`${kit.tag} ${unsure ? kit.amber : kit.ok}`}>{percent.toFixed(1)}%</span>}
                 </div>
-              )}
-              
-              <ul className={styles.resultList}>
-                <li className={styles.resultItem}>
-                  <span className={styles.diseaseName}>{result.disease}</span>
-                  {!result.uncertain && (
-                    <span className={styles.confidenceScore} style={{ color: result.confidence * 100 >= 70 ? 'var(--color-success)' : 'var(--color-warning)' }}>
-                      {(result.confidence * 100).toFixed(1)}%
-                    </span>
-                  )}
-                </li>
-              </ul>
-
-              <p className={styles.successBox} role="status">Đã gửi cán bộ kỹ thuật xem</p>
-              <p className={styles.aiNote}>* AI không đưa ra khuyến nghị điều trị. Hãy tham khảo ý kiến chuyên gia. CBKT đã nhận được kết quả này.</p>
-
-              <button className={styles.analyzeBtn} onClick={resetForm}>
-                Chẩn đoán hình ảnh khác
-              </button>
-            </div>
+                {!result.uncertain && (
+                  <progress className={`${styles.bar} ${unsure ? styles.barLow : ''}`} max={100} value={percent} aria-label="Độ tin cậy" />
+                )}
+                {unsure && (
+                  <div className={kit.warn}>
+                    <AlertTriangle size={20} aria-hidden="true" />
+                    <span><strong>Độ tự tin thấp:</strong> ảnh có thể mờ hoặc chưa rõ triệu chứng. Cán bộ kỹ thuật đã nhận được thông báo và sẽ kiểm tra thêm.</span>
+                  </div>
+                )}
+                <p className={styles.successBox} role="status">Đã gửi cán bộ kỹ thuật xem</p>
+                <p className={styles.aiNote}>* AI không đưa ra khuyến nghị điều trị. Hãy tham khảo ý kiến chuyên gia. CBKT đã nhận được kết quả này.</p>
+                <div className={styles.actions}>
+                  <Link href="/farmer/ai" className={kit.btn2}><Sparkles size={16} aria-hidden="true" />Hỏi AI cách xử lý</Link>
+                  <Link href="/farmer/handbook" className={kit.btn2}><BookOpen size={16} aria-hidden="true" />Xem cẩm nang</Link>
+                </div>
+              </div>
+            </section>
           )}
         </div>
 
-        {/* Right Column: History */}
-        <div className={styles.sidePanel}>
-          <h3>Lịch sử chẩn đoán</h3>
+        <section className={`${kit.pn} ${styles.historyColumn}`} aria-label="Lịch sử chẩn đoán">
+          <div className={kit.ph}><h2>Lịch sử chẩn đoán</h2></div>
           {history.length === 0 ? (
             <p className={styles.emptyHistory}>Chưa có lịch sử chẩn đoán.</p>
           ) : (
-            history.map(h => (
-              <div key={h.id} className={styles.historyCard}>
-                <div className={styles.historyHeader}>
-                  <span className={styles.historyDate}>{new Date(h.detection_date).toLocaleDateString('vi-VN')}</span>
-                  <Pill tone={diseaseStatusLabel(h.status).tone}>{diseaseStatusLabel(h.status).label}</Pill>
-                </div>
-                <div className={styles.historyBody}>
-                  {h.photo_url ? (
-                    <div className={styles.historyPhoto}>
-                      <ReportPhoto src={h.photo_url} alt="Disease" className={styles.historyImage} />
-                    </div>
-                  ) : (
-                    <div className={styles.historyImagePlaceholder}>Ảnh không khả dụng</div>
-                  )}
-                  <div className={styles.historyDetails}>
-                    <div className={styles.historyParcel}>Thửa: {h.parcel_code}</div>
-                    <span className={styles.historyDisease}>{displayDiseaseName(h)} ({(h.ai_confidence * 100).toFixed(1)}%)</span>
+            <ul className={kit.list}>
+              {history.map(h => (
+                <li key={h.id} className={styles.past}>
+                  <span className={styles.thumb}>
+                    {h.photo_url ? <ReportPhoto src={h.photo_url} alt="Disease" className={styles.historyImage} /> : <ImageIcon size={18} aria-label="Ảnh không khả dụng" />}
+                  </span>
+                  <span className={kit.grow}>
+                    <strong>{displayDiseaseName(h)} ({(h.ai_confidence * 100).toFixed(1)}%)</strong>
+                    <span className={styles.pastMeta}>{h.parcel_code} · {new Date(h.detection_date).toLocaleDateString('vi-VN')}</span>
                     {h.treatment_recommendation && (
-                      <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', backgroundColor: 'var(--color-info-subtle)', padding: '0.5rem', borderRadius: '4px', border: '1px solid color-mix(in srgb, var(--color-info) 30%, transparent)' }}>
-                        <strong>Hướng dẫn CBKT:</strong> {h.treatment_recommendation}
-                      </div>
+                      <span className={styles.advice}><strong>Hướng dẫn CBKT:</strong> {h.treatment_recommendation}</span>
                     )}
-                  </div>
-                </div>
-              </div>
-            ))
+                  </span>
+                  <Pill tone={diseaseStatusLabel(h.status).tone}>{diseaseStatusLabel(h.status).label}</Pill>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
+        </section>
       </div>
     </div>
   )

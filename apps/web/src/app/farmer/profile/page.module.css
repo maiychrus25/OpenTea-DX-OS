@@ -1,16 +1,20 @@
 /* Copyright (c) 2026 OpenTea Developers
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
-.container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
-}
-
-.columns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
-  align-items: start;
-  gap: 20px;
-}
+.wide { flex: 2 1 560px; }
+.narrow { flex: 1 1 320px; }
+.identity { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 20px; }
+.face { width: 72px; height: 72px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 99px; background: var(--color-sidebar-badge); color: var(--color-sidebar-badge-foreground); font-size: 24px; font-weight: 800; }
+.name { display: block; font-size: 20px; color: var(--color-ink-heading); }
+.meta { font-size: 13.5px; color: var(--color-ink-secondary); }
+.stats { display: flex; gap: 24px; margin: 0; text-align: center; }
+.stats dd { margin: 0; font-size: 20px; font-weight: 700; }
+.stats dt { font-size: 12px; color: var(--color-ink-secondary); }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px 18px; }
+.fields input { background: var(--background); }
+.option { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-row); font-size: 14px; }
+.option:last-child { border-bottom: 0; }
+.option small { display: block; font-size: 12px; color: var(--color-ink-secondary); }
+.toggle { display: flex; align-items: center; gap: 12px; width: 100%; }
+.toggle input { width: 18px; height: 18px; accent-color: var(--color-primary); }
+.actions { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; }

@@ -2,34 +2,33 @@
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
 .withdrawals { list-style: none; margin: 0; padding: 0; font-weight: 700; }
-.parcel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 18px; border-top: 1px solid var(--color-border-row); }
-.parcel:first-child { border-top: 0; }
-.crop { flex: 1; color: var(--color-ink-secondary); }
-.status { padding: 3px 10px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 700; color: var(--color-ink-inverse); }
-.sowing { background: var(--color-status-sowing); }
-.tending { background: var(--color-status-tending); }
-.harvestApproved { background: var(--color-status-harvest-approved); }
-.harvested { background: var(--color-status-harvested); }
-.draft { background: var(--color-status-draft); }
-.weatherBody { display: flex; align-items: center; gap: 16px; }
-.temperature { margin: 0; }
-.temperature strong { font-size: 28px; font-weight: 800; }
-.temperature span { color: var(--color-ink-secondary); }
-.weatherMeta { margin: 2px 0 0; font-size: 13px; color: var(--color-ink-secondary); }
-
-/* Status fills are pale in the dark theme, so their text turns dark. */
-:global(:root[data-theme='dark']) .status { color: var(--background); }
+.shortcuts { display: flex; flex-wrap: wrap; gap: 14px; }
+.shortcut { flex: 1 1 300px; display: flex; align-items: center; gap: 14px; padding: 14px 16px; color: inherit; text-decoration: none; }
+.shortcut:hover { color: inherit; border-color: var(--color-border-input); }
+.shortcut strong { display: block; font-size: 15px; }
+.shortcut small { font-size: 13px; color: var(--color-ink-secondary); }
+.parcels { flex: 3 1 520px; }
+.parcel { gap: 14px; padding-top: 14px; padding-bottom: 14px; }
+.side { flex: 2 1 340px; }
+.weatherBody { display: flex; flex-direction: column; gap: 16px; padding: 18px; }
+.now { display: flex; align-items: center; gap: 14px; color: var(--color-ink-secondary); font-size: 14px; }
+.now svg { color: var(--color-primary); }
+.now strong { font-size: 34px; letter-spacing: -1px; color: var(--color-ink-primary); }
+.readings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.readings div { padding: 12px; border-radius: 12px; background: var(--color-table-head); }
+.readings span { display: block; font-size: 12.5px; color: var(--color-ink-secondary); }
+.readings strong { display: flex; align-items: center; gap: 6px; }
+.empty { margin: 0; padding: 18px; color: var(--color-ink-secondary); }
+.date { width: 44px; color: var(--color-ink-secondary); }
 
 /* Phone: banner, weather, warning, then the parcels; the rest stays reachable below. */
 @media (max-width: 767px) {
   .page { gap: 12px; }
-  /* Two classes, so these win over the shared grid whichever stylesheet loads last. */
-  .page .columns, .page .main, .page .side { display: contents; }
+  .page .columns, .page .side { display: contents; }
   .hero { order: 1; }
   .weather { order: 2; }
   .alert { order: 3; }
-  .parcels { order: 4; }
-  .metrics { order: 5; }
+  .parcels { order: 4; flex-basis: auto; }
+  .shortcuts { order: 5; }
   .recent { order: 6; }
-  .upcoming { order: 7; }
 }

@@ -335,13 +335,45 @@
   }
 }
 
-.formPage {
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 24px;
-  background: var(--color-surface-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-}
+/* Farmer journal: filter chips, a list and the chosen entry beside it. */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.entries { flex: 2 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.entry { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 14px 16px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.entry > strong { font-size: 15px; }
+.entryOn { border: 2px solid var(--color-primary); background: var(--color-surface-sunken); }
+.entryTop { display: flex; align-items: center; gap: 8px; }
+.detail { flex: 3 1 520px; }
+.rows { margin: 0; padding: 8px 20px 4px; }
+.rows div { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--color-border-row); font-size: 14px; }
+.rows dt { width: 130px; flex: none; font-weight: 700; color: var(--color-ink-secondary); }
+.rows dd { flex: 1; margin: 0; }
+.photo { padding: 12px 20px; font-size: 14px; }
+.photo img { display: block; max-width: 100%; max-height: 300px; margin-top: 8px; border-radius: 12px; object-fit: contain; }
+.inset { margin: 12px 20px 0; }
+.history { padding: 12px 20px 18px; font-size: 13.5px; }
+.history ol { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.history li { display: flex; flex-direction: column; padding-left: 22px; position: relative; }
+.history li::before { content: ''; position: absolute; left: 0; top: 5px; width: 10px; height: 10px; border-radius: 99px; background: var(--color-primary); }
+.history li span { color: var(--color-ink-secondary); }
+.foot { display: flex; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--color-border-row); }
+.foot .withdraw { color: var(--color-danger); }
+
+/* New entry page. */
+.formCard { flex: 3 1 560px; padding: 22px; }
+.guide { flex: 1 1 300px; }
+.steps { margin: 0; padding: 14px 18px 16px 38px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.6; list-style: decimal; }
+.ask { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: inherit; text-decoration: none; font-size: 13.5px; }
+.ask:hover { color: inherit; }
+.ask small { display: block; font-size: 13.5px; color: var(--color-ink-secondary); }
+.entryForm { display: flex; flex-direction: column; gap: 18px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.entryForm .tall { height: 44px; }
+.entryForm .tallChip { height: 40px; }
+.check { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.check input { width: 18px; height: 18px; accent-color: var(--color-primary); }
+.entryForm .area { height: 84px; padding: 10px 12px; resize: vertical; }
+.drop { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 110px; border: 2px dashed var(--color-border-input); border-radius: 14px; background: var(--color-surface-sunken); color: var(--color-ink-secondary); font-weight: 400; font-size: 13px; cursor: pointer; }
+.drop:focus-within { border-color: var(--color-primary); }
+.fileInput { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.entryActions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid var(--color-border-row); }
