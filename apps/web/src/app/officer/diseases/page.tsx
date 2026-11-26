@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Bug, ImageIcon, Layers, CalendarDays, ArrowRight } from 'lucide-react'
-import { Stats } from '@/components/features/officer-web/parts'
+import { FilteredCards } from '@/components/features/officer-web/FilteredCards'
 import React from 'react';
 import Link from 'next/link';
 import { auth } from '@/auth';
@@ -56,19 +56,23 @@ export default async function OfficerDiseasesPage() {
         description="Ảnh chẩn đoán do nông hộ gửi, chờ cán bộ kỹ thuật xác nhận"
       />
 
-      <Stats items={[
-        { label: 'Báo cáo chờ duyệt', value: reports.length, icon: <Bug /> },
-        { label: 'Báo cáo có ảnh', value: reports.filter(report => report.photo_url).length, icon: <ImageIcon /> },
-      ]} />
-
       {reports.length === 0 ? (
         <div className={styles.empty}>
           Không có báo cáo bệnh nào đang chờ duyệt.
         </div>
-      ) : (
-        <div className={styles.grid}>
-          {reports.map((report) => (
-            <div key={report.id} className={styles.card}>
+      ) : null}
+
+      <FilteredCards
+          className={styles.grid}
+          figures={[
+            { label: 'Báo cáo chờ duyệt', value: reports.length, icon: <Bug /> },
+            { label: 'Báo cáo có ảnh', value: reports.filter(report => report.photo_url).length, icon: <ImageIcon />, tag: 'photo' },
+          ]}
+          cards={reports.map((report) => ({
+            key: report.id,
+            tags: report.photo_url ? ['photo'] : [],
+            node: (
+            <div className={styles.card}>
               {report.photo_url && (
                 <div className={styles.imageWrapper}>
                   <ReportPhoto src={report.photo_url} className={styles.reportImage} />
@@ -102,9 +106,9 @@ export default async function OfficerDiseasesPage() {
                 </Link>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+            ),
+          }))}
+      />
     </div>
   );
 }

@@ -5,7 +5,7 @@
 
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Users, Layers, Sprout, LandPlot } from 'lucide-react'
-import { Stats } from '@/components/features/officer-web/parts'
+import { FilteredCards } from '@/components/features/officer-web/FilteredCards'
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Phone, MapPin } from 'lucide-react'
@@ -91,11 +91,6 @@ export function HouseholdManager() {
         actions={!showForm ? <button type="button" className={styles.createBtn} onClick={() => setShowForm(true)}>+ Thêm nông hộ</button> : undefined}
       />
 
-      {!loading && !loadFailed && <Stats items={[
-        { label: 'Tổng số nông hộ', value: households.length, icon: <Users /> },
-        { label: 'Tổng số thửa', value: households.reduce((sum, h) => sum + h.parcel_count, 0), icon: <LandPlot /> },
-        { label: 'Tổng diện tích', value: `${households.reduce((sum, h) => sum + h.total_area_ha, 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha`, icon: <Layers /> },
-      ]} />}
 
       {showForm && (
         <form className={styles.formCard} onSubmit={handleCreate}>
@@ -130,10 +125,21 @@ export function HouseholdManager() {
         <div className={styles.empty}>Không thể tải danh sách nông hộ. Vui lòng thử lại sau.</div>
       ) : households.length === 0 ? (
         <div className={styles.empty}>Chưa có nông hộ nào. Hãy thêm nông hộ đầu tiên!</div>
-      ) : (
-        <div className={styles.grid}>
-          {households.map(h => (
-            <article key={h.id} className={styles.card}>
+      ) : null}
+
+      {!loading && !loadFailed && (
+        <FilteredCards
+          className={styles.grid}
+          figures={[
+            { label: 'Tổng số nông hộ', value: households.length, icon: <Users /> },
+            { label: 'Tổng số thửa', value: households.reduce((sum, h) => sum + h.parcel_count, 0), icon: <LandPlot />, sort: 'parcels' },
+            { label: 'Tổng diện tích', value: `${hectares(totalArea)} ha`, icon: <Layers />, sort: 'area' },
+          ]}
+          cards={households.map(h => ({
+            key: h.id,
+            rank: { parcels: h.parcel_count, area: h.total_area_ha },
+            node: (
+            <article className={styles.card}>
               <div className={styles.cardHead}>
                 <span className={styles.mark} aria-hidden="true">{h.name.trim().split(/\s+/).slice(-2).map(word => word[0]).join('').toUpperCase()}</span>
                 <div className={styles.headText}>
@@ -158,8 +164,9 @@ export function HouseholdManager() {
                 Xem chi tiết <span className={styles.go} aria-hidden="true"><ArrowRight size={14} /></span>
               </Link>
             </article>
-          ))}
-        </div>
+            ),
+          }))}
+        />
       )}
     </div>
   )

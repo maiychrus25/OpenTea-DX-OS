@@ -5,7 +5,7 @@
 
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Package, CheckCircle, Layers, Weight, CalendarDays, ArrowRight } from 'lucide-react'
-import { Stats } from '@/components/features/officer-web/parts'
+import { FilteredCards } from '@/components/features/officer-web/FilteredCards'
 import React, { useEffect, useState, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import { QrCode } from 'lucide-react'
@@ -92,12 +92,6 @@ export function LotList() {
         actions={<button type="button" className={styles.createBtn} onClick={() => setShowForm(true)}>+ Tạo lô mới</button>}
       />
 
-      {!loading && !loadFailed && <Stats items={[
-        { label: 'Tổng số lô', value: lots.length, icon: <Package /> },
-        { label: 'Lô sẵn sàng', value: lots.filter(lot => lot.status === 'ready').length, icon: <CheckCircle /> },
-        { label: 'Lô đã xuất QR', value: lots.filter(lot => lot.status === 'qr_exported').length, icon: <QrCode /> },
-      ]} />}
-
       {successMsg && <div className={styles.successBanner}>{successMsg}</div>}
 
       {loading ? (
@@ -106,10 +100,21 @@ export function LotList() {
         <div className={styles.empty}>{LOAD_FAILED_MESSAGE}</div>
       ) : lots.length === 0 ? (
         <div className={styles.empty}>Chưa có lô hàng nào.</div>
-      ) : (
-        <div className={styles.grid}>
-          {lots.map(lot => (
-            <div key={lot.id} className={styles.card}>
+      ) : null}
+
+      {!loading && !loadFailed && (
+        <FilteredCards
+          className={styles.grid}
+          figures={[
+            { label: 'Tổng số lô', value: lots.length, icon: <Package /> },
+            { label: 'Lô sẵn sàng', value: lots.filter(lot => lot.status === 'ready').length, icon: <CheckCircle />, tag: 'ready' },
+            { label: 'Lô đã xuất QR', value: lots.filter(lot => lot.status === 'qr_exported').length, icon: <QrCode />, tag: 'qr_exported' },
+          ]}
+          cards={lots.map(lot => ({
+            key: lot.id,
+            tags: [lot.status],
+            node: (
+            <div className={styles.card}>
               <div className={styles.cardHead}>
                 <span className={styles.mark} aria-hidden="true"><Package size={22} /></span>
                 <div className={styles.headText}>
@@ -147,8 +152,9 @@ export function LotList() {
                 )}
               </div>
             </div>
-          ))}
-        </div>
+            ),
+          }))}
+        />
       )}
 
       {showForm && (
