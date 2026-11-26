@@ -315,11 +315,11 @@ Bo góc vừa phải: 6px cho điều khiển nhỏ, 10px cho nút và ô nhập
 
 ## Chat workspace
 
-- `/manager/chat` (market), `/officer/chat` (technical) và `/officer/assistant` (market) dùng chung `components/ui/chat-interface`. Giữ nguyên tiêu đề/phụ đề từng trang và phân quyền ở server; không thay API/use case.
-- Chat chiếm toàn bộ vùng dưới topbar, không thẻ bao ngoài; AppShell chỉ bỏ padding/max-width và khóa chiều cao khi có `[data-chat-workspace]`. Danh sách tin nhắn và lịch sử cuộn độc lập, không cuộn trang.
-- Cột nội dung rộng tối đa 760px; câu hỏi nằm bên phải trên `--muted`, câu trả lời không bong bóng, avatar nhỏ. Markdown có khung cuộn riêng cho bảng/mã, nguồn là chip văn bản và sao chép có phản hồi thành công/thất bại.
-- Lịch sử rộng 248px, thu gọn được trên desktop; dưới 801px dùng native modal dialog (focus trap, Escape, trả focus). Chỉ nhóm ngày từ `updated_at` của API; bản ghi thiếu ngày nằm trong nhóm không ghi ngày.
-- Trạng thái trống đặt lời chào và composer giữa vùng chat, gợi ý theo market/technical chỉ điền ô nhập. Có tin nhắn thì composer ở đáy; textarea tự giãn tối đa 200px (giới hạn thêm theo chiều cao màn hình). Enter gửi, Shift+Enter xuống dòng, không gửi trong IME.
+- `/manager/chat` (market), `/officer/chat` (technical) và `/officer/assistant` (market) dùng chung `components/ui/chat-interface`. Giữ tiêu đề từng trang (h1 nhỏ ở góc trên) và phân quyền ở server; không thay API/use case.
+- Chat chiếm trọn cửa sổ như ChatGPT: AppShell ẩn sidebar và topbar của ứng dụng khi có `[data-chat-workspace]`. Chỉ còn một sidebar của chat: thương hiệu, tìm và thu gọn, Trò chuyện mới, Về Tổng quan, trợ lý còn lại (cán bộ), mục Gần đây và người đăng nhập ở đáy. Tin nhắn và lịch sử cuộn độc lập.
+- Nền `--color-surface-card`, sidebar `--color-surface-sunken`. Cột nội dung rộng khoảng 770px; câu hỏi nằm bên phải trên `--muted`, câu trả lời là chữ thường không bong bóng, không avatar. Markdown có khung cuộn riêng cho bảng/mã, nguồn là chip văn bản và sao chép có phản hồi thành công/thất bại.
+- Sidebar rộng 272px, thu gọn được trên desktop; dưới 801px dùng native modal dialog (focus trap, Escape, trả focus). Ô tìm chỉ lọc tiêu đề đã tải, không gọi API.
+- Trạng thái trống chỉ có lời chào “Hôm nay bạn đang nghĩ gì?” và ô nhập dạng viên thuốc ở giữa, không gợi ý. Có tin nhắn thì ô nhập ở đáy; textarea tự giãn tối đa 200px. Enter gửi, Shift+Enter xuống dòng, không gửi trong IME.
 - Nút gửi chuyển thành dừng khi nhận phản hồi. AbortController hủy request phía client; mọi cập nhật cũ bị bỏ qua sau khi đổi/tạo hội thoại hoặc unmount. Không cam kết hủy xử lý/lưu lịch sử ở backend vì API không đổi.
 - Stream hiện tại là NDJSON: giữ dòng dang dở giữa các chunk, giải mã UTF-8 liên tục, xử lý cả dòng cuối không có newline, dừng ở done/error. Ẩn think blocks khi stream và nạp lịch sử; lỗi cập nhật cùng một assistant message. 401 chuyển tới đăng nhập, 503 có thông báo dịch vụ không khả dụng.
 - Chỉ tự cuộn khi người đọc ở gần đáy (96px), nếu không hiện nút đến tin mới nhất. Typing indicator/cursor tuân thủ reduced motion. Disclaimer luôn nhắc AI chỉ tham khảo, không quyết định thay HTX.

@@ -31,7 +31,11 @@
   padding: var(--spacing-gutter-mobile);
 }
 
-/* Chat owns its scrolling; other routes retain the normal page layout. */
+/* Chat owns the whole window: its own sidebar replaces the app sidebar and top bar. */
+.shell:has([data-chat-workspace]) > aside,
+.content:has([data-chat-workspace]) > header {
+  display: none;
+}
 .shell:has([data-chat-workspace]) {
   height: 100dvh;
   min-height: 0;
@@ -40,6 +44,10 @@
 .workspace:has([data-chat-workspace]),
 .content:has([data-chat-workspace]) {
   min-height: 0;
+}
+.workspace:has([data-chat-workspace]) {
+  width: 100%;
+  margin-left: 0;
 }
 .pageContent:has([data-chat-workspace]) {
   min-height: 0;

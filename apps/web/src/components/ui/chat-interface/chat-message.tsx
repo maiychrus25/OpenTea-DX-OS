@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import { useState } from 'react'
-import { Bot, Check, Copy } from 'lucide-react'
+import { Check, Copy } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -26,7 +26,6 @@ export function ChatMessage({ message, streaming }: { message: Message; streamin
 
   return (
     <div className={`${styles.messageRow} ${styles.messageRowBot}`}>
-      <div className={styles.avatar} aria-hidden="true"><Bot size={18} /></div>
       <div className={styles.botMessage}>
         {message.content ? (
           <div className={`${styles.markdownContent} ${message.isError ? styles.errorMessage : ''}`} role={message.isError ? 'alert' : undefined}>

@@ -21,8 +21,8 @@ export default async function OfficerAssistantPage() {
     <ChatInterface
       role="officer"
       chatType="market"
-      subtitle="Hỏi đáp thông tin thị trường nông sản — dữ liệu có trích nguồn"
-      userName={session.user.name || 'Cán bộ Kỹ thuật'}
+      userRole={role === 'manager' ? 'manager' : 'officer'}
+      userName={session.user.name || undefined}
     />
   )
 }

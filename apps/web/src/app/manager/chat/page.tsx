@@ -18,6 +18,6 @@ export default async function ManagerChatPage() {
   if (role !== 'manager' && role !== 'officer') redirect('/unauthorized')
 
   return (
-    <ChatInterface role="manager" />
+    <ChatInterface role="manager" userRole={role === 'officer' ? 'officer' : 'manager'} userName={session.user.name || undefined} />
   )
 }

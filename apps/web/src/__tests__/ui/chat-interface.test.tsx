@@ -27,7 +27,7 @@ function streamResponse(chunks: string[], failure = false) {
 }
 
 function send(text = 'Giá chè hôm nay?') {
-  fireEvent.change(screen.getByPlaceholderText('Nhập câu hỏi...'), { target: { value: text } })
+  fireEvent.change(screen.getByPlaceholderText('Hỏi trợ lý…'), { target: { value: text } })
   fireEvent.click(screen.getByRole('button', { name: 'Gửi' }))
 }
 
@@ -52,14 +52,33 @@ beforeEach(() => {
 
 describe('ChatInterface', () => {
   it.each([
-    ['manager', 'Trợ lý Thị trường', 'Phân tích từ USDA + WTO + Chợ đầu mối'],
-    ['officer', 'Trợ lý Kỹ thuật', 'Kiến thức canh tác + VietGAP + Bệnh cây'],
-  ] as const)('renders the %s title and subtitle', async (role, title, subtitle) => {
+    ['manager', 'Trợ lý Thị trường'],
+    ['officer', 'Trợ lý Kỹ thuật'],
+  ] as const)('renders the %s title and an empty greeting', async (role, title) => {
     render(<ChatInterface role={role} />)
-    expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
-    expect(screen.getByText(subtitle)).toBeInTheDocument()
-    expect(screen.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument()
+    expect(screen.getByText('Hôm nay bạn đang nghĩ gì?')).toBeInTheDocument()
     await screen.findByRole('button', { name: 'Hội thoại đã lưu' })
+  })
+
+  it('filters recent titles locally and restores them when search closes', async () => {
+    render(<ChatInterface role="officer" userName="Người kiểm thử" />)
+    const sidebar = within(screen.getByRole('complementary'))
+    await sidebar.findByRole('button', { name: 'Hội thoại đã lưu' })
+    expect(sidebar.getByRole('link', { name: 'Về Tổng quan' })).toHaveAttribute('href', '/officer/dashboard')
+    expect(sidebar.getByRole('link', { name: 'Trợ lý Thị trường' })).toHaveAttribute('href', '/officer/assistant')
+    const requests = (fetch as jest.Mock).mock.calls.length
+    fireEvent.click(sidebar.getByRole('button', { name: 'Tìm kiếm trò chuyện' }))
+    const search = sidebar.getByRole('searchbox', { name: 'Tìm trong lịch sử' })
+    expect(search).toHaveFocus()
+    fireEvent.change(search, { target: { value: 'không khớp' } })
+    expect(sidebar.queryByRole('button', { name: 'Hội thoại đã lưu' })).not.toBeInTheDocument()
+    expect(sidebar.getByText('Không tìm thấy cuộc trò chuyện')).toBeInTheDocument()
+    fireEvent.change(search, { target: { value: '  HỘI THOẠI  ' } })
+    expect(sidebar.getByRole('button', { name: 'Hội thoại đã lưu' })).toBeInTheDocument()
+    fireEvent.click(sidebar.getByRole('button', { name: 'Tìm kiếm trò chuyện' }))
+    expect(sidebar.queryByRole('searchbox')).not.toBeInTheDocument()
+    expect((fetch as jest.Mock).mock.calls).toHaveLength(requests)
   })
 
   it('keeps the empty-history label', async () => {
@@ -121,19 +140,19 @@ describe('ChatInterface', () => {
     render(<ChatInterface role="manager" />)
     await screen.findByRole('button', { name: 'Hội thoại đã lưu' })
     send()
-    fireEvent.click(screen.getByRole('button', { name: destination === 'new' ? 'Cuộc trò chuyện mới' : 'Hội thoại đã lưu' }))
+    fireEvent.click(screen.getByRole('button', { name: destination === 'new' ? 'Trò chuyện mới' : 'Hội thoại đã lưu' }))
     expect(signal?.aborted).toBe(true)
     await act(async () => resolvePost(streamResponse(['{"text":"Rò rỉ"}\n'])))
     expect(screen.queryByText('Rò rỉ')).not.toBeInTheDocument()
     if (destination === 'saved') {
       expect(await screen.findByText('Nội dung đã lưu')).toBeInTheDocument()
       expect(screen.queryByText(/Bí mật/)).not.toBeInTheDocument()
-    } else expect(screen.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeInTheDocument()
+    } else expect(screen.getByText('Hôm nay bạn đang nghĩ gì?')).toBeInTheDocument()
   })
 
   it('does not send Enter during IME or Shift+Enter, but sends plain Enter', async () => {
     render(<ChatInterface role="officer" />)
-    const input = screen.getByPlaceholderText('Nhập câu hỏi...')
+    const input = screen.getByPlaceholderText('Hỏi trợ lý…')
     fireEvent.change(input, { target: { value: 'Chè' } })
     fireEvent.compositionStart(input)
     fireEvent.keyDown(input, { key: 'Enter', keyCode: 229, isComposing: true })
@@ -153,24 +172,20 @@ describe('ChatInterface', () => {
     await waitFor(() => expect(redirectToLogin).toHaveBeenCalledTimes(1))
   })
 
-  it('uses market chat for the officer assistant without changing its subtitle', async () => {
-    render(<ChatInterface role="officer" chatType="market" subtitle="Thông tin thị trường" />)
-    expect(screen.getByRole('heading', { name: 'Trợ lý Thị trường' })).toBeInTheDocument()
-    expect(screen.getByText('Thông tin thị trường')).toBeInTheDocument()
+  it('uses market chat for the officer assistant', async () => {
+    render(<ChatInterface role="officer" chatType="market" />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Trợ lý Thị trường' })).toBeInTheDocument()
     send()
     await screen.findByText('Trả lời mẫu')
     const [, request] = (fetch as jest.Mock).mock.calls.find(([, init]) => init?.method === 'POST')!
     expect(JSON.parse(request.body).type).toBe('market')
   })
 
-  it('fills a suggestion without sending it and copies the finished answer', async () => {
+  it('copies the finished answer', async () => {
     const writeText = jest.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
     render(<ChatInterface role="manager" />)
-    fireEvent.click(screen.getByRole('button', { name: 'Giá chè búp khô tuần này thế nào?' }))
-    expect(screen.getByPlaceholderText('Nhập câu hỏi...')).toHaveValue('Giá chè búp khô tuần này thế nào?')
-    expect((fetch as jest.Mock).mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }))
+    send()
     fireEvent.click(await screen.findByRole('button', { name: 'Sao chép câu trả lời' }))
     expect(writeText).toHaveBeenCalledWith('Trả lời mẫu')
     expect(await screen.findByText('Đã sao chép')).toBeInTheDocument()
@@ -182,10 +197,10 @@ describe('ChatInterface', () => {
     render(<ChatInterface role="manager" />)
     fireEvent.click(await screen.findByRole('button', { name: 'Hội thoại đã lưu' }))
     expect(screen.getByText('Đang tải cuộc trò chuyện...')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Cuộc trò chuyện mới' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Trò chuyện mới' }))
     await act(async () => resolveHistory(jsonResponse({ history: [{ role: 'assistant', content: 'Lịch sử cũ' }] })))
     expect(screen.queryByText('Lịch sử cũ')).not.toBeInTheDocument()
-    expect(screen.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeInTheDocument()
+    expect(screen.getByText('Hôm nay bạn đang nghĩ gì?')).toBeInTheDocument()
   })
 
   it('shows history failures instead of pretending the conversation is empty', async () => {
@@ -193,9 +208,9 @@ describe('ChatInterface', () => {
     render(<ChatInterface role="manager" />)
     fireEvent.click(await screen.findByRole('button', { name: 'Hội thoại đã lưu' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Không tải được cuộc trò chuyện')
-    expect(screen.getByPlaceholderText('Nhập câu hỏi...')).toBeDisabled()
-    fireEvent.click(screen.getByRole('button', { name: 'Cuộc trò chuyện mới' }))
-    expect(screen.getByPlaceholderText('Nhập câu hỏi...')).not.toBeDisabled()
+    expect(screen.getByPlaceholderText('Hỏi trợ lý…')).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Trò chuyện mới' }))
+    expect(screen.getByPlaceholderText('Hỏi trợ lý…')).not.toBeDisabled()
   })
 
   it.each(['sessions', 'history'])('redirects a 401 from %s to login', async source => {
@@ -205,13 +220,6 @@ describe('ChatInterface', () => {
     render(<ChatInterface role="manager" />)
     if (source === 'history') fireEvent.click(await screen.findByRole('button', { name: 'Hội thoại đã lưu' }))
     await waitFor(() => expect(redirectToLogin).toHaveBeenCalledTimes(1))
-  })
-
-  it('does not invent dates for legacy sessions with no timestamp', async () => {
-    ;(fetch as jest.Mock).mockResolvedValue(jsonResponse({ sessions: [{ session_id: 'legacy', title: 'Không có ngày' }] }))
-    render(<ChatInterface role="manager" />)
-    await screen.findByRole('button', { name: 'Không có ngày' })
-    expect(within(screen.getByRole('complementary')).getByRole('heading')).toHaveTextContent('Cuộc trò chuyện')
   })
 
   it('preserves scroll position for incoming chunks when the reader scrolls up', async () => {

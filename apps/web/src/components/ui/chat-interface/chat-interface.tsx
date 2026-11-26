@@ -4,7 +4,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { ArrowDown, ArrowUp, Bot, PanelLeft, Square, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, PanelLeft, Square, SquarePen } from 'lucide-react'
 import { ChatHistory } from './chat-history'
 import { ChatMessage } from './chat-message'
 import { useChat, type ChatType } from './use-chat'
@@ -13,16 +13,12 @@ import styles from './chat-interface.module.css'
 interface ChatInterfaceProps {
   role: 'manager' | 'officer'
   chatType?: ChatType
-  subtitle?: string
   userName?: string
+  /** Who is signed in, when that differs from the screen being shown. */
+  userRole?: 'manager' | 'officer'
 }
 
-const suggestions = {
-  market: ['Giá chè búp khô tuần này thế nào?', 'Xu hướng xuất khẩu chè Việt Nam', 'Thị trường nông sản có gì đáng chú ý?'],
-  technical: ['Chăm sóc chè theo VietGAP', 'Nhận biết bệnh thường gặp trên cây chè', 'Lưu ý khi bón phân cho chè'],
-}
-
-export function ChatInterface({ role, chatType: requestedType, subtitle: requestedSubtitle, userName }: ChatInterfaceProps) {
+export function ChatInterface({ role, chatType: requestedType, userName, userRole = role }: ChatInterfaceProps) {
   const chatType = requestedType || (role === 'manager' ? 'market' : 'technical')
   const chat = useChat(chatType)
   const [inputValue, setInputValue] = useState('')
@@ -35,8 +31,9 @@ export function ChatInterface({ role, chatType: requestedType, subtitle: request
   const following = useRef(true)
   const empty = !chat.messages.length && !chat.historyLoading && !chat.historyError
   const title = chatType === 'market' ? 'Trợ lý Thị trường' : 'Trợ lý Kỹ thuật'
-  const subtitle = requestedSubtitle || (chatType === 'market'
-    ? 'Phân tích từ USDA + WTO + Chợ đầu mối' : 'Kiến thức canh tác + VietGAP + Bệnh cây')
+  const otherAssistant = userRole !== 'officer' ? undefined : chatType === 'market'
+    ? { label: 'Trợ lý Kỹ thuật', href: '/officer/chat' }
+    : { label: 'Trợ lý Thị trường', href: '/officer/assistant' }
 
   useEffect(() => {
     const input = inputRef.current
@@ -78,29 +75,31 @@ export function ChatInterface({ role, chatType: requestedType, subtitle: request
       send()
     }
   }
-  const history = <ChatHistory sessions={chat.sessions} sessionId={chat.sessionId}
+  const sidebar = (drawer: boolean) => <ChatHistory
+    user={{ name: userName || (userRole === 'manager' ? 'Trưởng HTX' : 'Cán bộ KT'), role: userRole }}
+    otherAssistant={otherAssistant} drawer={drawer} fresh={empty}
+    sessions={chat.sessions} sessionId={chat.sessionId}
     loading={chat.sessionsLoading} error={chat.sessionsError} onRetry={() => void chat.fetchSessions()}
-    onNew={onNew} onSelect={onSelect} />
+    onNew={onNew} onSelect={onSelect} onClose={() => drawer ? drawerRef.current?.close() : setCollapsed(true)} />
 
   return (
     <div className={styles.chatLayout} data-chat-workspace>
       <aside id="chat-history" className={`${styles.chatHistory} ${styles.desktopHistory}`} hidden={collapsed} aria-label="Lịch sử trò chuyện">
-        {history}
+        {sidebar(false)}
       </aside>
       <dialog ref={drawerRef} className={styles.historyDrawer} aria-label="Lịch sử trò chuyện"
         onClick={event => { if (event.target === event.currentTarget) drawerRef.current?.close() }}>
-        <div className={styles.drawerContent}>
-          <div className={styles.drawerHeading}><span>Lịch sử trò chuyện</span><button className={styles.iconButton} aria-label="Đóng lịch sử" onClick={() => drawerRef.current?.close()}><X size={20} /></button></div>
-          {history}
-        </div>
+        <div className={styles.drawerContent}>{sidebar(true)}</div>
       </dialog>
       <section className={styles.chatMain} aria-label={title}>
         <header className={styles.chatHeader}>
-          <button className={`${styles.iconButton} ${styles.desktopToggle}`} onClick={() => setCollapsed(!collapsed)}
-            aria-label={collapsed ? 'Mở lịch sử' : 'Thu gọn lịch sử'} aria-expanded={!collapsed} aria-controls="chat-history"><PanelLeft size={20} /></button>
+          {collapsed && <span className={styles.desktopToggle}>
+            <button className={styles.iconButton} onClick={() => setCollapsed(false)} aria-label="Mở lịch sử"><PanelLeft size={19} /></button>
+            <button className={styles.iconButton} onClick={onNew} aria-label="Trò chuyện mới"><SquarePen size={19} /></button>
+          </span>}
           <button className={`${styles.iconButton} ${styles.mobileToggle}`} onClick={() => drawerRef.current?.showModal()}
-            aria-label="Mở lịch sử" aria-haspopup="dialog"><PanelLeft size={20} /></button>
-          <div><h1 className={styles.headerTitle}>{title}</h1><p className={styles.headerSubtitle}>{subtitle}</p></div>
+            aria-label="Mở lịch sử" aria-haspopup="dialog"><PanelLeft size={19} /></button>
+          <h1 className={styles.headerTitle}>{title}</h1>
         </header>
         <div className={`${styles.conversation} ${empty ? styles.emptyConversation : ''}`}>
           <div ref={listRef} className={styles.messages} role="region" aria-label="Tin nhắn" tabIndex={0}
@@ -111,9 +110,7 @@ export function ChatInterface({ role, chatType: requestedType, subtitle: request
               setShowLatest(!following.current)
             }}>
             {empty ? <div className={styles.emptyState}>
-              <div className={styles.greetingIcon}><Bot size={28} /></div>
-              <h2>{userName ? `Xin chào ${userName}!` : 'Hôm nay bạn cần hỗ trợ gì?'}</h2>
-              <p>Hãy đặt câu hỏi để bắt đầu...</p>
+              <h2>Hôm nay bạn đang nghĩ gì?</h2>
             </div> : <div className={styles.messageColumn}>
               {chat.historyLoading && <p role="status" className={styles.historyStatus}>Đang tải cuộc trò chuyện...</p>}
               {chat.historyError && <p role="alert" className={styles.errorMessage}>{chat.historyError}</p>}
@@ -127,7 +124,7 @@ export function ChatInterface({ role, chatType: requestedType, subtitle: request
               listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
             }}><ArrowDown size={16} /> Đến tin nhắn mới nhất</button>}
             <div className={styles.inputWrapper}>
-              <textarea ref={inputRef} className={styles.input} placeholder="Nhập câu hỏi..." aria-label="Nhập câu hỏi..."
+              <textarea ref={inputRef} className={styles.input} placeholder="Hỏi trợ lý…" aria-label="Câu hỏi"
                 rows={1} value={inputValue} onChange={event => setInputValue(event.target.value)} onKeyDown={onKeyDown}
                 onCompositionStart={() => { composing.current = true }} onCompositionEnd={() => { composing.current = false }}
                 disabled={chat.historyLoading || !!chat.historyError} />
@@ -138,9 +135,6 @@ export function ChatInterface({ role, chatType: requestedType, subtitle: request
               </button>
             </div>
             <p className={styles.disclaimer}>AI chỉ cung cấp thông tin tham khảo, không quyết định thay HTX.</p>
-            {empty && <div className={styles.suggestions} aria-label="Câu hỏi gợi ý">
-              {suggestions[chatType].map(suggestion => <button key={suggestion} onClick={() => { setInputValue(suggestion); inputRef.current?.focus() }}>{suggestion}</button>)}
-            </div>}
           </div>
         </div>
       </section>
