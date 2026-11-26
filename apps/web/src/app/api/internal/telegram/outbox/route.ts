@@ -21,7 +21,8 @@ async function getTelegramOutbox(request: Request) {
   await telegramNotifier().runHealthChecks()
   // Assistant requests older than 60 s expire here, and their chats get the timeout reply with the menu (contract C7).
   const expired = await assistantRequests().expire(new Date())
-  await telegramRepository().enqueue(assistantTimeoutInserts(expired, telegramCallbackKey()))
+  const timeouts = assistantTimeoutInserts(expired, telegramCallbackKey())
+  if (timeouts.length) await telegramRepository().enqueue(timeouts)
   const rows = await telegramRepository().lease(limit, new Date(), LEASE_SECONDS)
   return NextResponse.json({
     data: rows.map((row) => ({
