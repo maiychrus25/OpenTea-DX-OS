@@ -17,6 +17,13 @@ function settingsEvidence(thresholds: Record<string, number>): Evidence {
   return { rows, sha256: evidenceDigest(rows) }
 }
 
+// The plan row the strategy plans route always attaches to strategy.adopt: without it the warnings cannot be read (test 37).
+function cleanPlanEvidence(): Evidence {
+  const rows = [{ table: 'strategy_plans', id: 'plan-1', sha256: 'h', values: { warnings: [] } }]
+  return { rows, sha256: evidenceDigest(rows) }
+}
+const evidenceFor = (kind: string) => (kind === 'strategy.adopt' ? cleanPlanEvidence() : emptyEvidence)
+
 function check(kind: string, payload: Record<string, unknown> = {}, config = normal, origin: 'agent' | 'user' = 'agent', evidence = emptyEvidence) {
   return autoEligibility({ origin, payload, evidence }, getAction(kind)!, config)
 }
@@ -75,7 +82,7 @@ describe('autoEligibility', () => {
       }
       if (definition.autonomy === 'unlockable') {
         expect(check(definition.kind).reason).toBe('not_unlocked')
-        expect(check(definition.kind, {}, { unlockedKinds: [definition.kind] }).eligible).toBe(true)
+        expect(check(definition.kind, {}, { unlockedKinds: [definition.kind] }, 'agent', evidenceFor(definition.kind)).eligible).toBe(true)
         // Opening another kind does not open this one.
         expect(check(definition.kind, {}, { unlockedKinds: ['something.else'] }).eligible).toBe(false)
       }

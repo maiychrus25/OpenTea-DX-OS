@@ -120,6 +120,17 @@ describe('strategy.adopt eligibility (test 37)', () => {
     expect(check(plan())).toEqual({ eligible: true, reason: 'ok' })
   })
 
+  it('a plan row without its values never does: its warnings could not be read (a real hash with values left out)', () => {
+    const { rows } = evidenceOf(plan({ warnings: ['Mục tiêu Sản lượng thấp hơn cùng kỳ năm trước'] }))
+    const bare = { ...rows[0], values: undefined }
+    const evidence = { rows: [bare], sha256: evidenceDigest([bare]) }
+    expect(autoEligibility({ origin: 'agent', payload: { plan_id: PLAN_ID }, evidence }, strategyAdoptAction as never, open)).toEqual({
+      eligible: false,
+      reason: 'rule_warning',
+    })
+    expect(autoEligibility({ origin: 'agent', payload: { plan_id: PLAN_ID }, evidence: { rows: [], sha256: evidenceDigest([]) } }, strategyAdoptAction as never, open).eligible).toBe(false)
+  })
+
   it('a plan with warnings never does', () => {
     expect(check(plan({ warnings: ['Mục tiêu Sản lượng thấp hơn cùng kỳ năm trước'] }))).toEqual({
       eligible: false,
