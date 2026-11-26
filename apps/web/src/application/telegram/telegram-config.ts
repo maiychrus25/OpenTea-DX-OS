@@ -13,3 +13,8 @@ export function telegramCallbackKey(): string | null {
 export function isTelegramConfigured(): boolean {
   return Boolean(telegramBotUsername() && telegramCallbackKey())
 }
+
+/** The derived Mini App key (hex). Without it the Mini App is off; the bot token itself never reaches the web. */
+export function telegramWebAppKey(): string | null {
+  return process.env.DXOS_TELEGRAM_WEBAPP_KEY || null
+}
