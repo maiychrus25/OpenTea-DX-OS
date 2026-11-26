@@ -31,7 +31,8 @@ CSP = ("default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' 
 CLAIMS = {"sub": "kc-1", "name": "Quản trị TC", "htx_code": "TC", "realm_access": {"roles": ["manager"]}}
 TOKEN = "Bearer h." + base64.urlsafe_b64encode(json.dumps(CLAIMS).encode()).decode().rstrip("=") + ".s"
 ROOT_FIELDS = re.compile(r"\b(parcels|households|journal_entries|disease_reports|lots|telemetry_sensor_readings|"
-                         r"telemetry_sensor_daily|telemetry_lifecycle_runs|market_data|weather_cache)\(")
+                         r"telemetry_sensor_daily|telemetry_lifecycle_runs|market_data|weather_cache|platform_agent_proposals|platform_agent_runs|"
+                         r"platform_improvements)\(")
 
 
 def empty_answer(payload: dict) -> dict:

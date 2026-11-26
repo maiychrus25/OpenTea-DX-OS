@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+table:
+  name: agent_runs
+  schema: platform
+select_permissions:
+  - role: manager
+    permission:
+      columns:
+        - id
+        - agent
+        - status
+        - provider
+        - model
+        - tokens_in
+        - tokens_out
+        - cost_estimate
+        - started_at
+        - finished_at
+      filter: {_and: [{htx_code: {_eq: X-Hasura-Htx-Code}}, {htx_code: {_neq: ''}}]}

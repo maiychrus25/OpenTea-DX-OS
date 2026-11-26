@@ -4,7 +4,7 @@ apiVersion: dxos/v1
 id: htx-dashboard
 name: Bảng điều hành HTX
 description: "Bảng điều hành biểu đồ cho trưởng HTX: việc cần chú ý, xu hướng so với kỳ trước, sản xuất, cảm biến, sức khoẻ cây, lô chè và vòng đời dữ liệu."
-version: 0.2.0
+version: 0.3.0
 license: MIT
 publisher: OpenTea Developers
 requires: { core: ">=1.13.0" }
@@ -38,8 +38,10 @@ store:
     - "Số đo cảm biến mới nhất và thống kê theo ngày"
     - "Các lần chuyển dữ liệu cảm biến sang kho lạnh và kết quả kiểm chất lượng"
     - "Thời tiết mới nhất của thửa và giá thị trường"
+    - "Đề xuất, lần chạy và cải tiến của các agent trong 28 ngày qua (chỉ các cột được cấp cho trưởng HTX)"
   screenshots:
     - { file: store/overview.png, caption: "Tổng quan: chỉ số kèm xu hướng, việc cần chú ý và lưới biểu đồ" }
     - { file: store/parcel.png, caption: "Bản sao số của một thửa: số đo, thang giá trị, nhiệt độ đặt cạnh độ ẩm và lượng mưa" }
     - { file: store/parcels.png, caption: "Vùng trồng: phân bố thửa và số đo cảm biến kèm xu hướng 30 ngày" }
     - { file: store/data.png, caption: "Dữ liệu: số đo mỗi ngày, lần chuyển sang kho lạnh và sức khoẻ cảm biến" }
+    - { file: store/ai.png, caption: "AI: đề xuất theo agent và trạng thái, hiệu quả từng agent, cải tiến hằng tuần và kết quả đo" }
