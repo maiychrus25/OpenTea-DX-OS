@@ -159,3 +159,10 @@ def test_improvement_smoke_checks_that_only_the_silent_hours_threshold_changes()
     text = (TESTS / "smoke-improvement.sh").read_text(encoding="utf-8")
     assert "reject_rate:field-watch:sensor_silent" in text
     assert "jsonb_build_object('silent_hours', 8)" in text
+
+
+def test_campaign_smoke_closes_older_open_proposals_before_seeding():
+    # The earlier smokes leave many open TC proposals; with the 15-item cap the fresh notice fell out (M7 CI).
+    text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
+    close = text.index("set status = 'expired' where htx_code = 'TC' and status = 'proposed'")
+    assert text.index("$COMPOSE stop dxos-agent") < close < text.index("M7_NOTICE=$(m7_post")
