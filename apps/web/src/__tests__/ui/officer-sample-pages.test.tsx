@@ -13,14 +13,14 @@ import Bookings from '@/app/officer/bookings/page'
 import { PRODUCTS, ORDERS, TOURS, BOOKINGS, REVENUE, money, sum } from '@/components/features/officer-web/sample'
 
 describe('officer sample screens', () => {
-  it.each([[Products, 'Sản phẩm'], [Orders, 'Đơn hàng'], [() => <Order params={{ code: 'DH-0141' }} />, 'Chi tiết đơn'], [Payments, 'Doanh thu'], [Tours, 'Tour của HTX'], [Bookings, 'Lượt đặt tour']])('renders %p', (Page, title) => {
+  it.each([[Products, 'Sản phẩm'], [Orders, 'Đơn hàng'], [() => <Order params={{ code: 'SP-03' }} />, 'Người đặt sản phẩm'], [Payments, 'Doanh thu'], [Tours, 'Tour của HTX'], [Bookings, 'Lượt đặt tour']])('renders %p', (Page, title) => {
     render(<Page />)
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument()
   })
 
   it.each([
     [Products, 'Tổng tồn kho', sum(PRODUCTS, p => p.stock).toLocaleString('vi-VN')],
-    [Orders, 'Người đặt', ORDERS.filter(o => o.status === 'Đã đặt').length.toLocaleString('vi-VN')],
+    [Orders, 'Số lượng đã đặt', sum(ORDERS.filter(o => o.status === 'Đã đặt'), o => o.quantity).toLocaleString('vi-VN')],
     [Tours, 'Khách đã đặt', sum(TOURS, t => t.booked).toLocaleString('vi-VN')],
     [Bookings, 'Giá trị đặt (không tính đã huỷ)', money(sum(BOOKINGS.filter(b => b.status === 'Đã đặt'), b => b.total))],
     [Payments, 'Tổng doanh thu', money(sum(REVENUE, r => r.total))],
@@ -33,19 +33,20 @@ describe('officer sample screens', () => {
     expect(screen.getByRole('table')).toBeInTheDocument()
   })
 
-  it('shows what each order bought and opens it, with no approval step', () => {
+  it('counts orders by product, one row each with its own code', () => {
     const { container } = render(<Orders />)
-    expect(screen.getAllByRole('link', { name: 'Chi tiết' })).toHaveLength(4)
-    expect(container.querySelectorAll('tbody img')).toHaveLength(5)
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(PRODUCTS.length)
+    expect(screen.getByText('SP-02').closest('tr')).toHaveTextContent('Chè móc câu')
+    expect(screen.getByText('SP-02').closest('tr')).not.toHaveTextContent('Chè xanh Tân Cương')
     expect(screen.queryByText(/xác nhận/i)).not.toBeInTheDocument()
   })
 })
 
 describe('officer sample filters', () => {
-  it('narrows the orders by status', () => {
+  it('narrows the products to those nobody has ordered', () => {
     render(<Orders />)
-    fireEvent.click(screen.getByRole('button', { name: 'Đã huỷ' }))
-    expect(screen.getByText('Phạm Quốc Bảo')).toBeInTheDocument()
-    expect(screen.queryByText('Nguyễn Thị Hà')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Chưa có đơn' }))
+    expect(screen.getByText('Hồng trà Shan Tuyết')).toBeInTheDocument()
+    expect(screen.queryByText('Chè móc câu')).not.toBeInTheDocument()
   })
 })

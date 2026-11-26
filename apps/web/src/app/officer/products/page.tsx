@@ -28,7 +28,7 @@ export default function OfficerProductsPage() {
         columns={['Sản phẩm', 'Quy cách', 'Giá bán', 'Tồn kho', 'Trạng thái']}
         numeric={[2, 3]}
         rows={PRODUCTS.map((p) => ({
-          key: p.name,
+          key: p.code,
           group: p.stock ? 'Còn hàng' : 'Hết hàng',
           rank: { stock: p.stock },
           cells: [

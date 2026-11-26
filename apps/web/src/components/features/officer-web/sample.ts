@@ -8,29 +8,32 @@ export type Tone = 'ok' | 'wt' | 'in' | 'bd' | 'mu'
 
 // Names, packs, prices, stock and photos follow the mobile app's sample shop (apps/hub-mobile seed data).
 export const PRODUCTS = [
-  { image: 'prod-01', name: 'Chè xanh Tân Cương đặc biệt', pack: 'Hộp 200 g', price: 180000, stock: 40 },
-  { image: 'prod-02', name: 'Chè móc câu', pack: 'Gói 100 g', price: 95000, stock: 60 },
-  { image: 'prod-03', name: 'Trà hoa nhài sấy', pack: 'Hộp 150 g', price: 130000, stock: 3 },
-  { image: 'prod-04', name: 'Shan Tuyết cổ thụ', pack: 'Hộp 250 g', price: 320000, stock: 25 },
-  { image: 'prod-05', name: 'Hồng trà Shan Tuyết', pack: 'Hộp 200 g', price: 210000, stock: 0 },
+  { code: 'SP-01', image: 'prod-01', name: 'Chè xanh Tân Cương đặc biệt', pack: 'Hộp 200 g', price: 180000, stock: 40 },
+  { code: 'SP-02', image: 'prod-02', name: 'Chè móc câu', pack: 'Gói 100 g', price: 95000, stock: 60 },
+  { code: 'SP-03', image: 'prod-03', name: 'Trà hoa nhài sấy', pack: 'Hộp 150 g', price: 130000, stock: 3 },
+  { code: 'SP-04', image: 'prod-04', name: 'Shan Tuyết cổ thụ', pack: 'Hộp 250 g', price: 320000, stock: 25 },
+  { code: 'SP-05', image: 'prod-05', name: 'Hồng trà Shan Tuyết', pack: 'Hộp 200 g', price: 210000, stock: 0 },
 ]
 
 /** The photo of a product, by its id. */
 export const productPhoto = (image: string) => `/images/officer/products/${image}.jpg`
 
-/** Goods are in stock, so an order needs no approval: it is placed, or it was cancelled. */
+/** One order is for one product. Goods are in stock, so it needs no approval: it is placed, or it was cancelled. */
 export const ORDERS = [
-  { code: 'DH-0142', name: 'Nguyễn Thị Hà', phone: '0935 111 222', address: 'Xóm Cầu Gỗ, xã Tân Cương', status: 'Đã đặt', items: [{ image: 'prod-01', quantity: 2 }, { image: 'prod-02', quantity: 3 }] },
-  { code: 'DH-0141', name: 'Lê Văn Minh', phone: '0988 222 333', address: 'Phường Quang Trung, Thái Nguyên', status: 'Đã đặt', items: [{ image: 'prod-03', quantity: 2 }] },
-  { code: 'DH-0140', name: 'Trần Thu Hương', phone: '0912 000 111', address: 'Xã Phúc Xuân, Thái Nguyên', status: 'Đã đặt', items: [{ image: 'prod-04', quantity: 1 }] },
-  { code: 'DH-0139', name: 'Phạm Quốc Bảo', phone: '0977 444 555', address: 'Phường Thịnh Đán, Thái Nguyên', status: 'Đã huỷ', items: [{ image: 'prod-05', quantity: 2 }] },
+  { code: 'DH-0143', product: 'SP-02', quantity: 3, name: 'Nguyễn Thị Hà', phone: '0935 111 222', address: 'Xóm Cầu Gỗ, xã Tân Cương', status: 'Đã đặt' },
+  { code: 'DH-0142', product: 'SP-01', quantity: 2, name: 'Nguyễn Thị Hà', phone: '0935 111 222', address: 'Xóm Cầu Gỗ, xã Tân Cương', status: 'Đã đặt' },
+  { code: 'DH-0141', product: 'SP-03', quantity: 2, name: 'Lê Văn Minh', phone: '0988 222 333', address: 'Phường Quang Trung, Thái Nguyên', status: 'Đã đặt' },
+  { code: 'DH-0140', product: 'SP-04', quantity: 1, name: 'Trần Thu Hương', phone: '0912 000 111', address: 'Xã Phúc Xuân, Thái Nguyên', status: 'Đã đặt' },
+  { code: 'DH-0139', product: 'SP-05', quantity: 2, name: 'Phạm Quốc Bảo', phone: '0977 444 555', address: 'Phường Thịnh Đán, Thái Nguyên', status: 'Đã huỷ' },
 ]
 
-export type Order = (typeof ORDERS)[number]
-
-/** What was bought, with the product behind each line. */
-export const orderLines = (order: Order) => order.items.map((item) => ({ product: PRODUCTS.find((p) => p.image === item.image)!, quantity: item.quantity }))
-export const orderTotal = (order: Order) => orderLines(order).reduce((total, line) => total + line.quantity * line.product.price, 0)
+/** What each product has been ordered: cancelled orders are listed but not counted. */
+export const productOrders = (product: (typeof PRODUCTS)[number]) => {
+  const orders = ORDERS.filter((o) => o.product === product.code)
+  const placed = orders.filter((o) => o.status === 'Đã đặt')
+  const quantity = placed.reduce((total, o) => total + o.quantity, 0)
+  return { orders, buyers: new Set(placed.map((o) => o.phone)).size, quantity, value: quantity * product.price }
+}
 
 export const TOURS = [
   { code: 'TB-0230', name: 'Thưởng trà trên đồi', image: '/images/officer/tour-tea-on-the-hill.jpg', date: '27/11/2026', booked: 2, seats: 25, adult: 290000, child: 190000 },
