@@ -114,7 +114,22 @@ class RealmPolicyTest(unittest.TestCase):
         self.assertIn("agent", names)
         for client in REALM["clients"]:
             if client.get("serviceAccountsEnabled"):
-                self.assertTrue(client["clientId"].startswith("dxos-agent-"), client["clientId"])
+                self.assertTrue(client["clientId"].startswith("dxos-agent-") or client["clientId"] == "dxos-apps-actor",
+                                client["clientId"])
+
+    def test_apps_actor_client_is_a_confidential_service_account_without_roles(self):
+        # The web runs an approved app action as the approver with this client's token (M9); the token carries
+        # the core audience and no realm roles, so it opens no user or agent route.
+        client = by_key(REALM["clients"], "clientId", "dxos-apps-actor")
+        self.assertIs(client["publicClient"], False)
+        self.assertIs(client["serviceAccountsEnabled"], True)
+        for flow in ("standardFlowEnabled", "implicitFlowEnabled", "directAccessGrantsEnabled"):
+            self.assertIs(client[flow], False, flow)
+        self.assertEqual(client["defaultClientScopes"], ["dx-os-core"])
+        self.assertEqual(client["optionalClientScopes"], [])
+        self.assertNotIn("secret", client)
+        self.assertNotIn("realmRoles", client)
+        self.assertNotIn("serviceAccountRoles", client)
 
     def test_telegram_realm_role_exists_and_only_its_client_may_hold_it(self):
         names = {role["name"] for role in REALM["roles"]["realm"]}
