@@ -18,6 +18,8 @@ export interface ChatMessage {
 }
 const unavailable = 'Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau.'
 const connectionError = 'Không thể kết nối tới AI. Vui lòng kiểm tra kết nối và thử lại.'
+// The chatbot API serves managers and officers only; say so rather than blame the connection.
+const notOpen = 'Trợ lý AI chưa mở cho tài khoản này.'
 const newId = () => `chat-${crypto.randomUUID()}`
 
 export function useChat(chatType: ChatType) {
@@ -41,6 +43,7 @@ export function useChat(chatType: ChatType) {
       const response = await fetch(`/api/chatbot/sessions?type=${chatType}`, { signal: controller.signal })
       if (controller.signal.aborted) return
       if (response.status === 401) { redirectToLogin(); return }
+      if (response.status === 403) { setSessions([]); setSessionsError(''); return }
       if (!response.ok) throw new Error('sessions')
       const data = await response.json()
       if (!controller.signal.aborted) {
@@ -140,7 +143,7 @@ export function useChat(chatType: ChatType) {
       if (controller.signal.aborted) return
       if (response.status === 401) { redirectToLogin(); return }
       if (!response.ok) {
-        update({ content: response.status === 503 ? unavailable : connectionError, isError: true })
+        update({ content: response.status === 403 ? notOpen : response.status === 503 ? unavailable : connectionError, isError: true })
         return
       }
       if (!response.body) throw new Error(connectionError)

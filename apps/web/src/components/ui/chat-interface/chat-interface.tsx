@@ -11,7 +11,7 @@ import { useChat, type ChatType } from './use-chat'
 import styles from './chat-interface.module.css'
 
 interface ChatInterfaceProps {
-  role: 'manager' | 'officer'
+  role: 'manager' | 'officer' | 'farmer'
   chatType?: ChatType
 }
 

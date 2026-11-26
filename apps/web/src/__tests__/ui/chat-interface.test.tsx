@@ -279,6 +279,13 @@ describe('chat stream boundaries', () => {
     expect(releaseLock).toHaveBeenCalled()
   })
 
+  it('tells a farmer the AI is not open yet instead of blaming the connection', async () => {
+    global.fetch = jest.fn(async () => ({ ok: false, status: 403 })) as unknown as typeof fetch
+    render(<ChatInterface role="farmer" />)
+    send('Bón phân thế nào?')
+    expect(await screen.findByText('Trợ lý AI chưa mở cho tài khoản này.')).toBeInTheDocument()
+  })
+
   it.each(['<', '<t', '<th', '<thi', '<thin', '<think', '<think>Ẩn', '<THINK>Ẩn</THINK>'])('hides incomplete or complete thinking: %s', text => {
     expect(stripThinking(text)).toBe('')
   })
