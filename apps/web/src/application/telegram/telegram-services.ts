@@ -12,6 +12,9 @@ import { PrismaTelegramRepository } from '@/infrastructure/db/telegram/PrismaTel
 import { TelegramPhotoStore } from '@/infrastructure/storage/telegram-photo-store'
 import { logger } from '@/lib/logger'
 import { AssistantRequests } from './assistant/AssistantRequests'
+import { AssistantResultUseCase } from './assistant/AssistantResult'
+import { ChatEngine } from './chat/ChatEngine'
+import { ChatUserResolver } from './chat/ChatUserResolver'
 import { CHAT_ACTIONS } from './chat/actions'
 import { CHAT_TOOLS } from './chat/tools'
 import { TelegramLinkService } from './TelegramLinkService'
@@ -56,6 +59,34 @@ export function chatServices(): ChatServices {
 
 export function assistantRequests(): AssistantRequests {
   return new AssistantRequests(new PrismaAssistantRequestRepository(), telegramRepository())
+}
+
+/** Applies an agent's intent for a claimed request: the same engine and live role reads as the chat updates. */
+export function assistantResultUseCase(): AssistantResultUseCase {
+  const services = chatServices()
+  const repo = telegramRepository()
+  const roles = new KeycloakLiveRoleReader()
+  const users = new ChatUserResolver({
+    roles,
+    htxProfileId: async (htxCode) => (await new PrismaHtxProfileRepository().findByCode(htxCode))?.id ?? null,
+    householdId: services.householdId,
+  })
+  const engine = new ChatEngine({
+    repo,
+    tools: services.tools,
+    actions: services.actions,
+    photos: services.photos,
+    requests: assistantRequests(),
+    callbackKey: telegramCallbackKey() ?? '',
+    proposalMessages: services.proposalMessages,
+  })
+  return new AssistantResultUseCase({
+    requests: services.requests,
+    links: repo,
+    users,
+    engine,
+    enqueue: (rows) => repo.enqueue(rows),
+  })
 }
 
 export function telegramUpdateHandler(): TelegramUpdateHandler {

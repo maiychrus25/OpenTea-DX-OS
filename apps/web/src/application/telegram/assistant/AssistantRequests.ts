@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import type { AssistantRequestRepository, ExpiredAssistantRequest } from '@/domain/telegram/ports/AssistantRequestRepository'
+import type {
+  AssistantRequestRepository,
+  AssistantRequestRow,
+  ExpiredAssistantRequest,
+} from '@/domain/telegram/ports/AssistantRequestRepository'
 import type { AssistantSubmitter } from '../chat/ChatEngine'
-import type { ChatUser } from '../chat/types'
+import type { ChatAction, ChatTool, ChatUser } from '../chat/types'
 
 export const ASSISTANT_TEXT_MAX = 1000
 /** An agent heartbeat this recent means the cooperative's agent can take requests (contract C9). */
@@ -41,7 +45,37 @@ export class AssistantRequests implements AssistantSubmitter {
     return seen !== null && now.getTime() - seen.getTime() <= AGENT_ONLINE_MS
   }
 
+  claim(htxCode: string, limit: number, now: Date): Promise<AssistantRequestRow[]> {
+    return this.requests.claim(htxCode, limit, now)
+  }
+
   expire(now: Date): Promise<ExpiredAssistantRequest[]> {
     return this.requests.expireOlderThan(new Date(now.getTime() - ASSISTANT_TIMEOUT_MS))
+  }
+}
+
+/** Today's date in Vietnam as YYYY-MM-DD, the day the assistant resolves relative dates against. */
+export function vietnamDate(now: Date): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+}
+
+/** The body of the claim route (contract C7): every request with the full tool and action lists. */
+export function claimPayload(
+  rows: AssistantRequestRow[],
+  tools: readonly ChatTool[],
+  actions: readonly ChatAction[],
+  today: string
+) {
+  const toolList = tools.map((tool) => ({ name: tool.name, title_vi: tool.titleVi, args: tool.args }))
+  const actionList = actions.map((action) => ({ name: action.name, title_vi: action.titleVi, args: action.args }))
+  return {
+    requests: rows.map((row) => ({
+      id: row.id,
+      text: row.text,
+      role: row.role,
+      today,
+      tools: toolList,
+      actions: actionList,
+    })),
   }
 }

@@ -430,7 +430,7 @@ describe('ChatEngine: cards and confirm', () => {
   test('a DomainError from execute becomes executeFailed, and nothing is audited', async () => {
     const { engine, repo } = build()
     const card = await journalCard(engine)
-    journal.execute.mockRejectedValueOnce(new DomainError('Thửa đã đóng'))
+    ;(journal.execute as unknown as jest.Mock).mockRejectedValueOnce(new DomainError('Thửa đã đóng'))
     const res = await press(engine, FARMER, '42', 42, ...pair(card.replies[0].buttons, 'Xác nhận'), 9)
     expect(res.replies[0].text).toBe(TELEGRAM_TEXT.executeFailed('Thửa đã đóng'))
     expect(repo.audit).toEqual([])
