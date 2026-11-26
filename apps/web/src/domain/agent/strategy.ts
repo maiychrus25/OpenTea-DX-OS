@@ -13,6 +13,13 @@ export const GOAL_DEFS: Readonly<Record<GoalKey, { labelVi: string; unitVi: stri
   shop_revenue_vnd: { labelVi: 'Doanh thu cửa hàng', unitVi: 'đồng', direction: 'up' },
 }
 
+/** The campaign goal an item serves when the plan raises this goal (contract C6); the shop has none. */
+export const CAMPAIGN_GOAL_OF_SEASON_GOAL: Readonly<Partial<Record<GoalKey, string>>> = {
+  yield_kg: 'harvest',
+  diseased_parcel_rate: 'inspection',
+  journal_on_time_rate: 'journal_backlog',
+}
+
 export type Figures = Record<GoalKey, number | null>
 
 export const INITIATIVE_KINDS = ['miniapp', 'training', 'partner', 'expand', 'outside'] as const

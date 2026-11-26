@@ -83,3 +83,41 @@ describe('weekly report lines (contract C6)', () => {
     expect(sentText(enqueue)).not.toContain('Cải tiến')
   })
 })
+
+describe('weekly report season lines (M11, contract C6)', () => {
+  function withSeason(seasonLines: (htx: string, now: Date) => Promise<string[]>, kind: 'daily' | 'weekly' = 'weekly') {
+    const enqueue = jest.fn(async (_rows: unknown[]) => undefined)
+    const repo = {
+      insertReportIfNew: jest.fn(async () => true),
+      proposalCounts: jest.fn(async () => ({ open: 0, decided: 0 })),
+      userLinkRecipients: jest.fn(async () => [{ chatId: '42' }]),
+      groupLinkRecipients: jest.fn(async () => []),
+      enqueue,
+    } as unknown as TelegramRepository
+    const notifier = new TelegramNotifier({ repo, proposals: { findById: jest.fn() } as never, seasonLines, now: () => NOW })
+    return { run: () => notifier.enqueueReport('TC', kind, '2026-11-23', '2026-11-29', FIGURES), enqueue }
+  }
+
+  it('adds the season lines to the weekly report', async () => {
+    const { run, enqueue } = withSeason(async () => ['Sản lượng: 200 (cùng kỳ năm trước: 1000)'])
+    await run()
+    expect(sentText(enqueue)).toContain('Sản lượng: 200 (cùng kỳ năm trước: 1000)')
+  })
+
+  it('adds nothing to the daily report', async () => {
+    const seasonLines = jest.fn(async () => ['Sản lượng: 200 (cùng kỳ năm trước: 1000)'])
+    const { run, enqueue } = withSeason(seasonLines, 'daily')
+    await run()
+    expect(seasonLines).not.toHaveBeenCalled()
+    expect(sentText(enqueue)).not.toContain('Sản lượng')
+  })
+
+  it('still sends the report when the season lines cannot be read', async () => {
+    const { run, enqueue } = withSeason(async () => {
+      throw new Error('db down')
+    })
+    jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    await run()
+    expect(enqueue).toHaveBeenCalled()
+  })
+})
