@@ -82,3 +82,4 @@
 /* A tour is told apart by its picture as much as by its name. */
 .tourName { display: flex; align-items: center; gap: 12px; font-weight: 700; }
 .tourName img { width: 96px; height: 64px; flex: none; border-radius: 8px; object-fit: cover; }
+.photo { width: 120px; height: 120px; border-radius: 8px; object-fit: cover; }

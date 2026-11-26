@@ -27,7 +27,7 @@ export default function OfficerProductOrdersPage({ params }: { params: { code: s
         <section className={styles.pn}>
           <h2 className={styles.ph}>Sản phẩm</h2>
           <dl className={styles.facts}>
-            <div><dt>Ảnh</dt><dd><span className={styles.tourName}><img src={productPhoto(product.image)} alt="" /></span></dd></div>
+            <div><dt>Ảnh</dt><dd><img className={styles.photo} src={productPhoto(product.image)} alt={product.name} /></dd></div>
             <div><dt>Tên</dt><dd>{product.name}</dd></div>
             <div><dt>Quy cách</dt><dd>{product.pack}</dd></div>
             <div><dt>Giá bán</dt><dd>{money(product.price)}</dd></div>
