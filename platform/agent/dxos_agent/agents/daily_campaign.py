@@ -35,6 +35,8 @@ KIND_WEIGHT = {
     "notification.internal": 6,
     "bulletin.publish": 7,
 }
+# The season plan's goal keys (contract C2 of M11) and the campaign goals they raise; a key already in campaign form passes through.
+SEASON_GOAL_CAMPAIGN = {"yield_kg": "harvest", "diseased_parcel_rate": "inspection", "journal_on_time_rate": "journal_backlog"}
 # Mirrors the goal table of the web (contract C2): the agent needs the labels for its prompt and fallback summary.
 GOAL_LABELS_VI = {
     "harvest": "Duyệt thu hoạch",
@@ -79,7 +81,7 @@ def _dropped(row: Mapping[str, Any], rule: str) -> dict[str, str]:
 
 
 def plan_campaign(candidates: Mapping[str, Any]) -> CampaignPlan:
-    """Apply the C5 rules in order: withdrawal, rain, sort, people, overflow."""
+    """Apply the C5 rules in order: withdrawal, rain, sort (season goals first), people, overflow."""
     withdrawal = set(candidates.get("withdrawal_parcel_codes") or [])
     rain = set(candidates.get("rain_parcel_codes") or [])
     dropped: list[dict[str, str]] = []
@@ -92,7 +94,9 @@ def plan_campaign(candidates: Mapping[str, Any]) -> CampaignPlan:
             dropped.append(_dropped(row, "rain"))
         else:
             pool.append(row)
-    pool.sort(key=lambda row: (KIND_WEIGHT.get(row["kind"], OTHER_WEIGHT), parse_utc(row["created_at"]), str(row["id"])))
+    raised = {SEASON_GOAL_CAMPAIGN.get(str(key), str(key)) for key in candidates.get("season_goal_keys") or []}
+    # Items that serve the adopted plan's goals come first; the kind weights order each group (C6 of M11).
+    pool.sort(key=lambda row: (row.get("goal_key") not in raised, KIND_WEIGHT.get(row["kind"], OTHER_WEIGHT), parse_utc(row["created_at"]), str(row["id"])))
 
     people = candidates.get("people_available")
     if isinstance(people, (int, float)) and not isinstance(people, bool):

@@ -11,7 +11,7 @@ import threading
 import time as time_module
 
 from . import __version__
-from .agents import bulletin, daily_campaign, disease_watch, field_watch, harvest_ready, improvement
+from .agents import bulletin, daily_campaign, disease_watch, field_watch, harvest_ready, improvement, strategy
 from .agents.assistant import run_assistant_once
 from .agents.digest import DigestSchedule, run_digest
 from .agents.journal_review import (
@@ -31,7 +31,7 @@ from .providers import (
     ProviderError,
     ReplayProvider,
 )
-from .schedule import DailySchedule, IntervalSchedule, ReviewSchedule, WeeklySchedule
+from .schedule import DailySchedule, IntervalSchedule, ReviewSchedule, SeasonSchedule, WeeklySchedule
 from .settings import AgentSettings, OLLAMA, choose_providers, fetch_settings
 
 HEARTBEAT_INTERVAL = timedelta(minutes=5)
@@ -41,6 +41,7 @@ DISEASE_WATCH_AT = time(5, 40)  # Vietnam time
 CAMPAIGN_AT = time(6, 0)  # Vietnam time, after A2, A4 and A3 (contract C5)
 BULLETIN_AT = time(5, 0)  # Vietnam time
 IMPROVEMENT_AT = time(6, 30)  # Vietnam time, Mondays: after the day's agents, before the 07:00 weekly report (contract C4)
+STRATEGY_AT = time(6, 15)  # Vietnam time, on a quarter's first day: after A9's campaign at 06:00 (contract C5 of M11)
 ASSISTANT_POLL_SECONDS = 1.5
 # The web expires an assistant request after 60 s; a result must land before that.
 ASSISTANT_EXTERNAL_TIMEOUT_SECONDS = 45.0
@@ -91,6 +92,7 @@ class _CooperativeRuntime:
     daily_campaign: DailySchedule = field(default_factory=lambda: DailySchedule(CAMPAIGN_AT))
     bulletin: DailySchedule = field(default_factory=lambda: DailySchedule(BULLETIN_AT))
     improvement: WeeklySchedule = field(default_factory=lambda: WeeklySchedule(IMPROVEMENT_AT))
+    strategy: SeasonSchedule = field(default_factory=lambda: SeasonSchedule(STRATEGY_AT))
     # The bulletin's LLM call can take minutes on a CPU server, so it runs on its own thread (one at a time).
     bulletin_thread: threading.Thread | None = None
 
@@ -283,12 +285,22 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
         improvement.run_improvement(gateway, now, chain)
         runtime.improvement.record(now)  # a finished or refused week is done; a raised failure is retried next cycle
 
+    def strategy_cycle() -> None:
+        if not runtime.strategy.is_due(now):
+            return
+        provider, fallback = choose_providers(settings, strategy.AGENT_NAME, runtime.providers)
+        provider, fallback = _local_unless_busy(provider), _local_unless_busy(fallback)
+        chain = [provider] if fallback is None else [provider, fallback]
+        strategy.run_strategy(gateway, now, chain)
+        runtime.strategy.record(now)  # a drafted, skipped or refused quarter is done; a raised failure is retried next cycle
+
     _guarded("A2 field-watch", htx, field_watch_cycle)
     _guarded("A4 harvest-ready", htx, harvest_cycle)
     _guarded("A3 disease-watch", htx, disease_cycle)
     _guarded("A9 daily-campaign", htx, campaign_cycle)
     _guarded("A5 bulletin", htx, bulletin_cycle)
     _guarded("A10 improvement", htx, improvement_cycle)
+    _guarded("A11 strategy", htx, strategy_cycle)
 
 
 def run_once(
