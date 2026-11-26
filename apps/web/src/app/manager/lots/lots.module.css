@@ -1,0 +1,18 @@
+/* SPDX-License-Identifier: MIT */
+
+.columns { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
+.list { flex: 3 1 560px; }
+.panel { flex: 1 1 280px; padding: 16px 18px; }
+.chosen { background: var(--color-table-head); }
+.panel header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.panel h2 { margin: 0; font-size: 16px; font-weight: 800; color: var(--color-ink-heading); overflow-wrap: anywhere; }
+.panel dl { margin: 12px 0; }
+.panel dl div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
+.panel dt { color: var(--color-ink-secondary); }
+.panel dd { margin: 0; font-weight: 700; text-align: right; }
+.panel h3 { margin: 0 0 8px; font-size: 13px; color: var(--color-ink-secondary); }
+.panel ol { margin: 0 0 14px; padding: 0; list-style: none; counter-reset: step; }
+.panel li { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 13.5px; counter-increment: step; }
+.panel li::before { content: counter(step); display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); font-size: 11px; font-weight: 800; color: var(--color-ink-secondary); }
+.panel li[data-done='true']::before { content: '✓'; background: var(--color-success-subtle); color: var(--color-success); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }

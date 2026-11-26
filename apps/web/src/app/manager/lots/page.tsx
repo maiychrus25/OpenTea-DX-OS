@@ -1,16 +1,17 @@
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { QrCode, Info, Package } from 'lucide-react'
 import { PageHeader, Pill, SegmentedFilter } from '@/components/ui'
 import table from '@/components/features/dashboard/dashboard.module.css'
 import kit from '@/components/features/dashboard/page-kit.module.css'
 import { fetchJson } from '@/lib/api/fetch-json'
+import styles from './lots.module.css'
 
 interface LotSummary {
   id: string
@@ -24,7 +25,7 @@ interface LotSummary {
 type FilterTab = 'ALL' | 'READY' | 'QR_EXPORTED'
 
 export default function ManagerLotsPage() {
-  const router = useRouter()
+  const [chosenId, setChosenId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [lots, setLots] = useState<LotSummary[]>([])
@@ -40,10 +41,6 @@ export default function ManagerLotsPage() {
       .finally(() => setIsLoading(false))
   }, [])
 
-  const handleRowClick = (lotId: string) => {
-    router.push(`/manager/lots/${lotId}`)
-  }
-
   // Lọc data theo tab và search
   const filteredLots = lots.filter(lot => {
     const matchSearch = lot.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -55,6 +52,9 @@ export default function ManagerLotsPage() {
     if (activeTab === 'QR_EXPORTED') return lot.status === 'qr_exported'
     return true
   })
+
+  // The panel follows the chosen row, or the first lot on screen.
+  const chosen = filteredLots.find(lot => lot.id === chosenId) ?? filteredLots[0]
 
   // Đếm số lượng cho các tab
   const countReady = lots.filter(l => l.status === 'ready').length
@@ -97,7 +97,8 @@ export default function ManagerLotsPage() {
         ]}
       />
 
-      <div className={kit.card}>
+      <div className={styles.columns}>
+      <div className={`${kit.card} ${styles.list}`}>
         <div className={kit.toolbar}>
           <input
             type="search"
@@ -130,7 +131,7 @@ export default function ManagerLotsPage() {
               </thead>
               <tbody>
                 {filteredLots.map(lot => (
-                  <tr key={lot.id} className={kit.clickable} onClick={() => handleRowClick(lot.id)}>
+                  <tr key={lot.id} className={`${kit.clickable}${chosen?.id === lot.id ? ` ${styles.chosen}` : ''}`} aria-selected={chosen?.id === lot.id} onClick={() => setChosenId(lot.id)}>
                     <td className={table.code}>
                       <Link href={`/manager/lots/${lot.id}`} className={table.action} onClick={e => e.stopPropagation()}>
                         {lot.lot_code || lot.id.substring(0, 8)}
@@ -147,6 +148,35 @@ export default function ManagerLotsPage() {
             </table>
           </div>
         )}
+      </div>
+
+      {chosen && (
+        <aside className={`${kit.card} ${styles.panel}`} aria-label={`Lô ${chosen.lot_code}`}>
+          <header>
+            <h2>{chosen.lot_code}</h2>
+            {renderStatus(chosen.status)}
+          </header>
+          <dl>
+            <div><dt>Sản phẩm</dt><dd>{chosen.commodity}</dd></div>
+            <div><dt>Khối lượng</dt><dd>{chosen.estimated_weight_kg ? `${chosen.estimated_weight_kg.toLocaleString('vi-VN')} kg` : '—'}</dd></div>
+            <div><dt>Ngày tạo</dt><dd>{chosen.created_at ? new Date(chosen.created_at).toLocaleDateString('vi-VN') : '—'}</dd></div>
+          </dl>
+          <h3>Tiến trình lô</h3>
+          <ol>
+            <li data-done="true">Đóng lô</li>
+            <li data-done="true">Nghiệm thu, sẵn sàng</li>
+            <li data-done={chosen.status === 'qr_exported'}>Cấp mã QR truy xuất</li>
+          </ol>
+          <div className={styles.actions}>
+            {chosen.status === 'qr_exported' && (
+              <a className={kit.secondary} href={`/lot/${chosen.lot_code}`} target="_blank" rel="noopener noreferrer">
+                <QrCode size={16} aria-hidden="true" /> Xem trang truy xuất
+              </a>
+            )}
+            <Link className={kit.primary} href={`/manager/lots/${chosen.id}`}>Mở chi tiết lô</Link>
+          </div>
+        </aside>
+      )}
       </div>
     </div>
   )
