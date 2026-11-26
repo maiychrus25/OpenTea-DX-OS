@@ -101,7 +101,7 @@ def _record(server, issuer, tokens):
         "server": server,
         "issuer": issuer,
         "access_token": tokens["access_token"],
-        "refresh_token": tokens["refresh_token"],
+        "refresh_token": tokens.get("refresh_token", ""),
         "expires_at": time.time() + int(tokens.get("expires_in", 0)),
     }
 
