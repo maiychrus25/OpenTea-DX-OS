@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { ChevronDown, ChevronUp, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSun, Droplets, Eye, Gauge, Loader2, Moon, Snowflake, Sun, Sunrise, Thermometer, Umbrella, Wind } from 'lucide-react'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 import type { WeatherDetail } from '@/infrastructure/external/open-meteo-detail'
+import { RainCanvas } from './RainCanvas'
 import styles from './weather.module.css'
 
 interface Place {
@@ -115,7 +116,8 @@ function WeatherCard({ place, area, open, onToggle }: { place: Place; area: stri
 
   return (
     <>
-      <div className={`${styles.scene} ${isRainy(current.code) ? styles.rainy : ''}`.trim()}>
+      <div className={styles.scene}>
+        {isRainy(current.code) && <RainCanvas code={current.code} windSpeed={current.windSpeed} />}
         <button type="button" className={styles.summary} aria-expanded={open} onClick={onToggle}>
           <span className={styles.bigIcon}><WeatherIcon code={current.code} isDay={current.isDay} size={open ? 50 : 34} /></span>
           <span className={styles.where}>
