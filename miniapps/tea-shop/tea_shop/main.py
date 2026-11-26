@@ -15,9 +15,9 @@ from pathlib import Path
 from urllib.parse import urlencode
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Form, Header, Request
+from fastapi import Body, Depends, FastAPI, Form, Header, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException
 
@@ -37,7 +37,8 @@ ORDER_STATUS = {"NEW": "Mới", "CONFIRMED": "Đã xác nhận", "SHIPPING": "Đ
                 "CANCELLED": "Đã huỷ"}
 NOT_FOUND_ORDER = "Không tìm thấy đơn hàng với mã và số điện thoại này."
 # Fixed keys only: ?notice= never carries free text into the page.
-NOTICES = {"unchanged": "Không có gì thay đổi: đơn đã được xử lý trước đó.", "saved": "Đã lưu sản phẩm."}
+NOTICES = {"unchanged": "Không có gì thay đổi: đơn đã được xử lý trước đó.", "saved": "Đã lưu sản phẩm.",
+           "ended": "Đã kết thúc khuyến mãi.", "over": "Khuyến mãi này đã kết thúc từ trước."}
 DB_MAX_CONNECTIONS = 8  # the app role allows 10; leaves room for ./dxos install and an admin
 DB_WAIT_S = 2
 DB_SLOTS = threading.BoundedSemaphore(DB_MAX_CONNECTIONS)
@@ -61,7 +62,7 @@ NOTICES_HOME = {"saved": NOTICES["saved"]}
 
 def tab_items(theme: str) -> list[tuple[str, str, str]]:
     return [("overview", "Tổng quan", href("/", theme)), ("orders", "Đơn hàng", href("/orders", theme)),
-            ("products", "Sản phẩm", href("/products", theme))]
+            ("products", "Sản phẩm", href("/products", theme)), ("promotions", "Khuyến mãi", href("/promotions", theme))]
 
 
 templates.env.globals.update(href=href, prefix=PREFIX, order_status=ORDER_STATUS, tab_items=tab_items,
@@ -81,13 +82,21 @@ def redirect(request: Request, path: str, **params) -> RedirectResponse:
     return RedirectResponse(href(path, theme if theme in THEMES else "", **params), status_code=303)
 
 
+def agent_path(request: Request) -> bool:
+    return "/agent/" in request.url.path
+
+
 @app.exception_handler(HTTPException)
 async def http_error(request: Request, exc: HTTPException):
+    if agent_path(request):  # the agent and the web's executor read JSON, not pages
+        return JSONResponse({"message_vi": ERRORS.get(exc.status_code, "Có lỗi xảy ra.")}, exc.status_code)
     return page(request, "message.html", exc.status_code, message=ERRORS.get(exc.status_code, "Có lỗi xảy ra."))
 
 
 @app.exception_handler(RequestValidationError)
 async def bad_path(request: Request, exc: RequestValidationError):
+    if agent_path(request):
+        return JSONResponse({"message_vi": "Dữ liệu gửi lên không hợp lệ."}, 400)
     # Only path ids are typed (form fields are read as text), so a validation error is a page that does not exist.
     return page(request, "message.html", 404, message=ERRORS[404])
 
@@ -98,8 +107,8 @@ async def server_error(request: Request, exc: Exception):
     return page(request, "message.html", 500, message="Có lỗi xảy ra. Vui lòng thử lại sau.")
 
 
-def signed_in(authorization: str | None = Header(None)) -> Claims:
-    claims = read_claims(authorization)
+def signed_in(request: Request, authorization: str | None = Header(None)) -> Claims:
+    claims = read_claims(authorization, request.headers)
     if claims is None:
         raise HTTPException(401)
     return claims
@@ -345,6 +354,60 @@ def advance_order(request: Request, order_id: UUID, claims: Claims = Depends(rol
 @app.post("/orders/{order_id}/cancel")
 def cancel_order(request: Request, order_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db)):
     return move_order(request, store.cancel_order(conn, claims.htx_code, order_id), order_id)
+
+
+# ---------- Promotions ----------
+
+@app.get("/promotions")
+def promotion_list(request: Request, claims: Claims = Depends(role("manager")), conn=Depends(db)):
+    return page(request, "promotions.html", htx=claims.htx_code, promotions=store.list_promotions(conn, claims.htx_code),
+                notice=NOTICES.get(request.query_params.get("notice", "")))
+
+
+@app.post("/promotions/{promotion_id}/end")
+def end_promotion(request: Request, promotion_id: UUID, claims: Claims = Depends(role("manager")), conn=Depends(db)):
+    ended = store.end_promotion(conn, claims.htx_code, promotion_id)
+    if ended is None:
+        raise HTTPException(404)
+    return redirect(request, "/promotions", notice="ended" if ended else "over")
+
+
+# ---------- Agent (called by dxos-agent with its token, and by the web's executor for the approver) ----------
+
+PROMOTION_LIMITS = {"discount_pct": ("Phần trăm giảm", 5, 30), "days": ("Số ngày", 1, 14)}  # the same bounds as agent.actions in app.yaml
+
+
+@app.get("/agent/suggestions")
+def agent_suggestions(claims: Claims = Depends(role("agent")), conn=Depends(db)):
+    return {"suggestions": [{
+        "action": "promotion.create",
+        "payload": {"product_id": str(p.id), "discount_pct": 10, "days": 7},
+        "labels": {"product_name": p.name},
+        "reason_vi": f"Sản phẩm còn {p.stock} gói, {store.SUGGEST_QUIET_DAYS} ngày chưa bán được gói nào.",
+        "subjects": [str(p.id)]} for p in store.stale_stock_products(conn, claims.htx_code)]}
+
+
+def bad_request(message: str) -> JSONResponse:
+    return JSONResponse({"message_vi": message}, 400)
+
+
+@app.post("/agent/actions/promotion-create")
+def agent_promotion_create(body: dict | None = Body(None), claims: Claims = Depends(role("manager")), conn=Depends(db)):
+    """The app re-checks like a click in its own UI: the payload, the product and any promotion already running."""
+    body = body if isinstance(body, dict) else {}
+    if set(body) != {"product_id", "discount_pct", "days"}:
+        return bad_request("Thiếu hoặc thừa thông tin khuyến mãi.")
+    for key, (label, low, high) in PROMOTION_LIMITS.items():
+        if type(body[key]) is not int or not low <= body[key] <= high:
+            return bad_request(f"{label} phải là số nguyên từ {low} đến {high}.")
+    try:
+        product_id = UUID(str(body["product_id"]))
+    except ValueError:
+        return bad_request("Mã sản phẩm không hợp lệ.")
+    made = store.create_promotion(conn, claims.htx_code, product_id, body["discount_pct"], body["days"], claims.sub)
+    if isinstance(made, store.Refusal):
+        return JSONResponse({"message_vi": made.message}, 409 if made.message == store.PROMOTION_OVERLAP else 404)
+    return {"promotion_id": str(made.id), "ends_on": made.ends_on.isoformat()}
 
 
 # ---------- Public (no token; never shows another customer's name, phone or address) ----------

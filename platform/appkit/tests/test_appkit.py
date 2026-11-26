@@ -85,3 +85,41 @@ def test_csv_response_escapes_formula_cells():
 def test_shell_url():
     assert appkit.shell_url("manager", "tea-shop", "/orders") == "/manager/apps/tea-shop/orders"
     assert appkit.shell_url("farmer", "tea-tour") == "/farmer/apps/tea-tour/"
+
+
+def _bearer(**claims):
+    import base64
+    import json
+
+    payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
+    return f"Bearer h.{payload}.s"
+
+
+USER = {"sub": "kc-user", "name": "Tên", "htx_code": "TC", "realm_access": {"roles": ["manager"]}}
+ACTING = {"x-dxos-acting-sub": "kc-approver", "x-dxos-acting-role": "manager", "x-dxos-acting-htx": "LB"}
+
+
+def test_read_claims_plain_token():
+    claims = appkit.read_claims(_bearer(**USER), ACTING)  # forged headers next to a user token are ignored
+    assert (claims.sub, claims.htx_code, claims.roles, claims.name) == ("kc-user", "TC", ("manager",), "Tên")
+    assert appkit.read_claims(None, {}) is None
+    assert appkit.read_claims("Bearer nope", {}) is None
+    assert appkit.read_claims(_bearer(sub=""), {}) is None
+
+
+def test_read_claims_acting_person():
+    actor = _bearer(sub="service-account-dxos-apps-actor", azp="dxos-apps-actor", realm_access={"roles": ["manager", "agent"]})
+    claims = appkit.read_claims(actor, ACTING)
+    assert (claims.sub, claims.htx_code, claims.roles) == ("kc-approver", "LB", ("manager",))
+    officer = appkit.read_claims(actor, {**ACTING, "X-DXOS-Acting-Role": "officer"})  # header names are case-insensitive
+    assert officer.roles == ("officer",)
+
+
+def test_read_claims_acting_headers_must_be_valid():
+    actor = _bearer(sub="svc", azp="dxos-apps-actor")
+    for bad in ({"x-dxos-acting-role": "agent"}, {"x-dxos-acting-role": "farmer"}, {"x-dxos-acting-role": ""},
+                {"x-dxos-acting-sub": ""}, {"x-dxos-acting-htx": "bad htx!"}, {"x-dxos-acting-htx": ""}):
+        assert appkit.read_claims(actor, {**ACTING, **bad}) is None
+    assert appkit.read_claims(actor, {}) is None  # the service account alone is nobody
+    other = _bearer(**USER, azp="dxos-web")
+    assert appkit.read_claims(other, ACTING).sub == "kc-user"
