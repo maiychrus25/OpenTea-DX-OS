@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { signCallbackDataV2 } from '@/domain/telegram/callback-data'
+import type { ReplyButton } from '../TelegramUpdateHandler'
+import { openAppButton } from './mini-app'
 import type { ChatRole } from './types'
 
 export const MENU_LABEL = {
@@ -25,12 +27,14 @@ export const MENU_BY_ROLE: Record<ChatRole, readonly MenuKey[]> = {
 }
 
 /** Menu buttons carry the fixed token `menu`, so they stay valid until the user taps another step. */
-export function menuKeyboard(role: ChatRole, callbackKey: string): { text: string; callback_data: string }[][] {
+export function menuKeyboard(role: ChatRole, callbackKey: string): ReplyButton[][] {
   const buttons = MENU_BY_ROLE[role].map((key) => ({
     text: MENU_LABEL[key],
     callback_data: signCallbackDataV2(callbackKey, 'menu', key),
   }))
-  const rows: { text: string; callback_data: string }[][] = []
+  const rows: ReplyButton[][] = []
   for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2))
+  const openApp = openAppButton()
+  if (openApp) rows.push([openApp])
   return rows
 }
