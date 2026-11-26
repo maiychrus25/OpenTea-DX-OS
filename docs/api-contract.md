@@ -799,6 +799,26 @@ Các route nội bộ dùng token agent, không có phiên trình duyệt. Mọi
 
 - **`GET /api/agent/campaigns/today`**: đối tượng `campaign` có thêm `reminders: string[]` (các dòng `Nhắc theo mẫu:`). Các trường khác không đổi.
 
+## Tự vận hành (M12)
+
+### Nội bộ (token agent)
+
+- **`POST /api/internal/autopilot/tick`**: không có thân. `dxos-agent` gọi mỗi vòng chính cho từng HTX có thông tin xác thực; web chỉ xử lý HTX của token. Trả `{ data: { ran, failed, returned, stopped } }` với `stopped` là một trong `enabler_lost|inactive|brake_failures|brake_cap|brake_blocks|brake_volume` hoặc `null`. Khi chế độ tắt, lệnh gọi không làm gì. Mỗi lần tick kiểm tra lại mọi điều kiện: người bật còn là trưởng HTX và chưa bị khóa, 7 ngày có thao tác của quản lý, các phanh (3 lỗi trong 1 giờ, đủ hạn mức ngày, hơn 30% bị chặn khi có từ 5 quyết định, một agent vượt 3 lần mức trung bình 14 ngày), rồi nhận tối đa 20 đề xuất đến giờ và chạy qua `DecideProposalUseCase` với vai trò `manager` của người bật, kênh `autopilot`. Một nông hộ đã nhận 2 tin tự động trong ngày thì đề xuất `notification.households` quay về chờ duyệt.
+- Đề xuất tạo qua `POST /api/internal/agent/proposals` nay lưu thêm `shadow_auto` và, khi chế độ bật và đề xuất đủ điều kiện, `run_at` = giờ tạo + cửa sổ theo rủi ro (`low` 0, `medium` 15 phút, `high` 2 giờ). Câu trả lời không đổi.
+
+### Web (quản lý và cán bộ)
+
+- **`GET /api/agent/autopilot`** (quản lý, cán bộ): `{ data: { enabled, enabled_by_name, enabled_at, stopped_at, stop_reason, daily_cap, unlocked_kinds, kinds, today: { ran, blocked, pending }, can_enable } }`. Mỗi phần tử của `kinds` có `kind`, `title_vi`, `autonomy` (`auto|unlockable|never`), `risk`, `window_minutes`, `match_rate` (0..1 hoặc `null` khi chưa có mẫu), `sample`, `warning` (đúng khi `match_rate` dưới 0,9) và `unlocked`. Tỉ lệ khớp tính trên 30 ngày: đề xuất `origin: agent` đã được người quyết định (không tính hết hạn, hết hiệu lực và các quyết định của chính chế độ tự vận hành) mà `shadow_auto` bằng việc đề xuất có được duyệt hay không. Một yêu cầu của quản lý cập nhật `last_manager_activity_at` (tối đa một lần mỗi phút).
+- **`POST /api/agent/autopilot/enable`** (chỉ quản lý) với `{ "unlocked_kinds": string[], "daily_cap": 1..50, "acknowledged": true }`. `401 REAUTH_REQUIRED` khi `auth_time` của phiên (claim của Keycloak, giây) cũ hơn 5 phút hoặc không có; giao diện khi đó gọi `signIn('keycloak', { callbackUrl }, { prompt: 'login' })`. `400` khi chưa xác nhận, `daily_cap` ngoài 1..50, hoặc một loại không phải `unlockable`. Ghi sự kiện kiểm toán `autopilot.enabled` kèm ảnh chụp màn hình bật, gửi tin Telegram tới mọi quản lý và cán bộ đã liên kết. Trả về cùng dạng với `GET`.
+- **`POST /api/agent/autopilot/stop`** (quản lý, cán bộ): dừng với lý do `manual`; trả về cùng dạng với `GET` cùng `returned` (số cửa sổ đã trả về chờ duyệt) và `was_on`.
+- Phiên có thêm `authTime` (giây kể từ epoch): claim `auth_time` của ID token Keycloak lúc đăng nhập, giữ nguyên khi làm mới token.
+
+### Telegram (M12)
+
+- Nút của tin `Sẽ tự chạy lúc <HH:mm>: …` dùng callback v1 với thao tác `b` (Chặn) và `v` (Xem). Chặn trước giờ chạy: `blocked_by`, `blocked_at`, `run_at = NULL`, đề xuất vẫn `proposed`. Chặn sau khi tick đã nhận hoặc đã chạy trả lời `Đã chạy, không chặn được nữa.`. Chặn khi đề xuất không còn cửa sổ trả lời `Việc này không còn chờ tự chạy.`.
+- `/dung` (trưởng HTX hoặc cán bộ, trò chuyện riêng) dừng chế độ với lý do `manual`: `Đã dừng tự vận hành. Các việc đang chờ chuyển về chờ duyệt.`; khi chế độ đã tắt: `Tự vận hành đang tắt.`. `/tuvanhanh` hiện trạng thái và số liệu hôm nay.
+- Tin được sửa thành `AI đã tự thực hiện lúc <HH:mm>.` sau khi chạy. Tin chiến dịch 06:00 bắt đầu bằng `Chiến dịch hôm nay sẽ tự chạy` khi chế độ bật, kèm giờ chạy của từng việc có `run_at`. Báo cáo 18:00 thêm dòng `Tự vận hành: <n> việc đã tự chạy, <n> bị chặn, <n> lần phanh, chi phí <usd> USD` khi chế độ bật trong ngày.
+
 ## Telegram base (M2)
 
 Telegram is optional. It is active only when `TELEGRAM_BOT_USERNAME` and `DXOS_TELEGRAM_CALLBACK_KEY` are set on the web; without them no message is queued and the rest of the web works as before. The relay `dxos-telegram` long-polls the Bot API and calls the internal routes below through APISIX `:9081`; every decision is made here. Messages are plain text, at most 4096 characters, with no personal data (parcel codes, counts and dates only).

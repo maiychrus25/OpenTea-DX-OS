@@ -7,6 +7,7 @@ import { CreateProposalUseCase } from '@/application/agent/CreateProposalUseCase
 import { KNOWN_AGENTS } from '@/domain/agent/proposal'
 import { ValidationError } from '@/domain/errors'
 import { PrismaAgentRunRepository } from '@/infrastructure/db/agent/PrismaAgentRunRepository'
+import { PrismaAutopilotRepository } from '@/infrastructure/db/agent/PrismaAutopilotRepository'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import { notifyProposalCreated } from '@/application/telegram/telegram-services'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
@@ -56,7 +57,7 @@ async function postInternalAgentProposal(request: Request) {
     }
   }
 
-  const useCase = new CreateProposalUseCase(new PrismaProposalRepository())
+  const useCase = new CreateProposalUseCase(new PrismaProposalRepository(), undefined, new PrismaAutopilotRepository())
   const created = await useCase.execute({
     htxCode: caller.htxCode,
     runId: body.run_id ?? null,

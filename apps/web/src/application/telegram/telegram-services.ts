@@ -8,6 +8,10 @@ import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHousehold
 import { KeycloakLiveRoleReader } from '@/infrastructure/auth/dxos-web-roles.client'
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
+import { getAction } from '@/application/agent/action-catalog'
+import { AutopilotService } from '@/application/agent/autopilot/AutopilotService'
+import { RunAutopilotTickUseCase } from '@/application/agent/autopilot/RunAutopilotTickUseCase'
+import { PrismaAutopilotRepository } from '@/infrastructure/db/agent/PrismaAutopilotRepository'
 import { PrismaCampaignRepository } from '@/infrastructure/db/agent/PrismaCampaignRepository'
 import { PrismaImprovementRepository } from '@/infrastructure/db/agent/PrismaImprovementRepository'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
@@ -21,9 +25,10 @@ import { ChatEngine } from './chat/ChatEngine'
 import { ChatUserResolver } from './chat/ChatUserResolver'
 import { CHAT_ACTIONS } from './chat/actions'
 import { CHAT_TOOLS } from './chat/tools'
+import { autopilotEnabledText } from './messages'
 import { TelegramLinkService } from './TelegramLinkService'
 import { TelegramNotifier } from './TelegramNotifier'
-import { CampaignServices, ChatServices, TelegramUpdateHandler } from './TelegramUpdateHandler'
+import { AutopilotServices, CampaignServices, ChatServices, TelegramUpdateHandler } from './TelegramUpdateHandler'
 import { telegramCallbackKey } from './telegram-config'
 
 export function telegramRepository(): PrismaTelegramRepository {
@@ -36,6 +41,7 @@ export function telegramNotifier(): TelegramNotifier {
     proposals: new PrismaProposalRepository(),
     campaigns: new PrismaCampaignRepository(),
     improvements: new PrismaImprovementRepository(),
+    autopilot: new PrismaAutopilotRepository(),
   })
 }
 
@@ -111,6 +117,7 @@ export function telegramUpdateHandler(): TelegramUpdateHandler {
     callbackKey,
     chat: chatServices(),
     campaigns: campaignServices(),
+    autopilot: autopilotHandlerServices(),
   })
 }
 
@@ -180,5 +187,59 @@ export function campaignServices(): CampaignServices {
     }),
     drop: new DropCampaignUseCase(campaigns),
     message: (htxCode, campaignId) => notifier.campaignMessage(htxCode, campaignId),
+  }
+}
+
+/** The once-a-minute autonomous-mode pass: the same decision use case as both channels, with the live role reader. */
+export function autopilotTickUseCase(): RunAutopilotTickUseCase {
+  const notifier = telegramNotifier()
+  return new RunAutopilotTickUseCase({
+    autopilot: new PrismaAutopilotRepository(),
+    proposals: new PrismaProposalRepository(),
+    decide: (input) => decisionUseCase().execute(input),
+    roles: new KeycloakLiveRoleReader(),
+    htxProfileId: async (htxCode) => (await new PrismaHtxProfileRepository().findByCode(htxCode))?.id ?? null,
+    notifier: {
+      stopped: (htxCode, reason, returned, dailyCap) => notifier.enqueueAutopilotStopped(htxCode, reason, returned, dailyCap),
+      decided: (htxCode, proposalId) => notifier.syncDecision(htxCode, proposalId),
+    },
+  })
+}
+
+/** The enable screen, status, enable and stop of the web (C4), with the Telegram notices to every manager and officer. */
+export function autopilotService(): AutopilotService {
+  const notifier = telegramNotifier()
+  return new AutopilotService({
+    autopilot: new PrismaAutopilotRepository(),
+    notifier: {
+      enabled: (htxCode, byName, unlocked, dailyCap) =>
+        notifier.enqueueAutopilotNotice(
+          htxCode,
+          autopilotEnabledText(byName, unlocked.map((kind) => getAction(kind)?.titleVi ?? kind), dailyCap)
+        ),
+      stopped: (htxCode, reason, returned, dailyCap) => notifier.enqueueAutopilotStopped(htxCode, reason, returned, dailyCap),
+    },
+  })
+}
+
+/** The Telegram handler's autonomous-mode calls: the same repository and service as the web. */
+function autopilotHandlerServices(): AutopilotServices {
+  const autopilot = new PrismaAutopilotRepository()
+  const service = autopilotService()
+  return {
+    block: (htxCode, proposalId, userId) => autopilot.block(htxCode, proposalId, userId),
+    stop: (htxCode, userId) => service.stop(htxCode, userId),
+    status: async (htxCode) => {
+      const view = await service.view(htxCode)
+      return {
+        enabled: view.enabled,
+        enabledByName: view.enabled_by_name,
+        pending: view.today.pending,
+        ran: view.today.ran,
+        blocked: view.today.blocked,
+        dailyCap: view.daily_cap,
+      }
+    },
+    touchManagerActivity: (htxCode, now) => autopilot.touchManagerActivity(htxCode, now),
   }
 }
