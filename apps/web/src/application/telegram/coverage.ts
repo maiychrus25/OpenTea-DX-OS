@@ -83,6 +83,7 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'GET /api/agent/settings',
     'PUT /api/agent/settings',
     'POST /api/agent/proposals/[id]/decision',
+    'GET /api/weather/live',
   ],
   none: [
     'GET /api/auth/[...nextauth]',

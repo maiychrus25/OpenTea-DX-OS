@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Live weather on the bulletin pages (`apps/web`)**: managers and farmers see the weather where the cooperative's parcels are, read from Open-Meteo through `GET /api/weather/live`: temperature, rain chance, humidity, wind, a 24 hour strip and a 10 day forecast. Parcels about 5 km apart share one card, and parcels without coordinates are left out. The card animates rain when the forecast says it is raining, and stays still for people who ask for reduced motion.
+
+### Changed
+
+- **New web interface (`apps/web`)**: new colour tokens, a grouped sidebar, a breadcrumb top bar and a bottom bar for farmers on phones; new dashboards for the three roles; page headers, filters, tables and cards restyled across the role pages; a rebuilt login page and cooperative profile page. The profile page now shows the cooperative's own parcel and household figures instead of fixed sample numbers.
+
 ## [1.15.0] - 2026-11-26
 
 The agentic layer goes to work in the field and in the chat. Four new agents watch sensors and weather, disease reports, harvest readiness and the market, and propose warnings, inspections, harvest approvals and a bulletin that a person approves. The Telegram bot becomes an assistant: farmers, officers and managers ask questions, share a location, and record a journal entry with a photo from the chat, with a confirmation card before anything is written.
