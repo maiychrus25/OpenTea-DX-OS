@@ -9,8 +9,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "platform" / "tests"
 SHELL_SCRIPTS = [
-    "smoke-telegram.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh", "smoke-agentic.sh",
-    "lib.sh", "lib-telegram.sh", "tokens.sh",
+    "smoke-telegram.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh",
+    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
 ]
 
 
@@ -95,3 +95,125 @@ def test_assistant_smoke_uses_the_callback_data_the_stub_recorded():
     # Button data comes from the stub's recorded reply_markup; the smoke never signs a callback itself.
     text = (TESTS / "smoke-assistant.sh").read_text(encoding="utf-8")
     assert "reply_markup" in text and "callback_sign" not in text and "hmac" not in text
+
+
+def test_campaign_smoke_runs_after_the_assistant_smoke_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-assistant.sh") < text.index("source platform/tests/smoke-campaign.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the campaign checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-assistant.sh"):
+        assert "smoke-campaign.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_campaign_smoke_stops_the_agent_before_seeding_and_restarts_it_after():
+    # A running agent between the seeds and its restart would race with them (lesson 5 of M4).
+    text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
+    assert text.index("$COMPOSE stop dxos-agent") < text.index("insert into parcels") < text.index("--force-recreate dxos-agent")
+
+
+def test_campaign_smoke_restores_its_rows_on_exit_before_the_assistant_cleanup():
+    text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
+    # The EXIT trap of smoke-assistant is replaced, so this one chains it after the campaign cleanup.
+    assert "trap 'campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+    for statement in ("delete from platform.campaigns", "delete from platform.agent_proposals",
+                      "delete from parcels where id='$M7_PARCEL'"):
+        assert statement in text, statement
+
+
+def test_campaign_smoke_presses_the_button_the_stub_recorded_and_signs_nothing():
+    text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
+    assert "tg_button" in text and "Duyệt cả chiến dịch" in text
+    assert "callback_sign" not in text and "hmac" not in text
+
+
+def test_improvement_smoke_runs_after_the_campaign_smoke_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-campaign.sh") < text.index("source platform/tests/smoke-improvement.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the improvement checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-assistant.sh", "smoke-campaign.sh"):
+        assert "smoke-improvement.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_improvement_smoke_stops_the_agent_before_seeding_and_restarts_it_after():
+    text = (TESTS / "smoke-improvement.sh").read_text(encoding="utf-8")
+    # A running agent between the seeds and its restart would race with them (lesson 5 of M4).
+    assert text.index("$COMPOSE stop dxos-agent") < text.index("insert into platform.agent_proposals") < text.index("--force-recreate dxos-agent")
+
+
+def test_improvement_smoke_restores_its_rows_and_thresholds_on_exit_before_the_campaign_cleanup():
+    text = (TESTS / "smoke-improvement.sh").read_text(encoding="utf-8")
+    # The EXIT trap of smoke-campaign is replaced, so this one chains it after the improvement cleanup.
+    assert "trap 'improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+    for statement in ("delete from platform.improvements", "delete from platform.agent_proposals",
+                      "delete from platform.agent_runs", "M8_THRESHOLDS"):
+        assert statement in text, statement
+
+
+def test_improvement_smoke_approves_from_the_recorded_keyboard_and_signs_nothing():
+    text = (TESTS / "smoke-improvement.sh").read_text(encoding="utf-8")
+    assert "approve_by_telegram" in text
+    assert "callback_sign" not in text and "hmac" not in text
+
+
+def test_improvement_smoke_checks_that_only_the_silent_hours_threshold_changes():
+    text = (TESTS / "smoke-improvement.sh").read_text(encoding="utf-8")
+    assert "reject_rate:field-watch:sensor_silent" in text
+    assert "jsonb_build_object('silent_hours', 8)" in text
+
+
+def test_mcp_smoke_runs_last_in_the_agentic_smoke_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-improvement.sh") < text.index("source platform/tests/smoke-mcp.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the MCP checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-improvement.sh"):
+        assert "smoke-mcp.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_mcp_smoke_chains_every_earlier_cleanup_on_exit():
+    # The EXIT trap of smoke-improvement is replaced, so this one chains it after its own cleanup.
+    text = (TESTS / "smoke-mcp.sh").read_text(encoding="utf-8")
+    assert "trap 'mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+
+
+def test_mcp_smoke_restores_the_client_grant_and_removes_the_token_file():
+    text = (TESTS / "smoke-mcp.sh").read_text(encoding="utf-8")
+    assert "M14_DIRECT_BEFORE" in text and "mcp_restore_client" in text
+    assert "rm -rf \"$M14_HOME\"" in text and "chmod 700" in text and "0o600" in text
+
+
+def test_mcp_smoke_never_prints_a_token_or_turns_on_shell_tracing():
+    text = (TESTS / "smoke-mcp.sh").read_text(encoding="utf-8")
+    assert "set -x" not in text
+    for line in text.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        if any(word in line for word in ("echo", "printf", "cat ")):
+            assert "TOKEN" not in line.upper(), line
+
+
+def test_mcp_smoke_uses_the_bridge_routes_and_the_recorded_keyboard_and_signs_nothing():
+    text = (TESTS / "smoke-mcp.sh").read_text(encoding="utf-8")
+    for needle in ("make mcp-client", "/api/mcp/tools", "platform/mcp/dxos_mcp.py serve", "tools/list", "tools/call",
+                   "approve_by_telegram mcp", "notification.internal"):
+        assert needle in text, needle
+    assert "callback_sign" not in text and "hmac" not in text
+
+
+def test_mcp_smoke_checks_the_lot_verification_line_and_no_name():
+    text = (TESTS / "smoke-mcp.sh").read_text(encoding="utf-8")
+    assert "kiểm chứng trong sổ audit" in text and "trưởng HTX" in text
+    assert "/lot/" in text and "Smoke Manager" in text
+
+
+def test_campaign_smoke_closes_older_open_proposals_before_seeding():
+    # The earlier smokes leave many open TC proposals; with the 15-item cap the fresh notice fell out (M7 CI).
+    text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
+    close = text.index("set status = 'expired' where htx_code = 'TC' and status = 'proposed'")
+    assert text.index("$COMPOSE stop dxos-agent") < close < text.index("M7_NOTICE=$(m7_post")
+
+
+def test_campaign_smoke_reads_the_approve_all_line_by_its_text():
+    # Other messages to the manager (proposal syncs) arrive after the campaign edit, so the newest one is not it (M7 CI).
+    text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
+    assert 'tg_last_with "$TG_OWNER" "Đã duyệt chiến dịch"' in text
+    assert 'tg_last_text "$TG_OWNER"' not in text

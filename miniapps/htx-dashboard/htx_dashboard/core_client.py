@@ -109,6 +109,17 @@ RUNS = """query ($htx: String!, $limit: Int!) { telemetry_lifecycle_runs(where: 
   size_bytes quality error started_at finished_at } }"""
 
 
+# The AI tab (M8) reads the manager's own rows: the columns the manager role may see, with the cooperative filter set in
+# the Hasura permission (htx_code is not selectable, so it cannot appear in a where clause here).
+AI_PROPOSALS = """query ($since: timestamptz!, $limit: Int!) { platform_agent_proposals(where: {created_at: {_gte: $since}},
+  order_by: {created_at: desc}, limit: $limit) { agent status created_at decided_at } }"""
+
+AI_RUNS = """query ($since: timestamptz!, $limit: Int!) { platform_agent_runs(where: {started_at: {_gte: $since}},
+  order_by: {started_at: desc}, limit: $limit) { agent status cost_estimate started_at } }"""
+
+AI_IMPROVEMENTS = """query ($since: timestamptz!, $limit: Int!) { platform_improvements(where: {created_at: {_gte: $since}},
+  order_by: {created_at: desc}, limit: $limit) { title_vi status effect created_at } }"""
+
 class CoreError(Exception):
     pass
 
@@ -324,6 +335,25 @@ def parse_daily(data: dict) -> list[m.Daily]:
 def parse_daily_totals(data: dict) -> list[tuple[date, int]]:
     return [(date.fromisoformat(_str(r["day"])), _int(r["reading_count"])) for r in _rows(data, "telemetry_sensor_daily")]
 
+
+def parse_ai_proposals(data: dict) -> list[m.AgentProposal]:
+    return [m.AgentProposal(_str(r["agent"]), _str(r["status"]), parse_ts(_str(r["created_at"])), _ts(r.get("decided_at")))
+            for r in _rows(data, "platform_agent_proposals")]
+
+
+def parse_ai_runs(data: dict) -> list[m.AgentRun]:
+    return [m.AgentRun(_str(r["agent"]), _str(r["status"]), _opt_float(r.get("cost_estimate")), parse_ts(_str(r["started_at"])))
+            for r in _rows(data, "platform_agent_runs")]
+
+
+def parse_ai_improvements(data: dict) -> list[m.Improvement]:
+    out = []
+    for r in _rows(data, "platform_improvements"):
+        effect = r.get("effect") or {}
+        if not isinstance(effect, dict):
+            raise TypeError("effect: object expected")
+        out.append(m.Improvement(_str(r["title_vi"]), _str(r["status"]), effect, parse_ts(_str(r["created_at"]))))
+    return out
 
 def parse_runs(data: dict) -> list[m.Run]:
     return [m.Run(id=_str(r["id"]), target=_str(r["target"]), partition_date=date.fromisoformat(_str(r["partition_date"])),

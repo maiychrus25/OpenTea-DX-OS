@@ -1,0 +1,78 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "charts.html" as ch %}
+{% block title %}AI{% endblock %}
+{% block head %}{{ kit.app_header("AI", "Số liệu của các agent và cải tiến của HTX " ~ htx ~ " trong 28 ngày qua") }}{% endblock %}
+{% block main %}
+{% set rates_note = "Tỉ lệ duyệt = đã duyệt / (đã duyệt + từ chối). Đề xuất còn chờ hoặc hết hạn không tính vào tỉ lệ. Thời gian chờ tính từ lúc tạo đến lúc quyết định. Chi phí là tổng chi phí ước tính của các lần chạy." %}
+
+{% if r.proposals.ok and r.runs.ok %}
+  {% if empty %}
+    {{ kit.empty("Chưa có số liệu AI trong 28 ngày qua.") }}
+  {% else %}
+    <div class="grid-cards" aria-label="Biểu đồ AI">
+      {% call parts.card("Đề xuất theo agent và trạng thái", 12, "h-proposals") %}
+        <ul class="hbars" aria-label="Đề xuất theo agent và trạng thái">
+          {%- for b in bars %}
+          <li title="{{ b.agent }}: {{ b.total }}">
+            <span class="hbar-label">{{ b.agent }}</span>
+            <span class="hbar-value">{{ b.total }}</span>
+            <svg class="hbar-track" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true" focusable="false">{% for s in b.segments %}<rect class="tone-{{ s.tone }}" x="{{ s.x }}" y="1" width="{{ s.width }}" height="8"><title>{{ s.title }}</title></rect>{% endfor %}</svg>
+          </li>
+          {%- endfor %}
+        </ul>
+        {{ ch.legend(names) }}
+      {% endcall %}
+    </div>
+
+    <section class="group" aria-labelledby="agents-title">
+      <h2 id="agents-title">Hiệu quả theo agent</h2>
+      <table role="table">
+        <thead role="rowgroup"><tr role="row">
+          <th role="columnheader">Agent</th><th role="columnheader">Đề xuất</th><th role="columnheader">Đã duyệt</th>
+          <th role="columnheader">Từ chối</th><th role="columnheader">Tỉ lệ duyệt</th><th role="columnheader">Tỉ lệ từ chối</th>
+          <th role="columnheader">Thời gian chờ trung vị (giờ)</th><th role="columnheader">Lần chạy lỗi</th><th role="columnheader">Chi phí</th>
+        </tr></thead>
+        <tbody role="rowgroup">
+        {% for row in rows %}
+          <tr role="row">
+            <td role="cell" data-label="Agent">{{ row.agent }}</td>
+            <td role="cell" data-label="Đề xuất">{{ row.proposals }}</td>
+            <td role="cell" data-label="Đã duyệt">{{ row.approved }}</td>
+            <td role="cell" data-label="Từ chối">{{ row.rejected }}</td>
+            <td role="cell" data-label="Tỉ lệ duyệt">{{ row.approval }}</td>
+            <td role="cell" data-label="Tỉ lệ từ chối">{{ row.rejection }}</td>
+            <td role="cell" data-label="Thời gian chờ trung vị (giờ)">{{ row.wait }}</td>
+            <td role="cell" data-label="Lần chạy lỗi">{{ row.failed }}</td>
+            <td role="cell" data-label="Chi phí">{{ row.cost }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% endif %}
+{% else %}{{ parts.error() }}{% endif %}
+
+<section class="group" aria-labelledby="improvements-title">
+  <h2 id="improvements-title">Cải tiến hằng tuần và kết quả đo</h2>
+  {% if r.improvements.ok %}
+    {% if improvements %}
+    <table role="table">
+      <thead role="rowgroup"><tr role="row"><th role="columnheader">Cải tiến</th><th role="columnheader">Trạng thái</th><th role="columnheader">Sau 2 tuần</th><th role="columnheader">Sau 4 tuần</th></tr></thead>
+      <tbody role="rowgroup">
+      {% for item in improvements %}
+        <tr role="row">
+          <td role="cell" data-label="Cải tiến">{{ item.title }}</td>
+          <td role="cell" data-label="Trạng thái">{{ item.status }}</td>
+          <td role="cell" data-label="Sau 2 tuần">{{ item.after_2w }}</td>
+          <td role="cell" data-label="Sau 4 tuần">{{ item.after_4w }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}{{ kit.empty("Chưa có cải tiến nào trong 8 tuần qua.") }}{% endif %}
+  {% else %}{{ parts.error() }}{% endif %}
+</section>
+{{ parts.notes([rates_note] + ([note] if note else [])) }}
+{% endblock %}

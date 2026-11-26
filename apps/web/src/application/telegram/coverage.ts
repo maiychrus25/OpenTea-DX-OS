@@ -84,6 +84,8 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'PUT /api/agent/settings',
     'POST /api/agent/proposals/[id]/decision',
     'GET /api/weather/live',
+    'GET /api/agent/campaigns/today',
+    'POST /api/agent/campaigns/[id]/decision',
   ],
   none: [
     'GET /api/auth/[...nextauth]',
@@ -105,5 +107,7 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'POST /api/telegram/link',
     'DELETE /api/telegram/link',
     'POST /api/telegram/group-link',
+    'GET /api/mcp/tools',
+    'POST /api/mcp/tools/[name]',
   ],
 }

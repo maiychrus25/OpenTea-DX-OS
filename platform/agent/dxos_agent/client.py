@@ -250,6 +250,29 @@ class CoreGatewayClient:
             raise
         return True
 
+    def get_campaign_candidates(self, day: str) -> dict[str, Any]:
+        """The open proposals and the facts the campaign rules need, for one Vietnam day (contract C3)."""
+        return self._request_json("GET", "/api/internal/agent/campaigns/candidates?" + urllib.parse.urlencode({"day": day}))
+
+    def post_campaign(self, campaign: Mapping[str, Any]) -> dict[str, Any]:
+        """Post the day's campaign (contract C4); the answer is `{id}`, or `{existing: true, id}` when one already exists."""
+        return self._request_json("POST", "/api/internal/agent/campaigns", campaign)
+
+    def get_improvement_inputs(self, week: str) -> dict[str, Any]:
+        """The figures A10 reads for one Monday (contract C3); the `data` object of the answer."""
+        res = self._request_json("GET", "/api/internal/agent/improvements/inputs?" + urllib.parse.urlencode({"week": week}))
+        return dict(res.get("data") or {})
+
+    def post_improvement(self, improvement: Mapping[str, Any]) -> dict[str, Any]:
+        """Post one improvement (contract C5); the answer is `{id, proposal_id}`, or `{deduped: true}` on a repeat."""
+        res = self._request_json("POST", "/api/internal/agent/improvements", improvement)
+        return dict(res.get("data") or {})
+
+    def post_improvement_effect(self, improvement_id: str, effect: Mapping[str, Any]) -> dict[str, Any]:
+        """Record a 2-week or 4-week measurement of an adopted improvement (contract C5)."""
+        res = self._request_json("POST", f"/api/internal/agent/improvements/{improvement_id}/effect", effect)
+        return dict(res.get("data") or {})
+
     def heartbeat(self, version: str, providers: Sequence[str]) -> None:
         """Tell the web this agent is alive and which LLM providers its keys allow (contract C3)."""
         self._request_json(

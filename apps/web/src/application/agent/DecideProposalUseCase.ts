@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import type { CampaignRepository } from '@/domain/agent/ports/CampaignRepository'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
+import type { ImprovementRepository, ImprovementSettlement } from '@/domain/agent/ports/ImprovementRepository'
 import type { DecisionChannel, ProposalStatus } from '@/domain/agent/proposal'
 import { DomainError, ForbiddenError, NotFoundError, ValidationError } from '@/domain/errors'
 import type { Tenant } from '@/lib/api/tenant'
@@ -40,10 +42,58 @@ export class DecideProposalUseCase {
       definition: ActionDefinition<any>,
       payload: Record<string, unknown>,
       tenant: Tenant
-    ) => Promise<Record<string, unknown>>
+    ) => Promise<Record<string, unknown>>,
+    /** When an item of a draft campaign is decided, that campaign becomes partial (M7). */
+    private readonly campaigns?: Pick<CampaignRepository, 'itemOfDraftCampaign' | 'setStatus'>,
+    /** An improvement follows its proposal: adopted when executed, declined when rejected (M8). */
+    private readonly improvements?: Pick<ImprovementRepository, 'settleProposal'>
   ) {}
 
   async execute(input: DecideProposalInput): Promise<DecideProposalOutcome> {
+    const outcome = await this.decide(input)
+    if (outcome.outcome !== 'already_decided') {
+      await this.markCampaignPartial(input.tenant.htxCode, input.proposalId)
+      await this.settleImprovement(input, outcome)
+    }
+    return outcome
+  }
+
+  /** Never changes the outcome: a failure here is logged, the decision already stands. */
+  private async settleImprovement(input: DecideProposalInput, outcome: DecideProposalOutcome): Promise<void> {
+    if (!this.improvements) return
+    let settlement: ImprovementSettlement
+    if (outcome.outcome === 'executed') {
+      settlement = { status: 'adopted', decidedBy: input.tenant.userId, adoptedAt: input.now ?? new Date() }
+    } else if (outcome.outcome === 'rejected') {
+      settlement = { status: 'declined', decidedBy: input.tenant.userId }
+    } else {
+      return
+    }
+    try {
+      await this.improvements.settleProposal(input.tenant.htxCode, input.proposalId, settlement)
+    } catch (err) {
+      console.error('[DecideProposal] could not move the improvement of proposal', input.proposalId, err)
+    }
+  }
+
+  /** Never changes the outcome: a failure here is logged, the decision already stands. */
+  private async markCampaignPartial(htxCode: string, proposalId: string): Promise<void> {
+    if (!this.campaigns) return
+    try {
+      const draft = await this.campaigns.itemOfDraftCampaign(htxCode, proposalId)
+      if (draft) {
+        await this.campaigns.setStatus(htxCode, draft.id, {
+          to: 'partial',
+          from: ['draft'],
+          event: { op: 'agent.campaign.item_decided', details: { proposal_id: proposalId } },
+        })
+      }
+    } catch (err) {
+      console.error('[DecideProposal] could not move the draft campaign to partial', proposalId, err)
+    }
+  }
+
+  private async decide(input: DecideProposalInput): Promise<DecideProposalOutcome> {
     const proposal = await this.repo.findById(input.tenant.htxCode, input.proposalId)
     if (!proposal) {
       throw new NotFoundError('Không tìm thấy đề xuất')

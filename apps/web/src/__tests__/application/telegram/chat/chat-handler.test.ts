@@ -91,6 +91,7 @@ function build(links: TelegramLink[] = [link({})]) {
       householdId: async () => null,
       proposalMessages: async () => [],
     },
+    campaigns: {} as never,
     now: () => NOW,
   })
   return { handler, repo }

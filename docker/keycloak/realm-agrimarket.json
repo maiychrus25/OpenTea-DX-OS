@@ -852,6 +852,30 @@
       "attributes": {
         "pkce.code.challenge.method": "S256"
       }
+    },
+    {
+      "clientId": "dxos-mcp",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": [],
+      "webOrigins": [],
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "email",
+        "dx-os-core"
+      ],
+      "optionalClientScopes": [],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "true"
+      }
     }
   ],
   "components": {

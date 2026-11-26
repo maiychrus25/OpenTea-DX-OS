@@ -422,11 +422,19 @@ Telegram là tuỳ chọn. Đặt `TELEGRAM_BOT_TOKEN` (token BotFather tạo) v
 ### Các agent của lớp AI
 
 - `field-watch` (A2): cảnh báo cảm biến mất tín hiệu, đất khô, nắng nóng, sương muối và mưa sau khi phun, mỗi 30 phút.
-- `disease-watch` (A3): gom báo cáo bệnh cùng loại trong 2 km thành đề nghị kiểm tra và thông báo cho nông hộ, hằng ngày lúc 07:00.
-- `harvest-ready` (A4): đề nghị duyệt thu hoạch khi thửa sẵn sàng và đã qua thời gian cách ly, hằng ngày lúc 06:30.
+- `disease-watch` (A3): gom báo cáo bệnh cùng loại trong 2 km thành đề nghị kiểm tra và thông báo cho nông hộ, hằng ngày lúc 05:40.
+- `harvest-ready` (A4): đề nghị duyệt thu hoạch khi thửa sẵn sàng và đã qua thời gian cách ly, hằng ngày lúc 05:30.
 - `bulletin` (A5): soạn bản tin thị trường chè từ dữ liệu giá, hằng ngày lúc 05:00; bản tin chỉ đăng khi quản lý duyệt.
 
+**Chiến dịch ngày (A9).** Mỗi sáng lúc 06:00 A9 gom các đề xuất đang mở của HTX thành một chiến dịch tối đa 15 việc, mỗi việc có mục tiêu đo được. Quản lý nhận chiến dịch trên Telegram và trên trang AI, có thể duyệt cả chiến dịch (việc rủi ro cao vẫn chờ xác nhận riêng), duyệt từng việc hoặc bỏ chiến dịch. Báo cáo lúc 18:00 cho biết mỗi mục tiêu đã làm được bao nhiêu. Quy tắc và giới hạn: mục 3.12 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
+
+**Cải tiến hằng tuần (A10).** Mỗi thứ Hai lúc 06:30 A10 xem số liệu agent và chiến dịch trong vài tuần qua, rồi đề xuất tối đa 5 cải tiến, mỗi cải tiến kèm bằng chứng. Ví dụ: nếu quản lý thường từ chối cảnh báo cảm biến im lặng, A10 đề xuất nới ngưỡng im lặng và quản lý duyệt như mọi đề nghị khác trên Telegram hoặc trang AI. Sau 2 và 4 tuần, báo cáo 07:00 cho biết cải tiến đã giúp hay chưa. Quy tắc và giới hạn: mục 3.13 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
+
 Ngưỡng và quy tắc mẫu tin: mục 3.10 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
+
+**Client MCP (M14).** Claude Desktop, Claude Code hoặc Codex có thể nối vào trợ lý qua MCP, bằng tài khoản Keycloak của chính người dùng. Client chỉ đọc được những gì người dùng đọc được và chỉ tạo được đề xuất; mọi đề xuất vẫn chờ người có quyền xác nhận trên web hoặc Telegram. Hướng dẫn đăng nhập và cấu hình: [platform/mcp/README.md](./platform/mcp/README.md). Giới hạn và quy tắc dòng kiểm chứng lô: mục 3.14 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
+
+**Đo lường agent (M14).** `make benchmark PROVIDER=<replay|ollama|anthropic|openai> MODEL=<id>` chạy các bộ kịch bản của agent với một nhà cung cấp và ghi bảng kết quả vào [docs/benchmark.md](./docs/benchmark.md).
 
 ### Bật / tắt lớp AI cho từng HTX (`./dxos agent`)
 

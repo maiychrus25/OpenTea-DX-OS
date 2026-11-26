@@ -8,6 +8,7 @@ import {
   type TelegramTokenVerifier,
   type VerifiedTelegramToken,
 } from '@/domain/telegram/ports/TelegramTokenVerifier'
+import { MCP_CLIENT_ID, type McpTokenVerifier, type VerifiedMcpToken } from '@/domain/mcp/ports/McpTokenVerifier'
 import { ForbiddenError, UnauthorizedError } from '@/domain/errors'
 
 const TEN_MINUTES_MS = 10 * 60 * 1000
@@ -255,5 +256,22 @@ export class KeycloakTelegramTokenVerifier implements TelegramTokenVerifier {
       throw new ForbiddenError('Invalid telegram client binding')
     }
     return { sub: payload.sub as string, azp: TELEGRAM_CLIENT_ID, roles }
+  }
+}
+
+/** Verifies a person's `dxos-mcp` access token. Role and cooperative are read live later, so only the token's identity is checked here. */
+export class KeycloakMcpTokenVerifier implements McpTokenVerifier {
+  private readonly jwt: KeycloakJwtVerifier
+
+  constructor(options: KeycloakJwtVerifierOptions = {}) {
+    this.jwt = new KeycloakJwtVerifier(options)
+  }
+
+  async verify(token: string): Promise<VerifiedMcpToken> {
+    const { payload, roles } = await this.jwt.verifyClaims(token)
+    if (payload.azp !== MCP_CLIENT_ID) {
+      throw new UnauthorizedError('Invalid MCP client binding')
+    }
+    return { sub: payload.sub as string, azp: MCP_CLIENT_ID, roles }
   }
 }

@@ -6,6 +6,7 @@ import csv
 import io
 import json
 import re
+from datetime import timedelta
 
 import pytest
 import sample
@@ -22,7 +23,7 @@ def bearer(roles=("manager",), htx="TC", sub="kc-1"):
 
 
 MANAGER = bearer()
-TABS = ["/", "/production", "/parcels", "/parcels/P-TC-001", "/health", "/lots", "/data"]
+TABS = ["/", "/production", "/parcels", "/parcels/P-TC-001", "/health", "/lots", "/data", "/ai"]
 CSV = ["/production/export.csv", "/parcels/export.csv", "/health/export.csv", "/lots/export.csv", "/data/export.csv"]
 PRINT = ["/production/print", "/parcels/print", "/health/print", "/lots/print", "/data/print"]
 
@@ -413,3 +414,48 @@ def test_the_overview_sensor_cards_name_the_unit_and_the_latest_value(client):
 def test_every_kpi_tile_has_the_same_parts(client):
     html = client.get("/", headers=MANAGER).text
     assert html.count('class="kpi-visual"') == 6 and html.count('class="kpi-caption"') == 6
+
+
+# ---------- the AI tab (M8): figures per agent, the proposals chart, improvements and verdicts ----------
+
+def test_ai_tab_shows_agents_chart_and_verdicts(client):
+    html = client.get("/ai", headers=MANAGER).text
+    assert "field-watch" in html and "disease-watch" in html and "harvest-ready" in html
+    assert "Đề xuất theo agent và trạng thái" in html
+    assert "Đã giúp" in html and "Chưa thấy tác dụng" in html
+    assert "Chưa có số liệu AI" not in html
+
+
+def test_ai_tab_without_rows_says_so(client, monkeypatch):
+    empty = lambda key: (lambda p: {"data": {key: []}})
+    use(monkeypatch, **{cc.AI_PROPOSALS: empty("platform_agent_proposals"), cc.AI_RUNS: empty("platform_agent_runs"),
+                        cc.AI_IMPROVEMENTS: empty("platform_improvements")})
+    html = client.get("/ai", headers=MANAGER).text
+    assert "Chưa có số liệu AI trong 28 ngày qua." in html
+
+
+def test_ai_tab_one_failing_query_keeps_the_page(client, monkeypatch):
+    def boom(payload):
+        raise OSError("connection reset")
+    use(monkeypatch, **{cc.AI_RUNS: boom})
+    reply = client.get("/ai", headers=MANAGER)
+    assert reply.status_code == 200
+    assert "Chưa lấy được dữ liệu, thử tải lại" in reply.text
+
+
+def test_ai_tab_escapes_text_from_the_agent(client, monkeypatch):
+    hostile = [{"title_vi": "<script>alert(1)</script>", "status": "proposed", "effect": {}, "created_at": sample.aware(sample.NOW)}]
+    use(monkeypatch, **{cc.AI_IMPROVEMENTS: lambda p: {"data": {"platform_improvements": hostile}}})
+    html = client.get("/ai", headers=MANAGER).text
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+
+
+def test_ai_tab_ignores_proposals_older_than_28_days(client, monkeypatch):
+    old = [{"agent": "retired-agent", "status": "approved", "created_at": sample.aware(sample.NOW - timedelta(days=60)),
+            "decided_at": sample.aware(sample.NOW - timedelta(days=59))}]
+    use(monkeypatch, **{cc.AI_PROPOSALS: lambda p: {"data": {"platform_agent_proposals": old}},
+                        cc.AI_RUNS: lambda p: {"data": {"platform_agent_runs": []}}})
+    html = client.get("/ai", headers=MANAGER).text
+    assert "retired-agent" not in html
+    assert "Chưa có số liệu AI trong 28 ngày qua." in html

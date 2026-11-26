@@ -42,6 +42,8 @@ export function resolveAuthRedirect(
         lowerPath === '/api/health/' ||
         lowerPath.startsWith('/api/dev-login') ||
         lowerPath.startsWith('/api/internal/') ||
+        // MCP routes verify the person's dxos-mcp bearer token themselves; an MCP client never has a session.
+        lowerPath.startsWith('/api/mcp/') ||
         isPublicApiPath(pathname)
       )
         return null

@@ -196,6 +196,41 @@ def prices() -> dict:
     return {"market_data": [row("Tea", "producer_price_index", 108.2, "index", "FAOSTAT", 30)] + history}
 
 
+def _ai_at(hours: float) -> str:
+    return aware(NOW - timedelta(hours=hours))
+
+
+def ai_proposals() -> list[dict]:
+    """The agents' proposals as the manager role reads them: agent, status, created_at, decided_at (decided ones only)."""
+    def row(agent, status, created_h, decided_h=None):
+        return {"agent": agent, "status": status, "created_at": _ai_at(created_h),
+                "decided_at": None if decided_h is None else _ai_at(decided_h)}
+    return [row("field-watch", "approved", 30, 27), row("field-watch", "approved", 20, 16), row("field-watch", "executed", 12, 6),
+            row("field-watch", "rejected", 40, 4), row("field-watch", "rejected", 9, 1), row("field-watch", "proposed", 2),
+            row("field-watch", "expired", 100), row("disease-watch", "approved", 60, 50), row("disease-watch", "rejected", 60, 58),
+            row("harvest-ready", "proposed", 5), row("field-watch", "approved", 40 * 24, 39 * 24 + 2)]
+
+
+def ai_runs() -> list[dict]:
+    def row(agent, status, cost, started_h):
+        return {"agent": agent, "status": status, "cost_estimate": cost, "started_at": _ai_at(started_h)}
+    return ([row("field-watch", "ok", 0.02, 24 * d) for d in range(1, 6)]
+            + [row("digest", "failed", 0.5, 24), row("digest", "failed", 0.5, 30), row("digest", "ok", 0.1, 24),
+               row("field-watch", "failed", 9.0, 40 * 24)])
+
+
+def ai_improvements() -> list[dict]:
+    """Improvements as the manager role reads them: title, status, effect, created_at."""
+    def row(title, status, effect, created_h):
+        return {"title_vi": title, "status": status, "effect": effect, "created_at": _ai_at(created_h)}
+    return [row("Nới ngưỡng cảm biến im lặng", "measured",
+                {"after_2w": {"value": 0.2, "verdict": "helped"}, "after_4w": {"value": 0.1, "verdict": "helped"}}, 35 * 24),
+            row("Bắt buộc ghi liều lượng khi ghi nhật ký phun thuốc", "adopted",
+                {"after_2w": {"value": 0.9, "verdict": "no_effect"}}, 20 * 24),
+            row("Đề xuất chờ duyệt quá lâu: nên giao thêm người duyệt", "proposed", {}, 3 * 24),
+            row("Cải tiến quá cũ", "proposed", {}, 70 * 24)]
+
+
 def _count(n: int) -> dict:
     return {"aggregate": {"count": n}}
 
@@ -251,6 +286,15 @@ def answer(payload: dict) -> dict:
         return {"data": {"telemetry_sensor_daily": daily(code_of, v["from"])}}
     if query == cc.RUNS:
         return {"data": {"telemetry_lifecycle_runs": runs()}}
+    if query == cc.AI_PROPOSALS:
+        since = cc.parse_ts(v["since"])
+        return {"data": {"platform_agent_proposals": [r for r in ai_proposals() if cc.parse_ts(r["created_at"]) >= since]}}
+    if query == cc.AI_RUNS:
+        since = cc.parse_ts(v["since"])
+        return {"data": {"platform_agent_runs": [r for r in ai_runs() if cc.parse_ts(r["started_at"]) >= since]}}
+    if query == cc.AI_IMPROVEMENTS:
+        since = cc.parse_ts(v["since"])
+        return {"data": {"platform_improvements": [r for r in ai_improvements() if cc.parse_ts(r["created_at"]) >= since]}}
     raise AssertionError("no sample answer for this query: " + query[:60])
 
 

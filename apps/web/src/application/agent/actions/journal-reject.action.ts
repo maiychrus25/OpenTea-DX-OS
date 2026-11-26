@@ -22,7 +22,7 @@ export const journalRejectAction: ActionDefinition<JournalRejectPayload> = {
   titleVi: 'Trả lại nhật ký canh tác',
   risk: 'medium',
   approverRoles: ['officer', 'manager'],
-  origins: ['agent'],
+  origins: ['agent', 'user'],
   autonomy: 'auto',
   channels: ['web', 'telegram'],
   payloadSchema: journalRejectPayloadSchema,

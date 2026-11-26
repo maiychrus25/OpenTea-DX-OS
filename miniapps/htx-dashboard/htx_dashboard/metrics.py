@@ -8,6 +8,7 @@ Thresholds are constants of the app for now (spec §5.2).
 from collections import Counter
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
+from statistics import median
 from typing import Iterable, Sequence
 
 VN = timezone(timedelta(hours=7))
@@ -634,3 +635,101 @@ def busiest_day(counts: dict[date, int]) -> tuple[date, int] | None:
         return None
     day = max(sorted(counts), key=lambda d: counts[d])
     return day, counts[day]
+
+
+# ---------- 0.3.0 figures: the AI tab (M8) ----------
+
+AI_DAYS = 28  # the AI tab's window
+IMPROVEMENT_DAYS = 56  # 8 weeks: a 4-week verdict arrives after the adoption, so the list reads further back than the window
+APPROVED_STATUSES = ("approved", "executed", "failed")  # a failed proposal was approved before it ran
+REJECTED_STATUSES = ("rejected",)
+PROPOSAL_GROUPS = (("Chờ duyệt", ("proposed",)), ("Đã duyệt", ("approved", "executed")), ("Lỗi khi thực hiện", ("failed",)),
+                   ("Từ chối", ("rejected",)), ("Hết hạn", ("expired",)), ("Đã lỗi thời", ("stale",)))
+VERDICT = {"helped": "Đã giúp", "no_effect": "Chưa thấy tác dụng", "drop": "Nên bỏ"}
+IMPROVEMENT_STATUS = {"proposed": "Chờ duyệt", "adopted": "Đã áp dụng", "declined": "Đã từ chối", "measured": "Đã đo"}
+
+
+@dataclass(frozen=True)
+class AgentProposal:
+    agent: str
+    status: str
+    created_at: datetime
+    decided_at: datetime | None
+
+
+@dataclass(frozen=True)
+class AgentRun:
+    agent: str
+    status: str
+    cost: float | None
+    started_at: datetime
+
+
+@dataclass(frozen=True)
+class Improvement:
+    title: str
+    status: str
+    effect: dict
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class AgentFigures:
+    agent: str
+    proposals: int
+    approved: int
+    rejected: int
+    median_wait_hours: float | None
+    failed_runs: int
+    cost_usd: float
+
+    @property
+    def approval_rate(self) -> float | None:
+        decided = self.approved + self.rejected
+        return self.approved / decided if decided else None
+
+    @property
+    def rejection_rate(self) -> float | None:
+        decided = self.approved + self.rejected
+        return self.rejected / decided if decided else None
+
+
+def usd_text(value: float) -> str:
+    return f"{value:.2f}".replace(".", ",") + " USD"
+
+
+def agent_figures(proposals: Sequence[AgentProposal], runs: Sequence[AgentRun], now: datetime, days: int = AI_DAYS) -> list[AgentFigures]:
+    """One row per agent seen in the window, the busiest first. Rates count decided proposals only; the wait runs from creation to decision."""
+    mine = [p for p in proposals if in_period(p.created_at, now, days)]
+    recent = [r for r in runs if in_period(r.started_at, now, days)]
+    out = []
+    for name in {p.agent for p in mine} | {r.agent for r in recent}:
+        own = [p for p in mine if p.agent == name]
+        own_runs = [r for r in recent if r.agent == name]
+        waits = [(p.decided_at - p.created_at).total_seconds() / 3600 for p in own if p.decided_at is not None]
+        out.append(AgentFigures(
+            agent=name, proposals=len(own),
+            approved=sum(p.status in APPROVED_STATUSES for p in own),
+            rejected=sum(p.status in REJECTED_STATUSES for p in own),
+            median_wait_hours=round(median(waits), 1) if waits else None,
+            failed_runs=sum(r.status == "failed" for r in own_runs),
+            cost_usd=sum(r.cost or 0.0 for r in own_runs)))
+    return sorted(out, key=lambda f: (-f.proposals, f.agent))
+
+
+def status_series(proposals: Sequence[AgentProposal], agents: Sequence[str]) -> tuple[list[str], list[list[int]]]:
+    """Proposals per agent (in the given order) for each status group that has any row."""
+    names, series = [], []
+    for label, statuses in PROPOSAL_GROUPS:
+        counts = [sum(p.agent == a and p.status in statuses for p in proposals) for a in agents]
+        if any(counts):
+            names.append(label)
+            series.append(counts)
+    return names, series
+
+
+def verdict_text(effect: dict, after: str) -> str:
+    """The verdict of one measurement window; a window not measured yet, or an unknown verdict, shows a dash."""
+    window = effect.get(after) if isinstance(effect, dict) else None
+    verdict = window.get("verdict") if isinstance(window, dict) else None
+    return VERDICT.get(verdict, "—")

@@ -15,6 +15,7 @@ export interface CreateProposalRecord {
   risk: Risk
   origin: Origin
   requestedBy: string | null
+  channel?: string | null
   dedupeKey: string
   subjects: string[]
   expiresAt: Date

@@ -74,6 +74,17 @@ export const TELEGRAM_TEXT = {
   locationNoParcel: 'Không tìm thấy thửa nào có toạ độ.',
   rateLimited: 'Bạn đã gửi 60 tin trong một giờ. Vui lòng thử lại sau.',
   executeFailed: (message: string) => `Chưa thực hiện được: ${message}`,
+  // Daily campaign (M7, contract C6).
+  campaignDone: 'Chiến dịch đã được xử lý.',
+  campaignNotFound: 'Không tìm thấy chiến dịch này.',
+  campaignNotAllowed: 'Bạn không có quyền xử lý chiến dịch này.',
+  campaignNoOpenItems: 'Không còn việc nào chờ duyệt trong chiến dịch.',
+  campaignDropped: 'Đã bỏ chiến dịch hôm nay.',
+  campaignListed: 'Đã gửi lại các việc chờ duyệt.',
+  noCampaignToday: 'Hôm nay chưa có chiến dịch.',
+  campaignApproved: (r: { executed: number; waitingHigh: number; forwarded: number; failed: number }) =>
+    `Đã duyệt chiến dịch: ${r.executed} việc đã chạy, ${r.waitingHigh} việc chờ xác nhận riêng, ${r.forwarded} việc chuyển người đủ quyền.` +
+    (r.failed > 0 ? ` ${r.failed} việc lỗi.` : ''),
 }
 
 /** Button labels of the chat cards and steps (contract C10). */
@@ -125,12 +136,18 @@ export interface ReportFigures {
   lots_created?: number
 }
 
-/** At most four lines: a header and up to three lines of figures. Missing figures are left out. */
+const MAX_REPORT_LINES = 8
+
+/**
+ * The header, up to three lines of figures and, on the daily report, the campaign lines (C9). Missing figures are left
+ * out; when the report would pass eight lines, the lowest-priority figure lines go first.
+ */
 export function reportText(
   kind: 'daily' | 'weekly',
   periodStart: string,
   periodEnd: string,
-  figures: ReportFigures
+  figures: ReportFigures,
+  campaignLines: string[] = []
 ): string {
   const range = periodStart === periodEnd ? formatIsoDate(periodStart) : `${formatIsoDate(periodStart)} – ${formatIsoDate(periodEnd)}`
   const lines = [`Báo cáo ${kind === 'daily' ? 'ngày' : 'tuần'} ${range}`]
@@ -142,20 +159,37 @@ export function reportText(
     part('đã duyệt', figures.journals_approved),
     part('chờ duyệt', figures.journals_pending),
   ].filter(Boolean)
-  if (journals.length) lines.push(journals.join(' · '))
+  const figureLines: string[] = []
+  if (journals.length) figureLines.push(journals.join(' · '))
 
   const proposals = [
     part('Đề xuất đang mở', figures.proposals_open),
     part('đã xử lý', figures.proposals_decided),
   ].filter(Boolean)
-  if (proposals.length) lines.push(proposals.join(' · '))
+  if (proposals.length) figureLines.push(proposals.join(' · '))
 
   const others = [part('Báo cáo bệnh hại', figures.disease_reports), part('Lô mới', figures.lots_created)].filter(Boolean)
-  if (others.length) lines.push(others.join(' · '))
+  if (others.length) figureLines.push(others.join(' · '))
 
-  return lines.join('\n')
+  while (lines.length + figureLines.length + campaignLines.length > MAX_REPORT_LINES && figureLines.length) figureLines.pop()
+  return [...lines, ...figureLines, ...campaignLines].join('\n')
 }
 
 export function healthText(condition: string, detail: string): string {
   return `Cảnh báo hệ thống: ${condition}\n${detail}`
+}
+
+/** Campaign message (contract C6): the day, the count, A9's summary and up to four items. */
+export interface CampaignLine {
+  title: string
+  target: number
+  unitVi: string
+}
+
+export function campaignText(day: string, summaryVi: string, lines: CampaignLine[], reminders: string[] = []): string {
+  const [, month, dayOfMonth] = day.split('-')
+  const out = [`Chiến dịch ngày ${dayOfMonth}/${month}: ${lines.length} việc`, summaryVi]
+  lines.slice(0, 4).forEach((line, index) => out.push(`${index + 1}. ${line.title} · ${line.target} ${line.unitVi}`))
+  if (lines.length > 4) out.push(`… và ${lines.length - 4} việc khác`)
+  return [...out, ...reminders].join('\n')
 }

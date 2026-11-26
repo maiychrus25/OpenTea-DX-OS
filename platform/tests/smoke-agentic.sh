@@ -27,4 +27,7 @@ source platform/tests/smoke-telegram.sh
 source platform/tests/smoke-llm.sh
 source platform/tests/smoke-agents.sh
 source platform/tests/smoke-assistant.sh
+source platform/tests/smoke-campaign.sh
+source platform/tests/smoke-improvement.sh
+source platform/tests/smoke-mcp.sh
 echo "agentic smoke passed"

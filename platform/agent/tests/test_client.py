@@ -83,3 +83,27 @@ def test_post_result_other_http_errors_still_raise():
 
     with pytest.raises(RuntimeError, match="failed \\(500\\)"):
         gateway.post_assistant_result("r1", {"type": "unknown"}, "run-1")
+
+
+def test_campaign_candidates_gets_the_day_and_returns_the_answer():
+    calls: list = []
+    answer = {"day": "2026-11-27", "proposals": [], "rain_parcel_codes": [], "withdrawal_parcel_codes": [], "people_available": None}
+    gateway = _gateway_with(answer, calls=calls)
+
+    assert gateway.get_campaign_candidates("2026-11-27") == answer
+    assert calls == [("GET", "http://gateway/api/internal/agent/campaigns/candidates?day=2026-11-27", None)]
+
+
+def test_post_campaign_sends_the_body_and_returns_the_answer():
+    calls: list = []
+    body = {
+        "day": "2026-11-27",
+        "items": [{"proposal_id": "p1", "position": 1}],
+        "dropped": [{"proposal_id": "p2", "rule": "withdrawal"}],
+        "summary_vi": "Hôm nay có 1 việc.",
+        "run_id": "run-1",
+    }
+    gateway = _gateway_with({"id": "c1"}, calls=calls)
+
+    assert gateway.post_campaign(body) == {"id": "c1"}
+    assert calls == [("POST", "http://gateway/api/internal/agent/campaigns", body)]

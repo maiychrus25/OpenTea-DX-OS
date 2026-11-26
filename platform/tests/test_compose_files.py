@@ -205,3 +205,41 @@ def test_provider_keys_reach_only_the_agent_container():
 def test_env_example_lists_the_provider_keys_empty():
     lines = (ROOT / "docker" / ".env.local.example").read_text(encoding="utf-8").splitlines()
     assert "ANTHROPIC_API_KEY=" in lines and "OPENAI_API_KEY=" in lines
+
+
+def test_campaign_items_follow_their_proposal_on_delete():
+    # The earlier smokes delete their proposals at cleanup; A9 may have put them in a campaign by then (M7 CI).
+    import re
+    sources = [
+        ROOT / "platform/postgres/init/08-agent.sql",
+        ROOT / "apps/web/prisma/migrations/20261126180000_daily_campaigns/migration.sql",
+    ]
+    for path in sources:
+        text = path.read_text(encoding="utf-8")
+        assert re.search(r"proposal_id\s+uuid\s+NOT NULL REFERENCES platform\.agent_proposals\(id\) ON DELETE CASCADE", text), path
+
+
+def test_mcp_route_takes_only_the_bridge_client_and_no_agent_or_relay_role():
+    route = load_routes()["mcp"]
+    assert route["uri"] == "/api/mcp/*"
+    assert route["upstream_id"] == "web"
+    assert route["methods"] == ["GET", "POST"]
+    schema = route["plugins"]["openid-connect"]["claim_schema"]
+    assert schema["properties"]["azp"] == {"enum": ["dxos-mcp"]}
+    assert schema["properties"]["aud"]["anyOf"][0] == {"enum": ["dx-os-core"]}
+    assert schema["properties"]["realm_access"]["properties"]["roles"] == {
+        "not": {"contains": {"enum": ["agent", "telegram"]}}
+    }
+
+
+def test_mcp_route_is_on_the_public_port():
+    # Like the other user routes it has no server_port filter, so the browser-facing port serves it.
+    assert "vars" not in load_routes()["mcp"]
+
+
+def test_mcp_client_target_creates_the_device_grant_client_idempotently():
+    text = (ROOT / "Makefile").read_text(encoding="utf-8")
+    target = text[text.index("\nmcp-client:") :]
+    assert "clientId=dxos-mcp" in target and "clients -r agrimarket" in target
+    assert 'oauth2.device.authorization.grant.enabled\\"=true' in target
+    assert "dxos-mcp updated" in target and "dxos-mcp created" in target

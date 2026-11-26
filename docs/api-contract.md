@@ -739,6 +739,66 @@ Reject or request changes on a `PENDING_APPROVAL` journal entry (`officer` or `m
 ---
 
 
+## Chiến dịch hôm nay (M7)
+
+Mỗi sáng agent A9 (`daily-campaign`, 06:00 giờ Việt Nam) gom các đề xuất đang mở của HTX thành một chiến dịch: tối đa 15 việc, mỗi việc có mục tiêu đo được. Quy tắc thứ tự và xung đột (mưa, thời gian cách ly, số người) nằm ở agent; web lưu chiến dịch sau khi kiểm tra lại, và là nơi duy nhất ghi quyết định. Mỗi HTX chỉ có một chiến dịch cho mỗi ngày.
+
+### Nội bộ (token agent)
+
+- **`GET /api/internal/agent/campaigns/candidates?day=YYYY-MM-DD`**: trả về `{ day, proposals, rain_parcel_codes, withdrawal_parcel_codes, people_available }`. `proposals` là đề xuất `proposed` chưa hết hạn, mỗi mục có `id`, `kind`, `risk`, `title_vi`, `created_at`, `parcel_codes`, `goal_key`, `target`, `involves_spraying` (luôn `false`), `people_needed` (luôn `0`). `rain_parcel_codes` là thửa có dự báo từ 5 mm mưa; `withdrawal_parcel_codes` là thửa còn trong thời gian cách ly phun thuốc của ngày đó. `people_available` là `null` cho tới M10.
+- **`POST /api/internal/agent/campaigns`**: `{ day, items: [{ proposal_id, position }], dropped: [{ proposal_id, rule }], summary_vi, run_id }`. `position` phải là 1..n theo thứ tự; `rule` là `withdrawal`, `rain`, `people` hoặc `overflow`. Web tính lại `goal_key` và `target` từ đề xuất, không tin giá trị agent gửi. `201 { id }` khi tạo mới; `200 { existing: true, id }` khi HTX đã có chiến dịch của ngày đó (không gửi Telegram lần nữa). `400 INVALID_CAMPAIGN` khi một đề xuất không còn `proposed` hoặc không thuộc HTX; `400 INVALID_RUN_ID` khi `run_id` không thuộc HTX. Danh sách `dropped` chỉ ghi vào sự kiện kiểm toán `agent.campaign.created`.
+
+### Web (quản lý và cán bộ)
+
+- **`GET /api/agent/campaigns/today`**: `{ campaign: null }` hoặc `{ campaign: { id, day, status, summaryVi, decidedByName, items: [{ position, proposalId, kind, titleVi, status, risk, goalLine }] } }`. `status` là `draft`, `approved`, `partial`, `done` hoặc `dropped`.
+- **`POST /api/agent/campaigns/[id]/decision`** với `{ "decision": "approve_all" | "drop" }`:
+  - `approve_all` chạy từng việc qua `DecideProposalUseCase` mà người duyệt có quyền; việc `high` chờ xác nhận riêng; việc của vai trò khác được chuyển cho người có quyền. Trả về `{ data: { executed, waitingHigh, forwarded, failed, alreadyDecided } }`.
+  - `drop` bỏ chiến dịch; các việc trở lại thành đề xuất thường. Trả về `{ data: { dropped: true } }`.
+  - `409 CAMPAIGN_CLOSED` khi chiến dịch không còn `draft` hoặc `partial`.
+  - Một việc được duyệt riêng từ hộp thư khi chiến dịch còn `draft` sẽ chuyển chiến dịch sang `partial`.
+
+### Telegram
+
+- Tin chiến dịch gửi cho quản lý liên kết, với nút `A` (Duyệt cả chiến dịch), `L` (Xem từng mục) và `D` (Bỏ chiến dịch). Nút `A` và `D` sửa chính tin đó thành dòng kết quả, không còn nút. Nút `L` gửi lại tin đề xuất của từng việc chưa quyết định.
+- `/chiendich` trong chat riêng gửi chiến dịch hôm nay cho quản lý hoặc cán bộ, hoặc trả lời `Hôm nay chưa có chiến dịch.`.
+- Báo cáo 18:00 (`daily`) có thêm dòng `Chiến dịch hôm nay: <việc xong>/<việc> việc xong`, tối đa ba dòng mục tiêu `• <nhãn>: <đạt>/<mục tiêu> <đơn vị>` và `Chưa xong: <k> việc`. Khi mọi việc đã quyết định, chiến dịch chuyển sang `done`.
+
+## Cải tiến hằng tuần (M8)
+
+Mỗi thứ Hai 06:30 (giờ Việt Nam) agent A10 (`improvement`) xem số liệu tuần trước và đề xuất tối đa năm cải tiến. Mỗi cải tiến là một đề xuất thường (`agent.settings.update` cho đổi ngưỡng hoặc giờ báo cáo, `improvement.adopt` cho ghi chú quy trình hoặc mẫu nhắc của chiến dịch), nên duyệt, Telegram, chiến dịch và kiểm toán dùng lại luồng M1 đến M7. Trạng thái cải tiến đi theo đề xuất: đề xuất được duyệt và thực hiện thì `adopted`, bị từ chối thì `declined`.
+
+`agent.settings.update` chỉ đổi các khóa trong payload, trong khoảng cho phép của agent (ví dụ `field-watch.silent_hours` 1..48, `digest.schedule` 05:00..22:00). Bản xem trước ghi rõ `(siết)` hoặc `(nới)` cho từng thay đổi, và khóa `SETTING_KEYS` trong `agent-settings-update.action.ts` cho M12 biết chiều của mỗi khóa.
+
+Các route nội bộ dùng token agent, không có phiên trình duyệt. Mọi phản hồi nằm trong `data`.
+
+### Nội bộ (token agent)
+
+- **`GET /api/internal/agent/improvements/inputs?week=YYYY-MM-DD`** (thứ Hai): trả về `{ data: { week, settings, proposal_stats, journal_review, campaign_goals, improvements, metrics } }`.
+  - `settings`: ngưỡng và giờ báo cáo của từng agent có dòng cài đặt.
+  - `proposal_stats`: đề xuất đã quyết định trong 28 ngày, nhóm theo `agent`, `kind`, `template`, với `approved`, `rejected`, `expired`, `median_wait_hours`.
+  - `journal_review`: `reviewed` và `returned_missing_info` trong 28 ngày.
+  - `campaign_goals`: số ngày và số ngày trượt mục tiêu trong 14 ngày gần nhất (`actual < target`).
+  - `improvements`: cải tiến của 8 tuần gần nhất.
+  - `metrics`: giá trị hiện tại của từng `metric_key` trong `improvements`; khóa không có số liệu không có giá trị.
+- **`POST /api/internal/agent/improvements`**: `{ week, kind, metric_key, title_vi, rationale_vi, baseline, evidence, settings_change?, template?, run_id? }`.
+  - `kind` là `setting` (cần `settings_change`), `process` hoặc `template` (cần `template`).
+  - `week` phải là thứ Hai; `title_vi` tối đa 120 ký tự, `rationale_vi` tối đa 600.
+  - `201 { data: { id, proposal_id } }` khi tạo mới. `200 { data: { deduped: true } }` khi đã có cải tiến cùng tuần và `metric_key`, hoặc đề xuất bị chặn vì vừa có đề xuất tương tự.
+  - `400 VALIDATION_ERROR` khi khóa hoặc khoảng giá trị nằm ngoài hợp đồng C2. Cải tiến không được lưu trong trường hợp này.
+- **`POST /api/internal/agent/improvements/{id}/effect`**: `{ after: "2w" | "4w", value, verdict: "helped" | "no_effect" | "drop" }`. `after: "4w"` đặt trạng thái `measured`.
+  - `200 { data: { id, after } }`.
+  - `404 NOT_FOUND` khi cải tiến không thuộc HTX.
+  - `409 CONFLICT` khi cải tiến chưa `adopted` hoặc mốc `after` đã có số đo.
+
+### Telegram (M8)
+
+- Báo cáo tuần (`weekly`) có thêm tối đa ba dòng sau các số liệu: `Cải tiến tuần này: <n> đề xuất` khi có đề xuất mới trong tuần, và một dòng cho mỗi cải tiến được đo trong 7 ngày gần nhất: `Đã giúp: <tiêu đề>`, `Chưa thấy tác dụng: <tiêu đề>` hoặc `Nên bỏ: <tiêu đề>`.
+- Tin chiến dịch 06:00 và khung chiến dịch trong hộp thư có thêm dòng `Nhắc theo mẫu: <tiêu đề>` cho mẫu đã áp dụng đúng thứ trong tuần của chiến dịch (thứ Hai = 1). Tối đa hai dòng.
+
+### Hộp thư (quản lý và cán bộ)
+
+- **`GET /api/agent/campaigns/today`**: đối tượng `campaign` có thêm `reminders: string[]` (các dòng `Nhắc theo mẫu:`). Các trường khác không đổi.
+
 ## Telegram base (M2)
 
 Telegram is optional. It is active only when `TELEGRAM_BOT_USERNAME` and `DXOS_TELEGRAM_CALLBACK_KEY` are set on the web; without them no message is queued and the rest of the web works as before. The relay `dxos-telegram` long-polls the Bot API and calls the internal routes below through APISIX `:9081`; every decision is made here. Messages are plain text, at most 4096 characters, with no personal data (parcel codes, counts and dates only).
@@ -770,6 +830,29 @@ Bearer token of client `dxos-telegram` plus the gateway header (`X-Dxos-Gateway`
 - **`POST /api/telegram/link`**: creates a single-use link code and returns `{ "url": "https://t.me/<bot>?start=<code>", "expires_at" }` (201). `409 TELEGRAM_NOT_CONFIGURED` when Telegram is off.
 - **`DELETE /api/telegram/link`**: unlinks the caller's Telegram account.
 - **`POST /api/telegram/group-link`** (manager only): `{ "command": "/nhom <code>", "expires_at" }` (201).
+
+## MCP cho client bên ngoài (M14)
+
+Route `/api/mcp/*` nhận `Authorization: Bearer <access token>` của chính người dùng. Token phát hành cho client Keycloak `dxos-mcp` (realm `agrimarket`, device grant). Không dùng session và không cần header `X-Dxos-Gateway`. Vai trò, HTX và trạng thái bật/tắt được đọc trực tiếp từ Keycloak ở mỗi lượt gọi, giống Telegram. Client chỉ có đúng quyền của người dùng đó.
+
+### `GET /api/mcp/tools`
+Trả `{ "tools": [{ "name", "title_vi", "description_vi", "input_schema" }] }`. Mỗi công cụ đọc của chat chỉ hiện với vai trò được phép; `input_schema` là JSON Schema của đối số. `create_proposal` chỉ hiện với quản lý và cán bộ.
+
+**Lỗi:** `401 UNAUTHORIZED` khi thiếu, hết hạn hoặc là token của client khác; `403 FORBIDDEN` khi người dùng bị tắt hoặc không còn vai trò; `503 CORE_UNAVAILABLE` khi không đọc được Keycloak.
+
+### `POST /api/mcp/tools/[name]`
+Body: `{ "arguments": { ... } }`.
+
+- **Công cụ đọc:** `200 { "text": "<tối đa 7 dòng>\nNguồn: <nguồn>" }`, cùng định dạng với Telegram. `403` khi vai trò không được dùng công cụ, `404` khi tên không tồn tại.
+- **`create_proposal`:** `arguments` là `{ kind, payload, reason_vi }` với `reason_vi` 1 đến 500 ký tự. Chỉ tạo đề xuất, không thực hiện gì: đề xuất ở trạng thái `proposed` cho đến khi người có quyền duyệt qua `DecideProposalUseCase`. Đề xuất có `origin: 'user'`, `requested_by` là người dùng, `agent: 'mcp'`, bằng chứng do web tự dựng từ các đối tượng trong payload, và được gửi tới Telegram như đề xuất thường. `201 { "proposal_id", "status": "proposed", "message_vi" }`.
+  - `400 VALIDATION_ERROR` với message `INVALID_ORIGIN`, `UNKNOWN_KIND`, `INVALID_PAYLOAD` hoặc `EVIDENCE_NOT_IN_HTX` (đối tượng ngoài HTX).
+  - `403 FORBIDDEN` với message `NOT_AN_APPROVER` khi vai trò không duyệt được loại đề xuất đó.
+  - `409 CONFLICT` khi đã có đề xuất đang mở cho cùng đối tượng.
+  - Sự kiện kiểm toán `agent.proposal.created` có `origin: 'user'` và `channel: 'mcp'`.
+
+## Dòng kiểm chứng AI trên trang truy xuất (M14)
+
+Trang công khai `/lot/[lot_code]` hiện khối "kiểm chứng trong sổ audit" chỉ khi quyết định AI của lô có đủ ba điều kiện: sự kiện duyệt `agent.proposal.approved` tồn tại, mã băm bằng chứng của sự kiện bằng mã băm của đề xuất, và `audit.verify_chain()` không báo dòng hỏng tới sự kiện đó. Mỗi lô tối đa 3 dòng, dạng `AI đề xuất, <cán bộ|trưởng HTX> đã duyệt ngày <dd/MM/yyyy>, kiểm chứng trong sổ audit`. Trang không bao giờ hiện tên người duyệt. Dòng được tính khi tải trang, không nằm trong ảnh chụp `public_page_data` của lô đã xuất QR.
 
 ## Error Codes
 

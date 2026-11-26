@@ -4,9 +4,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/auth'
-import { DecideProposalUseCase } from '@/application/agent/DecideProposalUseCase'
-import { notifyProposalDecided } from '@/application/telegram/telegram-services'
-import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
+import { decisionUseCase, notifyProposalDecided } from '@/application/telegram/telegram-services'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
@@ -51,8 +49,7 @@ async function postProposalDecision(request: Request, context: unknown) {
     return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: parsed.error.message } }, { status: 400 })
   }
 
-  const useCase = new DecideProposalUseCase(new PrismaProposalRepository())
-  const outcome = await useCase.execute({
+  const outcome = await decisionUseCase().execute({
     proposalId: id,
     tenant,
     userName: session.user.name || session.user.email || tenant.userId,

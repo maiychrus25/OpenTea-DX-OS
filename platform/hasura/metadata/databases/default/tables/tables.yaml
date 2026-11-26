@@ -18,3 +18,6 @@
 - "!include telemetry_sensor_readings.yaml"
 - "!include telemetry_sensor_daily.yaml"
 - "!include telemetry_lifecycle_runs.yaml"
+- "!include platform_agent_proposals.yaml"
+- "!include platform_agent_runs.yaml"
+- "!include platform_improvements.yaml"
