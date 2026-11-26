@@ -104,7 +104,8 @@ const journal = {
     parcel_id: z.string(),
     activity_type: z.string(),
     product_name: z.string().optional(),
-    photo_key: z.string().nullable().optional(),
+    // As the real journal.create schema: a skipped optional photo must reach the payload as absent, not null.
+    photo_key: z.string().min(1).optional(),
   }),
   consequenceVi: null,
   preview: jest.fn(async (payload: Record<string, unknown>) => [`Thửa: ${String(payload.parcel_id)}`]),

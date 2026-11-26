@@ -100,6 +100,9 @@ const callbackOnly = (replies: OutboxReply[], answer = '', alert = false): Updat
 const newToken = (): string => randomBytes(8).toString('base64url')
 const expired = (row: TelegramConversation, now: Date): boolean => row.expiresAt.getTime() <= now.getTime()
 const withoutMeta = (state: Meta): Meta => Object.fromEntries(Object.entries(state).filter(([key]) => !key.startsWith('__')))
+/** The action's payload: no meta keys, and a skipped step (stored as null so it is not asked again) left out. */
+const payloadOf = (state: Meta): Meta =>
+  Object.fromEntries(Object.entries(state).filter(([key, value]) => !key.startsWith('__') && value !== null))
 
 const rowsOfTwo = <T>(items: T[]): T[][] => {
   const rows: T[][] = []
@@ -327,7 +330,7 @@ export class ChatEngine {
     if (press.s === 'next' && row.step === CARD_FIRST && action.risk === 'high') {
       // The second card of a high action gets its own token and its own 10 minutes.
       // The second card repeats the object (first preview line) so the final press names what it confirms.
-      const payload = action.payloadSchema.safeParse(withoutMeta(row.state))
+      const payload = action.payloadSchema.safeParse(payloadOf(row.state))
       const preview = payload.success ? await action.preview(payload.data, user) : []
       const token = newToken()
       await this.deps.repo.setFlow({
@@ -367,7 +370,7 @@ export class ChatEngine {
   ): Promise<UpdateResponse> {
     const chat = press.chatId
     await this.deps.repo.deleteConversation(press.telegramUserId)
-    const payload = action.payloadSchema.safeParse(withoutMeta(row.state))
+    const payload = action.payloadSchema.safeParse(payloadOf(row.state))
     if (!payload.success) {
       return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.executeFailed('Thiếu thông tin'))], '', true)
     }
@@ -522,7 +525,7 @@ export class ChatEngine {
 
   private async card(user: ChatUser, action: ChatAction, state: Meta, now: Date): Promise<UpdateResponse> {
     const chat = user.chatId
-    const payload = action.payloadSchema.safeParse(withoutMeta(state))
+    const payload = action.payloadSchema.safeParse(payloadOf(state))
     if (!payload.success) {
       await this.deps.repo.deleteConversation(user.telegramUserId)
       return only([send(chat, TELEGRAM_TEXT.executeFailed('Thiếu thông tin'))])
