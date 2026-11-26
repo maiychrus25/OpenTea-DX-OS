@@ -621,6 +621,46 @@ describe('ChatEngine: voice messages (M15)', () => {
     expect(requests.submit).not.toHaveBeenCalled()
   })
 
+  test('a voice answer in the middle of a flow waits inside the flow; Đúng feeds it to the step and keeps the flow', async () => {
+    const { engine, repo } = build()
+    repo.rows.set('42', {
+      telegramUserId: '42', kind: 'flow', proposalId: null, flow: 'journal.create', step: 2,
+      state: { parcel_id: 'p1', activity_type: 'SPRAYING' }, token: 'FlowTok0123', cardMessageId: null,
+      expiresAt: new Date(NOW.getTime() + 5 * 60 * 1000),
+    })
+    const res = await engine.onVoice(FARMER, heard('Regent 800WG'), NOW)
+    expect(res.replies[0].text).toBe('Em nghe được: “Regent 800WG”')
+    expect(res.replies[0].buttons!.flat().map((b) => b.text)).toEqual(['Đúng', 'Sửa', 'Bỏ câu này'])
+    // The half-filled flow is kept, with the heard sentence waiting beside its answers.
+    expect(repo.rows.get('42')).toMatchObject({ kind: 'flow', flow: 'journal.create', step: 2, token: 'FlowTok0123' })
+    expect(repo.rows.get('42')!.state).toMatchObject({ parcel_id: 'p1', activity_type: 'SPRAYING' })
+
+    const yes = buttonFor(res.replies[0].buttons, 'Đúng')
+    const ok = await press(engine, FARMER, '42', 42, yes.c, yes.s)
+    expect(ok.replies[0]).toMatchObject({ op: 'edit', text: 'Em nghe được: “Regent 800WG”' })
+    expect(ok.replies[1]).toMatchObject({ op: 'send', text: 'Gửi một ảnh minh chứng, hoặc bấm Bỏ qua.' })
+    expect(repo.rows.get('42')).toMatchObject({ kind: 'flow', flow: 'journal.create', step: 3 })
+    expect(repo.rows.get('42')!.state).toEqual({ parcel_id: 'p1', activity_type: 'SPRAYING', product_name: 'Regent 800WG' })
+    expect(journal.execute).not.toHaveBeenCalled()
+  })
+
+  test('Bỏ câu này drops only the heard sentence and keeps the flow where it was', async () => {
+    const { engine, repo } = build()
+    repo.rows.set('42', {
+      telegramUserId: '42', kind: 'flow', proposalId: null, flow: 'journal.create', step: 2,
+      state: { parcel_id: 'p1', activity_type: 'SPRAYING' }, token: 'FlowTok0123', cardMessageId: null,
+      expiresAt: new Date(NOW.getTime() + 5 * 60 * 1000),
+    })
+    const res = await engine.onVoice(FARMER, heard('ừm'), NOW)
+    const drop = buttonFor(res.replies[0].buttons, 'Bỏ câu này')
+    const dropped = await press(engine, FARMER, '42', 42, drop.c, drop.s)
+    expect(dropped.replies[0]).toMatchObject({ op: 'edit', text: 'Đã bỏ câu vừa nói. Bạn trả lời tiếp bằng chữ hoặc nói lại nhé.' })
+    expect(repo.rows.get('42')).toMatchObject({ kind: 'flow', step: 2, state: { parcel_id: 'p1', activity_type: 'SPRAYING' } })
+    const again = await press(engine, FARMER, '42', 42, drop.c, drop.s)
+    expect(again.answer_callback).toEqual({ text: TELEGRAM_TEXT.staleButton, show_alert: true })
+    expect(repo.rows.get('42')).toMatchObject({ kind: 'flow', step: 2 })
+  })
+
   test('empty or blank text answers voiceUnclear with no buttons and stores nothing', async () => {
     const { engine, repo } = build()
     for (const text of ['', '   ']) {

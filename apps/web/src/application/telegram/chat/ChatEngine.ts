@@ -105,6 +105,18 @@ const callbackOnly = (replies: OutboxReply[], answer = '', alert = false): Updat
 
 const newToken = (): string => randomBytes(8).toString('base64url')
 const expired = (row: TelegramConversation, now: Date): boolean => row.expiresAt.getTime() <= now.getTime()
+/** State key of a heard sentence waiting inside a flow, and the ops of its buttons (M15). */
+const VOICE_IN_FLOW = '__voice'
+const VOICE_IN_FLOW_OPS = ['vok', 'vedit', 'vno']
+const flowInputOf = (row: TelegramConversation) => ({
+  telegramUserId: row.telegramUserId,
+  flow: row.flow ?? '',
+  step: row.step,
+  state: row.state,
+  token: row.token,
+  cardMessageId: row.cardMessageId,
+  expiresAt: row.expiresAt,
+})
 const withoutMeta = (state: Meta): Meta => Object.fromEntries(Object.entries(state).filter(([key]) => !key.startsWith('__')))
 /** The action's payload: no meta keys, and a skipped step (stored as null so it is not asked again) left out. */
 const payloadOf = (state: Meta): Meta =>
@@ -207,6 +219,19 @@ export class ChatEngine {
     const text = voice.text.trim()
     if (!text) return only([send(chat, TELEGRAM_TEXT.voiceUnclear)])
 
+    // In the middle of a flow the heard sentence waits inside it (a `__` key never reaches the payload), so a spoken
+    // answer such as "hai lít" does not throw away the half-filled card. Its buttons carry the flow's own token.
+    const open = await this.deps.repo.conversationOf(user.telegramUserId)
+    if (open?.kind === 'flow' && open.flow !== null && open.token && !expired(open, now)) {
+      await this.deps.repo.setFlow({ ...flowInputOf(open), state: { ...open.state, [VOICE_IN_FLOW]: text } })
+      const inFlow: Buttons = [[
+        this.button(open.token, 'vok', TELEGRAM_BUTTON.voiceOk),
+        this.button(open.token, 'vedit', TELEGRAM_BUTTON.voiceEdit),
+        this.button(open.token, 'vno', TELEGRAM_BUTTON.voiceDrop),
+      ]]
+      return only([send(chat, TELEGRAM_TEXT.voiceHeard(text), inFlow)])
+    }
+
     const token = newToken()
     await this.deps.repo.setFlow({
       telegramUserId: user.telegramUserId,
@@ -243,6 +268,9 @@ export class ChatEngine {
 
     const row = await this.deps.repo.conversationOf(press.telegramUserId)
     if (row?.kind === 'voice' && row.token === press.c) return this.voicePress(user, row, press, now)
+    if (row?.kind === 'flow' && row.token === press.c && VOICE_IN_FLOW_OPS.includes(press.s)) {
+      return this.voiceInFlowPress(user, row, press, now)
+    }
     if (!row || row.kind !== 'flow' || row.token !== press.c) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
     const action = this.actionNamed(row.flow)
     if (!action) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
@@ -274,6 +302,22 @@ export class ChatEngine {
       return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
     }
     if (press.s === 'cancel') return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.flowCancelled)])
+    const heard = edit(chat, press.messageId, TELEGRAM_TEXT.voiceHeard(text))
+    if (press.s === 'vedit') return callbackOnly([heard, send(chat, TELEGRAM_TEXT.voiceRetype)])
+    const next = await this.onText(user, text, now)
+    return callbackOnly([heard, ...next.replies])
+  }
+
+  /** A heard sentence waiting inside a flow: Đúng answers the flow's step with it, Sửa and Bỏ câu này keep the flow. */
+  private async voiceInFlowPress(user: ChatUser | null, row: TelegramConversation, press: CallbackPress, now: Date): Promise<UpdateResponse> {
+    const chat = press.chatId
+    const text = typeof row.state[VOICE_IN_FLOW] === 'string' ? (row.state[VOICE_IN_FLOW] as string) : ''
+    if (!user) return callbackOnly([], TELEGRAM_TEXT.noPermission('Trợ lý Telegram'), true)
+    if (!text || expired(row, now)) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
+    const rest = { ...row.state }
+    delete rest[VOICE_IN_FLOW]
+    await this.deps.repo.setFlow({ ...flowInputOf(row), state: rest })
+    if (press.s === 'vno') return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.voiceDropped)])
     const heard = edit(chat, press.messageId, TELEGRAM_TEXT.voiceHeard(text))
     if (press.s === 'vedit') return callbackOnly([heard, send(chat, TELEGRAM_TEXT.voiceRetype)])
     const next = await this.onText(user, text, now)
