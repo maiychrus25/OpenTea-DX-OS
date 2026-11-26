@@ -946,3 +946,15 @@ Body `{ "intent": { type, name?, args? }, "run_id": uuid | null }`. Trả về `
 
 `GET /api/internal/telegram/outbox` trước khi giao hàng đợi đánh dấu các yêu cầu `pending` hoặc `claimed` cũ hơn 60 giây là `expired`, rồi xếp lời trả lời `assistantTimeout` kèm menu vào đúng chat.
 
+
+## Telegram Mini App (M6)
+
+Mini App chỉ bật khi web có `DXOS_TELEGRAM_WEBAPP_KEY` (hex của `HMAC_SHA256(key="WebAppData", msg=<bot token>)`, do `./dxos telegram enable` ghi). Web không bao giờ giữ bot token.
+
+- **`POST /api/telegram/webapp/session`** (cần phiên đăng nhập): body `{ "init_data": "<initData thô>" }`. Web kiểm `hash` theo thuật toán của Telegram (so sánh thời gian hằng), `auth_date` không quá 24 giờ, có `user.id`, và `user.id` phải bằng `telegram_user_id` của liên kết còn hiệu lực của người đang đăng nhập. `initData` không bao giờ là đăng nhập.
+  - `200 { "data": { "telegram_user_id": n } }` và đặt cookie `dxos_tg_webapp` (`httpOnly`, `SameSite=Lax`, 12 giờ, giá trị `<telegram_user_id>.<user_id>.<hết hạn>.<chữ ký>`, ký bằng `AUTH_SECRET`).
+  - `404 WEBAPP_DISABLED` (thiếu khóa dẫn xuất), `401` (không có phiên), `400 WEBAPP_INVALID` (hash sai, quá hạn, thiếu `user`, body sai), `403 WEBAPP_NOT_LINKED` (Telegram của người khác hoặc chưa liên kết).
+- Vì Content-Security-Policy chưa được đặt ở đâu trong web, không có chính sách nào cần đổi; script `https://telegram.org/js/telegram-web-app.js` chỉ được tải khi mở trong Telegram.
+- **Trang `/telegram/open`** (cần phiên; khách chưa đăng nhập được chuyển tới `/login?callbackUrl=/telegram/open?...` và quay lại sau khi đăng nhập): gửi `initData` tới route trên một lần, rồi chuyển tới `?to=<đường dẫn>` nếu đó là đường dẫn cùng nguồn thuộc danh sách của vai trò (`/farmer/journal/new`; `/officer/journal`, `/officer/households`, `/officer/farm-zones`; `/manager/ai`, `/manager/journal-approve`), nếu không thì tới trang chủ của vai trò. Ngoài Telegram hoặc khi `WEBAPP_DISABLED` trang chỉ chuyển hướng; khi `403` trang hiện lý do.
+- `TelegramWebAppShell` (layout gốc) chỉ hoạt động khi URL có `tgWebAppData` hoặc `tgWebAppPlatform` (cờ lưu trong `sessionStorage`); khi đó mới tải `https://telegram.org/js/telegram-web-app.js`, gọi `ready()` và `expand()`, đặt `data-theme` theo `colorScheme` của Telegram và nối nút Back với `router.back()` khi `history.length > 1`.
+- **Nút Mini App trong chat (M6)**, chỉ hiện khi web có `DXOS_WEB_PUBLIC_URL` bắt đầu bằng `https://` (không thì chat giữ nguyên): menu có thêm hàng `Mở ứng dụng` (nút `web_app` tới `/telegram/open`, mọi vai trò); thẻ xác nhận `journal.create` của nông dân có thêm nút `Sửa` mở `/farmer/journal/new?parcel&activity&product&dosage&withdrawal` đã điền sẵn; tin đề xuất mức `high` có thêm nút `Mở chi tiết` tới `/manager/ai?proposal=<id>`. Cán bộ và `harvest.approve` chưa có biểu mẫu riêng nên không có nút `Sửa`. Hàng đợi gửi nhận thêm loại nút `{ text, web_app: { url } }`.

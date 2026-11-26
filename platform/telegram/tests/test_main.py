@@ -66,3 +66,10 @@ def test_config_defaults_when_env_unset(monkeypatch):
     cfg = Config.from_env()
     assert cfg.interval_seconds == 30.0
     assert cfg.heartbeat_path == "/tmp/dxos-telegram.heartbeat"
+
+
+def test_config_reads_the_public_web_url(monkeypatch):
+    monkeypatch.delenv("DXOS_WEB_PUBLIC_URL", raising=False)
+    assert Config.from_env().web_public_url == ""
+    monkeypatch.setenv("DXOS_WEB_PUBLIC_URL", " https://dx.example.org/ ")
+    assert Config.from_env().web_public_url == "https://dx.example.org"

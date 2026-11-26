@@ -39,3 +39,10 @@ def test_photo_update_injected_on_control_is_returned_by_get_updates(stub):
     req = urllib.request.Request(f"{stub}/control/updates", data=json.dumps(update).encode("utf-8"), method="POST")
     urllib.request.urlopen(req, timeout=5).read()
     assert BotApi(stub, "123:smoke").call("getUpdates", {"offset": 0, "timeout": 0}) == [update]
+
+
+def test_stub_records_set_chat_menu_button(stub):
+    params = {"menu_button": {"type": "web_app", "text": "Mở ứng dụng", "web_app": {"url": "https://x.example/telegram/open"}}}
+    assert BotApi(stub, "123:smoke").call("setChatMenuButton", params) is True
+    calls = json.loads(urllib.request.urlopen(f"{stub}/control/calls", timeout=5).read())
+    assert calls == [{"method": "setChatMenuButton", "params": params}]

@@ -219,6 +219,13 @@ def test_campaign_smoke_reads_the_approve_all_line_by_its_text():
     assert 'tg_last_text "$TG_OWNER"' not in text
 
 
+def test_telegram_smoke_checks_the_mini_app_session_and_the_menu_button():
+    text = (TESTS / "smoke-telegram.sh").read_text(encoding="utf-8") + (TESTS / "lib-telegram.sh").read_text(encoding="utf-8")
+    for needle in ("/api/telegram/webapp/session", "setChatMenuButton", "WEBAPP_NOT_LINKED", "dxos_tg_webapp",
+                   'TELEGRAM_BOT_TOKEN="$TG_TOKEN_VALUE" ./dxos telegram enable', "DXOS_WEB_PUBLIC_URL"):
+        assert needle in text, needle
+
+
 def test_staff_smoke_runs_after_the_mcp_smoke_and_stays_out_of_the_platform_count():
     text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
     assert text.index("source platform/tests/smoke-mcp.sh") < text.index("source platform/tests/smoke-staff.sh")

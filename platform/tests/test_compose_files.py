@@ -266,6 +266,13 @@ def test_mcp_client_target_creates_the_device_grant_client_idempotently():
     assert "dxos-mcp updated" in target and "dxos-mcp created" in target
 
 
+def test_mini_app_settings_reach_the_web_and_the_relay_but_the_token_never_reaches_the_web():
+    services = load_compose(COMPOSE)
+    assert "DXOS_TELEGRAM_WEBAPP_KEY" in services["web"]["environment"]
+    assert "TELEGRAM_BOT_TOKEN" not in services["web"]["environment"]
+    assert "DXOS_WEB_PUBLIC_URL" in services["dxos-telegram"]["environment"]
+
+
 def test_only_the_staff_route_is_internal_and_served_on_the_public_port():
     # The staff app runs outside the compose network (D14); the agent and relay routes stay on 9081 only.
     routes = load_routes()
