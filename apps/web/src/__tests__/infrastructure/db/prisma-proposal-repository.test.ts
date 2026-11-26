@@ -159,9 +159,29 @@ describe('PrismaProposalRepository', () => {
       subjectIds: ['e1'],
     })
 
-    // Third statement is the audit call: values are the proposal id and the JSON details.
-    const details = JSON.parse((mockPrisma.__tx.$executeRaw.mock.calls[2] as unknown[])[2] as string)
+    // Third statement is the audit call: values are the event, the proposal id and the JSON details.
+    const details = JSON.parse((mockPrisma.__tx.$executeRaw.mock.calls[2] as unknown[])[3] as string)
     expect(details).toMatchObject({ actor: 'user:u1', agent: 'journal-review', kind: 'journal.approve', subject_ids: ['e1'] })
+  })
+
+  test('markExecuted moves a task waiting for the staff app to sent_to_staff_app, not executed', async () => {
+    const repo = new PrismaProposalRepository()
+
+    await repo.markExecuted('prop-1', { state: 'waiting_for_staff_app' }, { actorId: 'u1', kind: 'staff.task.create' })
+
+    const update = mockPrisma.__tx.$executeRaw.mock.calls[1] as unknown[]
+    expect(sqlOf(update)).toContain('SET status = ?::text')
+    expect(update.slice(1)).toContain('sent_to_staff_app')
+    expect(update.slice(1)).not.toContain('executed')
+    expect(mockPrisma.__tx.$executeRaw.mock.calls[2]).toContain('agent.proposal.sent_to_staff_app')
+  })
+
+  test('markExecuted still marks every other result executed', async () => {
+    await new PrismaProposalRepository().markExecuted('prop-1', { approved_count: 1 })
+
+    const update = mockPrisma.__tx.$executeRaw.mock.calls[1] as unknown[]
+    expect(update.slice(1)).toContain('executed')
+    expect(mockPrisma.__tx.$executeRaw.mock.calls[2]).toContain('agent.proposal.executed')
   })
 
   test('countOpen counts only proposals still awaiting a decision', async () => {

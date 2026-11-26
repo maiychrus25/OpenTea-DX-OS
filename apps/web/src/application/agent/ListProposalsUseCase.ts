@@ -7,7 +7,7 @@ import type { Proposal, ProposalStatus } from '@/domain/agent/proposal'
 export type ProposalListView = 'open' | 'history'
 
 const OPEN_STATUSES: ProposalStatus[] = ['proposed']
-const HISTORY_STATUSES: ProposalStatus[] = ['approved', 'executed', 'failed', 'rejected', 'expired', 'stale']
+const HISTORY_STATUSES: ProposalStatus[] = ['approved', 'sent_to_staff_app', 'executed', 'failed', 'rejected', 'expired', 'stale']
 
 export class ListProposalsUseCase {
   constructor(private readonly repo: Pick<ProposalRepository, 'list'>) {}

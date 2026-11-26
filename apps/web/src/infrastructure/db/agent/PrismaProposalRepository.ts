@@ -18,6 +18,7 @@ import type {
   Risk,
 } from '@/domain/agent/proposal'
 import { prisma } from '@/infrastructure/db/prisma.client'
+import { WAITING_FOR_STAFF_APP } from '@/application/agent/actions/staff-task-create.action'
 
 type ProposalRow = {
   id: string
@@ -338,16 +339,20 @@ export class PrismaProposalRepository implements ProposalRepository {
   async markExecuted(id: string, result: Record<string, unknown>, meta?: ExecutionAuditMeta): Promise<void> {
     const actor = meta?.actorId ? `user:${meta.actorId}` : 'system:web'
     const resultJson = JSON.stringify(result)
+    // A staff task is only handed over here; the staff app's acknowledgement is what executes it.
+    const waiting = result.state === WAITING_FOR_STAFF_APP
+    const status = waiting ? 'sent_to_staff_app' : 'executed'
+    const event = `agent.proposal.${status}`
     await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('dxos.actor', ${actor}, true)`
       await tx.$executeRaw`
         UPDATE platform.agent_proposals
-        SET status = 'executed', executed_at = now(), result = ${resultJson}::jsonb
+        SET status = ${status}::text, executed_at = CASE WHEN ${waiting}::boolean THEN NULL ELSE now() END, result = ${resultJson}::jsonb
         WHERE id = ${id}::uuid AND status = 'approved'
       `
       const details = { actor, agent: meta?.agent, kind: meta?.kind, subject_ids: meta?.subjectIds, result: truncateText(resultJson) }
       await tx.$executeRaw`
-        SELECT audit.record_event('web', 'agent.proposal.executed', ${id}, ${JSON.stringify(details)}::jsonb)
+        SELECT audit.record_event('web', ${event}, ${id}, ${JSON.stringify(details)}::jsonb)
       `
     })
   }

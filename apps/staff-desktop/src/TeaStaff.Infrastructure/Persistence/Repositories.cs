@@ -93,6 +93,9 @@ public sealed class TaskRepository(IDbContextFactory<AppDbContext> f) : EfReposi
     public Task<WorkTask?> GetAsync(int id, CancellationToken ct = default) =>
         RunAsync(db => db.Tasks.AsNoTracking().Include(t => t.Assignee).FirstOrDefaultAsync(t => t.Id == id, ct), ct);
 
+    public Task<WorkTask?> FindByExternalRefAsync(string externalRef, CancellationToken ct = default) =>
+        RunAsync(db => db.Tasks.AsNoTracking().Include(t => t.Assignee).FirstOrDefaultAsync(t => t.ExternalRef == externalRef, ct), ct);
+
     public Task<WorkTask> SaveAsync(WorkTask task, CancellationToken ct = default) => UpsertAsync(task, ct);
 
     public Task DeleteAsync(int id, CancellationToken ct = default) => RemoveAsync<WorkTask>(id, ct);
