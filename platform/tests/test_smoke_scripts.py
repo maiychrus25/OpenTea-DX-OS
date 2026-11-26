@@ -415,3 +415,11 @@ def test_voice_smoke_uses_the_stt_stub_and_never_the_real_server():
     # The assertions the plan names: three buttons, Đúng starts the journal flow, test 40 (no row before Xác nhận).
     for needle in ('"Đúng" "Sửa" "Huỷ"', "Chọn thửa:", "test 40", "Tin thoại dài quá 60 giây", "Chưa nghe được tin thoại lúc này"):
         assert needle in text, needle
+
+
+def test_builder_smoke_makes_its_own_token_client_and_users():
+    # It runs in its own CI job (Builder Smoke), where smoke-platform.sh has not created them.
+    text = (TESTS / "smoke-builder.sh").read_text(encoding="utf-8")
+    client = text.index("ensure_client dxos-smoke dx-os-core,roles,profile")
+    assert client < text.index("ensure_user smoke_manager_tc manager TC") < text.index("telegram_link_owner")
+    assert "ensure_user smoke_manager_lb manager LB" in text
