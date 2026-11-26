@@ -139,6 +139,7 @@ tg_expect "$TG_OWNER" "$M12_STOP_TEXT" "$n" || fail "no '$M12_STOP_TEXT' reply t
 pass "/dung replies with the stop text"
 assert_eq "$(psql_app "select enabled::text || ':' || coalesce(stop_reason, '') from platform.autopilot where htx_code='TC'")" "false:manual" \
   "/dung stops the mode with reason manual"
-assert_eq "$(psql_app "select count(*) from platform.agent_proposals where htx_code='TC' and (run_at is not null or run_claimed_at is not null)")" "0" \
+# Pending means still proposed: the notice that already ran keeps its run_claimed_at.
+assert_eq "$(psql_app "select count(*) from platform.agent_proposals where htx_code='TC' and status = 'proposed' and (run_at is not null or run_claimed_at is not null)")" "0" \
   "every pending run_at of TC is cleared by the stop"
 assert_eq "$(psql_app "select status from platform.agent_proposals where id='$M12_PENDING'")" "proposed" "the pending proposal is back to normal approval"
