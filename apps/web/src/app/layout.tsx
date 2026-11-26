@@ -6,6 +6,7 @@ import { Be_Vietnam_Pro } from 'next/font/google'
 import '@/styles/globals.css'
 import { Providers } from './providers'
 import { BRAND_NAME } from '@/lib/brand'
+import { TelegramWebAppShell } from '@/components/features/telegram/TelegramWebAppShell'
 import { themeInitScript } from '@/components/ui/ThemeToggle/theme'
 
 const beVietnam = Be_Vietnam_Pro({
@@ -38,6 +39,7 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>{children}</Providers>
+        <TelegramWebAppShell />
       </body>
     </html>
   )
