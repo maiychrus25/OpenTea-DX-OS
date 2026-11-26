@@ -81,12 +81,6 @@ export const AppShell: React.FC<AppShellProps> = ({
             onMenuClick={!hideSidebar ? () => setSidebarOpen(true) : undefined}
           />
           <div className={styles.pageContent}>
-            {/* The top bar already names the path for assistive technology, so this copy is for the eye only. */}
-            {role === 'officer' && pageName && !/^\/officer\/(chat|assistant|reels)/.test(pathname ?? '') && (
-              <div className={styles.crumb} aria-hidden="true">
-                <span>Trang chủ</span><span>›</span><span>{getRoleLabel(role)}</span><span>›</span><b>{pageName}</b>
-              </div>
-            )}
             {children}
           </div>
         </main>

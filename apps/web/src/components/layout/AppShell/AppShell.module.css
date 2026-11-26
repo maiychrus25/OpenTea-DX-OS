@@ -122,7 +122,3 @@
     margin-left: 0;
   }
 }
-
-/* Officer breadcrumb; page and table colours retain the app defaults. */
-.crumb { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; font-size: 12.5px; color: var(--color-ink-secondary); }
-.crumb b { color: var(--color-primary); font-weight: 600; }

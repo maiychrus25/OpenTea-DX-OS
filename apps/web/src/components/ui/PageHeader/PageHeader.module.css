@@ -8,13 +8,14 @@
 .description { margin: 2px 0 0; font-size: 13.5px; color: var(--color-ink-secondary); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* Officer headers: a larger icon tile and title. */
-:global([data-role='officer']) .header { padding-bottom: 16px; }
-:global([data-role='officer']) .iconBox { width: 64px; height: 64px; border-radius: 16px; }
-:global([data-role='officer']) .title { font-size: 28px; overflow-wrap: anywhere; }
+/* Officer headers stay low: the top bar already says where you are. */
+:global([data-role='officer']) .header { gap: 12px; }
+:global([data-role='officer']) .iconBox { width: 40px; height: 40px; border-radius: 10px; }
+:global([data-role='officer']) .iconBox svg { width: 20px; height: 20px; }
+:global([data-role='officer']) .title { font-size: 20px; letter-spacing: -0.2px; line-height: 1.25; overflow-wrap: anywhere; }
+:global([data-role='officer']) .description { margin: 0; font-size: 12.5px; }
 :global([data-role='officer']) .text { min-width: 0; flex-basis: 200px; }
 :global([data-role='officer']) .actions { max-width: 100%; }
 @media (max-width: 639px) {
-  :global([data-role='officer']) .title { font-size: 23px; }
   :global([data-role='officer']) .actions { width: 100%; }
 }
