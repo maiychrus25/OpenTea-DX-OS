@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { List, Map as MapIcon } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import kit from '@/components/features/dashboard/page-kit.module.css'
+import { PartnerFallback } from '@/components/features/sample/PartnerFallback'
 
 const PartnerMap = dynamic(() => import('@/components/features/partner-map/PartnerMap'), { ssr: false })
 
@@ -33,6 +34,8 @@ export default function ManagerPartnerMapPage() {
       <section>
         <PartnerMap />
       </section>
+
+      <PartnerFallback />
     </div>
   )
 }
