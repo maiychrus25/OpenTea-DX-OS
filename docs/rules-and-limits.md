@@ -332,6 +332,21 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
 - **Trạng thái theo đề xuất:** đề xuất được duyệt và chạy thì cải tiến thành `adopted`; bị từ chối thì thành `declined`. Cải tiến bị từ chối hoặc không có dữ liệu không được đo.
 - **Nhắc theo mẫu:** tin 06:00 của đúng thứ trong tuần hiển thị tối đa 2 dòng `Nhắc theo mẫu: <tiêu đề>` (chiến dịch ngày, mục 3.12).
 
+### 3.14 MCP cho client bên ngoài và dòng kiểm chứng lô (M14)
+
+- **Đăng nhập:** client MCP đăng nhập bằng tài khoản Keycloak của chính người dùng, qua client `dxos-mcp` (device grant, không có direct grant). Token có đúng quyền của người dùng; vai trò, HTX và trạng thái bật/tắt được đọc trực tiếp mỗi lần gọi (như Telegram).
+- **Từ chối:** token hết hạn, token của client khác hoặc người dùng bị tắt cho 401 hoặc 403 và không tạo gì. Loại đề xuất mà vai trò của người dùng không duyệt được bị từ chối với 403 `NOT_AN_APPROVER`.
+- **Công cụ:** chỉ các công cụ đọc của trợ lý và đúng một công cụ ghi `create_proposal`. Loại được phép từ MCP: `notification.internal`, `notification.households`, `disease.inspection`, `journal.approve`, `journal.reject`, `harvest.approve`, `bulletin.publish`.
+- **Không thực thi:** đề xuất từ MCP có `origin: 'user'`, `agent: 'mcp'` và `requested_by` là người dùng. Chỉ `DecideProposalUseCase` quyết định nó, bởi người có quyền duyệt (có thể là chính người đó). Chế độ tự chủ M12 không bao giờ tự chạy đề xuất `origin: 'user'`.
+- **Bằng chứng:** web tự dựng bằng chứng từ các chủ thể trong payload; chủ thể ngoài HTX bị 400 `EVIDENCE_NOT_IN_HTX`.
+- **Cầu nối:** `platform/mcp/dxos_mcp.py` chạy trên máy người dùng, nói MCP qua stdio. File token có quyền 0600, token không bao giờ in ra stdout hoặc stderr. Refresh thất bại thì trả thông báo đăng nhập lại, không làm dừng vòng lặp stdio.
+- **Dòng kiểm chứng (C4):** trang truy xuất công khai chỉ hiện dòng `AI đề xuất, <cán bộ|trưởng HTX> đã duyệt ngày <dd/MM/yyyy>, kiểm chứng trong sổ audit` khi cả bốn điều kiện đúng:
+  1. có đề xuất `harvest.approve` đã `executed` của thửa trong lô, trước khi lô được tạo;
+  2. sự kiện quyết định của đề xuất có trong sổ audit;
+  3. mã băm bằng chứng của sự kiện khớp `evidence.sha256` của đề xuất;
+  4. `audit.verify_chain()` không báo dòng hỏng đến sự kiện đó.
+  Không hiện dòng nào khi chuỗi audit hỏng, mã băm lệch, đề xuất bị từ chối hoặc lô không có quyết định AI. Dòng chỉ ghi vai trò, không bao giờ ghi tên; tối đa 3 dòng.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication
