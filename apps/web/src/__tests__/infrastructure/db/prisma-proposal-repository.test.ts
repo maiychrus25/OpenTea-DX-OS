@@ -159,8 +159,8 @@ describe('PrismaProposalRepository', () => {
       subjectIds: ['e1'],
     })
 
-    // Third statement is the audit call: values are the proposal id and the JSON details.
-    const details = JSON.parse((mockPrisma.__tx.$executeRaw.mock.calls[2] as unknown[])[2] as string)
+    // Third statement is the audit call: values are the event, the proposal id and the JSON details.
+    const details = JSON.parse((mockPrisma.__tx.$executeRaw.mock.calls[2] as unknown[])[3] as string)
     expect(details).toMatchObject({ actor: 'user:u1', agent: 'journal-review', kind: 'journal.approve', subject_ids: ['e1'] })
   })
 
