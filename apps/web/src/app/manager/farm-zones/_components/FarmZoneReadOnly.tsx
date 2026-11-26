@@ -12,6 +12,8 @@ import { escapeHtml } from '@/lib/sanitize'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import table from '@/components/features/dashboard/dashboard.module.css'
 import kit from '@/components/features/dashboard/page-kit.module.css'
+import sample from '@/components/features/sample/sample.module.css'
+import { SampleTag } from '@/components/features/sample/SampleTag'
 
 // Dùng đúng field name từ API (polygon_geojson, không phải geometry)
 type Parcel = {
@@ -385,6 +387,25 @@ export default function FarmZoneReadOnly() {
         )}
       </div>
     </div>
+
+    {/* Without drawn boundaries the map is empty: show the real parcels as blocks, and say it is not a map. */}
+    {drawnParcels === 0 && listed.length > 0 && (
+      <section className={sample.card} aria-label="Sơ đồ thửa minh hoạ" style={{ marginTop: 16 }}>
+        <div className={sample.head}>
+          <h2>Sơ đồ thửa</h2>
+          <SampleTag />
+          <span>Vị trí minh hoạ, không đúng thực tế</span>
+        </div>
+        <div className={sample.blocks}>
+          {listed.map(p => (
+            <div key={p.id} className={`${sample.block} ${sample[p.status] ?? ''}`} style={{ flex: `${Math.max(p.area_ha ?? 0.5, 0.3)} 1 90px` }}>
+              <strong>{p.parcel_code || p.name}</strong>
+              <span>{STATUS_CONFIG[p.status]?.label ?? p.status}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
 
     {listed.length > 0 && (
       <section className={kit.card} aria-label="Danh sách thửa" style={{ marginTop: 16 }}>
