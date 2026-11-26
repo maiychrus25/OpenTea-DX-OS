@@ -233,6 +233,7 @@ def gates(work: Path = WORK, input_dir: Path = Path("/input"), out: Path = Path(
 
 
 def main(argv: list[str]) -> int:
+    Path(os.environ.get("HOME", "/tmp/home")).mkdir(parents=True, exist_ok=True)  # the root filesystem is read-only; HOME is on /tmp
     if len(argv) >= 2 and argv[1] == "gates":
         return gates()
     if len(argv) == 3 and argv[1] == "build":
