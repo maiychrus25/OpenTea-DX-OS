@@ -287,3 +287,5 @@
 .notifItem:last-child {
   border-bottom: 0;
 }
+
+.dayGroup { margin: 0; padding: 10px 18px; font-size: 13px; font-weight: 700; color: var(--color-ink-secondary); border-bottom: 1px solid var(--color-border-row); }

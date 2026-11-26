@@ -8,6 +8,8 @@ import { Bell, Volume2, Check, CheckCheck, ExternalLink, Loader2 } from 'lucide-
 import useSWR from 'swr'
 import styles from './notification-inbox.module.css'
 
+const isToday = (value: string) => new Date(value).toDateString() === new Date().toDateString()
+
 interface Notification {
   id: string
   title: string
@@ -186,9 +188,13 @@ export function NotificationInbox({ role, showPageHeader = true }: NotificationI
             <p>{filter === 'unread' ? 'Không có thông báo chưa đọc' : 'Chưa có thông báo nào'}</p>
           </div>
         ) : (
-          notifications.map(n => (
+          notifications.map((n, index) => (
+            <React.Fragment key={n.id}>
+              {/* The cooperative head's design splits today from what came before. */}
+              {role === 'manager' && (index === 0 || isToday(notifications[index - 1].created_at) !== isToday(n.created_at)) && (
+                <h2 className={styles.dayGroup}>{isToday(n.created_at) ? 'Hôm nay' : 'Trước đó'}</h2>
+              )}
             <div
-              key={n.id}
               className={`${styles.notifItem} ${!n.read ? styles.unread : ''}`}
             >
               <div className={`${styles.toneDot} ${toneClass(n.tone)}`} />
@@ -229,6 +235,7 @@ export function NotificationInbox({ role, showPageHeader = true }: NotificationI
                 </div>
               </div>
             </div>
+            </React.Fragment>
           ))
         )}
       </div>
