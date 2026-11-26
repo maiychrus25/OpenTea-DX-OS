@@ -745,8 +745,22 @@ Mỗi sáng agent A9 (`daily-campaign`, 06:00 giờ Việt Nam) gom các đề x
 
 ### Nội bộ (token agent)
 
-- **`GET /api/internal/agent/campaigns/candidates?day=YYYY-MM-DD`**: trả về `{ day, proposals, rain_parcel_codes, withdrawal_parcel_codes, people_available }`. `proposals` là đề xuất `proposed` chưa hết hạn, mỗi mục có `id`, `kind`, `risk`, `title_vi`, `created_at`, `parcel_codes`, `goal_key`, `target`, `involves_spraying` (luôn `false`), `people_needed` (luôn `0`). `rain_parcel_codes` là thửa có dự báo từ 5 mm mưa; `withdrawal_parcel_codes` là thửa còn trong thời gian cách ly phun thuốc của ngày đó. `people_available` là `null` cho tới M10.
+- **`GET /api/internal/agent/campaigns/candidates?day=YYYY-MM-DD`**: trả về `{ day, proposals, rain_parcel_codes, withdrawal_parcel_codes, people_available }`. `proposals` là đề xuất `proposed` chưa hết hạn, mỗi mục có `id`, `kind`, `risk`, `title_vi`, `created_at`, `parcel_codes`, `goal_key`, `target`, `involves_spraying` (luôn `false`), `people_needed` (luôn `0`). `rain_parcel_codes` là thửa có dự báo từ 5 mm mưa; `withdrawal_parcel_codes` là thửa còn trong thời gian cách ly phun thuốc của ngày đó. `people_available` là `null` cho tới M10. `season_goal_keys` (M11) là các `goal_key` của chiến dịch mà kế hoạch mùa vụ đang áp dụng đề cao (`harvest`, `inspection`, `journal_backlog`); rỗng khi quý chưa có kế hoạch.
 - **`POST /api/internal/agent/campaigns`**: `{ day, items: [{ proposal_id, position }], dropped: [{ proposal_id, rule }], summary_vi, run_id }`. `position` phải là 1..n theo thứ tự; `rule` là `withdrawal`, `rain`, `people` hoặc `overflow`. Web tính lại `goal_key` và `target` từ đề xuất, không tin giá trị agent gửi. `201 { id }` khi tạo mới; `200 { existing: true, id }` khi HTX đã có chiến dịch của ngày đó (không gửi Telegram lần nữa). `400 INVALID_CAMPAIGN` khi một đề xuất không còn `proposed` hoặc không thuộc HTX; `400 INVALID_RUN_ID` khi `run_id` không thuộc HTX. Danh sách `dropped` chỉ ghi vào sự kiện kiểm toán `agent.campaign.created`.
+
+### Kế hoạch mùa vụ (M11, nội bộ, token agent)
+
+- **`GET /api/internal/agent/strategy/inputs?season=YYYY-Qn`**: `{ data: { season, current, last_year, previous, adopted, draft_exists } }`.
+  - `current`, `last_year` (cùng quý năm trước), `previous` (quý trước): `{ yield_kg, journal_on_time_rate, diseased_parcel_rate, shop_revenue_vnd }`, mỗi số liệu là số hoặc `null` khi không có dòng nào. `shop_revenue_vnd` là `null` khi `tea-shop` chưa cài hoặc chưa bật cho HTX.
+  - `adopted`: `{ id, season }` của kế hoạch đã áp dụng cho quý đó, hoặc `null`. `draft_exists`: quý đã có bản nháp.
+  - `400` khi `season` không phải `YYYY-Qn`.
+- **`POST /api/internal/agent/strategy/plans`**: `{ season, goals: [{ key, target }], priorities, initiatives: [{ kind, title_vi }], run_id? }`.
+  - Tối đa 5 `priorities` (mỗi mục tối đa 160 ký tự) và 5 `initiatives` (`kind` ∈ `miniapp|training|partner|expand|outside`); `goals` không lặp `key`.
+  - Web đặt nhãn, đơn vị, hướng và `baseline` của mục tiêu từ số liệu cùng quý năm trước; mục tiêu không có số liệu năm trước bị từ chối (`400 INVALID_GOAL`).
+  - `warnings` do web tính lại: mỗi mục tiêu tệ hơn cùng kỳ (thấp hơn với `up`, cao hơn với `down`) thêm `Mục tiêu <nhãn> thấp hơn cùng kỳ năm trước`.
+  - `201 { data: { id, proposal_id } }` và tạo đề xuất `strategy.adopt` (agent `strategy`, payload `{ plan_id }`). `200 { data: { existing: true } }` khi quý đã có bản nháp.
+- **`strategy.adopt`** (danh mục): rủi ro `medium`, người duyệt `manager`, `autonomy: unlockable`, cửa sổ chặn 48 giờ khi tự vận hành. Áp dụng kế hoạch (`adopted`) và chuyển kế hoạch đã áp dụng trước của cùng quý sang `superseded` trong một giao dịch; ghi sự kiện kiểm toán `strategy.adopted`. Kế hoạch có `warnings` không bao giờ đủ điều kiện tự chạy (lý do `rule_warning`).
+- Báo cáo tuần thứ Hai thêm tối đa 3 dòng `<nhãn>: <hiện tại> (cùng kỳ năm trước: <baseline>)` từ kế hoạch đã áp dụng, không nhắc tới mục tiêu.
 
 ### Web (quản lý và cán bộ)
 
@@ -773,13 +787,14 @@ Các route nội bộ dùng token agent, không có phiên trình duyệt. Mọi
 
 ### Nội bộ (token agent)
 
-- **`GET /api/internal/agent/improvements/inputs?week=YYYY-MM-DD`** (thứ Hai): trả về `{ data: { week, settings, proposal_stats, journal_review, campaign_goals, improvements, metrics } }`.
+- **`GET /api/internal/agent/improvements/inputs?week=YYYY-MM-DD`** (thứ Hai): trả về `{ data: { week, settings, proposal_stats, journal_review, campaign_goals, improvements, metrics, season_progress } }`.
   - `settings`: ngưỡng và giờ báo cáo của từng agent có dòng cài đặt.
   - `proposal_stats`: đề xuất đã quyết định trong 28 ngày, nhóm theo `agent`, `kind`, `template`, với `approved`, `rejected`, `expired`, `median_wait_hours`.
   - `journal_review`: `reviewed` và `returned_missing_info` trong 28 ngày.
   - `campaign_goals`: số ngày và số ngày trượt mục tiêu trong 14 ngày gần nhất (`actual < target`).
   - `improvements`: cải tiến của 8 tuần gần nhất.
-  - `metrics`: giá trị hiện tại của từng `metric_key` trong `improvements`; khóa không có số liệu không có giá trị.
+  - `metrics`: giá trị hiện tại của từng `metric_key` trong `improvements`; khóa không có số liệu không có giá trị. Khóa `season_goal:<key>` (M11) có giá trị là số liệu hiện tại của mục tiêu vụ đó.
+  - `season_progress` (M11): mỗi mục tiêu của kế hoạch mùa vụ đã áp dụng cho quý hiện tại: `{ key, label_vi, direction, baseline, target, current, pro_rated_target, weeks_elapsed }`. `pro_rated_target` là mục tiêu nhân tỉ lệ quý đã qua với sản lượng và doanh thu (cộng dồn), và là chính mục tiêu với tỉ lệ. Rỗng khi không có kế hoạch.
 - **`POST /api/internal/agent/improvements`**: `{ week, kind, metric_key, title_vi, rationale_vi, baseline, evidence, settings_change?, template?, run_id? }`.
   - `kind` là `setting` (cần `settings_change`), `process` hoặc `template` (cần `template`).
   - `week` phải là thứ Hai; `title_vi` tối đa 120 ký tự, `rationale_vi` tối đa 600.
