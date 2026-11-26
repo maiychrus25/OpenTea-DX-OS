@@ -37,6 +37,10 @@ export interface TelegramMessageInput {
   photo?: { mime_type: 'image/jpeg'; data_base64: string; file_unique_id: string }
   photo_error?: 'too_large' | 'download_failed'
   location?: { latitude: number; longitude: number }
+  /** A voice message the relay turned into text (M15, contract C2): at most 500 characters, never the audio. */
+  voice_text?: string
+  voice_duration?: number
+  voice_error?: 'too_long' | 'stt_unavailable'
 }
 
 export interface TelegramCallbackInput {
@@ -244,8 +248,15 @@ export class TelegramUpdateHandler {
       return this.receiveAppAnswer(link, open.state.request_id, text, chatId)
     }
 
+    // A voice message would replace the conversation that waits for the manager's answer to A12, so it asks for text.
+    if (open?.kind === 'app_answer' && (message.voice_text !== undefined || message.voice_error)) {
+      return { replies: [reply(chatId, TELEGRAM_TEXT.voiceTypeAnswer)] }
+    }
+
     const user = await this.users.resolve(link)
     if (!user) return { replies: [reply(chatId, TELEGRAM_TEXT.notLinked)] }
+    if (message.voice_error) return this.chat.onVoice(user, { kind: 'error', reason: message.voice_error }, this.now())
+    if (message.voice_text !== undefined) return this.chat.onVoice(user, { kind: 'text', text: message.voice_text }, this.now())
     if (message.photo || message.photo_error) return this.chat.onPhoto(user, incomingPhoto(message), this.now())
     if (message.location) {
       return this.chat.onLocation(user, message.location.latitude, message.location.longitude, this.now())

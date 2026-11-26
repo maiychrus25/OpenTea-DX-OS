@@ -34,4 +34,5 @@ source platform/tests/smoke-staff.sh
 source platform/tests/smoke-autopilot.sh
 source platform/tests/smoke-app-actions.sh
 source platform/tests/smoke-strategy.sh
+source platform/tests/smoke-voice.sh
 echo "agentic smoke passed"

@@ -66,7 +66,8 @@ BEGIN
   IF to_regclass('platform.telegram_conversations') IS NOT NULL THEN
     ALTER TABLE platform.telegram_conversations DROP CONSTRAINT IF EXISTS telegram_conversations_kind_check;
     ALTER TABLE platform.telegram_conversations ADD CONSTRAINT telegram_conversations_kind_check
-      CHECK (kind IN ('reject_reason', 'flow', 'app_answer'));
+      -- 'voice' (M15) is kept: this migration runs after the one that adds it.
+      CHECK (kind IN ('reject_reason', 'flow', 'voice', 'app_answer'));
   END IF;
 
   IF to_regclass('platform.telegram_outbox') IS NOT NULL THEN

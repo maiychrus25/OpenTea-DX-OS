@@ -1006,3 +1006,22 @@ Theo `AGENTS.md`:
 - **Chỉ số `season_goal:<khoá>`** trong cải tiến của A10 chỉ đo được khi quý hiện tại có kế hoạch đang áp dụng.
 
 **Chưa làm:** A11 đề xuất xây mini-app mới từ việc phát triển loại `miniapp`. Việc này làm cùng M13.
+
+### M15: tin nhắn thoại (2026-11-27)
+
+**Đã làm:**
+- **Chuyển giọng nói thành chữ ngay trên máy chủ của hợp tác xã.** Tin thoại dài tối đa 60 giây được whisper.cpp chuyển thành chữ, qua dịch vụ `dxos-stt` trong nhóm voice (`make up-voice`).
+  - Relay giữ âm thanh trong bộ nhớ và chỉ gửi tới máy chủ STT nội bộ.
+  - Có chữ rồi thì âm thanh bị bỏ ngay (kiểm thử 41).
+- **Xác nhận trước khi làm.** Bot trả lời "Em nghe được: “…”" với ba nút Đúng, Sửa và Huỷ. Chỉ nút Đúng gửi câu đi, như khi gõ, nên thao tác ghi vẫn cần thẻ xác nhận (kiểm thử 40).
+- **Khi không nghe được.** Tin dài quá 60 giây, máy chủ STT không chạy, hoặc câu nghe không rõ: bot trả lời một câu hướng dẫn, và chat bằng chữ vẫn chạy.
+- **Chọn model.** `make stt-measure` đo tỉ lệ lỗi từ của từng model trên bản ghi của hợp tác xã, để chọn model. Mặc định là `small`.
+
+**Khác với đặc tả:**
+- **Tin thoại gửi giữa một luồng nhiều bước được giữ lại trong luồng đó.** Các nút là Đúng, Sửa và "Bỏ câu này". Bấm Đúng thì câu đi vào bước đang hỏi, và luồng không bị mất.
+- **Nút Đúng chỉ phát lại câu như khi gõ.** Ví dụ câu "ghi nhật ký bón phân thửa A3" mở luồng ghi nhật ký từ bước chọn thửa, chưa điền sẵn thửa.
+- **Người chưa liên kết vẫn được chuyển thành chữ.** Relay không biết người gửi đã liên kết hay chưa, nên vẫn chuyển giọng nói thành chữ trên máy chủ rồi bỏ âm thanh. Sau đó web trả lời như ở M2. Chỉ tin thoại trong nhóm là không được tải về.
+- **Ảnh whisper.cpp chính thức chỉ có bản amd64.** Trên máy arm, ảnh chạy bằng giả lập và rất chậm.
+- **`DXOS_STT_URL` phải trỏ vào mạng nội bộ.** Nếu trỏ ra ngoài, relay tắt phần thoại và ghi lỗi; chat bằng chữ vẫn chạy.
+
+**Còn chờ chủ dự án:** chạy `make stt-measure` với bản ghi thật của hợp tác xã thí điểm, để chọn model.

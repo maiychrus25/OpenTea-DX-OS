@@ -123,3 +123,9 @@ def test_call_files_failures_are_classified_like_call():
     with pytest.raises(BotApiError) as info:
         api.call_files("sendPhoto", {"chat_id": 5}, {"photo": ("a.png", b"x", "image/png")})
     assert info.value.permanent is True
+
+
+def test_download_with_a_limit_reads_one_byte_over_it():
+    api = BotApi("https://api.example.test", "123:abc", urlopen_fn=lambda req, timeout: FakeResponse(b"x" * 50))
+    assert len(api.download("voice/a.oga", max_bytes=10)) == 11
+    assert len(api.download("voice/a.oga")) == 50

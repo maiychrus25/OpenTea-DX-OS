@@ -12,7 +12,7 @@ export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 # keycloak on every platform-up. Without the attestation the same inputs give the same ID, so nothing is recreated.
 export BUILDX_NO_DEFAULT_ATTESTATIONS := 1
 
-.PHONY: builder-image gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice up-workflow up-chat up-agent stop-extras platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync mobile-client mcp-client
+.PHONY: builder-image gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice stt-measure up-workflow up-chat up-agent stop-extras platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync mobile-client mcp-client
 
 # APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
 gateway-sync:
@@ -56,7 +56,7 @@ up-core: gateway-sync
 EXTRAS_DOCS := seaweedfs clamav dxos-scanner dxos-lifecycle
 EXTRAS_SENSORS := mosquitto dxos-ingest
 EXTRAS_AI := disease-api ollama
-EXTRAS_VOICE := piper
+EXTRAS_VOICE := piper dxos-stt
 EXTRAS_WORKFLOW := n8n
 EXTRAS_CHAT := mattermost
 EXTRAS_AGENT := dxos-agent dxos-telegram
@@ -70,8 +70,21 @@ up-sensors: gateway-sync
 up-ai: gateway-sync
 	$(COMPOSE) up -d --no-deps $(EXTRAS_AI)
 
+# stt-init downloads the speech-to-text model into its volume when the file is missing or wrong, and does nothing otherwise.
 up-voice: gateway-sync
+	$(COMPOSE) --profile tools run --rm stt-init
 	$(COMPOSE) up -d --no-deps $(EXTRAS_VOICE)
+
+# Word error rate and time per file of each Whisper model on the cooperative's own recordings: make stt-measure DIR=<folder
+# of .ogg files, each with a .txt transcript>. It restarts dxos-stt on each model and ends on the default one.
+STT_MODELS := base small medium
+stt-measure:
+	@test -n "$(DIR)" -a -d "$(DIR)" || { echo "usage: make stt-measure DIR=<folder of .ogg files with .txt transcripts>" >&2; exit 1; }
+	@for model in $(STT_MODELS); do \
+		DXOS_STT_MODEL=$$model $(COMPOSE) --profile tools run --rm stt-init && \
+		DXOS_STT_MODEL=$$model $(COMPOSE) up -d --no-deps --force-recreate --wait dxos-stt && \
+		DXOS_STT_MODEL=$$model $(COMPOSE) run --rm -T --no-deps -e DXOS_STT_MODEL=$$model -v "$$(cd "$(DIR)" && pwd):/recordings:ro" --entrypoint python dxos-telegram -m dxos_telegram.stt_measure /recordings || exit 1; \
+	done; $(COMPOSE) up -d --no-deps --force-recreate dxos-stt
 
 up-workflow: gateway-sync
 	$(COMPOSE) up -d --no-deps $(EXTRAS_WORKFLOW)

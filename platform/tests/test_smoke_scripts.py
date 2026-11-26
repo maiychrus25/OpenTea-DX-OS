@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "platform" / "tests"
 SHELL_SCRIPTS = [
     "smoke-telegram.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh",
-    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-staff.sh", "smoke-autopilot.sh", "smoke-app-actions.sh", "smoke-builder.sh", "smoke-strategy.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
+    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-staff.sh", "smoke-autopilot.sh", "smoke-app-actions.sh", "smoke-builder.sh", "smoke-strategy.sh", "smoke-voice.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
 ]
 
 
@@ -392,4 +392,26 @@ def test_strategy_smoke_approves_from_the_recorded_keyboard_and_signs_nothing():
 def test_strategy_smoke_checks_the_105_percent_target_and_the_warning_of_test_37():
     text = (TESTS / "smoke-strategy.sh").read_text(encoding="utf-8")
     for needle in ("*1.05", "yield_kg", "strategy.adopt", "/api/internal/agent/strategy/plans", "test 37", "thấp hơn cùng kỳ năm trước"):
+        assert needle in text, needle
+
+
+def test_voice_smoke_runs_last_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-mcp.sh") < text.index("source platform/tests/smoke-staff.sh") < text.index("source platform/tests/smoke-autopilot.sh") < text.index("source platform/tests/smoke-voice.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the voice checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-assistant.sh", "smoke-mcp.sh"):
+        assert "smoke-voice.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_voice_smoke_chains_every_earlier_cleanup_on_exit():
+    text = (TESTS / "smoke-voice.sh").read_text(encoding="utf-8")
+    assert "trap 'voice_cleanup; strategy_cleanup; app_actions_cleanup; autopilot_cleanup; staff_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+
+
+def test_voice_smoke_uses_the_stt_stub_and_never_the_real_server():
+    text = (TESTS / "smoke-voice.sh").read_text(encoding="utf-8")
+    assert "--profile stt-test up -d --no-deps stt-test-stub" in text
+    assert "dxos-stt" not in text.replace("network as dxos-stt", "") and "up-voice" not in text
+    # The assertions the plan names: three buttons, Đúng starts the journal flow, test 40 (no row before Xác nhận).
+    for needle in ('"Đúng" "Sửa" "Huỷ"', "Chọn thửa:", "test 40", "Tin thoại dài quá 60 giây", "Chưa nghe được tin thoại lúc này"):
         assert needle in text, needle
