@@ -17,47 +17,43 @@ function proposal(id: string, kind: string, payload: Record<string, unknown>, ov
 }
 
 describe('StaffInputsUseCase (C4)', () => {
-  it('lists the sources of the last 24 hours with parcel codes, the roster, attendance and tasks per assignee today', async () => {
-    const list = jest.fn(async (_htx: string, filter: { kind?: string }) =>
-      filter.kind === 'staff.task.create'
-        ? [
-            proposal('t1', 'staff.task.create', { assignee_ref: 'E1' }, { status: 'proposed', createdAt: new Date('2026-11-26T22:30:00Z') }),
-            proposal('t2', 'staff.task.create', { assignee_ref: 'E1' }, { status: 'sent_to_staff_app', editedPayload: { assignee_ref: 'E2' }, createdAt: new Date('2026-11-26T22:31:00Z') }),
-            proposal('t3', 'staff.task.create', { assignee_ref: 'E1' }, { createdAt: new Date('2026-11-25T01:00:00Z') }),
-          ]
-        : [
-            proposal('h1', 'harvest.approve', { parcel_id: 'parcel-2' }),
-            proposal('d1', 'disease.inspection', { parcel_codes: ['P-TC-003'] }),
-            proposal('n1', 'notification.households', { template: 'dry_soil', slots: { parcel_codes: ['P-TC-004'] } }),
-            proposal('n2', 'notification.households', { template: 'weather_warning', slots: { parcel_codes: ['P-TC-005'] } }),
-            proposal('old', 'harvest.approve', { parcel_id: 'parcel-2' }, { executedAt: new Date('2026-11-25T01:00:00Z'), decidedAt: new Date('2026-11-25T01:00:00Z') }),
-            proposal('j1', 'journal.approve', { entry_ids: ['e'] }),
-          ]
-    )
+  it('lists the executed sources of the last 24 hours with their parcels, the roster and today attendance', async () => {
+    const list = jest.fn(async () => [
+      proposal('h1', 'harvest.approve', { parcel_id: 'parcel-2' }),
+      proposal('d1', 'disease.inspection', { parcel_codes: ['P-TC-003', 'P-TC-009'] }),
+      proposal('n1', 'notification.households', { template: 'dry_soil', slots: { parcel_codes: ['P-TC-004'] } }),
+      proposal('n2', 'notification.households', { template: 'weather_warning', slots: { parcel_codes: ['P-TC-005'] } }),
+      proposal('old', 'harvest.approve', { parcel_id: 'parcel-2' }, { executedAt: new Date('2026-11-25T01:00:00Z'), decidedAt: new Date('2026-11-25T01:00:00Z') }),
+      proposal('j1', 'journal.approve', { entry_ids: ['e'] }),
+    ])
     const staff = {
       activeRoster: jest.fn(async () => [{ staffRef: 'E1', name: 'Lan', department: 'Kỹ thuật', active: true }]),
       attendance: jest.fn(async () => 5),
     }
-    const parcelCodes = jest.fn(async () => new Map([['parcel-2', 'P-TC-002']]))
+    const parcelsOf = jest.fn(async () => [
+      { id: 'parcel-2', code: 'P-TC-002' },
+      { id: 'parcel-3', code: 'P-TC-003' },
+      { id: 'parcel-4', code: 'P-TC-004' },
+    ])
 
-    const result = await new StaffInputsUseCase({ list } as never, staff, parcelCodes).execute('TC', now)
+    const result = await new StaffInputsUseCase({ list } as never, staff, parcelsOf).execute('TC', now)
 
     expect(list).toHaveBeenCalledWith('TC', expect.objectContaining({ statuses: ['executed'] }))
+    expect(parcelsOf).toHaveBeenCalledWith('TC', ['parcel-2'], ['P-TC-003', 'P-TC-009', 'P-TC-004'])
     expect(staff.attendance).toHaveBeenCalledWith('TC', '2026-11-27')
-    expect(result.day).toBe('2026-11-27')
-    expect(result.sources.map((s) => [s.proposal_id, s.kind, s.template, s.parcel_codes])).toEqual([
-      ['h1', 'harvest.approve', null, ['P-TC-002']],
-      ['d1', 'disease.inspection', null, ['P-TC-003']],
-      ['n1', 'notification.households', 'dry_soil', ['P-TC-004']],
+    expect(result.proposals).toEqual([
+      { id: 'h1', kind: 'harvest.approve', template: null, parcels: [{ id: 'parcel-2', code: 'P-TC-002' }] },
+      { id: 'd1', kind: 'disease.inspection', template: null, parcels: [{ id: 'parcel-3', code: 'P-TC-003' }] },
+      { id: 'n1', kind: 'notification.households', template: 'dry_soil', parcels: [{ id: 'parcel-4', code: 'P-TC-004' }] },
     ])
-    expect(result.roster).toEqual([{ staff_ref: 'E1', name: 'Lan', department: 'Kỹ thuật' }])
-    expect(result.attendance_present).toBe(5)
-    expect(result.assigned_today).toEqual({ E1: 1, E2: 1 })
+    expect(result.roster).toEqual([{ staff_ref: 'E1', name: 'Lan', department: 'Kỹ thuật', active: true }])
+    expect(result.attendance).toEqual({ day: '2026-11-27', present: 5 })
   })
 
-  it('answers null attendance and an empty roster when the staff app reported nothing', async () => {
-    const list = jest.fn(async () => [])
-    const result = await new StaffInputsUseCase({ list } as never, { activeRoster: async () => [], attendance: async () => null }, async () => new Map()).execute('TC', now)
-    expect(result).toMatchObject({ sources: [], roster: [], attendance_present: null, assigned_today: {} })
+  it('answers null attendance, an empty roster and no parcel lookup when nothing was reported', async () => {
+    const parcelsOf = jest.fn()
+    const result = await new StaffInputsUseCase({ list: jest.fn(async () => []) } as never, { activeRoster: async () => [], attendance: async () => null }, parcelsOf).execute('TC', now)
+    expect(result).toEqual({ proposals: [], roster: [], attendance: null })
+    expect(parcelsOf).not.toHaveBeenCalled()
   })
 })

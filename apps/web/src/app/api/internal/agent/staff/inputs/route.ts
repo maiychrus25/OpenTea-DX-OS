@@ -13,8 +13,8 @@ import { withErrorHandler } from '@/lib/api/withErrorHandler'
 async function getAgentStaffInputs(request: Request) {
   const caller = await requireAgentCaller(request)
   const source = new PrismaCampaignCandidateSource()
-  const inputs = await new StaffInputsUseCase(new PrismaProposalRepository(), new PrismaStaffSyncRepository(), (htx, ids) =>
-    source.parcelCodesByIds(htx, ids)
+  const inputs = await new StaffInputsUseCase(new PrismaProposalRepository(), new PrismaStaffSyncRepository(), (htx, ids, codes) =>
+    source.parcelsByIdsOrCodes(htx, ids, codes)
   ).execute(caller.htxCode)
   return NextResponse.json({ data: inputs })
 }

@@ -71,6 +71,14 @@ export class PrismaCampaignCandidateSource implements CandidateSource {
     return rows[0]?.present ?? null
   }
 
+  async parcelsByIdsOrCodes(htxCode: string, ids: string[], codes: string[]): Promise<{ id: string; code: string }[]> {
+    const parcels = await prisma.parcel.findMany({
+      where: { OR: [{ id: { in: ids } }, { parcel_code: { in: codes } }], household: { htx_profile: { htx_code: htxCode } } },
+      select: { id: true, parcel_code: true },
+    })
+    return parcels.map((p) => ({ id: p.id, code: p.parcel_code }))
+  }
+
   async parcelCodesOfEntries(htxCode: string, entryIds: string[]): Promise<Map<string, string>> {
     const entries = await prisma.journalEntry.findMany({
       where: { id: { in: entryIds }, parcel: { household: { htx_profile: { htx_code: htxCode } } } },
