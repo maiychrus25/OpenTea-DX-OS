@@ -12,7 +12,7 @@ import styles from './AppStoreDetail.module.css'
 import { InstallProgress } from './InstallProgress'
 import { StoreAppIcon } from './StoreAppIcon'
 import { StoreHistoryTable } from './StoreHistory'
-import { CATEGORY_LABELS, hasNewVersion, NEW_VERSION_LABEL, ROLE_LABELS, STATUS_LABELS, STATUS_TONES } from './store-labels'
+import { CATEGORY_LABELS, GENERATED_LABEL, GENERATED_REPORT_LABEL, hasNewVersion, NEW_VERSION_LABEL, ROLE_LABELS, STATUS_LABELS, STATUS_TONES } from './store-labels'
 import { useStorePolling } from './use-store-polling'
 
 const CONFIRM_REMOVE = 'Gỡ ứng dụng này khỏi HTX? Dữ liệu được giữ lại.'
@@ -100,6 +100,12 @@ export function AppStoreDetail({ initial, workerAlive }: { initial: StoreAppDeta
             v{app.version} · {app.publisher} · {app.license}
             {app.category && <> · {CATEGORY_LABELS[app.category]}</>}
           </p>
+          {app.generated && (
+            <p className={styles.meta}>
+              {GENERATED_LABEL}
+              {app.buildRequestId && <> · <Link href={`/manager/ai/apps/${app.buildRequestId}`}>{GENERATED_REPORT_LABEL}</Link></>}
+            </p>
+          )}
           {app.description && <p className={styles.description}>{app.description}</p>}
         </div>
         <div className={styles.actions}>

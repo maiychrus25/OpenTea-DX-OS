@@ -8,7 +8,9 @@ import { ForbiddenError, UnauthorizedError, ValidationError } from '@/domain/err
 import { withErrorHandler } from './withErrorHandler'
 
 /** `withErrorHandler` that also answers the factory's expected refusals as `{ error: { code, message } }` with their status. */
-export function withAppBuildErrors<TContext = any>(handler: (req: Request, context: TContext) => Promise<NextResponse>) {
+export function withAppBuildErrors<TContext = any>(
+  handler: (req: Request, context: TContext) => Promise<NextResponse>
+): (req: Request, context?: TContext) => Promise<NextResponse> {
   return withErrorHandler<TContext>(async (req, context) => {
     try {
       return await handler(req, context)
@@ -18,7 +20,7 @@ export function withAppBuildErrors<TContext = any>(handler: (req: Request, conte
       }
       throw error
     }
-  })
+  }) as (req: Request, context?: TContext) => Promise<NextResponse>
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

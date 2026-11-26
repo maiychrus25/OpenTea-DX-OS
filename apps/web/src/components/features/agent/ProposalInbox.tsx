@@ -505,6 +505,11 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
           <Link href={`/${role}/ai/settings`} className={styles.tab}>
             Cài đặt
           </Link>
+          {role === 'manager' && (
+            <Link href="/manager/ai/apps" className={styles.tab}>
+              Xưởng mini-app
+            </Link>
+          )}
         </div>
 
         <div className={styles.filters}>

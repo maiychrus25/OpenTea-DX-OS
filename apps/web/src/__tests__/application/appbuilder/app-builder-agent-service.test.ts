@@ -38,7 +38,7 @@ function fakeRepo(initial: AppBuildRequest[], builds: AppBuild[] = [], catalog: 
   const repo: Partial<AppBuildRepository> = {
     findById: async (htx, id) => (rows.get(id)?.htxCode === htx ? rows.get(id)! : null),
     waitingForAgent: async (htx) =>
-      [...rows.values()].filter((r) => r.htxCode === htx && (r.status === 'new' || (r.status === 'asking' && r.answerText) || (['passed', 'failed'].includes(r.status) && !r.announcedAt))),
+      Array.from(rows.values()).filter((r) => r.htxCode === htx && (r.status === 'new' || (r.status === 'asking' && r.answerText) || (['passed', 'failed'].includes(r.status) && !r.announcedAt))),
     setQuestions: async (h, id, questions) => move(h, id, ['new'], { status: 'asking', questions }),
     setRouted: async (h, id, path, target) => move(h, id, ['new', 'asking'], { status: 'routed', path, appId: target }),
     setSpec: async (h, id, appId, s) => {
