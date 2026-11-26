@@ -112,8 +112,10 @@ export function WeatherSection() {
                 {daily[0] && <span className={styles.range}>Cao {degrees(daily[0].max)} · Thấp {degrees(daily[0].min)}</span>}
               </span>
               <span className={styles.temperature}>{degrees(current.temperature)}</span>
-              <ChevronDown size={18} className={styles.chevron} aria-hidden="true" />
-              <span className={styles.srOnly}>{open === i ? 'Thu gọn' : 'Xem chi tiết'}</span>
+              <span className={styles.toggle}>
+                <span className={styles.toggleText}>{open === i ? 'Thu gọn' : 'Xem chi tiết'}</span>
+                <ChevronDown size={18} className={styles.chevron} aria-hidden="true" />
+              </span>
             </button>
           )
         })}
