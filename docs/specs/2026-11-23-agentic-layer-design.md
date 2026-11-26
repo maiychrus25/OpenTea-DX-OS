@@ -878,3 +878,28 @@ Theo `AGENTS.md`:
 - duyệt thành viên;
 - cài và gỡ mini-app (M13);
 - `strategy.adopt` (M11).
+
+### M9: hành động của mini-app (2026-11-27)
+
+**Đã làm:**
+- **Khối `agent` trong `app.yaml`.** Mini-app khai đường gợi ý và các hành động của mình trong khối này. `dxos validate` kiểm khối này và từ chối app do AI xây có khai hành động (kiểm thử 29).
+- **Gợi ý thành đề xuất.** `dxos-agent` hỏi từng app đang bật cho hợp tác xã, rồi gửi gợi ý thành đề xuất loại `app.<app>.<hành động>`. Đề xuất đi qua cùng đường tạo và duyệt như mọi loại khác.
+- **Thực hiện khi được duyệt.** Web gọi app qua cổng nội bộ bằng client `dxos-apps-actor`, kèm ba header nêu người duyệt.
+  - Gateway xoá ba header này ở mọi route khác của app.
+  - App chỉ tin ba header khi token là của `dxos-apps-actor`.
+- **Gỡ hoặc tắt app** thì đề xuất đang mở của app đó hết hạn (kiểm thử 16).
+- **`tea-shop` có khuyến mãi.**
+  - Có bảng khuyến mãi, và giá công khai trừ khuyến mãi.
+  - Trưởng HTX xem và kết thúc khuyến mãi.
+  - Luật gợi ý: hàng còn từ 20 gói và 21 ngày chưa bán được.
+  - Hành động `promotion.create` liên quan đến tiền, nên chỉ tự chạy khi được mở, sau khoảng chờ 2 giờ.
+
+**Khác với đặc tả:**
+- **Agent biết app nào đang bật bằng cách đọc qua Hasura.** Vai trò `agent` được đọc `platform.installed_apps` và `platform.app_enablements` của chính hợp tác xã.
+- **`./dxos remove` cho đề xuất hết hạn ngay trong cơ sở dữ liệu.** Web cũng cho hết hạn ở lần nạp danh mục kế tiếp, nên có thể trễ tối đa 60 giây.
+- **Route ghi lượt chạy nhận tên agent `app:<id>`,** giống route tạo đề xuất.
+- **`roles.env` của web được ghi theo từng khoá,** để bật hoặc tắt Telegram không xoá secret của `dxos-apps-actor`.
+- **Bảng khuyến mãi có thêm `htx_code` và `ended_at`.** Đơn hàng tính theo giá đã giảm.
+- **Hành động về tiền của app chưa hiện trong màn hình bật tự vận hành.** Vì vậy chúng không thể tự chạy cho tới khi màn hình này liệt kê được chúng.
+
+**Chưa làm:** hành động của `tea-tour` ("mở thêm chỗ") và `leaf-purchase` ("báo giá thu mua"). Chúng theo cùng mẫu và để PR sau.
