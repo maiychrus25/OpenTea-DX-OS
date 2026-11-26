@@ -4,9 +4,10 @@
 
 The web app inserts requests; `./dxos worker` claims them through the CLI and reports back with finish().
 """
+import re
 import sys
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import psycopg
@@ -20,6 +21,9 @@ STALE_MESSAGE = "Trình cài đặt khởi động lại giữa chừng."
 UNKNOWN_MESSAGE = "Ứng dụng không có trong kho."
 ERROR_LIMIT = 300
 PHASES = ("prepare", "build", "register")
+# A generated app installs only for the cooperative that asked, from a build that passed (spec 12.5, test 28).
+REFUSED_MESSAGE = "Bản này chưa qua kiểm tra hoặc không thuộc HTX này"
+VERSION_RE = re.compile(r"\d+\.\d+\.\d+")
 
 
 @dataclass(frozen=True)
@@ -29,6 +33,7 @@ class Job:
     app_id: str
     htx_code: str
     installed: bool
+    version: str | None = None  # set for a generated app: the export folder to install from
 
 
 def sync_catalog(conn: psycopg.Connection, miniapps_dir: Path, core_version: str) -> list[str]:
@@ -42,42 +47,55 @@ def sync_catalog(conn: psycopg.Connection, miniapps_dir: Path, core_version: str
                 errors = [f"thư mục phải trùng id '{manifest['id']}' của manifest"]
         except ManifestError as exc:
             errors = [str(exc)]
+        if not errors and manifest.get("generated") is True:
+            errors = ["app do AI xây chỉ vào kho qua builder, không qua thư mục miniapps"]
         if errors:
             print(f"catalog-sync: bỏ qua {app_dir.name}: {'; '.join(errors)}", file=sys.stderr)
             continue
-        protected = manifest["routes"].get("protected", {})
-        store_block = {k: v for k, v in manifest.get("store", {}).items() if k != "screenshots"}
-        images = []
-        for shot in manifest.get("store", {}).get("screenshots", []):
-            try:
-                images.append((read_screenshot(app_dir, shot["file"]), shot["caption"]))
-            except ManifestError as exc:
-                print(f"catalog-sync: bỏ qua ảnh {shot['file']} của {manifest['id']}: {exc}", file=sys.stderr)
-        # One transaction per app: the card never shows the new text with the old screenshots.
-        with conn.transaction():
-            conn.execute(
-                "INSERT INTO platform.app_catalog (id, name, version, description, license, publisher, menu, roles,"
-                " has_public, store, requires_core, has_database, synced_at)"
-                " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())"
-                " ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, version = EXCLUDED.version,"
-                " description = EXCLUDED.description, license = EXCLUDED.license, publisher = EXCLUDED.publisher,"
-                " menu = EXCLUDED.menu, roles = EXCLUDED.roles, has_public = EXCLUDED.has_public,"
-                " store = EXCLUDED.store, requires_core = EXCLUDED.requires_core,"
-                " has_database = EXCLUDED.has_database, synced_at = now()",
-                (manifest["id"], manifest["name"], manifest["version"], manifest.get("description", ""),
-                 manifest["license"], manifest["publisher"], Jsonb(manifest.get("menu", [])),
-                 sorted({role for roles in protected.values() for role in roles}),
-                 bool(manifest["routes"].get("public")), Jsonb(store_block), manifest["requires"]["core"],
-                 "database" in manifest))
-            conn.execute("DELETE FROM platform.app_catalog_screenshots WHERE app_id = %s", (manifest["id"],))
-            for position, (file, caption) in enumerate(images):
-                conn.execute("INSERT INTO platform.app_catalog_screenshots (app_id, position, caption, content_type, bytes)"
-                             " VALUES (%s, %s, %s, %s, %s)", (manifest["id"], position, caption, *file))
-        synced.append(manifest["id"])
+        if upsert_app(conn, manifest, app_dir):
+            synced.append(manifest["id"])
     # An installed app keeps its card even when its directory is gone, so the store can still offer Gỡ.
-    conn.execute("DELETE FROM platform.app_catalog WHERE NOT (id = ANY(%s))"
+    # A generated app (owner_htx) has no folder in miniapps/ at all: its card lives as long as its row does.
+    conn.execute("DELETE FROM platform.app_catalog WHERE NOT (id = ANY(%s)) AND owner_htx IS NULL"
                  " AND id NOT IN (SELECT id FROM platform.installed_apps)", (synced,))
     return synced
+
+
+def upsert_app(conn: psycopg.Connection, manifest: dict, app_dir: Path, owner_htx: str | None = None,
+               build_id: str | None = None) -> bool:
+    """One catalogue card from a manifest. False when a card of another owner already has that id: it is left as it is."""
+    protected = manifest["routes"].get("protected", {})
+    store_block = {k: v for k, v in manifest.get("store", {}).items() if k != "screenshots"}
+    images = []
+    for shot in manifest.get("store", {}).get("screenshots", []):
+        try:
+            images.append((read_screenshot(app_dir, shot["file"]), shot["caption"]))
+        except ManifestError as exc:
+            print(f"catalog-sync: bỏ qua ảnh {shot['file']} của {manifest['id']}: {exc}", file=sys.stderr)
+    # One transaction per app: the card never shows the new text with the old screenshots.
+    with conn.transaction():
+        written = conn.execute(
+            "INSERT INTO platform.app_catalog (id, name, version, description, license, publisher, menu, roles,"
+            " has_public, store, requires_core, has_database, owner_htx, build_id, synced_at)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())"
+            " ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, version = EXCLUDED.version,"
+            " description = EXCLUDED.description, license = EXCLUDED.license, publisher = EXCLUDED.publisher,"
+            " menu = EXCLUDED.menu, roles = EXCLUDED.roles, has_public = EXCLUDED.has_public,"
+            " store = EXCLUDED.store, requires_core = EXCLUDED.requires_core,"
+            " has_database = EXCLUDED.has_database, build_id = EXCLUDED.build_id, synced_at = now()"
+            " WHERE platform.app_catalog.owner_htx IS NOT DISTINCT FROM EXCLUDED.owner_htx",
+            (manifest["id"], manifest["name"], manifest["version"], manifest.get("description", ""),
+             manifest["license"], manifest["publisher"], Jsonb(manifest.get("menu", [])),
+             sorted({role for roles in protected.values() for role in roles}),
+             bool(manifest["routes"].get("public")), Jsonb(store_block), manifest["requires"]["core"],
+             "database" in manifest, owner_htx, build_id)).rowcount
+        if not written:
+            return False
+        conn.execute("DELETE FROM platform.app_catalog_screenshots WHERE app_id = %s", (manifest["id"],))
+        for position, (file, caption) in enumerate(images):
+            conn.execute("INSERT INTO platform.app_catalog_screenshots (app_id, position, caption, content_type, bytes)"
+                         " VALUES (%s, %s, %s, %s, %s)", (manifest["id"], position, caption, *file))
+    return True
 
 
 def claim_next(conn: psycopg.Connection) -> Job | None:
@@ -93,12 +111,29 @@ def claim_next(conn: psycopg.Connection) -> Job | None:
 def claim_known(conn: psycopg.Connection) -> Job | None:
     """The next job whose app is in the catalogue; others are failed on the spot (an id is never trusted)."""
     while job := claim_next(conn):
-        in_catalog = APP_ID_RE.fullmatch(job.app_id) and conn.execute(
-            "SELECT 1 FROM platform.app_catalog WHERE id = %s", (job.app_id,)).fetchone()
-        if in_catalog:
+        row = APP_ID_RE.fullmatch(job.app_id) and conn.execute(
+            "SELECT owner_htx, build_id, version FROM platform.app_catalog WHERE id = %s", (job.app_id,)).fetchone()
+        if row and row[0] is None:
             return job
-        finish(conn, job.id, False, UNKNOWN_MESSAGE)
+        if row and generated_is_ready(conn, job, *row):
+            return replace(job, version=row[2]) if job.action == "ENABLE" else job
+        # A gen- id with no card is a build that never passed: the same refusal, not "not in the store".
+        refused = row or (APP_ID_RE.fullmatch(job.app_id) and job.app_id.startswith("gen-"))
+        finish(conn, job.id, False, REFUSED_MESSAGE if refused else UNKNOWN_MESSAGE)
     return None
+
+
+def generated_is_ready(conn: psycopg.Connection, job: Job, owner_htx: str, build_id, version: str) -> bool:
+    """Test 28, enforced again at claim time: the asking cooperative owns the app, its build passed, its spec was approved."""
+    if job.action != "ENABLE":
+        return True  # taking an app away needs no proof; the enablement row is the cooperative's own
+    if owner_htx != job.htx_code or not VERSION_RE.fullmatch(version):
+        return False
+    return conn.execute(
+        "SELECT 1 FROM platform.app_builds b JOIN platform.app_build_requests r ON r.id = b.request_id"
+        " WHERE b.id = %s AND b.app_id = %s AND b.version = %s AND b.status = 'passed' AND r.htx_code = %s"
+        " AND r.spec IS NOT NULL AND r.status IN ('passed', 'installed')",
+        (build_id, job.app_id, version, job.htx_code)).fetchone() is not None
 
 
 def finish(conn: psycopg.Connection, job_id: str, ok: bool, error: str | None = None) -> int:

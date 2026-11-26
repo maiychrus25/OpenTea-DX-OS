@@ -96,7 +96,8 @@ def cmd_store(args) -> int:
                 while True:
                     store.heartbeat(conn)
                     if job := store.claim_known(conn):
-                        print(f"{job.id}\t{job.action}\t{job.app_id}\t{job.htx_code}\t{int(job.installed)}")
+                        print(f"{job.id}\t{job.action}\t{job.app_id}\t{job.htx_code}\t{int(job.installed)}"
+                              + (f"\t{job.version}" if job.version else ""))
                         break
                     if time.monotonic() >= deadline:
                         break
