@@ -1,10 +1,11 @@
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, UserPlus } from 'lucide-react';
+import { Users, UserPlus, Download } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SegmentedFilter } from '@/components/ui/SegmentedFilter';
 import table from '@/components/features/dashboard/dashboard.module.css';
@@ -15,12 +16,15 @@ import { Modal } from '@/components/ui/Modal';
 import { Member } from './mock-data';
 import { InvitationModal } from './invitation-modal';
 import { toast } from 'sonner';
+import styles from './member-list.module.css';
 
 export function MemberList() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  // Parcels and area per household, matched to a farmer by phone number.
+  const [land, setLand] = useState<Record<string, { parcels: number; area: number }>>({});
   const [query, setQuery] = useState('');
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -46,6 +50,16 @@ export function MemberList() {
   useEffect(() => {
     fetchMembers();
   }, [fetchMembers]);
+
+  useEffect(() => {
+    // Extra columns only: the list works without them.
+    fetch('/api/farm/households')
+      .then((res) => (res.ok ? res.json() : { data: [] }))
+      .then((json) =>
+        setLand(Object.fromEntries((json.data || []).map((h: { phone?: string; parcel_count?: number; total_area_ha?: number }) => [h.phone, { parcels: h.parcel_count ?? 0, area: h.total_area_ha ?? 0 }])))
+      )
+      .catch(() => setLand({}));
+  }, []);
 
 
 
@@ -100,13 +114,35 @@ export function MemberList() {
   };
 
   const needle = query.trim().toLowerCase();
-  const filteredMembers = members.filter(
+  const roleOf = (m: Member) => m.role?.toUpperCase() ?? '';
+  const ROLE_LABELS: Record<string, string> = { FARMER: 'Nông dân', OFFICER: 'Cán bộ kỹ thuật', MANAGER: 'Trưởng HTX' };
+  // People still waiting are asked about above; the table lists the members.
+  const waiting = members.filter((m) => m.status === 'PENDING');
+  const joined = members.filter((m) => m.status !== 'PENDING');
+  const filteredMembers = joined.filter(
     (m) =>
-      (statusFilter === 'ALL' || m.status === statusFilter) &&
+      (roleFilter === 'ALL' || roleOf(m) === roleFilter) &&
       (!needle || [m.full_name, m.name, m.phone, m.email].some((v) => v?.toLowerCase().includes(needle)))
   );
 
-  const countOf = (status: string) => members.filter((m) => m.status === status).length;
+  const countRole = (role: string) => joined.filter((m) => roleOf(m) === role).length;
+  const phoneOf = (m: Member) => (m.phone && m.phone !== 'Chưa cập nhật' ? m.phone : '');
+  const hectares = (value: number) => value.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+
+  const exportCsv = () => {
+    // A leading quote keeps a cell that starts like a formula from being run by a spreadsheet.
+    const cell = (value: string) => `"${(/^[=+\-@]/.test(value) ? `'${value}` : value).replace(/"/g, '""')}"`;
+    const rows = [
+      ['Thành viên', 'Vai trò', 'Số điện thoại', 'Số thửa', 'Diện tích (ha)', 'Trạng thái'],
+      ...filteredMembers.map((m) => [m.full_name || m.name || '', ROLE_LABELS[roleOf(m)] ?? '', phoneOf(m), String(land[phoneOf(m)]?.parcels ?? ''), String(land[phoneOf(m)]?.area ?? ''), m.status === 'ACTIVE' ? 'Hoạt động' : 'Đã khóa']),
+    ];
+    const url = URL.createObjectURL(new Blob([`\ufeff${rows.map((r) => r.map(cell).join(',')).join('\r\n')}`], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'thanh-vien.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
   const initials = (name = '') =>
     name.trim().split(/\s+/).slice(-2).map((part) => part.charAt(0)).join('').toUpperCase();
 
@@ -118,15 +154,41 @@ export function MemberList() {
         description={
           loading
             ? 'Danh sách thành viên và lời mời tham gia hợp tác xã'
-            : `${members.length} thành viên · ${countOf('PENDING')} đang chờ`
+            : `${joined.length} thành viên · ${waiting.length} yêu cầu gia nhập đang chờ`
         }
         actions={
-          <Button onClick={() => setIsInviteModalOpen(true)} variant="primary">
-            <UserPlus size={16} aria-hidden="true" />
-            + Thêm thành viên
-          </Button>
+          <>
+            <Button onClick={exportCsv} variant="secondary" disabled={filteredMembers.length === 0}>
+              <Download size={16} aria-hidden="true" />
+              Xuất danh sách
+            </Button>
+            <Button onClick={() => setIsInviteModalOpen(true)} variant="primary">
+              <UserPlus size={16} aria-hidden="true" />
+              + Thêm thành viên
+            </Button>
+          </>
         }
       />
+
+      {waiting.length > 0 && (
+        <section className={styles.waiting} aria-label="Yêu cầu gia nhập chờ duyệt">
+          <h2>Yêu cầu gia nhập chờ duyệt <span>{waiting.length}</span></h2>
+          <ul>
+            {waiting.map((member) => (
+              <li key={member.id}>
+                <span className={kit.avatar} aria-hidden="true">{initials(member.full_name || member.name)}</span>
+                <div className={kit.personText}>
+                  <strong>{member.full_name || member.name}</strong>
+                  <small>{[ROLE_LABELS[roleOf(member)], phoneOf(member)].filter(Boolean).join(' · ')}</small>
+                </div>
+                <Pill tone="amber">Chờ xác nhận</Pill>
+                <button type="button" className={kit.dangerButton} onClick={() => handleDelete(member.id)}>Từ chối</button>
+                <button type="button" className={kit.primary} onClick={() => handleApprove(member.id)}>Duyệt</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className={kit.card}>
         <div className={kit.toolbar}>
@@ -139,14 +201,14 @@ export function MemberList() {
             onChange={(e) => setQuery(e.target.value)}
           />
           <SegmentedFilter
-            label="Lọc theo trạng thái"
-            value={statusFilter}
-            onChange={setStatusFilter}
+            label="Lọc theo vai trò"
+            value={roleFilter}
+            onChange={setRoleFilter}
             options={[
-              { value: 'ALL', label: 'Tất cả', count: members.length },
-              { value: 'ACTIVE', label: 'Hoạt động', count: countOf('ACTIVE') },
-              { value: 'PENDING', label: 'Chờ xác nhận', count: countOf('PENDING') },
-              { value: 'LOCKED', label: 'Đã khóa', count: countOf('LOCKED') },
+              { value: 'ALL', label: 'Tất cả', count: joined.length },
+              { value: 'FARMER', label: 'Nông hộ', count: countRole('FARMER') },
+              { value: 'OFFICER', label: 'Cán bộ KT', count: countRole('OFFICER') },
+              { value: 'MANAGER', label: 'Trưởng HTX', count: countRole('MANAGER') },
             ]}
           />
         </div>
@@ -164,6 +226,9 @@ export function MemberList() {
                     <th scope="col">STT</th>
                     <th scope="col">Thành viên</th>
                     <th scope="col">Vai trò</th>
+                    <th scope="col">Số điện thoại</th>
+                    <th scope="col">Số thửa</th>
+                    <th scope="col">Diện tích</th>
                     <th scope="col">Trạng thái</th>
                     <th scope="col">Thao tác</th>
                   </tr>
@@ -179,34 +244,22 @@ export function MemberList() {
                           </span>
                           <div className={kit.personText}>
                             <strong>{member.full_name || member.name}</strong>
-                            <small>
-                              {[member.email, member.phone]
-                                .filter((v) => v && v !== 'Chưa cập nhật')
-                                .filter((v, i, a) => a.indexOf(v) === i)
-                                .join(' • ') || 'Chưa cập nhật'}
-                            </small>
+                            {member.email && member.email !== 'Chưa cập nhật' && member.email !== member.phone && <small>{member.email}</small>}
                           </div>
                         </div>
                       </td>
-                      <td>
-                        {member.role?.toUpperCase() === 'FARMER' && 'Nông dân'}
-                        {member.role?.toUpperCase() === 'OFFICER' && 'Cán bộ kỹ thuật'}
-                        {member.role?.toUpperCase() === 'MANAGER' && 'Trưởng HTX'}
-                      </td>
+                      <td>{ROLE_LABELS[roleOf(member)]}</td>
+                      <td>{phoneOf(member) || 'Chưa cập nhật'}</td>
+                      <td>{land[phoneOf(member)]?.parcels ?? '—'}</td>
+                      <td>{land[phoneOf(member)] ? `${hectares(land[phoneOf(member)].area)} ha` : '—'}</td>
                       <td>
                         <Pill tone={getStatusBadgeVariant(member.status)}>
                           {member.status === 'ACTIVE' && 'Hoạt động'}
-                          {member.status === 'PENDING' && 'Chờ xác nhận'}
                           {member.status === 'LOCKED' && 'Đã khóa'}
                         </Pill>
                       </td>
                       <td>
                         <div className={kit.rowActions}>
-                          {member.status === 'PENDING' && (
-                            <button type="button" className={kit.linkButton} onClick={() => handleApprove(member.id)}>
-                              Duyệt
-                            </button>
-                          )}
                           <button type="button" className={kit.dangerButton} onClick={() => handleDelete(member.id)}>
                             Xóa
                           </button>
@@ -217,7 +270,7 @@ export function MemberList() {
                 </tbody>
               </table>
             </div>
-            <div className={kit.footer}>Hiển thị {filteredMembers.length} / {members.length}</div>
+            <div className={kit.footer}>Hiển thị {filteredMembers.length} / {joined.length}</div>
           </>
         )}
       </div>
