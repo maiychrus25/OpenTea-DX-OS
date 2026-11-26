@@ -64,6 +64,8 @@ export interface ChatEngineDeps {
   photos: PhotoStore
   requests: AssistantSubmitter
   callbackKey: string
+  /** Mini-app requests by chat (M13): a manager's sentence that asks for an app. Absent: the sentence goes to the assistant. */
+  appRequests?: { submit(user: ChatUser, text: string): Promise<string> }
   /** Approver messages of open proposals, for the tool `pending` (built the way the notifier builds them). */
   proposalMessages: (htxCode: string, proposalIds: string[]) => Promise<ProposalMessage[]>
 }
@@ -156,6 +158,9 @@ export class ChatEngine {
     const route = routeText(text)
     if (route?.kind === 'tool') return this.runTool(user, route.name, {}, now)
     if (route?.kind === 'action') return this.startAction(user, route.name, {}, now)
+    if (route?.kind === 'app_request' && user.tenant.role === 'manager' && this.deps.appRequests) {
+      return only([send(user.chatId, await this.deps.appRequests.submit(user, text))])
+    }
     return this.askAssistant(user, text, now)
   }
 

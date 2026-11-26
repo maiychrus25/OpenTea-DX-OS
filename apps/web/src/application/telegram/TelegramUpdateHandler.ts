@@ -22,7 +22,7 @@ import { AssistantRequests } from './assistant/AssistantRequests'
 import { ChatEngine, PHOTO_MAX_BYTES, type IncomingPhoto, type ProposalMessage } from './chat/ChatEngine'
 import { ChatUserResolver } from './chat/ChatUserResolver'
 import { commandOf } from './chat/router'
-import type { ChatAction, ChatTool, PhotoStore } from './chat/types'
+import type { ChatAction, ChatTool, ChatUser, PhotoStore } from './chat/types'
 import { autopilotStatusText, TELEGRAM_TEXT, type AutopilotStatusFigures } from './messages'
 
 export interface TelegramMessageInput {
@@ -70,6 +70,11 @@ export interface ChatServices {
   photos: PhotoStore
   requests: AssistantRequestRepository
   householdId(userId: string): Promise<string | null>
+  /** Mini-app requests (M13): a manager's sentence, and the text that answers A12's questions. */
+  appRequests?: {
+    submit(user: ChatUser, text: string): Promise<string>
+    answer(htxCode: string, requestId: string, text: string): Promise<{ reply: string; done: boolean }>
+  }
   proposalMessages(htxCode: string, proposalIds: string[]): Promise<ProposalMessage[]>
 }
 
@@ -161,6 +166,7 @@ export class TelegramUpdateHandler {
       photos: deps.chat.photos,
       requests: new AssistantRequests(deps.chat.requests, deps.repo),
       callbackKey: deps.callbackKey,
+      appRequests: deps.chat.appRequests,
       proposalMessages: deps.chat.proposalMessages,
     })
   }
@@ -232,6 +238,9 @@ export class TelegramUpdateHandler {
 
     const open = await this.deps.repo.activeConversation(fromId, this.now())
     if (open?.kind === 'reject_reason') return this.receiveRejectReason(fromId, chatId, text)
+    if (open?.kind === 'app_answer' && this.deps.chat.appRequests && text && !command) {
+      return this.receiveAppAnswer(link, open.state.request_id, text, chatId)
+    }
 
     const user = await this.users.resolve(link)
     if (!user) return { replies: [reply(chatId, TELEGRAM_TEXT.notLinked)] }
@@ -241,6 +250,16 @@ export class TelegramUpdateHandler {
     }
     if (!text) return EMPTY
     return this.chat.onText(user, text, this.now())
+  }
+
+  /** The text that answers A12's questions (M13): stored on the request, and the conversation ends unless the text was too long. */
+  private async receiveAppAnswer(link: TelegramLink, requestId: unknown, text: string, chatId: number): Promise<UpdateResponse> {
+    const outcome =
+      typeof requestId === 'string'
+        ? await this.deps.chat.appRequests!.answer(link.htxCode, requestId, text)
+        : { reply: TELEGRAM_TEXT.flowExpired, done: true }
+    if (outcome.done) await this.deps.repo.deleteConversation(link.telegramUserId!)
+    return { replies: [reply(chatId, outcome.reply)] }
   }
 
   private async menuFor(link: TelegramLink, chatId: number): Promise<UpdateResponse> {

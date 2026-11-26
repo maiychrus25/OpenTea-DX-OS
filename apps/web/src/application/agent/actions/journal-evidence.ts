@@ -21,6 +21,8 @@ import {
   sensorReadingValues,
   weatherCacheValues,
 } from './field-evidence'
+import { loadRequestEvidence } from '@/application/appbuilder/evidence'
+import { PrismaAppBuildRepository } from '@/infrastructure/db/appbuilder/PrismaAppBuildRepository'
 import { agentSettingsValues, improvementValues, settingsAgentOf } from './weekly-evidence'
 
 // Evidence contract version 2, see platform/agent/tests/fixtures/evidence-vectors.json.
@@ -132,6 +134,7 @@ export const EVIDENCE_LOADERS: EvidenceLoaders = {
     const row = await new PrismaImprovementRepository().findById(htxCode, id)
     return row ? improvementValues(row) : null
   },
+  app_build_requests: (htxCode, id) => loadRequestEvidence(new PrismaAppBuildRepository(), htxCode, id),
   // Shared reference data: every cooperative reads the same rows, so the cooperative is not checked.
   market_data: async (_htxCode, id) => {
     const row = await findMarketDataForEvidence(id)

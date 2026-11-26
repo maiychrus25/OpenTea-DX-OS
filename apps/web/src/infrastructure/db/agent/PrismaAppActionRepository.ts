@@ -25,6 +25,8 @@ export class PrismaAppActionRepository implements AppActionSource {
           UPDATE platform.agent_proposals p
           SET status = 'expired'
           WHERE p.status = 'proposed' AND p.kind LIKE 'app.%'
+            -- A built-in kind (M13) that happens to start with app. is not an action of an installed app.
+            AND p.kind <> 'app.spec.approve'
             AND NOT EXISTS (
               SELECT 1
               FROM platform.installed_apps a

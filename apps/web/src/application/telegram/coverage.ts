@@ -88,6 +88,10 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'GET /api/agent/autopilot',
     'POST /api/agent/autopilot/enable',
     'POST /api/agent/autopilot/stop',
+    'POST /api/agent/app-requests',
+    'POST /api/agent/app-requests/[id]/answer',
+    'POST /api/agent/app-requests/[id]/cancel',
+    'GET /api/agent/app-requests/[id]/files/[name]',
   ],
   none: [
     'GET /api/auth/[...nextauth]',

@@ -936,3 +936,41 @@ Body `{ "intent": { type, name?, args? }, "run_id": uuid | null }`. Trả về `
 - **Danh mục động.** `getAction(kind, htxCode)` đọc `platform.installed_apps.manifest.agent` và `platform.app_enablements`, lưu 60 giây (xóa khi cài hoặc gỡ qua `./dxos`, nên thay đổi có hiệu lực trong tối đa 60 giây). `risk`, `approver_roles`, `title_vi` lấy từ manifest; `autonomy` là `unlockable` khi `money: true` (cửa sổ tự chạy 2 giờ), ngược lại `auto`; hết hạn sau 72 giờ; không có trường chỉnh sửa.
 - **Duyệt = thực thi.** `POST /api/agent/proposals/{id}/decide` (và nút Telegram) gọi `POST {CORE_GATEWAY_URL}/apps/<id><path>` với token `client_credentials` của `dxos-apps-actor` (bí mật `DXOS_APPS_ACTOR_SECRET` trong môi trường hoặc `/run/dxos-web/roles.env`, ghi bởi `./dxos apps actor enable`) và ba header `X-DXOS-Acting-Sub`, `X-DXOS-Acting-Role`, `X-DXOS-Acting-Htx`; thân là tải trọng bỏ `_labels`. 2xx → `executed` với `result: { result: <JSON của ứng dụng> }`; 4xx → `failed` kèm `message_vi` của ứng dụng; lỗi khác → `failed` với thông báo chung. Chưa có bí mật → `failed` với thông báo yêu cầu quản trị viên bật.
 - **Gỡ hoặc tắt ứng dụng.** Mọi đề xuất `proposed` có `kind` `app.<id>.%` của ứng dụng không còn cài hoặc không còn bật cho HTX chuyển sang `expired` (sự kiện kiểm toán `agent.proposal.expired`, `reason` là `app_removed` hoặc `app_disabled`), chạy mỗi lần danh mục nạp lại. Quyết định muộn trên đề xuất đó trả `{ outcome: "expired" }` và không gọi ứng dụng.
+
+## Xưởng mini-app (M13)
+
+Trưởng HTX nhờ AI làm app; A12 chọn cách rẻ nhất (app trong Kho, mẫu Sổ tự tạo, hoặc viết app mới). Mọi lỗi dự kiến trả `{ error: { code, message } }`.
+
+### Trưởng HTX (phiên đăng nhập, vai trò `manager`)
+
+- **`POST /api/agent/app-requests`**: `{ request_text }` (5 đến 500 ký tự) → `201 { data: { id, status: "new" } }`. HTX và người gửi lấy từ phiên. `409 REQUEST_ACTIVE` khi HTX đang có yêu cầu ở `new`, `asking`, `spec_proposed`, `spec_approved` hoặc `building`.
+- **`POST /api/agent/app-requests/{id}/answer`**: `{ answer_text }` (1 đến 1000 ký tự) cho yêu cầu `asking` chưa có câu trả lời; `409 WRONG_STATE` nếu không còn chờ. Trên Telegram, tin nhắn kế tiếp của người gửi (cuộc hội thoại `app_answer`, 24 giờ) có tác dụng như vậy.
+- **`POST /api/agent/app-requests/{id}/cancel`**: đóng yêu cầu ở `new`, `asking`, `spec_proposed`.
+- **`GET /api/agent/app-requests/{id}/files/{name}`**: ảnh chụp (`desktop-light.png`, `desktop-dark.png`, `mobile-light.png`, `mobile-dark.png`), `review.md` hoặc `spec.md` của bản xây mới nhất.
+- Trang `/manager/ai/apps` (biểu mẫu, danh sách, câu hỏi) và `/manager/ai/apps/{id}` (đặc tả, bảng cổng kiểm tra, báo cáo AI thứ hai, bốn ảnh chụp, nút duyệt đặc tả).
+- Telegram: câu có `cần app`, `làm app`, `xây app` hoặc `cần phần mềm` của trưởng HTX tạo yêu cầu (`Đã nhận yêu cầu. Trợ lý sẽ hỏi lại vài câu nếu cần.`); đã có yêu cầu mở thì trả `HTX đang có một yêu cầu xây app chưa xong.`.
+
+### A12 (token `agent`, phạm vi `htx_code` của token; mọi đường dẫn nằm dưới `/api/internal/agent/`)
+
+- **`GET /api/internal/agent/app-builder/requests`** → `{ data: { requests } }`: yêu cầu `new`; `asking` đã có câu trả lời; `passed` hoặc `failed` mà `announced_at` còn trống. Yêu cầu đang mở có `{ id, status, request_text, questions, answer_text, store_apps: [{ id, name_vi, description_vi, enabled }], book_templates, custom_books_enabled, code_providers }`; yêu cầu đã xong chỉ có `{ id, status }`. `store_apps` không có app của HTX khác.
+- **`POST …/requests/{id}/questions`**: `{ questions }` (1 đến 5, mỗi câu tối đa 160 ký tự) → `asking`; gửi một tin Telegram và mở hội thoại `app_answer`.
+- **`POST …/requests/{id}/route`**: `{ path: "store" | "book", target, reason_vi (≤ 300) }` → `routed` và `{ data: { proposal_id } }`. `store`: đề xuất `miniapp.install` của `target`. `book`: đề xuất `app.custom-books.book.create` (mẫu `target`), hoặc `miniapp.install` của `custom-books` khi chưa bật.
+- **`POST …/requests/{id}/spec`**: thân là đặc tả (`app_id` `^gen-[a-z0-9-]{3,27}$`, `name_vi`, `summary_vi`, `roles` 1 đến 3, `screens` 1 đến 8, `data` 0 đến 5 bảng, `agent_reads` 0 đến 5; không có chỗ cho hành động) → `201 { data: { proposal_id } }`, đề xuất `app.spec.approve`. `409 APP_ID_TAKEN` khi mã có trong danh mục, trong `app_builds` hoặc ở yêu cầu khác.
+- **`POST …/requests/{id}/announce`**: thân rỗng. Khi `passed`: xếp tin `App "<tên>" đã xây xong, qua 7 cổng kiểm tra.` kèm 4 ảnh và tạo đề xuất `miniapp.install` (`agent: app-builder`) → `{ data: { proposal_id } }`. Khi `failed`: xếp tin `Chưa xây được app "<tên>": <lỗi>. Yêu cầu đã đóng.` → `{ data: { proposal_id: null } }`. Gọi lần hai không làm gì thêm (`announced_at`).
+
+### Hành động (danh mục)
+
+| Loại | Rủi ro, tự chạy | Tải trọng | Thực thi |
+|---|---|---|---|
+| `app.spec.approve` | medium, `auto` | `{ request_id }` | `spec_proposed` → `spec_approved`; cũ khi đặc tả hoặc trạng thái đổi |
+| `miniapp.install` | high, `unlockable` | `{ app_id }` | yêu cầu `ENABLE` của Kho cho HTX của đề xuất; app `gen-*` chỉ khi `owner_htx` là HTX đó, bản xây `passed` và đặc tả đã duyệt (từ chối khi tạo và khi chạy: `Bản này chưa qua kiểm tra hoặc không thuộc HTX này`) |
+| `miniapp.remove` | high, `unlockable` | `{ app_id }` | yêu cầu `DISABLE` của Kho |
+
+### Telegram
+
+- `GET /api/internal/telegram/outbox`: mỗi mục có thể có `photos: [{ build_id, name }]` (tối đa 4).
+- `GET /api/internal/telegram/media?build=<uuid>&name=<n>` (token relay): một trong bốn ảnh PNG của bản xây; `400` cho tên khác, `404` khi không có.
+
+### Kho ứng dụng
+
+Danh mục có `owner_htx` chỉ hiện cho HTX đó (danh sách, chi tiết `404` cho HTX khác). Thẻ và trang chi tiết có `generated: true` và `buildRequestId`, hiển thị `App do AI xây` kèm liên kết tới `/manager/ai/apps/<request id>`.

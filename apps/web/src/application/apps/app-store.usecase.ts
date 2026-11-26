@@ -65,9 +65,10 @@ function toCard(app: CatalogApp, snapshot: AppStoreSnapshot, htxCode: string): S
   const { category, icon } = parseStore(app.store)
   const usable = status === 'enabled' || status === 'enabled_all'
   const entry = usable ? app.menu.find(item => item.roles.includes('manager')) : undefined
-  const { menu: _menu, hasDatabase: _db, requiresCore: _core, store: _store, ...card } = app
+  const { menu: _menu, hasDatabase: _db, requiresCore: _core, store: _store, ownerHtx, buildRequestId, ...card } = app
   return {
     ...card,
+    ...(ownerHtx ? { generated: true, buildRequestId: buildRequestId ?? null } : {}),
     status,
     error,
     category,
