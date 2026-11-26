@@ -608,11 +608,13 @@ services:
     user: "65534:65534"
     environment:
       PYTHONDONTWRITEBYTECODE: "1"
+      # The relay posts to dxos-stt:8080 (its default DXOS_STT_URL), so the stub listens there under that alias.
+      DXOS_STT_STUB_PORT: "8080"
     volumes:
       - ../platform/tests/stub_stt.py:/app/stub_stt.py:ro
     command: ["python", "-u", "/app/stub_stt.py"]
     ports:
-      - "127.0.0.1:8083:8083"
+      - "127.0.0.1:8083:8080"
     networks:
       agrimarket-net:
         aliases: [dxos-stt]

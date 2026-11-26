@@ -302,7 +302,12 @@ def test_relay_gets_the_stt_url_with_the_internal_default():
 
 def test_stt_stub_is_test_only_loopback_published_and_takes_the_stt_alias():
     stub = load_compose(COMPOSE)["stt-test-stub"]
-    assert stub["profiles"] == ["stt-test"] and stub["ports"] == ["127.0.0.1:8083:8083"]
+    # The relay posts to the port of its default DXOS_STT_URL; the stub takes the dxos-stt name, so it must listen there.
+    relay_default = load_compose(COMPOSE)["dxos-telegram"]["environment"]["DXOS_STT_URL"]
+    port = relay_default.rsplit(":", 1)[1].rstrip("}")
+    assert port == "8080"
+    assert stub["profiles"] == ["stt-test"] and stub["ports"] == [f"127.0.0.1:8083:{port}"]
+    assert stub["environment"]["DXOS_STT_STUB_PORT"] == port
     assert stub["read_only"] is True and stub["cap_drop"] == ["ALL"] and stub["user"] == "65534:65534"
     assert stub["networks"] == {"agrimarket-net": {"aliases": ["dxos-stt"]}}
     assert "stt-test-stub" not in load_compose(RELEASE)
