@@ -313,6 +313,18 @@ Bo góc vừa phải: 6px cho điều khiển nhỏ, 10px cho nút và ô nhập
 - **Bộ giao diện mini-app (`apps/web/public/dxos-app.css`):** chỉ dùng token đã có, đúng ở sáng và tối, không tràn ngang ở 390px, có `:focus-visible`. Thành phần: `app-header`, `tabs` (cuộn trong thanh), `stats` (2 cột ở điện thoại, 4 từ 768px), `chart` (một dòng nhãn-thanh-giá trị từ 640px; thanh SVG do máy chủ sinh, chiều dài là thuộc tính SVG, không `style=`), `toolbar`, `pagination`, `cards`, `steps` (✓ cho bước xong, bước hiện tại tô `primary`), `empty`, `field-error`, `disclosure`, `actions`, `a.button` và `.danger`, `.pill` với ba sắc `neutral`/`warn`/`danger`, ô chọn và nút radio cỡ bình thường, nút gọn trong bảng, `signature` (chỗ ký tay khi in), `print-sheet`/`no-print`/`print-only` với `@media print` bỏ nền, màu, điều hướng và nút. Macro và ví dụ ở `platform/appkit/`, mô tả trong `docs/miniapps.md`.
 - **Không nhấp nháy:** `layout.tsx` chạy một đoạn script nội tuyến trước lần vẽ đầu, trong `try/catch`, để đặt `data-theme` từ lựa chọn đã lưu; không có lựa chọn hoặc `system` thì để trống và theo `prefers-color-scheme`.
 
+## Chat workspace
+
+- `/manager/chat` (market), `/officer/chat` (technical) và `/officer/assistant` (market) dùng chung `components/ui/chat-interface`. Giữ nguyên tiêu đề/phụ đề từng trang và phân quyền ở server; không thay API/use case.
+- Chat chiếm toàn bộ vùng dưới topbar, không thẻ bao ngoài; AppShell chỉ bỏ padding/max-width và khóa chiều cao khi có `[data-chat-workspace]`. Danh sách tin nhắn và lịch sử cuộn độc lập, không cuộn trang.
+- Cột nội dung rộng tối đa 760px; câu hỏi nằm bên phải trên `--muted`, câu trả lời không bong bóng, avatar nhỏ. Markdown có khung cuộn riêng cho bảng/mã, nguồn là chip văn bản và sao chép có phản hồi thành công/thất bại.
+- Lịch sử rộng 248px, thu gọn được trên desktop; dưới 801px dùng native modal dialog (focus trap, Escape, trả focus). Chỉ nhóm ngày từ `updated_at` của API; bản ghi thiếu ngày nằm trong nhóm không ghi ngày.
+- Trạng thái trống đặt lời chào và composer giữa vùng chat, gợi ý theo market/technical chỉ điền ô nhập. Có tin nhắn thì composer ở đáy; textarea tự giãn tối đa 200px (giới hạn thêm theo chiều cao màn hình). Enter gửi, Shift+Enter xuống dòng, không gửi trong IME.
+- Nút gửi chuyển thành dừng khi nhận phản hồi. AbortController hủy request phía client; mọi cập nhật cũ bị bỏ qua sau khi đổi/tạo hội thoại hoặc unmount. Không cam kết hủy xử lý/lưu lịch sử ở backend vì API không đổi.
+- Stream hiện tại là NDJSON: giữ dòng dang dở giữa các chunk, giải mã UTF-8 liên tục, xử lý cả dòng cuối không có newline, dừng ở done/error. Ẩn think blocks khi stream và nạp lịch sử; lỗi cập nhật cùng một assistant message. 401 chuyển tới đăng nhập, 503 có thông báo dịch vụ không khả dụng.
+- Chỉ tự cuộn khi người đọc ở gần đáy (96px), nếu không hiện nút đến tin mới nhất. Typing indicator/cursor tuân thủ reduced motion. Disclaimer luôn nhắc AI chỉ tham khảo, không quyết định thay HTX.
+- Không thêm đính kèm, microphone, chọn model, đổi tên/xóa hay tạo lại câu trả lời khi chưa có backend hỗ trợ. Không thêm dependency hay token màu mới.
+
 ## Do's and Don'ts
 
 - Dùng token, không dùng mã màu; cần màu mới thì thêm token vào `globals.css` và tệp này cùng lúc, có giá trị tối.

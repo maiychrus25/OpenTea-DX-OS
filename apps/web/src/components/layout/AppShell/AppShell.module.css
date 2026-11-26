@@ -31,6 +31,23 @@
   padding: var(--spacing-gutter-mobile);
 }
 
+/* Chat owns its scrolling; other routes retain the normal page layout. */
+.shell:has([data-chat-workspace]) {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.workspace:has([data-chat-workspace]),
+.content:has([data-chat-workspace]) {
+  min-height: 0;
+}
+.pageContent:has([data-chat-workspace]) {
+  min-height: 0;
+  max-width: none;
+  padding: 0;
+  overflow: hidden;
+}
+
 @media (max-width: 767px) {
   .shell[data-role="farmer"] .content {
     padding-bottom: calc(68px + env(safe-area-inset-bottom));

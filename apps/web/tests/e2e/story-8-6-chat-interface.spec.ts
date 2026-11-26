@@ -1,131 +1,160 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { mockSessionCookie } from './helpers/forged-session'
 
-test.describe('Story 8.6: Chat Market Interface', () => {
+async function login(page: Page, role: string) {
+  if (process.env.E2E_DEV_LOGIN === 'true') {
+    // Opt-in for an already-running local preview; the default remains the isolated test cookie.
+    await page.request.get(`/api/dev-login?role=${role}`, { maxRedirects: 0 })
+  } else await mockSessionCookie(page, role)
+}
+
+const answer = '## Giá chè tham khảo\n\nTheo cập nhật mới nhất, cần đối chiếu giá tại địa phương.\n\n| Loại chè | Giá tham khảo | Nguồn | Thời điểm | Ghi chú |\n| --- | --- | --- | --- | --- |\n| Chè xanh | Chưa xác định | USDA | Hôm nay | Chỉ tham khảo |\n\n```text\n' + 'long_code_sample_'.repeat(35) + '\n```'
+const history = [
+  { role: 'user', content: 'Giá chè búp khô hôm nay thế nào?' },
+  { role: 'assistant', content: '<think>Không hiển thị suy nghĩ nội bộ</think>' + answer },
+]
+
+test.describe('Story 8.6: Shared chat workspace', () => {
   test.beforeEach(async ({ page }) => {
-    // Default to manager for most tests
-    await mockSessionCookie(page, 'manager', 'Manager', 'manager-1')
+    await login(page, 'manager')
+    await page.route('**/api/chatbot/sessions?*', route => route.fulfill({ json: { data: { sessions: [
+      { session_id: 'saved', title: 'Giá chè hôm nay', updated_at: '2026-11-25T08:00:00Z' },
+    ] } } }))
+    await page.route('**/api/chatbot?*', route => route.fulfill({ json: { data: { history } } }))
+    await page.route('**/api/chatbot', route => route.fulfill({ contentType: 'text/event-stream', body:
+      JSON.stringify({ text: answer }) + '\n' + JSON.stringify({ done: true, sources: ['USDA', 'Dữ liệu hệ thống'] }) + '\n' }))
   })
 
-  test('T1: Manager page renders with layout and correct header', async ({ page }) => {
+  test('header, empty composer, suggestion and real history', async ({ page }) => {
     await page.goto('/manager/chat')
-    
-    // Check main layout container
-    const layout = page.locator('div[class*="chatLayout"]')
-    await expect(layout).toBeVisible()
-    
-    // Check header
-    const h1 = page.locator('h1')
-    await expect(h1).toHaveText('Trợ lý Thị trường')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Trợ lý Thị trường')
+    await expect(page.getByText('Phân tích từ USDA + WTO + Chợ đầu mối')).toBeVisible()
+    await expect(page.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeVisible()
+    await page.getByRole('button', { name: 'Giá chè búp khô tuần này thế nào?' }).click()
+    await expect(page.getByPlaceholder('Nhập câu hỏi...')).toHaveValue('Giá chè búp khô tuần này thế nào?')
+    await page.getByRole('button', { name: 'Giá chè hôm nay', exact: true }).click()
+    await expect(page.locator('div[class*="userMessage"]')).toHaveText('Giá chè búp khô hôm nay thế nào?')
+    await expect(page.getByText('Không hiển thị suy nghĩ nội bộ')).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'Bảng dữ liệu' })).toBeVisible()
+    await page.getByRole('button', { name: 'Thu gọn lịch sử' }).click()
+    await expect(page.getByRole('complementary', { name: 'Lịch sử trò chuyện' })).toBeHidden()
+    await page.getByRole('button', { name: 'Mở lịch sử' }).click()
+    await page.getByRole('button', { name: 'Cuộc trò chuyện mới' }).click()
+    await expect(page.locator('div[class*="userMessage"]')).toHaveCount(0)
   })
 
-  test('T2: History sidebar visible', async ({ page }) => {
+  test('send, markdown, sources, copy and keyboard composition', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await page.goto('/manager/chat')
-    
-    const sidebar = page.locator('aside[class*="chatHistory"]')
-    await expect(sidebar).toBeVisible()
-    
-    const historyItem = sidebar.locator('li').first()
-    await expect(historyItem).toBeVisible()
-  })
-
-  test('T3 & T4: Mock messages visible with correct computed styles', async ({ page }) => {
-    await page.goto('/manager/chat')
-    
-    const userMsg = page.locator('div[class*="userMessage"]').first()
-    await expect(userMsg).toContainText('Giá chè búp khô hôm nay thế nào?')
-    
-    // Verify computed background color is #176c4b (rgb(23, 108, 75))
-    await expect(userMsg).toHaveCSS('background-color', 'rgb(23, 108, 75)')
-    
-    const botMsg = page.locator('div[class*="botMessage"]').first()
-    await expect(botMsg).toContainText('Theo cập nhật mới nhất')
-    
-    // Verify computed background color is #f2f5f2 (rgb(242, 245, 242))
-    await expect(botMsg).toHaveCSS('background-color', 'rgb(242, 245, 242)')
-  })
-
-  test('T5: Mini chart visible', async ({ page }) => {
-    await page.goto('/manager/chat')
-    
-    const chart = page.locator('div[class*="miniChart"]').first()
-    await expect(chart).toBeVisible()
-    
-    const bars = chart.locator('div[class*="miniChartBar"]')
-    // Should have 5 bars from mock data
-    await expect(bars).toHaveCount(5)
-  })
-
-  test('T6 & T7: Composer input and send button interaction', async ({ page }) => {
-    await page.goto('/manager/chat')
-    
     const input = page.getByPlaceholder('Nhập câu hỏi...')
     await input.fill('Thời tiết ngày mai?')
-    
-    const sendBtn = page.locator('button[aria-label="Gửi"]')
-    await expect(sendBtn).not.toBeDisabled()
-    
-    await sendBtn.click()
-    
-    // Verify new messages are added
-    const messages = page.locator('div[class*="messageRowUser"]')
-    await expect(messages).toHaveCount(2) // 1 mock + 1 new
-    
-    const userMsgs = page.locator('div[class*="userMessage"]')
-    await expect(userMsgs.last()).toContainText('Thời tiết ngày mai?')
-  })
-
-  test('T8: New conversation button', async ({ page }) => {
-    await page.goto('/manager/chat')
-    
-    const newChatBtn = page.locator('button', { hasText: 'Cuộc trò chuyện mới' })
-    await newChatBtn.click()
-    
-    // Messages should be cleared
+    await input.press('Shift+Enter')
+    await expect(input).toHaveValue('Thời tiết ngày mai?\n')
+    await input.dispatchEvent('compositionstart')
+    await input.press('Enter')
     await expect(page.locator('div[class*="userMessage"]')).toHaveCount(0)
-    await expect(page.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeVisible()
+    await input.dispatchEvent('compositionend')
+    await page.getByRole('button', { name: 'Gửi', exact: true }).click()
+    await expect(page.locator('div[class*="userMessage"]')).toHaveCount(1)
+    await expect(page.getByRole('list', { name: 'Nguồn tham khảo' })).toContainText('USDA')
+    await page.getByRole('button', { name: 'Sao chép câu trả lời' }).click()
+    await expect(page.getByText('Đã sao chép', { exact: true })).toBeVisible()
+    await expect(page.locator('div[class*="botMessage"]')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await expect(page.getByText('AI chỉ cung cấp thông tin tham khảo, không quyết định thay HTX.')).toBeVisible()
   })
 
-  test('T9: Mobile viewport hides sidebar', async ({ page }) => {
+  test('mobile drawer supports selection, focus containment and Escape', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/manager/chat')
-    
-    const sidebar = page.locator('aside[class*="chatHistory"]')
-    await expect(sidebar).toBeVisible()
-    
-    // Set mobile viewport
-    await page.setViewportSize({ width: 768, height: 1024 })
-    
-    // Should be hidden by CSS media query
-    await expect(sidebar).not.toBeVisible()
+    const toggle = page.getByRole('button', { name: 'Mở lịch sử' })
+    await toggle.click()
+    const drawer = page.getByRole('dialog', { name: 'Lịch sử trò chuyện' })
+    await expect(drawer).toBeVisible()
+    await drawer.getByRole('button', { name: 'Giá chè hôm nay', exact: true }).click()
+    await expect(drawer).toBeHidden()
+    await expect(page.locator('div[class*="userMessage"]')).toBeVisible()
+    await toggle.click()
+    await page.keyboard.press('Tab')
+    expect(await drawer.evaluate(element => element.contains(document.activeElement))).toBe(true)
+    await page.keyboard.press('Escape')
+    await expect(drawer).toBeHidden()
+    await expect(toggle).toBeFocused()
   })
 
-  test('T10: Officer page renders correctly', async ({ page }) => {
-    // Clear manager session and mock officer
+  for (const theme of ['light', 'dark'] as const) {
+    for (const width of [320, 390, 768, 1024, 1440]) {
+      test(`${theme} ${width}px: long messages stay within the workspace`, async ({ page }, testInfo) => {
+        await page.setViewportSize({ width, height: 900 })
+        await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' })
+        await page.goto('/manager/chat')
+        await page.screenshot({ path: testInfo.outputPath('empty.png') })
+        const input = page.getByPlaceholder('Nhập câu hỏi...')
+        await input.fill('Kiểm tra bảng và mã nguồn')
+        await input.press('Enter')
+        await expect(page.getByRole('button', { name: 'Sao chép câu trả lời' })).toBeVisible()
+        const bounds = await page.evaluate(() => {
+          const root = document.documentElement
+          const messages = document.querySelector('[aria-label="Tin nhắn"]')!
+          const pre = document.querySelector('pre')!
+          return { width: root.scrollWidth, viewportWidth: innerWidth, height: root.scrollHeight, viewportHeight: innerHeight,
+            messagesOverflow: getComputedStyle(messages).overflowY, codeScrolls: pre.scrollWidth > pre.clientWidth }
+        })
+        expect(bounds.width).toBeLessThanOrEqual(bounds.viewportWidth)
+        expect(bounds.height).toBeLessThanOrEqual(bounds.viewportHeight)
+        expect(bounds.messagesOverflow).toBe('auto')
+        expect(bounds.codeScrolls).toBe(true)
+        await expect(input).toBeInViewport()
+        await input.fill('Dòng dài\n'.repeat(40))
+        expect((await input.boundingBox())!.height).toBeLessThanOrEqual(200)
+        await page.screenshot({ path: testInfo.outputPath('conversation.png') })
+      })
+    }
+  }
+
+  test('scrolling up keeps position until jump to latest', async ({ page }) => {
+    await page.route('**/api/chatbot', route => route.fulfill({ contentType: 'text/event-stream', body:
+      JSON.stringify({ text: 'Đoạn thông tin tham khảo.\n\n'.repeat(100) }) + '\n{"done":true}\n' }))
+    await page.goto('/manager/chat')
+    await page.getByPlaceholder('Nhập câu hỏi...').fill('Thông tin dài')
+    await page.getByRole('button', { name: 'Gửi', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Sao chép câu trả lời' })).toBeVisible()
+    const list = page.getByRole('region', { name: 'Tin nhắn' })
+    await list.hover()
+    await page.mouse.wheel(0, -10000)
+    await expect(page.getByRole('button', { name: 'Đến tin nhắn mới nhất' })).toBeVisible()
+    const before = await list.evaluate(element => element.scrollTop)
+    await page.getByPlaceholder('Nhập câu hỏi...').fill('Câu tiếp theo')
+    await page.getByRole('button', { name: 'Gửi', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Gửi', exact: true })).toBeVisible()
+    await expect.poll(() => list.evaluate(element => element.scrollTop)).toBe(before)
+    await page.getByRole('button', { name: 'Đến tin nhắn mới nhất' }).click()
+    await expect.poll(() => list.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(96)
+  })
+
+  test('officer technical and market routes share the workspace and preserve headings', async ({ page }) => {
     await page.context().clearCookies()
-    await mockSessionCookie(page, 'officer', 'Officer', 'officer-1')
-    
+    await login(page, 'officer')
     await page.goto('/officer/chat')
-    
-    const h1 = page.locator('h1')
-    await expect(h1).toHaveText('Trợ lý Kỹ thuật')
-    
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Trợ lý Kỹ thuật')
     await expect(page.getByText('Kiến thức canh tác + VietGAP + Bệnh cây')).toBeVisible()
+    await page.goto('/officer/assistant')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Trợ lý Thị trường')
+    await expect(page.getByText('Hỏi đáp thông tin thị trường nông sản — dữ liệu có trích nguồn')).toBeVisible()
+    const request = page.waitForRequest(request => request.url().endsWith('/api/chatbot') && request.method() === 'POST')
+    await page.getByPlaceholder('Nhập câu hỏi...').fill('Giá chè')
+    await page.getByRole('button', { name: 'Gửi', exact: true }).click()
+    expect((await request).postDataJSON().type).toBe('market')
   })
 
-  test('T11: Role guard prevents farmer access', async ({ page }) => {
-    // Clear session and mock farmer
+  test('farmer remains unable to access the chat routes', async ({ page }) => {
     await page.context().clearCookies()
-    await mockSessionCookie(page, 'farmer', 'Farmer', 'farmer-1')
-    
-    await page.goto('/manager/chat')
-    // Should redirect to unauthorized
-    await expect(page).toHaveURL('/unauthorized')
-    
-    await page.goto('/officer/chat')
-    // Should redirect to unauthorized
-    await expect(page).toHaveURL('/unauthorized')
+    await login(page, 'farmer')
+    for (const route of ['/manager/chat', '/officer/chat', '/officer/assistant']) {
+      await page.goto(route)
+      await expect(page).toHaveURL('/unauthorized')
+    }
   })
 })

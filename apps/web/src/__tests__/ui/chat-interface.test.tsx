@@ -2,109 +2,277 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { TextDecoder, TextEncoder } from 'util'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { redirectToLogin } from '@/lib/api/redirect-to-login'
 import { ChatInterface } from '@/components/ui/chat-interface/chat-interface'
+import { readChatStream, stripThinking } from '@/components/ui/chat-interface/chat-stream'
 
 jest.mock('@/lib/api/redirect-to-login', () => ({ redirectToLogin: jest.fn() }))
+Object.assign(global, { TextDecoder, TextEncoder })
+const encoder = new TextEncoder()
+const sessions = [{ session_id: 'saved', title: 'Hội thoại đã lưu', updated_at: '2026-11-25T10:00:00Z' }]
+const jsonResponse = (data: object) => ({ ok: true, json: async () => ({ data }) })
+let postResponse: object
+let historyResponse: object
+let signal: AbortSignal | undefined
 
-// Mock use client window scroll function
-window.HTMLElement.prototype.scrollIntoView = jest.fn()
+function streamResponse(chunks: string[], failure = false) {
+  const read = jest.fn()
+  chunks.forEach(chunk => read.mockResolvedValueOnce({ done: false, value: encoder.encode(chunk) }))
+  if (failure) read.mockRejectedValueOnce(new Error('offline'))
+  else read.mockResolvedValue({ done: true })
+  return { ok: true, body: { getReader: () => ({ read, cancel: jest.fn().mockResolvedValue(undefined), releaseLock: jest.fn() }) } }
+}
 
-// Mock fetch globally
-global.fetch = jest.fn(() =>
-  Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({ data: { sessions: [] } }),
-    body: {
-      getReader: () => {
-        let isDone = false;
-        return {
-          read: () => {
-            if (!isDone) {
-              isDone = true;
-              return Promise.resolve({ done: false, value: new TextEncoder().encode('{"content":"Test response from bot"}') });
-            }
-            return Promise.resolve({ done: true });
-          }
-        }
-      }
+function send(text = 'Giá chè hôm nay?') {
+  fireEvent.change(screen.getByPlaceholderText('Nhập câu hỏi...'), { target: { value: text } })
+  fireEvent.click(screen.getByRole('button', { name: 'Gửi' }))
+}
+
+beforeEach(() => {
+  jest.clearAllMocks()
+  signal = undefined
+  postResponse = streamResponse(['{"text":"Trả lời mẫu"}\n{"done":true,"sources":["USDA"]}\n'])
+  historyResponse = jsonResponse({ history: [{ role: 'assistant', content: '<think>Bí mật</think>Nội dung đã lưu' }] })
+  global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') {
+      signal = init.signal as AbortSignal
+      return postResponse
     }
-  })
-) as jest.Mock;
+    return url.includes('/sessions') ? jsonResponse({ sessions }) : historyResponse
+  }) as jest.Mock
+  window.HTMLDialogElement.prototype.close = jest.fn()
+  window.HTMLDialogElement.prototype.showModal = jest.fn()
+  window.HTMLElement.prototype.scrollTo = jest.fn()
+  window.HTMLElement.prototype.scrollIntoView = jest.fn()
+  window.matchMedia = jest.fn().mockReturnValue({ matches: false, addEventListener: jest.fn(), removeEventListener: jest.fn() })
+})
 
 describe('ChatInterface', () => {
-  it('T1: renders manager layout correctly', () => {
-    render(<ChatInterface role="manager" />)
-    
-    // Check h1
-    expect(screen.getByRole('heading', { name: 'Trợ lý Thị trường' })).toBeInTheDocument()
-    // Check subtitle
-    expect(screen.getByText('Phân tích từ USDA + WTO + Chợ đầu mối')).toBeInTheDocument()
+  it.each([
+    ['manager', 'Trợ lý Thị trường', 'Phân tích từ USDA + WTO + Chợ đầu mối'],
+    ['officer', 'Trợ lý Kỹ thuật', 'Kiến thức canh tác + VietGAP + Bệnh cây'],
+  ] as const)('renders the %s title and subtitle', async (role, title, subtitle) => {
+    render(<ChatInterface role={role} />)
+    expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
+    expect(screen.getByText(subtitle)).toBeInTheDocument()
+    expect(screen.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeInTheDocument()
+    await screen.findByRole('button', { name: 'Hội thoại đã lưu' })
   })
 
-  it('T9: renders officer layout correctly', () => {
+  it('keeps the empty-history label', async () => {
+    ;(fetch as jest.Mock).mockResolvedValue(jsonResponse({ sessions: [] }))
+    render(<ChatInterface role="manager" />)
+    expect(await within(screen.getByRole('complementary')).findByText('Chưa có lịch sử trò chuyện')).toBeInTheDocument()
+  })
+
+  it('buffers split JSON lines, hides split think tags and flushes the last line', async () => {
+    postResponse = streamResponse(['{"te', 'xt":"<thi"}\n{"text":"nk>Ẩn</think>Giá ', 'chè"}\n{"done":true,"sources":["USDA"]}'])
+    render(<ChatInterface role="manager" />)
+    send()
+    expect(await screen.findByText('Giá chè')).toBeInTheDocument()
+    expect(await screen.findByText('USDA')).toBeInTheDocument()
+    expect(screen.queryByText(/Ẩn|<thi/)).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Gửi' })).toBeInTheDocument())
+  })
+
+  it('renders a connection error once after partial output', async () => {
+    postResponse = streamResponse(['{"text":"Một phần"}\n'], true)
+    render(<ChatInterface role="manager" />)
+    send()
+    await screen.findByText(/Không thể kết nối tới AI/)
+    expect(document.querySelectorAll('[class*="botMessage"]')).toHaveLength(1)
+  })
+
+  it('treats a stream error as terminal, without appending later text', async () => {
+    postResponse = streamResponse(['{"error":true,"message":"Dịch vụ đang bận"}\n{"text":"Không được hiện"}\n'])
+    render(<ChatInterface role="manager" />)
+    send()
+    expect(await screen.findByText('Dịch vụ đang bận')).toBeInTheDocument()
+    expect(screen.queryByText('Không được hiện')).not.toBeInTheDocument()
+    expect(document.querySelectorAll('[class*="botMessage"]')).toHaveLength(1)
+  })
+
+  it('stops an active stream and ignores a late chunk', async () => {
+    let resolveRead!: (value: object) => void
+    const read = jest.fn().mockResolvedValueOnce({ done: false, value: encoder.encode('{"text":"Đang trả lời"}\n') })
+      .mockImplementation(() => new Promise(resolve => { resolveRead = resolve }))
+    postResponse = { ok: true, body: { getReader: () => ({ read, cancel: jest.fn().mockResolvedValue(undefined), releaseLock: jest.fn() }) } }
+    render(<ChatInterface role="manager" />)
+    send()
+    await screen.findByText('Đang trả lời')
+    fireEvent.click(screen.getByRole('button', { name: 'Dừng trả lời' }))
+    expect(signal?.aborted).toBe(true)
+    await act(async () => resolveRead({ done: false, value: encoder.encode('{"text":"Rò rỉ"}\n') }))
+    expect(screen.queryByText(/Rò rỉ/)).not.toBeInTheDocument()
+    expect(screen.getByText('Đang trả lời')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Gửi' })).toBeInTheDocument()
+  })
+
+  it.each(['new', 'saved'])('isolates a pending answer when switching to %s', async destination => {
+    let resolvePost!: (value: object) => void
+    const pending = new Promise(resolve => { resolvePost = resolve })
+    ;(fetch as jest.Mock).mockImplementation(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') { signal = init.signal as AbortSignal; return pending }
+      return url.includes('/sessions') ? jsonResponse({ sessions }) : historyResponse
+    })
+    render(<ChatInterface role="manager" />)
+    await screen.findByRole('button', { name: 'Hội thoại đã lưu' })
+    send()
+    fireEvent.click(screen.getByRole('button', { name: destination === 'new' ? 'Cuộc trò chuyện mới' : 'Hội thoại đã lưu' }))
+    expect(signal?.aborted).toBe(true)
+    await act(async () => resolvePost(streamResponse(['{"text":"Rò rỉ"}\n'])))
+    expect(screen.queryByText('Rò rỉ')).not.toBeInTheDocument()
+    if (destination === 'saved') {
+      expect(await screen.findByText('Nội dung đã lưu')).toBeInTheDocument()
+      expect(screen.queryByText(/Bí mật/)).not.toBeInTheDocument()
+    } else expect(screen.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeInTheDocument()
+  })
+
+  it('does not send Enter during IME or Shift+Enter, but sends plain Enter', async () => {
     render(<ChatInterface role="officer" />)
-    
-    expect(screen.getByRole('heading', { name: 'Trợ lý Kỹ thuật' })).toBeInTheDocument()
-    expect(screen.getByText('Kiến thức canh tác + VietGAP + Bệnh cây')).toBeInTheDocument()
+    const input = screen.getByPlaceholderText('Nhập câu hỏi...')
+    fireEvent.change(input, { target: { value: 'Chè' } })
+    fireEvent.compositionStart(input)
+    fireEvent.keyDown(input, { key: 'Enter', keyCode: 229, isComposing: true })
+    fireEvent.compositionEnd(input)
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
+    expect((fetch as jest.Mock).mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await screen.findByText('Trả lời mẫu')
+    const [, request] = (fetch as jest.Mock).mock.calls.find(([, init]) => init?.method === 'POST')!
+    expect(JSON.parse(request.body).type).toBe('technical')
   })
 
-  it('T2: renders empty history sidebar initially', () => {
+  it('redirects a 401 answer to login', async () => {
+    postResponse = { ok: false, status: 401 }
     render(<ChatInterface role="manager" />)
-    
-    const historyList = screen.getAllByRole('list')[0]
-    expect(historyList).toBeInTheDocument()
-    expect(screen.getByText('Chưa có lịch sử trò chuyện')).toBeInTheDocument()
+    send()
+    await waitFor(() => expect(redirectToLogin).toHaveBeenCalledTimes(1))
   })
 
-  it('T3: renders empty state in main chat', () => {
-    render(<ChatInterface role="manager" />)
-    expect(screen.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeInTheDocument()
+  it('uses market chat for the officer assistant without changing its subtitle', async () => {
+    render(<ChatInterface role="officer" chatType="market" subtitle="Thông tin thị trường" />)
+    expect(screen.getByRole('heading', { name: 'Trợ lý Thị trường' })).toBeInTheDocument()
+    expect(screen.getByText('Thông tin thị trường')).toBeInTheDocument()
+    send()
+    await screen.findByText('Trả lời mẫu')
+    const [, request] = (fetch as jest.Mock).mock.calls.find(([, init]) => init?.method === 'POST')!
+    expect(JSON.parse(request.body).type).toBe('market')
   })
 
-  it('T6 & T7: composer input and send button calls fetch', async () => {
+  it('fills a suggestion without sending it and copies the finished answer', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
     render(<ChatInterface role="manager" />)
-    
-    const input = screen.getByPlaceholderText('Nhập câu hỏi...') as HTMLTextAreaElement
-    const sendBtn = screen.getByRole('button', { name: 'Gửi' })
-    
-    fireEvent.change(input, { target: { value: 'Test message' } })
-    expect(input.value).toBe('Test message')
-    
-    fireEvent.click(sendBtn)
-    
-    // User message should be rendered
-    expect(screen.getAllByText('Test message').length).toBeGreaterThan(0)
-    
-    // Input should be cleared
-    expect(input.value).toBe('')
-
-    // fetch should be called
-    expect(global.fetch).toHaveBeenCalled()
-  })
-
-  it('T8: new conversation button sets empty state', () => {
-    render(<ChatInterface role="manager" />)
-    
-    const newChatBtn = screen.getByRole('button', { name: /Cuộc trò chuyện mới/i })
-    fireEvent.click(newChatBtn)
-    
-    expect(screen.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeInTheDocument()
-  })
-
-  it('sends the user to login when the chat call answers 401', async () => {
-    ;(global.fetch as jest.Mock).mockImplementation((_url: string, init?: { method?: string }) =>
-      Promise.resolve(
-        init?.method === 'POST'
-          ? { ok: false, status: 401, json: () => Promise.resolve({}) }
-          : { ok: true, json: () => Promise.resolve({ data: { sessions: [] } }) }
-      )
-    )
-    render(<ChatInterface role="manager" />)
-    fireEvent.change(screen.getByPlaceholderText('Nhập câu hỏi...'), { target: { value: 'hi' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Giá chè búp khô tuần này thế nào?' }))
+    expect(screen.getByPlaceholderText('Nhập câu hỏi...')).toHaveValue('Giá chè búp khô tuần này thế nào?')
+    expect((fetch as jest.Mock).mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0)
     fireEvent.click(screen.getByRole('button', { name: 'Gửi' }))
-    await waitFor(() => expect(redirectToLogin).toHaveBeenCalled())
+    fireEvent.click(await screen.findByRole('button', { name: 'Sao chép câu trả lời' }))
+    expect(writeText).toHaveBeenCalledWith('Trả lời mẫu')
+    expect(await screen.findByText('Đã sao chép')).toBeInTheDocument()
+  })
+
+  it('ignores an old history response after starting a new conversation', async () => {
+    let resolveHistory!: (value: object) => void
+    historyResponse = new Promise(resolve => { resolveHistory = resolve })
+    render(<ChatInterface role="manager" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Hội thoại đã lưu' }))
+    expect(screen.getByText('Đang tải cuộc trò chuyện...')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Cuộc trò chuyện mới' }))
+    await act(async () => resolveHistory(jsonResponse({ history: [{ role: 'assistant', content: 'Lịch sử cũ' }] })))
+    expect(screen.queryByText('Lịch sử cũ')).not.toBeInTheDocument()
+    expect(screen.getByText('Hãy đặt câu hỏi để bắt đầu...')).toBeInTheDocument()
+  })
+
+  it('shows history failures instead of pretending the conversation is empty', async () => {
+    historyResponse = { ok: false, status: 503 }
+    render(<ChatInterface role="manager" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Hội thoại đã lưu' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Không tải được cuộc trò chuyện')
+    expect(screen.getByPlaceholderText('Nhập câu hỏi...')).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Cuộc trò chuyện mới' }))
+    expect(screen.getByPlaceholderText('Nhập câu hỏi...')).not.toBeDisabled()
+  })
+
+  it.each(['sessions', 'history'])('redirects a 401 from %s to login', async source => {
+    ;(fetch as jest.Mock).mockImplementation(async (url: string) => url.includes('/sessions')
+      ? source === 'sessions' ? { ok: false, status: 401 } : jsonResponse({ sessions })
+      : { ok: false, status: 401 })
+    render(<ChatInterface role="manager" />)
+    if (source === 'history') fireEvent.click(await screen.findByRole('button', { name: 'Hội thoại đã lưu' }))
+    await waitFor(() => expect(redirectToLogin).toHaveBeenCalledTimes(1))
+  })
+
+  it('does not invent dates for legacy sessions with no timestamp', async () => {
+    ;(fetch as jest.Mock).mockResolvedValue(jsonResponse({ sessions: [{ session_id: 'legacy', title: 'Không có ngày' }] }))
+    render(<ChatInterface role="manager" />)
+    await screen.findByRole('button', { name: 'Không có ngày' })
+    expect(within(screen.getByRole('complementary')).getByRole('heading')).toHaveTextContent('Cuộc trò chuyện')
+  })
+
+  it('preserves scroll position for incoming chunks when the reader scrolls up', async () => {
+    let resolveRead!: (value: object) => void
+    const read = jest.fn().mockResolvedValueOnce({ done: false, value: encoder.encode('{"text":"Đầu câu"}\n') })
+      .mockImplementation(() => new Promise(resolve => { resolveRead = resolve }))
+    postResponse = { ok: true, body: { getReader: () => ({ read, cancel: jest.fn().mockResolvedValue(undefined), releaseLock: jest.fn() }) } }
+    render(<ChatInterface role="manager" />)
+    const list = screen.getByRole('region', { name: 'Tin nhắn' })
+    Object.defineProperties(list, { scrollHeight: { value: 1000 }, clientHeight: { value: 300 } })
+    send()
+    await screen.findByText('Đầu câu')
+    expect(list.scrollTop).toBe(1000)
+    list.scrollTop = 50
+    fireEvent.scroll(list)
+    await act(async () => resolveRead({ done: false, value: encoder.encode('{"text":" nối tiếp"}\n') }))
+    expect(screen.getByText('Đầu câu nối tiếp')).toBeInTheDocument()
+    expect(list.scrollTop).toBe(50)
+    fireEvent.click(screen.getByRole('button', { name: 'Đến tin nhắn mới nhất' }))
+    expect(list.scrollTo).toHaveBeenCalledWith({ top: 1000, behavior: 'smooth' })
+    fireEvent.click(screen.getByRole('button', { name: 'Dừng trả lời' }))
+    await act(async () => resolveRead({ done: true }))
+  })
+
+  it('aborts the active answer when unmounted', async () => {
+    ;(fetch as jest.Mock).mockImplementation(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') { signal = init.signal as AbortSignal; return new Promise(() => undefined) }
+      return jsonResponse({ sessions })
+    })
+    const view = render(<ChatInterface role="manager" />)
+    send()
+    view.unmount()
+    expect(signal?.aborted).toBe(true)
+  })
+
+  it('shows a clear unavailable message for 503', async () => {
+    postResponse = { ok: false, status: 503 }
+    render(<ChatInterface role="manager" />)
+    send()
+    expect(await screen.findByText(/Dịch vụ AI hiện không khả dụng/)).toBeInTheDocument()
+  })
+})
+
+describe('chat stream boundaries', () => {
+  it('decodes Vietnamese UTF-8 split at every byte and skips malformed lines', async () => {
+    const bytes = encoder.encode('invalid\n' + JSON.stringify({ text: 'Chè Thái Nguyên' }) + '\r\n' + JSON.stringify({ done: true, sources: ['Nguồn Việt'] }))
+    const read = jest.fn()
+    bytes.forEach(byte => read.mockResolvedValueOnce({ done: false, value: new Uint8Array([byte]) }))
+    read.mockResolvedValue({ done: true })
+    const cancel = jest.fn().mockResolvedValue(undefined)
+    const releaseLock = jest.fn()
+    const update = jest.fn()
+    const error = jest.fn()
+    await readChatStream({ getReader: () => ({ read, cancel, releaseLock }) } as unknown as ReadableStream<Uint8Array>, new AbortController().signal, update, error)
+    expect(update).toHaveBeenLastCalledWith({ content: 'Chè Thái Nguyên', sources: ['Nguồn Việt'] })
+    expect(error).not.toHaveBeenCalled()
+    expect(cancel).toHaveBeenCalled()
+    expect(releaseLock).toHaveBeenCalled()
+  })
+
+  it.each(['<', '<t', '<th', '<thi', '<thin', '<think', '<think>Ẩn', '<THINK>Ẩn</THINK>'])('hides incomplete or complete thinking: %s', text => {
+    expect(stripThinking(text)).toBe('')
   })
 })

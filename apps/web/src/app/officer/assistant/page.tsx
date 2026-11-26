@@ -3,7 +3,7 @@
 
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
-import { ChatPanel } from '../../manager/chat/_components/ChatPanel'
+import { ChatInterface } from '@/components/ui/chat-interface/chat-interface'
 
 export const metadata = {
   title: 'Trợ lý Thị trường',
@@ -18,8 +18,10 @@ export default async function OfficerAssistantPage() {
   if (role !== 'officer' && role !== 'manager') redirect('/unauthorized')
 
   return (
-    <ChatPanel
-      userId={session.user.id!}
+    <ChatInterface
+      role="officer"
+      chatType="market"
+      subtitle="Hỏi đáp thông tin thị trường nông sản — dữ liệu có trích nguồn"
       userName={session.user.name || 'Cán bộ Kỹ thuật'}
     />
   )
