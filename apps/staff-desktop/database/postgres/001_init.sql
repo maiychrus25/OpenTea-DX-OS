@@ -222,6 +222,7 @@ CREATE TABLE app_staff_work.work_tasks (
     report_note text,
     assigned_by text NOT NULL,
     completed_at timestamp without time zone,
+    external_ref character varying(64),
     htx_code character varying(20) NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
@@ -279,6 +280,9 @@ CREATE INDEX "IX_recurring_tasks_preferred_assignee_id" ON app_staff_work.recurr
 
 
 CREATE INDEX "IX_work_tasks_assignee_id" ON app_staff_work.work_tasks (assignee_id);
+
+
+CREATE UNIQUE INDEX "IX_work_tasks_external_ref" ON app_staff_work.work_tasks (external_ref);
 
 
 CREATE INDEX "IX_work_tasks_htx_code_assignee_id_status" ON app_staff_work.work_tasks (htx_code, assignee_id, status);

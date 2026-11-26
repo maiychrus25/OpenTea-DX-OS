@@ -20,6 +20,7 @@ describe('Telegram message wording', () => {
     expect(proposalResultText(proposal({ status: 'executed' }))).toBe('Đã được Anh An duyệt lúc 10:05, đã thực hiện.')
     expect(proposalResultText(proposal({ status: 'failed' }))).toBe('Đã được Anh An duyệt lúc 10:05, thực hiện lỗi.')
     expect(proposalResultText(proposal({ status: 'rejected', decisionNote: 'Thiếu ảnh' }))).toBe('Đã từ chối: Thiếu ảnh')
+    expect(proposalResultText(proposal({ status: 'sent_to_staff_app' }))).toBe('Đã được Anh An duyệt lúc 10:05. Đã gửi app nhân sự.')
     expect(proposalResultText(proposal({ status: 'proposed' }))).toBeNull()
   })
 

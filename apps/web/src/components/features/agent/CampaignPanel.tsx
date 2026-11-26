@@ -32,6 +32,7 @@ const CAMPAIGN_STATUS: Record<CampaignStatus, { label: string; tone: 'green' | '
 const ITEM_STATUS: Record<ProposalStatus, string> = {
   proposed: 'Chờ duyệt',
   approved: 'Đã duyệt',
+  sent_to_staff_app: 'Đã gửi app nhân sự',
   executed: 'Đã thực hiện',
   failed: 'Thực thi lỗi',
   rejected: 'Đã từ chối',
