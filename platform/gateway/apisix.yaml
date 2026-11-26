@@ -56,7 +56,7 @@ routes:
       openid-connect: &oidc_aud
         <<: *oidc
         # Hasura checks the audience itself; n8n and disease-api do not, so require dx-os-core here.
-        # Agent and Telegram relay tokens carry dx-os-core too, so user routes also refuse both service roles (spec §5.2).
+        # Agent, Telegram relay and staff app tokens carry dx-os-core too, so user routes also refuse the service roles (spec §5.2).
         claim_schema:
           required: [aud]
           properties:
@@ -67,7 +67,7 @@ routes:
             realm_access:
               properties:
                 roles:
-                  not: { contains: { enum: ["agent", "telegram"] } }
+                  not: { contains: { enum: ["agent", "telegram", "staff-sync"] } }
       proxy-rewrite:
         regex_uri: ["^/api/workflow/(.*)", "/webhook/$1"]
   - id: disease
@@ -120,7 +120,7 @@ routes:
             realm_access:
               properties:
                 roles:
-                  not: { contains: { enum: ["agent", "telegram"] } }
+                  not: { contains: { enum: ["agent", "telegram", "staff-sync"] } }
   # Dedicated internal LLM route for dxos-agent so agent traffic has its own rate budget (spec §8.1).
   - id: internal-agent-llm
     uri: /api/internal/agent/llm/v1/chat/completions
@@ -200,6 +200,43 @@ routes:
     plugins:
       openid-connect: *oidc_agent
       # Runs and proposals per agent token; the LLM routes above keep their own budget.
+      limit-count:
+        count: 120
+        time_window: 60
+        key_type: var_combination
+        key: "$http_authorization"
+        rejected_code: 429
+      proxy-rewrite:
+        headers:
+          set:
+            X-Dxos-Gateway: "${{DXOS_INTERNAL_GATEWAY_SECRET:=dev-internal-gateway-secret}}"
+  # Internal-only route for the staff app (one client per cooperative, D14): its token carries the cooperative, and the web scopes every call to it.
+  - id: internal-staff
+    uri: /api/internal/staff/*
+    upstream_id: web
+    vars: [["server_port", "==", "9081"]]
+    plugins:
+      openid-connect:
+        <<: *oidc
+        claim_schema:
+          required: [aud, azp, realm_access, htx_code]
+          properties:
+            aud:
+              anyOf:
+                - { enum: ["dx-os-core"] }
+                - { type: array, contains: { enum: ["dx-os-core"] } }
+            azp:
+              type: string
+              pattern: "^dxos-staff-[a-z0-9_-]{1,20}$"
+            realm_access:
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  contains: { enum: ["staff-sync"] }
+            htx_code:
+              type: string
+              pattern: "^[A-Z0-9_-]{1,20}$"
       limit-count:
         count: 120
         time_window: 60

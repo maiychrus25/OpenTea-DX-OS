@@ -33,13 +33,34 @@ def load_routes():
     return {route["id"]: route for route in yaml.safe_load(GATEWAY.read_text(encoding="utf-8"))["routes"]}
 
 
-def test_user_routes_refuse_agent_and_telegram_tokens():
+def test_user_routes_refuse_agent_telegram_and_staff_tokens():
     routes = load_routes()
     for route_id in ("workflow", "disease", "llm-chat"):
         schema = routes[route_id]["plugins"]["openid-connect"]["claim_schema"]
         assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-            "not": {"contains": {"enum": ["agent", "telegram"]}}
+            "not": {"contains": {"enum": ["agent", "telegram", "staff-sync"]}}
         }, route_id
+
+
+def test_staff_route_needs_a_staff_client_with_the_role_and_a_cooperative_on_the_internal_port():
+    route = load_routes()["internal-staff"]
+    assert route["uri"] == "/api/internal/staff/*"
+    assert route["vars"] == [["server_port", "==", "9081"]]
+    schema = route["plugins"]["openid-connect"]["claim_schema"]
+    assert "htx_code" in schema["required"]
+    assert schema["properties"]["azp"]["pattern"] == "^dxos-staff-[a-z0-9_-]{1,20}$"
+    assert schema["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["staff-sync"]}
+    assert schema["properties"]["htx_code"]["pattern"] == "^[A-Z0-9_-]{1,20}$"
+    assert route["plugins"]["limit-count"]["key"] == "$http_authorization"
+    assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]
+
+
+def test_agent_and_telegram_tokens_cannot_use_the_staff_route():
+    routes = load_routes()
+    staff = routes["internal-staff"]["plugins"]["openid-connect"]["claim_schema"]["properties"]
+    agent = routes["internal-agent"]["plugins"]["openid-connect"]["claim_schema"]["properties"]
+    assert staff["azp"]["pattern"] != agent["azp"]["pattern"]
+    assert staff["realm_access"]["properties"]["roles"]["contains"] != agent["realm_access"]["properties"]["roles"]["contains"]
 
 
 def test_telegram_route_needs_the_relay_client_and_role_on_the_internal_port():
