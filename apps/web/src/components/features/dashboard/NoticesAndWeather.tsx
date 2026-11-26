@@ -6,12 +6,13 @@
 
 import React, { useEffect, useState } from 'react'
 import { EmptyState, Panel } from '@/components/ui'
-import { Bell, CloudRain } from 'lucide-react'
+import { CloudRain } from 'lucide-react'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
+import { SampleNotices } from '@/components/features/sample/SampleLists'
 import layout from './dashboard.module.css'
 
 interface Notice { id: string; title: string; detail: string; created_at: string }
-interface Day { date: string; code: number; min: number; max: number; rainChance: number }
+interface Day { date: string; code: number; min: number; max: number; rainChance: number; rainMm?: number }
 
 const dayLabel = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })
 
@@ -38,19 +39,12 @@ export function NoticesAndWeather() {
     })
   }, [])
 
-  const rainy = days.find((d, i) => i < 2 && d.rainChance >= 70)
-
   return (
     <>
-      {rainy && (
-        <p role="status" style={{ margin: 0, padding: '12px 18px', borderRadius: 'var(--radius-card)', background: 'var(--color-warning-subtle)', color: 'var(--color-warning)', fontSize: 14 }}>
-          Dự báo mưa {dayLabel(rainy.date)} (khả năng {rainy.rainChance}%). Nên hoãn phun thuốc.
-        </p>
-      )}
       <div className={layout.columns}>
         <Panel title="Bản tin & thông báo" href="/manager/notifications">
           {notices.length === 0 ? (
-            <EmptyState icon={<Bell />} title="Chưa có thông báo nào" />
+            <SampleNotices bare />
           ) : (
             <div className={layout.tableWrap}>
               <table className={layout.table}>
@@ -82,7 +76,7 @@ export function NoticesAndWeather() {
                       <td>{dayLabel(d.date)}</td>
                       <td>{weatherCodeToCondition(d.code)}</td>
                       <td>{Math.round(d.min)}–{Math.round(d.max)}°C</td>
-                      <td>{d.rainChance}%</td>
+                      <td>{(d.rainMm ?? 0).toLocaleString('vi-VN')} mm</td>
                     </tr>
                   ))}
                 </tbody>
@@ -92,5 +86,23 @@ export function NoticesAndWeather() {
         </Panel>
       </div>
     </>
+  )
+}
+
+/** The warning above the figures when rain is likely today or tomorrow. */
+export function RainAlert() {
+  const [rainy, setRainy] = useState<Day | null>(null)
+
+  useEffect(() => {
+    void load<{ data?: { weather: { daily: Day[] } }[] }>('/api/weather/live').then((json) =>
+      setRainy(json?.data?.[0]?.weather.daily.slice(0, 2).find((d) => d.rainChance >= 70) ?? null)
+    )
+  }, [])
+
+  if (!rainy) return null
+  return (
+    <p role="status" style={{ margin: 0, padding: '12px 18px', borderRadius: 'var(--radius-card)', background: 'var(--color-warning-subtle)', color: 'var(--color-warning)', fontSize: 14 }}>
+      Dự báo mưa {dayLabel(rainy.date)} (khả năng {rainy.rainChance}%). Nên hoãn phun thuốc.
+    </p>
   )
 }

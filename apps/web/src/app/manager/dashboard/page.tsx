@@ -15,7 +15,9 @@ import { requireTenant } from '@/lib/api/tenant'
 import { MetricCard, AiNote, SourceBox, HeroBanner, Panel, Pill, EmptyState } from '@/components/ui'
 import { isSimulatedPrice, SIMULATED_PRICE_LABEL } from '@/domain/market/simulated-price'
 
-import { NoticesAndWeather } from '@/components/features/dashboard/NoticesAndWeather'
+import { NoticesAndWeather, RainAlert } from '@/components/features/dashboard/NoticesAndWeather'
+import { PendingJournals } from '@/components/features/dashboard/PendingJournals'
+import { SampleYieldChart } from '@/components/features/sample/SampleYieldChart'
 import styles from './Dashboard.module.css'
 import layout from '@/components/features/dashboard/dashboard.module.css'
 
@@ -184,7 +186,7 @@ export default async function ManagerDashboard() {
     households: 0
   }
   let statusCounts: { status: string; count: number }[] = []
-  let pending: { id: string; activity_type: string; entry_date: Date; parcel: { parcel_code: string; household: { name: string } } }[] = []
+  let pending: { id: string; activity_type: string; entry_date: Date; activities?: { product_name: string | null }[]; parcel: { parcel_code: string; household: { name: string } } }[] = []
 
   let prices: { commodity: string; metric: string; value: number; unit: string; source: string; fetched_at: Date }[] = []
 
@@ -231,6 +233,7 @@ export default async function ManagerDashboard() {
           id: true,
           activity_type: true,
           entry_date: true,
+          activities: { select: { product_name: true }, take: 1 },
           parcel: { select: { parcel_code: true, household: { select: { name: true } } } }
         }
       })
@@ -264,8 +267,11 @@ export default async function ManagerDashboard() {
             eyebrow={htxName || 'Trưởng HTX'}
             title={`${getGreeting()}, ${session.user.name}`}
             subtitle={[formatDate(new Date()), seasonLabel].filter(Boolean).join(' · ')}
+            status="Đang hoạt động"
             actions={[{ href: '/manager/lots', label: 'Tạo lô hàng', icon: <Plus size={18} aria-hidden="true" /> }]}
           />
+
+          <RainAlert />
 
           <div className={layout.metrics}>
             <MetricCard
@@ -311,32 +317,9 @@ export default async function ManagerDashboard() {
             ))}
           </nav>
 
-          {/* TODO: the weekly yield chart needs an API; the dashboard does not have one yet. */}
+          {/* No weekly harvest records yet, so the chart is labelled as an example. */}
           <div className={layout.columns}>
-            <Panel title="Nhật ký chờ duyệt" href="/manager/journal-approve">
-              {pending.length === 0 ? (
-                <EmptyState icon={<CheckSquare />} title="Không có nhật ký chờ duyệt" />
-              ) : (
-                <div className={layout.tableWrap}>
-                  <table className={layout.table}>
-                    <thead>
-                      <tr><th>Mã thửa</th><th>Nông hộ</th><th>Hoạt động</th><th>Ngày</th><th>Thao tác</th></tr>
-                    </thead>
-                    <tbody>
-                      {pending.map(entry => (
-                        <tr key={entry.id}>
-                          <td className={layout.code}>{entry.parcel.parcel_code}</td>
-                          <td>{entry.parcel.household.name}</td>
-                          <td>{ACTIVITY_LABELS[entry.activity_type] ?? entry.activity_type}</td>
-                          <td>{entry.entry_date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</td>
-                          <td><Link href="/manager/journal-approve" className={layout.action}>Xử lý</Link></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </Panel>
+            <SampleYieldChart />
 
             <Panel title="Tình trạng thửa đất" href="/manager/farm-zones" linkLabel="Bản đồ">
               <div className={layout.tableWrap}>
@@ -360,6 +343,21 @@ export default async function ManagerDashboard() {
               </div>
             </Panel>
           </div>
+
+          <Panel title="Nhật ký chờ duyệt" href="/manager/journal-approve">
+            {pending.length === 0 ? (
+              <EmptyState icon={<CheckSquare />} title="Không có nhật ký chờ duyệt" />
+            ) : (
+              <PendingJournals rows={pending.map(entry => ({
+                id: entry.id,
+                parcel: entry.parcel.parcel_code,
+                household: entry.parcel.household.name,
+                activity: ACTIVITY_LABELS[entry.activity_type] ?? entry.activity_type,
+                material: entry.activities?.[0]?.product_name || '—',
+                date: entry.entry_date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+              }))} />
+            )}
+          </Panel>
 
           <NoticesAndWeather />
 

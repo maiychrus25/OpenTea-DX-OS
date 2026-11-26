@@ -23,3 +23,5 @@
   .subtitle { font-size: 14px; }
   .primary, .secondary { flex: 1 1 140px; padding: 0 10px; font-size: 14px; white-space: nowrap; }
 }
+
+.status { display: inline-flex; align-items: center; min-height: var(--button-height); padding: 0 16px; border-radius: var(--radius-pill); background: var(--color-primary-subtle); color: var(--color-primary); font-size: 14px; font-weight: 700; }
