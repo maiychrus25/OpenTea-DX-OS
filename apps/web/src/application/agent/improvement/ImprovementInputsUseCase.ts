@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import type { AgentSettingsRepository, AgentSettingsValues } from '@/domain/agent/ports/AgentSettingsRepository'
-import type { ImprovementRepository } from '@/domain/agent/ports/ImprovementRepository'
+import type { ImprovementEffect, ImprovementRepository } from '@/domain/agent/ports/ImprovementRepository'
 import type { ImprovementStatsReader } from '@/domain/agent/ports/ImprovementStatsReader'
 import { vnDayOf } from '@/application/agent/campaign/vn-day'
 import { computeMetrics } from './improvement-metrics'
@@ -36,7 +36,7 @@ export interface ImprovementInputs {
     status: string
     baseline: number
     adopted_at: string | null
-    effect: Record<string, unknown>
+    effect: ImprovementEffect
   }[]
   metrics: Record<string, number>
 }

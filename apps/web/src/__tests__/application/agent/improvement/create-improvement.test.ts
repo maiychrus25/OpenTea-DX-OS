@@ -5,6 +5,9 @@
 import { CreateImprovementUseCase, createImprovementSchema } from '@/application/agent/improvement/CreateImprovementUseCase'
 import { ValidationError } from '@/domain/errors'
 
+/** The input of the first call of a mock, typed loosely for assertions. */
+const firstCall = (fn: jest.Mock): Record<string, any> => (fn.mock.calls[0] as unknown[])[0] as Record<string, any>
+
 const settingsValues = { thresholds: { silent_hours: 6 }, schedule: null }
 
 function body(overrides: Record<string, unknown> = {}) {
@@ -46,7 +49,7 @@ describe('POST /api/internal/agent/improvements (contract C5)', () => {
     const result = await uc.execute('TC', createImprovementSchema.parse(body()))
     expect(result).toEqual({ deduped: false, id: '00000000-0000-4000-8000-0000000000a1', proposalId: 'prop-1' })
     expect(improvements.insertIfNew).toHaveBeenCalledWith(expect.objectContaining({ htxCode: 'TC', week: '2026-11-30', kind: 'setting' }))
-    const created = proposals.create.mock.calls[0][0]
+    const created = firstCall(proposals.create)
     expect(created).toMatchObject({
       htxCode: 'TC',
       agent: 'improvement',
@@ -61,7 +64,7 @@ describe('POST /api/internal/agent/improvements (contract C5)', () => {
   it('a process note proposes improvement.adopt for its own id', async () => {
     const { uc, proposals } = build()
     await uc.execute('TC', createImprovementSchema.parse(body({ kind: 'process', settings_change: null, template: null, metric_key: 'journal_missing_info_rate' })))
-    expect(proposals.create.mock.calls[0][0]).toMatchObject({ kind: 'improvement.adopt', payload: { improvement_id: '00000000-0000-4000-8000-0000000000a1' } })
+    expect(firstCall(proposals.create)).toMatchObject({ kind: 'improvement.adopt', payload: { improvement_id: '00000000-0000-4000-8000-0000000000a1' } })
   })
 
   it('a repeat of the metric this week is deduped and proposes nothing', async () => {
