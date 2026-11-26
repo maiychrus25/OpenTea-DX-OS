@@ -80,7 +80,7 @@
                                         <TextBlock Text="{Binding Task.Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                         <TextBlock FontSize="12" Foreground="{StaticResource InkTertiaryBrush}" TextTrimming="CharacterEllipsis">
                                             <Run Text="&#xE707;" FontFamily="{StaticResource IconFont}" />
-                                            <Run Text="{Binding Task.Location, TargetNullValue='Không ghi địa điểm', Mode=OneWay}" />
+                                            <Run Text="{Binding Task.Location, TargetNullValue='Không ghi địa điểm', Mode=OneWay}" /><Run Text="{Binding AiMarker, Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
                                         </TextBlock>
                                     </StackPanel>
                                 </DataTemplate>

@@ -12,6 +12,7 @@ using TeaStaff.Desktop.Views;
 using TeaStaff.Infrastructure;
 using TeaStaff.Infrastructure.MobileApi;
 using TeaStaff.Infrastructure.Persistence;
+using TeaStaff.Infrastructure.Sync;
 
 namespace TeaStaff.Desktop;
 
@@ -84,6 +85,7 @@ public partial class App : Application
         {
             // Headless mode: only the staff mobile API runs (e.g. on an always-on office PC). Stop it from Task Manager.
             var api = _services.GetRequiredService<MobileApiServer>();
+            _ = _services.GetRequiredService<CoreSyncService>().StartAsync(default);
             if (!await api.StartAsync())
             {
                 MessageBox.Show(api.LastError, "Tea Staff Manager", MessageBoxButton.OK, MessageBoxImage.Error);

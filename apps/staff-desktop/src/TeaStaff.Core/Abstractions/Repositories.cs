@@ -32,6 +32,7 @@ public interface ITaskRepository
 {
     Task<IReadOnlyList<WorkTask>> ListAsync(int? assigneeId = null, CancellationToken ct = default);
     Task<WorkTask?> GetAsync(int id, CancellationToken ct = default);
+    Task<WorkTask?> FindByExternalRefAsync(string externalRef, CancellationToken ct = default);
     Task<WorkTask> SaveAsync(WorkTask task, CancellationToken ct = default);
     Task DeleteAsync(int id, CancellationToken ct = default);
 }

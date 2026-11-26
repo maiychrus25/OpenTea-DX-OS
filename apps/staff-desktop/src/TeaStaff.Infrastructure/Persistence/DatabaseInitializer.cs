@@ -81,6 +81,14 @@ public sealed class DatabaseInitializer(IDbContextFactory<AppDbContext> factory,
         }
         foreach (var statement in MissingTableStatements(db.Database.GenerateCreateScript(), AutomationTables))
             await db.Database.ExecuteSqlRawAsync(statement, ct);
+
+        // 1.4.0: tasks pulled from the core carry the proposal id. Mirrors database/postgres/004_core_sync.sql.
+        var tasksTable = config.Database.Provider == DatabaseProvider.Postgres ? $"{AppDbContext.CoreSchema}.work_tasks" : "work_tasks";
+        var hasRef = config.Database.Provider == DatabaseProvider.Postgres
+            ? await db.Database.SqlQueryRaw<string>("SELECT column_name AS \"Value\" FROM information_schema.columns WHERE table_schema = {0} AND table_name = 'work_tasks' AND column_name = 'external_ref'", AppDbContext.CoreSchema).AnyAsync(ct)
+            : await db.Database.SqlQueryRaw<string>("SELECT name AS \"Value\" FROM pragma_table_info('work_tasks') WHERE name = 'external_ref'").AnyAsync(ct);
+        if (!hasRef) await db.Database.ExecuteSqlRawAsync($"ALTER TABLE {tasksTable} ADD COLUMN external_ref {(config.Database.Provider == DatabaseProvider.Postgres ? "character varying(64)" : "TEXT")} NULL", ct);
+        await db.Database.ExecuteSqlRawAsync($"CREATE UNIQUE INDEX IF NOT EXISTS \"IX_work_tasks_external_ref\" ON {tasksTable} (external_ref)", ct);
     }
 #pragma warning restore EF1002
 
