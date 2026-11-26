@@ -105,7 +105,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
         session.user.htxCode = token.htxCode ?? null;
       }
-      session.authTime = token.authTime;
+      if (token.authTime !== undefined) session.authTime = token.authTime;
       if (token.error) {
         session.error = token.error;
       }
