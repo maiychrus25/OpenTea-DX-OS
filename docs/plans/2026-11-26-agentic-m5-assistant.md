@@ -411,7 +411,7 @@ A user who is not linked keeps the M2 replies.
 
 ## Tracks
 
-Four parallel Codex sessions start from the commit of this plan. Each works in its own worktree and branch, then they merge into `feat/55-agentic-m5`.
+Four parallel implementation sessions start from the commit of this plan. Each works in its own worktree and branch, then they merge into `feat/55-agentic-m5`.
 
 - Keep to your files.
 - Follow C1–C11 exactly: names, routes, copy, limits.
