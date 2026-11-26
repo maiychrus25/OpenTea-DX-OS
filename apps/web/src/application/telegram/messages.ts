@@ -158,6 +158,13 @@ export function autopilotStoppedText(reason: StopReason, returned: number, daily
   return lines.join('\n')
 }
 
+export function autopilotEnabledText(byName: string, openedTitles: string[], dailyCap: number): string {
+  const lines = [`Tự vận hành đã được bật bởi ${byName}. Các đề xuất đủ điều kiện sẽ tự chạy sau thời gian chờ để mọi người chặn.`]
+  if (openedTitles.length > 0) lines.push(`Đã mở thêm: ${openedTitles.join(', ')}.`)
+  lines.push(`Tối đa ${dailyCap} việc tự chạy mỗi ngày. Gửi /dung để dừng ngay.`)
+  return lines.join('\n')
+}
+
 export interface AutopilotStatusFigures {
   enabled: boolean
   enabledByName: string | null

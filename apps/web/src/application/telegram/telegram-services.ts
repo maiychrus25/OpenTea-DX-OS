@@ -8,6 +8,8 @@ import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHousehold
 import { KeycloakLiveRoleReader } from '@/infrastructure/auth/dxos-web-roles.client'
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
+import { getAction } from '@/application/agent/action-catalog'
+import { AutopilotService } from '@/application/agent/autopilot/AutopilotService'
 import { RunAutopilotTickUseCase } from '@/application/agent/autopilot/RunAutopilotTickUseCase'
 import { PrismaAutopilotRepository } from '@/infrastructure/db/agent/PrismaAutopilotRepository'
 import { PrismaCampaignRepository } from '@/infrastructure/db/agent/PrismaCampaignRepository'
@@ -23,6 +25,7 @@ import { ChatEngine } from './chat/ChatEngine'
 import { ChatUserResolver } from './chat/ChatUserResolver'
 import { CHAT_ACTIONS } from './chat/actions'
 import { CHAT_TOOLS } from './chat/tools'
+import { autopilotEnabledText } from './messages'
 import { TelegramLinkService } from './TelegramLinkService'
 import { TelegramNotifier } from './TelegramNotifier'
 import { CampaignServices, ChatServices, TelegramUpdateHandler } from './TelegramUpdateHandler'
@@ -198,6 +201,22 @@ export function autopilotTickUseCase(): RunAutopilotTickUseCase {
     notifier: {
       stopped: (htxCode, reason, returned, dailyCap) => notifier.enqueueAutopilotStopped(htxCode, reason, returned, dailyCap),
       decided: (htxCode, proposalId) => notifier.syncDecision(htxCode, proposalId),
+    },
+  })
+}
+
+/** The enable screen, status, enable and stop of the web (C4), with the Telegram notices to every manager and officer. */
+export function autopilotService(): AutopilotService {
+  const notifier = telegramNotifier()
+  return new AutopilotService({
+    autopilot: new PrismaAutopilotRepository(),
+    notifier: {
+      enabled: (htxCode, byName, unlocked, dailyCap) =>
+        notifier.enqueueAutopilotNotice(
+          htxCode,
+          autopilotEnabledText(byName, unlocked.map((kind) => getAction(kind)?.titleVi ?? kind), dailyCap)
+        ),
+      stopped: (htxCode, reason, returned, dailyCap) => notifier.enqueueAutopilotStopped(htxCode, reason, returned, dailyCap),
     },
   })
 }

@@ -8,6 +8,7 @@ import { vnDayOf } from '@/application/agent/campaign/vn-day'
 import { templateReminderLines, vnIsoWeekday } from '@/application/telegram/improvement-lines'
 import { PrismaCampaignRepository } from '@/infrastructure/db/agent/PrismaCampaignRepository'
 import { PrismaImprovementRepository } from '@/infrastructure/db/agent/PrismaImprovementRepository'
+import { touchManagerActivity } from '@/application/agent/autopilot/manager-activity'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
@@ -21,6 +22,8 @@ async function getTodayCampaign() {
   if (tenant.role !== 'manager' && tenant.role !== 'officer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
+
+  await touchManagerActivity(tenant.htxCode, tenant.role)
 
   const campaigns = new PrismaCampaignRepository()
   const campaign = await campaigns.findForDay(tenant.htxCode, vnDayOf(new Date()))
