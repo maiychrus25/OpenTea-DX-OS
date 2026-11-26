@@ -13,18 +13,16 @@ test.describe('Story 8.8: Account Profile Page', () => {
 
     test('T1 & T2: Manager /manager/profile có cả 2 sections (HTX + Account) và HTX stats', async ({ page }) => {
       // HTX section
-      const htxSection = page.locator('section', { hasText: 'Thông tin Hợp tác xã' })
+      const htxSection = page.locator('section', { hasText: 'Hồ sơ Hợp tác xã' })
       await expect(htxSection).toBeVisible()
       
-      // 3-col stats
-      await expect(page.getByText('24.8 ha')).toBeVisible()
-      await expect(page.getByText('42')).toBeVisible()
-      await expect(page.getByText('18')).toBeVisible()
+      // HTX overview panel (figures come from the database)
+      await expect(page.getByRole('heading', { name: 'Tổng quan HTX' })).toBeVisible()
 
       // Account section
       const accountSection = page.locator('section', { hasText: 'Tài khoản cá nhân' })
       await expect(accountSection).toBeVisible()
-      await expect(accountSection.getByText('Nguyễn Văn An')).toBeVisible()
+      await expect(accountSection.getByText('Manager', { exact: true })).toBeVisible()
       await expect(accountSection.getByText('Trưởng HTX')).toBeVisible()
     })
 
@@ -59,7 +57,7 @@ test.describe('Story 8.8: Account Profile Page', () => {
       await expect(accountSection.getByText('Cán bộ KT/CL')).toBeVisible()
 
       // No HTX section
-      const htxSection = page.locator('section', { hasText: 'Thông tin Hợp tác xã' })
+      const htxSection = page.locator('section', { hasText: 'Hồ sơ Hợp tác xã' })
       await expect(htxSection).not.toBeVisible()
     })
     

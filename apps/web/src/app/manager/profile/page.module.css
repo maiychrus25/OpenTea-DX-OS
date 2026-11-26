@@ -1,36 +1,20 @@
 /* Copyright (c) 2026 OpenTea Developers
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
-.container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
-}
+.columns { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.column { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.card { padding: 18px; background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.card section { margin: 0; padding: 0; gap: 14px; }
+.telegram > * { margin: 0; border-radius: var(--radius-card); }
+.identity { display: flex; align-items: center; gap: 14px; padding: 16px 18px; }
+.identity div { display: flex; flex-direction: column; min-width: 0; }
+.identity small { font-size: var(--font-size-meta); color: var(--color-ink-secondary); }
+.logo { width: 64px; height: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-card); background: var(--sidebar-bg); color: var(--accent-lime); }
+.stats { margin: 0; }
+.stats div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--color-border-row); }
+.stats dt { color: var(--color-ink-secondary); }
+.stats dd { margin: 0; font-weight: 800; }
 
-.mockStatsGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-4);
-  margin: 20px 0;
-}
-
-.mockStatItem {
-  background-color: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--rounded-lg);
-  padding: var(--spacing-4);
-  text-align: center;
-}
-
-.mockStatValue {
-  font-size: var(--font-size-h3);
-  font-weight: 700;
-  color: var(--primary);
-  margin-bottom: var(--spacing-1);
-}
-
-.mockStatLabel {
-  font-size: var(--font-size-label);
-  color: var(--muted-foreground);
+@media (max-width: 1023px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
 }

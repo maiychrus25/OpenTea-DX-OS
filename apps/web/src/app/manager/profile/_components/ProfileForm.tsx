@@ -4,12 +4,12 @@
 'use client'
 
 import React, { useState } from 'react'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { Card, Button } from '@/components/ui'
+import { Panel } from '@/components/ui/Panel'
 import { htxProfileUpdateSchema, type HtxProfileUpdateInput } from '@/lib/validations/htx-profile.schema'
 import type { HtxProfile } from '@/domain/profile/entities/HtxProfile'
 import styles from './ProfileForm.module.css'
@@ -28,9 +28,6 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [profileData, setProfileData] = useState<HtxProfile | null>(initialData)
-  
-  // Mock avatar
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   const {
     control,
@@ -118,51 +115,12 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   }
 
   return (
-    <Card className={styles.container}>
-      <div className={styles.header}>
-        <h2>Hồ sơ Hợp tác xã</h2>
-        {!isEditing && (
-          <Button onClick={() => setIsEditing(true)}>Sửa</Button>
-        )}
-      </div>
-
+    <Panel
+      title="Hồ sơ Hợp tác xã"
+      extra={!isEditing && <Button size="sm" onClick={() => setIsEditing(true)}>Sửa</Button>}
+    >
       <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-        
-        {/* Avatar Upload Mock */}
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>Ảnh đại diện</label>
-          <div className="flex items-center gap-4 mt-2">
-            <div className="w-16 h-16 rounded-full bg-border overflow-hidden flex items-center justify-center border border-border">
-              {avatarUrl ? (
-                <Image src={avatarUrl} alt="Avatar" width={64} height={64} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-ink-tertiary text-xl font-bold">{profileData.name?.charAt(0) || 'H'}</span>
-              )}
-            </div>
-            {isEditing && (
-              <div>
-                <input 
-                  type="file" 
-                  id="avatar-upload" 
-                  className="hidden" 
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      setAvatarUrl(URL.createObjectURL(file))
-                    }
-                  }}
-                />
-                <label htmlFor="avatar-upload" className="cursor-pointer text-sm font-medium text-primary hover:underline bg-primary-50 px-3 py-1 rounded-md border border-primary-200">
-                  Tải ảnh lên
-                </label>
-                <p className="text-xs text-ink-tertiary mt-1">JPG, PNG tối đa 2MB.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className={styles.fieldGroup}>
+        <div className={styles.fieldWide}>
           <label className={styles.label}>Tên HTX</label>
           <Controller
             name="name"
@@ -187,6 +145,16 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         </div>
 
         <div className={styles.fieldGroup}>
+          <label className={styles.label}>Tổng diện tích (ha)</label>
+          {/* total_area_ha is auto-calculated, not directly editable */}
+          <div className={styles.value}>
+            {profileData.total_area_ha
+              ? `${profileData.total_area_ha.toLocaleString('vi-VN')} ha`
+              : '-'}
+          </div>
+        </div>
+
+        <div className={styles.fieldWide}>
           <label className={styles.label}>Địa chỉ</label>
           <Controller
             name="address"
@@ -294,16 +262,6 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
           {errors.crop_types && <span className={styles.error}>{errors.crop_types.message}</span>}
         </div>
 
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>Tổng diện tích (ha)</label>
-          {/* total_area_ha is auto-calculated, not directly editable */}
-          <div className={styles.value}>
-            {profileData.total_area_ha
-              ? `${profileData.total_area_ha.toLocaleString('vi-VN')} ha`
-              : '-'}
-          </div>
-        </div>
-
         {isEditing && (
           <div className={styles.actions}>
             <Button type="button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>Hủy</Button>
@@ -311,6 +269,6 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
           </div>
         )}
       </form>
-    </Card>
+    </Panel>
   )
 }
