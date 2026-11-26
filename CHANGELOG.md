@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Farmer web screens follow the new design, with Q&A, handbook, supply sign-up and leaf weighing screens showing fixed placeholder content until their features exist.
+- Farmer web screens follow the new design, with Q&A and handbook screens showing fixed placeholder content until their features exist.
 - **New web interface (`apps/web`)**: new colour tokens, a grouped sidebar, a breadcrumb top bar and a bottom bar for farmers on phones; new dashboards for the three roles; page headers, filters, tables and cards restyled across the role pages; a rebuilt login page and cooperative profile page. The profile page now shows the cooperative's own parcel and household figures instead of fixed sample numbers.
 
 ## [1.15.0] - 2026-11-26

@@ -5,7 +5,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
-import { Home, FileText, Stethoscope, User, Bell, Calendar, Bot, BookOpen, Store, Leaf } from 'lucide-react'
+import { Home, FileText, Stethoscope, User, Bell, Calendar, Bot, BookOpen } from 'lucide-react'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
@@ -28,11 +28,9 @@ export default async function FarmerLayout({ children }: { children: React.React
     { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <Stethoscope size={20} />, group: 'Canh tác' },
     { label: 'Hỏi đáp AI', href: '/farmer/ai', icon: <Bot size={20} />, group: 'Hỗ trợ' },
     { label: 'Cẩm nang', href: '/farmer/handbook', icon: <BookOpen size={20} />, group: 'Hỗ trợ' },
-    { label: 'Đăng ký vật tư', href: '/farmer/supplies', icon: <Store size={20} />, group: 'Ứng dụng' },
-    { label: 'Phiếu cân búp tươi', href: '/farmer/leaf-tickets', icon: <Leaf size={20} />, group: 'Ứng dụng' },
     { label: 'Bản tin & thông báo', href: '/farmer/bulletin-notifications', icon: <Bell size={20} />, group: 'Cá nhân' },
     { label: 'Tài khoản', href: '/farmer/profile', icon: <User size={20} />, group: 'Cá nhân' },
-    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'farmer', session.user.htxCode ?? null, loadAppFeed)).map((item) => ({ ...item, group: 'Ứng dụng đã cài' })),
+    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'farmer', session.user.htxCode ?? null, loadAppFeed)).map((item) => ({ ...item, group: 'Ứng dụng' })),
   ]
 
   return (

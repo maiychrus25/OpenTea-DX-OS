@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Cloud, CloudRain, Droplet, Sprout, PenLine, Camera, FileText, History, Sparkles, BookOpen, Store } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
+import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { HeroBanner, AlertBar, EmptyState } from '@/components/ui'
@@ -49,10 +50,12 @@ const PARCEL_TONE: Record<string, string> = {
   HARVESTED: 'mu',
 }
 
+/** The cooperative's own app; its card shows only where the app is installed and enabled. */
+const SUPPLY_APP = 'farm-supply'
+
 const SHORTCUTS = [
   { href: '/farmer/ai', icon: Sparkles, tone: 'dark', title: 'Hỏi đáp AI', detail: 'Hỏi về bón phân, sâu bệnh, thu hái' },
   { href: '/farmer/handbook', icon: BookOpen, tone: 'soft', title: 'Cẩm nang canh tác', detail: 'Việc theo mùa và cách phòng trị bệnh' },
-  { href: '/farmer/supplies', icon: Store, tone: 'amber', title: 'Vật tư mua chung', detail: 'Đăng ký mua chung phân bón, thuốc BVTV' },
 ]
 
 function dayMonth(date: Date): string {
@@ -133,6 +136,14 @@ export default async function FarmerDashboard() {
       ])
     : [[], null]
 
+  // The page still renders when the app list cannot be read.
+  const supplies = await new PrismaInstalledAppRepository()
+    .isEnabledFor(SUPPLY_APP, session.user.htxCode ?? '')
+    .catch(() => false)
+  const shortcuts = supplies
+    ? [...SHORTCUTS, { href: `/farmer/apps/${SUPPLY_APP}`, icon: Store, tone: 'amber', title: 'Vật tư mua chung', detail: 'Đăng ký mua chung phân bón, thuốc BVTV' }]
+    : SHORTCUTS
+
   const parcels = household?.parcels ?? []
   const totalHa = parcels.reduce((sum, p) => sum + p.area_ha, 0)
   const condition = weather && (/^\d+$/.test(weather.condition) ? weatherCodeToCondition(Number(weather.condition)) : weather.condition)
@@ -154,7 +165,7 @@ export default async function FarmerDashboard() {
       </div>
 
       <div className={styles.shortcuts}>
-        {SHORTCUTS.map(({ href, icon: Icon, tone, title, detail }) => (
+        {shortcuts.map(({ href, icon: Icon, tone, title, detail }) => (
           <Link key={href} href={href} className={`${kit.pn} ${styles.shortcut}`}>
             <span className={`${kit.ico} ${kit[tone]}`}><Icon size={22} aria-hidden="true" /></span>
             <span><strong>{title}</strong><small>{detail}</small></span>
