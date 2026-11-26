@@ -50,7 +50,15 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: flex-end;
   gap: var(--spacing-4);
+  min-height: 380px;
+  padding: var(--spacing-8);
+  border-radius: var(--radius-hero);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-hero-bg) 30%, transparent) 0%, var(--color-hero-bg) 90%),
+    url('/images/tea-hills-sunrise.jpg') center / cover;
+  color: var(--color-hero-text);
 }
 
 .title {
@@ -59,7 +67,7 @@
   line-height: 1.1;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--color-primary);
+  color: var(--color-hero-text);
 }
 
 .lead {
@@ -67,7 +75,7 @@
   max-width: 34rem;
   font-size: var(--font-size-body-large);
   line-height: 1.6;
-  color: var(--color-ink-secondary);
+  color: var(--color-hero-muted);
 }
 
 .signIn {
@@ -78,15 +86,15 @@
   min-height: 44px;
   padding: var(--spacing-3) var(--spacing-6);
   border-radius: var(--rounded-md);
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  font-weight: 600;
+  background: var(--accent-lime);
+  color: var(--color-hero-bg);
+  font-weight: 700;
   text-decoration: none;
   transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .signIn:hover {
-  background: var(--color-primary-hover);
+  filter: brightness(0.95);
 }
 
 .signIn:focus-visible,

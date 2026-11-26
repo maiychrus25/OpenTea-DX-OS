@@ -262,11 +262,13 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
               aria-invalid={!!errors.consent}
             />
             <label htmlFor="reg-consent" className={styles.consentLabel}>
-              Tôi đồng ý với{' '}
-              <a href="#" onClick={(e) => e.preventDefault()}>
-                điều khoản sử dụng
-              </a>{' '}
-              và cho phép HTX quản lý dữ liệu canh tác của tôi.
+              <span>
+                Tôi đồng ý với{' '}
+                <a href="#" onClick={(e) => e.preventDefault()}>
+                  điều khoản sử dụng
+                </a>{' '}
+                và cho phép HTX quản lý dữ liệu canh tác của tôi.
+              </span>
             </label>
           </div>
           {errors.consent && (
