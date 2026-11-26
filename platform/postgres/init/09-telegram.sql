@@ -58,6 +58,9 @@ CREATE TABLE IF NOT EXISTS platform.telegram_outbox (
   sent_at             timestamptz
 );
 
+-- Photos of a message (M13): [{build_id, name}], at most 4; the relay fetches each from the media route.
+ALTER TABLE platform.telegram_outbox ADD COLUMN IF NOT EXISTS photos jsonb NULL;
+
 CREATE INDEX IF NOT EXISTS telegram_outbox_due
   ON platform.telegram_outbox (status, next_attempt_at);
 CREATE INDEX IF NOT EXISTS telegram_outbox_proposal
@@ -81,7 +84,7 @@ CREATE TABLE IF NOT EXISTS platform.telegram_conversations (
 ALTER TABLE platform.telegram_conversations ALTER COLUMN proposal_id DROP NOT NULL;
 ALTER TABLE platform.telegram_conversations DROP CONSTRAINT IF EXISTS telegram_conversations_kind_check;
 ALTER TABLE platform.telegram_conversations ADD CONSTRAINT telegram_conversations_kind_check
-  CHECK (kind IN ('reject_reason', 'flow'));
+  CHECK (kind IN ('reject_reason', 'flow', 'app_answer'));
 ALTER TABLE platform.telegram_conversations DROP CONSTRAINT IF EXISTS telegram_conversations_proposal_check;
 ALTER TABLE platform.telegram_conversations ADD CONSTRAINT telegram_conversations_proposal_check
   CHECK ((kind = 'reject_reason') = (proposal_id IS NOT NULL));

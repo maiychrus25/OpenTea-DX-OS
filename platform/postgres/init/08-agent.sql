@@ -184,3 +184,58 @@ ALTER TABLE platform.agent_proposals ADD CONSTRAINT agent_proposals_decision_cha
 
 CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.autopilot
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
+
+-- Mini-app factory (M13): a manager's request for an app, its builds, and the files a build keeps. One open request per cooperative.
+CREATE TABLE IF NOT EXISTS platform.app_build_requests (
+  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  htx_code          text        NOT NULL,
+  requested_by      text        NOT NULL,
+  requested_by_name text        NULL,
+  request_text      text        NOT NULL CHECK (char_length(request_text) BETWEEN 5 AND 500),
+  questions         jsonb       NOT NULL DEFAULT '[]',
+  answer_text       text        NULL CHECK (char_length(answer_text) <= 1000),
+  path              text        NULL CHECK (path IN ('store', 'book', 'build')),
+  app_id            text        NULL,
+  spec              jsonb       NULL,
+  status            text        NOT NULL DEFAULT 'new' CHECK (status IN
+    ('new', 'asking', 'routed', 'spec_proposed', 'spec_approved', 'building', 'passed', 'failed', 'installed', 'cancelled')),
+  error_vi          text        NULL,
+  announced_at      timestamptz NULL,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS app_build_requests_one_active
+  ON platform.app_build_requests (htx_code) WHERE status IN ('new', 'asking', 'spec_proposed', 'spec_approved', 'building');
+
+CREATE TABLE IF NOT EXISTS platform.app_builds (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id  uuid        NOT NULL REFERENCES platform.app_build_requests(id) ON DELETE CASCADE,
+  htx_code    text        NOT NULL,
+  app_id      text        NOT NULL,
+  version     text        NOT NULL,
+  provider    text        NOT NULL,
+  rounds      smallint    NOT NULL DEFAULT 0 CHECK (rounds BETWEEN 0 AND 3),
+  status      text        NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'passed', 'failed')),
+  gates       jsonb       NOT NULL DEFAULT '[]',
+  git_tag     text        NULL,
+  started_at  timestamptz NOT NULL DEFAULT now(),
+  finished_at timestamptz NULL,
+  UNIQUE (app_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS platform.app_build_files (
+  build_id     uuid  NOT NULL REFERENCES platform.app_builds(id) ON DELETE CASCADE,
+  name         text  NOT NULL CHECK (name IN ('desktop-light.png', 'desktop-dark.png', 'mobile-light.png', 'mobile-dark.png', 'review.md', 'spec.md')),
+  content_type text  NOT NULL,
+  bytes        bytea NOT NULL,
+  PRIMARY KEY (build_id, name)
+);
+
+-- A generated app belongs to one cooperative and comes from a passed build (06-app-store.sql holds owner_htx; the
+-- build reference lives here because the builds table is created above).
+ALTER TABLE platform.app_catalog ADD COLUMN IF NOT EXISTS build_id uuid NULL REFERENCES platform.app_builds(id);
+
+CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.app_build_requests
+  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
+CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.app_builds
+  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
