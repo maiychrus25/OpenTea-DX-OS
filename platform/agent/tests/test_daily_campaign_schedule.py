@@ -3,8 +3,10 @@
 """The M7 schedule: A2, A4 and A3 run before A9 at 06:00, A9 runs before the bulletin, and a failing A9 stops nothing."""
 from datetime import datetime, time, timezone
 
+import pytest
+
 from dxos_agent import __main__ as agent_main
-from dxos_agent.client import AgentCredentials
+from dxos_agent.client import AgentCredentials, GatewayHTTPError
 from dxos_agent.providers import ReplayProvider
 from dxos_agent.settings import AgentSettings
 
@@ -41,6 +43,85 @@ def _patch_m4(monkeypatch, calls: list[str], campaign_error: Exception | None = 
         monkeypatch.setattr(agent_main.daily_campaign, "run_daily_campaign", record("A9", result=None))
     else:
         monkeypatch.setattr(agent_main.daily_campaign, "run_daily_campaign", failing_campaign)
+
+
+class CampaignRetryGateway:
+    """Serves one open proposal and refuses the campaign POST with `post_error`; counts the candidate reads."""
+
+    def __init__(self, post_error: Exception) -> None:
+        self._post_error = post_error
+        self.candidate_reads = 0
+        self.run_count = 0
+
+    def get_campaign_candidates(self, day: str) -> dict:
+        del day
+        self.candidate_reads += 1
+        return {
+            "day": "2026-11-27",
+            "proposals": [{
+                "id": "n1", "kind": "notification.internal", "risk": "low", "title_vi": "Gửi thông báo cán bộ",
+                "created_at": "2026-11-20T00:00:00Z", "parcel_codes": [], "goal_key": "internal_notice",
+                "target": 1, "involves_spraying": False, "people_needed": 0,
+            }],
+            "rain_parcel_codes": [], "withdrawal_parcel_codes": [], "people_available": None,
+        }
+
+    def start_run(self, **kwargs) -> str:
+        del kwargs
+        self.run_count += 1
+        return f"run-{self.run_count}"
+
+    def finish_run(self, run_id, status, **kwargs) -> None:
+        del run_id, status, kwargs
+
+    def post_campaign(self, body) -> dict:
+        del body
+        raise self._post_error
+
+
+def _patch_others(monkeypatch, calls: list[str]) -> None:
+    """Patch A2, A4, A3 and A5 only, so the real A9 runs against the fake gateway."""
+    monkeypatch.setattr(agent_main.field_watch, "run_field_watch", lambda *a, **k: calls.append("A2"))
+    monkeypatch.setattr(agent_main.harvest_ready, "run_harvest_ready", lambda *a, **k: calls.append("A4"))
+    monkeypatch.setattr(agent_main.disease_watch, "fetch_window", lambda *a, **k: ([],))
+    monkeypatch.setattr(agent_main.disease_watch, "window_fingerprint", lambda rows: "fp")
+    monkeypatch.setattr(agent_main.disease_watch, "run_disease_watch", lambda *a, **k: calls.append("A3"))
+    monkeypatch.setattr(agent_main.bulletin, "run_bulletin", lambda *a, **k: calls.append("A5"))
+
+
+def _runtime_with(gateway) -> agent_main._CooperativeRuntime:
+    local_model = ReplayProvider(fixtures={"default": {"summary_vi": "Một việc."}})
+    local_model.name = "ollama"
+    return agent_main._CooperativeRuntime(creds=CREDS, gateway=gateway, providers={"ollama": local_model})
+
+
+def test_refused_campaign_post_is_not_retried_on_the_next_cycle(monkeypatch):
+    _patch_others(monkeypatch, [])
+    gateway = CampaignRetryGateway(GatewayHTTPError("Gateway POST failed (400): INVALID_CAMPAIGN", 400))
+    runtime = _runtime_with(gateway)
+
+    agent_main._run_m4_agents(runtime, NOW, AgentSettings())
+    agent_main._run_m4_agents(runtime, NOW, AgentSettings())  # next cycle, same day
+
+    assert gateway.candidate_reads == 1
+    assert runtime.daily_campaign.last_day is not None  # the day's schedule is done
+
+
+@pytest.mark.parametrize(
+    "error",
+    [GatewayHTTPError("Gateway POST failed (500): boom", 500), ConnectionError("network down")],
+    ids=["server-error", "network-error"],
+)
+def test_server_or_network_failure_is_retried_on_the_next_cycle(monkeypatch, error):
+    _patch_others(monkeypatch, [])
+    gateway = CampaignRetryGateway(error)
+    runtime = _runtime_with(gateway)
+
+    agent_main._run_m4_agents(runtime, NOW, AgentSettings())
+    agent_main._run_m4_agents(runtime, NOW, AgentSettings())
+
+    assert gateway.candidate_reads == 2
+    assert runtime.daily_campaign.last_day is None
 
 
 def _join_bulletin(runtime: agent_main._CooperativeRuntime) -> None:

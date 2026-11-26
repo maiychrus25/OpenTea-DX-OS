@@ -9,6 +9,7 @@ from typing import Any, Mapping
 import pytest
 
 from dxos_agent.agents.daily_campaign import run_daily_campaign
+from dxos_agent.client import GatewayHTTPError
 from dxos_agent.providers import ProviderError, ReplayProvider
 
 SCENARIOS = Path(__file__).parent / "scenarios"
@@ -18,9 +19,15 @@ NOW = datetime.fromisoformat("2026-11-26T23:00:00+00:00")  # 06:00 on 27 Novembe
 class CampaignGateway:
     """Serves the candidates and records the run and the campaign the agent posts."""
 
-    def __init__(self, candidates: Mapping[str, Any], post_answer: Mapping[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        candidates: Mapping[str, Any],
+        post_answer: Mapping[str, Any] | None = None,
+        post_error: Exception | None = None,
+    ) -> None:
         self._candidates = candidates
         self._post_answer = dict(post_answer or {"id": "camp-1"})
+        self._post_error = post_error
         self.days: list[str] = []
         self.runs_started: list[dict[str, Any]] = []
         self.runs_finished: list[dict[str, Any]] = []
@@ -39,6 +46,8 @@ class CampaignGateway:
 
     def post_campaign(self, body: Mapping[str, Any]) -> dict[str, Any]:
         self.posted.append(dict(body))
+        if self._post_error is not None:
+            raise self._post_error
         return dict(self._post_answer)
 
 
@@ -85,6 +94,11 @@ def test_scenario_case(case: dict[str, Any]) -> None:
 
     expected = case["expected"]
     assert gateway.days == ["2026-11-27"]
+    if not case["candidates"]["proposals"]:
+        assert gateway.runs_started == []  # no open proposal: no run row, as A2 and A4 do
+        assert outcome.status == "empty"
+        assert gateway.posted == []
+        return
     assert len(gateway.runs_started) == 1
     assert gateway.runs_finished[-1]["status"] == "ok"
     if not expected["posted"]:
@@ -137,9 +151,10 @@ def test_second_campaign_of_the_day_is_reported_as_existing() -> None:
     assert len(gateway.posted) == 1
 
 
-def test_no_item_left_makes_no_llm_call_and_finishes_the_run_ok() -> None:
+def test_rules_that_leave_nothing_make_no_llm_call_and_finish_the_run_ok() -> None:
     provider = CountingProvider()
-    gateway = CampaignGateway({**_one_item(), "proposals": []})
+    harvest = {**_one_item()["proposals"][0], "kind": "harvest.approve", "parcel_codes": ["P-TC-003"]}
+    gateway = CampaignGateway({**_one_item(), "proposals": [harvest], "withdrawal_parcel_codes": ["P-TC-003"]})
 
     outcome = run_daily_campaign(gateway, NOW, [provider])
 
@@ -147,6 +162,16 @@ def test_no_item_left_makes_no_llm_call_and_finishes_the_run_ok() -> None:
     assert provider.calls == 0
     assert gateway.posted == []
     assert gateway.runs_finished == [{"id": "run-1", "status": "ok", "provider": "rules", "model": "rules-v1"}]
+
+
+def test_no_open_proposal_starts_no_run_and_posts_nothing() -> None:
+    gateway = CampaignGateway({**_one_item(), "proposals": []})
+
+    outcome = run_daily_campaign(gateway, NOW, [CountingProvider()])
+
+    assert outcome.status == "empty"
+    assert gateway.runs_started == []
+    assert gateway.posted == []
 
 
 def test_fallback_summary_is_recorded_as_rules_output() -> None:
@@ -157,6 +182,31 @@ def test_fallback_summary_is_recorded_as_rules_output() -> None:
     assert gateway.posted[0]["summary_vi"] == "Hôm nay có 1 việc: 1 Báo cán bộ"
     assert gateway.runs_finished[-1]["provider"] == "rules"
     assert gateway.runs_finished[-1]["status"] == "ok"
+
+
+def test_refused_post_finishes_the_run_failed_and_returns_without_raising() -> None:
+    gateway = CampaignGateway(_one_item(), post_error=GatewayHTTPError("Gateway POST failed (400): INVALID_CAMPAIGN", 400))
+
+    outcome = run_daily_campaign(gateway, NOW, [ReplayProvider(fixtures={"default": {"summary_vi": "Một việc."}})])
+
+    assert outcome.status == "refused"
+    assert outcome.campaign_id is None
+    assert gateway.runs_finished[-1]["status"] == "failed"
+    assert "INVALID_CAMPAIGN" in gateway.runs_finished[-1]["error"]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [GatewayHTTPError("Gateway POST failed (500): boom", 500), ConnectionError("network down")],
+    ids=["server-error", "network-error"],
+)
+def test_server_or_network_failure_finishes_the_run_failed_and_raises(error: Exception) -> None:
+    gateway = CampaignGateway(_one_item(), post_error=error)
+
+    with pytest.raises(type(error)):
+        run_daily_campaign(gateway, NOW, [ReplayProvider(fixtures={"default": {"summary_vi": "Một việc."}})])
+
+    assert gateway.runs_finished[-1]["status"] == "failed"
 
 
 def test_llm_summary_is_recorded_with_its_provider() -> None:

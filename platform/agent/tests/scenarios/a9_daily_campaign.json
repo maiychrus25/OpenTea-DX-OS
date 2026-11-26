@@ -144,7 +144,7 @@
     }
   },
   {
-    "name": "people limit keeps items while the running sum fits and drops the rest",
+    "name": "people limit keeps each item that still fits and drops only the ones that do not",
     "now": "2026-11-26T23:00:00Z",
     "candidates": {
       "day": "2026-11-27",
@@ -209,15 +209,77 @@
       "posted": true,
       "items": [
         "a",
-        "b"
+        "b",
+        "d"
       ],
       "dropped": [
         {
           "proposal_id": "c",
           "rule": "people"
+        }
+      ],
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    }
+  },
+  {
+    "name": "people limit with 3 available keeps the first and the zero-people item, drops the middle one",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "a",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "Kiểm tra vùng bệnh",
+          "created_at": "2026-11-20T01:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 2
         },
         {
-          "proposal_id": "d",
+          "id": "b",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "Kiểm tra vùng bệnh",
+          "created_at": "2026-11-20T02:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 2
+        },
+        {
+          "id": "c",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "Kiểm tra vùng bệnh",
+          "created_at": "2026-11-20T03:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [],
+      "people_available": 3
+    },
+    "replay_response": {
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    },
+    "expected": {
+      "posted": true,
+      "items": [
+        "a",
+        "c"
+      ],
+      "dropped": [
+        {
+          "proposal_id": "b",
           "rule": "people"
         }
       ],

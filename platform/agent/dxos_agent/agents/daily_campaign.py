@@ -11,7 +11,7 @@ import json
 import logging
 from typing import Any, Mapping, Sequence
 
-from ..client import CoreGatewayClient
+from ..client import CoreGatewayClient, GatewayHTTPError
 from ..evidence import canonical_json, sha256_hex
 from ..providers.base import LLMMessage, LLMProvider, ProviderError
 from ..providers.pricing import estimate_cost_usd
@@ -66,7 +66,9 @@ class CampaignPlan:
 
 @dataclass(frozen=True)
 class CampaignOutcome:
-    status: str  # posted, existing (the web already had today's campaign), or empty (the rules left nothing)
+    # posted, existing (the web already had today's campaign), empty (the rules left nothing),
+    # or refused (the web answered 4xx, so today's schedule is done and nothing is retried)
+    status: str
     run_id: str
     campaign_id: str | None
 
@@ -93,13 +95,16 @@ def plan_campaign(candidates: Mapping[str, Any]) -> CampaignPlan:
 
     people = candidates.get("people_available")
     if isinstance(people, (int, float)) and not isinstance(people, bool):
-        running = 0
-        for index, row in enumerate(pool):
-            running += int(row.get("people_needed") or 0)
-            if running > people:  # keep while the running sum fits; the rest are dropped
-                dropped += [_dropped(rest, "people") for rest in pool[index:]]
-                pool = pool[:index]
-                break
+        left = people
+        fitting: list[Mapping[str, Any]] = []
+        for row in pool:  # each item is checked against what is left; an item that does not fit is skipped, not the rest
+            need = int(row.get("people_needed") or 0)
+            if need <= left:
+                left -= need
+                fitting.append(row)
+            else:
+                dropped.append(_dropped(row, "people"))
+        pool = fitting
     dropped += [_dropped(rest, "overflow") for rest in pool[MAX_ITEMS:]]
     return CampaignPlan(items=pool[:MAX_ITEMS], dropped=dropped)
 
@@ -175,6 +180,8 @@ def run_daily_campaign(
     """Build and post today's campaign; `providers` is the chain the cooperative chose (empty means the fallback summary only)."""
     day = vn_day(now)
     candidates = gateway.get_campaign_candidates(day.isoformat())
+    if not candidates.get("proposals"):  # no open proposal: no run row and no request, as A2 and A4 do
+        return CampaignOutcome(status="empty", run_id="", campaign_id=None)
     plan = plan_campaign(candidates)
     primary = providers[0] if providers else None
     run_id = gateway.start_run(
@@ -199,7 +206,12 @@ def run_daily_campaign(
     }
     try:
         res = gateway.post_campaign(body)
-    except Exception as exc:
+    except GatewayHTTPError as exc:
+        gateway.finish_run(run_id, status="failed", error=str(exc)[:1000], **usage)
+        if 400 <= exc.status_code < 500:  # the web refused this campaign; the same body would be refused again today
+            return CampaignOutcome(status="refused", run_id=run_id, campaign_id=None)
+        raise
+    except Exception as exc:  # network errors and 5xx: the caller retries on the next cycle
         gateway.finish_run(run_id, status="failed", error=str(exc)[:1000], **usage)
         raise
     gateway.finish_run(run_id, status="ok", **usage)
