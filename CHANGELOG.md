@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Officer summaries and cards (`apps/web`)**: shared icon summary strips derived from loaded data, hill-decorated headers and reference-style household/lot/disease cards; preserve existing actions and tables, scope journal/document counts to visible results, and leave manager/farmer styling unchanged.
 - Farmer web screens follow the new design, with the handbook showing fixed placeholder content until the feature exists. Farmers' Q&A uses the same full-window chat as staff; the AI is not open to farmers yet and says so.
 - **New web interface (`apps/web`)**: new colour tokens, a grouped sidebar, a breadcrumb top bar and a bottom bar for farmers on phones; new dashboards for the three roles; page headers, filters, tables and cards restyled across the role pages; a rebuilt login page and cooperative profile page. The profile page now shows the cooperative's own parcel and household figures instead of fixed sample numbers.
 
