@@ -745,7 +745,7 @@ Mỗi sáng agent A9 (`daily-campaign`, 06:00 giờ Việt Nam) gom các đề x
 
 ### Nội bộ (token agent)
 
-- **`GET /api/internal/agent/campaigns/candidates?day=YYYY-MM-DD`**: trả về `{ day, proposals, rain_parcel_codes, withdrawal_parcel_codes, people_available }`. `proposals` là đề xuất `proposed` chưa hết hạn, mỗi mục có `id`, `kind`, `risk`, `title_vi`, `created_at`, `parcel_codes`, `goal_key`, `target`, `involves_spraying` (luôn `false`), `people_needed` (luôn `0`). `rain_parcel_codes` là thửa có dự báo từ 5 mm mưa; `withdrawal_parcel_codes` là thửa còn trong thời gian cách ly phun thuốc của ngày đó. `people_available` là `null` cho tới M10.
+- **`GET /api/internal/agent/campaigns/candidates?day=YYYY-MM-DD`**: trả về `{ day, proposals, rain_parcel_codes, withdrawal_parcel_codes, people_available }`. `proposals` là đề xuất `proposed` chưa hết hạn, mỗi mục có `id`, `kind`, `risk`, `title_vi`, `created_at`, `parcel_codes`, `goal_key`, `target`, `involves_spraying` (luôn `false`), `people_needed` (1 cho `staff.task.create`, 2 cho `harvest.approve` có sản lượng ước tính trên 500 kg, còn lại `0`). `rain_parcel_codes` là thửa có dự báo từ 5 mm mưa; `withdrawal_parcel_codes` là thửa còn trong thời gian cách ly phun thuốc của ngày đó. `people_available` là số người có mặt hôm nay do app nhân sự báo (`platform.staff_attendance`), hoặc `null` khi chưa có báo cáo; khi đó quy tắc người của A9 bị bỏ qua.
 - **`POST /api/internal/agent/campaigns`**: `{ day, items: [{ proposal_id, position }], dropped: [{ proposal_id, rule }], summary_vi, run_id }`. `position` phải là 1..n theo thứ tự; `rule` là `withdrawal`, `rain`, `people` hoặc `overflow`. Web tính lại `goal_key` và `target` từ đề xuất, không tin giá trị agent gửi. `201 { id }` khi tạo mới; `200 { existing: true, id }` khi HTX đã có chiến dịch của ngày đó (không gửi Telegram lần nữa). `400 INVALID_CAMPAIGN` khi một đề xuất không còn `proposed` hoặc không thuộc HTX; `400 INVALID_RUN_ID` khi `run_id` không thuộc HTX. Danh sách `dropped` chỉ ghi vào sự kiện kiểm toán `agent.campaign.created`.
 
 ### Web (quản lý và cán bộ)
@@ -873,6 +873,23 @@ Body: `{ "arguments": { ... } }`.
 ## Dòng kiểm chứng AI trên trang truy xuất (M14)
 
 Trang công khai `/lot/[lot_code]` hiện khối "kiểm chứng trong sổ audit" chỉ khi quyết định AI của lô có đủ ba điều kiện: sự kiện duyệt `agent.proposal.approved` tồn tại, mã băm bằng chứng của sự kiện bằng mã băm của đề xuất, và `audit.verify_chain()` không báo dòng hỏng tới sự kiện đó. Mỗi lô tối đa 3 dòng, dạng `AI đề xuất, <cán bộ|trưởng HTX> đã duyệt ngày <dd/MM/yyyy>, kiểm chứng trong sổ audit`. Trang không bao giờ hiện tên người duyệt. Dòng được tính khi tải trang, không nằm trong ảnh chụp `public_page_data` của lô đã xuất QR.
+
+## Giao việc cho nhân sự (M10)
+
+Mỗi sáng 05:50 (giờ Việt Nam) agent A8 (`staff-tasks`, không dùng LLM) đề xuất việc cho nhân sự từ những gì các agent khác đã làm. Đề xuất `staff.task.create` (rủi ro `medium`, người duyệt `manager`, web và Telegram) có `title_vi` (1..120), `note_vi` (tối đa 500, chỉ người thêm), `parcel_id?`, `due_date` (YYYY-MM-DD), `assignee_ref` (bắt buộc, 1..64, sửa được) và `source: {kind, proposal_id?}`. Khi duyệt, đề xuất chuyển sang `sent_to_staff_app` (hộp thư và Telegram ghi `Đã gửi app nhân sự`), kết quả `{ state: "waiting_for_staff_app" }`. Lúc duyệt web kiểm tra lại `assignee_ref` còn là dòng đang làm trong bảng nhân sự của HTX; nếu không, đề xuất `failed` với `Người nhận việc không còn trong danh sách nhân sự đang làm. Chọn người khác rồi duyệt lại.` Khi app nhân sự báo đã tạo việc, đề xuất thành `executed` với `external_ref` là mã việc.
+
+App nhân sự không bao giờ được core gọi tới: nó tự kéo mỗi phút. Mọi route dưới đây đi qua cổng nội bộ với token `dxos-staff-<htx>` (vai trò `staff-sync`, claim `htx_code`), và chỉ thấy dữ liệu của HTX trong token. Phản hồi nằm trong `data`.
+
+### Nội bộ (token app nhân sự)
+
+- **`GET /api/internal/staff/tasks`**: `{ data: { tasks: [{ proposal_id, title_vi, note_vi, parcel_code, due_date, assignee_ref, approved_by_name, approved_at }] } }`. Chỉ các đề xuất `staff.task.create` đang `sent_to_staff_app`, chưa hết hạn, của HTX trong token (HTX khác nhận danh sách rỗng). Giá trị là bản người duyệt đã sửa. `note_vi`, `parcel_code` có thể là `null`.
+- **`POST /api/internal/staff/tasks/{proposal_id}/ack`** với `{ task_id }` (1..100 ký tự): `200 { data: { proposal_id, task_id, already } }`; đề xuất thành `executed`, `external_ref = task_id`. Gửi lại cùng `task_id` vẫn `200` với `already: true`. `404` cho HTX khác, id lạ hoặc id không phải uuid; `409 PROPOSAL_NOT_AWAITING_STAFF_APP` khi không còn `sent_to_staff_app` (đã hết hạn, hoặc đã báo mã việc khác); `400` khi thiếu `task_id`.
+- **`PUT /api/internal/staff/roster`** với `{ staff: [{ staff_ref, name, department?, active }] }`, tối đa 500, `staff_ref` không trùng, không nhận trường lạ (không có số điện thoại hay lương). Thay toàn bộ danh sách của HTX: dòng không còn trong danh sách trở thành không hoạt động. `200 { data: { staff: n } }`.
+- **`PUT /api/internal/staff/attendance`** với `{ day, present }`, chỉ cho hôm nay theo giờ Việt Nam (ngày khác `400 ATTENDANCE_DAY_NOT_TODAY`); `present` là số nguyên 0..100000. Ghi đè số của ngày đó. `200 { data: { day, present } }`.
+
+### Nội bộ (token agent)
+
+- **`GET /api/internal/agent/staff/inputs`**: `{ data: { proposals, roster, attendance } }` cho A8. `proposals` là đề xuất `executed` trong 24 giờ qua thuộc `harvest.approve`, `disease.inspection` hoặc `notification.households` với mẫu `dry_soil` hoặc `rain_after_spray`, mỗi mục `{ id, kind, template, parcels: [{ id, code }] }` (`template` là `null` với loại không có mẫu). `roster` là nhân sự đang làm `{ staff_ref, name, department, active }`. `attendance` là `{ day, present }` của hôm nay hoặc `null` khi app nhân sự chưa báo.
 
 ## Error Codes
 

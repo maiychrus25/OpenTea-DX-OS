@@ -53,6 +53,18 @@ Staff sign in to Tea Work with the same account they use for the DX-OS web app a
 
 Create a staff account in the realm with the same user name as the employee's mobile login (for example `nv001`), realm role `farmer` and attribute `htx_code`. Accounts with mandatory TOTP cannot use the password grant.
 
+## 5. Tasks from the AI assistant (core sync)
+
+The core never calls the app: the app pulls. In **Settings → Kết nối hệ thống lõi** enter the core's internal gateway address (`https://…`, or `http://localhost…` on a test machine), the client ID `dxos-staff-<htx_code>` and its secret (created on the core with `./dxos staff enable <HTX>`). The token is requested from the Keycloak address of section 3 with the client-credentials grant.
+
+Every minute the app:
+
+1. `PUT /api/internal/staff/roster`: staff id, name, team and active flag. Phone numbers, pay and other personal data are never sent.
+2. `PUT /api/internal/staff/attendance`: today's date and the number of staff checked in (present or half day).
+3. `GET /api/internal/staff/tasks`: for each approved task, creates a task keyed by `external_ref` = proposal id (never twice), then `POST /api/internal/staff/tasks/{proposal_id}/ack` with the new task id. An answer 409 (the proposal expired) marks the still-untouched task Cancelled.
+
+A task needs an assignee: the one the core suggests (the staff id from the roster) when that person is still active, otherwise the task waits and is retried every minute. Errors never stop the app; the next round retries. The client secret is kept out of `config.json` (DPAPI on Windows, a 0600 file elsewhere).
+
 ## What is not done yet
 
 - The staff API is not yet packaged as a DX-OS mini-app container; it runs inside the desktop app (or headless with `--serve`).

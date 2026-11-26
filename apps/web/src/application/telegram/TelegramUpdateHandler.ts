@@ -23,6 +23,7 @@ import { ChatEngine, PHOTO_MAX_BYTES, type IncomingPhoto, type ProposalMessage }
 import { ChatUserResolver } from './chat/ChatUserResolver'
 import { commandOf } from './chat/router'
 import type { ChatAction, ChatTool, PhotoStore } from './chat/types'
+import { WAITING_FOR_STAFF_APP } from '@/application/agent/actions/staff-task-create.action'
 import { autopilotStatusText, TELEGRAM_TEXT, type AutopilotStatusFigures } from './messages'
 
 export interface TelegramMessageInput {
@@ -569,7 +570,7 @@ export class TelegramUpdateHandler {
     }
     switch (outcome.outcome) {
       case 'executed':
-        return { text: TELEGRAM_TEXT.executed, showAlert: false }
+        return { text: outcome.result.state === WAITING_FOR_STAFF_APP ? TELEGRAM_TEXT.sentToStaffApp : TELEGRAM_TEXT.executed, showAlert: false }
       case 'failed':
         return { text: TELEGRAM_TEXT.failedExecution, showAlert: true }
       case 'rejected':

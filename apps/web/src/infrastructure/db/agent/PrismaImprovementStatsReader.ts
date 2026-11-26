@@ -16,7 +16,7 @@ export class PrismaImprovementStatsReader implements ImprovementStatsReader {
       { agent: string; kind: string; template: string | null; approved: number; rejected: number; expired: number; median_wait_hours: number | null }[]
     >`
       SELECT agent, kind, payload->>'template' AS template,
-        count(*) FILTER (WHERE status IN ('approved', 'executed', 'failed'))::int AS approved,
+        count(*) FILTER (WHERE status IN ('approved', 'sent_to_staff_app', 'executed', 'failed'))::int AS approved,
         count(*) FILTER (WHERE status = 'rejected')::int AS rejected,
         count(*) FILTER (WHERE status = 'expired')::int AS expired,
         (percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (decided_at - created_at)) / 3600)

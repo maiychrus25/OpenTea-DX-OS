@@ -30,5 +30,6 @@ source platform/tests/smoke-assistant.sh
 source platform/tests/smoke-campaign.sh
 source platform/tests/smoke-improvement.sh
 source platform/tests/smoke-mcp.sh
+source platform/tests/smoke-staff.sh
 source platform/tests/smoke-autopilot.sh
 echo "agentic smoke passed"

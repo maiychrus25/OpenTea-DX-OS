@@ -38,6 +38,8 @@ function source(overrides: Partial<CandidateSource> = {}): CandidateSource {
     rainParcelCodes: jest.fn().mockResolvedValue(['P-TC-001']),
     withdrawalRows: jest.fn().mockResolvedValue([]),
     parcelCodesByIds: jest.fn().mockResolvedValue(new Map([['parcel-2', 'P-TC-002']])),
+    estimatedKgByParcelIds: jest.fn().mockResolvedValue(new Map([['parcel-2', 400]])),
+    staffPresent: jest.fn().mockResolvedValue(null),
     parcelCodesOfEntries: jest.fn().mockResolvedValue(new Map([['entry-1', 'P-TC-004']])),
     ...overrides,
   }
@@ -60,6 +62,7 @@ describe('CampaignCandidatesUseCase (C3)', () => {
     expect(list).toHaveBeenCalledWith('TC', { statuses: ['proposed'], limit: 500 })
     expect(result.day).toBe(day)
     expect(result.people_available).toBeNull()
+    expect(source().staffPresent).toBeDefined()
     expect(result.rain_parcel_codes).toEqual(['P-TC-001'])
     expect(result.proposals).toEqual([
       expect.objectContaining({ id: 'p-harvest', parcel_codes: ['P-TC-002'], goal_key: 'harvest', target: 1, involves_spraying: false, people_needed: 0 }),
@@ -80,6 +83,28 @@ describe('CampaignCandidatesUseCase (C3)', () => {
 
     expect(src.withdrawalRows).toHaveBeenCalledWith('TC', dayStart)
     expect(result.withdrawal_parcel_codes).toEqual(['P-TC-003'])
+  })
+
+  it('takes people_available from the attendance report of the day and null when none was reported', async () => {
+    const present = source({ staffPresent: jest.fn().mockResolvedValue(6) })
+    const result = await new CampaignCandidatesUseCase({ list: jest.fn().mockResolvedValue([]) }, present).execute('TC', day, now)
+    expect(present.staffPresent).toHaveBeenCalledWith('TC', day)
+    expect(result.people_available).toBe(6)
+  })
+
+  it('needs one person for a staff task, two for a harvest over 500 kg and none otherwise', async () => {
+    const proposals = [
+      proposal('p-staff', 'staff.task.create', { title_vi: 't', due_date: day, assignee_ref: 'E1', parcel_id: 'parcel-2', source: { kind: 'x' } }, '2026-11-26T01:00:00Z'),
+      proposal('p-big', 'harvest.approve', { parcel_id: 'parcel-big' }, '2026-11-26T02:00:00Z'),
+      proposal('p-small', 'harvest.approve', { parcel_id: 'parcel-2' }, '2026-11-26T03:00:00Z'),
+      proposal('p-edge', 'harvest.approve', { parcel_id: 'parcel-500' }, '2026-11-26T04:00:00Z'),
+      proposal('p-notice', 'notification.internal', {}, '2026-11-26T05:00:00Z'),
+    ]
+    const src = source({ estimatedKgByParcelIds: jest.fn().mockResolvedValue(new Map([['parcel-big', 501], ['parcel-2', 400], ['parcel-500', 500]])) })
+    const result = await new CampaignCandidatesUseCase({ list: jest.fn().mockResolvedValue(proposals) }, src).execute('TC', day, now)
+    expect(Object.fromEntries(result.proposals.map((p) => [p.id, p.people_needed]))).toEqual({
+      'p-staff': 1, 'p-big': 2, 'p-small': 0, 'p-edge': 0, 'p-notice': 0,
+    })
   })
 
   it('returns an empty proposal list when nothing is open', async () => {

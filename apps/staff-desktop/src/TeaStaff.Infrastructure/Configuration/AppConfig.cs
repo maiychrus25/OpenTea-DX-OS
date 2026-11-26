@@ -48,6 +48,18 @@ public sealed class IotOptions
     public string DeviceKey { get; set; } = "tea-iot-demo";
 }
 
+/// <summary>Pulls approved tasks from the DX-OS core. The client secret is not here: see <c>ICoreSecretStore</c>.</summary>
+public sealed class CoreSyncOptions
+{
+    /// <summary>Internal gateway of the core, e.g. https://core.example (http only for localhost).</summary>
+    public string BaseUrl { get; set; } = string.Empty;
+    public string ClientId { get; set; } = string.Empty;
+
+    public static bool IsValidBaseUrl(string? url) =>
+        Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var u) &&
+        (u.Scheme == Uri.UriSchemeHttps || (u.Scheme == Uri.UriSchemeHttp && u.IsLoopback));
+}
+
 /// <summary>Machine-level configuration stored in %LOCALAPPDATA%\TeaStaff\config.json.</summary>
 public sealed class AppConfig
 {
@@ -67,6 +79,7 @@ public sealed class AppConfig
     public KeycloakOptions Keycloak { get; set; } = new();
     public MobileApiOptions MobileApi { get; set; } = new();
     public IotOptions Iot { get; set; } = new();
+    public CoreSyncOptions CoreSync { get; set; } = new();
 
     private static readonly JsonSerializerOptions Json = new()
     {
