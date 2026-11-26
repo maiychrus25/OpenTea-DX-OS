@@ -33,6 +33,7 @@ describe('autoEligibility', () => {
       'journal.reject',
       'notification.households',
       'notification.internal',
+      'strategy.adopt',
     ])
   })
 

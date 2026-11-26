@@ -79,6 +79,10 @@ export function autoEligibility(
   ) {
     return { eligible: false, reason: 'loosens_setting' }
   }
+  if (definition.kind === 'strategy.adopt') {
+    const warnings = proposal.evidence.rows.find((r) => r.table === 'strategy_plans')?.values?.warnings
+    if (Array.isArray(warnings) && warnings.length > 0) return { eligible: false, reason: 'rule_warning' }
+  }
   if (definition.kind === 'journal.approve') {
     const warnings = proposal.payload.warnings
     if (Array.isArray(warnings) && warnings.length > 0) return { eligible: false, reason: 'rule_warning' }
