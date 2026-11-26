@@ -4,6 +4,7 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
+import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
 import { GetLotTraceDataUseCase } from '@/application/useCases/get-lot-trace-data-usecase';
 import { LotAiVerification } from '@/application/lot/lot-ai-verification';
@@ -26,15 +27,22 @@ const getCachedTrace = cache(async (code: string) => {
   }
 });
 
-/** The verification line never fails the page: a lookup error shows no line and is logged. */
-async function verificationLines(code: string): Promise<string[]> {
-  try {
-    return await new LotAiVerification(new PrismaLotVerificationRepository()).execute(code);
-  } catch (err) {
-    logger.error('Lot verification line failed', { lot_code: code, err });
-    return [];
-  }
-}
+/**
+ * The verification line never fails the page: a lookup error shows no line and is logged. Checking the audit chain
+ * reads every audit row, so a public page caches the answer per lot for 5 minutes.
+ */
+const verificationLines = unstable_cache(
+  async (code: string): Promise<string[]> => {
+    try {
+      return await new LotAiVerification(new PrismaLotVerificationRepository()).execute(code);
+    } catch (err) {
+      logger.error('Lot verification line failed', { lot_code: code, err });
+      return [];
+    }
+  },
+  ['lot-ai-verification'],
+  { revalidate: 300 }
+);
 
 export async function generateMetadata({ params }: { params: Promise<{ lot_code: string }> }) {
   const { lot_code } = await params;
