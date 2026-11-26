@@ -8,7 +8,7 @@ import React from 'react'
 import { Store, PackageX, Boxes } from 'lucide-react'
 import { FilteredTable } from '@/components/features/officer-web/FilteredTable'
 import { Header } from '@/components/features/officer-web/parts'
-import { PRODUCTS, money, sum } from '@/components/features/officer-web/sample'
+import { PRODUCTS, money, sum, productPhoto } from '@/components/features/officer-web/sample'
 import styles from '@/components/features/officer-web/kit.module.css'
 
 export const metadata = { title: 'Sản phẩm' }
@@ -32,7 +32,7 @@ export default function OfficerProductsPage() {
           group: p.stock ? 'Còn hàng' : 'Hết hàng',
           rank: { stock: p.stock },
           cells: [
-            <span key="name" className={styles.item}><img src={`/images/officer/${p.image}.svg`} alt="" />{p.name}</span>,
+            <span key="name" className={styles.item}><img src={productPhoto(p.image)} alt="" />{p.name}</span>,
             p.pack,
             money(p.price),
             p.stock,

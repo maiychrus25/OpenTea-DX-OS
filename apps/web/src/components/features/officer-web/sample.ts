@@ -6,19 +6,24 @@
 
 export type Tone = 'ok' | 'wt' | 'in' | 'bd' | 'mu'
 
+// Names, packs, prices, stock and photos follow the mobile app's sample shop (apps/hub-mobile seed data).
 export const PRODUCTS = [
-  { image: 'art-1', name: 'Chè Shan tuyết búp', pack: 'Hộp 100 g', price: 185000, stock: 48 },
-  { image: 'art-2', name: 'Chè xanh Tân Cương', pack: 'Gói 200 g', price: 120000, stock: 132 },
-  { image: 'art-3', name: 'Trà Kim Tuyên', pack: 'Hộp 150 g', price: 165000, stock: 0 },
-  { image: 'art-4', name: 'Chè Bát Tiên', pack: 'Hộp 100 g', price: 210000, stock: 21 },
+  { image: 'prod-01', name: 'Chè xanh Tân Cương đặc biệt', pack: 'Hộp 200 g', price: 180000, stock: 40 },
+  { image: 'prod-02', name: 'Chè móc câu', pack: 'Gói 100 g', price: 95000, stock: 60 },
+  { image: 'prod-03', name: 'Trà hoa nhài sấy', pack: 'Hộp 150 g', price: 130000, stock: 3 },
+  { image: 'prod-04', name: 'Shan Tuyết cổ thụ', pack: 'Hộp 250 g', price: 320000, stock: 25 },
+  { image: 'prod-05', name: 'Hồng trà Shan Tuyết', pack: 'Hộp 200 g', price: 210000, stock: 0 },
 ]
+
+/** The photo of a product, by its id. */
+export const productPhoto = (image: string) => `/images/officer/products/${image}.jpg`
 
 /** Goods are in stock, so an order needs no approval: it is placed, or it was cancelled. */
 export const ORDERS = [
-  { code: 'DH-0142', name: 'Nguyễn Thị Hà', phone: '0935 111 222', address: 'Xóm Cầu Gỗ, xã Tân Cương', status: 'Đã đặt', items: [{ image: 'art-1', quantity: 2 }, { image: 'art-2', quantity: 3 }] },
-  { code: 'DH-0141', name: 'Lê Văn Minh', phone: '0988 222 333', address: 'Phường Quang Trung, Thái Nguyên', status: 'Đã đặt', items: [{ image: 'art-3', quantity: 2 }] },
-  { code: 'DH-0140', name: 'Trần Thu Hương', phone: '0912 000 111', address: 'Xã Phúc Xuân, Thái Nguyên', status: 'Đã đặt', items: [{ image: 'art-1', quantity: 1 }] },
-  { code: 'DH-0139', name: 'Phạm Quốc Bảo', phone: '0977 444 555', address: 'Phường Thịnh Đán, Thái Nguyên', status: 'Đã huỷ', items: [{ image: 'art-4', quantity: 2 }] },
+  { code: 'DH-0142', name: 'Nguyễn Thị Hà', phone: '0935 111 222', address: 'Xóm Cầu Gỗ, xã Tân Cương', status: 'Đã đặt', items: [{ image: 'prod-01', quantity: 2 }, { image: 'prod-02', quantity: 3 }] },
+  { code: 'DH-0141', name: 'Lê Văn Minh', phone: '0988 222 333', address: 'Phường Quang Trung, Thái Nguyên', status: 'Đã đặt', items: [{ image: 'prod-03', quantity: 2 }] },
+  { code: 'DH-0140', name: 'Trần Thu Hương', phone: '0912 000 111', address: 'Xã Phúc Xuân, Thái Nguyên', status: 'Đã đặt', items: [{ image: 'prod-04', quantity: 1 }] },
+  { code: 'DH-0139', name: 'Phạm Quốc Bảo', phone: '0977 444 555', address: 'Phường Thịnh Đán, Thái Nguyên', status: 'Đã huỷ', items: [{ image: 'prod-05', quantity: 2 }] },
 ]
 
 export type Order = (typeof ORDERS)[number]
@@ -43,8 +48,8 @@ export const BOOKINGS = [
 export const REVENUE = [
   { date: '27/11/2026', source: 'Tour', code: 'TB-0230', total: 580000 },
   { date: '26/11/2026', source: 'Tour', code: 'TB-0229', total: 1900000 },
-  { date: '25/11/2026', source: 'Gian hàng', code: 'DH-0141', total: 330000 },
-  { date: '24/11/2026', source: 'Gian hàng', code: 'DH-0140', total: 185000 },
+  { date: '25/11/2026', source: 'Gian hàng', code: 'DH-0141', total: 260000 },
+  { date: '24/11/2026', source: 'Gian hàng', code: 'DH-0140', total: 320000 },
   { date: '22/11/2026', source: 'Gian hàng', code: 'DH-0138', total: 560000 },
 ]
 

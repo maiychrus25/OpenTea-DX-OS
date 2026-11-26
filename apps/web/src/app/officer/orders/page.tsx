@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { Boxes, Package, Users, Wallet } from 'lucide-react'
 import { FilteredTable } from '@/components/features/officer-web/FilteredTable'
 import { Header } from '@/components/features/officer-web/parts'
-import { ORDERS, money, orderLines, orderTotal, sum } from '@/components/features/officer-web/sample'
+import { ORDERS, money, orderLines, orderTotal, sum, productPhoto } from '@/components/features/officer-web/sample'
 import styles from '@/components/features/officer-web/kit.module.css'
 
 export const metadata = { title: 'Đơn hàng' }
@@ -44,7 +44,7 @@ export default function OfficerOrdersPage() {
             <ul key="lines" className={styles.lines}>
               {orderLines(o).map(({ product, quantity: count }) => (
                 <li key={product.name}>
-                  <img src={`/images/officer/${product.image}.svg`} alt="" />
+                  <img src={productPhoto(product.image)} alt="" />
                   <span>
                     <strong>{product.name}</strong>
                     <span className={styles.muted}>{product.pack} × {count}</span>

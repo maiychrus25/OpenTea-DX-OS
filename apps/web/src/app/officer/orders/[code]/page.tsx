@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Package } from 'lucide-react'
 import { Header } from '@/components/features/officer-web/parts'
-import { ORDERS, money, orderLines, orderTotal } from '@/components/features/officer-web/sample'
+import { ORDERS, money, orderLines, orderTotal, productPhoto } from '@/components/features/officer-web/sample'
 import styles from '@/components/features/officer-web/kit.module.css'
 
 export const metadata = { title: 'Chi tiết đơn' }
@@ -36,7 +36,7 @@ export default function OfficerOrderPage({ params }: { params: { code: string } 
             <tbody>
               {orderLines(order).map(({ product, quantity }) => (
                 <tr key={product.name}>
-                  <td><span className={styles.tourName}><img src={`/images/officer/${product.image}.svg`} alt="" />{product.name}</span></td>
+                  <td><span className={styles.tourName}><img src={productPhoto(product.image)} alt="" />{product.name}</span></td>
                   <td className={styles.num}>{quantity} × {money(product.price)}</td>
                   <td className={styles.num}>{money(quantity * product.price)}</td>
                 </tr>
