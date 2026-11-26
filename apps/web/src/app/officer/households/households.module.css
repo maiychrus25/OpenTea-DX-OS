@@ -52,36 +52,37 @@
   gap: 1.25rem;
 }
 
-.card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
-  background: var(--color-surface-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  transition: box-shadow 0.2s, border-color 0.2s;
-}
-.card:hover { box-shadow: var(--shadow-card-hover); border-color: var(--color-border-input); }
-.cardHead { display: flex; align-items: center; gap: 12px; padding: 16px 18px; }
-.mark { width: 56px; height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 14px; background: var(--color-primary-subtle); color: var(--color-primary); font-size: 23px; font-weight: 800; }
-.headText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); margin: 0; border-top: 1px solid var(--color-border-row); }
-.facts > div { min-width: 0; padding: 12px 16px; }
-.facts > div + div { border-left: 1px solid var(--color-border); }
-.facts dt { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-ink-secondary); }
-.facts dt svg { flex-shrink: 0; color: var(--color-primary); }
-.facts dd { margin: 4px 0 0 27px; font-size: 21px; font-weight: 800; color: var(--color-ink-primary); overflow-wrap: anywhere; }
-.cardName { font-weight: 800; font-size: 19px; color: var(--color-ink-heading); overflow-wrap: anywhere; }
+.card { position: relative; display: flex; flex-direction: column; gap: 16px; min-width: 0; overflow: hidden; padding: 20px 20px 0; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface-card); box-shadow: var(--shadow-card); transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s; }
+.card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--color-primary); transform: scaleX(0); transform-origin: left; transition: transform 0.22s; }
+.card:hover, .card:focus-within { transform: translateY(-2px); border-color: var(--color-border-input); box-shadow: var(--shadow-card-hover); }
+.card:hover::before, .card:focus-within::before { transform: scaleX(1); }
+.cardHead { display: flex; align-items: center; gap: 14px; }
+.mark { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 50%; background: var(--color-primary-subtle); box-shadow: 0 0 0 3px var(--color-surface-card), 0 0 0 4px var(--color-border-input); color: var(--color-primary); font-size: 17px; font-weight: 800; letter-spacing: 0.5px; }
+.headText { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.cardName { font-size: 18px; font-weight: 800; color: var(--color-ink-heading); overflow-wrap: anywhere; }
 .cardMeta { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--color-ink-secondary); }
-.cardMeta span { display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.cardMeta > span { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .cardMeta svg { flex-shrink: 0; }
-.cardLink { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin: auto 8px 8px; padding: 10px 16px; border-radius: var(--radius-button); background: var(--color-primary-subtle); color: var(--color-primary); font-size: 14px; font-weight: 800; text-decoration: none; }
-.cardLink:hover { background: var(--secondary); }
+.address { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.facts > div { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-pill); font-size: 13px; }
+.facts svg { flex-shrink: 0; color: var(--color-primary); }
+.facts dt { color: var(--color-ink-secondary); }
+.facts dd { margin: 0; font-weight: 800; color: var(--color-ink-primary); }
+.share { display: flex; flex-direction: column; gap: 6px; margin-top: auto; font-size: 12.5px; color: var(--color-ink-secondary); }
+.share progress { width: 100%; height: 6px; appearance: none; overflow: hidden; border: 0; border-radius: var(--radius-pill); background: var(--color-primary-subtle); }
+.share progress::-webkit-progress-bar { background: var(--color-primary-subtle); }
+.share progress::-webkit-progress-value { border-radius: var(--radius-pill); background: var(--color-primary); }
+.share progress::-moz-progress-bar { background: var(--color-primary); }
+.cardLink { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; margin: 0 -20px; padding: 0 20px; border-top: 1px solid var(--color-border-row); color: var(--color-primary); font-size: 14px; font-weight: 700; text-decoration: none; }
 .cardLink::after { content: ''; position: absolute; inset: 0; }
-.cardLink:focus-visible::after { outline: 2px solid var(--color-primary); outline-offset: -2px; border-radius: var(--radius-card); }
+.cardLink:focus-visible::after { outline: 2px solid var(--color-primary); outline-offset: -2px; border-radius: 16px; }
+.go { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--color-primary-subtle); transition: transform 0.18s; }
+.card:hover .go { transform: translateX(3px); }
+@media (prefers-reduced-motion: reduce) {
+  .card, .card::before, .go { transition: none; }
+  .card:hover, .card:focus-within, .card:hover .go { transform: none; }
+}
 
 .empty {
   text-align: center;

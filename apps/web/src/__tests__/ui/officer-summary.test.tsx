@@ -182,3 +182,13 @@ test('an empty summary does not render an empty strip', () => {
   const { container } = render(<Stats items={[]} />)
   expect(container).toBeEmptyDOMElement()
 })
+
+describe('household cards', () => {
+  it('give each household its share of the cooperative area', async () => {
+    const household = (id: string, name: string, area: number) => ({ id, name, phone: '0900000000', address: null, parcel_count: 1, total_area_ha: area })
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: [household('a', 'Lò Thị Mai', 3), household('b', 'Vàng A Sử', 1)] }) }) as unknown as typeof fetch
+    render(<HouseholdManager />)
+    expect(await screen.findByText('75% diện tích HTX')).toBeInTheDocument()
+    expect(screen.getByText('25% diện tích HTX')).toBeInTheDocument()
+  })
+})

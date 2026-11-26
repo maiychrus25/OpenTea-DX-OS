@@ -79,6 +79,9 @@ export function HouseholdManager() {
     }
   }
 
+  const hectares = (value: number) => value.toLocaleString('vi-VN', { maximumFractionDigits: 2 })
+  const totalArea = households.reduce((sum, h) => sum + h.total_area_ha, 0)
+
   return (
     <div className={styles.container}>
       <PageHeader
@@ -137,16 +140,22 @@ export function HouseholdManager() {
                   <span className={styles.cardName}>{h.name}</span>
                   <div className={styles.cardMeta}>
                     <span><Phone size={13} aria-hidden="true" /> {h.phone}</span>
-                    {h.address && <span><MapPin size={13} aria-hidden="true" /> {h.address}</span>}
+                    {h.address && <span title={h.address}><MapPin size={13} aria-hidden="true" /> <span className={styles.address}>{h.address}</span></span>}
                   </div>
                 </div>
               </div>
               <dl className={styles.facts}>
-                <div><dt><Layers size={19} aria-hidden="true" />Số thửa</dt><dd>{h.parcel_count}</dd></div>
-                <div><dt><Sprout size={19} aria-hidden="true" />Diện tích</dt><dd>{h.total_area_ha.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha</dd></div>
+                <div><Layers size={15} aria-hidden="true" /><dt>Số thửa</dt><dd>{h.parcel_count}</dd></div>
+                <div><Sprout size={15} aria-hidden="true" /><dt>Diện tích</dt><dd>{hectares(h.total_area_ha)} ha</dd></div>
               </dl>
+              {totalArea > 0 && (
+                <div className={styles.share}>
+                  <progress value={h.total_area_ha} max={totalArea} aria-label={`Phần diện tích của ${h.name} trong HTX`} />
+                  <span>{Math.round((h.total_area_ha / totalArea) * 100)}% diện tích HTX</span>
+                </div>
+              )}
               <Link href={`/officer/households/${h.id}`} className={styles.cardLink}>
-                Xem chi tiết <ArrowRight size={15} aria-hidden="true" />
+                Xem chi tiết <span className={styles.go} aria-hidden="true"><ArrowRight size={14} /></span>
               </Link>
             </article>
           ))}
