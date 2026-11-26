@@ -351,9 +351,12 @@ SQL
   ' "$htx" "$client_id")"
 
   [ -n "$secret" ] || { echo "Không lấy được client secret cho $client_id" >&2; exit 1; }
-  echo "Đã bật app nhân sự cho HTX $htx. Nhập hai giá trị này vào mục 'Kết nối hệ thống lõi' trong cài đặt app nhân sự:"
+  echo "Đã bật app nhân sự cho HTX $htx. Nhập các giá trị này vào mục 'Kết nối hệ thống lõi' trong cài đặt app nhân sự:"
   echo "  Client id: $client_id"
-  echo "  Secret:    $secret"
+  echo "  Secret: $secret"
+  echo "  Địa chỉ Keycloak (app lấy token tại <địa chỉ>/realms/agrimarket/protocol/openid-connect/token): http://localhost:8080"
+  echo "  Địa chỉ cổng lõi (gateway công khai): http://localhost:9080"
+  echo "  (Từ máy khác, thay localhost bằng địa chỉ của máy chủ lõi.)"
 }
 
 staff_disable() {

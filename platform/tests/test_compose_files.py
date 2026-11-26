@@ -42,10 +42,10 @@ def test_user_routes_refuse_agent_telegram_and_staff_tokens():
         }, route_id
 
 
-def test_staff_route_needs_a_staff_client_with_the_role_and_a_cooperative_on_the_internal_port():
+def test_staff_route_needs_a_staff_client_with_the_role_and_a_cooperative():
     route = load_routes()["internal-staff"]
     assert route["uri"] == "/api/internal/staff/*"
-    assert route["vars"] == [["server_port", "==", "9081"]]
+    assert route["priority"] == 10
     schema = route["plugins"]["openid-connect"]["claim_schema"]
     assert "htx_code" in schema["required"]
     assert schema["properties"]["azp"]["pattern"] == "^dxos-staff-[a-z0-9_-]{1,20}$"
@@ -240,7 +240,7 @@ def test_campaign_items_follow_their_proposal_on_delete():
         assert re.search(r"proposal_id\s+uuid\s+NOT NULL REFERENCES platform\.agent_proposals\(id\) ON DELETE CASCADE", text), path
 
 
-def test_mcp_route_takes_only_the_bridge_client_and_no_agent_or_relay_role():
+def test_mcp_route_takes_only_the_bridge_client_and_no_service_role():
     route = load_routes()["mcp"]
     assert route["uri"] == "/api/mcp/*"
     assert route["upstream_id"] == "web"
@@ -249,7 +249,7 @@ def test_mcp_route_takes_only_the_bridge_client_and_no_agent_or_relay_role():
     assert schema["properties"]["azp"] == {"enum": ["dxos-mcp"]}
     assert schema["properties"]["aud"]["anyOf"][0] == {"enum": ["dx-os-core"]}
     assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-        "not": {"contains": {"enum": ["agent", "telegram"]}}
+        "not": {"contains": {"enum": ["agent", "telegram", "staff-sync"]}}
     }
 
 
@@ -264,3 +264,11 @@ def test_mcp_client_target_creates_the_device_grant_client_idempotently():
     assert "clientId=dxos-mcp" in target and "clients -r agrimarket" in target
     assert 'oauth2.device.authorization.grant.enabled\\"=true' in target
     assert "dxos-mcp updated" in target and "dxos-mcp created" in target
+
+
+def test_only_the_staff_route_is_internal_and_served_on_the_public_port():
+    # The staff app runs outside the compose network (D14); the agent and relay routes stay on 9081 only.
+    routes = load_routes()
+    assert "vars" not in routes["internal-staff"]
+    for route_id in ("internal-agent", "internal-agent-llm", "internal-telegram"):
+        assert routes[route_id]["vars"] == [["server_port", "==", "9081"]], route_id

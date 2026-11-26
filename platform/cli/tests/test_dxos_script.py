@@ -180,6 +180,7 @@ def test_staff_enable_prints_the_client_id_and_the_secret_once_and_keeps_the_sec
     run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
     assert run.returncode == 0, run.stderr
     assert run.stdout.count("dxos-staff-tc") == 1 and run.stdout.count("s3cret") == 1
+    assert "/realms/agrimarket/protocol/openid-connect/token" in run.stdout and ":9080" in run.stdout and ":8080" in run.stdout
     assert "s3cret" not in run.stderr and "s3cret" not in (tmp_path / "calls").read_text()
     assert "dxos-staff-tc" in (tmp_path / "calls").read_text()
 

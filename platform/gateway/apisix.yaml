@@ -210,11 +210,12 @@ routes:
         headers:
           set:
             X-Dxos-Gateway: "${{DXOS_INTERNAL_GATEWAY_SECRET:=dev-internal-gateway-secret}}"
-  # Internal-only route for the staff app (one client per cooperative, D14): its token carries the cooperative, and the web scopes every call to it.
+  # The one /api/internal path served on the public port 9080 as well as 9081: the staff app runs on a separate PC outside the
+  # compose network (D14) and cannot reach 9081. The claims stay strict (client dxos-staff-<htx>, role staff-sync, htx_code), and the web scopes every call to that cooperative.
   - id: internal-staff
     uri: /api/internal/staff/*
     upstream_id: web
-    vars: [["server_port", "==", "9081"]]
+    priority: 10
     plugins:
       openid-connect:
         <<: *oidc
