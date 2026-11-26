@@ -161,36 +161,6 @@
   color: var(--color-ink-heading);
 }
 
-.historyCard {
-  padding: 1rem;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--rounded-md);
-  margin-bottom: 1rem;
-}
-
-.historyHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.historyDate {
-  font-size: 0.875rem;
-  color: var(--color-ink-tertiary);
-}
-
-.historyBody {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.875rem;
-}
-
-.historyDisease {
-  font-weight: 600;
-}
-
 /* Modal Overlay */
 .overlay {
   position: fixed;
@@ -278,40 +248,9 @@
   color: var(--color-ink-secondary);
 }
 
-.historyDetails {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.historyParcel {
-  font-size: 0.75rem;
-  color: var(--color-ink-tertiary);
-}
-
-.historyPhoto {
-  position: relative;
-  width: 100%;
-  height: 120px;
-  margin-bottom: 0.5rem;
-}
-
 .historyImage {
   object-fit: cover;
   border-radius: var(--rounded-sm);
-}
-
-.historyImagePlaceholder {
-  width: 100%;
-  height: 120px;
-  background: var(--color-border-subtle);
-  border-radius: var(--rounded-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-ink-tertiary);
-  font-size: 0.75rem;
-  margin-bottom: 0.5rem;
 }
 
 
@@ -367,8 +306,8 @@
 .verdict strong { flex: 1; font-size: 24px; color: var(--color-ink-heading); }
 .bar { width: 100%; height: 8px; accent-color: var(--color-success); }
 .barLow { accent-color: var(--color-accent); }
-.past { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
+.historyCard { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
 .thumb { position: relative; width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 10px; background: var(--color-primary-subtle); color: var(--color-ink-secondary); }
 .pastMeta { display: block; color: var(--color-ink-secondary); }
 .advice { display: block; margin-top: 6px; padding: 8px; border-radius: 8px; background: var(--color-info-subtle); }
-.past + .past { margin-top: 0; }
+.historyCard + .historyCard { margin-top: 0; }

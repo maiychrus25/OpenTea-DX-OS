@@ -230,7 +230,7 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
           ) : (
             <ul className={kit.list}>
               {history.map(h => (
-                <li key={h.id} className={styles.past}>
+                <li key={h.id} className={styles.historyCard}>
                   <span className={styles.thumb}>
                     {h.photo_url ? <ReportPhoto src={h.photo_url} alt="Disease" className={styles.historyImage} /> : <ImageIcon size={18} aria-label="Ảnh không khả dụng" />}
                   </span>
