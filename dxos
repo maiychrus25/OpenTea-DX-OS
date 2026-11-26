@@ -17,7 +17,7 @@ ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.
 HTX_RE='^[A-Z0-9_-]{1,20}$'
 
 usage() {
-  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | agent <enable|disable> <HTX> | telegram <enable|disable> | apps actor enable" >&2
+  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | builder [--once] | agent <enable|disable> <HTX> | telegram <enable|disable> | apps actor enable" >&2
   exit 2
 }
 
@@ -250,6 +250,30 @@ worker() {
   worker_log "worker stopped"
 }
 
+# Mini-app factory loop (plan M13): runs approved build requests, one at a time, in throwaway containers (platform/builder/loop.py).
+# One per compose project, held by the directory $BUILDER_LOCK, like the store worker.
+BUILDER_LOCK="$RUNTIME/builder.lock"
+builder_release() { rm -rf "$BUILDER_LOCK"; }
+
+builder() {
+  gateway_guard
+  command -v python3 >/dev/null || { echo "./dxos builder cần python3 trên máy chủ" >&2; exit 1; }
+  mkdir -p "$RUNTIME"
+  if ! mkdir "$BUILDER_LOCK" 2>/dev/null; then
+    local old
+    old="$(cat "$BUILDER_LOCK/pid" 2>/dev/null || true)"
+    if [[ "$old" =~ ^[0-9]+$ ]] && kill -0 "$old" 2>/dev/null; then
+      echo "Một vòng xây khác đang chạy (pid $old)." >&2
+      exit 1
+    fi
+    rm -rf "$BUILDER_LOCK"
+    mkdir "$BUILDER_LOCK" || { echo "Không tạo được $BUILDER_LOCK" >&2; exit 1; }
+  fi
+  echo $$ >"$BUILDER_LOCK/pid"
+  trap builder_release EXIT
+  COMPOSE_PROJECT_NAME="$PROJECT" python3 platform/builder/loop.py "$@"
+}
+
 kc_exec() {
   local script="$1"; shift
   compose exec -T keycloak sh -c "$script" sh "$@"
@@ -464,6 +488,9 @@ case "$cmd" in
   worker)
     [ $# -eq 0 ] || usage
     cd "$ROOT"; worker ;;
+  builder)
+    [ $# -le 1 ] && { [ $# -eq 0 ] || [ "$1" = --once ]; } || usage
+    cd "$ROOT"; builder "$@" ;;
   agent)
     [ $# -eq 2 ] || usage
     subcmd="$1"; htx="$2"

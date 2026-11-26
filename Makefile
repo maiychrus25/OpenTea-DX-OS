@@ -12,7 +12,7 @@ export DXOS_GATEWAY_FILE := ../$(RUNTIME)/gateway/apisix.yaml
 # keycloak on every platform-up. Without the attestation the same inputs give the same ID, so nothing is recreated.
 export BUILDX_NO_DEFAULT_ATTESTATIONS := 1
 
-.PHONY: gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice up-workflow up-chat up-agent stop-extras platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync mobile-client mcp-client
+.PHONY: builder-image gateway-sync web-up gateway-up up-core up-docs up-sensors up-ai up-voice up-workflow up-chat up-agent stop-extras platform-up platform-smoke apps-smoke platform-down up down build test lint appkit-sync mobile-client mcp-client
 
 # APISIX mounts $(RUNTIME)/gateway/apisix.yaml; create it before any container starts, or Docker makes it a directory.
 gateway-sync:
@@ -118,6 +118,10 @@ lint:
 .PHONY: benchmark
 benchmark:
 	uv run --no-project --python 3.12 platform/agent/benchmark.py --provider $(or $(PROVIDER),replay) $(if $(MODEL),--model $(MODEL))
+
+# The mini-app factory's build image (plan M13). DXOS_BUILDER_TOOLS = codex-cli (default), claude-code or both.
+builder-image:
+	bash platform/builder/build-image.sh
 
 # Copy platform/appkit/appkit.py and kit.html into every app that uses the kit.
 appkit-sync:
