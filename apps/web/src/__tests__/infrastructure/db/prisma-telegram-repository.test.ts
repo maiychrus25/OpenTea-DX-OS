@@ -55,4 +55,66 @@ describe('PrismaTelegramRepository', () => {
       expect(values.some(isColumnFragment)).toBe(true)
     }
   })
+
+  test('a flow is stored as a flow: no proposal, the state as jsonb and the token', async () => {
+    const repo = new PrismaTelegramRepository()
+    const expiresAt = new Date('2026-11-26T10:30:00Z')
+    await repo.setFlow({
+      telegramUserId: '42',
+      flow: 'journal.create',
+      step: 1,
+      state: { parcel_id: 'p1' },
+      token: 'tokenABCDEF',
+      cardMessageId: null,
+      expiresAt,
+    })
+    const [strings, ...values] = mockPrisma.__tx.$executeRaw.mock.calls[1]
+    const sql = (strings as string[]).join('?')
+    expect(sql).toContain("'flow', NULL")
+    expect(values).toContain('journal.create')
+    expect(values).toContain(JSON.stringify({ parcel_id: 'p1' }))
+    expect(values).toContain('tokenABCDEF')
+  })
+
+  test('a reject reason clears the flow columns when it replaces a flow', async () => {
+    const repo = new PrismaTelegramRepository()
+    await repo.setConversation({ telegramUserId: '42', proposalId: '00000000-0000-4000-8000-000000000001', expiresAt: new Date() })
+    const [strings] = mockPrisma.__tx.$executeRaw.mock.calls[1]
+    expect((strings as string[]).join('?')).toContain("flow = NULL, step = NULL, state = '{}'::jsonb, token = NULL")
+  })
+
+  test('conversationOf reads the row without an expiry filter, and the active read keeps it', async () => {
+    mockPrisma.$queryRaw.mockResolvedValueOnce([
+      { telegram_user_id: '42', kind: 'flow', proposal_id: null, flow: 'ask', step: null, state: {}, token: null,
+        card_message_id: null, expires_at: new Date('2020-01-01T00:00:00Z') },
+    ])
+    const repo = new PrismaTelegramRepository()
+    const row = await repo.conversationOf('42')
+    expect(row).toMatchObject({ kind: 'flow', flow: 'ask', proposalId: null })
+    const [strings] = mockPrisma.$queryRaw.mock.calls[0]
+    expect((strings as string[]).join('?')).not.toContain('expires_at >')
+  })
+
+  test('the update row keeps the Telegram user and the rate limit counts from the window start', async () => {
+    mockPrisma.__tx.$queryRaw.mockResolvedValueOnce([{ update_id: '7' }])
+    mockPrisma.$queryRaw.mockResolvedValueOnce([{ count: 3 }])
+    const repo = new PrismaTelegramRepository()
+    expect(await repo.markUpdateSeen('7', '42')).toBe(true)
+    const [, ...seenValues] = mockPrisma.__tx.$queryRaw.mock.calls[0]
+    expect(seenValues).toEqual(['7', '42'])
+
+    const since = new Date('2026-11-26T09:00:00Z')
+    expect(await repo.countRecentUpdates('42', since)).toBe(3)
+    const [, ...countValues] = mockPrisma.$queryRaw.mock.calls[0]
+    expect(countValues).toEqual(['42', since])
+  })
+
+  test('the audit event goes through audit.record_event with the actor in its details', async () => {
+    const repo = new PrismaTelegramRepository()
+    await repo.auditEvent('user-1', 'telegram.action.executed', 'TC', { kind: 'journal.create', htx_code: 'TC', channel: 'telegram' })
+    const [strings, ...values] = mockPrisma.__tx.$executeRaw.mock.calls[1]
+    expect((strings as string[]).join('?')).toContain('audit.record_event')
+    expect(values[0]).toBe('telegram.action.executed')
+    expect(JSON.parse(String(values[2]))).toMatchObject({ actor: 'user-1', channel: 'telegram' })
+  })
 })

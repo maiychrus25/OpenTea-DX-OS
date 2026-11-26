@@ -92,6 +92,9 @@ export class PrismaJournalRepository implements JournalPort {
     if (filters.household_id) {
       where.parcel = { household_id: filters.household_id }
     }
+    if (filters.htx_profile_id) {
+      where.parcel = { ...(where.parcel as object | undefined), household: { htx_profile_id: filters.htx_profile_id } }
+    }
 
     const page = filters.page ?? 1
     const limit = filters.limit ?? 20

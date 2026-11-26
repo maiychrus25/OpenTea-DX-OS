@@ -115,3 +115,49 @@ def test_bulletin_request_gets_a_bulletin_text_key(stub):
     )
     text = json.loads(answer["content"][1]["text"])["bulletin_vi"]
     assert len(text) >= 50 and not any(ch.isdigit() for ch in text)
+
+
+ASSISTANT_SYSTEM = 'Chọn đúng một công cụ hoặc hành động. Trả về JSON {"type": "tool|action|unknown", "name": "...", "args": {}}.'
+
+
+def intent_request(stub, content, path="/v1/messages"):
+    body = {"model": "m", "system": ASSISTANT_SYSTEM, "messages": [{"role": "user", "content": content}]}
+    if path == "/v1/chat/completions":
+        body = {"model": "m", "messages": [{"role": "system", "content": ASSISTANT_SYSTEM}, {"role": "user", "content": content}]}
+    return post(stub + path, body, {"x-api-key": "fake-key"})
+
+
+def test_intent_request_with_mai_gets_the_weather_tool(stub):
+    answer = intent_request(stub, json.dumps({"text": "mai có nên đi hái không"}, ensure_ascii=False))
+    assert json.loads(answer["content"][1]["text"]) == {"type": "tool", "name": "weather", "args": {}}
+
+
+def test_intent_request_without_mai_is_unknown(stub):
+    answer = intent_request(stub, json.dumps({"text": "duyệt hết nhật ký"}, ensure_ascii=False))
+    assert json.loads(answer["content"][1]["text"]) == {"type": "unknown"}
+
+
+def test_intent_request_reads_a_plain_sentence_and_the_openai_shape(stub):
+    answer = intent_request(stub, "Mai đi đâu?", path="/v1/chat/completions")
+    assert json.loads(answer["choices"][0]["message"]["content"]) == {"type": "tool", "name": "weather", "args": {}}
+
+
+def test_intent_request_ignores_the_keys_of_the_json_object_itself(stub):
+    # The intent prompt lists the tools as JSON keys; only the user's text decides the answer.
+    answer = intent_request(stub, json.dumps({"tools": [{"name": "mai"}], "text": "gibberish"}, ensure_ascii=False))
+    assert json.loads(answer["content"][1]["text"]) == {"type": "unknown"}
+
+
+def test_intent_request_reads_the_sentence_field_of_the_a7_payload(stub):
+    # The shape A7 sends: the sentence sits in payload["sentence"]["text"]; the tool names are not the sentence.
+    content = json.dumps({"actions": [{"name": "journal.create"}], "sentence": {"text": "mai có nên đi hái không", "trust": "untrusted"},
+                          "today": "2026-11-26", "tools": [{"name": "mai"}]}, ensure_ascii=False, sort_keys=True)
+    answer = intent_request(stub, content)
+    assert json.loads(answer["content"][1]["text"]) == {"type": "tool", "name": "weather", "args": {}}
+
+
+def test_intent_request_with_a7_payload_and_no_mai_is_unknown(stub):
+    content = json.dumps({"actions": [], "sentence": {"text": "duyệt hết nhật ký", "trust": "untrusted"},
+                          "today": "2026-11-26", "tools": [{"name": "mai"}]}, ensure_ascii=False, sort_keys=True)
+    answer = intent_request(stub, content)
+    assert json.loads(answer["content"][1]["text"]) == {"type": "unknown"}

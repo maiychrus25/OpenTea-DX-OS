@@ -46,6 +46,7 @@ const AGENT_LABEL: Record<ConfigurableAgent, string> = {
   'journal-review': 'Soát nhật ký (A1)',
   digest: 'Báo cáo tóm tắt (A6)',
   bulletin: 'Bản tin thị trường (A5)',
+  assistant: 'Trợ lý Telegram (A7)',
 }
 
 /** What leaves the server when the agent uses an external provider. */
@@ -56,6 +57,8 @@ const AGENT_SHARES: Record<ConfigurableAgent, string> = {
     'Nhật ký chờ duyệt: mã thửa, ngày, hoạt động, thuốc, liều, số ngày cách ly và ghi chú. Số điện thoại, e-mail và số giấy tờ trong ghi chú được che; tên người viết trong ghi chú không được che. Không gửi ảnh nông hộ.',
   digest:
     'Chỉ số của bảng điều hành, đề xuất đang mở và lỗi hệ thống; không có tên hay số điện thoại của nông hộ.',
+  assistant:
+    'Câu bạn nhắn cho trợ lý (đã che số điện thoại, e-mail và số giấy tờ). Không gửi ảnh, vị trí hay dữ liệu trả lời.',
 }
 
 const PROVIDER_LABEL: Record<AgentProvider, string> = {

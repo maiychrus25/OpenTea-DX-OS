@@ -8,9 +8,11 @@ import logging
 from pathlib import Path
 import signal
 import threading
+import time as time_module
 
 from . import __version__
 from .agents import bulletin, disease_watch, field_watch, harvest_ready
+from .agents.assistant import run_assistant_once
 from .agents.digest import DigestSchedule, run_digest
 from .agents.journal_review import (
     AGENT_NAME as JOURNAL_REVIEW_AGENT,
@@ -37,6 +39,9 @@ FIELD_WATCH_INTERVAL = timedelta(minutes=30)
 HARVEST_READY_AT = time(6, 30)  # Vietnam time
 DISEASE_WATCH_AT = time(7, 0)  # Vietnam time
 BULLETIN_AT = time(5, 0)  # Vietnam time
+ASSISTANT_POLL_SECONDS = 1.5
+# The web expires an assistant request after 60 s; a result must land before that.
+ASSISTANT_EXTERNAL_TIMEOUT_SECONDS = 45.0
 
 log = logging.getLogger("dxos_agent")
 
@@ -127,6 +132,58 @@ def _runtime_for(
         )
         runtimes[creds.htx_code] = runtime
     return runtime
+
+
+def _assistant_runtime_for(
+    cfg: Config,
+    runtimes: dict[str, _CooperativeRuntime],
+    creds: AgentCredentials,
+) -> _CooperativeRuntime:
+    """The assistant thread's own providers: its external calls stop at 45 s, and A1's providers keep theirs."""
+    runtime = runtimes.get(creds.htx_code)
+    if runtime is None or runtime.creds != creds:
+        token_client = KeycloakTokenClient(cfg.keycloak_url, creds)
+        providers = _build_providers(cfg, token_client)
+        for provider in providers.values():
+            if provider.external:
+                provider.timeout_seconds = ASSISTANT_EXTERNAL_TIMEOUT_SECONDS
+        runtime = _CooperativeRuntime(
+            creds=creds,
+            gateway=CoreGatewayClient(cfg.gateway_url, token_client.get_token),
+            providers=providers,
+        )
+        runtimes[creds.htx_code] = runtime
+    return runtime
+
+
+def run_assistant_cycle(
+    cfg: Config,
+    runtimes: dict[str, _CooperativeRuntime],
+    now: datetime,
+) -> None:
+    """Answer the pending assistant requests of every cooperative with credentials; one failure never stops the rest."""
+    credentials_list = load_all_agent_credentials(cfg.env_dir)
+    active = {creds.htx_code for creds in credentials_list}
+    for htx_code in [code for code in runtimes if code not in active]:
+        del runtimes[htx_code]
+
+    for creds in credentials_list:
+        try:
+            runtime = _assistant_runtime_for(cfg, runtimes, creds)
+            providers = {name: _local_unless_busy(provider) for name, provider in runtime.providers.items()}
+            run_assistant_once(runtime.gateway, providers, lambda: fetch_settings(runtime.gateway), now)
+        except Exception:
+            log.exception("A7 assistant failed for htx=%s", creds.htx_code)
+
+
+def _assistant_loop(cfg: Config, runtimes: dict[str, _CooperativeRuntime], stop: threading.Event) -> None:
+    """Poll for chat requests on a thread of its own, so a slow A1 or bulletin never delays a chat answer."""
+    while not stop.is_set():
+        try:
+            run_assistant_cycle(cfg, runtimes, datetime.now(timezone.utc))
+        except Exception:
+            log.exception("A7 assistant poll failed")
+        time_module.sleep(ASSISTANT_POLL_SECONDS)
 
 
 def _digest_and_heartbeat(runtime: _CooperativeRuntime, now: datetime, settings: AgentSettings) -> None:
@@ -277,6 +334,13 @@ def main(stop: threading.Event | None = None) -> None:
     log.info("dxos-agent started (provider=%s, env_dir=%s)", cfg.provider_name, cfg.env_dir)
 
     runtimes: dict[str, _CooperativeRuntime] = {}
+    # The assistant keeps its own runtimes, so its thread never touches the dict the main loop changes.
+    threading.Thread(
+        target=_assistant_loop,
+        args=(cfg, {}, stop),
+        name="assistant",
+        daemon=True,
+    ).start()
     while not stop.is_set():
         heartbeat.touch()
         run_once(cfg, runtimes)

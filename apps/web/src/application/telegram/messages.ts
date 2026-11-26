@@ -25,7 +25,7 @@ function truncate(text: string, max: number): string {
 
 export const TELEGRAM_TEXT = {
   welcome: (name: string) =>
-    `Đã kết nối tài khoản ${name}. Tin nhắn từ hệ thống sẽ được gửi qua máy chủ của Telegram.`,
+    `Đã kết nối tài khoản ${name}. Tin nhắn từ hệ thống sẽ được gửi qua máy chủ của Telegram. Nếu HTX bật nhà cung cấp AI bên ngoài cho trợ lý, câu bạn nhắn cũng được gửi tới nhà cung cấp đó. Gửi /menu để bắt đầu.`,
   openFromProfile: 'Vui lòng mở liên kết từ trang Hồ sơ trong ứng dụng để lấy mã kết nối.',
   invalidCode: 'Mã kết nối không đúng hoặc đã hết hạn. Vui lòng tạo mã mới trong trang Hồ sơ.',
   unlinked: 'Đã gỡ liên kết Telegram với tài khoản này.',
@@ -46,6 +46,43 @@ export const TELEGRAM_TEXT = {
   stale: 'Dữ liệu nguồn đã thay đổi, đề xuất không còn hiệu lực.',
   expired: 'Đề xuất đã hết hạn.',
   alreadyDecided: (by: string | null) => `Đề xuất đã được ${by ?? 'người khác'} xử lý.`,
+  // Chat assistant (M5, contract C10).
+  menuPrompt: 'Bạn cần gì? Chọn một mục bên dưới, hoặc nhắn câu hỏi bằng tiếng Việt.',
+  askPrompt: 'Bạn muốn hỏi gì? Ví dụ: Giá chè hôm nay thế nào?',
+  thinking: 'Đang tìm câu trả lời…',
+  assistantTimeout: 'Chưa trả lời kịp. Bạn chọn một mục trong menu nhé.',
+  notUnderstood: 'Chưa hiểu câu này. Bạn chọn một mục trong menu, hoặc nhắn lại ngắn hơn.',
+  noPermission: (title: string) => `Tài khoản của bạn không có quyền: ${title}.`,
+  notYet: 'Việc này chưa làm được qua Telegram. Bạn dùng trang web nhé.',
+  flowCancelled: 'Đã huỷ. Không có gì được ghi.',
+  nothingToCancel: 'Không có việc nào đang làm dở.',
+  flowExpired: 'Phiên nhập đã hết hạn. Gửi /menu để bắt đầu lại.',
+  staleButton: 'Nút này đã cũ. Gửi /menu để bắt đầu lại.',
+  cardFooter: 'Thẻ hết hạn sau 10 phút. Không bấm Xác nhận thì không có gì được ghi.',
+  secondCardTitle: 'Xác nhận lần cuối',
+  secondCardFooter: 'Nút hết hạn sau 10 phút.',
+  cardExpired: 'Thẻ đã hết hạn. Không có gì được thực hiện.',
+  expectChoice: 'Bạn chọn một nút bên trên nhé.',
+  expectText: 'Bước này cần nhắn chữ.',
+  expectPhoto: 'Bước này cần một ảnh.',
+  invalidNumber: (min: number, max: number) => `Nhập một số nguyên từ ${min} đến ${max}.`,
+  tooLong: (max: number) => `Tối đa ${max} ký tự.`,
+  noMatch: 'Không có trong danh sách. Bạn nhập lại nhé.',
+  photoTooLarge: 'Ảnh lớn hơn 5 MB. Bạn gửi ảnh nhỏ hơn nhé.',
+  photoFailed: 'Chưa nhận được ảnh. Bạn gửi lại nhé.',
+  photoOutsideFlow: 'Đã nhận ảnh. Muốn ghi nhật ký hoặc báo bệnh, bạn chọn trong menu rồi gửi lại ảnh.',
+  locationNoParcel: 'Không tìm thấy thửa nào có toạ độ.',
+  rateLimited: 'Bạn đã gửi 60 tin trong một giờ. Vui lòng thử lại sau.',
+  executeFailed: (message: string) => `Chưa thực hiện được: ${message}`,
+}
+
+/** Button labels of the chat cards and steps (contract C10). */
+export const TELEGRAM_BUTTON = {
+  confirm: 'Xác nhận',
+  cancel: 'Huỷ',
+  next: 'Tiếp tục',
+  finalConfirm: 'Xác nhận lần cuối',
+  skip: 'Bỏ qua',
 }
 
 /** Proposal message: title, up to five preview lines, a short reason and the expiry. */

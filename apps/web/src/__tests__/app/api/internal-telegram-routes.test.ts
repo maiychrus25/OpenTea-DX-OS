@@ -21,6 +21,7 @@ jest.mock('@/application/telegram/telegram-services', () => ({
   telegramUpdateHandler: () => ({ handle }),
   telegramNotifier: () => ({ recordResult, runHealthChecks, enqueueReport }),
   telegramRepository: () => ({ lease }),
+  assistantRequests: () => ({ expire: jest.fn(async () => []) }),
 }))
 
 const RESULT_ID = '00000000-0000-4000-8000-0000000000cc'

@@ -56,6 +56,7 @@ export class PrismaParcelRepository implements ParcelPort {
     const where: Record<string, unknown> = {}
     if (filters.household_id) where.household_id = filters.household_id
     if (filters.status) where.status = filters.status
+    if (filters.htx_profile_id) where.household = { htx_profile_id: filters.htx_profile_id }
 
     const parcels = await prisma.parcel.findMany({
       where,
