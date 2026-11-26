@@ -2,11 +2,13 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { canonicalJson, evidenceDigest, sha256Hex } from '@/domain/agent/evidence'
+import type { AutopilotRepository } from '@/domain/agent/ports/AutopilotRepository'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
 import type { Evidence, Origin } from '@/domain/agent/proposal'
 import { ValidationError } from '@/domain/errors'
 import { getAction } from './action-catalog'
 import { EVIDENCE_LOADERS, type EvidenceLoaders } from './actions/journal-evidence'
+import { autoEligibility, shadowEligibility, windowFor } from './autopilot/eligibility'
 
 export const MAX_EVIDENCE_ROWS = 50
 
@@ -29,7 +31,9 @@ export interface CreateProposalInput {
 export class CreateProposalUseCase {
   constructor(
     private readonly repo: Pick<ProposalRepository, 'create' | 'createdSince'>,
-    private readonly loaders: EvidenceLoaders = EVIDENCE_LOADERS
+    private readonly loaders: EvidenceLoaders = EVIDENCE_LOADERS,
+    /** M12: when given, a proposal of an eligible kind gets its blocking window while the mode is on. */
+    private readonly autopilot?: Pick<AutopilotRepository, 'get'>
   ) {}
 
   async execute(input: CreateProposalInput): Promise<{ id: string } | null> {
@@ -100,6 +104,9 @@ export class CreateProposalUseCase {
       return null
     }
 
+    const candidate = { origin: input.origin, payload: parsedPayload.data as Record<string, unknown>, evidence: input.evidence }
+    const runAt = await this.windowEnd(input.htxCode, candidate, definition, now)
+
     return this.repo.create({
       htxCode: input.htxCode,
       runId: input.runId ?? null,
@@ -116,6 +123,26 @@ export class CreateProposalUseCase {
       dedupeKey,
       subjects,
       expiresAt,
+      shadowAuto: shadowEligibility(candidate, definition),
+      runAt,
     })
+  }
+
+  /** When the tick may run this proposal: only while the mode is on and the proposal is eligible. A failed read means no window. */
+  private async windowEnd(
+    htxCode: string,
+    candidate: Parameters<typeof autoEligibility>[0],
+    definition: Parameters<typeof autoEligibility>[1],
+    now: Date
+  ): Promise<Date | null> {
+    if (!this.autopilot) return null
+    try {
+      const config = await this.autopilot.get(htxCode)
+      if (!config.enabled || !autoEligibility(candidate, definition, config).eligible) return null
+      return new Date(now.getTime() + windowFor(definition))
+    } catch (err) {
+      console.error('[CreateProposal] could not read the autonomous mode; the proposal waits for a person', err)
+      return null
+    }
   }
 }

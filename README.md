@@ -438,6 +438,8 @@ Ngưỡng và quy tắc mẫu tin: mục 3.10 trong [docs/rules-and-limits.md](.
 
 **Client MCP (M14).** Claude Desktop, Claude Code hoặc Codex có thể nối vào trợ lý qua MCP, bằng tài khoản Keycloak của chính người dùng. Client chỉ đọc được những gì người dùng đọc được và chỉ tạo được đề xuất; mọi đề xuất vẫn chờ người có quyền xác nhận trên web hoặc Telegram. Hướng dẫn đăng nhập và cấu hình: [platform/mcp/README.md](./platform/mcp/README.md). Giới hạn và quy tắc dòng kiểm chứng lô: mục 3.14 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
+**Tự vận hành (M12).** Trưởng HTX có thể bật chế độ tự vận hành trên trang cài đặt AI (cần đăng nhập lại): các đề xuất đủ điều kiện tự chạy sau một cửa sổ chặn theo rủi ro, mọi người duyệt đều chặn được bằng nút `Chặn` trên Telegram, và `/dung` hoặc nút `Dừng ngay` dừng chế độ tức thì. Chế độ tắt mặc định, có năm giới hạn cứng, giới hạn ngày và bốn phanh tự động. Quy tắc và giới hạn: mục 3.15 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
+
 **Đo lường agent (M14).** `make benchmark PROVIDER=<replay|ollama|anthropic|openai> MODEL=<id>` chạy các bộ kịch bản của agent với một nhà cung cấp và ghi bảng kết quả vào [docs/benchmark.md](./docs/benchmark.md).
 
 ### Bật / tắt lớp AI cho từng HTX (`./dxos agent`)

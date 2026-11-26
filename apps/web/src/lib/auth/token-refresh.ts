@@ -22,6 +22,12 @@ function readClaims(accessToken: string): Record<string, any> | null {
   }
 }
 
+/** When the user last signed in with their credentials, in seconds since the epoch (Keycloak's `auth_time` claim). */
+export function readAuthTime(jwt: string | undefined): number | undefined {
+  const value = jwt ? readClaims(jwt)?.auth_time : undefined
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
 export function readHtxCode(accessToken: string): string | null {
   return readClaims(accessToken)?.htx_code || null
 }

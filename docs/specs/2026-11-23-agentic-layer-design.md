@@ -409,7 +409,7 @@ Các loại còn lại (`autonomy: auto`) tự chạy ngay khi bật.
 
 - Trong lúc chờ, manager (và cán bộ, với việc thuộc phần mình) nhận tin Telegram "Sẽ tự chạy lúc …" kèm nút Chặn và Xem. Chặn không cần lý do; mỗi lần chặn được tính như một lần từ chối khi đo chất lượng agent.
 - Chiến dịch ngày ở chế độ này: tin 06:00 đổi thành "Chiến dịch hôm nay sẽ tự chạy", từng mục có nút Chặn theo cửa sổ của mục đó.
-- Web quyết định đề xuất nào được tự chạy ngay lúc nhận đề xuất, và đặt `run_at`. Việc chạy khi đến giờ do một nhịp gọi `/api/internal/autopilot/tick` mỗi phút. Nơi gọi nhịp không quan trọng, vì web kiểm lại mọi điều kiện ngay lúc chạy.
+- Web quyết định đề xuất nào được tự chạy ngay lúc nhận đề xuất, và đặt `run_at`. Việc chạy khi đến giờ do một nhịp gọi `/api/internal/agent/autopilot/tick` mỗi phút. Nơi gọi nhịp không quan trọng, vì web kiểm lại mọi điều kiện ngay lúc chạy.
 
 ### 11.4 Hạn mức và phanh bất thường
 
@@ -874,6 +874,56 @@ Theo `AGENTS.md`:
 - **Mã lỗi.** `initData` sai chữ ký hoặc quá 24 giờ trả 400 `WEBAPP_INVALID`. Tài khoản Telegram của người khác trả 403 `WEBAPP_NOT_LINKED`.
 
 **Còn chờ chủ dự án:** tên miền HTTPS (D17) để bật Mini App thật trên Telegram.
+
+### M12: chế độ tự vận hành (2026-11-27)
+
+**Đã làm:**
+- **Bật chế độ.** Quản lý bật chế độ ở mục "Tự vận hành" trên trang cài đặt AI, với các điều kiện:
+  - đã đăng nhập lại trong vòng 5 phút;
+  - đã đánh dấu xác nhận chịu trách nhiệm.
+
+  Nội dung màn hình lúc bật được lưu vào audit. Các loại `unlockable` chỉ tự chạy khi được mở lúc bật.
+- **Chạy tự động.** Đề xuất đủ điều kiện được hẹn giờ chạy, sau một khoảng chờ theo mức rủi ro:
+  - thấp: chạy ở lượt kế tiếp;
+  - vừa: sau 15 phút;
+  - cao: sau 2 giờ.
+
+  Trong khoảng chờ, ai cũng có thể bấm Chặn.
+- **Cách chạy.** Mỗi chu kỳ, `dxos-agent` gọi tick. Web kiểm lại mọi điều kiện, rồi chạy đề xuất qua đúng use case như khi có người duyệt, dưới tên người đã bật, với kênh `autopilot`. Audit ghi `autopilot:<agent>` cùng người đã bật (kiểm thử 24).
+- **Dừng bằng tay:** lệnh `/dung` trên Telegram, hoặc nút "Dừng ngay" trên web.
+- **Tự dừng** khi:
+  - người đã bật mất quyền quản lý hoặc bị khoá tài khoản;
+  - 7 ngày liền không có quản lý nào tương tác;
+  - một phanh sập: 3 lần chạy lỗi trong một giờ; chạm giới hạn mỗi ngày; hơn 30% việc bị chặn, tính từ 5 việc; số đề xuất của một agent gấp 3 lần trung bình 14 ngày.
+
+  Khi dừng, mọi việc đang chờ trở về chờ người duyệt.
+- **Chạy bóng.** Ở chế độ thường, mỗi đề xuất ghi `shadow_auto`. Màn hình bật hiện tỉ lệ khớp 30 ngày của từng loại (kiểm thử 25).
+- **Telegram:**
+  - tin "Sẽ tự chạy lúc …" với hai nút Chặn và Xem;
+  - lệnh `/tuvanhanh`;
+  - một dòng ở đầu tin chiến dịch;
+  - phần "Tự vận hành" trong báo cáo 18:00.
+- **Tin gửi nông hộ** do việc tự chạy gửi có thêm dòng "(Tin do AI của HTX gửi)". Mỗi hộ nhận tối đa 2 tin tự động mỗi ngày.
+- **Kiểm thử** 18 tới 25 và 31.
+
+**Khác với đặc tả:**
+- **Đề xuất rủi ro thấp** (không có khoảng chờ) vẫn nhận tin Duyệt/Từ chối thường. Sau khi chạy, tin được sửa thành "AI đã tự thực hiện lúc …". Chỉ đề xuất có khoảng chờ mới nhận tin "Sẽ tự chạy".
+- **Bấm Chặn muộn:**
+  - khi việc đã bị nhận để chạy: trả lời "Đã chạy, không chặn được nữa.";
+  - khi việc không còn khoảng chờ: trả lời "Việc này không còn chờ tự chạy.", và lần bấm không tính là một lần chặn.
+- **Đổi cài đặt được kiểm "chỉ siết" hai lần.** Lần đầu lúc tạo đề xuất, theo evidence. Lần sau lúc chạy, theo giá trị đang lưu. Lần sau mới là lần quyết định, nên thay đổi nới ngưỡng không bao giờ tự chạy, kể cả khi evidence thiếu dòng cài đặt.
+- **Dòng báo tin do AI gửi** đi qua trường ghi chú `note_vi` của đề xuất.
+- **Tỉ lệ khớp chỉ tính quyết định của người.** Không tính việc tự chạy, việc hết hạn và việc lỗi thời.
+- **Lỗi khi đọc quyền.** Nếu không đọc được vai trò của người đã bật (Keycloak lỗi), lượt tick đó được bỏ qua và chế độ không bị dừng.
+- **Bật lại khi đang bật** thì cập nhật cấu hình.
+- **Người gửi `/dung`** nhận cả câu trả lời lẫn tin báo chung.
+- **Đường dẫn của tick** là `POST /api/internal/agent/autopilot/tick`, không phải `/api/internal/autopilot/tick` như trong kế hoạch. Gateway chỉ cho token agent đi qua tiền tố `/api/internal/agent/*`.
+
+**Chưa làm,** vì thuộc mốc sau (bảng và khoảng chờ đã có sẵn, các mốc đó chỉ cần thêm loại hành động):
+- hành động về tiền của mini-app (M9);
+- duyệt thành viên;
+- cài và gỡ mini-app (M13);
+- `strategy.adopt` (M11).
 
 ### M15: tin nhắn thoại (2026-11-27)
 

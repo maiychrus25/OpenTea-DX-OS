@@ -16,7 +16,7 @@ export type KnownAgent = (typeof KNOWN_AGENTS)[number]
 
 export type Risk = 'low' | 'medium' | 'high'
 export type Origin = 'agent' | 'user'
-export type DecisionChannel = 'web' | 'telegram'
+export type DecisionChannel = 'web' | 'telegram' | 'autopilot'
 
 export interface EvidenceRow {
   table: string
@@ -55,4 +55,10 @@ export interface Proposal {
   editedPayload: Record<string, unknown> | null
   executedAt: Date | null
   result: Record<string, unknown> | null
+  /** M12: whether this proposal would have run on its own, recorded at creation in either mode. */
+  shadowAuto?: boolean | null
+  /** M12: when the tick may run it, set only while autonomous mode is on. */
+  runAt?: Date | null
+  blockedBy?: string | null
+  blockedAt?: Date | null
 }
