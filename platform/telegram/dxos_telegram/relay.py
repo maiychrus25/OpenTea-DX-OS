@@ -82,14 +82,24 @@ def message_call(item: Mapping[str, Any]) -> tuple[str, dict[str, Any]]:
 class Relay:
     """Three loops (updates, outbox, heartbeat) on daemon threads; `process_update` and `deliver` do the work and are testable alone."""
 
-    def __init__(self, bot: BotApi, web: WebGateway, version: str) -> None:
+    def __init__(self, bot: BotApi, web: WebGateway, version: str, web_public_url: str = "") -> None:
         self._bot = bot
         self._web = web
         self._version = version
+        self._web_public_url = web_public_url
         self._stop = threading.Event()
         self._threads: list[threading.Thread] = []
 
+    def set_menu_button(self) -> None:
+        """C2: the bot's menu button opens the web as a Mini App, which Telegram only allows over HTTPS."""
+        if not self._web_public_url.startswith("https://"):
+            log.info("Mini App needs an HTTPS web address; the menu button is not set.")
+            return
+        button = {"type": "web_app", "text": "Mở ứng dụng", "web_app": {"url": f"{self._web_public_url.rstrip('/')}/telegram/open"}}
+        self._send_best_effort("setChatMenuButton", {"menu_button": button})
+
     def start(self) -> None:
+        self.set_menu_button()
         for target in (self._poll_loop, self._outbox_loop, self._heartbeat_loop):
             thread = threading.Thread(target=target, name=target.__name__, daemon=True)
             thread.start()

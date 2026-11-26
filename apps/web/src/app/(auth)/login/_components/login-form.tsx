@@ -12,6 +12,11 @@ import { ArrowRight } from 'lucide-react'
 import styles from '../login-page.module.css'
 import { getAuthErrorMessage, isAccountLocked } from '@/lib/auth-validation'
 
+/** Only the Mini App entry may ask to come back to a page after sign-in; anything else goes to the role home. */
+export function safeCallbackUrl(value: string | null | undefined): string {
+  return value && /^\/telegram\/open(\?[A-Za-z0-9/_\-?=&%.]*)?$/.test(value) ? value : '/'
+}
+
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const searchParams = useSearchParams()
@@ -22,7 +27,7 @@ export function LoginForm() {
 
   const handleLogin = async () => {
     setIsLoading(true)
-    await signIn('keycloak', { callbackUrl: '/' })
+    await signIn('keycloak', { callbackUrl: safeCallbackUrl(searchParams?.get('callbackUrl')) })
   }
 
   return (

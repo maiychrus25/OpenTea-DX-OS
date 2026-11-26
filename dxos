@@ -17,7 +17,7 @@ ID_RE='^[a-z][a-z0-9-]{1,30}$'  # same as "id" in platform/apps/manifest.schema.
 HTX_RE='^[A-Z0-9_-]{1,20}$'
 
 usage() {
-  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | agent <enable|disable> <HTX> | telegram <enable|disable> | apps actor enable" >&2
+  echo "Dùng: ./dxos install <dir> | upgrade <dir> | remove <id> [--purge] | list | validate <dir>... | worker | agent <enable|disable> <HTX> | staff <enable|disable> <HTX> | telegram <enable|disable> | apps actor enable" >&2
   exit 2
 }
 
@@ -312,6 +312,72 @@ SQL
   echo "Đã tắt lớp AI cho HTX $htx"
 }
 
+# The staff app (D14) pulls tasks with its own per-cooperative client. Its secret is typed into the staff app's settings by the
+# operator, so it is printed once here and written nowhere else.
+staff_enable() {
+  local htx="$1" htx_lower client_id secret found
+  [[ "$htx" =~ $HTX_RE ]] || { echo "Mã HTX '$htx' không hợp lệ (chỉ gồm A-Z, 0-9, _, -, tối đa 20 ký tự)" >&2; exit 1; }
+  htx_lower="$(printf '%s' "$htx" | tr '[:upper:]' '[:lower:]')"
+  client_id="dxos-staff-$htx_lower"
+  # Checked before Keycloak is touched, so an unknown cooperative leaves no client behind.
+  found="$(compose exec -T postgres psql -U agrimarket -d agrimarket -tA -v ON_ERROR_STOP=1 -v "htx=$htx" <<'SQL'
+SELECT 1 FROM htx_profiles WHERE htx_code = :'htx';
+SQL
+)"
+  [ "$found" = 1 ] || { echo "Không có HTX $htx trong bảng htx_profiles; hãy tạo HTX trước khi bật app nhân sự" >&2; exit 1; }
+
+  secret="$(kc_exec '
+    set -eu
+    K=/opt/keycloak/bin/kcadm.sh
+    HTX="$1"
+    CLIENT_ID="$2"
+    SA_USER="service-account-$CLIENT_ID"
+    "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+    if ! "$K" get roles/staff-sync -r agrimarket >/dev/null 2>&1; then
+      "$K" create roles -r agrimarket -s name=staff-sync -s "description=Staff app sync" >/dev/null
+    fi
+    CID="$("$K" get clients -r agrimarket -q "clientId=$CLIENT_ID" --fields id --format csv --noquotes | head -n 1)"
+    if [ -z "$CID" ]; then
+      "$K" create clients -r agrimarket \
+        -s "clientId=$CLIENT_ID" -s enabled=true -s publicClient=false -s serviceAccountsEnabled=true \
+        -s standardFlowEnabled=false -s implicitFlowEnabled=false -s directAccessGrantsEnabled=false \
+        -s "defaultClientScopes=[\"roles\",\"dx-os-core\"]" -s "optionalClientScopes=[]" >/dev/null
+      CID="$("$K" get clients -r agrimarket -q "clientId=$CLIENT_ID" --fields id --format csv --noquotes | head -n 1)"
+    fi
+    UID_SA="$("$K" get "clients/$CID/service-account-user" -r agrimarket --fields id --format csv --noquotes | head -n 1)"
+    "$K" update "users/$UID_SA" -r agrimarket -s "attributes.htx_code=[\"$HTX\"]" >/dev/null
+    "$K" add-roles -r agrimarket --uusername "$SA_USER" --rolename staff-sync >/dev/null
+    "$K" get "clients/$CID/client-secret" -r agrimarket --fields value --format csv --noquotes | head -n 1
+  ' "$htx" "$client_id")"
+
+  [ -n "$secret" ] || { echo "Không lấy được client secret cho $client_id" >&2; exit 1; }
+  echo "Đã bật app nhân sự cho HTX $htx. Nhập các giá trị này vào mục 'Kết nối hệ thống lõi' trong cài đặt app nhân sự:"
+  echo "  Client id: $client_id"
+  echo "  Secret: $secret"
+  echo "  Địa chỉ Keycloak (app lấy token tại <địa chỉ>/realms/agrimarket/protocol/openid-connect/token): http://localhost:8080"
+  echo "  Địa chỉ cổng lõi (gateway công khai): http://localhost:9080"
+  echo "  (Từ máy khác, thay localhost bằng địa chỉ của máy chủ lõi.)"
+}
+
+staff_disable() {
+  local htx="$1" htx_lower client_id
+  [[ "$htx" =~ $HTX_RE ]] || { echo "Mã HTX '$htx' không hợp lệ" >&2; exit 1; }
+  htx_lower="$(printf '%s' "$htx" | tr '[:upper:]' '[:lower:]')"
+  client_id="dxos-staff-$htx_lower"
+
+  kc_exec '
+    set -eu
+    K=/opt/keycloak/bin/kcadm.sh
+    CLIENT_ID="$1"
+    "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+    CID="$("$K" get clients -r agrimarket -q "clientId=$CLIENT_ID" --fields id --format csv --noquotes | head -n 1)"
+    if [ -n "$CID" ]; then
+      "$K" delete "clients/$CID" -r agrimarket >/dev/null
+    fi
+  ' "$client_id"
+  echo "Đã tắt app nhân sự cho HTX $htx"
+}
+
 # Telegram relay credentials: dxos-telegram reads its file from dxos-telegram-env, dxos-web reads roles.env from dxos-web-env.
 telegram_env_write() {  # <dir in the helper> <file name>: content on stdin
   compose --profile tools run --rm -T --no-deps dxos-telegram-env \
@@ -334,8 +400,17 @@ roles_env_update() {  # <KEY>...: drops these keys from roles.env, then adds the
   if [ -n "$rest" ]; then printf '%s\n' "$rest" | telegram_env_write /run/dxos-web roles.env; else telegram_env_remove /run/dxos-web roles.env; fi
 }
 
+# C1: the web validates Mini App initData with HMAC_SHA256(key="WebAppData", msg=<bot token>), never with the token itself.
+# The token comes from the environment or docker/.env.local; prints nothing when there is none (Telegram stays chat-only).
+telegram_webapp_key() {
+  local token="${TELEGRAM_BOT_TOKEN:-}"
+  [ -n "$token" ] || token="$(sed -n 's/^TELEGRAM_BOT_TOKEN=//p' docker/.env.local 2>/dev/null | tail -n 1 | tr -d '\r"'"'" || true)"
+  [ -n "$token" ] || return 0
+  TG_TOKEN="$token" python3 -c 'import hashlib, hmac, os; print(hmac.new(b"WebAppData", os.environ["TG_TOKEN"].encode(), hashlib.sha256).hexdigest())'
+}
+
 telegram_enable() {
-  local secrets telegram_secret roles_secret
+  local secrets telegram_secret roles_secret webapp_key
   # One Keycloak script makes both clients; it prints the telegram client secret, then the roles client secret.
   secrets="$(kc_exec '
     set -eu
@@ -372,7 +447,10 @@ telegram_enable() {
   roles_secret="$(sed -n 2p <<<"$secrets")"
   [ -n "$telegram_secret" ] && [ -n "$roles_secret" ] || { echo "Không lấy được client secret của Telegram" >&2; exit 1; }
   printf 'DXOS_TELEGRAM_CLIENT_ID=dxos-telegram\nDXOS_TELEGRAM_CLIENT_SECRET=%s\n' "$telegram_secret" | telegram_env_write /run/dxos-telegram telegram.env
-  printf 'DXOS_ROLES_CLIENT_ID=dxos-web-roles\nDXOS_ROLES_CLIENT_SECRET=%s\n' "$roles_secret" | roles_env_update DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET
+  webapp_key="$(telegram_webapp_key)"
+  { printf 'DXOS_ROLES_CLIENT_ID=dxos-web-roles\nDXOS_ROLES_CLIENT_SECRET=%s\n' "$roles_secret"
+    [ -z "$webapp_key" ] || printf 'DXOS_TELEGRAM_WEBAPP_KEY=%s\n' "$webapp_key"; } \
+    | roles_env_update DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET DXOS_TELEGRAM_WEBAPP_KEY
   telegram_restart
   echo "Đã bật Telegram: client dxos-telegram và dxos-web-roles (cần TELEGRAM_BOT_TOKEN trong docker/.env.local để rơle nhận tin)"
 }
@@ -412,7 +490,7 @@ telegram_disable() {
     done
   '
   telegram_env_remove /run/dxos-telegram telegram.env
-  roles_env_update DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET </dev/null
+  roles_env_update DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET DXOS_TELEGRAM_WEBAPP_KEY </dev/null
   telegram_restart
   echo "Đã tắt Telegram: đã xoá client dxos-telegram và dxos-web-roles"
 }
@@ -445,6 +523,14 @@ case "$cmd" in
     case "$subcmd" in
       enable) cd "$ROOT"; agent_enable "$htx" ;;
       disable) cd "$ROOT"; agent_disable "$htx" ;;
+      *) usage ;;
+    esac ;;
+  staff)
+    [ $# -eq 2 ] || usage
+    subcmd="$1"; htx="$2"
+    case "$subcmd" in
+      enable) cd "$ROOT"; staff_enable "$htx" ;;
+      disable) cd "$ROOT"; staff_disable "$htx" ;;
       *) usage ;;
     esac ;;
   telegram)

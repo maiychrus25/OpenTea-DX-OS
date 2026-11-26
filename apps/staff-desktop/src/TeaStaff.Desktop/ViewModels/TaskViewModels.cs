@@ -16,6 +16,8 @@ public sealed class TaskRow(WorkTask task, DateTime now)
     public bool Overdue { get; } = task.IsOverdue(now);
     public string DueText => Task.DueDate.ToString("dd/MM HH:mm");
     public string AssigneeName => Task.Assignee?.FullName ?? "—";
+    /// <summary>Shown after the location of tasks that came from the core's assistant.</summary>
+    public string AiMarker => Task.ExternalRef is null ? string.Empty : "  ·  Từ trợ lý AI";
     public string AssigneeCode => Task.Assignee?.Code ?? string.Empty;
 }
 

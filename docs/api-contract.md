@@ -745,7 +745,7 @@ Mỗi sáng agent A9 (`daily-campaign`, 06:00 giờ Việt Nam) gom các đề x
 
 ### Nội bộ (token agent)
 
-- **`GET /api/internal/agent/campaigns/candidates?day=YYYY-MM-DD`**: trả về `{ day, proposals, rain_parcel_codes, withdrawal_parcel_codes, people_available }`. `proposals` là đề xuất `proposed` chưa hết hạn, mỗi mục có `id`, `kind`, `risk`, `title_vi`, `created_at`, `parcel_codes`, `goal_key`, `target`, `involves_spraying` (luôn `false`), `people_needed` (luôn `0`). `rain_parcel_codes` là thửa có dự báo từ 5 mm mưa; `withdrawal_parcel_codes` là thửa còn trong thời gian cách ly phun thuốc của ngày đó. `people_available` là `null` cho tới M10.
+- **`GET /api/internal/agent/campaigns/candidates?day=YYYY-MM-DD`**: trả về `{ day, proposals, rain_parcel_codes, withdrawal_parcel_codes, people_available }`. `proposals` là đề xuất `proposed` chưa hết hạn, mỗi mục có `id`, `kind`, `risk`, `title_vi`, `created_at`, `parcel_codes`, `goal_key`, `target`, `involves_spraying` (luôn `false`), `people_needed` (1 cho `staff.task.create`, 2 cho `harvest.approve` có sản lượng ước tính trên 500 kg, còn lại `0`). `rain_parcel_codes` là thửa có dự báo từ 5 mm mưa; `withdrawal_parcel_codes` là thửa còn trong thời gian cách ly phun thuốc của ngày đó. `people_available` là số người có mặt hôm nay do app nhân sự báo (`platform.staff_attendance`), hoặc `null` khi chưa có báo cáo; khi đó quy tắc người của A9 bị bỏ qua.
 - **`POST /api/internal/agent/campaigns`**: `{ day, items: [{ proposal_id, position }], dropped: [{ proposal_id, rule }], summary_vi, run_id }`. `position` phải là 1..n theo thứ tự; `rule` là `withdrawal`, `rain`, `people` hoặc `overflow`. Web tính lại `goal_key` và `target` từ đề xuất, không tin giá trị agent gửi. `201 { id }` khi tạo mới; `200 { existing: true, id }` khi HTX đã có chiến dịch của ngày đó (không gửi Telegram lần nữa). `400 INVALID_CAMPAIGN` khi một đề xuất không còn `proposed` hoặc không thuộc HTX; `400 INVALID_RUN_ID` khi `run_id` không thuộc HTX. Danh sách `dropped` chỉ ghi vào sự kiện kiểm toán `agent.campaign.created`.
 
 ### Web (quản lý và cán bộ)
@@ -874,6 +874,23 @@ Body: `{ "arguments": { ... } }`.
 
 Trang công khai `/lot/[lot_code]` hiện khối "kiểm chứng trong sổ audit" chỉ khi quyết định AI của lô có đủ ba điều kiện: sự kiện duyệt `agent.proposal.approved` tồn tại, mã băm bằng chứng của sự kiện bằng mã băm của đề xuất, và `audit.verify_chain()` không báo dòng hỏng tới sự kiện đó. Mỗi lô tối đa 3 dòng, dạng `AI đề xuất, <cán bộ|trưởng HTX> đã duyệt ngày <dd/MM/yyyy>, kiểm chứng trong sổ audit`. Trang không bao giờ hiện tên người duyệt. Dòng được tính khi tải trang, không nằm trong ảnh chụp `public_page_data` của lô đã xuất QR.
 
+## Giao việc cho nhân sự (M10)
+
+Mỗi sáng 05:50 (giờ Việt Nam) agent A8 (`staff-tasks`, không dùng LLM) đề xuất việc cho nhân sự từ những gì các agent khác đã làm. Đề xuất `staff.task.create` (rủi ro `medium`, người duyệt `manager`, web và Telegram) có `title_vi` (1..120), `note_vi` (tối đa 500, chỉ người thêm), `parcel_id?`, `due_date` (YYYY-MM-DD), `assignee_ref` (bắt buộc, 1..64, sửa được) và `source: {kind, proposal_id?}`. Khi duyệt, đề xuất chuyển sang `sent_to_staff_app` (hộp thư và Telegram ghi `Đã gửi app nhân sự`), kết quả `{ state: "waiting_for_staff_app" }`. Lúc duyệt web kiểm tra lại `assignee_ref` còn là dòng đang làm trong bảng nhân sự của HTX; nếu không, đề xuất `failed` với `Người nhận việc không còn trong danh sách nhân sự đang làm. Chọn người khác rồi duyệt lại.` Khi app nhân sự báo đã tạo việc, đề xuất thành `executed` với `external_ref` là mã việc.
+
+App nhân sự không bao giờ được core gọi tới: nó tự kéo mỗi phút. Mọi route dưới đây đi qua cổng nội bộ với token `dxos-staff-<htx>` (vai trò `staff-sync`, claim `htx_code`), và chỉ thấy dữ liệu của HTX trong token. Phản hồi nằm trong `data`.
+
+### Nội bộ (token app nhân sự)
+
+- **`GET /api/internal/staff/tasks`**: `{ data: { tasks: [{ proposal_id, title_vi, note_vi, parcel_code, due_date, assignee_ref, approved_by_name, approved_at }] } }`. Chỉ các đề xuất `staff.task.create` đang `sent_to_staff_app`, chưa hết hạn, của HTX trong token (HTX khác nhận danh sách rỗng). Giá trị là bản người duyệt đã sửa. `note_vi`, `parcel_code` có thể là `null`.
+- **`POST /api/internal/staff/tasks/{proposal_id}/ack`** với `{ task_id }` (1..100 ký tự): `200 { data: { proposal_id, task_id, already } }`; đề xuất thành `executed`, `external_ref = task_id`. Gửi lại cùng `task_id` vẫn `200` với `already: true`. `404` cho HTX khác, id lạ hoặc id không phải uuid; `409 PROPOSAL_NOT_AWAITING_STAFF_APP` khi không còn `sent_to_staff_app` (đã hết hạn, hoặc đã báo mã việc khác); `400` khi thiếu `task_id`.
+- **`PUT /api/internal/staff/roster`** với `{ staff: [{ staff_ref, name, department?, active }] }`, tối đa 500, `staff_ref` không trùng, không nhận trường lạ (không có số điện thoại hay lương). Thay toàn bộ danh sách của HTX: dòng không còn trong danh sách trở thành không hoạt động. `200 { data: { staff: n } }`.
+- **`PUT /api/internal/staff/attendance`** với `{ day, present }`, chỉ cho hôm nay theo giờ Việt Nam (ngày khác `400 ATTENDANCE_DAY_NOT_TODAY`); `present` là số nguyên 0..100000. Ghi đè số của ngày đó. `200 { data: { day, present } }`.
+
+### Nội bộ (token agent)
+
+- **`GET /api/internal/agent/staff/inputs`**: `{ data: { proposals, roster, attendance } }` cho A8. `proposals` là đề xuất `executed` trong 24 giờ qua thuộc `harvest.approve`, `disease.inspection` hoặc `notification.households` với mẫu `dry_soil` hoặc `rain_after_spray`, mỗi mục `{ id, kind, template, parcels: [{ id, code }] }` (`template` là `null` với loại không có mẫu). `roster` là nhân sự đang làm `{ staff_ref, name, department, active }`. `attendance` là `{ day, present }` của hôm nay hoặc `null` khi app nhân sự chưa báo.
+
 ## Error Codes
 
 | HTTP | code | Meaning |
@@ -929,6 +946,18 @@ Body `{ "intent": { type, name?, args? }, "run_id": uuid | null }`. Trả về `
 
 `GET /api/internal/telegram/outbox` trước khi giao hàng đợi đánh dấu các yêu cầu `pending` hoặc `claimed` cũ hơn 60 giây là `expired`, rồi xếp lời trả lời `assistantTimeout` kèm menu vào đúng chat.
 
+
+## Telegram Mini App (M6)
+
+Mini App chỉ bật khi web có `DXOS_TELEGRAM_WEBAPP_KEY` (hex của `HMAC_SHA256(key="WebAppData", msg=<bot token>)`, do `./dxos telegram enable` ghi). Web không bao giờ giữ bot token.
+
+- **`POST /api/telegram/webapp/session`** (cần phiên đăng nhập): body `{ "init_data": "<initData thô>" }`. Web kiểm `hash` theo thuật toán của Telegram (so sánh thời gian hằng), `auth_date` không quá 24 giờ, có `user.id`, và `user.id` phải bằng `telegram_user_id` của liên kết còn hiệu lực của người đang đăng nhập. `initData` không bao giờ là đăng nhập.
+  - `200 { "data": { "telegram_user_id": n } }` và đặt cookie `dxos_tg_webapp` (`httpOnly`, `SameSite=Lax`, 12 giờ, giá trị `<telegram_user_id>.<user_id>.<hết hạn>.<chữ ký>`, ký bằng `AUTH_SECRET`).
+  - `404 WEBAPP_DISABLED` (thiếu khóa dẫn xuất), `401` (không có phiên), `400 WEBAPP_INVALID` (hash sai, quá hạn, thiếu `user`, body sai), `403 WEBAPP_NOT_LINKED` (Telegram của người khác hoặc chưa liên kết).
+- Vì Content-Security-Policy chưa được đặt ở đâu trong web, không có chính sách nào cần đổi; script `https://telegram.org/js/telegram-web-app.js` chỉ được tải khi mở trong Telegram.
+- **Trang `/telegram/open`** (cần phiên; khách chưa đăng nhập được chuyển tới `/login?callbackUrl=/telegram/open?...` và quay lại sau khi đăng nhập): gửi `initData` tới route trên một lần, rồi chuyển tới `?to=<đường dẫn>` nếu đó là đường dẫn cùng nguồn thuộc danh sách của vai trò (`/farmer/journal/new`; `/officer/journal`, `/officer/households`, `/officer/farm-zones`; `/manager/ai`, `/manager/journal-approve`), nếu không thì tới trang chủ của vai trò. Ngoài Telegram hoặc khi `WEBAPP_DISABLED` trang chỉ chuyển hướng; khi `403` trang hiện lý do.
+- `TelegramWebAppShell` (layout gốc) chỉ hoạt động khi URL có `tgWebAppData` hoặc `tgWebAppPlatform` (cờ lưu trong `sessionStorage`); khi đó mới tải `https://telegram.org/js/telegram-web-app.js`, gọi `ready()` và `expand()`, đặt `data-theme` theo `colorScheme` của Telegram và nối nút Back với `router.back()` khi `history.length > 1`.
+- **Nút Mini App trong chat (M6)**, chỉ hiện khi web có `DXOS_WEB_PUBLIC_URL` bắt đầu bằng `https://` (không thì chat giữ nguyên): menu có thêm hàng `Mở ứng dụng` (nút `web_app` tới `/telegram/open`, mọi vai trò); thẻ xác nhận `journal.create` của nông dân có thêm nút `Sửa` mở `/farmer/journal/new?parcel&activity&product&dosage&withdrawal` đã điền sẵn; tin đề xuất mức `high` có thêm nút `Mở chi tiết` tới `/manager/ai?proposal=<id>`. Cán bộ và `harvest.approve` chưa có biểu mẫu riêng nên không có nút `Sửa`. Hàng đợi gửi nhận thêm loại nút `{ text, web_app: { url } }`.
 
 ## Hành động của mini-app (M9)
 

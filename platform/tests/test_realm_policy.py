@@ -137,6 +137,12 @@ class RealmPolicyTest(unittest.TestCase):
         for client in REALM["clients"]:
             self.assertNotIn("telegram", client.get("defaultRoles", []), client["clientId"])
 
+    def test_staff_sync_realm_role_exists_and_no_client_holds_it_by_default(self):
+        names = {role["name"] for role in REALM["roles"]["realm"]}
+        self.assertIn("staff-sync", names)
+        for client in REALM["clients"]:
+            self.assertNotIn("staff-sync", client.get("defaultRoles", []), client["clientId"])
+
     def test_sso_session_matches_app_session(self):
         self.assertEqual(REALM.get("ssoSessionIdleTimeout"), 28800)
         self.assertEqual(REALM.get("ssoSessionMaxLifespan"), 28800)

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { z } from 'zod'
+import type { ReplyButtons } from '@/application/telegram/TelegramUpdateHandler'
 import { ChatEngine } from '@/application/telegram/chat/ChatEngine'
 import type { ChatAction, ChatTool, ChatUser, PhotoStore } from '@/application/telegram/chat/types'
 import { TELEGRAM_TEXT } from '@/application/telegram/messages'
@@ -180,9 +181,9 @@ function build(options: { tools?: ChatTool[]; actions?: ChatAction[] } = {}) {
 beforeEach(() => jest.clearAllMocks())
 
 /** The button of a reply with the given step, read the way Telegram delivers it. */
-function buttonFor(replyButtons: { text: string; callback_data: string }[][] | undefined, label: string) {
+function buttonFor(replyButtons: ReplyButtons | undefined, label: string) {
   const button = replyButtons?.flat().find((b) => b.text === label)
-  if (!button) throw new Error(`no button ${label}`)
+  if (!button || !('callback_data' in button)) throw new Error(`no button ${label}`)
   return verifyCallbackDataV2(KEY, button.callback_data)!
 }
 
@@ -250,7 +251,7 @@ describe('ChatEngine: flows and steps', () => {
   })
 
   /** Presses the button with this label of the last reply, and returns the new response. */
-  async function tap(engine: ChatEngine, user: ChatUser, lastButtons: { text: string; callback_data: string }[][] | undefined, label: string, telegramUserId = '42', chatId = 42, now = NOW) {
+  async function tap(engine: ChatEngine, user: ChatUser, lastButtons: ReplyButtons | undefined, label: string, telegramUserId = '42', chatId = 42, now = NOW) {
     const { c, s } = buttonFor(lastButtons, label)
     return press(engine, user, telegramUserId, chatId, c, s, 9, now)
   }
@@ -369,7 +370,7 @@ describe('ChatEngine: cards and confirm', () => {
     return press(engine, FARMER, '42', 42, ...pair(third.replies[0].buttons, 'Bỏ qua'))
   }
 
-  function pair(buttons: { text: string; callback_data: string }[][] | undefined, label: string): [string, string] {
+  function pair(buttons: ReplyButtons | undefined, label: string): [string, string] {
     const { c, s } = buttonFor(buttons, label)
     return [c, s]
   }
@@ -442,6 +443,31 @@ describe('ChatEngine: cards and confirm', () => {
     const res = await press(engine, demoted, '42', 42, ...pair(card.replies[0].buttons, 'Xác nhận'), 9)
     expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.noPermission('Ghi nhật ký'), show_alert: true })
     expect(journal.execute).not.toHaveBeenCalled()
+  })
+
+  test('a farmer journal card gains Sửa with the HTTPS address set, and keeps its buttons without it', async () => {
+    const { engine } = build()
+    const plain = await journalCard(engine)
+    expect(plain.replies[0].buttons!.flat().map((b) => b.text)).toEqual(['Xác nhận', 'Huỷ'])
+    process.env.DXOS_WEB_PUBLIC_URL = 'https://dxos.example.org'
+    try {
+      const card = await journalCard(engine)
+      expect(card.replies[0].buttons!.map((row) => row.map((b) => b.text))).toEqual([['Xác nhận', 'Huỷ'], ['Sửa']])
+    } finally {
+      delete process.env.DXOS_WEB_PUBLIC_URL
+    }
+  })
+
+  test('a high action card (harvest.approve) has no Sửa: it has no form', async () => {
+    process.env.DXOS_WEB_PUBLIC_URL = 'https://dxos.example.org'
+    try {
+      const { engine } = build({ actions: [harvest] })
+      const start = await engine.onText(MANAGER, 'duyệt thu hoạch', NOW)
+      const card = await press(engine, MANAGER, '44', 44, ...pair(start.replies[0].buttons, 'TC-A2'))
+      expect(card.replies[0].buttons!.map((row) => row.map((b) => b.text))).toEqual([['Tiếp tục', 'Huỷ']])
+    } finally {
+      delete process.env.DXOS_WEB_PUBLIC_URL
+    }
   })
 
   test('a high action shows Tiếp tục first, then a second card with its own token and Xác nhận lần cuối', async () => {

@@ -11,7 +11,7 @@ import threading
 import time as time_module
 
 from . import __version__
-from .agents import app_suggestions, bulletin, daily_campaign, disease_watch, field_watch, harvest_ready, improvement
+from .agents import app_suggestions, bulletin, daily_campaign, disease_watch, field_watch, harvest_ready, improvement, staff_tasks
 from .agents.assistant import run_assistant_once
 from .agents.digest import DigestSchedule, run_digest
 from .agents.journal_review import (
@@ -39,6 +39,7 @@ FIELD_WATCH_INTERVAL = timedelta(minutes=30)
 APP_SUGGESTIONS_INTERVAL = timedelta(minutes=30)  # the web repeats no app proposal within 24 h, so asking often costs little
 HARVEST_READY_AT = time(5, 30)  # Vietnam time; early, so A9 at 06:00 reads its warnings
 DISEASE_WATCH_AT = time(5, 40)  # Vietnam time
+STAFF_TASKS_AT = time(5, 50)  # Vietnam time, after A4 and A3 and before A9, which reads the tasks
 CAMPAIGN_AT = time(6, 0)  # Vietnam time, after A2, A4 and A3 (contract C5)
 BULLETIN_AT = time(5, 0)  # Vietnam time
 IMPROVEMENT_AT = time(6, 30)  # Vietnam time, Mondays: after the day's agents, before the 07:00 weekly report (contract C4)
@@ -89,6 +90,7 @@ class _CooperativeRuntime:
     harvest_ready: DailySchedule = field(default_factory=lambda: DailySchedule(HARVEST_READY_AT))
     disease_watch: DailySchedule = field(default_factory=lambda: DailySchedule(DISEASE_WATCH_AT))
     disease_fingerprint: str | None = None
+    staff_tasks: DailySchedule = field(default_factory=lambda: DailySchedule(STAFF_TASKS_AT))
     app_suggestions: IntervalSchedule = field(default_factory=lambda: IntervalSchedule(APP_SUGGESTIONS_INTERVAL))
     daily_campaign: DailySchedule = field(default_factory=lambda: DailySchedule(CAMPAIGN_AT))
     bulletin: DailySchedule = field(default_factory=lambda: DailySchedule(BULLETIN_AT))
@@ -215,7 +217,7 @@ def _guarded(label: str, htx_code: str, run) -> None:
 
 
 def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentSettings) -> None:
-    """A2 to A5 (rules, plus the bulletin's LLM). They run for every cooperative with credentials, as A1 does."""
+    """A2 to A5 and A8 (rules, plus the bulletin's LLM). They run for every cooperative with credentials, as A1 does."""
     htx = runtime.creds.htx_code
     gateway = runtime.gateway
 
@@ -241,6 +243,11 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
         if daily_due:
             runtime.disease_watch.record(now)
         runtime.disease_fingerprint = fingerprint
+
+    def staff_tasks_cycle() -> None:
+        if runtime.staff_tasks.is_due(now):
+            staff_tasks.run_staff_tasks(gateway, now)
+            runtime.staff_tasks.record(now)  # only after a run that did not fail, so a failed run is retried
 
     def app_suggestions_cycle() -> None:
         if runtime.app_suggestions.is_due(now):
@@ -293,6 +300,7 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
     _guarded("A2 field-watch", htx, field_watch_cycle)
     _guarded("A4 harvest-ready", htx, harvest_cycle)
     _guarded("A3 disease-watch", htx, disease_cycle)
+    _guarded("A8 staff-tasks", htx, staff_tasks_cycle)
     _guarded("app suggestions", htx, app_suggestions_cycle)  # before A9, so the campaign sees them
     _guarded("A9 daily-campaign", htx, campaign_cycle)
     _guarded("A5 bulletin", htx, bulletin_cycle)

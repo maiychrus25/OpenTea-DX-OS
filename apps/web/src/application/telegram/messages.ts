@@ -42,6 +42,7 @@ export const TELEGRAM_TEXT = {
   otherCooperative: 'Đề xuất này không thuộc HTX của bạn.',
   approved: 'Đã duyệt đề xuất.',
   executed: 'Đã duyệt và thực hiện đề xuất.',
+  sentToStaffApp: 'Đã duyệt. Đã gửi app nhân sự.',
   failedExecution: 'Đã duyệt nhưng thực hiện lỗi. Xem chi tiết trên web.',
   rejected: 'Đã từ chối đề xuất.',
   stale: 'Dữ liệu nguồn đã thay đổi, đề xuất không còn hiệu lực.',
@@ -121,6 +122,8 @@ export function proposalResultText(proposal: Proposal): string | null {
   switch (proposal.status) {
     case 'executed':
       return proposal.decisionChannel === 'autopilot' ? `AI đã tự thực hiện lúc ${at}.` : `Đã được ${by} duyệt lúc ${at}, đã thực hiện.`
+    case 'sent_to_staff_app':
+      return `Đã được ${by} duyệt lúc ${at}. Đã gửi app nhân sự.`
     case 'failed':
       return proposal.decisionChannel === 'autopilot'
         ? `AI đã tự thực hiện lúc ${at}, thực hiện lỗi.`

@@ -33,6 +33,7 @@ describe('autoEligibility', () => {
       'journal.reject',
       'notification.households',
       'notification.internal',
+      'staff.task.create',
     ])
   })
 
@@ -56,6 +57,7 @@ describe('autoEligibility', () => {
     ['notification.households', true],
     ['disease.inspection', true],
     ['bulletin.publish', true],
+    ['staff.task.create', true],
     ['journal.approve', false],
     ['harvest.approve', false],
     ['improvement.adopt', false],

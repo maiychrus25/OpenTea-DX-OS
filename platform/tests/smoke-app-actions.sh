@@ -35,7 +35,7 @@ app_actions_cleanup() {
   ./dxos remove tea-shop --purge >/dev/null 2>&1 || true
   if [ "$M9_WAS_INSTALLED" != "0" ]; then ./dxos install miniapps/tea-shop >/dev/null 2>&1 || true; fi
 }
-trap 'app_actions_cleanup; autopilot_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT
+trap 'app_actions_cleanup; autopilot_cleanup; staff_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT
 
 # The agent stays stopped while the products are seeded (lesson 5 of M4); it restarts after them.
 $COMPOSE stop dxos-agent >/dev/null
