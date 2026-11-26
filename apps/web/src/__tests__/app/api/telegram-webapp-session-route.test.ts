@@ -6,12 +6,15 @@ import { createHmac } from 'node:crypto'
 import { webAppKeyFromBotToken, verifyWebAppCookie, WEBAPP_COOKIE_NAME } from '@/domain/telegram/webapp-init-data'
 
 const activeUserLinkByUser = jest.fn()
+const readFile = jest.fn()
+jest.mock('node:fs/promises', () => ({ readFile: (...args: unknown[]) => readFile(...args) }))
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 jest.mock('@/application/telegram/telegram-services', () => ({
   telegramRepository: () => ({ activeUserLinkByUser }),
 }))
 
 import { auth } from '@/auth'
+import { resetTelegramWebAppKeyCache } from '@/application/telegram/telegram-config'
 import { POST } from '@/app/api/telegram/webapp/session/route'
 
 const TOKEN = '123456:FAKE-token-for-tests'
@@ -31,6 +34,7 @@ describe('POST /api/telegram/webapp/session', () => {
   const env = process.env
   beforeEach(() => {
     jest.resetAllMocks()
+    resetTelegramWebAppKeyCache()
     process.env = { ...env, DXOS_TELEGRAM_WEBAPP_KEY: KEY, AUTH_SECRET: 'test-auth-secret' }
     ;(auth as jest.Mock).mockResolvedValue({ user: { id: 'user-1' } })
     activeUserLinkByUser.mockResolvedValue({ telegramUserId: '4242' })
@@ -89,5 +93,29 @@ describe('POST /api/telegram/webapp/session', () => {
     const res = await call({ init_data: initData(4242) })
     expect(res.status).toBe(404)
     expect((await res.json()).error.code).toBe('WEBAPP_DISABLED')
+  })
+
+  describe('key from the roles file', () => {
+    beforeEach(() => delete process.env.DXOS_TELEGRAM_WEBAPP_KEY)
+
+    it('uses the file when the environment variable is empty', async () => {
+      readFile.mockResolvedValue(`DXOS_ROLES_CLIENT_ID=x\nDXOS_TELEGRAM_WEBAPP_KEY=${KEY}\n`)
+      expect((await call({ init_data: initData(4242) })).status).toBe(200)
+    })
+
+    it('answers 404 WEBAPP_DISABLED when the file is missing or has no key', async () => {
+      readFile.mockRejectedValue(new Error('ENOENT'))
+      expect((await call({ init_data: initData(4242) })).status).toBe(404)
+      resetTelegramWebAppKeyCache()
+      readFile.mockResolvedValue('DXOS_ROLES_CLIENT_ID=x\n')
+      expect((await call({ init_data: initData(4242) })).status).toBe(404)
+    })
+
+    it('prefers the environment variable over the file', async () => {
+      process.env.DXOS_TELEGRAM_WEBAPP_KEY = KEY
+      readFile.mockRejectedValue(new Error('should not be read'))
+      expect((await call({ init_data: initData(4242) })).status).toBe(200)
+      expect(readFile).not.toHaveBeenCalled()
+    })
   })
 })

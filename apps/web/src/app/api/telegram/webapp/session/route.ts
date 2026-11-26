@@ -26,7 +26,7 @@ function refuse(status: number, code: string, message: string) {
  * it must name the account linked to this user.
  */
 async function postWebAppSession(req: Request) {
-  const key = telegramWebAppKey()
+  const key = await telegramWebAppKey()
   if (!key) return refuse(404, 'WEBAPP_DISABLED', 'Telegram Mini App chưa được bật.')
   const userId = (await auth())?.user?.id
   if (!userId) throw new UnauthorizedError()
