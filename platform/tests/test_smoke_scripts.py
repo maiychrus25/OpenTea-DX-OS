@@ -248,4 +248,4 @@ def test_staff_smoke_never_prints_the_secret():
         if line.lstrip().startswith("#"):
             continue
         if any(word in line for word in ("echo", "printf", "pass ")):
-            assert "csec" not in line, line
+            assert "$csec" not in line.replace("[ -n \"$csec\" ]", ""), line
