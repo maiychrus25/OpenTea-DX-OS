@@ -5,12 +5,14 @@ import { getAction } from '@/application/agent/action-catalog'
 import { loadJournalSubjects } from '@/application/agent/journal-subjects'
 import type { JournalSubject } from '@/application/agent/actions/journal-labels'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
+import type { CampaignRepository } from '@/domain/agent/ports/CampaignRepository'
 import type { Proposal } from '@/domain/agent/proposal'
 import { signCallbackData } from '@/domain/telegram/callback-data'
 import type { OutboxInsert, OutboxRow, TelegramRepository } from '@/domain/telegram/ports/TelegramRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
 import { telegramCallbackKey } from './telegram-config'
 import {
+  campaignText,
   healthText,
   proposalResultText,
   proposalText,
@@ -29,11 +31,18 @@ const MAX_BACKOFF_SECONDS = 15 * 60
 
 let lastHealthCheckAt = 0
 
+/** The campaign reads and writes the notifier needs (the campaign message and the 18:00 outcomes). */
+export type NotifierCampaigns = Pick<
+  CampaignRepository,
+  'findById' | 'items' | 'markTelegramSent' | 'findForDay' | 'writeOutcomes' | 'setStatus'
+>
+
 export interface TelegramNotifierDeps {
   repo: TelegramRepository
   proposals: Pick<ProposalRepository, 'findById'>
   /** Journal labels for a proposal's preview; the same wording the inbox shows. */
   labelsFor?: (htxCode: string, proposals: Proposal[]) => Promise<Map<string, JournalSubject>>
+  campaigns?: NotifierCampaigns
   now?: () => Date
 }
 
@@ -70,11 +79,13 @@ export class TelegramNotifier {
   private readonly proposals: Pick<ProposalRepository, 'findById'>
   private readonly labelsFor: (htxCode: string, proposals: Proposal[]) => Promise<Map<string, JournalSubject>>
   private readonly now: () => Date
+  private readonly campaigns?: NotifierCampaigns
 
   constructor(deps: TelegramNotifierDeps) {
     this.repo = deps.repo
     this.proposals = deps.proposals
     this.labelsFor = deps.labelsFor ?? defaultLabels
+    this.campaigns = deps.campaigns
     this.now = deps.now ?? (() => new Date())
   }
 
@@ -117,6 +128,36 @@ export class TelegramNotifier {
         purpose: 'proposal' as const,
       }))
     )
+  }
+
+  /** The campaign message to the cooperative's managers, with the approve-all, list and drop buttons (contract C6). */
+  async enqueueCampaign(htxCode: string, campaignId: string): Promise<void> {
+    const key = telegramCallbackKey()
+    const campaigns = this.campaigns
+    if (!key || !campaigns) return
+    const campaign = await campaigns.findById(htxCode, campaignId)
+    if (!campaign) return
+
+    const recipients = await this.repo.userLinkRecipients(htxCode, ['manager'])
+    if (recipients.length === 0) return
+    const items = await campaigns.items(htxCode, campaignId)
+    const lines = items.map((item) => ({
+      title: getAction(item.kind)?.titleVi ?? item.kind,
+      target: item.target,
+      unitVi: campaign.goals.find((g) => g.goalKey === item.goalKey)?.unitVi ?? 'việc',
+    }))
+    const text = campaignText(campaign.day, campaign.summaryVi, lines)
+    const buttons = [
+      [{ text: 'Duyệt cả chiến dịch', callback_data: signCallbackData(key, campaignId, 'A') }],
+      [
+        { text: 'Xem từng mục', callback_data: signCallbackData(key, campaignId, 'L') },
+        { text: 'Bỏ chiến dịch', callback_data: signCallbackData(key, campaignId, 'D') },
+      ],
+    ]
+    await this.repo.enqueue(
+      recipients.map((link) => ({ htxCode, chatId: link.chatId, op: 'send' as const, text, buttons, purpose: 'reply' as const }))
+    )
+    await campaigns.markTelegramSent(htxCode, campaignId)
   }
 
   /**

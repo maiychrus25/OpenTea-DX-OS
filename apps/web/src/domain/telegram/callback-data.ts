@@ -3,8 +3,10 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-export type CallbackOp = 'a' | 'r'
+/** `a` and `r` act on a proposal; `A`, `L` and `D` (M7) act on a campaign: approve all, list items, drop. */
+export type CallbackOp = 'a' | 'r' | 'A' | 'L' | 'D'
 
+/** `proposalId` holds the campaign id for the campaign ops `A`, `L` and `D`. */
 export interface ParsedCallbackData {
   proposalId: string
   op: CallbackOp
@@ -13,7 +15,7 @@ export interface ParsedCallbackData {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const ID_RE = /^[A-Za-z0-9_-]{22}$/
 const SIG_RE = /^[A-Za-z0-9_-]{16}$/
-const OPS: readonly CallbackOp[] = ['a', 'r']
+const OPS: readonly CallbackOp[] = ['a', 'r', 'A', 'L', 'D']
 
 function uuidToBase64Url(uuid: string): string {
   return Buffer.from(uuid.replace(/-/g, ''), 'hex').toString('base64url')

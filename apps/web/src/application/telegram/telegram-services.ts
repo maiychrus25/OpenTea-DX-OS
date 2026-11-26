@@ -6,6 +6,7 @@ import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHousehold
 import { KeycloakLiveRoleReader } from '@/infrastructure/auth/dxos-web-roles.client'
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
+import { PrismaCampaignRepository } from '@/infrastructure/db/agent/PrismaCampaignRepository'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import { PrismaAssistantRequestRepository } from '@/infrastructure/db/telegram/PrismaAssistantRequestRepository'
 import { PrismaTelegramRepository } from '@/infrastructure/db/telegram/PrismaTelegramRepository'
@@ -27,7 +28,11 @@ export function telegramRepository(): PrismaTelegramRepository {
 }
 
 export function telegramNotifier(): TelegramNotifier {
-  return new TelegramNotifier({ repo: telegramRepository(), proposals: new PrismaProposalRepository() })
+  return new TelegramNotifier({
+    repo: telegramRepository(),
+    proposals: new PrismaProposalRepository(),
+    campaigns: new PrismaCampaignRepository(),
+  })
 }
 
 export function telegramLinkService(): TelegramLinkService {
@@ -129,5 +134,14 @@ export async function notifyProposalDecided(htxCode: string, proposalId: string)
     await telegramNotifier().syncDecision(htxCode, proposalId)
   } catch (err) {
     logger.error('Telegram: could not sync proposal messages', { proposalId, err })
+  }
+}
+
+/** The campaign message is queued after A9 creates a campaign; a failure is logged and the campaign stays stored. */
+export async function notifyCampaignCreated(htxCode: string, campaignId: string): Promise<void> {
+  try {
+    await telegramNotifier().enqueueCampaign(htxCode, campaignId)
+  } catch (err) {
+    logger.error('Telegram: could not queue the campaign message', { campaignId, err })
   }
 }

@@ -159,3 +159,18 @@ export function reportText(
 export function healthText(condition: string, detail: string): string {
   return `Cảnh báo hệ thống: ${condition}\n${detail}`
 }
+
+/** Campaign message (contract C6): the day, the count, A9's summary and up to four items. */
+export interface CampaignLine {
+  title: string
+  target: number
+  unitVi: string
+}
+
+export function campaignText(day: string, summaryVi: string, lines: CampaignLine[]): string {
+  const [, month, dayOfMonth] = day.split('-')
+  const out = [`Chiến dịch ngày ${dayOfMonth}/${month}: ${lines.length} việc`, summaryVi]
+  lines.slice(0, 4).forEach((line, index) => out.push(`${index + 1}. ${line.title} · ${line.target} ${line.unitVi}`))
+  if (lines.length > 4) out.push(`… và ${lines.length - 4} việc khác`)
+  return out.join('\n')
+}
