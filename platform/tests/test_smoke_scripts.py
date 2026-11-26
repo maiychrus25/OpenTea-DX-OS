@@ -131,3 +131,10 @@ def test_campaign_smoke_closes_older_open_proposals_before_seeding():
     text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
     close = text.index("set status = 'expired' where htx_code = 'TC' and status = 'proposed'")
     assert text.index("$COMPOSE stop dxos-agent") < close < text.index("M7_NOTICE=$(m7_post")
+
+
+def test_campaign_smoke_reads_the_approve_all_line_by_its_text():
+    # Other messages to the manager (proposal syncs) arrive after the campaign edit, so the newest one is not it (M7 CI).
+    text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
+    assert 'tg_last_with "$TG_OWNER" "Đã duyệt chiến dịch"' in text
+    assert 'tg_last_text "$TG_OWNER"' not in text
