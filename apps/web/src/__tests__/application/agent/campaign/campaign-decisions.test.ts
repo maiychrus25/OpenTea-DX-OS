@@ -51,7 +51,7 @@ describe('ApproveCampaignUseCase (C7, test 14)', () => {
       item(2, 'harvest.approve', 'high'),
       item(3, 'journal.approve', 'medium'),
     ])
-    const decide = jest.fn(async () => ({ outcome: 'executed', result: {} }))
+    const decide = jest.fn(async (_input: { proposalId: string }) => ({ outcome: 'executed', result: {} }))
     const result = await useCase(campaigns, decide).execute(CAMPAIGN_ID, manager, 'Quản lý', 'web')
 
     expect(result).toEqual({ executed: 2, waitingHigh: 1, forwarded: 0, failed: 0, alreadyDecided: 0 })
@@ -77,7 +77,7 @@ describe('ApproveCampaignUseCase (C7, test 14)', () => {
       item(3, 'notification.internal', 'low'),
       item(4, 'notification.internal', 'low', 'executed'),
     ])
-    const decide = jest.fn()
+    const decide = jest.fn<Promise<unknown>, [{ proposalId: string }]>()
       .mockResolvedValueOnce({ outcome: 'stale' })
       .mockResolvedValueOnce({ outcome: 'already_decided', by: 'Ai đó', at: null, status: 'rejected' })
       .mockResolvedValueOnce({ outcome: 'executed', result: {} })

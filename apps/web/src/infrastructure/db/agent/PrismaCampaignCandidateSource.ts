@@ -26,7 +26,7 @@ export class PrismaCampaignCandidateSource implements CandidateSource {
       const code = row.parcel.parcel_code
       wettest.set(code, Math.max(wettest.get(code) ?? 0, row.precipitation_mm))
     }
-    return [...wettest].filter(([, mm]) => mm >= RAIN_MM).map(([code]) => code)
+    return Array.from(wettest).filter(([, mm]) => mm >= RAIN_MM).map(([code]) => code)
   }
 
   async withdrawalRows(htxCode: string, since: Date): Promise<{ parcel_code: string; safe_harvest_date: Date }[]> {

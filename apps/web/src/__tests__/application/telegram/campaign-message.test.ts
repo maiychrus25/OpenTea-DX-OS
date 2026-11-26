@@ -51,7 +51,7 @@ describe('TelegramNotifier.enqueueCampaign (C6)', () => {
   })
 
   it('queues one message per linked manager with the signed A, L and D buttons', async () => {
-    const enqueue = jest.fn(async () => undefined)
+    const enqueue = jest.fn(async (_rows: unknown[]) => undefined)
     const markTelegramSent = jest.fn(async () => undefined)
     const repo = {
       userLinkRecipients: jest.fn(async () => [{ chatId: '42' }, { chatId: '43' }]),

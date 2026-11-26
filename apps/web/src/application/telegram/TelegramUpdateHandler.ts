@@ -9,7 +9,7 @@ import type { DecideProposalInput, DecideProposalOutcome } from '@/application/a
 import type { Campaign, CampaignItem } from '@/domain/agent/campaign'
 import type { CampaignRepository } from '@/domain/agent/ports/CampaignRepository'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
-import type { Proposal } from '@/domain/agent/proposal'
+import type { DecisionChannel, Proposal } from '@/domain/agent/proposal'
 import { DomainError } from '@/domain/errors'
 import { verifyCallbackData, verifyCallbackDataV2 } from '@/domain/telegram/callback-data'
 import { hashLinkCode, LINK_CODE_TTL_MS } from '@/domain/telegram/link-code'
@@ -75,7 +75,7 @@ export interface ChatServices {
 /** The daily campaign's reads, its approve-all and drop, and its message for `/chiendich` (M7, contract C6). */
 export interface CampaignServices {
   repo: Pick<CampaignRepository, 'findById' | 'findForDay' | 'items'>
-  approve: { execute(campaignId: string, tenant: Tenant, userName: string, channel: 'telegram', now?: Date): Promise<ApproveCampaignResult> }
+  approve: { execute(campaignId: string, tenant: Tenant, userName: string, channel: DecisionChannel, now?: Date): Promise<ApproveCampaignResult> }
   drop: { execute(campaignId: string, tenant: Tenant, userName: string): Promise<void> }
   message(htxCode: string, campaignId: string): Promise<{ text: string; buttons?: ReplyButtons } | null>
 }

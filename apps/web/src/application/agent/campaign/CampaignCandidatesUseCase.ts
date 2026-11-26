@@ -8,8 +8,6 @@ import { getAction } from '../action-catalog'
 import { campaignGoal } from './campaign-goals'
 import { vnDayStart } from './vn-day'
 
-/** The rain-forecast threshold of C3: a cache row with at least this much rain marks its parcel. */
-const RAIN_MM = 5
 const CANDIDATE_LIMIT = 500
 
 /** Reads the facts the campaign rules need, always scoped to one cooperative. */
@@ -92,7 +90,7 @@ export class CampaignCandidatesUseCase {
         risk: proposal.risk,
         title_vi: getAction(proposal.kind)?.titleVi ?? proposal.kind,
         created_at: proposal.createdAt.toISOString(),
-        parcel_codes: [...new Set([...fromIds, ...fromEntries, ...codes])],
+        parcel_codes: Array.from(new Set([...fromIds, ...fromEntries, ...codes])),
         goal_key: goal.goalKey,
         target: goal.target,
         // Every kind in today's catalogue is free of spraying and manpower; A8 and mini-app kinds fill these later.
