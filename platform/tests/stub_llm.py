@@ -57,14 +57,19 @@ def _system_text(body):
 
 
 def _sentence(messages):
-    """The user's sentence: the text of the last user JSON object, or the plain user text."""
+    """The user's sentence: payload.sentence.text (the A7 shape), else payload.text, else the plain user text."""
     for msg in reversed(messages):
         if msg.get("role") == "user" and isinstance(msg.get("content"), str):
             try:
                 payload = json.loads(msg["content"])
             except json.JSONDecodeError:
                 return msg["content"]
-            text = payload.get("text") if isinstance(payload, dict) else None
+            if not isinstance(payload, dict):
+                return msg["content"]
+            sentence = payload.get("sentence")
+            if isinstance(sentence, dict) and isinstance(sentence.get("text"), str):
+                return sentence["text"]
+            text = payload.get("text")
             return text if isinstance(text, str) else ""
     return ""
 

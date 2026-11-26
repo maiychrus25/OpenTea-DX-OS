@@ -146,3 +146,18 @@ def test_intent_request_ignores_the_keys_of_the_json_object_itself(stub):
     # The intent prompt lists the tools as JSON keys; only the user's text decides the answer.
     answer = intent_request(stub, json.dumps({"tools": [{"name": "mai"}], "text": "gibberish"}, ensure_ascii=False))
     assert json.loads(answer["content"][1]["text"]) == {"type": "unknown"}
+
+
+def test_intent_request_reads_the_sentence_field_of_the_a7_payload(stub):
+    # The shape A7 sends: the sentence sits in payload["sentence"]["text"]; the tool names are not the sentence.
+    content = json.dumps({"actions": [{"name": "journal.create"}], "sentence": {"text": "mai có nên đi hái không", "trust": "untrusted"},
+                          "today": "2026-11-26", "tools": [{"name": "mai"}]}, ensure_ascii=False, sort_keys=True)
+    answer = intent_request(stub, content)
+    assert json.loads(answer["content"][1]["text"]) == {"type": "tool", "name": "weather", "args": {}}
+
+
+def test_intent_request_with_a7_payload_and_no_mai_is_unknown(stub):
+    content = json.dumps({"actions": [], "sentence": {"text": "duyệt hết nhật ký", "trust": "untrusted"},
+                          "today": "2026-11-26", "tools": [{"name": "mai"}]}, ensure_ascii=False, sort_keys=True)
+    answer = intent_request(stub, content)
+    assert json.loads(answer["content"][1]["text"]) == {"type": "unknown"}
