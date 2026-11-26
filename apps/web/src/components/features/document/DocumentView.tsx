@@ -34,6 +34,8 @@ export function DocumentView({ htxCode, variant }: { htxCode: string; variant?: 
   const [hasLiveDocuments, setHasLiveDocuments] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  // Officers press a figure to see only the files or only the folders; pressing it again shows both.
+  const [kind, setKind] = useState<'file' | 'dir' | null>(null)
   
   // Modals
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
@@ -265,8 +267,8 @@ export function DocumentView({ htxCode, variant }: { htxCode: string; variant?: 
       />
 
       {variant === 'officer' && !isLoading && hasLiveDocuments && <Stats items={[
-        { label: 'Tài liệu đang hiển thị', value: documents.filter(doc => !doc.isDir).length, icon: <FileText /> },
-        { label: 'Thư mục đang hiển thị', value: documents.filter(doc => doc.isDir).length, icon: <Folder /> },
+        { label: 'Tài liệu đang hiển thị', value: documents.filter(doc => !doc.isDir).length, icon: <FileText />, active: kind === 'file', onSelect: () => setKind(kind === 'file' ? null : 'file') },
+        { label: 'Thư mục đang hiển thị', value: documents.filter(doc => doc.isDir).length, icon: <Folder />, active: kind === 'dir', onSelect: () => setKind(kind === 'dir' ? null : 'dir') },
       ]} />}
 
       <div className={styles.content}>
@@ -330,7 +332,7 @@ export function DocumentView({ htxCode, variant }: { htxCode: string; variant?: 
                   </tr>
                 </thead>
                 <tbody>
-                  {documents.map((doc, i) => (
+                  {documents.filter(doc => !kind || (kind === 'dir') === Boolean(doc.isDir)).map((doc, i) => (
                     <tr key={i} className={doc.isDir ? styles.isDir : ''}>
                       <td>
                         {doc.isDir ? (
