@@ -220,11 +220,14 @@ export class DecideProposalUseCase {
   }
 
   private async expireOfGoneApp(input: DecideProposalInput, proposal: Proposal): Promise<DecideProposalOutcome> {
+    // The catalogue load may have expired it just now: that is still the answer, not "someone decided it".
+    if (proposal.status === 'expired') return { outcome: 'expired' }
     if (proposal.status !== 'proposed') {
       return { outcome: 'already_decided', by: proposal.decidedByName, at: proposal.decidedAt, status: proposal.status }
     }
-    const changed = await this.repo.markExpired(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })
-    return changed ? { outcome: 'expired' } : this.readConflict(input.tenant.htxCode, proposal.id)
+    if (await this.repo.markExpired(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })) return { outcome: 'expired' }
+    const latest = await this.readConflict(input.tenant.htxCode, proposal.id)
+    return latest.outcome === 'already_decided' && latest.status === 'expired' ? { outcome: 'expired' } : latest
   }
 
   private async readConflict(htxCode: string, proposalId: string): Promise<DecideProposalOutcome> {
