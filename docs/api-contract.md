@@ -763,6 +763,42 @@ Mỗi sáng agent A9 (`daily-campaign`, 06:00 giờ Việt Nam) gom các đề x
 - `/chiendich` trong chat riêng gửi chiến dịch hôm nay cho quản lý hoặc cán bộ, hoặc trả lời `Hôm nay chưa có chiến dịch.`.
 - Báo cáo 18:00 (`daily`) có thêm dòng `Chiến dịch hôm nay: <việc xong>/<việc> việc xong`, tối đa ba dòng mục tiêu `• <nhãn>: <đạt>/<mục tiêu> <đơn vị>` và `Chưa xong: <k> việc`. Khi mọi việc đã quyết định, chiến dịch chuyển sang `done`.
 
+## Cải tiến hằng tuần (M8)
+
+Mỗi thứ Hai 06:30 (giờ Việt Nam) agent A10 (`improvement`) xem số liệu tuần trước và đề xuất tối đa năm cải tiến. Mỗi cải tiến là một đề xuất thường (`agent.settings.update` cho đổi ngưỡng hoặc giờ báo cáo, `improvement.adopt` cho ghi chú quy trình hoặc mẫu nhắc của chiến dịch), nên duyệt, Telegram, chiến dịch và kiểm toán dùng lại luồng M1 đến M7. Trạng thái cải tiến đi theo đề xuất: đề xuất được duyệt và thực hiện thì `adopted`, bị từ chối thì `declined`.
+
+`agent.settings.update` chỉ đổi các khóa trong payload, trong khoảng cho phép của agent (ví dụ `field-watch.silent_hours` 1..48, `digest.schedule` 05:00..22:00). Bản xem trước ghi rõ `(siết)` hoặc `(nới)` cho từng thay đổi, và khóa `SETTING_KEYS` trong `agent-settings-update.action.ts` cho M12 biết chiều của mỗi khóa.
+
+Các route nội bộ dùng token agent, không có phiên trình duyệt. Mọi phản hồi nằm trong `data`.
+
+### Nội bộ (token agent)
+
+- **`GET /api/internal/agent/improvements/inputs?week=YYYY-MM-DD`** (thứ Hai): trả về `{ data: { week, settings, proposal_stats, journal_review, campaign_goals, improvements, metrics } }`.
+  - `settings`: ngưỡng và giờ báo cáo của từng agent có dòng cài đặt.
+  - `proposal_stats`: đề xuất đã quyết định trong 28 ngày, nhóm theo `agent`, `kind`, `template`, với `approved`, `rejected`, `expired`, `median_wait_hours`.
+  - `journal_review`: `reviewed` và `returned_missing_info` trong 28 ngày.
+  - `campaign_goals`: số ngày và số ngày trượt mục tiêu trong 14 ngày gần nhất (`actual < target`).
+  - `improvements`: cải tiến của 8 tuần gần nhất.
+  - `metrics`: giá trị hiện tại của từng `metric_key` trong `improvements`; khóa không có số liệu không có giá trị.
+- **`POST /api/internal/agent/improvements`**: `{ week, kind, metric_key, title_vi, rationale_vi, baseline, evidence, settings_change?, template?, run_id? }`.
+  - `kind` là `setting` (cần `settings_change`), `process` hoặc `template` (cần `template`).
+  - `week` phải là thứ Hai; `title_vi` tối đa 120 ký tự, `rationale_vi` tối đa 600.
+  - `201 { data: { id, proposal_id } }` khi tạo mới. `200 { data: { deduped: true } }` khi đã có cải tiến cùng tuần và `metric_key`, hoặc đề xuất bị chặn vì vừa có đề xuất tương tự.
+  - `400 VALIDATION_ERROR` khi khóa hoặc khoảng giá trị nằm ngoài hợp đồng C2. Cải tiến không được lưu trong trường hợp này.
+- **`POST /api/internal/agent/improvements/{id}/effect`**: `{ after: "2w" | "4w", value, verdict: "helped" | "no_effect" | "drop" }`. `after: "4w"` đặt trạng thái `measured`.
+  - `200 { data: { id, after } }`.
+  - `404 NOT_FOUND` khi cải tiến không thuộc HTX.
+  - `409 CONFLICT` khi cải tiến chưa `adopted` hoặc mốc `after` đã có số đo.
+
+### Telegram (M8)
+
+- Báo cáo tuần (`weekly`) có thêm tối đa ba dòng sau các số liệu: `Cải tiến tuần này: <n> đề xuất` khi có đề xuất mới trong tuần, và một dòng cho mỗi cải tiến được đo trong 7 ngày gần nhất: `Đã giúp: <tiêu đề>`, `Chưa thấy tác dụng: <tiêu đề>` hoặc `Nên bỏ: <tiêu đề>`.
+- Tin chiến dịch 06:00 và khung chiến dịch trong hộp thư có thêm dòng `Nhắc theo mẫu: <tiêu đề>` cho mẫu đã áp dụng đúng thứ trong tuần của chiến dịch (thứ Hai = 1). Tối đa hai dòng.
+
+### Hộp thư (quản lý và cán bộ)
+
+- **`GET /api/agent/campaigns/today`**: đối tượng `campaign` có thêm `reminders: string[]` (các dòng `Nhắc theo mẫu:`). Các trường khác không đổi.
+
 ## Telegram base (M2)
 
 Telegram is optional. It is active only when `TELEGRAM_BOT_USERNAME` and `DXOS_TELEGRAM_CALLBACK_KEY` are set on the web; without them no message is queued and the rest of the web works as before. The relay `dxos-telegram` long-polls the Bot API and calls the internal routes below through APISIX `:9081`; every decision is made here. Messages are plain text, at most 4096 characters, with no personal data (parcel codes, counts and dates only).
