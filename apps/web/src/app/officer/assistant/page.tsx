@@ -21,7 +21,6 @@ export default async function OfficerAssistantPage() {
     <ChatInterface
       role="officer"
       chatType="market"
-      userRole={role === 'manager' ? 'manager' : 'officer'}
     />
   )
 }

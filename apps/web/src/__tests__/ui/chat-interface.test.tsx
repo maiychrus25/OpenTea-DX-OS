@@ -80,16 +80,6 @@ describe('ChatInterface', () => {
     expect((fetch as jest.Mock).mock.calls).toHaveLength(requests)
   })
 
-  it('lets officers switch between the two assistants, but not managers', () => {
-    const view = render(<ChatInterface role="officer" />)
-    const switcher = within(screen.getByRole('navigation', { name: 'Chọn trợ lý' }))
-    expect(switcher.getByRole('link', { name: 'Kỹ thuật' })).toHaveAttribute('aria-current', 'page')
-    expect(switcher.getByRole('link', { name: 'Thị trường' })).toHaveAttribute('href', '/officer/assistant')
-    view.unmount()
-    render(<ChatInterface role="manager" />)
-    expect(screen.queryByRole('navigation', { name: 'Chọn trợ lý' })).not.toBeInTheDocument()
-  })
-
   it('keeps the empty-history label', async () => {
     ;(fetch as jest.Mock).mockResolvedValue(jsonResponse({ sessions: [] }))
     render(<ChatInterface role="manager" />)

@@ -4,7 +4,6 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import Link from 'next/link'
 import { ArrowDown, ArrowUp, History, Square, SquarePen } from 'lucide-react'
 import { ChatHistory } from './chat-history'
 import { ChatMessage } from './chat-message'
@@ -14,16 +13,9 @@ import styles from './chat-interface.module.css'
 interface ChatInterfaceProps {
   role: 'manager' | 'officer'
   chatType?: ChatType
-  /** Who is signed in, when that differs from the screen being shown. Officers can switch assistants. */
-  userRole?: 'manager' | 'officer'
 }
 
-const assistants: { type: ChatType; label: string; href: string }[] = [
-  { type: 'technical', label: 'Kỹ thuật', href: '/officer/chat' },
-  { type: 'market', label: 'Thị trường', href: '/officer/assistant' },
-]
-
-export function ChatInterface({ role, chatType: requestedType, userRole = role }: ChatInterfaceProps) {
+export function ChatInterface({ role, chatType: requestedType }: ChatInterfaceProps) {
   const chatType = requestedType || (role === 'manager' ? 'market' : 'technical')
   const chat = useChat(chatType)
   const [inputValue, setInputValue] = useState('')
@@ -68,8 +60,6 @@ export function ChatInterface({ role, chatType: requestedType, userRole = role }
       send()
     }
   }
-  const switcher = userRole === 'officer'
-
   return (
     <div className={styles.chatLayout} data-chat-workspace>
       <dialog ref={drawerRef} className={styles.historyDrawer} aria-label="Lịch sử trò chuyện"
@@ -82,11 +72,7 @@ export function ChatInterface({ role, chatType: requestedType, userRole = role }
       </dialog>
       <section className={styles.chatMain} aria-label={title}>
         <header className={styles.chatHeader}>
-          <h1 className={switcher ? styles.srOnly : styles.headerTitle}>{title}</h1>
-          {switcher && <nav className={styles.switcher} aria-label="Chọn trợ lý">
-            {assistants.map(item => <Link key={item.type} href={item.href}
-              aria-current={item.type === chatType ? 'page' : undefined}>{item.label}</Link>)}
-          </nav>}
+          <h1 className={styles.srOnly}>{title}</h1>
           <div className={styles.headerActions}>
             <button className={styles.headerButton} onClick={() => drawerRef.current?.showModal()} aria-haspopup="dialog">
               <History size={17} aria-hidden="true" />Lịch sử
