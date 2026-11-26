@@ -4,7 +4,8 @@
 'use client'
 
 import { PageHeader } from '@/components/ui/PageHeader'
-import { CheckSquare } from 'lucide-react'
+import { CheckSquare, BookOpen, Clock } from 'lucide-react'
+import { Stats } from '@/components/features/officer-web/parts'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import styles from '../journal.module.css'
@@ -140,6 +141,12 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
         description="Nhật ký canh tác do nông hộ gửi lên"
         actions={<button type="button" className={styles.createBtn} onClick={() => setIsCreating(true)}>+ Tạo nhật ký</button>}
       />
+
+      {!isLoading && !loadFailed && <Stats items={[
+        { label: 'Nhật ký đang hiển thị', value: entries.length, icon: <BookOpen /> },
+        { label: 'Chờ duyệt (đang hiển thị)', value: entries.filter(entry => entry.status === 'PENDING_APPROVAL').length, icon: <Clock /> },
+        { label: 'Đã duyệt (đang hiển thị)', value: entries.filter(entry => entry.status === 'APPROVED').length, icon: <CheckSquare /> },
+      ]} />}
 
       {hasWarning && (
         <div className={styles.notice}>
