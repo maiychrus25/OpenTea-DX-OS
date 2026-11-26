@@ -22,6 +22,8 @@ async function getLiveWeather(_req: Request) {
     orderBy: { parcel_code: 'asc' },
   })
 
+  const profile = await prisma.htxProfile.findUnique({ where: { id: htxProfileId }, select: { address: true } })
+
   const places = new Map<string, { lat: number; lng: number; parcels: string[] }>()
   for (const parcel of parcels) {
     const lat = parcel.centroid_lat!
@@ -40,7 +42,7 @@ async function getLiveWeather(_req: Request) {
     const data = await Promise.all(
       largest.map(async (place) => ({ parcels: place.parcels, weather: await fetchWeatherDetail(place.lat, place.lng) }))
     )
-    return NextResponse.json({ data })
+    return NextResponse.json({ data, area: profile?.address ?? '' })
   } catch (err) {
     logger.error('Open-Meteo request failed', { err })
     return NextResponse.json(

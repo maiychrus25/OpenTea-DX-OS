@@ -4,7 +4,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
-import { ChevronDown, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSun, Droplets, Eye, Gauge, Loader2, MapPin, Moon, Snowflake, Sun, Sunrise, Thermometer, Umbrella, Wind } from 'lucide-react'
+import { ChevronDown, ChevronUp, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSun, Droplets, Eye, Gauge, Loader2, Moon, Snowflake, Sun, Sunrise, Thermometer, Umbrella, Wind } from 'lucide-react'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 import type { WeatherDetail } from '@/infrastructure/external/open-meteo-detail'
 import styles from './weather.module.css'
@@ -54,6 +54,7 @@ function Tile({ icon, label, value, note }: { icon: React.ReactNode; label: stri
 export function WeatherSection() {
   const [places, setPlaces] = useState<Place[]>([])
   const [open, setOpen] = useState<number | null>(null)
+  const [area, setArea] = useState('')
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
 
   const load = useCallback(async () => {
@@ -63,6 +64,7 @@ export function WeatherSection() {
       if (!res.ok) throw new Error('weather')
       const json = await res.json()
       setPlaces(json.data ?? [])
+      setArea(json.area ?? '')
       setState('ready')
     } catch {
       setState('error')
@@ -88,66 +90,94 @@ export function WeatherSection() {
     )
   }
 
-  const place = open == null ? null : places[open]
-
   return (
     <section className={styles.section} aria-label="Thời tiết vùng trồng">
       {heading}
-
-      <div className={styles.cards}>
-        {places.map((p, i) => {
-          const { current, daily } = p.weather
-          return (
-            <button
-              key={p.parcels[0]}
-              type="button"
-              className={styles.summary}
-              aria-expanded={open === i}
-              onClick={() => setOpen(open === i ? null : i)}
-            >
-              <span className={styles.summaryIcon}><WeatherIcon code={current.code} isDay={current.isDay} size={28} /></span>
-              <span className={styles.summaryText}>
-                <span className={styles.location}><MapPin size={13} aria-hidden="true" />{p.parcels.length} thửa quanh {p.parcels[0]}</span>
-                <span className={styles.condition}>{weatherCodeToCondition(current.code)}</span>
-                {daily[0] && <span className={styles.range}>Cao {degrees(daily[0].max)} · Thấp {degrees(daily[0].min)}</span>}
-              </span>
-              <span className={styles.temperature}>{degrees(current.temperature)}</span>
-              <span className={styles.toggle}>
-                <span className={styles.toggleText}>{open === i ? 'Thu gọn' : 'Xem chi tiết'}</span>
-                <ChevronDown size={18} className={styles.chevron} aria-hidden="true" />
-              </span>
-            </button>
-          )
-        })}
-      </div>
-
-      {place && <WeatherDetails weather={place.weather} />}
+      {places.map((p, i) => (
+        <WeatherCard
+          key={p.parcels[0]}
+          place={p}
+          area={area}
+          open={open === i}
+          onToggle={() => setOpen(open === i ? null : i)}
+        />
+      ))}
     </section>
   )
 }
 
+const isRainy = (code: number) => (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95
+
+function WeatherCard({ place, area, open, onToggle }: { place: Place; area: string; open: boolean; onToggle: () => void }) {
+  const [showMore, setShowMore] = useState(false)
+  const { current, hourly, daily, updatedAt } = place.weather
+  const today = daily[0]
+
+  return (
+    <>
+      <div className={`${styles.scene} ${isRainy(current.code) ? styles.rainy : ''}`.trim()}>
+        <button type="button" className={styles.summary} aria-expanded={open} onClick={onToggle}>
+          <span className={styles.bigIcon}><WeatherIcon code={current.code} isDay={current.isDay} size={open ? 54 : 34} /></span>
+          <span className={styles.where}>
+            <span className={styles.location}>{place.parcels.length} thửa quanh {place.parcels[0]}</span>
+            {area && <span className={styles.muted}>{area}</span>}
+          </span>
+          <span className={styles.temperature}>{Math.round(current.temperature)}°C</span>
+          <span className={styles.sky}>
+            <span className={styles.condition}>{weatherCodeToCondition(current.code)}</span>
+            {today && <span className={styles.muted}>Cao {degrees(today.max)} · Thấp {degrees(today.min)}</span>}
+          </span>
+          <span className={styles.toggle}>
+            <span className={styles.toggleText}>{open ? 'Thu gọn' : 'Xem chi tiết'}</span>
+            {open ? <ChevronUp size={18} aria-hidden="true" /> : <ChevronDown size={18} aria-hidden="true" />}
+          </span>
+        </button>
+
+        {open && (
+          <>
+            <dl className={`${styles.glass} ${styles.stats}`}>
+              <div><Umbrella size={30} aria-hidden="true" /><span><dt>Khả năng mưa</dt><dd>{today?.rainChance ?? 0}%</dd></span></div>
+              <div><Droplets size={30} aria-hidden="true" /><span><dt>Độ ẩm</dt><dd>{current.humidity}%</dd></span></div>
+              <div><Wind size={30} aria-hidden="true" /><span><dt>Gió</dt><dd>{Math.round(current.windSpeed)} km/h</dd></span></div>
+            </dl>
+
+            <div className={styles.glass}>
+              <div className={styles.hoursHead}>
+                <h3>Dự báo theo giờ</h3>
+                <span>Open-Meteo · cập nhật {clock(updatedAt)}</span>
+              </div>
+              <ol className={styles.hours}>
+                {hourly.map((hour) => (
+                  <li key={hour.time} className={styles.hour}>
+                    <span>{clock(hour.time)}</span>
+                    <WeatherIcon code={hour.code} isDay={hour.isDay} size={34} />
+                    <strong>{degrees(hour.temperature)}</strong>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <button type="button" className={styles.more} aria-expanded={showMore} onClick={() => setShowMore(!showMore)}>
+              {showMore ? 'Ẩn dự báo 10 ngày' : 'Xem dự báo 10 ngày và chỉ số khác'}
+              {showMore ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
+            </button>
+          </>
+        )}
+      </div>
+
+      {open && showMore && <WeatherDetails weather={place.weather} />}
+    </>
+  )
+}
+
 function WeatherDetails({ weather }: { weather: WeatherDetail }) {
-  const { current, today, hourly, daily } = weather
+  const { current, today, daily } = weather
   const lowest = Math.min(...daily.map((d) => d.min))
   const span = Math.max(...daily.map((d) => d.max)) - lowest || 1
   const percent = (value: number) => `${((value - lowest) / span) * 100}%`
 
   return (
       <div className={styles.panel}>
-        <div className={styles.block}>
-          <p className={styles.cardTitle}>Dự báo theo giờ</p>
-          <ol className={styles.hours}>
-            {hourly.map((hour, i) => (
-              <li key={hour.time} className={styles.hour}>
-                <span>{i === 0 ? 'Bây giờ' : `${hour.time.slice(11, 13)} giờ`}</span>
-                <WeatherIcon code={hour.code} isDay={hour.isDay} />
-                <span className={styles.chance}>{hour.rainChance >= 20 ? `${hour.rainChance}%` : ''}</span>
-                <strong>{degrees(hour.temperature)}</strong>
-              </li>
-            ))}
-          </ol>
-        </div>
-
         <div className={styles.details}>
           <div className={styles.block}>
             <p className={styles.cardTitle}>Dự báo {daily.length} ngày</p>
@@ -182,7 +212,6 @@ function WeatherDetails({ weather }: { weather: WeatherDetail }) {
           </div>
         </div>
 
-        <p className={styles.source}>Nguồn: Open-Meteo · cập nhật lúc {clock(weather.updatedAt)}</p>
       </div>
   )
 }
