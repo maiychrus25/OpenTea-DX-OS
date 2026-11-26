@@ -110,10 +110,19 @@ class Candidate:
 
 
 @dataclass(frozen=True)
+class Measurement:
+    improvement_id: str
+    after: str  # "2w" or "4w"
+    value: float
+    verdict: str  # helped, no_effect or drop
+
+
+@dataclass(frozen=True)
 class ImprovementOutcome:
     status: str  # done, or refused when the web answered 400, 409 or 422 and the week's run ends
     run_id: str
     proposed: int
+    measured: int = 0
 
 
 @dataclass
@@ -302,6 +311,36 @@ def plan_proposals(inputs: Mapping[str, Any], now: datetime) -> list[Candidate]:
     return [candidate for candidate in candidates if candidate.metric_key not in blocked][:MAX_PROPOSALS]
 
 
+def measurement_verdict(baseline: float, value: float) -> str:
+    """Lower is better: at least 20% lower helped, at least 20% higher dropped, anything between had no effect."""
+    if baseline > 0 and value <= baseline * 0.8:
+        return "helped"
+    if value > baseline and value >= baseline * 1.2:
+        return "drop"
+    return "no_effect"
+
+
+def plan_measurements(inputs: Mapping[str, Any], now: datetime) -> list[Measurement]:
+    """2-week and 4-week effects of adopted improvements; a 4-week effect follows a 2-week one, recorded now or earlier."""
+    metrics = inputs.get("metrics") or {}
+    found: list[Measurement] = []
+    for imp in inputs.get("improvements") or []:
+        if imp.get("status") != "adopted" or not imp.get("adopted_at"):
+            continue
+        value = metrics.get(str(imp["metric_key"]))
+        if value is None:  # no data for the metric: nothing to measure yet
+            continue
+        effect = imp.get("effect") or {}
+        age = now - parse_utc(imp["adopted_at"])
+        has_2w = "after_2w" in effect
+        if not has_2w and age >= timedelta(days=14):
+            found.append(Measurement(str(imp["id"]), "2w", float(value), measurement_verdict(float(imp["baseline"]), float(value))))
+            has_2w = True
+        if has_2w and "after_4w" not in effect and age >= timedelta(days=28):
+            found.append(Measurement(str(imp["id"]), "4w", float(value), measurement_verdict(float(imp["baseline"]), float(value))))
+    return found
+
+
 def fallback_rationale(candidate: Candidate) -> str:
     return f"{candidate.label_vi}: {candidate.value_text} trong {candidate.window_days} ngày gần đây (ngưỡng {candidate.limit_text}). Đề xuất: {candidate.title_vi}."[:RATIONALE_MAX]
 
@@ -377,7 +416,8 @@ def run_improvement(
     week = _monday(vn_day(now))
     inputs = gateway.get_improvement_inputs(week.isoformat())
     candidates = plan_proposals(inputs, now)
-    if not candidates:  # nothing to propose: no run row and no LLM call, as A9 does for an empty campaign
+    measurements = plan_measurements(inputs, now)
+    if not candidates and not measurements:  # nothing to do: no run row and no LLM call, as A9 does for an empty campaign
         return ImprovementOutcome(status="done", run_id="", proposed=0)
     primary = providers[0] if providers else None
     run_id = gateway.start_run(
@@ -391,16 +431,24 @@ def run_improvement(
     usage = _Usage()
     external_before = _external_requests(providers)
     proposed = 0
+    measured = 0
     try:
         for candidate in candidates:
             rationale = _rationale(providers, candidate, usage)
             res = gateway.post_improvement(_body(week, candidate, rationale, run_id))
             if not res.get("deduped"):
                 proposed += 1
+        # Proposals come first: a refused measurement must not cost the week's proposals.
+        for measurement in measurements:
+            gateway.post_improvement_effect(
+                measurement.improvement_id,
+                {"after": measurement.after, "value": measurement.value, "verdict": measurement.verdict},
+            )
+            measured += 1
     except Exception as exc:
         gateway.finish_run(run_id, status="failed", error=str(exc)[:1000], **usage.as_kwargs(_external_requests(providers) - external_before))
         if isinstance(exc, GatewayHTTPError) and exc.status_code in REFUSAL_STATUSES:
-            return ImprovementOutcome(status="refused", run_id=run_id, proposed=proposed)
+            return ImprovementOutcome(status="refused", run_id=run_id, proposed=proposed, measured=measured)
         raise  # 401, 403, 5xx and network errors: the next cycle retries; posted rows are deduped by the web
     gateway.finish_run(run_id, status="ok", **usage.as_kwargs(_external_requests(providers) - external_before))
-    return ImprovementOutcome(status="done", run_id=run_id, proposed=proposed)
+    return ImprovementOutcome(status="done", run_id=run_id, proposed=proposed, measured=measured)
