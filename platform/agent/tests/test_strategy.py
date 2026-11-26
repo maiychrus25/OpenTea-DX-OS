@@ -9,10 +9,12 @@ from typing import Any, Mapping
 import pytest
 from zoneinfo import ZoneInfo
 
-from dxos_agent.agents.strategy import run_strategy, season_of
-from dxos_agent.client import GatewayHTTPError
+from dxos_agent import __main__ as agent_main
+from dxos_agent.agents.strategy import StrategyOutcome, run_strategy, season_of
+from dxos_agent.client import AgentCredentials, GatewayHTTPError
 from dxos_agent.providers import ProviderError, ReplayProvider
 from dxos_agent.schedule import SeasonSchedule
+from dxos_agent.settings import AgentSettings
 
 SCENARIOS = Path(__file__).parent / "scenarios"
 NOW = datetime.fromisoformat("2026-10-01T00:00:00+00:00")  # 07:00 on 1 October in Vietnam: the first day of 2026-Q4
@@ -186,3 +188,62 @@ def test_season_schedule_new_quarter_is_due_from_0615_vietnam_time() -> None:
     assert not schedule.is_due(_vn(10, 1, 6, 14))
     assert schedule.is_due(_vn(10, 1, 6, 15))
     assert schedule.is_due(_vn(10, 3, 1))  # a quarter not recorded is due again, even on a later day
+
+
+# --- the agent loop runs A11 on its own clock ---
+
+class _NoGateway:
+    """Every agent run is replaced in these tests, so the gateway is never called."""
+
+
+def _runtime() -> agent_main._CooperativeRuntime:
+    local_model = ReplayProvider(fixtures={"default": {"summary_vi": "Một việc."}})
+    local_model.name = "ollama"
+    creds = AgentCredentials(htx_code="TC01", client_id="agent-tc01", client_secret="secret")
+    return agent_main._CooperativeRuntime(creds=creds, gateway=_NoGateway(), providers={"ollama": local_model})
+
+
+def _run_cycle(monkeypatch, runtime, now, result=None, error=None) -> list[str]:
+    calls: list[str] = []
+    for module, name in ((agent_main.field_watch, "run_field_watch"), (agent_main.harvest_ready, "run_harvest_ready"),
+                         (agent_main.disease_watch, "run_disease_watch"), (agent_main.daily_campaign, "run_daily_campaign"),
+                         (agent_main.bulletin, "run_bulletin"), (agent_main.improvement, "run_improvement")):
+        monkeypatch.setattr(module, name, lambda *a, **k: None)
+    monkeypatch.setattr(agent_main.disease_watch, "fetch_window", lambda *a, **k: ([],))
+    monkeypatch.setattr(agent_main.disease_watch, "window_fingerprint", lambda rows: "fp")
+
+    def run(gateway, now, providers):
+        del gateway, now, providers
+        calls.append("A11")
+        if error is not None:
+            raise error
+        return result or StrategyOutcome(status="posted", run_id="run-1", plan_id="plan-1")
+
+    monkeypatch.setattr(agent_main.strategy, "run_strategy", run)
+    agent_main._run_m4_agents(runtime, now, AgentSettings())
+    if runtime.bulletin_thread is not None:
+        runtime.bulletin_thread.join(5)
+    return calls
+
+
+def test_a11_runs_on_the_first_cycle_and_not_again_in_the_same_quarter(monkeypatch) -> None:
+    runtime = _runtime()
+
+    assert _run_cycle(monkeypatch, runtime, _vn(11, 20, 9)) == ["A11"]
+    assert _run_cycle(monkeypatch, runtime, _vn(11, 21, 9)) == []
+
+
+def test_a11_failure_is_retried_on_the_next_cycle(monkeypatch) -> None:
+    runtime = _runtime()
+
+    assert _run_cycle(monkeypatch, runtime, _vn(11, 20, 9), error=ConnectionError("down")) == ["A11"]
+    assert runtime.strategy.last_season is None
+    assert _run_cycle(monkeypatch, runtime, _vn(11, 20, 9, 5)) == ["A11"]
+
+
+def test_a11_refused_quarter_is_not_retried(monkeypatch) -> None:
+    runtime = _runtime()
+
+    _run_cycle(monkeypatch, runtime, _vn(11, 20, 9), result=StrategyOutcome(status="refused", run_id="run-1", plan_id=None))
+
+    assert _run_cycle(monkeypatch, runtime, _vn(11, 20, 9, 5)) == []
