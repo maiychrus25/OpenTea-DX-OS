@@ -119,22 +119,6 @@ colors:
   hero-text-dark: "#ffffff"
   hero-muted: "#dbe9e1"
   hero-muted-dark: "#dbe9e1"
-  weather-day-top: "#1d5fa8"
-  weather-day-top-dark: "#1d5fa8"
-  weather-day-bottom: "#3d7fc0"
-  weather-day-bottom-dark: "#3d7fc0"
-  weather-night-top: "#0b1735"
-  weather-night-top-dark: "#0b1735"
-  weather-night-bottom: "#2b3f6b"
-  weather-night-bottom-dark: "#2b3f6b"
-  weather-glass: "rgba(0, 25, 60, 0.22)"
-  weather-glass-dark: "rgba(0, 25, 60, 0.22)"
-  weather-line: "rgba(255, 255, 255, 0.22)"
-  weather-line-dark: "rgba(255, 255, 255, 0.22)"
-  weather-rain: "#bfeaff"
-  weather-rain-dark: "#bfeaff"
-  weather-warm: "#ffd166"
-  weather-warm-dark: "#ffd166"
 typography:
   display:
     fontFamily: Be Vietnam Pro

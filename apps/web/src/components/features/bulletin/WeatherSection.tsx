@@ -4,7 +4,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
-import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSun, Droplets, Eye, Gauge, Loader2, MapPin, Moon, Snowflake, Sun, Sunrise, Thermometer, Umbrella, Wind } from 'lucide-react'
+import { ChevronDown, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSun, Droplets, Eye, Gauge, Loader2, MapPin, Moon, Snowflake, Sun, Sunrise, Thermometer, Umbrella, Wind } from 'lucide-react'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 import type { WeatherDetail } from '@/infrastructure/external/open-meteo-detail'
 import styles from './weather.module.css'
@@ -53,7 +53,7 @@ function Tile({ icon, label, value, note }: { icon: React.ReactNode; label: stri
 
 export function WeatherSection() {
   const [places, setPlaces] = useState<Place[]>([])
-  const [selected, setSelected] = useState(0)
+  const [open, setOpen] = useState<number | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
 
   const load = useCallback(async () => {
@@ -88,35 +88,51 @@ export function WeatherSection() {
     )
   }
 
-  const place = places[Math.min(selected, places.length - 1)]
-  const { current, today, hourly, daily } = place.weather
-  const lowest = Math.min(...daily.map((d) => d.min))
-  const span = Math.max(...daily.map((d) => d.max)) - lowest || 1
-  const percent = (value: number) => `${((value - lowest) / span) * 100}%`
+  const place = open == null ? null : places[open]
 
   return (
     <section className={styles.section} aria-label="Thời tiết vùng trồng">
       {heading}
 
-      {places.length > 1 && (
-        <div className={styles.places} role="group" aria-label="Chọn khu vực">
-          {places.map((p, i) => (
-            <button key={p.parcels[0]} type="button" className={styles.place} aria-pressed={i === selected} onClick={() => setSelected(i)}>
-              Khu {p.parcels[0]}
+      <div className={styles.cards}>
+        {places.map((p, i) => {
+          const { current, daily } = p.weather
+          return (
+            <button
+              key={p.parcels[0]}
+              type="button"
+              className={styles.summary}
+              aria-expanded={open === i}
+              onClick={() => setOpen(open === i ? null : i)}
+            >
+              <span className={styles.summaryIcon}><WeatherIcon code={current.code} isDay={current.isDay} size={28} /></span>
+              <span className={styles.summaryText}>
+                <span className={styles.location}><MapPin size={13} aria-hidden="true" />{p.parcels.length} thửa quanh {p.parcels[0]}</span>
+                <span className={styles.condition}>{weatherCodeToCondition(current.code)}</span>
+                {daily[0] && <span className={styles.range}>Cao {degrees(daily[0].max)} · Thấp {degrees(daily[0].min)}</span>}
+              </span>
+              <span className={styles.temperature}>{degrees(current.temperature)}</span>
+              <ChevronDown size={18} className={styles.chevron} aria-hidden="true" />
+              <span className={styles.srOnly}>{open === i ? 'Thu gọn' : 'Xem chi tiết'}</span>
             </button>
-          ))}
-        </div>
-      )}
+          )
+        })}
+      </div>
 
-      <div className={`${styles.sky} ${current.isDay ? '' : styles.night}`.trim()}>
-        <div className={styles.now}>
-          <p className={styles.location}><MapPin size={14} aria-hidden="true" />{place.parcels.length} thửa quanh {place.parcels[0]}</p>
-          <p className={styles.temperature}>{degrees(current.temperature)}</p>
-          <p className={styles.condition}><WeatherIcon code={current.code} isDay={current.isDay} />{weatherCodeToCondition(current.code)}</p>
-          {daily[0] && <p className={styles.range}>Cao {degrees(daily[0].max)} · Thấp {degrees(daily[0].min)}</p>}
-        </div>
+      {place && <WeatherDetails weather={place.weather} />}
+    </section>
+  )
+}
 
-        <div className={styles.glass}>
+function WeatherDetails({ weather }: { weather: WeatherDetail }) {
+  const { current, today, hourly, daily } = weather
+  const lowest = Math.min(...daily.map((d) => d.min))
+  const span = Math.max(...daily.map((d) => d.max)) - lowest || 1
+  const percent = (value: number) => `${((value - lowest) / span) * 100}%`
+
+  return (
+      <div className={styles.panel}>
+        <div className={styles.block}>
           <p className={styles.cardTitle}>Dự báo theo giờ</p>
           <ol className={styles.hours}>
             {hourly.map((hour, i) => (
@@ -131,7 +147,7 @@ export function WeatherSection() {
         </div>
 
         <div className={styles.details}>
-          <div className={styles.glass}>
+          <div className={styles.block}>
             <p className={styles.cardTitle}>Dự báo {daily.length} ngày</p>
             <ol className={styles.days}>
               {daily.map((day, i) => (
@@ -164,8 +180,7 @@ export function WeatherSection() {
           </div>
         </div>
 
-        <p className={styles.source}>Nguồn: Open-Meteo · cập nhật lúc {clock(place.weather.updatedAt)}</p>
+        <p className={styles.source}>Nguồn: Open-Meteo · cập nhật lúc {clock(weather.updatedAt)}</p>
       </div>
-    </section>
   )
 }
