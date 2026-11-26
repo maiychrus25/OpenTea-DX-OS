@@ -1,6 +1,7 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
+import Link from 'next/link'
 import React from 'react'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
@@ -136,10 +137,18 @@ export default async function OfficerDashboard() {
       />
 
       <section className={styles.metrics} data-testid="officer-metric-grid">
-        <MetricCard icon={<Clock />} label="Chờ duyệt" value={pendingJournals} tone="amber" />
-        <MetricCard icon={<Stethoscope />} label="Ca bệnh cần xác nhận" value={pendingDiseases} tone="red" />
-        <MetricCard icon={<Map />} label="Thửa đang canh tác" value={activeParcels} tone="green" />
-        <MetricCard icon={<Users />} label="Nông hộ quản lý" value={totalHouseholds} tone="blue" />
+        <Link href="/officer/journal?status=PENDING_APPROVAL" className={styles.metricLink} aria-label="Xem Chờ duyệt">
+          <MetricCard icon={<Clock />} label="Chờ duyệt" value={pendingJournals} tone="amber" />
+        </Link>
+        <Link href="/officer/diseases" className={styles.metricLink} aria-label="Xem Ca bệnh cần xác nhận">
+          <MetricCard icon={<Stethoscope />} label="Ca bệnh cần xác nhận" value={pendingDiseases} tone="red" />
+        </Link>
+        <Link href="/officer/households" className={styles.metricLink} aria-label="Xem Thửa đang canh tác">
+          <MetricCard icon={<Map />} label="Thửa đang canh tác" value={activeParcels} tone="green" />
+        </Link>
+        <Link href="/officer/households" className={styles.metricLink} aria-label="Xem Nông hộ quản lý">
+          <MetricCard icon={<Users />} label="Nông hộ quản lý" value={totalHouseholds} tone="blue" />
+        </Link>
       </section>
 
       <div className={styles.columns}>

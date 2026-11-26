@@ -33,3 +33,7 @@
 @media (max-width: 767px) {
   .metrics, .quickLinks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 }
+
+/* A figure that opens the list behind it. */
+.metricLink { display: grid; color: inherit; text-decoration: none; border-radius: var(--radius-card); }
+.metricLink:hover { color: inherit; box-shadow: var(--shadow-card-hover); }
