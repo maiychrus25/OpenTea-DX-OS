@@ -93,6 +93,7 @@ class _CooperativeRuntime:
     daily_campaign: DailySchedule = field(default_factory=lambda: DailySchedule(CAMPAIGN_AT))
     bulletin: DailySchedule = field(default_factory=lambda: DailySchedule(BULLETIN_AT))
     improvement: WeeklySchedule = field(default_factory=lambda: WeeklySchedule(IMPROVEMENT_AT))
+    app_builder_backoff: app_builder.RequestBackoff = field(default_factory=app_builder.RequestBackoff)
     # The bulletin's LLM call can take minutes on a CPU server, so it runs on its own thread (one at a time).
     bulletin_thread: threading.Thread | None = None
 
@@ -294,7 +295,7 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
         # Cheap when no request waits: one list call, and no model is asked.
         provider, fallback = choose_providers(settings, app_builder.AGENT_NAME, runtime.providers)
         provider, fallback = _local_unless_busy(provider), _local_unless_busy(fallback)
-        app_builder.run_app_builder(gateway, now, [provider] if fallback is None else [provider, fallback])
+        app_builder.run_app_builder(gateway, now, [provider] if fallback is None else [provider, fallback], runtime.app_builder_backoff)
 
     _guarded("A2 field-watch", htx, field_watch_cycle)
     _guarded("A4 harvest-ready", htx, harvest_cycle)

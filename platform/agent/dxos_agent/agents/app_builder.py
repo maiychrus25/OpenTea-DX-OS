@@ -6,7 +6,8 @@ Rules come first: a store app that fits the request is proposed without asking a
 questions, routes to a store app or a Sổ tự tạo template, or writes the short app spec. The web validates and creates every
 proposal; this agent only checks the shape, so a bad model answer is dropped and never reaches the manager.
 """
-from datetime import datetime
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 import json
 import logging
 import re
@@ -75,6 +76,35 @@ ANSWER_SCHEMA: dict[str, Any] = {
         "spec": {"type": "object"},
     },
 }
+
+
+BACKOFF_FIRST = timedelta(minutes=15)
+BACKOFF_MAX = timedelta(hours=6)
+
+
+@dataclass
+class RequestBackoff:
+    """Per-request wait after a failed attempt: 15 minutes, doubling per further failure, at most 6 hours; a success clears it."""
+
+    failures: dict[str, int] = field(default_factory=dict)
+    until: dict[str, datetime] = field(default_factory=dict)
+
+    def blocked(self, request_id: str, now: datetime) -> bool:
+        return request_id in self.until and now < self.until[request_id]
+
+    def fail(self, request_id: str, now: datetime) -> None:
+        count = self.failures.get(request_id, 0) + 1
+        self.failures[request_id] = count
+        self.until[request_id] = now + min(BACKOFF_FIRST * 2 ** (count - 1), BACKOFF_MAX)
+
+    def clear(self, request_id: str) -> None:
+        self.failures.pop(request_id, None)
+        self.until.pop(request_id, None)
+
+    def keep_only(self, request_ids: set[str]) -> None:
+        """Forget requests the web no longer lists."""
+        for request_id in [r for r in self.until if r not in request_ids]:
+            self.clear(request_id)
 
 
 def _text(value: Any, low: int, high: int, what: str) -> str:
@@ -285,22 +315,25 @@ def _post_spec(gateway: CoreGatewayClient, request_id: str, spec: dict[str, Any]
             spec = {**spec, "app_id": _with_suffix(spec["app_id"])}
 
 
-def _handle(gateway: CoreGatewayClient, req: Mapping[str, Any], providers: Sequence[LLMProvider]) -> None:
+def _handle(gateway: CoreGatewayClient, req: Mapping[str, Any], providers: Sequence[LLMProvider]) -> bool:
+    """False when the attempt failed (a model or web failure), so the caller backs off; True otherwise."""
     request_id = str(req["id"])
     if req.get("status") in FINISHED_STATUSES:
         gateway.announce_app_build(request_id)  # the web queues the message and the install proposal once
-        return
+        return True
     if req.get("questions") and not req.get("answer_text"):
-        return  # still waiting for the manager's answer
+        return True  # still waiting for the manager's answer
     can_code = bool(req.get("code_providers"))
     match = match_store_app(str(req.get("request_text") or ""), req.get("store_apps") or [])
     if match is not None:
         reason = f'App "{match.get("name_vi")}" trong kho ứng dụng đã làm được việc này, bật lên là dùng.'
         gateway.post_app_route(request_id, {"path": "store", "target": match["id"], "reason_vi": reason})
-        return
+        return True
+    if not providers:
+        return True
     decision = _decide(gateway, req, providers, can_code)
     if decision is None:
-        return
+        return False
     kind, value = decision
     if kind == "route":
         gateway.post_app_route(request_id, value)
@@ -313,15 +346,31 @@ def _handle(gateway: CoreGatewayClient, req: Mapping[str, Any], providers: Seque
         target = "blank" if "blank" in templates else (templates[0] if templates else None)
         if target is None:
             log.warning("A12 request %s needs code and no book template exists", request_id)
-            return
+            return False
         gateway.post_app_route(request_id, {"path": "book", "target": target, "reason_vi": NEEDS_KEY_REASON_VI})
+    return True
 
 
-def run_app_builder(gateway: CoreGatewayClient, now: datetime, providers: Sequence[LLMProvider]) -> None:
-    """Handle every request the web lists; one failing request is logged and the others go on, and is retried next cycle."""
-    del now
-    for req in gateway.get_app_builder_requests():
+def run_app_builder(
+    gateway: CoreGatewayClient,
+    now: datetime,
+    providers: Sequence[LLMProvider],
+    backoff: RequestBackoff | None = None,
+) -> None:
+    """Handle every request the web lists; a failing request is logged and waits out its backoff, the others go on."""
+    backoff = backoff if backoff is not None else RequestBackoff()
+    requests = gateway.get_app_builder_requests()
+    backoff.keep_only({str(req.get("id")) for req in requests})
+    for req in requests:
+        request_id = str(req.get("id"))
+        if backoff.blocked(request_id, now):
+            continue
         try:
-            _handle(gateway, req, providers)
+            ok = _handle(gateway, req, providers)
         except Exception:
-            log.exception("A12 request %s failed", req.get("id"))
+            log.exception("A12 request %s failed", request_id)
+            ok = False
+        if ok:
+            backoff.clear(request_id)
+        else:
+            backoff.fail(request_id, now)

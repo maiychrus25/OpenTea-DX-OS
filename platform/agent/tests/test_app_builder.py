@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """A12 (app-builder): rules pick the cheap paths first, the LLM asks, routes or writes the spec; finished builds are announced."""
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 from typing import Any
@@ -10,7 +10,7 @@ import pytest
 
 from dxos_agent import __main__ as agent_main
 from dxos_agent.agents import app_builder
-from dxos_agent.agents.app_builder import run_app_builder, validate_spec
+from dxos_agent.agents.app_builder import RequestBackoff, run_app_builder, validate_spec
 from dxos_agent.client import GatewayHTTPError
 from dxos_agent.providers import ProviderError, ReplayProvider
 from test_client import _gateway_with
@@ -452,7 +452,7 @@ def test_a12_runs_every_cycle_in_the_agent_loop(monkeypatch):
         monkeypatch.setattr(getattr(agent_main, module), attr, lambda *a, **k: None)
     monkeypatch.setattr(agent_main.disease_watch, "fetch_window", lambda *a, **k: ([],))
     monkeypatch.setattr(agent_main.app_suggestions, "run_app_suggestions", lambda *a, **k: None)
-    monkeypatch.setattr(agent_main.app_builder, "run_app_builder", lambda gateway, now, chain: calls.append(chain[0].name))
+    monkeypatch.setattr(agent_main.app_builder, "run_app_builder", lambda gateway, now, chain, backoff: calls.append(chain[0].name))
 
     agent_main._run_m4_agents(runtime, NOW, agent_main.AgentSettings())
     agent_main._run_m4_agents(runtime, NOW, agent_main.AgentSettings())
@@ -476,3 +476,77 @@ def test_the_smoke_recording_answers_the_fertiliser_request_with_a_valid_spec():
     assert [call[:2] for call in gateway.calls] == [("spec", "req-1")]
     assert gateway.calls[0][2]["app_id"] == "gen-fertiliser-stock"
     assert validate_spec(gateway.calls[0][2]) == gateway.calls[0][2]
+
+
+# --- backoff -------------------------------------------------------------------------------------------------------------
+
+
+class Counting(ReplayProvider):
+    """Fails every call and counts them."""
+
+    calls = 0
+
+    def _generate(self, messages, schema):
+        Counting.calls += 1
+        raise ProviderError("down")
+
+
+def _failing_cycle(gateway, backoff, at, provider):
+    run_app_builder(gateway, at, [provider], backoff)
+
+
+def test_a_failing_request_is_not_retried_next_cycle_but_after_fifteen_minutes():
+    Counting.calls = 0
+    gateway, backoff, provider = Gateway([request()]), RequestBackoff(), Counting(fixtures={})
+    _failing_cycle(gateway, backoff, NOW, provider)
+    first = Counting.calls
+    _failing_cycle(gateway, backoff, NOW + timedelta(seconds=30), provider)
+    assert Counting.calls == first
+    _failing_cycle(gateway, backoff, NOW + timedelta(minutes=15), provider)
+    assert Counting.calls > first
+
+
+def test_the_wait_doubles_per_failure_and_is_capped_at_six_hours():
+    backoff, waits = RequestBackoff(), []
+    for _ in range(8):
+        backoff.fail("r", NOW)
+        waits.append(backoff.until["r"] - NOW)
+    assert waits[:4] == [timedelta(minutes=15), timedelta(minutes=30), timedelta(hours=1), timedelta(hours=2)]
+    assert waits[-1] == timedelta(hours=6) and max(waits) == timedelta(hours=6)
+
+
+def test_a_success_clears_the_backoff():
+    gateway, backoff = Gateway([request()]), RequestBackoff()
+    backoff.fail("req-1", NOW)
+    later = NOW + timedelta(minutes=15)
+    run_app_builder(gateway, later, llm({"spec": SPEC}), backoff)
+    assert [c[0] for c in gateway.calls] == ["spec"]
+    assert "req-1" not in backoff.until and "req-1" not in backoff.failures
+
+
+def test_a_web_failure_backs_off_and_other_requests_are_not_held_back():
+    gateway = Gateway([request(id="a"), request(id="b")], errors={"spec": [GatewayHTTPError("boom", 500), None]})
+    backoff = RequestBackoff()
+    run_app_builder(gateway, NOW, llm({"spec": SPEC}), backoff)
+    assert [(c[0], c[1]) for c in gateway.calls] == [("spec", "a"), ("spec", "b")]
+    assert backoff.blocked("a", NOW) and not backoff.blocked("b", NOW)
+    gateway.requests = [request(id="a")]  # b was answered and the web no longer lists it
+    run_app_builder(gateway, NOW + timedelta(minutes=1), llm({"spec": SPEC}), backoff)
+    assert [c[1] for c in gateway.calls] == ["a", "b"]  # a is still waiting
+
+
+def test_a_failed_announce_waits_fifteen_minutes():
+    gateway = Gateway([request(id="a", status="passed")], errors={"announce": [GatewayHTTPError("boom", 500), None]})
+    backoff = RequestBackoff()
+    run_app_builder(gateway, NOW, [], backoff)
+    run_app_builder(gateway, NOW + timedelta(minutes=14), [], backoff)
+    assert len(gateway.calls) == 1
+    run_app_builder(gateway, NOW + timedelta(minutes=15), [], backoff)
+    assert len(gateway.calls) == 2 and "a" not in backoff.until
+
+
+def test_requests_the_web_no_longer_lists_are_forgotten():
+    backoff = RequestBackoff()
+    backoff.fail("gone", NOW)
+    run_app_builder(Gateway([]), NOW, [], backoff)
+    assert backoff.until == {}
