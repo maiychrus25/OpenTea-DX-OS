@@ -4,7 +4,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { FarmerJournalForm, type JournalPrefill } from '../../_components/FarmerJournalForm'
+import { FarmerJournalForm } from '../../_components/FarmerJournalForm'
+import type { JournalPrefill } from '../../_components/journal-prefill'
 import styles from '../../journal.module.css'
 
 export function FarmerJournalNewClient({ initial }: { initial?: JournalPrefill }) {
