@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Lớp AI vận hành có người duyệt
 
-> **Trạng thái:** Bản định hướng (2026-11-24, bản 6). Triển khai theo issue #55: M0 tới M4 đã vào `main` (M0 và M1 PR #66, M2 PR #70, M3 PR #71, M4 PR #78, 2026-11-25); M5 đã vào `main` (PR #81, 2026-11-26), phần còn lại của M5 ở issue #80; M7 ở nhánh `feat/55-agentic-m7` (2026-11-26). Mã khác đặc tả ở đâu thì xem §21. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12). Bản 5 đưa vào kết quả một lượt đánh giá độc lập và các cải tiến: bốn nguyên lý của đề thi (§5.4), MCP (§8.5), kiểm chứng trên trang lô, bộ đo công khai và kịch bản trình diễn (§15). Bản 6 ghi câu trả lời cho các câu hỏi mở (D13 tới D18, issue #56 tới #61).
+> **Trạng thái:** Bản định hướng (2026-11-24, bản 6). Triển khai theo issue #55: M0 tới M4 đã vào `main` (M0 và M1 PR #66, M2 PR #70, M3 PR #71, M4 PR #78, 2026-11-25); M5 đã vào `main` (PR #81, 2026-11-26), phần còn lại của M5 ở issue #80; M7 ở PR #83 và M8 ở nhánh `feat/55-agentic-m8` (2026-11-26). Mã khác đặc tả ở đâu thì xem §21. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12). Bản 5 đưa vào kết quả một lượt đánh giá độc lập và các cải tiến: bốn nguyên lý của đề thi (§5.4), MCP (§8.5), kiểm chứng trên trang lô, bộ đo công khai và kịch bản trình diễn (§15). Bản 6 ghi câu trả lời cho các câu hỏi mở (D13 tới D18, issue #56 tới #61).
 > **Yêu cầu của chủ dự án (2026-11-23):** thêm một lớp AI vận hành trên hệ thống, luôn còn người phê duyệt. Làm đầy đủ, không cắt phạm vi theo hạn nộp bài. Được gọi provider bên ngoài như Claude và Codex. Báo cáo, hỏi đáp và phê duyệt được qua Telegram, để không phụ thuộc hoàn toàn vào website.
 > **Người đọc:** người sẽ xây lớp này (thành viên nhóm hoặc một phiên AI lập trình). Tài liệu nói cần gì, vì sao, và chốt các quyết định kiến trúc. Chi tiết cài đặt do người làm quyết, trong khuôn khổ ở đây. Mỗi lần gộp vào `main` vẫn hỏi chủ dự án.
 
@@ -789,3 +789,24 @@ Theo `AGENTS.md`:
 - `campaign_items` và `campaign_outcomes` có thêm cột `id`, vì trigger audit dùng chung cần cột này.
 - Nút của chiến dịch dùng dữ liệu nút v1 với ba thao tác mới, `A` (duyệt cả), `L` (xem từng mục) và `D` (bỏ), trên mã chiến dịch.
 - Web từ chối chiến dịch bằng 400, 409 hoặc 422 thì A9 dừng tới hôm sau. Lỗi khác thì thử lại ở chu kỳ sau.
+
+### M8: cải tiến hằng tuần (2026-11-26)
+
+**Đã làm:**
+- A10 chạy lúc 06:30 thứ Hai và dùng luật cứng tìm chỉ số xấu:
+  - một loại cảnh báo bị từ chối nhiều;
+  - nhật ký hay bị trả lại vì thiếu thông tin;
+  - đề xuất chờ duyệt lâu;
+  - mục tiêu chiến dịch hay trượt.
+- Mỗi tuần có tối đa 5 cải tiến. Mỗi cải tiến là một đề xuất thường:
+  - `agent.settings.update` để đổi ngưỡng;
+  - `improvement.adopt` cho cải tiến quy trình hoặc mẫu.
+- Sau 2 tuần và 4 tuần, A10 đo lại và kết luận "đã giúp", "chưa thấy tác dụng" hoặc "nên bỏ". Tóm tắt tuần có phần cải tiến.
+- `htx-dashboard` 0.3.0 có tab AI, đọc qua Hasura bằng quyền của trưởng HTX.
+
+**Khác với đặc tả:**
+- **Cải tiến loại mẫu** hiện thành dòng "Nhắc theo mẫu" trong tin chiến dịch 06:00 và trong bảng chiến dịch, đúng ngày trong tuần của mẫu. A9 chưa tạo việc mới từ mẫu.
+- **Thời gian chờ duyệt** dùng trung vị trên mọi đề xuất đã quyết định. Web tính số này và gửi cho A10, nên lúc đề xuất và lúc đo dùng cùng một số.
+- **Evidence của cải tiến** không gồm `baseline`, vì dạng chuẩn hoá chỉ nhận số nguyên.
+- **Đổi cài đặt** chỉ áp dụng cho agent đã có dòng cài đặt của hợp tác xã.
+- **Tab AI** vẽ biểu đồ cột ngang để tên agent dài vẫn đọc được trên điện thoại. Danh sách cải tiến xét 56 ngày để kết quả sau 4 tuần vẫn hiện.
