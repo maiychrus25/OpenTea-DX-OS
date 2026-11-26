@@ -3,284 +3,169 @@
 
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { 
-  CloudRain, 
-  Thermometer, 
-  Wind, 
-  Droplets, 
-  Loader2, 
-  Sun, 
-  CloudSun, 
-  Cloud, 
-  CloudLightning, 
-  Snowflake, 
-  AlertCircle 
-} from 'lucide-react'
-import styles from './bulletin.module.css'
+import React, { useCallback, useEffect, useState } from 'react'
+import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSun, Droplets, Eye, Gauge, Loader2, MapPin, Moon, Snowflake, Sun, Sunrise, Thermometer, Umbrella, Wind } from 'lucide-react'
+import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
+import type { WeatherDetail } from '@/infrastructure/external/open-meteo-detail'
+import styles from './weather.module.css'
 
-interface ForecastDay {
-  date: string
-  temp_max: number
-  temp_min: number
-  precipitation_mm: number
-  condition: string
-  icon: string
+interface Place {
+  parcels: string[]
+  weather: WeatherDetail
 }
 
-interface WeatherZone {
-  parcel_code: string
-  parcel_name: string
-  crop_type: string
-  lat: number
-  lng: number
-  current: {
-    temperature: number
-    windspeed: number
-    condition: string
-    icon: string
-  }
-  forecast_7d: ForecastDay[]
+function WeatherIcon({ code, isDay = true, size = 22 }: { code: number; isDay?: boolean; size?: number }) {
+  const Icon =
+    code === 0 ? (isDay ? Sun : Moon)
+    : code <= 2 ? (isDay ? CloudSun : CloudMoon)
+    : code === 3 ? Cloud
+    : code <= 48 ? CloudFog
+    : code <= 57 ? CloudDrizzle
+    : code <= 67 ? CloudRain
+    : code <= 77 ? Snowflake
+    : code <= 82 ? CloudRain
+    : code <= 86 ? Snowflake
+    : CloudLightning
+  return <Icon size={size} aria-hidden="true" />
 }
 
-function RenderWeatherIcon({ iconKey, size = 20, className = '' }: { iconKey: string; size?: number; className?: string }) {
-  const key = iconKey.toLowerCase()
-  if (key.includes('sun') && !key.includes('cloud')) {
-    return <Sun size={size} className={`text-warning ${className}`} aria-hidden="true" />
-  }
-  if (key.includes('cloud-sun')) {
-    return <CloudSun size={size} className={`text-warning ${className}`} aria-hidden="true" />
-  }
-  if (key.includes('rain')) {
-    return <CloudRain size={size} className={`text-info ${className}`} aria-hidden="true" />
-  }
-  if (key.includes('lightning')) {
-    return <CloudLightning size={size} className={`text-accent ${className}`} aria-hidden="true" />
-  }
-  if (key.includes('snow')) {
-    return <Snowflake size={size} className={`text-info ${className}`} aria-hidden="true" />
-  }
-  return <Cloud size={size} className={`text-ink-tertiary ${className}`} aria-hidden="true" />
+const degrees = (value: number) => `${Math.round(value)}°`
+const clock = (iso: string) => iso.slice(11, 16)
+const COMPASS = ['Bắc', 'Đông Bắc', 'Đông', 'Đông Nam', 'Nam', 'Tây Nam', 'Tây', 'Tây Bắc']
+const compass = (angle: number) => COMPASS[Math.round(angle / 45) % 8]
+const uvLabel = (uv: number) => (uv < 3 ? 'Thấp' : uv < 6 ? 'Trung bình' : uv < 8 ? 'Cao' : uv < 11 ? 'Rất cao' : 'Nguy hại')
+
+function dayName(date: string, index: number) {
+  if (index === 0) return 'Hôm nay'
+  const day = new Date(`${date}T00:00:00`).getDay()
+  return day === 0 ? 'CN' : `Thứ ${day + 1}`
 }
 
-function RainfallChart({ data }: { data: ForecastDay[] }) {
-  const maxPrecip = Math.max(...data.map(d => d.precipitation_mm), 1)
-  const chartHeight = 120
-  const barWidth = 32
-  const gap = 8
-  const totalWidth = data.length * (barWidth + gap) - gap
-
+function Tile({ icon, label, value, note }: { icon: React.ReactNode; label: string; value: string; note: string }) {
   return (
-    <div className={styles.chartContainer}>
-      <svg
-        width="100%"
-        height={chartHeight + 40}
-        viewBox={`0 0 ${totalWidth} ${chartHeight + 40}`}
-        preserveAspectRatio="xMidYMid meet"
-      >
-        {/* Grid lines */}
-        {[0, 0.25, 0.5, 0.75, 1].map(pct => (
-          <line
-            key={pct}
-            x1={0}
-            y1={chartHeight * (1 - pct)}
-            x2={totalWidth}
-            y2={chartHeight * (1 - pct)}
-            stroke="var(--border)"
-            strokeWidth={pct === 0 ? 1.5 : 0.5}
-            strokeDasharray={pct === 0 ? 'none' : '4,4'}
-          />
-        ))}
-
-        {/* Bars */}
-        {data.map((d, i) => {
-          const barHeight = Math.max((d.precipitation_mm / maxPrecip) * (chartHeight - 10), 2)
-          const x = i * (barWidth + gap)
-          const y = chartHeight - barHeight
-          const dayLabel = new Date(d.date).toLocaleDateString('vi-VN', { weekday: 'short' })
-          const isToday = i === 0
-
-          return (
-            <g key={d.date}>
-              {/* Bar gradient */}
-              <defs>
-                <linearGradient id={`rain-grad-${i}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={isToday ? 'var(--primary)' : 'var(--color-info)'} />
-                  <stop offset="100%" stopColor={isToday ? 'var(--color-primary)' : 'var(--color-info)'} />
-                </linearGradient>
-              </defs>
-              <rect
-                x={x}
-                y={y}
-                width={barWidth}
-                height={barHeight}
-                rx={4}
-                fill={`url(#rain-grad-${i})`}
-                opacity={isToday ? 1 : 0.7}
-              />
-              {/* Precipitation value */}
-              {d.precipitation_mm > 0 && (
-                <text
-                  x={x + barWidth / 2}
-                  y={y - 4}
-                  textAnchor="middle"
-                  fontSize="10"
-                  fill="var(--muted-foreground)"
-                  fontWeight={isToday ? '600' : '400'}
-                >
-                  {d.precipitation_mm.toFixed(1)}
-                </text>
-              )}
-              {/* Day label */}
-              <text
-                x={x + barWidth / 2}
-                y={chartHeight + 16}
-                textAnchor="middle"
-                fontSize="11"
-                fill={isToday ? 'var(--primary)' : 'var(--muted-foreground)'}
-                fontWeight={isToday ? '600' : '400'}
-              >
-                {isToday ? 'H.nay' : dayLabel}
-              </text>
-              {/* Temperature max label */}
-              <text
-                x={x + barWidth / 2}
-                y={chartHeight + 32}
-                textAnchor="middle"
-                fontSize="10"
-                fill="var(--muted-foreground)"
-              >
-                {Math.round(d.temp_max)}°C
-              </text>
-            </g>
-          )
-        })}
-
-        {/* Y-axis label */}
-        <text x={0} y={-4} fontSize="10" fill="var(--muted-foreground)">
-          mm
-        </text>
-      </svg>
+    <div className={styles.tile}>
+      <p className={styles.cardTitle}>{icon}{label}</p>
+      <p className={styles.tileValue}>{value}</p>
+      <p className={styles.tileNote}>{note}</p>
     </div>
   )
 }
 
 export function WeatherSection() {
-  const [zones, setZones] = useState<WeatherZone[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [places, setPlaces] = useState<Place[]>([])
+  const [selected, setSelected] = useState(0)
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
 
-  useEffect(() => {
-    async function fetchWeather() {
-      try {
-        const res = await fetch(`/api/weather/forecast?days=7&_t=${Date.now()}`, { cache: 'no-store' })
-        if (!res.ok) throw new Error('Failed to fetch weather')
-        const json = await res.json()
-        setZones(json.data || [])
-      } catch {
-        setError('Không thể tải dữ liệu thời tiết')
-      } finally {
-        setLoading(false)
-      }
+  const load = useCallback(async () => {
+    setState('loading')
+    try {
+      const res = await fetch('/api/weather/live', { cache: 'no-store' })
+      if (!res.ok) throw new Error('weather')
+      const json = await res.json()
+      setPlaces(json.data ?? [])
+      setState('ready')
+    } catch {
+      setState('error')
     }
-    fetchWeather()
   }, [])
 
-  if (loading) {
+  useEffect(() => { load() }, [load])
+
+  const heading = <h2 className={styles.heading}>Thời tiết vùng trồng</h2>
+
+  if (state !== 'ready' || places.length === 0) {
     return (
-      <div className={styles.weatherLoading}>
-        <Loader2 size={24} className={styles.spinner} aria-hidden="true" />
-        <span>Đang tải dữ liệu thời tiết từ Open-Meteo...</span>
-      </div>
+      <section className={styles.section} aria-label="Thời tiết vùng trồng">
+        {heading}
+        <div className={styles.message} role="status">
+          {state === 'loading' && <><Loader2 size={22} className={styles.spinner} aria-hidden="true" />Đang tải thời tiết...</>}
+          {state === 'error' && (
+            <>Không lấy được dữ liệu thời tiết.<button type="button" className={styles.retry} onClick={load}>Thử lại</button></>
+          )}
+          {state === 'ready' && 'Chưa có thửa nào được định vị. Vẽ thửa trên bản đồ vùng trồng để xem thời tiết.'}
+        </div>
+      </section>
     )
   }
 
-  if (error) {
-    return (
-      <div className={styles.weatherSection}>
-        <div className="p-6 text-center bg-warning-subtle rounded-lg border border-warning/30">
-          <AlertCircle size={32} className="text-warning mx-auto mb-2" aria-hidden="true" />
-          <p className="font-semibold text-foreground">Không thể tải dữ liệu thời tiết</p>
-          <p className="text-sm text-ink-secondary mt-1">Hệ thống đang kết nối với máy chủ dự báo Open-Meteo. Vui lòng thử lại sau.</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (zones.length === 0) {
-    return (
-      <div className={styles.weatherSection}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>
-            <CloudRain size={20} aria-hidden="true" />
-            Thời tiết vùng trồng
-          </h2>
-          <span className={styles.weatherSource}>Nguồn: Open-Meteo (cập nhật mỗi giờ)</span>
-        </div>
-        <div className="p-8 text-center bg-card rounded-lg border border-dashed border-border">
-          <CloudSun size={40} className="text-ink-tertiary mx-auto mb-3" aria-hidden="true" />
-          <p className="font-medium text-ink-secondary">Chưa có dữ liệu thời tiết cho các thửa đất hiện tại</p>
-          <p className="text-sm text-ink-tertiary mt-1">Dữ liệu dự báo 7 ngày sẽ tự động được cập nhật khi hệ thống đồng bộ từ Open-Meteo.</p>
-        </div>
-      </div>
-    )
-  }
+  const place = places[Math.min(selected, places.length - 1)]
+  const { current, today, hourly, daily } = place.weather
+  const lowest = Math.min(...daily.map((d) => d.min))
+  const span = Math.max(...daily.map((d) => d.max)) - lowest || 1
+  const percent = (value: number) => `${((value - lowest) / span) * 100}%`
 
   return (
-    <div className={styles.weatherSection}>
-      <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>
-          <CloudRain size={20} aria-hidden="true" />
-          Thời tiết vùng trồng
-        </h2>
-        <span className={styles.weatherSource}>Nguồn: Open-Meteo (cập nhật mỗi giờ)</span>
-      </div>
+    <section className={styles.section} aria-label="Thời tiết vùng trồng">
+      {heading}
 
-      <div className={styles.weatherGrid}>
-        {zones.map(zone => (
-          <div key={zone.parcel_code} className={styles.weatherCard}>
-            {/* Current Weather Header */}
-            <div className={styles.weatherCardHeader}>
-              <div className={styles.weatherCardInfo}>
-                <span className={styles.weatherZoneName}>{zone.parcel_name}</span>
-                <span className={styles.weatherCrop}>{zone.crop_type}</span>
-              </div>
-              <span className={styles.weatherCurrentIcon}>
-                <RenderWeatherIcon iconKey={zone.current.icon} size={28} />
-              </span>
-            </div>
+      {places.length > 1 && (
+        <div className={styles.places} role="group" aria-label="Chọn khu vực">
+          {places.map((p, i) => (
+            <button key={p.parcels[0]} type="button" className={styles.place} aria-pressed={i === selected} onClick={() => setSelected(i)}>
+              Khu {p.parcels[0]}
+            </button>
+          ))}
+        </div>
+      )}
 
-            {/* Current Stats */}
-            <div className={styles.weatherStats}>
-              <div className={styles.weatherStat}>
-                <Thermometer size={16} aria-hidden="true" />
-                <span className={styles.weatherStatValue}>{zone.current.temperature}°C</span>
-                <span className={styles.weatherStatLabel}>Nhiệt độ</span>
-              </div>
-              <div className={styles.weatherStat}>
-                <Wind size={16} aria-hidden="true" />
-                <span className={styles.weatherStatValue}>{zone.current.windspeed} km/h</span>
-                <span className={styles.weatherStatLabel}>Gió</span>
-              </div>
-              <div className={styles.weatherStat}>
-                <Droplets size={16} aria-hidden="true" />
-                <span className={styles.weatherStatValue}>
-                  {zone.forecast_7d[0]?.precipitation_mm.toFixed(1) ?? '0'} mm
-                </span>
-                <span className={styles.weatherStatLabel}>Lượng mưa</span>
-              </div>
-            </div>
+      <div className={`${styles.sky} ${current.isDay ? '' : styles.night}`.trim()}>
+        <div className={styles.now}>
+          <p className={styles.location}><MapPin size={14} aria-hidden="true" />{place.parcels.length} thửa quanh {place.parcels[0]}</p>
+          <p className={styles.temperature}>{degrees(current.temperature)}</p>
+          <p className={styles.condition}><WeatherIcon code={current.code} isDay={current.isDay} />{weatherCodeToCondition(current.code)}</p>
+          {daily[0] && <p className={styles.range}>Cao {degrees(daily[0].max)} · Thấp {degrees(daily[0].min)}</p>}
+        </div>
 
-            <div className={styles.weatherCondition}>{zone.current.condition}</div>
+        <div className={styles.glass}>
+          <p className={styles.cardTitle}>Dự báo theo giờ</p>
+          <ol className={styles.hours}>
+            {hourly.map((hour, i) => (
+              <li key={hour.time} className={styles.hour}>
+                <span>{i === 0 ? 'Bây giờ' : `${hour.time.slice(11, 13)} giờ`}</span>
+                <WeatherIcon code={hour.code} isDay={hour.isDay} />
+                <span className={styles.chance}>{hour.rainChance >= 20 ? `${hour.rainChance}%` : ''}</span>
+                <strong>{degrees(hour.temperature)}</strong>
+              </li>
+            ))}
+          </ol>
+        </div>
 
-            {/* Rainfall Chart */}
-            <div className={styles.weatherChartSection}>
-              <h3 className={styles.weatherChartTitle}>Lượng mưa 7 ngày (mm)</h3>
-              <RainfallChart data={zone.forecast_7d} />
-            </div>
+        <div className={styles.details}>
+          <div className={styles.glass}>
+            <p className={styles.cardTitle}>Dự báo {daily.length} ngày</p>
+            <ol className={styles.days}>
+              {daily.map((day, i) => (
+                <li key={day.date} className={styles.day}>
+                  <span>{dayName(day.date, i)}</span>
+                  <span className={styles.dayIcon}>
+                    <WeatherIcon code={day.code} size={20} />
+                    {day.rainChance >= 20 && <span className={styles.chance}>{day.rainChance}%</span>}
+                  </span>
+                  <span className={styles.low}>{degrees(day.min)}</span>
+                  <svg className={styles.bar} viewBox="0 0 100 4" preserveAspectRatio="none" aria-hidden="true">
+                    <line x1="0" y1="2" x2="100" y2="2" className={styles.barTrack} />
+                    <line x1={percent(day.min)} y1="2" x2={percent(day.max)} y2="2" className={styles.barFill} />
+                  </svg>
+                  <span>{degrees(day.max)}</span>
+                </li>
+              ))}
+            </ol>
           </div>
-        ))}
+
+          <div className={styles.tiles}>
+            <Tile icon={<Thermometer size={14} aria-hidden="true" />} label="Cảm nhận" value={degrees(current.feelsLike)} note={`Nhiệt độ thực ${degrees(current.temperature)}`} />
+            <Tile icon={<Droplets size={14} aria-hidden="true" />} label="Độ ẩm" value={`${current.humidity}%`} note={current.humidity >= 85 ? 'Ẩm cao, chú ý nấm bệnh' : 'Trong không khí'} />
+            <Tile icon={<Umbrella size={14} aria-hidden="true" />} label="Lượng mưa" value={`${(daily[0]?.rainMm ?? 0).toLocaleString('vi-VN')} mm`} note={`Dự kiến hôm nay · khả năng ${daily[0]?.rainChance ?? 0}%`} />
+            <Tile icon={<Wind size={14} aria-hidden="true" />} label="Gió" value={`${Math.round(current.windSpeed)} km/h`} note={`Hướng ${compass(current.windDirection)} · giật ${Math.round(current.windGust)} km/h`} />
+            {today.uvMax != null && <Tile icon={<Sun size={14} aria-hidden="true" />} label="Chỉ số UV" value={String(Math.round(today.uvMax))} note={`${uvLabel(today.uvMax)} (cao nhất hôm nay)`} />}
+            <Tile icon={<Sunrise size={14} aria-hidden="true" />} label="Mặt trời mọc" value={clock(today.sunrise)} note={`Lặn lúc ${clock(today.sunset)}`} />
+            <Tile icon={<Gauge size={14} aria-hidden="true" />} label="Áp suất" value={`${Math.round(current.pressure)}`} note="hPa" />
+            {current.visibilityKm != null && <Tile icon={<Eye size={14} aria-hidden="true" />} label="Tầm nhìn" value={`${Math.round(current.visibilityKm)} km`} note={current.visibilityKm >= 10 ? 'Quang đãng' : 'Hạn chế'} />}
+          </div>
+        </div>
+
+        <p className={styles.source}>Nguồn: Open-Meteo · cập nhật lúc {clock(place.weather.updatedAt)}</p>
       </div>
-    </div>
+    </section>
   )
 }

@@ -1,0 +1,48 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.section { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.heading { margin: 0; font-size: var(--font-size-h2); font-weight: 700; color: var(--color-ink-heading); }
+.message { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; padding: 32px 18px; border: 1px dashed var(--color-border); border-radius: var(--radius-card); background: var(--color-surface-card); color: var(--color-ink-secondary); text-align: center; }
+.retry, .place { height: 34px; padding: 0 14px; border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; font-size: var(--font-size-meta); font-weight: 700; cursor: pointer; }
+.places { display: flex; flex-wrap: wrap; gap: 8px; }
+.place[aria-pressed='true'] { background: var(--color-sidebar); border-color: var(--color-sidebar); color: var(--color-hero-text); }
+.spinner { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.sky { display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: var(--radius-hero); background: linear-gradient(180deg, var(--weather-day-top), var(--weather-day-bottom)); color: var(--color-hero-text); min-width: 0; }
+.night { background: linear-gradient(180deg, var(--weather-night-top), var(--weather-night-bottom)); }
+.now { display: flex; flex-direction: column; align-items: center; padding: 8px 0 6px; text-align: center; }
+.now p { margin: 0; display: flex; align-items: center; gap: 6px; }
+.location { font-size: 15px; font-weight: 600; }
+.temperature { font-size: 84px; font-weight: 200; line-height: 1.1; padding-left: 0.3em; }
+.condition { font-size: 18px; font-weight: 600; }
+.range { font-size: 15px; font-weight: 600; }
+
+.glass, .tile { background: var(--weather-glass); border-radius: var(--radius-card); padding: 12px 14px; min-width: 0; }
+.cardTitle { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+.hours { display: flex; gap: 4px; margin: 0; padding: 0 0 4px; list-style: none; overflow-x: auto; }
+.hour { flex: 0 0 58px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; }
+.hour strong { font-size: 17px; }
+.chance { min-height: 15px; font-size: 11px; font-weight: 800; color: var(--weather-rain); }
+
+.details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.days { margin: 0; padding: 0; list-style: none; }
+.day { display: grid; grid-template-columns: 72px 40px 34px minmax(40px, 1fr) 34px; align-items: center; gap: 6px; white-space: nowrap; min-height: 44px; border-top: 1px solid var(--weather-line); font-weight: 600; }
+.dayIcon { display: flex; flex-direction: column; align-items: center; }
+.dayIcon .chance { min-height: 0; }
+.low { opacity: 0.85; text-align: right; }
+.bar { width: 100%; height: 5px; overflow: visible; }
+.bar line { stroke-width: 5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.barTrack { stroke: var(--weather-line); }
+.barFill { stroke: var(--weather-warm); }
+
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tile p { margin-bottom: 4px; }
+.tileValue { font-size: 28px; font-weight: 600; line-height: 1.2; }
+.tileNote { font-size: 12.5px; line-height: 1.4; }
+.source { margin: 0; font-size: 12px; text-align: center; }
+
+@media (max-width: 1023px) {
+  .details { grid-template-columns: minmax(0, 1fr); }
+}

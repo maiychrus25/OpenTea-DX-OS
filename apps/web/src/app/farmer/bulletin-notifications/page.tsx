@@ -8,6 +8,7 @@ import kit from '@/components/features/dashboard/page-kit.module.css'
 import React, { useState } from 'react'
 import { NotificationInbox } from '@/components/features/notification/NotificationInbox'
 import { BulletinCard } from '@/components/features/bulletin/BulletinCard'
+import { WeatherSection } from '@/components/features/bulletin/WeatherSection'
 import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
 import { Bell, Newspaper } from 'lucide-react'
 
@@ -50,6 +51,8 @@ export default function FarmerBulletinNotificationsPage() {
 
         <div className="min-h-[400px]">
           {activeTab === 'bulletin' && (
+            <div className={kit.page}>
+              <WeatherSection />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {MOCK_BULLETINS.map(bulletin => (
                 <BulletinCard
@@ -61,6 +64,7 @@ export default function FarmerBulletinNotificationsPage() {
                   sourceCount={bulletin.sourceCount}
                 />
               ))}
+            </div>
             </div>
           )}
 
