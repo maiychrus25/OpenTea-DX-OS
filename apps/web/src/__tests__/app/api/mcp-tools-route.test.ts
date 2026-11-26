@@ -63,8 +63,10 @@ jest.mock('@/application/farm/approve-harvest-usecase', () => ({
 
 import { UnauthorizedError } from '@/domain/errors'
 import { CHAT_TOOLS } from '@/application/telegram/chat/tools'
-import { GET as listTools } from '@/app/api/mcp/tools/route'
+import { GET as listToolsRoute } from '@/app/api/mcp/tools/route'
 import { POST as callTool } from '@/app/api/mcp/tools/[name]/route'
+
+const listTools = (req: Request) => listToolsRoute(req, {})
 
 const LIVE_MANAGER = { roles: ['manager'], enabled: true, htxCode: 'TC' }
 const LIVE_FARMER = { roles: ['farmer'], enabled: true, htxCode: 'TC' }
