@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Telegram Bot API calls for the relay. Errors say whether the message can be retried."""
 import json
+import secrets
 import urllib.error
 import urllib.request
 from typing import Any, Callable, Mapping, Optional
@@ -45,6 +46,32 @@ class BotApi:
             method="POST",
             headers={"Content-Type": "application/json"},
         )
+        return self._send(req, timeout)
+
+    def call_files(
+        self,
+        method: str,
+        params: Mapping[str, Any],
+        files: Mapping[str, tuple[str, bytes, str]],
+        timeout: float = 30.0,
+    ) -> Any:
+        """Multipart call for uploads. `files` maps a part name to (file name, bytes, content type); params that are not text go as JSON."""
+        boundary = "dxos" + secrets.token_hex(12)
+        body = b""
+        for name, value in params.items():
+            text = value if isinstance(value, str) else json.dumps(value)
+            body += f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{text}\r\n'.encode("utf-8")
+        for name, (filename, data, content_type) in files.items():
+            body += (f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'
+                     f"Content-Type: {content_type}\r\n\r\n").encode("utf-8") + data + b"\r\n"
+        body += f"--{boundary}--\r\n".encode("utf-8")
+        req = urllib.request.Request(
+            f"{self._base}/{method}", data=body, method="POST",
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        )
+        return self._send(req, timeout)
+
+    def _send(self, req: urllib.request.Request, timeout: float) -> Any:
         try:
             with self._urlopen(req, timeout=timeout) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
