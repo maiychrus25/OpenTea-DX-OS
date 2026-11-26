@@ -51,3 +51,18 @@ Bảng dưới đây là lần chạy nền bằng replay. Replay phải đạt 
 | a10_improvement | 25 | 25 | 0.0 | 0.0000 |
 | a10_improvement_measurement | 10 | 10 | 0.0 | 0.0000 |
 | **Tổng** | 90 | 90 | 0.0 | 0.0000 |
+
+## 2026-11-26 · openai · AHV-Holding
+
+| Bộ kịch bản | Số ca | Đúng | Độ trễ trung vị (ms) | Chi phí (USD) |
+|---|---:|---:|---:|---:|
+| a1_journal_review | 12 | 12 | 0.0 | 0.0000 |
+| a2_field_watch | 8 | 8 | 0.0 | 0.0000 |
+| a3_disease_watch | 7 | 7 | 0.0 | 0.0000 |
+| a4_harvest_ready | 5 | 5 | 0.0 | 0.0000 |
+| a5_bulletin | 4 | 3 | 3917.8 | 0.0003 |
+| a7_assistant | 9 | 6 | 3291.6 | 0.0009 |
+| a9_daily_campaign | 10 | 10 | 3030.6 | 0.0007 |
+| a10_improvement | 25 | 22 | 2639.9 | 0.0016 |
+| a10_improvement_measurement | 10 | 10 | 0.0 | 0.0000 |
+| **Tổng** | 90 | 83 | 0.1 | 0.0036 |
