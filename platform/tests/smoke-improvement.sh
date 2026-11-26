@@ -18,18 +18,19 @@ M8_RUN=$(python3 -c 'import uuid; print(uuid.uuid4())')
 M8_METRIC="reject_rate:field-watch:sensor_silent"
 M8_WEEK_SQL="(date_trunc('week', now() at time zone 'Asia/Ho_Chi_Minh'))::date"  # the Monday of this week (Vietnam)
 M8_WEEK_START_SQL="(date_trunc('week', now() at time zone 'Asia/Ho_Chi_Minh') at time zone 'Asia/Ho_Chi_Minh')"
-M8_MARKERS="array(select 'm8-silent-$M8_RUN-' || n::text from generate_series(1, 7) as n)"
+M8_SEEDED="exists (select 1 from unnest(subject_ids) as s where s like 'm8-silent-%')"  # the seeds of this run and of a crashed one
 # The field-watch thresholds of TC as they were; an empty value means the row did not exist and is removed at cleanup.
 M8_THRESHOLDS=$(psql_app "select coalesce((select thresholds::text from platform.agent_settings where htx_code='TC' and agent='field-watch'), '')")
 
 # Restores what this smoke changed: the improvements and their proposals and messages, the improvement runs of the smoke,
 # and the TC field-watch thresholds. The EXIT trap of smoke-campaign is replaced, so this one chains it after its own cleanup.
 improvement_cleanup() {
-  local rows="select id from platform.agent_proposals where subject_ids && $M8_MARKERS or id in (select proposal_id from platform.improvements where htx_code='TC' and created_at >= '$M8_T0' and proposal_id is not null)"
+  local rows="select id from platform.agent_proposals where $M8_SEEDED or id in (select proposal_id from platform.improvements where htx_code='TC' and created_at >= '$M8_T0' and proposal_id is not null)"
   psql_app "delete from platform.telegram_outbox where proposal_id in ($rows)" >/dev/null 2>&1 || true
   psql_app "delete from platform.telegram_conversations where proposal_id in ($rows)" >/dev/null 2>&1 || true
-  psql_app "delete from platform.improvements where htx_code='TC' and (created_at >= '$M8_T0' or metric_key='$M8_METRIC')" >/dev/null 2>&1 || true
-  psql_app "delete from platform.agent_proposals where id in ($rows)" >/dev/null 2>&1 || true
+  # One statement removes the improvements and their proposals: the proposals are found from the improvements being deleted.
+  psql_app "with gone as (delete from platform.improvements where htx_code='TC' and (created_at >= '$M8_T0' or metric_key='$M8_METRIC') returning proposal_id)
+    delete from platform.agent_proposals where $M8_SEEDED or id in (select proposal_id from gone where proposal_id is not null)" >/dev/null 2>&1 || true
   psql_app "delete from platform.agent_runs where htx_code='TC' and agent='improvement' and started_at >= '$M8_T0'" >/dev/null 2>&1 || true
   if [ -n "$M8_THRESHOLDS" ]; then
     psql_app "update platform.agent_settings set thresholds='$M8_THRESHOLDS'::jsonb where htx_code='TC' and agent='field-watch'" >/dev/null 2>&1 || true
@@ -44,11 +45,11 @@ $COMPOSE stop dxos-agent >/dev/null
 
 # Clean slate for this week: an improvement of this week or of the metric blocks a new one (one per metric and week, and no
 # repeat for 28 days), and a finished improvement run of this week means A10 does not run again on the restart.
-M8_OLD="select proposal_id from platform.improvements where htx_code='TC' and (week = $M8_WEEK_SQL or metric_key='$M8_METRIC') and proposal_id is not null"
+M8_OLD="select id from platform.agent_proposals where $M8_SEEDED or id in (select proposal_id from platform.improvements where htx_code='TC' and (week = $M8_WEEK_SQL or metric_key='$M8_METRIC') and proposal_id is not null)"
 psql_app "delete from platform.telegram_outbox where proposal_id in ($M8_OLD)" >/dev/null
 psql_app "delete from platform.telegram_conversations where proposal_id in ($M8_OLD)" >/dev/null
-psql_app "delete from platform.improvements where htx_code='TC' and (week = $M8_WEEK_SQL or metric_key='$M8_METRIC')" >/dev/null
-psql_app "delete from platform.agent_proposals where id in ($M8_OLD)" >/dev/null
+psql_app "with gone as (delete from platform.improvements where htx_code='TC' and (week = $M8_WEEK_SQL or metric_key='$M8_METRIC') returning proposal_id)
+  delete from platform.agent_proposals where $M8_SEEDED or id in (select proposal_id from gone where proposal_id is not null)" >/dev/null
 psql_app "delete from platform.agent_runs where htx_code='TC' and agent='improvement' and started_at >= $M8_WEEK_START_SQL" >/dev/null
 
 # Six rejected and one approved sensor_silent notices, decided two days ago (historical rows, as A2 files them).
