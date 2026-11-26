@@ -3,7 +3,9 @@
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { telegramNotifier, telegramRepository } from '@/application/telegram/telegram-services'
+import { assistantRequests, telegramNotifier, telegramRepository } from '@/application/telegram/telegram-services'
+import { assistantTimeoutInserts } from '@/application/telegram/assistant/AssistantResult'
+import { telegramCallbackKey } from '@/application/telegram/telegram-config'
 import { requireTelegramCaller } from '@/lib/api/internal-telegram-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
@@ -17,6 +19,10 @@ async function getTelegramOutbox(request: Request) {
   await requireTelegramCaller(request)
   const { limit } = querySchema.parse({ limit: new URL(request.url).searchParams.get('limit') ?? undefined })
   await telegramNotifier().runHealthChecks()
+  // Assistant requests older than 60 s expire here, and their chats get the timeout reply with the menu (contract C7).
+  const expired = await assistantRequests().expire(new Date())
+  const timeouts = assistantTimeoutInserts(expired, telegramCallbackKey())
+  if (timeouts.length) await telegramRepository().enqueue(timeouts)
   const rows = await telegramRepository().lease(limit, new Date(), LEASE_SECONDS)
   return NextResponse.json({
     data: rows.map((row) => ({

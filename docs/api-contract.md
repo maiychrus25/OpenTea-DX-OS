@@ -793,3 +793,36 @@ Bearer token of client `dxos-telegram` plus the gateway header (`X-Dxos-Gateway`
   }
 }
 ```
+
+## Telegram chat assistant (M5, internal)
+
+Các route dưới đây không dành cho trình duyệt. Chúng dùng chung bảo vệ biên gateway với các route nội bộ khác.
+
+### Cập nhật từ relay: `POST /api/internal/telegram/updates`
+
+Ngoài `message_id`, `chat`, `from`, `text`, tin nhắn có thể kèm:
+- `caption`: chú thích của ảnh (không dùng để định tuyến);
+- `photo`: `{ "mime_type": "image/jpeg", "data_base64": "...", "file_unique_id": "..." }`, ảnh lớn nhất không quá 5 MB;
+- `photo_error`: `too_large` hoặc `download_failed` khi có ảnh nhưng không chuyển tiếp được;
+- `location`: `{ "latitude": number, "longitude": number }`.
+
+### Trả lời cho relay: `op`
+
+Mỗi trả lời là `{ op: 'send', chat_id, text, buttons? }` hoặc `{ op: 'edit', chat_id, edit_message_id, text, buttons? }`. `buttons` là mảng hàng, mỗi nút có `text` và `callback_data`. Một lần `edit` không có `buttons` sẽ xoá bàn phím.
+
+### Callback dữ liệu v2
+
+`v2|<c>|<s>|<sig>`: `c` là `menu` hoặc mã 11 ký tự của bước hiện tại, `s` là bước của nút (ví dụ `o3`, `skip`, `ok`, `next`, `final`, `cancel`), `sig` là 12 byte đầu của HMAC-SHA256 khoá callback, mã hoá base64url (16 ký tự). Tổng tối đa 48 byte. Nút của bước cũ bị từ chối với `staleButton`.
+
+### `POST /api/internal/agent/assistant/claim`
+
+Agent claim tối đa 5 yêu cầu (mặc định 3) của HTX. Trả về `{ "requests": [{ id, text, role, today, tools, actions }] }` với `tools` và `actions` là danh sách đầy đủ (`name`, `title_vi`, `args`).
+
+### `POST /api/internal/agent/assistant/requests/{id}/result`
+
+Body `{ "intent": { type, name?, args? }, "run_id": uuid | null }`. Trả về `200 { ok: true }`; `404` cho HTX khác hoặc id lạ; `409` khi yêu cầu không ở trạng thái `claimed`. Intent không hợp lệ được coi là `unknown`.
+
+### Hết hạn
+
+`GET /api/internal/telegram/outbox` trước khi giao hàng đợi đánh dấu các yêu cầu `pending` hoặc `claimed` cũ hơn 60 giây là `expired`, rồi xếp lời trả lời `assistantTimeout` kèm menu vào đúng chat.
+

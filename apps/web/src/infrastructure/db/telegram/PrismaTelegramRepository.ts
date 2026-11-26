@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import type {
+  FlowInput,
   LinkCodeRecord,
   OutboxButton,
   OutboxInsert,
   OutboxRow,
+  RejectConversationInput,
   TelegramConversation,
   TelegramLink,
   TelegramRepository,
@@ -48,6 +50,35 @@ const LINK_COLUMNS = Prisma.raw(`id::text AS id, kind, user_id, user_name, role,
 const OUTBOX_COLUMNS = Prisma.raw(`id::text AS id, htx_code, chat_id::text AS chat_id, op, text, buttons,
   edit_message_id::text AS edit_message_id, proposal_id::text AS proposal_id, purpose, health_key,
   status, attempts, telegram_message_id::text AS telegram_message_id`)
+
+type ConversationRow = {
+  telegram_user_id: string
+  kind: TelegramConversation['kind']
+  proposal_id: string | null
+  flow: string | null
+  step: number | null
+  state: Record<string, unknown>
+  token: string | null
+  card_message_id: string | null
+  expires_at: Date
+}
+
+const CONVERSATION_COLUMNS = Prisma.raw(`telegram_user_id::text AS telegram_user_id, kind, proposal_id::text AS proposal_id,
+  flow, step, state, token, card_message_id::text AS card_message_id, expires_at`)
+
+function mapConversation(r: ConversationRow): TelegramConversation {
+  return {
+    telegramUserId: r.telegram_user_id,
+    kind: r.kind,
+    proposalId: r.proposal_id,
+    flow: r.flow,
+    step: r.step,
+    state: r.state ?? {},
+    token: r.token,
+    cardMessageId: r.card_message_id,
+    expiresAt: r.expires_at,
+  }
+}
 
 function mapLink(r: LinkRow): TelegramLink {
   return {
@@ -205,23 +236,42 @@ export class PrismaTelegramRepository implements TelegramRepository {
     return rows.map(mapLink)
   }
 
-  async setConversation(conversation: TelegramConversation): Promise<void> {
+  async setConversation(conversation: RejectConversationInput): Promise<void> {
     await this.write(`telegram:user:${conversation.telegramUserId}`, (tx) => tx.$executeRaw`
       INSERT INTO platform.telegram_conversations (telegram_user_id, kind, proposal_id, expires_at)
       VALUES (${conversation.telegramUserId}::bigint, 'reject_reason', ${conversation.proposalId}::uuid, ${conversation.expiresAt})
       ON CONFLICT (telegram_user_id) DO UPDATE
-        SET kind = EXCLUDED.kind, proposal_id = EXCLUDED.proposal_id, expires_at = EXCLUDED.expires_at
+        SET kind = EXCLUDED.kind, proposal_id = EXCLUDED.proposal_id, expires_at = EXCLUDED.expires_at,
+            flow = NULL, step = NULL, state = '{}'::jsonb, token = NULL, card_message_id = NULL
+    `)
+  }
+
+  async setFlow(flow: FlowInput): Promise<void> {
+    const state = JSON.stringify(flow.state)
+    await this.write(`telegram:user:${flow.telegramUserId}`, (tx) => tx.$executeRaw`
+      INSERT INTO platform.telegram_conversations (telegram_user_id, kind, proposal_id, expires_at, flow, step, state, token, card_message_id)
+      VALUES (${flow.telegramUserId}::bigint, 'flow', NULL, ${flow.expiresAt}, ${flow.flow}, ${flow.step}, ${state}::jsonb,
+              ${flow.token}, ${flow.cardMessageId}::bigint)
+      ON CONFLICT (telegram_user_id) DO UPDATE
+        SET kind = EXCLUDED.kind, proposal_id = NULL, expires_at = EXCLUDED.expires_at, flow = EXCLUDED.flow,
+            step = EXCLUDED.step, state = EXCLUDED.state, token = EXCLUDED.token, card_message_id = EXCLUDED.card_message_id
     `)
   }
 
   async activeConversation(telegramUserId: string, now: Date): Promise<TelegramConversation | null> {
-    const rows = await prisma.$queryRaw<{ telegram_user_id: string; proposal_id: string; expires_at: Date }[]>`
-      SELECT telegram_user_id::text AS telegram_user_id, proposal_id::text AS proposal_id, expires_at
-      FROM platform.telegram_conversations
+    const rows = await prisma.$queryRaw<ConversationRow[]>`
+      SELECT ${CONVERSATION_COLUMNS} FROM platform.telegram_conversations
       WHERE telegram_user_id = ${telegramUserId}::bigint AND expires_at > ${now}
     `
-    const row = rows[0]
-    return row ? { telegramUserId: row.telegram_user_id, proposalId: row.proposal_id, expiresAt: row.expires_at } : null
+    return rows[0] ? mapConversation(rows[0]) : null
+  }
+
+  async conversationOf(telegramUserId: string): Promise<TelegramConversation | null> {
+    const rows = await prisma.$queryRaw<ConversationRow[]>`
+      SELECT ${CONVERSATION_COLUMNS} FROM platform.telegram_conversations
+      WHERE telegram_user_id = ${telegramUserId}::bigint
+    `
+    return rows[0] ? mapConversation(rows[0]) : null
   }
 
   async deleteConversation(telegramUserId: string): Promise<void> {
@@ -230,14 +280,29 @@ export class PrismaTelegramRepository implements TelegramRepository {
     `)
   }
 
-  async markUpdateSeen(updateId: string): Promise<boolean> {
+  async markUpdateSeen(updateId: string, telegramUserId: string | null): Promise<boolean> {
     const rows = await this.write('telegram:relay', (tx) => tx.$queryRaw<{ update_id: string }[]>`
-      INSERT INTO platform.telegram_updates_seen (update_id)
-      VALUES (${updateId}::bigint)
+      INSERT INTO platform.telegram_updates_seen (update_id, telegram_user_id)
+      VALUES (${updateId}::bigint, ${telegramUserId}::bigint)
       ON CONFLICT (update_id) DO NOTHING
       RETURNING update_id::text AS update_id
     `)
     return rows.length > 0
+  }
+
+  async countRecentUpdates(telegramUserId: string, since: Date): Promise<number> {
+    const rows = await prisma.$queryRaw<{ count: number }[]>`
+      SELECT count(*)::int AS count FROM platform.telegram_updates_seen
+      WHERE telegram_user_id = ${telegramUserId}::bigint AND seen_at > ${since}
+    `
+    return rows[0]?.count ?? 0
+  }
+
+  async auditEvent(actor: string, op: string, subject: string, details: Record<string, unknown>): Promise<void> {
+    const json = JSON.stringify({ ...details, actor })
+    await this.write(`user:${actor}`, (tx) => tx.$executeRaw`
+      SELECT audit.record_event('web', ${op}, ${subject}, ${json}::jsonb)
+    `)
   }
 
   async forgetUpdate(updateId: string): Promise<void> {
