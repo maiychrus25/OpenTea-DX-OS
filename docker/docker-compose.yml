@@ -173,6 +173,8 @@ services:
       DXOS_TELEGRAM_CALLBACK_KEY: ${DXOS_TELEGRAM_CALLBACK_KEY:-dev-telegram-callback-key}
       # Derived Mini App key (never the bot token); ./dxos telegram enable also writes it to roles.env. Empty = Mini App off.
       DXOS_TELEGRAM_WEBAPP_KEY: ${DXOS_TELEGRAM_WEBAPP_KEY:-}
+      # The web's HTTPS base URL (D17): chat shows the Mini App buttons only when it is set. Same value as the relay's.
+      DXOS_WEB_PUBLIC_URL: ${DXOS_WEB_PUBLIC_URL:-}
       HOSTNAME: "0.0.0.0"
     volumes:
       # Client credentials of dxos-web-roles (realm-management view-users), written by ./dxos telegram enable.
