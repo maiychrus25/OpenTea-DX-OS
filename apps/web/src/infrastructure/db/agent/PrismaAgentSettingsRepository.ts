@@ -5,6 +5,7 @@ import type {
   AgentSettingRecord,
   AgentSettingsRepository,
   AgentSettingsSnapshot,
+  AgentSettingsValues,
   SaveAgentSettingsInput,
 } from '@/domain/agent/ports/AgentSettingsRepository'
 import {
@@ -15,6 +16,7 @@ import {
   type AgentProvider,
   type ConfigurableAgent,
 } from '@/domain/agent/settings'
+import { ValidationError } from '@/domain/errors'
 import { prisma } from '@/infrastructure/db/prisma.client'
 
 interface SettingsDbRow {
@@ -95,6 +97,42 @@ export class PrismaAgentSettingsRepository implements AgentSettingsRepository {
           SET monthly_budget = EXCLUDED.monthly_budget
         WHERE platform.agent_settings.monthly_budget IS DISTINCT FROM EXCLUDED.monthly_budget
       `
+    })
+  }
+
+  async findForEvidence(htxCode: string, agent: string): Promise<AgentSettingsValues | null> {
+    const rows = await prisma.$queryRaw<{ thresholds: Record<string, unknown> | null; schedule: string | null }[]>`
+      SELECT thresholds, schedule FROM platform.agent_settings WHERE htx_code = ${htxCode} AND agent = ${agent}
+    `
+    return rows[0] ? { thresholds: rows[0].thresholds ?? {}, schedule: rows[0].schedule ?? null } : null
+  }
+
+  /** Only the given keys change; a row that does not exist is refused rather than created with the agent switched off. */
+  async applyKeys(
+    htxCode: string,
+    agent: string,
+    change: AgentSettingsValues,
+    actor: string
+  ): Promise<{ before: AgentSettingsValues; after: AgentSettingsValues }> {
+    return prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('dxos.actor', ${actor}, true)`
+      const current = await tx.$queryRaw<{ thresholds: Record<string, unknown> | null; schedule: string | null }[]>`
+        SELECT thresholds, schedule FROM platform.agent_settings
+        WHERE htx_code = ${htxCode} AND agent = ${agent} FOR UPDATE
+      `
+      if (!current[0]) throw new ValidationError('Chưa có cài đặt cho agent này')
+      const updated = await tx.$queryRaw<{ thresholds: Record<string, unknown> | null; schedule: string | null }[]>`
+        UPDATE platform.agent_settings
+        SET thresholds = thresholds || ${JSON.stringify(change.thresholds)}::jsonb,
+            schedule = COALESCE(${change.schedule}::text, schedule)
+        WHERE htx_code = ${htxCode} AND agent = ${agent}
+        RETURNING thresholds, schedule
+      `
+      const values = (row: { thresholds: Record<string, unknown> | null; schedule: string | null }): AgentSettingsValues => ({
+        thresholds: row.thresholds ?? {},
+        schedule: row.schedule ?? null,
+      })
+      return { before: values(current[0]), after: values(updated[0]) }
     })
   }
 }
