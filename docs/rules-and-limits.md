@@ -289,6 +289,7 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
   1. `withdrawal`: không đưa việc thu hoạch vào thửa còn trong thời gian cách ly của lần phun thuốc.
   2. `rain`: không đưa việc phun thuốc vào thửa có dự báo mưa từ 5 mm trở lên trong 12 giờ tới.
   3. Sắp theo loại việc (thu hoạch, kiểm tra bệnh, thông báo nông hộ, nhật ký, thông báo cán bộ, bản tin), rồi theo ngày tạo.
+     Khi kế hoạch mùa vụ đang áp dụng (mục 3.16), việc thuộc mục tiêu mà kế hoạch nâng lên (sản lượng, thửa có bệnh, nhật ký đúng hạn) được xếp trước các việc còn lại; thứ tự theo loại việc vẫn giữ trong từng nhóm.
   4. `people`: khi có số người có mặt (từ chấm công, M10), bỏ việc vượt số người cần; hiện chưa có số liệu nên bước này không bỏ việc nào.
   5. `overflow`: giữ 15 việc đầu; việc còn lại mở lại vào ngày mai.
 - **Duyệt cả chiến dịch (C7):**
@@ -309,6 +310,7 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
 | Thiếu thông tin | `journal_missing_info_rate` | ≥ 0,4 với ít nhất 10 nhật ký đã xem | `process`: bắt buộc ghi liều lượng khi ghi nhật ký phun thuốc |
 | Quyết định chậm | `median_wait_hours` | ≥ 24 giờ với ít nhất 10 đề xuất đã quyết định | `process`: giao thêm người duyệt đề xuất |
 | Trượt mục tiêu | `missed_days:<goal_key>` | ≥ 3 ngày trượt trong 14 ngày | `template`: nhắc đầu tuần vào thứ Hai |
+| Mục tiêu vụ chậm | `season_goal:<khóa>` | Có kế hoạch mùa vụ đang áp dụng, đã qua ít nhất 4 tuần của quý, và số thực tế chậm hơn mục tiêu theo tỉ lệ thời gian từ 20% trở lên | `process`: `Mục tiêu vụ "<nhãn>" đang chậm so với kế hoạch` |
 
 - **Không lặp:** chỉ số đang có cải tiến `proposed`, hoặc cải tiến đã `adopted` trong 28 ngày gần đây, thì không tạo cải tiến mới.
 - **Giới hạn đề xuất:** A10 không bao giờ đề xuất thay đổi danh mục, vai trò, chính sách nhà cung cấp, ngân sách, khóa hay quyền tự chủ. Chỉ các khóa dưới đây được đề xuất:
@@ -387,6 +389,18 @@ Trong cửa sổ, bất kỳ người duyệt nào cũng chặn được bằng 
 **Bật:** chỉ quản lý, và phải đăng nhập lại trong 5 phút gần nhất. Màn hình bật hiện tỉ lệ khớp 30 ngày của từng loại (cảnh báo dưới 90%); nội dung màn hình được lưu trong sự kiện audit `autopilot.enabled`. Ở chế độ thường, mỗi đề xuất vẫn ghi `shadow_auto` (nó có tự chạy nếu chế độ bật hay không) mà không đổi đường đi của đề xuất.
 
 **Giám sát:** tin `Sẽ tự chạy lúc <HH:mm>` kèm nút `Chặn` và `Xem`; `/tuvanhanh` cho trạng thái và số liệu hôm nay; tin chiến dịch 06:00 bắt đầu bằng `Chiến dịch hôm nay sẽ tự chạy`; báo cáo 18:00 có mục `Tự vận hành`.
+
+### 3.16 Kế hoạch mùa vụ (A11, M11)
+
+- **Lịch:** A11 soạn kế hoạch quý vào ngày đầu quý lúc 06:15 (giờ Việt Nam), và ở lần chạy đầu tiên khi quý hiện tại chưa có kế hoạch đang áp dụng hay bản nháp. Một quý đã soạn, đã có kế hoạch hoặc bị web từ chối thì không chạy lại; lỗi mạng được thử lại ở chu kỳ sau.
+- **Luật đặt mục tiêu, LLM chỉ viết lời:** web tính số liệu (sản lượng, nhật ký đúng hạn, thửa có bệnh, doanh thu cửa hàng khi đã cài `tea-shop`) cho quý này, cùng kỳ năm trước và quý trước. Mục tiêu là số cùng kỳ năm trước cộng bước cố định:
+  - mục tiêu tăng: làm tròn (số × 1,05);
+  - mục tiêu giảm: làm tròn một chữ số thập phân (số × 0,9);
+  - mục tiêu không có số cùng kỳ năm trước thì bỏ, không bao giờ tự bịa.
+- **Ưu tiên và sáng kiến:** LLM chỉ nhận số liệu và mục tiêu, trả tối đa 5 ưu tiên (mỗi cái tối đa 160 ký tự) và tối đa 5 sáng kiến thuộc loại `miniapp`, `training`, `partner`, `expand`, `outside`; loại khác bị bỏ. Khi LLM lỗi, mỗi mục tiêu có một ưu tiên (`Tăng <nhãn>` hoặc `Giảm <nhãn>`) và không có sáng kiến. Việc ngoài hệ thống (vay vốn, hợp đồng, quyết định của đại hội xã viên) chỉ là sáng kiến loại `outside` dạng chữ; không có gì chạy chúng.
+- **Một bản nháp mỗi quý:** bản nháp thứ hai cho cùng quý trả `existing`. Duyệt kế hoạch (`strategy.adopt`, mức `medium`, người duyệt `manager`, tự chủ `unlockable`) thay kế hoạch đã áp dụng trước đó của quý bằng kế hoạch mới.
+- **Cảnh báo:** kế hoạch có mục tiêu kém hơn cùng kỳ năm trước (ví dụ do người duyệt sửa tay) mang cảnh báo `Mục tiêu <nhãn> thấp hơn cùng kỳ năm trước` và không bao giờ đủ điều kiện tự chạy (kiểm thử 37).
+- **Áp dụng:** từ chu kỳ sau khi duyệt, chiến dịch ngày (A9) xếp việc thuộc mục tiêu của kế hoạch trước (mục 3.12) và cải tiến hằng tuần (A10) báo mục tiêu đang chậm (mục 3.13). Báo cáo thứ Hai so số thực tế với cùng kỳ năm trước, không so với mục tiêu do A11 đặt.
 
 ## 4. Security Rules
 
