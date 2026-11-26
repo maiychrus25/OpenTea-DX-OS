@@ -157,3 +157,57 @@ def test_telegram_is_in_usage_and_takes_one_action():
     text = DXOS.read_text()
     assert "telegram <enable|disable>" in text
     assert "telegram)" in text and "[ $# -eq 1 ] || usage" in text
+
+
+def _staff_snippet(tmp_path, function, htx_row="1", secret="s3cret"):
+    body = subprocess.run(["sed", "-n", f"/^{function}()/,/^}}/p", str(DXOS)], capture_output=True, text=True).stdout
+    return (f"set -e\nHTX_RE='^[A-Z0-9_-]{{1,20}}$'\n"
+            f"compose() {{ echo \"compose $*\" >>{tmp_path}/calls; cat >/dev/null; echo '{htx_row}'; }}\n"
+            f"kc_exec() {{ echo \"keycloak ${{@: -1}}\" >>{tmp_path}/calls; echo '{secret}'; }}\n"
+            f"{body}\n")
+
+
+def test_staff_enable_refuses_an_unknown_cooperative_before_keycloak(tmp_path):
+    snippet = _staff_snippet(tmp_path, "staff_enable", htx_row="") + "staff_enable TC\necho still-running\n"
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 1 and "still-running" not in run.stdout
+    assert "htx_profiles" in run.stderr
+    assert "keycloak" not in (tmp_path / "calls").read_text()
+
+
+def test_staff_enable_prints_the_client_id_and_the_secret_once_and_keeps_the_secret_out_of_argv(tmp_path):
+    snippet = _staff_snippet(tmp_path, "staff_enable") + "staff_enable TC\n"
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    assert run.stdout.count("dxos-staff-tc") == 1 and run.stdout.count("s3cret") == 1
+    assert "s3cret" not in run.stderr and "s3cret" not in (tmp_path / "calls").read_text()
+    assert "dxos-staff-tc" in (tmp_path / "calls").read_text()
+
+
+def test_staff_enable_script_grants_only_the_staff_sync_role():
+    body = subprocess.run(["sed", "-n", "/^staff_enable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert "--rolename staff-sync" in body and "--rolename agent" not in body
+    assert "attributes.htx_code" in body and "serviceAccountsEnabled=true" in body
+
+
+def test_staff_disable_deletes_the_client_and_nothing_else(tmp_path):
+    snippet = _staff_snippet(tmp_path, "staff_disable") + "staff_disable TC\n"
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    calls = (tmp_path / "calls").read_text().splitlines()
+    assert len(calls) == 1 and calls[0].startswith("keycloak") and calls[0].endswith("dxos-staff-tc")
+    body = subprocess.run(["sed", "-n", "/^staff_disable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert "clients/$CID" in body and "delete" in body
+
+
+def test_staff_rejects_an_invalid_cooperative_code(tmp_path):
+    for function in ("staff_enable", "staff_disable"):
+        snippet = _staff_snippet(tmp_path, function) + f"{function} 'tc x'\n"
+        run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+        assert run.returncode == 1 and "không hợp lệ" in run.stderr
+
+
+def test_staff_is_in_usage_and_takes_an_action_and_a_cooperative():
+    text = DXOS.read_text()
+    assert "staff <enable|disable> <HTX>" in text
+    assert "staff)" in text
