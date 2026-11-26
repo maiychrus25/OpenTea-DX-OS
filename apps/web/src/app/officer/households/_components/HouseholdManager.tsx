@@ -4,7 +4,8 @@
 'use client'
 
 import { PageHeader } from '@/components/ui/PageHeader'
-import { Users } from 'lucide-react'
+import { Users, Layers, Sprout, LandPlot } from 'lucide-react'
+import { Stats } from '@/components/features/officer-web/parts'
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Phone, MapPin } from 'lucide-react'
@@ -87,6 +88,12 @@ export function HouseholdManager() {
         actions={!showForm ? <button type="button" className={styles.createBtn} onClick={() => setShowForm(true)}>+ Thêm nông hộ</button> : undefined}
       />
 
+      {!loading && !loadFailed && <Stats items={[
+        { label: 'Tổng số nông hộ', value: households.length, icon: <Users /> },
+        { label: 'Tổng số thửa', value: households.reduce((sum, h) => sum + h.parcel_count, 0), icon: <LandPlot /> },
+        { label: 'Tổng diện tích', value: `${households.reduce((sum, h) => sum + h.total_area_ha, 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha`, icon: <Layers /> },
+      ]} />}
+
       {showForm && (
         <form className={styles.formCard} onSubmit={handleCreate}>
           <h3 className={styles.formTitle}>Thêm nông hộ mới</h3>
@@ -135,8 +142,8 @@ export function HouseholdManager() {
                 </div>
               </div>
               <dl className={styles.facts}>
-                <div><dt>Số thửa</dt><dd>{h.parcel_count}</dd></div>
-                <div><dt>Diện tích</dt><dd>{h.total_area_ha.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha</dd></div>
+                <div><dt><Layers size={19} aria-hidden="true" />Số thửa</dt><dd>{h.parcel_count}</dd></div>
+                <div><dt><Sprout size={19} aria-hidden="true" />Diện tích</dt><dd>{h.total_area_ha.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha</dd></div>
               </dl>
               <Link href={`/officer/households/${h.id}`} className={styles.cardLink}>
                 Xem chi tiết <ArrowRight size={15} aria-hidden="true" />
