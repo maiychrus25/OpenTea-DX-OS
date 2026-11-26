@@ -19,6 +19,14 @@ interface Bead {
   radius: number
   speed: number
   wait: number
+  sprite: HTMLCanvasElement | null
+}
+
+interface Trace {
+  x: number
+  y: number
+  radius: number
+  life: number
 }
 
 interface Splash {
@@ -26,9 +34,15 @@ interface Splash {
   y: number
   size: number
   age: number
+  throwX: number
+  throwY: number
 }
 
 const SPLASH_SECONDS = 0.34
+const TRACE_SECONDS = 2.5
+const BACKDROP = '/images/tea-hills-rain.jpg'
+/** Where the card's CSS centres the photo vertically, so the drops bend the same part of it. */
+const BACKDROP_FOCUS = 0.62
 
 // far, middle and near rain; spacing is square pixels of card per drop
 const LAYERS = [
@@ -52,6 +66,75 @@ function streak(colour: string, length: number, width: number): HTMLCanvasElemen
     const w = sprite.width * (0.4 + 0.6 * near)
     context.fillRect((sprite.width - w) / 2, (sprite.height * i) / slices, w, sprite.height / slices + 1)
   }
+  return sprite
+}
+
+/**
+ * One drop of water on glass. Like a lens it shows the scene behind it upside down, with a dark rim
+ * where light is lost and a bright spot where it is reflected.
+ */
+function lens(photo: HTMLImageElement, x: number, y: number, radius: number, width: number, height: number): HTMLCanvasElement {
+  const ratio = 2
+  const size = Math.ceil(radius * 2 * ratio) + 4
+  const sprite = document.createElement('canvas')
+  sprite.width = size
+  sprite.height = Math.ceil(size * 1.2)
+  const context = sprite.getContext('2d')
+  if (!context) return sprite
+
+  const rx = radius * ratio
+  const ry = rx * 1.18
+  const cx = sprite.width / 2
+  const cy = sprite.height / 2
+  const cover = Math.max(width / photo.naturalWidth, height / photo.naturalHeight)
+  const left = (width - photo.naturalWidth * cover) / 2
+  const top = (height - photo.naturalHeight * cover) * BACKDROP_FOCUS
+  const reach = radius * 7
+
+  context.beginPath()
+  context.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
+  context.clip()
+  context.save()
+  context.translate(cx, cy)
+  context.rotate(Math.PI)
+  context.filter = 'brightness(1.3) saturate(1.1)'
+  context.drawImage(photo, (x - reach - left) / cover, (y - reach - top) / cover, (reach * 2) / cover, (reach * 2) / cover, -rx, -ry, rx * 2, ry * 2)
+  context.restore()
+
+  const rim = context.createRadialGradient(cx, cy - ry * 0.25, rx * 0.35, cx, cy, ry)
+  rim.addColorStop(0, 'transparent')
+  rim.addColorStop(0.7, 'transparent')
+  rim.addColorStop(1, 'black')
+  context.globalAlpha = 0.6
+  context.fillStyle = rim
+  context.fillRect(0, 0, sprite.width, sprite.height)
+
+  context.fillStyle = 'white'
+  context.globalAlpha = 0.9
+  context.beginPath()
+  context.ellipse(cx - rx * 0.32, cy - ry * 0.42, rx * 0.2, rx * 0.15, -0.6, 0, Math.PI * 2)
+  context.fill()
+  context.globalAlpha = 0.35
+  context.beginPath()
+  context.ellipse(cx + rx * 0.1, cy + ry * 0.62, rx * 0.5, ry * 0.12, 0, 0, Math.PI * 2)
+  context.fill()
+  return sprite
+}
+
+/** A soft round patch of mist, drawn once and stretched wide. */
+function puff(colour: string): HTMLCanvasElement {
+  const sprite = document.createElement('canvas')
+  sprite.width = sprite.height = 128
+  const context = sprite.getContext('2d')
+  if (!context) return sprite
+  const fade = context.createRadialGradient(64, 64, 0, 64, 64, 64)
+  fade.addColorStop(0, 'black')
+  fade.addColorStop(1, 'transparent')
+  context.fillStyle = fade
+  context.fillRect(0, 0, 128, 128)
+  context.globalCompositeOperation = 'source-in'
+  context.fillStyle = colour
+  context.fillRect(0, 0, 128, 128)
   return sprite
 }
 
@@ -83,6 +166,9 @@ export function RainCanvas({ code, windSpeed }: { code: number; windSpeed: numbe
     let drops: Drop[] = []
     let beads: Bead[] = []
     let splashes: Splash[] = []
+    let traces: Trace[] = []
+    let photo: HTMLImageElement | null = null
+    const mist = puff(colour)
     let frame = 0
     let last = performance.now()
 
@@ -93,13 +179,11 @@ export function RainCanvas({ code, windSpeed }: { code: number; windSpeed: numbe
       pace: 0.85 + Math.random() * 0.3,
     })
 
-    const newBead = (): Bead => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      radius: 0.8 + Math.random() ** 2 * 2.6,
-      speed: 0,
-      wait: Math.random() * 8,
-    })
+    const newBead = (y = Math.random() * height): Bead => {
+      const x = Math.random() * width
+      const radius = 1.4 + Math.random() ** 3 * 5.5
+      return { x, y, radius, speed: 0, wait: Math.random() * 10, sprite: photo && lens(photo, x, y, radius, width, height) }
+    }
 
     const resize = () => {
       const ratio = window.devicePixelRatio || 1
@@ -111,7 +195,7 @@ export function RainCanvas({ code, windSpeed }: { code: number; windSpeed: numbe
       drops = LAYERS.flatMap((layer, i) =>
         Array.from({ length: Math.round(((width * height) / layer.spacing) * intensity) }, () => newDrop(i, Math.random() * height))
       )
-      beads = Array.from({ length: Math.round((width * height) / 9000) }, newBead)
+      beads = Array.from({ length: Math.round((width * height) / 6500) }, () => newBead())
     }
 
     const draw = (now: number) => {
@@ -123,19 +207,13 @@ export function RainCanvas({ code, windSpeed }: { code: number; windSpeed: numbe
       context.fillStyle = colour
       context.strokeStyle = colour
 
-      // thin sheets of rain drifting across the hills
-      for (let i = 0; i < 3; i++) {
-        const x = ((seconds * (26 + i * 17) + i * 430) % (width + 500)) - 250
-        context.save()
-        context.translate(x, height * (0.35 + i * 0.18))
-        context.scale(3.2, 1)
-        for (let ring = 4; ring > 0; ring--) {
-          context.globalAlpha = 0.012 * intensity
-          context.beginPath()
-          context.arc(0, 0, ring * 18, 0, Math.PI * 2)
-          context.fill()
-        }
-        context.restore()
+      // mist rolling through the valleys and thin sheets of rain passing over them
+      for (let i = 0; i < 6; i++) {
+        const span = width + 640
+        const x = ((seconds * (9 + i * 5) + i * 270) % span) - 320
+        const y = height * (0.3 + (i % 3) * 0.11) + Math.sin(seconds * 0.4 + i) * 6
+        context.globalAlpha = (0.09 + 0.04 * Math.sin(seconds * 0.5 + i * 2)) * intensity
+        context.drawImage(mist, x - 220, y - 34, 440, 68)
       }
 
       for (const drop of drops) {
@@ -153,7 +231,7 @@ export function RainCanvas({ code, windSpeed }: { code: number; windSpeed: numbe
         // nearer rain reaches the lower ground and splashes, distant rain ends higher up
         const ground = height * layer.ground + (drop.pace - 1) * 120
         if (drop.y > ground) {
-          if (drop.layer > 0 && Math.random() < 0.55) splashes.push({ x: drop.x, y: ground, size: drop.layer, age: 0 })
+          if (drop.layer > 0 && Math.random() < 0.55) splashes.push({ x: drop.x, y: ground, size: drop.layer, age: 0, throwX: (Math.random() - 0.5) * 22, throwY: 3 + Math.random() * 9 * drop.layer })
           Object.assign(drop, newDrop(drop.layer, -Math.random() * 80))
         }
       }
@@ -167,46 +245,56 @@ export function RainCanvas({ code, windSpeed }: { code: number; windSpeed: numbe
         context.beginPath()
         context.ellipse(splash.x, splash.y, (2 + t * 7) * splash.size * 0.7, (0.7 + t * 2) * splash.size * 0.7, 0, 0, Math.PI * 2)
         context.stroke()
-        for (const side of [-1, 1]) {
-          context.beginPath()
-          context.arc(splash.x + side * t * 8, splash.y - Math.sin(t * Math.PI) * 7 * splash.size * 0.6, 0.9, 0, Math.PI * 2)
-          context.fill()
-        }
+        // one droplet thrown up, to its own side and height
+        context.beginPath()
+        context.arc(splash.x + splash.throwX * t, splash.y - Math.sin(t * Math.PI) * splash.throwY, 0.8, 0, Math.PI * 2)
+        context.fill()
       }
 
-      // water on the pane: beads sit for a while, then the heavier ones run down
-      for (const bead of beads) {
+      // water on the pane: drops sit for a while, heavy ones run down and leave small ones behind
+      traces = traces.filter((trace) => trace.life > 0)
+      for (const trace of traces) {
+        trace.life -= step
+        context.globalAlpha = Math.max(trace.life / TRACE_SECONDS, 0) * 0.45
+        context.beginPath()
+        context.arc(trace.x, trace.y, trace.radius, 0, Math.PI * 2)
+        context.fill()
+      }
+
+      for (let i = 0; i < beads.length; i++) {
+        const bead = beads[i]
         bead.wait -= step
-        if (bead.wait < 0 && bead.radius > 1.8) {
-          bead.speed = Math.min(bead.speed + 60 * step, 90)
-          const move = bead.speed * step * (0.4 + Math.random())
-          bead.y += move
-          context.globalAlpha = 0.16
-          context.lineWidth = bead.radius * 0.9
-          context.beginPath()
-          context.moveTo(bead.x, bead.y)
-          context.lineTo(bead.x, bead.y - Math.min(bead.speed * 0.35, 26))
-          context.stroke()
+        if (bead.wait < 0 && bead.radius > 3) {
+          // water sticks and slips, so the speed jumps instead of growing smoothly
+          bead.speed = Math.random() < 0.04 ? Math.random() * 25 : Math.min(bead.speed + 90 * step, 130)
+          bead.y += bead.speed * step
+          bead.x += (Math.random() - 0.5) * bead.speed * step * 0.35
+          if (Math.random() < bead.speed * step * 0.14) {
+            traces.push({ x: bead.x, y: bead.y - bead.radius * 1.4, radius: 0.6 + Math.random() * 1.1, life: TRACE_SECONDS })
+          }
         }
-        context.globalAlpha = 0.2
-        context.beginPath()
-        context.ellipse(bead.x, bead.y, bead.radius, bead.radius * 1.2, 0, 0, Math.PI * 2)
-        context.fill()
-        context.globalAlpha = 0.75
-        context.beginPath()
-        context.arc(bead.x - bead.radius * 0.3, bead.y - bead.radius * 0.4, bead.radius * 0.32, 0, Math.PI * 2)
-        context.fill()
-        if (bead.y > height + 5) Object.assign(bead, newBead(), { y: Math.random() * height * 0.3 })
+        if (bead.sprite) {
+          context.globalAlpha = 0.95
+          context.drawImage(bead.sprite, bead.x - bead.sprite.width / 4, bead.y - bead.sprite.height / 4, bead.sprite.width / 2, bead.sprite.height / 2)
+        }
+        if (bead.y > height + 8) beads[i] = newBead(Math.random() * height * 0.3)
       }
 
       frame = requestAnimationFrame(draw)
     }
 
     resize()
+    const backdrop = new Image()
+    backdrop.onload = () => {
+      photo = backdrop
+      resize() // now the drops have something to bend
+    }
+    backdrop.src = BACKDROP
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize)
     observer?.observe(canvas)
     frame = requestAnimationFrame(draw)
     return () => {
+      backdrop.onload = null
       cancelAnimationFrame(frame)
       observer?.disconnect()
     }
