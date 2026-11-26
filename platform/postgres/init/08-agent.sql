@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS platform.agent_proposals (
   evidence         jsonb       NOT NULL,
   confidence       real,
   risk             text        NOT NULL CHECK (risk IN ('low', 'medium', 'high')),
-  status           text        NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'approved', 'executed', 'failed', 'rejected', 'expired', 'stale')),
+  status           text        NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'approved', 'executed', 'failed', 'rejected', 'expired', 'stale', 'sent_to_staff_app')),
   origin           text        NOT NULL DEFAULT 'agent' CHECK (origin IN ('agent', 'user')),
   requested_by     text,
   dedupe_key       text        NOT NULL,
@@ -205,4 +205,36 @@ CREATE TABLE IF NOT EXISTS platform.strategy_plans (
 CREATE UNIQUE INDEX IF NOT EXISTS strategy_plans_one_draft ON platform.strategy_plans (htx_code, season) WHERE status = 'draft';
 
 CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.strategy_plans
+  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
+
+-- Staff tasks (M10): the staff app's roster and attendance, and the staff app's task id on a proposal.
+-- A staff.task.create proposal waits in status 'sent_to_staff_app' until the staff app acknowledges it.
+ALTER TABLE platform.agent_proposals ADD COLUMN IF NOT EXISTS external_ref text NULL;
+ALTER TABLE platform.agent_proposals DROP CONSTRAINT IF EXISTS agent_proposals_status_check;
+ALTER TABLE platform.agent_proposals ADD CONSTRAINT agent_proposals_status_check
+  CHECK (status IN ('proposed', 'approved', 'executed', 'failed', 'rejected', 'expired', 'stale', 'sent_to_staff_app'));
+
+CREATE TABLE IF NOT EXISTS platform.staff_roster (
+  id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  htx_code   text        NOT NULL,
+  staff_ref  text        NOT NULL,
+  name       text        NOT NULL,
+  department text        NULL,
+  active     boolean     NOT NULL DEFAULT true,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (htx_code, staff_ref)
+);
+
+CREATE TABLE IF NOT EXISTS platform.staff_attendance (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  htx_code    text        NOT NULL,
+  day         date        NOT NULL,
+  present     integer     NOT NULL CHECK (present >= 0),
+  reported_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (htx_code, day)
+);
+
+CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.staff_roster
+  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
+CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.staff_attendance
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();

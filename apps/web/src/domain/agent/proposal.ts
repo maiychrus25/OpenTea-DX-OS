@@ -9,8 +9,9 @@ export type ProposalStatus =
   | 'rejected'
   | 'expired'
   | 'stale'
+  | 'sent_to_staff_app'
 
-export const KNOWN_AGENTS = ['journal-review', 'field-watch', 'disease-watch', 'harvest-ready', 'bulletin', 'assistant', 'daily-campaign', 'improvement', 'strategy'] as const
+export const KNOWN_AGENTS = ['journal-review', 'field-watch', 'disease-watch', 'harvest-ready', 'bulletin', 'assistant', 'daily-campaign', 'improvement', 'staff-tasks', 'strategy'] as const
 export type KnownAgent = (typeof KNOWN_AGENTS)[number]
 
 export type Risk = 'low' | 'medium' | 'high'

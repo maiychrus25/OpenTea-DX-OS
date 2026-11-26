@@ -48,6 +48,8 @@ jest.mock('@/infrastructure/db/agent/PrismaCampaignCandidateSource', () => ({
     withdrawalRows: async () => [],
     parcelCodesByIds: async () => new Map(),
     parcelCodesOfEntries: async () => new Map(),
+    estimatedKgByParcelIds: async () => new Map(),
+    staffPresent: async () => null,
   })),
 }))
 

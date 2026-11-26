@@ -13,6 +13,7 @@ import { notificationHouseholdsAction } from './actions/notification-households.
 import { notificationInternalAction } from './actions/notification-internal.action'
 import { agentSettingsUpdateAction } from './actions/agent-settings-update.action'
 import { improvementAdoptAction } from './actions/improvement-adopt.action'
+import { staffTaskCreateAction } from './actions/staff-task-create.action'
 import { strategyAdoptAction } from './actions/strategy-adopt.action'
 import type { EvidenceLoaders } from './actions/journal-evidence'
 import type { JournalSubject } from './actions/journal-labels'
@@ -58,6 +59,7 @@ export const ACTION_CATALOG: Readonly<Record<string, ActionDefinition<any>>> = O
   'bulletin.publish': bulletinPublishAction,
   'agent.settings.update': agentSettingsUpdateAction,
   'improvement.adopt': improvementAdoptAction,
+  'staff.task.create': staffTaskCreateAction,
   'strategy.adopt': strategyAdoptAction,
 })
 

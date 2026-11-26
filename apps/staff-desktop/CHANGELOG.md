@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-11-27
+
+### Added
+- **Kết nối hệ thống lõi** in Settings: base URL, client ID and secret of the cooperative's `dxos-staff-<htx>` client. Every minute the app signs in with client credentials, sends the roster (id, name, team, active flag) and today's present count, pulls the tasks a manager approved in DX-OS and creates them as ordinary tasks, then reports each new task id. The core never calls the app; with no settings nothing is sent.
+- Tasks pulled from the core keep the proposal id (`work_tasks.external_ref`, unique), so a restart never creates one twice, and show **Từ trợ lý AI** in the task list. A task whose proposal expired meanwhile is marked Cancelled when it is still untouched.
+- The client secret is not stored in `config.json`: it is protected with DPAPI on Windows and kept in a private (0600) file on other systems.
+- PostgreSQL script `004_core_sync.sql`; databases from older versions gain the column on start-up.
+
 ## [1.3.0] - 2026-11-24
 
 ### Added
@@ -50,6 +58,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Command-line modes `--serve`, `--screenshots` and `--postgres-script`.
 - Demo cooperative seeded on first run; xUnit tests for payroll and the task state machine.
 
+[1.4.0]: https://github.com/Vudinhdat02/appManageStaff/releases/tag/v1.4.0
 [1.3.0]: https://github.com/Vudinhdat02/appManageStaff/releases/tag/v1.3.0
 [1.2.0]: https://github.com/Vudinhdat02/appManageStaff/releases/tag/v1.2.0
 [1.1.0]: https://github.com/Vudinhdat02/appManageStaff/releases/tag/v1.1.0

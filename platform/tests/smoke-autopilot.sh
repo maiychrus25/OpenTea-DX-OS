@@ -5,7 +5,7 @@
 # browser login (auth_time), which a bash smoke cannot hold. Then, through the internal proposals route: a low notice runs
 # on the next tick with channel autopilot; a medium tightening settings change gets a run_at about 15 minutes ahead and the
 # Chặn button the stub recorded blocks it; /dung from the linked manager stops the mode and clears every pending run_at;
-# a loosening settings change never gets a run_at (test 31). Sourced by smoke-agentic.sh after smoke-mcp.sh, which left
+# a loosening settings change never gets a run_at (test 31). Sourced by smoke-agentic.sh after smoke-staff.sh and smoke-mcp.sh, which left
 # the owner linked, the relay up and the agent running; it does not run on its own. It adds no PASS line to make
 # platform-smoke, so smoke-apps.sh keeps its count.
 
@@ -30,7 +30,7 @@ M12_SUBJECTS="array['m12-notice-tc','harvest-ready.harvest_window_days','field-w
 M12_ROWS="select id from platform.agent_proposals where htx_code='TC' and subject_ids && $M12_SUBJECTS"
 
 # Restores what this smoke changed: the mode (the row is removed, so TC is back to off), its proposals and their messages,
-# and the notices of the run. The EXIT trap of smoke-mcp is replaced, so this one chains it after its own cleanup.
+# and the notices of the run. The EXIT trap of smoke-staff is replaced, so this one chains it after its own cleanup.
 autopilot_cleanup() {
   psql_app "delete from platform.autopilot where htx_code='TC'" >/dev/null 2>&1 || true
   psql_app "delete from platform.telegram_outbox where proposal_id in ($M12_ROWS)" >/dev/null 2>&1 || true
@@ -38,7 +38,7 @@ autopilot_cleanup() {
   psql_app "delete from platform.agent_proposals where id in ($M12_ROWS)" >/dev/null 2>&1 || true
   psql_app "delete from notifications where created_at >= '$M12_T0'" >/dev/null 2>&1 || true
 }
-trap 'autopilot_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT
+trap 'autopilot_cleanup; staff_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT
 
 # Posts one proposal through the internal route as the TC agent and prints its id. A dedupe answer has no id and fails.
 m12_post() {  # <agent> <kind> <payload json>
@@ -139,6 +139,7 @@ tg_expect "$TG_OWNER" "$M12_STOP_TEXT" "$n" || fail "no '$M12_STOP_TEXT' reply t
 pass "/dung replies with the stop text"
 assert_eq "$(psql_app "select enabled::text || ':' || coalesce(stop_reason, '') from platform.autopilot where htx_code='TC'")" "false:manual" \
   "/dung stops the mode with reason manual"
-assert_eq "$(psql_app "select count(*) from platform.agent_proposals where htx_code='TC' and (run_at is not null or run_claimed_at is not null)")" "0" \
+# Pending means still proposed: the notice that already ran keeps its run_claimed_at.
+assert_eq "$(psql_app "select count(*) from platform.agent_proposals where htx_code='TC' and status = 'proposed' and (run_at is not null or run_claimed_at is not null)")" "0" \
   "every pending run_at of TC is cleared by the stop"
 assert_eq "$(psql_app "select status from platform.agent_proposals where id='$M12_PENDING'")" "proposed" "the pending proposal is back to normal approval"

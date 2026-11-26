@@ -7,6 +7,7 @@ using TeaStaff.Core.Services;
 using TeaStaff.Infrastructure.Identity;
 using TeaStaff.Infrastructure.MobileApi;
 using TeaStaff.Infrastructure.Persistence;
+using TeaStaff.Infrastructure.Sync;
 
 namespace TeaStaff.Infrastructure;
 
@@ -63,6 +64,8 @@ public static class ServiceRegistration
 
         services.AddSingleton<DatabaseInitializer>();
         services.AddSingleton<MobileApiServer>();
+        services.AddSingleton<ICoreSecretStore>(_ => new FileSecretStore());
+        services.AddSingleton<CoreSyncService>();
         services.AddSingleton<Diagnostics.ConnectionChecker>();
         return services;
     }

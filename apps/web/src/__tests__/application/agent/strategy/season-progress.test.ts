@@ -73,6 +73,7 @@ describe('A9 candidates carry the adopted plan (contract C6)', () => {
         withdrawalRows: jest.fn().mockResolvedValue([]),
         parcelCodesByIds: jest.fn().mockResolvedValue(new Map()),
         parcelCodesOfEntries: jest.fn().mockResolvedValue(new Map()),
+      estimatedKgByParcelIds: jest.fn().mockResolvedValue(new Map()), staffPresent: jest.fn().mockResolvedValue(null),
       },
       { adoptedFor: jest.fn().mockResolvedValue(adopted) }
     )
@@ -91,6 +92,7 @@ describe('A9 candidates carry the adopted plan (contract C6)', () => {
     const uc = new CampaignCandidatesUseCase({ list: jest.fn().mockResolvedValue([]) }, {
       rainParcelCodes: jest.fn().mockResolvedValue([]), withdrawalRows: jest.fn().mockResolvedValue([]),
       parcelCodesByIds: jest.fn().mockResolvedValue(new Map()), parcelCodesOfEntries: jest.fn().mockResolvedValue(new Map()),
+      estimatedKgByParcelIds: jest.fn().mockResolvedValue(new Map()), staffPresent: jest.fn().mockResolvedValue(null),
     }, { adoptedFor })
     await uc.execute('TC', '2027-01-02', NOW)
     expect(adoptedFor).toHaveBeenCalledWith('TC', '2027-Q1')

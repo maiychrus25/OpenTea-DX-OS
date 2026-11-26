@@ -51,7 +51,7 @@ strategy_cleanup() {
   psql_app "delete from lots where id='$M11_LOT'" >/dev/null 2>&1 || true
   psql_app "delete from parcels where id='$M11_PARCEL'" >/dev/null 2>&1 || true
 }
-trap 'strategy_cleanup; autopilot_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT
+trap 'strategy_cleanup; autopilot_cleanup; staff_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT
 
 # Posts a body to an internal route as the TC agent and prints the id of the answer; a status other than 201 fails.
 m11_post() {  # <path> <body json>
