@@ -347,6 +347,15 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
   4. `audit.verify_chain()` không báo dòng hỏng đến sự kiện đó.
   Không hiện dòng nào khi chuỗi audit hỏng, mã băm lệch, đề xuất bị từ chối hoặc lô không có quyết định AI. Dòng chỉ ghi vai trò, không bao giờ ghi tên; tối đa 3 dòng.
 
+### 3.15 Giao việc nhân sự (A8, M10)
+
+- **Lịch:** A8 chạy lúc 05:50 (giờ Việt Nam), sau A4 (05:30) và A3 (05:40), trước A9 (06:00). Không dùng LLM.
+- **Luật:** từ các đề xuất của HTX được duyệt trong 24 giờ qua: `harvest.approve` thành "Hái chè thửa <mã>", `disease.inspection` thành "Kiểm tra bệnh quanh thửa <mã>", `notification.households` mẫu `dry_soil` thành "Tưới thửa <mã>". Hạn là hôm nay. Mỗi nguồn một việc, tối đa 10 việc mỗi lần chạy, ưu tiên thu hoạch, rồi kiểm tra, rồi tưới. Mẫu `rain_after_spray` không tạo việc.
+- **Người nhận gợi ý:** nhân sự đang làm việc có ít việc nhất trong lần chạy; ưu tiên phòng `Kỹ thuật` cho việc kiểm tra. Không có nhân sự đang làm việc thì bỏ việc đó (ghi nhật ký INFO) vì app nhân sự không tạo được việc không có người nhận. Quản lý sửa được người nhận, hạn và ghi chú trước khi duyệt.
+- **Sau khi duyệt:** đề xuất `staff.task.create` chuyển sang `sent_to_staff_app` ("Đã gửi app nhân sự"). App nhân sự kéo việc về mỗi phút, tạo việc rồi báo mã việc; đề xuất mới thành `executed`. Lõi không bao giờ gọi app nhân sự.
+- **Kết nối:** `./dxos staff enable <HTX>` tạo client `dxos-staff-<htx>` (vai trò `staff-sync`, claim `htx_code`) và in client id, secret một lần cùng hai địa chỉ (Keycloak và cổng lõi) để nhập vào cài đặt app. Đường `/api/internal/staff/*` là đường nội bộ duy nhất mở trên cổng công khai 9080, vì app chạy trên máy ngoài mạng compose; mọi lệnh gọi chỉ thấy dữ liệu của HTX trong token, và token agent, rơle, người dùng bị từ chối.
+- **Dữ liệu cá nhân:** danh sách nhân sự chỉ gồm mã, tên, phòng và trạng thái; số điện thoại và lương không rời app nhân sự. Hôm nay chưa có báo cáo chuyên cần thì A9 bỏ luật số người.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication
