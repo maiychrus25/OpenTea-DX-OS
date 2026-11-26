@@ -1,0 +1,32 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Khuyến mãi của HTX {{ htx }}{% endblock %}
+{% block main %}
+{{ kit.app_header("Khuyến mãi", "HTX " ~ htx ~ " · giảm giá theo phần trăm cho từng sản phẩm, tính cả ngày đầu và ngày cuối") }}
+{{ kit.tabs(tab_items(theme), "promotions") }}
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+
+{% if promotions %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Sản phẩm</th><th role="columnheader">Giảm</th><th role="columnheader">Từ ngày</th><th role="columnheader">Đến ngày</th><th role="columnheader">Trạng thái</th><th role="columnheader">Thao tác</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for p in promotions %}
+    <tr role="row">
+      <td role="cell" data-label="Sản phẩm">{{ p.product_name }}</td>
+      <td role="cell" data-label="Giảm">{{ p.discount_pct }}%</td>
+      <td role="cell" data-label="Từ ngày">{{ p.starts_on.strftime("%d/%m/%Y") }}</td>
+      <td role="cell" data-label="Đến ngày">{{ p.ends_on.strftime("%d/%m/%Y") }}</td>
+      <td role="cell" data-label="Trạng thái"><span class="pill{% if p.state != 'active' %} neutral{% endif %}">{{ {"active": "Đang chạy", "ended": "Đã kết thúc", "over": "Hết hạn"}[p.state] }}</span></td>
+      <td role="cell" data-label="Thao tác">{% if p.state == 'active' %}
+        <form method="post" action="{{ href('/promotions/' ~ p.id ~ '/end', theme) }}"><button class="secondary" type="submit" aria-label="Kết thúc khuyến mãi {{ p.product_name }}">Kết thúc</button></form>
+      {% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+{{ kit.empty("HTX chưa có khuyến mãi nào. Trợ lý có thể đề xuất giảm giá cho sản phẩm tồn kho nhiều.") }}
+{% endif %}
+{% endblock %}
