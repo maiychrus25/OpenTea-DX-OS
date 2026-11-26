@@ -243,3 +243,10 @@ def test_mcp_client_target_creates_the_device_grant_client_idempotently():
     assert "clientId=dxos-mcp" in target and "clients -r agrimarket" in target
     assert 'oauth2.device.authorization.grant.enabled\\"=true' in target
     assert "dxos-mcp updated" in target and "dxos-mcp created" in target
+
+
+def test_mini_app_settings_reach_the_web_and_the_relay_but_the_token_never_reaches_the_web():
+    services = load_compose(COMPOSE)
+    assert "DXOS_TELEGRAM_WEBAPP_KEY" in services["web"]["environment"]
+    assert "TELEGRAM_BOT_TOKEN" not in services["web"]["environment"]
+    assert "DXOS_WEB_PUBLIC_URL" in services["dxos-telegram"]["environment"]

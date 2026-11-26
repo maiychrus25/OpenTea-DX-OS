@@ -212,3 +212,25 @@ def test_location_is_forwarded_with_its_coordinates_and_nothing_else():
     assert forwardable_update(update)["message"] == {
         "message_id": 4, "chat": {"id": 5, "type": "private"}, "from": {"id": 5}, "location": {"latitude": 21.58, "longitude": 105.77},
     }
+
+
+def test_menu_button_is_set_to_the_open_page_when_the_url_is_https():
+    bot = FakeBot()
+    Relay(bot, FakeWeb(), "t", web_public_url="https://dx.example.org/").set_menu_button()
+    assert bot.calls == [
+        ("setChatMenuButton", {"menu_button": {"type": "web_app", "text": "Mở ứng dụng", "web_app": {"url": "https://dx.example.org/telegram/open"}}})
+    ]
+
+
+@pytest.mark.parametrize("url", ["", "http://localhost:3000"])
+def test_menu_button_is_skipped_without_https(url, caplog):
+    bot = FakeBot()
+    with caplog.at_level("INFO", logger="dxos_telegram"):
+        Relay(bot, FakeWeb(), "t", web_public_url=url).set_menu_button()
+    assert bot.calls == []
+    assert "Mini App needs an HTTPS web address; the menu button is not set." in caplog.text
+
+
+def test_menu_button_failure_is_logged_not_raised():
+    bot = FakeBot(fail_on={"setChatMenuButton": BotApiError("Bad Request", permanent=True)})
+    Relay(bot, FakeWeb(), "t", web_public_url="https://dx.example.org").set_menu_button()

@@ -347,6 +347,12 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
   4. `audit.verify_chain()` không báo dòng hỏng đến sự kiện đó.
   Không hiện dòng nào khi chuỗi audit hỏng, mã băm lệch, đề xuất bị từ chối hoặc lô không có quyết định AI. Dòng chỉ ghi vai trò, không bao giờ ghi tên; tối đa 3 dòng.
 
+### 3.15 Mini App Telegram (M6)
+
+- **Yêu cầu HTTPS (D17):** Telegram chỉ mở Mini App qua địa chỉ `https://`. Đặt `DXOS_WEB_PUBLIC_URL` (địa chỉ gốc HTTPS của web) cho `dxos-telegram`. Khi giá trị rỗng hoặc không bắt đầu bằng `https://`, rơle không đặt nút menu và ghi một dòng nhật ký lúc khởi động; chat, nút duyệt và web hoạt động như trước.
+- **Khoá:** `./dxos telegram enable` ghi `DXOS_TELEGRAM_WEBAPP_KEY` = HMAC-SHA256(khoá `WebAppData`, token bot) cho web; `disable` xoá. Web chỉ dùng khoá này để kiểm chữ ký `initData`, không giữ token bot.
+- **Ràng buộc phiên:** `initData` không phải là đăng nhập. Chữ ký phải đúng, `auth_date` không quá 24 giờ, và `user.id` phải là tài khoản Telegram đã liên kết của người đang đăng nhập; không thì web trả 403 `WEBAPP_NOT_LINKED`. Cờ phiên `dxos_tg_webapp` hết hạn sau 12 giờ.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication
