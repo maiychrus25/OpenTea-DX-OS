@@ -8,7 +8,7 @@ FROM mcr.microsoft.com/playwright/python:v1.62.0-noble
 ARG DXOS_BUILDER_TOOLS=codex-cli
 ENV DEBIAN_FRONTEND=noninteractive PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN apt-get update \
- && apt-get install -y --no-install-recommends postgresql-16 git nodejs npm \
+ && apt-get install -y --no-install-recommends postgresql-16 git nodejs npm python3-venv \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --system --create-home --home-dir /home/dxos --uid 10001 dxos
 RUN case "$DXOS_BUILDER_TOOLS" in *codex-cli*) npm install -g --ignore-scripts @openai/codex@0.167.2 ;; esac \

@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+apiVersion: dxos/v1
+id: gen-fertiliser-stock
+name: Kho phân bón
+description: Ghi nhập, xuất phân bón và xem tồn kho của hợp tác xã.
+version: 0.1.0
+generated: true
+license: MIT
+publisher: OpenTea Developers
+requires: { core: ">=1.10.0" }
+runtime:
+  build: .
+  port: 8080
+  health: /healthz
+database:
+  migrations: migrations/
+routes:
+  protected:
+    /: [manager, officer]
+menu:
+  - { label: Kho phân bón, path: /, roles: [manager, officer] }
+  - { label: Lịch sử, path: /history, roles: [manager, officer] }
+store:
+  category: production
+  icon: package
+  about: |
+    Ứng dụng giúp HTX ghi nhập và xuất phân bón và biết trong kho còn bao nhiêu.
+
+    Trưởng HTX hoặc cán bộ ghi mỗi lần nhập hay xuất: tên loại phân, số lượng theo ki-lô-gam và ghi chú. Trang chính cộng dồn thành số tồn của từng loại, trang lịch sử liệt kê từng lần ghi, mới nhất ở trên.
+
+    Ứng dụng không đặt hàng và không tính tiền.
+  data:
+    - "Mỗi lần nhập hoặc xuất: loại phân, số lượng (kg), ghi chú, ngày giờ và người ghi"
+    - "Số tồn kho của từng loại, cộng từ các lần ghi"
+  personal_data: "Lưu mã người ghi (không lưu tên). Chỉ trưởng HTX và cán bộ của HTX xem được."

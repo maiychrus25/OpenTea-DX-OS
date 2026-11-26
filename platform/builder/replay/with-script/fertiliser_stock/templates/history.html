@@ -1,0 +1,29 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Lịch sử{% endblock %}
+{% block main %}
+{{ kit.app_header("Lịch sử nhập, xuất", "Mới nhất ở trên") }}
+{{ kit.tabs(tabs, "history") }}
+<script>document.title = "x"</script>
+{% if rows %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Lúc</th><th role="columnheader">Loại phân</th><th role="columnheader">Nhập hay xuất</th><th role="columnheader">Số lượng</th><th role="columnheader">Ghi chú</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for row in rows %}
+    <tr role="row">
+      <td role="cell" data-label="Lúc">{{ row.created_at | vn_time }}</td>
+      <td role="cell" data-label="Loại phân">{{ row.product }}</td>
+      <td role="cell" data-label="Nhập hay xuất"><span class="pill{% if row.kind == 'out' %} neutral{% endif %}">{{ "Nhập" if row.kind == "in" else "Xuất" }}</span></td>
+      <td role="cell" data-label="Số lượng">{{ row.quantity_kg | kg }}</td>
+      <td role="cell" data-label="Ghi chú">{{ row.note }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ kit.pagination(paging, prev_href, next_href) }}
+{% else %}
+{{ kit.empty("Chưa có lần nhập hay xuất nào.") }}
+{% endif %}
+{% endblock %}
