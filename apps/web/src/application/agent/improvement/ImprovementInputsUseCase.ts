@@ -5,6 +5,9 @@ import type { AgentSettingsRepository, AgentSettingsValues } from '@/domain/agen
 import type { ImprovementEffect, ImprovementRepository } from '@/domain/agent/ports/ImprovementRepository'
 import type { ImprovementStatsReader } from '@/domain/agent/ports/ImprovementStatsReader'
 import { vnDayOf } from '@/application/agent/campaign/vn-day'
+import type { StrategyPlanRepository } from '@/domain/agent/ports/StrategyPlanRepository'
+import { seasonOfDay, type Figures } from '@/domain/agent/strategy'
+import { seasonProgress, type SeasonProgressEntry } from '@/application/agent/strategy/season-progress'
 import { computeMetrics } from './improvement-metrics'
 
 const DAY_MS = 86_400_000
@@ -41,12 +44,26 @@ export interface ImprovementInputs {
     effect: ImprovementEffect
   }[]
   metrics: Record<string, number>
+  /** The adopted season plan's goals against the quarter so far (M11); empty without a plan. */
+  season_progress: SeasonProgressEntry[]
 }
 
 export interface ImprovementInputsDeps {
   improvements: Pick<ImprovementRepository, 'listSince'>
   stats: ImprovementStatsReader
   settings: Pick<AgentSettingsRepository, 'findForEvidence'>
+  /** M11: the adopted plan and the figures of its quarter so far. */
+  strategy?: { plans: Pick<StrategyPlanRepository, 'adoptedFor'>; figures(htxCode: string, season: string): Promise<Figures> }
+}
+
+/** The current value of each `season_goal:<key>` metric of A10's season rule (M11); a goal with no figure has none. */
+function seasonGoalMetrics(metricKeys: string[], figures: Figures | null): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const metricKey of metricKeys) {
+    const value = metricKey.startsWith('season_goal:') && figures ? figures[metricKey.slice(12) as keyof Figures] : null
+    if (typeof value === 'number') out[metricKey] = value
+  }
+  return out
 }
 
 /** Builds the figures A10 reads for a week (contract C3). Every figure is scoped to the cooperative. */
@@ -68,6 +85,10 @@ export class ImprovementInputsUseCase {
       const values = await this.deps.settings.findForEvidence(htxCode, agent)
       if (values) settings[agent] = values
     }
+
+    const season = seasonOfDay(vnDayOf(now))
+    const plan = this.deps.strategy ? await this.deps.strategy.plans.adoptedFor(htxCode, season) : null
+    const seasonFigures = plan && this.deps.strategy ? await this.deps.strategy.figures(htxCode, season) : null
 
     const metricKeys = Array.from(new Set(improvements.map((i) => i.metricKey)))
     return {
@@ -102,12 +123,16 @@ export class ImprovementInputsUseCase {
         adopted_at: i.adoptedAt ? i.adoptedAt.toISOString() : null,
         effect: i.effect,
       })),
-      metrics: computeMetrics(metricKeys, {
+      metrics: {
+        ...computeMetrics(metricKeys, {
         proposalStats: rows,
         journalReview,
         campaignGoals,
         medianWaitHours,
-      }),
+        }),
+        ...seasonGoalMetrics(metricKeys, seasonFigures),
+      },
+      season_progress: plan && seasonFigures ? seasonProgress(plan, seasonFigures, now) : [],
     }
   }
 }

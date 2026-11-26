@@ -15,6 +15,11 @@ import { PrismaAutopilotRepository } from '@/infrastructure/db/agent/PrismaAutop
 import { PrismaAgentSettingsRepository } from '@/infrastructure/db/agent/PrismaAgentSettingsRepository'
 import { PrismaCampaignRepository } from '@/infrastructure/db/agent/PrismaCampaignRepository'
 import { PrismaImprovementRepository } from '@/infrastructure/db/agent/PrismaImprovementRepository'
+import { PrismaStrategyPlanRepository } from '@/infrastructure/db/agent/PrismaStrategyPlanRepository'
+import { vnDayOf } from '@/application/agent/campaign/vn-day'
+import { seasonFigures } from '@/application/agent/strategy/season-figures'
+import { seasonReportLines } from '@/application/agent/strategy/season-progress'
+import { seasonOfDay } from '@/domain/agent/strategy'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import { PrismaAssistantRequestRepository } from '@/infrastructure/db/telegram/PrismaAssistantRequestRepository'
 import { PrismaTelegramRepository } from '@/infrastructure/db/telegram/PrismaTelegramRepository'
@@ -43,6 +48,11 @@ export function telegramNotifier(): TelegramNotifier {
     campaigns: new PrismaCampaignRepository(),
     improvements: new PrismaImprovementRepository(),
     autopilot: new PrismaAutopilotRepository(),
+    seasonLines: async (htxCode, now) => {
+      const season = seasonOfDay(vnDayOf(now))
+      const plan = await new PrismaStrategyPlanRepository().adoptedFor(htxCode, season)
+      return plan ? seasonReportLines(plan, await seasonFigures(htxCode, season)) : []
+    },
   })
 }
 
