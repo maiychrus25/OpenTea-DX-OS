@@ -107,6 +107,14 @@ class KeycloakTokenClient:
         return self._cached_token
 
 
+class GatewayHTTPError(RuntimeError):
+    """A gateway answer with an error status; `status_code` lets a caller treat one status as normal."""
+
+    def __init__(self, message: str, status_code: int) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
 class CoreGatewayClient:
     """Calls Hasura (role `agent`) and web `/api/internal/agent/*` exclusively via APISIX."""
 
@@ -141,7 +149,7 @@ class CoreGatewayClient:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace") if exc.fp else str(exc)
-            raise RuntimeError(f"Gateway {method} {path} failed ({exc.code}): {detail}") from exc
+            raise GatewayHTTPError(f"Gateway {method} {path} failed ({exc.code}): {detail}", exc.code) from exc
 
     def graphql(self, query: str, variables: Mapping[str, Any] | None = None) -> dict[str, Any]:
         """Execute a read-only Hasura GraphQL query as role `agent`."""
@@ -222,6 +230,25 @@ class CoreGatewayClient:
     def post_report(self, report: Mapping[str, Any]) -> None:
         """Hand a digest report (C5 figures) to the web, which renders and queues it."""
         self._request_json("POST", "/api/internal/agent/reports", report)
+
+    def claim_assistant_requests(self, limit: int) -> list[dict[str, Any]]:
+        """Claim up to `limit` pending assistant requests of this cooperative (contract C7)."""
+        res = self._request_json("POST", "/api/internal/agent/assistant/claim", {"limit": limit})
+        return list(res.get("requests") or [])
+
+    def post_assistant_result(self, request_id: str, intent: Mapping[str, Any], run_id: str | None) -> bool:
+        """Send the intent for one claimed request. False when the web no longer holds it claimed (409)."""
+        try:
+            self._request_json(
+                "POST",
+                f"/api/internal/agent/assistant/requests/{request_id}/result",
+                {"intent": dict(intent), "run_id": run_id},
+            )
+        except GatewayHTTPError as exc:
+            if exc.status_code == 409:
+                return False
+            raise
+        return True
 
     def heartbeat(self, version: str, providers: Sequence[str]) -> None:
         """Tell the web this agent is alive and which LLM providers its keys allow (contract C3)."""
