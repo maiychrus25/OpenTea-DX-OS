@@ -1,0 +1,776 @@
+[
+  {
+    "name": "withdrawal drops a harvest in its withdrawal period",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "h1",
+          "kind": "harvest.approve",
+          "risk": "high",
+          "title_vi": "Duyệt thu hoạch",
+          "created_at": "2026-11-20T02:00:00Z",
+          "parcel_codes": [
+            "P-TC-003"
+          ],
+          "goal_key": "harvest",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "h2",
+          "kind": "harvest.approve",
+          "risk": "high",
+          "title_vi": "Duyệt thu hoạch",
+          "created_at": "2026-11-21T02:00:00Z",
+          "parcel_codes": [
+            "P-TC-002"
+          ],
+          "goal_key": "harvest",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n1",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-22T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [
+        "P-TC-003"
+      ],
+      "people_available": null
+    },
+    "replay_response": {
+      "summary_vi": "Hôm nay có 2 việc: một thửa thu hoạch và một thông báo nội bộ."
+    },
+    "expected": {
+      "posted": true,
+      "items": [
+        "h2",
+        "n1"
+      ],
+      "dropped": [
+        {
+          "proposal_id": "h1",
+          "rule": "withdrawal"
+        }
+      ],
+      "summary_vi": "Hôm nay có 2 việc: một thửa thu hoạch và một thông báo nội bộ."
+    }
+  },
+  {
+    "name": "rain drops a spraying item on a parcel with rain coming and keeps the rest",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "d1",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "Kiểm tra vùng bệnh",
+          "created_at": "2026-11-20T01:00:00Z",
+          "parcel_codes": [
+            "P-TC-001"
+          ],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": true,
+          "people_needed": 0
+        },
+        {
+          "id": "d2",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "Kiểm tra vùng bệnh",
+          "created_at": "2026-11-20T02:00:00Z",
+          "parcel_codes": [
+            "P-TC-002"
+          ],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": true,
+          "people_needed": 0
+        },
+        {
+          "id": "n1",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-20T03:00:00Z",
+          "parcel_codes": [
+            "P-TC-001"
+          ],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [
+        "P-TC-001"
+      ],
+      "withdrawal_parcel_codes": [],
+      "people_available": null
+    },
+    "replay_response": {
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    },
+    "expected": {
+      "posted": true,
+      "items": [
+        "d2",
+        "n1"
+      ],
+      "dropped": [
+        {
+          "proposal_id": "d1",
+          "rule": "rain"
+        }
+      ],
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    }
+  },
+  {
+    "name": "people limit keeps items while the running sum fits and drops the rest",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "a",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "Kiểm tra vùng bệnh",
+          "created_at": "2026-11-20T01:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 2
+        },
+        {
+          "id": "b",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "Kiểm tra vùng bệnh",
+          "created_at": "2026-11-20T02:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 2
+        },
+        {
+          "id": "c",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "Kiểm tra vùng bệnh",
+          "created_at": "2026-11-20T03:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 3
+        },
+        {
+          "id": "d",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-20T04:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [],
+      "people_available": 4
+    },
+    "replay_response": {
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    },
+    "expected": {
+      "posted": true,
+      "items": [
+        "a",
+        "b"
+      ],
+      "dropped": [
+        {
+          "proposal_id": "c",
+          "rule": "people"
+        },
+        {
+          "proposal_id": "d",
+          "rule": "people"
+        }
+      ],
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    }
+  },
+  {
+    "name": "order follows the kind weight and then the age",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "b1",
+          "kind": "bulletin.publish",
+          "risk": "low",
+          "title_vi": "Đăng bản tin",
+          "created_at": "2026-11-20T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "bulletin",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "j1",
+          "kind": "journal.approve",
+          "risk": "low",
+          "title_vi": "Duyệt nhật ký",
+          "created_at": "2026-11-18T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "journal_backlog",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "j2",
+          "kind": "journal.reject",
+          "risk": "low",
+          "title_vi": "Từ chối nhật ký",
+          "created_at": "2026-11-19T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "journal_backlog",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n1",
+          "kind": "notification.households",
+          "risk": "low",
+          "title_vi": "Gửi thông báo nông hộ",
+          "created_at": "2026-11-21T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "households_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n2",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-17T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "x1",
+          "kind": "field.report",
+          "risk": "low",
+          "title_vi": "Việc khác",
+          "created_at": "2026-11-10T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "other",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "h1",
+          "kind": "harvest.approve",
+          "risk": "high",
+          "title_vi": "Duyệt thu hoạch",
+          "created_at": "2026-11-25T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "harvest",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "h2",
+          "kind": "harvest.approve",
+          "risk": "high",
+          "title_vi": "Duyệt thu hoạch",
+          "created_at": "2026-11-22T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "harvest",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "i1",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "Kiểm tra vùng bệnh",
+          "created_at": "2026-11-23T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [],
+      "people_available": null
+    },
+    "replay_response": {
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    },
+    "expected": {
+      "posted": true,
+      "items": [
+        "h2",
+        "h1",
+        "i1",
+        "n1",
+        "j2",
+        "j1",
+        "n2",
+        "b1",
+        "x1"
+      ],
+      "dropped": [],
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    }
+  },
+  {
+    "name": "overflow keeps the first 15 and leaves the rest open",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "n01",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-01T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n02",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-02T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n03",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-03T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n04",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-04T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n05",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-05T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n06",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-06T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n07",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-07T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n08",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-08T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n09",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-09T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n10",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-10T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n11",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-11T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n12",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-12T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n13",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-13T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n14",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-14T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n15",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-15T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n16",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-16T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "n17",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-17T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [],
+      "people_available": null
+    },
+    "replay_response": {
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    },
+    "expected": {
+      "posted": true,
+      "items": [
+        "n01",
+        "n02",
+        "n03",
+        "n04",
+        "n05",
+        "n06",
+        "n07",
+        "n08",
+        "n09",
+        "n10",
+        "n11",
+        "n12",
+        "n13",
+        "n14",
+        "n15"
+      ],
+      "dropped": [
+        {
+          "proposal_id": "n16",
+          "rule": "overflow"
+        },
+        {
+          "proposal_id": "n17",
+          "rule": "overflow"
+        }
+      ],
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    }
+  },
+  {
+    "name": "no candidates means nothing is posted",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [],
+      "people_available": null
+    },
+    "replay_response": {
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    },
+    "expected": {
+      "posted": false,
+      "items": [],
+      "dropped": []
+    }
+  },
+  {
+    "name": "rules drop every item so nothing is posted",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "h1",
+          "kind": "harvest.approve",
+          "risk": "high",
+          "title_vi": "Duyệt thu hoạch",
+          "created_at": "2026-11-20T02:00:00Z",
+          "parcel_codes": [
+            "P-TC-003"
+          ],
+          "goal_key": "harvest",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [
+        "P-TC-003"
+      ],
+      "people_available": null
+    },
+    "replay_response": {
+      "summary_vi": "Hôm nay có việc cần duyệt, ưu tiên thu hoạch trước."
+    },
+    "expected": {
+      "posted": false,
+      "items": [],
+      "dropped": [
+        {
+          "proposal_id": "h1",
+          "rule": "withdrawal"
+        }
+      ]
+    }
+  },
+  {
+    "name": "provider error gives the fallback summary",
+    "now": "2026-11-26T23:00:00Z",
+    "primary_error": true,
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "h1",
+          "kind": "harvest.approve",
+          "risk": "high",
+          "title_vi": "Duyệt thu hoạch",
+          "created_at": "2026-11-20T02:00:00Z",
+          "parcel_codes": [
+            "P-TC-002"
+          ],
+          "goal_key": "harvest",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "i1",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "Kiểm tra vùng bệnh",
+          "created_at": "2026-11-20T03:00:00Z",
+          "parcel_codes": [
+            "P-TC-001"
+          ],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "i2",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "Kiểm tra vùng bệnh",
+          "created_at": "2026-11-20T04:00:00Z",
+          "parcel_codes": [
+            "P-TC-004"
+          ],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [],
+      "people_available": null
+    },
+    "expected": {
+      "posted": true,
+      "items": [
+        "h1",
+        "i1",
+        "i2"
+      ],
+      "dropped": [],
+      "summary_vi": "Hôm nay có 3 việc: 1 Duyệt thu hoạch, 2 Kiểm tra vùng bệnh"
+    }
+  },
+  {
+    "name": "summary over 400 characters is trimmed",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "n1",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "Gửi thông báo cán bộ",
+          "created_at": "2026-11-20T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [],
+      "people_available": null
+    },
+    "replay_response": {
+      "summary_vi": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    "expected": {
+      "posted": true,
+      "items": [
+        "n1"
+      ],
+      "dropped": [],
+      "summary_len": 400
+    }
+  }
+]
