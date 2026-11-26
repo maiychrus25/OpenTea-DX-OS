@@ -140,6 +140,8 @@ LISTED=$(./dxos list) || fail "./dxos list failed"
 grep -qxF "$APP_ID" <<<"$(cut -f1 <<<"$LISTED")" && fail "$APP_ID is installed already; this smoke removes it, so run it on a clean stack"
 grep -qxF hello <<<"$(cut -f1 <<<"$LISTED")" && HELLO_WAS_INSTALLED=1
 kc_wait
+# This smoke runs in its own CI job, without smoke-platform.sh: it makes the token client and the users itself.
+ensure_client dxos-smoke dx-os-core,roles,profile
 ensure_user smoke_manager_tc manager TC
 ensure_user smoke_manager_lb manager LB
 if [ "$($COMPOSE exec -T postgres psql -U agrimarket -d agrimarket -tAc "select count(*) from parcels where id in ('pc_tc_1','pc_tc_2','pc_lb_1')")" != "3" ]; then

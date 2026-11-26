@@ -351,3 +351,11 @@ def test_builder_smoke_stops_the_agent_before_seeding_and_removes_what_it_made_o
 def test_builder_smoke_signs_nothing_and_presses_the_button_the_stub_recorded():
     text = builder_smoke()
     assert "telegram_approve_data_for" in text and "hmac" not in text.lower()
+
+
+def test_builder_smoke_makes_its_own_token_client_and_users():
+    # It runs in its own CI job (Builder Smoke), where smoke-platform.sh has not created them.
+    text = (TESTS / "smoke-builder.sh").read_text(encoding="utf-8")
+    client = text.index("ensure_client dxos-smoke dx-os-core,roles,profile")
+    assert client < text.index("ensure_user smoke_manager_tc manager TC") < text.index("telegram_link_owner")
+    assert "ensure_user smoke_manager_lb manager LB" in text
