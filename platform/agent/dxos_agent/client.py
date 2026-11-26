@@ -275,7 +275,7 @@ class CoreGatewayClient:
 
     def post_autopilot_tick(self) -> dict[str, Any]:
         """Run this cooperative's due autonomous-mode proposals (contract C3); `{ran, failed, returned, stopped}`."""
-        res = self._request_json("POST", "/api/internal/autopilot/tick", {})
+        res = self._request_json("POST", "/api/internal/agent/autopilot/tick", {})
         return dict(res.get("data") or {})
 
     def heartbeat(self, version: str, providers: Sequence[str]) -> None:
