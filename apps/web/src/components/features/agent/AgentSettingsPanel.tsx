@@ -49,6 +49,7 @@ const AGENT_LABEL: Record<ConfigurableAgent, string> = {
   assistant: 'Trợ lý Telegram (A7)',
   'daily-campaign': 'Chiến dịch ngày (A9)',
   improvement: 'Cải tiến hằng tuần (A10)',
+  'app-builder': 'Xưởng mini-app (A12)',
 }
 
 /** What leaves the server when the agent uses an external provider. */
@@ -63,6 +64,8 @@ const AGENT_SHARES: Record<ConfigurableAgent, string> = {
     'Câu bạn nhắn cho trợ lý (đã che số điện thoại, e-mail và số giấy tờ). Không gửi ảnh, vị trí hay dữ liệu trả lời.',
   'daily-campaign':
     'Tên các việc đề xuất hôm nay và mục tiêu của chúng (số thửa, số nhật ký). Không có tên hay số điện thoại của nông hộ.',
+  'app-builder':
+    'Yêu cầu app của trưởng HTX và câu trả lời của họ, tên và mô tả các app trong Kho ứng dụng. Không có dữ liệu của nông hộ.',
   improvement:
     'Số liệu tổng hợp của agent và chiến dịch (tỉ lệ duyệt, thời gian chờ, số ngày trượt mục tiêu). Không có tên hay số điện thoại của nông hộ.',
 }

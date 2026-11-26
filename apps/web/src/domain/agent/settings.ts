@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-/** Agents a manager can point at a model provider: A1, A5, A6, the Telegram assistant (A7) and the daily campaign (A9). */
-export const CONFIGURABLE_AGENTS = ['journal-review', 'digest', 'bulletin', 'assistant', 'improvement', 'daily-campaign'] as const
+/** Agents a manager can point at a model provider: A1, A5, A6, the Telegram assistant (A7), the daily campaign (A9) and the mini-app factory (A12). */
+export const CONFIGURABLE_AGENTS = ['journal-review', 'digest', 'bulletin', 'assistant', 'improvement', 'daily-campaign', 'app-builder'] as const
 export type ConfigurableAgent = (typeof CONFIGURABLE_AGENTS)[number]
 
 export const AGENT_PROVIDERS = ['ollama', 'anthropic', 'openai'] as const
