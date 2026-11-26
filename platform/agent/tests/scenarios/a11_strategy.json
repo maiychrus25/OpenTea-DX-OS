@@ -1,0 +1,629 @@
+[
+  {
+    "name": "targets are last year plus 5% and minus 10% and the LLM words priorities and initiatives",
+    "inputs": {
+      "season": "2026-Q4",
+      "current": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "last_year": {
+        "yield_kg": 1000,
+        "journal_on_time_rate": 80,
+        "diseased_parcel_rate": 10,
+        "shop_revenue_vnd": 2000000
+      },
+      "previous": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "adopted": null,
+      "draft_exists": false
+    },
+    "replay": {
+      "priorities": [
+        "Tập trung thu hái đúng lứa",
+        "Giữ nhật ký đúng hạn"
+      ],
+      "initiatives": [
+        {
+          "kind": "training",
+          "title_vi": "Tập huấn ghi nhật ký"
+        },
+        {
+          "kind": "outside",
+          "title_vi": "Vay vốn mở rộng"
+        },
+        {
+          "kind": "magic",
+          "title_vi": "Bỏ"
+        }
+      ]
+    },
+    "expect": {
+      "status": "posted",
+      "goals": [
+        [
+          "yield_kg",
+          1050,
+          1000,
+          "up"
+        ],
+        [
+          "journal_on_time_rate",
+          84,
+          80,
+          "up"
+        ],
+        [
+          "diseased_parcel_rate",
+          9.0,
+          10,
+          "down"
+        ],
+        [
+          "shop_revenue_vnd",
+          2100000,
+          2000000,
+          "up"
+        ]
+      ],
+      "priorities": [
+        "Tập trung thu hái đúng lứa",
+        "Giữ nhật ký đúng hạn"
+      ],
+      "initiatives": [
+        {
+          "kind": "training",
+          "title_vi": "Tập huấn ghi nhật ký"
+        },
+        {
+          "kind": "outside",
+          "title_vi": "Vay vốn mở rộng"
+        }
+      ]
+    }
+  },
+  {
+    "name": "a goal with no figure for last year is left out and the rest still come",
+    "inputs": {
+      "season": "2026-Q4",
+      "current": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "last_year": {
+        "yield_kg": 500,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "previous": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "adopted": null,
+      "draft_exists": false
+    },
+    "replay": {
+      "priorities": [
+        "Tập trung thu hái đúng lứa",
+        "Giữ nhật ký đúng hạn"
+      ],
+      "initiatives": [
+        {
+          "kind": "training",
+          "title_vi": "Tập huấn ghi nhật ký"
+        },
+        {
+          "kind": "outside",
+          "title_vi": "Vay vốn mở rộng"
+        },
+        {
+          "kind": "magic",
+          "title_vi": "Bỏ"
+        }
+      ]
+    },
+    "expect": {
+      "status": "posted",
+      "goals": [
+        [
+          "yield_kg",
+          525,
+          500,
+          "up"
+        ]
+      ],
+      "priorities": [
+        "Tập trung thu hái đúng lứa",
+        "Giữ nhật ký đúng hạn"
+      ],
+      "initiatives": [
+        {
+          "kind": "training",
+          "title_vi": "Tập huấn ghi nhật ký"
+        },
+        {
+          "kind": "outside",
+          "title_vi": "Vay vốn mở rộng"
+        }
+      ]
+    }
+  },
+  {
+    "name": "a new cooperative has no goals but priorities and initiatives still come",
+    "inputs": {
+      "season": "2026-Q4",
+      "current": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "last_year": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "previous": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "adopted": null,
+      "draft_exists": false
+    },
+    "replay": {
+      "priorities": [
+        "Tập trung thu hái đúng lứa",
+        "Giữ nhật ký đúng hạn"
+      ],
+      "initiatives": [
+        {
+          "kind": "training",
+          "title_vi": "Tập huấn ghi nhật ký"
+        },
+        {
+          "kind": "outside",
+          "title_vi": "Vay vốn mở rộng"
+        },
+        {
+          "kind": "magic",
+          "title_vi": "Bỏ"
+        }
+      ]
+    },
+    "expect": {
+      "status": "posted",
+      "goals": [],
+      "priorities": [
+        "Tập trung thu hái đúng lứa",
+        "Giữ nhật ký đúng hạn"
+      ],
+      "initiatives": [
+        {
+          "kind": "training",
+          "title_vi": "Tập huấn ghi nhật ký"
+        },
+        {
+          "kind": "outside",
+          "title_vi": "Vay vốn mở rộng"
+        }
+      ]
+    }
+  },
+  {
+    "name": "a provider error gives one priority per goal and no initiatives",
+    "inputs": {
+      "season": "2026-Q4",
+      "current": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "last_year": {
+        "yield_kg": 1000,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": 10,
+        "shop_revenue_vnd": null
+      },
+      "previous": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "adopted": null,
+      "draft_exists": false
+    },
+    "primary_error": true,
+    "expect": {
+      "status": "posted",
+      "goals": [
+        [
+          "yield_kg",
+          1050,
+          1000,
+          "up"
+        ],
+        [
+          "diseased_parcel_rate",
+          9.0,
+          10,
+          "down"
+        ]
+      ],
+      "priorities": [
+        "Tăng Sản lượng",
+        "Giảm Thửa có bệnh"
+      ],
+      "initiatives": []
+    }
+  },
+  {
+    "name": "an answer outside the schema falls back to the rules",
+    "inputs": {
+      "season": "2026-Q4",
+      "current": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "last_year": {
+        "yield_kg": 1000,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "previous": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "adopted": null,
+      "draft_exists": false
+    },
+    "replay": {
+      "unexpected": 1
+    },
+    "expect": {
+      "status": "posted",
+      "goals": [
+        [
+          "yield_kg",
+          1050,
+          1000,
+          "up"
+        ]
+      ],
+      "priorities": [
+        "Tăng Sản lượng"
+      ],
+      "initiatives": []
+    }
+  },
+  {
+    "name": "more than five priorities and initiatives are cut to five and long ones to 160 characters",
+    "inputs": {
+      "season": "2026-Q4",
+      "current": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "last_year": {
+        "yield_kg": 1000,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "previous": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "adopted": null,
+      "draft_exists": false
+    },
+    "replay": {
+      "priorities": [
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "initiatives": [
+        {
+          "kind": "miniapp",
+          "title_vi": "x0"
+        },
+        {
+          "kind": "miniapp",
+          "title_vi": "x1"
+        },
+        {
+          "kind": "miniapp",
+          "title_vi": "x2"
+        },
+        {
+          "kind": "miniapp",
+          "title_vi": "x3"
+        },
+        {
+          "kind": "miniapp",
+          "title_vi": "x4"
+        },
+        {
+          "kind": "miniapp",
+          "title_vi": "x5"
+        },
+        {
+          "kind": "miniapp",
+          "title_vi": "x6"
+        }
+      ]
+    },
+    "expect": {
+      "status": "posted",
+      "goals": [
+        [
+          "yield_kg",
+          1050,
+          1000,
+          "up"
+        ]
+      ],
+      "priorities": [
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "b",
+        "c",
+        "d",
+        "e"
+      ],
+      "initiatives": [
+        {
+          "kind": "miniapp",
+          "title_vi": "x0"
+        },
+        {
+          "kind": "miniapp",
+          "title_vi": "x1"
+        },
+        {
+          "kind": "miniapp",
+          "title_vi": "x2"
+        },
+        {
+          "kind": "miniapp",
+          "title_vi": "x3"
+        },
+        {
+          "kind": "miniapp",
+          "title_vi": "x4"
+        }
+      ]
+    }
+  },
+  {
+    "name": "an adopted plan for the season means nothing is done",
+    "inputs": {
+      "season": "2026-Q4",
+      "current": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "last_year": {
+        "yield_kg": 1000,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "previous": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "adopted": {
+        "id": "pl-1",
+        "season": "2026-Q4"
+      },
+      "draft_exists": false
+    },
+    "replay": {
+      "priorities": [
+        "Tập trung thu hái đúng lứa",
+        "Giữ nhật ký đúng hạn"
+      ],
+      "initiatives": [
+        {
+          "kind": "training",
+          "title_vi": "Tập huấn ghi nhật ký"
+        },
+        {
+          "kind": "outside",
+          "title_vi": "Vay vốn mở rộng"
+        },
+        {
+          "kind": "magic",
+          "title_vi": "Bỏ"
+        }
+      ]
+    },
+    "expect": {
+      "status": "skipped"
+    }
+  },
+  {
+    "name": "an adopted plan of an earlier season does not stop this season's plan",
+    "inputs": {
+      "season": "2026-Q4",
+      "current": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "last_year": {
+        "yield_kg": 1000,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "previous": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "adopted": {
+        "id": "pl-0",
+        "season": "2026-Q3"
+      },
+      "draft_exists": false
+    },
+    "replay": {
+      "priorities": [
+        "Tập trung thu hái đúng lứa",
+        "Giữ nhật ký đúng hạn"
+      ],
+      "initiatives": [
+        {
+          "kind": "training",
+          "title_vi": "Tập huấn ghi nhật ký"
+        },
+        {
+          "kind": "outside",
+          "title_vi": "Vay vốn mở rộng"
+        },
+        {
+          "kind": "magic",
+          "title_vi": "Bỏ"
+        }
+      ]
+    },
+    "expect": {
+      "status": "posted",
+      "goals": [
+        [
+          "yield_kg",
+          1050,
+          1000,
+          "up"
+        ]
+      ],
+      "priorities": [
+        "Tập trung thu hái đúng lứa",
+        "Giữ nhật ký đúng hạn"
+      ],
+      "initiatives": [
+        {
+          "kind": "training",
+          "title_vi": "Tập huấn ghi nhật ký"
+        },
+        {
+          "kind": "outside",
+          "title_vi": "Vay vốn mở rộng"
+        }
+      ]
+    }
+  },
+  {
+    "name": "an open draft for the season means nothing is done",
+    "inputs": {
+      "season": "2026-Q4",
+      "current": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "last_year": {
+        "yield_kg": 1000,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "previous": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "adopted": null,
+      "draft_exists": true
+    },
+    "replay": {
+      "priorities": [
+        "Tập trung thu hái đúng lứa",
+        "Giữ nhật ký đúng hạn"
+      ],
+      "initiatives": [
+        {
+          "kind": "training",
+          "title_vi": "Tập huấn ghi nhật ký"
+        },
+        {
+          "kind": "outside",
+          "title_vi": "Vay vốn mở rộng"
+        },
+        {
+          "kind": "magic",
+          "title_vi": "Bỏ"
+        }
+      ]
+    },
+    "expect": {
+      "status": "skipped"
+    }
+  },
+  {
+    "name": "no goals and no provider means no plan",
+    "inputs": {
+      "season": "2026-Q4",
+      "current": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "last_year": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "previous": {
+        "yield_kg": null,
+        "journal_on_time_rate": null,
+        "diseased_parcel_rate": null,
+        "shop_revenue_vnd": null
+      },
+      "adopted": null,
+      "draft_exists": false
+    },
+    "expect": {
+      "status": "empty"
+    }
+  }
+]
