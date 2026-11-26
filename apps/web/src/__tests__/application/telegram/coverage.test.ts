@@ -26,11 +26,11 @@ function routeFiles(dir: string): string[] {
 
 /** Methods a route file exports, both as `export const GET = ...` and as `export const { GET, POST } = handlers`. */
 function exportedMethods(source: string): string[] {
-  const direct = [...source.matchAll(/export\s+(?:async\s+)?(?:function|const)\s+(GET|POST|PUT|PATCH|DELETE)\b/g)].map((m) => m[1])
-  const destructured = [...source.matchAll(/export\s+const\s+\{([^}]*)\}\s*=/g)].flatMap((m) =>
+  const direct = Array.from(source.matchAll(/export\s+(?:async\s+)?(?:function|const)\s+(GET|POST|PUT|PATCH|DELETE)\b/g), (m) => m[1])
+  const destructured = Array.from(source.matchAll(/export\s+const\s+\{([^}]*)\}\s*=/g)).flatMap((m) =>
     m[1].split(',').map((name) => name.trim()).filter((name) => METHODS.includes(name))
   )
-  return [...new Set([...direct, ...destructured])]
+  return Array.from(new Set([...direct, ...destructured]))
 }
 
 function webRows(): string[] {
