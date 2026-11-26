@@ -22,7 +22,7 @@ describe('ReelsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Bình luận' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Thêm bình luận' }), { target: { value: 'Đẹp quá' } })
     fireEvent.click(screen.getByRole('button', { name: 'Đăng' }))
-    expect(screen.getByRole('button', { name: 'Bình luận (24)' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Bình luận (24)' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '—— Xem 2 câu trả lời' }))
     expect(screen.getByText('Đúng rồi, búp đều lắm.')).toBeInTheDocument()

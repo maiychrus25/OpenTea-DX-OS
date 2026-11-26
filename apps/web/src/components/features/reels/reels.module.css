@@ -60,9 +60,7 @@
 .notice { position: absolute; top: 16px; left: 16px; right: 16px; z-index: 3; margin: 0; text-align: center; font-size: 13px; text-shadow: 0 1px 6px var(--video-shade); pointer-events: none; }
 
 .panel { display: flex; flex: 0 0 min(300px, 40%); flex-direction: column; min-width: 0; min-height: 0; background: var(--video-panel); font-size: 12px; }
-.panelTabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid color-mix(in srgb, var(--video-ink) 12%, transparent); }
-.stage .panelTabs button { height: 36px; border: 0; border-bottom: 2px solid transparent; background: transparent; font-size: 12px; font-weight: 700; color: color-mix(in srgb, var(--video-ink) 55%, transparent); }
-.stage .panelTabs button[aria-pressed='true'] { border-bottom-color: var(--video-ink); color: var(--video-ink); }
+.panelTitle { margin: 0; padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, var(--video-ink) 12%, transparent); color: var(--video-ink); font-size: 13px; text-align: center; }
 .panelScroll { flex: 1; min-height: 0; overflow-y: auto; }
 .card { margin: 12px; padding: 10px; border-radius: 8px; background: color-mix(in srgb, var(--video-ink) 7%, transparent); }
 .cardHead { display: flex; align-items: center; gap: 8px; }
@@ -92,9 +90,6 @@
 .compose input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 0; border-radius: 6px; background: color-mix(in srgb, var(--video-ink) 10%, transparent); color: var(--video-ink); font: inherit; }
 .stage .compose button { border: 0; background: transparent; font-weight: 800; color: var(--video-like); }
 .stage .compose button:disabled { opacity: 0.55; cursor: default; }
-.channelGrid { display: grid; flex: 1; grid-template-columns: 1fr 1fr; align-content: start; gap: 10px; min-height: 0; margin: 0; padding: 12px; overflow-y: auto; list-style: none; }
-.channelGrid button { display: flex; flex-direction: column; gap: 5px; width: 100%; padding: 0; border: 0; background: transparent; font-size: 11.5px; text-align: left; }
-.channelGrid button > span { display: flex; align-items: center; justify-content: center; aspect-ratio: 9 / 14; border-radius: 6px; background: var(--video-shade) center / cover; }
 
 .profile { flex: 1; min-height: 0; overflow-y: auto; background: var(--color-surface-card); color: var(--color-ink-primary); }
 .page[data-reels='profile'] .round { background: var(--color-primary-subtle); color: var(--color-primary); }

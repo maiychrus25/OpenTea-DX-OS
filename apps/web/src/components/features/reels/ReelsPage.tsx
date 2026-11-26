@@ -353,7 +353,6 @@ export function ReelsPage({ userName }: { userName: string }) {
               reel={reel}
               added={added[reel.id] ?? []}
               userName={userName}
-              channelReels={reels.filter((r) => r.channel === reel.channel)}
               likes={reel.likes + (isLiked ? 1 : 0)}
               liked={isLiked}
               following={isFollowed}
@@ -361,7 +360,6 @@ export function ReelsPage({ userName }: { userName: string }) {
               onFollow={() => setFollowed(toggle(followed, reel.channel))}
               onCopy={copy}
               onAdd={(comments) => setAdded((all) => ({ ...all, [reel.id]: comments }))}
-              onWatch={watch}
             />
           )}
         </section>
