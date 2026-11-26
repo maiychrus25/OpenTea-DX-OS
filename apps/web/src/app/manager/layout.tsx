@@ -36,7 +36,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
     { label: 'Hồ sơ HTX', href: '/manager/profile', icon: <Landmark size={20} />, group: 'Quản trị' },
     { label: 'Bản tin', href: '/manager/bulletin', icon: <Newspaper size={20} />, group: 'Quản trị' },
     { label: 'Thông báo', href: '/manager/notifications', icon: <Bell size={20} />, group: 'Quản trị' },
-    { label: 'Chatbot', href: '/manager/chat', icon: <MessageCircle size={20} />, group: 'Ứng dụng' },
+    { label: 'Trợ lý AI', href: '/manager/chat', icon: <MessageCircle size={20} />, group: 'Ứng dụng' },
     { label: 'Đề xuất AI', href: '/manager/ai', icon: <Sparkles size={20} />, badge: openProposals || undefined, group: 'Ứng dụng' },
     { label: 'Kho ứng dụng', href: '/manager/app-store', icon: <Store size={20} />, group: 'Ứng dụng' },
     ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'manager', session.user.htxCode ?? null, loadAppFeed)).map((item) => ({ ...item, group: 'Ứng dụng' })),

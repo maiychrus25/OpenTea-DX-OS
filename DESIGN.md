@@ -316,9 +316,9 @@ Bo góc vừa phải: 6px cho điều khiển nhỏ, 10px cho nút và ô nhập
 ## Chat workspace
 
 - `/manager/chat` (market), `/officer/chat` (technical) và `/officer/assistant` (market) dùng chung `components/ui/chat-interface`. Giữ tiêu đề từng trang (h1 nhỏ ở góc trên) và phân quyền ở server; không thay API/use case.
-- Chat chiếm trọn cửa sổ như ChatGPT: AppShell ẩn sidebar và topbar của ứng dụng khi có `[data-chat-workspace]`. Chỉ còn một sidebar của chat: thương hiệu, tìm và thu gọn, Trò chuyện mới, Về Tổng quan, trợ lý còn lại (cán bộ), mục Gần đây và người đăng nhập ở đáy. Tin nhắn và lịch sử cuộn độc lập.
+- Chat nằm trong khung ứng dụng (giữ sidebar và topbar), chiếm hết vùng nội dung; AppShell chỉ bỏ padding/max-width và khóa chiều cao khi có `[data-chat-workspace]`. Menu chỉ có một mục “Trợ lý AI”; cán bộ chuyển Kỹ thuật/Thị trường bằng nút gạt ở đầu trang. Không có sidebar thứ hai.
 - Nền `--color-surface-card`, sidebar `--color-surface-sunken`. Cột nội dung rộng khoảng 770px; câu hỏi nằm bên phải trên `--muted`, câu trả lời là chữ thường không bong bóng, không avatar. Markdown có khung cuộn riêng cho bảng/mã, nguồn là chip văn bản và sao chép có phản hồi thành công/thất bại.
-- Sidebar rộng 272px, thu gọn được trên desktop; dưới 801px dùng native modal dialog (focus trap, Escape, trả focus). Ô tìm chỉ lọc tiêu đề đã tải, không gọi API.
+- Lịch sử và Trò chuyện mới là hai nút ở góc phải trên. Lịch sử mở thành native modal dialog bên phải (focus trap, Escape, trả focus); ô tìm chỉ lọc tiêu đề đã tải, không gọi API.
 - Trạng thái trống chỉ có lời chào “Hôm nay bạn đang nghĩ gì?” và ô nhập dạng viên thuốc ở giữa, không gợi ý. Có tin nhắn thì ô nhập ở đáy; textarea tự giãn tối đa 200px. Enter gửi, Shift+Enter xuống dòng, không gửi trong IME.
 - Nút gửi chuyển thành dừng khi nhận phản hồi. AbortController hủy request phía client; mọi cập nhật cũ bị bỏ qua sau khi đổi/tạo hội thoại hoặc unmount. Không cam kết hủy xử lý/lưu lịch sử ở backend vì API không đổi.
 - Stream hiện tại là NDJSON: giữ dòng dang dở giữa các chunk, giải mã UTF-8 liên tục, xử lý cả dòng cuối không có newline, dừng ở done/error. Ẩn think blocks khi stream và nạp lịch sử; lỗi cập nhật cùng một assistant message. 401 chuyển tới đăng nhập, 503 có thông báo dịch vụ không khả dụng.

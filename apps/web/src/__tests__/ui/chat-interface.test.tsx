@@ -44,11 +44,17 @@ beforeEach(() => {
     return url.includes('/sessions') ? jsonResponse({ sessions }) : historyResponse
   }) as jest.Mock
   window.HTMLDialogElement.prototype.close = jest.fn()
-  window.HTMLDialogElement.prototype.showModal = jest.fn()
+  window.HTMLDialogElement.prototype.showModal = jest.fn(function (this: HTMLDialogElement) { this.open = true })
   window.HTMLElement.prototype.scrollTo = jest.fn()
   window.HTMLElement.prototype.scrollIntoView = jest.fn()
   window.matchMedia = jest.fn().mockReturnValue({ matches: false, addEventListener: jest.fn(), removeEventListener: jest.fn() })
 })
+
+/** Opens the history panel and returns queries scoped to it. */
+async function openHistory() {
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Lịch sử' })) })
+  return within(screen.getByRole('dialog', { name: 'Lịch sử trò chuyện' }))
+}
 
 describe('ChatInterface', () => {
   it.each([
@@ -58,33 +64,36 @@ describe('ChatInterface', () => {
     render(<ChatInterface role={role} />)
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument()
     expect(screen.getByText('Hôm nay bạn đang nghĩ gì?')).toBeInTheDocument()
-    await screen.findByRole('button', { name: 'Hội thoại đã lưu' })
   })
 
-  it('filters recent titles locally and restores them when search closes', async () => {
-    render(<ChatInterface role="officer" userName="Người kiểm thử" />)
-    const sidebar = within(screen.getByRole('complementary'))
-    await sidebar.findByRole('button', { name: 'Hội thoại đã lưu' })
-    expect(sidebar.getByRole('link', { name: 'Về Tổng quan' })).toHaveAttribute('href', '/officer/dashboard')
-    expect(sidebar.getByRole('link', { name: 'Trợ lý Thị trường' })).toHaveAttribute('href', '/officer/assistant')
+  it('filters past titles locally in the history panel', async () => {
+    render(<ChatInterface role="manager" />)
+    const panel = await openHistory()
+    await panel.findByRole('button', { name: 'Hội thoại đã lưu' })
     const requests = (fetch as jest.Mock).mock.calls.length
-    fireEvent.click(sidebar.getByRole('button', { name: 'Tìm kiếm trò chuyện' }))
-    const search = sidebar.getByRole('searchbox', { name: 'Tìm trong lịch sử' })
-    expect(search).toHaveFocus()
+    const search = panel.getByRole('searchbox', { name: 'Tìm trong lịch sử' })
     fireEvent.change(search, { target: { value: 'không khớp' } })
-    expect(sidebar.queryByRole('button', { name: 'Hội thoại đã lưu' })).not.toBeInTheDocument()
-    expect(sidebar.getByText('Không tìm thấy cuộc trò chuyện')).toBeInTheDocument()
+    expect(panel.queryByRole('button', { name: 'Hội thoại đã lưu' })).not.toBeInTheDocument()
+    expect(panel.getByText('Không tìm thấy cuộc trò chuyện')).toBeInTheDocument()
     fireEvent.change(search, { target: { value: '  HỘI THOẠI  ' } })
-    expect(sidebar.getByRole('button', { name: 'Hội thoại đã lưu' })).toBeInTheDocument()
-    fireEvent.click(sidebar.getByRole('button', { name: 'Tìm kiếm trò chuyện' }))
-    expect(sidebar.queryByRole('searchbox')).not.toBeInTheDocument()
+    expect(panel.getByRole('button', { name: 'Hội thoại đã lưu' })).toBeInTheDocument()
     expect((fetch as jest.Mock).mock.calls).toHaveLength(requests)
+  })
+
+  it('lets officers switch between the two assistants, but not managers', () => {
+    const view = render(<ChatInterface role="officer" />)
+    const switcher = within(screen.getByRole('navigation', { name: 'Chọn trợ lý' }))
+    expect(switcher.getByRole('link', { name: 'Kỹ thuật' })).toHaveAttribute('aria-current', 'page')
+    expect(switcher.getByRole('link', { name: 'Thị trường' })).toHaveAttribute('href', '/officer/assistant')
+    view.unmount()
+    render(<ChatInterface role="manager" />)
+    expect(screen.queryByRole('navigation', { name: 'Chọn trợ lý' })).not.toBeInTheDocument()
   })
 
   it('keeps the empty-history label', async () => {
     ;(fetch as jest.Mock).mockResolvedValue(jsonResponse({ sessions: [] }))
     render(<ChatInterface role="manager" />)
-    expect(await within(screen.getByRole('complementary')).findByText('Chưa có lịch sử trò chuyện')).toBeInTheDocument()
+    expect(await (await openHistory()).findByText('Chưa có lịch sử trò chuyện')).toBeInTheDocument()
   })
 
   it('buffers split JSON lines, hides split think tags and flushes the last line', async () => {
@@ -138,9 +147,9 @@ describe('ChatInterface', () => {
       return url.includes('/sessions') ? jsonResponse({ sessions }) : historyResponse
     })
     render(<ChatInterface role="manager" />)
-    await screen.findByRole('button', { name: 'Hội thoại đã lưu' })
     send()
-    fireEvent.click(screen.getByRole('button', { name: destination === 'new' ? 'Trò chuyện mới' : 'Hội thoại đã lưu' }))
+    if (destination === 'saved') await openHistory()
+    fireEvent.click(await screen.findByRole('button', { name: destination === 'new' ? 'Trò chuyện mới' : 'Hội thoại đã lưu' }))
     expect(signal?.aborted).toBe(true)
     await act(async () => resolvePost(streamResponse(['{"text":"Rò rỉ"}\n'])))
     expect(screen.queryByText('Rò rỉ')).not.toBeInTheDocument()
@@ -195,7 +204,7 @@ describe('ChatInterface', () => {
     let resolveHistory!: (value: object) => void
     historyResponse = new Promise(resolve => { resolveHistory = resolve })
     render(<ChatInterface role="manager" />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Hội thoại đã lưu' }))
+    fireEvent.click(await (await openHistory()).findByRole('button', { name: 'Hội thoại đã lưu' }))
     expect(screen.getByText('Đang tải cuộc trò chuyện...')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Trò chuyện mới' }))
     await act(async () => resolveHistory(jsonResponse({ history: [{ role: 'assistant', content: 'Lịch sử cũ' }] })))
@@ -206,7 +215,7 @@ describe('ChatInterface', () => {
   it('shows history failures instead of pretending the conversation is empty', async () => {
     historyResponse = { ok: false, status: 503 }
     render(<ChatInterface role="manager" />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Hội thoại đã lưu' }))
+    fireEvent.click(await (await openHistory()).findByRole('button', { name: 'Hội thoại đã lưu' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Không tải được cuộc trò chuyện')
     expect(screen.getByPlaceholderText('Hỏi trợ lý…')).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Trò chuyện mới' }))
@@ -218,7 +227,7 @@ describe('ChatInterface', () => {
       ? source === 'sessions' ? { ok: false, status: 401 } : jsonResponse({ sessions })
       : { ok: false, status: 401 })
     render(<ChatInterface role="manager" />)
-    if (source === 'history') fireEvent.click(await screen.findByRole('button', { name: 'Hội thoại đã lưu' }))
+    if (source === 'history') fireEvent.click(await (await openHistory()).findByRole('button', { name: 'Hội thoại đã lưu' }))
     await waitFor(() => expect(redirectToLogin).toHaveBeenCalledTimes(1))
   })
 

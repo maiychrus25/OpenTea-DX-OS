@@ -18,6 +18,8 @@ export interface NavItem {
   icon: React.ReactNode
   badge?: number | string
   group?: string
+  /** Other paths this entry covers, so it stays highlighted there. */
+  match?: string[]
 }
 
 export interface SidebarProps {
@@ -71,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Only the most specific item is active: a feed entry sits under its app's own menu item.
   const activeHref = navItems
-    .filter((item) => isActive(pathname, item.href))
+    .filter((item) => [item.href, ...(item.match ?? [])].some((href) => isActive(pathname, href)))
     .reduce<string | null>((best, item) => (best === null || item.href.length > best.length ? item.href : best), null)
 
   const initials = userName

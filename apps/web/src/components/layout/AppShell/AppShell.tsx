@@ -44,7 +44,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const pathname = usePathname()
   // The most specific menu item that covers this page names it in the breadcrumb.
   const pageName = navItems
-    .filter((item) => pathname === item.href || pathname?.startsWith(`${item.href}/`))
+    .filter((item) => [item.href, ...(item.match ?? [])].some((href) => pathname === href || pathname?.startsWith(`${href}/`)))
     .sort((a, b) => b.href.length - a.href.length)[0]?.label
 
   return (

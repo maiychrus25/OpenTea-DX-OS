@@ -22,7 +22,6 @@ export default async function OfficerAssistantPage() {
       role="officer"
       chatType="market"
       userRole={role === 'manager' ? 'manager' : 'officer'}
-      userName={session.user.name || undefined}
     />
   )
 }
