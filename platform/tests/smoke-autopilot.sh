@@ -23,6 +23,8 @@ fi
 echo "[autopilot]"
 M12_T0=$(psql_app "select now()")
 M12_NONE="00000000-0000-0000-0000-000000000000"
+# The route checks the digest of the evidence rows: for no rows it is sha256 of the canonical JSON "[]".
+M12_EMPTY_EVIDENCE="$(python3 -c 'import hashlib; print(hashlib.sha256(b"[]").hexdigest())')"
 # One subject per proposal: the 24-hour dedupe of the route judges duplicates by kind and subjects.
 M12_SUBJECTS="array['m12-notice-tc','harvest-ready.harvest_window_days','field-watch.silent_hours','field-watch.heavy_rain_mm']"
 M12_ROWS="select id from platform.agent_proposals where htx_code='TC' and subject_ids && $M12_SUBJECTS"
@@ -41,8 +43,8 @@ trap 'autopilot_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; ass
 # Posts one proposal through the internal route as the TC agent and prints its id. A dedupe answer has no id and fails.
 m12_post() {  # <agent> <kind> <payload json>
   local body
-  body="$(jq -nc --arg agent "$1" --arg kind "$2" --argjson payload "$3" \
-    '{agent: $agent, kind: $kind, payload: $payload, reason_vi: "Kiểm thử tự vận hành M12", evidence: {rows: [], sha256: "m12-smoke"}}')"
+  body="$(jq -nc --arg agent "$1" --arg kind "$2" --argjson payload "$3" --arg empty "$M12_EMPTY_EVIDENCE" \
+    '{agent: $agent, kind: $kind, payload: $payload, reason_vi: "Kiểm thử tự vận hành M12", evidence: {rows: [], sha256: $empty}}')"
   $COMPOSE exec -T web node -e '
 const [token, body] = process.argv.slice(1);
 fetch("http://apisix:9081/api/internal/agent/proposals", {
