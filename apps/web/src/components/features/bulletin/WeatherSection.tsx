@@ -117,7 +117,7 @@ function WeatherCard({ place, area, open, onToggle }: { place: Place; area: stri
     <>
       <div className={`${styles.scene} ${isRainy(current.code) ? styles.rainy : ''}`.trim()}>
         <button type="button" className={styles.summary} aria-expanded={open} onClick={onToggle}>
-          <span className={styles.bigIcon}><WeatherIcon code={current.code} isDay={current.isDay} size={open ? 72 : 34} /></span>
+          <span className={styles.bigIcon}><WeatherIcon code={current.code} isDay={current.isDay} size={open ? 50 : 34} /></span>
           <span className={styles.where}>
             <span className={styles.location}>{place.parcels.length} thửa quanh {place.parcels[0]}</span>
             {area && <span className={styles.muted}>{area}</span>}
@@ -136,9 +136,9 @@ function WeatherCard({ place, area, open, onToggle }: { place: Place; area: stri
         {open && (
           <>
             <dl className={`${styles.glass} ${styles.stats}`}>
-              <div><Umbrella size={40} aria-hidden="true" /><span><dt>Khả năng mưa</dt><dd>{today?.rainChance ?? 0}%</dd></span></div>
-              <div><Droplets size={40} aria-hidden="true" /><span><dt>Độ ẩm</dt><dd>{current.humidity}%</dd></span></div>
-              <div><Wind size={40} aria-hidden="true" /><span><dt>Gió</dt><dd>{Math.round(current.windSpeed)} km/h</dd></span></div>
+              <div><Umbrella size={28} aria-hidden="true" /><span><dt>Khả năng mưa</dt><dd>{today?.rainChance ?? 0}%</dd></span></div>
+              <div><Droplets size={28} aria-hidden="true" /><span><dt>Độ ẩm</dt><dd>{current.humidity}%</dd></span></div>
+              <div><Wind size={28} aria-hidden="true" /><span><dt>Gió</dt><dd>{Math.round(current.windSpeed)} km/h</dd></span></div>
             </dl>
 
             <div className={styles.glass}>
@@ -150,7 +150,7 @@ function WeatherCard({ place, area, open, onToggle }: { place: Place; area: stri
                 {hourly.map((hour) => (
                   <li key={hour.time} className={styles.hour}>
                     <span>{clock(hour.time)}</span>
-                    <WeatherIcon code={hour.code} isDay={hour.isDay} size={46} />
+                    <WeatherIcon code={hour.code} isDay={hour.isDay} size={30} />
                     <strong>{degrees(hour.temperature)}</strong>
                   </li>
                 ))}
