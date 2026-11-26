@@ -273,6 +273,30 @@ class CoreGatewayClient:
         res = self._request_json("POST", f"/api/internal/agent/improvements/{improvement_id}/effect", effect)
         return dict(res.get("data") or {})
 
+    def get_app_builder_requests(self) -> list[dict[str, Any]]:
+        """A12's work list (contract C4): requests to route or ask about, and finished builds to announce."""
+        res = self._request_json("GET", "/api/internal/agent/app-builder/requests")
+        data = res.get("data", res)
+        rows = data if isinstance(data, list) else (data.get("requests") if isinstance(data, dict) else None)
+        return [dict(row) for row in rows or [] if isinstance(row, dict)]
+
+    def post_app_questions(self, request_id: str, questions: Sequence[str]) -> None:
+        """Ask the manager up to five questions; the web sends them as one Telegram message."""
+        self._request_json("POST", f"/api/internal/agent/app-builder/requests/{request_id}/questions", {"questions": list(questions)})
+
+    def post_app_route(self, request_id: str, body: Mapping[str, Any]) -> None:
+        """Send the store or book path (`{path, target, reason_vi}`); the web creates the proposal."""
+        self._request_json("POST", f"/api/internal/agent/app-builder/requests/{request_id}/route", body)
+
+    def post_app_spec(self, request_id: str, spec: Mapping[str, Any]) -> None:
+        """Send the C2 spec; the web answers 409 APP_ID_TAKEN when the id exists."""
+        self._request_json("POST", f"/api/internal/agent/app-builder/requests/{request_id}/spec", spec)
+
+    def announce_app_build(self, request_id: str) -> dict[str, Any]:
+        """Tell the web a build finished; it queues the message and the install proposal once. `{proposal_id}` or null."""
+        res = self._request_json("POST", f"/api/internal/agent/app-builder/requests/{request_id}/announce", {})
+        return dict(res.get("data") or {})
+
     def get_enabled_apps(self) -> list[dict[str, Any]]:
         """The mini-apps enabled for this cooperative, each `{id, manifest}` (Hasura filters by the token's cooperative)."""
         data = self.graphql("query { platform_installed_apps(order_by: {id: asc}) { id manifest } }")
