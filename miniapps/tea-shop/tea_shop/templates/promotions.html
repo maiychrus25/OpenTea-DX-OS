@@ -20,7 +20,7 @@
       <td role="cell" data-label="Đến ngày">{{ p.ends_on.strftime("%d/%m/%Y") }}</td>
       <td role="cell" data-label="Trạng thái"><span class="pill{% if p.state != 'active' %} neutral{% endif %}">{{ {"active": "Đang chạy", "ended": "Đã kết thúc", "over": "Hết hạn"}[p.state] }}</span></td>
       <td role="cell" data-label="Thao tác">{% if p.state == 'active' %}
-        <form method="post" action="{{ href('/promotions/' ~ p.id ~ '/end', theme) }}"><button class="secondary" type="submit" aria-label="Kết thúc khuyến mãi {{ p.product_name }}">Kết thúc</button></form>
+        <span class="actions"><form method="post" action="{{ href('/promotions/' ~ p.id ~ '/end', theme) }}"><button class="secondary" type="submit" aria-label="Kết thúc khuyến mãi {{ p.product_name }}">Kết thúc</button></form></span>
       {% endif %}</td>
     </tr>
   {% endfor %}
