@@ -13,14 +13,19 @@ export const PRODUCTS = [
   { image: 'art-4', name: 'Chè Bát Tiên', pack: 'Hộp 100 g', price: 210000, stock: 21 },
 ]
 
-export const ORDER_STATUS: Record<string, Tone> = { 'Chờ xác nhận': 'wt', 'Đã xác nhận': 'ok', 'Đã huỷ': 'mu' }
-
+/** Goods are in stock, so an order needs no approval: it is placed, or it was cancelled. */
 export const ORDERS = [
-  { code: 'DH-0142', name: 'Nguyễn Thị Hà', phone: '0935 111 222', total: 740000, status: 'Chờ xác nhận' },
-  { code: 'DH-0141', name: 'Lê Văn Minh', phone: '0988 222 333', total: 330000, status: 'Đã xác nhận' },
-  { code: 'DH-0140', name: 'Trần Thu Hương', phone: '0912 000 111', total: 185000, status: 'Đã xác nhận' },
-  { code: 'DH-0139', name: 'Phạm Quốc Bảo', phone: '0977 444 555', total: 420000, status: 'Đã huỷ' },
+  { code: 'DH-0142', name: 'Nguyễn Thị Hà', phone: '0935 111 222', address: 'Xóm Cầu Gỗ, xã Tân Cương', status: 'Đã đặt', items: [{ image: 'art-1', quantity: 2 }, { image: 'art-2', quantity: 3 }] },
+  { code: 'DH-0141', name: 'Lê Văn Minh', phone: '0988 222 333', address: 'Phường Quang Trung, Thái Nguyên', status: 'Đã đặt', items: [{ image: 'art-3', quantity: 2 }] },
+  { code: 'DH-0140', name: 'Trần Thu Hương', phone: '0912 000 111', address: 'Xã Phúc Xuân, Thái Nguyên', status: 'Đã đặt', items: [{ image: 'art-1', quantity: 1 }] },
+  { code: 'DH-0139', name: 'Phạm Quốc Bảo', phone: '0977 444 555', address: 'Phường Thịnh Đán, Thái Nguyên', status: 'Đã huỷ', items: [{ image: 'art-4', quantity: 2 }] },
 ]
+
+export type Order = (typeof ORDERS)[number]
+
+/** What was bought, with the product behind each line. */
+export const orderLines = (order: Order) => order.items.map((item) => ({ product: PRODUCTS.find((p) => p.image === item.image)!, quantity: item.quantity }))
+export const orderTotal = (order: Order) => orderLines(order).reduce((total, line) => total + line.quantity * line.product.price, 0)
 
 export const TOURS = [
   { code: 'TB-0230', name: 'Thưởng trà trên đồi', image: '/images/officer/tour-tea-on-the-hill.jpg', date: '27/11/2026', booked: 2, seats: 25, adult: 290000, child: 190000 },

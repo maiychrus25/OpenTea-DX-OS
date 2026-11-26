@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 OpenTea Developers
-// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+// SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 /* eslint-disable @next/next/no-img-element -- small drawings shipped with the page */
 
 import React from 'react'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { Package } from 'lucide-react'
 import { Header } from '@/components/features/officer-web/parts'
-import { ORDERS, PRODUCTS, money } from '@/components/features/officer-web/sample'
+import { ORDERS, money, orderLines, orderTotal } from '@/components/features/officer-web/sample'
 import styles from '@/components/features/officer-web/kit.module.css'
 
 export const metadata = { title: 'Chi tiết đơn' }
 
 /** Sample content: there is no order service yet. */
-export default function OfficerOrderPage() {
-  const order = ORDERS[0]
-  const lines = [{ product: PRODUCTS[0], quantity: 2 }, { product: PRODUCTS[1], quantity: 3 }]
-  const facts = [['Mã đơn', order.code], ['Người nhận', order.name], ['Điện thoại', order.phone], ['Địa chỉ', 'Xóm Cầu Gỗ, xã Tân Cương'], ['Thanh toán', 'Chuyển khoản'], ['Trạng thái', order.status]]
+export default function OfficerOrderPage({ params }: { params: { code: string } }) {
+  const order = ORDERS.find((o) => o.code === params.code)
+  if (!order) notFound()
+  const facts = [['Mã đơn', order.code], ['Người đặt', order.name], ['Điện thoại', order.phone], ['Địa chỉ', order.address], ['Thanh toán', 'Chuyển khoản'], ['Trạng thái', order.status]]
 
   return (
     <div className={styles.page}>
@@ -31,17 +31,17 @@ export default function OfficerOrderPage() {
           </dl>
         </section>
         <section className={`${styles.pn} ${styles.wide}`}>
-          <h2 className={styles.ph}>Sản phẩm</h2>
+          <h2 className={styles.ph}>Sản phẩm đã mua</h2>
           <table className={styles.table}>
             <tbody>
-              {lines.map(({ product, quantity }) => (
+              {orderLines(order).map(({ product, quantity }) => (
                 <tr key={product.name}>
-                  <td><span className={styles.item}><img src={`/images/officer/${product.image}.svg`} alt="" />{product.name}</span></td>
+                  <td><span className={styles.tourName}><img src={`/images/officer/${product.image}.svg`} alt="" />{product.name}</span></td>
                   <td className={styles.num}>{quantity} × {money(product.price)}</td>
                   <td className={styles.num}>{money(quantity * product.price)}</td>
                 </tr>
               ))}
-              <tr><td colSpan={2}><strong>Tổng cộng</strong></td><td className={styles.num}><strong>{money(order.total)}</strong></td></tr>
+              <tr><td colSpan={2}><strong>Tổng cộng</strong></td><td className={styles.num}><strong>{money(orderTotal(order))}</strong></td></tr>
             </tbody>
           </table>
         </section>

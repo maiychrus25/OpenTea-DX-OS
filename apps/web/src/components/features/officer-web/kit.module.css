@@ -82,3 +82,9 @@
 /* A tour is told apart by its picture as much as by its name. */
 .tourName { display: flex; align-items: center; gap: 12px; font-weight: 700; }
 .tourName img { width: 96px; height: 64px; flex: none; border-radius: 8px; object-fit: cover; }
+
+/* What an order holds, picture first. */
+.lines { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.lines li { display: flex; align-items: center; gap: 10px; }
+.lines img { width: 52px; height: 52px; flex: none; border-radius: 8px; background: var(--color-primary-subtle); }
+.lines strong { display: block; }
