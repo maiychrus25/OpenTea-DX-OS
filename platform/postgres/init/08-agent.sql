@@ -86,3 +86,46 @@ CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON pla
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
 CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.agent_settings
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
+
+-- Daily campaign (M7): one campaign per cooperative and Vietnam day, its items in order, and the 18:00 outcomes.
+CREATE TABLE IF NOT EXISTS platform.campaigns (
+  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  htx_code        text        NOT NULL,
+  day             date        NOT NULL,
+  status          text        NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'approved', 'partial', 'done', 'dropped')),
+  goals           jsonb       NOT NULL DEFAULT '[]',
+  summary_vi      text        NOT NULL,
+  run_id          uuid        NULL REFERENCES platform.agent_runs(id),
+  decided_by      text        NULL,
+  decided_by_name text        NULL,
+  decided_at      timestamptz NULL,
+  telegram_sent   boolean     NOT NULL DEFAULT false,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (htx_code, day)
+);
+CREATE TABLE IF NOT EXISTS platform.campaign_items (
+  id          uuid    NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+  campaign_id uuid    NOT NULL REFERENCES platform.campaigns(id) ON DELETE CASCADE,
+  proposal_id uuid    NOT NULL REFERENCES platform.agent_proposals(id),
+  position    integer NOT NULL CHECK (position BETWEEN 1 AND 15),
+  goal_key    text    NOT NULL,
+  target      integer NOT NULL CHECK (target >= 0),
+  PRIMARY KEY (campaign_id, proposal_id),
+  UNIQUE (campaign_id, position)
+);
+CREATE TABLE IF NOT EXISTS platform.campaign_outcomes (
+  id          uuid    NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+  campaign_id uuid        NOT NULL REFERENCES platform.campaigns(id) ON DELETE CASCADE,
+  goal_key    text        NOT NULL,
+  target      integer     NOT NULL,
+  actual      integer     NOT NULL,
+  measured_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (campaign_id, goal_key)
+);
+
+CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.campaigns
+  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
+CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.campaign_items
+  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
+CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.campaign_outcomes
+  FOR EACH ROW EXECUTE FUNCTION audit.capture_row();

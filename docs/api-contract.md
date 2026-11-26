@@ -739,6 +739,30 @@ Reject or request changes on a `PENDING_APPROVAL` journal entry (`officer` or `m
 ---
 
 
+## Chiến dịch hôm nay (M7)
+
+Mỗi sáng agent A9 (`daily-campaign`, 06:00 giờ Việt Nam) gom các đề xuất đang mở của HTX thành một chiến dịch: tối đa 15 việc, mỗi việc có mục tiêu đo được. Quy tắc thứ tự và xung đột (mưa, thời gian cách ly, số người) nằm ở agent; web lưu chiến dịch sau khi kiểm tra lại, và là nơi duy nhất ghi quyết định. Mỗi HTX chỉ có một chiến dịch cho mỗi ngày.
+
+### Nội bộ (token agent)
+
+- **`GET /api/internal/agent/campaigns/candidates?day=YYYY-MM-DD`**: trả về `{ day, proposals, rain_parcel_codes, withdrawal_parcel_codes, people_available }`. `proposals` là đề xuất `proposed` chưa hết hạn, mỗi mục có `id`, `kind`, `risk`, `title_vi`, `created_at`, `parcel_codes`, `goal_key`, `target`, `involves_spraying` (luôn `false`), `people_needed` (luôn `0`). `rain_parcel_codes` là thửa có dự báo từ 5 mm mưa; `withdrawal_parcel_codes` là thửa còn trong thời gian cách ly phun thuốc của ngày đó. `people_available` là `null` cho tới M10.
+- **`POST /api/internal/agent/campaigns`**: `{ day, items: [{ proposal_id, position }], dropped: [{ proposal_id, rule }], summary_vi, run_id }`. `position` phải là 1..n theo thứ tự; `rule` là `withdrawal`, `rain`, `people` hoặc `overflow`. Web tính lại `goal_key` và `target` từ đề xuất, không tin giá trị agent gửi. `201 { id }` khi tạo mới; `200 { existing: true, id }` khi HTX đã có chiến dịch của ngày đó (không gửi Telegram lần nữa). `400 INVALID_CAMPAIGN` khi một đề xuất không còn `proposed` hoặc không thuộc HTX; `400 INVALID_RUN_ID` khi `run_id` không thuộc HTX. Danh sách `dropped` chỉ ghi vào sự kiện kiểm toán `agent.campaign.created`.
+
+### Web (quản lý và cán bộ)
+
+- **`GET /api/agent/campaigns/today`**: `{ campaign: null }` hoặc `{ campaign: { id, day, status, summaryVi, decidedByName, items: [{ position, proposalId, kind, titleVi, status, risk, goalLine }] } }`. `status` là `draft`, `approved`, `partial`, `done` hoặc `dropped`.
+- **`POST /api/agent/campaigns/[id]/decision`** với `{ "decision": "approve_all" | "drop" }`:
+  - `approve_all` chạy từng việc qua `DecideProposalUseCase` mà người duyệt có quyền; việc `high` chờ xác nhận riêng; việc của vai trò khác được chuyển cho người có quyền. Trả về `{ data: { executed, waitingHigh, forwarded, failed, alreadyDecided } }`.
+  - `drop` bỏ chiến dịch; các việc trở lại thành đề xuất thường. Trả về `{ data: { dropped: true } }`.
+  - `409 CAMPAIGN_CLOSED` khi chiến dịch không còn `draft` hoặc `partial`.
+  - Một việc được duyệt riêng từ hộp thư khi chiến dịch còn `draft` sẽ chuyển chiến dịch sang `partial`.
+
+### Telegram
+
+- Tin chiến dịch gửi cho quản lý liên kết, với nút `A` (Duyệt cả chiến dịch), `L` (Xem từng mục) và `D` (Bỏ chiến dịch). Nút `A` và `D` sửa chính tin đó thành dòng kết quả, không còn nút. Nút `L` gửi lại tin đề xuất của từng việc chưa quyết định.
+- `/chiendich` trong chat riêng gửi chiến dịch hôm nay cho quản lý hoặc cán bộ, hoặc trả lời `Hôm nay chưa có chiến dịch.`.
+- Báo cáo 18:00 (`daily`) có thêm dòng `Chiến dịch hôm nay: <việc xong>/<việc> việc xong`, tối đa ba dòng mục tiêu `• <nhãn>: <đạt>/<mục tiêu> <đơn vị>` và `Chưa xong: <k> việc`. Khi mọi việc đã quyết định, chiến dịch chuyển sang `done`.
+
 ## Telegram base (M2)
 
 Telegram is optional. It is active only when `TELEGRAM_BOT_USERNAME` and `DXOS_TELEGRAM_CALLBACK_KEY` are set on the web; without them no message is queued and the rest of the web works as before. The relay `dxos-telegram` long-polls the Bot API and calls the internal routes below through APISIX `:9081`; every decision is made here. Messages are plain text, at most 4096 characters, with no personal data (parcel codes, counts and dates only).
