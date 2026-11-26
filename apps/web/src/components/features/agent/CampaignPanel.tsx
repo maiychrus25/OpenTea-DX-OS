@@ -7,6 +7,9 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Modal, Pill, Skeleton } from '@/components/ui'
 import type { ApproveCampaignResult } from '@/application/agent/campaign/ApproveCampaignUseCase'
 import type { CampaignView } from '@/application/agent/campaign/campaign-view'
+
+/** Today's campaign as the panel shows it: the view plus the `Nhắc theo mẫu:` lines of its weekday (contract C7). */
+export type CampaignPanelCampaign = CampaignView & { reminders?: string[] }
 import { formatIsoDate, TELEGRAM_TEXT } from '@/application/telegram/messages'
 import type { CampaignStatus, } from '@/domain/agent/campaign'
 import type { ProposalStatus } from '@/domain/agent/proposal'
@@ -37,7 +40,7 @@ const ITEM_STATUS: Record<ProposalStatus, string> = {
 }
 
 export interface CampaignPanelViewProps {
-  campaign: CampaignView
+  campaign: CampaignPanelCampaign
   busy: boolean
   result: ApproveCampaignResult | null
   error: string | null
@@ -80,6 +83,10 @@ export function CampaignPanelView({ campaign, busy, result, error, onApproveAll,
         ))}
       </ol>
 
+      {(campaign.reminders ?? []).map((line) => (
+        <p key={line} className={styles.summary}>{line}</p>
+      ))}
+
       {open && (
         <div className={styles.actions}>
           <Button variant="primary" onClick={onApproveAll} isLoading={busy}>Duyệt cả chiến dịch</Button>
@@ -113,7 +120,7 @@ export function CampaignPanelView({ campaign, busy, result, error, onApproveAll,
 
 /** Loads today's campaign and decides it. Renders nothing when the cooperative has no campaign today. */
 export function CampaignPanel() {
-  const [campaign, setCampaign] = useState<CampaignView | null>(null)
+  const [campaign, setCampaign] = useState<CampaignPanelCampaign | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<ApproveCampaignResult | null>(null)
@@ -122,7 +129,7 @@ export function CampaignPanel() {
 
   const load = useCallback(async () => {
     try {
-      const json = await fetchJson<{ campaign: CampaignView | null }>('/api/agent/campaigns/today')
+      const json = await fetchJson<{ campaign: CampaignPanelCampaign | null }>('/api/agent/campaigns/today')
       setCampaign(json.campaign)
       setLoadError(null)
     } catch {

@@ -5,7 +5,9 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { campaignView } from '@/application/agent/campaign/campaign-view'
 import { vnDayOf } from '@/application/agent/campaign/vn-day'
+import { templateReminderLines, vnIsoWeekday } from '@/application/telegram/improvement-lines'
 import { PrismaCampaignRepository } from '@/infrastructure/db/agent/PrismaCampaignRepository'
+import { PrismaImprovementRepository } from '@/infrastructure/db/agent/PrismaImprovementRepository'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
@@ -23,7 +25,10 @@ async function getTodayCampaign() {
   const campaigns = new PrismaCampaignRepository()
   const campaign = await campaigns.findForDay(tenant.htxCode, vnDayOf(new Date()))
   if (!campaign) return NextResponse.json({ campaign: null })
-  return NextResponse.json({ campaign: campaignView(campaign, await campaigns.items(tenant.htxCode, campaign.id)) })
+  const templates = await new PrismaImprovementRepository().activeTemplates(tenant.htxCode, vnIsoWeekday(campaign.day))
+  const items = await campaigns.items(tenant.htxCode, campaign.id)
+  // The reminders of the campaign's weekday (contract C7) come beside the view, which keeps its shape.
+  return NextResponse.json({ campaign: { ...campaignView(campaign, items), reminders: templateReminderLines(templates) } })
 }
 
 export const GET = withErrorHandler(getTodayCampaign)
