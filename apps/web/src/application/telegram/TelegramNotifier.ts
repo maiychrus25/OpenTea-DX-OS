@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { getAction } from '@/application/agent/action-catalog'
+import { OPEN_CAMPAIGN_STATUSES } from '@/application/agent/campaign/ApproveCampaignUseCase'
 import { loadJournalSubjects } from '@/application/agent/journal-subjects'
 import type { JournalSubject } from '@/application/agent/actions/journal-labels'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
@@ -36,6 +37,9 @@ export type NotifierCampaigns = Pick<
   CampaignRepository,
   'findById' | 'items' | 'markTelegramSent' | 'findForDay' | 'writeOutcomes' | 'setStatus'
 >
+
+/** Approve-all, list and drop buttons of a campaign message (C6). */
+export type CampaignButtons = { text: string; callback_data: string }[][]
 
 export interface TelegramNotifierDeps {
   repo: TelegramRepository
@@ -130,16 +134,15 @@ export class TelegramNotifier {
     )
   }
 
-  /** The campaign message to the cooperative's managers, with the approve-all, list and drop buttons (contract C6). */
-  async enqueueCampaign(htxCode: string, campaignId: string): Promise<void> {
-    const key = telegramCallbackKey()
+  /**
+   * The campaign message (contract C6): its text, and the approve-all, list and drop buttons while the campaign is open.
+   * Null when the campaign is missing.
+   */
+  async campaignMessage(htxCode: string, campaignId: string): Promise<{ text: string; buttons?: CampaignButtons } | null> {
     const campaigns = this.campaigns
-    if (!key || !campaigns) return
+    if (!campaigns) return null
     const campaign = await campaigns.findById(htxCode, campaignId)
-    if (!campaign) return
-
-    const recipients = await this.repo.userLinkRecipients(htxCode, ['manager'])
-    if (recipients.length === 0) return
+    if (!campaign) return null
     const items = await campaigns.items(htxCode, campaignId)
     const lines = items.map((item) => ({
       title: getAction(item.kind)?.titleVi ?? item.kind,
@@ -147,17 +150,37 @@ export class TelegramNotifier {
       unitVi: campaign.goals.find((g) => g.goalKey === item.goalKey)?.unitVi ?? 'việc',
     }))
     const text = campaignText(campaign.day, campaign.summaryVi, lines)
-    const buttons = [
-      [{ text: 'Duyệt cả chiến dịch', callback_data: signCallbackData(key, campaignId, 'A') }],
-      [
-        { text: 'Xem từng mục', callback_data: signCallbackData(key, campaignId, 'L') },
-        { text: 'Bỏ chiến dịch', callback_data: signCallbackData(key, campaignId, 'D') },
+    const key = telegramCallbackKey()
+    if (!key || !OPEN_CAMPAIGN_STATUSES.includes(campaign.status)) return { text }
+    return {
+      text,
+      buttons: [
+        [{ text: 'Duyệt cả chiến dịch', callback_data: signCallbackData(key, campaignId, 'A') }],
+        [
+          { text: 'Xem từng mục', callback_data: signCallbackData(key, campaignId, 'L') },
+          { text: 'Bỏ chiến dịch', callback_data: signCallbackData(key, campaignId, 'D') },
+        ],
       ],
-    ]
+    }
+  }
+
+  /** Queues the campaign message to the cooperative's managers once A9 has stored the campaign (contract C4, C6). */
+  async enqueueCampaign(htxCode: string, campaignId: string): Promise<void> {
+    const message = await this.campaignMessage(htxCode, campaignId)
+    if (!message?.buttons) return
+    const recipients = await this.repo.userLinkRecipients(htxCode, ['manager'])
+    if (recipients.length === 0) return
     await this.repo.enqueue(
-      recipients.map((link) => ({ htxCode, chatId: link.chatId, op: 'send' as const, text, buttons, purpose: 'reply' as const }))
+      recipients.map((link) => ({
+        htxCode,
+        chatId: link.chatId,
+        op: 'send' as const,
+        text: message.text,
+        buttons: message.buttons,
+        purpose: 'reply' as const,
+      }))
     )
-    await campaigns.markTelegramSent(htxCode, campaignId)
+    await this.campaigns!.markTelegramSent(htxCode, campaignId)
   }
 
   /**

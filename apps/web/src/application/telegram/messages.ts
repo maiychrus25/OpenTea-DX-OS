@@ -74,6 +74,17 @@ export const TELEGRAM_TEXT = {
   locationNoParcel: 'Không tìm thấy thửa nào có toạ độ.',
   rateLimited: 'Bạn đã gửi 60 tin trong một giờ. Vui lòng thử lại sau.',
   executeFailed: (message: string) => `Chưa thực hiện được: ${message}`,
+  // Daily campaign (M7, contract C6).
+  campaignDone: 'Chiến dịch đã được xử lý.',
+  campaignNotFound: 'Không tìm thấy chiến dịch này.',
+  campaignNotAllowed: 'Bạn không có quyền xử lý chiến dịch này.',
+  campaignNoOpenItems: 'Không còn việc nào chờ duyệt trong chiến dịch.',
+  campaignDropped: 'Đã bỏ chiến dịch hôm nay.',
+  campaignListed: 'Đã gửi lại các việc chờ duyệt.',
+  noCampaignToday: 'Hôm nay chưa có chiến dịch.',
+  campaignApproved: (r: { executed: number; waitingHigh: number; forwarded: number; failed: number }) =>
+    `Đã duyệt chiến dịch: ${r.executed} việc đã chạy, ${r.waitingHigh} việc chờ xác nhận riêng, ${r.forwarded} việc chuyển người đủ quyền.` +
+    (r.failed > 0 ? ` ${r.failed} việc lỗi.` : ''),
 }
 
 /** Button labels of the chat cards and steps (contract C10). */

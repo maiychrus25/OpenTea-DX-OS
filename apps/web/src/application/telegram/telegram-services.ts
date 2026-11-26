@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import { ApproveCampaignUseCase } from '@/application/agent/campaign/ApproveCampaignUseCase'
+import { DropCampaignUseCase } from '@/application/agent/campaign/DropCampaignUseCase'
 import { DecideProposalUseCase } from '@/application/agent/DecideProposalUseCase'
 import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHouseholdUseCase'
 import { KeycloakLiveRoleReader } from '@/infrastructure/auth/dxos-web-roles.client'
@@ -20,7 +22,7 @@ import { CHAT_ACTIONS } from './chat/actions'
 import { CHAT_TOOLS } from './chat/tools'
 import { TelegramLinkService } from './TelegramLinkService'
 import { TelegramNotifier } from './TelegramNotifier'
-import { ChatServices, TelegramUpdateHandler } from './TelegramUpdateHandler'
+import { CampaignServices, ChatServices, TelegramUpdateHandler } from './TelegramUpdateHandler'
 import { telegramCallbackKey } from './telegram-config'
 
 export function telegramRepository(): PrismaTelegramRepository {
@@ -102,10 +104,11 @@ export function telegramUpdateHandler(): TelegramUpdateHandler {
     proposals: new PrismaProposalRepository(),
     roles: new KeycloakLiveRoleReader(),
     notifier: telegramNotifier(),
-    decide: (input) => new DecideProposalUseCase(new PrismaProposalRepository()).execute(input),
+    decide: (input) => decisionUseCase().execute(input),
     htxProfileId: async (htxCode) => (await new PrismaHtxProfileRepository().findByCode(htxCode))?.id ?? null,
     callbackKey,
     chat: chatServices(),
+    campaigns: campaignServices(),
   })
 }
 
@@ -143,5 +146,31 @@ export async function notifyCampaignCreated(htxCode: string, campaignId: string)
     await telegramNotifier().enqueueCampaign(htxCode, campaignId)
   } catch (err) {
     logger.error('Telegram: could not queue the campaign message', { campaignId, err })
+  }
+}
+
+/** The decision use case as both channels run it: a decision also moves a draft campaign that holds the item to partial (M7). */
+export function decisionUseCase(): DecideProposalUseCase {
+  return new DecideProposalUseCase(new PrismaProposalRepository(), undefined, undefined, new PrismaCampaignRepository())
+}
+
+/** Approve all, drop and the campaign reads: the same use cases for the Telegram buttons and the web inbox (M7). */
+export function campaignServices(): CampaignServices {
+  const campaigns = new PrismaCampaignRepository()
+  const proposals = new PrismaProposalRepository()
+  const notifier = telegramNotifier()
+  return {
+    repo: campaigns,
+    approve: new ApproveCampaignUseCase({
+      campaigns,
+      decide: (input) => decisionUseCase().execute(input),
+      forward: async (htxCode, proposalId) => {
+        const proposal = await proposals.findById(htxCode, proposalId)
+        if (proposal) await notifier.enqueueProposal(proposal)
+      },
+      syncDecision: (htxCode, proposalId) => notifier.syncDecision(htxCode, proposalId),
+    }),
+    drop: new DropCampaignUseCase(campaigns),
+    message: (htxCode, campaignId) => notifier.campaignMessage(htxCode, campaignId),
   }
 }
