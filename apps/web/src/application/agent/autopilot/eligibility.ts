@@ -24,8 +24,9 @@ const MINUTE_MS = 60_000
 const HOUR_MS = 60 * MINUTE_MS
 
 /** The blocking window of a kind by risk. A zero window means the next tick. */
-export function windowFor(definition: Pick<ActionDefinition, 'kind' | 'risk'>): number {
+export function windowFor(definition: Pick<ActionDefinition, 'kind' | 'risk' | 'money'>): number {
   if (definition.kind === 'strategy.adopt') return 48 * HOUR_MS
+  if (definition.money) return 2 * HOUR_MS
   if (definition.risk === 'high') return 2 * HOUR_MS
   if (definition.risk === 'medium') return 15 * MINUTE_MS
   return 0
