@@ -10,6 +10,8 @@ import 'leaflet/dist/leaflet.css'
 import { MapPin, Target, Map } from 'lucide-react'
 import { escapeHtml } from '@/lib/sanitize'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
+import table from '@/components/features/dashboard/dashboard.module.css'
+import kit from '@/components/features/dashboard/page-kit.module.css'
 
 // Dùng đúng field name từ API (polygon_geojson, không phải geometry)
 type Parcel = {
@@ -232,8 +234,22 @@ export default function FarmZoneReadOnly() {
     }
   }
 
+  // The table lists every parcel the filters allow, drawn on the map or not.
+  const listed = parcels.filter(p => (selectedStatuses.length === 0 || selectedStatuses.includes(p.status)) && (selectedCrop === 'all' || p.crop_type === selectedCrop))
+
+  function exportGeoJson() {
+    const collection = { type: 'FeatureCollection', features: filtered.map(toGeoJSONFeature) }
+    const url = URL.createObjectURL(new Blob([JSON.stringify(collection)], { type: 'application/geo+json' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'vung-trong.geojson'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-full min-h-[calc(100vh-100px)]">
+    <>
+    <div className="flex flex-col lg:flex-row gap-4 min-h-[600px]">
       {/* Left Panel: Sidebar */}
       <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col gap-4">
         
@@ -369,5 +385,33 @@ export default function FarmZoneReadOnly() {
         )}
       </div>
     </div>
+
+    {listed.length > 0 && (
+      <section className={kit.card} aria-label="Danh sách thửa" style={{ marginTop: 16 }}>
+        <div className={kit.toolbar} style={{ justifyContent: 'space-between' }}>
+          <strong>Danh sách thửa · {listed.length}</strong>
+          <button type="button" className={kit.secondary} onClick={exportGeoJson} disabled={filtered.length === 0}>Xuất GeoJSON</button>
+        </div>
+        <div className={table.tableWrap}>
+          <table className={table.table}>
+            <thead>
+              <tr><th>Mã thửa</th><th>Nông hộ</th><th>Giống</th><th>Diện tích</th><th>Trạng thái</th></tr>
+            </thead>
+            <tbody>
+              {listed.map(p => (
+                <tr key={p.id} className={kit.clickable} onClick={() => setSelectedParcel(p)}>
+                  <td className={table.code}>{p.parcel_code || p.name || '—'}</td>
+                  <td>{p.household?.name || '—'}</td>
+                  <td>{p.crop_type || '—'}</td>
+                  <td>{p.area_ha != null ? `${p.area_ha.toLocaleString('vi-VN')} ha` : '—'}</td>
+                  <td>{STATUS_CONFIG[p.status]?.label ?? p.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )}
+    </>
   )
 }
