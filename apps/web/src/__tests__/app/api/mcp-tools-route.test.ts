@@ -253,5 +253,41 @@ describe('create_proposal', () => {
     )
     expect(res.status).toBe(400)
   })
+
+  it('refuses a reason longer than 500 characters with 400', async () => {
+    const res = await create('notification.internal', internalPayload, 'x'.repeat(501))
+    expect(res.status).toBe(400)
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('answers 401 without a bearer token and creates nothing', async () => {
+    const res = await callTool(
+      request('POST', { arguments: { kind: 'notification.internal', payload: internalPayload, reason_vi: 'Nhắc' } }, null),
+      callContext('create_proposal')
+    )
+    expect(res.status).toBe(401)
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
 })
 
+describe('tool call edge cases', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockVerify.mockResolvedValue({ sub: 'user-1', azp: 'dxos-mcp', roles: ['manager'] })
+    mockRead.mockResolvedValue(LIVE_MANAGER)
+  })
+
+  it('answers 400 to a call whose body is not JSON', async () => {
+    const res = await callTool(new Request('https://dxos.test/api/mcp/tools/lots', {
+      method: 'POST',
+      headers: { authorization: 'Bearer token-a', 'content-type': 'application/json' },
+      body: '{not json',
+    }), callContext('lots'))
+    expect(res.status).toBe(400)
+  })
+
+  it('answers 404 for a tool name that does not exist', async () => {
+    const res = await callTool(request('POST', { arguments: {} }), callContext('no_such_tool'))
+    expect(res.status).toBe(404)
+  })
+})
