@@ -68,6 +68,9 @@ M7_AT=$(client_token TC)
 
 # The agent stays stopped while the proposals and the parcel are seeded (lesson 5 of M4).
 $COMPOSE stop dxos-agent >/dev/null
+# The earlier smokes leave many open TC proposals; with the 15-item cap the seeds below could fall out of the campaign
+# (M7 CI). Their own cleanups still delete those rows on exit, whatever their status.
+psql_app "update platform.agent_proposals set status = 'expired' where htx_code = 'TC' and status = 'proposed'" >/dev/null
 psql_app "delete from platform.campaigns where htx_code='TC' and day = $M7_DAY_SQL" >/dev/null
 psql_app "insert into parcels (id, parcel_code, household_id, crop_type, area_ha, updated_at) values
   ('$M7_PARCEL', 'P-TC-901', 'hh_tc_2', 'Chè Trung du', 0.5, now()) on conflict (id) do nothing" >/dev/null
@@ -98,15 +101,27 @@ M7_APPROVE_DATA="$(tg_button "$TG_OWNER" "Duyệt cả chiến dịch" 2>/dev/nu
 [ -n "$M7_APPROVE_DATA" ] || fail "the campaign message carries no 'Duyệt cả chiến dịch' button"
 pass "the campaign message to the linked manager carries the approve-all button"
 
+# Text of the newest message sent or edited to <chat> that contains <needle>: other messages (proposal syncs) can come
+# after the one a step waits for.
+tg_last_with() {  # <chat> <needle>
+  stub_calls | python3 -c '
+import json, sys
+chat, needle = int(sys.argv[1]), sys.argv[2]
+hits = [c["params"].get("text", "") for c in json.load(sys.stdin)
+        if c["method"] in ("sendMessage", "editMessageText") and c["params"].get("chat_id") == chat and needle in c["params"].get("text", "")]
+print(hits[-1] if hits else "")' "$1" "$2"
+}
+
 # Approve-all as the manager: the notice runs, the harvest waits for its own confirmation, and the message is edited.
 n=$(tg_count "$TG_OWNER" "Đã duyệt chiến dịch")
 tg_callback "$TG_OWNER" "$TG_OWNER" private "$M7_APPROVE_DATA" "cq-m7-approve-all"
 tg_expect "$TG_OWNER" "Đã duyệt chiến dịch" "$n" || fail "the approve-all result was not edited into the campaign message within 90 s"
+M7_RESULT="$(tg_last_with "$TG_OWNER" "Đã duyệt chiến dịch")"
 assert_eq "$(python3 -c '
 import re, sys
 match = re.search(r"Đã duyệt chiến dịch: (\d+) việc đã chạy, (\d+) việc chờ xác nhận riêng, (\d+) việc chuyển người đủ quyền\.", sys.argv[1])
-print("ok" if match and int(match.group(1)) >= 1 and int(match.group(2)) >= 1 else "bad")' "$(tg_last_text "$TG_OWNER")")" "ok" \
-  "test 14: the approve-all result counts the notice as run and the harvest as waiting"
+print("ok" if match and int(match.group(1)) >= 1 and int(match.group(2)) >= 1 else "bad")' "$M7_RESULT")" "ok" \
+  "test 14: the approve-all result counts the notice as run and the harvest as waiting (got: $M7_RESULT)"
 
 wait_psql "select status from platform.agent_proposals where id='$M7_NOTICE'" "executed" 45 \
   || fail "the internal notice was not executed by approve-all"
