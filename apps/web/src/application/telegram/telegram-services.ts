@@ -8,6 +8,8 @@ import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHousehold
 import { KeycloakLiveRoleReader } from '@/infrastructure/auth/dxos-web-roles.client'
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
+import { RunAutopilotTickUseCase } from '@/application/agent/autopilot/RunAutopilotTickUseCase'
+import { PrismaAutopilotRepository } from '@/infrastructure/db/agent/PrismaAutopilotRepository'
 import { PrismaCampaignRepository } from '@/infrastructure/db/agent/PrismaCampaignRepository'
 import { PrismaImprovementRepository } from '@/infrastructure/db/agent/PrismaImprovementRepository'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
@@ -36,6 +38,7 @@ export function telegramNotifier(): TelegramNotifier {
     proposals: new PrismaProposalRepository(),
     campaigns: new PrismaCampaignRepository(),
     improvements: new PrismaImprovementRepository(),
+    autopilot: new PrismaAutopilotRepository(),
   })
 }
 
@@ -181,4 +184,20 @@ export function campaignServices(): CampaignServices {
     drop: new DropCampaignUseCase(campaigns),
     message: (htxCode, campaignId) => notifier.campaignMessage(htxCode, campaignId),
   }
+}
+
+/** The once-a-minute autonomous-mode pass: the same decision use case as both channels, with the live role reader. */
+export function autopilotTickUseCase(): RunAutopilotTickUseCase {
+  const notifier = telegramNotifier()
+  return new RunAutopilotTickUseCase({
+    autopilot: new PrismaAutopilotRepository(),
+    proposals: new PrismaProposalRepository(),
+    decide: (input) => decisionUseCase().execute(input),
+    roles: new KeycloakLiveRoleReader(),
+    htxProfileId: async (htxCode) => (await new PrismaHtxProfileRepository().findByCode(htxCode))?.id ?? null,
+    notifier: {
+      stopped: (htxCode, reason, returned, dailyCap) => notifier.enqueueAutopilotStopped(htxCode, reason, returned, dailyCap),
+      decided: (htxCode, proposalId) => notifier.syncDecision(htxCode, proposalId),
+    },
+  })
 }

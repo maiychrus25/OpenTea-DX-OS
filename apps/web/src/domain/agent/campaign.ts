@@ -38,4 +38,6 @@ export interface CampaignItem {
   kind: string
   risk: Risk
   proposalStatus: ProposalStatus
+  /** M12: when the proposal will run on its own, while the mode is on. */
+  runAt?: Date | null
 }
