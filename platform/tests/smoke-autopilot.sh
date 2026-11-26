@@ -26,7 +26,7 @@ M12_NONE="00000000-0000-0000-0000-000000000000"
 # The route checks the digest of the evidence rows: for no rows it is sha256 of the canonical JSON "[]".
 M12_EMPTY_EVIDENCE="$(python3 -c 'import hashlib; print(hashlib.sha256(b"[]").hexdigest())')"
 # One subject per proposal: the 24-hour dedupe of the route judges duplicates by kind and subjects.
-M12_SUBJECTS="array['m12-notice-tc','harvest-ready.harvest_window_days','field-watch.silent_hours','field-watch.heavy_rain_mm']"
+M12_SUBJECTS="array['m12-notice-tc','harvest-ready.harvest_window_days','field-watch.heat_c','field-watch.heavy_rain_mm']"
 M12_ROWS="select id from platform.agent_proposals where htx_code='TC' and subject_ids && $M12_SUBJECTS"
 
 # Restores what this smoke changed: the mode (the row is removed, so TC is back to off), its proposals and their messages,
@@ -124,7 +124,9 @@ M12_LOOSE=$(m12_post improvement agent.settings.update '{"agent": "field-watch",
   || fail "the loosening settings change was not accepted by the internal proposals route (autopilot smoke)"
 assert_eq "$(psql_app "select (run_at is null)::text || ':' || coalesce(shadow_auto::text, 'null') from platform.agent_proposals where id='$M12_LOOSE'")" \
   "true:false" "test 31: a loosening settings change gets no run_at and is not shadow-eligible"
-M12_PENDING=$(m12_post improvement agent.settings.update '{"agent": "field-watch", "thresholds": {"silent_hours": 2}}') \
+# heat_c, a key no other smoke proposes: the improvement smoke's silent_hours proposal stays (its improvement row keeps
+# it) and would dedupe this one for 168 hours.
+M12_PENDING=$(m12_post improvement agent.settings.update '{"agent": "field-watch", "thresholds": {"heat_c": 33}}') \
   || fail "the second tightening settings change was not accepted by the internal proposals route (autopilot smoke)"
 assert_eq "$(psql_app "select (run_at is not null)::text from platform.agent_proposals where id='$M12_PENDING'")" "true" \
   "a second tightening change waits with a run_at"
