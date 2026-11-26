@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Cooperative head pages follow the new design (`apps/web`)**: journal approval gains headline figures (waiting, overdue, approved this month, to be corrected), filters, a detail view and CSV export.
 - **Officer web design (`apps/web`)**: the officer pages take the new look (path line, underlined page headers, striped tables, grouped menu), with new Products, Orders, Revenue, Tours and Tour bookings screens. These five show fixed sample content and cannot be edited; they do not read from the shop or tour mini-apps. The headline figures on each officer page can be pressed to filter or order the list below, and the dashboard figures open the list behind them.
 - **Weather in the farmer's greeting banner (`apps/web`)**: the dashboard banner shows the live temperature, humidity and rainfall over the parcels, rain falls across it when it is raining there, and it replaces the separate weather panel.
 - **Reels on the web (`apps/web`)**: farmers, officers and managers have a "Reels" page with sample clips: like, save, follow, comment, reply, share, auto-advance, playback speed, and posting a clip from the computer. There is no video service yet, so everything done there stays in the browser and is gone after a reload.
