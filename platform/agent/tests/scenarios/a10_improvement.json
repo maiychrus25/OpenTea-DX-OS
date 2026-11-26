@@ -1,0 +1,206 @@
+[
+  {
+    "name": "noise fires at 0.6 with 5 decided",
+    "inputs": {"proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 2, "rejected": 3, "expired": 0, "median_wait_hours": 3.5}]},
+    "expect": {
+      "metric_keys": ["reject_rate:field-watch:sensor_silent"],
+      "first": {"kind": "setting", "title_vi": "Nới ngưỡng Cảm biến im lặng: 6 → 8 giờ", "settings_change": {"agent": "field-watch", "thresholds": {"silent_hours": 8}, "schedule": null}}
+    }
+  },
+  {
+    "name": "noise needs 5 decided, so 4 rejections do not fire",
+    "inputs": {"proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 0, "rejected": 4, "expired": 0, "median_wait_hours": 3.5}]},
+    "expect": {"metric_keys": []}
+  },
+  {
+    "name": "noise just under 0.6 does not fire",
+    "inputs": {"proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 41, "rejected": 59, "expired": 0, "median_wait_hours": 3.5}]},
+    "expect": {"metric_keys": []}
+  },
+  {
+    "name": "disease inspection noise loosens min_reports by one",
+    "inputs": {"proposal_stats": [{"agent": "disease-watch", "kind": "disease.inspection", "window_days": 28, "approved": 1, "rejected": 5, "expired": 0, "median_wait_hours": 3.5}]},
+    "expect": {
+      "metric_keys": ["reject_rate:disease-watch:disease.inspection"],
+      "first": {"kind": "setting", "title_vi": "Nới ngưỡng Số báo cáo tối thiểu: 3 → 4 báo cáo", "settings_change": {"agent": "disease-watch", "thresholds": {"min_reports": 4}, "schedule": null}}
+    }
+  },
+  {
+    "name": "noise steps from the value the web already set",
+    "inputs": {
+      "settings": {"field-watch": {"thresholds": {"silent_hours": 10}, "schedule": null}},
+      "proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 2, "rejected": 3, "expired": 0, "median_wait_hours": 3.5}]
+    },
+    "expect": {
+      "metric_keys": ["reject_rate:field-watch:sensor_silent"],
+      "first": {"title_vi": "Nới ngưỡng Cảm biến im lặng: 10 → 12 giờ", "settings_change": {"agent": "field-watch", "thresholds": {"silent_hours": 12}, "schedule": null}}
+    }
+  },
+  {
+    "name": "silent hours step is clamped at the 48 hour bound",
+    "inputs": {
+      "settings": {"field-watch": {"thresholds": {"silent_hours": 47}, "schedule": null}},
+      "proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 2, "rejected": 3, "expired": 0, "median_wait_hours": 3.5}]
+    },
+    "expect": {
+      "metric_keys": ["reject_rate:field-watch:sensor_silent"],
+      "first": {"title_vi": "Nới ngưỡng Cảm biến im lặng: 47 → 48 giờ", "settings_change": {"agent": "field-watch", "thresholds": {"silent_hours": 48}, "schedule": null}}
+    }
+  },
+  {
+    "name": "a setting already at its bound is not proposed",
+    "inputs": {
+      "settings": {"field-watch": {"thresholds": {"silent_hours": 48}, "schedule": null}},
+      "proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 2, "rejected": 3, "expired": 0, "median_wait_hours": 3.5}]
+    },
+    "expect": {"metric_keys": []}
+  },
+  {
+    "name": "dry soil step is clamped at its lower bound of 5",
+    "inputs": {
+      "settings": {"field-watch": {"thresholds": {"dry_soil_pct": 6}, "schedule": null}},
+      "proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "dry_soil", "window_days": 28, "approved": 2, "rejected": 3, "expired": 0, "median_wait_hours": 3.5}]
+    },
+    "expect": {
+      "metric_keys": ["reject_rate:field-watch:dry_soil"],
+      "first": {"title_vi": "Nới ngưỡng Đất khô: 6 → 5%", "settings_change": {"agent": "field-watch", "thresholds": {"dry_soil_pct": 5}, "schedule": null}}
+    }
+  },
+  {
+    "name": "missing info fires at 0.4 with 10 reviewed",
+    "inputs": {"journal_review": {"window_days": 28, "reviewed": 10, "returned_missing_info": 4}},
+    "expect": {
+      "metric_keys": ["journal_missing_info_rate"],
+      "first": {"kind": "process", "title_vi": "Bắt buộc ghi liều lượng khi ghi nhật ký phun thuốc"}
+    }
+  },
+  {
+    "name": "missing info needs 10 reviewed, so 9 do not fire",
+    "inputs": {"journal_review": {"window_days": 28, "reviewed": 9, "returned_missing_info": 9}},
+    "expect": {"metric_keys": []}
+  },
+  {
+    "name": "missing info just under 0.4 does not fire",
+    "inputs": {"journal_review": {"window_days": 28, "reviewed": 10, "returned_missing_info": 3}},
+    "expect": {"metric_keys": []}
+  },
+  {
+    "name": "slow decisions fire at 24 hours with 10 decided",
+    "inputs": {"proposal_stats": [
+      {"agent": "harvest-ready", "kind": "harvest.approve", "window_days": 28, "approved": 5, "rejected": 0, "expired": 0, "median_wait_hours": 24},
+      {"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 5, "rejected": 0, "expired": 0, "median_wait_hours": 24}
+    ]},
+    "expect": {
+      "metric_keys": ["median_wait_hours"],
+      "first": {"kind": "process", "title_vi": "Đề xuất chờ duyệt quá lâu: nên giao thêm người duyệt"}
+    }
+  },
+  {
+    "name": "slow decisions just under 24 hours do not fire",
+    "inputs": {"proposal_stats": [
+      {"agent": "harvest-ready", "kind": "harvest.approve", "window_days": 28, "approved": 5, "rejected": 0, "expired": 0, "median_wait_hours": 23.5},
+      {"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 5, "rejected": 0, "expired": 0, "median_wait_hours": 23.5}
+    ]},
+    "expect": {"metric_keys": []}
+  },
+  {
+    "name": "slow decisions need 10 decided, so 9 do not fire",
+    "inputs": {"proposal_stats": [
+      {"agent": "harvest-ready", "kind": "harvest.approve", "window_days": 28, "approved": 4, "rejected": 0, "expired": 0, "median_wait_hours": 30},
+      {"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 5, "rejected": 0, "expired": 0, "median_wait_hours": 30}
+    ]},
+    "expect": {"metric_keys": []}
+  },
+  {
+    "name": "missed goal fires at 3 missed days and proposes a Monday reminder",
+    "inputs": {"campaign_goals": [{"goal_key": "harvest", "days": 14, "missed_days": 3}]},
+    "expect": {
+      "metric_keys": ["missed_days:harvest"],
+      "first": {"kind": "template", "title_vi": "Nhắc đầu tuần: Duyệt thu hoạch", "template": {"weekday": 1, "goal_key": "harvest", "title_vi": "Xem lại mục tiêu: Duyệt thu hoạch"}}
+    }
+  },
+  {
+    "name": "missed goal with 2 missed days does not fire",
+    "inputs": {"campaign_goals": [{"goal_key": "harvest", "days": 14, "missed_days": 2}]},
+    "expect": {"metric_keys": []}
+  },
+  {
+    "name": "order follows the table and the cap keeps five",
+    "inputs": {
+      "proposal_stats": [
+        {"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 1, "rejected": 6, "expired": 0, "median_wait_hours": 30},
+        {"agent": "field-watch", "kind": "notification.internal", "template": "dry_soil", "window_days": 28, "approved": 1, "rejected": 6, "expired": 0, "median_wait_hours": 30},
+        {"agent": "field-watch", "kind": "notification.internal", "template": "heat", "window_days": 28, "approved": 1, "rejected": 6, "expired": 0, "median_wait_hours": 30}
+      ],
+      "journal_review": {"window_days": 28, "reviewed": 10, "returned_missing_info": 4},
+      "campaign_goals": [
+        {"goal_key": "harvest", "days": 14, "missed_days": 3},
+        {"goal_key": "inspection", "days": 14, "missed_days": 4}
+      ]
+    },
+    "expect": {"metric_keys": [
+      "reject_rate:field-watch:sensor_silent",
+      "reject_rate:field-watch:dry_soil",
+      "reject_rate:field-watch:heat",
+      "journal_missing_info_rate",
+      "median_wait_hours"
+    ]}
+  },
+  {
+    "name": "no repeat while open or recently adopted",
+    "inputs": {
+      "proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 2, "rejected": 3, "expired": 0, "median_wait_hours": 3.5}],
+      "journal_review": {"window_days": 28, "reviewed": 10, "returned_missing_info": 4},
+      "campaign_goals": [{"goal_key": "harvest", "days": 14, "missed_days": 3}],
+      "improvements": [
+        {"id": "i1", "kind": "setting", "metric_key": "reject_rate:field-watch:sensor_silent", "status": "proposed", "baseline": 0.6, "adopted_at": null, "effect": {}},
+        {"id": "i2", "kind": "process", "metric_key": "journal_missing_info_rate", "status": "adopted", "baseline": 0.4, "adopted_at": "2026-11-20T00:00:00Z", "effect": {}},
+        {"id": "i3", "kind": "template", "metric_key": "missed_days:harvest", "status": "adopted", "baseline": 3, "adopted_at": "2026-10-01T00:00:00Z", "effect": {}}
+      ]
+    },
+    "expect": {"metric_keys": ["missed_days:harvest"]}
+  },
+  {
+    "name": "a declined improvement does not block a new one",
+    "inputs": {
+      "journal_review": {"window_days": 28, "reviewed": 10, "returned_missing_info": 4},
+      "improvements": [{"id": "d1", "kind": "process", "metric_key": "journal_missing_info_rate", "status": "declined", "baseline": 0.4, "adopted_at": null, "effect": {}}]
+    },
+    "expect": {"metric_keys": ["journal_missing_info_rate"]}
+  },
+  {
+    "name": "provider error gives the fallback rationale",
+    "primary_error": true,
+    "inputs": {"journal_review": {"window_days": 28, "reviewed": 10, "returned_missing_info": 4}},
+    "expect": {
+      "metric_keys": ["journal_missing_info_rate"],
+      "first": {"rationale_vi": "Tỉ lệ nhật ký thiếu thông tin: 40% trong 28 ngày gần đây (ngưỡng 40%). Đề xuất: Bắt buộc ghi liều lượng khi ghi nhật ký phun thuốc."}
+    }
+  },
+  {
+    "name": "fallback rationale for a setting shows the rate and the limit",
+    "primary_error": true,
+    "inputs": {"proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 1, "rejected": 6, "expired": 0, "median_wait_hours": 3.5}]},
+    "expect": {
+      "metric_keys": ["reject_rate:field-watch:sensor_silent"],
+      "first": {"rationale_vi": "Tỉ lệ từ chối cảnh báo cảm biến im lặng: 86% trong 28 ngày gần đây (ngưỡng 60%). Đề xuất: Nới ngưỡng Cảm biến im lặng: 6 → 8 giờ."}
+    }
+  },
+  {
+    "name": "the model's rationale is used when it answers",
+    "replay": {"rationale_vi": "Có 4 trên 10 nhật ký bị trả lại vì thiếu thông tin."},
+    "inputs": {"journal_review": {"window_days": 28, "reviewed": 10, "returned_missing_info": 4}},
+    "expect": {
+      "metric_keys": ["journal_missing_info_rate"],
+      "first": {"rationale_vi": "Có 4 trên 10 nhật ký bị trả lại vì thiếu thông tin."}
+    }
+  },
+  {
+    "name": "a value already beyond its bound is never tightened by the loosening step",
+    "inputs": {
+      "settings": {"field-watch": {"thresholds": {"silent_hours": 60}, "schedule": null}},
+      "proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 2, "rejected": 3, "expired": 0, "median_wait_hours": 3.5}]
+    },
+    "expect": {"metric_keys": []}
+  }
+]

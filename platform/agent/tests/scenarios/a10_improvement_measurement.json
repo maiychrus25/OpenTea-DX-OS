@@ -1,0 +1,85 @@
+[
+  {
+    "name": "helped at two weeks when the value is at least 20 percent lower",
+    "inputs": {
+      "improvements": [{"id": "i1", "kind": "setting", "metric_key": "reject_rate:field-watch:sensor_silent", "status": "adopted", "baseline": 0.5, "adopted_at": "2026-11-10T00:00:00Z", "effect": {}}],
+      "metrics": {"reject_rate:field-watch:sensor_silent": 0.4}
+    },
+    "expect": [{"id": "i1", "after": "2w", "value": 0.4, "verdict": "helped"}]
+  },
+  {
+    "name": "no effect between 20 percent lower and 20 percent higher",
+    "inputs": {
+      "improvements": [{"id": "i1", "kind": "setting", "metric_key": "reject_rate:field-watch:sensor_silent", "status": "adopted", "baseline": 0.5, "adopted_at": "2026-11-10T00:00:00Z", "effect": {}}],
+      "metrics": {"reject_rate:field-watch:sensor_silent": 0.45}
+    },
+    "expect": [{"id": "i1", "after": "2w", "value": 0.45, "verdict": "no_effect"}]
+  },
+  {
+    "name": "drop when the value is at least 20 percent higher",
+    "inputs": {
+      "improvements": [{"id": "i1", "kind": "setting", "metric_key": "reject_rate:field-watch:sensor_silent", "status": "adopted", "baseline": 0.5, "adopted_at": "2026-11-10T00:00:00Z", "effect": {}}],
+      "metrics": {"reject_rate:field-watch:sensor_silent": 0.61}
+    },
+    "expect": [{"id": "i1", "after": "2w", "value": 0.61, "verdict": "drop"}]
+  },
+  {
+    "name": "a missing metric value is not measured, even when 4 weeks have passed",
+    "inputs": {
+      "improvements": [{"id": "i1", "kind": "setting", "metric_key": "reject_rate:field-watch:sensor_silent", "status": "adopted", "baseline": 0.5, "adopted_at": "2026-11-01T00:00:00Z", "effect": {}}],
+      "metrics": {}
+    },
+    "expect": []
+  },
+  {
+    "name": "a declined improvement is ignored",
+    "inputs": {
+      "improvements": [{"id": "d1", "kind": "process", "metric_key": "journal_missing_info_rate", "status": "declined", "baseline": 0.5, "adopted_at": "2026-11-10T00:00:00Z", "effect": {}}],
+      "metrics": {"journal_missing_info_rate": 0.1}
+    },
+    "expect": []
+  },
+  {
+    "name": "a proposed improvement is not measured",
+    "inputs": {
+      "improvements": [{"id": "p1", "kind": "process", "metric_key": "journal_missing_info_rate", "status": "proposed", "baseline": 0.5, "adopted_at": null, "effect": {}}],
+      "metrics": {"journal_missing_info_rate": 0.1}
+    },
+    "expect": []
+  },
+  {
+    "name": "two weeks and then four weeks are both due in one run, in that order",
+    "inputs": {
+      "improvements": [{"id": "i1", "kind": "setting", "metric_key": "reject_rate:field-watch:sensor_silent", "status": "adopted", "baseline": 0.5, "adopted_at": "2026-11-01T00:00:00Z", "effect": {}}],
+      "metrics": {"reject_rate:field-watch:sensor_silent": 0.4}
+    },
+    "expect": [
+      {"id": "i1", "after": "2w", "value": 0.4, "verdict": "helped"},
+      {"id": "i1", "after": "4w", "value": 0.4, "verdict": "helped"}
+    ]
+  },
+  {
+    "name": "after_4w is posted only once after_2w is recorded",
+    "inputs": {
+      "improvements": [{"id": "i1", "kind": "setting", "metric_key": "reject_rate:field-watch:sensor_silent", "status": "adopted", "baseline": 0.5, "adopted_at": "2026-11-01T00:00:00Z", "effect": {"after_2w": {"value": 0.4, "verdict": "helped"}}}],
+      "metrics": {"reject_rate:field-watch:sensor_silent": 0.3}
+    },
+    "expect": [{"id": "i1", "after": "4w", "value": 0.3, "verdict": "helped"}]
+  },
+  {
+    "name": "nothing is measured before 14 days",
+    "inputs": {
+      "improvements": [{"id": "i1", "kind": "setting", "metric_key": "reject_rate:field-watch:sensor_silent", "status": "adopted", "baseline": 0.5, "adopted_at": "2026-11-20T00:00:00Z", "effect": {}}],
+      "metrics": {"reject_rate:field-watch:sensor_silent": 0.4}
+    },
+    "expect": []
+  },
+  {
+    "name": "an improvement with both effects recorded is not measured again",
+    "inputs": {
+      "improvements": [{"id": "i1", "kind": "setting", "metric_key": "reject_rate:field-watch:sensor_silent", "status": "measured", "baseline": 0.5, "adopted_at": "2026-10-01T00:00:00Z", "effect": {"after_2w": {"value": 0.4, "verdict": "helped"}, "after_4w": {"value": 0.4, "verdict": "helped"}}}],
+      "metrics": {"reject_rate:field-watch:sensor_silent": 0.4}
+    },
+    "expect": []
+  }
+]
