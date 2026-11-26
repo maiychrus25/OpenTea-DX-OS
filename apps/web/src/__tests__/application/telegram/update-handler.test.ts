@@ -57,7 +57,7 @@ interface FakeLink extends TelegramLink {
 function fakeRepo() {
   const links: FakeLink[] = []
   const codes = new Map<string, LinkCodeRecord & { expiresAt: Date; used: boolean }>()
-  const conversations = new Map<string, { proposalId: string; expiresAt: Date }>()
+  const conversations = new Map<string, { kind: 'reject_reason'; proposalId: string; expiresAt: Date }>()
   const seen = new Set<string>()
 
   const repo = {
@@ -108,7 +108,7 @@ function fakeRepo() {
       } as FakeLink)
     }),
     setConversation: jest.fn(async (c: { telegramUserId: string; proposalId: string; expiresAt: Date }) => {
-      conversations.set(c.telegramUserId, { proposalId: c.proposalId, expiresAt: c.expiresAt })
+      conversations.set(c.telegramUserId, { kind: 'reject_reason', proposalId: c.proposalId, expiresAt: c.expiresAt })
     }),
     activeConversation: jest.fn(async (telegramUserId: string, now: Date) => {
       const c = conversations.get(telegramUserId)

@@ -93,7 +93,8 @@ export class TelegramUpdateHandler {
   /** Idempotent per update_id: a repeated update returns nothing, the outbox already holds its messages. */
   async handle(update: TelegramUpdateInput): Promise<UpdateResponse> {
     const updateId = String(update.update_id)
-    if (!(await this.deps.repo.markUpdateSeen(updateId))) return EMPTY
+    const fromId = update.message?.from?.id ?? update.callback_query?.from.id
+    if (!(await this.deps.repo.markUpdateSeen(updateId, fromId === undefined ? null : String(fromId)))) return EMPTY
     try {
       if (update.callback_query) return await this.handleCallback(update.callback_query)
       if (update.message) return await this.handleMessage(update.message)
@@ -156,14 +157,14 @@ export class TelegramUpdateHandler {
 
   private async cancelRejectReason(telegramUserId: string, chatId: number): Promise<UpdateResponse> {
     const open = await this.deps.repo.activeConversation(telegramUserId, this.now())
-    if (!open) return EMPTY
+    if (open?.kind !== 'reject_reason') return EMPTY
     await this.deps.repo.deleteConversation(telegramUserId)
     return { replies: [reply(chatId, TELEGRAM_TEXT.rejectCancelled)] }
   }
 
   private async receiveRejectReason(telegramUserId: string, chatId: number, text: string): Promise<UpdateResponse> {
     const open = await this.deps.repo.activeConversation(telegramUserId, this.now())
-    if (!open) return EMPTY
+    if (open?.kind !== 'reject_reason' || !open.proposalId) return EMPTY
     if (!text || text.length > REJECT_REASON_MAX) return { replies: [reply(chatId, TELEGRAM_TEXT.rejectNoReason)] }
 
     const link = await this.deps.repo.activeUserLinkByTelegramUser(telegramUserId)

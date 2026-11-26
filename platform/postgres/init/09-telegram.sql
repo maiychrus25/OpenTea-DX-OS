@@ -65,17 +65,60 @@ CREATE INDEX IF NOT EXISTS telegram_outbox_proposal
 CREATE INDEX IF NOT EXISTS telegram_outbox_health_key
   ON platform.telegram_outbox (health_key, created_at) WHERE health_key IS NOT NULL;
 
+-- Conversations (M2 reject reason, M5 chat flows and cards). A reject reason has a proposal; a flow has none.
 CREATE TABLE IF NOT EXISTS platform.telegram_conversations (
   telegram_user_id  bigint      PRIMARY KEY,
-  kind              text        NOT NULL CHECK (kind IN ('reject_reason')),
-  proposal_id       uuid        NOT NULL REFERENCES platform.agent_proposals(id),
-  expires_at        timestamptz NOT NULL
+  kind              text        NOT NULL CHECK (kind IN ('reject_reason', 'flow')),
+  proposal_id       uuid        REFERENCES platform.agent_proposals(id),
+  expires_at        timestamptz NOT NULL,
+  flow              text,
+  step              integer,
+  state             jsonb       NOT NULL DEFAULT '{}',
+  token             text,
+  card_message_id   bigint
 );
+-- Upgrade of a database created by M2: the old table had NOT NULL proposal_id and only the reject kind.
+ALTER TABLE platform.telegram_conversations ALTER COLUMN proposal_id DROP NOT NULL;
+ALTER TABLE platform.telegram_conversations DROP CONSTRAINT IF EXISTS telegram_conversations_kind_check;
+ALTER TABLE platform.telegram_conversations ADD CONSTRAINT telegram_conversations_kind_check
+  CHECK (kind IN ('reject_reason', 'flow'));
+ALTER TABLE platform.telegram_conversations DROP CONSTRAINT IF EXISTS telegram_conversations_proposal_check;
+ALTER TABLE platform.telegram_conversations ADD CONSTRAINT telegram_conversations_proposal_check
+  CHECK ((kind = 'reject_reason') = (proposal_id IS NOT NULL));
+ALTER TABLE platform.telegram_conversations ADD COLUMN IF NOT EXISTS flow text;
+ALTER TABLE platform.telegram_conversations ADD COLUMN IF NOT EXISTS step integer;
+ALTER TABLE platform.telegram_conversations ADD COLUMN IF NOT EXISTS state jsonb NOT NULL DEFAULT '{}';
+ALTER TABLE platform.telegram_conversations ADD COLUMN IF NOT EXISTS token text;
+ALTER TABLE platform.telegram_conversations ADD COLUMN IF NOT EXISTS card_message_id bigint;
 
 CREATE TABLE IF NOT EXISTS platform.telegram_updates_seen (
-  update_id  bigint      PRIMARY KEY,
-  seen_at    timestamptz NOT NULL DEFAULT now()
+  update_id        bigint      PRIMARY KEY,
+  seen_at          timestamptz NOT NULL DEFAULT now(),
+  telegram_user_id bigint
 );
+-- Rate limit (M5): updates of one Telegram user in the last hour.
+ALTER TABLE platform.telegram_updates_seen ADD COLUMN IF NOT EXISTS telegram_user_id bigint;
+CREATE INDEX IF NOT EXISTS telegram_updates_seen_user
+  ON platform.telegram_updates_seen (telegram_user_id, seen_at);
+
+-- Assistant requests (M5): a sentence the router could not place, claimed by agent A7. The text is blanked once done.
+CREATE TABLE IF NOT EXISTS platform.assistant_requests (
+  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  htx_code          text        NOT NULL,
+  telegram_user_id  bigint      NOT NULL,
+  chat_id           bigint      NOT NULL,
+  user_id           text        NOT NULL,
+  role              text        NOT NULL CHECK (role IN ('farmer', 'officer', 'manager')),
+  text              text        NOT NULL CHECK (char_length(text) <= 1000),
+  status            text        NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'claimed', 'done', 'failed', 'expired')),
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  claimed_at        timestamptz,
+  finished_at       timestamptz,
+  run_id            uuid
+);
+CREATE INDEX IF NOT EXISTS assistant_requests_htx_status
+  ON platform.assistant_requests (htx_code, status, created_at);
 
 CREATE TABLE IF NOT EXISTS platform.service_heartbeats (
   service      text        PRIMARY KEY,
