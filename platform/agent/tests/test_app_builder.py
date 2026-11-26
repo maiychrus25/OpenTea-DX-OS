@@ -465,3 +465,14 @@ def test_a12_runs_every_cycle_in_the_agent_loop(monkeypatch):
 def test_the_agent_name_is_the_one_the_web_knows():
     assert app_builder.AGENT_NAME == "app-builder"
     assert Path(app_builder.__file__).name == "app_builder.py"
+
+
+def test_the_smoke_recording_answers_the_fertiliser_request_with_a_valid_spec():
+    replay = Path(__file__).parents[1] / "replay"
+    gateway = Gateway([request(store_apps=[], book_templates=["blank"])])
+
+    run_app_builder(gateway, NOW, [ReplayProvider(replay_dir=replay)])
+
+    assert [call[:2] for call in gateway.calls] == [("spec", "req-1")]
+    assert gateway.calls[0][2]["app_id"] == "gen-fertiliser-stock"
+    assert validate_spec(gateway.calls[0][2]) == gateway.calls[0][2]
