@@ -28,6 +28,7 @@ const saveSettingsSchema = z.object({
     assistant: agentChoiceSchema,
     improvement: agentChoiceSchema,
     'daily-campaign': agentChoiceSchema,
+    strategy: agentChoiceSchema,
   }),
   report_time: z.string().regex(REPORT_TIME_PATTERN),
   monthly_limit_usd: z.number().positive().max(1_000_000).nullable(),
