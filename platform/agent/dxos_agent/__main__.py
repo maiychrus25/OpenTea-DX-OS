@@ -11,7 +11,7 @@ import threading
 import time as time_module
 
 from . import __version__
-from .agents import app_suggestions, bulletin, daily_campaign, disease_watch, field_watch, harvest_ready, improvement
+from .agents import app_builder, app_suggestions, bulletin, daily_campaign, disease_watch, field_watch, harvest_ready, improvement
 from .agents.assistant import run_assistant_once
 from .agents.digest import DigestSchedule, run_digest
 from .agents.journal_review import (
@@ -290,6 +290,12 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
         improvement.run_improvement(gateway, now, chain)
         runtime.improvement.record(now)  # a finished or refused week is done; a raised failure is retried next cycle
 
+    def app_builder_cycle() -> None:
+        # Cheap when no request waits: one list call, and no model is asked.
+        provider, fallback = choose_providers(settings, app_builder.AGENT_NAME, runtime.providers)
+        provider, fallback = _local_unless_busy(provider), _local_unless_busy(fallback)
+        app_builder.run_app_builder(gateway, now, [provider] if fallback is None else [provider, fallback])
+
     _guarded("A2 field-watch", htx, field_watch_cycle)
     _guarded("A4 harvest-ready", htx, harvest_cycle)
     _guarded("A3 disease-watch", htx, disease_cycle)
@@ -297,6 +303,7 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
     _guarded("A9 daily-campaign", htx, campaign_cycle)
     _guarded("A5 bulletin", htx, bulletin_cycle)
     _guarded("A10 improvement", htx, improvement_cycle)
+    _guarded("A12 app-builder", htx, app_builder_cycle)
 
 
 def run_once(
