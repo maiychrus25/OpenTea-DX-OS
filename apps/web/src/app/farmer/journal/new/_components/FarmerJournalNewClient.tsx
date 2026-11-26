@@ -11,7 +11,7 @@ export function FarmerJournalNewClient() {
   const router = useRouter()
 
   return (
-    <main className={styles.container}>
+    <main className={styles.formPage}>
       <FarmerJournalForm
         onSuccess={() => router.push('/farmer/journal')}
         onCancel={() => router.push('/farmer/journal')}

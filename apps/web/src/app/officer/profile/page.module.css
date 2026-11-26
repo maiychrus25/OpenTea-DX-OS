@@ -7,3 +7,10 @@
   gap: 20px;
   width: 100%;
 }
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+  align-items: start;
+  gap: 20px;
+}

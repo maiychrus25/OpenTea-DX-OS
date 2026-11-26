@@ -103,18 +103,21 @@ export function LotList() {
         <div className={styles.grid}>
           {lots.map(lot => (
             <div key={lot.id} className={styles.card}>
-              <div className={styles.cardHeader}>
-                <span className={styles.lotCode}>{lot.lot_code}</span>
+              <div className={styles.cardHead}>
+                <span className={styles.mark} aria-hidden="true"><Package size={22} /></span>
+                <div className={styles.headText}>
+                  <span className={styles.lotCode}>{lot.lot_code}</span>
+                  <span className={styles.commodity}>{lot.commodity}</span>
+                </div>
                 <Pill tone={statusTone(lot.status)}>
                   {STATUS_LABELS[lot.status] ?? lot.status}
                 </Pill>
               </div>
-              <div className={styles.cardBody}>
-                <span>Nông sản: {lot.commodity}</span>
-                <span>Số thửa: {lot.parcel_count}</span>
-                {lot.estimated_weight_kg && <span>Khối lượng: {lot.estimated_weight_kg} kg</span>}
-                <span>Ngày tạo: {new Date(lot.created_at).toLocaleDateString('vi-VN')}</span>
-              </div>
+              <dl className={styles.facts}>
+                <div><dt>Số thửa</dt><dd>{lot.parcel_count}</dd></div>
+                {lot.estimated_weight_kg ? <div><dt>Khối lượng</dt><dd>{lot.estimated_weight_kg.toLocaleString('vi-VN')} kg</dd></div> : null}
+                <div><dt>Ngày tạo</dt><dd>{new Date(lot.created_at).toLocaleDateString('vi-VN')}</dd></div>
+              </dl>
               <div className={styles.cardActions}>
                 {lot.status !== 'qr_exported' && (
                   <button
@@ -124,7 +127,7 @@ export function LotList() {
                   >
                     {exporting === lot.id ? 'Đang xuất...' : (
                       <>
-                        <QrCode size={15} className="inline-block mr-1.5 align-text-bottom" />
+                        <QrCode size={15} aria-hidden="true" />
                         Xuất QR
                       </>
                     )}

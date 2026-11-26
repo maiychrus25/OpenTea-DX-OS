@@ -10,6 +10,7 @@ import type { AppStoreStatus, StoreAction, StoreApp, StoreCategory, StoreCreated
 import { fetchJson } from '@/lib/api/fetch-json'
 import { Store } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
 import styles from './AppStoreClient.module.css'
 import { StoreAppIcon } from './StoreAppIcon'
 import { StoreHistory } from './StoreHistory'
@@ -122,7 +123,7 @@ export function AppStoreClient({ initial }: { initial: AppStoreData }) {
 
       <div role="tabpanel" id="store-panel-apps" aria-labelledby="store-tab-apps" hidden={tab !== 'apps'}>
         {data.apps.length === 0 ? (
-          <p className={styles.empty}>Kho chưa có ứng dụng nào.</p>
+          <EmptyState icon={<Store size={24} />} title="Kho chưa có ứng dụng nào." />
         ) : (
           <>
             <div className={styles.toolbar}>

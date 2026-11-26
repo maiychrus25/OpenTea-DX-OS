@@ -132,6 +132,11 @@
 .list {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .emptyState {
@@ -145,8 +150,12 @@
 }
 
 .emptyIcon {
-  opacity: 0.3;
+  box-sizing: content-box;
+  padding: 16px;
   margin-bottom: 0.75rem;
+  border-radius: 50%;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
 }
 
 /* Notification item */
@@ -273,4 +282,8 @@
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.notifItem:last-child {
+  border-bottom: 0;
 }

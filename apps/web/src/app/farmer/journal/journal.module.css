@@ -61,9 +61,9 @@
 }
 
 .cardList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: 14px;
 }
 
 .card {
@@ -96,8 +96,11 @@
 }
 
 .cardActivity {
-  font-size: 0.875rem;
-  color: var(--muted-foreground);
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-row);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink-heading);
 }
 
 .cardDetail {
@@ -330,4 +333,15 @@
   .formActions {
     flex-direction: column;
   }
+}
+
+.formPage {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px;
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }

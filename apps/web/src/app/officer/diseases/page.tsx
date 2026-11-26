@@ -63,29 +63,35 @@ export default async function OfficerDiseasesPage() {
         <div className={styles.grid}>
           {reports.map((report) => (
             <div key={report.id} className={styles.card}>
-              <div className={styles.cardHeader}>
-                <div>
-                  <h3 className={styles.diseaseName}>{displayDiseaseName(report)}</h3>
-                  <p className={styles.meta}>Nông hộ: {report.farmer_name}</p>
-                </div>
-                <Pill tone={PENDING.tone}>{PENDING.label}</Pill>
-              </div>
-
               {report.photo_url && (
                 <div className={styles.imageWrapper}>
                   <ReportPhoto src={report.photo_url} className={styles.reportImage} />
                 </div>
               )}
 
-              <div className={styles.details}>
-                <div><strong>Thửa đất:</strong> {report.parcel_code}</div>
-                <div><strong>AI Tự tin:</strong> {(report.ai_confidence * 100).toFixed(1)}%</div>
-                <div><strong>Ngày gửi:</strong> {new Date(report.detection_date).toLocaleDateString('vi-VN')}</div>
+              <div className={styles.cardHead}>
+                <div className={styles.headText}>
+                  <h3 className={styles.diseaseName}>{displayDiseaseName(report)}</h3>
+                  <p className={styles.meta}>Nông hộ: {report.farmer_name}</p>
+                </div>
+                <Pill tone={PENDING.tone}>{PENDING.label}</Pill>
               </div>
 
-              <Link href={`/officer/diseases/${report.id}`} style={{ textDecoration: 'none' }}>
-                <Button variant="primary" style={{ width: '100%' }}>Xem chi tiết & Duyệt</Button>
-              </Link>
+              <dl className={styles.facts}>
+                <div><dt>Thửa đất</dt><dd>{report.parcel_code}</dd></div>
+                <div><dt>Ngày gửi</dt><dd>{new Date(report.detection_date).toLocaleDateString('vi-VN')}</dd></div>
+              </dl>
+
+              <div className={styles.confidence}>
+                <span className={styles.confidenceRow}>Độ tin cậy của AI <strong>{(report.ai_confidence * 100).toFixed(1)}%</strong></span>
+                <progress max={1} value={report.ai_confidence} aria-label="Độ tin cậy của AI" />
+              </div>
+
+              <div className={styles.cardActions}>
+                <Link href={`/officer/diseases/${report.id}`}>
+                  <Button variant="primary" style={{ width: '100%' }}>Xem chi tiết & Duyệt</Button>
+                </Link>
+              </div>
             </div>
           ))}
         </div>

@@ -91,9 +91,7 @@ export default async function HtxProfilePage() {
             <TelegramLinkCard role="manager" />
           </div>
 
-          <div className={styles.card}>
-            <AccountSection name={session?.user?.name || 'Trưởng HTX'} role="manager" />
-          </div>
+          <AccountSection name={session?.user?.name || 'Trưởng HTX'} role="manager" />
         </div>
       </div>
     </div>

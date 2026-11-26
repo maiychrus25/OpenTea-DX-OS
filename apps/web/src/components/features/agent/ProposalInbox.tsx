@@ -6,6 +6,8 @@
 import Link from 'next/link'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { Sparkles } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { Button, Card, Modal, Pill, Skeleton } from '@/components/ui'
 import {
   ACTIVITY_LABEL,
@@ -450,15 +452,11 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div>
-          <span className={styles.eyebrow}>TRỢ LÝ VẬN HÀNH ({role === 'manager' ? 'TRƯỞNG HTX' : 'CÁN BỘ KT'})</span>
-          <h1 className={styles.title}>Hộp duyệt đề xuất AI</h1>
-          <p className={styles.subtitle}>
-            Xem lý do, bằng chứng đối chiếu và phê duyệt các hành động do AI đề xuất cho HTX.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        icon={<Sparkles size={28} />}
+        title="Hộp duyệt đề xuất AI"
+        description="Xem lý do, bằng chứng đối chiếu và phê duyệt các hành động do AI đề xuất cho HTX."
+      />
 
       <div className={styles.toolbar}>
         <div className={styles.tabs} role="group" aria-label="Chế độ xem">
@@ -542,6 +540,7 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
         </Card>
       ) : items.length === 0 ? (
         <Card className={styles.stateCard}>
+          <Sparkles size={28} className={styles.emptyIcon} aria-hidden="true" />
           <p className={styles.emptyText}>Chưa có đề xuất nào</p>
         </Card>
       ) : visible.length === 0 ? (

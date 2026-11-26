@@ -4,11 +4,16 @@
 import { PageHeader } from '@/components/ui/PageHeader'
 import { UserRound } from 'lucide-react'
 import React from 'react'
+import { redirect } from 'next/navigation'
+import { auth } from '@/auth'
 import { AccountSection } from '@/components/ui'
 import { TelegramLinkCard } from '@/components/features/telegram/TelegramLinkCard'
 import styles from './page.module.css'
 
-export default function FarmerProfilePage() {
+export default async function FarmerProfilePage() {
+  const session = await auth()
+  if (!session) redirect('/login')
+
   return (
     <div className={styles.container}>
       <PageHeader
@@ -17,9 +22,10 @@ export default function FarmerProfilePage() {
         description="Quản lý thông tin cá nhân và cài đặt bảo mật."
       />
 
-      <TelegramLinkCard role="farmer" />
-
-      <AccountSection name="Lê Văn Bình" role="farmer" />
+      <div className={styles.columns}>
+        <AccountSection name={session.user.name || 'Nông dân'} role="farmer" />
+        <TelegramLinkCard role="farmer" />
+      </div>
     </div>
   )
 }

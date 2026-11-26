@@ -22,9 +22,10 @@ export default async function OfficerProfilePage() {
         description="Quản lý thông tin cá nhân và cài đặt bảo mật."
       />
 
-      <TelegramLinkCard role="officer" />
-
-      <AccountSection name={session.user.name || 'Cán bộ Kỹ thuật'} role="officer" />
+      <div className={styles.columns}>
+        <AccountSection name={session.user.name || 'Cán bộ Kỹ thuật'} role="officer" />
+        <TelegramLinkCard role="officer" />
+      </div>
     </div>
   )
 }

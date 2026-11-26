@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Users } from 'lucide-react'
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Phone, MapPin } from 'lucide-react'
+import { ArrowRight, Phone, MapPin } from 'lucide-react'
 import styles from '../households.module.css'
 import { fetchJson } from '@/lib/api/fetch-json'
 
@@ -123,22 +123,25 @@ export function HouseholdManager() {
       ) : (
         <div className={styles.grid}>
           {households.map(h => (
-            <div key={h.id} className={styles.card}>
-              <span className={styles.cardName}>{h.name}</span>
-              <div className={styles.cardMeta}>
-                <span className="inline-flex items-center gap-1"><Phone size={13} className="text-ink-tertiary" /> {h.phone}</span>
-                {h.address && <span className="inline-flex items-center gap-1"><MapPin size={13} className="text-ink-tertiary" /> {h.address}</span>}
+            <article key={h.id} className={styles.card}>
+              <div className={styles.cardHead}>
+                <span className={styles.mark} aria-hidden="true">{h.name.trim().split(/\s+/).slice(-2).map(word => word[0]).join('').toUpperCase()}</span>
+                <div className={styles.headText}>
+                  <span className={styles.cardName}>{h.name}</span>
+                  <div className={styles.cardMeta}>
+                    <span><Phone size={13} aria-hidden="true" /> {h.phone}</span>
+                    {h.address && <span><MapPin size={13} aria-hidden="true" /> {h.address}</span>}
+                  </div>
+                </div>
               </div>
-              <div className={styles.statRow}>
-                <span className={styles.stat}>Thửa: <span className={styles.statValue}>{h.parcel_count}</span></span>
-                <span className={styles.stat}>Diện tích: <span className={styles.statValue}>{h.total_area_ha.toFixed(2)} ha</span></span>
-              </div>
-              <div className="mt-4 pt-3 border-t border-border-subtle">
-                <Link href={`/officer/households/${h.id}`} className="text-sm font-medium text-success hover:underline flex items-center justify-center w-full">
-                  Xem chi tiết &rarr;
-                </Link>
-              </div>
-            </div>
+              <dl className={styles.facts}>
+                <div><dt>Số thửa</dt><dd>{h.parcel_count}</dd></div>
+                <div><dt>Diện tích</dt><dd>{h.total_area_ha.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha</dd></div>
+              </dl>
+              <Link href={`/officer/households/${h.id}`} className={styles.cardLink}>
+                Xem chi tiết <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            </article>
           ))}
         </div>
       )}
