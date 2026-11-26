@@ -3,6 +3,8 @@
 
 'use client'
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Package } from 'lucide-react'
 import React, { useEffect, useState, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import { QrCode } from 'lucide-react'
@@ -82,10 +84,12 @@ export function LotList() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Quản lý Lô hàng</h1>
-        <button className={styles.createBtn} onClick={() => setShowForm(true)}>+ Tạo lô mới</button>
-      </div>
+      <PageHeader
+        icon={<Package size={28} />}
+        title="Quản lý Lô hàng"
+        description="Tạo lô từ thửa đã thu hoạch và xuất mã QR truy xuất"
+        actions={<button type="button" className={styles.createBtn} onClick={() => setShowForm(true)}>+ Tạo lô mới</button>}
+      />
 
       {successMsg && <div className={styles.successBanner}>{successMsg}</div>}
 

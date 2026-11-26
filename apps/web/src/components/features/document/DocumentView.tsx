@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Folder, FileText, Download, Eye, Upload, ChevronRight, Search, Plus, Tag, Shield, FolderInput } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { Modal } from '@/components/ui/Modal/Modal'
+import { PageHeader } from '@/components/ui/PageHeader'
 import styles from './DocumentView.module.css'
 import { DocumentItem } from './mock-data'
 import { MOCK_DOCUMENTS } from './mock-data'
@@ -235,25 +236,27 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Kho tài liệu P.A.R.A</h1>
-        {!isReadOnly && (
-          <div className="flex gap-2">
-            <Button onClick={() => setIsNewFolderModalOpen(true)} variant="secondary" className="flex items-center gap-2">
-              <Plus size={18} />
+      <PageHeader
+        icon={<Folder size={28} />}
+        title="Kho tài liệu P.A.R.A"
+        description="Tài liệu của HTX theo cấu trúc Projects, Areas, Resources, Archives"
+        actions={!isReadOnly ? (
+          <>
+            <Button onClick={() => setIsNewFolderModalOpen(true)} variant="secondary">
+              <Plus size={18} aria-hidden="true" />
               Thư mục mới
             </Button>
             <Button onClick={() => {
-               setUploadError(null)
-               setUploadProgress(0)
-               setIsUploadModalOpen(true)
-            }} className="flex items-center gap-2">
-              <Upload size={18} />
+              setUploadError(null)
+              setUploadProgress(0)
+              setIsUploadModalOpen(true)
+            }}>
+              <Upload size={18} aria-hidden="true" />
               Tải tài liệu lên
             </Button>
-          </div>
-        )}
-      </div>
+          </>
+        ) : undefined}
+      />
 
       <div className={styles.content}>
         <div className={styles.sidebar}>

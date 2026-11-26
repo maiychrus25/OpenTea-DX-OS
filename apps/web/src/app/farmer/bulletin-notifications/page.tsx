@@ -3,6 +3,8 @@
 
 'use client'
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import kit from '@/components/features/dashboard/page-kit.module.css'
 import React, { useState } from 'react'
 import { NotificationInbox } from '@/components/features/notification/NotificationInbox'
 import { BulletinCard } from '@/components/features/bulletin/BulletinCard'
@@ -13,11 +15,12 @@ export default function FarmerBulletinNotificationsPage() {
   const [activeTab, setActiveTab] = useState<'bulletin' | 'notifications'>('bulletin')
 
   return (
-    <div className="max-w-[1000px] mx-auto p-6">
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground mb-2">Bản tin & Thông báo</h1>
-        <p className="text-sm text-ink-tertiary">Cập nhật thông tin thị trường và thông báo cá nhân của bạn</p>
-      </header>
+    <div className={kit.page}>
+      <PageHeader
+        icon={<Newspaper size={28} />}
+        title="Bản tin & Thông báo"
+        description="Cập nhật thông tin thị trường và thông báo cá nhân của bạn"
+      />
 
       <div className="flex flex-col">
         <div className="flex gap-4 border-b border-border-subtle mb-6">
@@ -62,7 +65,7 @@ export default function FarmerBulletinNotificationsPage() {
           )}
 
           {activeTab === 'notifications' && (
-            <div className="-m-6">
+            <div>
               <NotificationInbox role="farmer" showPageHeader={false} />
             </div>
           )}

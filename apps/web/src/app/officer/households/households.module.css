@@ -4,10 +4,9 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
 }
 
 .header {
@@ -26,15 +25,21 @@
 }
 
 .createBtn {
-  padding: 0.625rem 1.25rem;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--input-height);
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
-  font-size: 0.875rem;
-  transition: background 0.2s;
 }
 
 .createBtn:hover {
@@ -48,14 +53,14 @@
 }
 
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  transition: box-shadow 0.2s;
+  padding: 18px;
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .card:hover {

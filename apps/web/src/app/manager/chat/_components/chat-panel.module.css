@@ -4,7 +4,7 @@
 .container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 80px);
+  height: calc(100dvh - 64px - 56px); /* topbar and page padding */
   max-width: 900px;
   margin: 0 auto;
 }

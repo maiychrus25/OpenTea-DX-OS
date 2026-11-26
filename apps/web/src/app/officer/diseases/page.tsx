@@ -1,6 +1,8 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Bug } from 'lucide-react'
 import React from 'react';
 import Link from 'next/link';
 import { auth } from '@/auth';
@@ -47,9 +49,11 @@ export default async function OfficerDiseasesPage() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Danh sách Báo cáo Bệnh cần duyệt</h1>
-      </header>
+      <PageHeader
+        icon={<Bug size={28} />}
+        title="Danh sách Báo cáo Bệnh cần duyệt"
+        description="Ảnh chẩn đoán do nông hộ gửi, chờ cán bộ kỹ thuật xác nhận"
+      />
 
       {reports.length === 0 ? (
         <div className={styles.empty}>

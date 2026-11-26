@@ -3,6 +3,8 @@
 
 'use client'
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Users } from 'lucide-react'
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Phone, MapPin } from 'lucide-react'
@@ -78,12 +80,12 @@ export function HouseholdManager() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Quản lý Nông hộ</h1>
-        {!showForm && (
-          <button className={styles.createBtn} onClick={() => setShowForm(true)}>+ Thêm nông hộ</button>
-        )}
-      </div>
+      <PageHeader
+        icon={<Users size={28} />}
+        title="Quản lý Nông hộ"
+        description="Hộ thành viên, liên hệ và thửa đất đang phụ trách"
+        actions={!showForm ? <button type="button" className={styles.createBtn} onClick={() => setShowForm(true)}>+ Thêm nông hộ</button> : undefined}
+      />
 
       {showForm && (
         <form className={styles.formCard} onSubmit={handleCreate}>

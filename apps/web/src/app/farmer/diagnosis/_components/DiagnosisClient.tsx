@@ -3,9 +3,10 @@
 
 'use client'
 
+import { PageHeader } from '@/components/ui/PageHeader'
 import React, { useState } from 'react'
 import { Pill } from '@/components/ui'
-import { WifiOff, RefreshCw, AlertTriangle } from 'lucide-react'
+import { WifiOff, RefreshCw, AlertTriangle, ScanLine } from 'lucide-react'
 import styles from '../diagnosis.module.css'
 import { getDiagnosisHistory } from '../actions'
 import { DiagnosisHistoryItem } from '@/domain/disease/ports/disease-report.port'
@@ -114,8 +115,11 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Chẩn đoán bệnh tự động</h1>
-        <p className={styles.subtitle}>Tải ảnh lá bệnh lên để AI hỗ trợ nhận diện. Kết quả sẽ tự động được lưu và thông báo cho Cán bộ Kỹ thuật.</p>
+        <PageHeader
+          icon={<ScanLine size={28} />}
+          title="Chẩn đoán bệnh tự động"
+          description="Tải ảnh lá bệnh lên để AI hỗ trợ nhận diện. Kết quả sẽ tự động được lưu và thông báo cho Cán bộ Kỹ thuật."
+        />
         
         {!isOnline && (
           <div className={styles.offlineBanner}>

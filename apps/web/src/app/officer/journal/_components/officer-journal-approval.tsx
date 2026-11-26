@@ -3,6 +3,8 @@
 
 'use client'
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import { CheckSquare } from 'lucide-react'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import styles from '../journal.module.css'
@@ -132,15 +134,12 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <div>
-          <span className={styles.eyebrow}>
-            NHẬT KÝ CANH TÁC
-          </span>
-          <h1 className={styles.title}>Kiểm tra và phê duyệt nhật ký</h1>
-        </div>
-        <button className={styles.createBtn} onClick={() => setIsCreating(true)}>+ Tạo nhật ký</button>
-      </div>
+      <PageHeader
+        icon={<CheckSquare size={28} />}
+        title="Kiểm tra và phê duyệt nhật ký"
+        description="Nhật ký canh tác do nông hộ gửi lên"
+        actions={<button type="button" className={styles.createBtn} onClick={() => setIsCreating(true)}>+ Tạo nhật ký</button>}
+      />
 
       {hasWarning && (
         <div className={styles.notice}>

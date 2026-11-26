@@ -1,6 +1,8 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import { UserRound } from 'lucide-react'
 import React from 'react'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
@@ -14,10 +16,11 @@ export default async function OfficerProfilePage() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Tài khoản của tôi</h1>
-        <p className={styles.description}>Quản lý thông tin cá nhân và cài đặt bảo mật.</p>
-      </div>
+      <PageHeader
+        icon={<UserRound size={28} />}
+        title="Tài khoản của tôi"
+        description="Quản lý thông tin cá nhân và cài đặt bảo mật."
+      />
 
       <TelegramLinkCard role="officer" />
 
