@@ -415,6 +415,9 @@ Telegram là tuỳ chọn. Đặt `TELEGRAM_BOT_TOKEN` (token BotFather tạo) v
 - `dxos-telegram` chỉ là rơle: nhận tin nhắn của bot qua long polling, chuyển sang web và gửi lại phản hồi. Mọi quyết định (liên kết, kiểm tra vai trò, chữ ký nút bấm, nội dung tin) nằm ở web. Tin nhắn đi qua máy chủ của Telegram, nên không gửi dữ liệu cá nhân (tên hộ, số điện thoại, địa chỉ) vào đó.
 - Khi chưa có token hoặc chưa chạy `enable`, dxos-telegram chỉ ghi nhịp tim và chờ; web vẫn hoạt động như trước.
 - Bản phát hành bắt buộc `DXOS_TELEGRAM_CALLBACK_KEY` (khoá ký nút bấm) khác giá trị mặc định công khai.
+- Trợ lý trong chat riêng (không hoạt động trong nhóm): gửi `/menu` để mở menu theo vai trò (Hôm nay, Việc cần duyệt, Ghi nhật ký, Báo bệnh, Hỏi), hoặc nhắn câu hỏi bằng tiếng Việt. Lệnh: `/menu`, `/huy` (huỷ việc đang làm dở), `/tomtat`, `/cho`, `/nhatky`, `/benh`, `/hoi`.
+- Ghi nhật ký bằng ảnh: bấm Ghi nhật ký (hoặc `/nhatky`), chọn thửa, hoạt động, nhập thuốc, liều và số ngày cách ly, gửi một ảnh rồi bấm Xác nhận. Nhật ký vào trạng thái chờ duyệt. Không bấm Xác nhận thì không có gì được ghi.
+- Gửi vị trí trong chat riêng để xem thửa gần nhất và thời tiết tại đó. Giới hạn và hạn hiệu lực xem [docs/rules-and-limits.md](./docs/rules-and-limits.md), mục 3.11.
 
 ### Các agent của lớp AI
 
