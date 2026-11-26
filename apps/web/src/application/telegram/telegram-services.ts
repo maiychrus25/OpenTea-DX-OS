@@ -35,6 +35,7 @@ export function telegramNotifier(): TelegramNotifier {
     repo: telegramRepository(),
     proposals: new PrismaProposalRepository(),
     campaigns: new PrismaCampaignRepository(),
+    improvements: new PrismaImprovementRepository(),
   })
 }
 
