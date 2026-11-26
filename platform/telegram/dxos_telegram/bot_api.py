@@ -66,12 +66,13 @@ class BotApi:
             raise BotApiError(str(payload.get("description") or "Bot API returned ok=false"))
         return payload.get("result")
 
-    def download(self, file_path: str, timeout: float = 15.0) -> bytes:
+    def download(self, file_path: str, timeout: float = 15.0, max_bytes: Optional[int] = None) -> bytes:
         """Fetches a file that getFile named: `<api_base>/file/bot<token>/<file_path>`. Errors never show the URL."""
         req = urllib.request.Request(f"{self._file_base}/{file_path}", method="GET")
         try:
             with self._urlopen(req, timeout=timeout) as resp:
-                return resp.read()
+                # One byte over the limit tells the caller the file is too large without holding all of it.
+                return resp.read() if max_bytes is None else resp.read(max_bytes + 1)
         except urllib.error.HTTPError as exc:
             code = exc.code
             exc.close()  # CI runs the tests with -W error: an unclosed HTTP error response warns when collected

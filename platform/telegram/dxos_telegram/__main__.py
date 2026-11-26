@@ -12,6 +12,7 @@ from .bot_api import BotApi
 from .config import Config
 from .gateway import WebGateway
 from .relay import Relay
+from .stt import SttClient, SttError
 
 log = logging.getLogger("dxos_telegram")
 CREDENTIALS_FILE = "telegram.env"
@@ -26,7 +27,12 @@ def start_relay(cfg: Config) -> Optional[Relay]:
     except (OSError, ValueError):
         return None
     tokens = KeycloakTokenClient(cfg.keycloak_url, credentials)
-    relay = Relay(BotApi(cfg.api_base, cfg.bot_token), WebGateway(cfg.gateway_url, tokens.get_token), cfg.version, cfg.web_public_url)
+    try:
+        stt: Optional[SttClient] = SttClient(cfg.stt_url)
+    except SttError as exc:
+        log.error("voice messages are off: %s", exc)  # never posts audio to a public host; text chat keeps working
+        stt = None
+    relay = Relay(BotApi(cfg.api_base, cfg.bot_token), WebGateway(cfg.gateway_url, tokens.get_token), cfg.version, cfg.web_public_url, stt)
     relay.start()
     log.info("dxos-telegram relay started")
     return relay
