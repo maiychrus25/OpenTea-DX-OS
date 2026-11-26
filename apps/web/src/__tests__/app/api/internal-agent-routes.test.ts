@@ -91,6 +91,22 @@ describe('Internal agent API routes', () => {
     expect(startRunMock).toHaveBeenCalledWith(expect.objectContaining({ htxCode: 'TC', agent: 'assistant', trigger: 'message' }))
   })
 
+  test('POST /api/internal/agent/runs accepts a mini-app agent (app:<id>), as the proposals route does (M9)', async () => {
+    startRunMock.mockResolvedValueOnce({ id: RUN_UUID })
+    const run = (agent: string) =>
+      postRun(
+        new Request('http://web/api/internal/agent/runs', {
+          method: 'POST',
+          body: JSON.stringify({ agent, trigger: 'schedule', provider: 'rules' }),
+        }),
+        undefined
+      )
+    expect((await run('app:tea-shop')).status).toBe(201)
+    expect(startRunMock).toHaveBeenCalledWith(expect.objectContaining({ htxCode: 'TC', agent: 'app:tea-shop' }))
+    expect((await run('app:Tea Shop')).status).toBe(400)
+    expect((await run('tea-shop')).status).toBe(400)
+  })
+
   test('POST /api/internal/agent/runs propagates 403 when gateway header fails and 400 on bad trigger', async () => {
     ;(requireAgentCaller as jest.Mock).mockRejectedValueOnce(new ForbiddenError('INTERNAL_GATEWAY_REQUIRED'))
     const denied = await postRun(new Request('http://web/api/internal/agent/runs', { method: 'POST' }), undefined)

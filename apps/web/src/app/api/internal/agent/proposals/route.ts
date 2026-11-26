@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { CreateProposalUseCase } from '@/application/agent/CreateProposalUseCase'
-import { KNOWN_AGENTS } from '@/domain/agent/proposal'
+import { APP_AGENT_PATTERN, KNOWN_AGENTS } from '@/domain/agent/proposal'
 import { ValidationError } from '@/domain/errors'
 import { PrismaAgentRunRepository } from '@/infrastructure/db/agent/PrismaAgentRunRepository'
 import { PrismaAutopilotRepository } from '@/infrastructure/db/agent/PrismaAutopilotRepository'
@@ -19,7 +19,7 @@ const MAX_PROPOSAL_BYTES = 256 * 1024
 const createProposalSchema = z.object({
   run_id: z.string().uuid().optional().nullable(),
   // `app:<id>` is a mini-app's own suggestion loop (M9).
-  agent: z.union([z.enum(KNOWN_AGENTS), z.string().regex(/^app:[a-z0-9][a-z0-9-]{0,39}$/)]),
+  agent: z.union([z.enum(KNOWN_AGENTS), z.string().regex(APP_AGENT_PATTERN)]),
   kind: z.string().trim().min(1).max(128),
   payload: z.record(z.unknown()),
   reason_vi: z.string().trim().min(1).max(1000),

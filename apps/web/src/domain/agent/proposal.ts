@@ -12,6 +12,8 @@ export type ProposalStatus =
 
 export const KNOWN_AGENTS = ['journal-review', 'field-watch', 'disease-watch', 'harvest-ready', 'bulletin', 'assistant', 'daily-campaign', 'improvement'] as const
 export type KnownAgent = (typeof KNOWN_AGENTS)[number]
+/** A mini-app's agent name, `app:<app id>` (M9): its suggestions are posted, and its runs recorded, under this name. */
+export const APP_AGENT_PATTERN = /^app:[a-z0-9][a-z0-9-]{0,39}$/
 
 export type Risk = 'low' | 'medium' | 'high'
 export type Origin = 'agent' | 'user'
