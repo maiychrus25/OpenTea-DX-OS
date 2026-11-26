@@ -171,6 +171,8 @@ services:
       DXOS_APP_PUBLIC_LIMIT: ${DXOS_APP_PUBLIC_LIMIT:-10}
       # Signs the Telegram callback buttons (C3). The release override refuses the dev value.
       DXOS_TELEGRAM_CALLBACK_KEY: ${DXOS_TELEGRAM_CALLBACK_KEY:-dev-telegram-callback-key}
+      # Derived Mini App key (never the bot token); ./dxos telegram enable also writes it to roles.env. Empty = Mini App off.
+      DXOS_TELEGRAM_WEBAPP_KEY: ${DXOS_TELEGRAM_WEBAPP_KEY:-}
       HOSTNAME: "0.0.0.0"
     volumes:
       # Client credentials of dxos-web-roles (realm-management view-users), written by ./dxos telegram enable.
@@ -493,6 +495,8 @@ services:
       DXOS_GATEWAY_URL: http://apisix:9081
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/realms/agrimarket
       DXOS_TELEGRAM_ENV_DIR: /run/dxos-telegram
+      # The web's HTTPS base URL (D17). Empty = no Mini App menu button; chat keeps working.
+      DXOS_WEB_PUBLIC_URL: ${DXOS_WEB_PUBLIC_URL:-}
     volumes:
       - dxos-telegram-env:/run/dxos-telegram:ro
     healthcheck:

@@ -325,8 +325,17 @@ telegram_restart() {
   if [ -n "$(compose ps -q dxos-telegram 2>/dev/null)" ]; then compose restart dxos-telegram >/dev/null; fi
 }
 
+# C1: the web validates Mini App initData with HMAC_SHA256(key="WebAppData", msg=<bot token>), never with the token itself.
+# The token comes from the environment or docker/.env.local; prints nothing when there is none (Telegram stays chat-only).
+telegram_webapp_key() {
+  local token="${TELEGRAM_BOT_TOKEN:-}"
+  [ -n "$token" ] || token="$(sed -n 's/^TELEGRAM_BOT_TOKEN=//p' docker/.env.local 2>/dev/null | tail -n 1 | tr -d '\r"'"'" || true)"
+  [ -n "$token" ] || return 0
+  TG_TOKEN="$token" python3 -c 'import hashlib, hmac, os; print(hmac.new(b"WebAppData", os.environ["TG_TOKEN"].encode(), hashlib.sha256).hexdigest())'
+}
+
 telegram_enable() {
-  local secrets telegram_secret roles_secret
+  local secrets telegram_secret roles_secret webapp_key
   # One Keycloak script makes both clients; it prints the telegram client secret, then the roles client secret.
   secrets="$(kc_exec '
     set -eu
@@ -363,7 +372,9 @@ telegram_enable() {
   roles_secret="$(sed -n 2p <<<"$secrets")"
   [ -n "$telegram_secret" ] && [ -n "$roles_secret" ] || { echo "Không lấy được client secret của Telegram" >&2; exit 1; }
   printf 'DXOS_TELEGRAM_CLIENT_ID=dxos-telegram\nDXOS_TELEGRAM_CLIENT_SECRET=%s\n' "$telegram_secret" | telegram_env_write /run/dxos-telegram telegram.env
-  printf 'DXOS_ROLES_CLIENT_ID=dxos-web-roles\nDXOS_ROLES_CLIENT_SECRET=%s\n' "$roles_secret" | telegram_env_write /run/dxos-web roles.env
+  webapp_key="$(telegram_webapp_key)"
+  { printf 'DXOS_ROLES_CLIENT_ID=dxos-web-roles\nDXOS_ROLES_CLIENT_SECRET=%s\n' "$roles_secret"
+    [ -z "$webapp_key" ] || printf 'DXOS_TELEGRAM_WEBAPP_KEY=%s\n' "$webapp_key"; } | telegram_env_write /run/dxos-web roles.env
   telegram_restart
   echo "Đã bật Telegram: client dxos-telegram và dxos-web-roles (cần TELEGRAM_BOT_TOKEN trong docker/.env.local để rơle nhận tin)"
 }
