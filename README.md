@@ -432,6 +432,8 @@ Telegram là tuỳ chọn. Đặt `TELEGRAM_BOT_TOKEN` (token BotFather tạo) v
 
 **Cải tiến hằng tuần (A10).** Mỗi thứ Hai lúc 06:30 A10 xem số liệu agent và chiến dịch trong vài tuần qua, rồi đề xuất tối đa 5 cải tiến, mỗi cải tiến kèm bằng chứng. Ví dụ: nếu quản lý thường từ chối cảnh báo cảm biến im lặng, A10 đề xuất nới ngưỡng im lặng và quản lý duyệt như mọi đề nghị khác trên Telegram hoặc trang AI. Sau 2 và 4 tuần, báo cáo 07:00 cho biết cải tiến đã giúp hay chưa. Quy tắc và giới hạn: mục 3.13 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
+**Kế hoạch mùa vụ (A11).** Đầu mỗi quý lúc 06:15 A11 soạn kế hoạch quý: mục tiêu đo được lấy từ cùng kỳ năm trước (tăng 5% hoặc giảm 10%, mục nào thiếu số liệu thì bỏ), cùng tối đa 5 ưu tiên và 5 sáng kiến phát triển bằng tiếng Việt. Quản lý duyệt bằng đề xuất `strategy.adopt` trên Telegram hoặc trang AI; kế hoạch có mục tiêu thấp hơn cùng kỳ năm trước mang cảnh báo và không bao giờ tự chạy. Khi đã duyệt, chiến dịch ngày xếp việc phục vụ mục tiêu lên trước, cải tiến hằng tuần báo mục tiêu đang chậm, và báo cáo thứ Hai so với cùng kỳ năm trước. Quy tắc và giới hạn: mục 3.16 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md)
+
 Ngưỡng và quy tắc mẫu tin: mục 3.10 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
 **Giao việc nhân sự (A8).** Mỗi sáng lúc 05:50 A8 đề xuất việc cho nhân sự từ các đề xuất đã duyệt trong 24 giờ qua (hái chè, kiểm tra bệnh, tưới), kèm người nhận gợi ý. Quản lý duyệt trên Telegram hoặc trang AI; app nhân sự kéo việc về mỗi phút và báo lại mã việc. Kết nối app: `./dxos staff enable <HTX>` (bên dưới). Quy tắc và giới hạn: mục 3.15 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).

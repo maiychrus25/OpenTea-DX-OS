@@ -4,6 +4,8 @@
 import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
 import type { Proposal } from '@/domain/agent/proposal'
+import type { StrategyPlanRepository } from '@/domain/agent/ports/StrategyPlanRepository'
+import { CAMPAIGN_GOAL_OF_SEASON_GOAL, seasonOfDay } from '@/domain/agent/strategy'
 import { ensureAppActions, getAction } from '../action-catalog'
 import { campaignGoal } from './campaign-goals'
 import { vnDayStart } from './vn-day'
@@ -43,6 +45,8 @@ export interface CampaignCandidates {
   rain_parcel_codes: string[]
   withdrawal_parcel_codes: string[]
   people_available: number | null
+  /** Campaign goal keys the adopted season plan raises; A9 sorts their items first (M11). */
+  season_goal_keys: string[]
 }
 
 /** Refs a proposal names: parcel ids (harvest), journal entry ids, or parcel codes already in its payload. */
@@ -79,7 +83,8 @@ function peopleNeeded(kind: string, parcelIds: string[], harvestKg: Map<string, 
 export class CampaignCandidatesUseCase {
   constructor(
     private readonly proposals: Pick<ProposalRepository, 'list'>,
-    private readonly source: CandidateSource
+    private readonly source: CandidateSource,
+    private readonly plans?: Pick<StrategyPlanRepository, 'adoptedFor'>
   ) {}
 
   async execute(htxCode: string, day: string, now: Date = new Date()): Promise<CampaignCandidates> {
@@ -117,12 +122,16 @@ export class CampaignCandidatesUseCase {
       }
     })
 
+    const plan = this.plans ? await this.plans.adoptedFor(htxCode, seasonOfDay(day)) : null
+    const seasonGoalKeys = (plan?.goals ?? []).flatMap((goal) => CAMPAIGN_GOAL_OF_SEASON_GOAL[goal.key] ?? [])
+
     return {
       day,
       proposals,
       rain_parcel_codes: await this.source.rainParcelCodes(htxCode, now),
       withdrawal_parcel_codes: withdrawn,
       people_available: await this.source.staffPresent(htxCode, day),
+      season_goal_keys: seasonGoalKeys,
     }
   }
 }

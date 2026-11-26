@@ -11,7 +11,7 @@ export type ProposalStatus =
   | 'stale'
   | 'sent_to_staff_app'
 
-export const KNOWN_AGENTS = ['journal-review', 'field-watch', 'disease-watch', 'harvest-ready', 'bulletin', 'assistant', 'daily-campaign', 'improvement', 'staff-tasks', 'app-builder'] as const
+export const KNOWN_AGENTS = ['journal-review', 'field-watch', 'disease-watch', 'harvest-ready', 'bulletin', 'assistant', 'daily-campaign', 'improvement', 'staff-tasks', 'app-builder', 'strategy'] as const
 export type KnownAgent = (typeof KNOWN_AGENTS)[number]
 /** A mini-app's agent name, `app:<app id>` (M9): its suggestions are posted, and its runs recorded, under this name. */
 export const APP_AGENT_PATTERN = /^app:[a-z0-9][a-z0-9-]{0,39}$/

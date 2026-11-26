@@ -984,3 +984,25 @@ Theo `AGENTS.md`:
 - dùng thử bản xem trước trong Mini App, trên dữ liệu mẫu (cần tên miền HTTPS, D17);
 - nâng cấp app theo góp ý;
 - A11 đề xuất xây app mới từ kế hoạch mùa vụ.
+
+### M11: kế hoạch mùa vụ A11 (2026-11-27)
+
+**Đã làm:**
+- **A11 soạn bản nháp kế hoạch của quý.** Agent chạy ngày đầu mỗi quý lúc 06:15, và chạy ở lượt đầu tiên nếu quý hiện tại chưa có kế hoạch.
+  - Mục tiêu đặt theo luật, so với cùng kỳ năm trước: tăng 5% cho chỉ số càng cao càng tốt, giảm 10% cho chỉ số càng thấp càng tốt.
+  - LLM chỉ viết ưu tiên và việc phát triển, tối đa 5 mỗi loại. Không có LLM thì dùng ưu tiên theo luật.
+- **Các chỉ số** gồm sản lượng, nhật ký đúng hạn, tỉ lệ thửa có bệnh, và doanh thu cửa hàng (chỉ khi `tea-shop` được bật cho hợp tác xã).
+- **Áp dụng.** Quản lý áp dụng kế hoạch bằng `strategy.adopt`, và kế hoạch mới thay kế hoạch cũ của cùng quý. Khi kế hoạch đang áp dụng:
+  - A9 đặt các việc phục vụ mục tiêu lên trước;
+  - A10 báo mục tiêu đang chậm, khi chậm từ 20% sau ít nhất 4 tuần;
+  - báo cáo thứ Hai so số liệu thật với cùng kỳ năm trước.
+- **Kiểm thử 37.** Kế hoạch có mục tiêu thấp hơn cùng kỳ mang cảnh báo và không bao giờ tự chạy.
+
+**Khác với đặc tả:**
+- **`strategy.adopt` chỉ tự chạy khi đọc được cảnh báo của kế hoạch** trong dòng evidence và danh sách cảnh báo rỗng. Thiếu dòng hoặc thiếu giá trị thì luôn chờ người duyệt.
+- **Bản nháp có đề xuất đã bị từ chối, hết hạn hoặc lỗi thời** nhường chỗ cho bản nháp mới của cùng quý, và chuyển sang `superseded`.
+- **Web tự điền nhãn, đơn vị, chiều và mốc cùng kỳ của từng mục tiêu.** Agent chỉ gửi khoá và mục tiêu. Mục tiêu không có số cùng kỳ bị từ chối.
+- **Chỉ sản lượng và doanh thu tính mục tiêu theo phần quý đã qua.** Các chỉ số tỉ lệ giữ nguyên mục tiêu.
+- **Chỉ số `season_goal:<khoá>`** trong cải tiến của A10 chỉ đo được khi quý hiện tại có kế hoạch đang áp dụng.
+
+**Chưa làm:** A11 đề xuất xây mini-app mới từ việc phát triển loại `miniapp`. Việc này làm cùng M13.

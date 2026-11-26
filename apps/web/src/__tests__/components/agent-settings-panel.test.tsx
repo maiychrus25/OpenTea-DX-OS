@@ -24,6 +24,7 @@ function settingsResponse(overrides: Record<string, unknown> = {}) {
       'daily-campaign': { enabled: false, provider: 'ollama', model: null },
       improvement: { enabled: false, provider: 'ollama', model: null },
       'app-builder': { enabled: false, provider: 'ollama', model: null },
+      strategy: { enabled: false, provider: 'ollama', model: null },
     },
     report_time: '18:00',
     budget: { monthly_limit_usd: 10, spent_usd: 8.2, month: '2026-11', exhausted: false },

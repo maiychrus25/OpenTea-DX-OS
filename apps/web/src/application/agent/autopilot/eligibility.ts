@@ -80,6 +80,12 @@ export function autoEligibility(
   ) {
     return { eligible: false, reason: 'loosens_setting' }
   }
+  if (definition.kind === 'strategy.adopt') {
+    // The plan row's values carry its warnings; their hash is checked at creation and against the stored row before a
+    // run, so without them the warnings cannot be read and a person decides (test 37).
+    const warnings = proposal.evidence.rows.find((r) => r.table === 'strategy_plans')?.values?.warnings
+    if (!Array.isArray(warnings) || warnings.length > 0) return { eligible: false, reason: 'rule_warning' }
+  }
   if (definition.kind === 'journal.approve') {
     const warnings = proposal.payload.warnings
     if (Array.isArray(warnings) && warnings.length > 0) return { eligible: false, reason: 'rule_warning' }

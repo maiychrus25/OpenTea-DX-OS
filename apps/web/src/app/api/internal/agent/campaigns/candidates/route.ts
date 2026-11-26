@@ -7,6 +7,7 @@ import { vnDayOf } from '@/application/agent/campaign/vn-day'
 import { ValidationError } from '@/domain/errors'
 import { PrismaCampaignCandidateSource } from '@/infrastructure/db/agent/PrismaCampaignCandidateSource'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
+import { PrismaStrategyPlanRepository } from '@/infrastructure/db/agent/PrismaStrategyPlanRepository'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
@@ -17,10 +18,11 @@ async function getAgentCampaignCandidates(request: Request) {
   const caller = await requireAgentCaller(request)
   const day = new URL(request.url).searchParams.get('day') ?? vnDayOf(new Date())
   if (!DAY_RE.test(day)) throw new ValidationError('INVALID_DAY')
-  const candidates = await new CampaignCandidatesUseCase(new PrismaProposalRepository(), new PrismaCampaignCandidateSource()).execute(
-    caller.htxCode,
-    day
-  )
+  const candidates = await new CampaignCandidatesUseCase(
+    new PrismaProposalRepository(),
+    new PrismaCampaignCandidateSource(),
+    new PrismaStrategyPlanRepository()
+  ).execute(caller.htxCode, day)
   return NextResponse.json(candidates)
 }
 

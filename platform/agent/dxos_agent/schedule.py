@@ -84,3 +84,30 @@ class DailySchedule:
 
     def record(self, now: datetime) -> None:
         self.last_day = now.astimezone(VN_TZ).date()
+
+
+def season_key(local: datetime) -> tuple[int, int]:
+    return local.year, (local.month - 1) // 3 + 1
+
+
+@dataclass
+class SeasonSchedule:
+    """Due on the first cycle after start, then once per Vietnam quarter: from `at` on its first day, any time after that.
+
+    A quarter that was not recorded stays due, so a failed run is retried.
+    """
+
+    at: time
+    last_season: tuple[int, int] | None = None
+
+    def is_due(self, now: datetime) -> bool:
+        local = now.astimezone(VN_TZ)
+        if self.last_season is None:  # first cycle after start, at any hour: the run itself checks for an existing plan
+            return True
+        year, quarter = season_key(local)
+        if (year, quarter) == self.last_season:
+            return False
+        return local.date() > date(year, quarter * 3 - 2, 1) or local.time() >= self.at
+
+    def record(self, now: datetime) -> None:
+        self.last_season = season_key(now.astimezone(VN_TZ))

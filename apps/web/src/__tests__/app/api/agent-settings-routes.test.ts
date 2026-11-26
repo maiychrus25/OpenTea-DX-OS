@@ -57,6 +57,7 @@ const savedSettings = {
   'daily-campaign': { enabled: false, provider: 'ollama', model: null, schedule: null, thresholds: {} },
   improvement: { enabled: false, provider: 'ollama', model: null, schedule: null, thresholds: {} },
   'app-builder': { enabled: false, provider: 'ollama', model: null, schedule: null, thresholds: {} },
+  strategy: { enabled: false, provider: 'ollama', model: null, schedule: null, thresholds: {} },
 }
 
 function tenant(role: 'manager' | 'officer' | 'farmer', htxCode = 'TC') {
@@ -76,6 +77,7 @@ const validSave = {
     'daily-campaign': { provider: 'ollama', model: null },
     improvement: { provider: 'ollama', model: null },
     'app-builder': { provider: 'ollama', model: null },
+    strategy: { provider: 'ollama', model: null },
   },
   report_time: '07:30',
   monthly_limit_usd: 10,

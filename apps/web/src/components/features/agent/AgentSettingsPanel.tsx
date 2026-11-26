@@ -50,6 +50,7 @@ const AGENT_LABEL: Record<ConfigurableAgent, string> = {
   'daily-campaign': 'Chiến dịch ngày (A9)',
   improvement: 'Cải tiến hằng tuần (A10)',
   'app-builder': 'Xưởng mini-app (A12)',
+  strategy: 'Kế hoạch mùa vụ (A11)',
 }
 
 /** What leaves the server when the agent uses an external provider. */
@@ -68,6 +69,8 @@ const AGENT_SHARES: Record<ConfigurableAgent, string> = {
     'Yêu cầu app của trưởng HTX và câu trả lời của họ, tên và mô tả các app trong Kho ứng dụng. Không có dữ liệu của nông hộ.',
   improvement:
     'Số liệu tổng hợp của agent và chiến dịch (tỉ lệ duyệt, thời gian chờ, số ngày trượt mục tiêu). Không có tên hay số điện thoại của nông hộ.',
+  strategy:
+    'Số liệu tổng hợp của HTX theo quý (sản lượng, tỉ lệ nhật ký đúng hạn, tỉ lệ thửa có bệnh, doanh thu cửa hàng). Không có tên hay số điện thoại của nông hộ.',
 }
 
 const PROVIDER_LABEL: Record<AgentProvider, string> = {

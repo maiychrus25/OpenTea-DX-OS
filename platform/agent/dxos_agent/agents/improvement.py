@@ -6,7 +6,7 @@ The rules decide what is proposed. The LLM only words each rationale; any provid
 from the rule's own numbers, so a week's proposals are never held back by the model.
 """
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import json
 import logging
 from typing import Any, Mapping, Sequence
@@ -36,6 +36,14 @@ SLOW_MIN_DECIDED = 10
 MISSED_DAYS_MIN = 3
 WINDOW_DAYS = 28
 GOAL_WINDOW_DAYS = 14
+SEASON_BEHIND_DAYS = 28  # the rule waits for four weeks of the quarter (M11 C6)
+# The season plan's goals the rule may judge: key -> (label, unit, direction). The web owns the figures; the labels mirror its table.
+SEASON_GOALS = {
+    "yield_kg": ("Sản lượng", " kg", "up"),
+    "journal_on_time_rate": ("Nhật ký đúng hạn", "%", "up"),
+    "diseased_parcel_rate": ("Thửa có bệnh", "%", "down"),
+    "shop_revenue_vnd": ("Doanh thu cửa hàng", " đồng", "up"),
+}
 DISEASE_KIND = "disease.inspection"
 # field-watch template -> the threshold a rejected template loosens (C4); disease inspections loosen min_reports
 FIELD_TEMPLATE_KEYS = {
@@ -301,6 +309,38 @@ def _missed(inputs: Mapping[str, Any]) -> list[Candidate]:
     return found
 
 
+def _season_behind(inputs: Mapping[str, Any], now: datetime) -> list[Candidate]:
+    """Plan goals at least 20% behind the pro-rated target, once four weeks of the quarter have passed (C6 of M11)."""
+    today = vn_day(now)
+    if (today - date(today.year, (today.month - 1) // 3 * 3 + 1, 1)).days < SEASON_BEHIND_DAYS:
+        return []
+    found: list[Candidate] = []
+    for goal in inputs.get("season_progress") or []:
+        key = str(goal.get("key"))
+        current, expected = goal.get("current"), goal.get("pro_rated_target")
+        if key not in SEASON_GOALS or current is None or expected is None:
+            continue
+        label, unit, direction = SEASON_GOALS[key]
+        # Cross-multiplied (a 20% margin is 4/5 or 6/5) so the edge is exact in floats.
+        behind = current * 5 <= expected * 4 if direction == "up" else current * 5 >= expected * 6 and current > expected
+        if not behind:
+            continue
+        found.append(
+            Candidate(
+                kind="process",
+                metric_key=f"season_goal:{key}",
+                title_vi=f'Mục tiêu vụ "{label}" đang chậm so với kế hoạch',
+                baseline=float(current),
+                label_vi=f"Tiến độ mục tiêu vụ {label}",
+                value_text=f"{current}{unit}",
+                limit_text=f"{expected}{unit}",
+                window_days=SEASON_BEHIND_DAYS,
+                evidence={"rule": "season_goal_behind", "goal_key": key, "current": current, "pro_rated_target": expected, "window_days": SEASON_BEHIND_DAYS},
+            )
+        )
+    return found
+
+
 def _blocked_metric_keys(inputs: Mapping[str, Any], now: datetime) -> set[str]:
     """A metric with an open improvement, or one adopted within REPEAT_DAYS, gets no new proposal."""
     blocked: set[str] = set()
@@ -313,9 +353,9 @@ def _blocked_metric_keys(inputs: Mapping[str, Any], now: datetime) -> set[str]:
 
 
 def plan_proposals(inputs: Mapping[str, Any], now: datetime) -> list[Candidate]:
-    """The C4 rules in table order (noise, missing info, slow decisions, missed goal), capped at MAX_PROPOSALS."""
+    """The C4 rules in table order (noise, missing info, slow decisions, missed goal, season goal behind), capped at MAX_PROPOSALS."""
     blocked = _blocked_metric_keys(inputs, now)
-    candidates = _noise(inputs) + _missing_info(inputs) + _slow(inputs) + _missed(inputs)
+    candidates = _noise(inputs) + _missing_info(inputs) + _slow(inputs) + _missed(inputs) + _season_behind(inputs, now)
     return [candidate for candidate in candidates if candidate.metric_key not in blocked][:MAX_PROPOSALS]
 
 

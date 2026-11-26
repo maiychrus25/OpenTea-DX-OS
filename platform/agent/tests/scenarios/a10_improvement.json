@@ -221,5 +221,30 @@
       "proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 2, "rejected": 3, "expired": 0, "median_wait_hours": 3.5}]
     },
     "expect": {"metric_keys": []}
+  },
+  {
+    "name": "season goal behind by 20% fires for an up goal",
+    "inputs": {"season_progress": [{"key": "yield_kg", "target": 1000, "baseline": 900, "current": 480, "pro_rated_target": 600}]},
+    "expect": {"metric_keys": ["season_goal:yield_kg"], "first": {"kind": "process", "title_vi": "Mục tiêu vụ \"Sản lượng\" đang chậm so với kế hoạch", "baseline": 480}}
+  },
+  {
+    "name": "season goal behind by less than 20% does not fire",
+    "inputs": {"season_progress": [{"key": "yield_kg", "target": 1000, "baseline": 900, "current": 481, "pro_rated_target": 600}]},
+    "expect": {"metric_keys": []}
+  },
+  {
+    "name": "season goal behind for a down goal fires at 20% above the pro-rated target",
+    "inputs": {"season_progress": [{"key": "diseased_parcel_rate", "target": 1000, "baseline": 900, "current": 12, "pro_rated_target": 10}]},
+    "expect": {"metric_keys": ["season_goal:diseased_parcel_rate"], "first": {"kind": "process", "title_vi": "Mục tiêu vụ \"Thửa có bệnh\" đang chậm so với kế hoạch"}}
+  },
+  {
+    "name": "season goal below 20% above the pro-rated target does not fire for a down goal",
+    "inputs": {"season_progress": [{"key": "diseased_parcel_rate", "target": 1000, "baseline": 900, "current": 11, "pro_rated_target": 10}]},
+    "expect": {"metric_keys": []}
+  },
+  {
+    "name": "season goal without a current figure or of an unknown key is skipped",
+    "inputs": {"season_progress": [{"key": "yield_kg", "target": 1000, "baseline": 900, "current": null, "pro_rated_target": 600}, {"key": "moon_kg", "target": 1000, "baseline": 900, "current": 1, "pro_rated_target": 100}]},
+    "expect": {"metric_keys": []}
   }
 ]

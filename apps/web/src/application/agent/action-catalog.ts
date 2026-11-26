@@ -18,6 +18,7 @@ import { appSpecApproveAction } from './actions/app-spec-approve.action'
 import { miniappInstallAction } from './actions/miniapp-install.action'
 import { miniappRemoveAction } from './actions/miniapp-remove.action'
 import { appActionCatalog } from './app-actions/default-app-actions'
+import { strategyAdoptAction } from './actions/strategy-adopt.action'
 import type { EvidenceLoaders } from './actions/journal-evidence'
 import type { JournalSubject } from './actions/journal-labels'
 
@@ -70,6 +71,7 @@ export const ACTION_CATALOG: Readonly<Record<string, ActionDefinition<any>>> = O
   'app.spec.approve': appSpecApproveAction,
   'miniapp.install': miniappInstallAction,
   'miniapp.remove': miniappRemoveAction,
+  'strategy.adopt': strategyAdoptAction,
 })
 
 /**

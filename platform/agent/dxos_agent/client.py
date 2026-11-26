@@ -306,6 +306,17 @@ class CoreGatewayClient:
         """GET an app's suggestions path through the gateway with this cooperative's agent token (contract C2)."""
         return list(self._request_json("GET", f"/apps/{app_id}{path}").get("suggestions") or [])
 
+    def get_strategy_inputs(self, season: str) -> dict[str, Any]:
+        """The figures A11 reads for one quarter (contract C3 of M11); the `data` object of the answer."""
+        res = self._request_json("GET", "/api/internal/agent/strategy/inputs?" + urllib.parse.urlencode({"season": season}))
+        return dict(res.get("data") or {})
+
+    def post_strategy_plan(self, plan: Mapping[str, Any]) -> dict[str, Any]:
+        """Post the season's draft plan (contract C3 of M11); `{id, proposal_id}`, or `{existing: true}` when a draft exists."""
+        res = self._request_json("POST", "/api/internal/agent/strategy/plans", plan)
+        data = res.get("data")
+        return dict(data if isinstance(data, Mapping) else res)  # the contract does not say whether the answer is wrapped
+
     def post_autopilot_tick(self) -> dict[str, Any]:
         """Run this cooperative's due autonomous-mode proposals (contract C3); `{ran, failed, returned, stopped}`."""
         res = self._request_json("POST", "/api/internal/agent/autopilot/tick", {})
