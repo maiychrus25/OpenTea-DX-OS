@@ -56,6 +56,9 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
     fetcher
   )
 
+  const todayKey = new Date().toDateString()
+  const todayEvents = (data?.data ?? []).filter(ev => ev.estimatedHarvestDate && new Date(ev.estimatedHarvestDate).toDateString() === todayKey)
+
   const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
   const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
 
@@ -127,8 +130,8 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
         ) : undefined}
       />
 
-      <div className={isFarmer ? farmer.cols : undefined}>
-      <div className={`${styles.calendarContainer} ${isFarmer ? styles.beside : ''}`}>
+      <div className={isFarmer || isManager ? farmer.cols : undefined}>
+      <div className={`${styles.calendarContainer} ${isFarmer || isManager ? styles.beside : ''}`}>
       {!isFarmer && <div className={styles.header}>
         <h2 className={styles.title}>
           Tháng {currentDate.getMonth() + 1} / {currentDate.getFullYear()}
@@ -188,6 +191,44 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
       </div>
       </div>
       {isFarmer && <FarmerScheduleAside />}
+      {isManager && (
+        <div className={farmer.stack} style={{ flex: '1 1 280px' }}>
+          <section className={farmer.pn} aria-label="Chưa xếp lịch">
+            <div className={farmer.ph}>
+              <h2>Chưa xếp lịch</h2>
+              <span className={`${farmer.tag} ${farmer.wt}`}>{unscheduledData?.data?.length ?? 0} thửa</span>
+            </div>
+            {!unscheduledData?.data?.length ? (
+              <p className={farmer.muted} style={{ margin: 0, padding: 18, fontSize: 13.5 }}>Thửa nào cũng đã có lịch.</p>
+            ) : (
+              <ul className={farmer.list}>
+                {unscheduledData.data.map(cycle => (
+                  <li key={cycle.cycleId} className={farmer.row}>
+                    <span className={farmer.grow}>
+                      <strong>{cycle.parcelName} · {cycle.householdName}</strong>
+                      <br />
+                      <span className={farmer.muted}>{cycle.cropType}</span>
+                    </span>
+                    <button type="button" className={farmer.btn2} aria-label={`Xếp lịch cho ${cycle.parcelName}`} onClick={() => { setSelectedUnscheduledCycleId(cycle.cycleId); setIsAddModalOpen(true) }}>
+                      Xếp lịch
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          <section className={farmer.pn} aria-label="Lịch trong ngày">
+            <div className={farmer.ph}><h2>Lịch trong ngày</h2></div>
+            {todayEvents.length === 0 ? (
+              <p className={farmer.muted} style={{ margin: 0, padding: 18, fontSize: 13.5 }}>Hôm nay chưa có lịch thu hái.</p>
+            ) : (
+              <ul className={farmer.list}>
+                {todayEvents.map(ev => <li key={ev.cycleId} className={farmer.row}><strong>{ev.parcelName}</strong> <span className={farmer.muted}>{ev.householdName} · {ev.cropType}</span></li>)}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
       </div>
 
       {/* Edit Modal */}
