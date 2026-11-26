@@ -314,6 +314,8 @@ def run_once(
         _guarded("A1 journal-review", creds.htx_code, lambda: _journal_review_cycle(runtime, now, settings))
         # The M4 agents come after A1: the bulletin's LLM call can take minutes and must not delay the journal review.
         _run_m4_agents(runtime, now, settings)
+        # Cheap when the mode is off; the web re-checks every condition, so a failed tick only delays the run.
+        _guarded("autopilot tick", creds.htx_code, runtime.gateway.post_autopilot_tick)
 
 
 def _journal_review_cycle(runtime: _CooperativeRuntime, now: datetime, settings: AgentSettings) -> None:
