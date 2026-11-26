@@ -23,9 +23,9 @@ export const ORDERS = [
 ]
 
 export const TOURS = [
-  { code: 'TB-0230', name: 'Thưởng trà trên đồi', date: '27/11/2026', booked: 2, seats: 25, adult: 290000, child: 190000 },
-  { code: 'TB-0231', name: 'Trải nghiệm hái chè Tân Cương', date: '28/11/2026', booked: 4, seats: 20, adult: 450000, child: 300000 },
-  { code: 'TB-0229', name: 'Một ngày làm người nông dân chè', date: '30/11/2026', booked: 5, seats: 15, adult: 380000, child: 250000 },
+  { code: 'TB-0230', name: 'Thưởng trà trên đồi', image: '/images/officer/tour-tea-on-the-hill.jpg', date: '27/11/2026', booked: 2, seats: 25, adult: 290000, child: 190000 },
+  { code: 'TB-0231', name: 'Trải nghiệm hái chè Tân Cương', image: '/images/officer/tour-picking.jpg', date: '28/11/2026', booked: 4, seats: 20, adult: 450000, child: 300000 },
+  { code: 'TB-0229', name: 'Một ngày làm người nông dân chè', image: '/images/officer/tour-farmer-day.jpg', date: '30/11/2026', booked: 5, seats: 15, adult: 380000, child: 250000 },
 ]
 
 export const BOOKINGS = [
@@ -42,6 +42,9 @@ export const REVENUE = [
   { date: '24/11/2026', source: 'Gian hàng', code: 'DH-0140', total: 185000 },
   { date: '22/11/2026', source: 'Gian hàng', code: 'DH-0138', total: 560000 },
 ]
+
+/** The picture that stands for a tour wherever it is listed. */
+export const tourImage = (name: string) => TOURS.find((t) => t.name === name)?.image
 
 export const money = (value: number) => `${value.toLocaleString('vi-VN')} ₫`
 export const sum = <T,>(list: T[], of: (item: T) => number) => list.reduce((total, item) => total + of(item), 0)

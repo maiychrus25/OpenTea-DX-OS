@@ -2,11 +2,13 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
+/* eslint-disable @next/next/no-img-element -- small photos shipped with the page */
+
 import React from 'react'
 import { CalendarCheck, Wallet } from 'lucide-react'
 import { FilteredTable } from '@/components/features/officer-web/FilteredTable'
 import { Header } from '@/components/features/officer-web/parts'
-import { BOOKINGS, money, sum } from '@/components/features/officer-web/sample'
+import { BOOKINGS, money, sum, tourImage } from '@/components/features/officer-web/sample'
 import styles from '@/components/features/officer-web/kit.module.css'
 
 export const metadata = { title: 'Lượt đặt tour' }
@@ -33,7 +35,7 @@ export default function OfficerBookingsPage() {
           cells: [
             <span key="code" className={styles.mono}>{b.code}</span>,
             b.guest,
-            b.tour,
+            <span key="tour" className={styles.tourName}><img src={tourImage(b.tour)} alt="" />{b.tour}</span>,
             b.date,
             b.people,
             money(b.total),

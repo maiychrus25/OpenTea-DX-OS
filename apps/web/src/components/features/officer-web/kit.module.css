@@ -78,3 +78,7 @@
 .hit { position: absolute; inset: 0; width: 100%; border: 0; background: transparent; cursor: pointer; }
 .hit:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -4px; }
 .none { margin: 0; padding: 28px; text-align: center; color: var(--color-ink-secondary); }
+
+/* A tour is told apart by its picture as much as by its name. */
+.tourName { display: flex; align-items: center; gap: 12px; font-weight: 700; }
+.tourName img { width: 96px; height: 64px; flex: none; border-radius: 8px; object-fit: cover; }

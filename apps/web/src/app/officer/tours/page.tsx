@@ -2,6 +2,8 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
+/* eslint-disable @next/next/no-img-element -- small photos shipped with the page */
+
 import React from 'react'
 import { Map, Users, CalendarDays } from 'lucide-react'
 import { FilteredTable } from '@/components/features/officer-web/FilteredTable'
@@ -31,7 +33,7 @@ export default function OfficerToursPage() {
           rank: { booked: t.booked },
           cells: [
             <span key="code" className={styles.mono}>{t.code}</span>,
-            <strong key="name">{t.name}</strong>,
+            <span key="name" className={styles.tourName}><img src={t.image} alt="" />{t.name}</span>,
             t.date,
             <span key="fill" className={styles.fill}>
               <progress value={t.booked} max={t.seats} aria-label={`Đã đặt ${t.booked} trên ${t.seats} chỗ`} />
