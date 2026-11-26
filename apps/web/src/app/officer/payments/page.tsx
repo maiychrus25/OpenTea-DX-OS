@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react'
-import { Landmark } from 'lucide-react'
+import { Landmark, Store, Map } from 'lucide-react'
 import { FilteredTable } from '@/components/features/officer-web/FilteredTable'
 import { Header, Stats } from '@/components/features/officer-web/parts'
 import { REVENUE, money, sum } from '@/components/features/officer-web/sample'
@@ -27,9 +27,9 @@ export default function OfficerPaymentsPage() {
     <div className={styles.page}>
       <Header icon={<Landmark size={24} />} title="Doanh thu" description="Tổng hợp doanh thu từ gian hàng sản phẩm và tour của HTX." />
       <Stats items={[
-        { label: 'Tổng doanh thu', value: money(total) },
-        { label: `Gian hàng · ${share(of('Gian hàng'))}`, value: money(of('Gian hàng')) },
-        { label: `Tour · ${share(of('Tour'))}`, value: money(of('Tour')) },
+        { label: 'Tổng doanh thu', value: money(total), icon: <Landmark /> },
+        { label: `Gian hàng · ${share(of('Gian hàng'))}`, value: money(of('Gian hàng')), icon: <Store /> },
+        { label: `Tour · ${share(of('Tour'))}`, value: money(of('Tour')), icon: <Map /> },
       ]} />
       <section className={styles.pn} style={{ flex: 'none' }}>
         <h2 className={styles.ph}>Doanh thu theo ngày (nghìn đồng)</h2>

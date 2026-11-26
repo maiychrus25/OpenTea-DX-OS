@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react'
-import { Map } from 'lucide-react'
+import { Map, Users, CalendarDays } from 'lucide-react'
 import { Header, Stats } from '@/components/features/officer-web/parts'
 import { TOURS, money, sum } from '@/components/features/officer-web/sample'
 import styles from '@/components/features/officer-web/kit.module.css'
@@ -15,9 +15,9 @@ export default function OfficerToursPage() {
     <div className={styles.page}>
       <Header icon={<Map size={24} />} title="Tour của HTX" description="Các tour đã có khách đặt. Tour đủ điều kiện mới được đăng và mở đặt, nên không có bước duyệt." />
       <Stats items={[
-        { label: 'Đoàn sắp khởi hành', value: TOURS.length },
-        { label: 'Khách đã đặt', value: sum(TOURS, (t) => t.booked) },
-        { label: 'Gần nhất', value: TOURS[0].date },
+        { label: 'Đoàn sắp khởi hành', value: TOURS.length, icon: <Map /> },
+        { label: 'Khách đã đặt', value: sum(TOURS, (t) => t.booked), icon: <Users /> },
+        { label: 'Gần nhất', value: TOURS[0].date, icon: <CalendarDays /> },
       ]} />
       <div className={styles.tableBox}>
         <table className={styles.table}>

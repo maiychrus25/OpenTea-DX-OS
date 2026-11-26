@@ -19,7 +19,7 @@ export default function OfficerOrdersPage() {
   return (
     <div className={styles.page}>
       <Header icon={<Package size={24} />} title="Đơn hàng" description={`${count('Chờ xác nhận')} đơn chờ xác nhận`} />
-      <Stats items={statuses.map((status) => ({ label: status, value: count(status) }))} />
+      <Stats items={statuses.map((status) => ({ label: status, value: count(status), icon: <Package /> }))} />
       <FilteredTable
         filters={statuses}
         columns={['Mã đơn', 'Người nhận', 'Điện thoại', 'Tổng tiền', 'Trạng thái', 'Thao tác']}

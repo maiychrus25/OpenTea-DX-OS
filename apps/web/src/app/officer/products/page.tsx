@@ -4,7 +4,7 @@
 /* eslint-disable @next/next/no-img-element -- small drawings shipped with the page */
 
 import React from 'react'
-import { Store } from 'lucide-react'
+import { Store, PackageX, Boxes } from 'lucide-react'
 import { Header, Stats } from '@/components/features/officer-web/parts'
 import { PRODUCTS, money, sum } from '@/components/features/officer-web/sample'
 import styles from '@/components/features/officer-web/kit.module.css'
@@ -17,9 +17,9 @@ export default function OfficerProductsPage() {
     <div className={styles.page}>
       <Header icon={<Store size={24} />} title="Sản phẩm" description="Gian hàng của HTX. Chỉnh sửa sản phẩm sẽ làm cùng API ở mốc M2; hiện chỉ xem." />
       <Stats items={[
-        { label: 'Sản phẩm', value: PRODUCTS.length },
-        { label: 'Hết hàng', value: PRODUCTS.filter((p) => p.stock === 0).length },
-        { label: 'Tổng tồn kho', value: sum(PRODUCTS, (p) => p.stock) },
+        { label: 'Sản phẩm', value: PRODUCTS.length, icon: <Store /> },
+        { label: 'Hết hàng', value: PRODUCTS.filter((p) => p.stock === 0).length, icon: <PackageX /> },
+        { label: 'Tổng tồn kho', value: sum(PRODUCTS, (p) => p.stock), icon: <Boxes /> },
       ]} />
       <div className={styles.tableBox}>
         <table className={styles.table}>
