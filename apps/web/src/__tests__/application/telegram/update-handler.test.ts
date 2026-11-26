@@ -242,6 +242,15 @@ describe('TelegramUpdateHandler', () => {
     expect(notifier.syncDecision).toHaveBeenCalledWith('TC', PROPOSAL_ID)
   })
 
+  test('approving a staff task answers that it was sent to the staff app, not that it ran', async () => {
+    const { handler, repo } = build({ outcome: { outcome: 'executed', result: { state: 'waiting_for_staff_app' } } })
+    await linkManager(handler, repo)
+
+    const res = await handler.handle(callback(approveData))
+
+    expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.sentToStaffApp, show_alert: false })
+  })
+
   test('a repeated update_id does nothing the second time', async () => {
     const { handler, repo, decide } = build()
     await linkManager(handler, repo)
