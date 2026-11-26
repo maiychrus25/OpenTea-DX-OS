@@ -55,6 +55,7 @@ const RISK_LABEL: Record<Risk, string> = {
 const STATUS_LABEL: Record<ProposalStatus, { label: string; tone: 'green' | 'amber' | 'blue' | 'neutral' | 'danger' }> = {
   proposed: { label: 'Chờ duyệt', tone: 'amber' },
   approved: { label: 'Đã duyệt', tone: 'blue' },
+  sent_to_staff_app: { label: 'Đã gửi app nhân sự', tone: 'blue' },
   executed: { label: 'Đã thực hiện', tone: 'green' },
   failed: { label: 'Thực thi lỗi', tone: 'danger' },
   rejected: { label: 'Đã từ chối', tone: 'neutral' },
@@ -70,12 +71,22 @@ const KIND_LABEL: Record<string, string> = {
   'disease.inspection': 'Đề nghị kiểm tra dịch bệnh',
   'harvest.approve': 'Duyệt thu hoạch',
   'bulletin.publish': 'Đăng bản tin thị trường',
+  'staff.task.create': 'Giao việc cho nhân sự',
 }
 
 const FIELD_LABEL: Record<string, string> = {
   reason_vi: 'Nội dung lý do gửi nông hộ',
   note_vi: 'Lời nhắn thêm cho nông hộ',
   bulletin_vi: 'Nội dung bản tin',
+}
+
+/** Labels that differ for one kind: `note_vi` is a note to households elsewhere and to staff here. */
+const KIND_FIELD_LABEL: Record<string, Record<string, string>> = {
+  'staff.task.create': {
+    assignee_ref: 'Mã nhân sự được giao',
+    due_date: 'Hạn làm (YYYY-MM-DD)',
+    note_vi: 'Ghi chú cho nhân sự',
+  },
 }
 
 const PARCEL_STATUS_LABEL: Record<string, string> = {
@@ -411,14 +422,16 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
   const submitEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editTarget) return
+    // An empty field keeps the proposal's value (the server merges the edit over the payload and checks the schema),
+    // so optional fields such as a staff task's note can stay empty.
     const edited: Record<string, string> = {}
     for (const field of editTarget.editableFields) {
       const value = (editValues[field] ?? '').trim()
-      if (!value) {
-        setEditError('Vui lòng điền đầy đủ các trường')
-        return
-      }
-      edited[field] = value
+      if (value) edited[field] = value
+    }
+    if (Object.keys(edited).length === 0) {
+      setEditError('Vui lòng điền ít nhất một trường')
+      return
     }
     setEditError(null)
     const error = await approve(editTarget, edited)
@@ -702,7 +715,7 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
           {editTarget?.editableFields.map((field) => (
             <div key={field} className={styles.fieldGroup}>
               <label htmlFor={`proposal-edit-${field}`} className={styles.modalLabel}>
-                {FIELD_LABEL[field] ?? field}
+                {KIND_FIELD_LABEL[editTarget.kind]?.[field] ?? FIELD_LABEL[field] ?? field}
               </label>
               <textarea
                 id={`proposal-edit-${field}`}

@@ -60,6 +60,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.Property(x => x.Title).HasMaxLength(200).IsRequired();
             e.HasOne(x => x.Assignee).WithMany().HasForeignKey(x => x.AssigneeId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.HtxCode, x.AssigneeId, x.Status });
+            e.Property(x => x.ExternalRef).HasMaxLength(64);
+            e.HasIndex(x => x.ExternalRef).IsUnique();
             e.Ignore(x => x.IsOpen);
             e.HasQueryFilter(x => x.HtxCode == Htx);
         });

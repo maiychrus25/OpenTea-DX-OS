@@ -71,6 +71,9 @@ public class WorkTask : TenantEntity
     public string AssignedBy { get; set; } = string.Empty;
     public DateTime? CompletedAt { get; set; }
 
+    /// <summary>Id of the DX-OS proposal this task came from (set only for tasks pulled from the core; unique).</summary>
+    public string? ExternalRef { get; set; }
+
     public bool IsOpen => Status is WorkTaskStatus.Assigned or WorkTaskStatus.Accepted or WorkTaskStatus.InProgress;
     public bool IsOverdue(DateTime now) => IsOpen && DueDate < now;
 }

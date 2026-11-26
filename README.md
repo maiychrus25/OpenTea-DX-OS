@@ -434,6 +434,8 @@ Telegram là tuỳ chọn. Đặt `TELEGRAM_BOT_TOKEN` (token BotFather tạo) v
 
 Ngưỡng và quy tắc mẫu tin: mục 3.10 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
+**Giao việc nhân sự (A8).** Mỗi sáng lúc 05:50 A8 đề xuất việc cho nhân sự từ các đề xuất đã duyệt trong 24 giờ qua (hái chè, kiểm tra bệnh, tưới), kèm người nhận gợi ý. Quản lý duyệt trên Telegram hoặc trang AI; app nhân sự kéo việc về mỗi phút và báo lại mã việc. Kết nối app: `./dxos staff enable <HTX>` (bên dưới). Quy tắc và giới hạn: mục 3.15 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
+
 **Client MCP (M14).** Claude Desktop, Claude Code hoặc Codex có thể nối vào trợ lý qua MCP, bằng tài khoản Keycloak của chính người dùng. Client chỉ đọc được những gì người dùng đọc được và chỉ tạo được đề xuất; mọi đề xuất vẫn chờ người có quyền xác nhận trên web hoặc Telegram. Hướng dẫn đăng nhập và cấu hình: [platform/mcp/README.md](./platform/mcp/README.md). Giới hạn và quy tắc dòng kiểm chứng lô: mục 3.14 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
 **Đo lường agent (M14).** `make benchmark PROVIDER=<replay|ollama|anthropic|openai> MODEL=<id>` chạy các bộ kịch bản của agent với một nhà cung cấp và ghi bảng kết quả vào [docs/benchmark.md](./docs/benchmark.md).
@@ -448,6 +450,16 @@ Ngưỡng và quy tắc mẫu tin: mục 3.10 trong [docs/rules-and-limits.md](.
 - Lệnh tạo hoặc thu hồi client `dxos-agent-<htx viết thường>` trong Keycloak (gán claim `htx_code` viết hoa và vai trò realm `agent`), ghi tệp env của HTX vào volume Docker `dxos-agent-env` của project (tệp thuộc uid `10001` của dxos-agent, quyền `600`, không nằm trên thư mục host) và cập nhật `platform.agent_settings`. Với HTX đã bật trước đó, chạy lại `./dxos agent enable <HTX>` để ghi tệp vào volume; tệp cũ dưới `docker/runtime/<project>/agent/` không còn được đọc. Khi tắt, mọi đề xuất ở trạng thái `proposed` của HTX đó chuyển sang `expired`.
 - `./dxos agent enable` kiểm tra HTX có trong `platform.htx_profiles` trước khi gọi Keycloak; HTX không tồn tại thì lệnh dừng với lỗi và không tạo client nào.
 - `./dxos agent disable` xoá client nhưng không thu hồi token đã cấp: token phát hành trước đó còn dùng được đến khi hết hạn. Thời hạn access token là 5 phút (300 giây, mặc định của Keycloak vì realm `agrimarket` không đặt riêng và client agent không ghi đè).
+
+### Kết nối app nhân sự (`./dxos staff`)
+
+```bash
+./dxos staff enable TC                  # tạo client Keycloak dxos-staff-tc (vai staff-sync) và in client id, secret, hai địa chỉ
+./dxos staff disable TC                 # xoá client dxos-staff-tc
+```
+
+- Lệnh in client id, secret (một lần, không ghi ở đâu khác) và địa chỉ Keycloak, địa chỉ cổng lõi để nhập vào mục "Kết nối hệ thống lõi" của app nhân sự. App lấy token ở `<Keycloak>/realms/agrimarket/protocol/openid-connect/token` bằng client credentials rồi gọi `/api/internal/staff/*` trên cổng lõi.
+- Chạy lại `./dxos staff enable <HTX>` in lại cùng secret. Giống `agent enable`, lệnh kiểm tra HTX có trong `platform.htx_profiles` trước khi gọi Keycloak. `./dxos staff disable` xoá client nhưng không thu hồi token đã cấp (hết hạn sau 5 phút).
 
 > [!WARNING]
 > `make apps-smoke` xoá dữ liệu của `tea-tour`, `leaf-purchase`, `tea-shop`, `farm-supply`, `custom-books` (`--purge`), gỡ `htx-dashboard`, xoá số đo cảm biến của bốn thửa mẫu (TC-A1, TC-B1, TC-B2, LB-A1) và xoá dữ liệu của các fixture, và tự bật một `./dxos worker` của riêng nó. Không chạy nó trên stack có dữ liệu thật, ví dụ stack demo sau khi đã chuẩn bị dữ liệu; hãy dùng stack riêng (`COMPOSE_PROJECT_NAME=dxos-clean`). Script tự dừng với mã 1 khi `tea-tour`, `hello`, `htx-dashboard` hoặc một app nghiệp vụ đang được cài, và cũng không chạy được khi một worker khác đang chạy.

@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 # Telegram voice messages (M15) against the Bot API stub and the STT stub (never the real whisper.cpp): the answer with its
 # three buttons, Đúng starting the journal flow, test 40 (no journal row before the card's Xác nhận), the 60-second limit,
-# an old Đúng, and the fallback when the STT server is down. Sourced by smoke-agentic.sh after smoke-mcp.sh, which left the
+# an old Đúng, and the fallback when the STT server is down. Sourced by smoke-agentic.sh after smoke-staff.sh and smoke-mcp.sh, which left the
 # farmer linked and the relay up (the assistant smoke's helpers and variables are in scope); it does not run on its own.
 # It adds no PASS line to make platform-smoke, so smoke-apps.sh keeps its count.
 
@@ -26,7 +26,7 @@ voice_cleanup() {
   $COMPOSE --profile stt-test stop stt-test-stub >/dev/null 2>&1 || true
 }
 # The EXIT trap of smoke-mcp is replaced, so this one chains every earlier cleanup after its own.
-trap 'voice_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT
+trap 'voice_cleanup; staff_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT
 
 tg_voice() { tg_inject_py "$VOICE_TEXT_PY" "$1" "$2"; }  # <chat> <duration in seconds>
 stt_posts() { curl -sf "$STT_STUB/control/requests" | python3 -c 'import json, sys; print(len(json.load(sys.stdin)["requests"]))'; }

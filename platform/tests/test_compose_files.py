@@ -33,13 +33,34 @@ def load_routes():
     return {route["id"]: route for route in yaml.safe_load(GATEWAY.read_text(encoding="utf-8"))["routes"]}
 
 
-def test_user_routes_refuse_agent_and_telegram_tokens():
+def test_user_routes_refuse_agent_telegram_and_staff_tokens():
     routes = load_routes()
     for route_id in ("workflow", "disease", "llm-chat"):
         schema = routes[route_id]["plugins"]["openid-connect"]["claim_schema"]
         assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-            "not": {"contains": {"enum": ["agent", "telegram"]}}
+            "not": {"contains": {"enum": ["agent", "telegram", "staff-sync"]}}
         }, route_id
+
+
+def test_staff_route_needs_a_staff_client_with_the_role_and_a_cooperative():
+    route = load_routes()["internal-staff"]
+    assert route["uri"] == "/api/internal/staff/*"
+    assert route["priority"] == 10
+    schema = route["plugins"]["openid-connect"]["claim_schema"]
+    assert "htx_code" in schema["required"]
+    assert schema["properties"]["azp"]["pattern"] == "^dxos-staff-[a-z0-9_-]{1,20}$"
+    assert schema["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["staff-sync"]}
+    assert schema["properties"]["htx_code"]["pattern"] == "^[A-Z0-9_-]{1,20}$"
+    assert route["plugins"]["limit-count"]["key"] == "$http_authorization"
+    assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]
+
+
+def test_agent_and_telegram_tokens_cannot_use_the_staff_route():
+    routes = load_routes()
+    staff = routes["internal-staff"]["plugins"]["openid-connect"]["claim_schema"]["properties"]
+    agent = routes["internal-agent"]["plugins"]["openid-connect"]["claim_schema"]["properties"]
+    assert staff["azp"]["pattern"] != agent["azp"]["pattern"]
+    assert staff["realm_access"]["properties"]["roles"]["contains"] != agent["realm_access"]["properties"]["roles"]["contains"]
 
 
 def test_telegram_route_needs_the_relay_client_and_role_on_the_internal_port():
@@ -219,7 +240,7 @@ def test_campaign_items_follow_their_proposal_on_delete():
         assert re.search(r"proposal_id\s+uuid\s+NOT NULL REFERENCES platform\.agent_proposals\(id\) ON DELETE CASCADE", text), path
 
 
-def test_mcp_route_takes_only_the_bridge_client_and_no_agent_or_relay_role():
+def test_mcp_route_takes_only_the_bridge_client_and_no_service_role():
     route = load_routes()["mcp"]
     assert route["uri"] == "/api/mcp/*"
     assert route["upstream_id"] == "web"
@@ -228,7 +249,7 @@ def test_mcp_route_takes_only_the_bridge_client_and_no_agent_or_relay_role():
     assert schema["properties"]["azp"] == {"enum": ["dxos-mcp"]}
     assert schema["properties"]["aud"]["anyOf"][0] == {"enum": ["dx-os-core"]}
     assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-        "not": {"contains": {"enum": ["agent", "telegram"]}}
+        "not": {"contains": {"enum": ["agent", "telegram", "staff-sync"]}}
     }
 
 
@@ -285,3 +306,11 @@ def test_stt_stub_is_test_only_loopback_published_and_takes_the_stt_alias():
     assert stub["read_only"] is True and stub["cap_drop"] == ["ALL"] and stub["user"] == "65534:65534"
     assert stub["networks"] == {"agrimarket-net": {"aliases": ["dxos-stt"]}}
     assert "stt-test-stub" not in load_compose(RELEASE)
+
+
+def test_only_the_staff_route_is_internal_and_served_on_the_public_port():
+    # The staff app runs outside the compose network (D14); the agent and relay routes stay on 9081 only.
+    routes = load_routes()
+    assert "vars" not in routes["internal-staff"]
+    for route_id in ("internal-agent", "internal-agent-llm", "internal-telegram"):
+        assert routes[route_id]["vars"] == [["server_port", "==", "9081"]], route_id
