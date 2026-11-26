@@ -4,6 +4,7 @@
 from datetime import datetime, timedelta, timezone
 import email.message
 import io
+import logging
 import threading
 import urllib.error
 
@@ -127,6 +128,14 @@ class FakeHasuraGateway:
     def heartbeat(self, version, providers):
         del providers
         self.heartbeats.append(version)
+
+    def get_campaign_candidates(self, day):
+        del day
+        return {"proposals": [], "rain_parcel_codes": [], "withdrawal_parcel_codes": [], "people_available": None}
+
+    def post_campaign(self, campaign):
+        del campaign
+        return {"id": "campaign-1"}
 
     def start_run(self, **kwargs):
         del kwargs
@@ -443,3 +452,14 @@ class _RoundsStop:
         self.on_wait()
         if self.waits >= self.rounds:
             self._set = True
+
+
+def test_a9_logs_no_error_when_the_queue_is_quiet(cooperative, caplog):
+    cfg, _gateway = cooperative
+    runtimes: dict = {}
+    t0 = datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc)
+
+    with caplog.at_level(logging.ERROR, logger="dxos_agent"):
+        agent_main.run_once(cfg, runtimes, now=t0)
+
+    assert "A9 daily-campaign failed" not in caplog.text
