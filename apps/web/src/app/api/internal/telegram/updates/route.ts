@@ -27,6 +27,10 @@ const updateSchema = z.object({
         })
         .optional(),
       photo_error: z.enum(['too_large', 'download_failed']).optional(),
+      // Contract C2: the relay sends the heard text (at most 500 characters), never the audio.
+      voice_text: z.string().max(500).optional(),
+      voice_duration: z.number().min(0).max(3600).optional(),
+      voice_error: z.enum(['too_long', 'stt_unavailable']).optional(),
       location: z
         .object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) })
         .optional(),

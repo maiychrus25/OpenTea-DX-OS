@@ -40,8 +40,8 @@ function fakeRepo(links: TelegramLink[]) {
       return row && row.expiresAt > now ? row : null
     }),
     conversationOf: jest.fn(async (tg: string) => conversations.get(tg) ?? null),
-    setFlow: jest.fn(async (f: { telegramUserId: string; flow: string; step: number | null; state: Record<string, unknown>; token: string | null; cardMessageId: string | null; expiresAt: Date }) => {
-      conversations.set(f.telegramUserId, { ...f, kind: 'flow', proposalId: null })
+    setFlow: jest.fn(async (f: { telegramUserId: string; kind?: 'flow' | 'voice'; flow: string; step: number | null; state: Record<string, unknown>; token: string | null; cardMessageId: string | null; expiresAt: Date }) => {
+      conversations.set(f.telegramUserId, { ...f, kind: f.kind ?? 'flow', proposalId: null })
     }),
     deleteConversation: jest.fn(async (tg: string) => {
       conversations.delete(tg)
@@ -159,5 +159,34 @@ describe('TelegramUpdateHandler: chat routes', () => {
     const { handler } = build([link({ userId: 'u-farmer', role: 'farmer', telegramUserId: String(FARMER_TG), chatId: String(FARMER_TG) })])
     const res = await handler.handle(message({ text: '/menu' }, FARMER_TG))
     expect(res.replies[0].buttons!.flat().map((b) => b.text)).toEqual(['Hôm nay', 'Ghi nhật ký', 'Hỏi'])
+  })
+})
+
+describe('TelegramUpdateHandler: voice messages (M15)', () => {
+  test('a forwarded voice text is echoed with the three buttons and held as a voice conversation', async () => {
+    const { handler, repo } = build()
+    const res = await handler.handle(message({ voice_text: 'giá chè hôm nay', voice_duration: 4 }))
+    expect(res.replies[0].text).toBe('Em nghe được: “giá chè hôm nay”')
+    expect(res.replies[0].buttons!.flat().map((b) => b.text)).toEqual(['Đúng', 'Sửa', 'Huỷ'])
+    expect(repo.conversations.get(String(MANAGER_TG))).toMatchObject({ kind: 'voice', state: { text: 'giá chè hôm nay' } })
+  })
+
+  test('voice_error and empty text map to their copy', async () => {
+    const { handler } = build()
+    expect((await handler.handle(message({ voice_error: 'too_long', voice_duration: 75 }))).replies[0].text).toBe(TELEGRAM_TEXT.voiceTooLong)
+    expect((await handler.handle(message({ voice_error: 'stt_unavailable' }))).replies[0].text).toBe(TELEGRAM_TEXT.voiceUnavailable)
+    expect((await handler.handle(message({ voice_text: '  ', voice_duration: 2 }))).replies[0].text).toBe(TELEGRAM_TEXT.voiceUnclear)
+  })
+
+  test('a voice message in a group or from an unlinked user starts nothing', async () => {
+    const { handler, repo } = build()
+    const group = await handler.handle({
+      update_id: ++nextId,
+      message: { chat: { id: -100, type: 'supergroup' }, from: { id: MANAGER_TG }, voice_text: 'hôm nay' } as TelegramUpdateInput['message'],
+    })
+    expect(group).toEqual({ replies: [] })
+    const stranger = await handler.handle(message({ voice_text: 'hôm nay' }, 9999))
+    expect(stranger).toEqual({ replies: [] })
+    expect(repo.conversations.size).toBe(0)
   })
 })

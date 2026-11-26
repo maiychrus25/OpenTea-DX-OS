@@ -71,6 +71,12 @@ export const TELEGRAM_TEXT = {
   photoTooLarge: 'Ảnh lớn hơn 5 MB. Bạn gửi ảnh nhỏ hơn nhé.',
   photoFailed: 'Chưa nhận được ảnh. Bạn gửi lại nhé.',
   photoOutsideFlow: 'Đã nhận ảnh. Muốn ghi nhật ký hoặc báo bệnh, bạn chọn trong menu rồi gửi lại ảnh.',
+  // Voice messages (M15, contract C2 and C3).
+  voiceHeard: (text: string) => `Em nghe được: “${text}”`,
+  voiceTooLong: 'Tin thoại dài quá 60 giây. Bạn nói ngắn hơn hoặc nhắn chữ nhé.',
+  voiceUnavailable: 'Chưa nghe được tin thoại lúc này. Bạn nhắn chữ giúp nhé.',
+  voiceUnclear: 'Chưa nghe rõ. Bạn nói lại hoặc nhắn chữ nhé.',
+  voiceRetype: 'Bạn nhắn lại câu đúng nhé.',
   locationNoParcel: 'Không tìm thấy thửa nào có toạ độ.',
   rateLimited: 'Bạn đã gửi 60 tin trong một giờ. Vui lòng thử lại sau.',
   executeFailed: (message: string) => `Chưa thực hiện được: ${message}`,
@@ -91,6 +97,8 @@ export const TELEGRAM_TEXT = {
 export const TELEGRAM_BUTTON = {
   confirm: 'Xác nhận',
   cancel: 'Huỷ',
+  voiceOk: 'Đúng',
+  voiceEdit: 'Sửa',
   next: 'Tiếp tục',
   finalConfirm: 'Xác nhận lần cuối',
   skip: 'Bỏ qua',
