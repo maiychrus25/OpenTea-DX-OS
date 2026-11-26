@@ -5,7 +5,7 @@
 import React from 'react'
 import { Landmark, Store, Map } from 'lucide-react'
 import { FilteredTable } from '@/components/features/officer-web/FilteredTable'
-import { Header, Stats } from '@/components/features/officer-web/parts'
+import { Header } from '@/components/features/officer-web/parts'
 import { REVENUE, money, sum } from '@/components/features/officer-web/sample'
 import styles from '@/components/features/officer-web/kit.module.css'
 
@@ -27,11 +27,21 @@ export default function OfficerPaymentsPage() {
   return (
     <div className={styles.page}>
       <Header icon={<Landmark size={24} />} title="Doanh thu" description="Tổng hợp doanh thu từ gian hàng sản phẩm và tour của HTX." />
-      <Stats items={[
-        { label: 'Tổng doanh thu', value: money(total), icon: <Landmark /> },
-        { label: `Gian hàng · ${share(of('Gian hàng'))}`, value: money(of('Gian hàng')), icon: <Store /> },
-        { label: `Tour · ${share(of('Tour'))}`, value: money(of('Tour')), icon: <Map /> },
-      ]} />
+      <FilteredTable
+        figures={[
+          { label: 'Tổng doanh thu', value: money(total), icon: <Landmark /> },
+          { label: `Gian hàng · ${share(of('Gian hàng'))}`, value: money(of('Gian hàng')), icon: <Store />, filter: 'Gian hàng' },
+          { label: `Tour · ${share(of('Tour'))}`, value: money(of('Tour')), icon: <Map />, filter: 'Tour' },
+        ]}
+        filters={['Gian hàng', 'Tour']}
+        columns={['Ngày', 'Nguồn', 'Mã', 'Doanh thu']}
+        numeric={[3]}
+        rows={REVENUE.map((r) => ({
+          key: r.code,
+          group: r.source,
+          cells: [r.date, r.source, <span key="code" className={styles.mono}>{r.code}</span>, money(r.total)],
+        }))}
+      >
       <section className={styles.pn} style={{ flex: 'none' }}>
         <h2 className={styles.ph}>Doanh thu theo ngày (nghìn đồng)</h2>
         <ol className={styles.chart}>
@@ -50,16 +60,7 @@ export default function OfficerPaymentsPage() {
           <span><i className={styles.shop} />Gian hàng</span>
         </div>
       </section>
-      <FilteredTable
-        filters={['Gian hàng', 'Tour']}
-        columns={['Ngày', 'Nguồn', 'Mã', 'Doanh thu']}
-        numeric={[3]}
-        rows={REVENUE.map((r) => ({
-          key: r.code,
-          group: r.source,
-          cells: [r.date, r.source, <span key="code" className={styles.mono}>{r.code}</span>, money(r.total)],
-        }))}
-      />
+      </FilteredTable>
     </div>
   )
 }

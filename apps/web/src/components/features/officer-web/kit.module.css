@@ -70,3 +70,11 @@
 .legend { display: flex; gap: 16px; padding: 8px 16px 12px; font-size: 12.5px; color: var(--color-ink-secondary); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legend i { width: 10px; height: 10px; border-radius: 3px; }
+
+/* A figure that can be pressed: the button covers the whole cell, the chosen one is underlined. */
+.pick { position: relative; cursor: pointer; }
+.pick:hover dd { color: var(--color-primary); }
+.picked { box-shadow: inset 0 -3px 0 var(--color-primary); }
+.hit { position: absolute; inset: 0; width: 100%; border: 0; background: transparent; cursor: pointer; }
+.hit:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -4px; }
+.none { margin: 0; padding: 28px; text-align: center; color: var(--color-ink-secondary); }

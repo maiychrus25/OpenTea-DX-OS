@@ -6,7 +6,7 @@ import React from 'react'
 import Link from 'next/link'
 import { Package } from 'lucide-react'
 import { FilteredTable } from '@/components/features/officer-web/FilteredTable'
-import { Header, Stats } from '@/components/features/officer-web/parts'
+import { Header } from '@/components/features/officer-web/parts'
 import { ORDERS, ORDER_STATUS, money } from '@/components/features/officer-web/sample'
 import styles from '@/components/features/officer-web/kit.module.css'
 
@@ -20,8 +20,8 @@ export default function OfficerOrdersPage() {
   return (
     <div className={styles.page}>
       <Header icon={<Package size={24} />} title="Đơn hàng" description={`${count('Chờ xác nhận')} đơn chờ xác nhận`} />
-      <Stats items={statuses.map((status) => ({ label: status, value: count(status), icon: <Package /> }))} />
       <FilteredTable
+        figures={statuses.map((status) => ({ label: status, value: count(status), icon: <Package />, filter: status }))}
         filters={statuses}
         columns={['Mã đơn', 'Người nhận', 'Điện thoại', 'Tổng tiền', 'Trạng thái', 'Thao tác']}
         numeric={[3]}

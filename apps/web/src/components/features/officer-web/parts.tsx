@@ -11,14 +11,26 @@ export function Header({ icon, title, description }: { icon: React.ReactNode; ti
 }
 
 /** Officer-only headline figures; callers supply counts from their loaded data. */
-export function Stats({ items }: { items: { label: string; value: string | number; icon: React.ReactNode }[] }) {
+export interface Stat {
+  label: string
+  value: string | number
+  icon: React.ReactNode
+  active?: boolean
+  /** Makes the whole figure a button that shows the matching rows below. */
+  onSelect?: () => void
+}
+
+export function Stats({ items }: { items: Stat[] }) {
   if (items.length === 0) return null
 
   return (
     <dl className={styles.stats}>
       {items.map((item) => (
-        <div key={item.label} className={styles.stat}>
-          <dt><span className={styles.statIcon} aria-hidden="true">{item.icon}</span>{item.label}</dt>
+        <div key={item.label} className={`${styles.stat}${item.onSelect ? ` ${styles.pick}` : ''}${item.active ? ` ${styles.picked}` : ''}`}>
+          <dt>
+            <span className={styles.statIcon} aria-hidden="true">{item.icon}</span>{item.label}
+            {item.onSelect && <button type="button" className={styles.hit} aria-label={`Xem ${item.label}`} aria-pressed={item.active} onClick={item.onSelect} />}
+          </dt>
           <dd>{typeof item.value === 'number' ? item.value.toLocaleString('vi-VN') : item.value}</dd>
         </div>
       ))}
