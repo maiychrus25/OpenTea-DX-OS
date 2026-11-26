@@ -100,6 +100,27 @@ routes:
     plugins:
       proxy-rewrite:
         regex_uri: ["^/storage/(.*)", "/$1"]
+  # MCP tools for outside agents: only the dxos-mcp bridge's token passes; the web checks the person's rights per call.
+  - id: mcp
+    uri: /api/mcp/*
+    methods: [GET, POST]
+    upstream_id: web
+    plugins:
+      openid-connect:
+        <<: *oidc
+        claim_schema:
+          required: [aud, azp, realm_access]
+          properties:
+            aud:
+              anyOf:
+                - { enum: ["dx-os-core"] }
+                - { type: array, contains: { enum: ["dx-os-core"] } }
+            azp:
+              enum: ["dxos-mcp"]
+            realm_access:
+              properties:
+                roles:
+                  not: { contains: { enum: ["agent", "telegram"] } }
   # Dedicated internal LLM route for dxos-agent so agent traffic has its own rate budget (spec §8.1).
   - id: internal-agent-llm
     uri: /api/internal/agent/llm/v1/chat/completions

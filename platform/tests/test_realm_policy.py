@@ -157,6 +157,23 @@ class RealmPolicyTest(unittest.TestCase):
         self.assertFalse(attr.get("multivalued", False))
         self.assertFalse(attr.get("required"))
 
+    def test_mcp_client_is_public_and_device_grant_only(self):
+        client = by_key(REALM["clients"], "clientId", "dxos-mcp")
+        self.assertIs(client["publicClient"], True)
+        self.assertNotIn("secret", client)
+        self.assertEqual(client["attributes"]["oauth2.device.authorization.grant.enabled"], "true")
+        self.assertIs(client["standardFlowEnabled"], False)
+        self.assertIs(client["directAccessGrantsEnabled"], False)
+        self.assertIs(client["serviceAccountsEnabled"], False)
+        self.assertEqual(client.get("redirectUris", []), [])
+
+    def test_mcp_client_uses_the_web_scopes_without_offline_access(self):
+        web = by_key(REALM["clients"], "clientId", "nextjs-web")
+        client = by_key(REALM["clients"], "clientId", "dxos-mcp")
+        self.assertEqual(client["defaultClientScopes"], web["defaultClientScopes"])
+        self.assertIn("dx-os-core", client["defaultClientScopes"])
+        self.assertNotIn("offline_access", client["defaultClientScopes"] + client["optionalClientScopes"])
+
 
 if __name__ == "__main__":
     unittest.main()

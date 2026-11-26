@@ -36,7 +36,7 @@ export const bulletinPublishAction: ActionDefinition<BulletinPublishPayload> = {
   titleVi: 'Đăng bản tin thị trường',
   risk: 'medium',
   approverRoles: ['manager'],
-  origins: ['agent'],
+  origins: ['agent', 'user'],
   autonomy: 'auto',
   channels: ['web', 'telegram'],
   payloadSchema: bulletinPublishPayloadSchema,

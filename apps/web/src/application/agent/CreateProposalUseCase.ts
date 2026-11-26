@@ -21,6 +21,8 @@ export interface CreateProposalInput {
   confidence?: number | null
   origin: Origin
   requestedBy?: string | null
+  /** Where a user proposal came from (the MCP route), recorded in the audit event; agents leave it out. */
+  channel?: string | null
   now?: Date
 }
 
@@ -110,6 +112,7 @@ export class CreateProposalUseCase {
       risk: definition.risk,
       origin: input.origin,
       requestedBy: input.requestedBy ?? null,
+      channel: input.channel ?? null,
       dedupeKey,
       subjects,
       expiresAt,

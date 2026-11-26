@@ -831,6 +831,29 @@ Bearer token of client `dxos-telegram` plus the gateway header (`X-Dxos-Gateway`
 - **`DELETE /api/telegram/link`**: unlinks the caller's Telegram account.
 - **`POST /api/telegram/group-link`** (manager only): `{ "command": "/nhom <code>", "expires_at" }` (201).
 
+## MCP cho client bên ngoài (M14)
+
+Route `/api/mcp/*` nhận `Authorization: Bearer <access token>` của chính người dùng. Token phát hành cho client Keycloak `dxos-mcp` (realm `agrimarket`, device grant). Không dùng session và không cần header `X-Dxos-Gateway`. Vai trò, HTX và trạng thái bật/tắt được đọc trực tiếp từ Keycloak ở mỗi lượt gọi, giống Telegram. Client chỉ có đúng quyền của người dùng đó.
+
+### `GET /api/mcp/tools`
+Trả `{ "tools": [{ "name", "title_vi", "description_vi", "input_schema" }] }`. Mỗi công cụ đọc của chat chỉ hiện với vai trò được phép; `input_schema` là JSON Schema của đối số. `create_proposal` chỉ hiện với quản lý và cán bộ.
+
+**Lỗi:** `401 UNAUTHORIZED` khi thiếu, hết hạn hoặc là token của client khác; `403 FORBIDDEN` khi người dùng bị tắt hoặc không còn vai trò; `503 CORE_UNAVAILABLE` khi không đọc được Keycloak.
+
+### `POST /api/mcp/tools/[name]`
+Body: `{ "arguments": { ... } }`.
+
+- **Công cụ đọc:** `200 { "text": "<tối đa 7 dòng>\nNguồn: <nguồn>" }`, cùng định dạng với Telegram. `403` khi vai trò không được dùng công cụ, `404` khi tên không tồn tại.
+- **`create_proposal`:** `arguments` là `{ kind, payload, reason_vi }` với `reason_vi` 1 đến 500 ký tự. Chỉ tạo đề xuất, không thực hiện gì: đề xuất ở trạng thái `proposed` cho đến khi người có quyền duyệt qua `DecideProposalUseCase`. Đề xuất có `origin: 'user'`, `requested_by` là người dùng, `agent: 'mcp'`, bằng chứng do web tự dựng từ các đối tượng trong payload, và được gửi tới Telegram như đề xuất thường. `201 { "proposal_id", "status": "proposed", "message_vi" }`.
+  - `400 VALIDATION_ERROR` với message `INVALID_ORIGIN`, `UNKNOWN_KIND`, `INVALID_PAYLOAD` hoặc `EVIDENCE_NOT_IN_HTX` (đối tượng ngoài HTX).
+  - `403 FORBIDDEN` với message `NOT_AN_APPROVER` khi vai trò không duyệt được loại đề xuất đó.
+  - `409 CONFLICT` khi đã có đề xuất đang mở cho cùng đối tượng.
+  - Sự kiện kiểm toán `agent.proposal.created` có `origin: 'user'` và `channel: 'mcp'`.
+
+## Dòng kiểm chứng AI trên trang truy xuất (M14)
+
+Trang công khai `/lot/[lot_code]` hiện khối "kiểm chứng trong sổ audit" chỉ khi quyết định AI của lô có đủ ba điều kiện: sự kiện duyệt `agent.proposal.approved` tồn tại, mã băm bằng chứng của sự kiện bằng mã băm của đề xuất, và `audit.verify_chain()` không báo dòng hỏng tới sự kiện đó. Mỗi lô tối đa 3 dòng, dạng `AI đề xuất, <cán bộ|trưởng HTX> đã duyệt ngày <dd/MM/yyyy>, kiểm chứng trong sổ audit`. Trang không bao giờ hiện tên người duyệt. Dòng được tính khi tải trang, không nằm trong ảnh chụp `public_page_data` của lô đã xuất QR.
+
 ## Error Codes
 
 | HTTP | code | Meaning |

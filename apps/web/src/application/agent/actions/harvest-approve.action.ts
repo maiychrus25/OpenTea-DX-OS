@@ -22,7 +22,7 @@ export const harvestApproveAction: ActionDefinition<HarvestApprovePayload> = {
   titleVi: 'Duyệt thu hoạch',
   risk: 'high',
   approverRoles: ['manager'],
-  origins: ['agent'],
+  origins: ['agent', 'user'],
   autonomy: 'unlockable',
   channels: ['web', 'telegram'],
   payloadSchema: harvestApprovePayloadSchema,

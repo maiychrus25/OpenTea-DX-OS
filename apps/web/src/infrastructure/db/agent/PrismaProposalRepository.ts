@@ -137,6 +137,7 @@ export class PrismaProposalRepository implements ProposalRepository {
         origin: input.origin,
         subject_ids: input.subjects,
         evidence_sha256: input.evidence.sha256,
+        ...(input.channel ? { channel: input.channel } : {}),
       }
       await tx.$executeRaw`
         SELECT audit.record_event('web', 'agent.proposal.created', ${id}, ${JSON.stringify(details)}::jsonb)
