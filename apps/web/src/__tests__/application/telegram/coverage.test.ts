@@ -9,8 +9,7 @@ import { CHAT_ACTIONS } from '@/application/telegram/chat/actions'
 import { CHAT_TOOLS } from '@/application/telegram/chat/tools'
 import { TELEGRAM_COVERAGE } from '@/application/telegram/coverage'
 
-// The chat arrays import the auth modules; only their route lists are needed here, so the auth entry points are stubbed.
-jest.mock('@/auth', () => ({ auth: jest.fn(), handlers: {} }))
+// disease.report still imports the token module, which loads next-auth as ESM; only the route lists are needed here.
 jest.mock('@/lib/auth/core-token', () => ({ getCoreToken: jest.fn() }))
 
 const API_ROOT = path.resolve(__dirname, '../../../app/api')

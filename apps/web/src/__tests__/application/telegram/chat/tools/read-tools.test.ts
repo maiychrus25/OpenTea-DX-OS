@@ -5,18 +5,30 @@
 import { CHAT_TOOLS } from '@/application/telegram/chat/tools'
 import type { ChatTool, ChatUser } from '@/application/telegram/chat/types'
 import { NotFoundError } from '@/domain/errors'
-const mockFakes = { parcels: jest.fn(), journal: jest.fn(), schedule: jest.fn(), forecast: jest.fn(), proposals: jest.fn(), subjects: jest.fn(), lots: jest.fn(), bulletin: jest.fn(), htxProfile: jest.fn(), notifications: jest.fn(), weatherForParcel: jest.fn(), marketFindFirst: jest.fn(), fxFindMany: jest.fn() }
+const mockFakes = { parcels: jest.fn(), parcelById: jest.fn(), journalScoped: jest.fn(), journal: jest.fn(), schedule: jest.fn(), forecast: jest.fn(), proposals: jest.fn(), subjects: jest.fn(), lots: jest.fn(), bulletin: jest.fn(), htxProfile: jest.fn(), notifications: jest.fn(), weatherForParcel: jest.fn(), marketFindFirst: jest.fn(), fxFindMany: jest.fn() }
 const fakes = mockFakes
 
-jest.mock('@/application/farm/ListParcelsUseCase', () => ({
-  ListParcelsUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.parcels(...args) })),
+// The Telegram update route has no browser session: a chat read that loads the auth modules must fail here.
+jest.mock('@/auth', () => {
+  throw new Error('chat code loaded the browser session')
+})
+jest.mock('@/lib/auth/core-token', () => {
+  throw new Error('chat code loaded the browser session token')
+})
+jest.mock('@/infrastructure/db/farm/PrismaParcelRepository', () => ({
+  PrismaParcelRepository: jest.fn(() => ({
+    findAll: (...args: unknown[]) => mockFakes.parcels(...args),
+    findById: (...args: unknown[]) => mockFakes.parcelById(...args),
+  })),
 }))
-jest.mock('@/infrastructure/core/gateway-parcel-reader', () => ({ GatewayParcelReader: jest.fn() }))
-jest.mock('@/infrastructure/core/gateway-journal-reader', () => ({ GatewayJournalReader: jest.fn() }))
-jest.mock('@/infrastructure/core/gateway-lot-reader', () => ({ GatewayLotReader: jest.fn() }))
-jest.mock('@/infrastructure/core/core-gateway.client', () => ({ CoreGatewayClient: jest.fn() }))
-jest.mock('@/application/journal/ListJournalEntriesUseCase', () => ({
-  ListJournalEntriesUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.journal(...args) })),
+jest.mock('@/infrastructure/db/journal/PrismaJournalRepository', () => ({
+  PrismaJournalRepository: jest.fn(() => ({
+    findAll: (...args: unknown[]) => mockFakes.journal(...args),
+    findManyScoped: (...args: unknown[]) => mockFakes.journalScoped(...args),
+  })),
+}))
+jest.mock('@/infrastructure/db/lot/PrismaLotRepository', () => ({
+  PrismaLotRepository: jest.fn(() => ({ findAll: (...args: unknown[]) => mockFakes.lots(...args) })),
 }))
 jest.mock('@/application/farm/get-harvest-schedule-use-case', () => ({
   GetHarvestScheduleUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.schedule(...args) })),
@@ -200,7 +212,7 @@ describe('journal', () => {
       total: 1,
     })
     const reply = await tool('journal').run(user('officer'), {}, NOW)
-    expect(fakes.journal).toHaveBeenCalledWith({ limit: 5 })
+    expect(fakes.journal).toHaveBeenCalledWith({ htx_profile_id: 'htx-tc', limit: 5 })
     expect(reply.lines).toEqual(['25/11 · TC-A1 · Phun thuốc · Chờ duyệt'])
   })
 
@@ -214,7 +226,7 @@ describe('journal', () => {
       total: 3,
     })
     const reply = await tool('journal').run(user('farmer'), {}, NOW)
-    expect(fakes.journal).toHaveBeenCalledWith({ household_id: 'hh_tc_1', limit: 5 })
+    expect(fakes.journal).toHaveBeenCalledWith({ htx_profile_id: 'htx-tc', household_id: 'hh_tc_1', limit: 5 })
     expect(reply.lines.join('\n')).toContain('TC-A1')
     expect(reply.lines.join('\n')).not.toContain('TC-B9')
     expect(reply.lines.join('\n')).not.toContain('LB-C3')
@@ -231,7 +243,7 @@ describe('parcels', () => {
   it('scopes a farmer to the household: two households and an LB row', async () => {
     fakes.parcels.mockResolvedValue([parcelRow('TC-A1', 'hh_tc_1'), parcelRow('TC-B9', 'hh_tc_2'), parcelRow('LB-C3', 'hh_lb_1')])
     const reply = await tool('parcels').run(user('farmer'), {}, NOW)
-    expect(fakes.parcels).toHaveBeenCalledWith({}, 'FARMER', 'hh_tc_1')
+    expect(fakes.parcels).toHaveBeenCalledWith({ htx_profile_id: 'htx-tc', household_id: 'hh_tc_1' })
     expect(reply.lines).toEqual(['TC-A1 · Chè · 1.2 ha'])
     expect(reply.source).toBe('Vùng trồng')
   })
@@ -261,6 +273,7 @@ describe('lots', () => {
   it('lists lots for an officer', async () => {
     fakes.lots.mockResolvedValue([{ lot_code: 'LOT-001', commodity: 'Chè', status: 'READY', harvest_date: new Date('2026-11-20T00:00:00Z') }])
     const reply = await tool('lots').run(user('officer'), {}, NOW)
+    expect(fakes.lots).toHaveBeenCalledWith({ htx_profile_id: 'htx-tc' })
     expect(reply).toEqual({ lines: ['LOT-001 · Chè · READY · 20/11/2026'], source: 'Lô hàng' })
   })
 })
@@ -296,8 +309,8 @@ describe('today', () => {
       { cycleId: 'c1', parcelId: 'id-TC-A1', parcelName: 'TC-A1', householdName: 'Hộ 1', cropType: 'Chè', estimatedYieldKg: null, estimatedHarvestDate: '2026-12-02T00:00:00.000Z', safeHarvestDate: null, status: 'SAFE' },
     ])
     const reply = await tool('today').run(user('farmer'), {}, NOW)
-    expect(fakes.journal).toHaveBeenNthCalledWith(1, { household_id: 'hh_tc_1', status: 'PENDING_APPROVAL', limit: 1 })
-    expect(fakes.journal).toHaveBeenNthCalledWith(2, { household_id: 'hh_tc_1', status: 'REQUEST_CHANGES', limit: 1 })
+    expect(fakes.journal).toHaveBeenNthCalledWith(1, { htx_profile_id: 'htx-tc', household_id: 'hh_tc_1', status: 'PENDING_APPROVAL', limit: 1 })
+    expect(fakes.journal).toHaveBeenNthCalledWith(2, { htx_profile_id: 'htx-tc', household_id: 'hh_tc_1', status: 'REQUEST_CHANGES', limit: 1 })
     expect(reply.lines).toEqual(['Thời tiết: 26°C, Mưa nhẹ', 'Nhật ký chờ duyệt: 2', 'Nhật ký cần sửa: 1', 'Thu hoạch gần nhất: 02/12/2026'])
     expect(reply.source).toBe('Tổng quan')
   })
@@ -306,7 +319,7 @@ describe('today', () => {
     fakes.journal.mockResolvedValue({ entries: [], total: 4 })
     fakes.proposals.mockResolvedValue([{ id: 'a' }, { id: 'b' }])
     const reply = await tool('today').run(user('officer'), {}, NOW)
-    expect(fakes.journal).toHaveBeenCalledWith({ status: 'PENDING_APPROVAL', limit: 1 })
+    expect(fakes.journal).toHaveBeenCalledWith({ htx_profile_id: 'htx-tc', status: 'PENDING_APPROVAL', limit: 1 })
     expect(reply.lines).toEqual(['Nhật ký chờ duyệt: 4', 'Đề xuất đang mở: 2'])
   })
 })

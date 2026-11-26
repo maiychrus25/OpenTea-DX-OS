@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { ListParcelsUseCase } from '@/application/farm/ListParcelsUseCase'
-import { GatewayParcelReader } from '@/infrastructure/core/gateway-parcel-reader'
-import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
 import type { ParcelSummary } from '@/domain/farm/ports/ParcelPort'
+import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
 import { localDay } from '@/domain/shared/local-day'
 import type { ChatReply, ChatUser } from '../types'
 
@@ -18,11 +16,6 @@ export function reply(source: string, lines: string[], proposalIds?: string[]): 
   return answer
 }
 
-/** The gateway client the web routes use, so the core applies the same role-scoped access. */
-export function coreClient(user: ChatUser): CoreGatewayClient {
-  return new CoreGatewayClient(user.tenant.role)
-}
-
 /**
  * The household filter of a read: a farmer sees only their household, officers and managers the cooperative.
  * Null when a farmer's link has no household; such a farmer reads nothing, never the whole cooperative.
@@ -32,15 +25,14 @@ export function householdFilter(user: ChatUser): { household_id?: string } | nul
   return user.householdId ? { household_id: user.householdId } : null
 }
 
-/** The parcels the user may see, with the same scoping as `GET /api/farm/parcels`. */
+/**
+ * The parcels the user may see: the cooperative's, and for a farmer only their household's.
+ * Reads Prisma directly, as the Telegram update route has no browser session to call the core with.
+ */
 export async function visibleParcels(user: ChatUser): Promise<ParcelSummary[]> {
   const scope = householdFilter(user)
   if (!scope) return []
-  const parcels = await new ListParcelsUseCase(new GatewayParcelReader(coreClient(user))).execute(
-    {},
-    user.tenant.role.toUpperCase(),
-    user.householdId ?? undefined
-  )
+  const parcels = await new PrismaParcelRepository().findAll({ htx_profile_id: user.tenant.htxProfileId, ...scope })
   return scope.household_id ? parcels.filter((parcel) => parcel.household_id === scope.household_id) : parcels
 }
 

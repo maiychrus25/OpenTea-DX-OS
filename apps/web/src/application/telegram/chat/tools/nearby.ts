@@ -3,10 +3,10 @@
 
 import { GetWeatherUseCase } from '@/application/farm/GetWeatherUseCase'
 import type { ParcelSummary } from '@/domain/farm/ports/ParcelPort'
+import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
 import { PrismaWeatherCacheRepository } from '@/infrastructure/db/farm/PrismaWeatherCacheRepository'
-import { GatewayParcelReader } from '@/infrastructure/core/gateway-parcel-reader'
 import type { ChatTool, ChatUser } from '../types'
-import { coreClient, reply, todayIso, visibleParcels } from './common'
+import { reply, todayIso, visibleParcels } from './common'
 
 // Same wording as the copy key `locationNoParcel` (contract C10).
 const LOCATION_NO_PARCEL = 'Không tìm thấy thửa nào có toạ độ.'
@@ -45,7 +45,7 @@ export const nearbyTool: ChatTool = {
       distanceKm(lat, lng, parcel.centroid_lat, parcel.centroid_lng) < distanceKm(lat, lng, best.centroid_lat, best.centroid_lng) ? parcel : best
     )
     const km = distanceKm(lat, lng, nearest.centroid_lat, nearest.centroid_lng)
-    const weather = await new GetWeatherUseCase(new PrismaWeatherCacheRepository(), new GatewayParcelReader(coreClient(user))).execute(
+    const weather = await new GetWeatherUseCase(new PrismaWeatherCacheRepository(), new PrismaParcelRepository()).execute(
       nearest.id,
       todayIso(now),
       { id: user.tenant.userId, role: user.tenant.role, householdId: user.householdId ?? undefined }

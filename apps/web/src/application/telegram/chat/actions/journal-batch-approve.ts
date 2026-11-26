@@ -3,13 +3,11 @@
 
 import { ACTIVITY_LABEL, formatVnDayMonth } from '@/application/agent/actions/journal-labels'
 import { BatchApproveJournalUseCase } from '@/application/journal/BatchApproveJournalUseCase'
-import { GatewayJournalReader } from '@/infrastructure/core/gateway-journal-reader'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 import { TenantGuard } from '@/lib/api/tenant-guard'
 import { z } from 'zod'
 import type { ChatAction } from '../types'
-import { coreClient } from '../tools/common'
 
 const MAX_BATCH = 50
 const SHOWN = 5
@@ -28,20 +26,22 @@ export const journalBatchApproveAction: ChatAction<BatchApprovePayload> = {
   args: [],
   // The oldest pending entries of the cooperative: the gateway lists newest first, so the tail holds the oldest.
   async start(user) {
-    const reader = new GatewayJournalReader(coreClient(user))
-    const { total } = await reader.findAll({ status: 'PENDING_APPROVAL', limit: 1 })
+    const repo = new PrismaJournalRepository()
+    const scope = { status: 'PENDING_APPROVAL', htx_profile_id: user.tenant.htxProfileId }
+    const { total } = await repo.findAll({ ...scope, limit: 1 })
     if (!total) return { replyVi: 'Không có nhật ký nào đang chờ duyệt.' }
-    const { entries } = await reader.findAll({ status: 'PENDING_APPROVAL', limit: total })
+    const { entries } = await repo.findAll({ ...scope, limit: total })
     return { state: { entry_ids: entries.slice(-MAX_BATCH).reverse().map((entry) => entry.id) } }
   },
   steps: [],
   payloadSchema,
   consequenceVi: null,
   async preview(payload, user) {
-    const reader = new GatewayJournalReader(coreClient(user))
-    const shown = await Promise.all(payload.entry_ids.slice(0, SHOWN).map((id) => reader.findById(id)))
+    const ids = payload.entry_ids.slice(0, SHOWN)
+    const found = new Map((await new PrismaJournalRepository().findManyScoped(ids, user.tenant.htxProfileId)).map((e) => [e.id, e]))
     const lines = [`Số nhật ký: ${payload.entry_ids.length}`]
-    for (const entry of shown) {
+    for (const id of ids) {
+      const entry = found.get(id)
       if (!entry) continue
       lines.push(`• ${entry.parcel_code ?? ''} · ${ACTIVITY_LABEL[entry.activity_type] ?? entry.activity_type} · ${formatVnDayMonth(entry.entry_date) ?? '—'}`)
     }

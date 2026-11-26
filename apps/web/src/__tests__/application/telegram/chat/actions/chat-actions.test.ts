@@ -6,6 +6,7 @@ import { CHAT_ACTIONS } from '@/application/telegram/chat/actions'
 import type { ChatAction, ChatUser, ChoiceStep, FlowStep, PhotoStep } from '@/application/telegram/chat/types'
 import { assertJournalPhotoKey, journalPhotoRoot } from '@/domain/document/document-namespace'
 import { DomainError } from '@/domain/errors'
+import { getCoreToken } from '@/lib/auth/core-token'
 
 const mockFakes = {
   parcels: jest.fn(),
@@ -13,6 +14,7 @@ const mockFakes = {
   guardJournal: jest.fn(),
   journalFindAll: jest.fn(),
   journalFindById: jest.fn(),
+  journalScoped: jest.fn(),
   createEntry: jest.fn(),
   submitDiagnosis: jest.fn(),
   batchApprove: jest.fn(),
@@ -20,15 +22,18 @@ const mockFakes = {
 }
 const fakes = mockFakes
 
-jest.mock('@/application/farm/ListParcelsUseCase', () => ({
-  ListParcelsUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.parcels(...args) })),
+// The Telegram update route has no browser session: loading the auth module must fail here.
+jest.mock('@/auth', () => {
+  throw new Error('chat code loaded the browser session')
+})
+jest.mock('@/infrastructure/db/farm/PrismaParcelRepository', () => ({
+  PrismaParcelRepository: jest.fn(() => ({ findAll: (...args: unknown[]) => mockFakes.parcels(...args) })),
 }))
-jest.mock('@/infrastructure/core/gateway-parcel-reader', () => ({ GatewayParcelReader: jest.fn() }))
-jest.mock('@/infrastructure/core/core-gateway.client', () => ({ CoreGatewayClient: jest.fn() }))
-jest.mock('@/infrastructure/core/gateway-journal-reader', () => ({
-  GatewayJournalReader: jest.fn(() => ({
+jest.mock('@/infrastructure/db/journal/PrismaJournalRepository', () => ({
+  PrismaJournalRepository: jest.fn(() => ({
     findAll: (...args: unknown[]) => mockFakes.journalFindAll(...args),
     findById: (...args: unknown[]) => mockFakes.journalFindById(...args),
+    findManyScoped: (...args: unknown[]) => mockFakes.journalScoped(...args),
   })),
 }))
 jest.mock('@/lib/api/tenant-guard', () => ({
@@ -37,8 +42,6 @@ jest.mock('@/lib/api/tenant-guard', () => ({
     journalEntry: (...args: unknown[]) => mockFakes.guardJournal(...args),
   })),
 }))
-jest.mock('@/infrastructure/db/journal/PrismaJournalRepository', () => ({ PrismaJournalRepository: jest.fn() }))
-jest.mock('@/infrastructure/db/farm/PrismaParcelRepository', () => ({ PrismaParcelRepository: jest.fn() }))
 jest.mock('@/application/journal/CreateJournalEntryUseCase', () => ({
   CreateJournalEntryUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.createEntry(...args) })),
 }))
@@ -151,7 +154,7 @@ describe('journal.create', () => {
 
   it('offers the parcels the farmer may write for, by code', async () => {
     const choices = await (stepOf(a(), 'parcel_id') as ChoiceStep).choices(farmer, {})
-    expect(fakes.parcels).toHaveBeenCalledWith({}, 'FARMER', 'hh_tc_1')
+    expect(fakes.parcels).toHaveBeenCalledWith({ htx_profile_id: 'htx-tc', household_id: 'hh_tc_1' })
     expect(choices).toEqual([
       { value: 'p1', label: 'TC-A1' },
       { value: 'p2', label: 'TC-B9' },
@@ -272,7 +275,9 @@ describe('journal.batch_approve', () => {
 
   it('shows five entries and the count of the rest', async () => {
     const ids = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7']
-    fakes.journalFindById.mockImplementation(async (id: string) => ({ id, parcel_code: `TC-${id}`, activity_type: 'SPRAYING', entry_date: new Date('2026-11-25T00:00:00Z') }))
+    fakes.journalScoped.mockImplementation(async (ids: string[]) =>
+      ids.map((id) => ({ id, parcel_code: `TC-${id}`, activity_type: 'SPRAYING', entry_date: new Date('2026-11-25T00:00:00Z') }))
+    )
     const lines = await a().preview({ entry_ids: ids }, officer)
     expect(lines).toEqual([
       'Số nhật ký: 7',
@@ -290,6 +295,22 @@ describe('journal.batch_approve', () => {
     expect(fakes.guardJournal).toHaveBeenCalledTimes(2)
     expect(fakes.batchApprove).toHaveBeenCalledWith(['e1', 'e2'], 'officer-1', 'TC')
     expect(result).toBe('Đã duyệt 7 nhật ký.')
+  })
+})
+
+describe('no session on the read paths', () => {
+  it('only disease.report reads the core token, and only when it runs', async () => {
+    fakes.journalFindAll.mockResolvedValue({ entries: [], total: 0 })
+    fakes.journalScoped.mockResolvedValue([])
+    const readPaths = CHAT_ACTIONS.filter((a) => a.name !== 'disease.report')
+    for (const a of readPaths) {
+      for (const step of a.steps) if (step.kind === 'choice') await step.choices(officer, {})
+      if (a.start) await a.start(officer, NOW)
+    }
+    await action('journal.create').preview({ parcel_id: 'p1', activity_type: 'IRRIGATION' }, farmer)
+    await action('journal.batch_approve').preview({ entry_ids: ['e1'] }, officer)
+    await action('harvest.approve').preview({ parcel_id: 'p2' }, officer)
+    expect(getCoreToken).not.toHaveBeenCalled()
   })
 })
 
