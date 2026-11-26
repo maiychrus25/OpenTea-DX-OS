@@ -5,6 +5,12 @@
 -- models; the same statements are in that file for new databases. Guarded so a database without those tables still migrates.
 DO $$
 BEGIN
+  IF to_regclass('platform.agent_runs') IS NOT NULL THEN
+    ALTER TABLE platform.agent_runs DROP CONSTRAINT IF EXISTS agent_runs_trigger_check;
+    ALTER TABLE platform.agent_runs ADD CONSTRAINT agent_runs_trigger_check
+      CHECK (trigger IN ('schedule', 'event', 'manual', 'message'));
+  END IF;
+
   IF to_regclass('platform.telegram_conversations') IS NOT NULL THEN
     ALTER TABLE platform.telegram_conversations ALTER COLUMN proposal_id DROP NOT NULL;
     ALTER TABLE platform.telegram_conversations DROP CONSTRAINT IF EXISTS telegram_conversations_kind_check;
