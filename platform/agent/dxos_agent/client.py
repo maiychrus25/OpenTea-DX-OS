@@ -273,6 +273,15 @@ class CoreGatewayClient:
         res = self._request_json("POST", f"/api/internal/agent/improvements/{improvement_id}/effect", effect)
         return dict(res.get("data") or {})
 
+    def get_enabled_apps(self) -> list[dict[str, Any]]:
+        """The mini-apps enabled for this cooperative, each `{id, manifest}` (Hasura filters by the token's cooperative)."""
+        data = self.graphql("query { platform_installed_apps(order_by: {id: asc}) { id manifest } }")
+        return [dict(row) for row in data.get("platform_installed_apps") or []]
+
+    def get_app_suggestions(self, app_id: str, path: str) -> list[Any]:
+        """GET an app's suggestions path through the gateway with this cooperative's agent token (contract C2)."""
+        return list(self._request_json("GET", f"/apps/{app_id}{path}").get("suggestions") or [])
+
     def post_autopilot_tick(self) -> dict[str, Any]:
         """Run this cooperative's due autonomous-mode proposals (contract C3); `{ran, failed, returned, stopped}`."""
         res = self._request_json("POST", "/api/internal/autopilot/tick", {})
