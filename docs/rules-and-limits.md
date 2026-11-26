@@ -248,8 +248,8 @@ Các ngưỡng mặc định nằm trong `thresholds` của từng agent và có
 | A2 | `heavy_rain_mm` | 15 mm | Dự báo mưa từ ngưỡng trở lên trong ngày sau lần phun gần đây → mẫu `rain_after_spray` |
 | A2 | `spray_lookback_days`, `forecast_days` | 2 ngày, 2 ngày | Phạm vi xét lần phun gần đây và dự báo |
 | A2 | `fresh_reading_hours` | 2 giờ | Chỉ số đo trong khoảng này mới được xét ngưỡng |
-| A3 `disease-watch` | `radius_m`, `window_days`, `min_reports` | 2000 m, 7 ngày, 3 báo cáo | Từ 3 báo cáo cùng bệnh trong 2 km → `disease.inspection` và `notification.households` (mẫu `disease_nearby`). Chạy hằng ngày lúc 07:00 và khi tập báo cáo trong cửa sổ thay đổi |
-| A4 `harvest-ready` | `harvest_window_days` | 3 ngày | Thửa đang `TENDING`, vụ có ngày thu hoạch dự kiến trong 3 ngày tới, và mọi hoạt động phun thuốc không nháp đã qua ngày an toàn → `harvest.approve`. Chạy hằng ngày lúc 06:30 |
+| A3 `disease-watch` | `radius_m`, `window_days`, `min_reports` | 2000 m, 7 ngày, 3 báo cáo | Từ 3 báo cáo cùng bệnh trong 2 km → `disease.inspection` và `notification.households` (mẫu `disease_nearby`). Chạy hằng ngày lúc 05:40 và khi tập báo cáo trong cửa sổ thay đổi |
+| A4 `harvest-ready` | `harvest_window_days` | 3 ngày | Thửa đang `TENDING`, vụ có ngày thu hoạch dự kiến trong 3 ngày tới, và mọi hoạt động phun thuốc không nháp đã qua ngày an toàn → `harvest.approve`. Chạy hằng ngày lúc 05:30 để kịp chiến dịch 06:00 |
 | A5 `bulletin` | `commodity`, `market_hours` | `Tea`, 48 giờ | Không có dữ liệu thị trường trong 48 giờ thì không chạy. Chạy hằng ngày lúc 05:00 |
 
 Quy tắc mẫu tin: tin gửi nông hộ và cán bộ không bao giờ là văn bản tự do của agent. Agent chỉ gửi mã mẫu và các slot có kiểu xác định; web dựng nội dung tiếng Việt từ mẫu. Agent không được gửi `note_vi`, `body`, mã mẫu lạ hoặc slot sai kiểu: các trường này bị từ chối với mã `INVALID_PAYLOAD` (HTTP 400). Quản lý hoặc cán bộ có thể thêm `note_vi` khi duyệt; ghi chú này được nối vào cuối nội dung như một đoạn mới.
@@ -275,7 +275,28 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
 - **Ghi dữ liệu:** chỉ khi chính tài khoản đó bấm Xác nhận trên thẻ của mình. Vai trò, HTX và trạng thái bật của tài khoản được đọc lại khi xử lý tin và khi bấm Xác nhận; bị hạ quyền hay đổi HTX thì không ghi gì (`noPermission`).
 - **Ảnh và vị trí:** ảnh lớn hơn 5 MB hoặc tải lỗi không được ghi; vị trí chỉ dùng để tìm thửa gần nhất (công cụ `nearby`).
 - **LLM (agent A7) chỉ thấy:** câu người dùng nhắn (đã che số điện thoại, e-mail và số giấy tờ khi dùng nhà cung cấp bên ngoài), ngày hôm nay theo giờ Việt Nam, và danh sách tên công cụ và hành động. Không gửi ảnh, vị trí, kết quả công cụ hay dữ liệu trả lời.
-- **Lệnh chưa có:** `/chiendich`, `/tuvanhanh`, `/dung` trả lời `notYet`.
+- **Lệnh chưa có:** `/tuvanhanh`, `/dung` trả lời `notYet`. `/chiendich` gửi chiến dịch hôm nay của HTX (mục 3.12), hoặc `Hôm nay chưa có chiến dịch.`.
+
+### 3.12 Chiến dịch ngày (A9, M7)
+
+- **Lịch:** A9 chạy lúc 06:00 (giờ Việt Nam), sau A4 (05:30) và A3 (05:40). Báo cáo 18:00 có thêm tiến độ chiến dịch (mục 13.3 của đặc tả).
+- **Giới hạn:**
+  - tối đa 15 việc trong một chiến dịch, mỗi việc có một mục tiêu đo được (ví dụ `1 thửa`, `3 nhật ký`);
+  - tối đa một chiến dịch cho mỗi HTX trong một ngày; lần đăng thứ hai trong ngày trả lại chiến dịch đã có và không gửi thêm tin Telegram;
+  - tóm tắt do LLM viết tối đa 400 ký tự; không có nhà cung cấp hoặc LLM lỗi thì dùng câu mẫu `Hôm nay có <n> việc: …`;
+  - không có việc nào thì không đăng chiến dịch và không gọi LLM.
+- **Thứ tự và loại việc bị bỏ (quy tắc C5):** mỗi việc bị bỏ được ghi kèm quy tắc (`withdrawal`, `rain`, `people`, `overflow`) và vẫn là đề xuất `proposed`.
+  1. `withdrawal`: không đưa việc thu hoạch vào thửa còn trong thời gian cách ly của lần phun thuốc.
+  2. `rain`: không đưa việc phun thuốc vào thửa có dự báo mưa từ 5 mm trở lên trong 12 giờ tới.
+  3. Sắp theo loại việc (thu hoạch, kiểm tra bệnh, thông báo nông hộ, nhật ký, thông báo cán bộ, bản tin), rồi theo ngày tạo.
+  4. `people`: khi có số người có mặt (từ chấm công, M10), bỏ việc vượt số người cần; hiện chưa có số liệu nên bước này không bỏ việc nào.
+  5. `overflow`: giữ 15 việc đầu; việc còn lại mở lại vào ngày mai.
+- **Duyệt cả chiến dịch (C7):**
+  - chạy mọi việc mà người duyệt được quyết định, qua cùng luồng `DecideProposalUseCase` của đề xuất;
+  - việc mức `high` (duyệt thu hoạch) không bao giờ chạy từ "duyệt cả": nó chờ xác nhận riêng và chiến dịch chuyển sang `partial`;
+  - việc mà vai trò của người duyệt không được quyết định được gửi lại cho cán bộ có quyền qua Telegram;
+  - một việc lỗi hoặc đã được quyết định không dừng các việc còn lại; kết quả ghi số việc đã chạy, chờ xác nhận riêng, chuyển người đủ quyền và lỗi;
+  - bỏ chiến dịch chỉ khi còn nháp hoặc một phần; sau khi bỏ, các việc trở lại là đề xuất thông thường.
 
 ## 4. Security Rules
 
