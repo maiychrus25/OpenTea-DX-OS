@@ -57,6 +57,13 @@ export class PrismaStrategyPlanRepository implements StrategyPlanRepository {
 
   async insertDraftIfNone(input: NewStrategyPlan): Promise<{ id: string } | null> {
     return this.write(AGENT_ACTOR, async (tx) => {
+      // A draft whose proposal was rejected, expired or went stale is finished: it gives way to the new one.
+      await tx.$executeRaw`
+        UPDATE platform.strategy_plans sp SET status = 'superseded'
+        WHERE sp.htx_code = ${input.htxCode} AND sp.season = ${input.season} AND sp.status = 'draft'
+          AND sp.proposal_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM platform.agent_proposals p WHERE p.id = sp.proposal_id AND p.status = 'proposed')
+      `
       const inserted = await tx.$queryRaw<{ id: string }[]>`
         INSERT INTO platform.strategy_plans (htx_code, season, goals, priorities, initiatives, warnings, run_id)
         VALUES (${input.htxCode}, ${input.season}, ${JSON.stringify(input.goals)}::jsonb,
@@ -94,7 +101,11 @@ export class PrismaStrategyPlanRepository implements StrategyPlanRepository {
   async draftExists(htxCode: string, season: string): Promise<boolean> {
     const rows = await prisma.$queryRaw<{ found: boolean }[]>`
       SELECT EXISTS (
-        SELECT 1 FROM platform.strategy_plans WHERE htx_code = ${htxCode} AND season = ${season} AND status = 'draft'
+        SELECT 1 FROM platform.strategy_plans sp
+        WHERE sp.htx_code = ${htxCode} AND sp.season = ${season} AND sp.status = 'draft'
+          -- A draft whose proposal is closed no longer counts: A11 may draft the season again.
+          AND (sp.proposal_id IS NULL
+               OR EXISTS (SELECT 1 FROM platform.agent_proposals p WHERE p.id = sp.proposal_id AND p.status = 'proposed'))
       ) AS found
     `
     return rows[0]?.found === true
