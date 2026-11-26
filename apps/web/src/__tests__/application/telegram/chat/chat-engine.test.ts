@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { ChatEngine } from '@/application/telegram/chat/ChatEngine'
 import type { ChatAction, ChatTool, ChatUser, PhotoStore } from '@/application/telegram/chat/types'
 import { TELEGRAM_TEXT } from '@/application/telegram/messages'
+import { DomainError } from '@/domain/errors'
 import { verifyCallbackDataV2 } from '@/domain/telegram/callback-data'
 import type { TelegramConversation } from '@/domain/telegram/ports/TelegramRepository'
 
@@ -339,5 +340,161 @@ describe('ChatEngine: flows and steps', () => {
 
     await engine.onText(FARMER, 'thời tiết hôm nay', NOW)
     expect(weather.run).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('ChatEngine: cards and confirm', () => {
+  const harvest = {
+    name: 'harvest.approve',
+    titleVi: 'Duyệt thu hoạch',
+    risk: 'high',
+    roles: ['manager'],
+    routes: [],
+    args: [],
+    steps: [
+      { kind: 'choice', slot: 'parcel_id', promptVi: 'Chọn thửa cần duyệt thu hoạch:', choices: async () => [{ value: 'p2', label: 'TC-A2' }] },
+    ],
+    payloadSchema: z.object({ parcel_id: z.string() }),
+    consequenceVi: 'Thửa TC-A2 sẽ được phép thu hái. Hệ thống kiểm tra lại thời gian cách ly trước khi duyệt.',
+    preview: jest.fn(async () => ['Thửa: TC-A2']),
+    execute: jest.fn(async () => 'Đã duyệt thu hoạch thửa TC-A2.'),
+  } as unknown as ChatAction
+
+  const tenMinutes = 10 * 60 * 1000
+
+  /** Opens the spraying-free journal flow with the optional photo skipped, and returns the card reply. */
+  async function journalCard(engine: ChatEngine) {
+    const first = await engine.onText(FARMER, '/nhatky', NOW)
+    const second = await press(engine, FARMER, '42', 42, ...pair(first.replies[0].buttons, 'TC-B2'))
+    const third = await press(engine, FARMER, '42', 42, ...pair(second.replies[0].buttons, 'Tưới nước'))
+    return press(engine, FARMER, '42', 42, ...pair(third.replies[0].buttons, 'Bỏ qua'))
+  }
+
+  function pair(buttons: { text: string; callback_data: string }[][] | undefined, label: string): [string, string] {
+    const { c, s } = buttonFor(buttons, label)
+    return [c, s]
+  }
+
+  test('a medium card shows the preview, the footer and Xác nhận / Huỷ', async () => {
+    const { engine, repo } = build()
+    const card = await journalCard(engine)
+    expect(card.replies[0].text).toBe(['Ghi nhật ký', 'Thửa: p2', TELEGRAM_TEXT.cardFooter].join('\n'))
+    expect(card.replies[0].buttons!.map((row) => row.map((b) => b.text))).toEqual([['Xác nhận', 'Huỷ']])
+    expect(repo.rows.get('42')).toMatchObject({ flow: 'journal.create', step: -1 })
+  })
+
+  test('Cancel edits the card to flowCancelled and runs nothing', async () => {
+    const { engine, repo } = build()
+    const card = await journalCard(engine)
+    const res = await press(engine, FARMER, '42', 42, ...pair(card.replies[0].buttons, 'Huỷ'), 9)
+    expect(res.replies[0]).toEqual({ op: 'edit', chat_id: 42, edit_message_id: 9, text: TELEGRAM_TEXT.flowCancelled })
+    expect(journal.execute).not.toHaveBeenCalled()
+    expect(repo.rows.has('42')).toBe(false)
+  })
+
+  test('Confirm after 10 minutes answers cardExpired and runs nothing', async () => {
+    const { engine } = build()
+    const card = await journalCard(engine)
+    const late = new Date(NOW.getTime() + tenMinutes)
+    const res = await press(engine, FARMER, '42', 42, ...pair(card.replies[0].buttons, 'Xác nhận'), 9, late)
+    expect(res.replies[0]).toMatchObject({ op: 'edit', text: TELEGRAM_TEXT.cardExpired })
+    expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.cardExpired, show_alert: true })
+    expect(journal.execute).not.toHaveBeenCalled()
+  })
+
+  test('Confirm executes once, edits the card to the result and writes one audit event', async () => {
+    const { engine, repo } = build()
+    const card = await journalCard(engine)
+    const res = await press(engine, FARMER, '42', 42, ...pair(card.replies[0].buttons, 'Xác nhận'), 9)
+    expect(res.replies[0]).toEqual({ op: 'edit', chat_id: 42, edit_message_id: 9, text: 'Đã ghi nhật ký. Nhật ký đang chờ duyệt.' })
+    expect(journal.execute).toHaveBeenCalledTimes(1)
+    expect(journal.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ parcel_id: 'p2', activity_type: 'IRRIGATION' }),
+      FARMER,
+      expect.objectContaining({ photos: expect.any(Object) }),
+      NOW
+    )
+    expect(repo.audit).toEqual([
+      {
+        actor: 'u-farmer',
+        op: 'telegram.action.executed',
+        subject: 'TC',
+        details: { kind: 'journal.create', htx_code: 'TC', channel: 'telegram' },
+      },
+    ])
+    // The card is used up: a second press is stale.
+    const again = await press(engine, FARMER, '42', 42, ...pair(card.replies[0].buttons, 'Xác nhận'), 9)
+    expect(again.answer_callback).toEqual({ text: TELEGRAM_TEXT.staleButton, show_alert: true })
+  })
+
+  test('a DomainError from execute becomes executeFailed, and nothing is audited', async () => {
+    const { engine, repo } = build()
+    const card = await journalCard(engine)
+    journal.execute.mockRejectedValueOnce(new DomainError('Thửa đã đóng'))
+    const res = await press(engine, FARMER, '42', 42, ...pair(card.replies[0].buttons, 'Xác nhận'), 9)
+    expect(res.replies[0].text).toBe(TELEGRAM_TEXT.executeFailed('Thửa đã đóng'))
+    expect(repo.audit).toEqual([])
+  })
+
+  test('confirm re-reads the live role and refuses a demoted user, with nothing executed', async () => {
+    const { engine } = build()
+    const card = await journalCard(engine)
+    const demoted: ChatUser = { ...FARMER, tenant: { ...FARMER.tenant, role: 'manager' } }
+    const res = await press(engine, demoted, '42', 42, ...pair(card.replies[0].buttons, 'Xác nhận'), 9)
+    expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.noPermission('Ghi nhật ký'), show_alert: true })
+    expect(journal.execute).not.toHaveBeenCalled()
+  })
+
+  test('a high action shows Tiếp tục first, then a second card with its own token and Xác nhận lần cuối', async () => {
+    const { engine, repo } = build({ actions: [harvest] })
+    const start = await engine.onText(MANAGER, 'duyệt thu hoạch', NOW)
+    const first = await press(engine, MANAGER, '44', 44, ...pair(start.replies[0].buttons, 'TC-A2'))
+    expect(first.replies[0].text).toBe(['Duyệt thu hoạch', 'Thửa: TC-A2', TELEGRAM_TEXT.cardFooter].join('\n'))
+    expect(first.replies[0].buttons!.map((row) => row.map((b) => b.text))).toEqual([['Tiếp tục', 'Huỷ']])
+
+    const oldToken = repo.rows.get('44')!.token
+    const second = await press(engine, MANAGER, '44', 44, ...pair(first.replies[0].buttons, 'Tiếp tục'), 9)
+    expect(second.replies[0].text).toBe(
+      [TELEGRAM_TEXT.secondCardTitle, 'Thửa: TC-A2', harvest.consequenceVi, TELEGRAM_TEXT.secondCardFooter].join('\n')
+    )
+    expect(second.replies[0].buttons!.map((row) => row.map((b) => b.text))).toEqual([['Xác nhận lần cuối', 'Huỷ']])
+    expect(repo.rows.get('44')).toMatchObject({ step: -2 })
+    expect(repo.rows.get('44')!.token).not.toBe(oldToken)
+  })
+
+  test('final on the first card is refused, and a second-card confirm after 10 minutes is cardExpired', async () => {
+    const { engine } = build({ actions: [harvest] })
+    const start = await engine.onText(MANAGER, 'duyệt thu hoạch', NOW)
+    const first = await press(engine, MANAGER, '44', 44, ...pair(start.replies[0].buttons, 'TC-A2'))
+    const token = buttonFor(first.replies[0].buttons, 'Tiếp tục').c
+    const refused = await engine.onCallback(MANAGER, { telegramUserId: '44', c: token, s: 'final', chatId: 44, messageId: 9 }, NOW)
+    expect(refused.answer_callback).toEqual({ text: TELEGRAM_TEXT.staleButton, show_alert: true })
+
+    const second = await press(engine, MANAGER, '44', 44, ...pair(first.replies[0].buttons, 'Tiếp tục'), 9)
+    const late = new Date(NOW.getTime() + tenMinutes)
+    const expired = await press(engine, MANAGER, '44', 44, ...pair(second.replies[0].buttons, 'Xác nhận lần cuối'), 9, late)
+    expect(expired.replies[0].text).toBe(TELEGRAM_TEXT.cardExpired)
+    expect(harvest.execute).not.toHaveBeenCalled()
+  })
+
+  test('a high action confirmed on the second card runs once and names the result', async () => {
+    const { engine, repo } = build({ actions: [harvest] })
+    const start = await engine.onText(MANAGER, 'duyệt thu hoạch', NOW)
+    const first = await press(engine, MANAGER, '44', 44, ...pair(start.replies[0].buttons, 'TC-A2'))
+    const second = await press(engine, MANAGER, '44', 44, ...pair(first.replies[0].buttons, 'Tiếp tục'), 9)
+    const done = await press(engine, MANAGER, '44', 44, ...pair(second.replies[0].buttons, 'Xác nhận lần cuối'), 9)
+    expect(done.replies[0].text).toBe('Đã duyệt thu hoạch thửa TC-A2.')
+    expect(harvest.execute).toHaveBeenCalledTimes(1)
+    expect(repo.audit[0]).toMatchObject({ actor: 'u-manager', details: { kind: 'harvest.approve' } })
+  })
+
+  test('a high card shows no ok button: Xác nhận on the first card is stale', async () => {
+    const { engine } = build({ actions: [harvest] })
+    const start = await engine.onText(MANAGER, 'duyệt thu hoạch', NOW)
+    const first = await press(engine, MANAGER, '44', 44, ...pair(start.replies[0].buttons, 'TC-A2'))
+    const token = buttonFor(first.replies[0].buttons, 'Tiếp tục').c
+    const res = await engine.onCallback(MANAGER, { telegramUserId: '44', c: token, s: 'ok', chatId: 44, messageId: 9 }, NOW)
+    expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.staleButton, show_alert: true })
+    expect(harvest.execute).not.toHaveBeenCalled()
   })
 })
