@@ -14,6 +14,7 @@ Mini-app chỉ đọc cho trưởng HTX: một góc nhìn tổng thể và theo 
 | Sức khoẻ cây | `/health` | Báo cáo bệnh theo tuần và loại; trạng thái xử lý; độ tin cậy AI; xác nhận và chỉ có AI; thửa bị báo cáo nhiều nhất |
 | Lô chè | `/lots` | Phễu theo giai đoạn; lô tạo mỗi tháng theo trạng thái; dự kiến và thực tế; hạng chất lượng |
 | Dữ liệu | `/data` | Số đo kho nóng mỗi ngày (vùng); số đo theo loại cảm biến; ma trận cảm biến theo thửa; số dòng mỗi lần chuyển sang kho lạnh (lần lỗi đánh dấu ✕) |
+| AI | `/ai` | Đề xuất theo agent và trạng thái (thanh xếp chồng); hiệu quả từng agent: tỉ lệ duyệt và từ chối, thời gian chờ, lần chạy lỗi, chi phí; cải tiến hằng tuần và kết quả đo sau 2 và 4 tuần |
 
 Kỳ xem `?days=7|30|90` (mặc định 30). Biểu đồ số đo cảm biến luôn dùng tối đa 30 ngày, vì kho nóng chỉ giữ 30 ngày. Cần lõi `>=1.13.0`: app đọc view `telemetry_sensor_daily`.
 
