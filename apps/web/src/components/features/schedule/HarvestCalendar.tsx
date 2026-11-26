@@ -6,6 +6,8 @@
 import React, { useState, useMemo } from 'react'
 import useSWR from 'swr'
 import { Calendar, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Edit2, ShieldAlert } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import kit from '@/components/features/dashboard/page-kit.module.css'
 import styles from './HarvestCalendar.module.css'
 import { Button } from '@/components/ui/Button/Button'
 
@@ -108,26 +110,26 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
   const emptyDays = useMemo(() => Array.from({ length: startDayOfWeek }, (_, i) => i), [startDayOfWeek])
 
   return (
-    <div className={styles.calendarContainer}>
+    <div className={kit.page}>
+      <PageHeader
+        icon={<Calendar size={28} />}
+        title="Lịch thu hái"
+        description="Lịch dự kiến thu hoạch theo thửa, có cảnh báo thời gian cách ly"
+        actions={isManager ? <Button onClick={() => setIsAddModalOpen(true)}>+ Thêm lịch</Button> : undefined}
+      />
+
+      <div className={styles.calendarContainer}>
       <div className={styles.header}>
-        <div className="flex items-center gap-2">
-          <Calendar className="w-6 h-6 text-primary" />
-          <h2 className={styles.title}>Lịch Dự Kiến Thu Hoạch</h2>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="font-medium">
-            Tháng {currentDate.getMonth() + 1} / {currentDate.getFullYear()}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={handlePrevMonth} aria-label="Tháng trước"><ChevronLeft size={16} /></Button>
-            <Button variant="secondary" onClick={handleNextMonth} aria-label="Tháng sau"><ChevronRight size={16} /></Button>
-            {isManager && (
-              <Button onClick={() => setIsAddModalOpen(true)}>+ Thêm lịch</Button>
-            )}
-          </div>
+        <h2 className={styles.title}>
+          Tháng {currentDate.getMonth() + 1} / {currentDate.getFullYear()}
+        </h2>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={handlePrevMonth} aria-label="Tháng trước"><ChevronLeft size={16} /></Button>
+          <Button variant="secondary" onClick={handleNextMonth} aria-label="Tháng sau"><ChevronRight size={16} /></Button>
         </div>
       </div>
 
+      <div className={styles.gridScroll}>
       <div className={styles.grid}>
         {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(day => (
           <div key={day} className={styles.dayHeader}>{day}</div>
@@ -172,6 +174,8 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
             </div>
           )
         })}
+      </div>
+      </div>
       </div>
 
       {/* Edit Modal */}

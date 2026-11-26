@@ -11,6 +11,7 @@ import { GatewayParcelReader } from '@/infrastructure/core/gateway-parcel-reader
 import { MetricCard } from '@/components/ui/MetricCard'
 import { Pill } from '@/components/ui/Pill'
 import { Map } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
 import styles from './page.module.css'
 
 const ZoneMap = dynamic(() => import('@/components/features/map/ZoneMap'), { ssr: false })
@@ -37,9 +38,7 @@ export default async function ManagerZonesPage() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Bản đồ Vùng Trồng</h1>
-      </div>
+      <PageHeader icon={<Map size={28} />} title="Bản đồ Vùng Trồng" description="Diện tích và trạng thái các thửa của HTX" />
 
       <MetricCard 
         icon={<Map size={24} />}

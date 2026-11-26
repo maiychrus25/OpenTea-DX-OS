@@ -4,8 +4,9 @@
 import { Metadata } from 'next'
 import { PartnerList } from './_components/PartnerList'
 import Link from 'next/link'
-import { Map, Plus } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { Map, Plus, Users } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import kit from '@/components/features/dashboard/page-kit.module.css'
 
 export const metadata: Metadata = {
   title: 'Danh bạ đối tác',
@@ -13,25 +14,22 @@ export const metadata: Metadata = {
 
 export default function PartnersPage() {
   return (
-    <div className="h-full flex flex-col gap-6 p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Danh bạ đối tác</h1>
-          <p className="text-sm text-ink-tertiary mt-1">Quản lý danh sách đối tác mua bán, nhà cung cấp vật tư</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/manager/partner-map">
-            <Button variant="secondary" className="flex items-center gap-2">
-              <Map size={18} aria-hidden="true" /> Bản đồ
-            </Button>
-          </Link>
-          <Link href="/manager/partner-map">
-            <Button className="flex items-center gap-2">
-              <Plus size={18} aria-hidden="true" /> Thêm đối tác
-            </Button>
-          </Link>
-        </div>
-      </div>
+    <div className={`${kit.page} h-full`}>
+      <PageHeader
+        icon={<Users size={28} />}
+        title="Danh bạ đối tác"
+        description="Danh sách đối tác mua bán, nhà cung cấp vật tư"
+        actions={
+          <>
+            <Link href="/manager/partner-map" className={kit.secondary}>
+              <Map size={16} aria-hidden="true" /> Bản đồ
+            </Link>
+            <Link href="/manager/partner-map" className={kit.primary}>
+              <Plus size={16} aria-hidden="true" /> Thêm đối tác
+            </Link>
+          </>
+        }
+      />
       
       <div className="flex-1 min-h-0 bg-card border border-border-subtle rounded-xl overflow-hidden shadow-sm">
         <PartnerList />

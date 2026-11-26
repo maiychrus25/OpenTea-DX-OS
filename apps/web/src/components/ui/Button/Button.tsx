@@ -26,7 +26,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {isLoading && (
           <span className={styles.spinner} aria-hidden="true" />
         )}
-        <span className={isLoading ? styles.hiddenContent : ''}>
+        <span className={`${styles.content} ${isLoading ? styles.hiddenContent : ''}`.trim()}>
           {children}
         </span>
       </button>

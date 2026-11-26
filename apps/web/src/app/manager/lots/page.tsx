@@ -5,9 +5,11 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { QrCode, Info } from 'lucide-react'
-import { Pill } from '@/components/ui'
-import styles from './lots.module.css'
+import Link from 'next/link'
+import { QrCode, Info, Package } from 'lucide-react'
+import { PageHeader, Pill, SegmentedFilter } from '@/components/ui'
+import table from '@/components/features/dashboard/dashboard.module.css'
+import kit from '@/components/features/dashboard/page-kit.module.css'
 import { fetchJson } from '@/lib/api/fetch-json'
 
 interface LotSummary {
@@ -71,98 +73,79 @@ export default function ManagerLotsPage() {
   }
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <div>
-          <span className={styles.eyebrow}>LÔ HÀNG & TRUY XUẤT</span>
-          <h1 className={styles.title}>Sẵn sàng giao thương</h1>
-          <p className={styles.subtitle}>Kiểm soát nghiệm thu, hồ sơ và mã QR trước khi xuất hàng.</p>
-        </div>
-        {/* Manager chỉ xem + export QR — việc tạo lô hàng do Cán bộ kỹ thuật thực hiện (api-contract.md) */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '0.5rem',
-          background: 'var(--color-success-subtle)', border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
-          borderRadius: '0.5rem', padding: '0.5rem 1rem',
-          fontSize: '0.85rem', color: 'var(--color-success)',
-        }}>
-          <Info className="w-4 h-4 shrink-0 text-success" aria-hidden="true" />
-          <span>Cán bộ kỹ thuật tạo lô hàng. Trưởng HTX duyệt & xuất QR.</span>
-        </div>
-      </div>
+    <div className={kit.page}>
+      <PageHeader
+        icon={<Package size={28} />}
+        title="Lô hàng"
+        description="Kiểm soát nghiệm thu, hồ sơ và mã QR trước khi xuất hàng"
+      />
 
-      <div className={styles.filterRow}>
-        <input 
-          type="text" 
-          className={styles.searchbox} 
-          placeholder="Tìm mã lô, sản phẩm..." 
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-        />
-        
-        <div className={styles.filterTabs}>
-          <button 
-            className={`${styles.filter} ${activeTab === 'ALL' ? styles.filterActive : ''}`}
-            onClick={() => setActiveTab('ALL')}
-          >
-            Tất cả <span className={styles.filterCount}>{lots.length}</span>
-          </button>
-          <button 
-            className={`${styles.filter} ${activeTab === 'READY' ? styles.filterActive : ''}`}
-            onClick={() => setActiveTab('READY')}
-          >
-            Sẵn sàng <span className={styles.filterCount}>{countReady}</span>
-          </button>
-          <button 
-            className={`${styles.filter} ${activeTab === 'QR_EXPORTED' ? styles.filterActive : ''}`}
-            onClick={() => setActiveTab('QR_EXPORTED')}
-          >
-            Đã xuất QR <span className={styles.filterCount}>{countQrExported}</span>
-          </button>
-        </div>
-      </div>
+      {/* Manager chỉ xem + export QR — việc tạo lô hàng do Cán bộ kỹ thuật thực hiện (api-contract.md) */}
+      <p className={kit.notice}>
+        <Info size={16} aria-hidden="true" />
+        <span>Cán bộ kỹ thuật tạo lô hàng. Trưởng HTX duyệt &amp; xuất QR.</span>
+      </p>
 
-      <div className={styles.tableContainer}>
+      <SegmentedFilter
+        label="Lọc theo trạng thái"
+        value={activeTab}
+        onChange={value => setActiveTab(value as FilterTab)}
+        options={[
+          { value: 'ALL', label: 'Tất cả', count: lots.length },
+          { value: 'READY', label: 'Sẵn sàng', count: countReady },
+          { value: 'QR_EXPORTED', label: 'Đã xuất QR', count: countQrExported },
+        ]}
+      />
+
+      <div className={kit.card}>
+        <div className={kit.toolbar}>
+          <input
+            type="search"
+            className={kit.search}
+            aria-label="Tìm lô hàng"
+            placeholder="Tìm mã lô, sản phẩm..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+
         {isLoading ? (
-          <div className={styles.loadingCell}>
-            Đang tải dữ liệu...
-          </div>
+          <div className={kit.state}>Đang tải dữ liệu...</div>
         ) : error ? (
-          <div className={styles.emptyCell}>
-            {error}
-          </div>
+          <div className={kit.state}>{error}</div>
+        ) : filteredLots.length === 0 ? (
+          <div className={kit.state}>Không tìm thấy lô hàng nào.</div>
         ) : (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Mã lô</th>
-                <th>Sản phẩm & nguồn</th>
-                <th>Sản lượng</th>
-                <th>Trạng thái</th>
-                <th className={styles.actionCol}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLots.length > 0 ? (
-                filteredLots.map(lot => (
-                  <tr key={lot.id} className={styles.tableRow} onClick={() => handleRowClick(lot.id)}>
-                    <td className={styles.lotCode}>{lot.lot_code || lot.id.substring(0,8)}</td>
-                    <td>{lot.commodity}</td>
-                    <td>{lot.estimated_weight_kg ? `${lot.estimated_weight_kg} kg` : '-'}</td>
-                    <td>{renderStatus(lot.status)}</td>
-                    <td className={styles.actionCell}>
-                      <QrCode size={20} className={styles.qrIcon} aria-label="QR Code Icon" />
-                    </td>
-                  </tr>
-                ))
-              ) : (
+          <div className={table.tableWrap}>
+            <table className={table.table}>
+              <thead>
                 <tr>
-                  <td colSpan={5} className={styles.emptyCell}>
-                    Không tìm thấy lô hàng nào.
-                  </td>
+                  <th>Mã lô</th>
+                  <th>Sản phẩm</th>
+                  <th>Khối lượng</th>
+                  <th>Ngày tạo</th>
+                  <th>Trạng thái</th>
+                  <th>QR</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredLots.map(lot => (
+                  <tr key={lot.id} className={kit.clickable} onClick={() => handleRowClick(lot.id)}>
+                    <td className={table.code}>
+                      <Link href={`/manager/lots/${lot.id}`} className={table.action} onClick={e => e.stopPropagation()}>
+                        {lot.lot_code || lot.id.substring(0, 8)}
+                      </Link>
+                    </td>
+                    <td>{lot.commodity}</td>
+                    <td>{lot.estimated_weight_kg ? `${lot.estimated_weight_kg.toLocaleString('vi-VN')} kg` : '—'}</td>
+                    <td>{lot.created_at ? new Date(lot.created_at).toLocaleDateString('vi-VN') : '—'}</td>
+                    <td>{renderStatus(lot.status)}</td>
+                    <td><QrCode size={18} aria-hidden="true" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

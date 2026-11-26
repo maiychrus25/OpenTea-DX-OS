@@ -9,20 +9,24 @@
   border-radius: var(--rounded-xl);
   overflow: hidden;
   box-shadow: var(--shadow-card);
-  font-family: 'Inter', sans-serif;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem 1.5rem;
-  background: linear-gradient(to right, color-mix(in srgb, var(--color-success) 5%, transparent), transparent);
+  min-height: 56px;
+  padding: 0 18px;
   border-bottom: 1px solid var(--color-border-default);
 }
 
+.gridScroll {
+  overflow-x: auto;
+}
+
 .title {
-  font-size: 1.25rem;
+  margin: 0;
+  font-size: var(--font-size-card-title);
   font-weight: 700;
   color: var(--color-ink-primary);
   letter-spacing: -0.025em;
@@ -30,7 +34,8 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-width: 640px;
   background-color: var(--color-border-default); /* creates the grid lines */
   gap: 1px;
 }
@@ -47,7 +52,7 @@
 }
 
 .cell {
-  min-height: 140px;
+  min-height: 112px;
   padding: 0.75rem;
   background-color: var(--color-surface-card);
   display: flex;

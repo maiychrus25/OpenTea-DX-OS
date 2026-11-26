@@ -4,7 +4,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card } from '@/components/ui/Card';
+import { Users, UserPlus } from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SegmentedFilter } from '@/components/ui/SegmentedFilter';
+import table from '@/components/features/dashboard/dashboard.module.css';
+import kit from '@/components/features/dashboard/page-kit.module.css';
 import { Button } from '@/components/ui/Button';
 import { Pill } from '@/components/ui/Pill';
 import { Modal } from '@/components/ui/Modal';
@@ -17,6 +21,7 @@ export function MemberList() {
   const [loading, setLoading] = useState(true);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [query, setQuery] = useState('');
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     action: 'APPROVE' | 'DELETE' | null;
@@ -94,122 +99,128 @@ export function MemberList() {
     }
   };
 
+  const needle = query.trim().toLowerCase();
   const filteredMembers = members.filter(
-    (m) => statusFilter === 'ALL' || m.status === statusFilter
+    (m) =>
+      (statusFilter === 'ALL' || m.status === statusFilter) &&
+      (!needle || [m.full_name, m.name, m.phone, m.email].some((v) => v?.toLowerCase().includes(needle)))
   );
 
+  const countOf = (status: string) => members.filter((m) => m.status === status).length;
+  const initials = (name = '') =>
+    name.trim().split(/\s+/).slice(-2).map((part) => part.charAt(0)).join('').toUpperCase();
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center space-x-2">
-          <label htmlFor="statusFilter" className="text-sm font-medium text-[var(--color-ink-primary)]">
-            Lọc theo trạng thái:
-          </label>
-          <select
-            id="statusFilter"
+    <div className={kit.page}>
+      <PageHeader
+        icon={<Users size={28} />}
+        title="Quản lý thành viên"
+        description={
+          loading
+            ? 'Danh sách thành viên và lời mời tham gia hợp tác xã'
+            : `${members.length} thành viên · ${countOf('PENDING')} đang chờ`
+        }
+        actions={
+          <Button onClick={() => setIsInviteModalOpen(true)} variant="primary">
+            <UserPlus size={16} aria-hidden="true" />
+            + Thêm thành viên
+          </Button>
+        }
+      />
+
+      <div className={kit.card}>
+        <div className={kit.toolbar}>
+          <input
+            type="search"
+            className={kit.search}
+            aria-label="Tìm thành viên"
+            placeholder="Tìm theo tên, số điện thoại..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <SegmentedFilter
+            label="Lọc theo trạng thái"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="block w-32 rounded-md border-border shadow-sm focus:border-primary focus:ring-primary sm:text-sm text-[var(--color-ink-primary)]"
-          >
-            <option value="ALL">Tất cả</option>
-            <option value="ACTIVE">Hoạt động</option>
-            <option value="PENDING">Chờ xác nhận</option>
-            <option value="LOCKED">Đã khóa</option>
-          </select>
+            onChange={setStatusFilter}
+            options={[
+              { value: 'ALL', label: 'Tất cả', count: members.length },
+              { value: 'ACTIVE', label: 'Hoạt động', count: countOf('ACTIVE') },
+              { value: 'PENDING', label: 'Chờ xác nhận', count: countOf('PENDING') },
+              { value: 'LOCKED', label: 'Đã khóa', count: countOf('LOCKED') },
+            ]}
+          />
         </div>
 
-        <Button onClick={() => setIsInviteModalOpen(true)} variant="primary">
-          + Thêm thành viên
-        </Button>
-      </div>
-
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-border-subtle">
-            <thead className="bg-[var(--color-surface-sunken)] border-b border-[var(--border)]">
-              <tr>
-                <th scope="col" className="px-6 py-2.5 text-left text-xs font-semibold text-[var(--color-ink-secondary)] uppercase tracking-wider">
-                  Thành viên
-                </th>
-                <th scope="col" className="px-6 py-2.5 text-left text-xs font-semibold text-[var(--color-ink-secondary)] uppercase tracking-wider">
-                  Vai trò
-                </th>
-                <th scope="col" className="px-6 py-2.5 text-left text-xs font-semibold text-[var(--color-ink-secondary)] uppercase tracking-wider">
-                  Trạng thái
-                </th>
-                <th scope="col" className="px-6 py-2.5 text-right text-xs font-semibold text-[var(--color-ink-secondary)] uppercase tracking-wider">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-card divide-y divide-border-subtle">
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-ink-tertiary">
-                    Đang tải danh sách...
-                  </td>
-                </tr>
-              ) : filteredMembers.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-ink-tertiary">
-                    Không tìm thấy thành viên nào.
-                  </td>
-                </tr>
-              ) : (
-                filteredMembers.map((member) => (
-                  <tr key={member.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-[var(--color-ink-primary)]">
-                            {member.full_name || member.name}
-                          </div>
-                          <div className="text-sm mt-1 text-[var(--color-ink-secondary)]">
-                            {[member.email, member.phone]
-                              .filter((v) => v && v !== 'Chưa cập nhật')
-                              .filter((v, i, a) => a.indexOf(v) === i)
-                              .join(' • ') || 'Chưa cập nhật'}
+        {loading ? (
+          <div className={kit.state}>Đang tải danh sách...</div>
+        ) : filteredMembers.length === 0 ? (
+          <div className={kit.state}>Không tìm thấy thành viên nào.</div>
+        ) : (
+          <>
+            <div className={table.tableWrap}>
+              <table className={table.table}>
+                <thead>
+                  <tr>
+                    <th scope="col">STT</th>
+                    <th scope="col">Thành viên</th>
+                    <th scope="col">Vai trò</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMembers.map((member, index) => (
+                    <tr key={member.id}>
+                      <td>{index + 1}</td>
+                      <td>
+                        <div className={kit.person}>
+                          <span className={kit.avatar} aria-hidden="true">
+                            {initials(member.full_name || member.name)}
+                          </span>
+                          <div className={kit.personText}>
+                            <strong>{member.full_name || member.name}</strong>
+                            <small>
+                              {[member.email, member.phone]
+                                .filter((v) => v && v !== 'Chưa cập nhật')
+                                .filter((v, i, a) => a.indexOf(v) === i)
+                                .join(' • ') || 'Chưa cập nhật'}
+                            </small>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-ink-secondary)]">
-                      {member.role?.toUpperCase() === 'FARMER' && 'Nông dân'}
-                      {member.role?.toUpperCase() === 'OFFICER' && 'Cán bộ kỹ thuật'}
-                      {member.role?.toUpperCase() === 'MANAGER' && 'Trưởng HTX'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Pill tone={getStatusBadgeVariant(member.status)}>
-                        {member.status === 'ACTIVE' && 'Hoạt động'}
-                        {member.status === 'PENDING' && 'Chờ xác nhận'}
-                        {member.status === 'LOCKED' && 'Đã khóa'}
-                      </Pill>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {member.status === 'PENDING' && (
-                        <button 
-                          onClick={() => handleApprove(member.id)}
-                          className="text-success hover:underline ml-4 font-bold"
-                        >
-                          Duyệt
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => handleDelete(member.id)}
-                        className="text-danger hover:text-[var(--color-danger-hover)] hover:underline ml-4"
-                      >
-                        Xóa
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-
+                      </td>
+                      <td>
+                        {member.role?.toUpperCase() === 'FARMER' && 'Nông dân'}
+                        {member.role?.toUpperCase() === 'OFFICER' && 'Cán bộ kỹ thuật'}
+                        {member.role?.toUpperCase() === 'MANAGER' && 'Trưởng HTX'}
+                      </td>
+                      <td>
+                        <Pill tone={getStatusBadgeVariant(member.status)}>
+                          {member.status === 'ACTIVE' && 'Hoạt động'}
+                          {member.status === 'PENDING' && 'Chờ xác nhận'}
+                          {member.status === 'LOCKED' && 'Đã khóa'}
+                        </Pill>
+                      </td>
+                      <td>
+                        <div className={kit.rowActions}>
+                          {member.status === 'PENDING' && (
+                            <button type="button" className={kit.linkButton} onClick={() => handleApprove(member.id)}>
+                              Duyệt
+                            </button>
+                          )}
+                          <button type="button" className={kit.dangerButton} onClick={() => handleDelete(member.id)}>
+                            Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className={kit.footer}>Hiển thị {filteredMembers.length} / {members.length}</div>
+          </>
+        )}
+      </div>
 
       <Modal
         isOpen={confirmModal.isOpen}

@@ -9,6 +9,8 @@ import { ProfileForm } from './_components/ProfileForm'
 import { AccountSection } from '@/components/ui'
 import { TelegramLinkCard } from '@/components/features/telegram/TelegramLinkCard'
 import { CertificateManager } from '@/components/features/certificate/CertificateManager'
+import { Landmark } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
 import styles from './page.module.css'
 
 export default async function HtxProfilePage() {
@@ -27,10 +29,11 @@ export default async function HtxProfilePage() {
   return (
     <div className={styles.container}>
       <section aria-label="Hồ sơ HTX">
-        <div className={styles.header}>
-          <h1 className={styles.title}>Thông tin Hợp tác xã</h1>
-          <p className={styles.description}>Quản lý và cập nhật thông tin chung của hợp tác xã.</p>
-        </div>
+        <PageHeader
+          icon={<Landmark size={28} />}
+          title="Thông tin Hợp tác xã"
+          description="Quản lý và cập nhật thông tin chung của hợp tác xã"
+        />
         
         {/* Mock HTX Stats Grid from AC-1 */}
         <div className={styles.mockStatsGrid}>

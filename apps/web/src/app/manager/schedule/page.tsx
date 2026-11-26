@@ -6,7 +6,7 @@ import { HarvestCalendar } from '@/components/features/schedule/HarvestCalendar'
 
 export default function ManagerSchedulePage() {
   return (
-    <div className="p-6">
+    <div>
       <HarvestCalendar userRole="MANAGER" />
     </div>
   )

@@ -4,8 +4,10 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
-import { Check, CheckCircle2 } from 'lucide-react'
-import styles from '../approve.module.css'
+import { Check, CheckCircle2, CheckSquare } from 'lucide-react'
+import { EmptyState, PageHeader } from '@/components/ui'
+import table from '@/components/features/dashboard/dashboard.module.css'
+import kit from '@/components/features/dashboard/page-kit.module.css'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface JournalEntry {
@@ -106,84 +108,87 @@ export function ApproveList() {
   }
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Duyệt nhật ký</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {selected.size > 0 && (
-            <span className={styles.selectedCount}>Đã chọn: {selected.size}</span>
-          )}
+    <div className={kit.page}>
+      <PageHeader
+        icon={<CheckSquare size={28} />}
+        title="Duyệt nhật ký"
+        description="Nhật ký canh tác đang chờ Trưởng HTX phê duyệt"
+        actions={
           <button
-            className={styles.approveBtn}
+            type="button"
+            className={kit.primary}
             disabled={selected.size === 0 || approving}
             onClick={handleApprove}
           >
             {approving ? 'Đang duyệt...' : (
               <>
-                <Check size={16} className="inline mr-1 align-text-bottom" />
+                <Check size={16} aria-hidden="true" />
                 Duyệt ({selected.size})
               </>
             )}
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {message && (
-        <div className={message.type === 'success' ? styles.successBanner : styles.errorBanner}>
+        <p className={message.type === 'success' ? kit.success : kit.error} role="status">
           {message.text}
-        </div>
+        </p>
       )}
 
-      {loading ? (
-        <div className={styles.empty}>Đang tải...</div>
-      ) : loadFailed ? (
-        <div className={styles.empty}>{LOAD_FAILED_MESSAGE}</div>
-      ) : entries.length === 0 ? (
-        <div className={styles.empty}>
-          <CheckCircle2 size={36} className="text-success mb-2 mx-auto block" />
-          Không có nhật ký nào đang chờ duyệt!
-        </div>
-      ) : (
-        <>
-          <label className={styles.selectAll}>
-            <input
-              type="checkbox"
-              checked={selected.size === entries.length}
-              onChange={toggleAll}
-            />
-            Chọn tất cả ({entries.length})
-          </label>
-
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th style={{ width: '40px' }}></th>
-                <th>Ngày</th>
-                <th>Hoạt động</th>
-                <th>Người thực hiện</th>
-                <th>Chi tiết</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map(e => (
-                <tr key={e.id}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selected.has(e.id)}
-                      onChange={() => toggleSelect(e.id)}
-                    />
-                  </td>
-                  <td>{new Date(e.entry_date).toLocaleDateString('vi-VN')}</td>
-                  <td>{ACTIVITY_LABELS[e.activity_type] || e.activity_type}</td>
-                  <td>{e.performed_by}</td>
-                  <td>{formatDetail(e.activities?.[0]?.activity_detail, e.notes)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
+      <div className={kit.card}>
+        {loading ? (
+          <div className={kit.state}>Đang tải...</div>
+        ) : loadFailed ? (
+          <div className={kit.state}>{LOAD_FAILED_MESSAGE}</div>
+        ) : entries.length === 0 ? (
+          <EmptyState icon={<CheckCircle2 size={28} />} title="Không có nhật ký nào đang chờ duyệt!" />
+        ) : (
+          <>
+            <div className={table.tableWrap}>
+              <table className={table.table}>
+                <thead>
+                  <tr>
+                    <th className={kit.checkCell}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Chọn tất cả (${entries.length})`}
+                        checked={selected.size === entries.length}
+                        onChange={toggleAll}
+                      />
+                    </th>
+                    <th>STT</th>
+                    <th>Ngày</th>
+                    <th>Hoạt động</th>
+                    <th>Người thực hiện</th>
+                    <th>Chi tiết</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((e, index) => (
+                    <tr key={e.id}>
+                      <td className={kit.checkCell}>
+                        <input
+                          type="checkbox"
+                          aria-label={`Chọn nhật ký ${index + 1}`}
+                          checked={selected.has(e.id)}
+                          onChange={() => toggleSelect(e.id)}
+                        />
+                      </td>
+                      <td>{index + 1}</td>
+                      <td>{new Date(e.entry_date).toLocaleDateString('vi-VN')}</td>
+                      <td>{ACTIVITY_LABELS[e.activity_type] || e.activity_type}</td>
+                      <td>{e.performed_by}</td>
+                      <td>{formatDetail(e.activities?.[0]?.activity_detail, e.notes)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className={kit.footer}>Đã chọn {selected.size} · Hiển thị {entries.length} nhật ký</div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

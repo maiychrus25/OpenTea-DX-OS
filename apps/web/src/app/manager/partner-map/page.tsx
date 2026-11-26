@@ -5,8 +5,9 @@ import React from 'react'
 import { Metadata } from 'next'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { List } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { List, Map as MapIcon } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import kit from '@/components/features/dashboard/page-kit.module.css'
 
 const PartnerMap = dynamic(() => import('@/components/features/partner-map/PartnerMap'), { ssr: false })
 
@@ -17,24 +18,17 @@ export const metadata: Metadata = {
 
 export default function ManagerPartnerMapPage() {
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink-primary)]">
-            Bản đồ Đối tác
-          </h1>
-          <p className="mt-2 text-sm text-[var(--color-ink-secondary)]">
-            Quản lý các đối tác (người mua, nhà kho, đại lý) trực quan trên bản đồ.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/manager/partners">
-            <Button variant="secondary" className="flex items-center gap-2">
-              <List size={18} aria-hidden="true" /> Danh bạ đối tác
-            </Button>
+    <div className={kit.page}>
+      <PageHeader
+        icon={<MapIcon size={28} />}
+        title="Bản đồ đối tác"
+        description="Quản lý người mua, nhà kho, đại lý trực quan trên bản đồ"
+        actions={
+          <Link href="/manager/partners" className={kit.secondary}>
+            <List size={16} aria-hidden="true" /> Danh bạ đối tác
           </Link>
-        </div>
-      </header>
+        }
+      />
 
       <section>
         <PartnerMap />

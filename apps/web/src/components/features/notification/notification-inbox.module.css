@@ -18,9 +18,7 @@
 }
 
 .container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 1.5rem;
+  width: 100%;
 }
 
 .header {
@@ -39,6 +37,11 @@
 }
 
 .bellIcon {
+  width: var(--page-icon-box);
+  height: var(--page-icon-box);
+  padding: 15px;
+  border-radius: var(--radius-card);
+  background: var(--color-primary-subtle);
   color: var(--color-primary);
 }
 
@@ -53,9 +56,10 @@
 }
 
 .title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-ink-primary);
+  font-size: var(--font-size-page-title);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--color-ink-heading);
   margin: 0;
 }
 
