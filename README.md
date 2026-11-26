@@ -436,6 +436,8 @@ Ngưỡng và quy tắc mẫu tin: mục 3.10 trong [docs/rules-and-limits.md](.
 
 **Tự vận hành (M12).** Trưởng HTX có thể bật chế độ tự vận hành trên trang cài đặt AI (cần đăng nhập lại): các đề xuất đủ điều kiện tự chạy sau một cửa sổ chặn theo rủi ro, mọi người duyệt đều chặn được bằng nút `Chặn` trên Telegram, và `/dung` hoặc nút `Dừng ngay` dừng chế độ tức thì. Chế độ tắt mặc định, có năm giới hạn cứng, giới hạn ngày và bốn phanh tự động. Quy tắc và giới hạn: mục 3.15 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
+**Hành động của mini-app (M9).** Mini-app khai trong `app.yaml` điều agent được gợi ý và hành động nào có thể chạy (ví dụ `tea-shop` tạo khuyến mãi cho sản phẩm tồn kho lâu). Gợi ý của app thành đề xuất như mọi đề xuất khác và chỉ chạy sau khi người có quyền duyệt; hành động động tới tiền chỉ tự chạy khi chế độ tự vận hành mở khoá riêng. Chạy `./dxos apps actor enable` một lần để web có quyền gọi app thay người duyệt. Cách khai: [docs/miniapps.md](./docs/miniapps.md); quy tắc và giới hạn: mục 3.16 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
+
 **Đo lường agent (M14).** `make benchmark PROVIDER=<replay|ollama|anthropic|openai> MODEL=<id>` chạy các bộ kịch bản của agent với một nhà cung cấp và ghi bảng kết quả vào [docs/benchmark.md](./docs/benchmark.md).
 
 ### Bật / tắt lớp AI cho từng HTX (`./dxos agent`)

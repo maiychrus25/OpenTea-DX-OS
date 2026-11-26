@@ -388,6 +388,26 @@ Trong cửa sổ, bất kỳ người duyệt nào cũng chặn được bằng 
 
 **Giám sát:** tin `Sẽ tự chạy lúc <HH:mm>` kèm nút `Chặn` và `Xem`; `/tuvanhanh` cho trạng thái và số liệu hôm nay; tin chiến dịch 06:00 bắt đầu bằng `Chiến dịch hôm nay sẽ tự chạy`; báo cáo 18:00 có mục `Tự vận hành`.
 
+### 3.16 Hành động của mini-app (M9)
+
+| Quy tắc | Giá trị |
+|---|---|
+| Số hành động tối đa mỗi app | 10 (`agent.actions` trong `app.yaml`) |
+| Số gợi ý tối đa mỗi lần hỏi một app | 10 |
+| Chu kỳ agent hỏi gợi ý của app | 30 phút, mỗi HTX và mỗi app đã bật |
+| Không lặp đề xuất của app | 24 giờ, theo loại `app.<id>.<action>` và đối tượng |
+| Hạn của đề xuất app | 72 giờ |
+| Cửa sổ chặn khi tự vận hành | hành động `money: true` là loại phải mở khoá riêng, cửa sổ 2 giờ; hành động khác `risk` trung bình 15 phút |
+| Quyền duyệt | vai trò trong `approver_roles` của hành động (`officer`, `manager`) |
+| Thứ tự trong chiến dịch ngày (A9) | sau bản tin, trước các loại chưa biết |
+| Tên hành động | `^[a-z][a-z0-9_.]{2,40}$` |
+| `payload` | chỉ các từ khoá `type`, `enum`, `minimum`, `maximum`, `minLength`, `maxLength`, `required`, `additionalProperties: false`; tối đa 20 thuộc tính |
+
+- Hành động của app chỉ chạy sau một quyết định, như mọi loại đề xuất khác; không đường nào bỏ qua quyết định ngoài chế độ tự vận hành (mục 3.15).
+- Web chạy hành động bằng token của client `dxos-apps-actor` (không có vai trò nào) kèm ba header `X-DXOS-Acting-*` về người duyệt. Gateway xoá ba header này ở mọi route app, trừ route hành động chỉ nhận client đó; app chỉ tin header khi `azp` của token là `dxos-apps-actor`.
+- Lỗi 4xx của app ghi `failed` kèm câu tiếng Việt của app và không tự thử lại. Gỡ app, hoặc tắt app cho HTX, làm các đề xuất đang mở của app chuyển `expired`.
+- App do AI sinh ra (`generated: true`) không được khai hành động; `./dxos validate` từ chối.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication
