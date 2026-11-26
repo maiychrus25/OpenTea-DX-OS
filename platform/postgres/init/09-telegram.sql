@@ -68,7 +68,7 @@ CREATE INDEX IF NOT EXISTS telegram_outbox_health_key
 -- Conversations (M2 reject reason, M5 chat flows and cards). A reject reason has a proposal; a flow has none.
 CREATE TABLE IF NOT EXISTS platform.telegram_conversations (
   telegram_user_id  bigint      PRIMARY KEY,
-  kind              text        NOT NULL CHECK (kind IN ('reject_reason', 'flow')),
+  kind              text        NOT NULL CHECK (kind IN ('reject_reason', 'flow', 'voice')),
   proposal_id       uuid        REFERENCES platform.agent_proposals(id),
   expires_at        timestamptz NOT NULL,
   flow              text,
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS platform.telegram_conversations (
 ALTER TABLE platform.telegram_conversations ALTER COLUMN proposal_id DROP NOT NULL;
 ALTER TABLE platform.telegram_conversations DROP CONSTRAINT IF EXISTS telegram_conversations_kind_check;
 ALTER TABLE platform.telegram_conversations ADD CONSTRAINT telegram_conversations_kind_check
-  CHECK (kind IN ('reject_reason', 'flow'));
+  CHECK (kind IN ('reject_reason', 'flow', 'voice'));
 ALTER TABLE platform.telegram_conversations DROP CONSTRAINT IF EXISTS telegram_conversations_proposal_check;
 ALTER TABLE platform.telegram_conversations ADD CONSTRAINT telegram_conversations_proposal_check
   CHECK ((kind = 'reject_reason') = (proposal_id IS NOT NULL));

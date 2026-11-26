@@ -887,7 +887,10 @@ Ngoài `message_id`, `chat`, `from`, `text`, tin nhắn có thể kèm:
 - `caption`: chú thích của ảnh (không dùng để định tuyến);
 - `photo`: `{ "mime_type": "image/jpeg", "data_base64": "...", "file_unique_id": "..." }`, ảnh lớn nhất không quá 5 MB;
 - `photo_error`: `too_large` hoặc `download_failed` khi có ảnh nhưng không chuyển tiếp được;
-- `location`: `{ "latitude": number, "longitude": number }`.
+- `location`: `{ "latitude": number, "longitude": number }`;
+- `voice_text`: câu relay nghe được từ tin thoại (tối đa 500 ký tự, không bao giờ là âm thanh). Web trả `Em nghe được: “…”` kèm ba nút `Đúng`, `Sửa`, `Huỷ` và giữ câu trong cuộc hội thoại loại `voice` 10 phút; chỉ `Đúng` mới chuyển câu đó đi như tin nhắn chữ, nên việc ghi vẫn cần thẻ xác nhận. Văn bản rỗng trả `Chưa nghe rõ. Bạn nói lại hoặc nhắn chữ nhé.` không kèm nút;
+- `voice_duration`: số giây của tin thoại (0 đến 3600);
+- `voice_error`: `too_long` (tin thoại dài quá 60 giây) hoặc `stt_unavailable` (dịch vụ nhận dạng không chạy hoặc lỗi); web trả câu giải thích, không giữ gì.
 
 ### Trả lời cho relay: `op`
 

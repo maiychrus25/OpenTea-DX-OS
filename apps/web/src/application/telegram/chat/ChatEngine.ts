@@ -84,6 +84,10 @@ export type IncomingPhoto =
   | { kind: 'image'; bytes: Buffer; mimeType: 'image/jpeg' }
   | { kind: 'error'; reason: 'too_large' | 'download_failed' }
 
+export type IncomingVoice =
+  | { kind: 'text'; text: string }
+  | { kind: 'error'; reason: 'too_long' | 'stt_unavailable' }
+
 const send = (chatId: number, text: string, buttons?: Buttons): OutboxReply =>
   buttons ? { op: 'send', chat_id: chatId, text, buttons } : { op: 'send', chat_id: chatId, text }
 
@@ -154,6 +158,9 @@ export class ChatEngine {
       }
     }
 
+    // A typed message replaces a heard sentence that is still waiting, so its old Đúng button goes stale.
+    if (open?.kind === 'voice') await this.deps.repo.deleteConversation(user.telegramUserId)
+
     if (command) return this.command(user, command, text, now)
     const route = routeText(text)
     if (route?.kind === 'tool') return this.runTool(user, route.name, {}, now)
@@ -191,6 +198,34 @@ export class ChatEngine {
     return this.advance(user, action, { ...open.state, [step.slot]: key }, open.step + 1, now)
   }
 
+  /** A voice message the relay turned into text (or could not). Nothing runs until the person presses Đúng. */
+  async onVoice(user: ChatUser, voice: IncomingVoice, now: Date): Promise<UpdateResponse> {
+    const chat = user.chatId
+    if (voice.kind === 'error') {
+      return only([send(chat, voice.reason === 'too_long' ? TELEGRAM_TEXT.voiceTooLong : TELEGRAM_TEXT.voiceUnavailable)])
+    }
+    const text = voice.text.trim()
+    if (!text) return only([send(chat, TELEGRAM_TEXT.voiceUnclear)])
+
+    const token = newToken()
+    await this.deps.repo.setFlow({
+      telegramUserId: user.telegramUserId,
+      kind: 'voice',
+      flow: 'voice',
+      step: null,
+      state: { text },
+      token,
+      cardMessageId: null,
+      expiresAt: new Date(now.getTime() + CARD_TTL_MS),
+    })
+    const buttons: Buttons = [[
+      this.button(token, 'vok', TELEGRAM_BUTTON.voiceOk),
+      this.button(token, 'vedit', TELEGRAM_BUTTON.voiceEdit),
+      this.button(token, 'cancel', TELEGRAM_BUTTON.cancel),
+    ]]
+    return only([send(chat, TELEGRAM_TEXT.voiceHeard(text), buttons)])
+  }
+
   onLocation(user: ChatUser, latitude: number, longitude: number, now: Date): Promise<UpdateResponse> {
     return this.runTool(user, 'nearby', { latitude, longitude }, now)
   }
@@ -207,6 +242,7 @@ export class ChatEngine {
     }
 
     const row = await this.deps.repo.conversationOf(press.telegramUserId)
+    if (row?.kind === 'voice' && row.token === press.c) return this.voicePress(user, row, press, now)
     if (!row || row.kind !== 'flow' || row.token !== press.c) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
     const action = this.actionNamed(row.flow)
     if (!action) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
@@ -226,6 +262,22 @@ export class ChatEngine {
     }
     if (isCard) return this.cardPress(user, row, action, press, now)
     return this.stepPress(user, row, action, press, now)
+  }
+
+  /** Đúng replays the heard text as if typed; Sửa and Huỷ drop it. Expired, or a user without a role, sends nothing on. */
+  private async voicePress(user: ChatUser | null, row: TelegramConversation, press: CallbackPress, now: Date): Promise<UpdateResponse> {
+    const chat = press.chatId
+    const text = typeof row.state.text === 'string' ? row.state.text : ''
+    if (!user) return callbackOnly([], TELEGRAM_TEXT.noPermission('Trợ lý Telegram'), true)
+    await this.deps.repo.deleteConversation(press.telegramUserId)
+    if (expired(row, now) || !text || !['vok', 'vedit', 'cancel'].includes(press.s)) {
+      return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
+    }
+    if (press.s === 'cancel') return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.flowCancelled)])
+    const heard = edit(chat, press.messageId, TELEGRAM_TEXT.voiceHeard(text))
+    if (press.s === 'vedit') return callbackOnly([heard, send(chat, TELEGRAM_TEXT.voiceRetype)])
+    const next = await this.onText(user, text, now)
+    return callbackOnly([heard, ...next.replies])
   }
 
   /** Runs an intent the assistant returned (contract C7). The caller sends the replies through the outbox. */

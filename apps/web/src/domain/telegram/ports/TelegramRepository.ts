@@ -47,7 +47,7 @@ export interface OutboxRow extends OutboxInsert {
   telegramMessageId: string | null
 }
 
-export type ConversationKind = 'reject_reason' | 'flow'
+export type ConversationKind = 'reject_reason' | 'flow' | 'voice'
 
 /** One open conversation per Telegram user: a reject reason (M2) or a chat flow or card (M5). */
 export interface TelegramConversation {
@@ -73,6 +73,8 @@ export interface RejectConversationInput {
 
 export interface FlowInput {
   telegramUserId: string
+  /** Defaults to 'flow'; 'voice' holds a heard sentence until the person confirms it (M15). */
+  kind?: 'flow' | 'voice'
   flow: string
   step: number | null
   state: Record<string, unknown>
