@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: MIT
+   SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.bar { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-radius: 12px; border: 1px solid var(--alert-warn-border); background: var(--alert-warn-bg); color: var(--alert-warn-fg); }
+.icon { flex-shrink: 0; }
+.text { flex: 1; }
+.link { font-weight: 700; color: var(--alert-warn-fg); text-decoration: none; white-space: nowrap; }
+.link:hover { text-decoration: underline; }

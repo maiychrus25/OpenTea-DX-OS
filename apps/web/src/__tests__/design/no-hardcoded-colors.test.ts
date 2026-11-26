@@ -203,6 +203,7 @@ const RUNTIME_VARIABLES: Record<string, string> = {
   '--skeleton-width': 'Skeleton.tsx sets it inline from the width prop',
   '--skeleton-height': 'Skeleton.tsx sets it inline from the height prop',
   '--bar-height': 'chat-interface.tsx sets it inline for each chart bar',
+  '--share-color': 'manager/dashboard/page.tsx sets it inline from each parcel status',
 }
 
 // Only :root and the dark blocks count: Tailwind emits an `@theme inline` name only when a utility needs it.

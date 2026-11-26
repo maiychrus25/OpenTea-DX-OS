@@ -23,7 +23,7 @@ colors:
   muted-dark: "#162a20"
   muted-foreground: "#5d6a63"
   muted-foreground-dark: "#9fb4a8"
-  border: "#dce3dd"
+  border: "#dde6e0"
   border-dark: "#2a4034"
   sidebar-bg: "#143c2d"
   sidebar-bg-dark: "#0e271d"
@@ -67,15 +67,15 @@ colors:
   danger-subtle-dark: "#3a1414"
   info-subtle: "#dbeafe"
   info-subtle-dark: "#132640"
-  surface-sunken: "#f1f5f9"
+  surface-sunken: "#f7faf8"
   surface-sunken-dark: "#0e1d16"
   surface-overlay: "#ffffff"
   surface-overlay-dark: "#152a20"
   border-subtle: "#e2e8f0"
   border-subtle-dark: "#1f3229"
-  ink-secondary: "#475569"
+  ink-secondary: "#5d6a63"
   ink-secondary-dark: "#b4c4bb"
-  ink-tertiary: "#5f6b7a"
+  ink-tertiary: "#475569"
   ink-tertiary-dark: "#8ea398"
   ink-inverse: "#ffffff"
   ink-inverse-dark: "#08130e"
@@ -87,6 +87,38 @@ colors:
   badge-unread-dark: "#f87171"
   danger-hover: "#991b1b"
   danger-hover-dark: "#fca5a5"
+  primary-strong: "#14583e"
+  primary-strong-dark: "#4cc38a"
+  sidebar-text: "#dbe9e1"
+  sidebar-text-dark: "#dbe9e1"
+  sidebar-muted: "#a9c7b7"
+  sidebar-muted-dark: "#a9c7b7"
+  sidebar-group: "#8fb3a1"
+  sidebar-group-dark: "#8fb3a1"
+  sidebar-badge: "#f2b544"
+  sidebar-badge-dark: "#f2b544"
+  sidebar-badge-foreground: "#1d1405"
+  sidebar-badge-foreground-dark: "#1d1405"
+  table-head: "#f1f6f3"
+  table-head-dark: "#173328"
+  border-input: "#c9d6cd"
+  border-input-dark: "#42614f"
+  border-row: "#edf1ee"
+  border-row-dark: "#1f3229"
+  ink-heading: "#10301f"
+  ink-heading-dark: "#e3ece6"
+  pill-ok-fg: "#147a3a"
+  pill-ok-fg-dark: "#4ade80"
+  alert-warn-border: "#f5d98a"
+  alert-warn-border-dark: "#765b1f"
+  alert-warn-fg: "#4a3000"
+  alert-warn-fg-dark: "#fbbf24"
+  hero-bg: "#10301f"
+  hero-bg-dark: "#10301f"
+  hero-text: "#ffffff"
+  hero-text-dark: "#ffffff"
+  hero-muted: "#dbe9e1"
+  hero-muted-dark: "#dbe9e1"
 typography:
   display:
     fontFamily: Be Vietnam Pro
@@ -110,7 +142,7 @@ typography:
     lineHeight: 1.4
   body:
     fontFamily: Be Vietnam Pro
-    fontSize: 0.9375rem
+    fontSize: 14px
     fontWeight: 400
     lineHeight: 1.55
   body-large:
@@ -125,12 +157,32 @@ typography:
     lineHeight: 1.4
   meta:
     fontFamily: Be Vietnam Pro
-    fontSize: 0.75rem
+    fontSize: 12.5px
     fontWeight: 500
     lineHeight: 1.4
   mono:
     fontFamily: JetBrains Mono
     fontSize: 0.8125rem
+    fontWeight: 400
+    lineHeight: 1.5
+  page-title:
+    fontFamily: Be Vietnam Pro
+    fontSize: 28px
+    fontWeight: 800
+    lineHeight: 1.2
+  hero-title:
+    fontFamily: Be Vietnam Pro
+    fontSize: 36px
+    fontWeight: 800
+    lineHeight: 1.15
+  card-title:
+    fontFamily: Be Vietnam Pro
+    fontSize: 15px
+    fontWeight: 700
+    lineHeight: 1.4
+  table:
+    fontFamily: Be Vietnam Pro
+    fontSize: 13.5px
     fontWeight: 400
     lineHeight: 1.5
 rounded:
@@ -151,9 +203,9 @@ spacing:
   "12": 48px
   "16": 64px
   gutter-mobile: 16px
-  gutter-desktop: 24px
-  sidebar-width: 240px
-  topbar-height: 56px
+  gutter-desktop: 28px
+  sidebar-width: 264px
+  topbar-height: 64px
 motion:
   duration-fast: 150ms
   duration-base: 200ms
@@ -237,7 +289,7 @@ Lưới khoảng cách 4px (`spacing`). Lề trang 16px trên điện thoại, 2
 
 | Token | Sáng | Tối |
 | --- | --- | --- |
-| `--shadow-card` | `0 1px 4px rgba(15, 23, 42, 0.06)` | `0 1px 4px rgba(0, 0, 0, 0.4)` |
+| `--shadow-card` | `0 1px 3px rgba(10, 58, 38, 0.05)` | `0 1px 4px rgba(0, 0, 0, 0.4)` |
 | `--shadow-card-hover` | `0 4px 16px rgba(15, 23, 42, 0.10)` | `0 4px 16px rgba(0, 0, 0, 0.5)` |
 | `--shadow-modal` | `0 10px 25px rgba(15, 23, 42, 0.15)` | `0 10px 25px rgba(0, 0, 0, 0.6)` |
 

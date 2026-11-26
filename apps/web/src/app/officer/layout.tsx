@@ -25,20 +25,20 @@ export default async function OfficerLayout({ children }: { children: React.Reac
   const openProposals = session.user.htxCode ? await new PrismaProposalRepository().countOpen(session.user.htxCode) : 0
 
   const navItems = [
-    { label: 'Tổng quan', href: '/officer/dashboard', icon: <Home size={20} /> },
-    { label: 'Lịch thu hái', href: '/officer/schedule', icon: <Calendar size={20} /> },
-    { label: 'Bản đồ', href: '/officer/farm-zones', icon: <Map size={20} /> },
-    { label: 'Nông hộ', href: '/officer/households', icon: <Users size={20} /> },
-    { label: 'Nhật ký', href: '/officer/journal', icon: <FileText size={20} /> },
-    { label: 'Đề xuất AI', href: '/officer/ai', icon: <Sparkles size={20} />, badge: openProposals || undefined },
-    { label: 'Lô hàng', href: '/officer/lots', icon: <PackageCheck size={20} /> },
-    { label: 'Nhật ký bệnh', href: '/officer/diseases', icon: <Stethoscope size={20} /> },
-    { label: 'Tài liệu', href: '/officer/documents', icon: <FolderOpen size={20} /> },
-    { label: 'Chatbot KT', href: '/officer/chat', icon: <MessageCircle size={20} /> },
-    { label: 'Trợ lý TT', href: '/officer/assistant', icon: <Bot size={20} /> },
-    { label: 'Thông báo', href: '/officer/notifications', icon: <Bell size={20} /> },
-    { label: 'Tài khoản', href: '/officer/profile', icon: <User size={20} /> },
-    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'officer', session.user.htxCode ?? null, loadAppFeed)),
+    { label: 'Tổng quan', href: '/officer/dashboard', icon: <Home size={20} />, group: 'Vận hành' },
+    { label: 'Lịch thu hái', href: '/officer/schedule', icon: <Calendar size={20} />, group: 'Vận hành' },
+    { label: 'Bản đồ', href: '/officer/farm-zones', icon: <Map size={20} />, group: 'Vận hành' },
+    { label: 'Nông hộ', href: '/officer/households', icon: <Users size={20} />, group: 'Vận hành' },
+    { label: 'Nhật ký', href: '/officer/journal', icon: <FileText size={20} />, group: 'Vận hành' },
+    { label: 'Lô hàng', href: '/officer/lots', icon: <PackageCheck size={20} />, group: 'Vận hành' },
+    { label: 'Nhật ký bệnh', href: '/officer/diseases', icon: <Stethoscope size={20} />, group: 'Vận hành' },
+    { label: 'Tài liệu', href: '/officer/documents', icon: <FolderOpen size={20} />, group: 'Tài nguyên' },
+    { label: 'Chatbot KT', href: '/officer/chat', icon: <MessageCircle size={20} />, group: 'Tài nguyên' },
+    { label: 'Trợ lý TT', href: '/officer/assistant', icon: <Bot size={20} />, group: 'Tài nguyên' },
+    { label: 'Đề xuất AI', href: '/officer/ai', icon: <Sparkles size={20} />, badge: openProposals || undefined, group: 'Tài nguyên' },
+    { label: 'Thông báo', href: '/officer/notifications', icon: <Bell size={20} />, group: 'Cá nhân' },
+    { label: 'Tài khoản', href: '/officer/profile', icon: <User size={20} />, group: 'Cá nhân' },
+    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'officer', session.user.htxCode ?? null, loadAppFeed)).map((item) => ({ ...item, group: 'Ứng dụng' })),
   ]
 
   return (

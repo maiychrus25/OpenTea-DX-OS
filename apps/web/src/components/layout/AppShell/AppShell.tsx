@@ -4,6 +4,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import styles from './AppShell.module.css'
 import { Sidebar, NavItem } from '../Sidebar/Sidebar'
 import { TopBar } from '../TopBar/TopBar'
@@ -40,6 +41,11 @@ export const AppShell: React.FC<AppShellProps> = ({
   htxLocation
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const pathname = usePathname()
+  // The most specific menu item that covers this page names it in the breadcrumb.
+  const pageName = navItems
+    .filter((item) => pathname === item.href || pathname?.startsWith(`${item.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.label
 
   return (
     <div className={styles.shell} data-role={role}>
@@ -71,6 +77,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             role={role}
             roleName={getRoleLabel(role)} 
             userName={userName} 
+            pageName={pageName}
             onMenuClick={!hideSidebar ? () => setSidebarOpen(true) : undefined}
           />
           <div className={styles.pageContent}>
@@ -78,7 +85,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
         </main>
 
-        <BottomNav navItems={navItems} />
+        {role === 'farmer' && <BottomNav navItems={navItems} />}
       </div>
       <Toaster position="top-right" richColors />
     </div>

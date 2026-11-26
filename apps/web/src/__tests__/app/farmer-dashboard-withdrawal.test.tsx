@@ -16,6 +16,9 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({
     household: { findFirst: jest.fn() },
     weatherCache: { findFirst: jest.fn() },
     journalActivity: { findMany: jest.fn() },
+    journalEntry: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) },
+    parcelCropCycle: { findMany: jest.fn().mockResolvedValue([]) },
+    htxProfile: { findUnique: jest.fn().mockResolvedValue({ name: 'HTX Chè' }) },
   },
 }))
 
@@ -26,6 +29,10 @@ const safeOn = (parcel_code: string, at: Date) => ({ safe_harvest_date: at, jour
 
 beforeEach(() => {
   jest.clearAllMocks()
+  db.journalEntry.findMany.mockResolvedValue([])
+  db.journalEntry.count.mockResolvedValue(0)
+  db.parcelCropCycle.findMany.mockResolvedValue([])
+  db.htxProfile.findUnique.mockResolvedValue({ name: 'HTX Chè' })
   jest.useFakeTimers().setSystemTime(NOW)
   db.household.findFirst.mockResolvedValue({
     id: 'hh1',

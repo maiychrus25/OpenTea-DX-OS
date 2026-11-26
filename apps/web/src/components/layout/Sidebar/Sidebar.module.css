@@ -2,7 +2,7 @@
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
 .sidebar {
-  width: 276px;
+  width: var(--sidebar-width);
   height: 100vh;
   background-color: var(--sidebar-bg);
   color: var(--sidebar-foreground);
@@ -28,7 +28,7 @@
 
 /* Brand Block */
 .brand {
-  height: 78px;
+  height: 77px;
   border-bottom: 1px solid color-mix(in srgb, var(--sidebar-foreground) 10%, transparent);
   display: flex;
   align-items: center;
@@ -62,7 +62,7 @@
 
 .brandText small {
   font-size: 12px;
-  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
+  color: var(--color-sidebar-muted);
 }
 
 .closeMenu {
@@ -84,22 +84,23 @@
 
 /* Coop Block */
 .coop {
-  padding: var(--spacing-4);
+  margin: 14px 12px 4px;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  cursor: pointer;
-  border-bottom: 1px solid color-mix(in srgb, var(--sidebar-foreground) 5%, transparent);
+  border-radius: var(--radius-button);
+  background: var(--color-sidebar-deep);
+  border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 8%, transparent);
 }
 
 .coopBadge {
   background: color-mix(in srgb, var(--sidebar-foreground) 10%, transparent);
   color: var(--sidebar-foreground);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 4px 8px;
-  border-radius: var(--rounded-md);
-  letter-spacing: 0.5px;
+  padding: 3px 7px;
+  border-radius: 6px;
 }
 
 .coopText {
@@ -109,62 +110,61 @@
   overflow: hidden;
 }
 
-.coopText strong {
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
+.coopText strong,
 .coopText small {
-  font-size: 12px;
-  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.coopIcon {
-  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
-}
+.coopText strong { font-size: 13.5px; font-weight: 700; }
+.coopText small { font-size: 12px; color: var(--color-sidebar-muted); }
 
 /* Nav */
 .nav {
   display: flex;
   flex-direction: column;
-  padding: var(--spacing-3);
-  gap: var(--spacing-1);
+  padding: 4px 12px 12px;
+  gap: 2px;
   flex: 1;
   overflow-y: auto;
+}
+
+.groupTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-sidebar-group);
+  padding: 18px 12px 6px;
 }
 
 .navItem {
   display: flex;
   align-items: center;
-  height: 40px;
-  padding: 0 var(--spacing-3);
-  border-radius: var(--rounded-sm);
-  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
+  flex-shrink: 0;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: var(--radius-button);
+  color: var(--color-sidebar-text);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
 .navItem:hover {
   background-color: color-mix(in srgb, var(--sidebar-foreground) 7%, transparent);
-  color: var(--sidebar-foreground);
 }
 
 .navBadge {
-  background-color: var(--accent-lime);
-  color: var(--sidebar-bg);
-  font-size: 0.7rem;
+  background-color: var(--color-sidebar-badge);
+  color: var(--color-sidebar-badge-foreground);
+  font-size: 11px;
   font-weight: 700;
   padding: 0 6px;
-  border-radius: 9999px;
-  min-width: 18px;
+  border-radius: var(--radius-pill);
+  min-width: 22px;
   height: 18px;
   display: flex;
   align-items: center;
@@ -173,9 +173,9 @@
 }
 
 .active, .active:hover {
-  background-color: color-mix(in srgb, var(--sidebar-foreground) 7%, transparent);
-  color: var(--sidebar-foreground);
-  box-shadow: inset 3px 0 var(--accent-lime);
+  background-color: var(--accent-lime);
+  color: var(--color-sidebar-deep);
+  font-weight: 700;
 }
 
 .icon {
@@ -194,25 +194,6 @@
   padding: var(--spacing-4);
   border-top: 1px solid color-mix(in srgb, var(--sidebar-foreground) 10%, transparent);
   flex-shrink: 0;
-}
-
-.roleLabel {
-  font-size: 10px;
-  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  margin-bottom: var(--spacing-2);
-}
-
-.roleSwitch {
-  background: color-mix(in srgb, var(--sidebar-foreground) 5%, transparent);
-  border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 10%, transparent);
-  color: var(--sidebar-foreground);
-  border-radius: var(--rounded-sm);
-  padding: var(--spacing-2) var(--spacing-3);
-  font-size: 13px;
-  margin-bottom: var(--spacing-4);
-  text-align: center;
 }
 
 .profile {
@@ -254,7 +235,7 @@
 
 .profileText small {
   font-size: 12px;
-  color: color-mix(in srgb, var(--sidebar-foreground) 75%, transparent);
+  color: var(--color-sidebar-muted);
 }
 
 /* Profile Popup */

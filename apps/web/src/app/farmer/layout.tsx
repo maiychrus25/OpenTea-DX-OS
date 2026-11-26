@@ -22,13 +22,13 @@ export default async function FarmerLayout({ children }: { children: React.React
   const htxProfile = session.user.htxCode ? await profileRepo.getProfile(session.user.htxCode) : null
 
   const navItems = [
-    { label: 'Tổng quan', href: '/farmer/dashboard', icon: <Home size={20} /> },
-    { label: 'Lịch thu hái', href: '/farmer/schedule', icon: <Calendar size={20} /> },
-    { label: 'Nhật ký', href: '/farmer/journal', icon: <FileText size={20} /> },
-    { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <Stethoscope size={20} /> },
-    { label: 'Bản tin & thông báo', href: '/farmer/bulletin-notifications', icon: <Bell size={20} /> },
-    { label: 'Tài khoản', href: '/farmer/profile', icon: <User size={20} /> },
-    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'farmer', session.user.htxCode ?? null, loadAppFeed)),
+    { label: 'Tổng quan', href: '/farmer/dashboard', icon: <Home size={20} />, group: 'Canh tác' },
+    { label: 'Lịch thu hái', href: '/farmer/schedule', icon: <Calendar size={20} />, group: 'Canh tác' },
+    { label: 'Nhật ký', href: '/farmer/journal', icon: <FileText size={20} />, group: 'Canh tác' },
+    { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <Stethoscope size={20} />, group: 'Canh tác' },
+    { label: 'Bản tin & thông báo', href: '/farmer/bulletin-notifications', icon: <Bell size={20} />, group: 'Cá nhân' },
+    { label: 'Tài khoản', href: '/farmer/profile', icon: <User size={20} />, group: 'Cá nhân' },
+    ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'farmer', session.user.htxCode ?? null, loadAppFeed)).map((item) => ({ ...item, group: 'Ứng dụng' })),
   ]
 
   return (

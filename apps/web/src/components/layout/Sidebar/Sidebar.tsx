@@ -17,6 +17,7 @@ export interface NavItem {
   href: string
   icon: React.ReactNode
   badge?: number | string
+  group?: string
 }
 
 export interface SidebarProps {
@@ -103,17 +104,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <strong>{htxName || 'Đang tải...'}</strong>
           <small>{htxLocation || '---'}</small>
         </div>
-        <ChevronDown size={16} className={styles.coopIcon} />
       </div>
 
       {/* Nav */}
-      <nav className={styles.nav}>
-        {navItems.map((item) => {
+      <nav className={styles.nav} aria-label="Điều hướng chính">
+        {navItems.map((item, index) => {
           const active = item.href === activeHref
           return (
+            <React.Fragment key={item.href}>
+            {item.group && item.group !== navItems[index - 1]?.group && (
+              <span className={styles.groupTitle}>{item.group}</span>
+            )}
             <Link
-              key={item.href}
               href={item.href}
+              onClick={onClose}
               className={`${styles.navItem} ${active ? styles.active : ''}`}
               aria-current={active ? 'page' : undefined}
             >
@@ -121,16 +125,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className={styles.label}>{item.label}</span>
               {item.badge != null && <span className={styles.navBadge}>{item.badge}</span>}
             </Link>
+            </React.Fragment>
           )
         })}
       </nav>
 
       {/* Footer */}
       <div className={styles.sidebarFoot}>
-        <div className={styles.roleLabel}>ĐANG XEM VỚI VAI TRÒ</div>
-        <div className={styles.roleSwitch}>
-          {getRoleLabel(role)}
-        </div>
         <div className={styles.profileWrapper} ref={profileRef}>
           {profileOpen && (
             <div className={styles.profilePopup}>
@@ -147,12 +148,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             </div>
           )}
-          <button className={styles.profile} onClick={() => setProfileOpen(prev => !prev)}>
+          <button type="button" className={styles.profile} aria-expanded={profileOpen} onClick={() => setProfileOpen(prev => !prev)}>
             <span className={styles.avatar}>{initials}</span>
             <div className={styles.profileText}>
               <strong>{userName}</strong>
               <small>{getRoleLabel(role)}</small>
             </div>
+            <ChevronDown size={16} aria-hidden="true" />
           </button>
         </div>
       </div>
