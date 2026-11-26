@@ -67,14 +67,24 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
   const [isLoading, setIsLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [only, setOnly] = useState<JournalEntry['status'] | null>(null)
+  const [total, setTotal] = useState(0)
+
+  // The dashboard links here with ?status=… to open on the entries it counted.
+  useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get('status')
+    if (status === 'PENDING_APPROVAL' || status === 'APPROVED') setOnly(status)
+  }, [])
 
   const load = useCallback(async () => {
     try {
+      // The API pages by 20; filtering needs the whole list, up to the most it will send.
       const url = householdId
-        ? `/api/journal?householdId=${householdId}`
-        : '/api/journal'
-      const data = await fetchJson<{ data?: JournalEntry[] }>(url)
+        ? `/api/journal?householdId=${householdId}&limit=1000`
+        : '/api/journal?limit=1000'
+      const data = await fetchJson<{ data?: JournalEntry[]; meta?: { total?: number } }>(url)
       setEntries(data.data || [])
+      setTotal(data.meta?.total ?? data.data?.length ?? 0)
       setLoadFailed(false)
     } catch {
       setLoadFailed(true)
@@ -131,6 +141,7 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
     }
   }
 
+  const shown = only ? entries.filter(e => e.status === only) : entries
   const hasWarning = entries.some(e => e.hasDiseaseWarning && e.status === 'PENDING_APPROVAL')
 
   return (
@@ -143,10 +154,14 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
       />
 
       {!isLoading && !loadFailed && <Stats items={[
-        { label: 'Nhật ký đang hiển thị', value: entries.length, icon: <BookOpen /> },
-        { label: 'Chờ duyệt (đang hiển thị)', value: entries.filter(entry => entry.status === 'PENDING_APPROVAL').length, icon: <Clock /> },
-        { label: 'Đã duyệt (đang hiển thị)', value: entries.filter(entry => entry.status === 'APPROVED').length, icon: <CheckSquare /> },
+        { label: 'Tất cả nhật ký', value: entries.length, icon: <BookOpen />, active: only === null, onSelect: () => setOnly(null) },
+        { label: 'Chờ duyệt', value: entries.filter(entry => entry.status === 'PENDING_APPROVAL').length, icon: <Clock />, active: only === 'PENDING_APPROVAL', onSelect: () => setOnly('PENDING_APPROVAL') },
+        { label: 'Đã duyệt', value: entries.filter(entry => entry.status === 'APPROVED').length, icon: <CheckSquare />, active: only === 'APPROVED', onSelect: () => setOnly('APPROVED') },
       ]} />}
+
+      {total > entries.length && (
+        <p className={styles.notice}>Đang hiển thị {entries.length.toLocaleString('vi-VN')} nhật ký mới nhất trong tổng số {total.toLocaleString('vi-VN')}.</p>
+      )}
 
       {hasWarning && (
         <div className={styles.notice}>
@@ -178,6 +193,12 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
                   {LOAD_FAILED_MESSAGE}
                 </td>
               </tr>
+            ) : shown.length === 0 && entries.length > 0 ? (
+              <tr>
+                <td colSpan={5} className={styles.emptyCell}>
+                  Không có nhật ký nào trong mục đang chọn.
+                </td>
+              </tr>
             ) : entries.length === 0 ? (
               <tr>
                 <td colSpan={5} className={styles.emptyCell}>
@@ -185,7 +206,7 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
                 </td>
               </tr>
             ) : (
-              entries.map(e => (
+              shown.map(e => (
                 <tr key={e.id}>
                   <td>{e.parcel_code || e.parcel_id || e.id.substring(0, 8)}</td>
                   <td>{formatDetail(e.activities?.[0]?.activity_detail)}</td>

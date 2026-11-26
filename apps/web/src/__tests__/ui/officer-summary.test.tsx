@@ -104,12 +104,12 @@ test('journal status totals update after approval while retaining the table', as
   render(<OfficerJournalApproval householdId="h1" />)
   await screen.findByText('P1')
   expect(screen.getByRole('table')).toBeInTheDocument()
-  expect(metric('Nhật ký đang hiển thị')).toHaveTextContent('2')
-  expect(metric('Chờ duyệt (đang hiển thị)')).toHaveTextContent('1')
+  expect(metric('Tất cả nhật ký')).toHaveTextContent('2')
+  expect(metric('Chờ duyệt')).toHaveTextContent('1')
   fireEvent.click(screen.getByRole('button', { name: 'Duyệt' }))
-  await waitFor(() => expect(metric('Đã duyệt (đang hiển thị)')).toHaveTextContent('2'))
-  expect(metric('Chờ duyệt (đang hiển thị)')).toHaveTextContent('0')
-  expect(global.fetch).toHaveBeenCalledWith('/api/journal?householdId=h1')
+  await waitFor(() => expect(metric('Đã duyệt')).toHaveTextContent('2'))
+  expect(metric('Chờ duyệt')).toHaveTextContent('0')
+  expect(global.fetch).toHaveBeenCalledWith('/api/journal?householdId=h1&limit=1000')
 })
 
 test.each([
@@ -122,7 +122,7 @@ test.each([
   fireEvent.click(screen.getByRole('button', { name: action }))
   fireEvent.change(screen.getByPlaceholderText('Nhập lý do để nông dân biết...'), { target: { value: 'Cần kiểm tra lại' } })
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận' }))
-  await waitFor(() => expect(metric('Chờ duyệt (đang hiển thị)')).toHaveTextContent('0'))
+  await waitFor(() => expect(metric('Chờ duyệt')).toHaveTextContent('0'))
   expect(global.fetch).toHaveBeenCalledWith('/api/journal/j1/review', expect.objectContaining({
     method: 'POST', body: JSON.stringify({ decision, reason: 'Cần kiểm tra lại' }),
   }))
@@ -190,5 +190,28 @@ describe('household cards', () => {
     render(<HouseholdManager />)
     expect(await screen.findByText('75% diện tích HTX')).toBeInTheDocument()
     expect(screen.getByText('25% diện tích HTX')).toBeInTheDocument()
+  })
+})
+
+describe('pressing a figure', () => {
+  it('shows only the journal entries it counts, and everything again', async () => {
+    global.fetch = jest.fn().mockResolvedValue(response([
+      { id: 'j1', parcel_code: 'P1', status: 'PENDING_APPROVAL' },
+      { id: 'j2', parcel_code: 'P2', status: 'APPROVED' },
+    ]))
+    render(<OfficerJournalApproval />)
+    await screen.findByText('P1')
+    fireEvent.click(screen.getByRole('button', { name: 'Xem Chờ duyệt' }))
+    expect(screen.queryByText('P2')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Xem Tất cả nhật ký' }))
+    expect(screen.getByText('P2')).toBeInTheDocument()
+  })
+
+  it('orders households by area', async () => {
+    global.fetch = jest.fn().mockResolvedValue(response(households))
+    const { container } = render(<HouseholdManager />)
+    await screen.findByText('Đặng Thị Hoa')
+    fireEvent.click(screen.getByRole('button', { name: 'Xem Tổng diện tích' }))
+    expect(container.querySelector('article')).toHaveTextContent('Vàng A Sử')
   })
 })
