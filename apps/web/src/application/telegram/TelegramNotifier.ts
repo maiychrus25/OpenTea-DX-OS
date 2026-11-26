@@ -12,6 +12,8 @@ import type { ImprovementRepository } from '@/domain/agent/ports/ImprovementRepo
 import { signCallbackData } from '@/domain/telegram/callback-data'
 import type { OutboxInsert, OutboxRow, TelegramRepository } from '@/domain/telegram/ports/TelegramRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
+import { detailButton } from './chat/mini-app'
+import type { ReplyButton } from './TelegramUpdateHandler'
 import { telegramCallbackKey } from './telegram-config'
 import { measuredLines, templateReminderLines, vnIsoWeekday, vnMondayOf, weeklyImprovementLines } from './improvement-lines'
 import {
@@ -101,7 +103,7 @@ export class TelegramNotifier {
 
   /** One message per approver linked to the cooperative, with signed Approve and Reject buttons. */
   /** The approver message of a proposal: its text and the approve and reject buttons. Null when it cannot be signed. */
-  async proposalMessage(proposal: Proposal): Promise<{ text: string; buttons: { text: string; callback_data: string }[][] } | null> {
+  async proposalMessage(proposal: Proposal): Promise<{ text: string; buttons: ReplyButton[][] } | null> {
     const key = telegramCallbackKey()
     const definition = getAction(proposal.kind)
     // Only the callback key is needed to sign the buttons; the bot username only builds link URLs.
@@ -109,12 +111,14 @@ export class TelegramNotifier {
 
     const labels = await this.labelsFor(proposal.htxCode, [proposal])
     const text = proposalText(proposal, definition.titleVi, definition.preview(proposal.payload, labels, proposal.evidence))
-    const buttons = [
+    const buttons: ReplyButton[][] = [
       [
         { text: 'Duyệt', callback_data: signCallbackData(key, proposal.id, 'a') },
         { text: 'Từ chối', callback_data: signCallbackData(key, proposal.id, 'r') },
       ],
     ]
+    const detail = definition.risk === 'high' ? detailButton(proposal.id) : null
+    if (detail) buttons.push([detail])
     return { text, buttons }
   }
 
