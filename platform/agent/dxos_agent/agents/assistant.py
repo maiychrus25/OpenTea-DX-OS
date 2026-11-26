@@ -12,7 +12,6 @@ from typing import Any, Mapping, Sequence
 from zoneinfo import ZoneInfo
 
 from ..client import CoreGatewayClient
-from ..evidence import canonical_json
 from ..providers.base import LLMMessage, LLMProvider, LLMResult, ProviderError, compute_input_hash
 from ..providers.pricing import estimate_cost_usd
 from ..settings import AgentSettings, choose_providers
