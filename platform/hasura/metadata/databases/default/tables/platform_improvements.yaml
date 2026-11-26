@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+table:
+  name: improvements
+  schema: platform
+select_permissions:
+  - role: manager
+    permission:
+      columns:
+        - id
+        - kind
+        - title_vi
+        - status
+        - effect
+        - metric_key
+        - created_at
+        - adopted_at
+      filter: {_and: [{htx_code: {_eq: X-Hasura-Htx-Code}}, {htx_code: {_neq: ''}}]}
