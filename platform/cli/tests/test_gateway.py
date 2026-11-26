@@ -9,11 +9,22 @@ import pytest
 import yaml
 
 from dxos_cli import gateway
-from dxos_cli.gateway import GatewayError, app_routes, render_gateway, sync_gateway
+from dxos_cli.gateway import AUD, GatewayError, app_routes, render_gateway, sync_gateway
 from dxos_cli.manifest import load_manifest, repo_root
 
 FIXTURES = Path(__file__).parent / "fixtures"
 BASE_PATH = repo_root() / "platform" / "gateway" / "apisix.yaml"
+
+
+ACTING = ["X-DXOS-Acting-Sub", "X-DXOS-Acting-Role", "X-DXOS-Acting-Htx"]
+
+
+@pytest.fixture
+def agent_manifest(manifest):
+    manifest["agent"] = {"suggestions": "/agent/suggestions", "actions": [
+        {"name": "promotion.create", "path": "/agent/actions/promotion-create"},
+        {"name": "promotion.end", "path": "/agent/actions/promotion-end"}]}
+    return manifest
 
 
 @pytest.fixture
@@ -41,7 +52,7 @@ def test_public_route_has_no_auth(manifest):
     assert route["uri"] == "/apps/tea-tour/public/*"
     assert route["priority"] == 20
     assert route["upstream"] == {"nodes": {"app-tea-tour:8080": 1}}
-    assert route["plugins"] == {"proxy-rewrite": {"regex_uri": ["^/apps/tea-tour(/.*)?$", "$1"]}}
+    assert route["plugins"] == {"proxy-rewrite": {"regex_uri": ["^/apps/tea-tour(/.*)?$", "$1"], "headers": {"remove": ACTING}}}
 
 
 def test_protected_route_requires_roles_and_audience(manifest, base_text):
@@ -49,7 +60,8 @@ def test_protected_route_requires_roles_and_audience(manifest, base_text):
     guide = routes["app-tea-tour-protected-2"]
     assert guide["uri"] == "/apps/tea-tour/guide*"
     assert guide["upstream"] == {"nodes": {"app-tea-tour:8080": 1}}
-    assert guide["plugins"]["proxy-rewrite"] == {"regex_uri": ["^/apps/tea-tour(/.*)?$", "$1"]}
+    assert guide["plugins"]["proxy-rewrite"] == {
+        "regex_uri": ["^/apps/tea-tour(/.*)?$", "$1"], "headers": {"remove": ACTING}}
     oidc = guide["plugins"]["openid-connect"]
     # The merge key resolved to the base &oidc settings, so the secret stays in one place.
     assert oidc["client_id"] == "dxos-gateway"
@@ -182,3 +194,58 @@ def test_sync_rejects_foreign_fragment_route(tmp_path, manifest, field, value):
     with pytest.raises(GatewayError, match="tea-tour"):
         sync_gateway(repo)
     assert target.read_bytes() == before
+
+
+def test_every_route_but_the_actor_routes_strips_the_acting_headers(agent_manifest):
+    routes = by_id(app_routes(agent_manifest))
+    assert {i for i in routes if "-actor-" in i} == {"app-tea-tour-actor-1", "app-tea-tour-actor-2"}
+    for route_id, route in routes.items():
+        removed = route["plugins"]["proxy-rewrite"].get("headers", {}).get("remove")
+        assert (removed is None) == ("-actor-" in route_id), route_id
+        assert removed in (None, ACTING)
+
+
+def test_actor_route_is_exact_internal_and_needs_the_actor_client(agent_manifest, base_text):
+    route = merged_routes(base_text, {"tea-tour": app_routes(agent_manifest)})["app-tea-tour-actor-2"]
+    assert route["uri"] == "/apps/tea-tour/agent/actions/promotion-end"
+    assert route["methods"] == ["POST"] and route["priority"] == 100
+    assert route["vars"] == [["server_port", "==", "9081"]]
+    oidc = route["plugins"]["openid-connect"]
+    assert oidc["client_id"] == "dxos-gateway" and oidc["bearer_only"] is True
+    assert oidc["claim_schema"]["required"] == ["aud", "azp"]
+    assert oidc["claim_schema"]["properties"]["azp"] == {"enum": ["dxos-apps-actor"]}
+    assert oidc["claim_schema"]["properties"]["aud"] == AUD
+    assert "realm_access" not in oidc["claim_schema"]["properties"]
+
+
+def test_suggestions_route_takes_only_the_agent_token(agent_manifest, base_text):
+    routes = merged_routes(base_text, {"tea-tour": app_routes(agent_manifest)})
+    route = routes["app-tea-tour-agent-1"]
+    assert route["uri"] == "/apps/tea-tour/agent/suggestions" and route["methods"] == ["GET"]
+    # The merge key resolves to the base &oidc_agent: azp dxos-agent-<htx>, role agent, htx_code.
+    assert route["plugins"]["openid-connect"] == routes["internal-agent"]["plugins"]["openid-connect"]
+    assert route["plugins"]["proxy-rewrite"]["headers"] == {"remove": ACTING}
+
+
+def test_manifest_without_agent_block_has_no_actor_or_agent_route(manifest):
+    assert not [i for i in by_id(app_routes(manifest)) if "-actor-" in i or "-agent-" in i]
+
+
+def test_sync_strips_the_acting_headers_from_an_old_fragment(tmp_path, manifest):
+    repo = make_repo(tmp_path)
+    routes = app_routes(manifest)
+    for route in routes:
+        route["plugins"]["proxy-rewrite"].pop("headers", None)  # a fragment written before the acting headers existed
+    write_fragment(repo, "tea-tour", routes)
+    sync_gateway(repo)
+    text = (repo / "docker" / "runtime" / "gateway" / "apisix.yaml").read_text(encoding="utf-8")
+    merged = by_id(yaml.safe_load(text)["routes"])
+    assert all(merged[r["id"]]["plugins"]["proxy-rewrite"]["headers"] == {"remove": ACTING} for r in routes)
+
+
+def test_sync_accepts_agent_and_actor_routes(tmp_path, agent_manifest):
+    repo = make_repo(tmp_path)
+    write_fragment(repo, "tea-tour", app_routes(agent_manifest))
+    sync_gateway(repo)
+    text = (repo / "docker" / "runtime" / "gateway" / "apisix.yaml").read_text(encoding="utf-8")
+    assert "app-tea-tour-actor-1" in text and "<<: *oidc_agent" in text and "&id" not in text
