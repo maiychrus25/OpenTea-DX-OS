@@ -96,3 +96,30 @@ def test_download_http_error_carries_the_status_only():
         api.download("gone.jpg")
     assert info.value.code == 404
     assert "SECRET" not in str(info.value)
+
+
+def test_call_files_posts_multipart_with_json_params_and_the_file_parts():
+    seen = []
+
+    def opener(req, timeout):
+        seen.append((req.full_url, req.get_header("Content-type"), req.data))
+        return FakeResponse(json.dumps({"ok": True, "result": [{"message_id": 9}]}).encode("utf-8"))
+
+    api = BotApi("https://api.example.test", "123:abc", urlopen_fn=opener)
+    result = api.call_files("sendMediaGroup", {"chat_id": 5, "media": [{"type": "photo", "media": "attach://p0"}]},
+                            {"p0": ("a.png", b"PNGBYTES", "image/png")})
+    assert result == [{"message_id": 9}]
+    url, content_type, body = seen[0]
+    assert url == "https://api.example.test/bot123:abc/sendMediaGroup"
+    boundary = content_type.split("boundary=")[1]
+    assert content_type.startswith("multipart/form-data") and body.endswith(f"--{boundary}--\r\n".encode())
+    assert b'name="chat_id"\r\n\r\n5\r\n' in body
+    assert b'name="media"\r\n\r\n[{"type": "photo", "media": "attach://p0"}]\r\n' in body
+    assert b'name="p0"; filename="a.png"\r\nContent-Type: image/png\r\n\r\nPNGBYTES\r\n' in body
+
+
+def test_call_files_failures_are_classified_like_call():
+    api = BotApi("https://api.example.test", "t", urlopen_fn=fake_urlopen(status=400, body={"ok": False, "description": "Bad Request: wrong file"}))
+    with pytest.raises(BotApiError) as info:
+        api.call_files("sendPhoto", {"chat_id": 5}, {"photo": ("a.png", b"x", "image/png")})
+    assert info.value.permanent is True

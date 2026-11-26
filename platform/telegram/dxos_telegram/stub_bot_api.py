@@ -4,6 +4,8 @@
 import base64
 import json
 import os
+from email.parser import BytesParser
+from email.policy import HTTP
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -38,6 +40,24 @@ def make_handler(state: StubState) -> type[BaseHTTPRequestHandler]:
         def log_message(self, fmt: str, *args: Any) -> None:  # keep the smoke log quiet
             return
 
+        def _multipart(self) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+            """Text fields (JSON values decoded) and the uploaded parts' names and sizes, for sendMediaGroup and sendPhoto."""
+            raw = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+            message = BytesParser(policy=HTTP).parsebytes(b"Content-Type: " + self.headers["Content-Type"].encode() + b"\r\n\r\n" + raw)
+            params: dict[str, Any] = {}
+            files: list[dict[str, Any]] = []
+            for part in message.iter_parts():
+                payload = part.get_payload(decode=True) or b""
+                if part.get_filename():
+                    files.append({"name": part.get_param("name", header="content-disposition"), "filename": part.get_filename(), "size": len(payload)})
+                else:
+                    text = payload.decode("utf-8")
+                    try:
+                        params[part.get_param("name", header="content-disposition")] = json.loads(text)
+                    except ValueError:
+                        params[part.get_param("name", header="content-disposition")] = text
+            return params, files
+
         def _send_bytes(self, data: bytes, content_type: str) -> None:
             self.send_response(200)
             self.send_header("Content-Type", content_type)
@@ -71,6 +91,8 @@ def make_handler(state: StubState) -> type[BaseHTTPRequestHandler]:
             if self.path.startswith("/control/"):
                 return self._control()
             method = self.path.rsplit("/", 1)[-1]
+            if method in ("sendMediaGroup", "sendPhoto"):
+                return self._upload(method)
             params = self._body()
             if method == "getUpdates":
                 return self._get_updates(params)
@@ -87,6 +109,13 @@ def make_handler(state: StubState) -> type[BaseHTTPRequestHandler]:
             else:
                 return self._send(404, {"ok": False, "error_code": 404, "description": "Not Found"})
             self._send(200, {"ok": True, "result": result})
+
+        def _upload(self, method: str) -> None:
+            params, files = self._multipart()
+            with state.lock:
+                state.calls.append({"method": method, "params": params, "files": files})
+            sent = [state.next_message(params.get("chat_id"), params.get("caption")) for _ in (files if method == "sendMediaGroup" else files[:1])]
+            self._send(200, {"ok": True, "result": sent if method == "sendMediaGroup" else sent[0]})
 
         def _get_updates(self, params: dict[str, Any]) -> None:
             deadline = time.monotonic() + min(float(params.get("timeout") or 0), 30.0)

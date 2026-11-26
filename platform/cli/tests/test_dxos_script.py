@@ -203,3 +203,37 @@ def test_apps_actor_enable_is_wired_and_never_prints_the_secret():
     assert "dxos-apps-actor" in body and "roles_env_update DXOS_APPS_ACTOR_SECRET" in body
     assert body.count("$secret") == 2  # the emptiness check and the one pipe into the helper; never an echo
     assert "echo" not in body.split("printf 'DXOS_APPS_ACTOR_SECRET")[1].split("\n")[0]
+
+
+def run_function(name, snippet_after, tmp_path):
+    body = subprocess.run(["sed", "-n", f"/^{name}()/,/^}}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert body, name
+    script = (f"set -e\nPROJECT=proj\ncompose() {{ echo \"cid-${{@: -1}}\"; }}\n"
+              f"docker() {{ echo \"docker $*\" >>{tmp_path}/calls; }}\n{body}\n{snippet_after}\n")
+    return subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+
+
+def test_gen_network_connect_joins_apisix_and_postgres_to_a_generated_apps_network(tmp_path):
+    run = run_function("gen_network_connect", "gen_network_connect gen-tea-log", tmp_path)
+    assert run.returncode == 0, run.stderr
+    assert (tmp_path / "calls").read_text().splitlines() == [
+        "docker network connect proj_dxos-gen-gen-tea-log cid-apisix", "docker network connect proj_dxos-gen-gen-tea-log cid-postgres"]
+
+
+def test_gen_network_connect_ignores_a_store_app(tmp_path):
+    assert run_function("gen_network_connect", "gen_network_connect tea-shop", tmp_path).returncode == 0
+    assert not (tmp_path / "calls").exists()
+
+
+def test_gen_network_drop_disconnects_then_removes_the_network(tmp_path):
+    assert run_function("gen_network_drop", "gen_network_drop gen-tea-log", tmp_path).returncode == 0
+    assert (tmp_path / "calls").read_text().splitlines() == [
+        "docker network disconnect proj_dxos-gen-gen-tea-log cid-apisix", "docker network disconnect proj_dxos-gen-gen-tea-log cid-postgres",
+        "docker network rm proj_dxos-gen-gen-tea-log"]
+
+
+def test_worker_installs_a_generated_app_from_its_runtime_export():
+    text = DXOS.read_text()
+    assert "read -r job action app htx installed version" in text
+    assert '/repo/docker/runtime/generated/$app/$version' in text
+    assert text.count("gen_network_connect") >= 4  # defined, install, upgrade, worker start

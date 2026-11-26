@@ -59,6 +59,27 @@ gateway_guard() {
   exit 1
 }
 
+# A generated app's private network (spec 12.7) holds the app, apisix and postgres. The compose file creates it with the
+# app and names apisix and postgres, but only a recreate would apply that, so the running containers are joined here.
+# shortcut: recreating apisix or postgres drops the join; ./dxos worker, install and upgrade put it back.
+gen_network_connect() {  # <id>
+  case "$1" in gen-*) ;; *) return 0 ;; esac
+  local svc cid
+  for svc in apisix postgres; do
+    cid="$(compose ps -q "$svc" 2>/dev/null)" || continue
+    [ -z "$cid" ] || docker network connect "${PROJECT}_dxos-gen-$1" "$cid" 2>/dev/null || true  # "already exists" is fine
+  done
+}
+gen_network_drop() {  # <id>
+  case "$1" in gen-*) ;; *) return 0 ;; esac
+  local svc cid
+  for svc in apisix postgres; do
+    cid="$(compose ps -q "$svc" 2>/dev/null)" || continue
+    [ -z "$cid" ] || docker network disconnect "${PROJECT}_dxos-gen-$1" "$cid" 2>/dev/null || true
+  done
+  docker network rm "${PROJECT}_dxos-gen-$1" >/dev/null 2>&1 || true
+}
+
 # Host directory (relative to the caller's cwd) -> the same directory inside dxos-cli, where the repo is /repo.
 to_container() {
   local abs
@@ -87,6 +108,7 @@ install() {  # <dir> [all|htx]: "htx" leaves enabling to the store worker, "all"
   if grep -qxF "$id" <<<"$(cut -f1 <<<"$listing")"; then
     echo "$id đã được cài; chỉ bảo đảm container đang chạy"
     app "$id" up -d --wait "app-$id"
+    gen_network_connect "$id"
     return
   fi
   # Ctrl-C (or TERM) from here to commit must not leave a journal, route, schema or container behind. Set before
@@ -100,7 +122,7 @@ install() {  # <dir> [all|htx]: "htx" leaves enabling to the store worker, "all"
   cli prepare "$dir" || { cli abort "$id" || true; exit 1; }
   progress build
   # shellcheck disable=SC2086  # flag is empty or one option
-  if app "$id" up -d --build --wait "app-$id" && { progress register; cli commit "$id" $flag; }; then
+  if app "$id" up -d --build --wait "app-$id" && { gen_network_connect "$id"; progress register; cli commit "$id" $flag; }; then
     trap - INT TERM
     echo "Đã cài $id"
     return
@@ -115,7 +137,7 @@ upgrade() {  # <dir>
   local dir="$1" id old new
   id="$(cli manifest-id "$dir")" || exit 1
   old="$(cli list | awk -F'\t' -v id="$id" '$1 == id { print $2 }')"
-  if cli upgrade-prepare "$dir" && app "$id" up -d --build --wait "app-$id" && cli upgrade-commit "$id"; then
+  if cli upgrade-prepare "$dir" && app "$id" up -d --build --wait "app-$id" && { gen_network_connect "$id"; cli upgrade-commit "$id"; }; then
     new="$(cli list | awk -F'\t' -v id="$id" '$1 == id { print $2 }')"
     echo "Đã nâng cấp $id lên $new"
     return
@@ -128,6 +150,7 @@ remove() {
   local id="$1"; shift
   [[ "$id" =~ $ID_RE ]] || { echo "id '$id' không hợp lệ" >&2; exit 1; }
   remove_container "$id"
+  gen_network_drop "$id"
   cli remove "$id" "$@"
 }
 
@@ -166,7 +189,7 @@ worker() {
   fi
   echo $$ >"$WORKER_LOCK/pid"
   trap worker_release EXIT
-  local stop=0 claim_pid="" claim_out id job action app htx installed rc dir remaining
+  local stop=0 claim_pid="" claim_out id job action app htx installed version rc dir remaining
   claim_out="$(mktemp)"
   # A signal between jobs ends the loop at once (the claim is killed); during a job it ends the loop afterwards.
   on_signal() { stop=1; [ -z "$claim_pid" ] || kill "$claim_pid" 2>/dev/null || true; }
@@ -179,6 +202,7 @@ worker() {
     cli abort "$id" >/dev/null 2>&1 || true
     worker_log "recovered half install of $id"
   done <<<"$(cli worker-start)"
+  for id in $(cli list | awk -F'\t' '$1 ~ /^gen-/ { print $1 }'); do gen_network_connect "$id"; done
   worker_log "worker started (pid $$, project $PROJECT)"
 
   while [ "$stop" = 0 ]; do
@@ -189,11 +213,12 @@ worker() {
     claim_pid=""
     [ "$stop" = 0 ] || break
     if [ "$rc" != 0 ]; then worker_log "worker-claim failed (code $rc); retrying in 5 s"; sleep 5; continue; fi
-    IFS=$'\t' read -r job action app htx installed <"$claim_out" || continue
+    version=""
+    IFS=$'\t' read -r job action app htx installed version <"$claim_out" || continue
     if [ "$action" = ENABLE ] && [ "$installed" = 0 ]; then
       # set -e is off inside a condition, so run the install in its own subshell with it switched on again.
       set +e
-      ( set -e; DXOS_JOB="$job"; dir="$(to_container "miniapps/$app")" || exit 1; install "$dir" htx )
+      ( set -e; DXOS_JOB="$job"; if [ -n "$version" ]; then dir="/repo/docker/runtime/generated/$app/$version"; else dir="$(to_container "miniapps/$app")" || exit 1; fi; install "$dir" htx )
       rc=$?
       set -e
       if [ "$rc" = 130 ] || [ "$rc" = 143 ]; then  # interrupted: install undid itself; worker-start fails the request

@@ -16,6 +16,8 @@ OUTBOX_INTERVAL_SECONDS = 2.0
 HEARTBEAT_INTERVAL_SECONDS = 60.0
 POLL_TIMEOUT_SECONDS = 30
 PHOTO_MAX_BYTES = 5 * 1024 * 1024  # C1: larger photos are not forwarded
+CAPTION_MAX = 1024  # Telegram's limit for a photo caption
+ALBUM_MAX = 4  # C8: a finished build sends its four screenshots
 
 
 class Backoff:
@@ -195,8 +197,11 @@ class Relay:
             if self._stop.is_set():
                 return 0.0  # the leases expire and the next start sends them again
             try:
-                method, params = message_call(item)
-                message_id = self._bot_message_id(method, params, item)
+                if item.get("photos") and item["op"] != "edit":
+                    message_id = self._send_photos(item)
+                else:
+                    method, params = message_call(item)
+                    message_id = self._bot_message_id(method, params, item)
             except BotApiError as exc:
                 if exc.permanent:
                     self._report(item, {"ok": False, "error": exc.description, "permanent": True})
@@ -208,6 +213,31 @@ class Relay:
                 return 5.0
             self._report(item, {"ok": True, "telegram_message_id": message_id})
         return 0.0
+
+    def _send_photos(self, item: Mapping[str, Any]) -> Optional[int]:
+        """C8: the text as the caption of the screenshots, as one album. Buttons cannot ride on an album, so none are sent.
+
+        A screenshot the web cannot serve is left out; with none left the text goes alone, so the manager is still told.
+        """
+        shots: list[tuple[str, bytes]] = []
+        for ref in list(item["photos"])[:ALBUM_MAX]:
+            try:
+                shots.append((str(ref["name"]), self._web.fetch_media(str(ref["build_id"]), str(ref["name"]))))
+            except (GatewayError, KeyError) as exc:
+                log.warning("screenshot %s not sent: %s", ref, exc)
+        if not shots:
+            method, params = message_call({**item, "buttons": None})
+            return self._bot_message_id(method, params, item)
+        caption = str(item["text"])[:CAPTION_MAX]
+        files = {f"p{i}": (name, data, "image/png") for i, (name, data) in enumerate(shots)}
+        if len(shots) == 1:
+            result = self._bot.call_files("sendPhoto", {"chat_id": item["chat_id"], "caption": caption}, {"photo": files["p0"]})
+        else:
+            media = [{"type": "photo", "media": f"attach://{key}", **({"caption": caption} if i == 0 else {})}
+                     for i, key in enumerate(files)]
+            result = self._bot.call_files("sendMediaGroup", {"chat_id": item["chat_id"], "media": media}, files)
+        first = result[0] if isinstance(result, list) and result else result
+        return int(first["message_id"]) if isinstance(first, dict) and "message_id" in first else None
 
     def _bot_message_id(self, method: str, params: Mapping[str, Any], item: Mapping[str, Any]) -> Optional[int]:
         try:

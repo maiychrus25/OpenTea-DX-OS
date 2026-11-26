@@ -298,6 +298,15 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
   - một việc lỗi hoặc đã được quyết định không dừng các việc còn lại; kết quả ghi số việc đã chạy, chờ xác nhận riêng, chuyển người đủ quyền và lỗi;
   - bỏ chiến dịch chỉ khi còn nháp hoặc một phần; sau khi bỏ, các việc trở lại là đề xuất thông thường.
 
+### 3.14 Xưởng mini-app (A12, M13)
+
+- **Một yêu cầu đang xây cho mỗi HTX** (trạng thái `new`, `asking`, `spec_proposed`, `spec_approved`, `building`). Tối đa 5 câu hỏi (mỗi câu tối đa 160 ký tự); mô tả yêu cầu 5 đến 500 ký tự.
+- **Chọn cách rẻ nhất:** bật app có sẵn trong kho, rồi mẫu Sổ tự tạo, rồi mới viết mã. Chỉ cấu hình Ollama thì chỉ có hai cách đầu.
+- **Buồng xây (`build`):** chỉ có khoá, địa chỉ và mô hình của công cụ viết mã, `HTTPS_PROXY` và thư mục `/work`; không có Docker socket, biến của lõi, mạng của lõi hay `postgres`. Ra ngoài chỉ qua proxy theo danh sách host cho phép; host khác nhận 403. Tối đa 30 phút và 60 lượt mỗi vòng, 3 vòng.
+- **Bảy cổng, không bỏ qua được:** `manifest`, `markup`, `kit`, `tests`, `deps`, `files`, `run` (cộng cổng `review` của AI thứ hai). Mã cổng chạy từ image, không từ thư mục của app. Một phát hiện `high` của `review` là trượt.
+- **App xây xong** chỉ vào kho cho HTX yêu cầu (`owner_htx`), chạy trên mạng riêng `dxos-gen-<id>` chỉ thấy `apisix` và `postgres`, và không được khai `agent.actions` (chỉ số liệu chỉ đọc). Cài và gỡ là `miniapp.install` và `miniapp.remove`, mức `high`, qua đường `platform.app_requests` và `./dxos worker`.
+- **Ảnh chụp:** bốn ảnh (desktop và điện thoại, sáng và tối) gửi một lần qua Telegram dưới dạng album; chú thích tối đa 1024 ký tự, mỗi ảnh tối đa 5 MB; album không có nút, nút duyệt nằm ở tin đề xuất `miniapp.install` gửi sau.
+
 ### 3.13 Cải tiến hằng tuần (A10, M8)
 
 - **Lịch:** A10 chạy mỗi thứ Hai lúc 06:30 (giờ Việt Nam), trước báo cáo 07:00. Nếu tuần này chưa chạy, lần khởi động đầu tiên sau đó sẽ chạy bù.

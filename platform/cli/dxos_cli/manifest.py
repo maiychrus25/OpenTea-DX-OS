@@ -16,6 +16,7 @@ OSI_LICENSES = frozenset({
 })
 
 _CORE_RE = re.compile(r"^>=(\d+)\.(\d+)\.(\d+)$")
+GENERATED_ID_RE = re.compile(r"^gen-[a-z0-9-]{3,30}$")
 
 
 class ManifestError(Exception):
@@ -179,6 +180,12 @@ def validate_manifest(data: dict, core_version: str, installed_ids: set[str]) ->
             errors.append(f"'feed': đường dẫn '{feed}' phải nằm dưới một tiền tố cần đăng nhập trong 'routes.protected'")
     if isinstance(routes, dict):
         errors += _agent_errors(data, routes)
+    # The id decides the app's private network, so the flag and the prefix must agree (M13).
+    is_gen_id = isinstance(app_id, str) and app_id.startswith("gen-")
+    if data.get("generated") is True and not (isinstance(app_id, str) and GENERATED_ID_RE.match(app_id)):
+        errors.append("'generated': app do AI xây phải có id dạng gen-<tên> (gen-, rồi 3 đến 30 ký tự a-z, 0-9, -)")
+    elif is_gen_id and data.get("generated") is not True:
+        errors.append("'id': id bắt đầu bằng gen- chỉ dành cho app do AI xây, cần 'generated: true'")
     requires = data.get("requires")
     core = requires.get("core") if isinstance(requires, dict) else None
     match = _CORE_RE.match(core) if isinstance(core, str) else None
