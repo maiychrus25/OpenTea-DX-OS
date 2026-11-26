@@ -35,6 +35,7 @@ class BotApi:
         urlopen_fn: Callable[..., Any] = urllib.request.urlopen,
     ) -> None:
         self._base = f"{api_base.rstrip('/')}/bot{token}"
+        self._file_base = f"{api_base.rstrip('/')}/file/bot{token}"
         self._urlopen = urlopen_fn
 
     def call(self, method: str, params: Mapping[str, Any] | None = None, timeout: float = 15.0) -> Any:
@@ -64,6 +65,19 @@ class BotApi:
         if not payload.get("ok"):
             raise BotApiError(str(payload.get("description") or "Bot API returned ok=false"))
         return payload.get("result")
+
+    def download(self, file_path: str, timeout: float = 15.0) -> bytes:
+        """Fetches a file that getFile named: `<api_base>/file/bot<token>/<file_path>`. Errors never show the URL."""
+        req = urllib.request.Request(f"{self._file_base}/{file_path}", method="GET")
+        try:
+            with self._urlopen(req, timeout=timeout) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            code = exc.code
+            exc.close()  # CI runs the tests with -W error: an unclosed HTTP error response warns when collected
+            raise BotApiError(f"file download answered HTTP {code}", code=code) from None
+        except (urllib.error.URLError, OSError) as exc:
+            raise BotApiError(f"network error: {type(exc).__name__}") from None
 
 
 def _error_body(exc: urllib.error.HTTPError) -> dict[str, Any]:

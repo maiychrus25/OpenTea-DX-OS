@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Relay behaviour with a fake Bot API and a fake web: updates, replies, outbox results, retries."""
+import base64
+
 import pytest
 
 from dxos_telegram.bot_api import BotApiError
@@ -9,9 +11,10 @@ from dxos_telegram.relay import Relay, forwardable_update, message_call
 
 
 class FakeBot:
-    def __init__(self, fail_on=None):
+    def __init__(self, fail_on=None, files=None):
         self.calls = []
         self.fail_on = fail_on or {}
+        self.files = files or {}
 
     def call(self, method, params=None, timeout=15.0):
         self.calls.append((method, dict(params or {})))
@@ -19,7 +22,14 @@ class FakeBot:
             raise self.fail_on[method]
         if method == "sendMessage":
             return {"message_id": 900 + len(self.calls)}
+        if method == "getFile":
+            return {"file_id": params["file_id"], "file_path": f"photos/{params['file_id']}.jpg"}
         return True
+
+    def download(self, file_path, timeout=15.0):
+        if "download" in self.fail_on:
+            raise self.fail_on["download"]
+        return self.files[file_path]
 
 
 class FakeWeb:
@@ -143,3 +153,62 @@ def test_network_failure_reports_without_retry_after_and_backs_off():
     relay = make_relay(FakeBot(fail_on={"sendMessage": BotApiError("network error: URLError")}), web)
     assert relay.deliver([{"id": "o1", "op": "send", "chat_id": 5, "text": "a"}]) == 5.0
     assert web.results == [("o1", {"ok": False, "error": "network error: URLError"})]
+
+
+PHOTO_UPDATE = {
+    "update_id": 5,
+    "message": {
+        "message_id": 2, "chat": {"id": 5, "type": "private"}, "from": {"id": 5}, "caption": "ghi nhật ký",
+        "photo": [
+            {"file_id": "small", "file_unique_id": "u-small", "file_size": 2048},
+            {"file_id": "large", "file_unique_id": "u-large", "file_size": 4096},
+        ],
+    },
+}
+
+
+def test_photo_is_forwarded_as_bytes_with_its_caption_and_the_largest_size():
+    web = FakeWeb()
+    bot = FakeBot(files={"photos/large.jpg": b"JPEGDATA"})
+    assert make_relay(bot, web).process_update(PHOTO_UPDATE) is True
+    message = web.forwarded[0]["message"]
+    assert message["caption"] == "ghi nhật ký"
+    assert message["photo"] == {
+        "mime_type": "image/jpeg", "data_base64": base64.b64encode(b"JPEGDATA").decode("ascii"), "file_unique_id": "u-large",
+    }
+    assert ("getFile", {"file_id": "large"}) in bot.calls
+
+
+def test_oversized_photo_is_forwarded_as_photo_error_without_download():
+    web = FakeWeb()
+    bot = FakeBot()
+    update = {"update_id": 6, "message": {"message_id": 3, "chat": {"id": 5, "type": "private"}, "from": {"id": 5},
+              "photo": [{"file_id": "huge", "file_unique_id": "u", "file_size": 6 * 1024 * 1024}]}}
+    make_relay(bot, web).process_update(update)
+    assert web.forwarded[0]["message"]["photo_error"] == "too_large"
+    assert "photo" not in web.forwarded[0]["message"]
+    assert bot.calls == []
+
+
+def test_photo_whose_bytes_exceed_5_mb_is_too_large_even_with_a_small_file_size():
+    web = FakeWeb()
+    bot = FakeBot(files={"photos/large.jpg": b"x" * (5 * 1024 * 1024 + 1)})
+    make_relay(bot, web).process_update(PHOTO_UPDATE)
+    assert web.forwarded[0]["message"]["photo_error"] == "too_large"
+
+
+def test_failed_download_is_forwarded_as_download_failed():
+    for fail_on in ({"getFile": BotApiError("Bad Request: wrong file_id", code=400, permanent=True)},
+                    {"download": BotApiError("file download answered HTTP 404", code=404)}):
+        web = FakeWeb()
+        make_relay(FakeBot(fail_on=fail_on), web).process_update(PHOTO_UPDATE)
+        assert web.forwarded[0]["message"]["photo_error"] == "download_failed"
+        assert "photo" not in web.forwarded[0]["message"]
+
+
+def test_location_is_forwarded_with_its_coordinates_and_nothing_else():
+    update = {"update_id": 7, "message": {"message_id": 4, "chat": {"id": 5, "type": "private"}, "from": {"id": 5, "first_name": "Lan"},
+              "location": {"latitude": 21.58, "longitude": 105.77, "horizontal_accuracy": 8}}}
+    assert forwardable_update(update)["message"] == {
+        "message_id": 4, "chat": {"id": 5, "type": "private"}, "from": {"id": 5}, "location": {"latitude": 21.58, "longitude": 105.77},
+    }
