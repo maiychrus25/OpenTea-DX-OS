@@ -595,6 +595,28 @@ services:
     networks:
       - agrimarket-net
 
+  # Test-only stand-in for dxos-stt (platform/tests/stub_stt.py): the voice smoke runs it instead of whisper.cpp, under the
+  # network alias dxos-stt that the relay posts to. Never started together with the real dxos-stt; not in the release bundle.
+  stt-test-stub:
+    image: python:3.12.15-slim-bookworm
+    profiles: ["stt-test"]
+    restart: "no"
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    user: "65534:65534"
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ../platform/tests/stub_stt.py:/app/stub_stt.py:ro
+    command: ["python", "-u", "/app/stub_stt.py"]
+    ports:
+      - "127.0.0.1:8083:8083"
+    networks:
+      agrimarket-net:
+        aliases: [dxos-stt]
+
   # Test-only stand-in for the Anthropic and OpenAI APIs (platform/tests/stub_llm.py). The agentic smoke points dxos-agent
   # at it with ANTHROPIC_API_BASE; it is never in the release bundle.
   llm-test-stub:
