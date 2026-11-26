@@ -73,3 +73,5 @@
   .iconWrap { width: 36px; height: 36px; }
   .value { font-size: 20px; white-space: nowrap; }
 }
+
+:global([data-role='officer']) .card { border-top: 3px solid var(--color-primary); border-radius: 12px; }

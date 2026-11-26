@@ -8,3 +8,7 @@
 .link { font-size: var(--font-size-meta); font-weight: 700; color: var(--color-primary); text-decoration: none; }
 .link:hover { text-decoration: underline; }
 .body { overflow-x: auto; }
+
+:global([data-role='officer']) .panel { border-color: var(--color-border-input); border-radius: 12px; }
+:global([data-role='officer']) .head { min-height: 46px; background: var(--color-primary-subtle); border-bottom-color: var(--color-border-input); }
+:global([data-role='officer']) .title::before { width: 3px; height: 16px; border-radius: 0; }

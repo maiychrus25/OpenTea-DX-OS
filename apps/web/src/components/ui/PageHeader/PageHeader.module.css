@@ -7,3 +7,8 @@
 .title { margin: 0; font-size: var(--font-size-page-title); font-weight: 800; letter-spacing: -0.5px; color: var(--color-ink-heading); }
 .description { margin: 2px 0 0; font-size: 13.5px; color: var(--color-ink-secondary); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* The officer design underlines the header and sets the icon on dark green. */
+:global([data-role='officer']) .header { padding-bottom: 14px; border-bottom: 2px solid var(--color-primary); }
+:global([data-role='officer']) .iconBox { width: 50px; height: 50px; border-radius: 13px; background: var(--color-primary-strong); color: var(--color-primary-foreground); }
+:global([data-role='officer']) .title { font-size: 25px; }
