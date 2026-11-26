@@ -136,12 +136,18 @@ export interface ReportFigures {
   lots_created?: number
 }
 
-/** At most four lines: a header and up to three lines of figures. Missing figures are left out. */
+const MAX_REPORT_LINES = 8
+
+/**
+ * The header, up to three lines of figures and, on the daily report, the campaign lines (C9). Missing figures are left
+ * out; when the report would pass eight lines, the lowest-priority figure lines go first.
+ */
 export function reportText(
   kind: 'daily' | 'weekly',
   periodStart: string,
   periodEnd: string,
-  figures: ReportFigures
+  figures: ReportFigures,
+  campaignLines: string[] = []
 ): string {
   const range = periodStart === periodEnd ? formatIsoDate(periodStart) : `${formatIsoDate(periodStart)} – ${formatIsoDate(periodEnd)}`
   const lines = [`Báo cáo ${kind === 'daily' ? 'ngày' : 'tuần'} ${range}`]
@@ -153,18 +159,20 @@ export function reportText(
     part('đã duyệt', figures.journals_approved),
     part('chờ duyệt', figures.journals_pending),
   ].filter(Boolean)
-  if (journals.length) lines.push(journals.join(' · '))
+  const figureLines: string[] = []
+  if (journals.length) figureLines.push(journals.join(' · '))
 
   const proposals = [
     part('Đề xuất đang mở', figures.proposals_open),
     part('đã xử lý', figures.proposals_decided),
   ].filter(Boolean)
-  if (proposals.length) lines.push(proposals.join(' · '))
+  if (proposals.length) figureLines.push(proposals.join(' · '))
 
   const others = [part('Báo cáo bệnh hại', figures.disease_reports), part('Lô mới', figures.lots_created)].filter(Boolean)
-  if (others.length) lines.push(others.join(' · '))
+  if (others.length) figureLines.push(others.join(' · '))
 
-  return lines.join('\n')
+  while (lines.length + figureLines.length + campaignLines.length > MAX_REPORT_LINES && figureLines.length) figureLines.pop()
+  return [...lines, ...figureLines, ...campaignLines].join('\n')
 }
 
 export function healthText(condition: string, detail: string): string {

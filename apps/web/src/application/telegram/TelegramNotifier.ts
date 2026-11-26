@@ -275,11 +275,14 @@ export class TelegramNotifier {
       vnMidnight(periodStart),
       new Date(vnMidnight(periodEnd).getTime() + DAY_MS)
     )
-    const text = reportText(kind, periodStart, periodEnd, {
-      ...figures,
-      proposals_open: counts.open,
-      proposals_decided: counts.decided,
-    })
+    const campaignLines = kind === 'daily' ? await this.reportCampaign(htxCode, periodStart) : []
+    const text = reportText(
+      kind,
+      periodStart,
+      periodEnd,
+      { ...figures, proposals_open: counts.open, proposals_decided: counts.decided },
+      campaignLines
+    )
     const recipients = [
       ...(await this.repo.userLinkRecipients(htxCode, ['manager', 'officer'])),
       ...(await this.repo.groupLinkRecipients(htxCode)),
@@ -288,6 +291,43 @@ export class TelegramNotifier {
       recipients.map((link) => ({ htxCode, chatId: link.chatId, op: 'send' as const, text, purpose: 'report' as const }))
     )
     return true
+  }
+
+  /**
+   * The campaign lines of the 18:00 report (C9): the outcome per goal is written, and a campaign whose items are all
+   * decided becomes done. A dropped or missing campaign adds nothing.
+   */
+  private async reportCampaign(htxCode: string, day: string): Promise<string[]> {
+    const campaigns = this.campaigns
+    if (!campaigns) return []
+    const campaign = await campaigns.findForDay(htxCode, day)
+    if (!campaign || campaign.status === 'dropped') return []
+
+    const items = await campaigns.items(htxCode, campaign.id)
+    const done = items.filter((i) => i.proposalStatus === 'executed')
+    const outcomes = campaign.goals.map((goal) => ({
+      goalKey: goal.goalKey,
+      target: goal.target,
+      actual: done.filter((i) => i.goalKey === goal.goalKey).reduce((sum, i) => sum + i.target, 0),
+    }))
+    await campaigns.writeOutcomes(htxCode, campaign.id, outcomes)
+
+    const stillOpen = items.filter((i) => i.proposalStatus === 'proposed' || i.proposalStatus === 'approved').length
+    if (stillOpen === 0) {
+      await campaigns.setStatus(htxCode, campaign.id, {
+        to: 'done',
+        from: ['draft', 'approved', 'partial'],
+        event: { op: 'agent.campaign.done', details: { executed: done.length, items: items.length } },
+      })
+    }
+
+    const lines = [`Chiến dịch hôm nay: ${done.length}/${items.length} việc xong`]
+    campaign.goals.slice(0, 3).forEach((goal, index) => {
+      const outcome = outcomes[index]
+      lines.push(`• ${goal.labelVi}: ${outcome.actual}/${outcome.target} ${goal.unitVi}`)
+    })
+    if (items.length > done.length) lines.push(`Chưa xong: ${items.length - done.length} việc`)
+    return lines
   }
 
   /** Banner state for the inbox: an enabled agent that has gone quiet, or a relay that has gone quiet. */
