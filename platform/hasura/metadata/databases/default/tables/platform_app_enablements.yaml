@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+table:
+  name: app_enablements
+  schema: platform
+select_permissions:
+  # The agent reads which apps its cooperative uses; htx_code '*' means every cooperative.
+  - role: agent
+    permission:
+      columns:
+        - app_id
+        - htx_code
+      filter:
+        _and:
+          - {htx_code: {_neq: ''}}
+          - _or:
+              - {htx_code: {_eq: X-Hasura-Htx-Code}}
+              - {htx_code: {_eq: '*'}}

@@ -140,16 +140,17 @@ def test_telegram_credentials_reach_the_helper_on_stdin_only(tmp_path):
     assert (tmp_path / "stdin").read_text() == "DXOS_TELEGRAM_CLIENT_SECRET=s3cret\n"
 
 
-def test_telegram_disable_removes_both_credential_files_and_clients(tmp_path):
+def test_telegram_disable_removes_its_credentials_and_clients(tmp_path):
     body = subprocess.run(["sed", "-n", "/^telegram_disable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
     snippet = (f"set -e\nkc_exec() {{ echo kc >>{tmp_path}/calls; }}\n"
                f"telegram_env_remove() {{ echo \"rm $1/$2\" >>{tmp_path}/calls; }}\n"
+               f"roles_env_update() {{ echo \"drop $*\" >>{tmp_path}/calls; }}\n"
                "telegram_restart() { echo restart >>" f"{tmp_path}/calls; }}\n"
                f"{body}\ntelegram_disable\n")
     run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
     assert run.returncode == 0, run.stderr
     assert (tmp_path / "calls").read_text().splitlines() == [
-        "kc", "rm /run/dxos-telegram/telegram.env", "rm /run/dxos-web/roles.env", "restart",
+        "kc", "rm /run/dxos-telegram/telegram.env", "drop DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET", "restart",
     ]
 
 
@@ -157,3 +158,48 @@ def test_telegram_is_in_usage_and_takes_one_action():
     text = DXOS.read_text()
     assert "telegram <enable|disable>" in text
     assert "telegram)" in text and "[ $# -eq 1 ] || usage" in text
+
+
+def run_roles_env_update(tmp_path, existing, keys, new):
+    """Source the real roles_env_update() with stubs for the helper container; returns (written file or None, removed?)."""
+    body = subprocess.run(["sed", "-n", "/^roles_env_update()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    (tmp_path / "existing").write_text(existing)
+    snippet = (f"set -euo pipefail\nroles_env_read() {{ cat {tmp_path}/existing; }}\n"
+               f"telegram_env_write() {{ echo \"$1 $2\" >{tmp_path}/target; cat >{tmp_path}/written; }}\n"
+               f"telegram_env_remove() {{ echo \"$1 $2\" >{tmp_path}/removed; }}\n{body}\n"
+               f"printf '%s' '{new}' | roles_env_update {keys}\n")
+    run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    written = (tmp_path / "written").read_text() if (tmp_path / "written").exists() else None
+    return written, (tmp_path / "removed").exists()
+
+
+def test_roles_env_update_replaces_its_keys_and_keeps_the_others(tmp_path):
+    existing = "DXOS_ROLES_CLIENT_ID=dxos-web-roles\nDXOS_ROLES_CLIENT_SECRET=old\nDXOS_APPS_ACTOR_SECRET=keep\n"
+    written, removed = run_roles_env_update(
+        tmp_path, existing, "DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET",
+        "DXOS_ROLES_CLIENT_ID=dxos-web-roles\nDXOS_ROLES_CLIENT_SECRET=new\n")
+    assert sorted(written.splitlines()) == [
+        "DXOS_APPS_ACTOR_SECRET=keep", "DXOS_ROLES_CLIENT_ID=dxos-web-roles", "DXOS_ROLES_CLIENT_SECRET=new"]
+    assert not removed
+    assert (tmp_path / "target").read_text() == "/run/dxos-web roles.env\n"
+
+
+def test_roles_env_update_on_a_missing_file_writes_only_the_new_lines(tmp_path):
+    written, _ = run_roles_env_update(tmp_path, "", "DXOS_APPS_ACTOR_SECRET", "DXOS_APPS_ACTOR_SECRET=s3\n")
+    assert written == "DXOS_APPS_ACTOR_SECRET=s3\n"
+
+
+def test_roles_env_update_with_nothing_left_removes_the_file(tmp_path):
+    written, removed = run_roles_env_update(
+        tmp_path, "DXOS_ROLES_CLIENT_ID=x\nDXOS_ROLES_CLIENT_SECRET=y\n", "DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET", "")
+    assert written is None and removed
+
+
+def test_apps_actor_enable_is_wired_and_never_prints_the_secret():
+    text = DXOS.read_text()
+    assert "apps actor <enable>" in text or "apps actor enable" in text
+    body = subprocess.run(["sed", "-n", "/^apps_actor_enable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert "dxos-apps-actor" in body and "roles_env_update DXOS_APPS_ACTOR_SECRET" in body
+    assert body.count("$secret") == 2  # the emptiness check and the one pipe into the helper; never an echo
+    assert "echo" not in body.split("printf 'DXOS_APPS_ACTOR_SECRET")[1].split("\n")[0]

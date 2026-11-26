@@ -876,6 +876,20 @@
       "attributes": {
         "oauth2.device.authorization.grant.enabled": "true"
       }
+    },
+    {
+      "clientId": "dxos-apps-actor",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "defaultClientScopes": [
+        "dx-os-core"
+      ],
+      "optionalClientScopes": []
     }
   ],
   "components": {

@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "platform" / "tests"
 SHELL_SCRIPTS = [
     "smoke-telegram.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh",
-    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-autopilot.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
+    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-autopilot.sh", "smoke-app-actions.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
 ]
 
 
@@ -244,5 +244,35 @@ def test_autopilot_smoke_presses_the_button_the_stub_recorded_and_signs_nothing(
     text = (TESTS / "smoke-autopilot.sh").read_text(encoding="utf-8")
     for needle in ("m12_block_data_for", "stub_calls", "/api/internal/agent/proposals", "/dung",
                    "executed:autopilot", "test 31", "Đã dừng tự vận hành. Các việc đang chờ chuyển về chờ duyệt."):
+        assert needle in text, needle
+    assert "callback_sign" not in text and "hmac" not in text
+
+
+def test_app_actions_smoke_runs_after_the_autopilot_smoke_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-autopilot.sh") < text.index("source platform/tests/smoke-app-actions.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the app action checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-autopilot.sh"):
+        assert "smoke-app-actions.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_app_actions_smoke_chains_every_earlier_cleanup_and_reinstalls_the_app():
+    text = (TESTS / "smoke-app-actions.sh").read_text(encoding="utf-8")
+    assert "trap 'app_actions_cleanup; autopilot_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+    for needle in ("delete from platform.agent_proposals", "delete from platform.telegram_outbox",
+                   "delete from platform.telegram_conversations", "./dxos install miniapps/tea-shop"):
+        assert needle in text, needle
+
+
+def test_app_actions_smoke_stops_the_agent_before_seeding_and_restarts_it_after():
+    text = (TESTS / "smoke-app-actions.sh").read_text(encoding="utf-8")
+    # A running agent between the seeds and its restart would race with them (lesson 5 of M4).
+    assert text.index("$COMPOSE stop dxos-agent") < text.index("insert into app_tea_shop.products") < text.index("--force-recreate dxos-agent")
+
+
+def test_app_actions_smoke_approves_from_the_recorded_keyboard_and_signs_nothing():
+    text = (TESTS / "smoke-app-actions.sh").read_text(encoding="utf-8")
+    for needle in ("approve_by_telegram", "./dxos apps actor enable", "./dxos remove tea-shop", "executed:telegram",
+                   "test 16", "app.tea-shop.promotion.create"):
         assert needle in text, needle
     assert "callback_sign" not in text and "hmac" not in text

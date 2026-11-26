@@ -11,7 +11,7 @@ import threading
 import time as time_module
 
 from . import __version__
-from .agents import bulletin, daily_campaign, disease_watch, field_watch, harvest_ready, improvement
+from .agents import app_suggestions, bulletin, daily_campaign, disease_watch, field_watch, harvest_ready, improvement
 from .agents.assistant import run_assistant_once
 from .agents.digest import DigestSchedule, run_digest
 from .agents.journal_review import (
@@ -36,6 +36,7 @@ from .settings import AgentSettings, OLLAMA, choose_providers, fetch_settings
 
 HEARTBEAT_INTERVAL = timedelta(minutes=5)
 FIELD_WATCH_INTERVAL = timedelta(minutes=30)
+APP_SUGGESTIONS_INTERVAL = timedelta(minutes=30)  # the web repeats no app proposal within 24 h, so asking often costs little
 HARVEST_READY_AT = time(5, 30)  # Vietnam time; early, so A9 at 06:00 reads its warnings
 DISEASE_WATCH_AT = time(5, 40)  # Vietnam time
 CAMPAIGN_AT = time(6, 0)  # Vietnam time, after A2, A4 and A3 (contract C5)
@@ -88,6 +89,7 @@ class _CooperativeRuntime:
     harvest_ready: DailySchedule = field(default_factory=lambda: DailySchedule(HARVEST_READY_AT))
     disease_watch: DailySchedule = field(default_factory=lambda: DailySchedule(DISEASE_WATCH_AT))
     disease_fingerprint: str | None = None
+    app_suggestions: IntervalSchedule = field(default_factory=lambda: IntervalSchedule(APP_SUGGESTIONS_INTERVAL))
     daily_campaign: DailySchedule = field(default_factory=lambda: DailySchedule(CAMPAIGN_AT))
     bulletin: DailySchedule = field(default_factory=lambda: DailySchedule(BULLETIN_AT))
     improvement: WeeklySchedule = field(default_factory=lambda: WeeklySchedule(IMPROVEMENT_AT))
@@ -240,6 +242,11 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
             runtime.disease_watch.record(now)
         runtime.disease_fingerprint = fingerprint
 
+    def app_suggestions_cycle() -> None:
+        if runtime.app_suggestions.is_due(now):
+            app_suggestions.run_app_suggestions(gateway, now)
+            runtime.app_suggestions.record(now)  # one failing app is logged inside; a failure of the list itself is retried
+
     def campaign_cycle() -> None:
         if not runtime.daily_campaign.is_due(now):
             return
@@ -286,6 +293,7 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
     _guarded("A2 field-watch", htx, field_watch_cycle)
     _guarded("A4 harvest-ready", htx, harvest_cycle)
     _guarded("A3 disease-watch", htx, disease_cycle)
+    _guarded("app suggestions", htx, app_suggestions_cycle)  # before A9, so the campaign sees them
     _guarded("A9 daily-campaign", htx, campaign_cycle)
     _guarded("A5 bulletin", htx, bulletin_cycle)
     _guarded("A10 improvement", htx, improvement_cycle)
