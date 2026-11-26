@@ -114,7 +114,7 @@ describe('strategy.adopt', () => {
 describe('strategy.adopt eligibility (test 37)', () => {
   const open = { unlockedKinds: ['strategy.adopt'] }
   const check = (p: StrategyPlan) =>
-    autoEligibility({ origin: 'agent', payload: { plan_id: p.id }, evidence: evidenceOf(p) }, strategyAdoptAction, open)
+    autoEligibility({ origin: 'agent', payload: { plan_id: p.id }, evidence: evidenceOf(p) }, strategyAdoptAction as never, open)
 
   it('a clean plan runs on its own once the kind is opened', () => {
     expect(check(plan())).toEqual({ eligible: true, reason: 'ok' })
