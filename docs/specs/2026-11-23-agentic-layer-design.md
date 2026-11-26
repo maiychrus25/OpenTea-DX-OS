@@ -878,3 +878,38 @@ Theo `AGENTS.md`:
 - duyệt thành viên;
 - cài và gỡ mini-app (M13);
 - `strategy.adopt` (M11).
+
+### M13: xưởng mini-app A12 (2026-11-27)
+
+**Đã làm:**
+- **Nhận yêu cầu.** Trưởng HTX gửi yêu cầu qua chat ("cần app …") hoặc ở trang `/manager/ai/apps`. Mỗi hợp tác xã chỉ có một yêu cầu đang làm. A12 chọn cách rẻ nhất:
+  1. bật app sẵn có;
+  2. tạo một sổ nháp trong Sổ tự tạo (hành động `book.create`);
+  3. hoặc hỏi tối đa 5 câu, rồi viết đặc tả để trưởng HTX duyệt (`app.spec.approve`).
+- **Dựng app.** `./dxos builder` nhận đặc tả đã duyệt. Mỗi vòng dựng chạy ba container dùng một lần:
+  - **`build`:** công cụ viết mã. Container này chỉ thấy `/work`, chỉ ra mạng qua proxy có danh sách cho phép, và không có biến hay khoá nào của lõi (kiểm thử 30);
+  - **`gates`:** không có mạng, đọc `/work` ở chế độ chỉ đọc, và lấy mã kiểm tra từ ảnh, không từ workspace;
+  - **`review`:** một AI thứ hai đọc mã tìm lỗi bảo mật.
+
+  Có bảy cổng: manifest, markup (không script, không style inline), kit, tests, deps, files, và chạy thử có chụp màn hình. Mỗi app được sửa tối đa 3 vòng.
+- **App qua mọi cổng:**
+  - được gắn tag git trong `generated-apps/<htx>/<app>`;
+  - vào kho ứng dụng với nhãn "App do AI xây", chỉ hợp tác xã yêu cầu thấy;
+  - A12 báo kèm bốn ảnh qua Telegram và tạo đề xuất `miniapp.install`.
+- **Không có đường cài** cho bản chưa qua cổng hoặc chưa được duyệt đặc tả (kiểm thử 26 và 28).
+- **Mạng riêng.** App do AI xây chạy trên mạng riêng, chỉ thấy `apisix` và `postgres` (kiểm thử 27).
+- **Kiểm thử 29.** App do AI xây không được khai hành động.
+
+**Khác với đặc tả:**
+- **Thông báo bản dựng xong.** A12 gọi route `announce` của web. Web gửi tin, kèm ảnh nếu bản dựng qua, và tạo đề xuất cài, chỉ một lần cho mỗi bản dựng.
+- **Mã app do AI xây** có dạng `gen-` cộng tối đa 27 ký tự, vì manifest giới hạn mã ở 31 ký tự.
+- **Cổng `review` chỉ hiện trong bảng cổng khi trượt.** Bản dựng qua hiện đúng 7 cổng xanh.
+- **Ảnh chụp sáng và tối giống nhau,** vì container cổng không có `dxos-app.css` của khung web.
+- **A12 thử lại một yêu cầu lỗi** sau 15 phút, nhân đôi mỗi lần, tối đa 6 giờ, để không gọi model liên tục.
+- **Mạng riêng của app** phải được nối lại khi `apisix` hoặc `postgres` bị tạo lại. Worker, lệnh cài và lệnh nâng cấp tự nối lại.
+- **Claude Code không phải mã nguồn mở.** Nó chỉ được cài vào ảnh khi `DXOS_BUILDER_TOOLS` có nó. CI dựng ảnh không kèm công cụ nào và dùng bản ghi phát lại.
+
+**Chưa làm:**
+- dùng thử bản xem trước trong Mini App, trên dữ liệu mẫu (cần tên miền HTTPS, D17);
+- nâng cấp app theo góp ý;
+- A11 đề xuất xây app mới từ kế hoạch mùa vụ.
