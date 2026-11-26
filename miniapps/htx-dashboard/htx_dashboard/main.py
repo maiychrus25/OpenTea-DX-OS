@@ -28,7 +28,8 @@ THEMES = ("light", "dark")  # the shell passes ?theme=; without it /dxos-app.css
 ERRORS = {401: "Cần đăng nhập để xem trang này.", 403: "Tài khoản của bạn không được vào trang này.",
           404: "Không tìm thấy trang này.", 405: "Không tìm thấy trang này.", 503: "Hệ thống đang bận. Vui lòng thử lại sau ít phút."}
 TABS = (("overview", "Tổng quan", "/"), ("production", "Sản xuất", "/production"), ("parcels", "Vùng trồng", "/parcels"),
-        ("health", "Sức khoẻ cây", "/health"), ("lots", "Lô chè", "/lots"), ("data", "Dữ liệu", "/data"))
+        ("health", "Sức khoẻ cây", "/health"), ("lots", "Lô chè", "/lots"), ("data", "Dữ liệu", "/data"),
+        ("ai", "AI", "/ai"))
 # Pages of the core, opened in the top window (the app is framed): routes under apps/web/src/app/manager/.
 CORE_PAGES = {"journal_approve": "/manager/journal-approve", "schedule": "/manager/schedule", "lots": "/manager/lots",
               "farm_zones": "/manager/farm-zones", "dashboard": "/manager/dashboard"}
@@ -189,6 +190,12 @@ def data(request: Request, claims: Claims = Depends(manager)):
     days = period(request)
     ctx = pages.data_page(core, auth_of(request), claims.htx_code, now(), days)
     return render(request, "data.html", claims=claims, current="data", here="/data", **ctx)
+
+
+@app.get("/ai", response_class=HTMLResponse)
+def ai(request: Request, claims: Claims = Depends(manager)):
+    ctx = pages.ai_page(core, auth_of(request), now())
+    return render(request, "ai.html", claims=claims, current="ai", here="/ai", **ctx)
 
 
 # ---------- the parcel page: the code is checked against a pattern before any query ----------
