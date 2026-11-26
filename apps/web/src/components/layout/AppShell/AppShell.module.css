@@ -48,6 +48,13 @@
   overflow: hidden;
 }
 
+/* Chat drops the top bar where the sidebar is already on screen; narrower, it holds the menu button. */
+@media (min-width: 1024px) {
+  .content:has([data-chat-workspace]) > header {
+    display: none;
+  }
+}
+
 @media (max-width: 767px) {
   .shell[data-role="farmer"] .content {
     padding-bottom: calc(68px + env(safe-area-inset-bottom));

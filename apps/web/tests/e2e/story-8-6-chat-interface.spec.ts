@@ -31,6 +31,7 @@ test.describe('Story 8.6: Shared chat workspace', () => {
   test('title, empty composer and real history', async ({ page }) => {
     await page.goto('/manager/chat')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Trợ lý Thị trường')
+    await expect(page.getByRole('navigation', { name: 'Đường dẫn' })).toBeHidden()
     await expect(page.getByText('Hôm nay bạn đang nghĩ gì?')).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('link', { name: 'Trợ lý AI' })).toHaveAttribute('aria-current', 'page')
     await page.getByRole('button', { name: 'Lịch sử', exact: true }).click()
