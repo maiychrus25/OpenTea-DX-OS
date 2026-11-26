@@ -11,6 +11,8 @@ declare module "next-auth/jwt" {
     /** Seconds since the epoch. */
     accessTokenExpiresAt?: number
     htxCode?: string | null
+    /** Seconds since the epoch of the user's last sign-in with credentials (Keycloak `auth_time`). */
+    authTime?: number
     error?: 'RefreshFailed'
   }
 }
@@ -21,6 +23,8 @@ declare module "next-auth" {
    */
   interface Session {
     error?: 'RefreshFailed'
+    /** Seconds since the epoch of the user's last sign-in with credentials. */
+    authTime?: number
     user: {
       role?: 'manager' | 'officer' | 'farmer'
       htxCode: string | null

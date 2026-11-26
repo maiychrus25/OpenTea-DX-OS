@@ -95,6 +95,7 @@ class FakeAutopilot implements AutopilotRepository {
     return 'blocked' as const
   }
   async dayCounts() { return this.counts }
+  async countPending() { return 0 }
   async volumeSpike() { return this.spike }
   async matchRates() { return [] }
   async householdMessageCounts() { return this.householdCounts }

@@ -201,6 +201,14 @@ export class PrismaAutopilotRepository implements AutopilotRepository {
     return { autoRuns: row?.auto_runs ?? 0, blocked: row?.blocked ?? 0, failuresLastHour: row?.failures ?? 0 }
   }
 
+  async countPending(htxCode: string): Promise<number> {
+    const rows = await prisma.$queryRaw<{ n: number }[]>`
+      SELECT count(*)::int AS n FROM platform.agent_proposals
+      WHERE htx_code = ${htxCode} AND status = 'proposed' AND run_at IS NOT NULL
+    `
+    return rows[0]?.n ?? 0
+  }
+
   async volumeSpike(htxCode: string, dayStart: Date): Promise<string | null> {
     const historyStart = new Date(dayStart.getTime() - 14 * DAY_MS)
     const rows = await prisma.$queryRaw<{ agent: string }[]>`

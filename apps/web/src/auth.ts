@@ -8,6 +8,7 @@ import {
   KEYCLOAK_CLIENT_SECRET,
   KEYCLOAK_INTERNAL,
   endKeycloakSession,
+  readAuthTime,
   readHtxCode,
   refreshAccessToken,
   roleFromRealmRoles,
@@ -88,6 +89,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.refreshToken = account.refresh_token;
         token.accessTokenExpiresAt = account.expires_at;
         token.htxCode = readHtxCode(account.access_token);
+        // The moment of the real sign-in, kept across refreshes: the web asks for a fresh one before it turns autonomous mode on.
+        token.authTime = readAuthTime(account.id_token) ?? readAuthTime(account.access_token);
         return token;
       }
       return refreshAccessToken(token);
@@ -102,6 +105,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
         session.user.htxCode = token.htxCode ?? null;
       }
+      session.authTime = token.authTime;
       if (token.error) {
         session.error = token.error;
       }

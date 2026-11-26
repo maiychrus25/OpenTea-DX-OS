@@ -39,6 +39,8 @@ export interface AutopilotRepository {
   /** Chặn: only while the proposal is open, has a window and is not claimed by the tick yet. */
   block(htxCode: string, proposalId: string, userId: string): Promise<BlockOutcome>
   dayCounts(htxCode: string, dayStart: Date, now: Date): Promise<AutopilotDayCounts>
+  /** Open proposals that have a window and have not run yet. */
+  countPending(htxCode: string): Promise<number>
   /** The agent whose proposals today exceed 3 times its 14-day daily average (average at least 1), or null. */
   volumeSpike(htxCode: string, dayStart: Date): Promise<string | null>
   matchRates(htxCode: string, since: Date): Promise<KindMatchRate[]>
