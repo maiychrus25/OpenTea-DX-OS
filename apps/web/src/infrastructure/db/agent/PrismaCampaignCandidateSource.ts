@@ -54,6 +54,23 @@ export class PrismaCampaignCandidateSource implements CandidateSource {
     return new Map(parcels.map((p) => [p.id, p.parcel_code]))
   }
 
+  async estimatedKgByParcelIds(htxCode: string, parcelIds: string[]): Promise<Map<string, number>> {
+    const parcels = await prisma.parcel.findMany({
+      where: { id: { in: parcelIds }, household: { htx_profile: { htx_code: htxCode } } },
+      select: { id: true, area_ha: true, estimated_yield_per_ha: true },
+    })
+    return new Map(
+      parcels.flatMap((p) => (p.estimated_yield_per_ha === null ? [] : [[p.id, p.area_ha * p.estimated_yield_per_ha] as [string, number]]))
+    )
+  }
+
+  async staffPresent(htxCode: string, day: string): Promise<number | null> {
+    const rows = await prisma.$queryRaw<{ present: number }[]>`
+      SELECT present FROM platform.staff_attendance WHERE htx_code = ${htxCode} AND day = ${day}::date
+    `
+    return rows[0]?.present ?? null
+  }
+
   async parcelCodesOfEntries(htxCode: string, entryIds: string[]): Promise<Map<string, string>> {
     const entries = await prisma.journalEntry.findMany({
       where: { id: { in: entryIds }, parcel: { household: { htx_profile: { htx_code: htxCode } } } },
