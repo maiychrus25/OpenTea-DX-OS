@@ -4,7 +4,8 @@
 'use client'
 
 import { PageHeader } from '@/components/ui/PageHeader'
-import { Package } from 'lucide-react'
+import { Package, CheckCircle, Layers, Weight, CalendarDays, ArrowRight } from 'lucide-react'
+import { Stats } from '@/components/features/officer-web/parts'
 import React, { useEffect, useState, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import { QrCode } from 'lucide-react'
@@ -91,6 +92,12 @@ export function LotList() {
         actions={<button type="button" className={styles.createBtn} onClick={() => setShowForm(true)}>+ Tạo lô mới</button>}
       />
 
+      {!loading && !loadFailed && <Stats items={[
+        { label: 'Tổng số lô', value: lots.length, icon: <Package /> },
+        { label: 'Lô sẵn sàng', value: lots.filter(lot => lot.status === 'ready').length, icon: <CheckCircle /> },
+        { label: 'Lô đã xuất QR', value: lots.filter(lot => lot.status === 'qr_exported').length, icon: <QrCode /> },
+      ]} />}
+
       {successMsg && <div className={styles.successBanner}>{successMsg}</div>}
 
       {loading ? (
@@ -114,9 +121,9 @@ export function LotList() {
                 </Pill>
               </div>
               <dl className={styles.facts}>
-                <div><dt>Số thửa</dt><dd>{lot.parcel_count}</dd></div>
-                {lot.estimated_weight_kg ? <div><dt>Khối lượng</dt><dd>{lot.estimated_weight_kg.toLocaleString('vi-VN')} kg</dd></div> : null}
-                <div><dt>Ngày tạo</dt><dd>{new Date(lot.created_at).toLocaleDateString('vi-VN')}</dd></div>
+                <div><dt><Layers size={18} aria-hidden="true" />Số thửa</dt><dd>{lot.parcel_count}</dd></div>
+                {lot.estimated_weight_kg ? <div><dt><Weight size={18} aria-hidden="true" />Khối lượng</dt><dd>{lot.estimated_weight_kg.toLocaleString('vi-VN')} kg</dd></div> : null}
+                <div><dt><CalendarDays size={18} aria-hidden="true" />Ngày tạo</dt><dd>{new Date(lot.created_at).toLocaleDateString('vi-VN')}</dd></div>
               </dl>
               <div className={styles.cardActions}>
                 {lot.status !== 'qr_exported' && (
@@ -135,7 +142,7 @@ export function LotList() {
                 )}
                 {lot.status === 'qr_exported' && (
                   <a href={`/lot/${lot.lot_code}`} target="_blank" rel="noopener noreferrer" className={styles.viewBtn}>
-                    Xem trang QR
+                    Xem trang QR <ArrowRight size={18} aria-hidden="true" />
                   </a>
                 )}
               </div>

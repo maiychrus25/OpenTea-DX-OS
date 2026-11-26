@@ -48,7 +48,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: 1.25rem;
 }
 
@@ -71,16 +71,18 @@
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); margin: 0; border-top: 1px solid var(--color-border-row); }
 .facts > div { padding: 12px 18px; }
 .facts > div + div { border-left: 1px solid var(--color-border-row); }
-.facts dt { font-size: 12px; color: var(--color-ink-secondary); }
+.facts dt { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-ink-secondary); }
+.facts dt svg { flex-shrink: 0; color: var(--color-primary); }
+.facts > div { min-width: 0; overflow-wrap: anywhere; }
+.headText { overflow-wrap: anywhere; }
 .facts dd { margin: 2px 0 0; font-size: 16px; font-weight: 700; color: var(--color-ink-primary); }
 .lotCode { font-family: monospace; font-weight: 700; font-size: 15.5px; color: var(--color-ink-heading); }
 .commodity { font-size: 13px; color: var(--color-ink-secondary); }
-.cardActions { display: flex; gap: 8px; margin-top: auto; padding: 12px 18px; border-top: 1px solid var(--color-border-row); background: var(--color-surface-sunken); }
-.qrBtn, .viewBtn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 0 16px; border-radius: var(--radius-button); font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer; }
-.qrBtn { border: 1px solid var(--color-primary); background: var(--color-primary); color: var(--color-primary-foreground); }
-.qrBtn:hover { background: var(--color-primary-hover); }
+.cardActions { display: flex; gap: 8px; margin-top: auto; padding: 8px; }
+.qrBtn, .viewBtn { flex: 1; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 8px 16px; border: 0; border-radius: var(--radius-button); background: var(--color-primary-subtle); color: var(--color-primary); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
+.qrBtn:hover, .viewBtn:hover { background: var(--secondary); }
+.qrBtn:focus-visible, .viewBtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .qrBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-.viewBtn { border: 1px solid var(--color-border-input); background: var(--color-surface-card); color: var(--color-ink-primary); }
 
 .empty {
   text-align: center;
