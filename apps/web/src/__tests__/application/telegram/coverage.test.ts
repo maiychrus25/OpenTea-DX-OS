@@ -9,9 +9,6 @@ import { CHAT_ACTIONS } from '@/application/telegram/chat/actions'
 import { CHAT_TOOLS } from '@/application/telegram/chat/tools'
 import { TELEGRAM_COVERAGE } from '@/application/telegram/coverage'
 
-// disease.report still imports the token module, which loads next-auth as ESM; only the route lists are needed here.
-jest.mock('@/lib/auth/core-token', () => ({ getCoreToken: jest.fn() }))
-
 const API_ROOT = path.resolve(__dirname, '../../../app/api')
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 

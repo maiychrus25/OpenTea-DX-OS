@@ -6,7 +6,6 @@ import { CHAT_ACTIONS } from '@/application/telegram/chat/actions'
 import type { ChatAction, ChatUser, ChoiceStep, FlowStep, PhotoStep } from '@/application/telegram/chat/types'
 import { assertJournalPhotoKey, journalPhotoRoot } from '@/domain/document/document-namespace'
 import { DomainError } from '@/domain/errors'
-import { getCoreToken } from '@/lib/auth/core-token'
 
 const mockFakes = {
   parcels: jest.fn(),
@@ -16,7 +15,6 @@ const mockFakes = {
   journalFindById: jest.fn(),
   journalScoped: jest.fn(),
   createEntry: jest.fn(),
-  submitDiagnosis: jest.fn(),
   batchApprove: jest.fn(),
   approveHarvest: jest.fn(),
 }
@@ -45,14 +43,9 @@ jest.mock('@/lib/api/tenant-guard', () => ({
 jest.mock('@/application/journal/CreateJournalEntryUseCase', () => ({
   CreateJournalEntryUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.createEntry(...args) })),
 }))
-jest.mock('@/application/disease/submit-diagnosis.usecase', () => ({
-  SubmitDiagnosisUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.submitDiagnosis(...args) })),
-}))
-jest.mock('@/infrastructure/disease-api/disease-api.adapter', () => ({ DiseaseApiAdapter: jest.fn() }))
-jest.mock('@/infrastructure/storage/minio-storage.adapter', () => ({ MinioStorageAdapter: jest.fn() }))
-jest.mock('@/infrastructure/db/farm/PrismaDiseaseReportRepository', () => ({ PrismaDiseaseReportRepository: jest.fn() }))
-jest.mock('@/infrastructure/db/notification/prisma-notification-repository', () => ({ PrismaNotificationRepository: jest.fn() }))
-jest.mock('@/lib/auth/core-token', () => ({ getCoreToken: jest.fn(async () => 'core-token') }))
+jest.mock('@/lib/auth/core-token', () => {
+  throw new Error('chat code loaded the browser session token')
+})
 jest.mock('@/application/journal/BatchApproveJournalUseCase', () => ({
   BatchApproveJournalUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.batchApprove(...args) })),
 }))
@@ -101,7 +94,6 @@ beforeEach(() => {
   fakes.guardParcel.mockResolvedValue(undefined)
   fakes.guardJournal.mockResolvedValue(undefined)
   fakes.createEntry.mockResolvedValue({ id: 'entry-1' })
-  fakes.submitDiagnosis.mockResolvedValue({ report_id: 'r1', disease_name: 'Bệnh đốm nâu', confidence_score: 0.873, uncertain: false })
   fakes.batchApprove.mockResolvedValue({ approved: 7, failed: [] })
   fakes.approveHarvest.mockResolvedValue({ id: 'p2', parcel_code: 'TC-B9', status: 'TENDING' })
 })
@@ -110,7 +102,6 @@ describe('CHAT_ACTIONS (contract C6)', () => {
   it('lists the four actions in contract order with the roles of their routes', () => {
     expect(CHAT_ACTIONS.map((a) => [a.name, [...a.roles]])).toEqual([
       ['journal.create', ['farmer', 'officer']],
-      ['disease.report', ['farmer']],
       ['journal.batch_approve', ['officer', 'manager']],
       ['harvest.approve', ['officer', 'manager']],
     ])
@@ -222,34 +213,6 @@ describe('journal.create', () => {
   })
 })
 
-describe('disease.report', () => {
-  const a = () => action('disease.report')
-
-  it('is farmer only, low risk, and asks a parcel then a clear leaf photo', () => {
-    expect(a().risk).toBe('low')
-    expect(a().steps.map((s) => s.slot)).toEqual(['parcel_id', 'photo_key'])
-    expect(a().steps.map((s) => s.promptVi)[1]).toBe('Gửi ảnh lá chè bị bệnh, chụp rõ một lá.')
-    expect((stepOf(a(), 'photo_key') as PhotoStep).optional).toBe(false)
-    expect((stepOf(a(), 'photo_key') as PhotoStep).photoKey(farmer)).toMatch(/^telegram\/TC\/\d{4}\/.+\.jpg$/)
-  })
-
-  it('reads the photo and submits it as the route does', async () => {
-    const result = await a().execute({ parcel_id: 'p1', photo_key: 'telegram/TC/2026/x.jpg' }, farmer, deps, NOW)
-    expect(deps.photos.get).toHaveBeenCalledWith('telegram/TC/2026/x.jpg')
-    expect(fakes.guardParcel).toHaveBeenCalledWith('p1')
-    expect(fakes.submitDiagnosis).toHaveBeenCalledWith(
-      expect.objectContaining({ farmerUserId: 'farmer-1', htxCode: 'TC', parcelId: 'p1', mimeType: 'image/jpeg' })
-    )
-    expect(result).toBe('Đã gửi ảnh. AI nhận định: Bệnh đốm nâu (87%). Cán bộ sẽ xem lại.')
-  })
-
-  it('answers without an AI result when the model is uncertain', async () => {
-    fakes.submitDiagnosis.mockResolvedValue({ report_id: 'r1', disease_name: 'Không xác định', confidence_score: 0.2, uncertain: true })
-    const result = await a().execute({ parcel_id: 'p1', photo_key: 'telegram/TC/2026/x.jpg' }, farmer, deps, NOW)
-    expect(result).toBe('Đã gửi ảnh. Cán bộ sẽ xem lại.')
-  })
-})
-
 describe('journal.batch_approve', () => {
   const a = () => action('journal.batch_approve')
 
@@ -299,18 +262,16 @@ describe('journal.batch_approve', () => {
 })
 
 describe('no session on the read paths', () => {
-  it('only disease.report reads the core token, and only when it runs', async () => {
+  it('no action reads the core token on its read paths', async () => {
     fakes.journalFindAll.mockResolvedValue({ entries: [], total: 0 })
     fakes.journalScoped.mockResolvedValue([])
-    const readPaths = CHAT_ACTIONS.filter((a) => a.name !== 'disease.report')
-    for (const a of readPaths) {
+    for (const a of CHAT_ACTIONS) {
       for (const step of a.steps) if (step.kind === 'choice') await step.choices(officer, {})
       if (a.start) await a.start(officer, NOW)
     }
     await action('journal.create').preview({ parcel_id: 'p1', activity_type: 'IRRIGATION' }, farmer)
     await action('journal.batch_approve').preview({ entry_ids: ['e1'] }, officer)
     await action('harvest.approve').preview({ parcel_id: 'p2' }, officer)
-    expect(getCoreToken).not.toHaveBeenCalled()
   })
 })
 
