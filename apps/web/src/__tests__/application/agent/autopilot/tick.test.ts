@@ -144,16 +144,18 @@ function setup(roles: { roles: string[]; enabled: boolean; htxCode: string | nul
     if (roles instanceof Error) throw roles
     return roles
   })
+  const liveRows = new Map<string, { thresholds: Record<string, number>; schedule: string | null }>()
   const tick = new RunAutopilotTickUseCase({
     autopilot: fake,
     proposals: { findById: async (_h, id) => fake.rows.get(id)?.proposal ?? null },
     decide,
     roles: { read: readRole },
     htxProfileId: async () => 'htx-tc',
+    liveSettings: async (_htx, agent) => liveRows.get(agent) ?? null,
     notifier,
     now: () => NOW,
   })
-  return { fake, decide, notifier, tick, readRole }
+  return { fake, decide, notifier, tick, readRole, liveRows }
 }
 
 describe('RunAutopilotTickUseCase', () => {
@@ -179,6 +181,24 @@ describe('RunAutopilotTickUseCase', () => {
       now: NOW,
     })
     expect(notifier.decided).toHaveBeenCalledWith(HTX, id)
+  })
+
+  test('test 31: a settings change that tightens against its evidence but loosens the live value goes back to a person', async () => {
+    const { fake, tick, decide, liveRows } = setup()
+    // Evidence without the settings row reads as the default (6 h); the cooperative already stores 2 h, so 4 h loosens.
+    liveRows.set('field-watch', { thresholds: { silent_hours: 2 }, schedule: null })
+    const id = fake.add({ agent: 'improvement', kind: 'agent.settings.update', risk: 'medium', payload: { agent: 'field-watch', thresholds: { silent_hours: 4 } } })
+    expect(await tick.execute(HTX)).toEqual({ ran: 0, failed: 0, returned: 1, stopped: null })
+    expect(decide).not.toHaveBeenCalled()
+    expect(fake.rows.get(id)!.proposal.runAt).toBeNull()
+  })
+
+  test('a settings change that tightens the live value runs', async () => {
+    const { fake, tick, decide, liveRows } = setup()
+    liveRows.set('field-watch', { thresholds: { silent_hours: 6 }, schedule: null })
+    fake.add({ agent: 'improvement', kind: 'agent.settings.update', risk: 'medium', payload: { agent: 'field-watch', thresholds: { silent_hours: 4 } } })
+    expect((await tick.execute(HTX)).ran).toBe(1)
+    expect(decide).toHaveBeenCalledTimes(1)
   })
 
   test('a window that has not ended is not run', async () => {
@@ -416,6 +436,7 @@ describe('the tick through the real DecideProposalUseCase', () => {
       decide: (input) => useCase.execute(input),
       roles: { read: async () => ({ roles: ['manager'], enabled: true, htxCode: HTX }) },
       htxProfileId: async () => 'htx-tc',
+      liveSettings: async () => null,
       notifier: { stopped: async () => undefined, decided: async () => undefined },
       now: () => NOW,
     })

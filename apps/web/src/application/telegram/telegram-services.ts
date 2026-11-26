@@ -12,6 +12,7 @@ import { getAction } from '@/application/agent/action-catalog'
 import { AutopilotService } from '@/application/agent/autopilot/AutopilotService'
 import { RunAutopilotTickUseCase } from '@/application/agent/autopilot/RunAutopilotTickUseCase'
 import { PrismaAutopilotRepository } from '@/infrastructure/db/agent/PrismaAutopilotRepository'
+import { PrismaAgentSettingsRepository } from '@/infrastructure/db/agent/PrismaAgentSettingsRepository'
 import { PrismaCampaignRepository } from '@/infrastructure/db/agent/PrismaCampaignRepository'
 import { PrismaImprovementRepository } from '@/infrastructure/db/agent/PrismaImprovementRepository'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
@@ -199,6 +200,7 @@ export function autopilotTickUseCase(): RunAutopilotTickUseCase {
     decide: (input) => decisionUseCase().execute(input),
     roles: new KeycloakLiveRoleReader(),
     htxProfileId: async (htxCode) => (await new PrismaHtxProfileRepository().findByCode(htxCode))?.id ?? null,
+    liveSettings: (htxCode, agent) => new PrismaAgentSettingsRepository().findForEvidence(htxCode, agent),
     notifier: {
       stopped: (htxCode, reason, returned, dailyCap) => notifier.enqueueAutopilotStopped(htxCode, reason, returned, dailyCap),
       decided: (htxCode, proposalId) => notifier.syncDecision(htxCode, proposalId),

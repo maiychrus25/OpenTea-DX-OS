@@ -40,6 +40,8 @@ export interface RunAutopilotTickDeps {
   decide(input: DecideProposalInput): Promise<DecideProposalOutcome>
   roles: LiveRoleReader
   htxProfileId(htxCode: string): Promise<string | null>
+  /** The stored settings row of one agent, or null when the cooperative has none (the defaults apply). */
+  liveSettings(htxCode: string, agent: string): Promise<{ thresholds?: Record<string, unknown> } | null>
   notifier: AutopilotTickNotifier
   now?: () => Date
 }
@@ -141,7 +143,12 @@ export class RunAutopilotTickUseCase {
     if (!proposal || !definition || proposal.status !== 'proposed') return 'skipped'
 
     // The conditions of scheduling may have changed (unlock closed, kind no longer eligible): back to normal approval.
-    if (!autoEligibility(proposal, definition, config).eligible) return this.giveBack(htxCode, proposalId)
+    // A settings change is judged against the stored values, not its evidence, so a loosening never runs (test 31).
+    const live =
+      proposal.kind === 'agent.settings.update'
+        ? ((await this.deps.liveSettings(htxCode, String(proposal.payload.agent)))?.thresholds ?? {})
+        : undefined
+    if (!autoEligibility(proposal, definition, config, live).eligible) return this.giveBack(htxCode, proposalId)
     if (proposal.kind === 'notification.households' && (await this.householdCapReached(config, htxProfileId, proposal.payload, dayStart))) {
       return this.giveBack(htxCode, proposalId)
     }

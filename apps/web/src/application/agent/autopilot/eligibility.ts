@@ -39,7 +39,7 @@ function currentThresholds(evidence: Evidence): Record<string, unknown> {
 }
 
 /** True only when every change moves the agent in its stricter direction (or keeps the value); an unknown key fails. */
-function onlyTightens(payload: Record<string, unknown>, evidence: Evidence): boolean {
+function onlyTightens(payload: Record<string, unknown>, current: Record<string, unknown>): boolean {
   const agent = payload.agent as string
   const thresholds = (payload.thresholds ?? {}) as Record<string, number>
   const keys = Object.keys(thresholds)
@@ -47,7 +47,6 @@ function onlyTightens(payload: Record<string, unknown>, evidence: Evidence): boo
   if (agent === 'digest') return false
   const defined = (SETTING_KEYS as Record<string, { thresholds?: ThresholdTable }>)[agent]?.thresholds
   if (!defined) return false
-  const current = currentThresholds(evidence)
   return keys.every((key) => {
     const setting = defined[key]
     if (!setting) return false
@@ -64,7 +63,9 @@ function onlyTightens(payload: Record<string, unknown>, evidence: Evidence): boo
 export function autoEligibility(
   proposal: EligibilityProposal,
   definition: ActionDefinition,
-  config: EligibilityConfig
+  config: EligibilityConfig,
+  /** The cooperative's stored thresholds of the agent; the tick passes them so the run never trusts the evidence alone. */
+  liveThresholds?: Record<string, unknown>
 ): Eligibility {
   if (proposal.origin !== 'agent') return { eligible: false, reason: 'origin_user' }
   if (definition.autonomy === 'never') return { eligible: false, reason: 'never' }
@@ -72,7 +73,10 @@ export function autoEligibility(
     return { eligible: false, reason: 'not_unlocked' }
   }
   if (!definition.approverRoles.includes('manager')) return { eligible: false, reason: 'manager_cannot_decide' }
-  if (definition.kind === 'agent.settings.update' && !onlyTightens(proposal.payload, proposal.evidence)) {
+  if (
+    definition.kind === 'agent.settings.update' &&
+    !onlyTightens(proposal.payload, liveThresholds ?? currentThresholds(proposal.evidence))
+  ) {
     return { eligible: false, reason: 'loosens_setting' }
   }
   if (definition.kind === 'journal.approve') {
