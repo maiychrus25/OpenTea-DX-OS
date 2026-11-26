@@ -849,6 +849,6 @@ stop_worker
 ./dxos remove hello >/dev/null && pass "hello removed after the upgrade checks" || fail "remove hello after the upgrade checks"
 OUT=$(make platform-smoke 2>&1) || { tail -20 <<<"$OUT" >&2; fail "make platform-smoke after remove"; }
 # 131 before the agentic layer; its agent checks add 26 and the Telegram checks 14 (the web is up when this runs).
-assert_eq "$(grep -c '^PASS' <<<"$OUT")" 171 "platform smoke still gives 171 PASS without apps"
+assert_eq "$(grep -c '^PASS' <<<"$OUT")" 176 "platform smoke still gives 176 PASS without apps"
 
 echo "apps smoke: all checks passed"
