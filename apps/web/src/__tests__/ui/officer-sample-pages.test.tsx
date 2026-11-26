@@ -35,7 +35,8 @@ describe('officer sample screens', () => {
 
   it('counts orders by product, one row each with its own code', () => {
     const { container } = render(<Orders />)
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(PRODUCTS.length)
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(4)
+    expect(screen.queryByText('Hồng trà Shan Tuyết')).not.toBeInTheDocument()
     expect(screen.getByText('SP-02').closest('tr')).toHaveTextContent('Chè móc câu')
     expect(screen.getByText('SP-02').closest('tr')).not.toHaveTextContent('Chè xanh Tân Cương')
     expect(screen.queryByText(/xác nhận/i)).not.toBeInTheDocument()
@@ -43,10 +44,9 @@ describe('officer sample screens', () => {
 })
 
 describe('officer sample filters', () => {
-  it('narrows the products to those nobody has ordered', () => {
-    render(<Orders />)
-    fireEvent.click(screen.getByRole('button', { name: 'Chưa có đơn' }))
-    expect(screen.getByText('Hồng trà Shan Tuyết')).toBeInTheDocument()
-    expect(screen.queryByText('Chè móc câu')).not.toBeInTheDocument()
+  it('orders the products by quantity when that figure is pressed', () => {
+    const { container } = render(<Orders />)
+    fireEvent.click(screen.getByRole('button', { name: 'Xem Số lượng đã đặt' }))
+    expect(container.querySelector('tbody tr')).toHaveTextContent('Chè móc câu')
   })
 })

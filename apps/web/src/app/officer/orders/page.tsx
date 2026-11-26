@@ -15,24 +15,24 @@ export const metadata = { title: 'Đơn hàng' }
 
 /** Orders counted by product. Sample content: there is no order service yet. */
 export default function OfficerOrdersPage() {
-  const rows = PRODUCTS.map((product) => ({ product, ...productOrders(product) }))
-  const ordered = rows.filter((r) => r.quantity > 0)
+  // A product nobody has ordered (cancelled orders aside) is left off.
+  const rows = PRODUCTS.map((product) => ({ product, ...productOrders(product) })).filter((r) => r.quantity > 0)
 
   return (
     <div className={styles.page}>
       <Header icon={<Package size={24} />} title="Đơn hàng" description="Tính theo từng sản phẩm. Hàng có sẵn nên khách đặt là xong, không cần HTX duyệt." />
       <FilteredTable
         figures={[
-          { label: 'Sản phẩm có người đặt', value: ordered.length, icon: <ShoppingBag />, filter: 'Có người đặt' },
-          { label: 'Số lượng đã đặt', value: sum(rows, (r) => r.quantity), icon: <Boxes />, filter: 'Có người đặt', sort: 'quantity' },
-          { label: 'Giá trị đặt', value: money(sum(rows, (r) => r.value)), icon: <Wallet />, filter: 'Có người đặt', sort: 'value' },
+          { label: 'Sản phẩm có người đặt', value: rows.length, icon: <ShoppingBag /> },
+          { label: 'Số lượng đã đặt', value: sum(rows, (r) => r.quantity), icon: <Boxes />, sort: 'quantity' },
+          { label: 'Giá trị đặt', value: money(sum(rows, (r) => r.value)), icon: <Wallet />, sort: 'value' },
         ]}
-        filters={['Có người đặt', 'Chưa có đơn']}
+        filters={[]}
         columns={['Mã SP', 'Sản phẩm', 'Giá bán', 'Số người đặt', 'Số lượng', 'Thành tiền', 'Thao tác']}
         numeric={[2, 3, 4, 5]}
         rows={rows.map(({ product, buyers, quantity, value }) => ({
           key: product.code,
-          group: quantity > 0 ? 'Có người đặt' : 'Chưa có đơn',
+          group: '',
           rank: { quantity, value },
           cells: [
             <span key="code" className={styles.mono}>{product.code}</span>,
