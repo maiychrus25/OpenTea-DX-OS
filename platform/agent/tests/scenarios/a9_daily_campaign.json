@@ -834,5 +834,232 @@
       "dropped": [],
       "summary_len": 400
     }
+  },
+  {
+    "name": "season goal keys put the goal's items first and keep the kind weights inside each group",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "n1",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "n1",
+          "created_at": "2026-11-20T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "i1",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "i1",
+          "created_at": "2026-11-21T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "h1",
+          "kind": "harvest.approve",
+          "risk": "low",
+          "title_vi": "h1",
+          "created_at": "2026-11-22T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "harvest",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "j1",
+          "kind": "journal.approve",
+          "risk": "low",
+          "title_vi": "j1",
+          "created_at": "2026-11-19T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "journal_backlog",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [],
+      "people_available": null,
+      "season_goal_keys": [
+        "journal_backlog",
+        "inspection"
+      ]
+    },
+    "replay_response": {
+      "summary_vi": "Hôm nay có việc."
+    },
+    "expected": {
+      "posted": true,
+      "items": [
+        "i1",
+        "j1",
+        "h1",
+        "n1"
+      ],
+      "dropped": []
+    }
+  },
+  {
+    "name": "season goal keys from the plan are mapped to campaign goals",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "n1",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "n1",
+          "created_at": "2026-11-20T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "i1",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "i1",
+          "created_at": "2026-11-21T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "h1",
+          "kind": "harvest.approve",
+          "risk": "low",
+          "title_vi": "h1",
+          "created_at": "2026-11-22T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "harvest",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "j1",
+          "kind": "journal.approve",
+          "risk": "low",
+          "title_vi": "j1",
+          "created_at": "2026-11-19T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "journal_backlog",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [],
+      "people_available": null,
+      "season_goal_keys": [
+        "journal_on_time_rate"
+      ]
+    },
+    "replay_response": {
+      "summary_vi": "Hôm nay có việc."
+    },
+    "expected": {
+      "posted": true,
+      "items": [
+        "j1",
+        "h1",
+        "i1",
+        "n1"
+      ],
+      "dropped": []
+    }
+  },
+  {
+    "name": "no season goal keys keeps the kind weights",
+    "now": "2026-11-26T23:00:00Z",
+    "candidates": {
+      "day": "2026-11-27",
+      "proposals": [
+        {
+          "id": "n1",
+          "kind": "notification.internal",
+          "risk": "low",
+          "title_vi": "n1",
+          "created_at": "2026-11-20T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "internal_notice",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "i1",
+          "kind": "disease.inspection",
+          "risk": "low",
+          "title_vi": "i1",
+          "created_at": "2026-11-21T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "inspection",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "h1",
+          "kind": "harvest.approve",
+          "risk": "low",
+          "title_vi": "h1",
+          "created_at": "2026-11-22T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "harvest",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        },
+        {
+          "id": "j1",
+          "kind": "journal.approve",
+          "risk": "low",
+          "title_vi": "j1",
+          "created_at": "2026-11-19T00:00:00Z",
+          "parcel_codes": [],
+          "goal_key": "journal_backlog",
+          "target": 1,
+          "involves_spraying": false,
+          "people_needed": 0
+        }
+      ],
+      "rain_parcel_codes": [],
+      "withdrawal_parcel_codes": [],
+      "people_available": null,
+      "season_goal_keys": []
+    },
+    "replay_response": {
+      "summary_vi": "Hôm nay có việc."
+    },
+    "expected": {
+      "posted": true,
+      "items": [
+        "h1",
+        "i1",
+        "j1",
+        "n1"
+      ],
+      "dropped": []
+    }
   }
 ]
