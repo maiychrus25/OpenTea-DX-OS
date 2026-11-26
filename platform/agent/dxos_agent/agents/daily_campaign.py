@@ -25,6 +25,7 @@ MAX_ITEMS = 15
 SUMMARY_MAX = 400
 OTHER_LABEL_VI = "Việc khác"
 OTHER_WEIGHT = 9
+APP_WEIGHT = 8  # business actions of mini-apps (M9) come after the production work and before anything unknown
 REFUSAL_STATUSES = (400, 409, 422)  # the web refused the campaign body; the day is done
 KIND_WEIGHT = {
     "harvest.approve": 1,
@@ -78,6 +79,10 @@ def _dropped(row: Mapping[str, Any], rule: str) -> dict[str, str]:
     return {"proposal_id": str(row["id"]), "rule": rule}
 
 
+def _kind_weight(kind: str) -> int:
+    return KIND_WEIGHT.get(kind, APP_WEIGHT if kind.startswith("app.") else OTHER_WEIGHT)
+
+
 def plan_campaign(candidates: Mapping[str, Any]) -> CampaignPlan:
     """Apply the C5 rules in order: withdrawal, rain, sort, people, overflow."""
     withdrawal = set(candidates.get("withdrawal_parcel_codes") or [])
@@ -92,7 +97,7 @@ def plan_campaign(candidates: Mapping[str, Any]) -> CampaignPlan:
             dropped.append(_dropped(row, "rain"))
         else:
             pool.append(row)
-    pool.sort(key=lambda row: (KIND_WEIGHT.get(row["kind"], OTHER_WEIGHT), parse_utc(row["created_at"]), str(row["id"])))
+    pool.sort(key=lambda row: (_kind_weight(row["kind"]), parse_utc(row["created_at"]), str(row["id"])))
 
     people = candidates.get("people_available")
     if isinstance(people, (int, float)) and not isinstance(people, bool):
