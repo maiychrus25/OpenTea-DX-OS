@@ -126,9 +126,11 @@ for name, check in checks.items():
     except (KeyError, IndexError, TypeError):
         ok = False
     if not ok:
-        print(name)' || true)"
+        # The reply is safe to show: the bridge never puts the token in a reply.
+        print(name + "\t" + json.dumps(replies.get({"initialize": 1, "tools-list": 2, "read-tool": 3, "create-proposal": 4, "ping": 5}[name]), ensure_ascii=False)[:400])' || true)"
 for check in initialize tools-list read-tool create-proposal ping; do
-  if grep -qx "$check" <<<"$M14_FAILED"; then fail "MCP bridge check failed: $check"; fi
+  line="$(grep -E "^$check	" <<<"$M14_FAILED" || true)"
+  if [ -n "$line" ]; then fail "MCP bridge check failed: $check (reply: ${line#*	})"; fi
 done
 pass "MCP bridge answers initialize, tools/list (create_proposal), a read tool with its source, create_proposal and ping"
 
