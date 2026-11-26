@@ -13,7 +13,7 @@ export const notificationInternalAction: ActionDefinition<TemplatePayload> = {
   titleVi: 'Thông báo nội bộ',
   risk: 'low',
   approverRoles: ['manager'],
-  origins: ['agent'],
+  origins: ['agent', 'user'],
   autonomy: 'auto',
   channels: ['web', 'telegram'],
   payloadSchema: templatePayloadSchema('internal'),

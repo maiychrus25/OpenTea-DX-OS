@@ -20,7 +20,7 @@ export const journalApproveAction: ActionDefinition<JournalApprovePayload> = {
   titleVi: 'Duyệt nhật ký canh tác',
   risk: 'medium',
   approverRoles: ['officer', 'manager'],
-  origins: ['agent'],
+  origins: ['agent', 'user'],
   autonomy: 'unlockable',
   channels: ['web', 'telegram'],
   payloadSchema: journalApprovePayloadSchema,

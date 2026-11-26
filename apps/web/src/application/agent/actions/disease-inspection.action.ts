@@ -36,7 +36,7 @@ export const diseaseInspectionAction: ActionDefinition<DiseaseInspectionPayload>
   titleVi: 'Đề nghị kiểm tra dịch bệnh',
   risk: 'medium',
   approverRoles: ['officer', 'manager'],
-  origins: ['agent'],
+  origins: ['agent', 'user'],
   autonomy: 'auto',
   channels: ['web', 'telegram'],
   payloadSchema: diseaseInspectionPayloadSchema,
