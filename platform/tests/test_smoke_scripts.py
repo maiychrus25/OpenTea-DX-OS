@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "platform" / "tests"
 SHELL_SCRIPTS = [
     "smoke-telegram.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh",
-    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
+    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-voice.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
 ]
 
 
@@ -223,4 +223,26 @@ def test_telegram_smoke_checks_the_mini_app_session_and_the_menu_button():
     text = (TESTS / "smoke-telegram.sh").read_text(encoding="utf-8") + (TESTS / "lib-telegram.sh").read_text(encoding="utf-8")
     for needle in ("/api/telegram/webapp/session", "setChatMenuButton", "WEBAPP_NOT_LINKED", "dxos_tg_webapp",
                    'TELEGRAM_BOT_TOKEN="$TG_TOKEN_VALUE" ./dxos telegram enable', "DXOS_WEB_PUBLIC_URL"):
+        assert needle in text, needle
+
+
+def test_voice_smoke_runs_last_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-mcp.sh") < text.index("source platform/tests/smoke-voice.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the voice checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-assistant.sh", "smoke-mcp.sh"):
+        assert "smoke-voice.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_voice_smoke_chains_every_earlier_cleanup_on_exit():
+    text = (TESTS / "smoke-voice.sh").read_text(encoding="utf-8")
+    assert "trap 'voice_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+
+
+def test_voice_smoke_uses_the_stt_stub_and_never_the_real_server():
+    text = (TESTS / "smoke-voice.sh").read_text(encoding="utf-8")
+    assert "--profile stt-test up -d --no-deps stt-test-stub" in text
+    assert "dxos-stt" not in text.replace("network as dxos-stt", "") and "up-voice" not in text
+    # The assertions the plan names: three buttons, Đúng starts the journal flow, test 40 (no row before Xác nhận).
+    for needle in ('"Đúng" "Sửa" "Huỷ"', "Chọn thửa:", "test 40", "Tin thoại dài quá 60 giây", "Chưa nghe được tin thoại lúc này"):
         assert needle in text, needle
