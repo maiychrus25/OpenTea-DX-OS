@@ -124,3 +124,10 @@ def test_campaign_smoke_presses_the_button_the_stub_recorded_and_signs_nothing()
     text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
     assert "tg_button" in text and "Duyệt cả chiến dịch" in text
     assert "callback_sign" not in text and "hmac" not in text
+
+
+def test_campaign_smoke_closes_older_open_proposals_before_seeding():
+    # The earlier smokes leave many open TC proposals; with the 15-item cap the fresh notice fell out (M7 CI).
+    text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
+    close = text.index("set status = 'expired' where htx_code = 'TC' and status = 'proposed'")
+    assert text.index("$COMPOSE stop dxos-agent") < close < text.index("M7_NOTICE=$(m7_post")

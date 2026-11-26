@@ -68,6 +68,9 @@ M7_AT=$(client_token TC)
 
 # The agent stays stopped while the proposals and the parcel are seeded (lesson 5 of M4).
 $COMPOSE stop dxos-agent >/dev/null
+# The earlier smokes leave many open TC proposals; with the 15-item cap the seeds below could fall out of the campaign
+# (M7 CI). Their own cleanups still delete those rows on exit, whatever their status.
+psql_app "update platform.agent_proposals set status = 'expired' where htx_code = 'TC' and status = 'proposed'" >/dev/null
 psql_app "delete from platform.campaigns where htx_code='TC' and day = $M7_DAY_SQL" >/dev/null
 psql_app "insert into parcels (id, parcel_code, household_id, crop_type, area_ha, updated_at) values
   ('$M7_PARCEL', 'P-TC-901', 'hh_tc_2', 'Chè Trung du', 0.5, now()) on conflict (id) do nothing" >/dev/null
