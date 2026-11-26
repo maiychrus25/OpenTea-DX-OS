@@ -29,6 +29,8 @@ type CatalogRow = {
   has_database: boolean
   installed_on_server: boolean
   installed_version: string | null
+  owner_htx: string | null
+  build_request_id: string | null
 }
 
 type HistoryRow = {
@@ -55,10 +57,14 @@ export class PrismaAppStoreRepository implements AppStoreRepository {
     const [apps, open, enablements, latest] = await Promise.all([
       prisma.$queryRaw<CatalogRow[]>`
         SELECT c.id, c.name, c.version, c.description, c.license, c.publisher, c.roles, c.has_public,
-               c.menu, c.store, c.requires_core, c.has_database,
+               c.menu, c.store, c.requires_core, c.has_database, c.owner_htx,
+               (SELECT b.request_id::text FROM platform.app_builds b WHERE b.id = c.build_id) AS build_request_id,
                EXISTS (SELECT 1 FROM platform.installed_apps i WHERE i.id = c.id) AS installed_on_server,
                (SELECT i.version FROM platform.installed_apps i WHERE i.id = c.id) AS installed_version
-        FROM platform.app_catalog c ORDER BY c.name, c.id`,
+        FROM platform.app_catalog c
+        -- An app the AI built for one cooperative is listed for that cooperative only (M13).
+        WHERE c.owner_htx IS NULL OR c.owner_htx = ${htxCode}
+        ORDER BY c.name, c.id`,
       prisma.$queryRaw<{ app_id: string; action: 'ENABLE' | 'DISABLE'; phase: InstallPhase | null }[]>`
         SELECT app_id, action, phase FROM platform.app_requests
         WHERE htx_code = ${htxCode} AND status IN ('PENDING', 'RUNNING')`,
@@ -69,8 +75,10 @@ export class PrismaAppStoreRepository implements AppStoreRepository {
         WHERE htx_code = ${htxCode} ORDER BY app_id, created_at DESC`,
     ])
     return {
-      apps: apps.map(({ has_public, requires_core, has_database, installed_on_server, installed_version, ...app }) => ({
+      apps: apps.map(({ has_public, requires_core, has_database, installed_on_server, installed_version, owner_htx, build_request_id, ...app }) => ({
         ...app,
+        ownerHtx: owner_htx,
+        buildRequestId: build_request_id,
         hasPublic: has_public,
         requiresCore: requires_core,
         hasDatabase: has_database,

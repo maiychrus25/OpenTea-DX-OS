@@ -31,6 +31,7 @@ async function getTelegramOutbox(request: Request) {
       chat_id: Number(row.chatId),
       text: row.text,
       ...(row.buttons ? { buttons: row.buttons } : {}),
+      ...(row.photos?.length ? { photos: row.photos.slice(0, 4) } : {}),
       ...(row.editMessageId ? { edit_message_id: Number(row.editMessageId) } : {}),
     })),
   })

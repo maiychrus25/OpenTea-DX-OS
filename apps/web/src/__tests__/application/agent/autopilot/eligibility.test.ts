@@ -25,12 +25,15 @@ describe('autoEligibility', () => {
   test('the catalogue holds exactly the known kinds (test 19)', () => {
     expect(Object.keys(ACTION_CATALOG).sort()).toEqual([
       'agent.settings.update',
+      'app.spec.approve',
       'bulletin.publish',
       'disease.inspection',
       'harvest.approve',
       'improvement.adopt',
       'journal.approve',
       'journal.reject',
+      'miniapp.install',
+      'miniapp.remove',
       'notification.households',
       'notification.internal',
     ])
@@ -45,7 +48,8 @@ describe('autoEligibility', () => {
     for (const definition of Object.values(ACTION_CATALOG)) {
       expect(definition.execute.toString()).not.toMatch(/autopilot/i)
       // H3 and H4: no disease report review, no delete.
-      expect(definition.kind).not.toMatch(/delete|remove|report/)
+      // `miniapp.remove` (M13) only queues the store's DISABLE request, which keeps the app's data; it is unlockable, never auto.
+      if (definition.kind !== 'miniapp.remove') expect(definition.kind).not.toMatch(/delete|remove|report/)
       expect(definition.kind).not.toMatch(/^(role|key|budget|policy|catalog|autopilot)/)
     }
   })

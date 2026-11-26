@@ -4,10 +4,15 @@
 import type { ActionName, ToolName } from './types'
 import { normalizeText } from './normalize'
 
-export type Route = { kind: 'tool'; name: ToolName } | { kind: 'action'; name: ActionName }
+export type Route = { kind: 'tool'; name: ToolName } | { kind: 'action'; name: ActionName } | { kind: 'app_request' }
 
 /** Phrase table of contract C8. When several phrases match, the longest wins; on a tie the first row wins. */
 const PHRASES: readonly [string, Route][] = [
+  // A manager asks for a mini-app (M13, contract C4); for anyone else the sentence goes to the assistant.
+  ['can app', { kind: 'app_request' }],
+  ['lam app', { kind: 'app_request' }],
+  ['xay app', { kind: 'app_request' }],
+  ['can phan mem', { kind: 'app_request' }],
   ['ghi nhat ky', { kind: 'action', name: 'journal.create' }],
   ['bao benh', { kind: 'action', name: 'disease.report' }],
   ['duyet thu hoach', { kind: 'action', name: 'harvest.approve' }],

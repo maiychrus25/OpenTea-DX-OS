@@ -5,6 +5,7 @@ import type {
   FlowInput,
   LinkCodeRecord,
   OutboxButton,
+  OutboxPhoto,
   OutboxInsert,
   OutboxRow,
   RejectConversationInput,
@@ -38,6 +39,7 @@ type OutboxDbRow = {
   proposal_id: string | null
   purpose: OutboxRow['purpose']
   health_key: string | null
+  photos: OutboxPhoto[] | null
   status: OutboxRow['status']
   attempts: number
   telegram_message_id: string | null
@@ -48,7 +50,7 @@ const LINK_COLUMNS = Prisma.raw(`id::text AS id, kind, user_id, user_name, role,
   telegram_user_id::text AS telegram_user_id, chat_id::text AS chat_id, linked_at`)
 
 const OUTBOX_COLUMNS = Prisma.raw(`id::text AS id, htx_code, chat_id::text AS chat_id, op, text, buttons,
-  edit_message_id::text AS edit_message_id, proposal_id::text AS proposal_id, purpose, health_key,
+  edit_message_id::text AS edit_message_id, proposal_id::text AS proposal_id, purpose, health_key, photos,
   status, attempts, telegram_message_id::text AS telegram_message_id`)
 
 type ConversationRow = {
@@ -106,6 +108,7 @@ function mapOutbox(r: OutboxDbRow): OutboxRow {
     proposalId: r.proposal_id,
     purpose: r.purpose,
     healthKey: r.health_key,
+    photos: r.photos,
     status: r.status,
     attempts: r.attempts,
     telegramMessageId: r.telegram_message_id,
@@ -258,6 +261,17 @@ export class PrismaTelegramRepository implements TelegramRepository {
     `)
   }
 
+  async setAppAnswer(input: { telegramUserId: string; requestId: string; expiresAt: Date }): Promise<void> {
+    const state = JSON.stringify({ request_id: input.requestId })
+    await this.write(`telegram:user:${input.telegramUserId}`, (tx) => tx.$executeRaw`
+      INSERT INTO platform.telegram_conversations (telegram_user_id, kind, proposal_id, expires_at, flow, step, state, token, card_message_id)
+      VALUES (${input.telegramUserId}::bigint, 'app_answer', NULL, ${input.expiresAt}, 'app_answer', NULL, ${state}::jsonb, NULL, NULL)
+      ON CONFLICT (telegram_user_id) DO UPDATE
+        SET kind = EXCLUDED.kind, proposal_id = NULL, expires_at = EXCLUDED.expires_at, flow = EXCLUDED.flow,
+            step = NULL, state = EXCLUDED.state, token = NULL, card_message_id = NULL
+    `)
+  }
+
   async activeConversation(telegramUserId: string, now: Date): Promise<TelegramConversation | null> {
     const rows = await prisma.$queryRaw<ConversationRow[]>`
       SELECT ${CONVERSATION_COLUMNS} FROM platform.telegram_conversations
@@ -318,10 +332,11 @@ export class PrismaTelegramRepository implements TelegramRepository {
         const buttons = row.buttons ? JSON.stringify(row.buttons) : null
         await tx.$executeRaw`
           INSERT INTO platform.telegram_outbox (
-            htx_code, chat_id, op, text, buttons, edit_message_id, proposal_id, purpose, health_key
+            htx_code, chat_id, op, text, buttons, edit_message_id, proposal_id, purpose, health_key, photos
           ) VALUES (
             ${row.htxCode ?? null}, ${row.chatId}::bigint, ${row.op}, ${row.text}, ${buttons}::jsonb,
-            ${row.editMessageId ?? null}::bigint, ${row.proposalId ?? null}::uuid, ${row.purpose}, ${row.healthKey ?? null}
+            ${row.editMessageId ?? null}::bigint, ${row.proposalId ?? null}::uuid, ${row.purpose}, ${row.healthKey ?? null},
+            ${row.photos?.length ? JSON.stringify(row.photos) : null}::jsonb
           )
         `
       }

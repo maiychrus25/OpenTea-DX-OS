@@ -50,6 +50,7 @@ export class CreateProposalUseCase {
     if (!parsedPayload.success) {
       throw new ValidationError('INVALID_PAYLOAD')
     }
+    await definition.validate?.(parsedPayload.data, { htxCode: input.htxCode })
     // Text a human adds when deciding (for example a note to households) is never written by an agent.
     if (input.origin === 'agent' && definition.humanOnlyFields.some((key) => key in input.payload)) {
       throw new ValidationError('INVALID_PAYLOAD')

@@ -27,6 +27,8 @@ import { ChatUserResolver } from './chat/ChatUserResolver'
 import { CHAT_ACTIONS } from './chat/actions'
 import { CHAT_TOOLS } from './chat/tools'
 import { autopilotEnabledText } from './messages'
+import { AppRequestIntake } from '@/application/appbuilder/AppRequestIntake'
+import { PrismaAppBuildRepository } from '@/infrastructure/db/appbuilder/PrismaAppBuildRepository'
 import { TelegramLinkService } from './TelegramLinkService'
 import { TelegramNotifier } from './TelegramNotifier'
 import { AutopilotServices, CampaignServices, ChatServices, TelegramUpdateHandler } from './TelegramUpdateHandler'
@@ -52,7 +54,12 @@ export function telegramLinkService(): TelegramLinkService {
 
 /** The chat assistant's registries and adapters: the tools and actions of W2, photos, requests and households. */
 export function chatServices(): ChatServices {
+  const intake = new AppRequestIntake(new PrismaAppBuildRepository())
   return {
+    appRequests: {
+      submit: (user, text) => intake.submitFromChat({ htxCode: user.tenant.htxCode, userId: user.tenant.userId, userName: user.userName }, text),
+      answer: (htxCode, requestId, text) => intake.answerFromChat(htxCode, requestId, text),
+    },
     tools: CHAT_TOOLS,
     actions: CHAT_ACTIONS,
     photos: new TelegramPhotoStore(),
@@ -94,6 +101,7 @@ export function assistantResultUseCase(): AssistantResultUseCase {
     photos: services.photos,
     requests: assistantRequests(),
     callbackKey: telegramCallbackKey() ?? '',
+    appRequests: services.appRequests,
     proposalMessages: services.proposalMessages,
   })
   return new AssistantResultUseCase({

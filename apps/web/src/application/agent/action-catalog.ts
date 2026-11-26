@@ -13,6 +13,9 @@ import { notificationHouseholdsAction } from './actions/notification-households.
 import { notificationInternalAction } from './actions/notification-internal.action'
 import { agentSettingsUpdateAction } from './actions/agent-settings-update.action'
 import { improvementAdoptAction } from './actions/improvement-adopt.action'
+import { appSpecApproveAction } from './actions/app-spec-approve.action'
+import { miniappInstallAction } from './actions/miniapp-install.action'
+import { miniappRemoveAction } from './actions/miniapp-remove.action'
 import { appActionCatalog } from './app-actions/default-app-actions'
 import type { EvidenceLoaders } from './actions/journal-evidence'
 import type { JournalSubject } from './actions/journal-labels'
@@ -46,6 +49,8 @@ export interface ActionDefinition<P extends Record<string, unknown> = Record<str
   expiresAfterHours: number
   preview(payload: P, subjects?: ReadonlyMap<string, JournalSubject>, evidence?: Evidence): string[]
   subjects(payload: P, evidence?: Evidence): string[]
+  /** Refuses a proposal that could never run (M13: a generated app of another cooperative). Throws ValidationError. */
+  validate?(payload: P, ctx: { htxCode: string }): Promise<void>
   isStale(payload: P, evidence: Evidence, ctx: ActionStalenessContext): Promise<boolean>
   execute(payload: P, approver: Tenant): Promise<Record<string, unknown>>
 }
@@ -60,6 +65,9 @@ export const ACTION_CATALOG: Readonly<Record<string, ActionDefinition<any>>> = O
   'bulletin.publish': bulletinPublishAction,
   'agent.settings.update': agentSettingsUpdateAction,
   'improvement.adopt': improvementAdoptAction,
+  'app.spec.approve': appSpecApproveAction,
+  'miniapp.install': miniappInstallAction,
+  'miniapp.remove': miniappRemoveAction,
 })
 
 /**
