@@ -8,6 +8,7 @@ import { Folder, FileText, Download, Eye, Upload, ChevronRight, Search, Plus, Ta
 import { Button } from '@/components/ui'
 import { Modal } from '@/components/ui/Modal/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Stats } from '@/components/features/officer-web/parts'
 import styles from './DocumentView.module.css'
 import { DocumentItem } from './mock-data'
 import { MOCK_DOCUMENTS } from './mock-data'
@@ -20,7 +21,7 @@ const CATEGORIES = [
   { id: 'Archives/', name: 'Archives', description: 'Lưu trữ cũ' }
 ]
 
-export function DocumentView({ htxCode }: { htxCode: string }) {
+export function DocumentView({ htxCode, variant }: { htxCode: string; variant?: 'officer' }) {
   const root = documentRoot(htxCode)
   const categories = [
     ...CATEGORIES.map(cat => ({ ...cat, id: `${root}${cat.id}` })),
@@ -30,6 +31,7 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
   const isReadOnly = activeCategory === MARKET_REPORTS_ROOT
   const [currentPath, setCurrentPath] = useState(categories[0].id)
   const [documents, setDocuments] = useState<DocumentItem[]>([])
+  const [hasLiveDocuments, setHasLiveDocuments] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   
@@ -51,6 +53,7 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
     // The mock tree has no HTX level.
     const mockPath = path.replace(root, 'para/')
     setIsLoading(true)
+    setHasLiveDocuments(false)
     try {
       const res = await fetch(`/api/documents?path=${encodeURIComponent(path)}`)
 
@@ -72,7 +75,9 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
           filtered = items.filter(doc => doc.name.toLowerCase().includes(searchQuery.toLowerCase()))
         }
         setDocuments(filtered)
+        setHasLiveDocuments(true)
       } else {
+        setHasLiveDocuments(false)
         // API failed, fallback to mock for categories that have mock data
         const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(mockPath) && doc.key !== mockPath)
           .filter(doc => {
@@ -83,6 +88,7 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
         setDocuments(filtered)
       }
     } catch {
+      setHasLiveDocuments(false)
       // On error, fallback to mock data
       const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(mockPath) && doc.key !== mockPath)
         .filter(doc => {
@@ -235,7 +241,7 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
   }
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container}${variant === 'officer' ? ` ${styles.officer}` : ''}`}>
       <PageHeader
         icon={<Folder size={28} />}
         title="Kho tài liệu P.A.R.A"
@@ -257,6 +263,11 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
           </>
         ) : undefined}
       />
+
+      {variant === 'officer' && !isLoading && hasLiveDocuments && <Stats items={[
+        { label: 'Tài liệu đang hiển thị', value: documents.filter(doc => !doc.isDir).length, icon: <FileText /> },
+        { label: 'Thư mục đang hiển thị', value: documents.filter(doc => doc.isDir).length, icon: <Folder /> },
+      ]} />}
 
       <div className={styles.content}>
         <div className={styles.sidebar}>

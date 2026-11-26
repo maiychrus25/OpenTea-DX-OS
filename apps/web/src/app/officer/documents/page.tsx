@@ -14,7 +14,7 @@ export default async function DocumentPage() {
   const { htxCode } = await requireTenant()
   return (
     <div className="h-full">
-      <DocumentView htxCode={htxCode} />
+      <DocumentView htxCode={htxCode} variant="officer" />
     </div>
   )
 }

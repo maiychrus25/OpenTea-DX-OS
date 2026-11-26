@@ -404,3 +404,16 @@
   border-radius: var(--rounded-md);
   font-size: 0.875rem;
 }
+
+/* Keep the existing shared view unchanged outside the officer variant. */
+.officer, .officer .content, .officer .mainPanel { min-width: 0; }
+.officer .panelHeader { flex-wrap: wrap; }
+.officer .panelHeader > div { min-width: 0; overflow-wrap: anywhere; }
+.officer .searchBox { max-width: 100%; }
+.officer .searchBox input { min-width: 0; }
+.officer .fileList { overflow-x: auto; }
+@media (max-width: 767px) {
+  .officer .content { flex-direction: column; }
+  .officer .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; }
+  .officer .searchBox { width: 100%; }
+}
