@@ -19,6 +19,9 @@ export interface CreateProposalRecord {
   dedupeKey: string
   subjects: string[]
   expiresAt: Date
+  /** M12: would this run on its own (recorded in either mode), and when the tick may run it (mode on only). */
+  shadowAuto?: boolean
+  runAt?: Date | null
 }
 
 export interface ProposalFilter {
