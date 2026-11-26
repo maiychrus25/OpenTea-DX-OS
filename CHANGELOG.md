@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-11-26
+
+The agentic layer starts to plan and learn. Every morning an agent turns the open proposals into one daily campaign that a manager approves with one button. Every Monday another agent looks at how the agents did and proposes improvements, which are measured again weeks later. Outside AI clients can now connect through MCP with a person's own account, the public lot page shows when an AI decision is verified in the audit chain, and a public benchmark compares models on the agents' scenarios.
+
+### Added
+
+- **Agentic layer milestone M7: daily campaign (`platform/agent`, `apps/web`):**
+  - **06:00 campaign.** At 06:00 agent A9 groups the cooperative's open proposals into one campaign of at most 15 actions, each with a measurable goal.
+    - Fixed rules order the items and drop conflicts: no harvest on a parcel still in its withdrawal period, no spraying before rain, and no more work than the people available.
+    - The model only writes the summary.
+  - **Deciding.** Managers receive the campaign on Telegram (`Duyệt cả chiến dịch`, `Xem từng mục`, `Bỏ chiến dịch`, and `/chiendich`) and in a new "Chiến dịch hôm nay" panel above the AI inbox.
+    - Approving the whole campaign runs every item the approver may decide.
+    - High-risk items still wait for their own confirmation, and items for another role are forwarded.
+  - **18:00 report.** The report shows target against actual for each goal.
+  - **Schedule.** The harvest and disease agents now run at 05:30 and 05:40, so their warnings are ready before 06:00.
+- **Agentic layer milestone M8: weekly improvements and the AI tab (`platform/agent`, `apps/web`, `miniapps/htx-dashboard`, Hasura):**
+  - **Weekly rules.** Every Monday agent A10 looks for:
+    - a warning that managers keep rejecting;
+    - journal entries returned for missing information;
+    - slow decisions;
+    - campaign goals that keep slipping.
+  - **Proposals.** It proposes at most five improvements as ordinary proposals:
+    - `agent.settings.update` changes a threshold within fixed ranges, marking whether it tightens or loosens;
+    - `improvement.adopt` covers a process note or a Monday reminder.
+  - **Measurement.** Adopted improvements are measured again after two and four weeks, and the Monday report says whether they helped.
+  - **AI tab.** `htx-dashboard` 0.3.0 adds an AI tab with each agent's approval rate, waiting time, failures and cost, read with the manager's own rights.
+- **Agentic layer milestone M14: MCP, lot verification and the public benchmark (`apps/web`, `platform/mcp`, `platform/agent`, Keycloak, gateway):**
+  - **MCP.** A person can connect any MCP client with their own Keycloak account, through the device-login bridge `platform/mcp/dxos_mcp.py` and the new client `dxos-mcp`.
+    - The client gets the assistant's read tools and one write tool, which creates a proposal that a person still has to approve.
+  - **Lot verification.** The public lot page shows "AI đề xuất, <vai trò> đã duyệt ngày …, kiểm chứng trong sổ audit" only when the decision is in an intact audit chain with a matching evidence hash. It never shows a name.
+  - **Benchmark.** `make benchmark` runs every agent scenario suite with a chosen model, and the results are published in `docs/benchmark.md`.
+
+### Fixed
+
+- **Proposal deletes in a campaign (`platform/postgres`).** Deleting a proposal also removes it from campaign items, so cleanup and retention jobs no longer fail on proposals that a campaign listed.
+
+---
+
 ## [1.15.0] - 2026-11-26
 
 The agentic layer goes to work in the field and in the chat. Four new agents watch sensors and weather, disease reports, harvest readiness and the market, and propose warnings, inspections, harvest approvals and a bulletin that a person approves. The Telegram bot becomes an assistant: farmers, officers and managers ask questions, share a location, and record a journal entry with a photo from the chat, with a confirmation card before anything is written.
