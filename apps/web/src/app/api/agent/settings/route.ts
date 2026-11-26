@@ -26,6 +26,7 @@ const saveSettingsSchema = z.object({
     digest: agentChoiceSchema,
     bulletin: agentChoiceSchema,
     assistant: agentChoiceSchema,
+    improvement: agentChoiceSchema,
     'daily-campaign': agentChoiceSchema,
   }),
   report_time: z.string().regex(REPORT_TIME_PATTERN),

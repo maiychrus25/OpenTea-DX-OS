@@ -544,3 +544,55 @@ def data_page(core: cc.Core, auth: str, htx: str, now: datetime, days: int) -> d
                      "" if x["run"].size_bytes is None else x["run"].size_bytes, x["run"].sha256 or "",
                      x["quality"].rows if x["quality"] else "", x["quality"].rejects if x["quality"] else "", x["run"].error or "") for x in run_rows]) if run_rows is not None else None,
     }
+
+
+# ---------------------------------------------------------------- AI tab (M8): figures per agent, improvements and verdicts
+
+def _pct(share: float | None) -> str:
+    return "—" if share is None else f"{appkit.number(share * 100, 0)} %"
+
+
+def _stacked_bars(agents: list[str], series: list[list[int]], names: list[str]) -> list[dict]:
+    """Proposals per agent as one stacked horizontal bar, each segment a status, on the hbars rows of the other tabs.
+    Horizontal rather than columns: agent names are long and the column helper cannot space them on a phone."""
+    totals = [sum(s[i] for s in series) for i in range(len(agents))]
+    top = max(totals, default=0)
+    out = []
+    for i, agent in enumerate(agents):
+        at, segments = 0.0, []
+        for s, values in enumerate(series):
+            if values[i] <= 0 or top <= 0:
+                continue
+            width = values[i] / top * 100
+            segments.append({"x": round(at, 2), "width": round(width, 2), "tone": s % charts.TONES,
+                             "title": f"{names[s]}: {values[i]}"})
+            at += width
+        out.append({"agent": agent, "total": totals[i], "segments": segments})
+    return out
+
+
+def ai_page(core: cc.Core, auth: str, now: datetime) -> dict:
+    since, since_improvements = m.period_start(now, m.AI_DAYS), m.period_start(now, m.IMPROVEMENT_DAYS)
+    r = core.run(auth, {
+        "proposals": block(cc.AI_PROPOSALS, cc.parse_ai_proposals, since=iso(since), **limited()),
+        "runs": block(cc.AI_RUNS, cc.parse_ai_runs, since=iso(since), **limited()),
+        "improvements": block(cc.AI_IMPROVEMENTS, cc.parse_ai_improvements, since=iso(since_improvements), **limited()),
+    })
+    proposals, runs, items = ok(r, "proposals"), ok(r, "runs"), ok(r, "improvements")
+    figures = m.agent_figures(proposals, runs, now) if proposals is not None and runs is not None else None
+    agents = [f.agent for f in figures] if figures else []
+    recent = [p for p in proposals if m.in_period(p.created_at, now, m.AI_DAYS)] if proposals is not None else []
+    names, series = m.status_series(recent, agents)
+    return {
+        "r": r, "empty": figures is not None and not figures,
+        "rows": [{"agent": f.agent, "proposals": f.proposals, "approved": f.approved, "rejected": f.rejected,
+                  "approval": _pct(f.approval_rate), "rejection": _pct(f.rejection_rate),
+                  "wait": "—" if f.median_wait_hours is None else appkit.number(f.median_wait_hours, 1),
+                  "failed": f.failed_runs, "cost": m.usd_text(f.cost_usd)} for f in figures] if figures is not None else None,
+        "names": names, "bars": _stacked_bars(agents, series, names),
+        "improvements": [{"title": i.title, "status": m.IMPROVEMENT_STATUS.get(i.status, i.status),
+                          "after_2w": m.verdict_text(i.effect, "after_2w"), "after_4w": m.verdict_text(i.effect, "after_4w")}
+                         for i in items] if items is not None else None,
+        "note": cap_note(proposals, "đề xuất của agent") or cap_note(runs, "lần chạy của agent"),
+    }
+

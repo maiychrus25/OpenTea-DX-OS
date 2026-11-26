@@ -298,6 +298,40 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
   - một việc lỗi hoặc đã được quyết định không dừng các việc còn lại; kết quả ghi số việc đã chạy, chờ xác nhận riêng, chuyển người đủ quyền và lỗi;
   - bỏ chiến dịch chỉ khi còn nháp hoặc một phần; sau khi bỏ, các việc trở lại là đề xuất thông thường.
 
+### 3.13 Cải tiến hằng tuần (A10, M8)
+
+- **Lịch:** A10 chạy mỗi thứ Hai lúc 06:30 (giờ Việt Nam), trước báo cáo 07:00. Nếu tuần này chưa chạy, lần khởi động đầu tiên sau đó sẽ chạy bù.
+- **Luật tìm vấn đề, LLM chỉ viết lý do:** mỗi cải tiến là một đề xuất thông thường (`agent.settings.update` hoặc `improvement.adopt`). Tối đa 5 cải tiến mỗi lần chạy, theo thứ tự bảng dưới. LLM chỉ nhận luật, chỉ số, con số và thay đổi, rồi trả `rationale_vi` tối đa 600 ký tự; nếu nhà cung cấp lỗi, dùng câu mẫu `<chỉ số>: <giá trị> trong <n> ngày gần đây (ngưỡng <giới hạn>). Đề xuất: <thay đổi>.`.
+
+| Luật | Chỉ số (`metric_key`) | Kích hoạt khi | Cải tiến |
+|---|---|---|---|
+| Nhiễu | `reject_rate:<agent>:<mẫu>` | Tỉ lệ từ chối ≥ 0,6 với ít nhất 5 đề xuất đã quyết định; mẫu `sensor_silent`, `dry_soil`, `heat`, `frost`, `rain_after_spray` của field-watch và `disease.inspection` của disease-watch | `agent.settings.update` nới một bậc: `silent_hours` +2 (tối đa 48), `dry_soil_pct` −3, `heat_c` +1, `frost_c` −1, `heavy_rain_mm` +5, `min_reports` +1 |
+| Thiếu thông tin | `journal_missing_info_rate` | ≥ 0,4 với ít nhất 10 nhật ký đã xem | `process`: bắt buộc ghi liều lượng khi ghi nhật ký phun thuốc |
+| Quyết định chậm | `median_wait_hours` | ≥ 24 giờ với ít nhất 10 đề xuất đã quyết định | `process`: giao thêm người duyệt đề xuất |
+| Trượt mục tiêu | `missed_days:<goal_key>` | ≥ 3 ngày trượt trong 14 ngày | `template`: nhắc đầu tuần vào thứ Hai |
+
+- **Không lặp:** chỉ số đang có cải tiến `proposed`, hoặc cải tiến đã `adopted` trong 28 ngày gần đây, thì không tạo cải tiến mới.
+- **Giới hạn đề xuất:** A10 không bao giờ đề xuất thay đổi danh mục, vai trò, chính sách nhà cung cấp, ngân sách, khóa hay quyền tự chủ. Chỉ các khóa dưới đây được đề xuất:
+
+| Agent | Khóa | Khoảng giá trị | Siết (nghiêm hơn) là |
+|---|---|---|---|
+| `field-watch` | `silent_hours` | 1–48 | thấp hơn |
+| `field-watch` | `dry_soil_pct` | 5–80 | cao hơn |
+| `field-watch` | `heat_c` | 25–50 | thấp hơn |
+| `field-watch` | `frost_c` | −5–15 | cao hơn |
+| `field-watch` | `heavy_rain_mm` | 1–200 | thấp hơn |
+| `disease-watch` | `min_reports` | 2–20 | thấp hơn |
+| `disease-watch` | `radius_m` | 200–20000 | cao hơn |
+| `disease-watch` | `window_days` | 1–60 | cao hơn |
+| `harvest-ready` | `harvest_window_days` | 0–30 | cao hơn |
+| `digest` | `schedule` (`HH:MM`) | 05:00–22:00 | không áp dụng |
+
+- **Xem trước:** mỗi thay đổi hiện một dòng `<nhãn>: <cũ> → <mới> (siết|nới)`. Đề xuất có mức tự chủ `auto`, nhưng M12 sẽ quy định chiều nào được tự chạy (đặc tả §11.1).
+- **Đề xuất đã lỗi thời:** nếu cài đặt đổi sau khi đề xuất được tạo, quyết định sẽ là `stale` và không thay đổi gì.
+- **Đo lại:** cải tiến đã áp dụng được đo sau 2 và 4 tuần so với `baseline`. Giảm ít nhất 20 % là `helped` (đã giúp), tăng ít nhất 20 % là `drop` (nên bỏ), còn lại là `no_effect` (chưa thấy tác dụng). Chỉ số không có giá trị thì không đo.
+- **Trạng thái theo đề xuất:** đề xuất được duyệt và chạy thì cải tiến thành `adopted`; bị từ chối thì thành `declined`. Cải tiến bị từ chối hoặc không có dữ liệu không được đo.
+- **Nhắc theo mẫu:** tin 06:00 của đúng thứ trong tuần hiển thị tối đa 2 dòng `Nhắc theo mẫu: <tiêu đề>` (chiến dịch ngày, mục 3.12).
+
 ## 4. Security Rules
 
 ### 4.1 Authentication

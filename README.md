@@ -428,6 +428,8 @@ Telegram là tuỳ chọn. Đặt `TELEGRAM_BOT_TOKEN` (token BotFather tạo) v
 
 **Chiến dịch ngày (A9).** Mỗi sáng lúc 06:00 A9 gom các đề xuất đang mở của HTX thành một chiến dịch tối đa 15 việc, mỗi việc có mục tiêu đo được. Quản lý nhận chiến dịch trên Telegram và trên trang AI, có thể duyệt cả chiến dịch (việc rủi ro cao vẫn chờ xác nhận riêng), duyệt từng việc hoặc bỏ chiến dịch. Báo cáo lúc 18:00 cho biết mỗi mục tiêu đã làm được bao nhiêu. Quy tắc và giới hạn: mục 3.12 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
+**Cải tiến hằng tuần (A10).** Mỗi thứ Hai lúc 06:30 A10 xem số liệu agent và chiến dịch trong vài tuần qua, rồi đề xuất tối đa 5 cải tiến, mỗi cải tiến kèm bằng chứng. Ví dụ: nếu quản lý thường từ chối cảnh báo cảm biến im lặng, A10 đề xuất nới ngưỡng im lặng và quản lý duyệt như mọi đề nghị khác trên Telegram hoặc trang AI. Sau 2 và 4 tuần, báo cáo 07:00 cho biết cải tiến đã giúp hay chưa. Quy tắc và giới hạn: mục 3.13 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
+
 Ngưỡng và quy tắc mẫu tin: mục 3.10 trong [docs/rules-and-limits.md](./docs/rules-and-limits.md).
 
 ### Bật / tắt lớp AI cho từng HTX (`./dxos agent`)

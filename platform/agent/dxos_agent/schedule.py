@@ -48,6 +48,28 @@ class IntervalSchedule:
 
 
 @dataclass
+class WeeklySchedule:
+    """Due once per Vietnam week (weeks start on Monday) at or after `at` on that Monday; a week not recorded is due again."""
+
+    at: time
+    last_week: date | None = None
+
+    @staticmethod
+    def _monday(local: datetime) -> date:
+        return local.date() - timedelta(days=local.weekday())
+
+    def is_due(self, now: datetime) -> bool:
+        local = now.astimezone(VN_TZ)
+        monday = self._monday(local)
+        if self.last_week == monday:
+            return False
+        return local >= datetime.combine(monday, self.at, tzinfo=VN_TZ)
+
+    def record(self, now: datetime) -> None:
+        self.last_week = self._monday(now.astimezone(VN_TZ))
+
+
+@dataclass
 class DailySchedule:
     """Due on the first cycle after start, then once per Vietnam day at or after `at` (Vietnam time)."""
 

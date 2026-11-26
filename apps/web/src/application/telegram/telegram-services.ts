@@ -9,6 +9,7 @@ import { KeycloakLiveRoleReader } from '@/infrastructure/auth/dxos-web-roles.cli
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
 import { PrismaCampaignRepository } from '@/infrastructure/db/agent/PrismaCampaignRepository'
+import { PrismaImprovementRepository } from '@/infrastructure/db/agent/PrismaImprovementRepository'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import { PrismaAssistantRequestRepository } from '@/infrastructure/db/telegram/PrismaAssistantRequestRepository'
 import { PrismaTelegramRepository } from '@/infrastructure/db/telegram/PrismaTelegramRepository'
@@ -34,6 +35,7 @@ export function telegramNotifier(): TelegramNotifier {
     repo: telegramRepository(),
     proposals: new PrismaProposalRepository(),
     campaigns: new PrismaCampaignRepository(),
+    improvements: new PrismaImprovementRepository(),
   })
 }
 
@@ -151,7 +153,13 @@ export async function notifyCampaignCreated(htxCode: string, campaignId: string)
 
 /** The decision use case as both channels run it: a decision also moves a draft campaign that holds the item to partial (M7). */
 export function decisionUseCase(): DecideProposalUseCase {
-  return new DecideProposalUseCase(new PrismaProposalRepository(), undefined, undefined, new PrismaCampaignRepository())
+  return new DecideProposalUseCase(
+    new PrismaProposalRepository(),
+    undefined,
+    undefined,
+    new PrismaCampaignRepository(),
+    new PrismaImprovementRepository()
+  )
 }
 
 /** Approve all, drop and the campaign reads: the same use cases for the Telegram buttons and the web inbox (M7). */

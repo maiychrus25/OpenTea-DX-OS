@@ -3,6 +3,8 @@
 
 import { canonicalJson, sha256Hex, utcTimestamp } from '@/domain/agent/evidence'
 import type { Evidence, EvidenceRow } from '@/domain/agent/proposal'
+import { PrismaAgentSettingsRepository } from '@/infrastructure/db/agent/PrismaAgentSettingsRepository'
+import { PrismaImprovementRepository } from '@/infrastructure/db/agent/PrismaImprovementRepository'
 import {
   findCropCycleForEvidence,
   findDiseaseReportForEvidence,
@@ -19,6 +21,7 @@ import {
   sensorReadingValues,
   weatherCacheValues,
 } from './field-evidence'
+import { agentSettingsValues, improvementValues, settingsAgentOf } from './weekly-evidence'
 
 // Evidence contract version 2, see platform/agent/tests/fixtures/evidence-vectors.json.
 export interface EvidenceJournalEntry {
@@ -119,6 +122,15 @@ export const EVIDENCE_LOADERS: EvidenceLoaders = {
   weather_cache: async (htxCode, id) => {
     const row = await findWeatherCacheForEvidence(htxCode, id)
     return row ? weatherCacheValues(row) : null
+  },
+  agent_settings: async (htxCode, id) => {
+    const agent = settingsAgentOf(htxCode, id)
+    const row = agent ? await new PrismaAgentSettingsRepository().findForEvidence(htxCode, agent) : null
+    return row ? agentSettingsValues(row) : null
+  },
+  improvements: async (htxCode, id) => {
+    const row = await new PrismaImprovementRepository().findById(htxCode, id)
+    return row ? improvementValues(row) : null
   },
   // Shared reference data: every cooperative reads the same rows, so the cooperative is not checked.
   market_data: async (_htxCode, id) => {
