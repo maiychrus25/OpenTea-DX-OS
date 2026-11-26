@@ -9,6 +9,7 @@ using TeaStaff.Core.Domain;
 using TeaStaff.Core.Services;
 using TeaStaff.Infrastructure;
 using TeaStaff.Infrastructure.MobileApi;
+using TeaStaff.Infrastructure.Sync;
 
 namespace TeaStaff.Desktop.ViewModels;
 
@@ -131,6 +132,7 @@ public sealed partial class MainViewModel : ObservableObject
         await UpdateBadgesAsync();
         await NavigateAsync("dashboard");
         StartAutomation();
+        _ = _services.GetRequiredService<CoreSyncService>().StartAsync(default);
     }
 
     /// <summary>Runs the automation rules a few seconds after sign-in and then every minute.</summary>
@@ -259,6 +261,7 @@ public sealed partial class MainViewModel : ObservableObject
     private void SignOut()
     {
         _timer?.Stop();
+        _ = _services.GetRequiredService<CoreSyncService>().StopAsync(default);
         _notifier.Changed -= OnDataChanged;
         _activity.Raised -= OnActivity;
         SignOutRequested?.Invoke(this, EventArgs.Empty);
