@@ -26,7 +26,7 @@ describe('the factory actions in the catalogue (contract C3)', () => {
 
   it('never run on their own until the kind is unlocked, for install and remove', () => {
     const evidence = { rows: [], sha256: evidenceDigest([]) }
-    for (const def of [miniappInstallAction, miniappRemoveAction]) {
+    for (const def of [miniappInstallAction, miniappRemoveAction] as unknown as Parameters<typeof autoEligibility>[1][]) {
       expect(autoEligibility({ origin: 'agent', payload: {}, evidence }, def, { unlockedKinds: [] }).reason).toBe('not_unlocked')
     }
   })
