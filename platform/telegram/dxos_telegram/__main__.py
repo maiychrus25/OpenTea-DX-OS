@@ -26,7 +26,7 @@ def start_relay(cfg: Config) -> Optional[Relay]:
     except (OSError, ValueError):
         return None
     tokens = KeycloakTokenClient(cfg.keycloak_url, credentials)
-    relay = Relay(BotApi(cfg.api_base, cfg.bot_token), WebGateway(cfg.gateway_url, tokens.get_token), cfg.version)
+    relay = Relay(BotApi(cfg.api_base, cfg.bot_token), WebGateway(cfg.gateway_url, tokens.get_token), cfg.version, cfg.web_public_url)
     relay.start()
     log.info("dxos-telegram relay started")
     return relay
