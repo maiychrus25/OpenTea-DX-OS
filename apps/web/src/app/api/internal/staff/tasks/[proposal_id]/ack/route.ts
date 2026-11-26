@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { ackBodySchema, StaffSyncUseCase } from '@/application/agent/staff/StaffSyncUseCase'
 import { NotFoundError } from '@/domain/errors'
+import { notifyProposalDecided } from '@/application/telegram/telegram-services'
 import { PrismaStaffSyncRepository } from '@/infrastructure/db/agent/PrismaStaffSyncRepository'
 import { requireStaffCaller } from '@/lib/api/internal-staff-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
@@ -33,6 +34,8 @@ async function postStaffTaskAck(request: Request, context: unknown) {
       { status: 409 }
     )
   }
+  // The messages that said "sent to the staff app" are edited to the final state; a failure never undoes the acknowledgement.
+  if (outcome === 'acknowledged') await notifyProposalDecided(caller.htxCode, id.data).catch(() => undefined)
   return NextResponse.json({ data: { proposal_id: id.data, task_id: body.task_id, already: outcome === 'already' } })
 }
 

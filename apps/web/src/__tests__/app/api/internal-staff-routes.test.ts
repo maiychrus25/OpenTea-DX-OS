@@ -17,8 +17,10 @@ const repo = {
   saveAttendance: jest.fn(),
 }
 const parcelCodesByIds = jest.fn()
+const notifyProposalDecided = jest.fn(async (..._args: unknown[]) => undefined)
 
 jest.mock('@/lib/api/internal-staff-auth', () => ({ requireStaffCaller: jest.fn(async () => ({ htxCode: 'TC' })) }))
+jest.mock('@/application/telegram/telegram-services', () => ({ notifyProposalDecided: (...a: unknown[]) => notifyProposalDecided(...a) }))
 jest.mock('@/infrastructure/db/agent/PrismaStaffSyncRepository', () => ({
   PrismaStaffSyncRepository: jest.fn().mockImplementation(() => mockRepo()),
 }))
@@ -110,6 +112,7 @@ describe('POST /api/internal/staff/tasks/{proposal_id}/ack', () => {
     expect(res.status).toBe(200)
     expect(repo.acknowledge).toHaveBeenCalledWith('TC', PROPOSAL_ID, 'task-9')
     expect((await res.json()).data).toMatchObject({ task_id: 'task-9', already: false })
+    expect(notifyProposalDecided).toHaveBeenCalledWith('TC', PROPOSAL_ID)
   })
 
   it('answers 200 again for a repeat with the same task id', async () => {
@@ -117,6 +120,7 @@ describe('POST /api/internal/staff/tasks/{proposal_id}/ack', () => {
     const res = await postAck(request(ackUrl, 'POST', { task_id: 'task-9' }), ackContext(PROPOSAL_ID))
     expect(res.status).toBe(200)
     expect((await res.json()).data.already).toBe(true)
+    expect(notifyProposalDecided).not.toHaveBeenCalled()
   })
 
   it('answers 404 for a proposal of another cooperative or one that does not exist', async () => {
