@@ -546,3 +546,79 @@ jobs:
             docker logs --tail 200 "$name" 2>&1 || true
           done
           docker compose -f docker/docker-compose.yml logs
+
+  # ─── Mini-app factory: builds an app from a recorded run, end to end ───
+  builder-smoke:
+    name: Builder Smoke
+    runs-on: ubuntu-latest
+    # A separate job because the image is large (Playwright base, browsers, PostgreSQL, wheels): about 6 min to build cold.
+    timeout-minutes: 60
+    needs: [lint]
+    env:
+      BUILDX_NO_DEFAULT_ATTESTATIONS: '1'
+      # The recorded fertiliser-stock run replaces the coding tool, so no key is needed; the agent's `replay` provider does the same for A12.
+      DXOS_BUILDER_TOOL: replay:fertiliser-stock
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/web
+        run: npm install --no-audit --no-fund
+
+      - name: Prepare Environments
+        run: |
+          cp .env.example .env.local
+          cp docker/.env.local.example docker/.env.local
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Builder Unit Tests
+        run: python -m pip install pytest==9.1.1 PyYAML==6.0.3 jsonschema==4.26.0 'psycopg[binary]==3.3.6' && python -m pytest platform/builder/tests -q -W error
+
+      - name: Free Runner Disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      # No coding tool is baked in: the replay run does not call one. The real image is `make builder-image` (codex-cli by default).
+      - name: Build Builder Image
+        env:
+          DXOS_BUILDER_TOOLS: none
+        run: make builder-image
+
+      - name: Start Platform
+        run: make platform-up
+
+      - name: Seed Demo Data
+        working-directory: apps/web
+        env:
+          DATABASE_URL: postgresql://agrimarket:your_password_here@localhost:5432/agrimarket
+        run: |
+          npx prisma generate
+          npm run seed
+
+      - name: Start Web
+        run: make web-up
+
+      - name: Builder Smoke Test
+        run: bash platform/tests/smoke-builder.sh
+
+      - name: Docker Logs on Failure
+        if: failure()
+        run: |
+          df -h /
+          for name in $(docker ps -a --filter "name=-app-" --filter "name=dxos-builder" --format '{{.Names}}'); do
+            echo "== $name"
+            docker logs --tail 200 "$name" 2>&1 || true
+          done
+          docker compose -f docker/docker-compose.yml logs

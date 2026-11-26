@@ -19,6 +19,8 @@ COPY builder/allowed-requirements.txt /opt/dxos-gates/allowed-requirements.txt
 RUN python3 -m venv --system-site-packages /opt/venv \
  && /opt/venv/bin/pip download --no-cache-dir -d /wheels -r /opt/dxos-gates/allowed-requirements.txt \
  && /opt/venv/bin/pip install --no-cache-dir --no-index --find-links /wheels -r /opt/dxos-gates/allowed-requirements.txt
+# The gates' own browser driver; the browsers themselves come with the base image (same version, 1.62.0).
+RUN /opt/venv/bin/pip install --no-cache-dir playwright==1.62.0
 # Code last, so a change here does not redo the layers above.
 COPY cli/dxos_cli /opt/dxos-gates/cli/dxos_cli
 COPY repo /opt/dxos-gates/repo

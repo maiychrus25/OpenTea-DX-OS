@@ -243,6 +243,24 @@ No package is installed for these: the agent calls both APIs with `urllib` from 
 
 ---
 
+## Mini-app factory (`platform/builder`, image `dxos-builder`, optional)
+
+Installed only in the `dxos-builder` image (built by `make builder-image`), never in the core. Every tag and package below is at least two weeks old; the host loop `./dxos builder` and the proxy use the Python standard library only.
+
+| Package | Version | License | Purpose |
+|---------|---------|---------|---------|
+| [Playwright for Python base image](https://mcr.microsoft.com/en-us/artifact/mar/playwright/python) (`mcr.microsoft.com/playwright/python`) | v1.62.0-noble | Apache-2.0 | Base image: Ubuntu 24.04, Python 3.12 and the browsers for the `run` gate |
+| [playwright](https://github.com/microsoft/playwright-python) (Python) | 1.62.0 | Apache-2.0 | Drives the browser in the `run` gate (same version as the browsers of the base image) |
+| [@openai/codex](https://github.com/openai/codex) | 0.167.2 | Apache-2.0 | Coding tool `codex-cli`, installed when `DXOS_BUILDER_TOOLS` includes `codex-cli` (the default) |
+| [@anthropic-ai/claude-code](https://www.npmjs.com/package/@anthropic-ai/claude-code) | 2.1.322 | Proprietary (Anthropic terms) | Coding tool `claude-code`, installed at image build only when `DXOS_BUILDER_TOOLS` includes `claude-code`; never committed |
+| PostgreSQL | 16 (Ubuntu package) | PostgreSQL | A throwaway server inside the `gates` container for the tests and the `run` gate |
+| Node.js, npm, git (Ubuntu packages) | distribution | MIT, Artistic-2.0, GPL-2.0 | Runtime of the coding tools (npm packages only); git is only for the tools |
+| `python:3.12.15-slim-bookworm` | 3.12.15 | PSF-2.0 | Runs the allowlist proxy (`dxos-builder-proxy`) |
+
+The wheelhouse (`/wheels`) and the libraries a generated app may use are exactly the pins in `platform/builder/allowed-requirements.txt` (the union of the existing mini-apps' pins, each line with its licence). Both coding tools call their provider's paid API with the operator's own key; they are off unless a key is set.
+
+---
+
 ## License Compatibility
 
 All direct dependencies use OSI-approved licenses (MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC)
