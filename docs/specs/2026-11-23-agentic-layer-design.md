@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Lớp AI vận hành có người duyệt
 
-> **Trạng thái:** Bản định hướng (2026-11-24, bản 6). Triển khai theo issue #55: M0 tới M4 đã vào `main` (M0 và M1 PR #66, M2 PR #70, M3 PR #71, M4 PR #78, 2026-11-25); M5 đã vào `main` (PR #81, 2026-11-26), phần còn lại của M5 ở issue #80; M7 ở PR #83 và M8 ở nhánh `feat/55-agentic-m8` (2026-11-26). Mã khác đặc tả ở đâu thì xem §21. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12). Bản 5 đưa vào kết quả một lượt đánh giá độc lập và các cải tiến: bốn nguyên lý của đề thi (§5.4), MCP (§8.5), kiểm chứng trên trang lô, bộ đo công khai và kịch bản trình diễn (§15). Bản 6 ghi câu trả lời cho các câu hỏi mở (D13 tới D18, issue #56 tới #61).
+> **Trạng thái:** Bản định hướng (2026-11-24, bản 6). Triển khai theo issue #55: M0 tới M4 đã vào `main` (M0 và M1 PR #66, M2 PR #70, M3 PR #71, M4 PR #78, 2026-11-25); M5 đã vào `main` (PR #81, 2026-11-26), phần còn lại của M5 ở issue #80; M7 ở PR #83, M8 ở PR #84 và M14 ở nhánh `feat/55-agentic-m14` (2026-11-26); v1.15.0 phát hành M4 và M5. Mã khác đặc tả ở đâu thì xem §21. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12). Bản 5 đưa vào kết quả một lượt đánh giá độc lập và các cải tiến: bốn nguyên lý của đề thi (§5.4), MCP (§8.5), kiểm chứng trên trang lô, bộ đo công khai và kịch bản trình diễn (§15). Bản 6 ghi câu trả lời cho các câu hỏi mở (D13 tới D18, issue #56 tới #61).
 > **Yêu cầu của chủ dự án (2026-11-23):** thêm một lớp AI vận hành trên hệ thống, luôn còn người phê duyệt. Làm đầy đủ, không cắt phạm vi theo hạn nộp bài. Được gọi provider bên ngoài như Claude và Codex. Báo cáo, hỏi đáp và phê duyệt được qua Telegram, để không phụ thuộc hoàn toàn vào website.
 > **Người đọc:** người sẽ xây lớp này (thành viên nhóm hoặc một phiên AI lập trình). Tài liệu nói cần gì, vì sao, và chốt các quyết định kiến trúc. Chi tiết cài đặt do người làm quyết, trong khuôn khổ ở đây. Mỗi lần gộp vào `main` vẫn hỏi chủ dự án.
 
@@ -810,3 +810,21 @@ Theo `AGENTS.md`:
 - **Evidence của cải tiến** không gồm `baseline`, vì dạng chuẩn hoá chỉ nhận số nguyên.
 - **Đổi cài đặt** chỉ áp dụng cho agent đã có dòng cài đặt của hợp tác xã.
 - **Tab AI** vẽ biểu đồ cột ngang để tên agent dài vẫn đọc được trên điện thoại. Danh sách cải tiến xét 56 ngày để kết quả sau 4 tuần vẫn hiện.
+
+### M14: MCP, dòng kiểm chứng trên trang lô, bộ đo công khai (2026-11-26)
+
+**Đã làm:**
+- **MCP.** Client MCP nối bằng tài khoản Keycloak của chính người dùng, qua client mới `dxos-mcp`.
+  - Client có các công cụ đọc của trợ lý và đúng một công cụ ghi, `create_proposal`.
+  - Đề xuất tạo ra mang `origin: user` và `agent: mcp`, và chỉ chạy khi có người bấm duyệt (kiểm thử 38).
+- **Dòng kiểm chứng trên trang truy xuất lô công khai.** Dòng chỉ hiện khi quyết định duyệt thu hoạch nằm trong chuỗi audit còn nguyên và hash evidence khớp. Dòng chỉ nêu vai trò, không nêu tên (kiểm thử 39).
+- **Bộ đo công khai.** `make benchmark` chạy mọi bộ kịch bản với một provider, và kết quả ghi trong `docs/benchmark.md`.
+
+**Khác với đặc tả:**
+- **Cách nối MCP.** Client không nối thẳng HTTP vào web mà qua cầu nối stdio `platform/mcp/dxos_mcp.py`.
+  - Cầu nối đăng nhập bằng OAuth device grant và tự làm mới token.
+  - Web chỉ mở hai route bearer `/api/mcp/tools` và `/api/mcp/tools/[name]`.
+  - Nhờ vậy mọi client MCP đều dùng được mà web không phải làm máy chủ OAuth.
+- **Bảy loại hành động nhận `origin: user`.** Người tạo đề xuất phải có vai trò được duyệt loại đó. Evidence do web tự dựng từ đối tượng của đề xuất.
+- **Dòng kiểm chứng được lưu đệm 5 phút cho mỗi lô,** vì kiểm chuỗi audit phải đọc mọi dòng audit.
+- **Smoke trên CI** tạm bật direct grant cho `dxos-mcp` để lấy token không cần trình duyệt, rồi khôi phục khi chạy xong.
