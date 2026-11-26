@@ -62,6 +62,8 @@ export interface JournalFilters {
   page?: number
   limit?: number
   household_id?: string // for farmer scope filtering
+  /** The cooperative the entries belong to; set by chat reads, which have no session to scope them. */
+  htx_profile_id?: string
 }
 
 export interface JournalPort {

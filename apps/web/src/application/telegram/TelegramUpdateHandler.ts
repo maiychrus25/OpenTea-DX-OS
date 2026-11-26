@@ -6,11 +6,17 @@ import type { DecideProposalInput, DecideProposalOutcome } from '@/application/a
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
 import type { Proposal } from '@/domain/agent/proposal'
 import { DomainError } from '@/domain/errors'
-import { verifyCallbackData } from '@/domain/telegram/callback-data'
+import { verifyCallbackData, verifyCallbackDataV2 } from '@/domain/telegram/callback-data'
 import { hashLinkCode, LINK_CODE_TTL_MS } from '@/domain/telegram/link-code'
 import type { LiveRoleReader, LiveUserState } from '@/domain/telegram/ports/LiveRoleReader'
+import type { AssistantRequestRepository } from '@/domain/telegram/ports/AssistantRequestRepository'
 import type { TelegramLink, TelegramRepository } from '@/domain/telegram/ports/TelegramRepository'
 import type { Tenant } from '@/lib/api/tenant'
+import { AssistantRequests } from './assistant/AssistantRequests'
+import { ChatEngine, PHOTO_MAX_BYTES, type IncomingPhoto, type ProposalMessage } from './chat/ChatEngine'
+import { ChatUserResolver } from './chat/ChatUserResolver'
+import { commandOf } from './chat/router'
+import type { ChatAction, ChatTool, PhotoStore } from './chat/types'
 import { TELEGRAM_TEXT } from './messages'
 
 export interface TelegramMessageInput {
@@ -18,6 +24,12 @@ export interface TelegramMessageInput {
   chat: { id: number; type: string }
   from?: { id: number }
   text?: string
+  /** Text of a photo; not used for routing (a photo goes to the open photo step or is refused). */
+  caption?: string
+  /** Set when the photo was downloaded: the largest size at most 5 MB, as base64 JPEG bytes (contract C1). */
+  photo?: { mime_type: 'image/jpeg'; data_base64: string; file_unique_id: string }
+  photo_error?: 'too_large' | 'download_failed'
+  location?: { latitude: number; longitude: number }
 }
 
 export interface TelegramCallbackInput {
@@ -33,15 +45,26 @@ export interface TelegramUpdateInput {
   callback_query?: TelegramCallbackInput
 }
 
-export interface OutboxReply {
-  op: 'send'
-  chat_id: number
-  text: string
-}
+export type ReplyButtons = { text: string; callback_data: string }[][]
+
+/** A reply the relay sends (contract C2). An edit always sends its keyboard, so an edit without buttons removes them. */
+export type OutboxReply =
+  | { op: 'send'; chat_id: number; text: string; buttons?: ReplyButtons }
+  | { op: 'edit'; chat_id: number; edit_message_id: number; text: string; buttons?: ReplyButtons }
 
 export interface UpdateResponse {
   replies: OutboxReply[]
   answer_callback?: { text: string; show_alert: boolean }
+}
+
+/** The chat assistant's inputs from the composition root: the tool and action registries, photos and requests. */
+export interface ChatServices {
+  tools: readonly ChatTool[]
+  actions: readonly ChatAction[]
+  photos: PhotoStore
+  requests: AssistantRequestRepository
+  householdId(userId: string): Promise<string | null>
+  proposalMessages(htxCode: string, proposalIds: string[]): Promise<ProposalMessage[]>
 }
 
 export interface TelegramUpdateHandlerDeps {
@@ -52,6 +75,7 @@ export interface TelegramUpdateHandlerDeps {
   decide: (input: DecideProposalInput) => Promise<DecideProposalOutcome>
   htxProfileId: (htxCode: string) => Promise<string | null>
   callbackKey: string
+  chat: ChatServices
   now?: () => Date
 }
 
@@ -72,6 +96,9 @@ interface DecisionResult {
 const EMPTY: UpdateResponse = { replies: [] }
 const REJECT_REASON_MAX = 500
 const TRANSITIONS = new Set(['executed', 'failed', 'rejected', 'stale', 'expired'])
+/** Button presses and private messages per Telegram user in the rolling hour (contract C9). */
+const RATE_LIMIT_PER_HOUR = 60
+const HOUR_MS = 60 * 60 * 1000
 
 const reply = (chatId: number, text: string): OutboxReply => ({ op: 'send', chat_id: chatId, text })
 const answer = (text: string, showAlert = false): UpdateResponse => ({
@@ -79,21 +106,46 @@ const answer = (text: string, showAlert = false): UpdateResponse => ({
   answer_callback: { text, show_alert: showAlert },
 })
 
+function incomingPhoto(message: TelegramMessageInput): IncomingPhoto {
+  if (message.photo_error) return { kind: 'error', reason: message.photo_error }
+  const bytes = Buffer.from(message.photo!.data_base64, 'base64')
+  if (bytes.length > PHOTO_MAX_BYTES) return { kind: 'error', reason: 'too_large' }
+  return { kind: 'image', bytes, mimeType: 'image/jpeg' }
+}
+
 /**
  * Every Telegram update, decided in the web. Keeps the identity rules of the spec: a link is only ever
  * trusted for who it names, while the role, cooperative and enabled flag are read live at tap time.
  */
 export class TelegramUpdateHandler {
   private readonly now: () => Date
+  private readonly users: ChatUserResolver
+  private readonly chat: ChatEngine
 
   constructor(private readonly deps: TelegramUpdateHandlerDeps) {
     this.now = deps.now ?? (() => new Date())
+    this.users = new ChatUserResolver({
+      roles: deps.roles,
+      htxProfileId: deps.htxProfileId,
+      householdId: deps.chat.householdId,
+    })
+    this.chat = new ChatEngine({
+      repo: deps.repo,
+      tools: deps.chat.tools,
+      actions: deps.chat.actions,
+      photos: deps.chat.photos,
+      requests: new AssistantRequests(deps.chat.requests, deps.repo),
+      callbackKey: deps.callbackKey,
+      proposalMessages: deps.chat.proposalMessages,
+    })
   }
 
   /** Idempotent per update_id: a repeated update returns nothing, the outbox already holds its messages. */
   async handle(update: TelegramUpdateInput): Promise<UpdateResponse> {
     const updateId = String(update.update_id)
-    if (!(await this.deps.repo.markUpdateSeen(updateId))) return EMPTY
+    const fromId = update.message?.from?.id ?? update.callback_query?.from.id
+    const telegramUserId = fromId === undefined ? null : String(fromId)
+    if (!(await this.deps.repo.markUpdateSeen(updateId, telegramUserId))) return EMPTY
     try {
       if (update.callback_query) return await this.handleCallback(update.callback_query)
       if (update.message) return await this.handleMessage(update.message)
@@ -113,16 +165,58 @@ export class TelegramUpdateHandler {
     const fromId = String(message.from.id)
     const argument = text.split(/\s+/)[1] ?? ''
 
-    if (message.chat.type === 'private') {
-      if (/^\/start(\s|$)/.test(text)) return this.linkUser(argument, fromId, chatId)
-      if (/^\/stop(\s|$)/.test(text)) return this.unlinkUser(fromId, chatId)
-      if (/^\/huy(\s|$)/.test(text)) return this.cancelRejectReason(fromId, chatId)
-      return this.receiveRejectReason(fromId, chatId, text)
-    }
+    if (message.chat.type === 'private') return this.handlePrivate(message, text, argument, fromId, chatId)
     if ((message.chat.type === 'group' || message.chat.type === 'supergroup') && /^\/nhom(\s|$)/.test(text)) {
       return this.linkGroup(argument, chatId)
     }
     return EMPTY
+  }
+
+  private async handlePrivate(
+    message: TelegramMessageInput,
+    text: string,
+    argument: string,
+    fromId: string,
+    chatId: number
+  ): Promise<UpdateResponse> {
+    const command = commandOf(text)
+    if (command === '/start') {
+      if (!argument) {
+        const link = await this.deps.repo.activeUserLinkByTelegramUser(fromId)
+        if (link) return this.menuFor(link, chatId)
+      }
+      return this.linkUser(argument, fromId, chatId)
+    }
+    if (command === '/stop') return this.unlinkUser(fromId, chatId)
+
+    const link = await this.deps.repo.activeUserLinkByTelegramUser(fromId)
+    if (!link) {
+      // Users who are not linked keep the M2 replies.
+      if (command === '/huy') return this.cancelRejectReason(fromId, chatId)
+      return this.receiveRejectReason(fromId, chatId, text)
+    }
+
+    const limit = await this.rateLimitState(fromId)
+    if (limit !== 'ok') return limit === 'notice' ? { replies: [reply(chatId, TELEGRAM_TEXT.rateLimited)] } : EMPTY
+    if (command === '/huy') return this.cancelOpen(fromId, chatId)
+
+    const open = await this.deps.repo.activeConversation(fromId, this.now())
+    if (open?.kind === 'reject_reason') return this.receiveRejectReason(fromId, chatId, text)
+
+    const user = await this.users.resolve(link)
+    if (!user) return { replies: [reply(chatId, TELEGRAM_TEXT.notLinked)] }
+    if (message.photo || message.photo_error) return this.chat.onPhoto(user, incomingPhoto(message), this.now())
+    if (message.location) {
+      return this.chat.onLocation(user, message.location.latitude, message.location.longitude, this.now())
+    }
+    if (!text) return EMPTY
+    return this.chat.onText(user, text, this.now())
+  }
+
+  private async menuFor(link: TelegramLink, chatId: number): Promise<UpdateResponse> {
+    const user = await this.users.resolve(link)
+    if (!user) return { replies: [reply(chatId, TELEGRAM_TEXT.notLinked)] }
+    return this.chat.menu(user)
   }
 
   private async linkUser(code: string, telegramUserId: string, chatId: number): Promise<UpdateResponse> {
@@ -154,16 +248,25 @@ export class TelegramUpdateHandler {
     return { replies: [reply(chatId, TELEGRAM_TEXT.groupLinked)] }
   }
 
+  /** `/huy` for a linked user: cancels a reject reason or a chat flow, whichever is open. */
+  private async cancelOpen(telegramUserId: string, chatId: number): Promise<UpdateResponse> {
+    const open = await this.deps.repo.activeConversation(telegramUserId, this.now())
+    if (!open) return { replies: [reply(chatId, TELEGRAM_TEXT.nothingToCancel)] }
+    await this.deps.repo.deleteConversation(telegramUserId)
+    const text = open.kind === 'reject_reason' ? TELEGRAM_TEXT.rejectCancelled : TELEGRAM_TEXT.flowCancelled
+    return { replies: [reply(chatId, text)] }
+  }
+
   private async cancelRejectReason(telegramUserId: string, chatId: number): Promise<UpdateResponse> {
     const open = await this.deps.repo.activeConversation(telegramUserId, this.now())
-    if (!open) return EMPTY
+    if (open?.kind !== 'reject_reason') return EMPTY
     await this.deps.repo.deleteConversation(telegramUserId)
     return { replies: [reply(chatId, TELEGRAM_TEXT.rejectCancelled)] }
   }
 
   private async receiveRejectReason(telegramUserId: string, chatId: number, text: string): Promise<UpdateResponse> {
     const open = await this.deps.repo.activeConversation(telegramUserId, this.now())
-    if (!open) return EMPTY
+    if (open?.kind !== 'reject_reason' || !open.proposalId) return EMPTY
     if (!text || text.length > REJECT_REASON_MAX) return { replies: [reply(chatId, TELEGRAM_TEXT.rejectNoReason)] }
 
     const link = await this.deps.repo.activeUserLinkByTelegramUser(telegramUserId)
@@ -174,15 +277,45 @@ export class TelegramUpdateHandler {
     return { replies: [reply(chatId, result.text)] }
   }
 
+  /** Counts this user's updates in the last hour (the current one included): the 61st is told once, later ones get nothing. */
+  private async rateLimitState(telegramUserId: string): Promise<'ok' | 'notice' | 'silent'> {
+    const count = await this.deps.repo.countRecentUpdates(telegramUserId, new Date(this.now().getTime() - HOUR_MS))
+    if (count <= RATE_LIMIT_PER_HOUR) return 'ok'
+    return count === RATE_LIMIT_PER_HOUR + 1 ? 'notice' : 'silent'
+  }
+
   private async handleCallback(callback: TelegramCallbackInput): Promise<UpdateResponse> {
-    const parsed = verifyCallbackData(this.deps.callbackKey, callback.data)
-    if (!parsed) return answer(TELEGRAM_TEXT.invalidButton, true)
+    const key = this.deps.callbackKey
+    const v1 = verifyCallbackData(key, callback.data)
+    const v2 = v1 ? null : verifyCallbackDataV2(key, callback.data)
+    if (!v1 && !v2) return answer(TELEGRAM_TEXT.invalidButton, true)
     // Buttons only act in a private chat: a button in a group could be pressed by anyone there.
     if (callback.message.chat.type !== 'private') return answer(TELEGRAM_TEXT.groupCallback, true)
 
-    const link = await this.deps.repo.activeUserLinkByTelegramUser(String(callback.from.id))
+    const telegramUserId = String(callback.from.id)
+    const link = await this.deps.repo.activeUserLinkByTelegramUser(telegramUserId)
     if (!link) return answer(TELEGRAM_TEXT.notLinked, true)
 
+    const limit = await this.rateLimitState(telegramUserId)
+    if (limit === 'notice') return answer(TELEGRAM_TEXT.rateLimited, true)
+    if (limit === 'silent') return EMPTY
+
+    if (v2) {
+      const user = await this.users.resolve(link)
+      return this.chat.onCallback(
+        user,
+        {
+          telegramUserId,
+          c: v2.c,
+          s: v2.s,
+          chatId: callback.message.chat.id,
+          messageId: callback.message.message_id ?? 0,
+        },
+        this.now()
+      )
+    }
+
+    const parsed = v1!
     if (parsed.op === 'r') {
       const access = await this.approverAccess(link, parsed.proposalId)
       if ('refusal' in access) return answer(access.refusal, true)
@@ -190,7 +323,7 @@ export class TelegramUpdateHandler {
         return answer(TELEGRAM_TEXT.alreadyDecided(access.proposal.decidedByName))
       }
       await this.deps.repo.setConversation({
-        telegramUserId: String(callback.from.id),
+        telegramUserId,
         proposalId: parsed.proposalId,
         expiresAt: new Date(this.now().getTime() + LINK_CODE_TTL_MS),
       })

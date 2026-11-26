@@ -17,6 +17,19 @@ const updateSchema = z.object({
       chat: chatSchema,
       from: z.object({ id: z.number() }).optional(),
       text: z.string().max(4096).optional(),
+      caption: z.string().max(1024).optional(),
+      // Contract C1: a photo is at most 5 MB, so its base64 form stays under 7 000 000 characters.
+      photo: z
+        .object({
+          mime_type: z.literal('image/jpeg'),
+          data_base64: z.string().max(7_000_000),
+          file_unique_id: z.string().min(1).max(128),
+        })
+        .optional(),
+      photo_error: z.enum(['too_large', 'download_failed']).optional(),
+      location: z
+        .object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) })
+        .optional(),
     })
     .optional(),
   callback_query: z

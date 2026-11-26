@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS platform.agent_runs (
   id             uuid          PRIMARY KEY DEFAULT gen_random_uuid(),
   htx_code       text          NOT NULL,
   agent          text          NOT NULL,
-  trigger        text          NOT NULL CHECK (trigger IN ('schedule', 'event', 'manual')),
+  trigger        text          NOT NULL CHECK (trigger IN ('schedule', 'event', 'manual', 'message')),
   started_at     timestamptz   NOT NULL DEFAULT now(),
   finished_at    timestamptz,
   status         text          NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'ok', 'failed', 'skipped')),
@@ -20,6 +20,11 @@ CREATE TABLE IF NOT EXISTS platform.agent_runs (
   prompt_version text,
   input_hash     text
 );
+-- M5: a chat request runs A7 with trigger 'message'. Re-create the named check on databases made before M5.
+ALTER TABLE platform.agent_runs DROP CONSTRAINT IF EXISTS agent_runs_trigger_check;
+ALTER TABLE platform.agent_runs ADD CONSTRAINT agent_runs_trigger_check
+  CHECK (trigger IN ('schedule', 'event', 'manual', 'message'));
+
 
 CREATE TABLE IF NOT EXISTS platform.agent_proposals (
   id               uuid        PRIMARY KEY DEFAULT gen_random_uuid(),

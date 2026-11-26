@@ -1,12 +1,19 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Stub Telegram Bot API for the platform smoke test (compose profile telegram-test only). Records calls and queues injected updates."""
+import base64
 import json
 import os
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
+
+# A 16x16 JPEG (632 bytes) served for every photo: the smoke only checks that the bytes arrive and are stored.
+PHOTO_PATH = "photos/smoke.jpg"
+PHOTO_JPEG = base64.b64decode(
+    "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcgLikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//2wBDAQ4ODhMREyYVFSZPNS01T09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0//wAARCAAQABADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDJooorhPMP/9k="
+)
 
 
 class StubState:
@@ -31,6 +38,13 @@ def make_handler(state: StubState) -> type[BaseHTTPRequestHandler]:
         def log_message(self, fmt: str, *args: Any) -> None:  # keep the smoke log quiet
             return
 
+        def _send_bytes(self, data: bytes, content_type: str) -> None:
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
         def _body(self) -> dict[str, Any]:
             length = int(self.headers.get("Content-Length") or 0)
             raw = self.rfile.read(length) if length else b"{}"
@@ -48,6 +62,8 @@ def make_handler(state: StubState) -> type[BaseHTTPRequestHandler]:
             if self.path == "/control/calls":
                 with state.lock:
                     self._send(200, list(state.calls))
+            elif self.path.startswith("/file/bot") and self.path.endswith("/" + PHOTO_PATH):
+                self._send_bytes(PHOTO_JPEG, "image/jpeg")
             else:
                 self._send(404, {"ok": False})
 
@@ -66,6 +82,8 @@ def make_handler(state: StubState) -> type[BaseHTTPRequestHandler]:
                 result = {"message_id": params.get("message_id"), "chat": {"id": params.get("chat_id")}}
             elif method == "answerCallbackQuery":
                 result = True
+            elif method == "getFile":
+                result = {"file_id": params.get("file_id"), "file_unique_id": "smoke-stub", "file_size": len(PHOTO_JPEG), "file_path": PHOTO_PATH}
             else:
                 return self._send(404, {"ok": False, "error_code": 404, "description": "Not Found"})
             self._send(200, {"ok": True, "result": result})

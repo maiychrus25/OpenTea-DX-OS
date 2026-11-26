@@ -34,6 +34,8 @@ export interface CreateParcelData {
 export interface ParcelFilters {
   household_id?: string
   status?: string
+  /** The cooperative the parcels belong to; set by chat reads, which have no session to scope them. */
+  htx_profile_id?: string
 }
 
 export interface ParcelPort {

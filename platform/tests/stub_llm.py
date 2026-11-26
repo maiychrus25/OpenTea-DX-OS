@@ -17,6 +17,8 @@ USAGE_IN = 123
 USAGE_OUT = 45
 MAX_RECORDED_CALLS = 200
 BULLETIN_KEY = "bulletin_vi"
+INTENT_KEYS = ('"type"', '"name"', '"args"')  # the A7 intent prompt asks for these keys (contract C7)
+INTENT_WEATHER = {"type": "tool", "name": "weather", "args": {}}
 BULLETIN_TEXT = "Giá chè trên thị trường tuần này đi ngang, nhu cầu ổn định. Bà con tiếp tục theo dõi thị trường trước khi bán."
 
 _lock = threading.Lock()
@@ -54,10 +56,38 @@ def _system_text(body):
     return "\n".join(p for p in parts if isinstance(p, str))
 
 
+def _sentence(messages):
+    """The user's sentence: payload.sentence.text (the A7 shape), else payload.text, else the plain user text."""
+    for msg in reversed(messages):
+        if msg.get("role") == "user" and isinstance(msg.get("content"), str):
+            try:
+                payload = json.loads(msg["content"])
+            except json.JSONDecodeError:
+                return msg["content"]
+            if not isinstance(payload, dict):
+                return msg["content"]
+            sentence = payload.get("sentence")
+            if isinstance(sentence, dict) and isinstance(sentence.get("text"), str):
+                return sentence["text"]
+            text = payload.get("text")
+            return text if isinstance(text, str) else ""
+    return ""
+
+
+def _intent_text(messages):
+    # A sentence containing "mai" is a weather question; anything else is not understood.
+    if "mai" in _sentence(messages).lower():
+        return json.dumps(INTENT_WEATHER, ensure_ascii=False)
+    return json.dumps({"type": "unknown"})
+
+
 def _answer_text(body):
     # The bulletin agent (A5) asks for the bulletin_vi key in its system message; every other request keeps the review answer.
-    if BULLETIN_KEY in _system_text(body):
+    system = _system_text(body)
+    if BULLETIN_KEY in system:
         return json.dumps({BULLETIN_KEY: BULLETIN_TEXT}, ensure_ascii=False)
+    if all(key in system for key in INTENT_KEYS):
+        return _intent_text(body.get("messages") or [])
     return _reply_text(body.get("messages") or [])
 
 

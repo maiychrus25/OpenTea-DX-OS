@@ -258,6 +258,25 @@ Dữ liệu thiếu không tạo đề xuất: thửa không có cảm biến, b
 
 ---
 
+### 3.11 Trợ lý Telegram (M5)
+
+Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài khoản đã liên kết. Nhóm giữ hành vi M2 (báo cáo và nút duyệt v1).
+
+- **Giới hạn (C9):**
+  - tối đa 60 tin nhắn và lần bấm nút mỗi tài khoản Telegram trong một giờ; tin thứ 61 nhận `rateLimited` một lần, các tin sau trong giờ đó không có phản hồi;
+  - câu nhắn chuyển cho trợ lý chỉ khi HTX có nhịp tim `agent:<HTX>` trong 10 phút; không có thì trả lời `notUnderstood` kèm menu;
+  - văn bản giữ trong phiên hoặc yêu cầu tối đa 1000 ký tự; ảnh tối đa 5 MB;
+  - mỗi tài khoản chỉ có một phiên nhập; mở menu hoặc bắt đầu phiên mới thì phiên cũ bị thay thế.
+- **Hạn:**
+  - phiên nhập hết hạn 30 phút sau bước cuối (`flowExpired`);
+  - thẻ xác nhận hết hạn 10 phút sau khi gửi (`cardExpired`), không ghi gì;
+  - hành động mức `high` (duyệt thu hoạch) có hai thẻ, thẻ thứ hai hết hạn 10 phút sau khi bấm Tiếp tục;
+  - yêu cầu gửi cho trợ lý quá 60 giây chưa có trả lời thì nhận `assistantTimeout` kèm menu.
+- **Ghi dữ liệu:** chỉ khi chính tài khoản đó bấm Xác nhận trên thẻ của mình. Vai trò, HTX và trạng thái bật của tài khoản được đọc lại khi xử lý tin và khi bấm Xác nhận; bị hạ quyền hay đổi HTX thì không ghi gì (`noPermission`).
+- **Ảnh và vị trí:** ảnh lớn hơn 5 MB hoặc tải lỗi không được ghi; vị trí chỉ dùng để tìm thửa gần nhất (công cụ `nearby`).
+- **LLM (agent A7) chỉ thấy:** câu người dùng nhắn (đã che số điện thoại, e-mail và số giấy tờ khi dùng nhà cung cấp bên ngoài), ngày hôm nay theo giờ Việt Nam, và danh sách tên công cụ và hành động. Không gửi ảnh, vị trí, kết quả công cụ hay dữ liệu trả lời.
+- **Lệnh chưa có:** `/chiendich`, `/tuvanhanh`, `/dung` trả lời `notYet`.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication

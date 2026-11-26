@@ -65,3 +65,34 @@ def test_network_failure_is_retryable_and_hides_the_url():
         api.call("getUpdates", {})
     assert info.value.permanent is False
     assert "SECRET" not in str(info.value)
+
+
+def test_download_reads_the_file_url_and_returns_the_bytes():
+    seen = []
+
+    def opener(req, timeout):
+        seen.append(req.full_url)
+        return FakeResponse(b"\xff\xd8\xff photo")
+
+    api = BotApi("https://api.example.test/", "123:abc", urlopen_fn=opener)
+    assert api.download("photos/file_1.jpg") == b"\xff\xd8\xff photo"
+    assert seen == ["https://api.example.test/file/bot123:abc/photos/file_1.jpg"]
+
+
+def test_download_failures_hide_the_url():
+    def refuse(req, timeout):
+        raise urllib.error.URLError("connection refused to https://api.example.test/file/bot123:SECRET/x.jpg")
+
+    api = BotApi("https://api.example.test", "123:SECRET", urlopen_fn=refuse)
+    with pytest.raises(BotApiError) as info:
+        api.download("x.jpg")
+    assert info.value.permanent is False
+    assert "SECRET" not in str(info.value)
+
+
+def test_download_http_error_carries_the_status_only():
+    api = BotApi("https://api.example.test", "123:SECRET", urlopen_fn=fake_urlopen(status=404, body={"ok": False}))
+    with pytest.raises(BotApiError) as info:
+        api.download("gone.jpg")
+    assert info.value.code == 404
+    assert "SECRET" not in str(info.value)

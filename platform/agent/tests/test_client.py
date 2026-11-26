@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Credential loading: one malformed file skips only its own cooperative and never logs values."""
+import json
 import logging
+
+import pytest
 
 from dxos_agent.client import load_all_agent_credentials
 
@@ -26,3 +29,57 @@ def test_malformed_credential_file_is_skipped_and_only_its_name_is_logged(tmp_pa
     assert "c_binary.env" in caplog.text
     assert "leaky" not in caplog.text
     assert "good-secret" not in caplog.text
+
+
+def _gateway_with(reply, status=None, calls=None):
+    """A CoreGatewayClient whose HTTP layer answers `reply`, or fails with HTTP `status`, and records each request."""
+    import io
+    import urllib.error
+
+    from dxos_agent.client import CoreGatewayClient
+
+    def urlopen(req, timeout):
+        del timeout
+        body = json.loads(req.data.decode("utf-8")) if req.data else None
+        if calls is not None:
+            calls.append((req.get_method(), req.full_url, body))
+        if status is not None:
+            raise urllib.error.HTTPError(req.full_url, status, "failed", {}, io.BytesIO(b'{"error": "x"}'))
+        return io.BytesIO(json.dumps(reply).encode("utf-8"))
+
+    return CoreGatewayClient("http://gateway", lambda: "token", urlopen_fn=urlopen)
+
+
+def test_claim_posts_limit_and_returns_the_requests():
+    calls: list = []
+    gateway = _gateway_with({"requests": [{"id": "r1", "text": "thoi tiet"}]}, calls=calls)
+
+    assert gateway.claim_assistant_requests(2) == [{"id": "r1", "text": "thoi tiet"}]
+    assert calls == [("POST", "http://gateway/api/internal/agent/assistant/claim", {"limit": 2})]
+
+
+def test_post_result_sends_intent_and_run_id_and_reports_accepted():
+    calls: list = []
+    gateway = _gateway_with({"ok": True}, calls=calls)
+
+    assert gateway.post_assistant_result("r1", {"type": "unknown"}, None) is True
+    assert calls == [
+        (
+            "POST",
+            "http://gateway/api/internal/agent/assistant/requests/r1/result",
+            {"intent": {"type": "unknown"}, "run_id": None},
+        )
+    ]
+
+
+def test_post_result_409_is_not_raised():
+    gateway = _gateway_with({}, status=409)
+
+    assert gateway.post_assistant_result("r1", {"type": "unknown"}, "run-1") is False
+
+
+def test_post_result_other_http_errors_still_raise():
+    gateway = _gateway_with({}, status=500)
+
+    with pytest.raises(RuntimeError, match="failed \\(500\\)"):
+        gateway.post_assistant_result("r1", {"type": "unknown"}, "run-1")

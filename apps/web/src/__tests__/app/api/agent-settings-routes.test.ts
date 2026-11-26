@@ -53,6 +53,7 @@ const savedSettings = {
   'journal-review': { enabled: true, provider: 'anthropic', model: 'claude-haiku-5-5', schedule: null, thresholds: {} },
   digest: { enabled: false, provider: 'ollama', model: null, schedule: '07:30', thresholds: {} },
   bulletin: { enabled: false, provider: 'ollama', model: null, schedule: null, thresholds: {} },
+  assistant: { enabled: false, provider: 'ollama', model: null, schedule: null, thresholds: {} },
 }
 
 function tenant(role: 'manager' | 'officer' | 'farmer', htxCode = 'TC') {
@@ -68,6 +69,7 @@ const validSave = {
     'journal-review': { provider: 'anthropic', model: null },
     digest: { provider: 'ollama', model: null },
     bulletin: { provider: 'ollama', model: null },
+    assistant: { provider: 'ollama', model: null },
   },
   report_time: '07:30',
   monthly_limit_usd: 10,

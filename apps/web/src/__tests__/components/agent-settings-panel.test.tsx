@@ -20,6 +20,7 @@ function settingsResponse(overrides: Record<string, unknown> = {}) {
       'journal-review': { enabled: true, provider: 'ollama', model: null },
       digest: { enabled: false, provider: 'ollama', model: null },
       bulletin: { enabled: false, provider: 'ollama', model: null },
+      assistant: { enabled: false, provider: 'ollama', model: null },
     },
     report_time: '18:00',
     budget: { monthly_limit_usd: 10, spent_usd: 8.2, month: '2026-11', exhausted: false },
@@ -46,6 +47,18 @@ describe('AgentSettingsPanel (settings tab)', () => {
     expect(options).toEqual(['Ollama (máy chủ HTX)', 'Claude (Anthropic)'])
     expect(screen.getByText(/Đã dùng tháng 11\/2026: 8\.20 USD trên 10\.00 USD/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Lưu cài đặt' })).toBeEnabled()
+  })
+
+  test('the assistant row names A7, and its external provider dialog says what leaves the server', async () => {
+    render(<AgentSettingsPanel role="manager" />)
+    const legend = await screen.findByText('Trợ lý Telegram (A7)')
+    const select = within(legend.closest('fieldset') as HTMLElement).getByLabelText(/Nhà cung cấp mô hình/i)
+
+    fireEvent.change(select, { target: { value: 'anthropic' } })
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent(
+      'Câu bạn nhắn cho trợ lý (đã che số điện thoại, e-mail và số giấy tờ). Không gửi ảnh, vị trí hay dữ liệu trả lời.'
+    )
   })
 
   test('choosing an external provider opens the list of what leaves the server before anything changes', async () => {

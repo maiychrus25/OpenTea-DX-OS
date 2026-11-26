@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """The relay: forwards Telegram updates to the web, sends what the web returns, and drains the web's outbox."""
+import base64
 import logging
 import threading
 from typing import Any, Mapping, Optional
@@ -14,6 +15,7 @@ OUTBOX_LIMIT = 20
 OUTBOX_INTERVAL_SECONDS = 2.0
 HEARTBEAT_INTERVAL_SECONDS = 60.0
 POLL_TIMEOUT_SECONDS = 30
+PHOTO_MAX_BYTES = 5 * 1024 * 1024  # C1: larger photos are not forwarded
 
 
 class Backoff:
@@ -41,6 +43,8 @@ def forwardable_update(update: Mapping[str, Any]) -> dict[str, Any]:
                 "chat": _chat(update["message"]["chat"]),
                 "from": _user(update["message"].get("from")),
                 "text": update["message"].get("text"),
+                "caption": update["message"].get("caption"),
+                "location": _location(update["message"].get("location")),
             }
         )
     if "callback_query" in update:
@@ -125,6 +129,8 @@ class Relay:
         except (KeyError, TypeError):
             log.warning("dropping a malformed update %s", update.get("update_id"))
             return True
+        if "photo" in update.get("message", {}):
+            forwarded["message"].update(self._photo_fields(update["message"]["photo"]))
         try:
             data = self._web.forward_update(forwarded)
         except GatewayError as exc:
@@ -143,6 +149,25 @@ class Relay:
         for reply in data.get("replies") or []:
             self._send_best_effort(*message_call(reply))
         return True
+
+    def _photo_fields(self, sizes: Any) -> dict[str, Any]:
+        """C1 photo fields: the largest size up to 5 MB, downloaded as bytes. A failure is forwarded as photo_error."""
+        try:
+            fitting = [size for size in sizes if size.get("file_size", 0) <= PHOTO_MAX_BYTES]
+        except (AttributeError, TypeError):
+            return {"photo_error": "download_failed"}
+        if not fitting:
+            return {"photo_error": "too_large"}
+        size = max(fitting, key=lambda item: item.get("file_size", 0))
+        try:
+            file_path = self._bot.call("getFile", {"file_id": size["file_id"]})["file_path"]
+            data = self._bot.download(file_path)
+            file_unique_id = size["file_unique_id"]
+        except (BotApiError, KeyError, TypeError):
+            return {"photo_error": "download_failed"}
+        if len(data) > PHOTO_MAX_BYTES:
+            return {"photo_error": "too_large"}
+        return {"photo": {"mime_type": "image/jpeg", "data_base64": base64.b64encode(data).decode("ascii"), "file_unique_id": file_unique_id}}
 
     def _send_best_effort(self, method: str, params: Mapping[str, Any]) -> None:
         # Replies are answers to a user's action, not queued proposals: a failed one is logged, not retried.
@@ -217,6 +242,10 @@ def _retry(exc: BotApiError) -> dict[str, Any]:
 
 def _chat(chat: Mapping[str, Any]) -> dict[str, Any]:
     return {"id": chat["id"], "type": chat["type"]}
+
+
+def _location(location: Optional[Mapping[str, Any]]) -> Optional[dict[str, Any]]:
+    return {"latitude": location["latitude"], "longitude": location["longitude"]} if location else None
 
 
 def _user(user: Optional[Mapping[str, Any]]) -> Optional[dict[str, Any]]:

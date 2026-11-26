@@ -10,7 +10,7 @@ import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
 const startRunSchema = z.object({
   agent: z.enum(KNOWN_AGENTS),
-  trigger: z.enum(['schedule', 'event', 'manual']),
+  trigger: z.enum(['schedule', 'event', 'manual', 'message']),
   provider: z.string().trim().min(1).max(64).optional().nullable(),
   model: z.string().trim().min(1).max(128).optional().nullable(),
   prompt_version: z.string().trim().min(1).max(64).optional().nullable(),
