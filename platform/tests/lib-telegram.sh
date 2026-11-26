@@ -110,11 +110,22 @@ async function main() {
   if (mode === "tampered") params.set("user", JSON.stringify({ id: Number(userId) + 1, first_name: "Smoke" }));
   const headers = { "Content-Type": "application/json" };
   if (mode !== "nosession") {
-    const { encode } = require("@auth/core/jwt");
+    // The standalone web image has no @auth/core on disk, so the session cookie is built here the way Auth.js builds it:
+    // a JWE (dir, A256CBC-HS512) under a key derived with HKDF from AUTH_SECRET and the cookie name.
+    const b64u = (b) => Buffer.from(b).toString("base64url");
     const name = "authjs.session-token";
+    const key = Buffer.from(crypto.hkdfSync("sha256", process.env.AUTH_SECRET, name, "Auth.js Generated Encryption Key (" + name + ")", 64));
+    const now = Math.floor(Date.now() / 1000);
     const exp = JSON.parse(Buffer.from(accessToken.split(".")[1], "base64url").toString()).exp;
-    const jwt = await encode({ token: { sub, role: "manager", htxCode: "TC", accessToken, refreshToken: "smoke", accessTokenExpiresAt: exp }, secret: process.env.AUTH_SECRET, salt: name, maxAge: 3600 });
-    headers.Cookie = name + "=" + jwt;
+    const claims = { sub, role: "manager", htxCode: "TC", accessToken, refreshToken: "smoke", accessTokenExpiresAt: exp, iat: now, exp: now + 3600, jti: crypto.randomUUID() };
+    const header = b64u(JSON.stringify({ alg: "dir", enc: "A256CBC-HS512" }));
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv("aes-256-cbc", key.subarray(32), iv);
+    const ct = Buffer.concat([cipher.update(JSON.stringify(claims)), cipher.final()]);
+    const al = Buffer.alloc(8);
+    al.writeBigUInt64BE(BigInt(header.length * 8));
+    const tag = crypto.createHmac("sha512", key.subarray(0, 32)).update(Buffer.concat([Buffer.from(header), iv, ct, al])).digest().subarray(0, 32);
+    headers.Cookie = name + "=" + [header, "", b64u(iv), b64u(ct), b64u(tag)].join(".");
   }
   const res = await fetch("http://localhost:3000/api/telegram/webapp/session", { method: "POST", headers, body: JSON.stringify({ init_data: params.toString() }) });
   const body = await res.json().catch(() => ({}));
