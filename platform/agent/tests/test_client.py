@@ -107,3 +107,11 @@ def test_post_campaign_sends_the_body_and_returns_the_answer():
 
     assert gateway.post_campaign(body) == {"id": "c1"}
     assert calls == [("POST", "http://gateway/api/internal/agent/campaigns", body)]
+
+
+def test_autopilot_tick_posts_an_empty_body_and_returns_the_data_object():
+    calls: list = []
+    gateway = _gateway_with({"data": {"ran": 1, "failed": 0, "returned": 0, "stopped": None}}, calls=calls)
+
+    assert gateway.post_autopilot_tick() == {"ran": 1, "failed": 0, "returned": 0, "stopped": None}
+    assert calls == [("POST", "http://gateway/api/internal/autopilot/tick", {})]
