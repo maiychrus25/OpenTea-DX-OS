@@ -232,7 +232,7 @@ def _missing_info(inputs: Mapping[str, Any]) -> list[Candidate]:
 
 
 def _weighted_median(pairs: Sequence[tuple[float, int]], total: int) -> float:
-    # shortcut: the median of the per-group medians, weighted by decided count, because the web gives no raw waits; upgrade if it sends the overall median.
+    # Fallback only, for inputs without `overall`: the median of the per-group medians, weighted by decided count.
     running = 0
     for wait, count in sorted(pairs):
         running += count
@@ -242,15 +242,23 @@ def _weighted_median(pairs: Sequence[tuple[float, int]], total: int) -> float:
 
 
 def _slow(inputs: Mapping[str, Any]) -> list[Candidate]:
-    pairs = []
-    for row in inputs.get("proposal_stats") or []:
-        decided = int(row.get("approved") or 0) + int(row.get("rejected") or 0)
-        if decided > 0:
-            pairs.append((float(row.get("median_wait_hours") or 0), decided))
-    total = sum(count for _, count in pairs)
-    if total < SLOW_MIN_DECIDED:
-        return []
-    median = _weighted_median(pairs, total)
+    overall = inputs.get("overall")
+    if isinstance(overall, Mapping) and overall.get("median_wait_hours") is not None:
+        # The web's true median over every decided proposal: the same figure its `metrics` measures against later.
+        total = int(overall.get("decided") or 0)
+        median = float(overall["median_wait_hours"])
+        if total < SLOW_MIN_DECIDED:
+            return []
+    else:
+        pairs = []
+        for row in inputs.get("proposal_stats") or []:
+            decided = int(row.get("approved") or 0) + int(row.get("rejected") or 0)
+            if decided > 0:
+                pairs.append((float(row.get("median_wait_hours") or 0), decided))
+        total = sum(count for _, count in pairs)
+        if total < SLOW_MIN_DECIDED:
+            return []
+        median = _weighted_median(pairs, total)
     if median < SLOW_HOURS_MIN:
         return []
     return [

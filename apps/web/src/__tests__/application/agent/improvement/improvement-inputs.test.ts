@@ -62,6 +62,8 @@ describe('GET /api/internal/agent/improvements/inputs (contract C3)', () => {
     ])
     expect(inputs.journal_review).toEqual({ window_days: 28, reviewed: 30, returned_missing_info: 14 })
     expect(inputs.campaign_goals).toEqual([{ goal_key: 'harvest', days: 10, missed_days: 4 }])
+    // The overall median the slow-decisions rule and its measurement share (integration of M8).
+    expect(inputs.overall).toEqual({ decided: 7, median_wait_hours: 3.5 })
   })
 
   it('lists settings only for agents that have a row, with their thresholds and schedule', async () => {

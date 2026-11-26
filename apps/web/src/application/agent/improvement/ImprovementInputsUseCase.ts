@@ -27,6 +27,8 @@ export interface ImprovementInputs {
     expired: number
     median_wait_hours: number | null
   }[]
+  /** Decided proposals of the window and their median wait: the figure A10's slow-decisions rule and its measurement share. */
+  overall: { decided: number; median_wait_hours: number | null }
   journal_review: { window_days: number; reviewed: number; returned_missing_info: number }
   campaign_goals: { goal_key: string; days: number; missed_days: number }[]
   improvements: {
@@ -81,6 +83,10 @@ export class ImprovementInputsUseCase {
         expired: row.expired,
         median_wait_hours: row.medianWaitHours,
       })),
+      overall: {
+        decided: rows.reduce((n, row) => n + row.approved + row.rejected, 0),
+        median_wait_hours: medianWaitHours,
+      },
       journal_review: {
         window_days: PROPOSAL_WINDOW_DAYS,
         reviewed: journalReview.reviewed,

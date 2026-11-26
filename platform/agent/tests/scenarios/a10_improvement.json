@@ -112,6 +112,25 @@
     "expect": {"metric_keys": []}
   },
   {
+    "name": "slow decisions use the overall median from the web: group medians of 30 h but an overall 10 h do not fire",
+    "inputs": {"proposal_stats": [
+      {"agent": "harvest-ready", "kind": "harvest.approve", "window_days": 28, "approved": 5, "rejected": 0, "expired": 0, "median_wait_hours": 30},
+      {"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 5, "rejected": 0, "expired": 0, "median_wait_hours": 30}
+    ], "overall": {"decided": 10, "median_wait_hours": 10}},
+    "expect": {"metric_keys": []}
+  },
+  {
+    "name": "slow decisions use the overall median from the web: group medians of 2 h but an overall 26 h fire",
+    "inputs": {"proposal_stats": [
+      {"agent": "harvest-ready", "kind": "harvest.approve", "window_days": 28, "approved": 5, "rejected": 0, "expired": 0, "median_wait_hours": 2},
+      {"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 5, "rejected": 0, "expired": 0, "median_wait_hours": 2}
+    ], "overall": {"decided": 10, "median_wait_hours": 26}},
+    "expect": {
+      "metric_keys": ["median_wait_hours"],
+      "first": {"kind": "process", "title_vi": "Đề xuất chờ duyệt quá lâu: nên giao thêm người duyệt"}
+    }
+  },
+  {
     "name": "missed goal fires at 3 missed days and proposes a Monday reminder",
     "inputs": {"campaign_goals": [{"goal_key": "harvest", "days": 14, "missed_days": 3}]},
     "expect": {
