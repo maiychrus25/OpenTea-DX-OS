@@ -7,6 +7,7 @@ import {
   type TelegramUpdateInput,
 } from '@/application/telegram/TelegramUpdateHandler'
 import { TELEGRAM_TEXT } from '@/application/telegram/messages'
+import type { Campaign, CampaignItem, CampaignStatus } from '@/domain/agent/campaign'
 import type { Proposal } from '@/domain/agent/proposal'
 import { signCallbackData } from '@/domain/telegram/callback-data'
 import { hashLinkCode } from '@/domain/telegram/link-code'
@@ -47,6 +48,15 @@ function proposal(overrides: Partial<Proposal> = {}): Proposal {
     executedAt: null,
     result: null,
     ...overrides,
+  }
+}
+
+const CAMPAIGN_ID = '00000000-0000-4000-8000-0000000000c1'
+
+function campaign(status: CampaignStatus): Campaign {
+  return {
+    id: CAMPAIGN_ID, htxCode: 'TC', day: '2026-11-27', status, goals: [], summaryVi: 'Tóm tắt.', runId: null,
+    decidedBy: null, decidedByName: null, decidedAt: null, telegramSent: false, createdAt: NOW,
   }
 }
 
@@ -129,9 +139,27 @@ function fakeRepo() {
   return repo
 }
 
-function build(options: { liveRoles?: Record<string, LiveUserState | null>; outcome?: unknown; proposalState?: Proposal | null } = {}) {
+function build(options: {
+  liveRoles?: Record<string, LiveUserState | null>
+  outcome?: unknown
+  proposalState?: Proposal | null
+  campaignStatus?: CampaignStatus
+  campaignItems?: CampaignItem[]
+} = {}) {
   const repo = fakeRepo()
   const current = { value: options.proposalState === undefined ? proposal() : options.proposalState }
+  const proposalMessages = jest.fn(async (_htxCode: string, _ids: string[]) => [] as { text: string; buttons: never[] }[])
+  const campaignRecord = campaign(options.campaignStatus ?? 'draft')
+  const campaigns = {
+    repo: {
+      findById: jest.fn(async (htxCode: string, id: string) => (htxCode === 'TC' && id === CAMPAIGN_ID ? campaignRecord : null)),
+      findForDay: jest.fn(async () => campaignRecord),
+      items: jest.fn(async () => options.campaignItems ?? []),
+    },
+    approve: { execute: jest.fn(async () => ({ executed: 2, waitingHigh: 1, forwarded: 0, failed: 0, alreadyDecided: 0 })) },
+    drop: { execute: jest.fn(async () => undefined) },
+    message: jest.fn(async () => ({ text: 'Chiến dịch ngày 27/11: 2 việc', buttons: [[{ text: 'Duyệt cả chiến dịch', callback_data: 'x' }]] })),
+  }
   const roles: LiveRoleReader = {
     read: jest.fn(async (userId: string) => (options.liveRoles ?? { [MANAGER]: { roles: ['manager'], enabled: true, htxCode: 'TC' } })[userId] ?? null),
   }
@@ -147,17 +175,18 @@ function build(options: { liveRoles?: Record<string, LiveUserState | null>; outc
     decide: decide as unknown as TelegramUpdateHandlerDeps['decide'],
     htxProfileId: async () => 'htx-profile-1',
     callbackKey: KEY,
+    campaigns: campaigns as unknown as TelegramUpdateHandlerDeps['campaigns'],
     chat: {
       tools: [],
       actions: [],
       photos: { put: jest.fn(async () => undefined), get: jest.fn(async () => Buffer.alloc(0)) },
       requests: { create: jest.fn(async () => 'req-1') } as never,
       householdId: async () => null,
-      proposalMessages: async () => [],
+      proposalMessages: proposalMessages,
     },
     now: () => NOW,
   })
-  return { handler, repo, decide, notifier, current }
+  return { handler, repo, decide, notifier, current, campaigns, roles, proposalMessages }
 }
 
 let updateId = 1000
@@ -367,5 +396,129 @@ describe('TelegramUpdateHandler', () => {
     await expect(handler.handle(update)).rejects.toThrow('db down')
     expect(repo.markUpdateSeen).toHaveBeenCalledTimes(1)
     expect(repo.forgetUpdate).toHaveBeenCalledWith(String(update.update_id))
+  })
+})
+
+describe('campaign messages (M7, contract C6)', () => {
+  beforeEach(() => {
+    updateId = 1000
+  })
+
+  const campaignData = (op: 'A' | 'L' | 'D') => signCallbackData(KEY, CAMPAIGN_ID, op)
+  const openItem = (n: number, status: CampaignItem['proposalStatus']): CampaignItem => ({
+    campaignId: CAMPAIGN_ID,
+    proposalId: `00000000-0000-4000-8000-0000000000${String(n).padStart(2, '0')}`,
+    position: n,
+    goalKey: 'internal_notice',
+    target: 1,
+    kind: 'notification.internal',
+    risk: 'low',
+    proposalStatus: status,
+  })
+
+  test('/chiendich sends the day campaign with its buttons to a manager', async () => {
+    const { handler, repo, campaigns } = build()
+    await linkManager(handler, repo)
+    const res = await handler.handle(text('/chiendich'))
+
+    expect(campaigns.repo.findForDay).toHaveBeenCalledWith('TC', '2026-11-24')
+    expect(res.replies).toEqual([
+      { op: 'send', chat_id: TG_MANAGER_CHAT, text: 'Chiến dịch ngày 27/11: 2 việc', buttons: [[{ text: 'Duyệt cả chiến dịch', callback_data: 'x' }]] },
+    ])
+  })
+
+  test('/chiendich without a campaign today says so', async () => {
+    const { handler, repo, campaigns } = build()
+    campaigns.repo.findForDay.mockResolvedValueOnce(null as never)
+    await linkManager(handler, repo)
+    const res = await handler.handle(text('/chiendich'))
+    expect(res.replies).toEqual([{ op: 'send', chat_id: TG_MANAGER_CHAT, text: TELEGRAM_TEXT.noCampaignToday }])
+  })
+
+  test('/chiendich is not for a farmer', async () => {
+    const liveRoles = { [MANAGER]: { roles: ['farmer'], enabled: true, htxCode: 'TC' } }
+    const { handler, repo, campaigns } = build({ liveRoles })
+    await linkManager(handler, repo)
+    const res = await handler.handle(text('/chiendich'))
+    expect(res.replies).toEqual([{ op: 'send', chat_id: TG_MANAGER_CHAT, text: TELEGRAM_TEXT.noCampaignToday }])
+    expect(campaigns.message).not.toHaveBeenCalled()
+  })
+
+  test('A approves all as the manager and edits the message to the result line, without buttons', async () => {
+    const { handler, repo, campaigns } = build()
+    await linkManager(handler, repo)
+    const res = await handler.handle(callback(campaignData('A')))
+
+    expect(campaigns.approve.execute).toHaveBeenCalledWith(CAMPAIGN_ID, expect.objectContaining({ role: 'manager', htxCode: 'TC' }), 'Quản lý', 'telegram', NOW)
+    expect(res.replies).toEqual([
+      {
+        op: 'edit', chat_id: TG_MANAGER_CHAT, edit_message_id: 1,
+        text: 'Đã duyệt chiến dịch: 2 việc đã chạy, 1 việc chờ xác nhận riêng, 0 việc chuyển người đủ quyền.',
+      },
+    ])
+    expect(res.replies[0]).not.toHaveProperty('buttons')
+  })
+
+  test('A adds the failed count to the result line', async () => {
+    const { handler, repo, campaigns } = build()
+    campaigns.approve.execute.mockResolvedValueOnce({ executed: 1, waitingHigh: 0, forwarded: 0, failed: 2, alreadyDecided: 0 })
+    await linkManager(handler, repo)
+    const res = await handler.handle(callback(campaignData('A')))
+    expect(res.replies[0]).toMatchObject({
+      text: 'Đã duyệt chiến dịch: 1 việc đã chạy, 0 việc chờ xác nhận riêng, 0 việc chuyển người đủ quyền. 2 việc lỗi.',
+    })
+  })
+
+  test('L sends each undecided item with its own approve and reject buttons', async () => {
+    const { handler, repo, campaigns, proposalMessages } = build({ campaignItems: [openItem(1, 'proposed'), openItem(2, 'executed')] })
+    proposalMessages.mockResolvedValueOnce([{ text: 'Đề xuất một', buttons: [] }])
+    await linkManager(handler, repo)
+    const res = await handler.handle(callback(campaignData('L')))
+
+    expect(campaigns.repo.items).toHaveBeenCalledWith('TC', CAMPAIGN_ID)
+    expect(proposalMessages).toHaveBeenCalledWith('TC', [openItem(1, 'proposed').proposalId])
+    expect(res.replies).toEqual([{ op: 'send', chat_id: TG_MANAGER_CHAT, text: 'Đề xuất một', buttons: [] }])
+  })
+
+  test('L with nothing open says so', async () => {
+    const { handler, repo } = build({ campaignItems: [openItem(1, 'executed')] })
+    await linkManager(handler, repo)
+    const res = await handler.handle(callback(campaignData('L')))
+    expect(res.replies).toEqual([])
+    expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.campaignNoOpenItems, show_alert: false })
+  })
+
+  test('D drops the campaign and edits the message to the dropped line', async () => {
+    const { handler, repo, campaigns } = build()
+    await linkManager(handler, repo)
+    const res = await handler.handle(callback(campaignData('D')))
+
+    expect(campaigns.drop.execute).toHaveBeenCalledWith(CAMPAIGN_ID, expect.objectContaining({ role: 'manager' }), 'Quản lý')
+    expect(res.replies).toEqual([{ op: 'edit', chat_id: TG_MANAGER_CHAT, edit_message_id: 1, text: TELEGRAM_TEXT.campaignDropped }])
+  })
+
+  test('a press on a campaign that is no longer open answers that it is done', async () => {
+    const { handler, repo, campaigns } = build({ campaignStatus: 'dropped' })
+    await linkManager(handler, repo)
+    const res = await handler.handle(callback(campaignData('A')))
+    expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.campaignDone, show_alert: false })
+    expect(campaigns.approve.execute).not.toHaveBeenCalled()
+  })
+
+  test('a farmer pressing approve all is refused', async () => {
+    const liveRoles = { [MANAGER]: { roles: ['farmer'], enabled: true, htxCode: 'TC' } }
+    const { handler, repo, campaigns } = build({ liveRoles })
+    await linkManager(handler, repo)
+    const res = await handler.handle(callback(campaignData('A')))
+    expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.campaignNotAllowed, show_alert: true })
+    expect(campaigns.approve.execute).not.toHaveBeenCalled()
+  })
+
+  test('a v1 approve press carrying a campaign id is refused (the proposal lookup fails)', async () => {
+    const { handler, repo, decide } = build()
+    await linkManager(handler, repo)
+    const res = await handler.handle(callback(signCallbackData(KEY, CAMPAIGN_ID, 'a')))
+    expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.otherCooperative, show_alert: true })
+    expect(decide).not.toHaveBeenCalled()
   })
 })

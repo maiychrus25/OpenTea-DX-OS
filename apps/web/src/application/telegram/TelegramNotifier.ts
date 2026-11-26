@@ -2,15 +2,18 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { getAction } from '@/application/agent/action-catalog'
+import { OPEN_CAMPAIGN_STATUSES } from '@/application/agent/campaign/ApproveCampaignUseCase'
 import { loadJournalSubjects } from '@/application/agent/journal-subjects'
 import type { JournalSubject } from '@/application/agent/actions/journal-labels'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
+import type { CampaignRepository } from '@/domain/agent/ports/CampaignRepository'
 import type { Proposal } from '@/domain/agent/proposal'
 import { signCallbackData } from '@/domain/telegram/callback-data'
 import type { OutboxInsert, OutboxRow, TelegramRepository } from '@/domain/telegram/ports/TelegramRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
 import { telegramCallbackKey } from './telegram-config'
 import {
+  campaignText,
   healthText,
   proposalResultText,
   proposalText,
@@ -29,11 +32,21 @@ const MAX_BACKOFF_SECONDS = 15 * 60
 
 let lastHealthCheckAt = 0
 
+/** The campaign reads and writes the notifier needs (the campaign message and the 18:00 outcomes). */
+export type NotifierCampaigns = Pick<
+  CampaignRepository,
+  'findById' | 'items' | 'markTelegramSent' | 'findForDay' | 'writeOutcomes' | 'setStatus'
+>
+
+/** Approve-all, list and drop buttons of a campaign message (C6). */
+export type CampaignButtons = { text: string; callback_data: string }[][]
+
 export interface TelegramNotifierDeps {
   repo: TelegramRepository
   proposals: Pick<ProposalRepository, 'findById'>
   /** Journal labels for a proposal's preview; the same wording the inbox shows. */
   labelsFor?: (htxCode: string, proposals: Proposal[]) => Promise<Map<string, JournalSubject>>
+  campaigns?: NotifierCampaigns
   now?: () => Date
 }
 
@@ -70,11 +83,13 @@ export class TelegramNotifier {
   private readonly proposals: Pick<ProposalRepository, 'findById'>
   private readonly labelsFor: (htxCode: string, proposals: Proposal[]) => Promise<Map<string, JournalSubject>>
   private readonly now: () => Date
+  private readonly campaigns?: NotifierCampaigns
 
   constructor(deps: TelegramNotifierDeps) {
     this.repo = deps.repo
     this.proposals = deps.proposals
     this.labelsFor = deps.labelsFor ?? defaultLabels
+    this.campaigns = deps.campaigns
     this.now = deps.now ?? (() => new Date())
   }
 
@@ -117,6 +132,55 @@ export class TelegramNotifier {
         purpose: 'proposal' as const,
       }))
     )
+  }
+
+  /**
+   * The campaign message (contract C6): its text, and the approve-all, list and drop buttons while the campaign is open.
+   * Null when the campaign is missing.
+   */
+  async campaignMessage(htxCode: string, campaignId: string): Promise<{ text: string; buttons?: CampaignButtons } | null> {
+    const campaigns = this.campaigns
+    if (!campaigns) return null
+    const campaign = await campaigns.findById(htxCode, campaignId)
+    if (!campaign) return null
+    const items = await campaigns.items(htxCode, campaignId)
+    const lines = items.map((item) => ({
+      title: getAction(item.kind)?.titleVi ?? item.kind,
+      target: item.target,
+      unitVi: campaign.goals.find((g) => g.goalKey === item.goalKey)?.unitVi ?? 'việc',
+    }))
+    const text = campaignText(campaign.day, campaign.summaryVi, lines)
+    const key = telegramCallbackKey()
+    if (!key || !OPEN_CAMPAIGN_STATUSES.includes(campaign.status)) return { text }
+    return {
+      text,
+      buttons: [
+        [{ text: 'Duyệt cả chiến dịch', callback_data: signCallbackData(key, campaignId, 'A') }],
+        [
+          { text: 'Xem từng mục', callback_data: signCallbackData(key, campaignId, 'L') },
+          { text: 'Bỏ chiến dịch', callback_data: signCallbackData(key, campaignId, 'D') },
+        ],
+      ],
+    }
+  }
+
+  /** Queues the campaign message to the cooperative's managers once A9 has stored the campaign (contract C4, C6). */
+  async enqueueCampaign(htxCode: string, campaignId: string): Promise<void> {
+    const message = await this.campaignMessage(htxCode, campaignId)
+    if (!message?.buttons) return
+    const recipients = await this.repo.userLinkRecipients(htxCode, ['manager'])
+    if (recipients.length === 0) return
+    await this.repo.enqueue(
+      recipients.map((link) => ({
+        htxCode,
+        chatId: link.chatId,
+        op: 'send' as const,
+        text: message.text,
+        buttons: message.buttons,
+        purpose: 'reply' as const,
+      }))
+    )
+    await this.campaigns!.markTelegramSent(htxCode, campaignId)
   }
 
   /**
@@ -211,11 +275,14 @@ export class TelegramNotifier {
       vnMidnight(periodStart),
       new Date(vnMidnight(periodEnd).getTime() + DAY_MS)
     )
-    const text = reportText(kind, periodStart, periodEnd, {
-      ...figures,
-      proposals_open: counts.open,
-      proposals_decided: counts.decided,
-    })
+    const campaignLines = kind === 'daily' ? await this.reportCampaign(htxCode, periodStart) : []
+    const text = reportText(
+      kind,
+      periodStart,
+      periodEnd,
+      { ...figures, proposals_open: counts.open, proposals_decided: counts.decided },
+      campaignLines
+    )
     const recipients = [
       ...(await this.repo.userLinkRecipients(htxCode, ['manager', 'officer'])),
       ...(await this.repo.groupLinkRecipients(htxCode)),
@@ -224,6 +291,43 @@ export class TelegramNotifier {
       recipients.map((link) => ({ htxCode, chatId: link.chatId, op: 'send' as const, text, purpose: 'report' as const }))
     )
     return true
+  }
+
+  /**
+   * The campaign lines of the 18:00 report (C9): the outcome per goal is written, and a campaign whose items are all
+   * decided becomes done. A dropped or missing campaign adds nothing.
+   */
+  private async reportCampaign(htxCode: string, day: string): Promise<string[]> {
+    const campaigns = this.campaigns
+    if (!campaigns) return []
+    const campaign = await campaigns.findForDay(htxCode, day)
+    if (!campaign || campaign.status === 'dropped') return []
+
+    const items = await campaigns.items(htxCode, campaign.id)
+    const done = items.filter((i) => i.proposalStatus === 'executed')
+    const outcomes = campaign.goals.map((goal) => ({
+      goalKey: goal.goalKey,
+      target: goal.target,
+      actual: done.filter((i) => i.goalKey === goal.goalKey).reduce((sum, i) => sum + i.target, 0),
+    }))
+    await campaigns.writeOutcomes(htxCode, campaign.id, outcomes)
+
+    const stillOpen = items.filter((i) => i.proposalStatus === 'proposed' || i.proposalStatus === 'approved').length
+    if (stillOpen === 0) {
+      await campaigns.setStatus(htxCode, campaign.id, {
+        to: 'done',
+        from: ['draft', 'approved', 'partial'],
+        event: { op: 'agent.campaign.done', details: { executed: done.length, items: items.length } },
+      })
+    }
+
+    const lines = [`Chiến dịch hôm nay: ${done.length}/${items.length} việc xong`]
+    campaign.goals.slice(0, 3).forEach((goal, index) => {
+      const outcome = outcomes[index]
+      lines.push(`• ${goal.labelVi}: ${outcome.actual}/${outcome.target} ${goal.unitVi}`)
+    })
+    if (items.length > done.length) lines.push(`Chưa xong: ${items.length - done.length} việc`)
+    return lines
   }
 
   /** Banner state for the inbox: an enabled agent that has gone quiet, or a relay that has gone quiet. */

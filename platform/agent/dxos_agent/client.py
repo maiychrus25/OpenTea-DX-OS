@@ -250,6 +250,14 @@ class CoreGatewayClient:
             raise
         return True
 
+    def get_campaign_candidates(self, day: str) -> dict[str, Any]:
+        """The open proposals and the facts the campaign rules need, for one Vietnam day (contract C3)."""
+        return self._request_json("GET", "/api/internal/agent/campaigns/candidates?" + urllib.parse.urlencode({"day": day}))
+
+    def post_campaign(self, campaign: Mapping[str, Any]) -> dict[str, Any]:
+        """Post the day's campaign (contract C4); the answer is `{id}`, or `{existing: true, id}` when one already exists."""
+        return self._request_json("POST", "/api/internal/agent/campaigns", campaign)
+
     def heartbeat(self, version: str, providers: Sequence[str]) -> None:
         """Tell the web this agent is alive and which LLM providers its keys allow (contract C3)."""
         self._request_json(

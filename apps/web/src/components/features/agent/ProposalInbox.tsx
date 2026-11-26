@@ -16,6 +16,7 @@ import {
 import { DISEASE_LABEL_VI } from '@/application/agent/actions/disease-labels'
 import type { DecisionChannel, Evidence, ProposalStatus, Risk } from '@/domain/agent/proposal'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
+import { CAMPAIGN_CHANGED_EVENT } from './CampaignPanel'
 import styles from './ProposalInbox.module.css'
 
 export interface ProposalInboxItem {
@@ -306,6 +307,8 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
   const [editTarget, setEditTarget] = useState<ProposalInboxItem | null>(null)
   const [editValues, setEditValues] = useState<Record<string, string>>({})
   const [editError, setEditError] = useState<string | null>(null)
+  // Proposals that are items of today's campaign (C8); a dropped campaign leaves none.
+  const [campaignIds, setCampaignIds] = useState<Set<string>>(new Set())
   // Once items are on screen a refresh keeps them, so the focused control stays in place.
   const hasItems = useRef(false)
 
@@ -325,9 +328,30 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
     }
   }, [view])
 
+  const loadCampaignTags = useCallback(async () => {
+    try {
+      const json = await fetchJson<{ campaign: { status: string; items: { proposalId: string }[] } | null }>('/api/agent/campaigns/today')
+      const campaign = json.campaign
+      setCampaignIds(campaign && campaign.status !== 'dropped' ? new Set(campaign.items.map((i) => i.proposalId)) : new Set())
+    } catch {
+      setCampaignIds(new Set())
+    }
+  }, [])
+
   useEffect(() => {
     load()
-  }, [load])
+    loadCampaignTags()
+  }, [load, loadCampaignTags])
+
+  // The campaign panel and this list share decisions: either side announces a change and both reload.
+  useEffect(() => {
+    const onChange = () => {
+      load()
+      loadCampaignTags()
+    }
+    window.addEventListener(CAMPAIGN_CHANGED_EVENT, onChange)
+    return () => window.removeEventListener(CAMPAIGN_CHANGED_EVENT, onChange)
+  }, [load, loadCampaignTags])
 
   const changeView = (next: 'open' | 'history') => {
     if (next === view) return
@@ -362,7 +386,7 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
       } else {
         toast.success(edited ? 'Đã sửa và duyệt' : 'Đã duyệt và thực hiện')
       }
-      await load()
+      window.dispatchEvent(new Event(CAMPAIGN_CHANGED_EVENT))
       return null
     } catch {
       toast.error('Lỗi kết nối khi duyệt đề xuất')
@@ -435,7 +459,7 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
       }
       toast.success('Đã từ chối đề xuất')
       closeRejectModal()
-      await load()
+      window.dispatchEvent(new Event(CAMPAIGN_CHANGED_EVENT))
     } catch {
       setRejectError('Lỗi kết nối khi từ chối đề xuất')
     } finally {
@@ -555,7 +579,7 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
             const subjectById = new Map((item.subjects ?? []).map((s) => [s.id, s]))
 
             return (
-              <Card key={item.id} className={styles.card}>
+              <Card key={item.id} id={`proposal-${item.id}`} className={styles.card}>
                 <div className={styles.cardHeader}>
                   <div className={styles.cardHeading}>
                     <h2 className={styles.cardTitle}>{item.titleVi}</h2>
@@ -566,6 +590,7 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
                     </div>
                   </div>
                   <div className={styles.badges}>
+                    {campaignIds.has(item.id) && <Pill tone="blue" size="md">Trong chiến dịch hôm nay</Pill>}
                     {item.risk === 'high' ? (
                       <span className={styles.dangerPill}>{RISK_LABEL[item.risk]}</span>
                     ) : (

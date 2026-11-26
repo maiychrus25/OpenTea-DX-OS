@@ -4,6 +4,7 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { AgentBudgetBanner } from '@/components/features/agent/AgentBudgetBanner'
+import { CampaignPanel } from '@/components/features/agent/CampaignPanel'
 import { ProposalInbox } from '@/components/features/agent/ProposalInbox'
 import { TelegramHealthBanner } from '@/components/features/telegram/TelegramHealthBanner'
 import { cooperativeBudgetLevel } from '@/application/agent/agent-budget'
@@ -23,6 +24,7 @@ export default async function OfficerAiInboxPage() {
     <>
       <TelegramHealthBanner {...health} />
       <AgentBudgetBanner level={budgetLevel} />
+      <CampaignPanel />
       <ProposalInbox role="officer" />
     </>
   )

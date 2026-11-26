@@ -2,9 +2,14 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { getAction } from '@/application/agent/action-catalog'
+import { OPEN_CAMPAIGN_STATUSES, type ApproveCampaignResult } from '@/application/agent/campaign/ApproveCampaignUseCase'
+import { CampaignClosedError } from '@/application/agent/campaign/campaign-errors'
+import { vnDayOf } from '@/application/agent/campaign/vn-day'
 import type { DecideProposalInput, DecideProposalOutcome } from '@/application/agent/DecideProposalUseCase'
+import type { Campaign, CampaignItem } from '@/domain/agent/campaign'
+import type { CampaignRepository } from '@/domain/agent/ports/CampaignRepository'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
-import type { Proposal } from '@/domain/agent/proposal'
+import type { DecisionChannel, Proposal } from '@/domain/agent/proposal'
 import { DomainError } from '@/domain/errors'
 import { verifyCallbackData, verifyCallbackDataV2 } from '@/domain/telegram/callback-data'
 import { hashLinkCode, LINK_CODE_TTL_MS } from '@/domain/telegram/link-code'
@@ -67,6 +72,14 @@ export interface ChatServices {
   proposalMessages(htxCode: string, proposalIds: string[]): Promise<ProposalMessage[]>
 }
 
+/** The daily campaign's reads, its approve-all and drop, and its message for `/chiendich` (M7, contract C6). */
+export interface CampaignServices {
+  repo: Pick<CampaignRepository, 'findById' | 'findForDay' | 'items'>
+  approve: { execute(campaignId: string, tenant: Tenant, userName: string, channel: DecisionChannel, now?: Date): Promise<ApproveCampaignResult> }
+  drop: { execute(campaignId: string, tenant: Tenant, userName: string): Promise<void> }
+  message(htxCode: string, campaignId: string): Promise<{ text: string; buttons?: ReplyButtons } | null>
+}
+
 export interface TelegramUpdateHandlerDeps {
   repo: TelegramRepository
   proposals: Pick<ProposalRepository, 'findById'>
@@ -76,6 +89,7 @@ export interface TelegramUpdateHandlerDeps {
   htxProfileId: (htxCode: string) => Promise<string | null>
   callbackKey: string
   chat: ChatServices
+  campaigns: CampaignServices
   now?: () => Date
 }
 
@@ -199,6 +213,7 @@ export class TelegramUpdateHandler {
     const limit = await this.rateLimitState(fromId)
     if (limit !== 'ok') return limit === 'notice' ? { replies: [reply(chatId, TELEGRAM_TEXT.rateLimited)] } : EMPTY
     if (command === '/huy') return this.cancelOpen(fromId, chatId)
+    if (command === '/chiendich') return this.todaysCampaign(link, chatId)
 
     const open = await this.deps.repo.activeConversation(fromId, this.now())
     if (open?.kind === 'reject_reason') return this.receiveRejectReason(fromId, chatId, text)
@@ -316,6 +331,9 @@ export class TelegramUpdateHandler {
     }
 
     const parsed = v1!
+    if (parsed.op === 'A' || parsed.op === 'L' || parsed.op === 'D') {
+      return this.campaignPress(link, parsed.op, parsed.proposalId, callback.message.chat.id, callback.message.message_id ?? 0)
+    }
     if (parsed.op === 'r') {
       const access = await this.approverAccess(link, parsed.proposalId)
       if ('refusal' in access) return answer(access.refusal, true)
@@ -335,6 +353,87 @@ export class TelegramUpdateHandler {
 
     const result = await this.decideAs(link, parsed.proposalId, 'approve')
     return answer(result.text, result.showAlert)
+  }
+
+  /** `/chiendich`: today's campaign for a manager or officer; everyone else, or no campaign, gets the plain line. */
+  private async todaysCampaign(link: TelegramLink, chatId: number): Promise<UpdateResponse> {
+    const none: UpdateResponse = { replies: [reply(chatId, TELEGRAM_TEXT.noCampaignToday)] }
+    const user = await this.users.resolve(link)
+    if (!user || (user.tenant.role !== 'manager' && user.tenant.role !== 'officer')) return none
+    const campaign = await this.deps.campaigns.repo.findForDay(link.htxCode, vnDayOf(this.now()))
+    if (!campaign || campaign.status === 'dropped') return none
+    const message = await this.deps.campaigns.message(link.htxCode, campaign.id)
+    if (!message) return none
+    return { replies: [{ op: 'send', chat_id: chatId, text: message.text, buttons: message.buttons }] }
+  }
+
+  /** Approve all (A), list the open items (L) and drop (D) from a campaign message (contract C6). */
+  private async campaignPress(
+    link: TelegramLink,
+    op: 'A' | 'L' | 'D',
+    campaignId: string,
+    chatId: number,
+    messageId: number
+  ): Promise<UpdateResponse> {
+    const access = await this.campaignAccess(link, campaignId)
+    if ('refusal' in access) return answer(access.refusal, true)
+    if (!OPEN_CAMPAIGN_STATUSES.includes(access.campaign.status)) return answer(TELEGRAM_TEXT.campaignDone)
+
+    const { tenant } = access
+    const userName = link.userName ?? link.userId ?? ''
+    try {
+      if (op === 'L') return await this.listOpenItems(link.htxCode, campaignId, chatId)
+      if (op === 'D') {
+        await this.deps.campaigns.drop.execute(campaignId, tenant, userName)
+        return this.editCampaignMessage(chatId, messageId, TELEGRAM_TEXT.campaignDropped)
+      }
+      const result = await this.deps.campaigns.approve.execute(campaignId, tenant, userName, 'telegram', this.now())
+      return this.editCampaignMessage(chatId, messageId, TELEGRAM_TEXT.campaignApproved(result))
+    } catch (err) {
+      if (err instanceof CampaignClosedError) return answer(TELEGRAM_TEXT.campaignDone)
+      if (err instanceof DomainError) return answer(err.message, true)
+      throw err
+    }
+  }
+
+  /** The campaign and the approver's live tenant; only a manager or officer who is still enabled in the cooperative passes. */
+  private async campaignAccess(link: TelegramLink, campaignId: string): Promise<{ campaign: Campaign; tenant: Tenant } | Refusal> {
+    const campaign = await this.deps.campaigns.repo.findById(link.htxCode, campaignId)
+    if (!campaign) return { refusal: TELEGRAM_TEXT.campaignNotFound }
+
+    let live: LiveUserState | null
+    try {
+      live = await this.deps.roles.read(link.userId!)
+    } catch {
+      return { refusal: TELEGRAM_TEXT.roleCheckUnavailable }
+    }
+    const role = live?.enabled && live.htxCode === link.htxCode
+      ? (['manager', 'officer'] as const).find((r) => live!.roles.includes(r))
+      : undefined
+    if (!role) return { refusal: TELEGRAM_TEXT.campaignNotAllowed }
+
+    const htxProfileId = await this.deps.htxProfileId(link.htxCode)
+    if (!htxProfileId) return { refusal: TELEGRAM_TEXT.campaignNotAllowed }
+    return { campaign, tenant: { userId: link.userId!, role, htxCode: link.htxCode, htxProfileId } }
+  }
+
+  private async listOpenItems(htxCode: string, campaignId: string, chatId: number): Promise<UpdateResponse> {
+    const open = (await this.deps.campaigns.repo.items(htxCode, campaignId))
+      .filter((item: CampaignItem) => item.proposalStatus === 'proposed')
+      .map((item) => item.proposalId)
+    if (open.length === 0) return answer(TELEGRAM_TEXT.campaignNoOpenItems)
+    const messages = await this.deps.chat.proposalMessages(htxCode, open)
+    return {
+      replies: messages.map((m) => ({ op: 'send' as const, chat_id: chatId, text: m.text, buttons: m.buttons })),
+      answer_callback: { text: TELEGRAM_TEXT.campaignListed, show_alert: false },
+    }
+  }
+
+  private editCampaignMessage(chatId: number, messageId: number, text: string): UpdateResponse {
+    return {
+      replies: [{ op: 'edit', chat_id: chatId, edit_message_id: messageId, text }],
+      answer_callback: { text, show_alert: false },
+    }
   }
 
   /** Re-checks the approver now (role, enabled flag, cooperative), then runs the same decision as the inbox. */
