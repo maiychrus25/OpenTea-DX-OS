@@ -316,7 +316,7 @@ Manifest không khai `database` thì `./dxos install` không tạo role hay sche
 
 | Thiết lập | Giá trị |
 | --- | --- |
-| Mạng | chỉ `dxos-apps-net`: `internal: true`, nên không ra internet; ngoài các app chỉ có `apisix` và `postgres`. Mọi app đã cài dùng chung mạng này và gọi được nhau (§3) |
+| Mạng | chỉ `dxos-apps-net`: `internal: true`, nên không ra internet; ngoài các app chỉ có `apisix` và `postgres`. Mọi app đã cài dùng chung mạng này và gọi được nhau (§3). **Ngoại lệ: app do AI xây (id `gen-…`)** nằm trên mạng riêng `dxos-gen-<id>` (`internal: true`), chỉ có app đó, `apisix` và `postgres`, nên không gọi được app nào khác (xem dưới) |
 | Cổng ra máy chủ | không có |
 | User | `10001:10001`, bất kể `USER` của image |
 | Hệ thống tệp | `read_only: true`; chỉ `/tmp` (tmpfs) ghi được |
@@ -330,6 +330,13 @@ Hệ quả cho người viết app:
 - Cài thư viện **lúc build**; lúc chạy không có mạng ra ngoài.
 - App chỉ gọi được gateway (`apisix:9081`), Postgres (`postgres:5432`) và các app khác đã cài, không gọi được dịch vụ lõi nào khác.
 - Trong lõi, chỉ gateway gửi request tới app. Các app khác cùng mạng cũng gọi thẳng được app (§3), nên chỉ cài app tin cậy.
+
+**App do AI xây (M13, đặc tả §12.7).**
+- `app.yaml` có `generated: true` và id `gen-<tên>` (3 đến 30 ký tự `a-z`, `0-9`, `-`; kèm tiền tố `gen-`, id vẫn phải khớp mẫu id chung, tối đa 31 ký tự). `./dxos validate` từ chối `generated: true` với id khác dạng đó, id `gen-…` thiếu `generated: true`, và khối `agent.actions` của app `generated` (H2).
+- File compose của app đặt nó trên mạng `dxos-gen-<id>` thay vì `dxos-apps-net`, và thêm mạng đó vào `apisix` và `postgres`. `./dxos install`, `upgrade` và `worker` nối thêm các container đang chạy của hai dịch vụ này vào mạng (`docker network connect`); `./dxos remove` ngắt và xoá mạng.
+- Hạn chế: tạo lại `apisix` hoặc `postgres` làm mất kết nối này, tới khi chạy lại `./dxos worker` (hoặc `install`/`upgrade` của app).
+- Thư mục `miniapps/` không nhận app `generated: true`: `catalog-sync` bỏ qua. App chỉ vào kho qua builder (`cli builder-finish ... passed`), kèm `owner_htx` của HTX yêu cầu. Dòng kho có `owner_htx` không bị `catalog-sync` xoá hay ghi đè.
+- Worker cài từ bản xuất `docker/runtime/<project>/generated/<id>/<version>/` và từ chối (`FAILED`, `Bản này chưa qua kiểm tra hoặc không thuộc HTX này`) khi HTX yêu cầu khác `owner_htx`, bản xây chưa `passed` hoặc yêu cầu chưa có đặc tả đã duyệt.
 
 ## 8. Lệnh `./dxos`
 
