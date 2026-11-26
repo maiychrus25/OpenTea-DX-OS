@@ -95,6 +95,15 @@ export class PrismaStaffSyncRepository implements StaffSyncRepository {
     })
   }
 
+  async isActive(htxCode: string, staffRef: string): Promise<boolean> {
+    const rows = await prisma.$queryRaw<{ found: boolean }[]>`
+      SELECT EXISTS (
+        SELECT 1 FROM platform.staff_roster WHERE htx_code = ${htxCode} AND staff_ref = ${staffRef} AND active
+      ) AS found
+    `
+    return rows[0]?.found === true
+  }
+
   async activeRoster(htxCode: string): Promise<RosterEntry[]> {
     const rows = await prisma.$queryRaw<{ staff_ref: string; name: string; department: string | null }[]>`
       SELECT staff_ref, name, department

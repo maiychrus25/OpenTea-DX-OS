@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { z } from 'zod'
+import { DomainError } from '@/domain/errors'
+import { PrismaStaffSyncRepository } from '@/infrastructure/db/agent/PrismaStaffSyncRepository'
 import type { ActionDefinition } from '../action-catalog'
 import { isRealDay } from '../campaign/vn-day'
 import { isEvidenceStale } from './journal-evidence'
@@ -16,7 +18,7 @@ const staffTaskPayloadSchema = z.object({
   note_vi: z.string().max(500).optional(),
   parcel_id: z.string().min(1).optional(),
   due_date: z.string().regex(DAY_RE).refine(isRealDay, 'real date'),
-  assignee_ref: z.string().min(1).max(100).optional(),
+  assignee_ref: z.string().min(1).max(64),
   source: z.object({ kind: z.string().min(1).max(64), proposal_id: z.string().min(1).optional() }).strict(),
 }).strict()
 
@@ -47,7 +49,7 @@ export const staffTaskCreateAction: ActionDefinition<StaffTaskCreatePayload> = {
   expiresAfterHours: 24,
   preview(payload) {
     const lines = [payload.title_vi, `Hạn: ${viDate(payload.due_date)}`]
-    if (payload.assignee_ref) lines.push(`Người nhận: ${payload.assignee_ref}`)
+    lines.push(`Người nhận: ${payload.assignee_ref}`)
     if (payload.note_vi) lines.push(payload.note_vi)
     return lines
   },
@@ -57,7 +59,11 @@ export const staffTaskCreateAction: ActionDefinition<StaffTaskCreatePayload> = {
   async isStale(_payload, evidence, ctx) {
     return isEvidenceStale(evidence, ctx.htxCode, ctx.loaders)
   },
-  async execute() {
+  async execute(payload, approver) {
+    // The roster may have changed since the agent proposed; the staff app cannot take a task without an active assignee.
+    if (!(await new PrismaStaffSyncRepository().isActive(approver.htxCode, payload.assignee_ref))) {
+      throw new DomainError('Người nhận việc không còn trong danh sách nhân sự đang làm. Chọn người khác rồi duyệt lại.')
+    }
     return { state: WAITING_FOR_STAFF_APP }
   },
 }

@@ -27,6 +27,7 @@ export interface StaffSyncRepository {
   /** Upserts the given staff and marks every other row of the cooperative inactive. */
   replaceRoster(htxCode: string, staff: RosterEntry[]): Promise<void>
   saveAttendance(htxCode: string, day: string, present: number): Promise<void>
+  isActive(htxCode: string, staffRef: string): Promise<boolean>
   activeRoster(htxCode: string): Promise<RosterEntry[]>
   /** The present count reported for a Vietnam day, or null when nothing was reported. */
   attendance(htxCode: string, day: string): Promise<number | null>
