@@ -99,12 +99,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      {/* Coop */}
+      {/* Who is signed in, and for which cooperative: a farmer's card says so first. */}
       <div className={styles.coop}>
-        <span className={styles.coopBadge}>HTX</span>
+        <span className={styles.coopBadge}>{role === 'farmer' ? 'ND' : 'HTX'}</span>
         <div className={styles.coopText}>
-          <strong>{htxName || 'Đang tải...'}</strong>
-          <small>{htxLocation || '---'}</small>
+          <strong>{role === 'farmer' ? 'Nông dân' : htxName || 'Đang tải...'}</strong>
+          <small>{(role === 'farmer' ? htxName : htxLocation) || '---'}</small>
         </div>
       </div>
 

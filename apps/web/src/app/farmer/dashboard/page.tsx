@@ -4,13 +4,14 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Cloud, CloudRain, Droplet, Sprout, PenLine, Camera, FileText, History, Sparkles, BookOpen, Store } from 'lucide-react'
+import { Sprout, PenLine, Camera, FileText, History, Sparkles, BookOpen, Store } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
-import { HeroBanner, AlertBar, EmptyState } from '@/components/ui'
+import { AlertBar, EmptyState } from '@/components/ui'
+import { WeatherHero } from '@/components/features/farmer-web/WeatherHero'
 import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 
@@ -132,7 +133,7 @@ export default async function FarmerDashboard() {
             parcel: { select: { parcel_code: true } },
           },
         }),
-        prisma.htxProfile.findUnique({ where: { id: htxProfileId }, select: { name: true } }),
+        prisma.htxProfile.findUnique({ where: { id: htxProfileId }, select: { name: true, address: true } }),
       ])
     : [[], null]
 
@@ -152,7 +153,7 @@ export default async function FarmerDashboard() {
   return (
     <main className={`${kit.page} ${styles.page}`}>
       <div className={styles.hero}>
-        <HeroBanner
+        <WeatherHero
           eyebrow={['Nông hộ', htx?.name].filter(Boolean).join(' · ')}
           title={`${getGreeting()}, ${session.user.name || 'Nông dân'}`}
           subtitle="Chúc bạn một ngày làm việc hiệu quả!"
@@ -161,6 +162,8 @@ export default async function FarmerDashboard() {
             { href: '/farmer/journal', label: 'Xem lịch sử', icon: <History size={16} aria-hidden="true" /> },
             { href: '/farmer/diagnosis', label: 'Chẩn đoán bệnh', icon: <Camera size={16} aria-hidden="true" /> },
           ]}
+          place={htx?.address ?? ''}
+          cached={weather && condition ? { temperature: weather.temperature_c, condition, humidity: weather.humidity_pct, rainMm: weather.precipitation_mm ?? 0 } : null}
         />
       </div>
 
@@ -207,24 +210,6 @@ export default async function FarmerDashboard() {
         </section>
 
         <div className={`${kit.stack} ${styles.side}`}>
-          <section className={`${kit.pn} ${styles.weather}`} data-testid="weather-widget">
-            <div className={kit.ph}><h2>Thời tiết hiện tại</h2></div>
-            {!weather ? (
-              <p className={styles.empty}>Chưa có dữ liệu thời tiết cho khu vực của bạn.</p>
-            ) : (
-              <div className={styles.weatherBody}>
-                <div className={styles.now}>
-                  <Cloud size={52} aria-hidden="true" />
-                  <span><strong>{weather.temperature_c.toLocaleString('vi-VN')}°C</strong><br />{condition}</span>
-                </div>
-                <div className={styles.readings}>
-                  <div><span>Độ ẩm</span><strong><Droplet size={16} aria-hidden="true" />{weather.humidity_pct}%</strong></div>
-                  <div><span>Lượng mưa</span><strong><CloudRain size={16} aria-hidden="true" />{weather.precipitation_mm} mm</strong></div>
-                </div>
-              </div>
-            )}
-          </section>
-
           <section className={`${kit.pn} ${styles.recent}`} aria-label="Nhật ký gần đây">
             <div className={kit.ph}><h2>Nhật ký gần đây</h2><Link href="/farmer/journal">Xem tất cả</Link></div>
             {entries.length === 0 ? (

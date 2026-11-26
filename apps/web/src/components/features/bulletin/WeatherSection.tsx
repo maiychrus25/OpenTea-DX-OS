@@ -15,7 +15,7 @@ interface Place {
   weather: WeatherDetail
 }
 
-function WeatherIcon({ code, isDay = true, size = 22 }: { code: number; isDay?: boolean; size?: number }) {
+export function WeatherIcon({ code, isDay = true, size = 22 }: { code: number; isDay?: boolean; size?: number }) {
   const Icon =
     code === 0 ? (isDay ? Sun : Moon)
     : code <= 2 ? (isDay ? CloudSun : CloudMoon)
@@ -107,7 +107,7 @@ export function WeatherSection() {
   )
 }
 
-const isRainy = (code: number) => (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95
+export const isRainy = (code: number) => (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95
 
 function WeatherCard({ place, area, open, onToggle }: { place: Place; area: string; open: boolean; onToggle: () => void }) {
   const [showMore, setShowMore] = useState(false)

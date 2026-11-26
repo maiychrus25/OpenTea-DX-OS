@@ -75,4 +75,12 @@ describe('Sidebar Component', () => {
       expect(current[0]).toHaveTextContent('Sổ của HTX')
     })
   })
+
+  it('names a farmer as a farmer, with the cooperative under it', () => {
+    render(<Sidebar navItems={mockItems} role="farmer" htxName="HTX Tân Cương" htxLocation="Thái Nguyên" onClose={() => {}} />)
+    const card = screen.getByText('ND').parentElement!
+    expect(card).toHaveTextContent('Nông dân')
+    expect(card).toHaveTextContent('HTX Tân Cương')
+    expect(card).not.toHaveTextContent('Thái Nguyên')
+  })
 })

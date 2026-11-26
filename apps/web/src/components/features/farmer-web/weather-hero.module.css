@@ -1,0 +1,33 @@
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+/* The photo keeps the position RainCanvas assumes, so the drops on the pane bend the same part of it. */
+.hero { position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; min-height: 300px; padding: 28px 32px; overflow: hidden; border-radius: var(--radius-hero); color: var(--color-hero-text); background: linear-gradient(90deg, color-mix(in srgb, var(--color-hero-bg) 88%, transparent), color-mix(in srgb, var(--color-hero-bg) 45%, transparent) 50%, color-mix(in srgb, var(--color-hero-bg) 12%, transparent)), url('/images/tea-hills-rain.jpg') center 62% / cover, var(--color-hero-bg); }
+/* Behind the words and the card, so the drops never blur the greeting. */
+.rain { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.rain canvas { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--color-hero-text); }
+
+.content { position: relative; z-index: 1; flex: 1 1 380px; min-width: 0; }
+.eyebrow { display: flex; align-items: center; gap: 12px; margin: 0 0 8px; font-size: var(--font-size-meta); font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; }
+.eyebrow::before { content: ''; width: 4px; height: 22px; border-radius: 2px; background: var(--accent-lime); }
+.title { margin: 0; font-size: var(--font-size-hero-title); font-weight: 800; line-height: 1.15; color: var(--color-hero-text); }
+.subtitle { margin: 10px 0 0; font-size: 16px; color: var(--color-hero-muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.primary, .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--button-height); padding: 0 18px; border-radius: var(--radius-button); font-weight: 700; text-decoration: none; }
+.primary { background: var(--accent-lime); color: var(--color-hero-bg); }
+.primary:hover { color: var(--color-hero-bg); }
+.secondary { border: 1px solid color-mix(in srgb, var(--color-hero-text) 35%, transparent); background: color-mix(in srgb, var(--color-hero-text) 12%, transparent); color: var(--color-hero-text); }
+.secondary:hover { color: var(--color-hero-text); }
+
+.card { position: relative; z-index: 1; display: flex; flex: 0 1 290px; flex-direction: column; gap: 12px; padding: 18px 22px; border: 1px solid color-mix(in srgb, var(--color-hero-text) 28%, transparent); border-radius: var(--radius-card); background: color-mix(in srgb, var(--color-hero-bg) 45%, transparent); backdrop-filter: blur(6px); }
+.card p { margin: 0; }
+.place { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-meta); }
+.now { display: flex; align-items: center; justify-content: center; gap: 20px; }
+.now > span { display: flex; flex-direction: column; }
+.now strong { font-size: 40px; font-weight: 800; line-height: 1.1; }
+.readings { display: grid; grid-template-columns: 1fr 1fr; margin: 0; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--color-hero-text) 25%, transparent); }
+.readings div + div { padding-left: 18px; border-left: 1px solid color-mix(in srgb, var(--color-hero-text) 25%, transparent); }
+.readings dt { font-size: var(--font-size-meta); color: var(--color-hero-muted); }
+.readings dd { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; font-size: 18px; font-weight: 800; }
+.forecast { display: inline-flex; align-items: center; align-self: flex-end; gap: 6px; font-size: var(--font-size-meta); font-weight: 700; color: var(--accent-lime); text-decoration: none; }
+.forecast:hover { color: var(--accent-lime); }
