@@ -41,7 +41,7 @@ export const SCREENSHOT_NAMES = BUILD_FILE_NAMES.filter((name) => name.endsWith(
 
 export const MAX_QUESTIONS = 5
 export const MAX_QUESTION_LENGTH = 160
-export const GENERATED_APP_ID_PATTERN = /^gen-[a-z0-9-]{3,30}$/
+export const GENERATED_APP_ID_PATTERN = /^gen-[a-z0-9-]{3,27}$/
 
 export interface AppBuildRequest {
   id: string

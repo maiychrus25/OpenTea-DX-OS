@@ -12,8 +12,8 @@ import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
 export const dynamic = 'force-dynamic'
 
-// The pattern of "id" in platform/apps/manifest.schema.json, longer by the 10 characters a generated app's `gen-` id adds. Any other field of the body (an HTX included) is ignored.
-const bodySchema = z.object({ appId: z.string().regex(/^[a-z][a-z0-9-]{1,40}$/), action: z.enum(['ENABLE', 'DISABLE']) })
+// Same pattern as "id" in platform/apps/manifest.schema.json. Any other field of the body (an HTX included) is ignored.
+const bodySchema = z.object({ appId: z.string().regex(/^[a-z][a-z0-9-]{1,30}$/), action: z.enum(['ENABLE', 'DISABLE']) })
 
 async function postRequest(request: Request) {
   const session = await auth()

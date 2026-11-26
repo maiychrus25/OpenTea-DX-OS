@@ -13,8 +13,8 @@ import { PrismaAppStoreRepository } from '@/infrastructure/db/repositories/prism
 import type { ActionDefinition } from '../action-catalog'
 import { isEvidenceStale } from './journal-evidence'
 
-/** The store accepts ids of up to 31 characters; a generated app's `gen-` id is up to 34. */
-export const MINIAPP_ID_PATTERN = /^[a-z][a-z0-9-]{1,40}$/
+/** The pattern of "id" in platform/apps/manifest.schema.json (31 characters at most, `gen-` ids included). */
+export const MINIAPP_ID_PATTERN = /^[a-z][a-z0-9-]{1,30}$/
 export const miniappPayloadSchema = z.object({ app_id: z.string().regex(MINIAPP_ID_PATTERN) }).strict()
 
 export type MiniappInstallPayload = z.infer<typeof miniappPayloadSchema>
