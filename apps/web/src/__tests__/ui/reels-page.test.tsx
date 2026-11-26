@@ -10,7 +10,7 @@ beforeAll(() => {
   window.HTMLMediaElement.prototype.pause = jest.fn()
 })
 
-const show = () => render(<ReelsPage userName="Trần Thị Lan" role="officer" />)
+const show = () => render(<ReelsPage userName="Trần Thị Lan" />)
 
 describe('ReelsPage', () => {
   it('likes a reel and opens the comments to add and reply', () => {
@@ -28,14 +28,23 @@ describe('ReelsPage', () => {
     expect(screen.getByText('Đúng rồi, búp đều lắm.')).toBeInTheDocument()
   })
 
-  it('keeps posting and own videos under "Cá nhân", and plays the one chosen', () => {
-    show()
-    expect(screen.queryByRole('button', { name: 'Đăng video' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Thoát Reels' })).toHaveAttribute('href', '/officer/dashboard')
+  it('hides and shows the side menu', () => {
+    const { container } = show()
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn menu' }))
+    expect(container.querySelector('[data-reels]')).toHaveAttribute('data-menu', 'hidden')
+    fireEvent.click(screen.getByRole('button', { name: 'Hiện menu' }))
+    expect(container.querySelector('[data-reels]')).toHaveAttribute('data-menu', 'shown')
+  })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cá nhân' }))
+  it('keeps posting and own videos under "Hồ sơ", and opens the file chooser at once', () => {
+    const chooser = jest.spyOn(window.HTMLInputElement.prototype, 'click')
+    show()
+    fireEvent.click(screen.getByRole('button', { name: 'Hồ sơ' }))
     expect(screen.getByRole('heading', { name: 'Trần Thị Lan' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Đăng video' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng video' }))
+    expect(chooser).toHaveBeenCalled()
+    chooser.mockRestore()
 
     fireEvent.click(screen.getByRole('button', { name: 'Xem Sao chè thủ công' }))
     expect(screen.getByText('hoangvanson')).toBeInTheDocument()

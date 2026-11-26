@@ -4,8 +4,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, Bookmark, ChevronDown, ChevronUp, Heart, MessageCircle, MoreHorizontal, Music2, Pause, Play, Plus, Share2, Trash2, User, Volume2, VolumeX } from 'lucide-react'
+import { ArrowLeft, Bookmark, ChevronDown, ChevronUp, Heart, MessageCircle, MoreHorizontal, Music2, PanelLeftClose, PanelLeftOpen, Pause, Play, Plus, Share2, Trash2, User, Volume2, VolumeX } from 'lucide-react'
 import { CommentsPanel } from './CommentsPanel'
 import { PostDialog } from './PostDialog'
 import { Reel, ReelComment, SAMPLE_REELS, clock, countLabel, handle, initials } from './data'
@@ -16,7 +15,7 @@ const SPEEDS = [1, 1.5, 2, 0.5]
 // Posted clips outlive moving between pages, but not a reload.
 let sessionReels: Reel[] = []
 
-export function ReelsPage({ userName, role }: { userName: string; role: 'farmer' | 'officer' | 'manager' }) {
+export function ReelsPage({ userName }: { userName: string }) {
   const [posted, setPosted] = useState<Reel[]>(() => sessionReels)
   const [view, setView] = useState<'feed' | 'profile'>('feed')
   const [index, setIndex] = useState(0)
@@ -36,6 +35,8 @@ export function ReelsPage({ userName, role }: { userName: string; role: 'farmer'
   const [added, setAdded] = useState<Record<string, ReelComment[]>>({})
   const [notice, setNotice] = useState('')
   const [posting, setPosting] = useState(false)
+  const [sideMenu, setSideMenu] = useState(true)
+  const [shelf, setShelf] = useState<'mine' | 'liked' | 'saved'>('mine')
   const video = useRef<HTMLVideoElement>(null)
   const player = useRef<HTMLDivElement>(null)
   const lastScroll = useRef(0)
@@ -43,6 +44,11 @@ export function ReelsPage({ userName, role }: { userName: string; role: 'farmer'
 
   const reels = [...posted, ...SAMPLE_REELS]
   const mine = reels.filter((r) => r.mine)
+  const shelves = {
+    mine: { label: 'Video', reels: mine, empty: 'Bạn chưa đăng video nào.' },
+    liked: { label: 'Đã thích', reels: reels.filter((r) => liked.includes(r.id)), empty: 'Video bạn thả tim sẽ hiện ở đây.' },
+    saved: { label: 'Đã lưu', reels: reels.filter((r) => saved.includes(r.id)), empty: 'Video bạn lưu sẽ hiện ở đây.' },
+  }
   const current = Math.min(index, reels.length - 1)
   const reel = reels[current]
   const isLiked = liked.includes(reel.id)
@@ -147,36 +153,55 @@ export function ReelsPage({ userName, role }: { userName: string; role: 'farmer'
   }
 
   return (
-    <div className={styles.page} data-reels={view}>
-      {view === 'profile' ? (
-        <section aria-label="Cá nhân" className={styles.profile}>
+    <div className={styles.page} data-reels={view} data-menu={sideMenu ? 'shown' : 'hidden'}>
+      <div className={styles.corner}>
+        <button type="button" className={`${styles.round} ${styles.menuToggle}`} aria-label={sideMenu ? 'Ẩn menu' : 'Hiện menu'} onClick={() => setSideMenu(!sideMenu)}>
+          {sideMenu ? <PanelLeftClose size={19} aria-hidden="true" /> : <PanelLeftOpen size={19} aria-hidden="true" />}
+        </button>
+        {view === 'profile' && (
           <button type="button" className={styles.round} aria-label="Quay lại Reels" onClick={() => setView('feed')}>
             <ArrowLeft size={20} aria-hidden="true" />
           </button>
-          <div className={styles.profileInner}>
-            <span className={styles.profileAvatar} aria-hidden="true">{initials(userName)}</span>
-            <h1>{userName}</h1>
-            <p className={styles.profileHandle}>@{handle(userName)}</p>
-            <dl className={styles.profileStats}>
-              <div><dt>Video</dt><dd>{mine.length}</dd></div>
-              <div><dt>Lượt tim</dt><dd>{countLabel(mine.reduce((sum, r) => sum + r.likes + (liked.includes(r.id) ? 1 : 0), 0))}</dd></div>
-              <div><dt>Đang theo dõi</dt><dd>{followed.length}</dd></div>
-            </dl>
-            <button type="button" className={styles.post} onClick={() => setPosting(true)}>
-              <Plus size={18} aria-hidden="true" /> Đăng video
-            </button>
-            <p className={styles.profileNote}>Video đăng chỉ lưu trong phiên này.</p>
+        )}
+      </div>
 
-            <h2>Video của tôi</h2>
+      {view === 'profile' ? (
+        <section aria-label="Hồ sơ" className={styles.profile}>
+          <div className={styles.profileInner}>
+            <header className={styles.profileHead}>
+              <span className={styles.profileAvatar} aria-hidden="true">{initials(userName)}</span>
+              <div>
+                <h1>{userName}</h1>
+                <p className={styles.profileHandle}>@{handle(userName)}</p>
+                <button type="button" className={styles.post} onClick={() => setPosting(true)}>
+                  <Plus size={18} aria-hidden="true" /> Đăng video
+                </button>
+                <dl className={styles.profileStats}>
+                  <div><dt>Video</dt><dd>{mine.length}</dd></div>
+                  <div><dt>Đang theo dõi</dt><dd>{followed.length}</dd></div>
+                  <div><dt>Thích</dt><dd>{countLabel(mine.reduce((sum, r) => sum + r.likes + (liked.includes(r.id) ? 1 : 0), 0))}</dd></div>
+                </dl>
+                <p className={styles.profileNote}>Video đăng chỉ lưu trong phiên này.</p>
+              </div>
+            </header>
+
+            <div className={styles.shelves}>
+              {(['mine', 'liked', 'saved'] as const).map((key) => (
+                <button key={key} type="button" aria-pressed={shelf === key} onClick={() => setShelf(key)}>
+                  {shelves[key].label}
+                </button>
+              ))}
+            </div>
+            {shelves[shelf].reels.length === 0 && <p className={styles.profileNote}>{shelves[shelf].empty}</p>}
             <ul className={styles.grid}>
-              {mine.map((r) => (
+              {shelves[shelf].reels.map((r) => (
                 <li key={r.id}>
                   <button type="button" className={styles.tile} onClick={() => watch(r)} aria-label={`Xem ${r.title}`}>
-                    <video src={r.src} poster={r.poster} muted playsInline preload="metadata" />
-                    <span className={styles.tileText}>
-                      <strong>{r.title}</strong>
-                      <span><Heart size={11} fill="currentColor" aria-hidden="true" /> {countLabel(r.likes)}</span>
+                    <span className={styles.thumb}>
+                      <video src={r.src} poster={r.poster} muted playsInline preload="metadata" />
+                      <span><Heart size={13} aria-hidden="true" /> {countLabel(r.likes + (liked.includes(r.id) ? 1 : 0))}</span>
                     </span>
+                    {r.title}
                   </button>
                   {r.posted && (
                     <button type="button" className={styles.remove} onClick={() => remove(r)} aria-label={`Xoá ${r.title}`}>
@@ -218,11 +243,8 @@ export function ReelsPage({ userName, role }: { userName: string; role: 'farmer'
               <span className={styles.bigPlay} data-playing={!paused}><Play size={22} fill="currentColor" aria-hidden="true" /></span>
             </button>
 
-            <Link href={`/${role}/dashboard`} className={`${styles.round} ${styles.exit}`} aria-label="Thoát Reels">
-              <ArrowLeft size={20} aria-hidden="true" />
-            </Link>
             <button type="button" className={styles.me} onClick={() => setView('profile')}>
-              <User size={17} aria-hidden="true" /> Cá nhân
+              <User size={17} aria-hidden="true" /> Hồ sơ
             </button>
 
             <div className={styles.side}>

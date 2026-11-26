@@ -4,6 +4,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
+import { Upload } from 'lucide-react'
 import styles from './reels.module.css'
 
 const MAX_SECONDS = 60
@@ -16,19 +17,27 @@ export function PostDialog({ onClose, onPost }: { onClose: () => void; onPost: (
   const [error, setError] = useState('')
   const dialog = useRef<HTMLDialogElement>(null)
   const posted = useRef(false)
+  const file = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     dialog.current?.showModal?.()
+    // Straight to the file chooser: the click that opened this dialog still counts as the user's.
+    file.current?.click()
   }, [])
   // A picked file that was never posted is released again.
   useEffect(() => () => {
     if (src && !posted.current) URL.revokeObjectURL(src)
   }, [src])
 
-  const pick = (file?: File) => {
+  const pick = (picked?: File) => {
     setSeconds(null)
     setError('')
-    setSrc(file ? URL.createObjectURL(file) : '')
+    if (picked && !picked.type.startsWith('video/')) {
+      setError('Tệp này không phải video. Hãy chọn tệp khác.')
+      setSrc('')
+      return
+    }
+    setSrc(picked ? URL.createObjectURL(picked) : '')
   }
 
   const ready = Boolean(src) && seconds !== null && seconds <= MAX_SECONDS && Boolean(title.trim())
@@ -44,9 +53,18 @@ export function PostDialog({ onClose, onPost }: { onClose: () => void; onPost: (
         }}
       >
         <h2 id="post-video-title">Đăng video</h2>
-        <label className={styles.field}>
-          Chọn video
-          <input type="file" accept="video/*" onChange={(event) => pick(event.target.files?.[0])} />
+        <label
+          className={styles.drop}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault()
+            pick(event.dataTransfer.files[0])
+          }}
+        >
+          <Upload size={26} aria-hidden="true" />
+          <strong>{src ? 'Chọn video khác' : 'Chọn video để tải lên'}</strong>
+          <span>Bấm vào đây hoặc kéo thả tệp</span>
+          <input ref={file} type="file" accept="video/*" aria-label="Chọn video" onChange={(event) => pick(event.target.files?.[0])} />
         </label>
         {src && (
           <video

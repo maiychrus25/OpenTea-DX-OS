@@ -9,5 +9,5 @@ export const metadata = { title: 'Reels' }
 
 export default async function Page() {
   const session = await auth()
-  return <ReelsPage userName={session?.user.name || 'Tôi'} role="officer" />
+  return <ReelsPage userName={session?.user.name || 'Tôi'} />
 }
