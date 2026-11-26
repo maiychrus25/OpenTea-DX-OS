@@ -340,6 +340,16 @@ def test_generated_app_may_not_declare_agent_actions(valid):
     # H2, test 29: an app a person did not write may not act for the cooperative.
     data = with_agent(valid)
     assert errors({**data, "generated": False}, core="1.8.0") == []
-    errs = errors({**data, "generated": True}, core="1.8.0")
+    errs = errors({**data, "id": "gen-tea-log", "generated": True}, core="1.8.0")
     assert len(errs) == 1 and "generated" in errs[0] and "agent.actions" in errs[0]
-    assert errors({**valid, "generated": True}, core="1.8.0") == []
+    assert errors({**valid, "id": "gen-tea-log", "generated": True}, core="1.8.0") == []
+
+
+def test_generated_flag_and_gen_prefix_go_together(valid):
+    # M13: only a builder-made app may take a gen- id, and it must say so; the id picks its private network.
+    errs = errors({**valid, "generated": True}, core="1.8.0")
+    assert len(errs) == 1 and "gen-" in errs[0]
+    errs = errors({**valid, "id": "gen-tea-log"}, core="1.8.0")
+    assert len(errs) == 1 and "generated" in errs[0]
+    assert errors({**valid, "id": "gen-tea-log", "generated": False}, core="1.8.0") != []
+    assert errors({**valid, "id": "gen-ab", "generated": True}, core="1.8.0") != []  # too short after the prefix
