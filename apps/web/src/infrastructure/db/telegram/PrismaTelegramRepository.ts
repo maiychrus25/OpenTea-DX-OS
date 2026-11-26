@@ -250,7 +250,7 @@ export class PrismaTelegramRepository implements TelegramRepository {
     const state = JSON.stringify(flow.state)
     await this.write(`telegram:user:${flow.telegramUserId}`, (tx) => tx.$executeRaw`
       INSERT INTO platform.telegram_conversations (telegram_user_id, kind, proposal_id, expires_at, flow, step, state, token, card_message_id)
-      VALUES (${flow.telegramUserId}::bigint, 'flow', NULL, ${flow.expiresAt}, ${flow.flow}, ${flow.step}, ${state}::jsonb,
+      VALUES (${flow.telegramUserId}::bigint, ${flow.kind ?? 'flow'}, NULL, ${flow.expiresAt}, ${flow.flow}, ${flow.step}, ${state}::jsonb,
               ${flow.token}, ${flow.cardMessageId}::bigint)
       ON CONFLICT (telegram_user_id) DO UPDATE
         SET kind = EXCLUDED.kind, proposal_id = NULL, expires_at = EXCLUDED.expires_at, flow = EXCLUDED.flow,
