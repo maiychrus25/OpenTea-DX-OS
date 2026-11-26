@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "platform" / "tests"
 SHELL_SCRIPTS = [
     "smoke-telegram.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh",
-    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-autopilot.sh", "smoke-app-actions.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
+    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-autopilot.sh", "smoke-app-actions.sh", "smoke-builder.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
 ]
 
 
@@ -276,3 +276,39 @@ def test_app_actions_smoke_approves_from_the_recorded_keyboard_and_signs_nothing
                    "test 16", "app.tea-shop.promotion.create"):
         assert needle in text, needle
     assert "callback_sign" not in text and "hmac" not in text
+
+
+def builder_smoke():
+    return (TESTS / "smoke-builder.sh").read_text(encoding="utf-8")
+
+
+def test_builder_smoke_is_a_job_of_its_own_and_stays_out_of_the_other_smokes():
+    # The image is large, so CI runs it in a separate job (plan M13); it must not sit in the agentic or platform counts.
+    for name in ("smoke-agentic.sh", "smoke-platform.sh", "smoke-agent.sh"):
+        assert "smoke-builder.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_builder_smoke_uses_the_replay_tool_and_the_replay_agent_and_never_a_real_key():
+    text = builder_smoke()
+    assert "replay:fertiliser-stock" in text and "DXOS_AGENT_PROVIDER: replay" in text
+    assert "ANTHROPIC_API_KEY" not in text and "OPENAI_API_KEY" not in text
+
+
+def test_builder_smoke_covers_tests_26_to_30():
+    text = builder_smoke()
+    for needle in ("test 26", "test 27", "test 28", "test 29", "test 30", "with-script", "extra-dependency", "with-agent-actions",
+                   "env-probe.json", "sendMediaGroup", "apisix:9081", "example.com"):
+        assert needle in text, needle
+
+
+def test_builder_smoke_stops_the_agent_before_seeding_and_removes_what_it_made_on_exit():
+    text = builder_smoke()
+    assert text.index("stop dxos-agent") < text.index("delete from platform.app_catalog where owner_htx is null")
+    assert "trap builder_cleanup EXIT" in text
+    for needle in ('./dxos remove "$APP_ID" --purge', 'rm -rf "generated-apps/TC"', "delete from platform.app_build_requests"):
+        assert needle in text, needle
+
+
+def test_builder_smoke_signs_nothing_and_presses_the_button_the_stub_recorded():
+    text = builder_smoke()
+    assert "telegram_approve_data_for" in text and "hmac" not in text.lower()
