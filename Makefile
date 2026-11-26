@@ -114,6 +114,11 @@ lint:
 	actionlint
 	bash scripts/appkit-sync.sh --check
 
+# Runs every agent scenario suite with one provider and appends the table to docs/benchmark.md (how to run it is there).
+.PHONY: benchmark
+benchmark:
+	uv run --no-project --python 3.12 platform/agent/benchmark.py --provider $(or $(PROVIDER),replay) $(if $(MODEL),--model $(MODEL))
+
 # Copy platform/appkit/appkit.py and kit.html into every app that uses the kit.
 appkit-sync:
 	bash scripts/appkit-sync.sh
