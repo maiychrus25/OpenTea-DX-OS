@@ -6,11 +6,10 @@ import styles from '@/components/features/farmer-web/kit.module.css'
 
 export const metadata = { title: "Phiếu cân búp tươi" }
 
-/** Laid out as designed; there is no data source yet, so everything on it is sample content. */
+/** Laid out as designed. There is no data source yet: every figure and message here is fixed placeholder content. */
 export default function FarmerLeafTicketsPage() {
   return (
     <div className={styles.page}>
-      <p className={styles.sample} role="note">Dữ liệu mẫu: khối lượng và số tiền dưới đây không phải của hộ bạn.</p>
 <div className={[styles["hd"]].join(' ')}>
 <span className={[styles["hico"]].join(' ')}>
 <svg aria-hidden="true" width={"28"} height={"28"} viewBox={"0 0 24 24"} fill={"none"} stroke={"currentColor"} strokeWidth={"2"} strokeLinecap={"round"} strokeLinejoin={"round"}>

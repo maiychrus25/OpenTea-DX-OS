@@ -45,7 +45,6 @@ a.btn2, a.btn2:hover { color: var(--color-ink-primary); }
 .warn { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-warning-subtle)); border-radius: 14px; background: var(--color-warning-subtle); color: var(--color-warning); font-size: 14px; }
 .warn a { color: inherit; font-weight: 700; text-decoration: none; }
 .note { display: flex; gap: 10px; padding: 14px; border-radius: 14px; background: var(--color-info-subtle); color: var(--color-info); font-size: 13px; line-height: 1.55; }
-.sample { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border: 1px dashed var(--color-accent); border-radius: 12px; background: var(--color-warning-subtle); color: var(--color-warning); font-size: 13px; font-weight: 600; }
 
 @media (max-width: 767px) {
   .two, .three { grid-template-columns: 1fr !important; }
