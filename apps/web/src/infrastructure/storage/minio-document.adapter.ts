@@ -143,6 +143,15 @@ export class MinioDocumentAdapter implements DocumentStoragePort {
     })
   }
 
+  /** The raw bytes of an object, for binary files such as chat photos (getDocumentContent decodes UTF-8 text). */
+  async downloadDocument(key: string): Promise<Buffer> {
+    await this.ensureBucketExists()
+    const stream = await this.minioClient.getObject(this.bucketName, key)
+    const chunks: Buffer[] = []
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk))
+    return Buffer.concat(chunks)
+  }
+
   async uploadDocument(key: string, content: Buffer | string, mimeType?: string): Promise<void> {
     await this.ensureBucketExists()
     

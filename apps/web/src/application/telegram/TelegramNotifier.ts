@@ -79,14 +79,12 @@ export class TelegramNotifier {
   }
 
   /** One message per approver linked to the cooperative, with signed Approve and Reject buttons. */
-  async enqueueProposal(proposal: Proposal): Promise<void> {
+  /** The approver message of a proposal: its text and the approve and reject buttons. Null when it cannot be signed. */
+  async proposalMessage(proposal: Proposal): Promise<{ text: string; buttons: { text: string; callback_data: string }[][] } | null> {
     const key = telegramCallbackKey()
     const definition = getAction(proposal.kind)
     // Only the callback key is needed to sign the buttons; the bot username only builds link URLs.
-    if (!key || !definition) return
-
-    const recipients = await this.repo.userLinkRecipients(proposal.htxCode, definition.approverRoles)
-    if (recipients.length === 0) return
+    if (!key || !definition) return null
 
     const labels = await this.labelsFor(proposal.htxCode, [proposal])
     const text = proposalText(proposal, definition.titleVi, definition.preview(proposal.payload, labels, proposal.evidence))
@@ -96,13 +94,25 @@ export class TelegramNotifier {
         { text: 'Từ chối', callback_data: signCallbackData(key, proposal.id, 'r') },
       ],
     ]
+    return { text, buttons }
+  }
+
+  async enqueueProposal(proposal: Proposal): Promise<void> {
+    const definition = getAction(proposal.kind)
+    if (!telegramCallbackKey() || !definition) return
+
+    const recipients = await this.repo.userLinkRecipients(proposal.htxCode, definition.approverRoles)
+    if (recipients.length === 0) return
+
+    const message = await this.proposalMessage(proposal)
+    if (!message) return
     await this.repo.enqueue(
       recipients.map((link) => ({
         htxCode: proposal.htxCode,
         chatId: link.chatId,
         op: 'send' as const,
-        text,
-        buttons,
+        text: message.text,
+        buttons: message.buttons,
         proposalId: proposal.id,
         purpose: 'proposal' as const,
       }))

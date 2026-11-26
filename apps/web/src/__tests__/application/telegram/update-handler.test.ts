@@ -57,7 +57,7 @@ interface FakeLink extends TelegramLink {
 function fakeRepo() {
   const links: FakeLink[] = []
   const codes = new Map<string, LinkCodeRecord & { expiresAt: Date; used: boolean }>()
-  const conversations = new Map<string, { kind: 'reject_reason'; proposalId: string; expiresAt: Date }>()
+  const conversations = new Map<string, { kind: 'reject_reason'; proposalId: string | null; expiresAt: Date }>()
   const seen = new Set<string>()
 
   const repo = {
@@ -117,6 +117,14 @@ function fakeRepo() {
     deleteConversation: jest.fn(async (telegramUserId: string) => {
       conversations.delete(telegramUserId)
     }),
+    conversationOf: jest.fn(async (telegramUserId: string) => {
+      const c = conversations.get(telegramUserId)
+      return c ? { telegramUserId, ...c } : null
+    }),
+    setFlow: jest.fn(async () => undefined),
+    auditEvent: jest.fn(async () => undefined),
+    countRecentUpdates: jest.fn(async () => 0),
+    heartbeatLastSeen: jest.fn(async () => null),
   }
   return repo
 }
@@ -139,6 +147,14 @@ function build(options: { liveRoles?: Record<string, LiveUserState | null>; outc
     decide: decide as unknown as TelegramUpdateHandlerDeps['decide'],
     htxProfileId: async () => 'htx-profile-1',
     callbackKey: KEY,
+    chat: {
+      tools: [],
+      actions: [],
+      photos: { put: jest.fn(async () => undefined), get: jest.fn(async () => Buffer.alloc(0)) },
+      requests: { create: jest.fn(async () => 'req-1') } as never,
+      householdId: async () => null,
+      proposalMessages: async () => [],
+    },
     now: () => NOW,
   })
   return { handler, repo, decide, notifier, current }
@@ -296,7 +312,7 @@ describe('TelegramUpdateHandler', () => {
     expect(repo.conversations.size).toBe(0)
   })
 
-  test('/huy cancels the reject conversation, and text without one is ignored', async () => {
+  test('/huy cancels the reject conversation, and free text without one goes to the assistant', async () => {
     const { handler, repo, decide } = build()
     await linkManager(handler, repo)
     await handler.handle(callback(rejectData))
@@ -304,8 +320,11 @@ describe('TelegramUpdateHandler', () => {
     const cancelled = await handler.handle(text('/huy'))
     expect(cancelled.replies[0].text).toBe(TELEGRAM_TEXT.rejectCancelled)
 
+    // Linked text that is not a reject reason goes to the chat engine (M5). With no agent heartbeat the answer is
+    // notUnderstood with the menu, never a silent drop.
     const ignored = await handler.handle(text('xin chào'))
-    expect(ignored).toEqual({ replies: [] })
+    expect(ignored.replies[0].text).toBe(TELEGRAM_TEXT.notUnderstood)
+    expect(ignored.replies[0].buttons!.length).toBeGreaterThan(0)
     expect(decide).not.toHaveBeenCalled()
   })
 
