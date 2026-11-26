@@ -123,9 +123,6 @@
   }
 }
 
-/* Officer design: where you are above the page, and tables with a dark green head and striped rows. */
+/* Officer breadcrumb; page and table colours retain the app defaults. */
 .crumb { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; font-size: 12.5px; color: var(--color-ink-secondary); }
 .crumb b { color: var(--color-primary); font-weight: 600; }
-.shell[data-role='officer'] table thead th { background: var(--color-primary-strong); color: var(--color-primary-foreground); font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; }
-.shell[data-role='officer'] table tbody tr:nth-child(even) td { background: var(--color-surface-sunken); }
-.shell[data-role='officer'] table tbody tr:hover td { background: var(--color-primary-subtle); }

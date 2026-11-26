@@ -11,7 +11,7 @@
 /* Only officer headers get the quiet hill silhouette; other roles keep the base style. */
 :global([data-role='officer']) .header { position: relative; isolation: isolate; padding-bottom: 16px; }
 :global([data-role='officer']) .header::after { content: ''; position: absolute; z-index: -1; pointer-events: none; right: 0; bottom: 0; width: 48%; height: 56px; background: var(--color-primary-subtle); opacity: 0.65; clip-path: ellipse(50% 75% at 50% 110%); }
-:global([data-role='officer']) .iconBox { width: 64px; height: 64px; border-radius: 16px; background: var(--color-primary-strong); color: var(--color-primary-foreground); }
+:global([data-role='officer']) .iconBox { width: 64px; height: 64px; border-radius: 16px; }
 :global([data-role='officer']) .title { font-size: 28px; overflow-wrap: anywhere; }
 :global([data-role='officer']) .text { min-width: 0; flex-basis: 200px; }
 :global([data-role='officer']) .actions { max-width: 100%; }
