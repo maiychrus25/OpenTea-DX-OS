@@ -21,3 +21,5 @@
 - "!include platform_agent_proposals.yaml"
 - "!include platform_agent_runs.yaml"
 - "!include platform_improvements.yaml"
+- "!include platform_installed_apps.yaml"
+- "!include platform_app_enablements.yaml"

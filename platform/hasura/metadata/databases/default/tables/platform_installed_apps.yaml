@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+table:
+  name: installed_apps
+  schema: platform
+array_relationships:
+  - name: enablements
+    using:
+      manual_configuration:
+        remote_table:
+          name: app_enablements
+          schema: platform
+        column_mapping:
+          id: app_id
+select_permissions:
+  # The agent reads the manifest (suggestions path, actions) of the apps enabled for its cooperative only.
+  - role: agent
+    permission:
+      columns:
+        - id
+        - manifest
+      filter:
+        enablements:
+          _and:
+            - {htx_code: {_neq: ''}}
+            - _or:
+                - {htx_code: {_eq: X-Hasura-Htx-Code}}
+                - {htx_code: {_eq: '*'}}
