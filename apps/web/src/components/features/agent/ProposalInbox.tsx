@@ -422,14 +422,16 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
   const submitEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editTarget) return
+    // An empty field keeps the proposal's value (the server merges the edit over the payload and checks the schema),
+    // so optional fields such as a staff task's note can stay empty.
     const edited: Record<string, string> = {}
     for (const field of editTarget.editableFields) {
       const value = (editValues[field] ?? '').trim()
-      if (!value) {
-        setEditError('Vui lòng điền đầy đủ các trường')
-        return
-      }
-      edited[field] = value
+      if (value) edited[field] = value
+    }
+    if (Object.keys(edited).length === 0) {
+      setEditError('Vui lòng điền ít nhất một trường')
+      return
     }
     setEditError(null)
     const error = await approve(editTarget, edited)
