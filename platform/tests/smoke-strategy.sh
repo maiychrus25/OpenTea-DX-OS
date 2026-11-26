@@ -110,10 +110,10 @@ assert_eq "$(psql_app "select status || ':' || (adopted_by is not null)::text ||
 # so the route answers 201.
 M11_SEASON=$(psql_app "select $M11_SEASON_SQL")
 M11_LOW_TARGET=$(python3 -c 'import sys; print(int(float(sys.argv[1]) * 0.5))' "$M11_BASE")
+# No run_id: the route refuses a run that is not this cooperative's own (INVALID_RUN_ID), and a hand-made plan has none.
 M11_LOW_BODY="$(jq -nc --arg season "$M11_SEASON" --argjson base "$M11_BASE" --argjson target "$M11_LOW_TARGET" \
-  --arg run "$(python3 -c 'import uuid; print(uuid.uuid4())')" \
   '{season: $season, goals: [{key: "yield_kg", label_vi: "Sản lượng", unit_vi: "kg", baseline: $base, target: $target, direction: "up"}],
-    priorities: ["Kiểm thử cảnh báo M11"], initiatives: [], run_id: $run}')"
+    priorities: ["Kiểm thử cảnh báo M11"], initiatives: [], run_id: null}')"
 M11_LOW=$(m11_post /api/internal/agent/strategy/plans "$M11_LOW_BODY") \
   || fail "the low-target plan was not accepted by the strategy plans route (strategy smoke)"
 assert_eq "$(psql_app "select (jsonb_array_length(warnings) >= 1 and warnings->>0 like 'Mục tiêu%thấp hơn cùng kỳ năm trước')::text from platform.strategy_plans where id='$M11_LOW'")" "true" \
