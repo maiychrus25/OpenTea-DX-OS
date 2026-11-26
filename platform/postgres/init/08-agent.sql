@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS platform.campaigns (
 CREATE TABLE IF NOT EXISTS platform.campaign_items (
   id          uuid    NOT NULL DEFAULT gen_random_uuid() UNIQUE,
   campaign_id uuid    NOT NULL REFERENCES platform.campaigns(id) ON DELETE CASCADE,
-  proposal_id uuid    NOT NULL REFERENCES platform.agent_proposals(id),
+  proposal_id uuid    NOT NULL REFERENCES platform.agent_proposals(id) ON DELETE CASCADE,
   position    integer NOT NULL CHECK (position BETWEEN 1 AND 15),
   goal_key    text    NOT NULL,
   target      integer NOT NULL CHECK (target >= 0),
