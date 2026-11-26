@@ -6,7 +6,7 @@ import type { AutopilotRepository } from '@/domain/agent/ports/AutopilotReposito
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
 import type { Evidence, Origin } from '@/domain/agent/proposal'
 import { ValidationError } from '@/domain/errors'
-import { getAction } from './action-catalog'
+import { ensureAppActions, getAction } from './action-catalog'
 import { EVIDENCE_LOADERS, type EvidenceLoaders } from './actions/journal-evidence'
 import { autoEligibility, shadowEligibility, windowFor } from './autopilot/eligibility'
 
@@ -37,7 +37,8 @@ export class CreateProposalUseCase {
   ) {}
 
   async execute(input: CreateProposalInput): Promise<{ id: string } | null> {
-    const definition = getAction(input.kind)
+    await ensureAppActions(input.kind)
+    const definition = getAction(input.kind, input.htxCode)
     if (!definition) {
       throw new ValidationError('UNKNOWN_KIND')
     }
@@ -62,20 +63,22 @@ export class CreateProposalUseCase {
       throw new ValidationError('TOO_MANY_EVIDENCE_ROWS')
     }
     for (const row of rows) {
-      if (!Object.prototype.hasOwnProperty.call(this.loaders, row.table)) {
+      // An app's own evidence row (`app:<id>`) is the app's word: only an action of that same app may cite it.
+      const appEvidence = row.table.startsWith('app:') && definition.kind.startsWith(`app.${row.table.slice(4)}.`)
+      if (!appEvidence && !Object.prototype.hasOwnProperty.call(this.loaders, row.table)) {
         throw new ValidationError('INVALID_EVIDENCE_TABLE')
       }
       if (row.values !== undefined && sha256Hex(canonicalJson(row.values)) !== row.sha256) {
         throw new ValidationError('INVALID_EVIDENCE')
       }
       // Every row must belong to this cooperative; the agent cannot reference another HTX's records.
-      if (!(await this.loaders[row.table](input.htxCode, row.id))) {
+      if (!appEvidence && !(await this.loaders[row.table](input.htxCode, row.id))) {
         throw new ValidationError('EVIDENCE_NOT_IN_HTX')
       }
     }
 
     // With a subjectTable every subject must have its evidence row in that table; null means dedupe key only.
-    const subjects = Array.from(new Set(definition.subjects(parsedPayload.data)))
+    const subjects = Array.from(new Set(definition.subjects(parsedPayload.data, input.evidence)))
     if (definition.subjectTable !== null) {
       for (const subject of subjects) {
         if (!rows.some((r) => r.table === definition.subjectTable && r.id === subject)) {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { getAction } from '@/application/agent/action-catalog'
+import { ensureAppActions, getAction } from '@/application/agent/action-catalog'
 import { OPEN_CAMPAIGN_STATUSES, type ApproveCampaignResult } from '@/application/agent/campaign/ApproveCampaignUseCase'
 import { CampaignClosedError } from '@/application/agent/campaign/campaign-errors'
 import { vnDayOf } from '@/application/agent/campaign/vn-day'
@@ -521,10 +521,11 @@ export class TelegramUpdateHandler {
     } catch {
       return { refusal: TELEGRAM_TEXT.roleCheckUnavailable }
     }
-    const definition = getAction(proposal.kind)
-    const role = definition && live?.enabled && live.htxCode === link.htxCode
-      ? definition.approverRoles.find((r) => live!.roles.includes(r))
-      : undefined
+    await ensureAppActions(proposal.kind)
+    const definition = getAction(proposal.kind, link.htxCode)
+    // The app of an open app proposal may be gone: any approver may reach the decision, which answers `expired`.
+    const roles = definition ? definition.approverRoles : proposal.kind.startsWith('app.') ? (['manager', 'officer'] as const) : []
+    const role = live?.enabled && live.htxCode === link.htxCode ? roles.find((r) => live!.roles.includes(r)) : undefined
     if (!role) return { refusal: TELEGRAM_TEXT.noLongerApprover }
 
     const htxProfileId = await this.deps.htxProfileId(link.htxCode)

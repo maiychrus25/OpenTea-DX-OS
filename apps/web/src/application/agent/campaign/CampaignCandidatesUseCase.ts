@@ -4,7 +4,7 @@
 import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
 import type { Proposal } from '@/domain/agent/proposal'
-import { getAction } from '../action-catalog'
+import { ensureAppActions, getAction } from '../action-catalog'
 import { campaignGoal } from './campaign-goals'
 import { vnDayStart } from './vn-day'
 
@@ -70,6 +70,7 @@ export class CampaignCandidatesUseCase {
 
   async execute(htxCode: string, day: string, now: Date = new Date()): Promise<CampaignCandidates> {
     const open = await this.proposals.list(htxCode, { statuses: ['proposed'], limit: CANDIDATE_LIMIT })
+    await ensureAppActions(open.map((proposal) => proposal.kind))
     const refs = open.map((proposal) => ({ proposal, ...refsOf(proposal) }))
 
     const parcelIds = refs.flatMap((r) => r.parcelIds).filter(Boolean)
@@ -88,7 +89,7 @@ export class CampaignCandidatesUseCase {
         id: proposal.id,
         kind: proposal.kind,
         risk: proposal.risk,
-        title_vi: getAction(proposal.kind)?.titleVi ?? proposal.kind,
+        title_vi: getAction(proposal.kind, htxCode)?.titleVi ?? proposal.kind,
         created_at: proposal.createdAt.toISOString(),
         parcel_codes: Array.from(new Set([...fromIds, ...fromEntries, ...codes])),
         goal_key: goal.goalKey,

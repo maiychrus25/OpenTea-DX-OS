@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { getAction } from '@/application/agent/action-catalog'
+import { ensureAppActions, getAction } from '@/application/agent/action-catalog'
 import { OPEN_CAMPAIGN_STATUSES } from '@/application/agent/campaign/ApproveCampaignUseCase'
 import { loadJournalSubjects } from '@/application/agent/journal-subjects'
 import type { JournalSubject } from '@/application/agent/actions/journal-labels'
@@ -111,7 +111,8 @@ export class TelegramNotifier {
   /** The approver message of a proposal: its text and the approve and reject buttons. Null when it cannot be signed. */
   async proposalMessage(proposal: Proposal): Promise<{ text: string; buttons: { text: string; callback_data: string }[][] } | null> {
     const key = telegramCallbackKey()
-    const definition = getAction(proposal.kind)
+    await ensureAppActions(proposal.kind)
+    const definition = getAction(proposal.kind, proposal.htxCode)
     // Only the callback key is needed to sign the buttons; the bot username only builds link URLs.
     if (!key || !definition) return null
 
@@ -132,7 +133,7 @@ export class TelegramNotifier {
    */
   private async scheduledMessage(proposal: Proposal): Promise<{ text: string; buttons: { text: string; callback_data: string }[][] } | null> {
     const key = telegramCallbackKey()
-    const definition = getAction(proposal.kind)
+    const definition = getAction(proposal.kind, proposal.htxCode)
     if (!key || !definition || !proposal.runAt || proposal.runAt.getTime() <= proposal.createdAt.getTime()) return null
     const labels = await this.labelsFor(proposal.htxCode, [proposal])
     const preview = definition.preview(proposal.payload, labels, proposal.evidence)
@@ -166,7 +167,8 @@ export class TelegramNotifier {
   }
 
   async enqueueProposal(proposal: Proposal): Promise<void> {
-    const definition = getAction(proposal.kind)
+    await ensureAppActions(proposal.kind)
+    const definition = getAction(proposal.kind, proposal.htxCode)
     if (!telegramCallbackKey() || !definition) return
 
     const recipients = await this.repo.userLinkRecipients(proposal.htxCode, definition.approverRoles)
