@@ -98,7 +98,7 @@ export class CreateImprovementUseCase {
     if (!stored) return { deduped: true }
 
     try {
-      const created = await new CreateProposalUseCase(this.deps.proposals as ProposalRepository, this.deps.loaders ?? EVIDENCE_LOADERS).execute({
+      const created = await new CreateProposalUseCase(this.deps.proposals, this.deps.loaders ?? EVIDENCE_LOADERS).execute({
         htxCode,
         runId: body.run_id ?? null,
         agent: 'improvement',
