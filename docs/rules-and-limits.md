@@ -356,6 +356,12 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
 - **Kết nối:** `./dxos staff enable <HTX>` tạo client `dxos-staff-<htx>` (vai trò `staff-sync`, claim `htx_code`) và in client id, secret một lần cùng hai địa chỉ (Keycloak và cổng lõi) để nhập vào cài đặt app. Đường `/api/internal/staff/*` là đường nội bộ duy nhất mở trên cổng công khai 9080, vì app chạy trên máy ngoài mạng compose; mọi lệnh gọi chỉ thấy dữ liệu của HTX trong token, và token agent, rơle, người dùng bị từ chối.
 - **Dữ liệu cá nhân:** danh sách nhân sự chỉ gồm mã, tên, phòng và trạng thái; số điện thoại và lương không rời app nhân sự. Hôm nay chưa có báo cáo chuyên cần thì A9 bỏ luật số người.
 
+### 3.16 Mini App Telegram (M6)
+
+- **Yêu cầu HTTPS (D17):** Telegram chỉ mở Mini App qua địa chỉ `https://`. Đặt `DXOS_WEB_PUBLIC_URL` (địa chỉ gốc HTTPS của web) cho `dxos-telegram`. Khi giá trị rỗng hoặc không bắt đầu bằng `https://`, rơle không đặt nút menu và ghi một dòng nhật ký lúc khởi động; chat, nút duyệt và web hoạt động như trước.
+- **Khoá:** `./dxos telegram enable` ghi `DXOS_TELEGRAM_WEBAPP_KEY` = HMAC-SHA256(khoá `WebAppData`, token bot) cho web; `disable` xoá. Web chỉ dùng khoá này để kiểm chữ ký `initData`, không giữ token bot.
+- **Ràng buộc phiên:** `initData` không phải là đăng nhập. Chữ ký phải đúng, `auth_date` không quá 24 giờ, và `user.id` phải là tài khoản Telegram đã liên kết của người đang đăng nhập; không thì web trả 403 `WEBAPP_NOT_LINKED`. Cờ phiên `dxos_tg_webapp` hết hạn sau 12 giờ.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication

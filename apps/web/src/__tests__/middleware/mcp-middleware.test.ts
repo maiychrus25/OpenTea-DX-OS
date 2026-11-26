@@ -18,3 +18,16 @@ describe('middleware MCP exemption', () => {
     expect(resolveAuthRedirect('/api/mcp', false, undefined)).toBe('UNAUTHORIZED_API')
   })
 })
+
+describe('middleware Mini App entry (M6)', () => {
+  test('sends a signed-out visitor of /telegram/open to the login with a return URL', () => {
+    expect(resolveAuthRedirect('/telegram/open', false, undefined, '?to=%2Fmanager%2Fai')).toBe(
+      '/login?callbackUrl=%2Ftelegram%2Fopen%3Fto%3D%252Fmanager%252Fai'
+    )
+  })
+
+  test('lets a signed-in person reach it, and keeps the session route behind the session', () => {
+    expect(resolveAuthRedirect('/telegram/open', true, 'farmer')).toBeNull()
+    expect(resolveAuthRedirect('/api/telegram/webapp/session', false, undefined)).toBe('UNAUTHORIZED_API')
+  })
+})

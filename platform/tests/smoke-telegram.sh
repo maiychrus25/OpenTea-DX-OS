@@ -29,6 +29,13 @@ telegram_relay_up
 telegram_link_owner
 wait_stub "any(x['method'] == 'sendMessage' and x['params'].get('chat_id') == $TG_OWNER for x in c)" \
   && pass "/start code answered by the web through the relay (welcome sent)" || fail "no welcome message after /start within 60 s"
+# Mini App (M6): the relay set the menu button, and the web binds only the linked Telegram account (spec test 13).
+wait_stub "any(x['method'] == 'setChatMenuButton' and x['params']['menu_button']['web_app']['url'] == '$TG_WEB_URL/telegram/open' for x in c)" 15 \
+  && pass "relay set the Mini App menu button for the HTTPS web address" || fail "no setChatMenuButton with $TG_WEB_URL/telegram/open"
+assert_eq "$(webapp_session "$TG_OWNER" valid 2>&1)" "200 - yes $TG_OWNER" "Mini App session accepts initData of the linked account and sets dxos_tg_webapp"
+case "$(webapp_session "$TG_STRANGER" valid 2>&1)" in "403 WEBAPP_NOT_LINKED no"*) pass "Mini App session refuses another Telegram account (test 13)";; *) fail "Mini App session did not refuse an unlinked Telegram account";; esac
+case "$(webapp_session "$TG_OWNER" tampered 2>&1)" in 400*|403*) pass "Mini App session refuses tampered initData";; *) fail "Mini App session accepted tampered initData";; esac
+case "$(webapp_session "$TG_OWNER" nosession 2>&1)" in 401*) pass "Mini App session needs a signed-in session";; *) fail "Mini App session answered without a session";; esac
 assert_eq "$(psql_app "select count(*) from platform.telegram_links where telegram_user_id=$TG_OWNER and user_id='$TG_SUB' and unlinked_at is null")" "1" "link stored for the owner's Telegram account"
 assert_eq "$(psql_app "select count(*) from platform.telegram_link_codes where code_hash='$TG_HASH' and used_at is not null")" "1" "link code is marked used after one use"
 

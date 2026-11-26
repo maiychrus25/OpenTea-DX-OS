@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises'
 import type { LiveRoleReader, LiveUserState } from '@/domain/telegram/ports/LiveRoleReader'
 
 // Written by `./dxos telegram enable` (mode 600, owner 10001) and mounted read-only into the web container.
-const ROLES_ENV_FILE = '/run/dxos-web/roles.env'
+export const ROLES_ENV_FILE = '/run/dxos-web/roles.env'
 const CREDENTIALS_TTL_MS = 60_000
 const TOKEN_SAFETY_MS = 5_000
 
