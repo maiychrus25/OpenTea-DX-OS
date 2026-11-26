@@ -2,11 +2,14 @@
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Agent A8 (staff-tasks): work for the staff from the proposals approved in the last day (contract C4). Rules only, no LLM."""
 from datetime import datetime
+import logging
 from typing import Any, Mapping, Sequence
 
 from ..client import CoreGatewayClient
 from ..evidence import build_evidence
 from .common import Proposal, RuleRun, submit_rule_run, vn_day
+
+log = logging.getLogger("dxos_agent")
 
 AGENT_NAME = "staff-tasks"
 TASK_KIND = "staff.task.create"
@@ -57,7 +60,14 @@ def staff_task_proposals(inputs: Mapping[str, Any], now: datetime) -> list[Propo
 
     load: dict[str, int] = {}
     proposals: list[Proposal] = []
-    for _, _, kind, source, codes in candidates[:MAX_TASKS]:
+    for _, _, kind, source, codes in candidates:
+        if len(proposals) >= MAX_TASKS:
+            break
+        # The staff app cannot create a task without an assignee, so a task with nobody to give it to is skipped.
+        assignee = _pick_assignee(roster, load, kind)
+        if assignee is None:
+            log.info("A8 staff-tasks skipped source %s: no active staff member to assign", source["id"])
+            continue
         parcels = source["parcels"]
         payload: dict[str, Any] = {
             "title_vi": f"{TITLES[kind]} {', '.join(codes)}"[:TITLE_MAX],
@@ -66,13 +76,10 @@ def staff_task_proposals(inputs: Mapping[str, Any], now: datetime) -> list[Propo
         }
         if len(parcels) == 1 and parcels[0].get("id"):
             payload["parcel_id"] = str(parcels[0]["id"])
-        assignee = _pick_assignee(roster, load, kind)
-        reason = REASONS[kind]
-        if assignee is not None:
-            ref = str(assignee["staff_ref"])
-            load[ref] = load.get(ref, 0) + 1
-            payload["assignee_ref"] = ref
-            reason += f" Gợi ý giao cho {assignee.get('name') or ref}."
+        ref = str(assignee["staff_ref"])
+        load[ref] = load.get(ref, 0) + 1
+        payload["assignee_ref"] = ref
+        reason = REASONS[kind] + f" Gợi ý giao cho {assignee.get('name') or ref}."
         row = source.get("evidence_row")
         proposals.append(Proposal(TASK_KIND, payload, reason, build_evidence([row] if row else [])))
     return proposals

@@ -136,16 +136,18 @@ def test_an_inspection_without_technical_staff_goes_to_anyone_active():
     assert gateway.proposals[0]["payload"]["assignee_ref"] == "s1"
 
 
-def test_an_empty_roster_still_makes_the_task_without_an_assignee():
-    gateway, run = _run({"proposals": [_source("h1", "harvest.approve", ["TC-01"])], "roster": []})
-    assert run.submitted == 1
-    assert "assignee_ref" not in gateway.proposals[0]["payload"]
+def test_no_active_staff_means_no_proposal_and_an_info_log(caplog):
+    caplog.set_level("INFO", logger="dxos_agent")
+    for roster in ([], [{**_staff("s1", "An"), "active": False}]):
+        gateway, run = _run({"proposals": [_source("h1", "harvest.approve", ["TC-01"])], "roster": roster})
+        assert run is None and gateway.proposals == [] and gateway.runs == []
+    assert "no active staff member" in caplog.text
 
 
 def test_a_source_with_several_parcels_is_one_task_without_a_parcel_id():
     gateway, _ = _run({
         "proposals": [_source("w1", "notification.households", ["TC-01", "TC-02"], template="dry_soil")],
-        "roster": [],
+        "roster": [_staff("s1", "An")],
     })
     payload = gateway.proposals[0]["payload"]
     assert payload["title_vi"] == "Tưới thửa TC-01, TC-02" and "parcel_id" not in payload
@@ -157,7 +159,7 @@ def test_a_source_without_a_parcel_is_skipped_and_a_missing_evidence_row_gives_e
             _source("h0", "harvest.approve", []),
             {**_source("h1", "harvest.approve", ["TC-01"]), "evidence_row": None},
         ],
-        "roster": [],
+        "roster": [_staff("s1", "An")],
     })
     assert run.submitted == 1
     assert gateway.proposals[0]["evidence"]["rows"] == []
@@ -165,7 +167,7 @@ def test_a_source_without_a_parcel_is_skipped_and_a_missing_evidence_row_gives_e
 
 def test_the_title_stays_within_120_characters():
     codes = [f"PARCEL-{i:03d}" for i in range(30)]
-    gateway, _ = _run({"proposals": [_source("w1", "notification.households", codes, template="dry_soil")], "roster": []})
+    gateway, _ = _run({"proposals": [_source("w1", "notification.households", codes, template="dry_soil")], "roster": [_staff("s1", "An")]})
     assert len(gateway.proposals[0]["payload"]["title_vi"]) <= 120
 
 
