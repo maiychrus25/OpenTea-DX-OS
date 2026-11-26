@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "platform" / "tests"
 SHELL_SCRIPTS = [
     "smoke-telegram.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh",
-    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
+    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-staff.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
 ]
 
 
@@ -217,3 +217,35 @@ def test_campaign_smoke_reads_the_approve_all_line_by_its_text():
     text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
     assert 'tg_last_with "$TG_OWNER" "Đã duyệt chiến dịch"' in text
     assert 'tg_last_text "$TG_OWNER"' not in text
+
+
+def test_staff_smoke_runs_after_the_mcp_smoke_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-mcp.sh") < text.index("source platform/tests/smoke-staff.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the staff checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-improvement.sh", "smoke-mcp.sh"):
+        assert "smoke-staff.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_staff_smoke_chains_every_earlier_cleanup_on_exit_and_stops_the_agent_before_seeding():
+    text = (TESTS / "smoke-staff.sh").read_text(encoding="utf-8")
+    assert "trap 'staff_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+    assert text.index("$COMPOSE stop dxos-agent") < text.index("insert into platform.agent_proposals") < text.index("--force-recreate dxos-agent")
+    for needle in ("./dxos staff disable TC", "./dxos staff disable LB", "delete from platform.staff_roster"):
+        assert needle in text, needle
+
+
+def test_staff_smoke_covers_the_foreign_cooperative_and_signs_nothing():
+    text = (TESTS / "smoke-staff.sh").read_text(encoding="utf-8")
+    for needle in ("test 42", "/api/internal/staff/tasks", "/ack", "sent_to_staff_app", "telegram_approve_data_for", "Đã gửi app nhân sự"):
+        assert needle in text, needle
+    assert "callback_sign" not in text and "hmac" not in text and "set -x" not in text
+
+
+def test_staff_smoke_never_prints_the_secret():
+    text = (TESTS / "smoke-staff.sh").read_text(encoding="utf-8")
+    for line in text.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        if any(word in line for word in ("echo", "printf", "pass ")):
+            assert "csec" not in line, line
