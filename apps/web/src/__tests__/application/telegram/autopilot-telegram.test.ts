@@ -55,12 +55,12 @@ function build(current: Proposal | null = proposal()) {
     countRecentUpdates: jest.fn(async () => 0),
     activeConversation: jest.fn(async () => null),
   }
-  const autopilot: jest.Mocked<AutopilotServices> = {
+  const autopilot = {
     block: jest.fn(async (): Promise<BlockOutcome> => 'blocked'),
     stop: jest.fn(async () => ({ returned: 3 })),
     status: jest.fn(async () => ({ enabled: true, enabledByName: 'Lan', pending: 2, ran: 5, blocked: 1, dailyCap: 50 })),
     touchManagerActivity: jest.fn(async () => undefined),
-  }
+  } as unknown as jest.Mocked<AutopilotServices>
   const proposalMessages = jest.fn(async () => [{ text: 'Đề xuất: Thông báo nông hộ', buttons: [[{ text: 'Duyệt', callback_data: 'a' }]] }])
   const roles: LiveRoleReader = { read: jest.fn(async (id: string) => LIVE[id] ?? null) }
   const handler = new TelegramUpdateHandler({
