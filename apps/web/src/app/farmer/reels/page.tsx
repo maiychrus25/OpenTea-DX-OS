@@ -3,11 +3,11 @@
 
 import React from 'react'
 import { auth } from '@/auth'
-import { ShortsPage } from '@/components/features/shorts/ShortsPage'
+import { ReelsPage } from '@/components/features/reels/ReelsPage'
 
-export const metadata = { title: 'Video ngắn' }
+export const metadata = { title: 'Reels' }
 
-export default async function VideosPage() {
+export default async function Page() {
   const session = await auth()
-  return <ShortsPage userName={session?.user.name || 'Tôi'} />
+  return <ReelsPage userName={session?.user.name || 'Tôi'} role="farmer" />
 }

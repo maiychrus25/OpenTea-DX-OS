@@ -28,7 +28,7 @@ export default async function FarmerLayout({ children }: { children: React.React
     { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <Stethoscope size={20} />, group: 'Canh tác' },
     { label: 'Hỏi đáp AI', href: '/farmer/ai', icon: <Bot size={20} />, group: 'Hỗ trợ' },
     { label: 'Cẩm nang', href: '/farmer/handbook', icon: <BookOpen size={20} />, group: 'Hỗ trợ' },
-    { label: 'Video ngắn', href: '/farmer/videos', icon: <Clapperboard size={20} />, group: 'Hỗ trợ' },
+    { label: 'Reels', href: '/farmer/reels', icon: <Clapperboard size={20} />, group: 'Hỗ trợ' },
     { label: 'Bản tin & thông báo', href: '/farmer/bulletin-notifications', icon: <Bell size={20} />, group: 'Cá nhân' },
     { label: 'Tài khoản', href: '/farmer/profile', icon: <User size={20} />, group: 'Cá nhân' },
     ...(await loadAppNavItems(new PrismaInstalledAppRepository(), 'farmer', session.user.htxCode ?? null, loadAppFeed)).map((item) => ({ ...item, group: 'Ứng dụng' })),

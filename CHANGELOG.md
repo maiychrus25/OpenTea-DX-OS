@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Short videos on the web (`apps/web`)**: farmers, officers and managers have a "Video ngắn" page with the sample clips of the mobile app: like, follow, comment, share, search and post a clip from the computer. There is no video service yet, so everything done there stays in the browser and is gone after a reload.
+- **Reels on the web (`apps/web`)**: farmers, officers and managers have a "Reels" page with sample clips: like, save, follow, comment, reply, share, auto-advance, playback speed, and posting a clip from the computer. There is no video service yet, so everything done there stays in the browser and is gone after a reload.
 - **Live weather on the bulletin pages (`apps/web`)**: managers and farmers see the weather where the cooperative's parcels are, read from Open-Meteo through `GET /api/weather/live`: temperature, rain chance, humidity, wind, a 24 hour strip and a 10 day forecast. Parcels about 5 km apart share one card, and parcels without coordinates are left out. The card animates rain when the forecast says it is raining, and stays still for people who ask for reduced motion.
 
 ### Changed

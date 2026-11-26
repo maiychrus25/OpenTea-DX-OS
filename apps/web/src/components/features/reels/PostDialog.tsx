@@ -4,7 +4,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import styles from './shorts.module.css'
+import styles from './reels.module.css'
 
 const MAX_SECONDS = 60
 
