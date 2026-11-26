@@ -194,5 +194,13 @@
       "metric_keys": ["journal_missing_info_rate"],
       "first": {"rationale_vi": "Có 4 trên 10 nhật ký bị trả lại vì thiếu thông tin."}
     }
+  },
+  {
+    "name": "a value already beyond its bound is never tightened by the loosening step",
+    "inputs": {
+      "settings": {"field-watch": {"thresholds": {"silent_hours": 60}, "schedule": null}},
+      "proposal_stats": [{"agent": "field-watch", "kind": "notification.internal", "template": "sensor_silent", "window_days": 28, "approved": 2, "rejected": 3, "expired": 0, "median_wait_hours": 3.5}]
+    },
+    "expect": {"metric_keys": []}
   }
 ]

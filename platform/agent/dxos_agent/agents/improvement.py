@@ -170,7 +170,7 @@ def _loosen(inputs: Mapping[str, Any], agent: str, name: str, key: str, rate: fl
     low, high, step = SETTING_LIMITS[key]
     current = _current_threshold(inputs, agent, key)
     new = clamp(current + step, low, high)
-    if new == current:  # already at the bound of its range: nothing looser to propose
+    if (new - current) * step <= 0:  # at the bound, or already beyond it: a clamp must never tighten the value
         return None
     unit = SETTING_UNITS[key]
     return Candidate(
