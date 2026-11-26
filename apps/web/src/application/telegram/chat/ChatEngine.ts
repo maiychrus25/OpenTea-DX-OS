@@ -26,8 +26,8 @@ export const FLOW_TTL_MS = 30 * 60 * 1000
 export const CARD_TTL_MS = 10 * 60 * 1000
 export const PHOTO_MAX_BYTES = 5 * 1024 * 1024
 const CHOICE_BUTTON_LIMIT = 8
-const TOOL_LINE_MAX = 7
-const NO_DATA_VI = 'Chưa có dữ liệu.'
+export const TOOL_LINE_MAX = 7
+export const NO_DATA_VI = 'Chưa có dữ liệu.'
 const SYSTEM_FAILURE_VI = 'Có lỗi hệ thống. Vui lòng thử lại sau.'
 /** Shown instead of the step prompt when a choice list is too long for buttons (contract C6, parcel steps). */
 const TYPED_CHOICE_PROMPT_VI = 'Nhập mã thửa, ví dụ TC-A1:'
@@ -111,7 +111,7 @@ const rowsOfTwo = <T>(items: T[]): T[][] => {
 }
 
 /** Keeps only the hinted arguments whose type fits; anything else A7 sent is dropped (contract C6). */
-function sanitizeArgs(hints: readonly ArgHint[], args: Record<string, unknown>): Meta {
+export function sanitizeArgs(hints: readonly ArgHint[], args: Record<string, unknown>): Meta {
   const out: Meta = {}
   for (const hint of hints) {
     const value = args[hint.name]
