@@ -186,10 +186,10 @@ export interface CampaignLine {
   unitVi: string
 }
 
-export function campaignText(day: string, summaryVi: string, lines: CampaignLine[]): string {
+export function campaignText(day: string, summaryVi: string, lines: CampaignLine[], reminders: string[] = []): string {
   const [, month, dayOfMonth] = day.split('-')
   const out = [`Chiến dịch ngày ${dayOfMonth}/${month}: ${lines.length} việc`, summaryVi]
   lines.slice(0, 4).forEach((line, index) => out.push(`${index + 1}. ${line.title} · ${line.target} ${line.unitVi}`))
   if (lines.length > 4) out.push(`… và ${lines.length - 4} việc khác`)
-  return out.join('\n')
+  return [...out, ...reminders].join('\n')
 }

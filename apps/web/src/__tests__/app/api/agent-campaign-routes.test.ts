@@ -15,6 +15,11 @@ const drop = jest.fn()
 
 jest.mock('@/auth', () => ({ auth: jest.fn() }))
 jest.mock('@/lib/api/tenant', () => ({ requireTenant: jest.fn() }))
+const activeTemplates = jest.fn()
+
+jest.mock('@/infrastructure/db/agent/PrismaImprovementRepository', () => ({
+  PrismaImprovementRepository: jest.fn().mockImplementation(() => ({ activeTemplates })),
+}))
 jest.mock('@/infrastructure/db/agent/PrismaCampaignRepository', () => ({
   PrismaCampaignRepository: jest.fn().mockImplementation(() => ({ findForDay, items })),
 }))
@@ -37,6 +42,7 @@ function post(body: unknown, id = CAMPAIGN_ID) {
 describe('GET /api/agent/campaigns/today', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    activeTemplates.mockResolvedValue([])
     ;(auth as jest.Mock).mockResolvedValue({ user: { id: 'mgr-1', name: 'Trưởng HTX', role: 'manager' } })
     ;(requireTenant as jest.Mock).mockResolvedValue(manager)
   })
@@ -45,6 +51,19 @@ describe('GET /api/agent/campaigns/today', () => {
     ;(requireTenant as jest.Mock).mockResolvedValueOnce({ ...manager, role: 'farmer' })
     const res = await todayCampaign(new Request('http://localhost/api/agent/campaigns/today'), {} as never)
     expect(res.status).toBe(403)
+  })
+
+  test('adds the template reminders of the campaign weekday beside the view (contract C7)', async () => {
+    // 2026-11-30 is a Monday in Vietnam: its weekday is 1.
+    findForDay.mockResolvedValueOnce({
+      id: CAMPAIGN_ID, htxCode: 'TC', day: '2026-11-30', status: 'draft', goals: [], summaryVi: 'Tóm tắt.', decidedByName: null,
+    })
+    items.mockResolvedValueOnce([])
+    activeTemplates.mockResolvedValueOnce([{ titleVi: 'Nhắc thu hoạch' }, { titleVi: 'Nhắc phun thuốc' }, { titleVi: 'Nhắc thứ ba' }])
+    const res = await todayCampaign(new Request('http://localhost/api/agent/campaigns/today'), {} as never)
+    expect(activeTemplates).toHaveBeenCalledWith('TC', 1)
+    const body = await res.json()
+    expect(body.campaign.reminders).toEqual(['Nhắc theo mẫu: Nhắc thu hoạch', 'Nhắc theo mẫu: Nhắc phun thuốc'])
   })
 
   test('answers campaign null when there is none today', async () => {

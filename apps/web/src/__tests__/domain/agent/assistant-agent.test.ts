@@ -7,7 +7,7 @@ import { KNOWN_AGENTS } from '@/domain/agent/proposal'
 
 describe('the Telegram assistant (A7) as a configurable agent', () => {
   it('is configurable with its own provider row, after the agents of M2 to M5 (A9 comes last, M7)', () => {
-    expect(CONFIGURABLE_AGENTS).toEqual(['journal-review', 'digest', 'bulletin', 'assistant', 'daily-campaign'])
+    expect(CONFIGURABLE_AGENTS).toEqual(['journal-review', 'digest', 'bulletin', 'assistant', 'improvement', 'daily-campaign'])
   })
 
   it('is a known agent for runs and proposals', () => {

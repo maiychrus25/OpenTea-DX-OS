@@ -41,6 +41,11 @@ describe('CampaignPanelView', () => {
     expect(screen.getAllByRole('link', { name: 'Xem trong danh sách' })[0]).toHaveAttribute('href', '#proposal-p1')
   })
 
+  test('shows the template reminders of the weekday under the items', () => {
+    render(<CampaignPanelView {...viewProps({ campaign: { ...draft, reminders: ['Nhắc theo mẫu: Nhắc thu hoạch'] } })} />)
+    expect(screen.getByText('Nhắc theo mẫu: Nhắc thu hoạch')).toBeInTheDocument()
+  })
+
   test('an approved campaign offers no decision', () => {
     render(<CampaignPanelView {...viewProps({ campaign: { ...draft, status: 'approved' } })} />)
     expect(screen.getByText('Đã duyệt')).toBeInTheDocument()

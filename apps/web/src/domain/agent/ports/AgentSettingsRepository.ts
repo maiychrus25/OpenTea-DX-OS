@@ -30,9 +30,24 @@ export interface SaveAgentSettingsInput {
   monthlyLimit: number | null
 }
 
+/** The keys one agent's row holds that a weekly improvement may change (contract C2). */
+export interface AgentSettingsValues {
+  thresholds: Record<string, unknown>
+  schedule: string | null
+}
+
 export interface AgentSettingsRepository {
   load(htxCode: string): Promise<AgentSettingsSnapshot>
   /** `ollama` plus each external provider whose key the agent container reported in its heartbeat. */
   availableProviders(htxCode: string): Promise<AgentProvider[]>
   save(htxCode: string, input: SaveAgentSettingsInput): Promise<void>
+  /** The thresholds and schedule of one agent's row, or null when the cooperative has no such row. */
+  findForEvidence(htxCode: string, agent: string): Promise<AgentSettingsValues | null>
+  /** Merges only the given thresholds and sets the schedule when given; returns the values before and after. */
+  applyKeys(
+    htxCode: string,
+    agent: string,
+    change: AgentSettingsValues,
+    actor: string
+  ): Promise<{ before: AgentSettingsValues; after: AgentSettingsValues }>
 }

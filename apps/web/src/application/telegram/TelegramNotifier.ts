@@ -8,10 +8,12 @@ import type { JournalSubject } from '@/application/agent/actions/journal-labels'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
 import type { CampaignRepository } from '@/domain/agent/ports/CampaignRepository'
 import type { Proposal } from '@/domain/agent/proposal'
+import type { ImprovementRepository } from '@/domain/agent/ports/ImprovementRepository'
 import { signCallbackData } from '@/domain/telegram/callback-data'
 import type { OutboxInsert, OutboxRow, TelegramRepository } from '@/domain/telegram/ports/TelegramRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
 import { telegramCallbackKey } from './telegram-config'
+import { measuredLines, templateReminderLines, vnIsoWeekday, vnMondayOf, weeklyImprovementLines } from './improvement-lines'
 import {
   campaignText,
   healthText,
@@ -47,6 +49,8 @@ export interface TelegramNotifierDeps {
   /** Journal labels for a proposal's preview; the same wording the inbox shows. */
   labelsFor?: (htxCode: string, proposals: Proposal[]) => Promise<Map<string, JournalSubject>>
   campaigns?: NotifierCampaigns
+  /** Template reminders of the campaign message and the weekly improvement lines (M8). */
+  improvements?: Pick<ImprovementRepository, 'activeTemplates' | 'countForWeek' | 'measuredBetween'>
   now?: () => Date
 }
 
@@ -84,12 +88,14 @@ export class TelegramNotifier {
   private readonly labelsFor: (htxCode: string, proposals: Proposal[]) => Promise<Map<string, JournalSubject>>
   private readonly now: () => Date
   private readonly campaigns?: NotifierCampaigns
+  private readonly improvements?: TelegramNotifierDeps['improvements']
 
   constructor(deps: TelegramNotifierDeps) {
     this.repo = deps.repo
     this.proposals = deps.proposals
     this.labelsFor = deps.labelsFor ?? defaultLabels
     this.campaigns = deps.campaigns
+    this.improvements = deps.improvements
     this.now = deps.now ?? (() => new Date())
   }
 
@@ -149,7 +155,8 @@ export class TelegramNotifier {
       target: item.target,
       unitVi: campaign.goals.find((g) => g.goalKey === item.goalKey)?.unitVi ?? 'việc',
     }))
-    const text = campaignText(campaign.day, campaign.summaryVi, lines)
+    const templates = this.improvements ? await this.improvements.activeTemplates(htxCode, vnIsoWeekday(campaign.day)) : []
+    const text = campaignText(campaign.day, campaign.summaryVi, lines, templateReminderLines(templates))
     const key = telegramCallbackKey()
     if (!key || !OPEN_CAMPAIGN_STATUSES.includes(campaign.status)) return { text }
     return {
@@ -276,12 +283,13 @@ export class TelegramNotifier {
       new Date(vnMidnight(periodEnd).getTime() + DAY_MS)
     )
     const campaignLines = kind === 'daily' ? await this.reportCampaign(htxCode, periodStart) : []
+    const improvementLines = kind === 'weekly' ? await this.reportImprovements(htxCode) : []
     const text = reportText(
       kind,
       periodStart,
       periodEnd,
       { ...figures, proposals_open: counts.open, proposals_decided: counts.decided },
-      campaignLines
+      [...campaignLines, ...improvementLines]
     )
     const recipients = [
       ...(await this.repo.userLinkRecipients(htxCode, ['manager', 'officer'])),
@@ -291,6 +299,16 @@ export class TelegramNotifier {
       recipients.map((link) => ({ htxCode, chatId: link.chatId, op: 'send' as const, text, purpose: 'report' as const }))
     )
     return true
+  }
+
+  /** The weekly report's improvement lines: the week's new proposals and the measurements of the last seven days (C6). */
+  private async reportImprovements(htxCode: string): Promise<string[]> {
+    if (!this.improvements) return []
+    const now = this.now()
+    const created = await this.improvements.countForWeek(htxCode, vnMondayOf(now))
+    const from = new Date(now.getTime() - 7 * DAY_MS)
+    const measured = await this.improvements.measuredBetween(htxCode, from, now)
+    return weeklyImprovementLines(created, measuredLines(measured, from, now))
   }
 
   /**
