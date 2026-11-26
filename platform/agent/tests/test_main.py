@@ -137,6 +137,10 @@ class FakeHasuraGateway:
         del campaign
         return {"id": "campaign-1"}
 
+    def post_autopilot_tick(self):
+        self.ticks = getattr(self, "ticks", 0) + 1
+        return {"ran": 0, "failed": 0, "returned": 0, "stopped": None}
+
     def start_run(self, **kwargs):
         del kwargs
         self.runs_started += 1
@@ -463,3 +467,33 @@ def test_a9_logs_no_error_when_the_queue_is_quiet(cooperative, caplog):
         agent_main.run_once(cfg, runtimes, now=t0)
 
     assert "A9 daily-campaign failed" not in caplog.text
+
+
+def test_autopilot_tick_is_posted_once_per_cycle_after_the_m4_agents(cooperative):
+    cfg, gateway = cooperative
+    runtimes: dict = {}
+    t0 = datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc)
+
+    agent_main.run_once(cfg, runtimes, now=t0)
+    assert gateway.ticks == 1
+    agent_main.run_once(cfg, runtimes, now=t0 + timedelta(seconds=30))
+    assert gateway.ticks == 2
+
+
+def test_a_failed_autopilot_tick_is_logged_and_the_loop_goes_on(cooperative, caplog):
+    cfg, gateway = cooperative
+
+    def failing_tick():
+        gateway.ticks = getattr(gateway, "ticks", 0) + 1
+        raise urllib.error.URLError("down")
+
+    gateway.post_autopilot_tick = failing_tick
+    runtimes: dict = {}
+    t0 = datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc)
+
+    with caplog.at_level(logging.ERROR, logger="dxos_agent"):
+        agent_main.run_once(cfg, runtimes, now=t0)
+        agent_main.run_once(cfg, runtimes, now=t0 + timedelta(seconds=30))
+
+    assert gateway.ticks == 2
+    assert "autopilot tick failed" in caplog.text

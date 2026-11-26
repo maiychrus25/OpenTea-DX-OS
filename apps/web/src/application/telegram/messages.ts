@@ -3,6 +3,7 @@
 
 // Vietnamese message wording for Telegram. Pure: no personal data, only codes, counts and dates (spec §8.3).
 import { formatVnDate } from '@/application/agent/actions/journal-labels'
+import type { StopReason } from '@/domain/agent/autopilot'
 import type { Proposal } from '@/domain/agent/proposal'
 
 const VN_TIMEZONE = 'Asia/Ho_Chi_Minh'
@@ -41,6 +42,7 @@ export const TELEGRAM_TEXT = {
   otherCooperative: 'Đề xuất này không thuộc HTX của bạn.',
   approved: 'Đã duyệt đề xuất.',
   executed: 'Đã duyệt và thực hiện đề xuất.',
+  sentToStaffApp: 'Đã duyệt. Đã gửi app nhân sự.',
   failedExecution: 'Đã duyệt nhưng thực hiện lỗi. Xem chi tiết trên web.',
   rejected: 'Đã từ chối đề xuất.',
   stale: 'Dữ liệu nguồn đã thay đổi, đề xuất không còn hiệu lực.',
@@ -82,6 +84,13 @@ export const TELEGRAM_TEXT = {
   campaignDropped: 'Đã bỏ chiến dịch hôm nay.',
   campaignListed: 'Đã gửi lại các việc chờ duyệt.',
   noCampaignToday: 'Hôm nay chưa có chiến dịch.',
+  // Autonomous mode (M12, contract C5).
+  autopilotBlocked: 'Đã chặn. Đề xuất chuyển về chờ duyệt.',
+  autopilotAlreadyRan: 'Đã chạy, không chặn được nữa.',
+  autopilotNotScheduled: 'Việc này không còn chờ tự chạy.',
+  autopilotStopped: 'Đã dừng tự vận hành. Các việc đang chờ chuyển về chờ duyệt.',
+  autopilotOff: 'Tự vận hành đang tắt.',
+  autopilotNotAllowed: 'Chỉ trưởng HTX hoặc cán bộ kỹ thuật được dùng lệnh này.',
   campaignApproved: (r: { executed: number; waitingHigh: number; forwarded: number; failed: number }) =>
     `Đã duyệt chiến dịch: ${r.executed} việc đã chạy, ${r.waitingHigh} việc chờ xác nhận riêng, ${r.forwarded} việc chuyển người đủ quyền.` +
     (r.failed > 0 ? ` ${r.failed} việc lỗi.` : ''),
@@ -112,9 +121,13 @@ export function proposalResultText(proposal: Proposal): string | null {
   const at = proposal.decidedAt ? formatVnClock(proposal.decidedAt) : ''
   switch (proposal.status) {
     case 'executed':
-      return `Đã được ${by} duyệt lúc ${at}, đã thực hiện.`
+      return proposal.decisionChannel === 'autopilot' ? `AI đã tự thực hiện lúc ${at}.` : `Đã được ${by} duyệt lúc ${at}, đã thực hiện.`
+    case 'sent_to_staff_app':
+      return `Đã được ${by} duyệt lúc ${at}. Đã gửi app nhân sự.`
     case 'failed':
-      return `Đã được ${by} duyệt lúc ${at}, thực hiện lỗi.`
+      return proposal.decisionChannel === 'autopilot'
+        ? `AI đã tự thực hiện lúc ${at}, thực hiện lỗi.`
+        : `Đã được ${by} duyệt lúc ${at}, thực hiện lỗi.`
     case 'rejected':
       return `Đã từ chối: ${proposal.decisionNote ?? ''}`
     case 'stale':
@@ -124,6 +137,54 @@ export function proposalResultText(proposal: Proposal): string | null {
     default:
       return null
   }
+}
+
+/** The message of a proposal that will run on its own at `runAt`, before the Chặn and Xem buttons. */
+export function autopilotScheduledText(titleVi: string, preview: string[], runAt: Date): string {
+  return `Sẽ tự chạy lúc ${formatVnClock(runAt)}: ${titleVi}${preview[0] ? ` — ${preview[0]}` : ''}`
+}
+
+const STOP_REASON_TEXT: Record<StopReason, (dailyCap: number) => string> = {
+  manual: () => 'Tự vận hành đã được dừng theo yêu cầu.',
+  enabler_lost: () => 'Tự vận hành đã dừng: người bật không còn là trưởng HTX hoặc đã bị khoá.',
+  inactive: () => 'Tự vận hành đã dừng: 7 ngày không có trưởng HTX nào thao tác.',
+  brake_failures: () => 'Tự vận hành đã dừng (phanh): có 3 việc tự chạy bị lỗi trong 1 giờ.',
+  brake_cap: (cap) => `Tự vận hành đã dừng (phanh): đã tự chạy đủ ${cap} việc trong ngày.`,
+  brake_blocks: () => 'Tự vận hành đã dừng (phanh): hơn 30% việc trong ngày bị chặn.',
+  brake_volume: () => 'Tự vận hành đã dừng (phanh): số đề xuất của một agent hôm nay vượt 3 lần mức thường ngày.',
+}
+
+export function autopilotStoppedText(reason: StopReason, returned: number, dailyCap: number): string {
+  const lines = [STOP_REASON_TEXT[reason](dailyCap)]
+  lines.push(returned > 0 ? `${returned} việc đang chờ đã chuyển về chờ duyệt.` : 'Các việc đang chờ chuyển về chờ duyệt.')
+  lines.push('Chỉ bật lại được trên web.')
+  return lines.join('\n')
+}
+
+export function autopilotEnabledText(byName: string, openedTitles: string[], dailyCap: number): string {
+  const lines = [`Tự vận hành đã được bật bởi ${byName}. Các đề xuất đủ điều kiện sẽ tự chạy sau thời gian chờ để mọi người chặn.`]
+  if (openedTitles.length > 0) lines.push(`Đã mở thêm: ${openedTitles.join(', ')}.`)
+  lines.push(`Tối đa ${dailyCap} việc tự chạy mỗi ngày. Gửi /dung để dừng ngay.`)
+  return lines.join('\n')
+}
+
+export interface AutopilotStatusFigures {
+  enabled: boolean
+  enabledByName: string | null
+  pending: number
+  ran: number
+  blocked: number
+  dailyCap: number
+}
+
+/** `/tuvanhanh`: the mode and today's counts. */
+export function autopilotStatusText(f: AutopilotStatusFigures): string {
+  if (!f.enabled) return TELEGRAM_TEXT.autopilotOff
+  return [
+    `Tự vận hành đang bật${f.enabledByName ? ` (bởi ${f.enabledByName})` : ''}.`,
+    `Hôm nay: ${f.ran}/${f.dailyCap} việc đã tự chạy, ${f.blocked} bị chặn, ${f.pending} việc đang chờ giờ chạy.`,
+    'Gửi /dung để dừng ngay.',
+  ].join('\n')
 }
 
 export interface ReportFigures {
@@ -184,12 +245,23 @@ export interface CampaignLine {
   title: string
   target: number
   unitVi: string
+  /** M12: when this item will run on its own. */
+  runAt?: Date | null
 }
 
-export function campaignText(day: string, summaryVi: string, lines: CampaignLine[], reminders: string[] = []): string {
+export function campaignText(
+  day: string,
+  summaryVi: string,
+  lines: CampaignLine[],
+  reminders: string[] = [],
+  autopilot = false
+): string {
   const [, month, dayOfMonth] = day.split('-')
   const out = [`Chiến dịch ngày ${dayOfMonth}/${month}: ${lines.length} việc`, summaryVi]
-  lines.slice(0, 4).forEach((line, index) => out.push(`${index + 1}. ${line.title} · ${line.target} ${line.unitVi}`))
+  if (autopilot) out.unshift('Chiến dịch hôm nay sẽ tự chạy')
+  lines.slice(0, 4).forEach((line, index) =>
+    out.push(`${index + 1}. ${line.title} · ${line.target} ${line.unitVi}${autopilot && line.runAt ? ` · tự chạy lúc ${formatVnClock(line.runAt)}` : ''}`)
+  )
   if (lines.length > 4) out.push(`… và ${lines.length - 4} việc khác`)
   return [...out, ...reminders].join('\n')
 }

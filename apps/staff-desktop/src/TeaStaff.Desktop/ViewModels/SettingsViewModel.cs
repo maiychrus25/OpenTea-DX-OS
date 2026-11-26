@@ -10,11 +10,12 @@ using TeaStaff.Core.Services;
 using TeaStaff.Desktop.Services;
 using TeaStaff.Infrastructure;
 using TeaStaff.Infrastructure.MobileApi;
+using TeaStaff.Infrastructure.Sync;
 
 namespace TeaStaff.Desktop.ViewModels;
 
 public sealed partial class SettingsViewModel(IDialogService dialogs, AppConfig config, PolicyService policies, MobileApiServer api,
-    IOwnerAccountRepository owners, IPasswordHasher hasher, ITenantContext tenant, Infrastructure.Diagnostics.ConnectionChecker checker) : PageViewModel(dialogs)
+    IOwnerAccountRepository owners, IPasswordHasher hasher, ITenantContext tenant, Infrastructure.Diagnostics.ConnectionChecker checker, ICoreSecretStore coreSecret) : PageViewModel(dialogs)
 {
     [CommunityToolkit.Mvvm.Input.RelayCommand]
     private async Task TestPhone()
@@ -69,6 +70,9 @@ public sealed partial class SettingsViewModel(IDialogService dialogs, AppConfig 
     [ObservableProperty] private string _keycloakClient = string.Empty;
     [ObservableProperty] private Option<DatabaseProvider>? _selectedProvider;
     [ObservableProperty] private string _postgresConnection = string.Empty;
+    [ObservableProperty] private string _coreSyncUrl = string.Empty;
+    [ObservableProperty] private string _coreSyncClientId = string.Empty;
+    [ObservableProperty] private string _coreSyncSecretHint = string.Empty;
     [ObservableProperty] private string _dataFolder = AppConfig.DataFolder;
     [ObservableProperty] private string _version = "1.0.0";
 
@@ -91,6 +95,9 @@ public sealed partial class SettingsViewModel(IDialogService dialogs, AppConfig 
         KeycloakClient = config.Keycloak.ClientId;
         SelectedProvider = Providers.First(x => x.Value == config.Database.Provider);
         PostgresConnection = config.Database.PostgresConnection;
+        CoreSyncUrl = config.CoreSync.BaseUrl;
+        CoreSyncClientId = config.CoreSync.ClientId;
+        CoreSyncSecretHint = string.IsNullOrEmpty(coreSecret.Read()) ? "Chưa lưu mã bí mật." : "Đã lưu mã bí mật (được mã hoá). Để trống ô bên dưới để giữ nguyên.";
         Version = typeof(SettingsViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
     }
 
@@ -166,6 +173,32 @@ public sealed partial class SettingsViewModel(IDialogService dialogs, AppConfig 
         config.Database.PostgresConnection = PostgresConnection.Trim();
         config.Save();
         Dialogs.Info("Đã lưu", "Cấu hình kết nối được áp dụng ở lần mở ứng dụng tiếp theo.\n\nXem docs/core-integration.md để tạo role app_staff_work và client Keycloak trên lõi.");
+    }
+
+    /// <summary>The secret comes from the view's PasswordBox, which cannot be bound. Empty URL turns the connection off.</summary>
+    public void SaveCoreSync(string secret)
+    {
+        var url = CoreSyncUrl.Trim().TrimEnd('/');
+        if (url.Length == 0)
+        {
+            config.CoreSync.BaseUrl = string.Empty;
+            config.CoreSync.ClientId = string.Empty;
+            config.Save();
+            coreSecret.Save(null);
+            CoreSyncClientId = string.Empty;
+            CoreSyncSecretHint = "Chưa lưu mã bí mật.";
+            Dialogs.Info("Đã tắt", "Ứng dụng không còn kết nối với hệ thống lõi.");
+            return;
+        }
+        if (!CoreSyncOptions.IsValidBaseUrl(url)) { Dialogs.Error("Địa chỉ lõi phải bắt đầu bằng https:// (hoặc http://localhost cho máy thử)."); return; }
+        if (string.IsNullOrWhiteSpace(CoreSyncClientId)) { Dialogs.Error("Vui lòng nhập Client ID (dạng dxos-staff-<mã HTX>)."); return; }
+        if (secret.Length == 0 && string.IsNullOrEmpty(coreSecret.Read())) { Dialogs.Error("Vui lòng nhập mã bí mật của client."); return; }
+        config.CoreSync.BaseUrl = url;
+        config.CoreSync.ClientId = CoreSyncClientId.Trim();
+        config.Save();
+        if (secret.Length > 0) coreSecret.Save(secret);
+        CoreSyncSecretHint = "Đã lưu mã bí mật (được mã hoá). Để trống ô bên dưới để giữ nguyên.";
+        Dialogs.Info("Đã lưu", "Ứng dụng sẽ đồng bộ danh sách nhân viên, chấm công và nhận việc đã duyệt từ lõi mỗi phút.");
     }
 
     [RelayCommand]

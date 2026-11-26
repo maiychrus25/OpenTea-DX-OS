@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "platform" / "tests"
 SHELL_SCRIPTS = [
     "smoke-telegram.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh",
-    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
+    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-staff.sh", "smoke-autopilot.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
 ]
 
 
@@ -161,7 +161,7 @@ def test_improvement_smoke_checks_that_only_the_silent_hours_threshold_changes()
     assert "jsonb_build_object('silent_hours', 8)" in text
 
 
-def test_mcp_smoke_runs_last_in_the_agentic_smoke_and_stays_out_of_the_platform_count():
+def test_mcp_smoke_runs_after_the_improvement_smoke_and_stays_out_of_the_platform_count():
     text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
     assert text.index("source platform/tests/smoke-improvement.sh") < text.index("source platform/tests/smoke-mcp.sh")
     # smoke-apps.sh counts the PASS lines of make platform-smoke, so the MCP checks must not run there.
@@ -217,3 +217,71 @@ def test_campaign_smoke_reads_the_approve_all_line_by_its_text():
     text = (TESTS / "smoke-campaign.sh").read_text(encoding="utf-8")
     assert 'tg_last_with "$TG_OWNER" "Đã duyệt chiến dịch"' in text
     assert 'tg_last_text "$TG_OWNER"' not in text
+
+
+def test_telegram_smoke_checks_the_mini_app_session_and_the_menu_button():
+    text = (TESTS / "smoke-telegram.sh").read_text(encoding="utf-8") + (TESTS / "lib-telegram.sh").read_text(encoding="utf-8")
+    for needle in ("/api/telegram/webapp/session", "setChatMenuButton", "WEBAPP_NOT_LINKED", "dxos_tg_webapp",
+                   'TELEGRAM_BOT_TOKEN="$TG_TOKEN_VALUE" ./dxos telegram enable', "DXOS_WEB_PUBLIC_URL"):
+        assert needle in text, needle
+
+
+def test_staff_smoke_runs_after_the_mcp_smoke_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-mcp.sh") < text.index("source platform/tests/smoke-staff.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the staff checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-improvement.sh", "smoke-mcp.sh"):
+        assert "smoke-staff.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_staff_smoke_chains_every_earlier_cleanup_on_exit_and_stops_the_agent_before_seeding():
+    text = (TESTS / "smoke-staff.sh").read_text(encoding="utf-8")
+    assert "trap 'staff_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+    assert text.index("$COMPOSE stop dxos-agent") < text.index("insert into platform.agent_proposals") < text.index("--force-recreate dxos-agent")
+    for needle in ("./dxos staff disable TC", "./dxos staff disable LB", "delete from platform.staff_roster"):
+        assert needle in text, needle
+
+
+def test_staff_smoke_covers_the_foreign_cooperative_and_signs_nothing():
+    text = (TESTS / "smoke-staff.sh").read_text(encoding="utf-8")
+    for needle in ("test 42", "/api/internal/staff/tasks", "/ack", "sent_to_staff_app", "telegram_approve_data_for", "Đã gửi app nhân sự"):
+        assert needle in text, needle
+    assert "callback_sign" not in text and "hmac" not in text and "set -x" not in text
+
+
+def test_staff_smoke_never_prints_the_secret():
+    text = (TESTS / "smoke-staff.sh").read_text(encoding="utf-8")
+    for line in text.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        if any(word in line for word in ("echo", "printf", "pass ")):
+            assert "$csec" not in line.replace("[ -n \"$csec\" ]", ""), line
+
+
+def test_autopilot_smoke_runs_last_in_the_agentic_smoke_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-mcp.sh") < text.index("source platform/tests/smoke-staff.sh") < text.index("source platform/tests/smoke-autopilot.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the autopilot checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-mcp.sh"):
+        assert "smoke-autopilot.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_autopilot_smoke_chains_every_earlier_cleanup_on_exit():
+    # The EXIT trap of smoke-staff is replaced, so this one chains it after its own cleanup.
+    text = (TESTS / "smoke-autopilot.sh").read_text(encoding="utf-8")
+    assert "trap 'autopilot_cleanup; staff_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+
+
+def test_autopilot_smoke_restores_the_mode_and_its_rows_on_exit():
+    text = (TESTS / "smoke-autopilot.sh").read_text(encoding="utf-8")
+    for needle in ("delete from platform.autopilot where htx_code='TC'", "delete from platform.agent_proposals",
+                   "delete from platform.telegram_outbox", "delete from platform.telegram_conversations"):
+        assert needle in text, needle
+
+
+def test_autopilot_smoke_presses_the_button_the_stub_recorded_and_signs_nothing():
+    text = (TESTS / "smoke-autopilot.sh").read_text(encoding="utf-8")
+    for needle in ("m12_block_data_for", "stub_calls", "/api/internal/agent/proposals", "/dung",
+                   "executed:autopilot", "test 31", "Đã dừng tự vận hành. Các việc đang chờ chuyển về chờ duyệt."):
+        assert needle in text, needle
+    assert "callback_sign" not in text and "hmac" not in text

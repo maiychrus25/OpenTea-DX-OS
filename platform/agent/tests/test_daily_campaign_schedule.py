@@ -38,6 +38,7 @@ def _patch_m4(monkeypatch, calls: list[str], campaign_error: Exception | None = 
     monkeypatch.setattr(agent_main.disease_watch, "fetch_window", lambda *a, **k: ([],))
     monkeypatch.setattr(agent_main.disease_watch, "window_fingerprint", lambda rows: "fp")
     monkeypatch.setattr(agent_main.disease_watch, "run_disease_watch", record("A3"))
+    monkeypatch.setattr(agent_main.staff_tasks, "run_staff_tasks", record("A8"))
     monkeypatch.setattr(agent_main.bulletin, "run_bulletin", record("A5"))
     if campaign_error is None:
         monkeypatch.setattr(agent_main.daily_campaign, "run_daily_campaign", record("A9", result=None))
@@ -86,6 +87,7 @@ def _patch_others(monkeypatch, calls: list[str]) -> None:
     monkeypatch.setattr(agent_main.disease_watch, "fetch_window", lambda *a, **k: ([],))
     monkeypatch.setattr(agent_main.disease_watch, "window_fingerprint", lambda rows: "fp")
     monkeypatch.setattr(agent_main.disease_watch, "run_disease_watch", lambda *a, **k: calls.append("A3"))
+    monkeypatch.setattr(agent_main.staff_tasks, "run_staff_tasks", lambda *a, **k: calls.append("A8"))
     monkeypatch.setattr(agent_main.bulletin, "run_bulletin", lambda *a, **k: calls.append("A5"))
 
 
@@ -143,9 +145,11 @@ def _join_bulletin(runtime: agent_main._CooperativeRuntime) -> None:
         runtime.bulletin_thread.join(5)
 
 
-def test_m7_daily_times_are_a4_530_a3_540_and_a9_600():
+def test_m7_daily_times_are_a4_530_a3_540_a8_550_and_a9_600():
     assert agent_main.HARVEST_READY_AT == time(5, 30)
     assert agent_main.DISEASE_WATCH_AT == time(5, 40)
+    assert agent_main.STAFF_TASKS_AT == time(5, 50)
+    assert _runtime().staff_tasks.at == time(5, 50)
     assert agent_main.CAMPAIGN_AT == time(6, 0)
     assert _runtime().daily_campaign.at == time(6, 0)
 
@@ -158,7 +162,7 @@ def test_a9_runs_after_a2_a4_and_a3_and_before_the_bulletin(monkeypatch):
     agent_main._run_m4_agents(runtime, NOW, AgentSettings())
     _join_bulletin(runtime)
 
-    assert calls == ["A2", "A4", "A3", "A9", "A5"]
+    assert calls == ["A2", "A4", "A3", "A8", "A9", "A5"]
 
 
 def test_a9_failure_does_not_stop_the_bulletin(monkeypatch):
@@ -169,5 +173,36 @@ def test_a9_failure_does_not_stop_the_bulletin(monkeypatch):
     agent_main._run_m4_agents(runtime, NOW, AgentSettings())
     _join_bulletin(runtime)
 
-    assert calls == ["A2", "A4", "A3", "A9", "A5"]
+    assert calls == ["A2", "A4", "A3", "A8", "A9", "A5"]
     assert runtime.daily_campaign.last_day is None  # not recorded, so the run is retried in the next cycle
+
+
+def test_a8_failure_does_not_stop_a9_and_is_retried(monkeypatch):
+    calls: list[str] = []
+    _patch_m4(monkeypatch, calls)
+
+    def failing(*args, **kwargs):
+        del args, kwargs
+        calls.append("A8")
+        raise GatewayHTTPError("Gateway GET failed (500): boom", 500)
+
+    monkeypatch.setattr(agent_main.staff_tasks, "run_staff_tasks", failing)
+    runtime = _runtime()
+
+    agent_main._run_m4_agents(runtime, NOW, AgentSettings())
+    _join_bulletin(runtime)
+
+    assert calls == ["A2", "A4", "A3", "A8", "A9", "A5"]
+    assert runtime.staff_tasks.last_day is None  # not recorded, so the run is retried in the next cycle
+
+
+def test_a8_runs_once_per_vietnam_day(monkeypatch):
+    calls: list[str] = []
+    _patch_m4(monkeypatch, calls)
+    runtime = _runtime()
+
+    agent_main._run_m4_agents(runtime, NOW, AgentSettings())
+    agent_main._run_m4_agents(runtime, NOW, AgentSettings())
+    _join_bulletin(runtime)
+
+    assert calls.count("A8") == 1

@@ -8,6 +8,7 @@ import { ListProposalsUseCase } from '@/application/agent/ListProposalsUseCase'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import { type JournalSubject } from '@/application/agent/actions/journal-labels'
 import { journalEntryIds, loadJournalSubjects } from '@/application/agent/journal-subjects'
+import { touchManagerActivity } from '@/application/agent/autopilot/manager-activity'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
@@ -20,6 +21,8 @@ async function getAgentProposals(request: Request) {
   if (tenant.role !== 'manager' && tenant.role !== 'officer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
+
+  await touchManagerActivity(tenant.htxCode, tenant.role)
 
   const url = new URL(request.url)
   const view = url.searchParams.get('view') === 'history' ? 'history' : 'open'

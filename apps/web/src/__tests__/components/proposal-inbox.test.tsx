@@ -169,6 +169,39 @@ describe('ProposalInbox', () => {
     })
   })
 
+  test('an empty optional field keeps the proposal value: a staff task is approved with a new assignee and no note', async () => {
+    const staffItem = {
+      ...sampleItem,
+      id: 'p-staff',
+      kind: 'staff.task.create',
+      titleVi: 'Giao việc cho nhân sự',
+      editableFields: ['assignee_ref', 'due_date', 'note_vi'],
+      payload: { title_vi: 'Hái chè thửa TC-A1', due_date: '2026-11-27', assignee_ref: '7', source: { kind: 'harvest.approve' } },
+      subjects: [],
+    }
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: [staffItem] }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: { outcome: 'executed', result: {} } }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: [] }) })
+    global.fetch = fetchMock as unknown as typeof fetch
+
+    render(<ProposalInbox role="manager" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Sửa rồi duyệt' }))
+    fireEvent.change(screen.getByLabelText('Mã nhân sự được giao'), { target: { value: '9' } })
+    expect(screen.getByLabelText('Ghi chú cho nhân sự')).toHaveValue('')
+    fireEvent.click(screen.getByRole('button', { name: 'Duyệt bản đã sửa' }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/agent/proposals/p-staff/decision',
+        expect.objectContaining({
+          body: JSON.stringify({ decision: 'approve', edited_payload: { assignee_ref: '9', due_date: '2026-11-27' } }),
+        })
+      )
+    })
+  })
+
   test('marks the active view with aria-pressed and links evidence to its page', async () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: [sampleItem] }) }) as unknown as typeof fetch
 

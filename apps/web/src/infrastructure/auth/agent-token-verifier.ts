@@ -3,6 +3,7 @@
 
 import { createPublicKey, verify as cryptoVerify, type JsonWebKey, type KeyObject } from 'node:crypto'
 import type { AgentTokenVerifier, VerifiedAgentToken } from '@/domain/agent/ports/AgentTokenVerifier'
+import type { StaffTokenVerifier, VerifiedStaffToken } from '@/domain/agent/ports/StaffTokenVerifier'
 import {
   TELEGRAM_CLIENT_ID,
   type TelegramTokenVerifier,
@@ -14,6 +15,7 @@ import { ForbiddenError, UnauthorizedError } from '@/domain/errors'
 const TEN_MINUTES_MS = 10 * 60 * 1000
 const JWKS_TIMEOUT_MS = 5000
 const HTX_CODE_RE = /^[A-Z0-9_-]{1,20}$/
+const STAFF_AZP_RE = /^dxos-staff-[a-z0-9_-]{1,20}$/
 
 interface JwkEntry extends JsonWebKey {
   kid?: string
@@ -236,6 +238,32 @@ export class KeycloakAgentTokenVerifier implements AgentTokenVerifier {
       htxCode: payload.htx_code,
       roles,
     }
+  }
+}
+
+/** Verifies Keycloak RS256 service-account JWTs issued to per-HTX `dxos-staff-<htx>` clients (role `staff-sync`). */
+export class KeycloakStaffTokenVerifier implements StaffTokenVerifier {
+  private readonly jwt: KeycloakJwtVerifier
+
+  constructor(options: KeycloakJwtVerifierOptions = {}) {
+    this.jwt = new KeycloakJwtVerifier(options)
+  }
+
+  async verify(token: string): Promise<VerifiedStaffToken> {
+    const { payload, roles } = await this.jwt.verifyClaims(token)
+    if (!roles.includes('staff-sync')) {
+      throw new ForbiddenError('Staff sync role required')
+    }
+
+    if (typeof payload.htx_code !== 'string' || !HTX_CODE_RE.test(payload.htx_code)) {
+      throw new ForbiddenError('Valid htx_code claim required')
+    }
+
+    if (typeof payload.azp !== 'string' || !STAFF_AZP_RE.test(payload.azp) || payload.azp !== `dxos-staff-${payload.htx_code.toLowerCase()}`) {
+      throw new ForbiddenError('Invalid staff client binding')
+    }
+
+    return { sub: payload.sub as string, azp: payload.azp, htxCode: payload.htx_code, roles }
   }
 }
 

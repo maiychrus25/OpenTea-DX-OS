@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronLeft, FileText, Sparkles, TriangleAlert } from 'lucide-react'
 import { FarmerJournalForm } from '../../_components/FarmerJournalForm'
 import kit from '@/components/features/farmer-web/kit.module.css'
+import type { JournalPrefill } from '../../_components/journal-prefill'
 import styles from '../../journal.module.css'
 import { fetchJson } from '@/lib/api/fetch-json'
 
@@ -29,7 +30,7 @@ function useWaitingParcels() {
   return waiting
 }
 
-export function FarmerJournalNewClient() {
+export function FarmerJournalNewClient({ initial }: { initial?: JournalPrefill }) {
   const router = useRouter()
   const waiting = useWaitingParcels()
 
@@ -47,6 +48,7 @@ export function FarmerJournalNewClient() {
       <div className={kit.cols}>
         <div className={`${kit.pn} ${styles.formCard}`}>
           <FarmerJournalForm
+            initial={initial}
             onSuccess={() => router.push('/farmer/journal')}
             onCancel={() => router.push('/farmer/journal')}
           />

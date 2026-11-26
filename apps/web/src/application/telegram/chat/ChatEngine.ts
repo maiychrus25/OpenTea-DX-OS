@@ -7,7 +7,9 @@ import { signCallbackDataV2 } from '@/domain/telegram/callback-data'
 import type { TelegramConversation, TelegramRepository } from '@/domain/telegram/ports/TelegramRepository'
 import { TELEGRAM_BUTTON, TELEGRAM_TEXT } from '../messages'
 import type { OutboxReply, UpdateResponse } from '../TelegramUpdateHandler'
+import type { ReplyButton } from '../TelegramUpdateHandler'
 import { menuKeyboard, MENU_LABEL, type MenuKey } from './menu'
+import { editButton } from './mini-app'
 import { normalizeText } from './normalize'
 import { commandOf, routeText } from './router'
 import type {
@@ -41,7 +43,7 @@ const CHOICES_KEY = '__choices'
 const CARD_FIRST = -1
 const CARD_SECOND = -2
 
-type Buttons = { text: string; callback_data: string }[][]
+type Buttons = ReplyButton[][]
 type Meta = Record<string, unknown>
 
 /** The conversation calls the engine makes; the handler passes the Prisma repository. */
@@ -536,6 +538,8 @@ export class ChatEngine {
       action.risk === 'high'
         ? [[this.button(token, 'next', TELEGRAM_BUTTON.next), this.button(token, 'cancel', TELEGRAM_BUTTON.cancel)]]
         : [[this.button(token, 'ok', TELEGRAM_BUTTON.confirm), this.button(token, 'cancel', TELEGRAM_BUTTON.cancel)]]
+    const edit = editButton(action.name, payload.data, user.tenant.role)
+    if (edit) buttons.push([edit])
 
     await this.deps.repo.setFlow({
       telegramUserId: user.telegramUserId,

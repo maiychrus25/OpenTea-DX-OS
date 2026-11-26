@@ -8,6 +8,7 @@ import styles from '../journal.module.css'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import { ImageIcon, Send, TriangleAlert } from 'lucide-react'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
+import { ACTIVITY_TYPES, type JournalPrefill } from './journal-prefill'
 
 interface Parcel {
   id: string
@@ -18,27 +19,20 @@ interface Parcel {
 interface FarmerJournalFormProps {
   onSuccess: () => void
   onCancel: () => void
+  /** Values from the chat card's Sửa button; anything invalid is dropped. */
+  initial?: JournalPrefill
 }
 
-const ACTIVITY_TYPES = [
-  { value: 'SPRAYING', label: 'Phun thuốc' },
-  { value: 'FERTILIZING', label: 'Bón phân' },
-  { value: 'IRRIGATION', label: 'Tưới tiêu' },
-  { value: 'HARVEST', label: 'Thu hoạch' },
-  { value: 'SOWING', label: 'Gieo sạ' },
-  { value: 'OTHER', label: 'Khác' },
-]
-
-export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProps) {
+export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJournalFormProps) {
   const [parcels, setParcels] = useState<Parcel[]>([])
   const [parcelId, setParcelId] = useState('')
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10))
-  const [activityType, setActivityType] = useState('SPRAYING')
-  const [productName, setProductName] = useState('')
+  const [activityType, setActivityType] = useState(initial?.activityType ?? 'SPRAYING')
+  const [productName, setProductName] = useState(initial?.productName ?? '')
   const [hasChemicals, setHasChemicals] = useState(true)
-  const [dosage, setDosage] = useState('')
+  const [dosage, setDosage] = useState(initial?.dosage ?? '')
   const [performer, setPerformer] = useState('')
-  const [withdrawalDays, setWithdrawalDays] = useState(14)
+  const [withdrawalDays, setWithdrawalDays] = useState(initial?.withdrawalDays ?? 14)
   const [observation, setObservation] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -50,10 +44,10 @@ export function FarmerJournalForm({ onSuccess, onCancel }: FarmerJournalFormProp
       .then(j => {
         const list = j.data || []
         setParcels(list)
-        if (list.length > 0) setParcelId(list[0].id)
+        if (list.length > 0) setParcelId(list.find(p => p.id === initial?.parcelId)?.id ?? list[0].id)
       })
       .catch(() => { setParcels([]); setError(LOAD_FAILED_MESSAGE) })
-  }, [])
+  }, [initial?.parcelId])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

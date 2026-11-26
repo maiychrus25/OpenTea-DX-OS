@@ -7,6 +7,7 @@ import { CampaignClosedError } from '@/application/agent/campaign/campaign-error
 import { vnDayOf } from '@/application/agent/campaign/vn-day'
 import type { DecideProposalInput, DecideProposalOutcome } from '@/application/agent/DecideProposalUseCase'
 import type { Campaign, CampaignItem } from '@/domain/agent/campaign'
+import type { AutopilotRepository, BlockOutcome } from '@/domain/agent/ports/AutopilotRepository'
 import type { CampaignRepository } from '@/domain/agent/ports/CampaignRepository'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
 import type { DecisionChannel, Proposal } from '@/domain/agent/proposal'
@@ -22,7 +23,8 @@ import { ChatEngine, PHOTO_MAX_BYTES, type IncomingPhoto, type ProposalMessage }
 import { ChatUserResolver } from './chat/ChatUserResolver'
 import { commandOf } from './chat/router'
 import type { ChatAction, ChatTool, PhotoStore } from './chat/types'
-import { TELEGRAM_TEXT } from './messages'
+import { WAITING_FOR_STAFF_APP } from '@/application/agent/actions/staff-task-create.action'
+import { autopilotStatusText, TELEGRAM_TEXT, type AutopilotStatusFigures } from './messages'
 
 export interface TelegramMessageInput {
   message_id?: number
@@ -50,7 +52,8 @@ export interface TelegramUpdateInput {
   callback_query?: TelegramCallbackInput
 }
 
-export type ReplyButtons = { text: string; callback_data: string }[][]
+export type ReplyButton = { text: string; callback_data: string } | { text: string; web_app: { url: string } }
+export type ReplyButtons = ReplyButton[][]
 
 /** A reply the relay sends (contract C2). An edit always sends its keyboard, so an edit without buttons removes them. */
 export type OutboxReply =
@@ -80,6 +83,15 @@ export interface CampaignServices {
   message(htxCode: string, campaignId: string): Promise<{ text: string; buttons?: ReplyButtons } | null>
 }
 
+/** Autonomous mode (M12): the Chặn button, `/dung`, `/tuvanhanh` and the manager-activity mark. Without it the commands are not offered. */
+export interface AutopilotServices {
+  block: AutopilotRepository['block']
+  /** Stops the mode with reason `manual`; null when it was already off. */
+  stop(htxCode: string, userId: string): Promise<{ returned: number } | null>
+  status(htxCode: string): Promise<AutopilotStatusFigures>
+  touchManagerActivity: AutopilotRepository['touchManagerActivity']
+}
+
 export interface TelegramUpdateHandlerDeps {
   repo: TelegramRepository
   proposals: Pick<ProposalRepository, 'findById'>
@@ -90,6 +102,7 @@ export interface TelegramUpdateHandlerDeps {
   callbackKey: string
   chat: ChatServices
   campaigns: CampaignServices
+  autopilot?: AutopilotServices
   now?: () => Date
 }
 
@@ -214,6 +227,10 @@ export class TelegramUpdateHandler {
     if (limit !== 'ok') return limit === 'notice' ? { replies: [reply(chatId, TELEGRAM_TEXT.rateLimited)] } : EMPTY
     if (command === '/huy') return this.cancelOpen(fromId, chatId)
     if (command === '/chiendich') return this.todaysCampaign(link, chatId)
+    if (this.deps.autopilot && (command === '/dung' || command === '/tuvanhanh')) {
+      return this.autopilotCommand(link, command, chatId)
+    }
+    await this.markManagerActivity(link)
 
     const open = await this.deps.repo.activeConversation(fromId, this.now())
     if (open?.kind === 'reject_reason') return this.receiveRejectReason(fromId, chatId, text)
@@ -331,6 +348,10 @@ export class TelegramUpdateHandler {
     }
 
     const parsed = v1!
+    await this.markManagerActivity(link)
+    if ((parsed.op === 'b' || parsed.op === 'v') && this.deps.autopilot) {
+      return this.autopilotPress(link, parsed.op, parsed.proposalId, callback.message.chat.id, callback.message.message_id ?? 0)
+    }
     if (parsed.op === 'A' || parsed.op === 'L' || parsed.op === 'D') {
       return this.campaignPress(link, parsed.op, parsed.proposalId, callback.message.chat.id, callback.message.message_id ?? 0)
     }
@@ -353,6 +374,61 @@ export class TelegramUpdateHandler {
 
     const result = await this.decideAs(link, parsed.proposalId, 'approve')
     return answer(result.text, result.showAlert)
+  }
+
+  /** A manager's press or message keeps the autonomous mode from stopping for inactivity (cheap: one write a minute at most). */
+  private async markManagerActivity(link: TelegramLink): Promise<void> {
+    if (!this.deps.autopilot || link.role !== 'manager') return
+    try {
+      await this.deps.autopilot.touchManagerActivity(link.htxCode, this.now())
+    } catch (err) {
+      console.error('[Telegram] could not record manager activity', err)
+    }
+  }
+
+  /** `/dung` stops the mode at once and `/tuvanhanh` shows it: for a manager or officer who is still one, in a private chat. */
+  private async autopilotCommand(link: TelegramLink, command: '/dung' | '/tuvanhanh', chatId: number): Promise<UpdateResponse> {
+    const user = await this.users.resolve(link)
+    if (!user || (user.tenant.role !== 'manager' && user.tenant.role !== 'officer')) {
+      return { replies: [reply(chatId, TELEGRAM_TEXT.autopilotNotAllowed)] }
+    }
+    const autopilot = this.deps.autopilot!
+    if (user.tenant.role === 'manager') await this.markManagerActivity(link)
+    if (command === '/tuvanhanh') {
+      return { replies: [reply(chatId, autopilotStatusText(await autopilot.status(link.htxCode)))] }
+    }
+    const stopped = await autopilot.stop(link.htxCode, user.tenant.userId)
+    return { replies: [reply(chatId, stopped ? TELEGRAM_TEXT.autopilotStopped : TELEGRAM_TEXT.autopilotOff)] }
+  }
+
+  /** Chặn (`b`) before the run, Xem (`v`) for the normal message with Duyệt and Từ chối (C5). */
+  private async autopilotPress(
+    link: TelegramLink,
+    op: 'b' | 'v',
+    proposalId: string,
+    chatId: number,
+    messageId: number
+  ): Promise<UpdateResponse> {
+    const access = await this.approverAccess(link, proposalId)
+    if ('refusal' in access) return answer(access.refusal, true)
+
+    if (op === 'v') {
+      if (access.proposal.status !== 'proposed') return answer(TELEGRAM_TEXT.alreadyDecided(access.proposal.decidedByName))
+      const [message] = await this.deps.chat.proposalMessages(link.htxCode, [proposalId])
+      if (!message) return answer(TELEGRAM_TEXT.invalidButton, true)
+      return { replies: [{ op: 'send', chat_id: chatId, text: message.text, buttons: message.buttons }] }
+    }
+
+    const outcome: BlockOutcome = await this.deps.autopilot!.block(link.htxCode, proposalId, access.tenant.userId)
+    if (outcome === 'already_ran') return answer(TELEGRAM_TEXT.autopilotAlreadyRan, true)
+    if (outcome === 'not_scheduled') return answer(TELEGRAM_TEXT.autopilotNotScheduled, true)
+    if (outcome === 'not_found') return answer(TELEGRAM_TEXT.otherCooperative, true)
+    // Blocked: the message goes back to the normal one, so the proposal can still be approved or rejected here.
+    const [message] = await this.deps.chat.proposalMessages(link.htxCode, [proposalId])
+    return {
+      replies: message ? [{ op: 'edit', chat_id: chatId, edit_message_id: messageId, text: message.text, buttons: message.buttons }] : [],
+      answer_callback: { text: TELEGRAM_TEXT.autopilotBlocked, show_alert: false },
+    }
   }
 
   /** `/chiendich`: today's campaign for a manager or officer; everyone else, or no campaign, gets the plain line. */
@@ -495,7 +571,7 @@ export class TelegramUpdateHandler {
     }
     switch (outcome.outcome) {
       case 'executed':
-        return { text: TELEGRAM_TEXT.executed, showAlert: false }
+        return { text: outcome.result.state === WAITING_FOR_STAFF_APP ? TELEGRAM_TEXT.sentToStaffApp : TELEGRAM_TEXT.executed, showAlert: false }
       case 'failed':
         return { text: TELEGRAM_TEXT.failedExecution, showAlert: true }
       case 'rejected':

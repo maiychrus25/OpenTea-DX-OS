@@ -149,6 +149,33 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
+
+                <!-- Core sync -->
+                <Border Style="{StaticResource Card}" Margin="0,20,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Kết nối hệ thống lõi" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Ứng dụng tự lấy các việc đã được chủ nhiệm duyệt từ trợ lý AI của lõi mỗi phút, và gửi danh sách nhân viên cùng số người đã chấm công hôm nay. Lõi không gọi vào máy này. Để trống địa chỉ để tắt." Style="{StaticResource Caption}" Margin="0,2,0,14" TextWrapping="Wrap" />
+                        <TextBlock Text="Địa chỉ lõi" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding CoreSyncUrl, UpdateSourceTrigger=PropertyChanged}" />
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Client ID" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding CoreSyncClientId, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Mã bí mật" Style="{StaticResource FieldLabel}" />
+                                <PasswordBox x:Name="CoreSecretBox" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{Binding CoreSyncSecretHint}" Style="{StaticResource Caption}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        <Button Margin="0,14,0,0" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Content="Lưu kết nối hệ thống lõi" Click="OnSaveCoreSync" />
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </Grid>
     </ScrollViewer>

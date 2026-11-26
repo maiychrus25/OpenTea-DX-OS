@@ -19,6 +19,9 @@ export interface CreateProposalRecord {
   dedupeKey: string
   subjects: string[]
   expiresAt: Date
+  /** M12: would this run on its own (recorded in either mode), and when the tick may run it (mode on only). */
+  shadowAuto?: boolean
+  runAt?: Date | null
 }
 
 export interface ProposalFilter {
@@ -34,11 +37,15 @@ export interface ProposalDecisionRecord {
   channel: DecisionChannel
   note: string | null
   editedPayload: Record<string, unknown> | null
+  /** M12: an auto-run acts as `autopilot:<agent>`; `enabledBy` names the manager who turned the mode on. */
+  autopilot?: { actor: string; enabledBy: string }
 }
 
 /** Who acted and on what, recorded in the audit details of an execution outcome. */
 export interface ExecutionAuditMeta {
   actorId?: string
+  /** Replaces the `user:<actorId>` actor of an auto-run, and records who enabled the mode. */
+  autopilot?: { actor: string; enabledBy: string }
   agent?: string
   kind?: string
   subjectIds?: string[]
@@ -52,8 +59,8 @@ export interface ProposalRepository {
   findById(htxCode: string, id: string): Promise<Proposal | null>
   claim(htxCode: string, id: string, decision: ProposalDecisionRecord): Promise<Proposal | null>
   markRejected(htxCode: string, id: string, decision: ProposalDecisionRecord): Promise<Proposal | null>
-  markStale(htxCode: string, id: string, meta?: { actorId?: string }): Promise<boolean>
-  markExpired(htxCode: string, id: string, meta?: { actorId?: string }): Promise<boolean>
+  markStale(htxCode: string, id: string, meta?: Pick<ExecutionAuditMeta, 'actorId' | 'autopilot'>): Promise<boolean>
+  markExpired(htxCode: string, id: string, meta?: Pick<ExecutionAuditMeta, 'actorId' | 'autopilot'>): Promise<boolean>
   markExecuted(id: string, result: Record<string, unknown>, meta?: ExecutionAuditMeta): Promise<void>
   markFailed(id: string, error: string, meta?: ExecutionAuditMeta): Promise<void>
 }

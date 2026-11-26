@@ -7,14 +7,20 @@ import { loadJournalSubjects } from '@/application/agent/journal-subjects'
 import type { JournalSubject } from '@/application/agent/actions/journal-labels'
 import type { ProposalRepository } from '@/domain/agent/ports/ProposalRepository'
 import type { CampaignRepository } from '@/domain/agent/ports/CampaignRepository'
+import type { AutopilotRepository } from '@/domain/agent/ports/AutopilotRepository'
 import type { Proposal } from '@/domain/agent/proposal'
+import type { StopReason } from '@/domain/agent/autopilot'
 import type { ImprovementRepository } from '@/domain/agent/ports/ImprovementRepository'
 import { signCallbackData } from '@/domain/telegram/callback-data'
 import type { OutboxInsert, OutboxRow, TelegramRepository } from '@/domain/telegram/ports/TelegramRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
+import { detailButton } from './chat/mini-app'
+import type { ReplyButton } from './TelegramUpdateHandler'
 import { telegramCallbackKey } from './telegram-config'
 import { measuredLines, templateReminderLines, vnIsoWeekday, vnMondayOf, weeklyImprovementLines } from './improvement-lines'
 import {
+  autopilotScheduledText,
+  autopilotStoppedText,
   campaignText,
   healthText,
   proposalResultText,
@@ -51,6 +57,8 @@ export interface TelegramNotifierDeps {
   campaigns?: NotifierCampaigns
   /** Template reminders of the campaign message and the weekly improvement lines (M8). */
   improvements?: Pick<ImprovementRepository, 'activeTemplates' | 'countForWeek' | 'measuredBetween'>
+  /** Autonomous mode (M12): the campaign header, the 18:00 section and nothing else. */
+  autopilot?: Pick<AutopilotRepository, 'get' | 'daySummary'>
   now?: () => Date
 }
 
@@ -89,6 +97,7 @@ export class TelegramNotifier {
   private readonly now: () => Date
   private readonly campaigns?: NotifierCampaigns
   private readonly improvements?: TelegramNotifierDeps['improvements']
+  private readonly autopilot?: TelegramNotifierDeps['autopilot']
 
   constructor(deps: TelegramNotifierDeps) {
     this.repo = deps.repo
@@ -96,12 +105,13 @@ export class TelegramNotifier {
     this.labelsFor = deps.labelsFor ?? defaultLabels
     this.campaigns = deps.campaigns
     this.improvements = deps.improvements
+    this.autopilot = deps.autopilot
     this.now = deps.now ?? (() => new Date())
   }
 
   /** One message per approver linked to the cooperative, with signed Approve and Reject buttons. */
   /** The approver message of a proposal: its text and the approve and reject buttons. Null when it cannot be signed. */
-  async proposalMessage(proposal: Proposal): Promise<{ text: string; buttons: { text: string; callback_data: string }[][] } | null> {
+  async proposalMessage(proposal: Proposal): Promise<{ text: string; buttons: ReplyButton[][] } | null> {
     const key = telegramCallbackKey()
     const definition = getAction(proposal.kind)
     // Only the callback key is needed to sign the buttons; the bot username only builds link URLs.
@@ -109,13 +119,54 @@ export class TelegramNotifier {
 
     const labels = await this.labelsFor(proposal.htxCode, [proposal])
     const text = proposalText(proposal, definition.titleVi, definition.preview(proposal.payload, labels, proposal.evidence))
-    const buttons = [
+    const buttons: ReplyButton[][] = [
       [
         { text: 'Duyệt', callback_data: signCallbackData(key, proposal.id, 'a') },
         { text: 'Từ chối', callback_data: signCallbackData(key, proposal.id, 'r') },
       ],
     ]
+    const detail = definition.risk === 'high' ? detailButton(proposal.id) : null
+    if (detail) buttons.push([detail])
     return { text, buttons }
+  }
+
+  /**
+   * M12: a proposal with a blocking window gets `Sẽ tự chạy lúc …` with Chặn and Xem instead of Duyệt and Từ chối.
+   * A zero window (a low-risk kind runs on the next tick) keeps the normal message, which becomes the run result.
+   */
+  private async scheduledMessage(proposal: Proposal): Promise<{ text: string; buttons: { text: string; callback_data: string }[][] } | null> {
+    const key = telegramCallbackKey()
+    const definition = getAction(proposal.kind)
+    if (!key || !definition || !proposal.runAt || proposal.runAt.getTime() <= proposal.createdAt.getTime()) return null
+    const labels = await this.labelsFor(proposal.htxCode, [proposal])
+    const preview = definition.preview(proposal.payload, labels, proposal.evidence)
+    return {
+      text: autopilotScheduledText(definition.titleVi, preview, proposal.runAt),
+      buttons: [
+        [
+          { text: 'Chặn', callback_data: signCallbackData(key, proposal.id, 'b') },
+          { text: 'Xem', callback_data: signCallbackData(key, proposal.id, 'v') },
+        ],
+      ],
+    }
+  }
+
+  /** The stop message to every linked manager and officer (H5, C3). */
+  async enqueueAutopilotStopped(htxCode: string, reason: StopReason, returned: number, dailyCap: number): Promise<void> {
+    const recipients = await this.repo.userLinkRecipients(htxCode, ['manager', 'officer'])
+    if (recipients.length === 0) return
+    const text = autopilotStoppedText(reason, returned, dailyCap)
+    await this.repo.enqueue(
+      recipients.map((link) => ({ htxCode, chatId: link.chatId, op: 'send' as const, text, purpose: 'reply' as const }))
+    )
+  }
+
+  /** The text lines of a change of the mode, sent to every linked manager and officer. */
+  async enqueueAutopilotNotice(htxCode: string, text: string): Promise<void> {
+    const recipients = await this.repo.userLinkRecipients(htxCode, ['manager', 'officer'])
+    await this.repo.enqueue(
+      recipients.map((link) => ({ htxCode, chatId: link.chatId, op: 'send' as const, text, purpose: 'reply' as const }))
+    )
   }
 
   async enqueueProposal(proposal: Proposal): Promise<void> {
@@ -125,7 +176,7 @@ export class TelegramNotifier {
     const recipients = await this.repo.userLinkRecipients(proposal.htxCode, definition.approverRoles)
     if (recipients.length === 0) return
 
-    const message = await this.proposalMessage(proposal)
+    const message = (await this.scheduledMessage(proposal)) ?? (await this.proposalMessage(proposal))
     if (!message) return
     await this.repo.enqueue(
       recipients.map((link) => ({
@@ -154,9 +205,11 @@ export class TelegramNotifier {
       title: getAction(item.kind)?.titleVi ?? item.kind,
       target: item.target,
       unitVi: campaign.goals.find((g) => g.goalKey === item.goalKey)?.unitVi ?? 'việc',
+      runAt: item.runAt ?? null,
     }))
+    const autopilotOn = this.autopilot ? (await this.autopilot.get(htxCode)).enabled : false
     const templates = this.improvements ? await this.improvements.activeTemplates(htxCode, vnIsoWeekday(campaign.day)) : []
-    const text = campaignText(campaign.day, campaign.summaryVi, lines, templateReminderLines(templates))
+    const text = campaignText(campaign.day, campaign.summaryVi, lines, templateReminderLines(templates), autopilotOn)
     const key = telegramCallbackKey()
     if (!key || !OPEN_CAMPAIGN_STATUSES.includes(campaign.status)) return { text }
     return {
@@ -283,6 +336,7 @@ export class TelegramNotifier {
       new Date(vnMidnight(periodEnd).getTime() + DAY_MS)
     )
     const campaignLines = kind === 'daily' ? await this.reportCampaign(htxCode, periodStart) : []
+    if (kind === 'daily') campaignLines.push(...(await this.reportAutopilot(htxCode, periodStart)))
     const improvementLines = kind === 'weekly' ? await this.reportImprovements(htxCode) : []
     const text = reportText(
       kind,
@@ -299,6 +353,17 @@ export class TelegramNotifier {
       recipients.map((link) => ({ htxCode, chatId: link.chatId, op: 'send' as const, text, purpose: 'report' as const }))
     )
     return true
+  }
+
+  /** The 18:00 section of autonomous mode, only when the mode was on during the day (C5). */
+  private async reportAutopilot(htxCode: string, day: string): Promise<string[]> {
+    if (!this.autopilot) return []
+    const start = vnMidnight(day)
+    const summary = await this.autopilot.daySummary(htxCode, start, new Date(start.getTime() + DAY_MS))
+    if (!summary.wasOn) return []
+    return [
+      `Tự vận hành: ${summary.ran} việc đã tự chạy, ${summary.blocked} bị chặn, ${summary.brakes} lần phanh, chi phí ${summary.costUsd.toFixed(2)} USD`,
+    ]
   }
 
   /** The weekly report's improvement lines: the week's new proposals and the measurements of the last seven days (C6). */

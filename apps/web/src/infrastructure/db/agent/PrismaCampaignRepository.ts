@@ -102,10 +102,10 @@ export class PrismaCampaignRepository implements CampaignRepository {
 
   async items(htxCode: string, campaignId: string): Promise<CampaignItem[]> {
     const rows = await prisma.$queryRaw<
-      { campaign_id: string; proposal_id: string; position: number; goal_key: string; target: number; kind: string; risk: Risk; proposal_status: ProposalStatus }[]
+      { campaign_id: string; proposal_id: string; position: number; goal_key: string; target: number; kind: string; risk: Risk; proposal_status: ProposalStatus; run_at: Date | null }[]
     >`
       SELECT ci.campaign_id::text AS campaign_id, ci.proposal_id::text AS proposal_id, ci.position, ci.goal_key, ci.target,
-             p.kind, p.risk, p.status AS proposal_status
+             p.kind, p.risk, p.status AS proposal_status, p.run_at
       FROM platform.campaign_items ci
       JOIN platform.campaigns c ON c.id = ci.campaign_id
       JOIN platform.agent_proposals p ON p.id = ci.proposal_id
@@ -121,6 +121,7 @@ export class PrismaCampaignRepository implements CampaignRepository {
       kind: r.kind,
       risk: r.risk,
       proposalStatus: r.proposal_status,
+      runAt: r.run_at,
     }))
   }
 

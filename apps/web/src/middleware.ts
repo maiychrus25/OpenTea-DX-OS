@@ -18,6 +18,7 @@ export function resolveAuthRedirect(
   pathname: string,
   isLoggedIn: boolean,
   role: string | undefined,
+  search = '',
 ): string | null {
   const lowerPath = pathname.toLowerCase()
 
@@ -58,6 +59,8 @@ export function resolveAuthRedirect(
       isPublicResourcePath(pathname)
     )
       return null
+    // The Mini App entry keeps its return URL, so the person lands on it after signing in inside Telegram.
+    if (pathname === '/telegram/open') return `/login?callbackUrl=${encodeURIComponent(pathname + search)}`
     return '/login'
   }
 
@@ -91,7 +94,7 @@ export default auth((req) => {
   const { pathname } = req.nextUrl
   const role = req.auth?.user?.role
 
-  const redirect = resolveAuthRedirect(pathname, isLoggedIn, role)
+  const redirect = resolveAuthRedirect(pathname, isLoggedIn, role, req.nextUrl.search)
   if (redirect === 'UNAUTHORIZED_API') {
     return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Unauthorized access' } }, { status: 401 })
   }

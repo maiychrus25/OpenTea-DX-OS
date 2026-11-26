@@ -409,7 +409,7 @@ Các loại còn lại (`autonomy: auto`) tự chạy ngay khi bật.
 
 - Trong lúc chờ, manager (và cán bộ, với việc thuộc phần mình) nhận tin Telegram "Sẽ tự chạy lúc …" kèm nút Chặn và Xem. Chặn không cần lý do; mỗi lần chặn được tính như một lần từ chối khi đo chất lượng agent.
 - Chiến dịch ngày ở chế độ này: tin 06:00 đổi thành "Chiến dịch hôm nay sẽ tự chạy", từng mục có nút Chặn theo cửa sổ của mục đó.
-- Web quyết định đề xuất nào được tự chạy ngay lúc nhận đề xuất, và đặt `run_at`. Việc chạy khi đến giờ do một nhịp gọi `/api/internal/autopilot/tick` mỗi phút. Nơi gọi nhịp không quan trọng, vì web kiểm lại mọi điều kiện ngay lúc chạy.
+- Web quyết định đề xuất nào được tự chạy ngay lúc nhận đề xuất, và đặt `run_at`. Việc chạy khi đến giờ do một nhịp gọi `/api/internal/agent/autopilot/tick` mỗi phút. Nơi gọi nhịp không quan trọng, vì web kiểm lại mọi điều kiện ngay lúc chạy.
 
 ### 11.4 Hạn mức và phanh bất thường
 
@@ -828,3 +828,99 @@ Theo `AGENTS.md`:
 - **Bảy loại hành động nhận `origin: user`.** Người tạo đề xuất phải có vai trò được duyệt loại đó. Evidence do web tự dựng từ đối tượng của đề xuất.
 - **Dòng kiểm chứng được lưu đệm 5 phút cho mỗi lô,** vì kiểm chuỗi audit phải đọc mọi dòng audit.
 - **Smoke trên CI** tạm bật direct grant cho `dxos-mcp` để lấy token không cần trình duyệt, rồi khôi phục khi chạy xong.
+
+### M10: giao việc nhân sự A8 (2026-11-27)
+
+**Đã làm:**
+- **A8 chạy lúc 05:50 mỗi sáng** và đề xuất việc cho nhân sự, từ các đề xuất đã chạy trong 24 giờ qua:
+  - hái chè sau khi thu hoạch được duyệt;
+  - kiểm tra bệnh;
+  - tưới khi đất khô.
+
+  Tối đa 10 việc. A8 gợi ý người đang có ít việc nhất, ưu tiên phòng Kỹ thuật cho việc kiểm tra bệnh, và không dùng LLM.
+- **Đường đi của một việc đã duyệt:**
+  1. Duyệt xong, đề xuất ở trạng thái "Đã gửi app nhân sự".
+  2. App nhân sự kéo việc về mỗi phút và tạo việc.
+  3. App báo lại mã việc, và đề xuất chuyển sang `executed`.
+- **App nhân sự báo danh sách nhân sự và số người có mặt hôm nay.** A9 dùng số này cho luật số người.
+- **Client riêng cho mỗi hợp tác xã.** `./dxos staff enable <HTX>` tạo client và in thông tin để nhập vào app nhân sự.
+- **Kiểm thử 42** có trong smoke và trong lượt kiểm chéo trên cơ sở dữ liệu thật: một hợp tác xã chỉ kéo được việc của mình.
+
+**Khác với đặc tả:**
+- **Việc giao cho nhân sự bắt buộc có người nhận,** vì app nhân sự không tạo được việc không có người nhận.
+  - Khi không có ai đang làm, A8 bỏ qua việc đó.
+  - Nếu người nhận đã nghỉ, duyệt sẽ thất bại, kèm lời nhắc chọn người khác.
+- **Route `/api/internal/staff/*` mở cả ở cổng công khai,** vì máy chạy app nhân sự nằm ngoài mạng nội bộ (D14). Gateway vẫn kiểm client, vai trò `staff-sync` và mã hợp tác xã, và giới hạn 120 lần mỗi phút.
+- **Mỗi đề xuất nguồn cho đúng một việc.** Đề xuất nguồn có nhiều thửa cho một việc không gắn thửa. Giới hạn 10 việc tính theo mỗi lần chạy.
+- **Trong hộp duyệt, ô sửa để trống giữ nguyên giá trị cũ** của đề xuất. Thay đổi này áp dụng cho mọi loại, để ghi chú tuỳ chọn của việc nhân sự có thể để trống.
+- **Phần xem trước hiện mã nhân sự.** Tên người nhận nằm trong lý do của đề xuất.
+- **App nhân sự trên điện thoại** chưa kéo việc về.
+
+### M6: Telegram Mini App (2026-11-27)
+
+**Đã làm:**
+- **Nút menu `Mở ứng dụng`** của bot mở web ngay trong Telegram, khi web có địa chỉ HTTPS (`DXOS_WEB_PUBLIC_URL`). Không có HTTPS thì relay không đặt nút, và chat vẫn chạy như cũ.
+- **Đăng nhập lần đầu.** Người dùng đăng nhập Keycloak ngay trong Telegram. Sau đó web gắn tài khoản Telegram vào phiên, khi `initData` có chữ ký hợp lệ, chưa quá 24 giờ, và đúng tài khoản Telegram đã liên kết với người đang đăng nhập (kiểm thử 13). Việc gắn được ghi trong cookie `dxos_tg_webapp`, sống 12 giờ.
+- **Hiển thị trong Telegram.** Web theo chế độ sáng hoặc tối của Telegram và dùng nút Back của Telegram. Mở bằng trình duyệt thường thì web không tải script của Telegram.
+- **Nút trong chat:**
+  - `Mở ứng dụng` trong menu;
+  - `Sửa` trên thẻ ghi nhật ký của nông hộ, mở biểu mẫu đã điền sẵn;
+  - `Mở chi tiết` trên tin đề xuất rủi ro cao.
+
+**Khác với đặc tả:**
+- **Web không bao giờ giữ token của bot.** `./dxos telegram enable` tính khoá Mini App từ token và chỉ ghi khoá này vào `roles.env` của web. Web đọc khoá từ biến môi trường trước, không có thì đọc tệp đó, lưu đệm 60 giây.
+- **Nút `Sửa` chỉ có trên thẻ ghi nhật ký của nông hộ.** Cán bộ chưa có biểu mẫu nhật ký riêng, và duyệt thu hoạch chưa có trang chi tiết thửa.
+- **Chỉ lấy chế độ sáng hoặc tối** (`colorScheme`) từ Telegram, không lấy bảng màu `themeParams`, để giữ độ tương phản theo `DESIGN.md`.
+- **Mã lỗi.** `initData` sai chữ ký hoặc quá 24 giờ trả 400 `WEBAPP_INVALID`. Tài khoản Telegram của người khác trả 403 `WEBAPP_NOT_LINKED`.
+
+**Còn chờ chủ dự án:** tên miền HTTPS (D17) để bật Mini App thật trên Telegram.
+
+### M12: chế độ tự vận hành (2026-11-27)
+
+**Đã làm:**
+- **Bật chế độ.** Quản lý bật chế độ ở mục "Tự vận hành" trên trang cài đặt AI, với các điều kiện:
+  - đã đăng nhập lại trong vòng 5 phút;
+  - đã đánh dấu xác nhận chịu trách nhiệm.
+
+  Nội dung màn hình lúc bật được lưu vào audit. Các loại `unlockable` chỉ tự chạy khi được mở lúc bật.
+- **Chạy tự động.** Đề xuất đủ điều kiện được hẹn giờ chạy, sau một khoảng chờ theo mức rủi ro:
+  - thấp: chạy ở lượt kế tiếp;
+  - vừa: sau 15 phút;
+  - cao: sau 2 giờ.
+
+  Trong khoảng chờ, ai cũng có thể bấm Chặn.
+- **Cách chạy.** Mỗi chu kỳ, `dxos-agent` gọi tick. Web kiểm lại mọi điều kiện, rồi chạy đề xuất qua đúng use case như khi có người duyệt, dưới tên người đã bật, với kênh `autopilot`. Audit ghi `autopilot:<agent>` cùng người đã bật (kiểm thử 24).
+- **Dừng bằng tay:** lệnh `/dung` trên Telegram, hoặc nút "Dừng ngay" trên web.
+- **Tự dừng** khi:
+  - người đã bật mất quyền quản lý hoặc bị khoá tài khoản;
+  - 7 ngày liền không có quản lý nào tương tác;
+  - một phanh sập: 3 lần chạy lỗi trong một giờ; chạm giới hạn mỗi ngày; hơn 30% việc bị chặn, tính từ 5 việc; số đề xuất của một agent gấp 3 lần trung bình 14 ngày.
+
+  Khi dừng, mọi việc đang chờ trở về chờ người duyệt.
+- **Chạy bóng.** Ở chế độ thường, mỗi đề xuất ghi `shadow_auto`. Màn hình bật hiện tỉ lệ khớp 30 ngày của từng loại (kiểm thử 25).
+- **Telegram:**
+  - tin "Sẽ tự chạy lúc …" với hai nút Chặn và Xem;
+  - lệnh `/tuvanhanh`;
+  - một dòng ở đầu tin chiến dịch;
+  - phần "Tự vận hành" trong báo cáo 18:00.
+- **Tin gửi nông hộ** do việc tự chạy gửi có thêm dòng "(Tin do AI của HTX gửi)". Mỗi hộ nhận tối đa 2 tin tự động mỗi ngày.
+- **Kiểm thử** 18 tới 25 và 31.
+
+**Khác với đặc tả:**
+- **Đề xuất rủi ro thấp** (không có khoảng chờ) vẫn nhận tin Duyệt/Từ chối thường. Sau khi chạy, tin được sửa thành "AI đã tự thực hiện lúc …". Chỉ đề xuất có khoảng chờ mới nhận tin "Sẽ tự chạy".
+- **Bấm Chặn muộn:**
+  - khi việc đã bị nhận để chạy: trả lời "Đã chạy, không chặn được nữa.";
+  - khi việc không còn khoảng chờ: trả lời "Việc này không còn chờ tự chạy.", và lần bấm không tính là một lần chặn.
+- **Đổi cài đặt được kiểm "chỉ siết" hai lần.** Lần đầu lúc tạo đề xuất, theo evidence. Lần sau lúc chạy, theo giá trị đang lưu. Lần sau mới là lần quyết định, nên thay đổi nới ngưỡng không bao giờ tự chạy, kể cả khi evidence thiếu dòng cài đặt.
+- **Dòng báo tin do AI gửi** đi qua trường ghi chú `note_vi` của đề xuất.
+- **Tỉ lệ khớp chỉ tính quyết định của người.** Không tính việc tự chạy, việc hết hạn và việc lỗi thời.
+- **Lỗi khi đọc quyền.** Nếu không đọc được vai trò của người đã bật (Keycloak lỗi), lượt tick đó được bỏ qua và chế độ không bị dừng.
+- **Bật lại khi đang bật** thì cập nhật cấu hình.
+- **Người gửi `/dung`** nhận cả câu trả lời lẫn tin báo chung.
+- **Đường dẫn của tick** là `POST /api/internal/agent/autopilot/tick`, không phải `/api/internal/autopilot/tick` như trong kế hoạch. Gateway chỉ cho token agent đi qua tiền tố `/api/internal/agent/*`.
+
+**Chưa làm,** vì thuộc mốc sau (bảng và khoảng chờ đã có sẵn, các mốc đó chỉ cần thêm loại hành động):
+- hành động về tiền của mini-app (M9);
+- duyệt thành viên;
+- cài và gỡ mini-app (M13);
+- `strategy.adopt` (M11).
