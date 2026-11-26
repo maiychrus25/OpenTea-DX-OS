@@ -409,7 +409,7 @@ Các loại còn lại (`autonomy: auto`) tự chạy ngay khi bật.
 
 - Trong lúc chờ, manager (và cán bộ, với việc thuộc phần mình) nhận tin Telegram "Sẽ tự chạy lúc …" kèm nút Chặn và Xem. Chặn không cần lý do; mỗi lần chặn được tính như một lần từ chối khi đo chất lượng agent.
 - Chiến dịch ngày ở chế độ này: tin 06:00 đổi thành "Chiến dịch hôm nay sẽ tự chạy", từng mục có nút Chặn theo cửa sổ của mục đó.
-- Web quyết định đề xuất nào được tự chạy ngay lúc nhận đề xuất, và đặt `run_at`. Việc chạy khi đến giờ do một nhịp gọi `/api/internal/autopilot/tick` mỗi phút. Nơi gọi nhịp không quan trọng, vì web kiểm lại mọi điều kiện ngay lúc chạy.
+- Web quyết định đề xuất nào được tự chạy ngay lúc nhận đề xuất, và đặt `run_at`. Việc chạy khi đến giờ do một nhịp gọi `/api/internal/agent/autopilot/tick` mỗi phút. Nơi gọi nhịp không quan trọng, vì web kiểm lại mọi điều kiện ngay lúc chạy.
 
 ### 11.4 Hạn mức và phanh bất thường
 
@@ -871,6 +871,7 @@ Theo `AGENTS.md`:
 - **Lỗi khi đọc quyền.** Nếu không đọc được vai trò của người đã bật (Keycloak lỗi), lượt tick đó được bỏ qua và chế độ không bị dừng.
 - **Bật lại khi đang bật** thì cập nhật cấu hình.
 - **Người gửi `/dung`** nhận cả câu trả lời lẫn tin báo chung.
+- **Đường dẫn của tick** là `POST /api/internal/agent/autopilot/tick`, không phải `/api/internal/autopilot/tick` như trong kế hoạch. Gateway chỉ cho token agent đi qua tiền tố `/api/internal/agent/*`.
 
 **Chưa làm,** vì thuộc mốc sau (bảng và khoảng chờ đã có sẵn, các mốc đó chỉ cần thêm loại hành động):
 - hành động về tiền của mini-app (M9);

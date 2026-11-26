@@ -13,7 +13,7 @@ describe('middleware internal agent exemption', () => {
   })
 
   test('allows the autopilot tick without a session; the session routes of the mode still need one', () => {
-    expect(resolveAuthRedirect('/api/internal/autopilot/tick', false, undefined)).toBeNull()
+    expect(resolveAuthRedirect('/api/internal/agent/autopilot/tick', false, undefined)).toBeNull()
     expect(resolveAuthRedirect('/api/agent/autopilot', false, undefined)).toBe('UNAUTHORIZED_API')
     expect(resolveAuthRedirect('/api/agent/autopilot/enable', false, undefined)).toBe('UNAUTHORIZED_API')
   })
