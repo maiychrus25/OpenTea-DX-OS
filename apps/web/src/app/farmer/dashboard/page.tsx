@@ -54,7 +54,7 @@ const PARCEL_TONE: Record<string, string> = {
 const SUPPLY_APP = 'farm-supply'
 
 const SHORTCUTS = [
-  { href: '/farmer/ai', icon: Sparkles, tone: 'dark', title: 'Hỏi đáp AI', detail: 'Hỏi về bón phân, sâu bệnh, thu hái' },
+  { href: '/farmer/ai', icon: Sparkles, tone: 'dark', title: 'Chatbot', detail: 'Hỏi về bón phân, sâu bệnh, thu hái' },
   { href: '/farmer/handbook', icon: BookOpen, tone: 'soft', title: 'Cẩm nang canh tác', detail: 'Việc theo mùa và cách phòng trị bệnh' },
 ]
 

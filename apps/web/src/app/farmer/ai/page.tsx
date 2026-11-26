@@ -7,7 +7,7 @@ import { auth } from '@/auth'
 import { ChatInterface } from '@/components/ui/chat-interface/chat-interface'
 
 export const metadata = {
-  title: 'Hỏi đáp AI',
+  title: 'Chatbot',
   description: 'Hỏi đáp về canh tác chè với trợ lý AI',
 }
 

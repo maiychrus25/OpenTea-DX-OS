@@ -34,7 +34,7 @@ export default async function OfficerLayout({ children }: { children: React.Reac
     { label: 'Nhật ký bệnh', href: '/officer/diseases', icon: <Stethoscope size={20} />, group: 'Vận hành' },
     { label: 'Tài liệu', href: '/officer/documents', icon: <FolderOpen size={20} />, group: 'Tài nguyên' },
     { label: 'Reels', href: '/officer/reels', icon: <Clapperboard size={20} />, group: 'Tài nguyên' },
-    { label: 'Trợ lý AI', href: '/officer/chat', match: ['/officer/assistant'], icon: <MessageCircle size={20} />, group: 'Tài nguyên' },
+    { label: 'Chatbot', href: '/officer/chat', match: ['/officer/assistant'], icon: <MessageCircle size={20} />, group: 'Tài nguyên' },
     { label: 'Đề xuất AI', href: '/officer/ai', icon: <Sparkles size={20} />, badge: openProposals || undefined, group: 'Tài nguyên' },
     { label: 'Thông báo', href: '/officer/notifications', icon: <Bell size={20} />, group: 'Cá nhân' },
     { label: 'Tài khoản', href: '/officer/profile', icon: <User size={20} />, group: 'Cá nhân' },
