@@ -8,7 +8,15 @@
 .description { margin: 2px 0 0; font-size: 13.5px; color: var(--color-ink-secondary); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* The officer design underlines the header and sets the icon on dark green. */
-:global([data-role='officer']) .header { padding-bottom: 14px; border-bottom: 2px solid var(--color-primary); }
-:global([data-role='officer']) .iconBox { width: 50px; height: 50px; border-radius: 13px; background: var(--color-primary-strong); color: var(--color-primary-foreground); }
-:global([data-role='officer']) .title { font-size: 25px; }
+/* Only officer headers get the quiet hill silhouette; other roles keep the base style. */
+:global([data-role='officer']) .header { position: relative; isolation: isolate; padding-bottom: 16px; }
+:global([data-role='officer']) .header::after { content: ''; position: absolute; z-index: -1; pointer-events: none; right: 0; bottom: 0; width: 48%; height: 56px; background: var(--color-primary-subtle); opacity: 0.65; clip-path: ellipse(50% 75% at 50% 110%); }
+:global([data-role='officer']) .iconBox { width: 64px; height: 64px; border-radius: 16px; background: var(--color-primary-strong); color: var(--color-primary-foreground); }
+:global([data-role='officer']) .title { font-size: 28px; overflow-wrap: anywhere; }
+:global([data-role='officer']) .text { min-width: 0; flex-basis: 200px; }
+:global([data-role='officer']) .actions { max-width: 100%; }
+@media (max-width: 639px) {
+  :global([data-role='officer']) .title { font-size: 23px; }
+  :global([data-role='officer']) .actions { width: 100%; }
+  :global([data-role='officer']) .header::after { width: 70%; height: 40px; }
+}
