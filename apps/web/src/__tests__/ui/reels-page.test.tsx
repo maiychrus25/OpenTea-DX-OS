@@ -28,11 +28,14 @@ describe('ReelsPage', () => {
     expect(screen.getByText('Đúng rồi, búp đều lắm.')).toBeInTheDocument()
   })
 
-  it('lists "Video của tôi" and plays the one chosen', () => {
+  it('keeps posting and own videos under "Cá nhân", and plays the one chosen', () => {
     show()
-    fireEvent.click(screen.getByRole('button', { name: 'Video của tôi' }))
-    expect(screen.getByRole('heading', { name: 'Video của tôi' })).toBeInTheDocument()
-    expect(screen.getByText('Reels · 6')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Đăng video' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Thoát Reels' })).toHaveAttribute('href', '/officer/dashboard')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cá nhân' }))
+    expect(screen.getByRole('heading', { name: 'Trần Thị Lan' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Đăng video' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Xem Sao chè thủ công' }))
     expect(screen.getByText('hoangvanson')).toBeInTheDocument()

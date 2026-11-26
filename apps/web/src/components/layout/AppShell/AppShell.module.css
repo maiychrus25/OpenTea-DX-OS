@@ -90,10 +90,9 @@
   }
 }
 
-/* The Reels player takes the whole page area, so the clip is as large as the window allows. */
-@media (min-width: 768px) {
-  .pageContent:has([data-reels='feed']) {
-    max-width: none;
-    padding: 12px 16px;
-  }
+/* Reels covers the window: the menus under it are taken away so they cannot be tabbed to. */
+.shell:has([data-reels]) > aside,
+.shell:has([data-reels]) nav[data-testid='bottom-nav'],
+.content:has([data-reels]) > header {
+  display: none;
 }

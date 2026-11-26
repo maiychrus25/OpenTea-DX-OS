@@ -5,21 +5,20 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Bookmark, ChevronDown, ChevronRight, ChevronUp, Heart, MessageCircle, MoreHorizontal, Music2, Pause, Play, Plus, Share2, Trash2, Volume2, VolumeX } from 'lucide-react'
+import { ArrowLeft, Bookmark, ChevronDown, ChevronUp, Heart, MessageCircle, MoreHorizontal, Music2, Pause, Play, Plus, Share2, Trash2, User, Volume2, VolumeX } from 'lucide-react'
 import { CommentsPanel } from './CommentsPanel'
 import { PostDialog } from './PostDialog'
 import { Reel, ReelComment, SAMPLE_REELS, clock, countLabel, handle, initials } from './data'
 import styles from './reels.module.css'
 
-const ROLE_LABEL = { farmer: 'Nông hộ', officer: 'Cán bộ KT', manager: 'Quản lý' }
 const SPEEDS = [1, 1.5, 2, 0.5]
 
 // Posted clips outlive moving between pages, but not a reload.
 let sessionReels: Reel[] = []
 
-export function ReelsPage({ userName, role }: { userName: string; role: keyof typeof ROLE_LABEL }) {
+export function ReelsPage({ userName, role }: { userName: string; role: 'farmer' | 'officer' | 'manager' }) {
   const [posted, setPosted] = useState<Reel[]>(() => sessionReels)
-  const [view, setView] = useState<'feed' | 'mine'>('feed')
+  const [view, setView] = useState<'feed' | 'profile'>('feed')
   const [index, setIndex] = useState(0)
   const [paused, setPaused] = useState(false)
   const [muted, setMuted] = useState(true)
@@ -35,7 +34,6 @@ export function ReelsPage({ userName, role }: { userName: string; role: keyof ty
   const [shared, setShared] = useState<string[]>([])
   const [followed, setFollowed] = useState<string[]>([])
   const [added, setAdded] = useState<Record<string, ReelComment[]>>({})
-  const [lengths, setLengths] = useState<Record<string, number>>({})
   const [notice, setNotice] = useState('')
   const [posting, setPosting] = useState(false)
   const video = useRef<HTMLVideoElement>(null)
@@ -150,63 +148,45 @@ export function ReelsPage({ userName, role }: { userName: string; role: keyof ty
 
   return (
     <div className={styles.page} data-reels={view}>
-      <nav className={styles.crumbs} aria-label="Đường dẫn">
-        <Link href={`/${role}/dashboard`}>Trang chủ</Link>
-        <ChevronRight size={12} aria-hidden="true" />
-        <span>{ROLE_LABEL[role]}</span>
-        <ChevronRight size={12} aria-hidden="true" />
-        <button type="button" onClick={() => setView('feed')}>Reels</button>
-      </nav>
+      {view === 'profile' ? (
+        <section aria-label="Cá nhân" className={styles.profile}>
+          <button type="button" className={styles.round} aria-label="Quay lại Reels" onClick={() => setView('feed')}>
+            <ArrowLeft size={20} aria-hidden="true" />
+          </button>
+          <div className={styles.profileInner}>
+            <span className={styles.profileAvatar} aria-hidden="true">{initials(userName)}</span>
+            <h1>{userName}</h1>
+            <p className={styles.profileHandle}>@{handle(userName)}</p>
+            <dl className={styles.profileStats}>
+              <div><dt>Video</dt><dd>{mine.length}</dd></div>
+              <div><dt>Lượt tim</dt><dd>{countLabel(mine.reduce((sum, r) => sum + r.likes + (liked.includes(r.id) ? 1 : 0), 0))}</dd></div>
+              <div><dt>Đang theo dõi</dt><dd>{followed.length}</dd></div>
+            </dl>
+            <button type="button" className={styles.post} onClick={() => setPosting(true)}>
+              <Plus size={18} aria-hidden="true" /> Đăng video
+            </button>
+            <p className={styles.profileNote}>Video đăng chỉ lưu trong phiên này.</p>
 
-      <header className={styles.header}>
-        <span className={styles.headIcon} aria-hidden="true"><Play size={24} /></span>
-        <div className={styles.headText}>
-          <h1>{view === 'mine' ? 'Video của tôi' : 'Reels'}</h1>
-          <p>{view === 'mine' ? `Reels · ${mine.length}` : 'Video đăng chỉ lưu trong phiên này.'}</p>
-        </div>
-        {view === 'feed' && (
-          <button type="button" className={styles.secondary} onClick={() => setView('mine')}>Video của tôi</button>
-        )}
-        <button type="button" className={styles.primary} onClick={() => setPosting(true)}>
-          <Plus size={16} aria-hidden="true" /> Đăng video
-        </button>
-      </header>
-
-      {view === 'mine' ? (
-        <section aria-label="Video của tôi" className={styles.mine}>
-          <div className={styles.mineBar}>
-            <button type="button" className={styles.pill} aria-pressed="true" onClick={() => setView('feed')}>Video của tôi</button>
-            <span>Video đăng chỉ lưu trong phiên này.</span>
-          </div>
-          <ul className={styles.grid}>
-            {mine.map((r) => (
-              <li key={r.id}>
-                <button type="button" className={styles.tile} onClick={() => watch(r)} aria-label={`Xem ${r.title}`}>
-                  <span className={styles.thumb}>
-                    <video src={r.src} poster={r.poster} muted playsInline preload="metadata" onLoadedMetadata={(event) => {
-                      const length = event.currentTarget.duration
-                      setLengths((all) => ({ ...all, [r.id]: length }))
-                    }} />
-                    <span className={styles.thumbPlay}><Play size={18} aria-hidden="true" /></span>
-                    {lengths[r.id] !== undefined && <span className={styles.length}>{clock(lengths[r.id]).replace(/^0/, '')}</span>}
-                  </span>
-                  <span className={styles.tileText}>
-                    <strong>{r.title}</strong>
-                    <span>{r.channel}</span>
-                    <span className={styles.tileStats}>
+            <h2>Video của tôi</h2>
+            <ul className={styles.grid}>
+              {mine.map((r) => (
+                <li key={r.id}>
+                  <button type="button" className={styles.tile} onClick={() => watch(r)} aria-label={`Xem ${r.title}`}>
+                    <video src={r.src} poster={r.poster} muted playsInline preload="metadata" />
+                    <span className={styles.tileText}>
+                      <strong>{r.title}</strong>
                       <span><Heart size={11} fill="currentColor" aria-hidden="true" /> {countLabel(r.likes)}</span>
-                      <span>Bình luận {r.commentCount + (added[r.id]?.length ?? 0)}</span>
                     </span>
-                  </span>
-                </button>
-                {r.posted && (
-                  <button type="button" className={styles.remove} onClick={() => remove(r)} aria-label={`Xoá ${r.title}`}>
-                    <Trash2 size={14} aria-hidden="true" /> Xoá
                   </button>
-                )}
-              </li>
-            ))}
-          </ul>
+                  {r.posted && (
+                    <button type="button" className={styles.remove} onClick={() => remove(r)} aria-label={`Xoá ${r.title}`}>
+                      <Trash2 size={14} aria-hidden="true" /> Xoá
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       ) : (
         <section className={styles.stage} aria-label="Xem Reels">
@@ -236,6 +216,13 @@ export function ReelsPage({ userName, role }: { userName: string; role: keyof ty
             />
             <button type="button" className={styles.surface} onClick={() => setPaused(!paused)} aria-label={paused ? 'Phát video' : 'Tạm dừng video'}>
               <span className={styles.bigPlay} data-playing={!paused}><Play size={22} fill="currentColor" aria-hidden="true" /></span>
+            </button>
+
+            <Link href={`/${role}/dashboard`} className={`${styles.round} ${styles.exit}`} aria-label="Thoát Reels">
+              <ArrowLeft size={20} aria-hidden="true" />
+            </Link>
+            <button type="button" className={styles.me} onClick={() => setView('profile')}>
+              <User size={17} aria-hidden="true" /> Cá nhân
             </button>
 
             <div className={styles.side}>
