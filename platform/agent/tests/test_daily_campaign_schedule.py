@@ -95,9 +95,10 @@ def _runtime_with(gateway) -> agent_main._CooperativeRuntime:
     return agent_main._CooperativeRuntime(creds=CREDS, gateway=gateway, providers={"ollama": local_model})
 
 
-def test_refused_campaign_post_is_not_retried_on_the_next_cycle(monkeypatch):
+@pytest.mark.parametrize("status", [400, 409, 422])
+def test_refused_campaign_post_is_not_retried_on_the_next_cycle(monkeypatch, status):
     _patch_others(monkeypatch, [])
-    gateway = CampaignRetryGateway(GatewayHTTPError("Gateway POST failed (400): INVALID_CAMPAIGN", 400))
+    gateway = CampaignRetryGateway(GatewayHTTPError(f"Gateway POST failed ({status}): refused", status))
     runtime = _runtime_with(gateway)
 
     agent_main._run_m4_agents(runtime, NOW, AgentSettings())
@@ -105,6 +106,19 @@ def test_refused_campaign_post_is_not_retried_on_the_next_cycle(monkeypatch):
 
     assert gateway.candidate_reads == 1
     assert runtime.daily_campaign.last_day is not None  # the day's schedule is done
+
+
+@pytest.mark.parametrize("status", [401, 403, 404])
+def test_other_client_errors_are_retried_on_the_next_cycle(monkeypatch, status):
+    _patch_others(monkeypatch, [])
+    gateway = CampaignRetryGateway(GatewayHTTPError(f"Gateway POST failed ({status}): try again", status))
+    runtime = _runtime_with(gateway)
+
+    agent_main._run_m4_agents(runtime, NOW, AgentSettings())
+    agent_main._run_m4_agents(runtime, NOW, AgentSettings())
+
+    assert gateway.candidate_reads == 2
+    assert runtime.daily_campaign.last_day is None  # not recorded: a fresh token may succeed next cycle
 
 
 @pytest.mark.parametrize(

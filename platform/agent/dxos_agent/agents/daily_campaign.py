@@ -25,6 +25,7 @@ MAX_ITEMS = 15
 SUMMARY_MAX = 400
 OTHER_LABEL_VI = "Việc khác"
 OTHER_WEIGHT = 9
+REFUSAL_STATUSES = (400, 409, 422)  # the web refused the campaign body; the day is done
 KIND_WEIGHT = {
     "harvest.approve": 1,
     "disease.inspection": 2,
@@ -208,10 +209,10 @@ def run_daily_campaign(
         res = gateway.post_campaign(body)
     except GatewayHTTPError as exc:
         gateway.finish_run(run_id, status="failed", error=str(exc)[:1000], **usage)
-        if 400 <= exc.status_code < 500:  # the web refused this campaign; the same body would be refused again today
+        if exc.status_code in REFUSAL_STATUSES:  # the web refused this body; the same body would be refused again today
             return CampaignOutcome(status="refused", run_id=run_id, campaign_id=None)
-        raise
-    except Exception as exc:  # network errors and 5xx: the caller retries on the next cycle
+        raise  # 401, 403 and other errors: a fresh token or a later cycle may succeed, so the caller retries
+    except Exception as exc:  # network errors: the caller retries on the next cycle
         gateway.finish_run(run_id, status="failed", error=str(exc)[:1000], **usage)
         raise
     gateway.finish_run(run_id, status="ok", **usage)

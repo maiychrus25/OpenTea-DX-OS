@@ -197,8 +197,12 @@ def test_refused_post_finishes_the_run_failed_and_returns_without_raising() -> N
 
 @pytest.mark.parametrize(
     "error",
-    [GatewayHTTPError("Gateway POST failed (500): boom", 500), ConnectionError("network down")],
-    ids=["server-error", "network-error"],
+    [
+        GatewayHTTPError("Gateway POST failed (500): boom", 500),
+        GatewayHTTPError("Gateway POST failed (401): token expired", 401),
+        ConnectionError("network down"),
+    ],
+    ids=["server-error", "expired-token", "network-error"],
 )
 def test_server_or_network_failure_finishes_the_run_failed_and_raises(error: Exception) -> None:
     gateway = CampaignGateway(_one_item(), post_error=error)
