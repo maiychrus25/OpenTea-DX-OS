@@ -89,3 +89,11 @@
     padding: var(--spacing-gutter-desktop);
   }
 }
+
+/* The Reels player takes the whole page area, so the clip is as large as the window allows. */
+@media (min-width: 768px) {
+  .pageContent:has([data-reels='feed']) {
+    max-width: none;
+    padding: 12px 16px;
+  }
+}

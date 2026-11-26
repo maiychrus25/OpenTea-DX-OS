@@ -3,6 +3,12 @@
 
 .page { display: flex; flex-direction: column; gap: 16px; width: 100%; min-width: 0; }
 
+.page[data-reels='feed'] { gap: 8px; }
+.page[data-reels='feed'] .header { padding-bottom: 8px; }
+.page[data-reels='feed'] .headIcon { width: 40px; height: 40px; }
+.page[data-reels='feed'] .headText h1 { font-size: 22px; }
+.page[data-reels='feed'] .headText p { margin: 0; font-size: 12px; }
+
 .crumbs { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--color-ink-secondary); }
 .crumbs a { color: inherit; text-decoration: none; }
 .crumbs button { padding: 0; border: 0; background: transparent; color: var(--color-primary); font: inherit; font-weight: 700; cursor: pointer; }
@@ -18,7 +24,7 @@
 .secondary { border: 1px solid var(--color-border-input); background: var(--color-surface-card); color: var(--color-ink-primary); }
 .primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.stage { display: flex; height: clamp(480px, calc(100vh - 290px), 680px); overflow: hidden; border-radius: 12px; background: var(--video-stage); color: var(--video-ink); }
+.stage { display: flex; height: max(520px, calc(100vh - 176px)); overflow: hidden; border-radius: 12px; background: var(--video-stage); color: var(--video-ink); }
 .stage button { font: inherit; color: inherit; cursor: pointer; }
 
 .player { position: relative; flex: 1; min-width: 0; overflow: hidden; background: var(--video-stage); }

@@ -149,7 +149,7 @@ export function ReelsPage({ userName, role }: { userName: string; role: keyof ty
   }
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-reels={view}>
       <nav className={styles.crumbs} aria-label="Đường dẫn">
         <Link href={`/${role}/dashboard`}>Trang chủ</Link>
         <ChevronRight size={12} aria-hidden="true" />
