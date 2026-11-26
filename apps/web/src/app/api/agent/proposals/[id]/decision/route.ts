@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/auth'
 import { decisionUseCase, notifyProposalDecided } from '@/application/telegram/telegram-services'
+import { touchManagerActivity } from '@/application/agent/autopilot/manager-activity'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
@@ -36,6 +37,8 @@ async function postProposalDecision(request: Request, context: unknown) {
   if (tenant.role !== 'manager' && tenant.role !== 'officer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
+
+  await touchManagerActivity(tenant.htxCode, tenant.role)
 
   const { params } = context as { params: Promise<{ id: string }> | { id: string } }
   const { id } = await params

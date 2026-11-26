@@ -107,3 +107,23 @@ def test_post_campaign_sends_the_body_and_returns_the_answer():
 
     assert gateway.post_campaign(body) == {"id": "c1"}
     assert calls == [("POST", "http://gateway/api/internal/agent/campaigns", body)]
+
+
+def test_autopilot_tick_posts_an_empty_body_and_returns_the_data_object():
+    calls: list = []
+    gateway = _gateway_with({"data": {"ran": 1, "failed": 0, "returned": 0, "stopped": None}}, calls=calls)
+
+    assert gateway.post_autopilot_tick() == {"ran": 1, "failed": 0, "returned": 0, "stopped": None}
+    assert calls == [("POST", "http://gateway/api/internal/agent/autopilot/tick", {})]
+
+
+def test_every_internal_path_the_agent_calls_is_under_the_gateway_agent_prefix():
+    """The gateway routes agent tokens only for /api/internal/agent/* on 9081 (internal-agent in apisix.yaml); a path
+    elsewhere answers 404 at the gateway and the call fails on every cycle (the M12 tick did)."""
+    import re
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "dxos_agent" / "client.py").read_text(encoding="utf-8")
+    paths = re.findall(r'"(/api/internal/[^"?{]*)', source)
+    assert paths, "no internal paths found in client.py"
+    assert [p for p in paths if not p.startswith("/api/internal/agent/")] == []

@@ -362,6 +362,47 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
 - **Khoá:** `./dxos telegram enable` ghi `DXOS_TELEGRAM_WEBAPP_KEY` = HMAC-SHA256(khoá `WebAppData`, token bot) cho web; `disable` xoá. Web chỉ dùng khoá này để kiểm chữ ký `initData`, không giữ token bot.
 - **Ràng buộc phiên:** `initData` không phải là đăng nhập. Chữ ký phải đúng, `auth_date` không quá 24 giờ, và `user.id` phải là tài khoản Telegram đã liên kết của người đang đăng nhập; không thì web trả 403 `WEBAPP_NOT_LINKED`. Cờ phiên `dxos_tg_webapp` hết hạn sau 12 giờ.
 
+### 3.17 Chế độ tự vận hành (M12)
+
+Chế độ tắt mặc định. Khi trưởng HTX bật, đề xuất của agent thuộc các loại được phép tự chạy sau một cửa sổ chặn, dưới tên người đã bật, qua đúng `DecideProposalUseCase` như khi người duyệt. Đặc tả: §11 của [docs/specs/2026-11-23-agentic-layer-design.md](./specs/2026-11-23-agentic-layer-design.md).
+
+**Năm giới hạn cứng (H1–H5), đúng với mọi cài đặt:**
+1. Mọi lần tự chạy đi qua `DecideProposalUseCase`, nên qua cùng các kiểm tra nghiệp vụ như quyết định của người.
+2. Không loại hành động nào đổi được chế độ này, giới hạn cứng, danh mục loại, vai trò, khoá, ngân sách, chính sách dữ liệu hay sổ audit.
+3. Duyệt báo cáo bệnh không bao giờ tự chạy.
+4. Không có loại hành động xoá nào.
+5. Mỗi lần tự chạy ghi sự kiện audit và gửi một tin Telegram.
+
+**Việc nào tự chạy.** Chỉ đề xuất `origin: 'agent'` mà loại của nó cho phép vai trò `manager` duyệt, và là loại `auto`, hoặc `unlockable` đã được mở lúc bật. Đề xuất từ chat hoặc MCP (`origin: 'user'`) không bao giờ tự chạy. `agent.settings.update` chỉ tự chạy khi mọi thay đổi đều siết; một thay đổi nới, khoá lạ hoặc tắt agent thì luôn chờ người. `journal.approve` chỉ tự chạy khi nhật ký không có cảnh báo quy tắc.
+
+**Cửa sổ chặn theo rủi ro:**
+
+| Rủi ro | Cửa sổ |
+|---|---|
+| thấp | 0 (lần tick kế tiếp) |
+| trung bình | 15 phút |
+| cao | 2 giờ |
+| việc liên quan tiền (chưa có loại nào) | 2 giờ |
+| `strategy.adopt` (M11) | 48 giờ |
+
+Trong cửa sổ, bất kỳ người duyệt nào cũng chặn được bằng nút `Chặn` trên Telegram; đề xuất bị chặn quay về chờ duyệt như thường. Chặn sau khi đã chạy trả lời `Đã chạy, không chặn được nữa.`
+
+**Giới hạn ngày:** tối đa 50 lần tự chạy mỗi ngày (HTX đặt thấp hơn được), và tối đa 2 tin tự động tới mỗi nông hộ mỗi ngày; tin gửi nông hộ do tự chạy kết thúc bằng `(Tin do AI của HTX gửi)`.
+
+**Bốn phanh** dừng chế độ ngay khi:
+- từ 3 lần tự chạy thất bại (`failed` hoặc `stale`) trong 1 giờ (`brake_failures`);
+- số lần tự chạy trong ngày đạt giới hạn ngày (`brake_cap`);
+- tỉ lệ bị chặn lớn hơn 30% số việc đã quyết trong ngày, khi đã có ít nhất 5 việc (`brake_blocks`);
+- số đề xuất trong ngày của một agent vượt 3 lần mức trung bình ngày của 14 ngày trước, khi mức trung bình từ 1 trở lên (`brake_volume`).
+
+**Tự dừng:** người bật không còn là `manager` hoặc bị tắt (`enabler_lost`); 7 ngày không có quản lý nào tương tác (`inactive`).
+
+**Dừng:** nút `Dừng ngay` trên web, lệnh `/dung` trên Telegram (quản lý hoặc cán bộ), hoặc một phanh. Mọi cửa sổ đang chờ được xoá, đề xuất ở lại `proposed` cho người duyệt, và mọi quản lý, cán bộ đã liên kết nhận tin. Bật lại chỉ làm được trên web.
+
+**Bật:** chỉ quản lý, và phải đăng nhập lại trong 5 phút gần nhất. Màn hình bật hiện tỉ lệ khớp 30 ngày của từng loại (cảnh báo dưới 90%); nội dung màn hình được lưu trong sự kiện audit `autopilot.enabled`. Ở chế độ thường, mỗi đề xuất vẫn ghi `shadow_auto` (nó có tự chạy nếu chế độ bật hay không) mà không đổi đường đi của đề xuất.
+
+**Giám sát:** tin `Sẽ tự chạy lúc <HH:mm>` kèm nút `Chặn` và `Xem`; `/tuvanhanh` cho trạng thái và số liệu hôm nay; tin chiến dịch 06:00 bắt đầu bằng `Chiến dịch hôm nay sẽ tự chạy`; báo cáo 18:00 có mục `Tự vận hành`.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication

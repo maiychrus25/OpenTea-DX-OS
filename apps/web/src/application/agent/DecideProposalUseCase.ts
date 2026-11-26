@@ -117,9 +117,13 @@ export class DecideProposalUseCase {
       }
     }
 
+    // An auto-run acts as the agent, on behalf of the manager who enabled the mode.
+    const autopilot =
+      input.channel === 'autopilot' ? { actor: `autopilot:${proposal.agent}`, enabledBy: input.tenant.userId } : undefined
+
     const now = input.now ?? new Date()
     if (proposal.expiresAt.getTime() <= now.getTime()) {
-      const changed = await this.repo.markExpired(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })
+      const changed = await this.repo.markExpired(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId, autopilot })
       return changed ? { outcome: 'expired' } : this.readConflict(input.tenant.htxCode, proposal.id)
     }
 
@@ -164,7 +168,7 @@ export class DecideProposalUseCase {
       loaders: this.loaders,
     })
     if (stale) {
-      const changed = await this.repo.markStale(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId })
+      const changed = await this.repo.markStale(input.tenant.htxCode, proposal.id, { actorId: input.tenant.userId, autopilot })
       // Nothing changed means someone decided it first, which is the more useful answer.
       return changed ? { outcome: 'stale' } : this.readConflict(input.tenant.htxCode, proposal.id)
     }
@@ -176,6 +180,7 @@ export class DecideProposalUseCase {
       channel: input.channel,
       note: input.note?.trim() || null,
       editedPayload: editedForDb,
+      autopilot,
     })
     if (!claimed) {
       return this.readConflict(input.tenant.htxCode, proposal.id)
@@ -186,6 +191,7 @@ export class DecideProposalUseCase {
       agent: proposal.agent,
       kind: proposal.kind,
       subjectIds: definition.subjects(parsedPayload.data),
+      autopilot,
     }
     let result: Record<string, unknown>
     try {

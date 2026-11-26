@@ -273,6 +273,11 @@ class CoreGatewayClient:
         res = self._request_json("POST", f"/api/internal/agent/improvements/{improvement_id}/effect", effect)
         return dict(res.get("data") or {})
 
+    def post_autopilot_tick(self) -> dict[str, Any]:
+        """Run this cooperative's due autonomous-mode proposals (contract C3); `{ran, failed, returned, stopped}`."""
+        res = self._request_json("POST", "/api/internal/agent/autopilot/tick", {})
+        return dict(res.get("data") or {})
+
     def get_staff_inputs(self) -> dict[str, Any]:
         """What A8 reads (contract C4): approved sources of the last 24 hours, the active roster, today's attendance."""
         res = self._request_json("GET", "/api/internal/agent/staff/inputs")
