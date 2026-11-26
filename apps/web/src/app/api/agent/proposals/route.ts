@@ -3,7 +3,7 @@
 
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getAction, type ApproverRole } from '@/application/agent/action-catalog'
+import { ensureAppActions, getAction, type ApproverRole } from '@/application/agent/action-catalog'
 import { ListProposalsUseCase } from '@/application/agent/ListProposalsUseCase'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import { type JournalSubject } from '@/application/agent/actions/journal-labels'
@@ -33,10 +33,11 @@ async function getAgentProposals(request: Request) {
     kind,
   })
 
+  if (proposals.some((p) => p.kind.startsWith('app.'))) await ensureAppActions()
   const labels = await loadJournalSubjects(proposals, tenant.htxProfileId)
 
   const data = proposals.map((p) => {
-    const def = getAction(p.kind)
+    const def = getAction(p.kind, tenant.htxCode)
     const subjects = Array.from(new Set(journalEntryIds(p)))
       .map((id) => labels.get(id))
       .filter((subject): subject is JournalSubject => Boolean(subject))

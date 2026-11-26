@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { getAction } from '@/application/agent/action-catalog'
+import { ensureAppActions, getAction } from '@/application/agent/action-catalog'
 import { vnDayOf, vnDayStart } from '@/application/agent/campaign/vn-day'
 import type { DecideProposalInput, DecideProposalOutcome } from '@/application/agent/DecideProposalUseCase'
 import type { AutopilotConfig, StopReason } from '@/domain/agent/autopilot'
@@ -139,7 +139,8 @@ export class RunAutopilotTickUseCase {
   ): Promise<'ran' | 'failed' | 'returned' | 'skipped'> {
     const { htxCode } = config
     const proposal = await this.deps.proposals.findById(htxCode, proposalId)
-    const definition = proposal ? getAction(proposal.kind) : undefined
+    if (proposal) await ensureAppActions(proposal.kind)
+    const definition = proposal ? getAction(proposal.kind, htxCode) : undefined
     if (!proposal || !definition || proposal.status !== 'proposed') return 'skipped'
 
     // The conditions of scheduling may have changed (unlock closed, kind no longer eligible): back to normal approval.

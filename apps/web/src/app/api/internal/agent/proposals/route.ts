@@ -18,7 +18,8 @@ const MAX_PROPOSAL_BYTES = 256 * 1024
 
 const createProposalSchema = z.object({
   run_id: z.string().uuid().optional().nullable(),
-  agent: z.enum(KNOWN_AGENTS),
+  // `app:<id>` is a mini-app's own suggestion loop (M9).
+  agent: z.union([z.enum(KNOWN_AGENTS), z.string().regex(/^app:[a-z0-9][a-z0-9-]{0,39}$/)]),
   kind: z.string().trim().min(1).max(128),
   payload: z.record(z.unknown()),
   reason_vi: z.string().trim().min(1).max(1000),

@@ -11,6 +11,7 @@ const mockFakeActions: Record<string, Record<string, unknown>> = {}
 
 jest.mock('@/application/agent/action-catalog', () => ({
   getAction: (kind: string) => mockFakeActions[kind],
+  ensureAppActions: async () => undefined,
 }))
 
 import { CreateProposalUseCase } from '@/application/agent/CreateProposalUseCase'
