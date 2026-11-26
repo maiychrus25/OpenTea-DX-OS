@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "platform" / "tests"
 SHELL_SCRIPTS = [
     "smoke-telegram.sh", "smoke-platform.sh", "smoke-agent.sh", "smoke-llm.sh", "smoke-agents.sh", "smoke-assistant.sh",
-    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-autopilot.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
+    "smoke-campaign.sh", "smoke-improvement.sh", "smoke-mcp.sh", "smoke-autopilot.sh", "smoke-strategy.sh", "smoke-agentic.sh", "lib.sh", "lib-telegram.sh", "tokens.sh",
 ]
 
 
@@ -246,3 +246,45 @@ def test_autopilot_smoke_presses_the_button_the_stub_recorded_and_signs_nothing(
                    "executed:autopilot", "test 31", "Đã dừng tự vận hành. Các việc đang chờ chuyển về chờ duyệt."):
         assert needle in text, needle
     assert "callback_sign" not in text and "hmac" not in text
+
+
+def test_strategy_smoke_runs_after_the_autopilot_smoke_and_stays_out_of_the_platform_count():
+    text = (TESTS / "smoke-agentic.sh").read_text(encoding="utf-8")
+    assert text.index("source platform/tests/smoke-autopilot.sh") < text.index("source platform/tests/smoke-strategy.sh")
+    # smoke-apps.sh counts the PASS lines of make platform-smoke, so the strategy checks must not run there.
+    for name in ("smoke-platform.sh", "smoke-agent.sh", "smoke-telegram.sh", "smoke-campaign.sh", "smoke-autopilot.sh"):
+        assert "smoke-strategy.sh" not in (TESTS / name).read_text(encoding="utf-8"), name
+
+
+def test_strategy_smoke_chains_every_earlier_cleanup_on_exit():
+    # The EXIT trap of smoke-autopilot is replaced, so this one chains it after its own cleanup.
+    text = (TESTS / "smoke-strategy.sh").read_text(encoding="utf-8")
+    assert "trap 'strategy_cleanup; autopilot_cleanup; mcp_cleanup; improvement_cleanup; campaign_cleanup; assistant_cleanup; m4_cleanup; llm_cleanup' EXIT" in text
+
+
+def test_strategy_smoke_stops_the_agent_before_seeding_and_restarts_it_after():
+    text = (TESTS / "smoke-strategy.sh").read_text(encoding="utf-8")
+    # A running agent between the seeds and its restart would race with them (lesson 5 of M4), in both of its two seedings.
+    first = text.index("$COMPOSE stop dxos-agent")
+    assert first < text.index("insert into lots") < text.index("--force-recreate dxos-agent")
+    second = text.index("$COMPOSE stop dxos-agent", first + 1)
+    assert second < text.index("insert into parcels") < text.index("--force-recreate dxos-agent", second)
+
+
+def test_strategy_smoke_restores_its_rows_on_exit():
+    text = (TESTS / "smoke-strategy.sh").read_text(encoding="utf-8")
+    for needle in ("delete from platform.strategy_plans", "delete from platform.agent_proposals", "delete from platform.agent_runs",
+                   "delete from platform.campaigns", "delete from lots", "delete from parcels"):
+        assert needle in text, needle
+
+
+def test_strategy_smoke_approves_from_the_recorded_keyboard_and_signs_nothing():
+    text = (TESTS / "smoke-strategy.sh").read_text(encoding="utf-8")
+    assert "approve_by_telegram" in text
+    assert "callback_sign" not in text and "hmac" not in text
+
+
+def test_strategy_smoke_checks_the_105_percent_target_and_the_warning_of_test_37():
+    text = (TESTS / "smoke-strategy.sh").read_text(encoding="utf-8")
+    for needle in ("*1.05", "yield_kg", "strategy.adopt", "/api/internal/agent/strategy/plans", "test 37", "thấp hơn cùng kỳ năm trước"):
+        assert needle in text, needle
