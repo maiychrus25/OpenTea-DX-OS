@@ -46,3 +46,11 @@ def test_stub_records_set_chat_menu_button(stub):
     assert BotApi(stub, "123:smoke").call("setChatMenuButton", params) is True
     calls = json.loads(urllib.request.urlopen(f"{stub}/control/calls", timeout=5).read())
     assert calls == [{"method": "setChatMenuButton", "params": params}]
+
+
+def test_get_file_names_a_voice_path_the_stub_serves_as_ogg(stub):
+    api = BotApi(stub, "123:smoke")
+    info = api.call("getFile", {"file_id": "smoke-voice-1"})
+    assert info["file_path"] == "voice/smoke.oga"
+    data = api.download(info["file_path"], max_bytes=2 * 1024 * 1024)
+    assert data[:4] == b"OggS" and len(data) < 1024

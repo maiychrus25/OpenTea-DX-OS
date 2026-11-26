@@ -353,6 +353,17 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
 - **Khoá:** `./dxos telegram enable` ghi `DXOS_TELEGRAM_WEBAPP_KEY` = HMAC-SHA256(khoá `WebAppData`, token bot) cho web; `disable` xoá. Web chỉ dùng khoá này để kiểm chữ ký `initData`, không giữ token bot.
 - **Ràng buộc phiên:** `initData` không phải là đăng nhập. Chữ ký phải đúng, `auth_date` không quá 24 giờ, và `user.id` phải là tài khoản Telegram đã liên kết của người đang đăng nhập; không thì web trả 403 `WEBAPP_NOT_LINKED`. Cờ phiên `dxos_tg_webapp` hết hạn sau 12 giờ.
 
+### 3.16 Tin thoại Telegram (M15)
+
+- **Chỉ trên máy chủ của HTX:** tin thoại được `dxos-telegram` tải về bộ nhớ và gửi tới `dxos-stt` (whisper.cpp) trong mạng Docker. Âm thanh không ghi ra đĩa ở rơle, không đi tới web, nhà cung cấp AI hay dịch vụ nào khác; chỉ phần chữ được chuyển tiếp. `DXOS_STT_URL` chỉ nhận máy `dxos-stt`, `localhost` hoặc địa chỉ riêng; địa chỉ công khai bị từ chối lúc khởi động (tin thoại báo chưa nghe được, chat chữ vẫn chạy).
+- **Giới hạn:**
+  - tối đa 60 giây và 2 MB mỗi tin thoại; dài hơn thì không tải về và trả lời `Tin thoại dài quá 60 giây. Bạn nói ngắn hơn hoặc nhắn chữ nhé.`;
+  - chờ `dxos-stt` tối đa 30 giây, không thử lại; chữ nhận được cắt ở 500 ký tự;
+  - chỉ trong chat riêng; tin thoại trong nhóm bị bỏ qua.
+- **Tin thoại không tự làm gì:** bot trả lời `Em nghe được: “…”` kèm `Đúng`, `Sửa`, `Huỷ`, giữ chữ 10 phút. Chỉ `Đúng` đưa chữ đi tiếp như người dùng tự gõ; việc ghi dữ liệu vẫn cần thẻ và nút Xác nhận như mục 3.11.
+- **Không có `dxos-stt`:** trả lời `Chưa nghe được tin thoại lúc này. Bạn nhắn chữ giúp nhé.`, không ảnh hưởng chức năng khác. Im lặng hoặc chỉ có tiếng ồn: `Chưa nghe rõ. Bạn nói lại hoặc nhắn chữ nhé.`.
+- **Mô hình:** mặc định `small` (`DXOS_STT_MODEL`), tải một lần bằng `make up-voice` và kiểm SHA-256. Chọn mô hình nhỏ nhất nghe được giọng của HTX bằng `make stt-measure DIR=<thư mục .ogg kèm .txt>` (đo tỉ lệ sai từ và thời gian của `base`, `small`, `medium`).
+
 ## 4. Security Rules
 
 ### 4.1 Authentication

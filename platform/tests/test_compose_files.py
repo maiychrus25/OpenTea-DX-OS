@@ -250,3 +250,38 @@ def test_mini_app_settings_reach_the_web_and_the_relay_but_the_token_never_reach
     assert "DXOS_TELEGRAM_WEBAPP_KEY" in services["web"]["environment"]
     assert "TELEGRAM_BOT_TOKEN" not in services["web"]["environment"]
     assert "DXOS_WEB_PUBLIC_URL" in services["dxos-telegram"]["environment"]
+
+
+def test_stt_service_is_pinned_private_and_in_the_voice_group():
+    services = load_compose(COMPOSE)
+    stt = services["dxos-stt"]
+    assert stt["image"].startswith("ghcr.io/ggml-org/whisper.cpp:main-") and len(stt["image"].rsplit("main-", 1)[1]) == 40
+    assert "ports" not in stt and stt["networks"] == ["agrimarket-net"]
+    assert stt["mem_limit"] == "2g" and stt["read_only"] is True and stt["cap_drop"] == ["ALL"]
+    assert "/models/ggml-${DXOS_STT_MODEL:-small}.bin -l vi --convert" in stt["command"][0]
+    assert stt["volumes"] == ["stt_models:/models:ro"]
+    assert "stt_models" in load_document(COMPOSE)["volumes"]
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    assert "EXTRAS_VOICE := piper dxos-stt" in makefile
+
+
+def test_stt_init_checks_the_model_digest_in_the_tools_profile():
+    init = load_compose(COMPOSE)["stt-init"]
+    assert init["profiles"] == ["tools"] and init["image"] == load_compose(COMPOSE)["dxos-stt"]["image"]
+    script = init["entrypoint"][-1]
+    for model in ("base", "small", "medium"):
+        assert f"{model}) sha=" in script
+    assert "sha256sum -c" in script and "huggingface.co/ggerganov/whisper.cpp/resolve/" in script and "/resolve/main/" not in script
+
+
+def test_relay_gets_the_stt_url_with_the_internal_default():
+    assert load_compose(COMPOSE)["dxos-telegram"]["environment"]["DXOS_STT_URL"] == "${DXOS_STT_URL:-http://dxos-stt:8080}"
+    assert "DXOS_STT_URL" not in load_compose(COMPOSE)["web"]["environment"]
+
+
+def test_stt_stub_is_test_only_loopback_published_and_takes_the_stt_alias():
+    stub = load_compose(COMPOSE)["stt-test-stub"]
+    assert stub["profiles"] == ["stt-test"] and stub["ports"] == ["127.0.0.1:8083:8083"]
+    assert stub["read_only"] is True and stub["cap_drop"] == ["ALL"] and stub["user"] == "65534:65534"
+    assert stub["networks"] == {"agrimarket-net": {"aliases": ["dxos-stt"]}}
+    assert "stt-test-stub" not in load_compose(RELEASE)

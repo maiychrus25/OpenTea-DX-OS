@@ -114,6 +114,8 @@ ImageNet weights it downloads are credited in `ai-models/ATTRIBUTION.md`.
 | Ollama | `ollama/ollama:0.40.15` | MIT | Local LLM runtime (network service, no host port) |
 | qwen2.5:0.5b | pulled by `ollama-init`, pinned by digest ID | Apache-2.0 | Default in-house LLM (model weights, not bundled in any image) |
 | Piper TTS | `rhasspy/wyoming-piper:2.5.2` | MIT | Text-to-Speech engine |
+| whisper.cpp server | `ghcr.io/ggml-org/whisper.cpp:main-bd9e1a12352fa57e448bdea6a0649aa9c24c64aa` (built 2026-11-10, linux/amd64 only) | MIT | Speech-to-text for Telegram voice messages (`dxos-stt`, no host port; the image also runs `stt-init`) |
+| Whisper ggml models | `ggml-small.bin` (default), `ggml-base.bin`, `ggml-medium.bin` from `ggerganov/whisper.cpp` at commit `5359861c739e955e79d9a303bcbc70fb988958b1`, downloaded by `stt-init` and checked by SHA-256 | MIT | Speech-recognition model weights (not bundled in any image) |
 | Mattermost | `mattermost/mattermost-team-edition:12.1.0` | MIT (Team Edition) | Team communication |
 
 ### File scanner (`platform/scanner`)

@@ -96,3 +96,9 @@ def test_download_http_error_carries_the_status_only():
         api.download("gone.jpg")
     assert info.value.code == 404
     assert "SECRET" not in str(info.value)
+
+
+def test_download_with_a_limit_reads_one_byte_over_it():
+    api = BotApi("https://api.example.test", "123:abc", urlopen_fn=lambda req, timeout: FakeResponse(b"x" * 50))
+    assert len(api.download("voice/a.oga", max_bytes=10)) == 11
+    assert len(api.download("voice/a.oga")) == 50
