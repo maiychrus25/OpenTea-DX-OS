@@ -72,7 +72,7 @@ def test_assistant_case(case: dict[str, Any]) -> None:
     else:
         provider = ReplayProvider(fixtures={"default": case["replay_response"]})
 
-    handled = run_assistant_once(gateway, {"ollama": provider}, AgentSettings(), NOW)
+    handled = run_assistant_once(gateway, {"ollama": provider}, lambda: AgentSettings(), NOW)
 
     assert handled == 1
     assert gateway.results == [
@@ -85,7 +85,7 @@ def test_each_request_is_one_assistant_message_run():
     case = json.loads(SCENARIOS.read_text(encoding="utf-8"))[0]
     gateway = ScenarioGateway([case["request"]])
 
-    run_assistant_once(gateway, {"ollama": ReplayProvider(fixtures={"default": case["replay_response"]})}, AgentSettings(), NOW)
+    run_assistant_once(gateway, {"ollama": ReplayProvider(fixtures={"default": case["replay_response"]})}, lambda: AgentSettings(), NOW)
 
     assert len(gateway.runs_started) == 1
     assert gateway.runs_started[0]["agent"] == "assistant"
@@ -95,7 +95,7 @@ def test_each_request_is_one_assistant_message_run():
 def test_empty_claim_makes_no_run_and_no_llm_call():
     gateway = ScenarioGateway([])
 
-    handled = run_assistant_once(gateway, {"ollama": ForbiddenProvider()}, AgentSettings(), NOW)
+    handled = run_assistant_once(gateway, {"ollama": ForbiddenProvider()}, lambda: AgentSettings(), NOW)
 
     assert handled == 0
     assert gateway.runs_started == []

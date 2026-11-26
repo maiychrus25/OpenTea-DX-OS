@@ -8,7 +8,7 @@ and whatever it names must be in the list the web sent; anything else becomes `u
 from datetime import datetime
 import json
 import logging
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 from zoneinfo import ZoneInfo
 
 from ..client import CoreGatewayClient
@@ -137,15 +137,18 @@ def _handle_request(
 def run_assistant_once(
     gateway: CoreGatewayClient,
     providers: Mapping[str, LLMProvider],
-    settings: AgentSettings,
+    load_settings: Callable[[], AgentSettings],
     now: datetime,
 ) -> int:
-    """Claim the pending assistant requests of one cooperative and answer each; returns how many were handled."""
+    """Claim the pending assistant requests of one cooperative and answer each; returns how many were handled.
+
+    `load_settings` runs only when something was claimed, so an idle poll costs one claim request.
+    """
     requests = gateway.claim_assistant_requests(CLAIM_LIMIT)
     if not requests:
-        # Nothing claimed: no run row and no LLM call.
+        # Nothing claimed: no run row, no settings read and no LLM call.
         return 0
-    provider, fallback = choose_providers(settings, AGENT_NAME, providers)
+    provider, fallback = choose_providers(load_settings(), AGENT_NAME, providers)
     chain = [provider] if fallback is None else [provider, fallback]
     for request in requests:
         try:

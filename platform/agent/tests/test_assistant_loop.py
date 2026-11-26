@@ -154,7 +154,7 @@ def test_assistant_uses_its_own_agent_choice_for_the_provider(cfg):
             return True
 
     gateway = OneRequest("", None)
-    run_assistant_once(gateway, providers, settings, NOW)
+    run_assistant_once(gateway, providers, lambda: settings, NOW)
 
     assert gateway.runs[0]["provider"] == "anthropic"
 
@@ -201,3 +201,65 @@ def test_a_failing_assistant_run_is_logged_and_not_raised_into_the_thread(monkey
     monkeypatch.setattr(agent_main, "run_assistant_once", failing_once)
 
     agent_main.run_assistant_cycle(cfg, {}, NOW)  # must not raise
+
+
+def test_an_idle_cycle_claims_once_per_cooperative_and_fetches_no_settings(monkeypatch, cfg):
+    _write_creds(cfg.env_dir, "TC01")
+    _write_creds(cfg.env_dir, "TC02")
+    counts = {"claim": 0, "settings": 0}
+
+    class IdleGateway:
+        def __init__(self, gateway_url, token_provider) -> None:
+            del gateway_url, token_provider
+
+        def claim_assistant_requests(self, limit):
+            del limit
+            counts["claim"] += 1
+            return []
+
+        def get_settings(self) -> dict:
+            counts["settings"] += 1
+            return {}
+
+    monkeypatch.setattr(agent_main, "CoreGatewayClient", IdleGateway)
+
+    agent_main.run_assistant_cycle(cfg, {}, NOW)
+
+    assert counts == {"claim": 2, "settings": 0}
+
+
+def test_a_poll_with_one_claimed_request_fetches_settings_exactly_once():
+    answer = {"type": "unknown", "name": "", "args": {}}
+
+    class OneClaimGateway:
+        def __init__(self) -> None:
+            self._requests = [{"id": "req-1", "text": "xin chào", "tools": [], "actions": []}]
+
+        def claim_assistant_requests(self, limit):
+            del limit
+            claimed, self._requests = self._requests, []
+            return claimed
+
+        def start_run(self, **kwargs):
+            del kwargs
+            return "run-1"
+
+        def finish_run(self, run_id, status, **kwargs):
+            del run_id, status, kwargs
+
+        def post_assistant_result(self, request_id, intent, run_id):
+            del request_id, intent, run_id
+            return True
+
+    loads: list = []
+
+    def load_settings() -> AgentSettings:
+        loads.append(1)
+        return AgentSettings()
+
+    handled = run_assistant_once(
+        OneClaimGateway(), {"ollama": ReplayProvider(fixtures={"default": answer})}, load_settings, NOW
+    )
+
+    assert handled == 1
+    assert loads == [1]

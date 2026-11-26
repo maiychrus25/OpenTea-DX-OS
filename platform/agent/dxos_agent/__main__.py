@@ -170,9 +170,8 @@ def run_assistant_cycle(
     for creds in credentials_list:
         try:
             runtime = _assistant_runtime_for(cfg, runtimes, creds)
-            settings = fetch_settings(runtime.gateway)
             providers = {name: _local_unless_busy(provider) for name, provider in runtime.providers.items()}
-            run_assistant_once(runtime.gateway, providers, settings, now)
+            run_assistant_once(runtime.gateway, providers, lambda: fetch_settings(runtime.gateway), now)
         except Exception:
             log.exception("A7 assistant failed for htx=%s", creds.htx_code)
 
