@@ -1,0 +1,140 @@
+[
+  {
+    "name": "weather question becomes the weather tool",
+    "request": {
+      "id": "req-weather",
+      "text": "trời có mưa ở vùng mình không",
+      "role": "farmer",
+      "today": "2026-11-26",
+      "tools": [
+        {"name": "weather", "title_vi": "Thời tiết", "args": []},
+        {"name": "journal", "title_vi": "Nhật ký", "args": []}
+      ],
+      "actions": [
+        {"name": "journal.create", "title_vi": "Ghi nhật ký", "args": [
+          {"name": "parcel_id", "type": "string", "descriptionVi": "Mã thửa, ví dụ TC-A1"},
+          {"name": "activity_type", "type": "enum", "values": ["SPRAYING", "FERTILIZING", "IRRIGATION", "HARVEST", "SOWING", "OTHER"], "descriptionVi": "Loại hoạt động"},
+          {"name": "product_name", "type": "string", "descriptionVi": "Tên thuốc hoặc phân bón"}
+        ]},
+        {"name": "journal.batch_approve", "title_vi": "Duyệt hàng loạt nhật ký", "args": []}
+      ]
+    },
+    "replay_response": {"type": "tool", "name": "weather", "args": {}},
+    "expected": {"intent": {"type": "tool", "name": "weather", "args": {}}, "run_status": "ok"}
+  },
+  {
+    "name": "spraying sentence becomes journal.create with its arguments",
+    "request": {
+      "id": "req-spray",
+      "text": "ghi nhật ký phun Regent 800WG thửa TC-A1",
+      "role": "farmer",
+      "today": "2026-11-26",
+      "tools": [{"name": "weather", "title_vi": "Thời tiết", "args": []}],
+      "actions": [
+        {"name": "journal.create", "title_vi": "Ghi nhật ký", "args": [
+          {"name": "parcel_id", "type": "string", "descriptionVi": "Mã thửa, ví dụ TC-A1"},
+          {"name": "activity_type", "type": "enum", "values": ["SPRAYING", "FERTILIZING", "IRRIGATION", "HARVEST", "SOWING", "OTHER"], "descriptionVi": "Loại hoạt động"},
+          {"name": "product_name", "type": "string", "descriptionVi": "Tên thuốc hoặc phân bón"}
+        ]}
+      ]
+    },
+    "replay_response": {"type": "action", "name": "journal.create", "args": {"parcel_id": "TC-A1", "activity_type": "SPRAYING", "product_name": "Regent 800WG"}},
+    "expected": {"intent": {"type": "action", "name": "journal.create", "args": {"parcel_id": "TC-A1", "activity_type": "SPRAYING", "product_name": "Regent 800WG"}}, "run_status": "ok"}
+  },
+  {
+    "name": "batch approve from a farmer is still named, the web refuses it",
+    "request": {
+      "id": "req-approve",
+      "text": "duyệt hết nhật ký",
+      "role": "farmer",
+      "today": "2026-11-26",
+      "tools": [],
+      "actions": [{"name": "journal.batch_approve", "title_vi": "Duyệt hàng loạt nhật ký", "args": []}]
+    },
+    "replay_response": {"type": "action", "name": "journal.batch_approve", "args": {}},
+    "expected": {"intent": {"type": "action", "name": "journal.batch_approve", "args": {}}, "run_status": "ok"}
+  },
+  {
+    "name": "gibberish becomes unknown",
+    "request": {
+      "id": "req-gibberish",
+      "text": "asdf qwer zxcv",
+      "role": "farmer",
+      "today": "2026-11-26",
+      "tools": [{"name": "weather", "title_vi": "Thời tiết", "args": []}],
+      "actions": []
+    },
+    "replay_response": {"type": "unknown", "name": "", "args": {}},
+    "expected": {"intent": {"type": "unknown"}, "run_status": "ok"}
+  },
+  {
+    "name": "name outside the list becomes unknown",
+    "request": {
+      "id": "req-outside",
+      "text": "giá phân bón hôm nay",
+      "role": "farmer",
+      "today": "2026-11-26",
+      "tools": [{"name": "weather", "title_vi": "Thời tiết", "args": []}],
+      "actions": []
+    },
+    "replay_response": {"type": "tool", "name": "fertilizer_price", "args": {}},
+    "expected": {"intent": {"type": "unknown"}, "run_status": "ok"}
+  },
+  {
+    "name": "type that disagrees with the list becomes unknown",
+    "request": {
+      "id": "req-mismatch",
+      "text": "ghi nhật ký giúp tôi",
+      "role": "farmer",
+      "today": "2026-11-26",
+      "tools": [{"name": "weather", "title_vi": "Thời tiết", "args": []}],
+      "actions": [{"name": "journal.create", "title_vi": "Ghi nhật ký", "args": []}]
+    },
+    "replay_response": {"type": "tool", "name": "journal.create", "args": {}},
+    "expected": {"intent": {"type": "unknown"}, "run_status": "ok"}
+  },
+  {
+    "name": "unknown arguments are dropped",
+    "request": {
+      "id": "req-args",
+      "text": "ghi nhật ký phun thửa TC-A1",
+      "role": "farmer",
+      "today": "2026-11-26",
+      "tools": [],
+      "actions": [
+        {"name": "journal.create", "title_vi": "Ghi nhật ký", "args": [
+          {"name": "parcel_id", "type": "string", "descriptionVi": "Mã thửa"},
+          {"name": "activity_type", "type": "enum", "values": ["SPRAYING", "OTHER"], "descriptionVi": "Loại hoạt động"}
+        ]}
+      ]
+    },
+    "replay_response": {"type": "action", "name": "journal.create", "args": {"parcel_id": "TC-A1", "activity_type": "SPRAYING", "made_up": "x", "owner_id": 7}},
+    "expected": {"intent": {"type": "action", "name": "journal.create", "args": {"parcel_id": "TC-A1", "activity_type": "SPRAYING"}}, "run_status": "ok"}
+  },
+  {
+    "name": "provider error becomes unknown and the run fails",
+    "request": {
+      "id": "req-down",
+      "text": "thời tiết hôm nay",
+      "role": "farmer",
+      "today": "2026-11-26",
+      "tools": [{"name": "weather", "title_vi": "Thời tiết", "args": []}],
+      "actions": []
+    },
+    "provider_error": true,
+    "expected": {"intent": {"type": "unknown"}, "run_status": "failed"}
+  },
+  {
+    "name": "schema error becomes unknown and the run fails",
+    "request": {
+      "id": "req-schema",
+      "text": "thời tiết hôm nay",
+      "role": "farmer",
+      "today": "2026-11-26",
+      "tools": [{"name": "weather", "title_vi": "Thời tiết", "args": []}],
+      "actions": []
+    },
+    "replay_response": {"type": "maybe", "name": "weather", "args": {}},
+    "expected": {"intent": {"type": "unknown"}, "run_status": "failed"}
+  }
+]
