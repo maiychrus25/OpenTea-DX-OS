@@ -28,7 +28,7 @@ import { CHAT_TOOLS } from './chat/tools'
 import { autopilotEnabledText } from './messages'
 import { TelegramLinkService } from './TelegramLinkService'
 import { TelegramNotifier } from './TelegramNotifier'
-import { CampaignServices, ChatServices, TelegramUpdateHandler } from './TelegramUpdateHandler'
+import { AutopilotServices, CampaignServices, ChatServices, TelegramUpdateHandler } from './TelegramUpdateHandler'
 import { telegramCallbackKey } from './telegram-config'
 
 export function telegramRepository(): PrismaTelegramRepository {
@@ -117,6 +117,7 @@ export function telegramUpdateHandler(): TelegramUpdateHandler {
     callbackKey,
     chat: chatServices(),
     campaigns: campaignServices(),
+    autopilot: autopilotHandlerServices(),
   })
 }
 
@@ -219,4 +220,26 @@ export function autopilotService(): AutopilotService {
       stopped: (htxCode, reason, returned, dailyCap) => notifier.enqueueAutopilotStopped(htxCode, reason, returned, dailyCap),
     },
   })
+}
+
+/** The Telegram handler's autonomous-mode calls: the same repository and service as the web. */
+function autopilotHandlerServices(): AutopilotServices {
+  const autopilot = new PrismaAutopilotRepository()
+  const service = autopilotService()
+  return {
+    block: (htxCode, proposalId, userId) => autopilot.block(htxCode, proposalId, userId),
+    stop: (htxCode, userId) => service.stop(htxCode, userId),
+    status: async (htxCode) => {
+      const view = await service.view(htxCode)
+      return {
+        enabled: view.enabled,
+        enabledByName: view.enabled_by_name,
+        pending: view.today.pending,
+        ran: view.today.ran,
+        blocked: view.today.blocked,
+        dailyCap: view.daily_cap,
+      }
+    },
+    touchManagerActivity: (htxCode, now) => autopilot.touchManagerActivity(htxCode, now),
+  }
 }

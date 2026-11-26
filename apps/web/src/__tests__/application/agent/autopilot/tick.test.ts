@@ -369,6 +369,23 @@ describe('RunAutopilotTickUseCase', () => {
       expect(fake.rows.get(id)!.proposal).toMatchObject({ status: 'proposed', runAt: null })
     })
 
+    test('a message to households ends with the line that says an AI sent it', async () => {
+      const { fake, tick, decide } = setup()
+      fake.add(households)
+      fake.add()
+      await tick.execute(HTX)
+      const byKind = Object.fromEntries(decide.mock.calls.map((c) => [fake.rows.get(c[0].proposalId)!.proposal.kind, c[0]]))
+      expect(byKind['notification.households'].editedPayload).toEqual({ note_vi: '(Tin do AI của HTX gửi)' })
+      expect(byKind['notification.internal'].editedPayload).toBeUndefined()
+    })
+
+    test('the households template puts the suffix at the end of the body', async () => {
+      const { renderNotification } = await import('@/application/agent/actions/message-templates')
+      const payload = { template: 'dry_soil', slots: { parcel_codes: ['P1'], value_pct: 20, threshold_pct: 35 } }
+      const body = renderNotification(payload.template, payload.slots, '(Tin do AI của HTX gửi)').body
+      expect(body.endsWith('\n\n(Tin do AI của HTX gửi)')).toBe(true)
+    })
+
     test('one message under the cap still runs', async () => {
       const { fake, tick } = setup()
       fake.householdCounts = new Map([['hh-1', 1]])

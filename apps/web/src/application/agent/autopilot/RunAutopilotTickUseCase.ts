@@ -15,6 +15,8 @@ import { autoEligibility } from './eligibility'
 const DAY_MS = 24 * 60 * 60_000
 export const INACTIVITY_LIMIT_MS = 7 * DAY_MS
 export const MAX_RUNS_PER_TICK = 20
+/** Ends every message to households that an auto-run sends (contract C5). */
+export const AUTO_MESSAGE_SUFFIX = '(Tin do AI của HTX gửi)'
 const FAILURE_BRAKE = 3
 const BLOCK_SHARE_BRAKE = 0.3
 const BLOCK_BRAKE_MIN_DECIDED = 5
@@ -151,6 +153,8 @@ export class RunAutopilotTickUseCase {
         tenant: { userId: config.enabledBy!, role: 'manager', htxCode, htxProfileId },
         userName: `AI tự thực hiện (bật bởi ${config.enabledByName ?? config.enabledBy})`,
         decision: 'approve',
+        // The note field is human-only for agents; here the system adds the line that says an AI sent it.
+        editedPayload: proposal.kind === 'notification.households' ? { note_vi: AUTO_MESSAGE_SUFFIX } : undefined,
         channel: 'autopilot',
         now: this.now(),
       })
