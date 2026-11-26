@@ -157,6 +157,6 @@ describe('TelegramUpdateHandler: chat routes', () => {
   test('a farmer without a household still gets the menu and no manager buttons', async () => {
     const { handler } = build([link({ userId: 'u-farmer', role: 'farmer', telegramUserId: String(FARMER_TG), chatId: String(FARMER_TG) })])
     const res = await handler.handle(message({ text: '/menu' }, FARMER_TG))
-    expect(res.replies[0].buttons!.flat().map((b) => b.text)).toEqual(['Hôm nay', 'Ghi nhật ký', 'Báo bệnh', 'Hỏi'])
+    expect(res.replies[0].buttons!.flat().map((b) => b.text)).toEqual(['Hôm nay', 'Ghi nhật ký', 'Hỏi'])
   })
 })

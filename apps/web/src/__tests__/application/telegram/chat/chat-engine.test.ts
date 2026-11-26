@@ -194,10 +194,8 @@ describe('ChatEngine: menu, commands and tools', () => {
     const { engine } = build()
     const farmer = await engine.menu(FARMER)
     expect(farmer.replies[0].text).toBe(TELEGRAM_TEXT.menuPrompt)
-    expect(farmer.replies[0].buttons!.map((row) => row.map((b) => b.text))).toEqual([
-      ['Hôm nay', 'Ghi nhật ký'],
-      ['Báo bệnh', 'Hỏi'],
-    ])
+    // No Báo bệnh button in M5: the disease endpoint needs a web session (the action is not wired in chat yet).
+    expect(farmer.replies[0].buttons!.map((row) => row.map((b) => b.text))).toEqual([['Hôm nay', 'Ghi nhật ký'], ['Hỏi']])
     const manager = await engine.menu(MANAGER)
     expect(manager.replies[0].buttons!.map((row) => row.map((b) => b.text))).toEqual([['Hôm nay', 'Việc cần duyệt'], ['Hỏi']])
   })
