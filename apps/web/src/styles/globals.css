@@ -66,6 +66,13 @@
   --primary:            #176c4b;
   --primary-foreground: #ffffff;
   --accent-lime:        #d6f05c;
+
+  /* Short video stage: stays dark in both themes, like the video itself */
+  --video-stage:        #0b140f;
+  --video-panel:        #101c15;
+  --video-ink:          #ffffff;
+  --video-shade:        #000000;
+  --video-like:         #e5323e;
   --secondary:          #e7f0ea;
   --muted:              #eef1ed;
   --muted-foreground:   #5d6a63;
@@ -251,6 +258,11 @@
     --primary:            #4cc38a;
     --primary-foreground: #04140c;
     --accent-lime:        #c9e157;
+    --video-stage:        #0b140f;
+    --video-panel:        #101c15;
+    --video-ink:          #ffffff;
+    --video-shade:        #000000;
+    --video-like:         #e5323e;
     --secondary:          #173328;
     --muted:              #162a20;
     --muted-foreground:   #9fb4a8;
@@ -316,6 +328,11 @@
   --primary:            #4cc38a;
   --primary-foreground: #04140c;
   --accent-lime:        #c9e157;
+  --video-stage:        #0b140f;
+  --video-panel:        #101c15;
+  --video-ink:          #ffffff;
+  --video-shade:        #000000;
+  --video-like:         #e5323e;
   --secondary:          #173328;
   --muted:              #162a20;
   --muted-foreground:   #9fb4a8;
