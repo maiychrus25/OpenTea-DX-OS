@@ -80,6 +80,20 @@ describe('TelegramNotifier', () => {
     expect(rows[0].text).toContain('Đề xuất: Duyệt nhật ký canh tác')
   })
 
+  test('a high proposal gains Mở chi tiết only with an HTTPS web address; others never do', async () => {
+    const high = { ...proposal, kind: 'harvest.approve', risk: 'high' as const, payload: { parcel_id: 'p1' } }
+    const labels = async () => new Map()
+    const make = (p: Proposal) => new TelegramNotifier({ repo: fakeRepo() as never, proposals: { findById: async () => p } as never, labelsFor: labels, now: () => NOW })
+    expect((await make(high).proposalMessage(high))!.buttons).toHaveLength(1)
+    process.env.DXOS_WEB_PUBLIC_URL = 'https://dxos.example.org'
+    const withUrl = (await make(high).proposalMessage(high))!.buttons
+    expect(withUrl.map((row) => row.map((b) => b.text))).toEqual([['Duyệt', 'Từ chối'], ['Mở chi tiết']])
+    expect(decodeURIComponent((withUrl[1][0] as { web_app: { url: string } }).web_app.url)).toBe(
+      `https://dxos.example.org/telegram/open?to=/manager/ai?proposal=${PROPOSAL_ID}`
+    )
+    expect((await make(proposal).proposalMessage(proposal))!.buttons).toHaveLength(1)
+  })
+
   test('nothing is queued without a callback key (the buttons could not be signed)', async () => {
     process.env.DXOS_TELEGRAM_CALLBACK_KEY = ''
     const repo = fakeRepo()

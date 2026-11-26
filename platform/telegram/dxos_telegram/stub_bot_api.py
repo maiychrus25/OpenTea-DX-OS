@@ -102,7 +102,7 @@ def make_handler(state: StubState) -> type[BaseHTTPRequestHandler]:
                 result: Any = state.next_message(params.get("chat_id"), params.get("text"))
             elif method == "editMessageText":
                 result = {"message_id": params.get("message_id"), "chat": {"id": params.get("chat_id")}}
-            elif method == "answerCallbackQuery":
+            elif method in ("answerCallbackQuery", "setChatMenuButton"):
                 result = True
             elif method == "getFile":
                 result = {"file_id": params.get("file_id"), "file_unique_id": "smoke-stub", "file_size": len(PHOTO_JPEG), "file_path": PHOTO_PATH}

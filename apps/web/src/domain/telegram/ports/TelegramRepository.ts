@@ -42,7 +42,10 @@ export interface OutboxPhoto {
   name: string
 }
 
-export type OutboxButton = { text: string; callback_data: string } | { text: string; url: string }
+export type OutboxButton =
+  | { text: string; callback_data: string }
+  | { text: string; url: string }
+  | { text: string; web_app: { url: string } }
 
 export interface OutboxRow extends OutboxInsert {
   id: string

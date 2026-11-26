@@ -55,3 +55,10 @@ def test_stub_accepts_send_media_group_and_records_the_album(stub):
 def test_stub_accepts_send_photo(stub):
     api = BotApi(stub, "123:smoke")
     assert api.call_files("sendPhoto", {"chat_id": 5, "caption": "x"}, {"photo": ("a.png", b"A", "image/png")})["message_id"] == 1001
+
+
+def test_stub_records_set_chat_menu_button(stub):
+    params = {"menu_button": {"type": "web_app", "text": "Mở ứng dụng", "web_app": {"url": "https://x.example/telegram/open"}}}
+    assert BotApi(stub, "123:smoke").call("setChatMenuButton", params) is True
+    calls = json.loads(urllib.request.urlopen(f"{stub}/control/calls", timeout=5).read())
+    assert calls == [{"method": "setChatMenuButton", "params": params}]

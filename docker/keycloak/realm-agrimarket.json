@@ -111,6 +111,10 @@
       {
         "name": "telegram",
         "description": "Rơle Telegram (client credentials, chỉ gọi /api/internal/telegram/*)"
+      },
+      {
+        "name": "staff-sync",
+        "description": "App nhân sự của HTX (client credentials, chỉ gọi /api/internal/staff/*)"
       }
     ]
   },

@@ -18,6 +18,7 @@ class Config:
     keycloak_url: str = "http://keycloak:8080/realms/agrimarket"
     env_dir: Path = Path("/run/dxos-telegram")
     version: str = "dev"
+    web_public_url: str = ""
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -32,4 +33,5 @@ class Config:
             keycloak_url=env.get("KEYCLOAK_INTERNAL_URL", "http://keycloak:8080/realms/agrimarket"),
             env_dir=Path(env.get("DXOS_TELEGRAM_ENV_DIR", "/run/dxos-telegram")),
             version=env.get("DXOS_TELEGRAM_VERSION", "dev"),
+            web_public_url=env.get("DXOS_WEB_PUBLIC_URL", "").strip().rstrip("/"),
         )

@@ -279,3 +279,25 @@ def test_media_group_failure_is_reported_like_any_send():
     bot = PhotoBot(fail_on={"sendMediaGroup": BotApiError("Too Many Requests", code=429, retry_after=7)})
     assert make_relay(bot, web).deliver([PHOTO_ITEM]) == 7.0
     assert web.results == [("o9", {"ok": False, "error": "Too Many Requests", "retry_after_seconds": 7})]
+
+
+def test_menu_button_is_set_to_the_open_page_when_the_url_is_https():
+    bot = FakeBot()
+    Relay(bot, FakeWeb(), "t", web_public_url="https://dx.example.org/").set_menu_button()
+    assert bot.calls == [
+        ("setChatMenuButton", {"menu_button": {"type": "web_app", "text": "Mở ứng dụng", "web_app": {"url": "https://dx.example.org/telegram/open"}}})
+    ]
+
+
+@pytest.mark.parametrize("url", ["", "http://localhost:3000"])
+def test_menu_button_is_skipped_without_https(url, caplog):
+    bot = FakeBot()
+    with caplog.at_level("INFO", logger="dxos_telegram"):
+        Relay(bot, FakeWeb(), "t", web_public_url=url).set_menu_button()
+    assert bot.calls == []
+    assert "Mini App needs an HTTPS web address; the menu button is not set." in caplog.text
+
+
+def test_menu_button_failure_is_logged_not_raised():
+    bot = FakeBot(fail_on={"setChatMenuButton": BotApiError("Bad Request", permanent=True)})
+    Relay(bot, FakeWeb(), "t", web_public_url="https://dx.example.org").set_menu_button()
