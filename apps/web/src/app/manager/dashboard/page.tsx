@@ -15,6 +15,7 @@ import { requireTenant } from '@/lib/api/tenant'
 import { MetricCard, AiNote, SourceBox, HeroBanner, Panel, Pill, EmptyState } from '@/components/ui'
 import { isSimulatedPrice, SIMULATED_PRICE_LABEL } from '@/domain/market/simulated-price'
 
+import { NoticesAndWeather } from '@/components/features/dashboard/NoticesAndWeather'
 import styles from './Dashboard.module.css'
 import layout from '@/components/features/dashboard/dashboard.module.css'
 
@@ -310,7 +311,7 @@ export default async function ManagerDashboard() {
             ))}
           </nav>
 
-          {/* TODO: weekly yield chart and weather forecast need an API; the dashboard does not have one yet. */}
+          {/* TODO: the weekly yield chart needs an API; the dashboard does not have one yet. */}
           <div className={layout.columns}>
             <Panel title="Nhật ký chờ duyệt" href="/manager/journal-approve">
               {pending.length === 0 ? (
@@ -359,6 +360,8 @@ export default async function ManagerDashboard() {
               </div>
             </Panel>
           </div>
+
+          <NoticesAndWeather />
 
           {/* Market Snapshot */}
           <Panel title="Chỉ số giá nông sản">
