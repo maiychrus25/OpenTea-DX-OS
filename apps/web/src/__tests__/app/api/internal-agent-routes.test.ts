@@ -78,6 +78,19 @@ describe('Internal agent API routes', () => {
     )
   })
 
+  test('POST /api/internal/agent/runs accepts the assistant (A7) with trigger message', async () => {
+    startRunMock.mockResolvedValueOnce({ id: RUN_UUID })
+    const res = await postRun(
+      new Request('http://web/api/internal/agent/runs', {
+        method: 'POST',
+        body: JSON.stringify({ agent: 'assistant', trigger: 'message', provider: 'ollama' }),
+      }),
+      undefined
+    )
+    expect(res.status).toBe(201)
+    expect(startRunMock).toHaveBeenCalledWith(expect.objectContaining({ htxCode: 'TC', agent: 'assistant', trigger: 'message' }))
+  })
+
   test('POST /api/internal/agent/runs propagates 403 when gateway header fails and 400 on bad trigger', async () => {
     ;(requireAgentCaller as jest.Mock).mockRejectedValueOnce(new ForbiddenError('INTERNAL_GATEWAY_REQUIRED'))
     const denied = await postRun(new Request('http://web/api/internal/agent/runs', { method: 'POST' }), undefined)

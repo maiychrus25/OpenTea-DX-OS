@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-export type AgentRunTrigger = 'schedule' | 'event' | 'manual'
+export type AgentRunTrigger = 'schedule' | 'event' | 'manual' | 'message'
 export type AgentRunTerminalStatus = 'ok' | 'failed' | 'skipped'
 
 export interface StartAgentRunInput {
