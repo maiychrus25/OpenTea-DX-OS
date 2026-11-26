@@ -34,6 +34,33 @@ jest.mock('@/infrastructure/db/lot/PrismaLotRepository', () => ({
   PrismaLotRepository: jest.fn().mockImplementation(() => ({ findAll: (filter: unknown) => mockFindAll(filter) })),
 }))
 
+const mockCreate = jest.fn()
+const mockNotify = jest.fn()
+jest.mock('@/infrastructure/db/agent/PrismaProposalRepository', () => ({
+  PrismaProposalRepository: jest.fn().mockImplementation(() => ({
+    create: (input: unknown) => mockCreate(input),
+    createdSince: async () => false,
+  })),
+}))
+jest.mock('@/application/telegram/telegram-services', () => ({
+  notifyProposalCreated: (htxCode: string, proposalId: string) => mockNotify(htxCode, proposalId),
+}))
+const mockParcelLoader = jest.fn()
+jest.mock('@/application/agent/actions/journal-evidence', () => {
+  const actual = jest.requireActual('@/application/agent/actions/journal-evidence')
+  return {
+    ...actual,
+    EVIDENCE_LOADERS: {
+      ...actual.EVIDENCE_LOADERS,
+      parcels: (htxCode: string, id: string) => mockParcelLoader(htxCode, id),
+    },
+  }
+})
+const mockHarvestUseCase = jest.fn()
+jest.mock('@/application/farm/approve-harvest-usecase', () => ({
+  ApproveHarvestUseCase: jest.fn().mockImplementation(() => ({ execute: (...args: unknown[]) => mockHarvestUseCase(...args) })),
+}))
+
 import { UnauthorizedError } from '@/domain/errors'
 import { CHAT_TOOLS } from '@/application/telegram/chat/tools'
 import { GET as listTools } from '@/app/api/mcp/tools/route'
@@ -120,3 +147,109 @@ describe('MCP tool routes', () => {
     expect(text).toMatch(/\nNguồn: /)
   })
 })
+
+describe('create_proposal', () => {
+  const internalPayload = {
+    template: 'sensor_silent',
+    slots: { parcel_code: 'P-01', sensor: 'soil_moisture', hours: 12 },
+    subjects: ['parcel-1'],
+  }
+
+  function create(kind: string, payload: unknown, reason = 'Nhắc các hộ gia đình kiểm tra cảm biến') {
+    return callTool(request('POST', { arguments: { kind, payload, reason_vi: reason } }), callContext('create_proposal'))
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockVerify.mockResolvedValue({ sub: 'user-1', azp: 'dxos-mcp', roles: ['manager'] })
+    mockRead.mockResolvedValue(LIVE_MANAGER)
+    mockCreate.mockResolvedValue({ id: 'proposal-1' })
+    mockNotify.mockResolvedValue(undefined)
+    mockParcelLoader.mockImplementation(async (htxCode: string, id: string) =>
+      htxCode === 'TC' && id === 'parcel-1' ? { id, parcel_code: 'P-01' } : null
+    )
+  })
+
+  it('creates a user proposal for a manager, queues it to Telegram and answers 201 without executing', async () => {
+    const res = await create('notification.internal', internalPayload)
+    expect(res.status).toBe(201)
+    expect(await res.json()).toEqual({
+      proposal_id: 'proposal-1',
+      status: 'proposed',
+      message_vi: 'Đã tạo đề xuất. Bạn cần xác nhận trên web hoặc Telegram.',
+    })
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        htxCode: 'TC',
+        kind: 'notification.internal',
+        origin: 'user',
+        requestedBy: 'user-1',
+        agent: 'mcp',
+        channel: 'mcp',
+      })
+    )
+    expect(mockNotify).toHaveBeenCalledWith('TC', 'proposal-1')
+    expect(mockHarvestUseCase).not.toHaveBeenCalled()
+  })
+
+  it('builds the evidence on the server from the payload subjects', async () => {
+    const res = await create('harvest.approve', { parcel_id: 'parcel-1' })
+    expect(res.status).toBe(201)
+    const input = mockCreate.mock.calls[0][0]
+    expect(input.evidence.rows).toEqual([
+      expect.objectContaining({ table: 'parcels', id: 'parcel-1', values: { id: 'parcel-1', parcel_code: 'P-01' } }),
+    ])
+    expect(mockHarvestUseCase).not.toHaveBeenCalled()
+  })
+
+  it('refuses a kind the person cannot decide with 403 NOT_AN_APPROVER', async () => {
+    mockVerify.mockResolvedValue({ sub: 'officer-1', azp: 'dxos-mcp', roles: ['officer'] })
+    mockRead.mockResolvedValue({ roles: ['officer'], enabled: true, htxCode: 'TC' })
+    const res = await create('harvest.approve', { parcel_id: 'parcel-1' })
+    expect(res.status).toBe(403)
+    expect((await res.json()).error.message).toBe('NOT_AN_APPROVER')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('refuses a kind that is not open to user proposals with 400', async () => {
+    const res = await create('improvement.adopt', { improvement_id: 'x' })
+    expect(res.status).toBe(400)
+    expect((await res.json()).error.message).toBe('INVALID_ORIGIN')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('refuses an unknown kind with 400', async () => {
+    const res = await create('no.such.kind', {})
+    expect(res.status).toBe(400)
+    expect((await res.json()).error.message).toBe('UNKNOWN_KIND')
+  })
+
+  it('refuses a subject outside the cooperative with 400 EVIDENCE_NOT_IN_HTX', async () => {
+    const res = await create('harvest.approve', { parcel_id: 'parcel-of-another-htx' })
+    expect(res.status).toBe(400)
+    expect((await res.json()).error.message).toBe('EVIDENCE_NOT_IN_HTX')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it('refuses a payload that does not match the kind schema with 400 INVALID_PAYLOAD', async () => {
+    const res = await create('notification.internal', { ...internalPayload, extra: true })
+    expect(res.status).toBe(400)
+    expect((await res.json()).error.message).toBe('INVALID_PAYLOAD')
+  })
+
+  it('answers 409 when an open proposal with the same subjects already exists', async () => {
+    mockCreate.mockResolvedValue(null)
+    const res = await create('notification.internal', internalPayload)
+    expect(res.status).toBe(409)
+    expect(mockNotify).not.toHaveBeenCalled()
+  })
+
+  it('refuses arguments without a reason with 400', async () => {
+    const res = await callTool(
+      request('POST', { arguments: { kind: 'notification.internal', payload: internalPayload } }),
+      callContext('create_proposal')
+    )
+    expect(res.status).toBe(400)
+  })
+})
+
