@@ -26,6 +26,7 @@ REFRESH_MARGIN_SECONDS = 30
 HTTP_TIMEOUT_SECONDS = 30
 TOOL_NAME = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 SESSION_EXPIRED = "Phiên đăng nhập đã hết. Chạy: python3 dxos_mcp.py login --server {server}"
+RETRY_LATER = "Không kết nối được máy chủ đăng nhập. Thử lại sau ít phút."
 
 
 class SessionError(Exception):
@@ -153,9 +154,11 @@ def current_session(token_path):
             f"{record['issuer']}/protocol/openid-connect/token",
             {"grant_type": "refresh_token", "refresh_token": record["refresh_token"], "client_id": CLIENT_ID},
         )
-    except OSError as error:
-        raise SessionError(session_expired(record["server"])) from error
-    if status != 200 or "access_token" not in body:
+    except OSError as error:  # unreachable or timed out: the stored tokens may still be good
+        raise BackendError(RETRY_LATER) from error
+    if status >= 500 or (status == 200 and "access_token" not in body):
+        raise BackendError(RETRY_LATER)
+    if status != 200:  # 400 invalid_grant, 401 and the rest: the session is over
         raise SessionError(session_expired(record["server"]))
     body.setdefault("refresh_token", record["refresh_token"])
     record = _record(record["server"], record["issuer"], body)

@@ -76,6 +76,7 @@ class FakeDxos:
         self.polls = ["authorization_pending", "slow_down", "approved"]
         self.access = "acc-1"
         self.refresh = "ref-1"
+        self.refresh_status = None  # set to a status to make the token endpoint fail refreshes with it
         self.calls = []
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
         self.httpd.fake = self
@@ -107,6 +108,8 @@ class FakeDxos:
             if step == "approved":
                 return 200, self._tokens()
             return 400, {"error": step}
+        if form.get("grant_type") == "refresh_token" and self.refresh_status:
+            return self.refresh_status, {"error": "server_error"}
         if form.get("grant_type") == "refresh_token" and form.get("refresh_token") == self.refresh:
             self.access, self.refresh = "acc-2", "ref-2"
             return 200, self._tokens()
@@ -256,6 +259,52 @@ def test_failed_refresh_asks_for_login_and_the_loop_keeps_running(fake, token_pa
     )
     assert replies[1] == {"jsonrpc": "2.0", "id": 2, "result": {}}
     assert "ref-1" not in stdout + stderr and "acc-1" not in stdout + stderr
+
+
+RETRY_LATER = "Không kết nối được máy chủ đăng nhập. Thử lại sau ít phút."
+
+
+def _closed_port_base():
+    # A loopback port with nothing listening: connecting to it fails with a network error.
+    import socket
+
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    return f"http://127.0.0.1:{port}"
+
+
+def test_network_error_on_refresh_keeps_the_tokens_and_asks_to_retry(fake, token_path):
+    write_token(token_path, fake.base, expires_in=5)
+    record = json.loads(token_path.read_text(encoding="utf-8"))
+    record["issuer"] = _closed_port_base() + REALM_PATH  # Keycloak is unreachable
+    token_path.write_text(json.dumps(record), encoding="utf-8")
+    before = token_path.read_text(encoding="utf-8")
+    replies, stdout, stderr = run_serve(token_path, rpc(1, "tools/call", call("list_lots")), rpc(2, "ping"))
+    result = replies[0]["result"]
+    assert result == {"content": [{"type": "text", "text": RETRY_LATER}], "isError": True}
+    assert token_path.read_text(encoding="utf-8") == before
+    assert replies[1] == {"jsonrpc": "2.0", "id": 2, "result": {}}
+
+
+def test_server_error_on_refresh_keeps_the_tokens_and_asks_to_retry(fake, token_path):
+    fake.refresh_status = 503
+    write_token(token_path, fake.base, expires_in=5)
+    before = token_path.read_text(encoding="utf-8")
+    replies, _, _ = run_serve(token_path, rpc(1, "tools/call", call("list_lots")))
+    assert replies[0]["result"] == {"content": [{"type": "text", "text": RETRY_LATER}], "isError": True}
+    assert token_path.read_text(encoding="utf-8") == before
+
+
+def test_invalid_grant_on_refresh_asks_for_login_and_keeps_the_file(fake, token_path):
+    fake.refresh = "gone"  # Keycloak answers invalid_grant
+    write_token(token_path, fake.base, expires_in=5)
+    before = token_path.read_text(encoding="utf-8")
+    replies, _, _ = run_serve(token_path, rpc(1, "tools/call", call("list_lots")))
+    assert replies[0]["result"]["content"][0]["text"] == (
+        f"Phiên đăng nhập đã hết. Chạy: python3 dxos_mcp.py login --server {fake.base}"
+    )
+    assert token_path.read_text(encoding="utf-8") == before
 
 
 def test_call_without_a_login_asks_for_login(token_path):
