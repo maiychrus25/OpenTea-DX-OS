@@ -257,7 +257,7 @@ export function AutopilotSection({ role, reauthNeeded = false }: AutopilotSectio
 
                 {needsLogin && <p className={styles.notice}>Để bật, bạn cần đăng nhập lại trong vòng 5 phút trước đó.</p>}
                 <div className={styles.actions}>
-                  <Button variant="primary" onClick={enable} isLoading={busy} disabled={!acknowledged}>
+                  <Button variant="primary" onClick={enable} isLoading={busy} disabled={!needsLogin && !acknowledged}>
                     {needsLogin ? 'Đăng nhập lại để bật' : 'Bật tự vận hành'}
                   </Button>
                 </div>
