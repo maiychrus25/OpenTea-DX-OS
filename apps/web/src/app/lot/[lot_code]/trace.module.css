@@ -196,6 +196,36 @@
   line-height: 1.55;
 }
 
+.verifiedBlock {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--color-success-subtle);
+  border: 1.5px solid color-mix(in srgb, var(--color-success) 40%, transparent);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-ink-primary);
+}
+
+.verifiedIcon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  color: var(--color-success);
+}
+
+.verifiedList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .lockedIcon {
   flex-shrink: 0;
   width: 20px;

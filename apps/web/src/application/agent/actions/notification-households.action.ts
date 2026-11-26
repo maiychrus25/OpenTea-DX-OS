@@ -13,7 +13,7 @@ export const notificationHouseholdsAction: ActionDefinition<TemplatePayload> = {
   titleVi: 'Thông báo nông hộ',
   risk: 'medium',
   approverRoles: ['manager'],
-  origins: ['agent'],
+  origins: ['agent', 'user'],
   autonomy: 'auto',
   channels: ['web', 'telegram'],
   payloadSchema: templatePayloadSchema('households'),

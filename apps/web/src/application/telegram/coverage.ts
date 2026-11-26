@@ -106,5 +106,7 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'POST /api/telegram/link',
     'DELETE /api/telegram/link',
     'POST /api/telegram/group-link',
+    'GET /api/mcp/tools',
+    'POST /api/mcp/tools/[name]',
   ],
 }
