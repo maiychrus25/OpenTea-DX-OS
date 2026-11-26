@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 import React from 'react';
-import { Info, Lock, Hourglass } from 'lucide-react';
+import { Info, Lock, Hourglass, ShieldCheck } from 'lucide-react';
 import { LotTraceData } from '@/domain/entities/lot-trace-data';
 import { Pill } from '@/components/ui/Pill/Pill';
 import styles from '../trace.module.css';
@@ -13,6 +13,8 @@ interface TraceViewProps {
   data: LotTraceData;
   qrDataUri?: string;
   pageUrl?: string;
+  /** Verification lines of the lot's AI decisions (M14 contract C4); empty when none is verifiable. */
+  verification?: string[];
 }
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -24,7 +26,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   OTHER: 'Khác',
 };
 
-export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
+export function TraceView({ data, qrDataUri, pageUrl, verification = [] }: TraceViewProps) {
   const {
     lot_code,
     commodity,
@@ -57,6 +59,17 @@ export function TraceView({ data, qrDataUri, pageUrl }: TraceViewProps) {
         <h1>Truy xuất nguồn gốc</h1>
         <p>{BRAND_NAME}</p>
       </header>
+
+      {verification.length > 0 && (
+        <section className={styles.verifiedBlock} aria-label="Kiểm chứng trong sổ audit">
+          <ShieldCheck className={styles.verifiedIcon} aria-hidden />
+          <ul className={styles.verifiedList}>
+            {verification.map((line, index) => (
+              <li key={index}>{line}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* QR Code Section */}
       {qrDataUri && (

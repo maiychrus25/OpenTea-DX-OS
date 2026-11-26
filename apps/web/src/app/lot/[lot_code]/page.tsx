@@ -6,7 +6,10 @@ import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { cache } from 'react';
 import { GetLotTraceDataUseCase } from '@/application/useCases/get-lot-trace-data-usecase';
+import { LotAiVerification } from '@/application/lot/lot-ai-verification';
 import { PrismaLotTraceRepository } from '@/infrastructure/db/repositories/prisma-lot-trace-repository';
+import { PrismaLotVerificationRepository } from '@/infrastructure/db/repositories/prisma-lot-verification-repository';
+import { logger } from '@/lib/logger';
 import { TraceView } from './_components/TraceView';
 
 export const runtime = 'nodejs';
@@ -22,6 +25,16 @@ const getCachedTrace = cache(async (code: string) => {
     throw e
   }
 });
+
+/** The verification line never fails the page: a lookup error shows no line and is logged. */
+async function verificationLines(code: string): Promise<string[]> {
+  try {
+    return await new LotAiVerification(new PrismaLotVerificationRepository()).execute(code);
+  } catch (err) {
+    logger.error('Lot verification line failed', { lot_code: code, err });
+    return [];
+  }
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ lot_code: string }> }) {
   const { lot_code } = await params;
@@ -81,10 +94,11 @@ export default async function TracePage({ params }: { params: Promise<{ lot_code
   const baseUrl = resolveBaseUrlFromHeaders(headerList, process.env.NEXT_PUBLIC_BASE_URL)
   const pageUrl = `${baseUrl}/lot/${encodeURIComponent(decoded!)}`
   const qrDataUri = await QRCode.toDataURL(pageUrl, { margin: 1, width: 200 }).catch(() => '')
+  const verification = await verificationLines(decoded!)
 
   return (
     <main>
-      <TraceView data={lotTraceData} qrDataUri={qrDataUri} pageUrl={pageUrl} />
+      <TraceView data={lotTraceData} qrDataUri={qrDataUri} pageUrl={pageUrl} verification={verification} />
     </main>
   );
 }
