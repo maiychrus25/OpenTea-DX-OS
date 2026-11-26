@@ -8,7 +8,7 @@
 .spinner { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.scene { position: relative; display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 8px 18px; border-radius: var(--radius-card); overflow: hidden; color: var(--color-hero-text); background: linear-gradient(color-mix(in srgb, var(--color-hero-bg) 42%, transparent), color-mix(in srgb, var(--color-hero-bg) 38%, transparent)), url('/images/tea-hills-sunrise.jpg') center 70% / cover, var(--color-hero-bg); box-shadow: var(--shadow-card); }
+.scene { position: relative; display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 14px 24px; border-radius: var(--radius-card); overflow: hidden; color: var(--color-hero-text); background: linear-gradient(color-mix(in srgb, var(--color-hero-bg) 42%, transparent), color-mix(in srgb, var(--color-hero-bg) 38%, transparent)), url('/images/tea-hills-sunrise.jpg') center 70% / cover, var(--color-hero-bg); box-shadow: var(--shadow-card); }
 .scene > * { position: relative; z-index: 1; }
 .rainy { background: linear-gradient(color-mix(in srgb, var(--color-hero-bg) 50%, transparent), color-mix(in srgb, var(--color-hero-bg) 45%, transparent)), url('/images/tea-hills-mist.jpg') center / cover, var(--color-hero-bg); }
 .rainy::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(104deg, transparent 0 17px, color-mix(in srgb, var(--color-hero-text) 13%, transparent) 17px 18px, transparent 18px 41px); }
@@ -20,38 +20,42 @@
 .where, .temperature, .sky { padding-left: 18px; border-left: 1px solid color-mix(in srgb, var(--color-hero-text) 28%, transparent); }
 .where { flex: 1.4; }
 .sky { flex: 1; }
-.location { font-size: 18px; font-weight: 800; }
-.condition { font-size: 16px; font-weight: 700; }
-.muted { font-size: var(--font-size-table); color: var(--color-hero-muted); }
-.temperature { font-size: 36px; font-weight: 800; line-height: 1.1; white-space: nowrap; }
+.location { font-size: 24px; font-weight: 800; }
+.condition { font-size: 20px; font-weight: 700; }
+.muted { font-size: 16px; color: var(--color-hero-muted); }
+.temperature { font-size: 54px; font-weight: 800; line-height: 1.1; white-space: nowrap; }
 .toggle { display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-weight: 700; }
 
-.glass { margin: 0; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--color-hero-text) 18%, transparent); border-radius: var(--radius-card); background: color-mix(in srgb, var(--color-hero-bg) 48%, transparent); backdrop-filter: blur(3px); min-width: 0; }
+.glass { margin: 0; padding: 16px 18px; border: 1px solid color-mix(in srgb, var(--color-hero-text) 18%, transparent); border-radius: var(--radius-card); background: color-mix(in srgb, var(--color-hero-bg) 48%, transparent); backdrop-filter: blur(3px); min-width: 0; }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .stats div { display: flex; align-items: center; justify-content: center; gap: 14px; }
 .stats div + div { border-left: 1px solid color-mix(in srgb, var(--color-hero-text) 22%, transparent); }
-.stats dt { font-size: var(--font-size-meta); color: var(--color-hero-muted); }
-.stats dd { margin: 0; font-size: 24px; font-weight: 800; }
+.stats dt { font-size: 15px; color: var(--color-hero-muted); }
+.stats dd { margin: 0; font-size: 30px; font-weight: 800; }
 .hoursHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px; margin-bottom: 8px; }
-.hoursHead h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--color-hero-text); }
+.hoursHead h3 { margin: 0; font-size: 20px; font-weight: 800; color: var(--color-hero-text); }
 .hoursHead span { font-size: 12px; font-style: italic; color: var(--color-hero-muted); }
 .hours { display: grid; grid-auto-flow: column; grid-auto-columns: calc(100% / 6); margin: 0; padding: 0 0 4px; list-style: none; overflow-x: auto; }
-.hour { display: flex; flex-direction: column; align-items: center; gap: 8px; font-weight: 700; }
+.hour { display: flex; flex-direction: column; align-items: center; gap: 12px; font-size: 18px; font-weight: 700; }
 .hour + .hour { border-left: 1px solid color-mix(in srgb, var(--color-hero-text) 22%, transparent); }
-.hour strong { font-size: 24px; }
+.hour strong { font-size: 32px; }
 .more { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px; border: 0; background: none; color: var(--accent-lime); font: inherit; font-size: var(--font-size-meta); font-weight: 700; cursor: pointer; }
 
 @media (max-width: 767px) {
   .scene { padding: 8px 12px; }
   .summary { flex-wrap: wrap; gap: 8px 12px; }
   .where { flex: 1 1 calc(100% - 110px); padding-left: 12px; }
-  .location { font-size: 15px; }
+  .location { font-size: 16px; }
+  .condition { font-size: 16px; }
+  .muted { font-size: var(--font-size-table); }
+  .hour strong { font-size: 24px; }
   .toggle { order: 1; }
-  .temperature { order: 2; padding-left: 0; border-left: 0; font-size: 30px; }
+  .temperature { order: 2; padding-left: 0; border-left: 0; font-size: 36px; }
   .sky { order: 3; padding-left: 12px; }
   .toggleText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .stats div { flex-direction: column; gap: 2px; text-align: center; }
-  .stats dd { font-size: 18px; }
+  .stats dd { font-size: 20px; }
+  .stats dt { font-size: 12px; }
   .hours { grid-auto-columns: 25%; }
 }
 
