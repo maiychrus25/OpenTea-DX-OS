@@ -62,6 +62,10 @@ const SHORTCUTS = [
   { href: '/farmer/handbook', icon: BookOpen, tone: 'soft', title: 'Cẩm nang canh tác', detail: 'Việc theo mùa và cách phòng trị bệnh cho cây chè' },
 ]
 
+function dayMonth(date: Date): string {
+  return date.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit' })
+}
+
 function fullDay(date: Date): string {
   return date.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' })
 }
@@ -288,12 +292,12 @@ export default async function FarmerDashboard() {
                 return (
                   <li key={parcel.id} className={styles.parcel}>
                     <span className={`${kit.ico} ${kit.soft}`}><Sprout size={20} aria-hidden="true" /></span>
-                    <span><strong className={kit.mono}>{parcel.parcel_code}</strong><small>{parcel.crop_type}</small></span>
+                    <span><strong>{parcel.parcel_code}</strong><small>{parcel.crop_type}</small></span>
                     <span><strong>{hectares(parcel.area_ha)} ha</strong><small>Diện tích</small></span>
                     <span className={`${kit.tag} ${kit[PARCEL_TONE[parcel.status] ?? 'mu']}`}>{getParcelStatusLabel(parcel.status)}</span>
                     <p>
-                      <span><Calendar size={13} aria-hidden="true" />{care ? `Lần chăm sóc: ${fullDay(care.entry_date)} (${ACTIVITY_LABELS[care.activity_type] ?? care.activity_type}${product ? ` ${product}` : ''})` : 'Chưa ghi lần chăm sóc nào'}</span>
-                      {harvest?.estimated_harvest_date && <span><Leaf size={13} aria-hidden="true" />Dự kiến thu hái: {fullDay(harvest.estimated_harvest_date)}</span>}
+                      <span><Calendar size={13} aria-hidden="true" />{care ? `Chăm sóc ${dayMonth(care.entry_date)}: ${ACTIVITY_LABELS[care.activity_type] ?? care.activity_type}${product ? `, ${product}` : ''}` : 'Chưa ghi lần chăm sóc'}</span>
+                      {harvest?.estimated_harvest_date && <span><Leaf size={13} aria-hidden="true" />Hái dự kiến {dayMonth(harvest.estimated_harvest_date)}</span>}
                     </p>
                   </li>
                 )
@@ -316,7 +320,7 @@ export default async function FarmerDashboard() {
                     <Link href="/farmer/journal" className={styles.entry}>
                       <span className={`${kit.ico} ${kit[tone]}`}><Icon size={18} aria-hidden="true" /></span>
                       <span className={kit.grow}><strong>{ACTIVITY_LABELS[entry.activity_type] ?? entry.activity_type}</strong> · {entry.parcel.parcel_code}</span>
-                      <span className={styles.date}><Calendar size={13} aria-hidden="true" />{fullDay(entry.entry_date)}</span>
+                      <span className={styles.date}><Calendar size={13} aria-hidden="true" />{dayMonth(entry.entry_date)}</span>
                       <span className={`${kit.tag} ${kit[status.tone]}`}>{status.label}</span>
                       <ChevronRight size={16} aria-hidden="true" />
                     </Link>
@@ -346,12 +350,12 @@ export default async function FarmerDashboard() {
                   const yieldKg = parcel?.estimated_yield_per_ha ? Math.round(parcel.estimated_yield_per_ha * parcel.area_ha) : null
                   const note = [
                     blocked ? (blocked.safe > when ? `Còn cách ly đến ${fullDay(blocked.safe)}` : 'Hết cách ly trước ngày hái') : null,
-                    yieldKg ? `Sản lượng dự kiến ~ ${yieldKg.toLocaleString('vi-VN')} kg` : null,
+                    yieldKg ? `Dự kiến ~${yieldKg.toLocaleString('vi-VN')} kg` : null,
                   ].filter(Boolean).join(' · ')
                   return (
                     <tr key={cycle.id}>
                       <td>{cycle.season || `Lứa ${index + 1}`}</td>
-                      <td className={kit.mono}>{parcel?.parcel_code}</td>
+                      <td>{parcel?.parcel_code}</td>
                       <td>{parcel?.crop_type}</td>
                       <td>{parcel ? `${hectares(parcel.area_ha)} ha` : ''}</td>
                       <td>{fullDay(when)}</td>
