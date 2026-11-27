@@ -52,14 +52,11 @@ const PRICES = [
 /** Seven days of the example price index, as points of a 300×60 sparkline. */
 const TREND = '0,52 50,44 100,30 150,38 200,24 250,18 300,8'
 
-const MOST_READ = [
-  'Bón phân cho chè vụ đông: lượng và thời điểm',
-  'Che phủ gốc chè chống rét đúng cách',
-  'Giá chè cuối năm: nên bán hay trữ?',
-  'Lịch thu hái chè vụ đông 2026',
-]
+/** Example read counts per article: the system does not count readers yet. */
+const READS: Record<string, number> = { '1': 214, '2': 356, '3': 298, '4': 97, '5': 183, '6': 241, 'policy-1': 132 }
 
 const SAVED_KEY = 'farmer-saved-news'
+const OPENED_KEY = 'farmer-opened-news'
 
 const dayOf = (date: string) => date.split(',')[0]
 const timeOf = (date: string) => date.split(', ')[1] ?? date
@@ -78,11 +75,13 @@ export function Newsroom() {
   const [savedOnly, setSavedOnly] = useState(false)
   const [saved, setSaved] = useState<string[]>([])
   const [open, setOpen] = useState<string | null>(null)
+  const [opened, setOpened] = useState<Record<string, number>>({})
 
   // Saved articles are kept in this browser; the page still works where storage is blocked.
   useEffect(() => {
     try {
       setSaved(JSON.parse(window.localStorage.getItem(SAVED_KEY) ?? '[]'))
+      setOpened(JSON.parse(window.localStorage.getItem(OPENED_KEY) ?? '{}'))
     } catch {
       // keep the empty list
     }
@@ -98,6 +97,29 @@ export function Newsroom() {
     }
   }
 
+  /** Opening an article counts as one more read of it. */
+  const openStory = (id: string) => {
+    setOpen(id)
+    const next = { ...opened, [id]: (opened[id] ?? 0) + 1 }
+    setOpened(next)
+    try {
+      window.localStorage.setItem(OPENED_KEY, JSON.stringify(next))
+    } catch {
+      // counted for this visit only
+    }
+  }
+  const toggleStory = (id: string) => (open === id ? setOpen(null) : openStory(id))
+  const readsOf = (id: string) => (READS[id] ?? 0) + (opened[id] ?? 0)
+  const mostRead = [...NEWS].sort((a, b) => readsOf(b.id) - readsOf(a.id)).slice(0, 4)
+
+  /** From the ranking: show every category, open the article and bring it into view. */
+  const goTo = (id: string) => {
+    setCategory('all')
+    setSavedOnly(false)
+    openStory(id)
+    window.setTimeout(() => document.getElementById(`news-${id}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'center' }), 0)
+  }
+
   const filtered = category !== 'all' || savedOnly
   const list = NEWS.filter(item =>
     (category === 'all' || item.category === category) &&
@@ -108,7 +130,7 @@ export function Newsroom() {
   return (
     <div className={styles.layout}>
       <div className={styles.main}>
-        <article className={`${kit.pn} ${styles.featured}`}>
+        <article id={`news-${FEATURED.id}`} className={`${kit.pn} ${styles.featured}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={IMAGES[FEATURED.id]} alt="" />
           <div>
@@ -117,7 +139,7 @@ export function Newsroom() {
             <p className={open === FEATURED.id ? undefined : styles.clamp}>{FEATURED.summary}</p>
             <footer>
               <span>{FEATURED.date} · {FEATURED.sourceCount} nguồn · đọc {minutes(FEATURED.summary)} phút</span>
-              <button type="button" className={styles.link} aria-expanded={open === FEATURED.id} onClick={() => setOpen(open === FEATURED.id ? null : FEATURED.id)}>
+              <button type="button" className={styles.link} aria-expanded={open === FEATURED.id} onClick={() => toggleStory(FEATURED.id)}>
                 {open === FEATURED.id ? 'Thu gọn' : 'Đọc tiếp'} <ArrowRight size={14} aria-hidden="true" />
               </button>
             </footer>
@@ -148,12 +170,12 @@ export function Newsroom() {
               <h3 className={styles.day}>{group.title}</h3>
               <ul className={`${kit.pn} ${styles.items}`}>
                 {(newestFirst ? items : [...items].reverse()).map(item => (
-                  <li key={item.id}>
+                  <li key={item.id} id={`news-${item.id}`}>
                     {IMAGES[item.id]
                       // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={IMAGES[item.id]} alt="" />
                       : <span className={styles.noPhoto}><FileCheck2 size={24} strokeWidth={1.5} aria-hidden="true" /></span>}
-                    <button type="button" className={styles.story} aria-expanded={open === item.id} onClick={() => setOpen(open === item.id ? null : item.id)}>
+                    <button type="button" className={styles.story} aria-expanded={open === item.id} onClick={() => toggleStory(item.id)}>
                       <span className={styles.kicker}><i className={styles[item.category]} aria-hidden="true" />{label(item.category)}</span>
                       <strong>{item.headline}</strong>
                       <span className={open === item.id ? styles.text : `${styles.text} ${styles.clamp}`}>{item.summary}</span>
@@ -195,9 +217,16 @@ export function Newsroom() {
         </section>
 
         <section className={kit.pn} aria-label="Đọc nhiều nhất">
-          <div className={kit.ph}><h2>Đọc nhiều nhất</h2></div>
+          <div className={kit.ph}><h2>Đọc nhiều nhất</h2><SampleTag /></div>
           <ol className={styles.ranking}>
-            {MOST_READ.map((title, index) => <li key={title}><b>{index + 1}</b>{title}</li>)}
+            {mostRead.map((item, index) => (
+              <li key={item.id}>
+                <button type="button" onClick={() => goTo(item.id)}>
+                  <b>{index + 1}</b>
+                  <span>{item.headline}<small>{readsOf(item.id).toLocaleString('vi-VN')} lượt đọc</small></span>
+                </button>
+              </li>
+            ))}
           </ol>
         </section>
 
