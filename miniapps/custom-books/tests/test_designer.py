@@ -51,7 +51,7 @@ def test_every_books_route_refuses_non_managers(client, db):
              f"/books/{book_id}/delete"]
     for headers in (OFFICER, FARMER):
         assert all(client.get(p, headers=headers).status_code == 403 for p in gets)
-        assert all(client.post(p, headers=headers, data={"template": "picking"}).status_code == 403 for p in posts)
+        assert all(client.post(p, headers=headers, data={"template": "meeting"}).status_code == 403 for p in posts)
     assert client.get("/books").status_code == 401
     assert store.get_book(db, "TC", book_id).status == "PUBLISHED"
 
@@ -63,11 +63,11 @@ def test_books_list_shows_own_htx_only(client, db):
     assert "Sổ của Tân Cương" in body and "Sổ của La Bằng" not in body and "Tạo sổ mới" in body
 
 
-def test_chooser_lists_eight_templates_and_blank(client):
+def test_chooser_lists_four_templates_and_blank(client):
     body = client.get("/books/new", headers=MANAGER).text
     for t in book_templates.TEMPLATES.values():
         assert t.name in body
-    assert "Sổ trắng" in body and body.count('name="template"') == 9
+    assert "Sổ trắng" in body and body.count('name="template"') == 5
 
 
 @pytest.mark.parametrize("key", list(book_templates.TEMPLATES) + ["blank"])
@@ -95,9 +95,9 @@ def test_fifty_books_limit(client, db):
     for n in range(50):
         add_book(db, name=f"Sổ {n}", status="DRAFT")
     add_book(db, htx="LB", name="Sổ khác HTX")
-    assert client.post("/books", headers=MANAGER, data={"template": "picking"}).status_code == 409
+    assert client.post("/books", headers=MANAGER, data={"template": "meeting"}).status_code == 409
     assert db.execute("SELECT count(*) FROM books WHERE htx_code = 'TC'").fetchone()[0] == 50
-    assert client.post("/books", headers=bearer(htx="LB"), data={"template": "picking"}).status_code == 303
+    assert client.post("/books", headers=bearer(htx="LB"), data={"template": "meeting"}).status_code == 303
 
 
 def test_design_page_shows_fields_three_blank_rows_and_headings(client, db):

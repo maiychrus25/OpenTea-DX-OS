@@ -87,7 +87,7 @@ test.describe('Sổ tự tạo', () => {
     const app = frameOf(manager)
     await expect(app.getByRole('heading', { name: 'Tạo sổ mới', level: 1 })).toBeVisible()
     await expectNoOverflow(manager, APP_NAME)
-    await app.locator('li.card', { hasText: 'Chấm công hái chè' }).getByRole('button', { name: 'Dùng mẫu này' }).click()
+    await app.locator('li.card', { hasText: 'Biên bản họp thành viên' }).getByRole('button', { name: 'Dùng mẫu này' }).click()
     await expect(app.getByRole('heading', { name: 'Thiết kế sổ', level: 1 })).toBeVisible()
     const bookId = await designedBookId(app)
 
@@ -111,7 +111,7 @@ test.describe('Sổ tự tạo', () => {
     await expect(app.getByRole('alert').first()).toBeVisible()
     await expect(app.getByLabel('Tên ô 2', { exact: true })).toHaveValue('Hộ hái chè')
     await expect(app.locator(`input[name="label_${blankIndex}"]`)).toHaveValue('Ca hái')
-    await expect(app.locator('input[name="name"]')).toHaveValue('Chấm công hái chè')
+    await expect(app.locator('input[name="name"]')).toHaveValue('Biên bản họp thành viên')
     await expectNoOverflow(manager, APP_NAME)
     await optionsError.fill('Sáng; Chiều; Tối')
     await app.getByRole('button', { name: 'Lưu thiết kế' }).click()
@@ -123,8 +123,8 @@ test.describe('Sổ tự tạo', () => {
     await expect(app.getByText('Ca hái')).toBeVisible()
     await app.getByRole('link', { name: 'Quay lại thiết kế' }).click()
     await app.getByRole('button', { name: 'Phát hành', exact: true }).click()
-    await expect(app.getByRole('heading', { name: 'Chấm công hái chè', level: 1 })).toBeVisible()
-    await expectEntry(manager, 'manager', bookId, true, 'Chấm công hái chè')
+    await expect(app.getByRole('heading', { name: 'Biên bản họp thành viên', level: 1 })).toBeVisible()
+    await expectEntry(manager, 'manager', bookId, true, 'Biên bản họp thành viên')
     // On a book page only the book's own entry is lit, not also "Sổ của HTX".
     await manager.goto(`/manager/apps/custom-books/b/${bookId}`)
     await expect(manager.locator('[data-testid=sidebar] [aria-current=page]')).toHaveCount(1)
@@ -140,7 +140,7 @@ test.describe('Sổ tự tạo', () => {
     // ---- The officer and the farmer get the entry with no further action by the manager.
     const officer = await newPage(browser)
     await keycloakLogin(officer, 'smoke_officer_tc', SMOKE_PASSWORD, 'officer')
-    await expectEntry(officer, 'officer', bookId, true, 'Chấm công hái chè')
+    await expectEntry(officer, 'officer', bookId, true, 'Biên bản họp thành viên')
     await expectEntry(officer, 'officer', cashId, true, 'Sổ thu chi')
     const farmer = await newPage(browser, PHONE)
     await keycloakLogin(farmer, 'smoke_farmer_tc', SMOKE_PASSWORD, 'farmer')
@@ -155,13 +155,13 @@ test.describe('Sổ tự tạo', () => {
       await manager.reload()
       return await openLink.count()
     }, { timeout: FEED_MS }).toBe(1)
-    await expect(manager.locator('li', { has: manager.locator(`a[href="/manager/apps/custom-books/b/${bookId}"]`) })).toContainText('Chấm công hái chè')
+    await expect(manager.locator('li', { has: manager.locator(`a[href="/manager/apps/custom-books/b/${bookId}"]`) })).toContainText('Biên bản họp thành viên')
     await shot(manager, 'store-section-with-books')
 
     // ---- The farmer adds a row at 390 px (household limited to their own).
     await farmer.goto(`/farmer/apps/custom-books/b/${bookId}`)
     const farmerApp = frameOf(farmer)
-    await expect(farmerApp.getByRole('heading', { name: 'Chấm công hái chè', level: 1 })).toBeVisible()
+    await expect(farmerApp.getByRole('heading', { name: 'Biên bản họp thành viên', level: 1 })).toBeVisible()
     await farmerApp.getByRole('link', { name: 'Ghi dòng mới' }).first().click()
     await expect(farmerApp.getByRole('heading', { name: 'Ghi dòng mới', level: 1 })).toBeVisible()
     await expect(farmerApp.locator('select[name="f2"] option:not([value=""])')).toHaveCount(1)
@@ -213,7 +213,7 @@ test.describe('Sổ tự tạo', () => {
     const { text } = await downloadCsv(manager, app.getByRole('link', { name: /CSV/ }))
     expect(text).toContain('18.5')
     const printed = await printAndGoBack(manager, app.getByRole('link', { name: 'Bản in' }), {
-      path: `/manager/apps/custom-books/b/${bookId}`, frameTitle: APP_NAME, heading: 'Chấm công hái chè',
+      path: `/manager/apps/custom-books/b/${bookId}`, frameTitle: APP_NAME, heading: 'Biên bản họp thành viên',
     })
     expect(printed).toContain('18,5')
 
@@ -224,7 +224,7 @@ test.describe('Sổ tự tạo', () => {
     await expectEntry(farmer, 'farmer', bookId, false)
     await manager.goto('/manager/apps/custom-books/books')
     await app.locator(`tbody tr:has(form[action*="${bookId}"])`).getByRole('button', { name: 'Phát hành lại' }).click()
-    await expect(app.getByRole('heading', { name: 'Chấm công hái chè', level: 1 })).toBeVisible()
+    await expect(app.getByRole('heading', { name: 'Biên bản họp thành viên', level: 1 })).toBeVisible()
     await expectEntry(officer, 'officer', bookId, true)
     await expectEntry(farmer, 'farmer', bookId, true)
     await farmer.goto(`/farmer/apps/custom-books/b/${bookId}`)

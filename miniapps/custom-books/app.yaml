@@ -3,8 +3,8 @@
 apiVersion: dxos/v1
 id: custom-books
 name: Sổ tự tạo
-description: Trưởng HTX tự tạo các sổ ghi chép (chấm công, phun thuốc, thu chi) mà không cần lập trình.
-version: 0.2.0
+description: Trưởng HTX tự tạo các sổ ghi chép (thu chi, biên bản họp, giao nhận vật tư) mà không cần lập trình.
+version: 0.3.0
 license: MIT
 publisher: OpenTea Developers
 requires: { core: ">=1.12.0" }
@@ -33,7 +33,7 @@ agent:
         required: [template, name_vi]
         additionalProperties: false
         properties:
-          template: { type: string, enum: [picking, spraying, fertilising, cashbook, meeting, handover, pest, visitors, blank] }
+          template: { type: string, enum: [cashbook, meeting, handover, visitors, blank] }
           name_vi: { type: string, minLength: 1, maxLength: 80 }
           description_vi: { type: string, maxLength: 200 }
       preview_vi: "Tạo sổ nháp \"{name_vi}\" từ mẫu {template}"
@@ -43,7 +43,7 @@ store:
   category: members
   icon: clipboard-list
   about: |
-    Ứng dụng giúp trưởng HTX tự tạo các sổ ghi chép riêng của HTX mà không cần biết lập trình: chấm công hái chè, sổ phun thuốc, sổ bón phân, sổ thu chi, biên bản họp, sổ giao nhận vật tư, theo dõi sâu bệnh, sổ khách tham quan, hoặc một sổ trắng tự thiết kế.
+    Ứng dụng giúp trưởng HTX tự tạo các sổ ghi chép riêng của HTX mà không cần biết lập trình: sổ thu chi, biên bản họp, sổ giao nhận vật tư, sổ khách tham quan, hoặc một sổ trắng tự thiết kế.
 
     Trưởng HTX chọn một mẫu có sẵn hoặc bắt đầu từ sổ trắng, đặt tên các ô cần ghi (chữ, số, tiền, ngày, lựa chọn, có/không, nông hộ), chọn cán bộ và nông dân được xem hay ghi, và có thể yêu cầu duyệt từng dòng. Khi phát hành, mỗi sổ hiện trong menu của đúng những vai được dùng như một ứng dụng riêng: có biểu mẫu nhập, danh sách tìm và lọc được, trang tổng hợp có tổng và biểu đồ, tải CSV và bản in.
 

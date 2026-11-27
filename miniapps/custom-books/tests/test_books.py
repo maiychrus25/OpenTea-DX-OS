@@ -5,7 +5,7 @@ import uuid
 from datetime import date
 
 import pytest
-from conftest import add_book, add_record, bearer
+from conftest import BOOK_NAME, add_book, add_record, bearer
 from fastapi.testclient import TestClient
 
 from custom_books import core_client, main
@@ -490,7 +490,7 @@ def test_csv_includes_the_values_of_a_removed_field(client, db):
 def test_print_page_uses_the_same_filters(client, db):
     book = seed_list(db)
     body = client.get(f"/b/{book}/print?household=h1", headers=MANAGER).text
-    assert "print-sheet" in body and "Chấm công hái chè" in body and "Nguyễn Văn An" in body and "Lê Thị Hoa" not in body
+    assert "print-sheet" in body and BOOK_NAME in body and "Nguyễn Văn An" in body and "Lê Thị Hoa" not in body
     assert "Ký tên" in body or "signature" in body
     assert f"/manager/apps/custom-books/b/{book}" in body
     assert "target=\"_top\"" in client.get(f"/b/{book}", headers=MANAGER).text

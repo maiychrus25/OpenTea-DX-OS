@@ -242,14 +242,14 @@ test.describe('store screenshots', () => {
     await keycloakLogin(manager, 'smoke_manager_tc', SMOKE_PASSWORD, 'manager')
     await manager.goto('/manager/apps/custom-books/books/new')
     const managerApp = appFrame(manager, title)
-    await managerApp.locator('li.card', { hasText: 'Chấm công hái chè' }).getByRole('button', { name: 'Dùng mẫu này' }).click()
+    await managerApp.locator('li.card', { hasText: 'Biên bản họp thành viên' }).getByRole('button', { name: 'Dùng mẫu này' }).click()
     await expect(managerApp.getByRole('heading', { name: 'Thiết kế sổ', level: 1 })).toBeVisible()
     const bookId = /books\/([0-9a-f-]{36})\/design/.exec((await managerApp.locator('form[action*="/design"]').getAttribute('action'))!)![1]
     await capture(manager, 'custom-books', 'designer', title, 'table.form-table')
 
     await manager.goto(`/manager/apps/custom-books/books/${bookId}/design`)
     await managerApp.getByRole('button', { name: 'Phát hành', exact: true }).click()
-    await expect(managerApp.getByRole('heading', { name: 'Chấm công hái chè', level: 1 })).toBeVisible()
+    await expect(managerApp.getByRole('heading', { name: 'Biên bản họp thành viên', level: 1 })).toBeVisible()
 
     // The officer writes four rows for different households (the seed's real-looking names come after the two demo ones).
     const officer = await newPage(browser)

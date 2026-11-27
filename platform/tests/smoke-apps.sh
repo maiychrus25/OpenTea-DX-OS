@@ -471,10 +471,11 @@ refused "$TO" $CB/books/new smoke_officer_tc
 assert_eq "$(get_page "$TM" $CB/feed | jq -c '{n: (.entries | length), create: .create.path}')" '{"n":0,"create":"/books/new"}' "feed of an empty HTX: no entries, the manager gets the create link"
 assert_eq "$(get_page "$TF" $CB/feed | jq -c 'has("create")')" false "feed: a farmer gets no create link"
 page_ok "$TM" $CB/books/new "template chooser"
-# A book from the picking template (officer: all, farmer: own, approval on) and one from the cashbook template (farmer: none).
-LOC=$(post_loc "$TM" $CB/books -d template=picking)
-[[ "$LOC" =~ ^$CB/books/[0-9a-f-]{36}/design$ ]] && pass "manager creates a book from the picking template -> 303 ($LOC)" || fail "create book Location wrong: '$LOC'"
+# A book from the meeting template, set to farmer: own with approval on (as the removed picking template was), and one from the cashbook template (farmer: none).
+LOC=$(post_loc "$TM" $CB/books -d template=meeting)
+[[ "$LOC" =~ ^$CB/books/[0-9a-f-]{36}/design$ ]] && pass "manager creates a book from the meeting template -> 303 ($LOC)" || fail "create book Location wrong: '$LOC'"
 BOOK=$(sed -E 's#.*/books/([0-9a-f-]{36})/design#\1#' <<<"$LOC")
+psql_app "update app_custom_books.books set farmer_access = 'own', approval = true where id = '$BOOK'" >/dev/null
 assert_eq "$(get_page "$TM" $CB/feed | jq '.entries | length')" 0 "a draft book is not in the feed"
 LOC=$(post_loc "$TM" $CB/books/$BOOK/publish -X POST)
 assert_eq "$LOC" "$CB/b/$BOOK" "manager publishes the book -> 303"
@@ -483,11 +484,11 @@ CASH=$(sed -E 's#.*/books/([0-9a-f-]{36})/design#\1#' <<<"$LOC")
 assert_eq "$(post_loc "$TM" $CB/books/$CASH/publish -X POST)" "$CB/b/$CASH" "manager publishes the cashbook (farmer: none)"
 fresh_tokens
 FEED_O=$(get_page "$TO" $CB/feed); FEED_F=$(get_page "$TF" $CB/feed)
-assert_eq "$(jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_O")" 1 "feed: the officer lists the picking book"
+assert_eq "$(jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_O")" 1 "feed: the officer lists the meeting book"
 assert_eq "$(jq -r --arg p "/b/$CASH" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_O")" 1 "feed: the officer lists the cashbook (level own)"
-assert_eq "$(jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_F")" 1 "feed: the farmer lists the picking book"
+assert_eq "$(jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_F")" 1 "feed: the farmer lists the meeting book"
 assert_eq "$(jq -r --arg p "/b/$CASH" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_F")" 0 "feed: a role at level none does not list the cashbook"
-assert_eq "$(jq -r '.entries[0] | [.label, .icon] | join("|")' <<<"$FEED_F")" "Chấm công hái chè|leaf" "feed entry carries the book's name and icon"
+assert_eq "$(jq -r '.entries[0] | [.label, .icon] | join("|")' <<<"$FEED_F")" "Biên bản họp thành viên|users" "feed entry carries the book's name and icon"
 assert_eq "$(jq -c 'has("create")' <<<"$FEED_F")" false "feed: no create link for the farmer"
 assert_app_http 403 "farmer token on the cashbook (level none) -> 403 from the app" -- -H "Authorization: Bearer $TF" "$APP_GW$CB/b/$CASH"
 # Rows: the farmer's own household, the officer's row for the same household.
