@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — GĐ1 dự án con 3: Giá búp ngày và Bàn cân có chốt chặn cách ly
 
-> **Trạng thái:** Bản thiết kế (2026-11-28). Nhánh `feat/phase1-value-chain`, làm sau khi dự án con 1 và 2 đã gộp vào nhánh này.
+> **Trạng thái:** Đã triển khai trên nhánh `feat/phase1-value-chain` (2026-11-28), chưa phát hành. Bản thiết kế viết ngày 2026-11-28; khác biệt giữa thiết kế và mã nằm ở "Ghi chú sau triển khai" cuối tài liệu.
 > **Căn cứ:** [product-roadmap.md](../product-roadmap.md) §1 (lời hứa 1), §3 rào chắn 3, §5 GĐ1 mục 3, §6 (vai `manager`, `accountant`, `farmer`); [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md); DEV-011.
 > **Quyết định của chủ dự án (2026-11-28):**
 > - Giám đốc công bố giá ngày theo phẩm cấp trong 10 giây.
@@ -216,3 +216,15 @@ Kho ứng dụng có danh sách `MERGED_INTO_CORE = ['leaf-purchase', 'farm-supp
    - Không tự tạo lứa khi cân.
 4. **Tranh chấp đồng thời.** Transaction tạo phiếu khoá dòng nương (`SELECT ... FROM parcels WHERE id = $1 FOR UPDATE`) trước khi kiểm cách ly. Transaction tạo nhật ký ở S1 (`PrismaJournalRepository.create`) cũng khoá đúng dòng nương đó trước khi ghi, để một lần phun và một phiếu cân của cùng nương không đi lọt nhau.
 5. **Trưởng HTX được tạo phiếu** với vai hoạt động `manager`, như bảng ở §4.3.
+
+## Ghi chú sau triển khai
+
+Mã là nguồn cuối cùng. Phần dưới liệt kê chỗ mã khác thân đặc tả (đã tính các quyết định ở mục 7).
+
+1. **Huỷ phiếu đã huỷ** trả 409 `TICKET_VOIDED` riêng; mục 4.2 chỉ nêu `TICKET_SETTLED`.
+2. **Danh sách phiếu** `GET /api/leaf-tickets` lọc theo `date`, `household_id`, `status` và `cursor`; chưa có bộ lọc theo nương hay lứa như mục 4.2 nêu.
+3. **Hai route ngoài bảng 4.3:** `GET /api/households` (tìm hộ cho bàn cân, tối đa 20, kèm nương không phải `DRAFT`) và `GET /api/cycles/[id]/weighing-summary` (đối chiếu kg cân với `fresh_leaf_kg`, vai `manager` và `officer`).
+4. **Không gắn `dxos.actor`.** Giao dịch tạo phiếu không đặt `dxos.actor`; người cân nằm ở `created_by_id`, người huỷ ở `voided_by_id`. Dòng kiểm toán của ba bảng vì thế không mang tên người thao tác từ biến này.
+5. **Thứ tự kiểm.** Mã kiểm hộ và nương, trạng thái nương `DRAFT` (422 `DOMAIN_ERROR`), rồi cách ly (409), rồi phẩm cấp (404 nếu không thuộc HTX, 400 nếu đã ẩn), rồi giá (409 `NO_PRICE_TODAY`).
+6. **Công bố giá** từ chối cả yêu cầu bằng 404 `NOT_FOUND` khi có một phẩm cấp không thuộc HTX hoặc đã ẩn, và không ghi dòng nào.
+7. **CSV** thêm dấu nháy đơn đầu ô cho giá trị bắt đầu bằng `=`, `+`, `-`, `@`, tab hoặc xuống dòng; tối đa 20.000 dòng và 366 ngày mỗi lần.

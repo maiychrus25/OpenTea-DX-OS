@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — GĐ1 dự án con 2: Một tài khoản nhiều vai, vai Kế toán và Quản trị nền tảng
 
-> **Trạng thái:** Bản thiết kế (2026-11-28). Nhánh `feat/phase1-value-chain`.
+> **Trạng thái:** Đã triển khai trên nhánh `feat/phase1-value-chain` (2026-11-28), chưa phát hành. Bản thiết kế viết ngày 2026-11-28; khác biệt giữa thiết kế và mã nằm ở "Ghi chú sau triển khai" cuối tài liệu.
 > **Căn cứ:** [product-roadmap.md](../product-roadmap.md) §3 `[H]`, §5 GĐ1 mục 5, §6; [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md) quyết định 1; DEV-013.
 > **Quyết định của chủ dự án (2026-11-28):** `htx_memberships` cùng bộ chuyển vai; thêm vai `accountant` và `platform_admin`; chuyển cấu hình LLM và ngân sách USD sang `platform_admin`; TOTP của trưởng HTX và cán bộ thành tuỳ chọn (không chặn lần đăng nhập đầu); mời thành viên không bắt buộc email.
 
@@ -263,3 +263,14 @@ model HtxMembership {
 - Cách gọi `update()` của NextAuth 5 (theo phiên bản đang cài).
 - Câu chữ của trạng thái trống và trạng thái lỗi.
 - Cách chia commit.
+
+## Ghi chú sau triển khai
+
+Mã là nguồn cuối cùng. Phần dưới liệt kê chỗ mã khác thân đặc tả (đã tính các quyết định ở mục 7).
+
+1. **Tập vai rỗng.** `PUT /api/members/[id]/roles` nhận mảng rỗng ở lớp zod; người không phải Trưởng HTX bị từ chối ở use case bằng 422 `DOMAIN_ERROR` ("Thành viên phải có ít nhất một vai"), không phải 400. Trưởng HTX được để trống tập vai phụ (mục 7.7).
+2. **Đổi vai chỉ ghi log.** `POST /api/session/role` ghi log có cấu trúc `role.switch` (người dùng, vai cũ, vai mới); chưa có lời gọi `audit.record_event` nào trong web, nên chưa có sự kiện kiểm toán, như mục 4.2 cho phép.
+3. **Xoá thành viên.** `DELETE /api/members/[id]` không cho xoá Trưởng HTX (403) và trả 404 cho thành viên HTX khác. Quy tắc này không có trong đặc tả.
+4. **`GET /api/members` giữ trường `role`** (vai đầu theo thứ tự `manager`, `officer`, `accountant`, `farmer`) cạnh `roles`, cùng `status` `ACTIVE` hoặc `PENDING`.
+5. **`POST /api/platform/htx` trả 409** khi mã HTX đã tồn tại hoặc khi Keycloak từ chối tạo tài khoản Trưởng HTX vì trùng (lỗi `ValidationError` của adapter); số điện thoại trùng không được kiểm riêng trước khi gọi Keycloak.
+6. **`htx_memberships` đồng bộ cả ở mời thành viên, sửa vai và tạo HTX**, ngoài `requireTenant()`; `platform_admin` không bao giờ có dòng.
