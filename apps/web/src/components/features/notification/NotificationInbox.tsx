@@ -3,6 +3,7 @@
 
 'use client'
 
+import { ROLE_LABELS, isHumanRole } from '@/lib/auth/roles'
 import React, { useState } from 'react'
 import { Bell, Volume2, Check, CheckCheck, ExternalLink, Loader2 } from 'lucide-react'
 import useSWR from 'swr'
@@ -133,7 +134,7 @@ export function NotificationInbox({ role, showPageHeader = true }: NotificationI
     }
   }
 
-  const roleLabel = role === 'manager' ? 'Trưởng HTX' : role === 'officer' ? 'Cán bộ KT' : 'Nông dân'
+  const roleLabel = isHumanRole(role) ? ROLE_LABELS[role] : 'Nông dân'
 
   return (
     <div className={styles.container}>

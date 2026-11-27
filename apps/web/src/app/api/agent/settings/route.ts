@@ -2,40 +2,12 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { NextResponse } from 'next/server'
-import { z } from 'zod'
 import { AgentSettingsUseCase } from '@/application/agent/agent-settings'
-import { AGENT_PROVIDERS, REPORT_TIME_PATTERN } from '@/domain/agent/settings'
 import { ForbiddenError } from '@/domain/errors'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
 
-// The web cannot see whether the installation has a default OpenAI model, so the manager names one.
-const agentChoiceSchema = z
-  .object({
-    provider: z.enum(AGENT_PROVIDERS),
-    model: z.string().trim().min(1).max(128).nullable(),
-  })
-  .refine((choice) => choice.provider !== 'openai' || choice.model !== null, {
-    message: 'Nhà cung cấp OpenAI cần tên model',
-    path: ['model'],
-  })
-
-const saveSettingsSchema = z.object({
-  agents: z.object({
-    'journal-review': agentChoiceSchema,
-    digest: agentChoiceSchema,
-    bulletin: agentChoiceSchema,
-    assistant: agentChoiceSchema,
-    improvement: agentChoiceSchema,
-    'daily-campaign': agentChoiceSchema,
-    'app-builder': agentChoiceSchema,
-    strategy: agentChoiceSchema,
-  }),
-  report_time: z.string().regex(REPORT_TIME_PATTERN),
-  monthly_limit_usd: z.number().positive().max(1_000_000).nullable(),
-})
-
-/** Managers and officers read the cooperative's agent settings; the officer view is read-only. */
+/** Managers and officers read the cooperative's agent settings, read-only. */
 async function getAgentSettings() {
   const tenant = await requireTenant()
   if (tenant.role !== 'manager' && tenant.role !== 'officer') throw new ForbiddenError('Forbidden')
@@ -44,20 +16,12 @@ async function getAgentSettings() {
     useCase.read(tenant.htxCode),
     useCase.availableProviders(tenant.htxCode),
   ])
-  return NextResponse.json({ data: { ...settings, providers, can_edit: tenant.role === 'manager' } })
+  return NextResponse.json({ data: { ...settings, providers, can_edit: false } })
 }
 
-/** Only the manager changes the settings; every change is audited by the table's trigger. */
-async function putAgentSettings(request: Request) {
-  const tenant = await requireTenant()
-  if (tenant.role !== 'manager') throw new ForbiddenError('Forbidden')
-  const body = saveSettingsSchema.parse(await request.json().catch(() => null))
-  const settings = await new AgentSettingsUseCase().save(tenant.htxCode, `user:${tenant.userId}`, {
-    agents: body.agents,
-    reportTime: body.report_time,
-    monthlyLimit: body.monthly_limit_usd,
-  })
-  return NextResponse.json({ data: settings })
+/** Nobody saves here any more: the platform admin sets the AI of each cooperative (PUT /api/platform/htx/[code]/agent-settings). */
+async function putAgentSettings(): Promise<NextResponse> {
+  throw new ForbiddenError('Cấu hình AI do quản trị nền tảng đặt.')
 }
 
 export const GET = withErrorHandler(getAgentSettings)

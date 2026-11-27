@@ -117,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* The cooperative. Farmers get no card: their name and role stand at the foot of the menu. */}
-      {role !== 'farmer' && (
+      {role !== 'farmer' && role !== 'platform_admin' && (
         <div className={styles.coop}>
           <span className={styles.coopBadge}>HTX</span>
           <div className={styles.coopText}>
@@ -166,7 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </span>
               </div>
               {roles && roles.length >= 2 && isHumanRole(role) && <RoleSwitcher roles={roles} active={role} />}
-              <Link href={`/${role || 'farmer'}/profile`} className={styles.popupItem} onClick={() => setProfileOpen(false)}>
+              <Link href={role === 'platform_admin' ? '/platform/account' : `/${role || 'farmer'}/profile`} className={styles.popupItem} onClick={() => setProfileOpen(false)}>
                 <User size={17} aria-hidden="true" />Tài khoản của tôi
               </Link>
               {role === 'farmer' && (
@@ -174,9 +174,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Map size={17} aria-hidden="true" />Thửa chè của tôi
                 </Link>
               )}
-              <Link href={`/${role || 'farmer'}/notifications`} className={styles.popupItem} onClick={() => setProfileOpen(false)}>
-                <Bell size={17} aria-hidden="true" />Thông báo
-              </Link>
+              {role !== 'platform_admin' && (
+                <Link href={`/${role || 'farmer'}/notifications`} className={styles.popupItem} onClick={() => setProfileOpen(false)}>
+                  <Bell size={17} aria-hidden="true" />Thông báo
+                </Link>
+              )}
               <div className={styles.popupItem}>
                 {theme === 'dark' ? <Moon size={17} aria-hidden="true" /> : <Sun size={17} aria-hidden="true" />}
                 Giao diện

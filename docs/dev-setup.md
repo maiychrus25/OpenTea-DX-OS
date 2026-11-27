@@ -57,6 +57,22 @@ docker exec -it agrimarket-n8n n8n import:workflow --input=/tmp/system-error-ale
 
 Ảnh cửa hàng của `custom-books` (`miniapps/custom-books/store/*.png`) vẫn chụp một mẫu sổ đã gỡ ở GĐ0. Cần chụp lại bằng `apps/web/tests/tools/store-screenshots.spec.ts` khi có stack đang chạy.
 
+### Tài khoản quản trị nền tảng và TOTP (Keycloak)
+
+Vai `platform_admin` không thuộc HTX nào và không có thuộc tính `htx_code`. Môi trường thật tạo tài khoản bằng `kcadm` (thay `<mật khẩu>`; lệnh chạy trong container Keycloak, sau khi đăng nhập `kcadm.sh config credentials`):
+
+```bash
+kcadm.sh create users -r agrimarket -s username=quantri -s enabled=true
+kcadm.sh set-password -r agrimarket --username quantri --new-password '<mật khẩu>'
+kcadm.sh add-roles -r agrimarket --uusername quantri --rolename platform_admin
+```
+
+TOTP là tuỳ chọn: tài khoản mới không bị ép cấu hình. Người dùng đang chạy thật còn treo yêu cầu `CONFIGURE_TOTP` thì không tự bị sửa; khi chủ dự án muốn gỡ:
+
+```bash
+kcadm.sh update users/<user-id> -r agrimarket -s 'requiredActions=[]'
+```
+
 ## Bước 4: Kiểm tra Sức khỏe Hệ thống (Smoke Test)
 
 Chạy script kiểm thử tự động để đảm bảo môi trường đã sẵn sàng:

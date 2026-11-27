@@ -39,7 +39,11 @@ interface Draft {
 }
 
 interface AgentSettingsPanelProps {
-  role: 'manager' | 'officer'
+  role: 'manager' | 'officer' | 'platform_admin'
+  /** Where the settings are read and saved. The platform admin passes the route of one cooperative. */
+  endpoint?: string
+  /** The link under the title. */
+  backHref?: string
 }
 
 const AGENT_LABEL: Record<ConfigurableAgent, string> = {
@@ -104,7 +108,7 @@ function formatMonth(month: string): string {
 }
 
 /** Manager edits the agents' providers, models, report time and the monthly budget; officers see the same values read-only. */
-export function AgentSettingsPanel({ role }: AgentSettingsPanelProps) {
+export function AgentSettingsPanel({ role, endpoint = '/api/agent/settings', backHref }: AgentSettingsPanelProps) {
   const [settings, setSettings] = useState<AgentSettingsResponse | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -115,7 +119,7 @@ export function AgentSettingsPanel({ role }: AgentSettingsPanelProps) {
 
   useEffect(() => {
     let cancelled = false
-    fetchJson<{ data: AgentSettingsResponse }>('/api/agent/settings')
+    fetchJson<{ data: AgentSettingsResponse }>(endpoint)
       .then((json) => {
         if (cancelled) return
         setSettings(json.data)
@@ -127,7 +131,7 @@ export function AgentSettingsPanel({ role }: AgentSettingsPanelProps) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [endpoint])
 
   const patchAgent = (agent: ConfigurableAgent, patch: Partial<AgentForm>) => {
     setDraft((current) =>
@@ -169,7 +173,7 @@ export function AgentSettingsPanel({ role }: AgentSettingsPanelProps) {
     setSaving(true)
     setError(null)
     try {
-      const response = await fetch('/api/agent/settings', {
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -221,14 +225,18 @@ export function AgentSettingsPanel({ role }: AgentSettingsPanelProps) {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <span className={styles.eyebrow}>TRỢ LÝ VẬN HÀNH ({role === 'manager' ? 'TRƯỞNG HTX' : 'CÁN BỘ KT'})</span>
+        <span className={styles.eyebrow}>TRỢ LÝ VẬN HÀNH ({role === 'manager' ? 'TRƯỞNG HTX' : role === 'officer' ? 'CÁN BỘ KT' : 'QUẢN TRỊ NỀN TẢNG'})</span>
         <h1 className={styles.title}>Cài đặt agent</h1>
         <p className={styles.subtitle}>Chọn nhà cung cấp mô hình cho từng agent và ngân sách tháng của HTX.</p>
-        <Link href={`/${role}/ai`} className={styles.backLink}>Quay lại hộp duyệt đề xuất</Link>
+        {role === 'platform_admin' ? (
+          <Link href={backHref ?? '/platform'} className={styles.backLink}>Quay lại danh sách HTX</Link>
+        ) : (
+          <Link href={`/${role}/ai`} className={styles.backLink}>Quay lại hộp duyệt đề xuất</Link>
+        )}
       </header>
 
       {readOnly && (
-        <p className={styles.note}>Bạn đang xem ở chế độ chỉ đọc. Chỉ trưởng HTX được thay đổi cài đặt agent.</p>
+        <p className={styles.note}>Bạn đang xem ở chế độ chỉ đọc. Do quản trị nền tảng cấu hình.</p>
       )}
       {!externalReady && (
         <p className={styles.note}>

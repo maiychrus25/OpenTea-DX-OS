@@ -8,7 +8,7 @@ import { signOutAction } from '@/app/actions/signout-action'
 import { Button } from '@/components/ui'
 import styles from './account-section.module.css'
 
-export type RoleType = 'manager' | 'officer' | 'farmer'
+export type RoleType = 'manager' | 'officer' | 'accountant' | 'farmer' | 'platform_admin'
 
 export interface AccountSectionProps {
   name: string
@@ -21,8 +21,12 @@ export const getRoleLabel = (role: RoleType) => {
       return 'Trưởng HTX'
     case 'officer':
       return 'Cán bộ KT/CL'
+    case 'accountant':
+      return 'Kế toán'
     case 'farmer':
       return 'Nông dân'
+    case 'platform_admin':
+      return 'Quản trị nền tảng'
     default:
       return 'Thành viên'
   }
