@@ -13,6 +13,7 @@ export class VoidFreshLeafTicketUseCase {
     const outcome = await this.port.voidTicket({ htxProfileId: actor.htxProfileId, id, reason, userId: actor.userId, at: this.clock() })
     if (outcome.kind === 'not_found') throw new NotFoundError('Không tìm thấy phiếu cân')
     if (outcome.kind === 'settled') throw new ConflictError('TICKET_SETTLED', 'Phiếu đã vào kỳ quyết toán nên không huỷ được.')
+    if (outcome.kind === 'in_batch') throw new ConflictError('TICKET_IN_BATCH', `Phiếu đã vào mẻ sao ${outcome.batch_code}. Bỏ phiếu khỏi mẻ trước khi huỷ.`)
     if (outcome.kind === 'already_voided') throw new ConflictError('TICKET_VOIDED', 'Phiếu này đã được huỷ.')
     return outcome.ticket
   }

@@ -70,6 +70,7 @@ export type VoidOutcome =
   | { kind: 'voided'; ticket: TicketView }
   | { kind: 'not_found' }
   | { kind: 'settled' }
+  | { kind: 'in_batch'; batch_code: string }
   | { kind: 'already_voided' }
 
 export interface TicketFilter {

@@ -136,15 +136,20 @@ export class PrismaFreshLeafTicketRepository implements FreshLeafTicketPort {
   }
 
   async voidTicket(input: { htxProfileId: string; id: string; reason: string; userId: string; at: Date }): Promise<VoidOutcome> {
-    // One conditional write: a ticket that was settled or voided meanwhile is not touched.
+    // One conditional write: a ticket that was settled, voided or put into a batch meanwhile is not touched.
     const done = await prisma.freshLeafTicket.updateMany({
-      where: { id: input.id, htx_profile_id: input.htxProfileId, status: 'VALID', settlement_id: null },
+      where: { id: input.id, htx_profile_id: input.htxProfileId, status: 'VALID', settlement_id: null, processing_batch_id: null },
       data: { status: 'VOIDED', void_reason: input.reason, voided_by_id: input.userId, voided_at: input.at },
     })
     const row = await prisma.freshLeafTicket.findFirst({ where: { id: input.id, htx_profile_id: input.htxProfileId }, include: INCLUDE })
     if (!row) return { kind: 'not_found' }
     if (done.count === 1) return { kind: 'voided', ticket: view(row) }
-    return row.settlement_id ? { kind: 'settled' } : { kind: 'already_voided' }
+    if (row.settlement_id) return { kind: 'settled' }
+    if (row.processing_batch_id) {
+      const batch = await prisma.processingBatch.findUnique({ where: { id: row.processing_batch_id }, select: { batch_code: true } })
+      return { kind: 'in_batch', batch_code: batch?.batch_code ?? '' }
+    }
+    return { kind: 'already_voided' }
   }
 
   async parcelOf(htxProfileId: string, parcelId: string) {

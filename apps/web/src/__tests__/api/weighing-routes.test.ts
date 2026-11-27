@@ -124,6 +124,16 @@ describe('POST /api/leaf-tickets/[id]/void', () => {
     expect((await res.json()).error.code).toBe('TICKET_SETTLED')
   })
 
+  it('answers 409 TICKET_IN_BATCH naming the batch', async () => {
+    signIn('manager')
+    fake.voidOutcome = { kind: 'in_batch', batch_code: 'TC-MS-20261128-01' }
+    const res = await ticketVoid.POST(new Request('http://x', { method: 'POST', body: JSON.stringify({ reason: 'Cân nhầm' }) }), ctx('t1'))
+    expect(res.status).toBe(409)
+    const { error } = await res.json()
+    expect(error.code).toBe('TICKET_IN_BATCH')
+    expect(error.message).toBe('Phiếu đã vào mẻ sao TC-MS-20261128-01. Bỏ phiếu khỏi mẻ trước khi huỷ.')
+  })
+
   it.each(['farmer', 'officer'])('a %s gets 403', async (role) => {
     signIn(role)
     expect((await ticketVoid.POST(new Request('http://x', { method: 'POST', body: JSON.stringify({ reason: 'Cân nhầm' }) }), ctx('t1'))).status).toBe(403)
