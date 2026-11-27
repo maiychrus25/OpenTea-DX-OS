@@ -3,7 +3,7 @@
 
 import { Metadata } from "next"
 import Link from "next/link"
-import { Check, ChevronLeft, Leaf } from "lucide-react"
+import { Leaf } from "lucide-react"
 import styles from "./login-page.module.css"
 import { Suspense } from "react"
 import { LoginForm } from "./_components/login-form"
@@ -24,9 +24,7 @@ export default function LoginPage() {
           <strong>{BRAND_NAME}</strong>
         </Link>
         <nav className={styles.topActions} aria-label="Điều hướng">
-          <Link href="/" className={styles.homeLink}>
-            <ChevronLeft size={16} aria-hidden="true" /> Trang chủ
-          </Link>
+          <Link href="/" className={styles.homeLink}>Trang chủ</Link>
           <ThemeToggle />
         </nav>
       </header>
@@ -39,9 +37,9 @@ export default function LoginPage() {
             <span>cho hợp tác xã chè.</span>
           </h2>
           <ul className={styles.featureList}>
-            <li><Check size={16} className={styles.checkIcon} aria-hidden="true" /> Ghi nhật ký canh tác minh bạch, truy xuất được nguồn gốc</li>
-            <li><Check size={16} className={styles.checkIcon} aria-hidden="true" /> AI nhận diện sâu bệnh từ ảnh lá chè</li>
-            <li><Check size={16} className={styles.checkIcon} aria-hidden="true" /> Dữ liệu HTX được lưu trữ riêng</li>
+            <li>Ghi nhật ký canh tác minh bạch, truy xuất được nguồn gốc</li>
+            <li>AI giám sát sâu bệnh và cảnh báo kịp thời</li>
+            <li>Dữ liệu của bạn được lưu trữ an toàn, bảo mật</li>
           </ul>
         </aside>
 
@@ -50,7 +48,7 @@ export default function LoginPage() {
           <div className={styles.authCard}>
             <div className={styles.cardHeader}>
               <h1 className={styles.cardTitle}>Đăng nhập</h1>
-              <p className={styles.cardDesc}>Dùng tài khoản hợp tác xã để vào {BRAND_NAME}.</p>
+              <p className={styles.cardDesc}>Nhập tài khoản và mật khẩu để sử dụng {BRAND_NAME}.</p>
             </div>
 
             <Suspense fallback={<div className={styles.form}>Đang tải...</div>}>
@@ -59,13 +57,15 @@ export default function LoginPage() {
 
             <div className={styles.help}>
               <strong>Cần hỗ trợ đăng nhập?</strong>
-              <span>Liên hệ cán bộ hợp tác xã của bạn.</span>
+              <span>Gọi cán bộ: 0208 3 855 xxx (7:00 – 17:00)</span>
             </div>
           </div>
         </main>
       </div>
 
-      <footer className={styles.footer}>© 2026 {BRAND_NAME} · Nông nghiệp minh bạch</footer>
+      <footer className={styles.footer}>
+        <span>© 2026 {BRAND_NAME}</span><span>Nông nghiệp minh bạch</span><span>Điều khoản</span><span>Quyền riêng tư</span>
+      </footer>
     </div>
   )
 }

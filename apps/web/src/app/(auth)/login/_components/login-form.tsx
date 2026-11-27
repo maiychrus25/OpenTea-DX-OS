@@ -63,7 +63,7 @@ export function LoginForm() {
       <div className={styles.forgotRow}>
         <span>Mật khẩu nhập ở bước tiếp theo.</span>
         <Link href="/forgot-pin" className={styles.authLink} data-testid="forgot-pin-link">
-          Quên PIN?
+          Quên mật khẩu?
         </Link>
       </div>
 

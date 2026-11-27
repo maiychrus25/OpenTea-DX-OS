@@ -3,7 +3,7 @@
 
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { Check, ChevronLeft, Leaf } from 'lucide-react'
+import { CircleCheck, Leaf } from 'lucide-react'
 import shell from '../login/login-page.module.css'
 import styles from './register.module.css'
 import { RegisterForm } from './_components/register-form'
@@ -33,9 +33,7 @@ export default async function RegisterPage() {
           <strong>{BRAND_NAME}</strong>
         </Link>
         <nav className={shell.topActions} aria-label="Điều hướng">
-          <Link href="/" className={shell.homeLink}>
-            <ChevronLeft size={16} aria-hidden="true" /> Trang chủ
-          </Link>
+          <Link href="/" className={shell.homeLink}>Trang chủ</Link>
           <ThemeToggle />
         </nav>
       </header>
@@ -48,9 +46,9 @@ export default async function RegisterPage() {
             <span>cho hợp tác xã chè.</span>
           </h2>
           <ul className={shell.featureList}>
-            <li><Check size={16} className={shell.checkIcon} aria-hidden="true" /> Ghi nhật ký canh tác minh bạch, truy xuất được nguồn gốc</li>
-            <li><Check size={16} className={shell.checkIcon} aria-hidden="true" /> AI nhận diện sâu bệnh từ ảnh lá chè</li>
-            <li><Check size={16} className={shell.checkIcon} aria-hidden="true" /> Dữ liệu HTX được lưu trữ riêng</li>
+            <li><CircleCheck size={20} className={shell.checkIcon} aria-hidden="true" /> Ghi nhật ký canh tác minh bạch, truy xuất được nguồn gốc</li>
+            <li><CircleCheck size={20} className={shell.checkIcon} aria-hidden="true" /> AI giám sát sâu bệnh và cảnh báo kịp thời</li>
+            <li><CircleCheck size={20} className={shell.checkIcon} aria-hidden="true" /> Dữ liệu của bạn được lưu trữ an toàn, bảo mật</li>
           </ul>
         </aside>
 
@@ -59,7 +57,7 @@ export default async function RegisterPage() {
           <div className={shell.authCard}>
             <div className={shell.cardHeader}>
               <h1 className={shell.cardTitle}>Đăng ký</h1>
-              <p className={shell.cardDesc}>Tạo tài khoản nông hộ. Trưởng HTX duyệt rồi mới đăng nhập được.</p>
+              <p className={shell.cardDesc}>Tạo tài khoản để sử dụng {BRAND_NAME}.</p>
             </div>
 
             <RegisterForm htxList={htxList} />
@@ -67,7 +65,9 @@ export default async function RegisterPage() {
         </main>
       </div>
 
-      <footer className={shell.footer}>© 2026 {BRAND_NAME} · Nông nghiệp minh bạch</footer>
+      <footer className={shell.footer}>
+        <span>© 2026 {BRAND_NAME}</span><span>Nông nghiệp minh bạch</span><span>Điều khoản</span><span>Quyền riêng tư</span>
+      </footer>
     </div>
   )
 }

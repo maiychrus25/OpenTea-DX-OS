@@ -40,5 +40,5 @@ test('TC-7.6-03: clicking login button initiates Keycloak redirect', async ({ pa
 test('TC-7.6-05: auth-side shows feature highlights', async ({ page }) => {
   await page.goto('/login')
   await expect(page.getByText(/Ghi nhật ký canh tác minh bạch/)).toBeVisible()
-  await expect(page.getByText(/Dữ liệu HTX được lưu trữ riêng/)).toBeVisible()
+  await expect(page.getByText(/Dữ liệu của bạn được lưu trữ an toàn/)).toBeVisible()
 })

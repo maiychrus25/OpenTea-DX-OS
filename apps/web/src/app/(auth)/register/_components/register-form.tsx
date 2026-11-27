@@ -124,7 +124,7 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
         {/* Chọn HTX */}
         <div className={styles.field}>
           <label htmlFor="reg-htx" className={styles.label}>
-            Hợp tác xã <span aria-hidden="true">*</span>
+            Loại tài khoản<span aria-hidden="true">*</span>
           </label>
           <div className={styles.control}>
             <Users size={17} aria-hidden="true" />
@@ -137,7 +137,7 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
               aria-describedby={errors.htxId ? 'err-htx' : undefined}
               aria-invalid={!!errors.htxId}
             >
-              <option value="">-- Chọn HTX của bạn --</option>
+              <option value="">Hợp tác xã</option>
               {htxList.map((htx) => (
                 <option key={htx.id} value={htx.id}>
                   {htx.name}
@@ -156,7 +156,7 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
         {/* Họ tên */}
         <div className={styles.field}>
           <label htmlFor="reg-fullname" className={styles.label}>
-            Họ và tên <span aria-hidden="true">*</span>
+            Họ và tên<span aria-hidden="true">*</span>
           </label>
           <div className={styles.control}>
             <User size={17} aria-hidden="true" />
@@ -183,7 +183,7 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
         {/* Số điện thoại */}
         <div className={styles.field}>
           <label htmlFor="reg-phone" className={styles.label}>
-            Số điện thoại <span aria-hidden="true">*</span>
+            Số điện thoại<span aria-hidden="true">*</span>
           </label>
           <div className={styles.control}>
             <Phone size={17} aria-hidden="true" />
@@ -208,12 +208,22 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
           )}
         </div>
         </div>
-        <p className={styles.hint}>Số điện thoại cũng là tên đăng nhập.</p>
+
+        {/* The phone number is the login name, so it is shown here rather than typed twice. */}
+        <div className={styles.field}>
+          <label htmlFor="reg-username" className={styles.label}>
+            Tên đăng nhập<span aria-hidden="true">*</span>
+          </label>
+          <div className={styles.control}>
+            <User size={17} aria-hidden="true" />
+            <input id="reg-username" className={styles.input} type="text" value={phone} readOnly placeholder="Tự lấy theo số điện thoại" />
+          </div>
+        </div>
 
         {/* Mã PIN */}
         <div className={styles.field}>
           <label htmlFor="reg-pin" className={styles.label}>
-            Tạo mã PIN (6 số) <span aria-hidden="true">*</span>
+            Mật khẩu<span aria-hidden="true">*</span>
           </label>
           <div className={styles.control}>
             <Lock size={17} aria-hidden="true" />
@@ -225,13 +235,13 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
               maxLength={6}
               autoComplete="new-password"
               className={`${styles.input} ${errors.pin ? styles.inputError : ''}`}
-              placeholder="••••••"
+              placeholder="Nhập mật khẩu (6 số)"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               aria-describedby={errors.pin ? 'err-pin' : undefined}
               aria-invalid={!!errors.pin}
             />
-            <button type="button" className={styles.reveal} aria-label={showPin ? 'Ẩn mã PIN' : 'Hiện mã PIN'} aria-pressed={showPin} onClick={() => setShowPin(!showPin)}>
+            <button type="button" className={styles.reveal} aria-label={showPin ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={showPin} onClick={() => setShowPin(!showPin)}>
               {showPin ? <Eye size={17} aria-hidden="true" /> : <EyeOff size={17} aria-hidden="true" />}
             </button>
           </div>
@@ -245,7 +255,7 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
         {/* Xác nhận PIN */}
         <div className={styles.field}>
           <label htmlFor="reg-confirm-pin" className={styles.label}>
-            Xác nhận mã PIN <span aria-hidden="true">*</span>
+            Xác nhận mật khẩu<span aria-hidden="true">*</span>
           </label>
           <div className={styles.control}>
             <Lock size={17} aria-hidden="true" />
@@ -257,13 +267,13 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
               maxLength={6}
               autoComplete="new-password"
               className={`${styles.input} ${errors.confirmPin ? styles.inputError : ''}`}
-              placeholder="••••••"
+              placeholder="Nhập lại mật khẩu"
               value={confirmPin}
               onChange={(e) => setConfirmPin(e.target.value)}
               aria-describedby={errors.confirmPin ? 'err-confirm-pin' : undefined}
               aria-invalid={!!errors.confirmPin}
             />
-            <button type="button" className={styles.reveal} aria-label={showConfirm ? 'Ẩn mã PIN' : 'Hiện mã PIN'} aria-pressed={showConfirm} onClick={() => setShowConfirm(!showConfirm)}>
+            <button type="button" className={styles.reveal} aria-label={showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={showConfirm} onClick={() => setShowConfirm(!showConfirm)}>
               {showConfirm ? <Eye size={17} aria-hidden="true" /> : <EyeOff size={17} aria-hidden="true" />}
             </button>
           </div>
