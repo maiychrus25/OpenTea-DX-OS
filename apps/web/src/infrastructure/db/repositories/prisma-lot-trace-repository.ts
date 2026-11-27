@@ -3,6 +3,7 @@
 
 import { LotTraceRepository, ParcelHarvests } from '@/domain/repositories/lot-trace-repository'
 import { LotTraceData } from '@/domain/entities/lot-trace-data'
+import { WITHDRAWAL_EXCLUDED_STATUSES } from '@/domain/journal/withdrawal-status'
 import { prisma } from '@/infrastructure/db/prisma.client'
 
 // Export pure function for unit testing
@@ -37,8 +38,8 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
                 household: true,
                 journal_entries: {
                   include: { activities: true },
-                  // Every entry that is not a draft drives the withdrawal check; only APPROVED ones are shown (see journal_summaries)
-                  where: { status: { not: 'DRAFT' } },
+                  // Every entry except drafts and rejected ones drives the withdrawal check; only APPROVED ones are shown (see journal_summaries)
+                  where: { status: { notIn: [...WITHDRAWAL_EXCLUDED_STATUSES] } },
                   orderBy: { entry_date: 'asc' },
                   take: 100,
                 }

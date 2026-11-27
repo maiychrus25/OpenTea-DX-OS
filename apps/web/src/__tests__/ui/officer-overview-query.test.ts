@@ -69,6 +69,11 @@ describe('officer overview tenant data', () => {
       parcel: { household: { htx_profile_id: 'tenant-a' } }, harvested_at: null, estimated_harvest_date: { not: null },
     } }))
   })
+  it('leaves drafts and rejected entries out of the withdrawal activities', async () => {
+    await loadOverview('tenant-a', now, 1)
+    const query = db.journalActivity.findMany.mock.calls[0][0]
+    expect(query.where.journal_entry.status).toEqual({ notIn: ['DRAFT', 'REJECTED'] })
+  })
   it('refreshes stored photo keys and tolerates unavailable storage', async () => {
     const sign = jest.fn().mockResolvedValueOnce('/signed-photo').mockRejectedValueOnce(new Error('offline'))
     ;(MinioStorageAdapter as jest.Mock).mockImplementation(() => ({ getPresignedUrl: sign }))

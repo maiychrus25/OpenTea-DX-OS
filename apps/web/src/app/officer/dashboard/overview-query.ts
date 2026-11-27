@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import { WITHDRAWAL_EXCLUDED_STATUSES } from '@/domain/journal/withdrawal-status'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { DAY, vietnamDayStart } from '@/components/features/officer-web/overview-data'
 import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
@@ -43,7 +44,7 @@ export async function loadOverview(htxProfileId: string, now: Date, requestedPag
     prisma.parcelCropCycle.findMany({ where: { ...journalTenant, harvested_at: null, estimated_harvest_date: { not: null } }, orderBy: { estimated_harvest_date: 'asc' },
       select: { id: true, parcel_id: true, estimated_harvest_date: true, parcel: { select: { parcel_code: true, household: { select: { name: true } } } } },
     }),
-    prisma.journalActivity.findMany({ where: { safe_harvest_date: { not: null }, journal_entry: { ...journalTenant, entry_date: { lte: now }, status: { not: 'REJECTED' } } },
+    prisma.journalActivity.findMany({ where: { safe_harvest_date: { not: null }, journal_entry: { ...journalTenant, entry_date: { lte: now }, status: { notIn: [...WITHDRAWAL_EXCLUDED_STATUSES] } } },
       select: { safe_harvest_date: true, journal_entry: { select: { parcel_id: true } } },
     }),
     prisma.journalEntry.findMany({ where: { ...journalTenant, entry_date: { gte: monthStart, lte: now } }, select: { entry_date: true, activity_type: true } }),
