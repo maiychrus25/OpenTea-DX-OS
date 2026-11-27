@@ -15,6 +15,7 @@ Tài liệu cho cán bộ, nông hộ và làm nguồn tra cứu cho AI. Sắp t
 | `4_Archives/` | Hồ sơ vụ đã xong, chỉ nhận dữ liệu thật của HTX |
 
 - Danh mục nguồn: `danh_muc.csv` (`tai_tai_lieu.py` sinh từ `nguon.json`).
+- Cào một mục của trang web: `./cao_trang.sh <url> [số trang]` (cần `firecrawl-local`; không vượt trang đã chặn).
 - Tải bản gốc về máy: `python3 tai_tai_lieu.py`. Bản gốc nằm trong `_goc/`, **không đưa vào repo**.
 - Các ghi chú là tóm tắt của dự án, không thay văn bản gốc. Gom ngày 27/11/2026.
 
