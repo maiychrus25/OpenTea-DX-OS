@@ -101,6 +101,9 @@ model HtxProfile {
   notifications Notification[]
   partners      Partner[]
   memberships   HtxMembership[]
+  leaf_grades        LeafGrade[]
+  daily_leaf_prices  DailyLeafPrice[]
+  fresh_leaf_tickets FreshLeafTicket[]
 
   @@map("htx_profiles")
 }
@@ -119,6 +122,7 @@ model Household {
   parcels         Parcel[]
   disease_reports DiseaseReport[]
   notifications   Notification[]  @relation("RecipientHousehold")
+  leaf_tickets    FreshLeafTicket[]
 
   htx_profile_id  String?
   htx_profile     HtxProfile?     @relation(fields: [htx_profile_id], references: [id])
@@ -151,6 +155,7 @@ model Parcel {
   lot_parcels     LotParcel[]
   disease_reports DiseaseReport[]
   weather_cache   WeatherCache[]
+  leaf_tickets    FreshLeafTicket[]
 
   @@map("parcels")
 }
@@ -167,6 +172,7 @@ model ParcelCropCycle {
 
   journal_entries JournalEntry[]
   lot_parcels     LotParcel[]
+  leaf_tickets    FreshLeafTicket[]
 
   @@map("parcel_crop_cycles")
 }
@@ -476,4 +482,83 @@ model HtxMembership {
   @@unique([keycloak_user_id, htx_profile_id])
   @@index([htx_profile_id])
   @@map("htx_memberships")
+}
+
+// ─── Weighing station ───────────────────────────────────────────────────────
+
+model LeafGrade {
+  id             String     @id @default(cuid())
+  htx_profile_id String
+  htx_profile    HtxProfile @relation(fields: [htx_profile_id], references: [id])
+  name           String
+  sort_order     Int        @default(0)
+  active         Boolean    @default(true)
+  created_at     DateTime   @default(now())
+  updated_at     DateTime   @updatedAt
+
+  prices  DailyLeafPrice[]
+  tickets FreshLeafTicket[]
+
+  @@unique([htx_profile_id, name])
+  @@map("leaf_grades")
+}
+
+// One price per grade and Vietnam calendar day; a ticket copies the price when it is written.
+model DailyLeafPrice {
+  id               String     @id @default(cuid())
+  htx_profile_id   String
+  htx_profile      HtxProfile @relation(fields: [htx_profile_id], references: [id])
+  grade_id         String
+  grade            LeafGrade  @relation(fields: [grade_id], references: [id])
+  price_date       DateTime   @db.Date
+  price_vnd_per_kg Int
+  published_by_id  String // Keycloak sub
+  published_at     DateTime   @default(now())
+  updated_at       DateTime   @updatedAt
+
+  @@unique([grade_id, price_date])
+  @@index([htx_profile_id, price_date])
+  @@map("daily_leaf_prices")
+}
+
+enum LeafTicketStatus {
+  VALID
+  VOIDED
+}
+
+// Immutable once written: a wrong ticket is voided and weighed again.
+model FreshLeafTicket {
+  id               String           @id @default(cuid())
+  htx_profile_id   String
+  htx_profile      HtxProfile       @relation(fields: [htx_profile_id], references: [id])
+  ticket_no        String           @unique // {HTX_CODE}-PC-{YYYYMMDD}-{NNN}
+  household_id     String
+  household        Household        @relation(fields: [household_id], references: [id])
+  parcel_id        String
+  parcel           Parcel           @relation(fields: [parcel_id], references: [id])
+  cycle_id         String? // null for a parcel without any flush (legacy data)
+  cycle            ParcelCropCycle? @relation(fields: [cycle_id], references: [id])
+  grade_id         String
+  grade            LeafGrade        @relation(fields: [grade_id], references: [id])
+  weighed_at       DateTime
+  gross_kg         Decimal          @db.Decimal(7, 1)
+  deduction_pct    Decimal          @db.Decimal(4, 1)
+  net_kg           Decimal          @db.Decimal(7, 1)
+  price_vnd_per_kg Int
+  amount_vnd       BigInt
+  status           LeafTicketStatus @default(VALID)
+  void_reason      String?
+  voided_by_id     String?
+  voided_at        DateTime?
+  created_by_id    String // Keycloak sub
+  client_id        String? // client-generated uuid, makes replays idempotent
+  settlement_id    String? // sub-project 4 adds the foreign key
+  created_at       DateTime         @default(now())
+
+  @@unique([created_by_id, client_id])
+  @@index([htx_profile_id, weighed_at])
+  @@index([household_id])
+  @@index([parcel_id])
+  @@index([cycle_id])
+  @@map("fresh_leaf_tickets")
 }
