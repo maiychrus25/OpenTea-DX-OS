@@ -40,3 +40,16 @@ export const batchOutputsSchema = z.object({
 export const batchFinishSchema = z.object({ deviation_note: z.string().trim().min(10).max(500).optional() }).strict()
 
 export const batchCancelSchema = z.object({ reason: z.string().trim().min(3).max(200) }).strict()
+
+export const dryStockQuerySchema = z.object({ grade: z.enum(DRY_TEA_GRADES).optional() })
+
+export const lotFromBatchesSchema = z.object({
+  grade: z.enum(DRY_TEA_GRADES),
+  sources: z.array(z.object({
+    output_id: id,
+    kg: z.number().gt(0).max(100_000).refine(oneDecimal, 'Tối đa một chữ số thập phân'),
+  }).strict()).min(1).max(50),
+  packaging_type: z.string().trim().max(100).optional(),
+  destination: z.string().trim().max(200).optional(),
+  buyer_name: z.string().trim().max(200).optional(),
+}).strict().refine((v) => new Set(v.sources.map((s) => s.output_id)).size === v.sources.length, 'Mỗi dòng tồn chỉ chọn một lần')

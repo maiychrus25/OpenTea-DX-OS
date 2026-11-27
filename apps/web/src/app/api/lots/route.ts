@@ -14,6 +14,10 @@ import { CreateLotUseCase } from '@/application/lot/CreateLotUseCase'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
 import { assertCertificateKeys } from '@/domain/document/document-namespace'
+import { labsOnly } from '@/lib/labs'
+
+// GET stays open; POST renders on every request because it answers from DXOS_LABS.
+export const dynamic = 'force-dynamic'
 
 async function getLots(request: Request) {
   const { role } = await requireTenant()
@@ -70,4 +74,5 @@ async function postLot(request: Request) {
 }
 
 export const GET = withErrorHandler(getLots)
-export const POST = withErrorHandler(postLot)
+// Lots from parcels are frozen (phase 2): lots are closed from dry tea stock, see POST /api/lots/from-batches.
+export const POST = withErrorHandler(labsOnly(postLot))

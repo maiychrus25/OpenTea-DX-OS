@@ -7,6 +7,15 @@ import { LotTraceData } from '@/domain/entities/lot-trace-data'
 import { Prisma, LotStatus } from '@prisma/client'
 import { cycleForLotLine } from '@/infrastructure/db/farm/PrismaCropCycleRepository'
 
+/** The next `{prefix}NNN` lot code. Takes a lock per prefix that lasts until the transaction ends, so two lots never share a number. */
+export async function nextLotCode(tx: Prisma.TransactionClient, prefix: string): Promise<string> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`lot:${prefix}`}))`
+  const rows = await tx.$queryRaw<{ n: number }[]>`
+    SELECT COALESCE(MAX(substring(lot_code from '[0-9]+$')::int), 0) + 1 AS n
+    FROM lots WHERE left(lot_code, ${prefix.length}::int) = ${prefix}`
+  return `${prefix}${String(rows[0].n).padStart(3, '0')}`
+}
+
 export class PrismaLotRepository implements LotPort {
   cycleForLine(parcelId: string, harvestDate: Date) {
     return cycleForLotLine(prisma, parcelId, harvestDate)
@@ -66,22 +75,13 @@ export class PrismaLotRepository implements LotPort {
     const cropCode = data.commodity.toUpperCase().replace(/\s+/g, '').substring(0, 6)
     const dateStr = data.harvest_date.toISOString().slice(0, 10).replace(/-/g, '')
 
-    // Count existing lots for today to generate sequence number
-    const existingCount = await prisma.lot.count({
-      where: {
-        lot_code: { startsWith: `${htxCode}-${cropCode}-${dateStr}` },
-      },
-    })
-    const seq = String(existingCount + 1).padStart(3, '0')
-    const lotCode = `${htxCode}-${cropCode}-${dateStr}-${seq}`
-
     const lines = await Promise.all(
       data.parcel_ids.map(async (parcelId) => ({ parcel_id: parcelId, cycle_id: await cycleForLotLine(prisma, parcelId, data.harvest_date) }))
     )
 
-    const l = await prisma.lot.create({
+    const l = await prisma.$transaction(async (tx) => tx.lot.create({
       data: {
-        lot_code: lotCode,
+        lot_code: await nextLotCode(tx, `${htxCode}-${cropCode}-${dateStr}-`),
         commodity: data.commodity,
         harvest_date: data.harvest_date,
         estimated_weight_kg: data.estimated_weight_kg ?? null,
@@ -98,7 +98,7 @@ export class PrismaLotRepository implements LotPort {
         },
       },
       include: { lot_parcels: true },
-    })
+    }))
 
     return {
       id: l.id,

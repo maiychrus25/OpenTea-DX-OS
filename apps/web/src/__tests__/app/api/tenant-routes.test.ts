@@ -40,6 +40,11 @@ const coreRequest = () => {
   return { role: init.headers['x-hasura-role'], body: init.body as string }
 }
 
+// Creating a lot from parcels is frozen behind DXOS_LABS (phase 2); these tests exercise that old path.
+const labsBefore = process.env.DXOS_LABS
+beforeAll(() => { process.env.DXOS_LABS = '1' })
+afterAll(() => { if (labsBefore === undefined) delete process.env.DXOS_LABS; else process.env.DXOS_LABS = labsBefore })
+
 beforeEach(() => {
   jest.clearAllMocks()
   mock(prisma.htxProfile.findUnique).mockImplementation(async ({ where }) => (where.htx_code === 'TC' ? tc : null))
@@ -167,5 +172,22 @@ describe('code below the routes', () => {
   test('updateProfile refuses an unknown HTX', async () => {
     await expect(profiles().updateProfile('XX', { name: 'X' } as never)).rejects.toThrow('HTX Profile not found')
     expect(prisma.htxProfile.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST lots is frozen without DXOS_LABS', () => {
+  test('answers 404 NOT_FOUND before any session or HTX work, and renders on every request', async () => {
+    const before = process.env.DXOS_LABS
+    delete process.env.DXOS_LABS
+    try {
+      signIn('officer', 'TC')
+      const response = await lots.POST(post('/api/lots'), {})
+      expect(response.status).toBe(404)
+      expect((await response.json()).error.code).toBe('NOT_FOUND')
+      expect(prisma.htxProfile.findUnique).not.toHaveBeenCalled()
+      expect(lots.dynamic).toBe('force-dynamic')
+    } finally {
+      process.env.DXOS_LABS = before
+    }
   })
 })

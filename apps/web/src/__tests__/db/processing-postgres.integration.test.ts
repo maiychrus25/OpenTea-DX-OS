@@ -16,6 +16,8 @@ maybe('processing batches on a real Postgres', () => {
   let batchRepo: import('@/infrastructure/db/processing/PrismaBatchRepository').PrismaBatchRepository
   let ticketRepo: import('@/infrastructure/db/weighing/PrismaFreshLeafTicketRepository').PrismaFreshLeafTicketRepository
   let uc: typeof import('@/application/processing/BatchUseCases')
+  let lotRepo: import('@/infrastructure/db/processing/PrismaLotFromBatchesRepository').PrismaLotFromBatchesRepository
+  let CreateLot: typeof import('@/application/processing/CreateLotFromBatchesUseCase').CreateLotFromBatchesUseCase
   let VoidTicket: typeof import('@/application/weighing/VoidFreshLeafTicketUseCase').VoidFreshLeafTicketUseCase
 
   const run = String(Date.now())
@@ -40,6 +42,8 @@ maybe('processing batches on a real Postgres', () => {
     batchRepo = new (require('@/infrastructure/db/processing/PrismaBatchRepository').PrismaBatchRepository)()
     ticketRepo = new (require('@/infrastructure/db/weighing/PrismaFreshLeafTicketRepository').PrismaFreshLeafTicketRepository)()
     uc = require('@/application/processing/BatchUseCases')
+    lotRepo = new (require('@/infrastructure/db/processing/PrismaLotFromBatchesRepository').PrismaLotFromBatchesRepository)()
+    CreateLot = require('@/application/processing/CreateLotFromBatchesUseCase').CreateLotFromBatchesUseCase
     VoidTicket = require('@/application/weighing/VoidFreshLeafTicketUseCase').VoidFreshLeafTicketUseCase
     const htx = await prisma.htxProfile.create({ data: { name: 'HTX thử', address: 'x', crop_types: [], htx_code: htxCode } })
     htxId = htx.id
@@ -107,5 +111,67 @@ maybe('processing batches on a real Postgres', () => {
     expect(done.outputs.map((o) => o.remaining_kg)).toEqual([20, 20])
     await expect(new uc.CancelBatch(batchRepo).execute(actor(), batch.id, 'Nhập nhầm')).rejects.toMatchObject({ code: 'BATCH_NOT_OPEN' })
     await expect(prisma.$executeRaw`UPDATE processing_batch_outputs SET kg = 0 WHERE batch_id = ${batch.id}`).rejects.toThrow()
+  })
+
+  describe('lots from batches', () => {
+    // A finished batch of one fresh ticket (100.0 kg) with the given dry outputs; returns the output ids by grade.
+    async function finishedBatch(day: string, outputs: { grade: 'DINH' | 'BOM'; kg: number }[]) {
+      const id = await ticket()
+      const batch = await new uc.CreateBatch(batchRepo).execute(actor(), { processed_on: day })
+      await new uc.AddTickets(batchRepo).execute(actor(), batch.id, [id])
+      await new uc.SetOutputs(batchRepo).execute(actor(), batch.id, outputs)
+      const done = await new uc.FinishBatch(batchRepo).execute(actor(), batch.id, { deviation_note: 'Thử nghiệm tỷ lệ lệch chuẩn' })
+      return Object.fromEntries(done.outputs.map((o) => [o.grade, o.id])) as Record<'DINH' | 'BOM', string>
+    }
+
+    it('two lots drawing one stock row at once: the second gets STOCK_CHANGED and stock never goes below zero (Review Focus 2)', async () => {
+      const { DINH } = await finishedBatch('2026-11-25', [{ grade: 'DINH', kg: 20 }])
+      const draw = () => new CreateLot(lotRepo).execute(actor(), { grade: 'DINH', sources: [{ output_id: DINH, kg: 15 }] })
+      const results = await Promise.allSettled([draw(), draw()])
+      expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected'])
+      const lost = results.find((r) => r.status === 'rejected') as PromiseRejectedResult
+      expect(lost.reason).toMatchObject({ code: 'STOCK_CHANGED' })
+      expect(lost.reason.details.stock).toEqual(expect.arrayContaining([expect.objectContaining({ output_id: DINH, remaining_kg: 5 })]))
+      const taken = await prisma.lotBatchSource.aggregate({ where: { output_id: DINH }, _sum: { kg: true } })
+      expect(Number(taken._sum.kg)).toBe(15)
+      const rest = await new CreateLot(lotRepo).execute(actor(), { grade: 'DINH', sources: [{ output_id: DINH, kg: 5 }] })
+      expect(rest.estimated_weight_kg).toBe(5)
+      expect((await lotRepo.stock(htxId, 'DINH')).find((r) => r.output_id === DINH)).toBeUndefined()
+    })
+
+    it('numbers parallel lots of one day without a gap or a duplicate, on the new and the old path', async () => {
+      const { BOM } = await finishedBatch('2026-11-26', [{ grade: 'BOM', kg: 20 }])
+      const made = await Promise.all(Array.from({ length: 5 }, () => new CreateLot(lotRepo).execute(actor(), { grade: 'BOM', sources: [{ output_id: BOM, kg: 1 }] })))
+      expect(new Set(made.map((l) => l.lot_code)).size).toBe(5)
+      // Every lot of the HTX and day, earlier tests included, holds 1..N once.
+      const numbersOf = async (prefix: string) => (await prisma.lot.findMany({ where: { htx_profile_id: htxId, lot_code: { startsWith: prefix } }, select: { lot_code: true } })).map((l) => Number(l.lot_code.slice(-3))).sort((x, y) => x - y)
+      const prefix = made[0].lot_code.slice(0, -3)
+      const newNumbers = await numbersOf(prefix)
+      expect(newNumbers).toEqual(newNumbers.map((_, i) => i + 1))
+      expect(newNumbers.length).toBeGreaterThanOrEqual(5)
+      const Old = require('@/infrastructure/db/lot/PrismaLotRepository').PrismaLotRepository
+      const old = await Promise.all(Array.from({ length: 4 }, () => new Old().create({ commodity: 'Chè', harvest_date: new Date('2026-10-01T00:00:00Z'), parcel_ids: [parcelId], htx_profile_id: htxId, created_by_id: 'off-1' })))
+      expect(new Set(old.map((l: { lot_code: string }) => l.lot_code)).size).toBe(4)
+      expect(await numbersOf(old[0].lot_code.slice(0, -3))).toEqual([1, 2, 3, 4])
+    })
+
+    it('carries the grade, the sources and the lot parcel, and refuses a spraying back-dated after the weighing (Review Focus 3)', async () => {
+      const { DINH } = await finishedBatch('2026-11-27', [{ grade: 'DINH', kg: 20 }])
+      const ok = await new CreateLot(lotRepo).execute(actor(), { grade: 'DINH', sources: [{ output_id: DINH, kg: 4.5 }], packaging_type: 'Túi 500g' })
+      const row = await prisma.lot.findUniqueOrThrow({ where: { id: ok.id }, include: { batch_sources: true, lot_parcels: true } })
+      expect(row).toMatchObject({ dry_grade: 'DINH', quality_grade: 'Đinh', status: 'READY', packaging_type: 'Túi 500g', htx_profile_id: htxId })
+      expect(row.batch_sources.map((s) => [s.output_id, Number(s.kg)])).toEqual([[DINH, 4.5]])
+      expect(row.lot_parcels.map((p) => p.parcel_id)).toEqual([parcelId])
+
+      // The ticket was weighed today; this spraying is dated yesterday, written down after, and is safe only in 5 days.
+      const yesterday = new Date(Date.now() - 86_400_000)
+      await prisma.journalEntry.create({
+        data: { parcel_id: parcelId, entry_date: yesterday, activity_type: 'SPRAYING', performed_by: 'Hộ A', submitted_role: 'FARMER', status: 'APPROVED',
+          activities: { create: { activity_detail: 'Phun thuốc', withdrawal_days: 6, safe_harvest_date: new Date(Date.now() + 5 * 86_400_000) } } },
+      })
+      await expect(new CreateLot(lotRepo).execute(actor(), { grade: 'DINH', sources: [{ output_id: DINH, kg: 1 }] })).rejects.toMatchObject({ code: 'WITHDRAWAL_NOT_PASSED', details: { parcel_code: `P-${run}` } })
+      const taken = await prisma.lotBatchSource.aggregate({ where: { output_id: DINH }, _sum: { kg: true } })
+      expect(Number(taken._sum.kg)).toBe(4.5)
+    })
   })
 })
