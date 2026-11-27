@@ -43,6 +43,16 @@ beforeEach(() => {
   ;(auth as jest.Mock).mockResolvedValue({ user: { name: 'Lan' }, authTime: nowSeconds() - 30 })
 })
 
+// The frozen feature under test runs only with the labs switch on (ADR 0005).
+const previousLabs = process.env.DXOS_LABS
+beforeEach(() => {
+  process.env.DXOS_LABS = '1'
+})
+afterEach(() => {
+  if (previousLabs === undefined) delete process.env.DXOS_LABS
+  else process.env.DXOS_LABS = previousLabs
+})
+
 describe('GET /api/agent/autopilot', () => {
   test('a manager and an officer read the status; a farmer is refused', async () => {
     const res = await getStatus(new Request('http://web/api/agent/autopilot'), undefined)
@@ -84,6 +94,8 @@ describe('POST /api/agent/autopilot/enable', () => {
   test.each([
     ['not acknowledged', { ...validBody, acknowledged: false }],
     ['a kind that is not unlockable', { ...validBody, unlocked_kinds: ['journal.reject'] }],
+    ['harvest.approve, which is human-only', { ...validBody, unlocked_kinds: ['harvest.approve'] }],
+    ['journal.approve, which is human-only', { ...validBody, unlocked_kinds: ['journal.approve'] }],
     ['a cap over 50', { ...validBody, daily_cap: 51 }],
     ['a missing body', undefined],
   ])('%s answers 400', async (_name, body) => {

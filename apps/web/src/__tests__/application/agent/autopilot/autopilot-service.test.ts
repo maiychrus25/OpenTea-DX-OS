@@ -28,7 +28,7 @@ const enableInput = {
   htxCode: 'TC',
   userId: 'mgr-1',
   userName: 'Lan',
-  unlockedKinds: ['harvest.approve'],
+  unlockedKinds: ['miniapp.install'],
   dailyCap: 20,
   acknowledged: true,
   authTime: nowSeconds - 60,
@@ -59,34 +59,35 @@ describe('AutopilotService.view', () => {
     expect(byKind['strategy.adopt']).toMatchObject({ autonomy: 'unlockable', risk: 'medium', window_minutes: 2880 })
     expect(byKind['notification.internal']).toMatchObject({ autonomy: 'auto', risk: 'low', window_minutes: 0 })
     expect(byKind['journal.reject']).toMatchObject({ autonomy: 'auto', window_minutes: 15 })
-    expect(byKind['harvest.approve']).toMatchObject({ autonomy: 'unlockable', risk: 'high', window_minutes: 120 })
+    expect(byKind['miniapp.install']).toMatchObject({ autonomy: 'unlockable', risk: 'high', window_minutes: 120 })
     expect(byKind['improvement.adopt'].autonomy).toBe('never')
+    expect(byKind['harvest.approve'].autonomy).toBe('never')
   })
 
   test('shows the mode, the opened kinds and today\'s counts', async () => {
-    const on: AutopilotConfig = { ...disabledConfig('TC'), enabled: true, enabledByName: 'Lan', enabledAt: NOW, unlockedKinds: ['journal.approve'], dailyCap: 30 }
+    const on: AutopilotConfig = { ...disabledConfig('TC'), enabled: true, enabledByName: 'Lan', enabledAt: NOW, unlockedKinds: ['miniapp.remove'], dailyCap: 30 }
     const view = await build(on).service.view('TC')
     expect(view).toMatchObject({ enabled: true, enabled_by_name: 'Lan', daily_cap: 30, today: { ran: 3, blocked: 1, pending: 2 } })
-    expect(view.kinds.find((k) => k.kind === 'journal.approve')!.unlocked).toBe(true)
-    expect(view.kinds.find((k) => k.kind === 'harvest.approve')!.unlocked).toBe(false)
+    expect(view.kinds.find((k) => k.kind === 'miniapp.remove')!.unlocked).toBe(true)
+    expect(view.kinds.find((k) => k.kind === 'miniapp.install')!.unlocked).toBe(false)
   })
 })
 
 describe('AutopilotService.enable', () => {
   test('turns the mode on with the screen as a snapshot and tells the notifier', async () => {
-    const { service, repo, notifier } = build(disabledConfig('TC'), [{ kind: 'harvest.approve', sample: 10, matched: 7 }])
+    const { service, repo, notifier } = build(disabledConfig('TC'), [{ kind: 'miniapp.install', sample: 10, matched: 7 }])
     await service.enable(enableInput)
     expect(repo.enable).toHaveBeenCalledWith('TC', {
       userId: 'mgr-1',
       userName: 'Lan',
-      unlockedKinds: ['harvest.approve'],
+      unlockedKinds: ['miniapp.install'],
       dailyCap: 20,
       snapshot: expect.objectContaining({ daily_cap: 20, acknowledged: true }),
     })
     const snapshot = (repo.enable.mock.calls[0] as unknown as [string, { snapshot: { kinds: { kind: string; unlocked: boolean; match_rate: number | null; warning: boolean }[] } }])[1].snapshot
-    expect(snapshot.kinds.find((k) => k.kind === 'harvest.approve')).toMatchObject({ unlocked: true, match_rate: 0.7, warning: true })
-    expect(snapshot.kinds.find((k) => k.kind === 'journal.approve')!.unlocked).toBe(false)
-    expect(notifier.enabled).toHaveBeenCalledWith('TC', 'Lan', ['harvest.approve'], 20)
+    expect(snapshot.kinds.find((k) => k.kind === 'miniapp.install')).toMatchObject({ unlocked: true, match_rate: 0.7, warning: true })
+    expect(snapshot.kinds.find((k) => k.kind === 'miniapp.remove')!.unlocked).toBe(false)
+    expect(notifier.enabled).toHaveBeenCalledWith('TC', 'Lan', ['miniapp.install'], 20)
   })
 
   test('a sign-in older than five minutes, or unknown, needs a fresh one and writes nothing', async () => {

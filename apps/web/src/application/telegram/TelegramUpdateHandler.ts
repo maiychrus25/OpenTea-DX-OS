@@ -25,6 +25,7 @@ import { commandOf } from './chat/router'
 import type { BulletinSpeech } from './chat/speech'
 import type { ChatAction, ChatTool, ChatUser, PhotoStore } from './chat/types'
 import { WAITING_FOR_STAFF_APP } from '@/application/agent/actions/staff-task-create.action'
+import { isLabsEnabled } from '@/lib/labs'
 import { autopilotStatusText, TELEGRAM_TEXT, type AutopilotStatusFigures } from './messages'
 
 export interface TelegramMessageInput {
@@ -430,6 +431,8 @@ export class TelegramUpdateHandler {
 
   /** `/dung` stops the mode at once and `/tuvanhanh` shows it: for a manager or officer who is still one, in a private chat. */
   private async autopilotCommand(link: TelegramLink, command: '/dung' | '/tuvanhanh', chatId: number): Promise<UpdateResponse> {
+    // The autopilot is frozen (ADR 0005); `/dung` still stops a mode that was left on.
+    if (command === '/tuvanhanh' && !isLabsEnabled()) return { replies: [reply(chatId, TELEGRAM_TEXT.featureNotOpen)] }
     const user = await this.users.resolve(link)
     if (!user || (user.tenant.role !== 'manager' && user.tenant.role !== 'officer')) {
       return { replies: [reply(chatId, TELEGRAM_TEXT.autopilotNotAllowed)] }

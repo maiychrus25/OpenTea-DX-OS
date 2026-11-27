@@ -4,6 +4,7 @@
 import { randomBytes } from 'node:crypto'
 import { formatVnDate } from '@/application/agent/actions/journal-labels'
 import { DomainError } from '@/domain/errors'
+import { isLabsEnabled } from '@/lib/labs'
 import { logger } from '@/lib/logger'
 import { signCallbackDataV2 } from '@/domain/telegram/callback-data'
 import type { TelegramConversation, TelegramRepository } from '@/domain/telegram/ports/TelegramRepository'
@@ -185,6 +186,7 @@ export class ChatEngine {
     if (route?.kind === 'tool') return this.runTool(user, route.name, route.args ?? {}, now)
     if (route?.kind === 'action') return this.startAction(user, route.name, {}, now)
     if (route?.kind === 'app_request' && user.tenant.role === 'manager' && this.deps.appRequests) {
+      if (!isLabsEnabled()) return only([send(user.chatId, TELEGRAM_TEXT.featureNotOpen)])
       return only([send(user.chatId, await this.deps.appRequests.submit(user, text))])
     }
     return this.askAssistant(user, text, now)

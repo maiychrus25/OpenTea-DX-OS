@@ -6,6 +6,7 @@ import { attendanceBodySchema, StaffSyncUseCase } from '@/application/agent/staf
 import { PrismaStaffSyncRepository } from '@/infrastructure/db/agent/PrismaStaffSyncRepository'
 import { requireStaffCaller } from '@/lib/api/internal-staff-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { labsOnly } from '@/lib/labs'
 
 /** The staff app reports how many people are present today (contract C3). */
 async function putStaffAttendance(request: Request) {
@@ -15,4 +16,4 @@ async function putStaffAttendance(request: Request) {
   return NextResponse.json({ data: { day: body.day, present: body.present } })
 }
 
-export const PUT = withErrorHandler(putStaffAttendance)
+export const PUT = withErrorHandler(labsOnly(putStaffAttendance))

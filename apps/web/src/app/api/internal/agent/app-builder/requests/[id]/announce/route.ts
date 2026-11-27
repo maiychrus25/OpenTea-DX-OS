@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { appBuilderAgentService } from '@/application/appbuilder/app-builder-services'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
 import { uuidParam, withAppBuildErrors } from '@/lib/api/app-build-response'
+import { labsOnly } from '@/lib/labs'
 
 /** A12 calls this for a request that passed or failed; a second call does nothing. */
 async function postAnnounce(request: Request, context: unknown) {
@@ -14,4 +15,4 @@ async function postAnnounce(request: Request, context: unknown) {
   return NextResponse.json({ data: { proposal_id: proposalId } })
 }
 
-export const POST = withAppBuildErrors(postAnnounce)
+export const POST = withAppBuildErrors(labsOnly(postAnnounce))

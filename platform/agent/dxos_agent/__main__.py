@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta, timezone
 import faulthandler
 import logging
+import os
 from pathlib import Path
 import signal
 import threading
@@ -223,6 +224,11 @@ def _digest_and_heartbeat(runtime: _CooperativeRuntime, now: datetime, settings:
             log.warning("Agent heartbeat failed for htx=%s", runtime.creds.htx_code)
 
 
+def labs_enabled() -> bool:
+    """Frozen features (ADR 0005) run only when DXOS_LABS is "1" or "true"; the same rule as the web. Read at call time."""
+    return os.environ.get("DXOS_LABS", "").strip().lower() in ("1", "true")
+
+
 def _guarded(label: str, htx_code: str, run) -> None:
     """Run one M4 agent; its failure is logged and the other agents and A1 go on."""
     try:
@@ -330,13 +336,16 @@ def _run_m4_agents(runtime: _CooperativeRuntime, now: datetime, settings: AgentS
     _guarded("A2 field-watch", htx, field_watch_cycle)
     _guarded("A4 harvest-ready", htx, harvest_cycle)
     _guarded("A3 disease-watch", htx, disease_cycle)
-    _guarded("A8 staff-tasks", htx, staff_tasks_cycle)
+    labs = labs_enabled()  # frozen agents are not scheduled at all, so no call reaches a 404 route
+    if labs:
+        _guarded("A8 staff-tasks", htx, staff_tasks_cycle)
     _guarded("app suggestions", htx, app_suggestions_cycle)  # before A9, so the campaign sees them
     _guarded("A9 daily-campaign", htx, campaign_cycle)
     _guarded("A5 bulletin", htx, bulletin_cycle)
     _guarded("A10 improvement", htx, improvement_cycle)
-    _guarded("A12 app-builder", htx, app_builder_cycle)
-    _guarded("A11 strategy", htx, strategy_cycle)
+    if labs:
+        _guarded("A12 app-builder", htx, app_builder_cycle)
+        _guarded("A11 strategy", htx, strategy_cycle)
 
 
 def run_once(
@@ -363,7 +372,8 @@ def run_once(
         # The M4 agents come after A1: the bulletin's LLM call can take minutes and must not delay the journal review.
         _run_m4_agents(runtime, now, settings)
         # Cheap when the mode is off; the web re-checks every condition, so a failed tick only delays the run.
-        _guarded("autopilot tick", creds.htx_code, runtime.gateway.post_autopilot_tick)
+        if labs_enabled():
+            _guarded("autopilot tick", creds.htx_code, runtime.gateway.post_autopilot_tick)
 
 
 def _journal_review_cycle(runtime: _CooperativeRuntime, now: datetime, settings: AgentSettings) -> None:

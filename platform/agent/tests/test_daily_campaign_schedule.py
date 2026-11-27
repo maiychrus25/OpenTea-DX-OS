@@ -155,6 +155,7 @@ def test_m7_daily_times_are_a4_530_a3_540_a8_550_and_a9_600():
 
 
 def test_a9_runs_after_a2_a4_and_a3_and_before_the_bulletin(monkeypatch):
+    monkeypatch.setenv("DXOS_LABS", "1")  # frozen feature (ADR 0005): runs only with the labs switch on
     calls: list[str] = []
     _patch_m4(monkeypatch, calls)
     runtime = _runtime()
@@ -166,6 +167,7 @@ def test_a9_runs_after_a2_a4_and_a3_and_before_the_bulletin(monkeypatch):
 
 
 def test_a9_failure_does_not_stop_the_bulletin(monkeypatch):
+    monkeypatch.setenv("DXOS_LABS", "1")  # frozen feature (ADR 0005): runs only with the labs switch on
     calls: list[str] = []
     _patch_m4(monkeypatch, calls, campaign_error=RuntimeError("web refused the campaign"))
     runtime = _runtime()
@@ -178,6 +180,7 @@ def test_a9_failure_does_not_stop_the_bulletin(monkeypatch):
 
 
 def test_a8_failure_does_not_stop_a9_and_is_retried(monkeypatch):
+    monkeypatch.setenv("DXOS_LABS", "1")  # frozen feature (ADR 0005): runs only with the labs switch on
     calls: list[str] = []
     _patch_m4(monkeypatch, calls)
 
@@ -197,6 +200,7 @@ def test_a8_failure_does_not_stop_a9_and_is_retried(monkeypatch):
 
 
 def test_a8_runs_once_per_vietnam_day(monkeypatch):
+    monkeypatch.setenv("DXOS_LABS", "1")  # frozen feature (ADR 0005): runs only with the labs switch on
     calls: list[str] = []
     _patch_m4(monkeypatch, calls)
     runtime = _runtime()

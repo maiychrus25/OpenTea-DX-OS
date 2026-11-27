@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+jest.mock('@/application/appbuilder/install-check', () => ({ assertInstallable: jest.fn(async () => undefined), assertRemovable: jest.fn() }))
+
 import { CreateProposalUseCase, type CreateProposalInput } from '@/application/agent/CreateProposalUseCase'
 import { disabledConfig, type AutopilotConfig } from '@/domain/agent/autopilot'
 import { canonicalJson, evidenceDigest, sha256Hex } from '@/domain/agent/evidence'
@@ -21,7 +23,7 @@ const reject: CreateProposalInput = {
   origin: 'agent',
   now: NOW,
 }
-const approve: CreateProposalInput = { ...reject, kind: 'journal.approve', payload: { entry_ids: ['entry-1'] }, reasonVi: 'Sạch' }
+const approve: CreateProposalInput = { ...reject, kind: 'miniapp.install', payload: { app_id: 'tea-shop' }, reasonVi: 'Sạch' }
 
 function build(config: AutopilotConfig | Error | null) {
   const repo = { create: jest.fn().mockResolvedValue({ id: 'prop-1' }), createdSince: jest.fn().mockResolvedValue(false) }
@@ -60,14 +62,14 @@ describe('CreateProposalUseCase autonomous mode hook', () => {
     await closed.useCase.execute(approve)
     expect(created(closed.repo)).toMatchObject({ shadowAuto: true, runAt: null })
 
-    const opened = build(on(['journal.approve']))
+    const opened = build(on(['miniapp.install']))
     await opened.useCase.execute(approve)
-    expect(created(opened.repo).runAt).toEqual(new Date(NOW.getTime() + 15 * 60_000))
+    expect(created(opened.repo).runAt).toEqual(new Date(NOW.getTime() + 120 * 60_000))
   })
 
   test('mode on: a user proposal never gets a window and has no shadow', async () => {
     const { repo, useCase } = build(on(['journal.approve']))
-    await useCase.execute({ ...approve, origin: 'user', requestedBy: 'u1' })
+    await useCase.execute({ ...approve, kind: 'journal.approve', payload: { entry_ids: ['entry-1'] }, origin: 'user', requestedBy: 'u1' })
     expect(created(repo)).toMatchObject({ shadowAuto: false, runAt: null })
   })
 

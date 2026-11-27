@@ -99,6 +99,7 @@ export const TELEGRAM_TEXT = {
   autopilotNotScheduled: 'Việc này không còn chờ tự chạy.',
   autopilotStopped: 'Đã dừng tự vận hành. Các việc đang chờ chuyển về chờ duyệt.',
   autopilotOff: 'Tự vận hành đang tắt.',
+  featureNotOpen: 'Tính năng này chưa mở.',
   autopilotNotAllowed: 'Chỉ trưởng HTX hoặc cán bộ kỹ thuật được dùng lệnh này.',
   campaignApproved: (r: { executed: number; waitingHigh: number; forwarded: number; failed: number }) =>
     `Đã duyệt chiến dịch: ${r.executed} việc đã chạy, ${r.waitingHigh} việc chờ xác nhận riêng, ${r.forwarded} việc chuyển người đủ quyền.` +

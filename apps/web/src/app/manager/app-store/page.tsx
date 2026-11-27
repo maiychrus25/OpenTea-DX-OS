@@ -8,6 +8,7 @@ import { loadAppFeed } from '@/lib/apps/feed-loader'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
 import { PrismaAppStoreRepository } from '@/infrastructure/db/repositories/prisma-app-store-repository'
 import { requireTenant } from '@/lib/api/tenant'
+import { isLabsEnabled } from '@/lib/labs'
 import { AppStoreClient } from './_components/AppStoreClient'
 
 export const metadata = { title: 'Kho ứng dụng' }
@@ -21,5 +22,5 @@ export default async function ManagerAppStorePage() {
 
   const tenant = await requireTenant()
   const initial = await new AppStoreUseCase(new PrismaAppStoreRepository(), { apps: new PrismaInstalledAppRepository(), loadFeed: loadAppFeed }).list(tenant.htxCode)
-  return <AppStoreClient initial={initial} />
+  return <AppStoreClient initial={initial} labs={isLabsEnabled()} />
 }

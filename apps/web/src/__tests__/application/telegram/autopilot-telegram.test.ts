@@ -90,6 +90,16 @@ function say(text: string, from = TG_MANAGER): TelegramUpdateInput {
   return { update_id: ++updateId, message: { chat: { id: from, type: 'private' }, from: { id: from }, text } }
 }
 
+// The frozen feature under test runs only with the labs switch on (ADR 0005).
+const previousLabs = process.env.DXOS_LABS
+beforeEach(() => {
+  process.env.DXOS_LABS = '1'
+})
+afterEach(() => {
+  if (previousLabs === undefined) delete process.env.DXOS_LABS
+  else process.env.DXOS_LABS = previousLabs
+})
+
 describe('Chặn and Xem (C5)', () => {
   test('Chặn before the run blocks it, edits the message to the normal one and counts as manager activity', async () => {
     const { handler, autopilot, proposalMessages } = build()
@@ -160,6 +170,15 @@ describe('/dung and /tuvanhanh (C5)', () => {
     expect((await handler.handle(say('/dung'))).replies[0]).toMatchObject({ text: TELEGRAM_TEXT.autopilotStopped })
     expect(autopilot.stop).toHaveBeenCalledWith('TC', 'mgr')
     expect(autopilot.touchManagerActivity).toHaveBeenCalled()
+  })
+
+  test('/tuvanhanh says the feature is not open when labs is off, while /dung still stops the mode', async () => {
+    delete process.env.DXOS_LABS
+    const { handler, autopilot } = build()
+    expect((await handler.handle(say('/tuvanhanh'))).replies[0]).toMatchObject({ text: 'Tính năng này chưa mở.' })
+    expect(autopilot.status).not.toHaveBeenCalled()
+    expect((await handler.handle(say('/dung'))).replies[0]).toMatchObject({ text: TELEGRAM_TEXT.autopilotStopped })
+    expect(autopilot.stop).toHaveBeenCalledTimes(1)
   })
 
   test('with the mode already off it says so', async () => {

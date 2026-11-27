@@ -293,3 +293,11 @@ CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON pla
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
 CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON platform.staff_attendance
   FOR EACH ROW EXECUTE FUNCTION audit.capture_row();
+
+-- Food safety and money are never autonomous (ADR 0005): drop stale unlocks.
+-- Only money app kinds were unlockable among `app.%` kinds (the others are auto), so every `app.%` entry is a money kind.
+UPDATE platform.autopilot
+   SET unlocked_kinds = array(SELECT k FROM unnest(unlocked_kinds) AS k
+                              WHERE k NOT IN ('harvest.approve', 'journal.approve') AND k NOT LIKE 'app.%')
+ WHERE unlocked_kinds && ARRAY['harvest.approve', 'journal.approve']
+    OR EXISTS (SELECT 1 FROM unnest(unlocked_kinds) AS k WHERE k LIKE 'app.%');

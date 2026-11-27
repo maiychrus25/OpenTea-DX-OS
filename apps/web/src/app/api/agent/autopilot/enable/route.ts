@@ -10,6 +10,7 @@ import { MAX_DAILY_CAP } from '@/domain/agent/autopilot'
 import { ForbiddenError } from '@/domain/errors'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { labsOnly } from '@/lib/labs'
 
 const enableSchema = z.object({
   unlocked_kinds: z.array(z.string().min(1).max(128)).max(20),
@@ -45,4 +46,4 @@ async function postEnableAutopilot(request: Request) {
   }
 }
 
-export const POST = withErrorHandler(postEnableAutopilot)
+export const POST = withErrorHandler(labsOnly(postEnableAutopilot))

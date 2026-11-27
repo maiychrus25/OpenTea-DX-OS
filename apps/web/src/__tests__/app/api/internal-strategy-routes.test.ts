@@ -51,6 +51,16 @@ function post(body: unknown) {
 }
 const valid = { season: '2026-Q4', goals: [{ key: 'yield_kg', target: 1050 }], priorities: ['Tăng Sản lượng'], initiatives: [], run_id: null }
 
+// The frozen feature under test runs only with the labs switch on (ADR 0005).
+const previousLabs = process.env.DXOS_LABS
+beforeEach(() => {
+  process.env.DXOS_LABS = '1'
+})
+afterEach(() => {
+  if (previousLabs === undefined) delete process.env.DXOS_LABS
+  else process.env.DXOS_LABS = previousLabs
+})
+
 describe('POST /api/internal/agent/strategy/plans', () => {
   beforeEach(() => {
     jest.clearAllMocks()

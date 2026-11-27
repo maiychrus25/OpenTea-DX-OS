@@ -434,6 +434,7 @@ def test_announce_answer_is_the_data_object():
 
 
 def test_a12_runs_every_cycle_in_the_agent_loop(monkeypatch):
+    monkeypatch.setenv("DXOS_LABS", "1")  # frozen feature (ADR 0005): runs only with the labs switch on
     calls: list[str] = []
     local_model = ReplayProvider(fixtures={"default": {"summary_vi": "x"}})
     local_model.name = "ollama"

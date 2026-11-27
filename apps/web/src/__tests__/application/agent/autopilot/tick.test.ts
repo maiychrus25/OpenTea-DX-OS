@@ -2,15 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-// Side effects of the harvest action are replaced by recording fakes; the decision and the tick run for real.
-jest.mock('@/infrastructure/db/notification/prisma-notification-repository', () => ({ PrismaNotificationRepository: jest.fn() }))
-jest.mock('@/infrastructure/db/farm/PrismaParcelRepository', () => ({ PrismaParcelRepository: jest.fn() }))
-jest.mock('@/infrastructure/db/journal/PrismaJournalRepository', () => ({ PrismaJournalRepository: jest.fn() }))
-jest.mock('@/lib/api/tenant-guard', () => ({ TenantGuard: jest.fn(() => ({ parcel: jest.fn(async () => undefined) })) }))
-jest.mock('@/application/farm/approve-harvest-usecase', () => {
-  const approve = jest.fn(async () => ({ id: 'parcel-1', status: 'HARVEST_APPROVED' }))
-  return { ApproveHarvestUseCase: jest.fn(() => ({ execute: approve })), __approve: approve }
-})
+// Side effects of the install action are replaced by recording fakes; the decision and the tick run for real.
+jest.mock('@/infrastructure/db/appbuilder/PrismaAppBuildRepository', () => ({
+  PrismaAppBuildRepository: jest.fn(() => ({ markInstalledByApp: jest.fn(async () => undefined), latestStoreRequestId: jest.fn(async () => 'req-1') })),
+}))
+jest.mock('@/infrastructure/db/repositories/prisma-app-store-repository', () => ({ PrismaAppStoreRepository: jest.fn() }))
+jest.mock('@/application/appbuilder/install-check', () => ({ assertInstallable: jest.fn(async () => undefined), assertRemovable: jest.fn() }))
+jest.mock('@/application/apps/app-store.usecase', () => ({ AppStoreUseCase: jest.fn(() => ({ requestChange: jest.fn(async () => 'PENDING') })) }))
 
 import { DecideProposalUseCase } from '@/application/agent/DecideProposalUseCase'
 import { RunAutopilotTickUseCase, type RunAutopilotTickDeps } from '@/application/agent/autopilot/RunAutopilotTickUseCase'
@@ -20,7 +18,7 @@ import type { AutopilotRepository } from '@/domain/agent/ports/AutopilotReposito
 import type { Proposal } from '@/domain/agent/proposal'
 import { DomainError } from '@/domain/errors/DomainError'
 
-const approveHarvest = jest.requireMock('@/application/farm/approve-harvest-usecase').__approve
+const assertInstallable = jest.requireMock('@/application/appbuilder/install-check').assertInstallable
 
 const NOW = new Date('2026-11-27T05:00:00.000Z') // 12:00 in Vietnam
 const HTX = 'TC'
@@ -361,7 +359,7 @@ describe('RunAutopilotTickUseCase', () => {
     test('a proposal that stopped being eligible is given back, not run', async () => {
       const { fake, tick, decide } = setup()
       const user = fake.add({ origin: 'user' })
-      const unlockable = fake.add({ kind: 'journal.approve', payload: { entry_ids: ['e'] } }) // not unlocked
+      const unlockable = fake.add({ kind: 'miniapp.install', payload: { app_id: 'tea-shop' } }) // not unlocked
       expect(await tick.execute(HTX)).toMatchObject({ ran: 0, returned: 2 })
       expect(decide).not.toHaveBeenCalled()
       expect(fake.rows.get(user)!.proposal.runAt).toBeNull()
@@ -370,10 +368,19 @@ describe('RunAutopilotTickUseCase', () => {
 
     test('an unlocked kind still runs', async () => {
       const { fake, tick, decide } = setup()
-      fake.config = { ...fake.config, unlockedKinds: ['journal.approve'] }
-      fake.add({ kind: 'journal.approve', payload: { entry_ids: ['e'] } })
+      fake.config = { ...fake.config, unlockedKinds: ['miniapp.install'] }
+      fake.add({ kind: 'miniapp.install', payload: { app_id: 'tea-shop' } })
       expect((await tick.execute(HTX)).ran).toBe(1)
       expect(decide).toHaveBeenCalledTimes(1)
+    })
+
+    test('a harvest or journal approval never runs, even if a stale unlock names it', async () => {
+      const { fake, tick, decide } = setup()
+      fake.config = { ...fake.config, unlockedKinds: ['harvest.approve', 'journal.approve'] }
+      fake.add({ kind: 'harvest.approve', risk: 'high', payload: { parcel_id: 'parcel-1' } })
+      fake.add({ kind: 'journal.approve', payload: { entry_ids: ['e'] } })
+      expect(await tick.execute(HTX)).toMatchObject({ ran: 0, returned: 2 })
+      expect(decide).not.toHaveBeenCalled()
     })
   })
 
@@ -444,8 +451,8 @@ describe('the tick through the real DecideProposalUseCase', () => {
 
   test('an auto-run is audited as autopilot:<agent> with who enabled the mode (test 24)', async () => {
     const fake = new FakeAutopilot()
-    fake.add({ agent: 'harvest-ready', kind: 'harvest.approve', risk: 'high', payload: { parcel_id: 'parcel-1' } })
-    fake.config = { ...fake.config, unlockedKinds: ['harvest.approve'] }
+    fake.add({ agent: 'harvest-ready', kind: 'miniapp.install', risk: 'high', payload: { app_id: 'tea-shop' } })
+    fake.config = { ...fake.config, unlockedKinds: ['miniapp.install'] }
     const { repo, useCase } = realDecide(fake)
     expect(await tickWith(fake, useCase).execute(HTX)).toMatchObject({ ran: 1 })
     const autopilot = { actor: 'autopilot:harvest-ready', enabledBy: 'mgr-1' }
@@ -457,17 +464,17 @@ describe('the tick through the real DecideProposalUseCase', () => {
     expect(repo.markExecuted).toHaveBeenCalledWith(expect.any(String), expect.anything(), expect.objectContaining({ autopilot }))
   })
 
-  test('a harvest in its withdrawal period is refused by the use case and not executed (test 23)', async () => {
+  test('an install the use case refuses is marked failed and not executed (test 23)', async () => {
     const fake = new FakeAutopilot()
-    fake.add({ agent: 'harvest-ready', kind: 'harvest.approve', risk: 'high', payload: { parcel_id: 'parcel-1' } })
-    fake.config = { ...fake.config, unlockedKinds: ['harvest.approve'] }
-    approveHarvest.mockRejectedValueOnce(new DomainError('Chưa qua thời gian cách ly. An toàn thu hoạch từ ngày 28/11/2026'))
+    fake.add({ agent: 'harvest-ready', kind: 'miniapp.install', risk: 'high', payload: { app_id: 'tea-shop' } })
+    fake.config = { ...fake.config, unlockedKinds: ['miniapp.install'] }
+    assertInstallable.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new DomainError('Mini-app chưa sẵn sàng để cài'))
     const { repo, useCase } = realDecide(fake)
     const result = await tickWith(fake, useCase).execute(HTX)
     expect(result).toMatchObject({ ran: 0, failed: 1 })
     expect(repo.markFailed).toHaveBeenCalledWith(
       expect.any(String),
-      'Chưa qua thời gian cách ly. An toàn thu hoạch từ ngày 28/11/2026',
+      'Mini-app chưa sẵn sàng để cài',
       expect.objectContaining({ autopilot: { actor: 'autopilot:harvest-ready', enabledBy: 'mgr-1' } })
     )
     expect(repo.markExecuted).not.toHaveBeenCalled()
