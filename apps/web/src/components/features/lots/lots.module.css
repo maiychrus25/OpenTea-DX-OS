@@ -20,7 +20,7 @@
 .checkLabel input:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
 .checkLabel input:disabled + span { opacity: 0.6; }
 
-input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+.form input:focus-visible, .form select:focus-visible, .form textarea:focus-visible, .table input:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
 
 @media (max-width: 480px) {
   .formGrid { grid-template-columns: minmax(0, 1fr); }

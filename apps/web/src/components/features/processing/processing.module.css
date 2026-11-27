@@ -30,7 +30,7 @@
 .lightBlock { background: var(--color-danger-subtle); color: var(--color-danger); }
 .lightWait { background: var(--color-surface-sunken); color: var(--color-ink-secondary); }
 
-input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+.form input:focus-visible, .form select:focus-visible, .form textarea:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
 
 @media (max-width: 900px) {
   .listLayout { grid-template-columns: minmax(0, 1fr); }
