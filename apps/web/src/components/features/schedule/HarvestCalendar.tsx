@@ -12,6 +12,7 @@ import styles from './HarvestCalendar.module.css'
 import { Button } from '@/components/ui/Button/Button'
 import type { HarvestEvent } from '@/domain/farm/entities/HarvestEvent'
 import { ApproveHarvestButton } from './ApproveHarvestButton'
+import { WeighingReconciliation } from '@/components/features/weighing/WeighingReconciliation'
 import { addDays, dayStart, spansOf, weekBars, weeksOf, type SpanKind } from './calendar-model'
 
 type ScheduleEvent = HarvestEvent & { parcelStatus?: string; canApprove?: boolean }
@@ -249,6 +250,7 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
                 )}
                 {selected.event.safeHarvestDate && <div><dt>Ngày được hái</dt><dd>{fullDay(selected.event.safeHarvestDate)}</dd></div>}
               </dl>
+              {userRole !== 'FARMER' && selected.event.harvestedAt && <WeighingReconciliation cycleId={selected.event.cycleId} />}
               {isManager && !selected.event.harvestedAt && <Button variant="secondary" onClick={() => edit(selected.event)}>Đổi ngày</Button>}
               {userRole !== 'FARMER' && (selected.event as ScheduleEvent).parcelStatus === 'TENDING' && !selected.event.harvestedAt && (
                 <ApproveHarvestButton parcelId={selected.event.parcelId} parcelCode={selected.event.parcelName ?? ''}

@@ -60,6 +60,21 @@
 .receiptRows > div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--color-border); padding: 3px 0; }
 .receiptRows dt, .receiptRows dd { margin: 0; }
 
+.filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.filters > label { flex: 1 1 160px; min-width: 0; }
+.chip { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; }
+.csvRow { font-size: 13.5px; }
+.link { color: var(--color-primary); font-weight: 600; text-decoration: none; }
+.link:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; border-radius: 4px; }
+.center { display: flex; justify-content: center; }
+.tableScroll { overflow-x: auto; max-width: 100%; }
+.table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.table th { padding: 10px 12px; text-align: left; background: var(--color-table-head); color: var(--color-ink-secondary); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.table td { padding: 10px 12px; border-bottom: 1px solid var(--color-border-row); vertical-align: top; overflow-wrap: anywhere; }
+.reconcile { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--color-info-subtle); color: var(--color-ink-primary); font-size: 14px; }
+.reconcile p { margin: 0; }
+.reconcile p + p { margin-top: 6px; }
+
 @media (max-width: 900px) {
   .station { grid-template-columns: minmax(0, 1fr); }
 }
