@@ -13,6 +13,7 @@ import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
 import { GatewayJournalReader } from '@/infrastructure/core/gateway-journal-reader'
 import { ListJournalEntriesUseCase } from '@/application/journal/ListJournalEntriesUseCase'
 import { CreateJournalEntryUseCase } from '@/application/journal/CreateJournalEntryUseCase'
+import { PrismaPesticideRepository } from '@/infrastructure/db/pesticide/PrismaPesticideRepository'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
 import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHouseholdUseCase'
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
@@ -99,19 +100,25 @@ async function postJournalEntry(request: Request) {
 
   const repo = new PrismaJournalRepository()
   const parcelRepo = new PrismaParcelRepository()
-  const useCase = new CreateJournalEntryUseCase(repo, parcelRepo)
+  const useCase = new CreateJournalEntryUseCase(repo, parcelRepo, new PrismaPesticideRepository())
+  const submittedById = (session.user as any).id ?? ''
+  // A replay of an offline submission returns the first entry instead of making a second.
+  const existing = await useCase.findExisting({ submitted_by_id: submittedById, client_id: parse.data.client_id })
+  if (existing) return NextResponse.json({ data: existing }, { status: 200 })
+
   const data = await useCase.execute({
     parcel_id: parse.data.parcel_id,
     entry_date: new Date(parse.data.entry_date),
     activity_type: parse.data.activities[0]?.activity_type ?? 'OTHER',
     performed_by: (session.user as any).name ?? 'Unknown',
-    submitted_by_id: (session.user as any).id ?? '',
+    submitted_by_id: submittedById,
     submitted_role: role.toUpperCase() as 'OFFICER' | 'FARMER',
     activities: parse.data.activities,
     observation: parse.data.observation,
     photo_url: parse.data.photo_url,
     photo_minio_key: parse.data.photo_minio_key,
-  }, role.toUpperCase(), role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined)
+    client_id: parse.data.client_id,
+  }, role.toUpperCase(), role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined, tenant.htxProfileId)
   
   return NextResponse.json({ data }, { status: 201 })
 }

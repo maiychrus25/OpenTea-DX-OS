@@ -105,13 +105,13 @@ describe('journal.edit', () => {
   it('updates the note through UpdateJournalEntryUseCase as the farmer of the household', async () => {
     const result = await a().execute({ entry_id: 'e1', field: 'observation', value: 'Đã tưới' }, farmer, deps, NOW)
     expect(mockFakes.scoped).toHaveBeenCalledWith(['e1'], 'htx-tc')
-    expect(mockFakes.update).toHaveBeenCalledWith('e1', { observation: 'Đã tưới' }, 'FARMER', 'hh1')
+    expect(mockFakes.update).toHaveBeenCalledWith('e1', { observation: 'Đã tưới' }, 'FARMER', 'hh1', 'htx-tc')
     expect(result).toBe('Đã cập nhật nhật ký.')
   })
 
   it('updates the date as a date', async () => {
     await a().execute({ entry_id: 'e1', field: 'entry_date', value: '25/11/2026' }, farmer, deps, NOW)
-    expect(mockFakes.update).toHaveBeenCalledWith('e1', { entry_date: new Date('2026-11-25T00:00:00.000Z') }, 'FARMER', 'hh1')
+    expect(mockFakes.update).toHaveBeenCalledWith('e1', { entry_date: new Date('2026-11-25T00:00:00.000Z') }, 'FARMER', 'hh1', 'htx-tc')
   })
 
   it('answers not found for an entry of another cooperative and writes nothing (Review Focus 1)', async () => {

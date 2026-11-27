@@ -6,6 +6,7 @@ export interface JournalActivityData {
   product_name?: string
   dosage?: string
   withdrawal_days?: number
+  pesticide_product_id?: string
 }
 
 export type JournalReviewDecision = 'REJECTED' | 'REQUEST_CHANGES'
@@ -16,6 +17,8 @@ export interface JournalEntryData {
   household_id?: string
   parcel_code?: string
   household_keycloak_user_id?: string | null
+  cycle_id?: string | null
+  client_id?: string | null
   entry_date: Date
   activity_type: string
   performed_by: string
@@ -40,6 +43,7 @@ export interface JournalEntryData {
     dosage: string | null
     withdrawal_days: number | null
     safe_harvest_date: Date | null
+    pesticide_product_id?: string | null
   }[]
 }
 
@@ -54,6 +58,8 @@ export interface CreateJournalData {
   observation?: string
   photo_url?: string
   photo_minio_key?: string
+  /** Client-generated uuid; a replay by the same sender returns the first entry. */
+  client_id?: string
 }
 
 export interface JournalFilters {
@@ -70,6 +76,8 @@ export interface JournalPort {
   findAll(filters: JournalFilters): Promise<{ entries: JournalEntryData[]; total: number }>
   findById(id: string): Promise<JournalEntryData | null>
   create(data: CreateJournalData): Promise<JournalEntryData>
+  findByClientId(submittedById: string, clientId: string): Promise<JournalEntryData | null>
+  /** `activities` replaces all of them; `resubmit` sends the entry back to the review queue. */
   update(id: string, data: Partial<CreateJournalData>, resubmit?: boolean): Promise<JournalEntryData>
   delete(id: string): Promise<void>
   batchApprove(entryIds: string[], approvedById: string): Promise<{ approved: number; failed: string[] }>

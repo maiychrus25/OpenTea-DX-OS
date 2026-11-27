@@ -4,10 +4,11 @@
 import { z } from 'zod'
 
 const journalActivitySchema = z.object({
-  activity_type: z.enum(['SOWING', 'FERTILIZING', 'SPRAYING', 'IRRIGATION', 'HARVEST', 'OTHER']),
+  activity_type: z.enum(['SOWING', 'FERTILIZING', 'SPRAYING', 'IRRIGATION', 'HARVEST', 'PRUNING', 'OTHER']),
   product_name: z.string().max(200).optional(),
   dosage: z.string().max(100).optional(),
   withdrawal_days: z.number().int().min(0).optional(),
+  pesticide_product_id: z.string().min(1).max(100).optional(),
 })
 
 export const journalCreateSchema = z.object({
@@ -18,9 +19,10 @@ export const journalCreateSchema = z.object({
   activities: z.array(journalActivitySchema).min(1, 'Cần ít nhất 1 hoạt động'),
   photo_url: z.string().optional(),
   photo_minio_key: z.string().optional(),
+  client_id: z.string().uuid().optional(),
 })
 
-export const journalUpdateSchema = journalCreateSchema.partial()
+export const journalUpdateSchema = journalCreateSchema.partial().extend({ submit: z.boolean().optional() })
 
 export const journalBatchApproveSchema = z.object({
   entry_ids: z.array(z.string().min(1)).min(1, 'Cần ít nhất 1 mục').max(50, 'Tối đa 50 mục mỗi lần duyệt'),

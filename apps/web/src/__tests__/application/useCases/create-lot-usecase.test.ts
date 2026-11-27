@@ -33,6 +33,7 @@ describe('CreateLotUseCase', () => {
       findAll: jest.fn(),
       findById: jest.fn(),
       create: jest.fn(),
+      findByClientId: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
       batchApprove: jest.fn(),

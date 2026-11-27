@@ -8,6 +8,8 @@ import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
 import { journalUpdateSchema } from '@/lib/validations/journal.schema'
 import { PrismaJournalRepository } from '@/infrastructure/db/journal/PrismaJournalRepository'
+import { PrismaPesticideRepository } from '@/infrastructure/db/pesticide/PrismaPesticideRepository'
+import { assertJournalPhotoKey } from '@/domain/document/document-namespace'
 import { UpdateJournalEntryUseCase } from '@/application/journal/UpdateJournalEntryUseCase'
 import { DeleteJournalEntryUseCase } from '@/application/journal/DeleteJournalEntryUseCase'
 import { GetFarmerHouseholdUseCase } from '@/application/farm/GetFarmerHouseholdUseCase'
@@ -32,7 +34,8 @@ async function putJournalEntry(request: Request, context: unknown) {
 
   const { params } = context as { params: Promise<{ id: string }> }
   const { id } = await params
-  await new TenantGuard(await requireTenant()).journalEntry(id)
+  const tenant = await requireTenant()
+  await new TenantGuard(tenant).journalEntry(id)
 
   const body = await request.json().catch(() => ({}))
   const parse = journalUpdateSchema.safeParse(body)
@@ -41,9 +44,18 @@ async function putJournalEntry(request: Request, context: unknown) {
   }
 
   const repo = new PrismaJournalRepository()
-  const useCase = new UpdateJournalEntryUseCase(repo)
+  assertJournalPhotoKey(parse.data.photo_minio_key, tenant.htxCode)
+  const useCase = new UpdateJournalEntryUseCase(repo, new PrismaPesticideRepository())
   const householdId = role === 'farmer' ? await getFarmerHouseholdId((session.user as any).id) : undefined
-  const data = await useCase.execute(id, parse.data, role.toUpperCase(), householdId)
+  const { entry_date, ...rest } = parse.data
+  const data = await useCase.execute(
+    id,
+    { ...rest, ...(entry_date ? { entry_date: new Date(entry_date) } : {}) },
+    role.toUpperCase(),
+    householdId,
+    tenant.htxProfileId,
+    { id: tenant.userId, name: (session.user as any).name ?? 'Unknown' }
+  )
   return NextResponse.json({ data })
 }
 

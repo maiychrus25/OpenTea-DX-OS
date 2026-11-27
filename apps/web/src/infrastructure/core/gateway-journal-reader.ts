@@ -6,8 +6,8 @@ import { CoreGatewayClient, parseCoreTimestamp } from './core-gateway.client'
 
 const ENTRY_FIELDS = `
   id parcel_id entry_date activity_type performed_by submitted_by_id submitted_role status approved_by_id approved_at
-  review_note notes weather_temperature weather_precipitation weather_humidity weather_condition photo_url photo_minio_key created_at
-  activities { id activity_detail product_name dosage withdrawal_days safe_harvest_date }
+  review_note notes cycle_id client_id weather_temperature weather_precipitation weather_humidity weather_condition photo_url photo_minio_key created_at
+  activities { id activity_detail product_name dosage withdrawal_days safe_harvest_date pesticide_product_id }
   parcel { household_id parcel_code household { keycloak_user_id } }
 `
 
@@ -24,6 +24,8 @@ interface EntryRow {
   approved_at: string | null
   review_note?: string | null
   notes: string | null
+  cycle_id?: string | null
+  client_id?: string | null
   weather_temperature: number | null
   weather_precipitation: number | null
   weather_humidity: number | null
@@ -38,6 +40,7 @@ interface EntryRow {
     dosage: string | null
     withdrawal_days: number | null
     safe_harvest_date: string | null
+    pesticide_product_id?: string | null
   }[]
   parcel: { household_id: string; parcel_code: string; household: { keycloak_user_id: string | null } | null } | null
 }
@@ -59,6 +62,8 @@ function toJournalEntry(row: EntryRow): JournalEntryData {
     approved_at: row.approved_at ? parseCoreTimestamp(row.approved_at) : null,
     review_note: row.review_note ?? null,
     notes: row.notes,
+    cycle_id: row.cycle_id ?? null,
+    client_id: row.client_id ?? null,
     weather_temperature: row.weather_temperature,
     weather_precipitation: row.weather_precipitation,
     weather_humidity: row.weather_humidity,
@@ -73,6 +78,7 @@ function toJournalEntry(row: EntryRow): JournalEntryData {
       dosage: activity.dosage,
       withdrawal_days: activity.withdrawal_days,
       safe_harvest_date: activity.safe_harvest_date ? parseCoreTimestamp(activity.safe_harvest_date) : null,
+      pesticide_product_id: activity.pesticide_product_id ?? null,
     })),
   }
 }

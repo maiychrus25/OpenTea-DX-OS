@@ -152,6 +152,7 @@ describe('journal.create', () => {
       { value: 'IRRIGATION', label: 'Tưới tiêu' },
       { value: 'HARVEST', label: 'Thu hoạch' },
       { value: 'SOWING', label: 'Trồng mới' },
+      { value: 'PRUNING', label: 'Đốn chè' },
       { value: 'OTHER', label: 'Khác' },
     ])
   })
@@ -213,7 +214,8 @@ describe('journal.create', () => {
         photo_minio_key: payload.photo_key,
       }),
       'FARMER',
-      'hh_tc_1'
+      'hh_tc_1',
+      'htx-tc'
     )
     expect(result).toBe('Đã ghi nhật ký. Nhật ký đang chờ duyệt.')
   })
