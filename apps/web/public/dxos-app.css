@@ -50,6 +50,12 @@
   --color-status-harvest-approved: #c2410c;
   --color-status-harvested: #2563eb;
   --color-status-draft: #6b7280;
+  --color-series-1: #257de0;
+  --color-series-2: #008a17;
+  --color-series-3: #6a4ce2;
+  --color-series-4: #f2a600;
+  --color-series-5: #00b894;
+  --color-series-6: #f47230;
 
   /* Semantic Feedback */
   --color-success: #15803d;
@@ -229,6 +235,12 @@
     --color-status-harvest-approved: #fb923c;
     --color-status-harvested: #60a5fa;
     --color-status-draft: #a3b1a9;
+    --color-series-1: #338ced;
+    --color-series-2: #0aac23;
+    --color-series-3: #9887ef;
+    --color-series-4: #d28e05;
+    --color-series-5: #00a888;
+    --color-series-6: #e76624;
     --color-success: #4ade80;
     --color-warning: #fbbf24;
     --color-danger: #f87171;
@@ -299,6 +311,12 @@
   --color-status-harvest-approved: #fb923c;
   --color-status-harvested: #60a5fa;
   --color-status-draft: #a3b1a9;
+  --color-series-1: #338ced;
+  --color-series-2: #0aac23;
+  --color-series-3: #9887ef;
+  --color-series-4: #d28e05;
+  --color-series-5: #00a888;
+  --color-series-6: #e76624;
   --color-success: #4ade80;
   --color-warning: #fbbf24;
   --color-danger: #f87171;

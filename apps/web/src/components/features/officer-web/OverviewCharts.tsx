@@ -1,68 +1,90 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import React, { useId } from 'react'
+import React from 'react'
 import { ACTIVITY_LABELS, type weeklyActivity } from './overview-data'
 import styles from './overview.module.css'
 
-/** Inflow counts, not a reconstruction of historical totals. The caption states the cohort. */
+/** New items per day over the week, oldest first. The caption states what is counted. */
 export function OverviewSparkline({ values, label }: { values: number[]; label: string }) {
-  if (!values.some(Boolean)) return null
+  // one or two busy days say nothing about a week
+  if (values.filter(Boolean).length < 3) return null
   const max = Math.max(1, ...values)
-  const points = values.map((value, index) => `${4 + index * 12},${28 - value / max * 24}`).join(' ')
   return (
     <span className={styles.sparkline} title={`${label}: ${values.join(', ')}`}>
-      <svg viewBox="0 0 80 32" role="img" aria-label={`${label}, từ cũ đến mới: ${values.join(', ')}`}>
-        <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" />
-        {values.map((value, index) => <circle key={index} cx={4 + index * 12} cy={28 - value / max * 24} r="2" fill="currentColor"><title>{`Ngày ${index + 1}: ${value}`}</title></circle>)}
+      <svg viewBox="0 0 68 28" role="img" aria-label={`${label}, từ cũ đến mới: ${values.join(', ')}`}>
+        {values.map((value, index) => {
+          const height = value ? Math.max(4, (value / max) * 26) : 2
+          return (
+            <rect key={index} x={index * 10} y={28 - height} width="7" height={height} rx="2" className={value ? styles.sparkBar : styles.sparkEmpty}>
+              <title>{`Ngày ${index + 1}: ${value}`}</title>
+            </rect>
+          )
+        })}
       </svg>
     </span>
   )
 }
 
+/** Each activity keeps its own colour, whatever else is on screen. Stacked bottom to top in this order. */
+const SERIES = ['IRRIGATION', 'FERTILIZING', 'SPRAYING', 'HARVEST', 'SOWING', 'OTHER']
+const COLORS = ['var(--color-series-1)', 'var(--color-series-2)', 'var(--color-series-3)', 'var(--color-series-4)', 'var(--color-series-5)', 'var(--color-series-6)']
+const colorOf = (type: string) => COLORS[SERIES.indexOf(type)]
+
+/** A bar segment with rounded top corners, for the top of a stack. */
+const rounded = (x: number, y: number, width: number, height: number) => {
+  const r = Math.min(4, height)
+  return `M${x},${y + height}V${y + r}Q${x},${y} ${x + r},${y}H${x + width - r}Q${x + width},${y} ${x + width},${y + r}V${y + height}Z`
+}
+
 export function OverviewActivityChart({ weeks }: { weeks: ReturnType<typeof weeklyActivity> }) {
-  const id = useId().replace(/:/g, '')
-  const types = Object.keys(ACTIVITY_LABELS).filter(type => weeks.some(week => week.counts[type] > 0))
-  const max = Math.max(1, ...weeks.map(week => week.total))
+  const types = SERIES.filter(type => weeks.some(week => week.counts[type] > 0))
   if (!types.length) return <p className={styles.empty}>Chưa có hoạt động canh tác trong 30 ngày.</p>
+  const step = Math.max(1, Math.ceil(Math.max(...weeks.map(week => week.total)) / 4))
+  const top = step * 4
+  const y = (value: number) => 150 - (value / top) * 132
+  const slot = 408 / weeks.length
+  const width = Math.min(34, slot * 0.5)
+
   return (
     <div className={styles.chartBody}>
-      <p className={styles.caption}>Số nhật ký theo ngày hoạt động · mọi trạng thái</p>
-      <svg className={styles.chart} viewBox="0 0 440 164" role="img" aria-label="Số nhật ký theo tuần và loại hoạt động; số liệu chi tiết bên dưới">
-        <defs>
-          {types.map(type => {
-            const index = Object.keys(ACTIVITY_LABELS).indexOf(type)
-            return <pattern key={type} id={`${id}-${type}`} width="8" height="8" patternUnits="userSpaceOnUse" patternTransform={`rotate(${index * 30})`}>
-              <rect width="8" height="8" className={styles.plotFill} />
-              <path d={index % 2 ? 'M0 0V8 M4 0V8' : 'M0 0V8'} className={styles.plotTexture} strokeWidth="2" />
-            </pattern>
-          })}
-        </defs>
-        {[0, max].map(value => <g key={value}>
-          <line x1="28" x2="432" y1={128 - value / max * 100} y2={128 - value / max * 100} className={styles.gridLine} />
-          <text x="24" y={132 - value / max * 100} textAnchor="end">{value}</text>
-        </g>)}
-        {weeks.map((week, index) => {
-          let offset = 0
-          return <g key={week.label}>
-            {types.map(type => {
-              const count = week.counts[type]
-              const height = count / max * 100
-              const y = 128 - offset - height
-              offset += height
-              return count > 0 ? <rect key={type} x={42 + index * 79} y={y} width="40" height={height} fill={`url(#${id}-${type})`} className={styles.segment} tabIndex={0} aria-label={`${week.label}: ${ACTIVITY_LABELS[type]} ${count}`}>
-                <title>{`${week.label} · ${ACTIVITY_LABELS[type]}: ${count} nhật ký`}</title>
-              </rect> : null
-            })}
-            <text x={62 + index * 79} y={120 - week.total / max * 100} textAnchor="middle" className={styles.total}>{week.total}</text>
-            <text x={62 + index * 79} y="149" textAnchor="middle">{week.label}</text>
+      <p className={styles.caption}>Số nhật ký theo tuần, gồm mọi trạng thái</p>
+      <svg className={styles.chart} viewBox="0 0 440 172" role="img" aria-label="Số nhật ký theo tuần và loại hoạt động; số liệu chi tiết bên dưới">
+        {[0, 1, 2, 3, 4].map(line => (
+          <g key={line}>
+            <line x1="26" x2="434" y1={y(line * step)} y2={y(line * step)} className={styles.gridLine} />
+            <text x="18" y={y(line * step) + 3} textAnchor="end" className={styles.tick}>{line * step}</text>
           </g>
+        ))}
+        {weeks.map((week, index) => {
+          const x = 28 + index * slot + (slot - width) / 2
+          const parts = types.filter(type => week.counts[type] > 0)
+          let done = 0
+          return (
+            <g key={week.label}>
+              {parts.map((type, i) => {
+                const count = week.counts[type]
+                const base = y(done)
+                done += count
+                // 2px of the card shows between the segments of a stack
+                const gap = i === 0 ? 0 : 2
+                const height = Math.max(1, base - y(done) - gap)
+                const props = { key: type, fill: colorOf(type), className: styles.segment, tabIndex: 0, 'aria-label': `${week.label}: ${ACTIVITY_LABELS[type]} ${count}` }
+                const title = <title>{`${week.label} · ${ACTIVITY_LABELS[type]}: ${count} nhật ký`}</title>
+                return i === parts.length - 1
+                  ? <path {...props} key={type} d={rounded(x, y(done), width, height)}>{title}</path>
+                  : <rect {...props} key={type} x={x} y={y(done)} width={width} height={height}>{title}</rect>
+              })}
+              {week.total > 0 && <text x={x + width / 2} y={y(week.total) - 5} textAnchor="middle" className={styles.total}>{week.total}</text>}
+              <text x={x + width / 2} y="166" textAnchor="middle" className={styles.tick}>{week.label.slice(0, 5)}</text>
+            </g>
+          )
         })}
       </svg>
       <ul className={styles.legend} aria-label="Loại hoạt động">
         {types.map(type => <li key={type}>
-          <svg viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" fill={`url(#${id}-${type})`} /></svg>
-          {ACTIVITY_LABELS[type]}
+          <i style={{ background: colorOf(type) }} aria-hidden="true" />
+          {ACTIVITY_LABELS[type]} <b>{weeks.reduce((sum, week) => sum + week.counts[type], 0)}</b>
         </li>)}
       </ul>
       <details className={styles.chartData}>

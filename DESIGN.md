@@ -61,6 +61,18 @@ colors:
   status-harvested-dark: "#60a5fa"
   status-draft: "#6b7280"
   status-draft-dark: "#a3b1a9"
+  series-1: "#257de0"
+  series-1-dark: "#338ced"
+  series-2: "#008a17"
+  series-2-dark: "#0aac23"
+  series-3: "#6a4ce2"
+  series-3-dark: "#9887ef"
+  series-4: "#f2a600"
+  series-4-dark: "#d28e05"
+  series-5: "#00b894"
+  series-5-dark: "#00a888"
+  series-6: "#f47230"
+  series-6-dark: "#e76624"
   success: "#15803d"
   success-dark: "#4ade80"
   warning: "#854d0e"
@@ -278,6 +290,7 @@ Token màu nằm trên `:root`. Màu tối nằm trong `@media (prefers-color-sc
 - **Accent lime (#d6f05c):** chỉ dùng cho khối logo trong sidebar và trang đăng nhập.
 - **Nền:** sáng `#f5f7f3`, thẻ `#ffffff`; tối `#0b1712` (xanh rất đậm) và thẻ `#112219`. Sidebar giữ màu xanh đậm ở cả hai chế độ.
 - **Trạng thái thửa (tập đóng):** `status-sowing`, `status-tending`, `status-harvest-approved`, `status-harvested`, `status-draft`. Chỉ dùng cho huy hiệu trạng thái thửa, chữ là `ink-inverse`.
+- **Chuỗi dữ liệu biểu đồ:** `series-1` đến `series-6`, gán cố định theo loại hoạt động (tưới tiêu, bón phân, phun thuốc, thu hái, gieo trồng, khác), luôn kèm chú giải và bảng số liệu. Không dùng cho chữ hay nút.
 - **Phản hồi:** `success`, `warning`, `danger`, `info` dùng làm chữ hoặc biểu tượng trên `*-subtle` hoặc trên thẻ; `danger` và `info` cũng làm nền nút với chữ `ink-inverse`.
 - **Chữ:** `foreground` (ink-primary) cho nội dung, `ink-secondary` cho mô tả, `ink-tertiary` và `muted-foreground` cho chú thích. `ink-inverse` là chữ trên nền màu đặc: trắng ở chế độ sáng, gần đen ở chế độ tối vì nền màu đặc ở chế độ tối sáng hơn.
 
