@@ -4,13 +4,16 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
-import { auth } from '@/auth'
+import { requireTenant } from '@/lib/api/tenant'
+import { ForbiddenError } from '@/domain/errors'
 import { partnerCreateSchema } from '@/lib/validations/partner.schema'
 
 async function getPartners(request: Request) {
+  const { role, htxProfileId } = await requireTenant()
+  if (role !== 'manager' && role !== 'officer') throw new ForbiddenError('Forbidden')
   const url = new URL(request.url)
   const type = url.searchParams.get('type')
-  const where: any = {}
+  const where: any = { htx_profile_id: htxProfileId }
   if (type) where.partner_type = type
 
   const partners = await prisma.partner.findMany({ where, orderBy: { created_at: 'desc' } })
@@ -18,8 +21,8 @@ async function getPartners(request: Request) {
 }
 
 async function postPartner(request: Request) {
-  const session = await auth()
-  if (!session || !session.user) return NextResponse.json({ error: { code: 'UNAUTHORIZED' } }, { status: 401 })
+  const { role, htxProfileId } = await requireTenant()
+  if (role !== 'manager') throw new ForbiddenError('Forbidden')
 
   const body = await request.json().catch(() => ({}))
   const parse = partnerCreateSchema.safeParse(body)
@@ -48,6 +51,7 @@ async function postPartner(request: Request) {
     address: parse.data.address || null,
     lat: lat ?? 0,
     lng: lng ?? 0,
+    htx_profile_id: htxProfileId,
   }})
 
   return NextResponse.json({ data: created })

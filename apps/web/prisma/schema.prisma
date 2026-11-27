@@ -89,6 +89,7 @@ model HtxProfile {
   households    Household[]
   lots          Lot[]
   notifications Notification[]
+  partners      Partner[]
 
   @@map("htx_profiles")
 }
@@ -372,9 +373,13 @@ model Partner {
   lat                 Float
   lng                 Float
   address             String?
+  htx_profile_id      String? // null rows belong to no cooperative and are invisible
   created_at          DateTime    @default(now())
   updated_at          DateTime    @updatedAt
 
+  htx_profile HtxProfile? @relation(fields: [htx_profile_id], references: [id])
+
+  @@index([htx_profile_id])
   @@map("partners")
 }
 
