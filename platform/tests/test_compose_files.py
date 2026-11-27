@@ -38,7 +38,7 @@ def test_user_routes_refuse_agent_telegram_and_staff_tokens():
     for route_id in ("workflow", "disease", "llm-chat"):
         schema = routes[route_id]["plugins"]["openid-connect"]["claim_schema"]
         assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-            "not": {"contains": {"enum": ["agent", "telegram", "staff-sync"]}}
+            "not": {"contains": {"enum": ["agent", "telegram", "staff-sync", "web-service"]}}
         }, route_id
 
 
@@ -72,6 +72,26 @@ def test_telegram_route_needs_the_relay_client_and_role_on_the_internal_port():
     assert schema["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["telegram"]}
     assert route["plugins"]["limit-count"]["key"] == "$http_authorization"
     assert "X-Dxos-Gateway" in route["plugins"]["proxy-rewrite"]["headers"]["set"]
+
+
+def test_web_disease_route_takes_only_the_web_service_client_on_the_internal_port():
+    route = load_routes()["internal-web-disease"]
+    assert route["uri"] == "/api/internal/web/disease/*"
+    assert route["upstream_id"] == "disease" and route["methods"] == ["POST"]
+    assert route["vars"] == [["server_port", "==", "9081"]]
+    schema = route["plugins"]["openid-connect"]["claim_schema"]
+    assert schema["required"] == ["aud", "azp", "realm_access"]
+    assert schema["properties"]["azp"] == {"enum": ["dxos-web-service"]}
+    assert schema["properties"]["aud"]["anyOf"][0] == {"enum": ["dx-os-core"]}
+    assert schema["properties"]["realm_access"]["properties"]["roles"]["contains"] == {"enum": ["web-service"]}
+    assert route["plugins"]["proxy-rewrite"]["regex_uri"] == ["^/api/internal/web/disease/(.*)", "/$1"]
+    assert route["plugins"]["limit-count"]["key"] == "$http_authorization"
+
+
+def test_web_disease_route_is_not_served_on_the_public_port_and_has_no_user_route_twin():
+    routes = load_routes()
+    assert routes["internal-web-disease"]["vars"] == [["server_port", "==", "9081"]]
+    assert routes["disease"]["uri"] == "/api/ai/disease/*" and "web-service" in str(routes["disease"]["plugins"]["openid-connect"]["claim_schema"])
 
 
 def test_agent_route_refuses_telegram_tokens_by_claims():
@@ -249,7 +269,7 @@ def test_mcp_route_takes_only_the_bridge_client_and_no_service_role():
     assert schema["properties"]["azp"] == {"enum": ["dxos-mcp"]}
     assert schema["properties"]["aud"]["anyOf"][0] == {"enum": ["dx-os-core"]}
     assert schema["properties"]["realm_access"]["properties"]["roles"] == {
-        "not": {"contains": {"enum": ["agent", "telegram", "staff-sync"]}}
+        "not": {"contains": {"enum": ["agent", "telegram", "staff-sync", "web-service"]}}
     }
 
 
@@ -317,5 +337,5 @@ def test_only_the_staff_route_is_internal_and_served_on_the_public_port():
     # The staff app runs outside the compose network (D14); the agent and relay routes stay on 9081 only.
     routes = load_routes()
     assert "vars" not in routes["internal-staff"]
-    for route_id in ("internal-agent", "internal-agent-llm", "internal-telegram"):
+    for route_id in ("internal-agent", "internal-agent-llm", "internal-telegram", "internal-web-disease"):
         assert routes[route_id]["vars"] == [["server_port", "==", "9081"]], route_id
