@@ -443,3 +443,37 @@ def test_evidence_for_a_spraying_entry_includes_the_crop_cycle_it_was_checked_ag
     evidence = evidence_for_entries([source])
     assert [row["table"] for row in evidence["rows"]] == ["journal_entries", "parcel_crop_cycles"]
     assert evidence["rows"][1]["id"] == "cc_a3_1"
+
+
+# Phase 1 S1: a spraying with a product outside the pesticide catalogue is never approved by the agent.
+def _catalogue_spray(entry_id: str, product_id) -> dict:
+    entry = _spray_entry("2026-11-19T23:00:00", "2026-12-15T00:00:00", withdrawal=14)
+    entry["id"] = entry_id
+    entry["activities"][0]["pesticide_product_id"] = product_id
+    return entry
+
+
+def test_out_of_catalogue_spraying_is_flagged_and_never_auto_approved():
+    from dxos_agent.agents.journal_review import OUT_OF_CATALOGUE_REASON_VI, is_out_of_catalogue
+
+    assert OUT_OF_CATALOGUE_REASON_VI == "Thuốc ngoài danh mục"
+    assert is_out_of_catalogue(_catalogue_spray("je_x", None))
+    assert not is_out_of_catalogue(_catalogue_spray("je_y", "catex"))
+    # A payload without the field (older gateway shape) is not flagged; other activities are never flagged.
+    assert not is_out_of_catalogue(_spray_entry("2026-11-19T23:00:00", "2026-12-15T00:00:00"))
+    assert not is_out_of_catalogue(_entry("je_f"))
+
+    gateway = FakeGatewayClient([_catalogue_spray("je_x", None), _catalogue_spray("je_y", "catex")])
+    outcome = run_journal_review(gateway, ReplayProvider(fixtures=[]), now=NOW)
+    approved = [p for p in gateway.proposals if p["kind"] == "journal.approve"]
+    assert [p["payload"]["entry_ids"] for p in approved] == [["je_y"]]
+    assert outcome.approved_count == 1 and outcome.rejected_count == 0
+    assert "thuốc ngoài danh mục" in approved[0]["reason_vi"]
+
+
+def test_journal_review_keeps_comparing_with_every_flush_harvest_date():
+    # Parcel-wide by dates: a harvest date of any flush of the parcel still triggers the withdrawal rule.
+    entry = _spray_entry("2026-11-19T23:00:00", "2026-11-22T00:00:00", withdrawal=14)
+    entry["activities"][0]["pesticide_product_id"] = "catex"
+    violation = evaluate_journal_entry(entry, now=NOW)
+    assert violation is not None and violation.reason_code == "WITHDRAWAL_PERIOD"

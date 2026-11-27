@@ -73,6 +73,7 @@ query PendingJournalEntries {
       dosage
       withdrawal_days
       safe_harvest_date
+      pesticide_product_id
     }
   }
 }
@@ -160,6 +161,17 @@ def withdrawal_cycles(entry: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     if entry.get("activity_type") != "SPRAYING" or not entry.get("activities") or not isinstance(parcel, Mapping):
         return []
     return [cycle for cycle in parcel.get("crop_cycles") or [] if _cycle_harvest_raw(cycle)]
+
+
+OUT_OF_CATALOGUE_REASON_VI = "Thuốc ngoài danh mục"
+
+
+def is_out_of_catalogue(entry: Mapping[str, Any]) -> bool:
+    """A spraying with an activity that names no catalogue product: a warning for the officer, never an auto-approval."""
+    if entry.get("activity_type") != "SPRAYING":
+        return False
+    # A row without the field comes from an older gateway shape and is not flagged.
+    return any("pesticide_product_id" in act and not act["pesticide_product_id"] for act in entry.get("activities") or [])
 
 
 def evaluate_journal_entry(
@@ -340,7 +352,7 @@ def _reason_for_entry(candidate: Any, parcel_code: str, fallback: str) -> str:
     return fallback[:500]
 
 
-def _approve_reason_vi(batch: Sequence[Mapping[str, Any]]) -> str:
+def _approve_reason_vi(batch: Sequence[Mapping[str, Any]], held: int = 0) -> str:
     """Approve text built in code from the batch: it claims only what the rules actually checked."""
     codes = sorted({_parcel_label(item) for item in batch})
     lines = [f"Đề xuất duyệt {len(batch)} nhật ký đã qua kiểm tra quy tắc tự động (thửa: {', '.join(codes)})."]
@@ -355,6 +367,8 @@ def _approve_reason_vi(batch: Sequence[Mapping[str, Any]]) -> str:
             f"{len(unchecked)} nhật ký phun thuốc chưa kiểm tra được thời gian cách ly "
             f"vì thửa chưa có ngày thu hoạch (thửa: {', '.join(unchecked_codes)})."
         )
+    if held:
+        lines.append(f"{held} nhật ký khác có {OUT_OF_CATALOGUE_REASON_VI.lower()} nên cần cán bộ xem, không nằm trong đề xuất này.")
     return " ".join(lines)
 
 
@@ -444,6 +458,7 @@ def run_journal_review(
 
     rejected: list[tuple[Mapping[str, Any], RuleViolation]] = []
     clean: list[Mapping[str, Any]] = []
+    held: list[Mapping[str, Any]] = []  # clean by the hard rules but with a product outside the catalogue
 
     try:
         for entry in entries:
@@ -455,6 +470,8 @@ def run_journal_review(
             violation = _classify_entry(entry, thresholds, now)
             if violation is not None:
                 rejected.append((entry, violation))
+            elif is_out_of_catalogue(entry):
+                held.append(entry)
             else:
                 clean.append(entry)
 
@@ -522,7 +539,7 @@ def run_journal_review(
                     "agent": AGENT_NAME,
                     "kind": "journal.approve",
                     "payload": {"entry_ids": batch_ids},
-                    "reason_vi": _approve_reason_vi(batch),
+                    "reason_vi": _approve_reason_vi(batch, len(held)),
                     "evidence": evidence_for_entries(batch),
                     "confidence": 1.0,
                     "dedupe_key": f"journal.approve:{batch_digest}",
