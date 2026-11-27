@@ -192,7 +192,7 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
             <Button variant="secondary" aria-expanded={prescribing} onClick={() => setPrescribing(v => !v)}>Kê đơn (tuỳ chọn)</Button>
             {prescribing && (
               <>
-                <PesticidePicker prescribing value={product} onChange={setProduct}
+                <PesticidePicker selectOnly value={product} onChange={setProduct}
                   target={report && report.ai_disease_name !== UNCERTAIN_DISEASE_NAME ? report.ai_disease_name : undefined} />
                 <label className={styles.label} htmlFor="prescription-dosage">Liều dùng</label>
                 <input id="prescription-dosage" className={styles.input} maxLength={100} value={dosage} onChange={e => setDosage(e.target.value)} disabled={submitting} />

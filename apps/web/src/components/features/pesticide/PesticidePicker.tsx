@@ -25,11 +25,11 @@ interface Props {
   onChange: (value: PesticideChange) => void
   target?: string
   disabled?: boolean
-  /** A prescription names a catalogue product only: no days box and no "Thuốc khác". */
-  prescribing?: boolean
+  /** Select only: a catalogue product, no days box and no "Thuốc khác" (used for prescriptions and item links): no days box and no "Thuốc khác". */
+  selectOnly?: boolean
 }
 
-export function PesticidePicker({ value, onChange, target, disabled, prescribing }: Props) {
+export function PesticidePicker({ value, onChange, target, disabled, selectOnly }: Props) {
   const id = useId()
   const [rows, setRows] = useState<PesticideRow[]>([])
   const [query, setQuery] = useState('')
@@ -83,7 +83,7 @@ export function PesticidePicker({ value, onChange, target, disabled, prescribing
             {row.needs_label_check && <span className={styles.check}>{NEEDS_LABEL_CHECK_TEXT}</span>}
           </button>
         ))}
-        {!prescribing && <button type="button" className={styles.option} aria-pressed={other} disabled={disabled} onClick={pickOther}>
+        {!selectOnly && <button type="button" className={styles.option} aria-pressed={other} disabled={disabled} onClick={pickOther}>
           <span className={styles.name}>Thuốc khác (ngoài danh mục)</span>
           <span className={styles.meta}>Mức sàn {CUSTOM_PRODUCT_FLOOR_DAYS} ngày, cán bộ sẽ xem lại</span>
         </button>}
@@ -97,13 +97,13 @@ export function PesticidePicker({ value, onChange, target, disabled, prescribing
         </label>
       )}
 
-      {!prescribing && <label className={styles.field} htmlFor={`${id}-days`}>
+      {!selectOnly && <label className={styles.field} htmlFor={`${id}-days`}>
         Số ngày cách ly
         <input id={`${id}-days`} type="number" min={0} inputMode="numeric" className={styles.input} disabled={disabled}
           value={value.days ?? ''} aria-invalid={below} aria-describedby={below ? `${id}-err` : undefined}
           onChange={e => emit({ ...value, days: e.target.value === '' ? null : Number(e.target.value) }, floorDays, selected?.trade_name)} />
       </label>}
-      {below && !prescribing && <p id={`${id}-err`} className={styles.error} role="alert">{belowFloorText(floorDays)}</p>}
+      {below && !selectOnly && <p id={`${id}-err`} className={styles.error} role="alert">{belowFloorText(floorDays)}</p>}
     </div>
   )
 }
