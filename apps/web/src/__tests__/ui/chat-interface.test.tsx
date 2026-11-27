@@ -286,6 +286,13 @@ describe('chat stream boundaries', () => {
     expect(await screen.findByText('Trợ lý AI chưa mở cho tài khoản này.')).toBeInTheDocument()
   })
 
+  it('keeps the composer off and says why when the chat is closed to the role', () => {
+    render(<ChatInterface role="farmer" closedNote="Chatbot chưa mở cho nông hộ." />)
+    expect(screen.getByText('Chatbot chưa mở cho nông hộ.')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Câu hỏi' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Gửi' })).toBeDisabled()
+  })
+
   it.each(['<', '<t', '<th', '<thi', '<thin', '<think', '<think>Ẩn', '<THINK>Ẩn</THINK>'])('hides incomplete or complete thinking: %s', text => {
     expect(stripThinking(text)).toBe('')
   })

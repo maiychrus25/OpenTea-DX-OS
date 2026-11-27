@@ -13,9 +13,11 @@ import styles from './chat-interface.module.css'
 interface ChatInterfaceProps {
   role: 'manager' | 'officer' | 'farmer'
   chatType?: ChatType
+  /** Why this role cannot ask yet; the composer is then off. */
+  closedNote?: string
 }
 
-export function ChatInterface({ role, chatType: requestedType }: ChatInterfaceProps) {
+export function ChatInterface({ role, chatType: requestedType, closedNote }: ChatInterfaceProps) {
   const chatType = requestedType || (role === 'manager' ? 'market' : 'technical')
   const chat = useChat(chatType)
   const [inputValue, setInputValue] = useState('')
@@ -91,7 +93,7 @@ export function ChatInterface({ role, chatType: requestedType }: ChatInterfacePr
               setShowLatest(!following.current)
             }}>
             {empty ? <div className={styles.emptyState}>
-              <h2>Hôm nay bạn đang nghĩ gì?</h2>
+              {closedNote ? <p role="status">{closedNote}</p> : <h2>Hôm nay bạn đang nghĩ gì?</h2>}
             </div> : <div className={styles.messageColumn}>
               {chat.historyLoading && <p role="status" className={styles.historyStatus}>Đang tải cuộc trò chuyện...</p>}
               {chat.historyError && <p role="alert" className={styles.errorMessage}>{chat.historyError}</p>}
@@ -105,12 +107,12 @@ export function ChatInterface({ role, chatType: requestedType }: ChatInterfacePr
               listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
             }}><ArrowDown size={16} /> Đến tin nhắn mới nhất</button>}
             <div className={styles.inputWrapper}>
-              <textarea ref={inputRef} className={styles.input} placeholder="Hỏi trợ lý…" aria-label="Câu hỏi"
+              <textarea ref={inputRef} className={styles.input} placeholder={closedNote ? 'Chatbot chưa mở' : 'Hỏi trợ lý…'} aria-label="Câu hỏi"
                 rows={1} value={inputValue} onChange={event => setInputValue(event.target.value)} onKeyDown={onKeyDown}
                 onCompositionStart={() => { composing.current = true }} onCompositionEnd={() => { composing.current = false }}
-                disabled={chat.historyLoading || !!chat.historyError} />
+                disabled={!!closedNote || chat.historyLoading || !!chat.historyError} />
               <button className={styles.sendBtn} onClick={chat.streamingId ? chat.stop : send}
-                disabled={!chat.streamingId && (!inputValue.trim() || chat.historyLoading || !!chat.historyError)}
+                disabled={!!closedNote || (!chat.streamingId && (!inputValue.trim() || chat.historyLoading || !!chat.historyError))}
                 aria-label={chat.streamingId ? 'Dừng trả lời' : 'Gửi'}>
                 {chat.streamingId ? <Square size={17} fill="currentColor" /> : <ArrowUp size={20} />}
               </button>
