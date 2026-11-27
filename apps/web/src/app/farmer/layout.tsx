@@ -5,7 +5,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
-import { Home, FileText, ShieldCheck, User, Bell, Calendar, BookOpen, Newspaper, Receipt } from 'lucide-react'
+import { Home, FileText, ShieldCheck, User, Bell, Calendar, BookOpen, Newspaper, Wallet } from 'lucide-react'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
@@ -44,7 +44,7 @@ export default async function FarmerLayout({ children }: { children: React.React
     { label: 'Tổng quan', href: '/farmer/dashboard', icon: <Home size={20} />, group: 'Canh tác' },
     { label: 'Lịch thu hái', href: '/farmer/schedule', icon: <Calendar size={20} />, group: 'Canh tác' },
     { label: 'Nhật ký', href: '/farmer/journal', icon: <FileText size={20} />, group: 'Canh tác', badge: pendingJournals || undefined },
-    { label: 'Phiếu cân', href: '/farmer/leaf-tickets', icon: <Receipt size={20} />, group: 'Canh tác' },
+    { label: 'Sổ tiền', href: '/farmer/ledger', icon: <Wallet size={20} />, group: 'Canh tác' },
     { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <ShieldCheck size={20} />, group: 'Canh tác', badge: pendingReports || undefined },
     { label: 'Cẩm nang', href: '/farmer/handbook', icon: <BookOpen size={20} />, group: 'Hỗ trợ' },
     { label: 'Bản tin', href: '/farmer/bulletin', icon: <Newspaper size={20} />, group: 'Hỗ trợ' },
