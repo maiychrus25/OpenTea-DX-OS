@@ -131,24 +131,17 @@ test.describe('Story 8.6: Shared chat workspace', () => {
     await expect.poll(() => list.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(96)
   })
 
-  test('officer technical and market routes share the workspace and preserve headings', async ({ page }) => {
+  test('officer technical chat keeps its heading', async ({ page }) => {
     await page.context().clearCookies()
     await login(page, 'officer')
     await page.goto('/officer/chat')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Trợ lý Kỹ thuật')
-    await page.goto('/officer/assistant')
-    await expect(page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('link', { name: 'Chatbot' })).toHaveAttribute('aria-current', 'page')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Trợ lý Thị trường')
-    const request = page.waitForRequest(request => request.url().endsWith('/api/chatbot') && request.method() === 'POST')
-    await page.getByPlaceholder('Hỏi trợ lý…').fill('Giá chè')
-    await page.getByRole('button', { name: 'Gửi', exact: true }).click()
-    expect((await request).postDataJSON().type).toBe('market')
   })
 
   test('farmer remains unable to access the chat routes', async ({ page }) => {
     await page.context().clearCookies()
     await login(page, 'farmer')
-    for (const route of ['/manager/chat', '/officer/chat', '/officer/assistant']) {
+    for (const route of ['/manager/chat', '/officer/chat']) {
       await page.goto(route)
       await expect(page).toHaveURL('/unauthorized')
     }

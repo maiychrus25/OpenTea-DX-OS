@@ -16,7 +16,6 @@ import styles from './partner-map.module.css'
 import mapStyles from '@/components/features/map/ZoneMap.module.css'
 import { DEFAULT_MAP_VIEW } from '@/lib/map-config'
 import { addMapBaseLayers } from '@/components/features/map/map-layers'
-import { PartnerFallback } from '@/components/features/sample/PartnerFallback'
 
 type Partner = {
   id: string
@@ -609,10 +608,7 @@ export default function PartnerMap() {
             ) : loadFailed ? (
               <p role="alert" className="p-4 text-sm text-ink-secondary">Không thể tải danh sách đối tác</p>
             ) : partners.length === 0 ? (
-              <>
-                <p className="text-sm text-ink-secondary">Chưa có đối tác nào</p>
-                <PartnerFallback />
-              </>
+              <p className="p-4 text-sm text-ink-secondary">Chưa có đối tác nào. Bấm Thêm đối tác để bắt đầu.</p>
             ) : visiblePartners.length === 0 ? (
               <p className="p-4 text-sm text-ink-secondary">Không có đối tác thuộc loại này</p>
             ) : (

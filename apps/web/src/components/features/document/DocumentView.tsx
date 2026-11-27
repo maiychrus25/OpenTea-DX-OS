@@ -10,9 +10,20 @@ import { Modal } from '@/components/ui/Modal/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Stats } from '@/components/features/officer-web/parts'
 import styles from './DocumentView.module.css'
-import { DocumentItem } from './mock-data'
-import { MOCK_DOCUMENTS } from './mock-data'
 import { documentRoot, MARKET_REPORTS_ROOT } from '@/domain/document/document-namespace'
+
+type PrivacyState = 'Chỉ mình tôi' | 'Nội bộ HTX' | 'Công khai'
+
+export interface DocumentItem {
+  id: string
+  name: string
+  size: number
+  uploadDate: Date
+  key: string
+  isDir: boolean
+  tags: string[]
+  privacy: PrivacyState
+}
 
 const CATEGORIES = [
   { id: 'Projects/', name: 'Projects', description: 'Các dự án ngắn hạn' },
@@ -33,6 +44,7 @@ export function DocumentView({ htxCode, variant }: { htxCode: string; variant?: 
   const [documents, setDocuments] = useState<DocumentItem[]>([])
   const [hasLiveDocuments, setHasLiveDocuments] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   // Officers press a figure to see only the files or only the folders; pressing it again shows both.
   const [kind, setKind] = useState<'file' | 'dir' | null>(null)
@@ -52,10 +64,9 @@ export function DocumentView({ htxCode, variant }: { htxCode: string; variant?: 
 
 
   const fetchDocuments = useCallback(async (path: string) => {
-    // The mock tree has no HTX level.
-    const mockPath = path.replace(root, 'para/')
     setIsLoading(true)
     setHasLiveDocuments(false)
+    setLoadFailed(false)
     try {
       const res = await fetch(`/api/documents?path=${encodeURIComponent(path)}`)
 
@@ -80,29 +91,17 @@ export function DocumentView({ htxCode, variant }: { htxCode: string; variant?: 
         setHasLiveDocuments(true)
       } else {
         setHasLiveDocuments(false)
-        // API failed, fallback to mock for categories that have mock data
-        const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(mockPath) && doc.key !== mockPath)
-          .filter(doc => {
-            const remainingPath = doc.key.replace(mockPath, '')
-            if (doc.isDir) return remainingPath.split('/').length === 2
-            return !remainingPath.includes('/')
-          })
-        setDocuments(filtered)
+        setDocuments([])
+        setLoadFailed(true)
       }
     } catch {
       setHasLiveDocuments(false)
-      // On error, fallback to mock data
-      const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(mockPath) && doc.key !== mockPath)
-        .filter(doc => {
-          const remainingPath = doc.key.replace(mockPath, '')
-          if (doc.isDir) return remainingPath.split('/').length === 2
-          return !remainingPath.includes('/')
-        })
-      setDocuments(filtered)
+      setDocuments([])
+      setLoadFailed(true)
     } finally {
       setIsLoading(false)
     }
-  }, [searchQuery, root])
+  }, [searchQuery])
 
   // Fetch documents on load, when path changes, or when search query changes
   useEffect(() => {
@@ -318,6 +317,8 @@ export function DocumentView({ htxCode, variant }: { htxCode: string; variant?: 
           <div className={styles.fileList}>
             {isLoading ? (
               <div className={styles.emptyState}>Đang tải...</div>
+            ) : loadFailed ? (
+              <div className={styles.emptyState} role="alert">Không tải được tài liệu. Vui lòng thử lại.</div>
             ) : documents.length === 0 ? (
               <div className={styles.emptyState}>Không có tài liệu nào</div>
             ) : (

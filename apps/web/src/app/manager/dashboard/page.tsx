@@ -4,7 +4,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Sprout, TrendingUp, PackageCheck, Clock, BarChart3, Calendar, CheckSquare, QrCode, Newspaper, ChevronRight, Plus } from 'lucide-react'
+import { Sprout, TrendingUp, PackageCheck, Clock, BarChart3, Calendar, CheckSquare, QrCode, Newspaper, ChevronRight } from 'lucide-react'
 
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
@@ -16,7 +16,6 @@ import { MetricCard, AiNote, SourceBox, HeroBanner, Panel, Pill, EmptyState } fr
 
 import { NoticesAndWeather, RainAlert } from '@/components/features/dashboard/NoticesAndWeather'
 import { PendingJournals } from '@/components/features/dashboard/PendingJournals'
-import { SampleYieldChart } from '@/components/features/sample/SampleYieldChart'
 import styles from './Dashboard.module.css'
 import layout from '@/components/features/dashboard/dashboard.module.css'
 
@@ -256,7 +255,6 @@ export default async function ManagerDashboard() {
             title={`${getGreeting()}, ${session.user.name}`}
             subtitle={[formatDate(new Date()), seasonLabel].filter(Boolean).join(' · ')}
             status="Đang hoạt động"
-            actions={[{ href: '/manager/lots', label: 'Tạo lô hàng', icon: <Plus size={18} aria-hidden="true" /> }]}
           />
 
           <RainAlert />
@@ -305,10 +303,6 @@ export default async function ManagerDashboard() {
             ))}
           </nav>
 
-          {/* No weekly harvest records yet, so the chart is labelled as an example. */}
-          <div className={layout.columns}>
-            <SampleYieldChart />
-
             <Panel title="Tình trạng thửa đất" href="/manager/farm-zones" linkLabel="Bản đồ">
               <div className={layout.tableWrap}>
                 <table className={layout.table}>
@@ -330,7 +324,6 @@ export default async function ManagerDashboard() {
                 </table>
               </div>
             </Panel>
-          </div>
 
           <Panel title="Nhật ký chờ duyệt" href="/manager/journal-approve">
             {pending.length === 0 ? (

@@ -7,7 +7,6 @@ import React, { useState } from 'react'
 import { Bell, Volume2, Check, CheckCheck, ExternalLink, Loader2 } from 'lucide-react'
 import useSWR from 'swr'
 import styles from './notification-inbox.module.css'
-import { SampleNotices } from '@/components/features/sample/SampleLists'
 
 const isToday = (value: string) => new Date(value).toDateString() === new Date().toDateString()
 
@@ -183,8 +182,6 @@ export function NotificationInbox({ role, showPageHeader = true }: NotificationI
             <Loader2 size={24} className={styles.spin} />
             <p>Đang tải thông báo...</p>
           </div>
-        ) : notifications.length === 0 && role === 'manager' && filter === 'all' ? (
-          <SampleNotices />
         ) : notifications.length === 0 ? (
           <div className={styles.emptyState}>
             <Bell size={40} className={styles.emptyIcon} />

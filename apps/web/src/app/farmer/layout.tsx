@@ -5,7 +5,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
-import { Home, FileText, ShieldCheck, User, Bell, Calendar, MessageCircle, BookOpen, SquarePlay, Newspaper } from 'lucide-react'
+import { Home, FileText, ShieldCheck, User, Bell, Calendar, BookOpen, Newspaper } from 'lucide-react'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
@@ -45,9 +45,7 @@ export default async function FarmerLayout({ children }: { children: React.React
     { label: 'Lịch thu hái', href: '/farmer/schedule', icon: <Calendar size={20} />, group: 'Canh tác' },
     { label: 'Nhật ký', href: '/farmer/journal', icon: <FileText size={20} />, group: 'Canh tác', badge: pendingJournals || undefined },
     { label: 'Chẩn đoán', href: '/farmer/diagnosis', icon: <ShieldCheck size={20} />, group: 'Canh tác', badge: pendingReports || undefined },
-    { label: 'Chatbot', href: '/farmer/ai', icon: <MessageCircle size={20} />, group: 'Hỗ trợ' },
     { label: 'Cẩm nang', href: '/farmer/handbook', icon: <BookOpen size={20} />, group: 'Hỗ trợ' },
-    { label: 'Reels', href: '/farmer/reels', icon: <SquarePlay size={20} />, group: 'Hỗ trợ' },
     { label: 'Bản tin', href: '/farmer/bulletin', icon: <Newspaper size={20} />, group: 'Hỗ trợ' },
     { label: 'Thông báo', href: '/farmer/notifications', icon: <Bell size={20} />, group: 'Cá nhân', badge: unread || undefined },
     // reached from the account menu; kept here so the breadcrumb can name the page
