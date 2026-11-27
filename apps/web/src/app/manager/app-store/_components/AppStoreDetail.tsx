@@ -109,21 +109,27 @@ export function AppStoreDetail({ initial, workerAlive, labs = false }: { initial
           {app.description && <p className={styles.description}>{app.description}</p>}
         </div>
         <div className={styles.actions}>
-          <Pill tone={STATUS_TONES[app.status]} size="md">
-            {STATUS_LABELS[app.status]}
-          </Pill>
+          {app.mergedIntoCore ? (
+            <Pill tone="amber" size="md">
+              {app.mergedIntoCoreNote}
+            </Pill>
+          ) : (
+            <Pill tone={STATUS_TONES[app.status]} size="md">
+              {STATUS_LABELS[app.status]}
+            </Pill>
+          )}
           {hasNewVersion(app) && (
             <Pill tone="amber" size="md">
               {NEW_VERSION_LABEL}
             </Pill>
           )}
-          {app.status === 'available' && <Button isLoading={pending} onClick={() => request('ENABLE')}>Cài</Button>}
-          {app.status === 'enabled' && (
+          {!app.mergedIntoCore && app.status === 'available' && <Button isLoading={pending} onClick={() => request('ENABLE')}>Cài</Button>}
+          {!app.mergedIntoCore && app.status === 'enabled' && (
             <Button variant="secondary" isLoading={pending} onClick={() => request('DISABLE')}>
               Gỡ
             </Button>
           )}
-          {app.status === 'failed' && <Button isLoading={pending} onClick={() => request('ENABLE')}>Thử lại</Button>}
+          {!app.mergedIntoCore && app.status === 'failed' && <Button isLoading={pending} onClick={() => request('ENABLE')}>Thử lại</Button>}
           {installed && app.openHref && (
             <Link href={app.openHref} className={styles.openLink}>
               Mở ứng dụng

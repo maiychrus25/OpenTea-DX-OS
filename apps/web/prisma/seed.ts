@@ -361,6 +361,18 @@ async function main() {
   })
 
   const tcProfile = await prisma.htxProfile.findUnique({ where: { htx_code: 'TC' } })
+  // Sample grades only: prices and tickets are operating data and are never invented.
+  if (tcProfile) {
+    const grades = ['Loại 1 (1 tôm 2 lá)', 'Loại 2', 'Loại 3']
+    for (let index = 0; index < grades.length; index++) {
+      const name = grades[index]
+      await prisma.leafGrade.upsert({
+        where: { htx_profile_id_name: { htx_profile_id: tcProfile.id, name } },
+        update: {},
+        create: { htx_profile_id: tcProfile.id, name, sort_order: index + 1 },
+      })
+    }
+  }
   if (!existingPartner) {
     await prisma.partner.createMany({
       data: [

@@ -269,6 +269,8 @@ export class PrismaJournalRepository implements JournalPort {
     let e
     try {
       e = await prisma.$transaction(async (tx) => {
+        // Same lock as the weighing ticket transaction: a spraying and a ticket of one parcel never pass each other.
+        await tx.$queryRaw`SELECT id FROM parcels WHERE id = ${data.parcel_id} FOR UPDATE`
         const cycleId = await assignCycle(tx, data.parcel_id, data.activity_type, data.entry_date)
         const entry = await tx.journalEntry.create({
           data: {
@@ -342,7 +344,12 @@ export class PrismaJournalRepository implements JournalPort {
       updateData.reviewed_by_id = null
     }
 
+    // A spraying that starts to count toward withdrawal (submitted, or changed in date or activities) takes the parcel
+    // lock first, as a weighing ticket does; a notes-only edit of a draft does not.
+    const locksParcel = resubmit || !!data.activities || !!data.entry_date
+
     const e = await prisma.$transaction(async (tx) => {
+      if (locksParcel) await tx.$queryRaw`SELECT id FROM parcels WHERE id = (SELECT parcel_id FROM journal_entries WHERE id = ${id}) FOR UPDATE`
       if (data.activities) {
         const current = await tx.journalEntry.findUnique({ where: { id }, select: { entry_date: true } })
         await tx.journalActivity.deleteMany({ where: { journal_entry_id: id } })

@@ -46,6 +46,16 @@ export class TenantGuard {
     this.check(r?.parcel.household.htx_profile_id)
   }
 
+  async leafGrade(id: string): Promise<void> {
+    const r = await this.db.leafGrade.findUnique({ where: { id }, select: { htx_profile_id: true } })
+    this.check(r?.htx_profile_id)
+  }
+
+  async leafTicket(id: string): Promise<void> {
+    const r = await this.db.freshLeafTicket.findUnique({ where: { id }, select: { htx_profile_id: true } })
+    this.check(r?.htx_profile_id)
+  }
+
   private check(htxProfileId: string | null | undefined): void {
     if (!htxProfileId || htxProfileId !== this.tenant.htxProfileId) throw new NotFoundError('Resource not found')
   }

@@ -20,6 +20,7 @@ import {
 import type { FeedLoader } from '@/application/apps/app-feed'
 import type { InstalledApp } from '@/domain/entities/installed-app'
 import { logger } from '@/lib/logger'
+import { isLabsEnabled } from '@/lib/labs'
 import { installPreview } from '@/application/apps/install-preview'
 
 /** First match wins: open request, then enablement for every HTX, then for this HTX, then a failed last request. */
@@ -100,19 +101,29 @@ export interface CreatedAppsSource {
   loadFeed: FeedLoader
 }
 
+/** Mini-apps whose job the core now does (S3 weighing station, S4 supplies). Hidden unless labs is on. */
+export const MERGED_INTO_CORE = ['leaf-purchase', 'farm-supply'] as const
+export const MERGED_INTO_CORE_NOTE = 'Đã hợp nhất vào lõi'
+export const isMergedIntoCore = (appId: string): boolean => (MERGED_INTO_CORE as readonly string[]).includes(appId)
+
 const managerHref = (appId: string, path: string) => `/manager/apps/${appId}${path}`
 
 export class AppStoreUseCase {
   constructor(
     private readonly repository: AppStoreRepository,
     private readonly createdSource?: CreatedAppsSource,
+    private readonly labs: () => boolean = isLabsEnabled,
   ) {}
+
+  private hidden(appId: string): boolean {
+    return isMergedIntoCore(appId) && !this.labs()
+  }
 
   /** The manager's feed of every enabled app that declares one; a failure here never breaks the store. */
   private async created(htxCode: string): Promise<StoreCreatedApp[]> {
     if (!this.createdSource) return []
     try {
-      const apps = (await this.createdSource.apps.list(htxCode)).filter(app => app.feed)
+      const apps = (await this.createdSource.apps.list(htxCode)).filter(app => app.feed && !this.hidden(app.id))
       return await Promise.all(
         apps.map(async app => {
           const feed = await this.createdSource!.loadFeed(app, 'manager', htxCode)
@@ -132,7 +143,7 @@ export class AppStoreUseCase {
 
   async list(htxCode: string): Promise<{ workerAlive: boolean; apps: StoreApp[]; created: StoreCreatedApp[] }> {
     const [snapshot, workerAlive, created] = await Promise.all([this.repository.snapshot(htxCode), this.repository.workerAlive(), this.created(htxCode)])
-    return { workerAlive, apps: snapshot.apps.map(app => toCard(app, snapshot, htxCode)), created }
+    return { workerAlive, apps: snapshot.apps.filter(app => !this.hidden(app.id)).map(app => toCard(app, snapshot, htxCode)), created }
   }
 
   async detail(htxCode: string, appId: string): Promise<StoreAppDetail> {
@@ -156,6 +167,8 @@ export class AppStoreUseCase {
       preview: installPreview({ ...app, coreReads }, htxCode, usable),
       screenshots: shots.map(shot => ({ ...shot, url: `/api/app-store/apps/${app.id}/screenshots/${shot.position}` })),
       history,
+      mergedIntoCore: this.hidden(appId),
+      mergedIntoCoreNote: this.hidden(appId) ? MERGED_INTO_CORE_NOTE : null,
     }
   }
 
@@ -169,6 +182,7 @@ export class AppStoreUseCase {
 
   /** Queues an install or removal for the caller's HTX; the worker does it later. */
   async requestChange(tenant: { htxCode: string; userId: string; userName: string | null }, appId: string, action: StoreAction): Promise<'installing' | 'removing'> {
+    if (this.hidden(appId)) throw new AppStoreError('MERGED_INTO_CORE', `${MERGED_INTO_CORE_NOTE}: ứng dụng này không còn cài riêng.`)
     const snapshot = await this.repository.snapshot(tenant.htxCode)
     if (!snapshot.apps.some(app => app.id === appId)) throw new AppStoreError('APP_NOT_FOUND', 'Không có ứng dụng này trong kho.')
     const refusal = REFUSALS[action][appStatus(appId, snapshot, tenant.htxCode).status]

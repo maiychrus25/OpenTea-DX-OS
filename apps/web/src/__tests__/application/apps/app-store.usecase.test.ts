@@ -152,15 +152,15 @@ const enabledTC = (appId: string) => ({ appId, htxCode: 'TC' })
 describe('AppStoreUseCase.list (store fields)', () => {
   test('openHref points at the first manager menu entry when the HTX can use the app', async () => {
     const leaf = teaShop({
-      id: 'leaf-purchase',
+      id: 'kit-app',
       menu: [
         { label: 'Tổng quan', path: '/dash', roles: ['officer'] },
         { label: 'Kỳ thu mua', path: '/periods', roles: ['manager'] },
       ],
     })
-    const { useCase } = setup(snapshot({ apps: [teaShop(), leaf], enablements: [enabledTC('tea-shop'), enabledTC('leaf-purchase')] }))
+    const { useCase } = setup(snapshot({ apps: [teaShop(), leaf], enablements: [enabledTC('tea-shop'), enabledTC('kit-app')] }))
     const { apps } = await useCase.list('TC')
-    expect(apps.map(app => app.openHref)).toEqual(['/manager/apps/tea-shop', '/manager/apps/leaf-purchase/periods'])
+    expect(apps.map(app => app.openHref)).toEqual(['/manager/apps/tea-shop', '/manager/apps/kit-app/periods'])
   })
 
   test('openHref is null when not enabled or without a manager entry', async () => {
