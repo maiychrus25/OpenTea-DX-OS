@@ -6,6 +6,7 @@ import { JournalPort } from '@/domain/journal/ports/JournalPort'
 import { NotificationPort } from '@/domain/ports/notification-port'
 import { NotFoundError } from '@/domain/errors/NotFoundError'
 import { ForbiddenError } from '@/domain/errors/ForbiddenError'
+import { countsTowardWithdrawal } from '@/domain/journal/withdrawal-status'
 import { DomainError } from '@/domain/errors/DomainError'
 
 export class ApproveHarvestUseCase {
@@ -25,12 +26,12 @@ export class ApproveHarvestUseCase {
       throw new NotFoundError('Không tìm thấy thửa đất')
     }
 
-    // Check withdrawal period: every entry that is not a draft counts, rejected and pending ones too
+    // Check withdrawal period: drafts and rejected entries do not count; pending and change-requested ones do
     const { entries } = await this.journalPort.findAll({ parcel_id: parcelId, limit: 100 })
     let maxSafeDate: Date | null = null
 
     for (const entry of entries) {
-      if (entry.status === 'DRAFT') continue
+      if (!countsTowardWithdrawal(entry.status)) continue
       for (const activity of entry.activities) {
         if (activity.safe_harvest_date) {
           const date = new Date(activity.safe_harvest_date)

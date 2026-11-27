@@ -4,10 +4,12 @@
 import { NextResponse } from 'next/server'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { ForbiddenError } from '@/domain/errors'
 import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter'
 
 async function listMembers(request: Request) {
-  const { htxCode } = await requireTenant()
+  const { htxCode, role } = await requireTenant()
+  if (role !== 'manager' && role !== 'officer') throw new ForbiddenError('Forbidden')
 
   const url = new URL(request.url)
   const filterRole = url.searchParams.get('role')

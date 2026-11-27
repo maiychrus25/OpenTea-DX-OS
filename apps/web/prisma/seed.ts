@@ -412,12 +412,14 @@ async function main() {
     where: { name: 'Công ty Thu mua Chè Tân Cương' },
   })
 
+  const tcProfile = await prisma.htxProfile.findUnique({ where: { htx_code: 'TC' } })
   if (!existingPartner) {
     await prisma.partner.createMany({
       data: [
         {
           name: 'Công ty Thu mua Chè Tân Cương',
           partner_type: 'BUYER',
+          htx_profile_id: tcProfile?.id,
           contact_phone: '0987654321',
           address: 'Tân Cương, TP. Thái Nguyên',
           lat: 21.5650,
@@ -427,6 +429,7 @@ async function main() {
         {
           name: 'Đại lý Phân bón An Phát',
           partner_type: 'WAREHOUSE',
+          htx_profile_id: tcProfile?.id,
           contact_phone: '0912345678',
           address: 'Đại Từ, Thái Nguyên',
           lat: 21.6300,
@@ -436,6 +439,7 @@ async function main() {
         {
           name: 'Hệ thống Siêu thị Co-op',
           partner_type: 'BUYER',
+          htx_profile_id: tcProfile?.id,
           contact_phone: '0909090909',
           address: 'Quận 1, TP. Hồ Chí Minh',
           lat: 10.7769,

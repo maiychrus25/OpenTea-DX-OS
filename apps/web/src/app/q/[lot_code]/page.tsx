@@ -3,7 +3,7 @@
 
 import React from 'react'
 import { Pill } from '@/components/ui'
-import { XCircle, AlertTriangle, Clock, Check, X } from 'lucide-react'
+import { XCircle, Check, X } from 'lucide-react'
 import styles from './qr.module.css'
 import { GetLotTraceDataUseCase } from '@/application/useCases/get-lot-trace-data-usecase'
 import { PrismaLotTraceRepository } from '@/infrastructure/db/repositories/prisma-lot-trace-repository'
@@ -24,7 +24,7 @@ const ACTIVITY_VN: Record<string, string> = {
   OTHER: 'Khác',
 }
 
-export default async function QrTracePage({ params, searchParams }: PageProps & { searchParams: Promise<{ status?: string }> }) {
+export default async function QrTracePage({ params }: PageProps) {
   const { lot_code } = await params
   let decodedCode: string
   try {
@@ -42,55 +42,6 @@ export default async function QrTracePage({ params, searchParams }: PageProps & 
           </div>
           <h1 className={styles.errorTitle}>Mã QR không hợp lệ</h1>
           <p className={styles.errorDesc}>Mã lô chứa ký tự không hợp lệ. Vui lòng kiểm tra lại tem dán.</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Allow overriding status via query param for testing error pages
-  const { status: overrideStatus } = await (searchParams || Promise.resolve({} as { status?: string }))
-
-  if (overrideStatus === 'invalid' || overrideStatus === 'not-found') {
-    return (
-      <div className={styles.container}>
-        <div className={styles.errorCard}>
-          <div className={`${styles.iconWrapper} ${styles.iconWrapperError}`}>
-            <XCircle size={32} aria-hidden="true" />
-          </div>
-          <h1 className={styles.errorTitle}>Không tìm thấy dữ liệu</h1>
-          <p className={styles.errorDesc}>Mã QR này không tồn tại trong hệ thống hoặc đã bị xóa. Vui lòng kiểm tra lại tem dán.</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (overrideStatus === 'revoked') {
-    return (
-      <div className={styles.container}>
-        <div className={styles.errorCard}>
-          <div className={`${styles.iconWrapper} ${styles.iconWrapperRevoked}`}>
-            <AlertTriangle size={32} aria-hidden="true" />
-          </div>
-          <h1 className={styles.errorTitle}>Lô hàng đã bị thu hồi</h1>
-          <p className={styles.errorDesc}>
-            Mã QR này thuộc về lô hàng <strong>{decodedCode}</strong> nhưng đã bị thu hồi bởi Cán bộ Kỹ thuật do không đạt tiêu chuẩn an toàn. Không sử dụng sản phẩm này.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  if (overrideStatus === 'expired') {
-    return (
-      <div className={styles.container}>
-        <div className={styles.errorCard}>
-          <div className={`${styles.iconWrapper} ${styles.iconWrapperExpired}`}>
-            <Clock size={32} aria-hidden="true" />
-          </div>
-          <h1 className={styles.errorTitle}>Lô hàng đã hết hạn</h1>
-          <p className={styles.errorDesc}>
-            Thời hạn sử dụng của lô hàng <strong>{decodedCode}</strong> đã kết thúc. Vui lòng xem kỹ hạn sử dụng trên bao bì thực tế.
-          </p>
         </div>
       </div>
     )

@@ -18,6 +18,7 @@ import { WeatherHero } from '@/components/features/farmer-web/WeatherHero'
 import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 
+import { WITHDRAWAL_EXCLUDED_STATUSES } from '@/domain/journal/withdrawal-status'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from './farmer-dashboard.module.css'
 
@@ -113,13 +114,13 @@ export default async function FarmerDashboard() {
     }
   })
 
-  // Drafts are left out; rejected and pending entries still warn the farmer, as they block harvest.
+  // Drafts and rejected entries are left out; pending and change-requested ones still warn the farmer, as they block harvest.
   const now = new Date()
   const withdrawalRows = household
     ? await prisma.journalActivity.findMany({
         where: {
           safe_harvest_date: { gt: now },
-          journal_entry: { status: { not: 'DRAFT' }, parcel: { household: { id: household.id, htx_profile_id: htxProfileId } } },
+          journal_entry: { status: { notIn: [...WITHDRAWAL_EXCLUDED_STATUSES] }, parcel: { household: { id: household.id, htx_profile_id: htxProfileId } } },
         },
         select: { safe_harvest_date: true, journal_entry: { select: { entry_date: true, parcel: { select: { parcel_code: true } } } } },
       })

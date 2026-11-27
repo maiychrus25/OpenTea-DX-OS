@@ -24,6 +24,7 @@ import * as unscheduled from '@/app/api/schedule/unscheduled/route'
 import * as forecast from '@/app/api/weather/forecast/route'
 import * as appStore from '@/app/api/app-store/route'
 import * as appStoreRequests from '@/app/api/app-store/requests/route'
+import * as partnerById from '@/app/api/partners/[id]/route'
 import SoilHealthPage from '@/app/officer/households/[id]/soil-health/page'
 
 // Every model method is a jest.fn created on first use, so any write the routes attempt is recorded.
@@ -119,6 +120,8 @@ const rows: Row[] = [
     role: 'manager',
     call: () => harvest.PATCH(json('PATCH', { estimated_harvest_date: '2026-01-01T00:00:00.000Z' }), ctx('r1', 'cycle_id')),
   },
+  { name: 'PUT partners/[id]', role: 'manager', call: () => partnerById.PUT(json('PUT', { name: 'X' }), ctx('r1')) },
+  { name: 'DELETE partners/[id]', role: 'manager', call: () => partnerById.DELETE(json('DELETE'), ctx('r1')) },
   { name: 'POST diagnosis', role: 'farmer', call: () => diagnosis.POST(imageForm()) },
 ]
 

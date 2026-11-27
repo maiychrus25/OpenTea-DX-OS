@@ -101,7 +101,7 @@ describe('routes read the caller HTX', () => {
   })
 
   test('search stays inside the caller HTX', async () => {
-    signIn('farmer', 'TC')
+    signIn('officer', 'TC')
     expect((await search.GET(get('/api/search?q=abc'), {})).status).toBe(200)
     expect(mock(prisma.household.findMany).mock.calls[0][0].where.htx_profile_id).toBe('htx-tc')
   })

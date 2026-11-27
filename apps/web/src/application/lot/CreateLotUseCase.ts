@@ -4,6 +4,7 @@
 import { LotPort, CreateLotData } from '@/domain/lot/ports/LotPort'
 import { ParcelPort } from '@/domain/farm/ports/ParcelPort'
 import { JournalPort } from '@/domain/journal/ports/JournalPort'
+import { countsTowardWithdrawal } from '@/domain/journal/withdrawal-status'
 import { DomainError } from '@/domain/errors/DomainError'
 
 export class CreateLotUseCase {
@@ -36,7 +37,7 @@ export class CreateLotUseCase {
         
         let maxSafeDate: Date | null = null
         for (const entry of journals.entries) {
-          if (entry.status === 'DRAFT') continue
+          if (!countsTowardWithdrawal(entry.status)) continue
           
           for (const act of entry.activities) {
             if (act.safe_harvest_date) {
