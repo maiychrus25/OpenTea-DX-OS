@@ -17,6 +17,7 @@ describe('advanceAmount', () => {
     expect(advanceAmount(0.5, 15001)).toBe(BigInt(7501)) // 7500.5
     expect(advanceAmount(1.25, 80000)).toBe(BigInt(100000))
     expect(advanceAmount(0.01, 49)).toBe(BigInt(0)) // 0.49
+    expect(advanceAmount(2.5, 333)).toBe(BigInt(833)) // 832.5 rounds up, as the web form does
     expect(advanceAmount(100000, 100_000_000)).toBe(BigInt('10000000000000'))
   })
 })

@@ -49,6 +49,12 @@ export class PrismaLedgerRepository implements LedgerPort {
     }
   }
 
+  async getBank(htxProfileId: string, householdId: string) {
+    const h = await prisma.household.findFirst({ where: { id: householdId, htx_profile_id: htxProfileId }, select: { bank_bin: true, bank_account: true, bank_account_name: true } })
+    if (!h) return undefined
+    return h.bank_bin && h.bank_account ? { bin: h.bank_bin, account: h.bank_account, accountName: h.bank_account_name ?? '' } : null
+  }
+
   async setBank(htxProfileId: string, householdId: string, bank: { bin: string; account: string; accountName: string }) {
     const done = await prisma.household.updateMany({
       where: { id: householdId, htx_profile_id: htxProfileId },

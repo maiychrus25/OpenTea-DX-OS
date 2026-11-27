@@ -44,3 +44,19 @@ export const householdBankSchema = z.object({
   bank_account: z.string().regex(/^\d{6,19}$/),
   bank_account_name: z.string().trim().min(1).max(60),
 }).strict()
+
+export const settlementCreateSchema = z.object({ date_from: day, date_to: day }).strict()
+  .refine((v) => v.date_from <= v.date_to, 'Ngày bắt đầu phải trước ngày kết thúc')
+
+export const settlementCloseSchema = z.object({
+  expected_household_count: z.number().int().min(0).max(100_000),
+  expected_payable_total_vnd: z.string().regex(/^(0|[1-9]\d{0,17})$/),
+}).strict()
+
+export const payoutSchema = z.object({ method: z.enum(['TRANSFER', 'CASH']), ref: z.string().trim().max(60).optional() }).strict()
+
+export const adjustmentSchema = z.object({
+  household_id: id,
+  amount_vnd: z.string().regex(/^-?[1-9]\d{0,14}$/, 'Số tiền phải là số nguyên khác 0'),
+  reason: z.string().trim().min(5).max(200),
+}).strict()

@@ -9,6 +9,15 @@ import { bankByBin, maskAccount } from '@/domain/payment/vietqr'
 export class SetHouseholdBankUseCase {
   constructor(private readonly port: LedgerPort) {}
 
+  /** Prefills the bank form. Only staff read the full number. */
+  async get(actor: { role: string; htxProfileId: string }, householdId: string) {
+    if (actor.role !== 'manager' && actor.role !== 'accountant') throw new ForbiddenError('Forbidden')
+    const bank = await this.port.getBank(actor.htxProfileId, householdId)
+    if (bank === undefined) throw new NotFoundError('Không tìm thấy hộ')
+    if (!bank) return null
+    return { bank_bin: bank.bin, bank_name: bankByBin(bank.bin)?.name ?? '', bank_account: bank.account, account_masked: maskAccount(bank.account), bank_account_name: bank.accountName }
+  }
+
   async execute(actor: { role: string; htxProfileId: string }, householdId: string, input: { bank_bin: string; bank_account: string; bank_account_name: string }) {
     if (actor.role !== 'manager' && actor.role !== 'accountant') throw new ForbiddenError('Forbidden')
     const bank = bankByBin(input.bank_bin)

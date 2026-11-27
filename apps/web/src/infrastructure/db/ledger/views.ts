@@ -43,6 +43,7 @@ export type LineRow = Prisma.MemberSettlementGetPayload<{ include: typeof LINE_I
 export function lineView(row: LineRow): LineView {
   return {
     id: row.id,
+    period_id: row.period_id,
     household_id: row.household_id,
     household_name: row.household.name,
     leaf_net_kg: Number(row.leaf_net_kg),
@@ -59,7 +60,7 @@ export function lineView(row: LineRow): LineView {
 }
 
 export function householdLineView(row: LineRow): HouseholdLineView {
-  return { ...lineView(row), period_id: row.period_id, period_code: row.period.code, date_from: dayString(row.period.date_from), date_to: dayString(row.period.date_to) }
+  return { ...lineView(row), period_code: row.period.code, date_from: dayString(row.period.date_from), date_to: dayString(row.period.date_to) }
 }
 
 export function entryView(row: Prisma.MemberLedgerEntryGetPayload<object>): LedgerEntryView {

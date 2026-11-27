@@ -20,6 +20,7 @@ const ledger = {
   householdIdsOfUser: jest.fn(async () => ['hh-1']),
   read: jest.fn(async () => ({ balance_vnd: '0', households: [], entries: [], unsettled_tickets: [], unsettled_advances: [], lines: [] })),
   setBank: jest.fn(async () => true),
+  getBank: jest.fn(async (): Promise<unknown> => ({ bin: '970405', account: '8600201001234', accountName: 'NGUYEN VAN A' })),
 }
 const guard = { household: jest.fn(), inputAdvance: jest.fn() }
 
@@ -192,6 +193,20 @@ describe('bank details', () => {
     signIn('manager')
     const res = await putBank({ ...bankBody, bank_account: '12ab56', extra: 1 })
     expect(JSON.stringify(await res.json())).not.toContain('12ab56')
+  })
+
+  it('prefills the form for staff with the full number, null without details, 404 for another HTX', async () => {
+    const get = () => bank.GET(new Request('http://x'), ctx('hh-1'))
+    signIn('accountant')
+    expect((await (await get()).json()).data).toEqual({ bank_bin: '970405', bank_name: 'Agribank', bank_account: '8600201001234', account_masked: '*********1234', bank_account_name: 'NGUYEN VAN A' })
+    ledger.getBank.mockResolvedValueOnce(null)
+    expect((await (await get()).json()).data).toBeNull()
+    guard.household.mockRejectedValueOnce(new NotFoundError('Resource not found'))
+    expect((await get()).status).toBe(404)
+    signIn('farmer')
+    expect((await get()).status).toBe(403)
+    signIn('officer')
+    expect((await get()).status).toBe(403)
   })
 
   it('lists the 21 banks', async () => {

@@ -50,6 +50,7 @@ export interface PeriodView {
 /** One household of a period. While the period is a draft `id` is null and the paid fields are empty. */
 export interface LineView {
   id: string | null
+  period_id: string
   household_id: string
   household_name: string
   leaf_net_kg: number

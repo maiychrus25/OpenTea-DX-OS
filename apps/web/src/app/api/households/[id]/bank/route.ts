@@ -20,4 +20,13 @@ async function setBank(request: Request, context: unknown) {
   return NextResponse.json({ data: await new SetHouseholdBankUseCase(new PrismaLedgerRepository()).execute(tenant, id, body) })
 }
 
+async function getBank(_request: Request, context: unknown) {
+  const tenant = await requireTenant()
+  requireRole(tenant, 'manager', 'accountant')
+  const id = await paramOf(context)
+  await new TenantGuard(tenant).household(id)
+  return NextResponse.json({ data: await new SetHouseholdBankUseCase(new PrismaLedgerRepository()).get(tenant, id) })
+}
+
+export const GET = withErrorHandler(getBank)
 export const PUT = withErrorHandler(setBank)
