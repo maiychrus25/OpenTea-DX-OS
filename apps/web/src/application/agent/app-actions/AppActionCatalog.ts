@@ -53,7 +53,7 @@ function toDefinition(appId: string, action: AgentActionManifest, run: AppAction
     risk: action.risk,
     approverRoles: action.approver_roles,
     origins: ['agent'],
-    autonomy: action.money === true ? 'unlockable' : 'auto',
+    autonomy: action.money === true ? 'never' : 'auto',
     money: action.money === true,
     channels: ['web', 'telegram'],
     payloadSchema: buildPayloadSchema(action.payload),

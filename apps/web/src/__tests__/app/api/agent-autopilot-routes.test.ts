@@ -84,6 +84,8 @@ describe('POST /api/agent/autopilot/enable', () => {
   test.each([
     ['not acknowledged', { ...validBody, acknowledged: false }],
     ['a kind that is not unlockable', { ...validBody, unlocked_kinds: ['journal.reject'] }],
+    ['harvest.approve, which is human-only', { ...validBody, unlocked_kinds: ['harvest.approve'] }],
+    ['journal.approve, which is human-only', { ...validBody, unlocked_kinds: ['journal.approve'] }],
     ['a cap over 50', { ...validBody, daily_cap: 51 }],
     ['a missing body', undefined],
   ])('%s answers 400', async (_name, body) => {

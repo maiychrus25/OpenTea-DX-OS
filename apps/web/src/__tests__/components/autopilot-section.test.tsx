@@ -18,8 +18,8 @@ jest.mock('@/lib/api/fetch-json', () => ({
 const kinds = [
   { kind: 'notification.internal', title_vi: 'Thông báo nội bộ', autonomy: 'auto', risk: 'low', window_minutes: 0, match_rate: 0.97, sample: 30, warning: false },
   { kind: 'journal.reject', title_vi: 'Yêu cầu sửa nhật ký', autonomy: 'auto', risk: 'medium', window_minutes: 15, match_rate: 0.8, sample: 10, warning: true },
-  { kind: 'harvest.approve', title_vi: 'Duyệt thu hoạch', autonomy: 'unlockable', risk: 'high', window_minutes: 120, match_rate: null, sample: 0, warning: false },
-  { kind: 'journal.approve', title_vi: 'Duyệt nhật ký canh tác', autonomy: 'unlockable', risk: 'medium', window_minutes: 15, match_rate: 0.95, sample: 20, warning: false },
+  { kind: 'miniapp.install', title_vi: 'Cài mini-app', autonomy: 'unlockable', risk: 'high', window_minutes: 120, match_rate: null, sample: 0, warning: false },
+  { kind: 'miniapp.remove', title_vi: 'Gỡ mini-app', autonomy: 'unlockable', risk: 'medium', window_minutes: 15, match_rate: 0.95, sample: 20, warning: false },
   { kind: 'improvement.adopt', title_vi: 'Áp dụng cải tiến', autonomy: 'never', risk: 'low', window_minutes: 0, match_rate: null, sample: 0, warning: false },
 ]
 
@@ -60,7 +60,7 @@ describe('AutopilotSection', () => {
     expect(screen.getAllByText('Chưa có dữ liệu so sánh').length).toBeGreaterThan(0)
     expect(screen.getByText('chạy ở lượt kế tiếp')).toBeInTheDocument()
     expect(screen.getByText('chờ 2 giờ để chặn')).toBeInTheDocument()
-    expect(screen.getByLabelText('Duyệt thu hoạch')).not.toBeChecked()
+    expect(screen.getByLabelText('Cài mini-app')).not.toBeChecked()
     expect(screen.queryByRole('button', { name: 'Dừng ngay' })).not.toBeInTheDocument()
   })
 
@@ -68,20 +68,20 @@ describe('AutopilotSection', () => {
     render(<AutopilotSection role="manager" />)
     const button = await screen.findByRole('button', { name: 'Bật tự vận hành' })
     expect(button).toBeDisabled()
-    fireEvent.click(screen.getByLabelText('Duyệt thu hoạch'))
+    fireEvent.click(screen.getByLabelText('Cài mini-app'))
     fireEvent.change(screen.getByLabelText(/Tối đa việc tự chạy/), { target: { value: '20' } })
     fireEvent.click(screen.getByLabelText(/Tôi hiểu các việc trên sẽ tự chạy dưới tên tôi/))
     expect(button).toBeEnabled()
 
-    respond(true, 200, { data: status({ enabled: true, enabled_by_name: 'Lan', daily_cap: 20, unlocked_kinds: ['harvest.approve'] }) })
+    respond(true, 200, { data: status({ enabled: true, enabled_by_name: 'Lan', daily_cap: 20, unlocked_kinds: ['miniapp.install'] }) })
     fireEvent.click(button)
 
     await waitFor(() => expect(screen.getByText('Đang bật')).toBeInTheDocument())
     const [url, init] = (global.fetch as jest.Mock).mock.calls[0]
     expect(url).toBe('/api/agent/autopilot/enable')
-    expect(JSON.parse(init.body)).toEqual({ unlocked_kinds: ['harvest.approve'], daily_cap: 20, acknowledged: true })
+    expect(JSON.parse(init.body)).toEqual({ unlocked_kinds: ['miniapp.install'], daily_cap: 20, acknowledged: true })
     expect(screen.getByRole('button', { name: 'Dừng ngay' })).toBeInTheDocument()
-    expect(screen.getByText('Đã mở thêm: Duyệt thu hoạch.')).toBeInTheDocument()
+    expect(screen.getByText('Đã mở thêm: Cài mini-app.')).toBeInTheDocument()
   })
 
   test('without a fresh sign-in the button says so and sends the person through sign-in', async () => {

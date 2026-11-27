@@ -21,7 +21,7 @@ export const journalApproveAction: ActionDefinition<JournalApprovePayload> = {
   risk: 'medium',
   approverRoles: ['officer', 'manager'],
   origins: ['agent', 'user'],
-  autonomy: 'unlockable',
+  autonomy: 'never',
   channels: ['web', 'telegram'],
   payloadSchema: journalApprovePayloadSchema,
   editableFields: [],

@@ -48,6 +48,11 @@ describe('autoEligibility', () => {
     ])
   })
 
+  test('food safety and money kinds are never autonomous', () => {
+    expect(getAction('harvest.approve')!.autonomy).toBe('never')
+    expect(getAction('journal.approve')!.autonomy).toBe('never')
+  })
+
   test('no kind touches the mode, the limits, roles, keys, budgets, data policy or the audit (tests 19, H2, H3, H4)', () => {
     const dir = path.join(__dirname, '../../../../application/agent/actions')
     for (const file of readdirSync(dir).filter((f) => f.endsWith('.action.ts'))) {
@@ -142,21 +147,16 @@ describe('autoEligibility', () => {
   })
 
   describe('journal.approve', () => {
-    const open = { unlockedKinds: ['journal.approve'] }
-    test('clean entries run when opened; a rule warning never runs', () => {
-      expect(check('journal.approve', { entry_ids: ['e1'] }, open).eligible).toBe(true)
-      expect(check('journal.approve', { entry_ids: ['e1'], warnings: [] }, open).eligible).toBe(true)
-      expect(check('journal.approve', { entry_ids: ['e1'], warnings: ['WITHDRAWAL'] }, open)).toEqual({
-        eligible: false,
-        reason: 'rule_warning',
-      })
+    test('is never eligible, even when opened', () => {
+      expect(check('journal.approve', { entry_ids: ['e1'] }, { unlockedKinds: ['journal.approve'] })).toEqual({ eligible: false, reason: 'never' })
     })
   })
 })
 
 describe('shadowEligibility', () => {
   test('treats every unlockable kind as opened, and nothing else', () => {
-    expect(shadowEligibility({ origin: 'agent', payload: {}, evidence: emptyEvidence }, getAction('journal.approve')!)).toBe(true)
+    expect(shadowEligibility({ origin: 'agent', payload: {}, evidence: emptyEvidence }, getAction('miniapp.install')!)).toBe(true)
+    expect(shadowEligibility({ origin: 'agent', payload: {}, evidence: emptyEvidence }, getAction('journal.approve')!)).toBe(false)
     expect(shadowEligibility({ origin: 'agent', payload: {}, evidence: emptyEvidence }, getAction('improvement.adopt')!)).toBe(false)
     expect(shadowEligibility({ origin: 'user', payload: {}, evidence: emptyEvidence }, getAction('journal.reject')!)).toBe(false)
   })
@@ -167,7 +167,7 @@ describe('windowFor', () => {
   test('follows the risk', () => {
     expect(minutes('notification.internal')).toBe(0) // low
     expect(minutes('journal.reject')).toBe(15) // medium
-    expect(minutes('harvest.approve')).toBe(120) // high
+    expect(minutes('miniapp.install')).toBe(120) // high
   })
   test('strategy.adopt waits 48 hours', () => {
     expect(windowFor({ kind: 'strategy.adopt', risk: 'high' }) / 3_600_000).toBe(48)
