@@ -38,3 +38,21 @@ it('filters by the figure pressed and approves only waiting journals that are ch
   fireEvent.click(await screen.findByRole('button', { name: 'Xem Đã duyệt tháng này' }))
   expect(screen.getByRole('checkbox', { name: 'Chọn nhật ký 1' })).toBeDisabled()
 })
+
+it('approves more than fifty journals in batches of fifty', async () => {
+  const many = Array.from({ length: 60 }, (_, i) => entry(`e${i}`, `P-${i}`, 'PENDING_APPROVAL', now))
+  global.fetch = jest.fn(async (url: string, init?: RequestInit) => ({
+    ok: true,
+    status: 200,
+    json: async () => (init?.method === 'POST'
+      ? { data: { approved_count: JSON.parse(String(init.body)).entry_ids.length, failed_ids: [] } }
+      : { data: String(url).includes('households') ? [] : many }),
+  })) as unknown as typeof fetch
+  render(<ApproveList />)
+  await screen.findByText('P-0')
+  for (const box of screen.getAllByRole('checkbox', { name: /^Chọn nhật ký/ })) fireEvent.click(box)
+  fireEvent.click(screen.getByRole('button', { name: 'Duyệt (60)' }))
+  await screen.findByText('Đã duyệt 60 nhật ký thành công.')
+  const sizes = (global.fetch as jest.Mock).mock.calls.filter(([, init]) => init?.method === 'POST').map(([, init]) => JSON.parse(init.body).entry_ids.length)
+  expect(sizes).toEqual([50, 10])
+})
