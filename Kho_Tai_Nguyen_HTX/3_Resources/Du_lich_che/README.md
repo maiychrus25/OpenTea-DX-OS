@@ -7,6 +7,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 **Phạm vi:** tour do công ty du lịch tổ chức và quản lý. Hợp tác xã và nông hộ nhận thông báo đoàn sắp đến để chuẩn bị đón.
 
+- **[Hồ sơ đầy đủ từng đối tượng](Ho_so/README.md)**
 - **[Cẩm nang chi tiết](Cam_nang/README.md)**: địa bàn, tiền hỗ trợ, sản phẩm, đón khách, homestay, an toàn, chi phí
 - `huong-dan-phat-trien.md`: 5 bước phát triển
 - `chinh-sach.md`: định hướng của tỉnh, xã
