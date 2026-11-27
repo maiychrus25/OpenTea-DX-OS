@@ -13,7 +13,6 @@ const mockFakes = {
   recent: jest.fn(),
   deleteOne: jest.fn(),
   listUsers: jest.fn(),
-  invite: jest.fn(),
   approve: jest.fn(),
   removeMember: jest.fn(),
   getProfile: jest.fn(),
@@ -48,9 +47,6 @@ jest.mock('@/application/notification/broadcast-announcement-usecase', () => ({
 }))
 jest.mock('@/application/notification/mark-notification-read-usecase', () => ({
   MarkNotificationReadUseCase: jest.fn(() => ({ execute: (...a: unknown[]) => mockFakes.markRead(...a) })),
-}))
-jest.mock('@/application/auth/invite-member.use-case', () => ({
-  InviteMemberUseCase: jest.fn(() => ({ execute: (...a: unknown[]) => mockFakes.invite(...a) })),
 }))
 jest.mock('@/application/auth/approve-member.use-case', () => ({
   ApproveMemberUseCase: jest.fn(() => ({ execute: (...a: unknown[]) => mockFakes.approve(...a) })),
@@ -177,26 +173,9 @@ describe('notification.read and notification.clear', () => {
 })
 
 describe('member.invite', () => {
-  const a = () => action('member.invite')
-
-  it('is for managers and asks phone, name and role', () => {
-    expect([...a().roles]).toEqual(['manager'])
-    expect(a().steps.map((s) => s.slot)).toEqual(['phone', 'full_name', 'role'])
-  })
-
-  it('refuses a short phone as the route does', () => {
-    expect(a().payloadSchema.safeParse({ phone: '12345', full_name: 'Lê Văn C', role: 'farmer' }).success).toBe(false)
-    expect(a().payloadSchema.safeParse({ phone: '0901234567', full_name: 'Lê Văn C', role: 'manager' }).success).toBe(false)
-  })
-
-  it('invites through the use case with a made password that is not in the payload', async () => {
-    const payload = { phone: '0901234567', full_name: 'Lê Văn C', role: 'officer' as const }
-    const line = await a().execute(payload, manager, deps, NOW)
-    const [request, htxCode] = mockFakes.invite.mock.calls[0]
-    expect(htxCode).toBe('TC')
-    expect(request).toEqual({ fullName: 'Lê Văn C', phone: '0901234567', pin: expect.stringMatching(/^\d{8}$/), role: 'officer' })
-    expect(line).toContain(`mật khẩu tạm ${request.pin}`)
-    expect(JSON.stringify(a().payloadSchema.parse(payload))).not.toContain(request.pin)
+  it('is not a chat action: an account and its password are made in the app, never in a Telegram message', () => {
+    expect(CHAT_ACTIONS.map((a) => a.name)).not.toContain('member.invite')
+    expect(CHAT_ACTIONS.flatMap((a) => a.routes)).not.toContain('POST /api/members/invite')
   })
 })
 

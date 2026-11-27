@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { randomInt } from 'crypto'
 import { z } from 'zod'
 import { ApproveMemberUseCase } from '@/application/auth/approve-member.use-case'
 import { DeleteMemberUseCase } from '@/application/auth/delete-member.use-case'
-import { InviteMemberUseCase } from '@/application/auth/invite-member.use-case'
 import type { MemberData } from '@/domain/auth/ports/auth-management.port'
 import { KeycloakAdminAdapter } from '@/infrastructure/db/auth/keycloak-admin.adapter'
 import { PrismaHouseholdRepository } from '@/infrastructure/db/farm/PrismaHouseholdRepository'
-import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
 import type { ChatAction, ChatUser } from '../types'
 import { MAX_CHOICES, notFound } from './scope'
 
@@ -39,46 +36,6 @@ async function memberOf(user: ChatUser, id: string): Promise<MemberData> {
 }
 
 const memberLine = (member: MemberData) => `Thành viên: ${member.full_name} · ${member.phone}`
-
-type InvitePayload = { phone: string; full_name: string; role: (typeof ROLES)[number]['value'] }
-
-/**
- * Routes: `POST /api/members/invite`. The route also needs a name and a password: the name is asked in the flow and a
- * random eight-digit password is made when the card is confirmed, and shown once in the answer.
- */
-export const memberInviteAction: ChatAction<InvitePayload> = {
-  name: 'member.invite',
-  titleVi: 'Mời thành viên',
-  risk: 'medium',
-  roles: ['manager'],
-  routes: ['POST /api/members/invite'],
-  args: [
-    { name: 'phone', type: 'string', descriptionVi: 'Số điện thoại' },
-    { name: 'full_name', type: 'string', descriptionVi: 'Họ và tên' },
-  ],
-  steps: [
-    { kind: 'text', slot: 'phone', promptVi: 'Số điện thoại của thành viên (từ 10 số):', maxLength: 20 },
-    { kind: 'text', slot: 'full_name', promptVi: 'Họ và tên:', maxLength: 100 },
-    { kind: 'choice', slot: 'role', promptVi: 'Vai trò:', choices: async () => [...ROLES] },
-  ],
-  payloadSchema: z.object({
-    phone: z.string().trim().min(10).max(20),
-    full_name: z.string().trim().min(2).max(100),
-    role: z.enum(['farmer', 'officer']),
-  }),
-  consequenceVi: null,
-  async preview(payload) {
-    return [`Họ tên: ${payload.full_name}`, `Số điện thoại: ${payload.phone}`, `Vai trò: ${ROLES.find((r) => r.value === payload.role)?.label}`]
-  },
-  async execute(payload, user) {
-    const pin = String(randomInt(10_000_000, 100_000_000))
-    await new InviteMemberUseCase(new KeycloakAdminAdapter(), new PrismaHouseholdRepository(), new PrismaHtxProfileRepository()).execute(
-      { fullName: payload.full_name, phone: payload.phone, pin, role: payload.role },
-      user.tenant.htxCode
-    )
-    return `Đã tạo tài khoản "${payload.full_name}". Đăng nhập bằng số điện thoại ${payload.phone}, mật khẩu tạm ${pin}. Nhờ họ đổi mật khẩu sau khi đăng nhập.`
-  },
-}
 
 type MemberPayload = { member_id: string }
 const memberPayload = z.object({ member_id: z.string().min(1) })

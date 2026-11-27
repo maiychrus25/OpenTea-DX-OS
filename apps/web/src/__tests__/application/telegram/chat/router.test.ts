@@ -38,7 +38,7 @@ describe('routeText', () => {
     ['gửi thông báo cho cả HTX', { kind: 'action', name: 'notification.announce' }],
     ['đánh dấu đã đọc', { kind: 'action', name: 'notification.read' }],
     ['xoá thông báo', { kind: 'action', name: 'notification.clear' }],
-    ['mời thành viên', { kind: 'action', name: 'member.invite' }],
+    ['mời thành viên', { kind: 'tool', name: 'members' }],
     ['duyệt thành viên', { kind: 'action', name: 'member.approve' }],
     ['xoá thành viên', { kind: 'action', name: 'member.remove' }],
     ['sửa hồ sơ HTX', { kind: 'action', name: 'profile.edit' }],

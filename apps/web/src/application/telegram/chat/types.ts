@@ -88,7 +88,6 @@ export const ACTION_NAMES = [
   'notification.announce',
   'notification.read',
   'notification.clear',
-  'member.invite',
   'member.approve',
   'member.remove',
   'profile.edit',

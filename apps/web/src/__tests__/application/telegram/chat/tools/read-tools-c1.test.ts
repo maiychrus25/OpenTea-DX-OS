@@ -321,6 +321,7 @@ describe('members', () => {
     expect(out.lines).toHaveLength(7)
     expect(out.lines[1]).toContain('Người 15')
     expect(out.lines.join('\n')).not.toContain('m15')
+    expect(out.lines[6]).toBe('Mời thành viên mới: mở ứng dụng, mục Thành viên.')
   })
 })
 

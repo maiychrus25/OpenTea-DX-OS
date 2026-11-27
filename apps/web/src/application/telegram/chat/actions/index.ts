@@ -13,7 +13,7 @@ import { journalDeleteAction } from './journal-delete'
 import { journalEditAction } from './journal-edit'
 import { lotCreateAction } from './lot-create'
 import { lotExportQrAction } from './lot-export-qr'
-import { memberApproveAction, memberInviteAction, memberRemoveAction } from './members'
+import { memberApproveAction, memberRemoveAction } from './members'
 import { notificationAnnounceAction, notificationClearAction, notificationReadAction } from './notifications'
 import { parcelDeleteAction } from './parcel-delete'
 import { profileEditAction } from './profile-edit'
@@ -34,7 +34,6 @@ export const CHAT_ACTIONS: readonly ChatAction[] = [
   notificationAnnounceAction,
   notificationReadAction,
   notificationClearAction,
-  memberInviteAction,
   memberApproveAction,
   memberRemoveAction,
   profileEditAction,

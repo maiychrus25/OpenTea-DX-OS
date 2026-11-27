@@ -55,6 +55,11 @@ describe('coverage table (test 17)', () => {
     expect([...TELEGRAM_COVERAGE.chatRead, ...TELEGRAM_COVERAGE.chatConfirm].filter((row) => !served.has(row))).toEqual([])
   })
 
+  it('keeps the member invite, which makes an account with a password, in the Mini App', () => {
+    expect(TELEGRAM_COVERAGE.miniApp).toContain('POST /api/members/invite')
+    expect(TELEGRAM_COVERAGE.chatConfirm).not.toContain('POST /api/members/invite')
+  })
+
   it('keeps Telegram link management out of the bot and the agent settings out of chat', () => {
     for (const row of listed.filter((r) => r.includes(' /api/telegram/'))) expect(TELEGRAM_COVERAGE.none).toContain(row)
     expect(TELEGRAM_COVERAGE.chatRead).toContain('GET /api/agent/proposals')

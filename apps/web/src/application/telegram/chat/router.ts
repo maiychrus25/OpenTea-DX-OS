@@ -67,7 +67,6 @@ const PHRASES: readonly [string, Route][] = [
   ['gui thong bao', { kind: 'action', name: 'notification.announce' }],
   ['danh dau da doc', { kind: 'action', name: 'notification.read' }],
   ['xoa thong bao', { kind: 'action', name: 'notification.clear' }],
-  ['moi thanh vien', { kind: 'action', name: 'member.invite' }],
   ['duyet thanh vien', { kind: 'action', name: 'member.approve' }],
   ['xoa thanh vien', { kind: 'action', name: 'member.remove' }],
   ['sua ho so', { kind: 'action', name: 'profile.edit' }],
