@@ -3,12 +3,14 @@
 """Shared pieces of the M4 rule agents: Vietnam-time helpers, the proposal record and the run submission."""
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+import logging
 from typing import Any, Mapping, Sequence
 from zoneinfo import ZoneInfo
 
-from ..client import CoreGatewayClient
+from ..client import CoreGatewayClient, GatewayHTTPError
 from ..evidence import build_evidence, canonical_json, sha256_hex
 
+log = logging.getLogger("dxos_agent")
 VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 RULES_PROVIDER = "rules"
 RULES_MODEL = "rules-v1"
@@ -73,10 +75,19 @@ class RuleRun:
     run_id: str
     submitted: int
     deduped: int
+    refused: int = 0
 
 
-def submit_rule_run(gateway: CoreGatewayClient, agent: str, proposals: Sequence[Proposal]) -> RuleRun | None:
-    """Submit proposals as one run; no proposals means no run row and no request, as A1 does for an empty queue."""
+def submit_rule_run(
+    gateway: CoreGatewayClient,
+    agent: str,
+    proposals: Sequence[Proposal],
+    skip_statuses: Sequence[int] = (),
+) -> RuleRun | None:
+    """Submit proposals as one run; no proposals means no run row and no request, as A1 does for an empty queue.
+
+    A proposal the web answers with one of `skip_statuses` is logged and counted as refused; the others go on.
+    """
     if not proposals:
         return None
     input_hash = sha256_hex(canonical_json(sorted(item.evidence["sha256"] for item in proposals)))
@@ -90,19 +101,27 @@ def submit_rule_run(gateway: CoreGatewayClient, agent: str, proposals: Sequence[
     )
     submitted = 0
     deduped = 0
+    refused = 0
     try:
         for item in proposals:
-            res = gateway.submit_proposal(
-                {
-                    "run_id": run_id,
-                    "agent": agent,
-                    "kind": item.kind,
-                    "payload": item.payload,
-                    "reason_vi": item.reason_vi,
-                    "evidence": item.evidence,
-                    "confidence": 1.0,
-                }
-            )
+            try:
+                res = gateway.submit_proposal(
+                    {
+                        "run_id": run_id,
+                        "agent": agent,
+                        "kind": item.kind,
+                        "payload": item.payload,
+                        "reason_vi": item.reason_vi,
+                        "evidence": item.evidence,
+                        "confidence": 1.0,
+                    }
+                )
+            except GatewayHTTPError as exc:
+                if exc.status_code not in skip_statuses:
+                    raise
+                log.warning("%s: the web refused a %s proposal (%d)", agent, item.kind, exc.status_code)
+                refused += 1
+                continue
             if res.get("deduped"):
                 deduped += 1
             else:
@@ -111,4 +130,4 @@ def submit_rule_run(gateway: CoreGatewayClient, agent: str, proposals: Sequence[
         gateway.finish_run(run_id, status="failed", provider=RULES_PROVIDER, model=RULES_MODEL, error=str(exc)[:1000])
         raise
     gateway.finish_run(run_id, status="ok", provider=RULES_PROVIDER, model=RULES_MODEL)
-    return RuleRun(run_id=run_id, submitted=submitted, deduped=deduped)
+    return RuleRun(run_id=run_id, submitted=submitted, deduped=deduped, refused=refused)

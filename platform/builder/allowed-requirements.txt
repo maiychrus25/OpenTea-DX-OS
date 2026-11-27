@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 OpenTea Developers
+# The libraries an AI-written mini-app may use: the union of the exact pins in the existing mini-apps' requirements files
+# (and the CLI's, which the gates use). Each line carries its OSI licence. A generated app's requirements may hold only these lines.
+fastapi==0.162.2  # MIT
+uvicorn[standard]==0.54.0  # BSD-3-Clause
+python-multipart==0.0.33  # Apache-2.0
+jinja2==3.1.6  # BSD-3-Clause
+psycopg[binary]==3.3.6  # LGPL-3.0-only
+pytest==9.1.1  # MIT
+httpx2==2.16.0  # BSD-3-Clause
+PyYAML==6.0.3  # MIT
+jsonschema==4.26.0  # MIT

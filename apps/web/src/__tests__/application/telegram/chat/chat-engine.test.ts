@@ -38,8 +38,8 @@ function fakeRepo() {
       const row = rows.get(tg)
       return row && row.expiresAt > now ? row : null
     }),
-    setFlow: jest.fn(async (f: { telegramUserId: string; flow: string; step: number | null; state: Record<string, unknown>; token: string | null; cardMessageId: string | null; expiresAt: Date }) => {
-      rows.set(f.telegramUserId, { telegramUserId: f.telegramUserId, kind: 'flow', proposalId: null, flow: f.flow, step: f.step, state: f.state, token: f.token, cardMessageId: f.cardMessageId, expiresAt: f.expiresAt })
+    setFlow: jest.fn(async (f: { telegramUserId: string; kind?: 'flow' | 'voice'; flow: string; step: number | null; state: Record<string, unknown>; token: string | null; cardMessageId: string | null; expiresAt: Date }) => {
+      rows.set(f.telegramUserId, { telegramUserId: f.telegramUserId, kind: f.kind ?? 'flow', proposalId: null, flow: f.flow, step: f.step, state: f.state, token: f.token, cardMessageId: f.cardMessageId, expiresAt: f.expiresAt })
     }),
     deleteConversation: jest.fn(async (tg: string) => {
       rows.delete(tg)
@@ -521,5 +521,161 @@ describe('ChatEngine: cards and confirm', () => {
     const res = await engine.onCallback(MANAGER, { telegramUserId: '44', c: token, s: 'ok', chatId: 44, messageId: 9 }, NOW)
     expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.staleButton, show_alert: true })
     expect(harvest.execute).not.toHaveBeenCalled()
+  })
+})
+
+describe('ChatEngine: voice messages (M15)', () => {
+  const heard = (text: string) => ({ kind: 'text' as const, text })
+
+  test('a voice text is echoed with Đúng, Sửa and Huỷ and held as a voice conversation for 10 minutes', async () => {
+    const { engine, repo, requests } = build()
+    const res = await engine.onVoice(FARMER, heard('ghi nhật ký bón phân thửa A3'), NOW)
+    expect(res.replies[0].text).toBe('Em nghe được: “ghi nhật ký bón phân thửa A3”')
+    expect(res.replies[0].buttons!.flat().map((b) => b.text)).toEqual(['Đúng', 'Sửa', 'Huỷ'])
+    expect(buttonFor(res.replies[0].buttons, 'Đúng').s).toBe('vok')
+    expect(buttonFor(res.replies[0].buttons, 'Sửa').s).toBe('vedit')
+    expect(buttonFor(res.replies[0].buttons, 'Huỷ').s).toBe('cancel')
+    expect(repo.rows.get('42')).toMatchObject({ kind: 'voice', state: { text: 'ghi nhật ký bón phân thửa A3' } })
+    expect(repo.rows.get('42')!.expiresAt.getTime()).toBe(NOW.getTime() + 10 * 60 * 1000)
+    // Voice never acts: nothing ran, nothing was asked of the assistant.
+    expect(requests.submit).not.toHaveBeenCalled()
+    expect(journal.execute).not.toHaveBeenCalled()
+  })
+
+  test('test 40: a write intent by voice makes no card until Đúng, then the normal flow still needs its Confirm', async () => {
+    const { engine, repo } = build()
+    const res = await engine.onVoice(FARMER, heard('ghi nhật ký'), NOW)
+    expect(res.replies[0].text).toContain('Em nghe được')
+    expect(repo.rows.get('42')).toMatchObject({ kind: 'voice' })
+
+    const yes = buttonFor(res.replies[0].buttons, 'Đúng')
+    const ok = await press(engine, FARMER, '42', 42, yes.c, yes.s)
+    expect(ok.replies[0]).toMatchObject({ op: 'edit', text: 'Em nghe được: “ghi nhật ký”' })
+    expect(ok.replies[0].buttons).toBeUndefined()
+    expect(ok.replies[1]).toMatchObject({ op: 'send', text: 'Chọn thửa:' })
+    expect(repo.rows.get('42')).toMatchObject({ kind: 'flow', flow: 'journal.create', step: 0 })
+    expect(journal.execute).not.toHaveBeenCalled()
+  })
+
+  test('Sửa asks for the right sentence and drops the voice text; the next text is handled normally', async () => {
+    const { engine, repo, requests } = build()
+    const res = await engine.onVoice(FARMER, heard('mai có nên đi hái không'), NOW)
+    const { c, s } = buttonFor(res.replies[0].buttons, 'Sửa')
+    const edited = await press(engine, FARMER, '42', 42, c, s)
+    expect(edited.replies.map((r) => r.text)).toEqual(['Em nghe được: “mai có nên đi hái không”', 'Bạn nhắn lại câu đúng nhé.'])
+    expect(repo.rows.has('42')).toBe(false)
+    await engine.onText(FARMER, 'mai có nên đi hái không', NOW)
+    expect(requests.submit).toHaveBeenCalledTimes(1)
+  })
+
+  test('Huỷ answers flowCancelled and drops the voice text', async () => {
+    const { engine, repo } = build()
+    const res = await engine.onVoice(FARMER, heard('thời tiết'), NOW)
+    const { c, s } = buttonFor(res.replies[0].buttons, 'Huỷ')
+    const cancelled = await press(engine, FARMER, '42', 42, c, s)
+    expect(cancelled.replies[0]).toMatchObject({ op: 'edit', text: TELEGRAM_TEXT.flowCancelled })
+    expect(repo.rows.has('42')).toBe(false)
+  })
+
+  test('a typed message while the voice text is waiting drops it, so the old Đúng cannot replay it', async () => {
+    const { engine, repo } = build()
+    const res = await engine.onVoice(FARMER, heard('thời tiết'), NOW)
+    const { c, s } = buttonFor(res.replies[0].buttons, 'Đúng')
+    await engine.onText(FARMER, 'giá chè', NOW)
+    expect(repo.rows.has('42')).toBe(false)
+    const stale = await press(engine, FARMER, '42', 42, c, s)
+    expect(stale.replies).toEqual([])
+    expect(stale.answer_callback).toEqual({ text: TELEGRAM_TEXT.staleButton, show_alert: true })
+  })
+
+  test('Đúng after 10 minutes is stale and sends nothing on', async () => {
+    const { engine, repo, requests } = build()
+    const res = await engine.onVoice(FARMER, heard('mai có nên đi hái không'), NOW)
+    const { c, s } = buttonFor(res.replies[0].buttons, 'Đúng')
+    const late = new Date(NOW.getTime() + 10 * 60 * 1000)
+    const stale = await press(engine, FARMER, '42', 42, c, s, 9, late)
+    expect(stale.replies).toEqual([])
+    expect(stale.answer_callback).toEqual({ text: TELEGRAM_TEXT.staleButton, show_alert: true })
+    expect(requests.submit).not.toHaveBeenCalled()
+    expect(repo.rows.has('42')).toBe(false)
+  })
+
+  test('Đúng after another flow started is stale and sends nothing on', async () => {
+    const { engine, requests } = build()
+    const res = await engine.onVoice(FARMER, heard('mai có nên đi hái không'), NOW)
+    const { c, s } = buttonFor(res.replies[0].buttons, 'Đúng')
+    await engine.onText(FARMER, '/nhatky', NOW)
+    const stale = await press(engine, FARMER, '42', 42, c, s)
+    expect(stale.replies).toEqual([])
+    expect(stale.answer_callback).toEqual({ text: TELEGRAM_TEXT.staleButton, show_alert: true })
+    expect(requests.submit).not.toHaveBeenCalled()
+  })
+
+  test('Đúng by a user whose link no longer grants a role replays nothing', async () => {
+    const { engine, requests } = build()
+    const res = await engine.onVoice(FARMER, heard('mai có nên đi hái không'), NOW)
+    const { c, s } = buttonFor(res.replies[0].buttons, 'Đúng')
+    const refused = await press(engine, null, '42', 42, c, s)
+    expect(refused.replies).toEqual([])
+    expect(refused.answer_callback?.show_alert).toBe(true)
+    expect(requests.submit).not.toHaveBeenCalled()
+  })
+
+  test('a voice answer in the middle of a flow waits inside the flow; Đúng feeds it to the step and keeps the flow', async () => {
+    const { engine, repo } = build()
+    repo.rows.set('42', {
+      telegramUserId: '42', kind: 'flow', proposalId: null, flow: 'journal.create', step: 2,
+      state: { parcel_id: 'p1', activity_type: 'SPRAYING' }, token: 'FlowTok0123', cardMessageId: null,
+      expiresAt: new Date(NOW.getTime() + 5 * 60 * 1000),
+    })
+    const res = await engine.onVoice(FARMER, heard('Regent 800WG'), NOW)
+    expect(res.replies[0].text).toBe('Em nghe được: “Regent 800WG”')
+    expect(res.replies[0].buttons!.flat().map((b) => b.text)).toEqual(['Đúng', 'Sửa', 'Bỏ câu này'])
+    // The half-filled flow is kept, with the heard sentence waiting beside its answers.
+    expect(repo.rows.get('42')).toMatchObject({ kind: 'flow', flow: 'journal.create', step: 2, token: 'FlowTok0123' })
+    expect(repo.rows.get('42')!.state).toMatchObject({ parcel_id: 'p1', activity_type: 'SPRAYING' })
+
+    const yes = buttonFor(res.replies[0].buttons, 'Đúng')
+    const ok = await press(engine, FARMER, '42', 42, yes.c, yes.s)
+    expect(ok.replies[0]).toMatchObject({ op: 'edit', text: 'Em nghe được: “Regent 800WG”' })
+    expect(ok.replies[1]).toMatchObject({ op: 'send', text: 'Gửi một ảnh minh chứng, hoặc bấm Bỏ qua.' })
+    expect(repo.rows.get('42')).toMatchObject({ kind: 'flow', flow: 'journal.create', step: 3 })
+    expect(repo.rows.get('42')!.state).toEqual({ parcel_id: 'p1', activity_type: 'SPRAYING', product_name: 'Regent 800WG' })
+    expect(journal.execute).not.toHaveBeenCalled()
+  })
+
+  test('Bỏ câu này drops only the heard sentence and keeps the flow where it was', async () => {
+    const { engine, repo } = build()
+    repo.rows.set('42', {
+      telegramUserId: '42', kind: 'flow', proposalId: null, flow: 'journal.create', step: 2,
+      state: { parcel_id: 'p1', activity_type: 'SPRAYING' }, token: 'FlowTok0123', cardMessageId: null,
+      expiresAt: new Date(NOW.getTime() + 5 * 60 * 1000),
+    })
+    const res = await engine.onVoice(FARMER, heard('ừm'), NOW)
+    const drop = buttonFor(res.replies[0].buttons, 'Bỏ câu này')
+    const dropped = await press(engine, FARMER, '42', 42, drop.c, drop.s)
+    expect(dropped.replies[0]).toMatchObject({ op: 'edit', text: 'Đã bỏ câu vừa nói. Bạn trả lời tiếp bằng chữ hoặc nói lại nhé.' })
+    expect(repo.rows.get('42')).toMatchObject({ kind: 'flow', step: 2, state: { parcel_id: 'p1', activity_type: 'SPRAYING' } })
+    const again = await press(engine, FARMER, '42', 42, drop.c, drop.s)
+    expect(again.answer_callback).toEqual({ text: TELEGRAM_TEXT.staleButton, show_alert: true })
+    expect(repo.rows.get('42')).toMatchObject({ kind: 'flow', step: 2 })
+  })
+
+  test('empty or blank text answers voiceUnclear with no buttons and stores nothing', async () => {
+    const { engine, repo } = build()
+    for (const text of ['', '   ']) {
+      const res = await engine.onVoice(FARMER, heard(text), NOW)
+      expect(res.replies).toEqual([{ op: 'send', chat_id: 42, text: 'Chưa nghe rõ. Bạn nói lại hoặc nhắn chữ nhé.' }])
+    }
+    expect(repo.rows.has('42')).toBe(false)
+  })
+
+  test('the relay errors map to their copy and store nothing', async () => {
+    const { engine, repo } = build()
+    const tooLong = await engine.onVoice(FARMER, { kind: 'error', reason: 'too_long' }, NOW)
+    expect(tooLong.replies[0].text).toBe('Tin thoại dài quá 60 giây. Bạn nói ngắn hơn hoặc nhắn chữ nhé.')
+    const down = await engine.onVoice(FARMER, { kind: 'error', reason: 'stt_unavailable' }, NOW)
+    expect(down.replies[0].text).toBe('Chưa nghe được tin thoại lúc này. Bạn nhắn chữ giúp nhé.')
+    expect(repo.rows.has('42')).toBe(false)
   })
 })

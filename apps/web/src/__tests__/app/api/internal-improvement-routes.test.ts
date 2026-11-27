@@ -36,6 +36,9 @@ jest.mock('@/infrastructure/db/agent/PrismaImprovementStatsReader', () => ({
 jest.mock('@/infrastructure/db/agent/PrismaAgentSettingsRepository', () => ({
   PrismaAgentSettingsRepository: jest.fn().mockImplementation(() => mockSettings()),
 }))
+jest.mock('@/infrastructure/db/agent/PrismaStrategyPlanRepository', () => ({
+  PrismaStrategyPlanRepository: jest.fn().mockImplementation(() => ({ adoptedFor: async () => null })),
+}))
 jest.mock('@/infrastructure/db/agent/PrismaProposalRepository', () => ({
   PrismaProposalRepository: jest.fn().mockImplementation(() => mockProposals()),
 }))

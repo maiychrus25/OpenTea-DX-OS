@@ -1,0 +1,45 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- SPDX-FileCopyrightText: 2026 OpenTea Developers -#}
+{% extends "base.html" %}
+{% import "kit.html" as kit %}
+{% block title %}Tồn kho{% endblock %}
+{% block main %}
+{{ kit.app_header("Kho phân bón", "Số tồn cộng từ các lần nhập và xuất") }}
+{{ kit.tabs(tabs, "stock") }}
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+{{ kit.stats([{"label": "Số loại phân", "value": lines | length}, {"label": "Tổng tồn", "value": total_kg | kg}]) }}
+
+<h2>Tồn kho theo loại</h2>
+{% if lines %}
+<table role="table">
+  <thead role="rowgroup"><tr role="row"><th role="columnheader">Loại phân</th><th role="columnheader">Đã nhập</th><th role="columnheader">Đã xuất</th><th role="columnheader">Còn tồn</th></tr></thead>
+  <tbody role="rowgroup">
+  {% for line in lines %}
+    <tr role="row">
+      <td role="cell" data-label="Loại phân">{{ line.product }}</td>
+      <td role="cell" data-label="Đã nhập">{{ line.in_kg | kg }}</td>
+      <td role="cell" data-label="Đã xuất">{{ line.out_kg | kg }}</td>
+      <td role="cell" data-label="Còn tồn"><span class="pill{% if line.stock_kg <= 0 %} warn{% endif %}">{{ line.stock_kg | kg }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+{{ kit.empty("Chưa có lần nhập hay xuất nào. Ghi lần đầu ở biểu mẫu bên dưới.") }}
+{% endif %}
+
+<h2>Ghi nhập hoặc xuất</h2>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="{{ href('/movements', theme) }}" aria-label="Ghi nhập hoặc xuất phân bón">
+  <label>Loại phân <input name="product" maxlength="80" required value="{{ typed.get('product', '') }}"></label>
+  <label>Nhập hay xuất
+    <select name="kind" required>
+      <option value="in"{% if typed.get('kind') != 'out' %} selected{% endif %}>Nhập kho</option>
+      <option value="out"{% if typed.get('kind') == 'out' %} selected{% endif %}>Xuất kho</option>
+    </select>
+  </label>
+  <label>Số lượng (kg) <input name="quantity" inputmode="decimal" maxlength="8" required value="{{ typed.get('quantity', '') }}"></label>
+  <label>Ghi chú <input name="note" maxlength="200" value="{{ typed.get('note', '') }}"></label>
+  <button type="submit">Ghi</button>
+</form>
+{% endblock %}

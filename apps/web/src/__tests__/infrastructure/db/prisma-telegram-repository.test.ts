@@ -70,10 +70,22 @@ describe('PrismaTelegramRepository', () => {
     })
     const [strings, ...values] = mockPrisma.__tx.$executeRaw.mock.calls[1]
     const sql = (strings as string[]).join('?')
-    expect(sql).toContain("'flow', NULL")
+    expect(sql).toContain('?, NULL')
+    expect(values).toContain('flow')
     expect(values).toContain('journal.create')
     expect(values).toContain(JSON.stringify({ parcel_id: 'p1' }))
     expect(values).toContain('tokenABCDEF')
+  })
+
+  test('a voice conversation is stored with the kind voice', async () => {
+    const repo = new PrismaTelegramRepository()
+    await repo.setFlow({
+      telegramUserId: '42', kind: 'voice', flow: 'voice', step: null, state: { text: 'hôm nay' },
+      token: 'tokenABCDEF', cardMessageId: null, expiresAt: new Date('2026-11-26T10:30:00Z'),
+    })
+    const [, ...values] = mockPrisma.__tx.$executeRaw.mock.calls[1]
+    expect(values).toContain('voice')
+    expect(values).not.toContain('flow')
   })
 
   test('a reject reason clears the flow columns when it replaces a flow', async () => {

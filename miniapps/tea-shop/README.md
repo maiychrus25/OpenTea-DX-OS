@@ -16,7 +16,10 @@ Ban quản trị HTX quản lý sản phẩm chè và xử lý đơn hàng; khá
 | `/orders/<id>/print` | `manager` | Phiếu giao hàng để in (mã đơn, khách, điện thoại, địa chỉ, dòng hàng, tổng, thu tiền khi nhận) |
 | `/products` | `manager` | Danh sách sản phẩm: tìm `q` theo tên, lọc `show` (`all`, `active`, `hidden`, `low`), phân trang |
 | `/products/<id>/edit` | `manager` | Sửa tên, quy cách, giá, tồn kho, mã lô, đang bán hay ngừng |
+| `/promotions` | `manager` | Khuyến mãi của HTX (sản phẩm, % giảm, từ ngày, đến ngày, trạng thái) và nút Kết thúc cho khuyến mãi đang chạy (`POST /promotions/<id>/end`) |
 | `/orders/<id>` | `manager` | Chi tiết đơn kèm họ tên, điện thoại, địa chỉ; các bước trạng thái; chuyển trạng thái hoặc huỷ |
+| `/agent/suggestions` | token của `dxos-agent` (role `agent`) | Đề xuất cho trợ lý: sản phẩm đang bán, tồn từ 20 gói trở lên, 21 ngày không có dòng đơn nào (đơn huỷ không tính) và chưa có khuyến mãi thì đề xuất giảm 10% trong 7 ngày; tối đa 10 đề xuất |
+| `POST /agent/actions/promotion-create` | trưởng HTX duyệt đề xuất | Chỉ web gọi, bằng token `dxos-apps-actor` kèm ba header `X-DXOS-Acting-*`. Body `{product_id, discount_pct 5-30, days 1-14}`; trả `{promotion_id, ends_on}`; 400 sai dữ liệu, 404 không có sản phẩm trong HTX, 409 `Sản phẩm đang có khuyến mãi.` |
 | `/public/<htx>` | công khai | Sản phẩm đang bán dạng thẻ, ô số lượng cho từng sản phẩm, form đặt hàng |
 | `/public/<htx>/order?code=&phone=` | công khai | Tra đơn: phải đúng cả mã và số điện thoại; hiện các bước Mới, Đã xác nhận, Đang giao, Hoàn tất (đơn huỷ hiện nhãn Đã huỷ) |
 
@@ -32,9 +35,16 @@ Mọi thao tác ghi là `POST` và trả 303 về một trang dưới `/apps/tea
 - Trạng thái: `NEW` → `CONFIRMED` → `SHIPPING` → `DONE`. Huỷ được từ `NEW`, `CONFIRMED`, `SHIPPING` và trả lại tồn kho; đơn `DONE` hoặc `CANCELLED` không đổi nữa.
 - Sửa sản phẩm không ghi đè tồn kho: form nhập số điều chỉnh (+/−, từ -9999 đến 9999) và `UPDATE ... stock = stock + delta` chạy một câu, nên đơn đặt giữa lúc mở và lưu form không bị mất. Điều chỉnh làm tồn kho âm thì bị từ chối. Thêm sản phẩm mới vẫn nhập tồn kho tuyệt đối.
 
+## Khuyến mãi
+
+- Bảng `promotions` (`migrations/002_promotions.sql`): giảm theo phần trăm (5 đến 30) cho một sản phẩm, từ ngày tạo đến `ends_on`, tính cả hai ngày theo giờ Việt Nam. `ended_at` ghi lúc trưởng HTX kết thúc sớm; dòng vẫn giữ làm lịch sử. Mỗi sản phẩm chỉ có một khuyến mãi chạy cùng lúc: tạo trong transaction khoá dòng sản phẩm, trùng thì bị từ chối.
+- Trang công khai hiện giá gốc gạch ngang, giá đã giảm (làm tròn lên đến đồng) và nhãn `-n%`. Đơn tính theo giá đã giảm và dòng đơn lưu giá đó, nên sửa hay kết thúc khuyến mãi sau đó không đổi đơn cũ.
+- Khối `agent` trong `app.yaml` khai báo hành động `promotion.create` (`money: true`, người duyệt là `manager`). App tự kiểm lại khi hành động chạy như khi bấm trên giao diện: dữ liệu, sản phẩm thuộc HTX của người duyệt, không trùng khuyến mãi. Khuyến mãi ghi người duyệt vào `created_by`.
+- App kit: `appkit.read_claims(authorization, headers)` chỉ tin ba header `X-DXOS-Acting-*` khi token có `azp` là `dxos-apps-actor` và role trong header là `manager` hoặc `officer`; với token khác thì bỏ qua header.
+
 ## Dữ liệu và mạng
 
-- Bảng `products`, `orders`, `order_items` trong schema `app_tea_shop` (`migrations/001_init.sql`), đều có `htx_code`; mọi truy vấn lọc theo `htx_code` của token (trang quản trị) hoặc của URL (trang công khai). Khoá ngoại của `order_items` gồm cả `htx_code`, nên dòng đơn luôn cùng HTX với đơn và sản phẩm.
+- Bảng `products`, `orders`, `order_items`, `promotions` trong schema `app_tea_shop` (`migrations/001_init.sql`), đều có `htx_code`; mọi truy vấn lọc theo `htx_code` của token (trang quản trị) hoặc của URL (trang công khai). Khoá ngoại của `order_items` gồm cả `htx_code`, nên dòng đơn luôn cùng HTX với đơn và sản phẩm.
 - App đọc `DXOS_APP_DB_URL` do `./dxos install` ghi vào tệp env; role `app_tea_shop` chỉ có quyền trên schema của mình (tối đa 10 kết nối). App giữ tối đa 8 kết nối cùng lúc; chờ quá 2 giây thì trả 503 "Hệ thống đang bận". App không gọi lõi nên không có `core_client`.
 - Giao diện: `/dxos-app.css`, `?theme=light|dark` đặt `data-theme` trên `<html>` và đi theo mọi link, form và chuyển hướng (như `hello`). Không có JavaScript.
 

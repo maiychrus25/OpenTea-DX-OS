@@ -273,6 +273,50 @@ class CoreGatewayClient:
         res = self._request_json("POST", f"/api/internal/agent/improvements/{improvement_id}/effect", effect)
         return dict(res.get("data") or {})
 
+    def get_app_builder_requests(self) -> list[dict[str, Any]]:
+        """A12's work list (contract C4): requests to route or ask about, and finished builds to announce."""
+        res = self._request_json("GET", "/api/internal/agent/app-builder/requests")
+        data = res.get("data", res)
+        rows = data if isinstance(data, list) else (data.get("requests") if isinstance(data, dict) else None)
+        return [dict(row) for row in rows or [] if isinstance(row, dict)]
+
+    def post_app_questions(self, request_id: str, questions: Sequence[str]) -> None:
+        """Ask the manager up to five questions; the web sends them as one Telegram message."""
+        self._request_json("POST", f"/api/internal/agent/app-builder/requests/{request_id}/questions", {"questions": list(questions)})
+
+    def post_app_route(self, request_id: str, body: Mapping[str, Any]) -> None:
+        """Send the store or book path (`{path, target, reason_vi}`); the web creates the proposal."""
+        self._request_json("POST", f"/api/internal/agent/app-builder/requests/{request_id}/route", body)
+
+    def post_app_spec(self, request_id: str, spec: Mapping[str, Any]) -> None:
+        """Send the C2 spec; the web answers 409 APP_ID_TAKEN when the id exists."""
+        self._request_json("POST", f"/api/internal/agent/app-builder/requests/{request_id}/spec", spec)
+
+    def announce_app_build(self, request_id: str) -> dict[str, Any]:
+        """Tell the web a build finished; it queues the message and the install proposal once. `{proposal_id}` or null."""
+        res = self._request_json("POST", f"/api/internal/agent/app-builder/requests/{request_id}/announce", {})
+        return dict(res.get("data") or {})
+
+    def get_enabled_apps(self) -> list[dict[str, Any]]:
+        """The mini-apps enabled for this cooperative, each `{id, manifest}` (Hasura filters by the token's cooperative)."""
+        data = self.graphql("query { platform_installed_apps(order_by: {id: asc}) { id manifest } }")
+        return [dict(row) for row in data.get("platform_installed_apps") or []]
+
+    def get_app_suggestions(self, app_id: str, path: str) -> list[Any]:
+        """GET an app's suggestions path through the gateway with this cooperative's agent token (contract C2)."""
+        return list(self._request_json("GET", f"/apps/{app_id}{path}").get("suggestions") or [])
+
+    def get_strategy_inputs(self, season: str) -> dict[str, Any]:
+        """The figures A11 reads for one quarter (contract C3 of M11); the `data` object of the answer."""
+        res = self._request_json("GET", "/api/internal/agent/strategy/inputs?" + urllib.parse.urlencode({"season": season}))
+        return dict(res.get("data") or {})
+
+    def post_strategy_plan(self, plan: Mapping[str, Any]) -> dict[str, Any]:
+        """Post the season's draft plan (contract C3 of M11); `{id, proposal_id}`, or `{existing: true}` when a draft exists."""
+        res = self._request_json("POST", "/api/internal/agent/strategy/plans", plan)
+        data = res.get("data")
+        return dict(data if isinstance(data, Mapping) else res)  # the contract does not say whether the answer is wrapped
+
     def post_autopilot_tick(self) -> dict[str, Any]:
         """Run this cooperative's due autonomous-mode proposals (contract C3); `{ran, failed, returned, stopped}`."""
         res = self._request_json("POST", "/api/internal/agent/autopilot/tick", {})

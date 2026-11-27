@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { getAction } from '@/application/agent/action-catalog'
+import { ensureAppActions, getAction } from '@/application/agent/action-catalog'
 import { OPEN_CAMPAIGN_STATUSES } from '@/application/agent/campaign/ApproveCampaignUseCase'
 import { loadJournalSubjects } from '@/application/agent/journal-subjects'
 import type { JournalSubject } from '@/application/agent/actions/journal-labels'
@@ -57,6 +57,8 @@ export interface TelegramNotifierDeps {
   campaigns?: NotifierCampaigns
   /** Template reminders of the campaign message and the weekly improvement lines (M8). */
   improvements?: Pick<ImprovementRepository, 'activeTemplates' | 'countForWeek' | 'measuredBetween'>
+  /** M11: the Monday report's season lines, from the adopted plan; empty without one. */
+  seasonLines?: (htxCode: string, now: Date) => Promise<string[]>
   /** Autonomous mode (M12): the campaign header, the 18:00 section and nothing else. */
   autopilot?: Pick<AutopilotRepository, 'get' | 'daySummary'>
   now?: () => Date
@@ -98,6 +100,7 @@ export class TelegramNotifier {
   private readonly campaigns?: NotifierCampaigns
   private readonly improvements?: TelegramNotifierDeps['improvements']
   private readonly autopilot?: TelegramNotifierDeps['autopilot']
+  private readonly seasonLines?: TelegramNotifierDeps['seasonLines']
 
   constructor(deps: TelegramNotifierDeps) {
     this.repo = deps.repo
@@ -106,6 +109,7 @@ export class TelegramNotifier {
     this.campaigns = deps.campaigns
     this.improvements = deps.improvements
     this.autopilot = deps.autopilot
+    this.seasonLines = deps.seasonLines
     this.now = deps.now ?? (() => new Date())
   }
 
@@ -113,7 +117,8 @@ export class TelegramNotifier {
   /** The approver message of a proposal: its text and the approve and reject buttons. Null when it cannot be signed. */
   async proposalMessage(proposal: Proposal): Promise<{ text: string; buttons: ReplyButton[][] } | null> {
     const key = telegramCallbackKey()
-    const definition = getAction(proposal.kind)
+    await ensureAppActions(proposal.kind)
+    const definition = getAction(proposal.kind, proposal.htxCode)
     // Only the callback key is needed to sign the buttons; the bot username only builds link URLs.
     if (!key || !definition) return null
 
@@ -136,7 +141,7 @@ export class TelegramNotifier {
    */
   private async scheduledMessage(proposal: Proposal): Promise<{ text: string; buttons: { text: string; callback_data: string }[][] } | null> {
     const key = telegramCallbackKey()
-    const definition = getAction(proposal.kind)
+    const definition = getAction(proposal.kind, proposal.htxCode)
     if (!key || !definition || !proposal.runAt || proposal.runAt.getTime() <= proposal.createdAt.getTime()) return null
     const labels = await this.labelsFor(proposal.htxCode, [proposal])
     const preview = definition.preview(proposal.payload, labels, proposal.evidence)
@@ -170,7 +175,8 @@ export class TelegramNotifier {
   }
 
   async enqueueProposal(proposal: Proposal): Promise<void> {
-    const definition = getAction(proposal.kind)
+    await ensureAppActions(proposal.kind)
+    const definition = getAction(proposal.kind, proposal.htxCode)
     if (!telegramCallbackKey() || !definition) return
 
     const recipients = await this.repo.userLinkRecipients(proposal.htxCode, definition.approverRoles)
@@ -338,6 +344,7 @@ export class TelegramNotifier {
     const campaignLines = kind === 'daily' ? await this.reportCampaign(htxCode, periodStart) : []
     if (kind === 'daily') campaignLines.push(...(await this.reportAutopilot(htxCode, periodStart)))
     const improvementLines = kind === 'weekly' ? await this.reportImprovements(htxCode) : []
+    if (kind === 'weekly') improvementLines.push(...(await this.reportSeason(htxCode)))
     const text = reportText(
       kind,
       periodStart,
@@ -364,6 +371,17 @@ export class TelegramNotifier {
     return [
       `Tự vận hành: ${summary.ran} việc đã tự chạy, ${summary.blocked} bị chặn, ${summary.brakes} lần phanh, chi phí ${summary.costUsd.toFixed(2)} USD`,
     ]
+  }
+
+  /** The weekly report's season lines (M11). A failed read adds nothing: the report still goes out. */
+  private async reportSeason(htxCode: string): Promise<string[]> {
+    if (!this.seasonLines) return []
+    try {
+      return await this.seasonLines(htxCode, this.now())
+    } catch (err) {
+      console.error('[TelegramNotifier] could not read the season lines', err)
+      return []
+    }
   }
 
   /** The weekly report's improvement lines: the week's new proposals and the measurements of the last seven days (C6). */

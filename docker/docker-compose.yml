@@ -237,6 +237,61 @@ services:
     networks:
       - agrimarket-net
 
+  # Speech to text for Telegram voice messages (M15, whisper.cpp, MIT). Part of `make up-voice`; the relay is its only client and
+  # no port is published, so audio never leaves the server. The image is amd64 only. --convert makes the server run ffmpeg, which
+  # writes a short-lived WAV into the tmpfs /tmp (never to disk). The entrypoint is `bash -c`, hence one command string.
+  dxos-stt:
+    image: ghcr.io/ggml-org/whisper.cpp:main-bd9e1a12352fa57e448bdea6a0649aa9c24c64aa
+    container_name: agrimarket-stt
+    restart: always
+    mem_limit: 2g
+    read_only: true
+    tmpfs: ["/tmp:size=64m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    command: ["whisper-server --host 0.0.0.0 --port 8080 -m /models/ggml-${DXOS_STT_MODEL:-small}.bin -l vi --convert --tmp-dir /tmp"]
+    volumes:
+      - stt_models:/models:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "-o", "/dev/null", "http://localhost:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - agrimarket-net
+
+  # One-shot: downloads the model into the stt_models volume and checks its SHA-256 (tools profile, like ollama-init). The URL is
+  # pinned to a commit of the Hugging Face repository. Changing the model means changing DXOS_STT_MODEL (base, small or medium).
+  stt-init:
+    image: ghcr.io/ggml-org/whisper.cpp:main-bd9e1a12352fa57e448bdea6a0649aa9c24c64aa
+    profiles: ["tools"]
+    restart: "no"
+    user: "0:0"
+    environment:
+      DXOS_STT_MODEL: ${DXOS_STT_MODEL:-small}
+    volumes:
+      - stt_models:/models
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        case "$$DXOS_STT_MODEL" in
+          base) sha=60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe ;;
+          small) sha=1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b ;;
+          medium) sha=6c14d5adee5f86394037b4e4e8b59f1673b6cee10e3cf0b11bbdbee79c156208 ;;
+          *) echo "DXOS_STT_MODEL must be base, small or medium" >&2; exit 1 ;;
+        esac
+        file="/models/ggml-$$DXOS_STT_MODEL.bin"
+        if [ -f "$$file" ] && echo "$$sha  $$file" | sha256sum -c - >/dev/null 2>&1; then echo "$$file is already there"; exit 0; fi
+        rm -f "$$file" "$$file.part"
+        curl -fsSL --retry 3 -o "$$file.part" "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-$$DXOS_STT_MODEL.bin" \
+          && echo "$$sha  $$file.part" | sha256sum -c - || { rm -f "$$file.part"; echo "Model $$DXOS_STT_MODEL did not download or does not match its SHA-256" >&2; exit 1; }
+        mv "$$file.part" "$$file"
+    networks:
+      - agrimarket-net
+
   # NOTE: MinIO is an S3-compatible object storage (AGPL-3.0, OSI-approved).
   # S3-compatible object storage (SeaweedFS, Apache-2.0). Serves S3 on 9000 under the
   # network alias "minio" so apps/web (minio client, port 9000) works unchanged.
@@ -499,6 +554,8 @@ services:
       DXOS_TELEGRAM_ENV_DIR: /run/dxos-telegram
       # The web's HTTPS base URL (D17). Empty = no Mini App menu button; chat keeps working.
       DXOS_WEB_PUBLIC_URL: ${DXOS_WEB_PUBLIC_URL:-}
+      # Voice messages (M15): only dxos-stt, localhost or a private address is accepted. Without `make up-voice` the relay answers that voice is unavailable.
+      DXOS_STT_URL: ${DXOS_STT_URL:-http://dxos-stt:8080}
     volumes:
       - dxos-telegram-env:/run/dxos-telegram:ro
     healthcheck:
@@ -537,6 +594,30 @@ services:
       - "127.0.0.1:8081:8081"
     networks:
       - agrimarket-net
+
+  # Test-only stand-in for dxos-stt (platform/tests/stub_stt.py): the voice smoke runs it instead of whisper.cpp, under the
+  # network alias dxos-stt that the relay posts to. Never started together with the real dxos-stt; not in the release bundle.
+  stt-test-stub:
+    image: python:3.12.15-slim-bookworm
+    profiles: ["stt-test"]
+    restart: "no"
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    user: "65534:65534"
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      # The relay posts to dxos-stt:8080 (its default DXOS_STT_URL), so the stub listens there under that alias.
+      DXOS_STT_STUB_PORT: "8080"
+    volumes:
+      - ../platform/tests/stub_stt.py:/app/stub_stt.py:ro
+    command: ["python", "-u", "/app/stub_stt.py"]
+    ports:
+      - "127.0.0.1:8083:8080"
+    networks:
+      agrimarket-net:
+        aliases: [dxos-stt]
 
   # Test-only stand-in for the Anthropic and OpenAI APIs (platform/tests/stub_llm.py). The agentic smoke points dxos-agent
   # at it with ANTHROPIC_API_BASE; it is never in the release bundle.
@@ -665,6 +746,40 @@ services:
     networks:
       - agrimarket-net
 
+  # Mini-app factory (plan M13). The image is built by platform/builder/build-image.sh, never left running: ./dxos builder
+  # starts one throwaway container per step with `docker run` (compose cannot give a run `--network none`). This service
+  # only names the image and the network; the proxy below is the build container's only way out.
+  dxos-builder:
+    image: ${DXOS_BUILDER_IMAGE:-opentea-dx-os/builder:local}
+    profiles: ["builder"]
+    restart: "no"
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp"]
+    networks:
+      - dxos-builder-net
+
+  # Allowlist CONNECT proxy (Python standard library). Hosts: DXOS_BUILDER_ALLOW_HOSTS, set by ./dxos builder from the
+  # configured provider base URLs; another host gets 403 and a log line. No `:-` on purpose: an empty list refuses everything.
+  dxos-builder-proxy:
+    image: python:3.12.15-slim-bookworm
+    profiles: ["builder"]
+    restart: "no"
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      DXOS_BUILDER_ALLOW_HOSTS: ${DXOS_BUILDER_ALLOW_HOSTS-api.anthropic.com,api.openai.com}
+    volumes:
+      - ../platform/builder/proxy.py:/proxy.py:ro
+    command: ["python", "-u", "/proxy.py"]
+    networks:
+      - dxos-builder-net
+      - agrimarket-net
+
 volumes:
   pgdata:
   n8n_data:
@@ -672,6 +787,7 @@ volumes:
   clamav_db:
   mosquitto_data:
   ollama_data:
+  stt_models:
   mattermost_data:
   mattermost_config:
   dxos-agent-env:
@@ -683,5 +799,9 @@ networks:
     driver: bridge
   # Mini-app containers live only here, with apisix and postgres (spec §6.2); internal, so apps have no egress either.
   dxos-apps-net:
+    driver: bridge
+    internal: true
+  # The build container of the mini-app factory lives only here, with the proxy; internal, so the only way out is the proxy.
+  dxos-builder-net:
     driver: bridge
     internal: true

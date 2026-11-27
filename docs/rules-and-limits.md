@@ -289,6 +289,7 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
   1. `withdrawal`: không đưa việc thu hoạch vào thửa còn trong thời gian cách ly của lần phun thuốc.
   2. `rain`: không đưa việc phun thuốc vào thửa có dự báo mưa từ 5 mm trở lên trong 12 giờ tới.
   3. Sắp theo loại việc (thu hoạch, kiểm tra bệnh, thông báo nông hộ, nhật ký, thông báo cán bộ, bản tin), rồi theo ngày tạo.
+     Khi kế hoạch mùa vụ đang áp dụng (mục 3.16), việc thuộc mục tiêu mà kế hoạch nâng lên (sản lượng, thửa có bệnh, nhật ký đúng hạn) được xếp trước các việc còn lại; thứ tự theo loại việc vẫn giữ trong từng nhóm.
   4. `people`: khi có số người có mặt (từ chấm công, M10), bỏ việc vượt số người cần; hiện chưa có số liệu nên bước này không bỏ việc nào.
   5. `overflow`: giữ 15 việc đầu; việc còn lại mở lại vào ngày mai.
 - **Duyệt cả chiến dịch (C7):**
@@ -309,6 +310,7 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
 | Thiếu thông tin | `journal_missing_info_rate` | ≥ 0,4 với ít nhất 10 nhật ký đã xem | `process`: bắt buộc ghi liều lượng khi ghi nhật ký phun thuốc |
 | Quyết định chậm | `median_wait_hours` | ≥ 24 giờ với ít nhất 10 đề xuất đã quyết định | `process`: giao thêm người duyệt đề xuất |
 | Trượt mục tiêu | `missed_days:<goal_key>` | ≥ 3 ngày trượt trong 14 ngày | `template`: nhắc đầu tuần vào thứ Hai |
+| Mục tiêu vụ chậm | `season_goal:<khóa>` | Có kế hoạch mùa vụ đang áp dụng, đã qua ít nhất 4 tuần của quý, và số thực tế chậm hơn mục tiêu theo tỉ lệ thời gian từ 20% trở lên | `process`: `Mục tiêu vụ "<nhãn>" đang chậm so với kế hoạch` |
 
 - **Không lặp:** chỉ số đang có cải tiến `proposed`, hoặc cải tiến đã `adopted` trong 28 ngày gần đây, thì không tạo cải tiến mới.
 - **Giới hạn đề xuất:** A10 không bao giờ đề xuất thay đổi danh mục, vai trò, chính sách nhà cung cấp, ngân sách, khóa hay quyền tự chủ. Chỉ các khóa dưới đây được đề xuất:
@@ -402,6 +404,58 @@ Trong cửa sổ, bất kỳ người duyệt nào cũng chặn được bằng 
 **Bật:** chỉ quản lý, và phải đăng nhập lại trong 5 phút gần nhất. Màn hình bật hiện tỉ lệ khớp 30 ngày của từng loại (cảnh báo dưới 90%); nội dung màn hình được lưu trong sự kiện audit `autopilot.enabled`. Ở chế độ thường, mỗi đề xuất vẫn ghi `shadow_auto` (nó có tự chạy nếu chế độ bật hay không) mà không đổi đường đi của đề xuất.
 
 **Giám sát:** tin `Sẽ tự chạy lúc <HH:mm>` kèm nút `Chặn` và `Xem`; `/tuvanhanh` cho trạng thái và số liệu hôm nay; tin chiến dịch 06:00 bắt đầu bằng `Chiến dịch hôm nay sẽ tự chạy`; báo cáo 18:00 có mục `Tự vận hành`.
+
+### 3.18 Tin thoại Telegram (M15)
+
+- **Chỉ trên máy chủ của HTX:** tin thoại được `dxos-telegram` tải về bộ nhớ và gửi tới `dxos-stt` (whisper.cpp) trong mạng Docker. Âm thanh không ghi ra đĩa ở rơle, không đi tới web, nhà cung cấp AI hay dịch vụ nào khác; chỉ phần chữ được chuyển tiếp. `DXOS_STT_URL` chỉ nhận máy `dxos-stt`, `localhost` hoặc địa chỉ riêng; địa chỉ công khai bị từ chối lúc khởi động (tin thoại báo chưa nghe được, chat chữ vẫn chạy).
+- **Giới hạn:**
+  - tối đa 60 giây và 2 MB mỗi tin thoại; dài hơn thì không tải về và trả lời `Tin thoại dài quá 60 giây. Bạn nói ngắn hơn hoặc nhắn chữ nhé.`;
+  - chờ `dxos-stt` tối đa 30 giây, không thử lại; chữ nhận được cắt ở 500 ký tự;
+  - chỉ trong chat riêng; tin thoại trong nhóm bị bỏ qua.
+- **Tin thoại không tự làm gì:** bot trả lời `Em nghe được: “…”` kèm `Đúng`, `Sửa`, `Huỷ`, giữ chữ 10 phút. Chỉ `Đúng` đưa chữ đi tiếp như người dùng tự gõ; việc ghi dữ liệu vẫn cần thẻ và nút Xác nhận như mục 3.11.
+- **Không có `dxos-stt`:** trả lời `Chưa nghe được tin thoại lúc này. Bạn nhắn chữ giúp nhé.`, không ảnh hưởng chức năng khác. Im lặng hoặc chỉ có tiếng ồn: `Chưa nghe rõ. Bạn nói lại hoặc nhắn chữ nhé.`.
+- **Mô hình:** mặc định `small` (`DXOS_STT_MODEL`), tải một lần bằng `make up-voice` và kiểm SHA-256. Chọn mô hình nhỏ nhất nghe được giọng của HTX bằng `make stt-measure DIR=<thư mục .ogg kèm .txt>` (đo tỉ lệ sai từ và thời gian của `base`, `small`, `medium`).
+
+### 3.19 Hành động của mini-app (M9)
+
+| Quy tắc | Giá trị |
+|---|---|
+| Số hành động tối đa mỗi app | 10 (`agent.actions` trong `app.yaml`) |
+| Số gợi ý tối đa mỗi lần hỏi một app | 10 |
+| Chu kỳ agent hỏi gợi ý của app | 30 phút, mỗi HTX và mỗi app đã bật |
+| Không lặp đề xuất của app | 24 giờ, theo loại `app.<id>.<action>` và đối tượng |
+| Hạn của đề xuất app | 72 giờ |
+| Cửa sổ chặn khi tự vận hành | hành động `money: true` là loại phải mở khoá riêng, cửa sổ 2 giờ; hành động khác `risk` trung bình 15 phút |
+| Quyền duyệt | vai trò trong `approver_roles` của hành động (`officer`, `manager`) |
+| Thứ tự trong chiến dịch ngày (A9) | sau bản tin, trước các loại chưa biết |
+| Tên hành động | `^[a-z][a-z0-9_.]{2,40}$` |
+| `payload` | chỉ các từ khoá `type`, `enum`, `minimum`, `maximum`, `minLength`, `maxLength`, `required`, `additionalProperties: false`; tối đa 20 thuộc tính |
+
+- Hành động của app chỉ chạy sau một quyết định, như mọi loại đề xuất khác; không đường nào bỏ qua quyết định ngoài chế độ tự vận hành (mục 3.15).
+- Web chạy hành động bằng token của client `dxos-apps-actor` (không có vai trò nào) kèm ba header `X-DXOS-Acting-*` về người duyệt. Gateway xoá ba header này ở mọi route app, trừ route hành động chỉ nhận client đó; app chỉ tin header khi `azp` của token là `dxos-apps-actor`.
+- Lỗi 4xx của app ghi `failed` kèm câu tiếng Việt của app và không tự thử lại. Gỡ app, hoặc tắt app cho HTX, làm các đề xuất đang mở của app chuyển `expired`.
+- App do AI sinh ra (`generated: true`) không được khai hành động; `./dxos validate` từ chối.
+
+### 3.20 Kế hoạch mùa vụ (A11, M11)
+
+- **Lịch:** A11 soạn kế hoạch quý vào ngày đầu quý lúc 06:15 (giờ Việt Nam), và ở lần chạy đầu tiên khi quý hiện tại chưa có kế hoạch đang áp dụng hay bản nháp. Một quý đã soạn, đã có kế hoạch hoặc bị web từ chối thì không chạy lại; lỗi mạng được thử lại ở chu kỳ sau.
+- **Luật đặt mục tiêu, LLM chỉ viết lời:** web tính số liệu (sản lượng, nhật ký đúng hạn, thửa có bệnh, doanh thu cửa hàng khi đã cài `tea-shop`) cho quý này, cùng kỳ năm trước và quý trước. Mục tiêu là số cùng kỳ năm trước cộng bước cố định:
+  - mục tiêu tăng: làm tròn (số × 1,05);
+  - mục tiêu giảm: làm tròn một chữ số thập phân (số × 0,9);
+  - mục tiêu không có số cùng kỳ năm trước thì bỏ, không bao giờ tự bịa.
+- **Ưu tiên và sáng kiến:** LLM chỉ nhận số liệu và mục tiêu, trả tối đa 5 ưu tiên (mỗi cái tối đa 160 ký tự) và tối đa 5 sáng kiến thuộc loại `miniapp`, `training`, `partner`, `expand`, `outside`; loại khác bị bỏ. Khi LLM lỗi, mỗi mục tiêu có một ưu tiên (`Tăng <nhãn>` hoặc `Giảm <nhãn>`) và không có sáng kiến. Việc ngoài hệ thống (vay vốn, hợp đồng, quyết định của đại hội xã viên) chỉ là sáng kiến loại `outside` dạng chữ; không có gì chạy chúng.
+- **Một bản nháp mỗi quý:** bản nháp thứ hai cho cùng quý trả `existing`. Duyệt kế hoạch (`strategy.adopt`, mức `medium`, người duyệt `manager`, tự chủ `unlockable`) thay kế hoạch đã áp dụng trước đó của quý bằng kế hoạch mới.
+- **Cảnh báo:** kế hoạch có mục tiêu kém hơn cùng kỳ năm trước (ví dụ do người duyệt sửa tay) mang cảnh báo `Mục tiêu <nhãn> thấp hơn cùng kỳ năm trước` và không bao giờ đủ điều kiện tự chạy (kiểm thử 37).
+- **Áp dụng:** từ chu kỳ sau khi duyệt, chiến dịch ngày (A9) xếp việc thuộc mục tiêu của kế hoạch trước (mục 3.12) và cải tiến hằng tuần (A10) báo mục tiêu đang chậm (mục 3.13). Báo cáo thứ Hai so số thực tế với cùng kỳ năm trước, không so với mục tiêu do A11 đặt.
+
+### 3.21 Xưởng mini-app (A12, M13)
+
+- **Một yêu cầu đang xây cho mỗi HTX** (trạng thái `new`, `asking`, `spec_proposed`, `spec_approved`, `building`). Tối đa 5 câu hỏi (mỗi câu tối đa 160 ký tự); mô tả yêu cầu 5 đến 500 ký tự.
+- **Chọn cách rẻ nhất:** bật app có sẵn trong kho, rồi mẫu Sổ tự tạo, rồi mới viết mã. Chỉ cấu hình Ollama thì chỉ có hai cách đầu.
+- **Buồng xây (`build`):** chỉ có khoá, địa chỉ và mô hình của công cụ viết mã, `HTTPS_PROXY` và thư mục `/work`; không có Docker socket, biến của lõi, mạng của lõi hay `postgres`. Ra ngoài chỉ qua proxy theo danh sách host cho phép; host khác nhận 403. Tối đa 30 phút và 60 lượt mỗi vòng, 3 vòng.
+- **Bảy cổng, không bỏ qua được:** `manifest`, `markup`, `kit`, `tests`, `deps`, `files`, `run` (cộng cổng `review` của AI thứ hai). Mã cổng chạy từ image, không từ thư mục của app. Một phát hiện `high` của `review` là trượt.
+- **App xây xong** chỉ vào kho cho HTX yêu cầu (`owner_htx`), chạy trên mạng riêng `dxos-gen-<id>` chỉ thấy `apisix` và `postgres`, và không được khai `agent.actions` (chỉ số liệu chỉ đọc). Cài và gỡ là `miniapp.install` và `miniapp.remove`, mức `high`, qua đường `platform.app_requests` và `./dxos worker`.
+- **Ảnh chụp:** bốn ảnh (desktop và điện thoại, sáng và tối) gửi một lần qua Telegram dưới dạng album; chú thích tối đa 1024 ký tự, mỗi ảnh tối đa 5 MB; album không có nút, nút duyệt nằm ở tin đề xuất `miniapp.install` gửi sau.
 
 ## 4. Security Rules
 

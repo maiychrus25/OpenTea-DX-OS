@@ -16,7 +16,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Header, Request
+from fastapi import Body, Depends, FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -85,13 +85,21 @@ def refuse(request: Request, status: int, message: str) -> HTMLResponse:
     return page(request, "message.html", status, message=message)
 
 
+def agent_path(request: Request) -> bool:
+    return "/agent/" in request.url.path
+
+
 @app.exception_handler(HTTPException)
 async def http_error(request: Request, exc: HTTPException):
+    if agent_path(request):  # the web's executor reads JSON, not pages
+        return JSONResponse({"message_vi": ERRORS.get(exc.status_code, "Có lỗi xảy ra.")}, exc.status_code)
     return refuse(request, exc.status_code, ERRORS.get(exc.status_code, "Có lỗi xảy ra."))
 
 
 @app.exception_handler(RequestValidationError)
 async def bad_path(request: Request, exc: RequestValidationError):
+    if agent_path(request):
+        return JSONResponse({"message_vi": "Dữ liệu gửi lên không hợp lệ."}, 400)
     # Only path ids are typed (form fields are read as text), so a validation error is a page that does not exist.
     return refuse(request, 404, ERRORS[404])
 
@@ -99,6 +107,8 @@ async def bad_path(request: Request, exc: RequestValidationError):
 @app.exception_handler(Exception)
 async def server_error(request: Request, exc: Exception):
     # Starlette re-raises after this response, so uvicorn still logs the traceback; the user never sees it.
+    if agent_path(request):
+        return JSONResponse({"message_vi": "Có lỗi xảy ra. Vui lòng thử lại sau."}, 500)
     return refuse(request, 500, "Có lỗi xảy ra. Vui lòng thử lại sau.")
 
 
@@ -120,6 +130,22 @@ def role(*names: str):
 
 member = role("manager", "officer", "farmer")
 manager = role("manager")
+
+
+def agent_caller(name: str):
+    """The caller of an agent route: the web's executor for the approving manager, or the cooperative's agent token."""
+    def check(request: Request, authorization: str | None = Header(None)) -> appkit.Claims:
+        claims = appkit.read_claims(authorization, request.headers)
+        if claims is None:
+            raise HTTPException(401)
+        if name not in claims.roles or not claims.htx_code:
+            raise HTTPException(403)
+        return claims
+    return check
+
+
+acting_manager = agent_caller("manager")
+agent_token = agent_caller("agent")
 
 
 async def posted(request: Request) -> dict[str, str]:
@@ -307,6 +333,40 @@ def delete(request: Request, book_id: UUID, claims: Claims = Depends(manager), c
     if outcome == "has_records":
         return refuse(request, 409, "Sổ đã có dòng nên không xoá được. Hãy chọn Ngừng dùng để gỡ sổ khỏi menu mà vẫn giữ dữ liệu.")
     return redirect(request, "/books")
+
+
+# ---------- Agent action book.create (called by the web's executor for the approving manager) ----------
+
+AGENT_BOOK_KEYS = {"template", "name_vi", "description_vi"}
+
+
+@app.get("/agent/suggestions")
+def agent_suggestions(claims: appkit.Claims = Depends(agent_token)):
+    """The agent proposes book.create from chat requests, never from here: no suggestions of its own (the manifest needs the path)."""
+    return {"suggestions": []}
+
+
+def bad_request(message: str) -> JSONResponse:
+    return JSONResponse({"message_vi": message}, 400)
+
+
+@app.post("/agent/actions/book-create")
+def agent_book_create(body: dict | None = Body(None), claims: appkit.Claims = Depends(acting_manager), conn=Depends(db)):
+    """The app re-checks like the designer does: the template, the name and the description, then the book limit."""
+    body = body if isinstance(body, dict) else {}
+    template, name, description = body.get("template"), body.get("name_vi"), body.get("description_vi")
+    if not set(body) <= AGENT_BOOK_KEYS or not isinstance(template, str) or not isinstance(name, str):
+        return bad_request("Thiếu hoặc thừa thông tin của sổ.")
+    if template != "blank" and template not in book_templates.TEMPLATES:
+        return bad_request("Mẫu sổ không hợp lệ.")
+    if not 1 <= len(name.strip()) <= 80:
+        return bad_request("Tên sổ cần từ 1 đến 80 ký tự.")
+    if description is not None and (not isinstance(description, str) or len(description) > 200):
+        return bad_request("Mô tả sổ tối đa 200 ký tự.")
+    book_id = store.create_book(conn, claims.htx_code, claims.sub, template, name.strip(), description)
+    if book_id is None:
+        return JSONResponse({"message_vi": f"HTX đã có {fl.MAX_BOOKS} sổ, là số tối đa."}, 409)
+    return {"book_id": str(book_id), "design_path": appkit.shell_url("manager", "custom-books", f"/books/{book_id}/design")}
 
 
 # ---------- Using a book (every role with a level) ----------

@@ -60,8 +60,9 @@ def json_path_key(key: str) -> str:
 
 # ---------- books ----------
 
-def create_book(conn, htx: str, user: str, template_key: str) -> UUID | None:
-    """A new DRAFT book from a template (or 'blank'); None when the HTX already has MAX_BOOKS books."""
+def create_book(conn, htx: str, user: str, template_key: str, name: str | None = None,
+                description: str | None = None) -> UUID | None:
+    """A new DRAFT book from a template (or 'blank'), named `name` when given; None when the HTX already has MAX_BOOKS books."""
     template = BLANK if template_key == "blank" else TEMPLATES[template_key]
     with conn.transaction():
         conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (htx,))  # two creates cannot both pass the limit
@@ -70,7 +71,7 @@ def create_book(conn, htx: str, user: str, template_key: str) -> UUID | None:
         return conn.execute(
             """INSERT INTO books (htx_code, name, description, icon, fields, next_key, officer_access, farmer_access,
                                   approval, created_by) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
-            (htx, template.name, template.description, template.icon, Jsonb([f.to_json() for f in template.fields]),
+            (htx, name or template.name, template.description if description is None else description, template.icon, Jsonb([f.to_json() for f in template.fields]),
              template.next_key, template.officer_access, template.farmer_access, template.approval, user)).fetchone()[0]
 
 

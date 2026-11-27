@@ -7,7 +7,7 @@ import type { DecisionChannel } from '@/domain/agent/proposal'
 import { NotFoundError } from '@/domain/errors'
 import type { Tenant } from '@/lib/api/tenant'
 import { logger } from '@/lib/logger'
-import { getAction, type ApproverRole } from '../action-catalog'
+import { ensureAppActions, getAction, type ApproverRole } from '../action-catalog'
 import type { DecideProposalInput, DecideProposalOutcome } from '../DecideProposalUseCase'
 import { CampaignClosedError } from './campaign-errors'
 
@@ -51,7 +51,9 @@ export class ApproveCampaignUseCase {
     if (!OPEN_CAMPAIGN_STATUSES.includes(campaign.status)) throw new CampaignClosedError()
 
     const result: ApproveCampaignResult = { executed: 0, waitingHigh: 0, forwarded: 0, failed: 0, alreadyDecided: 0 }
-    for (const item of await this.deps.campaigns.items(tenant.htxCode, campaignId)) {
+    const items = await this.deps.campaigns.items(tenant.htxCode, campaignId)
+    await ensureAppActions(items.map((item) => item.kind))
+    for (const item of items) {
       if (item.proposalStatus !== 'proposed') {
         result.alreadyDecided += 1
         continue
@@ -60,7 +62,7 @@ export class ApproveCampaignUseCase {
         result.waitingHigh += 1
         continue
       }
-      const definition = getAction(item.kind)
+      const definition = getAction(item.kind, tenant.htxCode)
       if (!definition) {
         result.failed += 1
         continue

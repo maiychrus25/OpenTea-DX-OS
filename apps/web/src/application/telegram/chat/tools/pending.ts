@@ -3,7 +3,7 @@
 
 import { loadJournalSubjects } from '@/application/agent/journal-subjects'
 import { ListProposalsUseCase } from '@/application/agent/ListProposalsUseCase'
-import { type ApproverRole, getAction } from '@/application/agent/action-catalog'
+import { type ApproverRole, ensureAppActions, getAction } from '@/application/agent/action-catalog'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
 import type { ChatTool } from '../types'
 import { reply } from './common'
@@ -20,12 +20,13 @@ export const pendingTool: ChatTool = {
   async run(user) {
     const role = user.tenant.role as ApproverRole
     const open = await new ListProposalsUseCase(new PrismaProposalRepository()).execute(user.tenant.htxCode, { view: 'open' })
+    await ensureAppActions(open.map((proposal) => proposal.kind))
     const approvable = open
-      .filter((proposal) => getAction(proposal.kind)?.approverRoles.includes(role))
+      .filter((proposal) => getAction(proposal.kind, user.tenant.htxCode)?.approverRoles.includes(role))
       .slice(0, MAX_PROPOSALS)
     const labels = await loadJournalSubjects(approvable, user.tenant.htxProfileId)
     const lines = approvable.map((proposal) => {
-      const def = getAction(proposal.kind)!
+      const def = getAction(proposal.kind, user.tenant.htxCode)!
       return `• ${def.titleVi}: ${def.preview(proposal.payload, labels, proposal.evidence).join(' · ')}`
     })
     return reply(

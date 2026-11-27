@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import { getAction } from '@/application/agent/action-catalog'
+import { ensureAppActions, getAction } from '@/application/agent/action-catalog'
 import { OPEN_CAMPAIGN_STATUSES, type ApproveCampaignResult } from '@/application/agent/campaign/ApproveCampaignUseCase'
 import { CampaignClosedError } from '@/application/agent/campaign/campaign-errors'
 import { vnDayOf } from '@/application/agent/campaign/vn-day'
@@ -22,7 +22,7 @@ import { AssistantRequests } from './assistant/AssistantRequests'
 import { ChatEngine, PHOTO_MAX_BYTES, type IncomingPhoto, type ProposalMessage } from './chat/ChatEngine'
 import { ChatUserResolver } from './chat/ChatUserResolver'
 import { commandOf } from './chat/router'
-import type { ChatAction, ChatTool, PhotoStore } from './chat/types'
+import type { ChatAction, ChatTool, ChatUser, PhotoStore } from './chat/types'
 import { WAITING_FOR_STAFF_APP } from '@/application/agent/actions/staff-task-create.action'
 import { autopilotStatusText, TELEGRAM_TEXT, type AutopilotStatusFigures } from './messages'
 
@@ -37,6 +37,10 @@ export interface TelegramMessageInput {
   photo?: { mime_type: 'image/jpeg'; data_base64: string; file_unique_id: string }
   photo_error?: 'too_large' | 'download_failed'
   location?: { latitude: number; longitude: number }
+  /** A voice message the relay turned into text (M15, contract C2): at most 500 characters, never the audio. */
+  voice_text?: string
+  voice_duration?: number
+  voice_error?: 'too_long' | 'stt_unavailable'
 }
 
 export interface TelegramCallbackInput {
@@ -72,6 +76,11 @@ export interface ChatServices {
   photos: PhotoStore
   requests: AssistantRequestRepository
   householdId(userId: string): Promise<string | null>
+  /** Mini-app requests (M13): a manager's sentence, and the text that answers A12's questions. */
+  appRequests?: {
+    submit(user: ChatUser, text: string): Promise<string>
+    answer(htxCode: string, requestId: string, text: string): Promise<{ reply: string; done: boolean }>
+  }
   proposalMessages(htxCode: string, proposalIds: string[]): Promise<ProposalMessage[]>
 }
 
@@ -163,6 +172,7 @@ export class TelegramUpdateHandler {
       photos: deps.chat.photos,
       requests: new AssistantRequests(deps.chat.requests, deps.repo),
       callbackKey: deps.callbackKey,
+      appRequests: deps.chat.appRequests,
       proposalMessages: deps.chat.proposalMessages,
     })
   }
@@ -234,15 +244,35 @@ export class TelegramUpdateHandler {
 
     const open = await this.deps.repo.activeConversation(fromId, this.now())
     if (open?.kind === 'reject_reason') return this.receiveRejectReason(fromId, chatId, text)
+    if (open?.kind === 'app_answer' && this.deps.chat.appRequests && text && !command) {
+      return this.receiveAppAnswer(link, open.state.request_id, text, chatId)
+    }
+
+    // A voice message would replace the conversation that waits for the manager's answer to A12, so it asks for text.
+    if (open?.kind === 'app_answer' && (message.voice_text !== undefined || message.voice_error)) {
+      return { replies: [reply(chatId, TELEGRAM_TEXT.voiceTypeAnswer)] }
+    }
 
     const user = await this.users.resolve(link)
     if (!user) return { replies: [reply(chatId, TELEGRAM_TEXT.notLinked)] }
+    if (message.voice_error) return this.chat.onVoice(user, { kind: 'error', reason: message.voice_error }, this.now())
+    if (message.voice_text !== undefined) return this.chat.onVoice(user, { kind: 'text', text: message.voice_text }, this.now())
     if (message.photo || message.photo_error) return this.chat.onPhoto(user, incomingPhoto(message), this.now())
     if (message.location) {
       return this.chat.onLocation(user, message.location.latitude, message.location.longitude, this.now())
     }
     if (!text) return EMPTY
     return this.chat.onText(user, text, this.now())
+  }
+
+  /** The text that answers A12's questions (M13): stored on the request, and the conversation ends unless the text was too long. */
+  private async receiveAppAnswer(link: TelegramLink, requestId: unknown, text: string, chatId: number): Promise<UpdateResponse> {
+    const outcome =
+      typeof requestId === 'string'
+        ? await this.deps.chat.appRequests!.answer(link.htxCode, requestId, text)
+        : { reply: TELEGRAM_TEXT.flowExpired, done: true }
+    if (outcome.done) await this.deps.repo.deleteConversation(link.telegramUserId!)
+    return { replies: [reply(chatId, outcome.reply)] }
   }
 
   private async menuFor(link: TelegramLink, chatId: number): Promise<UpdateResponse> {
@@ -523,10 +553,11 @@ export class TelegramUpdateHandler {
     } catch {
       return { refusal: TELEGRAM_TEXT.roleCheckUnavailable }
     }
-    const definition = getAction(proposal.kind)
-    const role = definition && live?.enabled && live.htxCode === link.htxCode
-      ? definition.approverRoles.find((r) => live!.roles.includes(r))
-      : undefined
+    await ensureAppActions(proposal.kind)
+    const definition = getAction(proposal.kind, link.htxCode)
+    // The app of an open app proposal may be gone: any approver may reach the decision, which answers `expired`.
+    const roles = definition ? definition.approverRoles : proposal.kind.startsWith('app.') ? (['manager', 'officer'] as const) : []
+    const role = live?.enabled && live.htxCode === link.htxCode ? roles.find((r) => live!.roles.includes(r)) : undefined
     if (!role) return { refusal: TELEGRAM_TEXT.noLongerApprover }
 
     const htxProfileId = await this.deps.htxProfileId(link.htxCode)

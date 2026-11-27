@@ -8,6 +8,7 @@ from typing import Any, Mapping, Optional
 
 from .bot_api import BotApi, BotApiError
 from .gateway import GatewayError, WebGateway
+from .stt import SttClient, SttError
 
 log = logging.getLogger("dxos_telegram")
 
@@ -16,6 +17,10 @@ OUTBOX_INTERVAL_SECONDS = 2.0
 HEARTBEAT_INTERVAL_SECONDS = 60.0
 POLL_TIMEOUT_SECONDS = 30
 PHOTO_MAX_BYTES = 5 * 1024 * 1024  # C1: larger photos are not forwarded
+CAPTION_MAX = 1024  # Telegram's limit for a photo caption
+ALBUM_MAX = 4  # C8: a finished build sends its four screenshots
+VOICE_MAX_SECONDS = 60  # M15 C2
+VOICE_MAX_BYTES = 2 * 1024 * 1024
 
 
 class Backoff:
@@ -82,11 +87,12 @@ def message_call(item: Mapping[str, Any]) -> tuple[str, dict[str, Any]]:
 class Relay:
     """Three loops (updates, outbox, heartbeat) on daemon threads; `process_update` and `deliver` do the work and are testable alone."""
 
-    def __init__(self, bot: BotApi, web: WebGateway, version: str, web_public_url: str = "") -> None:
+    def __init__(self, bot: BotApi, web: WebGateway, version: str, web_public_url: str = "", stt: Optional[SttClient] = None) -> None:
         self._bot = bot
         self._web = web
         self._version = version
         self._web_public_url = web_public_url
+        self._stt = stt
         self._stop = threading.Event()
         self._threads: list[threading.Thread] = []
 
@@ -141,6 +147,8 @@ class Relay:
             return True
         if "photo" in update.get("message", {}):
             forwarded["message"].update(self._photo_fields(update["message"]["photo"]))
+        if "voice" in update.get("message", {}) and update["message"]["chat"].get("type") == "private":
+            forwarded["message"].update(self._voice_fields(update["message"]["voice"]))
         try:
             data = self._web.forward_update(forwarded)
         except GatewayError as exc:
@@ -179,6 +187,28 @@ class Relay:
             return {"photo_error": "too_large"}
         return {"photo": {"mime_type": "image/jpeg", "data_base64": base64.b64encode(data).decode("ascii"), "file_unique_id": file_unique_id}}
 
+    def _voice_fields(self, voice: Any) -> dict[str, Any]:
+        """M15 C2: a voice message of at most 60 s is transcribed on the cooperative's own server. The audio stays in memory and only the text goes on."""
+        duration = voice.get("duration") if isinstance(voice, Mapping) else None
+        if not isinstance(duration, int) or isinstance(duration, bool) or duration < 0:
+            return {"voice_error": "stt_unavailable"}
+        if duration > VOICE_MAX_SECONDS:
+            return {"voice_error": "too_long", "voice_duration": duration}
+        if self._stt is None:
+            return {"voice_error": "stt_unavailable"}
+        try:
+            file_path = self._bot.call("getFile", {"file_id": voice["file_id"]})["file_path"]
+            audio = self._bot.download(file_path, max_bytes=VOICE_MAX_BYTES)
+        except (BotApiError, KeyError, TypeError):
+            return {"voice_error": "stt_unavailable"}
+        if len(audio) > VOICE_MAX_BYTES:
+            return {"voice_error": "too_long", "voice_duration": duration}
+        try:
+            return {"voice_text": self._stt.transcribe(audio), "voice_duration": duration}
+        except SttError as exc:
+            log.warning("speech to text failed: %s", exc)  # no retry: the person types instead
+            return {"voice_error": "stt_unavailable"}
+
     def _send_best_effort(self, method: str, params: Mapping[str, Any]) -> None:
         # Replies are answers to a user's action, not queued proposals: a failed one is logged, not retried.
         try:
@@ -205,8 +235,11 @@ class Relay:
             if self._stop.is_set():
                 return 0.0  # the leases expire and the next start sends them again
             try:
-                method, params = message_call(item)
-                message_id = self._bot_message_id(method, params, item)
+                if item.get("photos") and item["op"] != "edit":
+                    message_id = self._send_photos(item)
+                else:
+                    method, params = message_call(item)
+                    message_id = self._bot_message_id(method, params, item)
             except BotApiError as exc:
                 if exc.permanent:
                     self._report(item, {"ok": False, "error": exc.description, "permanent": True})
@@ -218,6 +251,31 @@ class Relay:
                 return 5.0
             self._report(item, {"ok": True, "telegram_message_id": message_id})
         return 0.0
+
+    def _send_photos(self, item: Mapping[str, Any]) -> Optional[int]:
+        """C8: the text as the caption of the screenshots, as one album. Buttons cannot ride on an album, so none are sent.
+
+        A screenshot the web cannot serve is left out; with none left the text goes alone, so the manager is still told.
+        """
+        shots: list[tuple[str, bytes]] = []
+        for ref in list(item["photos"])[:ALBUM_MAX]:
+            try:
+                shots.append((str(ref["name"]), self._web.fetch_media(str(ref["build_id"]), str(ref["name"]))))
+            except (GatewayError, KeyError) as exc:
+                log.warning("screenshot %s not sent: %s", ref, exc)
+        if not shots:
+            method, params = message_call({**item, "buttons": None})
+            return self._bot_message_id(method, params, item)
+        caption = str(item["text"])[:CAPTION_MAX]
+        files = {f"p{i}": (name, data, "image/png") for i, (name, data) in enumerate(shots)}
+        if len(shots) == 1:
+            result = self._bot.call_files("sendPhoto", {"chat_id": item["chat_id"], "caption": caption}, {"photo": files["p0"]})
+        else:
+            media = [{"type": "photo", "media": f"attach://{key}", **({"caption": caption} if i == 0 else {})}
+                     for i, key in enumerate(files)]
+            result = self._bot.call_files("sendMediaGroup", {"chat_id": item["chat_id"], "media": media}, files)
+        first = result[0] if isinstance(result, list) and result else result
+        return int(first["message_id"]) if isinstance(first, dict) and "message_id" in first else None
 
     def _bot_message_id(self, method: str, params: Mapping[str, Any], item: Mapping[str, Any]) -> Optional[int]:
         try:

@@ -217,3 +217,139 @@ def test_accepts_feed_covered_by_a_narrow_prefix(valid):
     data = mutated(valid, feed="/books/feed")
     data["routes"] = {"protected": {"/books/": ["manager"]}}
     assert errors(data, core="1.8.0") == []
+
+
+ACTION = {
+    "name": "promotion.create",
+    "title_vi": "Tạo khuyến mãi",
+    "risk": "medium",
+    "approver_roles": ["manager"],
+    "money": True,
+    "path": "/agent/actions/promotion-create",
+    "payload": {
+        "type": "object",
+        "required": ["product_id", "discount_pct"],
+        "additionalProperties": False,
+        "properties": {
+            "product_id": {"type": "string", "maxLength": 64},
+            "discount_pct": {"type": "integer", "minimum": 5, "maximum": 30},
+            "ratio": {"type": "number", "minimum": 0},
+            "gift": {"type": "boolean"},
+            "tier": {"type": "string", "enum": ["a", "b"]},
+        },
+    },
+    "preview_vi": "Giảm {discount_pct}% cho sản phẩm {product_name}",
+}
+
+
+def with_agent(valid, action=None, **block):
+    """A valid manifest whose protected prefix covers /agent/, with an agent block."""
+    data = copy.deepcopy(valid)
+    data["routes"] = {"protected": {"/": ["manager"]}}
+    data["agent"] = {"suggestions": "/agent/suggestions", "actions": [action or copy.deepcopy(ACTION)], **block}
+    return data
+
+
+def action_with(**changes):
+    return {**copy.deepcopy(ACTION), **changes}
+
+
+def test_agent_block_is_optional_and_accepted(valid):
+    assert "agent" not in valid
+    assert errors(with_agent(valid), core="1.8.0") == []
+
+
+@pytest.mark.parametrize(
+    "action",
+    [
+        action_with(name="Bad Name"),
+        action_with(name="ab"),
+        action_with(title_vi=""),
+        action_with(title_vi="x" * 81),
+        action_with(risk="critical"),
+        action_with(approver_roles=["farmer"]),
+        action_with(approver_roles=[]),
+        action_with(money="yes"),
+        action_with(path="/Agent/x"),
+        action_with(extra=1),
+        {k: v for k, v in ACTION.items() if k != "payload"},
+        {k: v for k, v in ACTION.items() if k != "preview_vi"},
+    ],
+)
+def test_agent_action_refuses(valid, action):
+    assert errors(with_agent(valid, action), core="1.8.0")
+
+
+def test_agent_block_refuses_unknown_key_and_too_many_actions(valid):
+    assert errors(with_agent(valid, extra=1), core="1.8.0")
+    many = [action_with(name=f"act.n{n}", path=f"/agent/actions/a{n}") for n in range(11)]
+    data = with_agent(valid)
+    data["agent"]["actions"] = many
+    assert errors(data, core="1.8.0")
+    data["agent"]["actions"] = many[:10]
+    assert errors(data, core="1.8.0") == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"type": "array"},
+        {"type": "object", "properties": {}},  # additionalProperties false is required
+        {"type": "object", "additionalProperties": True, "properties": {}},
+        {"type": "object", "additionalProperties": False, "properties": {"a": {"type": "object"}}},
+        {"type": "object", "additionalProperties": False, "properties": {"a": {"type": "string", "pattern": "^x$"}}},
+        {"type": "object", "additionalProperties": False, "properties": {"a": {"type": "string", "format": "uri"}}},
+        {"type": "object", "additionalProperties": False, "properties": {"a": {"type": "string", "$ref": "#/x"}}},
+        {"type": "object", "additionalProperties": False, "properties": {"a": {"type": "string", "minimum": 1}}},
+        {"type": "object", "additionalProperties": False, "properties": {"a": {"type": "integer", "maxLength": 3}}},
+        {"type": "object", "additionalProperties": False, "properties": {"a": {"type": "integer", "minimum": 5, "maximum": 1}}},
+        {"type": "object", "additionalProperties": False, "properties": {"a": {"type": "string", "minLength": 5, "maxLength": 1}}},
+        {"type": "object", "additionalProperties": False, "properties": {"a": {"type": "string", "enum": [1]}}},
+        {"type": "object", "additionalProperties": False, "required": ["b"], "properties": {"a": {"type": "string"}}},
+        {"type": "object", "additionalProperties": False, "properties": {"_labels": {"type": "string"}}},
+        {"type": "object", "additionalProperties": False, "properties": {"A-b": {"type": "string"}}},
+        {"type": "object", "additionalProperties": False, "oneOf": [], "properties": {}},
+    ],
+)
+def test_agent_payload_schema_is_a_strict_subset(valid, payload):
+    assert errors(with_agent(valid, action_with(payload=payload)), core="1.8.0")
+
+
+def test_agent_paths_must_be_under_a_protected_prefix(valid):
+    data = with_agent(valid)
+    data["routes"] = {"protected": {"/admin/": ["manager"]}}
+    errs = errors(data, core="1.8.0")
+    assert len(errs) == 2 and any("agent.suggestions" in e for e in errs) and any("promotion-create" in e for e in errs)
+
+
+def test_agent_paths_must_not_be_under_a_public_prefix(valid):
+    data = with_agent(valid)
+    data["routes"] = {"public": ["/agent/"], "protected": {"/": ["manager"]}}
+    errs = errors(data, core="1.8.0")
+    assert errs and all("public" in e or "công khai" in e for e in errs)
+
+
+def test_agent_action_names_and_paths_are_unique(valid):
+    data = with_agent(valid)
+    data["agent"]["actions"].append(copy.deepcopy(ACTION))
+    errs = errors(data, core="1.8.0")
+    assert any("promotion.create" in e for e in errs) and any("promotion-create" in e for e in errs)
+
+
+def test_generated_app_may_not_declare_agent_actions(valid):
+    # H2, test 29: an app a person did not write may not act for the cooperative.
+    data = with_agent(valid)
+    assert errors({**data, "generated": False}, core="1.8.0") == []
+    errs = errors({**data, "id": "gen-tea-log", "generated": True}, core="1.8.0")
+    assert len(errs) == 1 and "generated" in errs[0] and "agent.actions" in errs[0]
+    assert errors({**valid, "id": "gen-tea-log", "generated": True}, core="1.8.0") == []
+
+
+def test_generated_flag_and_gen_prefix_go_together(valid):
+    # M13: only a builder-made app may take a gen- id, and it must say so; the id picks its private network.
+    errs = errors({**valid, "generated": True}, core="1.8.0")
+    assert len(errs) == 1 and "gen-" in errs[0]
+    errs = errors({**valid, "id": "gen-tea-log"}, core="1.8.0")
+    assert len(errs) == 1 and "generated" in errs[0]
+    assert errors({**valid, "id": "gen-tea-log", "generated": False}, core="1.8.0") != []
+    assert errors({**valid, "id": "gen-ab", "generated": True}, core="1.8.0") != []  # too short after the prefix

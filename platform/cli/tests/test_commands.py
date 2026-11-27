@@ -122,6 +122,25 @@ def test_remove_keeps_schema_without_purge(root, monkeypatch, capsys):
     assert FakeDatabaseStep.purged == ["tea-tour"]
 
 
+def test_remove_expires_the_open_proposals_of_the_app_only(root, monkeypatch):
+    # Test 16: an action of a removed app can no longer run, so its open proposals expire; others stay as they are.
+    monkeypatch.setattr(commands, "DatabaseStep", FakeDatabaseStep)
+    assert main(["prepare", app_dir(root)]) == 0
+    assert main(["commit", "tea-tour"]) == 0
+    rows = [("app.tea-tour.promotion.create", "proposed", "a"), ("app.tea-tour.promotion.create", "executed", "b"),
+            ("app.tea-tour-x.other", "proposed", "c"), ("journal.approve", "proposed", "d")]
+    with psycopg.connect(root_db_url()) as conn:
+        for kind, status, key in rows:
+            conn.execute("INSERT INTO platform.agent_proposals (htx_code, agent, kind, payload, reason_vi, evidence, risk, status,"
+                         " dedupe_key, expires_at) VALUES ('TC', 'app:tea-tour', %s, '{}', 'x', '{}', 'low', %s, %s,"
+                         " now() + interval '1 day')", (kind, status, key))
+    assert main(["remove", "tea-tour"]) == 0
+    with psycopg.connect(root_db_url()) as conn:
+        got = dict(conn.execute("SELECT dedupe_key, status FROM platform.agent_proposals WHERE htx_code = 'TC'").fetchall())
+        conn.execute("DELETE FROM platform.agent_proposals WHERE htx_code = 'TC'")
+    assert got == {"a": "expired", "b": "executed", "c": "proposed", "d": "proposed"}
+
+
 def test_commands_refuse_an_id_that_is_a_path(root, capsys):
     assert main(["abort", "../../etc"]) == 1
     assert "không hợp lệ" in capsys.readouterr().err

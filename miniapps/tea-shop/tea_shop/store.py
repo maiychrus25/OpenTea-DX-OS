@@ -19,6 +19,12 @@ CANCELLABLE = ("NEW", "CONFIRMED", "SHIPPING")
 LOW_STOCK = 5  # an active product with this many packs or fewer is "sắp hết"
 VN_DAY = "(created_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date"
 # Start of the current month in Vietnam time, as a timestamptz.
+VN_TODAY = "(now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date"
+SUGGEST_MIN_STOCK = 20  # suggest a promotion for an active product with at least this many packs...
+SUGGEST_QUIET_DAYS = 21  # ...and no order line (cancelled orders left out) in this many days
+SUGGEST_LIMIT = 10
+PRODUCT_MISSING = "Không tìm thấy sản phẩm."
+PROMOTION_OVERLAP = "Sản phẩm đang có khuyến mãi."
 MONTH_START = "date_trunc('month', now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh'"
 
 
@@ -31,6 +37,30 @@ class Product:
     stock: int
     lot_code: str | None
     active: bool
+    discount_pct: int  # of the promotion that applies today, else 0
+
+    @property
+    def sale_price_vnd(self) -> int:
+        return (self.price_vnd * (100 - self.discount_pct) + 50) // 100  # half up, whole đồng
+
+
+@dataclass(frozen=True)
+class Promotion:
+    id: UUID
+    product_id: UUID
+    discount_pct: int
+    starts_on: date
+    ends_on: date
+
+
+@dataclass(frozen=True)
+class PromotionRow:
+    id: UUID
+    product_name: str
+    discount_pct: int
+    starts_on: date
+    ends_on: date
+    state: str  # active, ended (by a manager) or over (ends_on has passed)
 
 
 @dataclass(frozen=True)
@@ -60,7 +90,11 @@ class Refusal:
 
 
 ORDER_STATUSES = ("NEW", "CONFIRMED", "SHIPPING", "DONE", "CANCELLED")
-PRODUCT_COLUMNS = "id, name, pack, price_vnd, stock, lot_code, active"
+# The percent of the promotion running today (at most one, see create_promotion), 0 when there is none.
+PRODUCT_COLUMNS = (
+    "id, name, pack, price_vnd, stock, lot_code, active, COALESCE((SELECT max(pr.discount_pct) FROM promotions pr "
+    "WHERE pr.product_id = products.id AND pr.htx_code = products.htx_code AND pr.ended_at IS NULL "
+    f"AND {VN_TODAY} BETWEEN pr.starts_on AND pr.ends_on), 0) AS discount_pct")
 ORDER_COLUMNS = "id, code, customer_name, phone, address, note, status, total_vnd, created_at"
 
 
@@ -267,7 +301,7 @@ def place_order(conn, htx_code: str, lines: list[tuple[UUID, int]], customer_nam
             product = products[product_id]
             if wanted[product_id] > product.stock:
                 return Refusal(f"Sản phẩm {product.name} chỉ còn {product.stock}.")
-        total = sum(products[i].price_vnd * q for i, q in wanted.items())
+        total = sum(products[i].sale_price_vnd * q for i, q in wanted.items())
         placed = _insert_order(conn, htx_code, customer_name, phone, address, note, total)
         for product_id in sorted(wanted):
             product = products[product_id]
@@ -275,9 +309,59 @@ def place_order(conn, htx_code: str, lines: list[tuple[UUID, int]], customer_nam
                          (wanted[product_id], product_id, htx_code))
             conn.execute("INSERT INTO order_items (htx_code, order_id, product_id, product_name, pack, price_vnd, "
                          "quantity) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                         (htx_code, placed.id, product_id, product.name, product.pack, product.price_vnd,
+                         (htx_code, placed.id, product_id, product.name, product.pack, product.sale_price_vnd,
                           wanted[product_id]))
         return placed
+
+
+def create_promotion(conn, htx_code: str, product_id: UUID, discount_pct: int, days: int,
+                     created_by: str) -> Promotion | Refusal:
+    """A promotion from today for `days` days, both ends included. Refused when the product is not in this HTX or a
+    promotion is already running on it. The product row lock makes two creations on one product take turns."""
+    with conn.transaction():
+        if conn.execute("SELECT 1 FROM products WHERE id = %s AND htx_code = %s FOR UPDATE",
+                        (product_id, htx_code)).fetchone() is None:
+            return Refusal(PRODUCT_MISSING)
+        if conn.execute(f"SELECT 1 FROM promotions WHERE product_id = %s AND htx_code = %s AND ended_at IS NULL "
+                        f"AND ends_on >= {VN_TODAY}", (product_id, htx_code)).fetchone():
+            return Refusal(PROMOTION_OVERLAP)
+        with conn.cursor(row_factory=class_row(Promotion)) as cur:
+            return cur.execute(
+                f"INSERT INTO promotions (htx_code, product_id, discount_pct, starts_on, ends_on, created_by) "
+                f"VALUES (%s, %s, %s, {VN_TODAY}, {VN_TODAY} + %s, %s) "
+                "RETURNING id, product_id, discount_pct, starts_on, ends_on",
+                (htx_code, product_id, discount_pct, days - 1, created_by)).fetchone()
+
+
+def end_promotion(conn, htx_code: str, promotion_id: UUID) -> bool | None:
+    """True if ended now, False if it was already over, None if not in this HTX."""
+    if conn.execute(f"UPDATE promotions SET ended_at = now() WHERE id = %s AND htx_code = %s AND ended_at IS NULL "
+                    f"AND ends_on >= {VN_TODAY} RETURNING id", (promotion_id, htx_code)).fetchone():
+        return True
+    return False if conn.execute("SELECT 1 FROM promotions WHERE id = %s AND htx_code = %s",
+                                 (promotion_id, htx_code)).fetchone() else None
+
+
+def list_promotions(conn, htx_code: str) -> list[PromotionRow]:
+    """Newest first, at most 100 rows (shortcut: no paging, the page links to nothing older)."""
+    return _all(conn, PromotionRow,
+                f"SELECT pr.id, p.name AS product_name, pr.discount_pct, pr.starts_on, pr.ends_on, "
+                f"CASE WHEN pr.ended_at IS NOT NULL THEN 'ended' WHEN pr.ends_on < {VN_TODAY} THEN 'over' "
+                f"ELSE 'active' END AS state FROM promotions pr JOIN products p "
+                f"ON p.id = pr.product_id AND p.htx_code = pr.htx_code WHERE pr.htx_code = %s "
+                f"ORDER BY pr.created_at DESC, pr.id LIMIT 100", (htx_code,))
+
+
+def stale_stock_products(conn, htx_code: str) -> list[Product]:
+    """Active products with plenty of stock, no order line lately and no promotion today: the agent suggests a sale."""
+    return _all(conn, Product,
+                f"SELECT {PRODUCT_COLUMNS} FROM products WHERE htx_code = %s AND active AND stock >= %s "
+                f"AND NOT EXISTS (SELECT 1 FROM order_items i JOIN orders o ON o.id = i.order_id AND o.htx_code = i.htx_code "
+                f"WHERE i.product_id = products.id AND i.htx_code = products.htx_code AND o.status <> 'CANCELLED' "
+                f"AND o.created_at >= now() - make_interval(days => %s)) "
+                f"AND NOT EXISTS (SELECT 1 FROM promotions pr WHERE pr.product_id = products.id "
+                f"AND pr.htx_code = products.htx_code AND pr.ended_at IS NULL AND pr.ends_on >= {VN_TODAY}) "
+                f"ORDER BY stock DESC, id LIMIT %s", (htx_code, SUGGEST_MIN_STOCK, SUGGEST_QUIET_DAYS, SUGGEST_LIMIT))
 
 
 def _insert_order(conn, htx_code, customer_name, phone, address, note, total) -> Order:

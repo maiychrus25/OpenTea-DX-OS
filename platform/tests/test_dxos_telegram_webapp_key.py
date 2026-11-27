@@ -21,7 +21,11 @@ def run_enable(tmp_path, token_env):
         "set -euo pipefail\n"
         f"kc_exec() {{ printf 'tg-secret\\nroles-secret\\n'; }}\n"
         f"telegram_env_write() {{ mkdir -p {tmp_path}/$1; cat > {tmp_path}/$1/$2; }}\n"
+        f"telegram_env_remove() {{ rm -f {tmp_path}/$1/$2; }}\n"
+        # roles.env is updated key by key (M9), so the read side of the helper is stubbed on the same folder.
+        f"roles_env_read() {{ cat {tmp_path}/run/dxos-web/roles.env 2>/dev/null || true; }}\n"
         "telegram_restart() { :; }\n"
+        f"{function_body('roles_env_update')}\n"
         f"{function_body('telegram_webapp_key')}\n{function_body('telegram_enable')}\n"
         "telegram_enable\n"
     )
@@ -49,3 +53,14 @@ def test_without_a_token_no_key_is_written_and_enable_still_works(tmp_path):
     run = run_enable(tmp_path, {})
     assert run.returncode == 0, run.stderr
     assert "WEBAPP_KEY" not in (tmp_path / "run/dxos-web/roles.env").read_text()
+
+
+def test_enable_keeps_the_apps_actor_secret_already_in_roles_env(tmp_path):
+    web = tmp_path / "run/dxos-web"
+    web.mkdir(parents=True)
+    (web / "roles.env").write_text("DXOS_APPS_ACTOR_SECRET=actor-secret\nDXOS_TELEGRAM_WEBAPP_KEY=stale\n")
+    run = run_enable(tmp_path, {"TELEGRAM_BOT_TOKEN": FAKE_TOKEN})
+    assert run.returncode == 0, run.stderr
+    lines = (web / "roles.env").read_text().splitlines()
+    assert "DXOS_APPS_ACTOR_SECRET=actor-secret" in lines
+    assert f"DXOS_TELEGRAM_WEBAPP_KEY={EXPECTED_KEY}" in lines and "DXOS_TELEGRAM_WEBAPP_KEY=stale" not in lines

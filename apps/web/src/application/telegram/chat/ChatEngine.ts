@@ -66,6 +66,8 @@ export interface ChatEngineDeps {
   photos: PhotoStore
   requests: AssistantSubmitter
   callbackKey: string
+  /** Mini-app requests by chat (M13): a manager's sentence that asks for an app. Absent: the sentence goes to the assistant. */
+  appRequests?: { submit(user: ChatUser, text: string): Promise<string> }
   /** Approver messages of open proposals, for the tool `pending` (built the way the notifier builds them). */
   proposalMessages: (htxCode: string, proposalIds: string[]) => Promise<ProposalMessage[]>
 }
@@ -84,6 +86,10 @@ export type IncomingPhoto =
   | { kind: 'image'; bytes: Buffer; mimeType: 'image/jpeg' }
   | { kind: 'error'; reason: 'too_large' | 'download_failed' }
 
+export type IncomingVoice =
+  | { kind: 'text'; text: string }
+  | { kind: 'error'; reason: 'too_long' | 'stt_unavailable' }
+
 const send = (chatId: number, text: string, buttons?: Buttons): OutboxReply =>
   buttons ? { op: 'send', chat_id: chatId, text, buttons } : { op: 'send', chat_id: chatId, text }
 
@@ -101,6 +107,18 @@ const callbackOnly = (replies: OutboxReply[], answer = '', alert = false): Updat
 
 const newToken = (): string => randomBytes(8).toString('base64url')
 const expired = (row: TelegramConversation, now: Date): boolean => row.expiresAt.getTime() <= now.getTime()
+/** State key of a heard sentence waiting inside a flow, and the ops of its buttons (M15). */
+const VOICE_IN_FLOW = '__voice'
+const VOICE_IN_FLOW_OPS = ['vok', 'vedit', 'vno']
+const flowInputOf = (row: TelegramConversation) => ({
+  telegramUserId: row.telegramUserId,
+  flow: row.flow ?? '',
+  step: row.step,
+  state: row.state,
+  token: row.token,
+  cardMessageId: row.cardMessageId,
+  expiresAt: row.expiresAt,
+})
 const withoutMeta = (state: Meta): Meta => Object.fromEntries(Object.entries(state).filter(([key]) => !key.startsWith('__')))
 /** The action's payload: no meta keys, and a skipped step (stored as null so it is not asked again) left out. */
 const payloadOf = (state: Meta): Meta =>
@@ -154,10 +172,16 @@ export class ChatEngine {
       }
     }
 
+    // A typed message replaces a heard sentence that is still waiting, so its old Đúng button goes stale.
+    if (open?.kind === 'voice') await this.deps.repo.deleteConversation(user.telegramUserId)
+
     if (command) return this.command(user, command, text, now)
     const route = routeText(text)
     if (route?.kind === 'tool') return this.runTool(user, route.name, {}, now)
     if (route?.kind === 'action') return this.startAction(user, route.name, {}, now)
+    if (route?.kind === 'app_request' && user.tenant.role === 'manager' && this.deps.appRequests) {
+      return only([send(user.chatId, await this.deps.appRequests.submit(user, text))])
+    }
     return this.askAssistant(user, text, now)
   }
 
@@ -191,6 +215,47 @@ export class ChatEngine {
     return this.advance(user, action, { ...open.state, [step.slot]: key }, open.step + 1, now)
   }
 
+  /** A voice message the relay turned into text (or could not). Nothing runs until the person presses Đúng. */
+  async onVoice(user: ChatUser, voice: IncomingVoice, now: Date): Promise<UpdateResponse> {
+    const chat = user.chatId
+    if (voice.kind === 'error') {
+      return only([send(chat, voice.reason === 'too_long' ? TELEGRAM_TEXT.voiceTooLong : TELEGRAM_TEXT.voiceUnavailable)])
+    }
+    const text = voice.text.trim()
+    if (!text) return only([send(chat, TELEGRAM_TEXT.voiceUnclear)])
+
+    // In the middle of a flow the heard sentence waits inside it (a `__` key never reaches the payload), so a spoken
+    // answer such as "hai lít" does not throw away the half-filled card. Its buttons carry the flow's own token.
+    const open = await this.deps.repo.conversationOf(user.telegramUserId)
+    if (open?.kind === 'flow' && open.flow !== null && open.token && !expired(open, now)) {
+      await this.deps.repo.setFlow({ ...flowInputOf(open), state: { ...open.state, [VOICE_IN_FLOW]: text } })
+      const inFlow: Buttons = [[
+        this.button(open.token, 'vok', TELEGRAM_BUTTON.voiceOk),
+        this.button(open.token, 'vedit', TELEGRAM_BUTTON.voiceEdit),
+        this.button(open.token, 'vno', TELEGRAM_BUTTON.voiceDrop),
+      ]]
+      return only([send(chat, TELEGRAM_TEXT.voiceHeard(text), inFlow)])
+    }
+
+    const token = newToken()
+    await this.deps.repo.setFlow({
+      telegramUserId: user.telegramUserId,
+      kind: 'voice',
+      flow: 'voice',
+      step: null,
+      state: { text },
+      token,
+      cardMessageId: null,
+      expiresAt: new Date(now.getTime() + CARD_TTL_MS),
+    })
+    const buttons: Buttons = [[
+      this.button(token, 'vok', TELEGRAM_BUTTON.voiceOk),
+      this.button(token, 'vedit', TELEGRAM_BUTTON.voiceEdit),
+      this.button(token, 'cancel', TELEGRAM_BUTTON.cancel),
+    ]]
+    return only([send(chat, TELEGRAM_TEXT.voiceHeard(text), buttons)])
+  }
+
   onLocation(user: ChatUser, latitude: number, longitude: number, now: Date): Promise<UpdateResponse> {
     return this.runTool(user, 'nearby', { latitude, longitude }, now)
   }
@@ -207,6 +272,10 @@ export class ChatEngine {
     }
 
     const row = await this.deps.repo.conversationOf(press.telegramUserId)
+    if (row?.kind === 'voice' && row.token === press.c) return this.voicePress(user, row, press, now)
+    if (row?.kind === 'flow' && row.token === press.c && VOICE_IN_FLOW_OPS.includes(press.s)) {
+      return this.voiceInFlowPress(user, row, press, now)
+    }
     if (!row || row.kind !== 'flow' || row.token !== press.c) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
     const action = this.actionNamed(row.flow)
     if (!action) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
@@ -226,6 +295,38 @@ export class ChatEngine {
     }
     if (isCard) return this.cardPress(user, row, action, press, now)
     return this.stepPress(user, row, action, press, now)
+  }
+
+  /** Đúng replays the heard text as if typed; Sửa and Huỷ drop it. Expired, or a user without a role, sends nothing on. */
+  private async voicePress(user: ChatUser | null, row: TelegramConversation, press: CallbackPress, now: Date): Promise<UpdateResponse> {
+    const chat = press.chatId
+    const text = typeof row.state.text === 'string' ? row.state.text : ''
+    if (!user) return callbackOnly([], TELEGRAM_TEXT.noPermission('Trợ lý Telegram'), true)
+    await this.deps.repo.deleteConversation(press.telegramUserId)
+    if (expired(row, now) || !text || !['vok', 'vedit', 'cancel'].includes(press.s)) {
+      return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
+    }
+    if (press.s === 'cancel') return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.flowCancelled)])
+    const heard = edit(chat, press.messageId, TELEGRAM_TEXT.voiceHeard(text))
+    if (press.s === 'vedit') return callbackOnly([heard, send(chat, TELEGRAM_TEXT.voiceRetype)])
+    const next = await this.onText(user, text, now)
+    return callbackOnly([heard, ...next.replies])
+  }
+
+  /** A heard sentence waiting inside a flow: Đúng answers the flow's step with it, Sửa and Bỏ câu này keep the flow. */
+  private async voiceInFlowPress(user: ChatUser | null, row: TelegramConversation, press: CallbackPress, now: Date): Promise<UpdateResponse> {
+    const chat = press.chatId
+    const text = typeof row.state[VOICE_IN_FLOW] === 'string' ? (row.state[VOICE_IN_FLOW] as string) : ''
+    if (!user) return callbackOnly([], TELEGRAM_TEXT.noPermission('Trợ lý Telegram'), true)
+    if (!text || expired(row, now)) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
+    const rest = { ...row.state }
+    delete rest[VOICE_IN_FLOW]
+    await this.deps.repo.setFlow({ ...flowInputOf(row), state: rest })
+    if (press.s === 'vno') return callbackOnly([edit(chat, press.messageId, TELEGRAM_TEXT.voiceDropped)])
+    const heard = edit(chat, press.messageId, TELEGRAM_TEXT.voiceHeard(text))
+    if (press.s === 'vedit') return callbackOnly([heard, send(chat, TELEGRAM_TEXT.voiceRetype)])
+    const next = await this.onText(user, text, now)
+    return callbackOnly([heard, ...next.replies])
   }
 
   /** Runs an intent the assistant returned (contract C7). The caller sends the replies through the outbox. */

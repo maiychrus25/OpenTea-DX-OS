@@ -340,3 +340,90 @@ def test_failed_request_keeps_the_phase_that_failed(root, conn):
     store.set_phase(conn, job_id, "build")
     store.finish(conn, job_id, False, "boom")
     assert status_of(conn, job_id)[0] == "FAILED" and phase_of(conn, job_id) == "build"
+
+
+def make_generated_dir(root, where, app_id="gen-tea-log", version="0.1.0"):
+    """A copy of the valid fixture turned into a builder-made app: gen- id, generated: true, no store screenshots."""
+    import yaml
+    shutil.copytree(FIXTURES / "valid", where)
+    data = yaml.safe_load((where / "app.yaml").read_text(encoding="utf-8"))
+    data.update({"id": app_id, "version": version, "generated": True})
+    data.pop("store", None)
+    (where / "app.yaml").write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    return where
+
+
+def seed_generated(conn, app_id="gen-tea-log", htx="TC", build_status="passed", request_status="passed", spec=True,
+                   version="0.1.0"):
+    """A catalogue row with an owner, plus the request and build it came from (what builder-finish writes)."""
+    req = conn.execute(
+        "INSERT INTO platform.app_build_requests (htx_code, requested_by, request_text, status, app_id, spec)"
+        " VALUES (%s, 'u1', 'cần app theo dõi', %s, %s, %s) RETURNING id",
+        (htx, request_status, app_id, psycopg.types.json.Jsonb({"app_id": app_id}) if spec else None)).fetchone()[0]
+    build = conn.execute(
+        "INSERT INTO platform.app_builds (request_id, htx_code, app_id, version, provider, status)"
+        " VALUES (%s, %s, %s, %s, 'replay', %s) RETURNING id", (req, htx, app_id, version, build_status)).fetchone()[0]
+    seed_catalog(conn, app_id)
+    conn.execute("UPDATE platform.app_catalog SET owner_htx = %s, build_id = %s, version = %s WHERE id = %s",
+                 (htx, build, version, app_id))
+    return req, build
+
+
+def test_sync_leaves_owned_rows_alone_and_skips_generated_manifests(root, conn, capsys):
+    seed_generated(conn)
+    make_generated_dir(root, root / "miniapps" / "gen-other", "gen-other")
+    assert store.sync_catalog(conn, root / "miniapps", "1.9.0") == ["tea-tour"]
+    assert "gen-other" in capsys.readouterr().err
+    rows = dict(conn.execute("SELECT id, owner_htx FROM platform.app_catalog").fetchall())
+    assert rows == {"gen-tea-log": "TC", "tea-tour": None}  # the owned row stays, the folder's generated app is not listed
+
+
+def test_sync_never_overwrites_an_owned_row_with_a_same_id_manifest(root, conn):
+    seed_generated(conn, app_id="tea-tour")  # an id clash a human PR could cause; the owned row wins
+    store.sync_catalog(conn, root / "miniapps", "1.9.0")
+    assert conn.execute("SELECT owner_htx, version FROM platform.app_catalog WHERE id = 'tea-tour'").fetchone() == ("TC", "0.1.0")
+
+
+REFUSED = "Bản này chưa qua kiểm tra hoặc không thuộc HTX này"
+
+
+def claimed(conn, app_id="gen-tea-log", htx="TC"):
+    job_id = add_request(conn, app_id, htx)
+    job = store.claim_known(conn)
+    return job_id, job
+
+
+def test_worker_installs_a_passed_generated_app_for_its_owner_only(root, conn):
+    seed_generated(conn)
+    job_id, job = claimed(conn)
+    assert job is not None and job.id == job_id and job.version == "0.1.0"
+    assert status_of(conn, job_id)[0] == "RUNNING"
+
+
+@pytest.mark.parametrize("case", ["other_htx", "failed_build", "running_build", "no_spec", "request_failed"])
+def test_worker_refuses_a_generated_app_that_is_not_ready_or_not_theirs(root, conn, case):
+    """Test 28: an ENABLE row inserted by hand ends FAILED and nothing is installed."""
+    kwargs = {"failed_build": {"build_status": "failed", "request_status": "failed"},
+              "running_build": {"build_status": "running", "request_status": "building"},
+              "no_spec": {"spec": False}, "request_failed": {"request_status": "failed"}}.get(case, {})
+    seed_generated(conn, **kwargs)
+    job_id, job = claimed(conn, htx="LB" if case == "other_htx" else "TC")
+    assert job is None
+    assert status_of(conn, job_id) == ("FAILED", REFUSED)
+    assert enabled(conn, "gen-tea-log") == set()
+
+
+def test_worker_refuses_a_gen_id_with_no_catalogue_row_with_the_same_message(root, conn):
+    job_id, job = claimed(conn, app_id="gen-ghost")  # a build that failed never gets a row (test 26/28)
+    assert job is None and status_of(conn, job_id) == ("FAILED", REFUSED)
+
+
+def test_worker_claim_prints_the_version_only_for_a_generated_app(root, conn, capsys):
+    seed_catalog(conn, "hello")
+    seed_generated(conn)
+    plain = add_request(conn, "hello", "TC")
+    assert main(["worker-claim", "--wait", "0"]) == 0
+    assert capsys.readouterr().out.strip() == f"{plain}\tENABLE\thello\tTC\t0"
+    owned = add_request(conn, "gen-tea-log", "TC")
+    assert main(["worker-claim", "--wait", "0"]) == 0
+    assert capsys.readouterr().out.strip() == f"{owned}\tENABLE\tgen-tea-log\tTC\t0\t0.1.0"

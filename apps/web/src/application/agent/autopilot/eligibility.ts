@@ -24,8 +24,9 @@ const MINUTE_MS = 60_000
 const HOUR_MS = 60 * MINUTE_MS
 
 /** The blocking window of a kind by risk. A zero window means the next tick. */
-export function windowFor(definition: Pick<ActionDefinition, 'kind' | 'risk'>): number {
+export function windowFor(definition: Pick<ActionDefinition, 'kind' | 'risk' | 'money'>): number {
   if (definition.kind === 'strategy.adopt') return 48 * HOUR_MS
+  if (definition.money) return 2 * HOUR_MS
   if (definition.risk === 'high') return 2 * HOUR_MS
   if (definition.risk === 'medium') return 15 * MINUTE_MS
   return 0
@@ -78,6 +79,12 @@ export function autoEligibility(
     !onlyTightens(proposal.payload, liveThresholds ?? currentThresholds(proposal.evidence))
   ) {
     return { eligible: false, reason: 'loosens_setting' }
+  }
+  if (definition.kind === 'strategy.adopt') {
+    // The plan row's values carry its warnings; their hash is checked at creation and against the stored row before a
+    // run, so without them the warnings cannot be read and a person decides (test 37).
+    const warnings = proposal.evidence.rows.find((r) => r.table === 'strategy_plans')?.values?.warnings
+    if (!Array.isArray(warnings) || warnings.length > 0) return { eligible: false, reason: 'rule_warning' }
   }
   if (definition.kind === 'journal.approve') {
     const warnings = proposal.payload.warnings

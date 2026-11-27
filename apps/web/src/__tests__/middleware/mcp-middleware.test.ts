@@ -19,6 +19,19 @@ describe('middleware MCP exemption', () => {
   })
 })
 
+describe('middleware internal routes of the mini-app factory (M13)', () => {
+  // A12 and the relay call these with a service token and never carry a session cookie.
+  test('lets the A12 routes and the relay media route reach their token check', () => {
+    expect(resolveAuthRedirect('/api/internal/agent/app-builder/requests', false, undefined)).toBeNull()
+    expect(resolveAuthRedirect('/api/internal/agent/app-builder/requests/abc/announce', false, undefined)).toBeNull()
+    expect(resolveAuthRedirect('/api/internal/telegram/media', false, undefined)).toBeNull()
+  })
+
+  test('keeps the manager routes behind a session', () => {
+    expect(resolveAuthRedirect('/api/agent/app-requests', false, undefined)).toBe('UNAUTHORIZED_API')
+  })
+})
+
 describe('middleware Mini App entry (M6)', () => {
   test('sends a signed-out visitor of /telegram/open to the login with a return URL', () => {
     expect(resolveAuthRedirect('/telegram/open', false, undefined, '?to=%2Fmanager%2Fai')).toBe(

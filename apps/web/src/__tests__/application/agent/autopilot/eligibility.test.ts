@@ -17,6 +17,13 @@ function settingsEvidence(thresholds: Record<string, number>): Evidence {
   return { rows, sha256: evidenceDigest(rows) }
 }
 
+// The plan row the strategy plans route always attaches to strategy.adopt: without it the warnings cannot be read (test 37).
+function cleanPlanEvidence(): Evidence {
+  const rows = [{ table: 'strategy_plans', id: 'plan-1', sha256: 'h', values: { warnings: [] } }]
+  return { rows, sha256: evidenceDigest(rows) }
+}
+const evidenceFor = (kind: string) => (kind === 'strategy.adopt' ? cleanPlanEvidence() : emptyEvidence)
+
 function check(kind: string, payload: Record<string, unknown> = {}, config = normal, origin: 'agent' | 'user' = 'agent', evidence = emptyEvidence) {
   return autoEligibility({ origin, payload, evidence }, getAction(kind)!, config)
 }
@@ -25,15 +32,19 @@ describe('autoEligibility', () => {
   test('the catalogue holds exactly the known kinds (test 19)', () => {
     expect(Object.keys(ACTION_CATALOG).sort()).toEqual([
       'agent.settings.update',
+      'app.spec.approve',
       'bulletin.publish',
       'disease.inspection',
       'harvest.approve',
       'improvement.adopt',
       'journal.approve',
       'journal.reject',
+      'miniapp.install',
+      'miniapp.remove',
       'notification.households',
       'notification.internal',
       'staff.task.create',
+      'strategy.adopt',
     ])
   })
 
@@ -46,7 +57,8 @@ describe('autoEligibility', () => {
     for (const definition of Object.values(ACTION_CATALOG)) {
       expect(definition.execute.toString()).not.toMatch(/autopilot/i)
       // H3 and H4: no disease report review, no delete.
-      expect(definition.kind).not.toMatch(/delete|remove|report/)
+      // `miniapp.remove` (M13) only queues the store's DISABLE request, which keeps the app's data; it is unlockable, never auto.
+      if (definition.kind !== 'miniapp.remove') expect(definition.kind).not.toMatch(/delete|remove|report/)
       expect(definition.kind).not.toMatch(/^(role|key|budget|policy|catalog|autopilot)/)
     }
   })
@@ -76,7 +88,7 @@ describe('autoEligibility', () => {
       }
       if (definition.autonomy === 'unlockable') {
         expect(check(definition.kind).reason).toBe('not_unlocked')
-        expect(check(definition.kind, {}, { unlockedKinds: [definition.kind] }).eligible).toBe(true)
+        expect(check(definition.kind, {}, { unlockedKinds: [definition.kind] }, 'agent', evidenceFor(definition.kind)).eligible).toBe(true)
         // Opening another kind does not open this one.
         expect(check(definition.kind, {}, { unlockedKinds: ['something.else'] }).eligible).toBe(false)
       }

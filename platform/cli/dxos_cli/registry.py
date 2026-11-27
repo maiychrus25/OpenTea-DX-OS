@@ -28,6 +28,9 @@ def update(conn: psycopg.Connection, manifest: dict) -> None:
 
 def unregister(conn: psycopg.Connection, app_id: str) -> None:
     conn.execute("DELETE FROM platform.installed_apps WHERE id = %s", (app_id,))
+    # An action of a removed app cannot run (spec §15 test 16); the web expires them too when it sees the app gone.
+    conn.execute("UPDATE platform.agent_proposals SET status = 'expired' WHERE status = 'proposed' AND starts_with(kind, %s)",
+                 (f"app.{app_id}.",))
 
 
 def enable(conn: psycopg.Connection, app_id: str, htx_code: str, enabled_by: str) -> None:

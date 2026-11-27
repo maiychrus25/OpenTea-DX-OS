@@ -70,3 +70,11 @@ def add_record(conn, book_id, data, htx="TC", created_by="kc-manager-tc", create
                                 created_by_name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
         (htx, book_id, Jsonb(data), entry_date, status, household_id, household_name, created_by,
          created_by_name)).fetchone()[0]
+
+
+def acting(sub="kc-approver", htx="TC", role="manager") -> dict:
+    """What the web's executor sends: the apps actor's token plus the three acting headers."""
+    claims = {"sub": "service-account-dxos-apps-actor", "azp": "dxos-apps-actor"}
+    payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
+    return {"Authorization": f"Bearer h.{payload}.s", "X-DXOS-Acting-Sub": sub, "X-DXOS-Acting-Role": role,
+            "X-DXOS-Acting-Htx": htx}

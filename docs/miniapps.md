@@ -64,6 +64,8 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `routes.public` | không | danh sách tiền tố không cần đăng nhập, ví dụ `[/public/]` |
 | `routes.protected` | không | ánh xạ tiền tố → danh sách vai trò (`farmer`, `officer`, `manager`, ít nhất một) |
 | `feed` | không | đường dẫn (cùng quy tắc với route) mà app trả danh sách app con của người gọi; phải nằm dưới một tiền tố trong `routes.protected`. Xem mục dưới. App khai `feed` nên khai `requires.core: ">=1.12.0"` |
+| `agent` | không | khối cho lớp AI: đường dẫn gợi ý và các hành động agent được đề xuất; xem mục "Khối `agent`" dưới. App khai `agent` nên khai `requires.core` từ phiên bản có M9 |
+| `generated` | không | `true` cho app do AI sinh ra (M13). App `generated: true` không được khai `agent.actions` |
 | `menu[]` | không | `label` (1–60 ký tự), `path` (đường dẫn trong app), `roles` (ít nhất một) |
 | `store` | không | thông tin cho trang chi tiết trong cửa hàng; mọi khoá đều tuỳ chọn, khoá lạ bị từ chối (bảng dưới). App khai `store` nên khai `requires.core: ">=1.10.0"` |
 
@@ -91,6 +93,38 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 ```
 
 Luật kiểm tra của web, mục sai bị bỏ chứ không làm hỏng cả danh sách: tối đa 30 `entries` (phần thừa bị bỏ); `label` 1–60 ký tự sau khi cắt khoảng trắng; `description` tối đa 200 ký tự (dài hơn thì bị cắt), mặc định rỗng; `path` khớp `^/[a-z0-9_-]+(/[a-z0-9_-]+)*$` và không có đoạn `.`/`..`, nên không thể là `//host` hay URL tuyệt đối; `icon` chỉ nhận tên trong danh sách của khối `store`, tên khác thành biểu tượng mặc định; `create` (tuỳ chọn) kiểm tra như một mục. Văn bản luôn hiện dạng văn bản thuần. Mỗi mục thành một mục menu `/<vai trò>/apps/<id><path>` ngay sau các mục menu tĩnh của app, và trong Kho ứng dụng có phần "Ứng dụng do HTX tự tạo" (lấy `feed` của vai trò `manager`). Mục mới hiện ở lần tải trang kế tiếp (menu do máy chủ dựng, không tự cập nhật trong trang đang mở), trễ tối đa 15 giây sau khi app đổi `feed`; đã đo trên stack thật: người dùng không cần làm gì thêm. Bấm một mục mở app con trong khung; địa chỉ của trang bao quanh không đổi khi người dùng đi tiếp bên trong khung. Khi app tắt, `feed` hỏng ngay (không chờ hết thời hạn) nên trang vẫn dựng bình thường với các mục menu tĩnh. Bộ nhớ đệm theo vai trò, không theo người dùng: app không nên đưa vào `feed` thứ gì mà hai người cùng vai trò trong một HTX không được thấy chung.
+
+**Khối `agent`** (M9). App khai gợi ý và hành động để lớp AI đề xuất thay cho người dùng; mọi hành động vẫn đi qua đề xuất và chờ người có quyền duyệt (trên web hoặc Telegram), không bao giờ tự chạy khi chưa có quyết định (hoặc chế độ tự vận hành của M12, mục 3.15 trong [rules-and-limits.md](./rules-and-limits.md)).
+
+```yaml
+agent:
+  suggestions: /agent/suggestions          # GET, dưới routes.protected
+  actions:                                 # tối đa 10
+    - name: promotion.create               # ^[a-z][a-z0-9_.]{2,40}$, duy nhất trong app
+      title_vi: Tạo khuyến mãi              # 1-80 ký tự
+      risk: medium                         # low | medium | high
+      approver_roles: [manager]            # tập con của officer, manager
+      money: true                          # true: động tới tiền, chỉ tự chạy khi chế độ tự vận hành mở khoá riêng, cửa sổ chặn 2 giờ
+      path: /agent/actions/promotion-create   # POST, dưới routes.protected
+      payload:                             # tập con của JSON Schema (bên dưới)
+        type: object
+        required: [product_id, discount_pct, days]
+        additionalProperties: false        # bắt buộc ghi false
+        properties:
+          product_id: { type: string, maxLength: 64 }
+          discount_pct: { type: integer, minimum: 5, maximum: 30 }
+      preview_vi: "Giảm {discount_pct}% cho sản phẩm {product_name}"   # chỗ trống lấy từ payload hoặc `labels` của gợi ý
+```
+
+- **Tập con JSON Schema của `payload`:** `type: object`, `additionalProperties: false`, `required`, `properties` (tối đa 20, tên `^[a-z][a-z0-9_]{0,40}$`; không dùng `_labels`). Mỗi thuộc tính có `type` là `string`, `integer`, `number` hoặc `boolean`, và chỉ các từ khoá `enum`, `minimum`, `maximum`, `minLength`, `maxLength` (đúng kiểu: độ dài cho `string`, giới hạn số cho `integer` và `number`). Từ khoá khác (`pattern`, `format`, `$ref`, `oneOf`, ...) bị `./dxos validate` từ chối. Dùng `integer` thay `number` khi được, vì bằng chứng của đề xuất chỉ có số nguyên (gợi ý có số thực bị agent bỏ qua).
+- **`./dxos validate` còn từ chối:** `suggestions` và `path` không nằm dưới một tiền tố trong `routes.protected` hoặc nằm dưới tiền tố công khai; hai hành động trùng `name` hoặc `path`; `required` nêu tên không có trong `properties`; app `generated: true` có `agent.actions`.
+- **Gợi ý.** Mỗi 30 phút `dxos-agent` gọi `GET /apps/<id><suggestions>` bằng token của HTX (vai `agent`, claim `htx_code`), chỉ với app đã bật cho HTX đó. App trả tối đa 10 gợi ý: `{"suggestions": [{"action", "payload", "labels", "reason_vi", "subjects"}]}`. Agent đăng mỗi gợi ý thành đề xuất loại `app.<id>.<action>` (nhãn `labels` nằm trong `payload._labels`); web từ chối gợi ý sai khuôn (HTTP 400, agent ghi log và đi tiếp), và không lặp đề xuất cùng loại, cùng đối tượng trong 24 giờ.
+- **Thực thi.** Khi có người duyệt, web gọi `POST /apps/<id><path>` với token của client `dxos-apps-actor` và ba header `X-DXOS-Acting-Sub`, `X-DXOS-Acting-Role`, `X-DXOS-Acting-Htx` (người duyệt). Thân là `payload` không có `_labels`. App trả 2xx kèm JSON để thành công, hoặc 4xx kèm `{"message_vi": "..."}` để đề xuất ghi `failed` kèm câu đó; không có gì tự thử lại.
+- **App phải tự kiểm lại luật của mình** khi hành động chạy, như khi người dùng bấm trên giao diện (sản phẩm còn không, có thuộc HTX không, có trùng không).
+- **Ba header chỉ tin khi token là của `dxos-apps-actor`.** Gateway xoá ba header này khỏi mọi request tới app (đường người dùng và đường agent), chỉ giữ ở các route hành động. App dùng `read_claims(authorization, headers)` của app kit: nó chỉ đọc header khi `azp` của token là `dxos-apps-actor`, và chỉ nhận vai trò `manager` hoặc `officer` từ header. Với mọi token khác, header bị bỏ qua.
+- **Gateway sinh thêm route cho khối này,** chỉ trên cổng nội bộ 9081: `app-<id>-agent-1` (đúng đường dẫn gợi ý, chỉ nhận token `agent` của HTX) và `app-<id>-actor-<n>` (đúng đường dẫn từng hành động, chỉ nhận `azp = dxos-apps-actor`). Người dùng không vào được hai đường dẫn này.
+- **Gỡ app:** hành động rời danh mục và các đề xuất đang mở của app chuyển `expired`. App tắt cho một HTX thì không có gợi ý mới cho HTX đó.
+- Bật máy chủ cho hành động: chạy một lần `./dxos apps actor enable` (mục 8).
 
 **Đường dẫn** (route, menu, `health`, `feed`) phải khớp `^/([a-z0-9_-]+(/[a-z0-9_-]+)*/?)?$`: bắt đầu bằng `/`, chỉ gồm `[a-z0-9/_-]`, không có `..` hay `//`. Mọi route nằm dưới `/apps/<id>/`; trong manifest chỉ ghi phần sau tiền tố đó.
 
@@ -282,7 +316,7 @@ Manifest không khai `database` thì `./dxos install` không tạo role hay sche
 
 | Thiết lập | Giá trị |
 | --- | --- |
-| Mạng | chỉ `dxos-apps-net`: `internal: true`, nên không ra internet; ngoài các app chỉ có `apisix` và `postgres`. Mọi app đã cài dùng chung mạng này và gọi được nhau (§3) |
+| Mạng | chỉ `dxos-apps-net`: `internal: true`, nên không ra internet; ngoài các app chỉ có `apisix` và `postgres`. Mọi app đã cài dùng chung mạng này và gọi được nhau (§3). **Ngoại lệ: app do AI xây (id `gen-…`)** nằm trên mạng riêng `dxos-gen-<id>` (`internal: true`), chỉ có app đó, `apisix` và `postgres`, nên không gọi được app nào khác (xem dưới) |
 | Cổng ra máy chủ | không có |
 | User | `10001:10001`, bất kể `USER` của image |
 | Hệ thống tệp | `read_only: true`; chỉ `/tmp` (tmpfs) ghi được |
@@ -297,6 +331,13 @@ Hệ quả cho người viết app:
 - App chỉ gọi được gateway (`apisix:9081`), Postgres (`postgres:5432`) và các app khác đã cài, không gọi được dịch vụ lõi nào khác.
 - Trong lõi, chỉ gateway gửi request tới app. Các app khác cùng mạng cũng gọi thẳng được app (§3), nên chỉ cài app tin cậy.
 
+**App do AI xây (M13, đặc tả §12.7).**
+- `app.yaml` có `generated: true` và id `gen-<tên>` (3 đến 30 ký tự `a-z`, `0-9`, `-`; kèm tiền tố `gen-`, id vẫn phải khớp mẫu id chung, tối đa 31 ký tự). `./dxos validate` từ chối `generated: true` với id khác dạng đó, id `gen-…` thiếu `generated: true`, và khối `agent.actions` của app `generated` (H2).
+- File compose của app đặt nó trên mạng `dxos-gen-<id>` thay vì `dxos-apps-net`, và thêm mạng đó vào `apisix` và `postgres`. `./dxos install`, `upgrade` và `worker` nối thêm các container đang chạy của hai dịch vụ này vào mạng (`docker network connect`); `./dxos remove` ngắt và xoá mạng.
+- Hạn chế: tạo lại `apisix` hoặc `postgres` làm mất kết nối này, tới khi chạy lại `./dxos worker` (hoặc `install`/`upgrade` của app).
+- Thư mục `miniapps/` không nhận app `generated: true`: `catalog-sync` bỏ qua. App chỉ vào kho qua builder (`cli builder-finish ... passed`), kèm `owner_htx` của HTX yêu cầu. Dòng kho có `owner_htx` không bị `catalog-sync` xoá hay ghi đè.
+- Worker cài từ bản xuất `docker/runtime/<project>/generated/<id>/<version>/` và từ chối (`FAILED`, `Bản này chưa qua kiểm tra hoặc không thuộc HTX này`) khi HTX yêu cầu khác `owner_htx`, bản xây chưa `passed` hoặc yêu cầu chưa có đặc tả đã duyệt.
+
 ## 8. Lệnh `./dxos`
 
 `./dxos` ở gốc repo gọi container `dxos-cli` (profile `tools`) để làm phần manifest, database, gateway, nhật ký cài và đăng ký. Script tự bật hoặc tắt container của app bằng `docker compose`. Không mount docker socket vào container nào và không mở thêm cổng. Cần stack đang chạy (ít nhất `postgres` và `apisix`).
@@ -308,6 +349,7 @@ Hệ quả cho người viết app:
 | `./dxos upgrade <dir>` | Nâng cấp app đã đăng ký tại chỗ: kiểm manifest, chạy migration còn thiếu (giữ nguyên role và mật khẩu), sinh lại route và compose, `up -d --build --wait`, rồi cập nhật `name`, `version`, `menu`, `manifest` trong `platform.installed_apps`. Không đụng tới enablement của HTX. Build hoặc health check hỏng thì đăng ký vẫn ở bản cũ và lệnh thoát mã 1 (route và compose file đã sinh lại; chạy `upgrade` lần nữa để sửa). App chưa cài thì dùng `install` |
 | `./dxos remove <id> [--purge]` | Tắt container, gỡ route, xoá đăng ký; mặc định giữ dữ liệu (§5) |
 | `./dxos list` | Mỗi app đã cài một dòng: id, phiên bản, thời điểm cài, trạng thái container; hoặc "Chưa cài app nào" |
+| `./dxos apps actor enable` | Tạo (nếu chưa có) client `dxos-apps-actor` trong Keycloak và ghi `DXOS_APPS_ACTOR_SECRET` vào `roles.env` của web, nơi web tự đọc lại, không cần khởi động. Chạy lại nhiều lần được; các khoá khác trong `roles.env` giữ nguyên. Không có secret này, đề xuất của app được duyệt sẽ ghi `failed` kèm câu tiếng Việt báo thiếu cấu hình |
 | `./dxos worker` | Tiến trình của máy chủ làm các yêu cầu Cài và Gỡ mà trưởng HTX gửi từ Kho ứng dụng (xem dưới); chạy cho tới khi nhận TERM hoặc Ctrl-C |
 
 **Kho ứng dụng và bật tắt theo HTX.** `./dxos install` ghi app vào `platform.installed_apps` và bật nó cho mọi HTX (`platform.app_enablements`, mã `*`). Trang `/manager/app-store` thì bật hoặc tắt riêng cho HTX của trưởng HTX: web chỉ ghi một dòng vào `platform.app_requests`, còn `./dxos worker` nhận từng yêu cầu một. `ENABLE` cài app nếu chưa cài rồi ghi enablement của HTX; `DISABLE` xoá enablement (HTX thấy app biến mất ngay) rồi gỡ container khi không còn HTX nào dùng, vẫn giữ dữ liệu. App chỉ được phục vụ và hiện trong menu của HTX đã bật nó. Catalogue của kho (`platform.app_catalog`) được `make platform-up` và worker đồng bộ từ `miniapps/*/app.yaml`, nên tên thư mục phải trùng `id` trong manifest. Worker giữ khoá `docker/runtime/<project>/worker.lock` (mỗi project một worker), đánh dấu lỗi các yêu cầu mà worker cũ bỏ dở lúc khởi động và chỉ hoàn tác lần cài dở của app chưa đăng ký. Khi `version` trong catalogue khác phiên bản đang đăng ký, thẻ và trang chi tiết hiện nhãn `Có bản mới`, kèm dòng nhắc quản trị máy chủ chạy `./dxos upgrade miniapps/<id>`. Cách chạy dưới systemd nằm trong README, mục "Kho ứng dụng và `./dxos worker`".

@@ -38,6 +38,9 @@ export interface StoreApp {
   phase: InstallPhase | null
   /** `/manager/apps/<id><path>` of the first menu entry for managers when the HTX can use the app, else null. */
   openHref: string | null
+  /** M13: an app the AI built for this cooperative, with the request that holds its spec and gate report. */
+  generated?: boolean
+  buildRequestId?: string | null
 }
 
 /** An app that is enabled for the HTX and publishes a feed: the sub-apps the manager sees in it, as links into the shell. */
@@ -82,7 +85,10 @@ export interface StoreAppDetail extends StoreApp {
 }
 
 /** A catalogue row as stored: `store` is the manifest block, unchecked (see the use case, which degrades a bad shape). */
-export type CatalogApp = Omit<StoreApp, 'status' | 'error' | 'category' | 'icon' | 'phase' | 'openHref'> & {
+export type CatalogApp = Omit<StoreApp, 'status' | 'error' | 'category' | 'icon' | 'phase' | 'openHref' | 'generated' | 'buildRequestId'> & {
+  /** The cooperative a generated app belongs to; null for a store app. */
+  ownerHtx?: string | null
+  buildRequestId?: string | null
   menu: StoreMenuEntry[]
   hasDatabase: boolean
   requiresCore: string | null

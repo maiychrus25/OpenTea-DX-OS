@@ -55,7 +55,8 @@ describe('AutopilotService.view', () => {
   test('lists every catalogue kind with its autonomy, risk and window', async () => {
     const view = await build().service.view('TC')
     const byKind = Object.fromEntries(view.kinds.map((k) => [k.kind, k]))
-    expect(Object.keys(byKind).sort()).toHaveLength(10)
+    expect(Object.keys(byKind).sort()).toHaveLength(14)
+    expect(byKind['strategy.adopt']).toMatchObject({ autonomy: 'unlockable', risk: 'medium', window_minutes: 2880 })
     expect(byKind['notification.internal']).toMatchObject({ autonomy: 'auto', risk: 'low', window_minutes: 0 })
     expect(byKind['journal.reject']).toMatchObject({ autonomy: 'auto', window_minutes: 15 })
     expect(byKind['harvest.approve']).toMatchObject({ autonomy: 'unlockable', risk: 'high', window_minutes: 120 })
