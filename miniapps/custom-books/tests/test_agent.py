@@ -12,7 +12,7 @@ from custom_books import book_templates, main, store
 from custom_books.fields import MAX_BOOKS
 
 CREATE = "/agent/actions/book-create"
-TEMPLATES = ("picking", "spraying", "fertilising", "cashbook", "meeting", "handover", "pest", "visitors", "blank")
+TEMPLATES = ("cashbook", "meeting", "handover", "visitors", "blank")
 
 
 @pytest.fixture
@@ -47,10 +47,10 @@ def test_every_template_makes_a_named_draft_book(client, db, key):
 
 
 def test_the_description_is_the_templates_unless_given(client, db):
-    first = client.post(CREATE, headers=acting(), json={"template": "pest", "name_vi": "A"}).json()["book_id"]
-    second = client.post(CREATE, headers=acting(), json={"template": "pest", "name_vi": "B", "description_vi": "Mô tả riêng"}).json()["book_id"]
+    first = client.post(CREATE, headers=acting(), json={"template": "meeting", "name_vi": "A"}).json()["book_id"]
+    second = client.post(CREATE, headers=acting(), json={"template": "meeting", "name_vi": "B", "description_vi": "Mô tả riêng"}).json()["book_id"]
     descriptions = {str(i): d for i, d in db.execute("SELECT id, description FROM books").fetchall()}
-    assert descriptions[first] == book_templates.TEMPLATES["pest"].description
+    assert descriptions[first] == book_templates.TEMPLATES["meeting"].description
     assert descriptions[second] == "Mô tả riêng"
 
 
@@ -61,16 +61,16 @@ def test_the_book_belongs_to_the_approvers_cooperative(client, db):
 
 @pytest.mark.parametrize("body", [
     {"template": "nope", "name_vi": "A"},
-    {"template": "picking"},
+    {"template": "meeting"},
     {"name_vi": "A"},
-    {"template": "picking", "name_vi": ""},
-    {"template": "picking", "name_vi": "   "},
-    {"template": "picking", "name_vi": "x" * 81},
-    {"template": "picking", "name_vi": "A", "description_vi": "x" * 201},
-    {"template": "picking", "name_vi": "A", "description_vi": 5},
-    {"template": "picking", "name_vi": 5},
-    {"template": ["picking"], "name_vi": "A"},
-    {"template": "picking", "name_vi": "A", "extra": 1},
+    {"template": "meeting", "name_vi": ""},
+    {"template": "meeting", "name_vi": "   "},
+    {"template": "meeting", "name_vi": "x" * 81},
+    {"template": "meeting", "name_vi": "A", "description_vi": "x" * 201},
+    {"template": "meeting", "name_vi": "A", "description_vi": 5},
+    {"template": "meeting", "name_vi": 5},
+    {"template": ["meeting"], "name_vi": "A"},
+    {"template": "meeting", "name_vi": "A", "extra": 1},
 ])
 def test_bad_payloads_are_refused_with_a_message_and_create_nothing(client, db, body):
     response = client.post(CREATE, headers=acting(), json=body)
@@ -116,7 +116,7 @@ def test_errors_on_the_action_path_are_json_not_pages(client):
 
 
 def test_existing_designer_still_creates_a_template_book_with_its_own_name(client, db):
-    response = client.post("/books", headers=bearer(), data={"template": "picking"})
+    response = client.post("/books", headers=bearer(), data={"template": "meeting"})
     assert response.status_code == 303
-    assert db.execute("SELECT name FROM books").fetchone()[0] == book_templates.TEMPLATES["picking"].name
+    assert db.execute("SELECT name FROM books").fetchone()[0] == book_templates.TEMPLATES["meeting"].name
     assert store.create_book(db, "TC", "u", "blank") is not None

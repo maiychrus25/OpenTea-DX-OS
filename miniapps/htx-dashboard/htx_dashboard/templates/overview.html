@@ -77,7 +77,7 @@
         <li>
           <span class="price-name">{{ commodity_vn.get(p.commodity, p.commodity) }} <span class="price-metric">{{ metric_vn(p.metric) }}</span></span>
           <span class="price-value">{{ p.value | num(2) }} {{ p.unit }}</span>
-          <span class="price-source">{{ p.source }} · cập nhật {{ p.fetched_at | vn_datetime }}{% if p.simulated %} <span class="pill warn">giá mô phỏng</span>{% endif %}</span>
+          <span class="price-source">{{ p.source }} · cập nhật {{ p.fetched_at | vn_datetime }}</span>
         </li>
         {% endfor %}
       </ul>
@@ -162,7 +162,7 @@
     <dt>Nhật ký và báo cáo bệnh</dt><dd>Ghi trong kỳ xem theo ngày nhật ký (nhật ký) hoặc ngày tạo (báo cáo bệnh). Tuổi của nhật ký tính từ lúc tạo.</dd>
     <dt>Cảm biến im lặng</dt><dd>Cặp (thửa, cảm biến) có số đo trong kho nóng nhưng không có số đo nào trong {{ sensor_silent_hours }} giờ gần nhất.</dd>
     <dt>Lô chè</dt><dd>Lô theo trạng thái lõi lưu: nháp, sẵn sàng, đã xuất QR. Phễu đếm mỗi lô ở mọi giai đoạn nó đã qua.</dd>
-    <dt>Giá xuất khẩu</dt><dd>Giá chè xuất khẩu theo ngày. Nguồn mô phỏng được ghi rõ bên cạnh giá.</dd>
+    <dt>Giá xuất khẩu</dt><dd>Giá chè xuất khẩu theo ngày. Nguồn dữ liệu được ghi rõ bên cạnh giá.</dd>
   </dl>
 </details>
 {% endblock %}

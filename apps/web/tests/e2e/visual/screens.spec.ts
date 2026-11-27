@@ -174,8 +174,8 @@ if (process.env.E2E_CUSTOM_BOOKS === 'installed') {
   const BOOKS = 'iframe[title="Sổ tự tạo"]'
   const openBook = async (p: Page, base: string) => {
     await p.goto(base)
-    await p.frameLocator(BOOKS).getByRole('link', { name: 'Chấm công hái chè' }).first().click()
-    await expect(p.frameLocator(BOOKS).getByRole('heading', { name: 'Chấm công hái chè', level: 1 })).toBeVisible()
+    await p.frameLocator(BOOKS).getByRole('link', { name: 'Sổ giao nhận vật tư' }).first().click()
+    await expect(p.frameLocator(BOOKS).getByRole('heading', { name: 'Sổ giao nhận vật tư', level: 1 })).toBeVisible()
   }
   SCREENS.push(
     { name: 'custom-books-books', role: 'manager', frame: BOOKS, open: p => visitApp(p, '/manager/apps/custom-books/books', 'Quản lý các sổ', BOOKS) },
@@ -201,7 +201,7 @@ if (process.env.E2E_CUSTOM_BOOKS === 'installed') {
       name: 'custom-books-print', role: 'manager', bare: true,
       open: async p => {
         await p.goto('/manager/apps/custom-books')
-        await p.frameLocator(BOOKS).getByRole('link', { name: 'Chấm công hái chè' }).first().click()
+        await p.frameLocator(BOOKS).getByRole('link', { name: 'Sổ giao nhận vật tư' }).first().click()
         const frame = await (await p.locator(BOOKS).elementHandle())?.contentFrame()
         const link = frame!.locator('a', { hasText: 'Bản in' }).first()
         await expect(link).toBeVisible()

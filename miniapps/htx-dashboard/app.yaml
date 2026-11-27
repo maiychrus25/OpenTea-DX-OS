@@ -4,7 +4,7 @@ apiVersion: dxos/v1
 id: htx-dashboard
 name: Bảng điều hành HTX
 description: "Bảng điều hành biểu đồ cho trưởng HTX: việc cần chú ý, xu hướng so với kỳ trước, sản xuất, cảm biến, sức khoẻ cây, lô chè và vòng đời dữ liệu."
-version: 0.3.0
+version: 0.3.1
 license: MIT
 publisher: OpenTea Developers
 requires: { core: ">=1.13.0" }

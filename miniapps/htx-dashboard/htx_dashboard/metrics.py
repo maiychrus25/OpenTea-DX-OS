@@ -18,12 +18,11 @@ SENSOR_SILENT_HOURS = 6
 RECENT_DAYS = 7
 COMMODITY_VN = {"Tea": "Chè", "Rice": "Lúa gạo", "Maize": "Ngô", "Wheat": "Lúa mì", "Coffee": "Cà phê", "Sugar": "Đường",
                 "Pepper": "Tiêu", "Rubber": "Cao su", "Cassava": "Sắn"}  # a part of the core dashboard's list
-SIMULATED_SOURCE = "Mô phỏng (Toàn quốc)"  # as apps/web/src/domain/market/simulated-price.ts
 
-PARCEL_STATUS = {"SOWING": "Đang gieo sạ", "TENDING": "Đang chăm sóc", "HARVEST_APPROVED": "Đã duyệt thu hoạch",
+PARCEL_STATUS = {"SOWING": "Đang trồng mới", "TENDING": "Đang chăm sóc", "HARVEST_APPROVED": "Đã duyệt thu hoạch",
                  "HARVESTED": "Đã thu hoạch", "DRAFT": "Khởi tạo"}
 LOT_STATUS = {"DRAFT": "Nháp", "READY": "Sẵn sàng", "QR_EXPORTED": "Đã xuất QR"}
-ACTIVITY = {"SOWING": "Gieo sạ", "FERTILIZING": "Bón phân", "SPRAYING": "Phun thuốc", "IRRIGATION": "Tưới tiêu",
+ACTIVITY = {"SOWING": "Trồng mới", "FERTILIZING": "Bón phân", "SPRAYING": "Phun thuốc", "IRRIGATION": "Tưới tiêu",
             "HARVEST": "Thu hoạch", "OTHER": "Khác"}
 JOURNAL_STATUS = ("PENDING_APPROVAL", "REQUEST_CHANGES", "APPROVED", "REJECTED")
 DISEASE_STATUS = {"PENDING": "Chờ xử lý", "CONFIRMED": "Đã xác nhận", "REJECTED": "Đã bác bỏ"}
@@ -131,10 +130,6 @@ class Price:
     unit: str
     source: str
     fetched_at: datetime
-
-    @property
-    def simulated(self) -> bool:
-        return self.source == SIMULATED_SOURCE
 
 
 # ---------- Vietnam-time helpers ----------

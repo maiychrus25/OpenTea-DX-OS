@@ -242,14 +242,18 @@ test.describe('store screenshots', () => {
     await keycloakLogin(manager, 'smoke_manager_tc', SMOKE_PASSWORD, 'manager')
     await manager.goto('/manager/apps/custom-books/books/new')
     const managerApp = appFrame(manager, title)
-    await managerApp.locator('li.card', { hasText: 'Chấm công hái chè' }).getByRole('button', { name: 'Dùng mẫu này' }).click()
+    await managerApp.locator('li.card', { hasText: 'Sổ giao nhận vật tư' }).getByRole('button', { name: 'Dùng mẫu này' }).click()
     await expect(managerApp.getByRole('heading', { name: 'Thiết kế sổ', level: 1 })).toBeVisible()
     const bookId = /books\/([0-9a-f-]{36})\/design/.exec((await managerApp.locator('form[action*="/design"]').getAttribute('action'))!)![1]
     await capture(manager, 'custom-books', 'designer', title, 'table.form-table')
 
+    // The handover template asks for no approval; the shot shows both tones, so the manager turns approval on, as in the story spec.
     await manager.goto(`/manager/apps/custom-books/books/${bookId}/design`)
+    await managerApp.locator('input[name="approval"]').check()
+    await managerApp.getByRole('button', { name: 'Lưu thiết kế' }).click()
+    await expect(managerApp.getByRole('status').filter({ hasText: 'Đã lưu' })).toBeVisible()
     await managerApp.getByRole('button', { name: 'Phát hành', exact: true }).click()
-    await expect(managerApp.getByRole('heading', { name: 'Chấm công hái chè', level: 1 })).toBeVisible()
+    await expect(managerApp.getByRole('heading', { name: 'Sổ giao nhận vật tư', level: 1 })).toBeVisible()
 
     // The officer writes four rows for different households (the seed's real-looking names come after the two demo ones).
     const officer = await newPage(browser)
@@ -258,10 +262,10 @@ test.describe('store screenshots', () => {
     const households = Array.from((/<select[^>]*name="f2"[^>]*>([\s\S]*?)<\/select>/.exec(form)?.[1] ?? '').matchAll(/<option[^>]*value="([^"]+)"[^>]*>([^<]*)</g))
       .filter(match => !match[2].startsWith('Household'))
     expect(households.length, 'households with real-looking names in the seed').toBeGreaterThan(1)
-    const rows: [number, string, string, string][] = [[0, daysAgo(0), '18,5', 'Chè búp tươi'], [1, daysAgo(1), '12', 'Một tôm hai lá'], [households.length - 1, daysAgo(1), '9,5', 'Chè búp tươi'], [0, daysAgo(2), '21', 'Chè già']]
-    for (const [household, day, kg, kind] of rows) {
+    const rows: [number, string, string, string, string][] = [[0, daysAgo(0), 'Phân hữu cơ', '18,5', 'Giao'], [1, daysAgo(1), 'Thuốc BVTV sinh học', '12', 'Giao'], [households.length - 1, daysAgo(1), 'Bình phun', '9,5', 'Nhận lại'], [0, daysAgo(2), 'Phân NPK', '21', 'Giao']]
+    for (const [household, day, item, quantity, direction] of rows) {
       const response = await officer.request.post(`/apps/custom-books/b/${bookId}/records`, {
-        data: new URLSearchParams([['f1', day], ['f2', households[household][1]], ['f3', kg], ['f4', kind]]).toString(),
+        data: new URLSearchParams([['f1', day], ['f2', households[household][1]], ['f3', item], ['f4', quantity], ['f5', direction]]).toString(),
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
         maxRedirects: 0,
       })

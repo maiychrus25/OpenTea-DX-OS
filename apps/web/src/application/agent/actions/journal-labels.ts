@@ -4,7 +4,7 @@
 // Plain Vietnamese for proposal previews and inbox evidence. Pure: safe to import from client components.
 
 export const ACTIVITY_LABEL: Record<string, string> = {
-  SOWING: 'Gieo sạ',
+  SOWING: 'Trồng mới',
   FERTILIZING: 'Bón phân',
   SPRAYING: 'Phun thuốc',
   IRRIGATION: 'Tưới tiêu',

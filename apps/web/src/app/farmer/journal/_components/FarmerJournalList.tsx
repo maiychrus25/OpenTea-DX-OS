@@ -48,7 +48,7 @@ const ACTIVITY_MAP: Record<string, string> = {
   FERTILIZING: 'Bón phân',
   SPRAYING: 'Phun thuốc',
   HARVEST: 'Thu hoạch',
-  SOWING: 'Gieo sạ',
+  SOWING: 'Trồng mới',
   OTHER: 'Khác'
 }
 

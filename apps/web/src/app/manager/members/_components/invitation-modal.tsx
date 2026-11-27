@@ -189,7 +189,7 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
                 <input
                   type="text" value={address}
                   onChange={e => setAddress(e.target.value)}
-                  placeholder="VD: Ấp 3, Xã Long Hòa"
+                  placeholder="VD: Xóm Hồng Thái, xã Tân Cương"
                   disabled={isSubmitting || !!successMsg}
                   className="w-full px-3 py-2.5 bg-card border border-border rounded-lg text-sm text-foreground shadow-sm focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-surface-sunken transition-colors outline-none"
                 />

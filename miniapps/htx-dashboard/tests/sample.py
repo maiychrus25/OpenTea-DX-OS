@@ -191,7 +191,7 @@ def weather() -> list[dict]:
 
 def prices() -> dict:
     row = lambda c, m_, v, u, s, h: {"commodity": c, "metric": m_, "value": v, "unit": u, "source": s, "fetched_at": naive(NOW - timedelta(hours=h))}
-    history = [row("Tea", "export_price", round(3.3 + 0.25 * math.sin(d / 9.0) + d * 0.002, 2), "USD/kg", "Mô phỏng (Toàn quốc)", d * 24 + 5)
+    history = [row("Tea", "export_price", round(3.3 + 0.25 * math.sin(d / 9.0) + d * 0.002, 2), "USD/kg", "COMTRADE", d * 24 + 5)
                for d in range(90)]
     return {"market_data": [row("Tea", "producer_price_index", 108.2, "index", "FAOSTAT", 30)] + history}
 

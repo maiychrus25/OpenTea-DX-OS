@@ -18,7 +18,7 @@
     <input name="name" maxlength="80" required value="{{ form.name }}"{% if errors.get("name") %} aria-invalid="true"{% endif %}>
     {{ kit.field_error(errors, "name") }}
   </label>
-  <p>Tên này hiện trong menu và ở đầu trang của sổ. Ví dụ: Chấm công hái chè.</p>
+  <p>Tên này hiện trong menu và ở đầu trang của sổ. Ví dụ: Biên bản họp thành viên.</p>
   <label>Mô tả ngắn (không bắt buộc)
     <input name="description" maxlength="200" value="{{ form.description }}"{% if errors.get("description") %} aria-invalid="true"{% endif %}>
     {{ kit.field_error(errors, "description") }}

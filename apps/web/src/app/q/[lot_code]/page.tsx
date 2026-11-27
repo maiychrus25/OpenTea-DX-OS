@@ -16,7 +16,7 @@ interface PageProps {
 }
 
 const ACTIVITY_VN: Record<string, string> = {
-  SOWING: 'Gieo sạ',
+  SOWING: 'Trồng mới',
   FERTILIZING: 'Bón phân',
   SPRAYING: 'Phun thuốc',
   IRRIGATION: 'Tưới tiêu',

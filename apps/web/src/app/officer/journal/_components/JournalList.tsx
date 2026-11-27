@@ -30,7 +30,7 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const ACTIVITY_LABELS: Record<string, string> = {
-  SOWING: 'Gieo sạ',
+  SOWING: 'Trồng mới',
   FERTILIZING: 'Bón phân',
   SPRAYING: 'Phun thuốc',
   IRRIGATION: 'Tưới tiêu',

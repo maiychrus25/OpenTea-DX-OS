@@ -8,11 +8,11 @@ import { Badge } from '@/components/ui'
 
 describe('Badge', () => {
   const statuses = [
-    { status: 'sowing', label: 'Gieo trá»“ng' },
-    { status: 'tending', label: 'ChÄƒm sÃ³c' },
-    { status: 'harvest-approved', label: 'Chá» thu hoáº¡ch' },
-    { status: 'harvested', label: 'ÄÃ£ thu hoáº¡ch' },
-    { status: 'draft', label: 'NhÃ¡p' },
+    { status: 'sowing', label: 'Trồng mới' },
+    { status: 'tending', label: 'Chăm sóc' },
+    { status: 'harvest-approved', label: 'Chờ thu hoạch' },
+    { status: 'harvested', label: 'Đã thu hoạch' },
+    { status: 'draft', label: 'Nháp' },
   ] as const
 
   statuses.forEach(({ status, label }) => {
@@ -26,6 +26,6 @@ describe('Badge', () => {
   it('has correct ARIA attributes', () => {
     render(<Badge status="sowing" />)
     const badge = screen.getByRole('status')
-    expect(badge).toHaveAttribute('aria-label', expect.stringContaining('Gieo trá»“ng'))
+    expect(badge).toHaveAttribute('aria-label', expect.stringContaining('Trồng mới'))
   })
 })

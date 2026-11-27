@@ -471,10 +471,21 @@ refused "$TO" $CB/books/new smoke_officer_tc
 assert_eq "$(get_page "$TM" $CB/feed | jq -c '{n: (.entries | length), create: .create.path}')" '{"n":0,"create":"/books/new"}' "feed of an empty HTX: no entries, the manager gets the create link"
 assert_eq "$(get_page "$TF" $CB/feed | jq -c 'has("create")')" false "feed: a farmer gets no create link"
 page_ok "$TM" $CB/books/new "template chooser"
-# A book from the picking template (officer: all, farmer: own, approval on) and one from the cashbook template (farmer: none).
-LOC=$(post_loc "$TM" $CB/books -d template=picking)
-[[ "$LOC" =~ ^$CB/books/[0-9a-f-]{36}/design$ ]] && pass "manager creates a book from the picking template -> 303 ($LOC)" || fail "create book Location wrong: '$LOC'"
+# A book from the handover template (the manager then opens it to the farmer with approval on) and one from the cashbook template (farmer: none).
+LOC=$(post_loc "$TM" $CB/books -d template=handover)
+[[ "$LOC" =~ ^$CB/books/[0-9a-f-]{36}/design$ ]] && pass "manager creates a book from the handover template -> 303 ($LOC)" || fail "create book Location wrong: '$LOC'"
 BOOK=$(sed -E 's#.*/books/([0-9a-f-]{36})/design#\1#' <<<"$LOC")
+# The handover template gives the farmer no access; the manager saves the design with farmer: own and approval on, as the designer form does.
+DESIGN=(--data-urlencode "name=Sổ giao nhận vật tư" -d description= -d icon=truck -d officer_access=all -d farmer_access=own -d approval=on)
+for row in "1|f1|Ngày|date||on|on|" "2|f2|Nông hộ|household||on|on|" "3|f3|Vật tư|text||on|on|" "4|f4|Số lượng|number||on|on|on" \
+           "5|f5|Giao hay nhận lại|choice|Giao; Nhận lại|on|on|" "6|f6|Ghi chú|long_text||||"; do
+  IFS='|' read -r n key label type options required in_list summary <<<"$row"
+  DESIGN+=(-d "key_$n=$key" --data-urlencode "label_$n=$label" -d "type_$n=$type" --data-urlencode "options_$n=$options" -d "unit_$n=" -d "order_$n=$((n * 10))")
+  [ -z "$required" ] || DESIGN+=(-d "required_$n=on")
+  [ -z "$in_list" ] || DESIGN+=(-d "in_list_$n=on")
+  [ -z "$summary" ] || DESIGN+=(-d "summary_$n=on")
+done
+assert_eq "$(post_loc "$TM" $CB/books/$BOOK/design "${DESIGN[@]}")" "$CB/books/$BOOK/design?notice=saved" "manager saves the design: farmer own, approval on -> 303"
 assert_eq "$(get_page "$TM" $CB/feed | jq '.entries | length')" 0 "a draft book is not in the feed"
 LOC=$(post_loc "$TM" $CB/books/$BOOK/publish -X POST)
 assert_eq "$LOC" "$CB/b/$BOOK" "manager publishes the book -> 303"
@@ -483,22 +494,22 @@ CASH=$(sed -E 's#.*/books/([0-9a-f-]{36})/design#\1#' <<<"$LOC")
 assert_eq "$(post_loc "$TM" $CB/books/$CASH/publish -X POST)" "$CB/b/$CASH" "manager publishes the cashbook (farmer: none)"
 fresh_tokens
 FEED_O=$(get_page "$TO" $CB/feed); FEED_F=$(get_page "$TF" $CB/feed)
-assert_eq "$(jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_O")" 1 "feed: the officer lists the picking book"
+assert_eq "$(jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_O")" 1 "feed: the officer lists the handover book"
 assert_eq "$(jq -r --arg p "/b/$CASH" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_O")" 1 "feed: the officer lists the cashbook (level own)"
-assert_eq "$(jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_F")" 1 "feed: the farmer lists the picking book"
+assert_eq "$(jq -r --arg p "/b/$BOOK" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_F")" 1 "feed: the farmer lists the handover book"
 assert_eq "$(jq -r --arg p "/b/$CASH" '[.entries[] | select(.path == $p)] | length' <<<"$FEED_F")" 0 "feed: a role at level none does not list the cashbook"
-assert_eq "$(jq -r '.entries[0] | [.label, .icon] | join("|")' <<<"$FEED_F")" "Chấm công hái chè|leaf" "feed entry carries the book's name and icon"
+assert_eq "$(jq -r '.entries[0] | [.label, .icon] | join("|")' <<<"$FEED_F")" "Sổ giao nhận vật tư|truck" "feed entry carries the book's name and icon"
 assert_eq "$(jq -c 'has("create")' <<<"$FEED_F")" false "feed: no create link for the farmer"
 assert_app_http 403 "farmer token on the cashbook (level none) -> 403 from the app" -- -H "Authorization: Bearer $TF" "$APP_GW$CB/b/$CASH"
 # Rows: the farmer's own household, the officer's row for the same household.
 MARK_F=12.5; MARK_O=77.7
-LOC=$(post_loc "$TF" $CB/b/$BOOK/records -d "f1=$DAY" -d f2=hh_tc_1 -d "f3=$MARK_F" --data-urlencode "f4=Chè búp tươi")
+LOC=$(post_loc "$TF" $CB/b/$BOOK/records -d "f1=$DAY" -d f2=hh_tc_1 --data-urlencode "f3=Phân hữu cơ" -d "f4=$MARK_F" --data-urlencode "f5=Giao")
 assert_eq "$LOC" "$CB/b/$BOOK?notice=saved" "farmer adds a row -> 303"
-LOC=$(post_loc "$TO" $CB/b/$BOOK/records -d "f1=$DAY" -d f2=hh_tc_1 -d "f3=$MARK_O" --data-urlencode "f4=Chè già")
+LOC=$(post_loc "$TO" $CB/b/$BOOK/records -d "f1=$DAY" -d f2=hh_tc_1 --data-urlencode "f3=Phân NPK" -d "f4=$MARK_O" --data-urlencode "f5=Nhận lại")
 assert_eq "$LOC" "$CB/b/$BOOK?notice=saved" "officer adds a row -> 303"
 assert_eq "$(psql_app "select string_agg(status, ',' order by status) from app_custom_books.records where book_id = '$BOOK'")" "PENDING,PENDING" "both rows wait for approval"
-OFFICER_ROW=$(psql_app "select id from app_custom_books.records where book_id = '$BOOK' and (data->>'f3')::numeric = $MARK_O" | sed -n 1p)
-FARM_ROW=$(psql_app "select id from app_custom_books.records where book_id = '$BOOK' and (data->>'f3')::numeric = $MARK_F" | sed -n 1p)
+OFFICER_ROW=$(psql_app "select id from app_custom_books.records where book_id = '$BOOK' and (data->>'f4')::numeric = $MARK_O" | sed -n 1p)
+FARM_ROW=$(psql_app "select id from app_custom_books.records where book_id = '$BOOK' and (data->>'f4')::numeric = $MARK_F" | sed -n 1p)
 LIST_F=$(get_page "$TF" $CB/b/$BOOK)
 grep -q "12,5" <<<"$LIST_F" && pass "farmer's list shows the farmer's own row" || fail "farmer's list lacks their own row"
 grep -q "77,7" <<<"$LIST_F" && fail "farmer (level own) sees the officer's row in the list" || pass "farmer (level own) does not see the officer's row in the list"
@@ -511,14 +522,14 @@ grep -q "12,5" <<<"$(get_page "$TM" $CB/b/$BOOK/summary)" && fail "summary count
 LOC=$(post_loc "$TM" $CB/b/$BOOK/r/$FARM_ROW/reject --data-urlencode "reason=Thiếu ghi chú lô chè")
 [[ "$LOC" == $CB/b/$BOOK* ]] && pass "manager rejects the farmer's row with a reason ($LOC)" || fail "reject Location wrong: '$LOC'"
 assert_eq "$(psql_app "select status from app_custom_books.records where id = '$FARM_ROW'")" REJECTED "the row is REJECTED"
-LOC=$(post_loc "$TF" $CB/b/$BOOK/r/$FARM_ROW/edit -d "f1=$DAY" -d f2=hh_tc_1 -d "f3=$MARK_F" --data-urlencode "f4=Chè búp tươi")
+LOC=$(post_loc "$TF" $CB/b/$BOOK/r/$FARM_ROW/edit -d "f1=$DAY" -d f2=hh_tc_1 --data-urlencode "f3=Phân hữu cơ" -d "f4=$MARK_F" --data-urlencode "f5=Giao")
 [[ "$LOC" == $CB/b/$BOOK* ]] && pass "farmer edits the rejected row ($LOC)" || fail "edit Location wrong: '$LOC'"
 assert_eq "$(psql_app "select status from app_custom_books.records where id = '$FARM_ROW'")" PENDING "an edited row is PENDING again"
 LOC=$(post_loc "$TM" $CB/b/$BOOK/r/$FARM_ROW/approve -X POST)
 [[ "$LOC" == $CB/b/$BOOK* ]] && pass "manager approves the farmer's row ($LOC)" || fail "approve Location wrong: '$LOC'"
 assert_eq "$(psql_app "select status from app_custom_books.records where id = '$FARM_ROW'")" APPROVED "the row is APPROVED"
 grep -q "12,5" <<<"$(get_page "$TM" $CB/b/$BOOK/summary)" && pass "summary counts the row after approval" || fail "summary lacks the approved row"
-LOC=$(post_loc "$TF" $CB/b/$BOOK/r/$FARM_ROW/edit -d "f1=$DAY" -d f2=hh_tc_1 -d "f3=99" --data-urlencode "f4=Chè già")
+LOC=$(post_loc "$TF" $CB/b/$BOOK/r/$FARM_ROW/edit -d "f1=$DAY" -d f2=hh_tc_1 --data-urlencode "f3=Phân NPK" -d "f4=99" --data-urlencode "f5=Giao")
 [[ "$LOC" == $CB/b/$BOOK?notice=saved ]] && fail "an approved row was edited by its author" || pass "an approved row is locked for its author ($LOC)"
 csv_check "$TM" $CB/b/$BOOK/export.csv "custom-books CSV"
 grep -q "77,7\|77.7" <<<"$(get_page "$TM" $CB/b/$BOOK/export.csv)" && pass "manager's CSV holds every row" || fail "manager's CSV lacks the officer's row"

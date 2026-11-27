@@ -12,7 +12,7 @@ import { requestEvidenceRow } from './evidence'
 import { appSpecSchema, questionsSchema, type AppSpec } from './app-spec'
 
 /** Templates of the custom-books mini-app (contract C9). */
-export const BOOK_TEMPLATES = ['picking', 'spraying', 'fertilising', 'cashbook', 'meeting', 'handover', 'pest', 'visitors', 'blank'] as const
+export const BOOK_TEMPLATES = ['cashbook', 'meeting', 'handover', 'visitors', 'blank'] as const
 export type CodeProvider = 'claude-code' | 'codex-cli'
 const CUSTOM_BOOKS = 'custom-books'
 

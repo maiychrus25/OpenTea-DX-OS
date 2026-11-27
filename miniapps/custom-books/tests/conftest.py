@@ -25,7 +25,7 @@ from dxos_cli.database import drop_app_database, ensure_app_database  # noqa: E4
 
 from custom_books import store  # noqa: E402
 
-BOOK_NAME = "Chấm công hái chè"
+BOOK_NAME = "Biên bản họp thành viên"
 
 
 @pytest.fixture(scope="session")
