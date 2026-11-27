@@ -111,6 +111,13 @@ def review_argv(image: str, name: str, network: str, work: Path, out: Path, tool
             image, "review", tool]
 
 
+def replace_file(path: Path, text: str) -> None:
+    """Write `text` to `path`, replacing a file a container made. The gates and review containers run as another uid, so
+    on Linux their files in /out cannot be opened for writing; the directory is ours, so they can be removed."""
+    path.unlink(missing_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
 def parse_claim(text: str) -> dict | None:
     """`request_id=… htx=… app_id=… version=… provider=… build_id=…` by key, or None for no claim or a line we do not trust."""
     fields = dict(part.split("=", 1) for part in text.split() if "=" in part)
@@ -268,8 +275,8 @@ class Builder:
             self.docker(gates_argv(self.image, f"dxos-builder-gates-{tag}", work, input_dir, out), 900)
             self.docker(review_argv(self.image, f"dxos-builder-review-{tag}", self.network, work, out, reviewer, self.environ), 960)
             results, logs = self.collect(out)
-            (out / "spec.md").write_text((work / "SPEC.md").read_text(encoding="utf-8"), encoding="utf-8")
-            (out / "gates.json").write_text(json.dumps(results, ensure_ascii=False, indent=1), encoding="utf-8")
+            replace_file(out / "spec.md", (work / "SPEC.md").read_text(encoding="utf-8"))
+            replace_file(out / "gates.json", json.dumps(results, ensure_ascii=False, indent=1))
             if all(g["ok"] for g in results):
                 self.commit_and_export(work, htx, app_id, version)
                 self.finish(build_id, "passed", out)

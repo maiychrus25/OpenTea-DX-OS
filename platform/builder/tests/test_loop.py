@@ -33,7 +33,8 @@ def claim_line(app_id="gen-fertiliser-stock") -> str:
 class FakeDocker:
     """Answers docker and compose calls; git, tar and chmod run for real. `build` and `review` are what the containers would do."""
 
-    def __init__(self, tmp_path, fixture="fertiliser-stock", review=None, build_error=None):
+    def __init__(self, tmp_path, fixture="fertiliser-stock", review=None, build_error=None, foreign_files=False):
+        self.foreign_files = foreign_files  # the gates and review containers run as another uid: their files are not ours to rewrite
         self.calls, self.cli_calls, self.run_names = [], [], []
         self.fixture, self.review, self.build_error = fixture, review or {"findings": []}, build_error
         self.claims = []
@@ -85,6 +86,9 @@ class FakeDocker:
             results = gates.run_all(work, request, out, CONFIG, only=("manifest", "markup", "kit", "deps", "files"))
             results += [gates.Result("tests", True, "ok"), gates.Result("run", True, "ok")]
             gates.write_results(results, out)
+            if self.foreign_files:
+                for path in out.iterdir():
+                    path.chmod(0o444)
         else:
             out = self.mount(argv, "/out")
             if "findings" in self.review:
@@ -200,6 +204,16 @@ def test_a_passing_build_commits_tags_exports_and_finishes(repo):
     assert all(g["ok"] for g in json.loads((out / "gates.json").read_text(encoding="utf-8")))
     assert (out / "spec.md").is_file() and (out / "review.md").is_file()
     assert len(fake.run_names) == 3  # one round: build, gates, review
+
+
+def test_the_loop_replaces_the_gate_report_the_container_wrote_instead_of_opening_it(repo):
+    """On Linux the gates container (uid 10001) owns /out/gates.json: the host may delete and re-create it in its own
+    directory, but may not open it for writing. A read-only file stands for that here."""
+    builder, fake = make(repo, foreign_files=True)
+    claim = loop.parse_claim(claim_line())
+    assert builder.process(claim) == "passed"
+    out = repo / "docker" / "runtime" / "docker" / "builds" / claim["build_id"] / "out"
+    assert all(g["ok"] for g in json.loads((out / "gates.json").read_text(encoding="utf-8")))
 
 
 @pytest.mark.parametrize("fixture, gate", [("with-script", "markup"), ("extra-dependency", "deps"), ("with-agent-actions", "manifest")])

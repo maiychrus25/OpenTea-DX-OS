@@ -223,11 +223,14 @@ def run_function(name, snippet_after, tmp_path):
     return subprocess.run(["bash", "-c", script], capture_output=True, text=True)
 
 
-def test_gen_network_connect_joins_apisix_and_postgres_to_a_generated_apps_network(tmp_path):
+def test_gen_network_connect_joins_apisix_and_postgres_under_their_service_names(tmp_path):
+    """A plain `docker network connect` gives only the container name on the new network; the app's database URL says
+    `postgres`, so without the alias the app cannot resolve its database (the generated app answered 500 in CI)."""
     run = run_function("gen_network_connect", "gen_network_connect gen-tea-log", tmp_path)
     assert run.returncode == 0, run.stderr
     assert (tmp_path / "calls").read_text().splitlines() == [
-        "docker network connect proj_dxos-gen-gen-tea-log cid-apisix", "docker network connect proj_dxos-gen-gen-tea-log cid-postgres"]
+        "docker network connect --alias apisix proj_dxos-gen-gen-tea-log cid-apisix",
+        "docker network connect --alias postgres proj_dxos-gen-gen-tea-log cid-postgres"]
 
 
 def test_gen_network_connect_ignores_a_store_app(tmp_path):

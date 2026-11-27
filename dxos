@@ -61,13 +61,14 @@ gateway_guard() {
 
 # A generated app's private network (spec 12.7) holds the app, apisix and postgres. The compose file creates it with the
 # app and names apisix and postgres, but only a recreate would apply that, so the running containers are joined here.
+# The alias is the service name: a plain connect gives only the container name, and the app's database URL says postgres.
 # shortcut: recreating apisix or postgres drops the join; ./dxos worker, install and upgrade put it back.
 gen_network_connect() {  # <id>
   case "$1" in gen-*) ;; *) return 0 ;; esac
   local svc cid
   for svc in apisix postgres; do
     cid="$(compose ps -q "$svc" 2>/dev/null)" || continue
-    [ -z "$cid" ] || docker network connect "${PROJECT}_dxos-gen-$1" "$cid" 2>/dev/null || true  # "already exists" is fine
+    [ -z "$cid" ] || docker network connect --alias "$svc" "${PROJECT}_dxos-gen-$1" "$cid" 2>/dev/null || true  # "already exists" is fine
   done
 }
 gen_network_drop() {  # <id>
