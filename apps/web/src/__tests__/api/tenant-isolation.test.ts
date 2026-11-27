@@ -24,7 +24,6 @@ import * as unscheduled from '@/app/api/schedule/unscheduled/route'
 import * as forecast from '@/app/api/weather/forecast/route'
 import * as appStore from '@/app/api/app-store/route'
 import * as appStoreRequests from '@/app/api/app-store/requests/route'
-import * as partners from '@/app/api/partners/route'
 import * as partnerById from '@/app/api/partners/[id]/route'
 import SoilHealthPage from '@/app/officer/households/[id]/soil-health/page'
 
