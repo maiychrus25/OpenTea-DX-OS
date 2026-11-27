@@ -173,6 +173,7 @@ Các route sau trả 404 `NOT_FOUND` ("Tính năng này chưa mở.") khi `DXOS_
 - `/api/internal/agent/strategy/inputs` và `/api/internal/agent/strategy/plans`: agent chiến lược.
 - `/api/mcp/tools` và `/api/mcp/tools/[name]`: MCP.
 - `/api/internal/staff/{attendance,tasks,tasks/[proposal_id]/ack,roster}`: nhân sự.
+- `POST /api/lots` (tạo lô từ thửa) và thao tác chat `lot-create` (GĐ2): từ nay lô đóng từ mẻ sao qua `POST /api/lots/from-batches`. Route này trả 404 `NOT_FOUND` như các route trên khi `DXOS_LABS` tắt. Các route lô khác (`GET /api/lots`, `GET /api/lots/[id]`, `POST /api/lots/[id]/export-qr`) vẫn chạy.
 
 Các trang `/manager/ai/apps*`, mục "Tự vận hành" trong cài đặt AI, nhãn "App do AI xây" của Kho ứng dụng cũng ẩn theo công tắc. Các mục dưới đây của hợp đồng mô tả hành vi khi `DXOS_LABS=1`.
 
@@ -389,6 +390,8 @@ Batch approve multiple pending entries. **Roles:** manager.
 
 ## Lots & QR Traceability (Officer)
 
+> Phần này là hợp đồng cũ của lô tạo từ thửa. Từ GĐ2, lô được đóng từ mẻ sao qua `POST /api/lots/from-batches`, xuất QR có thêm chứng nhận và trang công khai là `/q/[lotCode]`: xem mục "Mẻ sao sấy, lô từ mẻ, chứng nhận và trang QR (GĐ2)" bên dưới, nơi các route `GET /api/lots`, `POST /api/lots`, `POST /api/lots/[id]/export-qr` được ghi đúng hành vi hiện tại.
+
 ### `GET /api/lots`
 List lots.
 
@@ -452,7 +455,8 @@ Refused with 422 `DOMAIN_ERROR` unless the lot is `READY`, its withdrawal period
 
 ## Public QR Scan Page (No Auth)
 
-### `GET /lot/[lotCode]`
+### `GET /lot/[lotCode]` (đã thay bằng `/q/[lotCode]`)
+**Từ GĐ2 đường này chỉ trả chuyển hướng 308 tới `/q/[lotCode]`** (`next.config.js`); trang là `/q/[lotCode]`, mục "Mẻ sao sấy, lô từ mẻ, chứng nhận và trang QR (GĐ2)". Mô tả dưới đây là của trang cũ.
 **This is a Next.js page route, not an API route.**
 Server Component — renders static lot traceability page.
 
@@ -1317,6 +1321,125 @@ Sửa sai sổ bằng một dòng `ADJUSTMENT` (sổ không sửa hay xoá dòng
 
 ---
 
+## Mẻ sao sấy, lô từ mẻ, chứng nhận và trang QR (GĐ2)
+
+Mọi route dưới đây trả `{ "data": ... }` khi thành công và `{ "error": { "code", "message", ...chi tiết } }` khi lỗi (lỗi 409 và 422 có mã riêng và có thể kèm trường chi tiết nằm cạnh `code`), chỉ tính trong HTX của phiên; bản ghi của HTX khác trả 404 `NOT_FOUND`. Quy tắc nghiệp vụ: [rules-and-limits.md](./rules-and-limits.md) mục 3.24 đến 3.26. Ngày là `YYYY-MM-DD` giờ Việt Nam, kg có một chữ số thập phân.
+
+**Mẻ (`BatchView`):**
+```json
+{ "id": "cuid", "batch_code": "TC-MS-20261128-01", "processed_on": "2026-11-28", "status": "OPEN|FINISHED|CANCELLED",
+  "master_name": null, "shift": null, "notes": null, "ticket_count": 4, "fresh_kg": 212.4, "dry_kg": 44.0,
+  "recovery_ratio": 4.83, "out_of_band": false, "deviation_note": null,
+  "created_at": "...", "finished_at": null, "cancel_reason": null }
+```
+Mẻ `OPEN` có `fresh_kg`, `dry_kg`, `recovery_ratio` và `out_of_band` tạm tính từ phiếu và sản lượng hiện có (`recovery_ratio` là `null` khi chưa có sản lượng); mẻ `FINISHED` giữ số đã chốt.
+
+**Chi tiết mẻ (`BatchDetail`):** `{ "batch": <mẻ>, "tickets": [ <phiếu cân, dạng của GĐ1 S3> ], "outputs": [ { "id", "grade": "DINH|TOM_NON|MOC_CAU|BOM|CAM", "kg", "remaining_kg" } ], "preview": { "fresh_kg", "dry_kg", "recovery_ratio", "out_of_band" } }`.
+
+### `GET /api/processing-batches`
+Mẻ của HTX, ngày chế biến mới nhất trước, tối đa 200 mẻ. **Vai:** `officer`, `manager`. **Query (tuỳ chọn):** `status` (`OPEN`, `FINISHED`, `CANCELLED`), `from`, `to` (ngày chế biến, gồm cả hai đầu). **Response:** `{ "data": [ <mẻ> ] }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`.
+
+### `POST /api/processing-batches`
+Mở mẻ mới. **Vai:** `officer`, `manager`. **Request:** `{ "processed_on": "2026-11-28", "master_name": "...", "shift": "...", "notes": "..." }`: `processed_on` bắt buộc; `master_name` tối đa 80, `shift` 40, `notes` 500 ký tự (tuỳ chọn). Khoá lạ bị từ chối. **Response:** 201 `{ "data": <mẻ> }` (trạng thái `OPEN`, mã `{HTX}-MS-YYYYMMDD-NN`). **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 422 `DOMAIN_ERROR` ("Ngày chế biến không được sau hôm nay.").
+
+### `GET /api/processing-batches/[id]`
+**Vai:** `officer`, `manager`. **Response:** `{ "data": <BatchDetail> }`. **Errors:** 403 `FORBIDDEN`; 404 `NOT_FOUND`.
+
+### `GET /api/processing-batches/available-tickets`
+Phiếu cân chọn được vào mẻ: `VALID`, của HTX, chưa vào mẻ nào, cân trong khoảng ngày (mặc định 30 ngày Việt Nam gần nhất đến hôm nay), cũ nhất trước, tối đa 500. **Vai:** `officer`, `manager`. **Query:** `from`, `to` (tuỳ chọn; `from` không sau `to`). **Response:** `{ "data": [ <phiếu cân> ] }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`.
+
+### `POST /api/processing-batches/[id]/tickets`
+Thêm phiếu nguyên phiếu vào mẻ `OPEN`. **Vai:** `officer`, `manager`. **Request:** `{ "ticket_ids": ["cuid", "..."] }` (1 đến 200 phiếu, không lặp). **Response:** `{ "data": <BatchDetail> }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `BATCH_NOT_OPEN`; 409 `TICKETS_CHANGED` (có phiếu vừa huỷ, vừa vào mẻ khác hoặc không thuộc HTX; không phiếu nào được thêm).
+
+### `DELETE /api/processing-batches/[id]/tickets/[ticketId]`
+Bỏ một phiếu khỏi mẻ `OPEN`. **Vai:** `officer`, `manager`. **Response:** `{ "data": <BatchDetail> }`. **Errors:** 403 `FORBIDDEN`; 404 `NOT_FOUND` (mẻ không có, hoặc phiếu không nằm trong mẻ); 409 `BATCH_NOT_OPEN`.
+
+### `PUT /api/processing-batches/[id]/outputs`
+Thay cả bộ sản lượng chè khô của mẻ `OPEN`. **Vai:** `officer`, `manager`. **Request:** `{ "outputs": [ { "grade": "TOM_NON", "kg": 20.5 } ] }`: 0 đến 5 dòng, mỗi hạng một dòng, `kg` lớn hơn 0, tối đa 100.000, một chữ số thập phân. **Response:** `{ "data": <BatchDetail> }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `BATCH_NOT_OPEN`.
+
+### `POST /api/processing-batches/[id]/finish`
+Hoàn thành mẻ. **Vai:** `officer`, `manager`. **Request:** `{ "deviation_note": "..." }` (tuỳ chọn; nếu gửi thì 10 đến 500 ký tự sau khi cắt khoảng trắng). Mẻ phải có ít nhất một phiếu và một dòng sản lượng. Tỷ lệ ngoài 4,50 đến 5,00 (xét trên tỷ lệ làm tròn 2 chữ số) thì `deviation_note` bắt buộc; trong khoảng chuẩn thì ghi chú không được lưu. **Response:** `{ "data": <BatchDetail> }` với `status` `FINISHED`. **Errors:** 400 `VALIDATION_ERROR` (ghi chú ngắn hơn 10 hoặc dài hơn 500 ký tự); 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `BATCH_NOT_OPEN`; 422 `BATCH_EMPTY`; 422 `DEVIATION_NOTE_REQUIRED` (tỷ lệ ngoài khoảng chuẩn mà không có ghi chú; kèm `error.recovery_ratio`).
+
+### `POST /api/processing-batches/[id]/cancel`
+Huỷ mẻ `OPEN`; mọi phiếu của mẻ được trả lại. **Vai:** `officer`, `manager`. **Request:** `{ "reason": "..." }` (3 đến 200 ký tự). **Response:** `{ "data": <mẻ> }` với `status` `CANCELLED` và `cancel_reason`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `BATCH_NOT_OPEN`.
+
+### `POST /api/leaf-tickets/[id]/void` (thay đổi GĐ2)
+Thêm điều kiện: phiếu đã vào một mẻ sao không huỷ được. **Errors (thêm):** 409 `TICKET_IN_BATCH` ("Phiếu đã vào mẻ sao {mã mẻ}. Bỏ phiếu khỏi mẻ trước khi huỷ."). Các lỗi khác như mục GĐ1 S3.
+
+### `GET /api/dry-stock`
+Tồn chè khô: các dòng sản lượng của mẻ `FINISHED` còn kg lớn hơn 0, mẻ cũ nhất trước. **Vai:** `officer`, `manager`. **Query:** `grade` (tuỳ chọn, một trong năm hạng). **Response:**
+```json
+{ "data": [ { "output_id": "cuid", "batch_id": "cuid", "batch_code": "TC-MS-20261128-01", "processed_on": "2026-11-28",
+  "grade": "TOM_NON", "kg": 20.5, "remaining_kg": 15.5, "recovery_ratio": 4.83, "out_of_band": false } ] }
+```
+**Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`.
+
+### `POST /api/lots/from-batches`
+Đóng lô từ tồn chè khô của một hạng. **Vai:** `officer`, `manager`.
+
+**Request:**
+```json
+{ "grade": "TOM_NON", "sources": [ { "output_id": "cuid", "kg": 15.5 } ],
+  "packaging_type": "Túi 25kg", "destination": "...", "buyer_name": "..." }
+```
+`sources` 1 đến 50 dòng, mỗi dòng một lần, `kg` lớn hơn 0, tối đa 100.000, một chữ số thập phân; `packaging_type` tối đa 100, `destination` và `buyer_name` tối đa 200 ký tự, tuỳ chọn.
+
+**Response:** 201 `{ "data": { "id", "lot_code": "TC-CHE-20261128-001", "commodity": "Chè", "harvest_date", "estimated_weight_kg", "actual_weight_kg": null, "status": "READY", "parcel_count", "created_at", "dry_grade": "TOM_NON" } }`.
+
+**Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 409 `STOCK_CHANGED` (dòng không thuộc HTX, mẻ chưa hoàn thành, kg lấy lớn hơn tồn còn lại, hoặc mẻ nguồn không có phiếu cân; kèm `error.stock` là tồn mới, dạng `GET /api/dry-stock`); 422 `GRADE_MISMATCH` (dòng khác hạng với lô); 422 `WITHDRAWAL_NOT_PASSED` (một phiếu nguồn chưa qua cách ly ở ngày cân của nó; kèm `parcel_code`, `weighed_on`, `safe_on`).
+
+### `GET /api/lots` (thay đổi GĐ2)
+**Vai:** `officer`, `manager`. **Query:** `status` (`DRAFT`, `READY`, `QR_EXPORTED`), `visibility` (`published` giữ lô `READY` và `QR_EXPORTED`). **Response:** `{ "data": [ { "id", "lot_code", "commodity", "harvest_date", "estimated_weight_kg", "actual_weight_kg", "status", "parcel_count", "created_at" } ] }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`.
+
+### `POST /api/lots` (đóng băng)
+Tạo lô từ thửa (`parcel_ids`). Chỉ chạy khi `DXOS_LABS` bật; tắt thì **404 `NOT_FOUND`** ("Tính năng này chưa mở.") trước mọi xử lý khác. **Vai:** `officer`. Khi bật, dạng thân và lỗi như mục "Lots & QR Traceability" ở trên (kèm `certificate_keys` phải nằm dưới thư mục tài liệu của HTX); mã lô `{HTX}-{CROP}-{YYYYMMDD}-{NNN}` đánh dưới khoá tư vấn.
+
+### `GET /api/lots/[id]`
+**Vai:** `officer`, `manager`. **Response:** `{ "data": { ...tóm tắt lô, "trace": <dữ liệu truy xuất> } }`. Dữ liệu truy xuất của lô từ mẻ có thêm `dry_grade`, `batches[]` (`batch_code`, `processed_on`, `master_name`, `fresh_kg`, `dry_kg`, `recovery_ratio`, `out_of_band`, `grade`, `kg_in_lot`, `ticket_count`, `parcel_codes[]`), `intake[]` (mỗi phiếu nguồn: `parcel_code`, `cycle_label`, `weighed_on`, `net_kg`, `safe_on`; không tên hộ, không mã phiếu) và `certificates[]` (`id`, `kind`, `number`, `issuer`, `issued_on`, `expires_on`, `file_key`, `revoked_at`). **Errors:** 401 `UNAUTHORIZED`; 403 `FORBIDDEN`; 404 `NOT_FOUND`.
+
+### `POST /api/lots/[id]/export-qr` (thay đổi GĐ2)
+Xuất QR, chốt ảnh chụp dữ liệu truy xuất và gắn chứng nhận. **Vai:** `officer`, `manager`.
+
+**Request (tuỳ chọn cả thân):** `{ "certificate_ids": ["cuid"], "certificate_keys": ["para/TC/Certificates/..."] }`. `certificate_ids` tối đa 20; không gửi thì gắn mọi chứng nhận còn hiệu lực của HTX. `certificate_keys` là khoá tệp phải nằm dưới thư mục tài liệu của HTX (400 `VALIDATION_ERROR` nếu sai). Thân sai dạng trả 400, không bao giờ hiểu là "gắn tất cả".
+
+Điều kiện: lô `READY`; lô phải có nguồn mẻ (trừ khi `DXOS_LABS` bật); lô có ít nhất một thửa liên kết; không còn lần phun chặn. Lô từ mẻ được kiểm theo từng phiếu nguồn, không kiểm "mỗi thửa có lứa đã hái" như lô từ thửa. Mỗi chứng nhận gửi lên phải thuộc HTX và còn hiệu lực hôm nay, và được kiểm lại dưới khoá dòng khi ghi.
+
+**Response:** `{ "data": { "lot_code": "TC-CHE-20261128-001", "qr_image_url": "...", "public_page_url": "/q/TC-CHE-20261128-001" } }`. Ảnh QR mã hoá `{gốc}/q/{mã lô}`.
+
+**Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`; 422 `LOT_WITHOUT_BATCH`; 422 `WITHDRAWAL_NOT_PASSED` (mã nay nằm ở trường `code`, trước đây chỉ là tiền tố của thông điệp); 422 `CERTIFICATE_NOT_VALID` (kèm `certificate_ids` sai); 422 `DOMAIN_ERROR` (lô đã xuất, lô không ở `READY`, lô không có thửa, thửa chưa có lứa đã hái ở đường lô từ thửa).
+
+### `GET /api/certificates`
+Mọi chứng nhận của HTX, hết hạn muộn nhất trước. **Vai:** `officer`, `manager`. **Response:**
+```json
+{ "data": [ { "id": "cuid", "kind": "VIETGAP|OCOP|ORGANIC|OTHER", "number": "VG-123", "issuer": "Sở NN&PTNT", "issued_on": "2026-01-10",
+  "expires_on": "2028-01-09", "scope_note": null, "file_name": "vietgap.pdf", "file_mime": "application/pdf", "file_size": 482113,
+  "revoked_at": null, "revoke_reason": null, "status": "VALID|EXPIRED|REVOKED" } ] }
+```
+`status` tính lúc đọc: `REVOKED` khi có `revoked_at`, `EXPIRED` khi hôm nay sau `expires_on`, còn lại `VALID`. Khoá tệp không nằm trong phản hồi. **Errors:** 403 `FORBIDDEN`.
+
+### `POST /api/certificates`
+Thêm chứng nhận kèm tệp. **Vai:** `officer`, `manager`. **Request:** `multipart/form-data` với `file` (PDF, JPG hoặc PNG, tối đa 10 MB) và các trường văn bản `kind`, `number` (1 đến 60 ký tự), `issuer` (1 đến 120), `issued_on`, `expires_on` (không trước `issued_on`), `scope_note` (tối đa 200, tuỳ chọn). Máy chủ kiểm byte đầu của tệp khớp loại khai báo. **Response:** 201 `{ "data": <chứng nhận> }`. **Errors:** 400 `VALIDATION_ERROR` (thiếu tệp hoặc trường sai); 400 `FILE_TOO_LARGE`; 400 `FILE_TYPE`; 403 `FORBIDDEN`.
+
+### `GET /api/certificates/[id]/file`
+Mở tệp chứng nhận. **Vai:** `officer`, `manager`. **Response:** 302 chuyển hướng tới liên kết ký sẵn hiệu lực 1 giờ. **Errors:** 403 `FORBIDDEN`; 404 `NOT_FOUND`.
+
+### `POST /api/certificates/[id]/revoke`
+**Vai:** `manager`. **Request:** `{ "reason": "..." }` (3 đến 200 ký tự). **Response:** `{ "data": <chứng nhận> }` với `status` `REVOKED`. Chứng nhận đã gắn vào lô vẫn hiện trên trang QR, với trạng thái mới. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `CERTIFICATE_REVOKED`.
+
+### `GET /api/htx/public-settings`
+**Vai:** `manager`, `officer`. **Response:** `{ "data": { "public_show_names": false } }`. **Errors:** 403 `FORBIDDEN`.
+
+### `PUT /api/htx/public-settings`
+Bật hoặc tắt hiện tên người trên trang QR công khai. **Vai:** `manager`. **Request:** `{ "public_show_names": true }` (khoá lạ bị từ chối). **Response:** `{ "data": { "public_show_names": true } }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`.
+
+### `GET /q/[lotCode]` (trang công khai, không phải route API)
+Trang Server Component không cần đăng nhập; mã lô sai ký tự (`/`, `?`, `#`, xuống dòng, hoặc dài hơn 100) hiện "Mã QR không hợp lệ", lô không có hiện "Không tìm thấy dữ liệu". Dựng bốn tầng (Vùng trồng; An toàn cách ly; Mẻ sao chế biến; Chứng nhận) từ dữ liệu truy xuất của lô, chứng nhận đọc trực tiếp lúc dựng trang, tên người (hộ, người ghi nhật ký, thợ sao) ẩn trừ khi `public_show_names` bật, cộng khối "Kiểm chứng trong sổ audit" (bộ nhớ đệm 5 phút). `GET /lot/[lotCode]` chuyển hướng 308 tới đây.
+
+### `/lots/[lot_code]/labels` (trang in tem, không phải route API)
+`/officer/lots/[lot_code]/labels` (vai `officer`) và `/manager/lots/[lot_code]/labels` (vai `manager`); vai khác bị chuyển về `/login`. Trang chỉ có cho hai vai này. Chọn khổ tem 50×30, 40×30 hoặc 60×40 mm và 1 đến 500 tem; mỗi tem có QR tới `{gốc trang}/q/{mã lô}`, mã lô, "Chè {hạng}", khối lượng lô và tên HTX.
+
+---
+
 ## Error Codes
 
 | HTTP | code | Meaning |
@@ -1335,8 +1458,16 @@ Sửa sai sổ bằng một dòng `ADJUSTMENT` (sổ không sửa hay xoá dòng
 | 409 | ITEM_EXISTS | Trùng tên vật tư trong HTX (GĐ1 S4) |
 | 409 | PERIOD_CLOSED, PERIOD_CHANGED | Kỳ đã chốt; số liệu kỳ đổi từ lúc xác nhận, kèm `totals` (GĐ1 S4) |
 | 409 | NOTHING_TO_PAY, ALREADY_PAID | Dòng không có khoản chi trả; đã ghi trả (GĐ1 S4) |
+| 409 | BATCH_NOT_OPEN, TICKETS_CHANGED | Mẻ đã hoàn thành hoặc đã huỷ; phiếu cân vừa đổi trạng thái (GĐ2) |
+| 409 | TICKET_IN_BATCH | Phiếu cân đã vào mẻ sao, không huỷ được (GĐ2) |
+| 409 | STOCK_CHANGED | Tồn chè khô đổi từ lúc chọn, kèm `stock` (GĐ2) |
+| 409 | CERTIFICATE_REVOKED | Chứng nhận đã thu hồi (GĐ2) |
 | 422 | DOMAIN_ERROR | Business rule violated (e.g., approve already-approved entry) |
 | 422 | WITHDRAWAL_BELOW_FLOOR | Số ngày cách ly thấp hơn mức sàn của thuốc (GĐ1 S1) |
+| 422 | BATCH_EMPTY, DEVIATION_NOTE_REQUIRED | Mẻ chưa có phiếu hoặc sản lượng; tỷ lệ ngoài khoảng chuẩn thiếu giải trình (GĐ2) |
+| 422 | GRADE_MISMATCH, WITHDRAWAL_NOT_PASSED | Dòng tồn khác hạng với lô; phiếu nguồn chưa qua cách ly (GĐ2) |
+| 422 | LOT_WITHOUT_BATCH, CERTIFICATE_NOT_VALID | Lô không có nguồn mẻ; chứng nhận hết hạn, thu hồi hoặc không thuộc HTX (GĐ2) |
+| 400 | FILE_TOO_LARGE, FILE_TYPE | Tệp chứng nhận quá 10 MB hoặc không phải PDF, JPG, PNG (GĐ2) |
 | 500 | INTERNAL_ERROR | Unhandled server error |
 | 503 | AI_UNAVAILABLE | Ollama or FastAPI not responding |
 
