@@ -76,11 +76,10 @@ describe('Sidebar Component', () => {
     })
   })
 
-  it('names a farmer as a farmer, with the cooperative under it', () => {
+  it('shows farmers no cooperative card, only their role at the foot', () => {
     render(<Sidebar navItems={mockItems} role="farmer" htxName="HTX Tân Cương" htxLocation="Thái Nguyên" onClose={() => {}} />)
-    const card = screen.getByText('ND').parentElement!
-    expect(card).toHaveTextContent('Nông dân')
-    expect(card).toHaveTextContent('HTX Tân Cương')
-    expect(card).not.toHaveTextContent('Thái Nguyên')
+    expect(screen.queryByText('ND')).not.toBeInTheDocument()
+    expect(screen.queryByText('HTX Tân Cương')).not.toBeInTheDocument()
+    expect(screen.getByText('Nông dân')).toBeInTheDocument()
   })
 })

@@ -99,14 +99,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      {/* Who is signed in, and for which cooperative: a farmer's card says so first. */}
-      <div className={styles.coop}>
-        <span className={styles.coopBadge}>{role === 'farmer' ? 'ND' : 'HTX'}</span>
-        <div className={styles.coopText}>
-          <strong>{role === 'farmer' ? 'Nông dân' : htxName || 'Đang tải...'}</strong>
-          <small>{(role === 'farmer' ? htxName : htxLocation) || '---'}</small>
+      {/* The cooperative. Farmers get no card: their name and role stand at the foot of the menu. */}
+      {role !== 'farmer' && (
+        <div className={styles.coop}>
+          <span className={styles.coopBadge}>HTX</span>
+          <div className={styles.coopText}>
+            <strong>{htxName || 'Đang tải...'}</strong>
+            <small>{htxLocation || '---'}</small>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Nav */}
       <nav className={styles.nav} aria-label="Điều hướng chính">
