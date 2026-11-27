@@ -233,7 +233,8 @@ for _ in $(seq 1 15); do
   sleep 1
 done
 assert_eq "$(app_curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TM_TC" "$APP_GW/apps/$APP_ID/")" "200" "/apps/$APP_ID/ answers 200 for the TC manager"
-assert_eq "$(app_curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TM_LB" "$APP_GW/apps/$APP_ID/")" "404" "the LB manager gets 404 on /apps/$APP_ID/"
+assert_eq "$(web_status_as smoke_manager_tc TC "/apps/$APP_ID/")" "200" "the TC manager opens /apps/$APP_ID/ through the web"
+assert_eq "$(web_status_as smoke_manager_lb LB "/apps/$APP_ID/")" "404" "the LB manager gets 404 on /apps/$APP_ID/ through the web: the app is TC's own"
 assert_eq "$(psql_app "select coalesce(string_agg(htx_code, ','), '') from platform.app_enablements where app_id='$APP_ID'")" "TC" "the app is enabled for TC only"
 
 # ---- test 27: the private network ------------------------------------------------------------------------------------
