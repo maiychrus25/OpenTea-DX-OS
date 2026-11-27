@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Kho tài nguyên HTX chè** (`Kho_Tai_Nguyen_HTX/`): notes on tea cultivation, pests, weather, VietGAP, markets, tourism and cooperative management, full texts of government documents, a source catalogue (`nguon.json`, `danh_muc.csv`) and a script that downloads the originals to a local folder that is not committed. The web and the chatbot do not read it yet.
+
 ## [1.17.0] - 2026-11-27
 
 The agentic layer is complete. Agents now hand work to staff, plan the season, and can run approved kinds of work on their own inside hard limits, with a stop button and a full audit trail. A manager can ask for a new mini-app in chat and an AI builds it behind seven gates. Everything a role can do on the web can now be done through the Telegram bot: in chat, by voice, or in the Mini App.
