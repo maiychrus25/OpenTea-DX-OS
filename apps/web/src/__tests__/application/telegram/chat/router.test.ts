@@ -47,3 +47,29 @@ describe('commandOf', () => {
     expect(commandOf('nhật ký /huy')).toBeNull()
   })
 })
+
+describe('routeText: the issue #80 read tools', () => {
+  test.each([
+    ['tìm trà Shan', { kind: 'tool', name: 'search', args: { query: 'trà Shan' } }],
+    ['chứng nhận TC-CHE-20261110-001', { kind: 'tool', name: 'certificate', args: { lot_code: 'TC-CHE-20261110-001' } }],
+    ['đất thửa P-TC-001', { kind: 'tool', name: 'soil', args: { parcel_code: 'P-TC-001' } }],
+    ['Ảnh thửa p-tc-002?', { kind: 'tool', name: 'photo', args: { parcel_code: 'p-tc-002' } }],
+    ['hộ Nguyễn Văn An', { kind: 'tool', name: 'households', args: { name: 'Nguyễn Văn An' } }],
+    ['nông hộ', { kind: 'tool', name: 'households' }],
+    ['thành viên', { kind: 'tool', name: 'members' }],
+    ['báo cáo bệnh', { kind: 'tool', name: 'diseases' }],
+    ['hồ sơ của tôi', { kind: 'tool', name: 'profile' }],
+    ['tài liệu', { kind: 'tool', name: 'documents' }],
+    ['đối tác', { kind: 'tool', name: 'partners' }],
+    ['đất thửa', { kind: 'tool', name: 'soil' }],
+  ])('%s', (text, expected) => {
+    expect(routeText(text)).toEqual(expected)
+  })
+
+  test('tìm and hộ route only at the start of a sentence; báo bệnh and báo cáo bệnh stay apart', () => {
+    expect(routeText('giúp tôi tìm thửa nào ẩm nhất')).toBeNull()
+    expect(routeText('cho hộ nhà tôi biết')).toBeNull()
+    expect(routeText('tôi muốn báo bệnh')).toEqual({ kind: 'action', name: 'disease.report' })
+  })
+})
+

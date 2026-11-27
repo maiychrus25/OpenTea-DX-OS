@@ -222,6 +222,20 @@ describe('ChatEngine: menu, commands and tools', () => {
     expect(res.replies[0].text).toContain('Nguồn: Vùng trồng')
   })
 
+  test('the words after a tool phrase reach the tool as its argument', async () => {
+    const search = {
+      name: 'search',
+      titleVi: 'Tìm kiếm',
+      roles: ['farmer', 'officer', 'manager'],
+      routes: [],
+      args: [{ name: 'query', type: 'string', descriptionVi: '' }],
+      run: jest.fn(async () => ({ lines: ['Thửa P-TC-001'], source: 'Tìm kiếm' })),
+    } as unknown as ChatTool
+    const { engine } = build({ tools: [search] })
+    await engine.onText(FARMER, 'Tìm P-TC-001?', NOW)
+    expect(search.run).toHaveBeenCalledWith(FARMER, { query: 'P-TC-001' }, NOW)
+  })
+
   test('an unmatched sentence goes to the assistant request', async () => {
     const { engine, requests } = build()
     const res = await engine.onText(FARMER, 'mai có nên đi hái không', NOW)
