@@ -7,7 +7,7 @@ const VECTOR = '00020101021238570010A0000007270127000697040501138600201001234020
 
 describe('vietqr', () => {
   it('builds the payload of the original spec vector', () => {
-    expect(payload('970405', '8600201001234', 500000n, 'TOUR K7M2QX9A')).toBe(VECTOR)
+    expect(payload('970405', '8600201001234', BigInt(500000), 'TOUR K7M2QX9A')).toBe(VECTOR)
   })
 
   it('computes the standard CRC check string', () => {
@@ -27,20 +27,20 @@ describe('vietqr', () => {
   })
 
   it.each([
-    ['bad BIN', '97040', '8600201001234', 1000n, 'TOUR A'],
-    ['account too short', '970405', '12345', 1000n, 'TOUR A'],
-    ['account not digits', '970405', '86002010012x4', 1000n, 'TOUR A'],
-    ['no amount', '970405', '8600201001234', 0n, 'TOUR A'],
-    ['negative amount', '970405', '8600201001234', -5n, 'TOUR A'],
-    ['not ASCII', '970405', '8600201001234', 1000n, 'TOUR Đ'],
-    ['empty note', '970405', '8600201001234', 1000n, ''],
-    ['note too long', '970405', '8600201001234', 1000n, 'x'.repeat(26)],
+    ['bad BIN', '97040', '8600201001234', BigInt(1000), 'TOUR A'],
+    ['account too short', '970405', '12345', BigInt(1000), 'TOUR A'],
+    ['account not digits', '970405', '86002010012x4', BigInt(1000), 'TOUR A'],
+    ['no amount', '970405', '8600201001234', BigInt(0), 'TOUR A'],
+    ['negative amount', '970405', '8600201001234', -BigInt(5), 'TOUR A'],
+    ['not ASCII', '970405', '8600201001234', BigInt(1000), 'TOUR Đ'],
+    ['empty note', '970405', '8600201001234', BigInt(1000), ''],
+    ['note too long', '970405', '8600201001234', BigInt(1000), 'x'.repeat(26)],
   ])('refuses %s', (_name, bin, account, amount, content) => {
     expect(() => payload(bin, account, amount, content)).toThrow()
   })
 
   it('writes the amount as exact digits for a large BigInt', () => {
-    expect(payload('970405', '8600201001234', 12345678901234n, 'QT 1')).toContain('541412345678901234')
+    expect(payload('970405', '8600201001234', BigInt('12345678901234'), 'QT 1')).toContain('541412345678901234')
   })
 })
 

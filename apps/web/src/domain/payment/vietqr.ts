@@ -38,7 +38,7 @@ export function crc16(text: string): string {
 export function payload(bin: string, account: string, amountVnd: bigint, content: string): string {
   if (!/^[0-9]{6}$/.test(bin)) throw new Error('BIN phải đủ 6 chữ số')
   if (!/^[0-9]{6,19}$/.test(account)) throw new Error('Số tài khoản phải từ 6 đến 19 chữ số')
-  if (amountVnd <= 0n) throw new Error('Số tiền phải lớn hơn 0')
+  if (amountVnd <= BigInt(0)) throw new Error('Số tiền phải lớn hơn 0')
   if (!/^[\x20-\x7E]+$/.test(content) || content.length > CONTENT_MAX) throw new Error(`Nội dung chuyển khoản phải là chữ ASCII, tối đa ${CONTENT_MAX} ký tự`)
   const beneficiary = field('00', bin) + field('01', account)
   const merchant = field('00', 'A000000727') + field('01', beneficiary) + field('02', 'QRIBFTTA')
@@ -54,4 +54,9 @@ export function transferNote(periodCode: string, householdId: string): string {
   const date = ascii(periodCode.split('-').pop() ?? '').toUpperCase()
   const tail = ascii(householdId).slice(-4).toUpperCase()
   return `QT ${date} ${tail}`.trim().slice(0, CONTENT_MAX)
+}
+
+/** Only the last four digits of a bank account are ever shown to a farmer or written to a response log. */
+export function maskAccount(account: string): string {
+  return `${'*'.repeat(Math.max(0, account.length - 4))}${account.slice(-4)}`
 }

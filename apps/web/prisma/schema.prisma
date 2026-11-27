@@ -652,17 +652,19 @@ model InputAdvance {
 }
 
 model SettlementPeriod {
-  id             String           @id @default(cuid())
-  htx_profile_id String
-  htx_profile    HtxProfile       @relation(fields: [htx_profile_id], references: [id])
-  code           String           @unique // {HTX_CODE}-QT-{YYYYMMDD of date_to}
-  date_from      DateTime         @db.Date
-  date_to        DateTime         @db.Date
-  status         SettlementStatus @default(DRAFT)
-  created_by_id  String // Keycloak sub
-  created_at     DateTime         @default(now())
-  closed_by_id   String?
-  closed_at      DateTime?
+  id              String           @id @default(cuid())
+  htx_profile_id  String
+  htx_profile     HtxProfile       @relation(fields: [htx_profile_id], references: [id])
+  code            String           @unique // {HTX_CODE}-QT-{YYYYMMDD of date_to}
+  date_from       DateTime         @db.Date
+  date_to         DateTime         @db.Date
+  status          SettlementStatus @default(DRAFT)
+  created_by_id   String // Keycloak sub
+  created_by_name String? // display name at that time; Keycloak is not queried when a page is read
+  created_at      DateTime         @default(now())
+  closed_by_id    String?
+  closed_by_name  String?
+  closed_at       DateTime?
 
   lines MemberSettlement[]
 

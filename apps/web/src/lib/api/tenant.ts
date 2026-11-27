@@ -13,6 +13,8 @@ export type Tenant = {
   role: Exclude<HumanRole, 'platform_admin'>
   htxCode: string
   htxProfileId: string
+  /** Display name from the session, copied onto records that show who acted (a settlement period). */
+  userName?: string
 }
 
 /** The signed-in user and their HTX. Throws rather than ever falling back to another HTX. */
@@ -29,5 +31,5 @@ export async function requireTenant(): Promise<Tenant> {
   // Keeps htx_memberships in line with the token's roles; it never throws and never blocks the request.
   await new PrismaMembershipRepository().sync(user.id, htx.id, heldRoles(user))
 
-  return { userId: user.id, role: user.role, htxCode: user.htxCode, htxProfileId: htx.id }
+  return { userId: user.id, role: user.role, htxCode: user.htxCode, htxProfileId: htx.id, userName: user.name ?? undefined }
 }

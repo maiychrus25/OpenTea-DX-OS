@@ -5,27 +5,27 @@ import { settleHousehold } from '@/domain/ledger/settlement'
 
 describe('settleHousehold', () => {
   it('pays leaf money minus the advances', () => {
-    expect(settleHousehold({ leafVnd: 1_000_000n, advancesVnd: 300_000n, outstandingVnd: 0n })).toEqual({ payableVnd: 700_000n, debtOutVnd: 0n, debtInVnd: 0n })
+    expect(settleHousehold({ leafVnd: BigInt(1000000), advancesVnd: BigInt(300000), outstandingVnd: BigInt(0) })).toEqual({ payableVnd: BigInt(700000), debtOutVnd: BigInt(0), debtInVnd: BigInt(0) })
   })
 
   it('never pays a negative amount: the surplus debt stays as debt', () => {
-    expect(settleHousehold({ leafVnd: 200_000n, advancesVnd: 500_000n, outstandingVnd: 0n })).toEqual({ payableVnd: 0n, debtOutVnd: 300_000n, debtInVnd: 0n })
+    expect(settleHousehold({ leafVnd: BigInt(200000), advancesVnd: BigInt(500000), outstandingVnd: BigInt(0) })).toEqual({ payableVnd: BigInt(0), debtOutVnd: BigInt(300000), debtInVnd: BigInt(0) })
   })
 
   it('subtracts the debt of earlier periods', () => {
-    expect(settleHousehold({ leafVnd: 1_000_000n, advancesVnd: 0n, outstandingVnd: -300_000n })).toEqual({ payableVnd: 700_000n, debtOutVnd: 0n, debtInVnd: 300_000n })
+    expect(settleHousehold({ leafVnd: BigInt(1000000), advancesVnd: BigInt(0), outstandingVnd: -BigInt(300000) })).toEqual({ payableVnd: BigInt(700000), debtOutVnd: BigInt(0), debtInVnd: BigInt(300000) })
   })
 
   it('keeps the old debt when the period brings nothing', () => {
-    expect(settleHousehold({ leafVnd: 0n, advancesVnd: 0n, outstandingVnd: -100_000n })).toEqual({ payableVnd: 0n, debtOutVnd: 100_000n, debtInVnd: 100_000n })
+    expect(settleHousehold({ leafVnd: BigInt(0), advancesVnd: BigInt(0), outstandingVnd: -BigInt(100000) })).toEqual({ payableVnd: BigInt(0), debtOutVnd: BigInt(100000), debtInVnd: BigInt(100000) })
   })
 
   it('adds a positive outstanding amount (a credit adjustment) to the payable', () => {
-    expect(settleHousehold({ leafVnd: 500_000n, advancesVnd: 100_000n, outstandingVnd: 50_000n })).toEqual({ payableVnd: 450_000n, debtOutVnd: 0n, debtInVnd: 0n })
+    expect(settleHousehold({ leafVnd: BigInt(500000), advancesVnd: BigInt(100000), outstandingVnd: BigInt(50000) })).toEqual({ payableVnd: BigInt(450000), debtOutVnd: BigInt(0), debtInVnd: BigInt(0) })
   })
 
   it('is exact above the safe integer range', () => {
-    const big = 9_007_199_254_740_993n
-    expect(settleHousehold({ leafVnd: big, advancesVnd: 1n, outstandingVnd: 0n }).payableVnd).toBe(big - 1n)
+    const big = BigInt('9007199254740993')
+    expect(settleHousehold({ leafVnd: big, advancesVnd: BigInt(1), outstandingVnd: BigInt(0) }).payableVnd).toBe(big - BigInt(1))
   })
 })

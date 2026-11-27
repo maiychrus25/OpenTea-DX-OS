@@ -22,8 +22,8 @@ export interface SettleResult {
 export function settleHousehold({ leafVnd, advancesVnd, outstandingVnd }: SettleInput): SettleResult {
   const net = leafVnd - advancesVnd + outstandingVnd
   return {
-    payableVnd: net > 0n ? net : 0n,
-    debtOutVnd: net < 0n ? -net : 0n,
-    debtInVnd: outstandingVnd < 0n ? -outstandingVnd : 0n,
+    payableVnd: net > BigInt(0) ? net : BigInt(0),
+    debtOutVnd: net < BigInt(0) ? -net : BigInt(0),
+    debtInVnd: outstandingVnd < BigInt(0) ? -outstandingVnd : BigInt(0),
   }
 }

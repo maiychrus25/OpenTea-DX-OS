@@ -66,8 +66,10 @@ CREATE TABLE "settlement_periods" (
     "date_to" DATE NOT NULL,
     "status" "SettlementStatus" NOT NULL DEFAULT 'DRAFT',
     "created_by_id" TEXT NOT NULL,
+    "created_by_name" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "closed_by_id" TEXT,
+    "closed_by_name" TEXT,
     "closed_at" TIMESTAMP(3),
 
     CONSTRAINT "settlement_periods_pkey" PRIMARY KEY ("id")

@@ -56,6 +56,16 @@ export class TenantGuard {
     this.check(r?.htx_profile_id)
   }
 
+  async inputItem(id: string): Promise<void> {
+    const r = await this.db.inputItem.findUnique({ where: { id }, select: { htx_profile_id: true } })
+    this.check(r?.htx_profile_id)
+  }
+
+  async inputAdvance(id: string): Promise<void> {
+    const r = await this.db.inputAdvance.findUnique({ where: { id }, select: { htx_profile_id: true } })
+    this.check(r?.htx_profile_id)
+  }
+
   private check(htxProfileId: string | null | undefined): void {
     if (!htxProfileId || htxProfileId !== this.tenant.htxProfileId) throw new NotFoundError('Resource not found')
   }

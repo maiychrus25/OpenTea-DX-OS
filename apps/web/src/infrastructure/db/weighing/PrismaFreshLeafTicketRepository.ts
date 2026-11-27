@@ -64,6 +64,8 @@ async function readSprays(db: Pick<Prisma.TransactionClient, 'journalEntry'>, pa
   })
 }
 
+export { INCLUDE as TICKET_INCLUDE, view as ticketView }
+
 function unitOf(tx: Prisma.TransactionClient): TicketUnit {
   return {
     async lockParcel(parcelId) {
