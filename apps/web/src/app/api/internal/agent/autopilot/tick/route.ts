@@ -15,3 +15,6 @@ async function postAutopilotTick(request: Request) {
 }
 
 export const POST = withErrorHandler(labsOnly(postAutopilotTick))
+
+// DXOS_LABS is read per request; a prerendered answer would freeze the switch into the build.
+export const dynamic = 'force-dynamic'

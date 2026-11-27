@@ -24,3 +24,6 @@ async function getInternalStrategyInputs(request: Request) {
 }
 
 export const GET = withErrorHandler(labsOnly(getInternalStrategyInputs))
+
+// DXOS_LABS is read per request; a prerendered answer would freeze the switch into the build.
+export const dynamic = 'force-dynamic'
