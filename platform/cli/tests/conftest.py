@@ -98,7 +98,8 @@ def pg_url():
         port = _docker("port", name, "5432/tcp").stdout.splitlines()[0].rsplit(":", 1)[1]
         yield f"postgresql://agrimarket:test@127.0.0.1:{port}/agrimarket"
     finally:
-        _docker("rm", "-f", name)
+        # -v: the image declares a data volume, and a forced removal without it leaves that volume behind on every run.
+        _docker("rm", "-f", "-v", name)
 
 
 @pytest.fixture
