@@ -436,7 +436,7 @@ Mọi dòng của hai nhóm "trong chat" ở bảng phủ (`apps/web/src/applica
 - **Giới hạn:** mỗi câu trả lời tra cứu tối đa 7 dòng; mỗi bước chọn tối đa 8 lựa chọn, mới nhất trước; thẻ xác nhận tối đa 5 dòng. Ngày gõ theo dạng `dd/mm/yyyy`.
 - **Tài liệu** chỉ hiện tên và ngày. Chat không bao giờ gửi tệp hay đường dẫn có chữ ký.
 - **Dữ liệu cá nhân.** Câu trả lời trong chat riêng có thể chứa tên và số điện thoại của nông hộ, thành viên, đúng với những gì vai trò đó đọc được trên web (đặc tả §8.3). Báo cáo tự động vẫn không chứa dữ liệu cá nhân (mục 3.11, đặc tả §13.3).
-- **Mời thành viên** tạo tài khoản ngay, như route của web. Mật khẩu tạm 8 chữ số được tạo lúc bấm Xác nhận, không lưu trong phiên, và hiện một lần trong câu trả lời cho quản lý. Mật khẩu này đi qua máy chủ của Telegram, nên thành viên cần đổi mật khẩu sau lần đăng nhập đầu.
+- **Mời thành viên không làm trong chat.** Việc mời tạo một tài khoản kèm mật khẩu, nên chỉ làm trong ứng dụng (Mini App hoặc web, mục Thành viên). Không tin nhắn Telegram nào mang mật khẩu. Nhắn `mời thành viên` thì bot trả danh sách thành viên kèm dòng chỉ chỗ mời.
 
 **Tra cứu (chỉ đọc):**
 
@@ -447,7 +447,7 @@ Mọi dòng của hai nhóm "trong chat" ở bảng phủ (`apps/web/src/applica
 | `đất thửa <mã>` | `soil` | mọi vai trò (nông dân: thửa của hộ) | số đo mới nhất và nhãn sức khoẻ đất |
 | `ảnh thửa <mã>` | `photo` | mọi vai trò (nông dân: thửa của hộ) | ngày và nguồn của ảnh mới nhất; không gửi ảnh hay đường dẫn có chữ ký |
 | `nông hộ`, `hộ <tên>` (đầu câu) | `households` | cán bộ, quản lý | danh sách nông hộ, hoặc một hộ kèm các thửa |
-| `thành viên` | `members` | quản lý | số thành viên theo trạng thái và những người đang chờ duyệt |
+| `thành viên`, `mời thành viên` | `members` | quản lý | số thành viên theo trạng thái, những người đang chờ duyệt, và dòng `Mời thành viên mới: mở ứng dụng, mục Thành viên.` |
 | `báo cáo bệnh` | `diseases` | cán bộ | các báo cáo bệnh đang chờ người xác nhận |
 | `hồ sơ` | `profile` | mọi vai trò | hồ sơ của chính người hỏi, hộ của họ và hồ sơ HTX |
 | `tài liệu` | `documents` | cán bộ, quản lý | tên và ngày của tài liệu |
@@ -469,7 +469,6 @@ Mọi dòng của hai nhóm "trong chat" ở bảng phủ (`apps/web/src/applica
 | `gửi thông báo` | `notification.announce` (một hộ hoặc cả HTX) | quản lý | `high` |
 | `đánh dấu đã đọc` | `notification.read` | mọi vai trò | `medium` |
 | `xoá thông báo` | `notification.clear` (50 thông báo mới nhất của chính mình) | mọi vai trò | `high` |
-| `mời thành viên` | `member.invite` | quản lý | `medium` |
 | `duyệt thành viên` | `member.approve` | quản lý | `high` |
 | `xoá thành viên` | `member.remove` | quản lý | `high` |
 | `sửa hồ sơ` | `profile.edit` (hồ sơ HTX) | quản lý | `medium` |

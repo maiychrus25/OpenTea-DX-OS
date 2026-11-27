@@ -1033,7 +1033,7 @@ Bốn việc này đã làm ở issue #80 (2026-11-27); xem ghi chú "M5, phần
 ### M5, phần còn lại: mọi thao tác trong chat (issue #80, 2026-11-27)
 
 **Đã làm:**
-- **Mọi dòng của hai nhóm "trong chat" ở §13.7 đều làm được trong chat.** Thêm 10 công cụ đọc và 17 hành động có thẻ xác nhận. Kiểm thử 17 nay kiểm cả việc mỗi dòng có một công cụ hoặc hành động phục vụ.
+- **Mọi dòng của hai nhóm "trong chat" ở §13.7 đều làm được trong chat.** Thêm 10 công cụ đọc và 16 hành động có thẻ xác nhận. Riêng việc mời thành viên làm trong Mini App (xem dưới). Kiểm thử 17 nay kiểm cả việc mỗi dòng có một công cụ hoặc hành động phục vụ.
 - **Gửi ảnh bệnh qua chat** (`disease.report`). Web gọi API chẩn đoán bằng token của client riêng `dxos-web-service`, qua route chỉ có ở cổng nội bộ. Kết quả vẫn chờ cán bộ xác nhận.
 - **Nút Nghe** dưới bản tin: web đọc bản tin bằng Piper và rơle gửi tệp âm thanh.
 - **Chú thích ảnh** được đọc như tin nhắn chữ. Ảnh của thẻ bị huỷ, bị thay hoặc hết hạn được xoá.
@@ -1044,10 +1044,8 @@ Bốn việc này đã làm ở issue #80 (2026-11-27); xem ghi chú "M5, phần
 - **Âm thanh gửi dưới dạng tệp `ban-tin.wav`,** không phải tin thoại. Telegram chỉ nhận tin thoại OGG/Opus, MP3 hoặc M4A, và máy chủ chưa có bộ mã hoá.
 - **Nút Nghe không qua hàng đợi gửi tin.** Web trả yêu cầu âm thanh ngay trong câu trả lời cho rơle, vì bảng hàng đợi không có cột âm thanh. Piper không chạy thì bot trả lời một câu và không gửi gì.
 - **Gửi thông báo luôn có hai thẻ,** kể cả khi gửi cho một hộ. Mức rủi ro của một hành động là cố định, nên chọn mức cao hơn.
-- **Mời thành viên tạo tài khoản ngay,** vì route của web làm vậy. Bot hỏi thêm họ tên, tạo mật khẩu tạm và hiện mật khẩu đó một lần cho quản lý. Mật khẩu đi qua máy chủ của Telegram.
+- **Mời thành viên làm trong Mini App, không trong chat** (quyết định của chủ dự án, 2026-11-27). §13.7 xếp `members/invite` vào nhóm có thẻ xác nhận, nhưng route này tạo tài khoản kèm mật khẩu, và mật khẩu hiện trong chat sẽ đi qua máy chủ của Telegram. Dòng này nay thuộc nhóm Mini App của bảng phủ; trong chat, công cụ `members` chỉ chỗ mời.
 - **Tạo lô trong chat chỉ gồm một thửa,** ngày thu hoạch là hôm nay. Lô nhiều thửa, đóng gói và người mua làm trên web hoặc Mini App.
 - **Sửa nhật ký chỉ sửa ghi chú và ngày,** vì route chỉ lưu hai trường đó.
 - **Ảnh chẩn đoán của chat bị xoá sau khi báo cáo đã lưu,** vì báo cáo giữ bản sao riêng.
 - **Hai dòng đọc không có trong kế hoạch** được thêm khi ghép: chi tiết một lô (`lô hàng <mã lô>`) và các lứa chưa đặt ngày thu hoạch (dòng đầu của `lịch thu hoạch`, chỉ quản lý).
-
-**Còn chờ chủ dự án:** quyết định có giữ việc hiện mật khẩu tạm trong chat khi mời thành viên, hay chuyển việc mời sang Mini App.
