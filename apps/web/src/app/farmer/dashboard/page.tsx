@@ -12,6 +12,8 @@ import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { EmptyState } from '@/components/ui'
 import { TodayTasks } from '@/components/features/farmer-web/TodayTasks'
+import { SampleTag } from '@/components/features/sample/SampleTag'
+import { DETECTIONS } from '@/components/features/disease/sample-detections'
 import { WeatherHero } from '@/components/features/farmer-web/WeatherHero'
 import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
@@ -242,6 +244,29 @@ export default async function FarmerDashboard() {
         )}
         <TodayTasks className={styles.tasks} />
       </div>
+
+      <section className={`${kit.pn} ${styles.disease}`} aria-label="Báo cáo sâu bệnh">
+        <div className={kit.ph}>
+          <h2>Báo cáo sâu bệnh <SampleTag /></h2>
+          <Link href="/farmer/diagnosis">Xem chẩn đoán <ArrowRight size={14} aria-hidden="true" /></Link>
+        </div>
+        <ul className={styles.findings}>
+          {DETECTIONS.map(d => (
+            <li key={d.id}>
+              <Link href="/farmer/diagnosis">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={d.image} alt="" />
+                <span className={kit.grow}>
+                  <strong>{d.name} <span className={`${kit.tag} ${kit[d.levelTone]}`}>{d.level}</span></strong>
+                  <small>{d.place} · {d.time}</small>
+                  <small>{d.status}</small>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <p className={styles.diseaseNote}>Minh hoạ, HTX chưa lắp camera: không làm theo để phun thuốc.</p>
+      </section>
 
       <div className={styles.columns}>
         <section className={`${kit.pn} ${styles.parcels}`} aria-label="Tình trạng thửa đất">
