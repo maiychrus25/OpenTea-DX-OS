@@ -6,9 +6,8 @@
 
 import React, { useEffect, useState } from 'react'
 import { EmptyState, Panel } from '@/components/ui'
-import { CloudRain } from 'lucide-react'
+import { Bell, CloudRain } from 'lucide-react'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
-import { SampleNotices } from '@/components/features/sample/SampleLists'
 import layout from './dashboard.module.css'
 
 interface Notice { id: string; title: string; detail: string; created_at: string }
@@ -27,12 +26,16 @@ async function load<T>(url: string): Promise<T | null> {
 
 /** The newest notices and the coming days' weather where the parcels are. */
 export function NoticesAndWeather() {
-  const [notices, setNotices] = useState<Notice[]>([])
+  const [notices, setNotices] = useState<Notice[] | null>(null)
+  const [noticesFailed, setNoticesFailed] = useState(false)
   const [days, setDays] = useState<Day[]>([])
   const [area, setArea] = useState('')
 
   useEffect(() => {
-    void load<{ data?: { notifications?: Notice[] } }>('/api/notifications?limit=4').then((json) => setNotices(json?.data?.notifications ?? []))
+    void load<{ data?: { notifications?: Notice[] } }>('/api/notifications?limit=4').then((json) => {
+      setNoticesFailed(json === null)
+      setNotices(json?.data?.notifications ?? [])
+    })
     void load<{ area?: string; data?: { weather: { daily: Day[] } }[] }>('/api/weather/live').then((json) => {
       setDays(json?.data?.[0]?.weather.daily.slice(0, 5) ?? [])
       setArea(json?.area ?? '')
@@ -43,8 +46,10 @@ export function NoticesAndWeather() {
     <>
       <div className={layout.columns}>
         <Panel title="Bản tin & thông báo" href="/manager/notifications">
-          {notices.length === 0 ? (
-            <SampleNotices bare />
+          {noticesFailed ? (
+            <EmptyState icon={<Bell />} title="Chưa tải được thông báo" />
+          ) : notices === null ? null : notices.length === 0 ? (
+            <EmptyState icon={<Bell />} title="Chưa có thông báo" />
           ) : (
             <div className={layout.tableWrap}>
               <table className={layout.table}>
