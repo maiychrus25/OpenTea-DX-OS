@@ -59,7 +59,7 @@ function proposal(overrides: Partial<Proposal> = {}): Proposal {
   return {
     id: '00000000-0000-0000-0000-000000000001', htxCode: 'TC', runId: null, agent: 'app:tea-shop', kind: KIND, payload,
     reasonVi: 'x', evidence, confidence: null, risk: 'medium', status: 'proposed', origin: 'agent', requestedBy: null,
-    dedupeKey: 'k', createdAt: new Date('2026-11-27T00:00:00Z'), expiresAt: new Date('2026-12-30T00:00:00Z'),
+    dedupeKey: 'k', createdAt: new Date('2026-11-27T00:00:00Z'), expiresAt: new Date('2099-12-31T00:00:00Z'),
     decidedBy: null, decidedByName: null, decidedAt: null, decisionChannel: null, decisionNote: null,
     editedPayload: null, executedAt: null, result: null, ...overrides,
   }
