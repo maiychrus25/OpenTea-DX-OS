@@ -937,7 +937,7 @@ Mọi route dưới đây trả `{ "data": ... }` khi thành công và `{ "error
 ### `GET /api/pesticides`
 Danh mục thuốc BVTV đang dùng, kèm mức sàn hiệu lực của HTX trong phiên. **Vai:** `manager`, `officer`, `farmer`.
 
-**Query:** `q` (tối đa 100 ký tự; tìm trong tên thương mại và hoạt chất, không phân biệt hoa thường), `target` (tối đa 100 ký tự; lọc theo đối tượng phòng trừ). Cả hai tuỳ chọn. Với `farmer`, thuốc hộ mình đã dùng trong 365 ngày qua xếp trước (dùng gần nhất trước), còn lại theo tên.
+**Query:** `q` (tối đa 100 ký tự; tìm trong tên thương mại và hoạt chất, không phân biệt hoa thường), `target` (tối đa 100 ký tự; lọc theo đối tượng phòng trừ). Cả hai tuỳ chọn. Với `farmer`, thuốc HTX đã ứng cho hộ trong 180 ngày qua (qua `input_items.pesticide_product_id`, ứng gần nhất trước) xếp đầu, rồi thuốc hộ đã dùng trong 365 ngày qua (dùng gần nhất trước), còn lại theo tên.
 
 **Response:**
 ```json
@@ -1192,6 +1192,131 @@ Mini-app `leaf-purchase` (và `farm-supply`) đã hợp nhất vào lõi nên b�
 
 ---
 
+## Vật tư ứng, sổ cái và quyết toán kỳ (GĐ1 S4)
+
+Quy tắc nghiệp vụ (công thức chốt, sổ chỉ thêm, ngân hàng): [rules-and-limits.md](./rules-and-limits.md) mục 3.23. Mọi số tiền (`*_vnd` ở dạng chuỗi) là số nguyên đồng viết thành chuỗi thập phân, ngoại trừ `unit_price_vnd` là số. Ngày là `YYYY-MM-DD`. Mọi route chỉ tính trong HTX của phiên; bản ghi của HTX khác trả 404 `NOT_FOUND`.
+
+**Vật tư:** `{ "id", "name", "unit", "unit_price_vnd": 12000, "kind": "FERTILIZER|PESTICIDE|OTHER", "pesticide_product_id": "cuid|null", "active": true }`
+
+**Phiếu ứng:**
+```json
+{ "id": "cuid", "advance_no": "TC-VT-20261128-001", "household_id": "cuid", "household_name": "Nguyễn Văn A",
+  "item_id": "cuid", "item_name": "Phân NPK", "unit": "kg", "quantity": 10.5, "unit_price_vnd": 12000,
+  "amount_vnd": "126000", "advanced_on": "2026-11-28", "status": "VALID", "void_reason": null, "settlement_id": null }
+```
+
+**Kỳ:** `{ "id", "code": "TC-QT-20261130", "date_from", "date_to", "status": "DRAFT|CLOSED", "created_by_name", "closed_by_name", "closed_at" }`
+
+**Dòng quyết toán (một hộ trong một kỳ):**
+```json
+{ "id": "cuid|null", "period_id": "cuid", "household_id": "cuid", "household_name": "Nguyễn Văn A",
+  "leaf_net_kg": 120.4, "leaf_amount_vnd": "1083600", "advances_vnd": "126000",
+  "debt_in_vnd": "0", "payable_vnd": "957600", "debt_out_vnd": "0",
+  "paid_at": null, "payment_method": null, "payment_ref": null, "has_bank_account": true }
+```
+`id` là `null` và các trường trả tiền rỗng khi kỳ còn `DRAFT` (số tạm tính).
+
+**Dòng sổ:** `{ "id", "household_id", "entry_type": "LEAF_CREDIT|INPUT_DEBIT|PAYOUT|ADJUSTMENT", "amount_vnd": "-126000", "note", "ticket_id", "advance_id", "settlement_id", "created_at" }`. Dương là HTX nợ hộ, âm là hộ nợ HTX. `ticket_id` và `advance_id` hiện luôn `null`; `settlement_id` là id của dòng quyết toán (rỗng với `ADJUSTMENT`).
+
+### `GET /api/input-items`
+Danh mục vật tư của HTX (đang dùng trước, rồi theo tên). **Vai:** `manager`, `accountant`, `officer`. **Response:** `{ "data": [ <vật tư> ] }`. **Errors:** 403 `FORBIDDEN`.
+
+### `POST /api/input-items`
+**Vai:** `manager`, `accountant`. **Request:** `{ "name", "unit", "unit_price_vnd", "kind", "pesticide_product_id"? }`: `name` 1 đến 80 ký tự, `unit` 1 đến 20, `unit_price_vnd` số nguyên 0 đến 100.000.000, `pesticide_product_id` chỉ với `kind` `PESTICIDE`. Khoá lạ bị từ chối. **Response:** 201 `{ "data": <vật tư> }`. **Errors:** 400 `VALIDATION_ERROR` (kể cả gắn thuốc cho vật tư không phải thuốc, hoặc "Không tìm thấy thuốc trong danh mục."); 403 `FORBIDDEN`; 409 `ITEM_EXISTS` (trùng tên trong HTX).
+
+### `PUT /api/input-items/[id]`
+**Vai:** `manager`, `accountant`. **Request:** một hay nhiều trong `name`, `unit`, `unit_price_vnd`, `kind`, `pesticide_product_id`, `active` (ít nhất một). Ẩn vật tư bằng `active: false`. **Response:** `{ "data": <vật tư> }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `ITEM_EXISTS`.
+
+### `POST /api/input-advances`
+Ghi một phiếu ứng vật tư. **Vai:** `accountant`, `manager`.
+
+**Request:** `{ "household_id": "cuid", "item_id": "cuid", "quantity": 10.5, "advanced_on": "2026-11-28", "client_id": "uuid" }`. `quantity` lớn hơn 0, tối đa 100.000, tối đa hai chữ số thập phân; `advanced_on` tuỳ chọn, mặc định hôm nay (giờ Việt Nam), không được ở tương lai; `client_id` tuỳ chọn. Khoá lạ bị từ chối. `amount_vnd` = số lượng × đơn giá của vật tư lúc ghi, làm tròn đến đồng, nửa làm tròn lên.
+
+**Response:** 201 `{ "data": <phiếu ứng> }`; **200** với phiếu đầu tiên khi `client_id` đã dùng.
+
+**Errors:** 400 `VALIDATION_ERROR` ("Ngày ứng không được ở tương lai.", "Vật tư này đã ẩn.", "Vật tư chưa có đơn giá."); 403 `FORBIDDEN`; 404 `NOT_FOUND` (hộ hoặc vật tư không thuộc HTX).
+
+### `GET /api/input-advances`
+Phiếu ứng của HTX, mới nhất trước, 50 phiếu mỗi trang. **Vai:** `manager`, `accountant`, `officer`. **Query (tuỳ chọn):** `household_id`, `from`, `to` (ngày, gồm cả hai đầu), `status` (`VALID` hoặc `VOIDED`), `cursor`. **Response:** `{ "data": [ <phiếu ứng> ], "next_cursor": "cuid|null", "totals": { "amount_vnd": "126000" } }`; `totals` cộng mọi phiếu `VALID` khớp bộ lọc.
+
+### `POST /api/input-advances/[id]/void`
+**Vai:** `accountant`, `manager`. **Request:** `{ "reason": "..." }` (3 đến 200 ký tự). **Response:** `{ "data": <phiếu ứng> }` với `status` `VOIDED`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `ADVANCE_SETTLED` (đã vào quyết toán); 409 `ADVANCE_VOIDED`.
+
+### `GET /api/input-advances/export.csv`
+CSV UTF-8 có BOM, `phieu-ung-<from>_<to>.csv`. **Vai:** `manager`, `accountant`. **Query bắt buộc:** `from`, `to` (cùng luật như `GET /api/leaf-tickets/export.csv`: tối đa 366 ngày). Tối đa 20.000 dòng, ngày ứng cũ nhất trước. Cột: Số phiếu, Ngày ứng, Hộ, Vật tư, Đơn vị, Số lượng, Đơn giá (đ), Thành tiền (đ), Trạng thái, Lý do huỷ. Ô bắt đầu bằng `=`, `+`, `-`, `@` được thêm dấu nháy đơn. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`.
+
+### `GET /api/banks`
+Danh sách 21 ngân hàng nhận tiền. **Vai:** mọi vai của HTX. **Response:** `{ "data": [ { "bin": "970405", "name": "Agribank" } ] }`.
+
+### `PUT /api/households/[id]/bank`
+Đặt tài khoản nhận tiền của một hộ. **Vai:** `manager`, `accountant`. **Request:** `{ "bank_bin": "970405", "bank_account": "8600201001234", "bank_account_name": "NGUYEN VAN A" }`: `bank_bin` đúng 6 chữ số và có trong `GET /api/banks`; `bank_account` 6 đến 19 chữ số; `bank_account_name` 1 đến 60 ký tự. **Response:** `{ "data": { "bank_bin", "bank_name", "account_masked": "*********1234", "bank_account_name" } }` (không có số đủ). **Errors:** 400 `VALIDATION_ERROR` (kể cả "Ngân hàng không có trong danh sách."); 403 `FORBIDDEN`; 404 `NOT_FOUND`.
+
+### `GET /api/households/[id]/bank`
+Điền sẵn biểu mẫu tài khoản. **Vai:** `manager`, `accountant`. **Response:** `{ "data": null }` khi hộ chưa khai, nếu không `{ "data": { "bank_bin", "bank_name", "bank_account", "account_masked", "bank_account_name" } }` với `bank_account` là số đủ. **Errors:** 403 `FORBIDDEN`; 404 `NOT_FOUND`.
+
+### `GET /api/households/[id]/ledger`
+Sổ của một hộ. **Vai:** `manager`, `accountant`. **Response:** `{ "data": <sổ> }` (dạng bên dưới). **Errors:** 403 `FORBIDDEN`; 404 `NOT_FOUND`.
+
+### `GET /api/ledger/mine`
+Sổ của mọi hộ gắn với tài khoản người đăng nhập, gộp theo hộ. **Vai:** `farmer`. **Errors:** 403 `FORBIDDEN`.
+
+**Sổ (`data` của hai route trên):**
+```json
+{
+  "balance_vnd": "957600",
+  "households": [ { "household_id": "cuid", "household_name": "Nguyễn Văn A", "balance_vnd": "957600" } ],
+  "entries": [ <dòng sổ> ],
+  "unsettled_tickets": [ <phiếu cân> ],
+  "unsettled_advances": [ <phiếu ứng> ],
+  "lines": [ { ...<dòng quyết toán>, "period_code": "TC-QT-20261130", "date_from": "2026-11-01", "date_to": "2026-11-30" } ]
+}
+```
+`balance_vnd` là số tạm tính: số dư sổ cộng tiền phiếu cân `VALID` chưa quyết toán trừ tiền phiếu ứng `VALID` chưa quyết toán; dương là HTX nợ hộ. `households` có số tạm tính từng hộ. `entries` tối đa 200 dòng mới nhất, `unsettled_tickets` và `unsettled_advances` tối đa 200, `lines` tối đa 100 dòng quyết toán mới nhất.
+
+### `POST /api/settlements`
+Tạo kỳ `DRAFT`. **Vai:** `manager`, `accountant`. **Request:** `{ "date_from": "2026-11-01", "date_to": "2026-11-30" }` (`date_from` không sau `date_to`). Mã kỳ `{HTX}-QT-YYYYMMDD` theo `date_to`. **Response:** 201 `{ "data": <kỳ> }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 422 `DOMAIN_ERROR` (`date_to` sau hôm nay; còn một kỳ nháp; kỳ mới chồng hoặc hở ngày so với kỳ gần nhất; còn phiếu trước ngày bắt đầu kỳ đầu tiên).
+
+### `GET /api/settlements`
+Mọi kỳ của HTX, `date_to` mới nhất trước. **Vai:** `manager`, `accountant`. **Response:** `{ "data": [ <kỳ> ] }`.
+
+### `GET /api/settlements/[id]`
+**Vai:** `manager`, `accountant`. **Response:** `{ "data": { "period": <kỳ>, "lines": [ <dòng quyết toán> ], "totals": { "households": 12, "leaf_amount_vnd": "...", "advances_vnd": "...", "payable_vnd": "...", "debt_out_vnd": "..." } } }`. Kỳ `DRAFT` trả số tạm tính của mọi phiếu chưa quyết toán đến hết `date_to` (dòng không có `id`); kỳ `CLOSED` trả các dòng đã lưu. Dòng xếp theo tên hộ. **Errors:** 403 `FORBIDDEN`; 404 `NOT_FOUND`.
+
+### `POST /api/settlements/[id]/close`
+Chốt kỳ cho cả HTX trong một giao dịch. **Vai:** `manager` (chỉ vai đang dùng là `manager`).
+
+**Request:** `{ "expected_household_count": 12, "expected_payable_total_vnd": "11491200" }`: số hộ và tổng `payable_vnd` mà hộp xác nhận đã hiện (chuỗi số nguyên không âm).
+
+Chốt gom mọi phiếu cân và phiếu ứng `VALID` chưa quyết toán đến hết `date_to` (kể cả phiếu trước `date_from`), ghi dòng quyết toán và dòng sổ, đặt kỳ `CLOSED`. **Response:** như `GET /api/settlements/[id]` của kỳ đã chốt.
+
+**Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `PERIOD_CLOSED` (đã chốt); 409 `PERIOD_CHANGED` (số tính lại khác `expected_*`, hoặc phiếu vừa đổi; lỗi có thêm `error.totals` là số mới khi khác `expected_*`, không ghi gì).
+
+### `POST /api/settlements/[id]/lines/[lineId]/payout`
+Ghi đã trả cho một dòng của kỳ đã chốt. **Vai:** `accountant`, `manager`. **Request:** `{ "method": "TRANSFER" | "CASH", "ref": "..." }` (`ref` tuỳ chọn, tối đa 60 ký tự). Ghi một dòng sổ `PAYOUT` âm bằng `payable_vnd`. **Response:** `{ "data": <dòng quyết toán> }` với `paid_at`, `payment_method`, `payment_ref`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`; 409 `NOTHING_TO_PAY` (`payable_vnd` bằng 0); 409 `ALREADY_PAID`.
+
+### `GET /api/settlements/[id]/lines/[lineId]/slip`
+Phiếu quyết toán của một dòng. **Vai:** `manager`, `accountant`, `farmer` (chỉ dòng của hộ gắn với tài khoản mình; dòng của hộ khác trả 404).
+
+**Response:**
+```json
+{ "data": {
+  "htx": { "name": "HTX Chè Tân Cương", "code": "TC" },
+  "household": { "id": "cuid", "name": "Nguyễn Văn A" },
+  "period": <kỳ>,
+  "tickets": [ <phiếu cân của dòng> ],
+  "advances": [ <phiếu ứng của dòng> ],
+  "line": <dòng quyết toán>,
+  "qr": { "data_url": "data:image/png;base64,...", "bank_name": "Agribank", "account_masked": "*********1234", "account_full": "8600201001234" },
+  "transfer_note": "QT 20261130 K7M2"
+} }
+```
+`qr` là `null` khi hộ chưa có ngân hàng và tài khoản hoặc `payable_vnd` bằng 0. `account_full` chỉ có với `manager` và `accountant`; phiếu của `farmer` vẫn có ảnh QR mã hoá đúng tài khoản của họ nhưng không có số đủ ở dạng chữ. **Errors:** 403 `FORBIDDEN`; 404 `NOT_FOUND`.
+
+### `POST /api/ledger/adjustments`
+Sửa sai sổ bằng một dòng `ADJUSTMENT` (sổ không sửa hay xoá dòng cũ). **Vai:** `manager`. **Request:** `{ "household_id": "cuid", "amount_vnd": "-50000", "reason": "Sửa nhầm số lượng phiếu ứng" }`: `amount_vnd` là chuỗi số nguyên khác 0 (có thể âm, tối đa 15 chữ số), `reason` 5 đến 200 ký tự. **Response:** 201 `{ "data": <dòng sổ> }`. **Errors:** 400 `VALIDATION_ERROR`; 403 `FORBIDDEN`; 404 `NOT_FOUND`.
+
+---
+
 ## Error Codes
 
 | HTTP | code | Meaning |
@@ -1206,6 +1331,10 @@ Mini-app `leaf-purchase` (và `farm-supply`) đã hợp nhất vào lõi nên b�
 | 409 | NO_PRICE_TODAY | Phẩm cấp chưa có giá hôm nay (GĐ1 S3) |
 | 409 | TICKET_SETTLED | Phiếu cân đã vào kỳ quyết toán, không huỷ được (GĐ1 S3) |
 | 409 | TICKET_VOIDED | Phiếu cân đã huỷ (GĐ1 S3) |
+| 409 | ADVANCE_SETTLED, ADVANCE_VOIDED | Phiếu ứng đã quyết toán hoặc đã huỷ (GĐ1 S4) |
+| 409 | ITEM_EXISTS | Trùng tên vật tư trong HTX (GĐ1 S4) |
+| 409 | PERIOD_CLOSED, PERIOD_CHANGED | Kỳ đã chốt; số liệu kỳ đổi từ lúc xác nhận, kèm `totals` (GĐ1 S4) |
+| 409 | NOTHING_TO_PAY, ALREADY_PAID | Dòng không có khoản chi trả; đã ghi trả (GĐ1 S4) |
 | 422 | DOMAIN_ERROR | Business rule violated (e.g., approve already-approved entry) |
 | 422 | WITHDRAWAL_BELOW_FLOOR | Số ngày cách ly thấp hơn mức sàn của thuốc (GĐ1 S1) |
 | 500 | INTERNAL_ERROR | Unhandled server error |

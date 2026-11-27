@@ -156,7 +156,7 @@ Nhật ký `DRAFT` hoặc `REJECTED` không tính vào thời gian cách ly; `PE
 
 - **(a) Nương đang mở (`openParcelBlock`), xét tại ngày D.** Mọi lần phun của nương có `entry_date <= D` và `safe_harvest_date > D` đều chặn, bất kể `cycle_id`. Dùng ở: `POST /api/parcels/[id]/approve-harvest` (D = lúc gọi), cờ `canApprove` của lịch thu hái, và bàn cân (D = cuối ngày Việt Nam của ngày cân; mục 3.22).
 - **(b) Dòng lô đã thu hoạch (`lotLineBlock`), ngày hái H.** Một lần phun tính khi `safe_harvest_date > H` **và** (`cycle_id` bằng lứa của dòng lô **hoặc** `entry_date <= H`). Lần phun của lứa sau, làm sau ngày hái, không khoá lô cũ; thuốc phun trước ngày hái vẫn chặn đủ. Dòng lô cũ không có `cycle_id` chỉ xét theo điều kiện ngày. Dùng ở: tạo lô (`POST /api/lots`, lỗi `WITHDRAWAL_NOT_PASSED`), xuất QR và trang truy xuất lô (`is_harvest_safe`).
-- **Cách so ngày.** Bàn cân so theo ngày lịch giờ Việt Nam (`Asia/Ho_Chi_Minh`): đúng ngày hết cách ly thì được cân. Duyệt thu hoạch và lô so thời điểm (lúc gọi, hoặc `harvest_date` của lô), không đổi sang ngày lịch.
+- **Cách so ngày.** Bàn cân so theo ngày lịch giờ Việt Nam (`Asia/Ho_Chi_Minh`): đúng ngày hết cách ly thì được cân. Duyệt thu hoạch và lô so thời điểm (lúc gọi, hoặc `harvest_date` của lô), không đổi sang ngày lịch: `POST /api/parcels/[id]/approve-harvest` so với thời điểm hiện tại, không so với ngày Việt Nam. Tổng quan nông dân, tổng quan cán bộ và ứng viên chiến dịch chưa được đối chiếu lại với quy tắc (a) trong nhánh này; mã của chúng không đổi.
 
 **Danh mục thuốc BVTV (`pesticide_products`).**
 
@@ -579,6 +579,26 @@ Bàn cân ghi phiếu cân búp tươi (`fresh_leaf_tickets`) theo phẩm cấp 
 - **Xuất CSV.** Tối đa 366 ngày và 20.000 dòng mỗi lần; cột gồm số phiếu, giờ cân (giờ Việt Nam), hộ, nương, phẩm cấp, kg cân, % trừ, kg tịnh, giá, thành tiền, trạng thái, lý do huỷ. Ô bắt đầu bằng `=`, `+`, `-`, `@`, tab hoặc xuống dòng được thêm dấu nháy đơn đầu ô để bảng tính không chạy nó như công thức.
 - **Mini-app `leaf-purchase`.** Việc thu mua búp tươi nay thuộc lõi: app này ẩn khỏi Kho ứng dụng và thanh điều hướng khi `DXOS_LABS` tắt.
 
+### 3.23 Sổ cái xã viên, vật tư ứng và quyết toán kỳ (GĐ1 S4)
+
+Tiền luôn là số nguyên đồng (VND). `amount_vnd` là BigInt trong cơ sở dữ liệu và là chuỗi số nguyên thập phân trong API; tiền được cộng và so sánh bằng số nguyên.
+
+- **Vật tư và phiếu ứng.** Mỗi HTX có danh mục vật tư (`input_items`: tên tối đa 80 ký tự và không trùng trong HTX, đơn vị tối đa 20, đơn giá 0 đến 100.000.000 đ, loại `FERTILIZER`, `PESTICIDE` hoặc `OTHER`). `manager` và `accountant` thêm hoặc sửa; vật tư loại `PESTICIDE` có thể gắn một thuốc của danh mục S1, loại khác thì không. Phiếu ứng (`input_advances`) do `accountant` hoặc `manager` ghi: số lượng lớn hơn 0, tối đa 100.000 và tối đa hai chữ số thập phân; ngày ứng mặc định hôm nay và không ở tương lai; vật tư phải còn dùng và có đơn giá lớn hơn 0. **Thành tiền = số lượng × đơn giá, làm tròn đến đồng, nửa làm tròn lên**, tính bằng số nguyên theo phần trăm. Đơn giá được chép lúc ghi nên đổi giá sau đó không đổi phiếu cũ. Số phiếu `{HTX}-VT-YYYYMMDD-NNN`, đánh từ 001 theo từng HTX và từng ngày dưới khoá tư vấn. Gửi lại cùng `client_id` (UUID) trả 200 với phiếu đầu tiên, không ghi thêm. Phiếu ứng không sửa: sai thì huỷ và ghi lại.
+- **Huỷ phiếu ứng** chỉ khi phiếu `VALID` và chưa vào quyết toán (`settlement_id` rỗng): đã vào quyết toán trả 409 `ADVANCE_SETTLED`, đã huỷ trả 409 `ADVANCE_VOIDED`. Phiếu cân cũng chỉ huỷ được khi chưa vào quyết toán (mục 3.22).
+- **Quy ước dấu của sổ.** `member_ledger_entries.amount_vnd` dương nghĩa là HTX nợ hộ, âm nghĩa là hộ nợ HTX. Số dư sổ của một hộ là tổng mọi dòng sổ của hộ.
+- **Sổ chỉ thêm, không sửa.** Trigger cơ sở dữ liệu từ chối mọi `UPDATE`, `DELETE` và `TRUNCATE` trên `member_ledger_entries`. Sửa sai bằng một dòng `ADJUSTMENT` mới. Bốn loại dòng: `LEAF_CREDIT` (tiền búp, dương), `INPUT_DEBIT` (vật tư, âm), `PAYOUT` (chi trả, âm), `ADJUSTMENT` (điều chỉnh, khác 0). Không có loại dòng riêng để mang nợ sang kỳ sau.
+- **Sổ chỉ được ghi khi chốt kỳ, khi chi trả và khi điều chỉnh.** Ghi phiếu cân hay phiếu ứng không ghi sổ. Số dư `balance_vnd` mà các route đọc sổ trả là số tạm tính: số dư sổ cộng tiền các phiếu cân chưa quyết toán trừ tiền các phiếu ứng chưa quyết toán.
+- **Công thức chốt, cho mỗi hộ có phiếu cân hoặc phiếu ứng chưa quyết toán.** `L` là tiền búp, `A` là tiền vật tư ứng, `outstanding` là số dư sổ của hộ trừ tổng `payable_vnd` của các dòng quyết toán cũ chưa trả (âm là nợ). Khi đó `net = L − A + outstanding`; `payable_vnd = max(0, net)`; `debt_out_vnd = max(0, −net)`; `debt_in_vnd = max(0, −outstanding)` (chỉ để hiện trên phiếu). Sổ nhận đúng hai dòng: `LEAF_CREDIT +L` nếu `L > 0` và `INPUT_DEBIT −A` nếu `A > 0`; nợ cũ đã nằm sẵn trong số dư nên không ghi lại. **Bất biến:** sau khi chốt, số dư sổ của hộ trừ tổng `payable_vnd` của mọi dòng chưa trả bằng `−debt_out_vnd` của dòng vừa chốt. Hộ không có phát sinh trong kỳ không có dòng quyết toán; nợ của hộ vẫn nằm trong sổ và được trừ ở kỳ đầu tiên hộ có phát sinh.
+- **Kỳ quyết toán (`settlement_periods`).** Mã `{HTX}-QT-YYYYMMDD` theo `date_to`. `accountant` hoặc `manager` tạo kỳ `DRAFT`: `date_to` không sau hôm nay (422 `DOMAIN_ERROR`); chỉ một kỳ `DRAFT` mỗi HTX (422); kỳ mới phải bắt đầu đúng ngày sau `date_to` của kỳ gần nhất, nên các kỳ liền nhau, không chồng và không hở (422 với câu nêu ngày bắt đầu đúng); kỳ đầu tiên không được bắt đầu sau ngày của phiếu cân hoặc phiếu ứng chưa quyết toán sớm nhất (422 "Còn phiếu trước ngày bắt đầu kỳ."). Kỳ `DRAFT` hiện số tạm tính từng hộ.
+- **Chốt kỳ chỉ do `manager`** (`POST /api/settlements/[id]/close`), từ giao diện hoặc API; không agent hay lịch nào chốt. Chốt chạy trong một giao dịch cho cả HTX: gom **mọi phiếu cân `VALID` và phiếu ứng `VALID` chưa quyết toán đến hết `date_to`**, kể cả phiếu trước `date_from`, ghi mỗi hộ một dòng `member_settlements`, gắn `settlement_id` vào phiếu, ghi sổ, rồi đặt kỳ `CLOSED` cùng người và giờ chốt. Người tạo và người chốt đều được ghi tên; cùng một người giữ cả hai vai vẫn chuẩn bị rồi chốt được. Chốt lần hai trả 409 `PERIOD_CLOSED` và không ghi gì.
+- **Xác nhận lại khi số đổi (`PERIOD_CHANGED`).** Yêu cầu chốt kèm `expected_household_count` và `expected_payable_total_vnd` mà hộp xác nhận đã hiện. Nếu số tính lại khác thì trả 409 `PERIOD_CHANGED` kèm `totals` mới, không ghi gì, và giao diện hiện lại hộp xác nhận. Cùng mã trả khi phiếu đổi giữa lúc khoá và lúc gắn.
+- **Chi trả.** `accountant` hoặc `manager` ghi `POST /api/settlements/[id]/lines/[lineId]/payout` với `method` `TRANSFER` hoặc `CASH` và `ref` tuỳ chọn (tối đa 60 ký tự). Chỉ dòng có `payable_vnd > 0` (nếu không 409 `NOTHING_TO_PAY`) và chỉ một lần (lần hai 409 `ALREADY_PAID`; hai người ghi cùng lúc thì một người thành công). Ghi một dòng `PAYOUT −payable_vnd`. Hộ chưa khai tài khoản vẫn ghi `TRANSFER` được; khi đó phiếu không có QR.
+- **Điều chỉnh.** Chỉ `manager`: `amount_vnd` là số nguyên khác 0 (âm hoặc dương, tối đa 15 chữ số), `reason` 5 đến 200 ký tự; ghi một dòng `ADJUSTMENT` vào sổ của hộ trong HTX.
+- **Một khoá cho mỗi HTX.** Chốt kỳ, chi trả và điều chỉnh cùng lấy khoá tư vấn `settlement:{htx_code}`, nên mỗi lúc chỉ một thao tác đổi tiền của HTX chạy; chúng không chen vào giữa một lần chốt. Giao dịch đặt `dxos.actor`, nên dòng kiểm toán mang tên người thao tác.
+- **Thông tin ngân hàng của hộ.** `households.bank_bin` (6 chữ số, thuộc danh sách 21 ngân hàng của `GET /api/banks`), `bank_account` (6 đến 19 chữ số), `bank_account_name` (tối đa 60 ký tự); cơ sở dữ liệu có `CHECK` cho hai cột đầu. `manager` và `accountant` đặt và đọc đủ số tài khoản (`GET`, `PUT /api/households/[id]/bank`; `PUT` chỉ trả số đã che); số đủ cũng hiện trên phiếu của họ để chuyển tiền. Xã viên chỉ đọc phiếu của chính hộ mình (hộ khác trả 404) và thấy số đã che, chỉ còn 4 số cuối; mã QR trên phiếu của xã viên vẫn mã hoá đúng tài khoản của họ, nhưng phản hồi không có số đủ ở dạng chữ. Số tài khoản không bao giờ gửi qua Telegram hay cho agent, không vào log ứng dụng, và các route ngân hàng và sổ nằm trong danh sách "tiền và ngân hàng không đi qua chat" của `coverage.ts`. Ba cột nằm trong bảng `households` nên theo trigger kiểm toán hiện có vào `audit.events` (như họ tên và số điện thoại; đây là kho nội bộ có kiểm soát). Hasura: các vai `farmer`, `manager` và `officer` chỉ được chọn `id`, `name`, `phone`, `address`, `keycloak_user_id`, `htx_profile_id`, `created_at`, `updated_at`; ba cột ngân hàng không nằm trong danh sách đó, và vai `agent` chỉ thấy `id`, `htx_profile_id`, `created_at`, `updated_at`.
+- **Phiếu quyết toán và VietQR.** Phiếu gồm HTX, hộ, kỳ, các phiếu cân và phiếu ứng của dòng, dòng quyết toán và nội dung chuyển khoản `QT {ngày của mã kỳ} {4 ký tự cuối id hộ}` (ASCII, tối đa 25 ký tự). Mã QR theo chuẩn VietQR/EMVCo (CRC16/CCITT-FALSE) chỉ có khi hộ có ngân hàng và tài khoản và `payable_vnd > 0`; ảnh sinh ở máy chủ, trả dạng data URL.
+- **Ai đọc gì.** Đọc danh sách và chi tiết kỳ: `manager`, `accountant`. Đọc sổ và phiếu của một hộ: `manager`, `accountant`. Xã viên chỉ đọc sổ của các hộ gắn với tài khoản mình (`GET /api/ledger/mine`, gộp theo hộ) và phiếu của chính hộ mình.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication
@@ -648,6 +668,20 @@ Bảng trên chỉ có ba cột. Quyền của `accountant` và `platform_admin`
 | Xuất CSV phiếu cân (`GET /api/leaf-tickets/export.csv`) | manager, accountant |
 | Xem một phiếu (`GET /api/leaf-tickets/[id]`) | manager, accountant, officer; farmer chỉ phiếu của hộ mình |
 | Phiếu của tôi (`GET /api/leaf-tickets/mine`) | farmer |
+| Danh sách vật tư (`GET /api/input-items`) | manager, accountant, officer |
+| Thêm hoặc sửa vật tư (`POST /api/input-items`, `PUT /api/input-items/[id]`) | manager, accountant |
+| Ghi hoặc huỷ phiếu ứng (`POST /api/input-advances`, `POST /api/input-advances/[id]/void`) | accountant, manager |
+| Danh sách phiếu ứng (`GET /api/input-advances`) | manager, accountant, officer |
+| Xuất CSV phiếu ứng (`GET /api/input-advances/export.csv`) | manager, accountant |
+| Danh sách ngân hàng (`GET /api/banks`) | mọi vai của HTX |
+| Đặt hoặc đọc tài khoản nhận tiền của hộ (`PUT`, `GET /api/households/[id]/bank`) | manager, accountant |
+| Đọc sổ của một hộ (`GET /api/households/[id]/ledger`) | manager, accountant |
+| Sổ của tôi (`GET /api/ledger/mine`) | farmer |
+| Tạo kỳ, xem danh sách và chi tiết kỳ (`POST`, `GET /api/settlements`, `GET /api/settlements/[id]`) | manager, accountant |
+| Chốt kỳ (`POST /api/settlements/[id]/close`) | manager |
+| Ghi chi trả (`POST /api/settlements/[id]/lines/[lineId]/payout`) | accountant, manager |
+| Phiếu quyết toán (`GET /api/settlements/[id]/lines/[lineId]/slip`) | manager, accountant; farmer chỉ phiếu của hộ mình (số tài khoản che) |
+| Điều chỉnh sổ (`POST /api/ledger/adjustments`) | manager |
 | Đèn cách ly của nương (`GET /api/parcels/[id]/withdrawal-status`) | accountant, manager, officer |
 | Đối chiếu cân và nhật ký của lứa (`GET /api/cycles/[id]/weighing-summary`) | manager, officer |
 
