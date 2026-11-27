@@ -409,11 +409,11 @@ make apps-smoke                         # kiểm thử tích hợp (sau npm run 
 Telegram là tuỳ chọn. Đặt `TELEGRAM_BOT_TOKEN` (token BotFather tạo) và `TELEGRAM_BOT_USERNAME` trong `docker/.env.local`, rồi chạy:
 
 ```bash
-./dxos telegram enable                  # tạo client dxos-telegram (vai telegram) và dxos-web-roles (đọc vai trò người dùng), ghi secret vào volume
-./dxos telegram disable                 # xoá hai client và hai tệp secret; dxos-telegram trở về trạng thái chờ
+./dxos telegram enable                  # tạo client dxos-telegram (vai telegram), dxos-web-roles (đọc vai trò người dùng) và dxos-web-service (chẩn đoán ảnh bệnh gửi qua chat), ghi secret vào volume
+./dxos telegram disable                 # xoá ba client và các secret; dxos-telegram trở về trạng thái chờ
 ```
 
-- `dxos-telegram` chỉ là rơle: nhận tin nhắn của bot qua long polling, chuyển sang web và gửi lại phản hồi. Mọi quyết định (liên kết, kiểm tra vai trò, chữ ký nút bấm, nội dung tin) nằm ở web. Tin nhắn đi qua máy chủ của Telegram, nên không gửi dữ liệu cá nhân (tên hộ, số điện thoại, địa chỉ) vào đó.
+- `dxos-telegram` chỉ là rơle: nhận tin nhắn của bot qua long polling, chuyển sang web và gửi lại phản hồi. Mọi quyết định (liên kết, kiểm tra vai trò, chữ ký nút bấm, nội dung tin) nằm ở web. Tin nhắn đi qua máy chủ của Telegram: báo cáo tự động không chứa dữ liệu cá nhân (tên hộ, số điện thoại, địa chỉ); câu trả lời tra cứu trong chat riêng thì có thể chứa tên và số điện thoại nông hộ, đúng với những gì vai trò của người hỏi đọc được trên web (docs/rules-and-limits.md, mục 3.18b).
 - Khi chưa có token hoặc chưa chạy `enable`, dxos-telegram chỉ ghi nhịp tim và chờ; web vẫn hoạt động như trước.
 - Bản phát hành bắt buộc `DXOS_TELEGRAM_CALLBACK_KEY` (khoá ký nút bấm) khác giá trị mặc định công khai.
 - Trợ lý trong chat riêng (không hoạt động trong nhóm): gửi `/menu` để mở menu theo vai trò (Hôm nay, Việc cần duyệt, Ghi nhật ký, Báo bệnh, Hỏi), hoặc nhắn câu hỏi bằng tiếng Việt. Lệnh: `/menu`, `/huy` (huỷ việc đang làm dở), `/tomtat`, `/cho`, `/nhatky`, `/benh`, `/hoi`.
