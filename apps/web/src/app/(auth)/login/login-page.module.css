@@ -58,12 +58,11 @@
 
 .authBox {
   display: grid;
-  grid-template-columns: 580px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   width: 100%;
-  max-width: 1200px;
-  min-height: 580px;
+  max-width: 1080px;
+  min-height: 600px;
   margin: auto;
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-hero);
   background: var(--color-surface-card);
   box-shadow: var(--shadow-card);
@@ -74,18 +73,18 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 18px;
-  padding: 56px;
+  gap: 14px;
+  padding: 40px 44px;
   background:
-    linear-gradient(180deg, transparent 30%, var(--color-hero-bg) 68%),
-    url('/images/tea-hills-sunrise.jpg') top center / auto 70% no-repeat,
+    linear-gradient(180deg, transparent 42%, var(--color-hero-bg) 80%),
+    url('/images/tea-hills-sunrise.jpg') center top / cover no-repeat,
     var(--color-hero-bg);
   color: var(--color-hero-text);
 }
 
 .authSideTitle {
   margin: 0;
-  font-size: 46px;
+  font-size: 38px;
   font-weight: 800;
   line-height: 1.15;
   color: var(--color-hero-text);
@@ -122,59 +121,100 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 24px;
+  padding: 32px 24px;
 }
 
 .authCard {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 390px;
+  max-width: 400px;
 }
 
 .cardHeader {
-  margin-bottom: 24px;
-}
-
-.cardIcon {
-  width: 56px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 22px;
-  border-radius: var(--radius-card);
-  background: var(--color-primary-subtle);
-  color: var(--color-primary);
+  margin-bottom: 20px;
+  text-align: center;
 }
 
 .cardTitle {
-  margin: 0 0 8px;
-  font-size: 40px;
+  margin: 0 0 6px;
+  font-size: 32px;
   font-weight: 800;
   color: var(--color-ink-heading);
 }
 
 .cardDesc {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--color-ink-secondary);
 }
 
-.cardFooterNote {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--color-border);
+.field {
   display: flex;
-  gap: 10px;
-  font-size: var(--font-size-meta);
-  line-height: 1.5;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-ink-primary);
+}
+
+.field input {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-button);
+  background: var(--color-surface-card);
+  color: var(--color-ink-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.field input:focus {
+  border-color: var(--color-primary);
+  outline: 2px solid var(--color-primary-subtle);
+}
+
+.forgotRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
   color: var(--color-ink-secondary);
 }
 
-.lockIcon {
-  flex-shrink: 0;
-  margin-top: 2px;
+.register {
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--color-ink-secondary);
+}
+
+.help {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-sunken);
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-ink-secondary);
+}
+
+.help strong {
+  font-size: 14px;
+  color: var(--color-ink-primary);
+}
+
+.footer {
+  padding-top: 16px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--color-ink-secondary);
 }
 
 @media (max-width: 1023px) {
@@ -225,13 +265,6 @@
 
 .recoveryLink:hover {
   text-decoration: underline;
-}
-
-.authLinks {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 4px;
 }
 
 .authLink {

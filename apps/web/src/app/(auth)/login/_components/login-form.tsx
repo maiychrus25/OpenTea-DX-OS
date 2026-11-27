@@ -19,6 +19,7 @@ export function safeCallbackUrl(value: string | null | undefined): string {
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
+  const [username, setUsername] = useState('')
   const searchParams = useSearchParams()
   const errorCode = searchParams?.get('error') ?? null
 
@@ -27,11 +28,13 @@ export function LoginForm() {
 
   const handleLogin = async () => {
     setIsLoading(true)
-    await signIn('keycloak', { callbackUrl: safeCallbackUrl(searchParams?.get('callbackUrl')) })
+    // The name only pre-fills Keycloak's form; the password is typed there and never reaches this app.
+    const name = username.trim()
+    await signIn('keycloak', { callbackUrl: safeCallbackUrl(searchParams?.get('callbackUrl')) }, name ? { login_hint: name } : undefined)
   }
 
   return (
-    <div className={styles.form}>
+    <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void handleLogin() }}>
       {/* AC-3: All login error states in Vietnamese */}
       {errorMessage && (
         <div
@@ -52,6 +55,18 @@ export function LoginForm() {
         </div>
       )}
 
+      <label className={styles.field}>
+        Tên đăng nhập
+        <input type="text" name="username" autoComplete="username" placeholder="Nhập tên đăng nhập" value={username} onChange={(event) => setUsername(event.target.value)} />
+      </label>
+
+      <div className={styles.forgotRow}>
+        <span>Mật khẩu nhập ở bước tiếp theo.</span>
+        <Link href="/forgot-pin" className={styles.authLink} data-testid="forgot-pin-link">
+          Quên PIN?
+        </Link>
+      </div>
+
       <Button
         type="button"
         onClick={handleLogin}
@@ -59,17 +74,15 @@ export function LoginForm() {
         isLoading={isLoading}
         data-testid="keycloak-login-btn"
       >
-        Tiếp tục với Keycloak
+        Đăng nhập
       </Button>
 
-      <div className={styles.authLinks}>
-        <Link href="/forgot-pin" className={styles.authLink} data-testid="forgot-pin-link">
-          Quên PIN?
-        </Link>
+      <p className={styles.register}>
+        Bạn chưa có tài khoản?{' '}
         <Link href="/register" className={styles.authLink} data-testid="register-link">
-          Đăng ký tài khoản
+          Đăng ký ngay
         </Link>
-      </div>
-    </div>
+      </p>
+    </form>
   )
 }

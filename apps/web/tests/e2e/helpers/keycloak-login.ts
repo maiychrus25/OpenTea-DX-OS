@@ -11,7 +11,7 @@ export const DEMO_PASSWORD = 'Test1234!'
 /** Logs in through the Keycloak form and waits for the role's dashboard. */
 export async function keycloakLogin(page: Page, username: string, password: string, role: 'farmer' | 'officer' | 'manager') {
   await page.goto('/login')
-  await page.getByRole('button', { name: 'Tiếp tục với Keycloak' }).click()
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
   await page.locator('#username').fill(username)
   await page.locator('#password').fill(password)
   await page.locator('#kc-login').click()

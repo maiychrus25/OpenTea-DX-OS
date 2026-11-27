@@ -23,7 +23,7 @@ function compose(...args: string[]) {
 
 async function login(page: Page, username: string) {
   await page.goto('/login');
-  await page.getByRole('button', { name: 'Tiếp tục với Keycloak' }).click();
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.locator('#username').fill(username);
   await page.locator('#password').fill(PASSWORD);
   await page.locator('#kc-login').click();
