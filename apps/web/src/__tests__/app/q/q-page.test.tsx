@@ -89,3 +89,11 @@ test('the verification block is labelled for screen readers', async () => {
   render(await pageFor('TC-CHE-20261128-001'))
   expect(within(screen.getByRole('region', { name: 'Kiểm chứng trong sổ audit' })).getByText('Chuỗi audit khớp.')).toBeInTheDocument()
 })
+
+test('a certificate revoked after export reads "Đã thu hồi" even before its expiry', async () => {
+  const certificates = [{ ...base.certificates![0], revoked_at: '2026-11-28T01:00:00.000Z' }]
+  load({ trace: { ...base, certificates }, today: '2026-11-28', verification: [] })
+  render(await pageFor('TC-CHE-20261128-001'))
+  expect(screen.getByText('Đã thu hồi')).toBeInTheDocument()
+  expect(screen.queryByText('Còn hiệu lực đến 01/01/2027')).not.toBeInTheDocument()
+})

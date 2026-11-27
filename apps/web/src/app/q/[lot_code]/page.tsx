@@ -5,7 +5,7 @@ import React from 'react'
 import { XCircle } from 'lucide-react'
 import { PublicTrace } from '@/components/features/qr/PublicTrace'
 import styles from './qr.module.css'
-import { certificateStatusOn } from './public-view-local'
+import { certificateStatus } from '@/domain/certificate/status'
 import { loadPublicPageData } from './public-page-data'
 
 export const runtime = 'nodejs'
@@ -52,7 +52,7 @@ export default async function QrTracePage({ params }: PageProps) {
       <PublicTrace
         trace={data.trace}
         verification={data.verification}
-        certificateState={c => certificateStatusOn(c, data.today)}
+        certificateState={c => certificateStatus({ revoked_at: c.revoked_at ? new Date(c.revoked_at) : null, expires_on: c.expires_on }, data.today)}
       />
     </main>
   )

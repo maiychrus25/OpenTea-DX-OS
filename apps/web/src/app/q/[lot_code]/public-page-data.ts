@@ -10,7 +10,8 @@ import { localDay } from '@/domain/shared/local-day'
 import { logger } from '@/lib/logger'
 import { PrismaLotTraceRepository } from '@/infrastructure/db/repositories/prisma-lot-trace-repository'
 import { PrismaLotVerificationRepository } from '@/infrastructure/db/repositories/prisma-lot-verification-repository'
-import { hideNamesUnlessAllowed } from './public-view-local'
+import { publicView } from '@/domain/lot/public-view'
+import { prisma } from '@/infrastructure/db/prisma.client'
 
 export interface PublicPageData {
   trace: LotTraceData
@@ -19,12 +20,10 @@ export interface PublicPageData {
   verification: string[]
 }
 
-/**
- * Whether the cooperative shows names on the public page.
- * TODO(integration): read htx_profiles.public_show_names (phase 2 B1 migration). Until then names stay hidden.
- */
-async function showNamesFor(): Promise<boolean> {
-  return false
+/** Whether the lot's cooperative shows names on the public page. Unknown means hidden. */
+async function showNamesFor(code: string): Promise<boolean> {
+  const lot = await prisma.lot.findUnique({ where: { lot_code: code }, select: { htx_profile: { select: { public_show_names: true } } } })
+  return lot?.htx_profile?.public_show_names ?? false
 }
 
 /** The audit verification line never fails the page: a lookup error shows no line and is logged. Cached 5 minutes, as on /lot. */
@@ -51,7 +50,7 @@ export async function loadPublicPageData(code: string): Promise<PublicPageData |
     throw e
   }
   return {
-    trace: hideNamesUnlessAllowed(trace, await showNamesFor()),
+    trace: publicView(trace, await showNamesFor(code)),
     today: localDay(new Date()),
     verification: await verificationLines(code),
   }
