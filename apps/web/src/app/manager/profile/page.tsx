@@ -13,6 +13,7 @@ import { AccountSection } from '@/components/ui'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Panel } from '@/components/ui/Panel'
 import { TelegramLinkCard } from '@/components/features/telegram/TelegramLinkCard'
+import { PublicNamesSetting } from '@/components/features/certificates/PublicNamesSetting'
 import kit from '@/components/features/dashboard/page-kit.module.css'
 import styles from './page.module.css'
 
@@ -85,6 +86,8 @@ export default async function HtxProfilePage() {
           <div className={styles.telegram}>
             <TelegramLinkCard role="manager" />
           </div>
+
+          <PublicNamesSetting />
 
           <AccountSection name={session?.user?.name || 'Trưởng HTX'} role="manager" />
         </div>
