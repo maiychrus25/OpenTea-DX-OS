@@ -1,7 +1,14 @@
 # Kế toán và thuế của hợp tác xã
 
-- **Kế toán:** Thông tư 71/2024/TT-BTC (07/10/2024), áp dụng cho năm tài chính từ 01/01/2025, thay Thông tư 24/2017/TT-BTC. Gồm chứng từ, tài khoản, sổ và báo cáo tài chính; không dùng để xác định nghĩa vụ thuế.
-- **Thuế thu nhập doanh nghiệp:** Luật 67/2025/QH15, hiệu lực 01/10/2025, áp dụng từ kỳ tính thuế 2025; hợp tác xã là người nộp thuế. Nghị định 320/2025/NĐ-CP hướng dẫn.
-- **Chưa tra được** điều khoản ưu đãi riêng cho hợp tác xã nông nghiệp trồng chè. Hỏi cơ quan thuế địa phương trước khi áp dụng.
+## Kế toán
+Thông tư 71/2024/TT-BTC (07/10/2024), Điều 8: hiệu lực 07/10/2024, áp dụng cho năm tài chính từ 01/01/2025, thay Thông tư 24/2017/TT-BTC. Mẫu chứng từ, tài khoản, sổ, báo cáo nằm trong các phần của Công báo (đã có trong kho).
 
-Thông tin lấy từ trang tổng hợp văn bản, chưa đối chiếu bản gốc.
+## Thuế thu nhập doanh nghiệp
+Luật 67/2025/QH15, hiệu lực 01/10/2025. Hợp tác xã là người nộp thuế.
+- **Miễn thuế (Điều 4 khoản 1):** thu nhập của hợp tác xã từ sản xuất sản phẩm cây trồng và chế biến nông sản (kể cả mua nông sản về chế biến).
+- **Miễn thuế (khoản 2):** thu nhập của hợp tác xã nông nghiệp ở địa bàn khó khăn, đặc biệt khó khăn.
+- **Miễn thuế (khoản 3):** dịch vụ kỹ thuật trực tiếp phục vụ nông nghiệp.
+- **Thuế suất 10% (Điều 13 khoản 2, điểm d):** thu nhập của hợp tác xã nông nghiệp không thuộc địa bàn ưu đãi.
+- Thu nhập hình thành quỹ, tài sản chung không chia của hợp tác xã cũng thuộc diện được miễn (xem Điều 4).
+
+Điều kiện miễn, nhất là với chè chế biến, còn phụ thuộc nghị định và thông tư hướng dẫn. **Luật đã có các luật sửa đổi**: tra bản hợp nhất và hỏi cơ quan thuế trước khi áp dụng.
