@@ -8,12 +8,13 @@ import Link from 'next/link'
 import { Pill } from '@/components/ui'
 import { WifiOff, RefreshCw, AlertTriangle, BookOpen, ImageIcon, Sparkles, Camera } from 'lucide-react'
 import { CameraWatch } from '@/components/features/disease/CameraWatch'
+import { TreatmentPlan } from '@/components/features/disease/TreatmentPlan'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from '../diagnosis.module.css'
 import { getDiagnosisHistory } from '../actions'
 import { DiagnosisHistoryItem } from '@/domain/disease/ports/disease-report.port'
 import { useOfflineSync } from '@/lib/hooks/useOfflineSync'
-import { displayDiseaseName } from '@/domain/disease/display-disease-name'
+import { displayDiseaseName, UNCERTAIN_DISEASE_NAME } from '@/domain/disease/display-disease-name'
 import { ReportPhoto } from '@/components/features/disease/ReportPhoto'
 import { diseaseStatusLabel } from '@/domain/disease/disease-status-label'
 
@@ -219,7 +220,8 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
                   </div>
                 )}
                 <p className={styles.successBox} role="status">Đã gửi cán bộ kỹ thuật xem</p>
-                <p className={styles.aiNote}>* AI không đưa ra khuyến nghị điều trị. Hãy tham khảo ý kiến chuyên gia. CBKT đã nhận được kết quả này.</p>
+                {!result.uncertain && <TreatmentPlan disease={result.disease} />}
+                <p className={styles.aiNote}>* AI không kê thuốc. Thuốc và liều do cán bộ kỹ thuật quyết định. CBKT đã nhận được kết quả này.</p>
                 <div className={styles.actions}>
                   <Link href="/farmer/ai" className={kit.btn2}><Sparkles size={16} aria-hidden="true" />Hỏi AI cách xử lý</Link>
                   <Link href="/farmer/handbook" className={kit.btn2}><BookOpen size={16} aria-hidden="true" />Xem cẩm nang</Link>
@@ -245,6 +247,12 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
                     <span className={styles.pastMeta}>{h.parcel_code} · {new Date(h.detection_date).toLocaleDateString('vi-VN')}</span>
                     {h.treatment_recommendation && (
                       <span className={styles.advice}><strong>Hướng dẫn CBKT:</strong> {h.treatment_recommendation}</span>
+                    )}
+                    {h.status !== 'REJECTED' && displayDiseaseName(h) !== UNCERTAIN_DISEASE_NAME && (
+                      <details className={styles.planToggle}>
+                        <summary>Xem lộ trình xử lý</summary>
+                        <TreatmentPlan disease={displayDiseaseName(h)} officerAdvice={h.treatment_recommendation} />
+                      </details>
                     )}
                   </span>
                   <Pill tone={diseaseStatusLabel(h.status).tone}>{diseaseStatusLabel(h.status).label}</Pill>

@@ -1,0 +1,14 @@
+/* SPDX-License-Identifier: MIT */
+/* SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.plan { margin-top: 8px; }
+.plan h3 { margin: 0 0 8px; font-size: 13.5px; font-weight: 800; color: var(--color-ink-heading); }
+.plan ol { margin: 0; padding: 0; list-style: none; }
+.plan li { position: relative; padding: 0 0 10px 22px; }
+.plan li::before { content: ''; position: absolute; left: 2px; top: 4px; z-index: 1; width: 10px; height: 10px; border-radius: var(--rounded-full); background: var(--color-primary); }
+.plan li:not(:last-child)::after { content: ''; position: absolute; left: 6px; top: 12px; bottom: -4px; width: 2px; background: var(--color-border-default); }
+.plan li span { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--color-primary); }
+.plan li strong { font-size: 13px; }
+.plan li p { margin: 2px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--color-ink-secondary); }
+.links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 0; font-size: 12.5px; font-weight: 700; }
+.links a { color: var(--color-primary); }
