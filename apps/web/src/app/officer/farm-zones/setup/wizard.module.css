@@ -104,8 +104,8 @@
 /* 2-Column Layout */
 .layout {
   display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1rem;
   min-height: 500px;
 }
 
@@ -312,4 +312,9 @@
 
 .summaryValue {
   font-weight: 600;
+}
+
+/* Ô tìm địa chỉ nằm trên cùng, nên đẩy nút chọn lớp bản đồ xuống dưới nó. */
+.mapContainer :global(.leaflet-top.leaflet-right) {
+  top: 48px;
 }

@@ -14,6 +14,8 @@ import 'leaflet-geosearch/dist/geosearch.css'
 import area from '@turf/area'
 import { polygon as turfPolygon } from '@turf/helpers'
 import { toast } from 'sonner'
+import { DEFAULT_MAP_VIEW } from '@/lib/map-config'
+import { addMapBaseLayers } from '@/components/features/map/map-layers'
 
 interface Props {
   onAreaCalculated: (areaSqm: number, geojson?: object, center?: { lat: number, lng: number }) => void
@@ -40,17 +42,11 @@ export default function SetupMapClient({ onAreaCalculated }: Props) {
     })
 
     const map = L.map(mapContainerRef.current, {
-      center: [10.762622, 106.660172],
-      zoom: 13,
+      ...DEFAULT_MAP_VIEW,
       maxZoom: 24, // Cho phép zoom thật sâu
     })
 
-    // Base Layers - Satellite ONLY
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-      maxNativeZoom: 19, // Mức zoom tối đa mà vệ tinh Esri cung cấp ảnh thực
-      maxZoom: 24 // Trình duyệt sẽ tự phóng to ảnh (digital zoom) để vẽ chi tiết
-    }).addTo(map)
+    addMapBaseLayers(map)
 
     // 1. Search Control (GeoSearch)
     const provider = new EsriProvider()

@@ -7,6 +7,7 @@ import React, { useState } from 'react'
 import dynamic from 'next/dynamic'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import styles from '../wizard.module.css'
+import mapStyles from '@/components/features/map/ZoneMap.module.css'
 
 const SetupMapClient = dynamic(() => import('./SetupMapClient'), { ssr: false })
 
@@ -26,7 +27,7 @@ export function Step2MapDraw({ householdName, onPrev, onNext }: Props) {
     <div className={styles.layout}>
       {/* Left Panel: Real Leaflet Map */}
       <div className={`${styles.leftPanel} ${styles.mapPanel}`}>
-        <div className={styles.mapContainer}>
+        <div className={`${styles.mapContainer} ${mapStyles.mapFrame}`}>
           <SetupMapClient onAreaCalculated={(sqm, geo, cen) => {
             setAreaSqm(sqm)
             setGeojson(geo)
