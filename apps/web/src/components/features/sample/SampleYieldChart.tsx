@@ -24,16 +24,19 @@ export function SampleYieldChart() {
         </span>
       </div>
       <div className={styles.chart}>
-        <svg viewBox="0 0 600 205" preserveAspectRatio="none" role="img" aria-label="Biểu đồ mẫu: sản lượng thực tế so với kế hoạch trong 12 tuần">
-          {[0, 2, 4, 6, 8].map((v) => <line key={v} x1="0" x2="600" y1={y(v)} y2={y(v)} />)}
-          {ACTUAL.map((v, i) => (
-            <rect key={i} className={i === ACTUAL.length - 1 ? styles.last : undefined} x={i * 50 + 11} width="28" y={y(v)} height={200 - y(v)} rx="3">
-              <title>{`Tuần ${36 + i}: ${v.toLocaleString('vi-VN')} tấn`}</title>
-            </rect>
-          ))}
-          <polyline points={PLAN.map((v, i) => `${i * 50 + 25},${y(v)}`).join(' ')} />
-        </svg>
-        <div className={styles.axis}>{ACTUAL.map((_, i) => <span key={i}>T{36 + i}</span>)}</div>
+        <div className={styles.plotRow}>
+          <div className={styles.scale} aria-hidden="true">{[8, 6, 4, 2, 0].map(v => <span key={v}>{v}</span>)}</div>
+          <svg viewBox="0 0 600 205" preserveAspectRatio="none" role="img" aria-label="Biểu đồ mẫu: sản lượng thực tế so với kế hoạch trong 12 tuần">
+            {[0, 2, 4, 6, 8].map((v) => <line key={v} x1="0" x2="600" y1={y(v)} y2={y(v)} />)}
+            {ACTUAL.map((v, i) => (
+              <rect key={i} className={i === ACTUAL.length - 1 ? styles.last : undefined} x={i * 50 + 15} width="20" y={y(v)} height={200 - y(v)} rx="3">
+                <title>{`Tuần ${36 + i}: ${v.toLocaleString('vi-VN')} tấn (kế hoạch ${PLAN[i].toLocaleString('vi-VN')})`}</title>
+              </rect>
+            ))}
+            <polyline points={PLAN.map((v, i) => `${i * 50 + 25},${y(v)}`).join(' ')} />
+          </svg>
+        </div>
+        <div className={`${styles.axis} ${styles.weeks}`}>{ACTUAL.map((_, i) => <span key={i}>T{36 + i}</span>)}</div>
       </div>
     </section>
   )

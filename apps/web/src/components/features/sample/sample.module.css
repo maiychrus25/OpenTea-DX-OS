@@ -30,3 +30,8 @@
 .TENDING { border-left-color: var(--color-status-tending); }
 .HARVEST_APPROVED { border-left-color: var(--color-status-harvest-approved); }
 .HARVESTED { border-left-color: var(--color-status-harvested); }
+
+.plotRow { display: flex; gap: 8px; }
+.plotRow svg { flex: 1; min-width: 0; }
+.scale { display: flex; flex-direction: column; justify-content: space-between; width: 14px; padding-bottom: 2px; font-size: 11px; color: var(--color-ink-secondary); text-align: right; }
+.weeks { margin-left: 22px; }
