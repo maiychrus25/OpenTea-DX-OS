@@ -38,4 +38,43 @@ export interface LotTraceData {
   journal_summaries: LotJournalSummary[]
   certificate_keys: string[]
   htx_name: string | null
+  // Phase 2 (spec §4.5). Absent in snapshots stored before phase 2: read them as empty.
+  dry_grade?: string | null
+  batches?: LotTraceBatch[]
+  intake?: LotTraceIntake[]
+  certificates?: LotTraceCertificate[]
+}
+
+/** One processing batch the lot draws from. `master_name` is a person: hidden unless the cooperative allows names. */
+export interface LotTraceBatch {
+  batch_code: string
+  processed_on: string
+  master_name: string | null
+  fresh_kg: number
+  dry_kg: number
+  recovery_ratio: number
+  out_of_band: boolean
+  grade: string
+  kg_in_lot: number
+  ticket_count: number
+  parcel_codes: string[]
+}
+
+/** One fresh-leaf ticket behind the lot, without household or ticket number. Days are Vietnam days, YYYY-MM-DD. */
+export interface LotTraceIntake {
+  parcel_code: string
+  cycle_label: string | null
+  weighed_on: string
+  net_kg: number
+  safe_on: string | null
+}
+
+export interface LotTraceCertificate {
+  id: string
+  kind: 'VIETGAP' | 'OCOP' | 'ORGANIC' | 'OTHER'
+  number: string
+  issuer: string
+  issued_on: string
+  expires_on: string
+  file_key: string
 }
