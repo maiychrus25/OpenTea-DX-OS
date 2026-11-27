@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.0] - 2026-11-28
+
 ### Added
 
 - **Farmer pages (`apps/web`)**: overview, journal grouped by date, harvest calendar with withdrawal periods and day details, farming handbook linking to real articles, a bulletin page with article pages, account page, disease diagnosis with a care plan after the AI names a disease (the product and dose stay with the officer), and a side menu with counts, an account menu and a folded rail
