@@ -58,3 +58,10 @@ Mốc điển hình theo tài liệu, thời tiết từng năm có thể làm l
 | 10-12 | chuyển lạnh, khô dần | phồng lá, rầy xanh (9-10), bọ xít muỗi, sâu chùm, dán cao, chuẩn bị đốn |
 
 Chi tiết nhận biết: `../Sau_benh_che/sau-hai.md`, `benh-hai.md`.
+
+## Sau mưa bão
+Nguồn: Trung tâm Khuyến nông và Môi trường Thái Nguyên (2026), khuyến cáo chung cho cây trồng cạn, **không viết riêng cho chè**.
+- Thoát nước ngay, không để đọng.
+- Dọn cỏ, cắt cành dập gãy cho thoáng.
+- Đất ráo thì xới nhẹ, vun gốc, dựng cây.
+- Theo dõi bệnh thối thân, thối rễ.

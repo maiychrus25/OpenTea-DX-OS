@@ -5,7 +5,7 @@ Tài liệu cho cán bộ, nông hộ và làm nguồn tra cứu cho AI. Sắp t
 | Ngăn | Nội dung |
 | --- | --- |
 | `1_Projects/` | Việc có thời hạn: kế hoạch vụ chè |
-| `2_Areas/` | Việc duy trì: pháp lý hợp tác xã, tài chính - kế toán - thuế, chính sách ngành chè, chính sách phát triển hợp tác xã |
+| `2_Areas/` | Việc duy trì: pháp lý hợp tác xã, tài chính - kế toán - thuế, chính sách ngành chè, chính sách phát triển hợp tác xã, quản trị hợp tác xã |
 | `3_Resources/` | Tri thức chè: trồng, chăm sóc, chế biến, bảo quản, sâu bệnh, an toàn thực phẩm, VietGAP, chất lượng - thương hiệu, truy xuất nguồn gốc, du lịch vùng chè, thích ứng thời tiết, thị trường và bán hàng (nguồn cho AI) |
 | `4_Archives/` | Hồ sơ vụ đã xong, chỉ nhận dữ liệu thật của HTX |
 
