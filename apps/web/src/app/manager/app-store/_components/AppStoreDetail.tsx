@@ -51,7 +51,7 @@ function PublicAddress({ path }: { path: string }) {
 }
 
 // Every text below comes from a manifest and is rendered as React text: no HTML, no Markdown.
-export function AppStoreDetail({ initial, workerAlive }: { initial: StoreAppDetail; workerAlive: boolean }) {
+export function AppStoreDetail({ initial, workerAlive, labs = false }: { initial: StoreAppDetail; workerAlive: boolean; labs?: boolean }) {
   const [app, setApp] = useState(initial)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -100,7 +100,7 @@ export function AppStoreDetail({ initial, workerAlive }: { initial: StoreAppDeta
             v{app.version} · {app.publisher} · {app.license}
             {app.category && <> · {CATEGORY_LABELS[app.category]}</>}
           </p>
-          {app.generated && (
+          {labs && app.generated && (
             <p className={styles.meta}>
               {GENERATED_LABEL}
               {app.buildRequestId && <> · <Link href={`/manager/ai/apps/${app.buildRequestId}`}>{GENERATED_REPORT_LABEL}</Link></>}

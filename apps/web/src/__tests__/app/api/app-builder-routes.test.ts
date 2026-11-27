@@ -34,6 +34,16 @@ const post = (body: unknown) => new Request('http://x/api', { method: 'POST', bo
 
 beforeEach(() => jest.clearAllMocks())
 
+// The frozen feature under test runs only with the labs switch on (ADR 0005).
+const previousLabs = process.env.DXOS_LABS
+beforeEach(() => {
+  process.env.DXOS_LABS = '1'
+})
+afterEach(() => {
+  if (previousLabs === undefined) delete process.env.DXOS_LABS
+  else process.env.DXOS_LABS = previousLabs
+})
+
 describe('the A12 routes', () => {
   it('answer the work list as {data: {requests}} for the token cooperative', async () => {
     agentService.waiting.mockResolvedValue([{ id: ID, status: 'new' }])

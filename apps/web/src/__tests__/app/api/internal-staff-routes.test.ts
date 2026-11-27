@@ -41,6 +41,16 @@ beforeEach(() => {
   jest.useRealTimers()
 })
 
+// The frozen feature under test runs only with the labs switch on (ADR 0005).
+const previousLabs = process.env.DXOS_LABS
+beforeEach(() => {
+  process.env.DXOS_LABS = '1'
+})
+afterEach(() => {
+  if (previousLabs === undefined) delete process.env.DXOS_LABS
+  else process.env.DXOS_LABS = previousLabs
+})
+
 describe('staff routes guard', () => {
   it('refuses every route when the staff token is refused', async () => {
     ;(requireStaffCaller as jest.Mock).mockRejectedValue(new ForbiddenError('Staff sync role required'))

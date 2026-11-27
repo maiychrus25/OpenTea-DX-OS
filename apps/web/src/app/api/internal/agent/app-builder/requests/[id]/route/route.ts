@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { appBuilderAgentService } from '@/application/appbuilder/app-builder-services'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
 import { readJson, uuidParam, withAppBuildErrors } from '@/lib/api/app-build-response'
+import { labsOnly } from '@/lib/labs'
 
 /** A12 chose the store or a book: the request is routed and a proposal carries the decision. */
 async function postRoute(request: Request, context: unknown) {
@@ -14,4 +15,4 @@ async function postRoute(request: Request, context: unknown) {
   return NextResponse.json({ data: { proposal_id: proposalId } })
 }
 
-export const POST = withAppBuildErrors(postRoute)
+export const POST = withAppBuildErrors(labsOnly(postRoute))

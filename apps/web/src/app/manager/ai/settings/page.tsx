@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { AgentSettingsPanel } from '@/components/features/agent/AgentSettingsPanel'
 import { AutopilotSection } from '@/components/features/agent/AutopilotSection'
+import { isLabsEnabled } from '@/lib/labs'
 import { REAUTH_MAX_AGE_SECONDS } from '@/domain/agent/autopilot'
 
 export default async function ManagerAiSettingsPage() {
@@ -18,7 +19,7 @@ export default async function ManagerAiSettingsPage() {
   return (
     <>
       <AgentSettingsPanel role="manager" />
-      <AutopilotSection role="manager" reauthNeeded={reauthNeeded} />
+      {isLabsEnabled() && <AutopilotSection role="manager" reauthNeeded={reauthNeeded} />}
     </>
   )
 }

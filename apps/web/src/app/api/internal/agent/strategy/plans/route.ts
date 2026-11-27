@@ -11,6 +11,7 @@ import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaPropos
 import { PrismaStrategyPlanRepository } from '@/infrastructure/db/agent/PrismaStrategyPlanRepository'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { labsOnly } from '@/lib/labs'
 
 /** A11 posts a season draft and its proposal (contract C3). Answers sit under `data`, as the other internal routes do. */
 async function postInternalStrategyPlan(request: Request) {
@@ -29,4 +30,4 @@ async function postInternalStrategyPlan(request: Request) {
   return NextResponse.json({ data: { id: result.id, proposal_id: result.proposalId } }, { status: 201 })
 }
 
-export const POST = withErrorHandler(postInternalStrategyPlan)
+export const POST = withErrorHandler(labsOnly(postInternalStrategyPlan))

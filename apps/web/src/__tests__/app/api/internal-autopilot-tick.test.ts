@@ -13,6 +13,16 @@ jest.mock('@/application/telegram/telegram-services', () => ({
   autopilotTickUseCase: jest.fn(() => ({ execute: executeMock })),
 }))
 
+// The frozen feature under test runs only with the labs switch on (ADR 0005).
+const previousLabs = process.env.DXOS_LABS
+beforeEach(() => {
+  process.env.DXOS_LABS = '1'
+})
+afterEach(() => {
+  if (previousLabs === undefined) delete process.env.DXOS_LABS
+  else process.env.DXOS_LABS = previousLabs
+})
+
 describe('POST /api/internal/agent/autopilot/tick', () => {
   beforeEach(() => {
     jest.clearAllMocks()

@@ -9,6 +9,7 @@ import { ValidationError } from '@/domain/errors'
 import { PrismaStrategyPlanRepository } from '@/infrastructure/db/agent/PrismaStrategyPlanRepository'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { labsOnly } from '@/lib/labs'
 
 /** The figures A11 reads before it drafts a season (contract C3). */
 async function getInternalStrategyInputs(request: Request) {
@@ -22,4 +23,4 @@ async function getInternalStrategyInputs(request: Request) {
   return NextResponse.json({ data: inputs })
 }
 
-export const GET = withErrorHandler(getInternalStrategyInputs)
+export const GET = withErrorHandler(labsOnly(getInternalStrategyInputs))

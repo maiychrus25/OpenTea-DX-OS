@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { AppBuildError, BUILD_FILE_NAMES, type BuildFileName } from '@/domain/appbuilder/app-build'
 import { PrismaAppBuildRepository } from '@/infrastructure/db/appbuilder/PrismaAppBuildRepository'
 import { requireManagerSession, uuidParam, withAppBuildErrors } from '@/lib/api/app-build-response'
+import { labsOnly } from '@/lib/labs'
 
 /** A screenshot, the review or the spec of the request's latest build, for the manager of its cooperative. */
 async function getBuildFile(_request: Request, context: unknown) {
@@ -22,4 +23,4 @@ async function getBuildFile(_request: Request, context: unknown) {
   })
 }
 
-export const GET = withAppBuildErrors(getBuildFile)
+export const GET = withAppBuildErrors(labsOnly(getBuildFile))

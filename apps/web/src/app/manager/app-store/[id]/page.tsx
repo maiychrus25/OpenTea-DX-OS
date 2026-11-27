@@ -7,6 +7,7 @@ import { AppStoreUseCase } from '@/application/apps/app-store.usecase'
 import { AppStoreError } from '@/domain/entities/app-store'
 import { PrismaAppStoreRepository } from '@/infrastructure/db/repositories/prisma-app-store-repository'
 import { requireTenant } from '@/lib/api/tenant'
+import { isLabsEnabled } from '@/lib/labs'
 import { AppStoreDetail } from '../_components/AppStoreDetail'
 
 export const metadata = { title: 'Chi tiết ứng dụng' }
@@ -25,7 +26,7 @@ export default async function ManagerAppStoreDetailPage({ params }: { params: { 
   const repository = new PrismaAppStoreRepository()
   try {
     const [initial, workerAlive] = await Promise.all([new AppStoreUseCase(repository).detail(tenant.htxCode, params.id), repository.workerAlive()])
-    return <AppStoreDetail initial={initial} workerAlive={workerAlive} />
+    return <AppStoreDetail initial={initial} workerAlive={workerAlive} labs={isLabsEnabled()} />
   } catch (error) {
     if (error instanceof AppStoreError && error.code === 'APP_NOT_FOUND') notFound()
     throw error
