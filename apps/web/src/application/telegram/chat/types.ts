@@ -60,7 +60,29 @@ export interface ChatTool {
   run(user: ChatUser, args: Record<string, unknown>, now: Date): Promise<ChatReply>
 }
 
-export const ACTION_NAMES = ['journal.create', 'disease.report', 'journal.batch_approve', 'harvest.approve'] as const
+export const ACTION_NAMES = [
+  'journal.create',
+  'disease.report',
+  'journal.batch_approve',
+  'harvest.approve',
+  'journal.edit',
+  'journal.delete',
+  'disease.review',
+  'round.start',
+  'harvest.schedule',
+  'lot.create',
+  'lot.export_qr',
+  'notification.announce',
+  'notification.read',
+  'notification.clear',
+  'member.invite',
+  'member.approve',
+  'member.remove',
+  'profile.edit',
+  'household.add',
+  'household.edit',
+  'parcel.delete',
+] as const
 export type ActionName = (typeof ACTION_NAMES)[number]
 
 export interface Choice {

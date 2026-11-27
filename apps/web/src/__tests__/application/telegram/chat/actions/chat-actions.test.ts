@@ -50,6 +50,17 @@ jest.mock('@/application/journal/BatchApproveJournalUseCase', () => ({
   BatchApproveJournalUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.batchApprove(...args) })),
 }))
 jest.mock('@/infrastructure/storage/minio-document.adapter', () => ({ MinioDocumentAdapter: jest.fn() }))
+// The read paths of the actions of issue #80 reach these; each answers an empty list.
+jest.mock('@/infrastructure/db/prisma.client', () => ({
+  prisma: new Proxy({}, { get: () => ({ findMany: async () => [], findFirst: async () => null }) }),
+}))
+jest.mock('@/infrastructure/db/auth/keycloak-admin.adapter', () => ({
+  KeycloakAdminAdapter: jest.fn(() => ({ listUsersByRole: async () => [] })),
+}))
+jest.mock('@/infrastructure/db/notification/prisma-notification-repository', () => ({
+  PrismaNotificationRepository: jest.fn(() => ({ getRecentByUserId: async () => [] })),
+}))
+jest.mock('@/infrastructure/db/lot/PrismaLotRepository', () => ({ PrismaLotRepository: jest.fn(() => ({ findAll: async () => [] })) }))
 jest.mock('@/application/farm/approve-harvest-usecase', () => ({
   ApproveHarvestUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.approveHarvest(...args) })),
 }))
@@ -99,8 +110,8 @@ beforeEach(() => {
 })
 
 describe('CHAT_ACTIONS (contract C6)', () => {
-  it('lists the four actions in contract order with the roles of their routes', () => {
-    expect(CHAT_ACTIONS.map((a) => [a.name, [...a.roles]])).toEqual([
+  it('lists the actions of contract C6 first, in order with the roles of their routes', () => {
+    expect(CHAT_ACTIONS.slice(0, 3).map((a) => [a.name, [...a.roles]])).toEqual([
       ['journal.create', ['farmer', 'officer']],
       ['journal.batch_approve', ['officer', 'manager']],
       ['harvest.approve', ['officer', 'manager']],
