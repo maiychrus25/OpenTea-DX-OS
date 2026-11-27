@@ -52,9 +52,9 @@ function Tile({ icon, label, value, note }: { icon: React.ReactNode; label: stri
   )
 }
 
-export function WeatherSection({ collapsed = false }: { collapsed?: boolean } = {}) {
+export function WeatherSection() {
   const [places, setPlaces] = useState<Place[]>([])
-  const [open, setOpen] = useState<number | null>(collapsed ? null : 0) // the first area starts expanded unless asked not to
+  const [open, setOpen] = useState<number | null>(0) // the first area starts expanded
   const [area, setArea] = useState('')
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
 

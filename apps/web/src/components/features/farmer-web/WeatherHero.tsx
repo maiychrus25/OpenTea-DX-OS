@@ -120,7 +120,7 @@ export function WeatherHero({ eyebrow, title, subtitle, actions, place, cached }
               <span>Không nên phun thuốc hôm nay: thuốc dễ bị rửa trôi do mưa.</span>
             </>
           )}
-          <Link href="/farmer/bulletin#du-bao" className={styles.forecast}>
+          <Link href="/farmer/bulletin-notifications" className={styles.forecast}>
             Xem dự báo <ArrowRight size={15} aria-hidden="true" />
           </Link>
         </div>

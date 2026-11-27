@@ -7,7 +7,6 @@ import { prisma } from '@/infrastructure/db/prisma.client';
 import { PrismaBulletinRepository } from '@/infrastructure/db/repositories/PrismaBulletinRepository';
 import { GetLatestBulletinUseCase } from '@/application/useCases/GetLatestBulletinUseCase';
 import { BulletinView } from '@/components/features/bulletin/BulletinView';
-import { WeatherSection } from '@/components/features/bulletin/WeatherSection';
 import { SampleTag } from '@/components/features/sample/SampleTag';
 import kit from '@/components/features/farmer-web/kit.module.css';
 import { toEnglishCommodity } from '@/lib/translations';
@@ -45,10 +44,6 @@ export default async function FarmerBulletinPage({
       <Newsroom />
 
       {bulletin && <BulletinView bulletin={bulletin} />}
-
-      <div id="du-bao">
-        <WeatherSection collapsed />
-      </div>
     </div>
   );
 }
