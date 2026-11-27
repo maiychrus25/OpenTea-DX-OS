@@ -18,6 +18,7 @@ export const ACTIVITY_TYPES = [
   { value: 'IRRIGATION', label: 'Tưới tiêu' },
   { value: 'HARVEST', label: 'Thu hoạch' },
   { value: 'SOWING', label: 'Trồng mới' },
+  { value: 'PRUNING', label: 'Đốn chè' },
   { value: 'OTHER', label: 'Khác' },
 ]
 

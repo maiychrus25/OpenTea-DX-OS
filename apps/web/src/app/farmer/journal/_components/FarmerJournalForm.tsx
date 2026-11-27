@@ -3,12 +3,16 @@
 
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import styles from '../journal.module.css'
 import kit from '@/components/features/farmer-web/kit.module.css'
-import { ImageIcon, Send, TriangleAlert } from 'lucide-react'
+import { ImageIcon, Send } from 'lucide-react'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import { ACTIVITY_TYPES, type JournalPrefill } from './journal-prefill'
+import { PesticidePicker, isBelowFloor, type PesticideChange } from '@/components/features/pesticide/PesticidePicker'
+import { CUSTOM_PRODUCT_FLOOR_DAYS } from '@/lib/pesticide/catalogue'
+import { uploadJournalPhoto, useJournalOfflineQueue, type JournalPayload } from '@/lib/hooks/useJournalOfflineQueue'
+import { freshLeafError, freshLeafKg, hasProductFields } from '@/lib/journal/activity-fields'
 
 interface Parcel {
   id: string
@@ -16,24 +20,56 @@ interface Parcel {
   crop_type: string
 }
 
+/** An entry of GET /api/journal, as far as the form edits it. */
+export interface EditableEntry {
+  id: string
+  parcel_id?: string
+  entry_date: string
+  status: string
+  activity_type: string
+  notes: string | null
+  activities: { product_name?: string | null; dosage?: string | null; performer?: string | null; withdrawal_days?: number | null; pesticide_product_id?: string | null; fresh_leaf_kg?: number | null }[]
+}
+
 interface FarmerJournalFormProps {
+  /** Edit and resubmit a returned entry, or confirm a prescribed DRAFT ("Đã phun"). */
+  entry?: EditableEntry
   onSuccess: () => void
   onCancel: () => void
   /** Values from the chat card's Sửa button; anything invalid is dropped. */
   initial?: JournalPrefill
 }
 
-export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJournalFormProps) {
+export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, entry }: FarmerJournalFormProps) {
+  const first = entry?.activities[0]
+  const initial: JournalPrefill | undefined = entry ? {
+    parcelId: entry.parcel_id,
+    activityType: entry.activity_type,
+    productName: first?.product_name ?? undefined,
+    dosage: first?.dosage ?? undefined,
+    withdrawalDays: first?.withdrawal_days ?? undefined,
+  } : chatPrefill
+  const confirming = entry?.status === 'DRAFT'
+  const queue = useJournalOfflineQueue()
+  const clientIdRef = useRef<string>()
   const [parcels, setParcels] = useState<Parcel[]>([])
-  const [parcelId, setParcelId] = useState('')
-  const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10))
+  const [parcelId, setParcelId] = useState(entry?.parcel_id ?? '')
+  const [entryDate, setEntryDate] = useState(entry && !confirming ? entry.entry_date.slice(0, 10) : new Date().toISOString().slice(0, 10))
   const [activityType, setActivityType] = useState(initial?.activityType ?? 'OTHER')
   const [productName, setProductName] = useState(initial?.productName ?? '')
-  const [hasChemicals, setHasChemicals] = useState(true)
+  const [hasChemicals, setHasChemicals] = useState(!entry || !!first?.product_name || first?.withdrawal_days != null)
   const [dosage, setDosage] = useState(initial?.dosage ?? '')
-  const [performer, setPerformer] = useState('')
-  const [withdrawalDays, setWithdrawalDays] = useState(initial?.withdrawalDays ?? 14)
-  const [observation, setObservation] = useState('')
+  const [performer, setPerformer] = useState(first?.performer ?? '')
+  const [pesticide, setPesticide] = useState<PesticideChange>({
+    productId: first?.pesticide_product_id ?? null,
+    customName: initial?.activityType === 'SPRAYING' ? (initial.productName ?? '') : '',
+    days: initial?.withdrawalDays ?? null,
+    // A catalogue product's floor is unknown until the picker loads it; the server checks it anyway.
+    floorDays: first?.pesticide_product_id ? 0 : CUSTOM_PRODUCT_FLOOR_DAYS,
+  })
+  const [freshLeaf, setFreshLeaf] = useState(first?.fresh_leaf_kg != null ? String(first.fresh_leaf_kg) : '')
+  const [attempted, setAttempted] = useState(false)
+  const [observation, setObservation] = useState(entry?.notes ?? '')
   const [photo, setPhoto] = useState<File | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -49,70 +85,70 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
       .catch(() => { setParcels([]); setError(LOAD_FAILED_MESSAGE) })
   }, [initial?.parcelId])
 
+  const spraying = activityType === 'SPRAYING'
+  const fertilizing = activityType === 'FERTILIZING'
+  const harvest = activityType === 'HARVEST'
+  const chemicals = hasProductFields(activityType) && hasChemicals
+  const sprayingWithProduct = chemicals && spraying
+  const dosageShown = sprayingWithProduct || (chemicals && fertilizing)
+  const belowFloor = sprayingWithProduct && isBelowFloor(pesticide)
+  const leafError = harvest && attempted ? freshLeafError(freshLeaf, true) : null
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setAttempted(true)
+    if (harvest && freshLeafError(freshLeaf, true)) return
     setSubmitting(true)
     setError('')
 
-    const body = {
-      parcel_id: parcelId,
+    const body: Record<string, unknown> = {
+      ...(entry ? { submit: true } : { parcel_id: parcelId, client_id: (clientIdRef.current ??= crypto.randomUUID()) }),
       entry_date: entryDate,
       observation,
       activities: [{
         activity_type: activityType,
-        product_name: hasChemicals ? (productName || undefined) : undefined,
-        dosage: (hasChemicals && activityType === 'SPRAYING') ? dosage : undefined,
-        performer: (hasChemicals && activityType === 'SPRAYING') ? performer : undefined,
-        withdrawal_days: (hasChemicals && activityType === 'SPRAYING') ? withdrawalDays : undefined,
+        product_name: !chemicals ? undefined
+          : spraying ? (pesticide.productName || pesticide.customName || undefined) : (productName || undefined),
+        pesticide_product_id: sprayingWithProduct ? (pesticide.productId ?? undefined) : undefined,
+        dosage: dosageShown ? dosage : undefined,
+        performer: sprayingWithProduct ? performer : undefined,
+        withdrawal_days: sprayingWithProduct ? (pesticide.days ?? undefined) : undefined,
+        fresh_leaf_kg: harvest ? freshLeafKg(freshLeaf) : undefined,
       }],
     }
 
     try {
-      let photo_url: string | undefined
-      let photo_minio_key: string | undefined
+      // Offline: keep the entry (and the photo) on the device; the queue sends it once when the network is back.
+      if (!entry && !navigator.onLine) {
+        await queue.enqueue(body as unknown as JournalPayload, photo ?? undefined)
+        onSuccess()
+        return
+      }
 
       if (photo) {
         setUploadingPhoto(true)
-        const ext = photo.name.split('.').pop() || 'jpg'
-        const filename = `journal-${Date.now()}.${ext}`
-        
-        // Get presigned URL
-        const presignRes = await fetch('/api/journal/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename, contentType: photo.type })
-        })
-        if (!presignRes.ok) throw new Error('Không thể lấy đường dẫn tải ảnh')
-        const { data: { uploadUrl, key } } = await presignRes.json()
-
-        // Upload directly to MinIO
-        const uploadRes = await fetch(uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': photo.type },
-          body: photo
-        })
-        if (!uploadRes.ok) throw new Error('Lỗi tải ảnh lên hệ thống')
-
-        photo_minio_key = key
-        // Need the final URL (without presign params) for simple storage if needed, but minio_key is primary.
-        // Actually the backend will generate public URL. We just pass minio_key.
-        photo_url = key // Temporary, backend should construct real URL or use presigned later
+        const key = await uploadJournalPhoto(photo)
+        // The backend builds the public URL from the key; the key stands in until then.
+        Object.assign(body, { photo_url: key, photo_minio_key: key })
       }
 
-      // Add photo to body
-      Object.assign(body, { photo_url, photo_minio_key })
-
-      const res = await fetch('/api/journal', {
-        method: 'POST',
+      const res = await fetch(entry ? `/api/journal/${entry.id}` : '/api/journal', {
+        method: entry ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error?.message || 'Lỗi ghi nhật ký')
+        throw new Error(err?.error?.message || (entry ? 'Không thể gửi lại nhật ký' : 'Lỗi ghi nhật ký'))
       }
       onSuccess()
     } catch (err: unknown) {
+      // A dropped connection (fetch rejects with TypeError) is queued, not shown as an error. Same client_id on any retry.
+      if (!entry && err instanceof TypeError) {
+        await queue.enqueue(body as unknown as JournalPayload, photo ?? undefined)
+        onSuccess()
+        return
+      }
       setError(err instanceof Error ? err.message : 'Lỗi không xác định')
     } finally {
       setSubmitting(false)
@@ -130,7 +166,7 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
 
       <div className={`${styles.two} ${kit.two}`}>
         {field('Thửa đất', (
-          <select className={`${kit.inp} ${styles.tall}`} value={parcelId} onChange={e => setParcelId(e.target.value)} disabled={parcels.length === 0}>
+          <select className={`${kit.inp} ${styles.tall}`} value={parcelId} onChange={e => setParcelId(e.target.value)} disabled={parcels.length === 0 || !!entry}>
             {parcels.length === 0 && <option value="">Chưa có thửa đất được phân công</option>}
             {parcels.map(p => (
               <option key={p.id} value={p.id}>{p.parcel_code} — {p.crop_type}</option>
@@ -149,29 +185,28 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
         </div>
       </div>
 
-      <label className={styles.check}>
-        <input type="checkbox" checked={!hasChemicals} onChange={e => setHasChemicals(!e.target.checked)} />
-        Không sử dụng thuốc / phân bón trong lần ghi này
-      </label>
+      {hasProductFields(activityType) && (
+        <label className={styles.check}>
+          <input type="checkbox" checked={!hasChemicals} onChange={e => setHasChemicals(!e.target.checked)} />
+          Không sử dụng thuốc / phân bón trong lần ghi này
+        </label>
+      )}
 
-      {hasChemicals && (
+      {chemicals && !spraying && field('Sản phẩm sử dụng', <input className={`${kit.inp} ${styles.tall}`} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />)}
+      {chemicals && fertilizing && field('Liều lượng', <input className={`${kit.inp} ${styles.tall}`} value={dosage} onChange={e => setDosage(e.target.value)} />)}
+      {harvest && (
         <>
-          {field('Sản phẩm sử dụng', <input className={`${kit.inp} ${styles.tall}`} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />)}
-          {activityType === 'SPRAYING' && (
-            <>
-              <div className={`${styles.three} ${kit.three}`}>
-                {field('Liều lượng', <input className={`${kit.inp} ${styles.tall}`} value={dosage} onChange={e => setDosage(e.target.value)} placeholder="VD: 50ml/bình 16L" />)}
-                {field('Người thực hiện', <input className={`${kit.inp} ${styles.tall}`} value={performer} onChange={e => setPerformer(e.target.value)} placeholder="VD: Nguyễn Văn A" />)}
-                {field('Thời gian cách ly (ngày)', <input className={`${kit.inp} ${styles.tall}`} type="number" value={withdrawalDays} onChange={e => setWithdrawalDays(Number(e.target.value))} />)}
-              </div>
-              {withdrawalDays < 14 && (
-                <div className={kit.warn} role="alert">
-                  <TriangleAlert size={20} aria-hidden="true" />
-                  <span><strong>Cảnh báo vi phạm:</strong> thời gian cách ly tiêu chuẩn là từ 14 ngày. Hãy đảm bảo an toàn!</span>
-                </div>
-              )}
-            </>
-          )}
+          {field('Sản lượng búp tươi (kg)', <input className={`${kit.inp} ${styles.tall}`} type="number" inputMode="decimal" step="any" value={freshLeaf} aria-invalid={!!leafError} onChange={e => setFreshLeaf(e.target.value)} />)}
+          {leafError && <p className={styles.errorText} role="alert">{leafError}</p>}
+        </>
+      )}
+      {sprayingWithProduct && (
+        <>
+          <PesticidePicker value={pesticide} onChange={setPesticide} />
+          <div className={`${styles.two} ${kit.two}`}>
+            {field('Liều lượng', <input className={`${kit.inp} ${styles.tall}`} value={dosage} onChange={e => setDosage(e.target.value)} placeholder="VD: 50ml/bình 16L" />)}
+            {field('Người thực hiện', <input className={`${kit.inp} ${styles.tall}`} value={performer} onChange={e => setPerformer(e.target.value)} placeholder="VD: Nguyễn Văn A" />)}
+          </div>
         </>
       )}
 
@@ -188,9 +223,9 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
 
       <div className={styles.entryActions}>
         <button type="button" className={`${kit.btn2} ${styles.tall}`} onClick={onCancel}>Hủy</button>
-        <button type="submit" className={`${kit.btn} ${styles.tall}`} disabled={submitting || uploadingPhoto || !parcelId}>
+        <button type="submit" className={`${kit.btn} ${styles.tall}`} disabled={submitting || uploadingPhoto || !parcelId || belowFloor}>
           <Send size={16} aria-hidden="true" />
-          {submitting || uploadingPhoto ? 'Đang gửi...' : 'Gửi chờ duyệt'}
+          {submitting || uploadingPhoto ? 'Đang gửi...' : confirming ? 'Đã phun' : entry ? 'Gửi lại' : 'Gửi chờ duyệt'}
         </button>
       </div>
     </form>

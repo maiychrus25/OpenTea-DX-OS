@@ -11,7 +11,10 @@ import farmer from '@/components/features/farmer-web/kit.module.css'
 import styles from './HarvestCalendar.module.css'
 import { Button } from '@/components/ui/Button/Button'
 import type { HarvestEvent } from '@/domain/farm/entities/HarvestEvent'
+import { ApproveHarvestButton } from './ApproveHarvestButton'
 import { addDays, dayStart, spansOf, weekBars, weeksOf, type SpanKind } from './calendar-model'
+
+type ScheduleEvent = HarvestEvent & { parcelStatus?: string; canApprove?: boolean }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -23,7 +26,7 @@ const KIND: Record<SpanKind, { label: string; icon: typeof Leaf }> = {
 }
 
 const ACTIVITY: Record<string, string> = {
-  SOWING: 'Gieo trồng', FERTILIZING: 'Bón phân', SPRAYING: 'Phun thuốc BVTV', IRRIGATION: 'Tưới tiêu', HARVEST: 'Thu hoạch', OTHER: 'Khác',
+  SOWING: 'Gieo trồng', FERTILIZING: 'Bón phân', SPRAYING: 'Phun thuốc BVTV', IRRIGATION: 'Tưới tiêu', HARVEST: 'Thu hoạch', PRUNING: 'Đốn chè', OTHER: 'Khác',
 }
 
 const fullDay = (value: number | string) => new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -45,7 +48,7 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
   const from = new Date(addDays(weeks[0][0], -31)).toISOString()
   const to = new Date(addDays(weeks[weeks.length - 1][6], 32) - 1).toISOString()
 
-  const { data, mutate } = useSWR<{ data: HarvestEvent[] }>(`/api/schedule/harvest?start_date=${from}&end_date=${to}`, fetcher)
+  const { data, mutate } = useSWR<{ data: ScheduleEvent[] }>(`/api/schedule/harvest?start_date=${from}&end_date=${to}`, fetcher)
   const { data: unscheduledData, mutate: mutateUnscheduled } = useSWR<{ data: HarvestEvent[] }>(isManager ? '/api/schedule/unscheduled' : null, fetcher)
 
   const events = data?.data ?? []
@@ -247,6 +250,11 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
                 {selected.event.safeHarvestDate && <div><dt>Ngày được hái</dt><dd>{fullDay(selected.event.safeHarvestDate)}</dd></div>}
               </dl>
               {isManager && !selected.event.harvestedAt && <Button variant="secondary" onClick={() => edit(selected.event)}>Đổi ngày</Button>}
+              {userRole !== 'FARMER' && (selected.event as ScheduleEvent).parcelStatus === 'TENDING' && !selected.event.harvestedAt && (
+                <ApproveHarvestButton parcelId={selected.event.parcelId} parcelCode={selected.event.parcelName ?? ''}
+                  canApprove={!!(selected.event as ScheduleEvent).canApprove} safeHarvestDate={selected.event.safeHarvestDate}
+                  onDone={() => { mutate(); mutateUnscheduled() }} />
+              )}
             </>
           )}
           {isManager && <Button variant="secondary" onClick={addOnSelectedDay}>+ Thêm lứa hái cho ngày này</Button>}

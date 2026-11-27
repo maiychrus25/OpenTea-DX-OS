@@ -10,11 +10,12 @@ import { Button } from '@/components/ui/Button';
 import styles from './detail.module.css';
 import { ReportPhoto } from '@/components/features/disease/ReportPhoto';
 import { diseaseStatusLabel } from '@/domain/disease/disease-status-label';
+import { PesticidePicker, type PesticideChange } from '@/components/features/pesticide/PesticidePicker';
+import { fetchJson } from '@/lib/api/fetch-json';
+import { UNCERTAIN_DISEASE_NAME } from '@/domain/disease/display-disease-name';
 
 // Only pending reports can be opened for review.
 const PENDING = diseaseStatusLabel('PENDING');
-import { fetchJson } from '@/lib/api/fetch-json';
-import { UNCERTAIN_DISEASE_NAME } from '@/domain/disease/display-disease-name';
 
 const DIAGNOSIS_REQUIRED_MESSAGE = 'Vui lòng nhập tên bệnh đã xác nhận trước khi duyệt.';
 
@@ -37,6 +38,9 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [prescribing, setPrescribing] = useState(false);
+  const [product, setProduct] = useState<PesticideChange>({ productId: null, customName: '', days: null, floorDays: 0 });
+  const [dosage, setDosage] = useState('');
 
   useEffect(() => {
     // In a real implementation, we'd fetch the specific report.
@@ -81,7 +85,10 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
         body: JSON.stringify({
           status,
           treatment_recommendation: treatment,
-          confirmed_diagnosis: confirmedName.trim()
+          confirmed_diagnosis: confirmedName.trim(),
+          ...(status === 'CONFIRMED' && prescribing && product.productId
+            ? { prescription: { pesticide_product_id: product.productId, ...(dosage.trim() ? { dosage: dosage.trim() } : {}) } }
+            : {}),
         })
       });
 
@@ -179,6 +186,18 @@ export default function OfficerDiseaseDetailPage({ params }: { params: { id: str
               onChange={(e) => setTreatment(e.target.value)}
               disabled={submitting}
             />
+          </div>
+
+          <div className={styles.formGroup}>
+            <Button variant="secondary" aria-expanded={prescribing} onClick={() => setPrescribing(v => !v)}>Kê đơn (tuỳ chọn)</Button>
+            {prescribing && (
+              <>
+                <PesticidePicker prescribing value={product} onChange={setProduct}
+                  target={report && report.ai_disease_name !== UNCERTAIN_DISEASE_NAME ? report.ai_disease_name : undefined} />
+                <label className={styles.label} htmlFor="prescription-dosage">Liều dùng</label>
+                <input id="prescription-dosage" className={styles.input} maxLength={100} value={dosage} onChange={e => setDosage(e.target.value)} disabled={submitting} />
+              </>
+            )}
           </div>
 
           <div className={styles.actions}>
