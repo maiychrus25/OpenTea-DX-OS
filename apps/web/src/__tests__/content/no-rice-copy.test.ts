@@ -14,8 +14,6 @@ const RICE_WORDS = new RegExp('lúa|gạo|ST25|Hè Thu|Đông Xuân|đạo ôn|x
 // (Comtrade HS 1006) and Wheat, and must keep their Vietnamese names.
 const ALLOWED: Record<string, string> = {
   "src/lib/translations.ts: 'Gạo': 'Rice',": 'Comtrade Rice rows: bulletin title and commodity tab name',
-  "src/app/manager/dashboard/page.tsx: 'Rice':                     'Lúa gạo',": 'Comtrade Rice rows on the dashboard price list',
-  "src/app/manager/dashboard/page.tsx: 'Wheat':                    'Lúa mì',": 'wheat, not rice: "lúa mì" is its Vietnamese name',
 }
 
 function isTestFile(relPath: string): boolean {
