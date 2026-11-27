@@ -123,8 +123,9 @@ test('một ngày của lô chè A3', async ({ browser }) => {
     const a3 = parcels.data.find((p: { parcel_code: string }) => p.parcel_code === 'TC-A3')
     expect(a3).toBeTruthy()
     const approval = await officer.request.post(`/api/parcels/${a3.id}/approve-harvest`)
-    expect(approval.status()).toBe(400)
-    expect((await approval.json()).error).toMatch(/^Chưa qua thời gian cách ly\. An toàn thu hoạch từ ngày /)
+    // The route answers with the shared error envelope: 422 DOMAIN_ERROR and the message for the officer.
+    expect(approval.status()).toBe(422)
+    expect((await approval.json()).error.message).toMatch(/^Chưa qua thời gian cách ly\. An toàn thu hoạch từ ngày /)
 
     await officer.goto('/officer/lots')
     await officer.getByRole('button', { name: '+ Tạo lô mới' }).click()
