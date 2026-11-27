@@ -10,7 +10,6 @@ import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCas
 import { NotFoundError } from '@/domain/errors'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
-import { SIMULATED_MARKET_SOURCE } from '@/domain/market/simulated-price'
 
 import ManagerDashboard from '../page'
 
@@ -145,17 +144,15 @@ describe('ManagerDashboard', () => {
     ({ commodity, metric: `metric_${minute}`, value: 100 + minute, unit: 'tonnes', source, fetched_at: at(minute) })
   const shownCommodities = () => screen.getAllByText(/^(Chè|Lúa gạo|Cà phê)$/).map((el) => el.textContent)
 
-  it('labels only the simulated price as giá mô phỏng', async () => {
+  it('shows no "giá mô phỏng" label', async () => {
     ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
     serveMarket([
-      { commodity: 'Tea', metric: 'Giá chè búp khô', value: 200000, unit: 'VND/kg', source: SIMULATED_MARKET_SOURCE, fetched_at: at(1) },
       { commodity: 'Tea', metric: 'export_value_to_world', value: 250, unit: 'million_USD', source: 'COMTRADE', fetched_at: at(2) },
     ])
 
     render(await ManagerDashboard())
 
-    expect(screen.getAllByText('Chè')).toHaveLength(2)
-    expect(screen.getAllByText('giá mô phỏng')).toHaveLength(1)
+    expect(screen.queryByText(/giá mô phỏng|Nguồn mô phỏng/)).not.toBeInTheDocument()
   })
 
   it('shows tea prices even when rice rows are newer', async () => {
@@ -176,25 +173,14 @@ describe('ManagerDashboard', () => {
     expect(shownCommodities()).toEqual(['Chè', 'Cà phê', 'Lúa gạo'])
   })
 
-  it('counts distinct real sources, not price rows, and never calls a simulated price verified', async () => {
+  it('counts distinct sources, not price rows', async () => {
     ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
-    serveMarket([row('Tea', 1), row('Tea', 2), row('Tea', 3, SIMULATED_MARKET_SOURCE)])
+    serveMarket([row('Tea', 1), row('Tea', 2), row('Tea', 3)])
 
     render(await ManagerDashboard())
 
     expect(screen.getByText('1 nguồn đã kiểm chứng')).toBeInTheDocument()
     expect(screen.getByText('COMTRADE')).toBeInTheDocument()
-    expect(screen.getByText(`Nguồn mô phỏng: ${SIMULATED_MARKET_SOURCE}`)).toBeInTheDocument()
-  })
-
-  it('shows no verified-source box when every price is simulated', async () => {
-    ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
-    serveMarket([{ commodity: 'Tea', metric: 'Giá chè búp khô', value: 200000, unit: 'VND/kg', source: SIMULATED_MARKET_SOURCE, fetched_at: at(1) }])
-
-    render(await ManagerDashboard())
-
-    expect(screen.queryByText(/nguồn đã kiểm chứng/)).not.toBeInTheDocument()
-    expect(screen.getByText(`Nguồn mô phỏng: ${SIMULATED_MARKET_SOURCE}`)).toBeInTheDocument()
   })
 
   it('names no source when there is no market data', async () => {
@@ -203,6 +189,7 @@ describe('ManagerDashboard', () => {
 
     render(await ManagerDashboard())
 
+    expect(screen.getByText('Chưa có dữ liệu giá.')).toBeInTheDocument()
     expect(screen.queryByText(/nguồn đã kiểm chứng/)).not.toBeInTheDocument()
     expect(screen.queryByText(/USDA|WTO|Sở NN&PTNT/)).not.toBeInTheDocument()
   })

@@ -2,12 +2,10 @@
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
 // Demo data for the Tân Cương (TC) and La Bằng (LB) tea cooperatives. Re-runnable: it changes only TC and LB rows
-// (and the shared market, bulletin and partner rows below), and every date is relative to the run.
+// (and the shared partner rows below), and every date is relative to the run.
 // Names, phones and coordinates are made up; coordinates fall inside the two tea areas but are not real plots.
 import { PrismaClient, ParcelStatus, Prisma } from '@prisma/client'
 import QRCode from 'qrcode'
-// Same value as SIMULATED_MARKET_SOURCE in src/domain/market/simulated-price.ts (ts-node cannot import it here).
-const SIMULATED_MARKET_SOURCE = 'Mô phỏng (Toàn quốc)'
 
 const prisma = new PrismaClient()
 
@@ -352,60 +350,6 @@ async function seedCooperatives() {
 
 async function main() {
   await seedCooperatives()
-
-  // --- Market Data Baseline Seed ---------------------------------------------
-  const marketSeeds = [
-    {
-      // Made-up demo figures carry only the simulated source (labelled in the UI), never a real agency's name.
-      source: SIMULATED_MARKET_SOURCE,
-      commodity: 'Tea',
-      metric: 'Giá chè búp khô Thái Nguyên',
-      value: 200000,
-      unit: 'VND/kg',
-      period: '2026-11',
-    },
-  ]
-
-  for (const m of marketSeeds) {
-    await prisma.marketData.upsert({
-      where: {
-        source_commodity_metric_period: {
-          source: m.source,
-          commodity: m.commodity,
-          metric: m.metric,
-          period: m.period,
-        },
-      },
-      update: {
-        value: m.value,
-        unit: m.unit,
-        fetched_at: new Date(),
-      },
-      create: {
-        ...m,
-        fetched_at: new Date(),
-      },
-    })
-  }
-
-  // ─── Bulletin Baseline Seed ───────────────────────────────────────────
-  const existingBulletin = await prisma.bulletin.findFirst({
-    where: { commodity: 'Tea', is_latest: true },
-  })
-
-  if (!existingBulletin) {
-    await prisma.bulletin.create({
-      data: {
-        commodity: 'Tea',
-        bulletin_vi: 'Bản tin thị trường chè Thái Nguyên: Nhu cầu chè búp khô duy trì ổn định. Giá chè búp khô quanh mức 200.000 đ/kg (giá mô phỏng). HTX cần tuân thủ lịch thu hái và đảm bảo thời gian cách ly theo tiêu chuẩn VietGAP.',
-        sources_json: [
-          { source: SIMULATED_MARKET_SOURCE, metric: 'Giá chè búp khô Thái Nguyên', value: 200000, date: '2026-11-01' },
-        ],
-        model_used: 'gemini-1.5-pro',
-        is_latest: true,
-      },
-    })
-  }
 
   // ─── Partner Baseline Seed ───────────────────────────────────────────
   const existingPartner = await prisma.partner.findFirst({
