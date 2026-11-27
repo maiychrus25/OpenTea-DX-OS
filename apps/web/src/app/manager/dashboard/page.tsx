@@ -4,7 +4,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Sprout, Package, PackageCheck, AlertCircle, BarChart3 } from 'lucide-react'
+import { Sprout, TrendingUp, PackageCheck, Clock, BarChart3, Calendar, CheckSquare, QrCode, Newspaper, ChevronRight, Plus } from 'lucide-react'
 
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
@@ -12,10 +12,14 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { NotFoundError } from '@/domain/errors'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
-import { MetricCard, AiNote, SourceBox } from '@/components/ui'
+import { MetricCard, AiNote, SourceBox, HeroBanner, Panel, Pill, EmptyState } from '@/components/ui'
 import { isSimulatedPrice, SIMULATED_PRICE_LABEL } from '@/domain/market/simulated-price'
 
+import { NoticesAndWeather, RainAlert } from '@/components/features/dashboard/NoticesAndWeather'
+import { PendingJournals } from '@/components/features/dashboard/PendingJournals'
+import { SampleYieldChart } from '@/components/features/sample/SampleYieldChart'
 import styles from './Dashboard.module.css'
+import layout from '@/components/features/dashboard/dashboard.module.css'
 
 function getGreeting(): string {
   const now = new Date()
@@ -67,6 +71,23 @@ const METRIC_VN: Record<string, string> = {
   'producer_price_index':      'Chỉ số giá sản xuất',
   'consumer_price_index':      'Chỉ số giá tiêu dùng',
 }
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  SOWING: 'Gieo trồng',
+  FERTILIZING: 'Bón phân',
+  SPRAYING: 'Phun thuốc',
+  IRRIGATION: 'Tưới tiêu',
+  HARVEST: 'Thu hoạch',
+  OTHER: 'Khác',
+}
+
+const PARCEL_STATUSES = [
+  { status: 'TENDING', label: 'Đang chăm sóc', color: 'var(--color-status-tending)' },
+  { status: 'SOWING', label: 'Xuống giống', color: 'var(--color-status-sowing)' },
+  { status: 'HARVEST_APPROVED', label: 'Được thu hoạch', color: 'var(--color-status-harvest-approved)' },
+  { status: 'HARVESTED', label: 'Đã thu hoạch', color: 'var(--color-status-harvested)' },
+  { status: 'DRAFT', label: 'Bản nháp', color: 'var(--color-status-draft)' },
+]
 
 const PRICE_SELECT = { commodity: true, metric: true, value: true, unit: true, source: true, fetched_at: true } as const
 const PRICE_COUNT = 3
@@ -138,11 +159,15 @@ export default async function ManagerDashboard() {
 
   let hasProfile = false
   let profileId = ''
+  let htxName = ''
+  let seasonLabel = ''
   
   try {
     const profile = await useCase.execute(htxCode)
     hasProfile = true
     profileId = profile.id
+    htxName = profile.name ?? ''
+    seasonLabel = profile.season_label ?? ''
   } catch (error) {
     if (error instanceof NotFoundError) {
       hasProfile = false
@@ -155,8 +180,13 @@ export default async function ManagerDashboard() {
     totalHa: 0,
     expectedYield: 0,
     readyLots: 0,
-    pendingCount: 0
+    pendingJournals: 0,
+    draftLots: 0,
+    parcels: 0,
+    households: 0
   }
+  let statusCounts: { status: string; count: number }[] = []
+  let pending: { id: string; activity_type: string; entry_date: Date; activities?: { product_name: string | null }[]; parcel: { parcel_code: string; household: { name: string } } }[] = []
 
   let prices: { commodity: string; metric: string; value: number; unit: string; source: string; fetched_at: Date }[] = []
 
@@ -188,13 +218,39 @@ export default async function ManagerDashboard() {
       latestPrices()
     ])
 
+    const [grouped, households, entries] = await Promise.all([
+      prisma.parcel.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+        where: { household: { htx_profile_id: profileId } }
+      }),
+      prisma.household.count({ where: { htx_profile_id: profileId } }),
+      prisma.journalEntry.findMany({
+        where: { parcel: { household: { htx_profile_id: profileId } }, status: 'PENDING_APPROVAL' },
+        orderBy: { entry_date: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          activity_type: true,
+          entry_date: true,
+          activities: { select: { product_name: true }, take: 1 },
+          parcel: { select: { parcel_code: true, household: { select: { name: true } } } }
+        }
+      })
+    ])
+    statusCounts = grouped.map(g => ({ status: g.status, count: g._count._all }))
+    stats.parcels = statusCounts.reduce((sum, g) => sum + g.count, 0)
+    stats.households = households
+    pending = entries
+
     stats.totalHa = areaAgg._sum.area_ha || 0
 
     const yieldKg = activeParcels.reduce((sum, p) => sum + ((p.area_ha || 0) * (p.estimated_yield_per_ha || 0)), 0)
     stats.expectedYield = Math.round((yieldKg / 1000) * 10) / 10
 
     stats.readyLots = readyLots
-    stats.pendingCount = pendingJournals + draftLots
+    stats.pendingJournals = pendingJournals
+    stats.draftLots = draftLots
     prices = fetchedPrices
   }
 
@@ -204,50 +260,110 @@ export default async function ManagerDashboard() {
   const simulatedSources = uniqueSources.filter(source => isSimulatedPrice(source))
 
   return (
-    <main className={styles.container}>
+    <main className={hasProfile ? layout.page : styles.container}>
       {hasProfile ? (
         <>
-          <section className={styles.hero}>
-            <div className={styles.heroGreeting}>
-              <h1 className={styles.heading}>
-                {getGreeting()}, {session.user.name}
-              </h1>
-              <span className={styles.pillGreen}>Đang hoạt động</span>
-            </div>
-            <span className={styles.date}>{formatDate(new Date())}</span>
-          </section>
+          <HeroBanner
+            eyebrow={htxName || 'Trưởng HTX'}
+            title={`${getGreeting()}, ${session.user.name}`}
+            subtitle={[formatDate(new Date()), seasonLabel].filter(Boolean).join(' · ')}
+            status="Đang hoạt động"
+            actions={[{ href: '/manager/lots', label: 'Tạo lô hàng', icon: <Plus size={18} aria-hidden="true" /> }]}
+          />
 
-          {/* Metrics */}
-          <div className={styles.metricGrid}>
+          <RainAlert />
+
+          <div className={layout.metrics}>
             <MetricCard
               icon={<Sprout />}
-              label="Vùng canh tác"
+              label="Diện tích canh tác"
               value={`${stats.totalHa.toLocaleString('vi-VN')} ha`}
+              detail={`${stats.parcels.toLocaleString('vi-VN')} thửa · ${stats.households.toLocaleString('vi-VN')} nông hộ`}
               tone="green"
             />
             <MetricCard
-              icon={<Package />}
-              label="Sản lượng kỳ vọng"
+              icon={<TrendingUp />}
+              label="Sản lượng dự kiến"
               value={`${stats.expectedYield.toLocaleString('vi-VN')} tấn`}
               tone="blue"
             />
             <MetricCard
-              icon={<PackageCheck />}
-              label="Lô sẵn sàng"
-              value={stats.readyLots}
-              tone="green"
+              icon={<Clock />}
+              label="Nhật ký chờ duyệt"
+              value={stats.pendingJournals}
+              detail={`${stats.draftLots.toLocaleString('vi-VN')} lô nháp`}
+              tone="amber"
             />
             <MetricCard
-              icon={<AlertCircle />}
-              label="Cần xử lý"
-              value={stats.pendingCount}
-              tone="amber"
+              icon={<PackageCheck />}
+              label="Lô sẵn sàng"
+              value={`${stats.readyLots.toLocaleString('vi-VN')} lô`}
+              tone="green"
             />
           </div>
 
+          <nav className={layout.quickLinks} aria-label="Lối tắt">
+            {[
+              { href: '/manager/schedule', label: 'Lịch thu hái', icon: <Calendar size={20} /> },
+              { href: '/manager/journal-approve', label: 'Duyệt nhật ký', icon: <CheckSquare size={20} /> },
+              { href: '/manager/lots', label: 'In tem QR', icon: <QrCode size={20} /> },
+              { href: '/manager/bulletin', label: 'Gửi bản tin', icon: <Newspaper size={20} /> },
+            ].map(link => (
+              <Link key={link.label} href={link.href} className={layout.quickLink}>
+                {link.icon}
+                <span>{link.label}</span>
+                <ChevronRight size={18} aria-hidden="true" />
+              </Link>
+            ))}
+          </nav>
+
+          {/* No weekly harvest records yet, so the chart is labelled as an example. */}
+          <div className={layout.columns}>
+            <SampleYieldChart />
+
+            <Panel title="Tình trạng thửa đất" href="/manager/farm-zones" linkLabel="Bản đồ">
+              <div className={layout.tableWrap}>
+                <table className={layout.table}>
+                  <thead>
+                    <tr><th>Trạng thái</th><th>Số thửa</th><th>Tỷ lệ</th></tr>
+                  </thead>
+                  <tbody>
+                    {PARCEL_STATUSES.map(({ status, label, color }) => {
+                      const count = statusCounts.find(g => g.status === status)?.count ?? 0
+                      return (
+                        <tr key={status}>
+                          <td><Pill tone="muted"><span className={styles.statusDot} style={{ background: color }} />{label}</Pill></td>
+                          <td><strong>{count.toLocaleString('vi-VN')}</strong></td>
+                          <td><progress className={styles.share} max={stats.parcels || 1} value={count} style={{ '--share-color': color } as React.CSSProperties} aria-label={`Tỷ lệ ${label}`} /></td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          </div>
+
+          <Panel title="Nhật ký chờ duyệt" href="/manager/journal-approve">
+            {pending.length === 0 ? (
+              <EmptyState icon={<CheckSquare />} title="Không có nhật ký chờ duyệt" />
+            ) : (
+              <PendingJournals rows={pending.map(entry => ({
+                id: entry.id,
+                parcel: entry.parcel.parcel_code,
+                household: entry.parcel.household.name,
+                activity: ACTIVITY_LABELS[entry.activity_type] ?? entry.activity_type,
+                material: entry.activities?.[0]?.product_name || '—',
+                date: entry.entry_date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+              }))} />
+            )}
+          </Panel>
+
+          <NoticesAndWeather />
+
           {/* Market Snapshot */}
-          <section className={styles.marketSnapshot}>
-            <span className={styles.eyebrow}>CHỈ SỐ GIÁ NÔNG SẢN</span>
+          <Panel title="Chỉ số giá nông sản">
+          <div className={layout.body}>
 
             <div className={styles.pricesGrid}>
               {prices.length > 0 ? prices.map((price, idx) => {
@@ -303,7 +419,8 @@ export default async function ManagerDashboard() {
                 <p className={styles.simulatedSource}>{`Nguồn mô phỏng: ${simulatedSources.join(' · ')}`}</p>
               )}
             </div>
-          </section>
+          </div>
+          </Panel>
         </>
       ) : (
         <>

@@ -1,0 +1,27 @@
+/* SPDX-License-Identifier: MIT
+   SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.hero { position: relative; display: flex; align-items: center; min-height: 250px; border-radius: var(--radius-hero); background: var(--color-hero-bg); color: var(--color-hero-text); overflow: hidden; }
+.photo { position: absolute; top: 0; bottom: 0; right: 0; width: 68%; background: url('/images/tea-hills-sunrise.jpg') center / cover; }
+.photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--color-hero-bg) 0%, color-mix(in srgb, var(--color-hero-bg) 55%, transparent) 30%, transparent 70%); }
+.content { position: relative; padding: 36px 40px; }
+.eyebrow { display: flex; align-items: center; gap: 12px; margin: 0 0 8px; font-size: var(--font-size-meta); font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; }
+.eyebrow::before { content: ''; width: 4px; height: 22px; border-radius: 2px; background: var(--accent-lime); }
+.title { margin: 0; font-size: var(--font-size-hero-title); font-weight: 800; line-height: 1.15; color: var(--color-hero-text); }
+.subtitle { margin: 10px 0 0; font-size: 16px; color: var(--color-hero-muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.primary, .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--button-height); padding: 0 18px; border-radius: var(--radius-button); font-weight: 700; text-decoration: none; }
+.primary { background: var(--accent-lime); color: var(--color-hero-bg); }
+.secondary { border: 1px solid color-mix(in srgb, var(--color-hero-text) 35%, transparent); background: color-mix(in srgb, var(--color-hero-text) 12%, transparent); color: var(--color-hero-text); }
+
+@media (max-width: 767px) {
+  .hero { align-items: flex-end; min-height: 220px; }
+  .photo { width: 100%; }
+  .photo::after { background: linear-gradient(180deg, color-mix(in srgb, var(--color-hero-bg) 25%, transparent) 0%, var(--color-hero-bg) 100%); }
+  .content { width: 100%; padding: 56px 18px 18px; }
+  .title { font-size: 24px; }
+  .subtitle { font-size: 14px; }
+  .primary, .secondary { flex: 1 1 140px; padding: 0 10px; font-size: 14px; white-space: nowrap; }
+}
+
+.status { display: inline-flex; align-items: center; min-height: var(--button-height); padding: 0 16px; border-radius: var(--radius-pill); background: var(--color-primary-subtle); color: var(--color-primary); font-size: 14px; font-weight: 700; }

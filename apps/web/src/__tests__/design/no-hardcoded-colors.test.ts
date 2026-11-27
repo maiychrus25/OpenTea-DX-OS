@@ -12,27 +12,6 @@ const baseline: string[] = []
 // Colours that must stay fixed whatever the theme. `allow` maps each exact snippet permitted in that file to the
 // number of times it occurs, so an extra copy fails; any other colour in the file still fails. Keep this short.
 const exceptions: Record<string, { allow: Record<string, number>; reason: string }> = {
-  'src/components/features/map/ZoneMap.tsx': {
-    allow: { "color: '#00ff00'": 1, "fillColor: '#00ff00'": 1 },
-    reason: 'Parcel outlines are drawn on the satellite tiles, which look the same in both themes.',
-  },
-  'src/components/features/map/ZoneMap.module.css': {
-    allow: { 'color: gray': 2, 'background-color: #f0f0f0': 1 },
-    reason: 'These style the content of a Leaflet popup, which leaflet.css keeps white in both themes.',
-  },
-  'src/app/manager/farm-zones/_components/FarmZoneReadOnly.tsx': {
-    allow: {
-      "fillColor: '#16A34A', color: '#15803D'": 1,
-      "fillColor: '#059669', color: '#047857'": 1,
-      "fillColor: '#9CA3AF', color: '#6B7280'": 2,
-      "fillColor: '#EA580C', color: '#C2410C'": 1,
-      "fillColor: '#2563EB', color: '#1D4ED8'": 1,
-      'stroke="#059669"': 1,
-      'style="color:#64748b"': 4,
-    },
-    reason:
-      'Parcel fills and the tooltip icon sit on map tiles that look the same in both themes, and the popup text sits in a Leaflet popup that leaflet.css keeps white.',
-  },
   'src/app/officer/farm-zones/setup/_components/SetupMapClient.tsx': {
     allow: { "container.style.backgroundColor = 'white'": 1 },
     reason: "The locate button must match Leaflet's own controls, which leaflet.css keeps white in both themes.",
@@ -137,17 +116,18 @@ describe('no hard-coded colours', () => {
   })
 
   it('catches an extra or a missing copy of an allowed snippet', () => {
-    const file = 'src/components/features/map/ZoneMap.tsx'
-    const once = "color: '#00ff00' fillColor: '#00ff00'"
+    const file = 'src/app/officer/farm-zones/setup/_components/SetupMapClient.tsx'
+    const once = "container.style.backgroundColor = 'white'"
     expect(countMismatches(file, once)).toEqual([])
-    expect(countMismatches(file, once + " color: '#00ff00'")).toEqual(["color: '#00ff00': 2/1"])
-    expect(countMismatches(file, "fillColor: '#00ff00'")).toEqual(["color: '#00ff00': 0/1"])
+    expect(countMismatches(file, once + ' ' + once)).toEqual([once + ': 2/1'])
+    expect(countMismatches(file, '')).toEqual([once + ': 0/1'])
   })
 
   it('still flags other colours in an exception file', () => {
-    const file = 'src/components/features/map/ZoneMap.tsx'
-    expect(offends(file, withoutAllowed(file, "color: '#00ff00', fill: '#fff'"))).toBe(true)
-    expect(offends(file, withoutAllowed(file, "color: '#00ff00'"))).toBe(false)
+    const file = 'src/app/officer/farm-zones/setup/_components/SetupMapClient.tsx'
+    const once = "container.style.backgroundColor = 'white'"
+    expect(offends(file, withoutAllowed(file, once + "; const fill = '#fff'"))).toBe(true)
+    expect(offends(file, withoutAllowed(file, once))).toBe(false)
   })
 
   it.each([
@@ -202,7 +182,8 @@ const RUNTIME_VARIABLES: Record<string, string> = {
   '--font-be-vietnam': 'next/font sets it on <html> in app/layout.tsx',
   '--skeleton-width': 'Skeleton.tsx sets it inline from the width prop',
   '--skeleton-height': 'Skeleton.tsx sets it inline from the height prop',
-  '--bar-height': 'chat-interface.tsx sets it inline for each chart bar',
+  '--share-color': 'manager/dashboard/page.tsx sets it inline from each parcel status',
+  '--played': 'ReelsPage.tsx sets it inline from the playback position',
 }
 
 // Only :root and the dark blocks count: Tailwind emits an `@theme inline` name only when a utility needs it.

@@ -4,7 +4,8 @@
 import { HarvestEvent } from '../entities/HarvestEvent'
 
 export interface CropCyclePort {
-  getHarvestSchedule(htxProfileId: string, startDate: string, endDate: string): Promise<HarvestEvent[]>
+  /** With `farmerUserId`, only the cycles of that farmer's household. */
+  getHarvestSchedule(htxProfileId: string, startDate: string, endDate: string, farmerUserId?: string): Promise<HarvestEvent[]>
   updateEstimatedHarvestDate(cycleId: string, newDate: string): Promise<void>
   getUnscheduledActiveCycles(htxProfileId: string): Promise<HarvestEvent[]>
   /** Moves a HARVESTED parcel to TENDING and opens its next round, atomically; null when the parcel is not HARVESTED. */

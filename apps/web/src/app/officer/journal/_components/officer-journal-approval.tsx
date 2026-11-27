@@ -3,13 +3,16 @@
 
 'use client'
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import { CheckSquare, BookOpen, Clock } from 'lucide-react'
+import { Stats } from '@/components/features/officer-web/parts'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import styles from '../journal.module.css'
 import { JournalForm } from './JournalForm'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
-interface JournalEntry {
+export interface JournalEntry {
   id: string
   parcel_code?: string
   parcel_id?: string
@@ -53,9 +56,11 @@ function formatDetail(detail: string | null | undefined): string {
 
 interface OfficerJournalApprovalProps {
   householdId?: string
+  selectedEntry?: JournalEntry
+  createOnOpen?: boolean
 }
 
-export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalProps) {
+export function OfficerJournalApproval({ householdId, selectedEntry, createOnOpen = false }: OfficerJournalApprovalProps) {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [rejectEntryId, setRejectEntryId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
@@ -64,14 +69,27 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
   const [isLoading, setIsLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [only, setOnly] = useState<JournalEntry['status'] | null>(null)
+  const [total, setTotal] = useState(0)
+
+  // The dashboard links here with ?status=… to open on the entries it counted.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const status = params.get('status')
+    if (status === 'PENDING_APPROVAL' || status === 'APPROVED') setOnly(status)
+    if (createOnOpen) setIsCreating(true)
+    if (selectedEntry) setViewEntryId(selectedEntry.id)
+  }, [createOnOpen, selectedEntry])
 
   const load = useCallback(async () => {
     try {
+      // The API pages by 20; filtering needs the whole list, up to the most it will send.
       const url = householdId
-        ? `/api/journal?householdId=${householdId}`
-        : '/api/journal'
-      const data = await fetchJson<{ data?: JournalEntry[] }>(url)
+        ? `/api/journal?householdId=${householdId}&limit=1000`
+        : '/api/journal?limit=1000'
+      const data = await fetchJson<{ data?: JournalEntry[]; meta?: { total?: number } }>(url)
       setEntries(data.data || [])
+      setTotal(data.meta?.total ?? data.data?.length ?? 0)
       setLoadFailed(false)
     } catch {
       setLoadFailed(true)
@@ -128,19 +146,27 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
     }
   }
 
+  const shown = only ? entries.filter(e => e.status === only) : entries
   const hasWarning = entries.some(e => e.hasDiseaseWarning && e.status === 'PENDING_APPROVAL')
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <div>
-          <span className={styles.eyebrow}>
-            NHẬT KÝ CANH TÁC
-          </span>
-          <h1 className={styles.title}>Kiểm tra và phê duyệt nhật ký</h1>
-        </div>
-        <button className={styles.createBtn} onClick={() => setIsCreating(true)}>+ Tạo nhật ký</button>
-      </div>
+      <PageHeader
+        icon={<CheckSquare size={28} />}
+        title="Kiểm tra và phê duyệt nhật ký"
+        description="Nhật ký canh tác do nông hộ gửi lên"
+        actions={<button type="button" className={styles.createBtn} onClick={() => setIsCreating(true)}>+ Tạo nhật ký</button>}
+      />
+
+      {!isLoading && !loadFailed && <Stats items={[
+        { label: 'Tất cả nhật ký', value: entries.length, icon: <BookOpen />, active: only === null, onSelect: () => setOnly(null) },
+        { label: 'Chờ duyệt', value: entries.filter(entry => entry.status === 'PENDING_APPROVAL').length, icon: <Clock />, active: only === 'PENDING_APPROVAL', onSelect: () => setOnly('PENDING_APPROVAL') },
+        { label: 'Đã duyệt', value: entries.filter(entry => entry.status === 'APPROVED').length, icon: <CheckSquare />, active: only === 'APPROVED', onSelect: () => setOnly('APPROVED') },
+      ]} />}
+
+      {total > entries.length && (
+        <p className={styles.notice}>Đang hiển thị {entries.length.toLocaleString('vi-VN')} nhật ký mới nhất trong tổng số {total.toLocaleString('vi-VN')}.</p>
+      )}
 
       {hasWarning && (
         <div className={styles.notice}>
@@ -172,6 +198,12 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
                   {LOAD_FAILED_MESSAGE}
                 </td>
               </tr>
+            ) : shown.length === 0 && entries.length > 0 ? (
+              <tr>
+                <td colSpan={5} className={styles.emptyCell}>
+                  Không có nhật ký nào trong mục đang chọn.
+                </td>
+              </tr>
             ) : entries.length === 0 ? (
               <tr>
                 <td colSpan={5} className={styles.emptyCell}>
@@ -179,7 +211,7 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
                 </td>
               </tr>
             ) : (
-              entries.map(e => (
+              shown.map(e => (
                 <tr key={e.id}>
                   <td>{e.parcel_code || e.parcel_id || e.id.substring(0, 8)}</td>
                   <td>{formatDetail(e.activities?.[0]?.activity_detail)}</td>
@@ -258,8 +290,8 @@ export function OfficerJournalApproval({ householdId }: OfficerJournalApprovalPr
             </div>
             
             {(() => {
-              const entry = entries.find(e => e.id === viewEntryId)
-              if (!entry) return null
+              const entry = entries.find(e => e.id === viewEntryId) ?? (selectedEntry?.id === viewEntryId ? selectedEntry : undefined)
+              if (!entry) return <p>Không tìm thấy nhật ký trong danh sách đã tải.</p>
               
               return (
                 <div className={styles.detailContainer}>

@@ -1,6 +1,8 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Home } from 'lucide-react'
 import React from 'react';
 import { Metadata } from 'next';
 import { HouseholdProfile } from './_components/household-profile';
@@ -16,14 +18,11 @@ export default async function OfficerHouseholdProfilePage(
   const params = await props.params;
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Chi tiết Nông hộ
-        </h1>
-        <p className="mt-2 text-sm text-ink-secondary">
-          Thông tin chi tiết, danh sách thửa đất và lịch sử sản xuất của nông hộ.
-        </p>
-      </header>
+      <PageHeader
+        icon={<Home size={28} />}
+        title="Chi tiết Nông hộ"
+        description="Thông tin chi tiết, danh sách thửa đất và lịch sử sản xuất của nông hộ."
+      />
 
       <section>
         <HouseholdProfile id={params.id} />

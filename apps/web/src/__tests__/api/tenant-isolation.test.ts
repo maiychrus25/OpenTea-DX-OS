@@ -176,6 +176,14 @@ describe('read routes return only the HTX of the caller', () => {
     expect(mock(prisma.parcelCropCycle.findMany).mock.calls[0][0].where.parcel).toEqual(ownHousehold)
   })
 
+  test('GET schedule/harvest gives a farmer only their own household', async () => {
+    signIn('farmer')
+    mock(prisma.parcelCropCycle.findMany).mockResolvedValue([])
+    expect((await harvestSchedule.GET(harvestRequest(), {})).status).toBe(200)
+    const userId = (await (auth as jest.Mock)()).user.id
+    expect(mock(prisma.parcelCropCycle.findMany).mock.calls[0][0].where.parcel).toEqual({ household: { htx_profile_id: 'htx-tc', keycloak_user_id: userId } })
+  })
+
   test('GET schedule/unscheduled filters the cycles by HTX', async () => {
     signIn('manager')
     mock(prisma.parcelCropCycle.findMany).mockResolvedValue([])

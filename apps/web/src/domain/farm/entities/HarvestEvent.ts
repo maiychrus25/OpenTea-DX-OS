@@ -11,4 +11,7 @@ export interface HarvestEvent {
   estimatedHarvestDate: string | null
   safeHarvestDate: string | null
   status: 'SAFE' | 'WARNING' | 'DANGER'
+  /** The activity whose withdrawal period ends last: what was applied, when, and for how long. */
+  treatment?: { activity: string; product: string | null; date: string; withdrawalDays: number | null } | null
+  harvestedAt?: string | null
 }

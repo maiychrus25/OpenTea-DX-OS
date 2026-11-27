@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Farmer pages (`apps/web`)**: overview, journal grouped by date, harvest calendar with withdrawal periods and day details, farming handbook linking to real articles, a bulletin page with article pages, account page, disease diagnosis with a care plan after the AI names a disease (the product and dose stay with the officer), and a side menu with counts, an account menu and a folded rail
+- **Maps (`apps/web`)**: street and labelled satellite layers centred on Tân Cương, clearer partner, parcel and parcel-drawing maps
+- **Sign-in and registration (`apps/web`)**: new two-panel layout; the name typed on the sign-in page pre-fills Keycloak, which still takes the password
+- Sample content, such as the camera watch, tea prices and handbook counts, is marked "Mẫu" until a data source exists
+- **Cooperative head pages follow the new design (`apps/web`)**: journal approval gains headline figures (waiting, overdue, approved this month, to be corrected), filters, a detail view and CSV export. Members lists join requests first, with land columns and export; lots show the chosen lot beside the list; the calendar lists unscheduled parcels; farm zones add a parcel table and GeoJSON export; the inbox separates today; the dashboard adds notices, the coming days' weather and approval of chosen journals. Where there is no data yet (weekly yield, partners, apps, notices, parcel positions) the design's example is shown with a "Mẫu" tag.
+- **Officer web design (`apps/web`)**: the officer pages take the new look (path line, underlined page headers, striped tables, grouped menu), with new Products, Orders, Revenue, Tours and Tour bookings screens. These five show fixed sample content and cannot be edited; they do not read from the shop or tour mini-apps. The headline figures on each officer page can be pressed to filter or order the list below, and the dashboard figures open the list behind them.
+- **Weather in the farmer's greeting banner (`apps/web`)**: the dashboard banner shows the live temperature, humidity and rainfall over the parcels, rain falls across it when it is raining there, and it replaces the separate weather panel.
+- **Reels on the web (`apps/web`)**: farmers, officers and managers have a "Reels" page with sample clips: like, save, follow, comment, reply, share, auto-advance, playback speed, and posting a clip from the computer. There is no video service yet, so everything done there stays in the browser and is gone after a reload.
+- **Live weather on the bulletin pages (`apps/web`)**: managers and farmers see the weather where the cooperative's parcels are, read from Open-Meteo through `GET /api/weather/live`: temperature, rain chance, humidity, wind, a 24 hour strip and a 10 day forecast. Parcels about 5 km apart share one card, and parcels without coordinates are left out. The card animates rain when the forecast says it is raining, and stays still for people who ask for reduced motion.
+
+### Changed
+
+- **Officer overview (`apps/web`)**: compact, tenant-scoped dashboard with live weather, withdrawal conflicts, six-row journal pagination and approval, disease photos, upcoming harvest safety, a tagged schematic, real weekly activity and approval metrics, household journal coverage and tagged shop/tour samples; farmer weather defaults stay unchanged.
+- **Officer summaries and cards (`apps/web`)**: shared icon summary strips derived from loaded data, hill-decorated headers and reference-style household/lot/disease cards; preserve existing actions and tables, scope journal/document counts to visible results, and leave manager/farmer styling unchanged.
+- Farmer web screens follow the new design, with the handbook showing fixed placeholder content until the feature exists. Farmers' Q&A uses the same full-window chat as staff; the AI is not open to farmers yet and says so.
+- **New web interface (`apps/web`)**: new colour tokens, a grouped sidebar, a breadcrumb top bar and a bottom bar for farmers on phones; new dashboards for the three roles; page headers, filters, tables and cards restyled across the role pages; a rebuilt login page and cooperative profile page. The profile page now shows the cooperative's own parcel and household figures instead of fixed sample numbers.
+
 ## [1.17.0] - 2026-11-27
 
 The agentic layer is complete. Agents now hand work to staff, plan the season, and can run approved kinds of work on their own inside hard limits, with a stop button and a full audit trail. A manager can ask for a new mini-app in chat and an AI builds it behind seven gates. Everything a role can do on the web can now be done through the Telegram bot: in chat, by voice, or in the Mini App.
@@ -102,6 +121,7 @@ The agentic layer starts to plan and learn. Every morning an agent turns the ope
 - **Proposal deletes in a campaign (`platform/postgres`).** Deleting a proposal also removes it from campaign items, so cleanup and retention jobs no longer fail on proposals that a campaign listed.
 
 ---
+
 
 ## [1.15.0] - 2026-11-26
 

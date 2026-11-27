@@ -52,7 +52,7 @@ describe('Login Page', () => {
 
   it('1.5a-UNIT-005: login button present with type submit', () => {
     render(<LoginPage />)
-    const button = screen.getByRole('button', { name: 'Tiếp tục với Keycloak' })
+    const button = screen.getByRole('button', { name: 'Đăng nhập' })
     expect(button).toBeInTheDocument()
     expect(button).toHaveAttribute('type', 'button')
   })

@@ -26,7 +26,7 @@ test.describe('Foundation Design Tokens', () => {
     await page.goto('/login')
     
     await expect(page.getByTestId('auth-panel')).toBeVisible()
-    await expect(page.getByRole('button', { name: /keycloak/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Đăng nhập', exact: true })).toBeVisible()
     
     // No console errors
     const errors: string[] = []

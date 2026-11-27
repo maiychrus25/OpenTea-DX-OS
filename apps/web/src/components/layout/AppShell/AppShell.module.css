@@ -19,12 +19,46 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding-bottom: 64px; /* Space for BottomNav on mobile */
+  min-width: 0;
 }
 
 .pageContent {
   flex: 1;
+  width: 100%;
+  min-width: 0;
+  max-width: calc(1260px + 2 * var(--spacing-gutter-desktop));
+  margin: 0 auto;
   padding: var(--spacing-gutter-mobile);
+}
+
+/* Chat owns its scrolling; other routes retain the normal page layout. */
+.shell:has([data-chat-workspace]) {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.workspace:has([data-chat-workspace]),
+.content:has([data-chat-workspace]) {
+  min-height: 0;
+}
+.pageContent:has([data-chat-workspace]) {
+  min-height: 0;
+  max-width: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Chat drops the top bar where the sidebar is already on screen; narrower, it holds the menu button. */
+@media (min-width: 1024px) {
+  .content:has([data-chat-workspace]) > header {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .shell[data-role="farmer"] .content {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
 }
 
 .backdrop {
@@ -43,16 +77,55 @@
   }
 
   .workspace {
-    width: calc(100% - 276px);
-    margin-left: 276px;
+    width: calc(100% - var(--sidebar-width));
+    margin-left: var(--sidebar-width);
   }
 
   .content {
-    padding-bottom: 0;
     min-width: 0;
   }
 
   .pageContent {
     padding: var(--spacing-gutter-desktop);
+  }
+}
+
+/* Reels takes the whole page area beside the menu and scrolls inside itself. */
+.shell:has([data-reels]) {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.workspace:has([data-reels]),
+.content:has([data-reels]) {
+  min-height: 0;
+}
+.pageContent:has([data-reels]) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* With the sidebar on screen Reels drops the top bar, and the viewer may put the sidebar away too. */
+@media (min-width: 1024px) {
+  .content:has([data-reels]) > header,
+  .shell:has([data-reels][data-menu='hidden']) > aside {
+    display: none;
+  }
+
+  .shell:has([data-reels][data-menu='hidden']) > .workspace {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* The menu folded to a rail of icons. */
+@media (min-width: 1024px) {
+  .shell[data-collapsed] {
+    --sidebar-width: 74px;
   }
 }

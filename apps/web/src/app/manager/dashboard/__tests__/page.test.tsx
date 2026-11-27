@@ -37,12 +37,17 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({
     parcel: {
       aggregate: jest.fn().mockResolvedValue({ _sum: { area_ha: 10 } }),
       findMany: jest.fn().mockResolvedValue([{ area_ha: 5, estimated_yield_per_ha: 2000 }]),
+      groupBy: jest.fn().mockResolvedValue([{ status: 'TENDING', _count: { _all: 2 } }]),
+    },
+    household: {
+      count: jest.fn().mockResolvedValue(2),
     },
     lot: {
       count: jest.fn().mockResolvedValue(5),
     },
     journalEntry: {
       count: jest.fn().mockResolvedValue(3),
+      findMany: jest.fn().mockResolvedValue([]),
     },
     marketData: {
       findMany: jest.fn().mockResolvedValue([

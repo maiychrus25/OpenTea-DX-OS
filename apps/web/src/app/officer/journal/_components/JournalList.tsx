@@ -3,6 +3,8 @@
 
 'use client'
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import { BookOpen } from 'lucide-react'
 import React, { useEffect, useState, useCallback } from 'react'
 import { Pill } from '@/components/ui'
 import { JournalForm } from './JournalForm'
@@ -91,10 +93,11 @@ export function JournalList() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Nhật ký canh tác</h1>
-        <button className={styles.createBtn} onClick={() => setShowForm(true)}>+ Ghi nhật ký</button>
-      </div>
+      <PageHeader
+        icon={<BookOpen size={28} />}
+        title="Nhật ký canh tác"
+        actions={<button type="button" className={styles.createBtn} onClick={() => setShowForm(true)}>+ Ghi nhật ký</button>}
+      />
 
       <div className={styles.filterRow}>
         {filters.map(f => (

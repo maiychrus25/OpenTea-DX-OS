@@ -18,9 +18,7 @@
 }
 
 .container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 1.5rem;
+  width: 100%;
 }
 
 .header {
@@ -39,6 +37,11 @@
 }
 
 .bellIcon {
+  width: var(--page-icon-box);
+  height: var(--page-icon-box);
+  padding: 15px;
+  border-radius: var(--radius-card);
+  background: var(--color-primary-subtle);
   color: var(--color-primary);
 }
 
@@ -53,9 +56,10 @@
 }
 
 .title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-ink-primary);
+  font-size: var(--font-size-page-title);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--color-ink-heading);
   margin: 0;
 }
 
@@ -128,6 +132,11 @@
 .list {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .emptyState {
@@ -141,8 +150,12 @@
 }
 
 .emptyIcon {
-  opacity: 0.3;
+  box-sizing: content-box;
+  padding: 16px;
   margin-bottom: 0.75rem;
+  border-radius: 50%;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
 }
 
 /* Notification item */
@@ -270,3 +283,9 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+.notifItem:last-child {
+  border-bottom: 0;
+}
+
+.dayGroup { margin: 0; padding: 10px 18px; font-size: 13px; font-weight: 700; color: var(--color-ink-secondary); border-bottom: 1px solid var(--color-border-row); }

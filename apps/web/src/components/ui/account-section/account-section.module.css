@@ -2,28 +2,37 @@
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
 .accountSection {
-  margin-top: var(--spacing-8);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-6);
+  min-width: 0;
+  overflow: hidden;
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .sectionTitle {
-  font-size: var(--font-size-h2);
-  font-weight: 600;
-  color: var(--foreground);
   margin: 0;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border-row);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink-heading);
 }
 
 .avatarBlock {
   display: flex;
   align-items: center;
   gap: var(--spacing-4);
+  padding: 18px;
+  background: var(--color-surface-sunken);
 }
 
 .avatarCircle {
-  width: 4rem;
-  height: 4rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
   border-radius: 9999px;
   background-color: var(--primary);
   color: var(--primary-foreground);
@@ -54,23 +63,19 @@
 .securityList {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-4);
-  background-color: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--rounded-lg);
-  padding: var(--spacing-4);
+  border-top: 1px solid var(--color-border-row);
 }
 
 .securityRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: var(--spacing-4);
-  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border-row);
 }
 
 .securityRow:last-child {
-  padding-bottom: 0;
   border-bottom: none;
 }
 
@@ -111,13 +116,19 @@
   text-decoration: underline;
 }
 
+.logoutRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 18px;
+  border-top: 1px solid var(--color-border-row);
+}
+
 .logoutBtn {
-  margin-top: var(--spacing-4);
-  background-color: var(--color-danger);
-  color: var(--color-ink-inverse);
-  width: 100%;
+  border: 1px solid var(--color-danger);
+  background: var(--color-surface-card);
+  color: var(--color-danger);
 }
 
 .logoutBtn:hover {
-  background-color: var(--color-danger-hover);
+  background: var(--color-danger-subtle);
 }

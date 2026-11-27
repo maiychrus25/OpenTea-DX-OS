@@ -3,108 +3,112 @@
 
 .authShell {
   min-height: 100vh;
-  padding: 16px;
-  display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(420px, 1.08fr);
-  gap: 16px;
-  background:
-    radial-gradient(circle at 8% 10%, var(--secondary), transparent 32%),
-    radial-gradient(circle at 92% 90%, var(--color-accent-subtle), transparent 28%),
-    var(--background);
-}
-
-.authSide {
-  position: relative;
-  overflow: hidden;
-  border-radius: 24px;
-  background: linear-gradient(145deg, var(--sidebar-bg), var(--sidebar-darker));
-  color: var(--sidebar-foreground);
-  padding: 48px clamp(32px, 5vw, 64px);
   display: flex;
   flex-direction: column;
-  isolation: isolate;
+  padding: 0 var(--spacing-gutter-mobile) 16px;
+  background: var(--color-surface-page);
+  color: var(--color-ink-primary);
 }
 
-.authSide::before,
-.authSide::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  border: 1px solid color-mix(in srgb, var(--accent-lime) 16%, transparent);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.authSide::before {
-  width: 520px;
-  height: 520px;
-  top: -190px;
-  right: -190px;
-}
-
-.authSide::after {
-  width: 360px;
-  height: 360px;
-  bottom: -170px;
-  left: -150px;
-}
-
-.authSideBrand {
+.topbar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-size: 1.25rem;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 calc(-1 * var(--spacing-gutter-mobile)) 16px;
+  padding: 12px max(var(--spacing-gutter-mobile), 3.5vw);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  color: var(--color-ink-heading);
+  text-decoration: none;
 }
 
 .brandIcon {
-  width: 48px;
-  height: 48px;
-  background: var(--accent-lime);
-  color: var(--sidebar-bg);
-  border-radius: var(--rounded-lg);
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: var(--radius-button);
+  background: var(--color-primary);
+  color: var(--accent-lime);
 }
 
-.authSideContent {
-  margin-top: auto;
-  margin-bottom: auto;
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.homeLink {
+  padding-right: 18px;
+  border-right: 1px solid var(--color-border);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.authBox {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  width: 100%;
+  max-width: 1080px;
+  min-height: 600px;
+  margin: auto;
+  border-radius: var(--radius-hero);
+  background: var(--color-surface-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.authSide {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 32px 28px;
+  background:
+    linear-gradient(180deg, transparent 40%, var(--color-hero-bg) 66%),
+    url('/images/auth-hills.jpg') left top / auto 68% no-repeat,
+    var(--color-hero-bg);
+  color: var(--color-hero-text);
 }
 
 .authSideTitle {
-  font-size: 2.5rem;
-  line-height: 1.2;
-  font-weight: 600;
   margin: 0;
-  max-width: 480px;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--color-hero-text);
 }
 
-.authSideDesc {
-  font-size: 1.125rem;
-  line-height: 1.6;
-  opacity: 0.9;
-  margin: 0;
-  max-width: 480px;
+.authSideTitle span {
+  display: block;
+  color: var(--accent-lime);
 }
 
 .featureList {
   list-style: none;
-  padding: 0;
   margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
+  color: var(--color-hero-text);
+  font-size: 15.5px;
 }
 
 .featureList li {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 1rem;
+  gap: 10px;
 }
 
 .checkIcon {
@@ -112,111 +116,123 @@
   flex-shrink: 0;
 }
 
-.authSideFooter {
-  font-size: 0.875rem;
-  opacity: 0.6;
-}
-
 .authPanel {
-  position: relative;
-  overflow: hidden;
-  border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(24px, 5vw, 64px);
-  background: var(--background);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-
-.authPanel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: linear-gradient(color-mix(in srgb, var(--primary) 5%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--primary) 5%, transparent) 1px, transparent 1px);
-  background-size: 32px 32px;
-  mask-image: linear-gradient(to bottom right, black, transparent 72%);
-  pointer-events: none;
-}
-
-.themeToggle {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 2;
+  padding: 32px 24px;
 }
 
 .authCard {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 440px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 48px 40px;
-  box-shadow: var(--shadow-modal);
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 400px;
 }
 
 .cardHeader {
-  margin-bottom: 24px;
-}
-
-.cardPretitle {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-ink-secondary);
-  margin: 0 0 8px 0;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
 .cardTitle {
-  font-size: 1.75rem;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-  color: var(--color-ink-primary);
+  margin: 0 0 6px;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-ink-heading);
 }
 
 .cardDesc {
-  font-size: 0.9375rem;
-  color: var(--color-ink-secondary);
   margin: 0;
-}
-
-.cardFooterNote {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 8px;
-  font-size: 0.75rem;
+  font-size: 14px;
   color: var(--color-ink-secondary);
-  line-height: 1.5;
 }
 
-.lockIcon {
-  flex-shrink: 0;
-  margin-top: 2px;
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-ink-primary);
 }
 
-@media (max-width: 900px) {
-  .authShell {
-    padding: 0;
-    grid-template-columns: 1fr;
+.field input {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-button);
+  background: var(--color-surface-card);
+  color: var(--color-ink-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.field input:focus {
+  border-color: var(--color-primary);
+  outline: 2px solid var(--color-primary-subtle);
+}
+
+.forgotRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-ink-secondary);
+}
+
+.register {
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--color-ink-secondary);
+}
+
+.help {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-sunken);
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-ink-secondary);
+}
+
+.help strong {
+  font-size: 14px;
+  color: var(--color-ink-primary);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 0;
+  padding-top: 16px;
+  font-size: 12.5px;
+  color: var(--color-ink-secondary);
+}
+
+.footer span + span {
+  margin-left: 14px;
+  padding-left: 14px;
+  border-left: 1px solid var(--color-border);
+}
+
+@media (max-width: 1023px) {
+  .authBox {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 480px;
+    min-height: 0;
   }
   .authSide {
     display: none;
-  }
-  .authPanel {
-    min-height: 100vh;
-    border-radius: 0;
-  }
-  .authCard {
-    padding: 32px 24px;
   }
 }
 
@@ -259,16 +275,10 @@
   text-decoration: underline;
 }
 
-.authLinks {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 4px;
-}
-
 .authLink {
   font-size: 0.875rem;
-  color: var(--color-ink-secondary);
+  font-weight: 700;
+  color: var(--color-primary);
   text-decoration: none;
 }
 

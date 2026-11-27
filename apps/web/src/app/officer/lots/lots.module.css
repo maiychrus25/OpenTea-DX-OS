@@ -4,10 +4,9 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
 }
 
 .header {
@@ -26,15 +25,21 @@
 }
 
 .createBtn {
-  padding: 0.625rem 1.25rem;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--input-height);
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
-  font-size: 0.875rem;
-  transition: background 0.2s;
 }
 
 .createBtn:hover {
@@ -43,83 +48,41 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: 1.25rem;
 }
 
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  transition: box-shadow 0.2s;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s, border-color 0.2s;
 }
-
-.card:hover {
-  box-shadow: var(--shadow-card-hover);
-}
-
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.lotCode {
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--foreground);
-}
-
-.cardBody {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.875rem;
-  color: var(--muted-foreground);
-}
-
-.cardActions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: auto;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
-}
-
-.qrBtn {
-  padding: 0.5rem 1rem;
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 0.8125rem;
-  transition: background 0.2s;
-}
-
-.qrBtn:hover {
-  background: var(--color-accent-hover);
-}
-
-.qrBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.viewBtn {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card);
-  color: var(--foreground);
-  cursor: pointer;
-  font-size: 0.8125rem;
-}
+.card:hover { box-shadow: var(--shadow-card-hover); border-color: var(--color-border-input); }
+.cardHead { display: flex; align-items: center; gap: 12px; padding: 16px 18px; }
+.mark { width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--color-primary-subtle); color: var(--color-primary); font-size: 14px; font-weight: 800; }
+.headText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); margin: 0; border-top: 1px solid var(--color-border-row); }
+.facts > div { padding: 12px 18px; }
+.facts > div + div { border-left: 1px solid var(--color-border-row); }
+.facts dt { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-ink-secondary); }
+.facts dt svg { flex-shrink: 0; color: var(--color-primary); }
+.facts > div { min-width: 0; overflow-wrap: anywhere; }
+.headText { overflow-wrap: anywhere; }
+.facts dd { margin: 2px 0 0; font-size: 16px; font-weight: 700; color: var(--color-ink-primary); }
+.lotCode { font-family: monospace; font-weight: 700; font-size: 15.5px; color: var(--color-ink-heading); }
+.commodity { font-size: 13px; color: var(--color-ink-secondary); }
+.cardActions { display: flex; gap: 8px; margin-top: auto; padding: 8px; }
+.qrBtn, .viewBtn { flex: 1; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 8px 16px; border: 0; border-radius: var(--radius-button); background: var(--color-primary-subtle); color: var(--color-primary); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
+.qrBtn:hover, .viewBtn:hover { background: var(--secondary); }
+.qrBtn:focus-visible, .viewBtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.qrBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .empty {
   text-align: center;

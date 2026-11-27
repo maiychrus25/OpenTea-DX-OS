@@ -36,6 +36,9 @@ const WEATHER_CODE_MAP: Record<number, string> = {
   61: 'Mưa nhỏ', 63: 'Mưa vừa', 65: 'Mưa to',
   71: 'Tuyết nhẹ', 73: 'Tuyết vừa', 75: 'Tuyết dày',
   80: 'Mưa rào nhẹ', 81: 'Mưa rào', 82: 'Mưa rào lớn',
+  56: 'Mưa phùn lạnh', 57: 'Mưa phùn lạnh',
+  66: 'Mưa lạnh', 67: 'Mưa lạnh',
+  77: 'Hạt tuyết', 85: 'Mưa tuyết', 86: 'Mưa tuyết',
   95: 'Giông', 96: 'Giông kèm mưa đá', 99: 'Giông mưa đá lớn',
 }
 

@@ -17,7 +17,7 @@ jest.mock('next/link', () => {
 
 // Helper: get submit button via role + name (Button renders data-testid="button-primary")
 function getSubmitButton() {
-  return screen.getByRole('button', { name: /Đăng ký tài khoản/i })
+  return screen.getByRole('button', { name: /^Đăng ký$/ })
 }
 
 // Helper: fill valid registration form

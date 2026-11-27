@@ -8,6 +8,10 @@ import Link from 'next/link'
 import { Button, Card, Pill } from '@/components/ui'
 import type { AppStoreStatus, StoreAction, StoreApp, StoreCategory, StoreCreatedApp } from '@/domain/entities/app-store'
 import { fetchJson } from '@/lib/api/fetch-json'
+import { Store } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { SampleApps } from '@/components/features/sample/SampleLists'
 import styles from './AppStoreClient.module.css'
 import { StoreAppIcon } from './StoreAppIcon'
 import { StoreHistory } from './StoreHistory'
@@ -84,10 +88,11 @@ export function AppStoreClient({ initial }: { initial: AppStoreData }) {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Kho ứng dụng</h1>
-        <p className={styles.subtitle}>Cài thêm ứng dụng cho HTX của bạn hoặc gỡ ứng dụng không dùng nữa.</p>
-      </header>
+      <PageHeader
+        icon={<Store size={28} />}
+        title="Kho ứng dụng"
+        description="Cài thêm ứng dụng cho HTX của bạn hoặc gỡ ứng dụng không dùng nữa."
+      />
 
       {!data.workerAlive && (
         <p className={styles.notice} role="status">
@@ -119,7 +124,10 @@ export function AppStoreClient({ initial }: { initial: AppStoreData }) {
 
       <div role="tabpanel" id="store-panel-apps" aria-labelledby="store-tab-apps" hidden={tab !== 'apps'}>
         {data.apps.length === 0 ? (
-          <p className={styles.empty}>Kho chưa có ứng dụng nào.</p>
+          <>
+            <EmptyState icon={<Store size={24} />} title="Kho chưa có ứng dụng nào." />
+            <SampleApps />
+          </>
         ) : (
           <>
             <div className={styles.toolbar}>

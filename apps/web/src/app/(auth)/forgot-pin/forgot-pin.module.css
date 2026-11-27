@@ -9,7 +9,9 @@
 }
 
 .authSide {
-  background: var(--sidebar-bg);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-hero-bg) 55%, transparent) 0%, var(--color-hero-bg) 85%),
+    url('/images/tea-hills-mist.jpg') center / cover;
   color: var(--sidebar-foreground);
   padding: 48px 64px;
   display: flex;

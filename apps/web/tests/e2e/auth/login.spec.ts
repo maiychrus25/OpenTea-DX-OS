@@ -10,7 +10,7 @@ test('TC-7.6-01: login page shows 2-panel layout on desktop', async ({ page }) =
   // Right panel with form visible
   await expect(page.locator('[data-testid="auth-panel"]')).toBeVisible()
   // Brand visible
-  await expect(page.getByText('OpenTea DX-OS')).toBeVisible()
+  await expect(page.getByText('OpenTea DX-OS', { exact: true })).toBeVisible()
 })
 
 test('TC-7.6-02: auth-side panel hidden on mobile', async ({ browser }) => {
@@ -24,7 +24,7 @@ test('TC-7.6-02: auth-side panel hidden on mobile', async ({ browser }) => {
 
 test('TC-7.6-03: clicking login button initiates Keycloak redirect', async ({ page }) => {
   await page.goto('/login')
-  const btn = page.getByRole('button', { name: /keycloak|tiếp tục/i })
+  const btn = page.getByRole('button', { name: 'Đăng nhập', exact: true })
   await expect(btn).toBeVisible()
   await expect(btn).not.toBeDisabled()
   // Click and assert redirect to Keycloak (URL contains keycloak or similar)
@@ -39,6 +39,6 @@ test('TC-7.6-03: clicking login button initiates Keycloak redirect', async ({ pa
 
 test('TC-7.6-05: auth-side shows feature highlights', async ({ page }) => {
   await page.goto('/login')
-  await expect(page.getByText(/Đăng nhập không mật khẩu/)).toBeVisible()
-  await expect(page.getByText(/Dữ liệu HTX được lưu trữ riêng/)).toBeVisible()
+  await expect(page.getByText(/Ghi nhật ký canh tác minh bạch/)).toBeVisible()
+  await expect(page.getByText(/Dữ liệu của bạn được lưu trữ an toàn/)).toBeVisible()
 })

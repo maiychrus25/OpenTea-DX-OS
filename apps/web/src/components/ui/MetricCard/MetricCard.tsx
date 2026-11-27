@@ -9,7 +9,7 @@ interface MetricCardProps {
   label: string
   value: string | number
   detail?: string
-  tone?: 'green' | 'amber' | 'blue' | 'neutral'
+  tone?: 'green' | 'amber' | 'blue' | 'neutral' | 'red'
 }
 
 export function MetricCard({ icon, label, value, detail, tone = 'green' }: MetricCardProps) {

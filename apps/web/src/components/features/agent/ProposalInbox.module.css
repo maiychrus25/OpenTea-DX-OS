@@ -2,12 +2,10 @@
 /* SPDX-FileCopyrightText: 2026 OpenTea Developers */
 
 .container {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: var(--spacing-6) var(--spacing-4);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-4);
+  gap: 20px;
+  width: 100%;
   min-width: 0;
 }
 
@@ -41,8 +39,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-2);
-  border-bottom: 1px solid var(--border);
-  padding-bottom: var(--spacing-2);
 }
 
 .tab {
@@ -243,7 +239,9 @@
 .stateCard {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  padding: 48px 24px;
+  text-align: center;
   gap: var(--spacing-3);
 }
 
@@ -297,8 +295,15 @@
 
 .toolbar {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: var(--spacing-3);
+  padding: 14px 18px;
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .filters {
@@ -308,7 +313,7 @@
 }
 
 .filterField {
-  flex: 1 1 200px;
+  flex: 1 1 180px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -360,4 +365,16 @@
 .inlineLink:focus-visible {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
+}
+
+.filters {
+  flex: 0 1 420px;
+}
+
+.emptyIcon {
+  box-sizing: content-box;
+  padding: 16px;
+  border-radius: 50%;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
 }

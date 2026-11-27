@@ -5,31 +5,43 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Pill } from '@/components/ui'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronRight, Droplet, FileText, Layers, Leaf, Plus, Scissors, SprayCan, Sprout, Trash2 } from 'lucide-react'
+import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from '../journal.module.css'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 
 interface JournalEntry {
   id: string
   entry_date: string
+  parcel_code?: string
   activity_type: string
   performed_by: string
   status: string
   notes: string | null
   activities: { activity_detail: string; product_name: string | null; dosage?: string; performer?: string; withdrawal_days?: number }[]
   history?: { date: string, action: string, note?: string }[]
+  created_at?: string | null
+  approved_at?: string | null
   review_note?: string | null
   photo_url?: string
 }
 
-const STATUS_MAP: Record<string, { label: string; tone: 'amber' | 'green' | 'neutral' | 'blue' }> = {
+const STATUS_MAP: Record<string, { label: string; tone: string }> = {
   PENDING_APPROVAL: { label: 'Chờ duyệt', tone: 'amber' },
-  APPROVED: { label: 'Đã duyệt', tone: 'green' },
-  DRAFT: { label: 'Bản nháp', tone: 'neutral' },
-  REJECTED: { label: 'Từ chối', tone: 'blue' },
-  REQUEST_CHANGES: { label: 'Yêu cầu sửa', tone: 'blue' },
+  APPROVED: { label: 'Đã duyệt', tone: 'soft' },
+  DRAFT: { label: 'Bản nháp', tone: 'mu' },
+  REJECTED: { label: 'Từ chối', tone: 'bd' },
+  REQUEST_CHANGES: { label: 'Yêu cầu sửa', tone: 'in' },
 }
+
+const FILTERS: { value: string; label: string }[] = [
+  { value: 'ALL', label: 'Tất cả' },
+  { value: 'PENDING_APPROVAL', label: 'Chờ duyệt' },
+  { value: 'APPROVED', label: 'Đã duyệt' },
+  { value: 'REJECTED', label: 'Từ chối' },
+  { value: 'REQUEST_CHANGES', label: 'Cần sửa' },
+  { value: 'DRAFT', label: 'Nháp' },
+]
 
 const ACTIVITY_MAP: Record<string, string> = {
   IRRIGATION: 'Tưới tiêu',
@@ -39,6 +51,44 @@ const ACTIVITY_MAP: Record<string, string> = {
   SOWING: 'Gieo sạ',
   OTHER: 'Khác'
 }
+
+const ACTIVITY_ICON: Record<string, typeof Leaf> = {
+  IRRIGATION: Droplet,
+  FERTILIZING: Sprout,
+  SPRAYING: SprayCan,
+  HARVEST: Scissors,
+}
+
+const RANGES = [
+  { value: 'ALL', label: 'Mọi ngày' },
+  { value: 'TODAY', label: 'Hôm nay' },
+  { value: '7', label: '7 ngày qua' },
+  { value: '30', label: '30 ngày qua' },
+]
+
+/** Midnight, local time, `back` days before today. */
+function startOfDay(back = 0): number {
+  const date = new Date()
+  date.setHours(0, 0, 0, 0)
+  date.setDate(date.getDate() - back)
+  return date.getTime()
+}
+
+/** Today, the rest of this week (from Monday), or earlier. */
+function groupOf(entryDate: string): 'today' | 'week' | 'older' {
+  const time = new Date(entryDate).getTime()
+  if (new Date(entryDate).toDateString() === new Date().toDateString()) return 'today'
+  return time >= startOfDay((new Date().getDay() + 6) % 7) ? 'week' : 'older'
+}
+
+/** As on the design: the spraying entry names what is sprayed. */
+const TITLE_MAP: Record<string, string> = { SPRAYING: 'Phun thuốc BVTV' }
+
+const GROUPS = [
+  { key: 'today', label: 'Hôm nay' },
+  { key: 'week', label: 'Tuần này' },
+  { key: 'older', label: 'Trước đó' },
+] as const
 
 function formatDetail(detail: string | null | undefined): string {
   if (!detail) return ''
@@ -56,8 +106,13 @@ export function FarmerJournalList() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
-  const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [filter, setFilter] = useState('ALL')
   const [isDeleting, setIsDeleting] = useState(false)
+  const [parcel, setParcel] = useState('ALL')
+  const [range, setRange] = useState('ALL')
+  // null: open "Trước đó" only when there is nothing newer to show
+  const [olderOpen, setOlderOpen] = useState<boolean | null>(null)
 
   const fetchEntries = useCallback(() => {
     setLoading(true)
@@ -80,22 +135,75 @@ export function FarmerJournalList() {
         throw new Error(err?.error?.message || 'Không thể rút nhật ký')
       }
       setEntries(prev => prev.filter(e => e.id !== id))
-      setSelectedEntry(null)
+      setSelectedId(null)
     } finally {
       setIsDeleting(false)
     }
   }
 
+  const parcelCodes = Array.from(new Set(entries.map(e => e.parcel_code).filter((code): code is string => !!code))).sort()
+  const since = range === 'ALL' ? null : startOfDay(range === 'TODAY' ? 0 : Number(range) - 1)
+  const shown = entries.filter(e =>
+    (filter === 'ALL' || e.status === filter) &&
+    (parcel === 'ALL' || e.parcel_code === parcel) &&
+    (since === null || new Date(e.entry_date).getTime() >= since))
+  const showOlder = olderOpen ?? shown.every(e => groupOf(e.entry_date) === 'older')
+  const visible = shown.filter(e => showOlder || groupOf(e.entry_date) !== 'older')
+  const selectedEntry = visible.find(e => e.id === selectedId) ?? visible[0] ?? null
+  const status = (value: string) => STATUS_MAP[value] ?? { label: value, tone: 'mu' }
+  const day = (value: string) => new Date(value).toLocaleDateString('vi-VN')
+  const activityName = (value: string) => TITLE_MAP[value] || ACTIVITY_MAP[value] || value
+  const dayTime = (value: string) => `${day(value)}, ${new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
+  const detailRows: [string, React.ReactNode][] = selectedEntry ? [
+    ['Ngày thực hiện', day(selectedEntry.entry_date)],
+    ...(selectedEntry.parcel_code ? [['Thửa chè', selectedEntry.parcel_code] as [string, React.ReactNode]] : []),
+    ['Sản phẩm', selectedEntry.activities?.[0]?.product_name || 'Không sử dụng'],
+    ...(selectedEntry.activities?.[0]?.dosage ? [['Liều lượng', selectedEntry.activities[0].dosage] as [string, React.ReactNode]] : []),
+    ...(selectedEntry.activities?.[0]?.performer ? [['Người thực hiện', selectedEntry.activities[0].performer] as [string, React.ReactNode]] : []),
+    ...(selectedEntry.activities?.[0]?.withdrawal_days != null ? [['Thời gian cách ly (PHI)', `${selectedEntry.activities[0].withdrawal_days} ngày`] as [string, React.ReactNode]] : []),
+    ['Ghi chú', selectedEntry.notes || 'Không có'],
+  ] : []
+
+  // Lịch sử lấy từ API nếu có; nếu không, dựng từ ngày tạo, ngày duyệt và trạng thái hiện tại
+  const steps: { title: string; text?: string; done: boolean }[] = !selectedEntry ? []
+    : selectedEntry.history?.length
+      ? selectedEntry.history.map(h => ({ title: h.action, text: `${h.date}${h.note ? ` · ${h.note}` : ''}`, done: true }))
+      : [
+          ...(selectedEntry.created_at ? [{ title: 'Đã tạo nhật ký', text: dayTime(selectedEntry.created_at), done: true }] : []),
+          ...(selectedEntry.status === 'PENDING_APPROVAL' ? [{ title: 'Chờ cán bộ kỹ thuật xem', text: 'Đang chờ cán bộ kỹ thuật xem và phê duyệt.', done: false }] : []),
+          ...(selectedEntry.status === 'APPROVED' ? [{ title: 'Đã duyệt', text: selectedEntry.approved_at ? dayTime(selectedEntry.approved_at) : undefined, done: true }] : []),
+          ...(selectedEntry.status === 'REJECTED' ? [{ title: 'Bị từ chối', done: true }] : []),
+          ...(selectedEntry.status === 'REQUEST_CHANGES' ? [{ title: 'Cán bộ yêu cầu sửa', done: true }] : []),
+        ]
+
+  const icon = (type: string, size = 34) => {
+    const Icon = ACTIVITY_ICON[type] ?? Leaf
+    return <span className={styles.activityIcon}><Icon size={size} strokeWidth={1.4} aria-hidden="true" /></span>
+  }
+
+  const card = (e: JournalEntry) => (
+    <button key={e.id} type="button" className={`${styles.entry} ${e.id === selectedEntry?.id ? styles.entryOn : ''}`}
+      aria-pressed={e.id === selectedEntry?.id} onClick={() => setSelectedId(e.id)}>
+      {icon(e.activity_type)}
+      <span className={styles.entryText}>
+        <strong>{activityName(e.activity_type)}</strong>
+        <span className={kit.muted}>{e.parcel_code ? `${e.parcel_code} · ` : ''}{day(e.entry_date)}</span>
+        <span>{e.notes || formatDetail(e.activities?.[0]?.activity_detail)}</span>
+      </span>
+      <span className={`${kit.tag} ${kit[status(e.status).tone]} ${styles.entryTag}`}>{status(e.status).label}</span>
+    </button>
+  )
+
   return (
-    <div className={styles.container}>
-      <Link className={styles.backBtn} href="/farmer/dashboard">
-        <ArrowLeft size={16} className="inline mr-1 align-text-bottom" />
-        Quay lại Dashboard
-      </Link>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Nhật ký của tôi</h1>
-        <Link className={styles.createBtn} href="/farmer/journal/new">
-          <Plus size={16} className="inline mr-1 align-text-bottom" />
+    <div className={kit.page}>
+      <div className={kit.hd}>
+        <span className={kit.hico}><FileText size={28} aria-hidden="true" /></span>
+        <div className={kit.hdText}>
+          <h1 className={kit.h1}>Nhật ký của tôi</h1>
+          <p className={kit.sub}>Ghi lại hoạt động canh tác và gửi cán bộ kỹ thuật duyệt.</p>
+        </div>
+        <Link className={kit.btn} href="/farmer/journal/new">
+          <Plus size={16} aria-hidden="true" />
           Ghi nhật ký
         </Link>
       </div>
@@ -107,111 +215,117 @@ export function FarmerJournalList() {
       ) : entries.length === 0 ? (
         <div className={styles.empty}>Bạn chưa ghi nhật ký nào.</div>
       ) : (
-        <div className={styles.cardList}>
-          {entries.map(e => {
-            const statusInfo = STATUS_MAP[e.status] ?? { label: e.status, tone: 'neutral' as const }
-            return (
-              <button key={e.id} className={`${styles.card} ${styles.cardButton}`} onClick={() => setSelectedEntry(e)}>
-                <div className={styles.cardTop}>
-                  <span className={styles.cardDate}>{new Date(e.entry_date).toLocaleDateString('vi-VN')}</span>
-                  <Pill tone={statusInfo.tone}>{statusInfo.label}</Pill>
-                </div>
-                <span className={styles.cardActivity}>{ACTIVITY_MAP[e.activity_type] || e.activity_type}</span>
-                {e.activities?.[0] && (
-                  <span className={styles.cardDetail}>{formatDetail(e.activities[0].activity_detail)}</span>
-                )}
-                {e.notes && <span className={styles.cardDetail}>{e.notes}</span>}
+        <>
+          <div className={styles.pills} role="group" aria-label="Lọc theo trạng thái">
+            {FILTERS.map(item => (
+              <button key={item.value} type="button" className={styles.pill} aria-pressed={filter === item.value} onClick={() => setFilter(item.value)}>
+                {item.label} <b>{item.value === 'ALL' ? entries.length : entries.filter(e => e.status === item.value).length}</b>
               </button>
-            )
-          })}
-        </div>
-      )}
-
-      {selectedEntry && (
-        <div className={styles.overlay} onClick={() => setSelectedEntry(null)}>
-          <div className={`${styles.modal} ${styles.detailModal}`} onClick={e => e.stopPropagation()}>
-            <h2 className={styles.modalTitle}>Chi tiết Nhật ký</h2>
-            
-            <div className={styles.detailBody}>
-              <div className={styles.detailRow}>
-                <strong>Ngày:</strong>
-                <span>{new Date(selectedEntry.entry_date).toLocaleDateString('vi-VN')}</span>
-              </div>
-              <div className={styles.detailRow}>
-                <strong>Hoạt động:</strong>
-                <span>{ACTIVITY_MAP[selectedEntry.activity_type] || selectedEntry.activity_type}</span>
-              </div>
-              <div className={styles.detailRow}>
-                <strong>Sản phẩm:</strong>
-                <span>{selectedEntry.activities?.[0]?.product_name || 'Không sử dụng'}</span>
-              </div>
-              {selectedEntry.activities?.[0]?.dosage && (
-                <div className={styles.detailRow}>
-                  <strong>Liều lượng:</strong>
-                  <span>{selectedEntry.activities[0].dosage}</span>
-                </div>
-              )}
-              {selectedEntry.activities?.[0]?.performer && (
-                <div className={styles.detailRow}>
-                  <strong>Người thực hiện:</strong>
-                  <span>{selectedEntry.activities[0].performer}</span>
-                </div>
-              )}
-              {selectedEntry.activities?.[0]?.withdrawal_days !== undefined && (
-                <div className={styles.detailRow}>
-                  <strong>Cách ly:</strong>
-                  <span>{selectedEntry.activities[0].withdrawal_days} ngày</span>
-                </div>
-              )}
-              <div className={styles.detailRow}>
-                <strong>Ghi chú:</strong>
-                <span>{selectedEntry.notes || 'Không có'}</span>
-              </div>
-              
-              {selectedEntry.photo_url && (
-                <div className={styles.detailRow}>
-                  <strong>Hình ảnh:</strong>
-                  <div className="mt-2 w-full rounded-md overflow-hidden bg-muted flex justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={selectedEntry.photo_url} alt="Journal attachment" className="max-w-full max-h-[300px] object-contain" />
-                  </div>
-                </div>
-              )}
-
-              {selectedEntry.review_note && (
-                <div className={styles.rejectBox}>
-                  <strong>{selectedEntry.status === 'REQUEST_CHANGES' ? 'Yêu cầu sửa:' : 'Lý do từ chối:'}</strong>
-                  <p>{selectedEntry.review_note}</p>
-                </div>
-              )}
-
-              <div className={styles.historyBox}>
-                <strong>Lịch sử duyệt:</strong>
-                {selectedEntry.history ? (
-                  <ul>
-                    {selectedEntry.history.map((h, i) => (
-                      <li key={i}>
-                        <span>{h.date}</span> - <strong>{h.action}</strong>
-                        {h.note && <span> ({h.note})</span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>Chưa có lịch sử</p>
-                )}
-              </div>
-            </div>
-
-            <div className={styles.formActions}>
-              <button type="button" className={styles.cancelBtn} onClick={() => setSelectedEntry(null)}>Đóng</button>
-              {selectedEntry.status === 'PENDING_APPROVAL' && (
-                <button type="button" className={styles.dangerBtn} onClick={() => handleWithdraw(selectedEntry.id)} disabled={isDeleting}>
-                  {isDeleting ? 'Đang rút...' : 'Rút nhật ký'}
-                </button>
-              )}
-            </div>
+            ))}
           </div>
-        </div>
+
+          <div className={styles.toolbar}>
+            <span className={styles.field}>
+              <Layers size={20} strokeWidth={1.6} aria-hidden="true" />
+              <select className={styles.select} aria-label="Lọc theo thửa" value={parcel} onChange={event => setParcel(event.target.value)}>
+                <option value="ALL">Tất cả thửa chè</option>
+                {parcelCodes.map(code => <option key={code} value={code}>{code}</option>)}
+              </select>
+              <ChevronDown size={18} aria-hidden="true" />
+            </span>
+            <span className={styles.field}>
+              <Calendar size={20} strokeWidth={1.6} aria-hidden="true" />
+              <select className={styles.select} aria-label="Lọc theo khoảng ngày" value={range} onChange={event => setRange(event.target.value)}>
+                {RANGES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+              <ChevronDown size={18} aria-hidden="true" />
+            </span>
+            <span className={styles.count}>{shown.length} nhật ký</span>
+          </div>
+
+          <div className={styles.layout}>
+            <div className={styles.entries}>
+              {shown.length === 0 && <div className={styles.empty}>Không có nhật ký nào khớp bộ lọc.</div>}
+              {GROUPS.map(group => {
+                const items = shown.filter(e => groupOf(e.entry_date) === group.key)
+                if (items.length === 0) return null
+                if (group.key !== 'older') {
+                  return (
+                    <React.Fragment key={group.key}>
+                      <h2 className={styles.groupHead}>{group.label}</h2>
+                      {items.map(card)}
+                    </React.Fragment>
+                  )
+                }
+                return (
+                  <React.Fragment key={group.key}>
+                    <button type="button" className={styles.groupHead} aria-expanded={showOlder} onClick={() => setOlderOpen(!showOlder)}>
+                      {showOlder ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+                      {group.label} ({items.length})
+                    </button>
+                    {showOlder && items.map(card)}
+                  </React.Fragment>
+                )
+              })}
+            </div>
+
+            {selectedEntry && (
+              <section className={`${kit.pn} ${styles.detail}`} aria-label="Chi tiết nhật ký">
+                <div className={styles.detailHead}>
+                  <h2>Chi tiết nhật ký</h2>
+                  <span className={`${kit.tag} ${kit[status(selectedEntry.status).tone]}`}>{status(selectedEntry.status).label}</span>
+                </div>
+                <div className={styles.detailTitle}>
+                  {icon(selectedEntry.activity_type, 28)}
+                  <strong>{activityName(selectedEntry.activity_type)}</strong>
+                </div>
+                <dl className={styles.rows}>
+                  {detailRows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+                </dl>
+
+                {selectedEntry.photo_url && (
+                  <div className={styles.photo}>
+                    <strong>Ảnh thực tế</strong>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={selectedEntry.photo_url} alt="Journal attachment" />
+                  </div>
+                )}
+
+                {selectedEntry.review_note && (
+                  <div className={`${styles.rejectBox} ${styles.inset}`}>
+                    <strong>{selectedEntry.status === 'REQUEST_CHANGES' ? 'Yêu cầu sửa:' : 'Lý do từ chối:'}</strong>
+                    <p>{selectedEntry.review_note}</p>
+                  </div>
+                )}
+
+                <div className={styles.history}>
+                  <strong>Lịch sử xử lý</strong>
+                  {steps.length ? (
+                    <ol>
+                      {steps.map((step, i) => (
+                        <li key={i} className={step.done ? styles.done : styles.waiting}>
+                          <b>{step.title}</b>
+                          {step.text && <span>{step.text}</span>}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className={kit.muted}>Chưa có lịch sử</p>
+                  )}
+                </div>
+
+                {selectedEntry.status === 'PENDING_APPROVAL' && (
+                  <div className={styles.foot}>
+                    <button type="button" className={`${kit.btn2} ${styles.withdraw}`} onClick={() => handleWithdraw(selectedEntry.id)} disabled={isDeleting}>
+                      <Trash2 size={16} aria-hidden="true" />
+                      {isDeleting ? 'Đang rút...' : 'Rút nhật ký'}
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
+        </>
       )}
     </div>
   )

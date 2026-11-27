@@ -20,9 +20,9 @@ test.describe('Sign-out Flow', () => {
     await profileButton.click();
 
     // 4. Verify the popup appears with the correct role and links
-    const popup = sidebar.locator('div').filter({ hasText: 'ĐĂNG NHẬP VỚI VAI TRÒ: TRƯỞNG HTX' }).first();
+    const popup = sidebar.locator('div').filter({ hasText: 'Tài khoản của tôi' }).filter({ has: page.getByRole('button', { name: 'Đăng xuất' }) }).last();
     await expect(popup).toBeVisible();
-    await expect(popup.getByRole('link', { name: 'Hồ sơ tài khoản' })).toBeVisible();
+    await expect(popup.getByRole('link', { name: 'Tài khoản của tôi' })).toBeVisible();
     
     // 5. Click the "Đăng xuất" button
     const signOutButton = popup.getByRole('button', { name: 'Đăng xuất' });

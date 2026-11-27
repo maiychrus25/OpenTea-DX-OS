@@ -1,0 +1,55 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+/* The building blocks of the farmer web design, expressed with the system tokens. */
+.page { display: flex; flex-direction: column; gap: 20px; width: 100%; min-width: 0; }
+.pn { min-width: 0; overflow: hidden; background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: 16px; box-shadow: var(--shadow-card); }
+.ph { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 18px; border-bottom: 1px solid var(--color-border-row); font-size: 15px; font-weight: 700; color: var(--color-ink-heading); }
+.ph::before { content: ''; width: 4px; height: 18px; flex: none; border-radius: 4px; background: var(--color-primary); }
+.ph h2 { margin: 0; font: inherit; flex: 1; }
+.ph a { font-size: 13px; font-weight: 600; color: var(--color-primary); text-decoration: none; }
+.th { padding: 11px 12px; border-bottom: 1px solid var(--color-border); background: var(--color-table-head); color: var(--color-ink-secondary); font-size: 12.5px; font-weight: 700; text-align: left; white-space: nowrap; }
+.td { padding: 11px 12px; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; vertical-align: middle; }
+.btn, .btn2 { display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; font-family: inherit; text-decoration: none; cursor: pointer; border-radius: 10px; }
+.btn { height: 42px; padding: 0 18px; border: 0; background: var(--color-primary-strong); color: var(--color-primary-foreground); font-size: 14px; font-weight: 700; }
+.btn2 { height: 40px; padding: 0 14px; border: 1px solid var(--color-border-input); background: var(--color-surface-card); color: var(--color-ink-primary); font-size: 13.5px; font-weight: 600; }
+a.btn, a.btn:hover { color: var(--color-primary-foreground); }
+a.btn2, a.btn2:hover { color: var(--color-ink-primary); }
+.btn:disabled, .btn2:disabled { cursor: not-allowed; }
+.inp { box-sizing: border-box; height: 40px; min-width: 0; padding: 0 12px; border: 1px solid var(--color-border-input); border-radius: 10px; background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; font-size: 13.5px; font-weight: 400; }
+.fl { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 13px; font-weight: 600; color: var(--color-ink-secondary); }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.ok { background: var(--color-success-subtle); color: var(--color-success); }
+.wt { background: var(--color-warning-subtle); color: var(--color-warning); }
+.in { background: var(--color-info-subtle); color: var(--color-info); }
+.bd { background: var(--color-danger-subtle); color: var(--color-danger); }
+.mu { background: var(--muted); color: var(--color-ink-tertiary); }
+.soft { background: var(--color-primary-subtle); color: var(--color-primary); }
+.amber { background: var(--color-warning-subtle); color: var(--color-accent); }
+.dark { background: var(--sidebar-bg); color: var(--accent-lime); }
+.hd { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.hico { width: 58px; height: 58px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 16px; background: var(--color-primary-subtle); color: var(--color-primary); }
+.hdText { flex: 1 1 320px; min-width: 0; }
+.h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; color: var(--color-ink-heading); }
+.sub { margin: 4px 0 0; font-size: 13.5px; color: var(--color-ink-secondary); }
+.ico { width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+.seg { box-sizing: border-box; display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border: 1px solid var(--color-border); border-radius: 99px; background: var(--color-surface-card); color: var(--color-ink-tertiary); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.seg[aria-pressed='true'] { background: var(--sidebar-bg); border-color: var(--sidebar-bg); color: var(--color-ink-inverse); }
+.cols { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
+.stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.list { list-style: none; margin: 0; padding: 0; }
+.row { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
+.grow { flex: 1; min-width: 0; }
+.muted { color: var(--color-ink-secondary); }
+.warn { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-warning-subtle)); border-radius: 14px; background: var(--color-warning-subtle); color: var(--color-warning); font-size: 14px; }
+.warn a { color: inherit; font-weight: 700; text-decoration: none; }
+.note { display: flex; gap: 10px; padding: 14px; border-radius: 14px; background: var(--color-info-subtle); color: var(--color-info); font-size: 13px; line-height: 1.55; }
+
+@media (max-width: 767px) {
+  .two, .three { grid-template-columns: 1fr !important; }
+}
+
+/* The CSS reset drops list numbers the design shows. */
+.page :where(ol) { list-style: decimal; }

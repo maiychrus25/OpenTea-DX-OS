@@ -1,45 +1,11 @@
-/* Copyright (c) 2026 OpenTea Developers
-   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+/* SPDX-License-Identifier: MIT
+   SPDX-FileCopyrightText: 2026 OpenTea Developers */
 
-/* Pill base */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 999px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Tones */
-.green {
-  background: var(--color-primary-subtle);
-  color: var(--color-primary);
-}
-
-.amber {
-  background: var(--color-warning-subtle);
-  color: var(--color-warning);
-}
-
-.blue {
-  background: var(--color-info-subtle);
-  color: var(--color-info);
-}
-
-.neutral {
-  background: var(--muted);
-  color: var(--muted-foreground);
-}
-
-/* Sizes */
-.sm {
-  font-size: 9px;
-  padding: 4px 8px;
-}
-
-.md {
-  font-size: 11px;
-  padding: 5px 10px;
-}
+.pill { display: inline-flex; align-items: center; gap: 4px; border-radius: var(--radius-pill); font-weight: 600; white-space: nowrap; }
+.green, .ok { background: var(--pill-ok-bg); color: var(--pill-ok-fg); }
+.amber, .wait { background: var(--pill-wait-bg); color: var(--pill-wait-fg); }
+.blue, .info { background: var(--pill-info-bg); color: var(--pill-info-fg); }
+.red, .bad { background: var(--pill-bad-bg); color: var(--pill-bad-fg); }
+.neutral, .muted { background: var(--pill-muted-bg); color: var(--pill-muted-fg); }
+.sm { font-size: 12px; padding: 2px 10px; }
+.md { font-size: 12.5px; padding: 5px 12px; white-space: normal; }

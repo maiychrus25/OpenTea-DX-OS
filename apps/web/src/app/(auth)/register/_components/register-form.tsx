@@ -6,7 +6,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui'
-import { Clock, ArrowLeft } from 'lucide-react'
+import { Clock, ArrowLeft, Eye, EyeOff, Lock, Phone, User, Users } from 'lucide-react'
 import styles from '../register.module.css'
 import {
   validateFullName,
@@ -40,6 +40,8 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
   const [confirmPin, setConfirmPin] = useState('')
   const [consent, setConsent] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
+  const [showPin, setShowPin] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   function validate(): boolean {
     const newErrors: FormErrors = {}
@@ -119,23 +121,58 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
       {/* Real connection to Keycloak enabled */}
 
       <div className={styles.form}>
+        {/* Chọn HTX */}
+        <div className={styles.field}>
+          <label htmlFor="reg-htx" className={styles.label}>
+            Loại tài khoản<span aria-hidden="true">*</span>
+          </label>
+          <div className={styles.control}>
+            <Users size={17} aria-hidden="true" />
+            <select
+              id="reg-htx"
+              data-testid="select-htx"
+              className={styles.select}
+              value={htxId}
+              onChange={(e) => setHtxId(e.target.value)}
+              aria-describedby={errors.htxId ? 'err-htx' : undefined}
+              aria-invalid={!!errors.htxId}
+            >
+              <option value="">Hợp tác xã</option>
+              {htxList.map((htx) => (
+                <option key={htx.id} value={htx.id}>
+                  {htx.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {errors.htxId && (
+            <p id="err-htx" className={styles.fieldError} role="alert" data-testid="error-htx">
+              {errors.htxId}
+            </p>
+          )}
+        </div>
+
+        <div className={styles.pair}>
         {/* Họ tên */}
         <div className={styles.field}>
           <label htmlFor="reg-fullname" className={styles.label}>
-            Họ và tên <span aria-hidden="true">*</span>
+            Họ và tên<span aria-hidden="true">*</span>
           </label>
-          <input
-            id="reg-fullname"
-            data-testid="input-fullname"
-            type="text"
-            autoComplete="name"
-            className={`${styles.input} ${errors.fullName ? styles.inputError : ''}`}
-            placeholder="VD: Nguyễn Văn An"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            aria-describedby={errors.fullName ? 'err-fullname' : undefined}
-            aria-invalid={!!errors.fullName}
-          />
+          <div className={styles.control}>
+            <User size={17} aria-hidden="true" />
+            <input
+              id="reg-fullname"
+              data-testid="input-fullname"
+              type="text"
+              autoComplete="name"
+              className={`${styles.input} ${errors.fullName ? styles.inputError : ''}`}
+              placeholder="Nhập họ và tên"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              aria-describedby={errors.fullName ? 'err-fullname' : undefined}
+              aria-invalid={!!errors.fullName}
+            />
+          </div>
           {errors.fullName && (
             <p id="err-fullname" className={styles.fieldError} role="alert" data-testid="error-fullname">
               {errors.fullName}
@@ -146,75 +183,68 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
         {/* Số điện thoại */}
         <div className={styles.field}>
           <label htmlFor="reg-phone" className={styles.label}>
-            Số điện thoại <span aria-hidden="true">*</span>
+            Số điện thoại<span aria-hidden="true">*</span>
           </label>
-          <input
-            id="reg-phone"
-            data-testid="input-phone"
-            type="tel"
-            autoComplete="tel"
-            inputMode="numeric"
-            className={`${styles.input} ${errors.phone ? styles.inputError : ''}`}
-            placeholder="VD: 0901234567"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            aria-describedby={errors.phone ? 'err-phone' : undefined}
-            aria-invalid={!!errors.phone}
-          />
+          <div className={styles.control}>
+            <Phone size={17} aria-hidden="true" />
+            <input
+              id="reg-phone"
+              data-testid="input-phone"
+              type="tel"
+              autoComplete="tel"
+              inputMode="numeric"
+              className={`${styles.input} ${errors.phone ? styles.inputError : ''}`}
+              placeholder="Nhập số điện thoại"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              aria-describedby={errors.phone ? 'err-phone' : undefined}
+              aria-invalid={!!errors.phone}
+            />
+          </div>
           {errors.phone && (
             <p id="err-phone" className={styles.fieldError} role="alert" data-testid="error-phone">
               {errors.phone}
             </p>
           )}
         </div>
+        </div>
 
-        {/* Chọn HTX */}
+        {/* The phone number is the login name, so it is shown here rather than typed twice. */}
         <div className={styles.field}>
-          <label htmlFor="reg-htx" className={styles.label}>
-            Hợp tác xã <span aria-hidden="true">*</span>
+          <label htmlFor="reg-username" className={styles.label}>
+            Tên đăng nhập<span aria-hidden="true">*</span>
           </label>
-          <select
-            id="reg-htx"
-            data-testid="select-htx"
-            className={styles.select}
-            value={htxId}
-            onChange={(e) => setHtxId(e.target.value)}
-            aria-describedby={errors.htxId ? 'err-htx' : undefined}
-            aria-invalid={!!errors.htxId}
-          >
-            <option value="">-- Chọn HTX của bạn --</option>
-            {htxList.map((htx) => (
-              <option key={htx.id} value={htx.id}>
-                {htx.name}
-              </option>
-            ))}
-          </select>
-          {errors.htxId && (
-            <p id="err-htx" className={styles.fieldError} role="alert" data-testid="error-htx">
-              {errors.htxId}
-            </p>
-          )}
+          <div className={styles.control}>
+            <User size={17} aria-hidden="true" />
+            <input id="reg-username" className={styles.input} type="text" value={phone} readOnly placeholder="Tự lấy theo số điện thoại" />
+          </div>
         </div>
 
         {/* Mã PIN */}
         <div className={styles.field}>
           <label htmlFor="reg-pin" className={styles.label}>
-            Tạo mã PIN (6 số) <span aria-hidden="true">*</span>
+            Mật khẩu<span aria-hidden="true">*</span>
           </label>
-          <input
-            id="reg-pin"
-            data-testid="input-pin"
-            type="password"
-            inputMode="numeric"
-            maxLength={6}
-            autoComplete="new-password"
-            className={`${styles.input} ${errors.pin ? styles.inputError : ''}`}
-            placeholder="••••••"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            aria-describedby={errors.pin ? 'err-pin' : undefined}
-            aria-invalid={!!errors.pin}
-          />
+          <div className={styles.control}>
+            <Lock size={17} aria-hidden="true" />
+            <input
+              id="reg-pin"
+              data-testid="input-pin"
+              type={showPin ? 'text' : 'password'}
+              inputMode="numeric"
+              maxLength={6}
+              autoComplete="new-password"
+              className={`${styles.input} ${errors.pin ? styles.inputError : ''}`}
+              placeholder="Nhập mật khẩu (6 số)"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              aria-describedby={errors.pin ? 'err-pin' : undefined}
+              aria-invalid={!!errors.pin}
+            />
+            <button type="button" className={styles.reveal} aria-label={showPin ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={showPin} onClick={() => setShowPin(!showPin)}>
+              {showPin ? <Eye size={17} aria-hidden="true" /> : <EyeOff size={17} aria-hidden="true" />}
+            </button>
+          </div>
           {errors.pin && (
             <p id="err-pin" className={styles.fieldError} role="alert" data-testid="error-pin">
               {errors.pin}
@@ -225,22 +255,28 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
         {/* Xác nhận PIN */}
         <div className={styles.field}>
           <label htmlFor="reg-confirm-pin" className={styles.label}>
-            Xác nhận mã PIN <span aria-hidden="true">*</span>
+            Xác nhận mật khẩu<span aria-hidden="true">*</span>
           </label>
-          <input
-            id="reg-confirm-pin"
-            data-testid="input-confirm-pin"
-            type="password"
-            inputMode="numeric"
-            maxLength={6}
-            autoComplete="new-password"
-            className={`${styles.input} ${errors.confirmPin ? styles.inputError : ''}`}
-            placeholder="••••••"
-            value={confirmPin}
-            onChange={(e) => setConfirmPin(e.target.value)}
-            aria-describedby={errors.confirmPin ? 'err-confirm-pin' : undefined}
-            aria-invalid={!!errors.confirmPin}
-          />
+          <div className={styles.control}>
+            <Lock size={17} aria-hidden="true" />
+            <input
+              id="reg-confirm-pin"
+              data-testid="input-confirm-pin"
+              type={showConfirm ? 'text' : 'password'}
+              inputMode="numeric"
+              maxLength={6}
+              autoComplete="new-password"
+              className={`${styles.input} ${errors.confirmPin ? styles.inputError : ''}`}
+              placeholder="Nhập lại mật khẩu"
+              value={confirmPin}
+              onChange={(e) => setConfirmPin(e.target.value)}
+              aria-describedby={errors.confirmPin ? 'err-confirm-pin' : undefined}
+              aria-invalid={!!errors.confirmPin}
+            />
+            <button type="button" className={styles.reveal} aria-label={showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={showConfirm} onClick={() => setShowConfirm(!showConfirm)}>
+              {showConfirm ? <Eye size={17} aria-hidden="true" /> : <EyeOff size={17} aria-hidden="true" />}
+            </button>
+          </div>
           {errors.confirmPin && (
             <p id="err-confirm-pin" className={styles.fieldError} role="alert" data-testid="error-confirm-pin">
               {errors.confirmPin}
@@ -262,11 +298,13 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
               aria-invalid={!!errors.consent}
             />
             <label htmlFor="reg-consent" className={styles.consentLabel}>
-              Tôi đồng ý với{' '}
-              <a href="#" onClick={(e) => e.preventDefault()}>
-                điều khoản sử dụng
-              </a>{' '}
-              và cho phép HTX quản lý dữ liệu canh tác của tôi.
+              <span>
+                Tôi đồng ý với{' '}
+                <a href="#" onClick={(e) => e.preventDefault()}>
+                  điều khoản sử dụng
+                </a>{' '}
+                và cho phép HTX quản lý dữ liệu canh tác của tôi.
+              </span>
             </label>
           </div>
           {errors.consent && (
@@ -282,13 +320,13 @@ export function RegisterForm({ htxList }: { htxList: HtxOption[] }) {
           isLoading={state === 'loading'}
           data-testid="register-submit-btn"
         >
-          Đăng ký tài khoản
+          Đăng ký
         </Button>
 
         <p className={styles.loginLink}>
-          Đã có tài khoản?{' '}
+          Bạn đã có tài khoản?{' '}
           <Link href="/login" data-testid="login-link">
-            Đăng nhập
+            Đăng nhập ngay
           </Link>
         </p>
       </div>

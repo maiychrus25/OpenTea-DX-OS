@@ -79,14 +79,16 @@ export function AccountSection({ name, role }: AccountSectionProps) {
         </div>
       </div>
 
-      <Button
-        className={styles.logoutBtn}
-        onClick={handleLogout}
-        disabled={isPending}
-        variant="secondary"
-      >
-        {isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
-      </Button>
+      <div className={styles.logoutRow}>
+        <Button
+          className={styles.logoutBtn}
+          onClick={handleLogout}
+          disabled={isPending}
+          variant="secondary"
+        >
+          {isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
+        </Button>
+      </div>
     </section>
   )
 }

@@ -1,0 +1,37 @@
+/* SPDX-License-Identifier: MIT */
+
+.tag { display: inline-block; padding: 1px 8px; border: 1px dashed var(--color-warning); border-radius: 99px; background: var(--color-warning-subtle); color: var(--color-warning); font-size: 11px; font-weight: 700; }
+.card { min-width: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface-card); box-shadow: var(--shadow-card); }
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 50px; padding: 0 18px; border-bottom: 1px solid var(--color-border-row); }
+.head h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--color-ink-heading); }
+.head > span:last-child { margin-left: auto; }
+.legend { display: inline-flex; gap: 14px; font-size: 12.5px; color: var(--color-ink-secondary); }
+.legend i { display: inline-block; width: 12px; height: 10px; margin-right: 6px; border-radius: 2px; background: var(--color-primary); }
+.legend i.plan { height: 0; border-top: 2px dashed var(--color-accent); background: none; vertical-align: middle; }
+.chart { position: relative; padding: 14px 18px 10px; }
+.chart svg { display: block; width: 100%; height: 220px; }
+.chart rect { fill: var(--color-primary); }
+.chart rect.last { fill: var(--sidebar-bg); }
+.chart polyline { fill: none; stroke: var(--color-accent); stroke-width: 2; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+.chart line { stroke: var(--color-border-row); }
+.axis { display: flex; justify-content: space-around; font-size: 11px; color: var(--color-ink-secondary); }
+.rows { margin: 0; padding: 0; list-style: none; }
+.rows li { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
+.rows li:last-child { border-bottom: 0; }
+.rows small { display: block; color: var(--color-ink-secondary); }
+.rows li > span:last-child:not(:only-child) { margin-left: auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 14px; }
+.app { display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+.app p { margin: 0; font-size: 13px; color: var(--color-ink-secondary); }
+.app small { color: var(--color-ink-secondary); }
+.blocks { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px; padding: 16px; }
+.block { display: flex; flex-direction: column; justify-content: space-between; min-width: 90px; min-height: 62px; padding: 8px; border: 1px solid var(--color-border-input); border-left: 6px solid var(--color-status-draft); border-radius: 8px; font-size: 12px; }
+.SOWING { border-left-color: var(--color-status-sowing); }
+.TENDING { border-left-color: var(--color-status-tending); }
+.HARVEST_APPROVED { border-left-color: var(--color-status-harvest-approved); }
+.HARVESTED { border-left-color: var(--color-status-harvested); }
+
+.plotRow { display: flex; gap: 8px; }
+.plotRow svg { flex: 1; min-width: 0; }
+.scale { display: flex; flex-direction: column; justify-content: space-between; width: 14px; padding-bottom: 2px; font-size: 11px; color: var(--color-ink-secondary); text-align: right; }
+.weeks { margin-left: 22px; }

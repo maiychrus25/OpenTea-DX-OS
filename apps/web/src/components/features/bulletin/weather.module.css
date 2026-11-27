@@ -1,0 +1,86 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.section { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.heading { margin: 0; font-size: var(--font-size-h2); font-weight: 700; color: var(--color-ink-heading); }
+.message { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; padding: 32px 18px; border: 1px dashed var(--color-border); border-radius: var(--radius-card); background: var(--color-surface-card); color: var(--color-ink-secondary); text-align: center; }
+.retry { height: 34px; padding: 0 14px; border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; font-size: var(--font-size-meta); font-weight: 700; cursor: pointer; }
+.spinner { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.scene { position: relative; display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 10px 18px; border-radius: var(--radius-card); overflow: hidden; color: var(--color-hero-text); background: linear-gradient(color-mix(in srgb, var(--color-hero-bg) 22%, transparent), color-mix(in srgb, var(--color-hero-bg) 8%, transparent) 55%, color-mix(in srgb, var(--color-hero-bg) 24%, transparent)), url('/images/tea-hills-rain.jpg') center 62% / cover, var(--color-hero-bg); box-shadow: var(--shadow-card); }
+.scene > * { position: relative; z-index: 1; }
+.scene > .rain { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; color: var(--color-hero-text); }
+
+.summary { display: flex; align-items: center; gap: 18px; width: 100%; min-width: 0; padding: 6px 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.summary:focus-visible, .more:focus-visible { outline: 2px solid var(--accent-lime); outline-offset: 2px; }
+.bigIcon { display: flex; flex-shrink: 0; }
+.where, .sky { display: flex; flex-direction: column; min-width: 0; }
+.where, .temperature, .sky { padding-left: 18px; border-left: 1px solid color-mix(in srgb, var(--color-hero-text) 28%, transparent); }
+.where { flex: 1.4; }
+.sky { flex: 1; }
+.location { font-size: 19px; font-weight: 800; }
+.condition { font-size: 16px; font-weight: 700; }
+.muted { font-size: var(--font-size-table); color: var(--color-hero-muted); }
+.temperature { font-size: 40px; font-weight: 800; line-height: 1.1; white-space: nowrap; }
+.toggle { display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-weight: 700; }
+
+.glass { margin: 0; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--color-hero-text) 18%, transparent); border-radius: var(--radius-card); background: color-mix(in srgb, var(--color-hero-bg) 34%, transparent); min-width: 0; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stats div { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.stats div + div { border-left: 1px solid color-mix(in srgb, var(--color-hero-text) 22%, transparent); }
+.stats dt { font-size: var(--font-size-meta); color: var(--color-hero-muted); }
+.stats dd { margin: 0; font-size: 21px; font-weight: 800; }
+.hoursHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px; margin-bottom: 4px; }
+.hoursHead h3 { margin: 0; font-size: 15px; font-weight: 800; color: var(--color-hero-text); }
+.hoursHead span { font-size: 12px; font-style: italic; color: var(--color-hero-muted); }
+.hours { display: grid; grid-auto-flow: column; grid-auto-columns: calc(100% / 6); margin: 0; padding: 0 0 4px; list-style: none; overflow-x: auto; }
+.hour { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; }
+.hour + .hour { border-left: 1px solid color-mix(in srgb, var(--color-hero-text) 22%, transparent); }
+.hour strong { font-size: 21px; }
+.more { display: flex; align-self: center; align-items: center; justify-content: center; gap: 6px; padding: 6px 14px; border: 0; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--color-hero-bg) 78%, transparent); color: var(--accent-lime); font: inherit; font-size: var(--font-size-meta); font-weight: 700; cursor: pointer; }
+
+@media (max-width: 767px) {
+  .scene { padding: 8px 12px; }
+  .summary { flex-wrap: wrap; gap: 8px 12px; }
+  .where { flex: 1 1 calc(100% - 110px); padding-left: 12px; }
+  .location { font-size: 16px; }
+  .condition { font-size: 16px; }
+  .muted { font-size: var(--font-size-table); }
+  .hour strong { font-size: 19px; }
+  .toggle { order: 1; }
+  .temperature { order: 2; padding-left: 0; border-left: 0; font-size: 32px; }
+  .sky { order: 3; padding-left: 12px; }
+  .toggleText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .stats div { flex-direction: column; gap: 2px; text-align: center; }
+  .stats dd { font-size: 20px; }
+  .stats dt { font-size: 12px; }
+  .hours { grid-auto-columns: 25%; }
+}
+
+.panel { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface-card); box-shadow: var(--shadow-card); min-width: 0; }
+.block, .tile { border: 1px solid var(--color-border-row); border-radius: var(--radius-button); padding: 12px 14px; min-width: 0; }
+.cardTitle { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--color-ink-secondary); }
+.cardTitle svg, .dayIcon svg { color: var(--color-primary); }
+.chance { min-height: 15px; font-size: 11px; font-weight: 800; color: var(--color-info); }
+
+.details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.days { margin: 0; padding: 0; list-style: none; }
+.day { display: grid; grid-template-columns: 72px 40px 34px minmax(40px, 1fr) 34px; align-items: center; gap: 6px; white-space: nowrap; min-height: 44px; border-top: 1px solid var(--color-border-row); font-weight: 600; }
+.dayIcon { display: flex; flex-direction: column; align-items: center; }
+.dayIcon .chance { min-height: 0; }
+.low { color: var(--color-ink-secondary); text-align: right; }
+.bar { width: 100%; height: 5px; overflow: visible; }
+.bar line { stroke-width: 5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.barTrack { stroke: var(--color-border-row); }
+.barFill { stroke: var(--color-primary); }
+
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tile p { margin-bottom: 4px; }
+.tileValue { font-size: 22px; font-weight: 600; line-height: 1.2; }
+.tileNote { font-size: 12.5px; line-height: 1.4; color: var(--color-ink-secondary); }
+
+@media (max-width: 1023px) {
+  .details { grid-template-columns: minmax(0, 1fr); }
+}

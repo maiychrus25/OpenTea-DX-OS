@@ -1,0 +1,39 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 OpenTea Developers
+   Licensed under the MIT License. See LICENSE file in the project root for full license information. */
+
+.page { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.quickLinks { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.quickLink { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 0 18px; background: var(--color-surface-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); font-weight: 700; font-size: 14px; color: var(--color-ink-primary); text-decoration: none; }
+.quickLink svg { color: var(--color-primary); }
+.quickLink span { flex: 1; }
+.quickLink:hover { border-color: var(--color-primary); }
+.columns { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--font-size-table); }
+.table th { text-align: left; padding: 11px 14px; background: var(--color-table-head); font-size: 12.5px; font-weight: 700; color: var(--color-ink-primary); white-space: nowrap; }
+.table td { padding: 12px 14px; border-top: 1px solid var(--color-border-row); white-space: nowrap; }
+.code { font-family: var(--font-family-mono, monospace); }
+.action { font-weight: 700; color: var(--color-primary); text-decoration: none; }
+.list { list-style: none; margin: 0; padding: 0; }
+.row { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--color-border-row); }
+.row:first-child { border-top: 0; }
+.rowMain { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rowMain strong { font-size: 14px; }
+.rowMain small { font-size: 12.5px; color: var(--color-ink-secondary); }
+.rowDate { width: 48px; font-weight: 700; }
+.body { padding: 16px 18px; }
+
+@media (max-width: 1023px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .metrics, .quickLinks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+}
+
+/* A figure that opens the list behind it. */
+.metricLink { display: grid; color: inherit; text-decoration: none; border-radius: var(--radius-card); }
+.metricLink:hover { color: inherit; box-shadow: var(--shadow-card-hover); }

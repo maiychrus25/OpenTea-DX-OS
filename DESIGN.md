@@ -17,13 +17,23 @@ colors:
   primary-foreground-dark: "#04140c"
   accent-lime: "#d6f05c"
   accent-lime-dark: "#c9e157"
+  video-stage: "#0b140f"
+  video-stage-dark: "#0b140f"
+  video-panel: "#101c15"
+  video-panel-dark: "#101c15"
+  video-ink: "#ffffff"
+  video-ink-dark: "#ffffff"
+  video-shade: "#000000"
+  video-shade-dark: "#000000"
+  video-like: "#f5124a"
+  video-like-dark: "#f5124a"
   secondary: "#e7f0ea"
   secondary-dark: "#173328"
   muted: "#eef1ed"
   muted-dark: "#162a20"
   muted-foreground: "#5d6a63"
   muted-foreground-dark: "#9fb4a8"
-  border: "#dce3dd"
+  border: "#dde6e0"
   border-dark: "#2a4034"
   sidebar-bg: "#143c2d"
   sidebar-bg-dark: "#0e271d"
@@ -51,6 +61,18 @@ colors:
   status-harvested-dark: "#60a5fa"
   status-draft: "#6b7280"
   status-draft-dark: "#a3b1a9"
+  series-1: "#257de0"
+  series-1-dark: "#338ced"
+  series-2: "#008a17"
+  series-2-dark: "#0aac23"
+  series-3: "#6a4ce2"
+  series-3-dark: "#9887ef"
+  series-4: "#f2a600"
+  series-4-dark: "#d28e05"
+  series-5: "#00b894"
+  series-5-dark: "#00a888"
+  series-6: "#f47230"
+  series-6-dark: "#e76624"
   success: "#15803d"
   success-dark: "#4ade80"
   warning: "#854d0e"
@@ -67,15 +89,15 @@ colors:
   danger-subtle-dark: "#3a1414"
   info-subtle: "#dbeafe"
   info-subtle-dark: "#132640"
-  surface-sunken: "#f1f5f9"
+  surface-sunken: "#f7faf8"
   surface-sunken-dark: "#0e1d16"
   surface-overlay: "#ffffff"
   surface-overlay-dark: "#152a20"
   border-subtle: "#e2e8f0"
   border-subtle-dark: "#1f3229"
-  ink-secondary: "#475569"
+  ink-secondary: "#5d6a63"
   ink-secondary-dark: "#b4c4bb"
-  ink-tertiary: "#5f6b7a"
+  ink-tertiary: "#475569"
   ink-tertiary-dark: "#8ea398"
   ink-inverse: "#ffffff"
   ink-inverse-dark: "#08130e"
@@ -87,6 +109,38 @@ colors:
   badge-unread-dark: "#f87171"
   danger-hover: "#991b1b"
   danger-hover-dark: "#fca5a5"
+  primary-strong: "#14583e"
+  primary-strong-dark: "#4cc38a"
+  sidebar-text: "#dbe9e1"
+  sidebar-text-dark: "#dbe9e1"
+  sidebar-muted: "#a9c7b7"
+  sidebar-muted-dark: "#a9c7b7"
+  sidebar-group: "#8fb3a1"
+  sidebar-group-dark: "#8fb3a1"
+  sidebar-badge: "#f2b544"
+  sidebar-badge-dark: "#f2b544"
+  sidebar-badge-foreground: "#1d1405"
+  sidebar-badge-foreground-dark: "#1d1405"
+  table-head: "#f1f6f3"
+  table-head-dark: "#173328"
+  border-input: "#c9d6cd"
+  border-input-dark: "#42614f"
+  border-row: "#edf1ee"
+  border-row-dark: "#1f3229"
+  ink-heading: "#10301f"
+  ink-heading-dark: "#e3ece6"
+  pill-ok-fg: "#147a3a"
+  pill-ok-fg-dark: "#4ade80"
+  alert-warn-border: "#f5d98a"
+  alert-warn-border-dark: "#765b1f"
+  alert-warn-fg: "#4a3000"
+  alert-warn-fg-dark: "#fbbf24"
+  hero-bg: "#10301f"
+  hero-bg-dark: "#10301f"
+  hero-text: "#ffffff"
+  hero-text-dark: "#ffffff"
+  hero-muted: "#dbe9e1"
+  hero-muted-dark: "#dbe9e1"
 typography:
   display:
     fontFamily: Be Vietnam Pro
@@ -110,7 +164,7 @@ typography:
     lineHeight: 1.4
   body:
     fontFamily: Be Vietnam Pro
-    fontSize: 0.9375rem
+    fontSize: 14px
     fontWeight: 400
     lineHeight: 1.55
   body-large:
@@ -125,12 +179,32 @@ typography:
     lineHeight: 1.4
   meta:
     fontFamily: Be Vietnam Pro
-    fontSize: 0.75rem
+    fontSize: 12.5px
     fontWeight: 500
     lineHeight: 1.4
   mono:
     fontFamily: JetBrains Mono
     fontSize: 0.8125rem
+    fontWeight: 400
+    lineHeight: 1.5
+  page-title:
+    fontFamily: Be Vietnam Pro
+    fontSize: 28px
+    fontWeight: 800
+    lineHeight: 1.2
+  hero-title:
+    fontFamily: Be Vietnam Pro
+    fontSize: 36px
+    fontWeight: 800
+    lineHeight: 1.15
+  card-title:
+    fontFamily: Be Vietnam Pro
+    fontSize: 15px
+    fontWeight: 700
+    lineHeight: 1.4
+  table:
+    fontFamily: Be Vietnam Pro
+    fontSize: 13.5px
     fontWeight: 400
     lineHeight: 1.5
 rounded:
@@ -151,9 +225,9 @@ spacing:
   "12": 48px
   "16": 64px
   gutter-mobile: 16px
-  gutter-desktop: 24px
-  sidebar-width: 240px
-  topbar-height: 56px
+  gutter-desktop: 28px
+  sidebar-width: 264px
+  topbar-height: 64px
 motion:
   duration-fast: 150ms
   duration-base: 200ms
@@ -216,6 +290,7 @@ Token màu nằm trên `:root`. Màu tối nằm trong `@media (prefers-color-sc
 - **Accent lime (#d6f05c):** chỉ dùng cho khối logo trong sidebar và trang đăng nhập.
 - **Nền:** sáng `#f5f7f3`, thẻ `#ffffff`; tối `#0b1712` (xanh rất đậm) và thẻ `#112219`. Sidebar giữ màu xanh đậm ở cả hai chế độ.
 - **Trạng thái thửa (tập đóng):** `status-sowing`, `status-tending`, `status-harvest-approved`, `status-harvested`, `status-draft`. Chỉ dùng cho huy hiệu trạng thái thửa, chữ là `ink-inverse`.
+- **Chuỗi dữ liệu biểu đồ:** `series-1` đến `series-6`, gán cố định theo loại hoạt động (tưới tiêu, bón phân, phun thuốc, thu hái, gieo trồng, khác), luôn kèm chú giải và bảng số liệu. Không dùng cho chữ hay nút.
 - **Phản hồi:** `success`, `warning`, `danger`, `info` dùng làm chữ hoặc biểu tượng trên `*-subtle` hoặc trên thẻ; `danger` và `info` cũng làm nền nút với chữ `ink-inverse`.
 - **Chữ:** `foreground` (ink-primary) cho nội dung, `ink-secondary` cho mô tả, `ink-tertiary` và `muted-foreground` cho chú thích. `ink-inverse` là chữ trên nền màu đặc: trắng ở chế độ sáng, gần đen ở chế độ tối vì nền màu đặc ở chế độ tối sáng hơn.
 
@@ -237,7 +312,7 @@ Lưới khoảng cách 4px (`spacing`). Lề trang 16px trên điện thoại, 2
 
 | Token | Sáng | Tối |
 | --- | --- | --- |
-| `--shadow-card` | `0 1px 4px rgba(15, 23, 42, 0.06)` | `0 1px 4px rgba(0, 0, 0, 0.4)` |
+| `--shadow-card` | `0 1px 3px rgba(10, 58, 38, 0.05)` | `0 1px 4px rgba(0, 0, 0, 0.4)` |
 | `--shadow-card-hover` | `0 4px 16px rgba(15, 23, 42, 0.10)` | `0 4px 16px rgba(0, 0, 0, 0.5)` |
 | `--shadow-modal` | `0 10px 25px rgba(15, 23, 42, 0.15)` | `0 10px 25px rgba(0, 0, 0, 0.6)` |
 
@@ -260,6 +335,38 @@ Bo góc vừa phải: 6px cho điều khiển nhỏ, 10px cho nút và ô nhập
 - **Dải ảnh màn hình (App Store):** hàng ngang các ảnh rộng `min(640px, 86vw)` giữ tỉ lệ ảnh, mỗi ảnh là liên kết mở ảnh lớn ở thẻ mới (`aria-label` "Xem ảnh lớn: <chú thích>"), viền `border`, bo 10px, chú thích `meta` bên dưới. Dải tự cuộn trong chính nó (`overflow-x: auto`), không làm trang tràn ngang; ảnh tải lười và có `alt` là chú thích.
 - **Bộ giao diện mini-app (`apps/web/public/dxos-app.css`):** chỉ dùng token đã có, đúng ở sáng và tối, không tràn ngang ở 390px, có `:focus-visible`. Thành phần: `app-header`, `tabs` (cuộn trong thanh), `stats` (2 cột ở điện thoại, 4 từ 768px), `chart` (một dòng nhãn-thanh-giá trị từ 640px; thanh SVG do máy chủ sinh, chiều dài là thuộc tính SVG, không `style=`), `toolbar`, `pagination`, `cards`, `steps` (✓ cho bước xong, bước hiện tại tô `primary`), `empty`, `field-error`, `disclosure`, `actions`, `a.button` và `.danger`, `.pill` với ba sắc `neutral`/`warn`/`danger`, ô chọn và nút radio cỡ bình thường, nút gọn trong bảng, `signature` (chỗ ký tay khi in), `print-sheet`/`no-print`/`print-only` với `@media print` bỏ nền, màu, điều hướng và nút. Macro và ví dụ ở `platform/appkit/`, mô tả trong `docs/miniapps.md`.
 - **Không nhấp nháy:** `layout.tsx` chạy một đoạn script nội tuyến trước lần vẽ đầu, trong `try/catch`, để đặt `data-theme` từ lựa chọn đã lưu; không có lựa chọn hoặc `system` thì để trống và theo `prefers-color-scheme`.
+
+## Officer summary strips and cards
+
+- Officer pages retain the original app colours: `surface-page` background, `primary-subtle` header icon boxes with `primary` icons, untinted panel heads and normal metric-card borders (no green top border). Tables retain their page-specific styles without officer-wide dark heads, uppercase white labels or zebra/hover fills. Sample tables use the shared `table-head` background and `ink-primary` text tokens. These tokens apply in both light and dark mode; manager and farmer styles are unchanged.
+- Officer `PageHeader` is low (40px icon, 20px title) and there is no breadcrumb above it: the top bar already names the page.
+- `components/features/officer-web/parts.tsx` owns the shared `Stats` definition list: pale `primary-subtle` icon boxes, text ink labels/values, thin `border` dividers, tabular numbers. Desktop figures share a bordered strip; below 640px they stack with horizontal dividers. Long labels and values wrap rather than overflow. Colour is decorative, not a data encoding.
+- Households use loaded household count, parcel-count sum and area sum (Vietnamese formatting, ha). Lots use loaded total/ready/exported counts; diseases use the pending queue and reports with displayable photos. Journal counts explicitly describe the currently displayed page, not the whole paginated dataset. Documents opt into an officer variant and count only currently displayed live files/folders; loading/error/mock fallback never becomes an invented zero or real total. No additional summary query.
+- The five sample shop/tour/revenue screens keep their existing sample datasets and computations; the shared strip changes presentation only. Tables stay tables.
+- Household cards use initials, retained phone/address, icon facts and an inset full-width pale-green detail link. Lot and disease cards reuse the pale icon/facts/footer treatment while preserving QR export, review buttons, photos and confidence. Existing CSS class names and E2E action names remain intact. Card grids shrink to the available mobile width; actions are at least 44px and retain keyboard focus outlines. Dark mode uses the same existing semantic tokens.
+
+## Officer overview
+
+- `/officer/dashboard` follows `design-handoff/officer-web/overview-target.png`: greeting/weather, four linked figures, urgent queue, journal plus disease/harvest lists, schematic plus activity chart, households plus sample shop/tours. Body is 13px, 10–12px gaps, compact panels; two-column groups stack below 1200px. Narrow tables scroll inside their panel, not the page. Existing colour/background tokens are unchanged; all new styles are local to this dashboard.
+- Reuses `WeatherHero`, `MetricCard`, `Panel`, `Pill`, `ReportPhoto` and `SampleTag`. `WeatherHero.forecastHref` defaults to the unchanged farmer route; the officer links to the existing weather bulletin category. No invented weather or favourable spraying advice. Missing live weather remains explicitly unavailable.
+- Prisma reads are server-side and tenant-scoped. Journal pagination uses six rows and stable date/id ordering. Approve uses the existing batch-approve API, checks both approved_count and failed_ids, disables duplicate submission and refreshes server figures. Journal deep links open the existing create/detail UI; an explicitly selected older entry is fetched server-side within the tenant rather than relying on the client list's 1,000-row limit.
+- Cultivated = neither DRAFT nor HARVESTED. Seven-day journal progress = cultivated parcels with at least one entry dated within the trailing seven days / cultivated parcels; no cultivated parcels means “Chưa canh tác”, not a fabricated 100%. Area is in hectares. Sparkline titles describe dated inflow of the currently counted cohort in seven Vietnam calendar days, not historical stock or an invented percentage trend; no events means no line.
+- Urgent items are pending disease reports and unharvested cycles planned before the parcel's latest safe_harvest_date from already-recorded, non-rejected activities. All outstanding plans, including overdue ones, are compared. The seven-day list starts at Vietnam midnight and compares each plan against that same safe date; “Được hái” describes withdrawal only, not harvest authorization. The urgent block disappears when empty; long queues scroll within the block.
+- The schematic alone has sample positions (tagged “Mẫu”); codes and states are real. State priority: not cultivated → has pending/confirmed disease → still within withdrawal → normal. Disease resolution is not inferred: the schema has no resolved status. Text accompanies every colour and the legend counts every loaded parcel.
+- Activity bars count real journals of every status over 30 Vietnam calendar days in nonoverlapping seven-day buckets, ending with a partial bucket. SVG uses the existing primary ink with fixed per-activity hatch patterns, never a new palette; legend, per-segment titles and an expandable exact-value table accompany totals. No entries means an empty state. Approval metrics use entries approved during those 30 days with valid timestamps; “on time” explicitly means approved_at − created_at ≤ 48 hours (a display definition, not a configured SLA), and the average uses 24-hour days. Both definitions are in title attributes; neither metric appears without data.
+- Shop/tour figures and recent orders are computed only from officer-web/sample.ts and marked “Mẫu”. They deliberately do not reproduce unsupported lot/booking figures from the target image as real facts. No dependencies or schema changes.
+
+## Chat workspace
+
+- `/manager/chat` (market), `/officer/chat` (technical) và `/officer/assistant` (market) dùng chung `components/ui/chat-interface`. Giữ tiêu đề từng trang (h1 nhỏ ở góc trên) và phân quyền ở server; không thay API/use case.
+- Chat nằm trong khung ứng dụng (giữ sidebar), chiếm hết vùng nội dung; từ 1024px ẩn topbar trên riêng các trang chat, màn hẹp hơn giữ lại vì có nút mở menu; AppShell chỉ bỏ padding/max-width và khóa chiều cao khi có `[data-chat-workspace]`. Menu chỉ có một mục “Trợ lý AI”; với cán bộ nó mở trợ lý kỹ thuật (trợ lý thị trường vẫn ở `/officer/assistant`, chưa có lối vào trên giao diện). Tiêu đề trang chỉ dành cho trình đọc màn hình. Không có sidebar thứ hai.
+- Nền `--color-surface-card`, sidebar `--color-surface-sunken`. Cột nội dung rộng khoảng 770px; câu hỏi nằm bên phải trên `--muted`, câu trả lời là chữ thường không bong bóng, không avatar. Markdown có khung cuộn riêng cho bảng/mã, nguồn là chip văn bản và sao chép có phản hồi thành công/thất bại.
+- Lịch sử và Trò chuyện mới là hai nút ở góc trái trên. Lịch sử mở thành native modal dialog bên phải (focus trap, Escape, trả focus); ô tìm chỉ lọc tiêu đề đã tải, không gọi API.
+- Trạng thái trống chỉ có lời chào “Hôm nay bạn đang nghĩ gì?” và ô nhập dạng viên thuốc ở giữa, không gợi ý. Có tin nhắn thì ô nhập ở đáy; textarea tự giãn tối đa 200px. Enter gửi, Shift+Enter xuống dòng, không gửi trong IME.
+- Nút gửi chuyển thành dừng khi nhận phản hồi. AbortController hủy request phía client; mọi cập nhật cũ bị bỏ qua sau khi đổi/tạo hội thoại hoặc unmount. Không cam kết hủy xử lý/lưu lịch sử ở backend vì API không đổi.
+- Stream hiện tại là NDJSON: giữ dòng dang dở giữa các chunk, giải mã UTF-8 liên tục, xử lý cả dòng cuối không có newline, dừng ở done/error. Ẩn think blocks khi stream và nạp lịch sử; lỗi cập nhật cùng một assistant message. 401 chuyển tới đăng nhập, 503 có thông báo dịch vụ không khả dụng.
+- Chỉ tự cuộn khi người đọc ở gần đáy (96px), nếu không hiện nút đến tin mới nhất. Typing indicator/cursor tuân thủ reduced motion. Disclaimer luôn nhắc AI chỉ tham khảo, không quyết định thay HTX.
+- Không thêm đính kèm, microphone, chọn model, đổi tên/xóa hay tạo lại câu trả lời khi chưa có backend hỗ trợ. Không thêm dependency hay token màu mới.
 
 ## Do's and Don'ts
 

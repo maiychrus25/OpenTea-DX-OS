@@ -1,0 +1,13 @@
+/* SPDX-License-Identifier: MIT */
+
+.filters { display: flex; flex-wrap: wrap; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--color-border-row); }
+.filters label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--color-ink-secondary); }
+.filters select, .filters input { min-width: 150px; height: 38px; padding: 0 10px; border: 1px solid var(--color-border-input); border-radius: var(--radius-button); background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; font-size: 13.5px; font-weight: 400; }
+.dialog { width: min(460px, calc(100vw - 32px)); margin: auto; padding: 20px; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface-card); color: var(--color-ink-primary); }
+.dialog::backdrop { background: var(--color-modal-overlay); }
+.dialog h2 { margin: 0 0 12px; font-size: 18px; color: var(--color-ink-heading); }
+.dialog dl { margin: 0 0 12px; }
+.dialog dl div { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
+.dialog dt { width: 130px; flex: none; color: var(--color-ink-secondary); }
+.dialog dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.dialog img { display: block; max-width: 100%; margin-bottom: 12px; border-radius: 8px; }

@@ -1,6 +1,9 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Bug, ImageIcon, Layers, CalendarDays, ArrowRight } from 'lucide-react'
+import { FilteredCards } from '@/components/features/officer-web/FilteredCards'
 import React from 'react';
 import Link from 'next/link';
 import { auth } from '@/auth';
@@ -47,45 +50,65 @@ export default async function OfficerDiseasesPage() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Danh sách Báo cáo Bệnh cần duyệt</h1>
-      </header>
+      <PageHeader
+        icon={<Bug size={28} />}
+        title="Danh sách Báo cáo Bệnh cần duyệt"
+        description="Ảnh chẩn đoán do nông hộ gửi, chờ cán bộ kỹ thuật xác nhận"
+      />
 
       {reports.length === 0 ? (
         <div className={styles.empty}>
           Không có báo cáo bệnh nào đang chờ duyệt.
         </div>
-      ) : (
-        <div className={styles.grid}>
-          {reports.map((report) => (
-            <div key={report.id} className={styles.card}>
-              <div className={styles.cardHeader}>
-                <div>
-                  <h3 className={styles.diseaseName}>{displayDiseaseName(report)}</h3>
-                  <p className={styles.meta}>Nông hộ: {report.farmer_name}</p>
-                </div>
-                <Pill tone={PENDING.tone}>{PENDING.label}</Pill>
-              </div>
+      ) : null}
 
+      <FilteredCards
+          className={styles.grid}
+          figures={[
+            { label: 'Báo cáo chờ duyệt', value: reports.length, icon: <Bug /> },
+            { label: 'Báo cáo có ảnh', value: reports.filter(report => report.photo_url).length, icon: <ImageIcon />, tag: 'photo' },
+          ]}
+          cards={reports.map((report) => ({
+            key: report.id,
+            tags: report.photo_url ? ['photo'] : [],
+            node: (
+            <div className={styles.card}>
               {report.photo_url && (
                 <div className={styles.imageWrapper}>
                   <ReportPhoto src={report.photo_url} className={styles.reportImage} />
                 </div>
               )}
 
-              <div className={styles.details}>
-                <div><strong>Thửa đất:</strong> {report.parcel_code}</div>
-                <div><strong>AI Tự tin:</strong> {(report.ai_confidence * 100).toFixed(1)}%</div>
-                <div><strong>Ngày gửi:</strong> {new Date(report.detection_date).toLocaleDateString('vi-VN')}</div>
+              <div className={styles.cardHead}>
+                <span className={styles.mark} aria-hidden="true"><Bug size={24} /></span>
+                <div className={styles.headText}>
+                  <h3 className={styles.diseaseName}>{displayDiseaseName(report)}</h3>
+                  <p className={styles.meta}>Nông hộ: {report.farmer_name}</p>
+                </div>
+                <Pill tone={PENDING.tone}>{PENDING.label}</Pill>
               </div>
 
-              <Link href={`/officer/diseases/${report.id}`} style={{ textDecoration: 'none' }}>
-                <Button variant="primary" style={{ width: '100%' }}>Xem chi tiết & Duyệt</Button>
-              </Link>
+              <dl className={styles.facts}>
+                <div><dt><Layers size={18} aria-hidden="true" />Thửa đất</dt><dd>{report.parcel_code}</dd></div>
+                <div><dt><CalendarDays size={18} aria-hidden="true" />Ngày gửi</dt><dd>{new Date(report.detection_date).toLocaleDateString('vi-VN')}</dd></div>
+              </dl>
+
+              <div className={styles.confidence}>
+                <span className={styles.confidenceRow}>Độ tin cậy của AI <strong>{(report.ai_confidence * 100).toFixed(1)}%</strong></span>
+                <progress max={1} value={report.ai_confidence} aria-label="Độ tin cậy của AI" />
+              </div>
+
+              <div className={styles.cardActions}>
+                <Link href={`/officer/diseases/${report.id}`}>
+                  <Button variant="primary" className={styles.reviewBtn}>
+                    Xem chi tiết & Duyệt <ArrowRight size={18} aria-hidden="true" />
+                  </Button>
+                </Link>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+            ),
+          }))}
+      />
     </div>
   );
 }

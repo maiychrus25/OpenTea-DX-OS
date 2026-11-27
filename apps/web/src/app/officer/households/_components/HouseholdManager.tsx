@@ -3,9 +3,12 @@
 
 'use client'
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Users, Layers, Sprout, LandPlot } from 'lucide-react'
+import { FilteredCards } from '@/components/features/officer-web/FilteredCards'
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Phone, MapPin } from 'lucide-react'
+import { ArrowRight, Phone, MapPin } from 'lucide-react'
 import styles from '../households.module.css'
 import { fetchJson } from '@/lib/api/fetch-json'
 
@@ -76,14 +79,18 @@ export function HouseholdManager() {
     }
   }
 
+  const hectares = (value: number) => value.toLocaleString('vi-VN', { maximumFractionDigits: 2 })
+  const totalArea = households.reduce((sum, h) => sum + h.total_area_ha, 0)
+
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Quản lý Nông hộ</h1>
-        {!showForm && (
-          <button className={styles.createBtn} onClick={() => setShowForm(true)}>+ Thêm nông hộ</button>
-        )}
-      </div>
+      <PageHeader
+        icon={<Users size={28} />}
+        title="Quản lý Nông hộ"
+        description="Hộ thành viên, liên hệ và thửa đất đang phụ trách"
+        actions={!showForm ? <button type="button" className={styles.createBtn} onClick={() => setShowForm(true)}>+ Thêm nông hộ</button> : undefined}
+      />
+
 
       {showForm && (
         <form className={styles.formCard} onSubmit={handleCreate}>
@@ -118,27 +125,48 @@ export function HouseholdManager() {
         <div className={styles.empty}>Không thể tải danh sách nông hộ. Vui lòng thử lại sau.</div>
       ) : households.length === 0 ? (
         <div className={styles.empty}>Chưa có nông hộ nào. Hãy thêm nông hộ đầu tiên!</div>
-      ) : (
-        <div className={styles.grid}>
-          {households.map(h => (
-            <div key={h.id} className={styles.card}>
-              <span className={styles.cardName}>{h.name}</span>
-              <div className={styles.cardMeta}>
-                <span className="inline-flex items-center gap-1"><Phone size={13} className="text-ink-tertiary" /> {h.phone}</span>
-                {h.address && <span className="inline-flex items-center gap-1"><MapPin size={13} className="text-ink-tertiary" /> {h.address}</span>}
+      ) : null}
+
+      {!loading && !loadFailed && (
+        <FilteredCards
+          className={styles.grid}
+          figures={[
+            { label: 'Tổng số nông hộ', value: households.length, icon: <Users /> },
+            { label: 'Tổng số thửa', value: households.reduce((sum, h) => sum + h.parcel_count, 0), icon: <LandPlot />, sort: 'parcels' },
+            { label: 'Tổng diện tích', value: `${hectares(totalArea)} ha`, icon: <Layers />, sort: 'area' },
+          ]}
+          cards={households.map(h => ({
+            key: h.id,
+            rank: { parcels: h.parcel_count, area: h.total_area_ha },
+            node: (
+            <article className={styles.card}>
+              <div className={styles.cardHead}>
+                <span className={styles.mark} aria-hidden="true">{h.name.trim().split(/\s+/).slice(-2).map(word => word[0]).join('').toUpperCase()}</span>
+                <div className={styles.headText}>
+                  <span className={styles.cardName}>{h.name}</span>
+                  <div className={styles.cardMeta}>
+                    <span><Phone size={13} aria-hidden="true" /> {h.phone}</span>
+                    {h.address && <span title={h.address}><MapPin size={13} aria-hidden="true" /> <span className={styles.address}>{h.address}</span></span>}
+                  </div>
+                </div>
               </div>
-              <div className={styles.statRow}>
-                <span className={styles.stat}>Thửa: <span className={styles.statValue}>{h.parcel_count}</span></span>
-                <span className={styles.stat}>Diện tích: <span className={styles.statValue}>{h.total_area_ha.toFixed(2)} ha</span></span>
-              </div>
-              <div className="mt-4 pt-3 border-t border-border-subtle">
-                <Link href={`/officer/households/${h.id}`} className="text-sm font-medium text-success hover:underline flex items-center justify-center w-full">
-                  Xem chi tiết &rarr;
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
+              <dl className={styles.facts}>
+                <div><Layers size={15} aria-hidden="true" /><dt>Số thửa</dt><dd>{h.parcel_count}</dd></div>
+                <div><Sprout size={15} aria-hidden="true" /><dt>Diện tích</dt><dd>{hectares(h.total_area_ha)} ha</dd></div>
+              </dl>
+              {totalArea > 0 && (
+                <div className={styles.share}>
+                  <progress value={h.total_area_ha} max={totalArea} aria-label={`Phần diện tích của ${h.name} trong HTX`} />
+                  <span>{Math.round((h.total_area_ha / totalArea) * 100)}% diện tích HTX</span>
+                </div>
+              )}
+              <Link href={`/officer/households/${h.id}`} className={styles.cardLink}>
+                Xem chi tiết <span className={styles.go} aria-hidden="true"><ArrowRight size={14} /></span>
+              </Link>
+            </article>
+            ),
+          }))}
+        />
       )}
     </div>
   )

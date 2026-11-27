@@ -1,0 +1,21 @@
+/* SPDX-License-Identifier: MIT
+   SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.header { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.iconBox { width: var(--page-icon-box); height: var(--page-icon-box); flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-card); background: var(--color-primary-subtle); color: var(--color-primary); }
+.text { flex: 1; min-width: 200px; }
+.title { margin: 0; font-size: var(--font-size-page-title); font-weight: 800; letter-spacing: -0.5px; color: var(--color-ink-heading); }
+.description { margin: 2px 0 0; font-size: 13.5px; color: var(--color-ink-secondary); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Officer headers stay low: the top bar already says where you are. */
+:global([data-role='officer']) .header { gap: 12px; }
+:global([data-role='officer']) .iconBox { width: 40px; height: 40px; border-radius: 10px; }
+:global([data-role='officer']) .iconBox svg { width: 20px; height: 20px; }
+:global([data-role='officer']) .title { font-size: 20px; letter-spacing: -0.2px; line-height: 1.25; overflow-wrap: anywhere; }
+:global([data-role='officer']) .description { margin: 0; font-size: 12.5px; }
+:global([data-role='officer']) .text { min-width: 0; flex-basis: 200px; }
+:global([data-role='officer']) .actions { max-width: 100%; }
+@media (max-width: 639px) {
+  :global([data-role='officer']) .actions { width: 100%; }
+}

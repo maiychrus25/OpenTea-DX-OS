@@ -5,7 +5,7 @@ import React from 'react'
 import styles from './Pill.module.css'
 
 export interface PillProps {
-  tone: 'green' | 'amber' | 'blue' | 'neutral'
+  tone: 'green' | 'amber' | 'blue' | 'neutral' | 'red' | 'ok' | 'wait' | 'info' | 'bad' | 'muted'
   size?: 'sm' | 'md'
   children: React.ReactNode
   className?: string

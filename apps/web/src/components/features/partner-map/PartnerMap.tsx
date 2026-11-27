@@ -13,6 +13,10 @@ import { Modal } from '@/components/ui/Modal/Modal'
 import { Button } from '@/components/ui'
 import { escapeHtml } from '@/lib/sanitize'
 import styles from './partner-map.module.css'
+import mapStyles from '@/components/features/map/ZoneMap.module.css'
+import { DEFAULT_MAP_VIEW } from '@/lib/map-config'
+import { addMapBaseLayers } from '@/components/features/map/map-layers'
+import { PartnerFallback } from '@/components/features/sample/PartnerFallback'
 
 type Partner = {
   id: string
@@ -34,6 +38,15 @@ const PARTNER_TYPE_MAP: Record<string, string> = {
 export default function PartnerMap() {
   const [partners, setPartners] = useState<Partner[]>([])
   const [isLoadingList, setIsLoadingList] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [isAdding, setIsAdding] = useState(false)
+  const [category, setCategory] = useState('all')
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const visiblePartners = partners.filter(p => category === 'all' || p.partner_type === category)
+
+  useEffect(() => {
+    if (isAdding) nameInputRef.current?.focus()
+  }, [isAdding])
   const [query, setQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [suggests, setSuggests] = useState<any[]>([])
@@ -80,11 +93,16 @@ export default function PartnerMap() {
   useEffect(() => {
     setIsLoadingList(true)
     fetch('/api/partners')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error('Partner load failed')
+        return r.json()
+      })
       .then(j => {
-        setPartners(j.data || [])
+        setPartners(Array.isArray(j) ? j : j.data || [])
+        setLoadFailed(false)
       })
       .catch(() => {
+        setLoadFailed(true)
         toast.error('Không thể tải danh sách đối tác')
       })
       .finally(() => {
@@ -133,6 +151,7 @@ export default function PartnerMap() {
   const handleMapClick = useCallback((coords: { lat: number; lng: number }) => {
     setSelected(coords)
     setFlyToLocation(coords)
+    setIsAdding(true)
     toast.info(`Đã chấm tọa độ: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`)
   }, [])
 
@@ -226,6 +245,8 @@ export default function PartnerMap() {
         setPartners(prev => [j.data, ...prev])
         setForm({ name: '', partner_type: 'BUYER', contact_phone: '', address: '' })
         setSelected(null)
+        setIsAdding(false)
+        setCategory('all')
         setFlyToLocation({ lat: j.data.lat, lng: j.data.lng })
         setQuery('')
         toast.success(`Đã thêm đối tác ${j.data.name} thành công!`)
@@ -256,8 +277,7 @@ export default function PartnerMap() {
     })
 
     const map = L.map(mapContainerRef.current, {
-      center: [10.0452, 105.7469],
-      zoom: 8,
+      ...DEFAULT_MAP_VIEW,
       minZoom: 6,
       maxBounds: [
         [8.0, 102.0],
@@ -266,9 +286,7 @@ export default function PartnerMap() {
       maxBoundsViscosity: 1.0,
     })
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-    }).addTo(map)
+    addMapBaseLayers(map)
 
     const markersLayer = L.layerGroup().addTo(map)
     markersLayerRef.current = markersLayer
@@ -304,7 +322,7 @@ export default function PartnerMap() {
     if (!mapRef.current || !markersLayerRef.current) return
     markersLayerRef.current.clearLayers()
 
-    partners.forEach(p => {
+    partners.filter(p => (category === 'all' || p.partner_type === category) && Number.isFinite(p.lat) && Number.isFinite(p.lng)).forEach(p => {
       const marker = L.marker([p.lat, p.lng])
       
       const safeName = escapeHtml(p.name)
@@ -320,21 +338,21 @@ export default function PartnerMap() {
         ${safePhone ? `<div class="${styles.popupInfo}">SĐT: <strong>${safePhone}</strong></div>` : ''}
         ${safeAddress ? `<div class="${styles.popupInfo}">Đ/c: ${safeAddress}</div>` : ''}
         <div class="${styles.popupActions}">
-          <button type="button" class="${styles.popupBtnEdit}" id="edit-partner-${p.id}" title="Chỉnh sửa thông tin">
+          <button type="button" class="${styles.popupBtnEdit}" data-action="edit" title="Chỉnh sửa thông tin">
             Sửa
           </button>
-          <button type="button" class="${styles.popupBtnDelete}" id="del-partner-${p.id}" title="Xóa đối tác">
+          <button type="button" class="${styles.popupBtnDelete}" data-action="delete" title="Xóa đối tác">
             Xóa
           </button>
         </div>
       `
 
-      popupDiv.querySelector(`#edit-partner-${p.id}`)?.addEventListener('click', (ev) => {
+      popupDiv.querySelector('[data-action="edit"]')?.addEventListener('click', (ev) => {
         ev.stopPropagation()
         handleOpenEdit(p)
       })
 
-      popupDiv.querySelector(`#del-partner-${p.id}`)?.addEventListener('click', (ev) => {
+      popupDiv.querySelector('[data-action="delete"]')?.addEventListener('click', (ev) => {
         ev.stopPropagation()
         setDeletingPartner(p)
       })
@@ -342,6 +360,14 @@ export default function PartnerMap() {
       marker.bindPopup(popupDiv)
       markersLayerRef.current?.addLayer(marker)
     })
+  }, [partners, category])
+
+  // Fit real locations when the loaded list changes, not while selecting a pin.
+  useEffect(() => {
+    const points = partners.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng)).map(p => [p.lat, p.lng] as [number, number])
+    if (points.length && mapRef.current) {
+      mapRef.current.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: DEFAULT_MAP_VIEW.zoom })
+    }
   }, [partners])
 
   // Sync selected coordinate marker
@@ -381,13 +407,25 @@ export default function PartnerMap() {
   const canSubmit = form.name.trim().length > 0 && (selected !== null || form.address.trim().length > 0)
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      
-      {/* Left Sidebar: Form & List */}
-      <div className="w-full lg:w-[400px] flex flex-col gap-6 shrink-0">
-        
-        {/* Add Partner Form */}
-        <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-border-default)] overflow-hidden shadow-sm">
+    <div>
+      <div className={mapStyles.toolbar}>
+        {partners.length > 0 ? (
+        <div className={mapStyles.chips} role="group" aria-label="Loại đối tác">
+          <button type="button" className={mapStyles.chip} aria-pressed={category === 'all'} onClick={() => setCategory('all')}>Tất cả · {partners.length}</button>
+          {Object.entries(PARTNER_TYPE_MAP).map(([type, label]) => (
+            <button key={type} type="button" className={mapStyles.chip} aria-pressed={category === type} onClick={() => setCategory(type)}>{label} · {partners.filter(p => p.partner_type === type).length}</button>
+          ))}
+        </div>
+        ) : <span />}
+        <Button type="button" onClick={() => setIsAdding(value => !value)} aria-expanded={isAdding} aria-controls="add-partner-form">
+          {isAdding ? <X size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
+          {isAdding ? 'Đóng biểu mẫu' : 'Thêm đối tác'}
+        </Button>
+      </div>
+      <div className={mapStyles.workspace}>
+      <div className={mapStyles.sidebar}>
+        {/* Keep the map interactive while the form is open. */}
+        {isAdding && <div id="add-partner-form" className={styles.panel}>
           <div className="px-5 py-4 border-b border-[var(--color-border-default)] bg-[var(--color-surface-card)]">
             <h2 className="font-semibold text-[var(--color-ink-primary)]">Thêm Đối Tác Mới</h2>
             <p className="text-xs text-[var(--color-ink-secondary)] mt-0.5">Tìm kiếm địa điểm hoặc nhấp trực tiếp lên bản đồ</p>
@@ -477,8 +515,10 @@ export default function PartnerMap() {
                   <label className="text-xs font-medium text-[var(--color-ink-secondary)]">
                     Tên đối tác <span className="text-danger">*</span>
                   </label>
-                  <input 
-                    required 
+                  <input
+                    ref={nameInputRef}
+                    aria-label="Tên đối tác"
+                    required
                     placeholder="Nhập tên đối tác" 
                     value={form.name} 
                     onChange={e => setForm({ ...form, name: e.target.value })} 
@@ -539,11 +579,11 @@ export default function PartnerMap() {
               </button>
             </form>
           </div>
-        </div>
+        </div>}
 
         {/* Partners List */}
-        <div className="bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-border-default)] overflow-hidden shadow-sm flex flex-col h-[400px]">
-          <div className="px-5 py-4 border-b border-[var(--color-border-default)] bg-[var(--color-surface-card)] flex items-center justify-between">
+        {!isAdding && <div className={styles.panel}>
+          <div className={styles.panelHeader}>
             <h2 className="font-semibold text-[var(--color-ink-primary)]">Danh Sách Đối Tác</h2>
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium bg-[var(--color-surface-sunken)] px-2.5 py-1 rounded-full text-[var(--color-ink-secondary)]">
@@ -566,19 +606,20 @@ export default function PartnerMap() {
                 <Loader2 className="h-6 w-6 animate-spin text-[var(--color-primary)]" aria-hidden="true" />
                 <p className="text-xs">Đang tải danh sách đối tác...</p>
               </div>
+            ) : loadFailed ? (
+              <p role="alert" className="p-4 text-sm text-ink-secondary">Không thể tải danh sách đối tác</p>
             ) : partners.length === 0 ? (
-              <div className="text-center py-12 text-[var(--color-ink-tertiary)] flex flex-col items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-[var(--color-surface-card)] flex items-center justify-center">
-                  <MapPin className="h-5 w-5" aria-hidden="true" />
-                </div>
-                <p className="text-sm">Chưa có đối tác nào</p>
-              </div>
+              <>
+                <p className="text-sm text-ink-secondary">Chưa có đối tác nào</p>
+                <PartnerFallback />
+              </>
+            ) : visiblePartners.length === 0 ? (
+              <p className="p-4 text-sm text-ink-secondary">Không có đối tác thuộc loại này</p>
             ) : (
-              partners.map(p => (
+              visiblePartners.map(p => (
                 <div 
                   key={p.id} 
-                  onClick={() => setFlyToLocation({ lat: p.lat, lng: p.lng })} 
-                  className="cursor-pointer bg-[var(--color-surface-card)] p-4 rounded-lg border border-[var(--color-border-default)] hover:border-[var(--color-primary)] hover:shadow-md transition-all group"
+                  className={styles.partnerItem}
                 >
                   <div className="flex justify-between items-start gap-4 mb-2">
                     <div>
@@ -589,7 +630,7 @@ export default function PartnerMap() {
                         {PARTNER_TYPE_MAP[p.partner_type] || p.partner_type}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 shrink-0">
                       <button 
                         type="button"
                         onClick={e => { e.stopPropagation(); handleOpenEdit(p); }} 
@@ -611,6 +652,9 @@ export default function PartnerMap() {
                     </div>
                   </div>
                   
+                  <button type="button" className={styles.locate} disabled={!Number.isFinite(p.lat) || !Number.isFinite(p.lng)} onClick={() => setFlyToLocation({ lat: p.lat, lng: p.lng })}>
+                    <MapPin size={14} aria-hidden="true" /> Định vị trên bản đồ
+                  </button>
                   <div className="space-y-1.5 text-xs text-[var(--color-ink-secondary)]">
                     {p.contact_phone && (
                       <div className="flex items-center gap-2">
@@ -629,12 +673,16 @@ export default function PartnerMap() {
               ))
             )}
           </div>
-        </div>
+        </div>}
       </div>
 
-      {/* Right Content: Map */}
-      <div className="flex-1 bg-[var(--color-surface-sunken)] rounded-xl border border-[var(--color-border-default)] overflow-hidden shadow-sm h-[800px] lg:h-auto lg:min-h-[600px] relative">
-        <div ref={mapContainerRef} className="h-full w-full absolute inset-0 z-0" />
+      <div className={mapStyles.mapFrame} aria-label="Bản đồ đối tác">
+        <div ref={mapContainerRef} className={mapStyles.mapCanvas} />
+        <div className={mapStyles.legend} aria-label="Chú giải bản đồ">
+          <span><MapPin size={14} aria-hidden="true" /> Đối tác đã lưu</span>
+          <span>Nhấp bản đồ để chấm ghim mới</span>
+        </div>
+      </div>
       </div>
 
       {/* Edit Partner Modal */}

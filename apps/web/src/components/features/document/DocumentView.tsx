@@ -7,6 +7,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Folder, FileText, Download, Eye, Upload, ChevronRight, Search, Plus, Tag, Shield, FolderInput } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { Modal } from '@/components/ui/Modal/Modal'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Stats } from '@/components/features/officer-web/parts'
 import styles from './DocumentView.module.css'
 import { DocumentItem } from './mock-data'
 import { MOCK_DOCUMENTS } from './mock-data'
@@ -19,7 +21,7 @@ const CATEGORIES = [
   { id: 'Archives/', name: 'Archives', description: 'Lưu trữ cũ' }
 ]
 
-export function DocumentView({ htxCode }: { htxCode: string }) {
+export function DocumentView({ htxCode, variant }: { htxCode: string; variant?: 'officer' }) {
   const root = documentRoot(htxCode)
   const categories = [
     ...CATEGORIES.map(cat => ({ ...cat, id: `${root}${cat.id}` })),
@@ -29,8 +31,11 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
   const isReadOnly = activeCategory === MARKET_REPORTS_ROOT
   const [currentPath, setCurrentPath] = useState(categories[0].id)
   const [documents, setDocuments] = useState<DocumentItem[]>([])
+  const [hasLiveDocuments, setHasLiveDocuments] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  // Officers press a figure to see only the files or only the folders; pressing it again shows both.
+  const [kind, setKind] = useState<'file' | 'dir' | null>(null)
   
   // Modals
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
@@ -50,6 +55,7 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
     // The mock tree has no HTX level.
     const mockPath = path.replace(root, 'para/')
     setIsLoading(true)
+    setHasLiveDocuments(false)
     try {
       const res = await fetch(`/api/documents?path=${encodeURIComponent(path)}`)
 
@@ -71,7 +77,9 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
           filtered = items.filter(doc => doc.name.toLowerCase().includes(searchQuery.toLowerCase()))
         }
         setDocuments(filtered)
+        setHasLiveDocuments(true)
       } else {
+        setHasLiveDocuments(false)
         // API failed, fallback to mock for categories that have mock data
         const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(mockPath) && doc.key !== mockPath)
           .filter(doc => {
@@ -82,6 +90,7 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
         setDocuments(filtered)
       }
     } catch {
+      setHasLiveDocuments(false)
       // On error, fallback to mock data
       const filtered = MOCK_DOCUMENTS.filter(doc => doc.key.startsWith(mockPath) && doc.key !== mockPath)
         .filter(doc => {
@@ -234,26 +243,33 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
   }
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Kho tài liệu P.A.R.A</h1>
-        {!isReadOnly && (
-          <div className="flex gap-2">
-            <Button onClick={() => setIsNewFolderModalOpen(true)} variant="secondary" className="flex items-center gap-2">
-              <Plus size={18} />
+    <div className={`${styles.container}${variant === 'officer' ? ` ${styles.officer}` : ''}`}>
+      <PageHeader
+        icon={<Folder size={28} />}
+        title="Kho tài liệu P.A.R.A"
+        description="Tài liệu của HTX theo cấu trúc Projects, Areas, Resources, Archives"
+        actions={!isReadOnly ? (
+          <>
+            <Button onClick={() => setIsNewFolderModalOpen(true)} variant="secondary">
+              <Plus size={18} aria-hidden="true" />
               Thư mục mới
             </Button>
             <Button onClick={() => {
-               setUploadError(null)
-               setUploadProgress(0)
-               setIsUploadModalOpen(true)
-            }} className="flex items-center gap-2">
-              <Upload size={18} />
+              setUploadError(null)
+              setUploadProgress(0)
+              setIsUploadModalOpen(true)
+            }}>
+              <Upload size={18} aria-hidden="true" />
               Tải tài liệu lên
             </Button>
-          </div>
-        )}
-      </div>
+          </>
+        ) : undefined}
+      />
+
+      {variant === 'officer' && !isLoading && hasLiveDocuments && <Stats items={[
+        { label: 'Tài liệu đang hiển thị', value: documents.filter(doc => !doc.isDir).length, icon: <FileText />, active: kind === 'file', onSelect: () => setKind(kind === 'file' ? null : 'file') },
+        { label: 'Thư mục đang hiển thị', value: documents.filter(doc => doc.isDir).length, icon: <Folder />, active: kind === 'dir', onSelect: () => setKind(kind === 'dir' ? null : 'dir') },
+      ]} />}
 
       <div className={styles.content}>
         <div className={styles.sidebar}>
@@ -316,7 +332,7 @@ export function DocumentView({ htxCode }: { htxCode: string }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {documents.map((doc, i) => (
+                  {documents.filter(doc => !kind || (kind === 'dir') === Boolean(doc.isDir)).map((doc, i) => (
                     <tr key={i} className={doc.isDir ? styles.isDir : ''}>
                       <td>
                         {doc.isDir ? (

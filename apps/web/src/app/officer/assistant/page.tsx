@@ -3,7 +3,7 @@
 
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
-import { ChatPanel } from '../../manager/chat/_components/ChatPanel'
+import { ChatInterface } from '@/components/ui/chat-interface/chat-interface'
 
 export const metadata = {
   title: 'Trợ lý Thị trường',
@@ -18,9 +18,9 @@ export default async function OfficerAssistantPage() {
   if (role !== 'officer' && role !== 'manager') redirect('/unauthorized')
 
   return (
-    <ChatPanel
-      userId={session.user.id!}
-      userName={session.user.name || 'Cán bộ Kỹ thuật'}
+    <ChatInterface
+      role="officer"
+      chatType="market"
     />
   )
 }

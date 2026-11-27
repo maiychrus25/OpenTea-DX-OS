@@ -25,7 +25,7 @@ describe('FarmerBulletinNotificationsPage', () => {
     render(<FarmerBulletinNotificationsPage />)
     
     expect(screen.getByText('Bản tin & Thông báo')).toBeInTheDocument()
-    expect(screen.getByText('Cập nhật thông tin thị trường và thông báo cá nhân của bạn')).toBeInTheDocument()
+    expect(screen.getByText('Thông tin thị trường, kỹ thuật từ HTX và thông báo của riêng bạn')).toBeInTheDocument()
     
     const bulletinTab = screen.getByRole('button', { name: /^Bản tin$/i })
     const notifTab = screen.getByRole('button', { name: /Thông báo/i })

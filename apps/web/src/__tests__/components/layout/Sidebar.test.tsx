@@ -23,7 +23,7 @@ describe('Sidebar Component', () => {
 
   it('renders brand block and coop block', () => {
     render(<Sidebar navItems={mockItems} htxName="HTX Tân Cương" htxLocation="Thái Nguyên" onClose={() => {}} />)
-    expect(screen.getByText('OpenTea DX-OS')).toBeInTheDocument()
+    expect(screen.getByText('DX-OS').parentElement).toHaveTextContent('OpenTea DX-OS')
     expect(screen.getByText('HTX Tân Cương')).toBeInTheDocument()
   })
 
@@ -74,5 +74,12 @@ describe('Sidebar Component', () => {
       expect(current).toHaveLength(1)
       expect(current[0]).toHaveTextContent('Sổ của HTX')
     })
+  })
+
+  it('shows farmers no cooperative card, only their role at the foot', () => {
+    render(<Sidebar navItems={mockItems} role="farmer" htxName="HTX Tân Cương" htxLocation="Thái Nguyên" onClose={() => {}} />)
+    expect(screen.queryByText('ND')).not.toBeInTheDocument()
+    expect(screen.queryByText('HTX Tân Cương')).not.toBeInTheDocument()
+    expect(screen.getByText('Nông dân')).toBeInTheDocument()
   })
 })

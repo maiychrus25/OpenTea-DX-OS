@@ -7,7 +7,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 64px;
+  height: calc(68px + env(safe-area-inset-bottom));
   background-color: var(--color-surface-card);
   border-top: 1px solid var(--color-border-subtle);
   z-index: 40;
@@ -16,7 +16,7 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-@media (min-width: 801px) {
+@media (min-width: 768px) {
   .bottomNav {
     display: none;
   }
@@ -48,15 +48,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  width: 52px;
+  height: 30px;
+  border-radius: var(--radius-pill);
 }
 
 .label {
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 500;
   line-height: 1;
 }
 
 .active .label {
   font-weight: 600;
+}
+
+.active .icon {
+  background: var(--color-primary-subtle);
 }

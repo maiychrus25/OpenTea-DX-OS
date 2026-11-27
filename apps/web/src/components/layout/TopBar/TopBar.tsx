@@ -3,7 +3,7 @@
 
 import * as React from 'react'
 import styles from './TopBar.module.css'
-import { Menu } from 'lucide-react'
+import { Home, Menu } from 'lucide-react'
 import { NotificationBell } from '@/components/ui'
 import { GlobalSearchInput } from '@/components/ui/GlobalSearch/GlobalSearchInput'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -15,9 +15,10 @@ export interface TopBarProps {
   userName: string
   notificationSlot?: React.ReactNode
   onMenuClick?: () => void
+  pageName?: string
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notificationSlot, onMenuClick }) => {
+export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notificationSlot, onMenuClick, pageName }) => {
   // Get initials for avatar
   const initials = userName
     .split(' ')
@@ -37,7 +38,12 @@ export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notifi
         <div className={styles.pageTitle}>
           <span className={styles.brandMobile}>{BRAND_NAME}</span>
         </div>
-        <div className={styles.rolePill}>{roleName}</div>
+        <nav className={styles.breadcrumb} aria-label="Đường dẫn">
+          <Home size={18} aria-hidden="true" />
+          <span>Không gian HTX</span>
+          <span aria-hidden="true">/</span>
+          <strong aria-current="page">{pageName || roleName}</strong>
+        </nav>
       </div>
 
       <GlobalSearchInput />

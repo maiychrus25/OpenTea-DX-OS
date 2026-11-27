@@ -213,3 +213,23 @@
   color: var(--color-ink-secondary);
   font-size: var(--font-size-label);
 }
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.share {
+  appearance: none;
+  width: 90px;
+  height: 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--color-border-row);
+}
+
+.share::-webkit-progress-bar { background: var(--color-border-row); }
+.share::-webkit-progress-value { background: var(--share-color); }
+.share::-moz-progress-bar { background: var(--share-color); }

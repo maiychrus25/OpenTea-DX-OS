@@ -2,26 +2,11 @@
 /* SPDX-FileCopyrightText: 2026 OpenTea Developers */
 
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--spacing-6) var(--spacing-4);
+  width: 100%;
 }
 
-.header {
-  margin-bottom: var(--spacing-6);
-}
-
-.title {
-  font-size: var(--font-size-h1);
-  font-weight: 700;
-  color: var(--color-ink-primary);
-  margin: 0 0 var(--spacing-2);
-}
-
-.subtitle {
-  font-size: var(--font-size-body);
-  color: var(--color-ink-secondary);
-  margin: 0;
+.container > header {
+  margin-bottom: 20px;
 }
 
 .notice {

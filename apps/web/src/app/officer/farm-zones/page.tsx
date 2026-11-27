@@ -1,6 +1,9 @@
 // Copyright (c) 2026 OpenTea Developers
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Map as MapIcon } from 'lucide-react'
+import kit from '@/components/features/dashboard/page-kit.module.css'
 import React from 'react'
 import { Metadata } from 'next'
 import dynamic from 'next/dynamic'
@@ -14,20 +17,13 @@ export const metadata: Metadata = {
 
 export default function OfficerFarmZonesPage() {
   return (
-    <div style={{ padding: 12, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <header className="mb-4 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Bản đồ vùng trồng
-          </h1>
-          <p className="mt-2 text-sm text-ink-secondary">
-            Xem và quản lý không gian các thửa đất trong Hợp tác xã.
-          </p>
-        </div>
-        <Link href="/officer/farm-zones/setup" className="inline-flex items-center justify-center px-4 py-2 border border-transparent font-medium rounded-md text-primary-foreground bg-primary hover:bg-primary-hover transition-colors shadow-sm text-sm">
-          Thiết lập Vùng trồng mới
-        </Link>
-      </header>
+    <div className={`${kit.page} h-full`}>
+      <PageHeader
+        icon={<MapIcon size={28} />}
+        title="Bản đồ vùng trồng"
+        description="Xem và quản lý không gian các thửa đất trong Hợp tác xã"
+        actions={<Link href="/officer/farm-zones/setup" className={kit.primary}>Thiết lập Vùng trồng mới</Link>}
+      />
       <div style={{ flex: 1, minHeight: 600 }}>
         <FarmZoneReadOnly />
       </div>
