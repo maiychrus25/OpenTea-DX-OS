@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Bug, Camera, ChevronLeft, ChevronRight, Download, Droplet, FileText, Leaf, Search, ShieldCheck, ShieldPlus, Sparkles, Sprout, Flower2 } from 'lucide-react'
+import { ArrowRight, Camera, ChevronLeft, ChevronRight, Download, Droplet, FileText, Leaf, Search, ShieldCheck, ShieldPlus, Sparkles, Sprout, Flower2 } from 'lucide-react'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import { SampleTag } from '@/components/features/sample/SampleTag'
 import styles from './handbook.module.css'
@@ -31,10 +31,10 @@ const ARTICLES = [
 ]
 
 const PESTS = [
-  { name: 'Rầy xanh', sign: 'Lá non quăn, mép cháy nâu.', level: 'Trung bình', tone: 'wt' },
-  { name: 'Bọ xít muỗi', sign: 'Búp có chấm đen, héo đầu.', level: 'Cao', tone: 'bd' },
-  { name: 'Thán thư', sign: 'Đốm nâu tròn, viền vàng.', level: 'Trung bình', tone: 'wt' },
-  { name: 'Phồng lá chè', sign: 'Lá phồng, mặt dưới trắng.', level: 'Thấp', tone: 'soft' },
+  { name: 'Rầy xanh', image: '/images/handbook/ray-xanh.jpg', sign: 'Lá non quăn, mép cháy nâu.', level: 'Trung bình', tone: 'wt' },
+  { name: 'Bọ xít muỗi', image: '/images/handbook/bo-xit-muoi.jpg', sign: 'Búp có chấm đen, héo đầu.', level: 'Cao', tone: 'bd' },
+  { name: 'Thán thư', image: '/images/handbook/than-thu.jpg', sign: 'Đốm nâu tròn, viền vàng.', level: 'Trung bình', tone: 'wt' },
+  { name: 'Phồng lá chè', image: '/images/handbook/phong-la.jpg', sign: 'Lá phồng, mặt dưới trắng.', level: 'Thấp', tone: 'soft' },
 ] as const
 
 const SEASON: Record<number, [string, string, string]> = {
@@ -141,7 +141,8 @@ export function Handbook() {
             <ul className={styles.rows}>
               {pests.map(pest => (
                 <li key={pest.name}>
-                  <span className={styles.pestIcon}><Bug size={22} strokeWidth={1.6} aria-hidden="true" /></span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className={styles.pestPhoto} src={pest.image} alt={`Ảnh minh hoạ ${pest.name}`} />
                   <span className={styles.grow}><strong>{pest.name}</strong><small>{pest.sign}</small></span>
                   <span className={`${kit.tag} ${kit[pest.tone]}`}>{pest.level}</span>
                 </li>
