@@ -423,8 +423,8 @@ def test_builder_smoke_checks_the_owner_cooperative_through_the_web_proxy():
     """The gateway's internal port checks the role only; whether a cooperative has an app is the web proxy's rule
     (forward-to-app.ts). An LB token sent straight to apisix:9081 answers 200, so the smoke asks the web instead."""
     text = builder_smoke()
-    assert 'web_status_as smoke_manager_tc TC "/apps/$APP_ID/")" "200"' in text
-    assert 'web_status_as smoke_manager_lb LB "/apps/$APP_ID/")" "404"' in text
+    assert 'web_status_as smoke_manager_tc TC "/apps/$APP_ID")" "200"' in text
+    assert 'web_status_as smoke_manager_lb LB "/apps/$APP_ID")" "404"' in text
     assert 'Bearer $TM_LB" "$APP_GW/apps/$APP_ID/")" "404"' not in text
 
 
