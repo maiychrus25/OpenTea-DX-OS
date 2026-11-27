@@ -5,20 +5,19 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Camera, ExternalLink, ChevronLeft, ChevronRight, Download, Droplet, FileText, Leaf, Search, ShieldCheck, ShieldPlus, Sparkles, Sprout, Flower2 } from 'lucide-react'
+import { ArrowRight, Camera, ExternalLink, ChevronLeft, ChevronRight, Download, Droplet, FileText, Leaf, Search, ShieldCheck, ShieldPlus, Sprout, Flower2 } from 'lucide-react'
 import kit from '@/components/features/farmer-web/kit.module.css'
-import { SampleTag } from '@/components/features/sample/SampleTag'
 import styles from './handbook.module.css'
 import { REFERENCES } from '@/components/features/articles/tea-references'
 
-/** Articles and documents link to real sources; topic counts, pest levels and the season notes are example content. */
+/** Articles and documents link to real sources; the season notes come from the list below. */
 const TOPICS = [
-  { name: 'Trồng & chăm sóc', count: 12, icon: Sprout, categories: ['Chăm sóc'] },
-  { name: 'Bón phân & tưới', count: 15, icon: Droplet, categories: ['Bón phân'] },
-  { name: 'Phòng trị bệnh', count: 18, icon: ShieldPlus, categories: ['Sâu bệnh'] },
-  { name: 'Thu hái & sơ chế', count: 10, icon: Leaf, categories: ['Thu hái'] },
-  { name: 'VietGAP & ghi chép', count: 9, icon: ShieldCheck, categories: ['VietGAP'] },
-  { name: 'Giống chè mới', count: 7, icon: Flower2, categories: ['Giống'] },
+  { name: 'Trồng & chăm sóc', icon: Sprout, categories: ['Chăm sóc'] },
+  { name: 'Bón phân & tưới', icon: Droplet, categories: ['Bón phân'] },
+  { name: 'Phòng trị bệnh', icon: ShieldPlus, categories: ['Sâu bệnh'] },
+  { name: 'Thu hái & sơ chế', icon: Leaf, categories: ['Thu hái'] },
+  { name: 'VietGAP & ghi chép', icon: ShieldCheck, categories: ['VietGAP'] },
+  { name: 'Giống chè mới', icon: Flower2, categories: ['Giống'] },
 ]
 
 const SUGGESTIONS = ['Rầy xanh', 'Bón phân', 'Đốn chè', 'VietGAP']
@@ -32,10 +31,10 @@ const ARTICLES = [
 ]
 
 const PESTS = [
-  { name: 'Rầy xanh', url: REFERENCES.leafhopper.url, image: '/images/handbook/ray-xanh.jpg', sign: 'Lá non quăn, mép cháy nâu.', level: 'Trung bình', tone: 'wt' },
-  { name: 'Bọ xít muỗi', url: REFERENCES.mosquitoBug.url, image: '/images/handbook/bo-xit-muoi.jpg', sign: 'Búp có chấm đen, héo đầu.', level: 'Cao', tone: 'bd' },
-  { name: 'Thán thư', image: '/images/handbook/than-thu.jpg', sign: 'Đốm nâu tròn, viền vàng.', level: 'Trung bình', tone: 'wt' },
-  { name: 'Phồng lá chè', url: REFERENCES.blister.url, image: '/images/handbook/phong-la.jpg', sign: 'Lá phồng, mặt dưới trắng.', level: 'Thấp', tone: 'soft' },
+  { name: 'Rầy xanh', url: REFERENCES.leafhopper.url, image: '/images/handbook/ray-xanh.jpg', sign: 'Lá non quăn, mép cháy nâu.' },
+  { name: 'Bọ xít muỗi', url: REFERENCES.mosquitoBug.url, image: '/images/handbook/bo-xit-muoi.jpg', sign: 'Búp có chấm đen, héo đầu.' },
+  { name: 'Thán thư', image: '/images/handbook/than-thu.jpg', sign: 'Đốm nâu tròn, viền vàng.' },
+  { name: 'Phồng lá chè', url: REFERENCES.blister.url, image: '/images/handbook/phong-la.jpg', sign: 'Lá phồng, mặt dưới trắng.' },
 ] as const
 
 const SEASON: Record<number, [string, string, string]> = {
@@ -48,9 +47,10 @@ const DOCUMENTS = [REFERENCES.sustainable, REFERENCES.blister, REFERENCES.blight
 const plain = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase()
 
 export function Handbook() {
+  const thisMonth = new Date().getMonth() + 1
   const [query, setQuery] = useState('')
   const [topic, setTopic] = useState<string | null>(null)
-  const [month, setMonth] = useState(() => new Date().getMonth() + 1)
+  const [month, setMonth] = useState(thisMonth)
 
   const words = plain(query.trim())
   const categories = TOPICS.find(t => t.name === topic)?.categories
@@ -65,10 +65,9 @@ export function Handbook() {
     <div className={`${kit.page} ${styles.page}`}>
       <div className={styles.head}>
         <div className={styles.headText}>
-          <h1>Cẩm nang canh tác <SampleTag /></h1>
-          <p>Kỹ thuật trồng, chăm sóc, phòng trừ sâu bệnh và thu hái chè, biên soạn bởi cán bộ kỹ thuật HTX</p>
+          <h1>Cẩm nang canh tác</h1>
+          <p>Kỹ thuật trồng, chăm sóc, phòng trừ sâu bệnh và thu hái chè. Tổng hợp từ tài liệu của cơ quan bảo vệ thực vật và các tạp chí khoa học (nguồn ghi ở từng bài).</p>
         </div>
-        <Link href="/farmer/ai" className={kit.btn}><Sparkles size={16} aria-hidden="true" />Hỏi AI</Link>
       </div>
 
       <label className={styles.search}>
@@ -83,16 +82,16 @@ export function Handbook() {
       </div>
 
       <div className={styles.topics} role="group" aria-label="Chủ đề">
-        {TOPICS.map(({ name, count, icon: Icon }) => (
+        {TOPICS.map(({ name, categories, icon: Icon }) => (
           <button key={name} type="button" className={styles.topic} aria-pressed={topic === name} onClick={() => setTopic(topic === name ? null : name)}>
             <span className={styles.topicIcon}><Icon size={22} strokeWidth={1.6} aria-hidden="true" /></span>
-            <span className={styles.grow}><strong>{name}</strong><small>{count} bài</small></span>
+            <span className={styles.grow}><strong>{name}</strong><small>{ARTICLES.filter(a => categories.includes(a.category)).length} bài</small></span>
             <ChevronRight size={18} aria-hidden="true" />
           </button>
         ))}
       </div>
 
-      <section className={kit.pn} aria-label="Việc theo mùa">
+      {SEASON[thisMonth] && <section className={kit.pn} aria-label="Việc theo mùa">
         <div className={`${kit.ph} ${styles.seasonHead}`}>
           <h2>Việc nên làm trong tháng {month}</h2>
           <span className={`${kit.tag} ${kit.soft}`}>Theo mùa</span>
@@ -111,7 +110,7 @@ export function Handbook() {
         ) : (
           <p className={styles.empty}>Chưa có nội dung cho tháng {month}.</p>
         )}
-      </section>
+      </section>}
 
       <div className={styles.columns}>
         <section className={kit.pn} aria-label="Bài viết nổi bật">
@@ -152,7 +151,6 @@ export function Handbook() {
                       : <strong>{pest.name}</strong>}
                     <small>{pest.sign}</small>
                   </span>
-                  <span className={`${kit.tag} ${kit[pest.tone]}`}>{pest.level}</span>
                 </li>
               ))}
             </ul>

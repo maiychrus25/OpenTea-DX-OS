@@ -5,12 +5,11 @@ import React from 'react';
 import { auth } from '@/auth';
 import { prisma } from '@/infrastructure/db/prisma.client';
 import { PrismaBulletinRepository } from '@/infrastructure/db/repositories/PrismaBulletinRepository';
-import { GetLatestBulletinUseCase } from '@/application/useCases/GetLatestBulletinUseCase';
+import { GetAllLatestBulletinsUseCase } from '@/application/useCases/GetAllLatestBulletinsUseCase';
 import { BulletinView } from '@/components/features/bulletin/BulletinView';
-import { SampleTag } from '@/components/features/sample/SampleTag';
+import { EmptyState } from '@/components/ui';
 import kit from '@/components/features/farmer-web/kit.module.css';
-import { toEnglishCommodity } from '@/lib/translations';
-import { Newsroom } from './_components/Newsroom';
+import { Newspaper } from 'lucide-react';
 import styles from './_components/newsroom.module.css';
 
 export const metadata = {
@@ -18,32 +17,26 @@ export const metadata = {
   description: 'Thị trường, thời tiết và kỹ thuật canh tác chè',
 }
 
-export default async function FarmerBulletinPage({
-  searchParams,
-}: {
-  searchParams: { commodity?: string };
-}) {
-  const commodity = searchParams.commodity || 'Chè';
-
+export default async function FarmerBulletinPage() {
   const repo = new PrismaBulletinRepository(prisma);
-  const useCase = new GetLatestBulletinUseCase(repo);
+  const useCase = new GetAllLatestBulletinsUseCase(repo);
 
   const htxCode = (await auth())?.user?.htxCode ?? '';
-  // The page still opens when the market bulletin cannot be read.
-  const bulletin = await useCase.execute(toEnglishCommodity(commodity), htxCode).catch(() => null);
+  // The page still opens when the bulletins cannot be read.
+  const bulletins = await useCase.execute(htxCode).catch(() => []);
 
   return (
     <div className={`${kit.page} ${styles.page}`}>
       <div className={styles.head}>
         <div>
-          <h1>Bản tin <SampleTag /></h1>
+          <h1>Bản tin</h1>
           <p>Thị trường, thời tiết và kỹ thuật canh tác chè, từ HTX và nguồn chính thống</p>
         </div>
       </div>
 
-      <Newsroom />
-
-      {bulletin && <BulletinView bulletin={bulletin} />}
+      {bulletins.length === 0
+        ? <EmptyState icon={<Newspaper />} title="Chưa có bản tin nào" />
+        : bulletins.map(bulletin => <BulletinView key={bulletin.id} bulletin={bulletin} />)}
     </div>
   );
 }
