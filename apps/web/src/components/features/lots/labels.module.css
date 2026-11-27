@@ -1,0 +1,27 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 OpenTea Developers */
+
+/* One named page per label size; each label names its page, so every label prints on a page of its own size. */
+@page label-50x30 { size: 50mm 30mm; margin: 0; }
+@page label-40x30 { size: 40mm 30mm; margin: 0; }
+@page label-60x40 { size: 60mm 40mm; margin: 0; }
+
+.controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 16px 18px; }
+.error { margin: 0 18px 8px; color: var(--color-danger); font-weight: 600; font-size: 13px; }
+.printArea { display: flex; flex-wrap: wrap; gap: 12px; padding: 16px 18px; }
+
+.label { box-sizing: border-box; display: flex; align-items: center; gap: 1.5mm; padding: 1mm; overflow: hidden; background: var(--color-surface-card); color: var(--color-ink-primary); border: 1px dashed var(--color-border); font-size: 7pt; break-after: page; }
+.size50x30 { width: 50mm; height: 30mm; page: label-50x30; }
+.size40x30 { width: 40mm; height: 30mm; page: label-40x30; }
+.size60x40 { width: 60mm; height: 40mm; page: label-60x40; }
+.qr { width: 22mm; height: 22mm; flex: none; }
+.text { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
+
+@media print {
+  /* The local class sits inside :not() so each selector stays pure for CSS modules. */
+  :global(body) *:not(.printArea) { visibility: hidden; }
+  :global(body) .printArea,
+  :global(body) .printArea * { visibility: visible; }
+  :global(body) .printArea { position: absolute; left: 0; top: 0; display: block; padding: 0; }
+  :global(body) .label { border: 0; }
+}

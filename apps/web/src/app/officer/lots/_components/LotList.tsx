@@ -12,7 +12,8 @@ import { QrCode } from 'lucide-react'
 import { LotCreateForm } from './LotCreateForm'
 import styles from '../lots.module.css'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
-import { withoutErrorCode } from '@/lib/api/error-message'
+import Link from 'next/link'
+import { ExportQrDialog } from '@/components/features/lots/ExportQrDialog'
 
 interface LotSummary {
   id: string
@@ -41,12 +42,12 @@ function statusTone(status: string): 'amber' | 'green' | 'neutral' {
   }
 }
 
-export function LotList() {
+export function LotList({ labsEnabled = false }: { labsEnabled?: boolean }) {
   const [lots, setLots] = useState<LotSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [exporting, setExporting] = useState<string | null>(null)
+  const [exportLot, setExportLot] = useState<{ id: string; code: string } | null>(null)
   const [successMsg, setSuccessMsg] = useState('')
 
   const fetchLots = useCallback(() => {
@@ -64,23 +65,11 @@ export function LotList() {
     fetchLots()
   }
 
-  async function handleExportQr(lotId: string) {
-    setExporting(lotId)
-    setSuccessMsg('')
-    try {
-      const res = await fetch(`/api/lots/${lotId}/export-qr`, { method: 'POST' })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(withoutErrorCode(err?.error?.message || 'Lỗi xuất QR'))
-      }
-      const data = await res.json()
-      setSuccessMsg(`Đã xuất QR thành công! Mã: ${data.data.lot_code}`)
-      fetchLots()
-    } catch (err: unknown) {
-      setSuccessMsg(err instanceof Error ? err.message : 'Lỗi')
-    } finally {
-      setExporting(null)
-    }
+  /** The export itself runs in ExportQrDialog, which shows the certificates first. */
+  function handleExported(lotCode: string) {
+    setExportLot(null)
+    setSuccessMsg(`Đã xuất QR thành công! Mã: ${lotCode}`)
+    fetchLots()
   }
 
   return (
@@ -89,7 +78,12 @@ export function LotList() {
         icon={<Package size={28} />}
         title="Quản lý Lô hàng"
         description="Tạo lô từ thửa đã thu hoạch và xuất mã QR truy xuất"
-        actions={<button type="button" className={styles.createBtn} onClick={() => setShowForm(true)}>+ Tạo lô mới</button>}
+        actions={(
+          <>
+            <Link href="/officer/lots/from-batches" className={styles.viewBtn}>Đóng lô từ mẻ</Link>
+            {labsEnabled && <button type="button" className={styles.createBtn} onClick={() => setShowForm(true)}>+ Tạo lô mới</button>}
+          </>
+        )}
       />
 
       {successMsg && <div className={styles.successBanner}>{successMsg}</div>}
@@ -132,18 +126,13 @@ export function LotList() {
               </dl>
               <div className={styles.cardActions}>
                 {lot.status !== 'qr_exported' && (
-                  <button
-                    className={styles.qrBtn}
-                    onClick={() => handleExportQr(lot.id)}
-                    disabled={exporting === lot.id}
-                  >
-                    {exporting === lot.id ? 'Đang xuất...' : (
-                      <>
-                        <QrCode size={15} aria-hidden="true" />
-                        Xuất QR
-                      </>
-                    )}
+                  <button className={styles.qrBtn} onClick={() => setExportLot({ id: lot.id, code: lot.lot_code })}>
+                    <QrCode size={15} aria-hidden="true" />
+                    Xuất QR
                   </button>
+                )}
+                {lot.status === 'qr_exported' && (
+                  <Link href={`/officer/lots/${lot.lot_code}/labels`} className={styles.viewBtn}>In tem</Link>
                 )}
                 {lot.status === 'qr_exported' && (
                   <a href={`/lot/${lot.lot_code}`} target="_blank" rel="noopener noreferrer" className={styles.viewBtn}>
@@ -157,7 +146,11 @@ export function LotList() {
         />
       )}
 
-      {showForm && (
+      {exportLot && (
+        <ExportQrDialog lotId={exportLot.id} lotCode={exportLot.code} onCancel={() => setExportLot(null)} onExported={handleExported} />
+      )}
+
+      {labsEnabled && showForm && (
         <div className={styles.overlay} onClick={() => setShowForm(false)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <LotCreateForm onSuccess={handleCreated} onCancel={() => setShowForm(false)} />

@@ -9,6 +9,11 @@ const TEXT: Record<string, string> = {
   DEVIATION_NOTE_REQUIRED: 'Tỷ lệ nằm ngoài khoảng chuẩn. Nhập giải trình (ít nhất 10 ký tự) để hoàn thành mẻ.',
   TICKET_IN_BATCH: 'Phiếu đã vào mẻ sao. Bỏ phiếu khỏi mẻ trước khi huỷ.',
   NOT_FOUND: 'Không tìm thấy mẻ này.',
+  STOCK_CHANGED: 'Tồn chè khô vừa thay đổi vì một lô khác đã lấy. Bảng đã được tải lại với tồn mới.',
+  WITHDRAWAL_NOT_PASSED: 'Có phiếu cân nguồn còn trong thời gian cách ly nên chưa đóng được lô.',
+  GRADE_MISMATCH: 'Có dòng tồn không cùng hạng với lô đang đóng.',
+  LOT_WITHOUT_BATCH: 'Lô chưa có nguồn từ mẻ sao sấy nên chưa xuất được QR.',
+  CERTIFICATE_NOT_VALID: 'Có chứng nhận đã hết hạn hoặc đã thu hồi. Bỏ chọn chứng nhận đó rồi xuất lại.',
 }
 
 export function processingErrorText(code: string | undefined, message: string | undefined, fallback: string): string {
