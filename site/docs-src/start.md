@@ -9,6 +9,7 @@ Bạn muốn biết hệ thống làm được gì và dữ liệu của HTX n�
 1. [Kiến trúc ba tầng](slug:architecture) cho biết lõi, ứng dụng HTX và mini-app liên quan với nhau thế nào.
 2. Mục [Ứng dụng](slug:app-leaf-purchase) mô tả từng app bạn dùng: thu mua, cửa hàng, vật tư, tour, sổ tự tạo và bảng điều hành.
 3. [Quy tắc và giới hạn](slug:rules) ghi các ràng buộc nghiệp vụ và giới hạn đã biết.
+4. [Lộ trình sản phẩm chiến lược](slug:product-roadmap) trình bày định hướng HTX chè đa thuê bao, các giai đoạn triển khai và KPI.
 
 ## Bạn cài đặt và vận hành hệ thống
 
@@ -21,7 +22,7 @@ Bạn muốn biết hệ thống làm được gì và dữ liệu của HTX n�
 1. [Viết mini-app](slug:miniapp-guide) là hướng dẫn chính: manifest `app.yaml`, đăng nhập, giao diện, database, bảo mật và lệnh `./dxos`.
 2. [Ứng dụng mẫu hello](slug:app-hello) là điểm bắt đầu nhỏ nhất.
 3. [Hợp đồng API](slug:api-contract) và [Cơ sở dữ liệu](slug:database-schema) mô tả bề mặt mà app có thể dùng.
-4. [ADR 0002](slug:adr-0002) giải thích vì sao mini-app chạy như container riêng.
+4. [ADR 0002](slug:adr-0002) giải thích vì sao mini-app chạy như container riêng, và [ADR 0005](slug:adr-0005) chốt ranh giới chuỗi giá trị chè.
 
 ## Bạn đóng góp mã nguồn
 
@@ -32,4 +33,4 @@ Bạn muốn biết hệ thống làm được gì và dữ liệu của HTX n�
 
 ## Tài liệu không đưa lên trang này
 
-Các tài liệu làm việc nội bộ của dự án như bản đặc tả (`docs/specs/`), kế hoạch (`docs/plans/`), sổ ghi các điểm sai lệch so với đặc tả và tài liệu phân tích nghiệp vụ (`docs/BA_Document.md`) không được xuất bản ở đây. Chúng vẫn nằm trong kho mã nguồn.
+Các tài liệu làm việc nội bộ của dự án như bản đặc tả (`docs/specs/`), kế hoạch (`docs/plans/`), sổ ghi các điểm sai lệch so với đặc tả và tài liệu phân tích nghiệp vụ (`docs/business-analysis.md`) không được xuất bản ở đây. Chúng vẫn nằm trong kho mã nguồn (xem mục lục tại `docs/README.md`).

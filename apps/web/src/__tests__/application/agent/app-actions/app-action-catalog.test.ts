@@ -73,7 +73,7 @@ describe('AppActionCatalog', () => {
       risk: 'medium',
       approverRoles: ['manager'],
       origins: ['agent'],
-      autonomy: 'unlockable',
+      autonomy: 'never',
       channels: ['web', 'telegram'],
       subjectTable: null,
       repeatAfterHours: 24,
@@ -98,17 +98,16 @@ describe('AppActionCatalog', () => {
     expect(def.subjects({ product_id: 'p1' })).toEqual([])
   })
 
-  it('makes non-money actions auto and money actions unlockable with a 2 h window', async () => {
+  it('makes non-money actions auto and money actions never autonomous', async () => {
     const { catalog } = setup()
     await catalog.ensure()
     const money = catalog.find('app.tea-shop.promotion.create', 'TC')!
     const plain = catalog.find('app.tea-shop.note.add', 'TC')!
     expect(plain.autonomy).toBe('auto')
-    expect(windowFor(money) / 3_600_000).toBe(2)
+    expect(money.autonomy).toBe('never')
     expect(windowFor(plain) / 60_000).toBe(0)
     const proposal = { origin: 'agent' as const, payload: {}, evidence: { rows: [], sha256: '' } }
-    expect(autoEligibility(proposal, money, { unlockedKinds: [] }).reason).toBe('not_unlocked')
-    expect(autoEligibility(proposal, money, { unlockedKinds: [money.kind] }).eligible).toBe(true)
+    expect(autoEligibility(proposal, money, { unlockedKinds: [money.kind] }).eligible).toBe(false)
   })
 
   it('resolves only for a cooperative the app is enabled for; "*" means every cooperative', async () => {

@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { appBuilderAgentService } from '@/application/appbuilder/app-builder-services'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
 import { readJson, uuidParam, withAppBuildErrors } from '@/lib/api/app-build-response'
+import { labsOnly } from '@/lib/labs'
 
 /** A12 asks up to 5 questions; the web sends them as one Telegram message. */
 async function postQuestions(request: Request, context: unknown) {
@@ -15,4 +16,7 @@ async function postQuestions(request: Request, context: unknown) {
   return NextResponse.json({ data: { status: 'asking' } })
 }
 
-export const POST = withAppBuildErrors(postQuestions)
+export const POST = withAppBuildErrors(labsOnly(postQuestions))
+
+// DXOS_LABS is read per request; a prerendered answer would freeze the switch into the build.
+export const dynamic = 'force-dynamic'

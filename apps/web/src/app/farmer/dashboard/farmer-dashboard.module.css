@@ -56,8 +56,6 @@
 .alertHead svg { width: 17.5px; height: 17.5px; }
 .alertLink { padding: 2px 11px; font-size: 12.5px; }
 .bar { height: 6.5px; margin-top: 6.5px; }
-.tasks ul { padding: 2px 0 !important; }
-.tasks label { padding: 2px 15.5px !important; font-size: 13px !important; }
 .cards { padding: 6.5px 11px 9px; gap: 6.5px; }
 .parcel { gap: 2px 11px; padding: 6.5px 11px; font-size: 14px; }
 .parcel > span:first-child { width: 31px; height: 31px; border-radius: var(--rounded-md); }
@@ -72,32 +70,22 @@
 .table td { padding: 4px 9px; }
 .empty { padding: 11px 15.5px; font-size: 14px; }
 
-.disease h2 { display: flex; align-items: center; gap: 8px; }
-.disease > div:first-child > a { display: inline-flex; flex: none; align-items: center; gap: 4px; margin-left: auto; white-space: nowrap; }
-.findings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 8px 12px 4px; list-style: none; }
-.findings a { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--color-border-default); border-radius: var(--rounded-md); color: var(--color-ink-primary); font-size: 13px; text-decoration: none; }
-.findings a:hover { border-color: var(--color-border-input); color: var(--color-ink-primary); }
-.findings img { flex: none; width: 46px; height: 46px; border-radius: var(--rounded-md); object-fit: cover; }
-.findings small { display: block; font-size: 11.5px; color: var(--color-ink-secondary); }
-.diseaseNote { margin: 0; padding: 2px 14px 8px; font-size: 11.5px; color: var(--color-warning); }
-
 /* Type only: one heading size, one text size, one note size, and bold kept for names. */
 .page section h2 { font-size: 14px; font-weight: 700; line-height: 1.3; }
 .page section h2 + small, .page section > div:first-child small { display: block; font-size: 12px; font-weight: 400; color: var(--color-ink-secondary); }
 .page section > div:first-child a { font-size: 12.5px; font-weight: 600; }
-.shortcut strong, .alertHead strong, .parcel strong, .findings strong { font-size: 13px; font-weight: 600; line-height: 1.35; }
-.shortcut small, .parcel small, .parcel p, .findings small, .withdrawals p, .diseaseNote { font-size: 12px; font-weight: 400; line-height: 1.45; color: var(--color-ink-secondary); }
+.shortcut strong, .alertHead strong, .parcel strong { font-size: 13px; font-weight: 600; line-height: 1.35; }
+.shortcut small, .parcel small, .parcel p, .withdrawals p { font-size: 12px; font-weight: 400; line-height: 1.45; color: var(--color-ink-secondary); }
 .entry { font-size: 13px; line-height: 1.4; }
 .entry strong { font-weight: 600; }
 .date { flex: none; align-items: center; width: 62px; font-size: 12px; }
 .entry > span[class*='tag'] { flex: none; width: 84px; text-align: center; }
-.tasks label { font-size: 13px !important; line-height: 1.45; }
 .table { font-size: 12.5px; }
 .table th { font-size: 12px; font-weight: 600; text-transform: none; }
 .page span[class*='tag'] { font-size: 11.5px; font-weight: 600; }
 
 @media (max-width: 1100px) {
-  .pair, .columns, .findings { grid-template-columns: minmax(0, 1fr); }
+  .pair, .columns { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Phone: banner, weather, warning, then the parcels; the rest stays reachable below. */
@@ -106,11 +94,9 @@
   .page .pair, .page .columns { display: contents; }
   .hero { order: 1; }
   .alert { order: 3; }
-  .disease { order: 4; }
   .parcels { order: 4; }
   .shortcuts { order: 5; }
   .recent { order: 6; }
-  .tasks { order: 7; }
-  .harvest { order: 8; }
+    .harvest { order: 8; }
   .entry { flex-wrap: wrap; }
 }

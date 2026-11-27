@@ -46,6 +46,8 @@ export interface ProposalInboxItem {
 
 interface ProposalInboxProps {
   role: 'manager' | 'officer'
+  /** The server's DXOS_LABS switch: shows the mini-app workshop tab. */
+  labs?: boolean
 }
 
 const RISK_LABEL: Record<Risk, string> = {
@@ -306,7 +308,7 @@ function evidenceView(row: Evidence['rows'][number], subject?: JournalSubject): 
   }
 }
 
-export function ProposalInbox({ role }: ProposalInboxProps) {
+export function ProposalInbox({ role, labs = false }: ProposalInboxProps) {
   const [view, setView] = useState<'open' | 'history'>('open')
   const [items, setItems] = useState<ProposalInboxItem[]>([])
   const [kindFilter, setKindFilter] = useState('all')
@@ -516,7 +518,7 @@ export function ProposalInbox({ role }: ProposalInboxProps) {
           <Link href={`/${role}/ai/settings`} className={styles.tab}>
             Cài đặt
           </Link>
-          {role === 'manager' && (
+          {role === 'manager' && labs && (
             <Link href="/manager/ai/apps" className={styles.tab}>
               Xưởng mini-app
             </Link>

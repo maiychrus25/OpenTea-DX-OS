@@ -35,6 +35,21 @@
     the specific behaviors checked and the evidence; "nothing else should be
     affected" is an assumption, not a verification. If a regression is genuinely
     unavoidable, say so and get approval before proceeding.
+12. Log all completed agent work in `docs/timelines/YYYY-MM-DD.md` (using the
+    current local calendar date, e.g., `docs/timelines/2026-11-28.md`) before
+    reporting any task complete. Create one file per calendar day and append new
+    timestamped entries to that day's file without overwriting earlier entries.
+
+# Daily Agent Work Timeline (docs/timelines/)
+- **Location & Naming:** Store daily work logs under `docs/timelines/` using strict ISO date filenames `YYYY-MM-DD.md` (e.g., `docs/timelines/2026-11-28.md`), creating exactly one file per local calendar day.
+- **Append-Only Per Day:** On the first task of a calendar day, create `docs/timelines/YYYY-MM-DD.md` with the repository's SPDX MIT comment header and `# Daily Work Timeline — YYYY-MM-DD`. For every subsequent task on the same day, append a new chronological entry — never overwrite or delete earlier entries in the file.
+- **Mandatory Scope:** Applies to every agent task executed in this repository (feature builds, bug fixes, refactors, audits, documentation updates, and configuration/tooling changes).
+- **Required Entry Structure:** Each entry must record:
+  1. Local timestamp (`HH:MM`) and task title.
+  2. Task objective / user request summary.
+  3. Concrete work performed and key decisions made.
+  4. Exact files created, modified, renamed, or deleted.
+  5. Verification commands run and their observed outcomes.
 
 # Tài liệu đi cùng code
 - Thay đổi hành vi, giới hạn, IPC, schema hoặc luồng phát hành phải cập nhật `SYSTEM_DOCUMENTATION.md` (và dấu `docs-check` liên quan) trong **cùng commit**.

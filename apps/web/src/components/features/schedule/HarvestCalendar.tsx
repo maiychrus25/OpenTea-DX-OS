@@ -317,13 +317,13 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
             <h3 className="text-lg font-bold">Thêm lịch thu hoạch mới</h3>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium">Chọn thửa ruộng (đang canh tác)</label>
+                <label className="text-sm font-medium">Chọn nương chè (đang canh tác)</label>
                 <select
                   className="border p-2 rounded-md"
                   value={selectedUnscheduledCycleId}
                   onChange={(e) => setSelectedUnscheduledCycleId(e.target.value)}
                 >
-                  <option value="">-- Chọn thửa ruộng --</option>
+                  <option value="">-- Chọn nương chè --</option>
                   {unscheduledData?.data?.map(cycle => (
                     <option key={cycle.cycleId} value={cycle.cycleId}>
                       {cycle.parcelName} - Hộ: {cycle.householdName} ({cycle.cropType})

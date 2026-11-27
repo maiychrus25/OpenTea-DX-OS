@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { appRequestIntake } from '@/application/appbuilder/app-builder-services'
 import { AppBuildError } from '@/domain/appbuilder/app-build'
 import { readJson, requireManagerSession, uuidParam, withAppBuildErrors } from '@/lib/api/app-build-response'
+import { labsOnly } from '@/lib/labs'
 
 const bodySchema = z.object({ answer_text: z.string() })
 
@@ -20,4 +21,7 @@ async function postAnswer(request: Request, context: unknown) {
   return NextResponse.json({ data: { status: 'asking' } })
 }
 
-export const POST = withAppBuildErrors(postAnswer)
+export const POST = withAppBuildErrors(labsOnly(postAnswer))
+
+// DXOS_LABS is read per request; a prerendered answer would freeze the switch into the build.
+export const dynamic = 'force-dynamic'

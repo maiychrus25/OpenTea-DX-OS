@@ -578,16 +578,19 @@ OpenTea-DX-OS/
 
 Vui lòng đọc kỹ trước khi đóng góp mã nguồn:
 
-- 📖 **[Project Context](./docs/project-context.md)** — Công nghệ, thuật ngữ nghiệp vụ (Domain Glossary) và các luật cốt lõi.
-- 📋 **[Tài liệu Phân tích Nghiệp vụ (BA)](./docs/BA_Document.md)** — Yêu cầu nghiệp vụ và luồng xử lý của HTX.
+- 🗂️ **[Mục lục Tài liệu & Quy chuẩn Đặt tên](./docs/README.md)** — Bản đồ toàn bộ tài liệu theo vai trò và quy tắc đặt tên chuẩn.
+- 📖 **[Project Context](./docs/project-context.md)** — Công nghệ, thuật ngữ nghiệp vụ ngành Chè và các luật cốt lõi.
+- 📋 **[Phân tích Nghiệp vụ (BA)](./docs/business-analysis.md)** — Mô hình HPDI, 8 pain point HTX Chè, chuỗi giá trị và vai trò.
+- 🧭 **[Lộ trình Sản phẩm Chiến lược](./docs/product-roadmap.md)** — Định vị SaaS đa HTX, phân loại tính năng, lộ trình 5 giai đoạn & KPI.
 - 🏛️ **[Rules and Limits](./docs/rules-and-limits.md)** — Ràng buộc nghiệp vụ (Business Rules) và tiêu chuẩn mã nguồn.
-- 🔌 **[API Contract](./docs/api-contract.md)** — Đặc tả các endpoint của Web App.
-- 🗄️ **[Database Schema](./docs/database-schema.md)** — Cấu trúc dữ liệu PostgreSQL.
+- 🔌 **[API Contract](./docs/api-contract.md)** — Đặc tả các endpoint của Web App và Gateway.
+- 🗄️ **[Database Schema](./docs/database-schema.md)** — Cấu trúc dữ liệu PostgreSQL (`public`, `audit`, `telemetry`, `platform`, `app_*`).
 - 🧪 **[Testing Strategy](./docs/testing-strategy.md)** — Công cụ và chiến lược kiểm thử.
 - 🛠️ **[Dev Setup](./docs/dev-setup.md)** — Hướng dẫn cài đặt môi trường phát triển.
-- 📝 **[Deviation Register](./docs/deviation-register.md)** — Sổ ghi nhận các điểm sai lệch so với đặc tả.
-- 🤝 **[Lớp AI vận hành có người duyệt](./docs/specs/2026-11-23-agentic-layer-design.md)** — Đặc tả và tiến độ (M0, M1 đã có; M2 Telegram đang làm, issue #55): agent đề xuất, người duyệt trên web hoặc Telegram, chiến dịch hằng ngày, chế độ tự vận hành tuỳ chọn, provider nội bộ và bên ngoài.
+- 📝 **[Deviation Register](./docs/deviation-register.md)** — Sổ ghi nhận các điểm sai lệch kỹ thuật & định hướng.
+- 🤝 **[Lớp AI vận hành có người duyệt](./docs/specs/2026-11-23-agentic-layer-design.md)** — Đặc tả M0–M15: agent đề xuất, duyệt qua web/Telegram, bằng chứng SHA-256.
 - 🧩 **[Mini-app](./docs/miniapps.md)** — Hướng dẫn viết mini-app: manifest, bảo mật, database, giao diện và lệnh `./dxos`.
+- 🧱 **[ADR 0005: SaaS Đa HTX & Chuỗi giá trị Chè](./docs/adr/0005-multi-tenant-tea-value-chain-dxos.md)** — Quyết định kiến trúc đồng bộ DX-OS với nghiệp vụ HTX Chè.
 - 🎨 **[DESIGN.md](./DESIGN.md)** — Hệ thống thiết kế: token màu sáng/tối, chữ, khoảng cách và quy tắc tương phản.
 - 📦 **[Dependencies](./DEPENDENCIES.md)** — Danh mục thư viện và giấy phép phụ thuộc.
 - 🌐 **[Trang giới thiệu dự án](https://maiychrus25.github.io/OpenTea-DX-OS/)** — Bản tiếng Việt và tiếng Anh, nguồn nằm ở `site/`, dựng bằng `bash scripts/build-site.sh`.

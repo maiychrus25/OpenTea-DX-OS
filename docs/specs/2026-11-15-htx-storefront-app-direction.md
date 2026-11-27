@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Định hướng — Gian hàng HTX: một app cho tin tức, tour, sản phẩm, đơn hàng, thanh toán và chatbot
 
-> **Trạng thái:** Tài liệu định hướng (2026-11-15), chưa phải đặc tả chi tiết. Người triển khai: Nguyễn Bá Quyến (toàn bộ). Mỗi mốc ở §8 cần một đặc tả riêng trong `docs/specs/` trước khi viết mã, như cách đã làm với `tea-experience`.
+> **Trạng thái:** Tài liệu định hướng lịch sử (2026-11-15); phần app di động riêng (`hub-mobile`) được tạm đóng băng và thương mại hóa gắn tồn kho Lô được hợp nhất theo [product-roadmap.md](../product-roadmap.md) và [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md) (2026-11-28). Xem "Ghi chú định hướng tiếp theo" ở cuối.
 > **Nguồn:** các quyết định của chủ dự án ngày 2026-11-15 (§2). Những gì ghi là "đề xuất" là ý của người viết tài liệu này, người triển khai được đổi nếu có lý do và ghi lại trong đặc tả.
 > **Thay thế cho:** hướng "tea-tour 1.0 là một app đặt tour riêng" (đã dừng ngày 2026-11-15). Mã đã viết cho hướng đó được giữ lại để dùng lại (§7).
 
@@ -156,3 +156,9 @@ Thứ tự này đặt bán hàng và app Android trước tin tức và chatbot
 - Thư viện mới phải có giấy phép OSI, ghim phiên bản và khai trong `DEPENDENCIES.md`; thay đổi ghi vào `CHANGELOG.md` mục `[Unreleased]` (tiêu chí PoF của đề thi).
 - Mọi PR qua CI; gộp vào `main` do chủ dự án quyết định.
 - Mốc thời gian của cuộc thi theo kế hoạch đang dùng: ngừng thêm tính năng ngày 02/12/2026, nộp bài ngày 05/12/2026.
+
+## Ghi chú định hướng tiếp theo (2026-11-28)
+
+Theo [product-roadmap.md](../product-roadmap.md) và [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md):
+- Không phát triển thêm ứng dụng Flutter/Android thương mại riêng (`apps/hub-mobile`) hay tính năng video ngắn `Reels`.
+- Mảng bán lẻ/bán sỉ chè của HTX ở GĐ3 nối trực tiếp vào tồn kho của `Lot` đã xuất QR (bắt buộc lưu `lot_id` trên từng dòng đơn hàng để phục vụ truy hồi); mảng du lịch (`tea-tour`) giữ ở vai trò Mini-app ngoại vi Tầng 3.

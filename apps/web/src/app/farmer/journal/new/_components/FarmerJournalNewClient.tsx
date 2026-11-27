@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, FileText, Sparkles, TriangleAlert } from 'lucide-react'
+import { ChevronLeft, FileText, TriangleAlert } from 'lucide-react'
 import { FarmerJournalForm } from '../../_components/FarmerJournalForm'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import type { JournalPrefill } from '../../_components/journal-prefill'
@@ -74,10 +74,6 @@ export function FarmerJournalNewClient({ initial }: { initial?: JournalPrefill }
               ))}
             </section>
           )}
-          <Link href="/farmer/ai" className={`${kit.pn} ${styles.ask}`}>
-            <span className={`${kit.ico} ${kit.dark}`}><Sparkles size={18} aria-hidden="true" /></span>
-            <span><strong>Không chắc liều dùng?</strong><small>Hỏi trợ lý AI trước khi ghi</small></span>
-          </Link>
         </div>
       </div>
     </div>

@@ -110,7 +110,7 @@ describe('the ten issue #80 read tools (plan C1)', () => {
       ['diseases', ['officer']],
       ['profile', ALL],
       ['documents', STAFF],
-      ['partners', ALL],
+      ['partners', STAFF],
     ])
     expect(CHAT_TOOLS.slice(11).map((t) => t.name)).toEqual(rows)
   })
@@ -382,8 +382,8 @@ describe('documents', () => {
 describe('partners', () => {
   it('lists up to ten partners, newest first, and caps the reply', async () => {
     mockDb.partnerFindMany.mockResolvedValue(many(10, (i) => ({ name: `Đối tác ${i}`, partner_type: 'BUYER', contact_phone: null, address: `Địa chỉ ${i}` })))
-    const out = await tool('partners').run(user('farmer'), {}, NOW)
-    expect(mockDb.partnerFindMany.mock.calls[0][0]).toMatchObject({ take: 10, orderBy: { created_at: 'desc' } })
+    const out = await tool('partners').run(user('officer'), {}, NOW)
+    expect(mockDb.partnerFindMany.mock.calls[0][0]).toMatchObject({ where: { htx_profile_id: 'htx-tc' }, take: 10, orderBy: { created_at: 'desc' } })
     expect(out.lines).toHaveLength(7)
     expect(out.lines[0]).toBe('Đối tác 0 · BUYER · Địa chỉ 0')
   })

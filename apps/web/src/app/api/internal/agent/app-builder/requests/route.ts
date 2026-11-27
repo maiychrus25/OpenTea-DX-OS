@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { appBuilderAgentService } from '@/application/appbuilder/app-builder-services'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
 import { withAppBuildErrors } from '@/lib/api/app-build-response'
+import { labsOnly } from '@/lib/labs'
 
 /** A12's work list: new requests, requests with an answer, and finished requests not yet announced (contract C4). */
 async function getRequests(request: Request) {
@@ -12,4 +13,7 @@ async function getRequests(request: Request) {
   return NextResponse.json({ data: { requests: await appBuilderAgentService().waiting(caller.htxCode) } })
 }
 
-export const GET = withAppBuildErrors(getRequests)
+export const GET = withAppBuildErrors(labsOnly(getRequests))
+
+// DXOS_LABS is read per request; a prerendered answer would freeze the switch into the build.
+export const dynamic = 'force-dynamic'

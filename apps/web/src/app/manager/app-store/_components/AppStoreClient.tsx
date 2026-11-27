@@ -11,7 +11,6 @@ import { fetchJson } from '@/lib/api/fetch-json'
 import { Store } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { SampleApps } from '@/components/features/sample/SampleLists'
 import styles from './AppStoreClient.module.css'
 import { StoreAppIcon } from './StoreAppIcon'
 import { StoreHistory } from './StoreHistory'
@@ -34,7 +33,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
 const CONFIRM_REMOVE = 'Gỡ ứng dụng này khỏi HTX? Dữ liệu được giữ lại.'
 const REQUEST_FAILED = 'Không gửi được yêu cầu. Vui lòng thử lại.'
 
-export function AppStoreClient({ initial }: { initial: AppStoreData }) {
+export function AppStoreClient({ initial, labs = false }: { initial: AppStoreData; labs?: boolean }) {
   const [data, setData] = useState(initial)
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -124,10 +123,7 @@ export function AppStoreClient({ initial }: { initial: AppStoreData }) {
 
       <div role="tabpanel" id="store-panel-apps" aria-labelledby="store-tab-apps" hidden={tab !== 'apps'}>
         {data.apps.length === 0 ? (
-          <>
-            <EmptyState icon={<Store size={24} />} title="Kho chưa có ứng dụng nào." />
-            <SampleApps />
-          </>
+          <EmptyState icon={<Store size={24} />} title="Kho chưa có ứng dụng nào." />
         ) : (
           <>
             <div className={styles.toolbar}>
@@ -193,7 +189,7 @@ export function AppStoreClient({ initial }: { initial: AppStoreData }) {
                         {app.roles.length > 0 && <> · Dành cho {app.roles.map(role => ROLE_LABELS[role] ?? role).join(', ')}</>}
                         {app.hasPublic && <> · Có trang công khai</>}
                       </p>
-                      {app.generated && (
+                      {labs && app.generated && (
                         <p className={styles.meta}>
                           {GENERATED_LABEL}
                           {app.buildRequestId && <> · <Link href={`/manager/ai/apps/${app.buildRequestId}`}>{GENERATED_REPORT_LABEL}</Link></>}

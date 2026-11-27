@@ -10,14 +10,8 @@ import styles from './page.module.css'
 import React, { useState } from 'react'
 import { NotificationInbox } from '@/components/features/notification/NotificationInbox'
 import { WeatherSection } from '@/components/features/bulletin/WeatherSection'
-import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
-import { Bell, FileText, Newspaper } from 'lucide-react'
-
-const CATEGORY: Record<string, { label: string; tone: string }> = {
-  market: { label: 'Thị trường', tone: 'in' },
-  weather: { label: 'Thời tiết', tone: 'amber' },
-  technical: { label: 'Kỹ thuật', tone: 'soft' },
-}
+import Link from 'next/link'
+import { Bell, Newspaper } from 'lucide-react'
 
 export default function FarmerBulletinNotificationsPage() {
   const [activeTab, setActiveTab] = useState<'bulletin' | 'notifications'>('bulletin')
@@ -44,22 +38,9 @@ export default function FarmerBulletinNotificationsPage() {
       {activeTab === 'bulletin' ? (
         <>
           <div className={kit.cols}>
-            <div className={styles.articles}>
-              {MOCK_BULLETINS.map(bulletin => {
-                const category = CATEGORY[bulletin.category] ?? { label: bulletin.category, tone: 'mu' }
-                return (
-                  <article key={bulletin.id} className={`${kit.pn} ${styles.article}`}>
-                    <span className={`${kit.tag} ${kit[category.tone]}`}>{category.label}</span>
-                    <h2>{bulletin.headline}</h2>
-                    <p>{bulletin.summary}</p>
-                    <footer>
-                      <span className={kit.grow}>{bulletin.date}</span>
-                      <span><FileText size={13} aria-hidden="true" /> {bulletin.sourceCount} nguồn</span>
-                    </footer>
-                  </article>
-                )
-              })}
-            </div>
+            <p className={`${kit.pn} ${styles.article}`}>
+              Bản tin thị trường và kỹ thuật của HTX nằm ở trang <Link href="/farmer/bulletin">Bản tin</Link>.
+            </p>
             <LatestNotices onShowAll={() => setActiveTab('notifications')} />
           </div>
           <WeatherSection />

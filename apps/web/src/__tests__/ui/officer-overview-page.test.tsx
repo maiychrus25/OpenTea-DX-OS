@@ -25,14 +25,15 @@ beforeEach(() => {
 afterEach(() => jest.useRealTimers())
 
 describe('officer dashboard blocks', () => {
-  it('keeps four real zero metrics and table, hides empty urgency and approval metrics, tags only samples', async () => {
+  it('keeps four real zero metrics and table, hides empty urgency and approval metrics, shows no sample blocks', async () => {
     render(await OfficerDashboard({}))
     expect(screen.getByTestId('officer-metric-grid').querySelectorAll('[data-testid="metric-card"]')).toHaveLength(4)
     expect(screen.getAllByTestId('metric-card').map(card => card.querySelector('strong')?.textContent)).toEqual(['0', '0', '0', '0'])
     expect(screen.getByTestId('task-table')).toHaveTextContent('Chưa có nhật ký nào')
     expect(screen.queryByText(/Cần xử lý ngay/)).not.toBeInTheDocument()
     expect(screen.queryByText('Tỉ lệ duyệt đúng hạn')).not.toBeInTheDocument()
-    expect(screen.getAllByText('Mẫu')).toHaveLength(2)
+    expect(screen.queryByText('Mẫu')).not.toBeInTheDocument()
+    expect(screen.queryByText('Gian hàng & Tour')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Tạo nhật ký' })).toHaveAttribute('href', '/officer/journal?create=1')
     expect(screen.getByRole('link', { name: 'Xem dự báo' })).toHaveAttribute('href', '/officer/bulletin?category=weather')
   })
@@ -60,7 +61,7 @@ describe('officer dashboard blocks', () => {
     expect(within(schedule).queryByText('20/12')).not.toBeInTheDocument()
     expect(screen.getByRole('progressbar', { name: 'Tiến độ Hộ chè' })).toHaveAttribute('value', '50')
     expect(screen.getByText('Tỉ lệ duyệt đúng hạn').parentElement).toHaveAttribute('title', expect.stringContaining('48 giờ'))
-    expect(screen.getByText('Vị trí minh họa · trạng thái thửa là dữ liệu thật')).toBeInTheDocument()
+    expect(screen.getByText('Trạng thái từng thửa chè')).toBeInTheDocument()
   })
   it('does not query tenant data for another role', async () => {
     ;(auth as jest.Mock).mockResolvedValue({ user: { role: 'farmer' } })

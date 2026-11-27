@@ -12,8 +12,6 @@ import { escapeHtml } from '@/lib/sanitize'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import table from '@/components/features/dashboard/dashboard.module.css'
 import kit from '@/components/features/dashboard/page-kit.module.css'
-import sample from '@/components/features/sample/sample.module.css'
-import { SampleTag } from '@/components/features/sample/SampleTag'
 import { DEFAULT_MAP_VIEW, PARCEL_STATUS_CONFIG as STATUS_CONFIG } from '@/lib/map-config'
 import { addMapBaseLayers } from '@/components/features/map/map-layers'
 import mapStyles from '@/components/features/map/ZoneMap.module.css'
@@ -376,15 +374,14 @@ export default function FarmZoneReadOnly() {
 
     {/* Without drawn boundaries the map is empty: show the real parcels as blocks, and say it is not a map. */}
     {drawnParcels === 0 && listed.length > 0 && (
-      <section className={sample.card} aria-label="Sơ đồ thửa minh hoạ" style={{ marginTop: 16 }}>
-        <div className={sample.head}>
+      <section className={mapStyles.zoneDiagram} aria-label="Sơ đồ thửa">
+        <div className={mapStyles.zoneDiagramHead}>
           <h2>Sơ đồ thửa</h2>
-          <SampleTag />
-          <span>Vị trí minh hoạ, không đúng thực tế</span>
+          <span>Chưa có ranh giới: vị trí các ô không đúng thực tế</span>
         </div>
-        <div className={`${sample.blocks} ${mapStyles.schematic}`}>
+        <div className={mapStyles.schematic}>
           {listed.map(p => (
-            <div key={p.id} className={`${sample.block} ${sample[p.status] ?? ''}`} style={{ flex: `${Math.max(p.area_ha ?? 0.5, 0.3)} 1 90px` }}>
+            <div key={p.id} className={mapStyles.zoneBlock} data-status={p.status} data-size={(p.area_ha ?? 0.5) < 0.5 ? 's' : (p.area_ha ?? 0.5) < 1.5 ? 'm' : 'l'}>
               <strong>{p.parcel_code || p.name}</strong>
               <span>{STATUS_CONFIG[p.status]?.label ?? p.status}</span>
             </div>

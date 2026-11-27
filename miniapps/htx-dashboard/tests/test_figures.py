@@ -139,8 +139,8 @@ def test_freshness_marks_fresh_silent_and_never_reported_pairs():
 # ---------- prices and lifecycle runs ----------
 
 def test_price_history_is_the_series_of_one_metric_oldest_first():
-    rows = [m.Price("Tea", "export_price", 3.6, "USD/kg", "Mô phỏng (Toàn quốc)", NOW - timedelta(days=1)),
-            m.Price("Tea", "export_price", 3.4, "USD/kg", "Mô phỏng (Toàn quốc)", NOW - timedelta(days=3)),
+    rows = [m.Price("Tea", "export_price", 3.6, "USD/kg", "COMTRADE", NOW - timedelta(days=1)),
+            m.Price("Tea", "export_price", 3.4, "USD/kg", "COMTRADE", NOW - timedelta(days=3)),
             m.Price("Tea", "producer_price_index", 108.0, "index", "FAOSTAT", NOW)]
     assert [v for _, v in m.price_series(rows, "export_price")] == [3.4, 3.6]
     assert m.price_series(rows, "missing") == []

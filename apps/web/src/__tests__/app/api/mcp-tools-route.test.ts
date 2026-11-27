@@ -85,6 +85,16 @@ function callContext(name: string) {
   return { params: Promise.resolve({ name }) }
 }
 
+// The frozen feature under test runs only with the labs switch on (ADR 0005).
+const previousLabs = process.env.DXOS_LABS
+beforeEach(() => {
+  process.env.DXOS_LABS = '1'
+})
+afterEach(() => {
+  if (previousLabs === undefined) delete process.env.DXOS_LABS
+  else process.env.DXOS_LABS = previousLabs
+})
+
 describe('MCP tool routes', () => {
   beforeEach(() => {
     jest.clearAllMocks()

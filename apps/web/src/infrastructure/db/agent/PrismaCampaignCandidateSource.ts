@@ -3,6 +3,7 @@
 
 import type { CandidateSource } from '@/application/agent/campaign/CampaignCandidatesUseCase'
 import { vnDayOf, vnDayStart } from '@/application/agent/campaign/vn-day'
+import { WITHDRAWAL_EXCLUDED_STATUSES } from '@/domain/journal/withdrawal-status'
 import { prisma } from '@/infrastructure/db/prisma.client'
 
 const RAIN_MM = 5
@@ -35,7 +36,7 @@ export class PrismaCampaignCandidateSource implements CandidateSource {
         safe_harvest_date: { gt: since },
         journal_entry: {
           activity_type: 'SPRAYING',
-          status: { not: 'DRAFT' },
+          status: { notIn: [...WITHDRAWAL_EXCLUDED_STATUSES] },
           parcel: { household: { htx_profile: { htx_code: htxCode } } },
         },
       },

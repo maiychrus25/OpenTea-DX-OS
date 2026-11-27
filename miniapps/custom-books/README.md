@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Mini-app `custom-books`: Sổ tự tạo
 
-Trưởng HTX tự tạo các sổ ghi chép (chấm công hái chè, sổ phun thuốc, sổ thu chi...) không cần lập trình. Một mini-app chứa mọi sổ của mọi HTX: định nghĩa sổ và các dòng ghi là JSONB trong schema `app_custom_books`. Đặc tả: `docs/specs/2026-11-14-custom-books-design.md`.
+Trưởng HTX tự tạo các sổ ghi chép (sổ thu chi, biên bản họp, giao nhận vật tư...) không cần lập trình. Một mini-app chứa mọi sổ của mọi HTX: định nghĩa sổ và các dòng ghi là JSONB trong schema `app_custom_books`. Đặc tả: `docs/specs/2026-11-14-custom-books-design.md`.
 
 ## Trang (dưới `/apps/custom-books`)
 
@@ -13,7 +13,7 @@ Trưởng HTX tự tạo các sổ ghi chép (chấm công hái chè, sổ phun 
 | `/` | mọi vai | Thẻ của các sổ đã phát hành mà vai được dùng; trưởng HTX thêm liên kết sang `/books` |
 | `/feed` | mọi vai | JSON `{"entries": [{label, path, icon, description}], "create": {...}}` cho menu và Kho ứng dụng của lõi; `create` chỉ cho trưởng HTX; tối đa 30 mục, sổ mới phát hành đứng đầu |
 | `/books`, `/books/new` | `manager` | Danh sách sổ (đang soạn, đang dùng, ngừng dùng); chọn một trong tám mẫu hoặc Sổ trắng |
-| `POST /books` | `manager` | `template=<picking, spraying, fertilising, cashbook, meeting, handover, pest, visitors, blank>`; 409 khi HTX đã có 50 sổ |
+| `POST /books` | `manager` | `template=<cashbook, meeting, handover, visitors, blank>`; 409 khi HTX đã có 50 sổ |
 | `GET /agent/suggestions`, `POST /agent/actions/book-create` | token `agent` / bộ thực thi của web | Khối `agent` (M13): không có gợi ý riêng. Hành động `book.create` (rủi ro thấp, không động tới tiền) nhận `{template, name_vi, description_vi?}`, tạo sổ nháp từ mẫu cho HTX của người duyệt và trả `{book_id, design_path}`; lỗi trả JSON `{message_vi}` (400 sai dữ liệu, 409 HTX đủ 50 sổ) |
 | `/books/<id>/design` | `manager` | Biểu mẫu thiết kế (tên, mô tả, biểu tượng, các ô, quyền cán bộ và nông dân, duyệt); lưu sai thì 400 và giữ những gì đã gõ |
 | `/books/<id>/preview` | `manager` | Biểu mẫu nhập đúng như người dùng sẽ thấy, không ghi gì |

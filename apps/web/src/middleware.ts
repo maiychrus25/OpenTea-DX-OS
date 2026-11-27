@@ -54,7 +54,6 @@ export function resolveAuthRedirect(
       pathname === '/' ||
       pathname === '/login' ||
       pathname === '/register' ||
-      pathname === '/forgot-pin' ||
       pathname === '/unauthorized' ||
       isPublicResourcePath(pathname)
     )

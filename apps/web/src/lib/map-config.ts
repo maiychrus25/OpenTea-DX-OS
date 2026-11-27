@@ -6,7 +6,7 @@
 export const DEFAULT_MAP_VIEW = { center: [21.538, 105.775] as [number, number], zoom: 14 }
 
 export const PARCEL_STATUS_CONFIG: Record<string, { color: string; fillColor: string; label: string }> = {
-  SOWING: { color: 'var(--color-status-sowing)', fillColor: 'var(--color-status-sowing)', label: 'Đang gieo sạ' },
+  SOWING: { color: 'var(--color-status-sowing)', fillColor: 'var(--color-status-sowing)', label: 'Đang trồng mới' },
   TENDING: { color: 'var(--color-status-tending)', fillColor: 'var(--color-status-tending)', label: 'Đang chăm sóc' },
   DRAFT: { color: 'var(--color-status-draft)', fillColor: 'var(--color-status-draft)', label: 'Khởi tạo' },
   HARVEST_APPROVED: { color: 'var(--color-status-harvest-approved)', fillColor: 'var(--color-status-harvest-approved)', label: 'Đã duyệt thu hoạch' },

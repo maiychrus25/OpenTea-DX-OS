@@ -12,6 +12,7 @@ import { NO_DATA_VI, TOOL_LINE_MAX, sanitizeArgs } from '@/application/telegram/
 import { ForbiddenError, NotFoundError } from '@/domain/errors'
 import { requireMcpCaller } from '@/lib/api/mcp-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { labsOnly } from '@/lib/labs'
 
 const callSchema = z.object({ arguments: z.record(z.unknown()).default({}) })
 const createSchema = z.object({
@@ -51,4 +52,7 @@ async function postMcpTool(request: Request, context: { params: Promise<{ name: 
   return NextResponse.json({ text: [...lines, `Nguồn: ${result.source}`].join('\n') })
 }
 
-export const POST = withErrorHandler(postMcpTool)
+export const POST = withErrorHandler(labsOnly(postMcpTool))
+
+// DXOS_LABS is read per request; a prerendered answer would freeze the switch into the build.
+export const dynamic = 'force-dynamic'

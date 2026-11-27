@@ -4,20 +4,18 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { AlertTriangle, ArrowRight, BookOpen, Calendar, Camera, ChevronRight, Droplet, FileText, History, Leaf, PenLine, Scissors, SprayCan, Sprout, Store, MessageCircle } from 'lucide-react'
+import { AlertTriangle, ArrowRight, BookOpen, Calendar, Camera, ChevronRight, Droplet, FileText, History, Leaf, PenLine, Scissors, SprayCan, Sprout, Store } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { EmptyState } from '@/components/ui'
-import { TodayTasks } from '@/components/features/farmer-web/TodayTasks'
-import { SampleTag } from '@/components/features/sample/SampleTag'
-import { DETECTIONS } from '@/components/features/disease/sample-detections'
 import { WeatherHero } from '@/components/features/farmer-web/WeatherHero'
 import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 
+import { WITHDRAWAL_EXCLUDED_STATUSES } from '@/domain/journal/withdrawal-status'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from './farmer-dashboard.module.css'
 
@@ -58,7 +56,6 @@ const PARCEL_TONE: Record<string, string> = {
 const SUPPLY_APP = 'farm-supply'
 
 const SHORTCUTS = [
-  { href: '/farmer/ai', icon: MessageCircle, tone: 'soft', title: 'Chatbot nông nghiệp', detail: 'Hỏi về bón phân, sâu bệnh, thu hái' },
   { href: '/farmer/handbook', icon: BookOpen, tone: 'soft', title: 'Cẩm nang canh tác', detail: 'Việc theo mùa và cách phòng trị bệnh cho cây chè' },
 ]
 
@@ -113,13 +110,13 @@ export default async function FarmerDashboard() {
     }
   })
 
-  // Drafts are left out; rejected and pending entries still warn the farmer, as they block harvest.
+  // Drafts and rejected entries are left out; pending and change-requested ones still warn the farmer, as they block harvest.
   const now = new Date()
   const withdrawalRows = household
     ? await prisma.journalActivity.findMany({
         where: {
           safe_harvest_date: { gt: now },
-          journal_entry: { status: { not: 'DRAFT' }, parcel: { household: { id: household.id, htx_profile_id: htxProfileId } } },
+          journal_entry: { status: { notIn: [...WITHDRAWAL_EXCLUDED_STATUSES] }, parcel: { household: { id: household.id, htx_profile_id: htxProfileId } } },
         },
         select: { safe_harvest_date: true, journal_entry: { select: { entry_date: true, parcel: { select: { parcel_code: true } } } } },
       })
@@ -223,8 +220,8 @@ export default async function FarmerDashboard() {
         ))}
       </div>
 
-      <div className={`${styles.pair} ${withdrawals.length === 0 ? styles.single : ''}`}>
-        {withdrawals.length > 0 && (
+      {withdrawals.length > 0 && (
+        <div className={`${styles.pair} ${styles.single}`}>
           <section className={styles.alert} role="status">
             <ul className={styles.withdrawals} aria-label="Thời gian cách ly">
               {withdrawals.map(w => (
@@ -245,32 +242,8 @@ export default async function FarmerDashboard() {
               ))}
             </ul>
           </section>
-        )}
-        <TodayTasks className={styles.tasks} />
-      </div>
-
-      <section className={`${kit.pn} ${styles.disease}`} aria-label="Báo cáo sâu bệnh">
-        <div className={kit.ph}>
-          <h2>Báo cáo sâu bệnh <SampleTag /></h2>
-          <Link href="/farmer/diagnosis">Xem chẩn đoán <ArrowRight size={14} aria-hidden="true" /></Link>
         </div>
-        <ul className={styles.findings}>
-          {DETECTIONS.map(d => (
-            <li key={d.id}>
-              <Link href="/farmer/diagnosis">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={d.image} alt="" />
-                <span className={kit.grow}>
-                  <strong>{d.name} <span className={`${kit.tag} ${kit[d.levelTone]}`}>{d.level}</span></strong>
-                  <small>{d.place} · {d.time}</small>
-                  <small>{d.status}</small>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <p className={styles.diseaseNote}>Minh hoạ, HTX chưa lắp camera: không làm theo để phun thuốc.</p>
-      </section>
+      )}
 
       <div className={styles.columns}>
         <section className={`${kit.pn} ${styles.parcels}`} aria-label="Tình trạng thửa đất">

@@ -8,7 +8,6 @@ import useSWR from 'swr';
 import { DollarSign, TrendingUp, Package, BarChart3, Sprout } from 'lucide-react';
 import { MetricCard } from '../../ui/MetricCard/MetricCard';
 import { SourceBox } from '../../ui/SourceBox/SourceBox';
-import { isSimulatedPrice, SIMULATED_PRICE_LABEL } from '@/domain/market/simulated-price';
 import styles from './MarketSummaryWidget.module.css';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -76,7 +75,6 @@ export function MarketSummaryWidget({ commodity = 'Chè' }: { commodity?: string
   const metricValue = marketRow?.value ?? 'N/A';
   const unit = marketRow?.unit || '';
   const metric = marketRow?.metric || '';
-  const isSimulated = isSimulatedPrice(marketRow?.source ?? '');
 
   const { displayValue, displayUnit } = formatMetricValue(metricValue, unit, fxValue);
 
@@ -120,14 +118,17 @@ export function MarketSummaryWidget({ commodity = 'Chè' }: { commodity?: string
           detail="Frankfurter API"
           tone="neutral"
         />
-        <MetricCard
-          icon={<TrendingUp size={20} />}
-          label={getMetricLabel(metric, commodity)}
-          value={displayValue}
-          detail={isSimulated ? `${displayUnit} · ${SIMULATED_PRICE_LABEL}` : displayUnit}
-          tone="green"
-        />
+        {marketRow && (
+          <MetricCard
+            icon={<TrendingUp size={20} />}
+            label={getMetricLabel(metric, commodity)}
+            value={displayValue}
+            detail={displayUnit}
+            tone="green"
+          />
+        )}
       </div>
+      {!marketRow && <p className={styles.signal}>Chưa có dữ liệu giá.</p>}
       {marketSignal && (
         <p className={styles.signal}>
           {marketSignal.icon}
@@ -135,7 +136,7 @@ export function MarketSummaryWidget({ commodity = 'Chè' }: { commodity?: string
         </p>
       )}
       <div className={styles.sources}>
-        <SourceBox count={2} sources={['Frankfurter', marketRow?.source ?? 'Chưa có dữ liệu']} />
+        <SourceBox count={marketRow ? 2 : 1} sources={marketRow ? ['Frankfurter', marketRow.source] : ['Frankfurter']} />
       </div>
     </aside>
   );

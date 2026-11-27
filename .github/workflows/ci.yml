@@ -236,6 +236,8 @@ jobs:
     # As in the Makefile: the raw compose and docker build steps below must not make a new image ID per build either.
     env:
       BUILDX_NO_DEFAULT_ATTESTATIONS: '1'
+      # The smokes of this job exercise frozen features (app factory, autopilot, strategy, staff sync, MCP).
+      DXOS_LABS: '1'
     steps:
       - uses: actions/checkout@v4
 
@@ -560,6 +562,8 @@ jobs:
       BUILDX_NO_DEFAULT_ATTESTATIONS: '1'
       # The recorded fertiliser-stock run replaces the coding tool, so no key is needed; the agent's `replay` provider does the same for A12.
       DXOS_BUILDER_TOOL: replay:fertiliser-stock
+      # The factory is a frozen feature (ADR 0005).
+      DXOS_LABS: '1'
     steps:
       - uses: actions/checkout@v4
 

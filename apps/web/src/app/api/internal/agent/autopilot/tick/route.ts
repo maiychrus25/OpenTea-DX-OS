@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { autopilotTickUseCase } from '@/application/telegram/telegram-services'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { labsOnly } from '@/lib/labs'
 
 /** Called every cycle by `dxos-agent`: handles only the cooperative of the agent token (spec §11, contract C3). */
 async function postAutopilotTick(request: Request) {
@@ -13,4 +14,7 @@ async function postAutopilotTick(request: Request) {
   return NextResponse.json({ data: result })
 }
 
-export const POST = withErrorHandler(postAutopilotTick)
+export const POST = withErrorHandler(labsOnly(postAutopilotTick))
+
+// DXOS_LABS is read per request; a prerendered answer would freeze the switch into the build.
+export const dynamic = 'force-dynamic'

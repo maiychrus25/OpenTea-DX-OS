@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { AgentSettingsPanel } from '@/components/features/agent/AgentSettingsPanel'
 import { AutopilotSection } from '@/components/features/agent/AutopilotSection'
+import { isLabsEnabled } from '@/lib/labs'
 
 export default async function OfficerAiSettingsPage() {
   const session = await auth()
@@ -14,7 +15,7 @@ export default async function OfficerAiSettingsPage() {
   return (
     <>
       <AgentSettingsPanel role="officer" />
-      <AutopilotSection role="officer" />
+      {isLabsEnabled() && <AutopilotSection role="officer" />}
     </>
   )
 }

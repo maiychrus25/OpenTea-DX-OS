@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Bảng điều hành HTX: mini-app theo dõi tổng thể hợp tác xã
 
-> **Trạng thái:** Đã triển khai trên nhánh `feat/htx-dashboard` (2026-11-20), chờ merge và gắn tag; xem "Ghi chú sau triển khai" ở cuối tài liệu. Bản thiết kế (2026-11-20). Chủ dự án giao việc ngày 2026-11-20: một app chuyên về dashboard để ban quản trị HTX có góc nhìn tổng thể và theo dõi hợp tác xã của mình. Bước gộp vào `main` vẫn hỏi lại chủ dự án.
+> **Trạng thái:** Đã triển khai `v1.13.0` (2026-11-20); theo [product-roadmap.md](../product-roadmap.md) GĐ3 & [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md) (2026-11-28), lộ trình hợp nhất `/manager/dashboard` và `htx-dashboard` thành 1 Bảng Điều hành Giám đốc duy nhất có đủ số liệu sản xuất – thu mua – chế biến – công nợ. Xem "Ghi chú sau triển khai" và "Ghi chú định hướng tiếp theo" ở cuối.
 > **Phạm vi:** đợt 1, mini-app `htx-dashboard` 0.1.0 và một thay đổi nhỏ, dùng chung, ở tầng dữ liệu lõi (§7). Đợt 2 (số liệu của các app khác) chỉ nêu hướng ở §10.
 > **Căn cứ:** Trang "Tổng quan" hiện có của trưởng HTX (`/manager/dashboard`) là trang "hôm nay": bốn con số và giá thị trường, không có chuỗi thời gian, không có cảm biến. Đề thi yêu cầu nguyên lý "IT/OT: cảm biến tới bản sao số" và "vòng đời, dòng dõi và chất lượng dữ liệu"; lõi đã thu và lưu số đo cảm biến nhưng chưa có màn hình nào hiện chúng.
 
@@ -147,4 +147,10 @@ Chỗ mã khác với thân tài liệu ở trên (thân tài liệu giữ nguy�
 - **Giá thị trường.** Thay cho "tối đa 3 dòng mới nhất" của 0.1.0: trang hiện giá mới nhất của mỗi chỉ số (tối đa 3) và vẽ xu hướng giá xuất khẩu khi có ít nhất hai điểm.
 - **Số liệu mới.** So sánh kỳ trước dùng cùng độ dài kỳ xem; sparkline không vẽ khi kỳ không có số nào; phễu lô đếm mỗi lô ở mọi giai đoạn nó đã qua, giả định trạng thái lô đi theo thứ tự nháp, sẵn sàng, đã xuất QR.
 - **Xem trước.** `python tests/preview.py [cổng] [--empty]` phục vụ app với dữ liệu mẫu dưới CSP của sản phẩm.
+
+## Ghi chú định hướng tiếp theo (2026-11-28)
+
+Theo [product-roadmap.md](../product-roadmap.md) (§4, §5 GĐ3) và [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md):
+- Tránh tách đôi nhận thức cho Giám đốc HTX giữa `/manager/dashboard` và `htx-dashboard`, lộ trình GĐ3 gộp hai màn hình thành **1 Bảng Điều hành Giám đốc duy nhất** tích hợp đủ số liệu sản xuất, sản lượng búp thu mua, tồn kho chè khô, công nợ xã viên và công nợ thương lái.
+- Kiến trúc Bản sao số IT/OT và Kho lạnh Parquet/DuckDB được giữ nguyên và mở rộng sang **cảm biến xưởng sao sấy chè** gắn với `ProcessingBatch`.
 

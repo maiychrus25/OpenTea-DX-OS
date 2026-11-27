@@ -20,7 +20,7 @@ STORE = [
     {"id": "tea-shop", "name_vi": "Cửa hàng chè", "description_vi": "Bán chè trực tuyến cho nông hộ", "enabled": True},
     {"id": "stock-ledger", "name_vi": "Sổ kho vật tư", "description_vi": "Theo dõi kho vật tư nông nghiệp", "enabled": False},
 ]
-TEMPLATES = ["picking", "spraying", "fertilising", "cashbook", "blank"]
+TEMPLATES = ["cashbook", "meeting", "handover", "visitors", "blank"]
 SPEC = {
     "app_id": "gen-fertiliser-stock",
     "name_vi": "Kho phân bón",
@@ -184,9 +184,9 @@ def test_a_request_still_waiting_for_its_answer_is_skipped():
 def test_the_llm_routes_to_a_book_template():
     gateway = Gateway([request()])
 
-    run_app_builder(gateway, NOW, llm({"path": "book", "target": "fertilising", "reason_vi": "Sổ bón phân đủ dùng."}))
+    run_app_builder(gateway, NOW, llm({"path": "book", "target": "handover", "reason_vi": "Sổ giao nhận vật tư đủ dùng."}))
 
-    assert gateway.calls == [("route", "req-1", {"path": "book", "target": "fertilising", "reason_vi": "Sổ bón phân đủ dùng."})]
+    assert gateway.calls == [("route", "req-1", {"path": "book", "target": "handover", "reason_vi": "Sổ giao nhận vật tư đủ dùng."})]
 
 
 def test_a_target_the_web_did_not_offer_is_refused_and_nothing_is_posted():
@@ -291,7 +291,7 @@ def test_the_prompt_lists_the_store_the_templates_and_the_answer():
 
     run_app_builder(gateway, NOW, [ReplayProvider(resolver=resolver)])
 
-    assert "cần app theo dõi kho phân bón" in seen[0] and "Thủ kho" in seen[0] and "fertilising" in seen[0]
+    assert "cần app theo dõi kho phân bón" in seen[0] and "Thủ kho" in seen[0] and "handover" in seen[0]
 
 
 # --- no code provider ------------------------------------------------------------------------------------------------
@@ -434,6 +434,7 @@ def test_announce_answer_is_the_data_object():
 
 
 def test_a12_runs_every_cycle_in_the_agent_loop(monkeypatch):
+    monkeypatch.setenv("DXOS_LABS", "1")  # frozen feature (ADR 0005): runs only with the labs switch on
     calls: list[str] = []
     local_model = ReplayProvider(fixtures={"default": {"summary_vi": "x"}})
     local_model.name = "ollama"

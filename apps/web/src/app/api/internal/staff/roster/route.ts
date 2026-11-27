@@ -6,6 +6,7 @@ import { rosterBodySchema, StaffSyncUseCase } from '@/application/agent/staff/St
 import { PrismaStaffSyncRepository } from '@/infrastructure/db/agent/PrismaStaffSyncRepository'
 import { requireStaffCaller } from '@/lib/api/internal-staff-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { labsOnly } from '@/lib/labs'
 
 /** The staff app replaces its cooperative's roster; rows it no longer lists become inactive (contract C3). */
 async function putStaffRoster(request: Request) {
@@ -15,4 +16,7 @@ async function putStaffRoster(request: Request) {
   return NextResponse.json({ data: { staff: body.staff.length } })
 }
 
-export const PUT = withErrorHandler(putStaffRoster)
+export const PUT = withErrorHandler(labsOnly(putStaffRoster))
+
+// DXOS_LABS is read per request; a prerendered answer would freeze the switch into the build.
+export const dynamic = 'force-dynamic'

@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Tầng 2b: Chuyển sang HTX chè (nghiệp vụ, mô hình bệnh chè, giao diện)
 
-> **Trạng thái:** Đã phát hành `v1.7.0` (2026-11-11). Xem "Ghi chú sau triển khai 2b" ở cuối.
+> **Trạng thái:** Đã phát hành `v1.7.0` (2026-11-11); cập nhật định hướng mở rộng chuỗi giá trị chè & sửa bẫy lứa hái theo [product-roadmap.md](../product-roadmap.md) và [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md) (2026-11-28). Xem "Ghi chú sau triển khai 2b" và "Ghi chú định hướng tiếp theo" ở cuối.
 > **Phạm vi:** Đợt 2b của Tầng 2 (milestone `v1.7.0`, issue #19). Tiếp nối đợt 2a (`docs/specs/2026-11-09-tier2a-core-integration-design.md`).
 > **Căn cứ:** Kế hoạch dự thi OLP 2026 (HTX chè Thái Nguyên, câu chuyện demo "Một ngày của lô chè A3"); tiêu chí chấm trải nghiệm người dùng và trình diễn trực tiếp.
 
@@ -196,3 +196,9 @@ Phần này ghi chỗ code khác đặc tả và các số đo được khi hoà
   - Trình duyệt: `core-tenant` 5, câu chuyện A3 1, ảnh chụp 36.
   - Ảnh lá chè tổng hợp trong câu chuyện được mô hình chè trả về qua gateway (`POST /predict?model=tea` trong log của `disease-api`) và vào hàng chờ cán bộ.
 - Ảnh chụp 8 màn hình ưu tiên của §6.4 (duyệt bệnh tách thành hàng chờ và trang duyệt, nên 9 màn hình) ở 1280×800 và 390×844, sáng và tối: 36 ảnh, không tràn ngang, không chữ đè. CI chạy câu chuyện A3 và ảnh chụp trong job `platform-smoke` và tải ảnh lên thành artifact `priority-screens`.
+
+## Ghi chú định hướng tiếp theo (2026-11-28)
+
+Theo kết quả kiểm toán sản phẩm và [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md) ([product-roadmap.md](../product-roadmap.md) GĐ0–GĐ4):
+- **R5 & Vòng đời lứa chè (§5.1–§5.2):** Lộ trình GĐ1 gắn `parcel_crop_cycle_id` trực tiếp vào `JournalEntry` và `LotParcel`, thay trạng thái `SOWING` ("Gieo sạ") bằng chu trình cây chè lâu năm (đốn – hái lứa – tự mở lứa mới sau thu hoạch) để việc chăm sóc lứa sau không khóa xuất QR của lứa trước.
+- **Mô hình bệnh chè (§4):** GĐ1 chuẩn hóa kê đơn của cán bộ gắn Danh mục thuốc BVTV được phép và tự khóa PHI; GĐ4 thu thập dữ liệu ảnh thực địa tại Việt Nam để bổ sung các đối tượng hại chủ lực (*rầy xanh, bọ cánh tơ, nhện đỏ, phồng lá chè*).

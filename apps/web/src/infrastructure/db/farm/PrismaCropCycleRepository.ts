@@ -3,6 +3,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import { CropCyclePort } from '../../../domain/farm/ports/CropCyclePort'
+import { WITHDRAWAL_EXCLUDED_STATUSES } from '../../../domain/journal/withdrawal-status'
 import { HarvestEvent } from '../../../domain/farm/entities/HarvestEvent'
 import { nextHarvestRoundSeason } from '../../../domain/farm/harvest-round'
 
@@ -27,6 +28,7 @@ export class PrismaCropCycleRepository implements CropCyclePort {
           include: {
             household: true,
             journal_entries: {
+              where: { status: { notIn: [...WITHDRAWAL_EXCLUDED_STATUSES] } },
               include: {
                 activities: true,
               },

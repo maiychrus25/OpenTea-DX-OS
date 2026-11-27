@@ -4,7 +4,6 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import FarmerBulletinNotificationsPage from '@/app/farmer/bulletin-notifications/page'
-import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
 
 // Mock the SWR hook and NotificationInbox component since we just want to test the page container layout
 jest.mock('swr', () => ({
@@ -34,15 +33,10 @@ describe('FarmerBulletinNotificationsPage', () => {
     expect(notifTab).toBeInTheDocument()
   })
 
-  it('shows bulletin tab by default with MOCK_BULLETINS', () => {
+  it('shows the bulletin tab by default with a link to the real bulletins and no invented articles', () => {
     render(<FarmerBulletinNotificationsPage />)
-    
-    // Check if the mock bulletins are rendered
-    expect(screen.getByText(MOCK_BULLETINS[0].headline)).toBeInTheDocument()
-    expect(screen.getByText(MOCK_BULLETINS[1].headline)).toBeInTheDocument()
-    expect(screen.getByText(MOCK_BULLETINS[2].headline)).toBeInTheDocument()
-    
-    // Check that inbox is NOT rendered yet
+
+    expect(screen.getByRole('link', { name: 'Bản tin' })).toHaveAttribute('href', '/farmer/bulletin')
     expect(screen.queryByTestId('mock-notification-inbox')).not.toBeInTheDocument()
   })
 
@@ -58,8 +52,7 @@ describe('FarmerBulletinNotificationsPage', () => {
     
     // showPageHeader should be false
     expect(inbox).toHaveAttribute('data-header-visible', 'false')
-    
-    // Bulletins should be hidden
-    expect(screen.queryByText(MOCK_BULLETINS[0].headline)).not.toBeInTheDocument()
+
+    expect(screen.queryByRole('link', { name: 'Bản tin' })).not.toBeInTheDocument()
   })
 })

@@ -10,6 +10,7 @@ import { TelegramHealthBanner } from '@/components/features/telegram/TelegramHea
 import { cooperativeBudgetLevel } from '@/application/agent/agent-budget'
 import { cooperativeHealth } from '@/application/telegram/telegram-services'
 import { requireTenant } from '@/lib/api/tenant'
+import { isLabsEnabled } from '@/lib/labs'
 
 export default async function ManagerAiInboxPage() {
   const session = await auth()
@@ -25,7 +26,7 @@ export default async function ManagerAiInboxPage() {
       <TelegramHealthBanner {...health} />
       <AgentBudgetBanner level={budgetLevel} />
       <CampaignPanel />
-      <ProposalInbox role="manager" />
+      <ProposalInbox role="manager" labs={isLabsEnabled()} />
     </>
   )
 }

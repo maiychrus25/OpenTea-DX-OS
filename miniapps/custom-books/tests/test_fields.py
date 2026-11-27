@@ -215,8 +215,7 @@ def test_display():
 
 
 def test_every_template_is_a_valid_design():
-    assert set(book_templates.TEMPLATES) == {"picking", "spraying", "fertilising", "cashbook", "meeting", "handover",
-                                             "pest", "visitors"}
+    assert set(book_templates.TEMPLATES) == {"cashbook", "meeting", "handover", "visitors"}
     for t in book_templates.TEMPLATES.values():
         assert 4 <= len(t.fields) <= 8 and any(f.type == "date" for f in t.fields), t.key
         assert t.icon in fl.ICONS and t.officer_access in fl.ACCESS_LEVELS and t.farmer_access in fl.ACCESS_LEVELS
@@ -234,5 +233,5 @@ def test_every_template_is_a_valid_design():
                     posted[f"{flag}_{r['i']}"] = "on"
         fields, _, errors = parse_design(posted, t.fields, t.next_key, False)
         assert errors == {} and fields == list(t.fields), t.key
-    assert book_templates.TEMPLATES["picking"].officer_access == "all"
-    assert book_templates.TEMPLATES["picking"].farmer_access == "own" and book_templates.TEMPLATES["picking"].approval
+    assert book_templates.TEMPLATES["meeting"].officer_access == "all"
+    assert book_templates.TEMPLATES["meeting"].farmer_access == "view" and not book_templates.TEMPLATES["meeting"].approval

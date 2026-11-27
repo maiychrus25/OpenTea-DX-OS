@@ -13,7 +13,7 @@ import kit from '@/components/features/dashboard/page-kit.module.css';
 import { Button } from '@/components/ui/Button';
 import { Pill } from '@/components/ui/Pill';
 import { Modal } from '@/components/ui/Modal';
-import { Member } from './mock-data';
+import { Member } from './member-types';
 import { InvitationModal } from './invitation-modal';
 import { toast } from 'sonner';
 import styles from './member-list.module.css';

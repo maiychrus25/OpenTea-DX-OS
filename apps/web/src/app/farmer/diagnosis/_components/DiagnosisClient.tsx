@@ -6,8 +6,7 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Pill } from '@/components/ui'
-import { WifiOff, RefreshCw, AlertTriangle, BookOpen, ImageIcon, Sparkles, Camera } from 'lucide-react'
-import { CameraWatch } from '@/components/features/disease/CameraWatch'
+import { WifiOff, RefreshCw, AlertTriangle, BookOpen, ImageIcon, Camera } from 'lucide-react'
 import { TreatmentPlan } from '@/components/features/disease/TreatmentPlan'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from '../diagnosis.module.css'
@@ -137,7 +136,6 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
         <a href="#tu-chup" className={kit.btn2}><Camera size={15} aria-hidden="true" />Tự chụp ảnh kiểm tra</a>
       </div>
 
-      <CameraWatch />
 
       <h2 id="tu-chup" className={styles.section}>Chẩn đoán bệnh tự động</h2>
       <p className={styles.sectionNote}>Tải ảnh lá bệnh để AI nhận diện. Kết quả được lưu và báo cho cán bộ kỹ thuật.</p>
@@ -223,7 +221,6 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
                 {!result.uncertain && <TreatmentPlan disease={result.disease} />}
                 <p className={styles.aiNote}>* AI không kê thuốc. Thuốc và liều do cán bộ kỹ thuật quyết định. CBKT đã nhận được kết quả này.</p>
                 <div className={styles.actions}>
-                  <Link href="/farmer/ai" className={kit.btn2}><Sparkles size={16} aria-hidden="true" />Hỏi AI cách xử lý</Link>
                   <Link href="/farmer/handbook" className={kit.btn2}><BookOpen size={16} aria-hidden="true" />Xem cẩm nang</Link>
                 </div>
               </div>

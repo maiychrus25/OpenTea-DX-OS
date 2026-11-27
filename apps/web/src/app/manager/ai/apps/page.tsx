@@ -2,12 +2,13 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { listAppRequests, type AppRequestSummary } from '@/application/appbuilder/app-request-view'
 import { ACTIVE_REQUEST_STATUSES } from '@/domain/appbuilder/app-build'
 import { PrismaAppBuildRepository } from '@/infrastructure/db/appbuilder/PrismaAppBuildRepository'
 import { requireTenant } from '@/lib/api/tenant'
+import { isLabsEnabled } from '@/lib/labs'
 import { AnswerForm, CancelButton, NewRequestForm } from './_components/AppRequestActions'
 import styles from './_components/AppRequests.module.css'
 
@@ -18,6 +19,7 @@ const pillClass = (status: AppRequestSummary['status']) =>
   ['passed', 'installed'].includes(status) ? styles.pillOk : status === 'failed' ? styles.pillBad : ['asking', 'spec_proposed'].includes(status) ? styles.pillWait : styles.pill
 
 export default async function ManagerAiAppsPage() {
+  if (!isLabsEnabled()) notFound()
   const session = await auth()
   if (!session) redirect('/login')
   if (session.user?.role !== 'manager') redirect('/unauthorized')

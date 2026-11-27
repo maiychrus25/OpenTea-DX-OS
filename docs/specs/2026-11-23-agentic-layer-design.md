@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — Lớp AI vận hành có người duyệt
 
-> **Trạng thái:** Bản định hướng (2026-11-24, bản 6). Triển khai theo issue #55: mọi mốc M0 tới M15 đã vào `main` (M0 tới M5: PR #66, #70, #71, #78, #81; M7, M8, M14: PR #83, #84, #85; M10, M6, M12: PR #88, #87, #89; M9, M11, M13, M15: PR #95; phần còn lại của M5 ở issue #80: PR #97; xong ngày 2026-11-27). Các bản phát hành: v1.14.0 (M0 tới M3), v1.15.0 (M4, M5), v1.16.0 (M7, M8, M14), v1.17.0 (M6, M9 tới M13, M15, issue #80). Mã khác đặc tả ở đâu thì xem §21. Bản 2 thêm hai yêu cầu chủ dự án đưa ra cùng ngày: mọi thông tin và thao tác làm được qua Telegram (D6), và chiến dịch hằng ngày cùng đề xuất cải tiến (D7). Bản 3 thêm chế độ tự vận hành tuỳ chọn (D8, §11). Bản 4 ghi các câu trả lời của chủ dự án (D9 tới D12) và thêm xưởng mini-app (§12). Bản 5 đưa vào kết quả một lượt đánh giá độc lập và các cải tiến: bốn nguyên lý của đề thi (§5.4), MCP (§8.5), kiểm chứng trên trang lô, bộ đo công khai và kịch bản trình diễn (§15). Bản 6 ghi câu trả lời cho các câu hỏi mở (D13 tới D18, issue #56 tới #61).
+> **Trạng thái:** Đã triển khai đầy đủ M0–M15 (`v1.17.0`, 2026-11-27); cập nhật rào chắn vận hành & phạm vi ưu tiên theo [product-roadmap.md](../product-roadmap.md) và [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md) (2026-11-28). Thân tài liệu giữ nguyên bản định hướng gốc; xem "Ghi chú định hướng tiếp theo" ở cuối.
 > **Yêu cầu của chủ dự án (2026-11-23):** thêm một lớp AI vận hành trên hệ thống, luôn còn người phê duyệt. Làm đầy đủ, không cắt phạm vi theo hạn nộp bài. Được gọi provider bên ngoài như Claude và Codex. Báo cáo, hỏi đáp và phê duyệt được qua Telegram, để không phụ thuộc hoàn toàn vào website.
 > **Người đọc:** người sẽ xây lớp này (thành viên nhóm hoặc một phiên AI lập trình). Tài liệu nói cần gì, vì sao, và chốt các quyết định kiến trúc. Chi tiết cài đặt do người làm quyết, trong khuôn khổ ở đây. Mỗi lần gộp vào `main` vẫn hỏi chủ dự án.
 
@@ -1049,3 +1049,9 @@ Bốn việc này đã làm ở issue #80 (2026-11-27); xem ghi chú "M5, phần
 - **Sửa nhật ký chỉ sửa ghi chú và ngày,** vì route chỉ lưu hai trường đó.
 - **Ảnh chẩn đoán của chat bị xoá sau khi báo cáo đã lưu,** vì báo cáo giữ bản sao riêng.
 - **Hai dòng đọc không có trong kế hoạch** được thêm khi ghép: chi tiết một lô (`lô hàng <mã lô>`) và các lứa chưa đặt ngày thu hoạch (dòng đầu của `lịch thu hoạch`, chỉ quản lý).
+
+## Ghi chú định hướng tiếp theo (2026-11-28)
+
+Theo [product-roadmap.md](../product-roadmap.md) và [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md):
+- **Rào chắn `Poka-yoke` cho Autopilot (§11):** Các tác vụ liên quan trực tiếp tới an toàn thực phẩm (`harvest.approve`) và tài chính (`tea-shop` giảm giá / thanh toán) không được tự động thực thi khi triển khai cho HTX thật — luôn giữ mức `never` yêu cầu con người ký duyệt.
+- **Đóng băng có điều kiện & Tách vai trò quản trị:** Tạm đóng băng `App Factory` (M13), `strategy` (A11) và `Autopilot` trong gói vận hành chuẩn cho HTX để tập trung tài nguyên cho chuỗi giá trị chè; chuyển phần cấu hình provider/ngân sách sang vai `platform_admin`; và mở rộng kênh phổ cập sang **Zalo OA/ZNS** ở GĐ4 (bổ sung cho Telegram ở D15).

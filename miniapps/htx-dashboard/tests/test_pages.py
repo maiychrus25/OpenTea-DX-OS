@@ -116,7 +116,7 @@ def test_overview_attention_rows_match_the_sample(client):
 
 def test_overview_strip_and_prices(client):
     html = client.get("/", headers=MANAGER).text
-    assert "12" in html and "giá mô phỏng" in html and "Mô phỏng (Toàn quốc)" in html
+    assert "12" in html and "COMTRADE" in html and "mô phỏng" not in html.lower()
     assert "Cách tính các chỉ số" in html
 
 

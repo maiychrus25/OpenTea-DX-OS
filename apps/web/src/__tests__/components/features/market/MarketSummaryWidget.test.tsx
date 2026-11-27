@@ -6,7 +6,6 @@ import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import useSWR from 'swr'
 import { MarketSummaryWidget } from '@/components/features/market/MarketSummaryWidget'
-import { SIMULATED_MARKET_SOURCE } from '@/domain/market/simulated-price'
 
 jest.mock('swr', () => ({ __esModule: true, default: jest.fn() }))
 
@@ -25,10 +24,10 @@ describe('MarketSummaryWidget', () => {
     expect(useSWR).toHaveBeenCalledWith(`/api/market-data?commodity=${encodeURIComponent('Chè')}`, expect.any(Function))
   })
 
-  it('labels a simulated price as giá mô phỏng', () => {
-    serve({ source: SIMULATED_MARKET_SOURCE, commodity: 'Tea', metric: 'Giá chè búp khô', value: 200000, unit: 'VND/kg' })
+  it('shows "Chưa có dữ liệu giá." when there is no market row', () => {
+    ;(useSWR as jest.Mock).mockReturnValue({ data: { data: [] } })
     render(<MarketSummaryWidget />)
-    expect(screen.getByText(/giá mô phỏng/)).toBeInTheDocument()
+    expect(screen.getByText('Chưa có dữ liệu giá.')).toBeInTheDocument()
   })
 
   it('names no source it has no data from', () => {
@@ -37,7 +36,7 @@ describe('MarketSummaryWidget', () => {
     expect(screen.queryByText(/USDA/)).not.toBeInTheDocument()
   })
 
-  it('does not label a price from a real source', () => {
+  it('shows no "giá mô phỏng" label', () => {
     serve({ source: 'COMTRADE', commodity: 'Tea', metric: 'export_value_to_world', value: 250, unit: 'million_USD' })
     render(<MarketSummaryWidget />)
     expect(screen.queryByText(/giá mô phỏng/)).not.toBeInTheDocument()

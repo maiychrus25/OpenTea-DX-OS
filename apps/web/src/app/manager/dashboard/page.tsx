@@ -4,7 +4,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Sprout, TrendingUp, PackageCheck, Clock, BarChart3, Calendar, CheckSquare, QrCode, Newspaper, ChevronRight, Plus } from 'lucide-react'
+import { Sprout, TrendingUp, PackageCheck, Clock, BarChart3, Calendar, CheckSquare, QrCode, Newspaper, ChevronRight } from 'lucide-react'
 
 import { GetHtxProfileUseCase } from '@/application/useCases/GetHtxProfileUseCase'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
@@ -13,11 +13,9 @@ import { NotFoundError } from '@/domain/errors'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { MetricCard, AiNote, SourceBox, HeroBanner, Panel, Pill, EmptyState } from '@/components/ui'
-import { isSimulatedPrice, SIMULATED_PRICE_LABEL } from '@/domain/market/simulated-price'
 
 import { NoticesAndWeather, RainAlert } from '@/components/features/dashboard/NoticesAndWeather'
 import { PendingJournals } from '@/components/features/dashboard/PendingJournals'
-import { SampleYieldChart } from '@/components/features/sample/SampleYieldChart'
 import styles from './Dashboard.module.css'
 import layout from '@/components/features/dashboard/dashboard.module.css'
 
@@ -92,22 +90,14 @@ const PARCEL_STATUSES = [
 const PRICE_SELECT = { commodity: true, metric: true, value: true, unit: true, source: true, fetched_at: true } as const
 const PRICE_COUNT = 3
 
-// Tea first, topped up with the newest other commodities when fewer than PRICE_COUNT tea rows exist.
-async function latestPrices() {
-  const tea = await prisma.marketData.findMany({
+// Tea only: other commodities are off-domain for a tea cooperative.
+function latestPrices() {
+  return prisma.marketData.findMany({
     where: { commodity: 'Tea' },
     orderBy: { fetched_at: 'desc' },
     take: PRICE_COUNT,
     select: PRICE_SELECT,
   })
-  if (tea.length >= PRICE_COUNT) return tea
-  const others = await prisma.marketData.findMany({
-    where: { commodity: { not: 'Tea' } },
-    orderBy: { fetched_at: 'desc' },
-    take: PRICE_COUNT - tea.length,
-    select: PRICE_SELECT,
-  })
-  return [...tea, ...others]
 }
 
 function toMetricVN(metric: string | undefined | null): string {
@@ -255,9 +245,6 @@ export default async function ManagerDashboard() {
   }
 
   const uniqueSources = Array.from(new Set(prices.map(p => p.source)))
-  // Only real sources count as verified; a simulated price is named as such, and no data names no source.
-  const verifiedSources = uniqueSources.filter(source => !isSimulatedPrice(source))
-  const simulatedSources = uniqueSources.filter(source => isSimulatedPrice(source))
 
   return (
     <main className={hasProfile ? layout.page : styles.container}>
@@ -268,7 +255,6 @@ export default async function ManagerDashboard() {
             title={`${getGreeting()}, ${session.user.name}`}
             subtitle={[formatDate(new Date()), seasonLabel].filter(Boolean).join(' · ')}
             status="Đang hoạt động"
-            actions={[{ href: '/manager/lots', label: 'Tạo lô hàng', icon: <Plus size={18} aria-hidden="true" /> }]}
           />
 
           <RainAlert />
@@ -317,10 +303,6 @@ export default async function ManagerDashboard() {
             ))}
           </nav>
 
-          {/* No weekly harvest records yet, so the chart is labelled as an example. */}
-          <div className={layout.columns}>
-            <SampleYieldChart />
-
             <Panel title="Tình trạng thửa đất" href="/manager/farm-zones" linkLabel="Bản đồ">
               <div className={layout.tableWrap}>
                 <table className={layout.table}>
@@ -342,7 +324,6 @@ export default async function ManagerDashboard() {
                 </table>
               </div>
             </Panel>
-          </div>
 
           <Panel title="Nhật ký chờ duyệt" href="/manager/journal-approve">
             {pending.length === 0 ? (
@@ -378,9 +359,6 @@ export default async function ManagerDashboard() {
                       <span className={styles.priceMetric}>
                         {toMetricVN(price.metric)}
                       </span>
-                      {isSimulatedPrice(price.source) && (
-                        <span className={styles.priceMetric}>{SIMULATED_PRICE_LABEL}</span>
-                      )}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       {isIndex ? (
@@ -403,7 +381,7 @@ export default async function ManagerDashboard() {
                 <div className={styles.emptyMarket}>
                   <BarChart3 size={36} className="text-primary mx-auto" />
                   <p style={{ margin: '0.5rem 0 0.25rem', fontWeight: 600, color: 'var(--color-ink-secondary)' }}>
-                    Chưa có dữ liệu giá hôm nay
+                    Chưa có dữ liệu giá.
                   </p>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-ink-tertiary)' }}>
                     Hệ thống cập nhật tự động mỗi ngày. Vui lòng quay lại sau.
@@ -414,10 +392,7 @@ export default async function ManagerDashboard() {
 
             <div className={styles.aiInfo}>
               <AiNote />
-              {verifiedSources.length > 0 && <SourceBox count={verifiedSources.length} sources={verifiedSources} />}
-              {simulatedSources.length > 0 && (
-                <p className={styles.simulatedSource}>{`Nguồn mô phỏng: ${simulatedSources.join(' · ')}`}</p>
-              )}
+              {uniqueSources.length > 0 && <SourceBox count={uniqueSources.length} sources={uniqueSources} />}
             </div>
           </div>
           </Panel>

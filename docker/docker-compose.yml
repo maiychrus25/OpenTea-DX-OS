@@ -176,6 +176,8 @@ services:
       # The web's HTTPS base URL (D17): chat shows the Mini App buttons only when it is set. Same value as the relay's.
       DXOS_WEB_PUBLIC_URL: ${DXOS_WEB_PUBLIC_URL:-}
       HOSTNAME: "0.0.0.0"
+      # Frozen features (ADR 0005): app factory, autopilot, strategy agent, MCP, staff sync. Off unless "1" or "true".
+      DXOS_LABS: ${DXOS_LABS:-}
     volumes:
       # Client credentials of dxos-web-roles (realm-management view-users), written by ./dxos telegram enable.
       - dxos-web-env:/run/dxos-web:ro
@@ -509,6 +511,8 @@ services:
       OPENAI_API_BASE: ${OPENAI_API_BASE:-https://api.openai.com}
       DXOS_ANTHROPIC_MODEL: ${DXOS_ANTHROPIC_MODEL:-claude-haiku-5-5}
       DXOS_OPENAI_MODEL: ${DXOS_OPENAI_MODEL:-}
+      # Frozen jobs (staff, app-builder, strategy, autopilot tick) are skipped unless "1" or "true" (ADR 0005).
+      DXOS_LABS: ${DXOS_LABS:-}
     volumes:
       - dxos-agent-env:/run/dxos-agent:ro
     healthcheck:

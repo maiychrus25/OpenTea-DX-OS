@@ -9,6 +9,7 @@ import { notifyProposalDecided } from '@/application/telegram/telegram-services'
 import { PrismaStaffSyncRepository } from '@/infrastructure/db/agent/PrismaStaffSyncRepository'
 import { requireStaffCaller } from '@/lib/api/internal-staff-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { labsOnly } from '@/lib/labs'
 
 const idSchema = z.string().uuid()
 
@@ -39,4 +40,7 @@ async function postStaffTaskAck(request: Request, context: unknown) {
   return NextResponse.json({ data: { proposal_id: id.data, task_id: body.task_id, already: outcome === 'already' } })
 }
 
-export const POST = withErrorHandler(postStaffTaskAck)
+export const POST = withErrorHandler(labsOnly(postStaffTaskAck))
+
+// DXOS_LABS is read per request; a prerendered answer would freeze the switch into the build.
+export const dynamic = 'force-dynamic'

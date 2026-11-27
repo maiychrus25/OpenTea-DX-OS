@@ -7,15 +7,13 @@ import React from 'react'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
-import { Map, Clock, Stethoscope, Users, Plus, CheckSquare, TriangleAlert, ShoppingCart, Package, Flag } from 'lucide-react'
+import { Map, Clock, Stethoscope, Users, Plus, CheckSquare, TriangleAlert } from 'lucide-react'
 import { MetricCard, Pill, Panel } from '@/components/ui'
 import { WeatherHero } from '@/components/features/farmer-web/WeatherHero'
 import { ReportPhoto } from '@/components/features/disease/ReportPhoto'
-import { SampleTag } from '@/components/features/sample/SampleTag'
 import { OverviewJournal } from '@/components/features/officer-web/OverviewJournal'
 import { OverviewActivityChart, OverviewSparkline } from '@/components/features/officer-web/OverviewCharts'
 import { ACTIVITY_LABELS, DAY, approvalMetrics, cultivated, dailyCounts, dayMonth, householdProgress, latestSafeDates, vietnamDayStart, weeklyActivity } from '@/components/features/officer-web/overview-data'
-import { BOOKINGS, ORDERS, PRODUCTS, money } from '@/components/features/officer-web/sample'
 import { loadOverview } from './overview-query'
 import styles from '@/components/features/officer-web/overview.module.css'
 
@@ -123,8 +121,8 @@ export default async function OfficerDashboard({ searchParams }: { searchParams?
     </div>
 
     <div className={styles.equalGrid}>
-      <Panel title="Bản đồ vùng chè" href="/officer/farm-zones" linkLabel="Mở bản đồ" extra={<SampleTag />} className={styles.panel}>
-        <p className={styles.caption}>Vị trí minh họa · trạng thái thửa là dữ liệu thật</p>
+      <Panel title="Bản đồ vùng chè" href="/officer/farm-zones" linkLabel="Mở bản đồ" className={styles.panel}>
+        <p className={styles.caption}>Trạng thái từng thửa chè</p>
         {!mapParcels.length ? <p className={styles.empty}>Chưa có thửa chè</p> : <div className={styles.parcelMap}>
           {mapParcels.map(parcel => <Link key={parcel.id} href="/officer/farm-zones" className={`${styles.parcel} ${styles[parcel.state]}`} title={`${parcel.parcel_code}: ${MAP_STATES[parcel.state]}`}>
             <strong>{parcel.parcel_code}</strong><small>{MAP_STATES[parcel.state]}</small>
@@ -151,17 +149,6 @@ export default async function OfficerDashboard({ searchParams }: { searchParams?
             }) : <tr><td colSpan={4} className={styles.empty}>Chưa có nông hộ</td></tr>}</tbody>
           </table>
         </div>
-      </Panel>
-      <Panel title="Gian hàng & Tour" extra={<SampleTag />} href="/officer/orders" linkLabel="Quản lý" className={styles.panel}>
-        <dl className={styles.shopStats}>
-          <div><ShoppingCart size={20} aria-hidden="true" /><dt>Đơn hàng đã đặt</dt><dd>{ORDERS.filter(order => order.status === 'Đã đặt').length}</dd></div>
-          <div><Package size={20} aria-hidden="true" /><dt>Sản phẩm còn hàng</dt><dd>{PRODUCTS.filter(product => product.stock > 0).length}</dd></div>
-          <div><Flag size={20} aria-hidden="true" /><dt>Lượt đặt tour</dt><dd>{BOOKINGS.filter(booking => booking.status === 'Đã đặt').length}</dd></div>
-        </dl>
-        <ul className={styles.list}>{ORDERS.slice(0, 3).map(order => {
-          const product = PRODUCTS.find(item => item.code === order.product)!
-          return <li key={order.code}><Link href="/officer/orders" className={styles.report}><span className={styles.rowMain}><strong>{order.code} · {product.name} × {order.quantity}</strong><small>{money(product.price * order.quantity)}</small></span><Pill tone="wait">{order.status}</Pill></Link></li>
-        })}</ul>
       </Panel>
     </div>
   </main>

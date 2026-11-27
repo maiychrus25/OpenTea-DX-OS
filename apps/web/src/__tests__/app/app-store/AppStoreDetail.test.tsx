@@ -50,6 +50,17 @@ afterEach(() => jest.useRealTimers())
 const view = (over: Partial<StoreAppDetail> = {}, workerAlive = true) => render(<AppStoreDetail initial={detail(over)} workerAlive={workerAlive} />)
 
 describe('AppStoreDetail', () => {
+  it('shows the AI-built label and report link only when labs is on', () => {
+    const app = detail({ generated: true, buildRequestId: 'req-1' })
+    const off = render(<AppStoreDetail initial={app} workerAlive />)
+    expect(screen.queryByText(/App do AI xây/)).not.toBeInTheDocument()
+    expect(off.container.querySelector('a[href="/manager/ai/apps/req-1"]')).toBeNull()
+    off.unmount()
+    const on = render(<AppStoreDetail initial={app} workerAlive labs />)
+    expect(screen.getByText(/App do AI xây/)).toBeInTheDocument()
+    expect(on.container.querySelector('a[href="/manager/ai/apps/req-1"]')).not.toBeNull()
+  })
+
   test('a newer catalogue version shows the pill, the running version and the upgrade command', () => {
     view({ version: '0.2.0', installedVersion: '0.1.0', status: 'enabled' })
     expect(screen.getByText('Có bản mới')).toBeInTheDocument()

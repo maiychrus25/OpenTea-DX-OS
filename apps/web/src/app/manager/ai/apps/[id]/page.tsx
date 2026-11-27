@@ -7,6 +7,7 @@ import { auth } from '@/auth'
 import { appRequestDetail } from '@/application/appbuilder/app-request-view'
 import { PrismaAppBuildRepository } from '@/infrastructure/db/appbuilder/PrismaAppBuildRepository'
 import { requireTenant } from '@/lib/api/tenant'
+import { isLabsEnabled } from '@/lib/labs'
 import { ApproveSpecButton, CancelButton } from '../_components/AppRequestActions'
 import styles from '../_components/AppRequests.module.css'
 
@@ -22,6 +23,7 @@ const SHOT_LABEL: Record<string, string> = {
 const ROLE_VI = { farmer: 'Nông hộ', officer: 'Cán bộ', manager: 'Trưởng HTX' } as const
 
 export default async function ManagerAiAppRequestPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
+  if (!isLabsEnabled()) notFound()
   const session = await auth()
   if (!session) redirect('/login')
   if (session.user?.role !== 'manager') redirect('/unauthorized')

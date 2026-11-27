@@ -7,6 +7,7 @@ import { PrismaCampaignCandidateSource } from '@/infrastructure/db/agent/PrismaC
 import { PrismaStaffSyncRepository } from '@/infrastructure/db/agent/PrismaStaffSyncRepository'
 import { requireStaffCaller } from '@/lib/api/internal-staff-auth'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { labsOnly } from '@/lib/labs'
 
 /** The approved staff tasks the staff app has not acknowledged yet (contract C3). */
 async function getStaffTasks(request: Request) {
@@ -18,4 +19,7 @@ async function getStaffTasks(request: Request) {
   return NextResponse.json({ data: { tasks } })
 }
 
-export const GET = withErrorHandler(getStaffTasks)
+export const GET = withErrorHandler(labsOnly(getStaffTasks))
+
+// DXOS_LABS is read per request; a prerendered answer would freeze the switch into the build.
+export const dynamic = 'force-dynamic'

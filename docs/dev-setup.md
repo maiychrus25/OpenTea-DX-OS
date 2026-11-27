@@ -1,6 +1,6 @@
 # Hướng dẫn Cài đặt Môi trường Phát triển (Local Dev Setup)
 
-Dự án DX-AgriMarket sử dụng kiến trúc Monorepo và Docker Compose để đồng bộ môi trường phát triển cho tất cả các thành viên.
+Dự án **OpenTea DX-OS** sử dụng kiến trúc Monorepo và Docker Compose để đồng bộ môi trường phát triển cho tất cả các thành viên (xem thêm mục lục tài liệu tại [docs/README.md](./README.md) và hướng dẫn chạy stack nhẹ tại [README.md](../README.md)).
 
 ## Yêu cầu Hệ thống
 - Docker & Docker Compose
@@ -48,6 +48,14 @@ docker exec -it agrimarket-n8n n8n import:workflow --input=/tmp/mattermost-push.
 docker cp workflows/system-error-alert.json agrimarket-n8n:/tmp/
 docker exec -it agrimarket-n8n n8n import:workflow --input=/tmp/system-error-alert.json
 ```
+
+### Công tắc `DXOS_LABS`
+
+`DXOS_LABS` (trong `.env`, mẫu ở `.env.example`) mặc định trống, tức tắt. Đặt `1` hoặc `true` để mở các tính năng đóng băng theo ADR 0005: xưởng mini-app, tự vận hành, agent chiến lược, MCP và đồng bộ nhân sự. Compose truyền biến cho `web` và `dxos-agent`; web đọc giá trị lúc gọi nên không cần dựng lại ảnh, chỉ cần tạo lại container `web` và `dxos-agent` sau khi đổi `.env`. Khi tắt, các route đó trả 404 và agent không lên lịch job tương ứng. Workflow đã xoá ở GĐ0 (`vietnam_market_sync`, `worldbank_sync`, `faostat_sync`, `nasa_power_sync`, `wto_tariffs`) không còn trong danh sách import.
+
+### Việc còn lại đã biết
+
+Ảnh cửa hàng của `custom-books` (`miniapps/custom-books/store/*.png`) vẫn chụp một mẫu sổ đã gỡ ở GĐ0. Cần chụp lại bằng `apps/web/tests/tools/store-screenshots.spec.ts` khi có stack đang chạy.
 
 ## Bước 4: Kiểm tra Sức khỏe Hệ thống (Smoke Test)
 

@@ -17,21 +17,23 @@ export interface SearchResult {
   url: string
 }
 
-const STATIC_SUGGESTIONS: SearchResult[] = [
-  { id: 'mock-1', title: 'Nguyễn Văn A', subtitle: 'Hộ thành viên HTX', type: 'household', url: '/manager/members' },
-  { id: 'mock-2', title: 'Thửa đất số 42', subtitle: 'Khu vực canh tác 1', type: 'parcel', url: '/manager/farm-zones' },
-  { id: 'mock-3', title: 'Nhật ký bón phân Lô 12', subtitle: 'Ngày 12/08/2026', type: 'journal', url: '/officer/farm-zones' },
-  { id: 'mock-4', title: 'Lô hàng LOT-2026-08', subtitle: 'Cà phê nhân Robusta', type: 'lot', url: '/manager/lots' },
-  { id: 'mock-5', title: 'Kế hoạch sản xuất.pdf', subtitle: 'Thư mục tài liệu', type: 'document', url: '/officer/documents' },
-  { id: 'mock-6', title: 'Công ty TNHH Nông sản Xanh', subtitle: 'Đối tác thu mua', type: 'partner', url: '/manager/partners' },
-]
+type SearchRole = 'manager' | 'officer'
+
+/** Pages that exist per role; the manager has no household detail page, the officer no lot detail page. */
+export function resultUrl(role: SearchRole, item: { type: string; id: string; title: string }): string {
+  if (item.type === 'HOUSEHOLD') return role === 'officer' ? `/officer/households/${item.id}` : '/manager/members'
+  if (item.type === 'PARCEL') return `/${role}/farm-zones`
+  if (item.type === 'LOT') return role === 'officer' ? '/officer/lots' : `/manager/lots/${encodeURIComponent(item.title)}`
+  return `/${role}/dashboard`
+}
 
 interface GlobalSearchProps {
   isOpen: boolean
   onClose: () => void
+  role: SearchRole
 }
 
-export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
+export function GlobalSearch({ isOpen, onClose, role }: GlobalSearchProps) {
   const [mounted, setMounted] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -110,19 +112,8 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
         const apiData = Array.isArray(json?.data) ? json.data : []
 
         const mappedApiResults: SearchResult[] = apiData.map((item: any) => {
-          let itemType: SearchResult['type'] = 'document'
-          let itemUrl = '#'
-
-          if (item.type === 'HOUSEHOLD') {
-            itemType = 'household'
-            itemUrl = `/manager/households/${item.id}`
-          } else if (item.type === 'PARCEL') {
-            itemType = 'parcel'
-            itemUrl = `/manager/farm-zones`
-          } else if (item.type === 'LOT') {
-            itemType = 'lot'
-            itemUrl = `/manager/lots/${item.title || item.id}`
-          }
+          const itemType: SearchResult['type'] = item.type === 'HOUSEHOLD' ? 'household' : item.type === 'PARCEL' ? 'parcel' : item.type === 'LOT' ? 'lot' : 'document'
+          const itemUrl = resultUrl(role, item)
 
           return {
             id: String(item.id),
@@ -133,37 +124,12 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
           }
         })
 
-        // Combine API results with relevant static fallback suggestions for richer demo experience
-        const matchedStatic = STATIC_SUGGESTIONS.filter(item =>
-          item.title.toLowerCase().includes(trimmed.toLowerCase()) ||
-          item.subtitle.toLowerCase().includes(trimmed.toLowerCase())
-        )
-
-        // Deduplicate by title
-        const seenTitles = new Set(mappedApiResults.map(r => r.title.toLowerCase()))
-        const combined = [...mappedApiResults]
-        for (const s of matchedStatic) {
-          if (!seenTitles.has(s.title.toLowerCase())) {
-            combined.push(s)
-            seenTitles.add(s.title.toLowerCase())
-          }
-        }
-
-        setResults(combined)
+        setResults(mappedApiResults)
       } catch (err: any) {
         if (err.name === 'AbortError') return
         
-        // If API fails or is offline, fallback gracefully to client search on suggestions
-        const clientFiltered = STATIC_SUGGESTIONS.filter(item =>
-          item.title.toLowerCase().includes(trimmed.toLowerCase()) ||
-          item.subtitle.toLowerCase().includes(trimmed.toLowerCase())
-        )
-        if (trimmed.toLowerCase() === 'error') {
-          setHasError(true)
-          setResults([])
-        } else {
-          setResults(clientFiltered)
-        }
+        setHasError(true)
+        setResults([])
       } finally {
         setIsSearching(false)
       }
@@ -173,7 +139,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
       clearTimeout(debounceTimer)
       abortController.abort()
     }
-  }, [query])
+  }, [query, role])
 
   const filteredResults = useMemo(() => {
     if (activeFilter === 'all') return results

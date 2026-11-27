@@ -7,6 +7,7 @@ import { autopilotService } from '@/application/telegram/telegram-services'
 import { ForbiddenError } from '@/domain/errors'
 import { requireTenant } from '@/lib/api/tenant'
 import { withErrorHandler } from '@/lib/api/withErrorHandler'
+import { labsOnly } from '@/lib/labs'
 
 /** Status, the kinds with their match rates and today's counts. Managers and officers read it. */
 async function getAutopilot() {
@@ -17,4 +18,7 @@ async function getAutopilot() {
   return NextResponse.json({ data: { ...view, can_enable: tenant.role === 'manager' } })
 }
 
-export const GET = withErrorHandler(getAutopilot)
+export const GET = withErrorHandler(labsOnly(getAutopilot))
+
+// DXOS_LABS is read per request; a prerendered answer would freeze the switch into the build.
+export const dynamic = 'force-dynamic'

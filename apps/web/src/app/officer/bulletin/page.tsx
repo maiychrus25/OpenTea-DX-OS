@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { AiNote } from '@/components/ui/AiNote'
 import { BulletinCard } from '@/components/features/bulletin/BulletinCard'
 import { ListenBulletinButton } from '@/components/features/bulletin/ListenBulletinButton'
-import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
 import { auth } from '@/auth'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { ArrowRight, ChevronUp } from 'lucide-react'
@@ -66,7 +65,7 @@ export default async function OfficerBulletinPage({ searchParams }: OfficerBulle
     }
   }).filter(b => b.summary.length > 0)
 
-  const rawBulletins = realBulletins.length > 0 ? realBulletins : MOCK_BULLETINS
+  const rawBulletins = realBulletins
 
   // Filter by category if selected
   const bulletins = selectedCategory === 'all' 
@@ -162,7 +161,7 @@ export default async function OfficerBulletinPage({ searchParams }: OfficerBulle
       {/* Bulletins Grid or Empty Notice */}
       {bulletins.length === 0 ? (
         <div className={styles.emptyNotice}>
-          Không có bản tin nào trong danh mục này.
+          {selectedCategory === 'all' ? 'Chưa có bản tin nào' : 'Không có bản tin nào trong danh mục này.'}
         </div>
       ) : (
         <div className={styles.newsGrid}>

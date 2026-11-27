@@ -46,7 +46,7 @@ export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notifi
         </nav>
       </div>
 
-      <GlobalSearchInput />
+      {(role === 'manager' || role === 'officer') && <GlobalSearchInput role={role} />}
 
       <div className={styles.right}>
         <ThemeToggle />

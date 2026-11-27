@@ -18,9 +18,9 @@ export default async function UnauthorizedPage({ searchParams }: UnauthorizedPag
   const { state } = await searchParams
 
   let redirectUrl = '/'
-  if (role === 'manager') redirectUrl = '/manager'
-  else if (role === 'officer') redirectUrl = '/officer'
-  else if (role === 'farmer') redirectUrl = '/farmer'
+  if (role === 'manager') redirectUrl = '/manager/dashboard'
+  else if (role === 'officer') redirectUrl = '/officer/dashboard'
+  else if (role === 'farmer') redirectUrl = '/farmer/dashboard'
 
   // AC-4: Pending account state
   if (state === 'pending') {
@@ -59,13 +59,9 @@ export default async function UnauthorizedPage({ searchParams }: UnauthorizedPag
             <h1 className={styles.stateTitleLocked}>Tài khoản bị khóa</h1>
             <p className={styles.description}>
               Tài khoản của bạn đã bị khóa do nhập sai PIN quá nhiều lần.
-              Vui lòng khôi phục mã PIN để mở khóa tài khoản.
+              
             </p>
-            <Link href="/forgot-pin" data-testid="locked-forgot-pin-link">
-              <Button variant="primary">
-                Khôi phục mã PIN
-              </Button>
-            </Link>
+            <p className={styles.description} data-testid="locked-forgot-pin-note">Quên mã PIN? Hãy liên hệ cán bộ HTX để được đặt lại.</p>
             <Link href="/login" className={styles.secondaryLink}>
               Quay về đăng nhập
             </Link>

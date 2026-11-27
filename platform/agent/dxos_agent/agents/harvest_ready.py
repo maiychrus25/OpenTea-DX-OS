@@ -17,6 +17,8 @@ DEFAULT_THRESHOLDS = THRESHOLD_DEFAULTS[AGENT_NAME]
 MAX_SPRAYING_ENTRIES = 48  # more entries than this: the parcel is skipped and logged, its evidence would be too large
 NO_HARVEST_DATE = datetime.min.replace(tzinfo=timezone.utc)
 
+# A spraying counts toward the withdrawal period unless its entry is a draft or was rejected (web: domain/journal/withdrawal-status.ts).
+WITHDRAWAL_EXCLUDED_STATUSES = ("DRAFT", "REJECTED")
 PARCELS_OPERATION = "HarvestReadyParcels"
 SPRAYINGS_OPERATION = "HarvestReadySprayings"
 PARCELS_QUERY = (
@@ -31,7 +33,7 @@ PARCELS_QUERY = (
 )
 SPRAYINGS_QUERY = (
     f"query {SPRAYINGS_OPERATION} {{\n"
-    '  journal_entries(where: {activity_type: {_eq: "SPRAYING"}, status: {_neq: "DRAFT"}, '
+    '  journal_entries(where: {activity_type: {_eq: "SPRAYING"}, status: {_nin: ["DRAFT", "REJECTED"]}, '
     '  parcel: {status: {_eq: "TENDING"}}}) {\n'
     "    id parcel_id entry_date activity_type status notes updated_at\n"
     "    activities(order_by: [{id: asc}]) { id activity_detail product_name dosage withdrawal_days safe_harvest_date }\n"
@@ -67,7 +69,7 @@ def harvest_proposals(
 
     sprays_by_parcel: dict[str, list[Mapping[str, Any]]] = {}
     for entry in sprayings:
-        if entry.get("activity_type") == "SPRAYING" and entry.get("status") != "DRAFT":
+        if entry.get("activity_type") == "SPRAYING" and entry.get("status") not in WITHDRAWAL_EXCLUDED_STATUSES:
             sprays_by_parcel.setdefault(str(entry["parcel_id"]), []).append(entry)
 
     proposals: list[Proposal] = []

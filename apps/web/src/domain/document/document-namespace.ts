@@ -6,7 +6,7 @@ import { NotFoundError, ValidationError } from '@/domain/errors'
 // Object keys are flat, so an encoded or relative step is refused rather than resolved.
 const UNSAFE = /[\\\0]|%2e|%2f|%5c/i
 
-/** Written by workflows/vietnam_market_sync.json. It holds no tenant data, so every HTX may read it and none may write. */
+/** Old market reports, no longer written by any workflow. It holds no tenant data, so every HTX may read it and none may write. */
 export const MARKET_REPORTS_ROOT = 'para/Archives/Market_Reports/'
 
 function hasSafeSegments(key: string): boolean {

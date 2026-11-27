@@ -73,85 +73,22 @@ test.describe('Story 8.10: Registration Flow', () => {
   })
 })
 
-// ─── 8.10-E2E-001: Forgot PIN Flow ────────────────────────────────────────────
-test.describe('Story 8.10: Forgot PIN Flow (8.10-E2E-001)', () => {
-  test('renders step 1 — phone verification', async ({ page }) => {
-    await page.goto('/forgot-pin')
-    await expect(page.locator('[data-testid="forgot-pin-panel"]')).toBeVisible()
-    await expect(page.locator('[data-testid="step-verify-phone"]')).toBeVisible()
-    await expect(page.locator('[data-testid="input-phone"]')).toBeVisible()
-    await expect(page.locator('[data-testid="send-otp-btn"]')).toBeVisible()
-    await expect(page.locator('[data-testid="mock-mode-banner"]')).toBeVisible()
-  })
-
-  test('step indicator updates across steps', async ({ page }) => {
-    await page.goto('/forgot-pin')
-    // Step 1 active
-    await expect(page.locator('[data-testid="step-dot-1"]')).toHaveClass(/active/)
-
-    // Go to step 2
-    await page.fill('[data-testid="input-phone"]', '0901234567')
-    await page.locator('[data-testid="send-otp-btn"]').click()
-    await expect(page.locator('[data-testid="step-enter-otp"]')).toBeVisible({ timeout: 3000 })
-    await expect(page.locator('[data-testid="step-dot-2"]')).toHaveClass(/active/)
-  })
-
-  test('8.10-E2E-001: complete success flow phone → OTP → new PIN → success', async ({ page }) => {
-    await page.goto('/forgot-pin')
-
-    // Step 1: Enter phone
-    await page.fill('[data-testid="input-phone"]', '0901234567')
-    await page.locator('[data-testid="send-otp-btn"]').click()
-
-    // Step 2: Enter OTP
-    await expect(page.locator('[data-testid="step-enter-otp"]')).toBeVisible({ timeout: 3000 })
-    await expect(page.locator('[data-testid="mock-otp-hint"]')).toBeVisible()
-    await page.fill('[data-testid="input-otp"]', '123456')
-    await page.locator('[data-testid="verify-otp-btn"]').click()
-
-    // Step 3: New PIN
-    await expect(page.locator('[data-testid="step-new-pin"]')).toBeVisible({ timeout: 3000 })
-    await page.fill('[data-testid="input-new-pin"]', '654321')
-    await page.fill('[data-testid="input-confirm-new-pin"]', '654321')
-    await page.locator('[data-testid="set-new-pin-btn"]').click()
-
-    // Success state
-    await expect(page.locator('[data-testid="forgot-pin-success"]')).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText(/thành công/i)).toBeVisible()
-    await expect(page.locator('[data-testid="go-to-login-btn"]')).toBeVisible()
-  })
-
-  test('8.10-E2E-001: shows PIN mismatch error on step 3', async ({ page }) => {
-    await page.goto('/forgot-pin')
-    await page.fill('[data-testid="input-phone"]', '0901234567')
-    await page.locator('[data-testid="send-otp-btn"]').click()
-    await page.waitForSelector('[data-testid="step-enter-otp"]')
-    await page.fill('[data-testid="input-otp"]', '123456')
-    await page.locator('[data-testid="verify-otp-btn"]').click()
-    await page.waitForSelector('[data-testid="step-new-pin"]')
-    await page.fill('[data-testid="input-new-pin"]', '123456')
-    await page.fill('[data-testid="input-confirm-new-pin"]', '654321')
-    await page.locator('[data-testid="set-new-pin-btn"]').click()
-    await expect(page.locator('[data-testid="error-confirm-new-pin"]')).toBeVisible()
-    await expect(page.locator('[data-testid="error-confirm-new-pin"]')).toContainText('không khớp')
-  })
-
-  test('forgot-pin link visible on login page', async ({ page }) => {
+// ─── Forgot PIN guidance ──────────────────────────────────────────────────────
+test.describe('Story 8.10: Forgot PIN guidance', () => {
+  test('login page tells the person to contact the cooperative officer, with no recovery link', async ({ page }) => {
     await page.goto('/login')
-    await expect(page.locator('[data-testid="forgot-pin-link"]')).toBeVisible()
-    await page.locator('[data-testid="forgot-pin-link"]').click()
-    await expect(page).toHaveURL('/forgot-pin')
+    await expect(page.locator('[data-testid="forgot-pin-note"]')).toContainText('liên hệ cán bộ HTX')
   })
+
 })
 
 // ─── Login Error States ────────────────────────────────────────────────────────
 test.describe('Story 8.10: Login Error States (AC-3)', () => {
-  test('shows locked error banner with recovery link', async ({ page }) => {
+  test('shows locked error banner with contact guidance', async ({ page }) => {
     await page.goto('/login?error=locked')
     await expect(page.locator('[data-testid="error-locked"]')).toBeVisible()
     await expect(page.locator('[data-testid="error-locked"]')).toContainText('bị khóa')
-    await expect(page.locator('[data-testid="locked-recovery-link"]')).toBeVisible()
-    await expect(page.locator('[data-testid="locked-recovery-link"]')).toHaveAttribute('href', '/forgot-pin')
+    await expect(page.locator('[data-testid="locked-recovery-note"]')).toContainText('liên hệ cán bộ HTX')
   })
 
   test('shows wrong-pin error banner', async ({ page }) => {
@@ -193,38 +130,16 @@ test.describe('Story 8.10: Unauthorized Page States (AC-4)', () => {
     await expect(page.locator('[data-testid="back-to-login-btn"]')).toBeVisible()
   })
 
-  test('?state=locked shows locked view with forgot-pin link', async ({ page }) => {
+  test('?state=locked shows locked view with contact guidance', async ({ page }) => {
     await page.goto('/unauthorized?state=locked')
     await expect(page.locator('[data-testid="state-locked"]')).toBeVisible()
     await expect(page.getByText(/bị khóa/i)).toBeVisible()
-    await expect(page.locator('[data-testid="locked-forgot-pin-link"]')).toHaveAttribute('href', '/forgot-pin')
+    await expect(page.locator('[data-testid="locked-forgot-pin-note"]')).toContainText('liên hệ cán bộ HTX')
   })
 })
 
 // ─── 8.10-SEC-001: Mock UI Security ───────────────────────────────────────────
 test.describe('Story 8.10: Security (8.10-SEC-001)', () => {
-  test('forgot-pin success state does not create auth session', async ({ page }) => {
-    await page.goto('/forgot-pin')
-    await page.fill('[data-testid="input-phone"]', '0901234567')
-    await page.locator('[data-testid="send-otp-btn"]').click()
-    await page.waitForSelector('[data-testid="step-enter-otp"]')
-    await page.fill('[data-testid="input-otp"]', '123456')
-    await page.locator('[data-testid="verify-otp-btn"]').click()
-    await page.waitForSelector('[data-testid="step-new-pin"]')
-    await page.fill('[data-testid="input-new-pin"]', '123456')
-    await page.fill('[data-testid="input-confirm-new-pin"]', '123456')
-    await page.locator('[data-testid="set-new-pin-btn"]').click()
-    await page.waitForSelector('[data-testid="forgot-pin-success"]')
-
-    // No auth session should be created
-    const cookies = await page.context().cookies()
-    const authCookie = cookies.find((c) => c.name === 'authjs.session-token')
-    expect(authCookie).toBeUndefined()
-
-    // User is still at /forgot-pin (no navigation to protected route)
-    await expect(page).toHaveURL('/forgot-pin')
-  })
-
   test('protected routes still require auth after mock forms', async ({ page }) => {
     // After register mock flow, navigating to /manager should redirect
     await page.goto('/register')

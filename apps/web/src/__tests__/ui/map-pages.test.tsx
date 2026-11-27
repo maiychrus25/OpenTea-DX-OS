@@ -30,14 +30,15 @@ jest.mock('leaflet', () => {
 
 const partner = { id: 'partner-1', name: 'Đối tác thật', partner_type: 'BUYER', lat: 21.56, lng: 105.81, address: 'Tân Cương' }
 const parcel = { id: 'parcel-1', parcel_code: 'TC-001', status: 'TENDING', area_ha: 1.25, crop_type: 'Chè', household: { name: 'Hộ chè' }, centroid_lat: 21.56, centroid_lng: 105.81, polygon_geojson: null }
+const EMPTY_PARTNERS = 'Chưa có đối tác nào. Bấm Thêm đối tác để bắt đầu.'
 const respond = (data: unknown, ok = true) => ({ ok, status: ok ? 200 : 503, json: async () => ({ data }) })
 
 beforeEach(() => { jest.clearAllMocks(); global.fetch = jest.fn().mockResolvedValue(respond([])) })
 
 test('partner map starts at Tan Cuong, has both labelled layers, and opens the form only on request', async () => {
   render(<PartnerMap />)
-  await screen.findByText('Công ty Chè Tân Thái')
-  expect(screen.getByText('Mẫu')).toBeInTheDocument()
+  await screen.findByText(EMPTY_PARTNERS)
+  expect(screen.queryByText('Mẫu')).not.toBeInTheDocument()
   expect(screen.queryByPlaceholderText('Nhập tên đối tác')).not.toBeInTheDocument()
   expect(L.map).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ center: [21.538, 105.775], zoom: 14 }))
   expect(L.control.layers).toHaveBeenCalledWith(expect.objectContaining({ 'Bản đồ': expect.anything(), 'Vệ tinh': expect.anything() }), undefined, expect.anything())
@@ -48,7 +49,14 @@ test('partner map starts at Tan Cuong, has both labelled layers, and opens the f
   expect(screen.getByPlaceholderText('Nhập tên đối tác')).toBeInTheDocument()
 })
 
-test('real partners replace samples; category chips filter both list and pins', async () => {
+test('shows the empty state, not sample partners, when there is no partner', async () => {
+  render(<PartnerMap />)
+  expect(await screen.findByText(EMPTY_PARTNERS)).toBeInTheDocument()
+  expect(screen.queryByText('Công ty Chè Tân Thái')).not.toBeInTheDocument()
+  expect(screen.queryByText('Mẫu')).not.toBeInTheDocument()
+})
+
+test('real partners are listed; category chips filter both list and pins', async () => {
   global.fetch = jest.fn().mockResolvedValue(respond([partner, { ...partner, id: 'warehouse', name: 'Kho chè', partner_type: 'WAREHOUSE', lat: 21.57 }]))
   render(<PartnerMap />)
   await screen.findByText('Đối tác thật')
@@ -70,7 +78,7 @@ test('a failed partner load does not masquerade as sample or empty data', async 
 test('map click opens partner form and preserves selected pin on create', async () => {
   global.fetch = jest.fn().mockResolvedValueOnce(respond([])).mockResolvedValueOnce(respond(partner))
   render(<PartnerMap />)
-  await screen.findByText('Công ty Chè Tân Thái')
+  await screen.findByText(EMPTY_PARTNERS)
   const map = (L.map as jest.Mock).mock.results[0].value
   const click = map.on.mock.calls.find(([event]: string[]) => event === 'click')[1]
   act(() => click({ latlng: { lat: 21.56, lng: 105.81 } }))
@@ -93,21 +101,21 @@ test('edit and delete still use the existing API and confirmation flow', async (
   expect(global.fetch).toHaveBeenLastCalledWith('/api/partners/partner-1', expect.objectContaining({ method: 'PUT' }))
   fireEvent.click(screen.getByRole('button', { name: 'Xóa đối tác' }))
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận xóa' }))
-  await screen.findByText('Công ty Chè Tân Thái')
+  await screen.findByText(EMPTY_PARTNERS)
   expect(global.fetch).toHaveBeenLastCalledWith('/api/partners/partner-1', { method: 'DELETE' })
 })
 
-test('farm parcels without boundaries keep schematic samples, labels, setup link and disabled export', async () => {
+test('farm parcels without boundaries keep the parcel diagram, labels, setup link and disabled export', async () => {
   global.fetch = jest.fn().mockResolvedValue(respond([parcel]))
   render(<FarmZoneReadOnly />)
-  const schematic = await screen.findByRole('region', { name: 'Sơ đồ thửa minh hoạ' })
-  expect(within(schematic).getByText('Mẫu')).toBeInTheDocument()
+  const schematic = await screen.findByRole('region', { name: 'Sơ đồ thửa' })
+  expect(within(schematic).queryByText('Mẫu')).not.toBeInTheDocument()
   expect(within(schematic).getByText('TC-001')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Vẽ ranh giới ngay' })).toHaveAttribute('href', '/officer/farm-zones/setup')
   expect(screen.getByRole('button', { name: 'Xuất GeoJSON' })).toBeDisabled()
   expect(screen.getByRole('checkbox', { name: 'Đang chăm sóc' })).toBeChecked()
   fireEvent.click(screen.getByRole('checkbox', { name: 'Đang chăm sóc' }))
-  expect(screen.queryByRole('region', { name: 'Sơ đồ thửa minh hoạ' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'Sơ đồ thửa' })).not.toBeInTheDocument()
 })
 
 test('zone map renders and fits polygons on the first mount even without centroids', async () => {

@@ -12,6 +12,16 @@ import type { TelegramConversation, TelegramLink } from '@/domain/telegram/ports
 const NOW = new Date('2026-11-26T03:00:00Z')
 const REQUEST_ID = '11111111-1111-4111-8111-111111111111'
 
+// The frozen feature under test runs only with the labs switch on (ADR 0005).
+const previousLabs = process.env.DXOS_LABS
+beforeEach(() => {
+  process.env.DXOS_LABS = '1'
+})
+afterEach(() => {
+  if (previousLabs === undefined) delete process.env.DXOS_LABS
+  else process.env.DXOS_LABS = previousLabs
+})
+
 describe('the chat intent app.request', () => {
   it.each(['cần app theo dõi kho phân bón', 'làm app quản lý xe', 'Xây app bán hàng', 'cần phần mềm kế toán'])('routes "%s" to a request', (text) => {
     expect(routeText(text)).toEqual({ kind: 'app_request' })
@@ -148,5 +158,13 @@ describe('the app_answer conversation in the update handler', () => {
     const res = await handler.handle(text('cần app theo dõi kho phân bón'))
     expect(submit).toHaveBeenCalled()
     expect(res.replies[0].text).toBe(APP_REQUEST_TEXT.received)
+  })
+
+  it('says the feature is not open, and creates nothing, when labs is off', async () => {
+    delete process.env.DXOS_LABS
+    const { handler, submit } = build(jest.fn(), null)
+    const res = await handler.handle(text('cần app theo dõi kho phân bón'))
+    expect(submit).not.toHaveBeenCalled()
+    expect(res.replies[0].text).toBe('Tính năng này chưa mở.')
   })
 })

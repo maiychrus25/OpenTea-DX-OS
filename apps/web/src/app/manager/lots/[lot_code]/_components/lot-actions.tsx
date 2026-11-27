@@ -26,7 +26,7 @@ export function LotActions({ lotCode }: { lotCode: string }) {
   const handleSimulateScan = () => {
     setShowScanner(true)
     setTimeout(() => {
-      window.open(`/q/${lotCode}?status=valid`, '_blank')
+      window.open(`/q/${lotCode}`, '_blank')
       setShowScanner(false)
     }, 2000)
   }
