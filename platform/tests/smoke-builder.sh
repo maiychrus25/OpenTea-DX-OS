@@ -116,7 +116,7 @@ builder_cleanup() {
   psql_app "delete from platform.app_enablements where app_id like 'gen-%'" >/dev/null 2>&1 || true
   psql_app "delete from platform.app_catalog where owner_htx = 'TC' and id like 'gen-%'" >/dev/null 2>&1 || true
   psql_app "delete from platform.app_build_requests where htx_code = 'TC' and created_at >= '$BUILDER_T0'" >/dev/null 2>&1 || true  # builds and files cascade
-  psql_app "delete from platform.telegram_conversations where kind = 'app_answer' and created_at >= '$BUILDER_T0'" >/dev/null 2>&1 || true
+  psql_app "delete from platform.telegram_conversations where kind = 'app_answer' and expires_at >= '$BUILDER_T0'" >/dev/null 2>&1 || true
   psql_app "delete from platform.agent_settings where htx_code='TC' and agent='app-builder'" >/dev/null 2>&1 || true
   psql_app "delete from platform.agent_runs where htx_code='TC' and agent='app-builder' and started_at >= '$BUILDER_T0'" >/dev/null 2>&1 || true
   rm -rf "generated-apps/TC" "$RUNTIME/generated"
