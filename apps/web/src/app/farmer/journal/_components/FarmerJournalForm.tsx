@@ -27,7 +27,7 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
   const [parcels, setParcels] = useState<Parcel[]>([])
   const [parcelId, setParcelId] = useState('')
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10))
-  const [activityType, setActivityType] = useState(initial?.activityType ?? 'SPRAYING')
+  const [activityType, setActivityType] = useState(initial?.activityType ?? 'OTHER')
   const [productName, setProductName] = useState(initial?.productName ?? '')
   const [hasChemicals, setHasChemicals] = useState(true)
   const [dosage, setDosage] = useState(initial?.dosage ?? '')
