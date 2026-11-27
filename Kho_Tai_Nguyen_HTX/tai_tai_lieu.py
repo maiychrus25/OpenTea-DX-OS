@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Tải bản gốc các tài liệu có "tai": true trong nguon.json vào _goc/ (không commit) và ghi lại kết quả."""
-import hashlib, json, pathlib, subprocess
+import csv, hashlib, json, pathlib, subprocess
 
 root = pathlib.Path(__file__).parent
 out = root / "_goc"
@@ -10,8 +10,9 @@ out = root / "_goc"
 # PDFKit có sẵn trên macOS; máy khác bỏ qua bước trích chữ.
 JXA = 'ObjC.import("PDFKit");function run(a){var d=$.PDFDocument.alloc.initWithURL($.NSURL.fileURLWithPath(a[0]));return d.isNil()?"":ObjC.unwrap(d.string)||""}'
 
+sources = json.loads((root / "nguon.json").read_text(encoding="utf-8"))
 report = []
-for item in json.loads((root / "nguon.json").read_text(encoding="utf-8")):
+for item in sources:
     if not item["tai"]:
         continue
     row = {"id": item["id"]}
@@ -37,3 +38,11 @@ for item in json.loads((root / "nguon.json").read_text(encoding="utf-8")):
     report.append(row)
     print(row)
 (out / "ket_qua_tai.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+
+# "có" chỉ khi lần chạy này tải được bản gốc.
+got = {row["id"] for row in report if "loi" not in row}
+with (root / "danh_muc.csv").open("w", encoding="utf-8-sig", newline="") as f:
+    table = csv.writer(f, lineterminator="\n")
+    table.writerow(["ma", "nhom", "ten", "co_quan", "loai", "da_tai_ban_goc", "url"])
+    for item in sources:
+        table.writerow([item["id"], item["nhom"], item["ten"], item["co_quan"], item["loai"], "có" if item["id"] in got else "không", item["url"]])
