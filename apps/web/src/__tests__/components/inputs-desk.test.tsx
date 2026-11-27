@@ -17,12 +17,14 @@ const advance = {
 
 let calls: { url: string; method: string; body: any }[]
 let advanceList: unknown[]
+let savedBank: unknown
 
 const ok = (data: unknown) => ({ ok: true, status: 200, json: async () => data })
 
 beforeEach(() => {
   calls = []
   advanceList = []
+  savedBank = null
   global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET'
     const body = init?.body ? JSON.parse(String(init.body)) : undefined
@@ -35,6 +37,7 @@ beforeEach(() => {
     if (url.startsWith('/api/input-advances?from=')) return ok({ data: advanceList, next_cursor: null, totals: { amount_vnd: '30000' } })
     if (url.endsWith('/void')) return ok({ data: { ...advance, status: 'VOIDED' } })
     if (url.startsWith('/api/pesticides')) return ok({ data: [] })
+    if (url === '/api/households/h1/bank' && method === 'GET') return ok({ data: savedBank })
     if (url === '/api/households/h1/bank' && method === 'PUT') return ok({ data: { bank_bin: '970405', bank_name: 'Agribank', account_masked: '********1234', bank_account_name: null } })
     return { ok: false, status: 404, json: async () => ({}) }
   }) as unknown as typeof fetch
@@ -110,4 +113,30 @@ test('an item needs a name, and a pesticide item needs a catalogue product', asy
   fireEvent.click(screen.getByRole('button', { name: 'Lưu vật tư' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Chọn thuốc trong danh mục thuốc.')
   expect(calls.some(c => c.url === '/api/input-items' && c.method === 'POST')).toBe(false)
+})
+
+test('the bank form opens with the saved account in full, and the summary shows only the masked number', async () => {
+  savedBank = { bank_bin: '970405', bank_name: 'Agribank', bank_account: '8600201001234', account_masked: '********1234', bank_account_name: 'NGUYEN VAN A' }
+  render(<InputsPanel />)
+  await screen.findByRole('option', { name: /Phân NPK/ })
+  fireEvent.change(screen.getAllByLabelText('Hộ')[1], { target: { value: 'Nguyễn' } })
+  fireEvent.click(await screen.findByRole('button', { name: /Nguyễn Văn A/ }))
+  expect(await screen.findByText('Đã lưu: Agribank · ********1234')).toBeInTheDocument()
+  expect(screen.getByLabelText('Ngân hàng')).toHaveValue('970405')
+  expect(screen.getByLabelText('Số tài khoản')).toHaveValue('8600201001234')
+  expect(screen.getByLabelText('Tên chủ tài khoản')).toHaveValue('NGUYEN VAN A')
+  expect(screen.getByRole('button', { name: 'Lưu tài khoản' })).toBeEnabled()
+})
+
+test('a household with no saved bank opens an empty form', async () => {
+  render(<InputsPanel />)
+  await screen.findByRole('option', { name: /Phân NPK/ })
+  fireEvent.change(screen.getAllByLabelText('Hộ')[1], { target: { value: 'Nguyễn' } })
+  fireEvent.click(await screen.findByRole('button', { name: /Nguyễn Văn A/ }))
+  await screen.findByRole('option', { name: 'Agribank' })
+  expect(screen.getByLabelText('Ngân hàng')).toHaveValue('')
+  expect(screen.getByLabelText('Số tài khoản')).toHaveValue('')
+  expect(screen.getByLabelText('Tên chủ tài khoản')).toHaveValue('')
+  expect(screen.queryByText(/Đã lưu:/)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Lưu tài khoản' })).toBeEnabled()
 })

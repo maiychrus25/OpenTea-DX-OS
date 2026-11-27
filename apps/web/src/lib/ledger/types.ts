@@ -43,10 +43,11 @@ export interface BankOption {
   name: string
 }
 
-/** Bank details as PUT /api/households/[id]/bank returns them; the account is masked. */
+/** Bank details as the server returns them. `bank_account` is the full number (manager and accountant only). */
 export interface HouseholdBank {
   bank_bin: string | null
   bank_name: string | null
+  bank_account?: string | null
   account_masked: string | null
   bank_account_name: string | null
 }
@@ -75,8 +76,8 @@ export interface SettlementTotals {
 /** One household's line. `id` is null while the period is a draft. */
 export interface SettlementLine {
   id: string | null
-  /** The period the line belongs to; the farmer's ledger needs it to open the slip. */
-  period_id?: string
+  /** The period the line belongs to; the slip URL is built from it. */
+  period_id: string
   household_id: string
   household_name: string
   leaf_net_kg: number | string
@@ -118,11 +119,26 @@ export interface LedgerEntry {
   note: string | null
 }
 
+/** A settlement line as the farmer's ledger lists it, with its period's code and dates. */
+export interface LedgerLine extends SettlementLine {
+  period_code: string
+  date_from: string
+  date_to: string
+}
+
+/** One household's balance; a farmer with several households gets one entry each. */
+export interface LedgerHouseholdBalance {
+  household_id: string
+  household_name: string
+  balance_vnd: string
+}
+
 /** GET /api/ledger/mine: the farmer's balance and what is not settled yet, across every household of the account. */
 export interface LedgerMine {
   balance_vnd: string
+  households: LedgerHouseholdBalance[]
   entries: LedgerEntry[]
   unsettled_tickets: LeafTicket[]
   unsettled_advances: InputAdvance[]
-  lines: SettlementLine[]
+  lines: LedgerLine[]
 }

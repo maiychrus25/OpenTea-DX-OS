@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { FarmerLedger, balanceText } from '@/components/features/ledger/FarmerLedger'
 
@@ -16,15 +16,17 @@ const advance = {
   unit: 'kg', quantity: 2.5, unit_price_vnd: 12000, amount_vnd: '30000', advanced_on: '2026-11-28', status: 'VALID', void_reason: null, settlement_id: null,
 }
 const line = {
-  id: 'l1', period_id: 'p1', household_id: 'h1', household_name: 'Nguyễn Văn A', leaf_net_kg: 95, leaf_amount_vnd: '1235000', advances_vnd: '0',
+  id: 'l1', period_id: 'p1', period_code: 'HTX-QT-20261101-20261130', date_from: '2026-11-01', date_to: '2026-11-30',
+  household_id: 'h1', household_name: 'Nguyễn Văn A', leaf_net_kg: 95, leaf_amount_vnd: '1235000', advances_vnd: '0',
   debt_in_vnd: '0', payable_vnd: '1235000', debt_out_vnd: '0', paid_at: null, payment_method: null, payment_ref: null, has_bank_account: true,
 }
+const oneHousehold = [{ household_id: 'h1', household_name: 'Nguyễn Văn A', balance_vnd: '250000' }]
 
 let mine: unknown
 let failing: boolean
 
 beforeEach(() => {
-  mine = { balance_vnd: '250000', entries: [], unsettled_tickets: [ticket], unsettled_advances: [advance], lines: [line] }
+  mine = { balance_vnd: '250000', households: oneHousehold, entries: [], unsettled_tickets: [ticket], unsettled_advances: [advance], lines: [line] }
   failing = false
   global.fetch = jest.fn(async () => (failing
     ? { ok: false, status: 500, json: async () => ({}) }
@@ -77,13 +79,38 @@ test('a zero balance shows "Số dư 0 đ"', async () => {
 })
 
 test('each tab has an empty state when nothing is waiting', async () => {
-  mine = { balance_vnd: '0', entries: [], unsettled_tickets: [], unsettled_advances: [], lines: [] }
+  mine = { balance_vnd: '0', households: [], entries: [], unsettled_tickets: [], unsettled_advances: [], lines: [] }
   render(<FarmerLedger />)
   expect(await screen.findByText('Chưa có phiếu cân nào chờ quyết toán.')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('tab', { name: 'Vật tư ứng' }))
   expect(screen.getByText('Chưa có vật tư ứng nào chờ quyết toán.')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('tab', { name: 'Quyết toán' }))
   expect(screen.getByText('Chưa có kỳ quyết toán nào.')).toBeInTheDocument()
+})
+
+test('a farmer with two households sees one balance row per household under the total', async () => {
+  mine = { ...(mine as object), balance_vnd: '130000', households: [
+    { household_id: 'h1', household_name: 'Nguyễn Văn A', balance_vnd: '250000' },
+    { household_id: 'h2', household_name: 'Trần Thị B', balance_vnd: '-120000' },
+  ] }
+  render(<FarmerLedger />)
+  const rows = within(await screen.findByRole('list', { name: 'Số dư từng hộ' })).getAllByRole('listitem')
+  expect(rows).toHaveLength(2)
+  expect(rows[0]).toHaveTextContent('Nguyễn Văn A: HTX đang nợ bạn 250.000 đ')
+  expect(rows[1]).toHaveTextContent('Trần Thị B: Bạn đang nợ HTX 120.000 đ')
+})
+
+test('a single household gets no extra balance rows', async () => {
+  render(<FarmerLedger />)
+  await screen.findByText('HTX đang nợ bạn 250.000 đ')
+  expect(screen.queryByRole('list', { name: 'Số dư từng hộ' })).not.toBeInTheDocument()
+})
+
+test('each settlement line shows its period code, and the slip link uses period_id', async () => {
+  render(<FarmerLedger />)
+  fireEvent.click(await screen.findByRole('tab', { name: 'Quyết toán' }))
+  expect(screen.getByText(/Kỳ HTX-QT-20261101-20261130/)).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Xem phiếu' })).toHaveAttribute('href', '/farmer/settlements/p1/slip/l1')
 })
 
 test('a failed load shows the error and no balance', async () => {
