@@ -90,6 +90,9 @@ function downloadCsv(rows: string[][]) {
   URL.revokeObjectURL(url)
 }
 
+/** The most entries one batch-approve request takes. */
+const BATCH_LIMIT = 50
+
 export function ApproveList() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [households, setHouseholds] = useState<Record<string, string>>({})
@@ -151,22 +154,32 @@ export function ApproveList() {
     if (chosen.length === 0) return
     setApproving(true)
     setMessage(null)
+    let approved = 0
+    let failed = 0
     try {
-      const res = await fetch('/api/journal/batch-approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entry_ids: chosen.map((e) => e.id) }),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error?.message || 'Lỗi duyệt nhật ký')
+      const ids = chosen.map((e) => e.id)
+      for (let at = 0; at < ids.length; at += BATCH_LIMIT) {
+        const res = await fetch('/api/journal/batch-approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entry_ids: ids.slice(at, at + BATCH_LIMIT) }),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err?.error?.message || 'Lỗi duyệt nhật ký')
+        }
+        const { approved_count, failed_ids } = (await res.json()).data
+        approved += approved_count
+        failed += failed_ids.length
       }
-      const { approved_count, failed_ids } = (await res.json()).data
-      setMessage({ type: 'success', text: `Đã duyệt ${approved_count} nhật ký thành công.${failed_ids.length > 0 ? ` ${failed_ids.length} thất bại.` : ''}` })
+      setMessage({ type: 'success', text: `Đã duyệt ${approved} nhật ký thành công.${failed > 0 ? ` ${failed} thất bại.` : ''}` })
       setSelected(new Set())
       fetchEntries()
     } catch (err: unknown) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Lỗi không xác định' })
+      const reason = err instanceof Error ? err.message : 'Lỗi không xác định'
+      setMessage({ type: 'error', text: approved > 0 ? `Đã duyệt ${approved} nhật ký, phần còn lại chưa duyệt: ${reason}` : reason })
+      // Earlier batches stay approved.
+      if (approved > 0) { setSelected(new Set()); fetchEntries() }
     } finally {
       setApproving(false)
     }
