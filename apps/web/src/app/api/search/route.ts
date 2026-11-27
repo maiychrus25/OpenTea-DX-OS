@@ -8,8 +8,8 @@ import { GlobalSearchUseCase } from '@/application/search/GlobalSearchUseCase'
 
 async function getSearch(request: Request) {
   const { role, htxProfileId } = await requireTenant()
-  // Support all three active roles: manager, officer, farmer
-  if (role !== 'manager' && role !== 'officer' && role !== 'farmer') {
+  // Farmers must not search the whole cooperative.
+  if (role !== 'manager' && role !== 'officer') {
     return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
 
