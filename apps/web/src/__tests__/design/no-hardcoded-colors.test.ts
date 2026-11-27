@@ -16,10 +16,6 @@ const exceptions: Record<string, { allow: Record<string, number>; reason: string
     allow: { "color: '#00ff00'": 1, "fillColor: '#00ff00'": 1 },
     reason: 'Parcel outlines are drawn on the satellite tiles, which look the same in both themes.',
   },
-  'src/components/features/map/ZoneMap.module.css': {
-    allow: { 'color: gray': 2, 'background-color: #f0f0f0': 1 },
-    reason: 'These style the content of a Leaflet popup, which leaflet.css keeps white in both themes.',
-  },
   'src/app/manager/farm-zones/_components/FarmZoneReadOnly.tsx': {
     allow: {
       "fillColor: '#16A34A', color: '#15803D'": 1,

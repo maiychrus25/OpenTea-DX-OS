@@ -1,6 +1,59 @@
 /* Copyright (c) 2026 OpenTea Developers
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
+/* Shared, scoped map workspace. The application palette/background stays unchanged. */
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: stretch; min-width: 0; }
+.sidebar { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; min-width: 0; height: 620px; gap: 12px; }
+.mapFrame { grid-column: 1; grid-row: 1; position: relative; height: 620px; min-width: 0; overflow: hidden; isolation: isolate; border: 1px solid var(--color-border-default); border-radius: var(--rounded-lg); background: var(--color-surface-sunken); }
+.mapCanvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; min-width: 0; }
+.figures { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 0; font-size: 13px; color: var(--color-ink-secondary); }
+.figures > div { display: flex; align-items: baseline; gap: 8px; }
+.figures dd { margin: 0; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--color-ink-primary); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 6px 12px; border: 1px solid var(--color-border-default); border-radius: var(--rounded-full); background: var(--color-surface-card); color: var(--color-ink-primary); font-size: 12px; cursor: pointer; }
+.chip:has(input:checked), .chip[aria-pressed='true'] { border-color: var(--color-primary); background: var(--color-primary-subtle); font-weight: 700; }
+.chip input { accent-color: var(--color-primary); }
+.chip:focus-visible, .chip:focus-within, .mapFrame :global(a:focus-visible), .mapFrame :global(button:focus-visible), .sidebar button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.legend { position: absolute; bottom: 32px; left: 12px; right: 12px; z-index: 500; display: flex; flex-wrap: wrap; gap: 6px 16px; width: fit-content; max-width: calc(100% - 24px); padding: 8px 12px; border: 1px solid var(--color-border-default); border-radius: var(--rounded-md); background: var(--color-surface-card); color: var(--color-ink-secondary); font-size: 11px; pointer-events: none; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.emptyBanner { position: absolute; top: 12px; left: 64px; max-width: calc(100% - 270px); z-index: 500; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 12px; border: 1px solid var(--color-border-default); border-radius: var(--rounded-md); background: var(--color-surface-card); color: var(--color-ink-primary); font-size: 12px; }
+.emptyBanner p { margin: 0; }
+.emptyBanner a { color: var(--color-primary); font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; }
+/* Compact chips inside the side panel so the list below keeps its room. */
+.sidebar .chip { min-height: 32px; padding: 3px 10px; }
+.sidebar .chips { gap: 6px; }
+.sidebar > * { flex-shrink: 0; }
+.sidebar > .parcelList { flex: 1 1 260px; min-height: 260px; }
+.sidebar { overflow-y: auto; }
+.parcelList { min-height: 0; flex: 1; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--color-border-default); border-radius: var(--rounded-lg); background: var(--color-surface-sunken); }
+.parcelButton { width: 100%; text-align: left; overflow-wrap: anywhere; }
+.schematic { display: flex; flex-wrap: wrap; gap: 12px; padding: 20px; background: var(--color-surface-sunken); }
+.schematic > div { min-height: 104px; min-width: 0; max-width: 100%; gap: 8px; padding: 14px; background: var(--color-surface-card); box-shadow: var(--shadow-card); overflow-wrap: anywhere; }
+.mapFrame :global(.leaflet-container) { font-family: inherit; background: var(--color-surface-sunken); }
+.mapFrame :global(.leaflet-bar), .mapFrame :global(.leaflet-control-layers) { border: 1px solid var(--color-border-default); border-radius: var(--rounded-md); overflow: hidden; box-shadow: var(--shadow-card); }
+.mapFrame :global(.leaflet-bar a), .mapFrame :global(.leaflet-control-layers), .mapFrame :global(.leaflet-popup-content-wrapper), .mapFrame :global(.leaflet-popup-tip) { background: var(--color-surface-card); color: var(--color-ink-primary); }
+.mapFrame :global(.leaflet-bar a) { width: 36px; height: 36px; line-height: 36px; border-color: var(--color-border-default); }
+.mapFrame :global(.leaflet-bar a:hover) { background: var(--color-surface-sunken); }
+.mapFrame :global(.leaflet-control-layers-base) { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.mapFrame :global(.leaflet-control-layers label) { display: flex; align-items: center; min-height: 32px; font-size: 12px; cursor: pointer; }
+.mapFrame :global(.leaflet-control-layers input) { accent-color: var(--color-primary); }
+.mapFrame :global(.leaflet-control-attribution) { max-width: 100%; font-size: 10px; background: var(--color-surface-card); color: var(--color-ink-secondary); }
+.mapFrame :global(.leaflet-control-attribution a), .mapFrame :global(.leaflet-popup-close-button) { color: var(--color-primary); }
+.mapFrame :global(.leaflet-popup-content) { margin: 16px; line-height: 1.6; overflow-wrap: anywhere; }
+.mapFrame :global(.leaflet-popup-content-wrapper) { border-radius: var(--rounded-lg); box-shadow: var(--shadow-card-hover); }
+.mapFrame :global(.transparent-tooltip), .mapFrame :global(.transparent-tooltip::before) { background: transparent; border: none; box-shadow: none; padding: 0; }
+@media (max-width: 1100px) {
+  .workspace { grid-template-columns: minmax(0, 1fr) 280px; }
+}
+@media (max-width: 767px) {
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+  .mapFrame { grid-column: 1; grid-row: 1; height: 480px; }
+  .sidebar { grid-column: 1; grid-row: 2; height: auto; max-height: 620px; }
+  .emptyBanner { left: 12px; top: 104px; max-width: calc(100% - 24px); }
+}
+
 .popupContainer {
   min-width: 200px;
 }
@@ -29,7 +82,7 @@
 
 .loadingText {
   font-size: 12px;
-  color: gray;
+  color: var(--color-ink-secondary);
   margin: 0;
 }
 
@@ -43,7 +96,7 @@
 
 .imageDate {
   font-size: 11px;
-  color: gray;
+  color: var(--color-ink-secondary);
   margin-top: 4px;
   margin-bottom: 0;
 }
@@ -51,7 +104,7 @@
 .placeholder {
   width: 100%;
   height: 100px;
-  background-color: #f0f0f0;
+  background-color: var(--color-surface-sunken);
   display: flex;
   align-items: center;
   justify-content: center;
