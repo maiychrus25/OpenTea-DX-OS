@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
+import type { LeafTicket } from '@/lib/weighing/types'
+
 /** Input item from GET /api/input-items (contract in the S4 plan). */
 export interface InputItem {
   id: string
@@ -47,4 +49,62 @@ export interface HouseholdBank {
   bank_name: string | null
   account_masked: string | null
   bank_account_name: string | null
+}
+
+/** Settlement period (kỳ quyết toán). */
+export interface SettlementPeriod {
+  id: string
+  code: string
+  date_from: string
+  date_to: string
+  status: 'DRAFT' | 'CLOSED'
+  created_by_name: string | null
+  closed_by_name: string | null
+  closed_at: string | null
+}
+
+/** Totals of a period; every amount is a decimal string. */
+export interface SettlementTotals {
+  households: number
+  leaf_amount_vnd: string
+  advances_vnd: string
+  payable_vnd: string
+  debt_out_vnd: string
+}
+
+/** One household's line. `id` is null while the period is a draft. */
+export interface SettlementLine {
+  id: string | null
+  /** The period the line belongs to; the farmer's ledger needs it to open the slip. */
+  period_id?: string
+  household_id: string
+  household_name: string
+  leaf_net_kg: number | string
+  leaf_amount_vnd: string
+  advances_vnd: string
+  debt_in_vnd: string
+  payable_vnd: string
+  debt_out_vnd: string
+  paid_at: string | null
+  payment_method: 'TRANSFER' | 'CASH' | null
+  payment_ref: string | null
+  has_bank_account: boolean
+}
+
+export interface SettlementDetail {
+  period: SettlementPeriod
+  lines: SettlementLine[]
+  totals: SettlementTotals
+}
+
+/** The printable slip of one line; `qr` is null when the household has no bank account. */
+export interface SettlementSlip {
+  htx: { name: string }
+  household: { name: string }
+  period: SettlementPeriod
+  tickets: LeafTicket[]
+  advances: InputAdvance[]
+  line: SettlementLine
+  qr: { data_url: string; bank_name: string; account_masked: string; account_full?: string } | null
+  transfer_note: string
 }
