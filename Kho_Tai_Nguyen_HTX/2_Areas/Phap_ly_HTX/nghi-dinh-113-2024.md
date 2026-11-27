@@ -3,7 +3,7 @@
 Ban hành 12/9/2024, hiệu lực 01/11/2024. Tóm tắt từ bản ký số trên cổng Chính phủ, **đọc bằng nhận dạng chữ**: đối chiếu nguyên văn trước khi làm hồ sơ. Năm 2026 đang có tổng kết, dự thảo sửa đổi.
 
 ## Điều kiện được xem xét (Điều 6)
-- Đạt tiêu chí tại điểm a khoản 1 Điều 18 Luật Hợp tác xã, **và** một trong các điều sau:
+- Không đang thi hành quyết định xử phạt về hành vi bị nghiêm cấm (khoản 2 Điều 7) và không đang chấp hành án hình sự (điểm a khoản 1 Điều 18 Luật Hợp tác xã 2023), **và** một trong các điều sau:
   - thành viên tăng 2 năm liền;
   - tỷ lệ giao dịch nội bộ tăng;
   - trích quỹ chung không chia cao hơn mức tối thiểu;

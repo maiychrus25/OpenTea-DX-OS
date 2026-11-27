@@ -13,7 +13,13 @@ Tiêu chuẩn ASEAN là bộ tham khảo và chứng nhận tự nguyện, **kh�
 - Có ban quản lý do cộng đồng bầu; đã hoạt động ít nhất một năm; đã tự đánh giá.
 - Có nhóm và cơ chế ứng phó rủi ro, khẩn cấp.
 
-## Văn bản Việt Nam (kho chưa có bản gốc, chưa đối chiếu)
-- Nghị định 168/2017/NĐ-CP: điều kiện cơ sở lưu trú, trong đó có nhà ở có phòng cho khách thuê. Kiểm tra hiệu lực và văn bản sửa đổi.
-- TCVN 13259:2020: yêu cầu chất lượng dịch vụ du lịch cộng đồng (có bản quyền).
+## Quy định Việt Nam: nhà ở có phòng cho khách du lịch thuê
+Điều 27 Nghị định 168/2017/NĐ-CP (bản ký số trên cổng Chính phủ, đọc bằng nhận dạng chữ). **Đây là điều kiện bắt buộc**; kiểm tra văn bản sửa đổi mới nhất.
+- Có đèn chiếu sáng, nước sạch.
+- Có khu sinh hoạt chung, khu lưu trú cho khách, bếp, phòng tắm, phòng vệ sinh.
+- Có giường, đệm hoặc chiếu; chăn, gối, màn, khăn mặt, khăn tắm; thay khi có khách mới.
+- Chủ nhà được tập huấn nghiệp vụ du lịch.
+
+## Văn bản khác (chưa đọc bản gốc)
+- TCVN 13259:2020: chất lượng dịch vụ du lịch cộng đồng (có bản quyền).
 - Quyết định 26/2026/QĐ-TTg: OCOP có nhóm dịch vụ du lịch cộng đồng, sinh thái và điểm du lịch.

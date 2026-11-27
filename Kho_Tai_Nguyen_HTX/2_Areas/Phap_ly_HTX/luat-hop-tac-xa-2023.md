@@ -1,6 +1,6 @@
 # Luật Hợp tác xã 2023 (17/2023/QH15)
 
-Nguồn: Sở Tư pháp Tuyên Quang, *Đề cương giới thiệu Luật Hợp tác xã năm 2023* (không phải toàn văn luật).
+Nguồn: Sở Tư pháp Tuyên Quang, *Đề cương giới thiệu Luật Hợp tác xã năm 2023* (không phải toàn văn luật). Toàn văn đã có trong kho (mã `luat-htx-17-2023`, nguồn vanban.chinhphu.vn): khi cần trích điều khoản thì lấy từ toàn văn.
 
 - Quốc hội thông qua 20/6/2023, hiệu lực 01/7/2024, thay Luật Hợp tác xã 2012.
 - 12 chương, 115 điều.

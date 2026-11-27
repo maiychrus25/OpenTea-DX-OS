@@ -8,7 +8,7 @@
   - Tân Cương - Đồng Hỷ - Văn Hán - Phú Lương - Vô Tranh - Phú Lạc - Phú Đình
   - Phú Lương - Bắc Kạn - Ba Bể
 
-## Di sản (theo báo chí, chưa đối chiếu quyết định)
-Tri thức trồng và chế biến chè Tân Cương được báo Nhân Dân đưa tin là Di sản văn hóa phi vật thể quốc gia. Các nguồn tìm được ghi tên di sản và thời điểm không thống nhất ("chè Tân Cương" và "chè Thái Nguyên"): tra quyết định của Bộ Văn hóa, Thể thao và Du lịch trước khi in lên ấn phẩm.
+## Di sản
+Theo cổng thông tin tỉnh Thái Nguyên, năm 2023 Bộ Văn hóa, Thể thao và Du lịch đưa "Tri thức trồng và chế biến chè Tân Cương" vào Danh mục di sản văn hóa phi vật thể quốc gia (giấy chứng nhận cho nhân dân các xã Tân Cương, Phúc Trìu, Phúc Xuân, tên trước sáp nhập). Kho chưa có quyết định gốc.
 
 Giá tour, giờ mở cửa, số điện thoại điểm đón: kho chưa có.

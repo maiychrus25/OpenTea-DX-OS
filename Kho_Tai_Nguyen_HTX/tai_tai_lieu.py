@@ -3,6 +3,7 @@
 # SPDX-FileCopyrightText: 2026 OpenTea Developers
 """Tải bản gốc các tài liệu có "tai": true trong nguon.json vào _goc/ (không commit) và ghi lại kết quả."""
 import csv, hashlib, json, pathlib, subprocess
+from urllib.parse import urlparse
 
 root = pathlib.Path(__file__).parent
 out = root / "_goc"
@@ -39,10 +40,14 @@ for item in sources:
     print(row)
 (out / "ket_qua_tai.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
+def chinh_thuc(url):
+    host = urlparse(url).hostname or ""
+    return host.endswith((".gov.vn", ".chinhphu.vn", ".cdnchinhphu.vn")) or host in ("vbpl.vn", "storage-vnportal.vnpt.vn")
+
 # "có" chỉ khi lần chạy này tải được bản gốc.
 got = {row["id"] for row in report if "loi" not in row}
 with (root / "danh_muc.csv").open("w", encoding="utf-8-sig", newline="") as f:
     table = csv.writer(f, lineterminator="\n")
-    table.writerow(["ma", "nhom", "ten", "co_quan", "loai", "da_tai_ban_goc", "url"])
+    table.writerow(["ma", "nhom", "ten", "co_quan", "loai", "da_tai_ban_goc", "nguon_nha_nuoc", "url"])
     for item in sources:
-        table.writerow([item["id"], item["nhom"], item["ten"], item["co_quan"], item["loai"], "có" if item["id"] in got else "không", item["url"]])
+        table.writerow([item["id"], item["nhom"], item["ten"], item["co_quan"], item["loai"], "có" if item["id"] in got else "không", "có" if chinh_thuc(item["url"]) else "không", item["url"]])
