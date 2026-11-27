@@ -102,6 +102,16 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'GET /api/settlements/[id]/lines/[lineId]/slip',
     'POST /api/ledger/adjustments',
     'GET /api/households',
+    // Processing batches (phase 2): the workshop is a web screen, chat does not open or finish a batch.
+    'GET /api/processing-batches',
+    'POST /api/processing-batches',
+    'GET /api/processing-batches/[id]',
+    'GET /api/processing-batches/available-tickets',
+    'POST /api/processing-batches/[id]/tickets',
+    'DELETE /api/processing-batches/[id]/tickets/[ticketId]',
+    'PUT /api/processing-batches/[id]/outputs',
+    'POST /api/processing-batches/[id]/finish',
+    'POST /api/processing-batches/[id]/cancel',
     // The pesticide catalogue and the HTX labels are picked and edited in the web forms.
     'GET /api/pesticides',
     'PUT /api/pesticides/[id]/label',
