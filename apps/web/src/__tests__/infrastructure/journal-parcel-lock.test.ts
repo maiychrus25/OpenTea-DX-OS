@@ -44,3 +44,41 @@ describe('PrismaJournalRepository.create', () => {
     expect(lockSql[0]).toContain('parcel-9')
   })
 })
+
+describe('PrismaJournalRepository.update', () => {
+  const { prisma } = jest.requireMock('@/infrastructure/db/prisma.client') as { prisma: Record<string, any> }
+  const entry = { id: 'j1', parcel_id: 'parcel-9', entry_date: new Date('2026-11-28'), activity_type: 'SPRAYING', status: 'DRAFT', submitted_role: 'OFFICER', activities: [], parcel: {} }
+
+  beforeEach(() => {
+    calls.length = 0
+    prisma.$transaction = jest.fn(async (run: (t: unknown) => unknown) =>
+      run({
+        $queryRaw: jest.fn(async () => { calls.push('lock'); return [] }),
+        journalEntry: {
+          findUnique: jest.fn(async () => { calls.push('read'); return entry }),
+          update: jest.fn(async () => { calls.push('update'); return entry }),
+        },
+        journalActivity: { deleteMany: jest.fn(), update: jest.fn() },
+        parcelCropCycle: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) },
+        parcel: { findUnique: jest.fn().mockResolvedValue(null), update: jest.fn() },
+        notification: { create: jest.fn().mockResolvedValue({ recipient_id: null }) },
+      }),
+    )
+  })
+
+  it('locks the parcel first when a draft is submitted', async () => {
+    await new PrismaJournalRepository().update('j1', {}, true)
+    expect(calls[0]).toBe('lock')
+  })
+
+  it.each([['activities', { activities: [{ activity_type: 'SPRAYING' }] }], ['entry_date', { entry_date: new Date('2026-11-29') }]])('locks the parcel first when %s change', async (_n, data) => {
+    await new PrismaJournalRepository().update('j1', data as never)
+    expect(calls[0]).toBe('lock')
+  })
+
+  it('takes no lock for a notes-only edit of a draft', async () => {
+    await new PrismaJournalRepository().update('j1', { observation: 'ghi chú' })
+    expect(calls).not.toContain('lock')
+    expect(calls).toContain('update')
+  })
+})

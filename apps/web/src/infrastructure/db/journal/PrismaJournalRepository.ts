@@ -344,7 +344,12 @@ export class PrismaJournalRepository implements JournalPort {
       updateData.reviewed_by_id = null
     }
 
+    // A spraying that starts to count toward withdrawal (submitted, or changed in date or activities) takes the parcel
+    // lock first, as a weighing ticket does; a notes-only edit of a draft does not.
+    const locksParcel = resubmit || !!data.activities || !!data.entry_date
+
     const e = await prisma.$transaction(async (tx) => {
+      if (locksParcel) await tx.$queryRaw`SELECT id FROM parcels WHERE id = (SELECT parcel_id FROM journal_entries WHERE id = ${id}) FOR UPDATE`
       if (data.activities) {
         const current = await tx.journalEntry.findUnique({ where: { id }, select: { entry_date: true } })
         await tx.journalActivity.deleteMany({ where: { journal_entry_id: id } })
