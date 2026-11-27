@@ -835,11 +835,12 @@ model HtxCertificate {
 }
 
 model LotCertificate {
+  id             String         @id @default(cuid())
   lot_id         String
   lot            Lot            @relation(fields: [lot_id], references: [id])
   certificate_id String
   certificate    HtxCertificate @relation(fields: [certificate_id], references: [id])
 
-  @@id([lot_id, certificate_id])
+  @@unique([lot_id, certificate_id])
   @@map("lot_certificates")
 }

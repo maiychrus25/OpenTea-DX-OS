@@ -32,11 +32,15 @@ CREATE TABLE "htx_certificates" (
 
 -- CreateTable
 CREATE TABLE "lot_certificates" (
+    "id" TEXT NOT NULL,
     "lot_id" TEXT NOT NULL,
     "certificate_id" TEXT NOT NULL,
 
-    CONSTRAINT "lot_certificates_pkey" PRIMARY KEY ("lot_id","certificate_id")
+    CONSTRAINT "lot_certificates_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "lot_certificates_lot_id_certificate_id_key" ON "lot_certificates"("lot_id", "certificate_id");
 
 -- CreateIndex
 CREATE INDEX "htx_certificates_htx_profile_id_expires_on_idx" ON "htx_certificates"("htx_profile_id", "expires_on");
