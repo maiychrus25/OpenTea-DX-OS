@@ -6,6 +6,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Bookmark, ChevronDown, ChevronUp, Heart, MessageCircle, MoreHorizontal, Music2, PanelLeftClose, PanelLeftOpen, Pause, Play, Plus, Share2, Trash2, User, Volume2, VolumeX } from 'lucide-react'
+import { SampleTag } from '@/components/features/sample/SampleTag'
 import { CommentsPanel } from './CommentsPanel'
 import { PostDialog } from './PostDialog'
 import { Reel, ReelComment, SAMPLE_REELS, clock, countLabel, handle, initials } from './data'
@@ -164,6 +165,7 @@ export function ReelsPage({ userName }: { userName: string }) {
             <ArrowLeft size={20} aria-hidden="true" />
           </button>
         )}
+        <p className={styles.sample}><SampleTag />Video mẫu. Video bạn đăng mất khi tải lại trang.</p>
       </div>
 
       {view === 'profile' ? (
@@ -182,7 +184,7 @@ export function ReelsPage({ userName }: { userName: string }) {
                   <div><dt>Đang theo dõi</dt><dd>{followed.length}</dd></div>
                   <div><dt>Thích</dt><dd>{countLabel(mine.reduce((sum, r) => sum + r.likes + (liked.includes(r.id) ? 1 : 0), 0))}</dd></div>
                 </dl>
-                <p className={styles.profileNote}>Video đăng chỉ lưu trong phiên này.</p>
+                <p className={styles.profileNote}>Video đăng chưa được lưu lên hệ thống.</p>
               </div>
             </header>
 

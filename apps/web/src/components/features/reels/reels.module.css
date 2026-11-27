@@ -140,3 +140,4 @@
   .bar { flex-wrap: nowrap; gap: 4px; }
   .auto span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 }
+.sample { display: flex; align-items: center; gap: 6px; margin: 0; padding: 4px 10px; border-radius: var(--radius-button); background: var(--color-surface-card); color: var(--color-ink-secondary); font-size: 12px; }
