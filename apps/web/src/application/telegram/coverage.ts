@@ -101,6 +101,10 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'POST /api/settlements/[id]/lines/[lineId]/payout',
     'GET /api/settlements/[id]/lines/[lineId]/slip',
     'POST /api/ledger/adjustments',
+    'GET /api/certificates',
+    'POST /api/certificates',
+    'GET /api/certificates/[id]/file',
+    'POST /api/certificates/[id]/revoke',
     'GET /api/households',
     // The pesticide catalogue and the HTX labels are picked and edited in the web forms.
     'GET /api/pesticides',
