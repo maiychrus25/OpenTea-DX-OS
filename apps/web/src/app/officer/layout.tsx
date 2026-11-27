@@ -5,7 +5,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { NoHtxNotice } from '@/components/layout/NoHtxNotice'
-import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, MessageCircle, User, Users, Bell, Calendar, Sparkles, Clapperboard, Store, Package, MapPinned, CalendarCheck, Landmark } from 'lucide-react'
+import { Home, Map, FileText, PackageCheck, Stethoscope, FolderOpen, MessageCircle, User, Users, Bell, Calendar, Sparkles, Clapperboard, Store, Package, MapPinned, CalendarCheck, Landmark, Bot } from 'lucide-react'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/repositories/PrismaHtxProfileRepository'
 import { PrismaProposalRepository } from '@/infrastructure/db/agent/PrismaProposalRepository'
@@ -39,7 +39,8 @@ export default async function OfficerLayout({ children }: { children: React.Reac
     { label: 'Doanh thu', href: '/officer/payments', icon: <Landmark size={20} />, group: 'Gian hàng & tour' },
     { label: 'Reels', href: '/officer/reels', icon: <Clapperboard size={20} />, group: 'Cộng đồng' },
     { label: 'Tài liệu', href: '/officer/documents', icon: <FolderOpen size={20} />, group: 'Tài nguyên' },
-    { label: 'Chatbot', href: '/officer/chat', match: ['/officer/assistant'], icon: <MessageCircle size={20} />, group: 'Tài nguyên' },
+    { label: 'Trợ lý TT', href: '/officer/assistant', icon: <Bot size={20} />, group: 'Tài nguyên' },
+    { label: 'Chatbot', href: '/officer/chat', icon: <MessageCircle size={20} />, group: 'Tài nguyên' },
     { label: 'Đề xuất AI', href: '/officer/ai', icon: <Sparkles size={20} />, badge: openProposals || undefined, group: 'Tài nguyên' },
     { label: 'Thông báo', href: '/officer/notifications', icon: <Bell size={20} />, group: 'Cá nhân' },
     { label: 'Tài khoản', href: '/officer/profile', icon: <User size={20} />, group: 'Cá nhân' },
