@@ -9,12 +9,12 @@ import 'leaflet/dist/leaflet.css'
 import { ParcelSummary } from '@/domain/farm/ports/ParcelPort'
 import { escapeHtml } from '@/lib/sanitize'
 import styles from './ZoneMap.module.css'
+import { DEFAULT_MAP_VIEW, PARCEL_STATUS_CONFIG, parcelStatusLabel } from '@/lib/map-config'
+import { addMapBaseLayers } from './map-layers'
 
 interface ZoneMapProps {
   parcels: ParcelSummary[]
 }
-
-const mapStyle = { height: '100%', width: '100%', borderRadius: '0.5rem' }
 
 // Khóa vùng kéo bản đồ (Giới hạn trong lãnh thổ đất liền/gần bờ Việt Nam)
 const VIETNAM_BOUNDS: L.LatLngBoundsLiteral = [
@@ -43,23 +43,14 @@ export default function ZoneMap({ parcels }: ZoneMapProps) {
       shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
     })
 
-    let center: [number, number] = [10.762622, 106.660172] // Default HCM
-    const validParcels = parcels.filter(p => p.centroid_lat && p.centroid_lng)
-    if (validParcels.length > 0) {
-      center = [validParcels[0].centroid_lat!, validParcels[0].centroid_lng!]
-    }
-
     const map = L.map(mapContainerRef.current, {
-      center,
-      zoom: 13,
+      ...DEFAULT_MAP_VIEW,
       minZoom: 6,
       maxBounds: VIETNAM_BOUNDS,
       maxBoundsViscosity: 1.0,
     })
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-    }).addTo(map)
+    addMapBaseLayers(map)
 
     mapRef.current = map
     const timer = setTimeout(() => map.invalidateSize(), 250)
@@ -76,7 +67,7 @@ export default function ZoneMap({ parcels }: ZoneMapProps) {
       mapRef.current = null
       geoJsonLayerRef.current = null
     }
-  }, [isMounted, parcels])
+  }, [isMounted])
 
   // Render polygons GeoJSON
   useEffect(() => {
@@ -95,23 +86,33 @@ export default function ZoneMap({ parcels }: ZoneMapProps) {
         properties: p,
       }))
 
-    if (featuresWithParcels.length === 0) return
+    if (featuresWithParcels.length === 0) {
+      // Không có ranh giới: về tâm các thửa nếu có toạ độ
+      const points = parcels
+        .filter(p => p.centroid_lat && p.centroid_lng)
+        .map(p => [p.centroid_lat!, p.centroid_lng!] as [number, number])
+      if (points.length > 0) mapRef.current.fitBounds(L.latLngBounds(points), { maxZoom: 15 })
+      return
+    }
 
     try {
       const geoLayer = L.geoJSON(featuresWithParcels as any, {
-        style: () => ({
-          color: '#00ff00',
-          weight: 3,
-          fillColor: '#00ff00',
-          fillOpacity: 0.2
-        }),
+        style: (feature) => {
+          const config = PARCEL_STATUS_CONFIG[(feature?.properties as ParcelSummary | undefined)?.status ?? '']
+          return {
+            color: config?.color ?? 'var(--color-primary)',
+            fillColor: config?.fillColor ?? 'var(--color-primary)',
+            weight: 3,
+            fillOpacity: 0.25,
+          }
+        },
         onEachFeature: (feature, layer) => {
           const parcel = feature.properties as ParcelSummary
           const safeCode = escapeHtml(parcel.parcel_code)
           const safeHousehold = escapeHtml(parcel.household?.name || 'N/A')
           const safeCrop = escapeHtml(parcel.crop_type || 'Chưa có')
           const safeArea = escapeHtml(parcel.area_ha != null ? `${parcel.area_ha} ha` : '—')
-          const safeStatus = escapeHtml(parcel.status)
+          const safeStatus = escapeHtml(parcelStatusLabel(parcel.status))
           const safeId = escapeHtml(parcel.id)
 
           const popupDiv = document.createElement('div')
@@ -178,16 +179,33 @@ export default function ZoneMap({ parcels }: ZoneMapProps) {
       }).addTo(mapRef.current)
 
       geoJsonLayerRef.current = geoLayer
+      const bounds = geoLayer.getBounds()
+      if (bounds.isValid()) mapRef.current.fitBounds(bounds, { maxZoom: 17, padding: [24, 24] })
     } catch (e) {
       console.error('Error rendering ZoneMap polygons:', e)
     }
-  }, [parcels])
+  }, [parcels, isMounted])
 
-  if (!isMounted) return <div style={{ height: '400px', backgroundColor: 'var(--card)' }} />
+  if (!isMounted) return <div className={styles.mapFrame} />
+
+  const hasBoundaries = parcels.some(p => p.polygon_geojson)
 
   return (
-    <div style={mapStyle} className="relative overflow-hidden">
-      <div ref={mapContainerRef} className="h-full w-full absolute inset-0 z-0" />
+    <div className={styles.mapFrame}>
+      <div ref={mapContainerRef} className={styles.mapCanvas} />
+      {!hasBoundaries && (
+        <div className={styles.emptyBanner}>
+          <p>Chưa có thửa nào được vẽ ranh giới.</p>
+        </div>
+      )}
+      <div className={styles.legend}>
+        {Object.entries(PARCEL_STATUS_CONFIG).map(([status, config]) => (
+          <span key={status}>
+            <i className={styles.swatch} style={{ background: config.fillColor }} aria-hidden="true" />
+            {config.label}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

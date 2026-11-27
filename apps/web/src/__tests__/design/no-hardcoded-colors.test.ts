@@ -12,10 +12,6 @@ const baseline: string[] = []
 // Colours that must stay fixed whatever the theme. `allow` maps each exact snippet permitted in that file to the
 // number of times it occurs, so an extra copy fails; any other colour in the file still fails. Keep this short.
 const exceptions: Record<string, { allow: Record<string, number>; reason: string }> = {
-  'src/components/features/map/ZoneMap.tsx': {
-    allow: { "color: '#00ff00'": 1, "fillColor: '#00ff00'": 1 },
-    reason: 'Parcel outlines are drawn on the satellite tiles, which look the same in both themes.',
-  },
   'src/app/officer/farm-zones/setup/_components/SetupMapClient.tsx': {
     allow: { "container.style.backgroundColor = 'white'": 1 },
     reason: "The locate button must match Leaflet's own controls, which leaflet.css keeps white in both themes.",
@@ -120,17 +116,18 @@ describe('no hard-coded colours', () => {
   })
 
   it('catches an extra or a missing copy of an allowed snippet', () => {
-    const file = 'src/components/features/map/ZoneMap.tsx'
-    const once = "color: '#00ff00' fillColor: '#00ff00'"
+    const file = 'src/app/officer/farm-zones/setup/_components/SetupMapClient.tsx'
+    const once = "container.style.backgroundColor = 'white'"
     expect(countMismatches(file, once)).toEqual([])
-    expect(countMismatches(file, once + " color: '#00ff00'")).toEqual(["color: '#00ff00': 2/1"])
-    expect(countMismatches(file, "fillColor: '#00ff00'")).toEqual(["color: '#00ff00': 0/1"])
+    expect(countMismatches(file, once + ' ' + once)).toEqual([once + ': 2/1'])
+    expect(countMismatches(file, '')).toEqual([once + ': 0/1'])
   })
 
   it('still flags other colours in an exception file', () => {
-    const file = 'src/components/features/map/ZoneMap.tsx'
-    expect(offends(file, withoutAllowed(file, "color: '#00ff00', fill: '#fff'"))).toBe(true)
-    expect(offends(file, withoutAllowed(file, "color: '#00ff00'"))).toBe(false)
+    const file = 'src/app/officer/farm-zones/setup/_components/SetupMapClient.tsx'
+    const once = "container.style.backgroundColor = 'white'"
+    expect(offends(file, withoutAllowed(file, once + "; const fill = '#fff'"))).toBe(true)
+    expect(offends(file, withoutAllowed(file, once))).toBe(false)
   })
 
   it.each([

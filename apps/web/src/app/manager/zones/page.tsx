@@ -8,7 +8,8 @@ import dynamic from 'next/dynamic'
 import { ListParcelsUseCase } from '@/application/farm/ListParcelsUseCase'
 import { CoreGatewayClient } from '@/infrastructure/core/core-gateway.client'
 import { GatewayParcelReader } from '@/infrastructure/core/gateway-parcel-reader'
-import { MetricCard } from '@/components/ui/MetricCard'
+import { isCultivating, parcelStatusLabel } from '@/lib/map-config'
+import mapStyles from '@/components/features/map/ZoneMap.module.css'
 import { Pill } from '@/components/ui/Pill'
 import { Map } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -33,22 +34,20 @@ export default async function ManagerZonesPage() {
   const parcels = await useCase.execute({}, role)
 
   // Aggregate total active area
-  const activeParcels = parcels.filter(p => p.status === 'ACTIVE')
+  const activeParcels = parcels.filter(p => isCultivating(p.status))
   const totalArea = activeParcels.reduce((sum, p) => sum + (p.area_ha || 0), 0)
 
   return (
     <div className={styles.container}>
       <PageHeader icon={<Map size={28} />} title="Bản đồ Vùng Trồng" description="Diện tích và trạng thái các thửa của HTX" />
 
-      <MetricCard 
-        icon={<Map size={24} />}
-        label="Tổng diện tích đang canh tác (ha)" 
-        value={totalArea.toFixed(2)} 
-      />
+      <dl className={mapStyles.figures}>
+        <div><dt>Diện tích đang canh tác</dt><dd>{totalArea.toFixed(2)} ha</dd></div>
+        <div><dt>Thửa đang canh tác</dt><dd>{activeParcels.length}</dd></div>
+        <div><dt>Tổng số thửa</dt><dd>{parcels.length}</dd></div>
+      </dl>
 
-      <div className={styles.mapWrapper}>
-        <ZoneMap parcels={parcels} />
-      </div>
+      <ZoneMap parcels={parcels} />
 
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
@@ -74,8 +73,8 @@ export default async function ManagerZonesPage() {
                   <td>{parcel.area_ha}</td>
                   <td>{parcel.crop_type || 'Chưa có'}</td>
                   <td>
-                    <Pill tone={parcel.status === 'ACTIVE' ? 'green' : 'neutral'}>
-                      {parcel.status}
+                    <Pill tone={isCultivating(parcel.status) ? 'green' : 'neutral'}>
+                      {parcelStatusLabel(parcel.status)}
                     </Pill>
                   </td>
                 </tr>
