@@ -4,12 +4,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { get, update } from 'idb-keyval'
 
+export interface JournalActivityPayload {
+  activity_type: string
+  product_name?: string
+  pesticide_product_id?: string
+  dosage?: string
+  performer?: string
+  withdrawal_days?: number
+  /** Only sent for HARVEST. */
+  fresh_leaf_kg?: number
+}
+
 export interface JournalPayload {
   client_id?: string
   parcel_id: string
   entry_date: string
   observation?: string
-  activities: Record<string, unknown>[]
+  activities: JournalActivityPayload[]
   photo_url?: string
   photo_minio_key?: string
 }

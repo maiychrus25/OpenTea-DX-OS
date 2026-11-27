@@ -12,6 +12,7 @@ import { ACTIVITY_TYPES, type JournalPrefill } from './journal-prefill'
 import { PesticidePicker, isBelowFloor, type PesticideChange } from '@/components/features/pesticide/PesticidePicker'
 import { CUSTOM_PRODUCT_FLOOR_DAYS } from '@/lib/pesticide/catalogue'
 import { uploadJournalPhoto, useJournalOfflineQueue, type JournalPayload } from '@/lib/hooks/useJournalOfflineQueue'
+import { freshLeafError, freshLeafKg, hasProductFields } from '@/lib/journal/activity-fields'
 
 interface Parcel {
   id: string
@@ -27,7 +28,7 @@ export interface EditableEntry {
   status: string
   activity_type: string
   notes: string | null
-  activities: { product_name?: string | null; dosage?: string | null; performer?: string | null; withdrawal_days?: number | null; pesticide_product_id?: string | null }[]
+  activities: { product_name?: string | null; dosage?: string | null; performer?: string | null; withdrawal_days?: number | null; pesticide_product_id?: string | null; fresh_leaf_kg?: number | null }[]
 }
 
 interface FarmerJournalFormProps {
@@ -66,6 +67,8 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
     // A catalogue product's floor is unknown until the picker loads it; the server checks it anyway.
     floorDays: first?.pesticide_product_id ? 0 : CUSTOM_PRODUCT_FLOOR_DAYS,
   })
+  const [freshLeaf, setFreshLeaf] = useState(first?.fresh_leaf_kg != null ? String(first.fresh_leaf_kg) : '')
+  const [attempted, setAttempted] = useState(false)
   const [observation, setObservation] = useState(entry?.notes ?? '')
   const [photo, setPhoto] = useState<File | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -83,11 +86,18 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
   }, [initial?.parcelId])
 
   const spraying = activityType === 'SPRAYING'
-  const sprayingWithProduct = hasChemicals && spraying
+  const fertilizing = activityType === 'FERTILIZING'
+  const harvest = activityType === 'HARVEST'
+  const chemicals = hasProductFields(activityType) && hasChemicals
+  const sprayingWithProduct = chemicals && spraying
+  const dosageShown = sprayingWithProduct || (chemicals && fertilizing)
   const belowFloor = sprayingWithProduct && isBelowFloor(pesticide)
+  const leafError = harvest && attempted ? freshLeafError(freshLeaf, true) : null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setAttempted(true)
+    if (harvest && freshLeafError(freshLeaf, true)) return
     setSubmitting(true)
     setError('')
 
@@ -97,12 +107,13 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
       observation,
       activities: [{
         activity_type: activityType,
-        product_name: !hasChemicals ? undefined
+        product_name: !chemicals ? undefined
           : spraying ? (pesticide.productName || pesticide.customName || undefined) : (productName || undefined),
         pesticide_product_id: sprayingWithProduct ? (pesticide.productId ?? undefined) : undefined,
-        dosage: sprayingWithProduct ? dosage : undefined,
+        dosage: dosageShown ? dosage : undefined,
         performer: sprayingWithProduct ? performer : undefined,
         withdrawal_days: sprayingWithProduct ? (pesticide.days ?? undefined) : undefined,
+        fresh_leaf_kg: harvest ? freshLeafKg(freshLeaf) : undefined,
       }],
     }
 
@@ -174,12 +185,21 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, e
         </div>
       </div>
 
-      <label className={styles.check}>
-        <input type="checkbox" checked={!hasChemicals} onChange={e => setHasChemicals(!e.target.checked)} />
-        Không sử dụng thuốc / phân bón trong lần ghi này
-      </label>
+      {hasProductFields(activityType) && (
+        <label className={styles.check}>
+          <input type="checkbox" checked={!hasChemicals} onChange={e => setHasChemicals(!e.target.checked)} />
+          Không sử dụng thuốc / phân bón trong lần ghi này
+        </label>
+      )}
 
-      {hasChemicals && !spraying && field('Sản phẩm sử dụng', <input className={`${kit.inp} ${styles.tall}`} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />)}
+      {chemicals && !spraying && field('Sản phẩm sử dụng', <input className={`${kit.inp} ${styles.tall}`} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />)}
+      {chemicals && fertilizing && field('Liều lượng', <input className={`${kit.inp} ${styles.tall}`} value={dosage} onChange={e => setDosage(e.target.value)} />)}
+      {harvest && (
+        <>
+          {field('Sản lượng búp tươi (kg)', <input className={`${kit.inp} ${styles.tall}`} type="number" inputMode="decimal" step="any" value={freshLeaf} aria-invalid={!!leafError} onChange={e => setFreshLeaf(e.target.value)} />)}
+          {leafError && <p className={styles.errorText} role="alert">{leafError}</p>}
+        </>
+      )}
       {sprayingWithProduct && (
         <>
           <PesticidePicker value={pesticide} onChange={setPesticide} />

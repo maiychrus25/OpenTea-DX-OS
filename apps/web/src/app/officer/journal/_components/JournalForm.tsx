@@ -9,6 +9,7 @@ import styles from '../journal.module.css'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import { PesticidePicker, isBelowFloor, type PesticideChange } from '@/components/features/pesticide/PesticidePicker'
 import { CUSTOM_PRODUCT_FLOOR_DAYS } from '@/lib/pesticide/catalogue'
+import { freshLeafError, freshLeafKg, hasProductFields } from '@/lib/journal/activity-fields'
 
 interface Parcel {
   id: string
@@ -20,11 +21,12 @@ interface Activity {
   activity_type: string
   product_name: string
   dosage: string
+  freshLeaf: string
   pesticide: PesticideChange
 }
 
 const emptyPesticide = (): PesticideChange => ({ productId: null, customName: '', days: null, floorDays: CUSTOM_PRODUCT_FLOOR_DAYS })
-const newActivity = (activity_type: string): Activity => ({ activity_type, product_name: '', dosage: '', pesticide: emptyPesticide() })
+const newActivity = (activity_type: string): Activity => ({ activity_type, product_name: '', dosage: '', freshLeaf: '', pesticide: emptyPesticide() })
 
 interface JournalFormProps {
   onSuccess: () => void
@@ -50,6 +52,7 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
     newActivity('SPRAYING'),
   ])
   const [submitting, setSubmitting] = useState(false)
+  const [attempted, setAttempted] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -75,9 +78,13 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
   }
 
   const belowFloor = activities.some(a => a.activity_type === 'SPRAYING' && isBelowFloor(a.pesticide))
+  // The fresh leaf weight is optional for officers, but a value typed in must be valid.
+  const leafInvalid = activities.some(a => a.activity_type === 'HARVEST' && freshLeafError(a.freshLeaf, false))
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setAttempted(true)
+    if (leafInvalid) return
     setSubmitting(true)
     setError('')
 
@@ -93,8 +100,9 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
         withdrawal_days: a.pesticide.days ?? undefined,
       } : {
         activity_type: a.activity_type,
-        product_name: a.product_name || undefined,
-        dosage: a.dosage || undefined,
+        product_name: hasProductFields(a.activity_type) ? a.product_name || undefined : undefined,
+        dosage: hasProductFields(a.activity_type) ? a.dosage || undefined : undefined,
+        fresh_leaf_kg: a.activity_type === 'HARVEST' ? freshLeafKg(a.freshLeaf) : undefined,
       }),
     }
 
@@ -149,16 +157,24 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
               <select className={styles.formSelect} aria-label="Loại hoạt động" value={a.activity_type} onChange={e => updateActivity(idx, 'activity_type', e.target.value)}>
                 {ACTIVITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
-              {a.activity_type !== 'SPRAYING' && (
+              {a.activity_type !== 'SPRAYING' && hasProductFields(a.activity_type) && (
                 <input className={styles.formInput} aria-label="Tên sản phẩm" placeholder="Tên sản phẩm" value={a.product_name} onChange={e => updateActivity(idx, 'product_name', e.target.value)} />
               )}
-              <input className={styles.formInput} aria-label="Liều lượng" placeholder="Liều lượng" value={a.dosage} onChange={e => updateActivity(idx, 'dosage', e.target.value)} />
+              {hasProductFields(a.activity_type) && (
+                <input className={styles.formInput} aria-label="Liều lượng" placeholder="Liều lượng" value={a.dosage} onChange={e => updateActivity(idx, 'dosage', e.target.value)} />
+              )}
+              {a.activity_type === 'HARVEST' && (
+                <input className={styles.formInput} type="number" inputMode="decimal" step="any" aria-label="Sản lượng búp tươi (kg)" placeholder="Sản lượng búp tươi (kg)" value={a.freshLeaf} aria-invalid={attempted && !!freshLeafError(a.freshLeaf, false)} onChange={e => updateActivity(idx, 'freshLeaf', e.target.value)} />
+              )}
               {activities.length > 1 && (
                 <button type="button" className={styles.removeBtn} onClick={() => removeActivity(idx)} aria-label="Xóa hoạt động">
                   <X size={16} />
                 </button>
               )}
             </div>
+            {attempted && a.activity_type === 'HARVEST' && freshLeafError(a.freshLeaf, false) && (
+              <p className={styles.errorText} role="alert">{freshLeafError(a.freshLeaf, false)}</p>
+            )}
             {a.activity_type === 'SPRAYING' && (
               <PesticidePicker value={a.pesticide} onChange={v => updateActivity(idx, 'pesticide', v)} />
             )}

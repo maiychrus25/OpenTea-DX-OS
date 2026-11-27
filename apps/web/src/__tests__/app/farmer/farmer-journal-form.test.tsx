@@ -60,6 +60,66 @@ test('"Đốn chè" is selectable and sent without pesticide fields', async () =
   expect(posted.activities[0].pesticide_product_id).toBeUndefined()
 })
 
+test('FERTILIZING shows the fertiliser and dosage, with no picker or withdrawal days', async () => {
+  const onSuccess = jest.fn()
+  render(<FarmerJournalForm onSuccess={onSuccess} onCancel={() => undefined} />)
+  await screen.findByRole('option', { name: /T-01/ })
+  fireEvent.click(screen.getByRole('button', { name: 'Bón phân' }))
+  expect(screen.getByLabelText('Sản phẩm sử dụng')).toBeInTheDocument()
+  expect(screen.getByLabelText('Liều lượng')).toBeInTheDocument()
+  expect(screen.queryByRole('group', { name: 'Danh mục thuốc' })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Số ngày cách ly')).not.toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText('Sản phẩm sử dụng'), { target: { value: 'NPK 16-16-8' } })
+  fireEvent.change(screen.getByLabelText('Liều lượng'), { target: { value: '20kg/sào' } })
+  fireEvent.click(screen.getByRole('button', { name: /Gửi chờ duyệt/ }))
+  await waitFor(() => expect(onSuccess).toHaveBeenCalled())
+  expect(posted.activities[0]).toEqual({ activity_type: 'FERTILIZING', product_name: 'NPK 16-16-8', dosage: '20kg/sào' })
+})
+
+test('HARVEST asks for the fresh leaf weight and hides the chemical fields', async () => {
+  const onSuccess = jest.fn()
+  render(<FarmerJournalForm onSuccess={onSuccess} onCancel={() => undefined} />)
+  await screen.findByRole('option', { name: /T-01/ })
+  fireEvent.click(screen.getByRole('button', { name: 'Thu hoạch' }))
+  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Sản phẩm sử dụng')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Liều lượng')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /Gửi chờ duyệt/ }))
+  expect(await screen.findByText('Nhập sản lượng búp tươi (kg)')).toBeInTheDocument()
+  expect(posted).toBeUndefined()
+  fireEvent.change(screen.getByLabelText('Sản lượng búp tươi (kg)'), { target: { value: '12.5' } })
+  fireEvent.click(screen.getByRole('button', { name: /Gửi chờ duyệt/ }))
+  await waitFor(() => expect(onSuccess).toHaveBeenCalled())
+  expect(posted.activities[0]).toEqual({ activity_type: 'HARVEST', fresh_leaf_kg: 12.5 })
+})
+
+test('PRUNING shows no product, chemical, dosage or withdrawal fields', async () => {
+  render(<FarmerJournalForm onSuccess={() => undefined} onCancel={() => undefined} />)
+  await screen.findByRole('option', { name: /T-01/ })
+  fireEvent.click(screen.getByRole('button', { name: 'Đốn chè' }))
+  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Sản phẩm sử dụng')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Liều lượng')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Số ngày cách ly')).not.toBeInTheDocument()
+})
+
+test('editing a returned HARVEST keeps the weight and sends it back', async () => {
+  const onSuccess = jest.fn()
+  let put: any
+  const base = global.fetch as jest.Mock
+  global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+    if (url === '/api/journal/e1') { put = JSON.parse(String(init?.body)); return { ok: true, status: 200, json: async () => ({ data: {} }) } }
+    return base(url, init)
+  }) as unknown as typeof fetch
+  render(<FarmerJournalForm onSuccess={onSuccess} onCancel={() => undefined}
+    entry={{ id: 'e1', parcel_id: 'parcel-1', entry_date: '2026-11-20T00:00:00Z', status: 'REQUEST_CHANGES', activity_type: 'HARVEST', notes: null, activities: [{ fresh_leaf_kg: 9 }] }} />)
+  await screen.findByRole('option', { name: /T-01/ })
+  expect(screen.getByLabelText('Sản lượng búp tươi (kg)')).toHaveValue(9)
+  fireEvent.click(screen.getByRole('button', { name: 'Gửi lại' }))
+  await waitFor(() => expect(onSuccess).toHaveBeenCalled())
+  expect(put.activities[0]).toEqual({ activity_type: 'HARVEST', fresh_leaf_kg: 9 })
+})
+
 describe('offline queue', () => {
   const submit = () => fireEvent.click(screen.getByRole('button', { name: /Gửi chờ duyệt/ }))
   const renderPruning = async (onSuccess: () => void) => {
@@ -99,5 +159,17 @@ describe('offline queue', () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalled())
     expect(mockStore.journal_offline_queue).toHaveLength(1)
     expect(mockStore.journal_offline_queue[0].client_id).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
+  test('an offline HARVEST keeps the fresh leaf weight in the queue', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+    const onSuccess = jest.fn()
+    render(<FarmerJournalForm onSuccess={onSuccess} onCancel={() => undefined} />)
+    await screen.findByRole('option', { name: /T-01/ })
+    fireEvent.click(screen.getByRole('button', { name: 'Thu hoạch' }))
+    fireEvent.change(screen.getByLabelText('Sản lượng búp tươi (kg)'), { target: { value: '8' } })
+    submit()
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled())
+    expect(mockStore.journal_offline_queue[0].payload.activities[0]).toEqual({ activity_type: 'HARVEST', fresh_leaf_kg: 8 })
   })
 })
