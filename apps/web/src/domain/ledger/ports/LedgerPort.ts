@@ -11,5 +11,5 @@ export interface LedgerPort {
   /** The stored bank details, or null when the household has none; undefined when it is not in the HTX. */
   getBank(htxProfileId: string, householdId: string): Promise<{ bin: string; account: string; accountName: string } | null | undefined>
   /** false when the household is not in the HTX. */
-  setBank(htxProfileId: string, householdId: string, bank: { bin: string; account: string; accountName: string }): Promise<boolean>
+  setBank(htxProfileId: string, householdId: string, bank: { bin: string; account: string; accountName: string }, actorId: string): Promise<boolean>
 }

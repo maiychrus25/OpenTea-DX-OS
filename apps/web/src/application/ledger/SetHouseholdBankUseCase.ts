@@ -18,11 +18,11 @@ export class SetHouseholdBankUseCase {
     return { bank_bin: bank.bin, bank_name: bankByBin(bank.bin)?.name ?? '', bank_account: bank.account, account_masked: maskAccount(bank.account), bank_account_name: bank.accountName }
   }
 
-  async execute(actor: { role: string; htxProfileId: string }, householdId: string, input: { bank_bin: string; bank_account: string; bank_account_name: string }) {
+  async execute(actor: { userId: string; role: string; htxProfileId: string }, householdId: string, input: { bank_bin: string; bank_account: string; bank_account_name: string }) {
     if (actor.role !== 'manager' && actor.role !== 'accountant') throw new ForbiddenError('Forbidden')
     const bank = bankByBin(input.bank_bin)
     if (!bank) throw new ValidationError('Ngân hàng không có trong danh sách.')
-    const saved = await this.port.setBank(actor.htxProfileId, householdId, { bin: bank.bin, account: input.bank_account, accountName: input.bank_account_name })
+    const saved = await this.port.setBank(actor.htxProfileId, householdId, { bin: bank.bin, account: input.bank_account, accountName: input.bank_account_name }, actor.userId)
     if (!saved) throw new NotFoundError('Không tìm thấy hộ')
     return { bank_bin: bank.bin, bank_name: bank.name, account_masked: maskAccount(input.bank_account), bank_account_name: input.bank_account_name }
   }

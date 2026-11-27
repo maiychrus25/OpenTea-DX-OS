@@ -55,11 +55,15 @@ export class PrismaLedgerRepository implements LedgerPort {
     return h.bank_bin && h.bank_account ? { bin: h.bank_bin, account: h.bank_account, accountName: h.bank_account_name ?? '' } : null
   }
 
-  async setBank(htxProfileId: string, householdId: string, bank: { bin: string; account: string; accountName: string }) {
-    const done = await prisma.household.updateMany({
-      where: { id: householdId, htx_profile_id: htxProfileId },
-      data: { bank_bin: bank.bin, bank_account: bank.account, bank_account_name: bank.accountName },
+  async setBank(htxProfileId: string, householdId: string, bank: { bin: string; account: string; accountName: string }, actorId: string) {
+    return prisma.$transaction(async (tx) => {
+      // The audit row names who changed the payout account; the row itself has no "updated by".
+      await tx.$executeRaw`SELECT set_config('dxos.actor', ${`user:${actorId}`}, true)`
+      const done = await tx.household.updateMany({
+        where: { id: householdId, htx_profile_id: htxProfileId },
+        data: { bank_bin: bank.bin, bank_account: bank.account, bank_account_name: bank.accountName },
+      })
+      return done.count === 1
     })
-    return done.count === 1
   }
 }

@@ -175,7 +175,8 @@ describe('bank details', () => {
     const text = JSON.stringify(await res.json())
     expect(JSON.parse(text).data).toEqual({ bank_bin: '970405', bank_name: 'Agribank', account_masked: '*********1234', bank_account_name: 'NGUYEN VAN A' })
     expect(text).not.toContain('8600201001234')
-    expect(ledger.setBank).toHaveBeenCalledWith('htx-tc', 'hh-1', { bin: '970405', account: '8600201001234', accountName: 'NGUYEN VAN A' })
+    // The person who changed the payout account is named in the audit row.
+    expect(ledger.setBank).toHaveBeenCalledWith('htx-tc', 'hh-1', { bin: '970405', account: '8600201001234', accountName: 'NGUYEN VAN A' }, 'u1')
   })
 
   it('rejects an unknown BIN, letters in the account, a long name and a farmer', async () => {
