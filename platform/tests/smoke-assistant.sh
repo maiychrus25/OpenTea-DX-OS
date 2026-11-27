@@ -33,7 +33,7 @@ AS_BULLETIN_ID=""
 
 # Restores what this smoke changed. It runs before the M4 cleanup (which unlinks the owner) and the LLM cleanup.
 assistant_cleanup() {
-  docker rm -f "$AS_DISEASE_STUB" "$AS_TTS_STUB" >/dev/null 2>&1 || true
+  docker rm -f -v "$AS_DISEASE_STUB" "$AS_TTS_STUB" >/dev/null 2>&1 || true
   if [ -n "$AS_DISEASE_WAS_UP" ]; then $COMPOSE start disease-api >/dev/null 2>&1 || true; $COMPOSE restart apisix >/dev/null 2>&1 || true; fi
   if [ -n "$AS_PIPER_WAS_UP" ]; then $COMPOSE start piper >/dev/null 2>&1 || true; fi
   if [ -n "$AS_BULLETIN_ID" ]; then psql_app "delete from bulletins where id='$AS_BULLETIN_ID'" >/dev/null 2>&1 || true; fi
@@ -276,7 +276,7 @@ assert_eq "$(python3 -c 'import sys; print("ok" if sys.argv[2] in sys.argv[1] el
 # C3: the farmer's disease photo reaches the disease API stub through apisix:9081, with the web service token, and is answered.
 AS_DISEASE_WAS_UP="$($COMPOSE ps -q disease-api 2>/dev/null)"
 [ -z "$AS_DISEASE_WAS_UP" ] || $COMPOSE stop disease-api >/dev/null
-docker rm -f "$AS_DISEASE_STUB" >/dev/null 2>&1 || true
+docker rm -f -v "$AS_DISEASE_STUB" >/dev/null 2>&1 || true
 docker run -d --name "$AS_DISEASE_STUB" --network "$AS_NET" --network-alias disease-api -p 127.0.0.1:8084:8000 \
   -v "$PWD/platform/tests/stub_disease.py:/app/stub_disease.py:ro" -e DXOS_DISEASE_STUB_PORT=8000 \
   python:3.12.15-slim-bookworm python -u /app/stub_disease.py >/dev/null
@@ -304,7 +304,7 @@ as_clear_flow
 tg_answer "$TG_OWNER" text "bản tin hôm nay" "Nguồn: Bản tin"
 tg_answer "$TG_OWNER" button "Nghe" "Chưa đọc được bản tin lúc này."
 assert_eq "$(stub_calls | python3 -c 'import json, sys; print(sum(1 for c in json.load(sys.stdin) if c["method"] == "sendDocument"))')" "0" "without a voice service Nghe sends no document"
-docker rm -f "$AS_TTS_STUB" >/dev/null 2>&1 || true
+docker rm -f -v "$AS_TTS_STUB" >/dev/null 2>&1 || true
 docker run -d --name "$AS_TTS_STUB" --network "$AS_NET" --network-alias piper \
   -v "$PWD/platform/tests/stub_tts.py:/app/stub_tts.py:ro" -e DXOS_TTS_STUB_PORT=10200 \
   python:3.12.15-slim-bookworm python -u /app/stub_tts.py >/dev/null
