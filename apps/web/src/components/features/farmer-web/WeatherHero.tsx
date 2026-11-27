@@ -118,7 +118,7 @@ export function WeatherHero({ eyebrow, title, subtitle, actions, place, cached, 
           {weather && weather.rainMm > 0 && (
             <>
               <Leaf size={18} aria-hidden="true" />
-              <span>Không nên phun thuốc hôm nay: thuốc dễ bị rửa trôi do mưa.</span>
+              <span>Dự báo hôm nay có mưa.</span>
             </>
           )}
           <Link href={forecastHref} className={styles.forecast}>

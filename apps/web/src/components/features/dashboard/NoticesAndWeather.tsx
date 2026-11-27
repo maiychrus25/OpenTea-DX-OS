@@ -107,7 +107,7 @@ export function RainAlert() {
   if (!rainy) return null
   return (
     <p role="status" style={{ margin: 0, padding: '12px 18px', borderRadius: 'var(--radius-card)', background: 'var(--color-warning-subtle)', color: 'var(--color-warning)', fontSize: 14 }}>
-      Dự báo mưa {dayLabel(rainy.date)} (khả năng {rainy.rainChance}%). Nên hoãn phun thuốc.
+      Dự báo mưa {dayLabel(rainy.date)} (khả năng {rainy.rainChance}%).
     </p>
   )
 }
