@@ -227,6 +227,7 @@ def _run_cycle(monkeypatch, runtime, now, result=None, error=None) -> list[str]:
 
 
 def test_a11_runs_on_the_first_cycle_and_not_again_in_the_same_quarter(monkeypatch) -> None:
+    monkeypatch.setenv("DXOS_LABS", "1")  # frozen feature (ADR 0005): runs only with the labs switch on
     runtime = _runtime()
 
     assert _run_cycle(monkeypatch, runtime, _vn(11, 20, 9)) == ["A11"]
@@ -234,6 +235,7 @@ def test_a11_runs_on_the_first_cycle_and_not_again_in_the_same_quarter(monkeypat
 
 
 def test_a11_failure_is_retried_on_the_next_cycle(monkeypatch) -> None:
+    monkeypatch.setenv("DXOS_LABS", "1")  # frozen feature (ADR 0005): runs only with the labs switch on
     runtime = _runtime()
 
     assert _run_cycle(monkeypatch, runtime, _vn(11, 20, 9), error=ConnectionError("down")) == ["A11"]

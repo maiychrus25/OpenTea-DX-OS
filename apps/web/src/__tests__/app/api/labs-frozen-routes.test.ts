@@ -31,10 +31,10 @@ import * as staffRoster from '@/app/api/internal/staff/roster/route'
 import * as staffTasks from '@/app/api/internal/staff/tasks/route'
 import * as staffAck from '@/app/api/internal/staff/tasks/[proposal_id]/ack/route'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Handler = (request: Request, context: any) => Promise<Response>
+type Handler = (request: Request, context: { params: Promise<Record<string, string>> }) => Promise<Response>
 
-const routes: [string, Handler][] = [
+// Route contexts differ per route, so the table keeps them opaque and the test passes one context with every parameter.
+const routes: [string, unknown][] = [
   ['POST /api/agent/app-requests', appRequests.POST],
   ['POST /api/agent/app-requests/[id]/answer', appRequestAnswer.POST],
   ['POST /api/agent/app-requests/[id]/cancel', appRequestCancel.POST],
@@ -70,7 +70,7 @@ afterEach(() => {
 describe('frozen routes without DXOS_LABS', () => {
   test.each(routes)('%s answers 404 NOT_FOUND and does not touch the database', async (_name, handler) => {
     const request = new Request('http://localhost/x', { method: 'POST', body: '{}' })
-    const response = await handler(request, { params: Promise.resolve({ id: 'x', name: 'x', proposal_id: 'x' }) })
+    const response = await (handler as Handler)(request, { params: Promise.resolve({ id: 'x', name: 'x', proposal_id: 'x' }) })
     expect(response.status).toBe(404)
     expect((await response.json()).error.code).toBe('NOT_FOUND')
     expect(prismaTouched).not.toHaveBeenCalled()

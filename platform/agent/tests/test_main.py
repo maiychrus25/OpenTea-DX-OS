@@ -473,7 +473,8 @@ def test_a9_logs_no_error_when_the_queue_is_quiet(cooperative, caplog):
     assert "A9 daily-campaign failed" not in caplog.text
 
 
-def test_autopilot_tick_is_posted_once_per_cycle_after_the_m4_agents(cooperative):
+def test_autopilot_tick_is_posted_once_per_cycle_after_the_m4_agents(monkeypatch, cooperative):
+    monkeypatch.setenv("DXOS_LABS", "1")  # frozen feature (ADR 0005): runs only with the labs switch on
     cfg, gateway = cooperative
     runtimes: dict = {}
     t0 = datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc)
@@ -484,7 +485,8 @@ def test_autopilot_tick_is_posted_once_per_cycle_after_the_m4_agents(cooperative
     assert gateway.ticks == 2
 
 
-def test_a_failed_autopilot_tick_is_logged_and_the_loop_goes_on(cooperative, caplog):
+def test_a_failed_autopilot_tick_is_logged_and_the_loop_goes_on(monkeypatch, cooperative, caplog):
+    monkeypatch.setenv("DXOS_LABS", "1")  # frozen feature (ADR 0005): runs only with the labs switch on
     cfg, gateway = cooperative
 
     def failing_tick():
