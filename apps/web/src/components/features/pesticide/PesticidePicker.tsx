@@ -25,9 +25,11 @@ interface Props {
   onChange: (value: PesticideChange) => void
   target?: string
   disabled?: boolean
+  /** A prescription names a catalogue product only: no days box and no "Thuốc khác". */
+  prescribing?: boolean
 }
 
-export function PesticidePicker({ value, onChange, target, disabled }: Props) {
+export function PesticidePicker({ value, onChange, target, disabled, prescribing }: Props) {
   const id = useId()
   const [rows, setRows] = useState<PesticideRow[]>([])
   const [query, setQuery] = useState('')
@@ -81,10 +83,10 @@ export function PesticidePicker({ value, onChange, target, disabled }: Props) {
             {row.needs_label_check && <span className={styles.check}>{NEEDS_LABEL_CHECK_TEXT}</span>}
           </button>
         ))}
-        <button type="button" className={styles.option} aria-pressed={other} disabled={disabled} onClick={pickOther}>
+        {!prescribing && <button type="button" className={styles.option} aria-pressed={other} disabled={disabled} onClick={pickOther}>
           <span className={styles.name}>Thuốc khác (ngoài danh mục)</span>
           <span className={styles.meta}>Mức sàn {CUSTOM_PRODUCT_FLOOR_DAYS} ngày, cán bộ sẽ xem lại</span>
-        </button>
+        </button>}
       </div>
 
       {other && (
@@ -95,13 +97,13 @@ export function PesticidePicker({ value, onChange, target, disabled }: Props) {
         </label>
       )}
 
-      <label className={styles.field} htmlFor={`${id}-days`}>
+      {!prescribing && <label className={styles.field} htmlFor={`${id}-days`}>
         Số ngày cách ly
         <input id={`${id}-days`} type="number" min={0} inputMode="numeric" className={styles.input} disabled={disabled}
           value={value.days ?? ''} aria-invalid={below} aria-describedby={below ? `${id}-err` : undefined}
           onChange={e => emit({ ...value, days: e.target.value === '' ? null : Number(e.target.value) }, floorDays, selected?.trade_name)} />
-      </label>
-      {below && <p id={`${id}-err`} className={styles.error} role="alert">{belowFloorText(floorDays)}</p>}
+      </label>}
+      {below && !prescribing && <p id={`${id}-err`} className={styles.error} role="alert">{belowFloorText(floorDays)}</p>}
     </div>
   )
 }
