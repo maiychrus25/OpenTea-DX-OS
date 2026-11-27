@@ -23,7 +23,7 @@ GĐ2 nối: **Phiếu cân → Mẻ sao sấy → Tồn chè khô theo hạng �
 - G2. **Cân bằng khối lượng.** Hệ thống tính tỷ lệ `kg búp tươi tịnh / kg chè khô`. Ngoài khoảng chuẩn 4,5–5,0 : 1 thì mẻ chỉ hoàn thành được khi có lời giải trình. Danh sách mẻ đánh dấu mẻ lệch.
 - G3. **Tồn chè khô.** Mỗi dòng sản lượng của mẻ đã hoàn thành là tồn kho theo hạng. Phần đã đóng lô bị trừ ra.
 - G4. **Đóng lô từ mẻ.** Chọn một hạng, chọn các dòng tồn và số kg lấy từ mỗi dòng. Lô nhận khối lượng bằng tổng số kg đó, nhận các thửa và lứa từ phiếu cân của các mẻ nguồn, và qua kiểm tra cách ly theo từng phiếu cân.
-- G5. **Chứng nhận thật.** HTX lưu chứng nhận (VietGAP, OCOP, hữu cơ, khác) có số, tổ chức cấp, ngày cấp, ngày hết hạn và tệp gốc (PDF/ảnh) trong kho đối tượng của nền tảng. Khi xuất QR, lô gắn các chứng nhận còn hiệu lực.
+- G5. **Chứng nhận thật.** HTX lưu chứng nhận (VietGAP, OCOP, hữu cơ, khác) có số, tổ chức cấp, ngày cấp, ngày hết hạn và tệp gốc (PDF/ảnh) trong kho SeaweedFS của nền tảng. Khi xuất QR, lô gắn các chứng nhận còn hiệu lực.
 - G6. **Một trang QR.** `/q/[lot_code]` là trang duy nhất, có 4 tầng: Vùng trồng, An toàn cách ly, Mẻ sao chế biến, Chứng nhận. `/lot/[lot_code]` chuyển hướng vĩnh viễn sang `/q/...` để tem đã in vẫn quét được. Tem mới mã hoá `/q/...`.
 - G7. **Ẩn tên cá nhân.** Mặc định trang công khai không hiện họ tên chủ hộ, người ghi nhật ký hay người sao. Trưởng HTX bật "Hiện tên trên trang truy xuất" trong hồ sơ HTX nếu muốn. Cài đặt áp khi hiển thị, nên cả lô đã xuất trước đó cũng theo.
 - G8. **In tem.** Trang in tem QR cho máy in nhiệt: chọn khổ (50×30, 40×30, 60×40 mm) và số tem. Mỗi tem là một trang in. Trình duyệt in thẳng hoặc "Lưu thành PDF".
@@ -52,7 +52,7 @@ GĐ2 nối: **Phiếu cân → Mẻ sao sấy → Tồn chè khô theo hạng �
 | Hạng chè khô | **Bộ cố định 5 hạng của chè Thái Nguyên** (Đinh, Tôm nõn, Móc câu, Bồm, Cám) theo lộ trình. | Danh mục hạng do từng HTX tạo, như hạng búp ở S3: linh hoạt hơn nhưng chưa ai yêu cầu. |
 | Truy lô về phiếu cân | **Lô → nguồn (dòng sản lượng của mẻ, số kg) → mẻ → mọi phiếu cân của mẻ.** Một mẻ trộn búp của nhiều phiếu, nên mọi phiếu của mẻ đều là nguồn của mọi hạng ra từ mẻ. | Gán từng phiếu cho từng hạng: không đúng với thực tế xưởng. |
 | Kiểm cách ly của lô | **Theo từng phiếu cân nguồn:** quy tắc (b) của S1 với `H` = ngày cân (ngày Việt Nam), lứa = lứa của phiếu. | Một dòng mỗi thửa với ngày cân muộn nhất: bỏ sót một lần phun được ghi lùi ngày sau khi đã cân. |
-| Lưu tệp chứng nhận | **Kho MinIO (S3) đang chạy, khoá `para/<htx_code>/Certificates/...`, tải lên qua server** để kiểm kích thước và loại tệp. | SeaweedFS như lộ trình viết: phải thêm một dịch vụ. MinIO đã nói giao thức S3, và đổi sau chỉ là đổi cấu hình. Link tải lên ký sẵn: server không kiểm được tệp. |
+| Lưu tệp chứng nhận | **Kho S3 đang chạy của stack (SeaweedFS, dịch vụ `seaweedfs`), qua client `minio` và `MinioDocumentAdapter` sẵn có, khoá `para/<htx_code>/Certificates/...`, tải lên qua server** để kiểm kích thước và loại tệp. Đây chính là SeaweedFS mà lộ trình nêu. | Link tải lên ký sẵn: server không kiểm được tệp. |
 | Tem in | **Trang in HTML với `@page` đúng khổ tem.** Trình duyệt in hoặc lưu PDF. | Thư viện tạo PDF (`pdfkit`, `@react-pdf/renderer`): thêm phụ thuộc, mà máy in nhiệt vẫn in từ trình duyệt. |
 
 ## 4. Thiết kế
@@ -239,7 +239,7 @@ Mọi route mới vào nhóm `miniApp` của bảng phủ Telegram (`application
 
    Nếu anh muốn giữ đường cũ mở thì chỉ cần bỏ cổng `DXOS_LABS` ở hai route.
 7. **Kiểm cách ly theo từng phiếu nguồn** với ngày cân là `H` (quy tắc (b) của S1). Lý do ở §3.
-8. **Dùng MinIO (S3) đang chạy thay vì dựng SeaweedFS.** Lộ trình viết SeaweedFS, nhưng cả hai đều là kho S3. Thêm dịch vụ mới ngược với mục tiêu RAM ≤ 6–8 GB của GĐ0.
+8. **Dùng kho S3 đang chạy.** Stack đã chạy SeaweedFS (dịch vụ `seaweedfs`) và web gọi vào qua client `minio`, nên chứng nhận nằm trên SeaweedFS như lộ trình viết, không thêm dịch vụ. Các tên `MINIO_*` trong mã là tên cũ của client, không phải một dịch vụ MinIO.
 9. **Tên người ẩn mặc định, áp lúc hiển thị** (cả lô cũ). Tên nghệ nhân sao chè tính là tên người.
 10. **Không thêm thư viện PDF.** Tem in từ trang HTML đúng khổ, "Lưu thành PDF" bằng trình duyệt.
 11. **Quyền:** officer và manager làm mẻ, lô, chứng nhận (bảng vai §6 của lộ trình ghi Cán bộ KT "Lập Mẻ sao sấy & Đóng lô in tem QR"). Kế toán không vào xưởng. Chỉ manager thu hồi chứng nhận và bật hiện tên.
