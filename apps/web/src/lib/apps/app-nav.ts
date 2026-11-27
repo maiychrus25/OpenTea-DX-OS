@@ -8,6 +8,8 @@ import type { InstalledApp } from '@/domain/entities/installed-app'
 import { appIcon } from '@/lib/apps/app-icons'
 import { UNSAFE_SEGMENT } from '@/lib/apps/unsafe-segment'
 import { logger } from '@/lib/logger'
+import { isLabsEnabled } from '@/lib/labs'
+import { isMergedIntoCore } from '@/application/apps/app-store.usecase'
 
 export type AppRole = 'farmer' | 'officer' | 'manager'
 
@@ -41,9 +43,11 @@ export async function loadAppNavItems(
   role: AppRole,
   htxCode: string | null,
   loadFeed?: FeedLoader,
+  labs: boolean = isLabsEnabled(),
 ): Promise<NavItem[]> {
   try {
-    const apps = await repository.list(htxCode)
+    // Apps merged into the core show only while labs is on, even when an HTX enabled them earlier.
+    const apps = (await repository.list(htxCode)).filter(app => labs || !isMergedIntoCore(app.id))
     const feeds: Record<string, AppFeed> = {}
     if (loadFeed && htxCode) {
       await Promise.all(
