@@ -330,7 +330,9 @@ def test_builder_smoke_is_a_job_of_its_own_and_stays_out_of_the_other_smokes():
 def test_builder_smoke_uses_the_replay_tool_and_the_replay_agent_and_never_a_real_key():
     text = builder_smoke()
     assert "replay:fertiliser-stock" in text and "DXOS_AGENT_PROVIDER: replay" in text
-    assert "ANTHROPIC_API_KEY" not in text and "OPENAI_API_KEY" not in text
+    # No real key and no real model: the only key is the placeholder that makes the agent report a code provider.
+    assert "ANTHROPIC_API_KEY" not in text
+    assert [line.strip() for line in text.splitlines() if "OPENAI_API_KEY" in line] == ["OPENAI_API_KEY: smoke-replay-placeholder"]
 
 
 def test_builder_smoke_covers_tests_26_to_30():
@@ -423,3 +425,11 @@ def test_builder_smoke_makes_its_own_token_client_and_users():
     client = text.index("ensure_client dxos-smoke dx-os-core,roles,profile")
     assert client < text.index("ensure_user smoke_manager_tc manager TC") < text.index("telegram_link_owner")
     assert "ensure_user smoke_manager_lb manager LB" in text
+
+
+def test_builder_smoke_waits_for_a_code_provider_before_it_sends_the_request():
+    # A12 offers the build path only when the web lists a code tool, which comes from the agent's heartbeat.
+    text = (TESTS / "smoke-builder.sh").read_text(encoding="utf-8")
+    assert "OPENAI_API_KEY: smoke-replay-placeholder" in text
+    heartbeat = text.index("from platform.service_heartbeats where service='agent:TC'")
+    assert text.index('$COMPOSE -f "$AGENT_OVERRIDE" up -d --no-deps --force-recreate dxos-agent') < heartbeat < text.index('tg_text "$TG_OWNER" "$REQUEST_TEXT"')

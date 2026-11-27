@@ -978,6 +978,8 @@ Theo `AGENTS.md`:
 - **Ảnh chụp sáng và tối giống nhau,** vì container cổng không có `dxos-app.css` của khung web.
 - **A12 thử lại một yêu cầu lỗi** sau 15 phút, nhân đôi mỗi lần, tối đa 6 giờ, để không gọi model liên tục.
 - **Mạng riêng của app** phải được nối lại khi `apisix` hoặc `postgres` bị tạo lại. Worker, lệnh cài và lệnh nâng cấp tự nối lại.
+- **Chế độ replay vẫn báo provider có khoá.** Khi agent chạy bằng bản ghi phát lại, heartbeat vẫn nêu các provider có khoá trên máy. Nhờ vậy web vẫn coi là có công cụ viết mã, và A12 đi được đường xây app trong buổi trình diễn và trên CI.
+- **Yêu cầu không bị kẹt khi tạo đề xuất hỏng.** Nếu web không tạo được đề xuất sau khi chuyển yêu cầu sang `routed` hoặc `spec_proposed`, yêu cầu trở về trạng thái trước đó để A12 xử lý lại.
 - **Claude Code không phải mã nguồn mở.** Nó chỉ được cài vào ảnh khi `DXOS_BUILDER_TOOLS` có nó. CI dựng ảnh không kèm công cụ nào và dùng bản ghi phát lại.
 
 **Chưa làm:**

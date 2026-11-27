@@ -164,6 +164,9 @@ services:
     environment:
       DXOS_AGENT_PROVIDER: replay
       DXOS_AGENT_REPLAY_DIR: /replay
+      # No model is called in replay mode. A key must exist for the web to offer a code tool (codex-cli), or A12 could
+      # only route to the store or a book; the agent reports its keyed providers in its heartbeat.
+      OPENAI_API_KEY: smoke-replay-placeholder
     volumes:
       - $REPLAY_DIR:/replay:ro
 YAML
@@ -174,6 +177,10 @@ wait_stub "any(x['method'] == 'sendMessage' and x['params'].get('chat_id') == $T
 stub_reset
 $COMPOSE -f "$AGENT_OVERRIDE" up -d --no-deps --force-recreate dxos-agent >/dev/null
 pass "dxos-agent runs with the replay provider and A12's recording"
+# The request must not reach A12 before its first heartbeat: until then the web lists no code tool.
+wait_psql "select (details->'providers' ? 'openai')::text from platform.service_heartbeats where service='agent:TC'" "true" 60 \
+  || fail "dxos-agent did not report a code provider in its heartbeat within 120 s"
+pass "the agent's heartbeat lists a provider that can write code"
 
 # ---- main path ----------------------------------------------------------------------------------------------------------
 echo "[builder: request and spec]"
