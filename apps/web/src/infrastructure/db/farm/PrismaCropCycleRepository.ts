@@ -9,13 +9,14 @@ import { nextHarvestRoundSeason } from '../../../domain/farm/harvest-round'
 export class PrismaCropCycleRepository implements CropCyclePort {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async getHarvestSchedule(htxProfileId: string, startDate: string, endDate: string): Promise<HarvestEvent[]> {
+  async getHarvestSchedule(htxProfileId: string, startDate: string, endDate: string, farmerUserId?: string): Promise<HarvestEvent[]> {
     const start = new Date(startDate)
     const end = new Date(endDate)
 
     const cycles = await this.prisma.parcelCropCycle.findMany({
       where: {
-        parcel: { household: { htx_profile_id: htxProfileId } },
+        // A farmer gets only their own household: the rows carry the products it sprayed.
+        parcel: { household: { htx_profile_id: htxProfileId, ...(farmerUserId !== undefined && { keycloak_user_id: farmerUserId }) } },
         estimated_harvest_date: {
           gte: start,
           lte: end,

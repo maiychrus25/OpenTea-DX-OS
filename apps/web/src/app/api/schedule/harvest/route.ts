@@ -19,7 +19,7 @@ const getQuerySchema = z.object({
 })
 
 async function getHarvestSchedule(req: Request) {
-  const { htxProfileId } = await requireTenant()
+  const { htxProfileId, role, userId } = await requireTenant()
 
   const { searchParams } = new URL(req.url)
   const startDateStr = searchParams.get('start_date')
@@ -38,7 +38,8 @@ async function getHarvestSchedule(req: Request) {
   const result = await getHarvestScheduleUseCase.execute(
     htxProfileId,
     validationResult.data.start_date,
-    validationResult.data.end_date
+    validationResult.data.end_date,
+    role === 'farmer' ? userId : undefined
   )
 
   return NextResponse.json({ data: result }, { status: 200 })
