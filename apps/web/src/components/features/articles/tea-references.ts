@@ -17,5 +17,5 @@ export const REFERENCES = {
   leafhopper: { title: 'Nghiên cứu phân bón và sâu hại (rầy xanh, bọ trĩ) trên chè', source: 'Tạp chí ĐH Thái Nguyên · PDF', url: 'https://jst.tnu.edu.vn/jst/article/download/580/pdf' },
   mosquitoBug: { title: 'Nghiên cứu phòng trừ bọ xít muỗi hại chè', source: 'Tạp chí Khoa học Nông nghiệp (VAAS) · PDF', url: 'https://tapchi.vaas.vn/sites/tapchi.vaas.vn/files/tapchi/2021-05/tapchi12-2012-30.pdf' },
   blister: { title: 'Hướng dẫn phòng trừ bệnh phồng lá chè (2024)', source: 'Cơ quan BVTV Thái Nguyên · PDF', url: 'https://storage-vnportal.vnpt.vn/gov-tnn/11492/ConvertFiles/documents/13418123/14872999/196.%2019.03.2024%20h%C6%B0%E1%BB%9Bng%20d%E1%BA%ABn%20%C4%91%E1%BA%A1o%20%C3%B4n,%20ph%E1%BB%93ng%20l%C3%A1.signed.signed.pdf' },
-  picking: { title: 'Tài liệu kỹ thuật đốn và hái chè', source: 'Cục Bảo vệ thực vật · PDF', url: 'https://ppd.gov.vn/FileUpload/Documents/P.%20Ke%20hoach/TBKT/20.03.26_%20PL%20QT%20Dan%20cao%20hai%20che.pdf' },
+  blightPatch: { title: 'Quy trình quản lý bệnh dán cao hại chè', source: 'Cục Bảo vệ thực vật · PDF', url: 'https://ppd.gov.vn/FileUpload/Documents/P.%20Ke%20hoach/TBKT/20.03.26_%20PL%20QT%20Dan%20cao%20hai%20che.pdf' },
 } satisfies Record<string, Reference>

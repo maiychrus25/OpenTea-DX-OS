@@ -28,7 +28,7 @@ const ARTICLES = [
   { ...REFERENCES.sustainable, category: 'Chăm sóc', image: '/images/officer/tour-farmer-day.jpg' },
   { ...REFERENCES.vietgapValue, category: 'VietGAP', image: '/images/officer/tour-tea-on-the-hill.jpg' },
   { ...REFERENCES.leafhopper, category: 'Sâu bệnh', image: '/images/tea-hills-mist.jpg' },
-  { ...REFERENCES.picking, category: 'Thu hái', image: '/images/officer/tour-picking.jpg' },
+  { ...REFERENCES.blightPatch, category: 'Sâu bệnh', image: '/images/officer/tour-picking.jpg' },
 ]
 
 const PESTS = [
@@ -42,7 +42,7 @@ const SEASON: Record<number, [string, string, string]> = {
   11: ['Thu hái lứa cuối, dọn cành lá bệnh khỏi nương.', 'Bón lót phân hữu cơ, vun gốc giữ ẩm cho mùa khô.', 'Đốn tỉa nhẹ, che chắn rét cho chè non.'],
 }
 
-const DOCUMENTS = [REFERENCES.sustainable, REFERENCES.blister, REFERENCES.picking]
+const DOCUMENTS = [REFERENCES.sustainable, REFERENCES.blister, REFERENCES.blightPatch]
 
 /** Lower case without Vietnamese marks, so "ray xanh" finds "Rầy xanh". */
 const plain = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase()
