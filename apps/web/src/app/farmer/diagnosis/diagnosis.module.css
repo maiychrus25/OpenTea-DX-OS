@@ -311,3 +311,11 @@
 .pastMeta { display: block; color: var(--color-ink-secondary); }
 .advice { display: block; margin-top: 6px; padding: 8px; border-radius: 8px; background: var(--color-info-subtle); }
 .historyCard + .historyCard { margin-top: 0; }
+
+/* Page heading and the farmer's own photo check under the camera watch. */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.top h1 { margin: 0; font-size: 22px; font-weight: 800; color: var(--color-ink-primary); }
+.top p { margin: 2px 0 0; font-size: 12.5px; color: var(--color-ink-secondary); }
+.section { margin: 8px 0 -12px; font-size: 17px; font-weight: 800; color: var(--color-ink-heading); scroll-margin-top: 80px; }
+.sectionNote { margin: 0 0 -8px; font-size: 12.5px; color: var(--color-ink-secondary); }
+.panelBody .preview { min-height: 150px; height: 150px; }

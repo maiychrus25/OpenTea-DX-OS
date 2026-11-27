@@ -6,7 +6,8 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Pill } from '@/components/ui'
-import { WifiOff, RefreshCw, AlertTriangle, BookOpen, ImageIcon, Sparkles, Stethoscope } from 'lucide-react'
+import { WifiOff, RefreshCw, AlertTriangle, BookOpen, ImageIcon, Sparkles, Camera } from 'lucide-react'
+import { CameraWatch } from '@/components/features/disease/CameraWatch'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from '../diagnosis.module.css'
 import { getDiagnosisHistory } from '../actions'
@@ -127,13 +128,18 @@ export function DiagnosisClient({ initialParcels, initialHistory }: DiagnosisCli
 
   return (
     <div className={kit.page}>
-      <div className={kit.hd}>
-        <span className={kit.hico}><Stethoscope size={28} aria-hidden="true" /></span>
-        <div className={kit.hdText}>
-          <h1 className={kit.h1}>Chẩn đoán bệnh tự động</h1>
-          <p className={kit.sub}>Tải ảnh lá bệnh để AI nhận diện. Kết quả được lưu và báo cho cán bộ kỹ thuật.</p>
+      <div className={styles.top}>
+        <div>
+          <h1>Chẩn đoán sâu bệnh</h1>
+          <p>Theo dõi bệnh trên nương chè và gửi ảnh để AI nhận diện, cán bộ kỹ thuật phê duyệt cách xử lý.</p>
         </div>
+        <a href="#tu-chup" className={kit.btn2}><Camera size={15} aria-hidden="true" />Tự chụp ảnh kiểm tra</a>
       </div>
+
+      <CameraWatch />
+
+      <h2 id="tu-chup" className={styles.section}>Chẩn đoán bệnh tự động</h2>
+      <p className={styles.sectionNote}>Tải ảnh lá bệnh để AI nhận diện. Kết quả được lưu và báo cho cán bộ kỹ thuật.</p>
 
       {!isOnline && (
         <div className={styles.offlineBanner}>
