@@ -63,9 +63,24 @@ test('a fallback response hides totals even when another request succeeded while
   expect(screen.queryByText('Tài liệu đang hiển thị')).not.toBeInTheDocument()
 })
 
-test('officer summary never counts the legacy mock fallback as live data', async () => {
+test('officer summary never counts a failed load as live data', async () => {
   global.fetch = jest.fn().mockResolvedValue({ ok: false })
   render(<DocumentView htxCode="TC" variant="officer" />)
   await waitFor(() => expect(screen.queryByText('Đang tải...')).not.toBeInTheDocument())
   expect(screen.queryByText('Tài liệu đang hiển thị')).not.toBeInTheDocument()
+})
+
+test('shows an error state, not sample files, when the documents API fails', async () => {
+  global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })
+  render(<DocumentView htxCode="TC" />)
+  expect(await screen.findByText('Không tải được tài liệu. Vui lòng thử lại.')).toBeInTheDocument()
+  global.fetch = jest.fn().mockRejectedValue(new Error('offline'))
+  fireEvent.click(screen.getByRole('button', { name: 'Báo cáo thị trường' }))
+  expect(await screen.findByText('Không tải được tài liệu. Vui lòng thử lại.')).toBeInTheDocument()
+})
+
+test('keeps the empty state for an empty folder', async () => {
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ data: { documents: [] } }) })
+  render(<DocumentView htxCode="TC" />)
+  expect(await screen.findByText('Không có tài liệu nào')).toBeInTheDocument()
 })
