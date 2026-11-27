@@ -104,6 +104,7 @@ describe('CHAT_ACTIONS (contract C6)', () => {
       ['journal.create', ['farmer', 'officer']],
       ['journal.batch_approve', ['officer', 'manager']],
       ['harvest.approve', ['officer', 'manager']],
+      ['disease.report', ['farmer']],
     ])
   })
 

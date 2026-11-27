@@ -98,3 +98,13 @@ describe('DiseaseApiAdapter', () => {
     await expect(new DiseaseApiAdapter('t').predict(image, 'tea')).rejects.toThrow('Disease API returned status 400')
   })
 })
+
+describe('DiseaseApiAdapter on the web-service route', () => {
+  test('predict can use the internal web route instead of the user route, with the same token handling', async () => {
+    fetchMock.mockResolvedValue(ok())
+    await new DiseaseApiAdapter('svc-tok', '/api/internal/web/disease').predict(image, 'tea')
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('http://gateway:9081/api/internal/web/disease/predict?model=tea')
+    expect(init.headers).toEqual({ Authorization: 'Bearer svc-tok' })
+  })
+})

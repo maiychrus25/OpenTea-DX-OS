@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import type { ChatAction } from '../types'
+import { diseaseReportAction } from './disease-report'
 import { harvestApproveAction } from './harvest-approve'
 import { journalBatchApproveAction } from './journal-batch-approve'
 import { journalCreateAction } from './journal-create'
@@ -11,4 +12,5 @@ export const CHAT_ACTIONS: readonly ChatAction[] = [
   journalCreateAction,
   journalBatchApproveAction,
   harvestApproveAction,
+  diseaseReportAction,
 ]
