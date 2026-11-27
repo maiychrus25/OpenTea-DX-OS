@@ -36,7 +36,7 @@ describe('GetHarvestScheduleUseCase', () => {
 
     const result = await useCase.execute('htx-1', '2026-10-01', '2026-10-31')
 
-    expect(mockPort.getHarvestSchedule).toHaveBeenCalledWith('htx-1', '2026-10-01', '2026-10-31')
+    expect(mockPort.getHarvestSchedule).toHaveBeenCalledWith('htx-1', '2026-10-01', '2026-10-31', undefined)
     expect(result).toEqual(mockEvents)
   })
 })
