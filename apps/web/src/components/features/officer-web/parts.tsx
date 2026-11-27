@@ -12,7 +12,7 @@ export function Header({ icon, title, description }: { icon: React.ReactNode; ti
   return (
     <>
       <PageHeader icon={icon} title={title} description={description} actions={<span className={`${styles.tag} ${styles.mu}`}>Chỉ xem (cán bộ)</span>} />
-      <p role="note"><SampleTag /> Tên khách, số điện thoại, đơn hàng và doanh thu trên trang này là dữ liệu mẫu, chưa có số liệu thật.</p>
+      <p role="note" className={styles.sampleNote}><SampleTag /> Tên khách, số điện thoại, đơn hàng và doanh thu trên trang này là dữ liệu mẫu, chưa có số liệu thật.</p>
     </>
   )
 }
