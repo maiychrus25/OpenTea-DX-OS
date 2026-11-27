@@ -49,7 +49,10 @@ export default async function PlatformPage() {
                     <td>{htx._count.households}</td>
                     <td>{htx._count.memberships}</td>
                     <td>{htx.created_at.toLocaleDateString('vi-VN')}</td>
-                    <td><Link href={`/platform/htx/${htx.htx_code}/ai`} className={kit.linkButton}>Cấu hình AI</Link></td>
+                    <td>
+                      {/* AI settings are keyed by htx_code, so a cooperative without a code has none to open. */}
+                      {htx.htx_code ? <Link href={`/platform/htx/${htx.htx_code}/ai`} className={kit.linkButton}>Cấu hình AI</Link> : 'Chưa có mã HTX'}
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -43,6 +43,15 @@ describe('platform area', () => {
     expect(screen.getByRole('button', { name: 'Tạo HTX' })).toBeInTheDocument()
   })
 
+  test('a cooperative without a code gets no AI link', async () => {
+    ;(prisma.htxProfile.findMany as jest.Mock).mockResolvedValue([
+      { id: 'n', htx_code: '', name: 'HTX No Code', created_at: new Date('2026-01-02'), _count: { households: 0, memberships: 0 } },
+    ])
+    render(await PlatformPage())
+    expect(screen.queryByRole('link', { name: 'Cấu hình AI' })).not.toBeInTheDocument()
+    expect(screen.getByText('Chưa có mã HTX')).toBeInTheDocument()
+  })
+
   test('the empty list says so', async () => {
     ;(prisma.htxProfile.findMany as jest.Mock).mockResolvedValue([])
     render(await PlatformPage())
