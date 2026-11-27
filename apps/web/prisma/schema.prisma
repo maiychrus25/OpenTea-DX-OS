@@ -108,6 +108,9 @@ model HtxProfile {
   input_advances     InputAdvance[]
   settlement_periods SettlementPeriod[]
   ledger_entries     MemberLedgerEntry[]
+  certificates       HtxCertificate[]
+  // Phase 2: names of people reach the public trace page only when the cooperative allows it.
+  public_show_names  Boolean  @default(false)
 
   @@map("htx_profiles")
 }
@@ -309,6 +312,7 @@ model Lot {
   updated_at          DateTime  @updatedAt
 
   lot_parcels LotParcel[]
+  certificates LotCertificate[]
 
   htx_profile_id String?
   htx_profile    HtxProfile? @relation(fields: [htx_profile_id], references: [id])
@@ -718,4 +722,48 @@ model MemberLedgerEntry {
 
   @@index([household_id, created_at])
   @@map("member_ledger_entries")
+}
+
+// Phase 2 track B: certificates with a stored file. Never deleted; revoked instead.
+enum CertificateKind {
+  VIETGAP
+  OCOP
+  ORGANIC
+  OTHER
+}
+
+model HtxCertificate {
+  id             String          @id @default(cuid())
+  htx_profile_id String
+  htx_profile    HtxProfile      @relation(fields: [htx_profile_id], references: [id])
+  kind           CertificateKind
+  number         String
+  issuer         String
+  issued_on      DateTime        @db.Date
+  expires_on     DateTime        @db.Date
+  scope_note     String?
+  file_key       String // para/<htx_code>/Certificates/...
+  file_name      String
+  file_mime      String
+  file_size      Int
+  created_by_id  String // Keycloak sub
+  created_at     DateTime        @default(now())
+  revoked_at     DateTime?
+  revoked_by_id  String?
+  revoke_reason  String?
+
+  lots LotCertificate[]
+
+  @@index([htx_profile_id, expires_on])
+  @@map("htx_certificates")
+}
+
+model LotCertificate {
+  lot_id         String
+  lot            Lot            @relation(fields: [lot_id], references: [id])
+  certificate_id String
+  certificate    HtxCertificate @relation(fields: [certificate_id], references: [id])
+
+  @@id([lot_id, certificate_id])
+  @@map("lot_certificates")
 }
