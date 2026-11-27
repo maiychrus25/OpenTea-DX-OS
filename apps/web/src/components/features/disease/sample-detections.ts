@@ -40,7 +40,7 @@ export const DETECTIONS: Detection[] = [
     id: 'PH-2611-014', name: 'Bọ xít muỗi', place: 'P-TC-001 · Ô B2', time: '26/11, 06:40', level: 'Cao', levelTone: 'bd', confidence: 92,
     status: 'Đã duyệt phun', statusTone: 'soft', open: true, image: '/images/diagnosis/bo-xit-nho.jpg', photo: '/images/diagnosis/bo-xit.jpg',
     symptom: 'Búp có chấm đen, héo đầu', area: '≈ 120 m² (12%)', camera: 2,
-    advice: [['Thuốc', 'Abamectin 1.8EC'], ['Liều lượng', '30 ml / 100 lít nước'], ['Phạm vi', 'Ô B2 và các ô lân cận B1, B3'], ['Thời điểm', 'Sáng sớm, trời khô ráo'], ['Thời gian cách ly', '7 ngày']],
+    advice: [['Thuốc và liều', 'Theo chỉ định của cán bộ kỹ thuật'], ['Phạm vi', 'Ô B2 và các ô lân cận B1, B3'], ['Thời điểm', 'Sáng sớm, trời khô ráo'], ['Thời gian cách ly', 'Theo nhãn thuốc được chỉ định']],
     steps: [
       { title: 'AI phát hiện', text: '26/11, 06:40 · Camera 02', state: 'done' },
       { title: 'Cán bộ xác nhận bệnh', text: '26/11, 08:15 · Cán bộ kỹ thuật', state: 'done' },

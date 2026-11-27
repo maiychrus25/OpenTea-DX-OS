@@ -104,7 +104,7 @@ export function CameraWatch() {
                 </dl>
                 {selected.advice.length > 0 && (
                   <div className={styles.advice}>
-                    <h3><Sparkles size={14} aria-hidden="true" />AI đề xuất, cán bộ đã điều chỉnh (ví dụ)</h3>
+                    <h3><Sparkles size={14} aria-hidden="true" />Hướng xử lý (ví dụ)<SampleTag /></h3>
                     <dl className={styles.rows}>{selected.advice.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
                   </div>
                 )}
