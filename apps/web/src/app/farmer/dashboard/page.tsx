@@ -4,7 +4,7 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { AlertTriangle, BookOpen, Camera, FileText, History, PenLine, Sprout, Store, MessageCircle } from 'lucide-react'
+import { AlertTriangle, ArrowRight, BookOpen, Calendar, Camera, ChevronRight, Droplet, FileText, History, Leaf, PenLine, Scissors, SprayCan, Sprout, Store, MessageCircle } from 'lucide-react'
 
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { PrismaInstalledAppRepository } from '@/infrastructure/db/repositories/prisma-installed-app-repository'
@@ -62,16 +62,20 @@ const SHORTCUTS = [
   { href: '/farmer/handbook', icon: BookOpen, tone: 'soft', title: 'Cẩm nang canh tác', detail: 'Việc theo mùa và cách phòng trị bệnh cho cây chè' },
 ]
 
-function dayMonth(date: Date): string {
-  return date.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit' })
-}
-
 function fullDay(date: Date): string {
   return date.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+const ACTIVITY_ICON = {
+  SOWING: { icon: Sprout, tone: 'soft' },
+  FERTILIZING: { icon: Sprout, tone: 'soft' },
+  SPRAYING: { icon: SprayCan, tone: 'soft' },
+  IRRIGATION: { icon: Droplet, tone: 'in' },
+  HARVEST: { icon: Scissors, tone: 'amber' },
+  OTHER: { icon: Leaf, tone: 'soft' },
+} as const
 
 function getParcelStatusLabel(status: string) {
   switch (status) {
@@ -158,14 +162,22 @@ export default async function FarmerDashboard() {
       ])
     : [[], null]
 
-  // The coming harvests, one line under each parcel.
-  const harvests = household
-    ? await prisma.parcelCropCycle.findMany({
-        where: { parcel: { household_id: household.id }, harvested_at: null, estimated_harvest_date: { gte: new Date(now.getTime() - DAY_MS) } },
-        orderBy: { estimated_harvest_date: 'asc' },
-        select: { id: true, parcel_id: true, estimated_harvest_date: true },
-      })
-    : []
+  // Last care per parcel and the coming harvests, for the parcel cards and the table.
+  const [lastCare, harvests] = household
+    ? await Promise.all([
+        prisma.journalEntry.findMany({
+          where: { parcel: { household_id: household.id }, status: { not: 'DRAFT' } },
+          orderBy: { entry_date: 'desc' },
+          distinct: ['parcel_id'],
+          select: { parcel_id: true, entry_date: true, activity_type: true, activities: { select: { product_name: true }, take: 1 } },
+        }),
+        prisma.parcelCropCycle.findMany({
+          where: { parcel: { household_id: household.id }, harvested_at: null, estimated_harvest_date: { gte: new Date(now.getTime() - DAY_MS) } },
+          orderBy: { estimated_harvest_date: 'asc' },
+          select: { id: true, season: true, parcel_id: true, estimated_harvest_date: true },
+        }),
+      ])
+    : [[], []]
 
   // The page still renders when the app list cannot be read.
   const supplies = await new PrismaInstalledAppRepository()
@@ -197,109 +209,161 @@ export default async function FarmerDashboard() {
         />
       </div>
 
-      <nav className={styles.shortcuts} aria-label="Lối tắt">
-        {shortcuts.map(({ href, icon: Icon, title }) => (
-          <Link key={href} href={href}><Icon size={15} aria-hidden="true" />{title}</Link>
+      <div className={styles.shortcuts}>
+        {shortcuts.map(({ href, icon: Icon, tone, title, detail }) => (
+          <Link key={href} href={href} className={`${kit.pn} ${styles.shortcut}`}>
+            <span className={`${kit.ico} ${kit[tone]}`}><Icon size={20} aria-hidden="true" /></span>
+            <span className={kit.grow}><strong>{title}</strong><small>{detail}</small></span>
+            <ChevronRight size={18} aria-hidden="true" />
+          </Link>
         ))}
-      </nav>
+      </div>
 
-      <div className={styles.columns}>
-        <div className={styles.main}>
-          {withdrawals.length > 0 && (
-            <section className={styles.alert} role="status">
-              <ul aria-label="Thời gian cách ly">
-                {withdrawals.map(w => (
-                  <li key={w.parcel_code}>
-                    <AlertTriangle size={16} aria-hidden="true" />
+      <div className={`${styles.pair} ${withdrawals.length === 0 ? styles.single : ''}`}>
+        {withdrawals.length > 0 && (
+          <section className={styles.alert} role="status">
+            <ul className={styles.withdrawals} aria-label="Thời gian cách ly">
+              {withdrawals.map(w => (
+                <li key={w.parcel_code}>
+                  <div className={styles.alertHead}>
+                    <AlertTriangle size={20} aria-hidden="true" />
                     <strong>{`Thửa ${w.parcel_code} còn ${w.days} ngày cách ly`}</strong>
-                    <span>Hái từ {fullDay(w.safe)}</span>
-                    {w.total !== null && (
-                      <span className={styles.bar} aria-label={`Đã qua ${w.passed}/${w.total} ngày`}><span style={{ width: `${Math.round((w.passed / w.total) * 100)}%` }} /></span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          <section className={`${kit.pn} ${styles.card} ${styles.parcels}`} aria-label="Tình trạng thửa đất">
-            <div className={styles.head}>
-              <h2>Thửa chè và lịch hái <small>{parcels.length} thửa · {hectares(totalHa)} ha</small></h2>
-              <Link href="/farmer/schedule">Xem lịch</Link>
-            </div>
-            {parcels.length === 0 ? (
-              <EmptyState icon={<Sprout />} title="Bạn chưa có thửa đất nào được phân công." />
-            ) : (
-              <ul className={styles.rows}>
-                {parcels.map(parcel => {
-                  const harvest = harvests.find(cycle => cycle.parcel_id === parcel.id)
-                  const blocked = withdrawals.find(w => w.parcel_code === parcel.parcel_code)
-                  const when = harvest?.estimated_harvest_date ?? null
-                  const yieldKg = parcel.estimated_yield_per_ha ? Math.round(parcel.estimated_yield_per_ha * parcel.area_ha) : null
-                  return (
-                    <li key={parcel.id}>
-                      <span className={kit.grow}>
-                        <strong>{parcel.parcel_code}</strong>
-                        <small>{parcel.crop_type} · {hectares(parcel.area_ha)} ha</small>
-                      </span>
-                      <span className={styles.harvestDay}>
-                        {when ? <>Hái {fullDay(when)}{yieldKg ? ` · ~${yieldKg.toLocaleString('vi-VN')} kg` : ''}</> : 'Chưa xếp lịch hái'}
-                        {when && blocked && blocked.safe > when && <small className={styles.danger}>Còn cách ly đến {fullDay(blocked.safe)}</small>}
-                      </span>
-                      <span className={`${kit.tag} ${kit[PARCEL_TONE[parcel.status] ?? 'mu']}`}>{getParcelStatusLabel(parcel.status)}</span>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </section>
-
-          <section className={`${kit.pn} ${styles.card} ${styles.recent}`} aria-label="Nhật ký gần đây">
-            <div className={styles.head}><h2>Nhật ký gần đây</h2><Link href="/farmer/journal">Xem tất cả</Link></div>
-            {entries.length === 0 ? (
-              <EmptyState icon={<FileText />} title="Chưa có nhật ký nào" />
-            ) : (
-              <ul className={styles.rows}>
-                {entries.map(entry => {
-                  const status = ENTRY_STATUS[entry.status as keyof typeof ENTRY_STATUS] ?? ENTRY_STATUS.DRAFT
-                  return (
-                    <li key={entry.id}>
-                      <span className={kit.grow}><strong>{ACTIVITY_LABELS[entry.activity_type] ?? entry.activity_type}</strong> · {entry.parcel.parcel_code}</span>
-                      <span className={styles.date}>{dayMonth(entry.entry_date)}</span>
-                      <span className={`${kit.tag} ${kit[status.tone]}`}>{status.label}</span>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </section>
-        </div>
-
-        <div className={styles.side}>
-          <TodayTasks className={`${styles.card} ${styles.tasks}`} />
-
-          <section className={`${kit.pn} ${styles.card} ${styles.disease}`} aria-label="Báo cáo sâu bệnh">
-            <div className={styles.head}>
-              <h2>Báo cáo sâu bệnh <SampleTag /></h2>
-              <Link href="/farmer/diagnosis">Xem tất cả</Link>
-            </div>
-            <ul className={styles.rows}>
-              {DETECTIONS.map(d => (
-                <li key={d.id}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={d.image} alt="" />
-                  <Link href="/farmer/diagnosis" className={kit.grow}>
-                    <strong>{d.name}</strong>
-                    <small>{d.status}</small>
-                  </Link>
-                  <span className={`${kit.tag} ${kit[d.levelTone]}`}>{d.level}</span>
+                    <Link href="/farmer/schedule" className={styles.alertLink}>Xem lịch</Link>
+                  </div>
+                  {w.total !== null && (
+                    <div className={styles.bar} aria-hidden="true"><span style={{ width: `${Math.round((w.passed / w.total) * 100)}%` }} /></div>
+                  )}
+                  <p>
+                    {w.total !== null && <span>Đã qua {w.passed}/{w.total} ngày ({Math.round((w.passed / w.total) * 100)}%)</span>}
+                    <span>Thu hái sớm nhất: <b>{fullDay(w.safe)}</b></span>
+                  </p>
                 </li>
               ))}
             </ul>
-            <p className={styles.diseaseNote}>Minh hoạ, không làm theo để phun thuốc.</p>
           </section>
-        </div>
+        )}
+        <TodayTasks className={styles.tasks} />
       </div>
+
+      <section className={`${kit.pn} ${styles.disease}`} aria-label="Báo cáo sâu bệnh">
+        <div className={kit.ph}>
+          <h2>Báo cáo sâu bệnh <SampleTag /></h2>
+          <Link href="/farmer/diagnosis">Xem chẩn đoán <ArrowRight size={14} aria-hidden="true" /></Link>
+        </div>
+        <ul className={styles.findings}>
+          {DETECTIONS.map(d => (
+            <li key={d.id}>
+              <Link href="/farmer/diagnosis">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={d.image} alt="" />
+                <span className={kit.grow}>
+                  <strong>{d.name} <span className={`${kit.tag} ${kit[d.levelTone]}`}>{d.level}</span></strong>
+                  <small>{d.place} · {d.time}</small>
+                  <small>{d.status}</small>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <p className={styles.diseaseNote}>Minh hoạ, HTX chưa lắp camera: không làm theo để phun thuốc.</p>
+      </section>
+
+      <div className={styles.columns}>
+        <section className={`${kit.pn} ${styles.parcels}`} aria-label="Tình trạng thửa đất">
+          <div className={kit.ph}>
+            <span>
+              <h2>Tình trạng thửa đất</h2>
+              <small className={kit.muted}>Tổng: {parcels.length} thửa · {hectares(totalHa)} ha</small>
+            </span>
+            <Link href="/farmer/schedule">Xem lịch <ArrowRight size={14} aria-hidden="true" /></Link>
+          </div>
+          {parcels.length === 0 ? (
+            <EmptyState icon={<Sprout />} title="Bạn chưa có thửa đất nào được phân công." />
+          ) : (
+            <ul className={styles.cards}>
+              {parcels.map(parcel => {
+                const care = lastCare.find(entry => entry.parcel_id === parcel.id)
+                const harvest = harvests.find(cycle => cycle.parcel_id === parcel.id)
+                const product = care?.activities?.[0]?.product_name
+                return (
+                  <li key={parcel.id} className={styles.parcel}>
+                    <span className={`${kit.ico} ${kit.soft}`}><Sprout size={20} aria-hidden="true" /></span>
+                    <span><strong className={kit.mono}>{parcel.parcel_code}</strong><small>{parcel.crop_type}</small></span>
+                    <span><strong>{hectares(parcel.area_ha)} ha</strong><small>Diện tích</small></span>
+                    <span className={`${kit.tag} ${kit[PARCEL_TONE[parcel.status] ?? 'mu']}`}>{getParcelStatusLabel(parcel.status)}</span>
+                    <p>
+                      <span><Calendar size={13} aria-hidden="true" />{care ? `Lần chăm sóc: ${fullDay(care.entry_date)} (${ACTIVITY_LABELS[care.activity_type] ?? care.activity_type}${product ? ` ${product}` : ''})` : 'Chưa ghi lần chăm sóc nào'}</span>
+                      {harvest?.estimated_harvest_date && <span><Leaf size={13} aria-hidden="true" />Dự kiến thu hái: {fullDay(harvest.estimated_harvest_date)}</span>}
+                    </p>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+
+        <section className={`${kit.pn} ${styles.recent}`} aria-label="Nhật ký gần đây">
+          <div className={kit.ph}><h2>Nhật ký gần đây</h2><Link href="/farmer/journal">Xem tất cả <ArrowRight size={14} aria-hidden="true" /></Link></div>
+          {entries.length === 0 ? (
+            <EmptyState icon={<FileText />} title="Chưa có nhật ký nào" />
+          ) : (
+            <ul className={kit.list}>
+              {entries.map(entry => {
+                const status = ENTRY_STATUS[entry.status as keyof typeof ENTRY_STATUS] ?? ENTRY_STATUS.DRAFT
+                const { icon: Icon, tone } = ACTIVITY_ICON[entry.activity_type as keyof typeof ACTIVITY_ICON] ?? ACTIVITY_ICON.OTHER
+                return (
+                  <li key={entry.id}>
+                    <Link href="/farmer/journal" className={styles.entry}>
+                      <span className={`${kit.ico} ${kit[tone]}`}><Icon size={18} aria-hidden="true" /></span>
+                      <span className={kit.grow}><strong>{ACTIVITY_LABELS[entry.activity_type] ?? entry.activity_type}</strong> · {entry.parcel.parcel_code}</span>
+                      <span className={styles.date}><Calendar size={13} aria-hidden="true" />{fullDay(entry.entry_date)}</span>
+                      <span className={`${kit.tag} ${kit[status.tone]}`}>{status.label}</span>
+                      <ChevronRight size={16} aria-hidden="true" />
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <section className={`${kit.pn} ${styles.harvest}`} aria-label="Lịch thu hái sắp tới">
+        <div className={kit.ph}><h2>Lịch thu hái sắp tới</h2><Link href="/farmer/schedule">Xem lịch <ArrowRight size={14} aria-hidden="true" /></Link></div>
+        {harvests.length === 0 ? (
+          <p className={styles.empty}>Chưa có lịch thu hái sắp tới.</p>
+        ) : (
+          <div className={styles.tableScroll}>
+            <table className={styles.table}>
+              <thead>
+                <tr><th>Lứa</th><th>Thửa chè</th><th>Giống chè</th><th>Diện tích</th><th>Ngày dự kiến</th><th>Ghi chú</th></tr>
+              </thead>
+              <tbody>
+                {harvests.slice(0, 3).map((cycle, index) => {
+                  const parcel = parcels.find(p => p.id === cycle.parcel_id)
+                  const when = cycle.estimated_harvest_date!
+                  const blocked = withdrawals.find(w => w.parcel_code === parcel?.parcel_code)
+                  const yieldKg = parcel?.estimated_yield_per_ha ? Math.round(parcel.estimated_yield_per_ha * parcel.area_ha) : null
+                  const note = [
+                    blocked ? (blocked.safe > when ? `Còn cách ly đến ${fullDay(blocked.safe)}` : 'Hết cách ly trước ngày hái') : null,
+                    yieldKg ? `Sản lượng dự kiến ~ ${yieldKg.toLocaleString('vi-VN')} kg` : null,
+                  ].filter(Boolean).join(' · ')
+                  return (
+                    <tr key={cycle.id}>
+                      <td>{cycle.season || `Lứa ${index + 1}`}</td>
+                      <td className={kit.mono}>{parcel?.parcel_code}</td>
+                      <td>{parcel?.crop_type}</td>
+                      <td>{parcel ? `${hectares(parcel.area_ha)} ha` : ''}</td>
+                      <td>{fullDay(when)}</td>
+                      <td>{note || '—'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </main>
   )
 }
