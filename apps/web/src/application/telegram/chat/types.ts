@@ -47,6 +47,17 @@ export const TOOL_NAMES = [
   'parcels',
   'lots',
   'nearby',
+  // Issue #80 read tools (plan C1).
+  'search',
+  'certificate',
+  'soil',
+  'photo',
+  'households',
+  'members',
+  'diseases',
+  'profile',
+  'documents',
+  'partners',
 ] as const
 export type ToolName = (typeof TOOL_NAMES)[number]
 

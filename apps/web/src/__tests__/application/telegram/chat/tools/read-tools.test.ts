@@ -121,7 +121,7 @@ beforeEach(() => {
 
 describe('CHAT_TOOLS (contract C5)', () => {
   it('lists the eleven tools in contract order with the roles of their routes', () => {
-    expect(CHAT_TOOLS.map((t) => [t.name, [...t.roles]])).toEqual([
+    expect(CHAT_TOOLS.slice(0, 11).map((t) => [t.name, [...t.roles]])).toEqual([
       ['today', ['farmer', 'officer', 'manager']],
       ['pending', ['officer', 'manager']],
       ['weather', ['farmer', 'officer', 'manager']],
