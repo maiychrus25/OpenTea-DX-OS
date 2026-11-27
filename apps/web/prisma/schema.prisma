@@ -3,7 +3,7 @@
 
 // apps/web/prisma/schema.prisma
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "windows", "linux-musl-openssl-3.0.x"]
 }
 
@@ -95,15 +95,19 @@ model HtxProfile {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
-  households    Household[]
-  pesticide_labels HtxPesticideLabel[]
-  lots          Lot[]
-  notifications Notification[]
-  partners      Partner[]
-  memberships   HtxMembership[]
+  households         Household[]
+  pesticide_labels   HtxPesticideLabel[]
+  lots               Lot[]
+  notifications      Notification[]
+  partners           Partner[]
+  memberships        HtxMembership[]
   leaf_grades        LeafGrade[]
   daily_leaf_prices  DailyLeafPrice[]
   fresh_leaf_tickets FreshLeafTicket[]
+  input_items        InputItem[]
+  input_advances     InputAdvance[]
+  settlement_periods SettlementPeriod[]
+  ledger_entries     MemberLedgerEntry[]
 
   @@map("htx_profiles")
 }
@@ -111,21 +115,28 @@ model HtxProfile {
 // â”€â”€â”€ Households â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model Household {
-  id               String   @id @default(cuid())
-  name             String
-  phone            String   @unique
-  address          String?
-  keycloak_user_id String? // linked after farmer account created
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  id                String   @id @default(cuid())
+  name              String
+  phone             String   @unique
+  address           String?
+  keycloak_user_id  String? // linked after farmer account created
+  // Payout account for the settlement slip. Personal data: never sent to Telegram, agents or logs.
+  bank_bin          String?
+  bank_account      String?
+  bank_account_name String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
 
   parcels         Parcel[]
   disease_reports DiseaseReport[]
-  notifications   Notification[]  @relation("RecipientHousehold")
+  notifications   Notification[]      @relation("RecipientHousehold")
   leaf_tickets    FreshLeafTicket[]
+  input_advances  InputAdvance[]
+  settlements     MemberSettlement[]
+  ledger_entries  MemberLedgerEntry[]
 
-  htx_profile_id  String?
-  htx_profile     HtxProfile?     @relation(fields: [htx_profile_id], references: [id])
+  htx_profile_id String?
+  htx_profile    HtxProfile? @relation(fields: [htx_profile_id], references: [id])
 
   @@index([htx_profile_id])
   @@map("households")
@@ -161,10 +172,10 @@ model Parcel {
 }
 
 model ParcelCropCycle {
-  id           String    @id @default(cuid())
-  parcel_id    String
-  parcel       Parcel    @relation(fields: [parcel_id], references: [id])
-  season       String? // e.g. "Lứa 1/2026"
+  id                     String    @id @default(cuid())
+  parcel_id              String
+  parcel                 Parcel    @relation(fields: [parcel_id], references: [id])
+  season                 String? // e.g. "Lứa 1/2026"
   sowed_at               DateTime?
   harvested_at           DateTime?
   estimated_harvest_date DateTime?
@@ -180,15 +191,15 @@ model ParcelCropCycle {
 // â”€â”€â”€ Journal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model JournalEntry {
-  id              String       @id @default(cuid())
+  id              String           @id @default(cuid())
   parcel_id       String
-  parcel          Parcel       @relation(fields: [parcel_id], references: [id])
+  parcel          Parcel           @relation(fields: [parcel_id], references: [id])
   entry_date      DateTime
   activity_type   ActivityType
   performed_by    String // name string
   submitted_by_id String? // keycloak user ID
   submitted_role  UserRole
-  status          String       @default("PENDING_APPROVAL")
+  status          String           @default("PENDING_APPROVAL")
   approved_by_id  String? // keycloak user ID of officer
   approved_at     DateTime?
   review_note     String? // reason given when an officer rejects or asks for changes
@@ -205,8 +216,8 @@ model JournalEntry {
   weather_humidity      Float?
 
   // Image attachment
-  photo_url             String?
-  photo_minio_key       String?
+  photo_url       String?
+  photo_minio_key String?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -219,18 +230,18 @@ model JournalEntry {
 }
 
 model JournalActivity {
-  id               String       @id @default(cuid())
-  journal_entry_id String
-  journal_entry    JournalEntry @relation(fields: [journal_entry_id], references: [id], onDelete: Cascade)
-  activity_detail  String
-  product_name     String? // for Spraying/Fertilizing
-  dosage           String?
-  withdrawal_days  Int? // for Spraying
-  safe_harvest_date DateTime? // entry_date + withdrawal_days
-  fresh_leaf_kg    Float? // for Harvest
+  id                   String            @id @default(cuid())
+  journal_entry_id     String
+  journal_entry        JournalEntry      @relation(fields: [journal_entry_id], references: [id], onDelete: Cascade)
+  activity_detail      String
+  product_name         String? // for Spraying/Fertilizing
+  dosage               String?
+  withdrawal_days      Int? // for Spraying
+  safe_harvest_date    DateTime? // entry_date + withdrawal_days
+  fresh_leaf_kg        Float? // for Harvest
   pesticide_product_id String?
   pesticide_product    PesticideProduct? @relation(fields: [pesticide_product_id], references: [id])
-  created_at       DateTime     @default(now())
+  created_at           DateTime          @default(now())
 
   @@map("journal_activities")
 }
@@ -249,8 +260,9 @@ model PesticideProduct {
   created_at            DateTime       @default(now())
   updated_at            DateTime       @updatedAt
 
-  activities JournalActivity[]
-  labels     HtxPesticideLabel[]
+  activities  JournalActivity[]
+  labels      HtxPesticideLabel[]
+  input_items InputItem[]
 
   @@map("pesticide_products")
 }
@@ -275,26 +287,26 @@ model HtxPesticideLabel {
 // â”€â”€â”€ Lots & QR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model Lot {
-  id               String    @id @default(cuid())
-  lot_code         String    @unique // e.g. "TC-CHE-20261110-001"
-  commodity        String
-  quality_grade    String? // "Grade 1" | "Grade 2" | "Ungraded"
-  harvest_date     DateTime
+  id                  String    @id @default(cuid())
+  lot_code            String    @unique // e.g. "TC-CHE-20261110-001"
+  commodity           String
+  quality_grade       String? // "Grade 1" | "Grade 2" | "Ungraded"
+  harvest_date        DateTime
   estimated_weight_kg Float?
-  actual_weight_kg Float?
-  packaging_type   String?
-  destination      String? // Nơi giao hàng
-  buyer_name       String? // Tên người mua
-  packaging_date   DateTime?
-  total_weight_kg  Float?
-  packaging_spec   String?
-  status           LotStatus @default(DRAFT)
-  qr_image_url     String? // MinIO URL of generated QR PNG
-  certificate_keys String[]  @default([]) // MinIO object keys of attached certificates
-  public_page_data Json? // JSONB snapshot of trace data for public QR page
-  created_by_id    String? // keycloak officer user ID
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  actual_weight_kg    Float?
+  packaging_type      String?
+  destination         String? // Nơi giao hàng
+  buyer_name          String? // Tên người mua
+  packaging_date      DateTime?
+  total_weight_kg     Float?
+  packaging_spec      String?
+  status              LotStatus @default(DRAFT)
+  qr_image_url        String? // MinIO URL of generated QR PNG
+  certificate_keys    String[]  @default([]) // MinIO object keys of attached certificates
+  public_page_data    Json? // JSONB snapshot of trace data for public QR page
+  created_by_id       String? // keycloak officer user ID
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
 
   lot_parcels LotParcel[]
 
@@ -306,11 +318,11 @@ model Lot {
 }
 
 model LotParcel {
-  id        String @id @default(cuid())
+  id        String           @id @default(cuid())
   lot_id    String
-  lot       Lot    @relation(fields: [lot_id], references: [id])
+  lot       Lot              @relation(fields: [lot_id], references: [id])
   parcel_id String
-  parcel    Parcel @relation(fields: [parcel_id], references: [id])
+  parcel    Parcel           @relation(fields: [parcel_id], references: [id])
   cycle_id  String?
   cycle     ParcelCropCycle? @relation(fields: [cycle_id], references: [id])
 
@@ -321,21 +333,21 @@ model LotParcel {
 // â”€â”€â”€ Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model Notification {
-  id                    String           @id @default(cuid())
-  type                  NotificationType
-  title                 String
-  body                  String
-  recipient_id          String? // keycloak user ID (null = system broadcast)
-  household_id          String?
-  household             Household?       @relation("RecipientHousehold", fields: [household_id], references: [id])
-  htx_profile_id        String? // owning HTX of a broadcast (recipient_id is null)
-  htx_profile           HtxProfile?      @relation(fields: [htx_profile_id], references: [id])
-  sender_id             String? // keycloak user ID of sender
-  is_read               Boolean          @default(false)
-  pushed_to_mattermost  Boolean          @default(false) // Story 5.7: track Mattermost push status
-  deep_link_url         String?
-  tts_text              String? // pre-generated TTS text (summary)
-  created_at            DateTime         @default(now())
+  id                   String           @id @default(cuid())
+  type                 NotificationType
+  title                String
+  body                 String
+  recipient_id         String? // keycloak user ID (null = system broadcast)
+  household_id         String?
+  household            Household?       @relation("RecipientHousehold", fields: [household_id], references: [id])
+  htx_profile_id       String? // owning HTX of a broadcast (recipient_id is null)
+  htx_profile          HtxProfile?      @relation(fields: [htx_profile_id], references: [id])
+  sender_id            String? // keycloak user ID of sender
+  is_read              Boolean          @default(false)
+  pushed_to_mattermost Boolean          @default(false) // Story 5.7: track Mattermost push status
+  deep_link_url        String?
+  tts_text             String? // pre-generated TTS text (summary)
+  created_at           DateTime         @default(now())
 
   @@index([recipient_id, is_read])
   @@index([htx_profile_id])
@@ -347,27 +359,27 @@ model Notification {
 // â”€â”€â”€ Disease Detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model DiseaseReport {
-  id                  String              @id @default(cuid())
-  parcel_id           String
-  parcel              Parcel              @relation(fields: [parcel_id], references: [id])
-  household_id        String
-  household           Household           @relation(fields: [household_id], references: [id])
-  detected_by_id      String // farmer keycloak user ID
-  detection_date      DateTime
-  photo_url           String // MinIO pre-signed URL (stored as path key)
-  photo_minio_key     String // MinIO object key for generating new URLs
-  gps_lat             Float?
-  gps_lng             Float?
-  ai_disease_name     String
-  ai_confidence       Float
-  confirmed_diagnosis String?
-  confirmed_by_id     String? // officer keycloak user ID
-  confirmed_at        DateTime?
-  treatment_notes     String? // officer-internal only, never shown to farmer
+  id                       String              @id @default(cuid())
+  parcel_id                String
+  parcel                   Parcel              @relation(fields: [parcel_id], references: [id])
+  household_id             String
+  household                Household           @relation(fields: [household_id], references: [id])
+  detected_by_id           String // farmer keycloak user ID
+  detection_date           DateTime
+  photo_url                String // MinIO pre-signed URL (stored as path key)
+  photo_minio_key          String // MinIO object key for generating new URLs
+  gps_lat                  Float?
+  gps_lng                  Float?
+  ai_disease_name          String
+  ai_confidence            Float
+  confirmed_diagnosis      String?
+  confirmed_by_id          String? // officer keycloak user ID
+  confirmed_at             DateTime?
+  treatment_notes          String? // officer-internal only, never shown to farmer
   treatment_recommendation String? // farmer-visible treatment advice
-  status              DiseaseReportStatus @default(PENDING)
-  created_at          DateTime            @default(now())
-  updated_at          DateTime            @updatedAt
+  status                   DiseaseReportStatus @default(PENDING)
+  created_at               DateTime            @default(now())
+  updated_at               DateTime            @updatedAt
 
   @@map("disease_reports")
 }
@@ -375,7 +387,7 @@ model DiseaseReport {
 // â”€â”€â”€ Market & Economic Data (n8n writes, Next.js reads) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model MarketData {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   source     String // "USDA" | "WTO" | "FAOSTAT" | "NASA"
   commodity  String
   metric     String // "export_price" | "import_tariff" | "production_volume"
@@ -528,32 +540,33 @@ enum LeafTicketStatus {
 
 // Immutable once written: a wrong ticket is voided and weighed again.
 model FreshLeafTicket {
-  id               String           @id @default(cuid())
+  id               String            @id @default(cuid())
   htx_profile_id   String
-  htx_profile      HtxProfile       @relation(fields: [htx_profile_id], references: [id])
-  ticket_no        String           @unique // {HTX_CODE}-PC-{YYYYMMDD}-{NNN}
+  htx_profile      HtxProfile        @relation(fields: [htx_profile_id], references: [id])
+  ticket_no        String            @unique // {HTX_CODE}-PC-{YYYYMMDD}-{NNN}
   household_id     String
-  household        Household        @relation(fields: [household_id], references: [id])
+  household        Household         @relation(fields: [household_id], references: [id])
   parcel_id        String
-  parcel           Parcel           @relation(fields: [parcel_id], references: [id])
+  parcel           Parcel            @relation(fields: [parcel_id], references: [id])
   cycle_id         String? // null for a parcel without any flush (legacy data)
-  cycle            ParcelCropCycle? @relation(fields: [cycle_id], references: [id])
+  cycle            ParcelCropCycle?  @relation(fields: [cycle_id], references: [id])
   grade_id         String
-  grade            LeafGrade        @relation(fields: [grade_id], references: [id])
+  grade            LeafGrade         @relation(fields: [grade_id], references: [id])
   weighed_at       DateTime
-  gross_kg         Decimal          @db.Decimal(7, 1)
-  deduction_pct    Decimal          @db.Decimal(4, 1)
-  net_kg           Decimal          @db.Decimal(7, 1)
+  gross_kg         Decimal           @db.Decimal(7, 1)
+  deduction_pct    Decimal           @db.Decimal(4, 1)
+  net_kg           Decimal           @db.Decimal(7, 1)
   price_vnd_per_kg Int
   amount_vnd       BigInt
-  status           LeafTicketStatus @default(VALID)
+  status           LeafTicketStatus  @default(VALID)
   void_reason      String?
   voided_by_id     String?
   voided_at        DateTime?
   created_by_id    String // Keycloak sub
   client_id        String? // client-generated uuid, makes replays idempotent
-  settlement_id    String? // sub-project 4 adds the foreign key
-  created_at       DateTime         @default(now())
+  settlement_id    String?
+  settlement       MemberSettlement? @relation(fields: [settlement_id], references: [id], onDelete: Restrict)
+  created_at       DateTime          @default(now())
 
   @@unique([created_by_id, client_id])
   @@index([htx_profile_id, weighed_at])
@@ -561,4 +574,146 @@ model FreshLeafTicket {
   @@index([parcel_id])
   @@index([cycle_id])
   @@map("fresh_leaf_tickets")
+}
+
+// ─── Input advances, member ledger and settlement (S4) ──────────────────────
+
+enum InputKind {
+  FERTILIZER
+  PESTICIDE
+  OTHER
+}
+
+enum SettlementStatus {
+  DRAFT
+  CLOSED
+}
+
+enum LedgerEntryType {
+  LEAF_CREDIT
+  INPUT_DEBIT
+  PAYOUT
+  ADJUSTMENT
+}
+
+enum PaymentMethod {
+  TRANSFER
+  CASH
+}
+
+model InputItem {
+  id                   String            @id @default(cuid())
+  htx_profile_id       String
+  htx_profile          HtxProfile        @relation(fields: [htx_profile_id], references: [id])
+  name                 String
+  unit                 String
+  unit_price_vnd       Int
+  kind                 InputKind
+  pesticide_product_id String?
+  pesticide_product    PesticideProduct? @relation(fields: [pesticide_product_id], references: [id])
+  active               Boolean           @default(true)
+  created_at           DateTime          @default(now())
+  updated_at           DateTime          @updatedAt
+
+  advances InputAdvance[]
+
+  @@unique([htx_profile_id, name])
+  @@map("input_items")
+}
+
+// Immutable once written: a wrong advance is voided and entered again. The price is copied from the item.
+model InputAdvance {
+  id             String            @id @default(cuid())
+  htx_profile_id String
+  htx_profile    HtxProfile        @relation(fields: [htx_profile_id], references: [id])
+  advance_no     String            @unique // {HTX_CODE}-VT-{YYYYMMDD}-{NNN}
+  household_id   String
+  household      Household         @relation(fields: [household_id], references: [id])
+  item_id        String
+  item           InputItem         @relation(fields: [item_id], references: [id])
+  quantity       Decimal           @db.Decimal(9, 2)
+  unit_price_vnd Int
+  amount_vnd     BigInt
+  advanced_on    DateTime          @db.Date
+  status         LeafTicketStatus  @default(VALID)
+  void_reason    String?
+  voided_by_id   String?
+  voided_at      DateTime?
+  settlement_id  String?
+  settlement     MemberSettlement? @relation(fields: [settlement_id], references: [id], onDelete: Restrict)
+  client_id      String? // client-generated uuid, makes replays idempotent
+  created_by_id  String // Keycloak sub
+  created_at     DateTime          @default(now())
+
+  @@unique([created_by_id, client_id])
+  @@index([htx_profile_id, advanced_on])
+  @@index([household_id])
+  @@map("input_advances")
+}
+
+model SettlementPeriod {
+  id             String           @id @default(cuid())
+  htx_profile_id String
+  htx_profile    HtxProfile       @relation(fields: [htx_profile_id], references: [id])
+  code           String           @unique // {HTX_CODE}-QT-{YYYYMMDD of date_to}
+  date_from      DateTime         @db.Date
+  date_to        DateTime         @db.Date
+  status         SettlementStatus @default(DRAFT)
+  created_by_id  String // Keycloak sub
+  created_at     DateTime         @default(now())
+  closed_by_id   String?
+  closed_at      DateTime?
+
+  lines MemberSettlement[]
+
+  @@index([htx_profile_id, date_from])
+  @@map("settlement_periods")
+}
+
+// One line per household with activity in the period; written only when the period is closed.
+model MemberSettlement {
+  id              String           @id @default(cuid())
+  period_id       String
+  period          SettlementPeriod @relation(fields: [period_id], references: [id])
+  household_id    String
+  household       Household        @relation(fields: [household_id], references: [id])
+  leaf_net_kg     Decimal          @db.Decimal(10, 1)
+  leaf_amount_vnd BigInt
+  advances_vnd    BigInt
+  debt_in_vnd     BigInt
+  payable_vnd     BigInt
+  debt_out_vnd    BigInt
+  paid_at         DateTime?
+  paid_by_id      String?
+  payment_method  PaymentMethod?
+  payment_ref     String?
+
+  tickets        FreshLeafTicket[]
+  advances       InputAdvance[]
+  ledger_entries MemberLedgerEntry[]
+
+  @@unique([period_id, household_id])
+  @@index([household_id])
+  @@map("member_settlements")
+}
+
+// Append-only (a database trigger refuses UPDATE and DELETE). Positive: the HTX owes the household. Negative: the household owes the HTX.
+model MemberLedgerEntry {
+  id             String            @id @default(cuid())
+  htx_profile_id String
+  htx_profile    HtxProfile        @relation(fields: [htx_profile_id], references: [id])
+  household_id   String
+  household      Household         @relation(fields: [household_id], references: [id])
+  entry_type     LedgerEntryType
+  amount_vnd     BigInt
+  ticket_id      String?
+  advance_id     String?
+  settlement_id  String?
+  settlement     MemberSettlement? @relation(fields: [settlement_id], references: [id], onDelete: Restrict)
+  note           String?
+  created_by_id  String // Keycloak sub
+  created_at     DateTime          @default(now())
+
+  @@index([household_id, created_at])
+  @@map("member_ledger_entries")
 }
