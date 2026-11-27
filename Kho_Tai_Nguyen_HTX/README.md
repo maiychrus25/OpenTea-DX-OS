@@ -14,6 +14,13 @@ Tài liệu cho cán bộ, nông hộ và làm nguồn tra cứu cho AI. Sắp t
 | `3_Resources/` | Tri thức chè: trồng, chăm sóc, chế biến, bảo quản, sâu bệnh, an toàn thực phẩm, VietGAP, chất lượng - thương hiệu, truy xuất nguồn gốc, du lịch vùng chè, thích ứng thời tiết, thị trường và bán hàng (nguồn cho AI) |
 | `4_Archives/` | Hồ sơ vụ đã xong, chỉ nhận dữ liệu thật của HTX |
 
+## Cẩm nang chi tiết
+- [Canh tác](3_Resources/Ky_thuat_che/Cam_nang/README.md)
+- [Chế biến và bán hàng](3_Resources/Che_bien_ban_hang/README.md)
+- [Quản lý hợp tác xã](2_Areas/Quan_tri_HTX/Cam_nang/README.md)
+- [Du lịch](3_Resources/Du_lich_che/Cam_nang/README.md)
+- [Số liệu vùng chè](3_Resources/So_lieu_dia_phuong/vung-che-thai-nguyen.md)
+
 - Danh mục nguồn: `danh_muc.csv` (`tai_tai_lieu.py` sinh từ `nguon.json`).
 - Cào một mục của trang web: `./cao_trang.sh <url> [số trang]` (cần `firecrawl-local`; không vượt trang đã chặn).
 - Tải bản gốc về máy: `python3 tai_tai_lieu.py`. Bản gốc nằm trong `_goc/`, **không đưa vào repo**.
