@@ -11,6 +11,8 @@ import { Bell, ChevronsLeft, ChevronsRight, ChevronsUpDown, CircleHelp, LogOut, 
 import { applyTheme, readStoredTheme, type ThemeChoice } from '@/components/ui/ThemeToggle/theme'
 import styles from './Sidebar.module.css'
 import { signOutAction } from '@/app/actions/signout-action'
+import { RoleSwitcher } from '@/components/layout/RoleSwitcher'
+import { ROLE_LABELS, isHumanRole, type HumanRole } from '@/lib/auth/roles'
 
 export interface NavItem {
   label: string
@@ -32,6 +34,8 @@ export interface SidebarProps {
   onClose?: () => void
   userName?: string
   role?: string
+  /** Every role of the account; the role switcher shows with two or more. */
+  roles?: HumanRole[]
   phone?: string
   collapsed?: boolean
   onToggleCollapsed?: () => void
@@ -43,14 +47,7 @@ function isActive(pathname: string | null, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-const getRoleLabel = (role?: string): string => {
-  switch (role) {
-    case 'farmer': return 'Nông dân'
-    case 'manager': return 'Trưởng HTX'
-    case 'officer': return 'Cán bộ KT'
-    default: return role || ''
-  }
-}
+const getRoleLabel = (role?: string): string => (isHumanRole(role) ? ROLE_LABELS[role] : role || '')
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   navItems, 
@@ -60,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   userName = 'Unknown',
   role,
+  roles,
   phone,
   collapsed = false,
   onToggleCollapsed
@@ -167,6 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <small>{phone || getRoleLabel(role)}</small>
                 </span>
               </div>
+              {roles && roles.length >= 2 && isHumanRole(role) && <RoleSwitcher roles={roles} active={role} />}
               <Link href={`/${role || 'farmer'}/profile`} className={styles.popupItem} onClick={() => setProfileOpen(false)}>
                 <User size={17} aria-hidden="true" />Tài khoản của tôi
               </Link>

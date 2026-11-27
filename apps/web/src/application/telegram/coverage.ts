@@ -99,6 +99,7 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'GET /api/auth/[...nextauth]',
     'POST /api/auth/[...nextauth]',
     'POST /api/register',
+    'POST /api/session/role',
     'GET /api/dev-login',
     'GET /api/debug/session',
     'GET /api/seed-farmer',

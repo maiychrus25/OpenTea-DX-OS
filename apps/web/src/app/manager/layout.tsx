@@ -45,6 +45,7 @@ export default async function ManagerLayout({ children }: { children: React.Reac
   return (
     <AppShell 
       role="manager" 
+      roles={session.user.roles}
       userName={session.user.name || 'Trưởng HTX'} 
       navItems={navItems}
       htxName={htxProfile?.name || 'Chưa cập nhật'}

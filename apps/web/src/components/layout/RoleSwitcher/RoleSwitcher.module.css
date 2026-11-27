@@ -1,0 +1,69 @@
+/* SPDX-License-Identifier: MIT
+   SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.title {
+  padding: 0 8px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-secondary);
+}
+
+.option {
+  display: flex;
+  width: 100%;
+  min-height: 36px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--rounded-sm);
+  background: transparent;
+  color: var(--color-ink-primary);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:hover:not(:disabled) {
+  background-color: var(--color-surface-sunken);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: -2px;
+}
+
+.option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.option[aria-current='true'] {
+  background-color: var(--color-success-subtle);
+  font-weight: 700;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border: 2px solid var(--color-border-default);
+  border-radius: 50%;
+}
+
+.option[aria-current='true'] .dot {
+  border-color: var(--color-ink-primary);
+  background-color: var(--color-ink-primary);
+}

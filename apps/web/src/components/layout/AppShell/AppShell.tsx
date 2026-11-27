@@ -10,22 +10,18 @@ import { Sidebar, NavItem } from '../Sidebar/Sidebar'
 import { TopBar } from '../TopBar/TopBar'
 import { BottomNav } from '../BottomNav/BottomNav'
 import { Toaster } from 'sonner'
+import { ROLE_LABELS, isHumanRole, type HumanRole } from '@/lib/auth/roles'
 
 
-const getRoleLabel = (role: string): string => {
-  switch (role) {
-    case 'farmer': return 'Nông dân'
-    case 'manager': return 'Trưởng HTX'
-    case 'officer': return 'Cán bộ KT'
-    default: return role
-  }
-}
+const getRoleLabel = (role: string): string => (isHumanRole(role) ? ROLE_LABELS[role] : role)
 
 const COLLAPSED_KEY = 'opentea-menu-collapsed'
 
 export interface AppShellProps {
   children: React.ReactNode
   role: string
+  /** Every role of the account; the role switcher shows with two or more. */
+  roles?: HumanRole[]
   userName: string
   navItems: NavItem[]
   hideSidebar?: boolean
@@ -38,6 +34,7 @@ export interface AppShellProps {
 export const AppShell: React.FC<AppShellProps> = ({ 
   children, 
   role, 
+  roles,
   userName,
   navItems,
   hideSidebar = false,
@@ -90,6 +87,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           onClose={() => setSidebarOpen(false)}
           userName={userName}
           role={role}
+          roles={roles}
           phone={phone}
           collapsed={collapsed}
           onToggleCollapsed={toggleCollapsed}

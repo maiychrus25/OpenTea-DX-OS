@@ -3,7 +3,8 @@
 
 import { auth } from '@/auth'
 import { ForbiddenError, NoHtxError, UnauthorizedError } from '@/domain/errors'
-import type { HumanRole } from '@/lib/auth/roles'
+import { heldRoles, type HumanRole } from '@/lib/auth/roles'
+import { PrismaMembershipRepository } from '@/infrastructure/db/auth/PrismaMembershipRepository'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
 
 export type Tenant = {
@@ -24,6 +25,9 @@ export async function requireTenant(): Promise<Tenant> {
 
   const htx = await new PrismaHtxProfileRepository().findByCode(user.htxCode)
   if (!htx) throw new NoHtxError()
+
+  // Keeps htx_memberships in line with the token's roles; it never throws and never blocks the request.
+  await new PrismaMembershipRepository().sync(user.id, htx.id, heldRoles(user))
 
   return { userId: user.id, role: user.role, htxCode: user.htxCode, htxProfileId: htx.id }
 }
