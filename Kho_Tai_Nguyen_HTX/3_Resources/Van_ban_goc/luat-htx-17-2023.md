@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Luật Hợp tác xã số 17/2023/QH15 (toàn văn)
 
 - Cơ quan: Quốc hội

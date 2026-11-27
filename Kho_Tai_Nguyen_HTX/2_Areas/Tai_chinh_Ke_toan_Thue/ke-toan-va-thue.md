@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Kế toán và thuế của hợp tác xã
 
 ## Kế toán

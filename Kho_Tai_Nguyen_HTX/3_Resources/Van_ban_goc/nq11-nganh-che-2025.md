@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Nghị quyết 11-NQ/TU (03/02/2025) phát triển ngành chè Thái Nguyên 2025-2030
 
 - Cơ quan: Tỉnh ủy Thái Nguyên

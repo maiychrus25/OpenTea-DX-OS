@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Tiêu chuẩn tham khảo: du lịch cộng đồng và homestay
 
 Tiêu chuẩn ASEAN là bộ tham khảo và chứng nhận tự nguyện, **không phải luật Việt Nam**.

@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Dư lượng thuốc bảo vệ thực vật trong chè
 
 ## Điều Thái Nguyên đã nêu (công văn trả lời của Bộ Nông nghiệp và Môi trường, 2025)

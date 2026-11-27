@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Sâu, nhện hại chè
 
 Nguồn: Trung tâm Khuyến nông Quốc gia, *Tài liệu hướng dẫn sản xuất chè bền vững* (2023), Bài 4. Ghi chú chỉ giữ phần nhận biết, thời điểm và biện pháp canh tác. Thuốc: do cán bộ kỹ thuật chỉ định, xem `danh-muc-thuoc.md`.

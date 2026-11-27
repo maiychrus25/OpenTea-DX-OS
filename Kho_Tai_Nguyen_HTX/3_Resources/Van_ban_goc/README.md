@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Toàn văn văn bản nhà nước
 
 Văn bản pháp luật và văn bản hành chính để tra cứu nguyên văn. Có thể đã được sửa đổi hoặc hết hiệu lực: kiểm tra trước khi áp dụng.

@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Du lịch vùng chè
 
 **Phạm vi:** tour do công ty du lịch tổ chức và quản lý. Hợp tác xã và nông hộ nhận thông báo đoàn sắp đến để chuẩn bị đón.

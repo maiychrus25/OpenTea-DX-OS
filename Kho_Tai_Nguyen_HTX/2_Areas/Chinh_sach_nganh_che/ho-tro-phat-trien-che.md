@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Chính sách phát triển ngành chè Thái Nguyên
 
 ## Nghị quyết 11-NQ/TU (03/02/2025), ngành chè 2025-2030

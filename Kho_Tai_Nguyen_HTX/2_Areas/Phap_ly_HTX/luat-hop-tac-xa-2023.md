@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Luật Hợp tác xã 2023 (17/2023/QH15)
 
 Nguồn: Sở Tư pháp Tuyên Quang, *Đề cương giới thiệu Luật Hợp tác xã năm 2023* (không phải toàn văn luật). Toàn văn đã có trong kho (mã `luat-htx-17-2023`, nguồn vanban.chinhphu.vn): khi cần trích điều khoản thì lấy từ toàn văn.

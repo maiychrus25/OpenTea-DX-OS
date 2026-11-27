@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Thông tư 16/2019/TT-BNNPTNT: chi tiết nông nghiệp hữu cơ
 
 - Cơ quan: Bộ Nông nghiệp và PTNT

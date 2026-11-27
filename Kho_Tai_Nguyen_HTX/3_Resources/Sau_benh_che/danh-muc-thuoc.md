@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Danh mục thuốc bảo vệ thực vật
 
 - Thông tư 75/2025/TT-BNNMT (26/12/2025), Điều 3: hiệu lực từ 10/02/2026. Phụ lục I: thuốc được phép; Phụ lục II: thuốc cấm.

@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Phòng trừ sâu bệnh: việc làm trước khi nghĩ tới thuốc
 
 Nguồn: *Tài liệu hướng dẫn sản xuất chè bền vững* (2023), Bài 4.

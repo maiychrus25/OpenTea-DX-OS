@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Kế hoạch 356/KH-UBND (10/8/2026): chuyển đổi số ngành chè 2026-2030
 
 - Cơ quan: UBND tỉnh Thái Nguyên

@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Hỗ trợ cho hợp tác xã theo Nghị định 113/2024/NĐ-CP
 
 Ban hành 12/9/2024, hiệu lực 01/11/2024. Tóm tắt từ bản ký số trên cổng Chính phủ, **đọc bằng nhận dạng chữ**: đối chiếu nguyên văn trước khi làm hồ sơ. Năm 2026 đang có tổng kết, dự thảo sửa đổi.

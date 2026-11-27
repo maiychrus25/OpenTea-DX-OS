@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Chè kiến thiết cơ bản (từ trồng đến tuổi 3)
 
 Nguồn: Trung tâm Khuyến nông Quốc gia, *Kỹ thuật sản xuất và chế biến chè xanh quy mô hộ và nhóm hộ* (2013).

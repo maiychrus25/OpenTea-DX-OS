@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Bệnh phồng lá chè
 
 Nguồn: Chi cục Trồng trọt và Bảo vệ thực vật Thái Nguyên, *Hướng dẫn phòng trừ bệnh hại cây trồng* (tháng 3/2024).

@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Kế hoạch vụ chè Đông Xuân 2026-2027 (khung, HTX điền)
 
 Mốc thời gian theo tài liệu kỹ thuật; ngày cụ thể và người phụ trách do HTX quyết định.

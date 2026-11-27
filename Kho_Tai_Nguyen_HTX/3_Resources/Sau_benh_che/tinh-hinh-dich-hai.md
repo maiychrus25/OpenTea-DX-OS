@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Tình hình dịch hại tại Thái Nguyên (số liệu theo thời điểm)
 
 Đây là ảnh chụp tại ngày ra thông báo, **không dùng làm tình hình hiện tại**.

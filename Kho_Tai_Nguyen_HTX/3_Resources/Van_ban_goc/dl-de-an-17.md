@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Đề án 17-ĐA/TU phát triển du lịch tỉnh Thái Nguyên
 
 - Cơ quan: Tỉnh ủy Thái Nguyên

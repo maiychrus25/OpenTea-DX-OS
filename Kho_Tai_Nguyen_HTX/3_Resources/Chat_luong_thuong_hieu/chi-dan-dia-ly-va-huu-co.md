@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Chỉ dẫn địa lý "Tân Cương" và chè hữu cơ
 
 ## Chỉ dẫn địa lý

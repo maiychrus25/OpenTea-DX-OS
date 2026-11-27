@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Chuẩn bị khi có đoàn khách
 
 **Đây là danh sách gợi ý của dự án, không phải quy định.** Hợp tác xã chỉnh theo thực tế.

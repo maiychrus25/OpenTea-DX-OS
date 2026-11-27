@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Nghị quyết 36/2026/NQ-CP: mã số vùng trồng, mã số cơ sở đóng gói (tệp 2)
 
 - Cơ quan: Chính phủ

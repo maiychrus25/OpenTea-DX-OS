@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Kế hoạch cải tạo, thâm canh, trồng mới chè năm 2026
 
 - Cơ quan: UBND xã Xuân Dương

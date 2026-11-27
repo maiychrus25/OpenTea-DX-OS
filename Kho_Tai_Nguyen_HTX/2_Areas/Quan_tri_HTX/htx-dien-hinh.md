@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Hợp tác xã nông nghiệp điển hình
 
 Nguồn: Cục Kinh tế hợp tác và PTNT, *Sổ tay hướng dẫn xây dựng mô hình hợp tác xã nông nghiệp điển hình*.

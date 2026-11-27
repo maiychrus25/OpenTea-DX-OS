@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Trồng mới chè và chọn giống
 
 Nguồn: Trung tâm Khuyến nông Quốc gia, *Tài liệu hướng dẫn sản xuất chè bền vững* (2023), Bài 2.

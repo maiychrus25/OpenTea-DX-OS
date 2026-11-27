@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Di sản trà, điểm đến và tuyến
 
 ## Theo Đề án 17-ĐA/TU (2025)

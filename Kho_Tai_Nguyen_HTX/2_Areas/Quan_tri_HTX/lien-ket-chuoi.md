@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Liên kết sản xuất và tiêu thụ
 
 Nghị định 98/2018/NĐ-CP. Bản scan, đọc bằng nhận dạng chữ; **kiểm tra còn hiệu lực và văn bản sửa đổi**.

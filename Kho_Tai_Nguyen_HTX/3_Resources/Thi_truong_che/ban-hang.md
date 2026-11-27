@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Bán chè: giá thành, nhãn, kênh bán
 
 ## Tính giá thành (gợi ý của dự án)

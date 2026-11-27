@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Chè hữu cơ
 
 ## Nguyên tắc (Nghị định 109/2018/NĐ-CP, Điều 4-6, 13; bản scan, đọc bằng nhận dạng chữ)

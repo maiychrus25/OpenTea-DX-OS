@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Sổ ghi chép sản xuất chè
 
 Khung theo tài liệu *Ghi chép nhật ký đồng ruộng và truy nguyên nguồn gốc* của Trung tâm Khuyến nông Quốc gia (mẫu gốc viết cho rau, ở đây chỉnh cho chè). Chưa đối chiếu với bản VietGAP 2026. Lưu tối thiểu 24 tháng sau thu hoạch.

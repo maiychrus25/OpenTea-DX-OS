@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # An toàn thực phẩm và tự công bố sản phẩm
 
 Nghị định 15/2018/NĐ-CP. Bản scan, đọc bằng nhận dạng chữ; đang có dự thảo sửa đổi: kiểm tra bản hiện hành.

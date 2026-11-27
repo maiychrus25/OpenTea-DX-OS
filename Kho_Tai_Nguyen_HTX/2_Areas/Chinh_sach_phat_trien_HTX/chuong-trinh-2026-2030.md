@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Chương trình phát triển kinh tế tập thể 2026-2030
 
 Quyết định 1128/QĐ-TTg ngày 24/6/2026. Tóm tắt từ bản ký số trên cổng Chính phủ, đọc bằng nhận dạng chữ.

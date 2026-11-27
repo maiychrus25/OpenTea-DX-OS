@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 [TÀI NGUYÊN] Kho tri thức, tài liệu tham khảo (Feed cho AI RAG)
 
 # VietGAP, chất lượng và OCOP

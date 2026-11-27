@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Định hướng cho một hợp tác xã chè
 
 **Đây là gợi ý của dự án**, ghép các hướng trong Quyết định 1128/QĐ-TTg và các nhóm hỗ trợ của Nghị định 113/2024. Đại hội thành viên quyết định.

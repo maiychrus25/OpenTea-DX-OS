@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Chế biến chè
 
 Nguồn: Trung tâm Khuyến nông Quốc gia, *Tài liệu hướng dẫn sản xuất chè bền vững* (2023), Bài 5, mục 3. Thông số đã đối chiếu với sơ đồ trong bản gốc (trang 108-110). Thực tế còn tuỳ thiết bị và nguyên liệu.

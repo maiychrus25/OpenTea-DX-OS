@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Luật Du lịch 2017: phần cần cho hợp tác xã, nông hộ
 
 Luật 09/2017/QH14, hiệu lực 01/01/2018. Bản scan, đọc bằng nhận dạng chữ; có thể đã sửa đổi.

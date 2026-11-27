@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # VietGAP trồng trọt 2026: điểm mới
 
 Theo Cổng thông tin Bộ Khoa học và Công nghệ (bài giới thiệu TCVN 11892-1:2026) và thông báo của một đơn vị chứng nhận. **Chưa đọc toàn văn tiêu chuẩn.**

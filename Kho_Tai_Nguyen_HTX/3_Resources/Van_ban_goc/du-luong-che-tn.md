@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Trả lời kiến nghị về dư lượng thuốc BVTV trong chè Thái Nguyên
 
 - Cơ quan: Bộ Nông nghiệp và Môi trường

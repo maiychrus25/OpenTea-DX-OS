@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Kho tài nguyên HTX chè
 
 Tài liệu cho cán bộ, nông hộ và làm nguồn tra cứu cho AI. Sắp theo 4 ngăn:

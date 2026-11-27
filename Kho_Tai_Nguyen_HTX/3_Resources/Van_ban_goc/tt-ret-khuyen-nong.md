@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Công văn phòng chống rét đậm, rét hại (1/2024)
 
 - Cơ quan: Trung tâm Khuyến nông Quốc gia

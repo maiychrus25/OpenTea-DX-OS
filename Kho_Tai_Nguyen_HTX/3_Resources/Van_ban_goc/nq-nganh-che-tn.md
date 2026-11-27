@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Nghị quyết 08-NQ/ĐU (28/10/2025) về phát triển ngành chè xã Định Hóa
 
 - Cơ quan: Đảng bộ xã Định Hóa

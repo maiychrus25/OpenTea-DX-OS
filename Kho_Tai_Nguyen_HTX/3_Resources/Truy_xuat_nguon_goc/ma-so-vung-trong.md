@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Mã số vùng trồng (quy định mới 2026)
 
 ## Cách xin cấp: Nghị quyết 36/2026/NQ-CP (31/7/2026)

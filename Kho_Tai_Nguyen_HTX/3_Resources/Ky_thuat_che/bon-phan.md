@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Bón phân cho chè
 
 Nguồn: Trung tâm Khuyến nông Quốc gia, *Tài liệu hướng dẫn sản xuất chè bền vững* (2023), Bài 3. Lượng tính cho 1 ha. Đây là mức hướng dẫn chung; điều chỉnh theo tuổi chè, giống, đất, và hỏi cán bộ kỹ thuật.

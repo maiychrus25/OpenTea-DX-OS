@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Chính sách du lịch gắn với chè
 
 ## Đề án 17-ĐA/TU (Tỉnh ủy Thái Nguyên, 10/12/2025), giai đoạn 2026-2030

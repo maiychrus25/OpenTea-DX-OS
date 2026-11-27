@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Thông tư 02/2024/TT-BKHCN: truy xuất nguồn gốc sản phẩm, hàng hoá
 
 Hiệu lực từ 01/6/2024.

@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Hướng dẫn phát triển du lịch vùng chè cho hợp tác xã
 
 Khung 5 bước theo *Sổ tay du lịch cộng đồng Việt Nam* (Dự án EU và WWF Việt Nam, 2013). Phần "với vùng chè" là **gợi ý của dự án**. Sổ tay đã cũ, phần pháp lý phải tra lại. Tour do công ty du lịch tổ chức; hợp tác xã là nơi đón và cung cấp trải nghiệm.

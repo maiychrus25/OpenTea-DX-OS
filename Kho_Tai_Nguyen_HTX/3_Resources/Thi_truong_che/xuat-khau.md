@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Xuất khẩu chè Việt Nam (số liệu theo thời điểm)
 
 Nguồn: Bộ Công Thương, *Bản tin thị trường nông, lâm, thủy sản* số ngày 13/4/2026 (số liệu Cục Hải quan).

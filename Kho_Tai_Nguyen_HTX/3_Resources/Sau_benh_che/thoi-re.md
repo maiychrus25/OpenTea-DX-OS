@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Bệnh thối rễ (chết loang)
 
 Nguồn: Cục Bảo vệ thực vật, TBKT 01-102:2020/BVTV, quy trình do Viện KHKT Nông lâm nghiệp miền núi phía Bắc đề xuất.

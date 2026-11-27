@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Thời tiết, việc cần làm và sâu bệnh hay gặp
 
 Ghi chú tóm tắt, không thay dự báo thời tiết và điều tra thực tế trên nương. Không chép tên thuốc.

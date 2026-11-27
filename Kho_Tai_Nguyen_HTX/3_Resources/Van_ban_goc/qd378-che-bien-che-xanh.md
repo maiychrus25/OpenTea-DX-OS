@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Quyết định công nhận tiến bộ kỹ thuật chế biến chè xanh (VN15, PH14)
 
 - Cơ quan: Bộ Nông nghiệp và PTNT

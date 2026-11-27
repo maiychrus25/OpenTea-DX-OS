@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Thông tư 02/2024/TT-BKHCN: Quản lý truy xuất nguồn gốc sản phẩm, hàng hóa
 
 - Cơ quan: Bộ Khoa học và Công nghệ

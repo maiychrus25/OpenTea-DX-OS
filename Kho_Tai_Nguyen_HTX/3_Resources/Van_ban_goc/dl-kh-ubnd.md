@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Kế hoạch 88/KH-UBND (15/4/2026) thực hiện Đề án 17 về du lịch
 
 - Cơ quan: UBND xã Quân Chu

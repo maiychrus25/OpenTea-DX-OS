@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Bảng tự kiểm tra trước đánh giá
 
 **Danh sách gợi ý của dự án, không phải bảng chỉ tiêu chính thức của TCVN 11892-1:2026.** Khi có bản tiêu chuẩn, đối chiếu từng điều.

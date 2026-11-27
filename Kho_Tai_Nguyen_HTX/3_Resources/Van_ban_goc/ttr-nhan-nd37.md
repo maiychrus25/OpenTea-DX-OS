@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Nghị định 37/2026/NĐ-CP: chất lượng sản phẩm, hàng hóa và ghi nhãn
 
 - Cơ quan: Chính phủ

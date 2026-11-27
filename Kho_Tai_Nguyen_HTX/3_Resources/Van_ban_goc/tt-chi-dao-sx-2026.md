@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Công văn chỉ đạo sản xuất (8/12), vụ 2026
 
 - Cơ quan: Chi cục Trồng trọt và BVTV Thái Nguyên

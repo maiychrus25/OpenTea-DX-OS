@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Luật Thuế thu nhập doanh nghiệp số 67/2025/QH15 (bản Công báo; đã có luật sửa đổi, xem bản hợp nhất)
 
 - Cơ quan: Quốc hội

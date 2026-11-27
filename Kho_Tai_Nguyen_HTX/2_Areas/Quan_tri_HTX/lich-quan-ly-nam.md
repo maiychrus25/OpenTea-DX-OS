@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Lịch quản lý trong năm
 
 **Gợi ý của dự án** ghép từ các ghi chú trong kho. Hợp tác xã chỉnh theo Điều lệ.

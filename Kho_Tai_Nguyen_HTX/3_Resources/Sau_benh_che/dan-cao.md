@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Bệnh dán cao hại chè
 
 Nguồn: Cục Bảo vệ thực vật, tiến bộ kỹ thuật TBKT 01-95:2020/BVTV, *Quy trình quản lý tổng hợp bệnh dán cao hại chè*.

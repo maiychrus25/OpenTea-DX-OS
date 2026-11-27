@@ -1,3 +1,7 @@
+<!--
+Toàn văn văn bản của cơ quan nhà nước, không phải tác phẩm của dự án và không áp dụng giấy phép MIT của dự án.
+-->
+
 # Nghị định 98/2018/NĐ-CP: liên kết sản xuất, tiêu thụ nông sản
 
 - Cơ quan: Chính phủ

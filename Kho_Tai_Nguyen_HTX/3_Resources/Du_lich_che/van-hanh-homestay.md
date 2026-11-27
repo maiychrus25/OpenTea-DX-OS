@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Vận hành homestay: quy trình phục vụ khách
 
 Tóm tắt ý chính theo *Tài liệu hướng dẫn vận hành du lịch lưu trú tại nhà dân* (Bộ Văn hóa, Thể thao và Du lịch). Tài liệu có bản quyền: xem bản gốc.

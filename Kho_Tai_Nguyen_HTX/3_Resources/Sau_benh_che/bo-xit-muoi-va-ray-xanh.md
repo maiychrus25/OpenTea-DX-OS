@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 OpenTea Developers
+-->
+
 # Bọ xít muỗi và rầy xanh: hai nghiên cứu tham khảo
 
 Đây là kết quả nghiên cứu tại địa phương khác, **không phải khuyến cáo dùng thuốc**.
