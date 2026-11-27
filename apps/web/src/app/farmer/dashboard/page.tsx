@@ -12,6 +12,7 @@ import { auth } from '@/auth'
 import { requireTenant } from '@/lib/api/tenant'
 import { EmptyState } from '@/components/ui'
 import { WeatherHero } from '@/components/features/farmer-web/WeatherHero'
+import { LeafPriceCard } from '@/components/features/weighing/LeafPriceCard'
 import { activeWithdrawals } from '@/domain/journal/active-withdrawals'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 
@@ -245,6 +246,8 @@ export default async function FarmerDashboard() {
           </section>
         </div>
       )}
+
+      <LeafPriceCard />
 
       <div className={styles.columns}>
         <section className={`${kit.pn} ${styles.parcels}`} aria-label="Tình trạng thửa đất">
