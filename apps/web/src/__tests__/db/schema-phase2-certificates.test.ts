@@ -13,7 +13,7 @@ describe('phase 2 track B schema', () => {
   it('declares certificates, the lot link and the names setting', () => {
     expect(schema).toMatch(/enum CertificateKind \{\s+VIETGAP\s+OCOP\s+ORGANIC\s+OTHER\s+\}/)
     expect(schema).toContain('@@map("htx_certificates")')
-    expect(schema).toContain('@@id([lot_id, certificate_id])')
+    expect(schema).toContain('@@unique([lot_id, certificate_id])')
     expect(schema).toMatch(/public_show_names\s+Boolean\s+@default\(false\)/)
   })
 
