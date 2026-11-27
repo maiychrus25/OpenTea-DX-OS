@@ -426,6 +426,57 @@ Trong cửa sổ, bất kỳ người duyệt nào cũng chặn được bằng 
 - **Ảnh mồ côi:** ảnh đã lưu trong phiên bị xoá khi thẻ bị huỷ, khi phiên bị thay (`/menu`, lệnh khác, `/huy`, `/stop`, nút menu) hoặc khi gặp phiên đã hết hạn; ảnh của hành động đã thực hiện được giữ. Hành động lỗi cũng xoá ảnh của nó.
 - **Nhật ký:** `GET /api/journal` trả danh sách rỗng cho nông dân chưa có nông hộ, không còn trả mọi nhật ký mà vai trò đọc được.
 
+### 3.18b Tra cứu và thao tác còn lại trong chat (issue #80)
+
+Mọi dòng của hai nhóm "trong chat" ở bảng phủ (`apps/web/src/application/telegram/coverage.ts`) đều có một công cụ hoặc một hành động phục vụ. Kiểm thử 17 kiểm điều này, không có danh sách ngoại lệ.
+
+**Quy tắc chung:**
+- **Vai trò theo đúng route của web.** Vai trò mà route từ chối thì nhận `noPermission`, và quyền được đọc lại lúc bấm Xác nhận.
+- **Không lộ dữ liệu của nơi khác.** Mã thửa, lô, nông hộ hay thành viên của HTX khác, và của hộ khác đối với nông dân, được trả lời như không tồn tại (`Không tìm thấy …`).
+- **Giới hạn:** mỗi câu trả lời tra cứu tối đa 7 dòng; mỗi bước chọn tối đa 8 lựa chọn, mới nhất trước; thẻ xác nhận tối đa 5 dòng. Ngày gõ theo dạng `dd/mm/yyyy`.
+- **Tài liệu** chỉ hiện tên và ngày. Chat không bao giờ gửi tệp hay đường dẫn có chữ ký.
+- **Dữ liệu cá nhân.** Câu trả lời trong chat riêng có thể chứa tên và số điện thoại của nông hộ, thành viên, đúng với những gì vai trò đó đọc được trên web (đặc tả §8.3). Báo cáo tự động vẫn không chứa dữ liệu cá nhân (mục 3.11, đặc tả §13.3).
+- **Mời thành viên** tạo tài khoản ngay, như route của web. Mật khẩu tạm 8 chữ số được tạo lúc bấm Xác nhận, không lưu trong phiên, và hiện một lần trong câu trả lời cho quản lý. Mật khẩu này đi qua máy chủ của Telegram, nên thành viên cần đổi mật khẩu sau lần đăng nhập đầu.
+
+**Tra cứu (chỉ đọc):**
+
+| Câu nhắn | Công cụ | Vai trò | Trả lời |
+|---|---|---|---|
+| `tìm <từ>` (đầu câu) | `search` | mọi vai trò | kết quả theo loại, kèm mã hoặc tên; nông dân chỉ thấy của hộ mình |
+| `chứng nhận <mã lô>` | `certificate` | mọi vai trò | lô, sản phẩm, ngày thu hoạch, trạng thái; liên kết truy xuất khi lô đã xuất QR và web có HTTPS |
+| `đất thửa <mã>` | `soil` | mọi vai trò (nông dân: thửa của hộ) | số đo mới nhất và nhãn sức khoẻ đất |
+| `ảnh thửa <mã>` | `photo` | mọi vai trò (nông dân: thửa của hộ) | ngày và nguồn của ảnh mới nhất; không gửi ảnh hay đường dẫn có chữ ký |
+| `nông hộ`, `hộ <tên>` (đầu câu) | `households` | cán bộ, quản lý | danh sách nông hộ, hoặc một hộ kèm các thửa |
+| `thành viên` | `members` | quản lý | số thành viên theo trạng thái và những người đang chờ duyệt |
+| `báo cáo bệnh` | `diseases` | cán bộ | các báo cáo bệnh đang chờ người xác nhận |
+| `hồ sơ` | `profile` | mọi vai trò | hồ sơ của chính người hỏi, hộ của họ và hồ sơ HTX |
+| `tài liệu` | `documents` | cán bộ, quản lý | tên và ngày của tài liệu |
+| `đối tác` | `partners` | mọi vai trò | danh sách đối tác |
+| `lô hàng <mã lô>` | `lots` | cán bộ, quản lý | chi tiết một lô: trạng thái, sản phẩm, ngày thu hoạch, khối lượng, số thửa, người mua |
+| `lịch thu hoạch` | `harvest_schedule` | quản lý | thêm dòng đầu `Chưa đặt ngày: <n> lứa · <thửa>` khi có lứa chưa có ngày thu hoạch |
+
+**Thao tác (thẻ xác nhận; mức `high` có hai thẻ):**
+
+| Câu nhắn | Hành động | Vai trò | Mức |
+|---|---|---|---|
+| `sửa nhật ký` | `journal.edit` (ghi chú hoặc ngày) | nông dân | `medium` |
+| `rút nhật ký`, `xoá nhật ký` | `journal.delete` (nháp hoặc chờ duyệt) | nông dân | `high` |
+| `duyệt báo cáo bệnh`, `duyệt bệnh` | `disease.review` | cán bộ | `medium` |
+| `bắt đầu lứa mới`, `lứa mới` | `round.start` | cán bộ | `medium` |
+| `đặt ngày thu hoạch`, `đổi ngày thu hoạch` | `harvest.schedule` | quản lý | `medium` |
+| `tạo lô hàng`, `tạo lô` | `lot.create` (một thửa, khối lượng kg) | cán bộ | `medium` |
+| `xuất mã QR`, `xuất QR` | `lot.export_qr` | cán bộ, quản lý | `high` |
+| `gửi thông báo` | `notification.announce` (một hộ hoặc cả HTX) | quản lý | `high` |
+| `đánh dấu đã đọc` | `notification.read` | mọi vai trò | `medium` |
+| `xoá thông báo` | `notification.clear` (50 thông báo mới nhất của chính mình) | mọi vai trò | `high` |
+| `mời thành viên` | `member.invite` | quản lý | `medium` |
+| `duyệt thành viên` | `member.approve` | quản lý | `high` |
+| `xoá thành viên` | `member.remove` | quản lý | `high` |
+| `sửa hồ sơ` | `profile.edit` (hồ sơ HTX) | quản lý | `medium` |
+| `thêm nông hộ` | `household.add` | cán bộ | `medium` |
+| `sửa nông hộ` | `household.edit` | nông dân (hộ mình), cán bộ, quản lý | `medium` |
+| `xoá thửa` | `parcel.delete` | cán bộ, quản lý | `high` |
+
 ### 3.19 Hành động của mini-app (M9)
 
 | Quy tắc | Giá trị |
