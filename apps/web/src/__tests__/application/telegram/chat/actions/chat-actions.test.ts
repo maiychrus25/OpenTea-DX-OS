@@ -115,8 +115,9 @@ describe('CHAT_ACTIONS (contract C6)', () => {
       ['journal.create', ['farmer', 'officer']],
       ['journal.batch_approve', ['officer', 'manager']],
       ['harvest.approve', ['officer', 'manager']],
-      ['disease.report', ['farmer']],
     ])
+    // The disease photo action (issue #80, C3) is registered last, after the actions of plan C2.
+    expect(CHAT_ACTIONS.slice(-1).map((a) => [a.name, [...a.roles]])).toEqual([['disease.report', ['farmer']]])
   })
 
   it('marks only harvest.approve as high risk, with a second-card consequence', () => {

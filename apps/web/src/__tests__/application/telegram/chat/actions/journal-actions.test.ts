@@ -34,7 +34,7 @@ const farmer: ChatUser = {
   telegramUserId: '1001',
   chatId: 1001,
 }
-const deps = { photos: { put: jest.fn(), get: jest.fn() } }
+const deps = { photos: { put: jest.fn(), get: jest.fn(), delete: jest.fn() } }
 const NOW = new Date('2026-11-27T03:00:00.000Z')
 const entry = (id: string, status: string, household = 'hh1') => ({
   id,

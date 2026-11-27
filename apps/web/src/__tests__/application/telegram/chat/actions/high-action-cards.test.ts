@@ -45,7 +45,7 @@ function build() {
     repo: repo as never,
     tools: [],
     actions: CHAT_ACTIONS,
-    photos: { put: jest.fn(), get: jest.fn() },
+    photos: { put: jest.fn(), get: jest.fn(), delete: jest.fn() },
     requests: { submit: jest.fn() } as never,
     callbackKey: 'k',
     proposalMessages: jest.fn(async () => []),

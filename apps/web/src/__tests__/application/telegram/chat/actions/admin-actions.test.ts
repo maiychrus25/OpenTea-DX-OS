@@ -79,7 +79,7 @@ const manager: ChatUser = {
   chatId: 3003,
 }
 const farmer: ChatUser = { ...manager, tenant: { ...manager.tenant, userId: 'farmer-1', role: 'farmer' }, householdId: 'hh1' }
-const deps = { photos: { put: jest.fn(), get: jest.fn() } }
+const deps = { photos: { put: jest.fn(), get: jest.fn(), delete: jest.fn() } }
 const NOW = new Date('2026-11-27T03:00:00.000Z')
 
 const action = (name: string): ChatAction => {
