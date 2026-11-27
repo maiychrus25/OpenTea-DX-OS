@@ -9,7 +9,7 @@ import { GlobalSearch } from './GlobalSearch'
 import topBarStyles from '../../layout/TopBar/TopBar.module.css'
 import inputStyles from './GlobalSearchInput.module.css'
 
-export function GlobalSearchInput() {
+export function GlobalSearchInput({ role }: { role: 'manager' | 'officer' }) {
   const [mounted, setMounted] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [isMac, setIsMac] = useState(false)
@@ -62,7 +62,7 @@ export function GlobalSearchInput() {
         </kbd>
       </div>
 
-      <GlobalSearch isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <GlobalSearch isOpen={isOpen} onClose={() => setIsOpen(false)} role={role} />
     </>
   )
 }
