@@ -18,9 +18,9 @@ export default async function UnauthorizedPage({ searchParams }: UnauthorizedPag
   const { state } = await searchParams
 
   let redirectUrl = '/'
-  if (role === 'manager') redirectUrl = '/manager'
-  else if (role === 'officer') redirectUrl = '/officer'
-  else if (role === 'farmer') redirectUrl = '/farmer'
+  if (role === 'manager') redirectUrl = '/manager/dashboard'
+  else if (role === 'officer') redirectUrl = '/officer/dashboard'
+  else if (role === 'farmer') redirectUrl = '/farmer/dashboard'
 
   // AC-4: Pending account state
   if (state === 'pending') {

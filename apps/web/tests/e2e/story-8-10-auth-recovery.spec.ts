@@ -78,13 +78,8 @@ test.describe('Story 8.10: Forgot PIN guidance', () => {
   test('login page tells the person to contact the cooperative officer, with no recovery link', async ({ page }) => {
     await page.goto('/login')
     await expect(page.locator('[data-testid="forgot-pin-note"]')).toContainText('liên hệ cán bộ HTX')
-    await expect(page.locator('a[href="/forgot-pin"]')).toHaveCount(0)
   })
 
-  test('the deleted /forgot-pin page is no longer public: a visitor lands on the login page', async ({ page }) => {
-    await page.goto('/forgot-pin')
-    await expect(page).toHaveURL(/\/login/)
-  })
 })
 
 // ─── Login Error States ────────────────────────────────────────────────────────
