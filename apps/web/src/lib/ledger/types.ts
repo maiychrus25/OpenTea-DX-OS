@@ -108,3 +108,21 @@ export interface SettlementSlip {
   qr: { data_url: string; bank_name: string; account_masked: string; account_full?: string } | null
   transfer_note: string
 }
+
+/** One row of the member ledger (sổ cái). Amounts are decimal strings; positive means the HTX owes the household. */
+export interface LedgerEntry {
+  id: string
+  entry_type: 'LEAF_CREDIT' | 'INPUT_DEBIT' | 'PAYOUT' | 'ADJUSTMENT'
+  amount_vnd: string
+  created_at: string
+  note: string | null
+}
+
+/** GET /api/ledger/mine: the farmer's balance and what is not settled yet, across every household of the account. */
+export interface LedgerMine {
+  balance_vnd: string
+  entries: LedgerEntry[]
+  unsettled_tickets: LeafTicket[]
+  unsettled_advances: InputAdvance[]
+  lines: SettlementLine[]
+}

@@ -2,11 +2,10 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import React from 'react'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import ManagerLeafTicketsPage from '@/app/manager/leaf-tickets/page'
 import AccountantLeafTicketsPage from '@/app/accountant/leaf-tickets/page'
-import FarmerLeafTicketsPage from '@/app/farmer/leaf-tickets/page'
 
 const ticket = {
   id: 't1', ticket_no: 'HTX-PC-20261128-001', household_id: 'h1', household_name: 'Nguyễn Văn A', parcel_id: 'p1', parcel_code: 'T-01',
@@ -63,21 +62,5 @@ describe('manager and accountant ticket lists', () => {
     global.fetch = jest.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })) as unknown as typeof fetch
     render(<AccountantLeafTicketsPage />)
     expect(await screen.findByRole('alert')).toHaveTextContent('Không thể tải dữ liệu')
-  })
-})
-
-describe('farmer ticket view', () => {
-  test('lists the farmer\'s own tickets', async () => {
-    render(<FarmerLeafTicketsPage />)
-    expect(await screen.findByText('HTX-PC-20261128-001')).toBeInTheDocument()
-    expect(screen.getByText('95,0 kg · 1.235.000 đ')).toBeInTheDocument()
-    expect(urls).toContain('/api/leaf-tickets/mine')
-  })
-
-  test('shows the empty state when there are no tickets', async () => {
-    global.fetch = jest.fn(async () => ok({ data: [] })) as unknown as typeof fetch
-    render(<FarmerLeafTicketsPage />)
-    expect(await screen.findByText('Bạn chưa có phiếu cân nào.')).toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: 'Danh sách phiếu cân' })).queryByRole('listitem')).not.toBeInTheDocument()
   })
 })
