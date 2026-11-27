@@ -16,7 +16,9 @@ test('the lot trace leaves drafts and rejected entries out of the withdrawal che
 
 describe('lot safety is judged against the lot harvest date', () => {
   const DAY = 24 * 60 * 60 * 1000
-  const at = (days: number) => new Date(Date.now() + days * DAY)
+  // One time base for the whole file: reading the clock twice made the dates differ by a millisecond.
+  const NOW = Date.now()
+  const at = (days: number) => new Date(NOW + days * DAY)
   const spray = (cycle_id: string, entryDays: number, safeDays: number) => ({
     status: 'APPROVED', cycle_id, entry_date: at(entryDays), activity_type: 'SPRAYING', performed_by: 'U', approved_by_id: null,
     activities: [{ activity_detail: 'x', product_name: 'P', dosage: '1', withdrawal_days: 7, safe_harvest_date: at(safeDays) }],
