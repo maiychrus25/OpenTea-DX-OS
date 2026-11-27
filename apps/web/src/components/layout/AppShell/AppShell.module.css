@@ -122,3 +122,10 @@
     margin-left: 0;
   }
 }
+
+/* The menu folded to a rail of icons. */
+@media (min-width: 1024px) {
+  .shell[data-collapsed] {
+    --sidebar-width: 74px;
+  }
+}
