@@ -1,0 +1,394 @@
+{
+ "chung_nhan_toan_tinh": [
+  {
+   "chi_so": "Mã số vùng trồng chè",
+   "gia_tri": "147",
+   "don_vi": "mã",
+   "nguon": "https://thainguyen.gov.vn/festival-tra/festival-tra-quoc-te-thai-nguyen-nam-2026-tu-ngu-dai-danh-tra-den-khat-vong-vuon-ra-the-gioi-301574"
+  },
+  {
+   "chi_so": "Diện tích có mã số vùng trồng",
+   "gia_tri": "1359.71",
+   "don_vi": "ha",
+   "nguon": "https://thainguyen.gov.vn/festival-tra/festival-tra-quoc-te-thai-nguyen-nam-2026-tu-ngu-dai-danh-tra-den-khat-vong-vuon-ra-the-gioi-301574"
+  },
+  {
+   "chi_so": "Chè VietGAP",
+   "gia_tri": "6483",
+   "don_vi": "ha",
+   "nguon": "https://thainguyen.gov.vn/festival-tra/festival-tra-quoc-te-thai-nguyen-nam-2026-tu-ngu-dai-danh-tra-den-khat-vong-vuon-ra-the-gioi-301574"
+  },
+  {
+   "chi_so": "Chè hữu cơ",
+   "gia_tri": "186.8",
+   "don_vi": "ha",
+   "nguon": "https://thainguyen.gov.vn/festival-tra/festival-tra-quoc-te-thai-nguyen-nam-2026-tu-ngu-dai-danh-tra-den-khat-vong-vuon-ra-the-gioi-301574"
+  },
+  {
+   "chi_so": "Mã vùng chè gắn định vị (bài khác, số lệch)",
+   "gia_tri": "149",
+   "don_vi": "mã",
+   "nguon": "https://thainguyen.gov.vn/doi-moi-sang-tao-vi-thai-nguyen-than-yeu/quan-ly-che-thai-nguyen-bang-gps-va-nhat-ky-dien-tu-284710"
+  },
+  {
+   "chi_so": "Sản phẩm chè OCOP 3-5 sao",
+   "gia_tri": "193",
+   "don_vi": "sản phẩm",
+   "nguon": "https://thainguyen.gov.vn/doi-moi-sang-tao-vi-thai-nguyen-than-yeu/quan-ly-che-thai-nguyen-bang-gps-va-nhat-ky-dien-tu-284710"
+  }
+ ],
+ "dich_hai_che": [
+  {
+   "ngay_thong_bao": "2025-11-26",
+   "so_van_ban": "",
+   "doi_tuong": "Bọ cánh tơ",
+   "don_vi": "% búp",
+   "pho_bien_tu": "1",
+   "pho_bien_den": "3",
+   "noi_cao_tu": "5.5",
+   "noi_cao_den": "7",
+   "cuc_bo": "",
+   "dien_tich_nhiem_ha": "",
+   "dien_tich_phong_tru_ha": "",
+   "xa_phuong": "Phú Thịnh; Đức Lương; Vô Tranh; La Bằng; Phú Xuyên; Tiên Hội; Đồng Hỷ; Văn Hán; Đại Từ; Vạn Phú; Phú Lương; Phổ Yên; Đại Phúc; Tân Cương",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/ConvertFiles/documents/12637908/0/Th%C3%B4ng%20b%C3%A1o%20d%E1%BB%8Bch%20h%E1%BA%A1i%20%207%20ng%C3%A0y%2026.11.2025..signed.signed.signed.pdf"
+  },
+  {
+   "ngay_thong_bao": "2025-11-26",
+   "so_van_ban": "",
+   "doi_tuong": "Bọ xít muỗi",
+   "don_vi": "% búp",
+   "pho_bien_tu": "1",
+   "pho_bien_den": "2",
+   "noi_cao_tu": "3.5",
+   "noi_cao_den": "5",
+   "cuc_bo": "",
+   "dien_tich_nhiem_ha": "",
+   "dien_tich_phong_tru_ha": "",
+   "xa_phuong": "Phú Thịnh; Đức Lương; Vô Tranh; La Bằng; Phú Xuyên; Tiên Hội; Đồng Hỷ; Văn Hán; Đại Từ; Vạn Phú; Phú Lương; Phổ Yên; Đại Phúc; Tân Cương",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/ConvertFiles/documents/12637908/0/Th%C3%B4ng%20b%C3%A1o%20d%E1%BB%8Bch%20h%E1%BA%A1i%20%207%20ng%C3%A0y%2026.11.2025..signed.signed.signed.pdf"
+  },
+  {
+   "ngay_thong_bao": "2025-11-26",
+   "so_van_ban": "",
+   "doi_tuong": "Nhện đỏ",
+   "don_vi": "% lá",
+   "pho_bien_tu": "3",
+   "pho_bien_den": "5",
+   "noi_cao_tu": "5.5",
+   "noi_cao_den": "7.5",
+   "cuc_bo": "",
+   "dien_tich_nhiem_ha": "",
+   "dien_tich_phong_tru_ha": "",
+   "xa_phuong": "Phú Thịnh; Đức Lương; Vô Tranh; La Bằng; Phú Xuyên; Tiên Hội; Đồng Hỷ; Văn Hán; Đại Từ; Vạn Phú; Phú Lương; Phổ Yên; Đại Phúc; Tân Cương",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/ConvertFiles/documents/12637908/0/Th%C3%B4ng%20b%C3%A1o%20d%E1%BB%8Bch%20h%E1%BA%A1i%20%207%20ng%C3%A0y%2026.11.2025..signed.signed.signed.pdf"
+  },
+  {
+   "ngay_thong_bao": "2025-11-26",
+   "so_van_ban": "",
+   "doi_tuong": "Rầy xanh",
+   "don_vi": "% búp",
+   "pho_bien_tu": "1",
+   "pho_bien_den": "3",
+   "noi_cao_tu": "3.5",
+   "noi_cao_den": "7.5",
+   "cuc_bo": "",
+   "dien_tich_nhiem_ha": "",
+   "dien_tich_phong_tru_ha": "",
+   "xa_phuong": "Quân Chu; Đồng Hỷ; Văn Hán; Đại Từ; Vạn Phú; Phú Lương; Phổ Yên; Bá Xuyên; Đại Phúc; La Bằng; Phú Xuyên; Tân Cương",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/ConvertFiles/documents/12637908/0/Th%C3%B4ng%20b%C3%A1o%20d%E1%BB%8Bch%20h%E1%BA%A1i%20%207%20ng%C3%A0y%2026.11.2025..signed.signed.signed.pdf"
+  },
+  {
+   "ngay_thong_bao": "2026-05-20",
+   "so_van_ban": "692/TB-CCTTBVTV",
+   "doi_tuong": "Bọ cánh tơ",
+   "don_vi": "% búp",
+   "pho_bien_tu": "3",
+   "pho_bien_den": "3",
+   "noi_cao_tu": "10",
+   "noi_cao_den": "10",
+   "cuc_bo": "20",
+   "dien_tich_nhiem_ha": "356",
+   "dien_tich_phong_tru_ha": "371",
+   "xa_phuong": "Quân Chu; Đồng Hỷ; Văn Hán; Văn Lăng; Võ Nhai; Đại Từ; Vạn Phú; Phú Lương; Bá Xuyên; Đại Phúc; La Bằng; Phú Xuyên; Tân Cương; Vô Tranh; Bình Thành; Phú Đình",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/T20%20-%20Th%C3%B4ng%20b%C3%A1o%20d%E1%BB%8Bch%20h%E1%BA%A1i%207%20ng%C3%A0y%20%2814-20.5.2026%29.signed.signed.pdf"
+  },
+  {
+   "ngay_thong_bao": "2026-05-20",
+   "so_van_ban": "692/TB-CCTTBVTV",
+   "doi_tuong": "Bọ xít muỗi",
+   "don_vi": "% búp",
+   "pho_bien_tu": "1.5",
+   "pho_bien_den": "1.5",
+   "noi_cao_tu": "5",
+   "noi_cao_den": "5",
+   "cuc_bo": "",
+   "dien_tich_nhiem_ha": "65",
+   "dien_tich_phong_tru_ha": "63",
+   "xa_phuong": "Quân Chu; Đồng Hỷ; Văn Hán; Văn Lăng; Võ Nhai; Đại Từ; Vạn Phú; Phú Lương; Bá Xuyên; Đại Phúc; La Bằng; Phú Xuyên; Tân Cương; Vô Tranh; Bình Thành; Phú Đình",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/T20%20-%20Th%C3%B4ng%20b%C3%A1o%20d%E1%BB%8Bch%20h%E1%BA%A1i%207%20ng%C3%A0y%20%2814-20.5.2026%29.signed.signed.pdf"
+  },
+  {
+   "ngay_thong_bao": "2026-05-20",
+   "so_van_ban": "692/TB-CCTTBVTV",
+   "doi_tuong": "Rầy xanh",
+   "don_vi": "% búp",
+   "pho_bien_tu": "3",
+   "pho_bien_den": "3",
+   "noi_cao_tu": "5",
+   "noi_cao_den": "5",
+   "cuc_bo": "15",
+   "dien_tich_nhiem_ha": "367",
+   "dien_tich_phong_tru_ha": "372",
+   "xa_phuong": "Quân Chu; Đồng Hỷ; Văn Hán; Văn Lăng; Võ Nhai; Đại Từ; Vạn Phú; Phú Lương; Bá Xuyên; Đại Phúc; La Bằng; Phú Xuyên; Tân Cương; Vô Tranh; Bình Thành; Phú Đình",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/T20%20-%20Th%C3%B4ng%20b%C3%A1o%20d%E1%BB%8Bch%20h%E1%BA%A1i%207%20ng%C3%A0y%20%2814-20.5.2026%29.signed.signed.pdf"
+  },
+  {
+   "ngay_thong_bao": "2026-05-27",
+   "so_van_ban": "738/TB-CCTTBVTV",
+   "doi_tuong": "Bọ cánh tơ",
+   "don_vi": "% búp",
+   "pho_bien_tu": "3",
+   "pho_bien_den": "3",
+   "noi_cao_tu": "10",
+   "noi_cao_den": "10",
+   "cuc_bo": "20",
+   "dien_tich_nhiem_ha": "439",
+   "dien_tich_phong_tru_ha": "444",
+   "xa_phuong": "Quân Chu; Đồng Hỷ; Văn Hán; Văn Lăng; Võ Nhai; Đại Từ; Vạn Phú; Phú Lương; Bá Xuyên; Đại Phúc; La Bằng; Phú Xuyên; Tân Cương; Vô Tranh; Bình Thành; Phú Đình",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/T21%20-%20Th%C3%B4ng%20b%C3%A1o%20d%E1%BB%8Bch%20h%E1%BA%A1i%207%20ng%C3%A0y%20%2821-27.5.2026%29.signed.signed.pdf"
+  },
+  {
+   "ngay_thong_bao": "2026-05-27",
+   "so_van_ban": "738/TB-CCTTBVTV",
+   "doi_tuong": "Bọ xít muỗi",
+   "don_vi": "% búp",
+   "pho_bien_tu": "1",
+   "pho_bien_den": "1",
+   "noi_cao_tu": "5",
+   "noi_cao_den": "5",
+   "cuc_bo": "",
+   "dien_tich_nhiem_ha": "88",
+   "dien_tich_phong_tru_ha": "86",
+   "xa_phuong": "Quân Chu; Đồng Hỷ; Văn Hán; Văn Lăng; Võ Nhai; Đại Từ; Vạn Phú; Phú Lương; Bá Xuyên; Đại Phúc; La Bằng; Phú Xuyên; Tân Cương; Vô Tranh; Bình Thành; Phú Đình",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/T21%20-%20Th%C3%B4ng%20b%C3%A1o%20d%E1%BB%8Bch%20h%E1%BA%A1i%207%20ng%C3%A0y%20%2821-27.5.2026%29.signed.signed.pdf"
+  },
+  {
+   "ngay_thong_bao": "2026-05-27",
+   "so_van_ban": "738/TB-CCTTBVTV",
+   "doi_tuong": "Rầy xanh",
+   "don_vi": "% búp",
+   "pho_bien_tu": "3",
+   "pho_bien_den": "3",
+   "noi_cao_tu": "10",
+   "noi_cao_den": "10",
+   "cuc_bo": "20",
+   "dien_tich_nhiem_ha": "412",
+   "dien_tich_phong_tru_ha": "402",
+   "xa_phuong": "Quân Chu; Đồng Hỷ; Văn Hán; Văn Lăng; Võ Nhai; Đại Từ; Vạn Phú; Phú Lương; Bá Xuyên; Đại Phúc; La Bằng; Phú Xuyên; Tân Cương; Vô Tranh; Bình Thành; Phú Đình",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/T21%20-%20Th%C3%B4ng%20b%C3%A1o%20d%E1%BB%8Bch%20h%E1%BA%A1i%207%20ng%C3%A0y%20%2821-27.5.2026%29.signed.signed.pdf"
+  }
+ ],
+ "diem_du_lich_cong_dong": [
+  {
+   "ten": "Khu bảo tồn làng nhà sàn dân tộc sinh thái Thái Hải",
+   "dia_ban_khi_cong_nhan": "xã Thịnh Đức",
+   "don_vi_quan_ly": "",
+   "nguon": "https://vietnamtourism.gov.vn/post/51755"
+  },
+  {
+   "ten": "Làng văn hóa dân tộc bản Quyên",
+   "dia_ban_khi_cong_nhan": "xã Điềm Mặc, Định Hóa",
+   "don_vi_quan_ly": "",
+   "nguon": "https://vietnamtourism.gov.vn/post/51755"
+  },
+  {
+   "ten": "Xóm Mỏ Gà",
+   "dia_ban_khi_cong_nhan": "xã Phú Thượng, Võ Nhai",
+   "don_vi_quan_ly": "",
+   "nguon": "https://vietnamtourism.gov.vn/post/51755"
+  },
+  {
+   "ten": "Xã Tân Cương",
+   "dia_ban_khi_cong_nhan": "TP. Thái Nguyên",
+   "don_vi_quan_ly": "",
+   "nguon": "https://vietnamtourism.gov.vn/post/51755"
+  },
+  {
+   "ten": "Hồ Ghềnh Chè",
+   "dia_ban_khi_cong_nhan": "xã Bình Sơn, Sông Công",
+   "don_vi_quan_ly": "HTX Du lịch cộng đồng Ghềnh Chè - Bình Sơn - Sông Công",
+   "nguon": "https://vietnamtourism.gov.vn/post/51755"
+  },
+  {
+   "ten": "Xóm Tân Sơn",
+   "dia_ban_khi_cong_nhan": "xã La Bằng",
+   "don_vi_quan_ly": "HTX Du lịch cộng đồng Kẹm La Bằng",
+   "nguon": "https://vietnamtourism.gov.vn/post/51755"
+  }
+ ],
+ "du_bao_dich_hai_2026": [
+  {
+   "vu": "Xuân 2026",
+   "doi_tuong": "Bệnh phồng lá",
+   "thang_cao_diem": "2;3;4",
+   "ghi_chu": "phát sinh sớm, hại nặng trên chè xuân khi nảy búp",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/2026.%20D%E1%BB%B1%20b%C3%A1o%20t%C3%ACnh%20h%C3%ACnh%20d%E1%BB%8Bch%20h%E1%BA%A1i%20tr%C3%AAn%20c%C3%A2y%20tr%E1%BB%93ng%20v%E1%BB%A5%20Xu%C3%A2n%20n%C4%83m%202026.signed.signed.pdf"
+  },
+  {
+   "vu": "Xuân 2026",
+   "doi_tuong": "Rầy xanh",
+   "thang_cao_diem": "4;5;6",
+   "ghi_chu": "hại mạnh",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/2026.%20D%E1%BB%B1%20b%C3%A1o%20t%C3%ACnh%20h%C3%ACnh%20d%E1%BB%8Bch%20h%E1%BA%A1i%20tr%C3%AAn%20c%C3%A2y%20tr%E1%BB%93ng%20v%E1%BB%A5%20Xu%C3%A2n%20n%C4%83m%202026.signed.signed.pdf"
+  },
+  {
+   "vu": "Xuân 2026",
+   "doi_tuong": "Bọ cánh tơ",
+   "thang_cao_diem": "5;6;7;8",
+   "ghi_chu": "mật độ, tỷ lệ tăng nhanh",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/2026.%20D%E1%BB%B1%20b%C3%A1o%20t%C3%ACnh%20h%C3%ACnh%20d%E1%BB%8Bch%20h%E1%BA%A1i%20tr%C3%AAn%20c%C3%A2y%20tr%E1%BB%93ng%20v%E1%BB%A5%20Xu%C3%A2n%20n%C4%83m%202026.signed.signed.pdf"
+  },
+  {
+   "vu": "Xuân 2026",
+   "doi_tuong": "Bọ xít muỗi",
+   "thang_cao_diem": "3;4",
+   "ghi_chu": "có thể gây cháy cục bộ ở nương rậm, nhiều cây che bóng",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/2026.%20D%E1%BB%B1%20b%C3%A1o%20t%C3%ACnh%20h%C3%ACnh%20d%E1%BB%8Bch%20h%E1%BA%A1i%20tr%C3%AAn%20c%C3%A2y%20tr%E1%BB%93ng%20v%E1%BB%A5%20Xu%C3%A2n%20n%C4%83m%202026.signed.signed.pdf"
+  },
+  {
+   "vu": "Mùa 2026",
+   "doi_tuong": "Rầy xanh",
+   "thang_cao_diem": "6;7;8",
+   "ghi_chu": "cao điểm",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/2026.%2014.7%20D%E1%BB%B1%20b%C3%A1o%20t%C3%ACnh%20h%C3%ACnh%20d%E1%BB%8Bch%20h%E1%BA%A1i%20v%E1%BB%A5%20M%C3%B9a%20n%C4%83m%202026.signed.signed.signed.pdf"
+  },
+  {
+   "vu": "Mùa 2026",
+   "doi_tuong": "Bọ xít muỗi",
+   "thang_cao_diem": "10;11",
+   "ghi_chu": "cao điểm",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/2026.%2014.7%20D%E1%BB%B1%20b%C3%A1o%20t%C3%ACnh%20h%C3%ACnh%20d%E1%BB%8Bch%20h%E1%BA%A1i%20v%E1%BB%A5%20M%C3%B9a%20n%C4%83m%202026.signed.signed.signed.pdf"
+  },
+  {
+   "vu": "Mùa 2026",
+   "doi_tuong": "Bọ cánh tơ",
+   "thang_cao_diem": "6;7;8;9",
+   "ghi_chu": "hại nặng diện rộng ở nương dãi nắng, khô hạn, ít che bóng",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/2026.%2014.7%20D%E1%BB%B1%20b%C3%A1o%20t%C3%ACnh%20h%C3%ACnh%20d%E1%BB%8Bch%20h%E1%BA%A1i%20v%E1%BB%A5%20M%C3%B9a%20n%C4%83m%202026.signed.signed.signed.pdf"
+  },
+  {
+   "vu": "Mùa 2026",
+   "doi_tuong": "Nhện đỏ",
+   "thang_cao_diem": "",
+   "ghi_chu": "gây hại cục bộ",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/2026.%2014.7%20D%E1%BB%B1%20b%C3%A1o%20t%C3%ACnh%20h%C3%ACnh%20d%E1%BB%8Bch%20h%E1%BA%A1i%20v%E1%BB%A5%20M%C3%B9a%20n%C4%83m%202026.signed.signed.signed.pdf"
+  },
+  {
+   "vu": "Mùa 2026",
+   "doi_tuong": "Bệnh thối búp",
+   "thang_cao_diem": "",
+   "ghi_chu": "gây hại cục bộ",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/2026.%2014.7%20D%E1%BB%B1%20b%C3%A1o%20t%C3%ACnh%20h%C3%ACnh%20d%E1%BB%8Bch%20h%E1%BA%A1i%20v%E1%BB%A5%20M%C3%B9a%20n%C4%83m%202026.signed.signed.signed.pdf"
+  },
+  {
+   "vu": "Mùa 2026",
+   "doi_tuong": "Bệnh đốm nâu",
+   "thang_cao_diem": "",
+   "ghi_chu": "gây hại cục bộ",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/2026.%2014.7%20D%E1%BB%B1%20b%C3%A1o%20t%C3%ACnh%20h%C3%ACnh%20d%E1%BB%8Bch%20h%E1%BA%A1i%20v%E1%BB%A5%20M%C3%B9a%20n%C4%83m%202026.signed.signed.signed.pdf"
+  },
+  {
+   "vu": "Mùa 2026",
+   "doi_tuong": "Bệnh chấm xám",
+   "thang_cao_diem": "",
+   "ghi_chu": "gây hại cục bộ",
+   "nguon": "https://storage-vnportal.vnpt.vn/gov-tnn/11492/FileQuanTriTinTuc/2026.%2014.7%20D%E1%BB%B1%20b%C3%A1o%20t%C3%ACnh%20h%C3%ACnh%20d%E1%BB%8Bch%20h%E1%BA%A1i%20v%E1%BB%A5%20M%C3%B9a%20n%C4%83m%202026.signed.signed.signed.pdf"
+  }
+ ],
+ "ocop_che_5_sao_2025": [
+  {
+   "san_pham": "Ngọc Xuân Trà Hương Vân",
+   "chu_the": "Hợp tác xã Hương Vân Trà",
+   "dia_chi": "Tổ 51, phường Phan Đình Phùng",
+   "hang": "5 sao quốc gia 2025",
+   "nguon": "https://thainguyen.gov.vn/tin-kinh-te/thai-nguyen-co-them-3-san-pham-ocop-5-sao-cap-quoc-gia-259337"
+  },
+  {
+   "san_pham": "Tam Phúc Trà Hương Vân",
+   "chu_the": "Hợp tác xã Hương Vân Trà",
+   "dia_chi": "Tổ 51, phường Phan Đình Phùng",
+   "hang": "5 sao quốc gia 2025",
+   "nguon": "https://thainguyen.gov.vn/tin-kinh-te/thai-nguyen-co-them-3-san-pham-ocop-5-sao-cap-quoc-gia-259337"
+  },
+  {
+   "san_pham": "Thanh Hải Trà - Trà Tôm Nõn Thượng Hạng",
+   "chu_the": "Hợp tác xã Chè La Bằng",
+   "dia_chi": "xóm Rừng Vần, xã La Bằng",
+   "hang": "5 sao quốc gia 2025",
+   "nguon": "https://thainguyen.gov.vn/tin-kinh-te/thai-nguyen-co-them-3-san-pham-ocop-5-sao-cap-quoc-gia-259337"
+  }
+ ],
+ "vung_che": [
+  {
+   "vung_xa": "Toàn tỉnh",
+   "dien_tich_ha": "22268",
+   "vietgap_huu_co_ha": "",
+   "co_ma_vung_ha": "",
+   "so_htx": "",
+   "lang_nghe": "",
+   "ngay_nguon": "2026-09-10",
+   "nguon": "https://thainguyen.gov.vn/tin-kinh-te/nam-2026-thai-nguyen-phan-dau-tong-gia-tri-san-pham-tu-cay-che-dat-tren-16-8-nghin-ty-dong-293116"
+  },
+  {
+   "vung_xa": "La Bằng",
+   "dien_tich_ha": "1135.7",
+   "vietgap_huu_co_ha": "gần 500",
+   "co_ma_vung_ha": "",
+   "so_htx": "13",
+   "lang_nghe": "17",
+   "ngay_nguon": "2026-03-17",
+   "nguon": "https://thainguyen.gov.vn/tin-ve-tra/la-bang-phat-trien-nganh-che-gan-voi-du-lich-nang-cao-thu-nhap-cho-nguoi-dan-253593"
+  },
+  {
+   "vung_xa": "Trại Cài",
+   "dien_tich_ha": "hơn 1000",
+   "vietgap_huu_co_ha": "193.3",
+   "co_ma_vung_ha": "85",
+   "so_htx": "22",
+   "lang_nghe": "10",
+   "ngay_nguon": "2026-07-28",
+   "nguon": "https://thainguyen.gov.vn/vung-tra/giu-vung-danh-tra-trai-cai-282699"
+  },
+  {
+   "vung_xa": "Văn Hán",
+   "dien_tich_ha": "hơn 1500",
+   "vietgap_huu_co_ha": "",
+   "co_ma_vung_ha": "",
+   "so_htx": "6",
+   "lang_nghe": "hơn 20",
+   "ngay_nguon": "2026-10-29",
+   "nguon": "https://thainguyen.gov.vn/vung-tra/van-han-nang-tam-gia-tri-che-truyen-thong-303538"
+  },
+  {
+   "vung_xa": "Khe Cốc",
+   "dien_tich_ha": "hơn 300",
+   "vietgap_huu_co_ha": "",
+   "co_ma_vung_ha": "",
+   "so_htx": "",
+   "lang_nghe": "",
+   "ngay_nguon": "2026-10-07",
+   "nguon": "https://thainguyen.gov.vn/thuong-hieu-tra/che-khe-coc-gin-giu-huong-vi-trung-du-nang-tam-che-tim-298618"
+  },
+  {
+   "vung_xa": "Tân Cương",
+   "dien_tich_ha": "644",
+   "vietgap_huu_co_ha": "",
+   "co_ma_vung_ha": "",
+   "so_htx": "",
+   "lang_nghe": "",
+   "ngay_nguon": "2026-05-24",
+   "nguon": "https://vietnamtourism.gov.vn/post/67810"
+  }
+ ]
+}

@@ -27,6 +27,16 @@ Tài liệu cho cán bộ, nông hộ và làm nguồn tra cứu cho AI. Sắp t
 - Tải bản gốc về máy: `python3 tai_tai_lieu.py`. Bản gốc nằm trong `_goc/`, **không đưa vào repo**.
 - Các ghi chú là tóm tắt của dự án, không thay văn bản gốc. Gom ngày 27/11/2026.
 
+## Ba cách đọc kho
+| Ai đọc | Dùng | Cách tạo |
+| --- | --- | --- |
+| Người | các file `.md`, bảng `.csv`, `.xlsx` | sửa trực tiếp |
+| Web | `xuat/bang.json` | `python3 xuat_du_lieu.py` |
+| Chatbot | `xuat/doan.jsonl` (đoạn kèm nguồn, đã loại đoạn có tên thuốc; không commit) | `python3 xuat_du_lieu.py` |
+
+Sửa ghi chú hay bảng xong thì chạy lại lệnh xuất. Thử tra như chatbot: `python3 tim.py "câu hỏi"`.
+Web và chatbot của hệ thống **chưa** đọc các file này.
+
 ## Quy tắc khi dùng cho AI
 
 1. Không tự nêu tên thuốc, hoạt chất, liều lượng hay thời gian cách ly; không đọc `thuoc-tham-khao-cho-can-bo.md`. Việc kê thuốc do cán bộ kỹ thuật, theo danh mục đang hiệu lực.

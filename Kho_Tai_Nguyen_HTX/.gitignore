@@ -1,3 +1,5 @@
 # Bản gốc tải về chỉ dùng trên máy (một số có bản quyền): không đưa vào repo.
 _goc/
 .DS_Store
+# Sinh lại được bằng xuat_du_lieu.py
+xuat/doan.jsonl
