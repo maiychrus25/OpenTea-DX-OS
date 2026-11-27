@@ -11,11 +11,11 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const statusLabels: Record<BadgeStatus, string> = {
-  sowing: 'Gieo trá»“ng',
-  tending: 'ChÄƒm sÃ³c',
-  'harvest-approved': 'Chá» thu hoáº¡ch',
-  harvested: 'ÄÃ£ thu hoáº¡ch',
-  draft: 'NhÃ¡p',
+  sowing: 'Trồng mới',
+  tending: 'Chăm sóc',
+  'harvest-approved': 'Chờ thu hoạch',
+  harvested: 'Đã thu hoạch',
+  draft: 'Nháp',
 }
 
 export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
@@ -27,7 +27,7 @@ export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
         ref={ref}
         className={`${styles.badge} ${styles[status]} ${className || ''}`}
         role="status"
-        aria-label={`Tráº¡ng thÃ¡i: ${label}`}
+        aria-label={`Trạng thái: ${label}`}
         data-testid={`badge-${status}`}
         {...props}
       >
