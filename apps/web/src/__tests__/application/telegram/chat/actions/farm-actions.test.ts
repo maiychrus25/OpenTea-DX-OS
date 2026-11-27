@@ -295,7 +295,7 @@ describe('lot.export_qr', () => {
   it('exports through ExportQrUseCase', async () => {
     mockFakes.lotById.mockResolvedValue(lot)
     expect(await a().execute({ lot_id: 'l1' }, officer, deps, NOW)).toBe('Đã xuất mã QR cho lô TC-CHE-1.')
-    expect(mockFakes.exportQr).toHaveBeenCalledWith('l1', undefined, process.env.NEXT_PUBLIC_BASE_URL)
+    expect(mockFakes.exportQr).toHaveBeenCalledWith('l1', undefined, process.env.NEXT_PUBLIC_BASE_URL, { htxProfileId: 'htx-tc' })
   })
 
   it("answers not found for another cooperative's lot (Review Focus 1)", async () => {

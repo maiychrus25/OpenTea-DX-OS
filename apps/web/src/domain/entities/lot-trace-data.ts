@@ -77,4 +77,6 @@ export interface LotTraceCertificate {
   issued_on: string
   expires_on: string
   file_key: string
+  /** ISO instant; set when the certificate was revoked, also after the lot was exported. */
+  revoked_at?: string | null
 }

@@ -3,7 +3,9 @@
 
 import { LotPort } from '@/domain/lot/ports/LotPort'
 import { LotTraceRepository } from '@/domain/repositories/lot-trace-repository'
-import { NotFoundError, DomainError } from '@/domain/errors'
+import { NotFoundError, DomainError, UnprocessableError } from '@/domain/errors'
+import { CertificatePort } from '@/domain/certificate/ports/CertificatePort'
+import { isLabsEnabled } from '@/lib/labs'
 import * as QRCode from 'qrcode'
 import { LotTraceData } from '@/domain/entities/lot-trace-data'
 
@@ -19,9 +21,10 @@ export class ExportQrUseCase {
     private readonly storagePort: StoragePort,
     private readonly docStoragePort: DocumentStoragePort,
     private readonly htxCode: string,
+    private readonly certificates?: CertificatePort,
   ) {}
 
-  async execute(lotId: string, certificateKeys?: string[], baseUrl?: string) {
+  async execute(lotId: string, certificateKeys?: string[], baseUrl?: string, options?: { htxProfileId: string; certificateIds?: string[] }) {
     const lot = await this.lotPort.findById(lotId)
     if (!lot) throw new NotFoundError('Lot not found')
     if (lot.status === 'QR_EXPORTED') throw new DomainError('Lot already exported')
@@ -32,6 +35,12 @@ export class ExportQrUseCase {
     const traceData = await this.traceRepo.getLotByCode(lot.lot_code)
     if (!traceData) throw new NotFoundError('Trace data not found')
 
+    // A lot is traced to its batches and weighed tickets; lots from parcels exist only while labs is on.
+    const fromBatches = (traceData.batches?.length ?? 0) > 0
+    if (!fromBatches && !isLabsEnabled()) {
+      throw new UnprocessableError('LOT_WITHOUT_BATCH', 'Lô này không có mẻ sao nguồn nên chưa xuất được QR. Đóng lô từ mẻ sao rồi xuất lại.')
+    }
+
     // Guard: lot must have at least 1 parcel (EC-S02)
     if (!traceData.parcels || traceData.parcels.length === 0) {
       throw new DomainError('Lô hàng phải có ít nhất 1 thửa đất liên kết')
@@ -39,16 +48,31 @@ export class ExportQrUseCase {
 
     // Check withdrawal period and parcel status
     if (!traceData.is_harvest_safe) {
-      throw new DomainError('WITHDRAWAL_NOT_PASSED: Lô hàng chưa an toàn để thu hoạch hoặc chứa thửa đất vi phạm thời gian cách ly')
+      throw new UnprocessableError('WITHDRAWAL_NOT_PASSED', 'Lô hàng chưa an toàn để thu hoạch hoặc chứa thửa đất vi phạm thời gian cách ly')
     }
 
     // Every parcel needs a round harvested on or before the lot's day; a new round may already be open (TENDING).
     // Compared by local day: harvest_date is a date-only value, a harvest later that same day still counts.
     const lotDay = localDay(lot.harvest_date)
-    const harvests = await this.traceRepo.getParcelHarvests(lot.lot_code)
+    // A lot from batches was judged ticket by ticket in the trace data, so the parcel-round check is only for the old path.
+    const harvests = fromBatches ? [] : await this.traceRepo.getParcelHarvests(lot.lot_code)
     const unharvested = harvests.filter(p => !p.harvested_at.some(at => localDay(at) <= lotDay)).map(p => p.parcel_code)
     if (unharvested.length > 0) {
       throw new DomainError(`Thửa ${unharvested.join(', ')} chưa có lứa thu hoạch đến ngày thu hoạch của lô`)
+    }
+
+    // Certificates: the ones asked for, else every valid one of the HTX; each must be valid today (checked again under lock).
+    let attach: { htxProfileId: string; ids: string[]; today: string } | undefined
+    if (this.certificates && options) {
+      const today = localDay(new Date())
+      const found = await this.certificates.validForLot(options.htxProfileId, options.certificateIds ?? null, today)
+      if ('invalid' in found) throw new UnprocessableError('CERTIFICATE_NOT_VALID', 'Có chứng nhận đã hết hạn, đã thu hồi hoặc không thuộc HTX nên không gắn vào lô được.', { certificate_ids: found.invalid })
+      if (found.ok.length > 0) {
+        attach = { htxProfileId: options.htxProfileId, ids: found.ok.map((c) => c.id), today }
+        traceData.certificates = found.ok.map((c) => ({ id: c.id, kind: c.kind, number: c.number, issuer: c.issuer, issued_on: c.issued_on, expires_on: c.expires_on, file_key: c.file_key }))
+        // The public certificate route serves files by these keys.
+        certificateKeys = Array.from(new Set([...(certificateKeys ?? []), ...found.ok.map((c) => c.file_key)]))
+      }
     }
 
     if (traceData.certificate_keys && certificateKeys) {
@@ -60,7 +84,7 @@ export class ExportQrUseCase {
     // Generate QR code pointing to the public lot page — baseUrl injected from route handler (headers.host) to keep hexagonal purity
     const rawBaseUrl = baseUrl || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
     const resolvedBaseUrl = rawBaseUrl.replace(/\/+$/, '')
-    const publicUrl = `${resolvedBaseUrl}/lot/${encodeURIComponent(lot.lot_code)}`
+    const publicUrl = `${resolvedBaseUrl}/q/${encodeURIComponent(lot.lot_code)}`
     let qrImageUrl: string
 
     try {
@@ -82,7 +106,9 @@ export class ExportQrUseCase {
     traceData.status = 'QR_EXPORTED'
     traceData.qr_image_url = qrImageUrl
 
-    const result = await this.lotPort.exportQr(lotId, traceData, qrImageUrl, certificateKeys)
+    const result = attach
+      ? await this.lotPort.exportQr(lotId, traceData, qrImageUrl, certificateKeys, attach)
+      : await this.lotPort.exportQr(lotId, traceData, qrImageUrl, certificateKeys)
 
     // Background task: Auto-archive to P.A.R.A
     this.archiveToPara(lot.lot_code, publicUrl, traceData).catch((e) => {

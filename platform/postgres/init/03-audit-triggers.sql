@@ -5,7 +5,11 @@ CREATE OR REPLACE FUNCTION audit.capture_row() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
   PERFORM audit.append_event(
-    'db', TG_TABLE_NAME, TG_OP, coalesce(NEW.id, OLD.id)::text, audit.current_actor(),
+    'db', TG_TABLE_NAME, TG_OP,
+    -- A link table such as lot_certificates has no id column: its key is lot_id:certificate_id.
+    coalesce(to_jsonb(NEW)->>'id', to_jsonb(OLD)->>'id',
+             (coalesce(to_jsonb(NEW), to_jsonb(OLD))->>'lot_id') || ':' || (coalesce(to_jsonb(NEW), to_jsonb(OLD))->>'certificate_id')),
+    audit.current_actor(),
     CASE WHEN TG_OP IN ('UPDATE', 'DELETE') THEN to_jsonb(OLD) END,
     CASE WHEN TG_OP IN ('INSERT', 'UPDATE') THEN to_jsonb(NEW) END);
   RETURN NULL;

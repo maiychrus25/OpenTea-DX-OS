@@ -18,6 +18,8 @@ maybe('processing batches on a real Postgres', () => {
   let uc: typeof import('@/application/processing/BatchUseCases')
   let lotRepo: import('@/infrastructure/db/processing/PrismaLotFromBatchesRepository').PrismaLotFromBatchesRepository
   let CreateLot: typeof import('@/application/processing/CreateLotFromBatchesUseCase').CreateLotFromBatchesUseCase
+  let ExportQr: typeof import('@/application/lot/ExportQrUseCase').ExportQrUseCase
+  let certRepo: import('@/infrastructure/db/certificate/PrismaCertificateRepository').PrismaCertificateRepository
   let VoidTicket: typeof import('@/application/weighing/VoidFreshLeafTicketUseCase').VoidFreshLeafTicketUseCase
 
   const run = String(Date.now())
@@ -29,10 +31,10 @@ maybe('processing batches on a real Postgres', () => {
   const actor = () => ({ userId: 'off-1', role: 'officer', htxProfileId: htxId, htxCode })
   const accountant = () => ({ userId: 'acc-1', role: 'accountant', htxProfileId: htxId })
 
-  const ticket = async () => {
+  const ticket = async (onParcel = parcelId) => {
     seq += 1
     return (await prisma.freshLeafTicket.create({
-      data: { htx_profile_id: htxId, ticket_no: `${htxCode}-PC-${seq}`, household_id: (await prisma.household.findFirstOrThrow({ where: { htx_profile_id: htxId } })).id, parcel_id: parcelId, grade_id: gradeId, weighed_at: new Date(), gross_kg: '100.0', deduction_pct: '0', net_kg: '100.0', price_vnd_per_kg: 20000, amount_vnd: BigInt(2_000_000), created_by_id: 'acc-1' },
+      data: { htx_profile_id: htxId, ticket_no: `${htxCode}-PC-${seq}`, household_id: (await prisma.household.findFirstOrThrow({ where: { htx_profile_id: htxId } })).id, parcel_id: onParcel, grade_id: gradeId, weighed_at: new Date(), gross_kg: '100.0', deduction_pct: '0', net_kg: '100.0', price_vnd_per_kg: 20000, amount_vnd: BigInt(2_000_000), created_by_id: 'acc-1' },
     })).id
   }
 
@@ -42,6 +44,8 @@ maybe('processing batches on a real Postgres', () => {
     batchRepo = new (require('@/infrastructure/db/processing/PrismaBatchRepository').PrismaBatchRepository)()
     ticketRepo = new (require('@/infrastructure/db/weighing/PrismaFreshLeafTicketRepository').PrismaFreshLeafTicketRepository)()
     uc = require('@/application/processing/BatchUseCases')
+    ExportQr = require('@/application/lot/ExportQrUseCase').ExportQrUseCase
+    certRepo = new (require('@/infrastructure/db/certificate/PrismaCertificateRepository').PrismaCertificateRepository)()
     lotRepo = new (require('@/infrastructure/db/processing/PrismaLotFromBatchesRepository').PrismaLotFromBatchesRepository)()
     CreateLot = require('@/application/processing/CreateLotFromBatchesUseCase').CreateLotFromBatchesUseCase
     VoidTicket = require('@/application/weighing/VoidFreshLeafTicketUseCase').VoidFreshLeafTicketUseCase
@@ -172,6 +176,120 @@ maybe('processing batches on a real Postgres', () => {
       await expect(new CreateLot(lotRepo).execute(actor(), { grade: 'DINH', sources: [{ output_id: DINH, kg: 1 }] })).rejects.toMatchObject({ code: 'WITHDRAWAL_NOT_PASSED', details: { parcel_code: `P-${run}` } })
       const taken = await prisma.lotBatchSource.aggregate({ where: { output_id: DINH }, _sum: { kg: true } })
       expect(Number(taken._sum.kg)).toBe(4.5)
+    })
+  })
+
+  describe('export with certificates', () => {
+    const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date())
+    const newCert = (days = 30) => prisma.htxCertificate.create({
+      data: { htx_profile_id: htxId, kind: 'VIETGAP', number: `VG-${++seq}-${run}`, issuer: 'Sở NN', issued_on: new Date('2026-01-01T00:00:00Z'), expires_on: new Date(Date.now() + days * 86_400_000), file_key: `para/${htxCode}/Certificates/${seq}.pdf`, file_name: 'c.pdf', file_mime: 'application/pdf', file_size: 10, created_by_id: 'mgr-1' },
+    })
+    // A parcel with no spraying, apart from the one the earlier tests sprayed.
+    let cleanParcelId = ''
+    beforeAll(async () => {
+      const household = await prisma.household.findFirstOrThrow({ where: { htx_profile_id: htxId } })
+      cleanParcelId = (await prisma.parcel.create({ data: { parcel_code: `PC-${run}`, household_id: household.id, crop_type: 'Chè', area_ha: 1, status: 'TENDING' } })).id
+    })
+    // A READY lot from a fresh finished batch of one ticket weighed now.
+    async function readyLot() {
+      const id = await ticket(cleanParcelId)
+      const batch = await new uc.CreateBatch(batchRepo).execute(actor(), { processed_on: '2026-11-28' })
+      await new uc.AddTickets(batchRepo).execute(actor(), batch.id, [id])
+      const done = await (async () => { await new uc.SetOutputs(batchRepo).execute(actor(), batch.id, [{ grade: 'DINH', kg: 20 }]); return new uc.FinishBatch(batchRepo).execute(actor(), batch.id, {}) })()
+      return new CreateLot(lotRepo).execute(actor(), { grade: 'DINH', sources: [{ output_id: done.outputs[0].id, kg: 20 }] })
+    }
+    const exporter = () => new ExportQr(
+      new (require('@/infrastructure/db/lot/PrismaLotRepository').PrismaLotRepository)(),
+      new (require('@/infrastructure/db/repositories/prisma-lot-trace-repository').PrismaLotTraceRepository)(),
+      { uploadFile: async () => ({ presignedUrl: 'https://m/qr.png' }) } as never,
+      { uploadDocument: async () => undefined } as never,
+      htxCode,
+      certRepo,
+    )
+    const trace = (code: string) => new (require('@/infrastructure/db/repositories/prisma-lot-trace-repository').PrismaLotTraceRepository)().getLotByCode(code)
+
+    it('exports a lot from batches with its certificate, then shows a later revoke on the trace (live certificates)', async () => {
+      const lot = await readyLot()
+      const c = await newCert()
+      await exporter().execute(lot.id, undefined, 'https://tea.example', { htxProfileId: htxId, certificateIds: [c.id] })
+      const row = await prisma.lot.findUniqueOrThrow({ where: { id: lot.id }, include: { certificates: true } })
+      expect(row.status).toBe('QR_EXPORTED')
+      expect(row.certificates.map((x) => x.certificate_id)).toEqual([c.id])
+      expect(row.certificate_keys).toContain(c.file_key)
+      const before = await trace(lot.lot_code)
+      expect(before.dry_grade).toBe('DINH')
+      expect(before.batches).toHaveLength(1)
+      expect(before.intake).toHaveLength(1)
+      expect(before.is_harvest_safe).toBe(true)
+      expect(before.certificates).toEqual([expect.objectContaining({ id: c.id, revoked_at: null })])
+      await certRepo.revoke(htxId, c.id, 'mgr-1', 'Sai số chứng nhận')
+      const after = await trace(lot.lot_code)
+      expect(after.certificates[0].revoked_at).toEqual(expect.stringMatching(/^\d{4}-/))
+    })
+
+    it('answers LOT_WITHOUT_BATCH for a lot from the old path while labs is off', async () => {
+      const Old = require('@/infrastructure/db/lot/PrismaLotRepository').PrismaLotRepository
+      const old = await new Old().create({ commodity: 'Chè', harvest_date: new Date('2026-09-01T00:00:00Z'), parcel_ids: [parcelId], htx_profile_id: htxId, created_by_id: 'off-1' })
+      await expect(exporter().execute(old.id, undefined, undefined, { htxProfileId: htxId })).rejects.toMatchObject({ code: 'LOT_WITHOUT_BATCH' })
+    })
+
+    it('refuses a certificate revoked before the export, in the check and again under the lock (Review Focus 5)', async () => {
+      const lot = await readyLot()
+      const c = await newCert()
+      await certRepo.revoke(htxId, c.id, 'mgr-1', 'Thu hồi trước')
+      await expect(exporter().execute(lot.id, undefined, undefined, { htxProfileId: htxId, certificateIds: [c.id] })).rejects.toMatchObject({ code: 'CERTIFICATE_NOT_VALID', details: { certificate_ids: [c.id] } })
+      // Skip the first check: the transaction itself must refuse.
+      const Repo = require('@/infrastructure/db/lot/PrismaLotRepository').PrismaLotRepository
+      const data = (await trace(lot.lot_code))
+      await expect(new Repo().exportQr(lot.id, data, 'u', undefined, { htxProfileId: htxId, ids: [c.id], today: today() })).rejects.toMatchObject({ code: 'CERTIFICATE_NOT_VALID' })
+      expect((await prisma.lot.findUniqueOrThrow({ where: { id: lot.id } })).status).toBe('READY')
+      expect(await prisma.lotCertificate.count({ where: { lot_id: lot.id } })).toBe(0)
+    })
+
+    it('an export waiting on the certificate lock sees a revoke that commits first and fails, writing nothing', async () => {
+      const lot = await readyLot()
+      const c = await newCert()
+      const Repo = require('@/infrastructure/db/lot/PrismaLotRepository').PrismaLotRepository
+      const data = await trace(lot.lot_code)
+      let release!: () => void
+      const held = new Promise<void>((resolve) => { release = resolve })
+      let locked!: () => void
+      const gotLock = new Promise<void>((resolve) => { locked = resolve })
+      // The revoke transaction holds the row, as a slow revoke would.
+      const revoking = prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM htx_certificates WHERE id = ${c.id} FOR UPDATE`
+        locked()
+        await held
+        await tx.htxCertificate.update({ where: { id: c.id }, data: { revoked_at: new Date(), revoke_reason: 'Thu hồi' } })
+      })
+      await gotLock
+      const exporting = new Repo().exportQr(lot.id, data, 'u', undefined, { htxProfileId: htxId, ids: [c.id], today: today() }).then(() => 'exported', (e: { code?: string }) => e.code)
+      await new Promise((r) => setTimeout(r, 300))
+      release()
+      await revoking
+      expect(await exporting).toBe('CERTIFICATE_NOT_VALID')
+      expect((await prisma.lot.findUniqueOrThrow({ where: { id: lot.id } })).status).toBe('READY')
+    })
+
+    it('a revoke racing an export: either the export fails clean, or it wins and the revoke follows it', async () => {
+      for (let round = 0; round < 6; round++) {
+        const lot = await readyLot()
+        const c = await newCert()
+        const [exported, revoked] = await Promise.allSettled([
+          exporter().execute(lot.id, undefined, undefined, { htxProfileId: htxId, certificateIds: [c.id] }),
+          certRepo.revoke(htxId, c.id, 'mgr-1', 'Thu hồi'),
+        ])
+        const row = await prisma.lot.findUniqueOrThrow({ where: { id: lot.id }, include: { certificates: true } })
+        expect(revoked.status).toBe('fulfilled')
+        if (exported.status === 'fulfilled') {
+          expect(row.status).toBe('QR_EXPORTED')
+          expect(row.certificates).toHaveLength(1)
+        } else {
+          expect((exported as PromiseRejectedResult).reason).toMatchObject({ code: 'CERTIFICATE_NOT_VALID' })
+          expect(row.status).toBe('READY')
+          expect(row.certificates).toHaveLength(0)
+        }
+      }
     })
   })
 })
