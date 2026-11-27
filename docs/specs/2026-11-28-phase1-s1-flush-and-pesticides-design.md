@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — GĐ1 dự án con 1: Lứa hái chè và Danh mục thuốc BVTV
 
-> **Trạng thái:** Bản thiết kế (2026-11-28). Nhánh `feat/phase1-value-chain`.
+> **Trạng thái:** Đã triển khai trên nhánh `feat/phase1-value-chain` (2026-11-28), chưa phát hành. Bản thiết kế viết ngày 2026-11-28; khác biệt giữa thiết kế và mã nằm ở "Ghi chú sau triển khai" cuối tài liệu.
 > **Căn cứ:** [product-roadmap.md](../product-roadmap.md) §3 `[P]` rào chắn 1 và 2, §5 GĐ1 mục 1 và 2; [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md); DEV-010, DEV-015.
 > **Quyết định của chủ dự án (2026-11-28):**
 > - Phạm vi gồm: gắn `cycle_id`; tự mở lứa mới khi chăm sóc sau hái; thêm `PRUNING` (Đốn chè); hàng đợi offline cho nhật ký; nút "Sửa lại" khi `REQUEST_CHANGES`; nút "Nghiệm thu đạt cách ly" trên web; cán bộ kê đơn ở `/officer/diseases` chọn thuốc từ danh mục, tự tạo nháp nhật ký phun và khoá thời gian cách ly.
@@ -371,3 +371,15 @@ Quy tắc chung: chỉ tính các lần phun có `cycle_id` bằng lứa đang x
 | Olicide 9SL | Oligo-sacarit (sinh học) | rỉ sắt |
 | Antracol 70WP | Propineb | thán thư |
 | Daconil 75WP, 500SC | Chlorothalonil | đốm lá, thán thư |
+
+## Ghi chú sau triển khai
+
+Mã là nguồn cuối cùng. Phần dưới liệt kê chỗ mã khác thân đặc tả (đã tính các quyết định ở mục 7).
+
+1. **Ba migration, không phải hai.** Ngoài `20261128120000_activity_pruning` và `20261128120100_flush_and_pesticides`, có `20261128120200_journal_fresh_leaf_kg`: thêm `journal_activities.fresh_leaf_kg` (kg búp tươi, chỉ `HARVEST`) để dự án con 3 đối chiếu cân với nhật ký. Cột này không có trong mục 4.1; `POST /api/journal` từ chối `fresh_leaf_kg` ở hoạt động khác `HARVEST`.
+2. **Hàng đợi offline giữ lại thêm mã 401, 408, 429.** Mục 4.7 nói mọi 4xx chuyển sang "Chưa gửi được"; mã chạy các mã 401, 408 và 429 ở lại hàng đợi để thử lại (như 5xx), còn 4xx khác mới ghi `last_error`.
+3. **Chỗ áp quy tắc (a) mục 7.10 mà mã đã đổi.** `openParcelBlock` được dùng ở duyệt thu hoạch (`ApproveHarvestUseCase`), cờ `canApprove` của lịch thu hái và chốt bàn cân (S3). Agent A4 (`harvest_ready.py`) không đổi mã: nó vốn đọc mọi lần phun của nương. Tổng quan nông dân, tổng quan cán bộ và ứng viên chiến dịch không có thay đổi trong nhánh này và chưa được đối chiếu lại với quy tắc.
+4. **`safeHarvestDate` của lịch thu hái ở lứa đang mở** lấy các lần phun có `entry_date` không sau ngày thu hoạch dự kiến (hoặc hôm nay nếu chưa có), không phải "tại ngày D" như mục 7.10; chỉ cờ `canApprove` dùng đúng quy tắc (a) với giờ gọi.
+5. **So sánh theo thời điểm.** Quy tắc (a) ở duyệt thu hoạch và quy tắc (b) ở tạo lô so thời điểm (lúc gọi, hoặc `harvest_date` của lô), không đổi sang ngày lịch giờ Việt Nam; chỉ bàn cân so theo ngày lịch (S3).
+6. **Nhãn "Thuốc ngoài danh mục" trong danh sách duyệt của cán bộ (mục 4.2) chưa có ở giao diện web.** Chỉ agent A1 dùng nó: nhật ký phun có thuốc ngoài danh mục không vào đề xuất duyệt, kèm dòng "n nhật ký khác có thuốc ngoài danh mục nên cần cán bộ xem".
+7. **Nhãn HTX thấp hơn mức sàn** (mục 7.1): `label_note` thiếu thì API trả 422 `DOMAIN_ERROR`, không phải 400 `VALIDATION_ERROR`.
