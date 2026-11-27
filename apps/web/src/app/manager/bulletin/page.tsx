@@ -7,7 +7,6 @@ import { AiNote } from '@/components/ui/AiNote'
 import { BulletinCard } from '@/components/features/bulletin/BulletinCard'
 import { WeatherSection } from '@/components/features/bulletin/WeatherSection'
 import { ListenBulletinButton } from '@/components/features/bulletin/ListenBulletinButton'
-import { MOCK_BULLETINS } from '@/components/features/bulletin/mock-data'
 import { auth } from '@/auth'
 import { prisma } from '@/infrastructure/db/prisma.client'
 import { ArrowRight, ChevronUp } from 'lucide-react'
@@ -70,8 +69,7 @@ export default async function ManagerBulletinPage({ searchParams }: ManagerBulle
     }
   }).filter(b => b.summary.length > 0)
 
-  // Use real data if available, fallback to mock
-  const rawBulletins = realBulletins.length > 0 ? realBulletins : MOCK_BULLETINS
+  const rawBulletins = realBulletins
 
   // Filter by category if selected
   const bulletins = selectedCategory === 'all' 
@@ -171,7 +169,7 @@ export default async function ManagerBulletinPage({ searchParams }: ManagerBulle
       {/* Bulletins Grid or Empty Notice */}
       {bulletins.length === 0 ? (
         <div className={styles.emptyNotice}>
-          Không có bản tin nào trong danh mục này.
+          {selectedCategory === 'all' ? 'Chưa có bản tin nào' : 'Không có bản tin nào trong danh mục này.'}
         </div>
       ) : (
         <div className={styles.newsGrid}>
