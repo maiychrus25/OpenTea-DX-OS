@@ -3,7 +3,7 @@
 
 import { LotTraceRepository, ParcelHarvests } from '@/domain/repositories/lot-trace-repository'
 import { LotTraceData } from '@/domain/entities/lot-trace-data'
-import { belongsToLotLine } from '@/domain/journal/blocking-sprays'
+import { belongsToLotLine, lotLineBlock } from '@/domain/journal/blocking-sprays'
 import { WITHDRAWAL_EXCLUDED_STATUSES } from '@/domain/journal/withdrawal-status'
 import { prisma } from '@/infrastructure/db/prisma.client'
 
@@ -72,10 +72,16 @@ export class PrismaLotTraceRepository implements LotTraceRepository {
     const entriesOf = (lp: (typeof lot.lot_parcels)[number]) =>
       lp.parcel.journal_entries.filter(e => belongsToLotLine(e, lot.harvest_date, lp.cycle_id))
     const allEntries = lot.lot_parcels.flatMap(entriesOf)
-    const latestSafeDate = computeSafeHarvestDate(allEntries)
-    
-    // If there is no latestSafeDate (no chemicals applied), it is safe to harvest by default.
-    const isHarvestSafe = latestSafeDate ? latestSafeDate <= new Date() : true
+    // Rule (b): each line is judged against the lot's harvest date, so a spray done inside the withdrawal
+    // before it keeps the lot unsafe even after its safe date has passed.
+    const blocking = lot.lot_parcels
+      .map(lp => lotLineBlock(lp.parcel.journal_entries, lot.harvest_date, lp.cycle_id))
+      .filter((d): d is Date => d !== null)
+    const isHarvestSafe = blocking.length === 0
+    // Shown date: the latest blocking date, else the latest counted safe date.
+    const latestSafeDate = blocking.length
+      ? blocking.reduce((x, y) => (y > x ? y : x))
+      : computeSafeHarvestDate(allEntries)
 
     return {
       lot_code: lot.lot_code,
