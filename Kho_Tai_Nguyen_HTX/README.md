@@ -19,6 +19,7 @@ Tài liệu cho cán bộ, nông hộ và làm nguồn tra cứu cho AI. Sắp t
 - [Chế biến và bán hàng](3_Resources/Che_bien_ban_hang/README.md)
 - [Quản lý hợp tác xã](2_Areas/Quan_tri_HTX/Cam_nang/README.md)
 - [Du lịch](3_Resources/Du_lich_che/Cam_nang/README.md)
+- [Dữ liệu dạng bảng: dịch hại, vùng chè, OCOP, điểm du lịch](3_Resources/Du_lieu/README.md)
 - [Số liệu vùng chè](3_Resources/So_lieu_dia_phuong/vung-che-thai-nguyen.md)
 
 - Danh mục nguồn: `danh_muc.csv` (`tai_tai_lieu.py` sinh từ `nguon.json`).
