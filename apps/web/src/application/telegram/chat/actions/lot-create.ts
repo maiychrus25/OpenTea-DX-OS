@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { z } from 'zod'
+import { DomainError } from '@/domain/errors'
+import { isLabsEnabled } from '@/lib/labs'
 import { CreateLotUseCase } from '@/application/lot/CreateLotUseCase'
 import { localDay } from '@/domain/shared/local-day'
 import { PrismaParcelRepository } from '@/infrastructure/db/farm/PrismaParcelRepository'
@@ -46,6 +48,8 @@ export const lotCreateAction: ChatAction<LotCreatePayload> = {
     return [`Thửa: ${await parcelCode(user, payload.parcel_id)}`, `Khối lượng ước tính: ${payload.weight_kg} kg`, 'Ngày thu hoạch: hôm nay']
   },
   async execute(payload, user, _deps, now) {
+    // Frozen with POST /api/lots: a lot is closed from dry tea stock on the web.
+    if (!isLabsEnabled()) throw new DomainError('Tạo lô từ thửa đã chuyển sang Đóng lô từ mẻ.')
     await inCooperative(new TenantGuard(user.tenant).parcel(payload.parcel_id))
     const parcel = await new PrismaParcelRepository().findById(payload.parcel_id)
     if (!parcel) throw notFound()

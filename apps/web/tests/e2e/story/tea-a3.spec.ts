@@ -3,6 +3,7 @@
 
 // "Một ngày của lô chè A3" (spec §7) on the real stack, after `npm run seed` and `make platform-smoke`:
 //   E2E_CORE=1 E2E_BASE_URL=http://localhost:3000 npx playwright test tests/e2e/story/tea-a3.spec.ts --project=chromium --no-deps
+// The stack must run with DXOS_LABS=1: the officer creates lots from parcels and exports them without a batch (frozen since phase 2).
 // The disease-api container must be up. The farmer is the demo user farmer_tc, who owns parcel A3 and has no TOTP step;
 // a login does not change the user. The officer is smoke_officer_tc, because the demo officers must set up TOTP first.
 import { execFileSync } from 'child_process'

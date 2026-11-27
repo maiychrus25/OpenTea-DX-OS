@@ -5,7 +5,18 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { LotPort, LotSummary, CreateLotData, LotFilters, ExportQrResult } from '@/domain/lot/ports/LotPort'
 import { LotTraceData } from '@/domain/entities/lot-trace-data'
 import { Prisma, LotStatus } from '@prisma/client'
+import { UnprocessableError } from '@/domain/errors'
+import { certificateStatus } from '@/domain/certificate/status'
 import { cycleForLotLine } from '@/infrastructure/db/farm/PrismaCropCycleRepository'
+
+/** The next `{prefix}NNN` lot code. Takes a lock per prefix that lasts until the transaction ends, so two lots never share a number. */
+export async function nextLotCode(tx: Prisma.TransactionClient, prefix: string): Promise<string> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`lot:${prefix}`}))`
+  const rows = await tx.$queryRaw<{ n: number }[]>`
+    SELECT COALESCE(MAX(substring(lot_code from '[0-9]+$')::int), 0) + 1 AS n
+    FROM lots WHERE left(lot_code, ${prefix.length}::int) = ${prefix}`
+  return `${prefix}${String(rows[0].n).padStart(3, '0')}`
+}
 
 export class PrismaLotRepository implements LotPort {
   cycleForLine(parcelId: string, harvestDate: Date) {
@@ -66,22 +77,13 @@ export class PrismaLotRepository implements LotPort {
     const cropCode = data.commodity.toUpperCase().replace(/\s+/g, '').substring(0, 6)
     const dateStr = data.harvest_date.toISOString().slice(0, 10).replace(/-/g, '')
 
-    // Count existing lots for today to generate sequence number
-    const existingCount = await prisma.lot.count({
-      where: {
-        lot_code: { startsWith: `${htxCode}-${cropCode}-${dateStr}` },
-      },
-    })
-    const seq = String(existingCount + 1).padStart(3, '0')
-    const lotCode = `${htxCode}-${cropCode}-${dateStr}-${seq}`
-
     const lines = await Promise.all(
       data.parcel_ids.map(async (parcelId) => ({ parcel_id: parcelId, cycle_id: await cycleForLotLine(prisma, parcelId, data.harvest_date) }))
     )
 
-    const l = await prisma.lot.create({
+    const l = await prisma.$transaction(async (tx) => tx.lot.create({
       data: {
-        lot_code: lotCode,
+        lot_code: await nextLotCode(tx, `${htxCode}-${cropCode}-${dateStr}-`),
         commodity: data.commodity,
         harvest_date: data.harvest_date,
         estimated_weight_kg: data.estimated_weight_kg ?? null,
@@ -98,7 +100,7 @@ export class PrismaLotRepository implements LotPort {
         },
       },
       include: { lot_parcels: true },
-    })
+    }))
 
     return {
       id: l.id,
@@ -113,12 +115,25 @@ export class PrismaLotRepository implements LotPort {
     }
   }
 
-  async exportQr(id: string, snapshotData: LotTraceData, qrImageUrl?: string, certificateKeys?: string[]): Promise<ExportQrResult> {
+  async exportQr(id: string, snapshotData: LotTraceData, qrImageUrl?: string, certificateKeys?: string[], certificates?: { htxProfileId: string; ids: string[]; today: string }): Promise<ExportQrResult> {
     // Transaction: write public_page_data + set status = QR_EXPORTED
     const lot = await prisma.$transaction(async (tx) => {
       const currentLot = await tx.lot.findUnique({ where: { id } })
       if (!currentLot) throw new Error('Lot not found')
       if (currentLot.status === 'QR_EXPORTED') throw new Error('Lot already exported')
+
+      if (certificates && certificates.ids.length > 0) {
+        // A revoke that commits first is seen here; one that comes later waits for this lock and follows the export.
+        const rows = await tx.$queryRaw<{ id: string; revoked_at: Date | null; expires_on: string }[]>`
+          SELECT id, revoked_at, to_char(expires_on, 'YYYY-MM-DD') AS expires_on FROM htx_certificates
+          WHERE id = ANY(${certificates.ids}) AND htx_profile_id = ${certificates.htxProfileId} ORDER BY id FOR UPDATE`
+        const invalid = certificates.ids.filter((cid) => {
+          const row = rows.find((r) => r.id === cid)
+          return !row || certificateStatus(row, certificates.today) !== 'VALID'
+        })
+        if (invalid.length > 0) throw new UnprocessableError('CERTIFICATE_NOT_VALID', 'Có chứng nhận đã hết hạn hoặc đã thu hồi nên không gắn vào lô được.', { certificate_ids: invalid })
+        await tx.lotCertificate.createMany({ data: certificates.ids.map((certificate_id) => ({ lot_id: id, certificate_id })) })
+      }
 
       return tx.lot.update({
         where: { id },
@@ -135,7 +150,7 @@ export class PrismaLotRepository implements LotPort {
     return {
       lot_code: lot.lot_code,
       qr_image_url: lot.qr_image_url ?? '',
-      public_page_url: `/lot/${lot.lot_code}`,
+      public_page_url: `/q/${encodeURIComponent(lot.lot_code)}`,
     }
   }
 }

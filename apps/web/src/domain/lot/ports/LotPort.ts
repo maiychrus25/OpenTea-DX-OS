@@ -48,5 +48,9 @@ export interface LotPort {
   create(data: CreateLotData): Promise<LotSummary>
   /** The plucking flush a lot line of this parcel and harvest date belongs to; null for a parcel without flushes. */
   cycleForLine(parcelId: string, harvestDate: Date): Promise<string | null>
-  exportQr(id: string, snapshotData: LotTraceData, qrImageUrl?: string, certificateKeys?: string[]): Promise<ExportQrResult>
+  /**
+   * With `certificates`, the rows are locked and checked again inside the same transaction: a certificate revoked or
+   * expired meanwhile fails the export with 422 CERTIFICATE_NOT_VALID. Otherwise they are linked to the lot.
+   */
+  exportQr(id: string, snapshotData: LotTraceData, qrImageUrl?: string, certificateKeys?: string[], certificates?: { htxProfileId: string; ids: string[]; today: string }): Promise<ExportQrResult>
 }

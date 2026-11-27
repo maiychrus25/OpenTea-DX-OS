@@ -8,6 +8,7 @@ import { requireTenant } from '@/lib/api/tenant'
 import { TenantGuard } from '@/lib/api/tenant-guard'
 import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
 import { PrismaLotTraceRepository } from '@/infrastructure/db/repositories/prisma-lot-trace-repository'
+import { PrismaCertificateRepository } from '@/infrastructure/db/certificate/PrismaCertificateRepository'
 import { MinioStorageAdapter } from '@/infrastructure/storage/minio-storage.adapter'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
 import { ExportQrUseCase } from '@/application/lot/ExportQrUseCase'
@@ -16,6 +17,7 @@ import { z } from 'zod'
 
 const exportQrSchema = z.object({
   certificate_keys: z.array(z.string()).optional(),
+  certificate_ids: z.array(z.string().min(1)).max(20).optional(),
 })
 
 async function postExportQr(request: Request, context: unknown) {
@@ -33,25 +35,20 @@ async function postExportQr(request: Request, context: unknown) {
   const tenant = await requireTenant()
   await new TenantGuard(tenant).lot(id)
 
-  let certificateKeys: string[] | undefined
-  try {
-    const body = await request.json()
-    const parsed = exportQrSchema.parse(body)
-    certificateKeys = parsed.certificate_keys
-  } catch (e) {
-    // If no body or invalid json, just ignore (certificate_keys is optional)
-  }
+  // No body at all is fine (everything is optional); a body that is wrong is a 400, so a bad certificate_ids never means "all".
+  const parsed = exportQrSchema.parse(await request.json().catch(() => ({})))
+  const certificateKeys = parsed.certificate_keys
   assertCertificateKeys(certificateKeys, tenant.htxCode)
 
   const lotRepo = new PrismaLotRepository()
   const traceRepo = new PrismaLotTraceRepository()
   const storageRepo = new MinioStorageAdapter()
   const docStorageRepo = new MinioDocumentAdapter()
-  const useCase = new ExportQrUseCase(lotRepo, traceRepo, storageRepo, docStorageRepo, tenant.htxCode)
+  const useCase = new ExportQrUseCase(lotRepo, traceRepo, storageRepo, docStorageRepo, tenant.htxCode, new PrismaCertificateRepository())
   // Hexagonal: baseUrl injected from request headers via validated helper (Host injection guard)
   const { resolveBaseUrlFromHeaders } = await import('@/lib/url-helpers')
   const baseUrl = resolveBaseUrlFromHeaders(request.headers, process.env.NEXT_PUBLIC_BASE_URL)
-  const data = await useCase.execute(id, certificateKeys, baseUrl)
+  const data = await useCase.execute(id, certificateKeys, baseUrl, { htxProfileId: tenant.htxProfileId, certificateIds: parsed.certificate_ids })
   return NextResponse.json({ data })
 }
 

@@ -3,6 +3,7 @@
 
 import { z } from 'zod'
 import { ExportQrUseCase } from '@/application/lot/ExportQrUseCase'
+import { PrismaCertificateRepository } from '@/infrastructure/db/certificate/PrismaCertificateRepository'
 import { PrismaLotRepository } from '@/infrastructure/db/lot/PrismaLotRepository'
 import { PrismaLotTraceRepository } from '@/infrastructure/db/repositories/prisma-lot-trace-repository'
 import { MinioDocumentAdapter } from '@/infrastructure/storage/minio-document.adapter'
@@ -49,10 +50,11 @@ export const lotExportQrAction: ChatAction<LotExportPayload> = {
     const lots = new PrismaLotRepository()
     const lot = await lots.findById(payload.lot_id)
     if (!lot) throw notFound()
-    await new ExportQrUseCase(lots, new PrismaLotTraceRepository(), new MinioStorageAdapter(), new MinioDocumentAdapter(), user.tenant.htxCode).execute(
+    await new ExportQrUseCase(lots, new PrismaLotTraceRepository(), new MinioStorageAdapter(), new MinioDocumentAdapter(), user.tenant.htxCode, new PrismaCertificateRepository()).execute(
       payload.lot_id,
       undefined,
-      process.env.NEXT_PUBLIC_BASE_URL
+      process.env.NEXT_PUBLIC_BASE_URL,
+      { htxProfileId: user.tenant.htxProfileId }
     )
     return `Đã xuất mã QR cho lô ${lot.lot_code}.`
   },

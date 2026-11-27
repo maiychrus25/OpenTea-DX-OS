@@ -53,6 +53,11 @@ const uploadRequest = (pathPrefix: string, fileName = 'a.pdf') =>
 const post = (body: unknown) => new Request('http://localhost/api/x', { method: 'POST', body: JSON.stringify(body) })
 const ctx = { params: Promise.resolve({ id: 'lot-1' }) }
 
+// Creating a lot from parcels is frozen behind DXOS_LABS (phase 2); these tests exercise that old path.
+const labsBefore = process.env.DXOS_LABS
+beforeAll(() => { process.env.DXOS_LABS = '1' })
+afterAll(() => { if (labsBefore === undefined) delete process.env.DXOS_LABS; else process.env.DXOS_LABS = labsBefore })
+
 beforeEach(() => {
   jest.clearAllMocks()
   jest.spyOn(console, 'error').mockImplementation(() => undefined)

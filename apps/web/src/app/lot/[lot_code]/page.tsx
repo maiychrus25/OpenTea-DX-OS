@@ -1,113 +1,19 @@
-// Copyright (c) 2026 OpenTea Developers
-// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 OpenTea Developers
 
-import React from 'react';
-import { notFound } from 'next/navigation';
-import { headers } from 'next/headers';
-import { unstable_cache } from 'next/cache';
-import { cache } from 'react';
-import { GetLotTraceDataUseCase } from '@/application/useCases/get-lot-trace-data-usecase';
-import { LotAiVerification } from '@/application/lot/lot-ai-verification';
-import { PrismaLotTraceRepository } from '@/infrastructure/db/repositories/prisma-lot-trace-repository';
-import { PrismaLotVerificationRepository } from '@/infrastructure/db/repositories/prisma-lot-verification-repository';
-import { logger } from '@/lib/logger';
-import { TraceView } from './_components/TraceView';
+import { notFound, permanentRedirect } from 'next/navigation'
 
-export const runtime = 'nodejs';
+export const runtime = 'nodejs'
 
-const getCachedTrace = cache(async (code: string) => {
-  const repo = new PrismaLotTraceRepository();
-  const useCase = new GetLotTraceDataUseCase(repo);
-  try {
-    return await useCase.execute(code);
-  } catch (e) {
-    const { NotFoundError } = await import('@/domain/errors')
-    if (e instanceof NotFoundError) return null
-    throw e
-  }
-});
-
-/**
- * The verification line never fails the page: a lookup error shows no line and is logged. Checking the audit chain
- * reads every audit row, so a public page caches the answer per lot for 5 minutes.
- */
-const verificationLines = unstable_cache(
-  async (code: string): Promise<string[]> => {
-    try {
-      return await new LotAiVerification(new PrismaLotVerificationRepository()).execute(code);
-    } catch (err) {
-      logger.error('Lot verification line failed', { lot_code: code, err });
-      return [];
-    }
-  },
-  ['lot-ai-verification'],
-  { revalidate: 300 }
-);
-
-export async function generateMetadata({ params }: { params: Promise<{ lot_code: string }> }) {
-  const { lot_code } = await params;
-  let decoded: string
-  try {
-    decoded = decodeURIComponent(lot_code).normalize('NFC')
-  } catch {
-    return {
-      title: `Không tìm thấy lô hàng`,
-      description: `Mã lô không hợp lệ`,
-      robots: { index: false, follow: false },
-    }
-  }
-  if (!decoded || decoded.length > 100 || /[\/\r\n?#]/.test(decoded)) {
-    return {
-      title: `Không tìm thấy lô hàng`,
-      description: `Mã lô không hợp lệ`,
-      robots: { index: false, follow: false },
-    }
-  }
-  const data = await getCachedTrace(decoded)
-  if (!data) {
-    return {
-      title: `Không tìm thấy lô hàng`,
-      description: `Lô hàng ${decoded} không tồn tại`,
-      robots: { index: false, follow: false },
-    }
-  }
-  return {
-    title: `Truy xuất ${decoded}`,
-    description: `Xem thông tin truy xuất nguồn gốc lô hàng ${decoded}`,
-  }
-}
-
-export default async function TracePage({ params }: { params: Promise<{ lot_code: string }> }) {
-  const { lot_code } = await params;
+/** Printed labels point here; the one public trace page is /q/[lot_code], so this answers 308 to it. */
+export default async function LotRedirect({ params }: { params: Promise<{ lot_code: string }> }) {
+  const { lot_code } = await params
   let decoded: string
   try {
     decoded = decodeURIComponent(lot_code).normalize('NFC')
   } catch {
     notFound()
   }
-  if (!decoded! || decoded.length > 100 || /[\/\r\n?#]/.test(decoded)) {
-    notFound()
-  }
-
-  const lotTraceData = await getCachedTrace(decoded!)
-
-  if (!lotTraceData) {
-    notFound()
-  }
-
-  // Generate QR code as base64 data URI — validated host-aware baseUrl (Host injection guard)
-  const QRCode = (await import('qrcode')).default
-  const headerList = await headers()
-  const { resolveBaseUrlFromHeaders } = await import('@/lib/url-helpers')
-  const baseUrl = resolveBaseUrlFromHeaders(headerList, process.env.NEXT_PUBLIC_BASE_URL)
-  const pageUrl = `${baseUrl}/lot/${encodeURIComponent(decoded!)}`
-  const qrDataUri = await QRCode.toDataURL(pageUrl, { margin: 1, width: 200 }).catch(() => '')
-  const verification = await verificationLines(decoded!)
-
-  return (
-    <main>
-      <TraceView data={lotTraceData} qrDataUri={qrDataUri} pageUrl={pageUrl} verification={verification} />
-    </main>
-  );
+  if (!decoded || decoded.length > 100 || /[\/\r\n?#]/.test(decoded)) notFound()
+  permanentRedirect(`/q/${encodeURIComponent(decoded)}`)
 }
-
