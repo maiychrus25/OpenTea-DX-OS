@@ -32,10 +32,11 @@ interface Props {
   place: string
   /** Last stored reading, shown until the live one arrives or when it cannot be read. */
   cached: HeroWeather | null
+  forecastHref?: string
 }
 
 /** The greeting banner with the weather over the parcels; it rains on the banner when it rains there. */
-export function WeatherHero({ eyebrow, title, subtitle, actions, place, cached }: Props) {
+export function WeatherHero({ eyebrow, title, subtitle, actions, place, cached, forecastHref = '/farmer/bulletin-notifications' }: Props) {
   const [live, setLive] = useState<{ weather: HeroWeather; area: string } | null>(null)
 
   useEffect(() => {
@@ -120,7 +121,7 @@ export function WeatherHero({ eyebrow, title, subtitle, actions, place, cached }
               <span>Không nên phun thuốc hôm nay: thuốc dễ bị rửa trôi do mưa.</span>
             </>
           )}
-          <Link href="/farmer/bulletin-notifications" className={styles.forecast}>
+          <Link href={forecastHref} className={styles.forecast}>
             Xem dự báo <ArrowRight size={15} aria-hidden="true" />
           </Link>
         </div>

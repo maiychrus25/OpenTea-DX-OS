@@ -21,6 +21,16 @@ beforeAll(() => {
 })
 
 describe('WeatherHero', () => {
+  it('allows an officer forecast destination without changing the farmer default', () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline')) as unknown as typeof fetch
+    const { unmount } = show()
+    expect(screen.getByRole('link', { name: /Xem dự báo/ })).toHaveAttribute('href', '/farmer/bulletin-notifications')
+    unmount()
+    render(<WeatherHero eyebrow="Cán bộ" title="Chào" subtitle="." actions={[]} place="" cached={cached} forecastHref="/officer/bulletin" />)
+    expect(screen.getByRole('link', { name: /Xem dự báo/ })).toHaveAttribute('href', '/officer/bulletin')
+    expect(screen.queryByText(/thuận lợi|nên phun/i)).not.toBeInTheDocument()
+  })
+
   it('rains on the banner only when it is raining', async () => {
     live(63)
     const { unmount } = show()
