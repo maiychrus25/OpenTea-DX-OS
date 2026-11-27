@@ -3,7 +3,7 @@
 
 import { Metadata } from "next"
 import Link from "next/link"
-import { Leaf } from "lucide-react"
+import { CircleCheck, Leaf } from "lucide-react"
 import styles from "./login-page.module.css"
 import { Suspense } from "react"
 import { LoginForm } from "./_components/login-form"
@@ -37,9 +37,9 @@ export default function LoginPage() {
             <span>cho hợp tác xã chè.</span>
           </h2>
           <ul className={styles.featureList}>
-            <li>Ghi nhật ký canh tác minh bạch, truy xuất được nguồn gốc</li>
-            <li>AI giám sát sâu bệnh và cảnh báo kịp thời</li>
-            <li>Dữ liệu của bạn được lưu trữ an toàn, bảo mật</li>
+            <li><CircleCheck size={20} className={styles.checkIcon} aria-hidden="true" /> Ghi nhật ký canh tác minh bạch, truy xuất được nguồn gốc</li>
+            <li><CircleCheck size={20} className={styles.checkIcon} aria-hidden="true" /> AI giám sát sâu bệnh và cảnh báo kịp thời</li>
+            <li><CircleCheck size={20} className={styles.checkIcon} aria-hidden="true" /> Dữ liệu của bạn được lưu trữ an toàn, bảo mật</li>
           </ul>
         </aside>
 
