@@ -36,6 +36,7 @@ select_permissions:
       columns:
         - id
         - parcel_id
+        - cycle_id
         - entry_date
         - activity_type
         - submitted_role

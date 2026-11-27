@@ -22,6 +22,15 @@ EXPECTED_COLUMNS = {
         "id", "parcel_id", "household_id", "status", "detection_date", "created_at", "updated_at",
         "ai_disease_name", "confirmed_diagnosis",
     },
+    "journal_entries": {
+        "id", "parcel_id", "cycle_id", "entry_date", "activity_type", "submitted_role", "status",
+        "approved_at", "review_note", "notes", "weather_condition", "weather_temperature",
+        "weather_precipitation", "weather_humidity", "created_at", "updated_at",
+    },
+    "journal_activities": {
+        "id", "journal_entry_id", "pesticide_product_id", "activity_detail", "product_name", "dosage",
+        "withdrawal_days", "safe_harvest_date", "created_at",
+    },
 }
 # Aggregate view with no personal column, so the agent may read all of its columns.
 ALL_COLUMNS = {"telemetry.sensor_daily"}
