@@ -44,12 +44,30 @@ function HouseholdBankForm({ household, onClear }: FormProps) {
   const [saved, setSaved] = useState<HouseholdBank | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [ready, setReady] = useState(false)
 
+  // Prefill from the household's saved details; null means nothing is saved yet. The account is never logged.
   useEffect(() => {
-    fetchJson<{ data: BankOption[] }>('/api/banks')
-      .then(body => setBanks(body.data))
-      .catch(() => setError(LOAD_FAILED_MESSAGE))
-  }, [])
+    let live = true
+    Promise.all([
+      fetchJson<{ data: BankOption[] }>('/api/banks'),
+      fetchJson<{ data: HouseholdBank | null }>(`/api/households/${household.id}/bank`),
+    ])
+      .then(([banksBody, bankBody]) => {
+        if (!live) return
+        setBanks(banksBody.data)
+        const current = bankBody.data
+        if (current) {
+          setBin(current.bank_bin ?? '')
+          setAccount(current.bank_account ?? '')
+          setAccountName(current.bank_account_name ?? '')
+          setSaved(current)
+        }
+        setReady(true)
+      })
+      .catch(() => { if (live) setError(LOAD_FAILED_MESSAGE) })
+    return () => { live = false }
+  }, [household.id])
 
   function problem(): string | null {
     if (!bin) return 'Chọn ngân hàng.'
@@ -72,7 +90,6 @@ function HouseholdBankForm({ household, onClear }: FormProps) {
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { setError(json?.error?.message || 'Không lưu được tài khoản.'); return }
       setSaved(json.data)
-      setAccount('')
     } catch {
       setError('Lỗi kết nối máy chủ.')
     } finally {
@@ -107,7 +124,7 @@ function HouseholdBankForm({ household, onClear }: FormProps) {
       {error && <p role="alert" className={styles.error}>{error}</p>}
       <div className={styles.actions}>
         <Button variant="secondary" onClick={onClear}>Chọn hộ khác</Button>
-        <Button isLoading={busy} onClick={save}>Lưu tài khoản</Button>
+        <Button isLoading={busy} disabled={!ready} onClick={save}>Lưu tài khoản</Button>
       </div>
     </div>
   )

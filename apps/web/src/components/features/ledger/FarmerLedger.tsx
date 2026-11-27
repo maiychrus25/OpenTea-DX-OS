@@ -65,6 +65,13 @@ export function FarmerLedger() {
 
       <section className={`${kit.pn} ${styles.balance}`} aria-label="Số dư">
         <p className={styles.balanceLine}>{balanceText(ledger.balance_vnd)}</p>
+        {ledger.households.length > 1 && (
+          <ul className={styles.householdBalances} aria-label="Số dư từng hộ">
+            {ledger.households.map(h => (
+              <li key={h.household_id}><strong>{h.household_name}:</strong> {balanceText(h.balance_vnd)}</li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className={kit.pn} aria-label="Chi tiết sổ tiền">
@@ -122,13 +129,13 @@ export function FarmerLedger() {
               : (
                 <ul className={kit.list}>
                   {ledger.lines.map(line => (
-                    <li key={`${line.period_id ?? ''}-${line.household_id}`} className={styles.row}>
+                    <li key={`${line.period_id}-${line.household_id}`} className={styles.row}>
                       <div className={styles.grow}>
                         <strong>{line.household_name}</strong>
-                        <span className={kit.muted}>Tiền búp {formatVnd(line.leaf_amount_vnd)} đ · Vật tư {formatVnd(line.advances_vnd)} đ</span>
+                        <span className={kit.muted}>Kỳ {line.period_code} · Tiền búp {formatVnd(line.leaf_amount_vnd)} đ · Vật tư {formatVnd(line.advances_vnd)} đ</span>
                         <span>Thực lĩnh {formatVnd(line.payable_vnd)} đ · {line.paid_at ? 'Đã trả' : BigInt(line.payable_vnd) === BigInt(0) ? 'Không có khoản chi trả' : 'Chưa trả'}</span>
                       </div>
-                      {line.id && line.period_id
+                      {line.id
                         ? <Link href={`/farmer/settlements/${line.period_id}/slip/${line.id}`} className={styles.link}>Xem phiếu</Link>
                         : <span className={kit.muted}>Phiếu chưa sẵn sàng</span>}
                     </li>

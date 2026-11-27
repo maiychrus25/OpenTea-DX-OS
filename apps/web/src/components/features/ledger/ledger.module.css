@@ -74,6 +74,7 @@
 
 .balance { padding: 22px 20px; }
 .balanceLine { margin: 0; font-size: 24px; font-weight: 800; color: var(--color-ink-heading); overflow-wrap: anywhere; }
+.householdBalances { display: flex; flex-direction: column; gap: 6px; list-style: none; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px solid var(--color-border-row); font-size: 15px; color: var(--color-ink-primary); overflow-wrap: anywhere; }
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--color-border); }
 .tab { min-height: 44px; padding: 0 16px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--color-ink-secondary); font: inherit; font-weight: 600; cursor: pointer; }
 .tab:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
