@@ -79,6 +79,8 @@ describe('routeText: the issue #80 read tools', () => {
     ['tài liệu', { kind: 'tool', name: 'documents' }],
     ['đối tác', { kind: 'tool', name: 'partners' }],
     ['đất thửa', { kind: 'tool', name: 'soil' }],
+    ['lô hàng TC-CHE-20261110-001', { kind: 'tool', name: 'lots', args: { lot_code: 'TC-CHE-20261110-001' } }],
+    ['lô hàng 5 tấn đã bán', { kind: 'tool', name: 'lots' }],
   ])('%s', (text, expected) => {
     expect(routeText(text)).toEqual(expected)
   })

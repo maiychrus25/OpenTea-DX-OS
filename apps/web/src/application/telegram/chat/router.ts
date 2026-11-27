@@ -83,7 +83,11 @@ const TEXT_ARG: Partial<Record<ToolName, string>> = {
   soil: 'parcel_code',
   photo: 'parcel_code',
   households: 'name',
+  lots: 'lot_code',
 }
+
+/** A tool that also answers with no argument takes the words only when they have this shape: a lot code is one word with a digit. */
+const ARG_SHAPE: Partial<Record<ToolName, RegExp>> = { lots: /^\S*\d\S*$/ }
 
 /** The words after the first run of words that fold to `phrase`, in the sentence's own spelling. */
 function wordsAfter(text: string, phrase: string): string {
@@ -108,7 +112,7 @@ export function routeText(text: string): Route | null {
   }
   if (best?.route.kind === 'tool' && TEXT_ARG[best.route.name]) {
     const value = wordsAfter(text, best.phrase)
-    if (value) return { ...best.route, args: { [TEXT_ARG[best.route.name] as string]: value } }
+    if (value && (ARG_SHAPE[best.route.name]?.test(value) ?? true)) return { ...best.route, args: { [TEXT_ARG[best.route.name] as string]: value } }
   }
   return best?.route ?? null
 }

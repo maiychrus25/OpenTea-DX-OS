@@ -5,7 +5,7 @@
 import { CHAT_TOOLS } from '@/application/telegram/chat/tools'
 import type { ChatTool, ChatUser } from '@/application/telegram/chat/types'
 import { NotFoundError } from '@/domain/errors'
-const mockFakes = { parcels: jest.fn(), parcelById: jest.fn(), journalScoped: jest.fn(), journal: jest.fn(), schedule: jest.fn(), forecast: jest.fn(), proposals: jest.fn(), subjects: jest.fn(), lots: jest.fn(), bulletin: jest.fn(), htxProfile: jest.fn(), notifications: jest.fn(), weatherForParcel: jest.fn(), marketFindFirst: jest.fn(), fxFindMany: jest.fn() }
+const mockFakes = { parcels: jest.fn(), parcelById: jest.fn(), journalScoped: jest.fn(), journal: jest.fn(), schedule: jest.fn(), forecast: jest.fn(), proposals: jest.fn(), subjects: jest.fn(), lots: jest.fn(), bulletin: jest.fn(), htxProfile: jest.fn(), notifications: jest.fn(), weatherForParcel: jest.fn(), marketFindFirst: jest.fn(), fxFindMany: jest.fn(), lotFindFirst: jest.fn(), unscheduled: jest.fn() }
 const fakes = mockFakes
 
 // The Telegram update route has no browser session: a chat read that loads the auth modules must fail here.
@@ -32,6 +32,9 @@ jest.mock('@/infrastructure/db/lot/PrismaLotRepository', () => ({
 }))
 jest.mock('@/application/farm/get-harvest-schedule-use-case', () => ({
   GetHarvestScheduleUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.schedule(...args) })),
+}))
+jest.mock('@/application/farm/get-unscheduled-cycles-use-case', () => ({
+  GetUnscheduledCyclesUseCase: jest.fn(() => ({ execute: (...args: unknown[]) => mockFakes.unscheduled(...args) })),
 }))
 jest.mock('@/infrastructure/db/farm/PrismaCropCycleRepository', () => ({ PrismaCropCycleRepository: jest.fn() }))
 jest.mock('@/application/weather/get-weather-forecast-usecase', () => ({
@@ -67,6 +70,7 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({
   prisma: {
     marketData: { findFirst: (...args: unknown[]) => mockFakes.marketFindFirst(...args) },
     fxRate: { findMany: (...args: unknown[]) => mockFakes.fxFindMany(...args) },
+    lot: { findFirst: (...args: unknown[]) => mockFakes.lotFindFirst(...args) },
   },
 }))
 
@@ -117,6 +121,8 @@ beforeEach(() => {
   fakes.marketFindFirst.mockResolvedValue(null)
   fakes.fxFindMany.mockResolvedValue([])
   fakes.htxProfile.mockResolvedValue(null)
+  fakes.lotFindFirst.mockResolvedValue(null)
+  fakes.unscheduled.mockResolvedValue([])
 })
 
 describe('CHAT_TOOLS (contract C5)', () => {
@@ -267,6 +273,24 @@ describe('harvest_schedule', () => {
     const reply = await tool('harvest_schedule').run(user('farmer'), {}, NOW)
     expect(fakes.schedule).toHaveBeenCalledWith('htx-tc', NOW.toISOString(), expect.any(String))
     expect(reply.lines).toEqual(['02/12 · TC-A1 · Chè', '10/12 · TC-A1 · Chè'])
+    expect(fakes.unscheduled).not.toHaveBeenCalled()
+  })
+
+  const cycle = (code: string) => ({ cycleId: `c-${code}`, parcelId: `id-${code}`, parcelName: code, householdName: 'Hộ 1', cropType: 'Chè', estimatedYieldKg: null, estimatedHarvestDate: null, safeHarvestDate: null, status: 'SAFE' })
+
+  it('tells a manager first which cycles have no harvest date, as the unscheduled route does', async () => {
+    fakes.schedule.mockResolvedValue([{ ...cycle('TC-A1'), estimatedHarvestDate: '2026-12-02T00:00:00.000Z' }])
+    fakes.unscheduled.mockResolvedValue(['TC-B1', 'TC-B2', 'TC-B3', 'TC-B4'].map(cycle))
+    const reply = await tool('harvest_schedule').run(user('manager'), {}, NOW)
+    expect(fakes.unscheduled).toHaveBeenCalledWith('htx-tc')
+    expect(reply.lines).toEqual(['Chưa đặt ngày: 4 lứa · TC-B1, TC-B2, TC-B3, …', '02/12 · TC-A1 · Chè'])
+  })
+
+  it('does not read the unscheduled cycles for an officer, whom the route refuses', async () => {
+    fakes.unscheduled.mockResolvedValue([cycle('TC-B1')])
+    const reply = await tool('harvest_schedule').run(user('officer'), {}, NOW)
+    expect(fakes.unscheduled).not.toHaveBeenCalled()
+    expect(reply.lines).toEqual(['Chưa có dữ liệu.'])
   })
 })
 
@@ -276,6 +300,24 @@ describe('lots', () => {
     const reply = await tool('lots').run(user('officer'), {}, NOW)
     expect(fakes.lots).toHaveBeenCalledWith({ htx_profile_id: 'htx-tc' })
     expect(reply).toEqual({ lines: ['LOT-001 · Chè · READY · 20/11/2026'], source: 'Lô hàng' })
+    expect(fakes.lotFindFirst).not.toHaveBeenCalled()
+  })
+
+  it('shows one lot of the cooperative by its code', async () => {
+    fakes.lotFindFirst.mockResolvedValue({ lot_code: 'TC-CHE-001', commodity: 'Chè', quality_grade: 'Grade 1', harvest_date: new Date('2026-11-20T00:00:00Z'), total_weight_kg: null, actual_weight_kg: 120, estimated_weight_kg: 150, buyer_name: 'Công ty Trà Việt', status: 'READY', _count: { lot_parcels: 2 } })
+    const reply = await tool('lots').run(user('manager'), { lot_code: 'tc-che-001' }, NOW)
+    expect(fakes.lotFindFirst.mock.calls[0][0].where).toEqual({ lot_code: { equals: 'tc-che-001', mode: 'insensitive' }, htx_profile_id: 'htx-tc' })
+    expect(reply).toEqual({
+      lines: ['Lô TC-CHE-001 · READY', 'Sản phẩm: Chè · Grade 1', 'Ngày thu hoạch: 20/11/2026', 'Khối lượng: 120 kg', 'Số thửa: 2', 'Người mua: Công ty Trà Việt'],
+      source: 'Lô hàng',
+    })
+    expect(fakes.lots).not.toHaveBeenCalled()
+  })
+
+  it("answers not found for another cooperative's lot code, and lists nothing", async () => {
+    const reply = await tool('lots').run(user('officer'), { lot_code: 'LB-CHE-009' }, NOW)
+    expect(reply.lines).toEqual(['Không tìm thấy lô hàng.'])
+    expect(fakes.lots).not.toHaveBeenCalled()
   })
 })
 
