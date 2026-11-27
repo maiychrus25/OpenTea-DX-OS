@@ -1,166 +1,75 @@
 /* Copyright (c) 2026 OpenTea Developers
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
-/* ── Auth Shell Layout (giống login, không dùng composé để tránh coupling) ── */
-.authShell {
-  min-height: 100vh;
+/* The shell (top bar, photo side and footer) is the sign-in page's; only the form is styled here. */
+.panel {
+  padding: 24px;
+}
+
+.pair {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
-.authSide {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--color-hero-bg) 55%, transparent) 0%, var(--color-hero-bg) 85%),
-    url('/images/tea-hills-mist.jpg') center / cover;
-  color: var(--sidebar-foreground);
-  padding: 48px 64px;
-  display: flex;
-  flex-direction: column;
-}
-
-.authSideBrand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 1.25rem;
-}
-
-.brandIcon {
-  width: 48px;
-  height: 48px;
-  background: var(--accent-lime);
-  color: var(--sidebar-bg);
-  border-radius: var(--rounded-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.authSideContent {
-  margin-top: auto;
-  margin-bottom: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.authSideTitle {
-  font-size: 2.5rem;
-  line-height: 1.2;
-  font-weight: 600;
-  margin: 0;
-  max-width: 480px;
-}
-
-.authSideDesc {
-  font-size: 1.125rem;
-  line-height: 1.6;
-  opacity: 0.9;
-  margin: 0;
-  max-width: 480px;
-}
-
-.featureList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
 }
 
-.featureList li {
+.pair > .field {
+  min-width: 0;
+}
+
+.control {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.9375rem;
-  opacity: 0.85;
-}
-
-.featureList li::before {
-  content: '';
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2384cc16' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-position: center;
-}
-
-.authSideFooter {
-  font-size: 0.875rem;
-  opacity: 0.6;
-}
-
-.authPanel {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 40px 32px;
-  background: var(--background);
-  overflow-y: auto;
-}
-
-.authCard {
-  width: 100%;
-  max-width: 480px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-button);
   background: var(--color-surface-card);
-  border-radius: var(--rounded-xl);
-  padding: 40px 36px;
-  box-shadow: var(--shadow-card);
-  display: flex;
-  flex-direction: column;
-  margin-top: 24px;
-  margin-bottom: 24px;
-}
-
-.cardHeader {
-  margin-bottom: 24px;
-}
-
-.cardPretitle {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--color-ink-secondary);
-  margin: 0 0 8px 0;
 }
 
-.cardTitle {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-  color: var(--color-ink-primary);
+.control:focus-within {
+  border-color: var(--color-primary);
+  outline: 2px solid var(--color-primary-subtle);
 }
 
-.cardDesc {
-  font-size: 0.9375rem;
+.control svg {
+  flex: none;
+}
+
+.control .input,
+.control .select {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  background: transparent;
+  font-size: 14px;
+}
+
+.reveal {
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  background: none;
   color: var(--color-ink-secondary);
-  margin: 0;
-  line-height: 1.5;
+  cursor: pointer;
 }
 
-/* ── Mock Mode Banner ── */
-.mockBanner {
-  background: var(--color-warning-subtle);
-  color: var(--color-warning);
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 0.8125rem;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.hint {
+  margin: -6px 0 0;
+  font-size: 12px;
+  color: var(--color-ink-secondary);
 }
 
 /* ── Form ── */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .field {
@@ -170,8 +79,8 @@
 }
 
 .label {
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--color-ink-primary);
 }
 
@@ -325,21 +234,8 @@
   text-decoration: underline;
 }
 
-@media (max-width: 900px) {
-  .authShell {
-    grid-template-columns: 1fr;
-  }
-
-  .authSide {
-    display: none;
-  }
-
-  .authCard {
-    padding: 32px 24px;
-  }
-
-  .authPanel {
-    align-items: flex-start;
-    padding: 24px 16px;
+@media (max-width: 480px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
