@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, CloudRain, Droplet, MapPin } from 'lucide-react'
+import { ArrowRight, CloudRain, Droplet, Leaf, MapPin } from 'lucide-react'
 import { weatherCodeToCondition } from '@/infrastructure/external/open-meteo-adapter'
 import { RainCanvas } from '@/components/features/bulletin/RainCanvas'
 import { WeatherIcon, isRainy } from '@/components/features/bulletin/WeatherSection'
@@ -113,9 +113,17 @@ export function WeatherHero({ eyebrow, title, subtitle, actions, place, cached }
             </dl>
           </>
         )}
-        <Link href="/farmer/bulletin-notifications" className={styles.forecast}>
-          Xem dự báo <ArrowRight size={15} aria-hidden="true" />
-        </Link>
+        <div className={weather && weather.rainMm > 0 ? styles.advice : styles.footer}>
+          {weather && weather.rainMm > 0 && (
+            <>
+              <Leaf size={18} aria-hidden="true" />
+              <span>Không nên phun thuốc hôm nay: thuốc dễ bị rửa trôi do mưa.</span>
+            </>
+          )}
+          <Link href="/farmer/bulletin-notifications" className={styles.forecast}>
+            Xem dự báo <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+        </div>
       </section>
     </header>
   )
