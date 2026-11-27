@@ -25,6 +25,8 @@ export interface ChatReply {
   source: string
   /** Open proposals the engine then sends to this chat with their approve and reject buttons (tool `pending`). */
   proposalIds?: string[]
+  /** The engine adds the Nghe button under this answer (tool `bulletin`). */
+  listen?: boolean
 }
 
 /** What A7 may fill in for a tool or an action; `name` equals the step slot for actions. */

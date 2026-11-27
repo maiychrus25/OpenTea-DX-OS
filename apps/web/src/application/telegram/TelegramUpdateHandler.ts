@@ -22,6 +22,7 @@ import { AssistantRequests } from './assistant/AssistantRequests'
 import { ChatEngine, PHOTO_MAX_BYTES, type IncomingPhoto, type ProposalMessage } from './chat/ChatEngine'
 import { ChatUserResolver } from './chat/ChatUserResolver'
 import { commandOf } from './chat/router'
+import type { BulletinSpeech } from './chat/speech'
 import type { ChatAction, ChatTool, ChatUser, PhotoStore } from './chat/types'
 import { WAITING_FOR_STAFF_APP } from '@/application/agent/actions/staff-task-create.action'
 import { autopilotStatusText, TELEGRAM_TEXT, type AutopilotStatusFigures } from './messages'
@@ -61,7 +62,7 @@ export type ReplyButtons = ReplyButton[][]
 
 /** A reply the relay sends (contract C2). An edit always sends its keyboard, so an edit without buttons removes them. */
 export type OutboxReply =
-  | { op: 'send'; chat_id: number; text: string; buttons?: ReplyButtons }
+  | { op: 'send'; chat_id: number; text: string; buttons?: ReplyButtons; audio?: { kind: 'bulletin'; id: string } }
   | { op: 'edit'; chat_id: number; edit_message_id: number; text: string; buttons?: ReplyButtons }
 
 export interface UpdateResponse {
@@ -74,6 +75,8 @@ export interface ChatServices {
   tools: readonly ChatTool[]
   actions: readonly ChatAction[]
   photos: PhotoStore
+  /** Read-aloud of the bulletin (C4); without it `Nghe` answers that it cannot read now. */
+  speech?: BulletinSpeech
   requests: AssistantRequestRepository
   householdId(userId: string): Promise<string | null>
   /** Mini-app requests (M13): a manager's sentence, and the text that answers A12's questions. */
@@ -177,6 +180,7 @@ export class TelegramUpdateHandler {
       tools: deps.chat.tools,
       actions: deps.chat.actions,
       photos: deps.chat.photos,
+      speech: deps.chat.speech,
       requests: new AssistantRequests(deps.chat.requests, deps.repo),
       callbackKey: deps.callbackKey,
       appRequests: deps.chat.appRequests,

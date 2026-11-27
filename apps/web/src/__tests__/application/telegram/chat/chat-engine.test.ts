@@ -4,6 +4,7 @@
 import { z } from 'zod'
 import type { ReplyButtons } from '@/application/telegram/TelegramUpdateHandler'
 import { ChatEngine } from '@/application/telegram/chat/ChatEngine'
+import type { BulletinSpeech } from '@/application/telegram/chat/speech'
 import type { ChatAction, ChatTool, ChatUser, PhotoStore } from '@/application/telegram/chat/types'
 import { TELEGRAM_TEXT } from '@/application/telegram/messages'
 import { DomainError } from '@/domain/errors'
@@ -165,7 +166,7 @@ const nearby = {
   run: jest.fn(async () => ({ lines: ['Thửa TC-A1 cách 0.4 km'], source: 'Vùng trồng' })),
 } as unknown as ChatTool
 
-function build(options: { tools?: ChatTool[]; actions?: ChatAction[] } = {}) {
+function build(options: { tools?: ChatTool[]; actions?: ChatAction[]; speech?: BulletinSpeech } = {}) {
   const repo = fakeRepo()
   const photos = fakePhotos()
   const requests = { submit: jest.fn(async () => true) }
@@ -177,6 +178,7 @@ function build(options: { tools?: ChatTool[]; actions?: ChatAction[] } = {}) {
     requests: requests as never,
     callbackKey: KEY,
     proposalMessages: jest.fn(async () => []),
+    speech: options.speech,
   })
   return { engine, repo, photos, requests }
 }
@@ -808,6 +810,75 @@ describe('ChatEngine: captions and orphan photos (issue #80, C5)', () => {
     await engine.discard('42')
     expect(photos.delete).toHaveBeenCalledWith(DISEASE_KEY)
     expect(repo.rows.has('42')).toBe(false)
+  })
+})
+
+describe('ChatEngine: read aloud (issue #80, C4)', () => {
+  const bulletin = {
+    name: 'bulletin',
+    titleVi: 'Bản tin',
+    roles: ['officer', 'manager'],
+    routes: [],
+    args: [],
+    run: jest.fn(async () => ({ lines: ['Giá chè ổn định.'], source: 'Bản tin', listen: true })),
+  } as unknown as ChatTool
+  const created = new Date('2026-11-25T03:00:00Z')
+  const speech = (over: Partial<BulletinSpeech> = {}): BulletinSpeech => ({
+    ready: jest.fn(async () => true),
+    latest: jest.fn(async () => ({ id: 'b-1', createdAt: created })),
+    ...over,
+  })
+
+  test('the bulletin reply gains Nghe, a v2 menu button whose step is listen', async () => {
+    const { engine } = build({ tools: [bulletin] })
+    const res = await engine.onText(MANAGER, 'bản tin hôm nay', NOW)
+    expect(res.replies[0].text).toBe('Giá chè ổn định.\nNguồn: Bản tin')
+    expect(buttonFor(res.replies[0].buttons, 'Nghe')).toMatchObject({ c: 'menu', s: 'listen' })
+  })
+
+  test('a reply without listen has no buttons', async () => {
+    const { engine } = build()
+    const res = await engine.onText(FARMER, 'thời tiết hôm nay', NOW)
+    expect(res.replies[0].buttons).toBeUndefined()
+  })
+
+  test('Nghe sends the audio reply for the latest bulletin of the cooperative, captioned with its day', async () => {
+    const fake = speech()
+    const { engine } = build({ tools: [bulletin], speech: fake })
+    const res = await press(engine, MANAGER, '44', 44, 'menu', 'listen')
+    expect(fake.latest).toHaveBeenCalledWith('TC')
+    expect(res.replies).toEqual([{ op: 'send', chat_id: 44, text: 'Bản tin 25/11/2026', audio: { kind: 'bulletin', id: 'b-1' } }])
+  })
+
+  test('Piper not running answers the fallback line and sends no audio', async () => {
+    const { engine } = build({ tools: [bulletin], speech: speech({ ready: jest.fn(async () => false) }) })
+    const res = await press(engine, MANAGER, '44', 44, 'menu', 'listen')
+    expect(res.replies).toEqual([{ op: 'send', chat_id: 44, text: 'Chưa đọc được bản tin lúc này.' }])
+  })
+
+  test('with no speech service at all it answers the same fallback line', async () => {
+    const { engine } = build({ tools: [bulletin] })
+    expect((await press(engine, MANAGER, '44', 44, 'menu', 'listen')).replies[0].text).toBe('Chưa đọc được bản tin lúc này.')
+  })
+
+  test('a bulletin that is gone answers the empty line', async () => {
+    const { engine } = build({ tools: [bulletin], speech: speech({ latest: jest.fn(async () => null) }) })
+    expect((await press(engine, MANAGER, '44', 44, 'menu', 'listen')).replies[0]).toMatchObject({ text: 'Chưa có dữ liệu.' })
+  })
+
+  test('a farmer cannot listen, and nothing is looked up', async () => {
+    const fake = speech()
+    const { engine } = build({ tools: [bulletin], speech: fake })
+    const res = await press(engine, FARMER, '42', 42, 'menu', 'listen')
+    expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.noPermission('Bản tin'), show_alert: true })
+    expect(fake.ready).not.toHaveBeenCalled()
+  })
+
+  test('listening keeps the flow that is open', async () => {
+    const { engine, repo } = build({ tools: [bulletin], speech: speech() })
+    await engine.onText(MANAGER, '/hoi', NOW)
+    await press(engine, MANAGER, '44', 44, 'menu', 'listen')
+    expect(repo.rows.get('44')).toMatchObject({ flow: 'ask' })
   })
 })
 

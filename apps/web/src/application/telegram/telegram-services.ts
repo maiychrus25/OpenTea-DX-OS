@@ -30,6 +30,7 @@ import { AssistantResultUseCase } from './assistant/AssistantResult'
 import { ChatEngine } from './chat/ChatEngine'
 import { ChatUserResolver } from './chat/ChatUserResolver'
 import { CHAT_ACTIONS } from './chat/actions'
+import { piperBulletinSpeech } from './chat/speech'
 import { CHAT_TOOLS } from './chat/tools'
 import { autopilotEnabledText } from './messages'
 import { AppRequestIntake } from '@/application/appbuilder/AppRequestIntake'
@@ -73,6 +74,7 @@ export function chatServices(): ChatServices {
     tools: CHAT_TOOLS,
     actions: CHAT_ACTIONS,
     photos: new TelegramPhotoStore(),
+    speech: piperBulletinSpeech(),
     requests: new PrismaAssistantRequestRepository(),
     householdId: async (userId) =>
       (await new GetFarmerHouseholdUseCase(new PrismaHouseholdRepository()).execute(userId))?.id ?? null,
@@ -109,6 +111,7 @@ export function assistantResultUseCase(): AssistantResultUseCase {
     tools: services.tools,
     actions: services.actions,
     photos: services.photos,
+    speech: services.speech,
     requests: assistantRequests(),
     callbackKey: telegramCallbackKey() ?? '',
     appRequests: services.appRequests,

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { randomBytes } from 'node:crypto'
+import { formatVnDate } from '@/application/agent/actions/journal-labels'
 import { DomainError } from '@/domain/errors'
 import { logger } from '@/lib/logger'
 import { signCallbackDataV2 } from '@/domain/telegram/callback-data'
@@ -13,6 +14,7 @@ import { menuKeyboard, MENU_LABEL, type MenuKey } from './menu'
 import { editButton } from './mini-app'
 import { normalizeText } from './normalize'
 import { commandOf, routeText } from './router'
+import type { BulletinSpeech } from './speech'
 import type {
   ActionName,
   ArgHint,
@@ -65,6 +67,8 @@ export interface ChatEngineDeps {
   tools: readonly ChatTool[]
   actions: readonly ChatAction[]
   photos: PhotoStore
+  /** Read-aloud of the bulletin (`Nghe`). Absent: the button answers that it cannot read now. */
+  speech?: BulletinSpeech
   requests: AssistantSubmitter
   callbackKey: string
   /** Mini-app requests by chat (M13): a manager's sentence that asks for an app. Absent: the sentence goes to the assistant. */
@@ -501,7 +505,22 @@ export class ChatEngine {
     return callbackOnly([edit(chat, press.messageId, line)])
   }
 
+  /** `Nghe`: the latest bulletin goes to the relay as an audio reply; nothing is sent when the voice is not running. */
+  private async listenPress(user: ChatUser): Promise<UpdateResponse> {
+    const chat = user.chatId
+    const tool = this.toolNamed('bulletin')
+    if (!tool || !tool.roles.includes(user.tenant.role)) {
+      return callbackOnly([], TELEGRAM_TEXT.noPermission(tool?.titleVi ?? 'Bản tin'), true)
+    }
+    const speech = this.deps.speech
+    if (!speech || !(await speech.ready())) return callbackOnly([send(chat, TELEGRAM_TEXT.listenUnavailable)])
+    const bulletin = await speech.latest(user.tenant.htxCode)
+    if (!bulletin) return callbackOnly([send(chat, NO_DATA_VI)])
+    return callbackOnly([{ op: 'send', chat_id: chat, text: `Bản tin ${formatVnDate(bulletin.createdAt) ?? ''}`.trim(), audio: { kind: 'bulletin', id: bulletin.id } }])
+  }
+
   private async menuPress(user: ChatUser, press: CallbackPress, now: Date): Promise<UpdateResponse> {
+    if (press.s === 'listen') return this.listenPress(user)
     if (!(MENU_KEYS as string[]).includes(press.s)) return callbackOnly([], TELEGRAM_TEXT.staleButton, true)
     await this.discard(press.telegramUserId)
     let result: UpdateResponse
@@ -552,7 +571,9 @@ export class ChatEngine {
 
     const result = await tool.run(user, args, now)
     const body = result.lines.length ? result.lines.slice(0, TOOL_LINE_MAX) : [NO_DATA_VI]
-    const replies: OutboxReply[] = [send(chat, [...body, `Nguồn: ${result.source}`].join('\n'))]
+    const text = [...body, `Nguồn: ${result.source}`].join('\n')
+    const listen = result.listen ? [[this.button('menu', 'listen', TELEGRAM_BUTTON.listen)]] : undefined
+    const replies: OutboxReply[] = [send(chat, text, listen)]
     if (result.proposalIds?.length) {
       const messages = await this.deps.proposalMessages(user.tenant.htxCode, result.proposalIds)
       for (const message of messages) replies.push(send(chat, message.text, message.buttons))
