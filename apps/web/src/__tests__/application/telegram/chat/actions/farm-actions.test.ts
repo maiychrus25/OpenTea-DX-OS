@@ -109,7 +109,7 @@ const base: ChatUser = {
 const officer = base
 const manager: ChatUser = { ...base, tenant: { ...base.tenant, userId: 'manager-1', role: 'manager' } }
 const farmer: ChatUser = { ...base, tenant: { ...base.tenant, userId: 'farmer-1', role: 'farmer' }, householdId: 'hh1' }
-const deps = { photos: { put: jest.fn(), get: jest.fn() } }
+const deps = { photos: { put: jest.fn(), get: jest.fn(), delete: jest.fn() } }
 const NOW = new Date('2026-11-27T03:00:00.000Z')
 
 const action = (name: string): ChatAction => {
@@ -128,7 +128,7 @@ beforeEach(() => {
 })
 
 describe('the high actions of this track', () => {
-  it.each(['journal.delete', 'notification.announce', 'notification.clear', 'member.approve', 'member.remove', 'parcel.delete'])(
+  it.each(['journal.delete', 'notification.announce', 'notification.clear', 'member.approve', 'member.remove', 'parcel.delete', 'lot.export_qr'])(
     '%s is high with a second-card consequence',
     (name) => {
       expect(action(name).risk).toBe('high')

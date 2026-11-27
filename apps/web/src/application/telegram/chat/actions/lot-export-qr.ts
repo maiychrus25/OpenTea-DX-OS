@@ -18,11 +18,14 @@ async function readyLots(user: ChatUser) {
   return lots.slice(0, MAX_CHOICES)
 }
 
-/** Routes: `POST /api/lots/[id]/export-qr`. The public link comes from `NEXT_PUBLIC_BASE_URL`, as no request carries a host. */
+/**
+ * Routes: `POST /api/lots/[id]/export-qr`. The public link comes from `NEXT_PUBLIC_BASE_URL`, as no request carries a host.
+ * High, with two cards (spec §13.7): an exported lot is public and frozen.
+ */
 export const lotExportQrAction: ChatAction<LotExportPayload> = {
   name: 'lot.export_qr',
   titleVi: 'Xuất mã QR lô hàng',
-  risk: 'medium',
+  risk: 'high',
   roles: ['officer', 'manager'],
   routes: ['POST /api/lots/[id]/export-qr'],
   args: [],
@@ -35,7 +38,7 @@ export const lotExportQrAction: ChatAction<LotExportPayload> = {
     },
   ],
   payloadSchema: z.object({ lot_id: z.string().min(1) }),
-  consequenceVi: null,
+  consequenceVi: 'Lô sẽ có trang truy xuất công khai. Sau khi xuất mã QR, dữ liệu lô không sửa được nữa.',
   async preview(payload, user) {
     const lot = (await readyLots(user)).find((candidate) => candidate.id === payload.lot_id)
     if (!lot) throw notFound()
