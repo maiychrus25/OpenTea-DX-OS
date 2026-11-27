@@ -75,10 +75,10 @@ describe('flush assignment', () => {
 describe('PrismaJournalRepository submit', () => {
   it('submitting a draft assigns the flush by entry_date', async () => {
     const tx = fakeTx([closed, open])
-    const entry = { parcel_id: 'p1', entry_date: day('2026-11-10'), activity_type: 'SPRAYING', status: 'DRAFT', submitted_role: 'FARMER', performed_by: 'U', submitted_by_id: 'u', parcel: {}, activities: [] }
+    const entry = { parcel_id: 'p1', entry_date: day('2026-11-10'), activity_type: 'SPRAYING', status: 'DRAFT', submitted_role: 'FARMER', performed_by: 'U', submitted_by_id: 'u', parcel: {}, activities: [{ id: 'a1', withdrawal_days: 14, safe_harvest_date: null }] }
     const updated: Record<string, unknown>[] = []
     const txClient = Object.assign(tx, {
-      journalActivity: { deleteMany: jest.fn() },
+      journalActivity: { deleteMany: jest.fn(), update: jest.fn() },
       journalEntry: {
         findUnique: jest.fn(async () => entry),
         update: jest.fn(async ({ data }: { data: Record<string, unknown> }) => {
@@ -99,5 +99,7 @@ describe('PrismaJournalRepository submit', () => {
     await new PrismaJournalRepository().update('e1', {}, true)
     expect(updated[1].cycle_id).toBe('c2')
     expect(updated[1].status).toBe('PENDING_APPROVAL')
+    // the withdrawal restarts from the confirmed spray date
+    expect(txClient.journalActivity.update).toHaveBeenLastCalledWith({ where: { id: 'a1' }, data: { safe_harvest_date: day('2026-11-28') } })
   })
 })

@@ -67,6 +67,10 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'POST /api/parcels/[id]/approve-harvest',
   ],
   miniApp: [
+    // The pesticide catalogue and the HTX labels are picked and edited in the web forms.
+    'GET /api/pesticides',
+    'PUT /api/pesticides/[id]/label',
+    'DELETE /api/pesticides/[id]/label',
     // Makes an account with a password: typed in the app, never sent in a Telegram message (owner's decision, 2026-11-27).
     'POST /api/members/invite',
     'POST /api/farm/parcels',

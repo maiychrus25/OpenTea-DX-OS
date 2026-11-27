@@ -357,6 +357,15 @@ export class PrismaJournalRepository implements JournalPort {
         }
       }
       const updated = await tx.journalEntry.update({ where: { id }, data: updateData, include: ENTRY_INCLUDE })
+      // The safe dates follow the spray date: a prescribed draft is dated when the farmer confirms the spraying.
+      if (!data.activities && (resubmit || data.entry_date)) {
+        for (const activity of updated.activities) {
+          if (!activity.withdrawal_days) continue
+          const safe = new Date(updated.entry_date.getTime() + activity.withdrawal_days * DAY_MS)
+          await tx.journalActivity.update({ where: { id: activity.id }, data: { safe_harvest_date: safe } })
+          activity.safe_harvest_date = safe
+        }
+      }
       if (resubmit && updated.submitted_role === 'FARMER') {
         await notifyOfficers(tx, updated.parcel_id, updated.performed_by, updated.activity_type, updated.submitted_by_id)
       }

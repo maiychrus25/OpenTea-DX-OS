@@ -5,6 +5,8 @@ import { DiseaseReportPort } from '@/domain/disease/ports/disease-report.port';
 import { NotificationPort } from '@/domain/ports/notification-port';
 import { StoragePort } from '@/domain/disease/ports/storage.port';
 import { DocumentStoragePort } from '@/domain/document/ports/document-storage.port';
+import { DiseasePrescription } from '@/domain/disease/ports/disease-report.port';
+import { PesticidePort } from '@/domain/pesticide/ports/PesticidePort';
 import { NotificationType } from '@prisma/client';
 import { documentRoot } from '@/domain/document/document-namespace';
 
@@ -16,6 +18,10 @@ export interface ReviewDiseaseReportCommand {
   treatment_recommendation: string;
   /** The officer's disease name; required and non-empty when CONFIRMED, ignored when REJECTED. */
   confirmed_diagnosis: string;
+  /** Only with CONFIRMED: a catalogue product to spray; creates a DRAFT spraying for the farmer. */
+  prescription?: { pesticideProductId: string; dosage?: string };
+  htxProfileId?: string;
+  officerName?: string;
 }
 
 export class ReviewDiseaseReportUseCase {
@@ -23,10 +29,11 @@ export class ReviewDiseaseReportUseCase {
     private diseaseReportPort: DiseaseReportPort,
     private notificationPort: NotificationPort,
     private storagePort: StoragePort,
-    private documentStoragePort: DocumentStoragePort
+    private documentStoragePort: DocumentStoragePort,
+    private pesticides?: PesticidePort
   ) {}
 
-  async execute(command: ReviewDiseaseReportCommand): Promise<void> {
+  async execute(command: ReviewDiseaseReportCommand): Promise<{ draftJournalEntryId?: string }> {
     const report = await this.diseaseReportPort.findById(command.reportId);
     
     if (!report) {
@@ -46,19 +53,34 @@ export class ReviewDiseaseReportUseCase {
       throw new Error('DIAGNOSIS_REQUIRED');
     }
 
-    await this.diseaseReportPort.updateStatus(
-      command.reportId,
-      command.status,
-      command.treatment_recommendation,
-      command.officerId,
-      confirmedDiagnosis
-    );
+    let prescription: DiseasePrescription | undefined;
+    if (command.prescription) {
+      if (command.status !== 'CONFIRMED') throw new Error('PRESCRIPTION_REQUIRES_CONFIRMED');
+      const floor = this.pesticides && command.htxProfileId
+        ? await this.pesticides.floorFor(command.prescription.pesticideProductId, command.htxProfileId)
+        : null;
+      if (!floor) throw new Error('PESTICIDE_NOT_FOUND');
+      prescription = {
+        pesticideProductId: floor.productId,
+        floorDays: floor.floorDays,
+        dosage: command.prescription.dosage,
+        officerName: command.officerName ?? 'Cán bộ kỹ thuật',
+      };
+    }
+
+    const result =
+      (prescription
+        ? await this.diseaseReportPort.updateStatus(command.reportId, command.status, command.treatment_recommendation, command.officerId, confirmedDiagnosis, prescription)
+        : await this.diseaseReportPort.updateStatus(command.reportId, command.status, command.treatment_recommendation, command.officerId, confirmedDiagnosis)) ?? {};
 
     const title = command.status === 'CONFIRMED' ? 'Báo cáo bệnh đã duyệt' : 'Báo cáo bệnh bị từ chối';
     let body = `Báo cáo bệnh ${confirmedDiagnosis ?? report.ai_disease_name} tại thửa ${report.parcel_code} đã được cán bộ phản hồi.`;
     
     if (command.status === 'CONFIRMED') {
       body += ` Hướng dẫn: ${command.treatment_recommendation}`;
+      if (result.draftJournalEntryId) {
+        body += ` Cán bộ kê đơn ${result.prescribedProductName ?? ''}. Khi phun xong, mở nhật ký nháp và bấm Đã phun.`;
+      }
 
       // User request: Transfer confirmed report to PARA (agrimarket-private)
       try {
@@ -98,5 +120,7 @@ export class ReviewDiseaseReportUseCase {
       body,
       report.id
     );
+
+    return { draftJournalEntryId: result.draftJournalEntryId };
   }
 }
