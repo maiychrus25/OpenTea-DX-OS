@@ -599,6 +599,43 @@ Tiền luôn là số nguyên đồng (VND). `amount_vnd` là BigInt trong cơ s
 - **Phiếu quyết toán và VietQR.** Phiếu gồm HTX, hộ, kỳ, các phiếu cân và phiếu ứng của dòng, dòng quyết toán và nội dung chuyển khoản `QT {ngày của mã kỳ} {4 ký tự cuối id hộ}` (ASCII, tối đa 25 ký tự). Mã QR theo chuẩn VietQR/EMVCo (CRC16/CCITT-FALSE) chỉ có khi hộ có ngân hàng và tài khoản và `payable_vnd > 0`; ảnh sinh ở máy chủ, trả dạng data URL.
 - **Ai đọc gì.** Đọc danh sách và chi tiết kỳ: `manager`, `accountant`. Đọc sổ và phiếu của một hộ: `manager`, `accountant`. Xã viên chỉ đọc sổ của các hộ gắn với tài khoản mình (`GET /api/ledger/mine`, gộp theo hộ) và phiếu của chính hộ mình.
 
+### 3.24 Mẻ sao sấy, tồn chè khô và lô từ mẻ (GĐ2)
+
+Quy trình: phiếu cân búp tươi vào một mẻ sao, mẻ cho ra chè khô theo hạng, lô đóng gói lấy từ tồn chè khô của các mẻ đã hoàn thành. `officer` và `manager` làm mọi bước này; `accountant` và `farmer` không vào xưởng.
+
+- **Mẻ.** Mã `{HTX}-MS-YYYYMMDD-NN` theo ngày chế biến (`processed_on`, không sau hôm nay, nếu không 422 `DOMAIN_ERROR`), `NN` đánh từ 01 theo từng HTX và từng ngày dưới khoá tư vấn. Trạng thái `OPEN`, `FINISHED`, `CANCELLED`. Tên thợ sao (`master_name`, tối đa 80), ca (40) và ghi chú (500) là tuỳ chọn.
+- **Phiếu vào một mẻ, nguyên phiếu.** Một phiếu cân không chia; mỗi phiếu thuộc tối đa một mẻ (`fresh_leaf_tickets.processing_batch_id`). Chỉ phiếu `VALID` của HTX và chưa vào mẻ nào thêm được. Số phiếu cập nhật khác số phiếu gửi lên (phiếu vừa huỷ, vừa vào mẻ khác, hoặc không thuộc HTX) thì cả lần thêm bị huỷ, trả 409 `TICKETS_CHANGED`. Danh sách phiếu chọn được mặc định 30 ngày Việt Nam gần nhất, tối đa 500 phiếu; máy chủ không cấm phiếu cũ hơn.
+- **Huỷ phiếu cân đã vào mẻ bị từ chối** (409 `TICKET_IN_BATCH`, nêu mã mẻ); phải bỏ phiếu khỏi mẻ đang mở trước. Phiếu trong mẻ vẫn được quyết toán bình thường (mục 3.23): tiền xã viên và khối lượng xưởng là hai việc độc lập.
+- **Sản lượng chè khô.** Bộ năm hạng cố định (`DryTeaGrade`): `DINH` (Đinh), `TOM_NON` (Tôm nõn), `MOC_CAU` (Móc câu), `BOM` (Bồm), `CAM` (Cám). Mỗi hạng tối đa một dòng, kg lớn hơn 0, tối đa 100.000, một chữ số thập phân. `PUT` thay cả bộ dòng.
+- **Chỉ sửa khi mẻ còn `OPEN`.** Thêm hoặc bỏ phiếu, đặt sản lượng, hoàn thành và huỷ đều khoá dòng mẻ rồi kiểm; mẻ đã hoàn thành hoặc đã huỷ trả 409 `BATCH_NOT_OPEN`.
+- **Hoàn thành mẻ.** Cần ít nhất một phiếu và một dòng sản lượng (nếu không 422 `BATCH_EMPTY`). `fresh_kg` là tổng `net_kg` các phiếu, `dry_kg` là tổng sản lượng, tính bằng số nguyên theo phần mười kg. **Tỷ lệ thu hồi `recovery_ratio` = `fresh_kg / dry_kg`, làm tròn 2 chữ số thập phân, nửa làm tròn lên.** Khoảng chuẩn **4,50 đến 5,00 (kg tươi cho 1 kg khô), gồm cả hai đầu, xét trên tỷ lệ đã làm tròn** (hằng `RECOVERY_BAND`, chưa cấu hình theo HTX). Ngoài khoảng thì `out_of_band` là `true` và bắt buộc có `deviation_note`: sau khi cắt khoảng trắng phải đủ 10 ký tự, nếu không trả 422 `DEVIATION_NOTE_REQUIRED` kèm `recovery_ratio`. Ghi chú lệch ngắn hơn 10 ký tự, hoặc dài quá 500, bị zod từ chối ngay bằng 400 `VALIDATION_ERROR`. Trong khoảng chuẩn thì không lưu ghi chú.
+- **Mẻ đã hoàn thành là cuối cùng.** Không mở lại và không sửa phiếu hay sản lượng; mẻ giữ đúng các số đã chốt (`fresh_kg`, `dry_kg`, `recovery_ratio`, `out_of_band`, `deviation_note`). Sai thì chỉ huỷ được khi còn `OPEN`.
+- **Huỷ mẻ** chỉ khi `OPEN`, kèm lý do 3 đến 200 ký tự. Mọi phiếu của mẻ được trả lại (`processing_batch_id` rỗng). Mẻ `CANCELLED` cũng là cuối cùng.
+- **Tồn chè khô.** Tồn của một dòng sản lượng = `kg` của dòng trừ tổng `lot_batch_sources.kg` đã lấy từ dòng đó. Chỉ dòng của mẻ `FINISHED` mới là tồn; hiện dòng còn tồn lớn hơn 0, mẻ cũ nhất trước (`GET /api/dry-stock`).
+- **Đóng lô từ mẻ** (`POST /api/lots/from-batches`). Một lô chỉ lấy từ tồn của **một hạng**. Trong một giao dịch, khoá các dòng sản lượng được chọn, rồi: dòng không thuộc HTX, mẻ chưa `FINISHED`, hoặc số kg lấy lớn hơn tồn còn lại thì trả 409 `STOCK_CHANGED` kèm tồn mới (`error.stock`); dòng khác hạng với lô thì 422 `GRADE_MISMATCH`.
+- **Kiểm cách ly từng phiếu nguồn.** Mọi phiếu cân `VALID` của các mẻ nguồn đều được kiểm, mỗi phiếu theo quy tắc (b) mục 3.2 với **ngày cân của chính phiếu là ngày thu hoạch `H`** (cuối ngày Việt Nam của ngày cân) và lứa của phiếu. Một lần phun có ngày an toàn đúng bằng ngày cân thì không chặn; một lần phun ghi sau với `entry_date` trước ngày cân thì chặn. Phiếu bị chặn thì 422 `WITHDRAWAL_NOT_PASSED` kèm `parcel_code`, `weighed_on` và `safe_on`, và không tạo lô.
+- **Lô tạo ra.** `commodity` là "Chè"; `dry_grade` là hạng và `quality_grade` là nhãn tiếng Việt của hạng; `harvest_date` là ngày cân muộn nhất của các phiếu nguồn; `packaging_date` là hôm nay; `total_weight_kg` và `estimated_weight_kg` là tổng kg lấy; trạng thái `READY`. Mỗi thửa có phiếu nguồn có một dòng `lot_parcels`, với lứa của phiếu cân muộn nhất của thửa đó. Nguồn ghi ở `lot_batch_sources` (mỗi cặp lô và dòng sản lượng một dòng).
+- **Mã lô** `{HTX}-CHE-YYYYMMDD-NNN` theo ngày thu hoạch của lô; `NNN` đánh dưới khoá tư vấn theo tiền tố mã (`lot:{tiền tố}`), nên hai lô không bao giờ trùng số, kể cả đường tạo lô cũ.
+- **Đường tạo lô từ thửa bị đóng băng.** `POST /api/lots` (với `parcel_ids`) và thao tác chat `lot-create` chỉ chạy khi `DXOS_LABS` là `1` hoặc `true` (ADR 0005); tắt thì `POST /api/lots` trả 404 `NOT_FOUND` ("Tính năng này chưa mở."). Xuất QR một lô không có nguồn mẻ khi `DXOS_LABS` tắt thì trả 422 `LOT_WITHOUT_BATCH`. Lô đã xuất QR trước đó vẫn hiện bình thường. Với lô từ mẻ, xuất QR không còn kiểm "mỗi thửa có lứa đã thu hoạch": nó đã được kiểm theo từng phiếu nguồn.
+
+### 3.25 Chứng nhận (GĐ2)
+
+- **Loại và trường.** `VIETGAP`, `OCOP`, `ORGANIC`, `OTHER`. Số chứng nhận (tối đa 60 ký tự), nơi cấp (120), ngày cấp, ngày hết hạn (không trước ngày cấp), ghi chú phạm vi tuỳ chọn (200); CSDL có `CHECK` cho độ dài, ngày và kích thước.
+- **Tệp.** PDF, JPG hoặc PNG, tối đa 10 MB (10.485.760 byte). Máy chủ kiểm **byte đầu của tệp** (`%PDF-`, `FF D8 FF`, chữ ký PNG) và loại khai báo phải khớp; sai thì 400 `FILE_TYPE`, quá lớn 400 `FILE_TOO_LARGE` (từ chối ngay theo `Content-Length` trước khi đọc thân). Tên tệp được làm sạch (chỉ `A-Z a-z 0-9 . _ -`, tối đa 80 ký tự).
+- **Nơi lưu.** Tệp nằm trên kho đối tượng của stack (SeaweedFS, qua client S3 `minio`; các biến `MINIO_*` là tên cũ của client, không phải dịch vụ MinIO) trong bucket `agrimarket-private`, khoá `para/<htx_code>/Certificates/<uuid>-<tên đã làm sạch>`. Tải về qua `GET /api/certificates/[id]/file` (chuyển hướng 302 tới liên kết ký sẵn 1 giờ).
+- **Trạng thái tính lúc đọc**, không lưu: `REVOKED` khi có `revoked_at`; `EXPIRED` khi ngày hôm nay (giờ Việt Nam) sau `expires_on`; còn lại `VALID`. Đúng ngày hết hạn vẫn còn hiệu lực.
+- **Thu hồi** chỉ do `manager`, kèm lý do 3 đến 200 ký tự; thu hồi hai lần trả 409 `CERTIFICATE_REVOKED`. Không xoá chứng nhận. Thêm và xem do `officer` và `manager`.
+- **Gắn vào lô khi xuất QR.** `POST /api/lots/[id]/export-qr` nhận `certificate_ids` tuỳ chọn (tối đa 20); không gửi thì gắn mọi chứng nhận còn hiệu lực của HTX. Mỗi chứng nhận gửi lên phải thuộc HTX và còn hiệu lực hôm nay, nếu không 422 `CERTIFICATE_NOT_VALID` kèm `certificate_ids` sai. Khi ghi, giao dịch khoá các dòng chứng nhận (`FOR UPDATE`) và kiểm lại, nên một lần thu hồi vừa xong không lọt; một lần thu hồi đến sau chờ khoá và theo sau lần xuất. `lot_certificates` ghi cặp (lô, chứng nhận); khoá tệp cũng được thêm vào `certificate_keys` để route tải công khai hiện có tiếp tục chạy.
+
+### 3.26 Trang QR công khai duy nhất (GĐ2)
+
+- **Một trang.** Mọi tem trỏ tới `/q/<mã lô>`; ảnh QR khi xuất mã hoá `{gốc}/q/{mã lô}`. Trang cũ `/lot/<mã lô>` đã bỏ; tem in trước đây vẫn chạy nhờ `next.config.js` trả chuyển hướng vĩnh viễn 308 từ `/lot/:lot_code` sang `/q/:lot_code`. Trang không cần đăng nhập.
+- **Bốn tầng, theo thứ tự; tầng rỗng bị bỏ:** (1) Vùng trồng; (2) An toàn cách ly; (3) Mẻ sao chế biến (mã mẻ, ngày, kg tươi vào, kg khô ra, tỷ lệ có đánh dấu khi lệch, phần kg của lô); (4) Chứng nhận (loại, số, nơi cấp, hiệu lực, thu hồi). Kèm khối "Kiểm chứng trong sổ audit" (M14).
+- **Với lô từ mẻ**, trang tính an toàn theo từng phiếu nguồn (mỗi phiếu theo ngày cân của nó, mục 3.24) và liệt kê từng phiếu nguồn: mã thửa, lứa, ngày cân, kg tịnh, ngày an toàn; không có tên hộ và không có mã phiếu.
+- **Chứng nhận đọc trực tiếp lúc dựng trang**, kể cả với lô đã xuất QR: một lần thu hồi hoặc hết hạn sau khi xuất hiện ngay trên trang, dù ảnh chụp lúc xuất vẫn giữ tệp.
+- **Tên người ẩn mặc định.** Tên hộ (`household_name`), người ghi nhật ký (`performed_by`) và tên thợ sao (`master_name`) chỉ hiện khi HTX bật `htx_profiles.public_show_names` (mặc định `false`). Việc ẩn làm **lúc dựng trang**, nên áp cả với ảnh chụp lô xuất từ trước. `manager` bật hoặc tắt qua `PUT /api/htx/public-settings`.
+- **Tem in.** `officer` và `manager` mở `/officer/lots/[mã lô]/labels` hoặc `/manager/lots/[mã lô]/labels`: chọn khổ 50×30, 40×30 hoặc 60×40 mm và số tem từ 1 đến 500; mỗi tem có QR, mã lô, "Chè {hạng}", khối lượng lô và tên HTX. In bằng hộp thoại in của trình duyệt (lưu PDF bằng trình duyệt); không thêm thư viện PDF.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication
@@ -682,6 +719,18 @@ Bảng trên chỉ có ba cột. Quyền của `accountant` và `platform_admin`
 | Ghi chi trả (`POST /api/settlements/[id]/lines/[lineId]/payout`) | accountant, manager |
 | Phiếu quyết toán (`GET /api/settlements/[id]/lines/[lineId]/slip`) | manager, accountant; farmer chỉ phiếu của hộ mình (số tài khoản che) |
 | Điều chỉnh sổ (`POST /api/ledger/adjustments`) | manager |
+| Danh sách và chi tiết mẻ, phiếu chọn được (`GET /api/processing-batches`, `GET /api/processing-batches/[id]`, `GET /api/processing-batches/available-tickets`) | officer, manager |
+| Mở mẻ, thêm hoặc bỏ phiếu, đặt sản lượng, hoàn thành, huỷ (`POST /api/processing-batches`, `POST .../[id]/tickets`, `DELETE .../[id]/tickets/[ticketId]`, `PUT .../[id]/outputs`, `POST .../[id]/finish`, `POST .../[id]/cancel`) | officer, manager |
+| Tồn chè khô (`GET /api/dry-stock`) | officer, manager |
+| Đóng lô từ mẻ (`POST /api/lots/from-batches`) | officer, manager |
+| Danh sách lô và chi tiết lô (`GET /api/lots`, `GET /api/lots/[id]`) | officer, manager |
+| Xuất QR (`POST /api/lots/[id]/export-qr`) | officer, manager |
+| Tạo lô từ thửa (`POST /api/lots`, đóng băng sau `DXOS_LABS`) | officer |
+| Danh sách, thêm, tải chứng nhận (`GET`, `POST /api/certificates`, `GET /api/certificates/[id]/file`) | officer, manager |
+| Thu hồi chứng nhận (`POST /api/certificates/[id]/revoke`) | manager |
+| Đọc cài đặt tên công khai (`GET /api/htx/public-settings`) | manager, officer |
+| Bật hoặc tắt tên công khai (`PUT /api/htx/public-settings`) | manager |
+| Xem trang QR công khai (`/q/[mã lô]`) | không cần đăng nhập |
 | Đèn cách ly của nương (`GET /api/parcels/[id]/withdrawal-status`) | accountant, manager, officer |
 | Đối chiếu cân và nhật ký của lứa (`GET /api/cycles/[id]/weighing-summary`) | manager, officer |
 
@@ -700,17 +749,19 @@ Bảng trên chỉ có ba cột. Quyền của `accountant` và `platform_admin`
 
 ### 4.4 MinIO Bucket Policy
 ```
-Bucket: agrimarket-private
-  - disease-photos/     → officer, farmer upload; manager + officer read
-  - documents/          → officer upload; manager + officer read (P.A.R.A — post-30/8)
-  - journal-photos/     → officer upload; manager + officer read
-
-Bucket: agrimarket-public
-  - qr-codes/           → read public (QR image file)
+Kho đối tượng: SeaweedFS của stack, gọi qua client S3 `minio` (các biến `MINIO_*` là tên cũ của client).
+Bucket duy nhất mà mã dùng: agrimarket-private (mặc định của MINIO_BUCKET_NAME)
+  - para/<htx_code>/...  → khoá nằm dưới thư mục tài liệu của HTX; khoá của HTX khác trả 404
+      Areas/Journal/      → ảnh nhật ký (nông dân, cán bộ tải lên)
+      Certificates/       → tệp chứng nhận (officer, manager tải lên; GĐ2)
+      Archives/           → hồ sơ tự lưu (báo cáo bệnh đã duyệt, mã QR và hồ sơ truy xuất lô đã xuất)
+      Archives/Disease_Photos/ → ảnh bệnh; `StoragePort.uploadFile` cũng ghi ảnh mã QR của lô vào đây, đọc bằng liên kết ký sẵn 15 phút
 
 Rule: Pre-signed upload URL expires: 15 minutes
 Rule: Pre-signed read URL expires: 60 minutes
 ```
+
+> Bảng cũ liệt kê thêm bucket `agrimarket-public` (thư mục `qr-codes/`) và các thư mục `disease-photos/`, `documents/`, `journal-photos/`. Mã hiện không dùng bucket công khai nào và không ghi vào các thư mục đó: chỉ có `agrimarket-private` với khoá `para/<htx>/...`; trang `/q` và `/htx` công khai đọc dữ liệu qua máy chủ chứ không đọc thẳng từ bucket.
 
 ---
 
