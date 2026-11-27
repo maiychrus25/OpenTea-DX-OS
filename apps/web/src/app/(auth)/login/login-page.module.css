@@ -83,7 +83,7 @@
 
 .authSideTitle {
   margin: 0;
-  font-size: 38px;
+  font-size: 42px;
   font-weight: 800;
   line-height: 1.15;
   color: var(--color-hero-text);
@@ -101,8 +101,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  color: var(--color-hero-muted);
-  font-size: 15px;
+  color: var(--color-hero-text);
+  font-size: 16.5px;
 }
 
 .featureList li {
