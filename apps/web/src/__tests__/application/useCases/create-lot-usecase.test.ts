@@ -18,6 +18,7 @@ describe('CreateLotUseCase', () => {
       findAll: jest.fn(),
       findById: jest.fn(),
       create: jest.fn(),
+      cycleForLine: jest.fn().mockResolvedValue(null),
       exportQr: jest.fn(),
     }
     parcelPort = {
@@ -82,6 +83,7 @@ describe('CreateLotUseCase', () => {
       entries: [
         {
           status: 'APPROVED',
+          entry_date: new Date('2020-01-01'),
           activities: [{ safe_harvest_date: new Date('2026-08-30') }]
         } as any
       ],
@@ -101,7 +103,7 @@ describe('CreateLotUseCase', () => {
     parcelPort.findById.mockResolvedValue({ status: 'HARVESTED', parcel_code: 'P01' } as Partial<ParcelSummary> as any)
 
     journalPort.findAll.mockResolvedValue({
-      entries: [{ status, activities: [{ safe_harvest_date: new Date('2026-08-30') }] } as any],
+      entries: [{ status, entry_date: new Date('2020-01-01'), activities: [{ safe_harvest_date: new Date('2026-08-30') }] } as any],
       total: 1,
     })
 
@@ -118,7 +120,7 @@ describe('CreateLotUseCase', () => {
   it('ignores a REJECTED spraying when checking the withdrawal period', async () => {
     parcelPort.findById.mockResolvedValue({ status: 'HARVESTED', parcel_code: 'P01' } as Partial<ParcelSummary> as any)
     journalPort.findAll.mockResolvedValue({
-      entries: [{ status: 'REJECTED', activities: [{ safe_harvest_date: new Date('2026-08-30') }] } as any],
+      entries: [{ status: 'REJECTED', entry_date: new Date('2020-01-01'), activities: [{ safe_harvest_date: new Date('2026-08-30') }] } as any],
       total: 1,
     })
 
@@ -140,6 +142,7 @@ describe('CreateLotUseCase', () => {
       entries: [
         {
           status: 'APPROVED',
+          entry_date: new Date('2020-01-01'),
           activities: [{ safe_harvest_date: new Date('2026-08-20') }]
         } as any
       ],

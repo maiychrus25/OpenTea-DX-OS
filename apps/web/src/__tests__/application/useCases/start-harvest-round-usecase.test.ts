@@ -6,7 +6,7 @@ import { StartHarvestRoundUseCase } from '@/application/farm/start-harvest-round
 import { PrismaCropCycleRepository } from '@/infrastructure/db/farm/PrismaCropCycleRepository'
 import { DomainError } from '@/domain/errors'
 
-type Cycle = { id: string; parcel_id: string; season: string; created_at: Date }
+type Cycle = { id: string; parcel_id: string; season: string; created_at: Date; harvested_at?: Date | null }
 
 /** In-memory parcel and cycles; transactions run one after another, as row locks make them in Postgres. */
 function fakeDb(status: string, cycles: Cycle[]) {
@@ -44,8 +44,8 @@ describe('StartHarvestRoundUseCase', () => {
   afterEach(() => jest.useRealTimers())
 
   const earlier = [
-    { id: 'c1', parcel_id: 'p1', season: 'Lứa 1/2026', created_at: new Date('2026-03-01T03:00:00Z') },
-    { id: 'c0', parcel_id: 'p1', season: 'Vụ 2025', created_at: new Date('2025-08-01T03:00:00Z') },
+    { id: 'c1', parcel_id: 'p1', season: 'Lứa 1/2026', created_at: new Date('2026-03-01T03:00:00Z'), harvested_at: new Date('2026-04-01T03:00:00Z') },
+    { id: 'c0', parcel_id: 'p1', season: 'Vụ 2025', created_at: new Date('2025-08-01T03:00:00Z'), harvested_at: new Date('2025-09-01T03:00:00Z') },
   ]
 
   test('on a harvested parcel creates the next round of the year and sets the parcel to TENDING', async () => {

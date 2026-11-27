@@ -12,6 +12,7 @@ import {
 } from '@/domain/journal/ports/JournalPort'
 import { ValidationError } from '@/domain/errors'
 import { ActivityType, NotificationType, ParcelStatus, Prisma } from '@prisma/client'
+import { cycleForEntryDate, cycleForHarvest, ensureOpenCycle } from '@/infrastructure/db/farm/PrismaCropCycleRepository'
 import { sseEmitter, SSE_EVENTS } from '@/lib/sse-emitter'
 
 function mapEntry(e: any): JournalEntryData {
@@ -53,7 +54,19 @@ function mapEntry(e: any): JournalEntryData {
 }
 
 // Reason for any: Prisma transaction client type is complex to import directly here
-async function applyParcelStatus(tx: any, parcelId: string, activityType: string, entryDate: Date) {
+/** The flush an entry belongs to; HARVEST closes the newest open one and SOWING opens one when none is open. */
+async function assignCycle(tx: any, parcelId: string, activityType: string, entryDate: Date): Promise<string | null> {
+  if (activityType === ActivityType.HARVEST) return cycleForHarvest(tx, parcelId)
+  if (activityType === ActivityType.SOWING) return (await cycleForHarvestOpen(tx, parcelId)) ?? ensureOpenCycle(tx, parcelId, new Date())
+  return cycleForEntryDate(tx, parcelId, entryDate)
+}
+
+async function cycleForHarvestOpen(tx: any, parcelId: string): Promise<string | null> {
+  const open = await tx.parcelCropCycle.findFirst({ where: { parcel_id: parcelId, harvested_at: null }, orderBy: { created_at: 'desc' }, select: { id: true } })
+  return open?.id ?? null
+}
+
+async function applyParcelStatus(tx: any, parcelId: string, activityType: string, entryDate: Date, cycleId?: string | null) {
   let newStatus: ParcelStatus | undefined = undefined
   if (activityType === ActivityType.SOWING) newStatus = ParcelStatus.SOWING
   else if (activityType === ActivityType.HARVEST) newStatus = ParcelStatus.HARVESTED
@@ -79,12 +92,17 @@ async function applyParcelStatus(tx: any, parcelId: string, activityType: string
         where: { id: activeCycle.id },
         data: { sowed_at: entryDate }
       })
-    } else if (activityType === ActivityType.HARVEST) {
+    } else if (activityType === ActivityType.HARVEST && !cycleId) {
       await tx.parcelCropCycle.update({
         where: { id: activeCycle.id },
         data: { harvested_at: entryDate }
       })
     }
+  }
+
+  // A harvest closes the flush of its own entry, not whichever flush was created last.
+  if (activityType === ActivityType.HARVEST && cycleId) {
+    await tx.parcelCropCycle.updateMany({ where: { id: cycleId, harvested_at: null }, data: { harvested_at: entryDate } })
   }
 }
 
@@ -249,8 +267,10 @@ export class PrismaJournalRepository implements JournalPort {
     let e
     try {
       e = await prisma.$transaction(async (tx) => {
+        const cycleId = await assignCycle(tx, data.parcel_id, data.activity_type, data.entry_date)
         const entry = await tx.journalEntry.create({
           data: {
+            cycle_id: cycleId,
             parcel_id: data.parcel_id,
             entry_date: data.entry_date,
             activity_type: data.activity_type as any,
@@ -278,7 +298,7 @@ export class PrismaJournalRepository implements JournalPort {
         }
 
         if (data.submitted_role === 'OFFICER') {
-          await applyParcelStatus(tx, data.parcel_id, data.activity_type, data.entry_date)
+          await applyParcelStatus(tx, data.parcel_id, data.activity_type, data.entry_date, cycleId)
         }
 
         return entry
@@ -325,6 +345,14 @@ export class PrismaJournalRepository implements JournalPort {
         const current = await tx.journalEntry.findUnique({ where: { id }, select: { entry_date: true } })
         await tx.journalActivity.deleteMany({ where: { journal_entry_id: id } })
         updateData.activities = { create: activityRows(data.activities, data.entry_date ?? current!.entry_date) }
+      }
+      // The flush is assigned when the entry is submitted (a draft has none) or its date changes.
+      if (resubmit || data.entry_date) {
+        const current = await tx.journalEntry.findUnique({ where: { id }, select: { parcel_id: true, entry_date: true, activity_type: true, status: true } })
+        if (current && (resubmit || current.status !== 'DRAFT')) {
+          const type = (updateData.activity_type as string | undefined) ?? current.activity_type
+          updateData.cycle_id = await assignCycle(tx, current.parcel_id, type, (data.entry_date ?? current.entry_date) as Date)
+        }
       }
       const updated = await tx.journalEntry.update({ where: { id }, data: updateData, include: ENTRY_INCLUDE })
       if (resubmit && updated.submitted_role === 'FARMER') {
@@ -415,7 +443,7 @@ export class PrismaJournalRepository implements JournalPort {
           continue
         }
         
-        await applyParcelStatus(tx, entry.parcel_id, entry.activity_type, entry.entry_date)
+        await applyParcelStatus(tx, entry.parcel_id, entry.activity_type, entry.entry_date, entry.cycle_id)
         if (entry.submitted_role === 'FARMER' && entry.parcel.household.keycloak_user_id) {
           const notif = await tx.notification.create({
             data: {

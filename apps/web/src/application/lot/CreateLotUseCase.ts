@@ -4,7 +4,7 @@
 import { LotPort, CreateLotData } from '@/domain/lot/ports/LotPort'
 import { ParcelPort } from '@/domain/farm/ports/ParcelPort'
 import { JournalPort } from '@/domain/journal/ports/JournalPort'
-import { countsTowardWithdrawal } from '@/domain/journal/withdrawal-status'
+import { lotLineBlock } from '@/domain/journal/blocking-sprays'
 import { DomainError } from '@/domain/errors/DomainError'
 
 export class CreateLotUseCase {
@@ -35,25 +35,13 @@ export class CreateLotUseCase {
         // 3. Kiểm tra Withdrawal Period (Thời gian cách ly)
         const journals = await this.journalPort.findAll({ parcel_id: parcelId, limit: 100 })
         
-        let maxSafeDate: Date | null = null
-        for (const entry of journals.entries) {
-          if (!countsTowardWithdrawal(entry.status)) continue
-          
-          for (const act of entry.activities) {
-            if (act.safe_harvest_date) {
-              const safeDate = new Date(act.safe_harvest_date)
-              if (!maxSafeDate || safeDate > maxSafeDate) {
-                maxSafeDate = safeDate
-              }
-            }
-          }
-        }
+        // A spray counts when it was done by the harvest date or belongs to this line's flush (legacy entries by date).
+        const harvestDate = new Date(data.harvest_date)
+        const lineCycleId = await this.lotPort.cycleForLine(parcelId, harvestDate)
+        const maxSafeDate = lotLineBlock(journals.entries, harvestDate, lineCycleId)
 
         if (maxSafeDate) {
-          const harvestDate = new Date(data.harvest_date)
-          if (harvestDate < maxSafeDate) {
-            throw new DomainError(`WITHDRAWAL_NOT_PASSED: Thửa đất ${parcel.parcel_code} chưa qua thời gian cách ly. An toàn thu hoạch từ ngày ${maxSafeDate.toISOString().slice(0, 10)}`)
-          }
+          throw new DomainError(`WITHDRAWAL_NOT_PASSED: Thửa đất ${parcel.parcel_code} chưa qua thời gian cách ly. An toàn thu hoạch từ ngày ${maxSafeDate.toISOString().slice(0, 10)}`)
         }
       })
     )

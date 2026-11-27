@@ -5,8 +5,13 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import { LotPort, LotSummary, CreateLotData, LotFilters, ExportQrResult } from '@/domain/lot/ports/LotPort'
 import { LotTraceData } from '@/domain/entities/lot-trace-data'
 import { Prisma, LotStatus } from '@prisma/client'
+import { cycleForLotLine } from '@/infrastructure/db/farm/PrismaCropCycleRepository'
 
 export class PrismaLotRepository implements LotPort {
+  cycleForLine(parcelId: string, harvestDate: Date) {
+    return cycleForLotLine(prisma, parcelId, harvestDate)
+  }
+
   async findAll(filters: LotFilters): Promise<LotSummary[]> {
     // F1 fix: use != null (not truthy) to prevent empty-string bypassing HTX scoping
     // F5 fix: use Prisma.LotWhereInput for compile-time type safety
@@ -70,6 +75,10 @@ export class PrismaLotRepository implements LotPort {
     const seq = String(existingCount + 1).padStart(3, '0')
     const lotCode = `${htxCode}-${cropCode}-${dateStr}-${seq}`
 
+    const lines = await Promise.all(
+      data.parcel_ids.map(async (parcelId) => ({ parcel_id: parcelId, cycle_id: await cycleForLotLine(prisma, parcelId, data.harvest_date) }))
+    )
+
     const l = await prisma.lot.create({
       data: {
         lot_code: lotCode,
@@ -85,9 +94,7 @@ export class PrismaLotRepository implements LotPort {
         created_by_id: data.created_by_id,
         htx_profile_id: data.htx_profile_id,
         lot_parcels: {
-          create: data.parcel_ids.map(parcelId => ({
-            parcel_id: parcelId,
-          })),
+          create: lines,
         },
       },
       include: { lot_parcels: true },

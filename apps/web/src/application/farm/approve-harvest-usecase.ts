@@ -6,7 +6,7 @@ import { JournalPort } from '@/domain/journal/ports/JournalPort'
 import { NotificationPort } from '@/domain/ports/notification-port'
 import { NotFoundError } from '@/domain/errors/NotFoundError'
 import { ForbiddenError } from '@/domain/errors/ForbiddenError'
-import { countsTowardWithdrawal } from '@/domain/journal/withdrawal-status'
+import { openParcelBlock } from '@/domain/journal/blocking-sprays'
 import { DomainError } from '@/domain/errors/DomainError'
 
 export class ApproveHarvestUseCase {
@@ -26,27 +26,12 @@ export class ApproveHarvestUseCase {
       throw new NotFoundError('Không tìm thấy thửa đất')
     }
 
-    // Check withdrawal period: drafts and rejected entries do not count; pending and change-requested ones do
+    // Residue stays in the plant whatever the flush: every spraying of the parcel still inside its withdrawal blocks.
+    // Drafts and rejected entries do not count; pending and change-requested ones do.
     const { entries } = await this.journalPort.findAll({ parcel_id: parcelId, limit: 100 })
-    let maxSafeDate: Date | null = null
-
-    for (const entry of entries) {
-      if (!countsTowardWithdrawal(entry.status)) continue
-      for (const activity of entry.activities) {
-        if (activity.safe_harvest_date) {
-          const date = new Date(activity.safe_harvest_date)
-          if (!maxSafeDate || date > maxSafeDate) {
-            maxSafeDate = date
-          }
-        }
-      }
-    }
-
+    const maxSafeDate = openParcelBlock(entries, new Date())
     if (maxSafeDate) {
-      const now = new Date()
-      if (now < maxSafeDate) {
-        throw new DomainError(`Chưa qua thời gian cách ly. An toàn thu hoạch từ ngày ${maxSafeDate.toLocaleDateString('vi-VN')}`)
-      }
+      throw new DomainError(`Chưa qua thời gian cách ly. An toàn thu hoạch từ ngày ${maxSafeDate.toLocaleDateString('vi-VN')}`)
     }
 
     // Update parcel status
