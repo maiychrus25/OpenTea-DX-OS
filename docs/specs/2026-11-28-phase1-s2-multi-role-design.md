@@ -250,6 +250,13 @@ model HtxMembership {
    - Người dùng đang chạy thật còn treo `CONFIGURE_TOTP` không bị sửa tự động. `docs/dev-setup.md` ghi lệnh `kcadm` để gỡ khi chủ dự án muốn.
    - Cổng "đăng nhập lại trong 5 phút" (`authTime`) của chế độ tự vận hành giữ nguyên.
 
+9. **Sửa của chủ dự án (2026-11-28): khu `/platform`.**
+   - Menu có "Hợp tác xã", "Danh mục thuốc" (`/platform/pesticides`) và "Tài khoản".
+   - Mỗi dòng HTX ở `/platform` có liên kết "Cấu hình AI" (`/platform/htx/[code]/ai`).
+10. **Sửa của chủ dự án (2026-11-28): không có lời gọi trả 403 từ khung giao diện.**
+    - `TopBar` ẩn chuông thông báo và ô tìm kiếm khi vai là `platform_admin`; khung giao diện không gọi API theo HTX cho vai này.
+    - `accountant` được dùng `GET /api/notifications` và các route thông báo mà chuông cần, với cùng phạm vi theo người dùng và HTX như các vai khác.
+
 ## 8. Phần để người làm tự quyết
 
 - Tên component cụ thể.

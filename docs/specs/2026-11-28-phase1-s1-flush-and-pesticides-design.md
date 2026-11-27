@@ -315,6 +315,20 @@ Quy tắc chung: chỉ tính các lần phun có `cycle_id` bằng lứa đang x
    - Tách hai migration: migration thứ nhất chỉ `ALTER TYPE "ActivityType" ADD VALUE 'PRUNING'`; migration thứ hai làm phần còn lại.
    - Vai `agent` của Hasura chỉ cần thêm cột `cycle_id` để lọc, không cần quan hệ mới.
 
+10. **Sửa của chủ dự án (2026-11-28), thay cho §4.4.** Dư lượng thuốc nằm trong cây chè, không theo ranh giới lứa. Có hai quy tắc, cả hai đều bỏ qua nhật ký `DRAFT` và `REJECTED`:
+    - **Nương đang mở**, xét tại ngày D:
+      - Áp dụng ở: nghiệm thu thu hoạch; lịch thu hái của lứa mở; Tổng quan nông dân; Tổng quan cán bộ; ứng viên chiến dịch; agent A4; bàn cân của dự án con 3.
+      - Mọi lần phun **của nương** có `entry_date <= D` và `safe_harvest_date > D` đều chặn, bất kể `cycle_id`.
+    - **Lứa hoặc lô đã thu hoạch**, ngày hái H:
+      - Áp dụng ở: tạo lô, xuất QR, trang truy xuất lô.
+      - Một lần phun bị tính khi `safe_harvest_date > H` **và** (thuộc `cycle_id` của dòng lô **hoặc** `entry_date <= H`).
+      - Như vậy lần phun của lứa sau, làm sau ngày hái, không khoá lô cũ; còn thuốc phun trước ngày hái vẫn chặn đủ.
+    - Agent A1 giữ cách so sánh cũ với ngày hái của mọi lứa của nương, chỉ thêm cảnh báo "Thuốc ngoài danh mục".
+    - Hai câu "chỉ tính các lần phun có `cycle_id` bằng lứa đang xét" ở §4.4 và các hàng tương ứng trong bảng §4.4 hết hiệu lực.
+11. **Sửa của chủ dự án (2026-11-28): ô theo từng hoạt động trên form nhật ký** (roadmap GĐ1 mục 2):
+    - `FERTILIZING`: tên phân và ô "Liều lượng" (cột `dosage` đã có).
+    - `HARVEST` và `PRUNING`: ẩn các ô thuốc, phân và liều. Riêng `HARVEST` thêm ô "Sản lượng búp tươi (kg)", lưu vào cột mới `journal_activities.fresh_leaf_kg` (migration riêng `20261128120200_journal_fresh_leaf_kg`, chỉ hợp lệ với `HARVEST`, từ trên 0 đến 100000). Số này dùng để đối chiếu với bàn cân ở dự án con 3.
+
 ## 8. Phần để người làm tự quyết
 
 - Tên component và hook.
