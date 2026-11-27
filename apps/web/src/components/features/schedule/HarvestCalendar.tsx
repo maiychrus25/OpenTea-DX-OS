@@ -5,11 +5,12 @@
 
 import React, { useState, useMemo } from 'react'
 import useSWR from 'swr'
-import { Calendar, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Edit2, ShieldAlert } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, ShieldAlert } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import kit from '@/components/features/dashboard/page-kit.module.css'
 import styles from './HarvestCalendar.module.css'
 import { FarmerScheduleAside } from './FarmerScheduleAside'
+import { DayPanel } from './DayPanel'
 import farmer from '@/components/features/farmer-web/kit.module.css'
 import { Button } from '@/components/ui/Button/Button'
 
@@ -29,6 +30,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' | 'FARMER' }) {
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedEvent, setSelectedEvent] = useState<HarvestEvent | null>(null)
   const [newDateStr, setNewDateStr] = useState('')
 
@@ -56,11 +58,27 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
     fetcher
   )
 
+  const events = data?.data ?? []
+  const eventsOn = (date: Date) => events.filter(ev => ev.estimatedHarvestDate && new Date(ev.estimatedHarvestDate).toDateString() === date.toDateString())
   const todayKey = new Date().toDateString()
-  const todayEvents = (data?.data ?? []).filter(ev => ev.estimatedHarvestDate && new Date(ev.estimatedHarvestDate).toDateString() === todayKey)
 
-  const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
-  const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
+  // Đổi tháng thì khung bên phải theo sang tháng đó: tháng hiện tại chọn hôm nay, tháng khác chọn mùng 1
+  const showMonth = (year: number, month: number) => {
+    const first = new Date(year, month, 1)
+    const now = new Date()
+    setCurrentDate(first)
+    setSelectedDate(now.getFullYear() === first.getFullYear() && now.getMonth() === first.getMonth() ? now : first)
+  }
+  const handlePrevMonth = () => showMonth(currentDate.getFullYear(), currentDate.getMonth() - 1)
+  const handleNextMonth = () => showMonth(currentDate.getFullYear(), currentDate.getMonth() + 1)
+  const handleToday = () => showMonth(new Date().getFullYear(), new Date().getMonth())
+
+  // yyyy-mm-dd theo giờ máy, cho ô nhập ngày
+  const toInputDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const addOnSelectedDay = () => {
+    setNewAddDateStr(toInputDate(selectedDate))
+    setIsAddModalOpen(true)
+  }
 
   const handleEventClick = (event: HarvestEvent) => {
     if (!isManager) return
@@ -114,122 +132,115 @@ export function HarvestCalendar({ userRole }: { userRole: 'MANAGER' | 'OFFICER' 
   const startDayOfWeek = firstDay.getDay() // 0 = Sunday
   const daysArray = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [daysInMonth])
   const emptyDays = useMemo(() => Array.from({ length: startDayOfWeek }, (_, i) => i), [startDayOfWeek])
+  const trailingDays = (7 - ((startDayOfWeek + daysInMonth) % 7)) % 7
 
   return (
     <div className={kit.page}>
       <PageHeader
         icon={<Calendar size={28} />}
         title={isFarmer ? 'Lịch dự kiến thu hoạch' : 'Lịch thu hái'}
-        description={isFarmer ? 'Ngày hái dự kiến từng thửa — màu cho biết đã đủ thời gian cách ly hay chưa' : 'Lịch dự kiến thu hoạch theo thửa, có cảnh báo thời gian cách ly'}
-        actions={isManager ? <Button onClick={() => setIsAddModalOpen(true)}>+ Thêm lịch</Button> : isFarmer ? (
-          <div className="flex gap-2 items-center">
-            <h2 className={styles.month}>Tháng {currentDate.getMonth() + 1} / {currentDate.getFullYear()}</h2>
-            <Button variant="secondary" onClick={handlePrevMonth} aria-label="Tháng trước"><ChevronLeft size={16} /></Button>
-            <Button variant="secondary" onClick={handleNextMonth} aria-label="Tháng sau"><ChevronRight size={16} /></Button>
-          </div>
-        ) : undefined}
+        description={isFarmer ? 'Ngày hái dự kiến từng thửa — màu cho biết đã đủ thời gian cách ly hay chưa' : isManager ? 'Lên kế hoạch thu hoạch cho các vùng chè của hợp tác xã.' : 'Lịch dự kiến thu hoạch theo thửa, có cảnh báo thời gian cách ly'}
+        actions={isManager ? <Button onClick={() => setIsAddModalOpen(true)}>+ Thêm lịch</Button> : undefined}
       />
 
-      <div className={isFarmer || isManager ? farmer.cols : undefined}>
-      <div className={`${styles.calendarContainer} ${isFarmer || isManager ? styles.beside : ''}`}>
-      {!isFarmer && <div className={styles.header}>
-        <h2 className={styles.title}>
-          Tháng {currentDate.getMonth() + 1} / {currentDate.getFullYear()}
-        </h2>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={handlePrevMonth} aria-label="Tháng trước"><ChevronLeft size={16} /></Button>
-          <Button variant="secondary" onClick={handleNextMonth} aria-label="Tháng sau"><ChevronRight size={16} /></Button>
-        </div>
-      </div>}
+      <div className={styles.layout}>
+        <div className={styles.calendarContainer}>
+          <div className={styles.header}>
+            <button type="button" className={styles.nav} onClick={handlePrevMonth} aria-label="Tháng trước"><ChevronLeft size={18} aria-hidden="true" /></button>
+            <h2 className={styles.title}>Tháng {currentDate.getMonth() + 1}, {currentDate.getFullYear()}</h2>
+            <button type="button" className={styles.nav} onClick={handleNextMonth} aria-label="Tháng sau"><ChevronRight size={18} aria-hidden="true" /></button>
+            <button type="button" className={styles.todayButton} onClick={handleToday}>Hôm nay</button>
+          </div>
 
-      <div className={styles.gridScroll}>
-      <div className={`${styles.grid} ${isFarmer ? styles.farmerGrid : ''}`}>
-        {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(day => (
-          <div key={day} className={styles.dayHeader}>{day}</div>
-        ))}
-        
-        {emptyDays.map(empty => (
-          <div key={`empty-${empty}`} className={styles.cell} />
-        ))}
+          <div className={styles.gridScroll}>
+            <div className={styles.grid}>
+              {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(day => (
+                <div key={day} className={styles.dayHeader}>{day}</div>
+              ))}
 
-        {daysArray.map(day => {
-          const eventsForDay = data?.data?.filter(ev => {
-            if (!ev.estimatedHarvestDate) return false
-            const evDate = new Date(ev.estimatedHarvestDate)
-            return evDate.getDate() === day && evDate.getMonth() === currentDate.getMonth() && evDate.getFullYear() === currentDate.getFullYear()
-          }) || []
+              {emptyDays.map(empty => (
+                <div key={`empty-${empty}`} className={`${styles.cell} ${styles.blank}`} />
+              ))}
 
-          return (
-            <div key={day} className={`${styles.cell} ${isFarmer && new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString() === new Date().toDateString() ? styles.today : ''}`}>
-              <div className={styles.cellDate}>{day}</div>
-              <div className="flex flex-col gap-1 overflow-y-auto">
-                {eventsForDay.map(ev => (
+              {daysArray.map(day => {
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+                const isToday = date.toDateString() === todayKey
+                const isSelected = date.toDateString() === selectedDate.toDateString()
+
+                return (
                   <div
-                    key={ev.cycleId}
-                    onClick={() => handleEventClick(ev)}
-                    className={`
-                      ${styles.event} 
-                      ${isManager ? styles.eventInteractive : ''}
-                      ${ev.status === 'SAFE' ? styles.eventSafe : ''}
-                      ${ev.status === 'WARNING' ? styles.eventWarning : ''}
-                      ${ev.status === 'DANGER' ? styles.eventDanger : ''}
-                    `}
-                    title={`Thửa: ${ev.parcelName}\nHộ: ${ev.householdName}\nSL dự kiến: ${ev.estimatedYieldKg || 0} kg`}
+                    key={day}
+                    className={`${styles.cell} ${isToday ? styles.today : ''} ${isSelected ? styles.selected : ''}`}
+                    onClick={() => setSelectedDate(date)}
                   >
-                    {ev.status === 'SAFE' && <CheckCircle size={12} aria-hidden="true" />}
-                    {ev.status === 'WARNING' && <AlertTriangle size={12} aria-hidden="true" />}
-                    {ev.status === 'DANGER' && <ShieldAlert size={12} aria-hidden="true" />}
-                    <span className="truncate">{ev.parcelName || 'N/A'}{isFarmer ? '' : ` - ${ev.cropType}`}</span>
-                    {isManager && <Edit2 size={10} className="ml-auto opacity-50" aria-hidden="true" />}
+                    <button type="button" className={styles.cellDate} aria-pressed={isSelected} aria-label={`Ngày ${day}/${date.getMonth() + 1}`}>{day}</button>
+                    <div className="flex flex-col gap-1 overflow-y-auto">
+                      {eventsOn(date).map(ev => (
+                        <div
+                          key={ev.cycleId}
+                          onClick={() => handleEventClick(ev)}
+                          className={`
+                            ${styles.event}
+                            ${isManager ? styles.eventInteractive : ''}
+                            ${ev.status === 'SAFE' ? styles.eventSafe : ''}
+                            ${ev.status === 'WARNING' ? styles.eventWarning : ''}
+                            ${ev.status === 'DANGER' ? styles.eventDanger : ''}
+                          `}
+                          title={`Thửa: ${ev.parcelName}\nGiống: ${ev.cropType}\nHộ: ${ev.householdName}\nSL dự kiến: ${ev.estimatedYieldKg || 0} kg`}
+                        >
+                          {ev.status === 'SAFE' && <CheckCircle size={12} aria-hidden="true" />}
+                          {ev.status === 'WARNING' && <AlertTriangle size={12} aria-hidden="true" />}
+                          {ev.status === 'DANGER' && <ShieldAlert size={12} aria-hidden="true" />}
+                          <span className="truncate">{ev.parcelName || 'N/A'}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
+                )
+              })}
+
+              {Array.from({ length: trailingDays }, (_, i) => (
+                <div key={`after-${i}`} className={`${styles.cell} ${styles.blank}`} />
+              ))}
             </div>
-          )
-        })}
-      </div>
-      </div>
-      </div>
-      {isFarmer && <FarmerScheduleAside />}
-      {isManager && (
-        <div className={farmer.stack} style={{ flex: '1 1 280px' }}>
-          <section className={farmer.pn} aria-label="Chưa xếp lịch">
-            <div className={farmer.ph}>
-              <h2>Chưa xếp lịch</h2>
-              <span className={`${farmer.tag} ${farmer.wt}`}>{unscheduledData?.data?.length ?? 0} thửa</span>
-            </div>
-            {!unscheduledData?.data?.length ? (
-              <p className={farmer.muted} style={{ margin: 0, padding: 18, fontSize: 13.5 }}>Thửa nào cũng đã có lịch.</p>
-            ) : (
-              <ul className={farmer.list}>
-                {unscheduledData.data.map(cycle => (
-                  <li key={cycle.cycleId} className={farmer.row}>
-                    <span className={farmer.grow}>
-                      <strong>{cycle.parcelName} · {cycle.householdName}</strong>
-                      <br />
-                      <span className={farmer.muted}>{cycle.cropType}</span>
-                    </span>
-                    <button type="button" className={farmer.btn2} aria-label={`Xếp lịch cho ${cycle.parcelName}`} onClick={() => { setSelectedUnscheduledCycleId(cycle.cycleId); setIsAddModalOpen(true) }}>
-                      Xếp lịch
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <section className={farmer.pn} aria-label="Lịch trong ngày">
-            <div className={farmer.ph}><h2>Lịch trong ngày</h2></div>
-            {todayEvents.length === 0 ? (
-              <p className={farmer.muted} style={{ margin: 0, padding: 18, fontSize: 13.5 }}>Hôm nay chưa có lịch thu hái.</p>
-            ) : (
-              <ul className={farmer.list}>
-                {todayEvents.map(ev => <li key={ev.cycleId} className={farmer.row}><strong>{ev.parcelName}</strong> <span className={farmer.muted}>{ev.householdName} · {ev.cropType}</span></li>)}
-              </ul>
-            )}
-          </section>
+          </div>
         </div>
-      )}
+
+        <DayPanel
+          date={selectedDate}
+          events={eventsOn(selectedDate)}
+          onAdd={isManager ? addOnSelectedDay : undefined}
+          onEdit={isManager ? handleEventClick : undefined}
+        />
       </div>
+
+      {isFarmer && <div className={styles.below}><FarmerScheduleAside /></div>}
+      {isManager && (
+        <section className={farmer.pn} aria-label="Chưa xếp lịch">
+          <div className={farmer.ph}>
+            <h2>Chưa xếp lịch</h2>
+            <span className={`${farmer.tag} ${farmer.wt}`}>{unscheduledData?.data?.length ?? 0} thửa</span>
+          </div>
+          {!unscheduledData?.data?.length ? (
+            <p className={farmer.muted} style={{ margin: 0, padding: 18, fontSize: 13.5 }}>Thửa nào cũng đã có lịch.</p>
+          ) : (
+            <ul className={farmer.list}>
+              {unscheduledData.data.map(cycle => (
+                <li key={cycle.cycleId} className={farmer.row}>
+                  <span className={farmer.grow}>
+                    <strong>{cycle.parcelName} · {cycle.householdName}</strong>
+                    <br />
+                    <span className={farmer.muted}>{cycle.cropType}</span>
+                  </span>
+                  <button type="button" className={farmer.btn2} aria-label={`Xếp lịch cho ${cycle.parcelName}`} onClick={() => { setSelectedUnscheduledCycleId(cycle.cycleId); setIsAddModalOpen(true) }}>
+                    Xếp lịch
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* Edit Modal */}
       {selectedEvent && (
