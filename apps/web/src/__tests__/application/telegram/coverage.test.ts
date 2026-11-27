@@ -50,6 +50,16 @@ describe('coverage table (test 17)', () => {
     for (const action of CHAT_ACTIONS) for (const row of action.routes) expect(TELEGRAM_COVERAGE.chatConfirm).toContain(row)
   })
 
+  it('serves every in-chat row by a tool or an action', () => {
+    const served = new Set([...CHAT_TOOLS.flatMap((tool) => tool.routes), ...CHAT_ACTIONS.flatMap((action) => action.routes)])
+    expect([...TELEGRAM_COVERAGE.chatRead, ...TELEGRAM_COVERAGE.chatConfirm].filter((row) => !served.has(row))).toEqual([])
+  })
+
+  it('keeps the member invite, which makes an account with a password, in the Mini App', () => {
+    expect(TELEGRAM_COVERAGE.miniApp).toContain('POST /api/members/invite')
+    expect(TELEGRAM_COVERAGE.chatConfirm).not.toContain('POST /api/members/invite')
+  })
+
   it('keeps Telegram link management out of the bot and the agent settings out of chat', () => {
     for (const row of listed.filter((r) => r.includes(' /api/telegram/'))) expect(TELEGRAM_COVERAGE.none).toContain(row)
     expect(TELEGRAM_COVERAGE.chatRead).toContain('GET /api/agent/proposals')

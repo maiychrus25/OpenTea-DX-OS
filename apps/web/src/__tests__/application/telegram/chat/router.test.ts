@@ -28,6 +28,23 @@ describe('routeText', () => {
     ['lô hàng đã bán', { kind: 'tool', name: 'lots' }],
     ['tóm tắt giúp tôi', { kind: 'tool', name: 'today' }],
     ['xem nhật ký', { kind: 'tool', name: 'journal' }],
+    ['sửa nhật ký hôm qua', { kind: 'action', name: 'journal.edit' }],
+    ['rút nhật ký', { kind: 'action', name: 'journal.delete' }],
+    ['duyệt báo cáo bệnh', { kind: 'action', name: 'disease.review' }],
+    ['bắt đầu lứa mới', { kind: 'action', name: 'round.start' }],
+    ['đặt ngày thu hoạch', { kind: 'action', name: 'harvest.schedule' }],
+    ['tạo lô hàng', { kind: 'action', name: 'lot.create' }],
+    ['xuất mã QR', { kind: 'action', name: 'lot.export_qr' }],
+    ['gửi thông báo cho cả HTX', { kind: 'action', name: 'notification.announce' }],
+    ['đánh dấu đã đọc', { kind: 'action', name: 'notification.read' }],
+    ['xoá thông báo', { kind: 'action', name: 'notification.clear' }],
+    ['mời thành viên', { kind: 'tool', name: 'members' }],
+    ['duyệt thành viên', { kind: 'action', name: 'member.approve' }],
+    ['xoá thành viên', { kind: 'action', name: 'member.remove' }],
+    ['sửa hồ sơ HTX', { kind: 'action', name: 'profile.edit' }],
+    ['thêm nông hộ', { kind: 'action', name: 'household.add' }],
+    ['sửa nông hộ', { kind: 'action', name: 'household.edit' }],
+    ['xoá thửa', { kind: 'action', name: 'parcel.delete' }],
   ])('%s', (text, expected) => {
     expect(routeText(text)).toEqual(expected)
   })
@@ -47,3 +64,31 @@ describe('commandOf', () => {
     expect(commandOf('nhật ký /huy')).toBeNull()
   })
 })
+
+describe('routeText: the issue #80 read tools', () => {
+  test.each([
+    ['tìm trà Shan', { kind: 'tool', name: 'search', args: { query: 'trà Shan' } }],
+    ['chứng nhận TC-CHE-20261110-001', { kind: 'tool', name: 'certificate', args: { lot_code: 'TC-CHE-20261110-001' } }],
+    ['đất thửa P-TC-001', { kind: 'tool', name: 'soil', args: { parcel_code: 'P-TC-001' } }],
+    ['Ảnh thửa p-tc-002?', { kind: 'tool', name: 'photo', args: { parcel_code: 'p-tc-002' } }],
+    ['hộ Nguyễn Văn An', { kind: 'tool', name: 'households', args: { name: 'Nguyễn Văn An' } }],
+    ['nông hộ', { kind: 'tool', name: 'households' }],
+    ['thành viên', { kind: 'tool', name: 'members' }],
+    ['báo cáo bệnh', { kind: 'tool', name: 'diseases' }],
+    ['hồ sơ của tôi', { kind: 'tool', name: 'profile' }],
+    ['tài liệu', { kind: 'tool', name: 'documents' }],
+    ['đối tác', { kind: 'tool', name: 'partners' }],
+    ['đất thửa', { kind: 'tool', name: 'soil' }],
+    ['lô hàng TC-CHE-20261110-001', { kind: 'tool', name: 'lots', args: { lot_code: 'TC-CHE-20261110-001' } }],
+    ['lô hàng 5 tấn đã bán', { kind: 'tool', name: 'lots' }],
+  ])('%s', (text, expected) => {
+    expect(routeText(text)).toEqual(expected)
+  })
+
+  test('tìm and hộ route only at the start of a sentence; báo bệnh and báo cáo bệnh stay apart', () => {
+    expect(routeText('giúp tôi tìm thửa nào ẩm nhất')).toBeNull()
+    expect(routeText('cho hộ nhà tôi biết')).toBeNull()
+    expect(routeText('tôi muốn báo bệnh')).toEqual({ kind: 'action', name: 'disease.report' })
+  })
+})
+

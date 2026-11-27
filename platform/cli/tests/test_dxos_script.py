@@ -150,8 +150,18 @@ def test_telegram_disable_removes_its_credentials_and_clients(tmp_path):
     run = subprocess.run(["bash", "-c", snippet], capture_output=True, text=True)
     assert run.returncode == 0, run.stderr
     assert (tmp_path / "calls").read_text().splitlines() == [
-        "kc", "rm /run/dxos-telegram/telegram.env", "drop DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET DXOS_TELEGRAM_WEBAPP_KEY", "restart",
+        "kc", "rm /run/dxos-telegram/telegram.env",
+        "drop DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET DXOS_TELEGRAM_WEBAPP_KEY DXOS_WEB_SERVICE_SECRET", "restart",
     ]
+
+
+def test_telegram_enable_and_disable_handle_the_web_service_client():
+    enable = subprocess.run(["sed", "-n", "/^telegram_enable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert 'ensure_client dxos-web-service "$WS_SCOPES"' in enable and "--rolename web-service" in enable
+    assert "service-account-dxos-web-service" in enable
+    assert "echo" not in enable.split("DXOS_WEB_SERVICE_SECRET")[1].split("\n")[0]  # the secret is piped to the helper, never echoed
+    disable = subprocess.run(["sed", "-n", "/^telegram_disable()/,/^}/p", str(DXOS)], capture_output=True, text=True).stdout
+    assert "dxos-telegram dxos-web-roles dxos-web-service" in disable
 
 
 def test_telegram_is_in_usage_and_takes_one_action():

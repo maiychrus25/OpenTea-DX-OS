@@ -45,6 +45,8 @@ async function getJournalEntries(request: Request) {
   let householdId: string | undefined
   if (role === 'farmer') {
     householdId = await getFarmerHouseholdId((session.user as any).id)
+    // No household means no filter below, which would list every entry the role can read.
+    if (!householdId) return NextResponse.json({ data: [], meta: { page, total: 0 } })
   } else {
     householdId = url.searchParams.get('householdId') ?? undefined
   }

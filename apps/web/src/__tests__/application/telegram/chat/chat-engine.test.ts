@@ -4,6 +4,7 @@
 import { z } from 'zod'
 import type { ReplyButtons } from '@/application/telegram/TelegramUpdateHandler'
 import { ChatEngine } from '@/application/telegram/chat/ChatEngine'
+import type { BulletinSpeech } from '@/application/telegram/chat/speech'
 import type { ChatAction, ChatTool, ChatUser, PhotoStore } from '@/application/telegram/chat/types'
 import { TELEGRAM_TEXT } from '@/application/telegram/messages'
 import { DomainError } from '@/domain/errors'
@@ -58,6 +59,9 @@ function fakePhotos() {
       stored.set(key, bytes)
     }),
     get: jest.fn(async (key: string) => stored.get(key) ?? Buffer.alloc(0)),
+    delete: jest.fn(async (key: string) => {
+      stored.delete(key)
+    }),
   }
   return store
 }
@@ -162,7 +166,7 @@ const nearby = {
   run: jest.fn(async () => ({ lines: ['Thửa TC-A1 cách 0.4 km'], source: 'Vùng trồng' })),
 } as unknown as ChatTool
 
-function build(options: { tools?: ChatTool[]; actions?: ChatAction[] } = {}) {
+function build(options: { tools?: ChatTool[]; actions?: ChatAction[]; speech?: BulletinSpeech } = {}) {
   const repo = fakeRepo()
   const photos = fakePhotos()
   const requests = { submit: jest.fn(async () => true) }
@@ -174,6 +178,7 @@ function build(options: { tools?: ChatTool[]; actions?: ChatAction[] } = {}) {
     requests: requests as never,
     callbackKey: KEY,
     proposalMessages: jest.fn(async () => []),
+    speech: options.speech,
   })
   return { engine, repo, photos, requests }
 }
@@ -196,8 +201,8 @@ describe('ChatEngine: menu, commands and tools', () => {
     const { engine } = build()
     const farmer = await engine.menu(FARMER)
     expect(farmer.replies[0].text).toBe(TELEGRAM_TEXT.menuPrompt)
-    // No Báo bệnh button in M5: the disease endpoint needs a web session (the action is not wired in chat yet).
-    expect(farmer.replies[0].buttons!.map((row) => row.map((b) => b.text))).toEqual([['Hôm nay', 'Ghi nhật ký'], ['Hỏi']])
+    // Only a farmer reports a disease (disease.report, issue #80).
+    expect(farmer.replies[0].buttons!.map((row) => row.map((b) => b.text))).toEqual([['Hôm nay', 'Ghi nhật ký'], ['Báo bệnh', 'Hỏi']])
     const manager = await engine.menu(MANAGER)
     expect(manager.replies[0].buttons!.map((row) => row.map((b) => b.text))).toEqual([['Hôm nay', 'Việc cần duyệt'], ['Hỏi']])
   })
@@ -220,6 +225,20 @@ describe('ChatEngine: menu, commands and tools', () => {
     const res = await engine.onLocation(FARMER, 11.9, 108.4, NOW)
     expect(nearby.run).toHaveBeenCalledWith(FARMER, { latitude: 11.9, longitude: 108.4 }, NOW)
     expect(res.replies[0].text).toContain('Nguồn: Vùng trồng')
+  })
+
+  test('the words after a tool phrase reach the tool as its argument', async () => {
+    const search = {
+      name: 'search',
+      titleVi: 'Tìm kiếm',
+      roles: ['farmer', 'officer', 'manager'],
+      routes: [],
+      args: [{ name: 'query', type: 'string', descriptionVi: '' }],
+      run: jest.fn(async () => ({ lines: ['Thửa P-TC-001'], source: 'Tìm kiếm' })),
+    } as unknown as ChatTool
+    const { engine } = build({ tools: [search] })
+    await engine.onText(FARMER, 'Tìm P-TC-001?', NOW)
+    expect(search.run).toHaveBeenCalledWith(FARMER, { query: 'P-TC-001' }, NOW)
   })
 
   test('an unmatched sentence goes to the assistant request', async () => {
@@ -679,3 +698,201 @@ describe('ChatEngine: voice messages (M15)', () => {
     expect(repo.rows.has('42')).toBe(false)
   })
 })
+
+describe('ChatEngine: captions and orphan photos (issue #80, C5)', () => {
+  const jpeg = { kind: 'image', bytes: Buffer.from([0xff, 0xd8, 0xff]), mimeType: 'image/jpeg' } as const
+  const DISEASE_KEY = 'telegram/TC/2026/disease.jpg'
+  const buttonsOf = (res: { replies: { buttons?: ReplyButtons }[] }) => res.replies[0].buttons
+
+  async function diseaseCard(engine: ChatEngine) {
+    await engine.onText(FARMER, '/benh', NOW)
+    return engine.onPhoto(FARMER, jpeg, NOW)
+  }
+
+  test('a caption is handled as the message text when no flow waits for a photo', async () => {
+    const { engine } = build()
+    const res = await engine.onPhoto(FARMER, jpeg, NOW, 'thời tiết hôm nay')
+    expect(res.replies).toEqual([{ op: 'send', chat_id: 42, text: 'Trời nắng, 31 độ\nNguồn: Thời tiết' }])
+  })
+
+  test('a caption with no match goes to the assistant like typed text', async () => {
+    const { engine, requests } = build()
+    await engine.onPhoto(FARMER, jpeg, NOW, 'mai có nên đi hái không')
+    expect(requests.submit).toHaveBeenCalledWith(FARMER, 'mai có nên đi hái không', NOW)
+  })
+
+  test('a caption answers the text step of an open flow', async () => {
+    const { engine, repo } = build({ actions: [{ ...journal, steps: [{ kind: 'text', slot: 'parcel_id', promptVi: 'Mã thửa:', maxLength: 20 }], payloadSchema: z.object({ parcel_id: z.string() }) } as unknown as ChatAction] })
+    await engine.onText(FARMER, '/nhatky', NOW)
+    await engine.onPhoto(FARMER, jpeg, NOW, 'TC-A1')
+    expect(repo.rows.get('42')).toMatchObject({ step: -1, state: { parcel_id: 'TC-A1' } })
+  })
+
+  test('inside a photo step the photo wins and the caption is ignored', async () => {
+    const { engine, photos, requests } = build()
+    await engine.onText(FARMER, '/benh', NOW)
+    const res = await engine.onPhoto(FARMER, jpeg, NOW, 'thời tiết hôm nay')
+    expect(photos.put).toHaveBeenCalledWith(DISEASE_KEY, jpeg.bytes, 'image/jpeg')
+    expect(res.replies[0].text).toContain('Gửi ảnh bệnh')
+    expect(weather.run).not.toHaveBeenCalled()
+    expect(requests.submit).not.toHaveBeenCalled()
+  })
+
+  test('a photo without a caption keeps the old answers', async () => {
+    const { engine } = build()
+    expect((await engine.onPhoto(FARMER, jpeg, NOW, '  ')).replies[0].text).toBe(TELEGRAM_TEXT.photoOutsideFlow)
+  })
+
+  test('Cancel on the card deletes the stored photo', async () => {
+    const { engine, photos, repo } = build()
+    const card = await diseaseCard(engine)
+    await press(engine, FARMER, '42', 42, buttonFor(buttonsOf(card), 'Huỷ').c, buttonFor(buttonsOf(card), 'Huỷ').s)
+    expect(photos.delete).toHaveBeenCalledTimes(1)
+    expect(photos.delete).toHaveBeenCalledWith(DISEASE_KEY)
+    expect(repo.rows.has('42')).toBe(false)
+  })
+
+  test('Cancel at a step with no photo yet deletes nothing', async () => {
+    const { engine, photos } = build()
+    const start = await engine.onText(FARMER, '/nhatky', NOW)
+    await press(engine, FARMER, '42', 42, buttonFor(buttonsOf(start), 'Huỷ').c, buttonFor(buttonsOf(start), 'Huỷ').s)
+    expect(photos.delete).not.toHaveBeenCalled()
+  })
+
+  test('a flow replaced by a command (/menu, /hoi or another action) deletes the stored photo once each', async () => {
+    for (const next of ['/menu', '/nhatky', '/hoi']) {
+      const { engine, photos } = build()
+      await diseaseCard(engine)
+      await engine.onText(FARMER, next, NOW)
+      expect(photos.delete).toHaveBeenCalledTimes(1)
+      expect(photos.delete).toHaveBeenCalledWith(DISEASE_KEY)
+    }
+  })
+
+  test('a menu button that replaces the flow deletes the stored photo', async () => {
+    const { engine, photos } = build()
+    await diseaseCard(engine)
+    await press(engine, FARMER, '42', 42, 'menu', 'today')
+    expect(photos.delete).toHaveBeenCalledWith(DISEASE_KEY)
+  })
+
+  test('an expired flow found by text, a photo or a button deletes the stored photo', async () => {
+    const later = new Date(NOW.getTime() + 11 * 60 * 1000)
+    const found = {
+      text: (engine: ChatEngine) => engine.onText(FARMER, 'lá vàng', later),
+      photo: (engine: ChatEngine) => engine.onPhoto(FARMER, jpeg, later),
+      button: (engine: ChatEngine, card: { replies: { buttons?: ReplyButtons }[] }) =>
+        press(engine, FARMER, '42', 42, buttonFor(buttonsOf(card), 'Xác nhận').c, buttonFor(buttonsOf(card), 'Xác nhận').s, 9, later),
+    }
+    for (const [name, run] of Object.entries(found)) {
+      const { engine, photos } = build()
+      const card = await diseaseCard(engine)
+      await run(engine, card)
+      expect([name, (photos.delete as jest.Mock).mock.calls]).toEqual([name, [[DISEASE_KEY]]])
+    }
+  })
+
+  test('an executed action keeps its photo', async () => {
+    const { engine, photos } = build()
+    const card = await diseaseCard(engine)
+    const ok = buttonFor(buttonsOf(card), 'Xác nhận')
+    await press(engine, FARMER, '42', 42, ok.c, ok.s)
+    expect(disease.execute).toHaveBeenCalledTimes(1)
+    expect(photos.delete).not.toHaveBeenCalled()
+  })
+
+  test('an action that fails deletes its photo', async () => {
+    const { engine, photos } = build()
+    const card = await diseaseCard(engine)
+    ;(disease.execute as unknown as jest.Mock).mockRejectedValueOnce(new DomainError('Dịch vụ bận'))
+    const ok = buttonFor(buttonsOf(card), 'Xác nhận')
+    await press(engine, FARMER, '42', 42, ok.c, ok.s)
+    expect(photos.delete).toHaveBeenCalledWith(DISEASE_KEY)
+  })
+
+  test('a photo that cannot be deleted does not break the reply', async () => {
+    const { engine, photos } = build()
+    const card = await diseaseCard(engine)
+    ;(photos.delete as jest.Mock).mockRejectedValueOnce(new Error('minio down'))
+    const res = await press(engine, FARMER, '42', 42, buttonFor(buttonsOf(card), 'Huỷ').c, buttonFor(buttonsOf(card), 'Huỷ').s)
+    expect(res.replies[0]).toMatchObject({ op: 'edit', text: TELEGRAM_TEXT.flowCancelled })
+  })
+
+  test('dropping a conversation for the handler deletes its photo and the row', async () => {
+    const { engine, photos, repo } = build()
+    await diseaseCard(engine)
+    await engine.discard('42')
+    expect(photos.delete).toHaveBeenCalledWith(DISEASE_KEY)
+    expect(repo.rows.has('42')).toBe(false)
+  })
+})
+
+describe('ChatEngine: read aloud (issue #80, C4)', () => {
+  const bulletin = {
+    name: 'bulletin',
+    titleVi: 'Bản tin',
+    roles: ['officer', 'manager'],
+    routes: [],
+    args: [],
+    run: jest.fn(async () => ({ lines: ['Giá chè ổn định.'], source: 'Bản tin', listen: true })),
+  } as unknown as ChatTool
+  const created = new Date('2026-11-25T03:00:00Z')
+  const speech = (over: Partial<BulletinSpeech> = {}): BulletinSpeech => ({
+    ready: jest.fn(async () => true),
+    latest: jest.fn(async () => ({ id: 'b-1', createdAt: created })),
+    ...over,
+  })
+
+  test('the bulletin reply gains Nghe, a v2 menu button whose step is listen', async () => {
+    const { engine } = build({ tools: [bulletin] })
+    const res = await engine.onText(MANAGER, 'bản tin hôm nay', NOW)
+    expect(res.replies[0].text).toBe('Giá chè ổn định.\nNguồn: Bản tin')
+    expect(buttonFor(res.replies[0].buttons, 'Nghe')).toMatchObject({ c: 'menu', s: 'listen' })
+  })
+
+  test('a reply without listen has no buttons', async () => {
+    const { engine } = build()
+    const res = await engine.onText(FARMER, 'thời tiết hôm nay', NOW)
+    expect(res.replies[0].buttons).toBeUndefined()
+  })
+
+  test('Nghe sends the audio reply for the latest bulletin of the cooperative, captioned with its day', async () => {
+    const fake = speech()
+    const { engine } = build({ tools: [bulletin], speech: fake })
+    const res = await press(engine, MANAGER, '44', 44, 'menu', 'listen')
+    expect(fake.latest).toHaveBeenCalledWith('TC')
+    expect(res.replies).toEqual([{ op: 'send', chat_id: 44, text: 'Bản tin 25/11/2026', audio: { kind: 'bulletin', id: 'b-1' } }])
+  })
+
+  test('Piper not running answers the fallback line and sends no audio', async () => {
+    const { engine } = build({ tools: [bulletin], speech: speech({ ready: jest.fn(async () => false) }) })
+    const res = await press(engine, MANAGER, '44', 44, 'menu', 'listen')
+    expect(res.replies).toEqual([{ op: 'send', chat_id: 44, text: 'Chưa đọc được bản tin lúc này.' }])
+  })
+
+  test('with no speech service at all it answers the same fallback line', async () => {
+    const { engine } = build({ tools: [bulletin] })
+    expect((await press(engine, MANAGER, '44', 44, 'menu', 'listen')).replies[0].text).toBe('Chưa đọc được bản tin lúc này.')
+  })
+
+  test('a bulletin that is gone answers the empty line', async () => {
+    const { engine } = build({ tools: [bulletin], speech: speech({ latest: jest.fn(async () => null) }) })
+    expect((await press(engine, MANAGER, '44', 44, 'menu', 'listen')).replies[0]).toMatchObject({ text: 'Chưa có dữ liệu.' })
+  })
+
+  test('a farmer cannot listen, and nothing is looked up', async () => {
+    const fake = speech()
+    const { engine } = build({ tools: [bulletin], speech: fake })
+    const res = await press(engine, FARMER, '42', 42, 'menu', 'listen')
+    expect(res.answer_callback).toEqual({ text: TELEGRAM_TEXT.noPermission('Bản tin'), show_alert: true })
+    expect(fake.ready).not.toHaveBeenCalled()
+  })
+
+  test('listening keeps the flow that is open', async () => {
+    const { engine, repo } = build({ tools: [bulletin], speech: speech() })
+    await engine.onText(MANAGER, '/hoi', NOW)
+    await press(engine, MANAGER, '44', 44, 'menu', 'listen')
+    expect(repo.rows.get('44')).toMatchObject({ flow: 'ask' })
+  })
+})
+

@@ -77,6 +77,7 @@ export const TELEGRAM_TEXT = {
   voiceHeard: (text: string) => `Em nghe được: “${text}”`,
   voiceTooLong: 'Tin thoại dài quá 60 giây. Bạn nói ngắn hơn hoặc nhắn chữ nhé.',
   voiceUnavailable: 'Chưa nghe được tin thoại lúc này. Bạn nhắn chữ giúp nhé.',
+  listenUnavailable: 'Chưa đọc được bản tin lúc này.',
   voiceUnclear: 'Chưa nghe rõ. Bạn nói lại hoặc nhắn chữ nhé.',
   voiceRetype: 'Bạn nhắn lại câu đúng nhé.',
   voiceTypeAnswer: 'Trợ lý đang chờ câu trả lời của bạn. Bạn trả lời bằng chữ giúp nhé.',
@@ -114,6 +115,7 @@ export const TELEGRAM_BUTTON = {
   next: 'Tiếp tục',
   finalConfirm: 'Xác nhận lần cuối',
   skip: 'Bỏ qua',
+  listen: 'Nghe',
 }
 
 /** Proposal message: title, up to five preview lines, a short reason and the expiry. */

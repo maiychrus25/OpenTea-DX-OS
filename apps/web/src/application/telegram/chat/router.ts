@@ -4,7 +4,7 @@
 import type { ActionName, ToolName } from './types'
 import { normalizeText } from './normalize'
 
-export type Route = { kind: 'tool'; name: ToolName } | { kind: 'action'; name: ActionName } | { kind: 'app_request' }
+export type Route = { kind: 'tool'; name: ToolName; args?: Record<string, string> } | { kind: 'action'; name: ActionName } | { kind: 'app_request' }
 
 /** Phrase table of contract C8. When several phrases match, the longest wins; on a tie the first row wins. */
 const PHRASES: readonly [string, Route][] = [
@@ -37,15 +37,81 @@ const PHRASES: readonly [string, Route][] = [
   ['hom nay', { kind: 'tool', name: 'today' }],
   ['tom tat', { kind: 'tool', name: 'today' }],
   ['nhat ky', { kind: 'tool', name: 'journal' }],
+  // Issue #80 read tools (plan C1). A leading `^` anchors a phrase to the start of the sentence: `tìm` and `hộ` are
+  // common words, so mid-sentence they stay with the assistant.
+  ['^tim', { kind: 'tool', name: 'search' }],
+  ['chung nhan', { kind: 'tool', name: 'certificate' }],
+  ['dat thua', { kind: 'tool', name: 'soil' }],
+  ['anh thua', { kind: 'tool', name: 'photo' }],
+  ['nong ho', { kind: 'tool', name: 'households' }],
+  ['^ho', { kind: 'tool', name: 'households' }],
+  ['thanh vien', { kind: 'tool', name: 'members' }],
+  ['bao cao benh', { kind: 'tool', name: 'diseases' }],
+  ['ho so', { kind: 'tool', name: 'profile' }],
+  ['tai lieu', { kind: 'tool', name: 'documents' }],
+  ['doi tac', { kind: 'tool', name: 'partners' }],
+  // Actions of issue #80 (plan C2).
+  ['sua nhat ky', { kind: 'action', name: 'journal.edit' }],
+  ['rut nhat ky', { kind: 'action', name: 'journal.delete' }],
+  ['xoa nhat ky', { kind: 'action', name: 'journal.delete' }],
+  ['duyet bao cao benh', { kind: 'action', name: 'disease.review' }],
+  ['duyet benh', { kind: 'action', name: 'disease.review' }],
+  ['bat dau lua moi', { kind: 'action', name: 'round.start' }],
+  ['lua moi', { kind: 'action', name: 'round.start' }],
+  ['dat ngay thu hoach', { kind: 'action', name: 'harvest.schedule' }],
+  ['doi ngay thu hoach', { kind: 'action', name: 'harvest.schedule' }],
+  ['tao lo hang', { kind: 'action', name: 'lot.create' }],
+  ['tao lo', { kind: 'action', name: 'lot.create' }],
+  ['xuat ma qr', { kind: 'action', name: 'lot.export_qr' }],
+  ['xuat qr', { kind: 'action', name: 'lot.export_qr' }],
+  ['gui thong bao', { kind: 'action', name: 'notification.announce' }],
+  ['danh dau da doc', { kind: 'action', name: 'notification.read' }],
+  ['xoa thong bao', { kind: 'action', name: 'notification.clear' }],
+  ['duyet thanh vien', { kind: 'action', name: 'member.approve' }],
+  ['xoa thanh vien', { kind: 'action', name: 'member.remove' }],
+  ['sua ho so', { kind: 'action', name: 'profile.edit' }],
+  ['them nong ho', { kind: 'action', name: 'household.add' }],
+  ['sua nong ho', { kind: 'action', name: 'household.edit' }],
+  ['xoa thua', { kind: 'action', name: 'parcel.delete' }],
 ]
+
+/** The argument a tool takes from the words after its phrase (`tìm trà` is `query` = `trà`). */
+const TEXT_ARG: Partial<Record<ToolName, string>> = {
+  search: 'query',
+  certificate: 'lot_code',
+  soil: 'parcel_code',
+  photo: 'parcel_code',
+  households: 'name',
+  lots: 'lot_code',
+}
+
+/** A tool that also answers with no argument takes the words only when they have this shape: a lot code is one word with a digit. */
+const ARG_SHAPE: Partial<Record<ToolName, RegExp>> = { lots: /^\S*\d\S*$/ }
+
+/** The words after the first run of words that fold to `phrase`, in the sentence's own spelling. */
+function wordsAfter(text: string, phrase: string): string {
+  const words = text.trim().split(/\s+/)
+  const folded = words.map((word) => normalizeText(word).trim())
+  const target = phrase.split(' ')
+  for (let i = 0; i + target.length <= words.length; i++) {
+    if (target.every((part, offset) => folded[i + offset] === part)) return words.slice(i + target.length).join(' ').replace(/[?!.,;]+$/, '')
+  }
+  return ''
+}
 
 /** The tool or action a sentence names, or null when it names none (the assistant takes it then). */
 export function routeText(text: string): Route | null {
   const folded = normalizeText(text)
   let best: { phrase: string; route: Route } | null = null
   for (const [phrase, route] of PHRASES) {
-    if (!folded.includes(` ${phrase} `)) continue
-    if (!best || phrase.length > best.phrase.length) best = { phrase, route }
+    const anchored = phrase.startsWith('^')
+    const words = anchored ? phrase.slice(1) : phrase
+    if (anchored ? !folded.startsWith(` ${words} `) : !folded.includes(` ${words} `)) continue
+    if (!best || words.length > best.phrase.length) best = { phrase: words, route }
+  }
+  if (best?.route.kind === 'tool' && TEXT_ARG[best.route.name]) {
+    const value = wordsAfter(text, best.phrase)
+    if (value && (ARG_SHAPE[best.route.name]?.test(value) ?? true)) return { ...best.route, args: { [TEXT_ARG[best.route.name] as string]: value } }
   }
   return best?.route ?? null
 }

@@ -460,13 +460,14 @@ telegram_webapp_key() {
 }
 
 telegram_enable() {
-  local secrets telegram_secret roles_secret webapp_key
-  # One Keycloak script makes both clients; it prints the telegram client secret, then the roles client secret.
+  local secrets telegram_secret roles_secret web_service_secret webapp_key
+  # One Keycloak script makes the three clients; it prints the telegram, roles and web-service client secrets, in that order.
   secrets="$(kc_exec '
     set -eu
     K=/opt/keycloak/bin/kcadm.sh
     TG_SCOPES="$1"
     RL_SCOPES="$2"
+    WS_SCOPES="$3"
     "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
     if ! "$K" get roles/telegram -r agrimarket >/dev/null 2>&1; then
       "$K" create roles -r agrimarket -s name=telegram -s "description=Rơle Telegram (client credentials, chỉ gọi /api/internal/telegram/*)" >/dev/null
@@ -492,17 +493,26 @@ telegram_enable() {
     RL_CID="$(ensure_client dxos-web-roles "$RL_SCOPES")"
     "$K" add-roles -r agrimarket --uusername service-account-dxos-web-roles --cclientid realm-management --rolename view-users >/dev/null
     client_secret dxos-web-roles "$RL_CID"
-  ' '["roles","dx-os-core"]' '["roles"]')"
+    # The web calls the disease API with this client when a farmer sends a photo in chat (issue #80).
+    if ! "$K" get roles/web-service -r agrimarket >/dev/null 2>&1; then
+      "$K" create roles -r agrimarket -s name=web-service -s "description=Web của lõi (client credentials, chỉ gọi /api/internal/web/disease/*)" >/dev/null
+    fi
+    WS_CID="$(ensure_client dxos-web-service "$WS_SCOPES")"
+    "$K" add-roles -r agrimarket --uusername service-account-dxos-web-service --rolename web-service >/dev/null
+    client_secret dxos-web-service "$WS_CID"
+  ' '["roles","dx-os-core"]' '["roles"]' '["roles","dx-os-core"]')"
   telegram_secret="$(sed -n 1p <<<"$secrets")"
   roles_secret="$(sed -n 2p <<<"$secrets")"
-  [ -n "$telegram_secret" ] && [ -n "$roles_secret" ] || { echo "Không lấy được client secret của Telegram" >&2; exit 1; }
+  web_service_secret="$(sed -n 3p <<<"$secrets")"
+  [ -n "$telegram_secret" ] && [ -n "$roles_secret" ] && [ -n "$web_service_secret" ] || { echo "Không lấy được client secret của Telegram" >&2; exit 1; }
   printf 'DXOS_TELEGRAM_CLIENT_ID=dxos-telegram\nDXOS_TELEGRAM_CLIENT_SECRET=%s\n' "$telegram_secret" | telegram_env_write /run/dxos-telegram telegram.env
   webapp_key="$(telegram_webapp_key)"
   { printf 'DXOS_ROLES_CLIENT_ID=dxos-web-roles\nDXOS_ROLES_CLIENT_SECRET=%s\n' "$roles_secret"
+    printf 'DXOS_WEB_SERVICE_SECRET=%s\n' "$web_service_secret"
     [ -z "$webapp_key" ] || printf 'DXOS_TELEGRAM_WEBAPP_KEY=%s\n' "$webapp_key"; } \
-    | roles_env_update DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET DXOS_TELEGRAM_WEBAPP_KEY
+    | roles_env_update DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET DXOS_TELEGRAM_WEBAPP_KEY DXOS_WEB_SERVICE_SECRET
   telegram_restart
-  echo "Đã bật Telegram: client dxos-telegram và dxos-web-roles (cần TELEGRAM_BOT_TOKEN trong docker/.env.local để rơle nhận tin)"
+  echo "Đã bật Telegram: client dxos-telegram, dxos-web-roles và dxos-web-service (cần TELEGRAM_BOT_TOKEN trong docker/.env.local để rơle nhận tin)"
 }
 
 # The web runs an approved mini-app action as the approver with this client's token (M9). Safe to repeat: the client is kept.
@@ -532,7 +542,7 @@ telegram_disable() {
     set -eu
     K=/opt/keycloak/bin/kcadm.sh
     "$K" config credentials --server http://localhost:8080 --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
-    for CLIENT_ID in dxos-telegram dxos-web-roles; do
+    for CLIENT_ID in dxos-telegram dxos-web-roles dxos-web-service; do
       CID="$("$K" get clients -r agrimarket -q "clientId=$CLIENT_ID" --fields id --format csv --noquotes | head -n 1)"
       if [ -n "$CID" ]; then
         "$K" delete "clients/$CID" -r agrimarket >/dev/null
@@ -540,9 +550,9 @@ telegram_disable() {
     done
   '
   telegram_env_remove /run/dxos-telegram telegram.env
-  roles_env_update DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET DXOS_TELEGRAM_WEBAPP_KEY </dev/null
+  roles_env_update DXOS_ROLES_CLIENT_ID DXOS_ROLES_CLIENT_SECRET DXOS_TELEGRAM_WEBAPP_KEY DXOS_WEB_SERVICE_SECRET </dev/null
   telegram_restart
-  echo "Đã tắt Telegram: đã xoá client dxos-telegram và dxos-web-roles"
+  echo "Đã tắt Telegram: đã xoá client dxos-telegram, dxos-web-roles và dxos-web-service"
 }
 
 [ $# -ge 1 ] || usage

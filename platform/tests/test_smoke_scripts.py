@@ -442,3 +442,15 @@ def test_builder_smoke_waits_for_a_code_provider_before_it_sends_the_request():
     assert "OPENAI_API_KEY: smoke-replay-placeholder" in text
     heartbeat = text.index("from platform.service_heartbeats where service='agent:TC'")
     assert text.index('$COMPOSE -f "$AGENT_OVERRIDE" up -d --no-deps --force-recreate dxos-agent') < heartbeat < text.index('tg_text "$TG_OWNER" "$REQUEST_TEXT"')
+
+
+def test_assistant_smoke_checks_the_chat_media_with_stubs_and_restores_what_it_stopped():
+    # Issue #80: a caption, a disease photo through the internal gateway route, and Nghe with and without a voice service.
+    text = (TESTS / "smoke-assistant.sh").read_text(encoding="utf-8")
+    for needle in ("tg_photo_caption", "stub_disease.py", "stub_tts.py", "--network-alias disease-api", "--network-alias piper",
+                   "ban-tin.wav", "Chưa đọc được bản tin lúc này.", "Cán bộ sẽ xác nhận kết quả này."):
+        assert needle in text, needle
+    cleanup = text[text.index("assistant_cleanup() {"):text.index("# The EXIT trap of smoke-agents stays in place")]
+    for needle in ("docker rm -f", "start disease-api", "start piper", "delete from bulletins", "delete from disease_reports"):
+        assert needle in cleanup, needle
+    assert (TESTS / "stub_disease.py").exists() and (TESTS / "stub_tts.py").exists()

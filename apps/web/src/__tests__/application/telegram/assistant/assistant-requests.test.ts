@@ -76,7 +76,7 @@ function engineFor(actions: ChatAction[] = [spraying, manager]) {
     repo: repo as never,
     tools: [weather],
     actions,
-    photos: { put: jest.fn(), get: jest.fn() },
+    photos: { put: jest.fn(), get: jest.fn(), delete: jest.fn() },
     requests: { submit: jest.fn(async () => true) },
     callbackKey: KEY,
     proposalMessages: jest.fn(async () => []),

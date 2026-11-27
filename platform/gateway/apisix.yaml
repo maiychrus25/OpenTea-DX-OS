@@ -56,7 +56,7 @@ routes:
       openid-connect: &oidc_aud
         <<: *oidc
         # Hasura checks the audience itself; n8n and disease-api do not, so require dx-os-core here.
-        # Agent, Telegram relay and staff app tokens carry dx-os-core too, so user routes also refuse the service roles (spec §5.2).
+        # Agent, Telegram relay, staff app and web service tokens carry dx-os-core too, so user routes also refuse the service roles (spec §5.2).
         claim_schema:
           required: [aud]
           properties:
@@ -67,7 +67,7 @@ routes:
             realm_access:
               properties:
                 roles:
-                  not: { contains: { enum: ["agent", "telegram", "staff-sync"] } }
+                  not: { contains: { enum: ["agent", "telegram", "staff-sync", "web-service"] } }
       proxy-rewrite:
         regex_uri: ["^/api/workflow/(.*)", "/webhook/$1"]
   - id: disease
@@ -120,7 +120,7 @@ routes:
             realm_access:
               properties:
                 roles:
-                  not: { contains: { enum: ["agent", "telegram", "staff-sync"] } }
+                  not: { contains: { enum: ["agent", "telegram", "staff-sync", "web-service"] } }
   # Dedicated internal LLM route for dxos-agent so agent traffic has its own rate budget (spec §8.1).
   - id: internal-agent-llm
     uri: /api/internal/agent/llm/v1/chat/completions
@@ -248,4 +248,37 @@ routes:
         headers:
           set:
             X-Dxos-Gateway: "${{DXOS_INTERNAL_GATEWAY_SECRET:=dev-internal-gateway-secret}}"
+  # The web's own token (client dxos-web-service) for the disease API when there is no browser session: a photo sent in
+  # Telegram chat (issue #80). Internal port only, POST only; the user route above refuses this token.
+  - id: internal-web-disease
+    uri: /api/internal/web/disease/*
+    methods: [POST]
+    upstream_id: disease
+    vars: [["server_port", "==", "9081"]]
+    plugins:
+      openid-connect:
+        <<: *oidc
+        claim_schema:
+          required: [aud, azp, realm_access]
+          properties:
+            aud:
+              anyOf:
+                - { enum: ["dx-os-core"] }
+                - { type: array, contains: { enum: ["dx-os-core"] } }
+            azp:
+              enum: ["dxos-web-service"]
+            realm_access:
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  contains: { enum: ["web-service"] }
+      limit-count:
+        count: 30
+        time_window: 60
+        key_type: var_combination
+        key: "$http_authorization"
+        rejected_code: 429
+      proxy-rewrite:
+        regex_uri: ["^/api/internal/web/disease/(.*)", "/$1"]
 #END

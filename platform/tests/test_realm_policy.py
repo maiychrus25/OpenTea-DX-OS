@@ -114,7 +114,7 @@ class RealmPolicyTest(unittest.TestCase):
         self.assertIn("agent", names)
         for client in REALM["clients"]:
             if client.get("serviceAccountsEnabled"):
-                self.assertTrue(client["clientId"].startswith("dxos-agent-") or client["clientId"] == "dxos-apps-actor",
+                self.assertTrue(client["clientId"].startswith("dxos-agent-") or client["clientId"] in ("dxos-apps-actor", "dxos-web-service"),
                                 client["clientId"])
 
     def test_apps_actor_client_is_a_confidential_service_account_without_roles(self):
@@ -142,6 +142,24 @@ class RealmPolicyTest(unittest.TestCase):
         self.assertIn("staff-sync", names)
         for client in REALM["clients"]:
             self.assertNotIn("staff-sync", client.get("defaultRoles", []), client["clientId"])
+
+    def test_web_service_realm_role_exists_and_no_client_holds_it_by_default(self):
+        names = {role["name"] for role in REALM["roles"]["realm"]}
+        self.assertIn("web-service", names)
+        for client in REALM["clients"]:
+            self.assertNotIn("web-service", client.get("defaultRoles", []), client["clientId"])
+
+    def test_web_service_client_is_a_confidential_service_account_with_the_core_audience(self):
+        # The web calls the disease API with this client's token when a farmer sends a photo in chat (issue #80, C3).
+        client = by_key(REALM["clients"], "clientId", "dxos-web-service")
+        self.assertIs(client["publicClient"], False)
+        self.assertIs(client["serviceAccountsEnabled"], True)
+        for flow in ("standardFlowEnabled", "implicitFlowEnabled", "directAccessGrantsEnabled"):
+            self.assertIs(client[flow], False, flow)
+        self.assertEqual(client["defaultClientScopes"], ["roles", "dx-os-core"])
+        self.assertEqual(client["optionalClientScopes"], [])
+        self.assertNotIn("secret", client)
+        self.assertNotIn("serviceAccountRoles", client)
 
     def test_sso_session_matches_app_session(self):
         self.assertEqual(REALM.get("ssoSessionIdleTimeout"), 28800)

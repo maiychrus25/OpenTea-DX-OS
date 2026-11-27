@@ -25,6 +25,8 @@ export interface ChatReply {
   source: string
   /** Open proposals the engine then sends to this chat with their approve and reject buttons (tool `pending`). */
   proposalIds?: string[]
+  /** The engine adds the Nghe button under this answer (tool `bulletin`). */
+  listen?: boolean
 }
 
 /** What A7 may fill in for a tool or an action; `name` equals the step slot for actions. */
@@ -47,6 +49,17 @@ export const TOOL_NAMES = [
   'parcels',
   'lots',
   'nearby',
+  // Issue #80 read tools (plan C1).
+  'search',
+  'certificate',
+  'soil',
+  'photo',
+  'households',
+  'members',
+  'diseases',
+  'profile',
+  'documents',
+  'partners',
 ] as const
 export type ToolName = (typeof TOOL_NAMES)[number]
 
@@ -60,7 +73,28 @@ export interface ChatTool {
   run(user: ChatUser, args: Record<string, unknown>, now: Date): Promise<ChatReply>
 }
 
-export const ACTION_NAMES = ['journal.create', 'disease.report', 'journal.batch_approve', 'harvest.approve'] as const
+export const ACTION_NAMES = [
+  'journal.create',
+  'disease.report',
+  'journal.batch_approve',
+  'harvest.approve',
+  'journal.edit',
+  'journal.delete',
+  'disease.review',
+  'round.start',
+  'harvest.schedule',
+  'lot.create',
+  'lot.export_qr',
+  'notification.announce',
+  'notification.read',
+  'notification.clear',
+  'member.approve',
+  'member.remove',
+  'profile.edit',
+  'household.add',
+  'household.edit',
+  'parcel.delete',
+] as const
 export type ActionName = (typeof ACTION_NAMES)[number]
 
 export interface Choice {
@@ -106,6 +140,8 @@ export type FlowStep = ChoiceStep | TextStep | IntegerStep | PhotoStep
 export interface PhotoStore {
   put(key: string, bytes: Buffer, mimeType: 'image/jpeg' | 'image/png'): Promise<void>
   get(key: string): Promise<Buffer>
+  /** Removes a stored photo; used for photos whose card was cancelled or whose flow was dropped. */
+  delete(key: string): Promise<void>
 }
 
 export interface ChatActionDeps {

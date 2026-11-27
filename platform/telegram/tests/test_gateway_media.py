@@ -36,3 +36,24 @@ def test_fetch_media_failure_is_a_gateway_error_without_the_token():
     with pytest.raises(GatewayError) as info:
         WebGateway("http://apisix:9081", lambda: "secret", urlopen_fn=refuse).fetch_media("b", "n.png")
     assert "404" in str(info.value) and "secret" not in str(info.value)
+
+
+def test_fetch_bulletin_audio_gets_the_wav_bytes_with_the_bearer_token_and_a_long_timeout():
+    seen = []
+
+    def opener(req, timeout):
+        seen.append((req.full_url, req.get_header("Authorization"), timeout))
+        return Body(b"RIFF")
+
+    web = WebGateway("http://apisix:9081/", lambda: "tok", urlopen_fn=opener)
+    assert web.fetch_bulletin_audio("0b1c") == b"RIFF"
+    assert seen == [("http://apisix:9081/api/internal/telegram/media?bulletin=0b1c", "Bearer tok", 90.0)]
+
+
+def test_fetch_bulletin_audio_failure_is_a_gateway_error_without_the_token():
+    def refuse(req, timeout):
+        raise urllib.error.HTTPError(req.full_url, 503, "x", {}, io.BytesIO(b"{}"))
+
+    with pytest.raises(GatewayError) as info:
+        WebGateway("http://apisix:9081", lambda: "secret", urlopen_fn=refuse).fetch_bulletin_audio("b")
+    assert "503" in str(info.value) and "secret" not in str(info.value)
