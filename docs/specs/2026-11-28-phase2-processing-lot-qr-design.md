@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — GĐ2: Mẻ sao sấy, Lô từ mẻ, Chứng nhận thật và một Trang QR
 
-> **Trạng thái:** Bản thiết kế (2026-11-28), chờ chủ dự án duyệt. Nhánh `feat/phase2-processing-qr`, tách từ `feat/phase1-value-chain` (GĐ1 đủ 4 dự án con).
+> **Trạng thái:** Đã triển khai trên nhánh `feat/phase2-processing-qr` (2026-11-28), chưa phát hành. Bản thiết kế viết ngày 2026-11-28; khác biệt giữa thiết kế và mã nằm ở "Ghi chú sau triển khai" cuối tài liệu.
 > **Căn cứ:** [product-roadmap.md](../product-roadmap.md) §1 (lời hứa 3), §3 rào chắn 4 và 5, §5 GĐ2 mục 1–3, §6 (vai `officer`, `manager`, khách mua), §7 KPI "100% lô xuất QR truy ngược về mẻ sao và phiếu cân"; [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md); DEV-009 (gỡ CertificateManager giả ở GĐ0, hẹn làm thật ở GĐ2).
 > **Cách duyệt:** chủ dự án giao làm tiếp các giai đoạn theo lộ trình trong đêm 2026-11-28. Các điểm lộ trình chưa nói rõ được quyết trong §7 và cần chủ dự án xem lại.
 
@@ -243,3 +243,19 @@ Mọi route mới vào nhóm `miniApp` của bảng phủ Telegram (`application
 9. **Tên người ẩn mặc định, áp lúc hiển thị** (cả lô cũ). Tên nghệ nhân sao chè tính là tên người.
 10. **Không thêm thư viện PDF.** Tem in từ trang HTML đúng khổ, "Lưu thành PDF" bằng trình duyệt.
 11. **Quyền:** officer và manager làm mẻ, lô, chứng nhận (bảng vai §6 của lộ trình ghi Cán bộ KT "Lập Mẻ sao sấy & Đóng lô in tem QR"). Kế toán không vào xưởng. Chỉ manager thu hồi chứng nhận và bật hiện tên.
+
+## Ghi chú sau triển khai
+
+Mã là nguồn cuối cùng. Phần dưới liệt kê chỗ mã khác thân đặc tả (đã tính các quyết định ở mục 7).
+
+1. **Lỗi 422 có mã riêng (`UnprocessableError`).** Mã `BATCH_EMPTY`, `DEVIATION_NOTE_REQUIRED`, `WITHDRAWAL_NOT_PASSED`, `GRADE_MISMATCH`, `LOT_WITHOUT_BATCH` và `CERTIFICATE_NOT_VALID` nằm ở trường `error.code`, cạnh `message` và các trường chi tiết (`recovery_ratio`, `parcel_code`, `weighed_on`, `safe_on`, `certificate_ids`). Riêng ở xuất QR, `WITHDRAWAL_NOT_PASSED` trước đây chỉ là tiền tố của thông điệp `DOMAIN_ERROR`; nay là mã thật. Các lỗi xuất QR khác (lô đã xuất, không ở `READY`, không có thửa) vẫn là 422 `DOMAIN_ERROR`.
+2. **`GRADE_MISMATCH` tách khỏi `STOCK_CHANGED`.** Mục 4.3 bước 2 gộp mọi sai lệch của dòng tồn vào 409 `STOCK_CHANGED`. Mã chỉ dùng 409 `STOCK_CHANGED` (kèm `error.stock`) khi dòng không thuộc HTX, mẻ chưa `FINISHED`, kg lấy lớn hơn tồn còn lại, hoặc các mẻ nguồn không có phiếu cân; dòng khác hạng với lô trả 422 `GRADE_MISMATCH`.
+3. **Ghi chú lệch quá ngắn là 400.** `deviation_note` được kiểm bằng zod (10 đến 500 ký tự sau khi cắt khoảng trắng), nên ghi chú ngắn hơn 10 ký tự trả 400 `VALIDATION_ERROR`. 422 `DEVIATION_NOTE_REQUIRED` chỉ trả khi tỷ lệ lệch mà không gửi ghi chú.
+4. **Chuyển hướng `/lot` nằm ở `next.config.js`.** Thư mục `app/lot` đã xoá; `redirects()` trả 308 (`permanent: true`) từ `/lot/:lot_code` sang `/q/:lot_code`, thay vì một trang `/lot/[lot_code]` tự chuyển hướng (mục 4.5).
+5. **`lot_certificates` có `id` riêng.** Mục 4.1 viết khoá chính kép; mã dùng `id` TEXT làm khoá chính và khoá duy nhất `(lot_id, certificate_id)`, vì `audit.capture_row()` lấy khoá hàng từ cột `id`.
+6. **Chứng nhận trên trang QR đọc trực tiếp.** Khối `certificates[]` của dữ liệu truy xuất có thêm `revoked_at`, và được đọc từ cơ sở dữ liệu lúc dựng trang chứ không từ ảnh chụp lúc xuất, nên thu hồi sau khi xuất hiện ngay. Trạng thái hiển thị vẫn tính lúc xem; `file_key` vẫn được thêm vào `certificate_keys` khi xuất.
+7. **Trang in tem.** `/officer/lots/[lot_code]/labels` chỉ cho vai `officer` và `/manager/lots/[lot_code]/labels` chỉ cho vai `manager` (vai khác về `/login`); khổ tem là 50×30, 40×30 hoặc 60×40 mm, 1 đến 500 tem.
+8. **Route đọc cài đặt tên công khai.** Có thêm `GET /api/htx/public-settings` (`manager`, `officer`); mục 4.6 chỉ liệt kê `PUT`.
+9. **Lỗi thu hồi và huỷ phiếu.** Thu hồi chứng nhận đã thu hồi trả 409 `CERTIFICATE_REVOKED`; huỷ phiếu cân đã vào mẻ trả 409 `TICKET_IN_BATCH` kèm mã mẻ.
+10. **Danh sách lô.** `GET /api/lots` nhận thêm `visibility=published` (lô `READY` và `QR_EXPORTED`). Danh sách mẻ trả tối đa 200 mẻ, danh sách phiếu chọn được tối đa 500 phiếu.
+11. **Đường tạo lô cũ khi `DXOS_LABS` tắt.** `POST /api/lots` trả 404 `NOT_FOUND` ("Tính năng này chưa mở."); thao tác chat `lot-create` trả "Tạo lô từ thửa đã chuyển sang Đóng lô từ mẻ.".
