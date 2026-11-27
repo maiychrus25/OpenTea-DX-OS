@@ -73,7 +73,7 @@
   flex-direction: column;
   justify-content: flex-end;
   gap: 14px;
-  padding: 36px 44px;
+  padding: 32px 28px;
   background:
     linear-gradient(180deg, transparent 40%, var(--color-hero-bg) 66%),
     url('/images/auth-hills.jpg') left top / auto 68% no-repeat,
@@ -102,13 +102,13 @@
   flex-direction: column;
   gap: 8px;
   color: var(--color-hero-text);
-  font-size: 16.5px;
+  font-size: 15.5px;
 }
 
 .featureList li {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .checkIcon {
