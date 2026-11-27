@@ -107,7 +107,7 @@ describe('the ten issue #80 read tools (plan C1)', () => {
       ['photo', ALL],
       ['households', STAFF],
       ['members', ['manager']],
-      ['diseases', STAFF],
+      ['diseases', ['officer']],
       ['profile', ALL],
       ['documents', STAFF],
       ['partners', ALL],
@@ -339,7 +339,7 @@ describe('diseases', () => {
     mockDb.diseaseFindMany.mockResolvedValue(
       many(10, (i) => ({ detection_date: NOW, ai_disease_name: `D${i}`, ai_confidence: 0.5, parcel: { parcel_code: 'P' }, household: { name: 'H' } }))
     )
-    expect((await tool('diseases').run(user('manager'), {}, NOW)).lines).toHaveLength(7)
+    expect((await tool('diseases').run(user('officer'), {}, NOW)).lines).toHaveLength(7)
   })
 })
 

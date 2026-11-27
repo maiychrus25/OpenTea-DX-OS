@@ -6,11 +6,11 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import type { ChatTool } from '../types'
 import { reply } from './common'
 
-/** Routes: `GET /api/officer/diseases`: reports waiting for a person, newest first, with no photo link. */
+/** Routes: `GET /api/officer/diseases`, which admits officers only: reports waiting for a person, newest first, with no photo link. */
 export const diseasesTool: ChatTool = {
   name: 'diseases',
   titleVi: 'Báo cáo bệnh',
-  roles: ['officer', 'manager'],
+  roles: ['officer'],
   routes: ['GET /api/officer/diseases'],
   args: [],
   async run(user) {
