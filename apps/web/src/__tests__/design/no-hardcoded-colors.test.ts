@@ -16,19 +16,6 @@ const exceptions: Record<string, { allow: Record<string, number>; reason: string
     allow: { "color: '#00ff00'": 1, "fillColor: '#00ff00'": 1 },
     reason: 'Parcel outlines are drawn on the satellite tiles, which look the same in both themes.',
   },
-  'src/app/manager/farm-zones/_components/FarmZoneReadOnly.tsx': {
-    allow: {
-      "fillColor: '#16A34A', color: '#15803D'": 1,
-      "fillColor: '#059669', color: '#047857'": 1,
-      "fillColor: '#9CA3AF', color: '#6B7280'": 2,
-      "fillColor: '#EA580C', color: '#C2410C'": 1,
-      "fillColor: '#2563EB', color: '#1D4ED8'": 1,
-      'stroke="#059669"': 1,
-      'style="color:#64748b"': 4,
-    },
-    reason:
-      'Parcel fills and the tooltip icon sit on map tiles that look the same in both themes, and the popup text sits in a Leaflet popup that leaflet.css keeps white.',
-  },
   'src/app/officer/farm-zones/setup/_components/SetupMapClient.tsx': {
     allow: { "container.style.backgroundColor = 'white'": 1 },
     reason: "The locate button must match Leaflet's own controls, which leaflet.css keeps white in both themes.",
