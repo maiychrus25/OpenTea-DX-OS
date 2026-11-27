@@ -1,8 +1,8 @@
-# Rules & Limits — DX-AgriMarket
+# Rules & Limits — OpenTea DX-OS
 
-> Tài liệu này định nghĩa tất cả **ràng buộc cứng** của hệ thống.
+> Tài liệu này định nghĩa tất cả **ràng buộc cứng** của hệ thống **OpenTea DX-OS** (tuân thủ kiến trúc DX-OS Open-Core & lộ trình [product-roadmap.md](./product-roadmap.md)).
 > Agent và developer PHẢI đọc file này trước khi implement bất kỳ feature nào.
-> Mọi vi phạm đều cần justification rõ ràng và approval từ team lead.
+> Mọi vi phạm đều cần justification rõ ràng và approval từ team lead / PO.
 
 ---
 
@@ -17,6 +17,7 @@ Chế độ thường:
 
 Chế độ tự vận hành (tuỳ chọn, mặc định tắt, do manager bật và chịu trách nhiệm):
 - AI tự thực thi hành động trong danh mục trong các ngưỡng và 5 giới hạn cứng H1–H5 của đặc tả §11.
+- **Rào chắn Poka-yoke định hướng chiến lược ([ADR 0005](./adr/0005-multi-tenant-tea-value-chain-dxos.md)):** Các quyết định **An toàn thực phẩm** (`harvest.approve`, nghiệm thu cách ly PHI) và **Tài chính/Giá cả** (thanh toán xã viên, khuyến mãi) thuộc phạm vi bắt buộc có người duyệt ký cuối cùng khi triển khai thực tế tại HTX.
 
 Giữ nguyên cho chatbot, bản tin, hỏi đáp và nhận diện bệnh:
 - Chatbot, bản tin và hỏi đáp CHỈ tổng hợp và trình bày sự thật có trích dẫn nguồn.
@@ -127,11 +128,11 @@ KHÔNG trust client-side role claims — luôn verify từ Keycloak token server
 ### 3.1 Lot Code Format
 ```
 Format:  {HTX_CODE}-{CROP_CODE}-{YYYYMMDD}-{NNN}
-Example: HTXA-RICE-20260804-001
+Example: TC-CHE-20261128-001
 
 Rules:
 - HTX_CODE: uppercase, max 6 chars, from htx_profiles.htx_code
-- CROP_CODE: uppercase, max 8 chars, alphanumeric only
+- CROP_CODE: uppercase, max 8 chars, ASCII alphanumeric only (stripped of Vietnamese diacritics)
 - YYYYMMDD: harvest date
 - NNN: sequential 3-digit, reset daily per HTX per crop
 - Total length: max 30 characters
@@ -178,22 +179,24 @@ Rules:
 
 ### 3.5 Parcel Status Transitions
 ```
-idle → growing (when crop cycle created)
-growing → harvested (when actual_harvest_date set)
-harvested → idle (when new cycle starts)
-growing → fallow (when crop failed / abandoned)
-fallow → idle (manual reset by officer)
+Hiện tại (apps/web/prisma/schema.prisma v1.17.0):
+  SOWING → TENDING → HARVEST_APPROVED → HARVESTED (hoặc FALLOW)
+  Officer mở lứa mới từ HARVESTED → TENDING (tạo ParcelCropCycle tiếp theo).
 
-Rule: Cannot delete parcel with active crop cycle (growing status)
+Đích chuẩn Ngành Chè (Lộ trình GĐ1 — ADR 0005):
+  PRUNED / TENDING → HARVEST_APPROVED (khi đạt cách ly PHI) → HARVESTED → tự động mở ParcelCropCycle lứa kế tiếp
+  (Chè là cây lưu niên hái 7–9 lứa/năm; nhật ký và lô gắn trực tiếp cycle_id để không khóa chéo giữa các lứa).
+
+Rule: Cannot delete parcel with active crop cycle
 ```
 
-### 3.6 HTX Profile Rules
+### 3.6 HTX Profile Rules (Multi-Tenant)
 ```
-- Only ONE HTX profile per system deployment
-- htx_code: uppercase, max 6 chars, alphanumeric, set on init
+- Hệ thống vận hành theo kiến trúc Multi-Tenant (SaaS Đa HTX & Cụm Liên minh Tỉnh): nhiều HTX dùng chung hạ tầng, cách ly tuyệt đối theo `htx_code` tại Keycloak claim, APISIX, Hasura RLS, Core TenantGuard và mọi schema `app_*`.
+- htx_code: uppercase, max 6 chars, alphanumeric, set on HTX onboarding
 - htx_code CANNOT be changed after first lot is exported (lot_code dependency)
-- total_area_ha: auto-calculated from sum of parcel areas
-- member_count: auto-calculated from count of households
+- total_area_ha: auto-calculated from sum of parcel areas (per HTX)
+- member_count: auto-calculated from count of households (per HTX)
 ```
 
 ### 3.7 Weather Auto-attach Rule
@@ -595,19 +598,25 @@ Rule: Pre-signed read URL expires: 60 minutes
 - Không inline styles (không dùng style={{}})
 - CSS Modules (.module.css) được phép cho animation phức tạp hoặc override đặc biệt
 - Không hardcode màu sắc — dùng var(--primary), var(--border), v.v.
-- Tham khảo docs/DESIGN.md cho component patterns chuẩn
+- Tham khảo DESIGN.md tại gốc repo cho component patterns chuẩn
 ```
 
 ### 5.2 Naming Conventions
 ```
-Files:        kebab-case.ts              (bulletin-service.ts)
-Interfaces:   IPrefixOrSuffix — KHÔNG  → PascalCase là đủ (BulletinRepository)
-Types:        PascalCase                (JournalEntryStatus)
-Enums:        PascalCase + UPPER value  (enum LotStatus { DRAFT = 'draft' })
-Constants:    SCREAMING_SNAKE_CASE      (MAX_WITHDRAWAL_DAYS)
-DB columns:   snake_case                (safe_harvest_date)
-API routes:   kebab-case                (/api/journal-entries)
-Env vars:     SCREAMING_SNAKE_CASE      (OLLAMA_MODEL)
+Code files:       kebab-case.ts              (bulletin-service.ts)
+Interfaces:       PascalCase                 (BulletinRepository — không dùng IPrefix)
+Types:            PascalCase                 (JournalEntryStatus)
+Enums:            PascalCase + UPPER value   (enum LotStatus { DRAFT = 'draft' })
+Constants:        SCREAMING_SNAKE_CASE       (MAX_WITHDRAWAL_DAYS)
+DB columns:       snake_case                 (safe_harvest_date)
+API routes:       kebab-case                 (/api/journal-entries)
+Env vars:         SCREAMING_SNAKE_CASE       (OLLAMA_MODEL)
+Root OSS docs:    UPPER_SNAKE_CASE.md        (README.md, DESIGN.md, CHANGELOG.md)
+Docs in docs/:    kebab-case.md / README.md  (business-analysis.md, product-roadmap.md)
+ADR files:        NNNN-kebab-case.md         (0005-multi-tenant-tea-value-chain-dxos.md)
+Specs & Plans:    YYYY-MM-DD-kebab-case.md   (2026-11-23-agentic-layer-design.md)
+Daily timelines:  YYYY-MM-DD.md              (docs/timelines/2026-11-28.md)
+Template dirs:    English kebab-case         (docs/templates/para-tea-cooperative/)
 ```
 
 ### 5.3 Comment Rules

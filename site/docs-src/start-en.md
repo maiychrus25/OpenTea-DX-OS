@@ -6,6 +6,7 @@ Pick the document that matches your role. The documents themselves are published
 
 - [Three-tier architecture](slug:architecture) (Vietnamese): how the core, the cooperative apps and the mini-apps fit together.
 - [Rules and limits](slug:rules) (Vietnamese): business rules and the known limits.
+- [Strategic product roadmap](slug:product-roadmap) (Vietnamese): multi-tenant tea cooperative positioning, 5 phases and KPIs.
 - Apps you use: [leaf purchase](slug:app-leaf-purchase), [tea shop](slug:app-tea-shop), [farm supply](slug:app-farm-supply), [tea tour](slug:app-tea-tour), [record books](slug:app-custom-books), [dashboard](slug:app-htx-dashboard) (all Vietnamese).
 
 ## Operators who install the system

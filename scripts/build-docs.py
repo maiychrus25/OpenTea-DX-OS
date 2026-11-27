@@ -51,6 +51,12 @@ PAGES = {
                      source="docs/adr/0001-n8n-workflow-engine.md", parent="adr", desc="Vì sao n8n được chọn làm công cụ quy trình dữ liệu."),
     "adr-0002": dict(title="ADR 0002: kiến trúc mini-app", group="Nhà phát triển", kind="file",
                      source="docs/adr/0002-miniapp-architecture.md", parent="adr", desc="Vì sao mini-app chạy như container riêng."),
+    "adr-0003": dict(title="ADR 0003: lớp AI vận hành", group="Nhà phát triển", kind="file",
+                     source="docs/adr/0003-agentic-layer.md", parent="adr", desc="Kiến trúc 3 vùng tin cậy và kiểm toán cho lớp AI."),
+    "adr-0004": dict(title="ADR 0004: LLM bên ngoài tuỳ chọn", group="Nhà phát triển", kind="file",
+                     source="docs/adr/0004-external-llm-providers.md", parent="adr", desc="Ngân sách HTX và che dữ liệu PII khi dùng provider ngoài."),
+    "adr-0005": dict(title="ADR 0005: SaaS đa HTX & chuỗi chè DX-OS", group="Nhà phát triển", kind="file",
+                     source="docs/adr/0005-multi-tenant-tea-value-chain-dxos.md", parent="adr", desc="Thống nhất chuỗi giá trị chè, Poka-yoke và mô hình SaaS đa HTX."),
     "app-hub-mobile": dict(title="Hub mobile (Flutter)", group="Ứng dụng", kind="file", source="apps/hub-mobile/README.md",
                            desc="Ứng dụng di động của HTX (chưa phát hành)."),
     "app-staff-desktop": dict(title="Tea Staff Manager (máy tính)", group="Ứng dụng", kind="file", source="apps/staff-desktop/README.md",
@@ -73,6 +79,8 @@ PAGES = {
                       desc="Ứng dụng mẫu tối giản để bắt đầu viết mini-app."),
     "design": dict(title="Hệ thống thiết kế", group="Thiết kế và vận hành", kind="file", source="DESIGN.md",
                    desc="Token màu, chữ, khoảng cách và quy tắc giao diện."),
+    "product-roadmap": dict(title="Lộ trình sản phẩm chiến lược", group="Thiết kế và vận hành", kind="file", source="docs/product-roadmap.md",
+                            desc="Định vị HTX chè đa thuê bao, phân loại tính năng và lộ trình 5 giai đoạn."),
     "rules": dict(title="Quy tắc và giới hạn", group="Thiết kế và vận hành", kind="file", source="docs/rules-and-limits.md",
                   desc="Ràng buộc nghiệp vụ và tiêu chuẩn mã nguồn."),
     "changelog": dict(title="Nhật ký thay đổi", group="Phát hành", kind="file", source="CHANGELOG.md",
@@ -493,7 +501,7 @@ def read_author(rel):
 
 def adr_index_text():
     lines = ["Các quyết định kiến trúc được ghi lại trong thư mục `docs/adr/`:", ""]
-    for slug in ["adr-0001", "adr-0002"]:
+    for slug in ["adr-0001", "adr-0002", "adr-0003", "adr-0004", "adr-0005"]:
         p = PAGES[slug]
         lines.append("- [%s](slug:%s)" % (p["title"], slug))
     return "\n".join(lines) + "\n"

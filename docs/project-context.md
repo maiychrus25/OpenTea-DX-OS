@@ -1,19 +1,19 @@
-# Project Context — DX-AgriMarket
-# AI Agent Entry Point
+# Project Context — OpenTea DX-OS
+# AI Agent & Developer Entry Point
 
 > **MANDATORY:** Read this file FIRST before any implementation task.
-> Check referenced docs only when you need specific details.
+> Check referenced docs in [`docs/README.md`](./README.md) when you need specific details.
 
 ---
 
 ## What This System Is
 
-**DX-AgriMarket** — Agricultural Digital Operating System for Vietnamese HTX (farming cooperatives).
-MNM (100% open source). OLP competition + internal production use.
+**OpenTea DX-OS** — Digital Transformation Operating System (**DX-OS Open-Core**, HPDI 4-space architecture) purpose-built for **Vietnamese Tea Cooperatives (`HTX Chè Việt Nam`)**.
+100% open-source core. Deployed as **Multi-Tenant Cloud SaaS (`htx_code`)** for SME cooperatives and **Sovereign Clusters** for Provincial Cooperative Alliances / Lead Enterprises.
 
-**3 Actors:** Manager (Trưởng HTX) · Officer (Cán bộ Kỹ thuật) · Farmer (Nông dân trẻ)
-
-**AI Invariant (NEVER violate):** AI presents cited facts ONLY. NEVER decides. NEVER recommends actions.
+- **Current Code Roles (`v1.17.0`):** `manager` (Giám đốc HTX) · `officer` (Cán bộ KT/CL) · `farmer` (Xã viên trồng chè) + service role `agent`.
+- **Target Roadmap Roles ([`product-roadmap.md`](./product-roadmap.md)):** Adds `platform_admin` (SaaS / Provincial Admin), `accountant` (Kế toán / Bàn cân), multi-role `htx_memberships` + Role Switcher.
+- **AI & Safety Invariant (`Poka-yoke`):** AI presents cited facts and SHA-256 evidence-backed proposals ONLY. Food-safety clearance (`harvest.approve` / PHI intake gate) and financial disbursements/discounts ALWAYS require human sign-off (see [ADR 0005](./adr/0005-multi-tenant-tea-value-chain-dxos.md)).
 
 ---
 
@@ -21,20 +21,22 @@ MNM (100% open source). OLP competition + internal production use.
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
-| Frontend | Next.js 14 App Router | Server Components default |
-| CSS | Tailwind CSS v4 + CSS Variables | `@import 'tailwindcss'` trong globals.css |
+| Frontend | Next.js 14 App Router | Server Components default (`apps/web`) |
+| CSS | Tailwind CSS v4 + CSS Variables | `@import 'tailwindcss'` in `globals.css`; tokens in `DESIGN.md` |
 | Font | Be Vietnam Pro (Google Fonts) | Variable: `--font-be-vietnam` |
-| Auth | Keycloak 24 + NextAuth.js 5 | OIDC, Passkeys/PIN |
+| Auth & Gateway | Keycloak 24 + NextAuth.js 5 + Apache APISIX | OIDC JWT with `htx_code`, Zero-Trust Gateway (`9080` public / `9081` internal) |
 | State | Zustand 4 | Client global state |
 | Map | Leaflet.js (pure) | `'use client'` + `dynamic(ssr:false)` ALWAYS |
 | Validation | Zod 3 | At route handler, before UseCase |
-| ORM | Prisma 5 | Schema at `apps/web/prisma/schema.prisma` |
-| Database | PostgreSQL 16 | Single source of truth |
-| Files | MinIO | Pre-signed URLs only, never direct client access |
-| LLM | Groq API Free Tier (Llama-3.1-8B) | `OLLAMA_MODEL` env var, `openai` npm client |
-| TTS | Piper TTS | On-demand via `/api/tts` |
-| Pipeline | n8n | Writes market_data, weather_cache, bulletins |
-| Disease AI | FastAPI + TF/Keras | Internal: `http://disease-api:8000` |
+| ORM & Read API | Prisma 5 + Hasura GraphQL v2 | `apps/web/prisma/schema.prisma` + read-only RLS by `htx_code` |
+| Database | PostgreSQL 16 + PostGIS + pgvector | Schemas: `public`, `audit`, `telemetry`, `platform`, `app_*` |
+| Object Storage & AV | SeaweedFS (S3 API) + ClamAV (`dxos-scanner`) | Pre-signed URLs + P.A.R.A structure; automatic quarantine |
+| Data Lifecycle & IoT | Mosquitto MQTT + `dxos-dataops` (Parquet/ZSTD + DuckDB) | 30d hot Postgres → cold S3 data lake |
+| LLM & Agentic | Ollama (`qwen2.5:0.5b` default) + optional external providers + `dxos-agent` | Cryptographic `evidence`, human-in-the-loop inbox |
+| TTS / STT | Piper TTS + `whisper.cpp` (`dxos-stt`) | Local Vietnamese voice synthesis & transcription |
+| Pipeline | n8n (with Kestra exit path, ADR 0001) | Background data & notification orchestration |
+| Disease AI | FastAPI + TF/Keras (`apps/disease-api`) | Internal: `http://disease-api:8000` |
+| Plug-in Tier 3 | FastAPI + Jinja2 (`miniapps/*` + `platform/appkit` + `./dxos`) | Scriptless SSR mini-apps behind APISIX |
 | Infra | Docker Compose | All services containerized |
 
 ---
@@ -141,30 +143,27 @@ Full list: `.env.example`
 
 ---
 
-## Domain Glossary (Use These Terms in Code)
+## Domain Glossary (Use These Terms in Code & Tea Domain)
 
-| Term | Code Name | Meaning |
-|------|-----------|---------|
-| HTX | `HtxProfile` | Hợp tác xã (farming cooperative) |
-| Nông hộ | `Household` | Member farming household |
-| Thửa đất | `Parcel` | Land parcel (has GeoJSON polygon) |
-| Vụ mùa | `ParcelCropCycle` | Crop cycle per parcel per season |
-| Nhật ký | `JournalEntry` | Daily farming log |
-| Lô hàng | `Lot` | Harvest batch (linked to QR) |
-| Bản tin | `Bulletin` | AI-synthesized market bulletin |
-| Cán bộ KT | `officer` | Technical/Quality officer role |
-| Trưởng HTX | `manager` | HTX manager role |
-| Mã lô | `lot_code` | Format: `{HTX_CODE}-{CROP}-{YYYYMMDD}-{NNN}` |
+| Term (Vietnamese Tea Domain) | Code Name / Target Entity | Meaning |
+|---|---|---|
+| HTX Chè | `HtxProfile` | Hợp tác xã chè (Multi-tenant boundary via `htx_code`) |
+| Nông hộ / Xã viên | `Household` | Member tea-farming household |
+| Nương chè / Thửa đất | `Parcel` | Tea land parcel (GeoJSON polygon, tea cultivar, age, expected yield) |
+| Lứa hái (7–9 lứa/năm) | `ParcelCropCycle` | Perennial tea plucking flush (`Lứa <n>/<YYYY>`) + pruning cycle |
+| Nhật ký canh tác | `JournalEntry` + `JournalActivity` | Pruning, fertilizing, spraying (with `withdrawal_days` / PHI), plucking |
+| Lô chè thành phẩm | `Lot` | Dried/processed tea batch linked to QR traceability (`/lot/[lot_code]`) |
+| Mã lô | `lot_code` | ASCII format: `{HTX_CODE}-{CROP}-{YYYYMMDD}-{NNN}` (e.g. `TC-CHE-20261128-001`) |
+| Bản tin | `Bulletin` | Market & cooperative bulletin |
+| Giám đốc HTX / Cán bộ KT / Xã viên | `manager` · `officer` · `farmer` | Core active roles (`platform_admin`, `accountant` in Roadmap GĐ1) |
+| Phiếu cân búp / Mẻ sao / Sổ cái | `FreshLeafTicket` · `ProcessingBatch` · `MemberLedger` | Roadmap GĐ1–GĐ2 Core unified value-chain entities (`product-roadmap.md`) |
 
 ---
 
-## MVP Scope (30/08/2026)
+## Current Baseline (`v1.17.0`) & Strategic Roadmap
 
-**In:** Auth + HTX Profile + n8n pipelines + Bulletin + TTS + Market Chatbot + Partner Map + Farm Zone Map + Journal + QR + Web Bell + Disease FastAPI (backend only)
-
-**Out:** Farmer UI, Mattermost push, P.A.R.A/MinIO docs, Technical Chatbot, nightly TTS cronjob
-
-**Critical path:** Farm Zone Map → Journal → QR (sequential, cannot parallelize)
+- **Implemented (`v1.17.0`):** Multi-tenant Tiers 1–3 (`keycloak`, `apisix`, `hasura`, `seaweedfs`, `clamav`, `mosquitto`, `dxos-dataops`, `apps/web`, `miniapps/*`, `dxos-agent`, `dxos-telegram`).
+- **Strategic Alignment Target (`2026-11-28`):** Execute the 5-phase PO/BA roadmap in [`docs/product-roadmap.md`](./product-roadmap.md) & [`ADR 0005`](./adr/0005-multi-tenant-tea-value-chain-dxos.md) — purge mock UI, unify the Tea Value Chain (`Lứa hái` FK + PHI weighing gate + `MemberLedger` debt offset + `ProcessingBatch` mass balance), and remove non-tea rice terminology.
 
 ---
 
@@ -172,9 +171,13 @@ Full list: `.env.example`
 
 | Need | Read |
 |------|------|
-| Full architecture decisions | `_bmad-output/planning-artifacts/architecture-dx-agrimarket-20260804/ARCHITECTURE-SPINE.md` |
-| All DB tables + ERD | `docs/database-schema.md` |
-| API endpoints + request/response | `docs/api-contract.md` |
-| Product requirements | `_bmad-output/planning-artifacts/prd-dx-agrimarket-20260804/prd.md` |
-| Business analysis source | `docs/BA_Document.md` |
-| **UI Design System** | **`docs/DESIGN.md`** — color tokens, components, layout patterns |
+| Documentation index & naming standard | [`docs/README.md`](./README.md) |
+| Business analysis (HPDI & Tea Cooperative) | [`docs/business-analysis.md`](./business-analysis.md) |
+| Strategic product roadmap (5 phases, KPIs) | [`docs/product-roadmap.md`](./product-roadmap.md) |
+| Architecture decisions | [`docs/adr/0001`..`0005`](./adr/0005-multi-tenant-tea-value-chain-dxos.md) |
+| Rules, invariants & hard limits | [`docs/rules-and-limits.md`](./rules-and-limits.md) |
+| Database schemas & divergences | [`docs/database-schema.md`](./database-schema.md) |
+| API endpoints & contracts | [`docs/api-contract.md`](./api-contract.md) |
+| Mini-app Tier 3 guide | [`docs/miniapps.md`](./miniapps.md) |
+| Known deviations register | [`docs/deviation-register.md`](./deviation-register.md) |
+| **UI Design System** | [`DESIGN.md`](../DESIGN.md) — color tokens, components, layout patterns |

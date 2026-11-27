@@ -1,10 +1,11 @@
-# API Contract — DX-AgriMarket
+# API Contract — OpenTea DX-OS
 
-**Base URL (local):** `http://localhost:3000/api`
+**Base URL (local):** `http://localhost:3000/api` (Web) · `http://localhost:9080` (APISIX Gateway)
 **Base URL (prod):** `https://{domain}/api`
-**Auth:** Bearer token (NextAuth.js session cookie) — all routes except `/lot/[code]` public page
+**Auth:** Bearer token (Keycloak OIDC / NextAuth.js session cookie) — all routes except `/lot/[code]` & `/htx/[code]` public pages
 **Response format:** `{ data: T }` success · `{ error: { code, message } }` error
 **Validation:** Zod at route handler layer, before UseCase
+**Strategic Direction:** Xem [business-analysis.md](./business-analysis.md) và [product-roadmap.md](./product-roadmap.md) cho các endpoint chuỗi giá trị chè hợp nhất (GĐ1–GĐ3).
 
 ---
 

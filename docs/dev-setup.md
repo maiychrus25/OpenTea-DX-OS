@@ -1,6 +1,6 @@
 # Hướng dẫn Cài đặt Môi trường Phát triển (Local Dev Setup)
 
-Dự án DX-AgriMarket sử dụng kiến trúc Monorepo và Docker Compose để đồng bộ môi trường phát triển cho tất cả các thành viên.
+Dự án **OpenTea DX-OS** sử dụng kiến trúc Monorepo và Docker Compose để đồng bộ môi trường phát triển cho tất cả các thành viên (xem thêm mục lục tài liệu tại [docs/README.md](./README.md) và hướng dẫn chạy stack nhẹ tại [README.md](../README.md)).
 
 ## Yêu cầu Hệ thống
 - Docker & Docker Compose

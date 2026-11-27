@@ -1,9 +1,13 @@
-# Database Schema — DX-AgriMarket
+# Database Schema — OpenTea DX-OS
 
-**ORM:** Prisma 5.x · **DB:** PostgreSQL 16 · **Schema file:** `apps/web/prisma/schema.prisma`
+**ORM:** Prisma 5.x · **DB:** PostgreSQL 16 (PostGIS + pgvector) · **Schema file:** `apps/web/prisma/schema.prisma`
+
+> [!IMPORTANT]
+> **Nguồn sự thật thực thi:** `apps/web/prisma/schema.prisma` (schema `public`) và `platform/postgres/init/*.sql` (các schema `audit`, `telemetry`, `platform`), cộng với các schema `app_<id>` của Mini-app Tầng 3.
+> Tài liệu này còn ghi nhận một số sai lệch lịch sử so với Prisma thực tế (ví dụ: người dùng quản lý qua Keycloak thay vì bảng `users`; `journal_entries` hiện chưa có `parcel_crop_cycle_id` và `partners` chưa có `htx_profile_id` — xem `DEV-007`, `DEV-010` trong [deviation-register.md](./deviation-register.md) và lộ trình hợp nhất trong [product-roadmap.md](./product-roadmap.md)).
 
 > **Rule:** n8n is the ONLY writer to `market_data`, `weather_cache`, `bulletins`, `fx_rates` tables.
-> All other tables are written by Next.js API routes via Prisma.
+> All other core `public` tables are written by Next.js API routes via Prisma (and protected by `audit.events` hash-chain triggers).
 
 ---
 
@@ -32,7 +36,7 @@ erDiagram
 ## Tables
 
 ### `htx_profiles`
-HTX (Hợp tác xã) master profile. One record per deployment.
+HTX (Hợp tác xã) master profile. Multi-tenant isolation key (`htx_code`, hỗ trợ nhiều HTX trên cùng một triển khai SaaS hoặc cụm Liên minh Tỉnh).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
