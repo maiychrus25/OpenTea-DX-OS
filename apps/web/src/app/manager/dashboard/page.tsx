@@ -91,22 +91,14 @@ const PARCEL_STATUSES = [
 const PRICE_SELECT = { commodity: true, metric: true, value: true, unit: true, source: true, fetched_at: true } as const
 const PRICE_COUNT = 3
 
-// Tea first, topped up with the newest other commodities when fewer than PRICE_COUNT tea rows exist.
-async function latestPrices() {
-  const tea = await prisma.marketData.findMany({
+// Tea only: other commodities are off-domain for a tea cooperative.
+function latestPrices() {
+  return prisma.marketData.findMany({
     where: { commodity: 'Tea' },
     orderBy: { fetched_at: 'desc' },
     take: PRICE_COUNT,
     select: PRICE_SELECT,
   })
-  if (tea.length >= PRICE_COUNT) return tea
-  const others = await prisma.marketData.findMany({
-    where: { commodity: { not: 'Tea' } },
-    orderBy: { fetched_at: 'desc' },
-    take: PRICE_COUNT - tea.length,
-    select: PRICE_SELECT,
-  })
-  return [...tea, ...others]
 }
 
 function toMetricVN(metric: string | undefined | null): string {

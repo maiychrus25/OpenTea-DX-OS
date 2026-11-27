@@ -164,13 +164,14 @@ describe('ManagerDashboard', () => {
     expect(shownCommodities()).toEqual(['Chè', 'Chè', 'Chè'])
   })
 
-  it('tops up with the newest other commodities when there are fewer than 3 tea prices', async () => {
+  it('shows only tea rows and the empty state when there is none', async () => {
     ;(auth as jest.Mock).mockResolvedValueOnce({ user: { role: 'manager' } })
-    serveMarket([row('Tea', 1), row('Rice', 10), row('Coffee', 12), row('Rice', 5)])
+    serveMarket([row('Rice', 10), row('Coffee', 12)])
 
     render(await ManagerDashboard())
 
-    expect(shownCommodities()).toEqual(['Chè', 'Cà phê', 'Lúa gạo'])
+    expect(screen.getByText('Chưa có dữ liệu giá.')).toBeInTheDocument()
+    expect(screen.queryByText(/^(Lúa gạo|Cà phê)$/)).not.toBeInTheDocument()
   })
 
   it('counts distinct sources, not price rows', async () => {
