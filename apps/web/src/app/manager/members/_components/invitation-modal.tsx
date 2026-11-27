@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
+import { EDITABLE_ROLES as ROLE_OPTIONS } from './member-types';
 
 interface InvitationModalProps {
   isOpen: boolean;
@@ -12,16 +13,11 @@ interface InvitationModalProps {
   onSuccess: () => void;
 }
 
-const ROLE_OPTIONS = [
-  { value: 'farmer', label: 'Nông dân', description: 'Ghi nhật ký canh tác, xem thửa đất, chẩn đoán bệnh' },
-  { value: 'officer', label: 'Cán bộ kỹ thuật', description: 'Quản lý nông hộ, duyệt nhật ký, tạo lô hàng' },
-];
-
 export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalProps) {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
-  const [role, setRole] = useState('farmer');
+  const [roles, setRoles] = useState<string[]>(['farmer']);
   const [address, setAddress] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -31,7 +27,7 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
     setFullName('');
     setPhone('');
     setPin('');
-    setRole('farmer');
+    setRoles(['farmer']);
     setAddress('');
     setErrorMsg('');
     setSuccessMsg('');
@@ -39,7 +35,7 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !phone || !pin) return;
+    if (!fullName || !phone || !pin || roles.length === 0) return;
 
     setIsSubmitting(true);
     setErrorMsg('');
@@ -49,7 +45,7 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
       const res = await fetch('/api/members/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, phone, pin, role, address }),
+        body: JSON.stringify({ fullName, phone, pin, roles, address }),
       });
 
       const json = await res.json();
@@ -72,7 +68,9 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
     }
   };
 
-  const selectedRole = ROLE_OPTIONS.find(r => r.value === role);
+  const selectedRoles = ROLE_OPTIONS.filter(r => roles.includes(r.value));
+  const toggleRole = (value: string) =>
+    setRoles(prev => (prev.includes(value) ? prev.filter(r => r !== value) : [...prev, value]));
 
   if (!isOpen) return null;
 
@@ -115,25 +113,23 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
             )}
 
 
-            {/* Role */}
-            <div>
-              <label className="block text-sm font-semibold text-ink-secondary mb-1.5">
+            {/* Roles */}
+            <fieldset className="border-0 p-0 m-0" disabled={isSubmitting || !!successMsg}>
+              <legend className="block text-sm font-semibold text-ink-secondary mb-1.5">
                 Vai trò <span className="text-danger">*</span>
-              </label>
-              <select
-                value={role}
-                onChange={e => setRole(e.target.value)}
-                disabled={isSubmitting || !!successMsg}
-                className="w-full px-3 py-2.5 bg-card border border-border rounded-lg text-sm text-foreground shadow-sm focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-surface-sunken transition-colors outline-none"
-              >
-                {ROLE_OPTIONS.map(r => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
-              {selectedRole && (
-                <p className="mt-1.5 text-xs text-ink-tertiary">{selectedRole.description}</p>
+              </legend>
+              {ROLE_OPTIONS.map(r => (
+                <label key={r.value} className="flex min-h-[44px] items-center gap-2 text-sm text-foreground cursor-pointer">
+                  <input type="checkbox" checked={roles.includes(r.value)} onChange={() => toggleRole(r.value)} className="h-[18px] w-[18px] accent-[var(--primary)]" />
+                  {r.label}
+                </label>
+              ))}
+              {selectedRoles.length > 0 ? (
+                <p className="mt-1.5 text-xs text-ink-tertiary">{selectedRoles.map(r => r.description).join(' · ')}</p>
+              ) : (
+                <p role="alert" className="mt-1.5 text-xs text-danger">Chọn ít nhất một vai</p>
               )}
-            </div>
+            </fieldset>
 
             {/* Full Name */}
             <div>
@@ -181,7 +177,7 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
             </div>
 
             {/* Address (farmer only) */}
-            {role === 'farmer' && (
+            {roles.includes('farmer') && (
               <div>
                 <label className="block text-sm font-semibold text-ink-secondary mb-1.5">
                   Địa chỉ nông hộ
@@ -209,10 +205,10 @@ export function InvitationModal({ isOpen, onClose, onSuccess }: InvitationModalP
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !fullName || !phone || !pin}
+                  disabled={isSubmitting || !fullName || !phone || !pin || roles.length === 0}
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                 >
-                  {isSubmitting ? 'Đang tạo...' : `Tạo tài khoản ${selectedRole?.label || ''}`}
+                  {isSubmitting ? 'Đang tạo...' : `Tạo tài khoản ${selectedRoles.map(r => r.label).join(', ')}`}
                 </button>
               </div>
             )}

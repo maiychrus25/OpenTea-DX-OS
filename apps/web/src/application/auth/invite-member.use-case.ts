@@ -10,7 +10,8 @@ export interface InviteMemberRequest {
   fullName: string
   phone: string
   pin: string
-  role: string
+  /** Realm roles to give; the route limits them to farmer, officer and accountant. */
+  roles: string[]
   address?: string
 }
 
@@ -32,8 +33,9 @@ export class InviteMemberUseCase {
       throw new Error('HTX_NOT_FOUND')
     }
 
+    const isFarmer = request.roles.includes('farmer')
     // The phone is globally unique: refuse here, before the Keycloak user exists.
-    if (request.role === 'farmer' && await this.householdPort.isPhoneTaken(request.phone, htx.id)) {
+    if (isFarmer && await this.householdPort.isPhoneTaken(request.phone, htx.id)) {
       throw new ValidationError('Số điện thoại này đã được đăng ký!')
     }
 
@@ -44,11 +46,11 @@ export class InviteMemberUseCase {
       pin: request.pin,
       htxId: htx.id,
       htxCode: inviterHtxCode,
-    }, request.role, true) // enabled = true, login được ngay
+    }, request.roles, true) // enabled = true, login được ngay
 
     // Step 2: Create or Update Household in DB (only for farmer)
     let householdId: string | null = null
-    if (request.role === 'farmer') {
+    if (isFarmer) {
       const orphanedHousehold = await this.householdPort.findOrphanedByPhone(request.phone, htx.id)
 
       if (orphanedHousehold) {

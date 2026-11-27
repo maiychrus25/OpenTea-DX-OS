@@ -23,6 +23,10 @@ async function deleteMember(
     if ((await adapter.getUserHtxCode(params.id)) !== tenant.htxCode) {
       return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Không tìm thấy thành viên' } }, { status: 404 })
     }
+    // A manager is not removed from the member list: another manager would lose their account here.
+    if ((await adapter.getMember(params.id))?.roles.includes('manager')) {
+      return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Không thể xóa Trưởng HTX' } }, { status: 403 })
+    }
     const householdRepo = new PrismaHouseholdRepository()
     const useCase = new DeleteMemberUseCase(adapter, householdRepo)
     await useCase.execute(params.id)

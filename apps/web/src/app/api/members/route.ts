@@ -16,19 +16,17 @@ async function listMembers(request: Request) {
   const adapter = new KeycloakAdminAdapter()
   
   try {
-    let data: any[] = []
-    if (filterRole) {
-      data = await adapter.listUsersByRole(filterRole, htxCode)
-    } else {
-      const [farmers, officers] = await Promise.all([
-        adapter.listUsersByRole('farmer', htxCode),
-        adapter.listUsersByRole('officer', htxCode)
-      ])
-      // Map roles so the UI knows
-      const farmersWithRole = farmers.map(f => ({ ...f, role: 'farmer' }))
-      const officersWithRole = officers.map(o => ({ ...o, role: 'officer' }))
-      data = [...farmersWithRole, ...officersWithRole]
+    // One row per person: a person who holds several roles is listed once with roles[].
+    const ORDER = ['manager', 'officer', 'accountant', 'farmer']
+    const byRole = await Promise.all(ORDER.map(async (r) => (await adapter.listUsersByRole(r, htxCode)).map((u) => ({ r, u }))))
+    const people = new Map<string, any>()
+    for (const { r, u } of byRole.flat()) {
+      const person = people.get(u.id) ?? { ...u, roles: [] as string[] }
+      person.roles.push(r)
+      people.set(u.id, person)
     }
+    let data: any[] = Array.from(people.values()).map((p) => ({ ...p, role: p.roles[0] }))
+    if (filterRole) data = data.filter((p) => p.roles.includes(filterRole))
     // Sort so newest users (createdTimestamp) appear first
     data.sort((a, b) => (b.createdTimestamp || 0) - (a.createdTimestamp || 0))
     
