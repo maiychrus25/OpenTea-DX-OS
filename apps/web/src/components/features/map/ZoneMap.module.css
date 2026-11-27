@@ -31,6 +31,17 @@
 .parcelButton { width: 100%; text-align: left; overflow-wrap: anywhere; }
 .schematic { display: flex; flex-wrap: wrap; gap: 12px; padding: 20px; background: var(--color-surface-sunken); }
 .schematic > div { min-height: 104px; min-width: 0; max-width: 100%; gap: 8px; padding: 14px; background: var(--color-surface-card); box-shadow: var(--shadow-card); overflow-wrap: anywhere; }
+.zoneDiagram { min-width: 0; margin-top: 16px; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface-card); box-shadow: var(--shadow-card); }
+.zoneDiagramHead { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 50px; padding: 0 18px; border-bottom: 1px solid var(--color-border-row); }
+.zoneDiagramHead h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--color-ink-heading); }
+.zoneDiagramHead span { margin-left: auto; font-size: 12.5px; color: var(--color-ink-secondary); }
+.zoneBlock { display: flex; flex: 2 1 90px; flex-direction: column; justify-content: space-between; min-width: 90px; border: 1px solid var(--color-border-input); border-left: 6px solid var(--color-status-draft); border-radius: 8px; font-size: 12px; }
+.zoneBlock[data-size='s'] { flex-grow: 1; }
+.zoneBlock[data-size='l'] { flex-grow: 4; }
+.zoneBlock[data-status='SOWING'] { border-left-color: var(--color-status-sowing); }
+.zoneBlock[data-status='TENDING'] { border-left-color: var(--color-status-tending); }
+.zoneBlock[data-status='HARVEST_APPROVED'] { border-left-color: var(--color-status-harvest-approved); }
+.zoneBlock[data-status='HARVESTED'] { border-left-color: var(--color-status-harvested); }
 .mapFrame :global(.leaflet-container) { font-family: inherit; background: var(--color-surface-sunken); }
 .mapFrame :global(.leaflet-bar), .mapFrame :global(.leaflet-control-layers) { border: 1px solid var(--color-border-default); border-radius: var(--rounded-md); overflow: hidden; box-shadow: var(--shadow-card); }
 .mapFrame :global(.leaflet-bar a), .mapFrame :global(.leaflet-control-layers), .mapFrame :global(.leaflet-popup-content-wrapper), .mapFrame :global(.leaflet-popup-tip) { background: var(--color-surface-card); color: var(--color-ink-primary); }

@@ -13,7 +13,6 @@ import { AccountSection } from '@/components/ui'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Panel } from '@/components/ui/Panel'
 import { TelegramLinkCard } from '@/components/features/telegram/TelegramLinkCard'
-import { CertificateManager } from '@/components/features/certificate/CertificateManager'
 import kit from '@/components/features/dashboard/page-kit.module.css'
 import styles from './page.module.css'
 
@@ -62,10 +61,6 @@ export default async function HtxProfilePage() {
         <div className={styles.column}>
           <section aria-label="Hồ sơ HTX">
             <ProfileForm initialData={profile} />
-          </section>
-
-          <section aria-label="Chứng nhận HTX" className={styles.card}>
-            <CertificateManager mode="manage" />
           </section>
         </div>
 
