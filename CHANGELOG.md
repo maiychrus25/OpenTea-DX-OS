@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Flushes and the pesticide catalogue (`apps/web`)**:
+  - Journals, weighing tickets and lots belong to a flush (`cycle_id`). After a harvest, the next care entry opens a new flush. Pruning is a journal activity.
+  - Farmers and officers pick sprays from a catalogue of 20 products with a minimum withdrawal period by group: 7 days for botanical, microbial and biological products, 14 for chemical ones and for "Thuốc khác". Each floor is flagged "Mức sàn mặc định — cần đối chiếu nhãn thực tế". The platform admin sets the label period for the catalogue, and the cooperative can set its own label above the floor.
+  - The journal form shows only the fields of the chosen activity. A harvest records "Sản lượng búp tươi (kg)".
+  - Farmers can fix a journal sent back with "Sửa lại", and journals written offline are queued and sent once.
+  - A disease prescription creates a draft spraying journal for the farmer.
+- **Several roles on one account (`apps/web`)**:
+  - New roles `accountant` (kế toán, bàn cân) and `platform_admin`.
+  - One account can hold several roles of its cooperative and switch between them from the menu.
+  - The platform admin manages cooperatives, the pesticide catalogue and each cooperative's AI settings and budget. These settings left the cooperative head's screens.
+  - Sign-in codes (TOTP) are optional for heads and officers, and an invitation no longer needs an email.
+- **Weighing station and daily leaf price (`apps/web`)**:
+  - The cooperative head publishes today's price per leaf grade on one screen, with yesterday's prices filled in.
+  - The accountant writes a ticket per household, parcel and grade, with a rain and impurity deduction. The server computes net kg and amount, and a receipt prints at 80 mm.
+  - A parcel inside its withdrawal period cannot be weighed, with no override for anyone.
+  - Tickets can be voided with a reason until they are settled. Farmers see today's price and their tickets.
+- **Input advances, member ledger and settlement (`apps/web`)**:
+  - The accountant records inputs (fertiliser, pesticide, other) advanced to a household. The amount is quantity × price, rounded half up to whole dong.
+  - The cooperative head closes a settlement period after a confirmation that shows the totals. Each household gets `Tiền búp − Nợ vật tư = Thực lĩnh`, and a debt left over carries into the next period.
+  - Each line prints as an A5 slip with a VietQR code for the transfer, and a payout is recorded once.
+  - Farmers see their balance, unsettled tickets and advances, and their slips with the account number masked.
+  - The ledger is append-only: corrections are adjustment rows.
+
+### Changed
+
+- The `leaf-purchase` and `farm-supply` mini-apps are hidden from the app store unless `DXOS_LABS` is on; their work now lives in the core.
+- Lot traces and lot export use the date rules for withdrawal:
+  - An open parcel on day D is blocked by every spraying done by D whose safe date is after D, whatever its flush.
+  - A lot line harvested on day H counts a spraying of its flush, or one done by H, whose safe date is after H.
+
+### Security
+
+- Household bank details are visible in full only to the head and the accountant. They are not sent to Telegram, agents or logs, and are left out of the Hasura household columns. A change of payout account records who made it in the audit trail.
+- New core tables (pesticides, memberships, leaf grades and prices, tickets, input items and advances, settlement periods and lines, ledger entries) are covered by the audit hash chain.
+
+## [1.18.0] - 2026-11-28
+
+### Added
+
 - **Farmer pages (`apps/web`)**: overview, journal grouped by date, harvest calendar with withdrawal periods and day details, farming handbook linking to real articles, a bulletin page with article pages, account page, disease diagnosis with a care plan after the AI names a disease (the product and dose stay with the officer), and a side menu with counts, an account menu and a folded rail
 - **Maps (`apps/web`)**: street and labelled satellite layers centred on Tân Cương, clearer partner, parcel and parcel-drawing maps
 - **Sign-in and registration (`apps/web`)**: new two-panel layout; the name typed on the sign-in page pre-fills Keycloak, which still takes the password
