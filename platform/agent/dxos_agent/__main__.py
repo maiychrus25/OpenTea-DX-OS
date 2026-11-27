@@ -83,6 +83,8 @@ class _CooperativeRuntime:
     gateway: CoreGatewayClient
     # Keyed by provider name; "ollama" is always present (Ollama, or the replay provider in CI).
     providers: dict[str, LLMProvider]
+    # What the heartbeat tells the web; in replay mode it also names the providers whose keys are set (see _reported).
+    reported: list[str] = field(default_factory=list)
     schedule: ReviewSchedule = field(default_factory=ReviewSchedule)
     digest: DigestSchedule = field(default_factory=DigestSchedule)
     heartbeat_at: datetime | None = None
@@ -100,6 +102,15 @@ class _CooperativeRuntime:
     strategy: SeasonSchedule = field(default_factory=lambda: SeasonSchedule(STRATEGY_AT))
     # The bulletin's LLM call can take minutes on a CPU server, so it runs on its own thread (one at a time).
     bulletin_thread: threading.Thread | None = None
+
+
+def _reported(cfg: Config, providers: dict[str, LLMProvider]) -> list[str]:
+    """The providers the keys on this machine allow. Replay answers every model call, but the keys are still there, so
+    the web keeps offering what needs them (the code tools of the mini-app factory)."""
+    names = list(providers)
+    if cfg.provider_name == "replay":
+        names += [name for name, key in (("anthropic", cfg.anthropic_api_key), ("openai", cfg.openai_api_key)) if key]
+    return names
 
 
 def _build_providers(cfg: Config, token_client: KeycloakTokenClient) -> dict[str, LLMProvider]:
@@ -141,6 +152,7 @@ def _runtime_for(
             gateway=CoreGatewayClient(cfg.gateway_url, token_client.get_token),
             providers=_build_providers(cfg, token_client),
         )
+        runtime.reported = _reported(cfg, runtime.providers)
         runtimes[creds.htx_code] = runtime
     return runtime
 
@@ -205,7 +217,7 @@ def _digest_and_heartbeat(runtime: _CooperativeRuntime, now: datetime, settings:
         log.exception("A6 digest failed for htx=%s", runtime.creds.htx_code)
     if runtime.heartbeat_at is None or now - runtime.heartbeat_at >= HEARTBEAT_INTERVAL:
         try:
-            runtime.gateway.heartbeat(__version__, list(runtime.providers))
+            runtime.gateway.heartbeat(__version__, runtime.reported or list(runtime.providers))
             runtime.heartbeat_at = now
         except Exception:
             log.warning("Agent heartbeat failed for htx=%s", runtime.creds.htx_code)

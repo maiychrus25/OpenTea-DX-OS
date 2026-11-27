@@ -130,7 +130,7 @@ class FakeHasuraGateway:
         return []
 
     def heartbeat(self, version, providers):
-        del providers
+        self.heartbeat_providers = list(providers)
         self.heartbeats.append(version)
 
     def get_campaign_candidates(self, day):
@@ -527,3 +527,17 @@ def test_a_failing_app_list_is_logged_retried_and_stops_nothing_else(monkeypatch
 
     assert len(harvest_runs) == 1 and "app suggestions failed" in caplog.text
     assert runtimes["TC01"].app_suggestions.is_due(t0 + timedelta(seconds=30))  # not recorded, so the next cycle retries
+
+
+def test_replay_mode_still_reports_the_providers_whose_keys_are_set(cooperative, tmp_path):
+    """Replay answers every model call, but the keys are still on the machine: the web offers the code tools from this list."""
+    from dataclasses import replace
+
+    cfg, gateway = cooperative
+    replayed = replace(cfg, provider_name="replay", replay_dir=tmp_path, openai_api_key="sk-test")
+    agent_main.run_once(replayed, {}, now=datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc))
+    assert gateway.heartbeat_providers == ["ollama", "openai"]
+
+    plain = replace(cfg, provider_name="replay", replay_dir=tmp_path)
+    agent_main.run_once(plain, {}, now=datetime(2026, 11, 24, 3, 0, tzinfo=timezone.utc))
+    assert gateway.heartbeat_providers == ["ollama"]
