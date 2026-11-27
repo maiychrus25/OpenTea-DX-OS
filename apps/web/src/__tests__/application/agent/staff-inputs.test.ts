@@ -11,7 +11,7 @@ function proposal(id: string, kind: string, payload: Record<string, unknown>, ov
   return {
     id, htxCode: 'TC', runId: null, agent: 'a', kind, payload, reasonVi: 'x', evidence: { rows: [], sha256: 'x' }, confidence: null,
     risk: 'low', status: 'executed', origin: 'agent', requestedBy: null, dedupeKey: id, createdAt: new Date('2026-11-26T01:00:00Z'),
-    expiresAt: new Date('2026-12-31T00:00:00Z'), decidedBy: null, decidedByName: null, decidedAt: new Date('2026-11-26T22:00:00Z'),
+    expiresAt: new Date('2099-12-31T00:00:00Z'), decidedBy: null, decidedByName: null, decidedAt: new Date('2026-11-26T22:00:00Z'),
     decisionChannel: null, decisionNote: null, editedPayload: null, executedAt: new Date('2026-11-26T22:00:00Z'), result: null, ...over,
   }
 }
