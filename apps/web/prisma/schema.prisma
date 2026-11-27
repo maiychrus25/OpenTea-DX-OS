@@ -220,6 +220,7 @@ model JournalActivity {
   dosage           String?
   withdrawal_days  Int? // for Spraying
   safe_harvest_date DateTime? // entry_date + withdrawal_days
+  fresh_leaf_kg    Float? // for Harvest
   pesticide_product_id String?
   pesticide_product    PesticideProduct? @relation(fields: [pesticide_product_id], references: [id])
   created_at       DateTime     @default(now())

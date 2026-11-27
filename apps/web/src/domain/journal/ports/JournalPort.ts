@@ -7,6 +7,7 @@ export interface JournalActivityData {
   dosage?: string
   withdrawal_days?: number
   pesticide_product_id?: string
+  fresh_leaf_kg?: number
 }
 
 export type JournalReviewDecision = 'REJECTED' | 'REQUEST_CHANGES'
@@ -44,6 +45,7 @@ export interface JournalEntryData {
     withdrawal_days: number | null
     safe_harvest_date: Date | null
     pesticide_product_id?: string | null
+    fresh_leaf_kg?: number | null
   }[]
 }
 

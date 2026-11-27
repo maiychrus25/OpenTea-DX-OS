@@ -84,3 +84,25 @@ describe('POST /api/journal with client_id', () => {
     expect(repo.create).not.toHaveBeenCalled()
   })
 })
+
+describe('fresh_leaf_kg', () => {
+  it('harvest entry stores fresh_leaf_kg', async () => {
+    repo.create.mockResolvedValue({ id: 'new' })
+    const res = await post({ activities: [{ activity_type: 'HARVEST', fresh_leaf_kg: 120.5 }] })
+    expect(res.status).toBe(201)
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ activities: [expect.objectContaining({ activity_type: 'HARVEST', fresh_leaf_kg: 120.5 })] })
+    )
+  })
+
+  it('fresh_leaf_kg on a spraying is rejected', async () => {
+    const res = await post({ activities: [{ activity_type: 'SPRAYING', fresh_leaf_kg: 10 }] })
+    expect(res.status).toBe(400)
+    expect((await res.json()).error.code).toBe('VALIDATION_ERROR')
+    expect(repo.create).not.toHaveBeenCalled()
+  })
+
+  it.each([0, -1, 100001])('rejects %s kg', async (kg) => {
+    expect((await post({ activities: [{ activity_type: 'HARVEST', fresh_leaf_kg: kg }] })).status).toBe(400)
+  })
+})

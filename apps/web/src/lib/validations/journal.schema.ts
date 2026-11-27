@@ -9,6 +9,10 @@ const journalActivitySchema = z.object({
   dosage: z.string().max(100).optional(),
   withdrawal_days: z.number().int().min(0).optional(),
   pesticide_product_id: z.string().min(1).max(100).optional(),
+  fresh_leaf_kg: z.number().gt(0).max(100000).optional(),
+}).refine((a) => a.fresh_leaf_kg === undefined || a.activity_type === 'HARVEST', {
+  message: 'fresh_leaf_kg chỉ dùng cho hoạt động thu hoạch',
+  path: ['fresh_leaf_kg'],
 })
 
 export const journalCreateSchema = z.object({

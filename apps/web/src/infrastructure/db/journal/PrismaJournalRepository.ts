@@ -49,6 +49,7 @@ function mapEntry(e: any): JournalEntryData {
       withdrawal_days: a.withdrawal_days,
       safe_harvest_date: a.safe_harvest_date,
       pesticide_product_id: a.pesticide_product_id ?? null,
+      fresh_leaf_kg: a.fresh_leaf_kg ?? null,
     })),
   }
 }
@@ -115,6 +116,7 @@ function activityRows(activities: JournalActivityData[], entryDate: Date) {
     dosage: a.dosage ?? null,
     withdrawal_days: a.withdrawal_days ?? null,
     pesticide_product_id: a.pesticide_product_id ?? null,
+    fresh_leaf_kg: a.fresh_leaf_kg ?? null,
     safe_harvest_date: a.withdrawal_days ? new Date(new Date(entryDate).getTime() + a.withdrawal_days * DAY_MS) : null,
   }))
 }
