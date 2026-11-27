@@ -55,7 +55,7 @@ Chuẩn là JSON Schema tại [`platform/apps/manifest.schema.json`](../platform
 | `version` | có | SemVer, ví dụ `0.1.0` |
 | `license` | có | thuộc danh sách OSI của CLI: `MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `MPL-2.0`, `EPL-2.0`, `LGPL-3.0-only`, `LGPL-3.0-or-later`, `GPL-2.0-only`, `GPL-3.0-only`, `GPL-3.0-or-later`, `AGPL-3.0-only`, `AGPL-3.0-or-later` |
 | `publisher` | có | 1–80 ký tự |
-| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.16.0`) |
+| `requires.core` | có | `>=X.Y.Z`. Lõi hiện tại là `version` trong `apps/web/package.json` (`1.17.0`) |
 | `runtime.build` / `runtime.image` | đúng một trong hai | `build`: thư mục tương đối trong thư mục app (thường là `.`). `image`: phải ghim digest, dạng `<ref>@sha256:<64 ký tự hex>` |
 | `runtime.port` | có | 1–65535, cổng app nghe trong container |
 | `runtime.health` | có | đường dẫn health check (đã cắt tiền tố), ví dụ `/healthz`, phải trả 2xx |
