@@ -61,7 +61,7 @@ export function Handbook() {
   const showAll = () => { setQuery(''); setTopic(null); setAll(true) }
 
   return (
-    <div className={kit.page}>
+    <div className={`${kit.page} ${styles.page}`}>
       <div className={styles.head}>
         <div className={styles.headText}>
           <h1>Cẩm nang canh tác <SampleTag /></h1>
