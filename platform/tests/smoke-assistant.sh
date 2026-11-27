@@ -165,14 +165,15 @@ tg_answer() {  # <chat> <text|button|photo> <value> <needle>
   esac
   tg_expect "$1" "$4" "$before" || fail "assistant flow did not reach '$4' after '$3'"
 }
-# /nhatky to the card: the parcel, the activity Phun thuốc, product, dosage and withdrawal 7, then a photo or Bỏ qua.
+# /nhatky to the card: the parcel, the activity Phun thuốc, product, dosage and withdrawal 14 (the floor for a product
+# outside the pesticide catalogue; less is refused), then a photo or Bỏ qua.
 farmer_journal_card() {  # <photo|skip>
   tg_answer "$TG_FARMER" text "/nhatky" "Chọn thửa:"
   tg_answer "$TG_FARMER" button "$AS_CODE_PARCEL" "Chọn hoạt động:"
   tg_answer "$TG_FARMER" button "Phun thuốc" "Tên thuốc hoặc phân bón:"
   tg_answer "$TG_FARMER" text "Regent 800WG" "Liều lượng, ví dụ"
   tg_answer "$TG_FARMER" text "20 ml" "Số ngày cách ly"
-  tg_answer "$TG_FARMER" text "7" "Gửi một ảnh minh chứng"
+  tg_answer "$TG_FARMER" text "14" "Gửi một ảnh minh chứng"
   if [ "$1" = photo ]; then
     tg_answer "$TG_FARMER" photo "" "Không bấm Xác nhận"
   else
