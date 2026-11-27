@@ -23,7 +23,7 @@ const KIND: Record<SpanKind, { label: string; icon: typeof Leaf }> = {
 }
 
 const ACTIVITY: Record<string, string> = {
-  SOWING: 'Gieo trồng', FERTILIZING: 'Bón phân', SPRAYING: 'Phun thuốc BVTV', IRRIGATION: 'Tưới tiêu', HARVEST: 'Thu hoạch', OTHER: 'Khác',
+  SOWING: 'Gieo trồng', FERTILIZING: 'Bón phân', SPRAYING: 'Phun thuốc BVTV', IRRIGATION: 'Tưới tiêu', HARVEST: 'Thu hoạch', PRUNING: 'Đốn chè', OTHER: 'Khác',
 }
 
 const fullDay = (value: number | string) => new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })

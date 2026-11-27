@@ -7,6 +7,8 @@ import React, { useEffect, useState } from 'react'
 import { X, Plus } from 'lucide-react'
 import styles from '../journal.module.css'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
+import { PesticidePicker, isBelowFloor, type PesticideChange } from '@/components/features/pesticide/PesticidePicker'
+import { CUSTOM_PRODUCT_FLOOR_DAYS } from '@/lib/pesticide/catalogue'
 
 interface Parcel {
   id: string
@@ -18,8 +20,11 @@ interface Activity {
   activity_type: string
   product_name: string
   dosage: string
-  withdrawal_days: string
+  pesticide: PesticideChange
 }
+
+const emptyPesticide = (): PesticideChange => ({ productId: null, customName: '', days: null, floorDays: CUSTOM_PRODUCT_FLOOR_DAYS })
+const newActivity = (activity_type: string): Activity => ({ activity_type, product_name: '', dosage: '', pesticide: emptyPesticide() })
 
 interface JournalFormProps {
   onSuccess: () => void
@@ -32,6 +37,7 @@ const ACTIVITY_TYPES = [
   { value: 'IRRIGATION', label: 'Tưới tiêu' },
   { value: 'HARVEST', label: 'Thu hoạch' },
   { value: 'SOWING', label: 'Trồng mới' },
+  { value: 'PRUNING', label: 'Đốn chè' },
   { value: 'OTHER', label: 'Khác' },
 ]
 
@@ -41,7 +47,7 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10))
   const [observation, setObservation] = useState('')
   const [activities, setActivities] = useState<Activity[]>([
-    { activity_type: 'SPRAYING', product_name: '', dosage: '', withdrawal_days: '' },
+    newActivity('SPRAYING'),
   ])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -56,17 +62,19 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
       .catch(() => { setParcels([]); setError(LOAD_FAILED_MESSAGE) })
   }, [])
 
-  function updateActivity(idx: number, field: keyof Activity, value: string) {
+  function updateActivity<K extends keyof Activity>(idx: number, field: K, value: Activity[K]) {
     setActivities(prev => prev.map((a, i) => i === idx ? { ...a, [field]: value } : a))
   }
 
   function addActivity() {
-    setActivities(prev => [...prev, { activity_type: 'OTHER', product_name: '', dosage: '', withdrawal_days: '' }])
+    setActivities(prev => [...prev, newActivity('OTHER')])
   }
 
   function removeActivity(idx: number) {
     setActivities(prev => prev.filter((_, i) => i !== idx))
   }
+
+  const belowFloor = activities.some(a => a.activity_type === 'SPRAYING' && isBelowFloor(a.pesticide))
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -77,12 +85,17 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
       parcel_id: parcelId,
       entry_date: entryDate,
       observation,
-      activities: activities.map(a => ({
+      activities: activities.map(a => a.activity_type === 'SPRAYING' ? {
+        activity_type: a.activity_type,
+        product_name: a.pesticide.productName || a.pesticide.customName || undefined,
+        pesticide_product_id: a.pesticide.productId ?? undefined,
+        dosage: a.dosage || undefined,
+        withdrawal_days: a.pesticide.days ?? undefined,
+      } : {
         activity_type: a.activity_type,
         product_name: a.product_name || undefined,
         dosage: a.dosage || undefined,
-        withdrawal_days: a.withdrawal_days ? parseInt(a.withdrawal_days, 10) : undefined,
-      })),
+      }),
     }
 
     try {
@@ -131,16 +144,23 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
       <div className={styles.formGroup}>
         <label className={styles.formLabel}>Hoạt động</label>
         {activities.map((a, idx) => (
-          <div key={idx} className={styles.activityRow}>
-            <select className={styles.formSelect} value={a.activity_type} onChange={e => updateActivity(idx, 'activity_type', e.target.value)}>
-              {ACTIVITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-            <input className={styles.formInput} placeholder="Tên sản phẩm" value={a.product_name} onChange={e => updateActivity(idx, 'product_name', e.target.value)} />
-            <input className={styles.formInput} placeholder="Liều lượng" value={a.dosage} onChange={e => updateActivity(idx, 'dosage', e.target.value)} />
-            {activities.length > 1 && (
-              <button type="button" className={styles.removeBtn} onClick={() => removeActivity(idx)} aria-label="Xóa hoạt động">
-                <X size={16} />
-              </button>
+          <div key={idx} className={styles.activityBlock}>
+            <div className={styles.activityRow}>
+              <select className={styles.formSelect} aria-label="Loại hoạt động" value={a.activity_type} onChange={e => updateActivity(idx, 'activity_type', e.target.value)}>
+                {ACTIVITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+              {a.activity_type !== 'SPRAYING' && (
+                <input className={styles.formInput} aria-label="Tên sản phẩm" placeholder="Tên sản phẩm" value={a.product_name} onChange={e => updateActivity(idx, 'product_name', e.target.value)} />
+              )}
+              <input className={styles.formInput} aria-label="Liều lượng" placeholder="Liều lượng" value={a.dosage} onChange={e => updateActivity(idx, 'dosage', e.target.value)} />
+              {activities.length > 1 && (
+                <button type="button" className={styles.removeBtn} onClick={() => removeActivity(idx)} aria-label="Xóa hoạt động">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            {a.activity_type === 'SPRAYING' && (
+              <PesticidePicker value={a.pesticide} onChange={v => updateActivity(idx, 'pesticide', v)} />
             )}
           </div>
         ))}
@@ -151,7 +171,7 @@ export function JournalForm({ onSuccess, onCancel }: JournalFormProps) {
 
       <div className={styles.formActions}>
         <button type="button" className={styles.cancelBtn} onClick={onCancel}>Hủy</button>
-        <button type="submit" className={styles.submitBtn} disabled={submitting}>
+        <button type="submit" className={styles.submitBtn} disabled={submitting || belowFloor}>
           {submitting ? 'Đang lưu...' : 'Lưu nhật ký'}
         </button>
       </div>

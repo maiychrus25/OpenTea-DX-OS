@@ -34,6 +34,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   SPRAYING: 'Phun thuốc BVTV',
   IRRIGATION: 'Tưới tiêu',
   HARVEST: 'Thu hoạch',
+  PRUNING: 'Đốn chè',
   OTHER: 'Khác',
 }
 

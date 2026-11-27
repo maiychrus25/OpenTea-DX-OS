@@ -6,9 +6,11 @@
 import React, { useEffect, useState } from 'react'
 import styles from '../journal.module.css'
 import kit from '@/components/features/farmer-web/kit.module.css'
-import { ImageIcon, Send, TriangleAlert } from 'lucide-react'
+import { ImageIcon, Send } from 'lucide-react'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
 import { ACTIVITY_TYPES, type JournalPrefill } from './journal-prefill'
+import { PesticidePicker, isBelowFloor, type PesticideChange } from '@/components/features/pesticide/PesticidePicker'
+import { CUSTOM_PRODUCT_FLOOR_DAYS } from '@/lib/pesticide/catalogue'
 
 interface Parcel {
   id: string
@@ -32,7 +34,12 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
   const [hasChemicals, setHasChemicals] = useState(true)
   const [dosage, setDosage] = useState(initial?.dosage ?? '')
   const [performer, setPerformer] = useState('')
-  const [withdrawalDays, setWithdrawalDays] = useState(initial?.withdrawalDays ?? 14)
+  const [pesticide, setPesticide] = useState<PesticideChange>({
+    productId: null,
+    customName: initial?.activityType === 'SPRAYING' ? (initial.productName ?? '') : '',
+    days: initial?.withdrawalDays ?? null,
+    floorDays: CUSTOM_PRODUCT_FLOOR_DAYS,
+  })
   const [observation, setObservation] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -49,6 +56,10 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
       .catch(() => { setParcels([]); setError(LOAD_FAILED_MESSAGE) })
   }, [initial?.parcelId])
 
+  const spraying = activityType === 'SPRAYING'
+  const sprayingWithProduct = hasChemicals && spraying
+  const belowFloor = sprayingWithProduct && isBelowFloor(pesticide)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
@@ -60,10 +71,12 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
       observation,
       activities: [{
         activity_type: activityType,
-        product_name: hasChemicals ? (productName || undefined) : undefined,
-        dosage: (hasChemicals && activityType === 'SPRAYING') ? dosage : undefined,
-        performer: (hasChemicals && activityType === 'SPRAYING') ? performer : undefined,
-        withdrawal_days: (hasChemicals && activityType === 'SPRAYING') ? withdrawalDays : undefined,
+        product_name: !hasChemicals ? undefined
+          : spraying ? (pesticide.productName || pesticide.customName || undefined) : (productName || undefined),
+        pesticide_product_id: sprayingWithProduct ? (pesticide.productId ?? undefined) : undefined,
+        dosage: sprayingWithProduct ? dosage : undefined,
+        performer: sprayingWithProduct ? performer : undefined,
+        withdrawal_days: sprayingWithProduct ? (pesticide.days ?? undefined) : undefined,
       }],
     }
 
@@ -154,24 +167,14 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
         Không sử dụng thuốc / phân bón trong lần ghi này
       </label>
 
-      {hasChemicals && (
+      {hasChemicals && !spraying && field('Sản phẩm sử dụng', <input className={`${kit.inp} ${styles.tall}`} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />)}
+      {sprayingWithProduct && (
         <>
-          {field('Sản phẩm sử dụng', <input className={`${kit.inp} ${styles.tall}`} value={productName} onChange={e => setProductName(e.target.value)} placeholder="VD: Phân NPK 16-16-8" />)}
-          {activityType === 'SPRAYING' && (
-            <>
-              <div className={`${styles.three} ${kit.three}`}>
-                {field('Liều lượng', <input className={`${kit.inp} ${styles.tall}`} value={dosage} onChange={e => setDosage(e.target.value)} placeholder="VD: 50ml/bình 16L" />)}
-                {field('Người thực hiện', <input className={`${kit.inp} ${styles.tall}`} value={performer} onChange={e => setPerformer(e.target.value)} placeholder="VD: Nguyễn Văn A" />)}
-                {field('Thời gian cách ly (ngày)', <input className={`${kit.inp} ${styles.tall}`} type="number" value={withdrawalDays} onChange={e => setWithdrawalDays(Number(e.target.value))} />)}
-              </div>
-              {withdrawalDays < 14 && (
-                <div className={kit.warn} role="alert">
-                  <TriangleAlert size={20} aria-hidden="true" />
-                  <span><strong>Cảnh báo vi phạm:</strong> thời gian cách ly tiêu chuẩn là từ 14 ngày. Hãy đảm bảo an toàn!</span>
-                </div>
-              )}
-            </>
-          )}
+          <PesticidePicker value={pesticide} onChange={setPesticide} />
+          <div className={`${styles.two} ${kit.two}`}>
+            {field('Liều lượng', <input className={`${kit.inp} ${styles.tall}`} value={dosage} onChange={e => setDosage(e.target.value)} placeholder="VD: 50ml/bình 16L" />)}
+            {field('Người thực hiện', <input className={`${kit.inp} ${styles.tall}`} value={performer} onChange={e => setPerformer(e.target.value)} placeholder="VD: Nguyễn Văn A" />)}
+          </div>
         </>
       )}
 
@@ -188,7 +191,7 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
 
       <div className={styles.entryActions}>
         <button type="button" className={`${kit.btn2} ${styles.tall}`} onClick={onCancel}>Hủy</button>
-        <button type="submit" className={`${kit.btn} ${styles.tall}`} disabled={submitting || uploadingPhoto || !parcelId}>
+        <button type="submit" className={`${kit.btn} ${styles.tall}`} disabled={submitting || uploadingPhoto || !parcelId || belowFloor}>
           <Send size={16} aria-hidden="true" />
           {submitting || uploadingPhoto ? 'Đang gửi...' : 'Gửi chờ duyệt'}
         </button>
