@@ -26,6 +26,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Farmer web screens follow the new design, with the handbook showing fixed placeholder content until the feature exists. Farmers' Q&A uses the same full-window chat as staff; the AI is not open to farmers yet and says so.
 - **New web interface (`apps/web`)**: new colour tokens, a grouped sidebar, a breadcrumb top bar and a bottom bar for farmers on phones; new dashboards for the three roles; page headers, filters, tables and cards restyled across the role pages; a rebuilt login page and cooperative profile page. The profile page now shows the cooperative's own parcel and household figures instead of fixed sample numbers.
 
+### Removed
+
+- **Sample screens and blocks (`apps/web`)**: the Reels pages of all three roles; the officer shop and tour pages (Products, Orders, Revenue, Tours, Tour bookings) and the "Trợ lý TT" market assistant, so the officer keeps one chatbot; the farmer camera watch, sample detections, sample tasks, sample pest report, sample bulletin prices and articles, and the farmer chatbot page; the manager sample yield chart, sample apps, sample partners, sample notices and the in-memory certificate manager; the demo `/forgot-pin` flow, which now sends a signed-out visitor to `/login` with a line telling the member to ask the cooperative officer to reset the PIN. A bookmark to a removed page shows the normal 404 page. This replaces the earlier "Mẫu"-tagged sample content listed above.
+- **Simulated and off-domain market data**: the workflows `vietnam_market_sync`, `worldbank_sync`, `faostat_sync`, `nasa_power_sync` and `wto_tariffs` and the simulated-price label. `comtrade_export_sync` keeps only tea (HS `0902`). The migration `20261128110000_purge_market_data` deletes the rows those workflows wrote and the non-tea Comtrade rows from `market_data`; it is not reversible and has not been run on any running stack.
+- **`custom-books` 0.3.0**: the four templates that duplicate core records (`picking`, `spraying`, `fertilising`, `pest`). Books already made from them keep working; an open `book.create` proposal that names a removed template is rejected when approved.
+
+### Fixed
+
+- **Withdrawal period (`apps/web`, `platform/agent`)**: a `REJECTED` spraying journal no longer counts toward the withdrawal period, so it no longer blocks harvest approval or lot creation. `DRAFT` and `REJECTED` are left out; `PENDING_APPROVAL`, `APPROVED` and `REQUEST_CHANGES` still count. One shared rule serves harvest approval, lot creation, the harvest calendar, the farmer dashboard, the campaign candidates, the lot trace and the `harvest-ready` agent.
+- **Public trace page (`apps/web`)**: `/q/[lot_code]` no longer reads `?status=` from the URL, so a link cannot show a lot as revoked or valid; the status comes from the lot.
+- **Dashboards (`apps/web`, `miniapps/htx-dashboard` 0.3.1)**: market blocks show tea prices only, or an empty state; documents and bulletin pages show an error or empty state instead of sample files and articles.
+- **Wording**: rice terms are replaced by tea terms ("Trồng mới" instead of "Gieo sạ", "nương chè" instead of "thửa ruộng", the sample address is in Tân Cương). The content test `no-rice-copy` now also rejects those words. Some mis-encoded Badge labels are repaired.
+
+### Changed
+
+- **Frozen features behind `DXOS_LABS` (ADR 0005)**: the mini-app factory, autopilot, strategy agent, MCP and staff sync run only when `DXOS_LABS` is `1` or `true`. The default is off. When off, 21 routes answer 404, their pages and tabs are hidden, the Telegram `/tuvanhanh` command and the `app.request` chat intent answer "chưa mở" (`/dung` still stops), and `dxos-agent` does not schedule those jobs. The code is kept. The compose file passes the variable to `web` and `dxos-agent`; `.env.example` documents it. Mini-apps already built and installed keep running.
+- **Food safety and money stay with people**: `harvest.approve`, `journal.approve` and every app action marked `money` are now `never`, so no switch lets autopilot run them. The init script `08-agent.sql` drops those kinds from stored unlocked kinds.
+- **Search (`apps/web`)**: invented suggestions are gone and each result links to the page of the searcher's role.
+
+### Security
+
+- `GET /api/members` and `GET /api/search` answer 403 to farmers; the global search box is hidden for farmers. `members/invite` and `members/[id]` stay manager only.
+- Partners belong to a cooperative: the migration `20261128100000_partners_tenant` adds `partners.htx_profile_id`, every read and write is scoped to the caller's cooperative, managers and officers read, only managers write, and a row of another cooperative answers 404. Existing demo partners go to cooperative `TC`, or to the only cooperative if there is one.
+- Known follow-up: the store screenshots of `custom-books` (`miniapps/custom-books/store/*.png`) still show a removed template and must be re-shot with a running stack (see `docs/dev-setup.md`).
+
 ## [1.17.0] - 2026-11-27
 
 The agentic layer is complete. Agents now hand work to staff, plan the season, and can run approved kinds of work on their own inside hard limits, with a stop button and a full audit trail. A manager can ask for a new mini-app in chat and an AI builds it behind seven gates. Everything a role can do on the web can now be done through the Telegram bot: in chat, by voice, or in the Mini App.

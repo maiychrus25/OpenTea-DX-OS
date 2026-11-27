@@ -151,6 +151,8 @@ Rules:
 - Display in UI: "Cách ly: X ngày — An toàn thu hoạch từ: DD/MM/YYYY"
 ```
 
+Nhật ký `DRAFT` hoặc `REJECTED` không tính vào thời gian cách ly; `PENDING_APPROVAL`, `APPROVED`, `REQUEST_CHANGES` vẫn tính. Quy tắc dùng chung cho duyệt thu hoạch, tạo lô, lịch thu hái, số ngày cách ly trên bảng điều khiển nông dân, danh sách ứng viên chiến dịch và agent `harvest_ready`.
+
 ### 3.3 Journal Approval Flow
 ```
 States: draft → pending_approval → approved | rejected
@@ -339,6 +341,8 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
 
 ### 3.14 MCP cho client bên ngoài và dòng kiểm chứng lô (M14)
 
+> Đóng băng (ADR 0005): chỉ chạy khi `DXOS_LABS=1`.
+
 - **Đăng nhập:** client MCP đăng nhập bằng tài khoản Keycloak của chính người dùng, qua client `dxos-mcp` (device grant, không có direct grant). Token có đúng quyền của người dùng; vai trò, HTX và trạng thái bật/tắt được đọc trực tiếp mỗi lần gọi (như Telegram).
 - **Từ chối:** token hết hạn, token của client khác hoặc người dùng bị tắt cho 401 hoặc 403 và không tạo gì. Loại đề xuất mà vai trò của người dùng không duyệt được bị từ chối với 403 `NOT_AN_APPROVER`.
 - **Công cụ:** chỉ các công cụ đọc của trợ lý và đúng một công cụ ghi `create_proposal`. Loại được phép từ MCP: `notification.internal`, `notification.households`, `disease.inspection`, `journal.approve`, `journal.reject`, `harvest.approve`, `bulletin.publish`.
@@ -353,6 +357,8 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
   Không hiện dòng nào khi chuỗi audit hỏng, mã băm lệch, đề xuất bị từ chối hoặc lô không có quyết định AI. Dòng chỉ ghi vai trò, không bao giờ ghi tên; tối đa 3 dòng.
 
 ### 3.15 Giao việc nhân sự (A8, M10)
+
+> Đóng băng (ADR 0005): chỉ chạy khi `DXOS_LABS=1`.
 
 - **Lịch:** A8 chạy lúc 05:50 (giờ Việt Nam), sau A4 (05:30) và A3 (05:40), trước A9 (06:00). Không dùng LLM.
 - **Luật:** từ các đề xuất của HTX được duyệt trong 24 giờ qua: `harvest.approve` thành "Hái chè thửa <mã>", `disease.inspection` thành "Kiểm tra bệnh quanh thửa <mã>", `notification.households` mẫu `dry_soil` thành "Tưới thửa <mã>". Hạn là hôm nay. Mỗi nguồn một việc, tối đa 10 việc mỗi lần chạy, ưu tiên thu hoạch, rồi kiểm tra, rồi tưới. Mẫu `rain_after_spray` không tạo việc.
@@ -369,6 +375,8 @@ Trợ lý chỉ hoạt động trong chat riêng giữa bot và một tài kho�
 
 ### 3.17 Chế độ tự vận hành (M12)
 
+> Đóng băng (ADR 0005): chỉ chạy khi `DXOS_LABS=1`.
+
 Chế độ tắt mặc định. Khi trưởng HTX bật, đề xuất của agent thuộc các loại được phép tự chạy sau một cửa sổ chặn, dưới tên người đã bật, qua đúng `DecideProposalUseCase` như khi người duyệt. Đặc tả: §11 của [docs/specs/2026-11-23-agentic-layer-design.md](./specs/2026-11-23-agentic-layer-design.md).
 
 **Năm giới hạn cứng (H1–H5), đúng với mọi cài đặt:**
@@ -378,7 +386,7 @@ Chế độ tắt mặc định. Khi trưởng HTX bật, đề xuất của age
 4. Không có loại hành động xoá nào.
 5. Mỗi lần tự chạy ghi sự kiện audit và gửi một tin Telegram.
 
-**Việc nào tự chạy.** Chỉ đề xuất `origin: 'agent'` mà loại của nó cho phép vai trò `manager` duyệt, và là loại `auto`, hoặc `unlockable` đã được mở lúc bật. Đề xuất từ chat hoặc MCP (`origin: 'user'`) không bao giờ tự chạy. `agent.settings.update` chỉ tự chạy khi mọi thay đổi đều siết; một thay đổi nới, khoá lạ hoặc tắt agent thì luôn chờ người. `journal.approve` chỉ tự chạy khi nhật ký không có cảnh báo quy tắc.
+**Việc nào tự chạy.** Chỉ đề xuất `origin: 'agent'` mà loại của nó cho phép vai trò `manager` duyệt, và là loại `auto`, hoặc `unlockable` đã được mở lúc bật. Đề xuất từ chat hoặc MCP (`origin: 'user'`) không bao giờ tự chạy. `agent.settings.update` chỉ tự chạy khi mọi thay đổi đều siết; một thay đổi nới, khoá lạ hoặc tắt agent thì luôn chờ người. `journal.approve`, `harvest.approve` và hành động có `money` ở mức `never` từ GĐ0 nên không bao giờ tự chạy (xem §4.2).
 
 **Cửa sổ chặn theo rủi ro:**
 
@@ -501,6 +509,8 @@ Mọi dòng của hai nhóm "trong chat" ở bảng phủ (`apps/web/src/applica
 
 ### 3.20 Kế hoạch mùa vụ (A11, M11)
 
+> Đóng băng (ADR 0005): chỉ chạy khi `DXOS_LABS=1`.
+
 - **Lịch:** A11 soạn kế hoạch quý vào ngày đầu quý lúc 06:15 (giờ Việt Nam), và ở lần chạy đầu tiên khi quý hiện tại chưa có kế hoạch đang áp dụng hay bản nháp. Một quý đã soạn, đã có kế hoạch hoặc bị web từ chối thì không chạy lại; lỗi mạng được thử lại ở chu kỳ sau.
 - **Luật đặt mục tiêu, LLM chỉ viết lời:** web tính số liệu (sản lượng, nhật ký đúng hạn, thửa có bệnh, doanh thu cửa hàng khi đã cài `tea-shop`) cho quý này, cùng kỳ năm trước và quý trước. Mục tiêu là số cùng kỳ năm trước cộng bước cố định:
   - mục tiêu tăng: làm tròn (số × 1,05);
@@ -512,6 +522,8 @@ Mọi dòng của hai nhóm "trong chat" ở bảng phủ (`apps/web/src/applica
 - **Áp dụng:** từ chu kỳ sau khi duyệt, chiến dịch ngày (A9) xếp việc thuộc mục tiêu của kế hoạch trước (mục 3.12) và cải tiến hằng tuần (A10) báo mục tiêu đang chậm (mục 3.13). Báo cáo thứ Hai so số thực tế với cùng kỳ năm trước, không so với mục tiêu do A11 đặt.
 
 ### 3.21 Xưởng mini-app (A12, M13)
+
+> Đóng băng (ADR 0005): chỉ chạy khi `DXOS_LABS=1`.
 
 - **Một yêu cầu đang xây cho mỗi HTX** (trạng thái `new`, `asking`, `spec_proposed`, `spec_approved`, `building`). Tối đa 5 câu hỏi (mỗi câu tối đa 160 ký tự); mô tả yêu cầu 5 đến 500 ký tự.
 - **Chọn cách rẻ nhất:** bật app có sẵn trong kho, rồi mẫu Sổ tự tạo, rồi mới viết mã. Chỉ cấu hình Ollama thì chỉ có hai cách đầu.
@@ -538,7 +550,10 @@ Mọi dòng của hai nhóm "trong chat" ở bảng phủ (`apps/web/src/applica
 |--------|---------|---------|--------|
 | View bulletin + chatbot | ✅ | ✅ | ❌ |
 | View partner map | ✅ | ✅ | ❌ |
-| CRUD partners | ✅ | ❌ | ❌ |
+| Read partners (`GET /api/partners`, only the caller's HTX) | ✅ | ✅ | ❌ |
+| CRUD partners (only the caller's HTX) | ✅ | ❌ | ❌ |
+| List members (`GET /api/members`, only the caller's HTX) | ✅ | ✅ | ❌ |
+| Global search (`GET /api/search`) | ✅ | ✅ | ❌ |
 | View farm zone map | ✅ (read) | ✅ (write) | ❌ |
 | CRUD households + parcels | ❌ | ✅ | ❌ |
 | Create journal entries | ❌ | ✅ | ✅ (own) |
@@ -549,6 +564,8 @@ Mọi dòng của hai nhóm "trong chat" ở bảng phủ (`apps/web/src/applica
 | View disease results | ✅ | ✅ | ✅ (own) |
 | View notifications | own only | own only | own only |
 | View QR public page | ✅ (no auth) | ✅ (no auth) | ✅ (no auth) |
+
+> **Luật `never` (không công tắc nào mở lại được):** `harvest.approve`, `journal.approve` và mọi hành động có `money` luôn ở mức `never`: chỉ người ký. Đề xuất vẫn có thể được soạn, nhưng không bao giờ tự chạy, kể cả khi bật tự vận hành. Test khoá luật này.
 
 > **AI Agents (`agent` role, M1b):** Service accounts `dxos-agent-<htx>` read HTX-scoped non-PII tables only through the read-only Hasura `agent` role (personal columns such as farmer `name`, `phone`, `address`, `performed_by`, and user IDs are hidden), ingest runs and proposals only through `/api/internal/agent/*` on internal gateway port `9081`, and cannot call any business write API.
 

@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 OpenTea Developers
 -->
 # Đặc tả thiết kế — GĐ0: Thanh lọc nhiễu, khoá rủi ro uy tín và chuẩn hoá ngôn ngữ chè
 
-> **Trạng thái:** Bản thiết kế (2026-11-28). Thực hiện trên nhánh `feat/phase0-trust-cleanup`.
+> **Trạng thái:** Đã triển khai trên nhánh `feat/phase0-trust-cleanup`, chưa gộp vào `main` (2026-11-28). Xem "Ghi chú sau triển khai" ở cuối.
 > **Căn cứ:** [product-roadmap.md](../product-roadmap.md) §4, §5 (GĐ0), §6; [ADR 0005](../adr/0005-multi-tenant-tea-value-chain-dxos.md); [deviation-register.md](../deviation-register.md) DEV-007 đến DEV-016.
 > **Yêu cầu của chủ dự án (2026-11-28):** "em thực hiện nhận làm giai đoạn 0 cho anh"; "thực hiện như bình thường, không cần quan tâm tới ngày đóng băng, dốc sức làm đạt kết quả tốt và nhanh".
 
@@ -223,3 +223,18 @@ Người làm tự quyết các chi tiết sau, miễn đúng các quy tắc tr�
 - Tên và vị trí của hàm đọc `DXOS_LABS` và của quy tắc trạng thái tính cách ly.
 - Câu chữ trạng thái trống.
 - Cách chia commit.
+
+## Ghi chú sau triển khai
+
+Mã khác đặc tả ở các điểm sau; mã là căn cứ:
+
+- Route tick của autopilot là `/api/internal/agent/autopilot/tick` (đặc tả §4.4 ghi `/api/internal/autopilot/tick`).
+- Không có route geocode riêng cho đối tác; việc geocode nằm trong `POST /api/partners` (phía server, qua Nominatim), chỉ `manager`.
+- Trang `/farmer/bulletin-notifications` được giữ, chỉ còn thẻ liên kết sang `/farmer/bulletin`.
+- `/forgot-pin` không còn là trang riêng, và người chưa đăng nhập vào đường dẫn này được chuyển về `/login`.
+- Liên kết trong kết quả tìm kiếm theo vai của người tìm.
+- Cán bộ KT chỉ giữ một chatbot (`/officer/chat`), đúng §4.1.
+- `custom-books` lên 0.3.0 và `htx-dashboard` lên 0.3.1 (bỏ phần còn lại của giá mô phỏng, dùng thuật ngữ chè).
+- Hai migration Prisma mới: `20261128100000_partners_tenant` và `20261128110000_purge_market_data`.
+- `DXOS_LABS` khoá 21 route (xưởng mini-app 9, tự vận hành 4, chiến lược 2, MCP 2, nhân sự 4), cùng các trang và tab nêu ở §4.4.
+- Ảnh cửa hàng `miniapps/custom-books/store/*.png` chưa chụp lại vì cần stack đang chạy; ghi trong `docs/dev-setup.md` như việc còn lại.
