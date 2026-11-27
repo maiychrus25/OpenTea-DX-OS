@@ -49,7 +49,8 @@ function makeProposal(entry: EvidenceJournalEntry, overrides: Partial<Proposal> 
     requestedBy: null,
     dedupeKey: 'journal.reject:entry-1',
     createdAt: new Date('2026-11-24T00:00:00.000Z'),
-    expiresAt: new Date('2026-11-27T00:00:00.000Z'),
+    // Far in the future: most cases pass no `now`, so the use case compares this with the real clock.
+    expiresAt: new Date('2099-01-01T00:00:00.000Z'),
     decidedBy: null,
     decidedByName: null,
     decidedAt: null,
@@ -149,7 +150,7 @@ describe('DecideProposalUseCase (spec tests 4, 5, 33)', () => {
       userName: 'Cán bộ',
       decision: 'approve',
       channel: 'web',
-      now: new Date('2026-11-28T00:00:00.000Z'),
+      now: new Date('2099-01-02T00:00:00.000Z'),
     })
 
     expect(outcome).toEqual({ outcome: 'expired' })
