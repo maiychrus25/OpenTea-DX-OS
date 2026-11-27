@@ -14,6 +14,7 @@ let htx = 'htx-tc'
 let role = 'officer'
 const labels: { htx_profile_id: string; pesticide_product_id: string; label_phi_days: number; label_note: string | null; verified_at: Date }[] = []
 const usage: { pesticide_product_id: string; journal_entry: { entry_date: Date } }[] = []
+const advanced: { advanced_on: Date; item: { pesticide_product_id: string | null } }[] = []
 
 jest.mock('@/lib/api/tenant', () => ({ requireTenant: jest.fn(async () => ({ userId: 'u1', role, htxCode: 'X', htxProfileId: htx })) }))
 jest.mock('@/application/farm/GetFarmerHouseholdUseCase', () => ({
@@ -40,6 +41,7 @@ jest.mock('@/infrastructure/db/prisma.client', () => ({
       deleteMany: jest.fn(async () => ({ count: 1 })),
     },
     journalActivity: { findMany: jest.fn(async () => usage) },
+    inputAdvance: { findMany: jest.fn(async () => advanced) },
   },
 }))
 
@@ -53,6 +55,7 @@ beforeEach(() => {
   role = 'officer'
   labels.length = 0
   usage.length = 0
+  advanced.length = 0
 })
 
 describe('GET /api/pesticides', () => {
@@ -75,6 +78,31 @@ describe('GET /api/pesticides', () => {
     usage.push({ pesticide_product_id: 'biobus', journal_entry: { entry_date: new Date() } })
     const { data } = await (await get()).json()
     expect(data.map((p: { id: string }) => p.id)).toEqual(['biobus', 'catex'])
+  })
+})
+
+describe('GET /api/pesticides after an advance', () => {
+  it('puts a product advanced to the household before one it used', async () => {
+    role = 'farmer'
+    usage.push({ pesticide_product_id: 'biobus', journal_entry: { entry_date: new Date() } })
+    advanced.push({ advanced_on: new Date(), item: { pesticide_product_id: 'catex' } })
+    const { data } = await (await get()).json()
+    expect(data.map((p: { id: string }) => p.id)).toEqual(['catex', 'biobus'])
+  })
+
+  it('ignores an advance whose item has no catalogue product and keeps the used order', async () => {
+    role = 'farmer'
+    usage.push({ pesticide_product_id: 'biobus', journal_entry: { entry_date: new Date() } })
+    advanced.push({ advanced_on: new Date(), item: { pesticide_product_id: null } })
+    const { data } = await (await get()).json()
+    expect(data.map((p: { id: string }) => p.id)).toEqual(['biobus', 'catex'])
+  })
+
+  it('does not look at advances for staff', async () => {
+    role = 'manager'
+    advanced.push({ advanced_on: new Date(), item: { pesticide_product_id: 'biobus' } })
+    const { data } = await (await get()).json()
+    expect(data.map((p: { id: string }) => p.id)).toEqual(['catex', 'biobus'])
   })
 })
 

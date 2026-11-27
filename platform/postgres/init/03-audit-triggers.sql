@@ -17,7 +17,8 @@ BEGIN
   FOREACH t IN ARRAY ARRAY['htx_profiles','households','parcels','parcel_crop_cycles','journal_entries',
                            'journal_activities','lots','lot_parcels','disease_reports','htx_memberships',
                            'pesticide_products','htx_pesticide_labels',
-                           'leaf_grades','daily_leaf_prices','fresh_leaf_tickets'] LOOP
+                           'leaf_grades','daily_leaf_prices','fresh_leaf_tickets',
+                           'input_items','input_advances','settlement_periods','member_settlements','member_ledger_entries'] LOOP
     IF to_regclass('public.' || t) IS NOT NULL THEN
       EXECUTE format('CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON public.%I '
                      'FOR EACH ROW EXECUTE FUNCTION audit.capture_row()', t);

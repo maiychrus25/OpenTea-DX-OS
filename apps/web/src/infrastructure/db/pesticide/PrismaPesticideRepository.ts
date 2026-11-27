@@ -6,6 +6,7 @@ import { prisma } from '@/infrastructure/db/prisma.client'
 import type { PesticideListOptions, PesticidePort, PesticideRow } from '@/domain/pesticide/ports/PesticidePort'
 
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000
+const ADVANCE_WINDOW_MS = 180 * 24 * 60 * 60 * 1000
 
 function toRow(product: PesticideProduct, label: HtxPesticideLabel | null | undefined): PesticideRow {
   return {
@@ -58,6 +59,22 @@ export class PrismaPesticideRepository implements PesticidePort {
 
     if (!opts.householdId) return rows.map((r) => r.row)
 
+    // Products the cooperative advanced to this household in the last 180 days come before the ones it only used.
+    const advanced = await prisma.inputAdvance.findMany({
+      where: {
+        household_id: opts.householdId,
+        status: 'VALID',
+        advanced_on: { gte: new Date(Date.now() - ADVANCE_WINDOW_MS) },
+        item: { pesticide_product_id: { not: null } },
+      },
+      select: { advanced_on: true, item: { select: { pesticide_product_id: true } } },
+    })
+    const lastAdvanced = new Map<string, number>()
+    for (const a of advanced) {
+      const productId = a.item.pesticide_product_id
+      if (productId && a.advanced_on.getTime() > (lastAdvanced.get(productId) ?? 0)) lastAdvanced.set(productId, a.advanced_on.getTime())
+    }
+
     const used = await prisma.journalActivity.findMany({
       where: {
         pesticide_product_id: { not: null },
@@ -73,8 +90,10 @@ export class PrismaPesticideRepository implements PesticidePort {
       const at = a.journal_entry.entry_date.getTime()
       if (a.pesticide_product_id && at > (lastUsed.get(a.pesticide_product_id) ?? 0)) lastUsed.set(a.pesticide_product_id, at)
     }
-    // Stable sort: unused products keep the alphabetical order from the query.
-    return rows.sort((a, b) => (lastUsed.get(b.id) ?? 0) - (lastUsed.get(a.id) ?? 0)).map((r) => r.row)
+    // Stable sort: advanced first (latest advance first), then used (latest use first); the rest keep the alphabetical order.
+    return rows
+      .sort((a, b) => (lastAdvanced.get(b.id) ?? 0) - (lastAdvanced.get(a.id) ?? 0) || (lastUsed.get(b.id) ?? 0) - (lastUsed.get(a.id) ?? 0))
+      .map((r) => r.row)
   }
 
   async setLabel(
