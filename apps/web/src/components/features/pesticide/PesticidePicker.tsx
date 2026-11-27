@@ -20,7 +20,8 @@ export const belowFloorText = (floorDays: number) => `Thời gian cách ly khôn
 export const isBelowFloor = (v: Pick<PesticideChange, 'days' | 'floorDays'>) => v.days !== null && v.days < v.floorDays
 
 interface Props {
-  value: PesticideValue
+  /** floorDays is optional: a prefilled value gets its floor from the catalogue once it loads. */
+  value: PesticideValue & { floorDays?: number }
   onChange: (value: PesticideChange) => void
   target?: string
   disabled?: boolean
@@ -47,7 +48,15 @@ export function PesticidePicker({ value, onChange, target, disabled }: Props) {
     const q = query.trim().toLowerCase()
     return q ? rows.filter(r => `${r.trade_name} ${r.active_ingredient}`.toLowerCase().includes(q)) : rows
   }, [rows, query])
+  const selectedFloor = selected?.floor_days
+  const selectedName = selected?.trade_name
+  const stale = selectedFloor !== undefined && value.floorDays !== selectedFloor
   const below = isBelowFloor({ days: value.days, floorDays })
+
+  useEffect(() => {
+    if (stale) onChange({ productId: value.productId, customName: value.customName, days: value.days, floorDays: selectedFloor, productName: selectedName })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stale, selectedFloor])
 
   const emit = (next: PesticideValue, floor = floorDays, productName?: string) => onChange({ ...next, floorDays: floor, productName })
   const pick = (row: PesticideRow) => { setOther(false); emit({ productId: row.id, customName: '', days: row.floor_days }, row.floor_days, row.trade_name) }

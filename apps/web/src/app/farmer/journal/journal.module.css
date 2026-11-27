@@ -384,6 +384,7 @@ button.groupHead { cursor: pointer; }
 .history li:not(:last-child)::after { content: ''; position: absolute; left: 6px; top: 10px; bottom: -4px; width: 2px; background: var(--color-primary); }
 .history li.waiting::before { border-color: var(--color-ink-tertiary); background: var(--color-surface-card); }
 .foot { padding: 0 16px 14px; }
+.foot a { width: 100%; }
 .foot .withdraw { width: 100%; min-height: 38px; justify-content: center; gap: 8px; font-size: 13px; color: var(--color-danger); }
 @media (max-width: 1100px) {
   .layout { grid-template-columns: minmax(0, 1fr); }

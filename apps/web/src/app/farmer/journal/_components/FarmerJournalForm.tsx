@@ -18,29 +18,52 @@ interface Parcel {
   crop_type: string
 }
 
+/** An entry of GET /api/journal, as far as the form edits it. */
+export interface EditableEntry {
+  id: string
+  parcel_id?: string
+  entry_date: string
+  status: string
+  activity_type: string
+  notes: string | null
+  activities: { product_name?: string | null; dosage?: string | null; performer?: string | null; withdrawal_days?: number | null; pesticide_product_id?: string | null }[]
+}
+
 interface FarmerJournalFormProps {
+  /** Edit and resubmit a returned entry, or confirm a prescribed DRAFT ("Đã phun"). */
+  entry?: EditableEntry
   onSuccess: () => void
   onCancel: () => void
   /** Values from the chat card's Sửa button; anything invalid is dropped. */
   initial?: JournalPrefill
 }
 
-export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJournalFormProps) {
+export function FarmerJournalForm({ onSuccess, onCancel, initial: chatPrefill, entry }: FarmerJournalFormProps) {
+  const first = entry?.activities[0]
+  const initial: JournalPrefill | undefined = entry ? {
+    parcelId: entry.parcel_id,
+    activityType: entry.activity_type,
+    productName: first?.product_name ?? undefined,
+    dosage: first?.dosage ?? undefined,
+    withdrawalDays: first?.withdrawal_days ?? undefined,
+  } : chatPrefill
+  const confirming = entry?.status === 'DRAFT'
   const [parcels, setParcels] = useState<Parcel[]>([])
-  const [parcelId, setParcelId] = useState('')
-  const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10))
+  const [parcelId, setParcelId] = useState(entry?.parcel_id ?? '')
+  const [entryDate, setEntryDate] = useState(entry && !confirming ? entry.entry_date.slice(0, 10) : new Date().toISOString().slice(0, 10))
   const [activityType, setActivityType] = useState(initial?.activityType ?? 'OTHER')
   const [productName, setProductName] = useState(initial?.productName ?? '')
-  const [hasChemicals, setHasChemicals] = useState(true)
+  const [hasChemicals, setHasChemicals] = useState(!entry || !!first?.product_name || first?.withdrawal_days != null)
   const [dosage, setDosage] = useState(initial?.dosage ?? '')
-  const [performer, setPerformer] = useState('')
+  const [performer, setPerformer] = useState(first?.performer ?? '')
   const [pesticide, setPesticide] = useState<PesticideChange>({
-    productId: null,
+    productId: first?.pesticide_product_id ?? null,
     customName: initial?.activityType === 'SPRAYING' ? (initial.productName ?? '') : '',
     days: initial?.withdrawalDays ?? null,
-    floorDays: CUSTOM_PRODUCT_FLOOR_DAYS,
+    // A catalogue product's floor is unknown until the picker loads it; the server checks it anyway.
+    floorDays: first?.pesticide_product_id ? 0 : CUSTOM_PRODUCT_FLOOR_DAYS,
   })
-  const [observation, setObservation] = useState('')
+  const [observation, setObservation] = useState(entry?.notes ?? '')
   const [photo, setPhoto] = useState<File | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -65,8 +88,8 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
     setSubmitting(true)
     setError('')
 
-    const body = {
-      parcel_id: parcelId,
+    const body: Record<string, unknown> = {
+      ...(entry ? { submit: true } : { parcel_id: parcelId }),
       entry_date: entryDate,
       observation,
       activities: [{
@@ -115,14 +138,14 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
       // Add photo to body
       Object.assign(body, { photo_url, photo_minio_key })
 
-      const res = await fetch('/api/journal', {
-        method: 'POST',
+      const res = await fetch(entry ? `/api/journal/${entry.id}` : '/api/journal', {
+        method: entry ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error?.message || 'Lỗi ghi nhật ký')
+        throw new Error(err?.error?.message || (entry ? 'Không thể gửi lại nhật ký' : 'Lỗi ghi nhật ký'))
       }
       onSuccess()
     } catch (err: unknown) {
@@ -143,7 +166,7 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
 
       <div className={`${styles.two} ${kit.two}`}>
         {field('Thửa đất', (
-          <select className={`${kit.inp} ${styles.tall}`} value={parcelId} onChange={e => setParcelId(e.target.value)} disabled={parcels.length === 0}>
+          <select className={`${kit.inp} ${styles.tall}`} value={parcelId} onChange={e => setParcelId(e.target.value)} disabled={parcels.length === 0 || !!entry}>
             {parcels.length === 0 && <option value="">Chưa có thửa đất được phân công</option>}
             {parcels.map(p => (
               <option key={p.id} value={p.id}>{p.parcel_code} — {p.crop_type}</option>
@@ -193,7 +216,7 @@ export function FarmerJournalForm({ onSuccess, onCancel, initial }: FarmerJourna
         <button type="button" className={`${kit.btn2} ${styles.tall}`} onClick={onCancel}>Hủy</button>
         <button type="submit" className={`${kit.btn} ${styles.tall}`} disabled={submitting || uploadingPhoto || !parcelId || belowFloor}>
           <Send size={16} aria-hidden="true" />
-          {submitting || uploadingPhoto ? 'Đang gửi...' : 'Gửi chờ duyệt'}
+          {submitting || uploadingPhoto ? 'Đang gửi...' : confirming ? 'Đã phun' : entry ? 'Gửi lại' : 'Gửi chờ duyệt'}
         </button>
       </div>
     </form>
