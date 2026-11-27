@@ -75,7 +75,7 @@
   gap: 14px;
   padding: 36px 44px;
   background:
-    linear-gradient(180deg, transparent 48%, var(--color-hero-bg) 70%),
+    linear-gradient(180deg, transparent 40%, var(--color-hero-bg) 66%),
     url('/images/auth-hills.jpg') left top / auto 68% no-repeat,
     var(--color-hero-bg);
   color: var(--color-hero-text);
