@@ -82,18 +82,25 @@ test('lot totals normalize statuses and preserve export and public QR actions', 
     { id: 'l1', lot_code: 'LOT-1', commodity: 'Chè', status: 'READY', parcel_count: 2, created_at: '2026-11-01' },
     { id: 'l2', lot_code: 'LOT-2', commodity: 'Chè', status: 'QR_EXPORTED', parcel_count: 1, created_at: '2026-11-02' },
   ]
-  global.fetch = jest.fn().mockResolvedValue(response(lots))
+  // Export now goes through the certificate dialog (phase 2 F2): the dialog lists certificates, then posts the choice.
+  let exported = false
+  global.fetch = jest.fn(async (url: string) => {
+    if (url === '/api/certificates') return response([])
+    if (url === '/api/lots/l1/export-qr') { exported = true; return response({ lot_code: 'LOT-1' }) }
+    return response(lots.map(l => (exported ? { ...l, status: 'QR_EXPORTED' } : l)))
+  }) as unknown as typeof fetch
   render(<LotList />)
   await screen.findByText('LOT-1')
   expect(metric('Tổng số lô')).toHaveTextContent('2')
   expect(metric('Lô sẵn sàng')).toHaveTextContent('1')
   expect(metric('Lô đã xuất QR')).toHaveTextContent('1')
   expect(screen.getByRole('link', { name: 'Xem trang QR' })).toHaveAttribute('href', '/lot/LOT-2')
-  ;(global.fetch as jest.Mock).mockResolvedValueOnce(response({ lot_code: 'LOT-1' }))
-    .mockResolvedValueOnce(response(lots.map(l => ({ ...l, status: 'QR_EXPORTED' }))))
   fireEvent.click(screen.getByRole('button', { name: 'Xuất QR' }))
+  const confirm = screen.getAllByRole('button', { name: 'Xuất QR' }).pop()!
+  await waitFor(() => expect(confirm).toBeEnabled())
+  fireEvent.click(confirm)
   await waitFor(() => expect(metric('Lô đã xuất QR')).toHaveTextContent('2'))
-  expect(global.fetch).toHaveBeenCalledWith('/api/lots/l1/export-qr', { method: 'POST' })
+  expect(global.fetch).toHaveBeenCalledWith('/api/lots/l1/export-qr', expect.objectContaining({ method: 'POST' }))
 })
 
 test('journal status totals update after approval while retaining the table', async () => {
