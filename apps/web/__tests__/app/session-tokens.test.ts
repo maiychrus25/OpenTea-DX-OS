@@ -177,8 +177,13 @@ describe('refreshAccessToken role and missing refresh token', () => {
     expect(result.role).toBeUndefined()
   })
 
-  it('applies the same role order as sign-in', async () => {
+  it('keeps an active role the refreshed token still holds (spec S2 section 7.3)', async () => {
     const result = await refreshedWith({ realm_access: { roles: ['farmer', 'officer'] } }, 'farmer')
+    expect(result.role).toBe('farmer')
+  })
+
+  it('applies the sign-in role order when the active role is no longer held', async () => {
+    const result = await refreshedWith({ realm_access: { roles: ['farmer', 'officer'] } }, 'manager')
     expect(result.role).toBe('officer')
   })
 

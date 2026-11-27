@@ -3,11 +3,13 @@
 
 import { auth } from '@/auth'
 import { ForbiddenError, NoHtxError, UnauthorizedError } from '@/domain/errors'
+import type { HumanRole } from '@/lib/auth/roles'
 import { PrismaHtxProfileRepository } from '@/infrastructure/db/farm/PrismaHtxProfileRepository'
 
 export type Tenant = {
   userId: string
-  role: 'manager' | 'officer' | 'farmer'
+  /** The active role. `platform_admin` never reaches a Tenant: it has no HTX. */
+  role: Exclude<HumanRole, 'platform_admin'>
   htxCode: string
   htxProfileId: string
 }
@@ -17,7 +19,7 @@ export async function requireTenant(): Promise<Tenant> {
   const session = await auth()
   const user = session?.user
   if (!user?.id) throw new UnauthorizedError()
-  if (!user.role) throw new ForbiddenError('Forbidden')
+  if (!user.role || user.role === 'platform_admin') throw new ForbiddenError('Forbidden')
   if (!user.htxCode) throw new NoHtxError()
 
   const htx = await new PrismaHtxProfileRepository().findByCode(user.htxCode)

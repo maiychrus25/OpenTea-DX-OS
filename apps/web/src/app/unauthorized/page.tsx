@@ -6,21 +6,25 @@ import { auth } from '@/auth'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Clock, Lock } from 'lucide-react'
+import { heldRoles, homeFor, isHumanRole } from '@/lib/auth/roles'
+import { SwitchRoleButton } from './SwitchRoleButton'
 import styles from './Unauthorized.module.css'
 
 interface UnauthorizedPageProps {
-  searchParams: Promise<{ state?: string }>
+  searchParams: Promise<{ state?: string; switch?: string }>
 }
 
 export default async function UnauthorizedPage({ searchParams }: UnauthorizedPageProps) {
   const session = await auth()
   const role = session?.user?.role
-  const { state } = await searchParams
+  const { state, switch: switchTarget } = await searchParams
 
-  let redirectUrl = '/'
-  if (role === 'manager') redirectUrl = '/manager/dashboard'
-  else if (role === 'officer') redirectUrl = '/officer/dashboard'
-  else if (role === 'farmer') redirectUrl = '/farmer/dashboard'
+  const redirectUrl = role ? homeFor(role) : '/'
+  // The button shows only for a role the session holds; the switch API checks it again.
+  const switchRole =
+    isHumanRole(switchTarget) && switchTarget !== role && heldRoles(session?.user ?? {}).includes(switchTarget)
+      ? switchTarget
+      : undefined
 
   // AC-4: Pending account state
   if (state === 'pending') {
@@ -80,6 +84,7 @@ export default async function UnauthorizedPage({ searchParams }: UnauthorizedPag
           <p className={styles.description}>
             Bạn không có quyền truy cập vào trang này dựa trên chức vụ của bạn.
           </p>
+          {switchRole && <SwitchRoleButton role={switchRole} />}
           <Link href={redirectUrl}>
             <Button variant="primary" data-testid="back-to-role-btn">
               Về trang phù hợp
