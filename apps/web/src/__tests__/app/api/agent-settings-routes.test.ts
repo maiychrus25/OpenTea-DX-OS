@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2026 OpenTea Developers
 
 import { GET as getInternalSettings } from '@/app/api/internal/agent/settings/route'
-import { GET as getSettings, PUT as putSettings } from '@/app/api/agent/settings/route'
+import { GET as getSettings } from '@/app/api/agent/settings/route'
 import { PATCH as patchRun } from '@/app/api/internal/agent/runs/[id]/route'
 import { POST as postHeartbeat } from '@/app/api/internal/agent/heartbeat/route'
 import { requireAgentCaller } from '@/lib/api/internal-agent-auth'
@@ -11,7 +11,6 @@ import { requireTenant } from '@/lib/api/tenant'
 
 const loadMock = jest.fn()
 const availableMock = jest.fn()
-const saveMock = jest.fn()
 const finishMock = jest.fn()
 const spentMock = jest.fn()
 const readBudgetMock = jest.fn()
@@ -24,7 +23,7 @@ jest.mock('@/infrastructure/db/agent/PrismaAgentSettingsRepository', () => ({
   PrismaAgentSettingsRepository: jest.fn().mockImplementation(() => ({
     load: loadMock,
     availableProviders: availableMock,
-    save: saveMock,
+    save: jest.fn(),
   })),
 }))
 jest.mock('@/infrastructure/db/agent/PrismaAgentRunRepository', () => ({
@@ -45,7 +44,6 @@ jest.mock('@/application/telegram/telegram-services', () => ({
 const getInternalCall = (req: Request) => getInternalSettings(req, {})
 const heartbeatCall = (req: Request) => postHeartbeat(req, {})
 const getSettingsCall = () => getSettings(new Request('http://web/api/agent/settings'), {})
-const putSettingsCall = (req: Request) => putSettings(req, {})
 
 const RUN_UUID = '00000000-0000-0000-0000-000000000010'
 
@@ -62,25 +60,6 @@ const savedSettings = {
 
 function tenant(role: 'manager' | 'officer' | 'farmer', htxCode = 'TC') {
   return { userId: 'u-1', role, htxCode, htxProfileId: 'p-1' }
-}
-
-function put(body: unknown) {
-  return new Request('http://web/api/agent/settings', { method: 'PUT', body: JSON.stringify(body) })
-}
-
-const validSave = {
-  agents: {
-    'journal-review': { provider: 'anthropic', model: null },
-    digest: { provider: 'ollama', model: null },
-    bulletin: { provider: 'ollama', model: null },
-    assistant: { provider: 'ollama', model: null },
-    'daily-campaign': { provider: 'ollama', model: null },
-    improvement: { provider: 'ollama', model: null },
-    'app-builder': { provider: 'ollama', model: null },
-    strategy: { provider: 'ollama', model: null },
-  },
-  report_time: '07:30',
-  monthly_limit_usd: 10,
 }
 
 describe('Agent settings routes (C1, C2, C3 and the manager tab)', () => {
@@ -171,13 +150,13 @@ describe('Agent settings routes (C1, C2, C3 and the manager tab)', () => {
     expect(touchHeartbeatMock).not.toHaveBeenCalled()
   })
 
-  test('tab: a manager reads the settings with the providers listed and can edit', async () => {
+  test('tab: a manager reads the settings with the providers listed, read-only (the platform admin edits; S2)', async () => {
     ;(requireTenant as jest.Mock).mockResolvedValue(tenant('manager'))
     const res = await getSettingsCall()
     const body = await res.json()
     expect(res.status).toBe(200)
     expect(body.data.providers).toEqual(['ollama', 'anthropic'])
-    expect(body.data.can_edit).toBe(true)
+    expect(body.data.can_edit).toBe(false)
     expect(body.data.budget.spent_usd).toBe(8.5)
   })
 
@@ -188,71 +167,5 @@ describe('Agent settings routes (C1, C2, C3 and the manager tab)', () => {
 
     ;(requireTenant as jest.Mock).mockResolvedValue(tenant('farmer'))
     expect((await getSettingsCall()).status).toBe(403)
-  })
-
-  test('tab: only a manager saves; an officer or farmer is refused before anything is written', async () => {
-    ;(requireTenant as jest.Mock).mockResolvedValue(tenant('officer'))
-    expect((await putSettingsCall(put(validSave))).status).toBe(403)
-    ;(requireTenant as jest.Mock).mockResolvedValue(tenant('farmer'))
-    expect((await putSettingsCall(put(validSave))).status).toBe(403)
-    expect(saveMock).not.toHaveBeenCalled()
-  })
-
-  test('tab: saving never turns an agent on or off; that stays with ./dxos agent enable', async () => {
-    ;(requireTenant as jest.Mock).mockResolvedValue(tenant('manager', 'TC'))
-    const body = {
-      ...validSave,
-      agents: {
-        ...validSave.agents,
-        'journal-review': { enabled: false, provider: 'ollama', model: null },
-        digest: { enabled: true, provider: 'ollama', model: null },
-      },
-    }
-    expect((await putSettingsCall(put(body))).status).toBe(200)
-    const saved = saveMock.mock.calls[0][1]
-    expect(saved.agents['journal-review']).toEqual({ provider: 'ollama', model: null })
-    expect(saved.agents.digest).toEqual({ provider: 'ollama', model: null })
-  })
-
-  test('tab: the manager saves for their own cooperative, audited as the user', async () => {
-    ;(requireTenant as jest.Mock).mockResolvedValue(tenant('manager', 'LB'))
-    const res = await putSettingsCall(put(validSave))
-    expect(res.status).toBe(200)
-    expect(saveMock).toHaveBeenCalledWith('LB', expect.objectContaining({
-      actor: 'user:u-1',
-      reportTime: '07:30',
-      monthlyLimit: 10,
-      agents: validSave.agents,
-    }))
-  })
-
-  test('tab: a provider whose key the agent did not report is refused', async () => {
-    ;(requireTenant as jest.Mock).mockResolvedValue(tenant('manager'))
-    const res = await putSettingsCall(put({
-      ...validSave,
-      agents: { ...validSave.agents, 'journal-review': { provider: 'openai', model: 'gpt-x' } },
-    }))
-    const body = await res.json()
-    expect(res.status).toBe(400)
-    expect(body.error.message).toBe('Nhà cung cấp này chưa được bật trên máy chủ')
-    expect(saveMock).not.toHaveBeenCalled()
-  })
-
-  test('tab: OpenAI without a model name is refused', async () => {
-    ;(requireTenant as jest.Mock).mockResolvedValue(tenant('manager'))
-    availableMock.mockResolvedValueOnce(['ollama', 'openai'])
-    const res = await putSettingsCall(put({
-      ...validSave,
-      agents: { ...validSave.agents, digest: { provider: 'openai', model: null } },
-    }))
-    expect(res.status).toBe(400)
-    expect(saveMock).not.toHaveBeenCalled()
-  })
-
-  test('tab: an invalid report time or budget is refused', async () => {
-    ;(requireTenant as jest.Mock).mockResolvedValue(tenant('manager'))
-    expect((await putSettingsCall(put({ ...validSave, report_time: '25:00' }))).status).toBe(400)
-    expect((await putSettingsCall(put({ ...validSave, monthly_limit_usd: 0 }))).status).toBe(400)
-    expect(saveMock).not.toHaveBeenCalled()
   })
 })

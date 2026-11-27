@@ -90,6 +90,7 @@ model HtxProfile {
   lots          Lot[]
   notifications Notification[]
   partners      Partner[]
+  memberships   HtxMembership[]
 
   @@map("htx_profiles")
 }
@@ -398,4 +399,21 @@ model ChatHistory {
   @@index([session_id, created_at])
   @@index([user_id, created_at])
   @@map("chat_history")
+}
+
+// ─── Memberships (S2) ───
+
+/// The roles a person holds in one HTX. Keycloak realm roles stay the source of truth; this row is synced from the token.
+model HtxMembership {
+  id               String     @id @default(cuid())
+  keycloak_user_id String
+  htx_profile_id   String
+  roles            String[] // subset of farmer, officer, accountant, manager
+  created_at       DateTime   @default(now())
+  updated_at       DateTime   @updatedAt
+  htx_profile      HtxProfile @relation(fields: [htx_profile_id], references: [id])
+
+  @@unique([keycloak_user_id, htx_profile_id])
+  @@index([htx_profile_id])
+  @@map("htx_memberships")
 }

@@ -15,7 +15,7 @@ DO $$
 DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY['htx_profiles','households','parcels','parcel_crop_cycles','journal_entries',
-                           'journal_activities','lots','lot_parcels','disease_reports'] LOOP
+                           'journal_activities','lots','lot_parcels','disease_reports','htx_memberships'] LOOP
     IF to_regclass('public.' || t) IS NOT NULL THEN
       EXECUTE format('CREATE OR REPLACE TRIGGER dxos_audit_row AFTER INSERT OR UPDATE OR DELETE ON public.%I '
                      'FOR EACH ROW EXECUTE FUNCTION audit.capture_row()', t);

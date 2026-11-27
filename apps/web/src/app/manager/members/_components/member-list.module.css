@@ -5,3 +5,12 @@
 .waiting ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); margin: 0; padding: 0; list-style: none; }
 .waiting li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-row); }
 .waiting li > div { flex: 1; min-width: 140px; }
+
+.rolesForm { display: flex; flex-direction: column; gap: 14px; }
+.roleChoices { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; border: 0; }
+.roleChoices legend { margin-bottom: 8px; padding: 0; font-size: 13px; font-weight: 600; color: var(--color-ink-secondary); }
+.roleChoices label { display: flex; min-height: 44px; align-items: center; gap: 10px; color: var(--color-ink-primary); cursor: pointer; }
+.roleChoices input { width: 18px; height: 18px; accent-color: var(--primary); }
+.formError { margin: 0; padding: 10px 12px; border-radius: var(--rounded-sm); background: var(--color-danger-subtle); color: var(--color-danger); font-size: 13px; }
+.dialogActions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px; border-top: 1px solid var(--color-border-subtle); }
+.roleTags { display: flex; flex-wrap: wrap; gap: 4px; }

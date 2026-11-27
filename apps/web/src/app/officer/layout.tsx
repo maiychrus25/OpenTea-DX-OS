@@ -43,6 +43,7 @@ export default async function OfficerLayout({ children }: { children: React.Reac
   return (
     <AppShell 
       role="officer" 
+      roles={session.user.roles}
       userName={session.user.name || 'Cán bộ Kỹ thuật'} 
       navItems={navItems}
       htxName={htxProfile?.name || 'Chưa cập nhật'}

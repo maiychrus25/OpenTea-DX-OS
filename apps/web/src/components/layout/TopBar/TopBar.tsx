@@ -50,11 +50,8 @@ export const TopBar: React.FC<TopBarProps> = ({ role, roleName, userName, notifi
 
       <div className={styles.right}>
         <ThemeToggle />
-        {notificationSlot ? (
-          notificationSlot
-        ) : (
-          <NotificationBell role={role} />
-        )}
+        {/* The platform admin has no HTX, so there is nothing to notify and the notification API would answer 403. */}
+        {role !== 'platform_admin' && (notificationSlot ?? <NotificationBell role={role} />)}
         <div className={styles.avatar} aria-label={`Người dùng: ${userName}`}>
           {initials}
         </div>

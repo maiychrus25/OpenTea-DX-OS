@@ -13,7 +13,8 @@ import kit from '@/components/features/dashboard/page-kit.module.css';
 import { Button } from '@/components/ui/Button';
 import { Pill } from '@/components/ui/Pill';
 import { Modal } from '@/components/ui/Modal';
-import { Member } from './member-types';
+import { Member, ROLE_LABELS as ROLE_NAME } from './member-types';
+import { RolesDialog } from './roles-dialog';
 import { InvitationModal } from './invitation-modal';
 import { toast } from 'sonner';
 import styles from './member-list.module.css';
@@ -32,6 +33,7 @@ export function MemberList() {
     memberId: string | null;
   }>({ isOpen: false, action: null, memberId: null });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [editing, setEditing] = useState<Member | null>(null);
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
@@ -114,18 +116,19 @@ export function MemberList() {
   };
 
   const needle = query.trim().toLowerCase();
-  const roleOf = (m: Member) => m.role?.toUpperCase() ?? '';
-  const ROLE_LABELS: Record<string, string> = { FARMER: 'Nông dân', OFFICER: 'Cán bộ kỹ thuật', MANAGER: 'Trưởng HTX' };
+  // Every role of a person; older answers carry only `role`.
+  const rolesOf = (m: Member): string[] => (m.roles?.length ? m.roles : [m.role?.toLowerCase()]).filter(Boolean) as string[];
+  const roleText = (m: Member) => rolesOf(m).map((r) => ROLE_NAME[r] ?? r).join(', ');
   // People still waiting are asked about above; the table lists the members.
   const waiting = members.filter((m) => m.status === 'PENDING');
   const joined = members.filter((m) => m.status !== 'PENDING');
   const filteredMembers = joined.filter(
     (m) =>
-      (roleFilter === 'ALL' || roleOf(m) === roleFilter) &&
+      (roleFilter === 'ALL' || rolesOf(m).includes(roleFilter.toLowerCase())) &&
       (!needle || [m.full_name, m.name, m.phone, m.email].some((v) => v?.toLowerCase().includes(needle)))
   );
 
-  const countRole = (role: string) => joined.filter((m) => roleOf(m) === role).length;
+  const countRole = (role: string) => joined.filter((m) => rolesOf(m).includes(role.toLowerCase())).length;
   const phoneOf = (m: Member) => (m.phone && m.phone !== 'Chưa cập nhật' ? m.phone : '');
   const hectares = (value: number) => value.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
 
@@ -134,7 +137,7 @@ export function MemberList() {
     const cell = (value: string) => `"${(/^[=+\-@]/.test(value) ? `'${value}` : value).replace(/"/g, '""')}"`;
     const rows = [
       ['Thành viên', 'Vai trò', 'Số điện thoại', 'Số thửa', 'Diện tích (ha)', 'Trạng thái'],
-      ...filteredMembers.map((m) => [m.full_name || m.name || '', ROLE_LABELS[roleOf(m)] ?? '', phoneOf(m), String(land[phoneOf(m)]?.parcels ?? ''), String(land[phoneOf(m)]?.area ?? ''), m.status === 'ACTIVE' ? 'Hoạt động' : 'Đã khóa']),
+      ...filteredMembers.map((m) => [m.full_name || m.name || '', roleText(m), phoneOf(m), String(land[phoneOf(m)]?.parcels ?? ''), String(land[phoneOf(m)]?.area ?? ''), m.status === 'ACTIVE' ? 'Hoạt động' : 'Đã khóa']),
     ];
     const url = URL.createObjectURL(new Blob([`\ufeff${rows.map((r) => r.map(cell).join(',')).join('\r\n')}`], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
@@ -179,7 +182,7 @@ export function MemberList() {
                 <span className={kit.avatar} aria-hidden="true">{initials(member.full_name || member.name)}</span>
                 <div className={kit.personText}>
                   <strong>{member.full_name || member.name}</strong>
-                  <small>{[ROLE_LABELS[roleOf(member)], phoneOf(member)].filter(Boolean).join(' · ')}</small>
+                  <small>{[roleText(member), phoneOf(member)].filter(Boolean).join(' · ')}</small>
                 </div>
                 <Pill tone="amber">Chờ xác nhận</Pill>
                 <button type="button" className={kit.dangerButton} onClick={() => handleDelete(member.id)}>Từ chối</button>
@@ -208,6 +211,7 @@ export function MemberList() {
               { value: 'ALL', label: 'Tất cả', count: joined.length },
               { value: 'FARMER', label: 'Nông hộ', count: countRole('FARMER') },
               { value: 'OFFICER', label: 'Cán bộ KT', count: countRole('OFFICER') },
+              { value: 'ACCOUNTANT', label: 'Kế toán', count: countRole('ACCOUNTANT') },
               { value: 'MANAGER', label: 'Trưởng HTX', count: countRole('MANAGER') },
             ]}
           />
@@ -248,7 +252,11 @@ export function MemberList() {
                           </div>
                         </div>
                       </td>
-                      <td>{ROLE_LABELS[roleOf(member)]}</td>
+                      <td>
+                        <span className={styles.roleTags}>
+                          {rolesOf(member).map((r) => <Pill key={r} tone="neutral">{ROLE_NAME[r] ?? r}</Pill>)}
+                        </span>
+                      </td>
                       <td>{phoneOf(member) || 'Chưa cập nhật'}</td>
                       <td>{land[phoneOf(member)]?.parcels ?? '—'}</td>
                       <td>{land[phoneOf(member)] ? `${hectares(land[phoneOf(member)].area)} ha` : '—'}</td>
@@ -260,9 +268,14 @@ export function MemberList() {
                       </td>
                       <td>
                         <div className={kit.rowActions}>
-                          <button type="button" className={kit.dangerButton} onClick={() => handleDelete(member.id)}>
-                            Xóa
+                          <button type="button" className={kit.primary} onClick={() => setEditing(member)}>
+                            Sửa vai
                           </button>
+                          {!rolesOf(member).includes('manager') && (
+                            <button type="button" className={kit.dangerButton} onClick={() => handleDelete(member.id)}>
+                              Xóa
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -305,6 +318,21 @@ export function MemberList() {
           </div>
         </div>
       </Modal>
+
+      {editing && (
+        <RolesDialog
+          memberId={editing.id}
+          memberName={editing.full_name || editing.name}
+          initialRoles={rolesOf(editing)}
+          isManager={rolesOf(editing).includes('manager')}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            toast.success('Đã cập nhật vai thành công!');
+            fetchMembers();
+          }}
+        />
+      )}
 
       {/* Invitation Modal */}
       <InvitationModal

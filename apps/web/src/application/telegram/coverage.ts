@@ -69,6 +69,7 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
   miniApp: [
     // Makes an account with a password: typed in the app, never sent in a Telegram message (owner's decision, 2026-11-27).
     'POST /api/members/invite',
+    'PUT /api/members/[id]/roles',
     'POST /api/farm/parcels',
     'PUT /api/farm/parcels/[id]',
     'POST /api/documents/upload',
@@ -99,6 +100,11 @@ export const TELEGRAM_COVERAGE: TelegramCoverage = {
     'GET /api/auth/[...nextauth]',
     'POST /api/auth/[...nextauth]',
     'POST /api/register',
+    'POST /api/session/role',
+    'POST /api/platform/htx',
+    'GET /api/platform/htx/[code]/agent-settings',
+    'PUT /api/platform/htx/[code]/agent-settings',
+    'PUT /api/platform/pesticides/[id]',
     'GET /api/dev-login',
     'GET /api/debug/session',
     'GET /api/seed-farmer',

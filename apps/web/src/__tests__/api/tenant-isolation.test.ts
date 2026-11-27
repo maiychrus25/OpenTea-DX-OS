@@ -134,7 +134,8 @@ beforeEach(() => {
   mock(prisma.htxProfile.findUnique).mockResolvedValue(tc)
 })
 
-const writes = () => Array.from(fns().entries()).filter(([key, fn]) => WRITE.test(key) && fn.mock.calls.length > 0).map(([key]) => key)
+// The membership sync of requireTenant() writes the caller's own roles; it is not a write of the record under test.
+const writes = () => Array.from(fns().entries()).filter(([key, fn]) => WRITE.test(key) && !key.startsWith('htxMembership.') && fn.mock.calls.length > 0).map(([key]) => key)
 
 describe.each(rows)('$name', ({ role, call }) => {
   test('answers 404 for a record of another HTX and writes nothing', async () => {

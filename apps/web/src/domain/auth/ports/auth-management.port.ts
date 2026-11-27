@@ -20,6 +20,16 @@ export interface MemberData {
   createdTimestamp: number | undefined;
 }
 
+export interface MemberDetail {
+  id: string;
+  htxCode: string | null;
+  fullName: string;
+  phone: string;
+  enabled: boolean;
+  /** Realm role names, service roles included. */
+  roles: string[];
+}
+
 export interface AuthManagementPort {
   /**
    * Register a new farmer (with 'farmer' role).
@@ -29,7 +39,9 @@ export interface AuthManagementPort {
    * @throws Error if phone is already taken
    */
   registerFarmer(data: RegisterData, enabled: boolean): Promise<string>;
-  registerUser(data: RegisterData, role: string, enabled: boolean): Promise<string>;
+  registerUser(data: RegisterData, roles: string[], enabled: boolean): Promise<string>;
+  setRealmRoles(userId: string, add: string[], remove: string[]): Promise<void>;
+  getMember(userId: string): Promise<MemberDetail | null>;
   
   /** Users holding `role` whose htx_code attribute equals `htxCode`. */
   listUsersByRole(role: string, htxCode: string): Promise<MemberData[]>;

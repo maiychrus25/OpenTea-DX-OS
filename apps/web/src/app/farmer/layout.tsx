@@ -56,6 +56,7 @@ export default async function FarmerLayout({ children }: { children: React.React
   return (
     <AppShell 
       role="farmer" 
+      roles={session.user.roles}
       userName={session.user.name || 'Nông dân'} 
       navItems={navItems}
       htxName={htxProfile?.name || 'Chưa cập nhật'}

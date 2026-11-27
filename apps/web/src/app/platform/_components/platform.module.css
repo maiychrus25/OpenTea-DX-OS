@@ -1,0 +1,12 @@
+/* SPDX-License-Identifier: MIT
+   SPDX-FileCopyrightText: 2026 OpenTea Developers */
+
+.form { display: flex; flex-direction: column; gap: 12px; }
+.form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--color-ink-secondary); }
+.form input { height: var(--input-height); padding: 0 12px; border: 1px solid var(--color-border-input); border-radius: var(--radius-button); background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; }
+.form input:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+.form fieldset { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 12px; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-button); }
+.form legend { padding: 0 6px; font-size: 13px; font-weight: 700; color: var(--color-ink-primary); }
+.actions { display: flex; justify-content: flex-end; gap: 10px; }
+.days { width: 84px; height: 36px; padding: 0 8px; border: 1px solid var(--color-border-input); border-radius: var(--radius-button); background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; }
+.days:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
