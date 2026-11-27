@@ -36,6 +36,26 @@ function webRows(): string[] {
   })
 }
 
+const OTHER_TRACK_ROWS: string[] = [
+  // Track R (read tools C1).
+  'GET /api/search',
+  'GET /api/lot/[lot_code]/certificate',
+  'GET /api/farm/parcels/[id]/soil-health',
+  'GET /api/parcels/[id]/latest-photo',
+  'GET /api/farm/households',
+  'GET /api/farm/households/[id]',
+  'GET /api/members',
+  'GET /api/officer/diseases',
+  'GET /api/profile',
+  'GET /api/documents',
+  'GET /api/documents/url',
+  'GET /api/partners',
+  // Track M (disease.report).
+  'POST /api/diagnosis',
+  // In no contract: no tool names these two; a tool of track R or the existing `lots` and `harvest_schedule` tools must.
+  'GET /api/lots/[id]',
+  'GET /api/schedule/unscheduled',
+]
 const groups = Object.values(TELEGRAM_COVERAGE)
 const listed = groups.flat()
 
@@ -48,6 +68,17 @@ describe('coverage table (test 17)', () => {
   it('keeps every tool route in the chat-read group and every action route in the chat-confirm group', () => {
     for (const tool of CHAT_TOOLS) for (const row of tool.routes) expect(TELEGRAM_COVERAGE.chatRead).toContain(row)
     for (const action of CHAT_ACTIONS) for (const row of action.routes) expect(TELEGRAM_COVERAGE.chatConfirm).toContain(row)
+  })
+
+  // Rows that only the read-tool and media tracks of issue #80 serve; they are not merged with the actions track yet.
+  // The integrator empties this list when the three branches meet, and the test then holds for every row.
+  const SERVED_BY_OTHER_TRACKS: readonly string[] = OTHER_TRACK_ROWS
+
+  it('serves every in-chat row by a tool or an action', () => {
+    const served = new Set([...CHAT_TOOLS.flatMap((tool) => tool.routes), ...CHAT_ACTIONS.flatMap((action) => action.routes)])
+    const unserved = [...TELEGRAM_COVERAGE.chatRead, ...TELEGRAM_COVERAGE.chatConfirm].filter((row) => !served.has(row))
+    expect(unserved.filter((row) => !SERVED_BY_OTHER_TRACKS.includes(row))).toEqual([])
+    for (const row of SERVED_BY_OTHER_TRACKS) expect(CHAT_ACTIONS.flatMap((action) => action.routes)).not.toContain(row)
   })
 
   it('keeps Telegram link management out of the bot and the agent settings out of chat', () => {
