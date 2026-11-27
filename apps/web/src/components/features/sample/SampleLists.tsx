@@ -39,14 +39,14 @@ export const SampleNotices = ({ bare }: { bare?: boolean }) => (
   ]} />
 )
 
-export const SamplePartners = () => (
-  <SampleList title="Danh sách đối tác" rows={[
+export const SamplePartners = ({ bare, category = 'all' }: { bare?: boolean; category?: string }) => (
+  <SampleList title="Danh sách đối tác" bare={bare} rows={([
     ['Công ty Chè Tân Thái', 'Thu mua chè búp tươi · cách 4,2 km', 'Thu mua'],
     ['Xưởng chè La Bằng', 'Thu mua, chế biến · cách 7,8 km', 'Thu mua'],
     ['Đại lý vật tư Phúc Xuân', 'Phân bón, thuốc BVTV · cách 3,1 km', 'Vật tư'],
     ['Cửa hàng nông sản Hồng Thái', 'Vật tư, dụng cụ · cách 5,6 km', 'Vật tư'],
     ['Vận tải Minh Phát', 'Xe tải 2,5 tấn · cách 6,0 km', 'Vận chuyển'],
-  ]} />
+  ] as [string, string, string][]).filter(row => category === 'all' || row[2] === category)} />
 )
 
 const APPS: [string, string, string][] = [

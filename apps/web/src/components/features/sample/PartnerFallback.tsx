@@ -3,27 +3,23 @@
 
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { SamplePartners } from './SampleLists'
+import mapStyles from '@/components/features/map/ZoneMap.module.css'
 
-/** The design's example partners, only when the cooperative has saved none. */
+/** Render only after the parent successfully loads an empty real partner list. */
 export function PartnerFallback() {
-  const [empty, setEmpty] = useState(false)
-
-  useEffect(() => {
-    const check = async () => {
-      try {
-        const res = await fetch('/api/partners')
-        if (!res.ok) return
-        const json = await res.json()
-        const list = Array.isArray(json) ? json : json.data ?? []
-        setEmpty(list.length === 0)
-      } catch {
-        // The map already reports a failed load.
-      }
-    }
-    void check()
-  }, [])
-
-  return empty ? <SamplePartners /> : null
+  const [category, setCategory] = useState('all')
+  return (
+    <>
+      <div className={mapStyles.chips} role="group" aria-label="Loại đối tác mẫu">
+        {['all', 'Thu mua', 'Vật tư', 'Vận chuyển'].map(type => (
+          <button key={type} type="button" className={mapStyles.chip} aria-pressed={category === type} onClick={() => setCategory(type)}>
+            {type === 'all' ? 'Tất cả' : type}
+          </button>
+        ))}
+      </div>
+      <SamplePartners bare category={category} />
+    </>
+  )
 }

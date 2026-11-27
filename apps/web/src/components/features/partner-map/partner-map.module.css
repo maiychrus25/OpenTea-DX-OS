@@ -1,6 +1,15 @@
 /* Copyright (c) 2026 OpenTea Developers
    Licensed under the MIT License. See LICENSE file in the project root for full license information. */
 
+.panel { display: flex; flex-direction: column; min-height: 0; height: 100%; overflow-y: auto; border: 1px solid var(--color-border-default); border-radius: var(--rounded-lg); background: var(--color-surface-sunken); }
+.panelHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 16px; border-bottom: 1px solid var(--color-border-default); background: var(--color-surface-card); }
+.panelHeader h2 { font-size: 14px; font-weight: 600; }
+.partnerItem { padding: 14px; border: 1px solid var(--color-border-default); border-radius: var(--rounded-md); background: var(--color-surface-card); overflow-wrap: anywhere; }
+.partnerItem:hover { border-color: var(--color-primary); }
+.locate { display: flex; align-items: center; gap: 6px; min-height: 44px; color: var(--color-primary); font-size: 12px; text-align: left; }
+.panel input, .panel select { min-width: 0; }
+.panel button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
 .suggestDropdown {
   position: absolute;
   top: 100%;
