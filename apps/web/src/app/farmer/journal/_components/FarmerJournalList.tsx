@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronRight, Droplet, FileText, Leaf, Plus, Scissors, SprayCan, Sprout, Trash2 } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronRight, Droplet, FileText, Layers, Leaf, Plus, Scissors, SprayCan, Sprout, Trash2 } from 'lucide-react'
 import kit from '@/components/features/farmer-web/kit.module.css'
 import styles from '../journal.module.css'
 import { fetchJson, LOAD_FAILED_MESSAGE } from '@/lib/api/fetch-json'
@@ -81,6 +81,9 @@ function groupOf(entryDate: string): 'today' | 'week' | 'older' {
   return time >= startOfDay((new Date().getDay() + 6) % 7) ? 'week' : 'older'
 }
 
+/** As on the design: the spraying entry names what is sprayed. */
+const TITLE_MAP: Record<string, string> = { SPRAYING: 'Phun thuốc BVTV' }
+
 const GROUPS = [
   { key: 'today', label: 'Hôm nay' },
   { key: 'week', label: 'Tuần này' },
@@ -149,8 +152,8 @@ export function FarmerJournalList() {
   const selectedEntry = visible.find(e => e.id === selectedId) ?? visible[0] ?? null
   const status = (value: string) => STATUS_MAP[value] ?? { label: value, tone: 'mu' }
   const day = (value: string) => new Date(value).toLocaleDateString('vi-VN')
-  const activityName = (value: string) => ACTIVITY_MAP[value] || value
-  const dayTime = (value: string) => new Date(value).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const activityName = (value: string) => TITLE_MAP[value] || ACTIVITY_MAP[value] || value
+  const dayTime = (value: string) => `${day(value)}, ${new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
   const detailRows: [string, React.ReactNode][] = selectedEntry ? [
     ['Ngày thực hiện', day(selectedEntry.entry_date)],
     ...(selectedEntry.parcel_code ? [['Thửa chè', selectedEntry.parcel_code] as [string, React.ReactNode]] : []),
@@ -173,9 +176,9 @@ export function FarmerJournalList() {
           ...(selectedEntry.status === 'REQUEST_CHANGES' ? [{ title: 'Cán bộ yêu cầu sửa', done: true }] : []),
         ]
 
-  const icon = (type: string, size = 28) => {
+  const icon = (type: string, size = 34) => {
     const Icon = ACTIVITY_ICON[type] ?? Leaf
-    return <span className={styles.activityIcon}><Icon size={size} aria-hidden="true" /></span>
+    return <span className={styles.activityIcon}><Icon size={size} strokeWidth={1.4} aria-hidden="true" /></span>
   }
 
   const card = (e: JournalEntry) => (
@@ -222,13 +225,21 @@ export function FarmerJournalList() {
           </div>
 
           <div className={styles.toolbar}>
-            <select className={styles.select} aria-label="Lọc theo thửa" value={parcel} onChange={event => setParcel(event.target.value)}>
-              <option value="ALL">Tất cả thửa chè</option>
-              {parcelCodes.map(code => <option key={code} value={code}>{code}</option>)}
-            </select>
-            <select className={styles.select} aria-label="Lọc theo khoảng ngày" value={range} onChange={event => setRange(event.target.value)}>
-              {RANGES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
-            </select>
+            <span className={styles.field}>
+              <Layers size={20} strokeWidth={1.6} aria-hidden="true" />
+              <select className={styles.select} aria-label="Lọc theo thửa" value={parcel} onChange={event => setParcel(event.target.value)}>
+                <option value="ALL">Tất cả thửa chè</option>
+                {parcelCodes.map(code => <option key={code} value={code}>{code}</option>)}
+              </select>
+              <ChevronDown size={18} aria-hidden="true" />
+            </span>
+            <span className={styles.field}>
+              <Calendar size={20} strokeWidth={1.6} aria-hidden="true" />
+              <select className={styles.select} aria-label="Lọc theo khoảng ngày" value={range} onChange={event => setRange(event.target.value)}>
+                {RANGES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+              <ChevronDown size={18} aria-hidden="true" />
+            </span>
             <span className={styles.count}>{shown.length} nhật ký</span>
           </div>
 
@@ -260,12 +271,12 @@ export function FarmerJournalList() {
 
             {selectedEntry && (
               <section className={`${kit.pn} ${styles.detail}`} aria-label="Chi tiết nhật ký">
-                <div className={kit.ph}>
+                <div className={styles.detailHead}>
                   <h2>Chi tiết nhật ký</h2>
                   <span className={`${kit.tag} ${kit[status(selectedEntry.status).tone]}`}>{status(selectedEntry.status).label}</span>
                 </div>
                 <div className={styles.detailTitle}>
-                  {icon(selectedEntry.activity_type, 24)}
+                  {icon(selectedEntry.activity_type, 28)}
                   <strong>{activityName(selectedEntry.activity_type)}</strong>
                 </div>
                 <dl className={styles.rows}>
@@ -292,7 +303,7 @@ export function FarmerJournalList() {
                   {steps.length ? (
                     <ol>
                       {steps.map((step, i) => (
-                        <li key={i} className={step.done ? undefined : styles.waiting}>
+                        <li key={i} className={step.done ? styles.done : styles.waiting}>
                           <b>{step.title}</b>
                           {step.text && <span>{step.text}</span>}
                         </li>
