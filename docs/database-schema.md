@@ -30,6 +30,14 @@ erDiagram
     LeafGrade ||--o{ DailyLeafPrice : "priced"
     Parcel ||--o{ FreshLeafTicket : "weighed"
     LeafGrade ||--o{ FreshLeafTicket : "graded"
+    HTXProfile ||--o{ ProcessingBatch : "processes"
+    ProcessingBatch ||--o{ FreshLeafTicket : "takes"
+    ProcessingBatch ||--o{ ProcessingBatchOutput : "yields"
+    ProcessingBatchOutput ||--o{ LotBatchSource : "feeds"
+    Lot ||--o{ LotBatchSource : "drawn from"
+    HTXProfile ||--o{ HtxCertificate : "holds"
+    Lot ||--o{ LotCertificate : "attaches"
+    HtxCertificate ||--o{ LotCertificate : "attached"
     HTXProfile ||--o{ InputItem : "catalogue"
     InputItem ||--o{ InputAdvance : "advanced"
     Household ||--o{ InputAdvance : "owes"
@@ -68,6 +76,7 @@ HTX (Hợp tác xã) master profile. Multi-tenant isolation key (`htx_code`, h�
 | member_count | INT | | Số thành viên — auto-calc from households |
 | certification | VARCHAR(50) | | VietGAP / GlobalGAP / Organic |
 | logo_minio_key | VARCHAR(500) | | MinIO object key cho logo |
+| public_show_names | BOOLEAN | NOT NULL, DEFAULT false | Hiện tên người (hộ, người ghi nhật ký, thợ sao) trên trang QR công khai; ẩn lúc dựng trang khi `false` (`20261128160100_certificates_and_public_names`, GĐ2) |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 
@@ -231,7 +240,8 @@ Lô hàng — đơn vị QR truy xuất nguồn gốc.
 | buyer_name | VARCHAR(200) | nullable | ✅ | Tên người mua |
 | status | ENUM | NOT NULL, DEFAULT 'DRAFT' | `LotStatus` enum: DRAFT/READY/QR_EXPORTED | |
 | qr_image_url | TEXT | nullable | `qr_image_url` (không phải `qr_minio_key`) | MinIO URL |
-| certificate_keys | TEXT[] | DEFAULT [] | ✅ | MinIO object keys |
+| certificate_keys | TEXT[] | DEFAULT [] | ✅ | Khoá tệp chứng nhận (kho đối tượng) cho route tải công khai |
+| dry_grade | ENUM `DryTeaGrade` | nullable | ✅ GĐ2 | Hạng chè khô của lô đóng từ mẻ; rỗng với lô tạo trước GĐ2 (`20261128160000_processing_batches`) |
 | public_page_data | JSONB | nullable | ✅ | Snapshot for QR public page |
 | created_by_id | TEXT | nullable | keycloak officer user ID | |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | ✅ | |
@@ -239,7 +249,7 @@ Lô hàng — đơn vị QR truy xuất nguồn gốc.
 
 **Indexes:** `lot_code` (unique), `status`, `htx_profile_id`
 
-> **Note:** Fields `packaging_date`, `total_weight_kg`, `packaging_spec` xuất hiện trong migration SQL nhưng **không có trong schema.prisma hiện tại** — đây là migration artefact từ intermediate schema version, không dùng trong application code.
+> **Note (cập nhật GĐ2):** `packaging_date`, `total_weight_kg` và `packaging_spec` có trong `schema.prisma` hiện tại; lô đóng từ mẻ ghi `packaging_date` (hôm nay) và `total_weight_kg` (tổng kg lấy). Quan hệ ngược: `batch_sources` (`lot_batch_sources`) và `certificates` (`lot_certificates`).
 
 ---
 
@@ -490,6 +500,7 @@ Phiếu cân búp tươi; ghi một lần, không sửa (sai thì huỷ và cân
 | void_reason, voided_by_id, voided_at | TEXT, TEXT, TIMESTAMP(3) | nullable | Điền khi huỷ |
 | created_by_id | TEXT | NOT NULL | Keycloak sub người cân |
 | client_id | TEXT | nullable | Chống trùng khi gửi lại |
+| processing_batch_id | TEXT | nullable FK → processing_batches (RESTRICT), index | Mẻ sao chứa phiếu (một phiếu một mẻ); phiếu có giá trị này không huỷ được (`20261128160000_processing_batches`, GĐ2) |
 | settlement_id | TEXT | nullable FK → member_settlements (RESTRICT) | Dòng quyết toán chứa phiếu; khoá ngoại thêm ở `20261128150000_member_ledger`. Phiếu có giá trị này không huỷ được |
 | created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
 
@@ -595,6 +606,90 @@ Sổ cái xã viên, **chỉ thêm** (xem trigger ở trên). Dương là HTX n�
 | created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
 
 **Index:** `(household_id, created_at)`.
+
+### Mẻ sao sấy, lô từ mẻ và chứng nhận (GĐ2)
+
+Thêm bởi hai migration `20261128160000_processing_batches` và `20261128160100_certificates_and_public_names`, cùng các cột `fresh_leaf_tickets.processing_batch_id`, `lots.dry_grade` và `htx_profiles.public_show_names` đã ghi ở các bảng trên. Enum mới: `ProcessingBatchStatus` (`OPEN`, `FINISHED`, `CANCELLED`), `DryTeaGrade` (`DINH`, `TOM_NON`, `MOC_CAU`, `BOM`, `CAM`), `CertificateKind` (`VIETGAP`, `OCOP`, `ORGANIC`, `OTHER`). Id là TEXT (cuid), thời gian `TIMESTAMP(3)`.
+
+**Trigger kiểm toán.** Cả năm bảng mới có trigger `dxos_audit_row` (`audit.capture_row()`), cài bởi `03-audit-triggers.sql` cho cơ sở dữ liệu mới và bởi migration cho cơ sở dữ liệu đang chạy (bỏ qua khi chưa có schema `audit`). Các giao dịch mẻ, chứng nhận và đóng lô đặt `dxos.actor`. `lot_certificates` có `id` riêng (cùng khoá duy nhất `(lot_id, certificate_id)`) để dòng kiểm toán có khoá hàng, vì `audit.capture_row()` lấy khoá hàng từ cột `id`.
+
+#### `processing_batches`
+Mẻ sao sấy. Ghi bởi `officer`, `manager`. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| batch_code | TEXT | UNIQUE, NOT NULL | `{HTX_CODE}-MS-{YYYYMMDD}-{NN}` |
+| processed_on | DATE | NOT NULL | Ngày chế biến (giờ Việt Nam) |
+| status | ENUM `ProcessingBatchStatus` | NOT NULL, DEFAULT 'OPEN' | |
+| master_name, shift, notes | TEXT | nullable | Thợ sao, ca, ghi chú |
+| fresh_kg, dry_kg | DECIMAL(10,1) | nullable, `CHECK` >= 0 | Chốt lúc hoàn thành |
+| recovery_ratio | DECIMAL(5,2) | nullable, `CHECK` > 0 | `fresh_kg / dry_kg`, làm tròn 2 chữ số |
+| out_of_band | BOOLEAN | NOT NULL, DEFAULT false | Ngoài khoảng 4,50 đến 5,00 |
+| deviation_note | TEXT | nullable | Giải trình khi lệch (API bắt buộc từ 10 ký tự) |
+| created_by_id | TEXT | NOT NULL | Keycloak sub |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+| finished_by_id, finished_at | TEXT, TIMESTAMP(3) | nullable | |
+| cancelled_by_id, cancelled_at, cancel_reason | TEXT, TIMESTAMP(3), TEXT | nullable | |
+
+**Index:** khoá duy nhất `batch_code`; `(htx_profile_id, processed_on)`; `fresh_leaf_tickets(processing_batch_id)`.
+
+#### `processing_batch_outputs`
+Sản lượng chè khô theo hạng của một mẻ. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| batch_id | TEXT | FK → processing_batches (RESTRICT), NOT NULL | |
+| grade | ENUM `DryTeaGrade` | NOT NULL | |
+| kg | DECIMAL(9,1) | NOT NULL, `CHECK` > 0 và <= 100000 | |
+
+**Index:** khoá duy nhất `(batch_id, grade)`.
+
+#### `lot_batch_sources`
+Phần kg của một lô lấy từ một dòng sản lượng. Tồn của dòng = `kg` − tổng `lot_batch_sources.kg`. Ghi lúc đóng lô. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| lot_id | TEXT | FK → lots (RESTRICT), NOT NULL | |
+| output_id | TEXT | FK → processing_batch_outputs (RESTRICT), NOT NULL | |
+| kg | DECIMAL(9,1) | NOT NULL, `CHECK` > 0 | |
+
+**Index:** khoá duy nhất `(lot_id, output_id)`; `output_id`.
+
+#### `htx_certificates`
+Chứng nhận của HTX kèm tệp. Không xoá; thu hồi bằng `revoked_at`. Ghi bởi `officer`, `manager` (thu hồi: `manager`). Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| kind | ENUM `CertificateKind` | NOT NULL | |
+| number | TEXT | NOT NULL | `CHECK` tối đa 60 ký tự |
+| issuer | TEXT | NOT NULL | `CHECK` tối đa 120 ký tự |
+| issued_on, expires_on | DATE | NOT NULL, `CHECK` `expires_on >= issued_on` | |
+| scope_note | TEXT | nullable | `CHECK` tối đa 200 ký tự |
+| file_key | TEXT | NOT NULL | `para/<htx_code>/Certificates/<uuid>-<tên>` |
+| file_name, file_mime | TEXT | NOT NULL | Tên đã làm sạch; `application/pdf`, `image/jpeg` hoặc `image/png` |
+| file_size | INT | NOT NULL, `CHECK` > 0 và <= 10485760 | Byte |
+| created_by_id | TEXT | NOT NULL | Keycloak sub |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+| revoked_at, revoked_by_id, revoke_reason | TIMESTAMP(3), TEXT, TEXT | nullable | Điền khi thu hồi |
+
+**Index:** `(htx_profile_id, expires_on)`. Trạng thái `VALID`, `EXPIRED`, `REVOKED` tính lúc đọc, không có cột.
+
+#### `lot_certificates`
+Chứng nhận gắn vào lô lúc xuất QR. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | Khoá riêng, để dòng kiểm toán có khoá hàng |
+| lot_id | TEXT | FK → lots (RESTRICT), NOT NULL | |
+| certificate_id | TEXT | FK → htx_certificates (RESTRICT), NOT NULL | |
+
+**Index:** khoá duy nhất `(lot_id, certificate_id)`.
 
 ### Agentic Layer (`platform` schema — `platform/postgres/init/08-agent.sql`, M1a)
 Tất cả ba bảng đều gắn trigger `dxos_audit_row` ghi vào `audit.events`.
