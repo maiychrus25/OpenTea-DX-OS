@@ -70,3 +70,12 @@ def test_get_file_names_a_voice_path_the_stub_serves_as_ogg(stub):
     assert info["file_path"] == "voice/smoke.oga"
     data = api.download(info["file_path"], max_bytes=2 * 1024 * 1024)
     assert data[:4] == b"OggS" and len(data) < 1024
+
+
+def test_stub_accepts_send_document_and_records_the_file(stub):
+    api = BotApi(stub, "123:smoke")
+    result = api.call_files("sendDocument", {"chat_id": 5, "caption": "Bản tin 25/11/2026"}, {"document": ("ban-tin.wav", b"RIFFwav", "audio/wav")})
+    assert result["message_id"] == 1001
+    calls = json.loads(urllib.request.urlopen(f"{stub}/control/calls", timeout=5).read())
+    assert calls == [{"method": "sendDocument", "params": {"chat_id": 5, "caption": "Bản tin 25/11/2026"},
+                      "files": [{"name": "document", "filename": "ban-tin.wav", "size": 7}]}]

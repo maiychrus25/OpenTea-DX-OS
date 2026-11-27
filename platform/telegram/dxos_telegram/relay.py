@@ -19,6 +19,7 @@ POLL_TIMEOUT_SECONDS = 30
 PHOTO_MAX_BYTES = 5 * 1024 * 1024  # C1: larger photos are not forwarded
 CAPTION_MAX = 1024  # Telegram's limit for a photo caption
 ALBUM_MAX = 4  # C8: a finished build sends its four screenshots
+AUDIO_UNAVAILABLE = "Chưa đọc được bản tin lúc này."  # the line the web uses when the voice service is down
 VOICE_MAX_SECONDS = 60  # M15 C2
 VOICE_MAX_BYTES = 2 * 1024 * 1024
 
@@ -165,8 +166,32 @@ class Relay:
                 },
             )
         for reply in data.get("replies") or []:
-            self._send_best_effort(*message_call(reply))
+            audio = reply.get("audio")
+            if isinstance(audio, Mapping) and audio.get("kind") == "bulletin" and reply.get("op") != "edit":
+                self._send_bulletin_audio(reply, str(audio.get("id")))
+            else:
+                self._send_best_effort(*message_call(reply))
         return True
+
+    def _send_bulletin_audio(self, reply: Mapping[str, Any], bulletin_id: str) -> None:
+        """Issue #80 C4: the web writes the bulletin to a WAV file; no OGG/Opus encoder is installed, so it goes as a document.
+
+        The web checked the voice service just before, but it can stop in between: the person then gets the plain line.
+        """
+        try:
+            wav = self._web.fetch_bulletin_audio(bulletin_id)
+        except GatewayError as exc:
+            log.warning("bulletin audio not sent: %s", exc)
+            self._send_best_effort("sendMessage", {"chat_id": reply["chat_id"], "text": AUDIO_UNAVAILABLE})
+            return
+        try:
+            self._bot.call_files(
+                "sendDocument",
+                {"chat_id": reply["chat_id"], "caption": str(reply["text"])[:CAPTION_MAX]},
+                {"document": ("ban-tin.wav", wav, "audio/wav")},
+            )
+        except BotApiError as exc:
+            log.warning("sendDocument failed: %s", exc.description)
 
     def _photo_fields(self, sizes: Any) -> dict[str, Any]:
         """C1 photo fields: the largest size up to 5 MB, downloaded as bytes. A failure is forwarded as photo_error."""

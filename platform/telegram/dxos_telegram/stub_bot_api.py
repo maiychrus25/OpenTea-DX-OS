@@ -97,7 +97,7 @@ def make_handler(state: StubState) -> type[BaseHTTPRequestHandler]:
             if self.path.startswith("/control/"):
                 return self._control()
             method = self.path.rsplit("/", 1)[-1]
-            if method in ("sendMediaGroup", "sendPhoto"):
+            if method in ("sendMediaGroup", "sendPhoto", "sendDocument"):
                 return self._upload(method)
             params = self._body()
             if method == "getUpdates":
