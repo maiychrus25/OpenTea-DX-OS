@@ -33,6 +33,10 @@ const nextConfig = {
       },
     ],
   },
+  // Labels printed before phase 2 point at /lot/<code>; the one public trace page is /q/<code>.
+  async redirects() {
+    return [{ source: '/lot/:lot_code', destination: '/q/:lot_code', permanent: true }]
+  },
 }
 
 const withPWA = require("@ducanh2912/next-pwa").default({
