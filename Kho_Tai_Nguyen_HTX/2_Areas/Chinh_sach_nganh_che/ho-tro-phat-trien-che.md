@@ -20,15 +20,8 @@ Bản gốc trên trang Tỉnh ủy Thái Nguyên.
 
 **Thương hiệu:** nhãn hiệu tập thể "Chè Thái Nguyên" được bảo hộ tại 6 nước và vùng lãnh thổ; chỉ dẫn địa lý "Tân Cương" được EU bảo hộ theo EVFTA.
 
-## Nghị quyết 08/2025/NQ-HĐND (30/7/2025), chính sách hỗ trợ
-**Kho chưa có toàn văn.** Theo cổng thông tin tỉnh, chưa đủ điều kiện kèm theo:
-- 100% kinh phí giống chè trồng mới hoặc trồng thay thế.
-- 70% phân bón hữu cơ, hữu cơ vi sinh năm đầu.
-- 100% phí chứng nhận VietGAP hoặc GAP khác; tối đa 6 triệu đồng/ha lần đầu, 4 triệu đồng/ha cấp lại.
-- 50% máy móc, thiết bị; tối đa 500 triệu đồng mỗi máy, 2 tỷ đồng mỗi cơ sở.
-- Còn có mã số vùng trồng, tưới tiết kiệm, sở hữu trí tuệ, OCOP, xúc tiến thương mại, du lịch cộng đồng.
-
-Xin toàn văn và Công văn 1818/SNNMT-KHTC (03/3/2026) ở UBND xã hoặc Sở Nông nghiệp và Môi trường trước khi làm hồ sơ.
+## Nghị quyết 08/2025/NQ-HĐND (30/7/2025), hiệu lực 10/8/2025
+Đã có toàn văn trên Công báo tỉnh: `../../3_Resources/Van_ban_goc/nq08-2025-che.md`. Bảng mức hỗ trợ đầy đủ và điều kiện: `../../3_Resources/Du_lich_che/Cam_nang/02-tien-ho-tro.md`.
 
 ## Cấp xã (ví dụ tham khảo)
 - **Định Hóa** (Nghị quyết 08-NQ/ĐU ngày 28/10/2025 của Đảng bộ xã): chè 320,5 ha; mục tiêu 375,6 ha vào 2030, từ 70% diện tích đạt GAP hoặc hữu cơ và từ 70% có mã số vùng trồng.

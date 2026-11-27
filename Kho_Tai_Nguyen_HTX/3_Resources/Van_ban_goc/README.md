@@ -20,6 +20,7 @@ Văn bản pháp luật và văn bản hành chính để tra cứu nguyên văn
 - [Luật Thuế thu nhập doanh nghiệp số 67/2025/QH15 (bản Công báo; đã có luật sửa đổi, xem bản hợp nhất)](luat-tndn-2025.md): Quốc hội
 
 ## Du lịch
+- [Nghị quyết 76/2026/NQ-HĐND: chính sách hỗ trợ phát triển du lịch Thái Nguyên 2026-2030](nq76-2026-du-lich.md): HĐND tỉnh Thái Nguyên
 - [Luật Du lịch 09/2017/QH14](luat-du-lich-2017.md): Quốc hội *(nhận dạng chữ)*
 - [Nghị định 168/2017/NĐ-CP quy định chi tiết Luật Du lịch](dl-nd168-2017.md): Chính phủ *(nhận dạng chữ)*
 - [Đề án 17-ĐA/TU phát triển du lịch tỉnh Thái Nguyên](dl-de-an-17.md): Tỉnh ủy Thái Nguyên
@@ -43,6 +44,7 @@ Văn bản pháp luật và văn bản hành chính để tra cứu nguyên văn
 - [Trả lời kiến nghị về dư lượng thuốc BVTV trong chè Thái Nguyên](du-luong-che-tn.md): Bộ Nông nghiệp và Môi trường
 
 ## Chính sách ngành chè
+- [Nghị quyết 08/2025/NQ-HĐND: chính sách hỗ trợ phát triển ngành chè Thái Nguyên](nq08-2025-che.md): HĐND tỉnh Thái Nguyên
 - [Nghị quyết 11-NQ/TU (03/02/2025) phát triển ngành chè Thái Nguyên 2025-2030](nq11-nganh-che-2025.md): Tỉnh ủy Thái Nguyên *(nhận dạng chữ)*
 - [Kế hoạch 356/KH-UBND (10/8/2026): chuyển đổi số ngành chè 2026-2030](ttr-kh-356-so.md): UBND tỉnh Thái Nguyên
 - [Nghị quyết 12-NQ/TU (02/7/2026) phát triển nông nghiệp hàng hóa 2026-2030](dl-nq-0012-2026.md): Tỉnh ủy Thái Nguyên
