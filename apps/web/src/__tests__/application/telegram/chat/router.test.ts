@@ -28,6 +28,23 @@ describe('routeText', () => {
     ['lô hàng đã bán', { kind: 'tool', name: 'lots' }],
     ['tóm tắt giúp tôi', { kind: 'tool', name: 'today' }],
     ['xem nhật ký', { kind: 'tool', name: 'journal' }],
+    ['sửa nhật ký hôm qua', { kind: 'action', name: 'journal.edit' }],
+    ['rút nhật ký', { kind: 'action', name: 'journal.delete' }],
+    ['duyệt báo cáo bệnh', { kind: 'action', name: 'disease.review' }],
+    ['bắt đầu lứa mới', { kind: 'action', name: 'round.start' }],
+    ['đặt ngày thu hoạch', { kind: 'action', name: 'harvest.schedule' }],
+    ['tạo lô hàng', { kind: 'action', name: 'lot.create' }],
+    ['xuất mã QR', { kind: 'action', name: 'lot.export_qr' }],
+    ['gửi thông báo cho cả HTX', { kind: 'action', name: 'notification.announce' }],
+    ['đánh dấu đã đọc', { kind: 'action', name: 'notification.read' }],
+    ['xoá thông báo', { kind: 'action', name: 'notification.clear' }],
+    ['mời thành viên', { kind: 'action', name: 'member.invite' }],
+    ['duyệt thành viên', { kind: 'action', name: 'member.approve' }],
+    ['xoá thành viên', { kind: 'action', name: 'member.remove' }],
+    ['sửa hồ sơ HTX', { kind: 'action', name: 'profile.edit' }],
+    ['thêm nông hộ', { kind: 'action', name: 'household.add' }],
+    ['sửa nông hộ', { kind: 'action', name: 'household.edit' }],
+    ['xoá thửa', { kind: 'action', name: 'parcel.delete' }],
   ])('%s', (text, expected) => {
     expect(routeText(text)).toEqual(expected)
   })
