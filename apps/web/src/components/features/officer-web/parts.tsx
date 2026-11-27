@@ -4,10 +4,17 @@
 
 import React from 'react'
 import { PageHeader } from '@/components/ui/PageHeader/PageHeader'
+import { SampleTag } from '@/components/features/sample/SampleTag'
 import styles from './kit.module.css'
 
 export function Header({ icon, title, description }: { icon: React.ReactNode; title: string; description?: string }) {
-  return <PageHeader icon={icon} title={title} description={description} actions={<span className={`${styles.tag} ${styles.mu}`}>Chỉ xem (cán bộ)</span>} />
+  // Every page with this header shows made-up shop and tour records: there is no API for them yet.
+  return (
+    <>
+      <PageHeader icon={icon} title={title} description={description} actions={<span className={`${styles.tag} ${styles.mu}`}>Chỉ xem (cán bộ)</span>} />
+      <p role="note"><SampleTag /> Tên khách, số điện thoại, đơn hàng và doanh thu trên trang này là dữ liệu mẫu, chưa có số liệu thật.</p>
+    </>
+  )
 }
 
 /** Officer-only headline figures; callers supply counts from their loaded data. */
