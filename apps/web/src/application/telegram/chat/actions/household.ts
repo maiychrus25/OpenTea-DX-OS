@@ -13,6 +13,16 @@ import { MAX_CHOICES, clip, inCooperative, notFound } from './scope'
 
 const PHONE_TAKEN_VI = 'Số điện thoại này đã được đăng ký!'
 
+/** The phone column is unique across cooperatives, so the database is the one check that cannot miss a holder. */
+async function writingPhone<T>(write: Promise<T>): Promise<T> {
+  try {
+    return await write
+  } catch (err) {
+    if ((err as { code?: string }).code === 'P2002') throw new DomainError(PHONE_TAKEN_VI)
+    throw err
+  }
+}
+
 type HouseholdAddPayload = { owner_name: string; phone: string }
 
 /** Routes: `POST /api/farm/households`, which admits officers only. The phone is the household code, as for an invited farmer. */
@@ -36,14 +46,14 @@ export const householdAddAction: ChatAction<HouseholdAddPayload> = {
     return [`Chủ hộ: ${payload.owner_name}`, `Số điện thoại: ${payload.phone}`]
   },
   async execute(payload, user) {
-    const repo = new PrismaHouseholdRepository()
-    if (await repo.isPhoneTaken(payload.phone, user.tenant.htxProfileId)) throw new DomainError(PHONE_TAKEN_VI)
-    await new CreateHouseholdUseCase(repo).execute({
-      household_code: payload.phone,
-      owner_name: payload.owner_name,
-      phone: payload.phone,
-      htx_profile_id: user.tenant.htxProfileId,
-    })
+    await writingPhone(
+      new CreateHouseholdUseCase(new PrismaHouseholdRepository()).execute({
+        household_code: payload.phone,
+        owner_name: payload.owner_name,
+        phone: payload.phone,
+        htx_profile_id: user.tenant.htxProfileId,
+      })
+    )
     return `Đã thêm nông hộ ${payload.owner_name}.`
   },
 }
@@ -96,12 +106,14 @@ export const householdEditAction: ChatAction<HouseholdEditPayload> = {
   async execute(payload, user) {
     if (user.tenant.role === 'farmer' && payload.household_id !== user.householdId) throw notFound()
     await inCooperative(new TenantGuard(user.tenant).household(payload.household_id))
-    const repo = new PrismaHouseholdRepository()
-    if (payload.field === 'phone' && (await repo.isPhoneTaken(payload.value, user.tenant.htxProfileId))) {
-      const current = await repo.findById(payload.household_id)
-      if (current?.phone !== payload.value) throw new DomainError(PHONE_TAKEN_VI)
-    }
-    await new UpdateHouseholdUseCase(repo).execute(payload.household_id, { [payload.field]: payload.value }, user.tenant.role.toUpperCase(), user.householdId ?? undefined)
+    await writingPhone(
+      new UpdateHouseholdUseCase(new PrismaHouseholdRepository()).execute(
+        payload.household_id,
+        { [payload.field]: payload.value },
+        user.tenant.role.toUpperCase(),
+        user.householdId ?? undefined
+      )
+    )
     return 'Đã cập nhật thông tin nông hộ.'
   },
 }

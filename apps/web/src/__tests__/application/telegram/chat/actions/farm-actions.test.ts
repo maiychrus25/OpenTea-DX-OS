@@ -25,8 +25,6 @@ const mockFakes = {
   deleteParcel: jest.fn(),
   hhCreate: jest.fn(),
   hhUpdate: jest.fn(),
-  hhPhoneTaken: jest.fn(),
-  hhFind: jest.fn(),
 }
 
 jest.mock('@/auth', () => {
@@ -74,10 +72,7 @@ jest.mock('@/infrastructure/db/lot/PrismaLotRepository', () => ({
   })),
 }))
 jest.mock('@/infrastructure/db/farm/PrismaHouseholdRepository', () => ({
-  PrismaHouseholdRepository: jest.fn(() => ({
-    isPhoneTaken: (...a: unknown[]) => mockFakes.hhPhoneTaken(...a),
-    findById: (...a: unknown[]) => mockFakes.hhFind(...a),
-  })),
+  PrismaHouseholdRepository: jest.fn(),
 }))
 jest.mock('@/application/disease/review-disease-report.usecase', () => ({
   ReviewDiseaseReportUseCase: jest.fn(() => ({ execute: (...a: unknown[]) => mockFakes.review(...a) })),
@@ -326,7 +321,6 @@ describe('household.add', () => {
 
   it('is for officers and creates the household with the phone as its code', async () => {
     expect([...a().roles]).toEqual(['officer'])
-    mockFakes.hhPhoneTaken.mockResolvedValue(false)
     expect(await a().execute({ owner_name: 'Trần Thị B', phone: '0901234567' }, officer, deps, NOW)).toBe('Đã thêm nông hộ Trần Thị B.')
     expect(mockFakes.hhCreate).toHaveBeenCalledWith({
       household_code: '0901234567',
@@ -337,9 +331,8 @@ describe('household.add', () => {
   })
 
   it('refuses a phone that is already taken', async () => {
-    mockFakes.hhPhoneTaken.mockResolvedValue(true)
+    mockFakes.hhCreate.mockRejectedValue({ code: 'P2002' })
     await expect(a().execute({ owner_name: 'x', phone: '0901234567' }, officer, deps, NOW)).rejects.toThrow('Số điện thoại này đã được đăng ký!')
-    expect(mockFakes.hhCreate).not.toHaveBeenCalled()
   })
 })
 
@@ -374,9 +367,7 @@ describe('household.edit', () => {
   })
 
   it('refuses a phone held by another household', async () => {
-    mockFakes.hhPhoneTaken.mockResolvedValue(true)
-    mockFakes.hhFind.mockResolvedValue({ phone: '0111111111' })
+    mockFakes.hhUpdate.mockRejectedValue({ code: 'P2002' })
     await expect(a().execute({ household_id: 'hh1', field: 'phone', value: '0901234567' }, officer, deps, NOW)).rejects.toThrow('Số điện thoại này đã được đăng ký!')
-    expect(mockFakes.hhUpdate).not.toHaveBeenCalled()
   })
 })
