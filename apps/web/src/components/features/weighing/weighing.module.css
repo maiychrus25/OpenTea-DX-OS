@@ -19,7 +19,63 @@
 .input:focus-visible,
 .grow input:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
 
+.lightOk { color: var(--color-success); font-weight: 600; font-size: 13px; }
+.lightBlock { color: var(--color-danger); font-weight: 600; font-size: 13px; }
+.lightWait { color: var(--color-ink-secondary); font-size: 13px; }
+
+.station { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 20px; align-items: start; }
+.form { display: flex; flex-direction: column; gap: 16px; padding: 18px; }
+.search { display: flex; flex-direction: column; gap: 8px; }
+.hits { list-style: none; margin: 0; padding: 0; border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; }
+.hit { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 44px; padding: 10px 14px; border: 0; border-bottom: 1px solid var(--color-border-row); background: var(--color-surface-card); color: var(--color-ink-primary); text-align: left; font: inherit; cursor: pointer; }
+.hit:focus-visible, .parcel:focus-visible, .grade:focus-visible, .quickBtn:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+.chosen { margin: 0; font-size: 14px; }
+.fieldset { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.fieldset legend { padding: 0; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--color-ink-secondary); }
+.parcelList, .gradeList { display: flex; flex-wrap: wrap; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.parcel, .grade { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 150px; min-height: 44px; padding: 10px 14px; border: 1px solid var(--color-border-input); border-radius: 12px; background: var(--color-surface-card); color: var(--color-ink-primary); text-align: left; font: inherit; cursor: pointer; }
+.parcel[aria-pressed='true'], .grade[aria-pressed='true'] { border-color: var(--color-primary); box-shadow: inset 0 0 0 1px var(--color-primary); }
+.grade:disabled { opacity: 0.55; cursor: not-allowed; }
+.reason { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--color-danger-subtle); color: var(--color-danger); font-size: 13px; font-weight: 600; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.quickBtn { min-width: 52px; min-height: 36px; padding: 0 10px; border: 1px solid var(--color-border-input); border-radius: 10px; background: var(--color-surface-card); color: var(--color-ink-primary); font: inherit; font-weight: 600; cursor: pointer; }
+.quickBtn[aria-pressed='true'] { background: var(--color-primary-subtle); border-color: var(--color-primary); color: var(--color-primary); }
+.preview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 14px; border-radius: 12px; background: var(--color-surface-sunken); }
+.preview dt { font-size: 12.5px; color: var(--color-ink-secondary); }
+.preview dd { margin: 2px 0 0; font-size: 18px; font-weight: 700; color: var(--color-ink-heading); overflow-wrap: anywhere; }
+.totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.totals dt { font-size: 12.5px; color: var(--color-ink-secondary); }
+.totals dd { margin: 2px 0 0; font-size: 17px; font-weight: 700; color: var(--color-ink-heading); overflow-wrap: anywhere; }
+.ticketRow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-row); font-size: 13.5px; }
+.ticketRow > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.modalActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+.printShell { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.printActions { display: flex; justify-content: center; }
+.receipt { width: 80mm; max-width: 100%; box-sizing: border-box; padding: 4mm; background: var(--color-surface-card); color: var(--color-ink-primary); font-family: 'Courier New', monospace; font-size: 12px; }
+.receiptTitle { margin: 0 0 4px; font-size: 14px; text-align: center; }
+.receiptCenter { margin: 2px 0; text-align: center; }
+.receiptRows { margin: 8px 0; }
+.receiptRows > div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--color-border); padding: 3px 0; }
+.receiptRows dt, .receiptRows dd { margin: 0; }
+
+@media (max-width: 900px) {
+  .station { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 480px) {
   .priceInput { max-width: none; flex-basis: 100%; }
   .publishBar > * { width: 100%; }
+  .fields, .preview, .totals { grid-template-columns: minmax(0, 1fr); }
+  .parcel, .grade { min-width: 0; flex: 1 1 100%; }
+}
+
+@media print {
+  @page { size: 80mm auto; margin: 4mm; }
+  /* The local class sits inside :not() so each selector stays pure for CSS modules. */
+  :global(body) *:not(.printArea) { visibility: hidden; }
+  :global(body) .printArea,
+  :global(body) .printArea * { visibility: visible; }
+  :global(body) .printArea { position: absolute; left: 0; top: 0; width: 80mm; }
 }
