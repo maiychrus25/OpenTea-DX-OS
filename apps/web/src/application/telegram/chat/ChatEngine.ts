@@ -177,7 +177,7 @@ export class ChatEngine {
 
     if (command) return this.command(user, command, text, now)
     const route = routeText(text)
-    if (route?.kind === 'tool') return this.runTool(user, route.name, {}, now)
+    if (route?.kind === 'tool') return this.runTool(user, route.name, route.args ?? {}, now)
     if (route?.kind === 'action') return this.startAction(user, route.name, {}, now)
     if (route?.kind === 'app_request' && user.tenant.role === 'manager' && this.deps.appRequests) {
       return only([send(user.chatId, await this.deps.appRequests.submit(user, text))])
