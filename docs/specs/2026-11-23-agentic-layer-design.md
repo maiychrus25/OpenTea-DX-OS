@@ -774,6 +774,8 @@ Theo `AGENTS.md`:
 - Các dòng còn lại của hai nhóm "trong chat" ở §13.7.
 - Đưa chú thích ảnh vào bộ định tuyến, và dọn ảnh của thẻ đã huỷ hoặc hết hạn.
 
+Bốn việc này đã làm ở issue #80 (2026-11-27); xem ghi chú "M5, phần còn lại" ở cuối mục này.
+
 ### M7: chiến dịch ngày (2026-11-26)
 
 **Đã làm:**
@@ -1027,3 +1029,25 @@ Theo `AGENTS.md`:
 - **`DXOS_STT_URL` phải trỏ vào mạng nội bộ.** Nếu trỏ ra ngoài, relay tắt phần thoại và ghi lỗi; chat bằng chữ vẫn chạy.
 
 **Còn chờ chủ dự án:** chạy `make stt-measure` với bản ghi thật của hợp tác xã thí điểm, để chọn model.
+
+### M5, phần còn lại: mọi thao tác trong chat (issue #80, 2026-11-27)
+
+**Đã làm:**
+- **Mọi dòng của hai nhóm "trong chat" ở §13.7 đều làm được trong chat.** Thêm 10 công cụ đọc và 17 hành động có thẻ xác nhận. Kiểm thử 17 nay kiểm cả việc mỗi dòng có một công cụ hoặc hành động phục vụ.
+- **Gửi ảnh bệnh qua chat** (`disease.report`). Web gọi API chẩn đoán bằng token của client riêng `dxos-web-service`, qua route chỉ có ở cổng nội bộ. Kết quả vẫn chờ cán bộ xác nhận.
+- **Nút Nghe** dưới bản tin: web đọc bản tin bằng Piper và rơle gửi tệp âm thanh.
+- **Chú thích ảnh** được đọc như tin nhắn chữ. Ảnh của thẻ bị huỷ, bị thay hoặc hết hạn được xoá.
+- Danh sách câu nhắn, vai trò và mức rủi ro: `docs/rules-and-limits.md`, mục 3.18a và 3.18b.
+
+**Khác với đặc tả:**
+- **Vai trò theo route, không theo bảng của kế hoạch.** Ví dụ: xem và duyệt báo cáo bệnh chỉ dành cho cán bộ; sửa hồ sơ HTX chỉ dành cho quản lý.
+- **Âm thanh gửi dưới dạng tệp `ban-tin.wav`,** không phải tin thoại. Telegram chỉ nhận tin thoại OGG/Opus, MP3 hoặc M4A, và máy chủ chưa có bộ mã hoá.
+- **Nút Nghe không qua hàng đợi gửi tin.** Web trả yêu cầu âm thanh ngay trong câu trả lời cho rơle, vì bảng hàng đợi không có cột âm thanh. Piper không chạy thì bot trả lời một câu và không gửi gì.
+- **Gửi thông báo luôn có hai thẻ,** kể cả khi gửi cho một hộ. Mức rủi ro của một hành động là cố định, nên chọn mức cao hơn.
+- **Mời thành viên tạo tài khoản ngay,** vì route của web làm vậy. Bot hỏi thêm họ tên, tạo mật khẩu tạm và hiện mật khẩu đó một lần cho quản lý. Mật khẩu đi qua máy chủ của Telegram.
+- **Tạo lô trong chat chỉ gồm một thửa,** ngày thu hoạch là hôm nay. Lô nhiều thửa, đóng gói và người mua làm trên web hoặc Mini App.
+- **Sửa nhật ký chỉ sửa ghi chú và ngày,** vì route chỉ lưu hai trường đó.
+- **Ảnh chẩn đoán của chat bị xoá sau khi báo cáo đã lưu,** vì báo cáo giữ bản sao riêng.
+- **Hai dòng đọc không có trong kế hoạch** được thêm khi ghép: chi tiết một lô (`lô hàng <mã lô>`) và các lứa chưa đặt ngày thu hoạch (dòng đầu của `lịch thu hoạch`, chỉ quản lý).
+
+**Còn chờ chủ dự án:** quyết định có giữ việc hiện mật khẩu tạm trong chat khi mời thành viên, hay chuyển việc mời sang Mini App.
