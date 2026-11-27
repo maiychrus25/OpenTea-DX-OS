@@ -141,31 +141,50 @@ Rules:
 
 ### 3.2 Pesticide Withdrawal Calculation
 ```
-safe_harvest_date = entry_date + withdrawal_days
+safe_harvest_date = entry_date + withdrawal_days (server-side, 24 giờ mỗi ngày; không tin giá trị từ client)
 
 Rules:
-- withdrawal_days MUST be set if activity_type = 'pesticide'
-- safe_harvest_date MUST be calculated server-side (never trust client)
-- Lot cannot be exported if ANY parcel has an active withdrawal period:
-  safe_harvest_date > harvest_date → BLOCK lot export with error WITHDRAWAL_NOT_PASSED
+- Mọi lần phun (SPRAYING) đều có withdrawal_days: không bao giờ trống, không bao giờ thấp hơn mức sàn của thuốc.
+- Vi phạm mức sàn → 422 WITHDRAWAL_BELOW_FLOOR.
+- Lô không tạo hoặc xuất QR được khi còn lần phun trong cách ly (xem quy tắc (b)) → WITHDRAWAL_NOT_PASSED.
 - Display in UI: "Cách ly: X ngày — An toàn thu hoạch từ: DD/MM/YYYY"
 ```
 
-Nhật ký `DRAFT` hoặc `REJECTED` không tính vào thời gian cách ly; `PENDING_APPROVAL`, `APPROVED`, `REQUEST_CHANGES` vẫn tính. Quy tắc dùng chung cho duyệt thu hoạch, tạo lô, lịch thu hái, số ngày cách ly trên bảng điều khiển nông dân, danh sách ứng viên chiến dịch và agent `harvest_ready`.
+Nhật ký `DRAFT` hoặc `REJECTED` không tính vào thời gian cách ly; `PENDING_APPROVAL`, `APPROVED`, `REQUEST_CHANGES` vẫn tính (`WITHDRAWAL_EXCLUDED_STATUSES`).
+
+**Hai quy tắc ngày (`apps/web/src/domain/journal/blocking-sprays.ts`).** Dư lượng thuốc nằm trong cây chè, không theo ranh giới lứa hái, nên `cycle_id` không giới hạn quy tắc (a).
+
+- **(a) Nương đang mở (`openParcelBlock`), xét tại ngày D.** Mọi lần phun của nương có `entry_date <= D` và `safe_harvest_date > D` đều chặn, bất kể `cycle_id`. Dùng ở: `POST /api/parcels/[id]/approve-harvest` (D = lúc gọi), cờ `canApprove` của lịch thu hái, và bàn cân (D = cuối ngày Việt Nam của ngày cân; mục 3.22).
+- **(b) Dòng lô đã thu hoạch (`lotLineBlock`), ngày hái H.** Một lần phun tính khi `safe_harvest_date > H` **và** (`cycle_id` bằng lứa của dòng lô **hoặc** `entry_date <= H`). Lần phun của lứa sau, làm sau ngày hái, không khoá lô cũ; thuốc phun trước ngày hái vẫn chặn đủ. Dòng lô cũ không có `cycle_id` chỉ xét theo điều kiện ngày. Dùng ở: tạo lô (`POST /api/lots`, lỗi `WITHDRAWAL_NOT_PASSED`), xuất QR và trang truy xuất lô (`is_harvest_safe`).
+- **Cách so ngày.** Bàn cân so theo ngày lịch giờ Việt Nam (`Asia/Ho_Chi_Minh`): đúng ngày hết cách ly thì được cân. Duyệt thu hoạch và lô so thời điểm (lúc gọi, hoặc `harvest_date` của lô), không đổi sang ngày lịch.
+
+**Danh mục thuốc BVTV (`pesticide_products`).**
+
+- Danh mục khởi đầu 20 thuốc, chép từ Hướng dẫn 528/CCTTBVTV-TTBVTV (Chi cục TT&BVTV Thái Nguyên) và chỉ đạo phòng trừ vụ Xuân 2026; không thêm tên nào ngoài các nguồn đó.
+- **Mức sàn mặc định** `default_phi_days` theo nhóm: thảo mộc (`BOTANICAL`), vi sinh (`MICROBIAL`), sinh học (`BIOLOGICAL`) 7 ngày; hoá học (`CHEMICAL`), kháng sinh (`ANTIBIOTIC`) 14 ngày. Mọi dòng mang cờ `phi_needs_label_check` và hiển thị "Mức sàn mặc định — cần đối chiếu nhãn thực tế" cho đến khi có người đối chiếu nhãn.
+- **Ai đặt số ngày thật theo nhãn.** `platform_admin` sửa danh mục chung (`default_phi_days`, cờ đối chiếu nhãn, `active`) qua `PUT /api/platform/pesticides/[id]`. Cán bộ kỹ thuật (`officer`) và Trưởng HTX (`manager`) đặt hoặc xoá nhãn riêng của HTX (`htx_pesticide_labels`, 1 đến 365 ngày) qua `PUT` và `DELETE /api/pesticides/[id]/label`. Nhãn của HTX thay mức sàn mặc định cho HTX đó; nhãn được thấp hơn mức mặc định nhưng phải có `label_note` (số lô hoặc nội dung nhãn), nếu không trả 422 `DOMAIN_ERROR`.
+- **Nông dân không hạ được dưới mức sàn.** Sàn hiệu lực là nhãn của HTX nếu có, nếu không là `default_phi_days`. Thiếu số ngày thì hệ thống điền mức sàn; số ngày thấp hơn thì trả 422 `WITHDRAWAL_BELOW_FLOOR`.
+- **"Thuốc khác".** Lần phun không có `pesticide_product_id` (kể cả khi chỉ có tên thuốc mà không khớp tên thương mại trong danh mục) có sàn 14 ngày (`CUSTOM_PRODUCT_FLOOR_DAYS`). Kênh chỉ gửi tên (Telegram) được khớp danh mục theo tên thương mại, không phân biệt hoa thường. Agent soát nhật ký A1 cảnh báo lần phun dùng thuốc ngoài danh mục.
+- Nhật ký đã lưu không bị kiểm lại: `PUT /api/journal/[id]` chỉ chạy kiểm mức sàn khi thân request có `activities`. `withdrawal_days` và `safe_harvest_date` được chốt lúc ghi; đổi nhãn sau đó không tính lại nhật ký cũ.
 
 ### 3.3 Journal Approval Flow
 ```
-States: draft → pending_approval → approved | rejected
+States: draft → pending_approval → approved | rejected | request_changes
 
 Rules:
-- Only officer/farmer can CREATE (status = draft)
-- Only officer can SUBMIT for approval (draft → pending_approval)
-- Officer and manager can APPROVE or REJECT (pending_approval → approved/rejected)
+- Only officer/farmer can CREATE (`POST /api/journal`). Farmer entries start as PENDING_APPROVAL; officer entries start as APPROVED. DRAFT exists only for an officer prescription (below).
+- Officer and manager can APPROVE or REJECT / REQUEST_CHANGES (pending_approval → approved/rejected/request_changes)
 - Rejecting or requesting changes keeps the entry out of APPROVED (`REJECTED` or `REQUEST_CHANGES`) and stores the reason in `review_note`
 - APPROVED entry cannot be edited or deleted
-- REJECTED entry can be edited and re-submitted
+- REJECTED and REQUEST_CHANGES entries can be edited and re-submitted by the farmer
 - Batch approve: max 50 entries per request
 ```
+
+- **"Sửa lại" (nông dân).** Nhật ký `REQUEST_CHANGES` hoặc `REJECTED` có nút "Sửa lại" mở `/farmer/journal/[id]/edit`. Lưu bằng `PUT /api/journal/[id]` với `submit: true`: trạng thái về `PENDING_APPROVAL`, `review_note` và `reviewed_by_id` bị xoá, cán bộ nhận thông báo, hạn cách ly tính lại theo ngày ghi. Chỉ nông dân của hộ có nương gửi lại được (cán bộ gọi `submit` nhận 403).
+- **Hàng đợi offline (nông dân).** Form nhật ký của nông dân khi mất mạng lưu mục vào IndexedDB (`journal_offline_queue`) kèm `client_id` (UUID) và gửi lại khi có mạng. Mục bị máy chủ từ chối bằng 4xx (trừ 401, 408, 429) chuyển sang danh sách "Chưa gửi được" để sửa hoặc bỏ; 5xx và 401, 408, 429 ở lại hàng đợi. Chống trùng bằng khoá duy nhất `(submitted_by_id, client_id)`: gửi lại cùng `client_id` trả 200 với nhật ký đã có, không tạo bản thứ hai.
+- **Kê đơn của cán bộ.** Ở `/officer/diseases`, cán bộ xác nhận ca bệnh (`CONFIRMED`) có thể chọn một thuốc trong danh mục. Hệ thống tạo ngay một nhật ký `DRAFT` loại `SPRAYING` cho nương của ca bệnh, với số ngày cách ly bằng mức sàn hiệu lực của HTX, ghi chú `Theo kê đơn ca bệnh <id>`, và thông báo cho nông dân. Bản nháp chưa có lứa và không tính vào cách ly. Nông dân bấm "Đã phun" (`submit: true`): người gửi và `performed_by` đổi thành nông dân, `safe_harvest_date` tính lại từ ngày ghi, lứa được gán lúc gửi.
+- **"Nghiệm thu đạt cách ly".** Lịch thu hái (không hiện cho nông dân) có nút này cho lứa đang mở của nương `TENDING`; nút chỉ bật khi `canApprove` (không còn lần phun chặn theo quy tắc (a) mục 3.2). Bấm gọi `POST /api/parcels/[id]/approve-harvest` (`officer` hoặc `manager`), chuyển nương sang `HARVEST_APPROVED`. Còn cách ly thì trả 422 `DOMAIN_ERROR` kèm ngày an toàn.
+- **Hoạt động mới.** `PRUNING` (Đốn chè) đưa nương về `TENDING` như chăm sóc khác. Hoạt động `HARVEST` có thể ghi `fresh_leaf_kg` (kg búp tươi, lớn hơn 0 và tối đa 100000); các loại khác gửi trường này bị 400.
 
 ### 3.4 QR Export Rules
 ```
@@ -181,16 +200,24 @@ Rules:
 
 ### 3.5 Parcel Status Transitions
 ```
-Hiện tại (apps/web/prisma/schema.prisma v1.17.0):
+apps/web/prisma/schema.prisma:
   SOWING → TENDING → HARVEST_APPROVED → HARVESTED (hoặc FALLOW)
-  Officer mở lứa mới từ HARVESTED → TENDING (tạo ParcelCropCycle tiếp theo).
+  Officer mở lứa mới từ HARVESTED → TENDING bằng POST /api/parcels/[id]/start-round (tạo ParcelCropCycle tiếp theo).
 
 Đích chuẩn Ngành Chè (Lộ trình GĐ1 — ADR 0005):
-  PRUNED / TENDING → HARVEST_APPROVED (khi đạt cách ly PHI) → HARVESTED → tự động mở ParcelCropCycle lứa kế tiếp
+  TENDING → HARVEST_APPROVED (khi đạt cách ly) → HARVESTED → tự động mở ParcelCropCycle lứa kế tiếp
   (Chè là cây lưu niên hái 7–9 lứa/năm; nhật ký và lô gắn trực tiếp cycle_id để không khóa chéo giữa các lứa).
 
 Rule: Cannot delete parcel with active crop cycle
 ```
+
+**Lứa hái (`parcel_crop_cycles`, GĐ1 S1).** Mỗi lứa là một dòng `parcel_crop_cycles` (`season` dạng `Lứa n/năm`, `sowed_at`, `harvested_at`).
+
+- **Gắn lứa.** `journal_entries.cycle_id` và `lot_parcels.cycle_id` trỏ tới lứa. Nhật ký `HARVEST` gắn vào lứa mở mới nhất (nếu không còn lứa mở thì lứa mới nhất) và lứa đó đóng (`harvested_at`) khi nhật ký có hiệu lực (cán bộ ghi, hoặc được duyệt); `SOWING` gắn vào lứa mở, nếu chưa có thì mở lứa kế tiếp; các hoạt động khác gắn theo `entry_date`: lứa bắt đầu muộn nhất không sau ngày đó (bắt đầu = `sowed_at`, nếu trống thì `created_at`). Nếu không lứa nào bắt đầu trước ngày ghi thì lấy lứa sớm nhất.
+- **Tự mở lứa kế tiếp.** Khi lứa gắn theo ngày đã đóng và `entry_date` sau `harvested_at`, hệ thống mở lứa mới (`sowed_at` là lúc mở). Chỉ tạo lứa: trạng thái nương chỉ đổi khi nhật ký được duyệt, `HARVESTED` không tự chuyển sang `TENDING`. Một lần phun ghi bù trước ngày hái vẫn thuộc lứa đã hái. Nương không có lứa nào (dữ liệu cũ) có `cycle_id` rỗng và vẫn được kiểm cách ly theo cả nương.
+- **Nháp không có lứa.** Nhật ký `DRAFT` (kể cả nháp kê đơn) không mở lứa và có `cycle_id` rỗng; lứa được gán khi gửi (`submit`) hoặc khi ngày ghi đổi.
+- **Hoạt động `PRUNING`** (Đốn chè) là chăm sóc: nương về `TENDING` khi nhật ký được duyệt, và nhật ký này gắn lứa theo ngày như bón phân hay phun thuốc.
+- **Cách ly không theo lứa.** Lứa chỉ là khung thời gian; số ngày cách ly xét theo hai quy tắc ngày ở mục 3.2, không chỉ theo `cycle_id`.
 
 ### 3.6 HTX Profile Rules (Multi-Tenant)
 ```
@@ -532,17 +559,49 @@ Mọi dòng của hai nhóm "trong chat" ở bảng phủ (`apps/web/src/applica
 - **App xây xong** chỉ vào kho cho HTX yêu cầu (`owner_htx`), chạy trên mạng riêng `dxos-gen-<id>` chỉ thấy `apisix` và `postgres`, và không được khai `agent.actions` (chỉ số liệu chỉ đọc). Cài và gỡ là `miniapp.install` và `miniapp.remove`, mức `high`, qua đường `platform.app_requests` và `./dxos worker`.
 - **Ảnh chụp:** bốn ảnh (desktop và điện thoại, sáng và tối) gửi một lần qua Telegram dưới dạng album; chú thích tối đa 1024 ký tự, mỗi ảnh tối đa 5 MB; album không có nút, nút duyệt nằm ở tin đề xuất `miniapp.install` gửi sau.
 
+### 3.22 Bàn cân và giá lá tươi hằng ngày (GĐ1 S3)
+
+Bàn cân ghi phiếu cân búp tươi (`fresh_leaf_tickets`) theo phẩm cấp và giá của ngày. Phiếu không sửa được: sai thì huỷ và cân lại.
+
+- **Phẩm cấp (`leaf_grades`).** Mỗi HTX tự đặt danh sách phẩm cấp (tên tối đa 60 ký tự, không trùng trong HTX, `sort_order` 0 đến 1000). Chỉ `manager` thêm, đổi tên hoặc ẩn (`active = false`). Phẩm cấp ẩn không cân được. Mọi vai của HTX đọc được danh sách.
+- **Giá hằng ngày (`daily_leaf_prices`).** Mỗi phẩm cấp có một giá cho mỗi ngày lịch giờ Việt Nam, số nguyên đồng/kg từ 1 đến 10.000.000. Chỉ `manager` công bố, bằng `PUT /api/leaf-prices/today`; công bố lại trong ngày thì ghi đè các dòng. Phẩm cấp phải đang dùng và thuộc HTX, nếu không cả yêu cầu bị từ chối và không ghi gì. Giá hôm qua chỉ để so sánh. Phiếu chép giá lúc ghi, nên đổi giá sau đó không đổi phiếu cũ.
+- **`NO_PRICE_TODAY`.** Phẩm cấp chưa có giá của ngày cân thì trả 409 `NO_PRICE_TODAY`, không tạo phiếu.
+- **Số phiếu.** `{HTX}-PC-YYYYMMDD-NNN`, ví dụ `TC-PC-20261128-001`. `YYYYMMDD` là ngày giờ Việt Nam của `weighed_at`; `NNN` đánh từ 001 theo từng HTX và từng ngày, lấy số kế tiếp dưới khoá tư vấn (advisory lock) của HTX và ngày; số phiếu duy nhất toàn bảng.
+- **Đầu vào.** `household_id`, `parcel_id`, `grade_id`, `gross_kg`, `deduction_pct`, `client_id` (tuỳ chọn, UUID). `gross_kg` lớn hơn 0 và tối đa 5000; `deduction_pct` từ 0 đến 30; cả hai tối đa một chữ số thập phân. `deduction_pct` là một ô trừ chung (mưa, tạp chất, nước); không có ô riêng cho từng lý do. Thân request không nhận khoá lạ (400 `VALIDATION_ERROR`): không có trường ngày, giờ hay cờ bỏ qua cách ly. `weighed_at` là giờ máy chủ.
+- **Cách tính (`computeTicket`).** Tính bằng số nguyên theo phần mười, không dùng số thực. `net_kg = gross_kg × (1 − deduction_pct / 100)`, làm tròn đến 0,1 kg, nửa làm tròn lên. `amount_vnd = net_kg × price_vnd_per_kg`, làm tròn đến đồng, nửa làm tròn lên. `amount_vnd` là số nguyên 64 bit (BigInt), API trả dưới dạng chuỗi thập phân. Cơ sở dữ liệu còn có ràng buộc `CHECK` cho giá, % trừ và kg cân.
+- **Khoá cách ly tuyệt đối.** Trước khi ghi, giao dịch khoá dòng nương (`SELECT ... FOR UPDATE`) rồi áp quy tắc (a) mục 3.2 với D là ngày cân: lần phun của nương có `entry_date` không sau cuối ngày D và `safe_harvest_date` sau cuối ngày D thì chặn, bất kể lứa, vai người phun hay trạng thái nương; `DRAFT` và `REJECTED` không tính; lần phun ghi cho ngày sau D không chặn hôm nay. Bị chặn thì trả 409 `PARCEL_IN_WITHDRAWAL` kèm `safe_from` (`YYYY-MM-DD`), không tạo phiếu. Không có trường nào bỏ qua được khoá này, kể cả với `manager`. Việc tạo hoặc sửa nhật ký phun cũng khoá cùng dòng nương, nên một lần phun và một phiếu cân của cùng nương không đi lọt nhau.
+- **Nương hợp lệ.** Nương phải thuộc hộ và HTX của người cân (nếu không 404 `NOT_FOUND`). Nương `DRAFT` chưa cân được (422 `DOMAIN_ERROR`).
+- **Lứa của phiếu (`cycle_id`).** Lứa đang mở của nương; nếu không có thì lứa vừa đóng gần nhất; nương chưa từng có lứa thì để rỗng. Cân không tự tạo lứa.
+- **`client_id` và gửi lại.** Khoá duy nhất `(created_by_id, client_id)`. Gửi lại cùng `client_id` trả 200 với phiếu đầu tiên và không tạo thêm; phiếu mới trả 201. Hai lần gửi đua nhau cũng chỉ ra một phiếu.
+- **Huỷ phiếu.** `accountant` hoặc `manager` huỷ bằng `POST /api/leaf-tickets/[id]/void` kèm `reason` (3 đến 200 ký tự). Chỉ huỷ được phiếu `VALID` chưa vào kỳ quyết toán (`settlement_id` rỗng). Phiếu đã vào kỳ quyết toán trả 409 `TICKET_SETTLED`; phiếu đã huỷ trả 409 `TICKET_VOIDED`. Phiếu huỷ giữ nguyên dòng (trạng thái `VOIDED`, người huỷ, lý do, giờ huỷ) và không tính vào tổng kg, tổng tiền và đối chiếu thu hoạch.
+- **Vai.** `accountant` và `manager` tạo phiếu; `officer` chỉ xem. Nông dân chỉ xem phiếu của chính hộ mình (`GET /api/leaf-tickets/mine`); phiếu của hộ khác trả 404.
+- **Đèn cách ly.** `GET /api/parcels/[id]/withdrawal-status` cho màn hình cân biết nương có bị chặn không; kết quả này chỉ để hiện đèn, phiếu vẫn được kiểm lại trong giao dịch tạo.
+- **Xuất CSV.** Tối đa 366 ngày và 20.000 dòng mỗi lần; cột gồm số phiếu, giờ cân (giờ Việt Nam), hộ, nương, phẩm cấp, kg cân, % trừ, kg tịnh, giá, thành tiền, trạng thái, lý do huỷ.
+- **Mini-app `leaf-purchase`.** Việc thu mua búp tươi nay thuộc lõi: app này ẩn khỏi Kho ứng dụng và thanh điều hướng khi `DXOS_LABS` tắt.
+
 ## 4. Security Rules
 
 ### 4.1 Authentication
 ```
-- All routes under /(manager)/, /(officer)/, /(farmer)/ require valid session
-- Session validation: server-side only via NextAuth.js getServerSession()
-- Role check: read from Keycloak token claim 'realm_roles'
+- All routes under /manager/, /officer/, /farmer/, /accountant/, /platform/ require valid session
+- Session validation: server-side only via NextAuth.js auth()
+- Role check: read from Keycloak token claim 'realm_access.roles'
 - Session timeout: 8 hours (Keycloak configured)
 - Passkey (WebAuthn) is primary method; PIN fallback allowed
 - NO password storage in application — Keycloak owns all credentials
 ```
+
+**Vai và nhiều vai (GĐ1 S2).**
+
+- **Năm vai người dùng:** `manager`, `officer`, `accountant`, `farmer` (thuộc một HTX) và `platform_admin` (không thuộc HTX nào, không có `htx_code`). Không bao giờ đặt vai tên `admin`: Hasura coi đó là siêu quản trị.
+- **Một người có thể giữ nhiều vai.** Vai thật nằm ở realm roles của Keycloak; đó là nguồn sự thật. Phiên (`session.user.roles`) giữ mọi vai của token và một vai đang dùng (`session.user.role`). Vai mặc định theo thứ tự ưu tiên `manager`, `officer`, `accountant`, `farmer`, `platform_admin`.
+- **Vai đang dùng chỉ là ngữ cảnh giao diện, không phải ranh giới bảo mật.** Quyền thật đến từ token Keycloak: middleware, `requireTenant()` và từng route đều xét lại vai đang dùng, và cookie phiên không thêm được vai mà token không có. Đổi vai bằng `POST /api/session/role`: route kiểm vai đó có nằm trong vai người này giữ (403 nếu không), rồi callback `jwt` kiểm lần nữa trước khi đổi `role`. Vai không giữ không bao giờ đặt được, kể cả khi client tự gọi cập nhật phiên. Đổi vai ghi một dòng log `role.switch` (chưa có bản ghi kiểm toán trong web).
+- **Truy cập khu vực.** Middleware chỉ cho `/manager`, `/officer`, `/farmer`, `/accountant` và `/platform` khi vai đang dùng khớp. Người giữ vai đó nhưng chưa chọn thì được dẫn tới `/unauthorized?switch=<vai>` có nút đổi vai; vai không giữ thì `/unauthorized`. `platform_admin` không qua được `requireTenant()` (không có HTX); các route của vai này dùng `requirePlatformAdmin()`.
+- **`htx_memberships`.** Bảng `(keycloak_user_id, htx_profile_id, roles[])` ghi lại các vai của một người trong một HTX. Keycloak vẫn là nguồn sự thật: `requireTenant()` đồng bộ dòng này từ token ở mỗi lần gọi (bộ vai đã ghi trong tiến trình thì bỏ qua; thêm và bớt, bỏ qua `platform_admin`, không bao giờ chặn request khi ghi lỗi); mời thành viên, sửa vai và tạo HTX cũng đồng bộ.
+- **TOTP là tuỳ chọn** cho mọi vai, kể cả `manager` và `officer`: tài khoản mới không bị ép `CONFIGURE_TOTP`. Người dùng đang chạy thật còn treo yêu cầu này không tự bị sửa (xem [dev-setup.md](./dev-setup.md)).
+- **Mời thành viên không cần email.** `POST /api/members/invite` chỉ cần tên, số điện thoại, mã PIN và vai; Keycloak không bắt buộc email. Đăng nhập bằng số điện thoại.
+- **Cấu hình AI và hạn mức USD hằng tháng của agent** do `platform_admin` đặt cho từng HTX (`GET` và `PUT /api/platform/htx/[code]/agent-settings`). `manager` và `officer` chỉ đọc `GET /api/agent/settings` (`can_edit` luôn `false`); `PUT /api/agent/settings` trả 403 `FORBIDDEN`.
+- **Tài khoản `platform_admin`** tạo bằng `kcadm` (xem [dev-setup.md](./dev-setup.md)). Cổng `/api/dev-login?role=` chỉ chạy ở môi trường phát triển và nhận cả năm vai.
 
 ### 4.2 Authorization Matrix
 
@@ -564,6 +623,32 @@ Mọi dòng của hai nhóm "trong chat" ở bảng phủ (`apps/web/src/applica
 | View disease results | ✅ | ✅ | ✅ (own) |
 | View notifications | own only | own only | own only |
 | View QR public page | ✅ (no auth) | ✅ (no auth) | ✅ (no auth) |
+
+Bảng trên chỉ có ba cột. Quyền của `accountant` và `platform_admin`, và các hành động GĐ1, nằm ở bảng bổ sung dưới đây (cột "Vai được phép" là các vai đang dùng; mọi route đều chỉ tính trong HTX của phiên, trừ `/api/platform/*`):
+
+| Hành động | Vai được phép |
+|-----------|---------------|
+| Xem danh mục thuốc BVTV (`GET /api/pesticides`) | manager, officer, farmer |
+| Đặt hoặc xoá nhãn thuốc của HTX (`PUT`, `DELETE /api/pesticides/[id]/label`) | manager, officer |
+| Sửa danh mục thuốc chung (`PUT /api/platform/pesticides/[id]`) | platform_admin |
+| Duyệt thu hoạch (`POST /api/parcels/[id]/approve-harvest`) | manager, officer |
+| Gửi lại nhật ký bị trả hoặc xác nhận "Đã phun" (`PUT /api/journal/[id]` với `submit`) | farmer (hộ của mình) |
+| Kê đơn khi xác nhận ca bệnh (`PUT /api/officer/diseases/[id]/review`) | officer |
+| Sửa vai thành viên (`PUT /api/members/[id]/roles`; chỉ farmer, officer, accountant) | manager |
+| Tạo HTX và Trưởng HTX đầu tiên (`POST /api/platform/htx`) | platform_admin |
+| Đọc và lưu cấu hình AI của một HTX (`/api/platform/htx/[code]/agent-settings`) | platform_admin |
+| Đọc cấu hình AI của HTX (`GET /api/agent/settings`, chỉ đọc) | manager, officer |
+| Đổi vai đang dùng (`POST /api/session/role`) | mọi người đã đăng nhập, chỉ sang vai mình giữ |
+| Đọc phẩm cấp và giá hôm nay (`GET /api/leaf-grades`, `GET /api/leaf-prices/today`) | mọi vai của HTX |
+| Thêm hoặc sửa phẩm cấp, công bố giá (`POST /api/leaf-grades`, `PUT /api/leaf-grades/[id]`, `PUT /api/leaf-prices/today`) | manager |
+| Tạo phiếu cân (`POST /api/leaf-tickets`) | accountant, manager |
+| Huỷ phiếu cân (`POST /api/leaf-tickets/[id]/void`) | accountant, manager |
+| Danh sách phiếu, tìm hộ (`GET /api/leaf-tickets`, `GET /api/households`) | manager, accountant, officer |
+| Xuất CSV phiếu cân (`GET /api/leaf-tickets/export.csv`) | manager, accountant |
+| Xem một phiếu (`GET /api/leaf-tickets/[id]`) | manager, accountant, officer; farmer chỉ phiếu của hộ mình |
+| Phiếu của tôi (`GET /api/leaf-tickets/mine`) | farmer |
+| Đèn cách ly của nương (`GET /api/parcels/[id]/withdrawal-status`) | accountant, manager, officer |
+| Đối chiếu cân và nhật ký của lứa (`GET /api/cycles/[id]/weighing-summary`) | manager, officer |
 
 > **Luật `never` (không công tắc nào mở lại được):** `harvest.approve`, `journal.approve` và mọi hành động có `money` luôn ở mức `never`: chỉ người ký. Đề xuất vẫn có thể được soạn, nhưng không bao giờ tự chạy, kể cả khi bật tự vận hành. Test khoá luật này.
 
