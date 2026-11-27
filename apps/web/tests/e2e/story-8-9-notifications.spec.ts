@@ -45,16 +45,20 @@ test.describe('Story 8.9: Notifications Full Page & Farmer Combined', () => {
       await mockSessionCookie(context, 'farmer')
     })
 
-    test('should display combined page with 2 tabs and navigate via sidebar', async ({ page }) => {
+    test('should reach the bulletin and the notifications from their own sidebar items', async ({ page }) => {
       await page.goto('/farmer/dashboard')
-      
-      // Click sidebar item
-      const combinedLink = page.getByRole('link', { name: 'Bản tin & thông báo' })
-      await combinedLink.click()
-      
-      // Verify URL
-      await expect(page).toHaveURL(/\/farmer\/bulletin-notifications/, { timeout: 15000 })
-      
+
+      await page.getByRole('link', { name: 'Bản tin', exact: true }).click()
+      await expect(page).toHaveURL(/\/farmer\/bulletin$/, { timeout: 15000 })
+      await expect(page.getByRole('heading', { name: /^Bản tin/, level: 1 })).toBeVisible()
+
+      await page.getByRole('link', { name: 'Thông báo', exact: true }).click()
+      await expect(page).toHaveURL(/\/farmer\/notifications/, { timeout: 15000 })
+    })
+
+    test('should display combined page with 2 tabs', async ({ page }) => {
+      await page.goto('/farmer/bulletin-notifications')
+
       // Verify page header
       await expect(page.getByRole('heading', { name: 'Bản tin & Thông báo' })).toBeVisible()
       
