@@ -15,6 +15,6 @@ Tài liệu cho cán bộ, nông hộ và làm nguồn tra cứu cho AI. Sắp t
 
 ## Quy tắc khi dùng cho AI
 
-1. Không tự nêu tên thuốc, hoạt chất, liều lượng hay thời gian cách ly. Việc kê thuốc do cán bộ kỹ thuật, theo danh mục đang hiệu lực.
+1. Không tự nêu tên thuốc, hoạt chất, liều lượng hay thời gian cách ly; không đọc `thuoc-tham-khao-cho-can-bo.md`. Việc kê thuốc do cán bộ kỹ thuật, theo danh mục đang hiệu lực.
 2. Luôn nói rõ tên tài liệu và năm. Tài liệu cũ hoặc chưa kiểm hiệu lực thì phải nói ra.
 3. Không có trong kho thì trả lời là chưa có, không suy đoán.

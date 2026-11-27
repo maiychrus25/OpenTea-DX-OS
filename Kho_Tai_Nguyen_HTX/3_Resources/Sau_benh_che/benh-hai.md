@@ -11,3 +11,9 @@ Nguồn: Trung tâm Khuyến nông Quốc gia, *Tài liệu hướng dẫn sản
 | Khô cành | *Physalospora neglecta* | | cắt cành bệnh, giảm đạm, tăng kali |
 | Chết loang (thối rễ) | tài liệu 2023 ghi chưa rõ nguyên nhân | tháng 4-11; cây chết dần sau 10-15 tháng | xem `thoi-re.md` |
 | Dán cao | *Septobasidium* | tháng 9 đến tháng 4 | xem `dan-cao.md` |
+
+## Khô cành, chết ngọn: biện pháp không dùng thuốc
+Nguồn: Chi cục Trồng trọt và BVTV Thái Nguyên, hướng dẫn 528 (21/4/2026); hướng dẫn này ghi tác nhân là nấm *Colletotrichum*, *Phomopsis* (khác tài liệu 2023).
+- Cắt cành bệnh tới phần gỗ khoẻ, cách vết bệnh 3-5 cm, đưa ra khỏi vườn tiêu huỷ.
+- Khơi rãnh thoát nước; tưới 6-9 giờ hoặc 15-17 giờ, không tưới qua đêm.
+- Đốn bằng dao, máy sắc, vết vát; tránh đốn khi mưa phùn, ẩm kéo dài.
