@@ -30,6 +30,14 @@ erDiagram
     LeafGrade ||--o{ DailyLeafPrice : "priced"
     Parcel ||--o{ FreshLeafTicket : "weighed"
     LeafGrade ||--o{ FreshLeafTicket : "graded"
+    HTXProfile ||--o{ InputItem : "catalogue"
+    InputItem ||--o{ InputAdvance : "advanced"
+    Household ||--o{ InputAdvance : "owes"
+    HTXProfile ||--o{ SettlementPeriod : "settles"
+    SettlementPeriod ||--o{ MemberSettlement : "lines"
+    MemberSettlement ||--o{ FreshLeafTicket : "covers"
+    MemberSettlement ||--o{ InputAdvance : "covers"
+    Household ||--o{ MemberLedgerEntry : "ledger"
     Lot ||--o{ LotParcel : "includes"
     LotParcel }o--|| Parcel : "from"
     Lot ||--o{ DiseaseReport : "may_have"
@@ -98,6 +106,9 @@ Nông hộ thành viên HTX.
 | phone | VARCHAR(20) | UNIQUE, NOT NULL | Dùng làm household_code |
 | address | TEXT | nullable | |
 | keycloak_user_id | TEXT | nullable | Linked after farmer account created |
+| bank_bin | TEXT | nullable, `CHECK` `^[0-9]{6}$` | BIN ngân hàng nhận tiền (`20261128150000_member_ledger`, GĐ1 S4) |
+| bank_account | TEXT | nullable, `CHECK` `^[0-9]{6,19}$` | Số tài khoản; chỉ `manager` và `accountant` đọc đủ, không vào Hasura, Telegram hay agent |
+| bank_account_name | TEXT | nullable | Tên chủ tài khoản, tối đa 60 ký tự (API) |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() |
 
@@ -479,10 +490,111 @@ Phiếu cân búp tươi; ghi một lần, không sửa (sai thì huỷ và cân
 | void_reason, voided_by_id, voided_at | TEXT, TEXT, TIMESTAMP(3) | nullable | Điền khi huỷ |
 | created_by_id | TEXT | NOT NULL | Keycloak sub người cân |
 | client_id | TEXT | nullable | Chống trùng khi gửi lại |
-| settlement_id | TEXT | nullable | Kỳ quyết toán; dự án con 4 thêm khoá ngoại. Phiếu có giá trị này không huỷ được |
+| settlement_id | TEXT | nullable FK → member_settlements (RESTRICT) | Dòng quyết toán chứa phiếu; khoá ngoại thêm ở `20261128150000_member_ledger`. Phiếu có giá trị này không huỷ được |
 | created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
 
 **Index:** khoá duy nhất `(created_by_id, client_id)`; `(htx_profile_id, weighed_at)`; `household_id`; `parcel_id`; `cycle_id`.
+
+### Vật tư ứng, sổ cái và quyết toán (GĐ1 S4)
+
+Thêm bởi migration `20261128150000_member_ledger`, cùng ba cột ngân hàng của `households` ở trên và khoá ngoại `fresh_leaf_tickets.settlement_id`. Enum mới: `InputKind` (`FERTILIZER`, `PESTICIDE`, `OTHER`), `SettlementStatus` (`DRAFT`, `CLOSED`), `LedgerEntryType` (`LEAF_CREDIT`, `INPUT_DEBIT`, `PAYOUT`, `ADJUSTMENT`), `PaymentMethod` (`TRANSFER`, `CASH`); `input_advances.status` dùng lại `LeafTicketStatus`. Số tiền là BIGINT đồng (trừ `unit_price_vnd` là INT).
+
+**Trigger.** Cả năm bảng có trigger kiểm toán `dxos_audit_row` (`audit.capture_row()`), cài bởi `03-audit-triggers.sql` cho cơ sở dữ liệu mới và bởi migration cho cơ sở dữ liệu đang chạy (bỏ qua khi chưa có schema `audit`). Riêng `member_ledger_entries` còn có trigger **chỉ thêm**: `member_ledger_entries_append_only` (`BEFORE UPDATE OR DELETE`, theo dòng) và `member_ledger_entries_no_truncate` (`BEFORE TRUNCATE`) cùng gọi `public.member_ledger_entries_refuse_change()`, hàm này ném lỗi `restrict_violation`; sửa sai bằng dòng `ADJUSTMENT` mới.
+
+#### `input_items`
+Danh mục vật tư của HTX. Ghi bởi `manager`, `accountant`. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| name | TEXT | NOT NULL | |
+| unit | TEXT | NOT NULL | |
+| unit_price_vnd | INT | NOT NULL, `CHECK` 0..100000000 | |
+| kind | ENUM `InputKind` | NOT NULL | |
+| pesticide_product_id | TEXT | nullable FK → pesticide_products (SET NULL) | Chỉ với loại `PESTICIDE` (API kiểm) |
+| active | BOOLEAN | NOT NULL, DEFAULT true | |
+| created_at, updated_at | TIMESTAMP(3) | NOT NULL | |
+
+**Index:** khoá duy nhất `(htx_profile_id, name)`.
+
+#### `input_advances`
+Phiếu ứng vật tư; ghi một lần, sai thì huỷ và ghi lại. Ghi bởi `accountant`, `manager`. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| advance_no | TEXT | UNIQUE, NOT NULL | `{HTX_CODE}-VT-{YYYYMMDD}-{NNN}` |
+| household_id | TEXT | FK → households (RESTRICT), NOT NULL | |
+| item_id | TEXT | FK → input_items (RESTRICT), NOT NULL | |
+| quantity | DECIMAL(9,2) | NOT NULL, `CHECK` > 0 | |
+| unit_price_vnd | INT | NOT NULL, `CHECK` >= 0 | Chép từ vật tư lúc ghi |
+| amount_vnd | BIGINT | NOT NULL, `CHECK` >= 0 | Số lượng × đơn giá, làm tròn đồng, nửa làm tròn lên |
+| advanced_on | DATE | NOT NULL | Ngày giờ Việt Nam |
+| status | ENUM `LeafTicketStatus` | NOT NULL, DEFAULT 'VALID' | `VALID`, `VOIDED` |
+| void_reason, voided_by_id, voided_at | TEXT, TEXT, TIMESTAMP(3) | nullable | Điền khi huỷ |
+| settlement_id | TEXT | nullable FK → member_settlements (RESTRICT) | Có giá trị thì không huỷ được |
+| client_id | TEXT | nullable | Chống trùng khi gửi lại |
+| created_by_id | TEXT | NOT NULL | Keycloak sub |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+
+**Index:** khoá duy nhất `(created_by_id, client_id)`; `(htx_profile_id, advanced_on)`; `household_id`.
+
+#### `settlement_periods`
+Kỳ quyết toán của HTX. Ghi bởi `accountant`, `manager` (tạo) và `manager` (chốt). Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| code | TEXT | UNIQUE, NOT NULL | `{HTX_CODE}-QT-{YYYYMMDD}` theo `date_to` |
+| date_from, date_to | DATE | NOT NULL, `CHECK` `date_from <= date_to` | |
+| status | ENUM `SettlementStatus` | NOT NULL, DEFAULT 'DRAFT' | |
+| created_by_id | TEXT | NOT NULL | Keycloak sub |
+| created_by_name | TEXT | nullable | Tên hiển thị lúc tạo |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+| closed_by_id, closed_by_name, closed_at | TEXT, TEXT, TIMESTAMP(3) | nullable | Người và giờ chốt |
+
+**Index:** khoá duy nhất `code`; `(htx_profile_id, date_from)`. Tính liền nhau của các kỳ và một kỳ `DRAFT` mỗi HTX do ứng dụng giữ dưới khoá tư vấn, không có ràng buộc cơ sở dữ liệu.
+
+#### `member_settlements`
+Một dòng cho mỗi hộ trong mỗi kỳ đã chốt. Ghi lúc chốt (`manager`); `paid_*` ghi lúc chi trả. Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| period_id | TEXT | FK → settlement_periods (RESTRICT), NOT NULL | |
+| household_id | TEXT | FK → households (RESTRICT), NOT NULL | |
+| leaf_net_kg | DECIMAL(10,1) | NOT NULL | Tổng kg tịnh |
+| leaf_amount_vnd | BIGINT | NOT NULL | `L`, tiền búp |
+| advances_vnd | BIGINT | NOT NULL | `A`, tiền vật tư |
+| debt_in_vnd | BIGINT | NOT NULL, `CHECK` >= 0 | Nợ mang vào, chỉ để hiện |
+| payable_vnd | BIGINT | NOT NULL, `CHECK` >= 0 | `max(0, L − A + outstanding)` |
+| debt_out_vnd | BIGINT | NOT NULL, `CHECK` >= 0 | `max(0, −(L − A + outstanding))` |
+| paid_at, paid_by_id | TIMESTAMP(3), TEXT | nullable | Điền khi ghi trả (một lần) |
+| payment_method | ENUM `PaymentMethod` | nullable | |
+| payment_ref | TEXT | nullable | |
+
+**Index:** khoá duy nhất `(period_id, household_id)`; `household_id`.
+
+#### `member_ledger_entries`
+Sổ cái xã viên, **chỉ thêm** (xem trigger ở trên). Dương là HTX nợ hộ, âm là hộ nợ HTX. Ghi lúc chốt kỳ (`LEAF_CREDIT`, `INPUT_DEBIT`), chi trả (`PAYOUT`) và điều chỉnh (`ADJUSTMENT`). Trigger kiểm toán: có.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | TEXT | PK | |
+| htx_profile_id | TEXT | FK → htx_profiles (RESTRICT), NOT NULL | |
+| household_id | TEXT | FK → households (RESTRICT), NOT NULL | |
+| entry_type | ENUM `LedgerEntryType` | NOT NULL | |
+| amount_vnd | BIGINT | NOT NULL | Có dấu |
+| ticket_id, advance_id | TEXT | nullable | Cột có sẵn, mã hiện chưa điền |
+| settlement_id | TEXT | nullable FK → member_settlements (RESTRICT) | Dòng quyết toán của bút toán; rỗng với `ADJUSTMENT` |
+| note | TEXT | nullable | Mã tham chiếu chi trả hoặc lý do điều chỉnh |
+| created_by_id | TEXT | NOT NULL | Keycloak sub |
+| created_at | TIMESTAMP(3) | NOT NULL, DEFAULT now() | |
+
+**Index:** `(household_id, created_at)`.
 
 ### Agentic Layer (`platform` schema — `platform/postgres/init/08-agent.sql`, M1a)
 Tất cả ba bảng đều gắn trigger `dxos_audit_row` ghi vào `audit.events`.
