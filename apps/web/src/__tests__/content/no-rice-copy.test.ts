@@ -7,8 +7,8 @@ import fs from 'fs'
 import path from 'path'
 
 const WEB_ROOT = path.resolve(__dirname, '../../..')
-// Built from a string: the web tsconfig targets pre-ES2018, which rejects the u flag in a literal. The lookbehind keeps "cấp" and "nhấp" out.
-const RICE_WORDS = new RegExp('lúa|gạo|ST25|Hè Thu|Đông Xuân|đạo ôn|xoài|Gieo sạ|thửa ruộng|(?<!\\p{L})Ấp\\s', 'iu')
+// Built from a string: the web tsconfig targets pre-ES2018, which rejects the u flag in a literal. The leading class keeps "cấp" and "nhấp" out.
+const RICE_WORDS = new RegExp('lúa|gạo|ST25|Hè Thu|Đông Xuân|đạo ôn|xoài|Gieo sạ|thửa ruộng|(?:^|[^\\p{L}\\p{N}_])Ấp\\s', 'iu')
 
 // Commodity name maps, not tea copy: national market rows still carry Rice
 // (Comtrade HS 1006) and Wheat, and must keep their Vietnamese names.
