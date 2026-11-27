@@ -285,6 +285,10 @@ Khi manifest khai `database`, `dxos install`:
   - xoá tệp env.
 - CLI từ chối xoá schema (không xoá gì) khi có đối tượng ngoài schema phụ thuộc vào nó. Phép kiểm này chỉ xét phụ thuộc vào bảng, kiểu và hàm của schema.
 
+### Mẫu sổ của `custom-books` (0.3.0)
+
+`custom-books` chỉ còn các mẫu không trùng bản ghi lõi: `cashbook` (sổ thu chi), `meeting` (biên bản họp), `handover` (giao nhận vật tư), `visitors` (khách tham quan) và `blank` (sổ trống). Bốn mẫu `picking`, `spraying`, `fertilising`, `pest` đã gỡ vì trùng nhật ký và lịch thu hái của lõi. Sổ đã tạo từ các mẫu đó vẫn chạy như sổ thường; đề xuất `book.create` còn mở với khoá đã gỡ bị từ chối khi duyệt. Ảnh cửa hàng `store/*.png` còn cho thấy mẫu đã gỡ, xem `docs/dev-setup.md`.
+
 ### App chỉ đọc không database: `htx-dashboard`
 
 Manifest không khai `database` thì `./dxos install` không tạo role hay schema, không ghi `DXOS_APP_DB_URL` và `remove` không còn gì để xoá (`--purge` không cần). App chỉ đọc dữ liệu lõi qua gateway (`http://apisix:9081/api/data/graphql`) bằng chính token và vai của người gọi, như phần "đọc nông hộ qua Hasura" của `leaf-purchase`, nên Hasura lọc theo `htx_code` của token và app không thể đọc nhiều hơn người xem. Khuôn của `htx-dashboard`:

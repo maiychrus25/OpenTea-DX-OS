@@ -107,8 +107,10 @@ Retrieve chat history.
 
 ## Partner Map (Manager)
 
+Mọi route `/api/partners*` chỉ trả và chỉ sửa đối tác của HTX trong phiên (`htx_profile_id` lấy từ phiên). Đối tác của HTX khác trả 404.
+
 ### `GET /api/partners`
-List all partners with map coordinates.
+List the caller's partners with map coordinates. **Roles:** manager, officer (farmer: 403 `FORBIDDEN`).
 
 **Query:** `?type=buyer` (optional filter)
 
@@ -130,7 +132,7 @@ List all partners with map coordinates.
 ```
 
 ### `POST /api/partners`
-Create new partner.
+Create new partner. **Roles:** manager only (officer, farmer: 403).
 
 **Request:**
 ```json
@@ -148,10 +150,30 @@ Create new partner.
 **Response:** `{ "data": { partner } }`
 
 ### `PUT /api/partners/[id]`
-Update partner. Same body as POST (partial OK).
+Update partner. Same body as POST (partial OK). **Roles:** manager only.
 
 ### `DELETE /api/partners/[id]`
 Delete partner. **Roles:** manager only.
+
+---
+
+## Thành viên và tìm kiếm (GĐ0)
+
+- **`GET /api/members`** và **`GET /api/search`**: chỉ `manager` và `officer`; nông dân nhận 403 `FORBIDDEN`. Kết quả chỉ gồm HTX trong phiên.
+- **`POST /api/members/invite`** và **`/api/members/[id]`**: chỉ `manager`.
+- Liên kết trong kết quả tìm kiếm theo vai của người tìm.
+
+## Route đóng băng (ADR 0005)
+
+Các route sau trả 404 `NOT_FOUND` ("Tính năng này chưa mở.") khi `DXOS_LABS` không phải `1` hoặc `true` (mặc định), kiểm tra lúc gọi, không cần dựng lại web:
+
+- `/api/agent/app-requests*` (4 route) và `/api/internal/agent/app-builder/requests*` (5 route): xưởng mini-app.
+- `/api/agent/autopilot`, `/api/agent/autopilot/enable`, `/api/agent/autopilot/stop` và `/api/internal/agent/autopilot/tick`: tự vận hành.
+- `/api/internal/agent/strategy/inputs` và `/api/internal/agent/strategy/plans`: agent chiến lược.
+- `/api/mcp/tools` và `/api/mcp/tools/[name]`: MCP.
+- `/api/internal/staff/{attendance,tasks,tasks/[proposal_id]/ack,roster}`: nhân sự.
+
+Các trang `/manager/ai/apps*`, mục "Tự vận hành" trong cài đặt AI, nhãn "App do AI xây" của Kho ứng dụng cũng ẩn theo công tắc. Các mục dưới đây của hợp đồng mô tả hành vi khi `DXOS_LABS=1`.
 
 ---
 
@@ -577,17 +599,17 @@ file: UploadFile (JPEG/PNG)
 ## Market Data (Read — Manager/Officer)
 
 ### `GET /api/market-data`
-Read latest market data from PostgreSQL (written by n8n).
+Read latest market data from PostgreSQL (written by n8n). Từ GĐ0 chỉ còn nguồn thật về chè (Comtrade, mã HS `0902`); các nguồn mô phỏng và lệch miền đã bị xoá cùng dòng cũ của chúng.
 
-**Query:** `?commodity=rice&source=usda_psd&metric=export_volume`
+**Query:** `?commodity=tea&source=COMTRADE&metric=export_volume`
 
 **Response:**
 ```json
 {
   "data": [
     {
-      "source": "usda_psd",
-      "commodity": "rice",
+      "source": "COMTRADE",
+      "commodity": "tea",
       "metric": "export_volume",
       "value": 6800000,
       "unit": "MT",
