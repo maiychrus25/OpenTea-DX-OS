@@ -73,7 +73,7 @@ def test_area_and_parcels_by_status_follow_the_core_labels():
     parcels = [parcel("P1", "TENDING", 2.0), parcel("P2", "TENDING", 1.5), parcel("P3", "HARVESTED", 3.0),
                parcel("P4", "DRAFT", 0.5)]
     assert m.total_area(parcels) == 7.0
-    assert m.parcels_by_status(parcels) == [("Đang gieo sạ", 0), ("Đang chăm sóc", 2), ("Đã duyệt thu hoạch", 0),
+    assert m.parcels_by_status(parcels) == [("Đang trồng mới", 0), ("Đang chăm sóc", 2), ("Đã duyệt thu hoạch", 0),
                                             ("Đã thu hoạch", 1), ("Khởi tạo", 1)]
 
 
