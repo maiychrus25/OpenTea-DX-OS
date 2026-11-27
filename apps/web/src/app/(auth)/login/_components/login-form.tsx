@@ -8,7 +8,6 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui'
-import { ArrowRight } from 'lucide-react'
 import styles from '../login-page.module.css'
 import { getAuthErrorMessage, isAccountLocked } from '@/lib/auth-validation'
 
@@ -44,13 +43,7 @@ export function LoginForm() {
         >
           <span>{errorMessage}</span>
           {isLocked && (
-            <Link
-              href="/forgot-pin"
-              className={styles.recoveryLink}
-              data-testid="locked-recovery-link"
-            >
-              Khôi phục PIN <ArrowRight size={13} className="inline ml-1 align-text-bottom" />
-            </Link>
+            <span data-testid="locked-recovery-note">Quên mã PIN? Hãy liên hệ cán bộ HTX để được đặt lại.</span>
           )}
         </div>
       )}
@@ -62,9 +55,7 @@ export function LoginForm() {
 
       <div className={styles.forgotRow}>
         <span>Mật khẩu nhập ở bước tiếp theo.</span>
-        <Link href="/forgot-pin" className={styles.authLink} data-testid="forgot-pin-link">
-          Quên mật khẩu?
-        </Link>
+        <span data-testid="forgot-pin-note">Quên mã PIN? Hãy liên hệ cán bộ HTX để được đặt lại.</span>
       </div>
 
       <Button

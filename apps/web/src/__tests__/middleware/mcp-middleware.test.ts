@@ -44,3 +44,10 @@ describe('middleware Mini App entry (M6)', () => {
     expect(resolveAuthRedirect('/api/telegram/webapp/session', false, undefined)).toBe('UNAUTHORIZED_API')
   })
 })
+
+describe('middleware public pages', () => {
+  test('middleware does not list deleted pages as public', () => {
+    expect(resolveAuthRedirect('/forgot-pin', false, undefined)).toBe('/login')
+    expect(resolveAuthRedirect('/login', false, undefined)).toBeNull()
+  })
+})
