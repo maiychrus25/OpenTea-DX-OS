@@ -416,6 +416,16 @@ Trong cửa sổ, bất kỳ người duyệt nào cũng chặn được bằng 
 - **Không có `dxos-stt`:** trả lời `Chưa nghe được tin thoại lúc này. Bạn nhắn chữ giúp nhé.`, không ảnh hưởng chức năng khác. Im lặng hoặc chỉ có tiếng ồn: `Chưa nghe rõ. Bạn nói lại hoặc nhắn chữ nhé.`.
 - **Mô hình:** mặc định `small` (`DXOS_STT_MODEL`), tải một lần bằng `make up-voice` và kiểm SHA-256. Chọn mô hình nhỏ nhất nghe được giọng của HTX bằng `make stt-measure DIR=<thư mục .ogg kèm .txt>` (đo tỉ lệ sai từ và thời gian của `base`, `small`, `medium`).
 
+### 3.18a Ảnh, bản tin đọc thành tiếng và ảnh mồ côi trong chat (issue #80)
+
+- **Báo bệnh bằng ảnh (`disease.report`, nông dân):** chọn thửa của hộ mình, gửi một ảnh JPEG hoặc PNG tối đa 5 MB, rồi bấm Xác nhận trên thẻ `Gửi ảnh thửa <mã> để chẩn đoán`. Kết quả là nhãn đứng đầu, độ tin cậy và `Cán bộ sẽ xác nhận kết quả này.` (người xác nhận kết quả bệnh vẫn là cán bộ). Ảnh lớn hơn 5 MB hoặc không phải JPEG/PNG bị từ chối bằng câu của M5, không lưu gì.
+- **Không có phiên trình duyệt:** chat gọi API chẩn đoán bằng token của client `dxos-web-service` (vai trò `web-service`, audience `dx-os-core`), không bằng token người dùng. Secret `DXOS_WEB_SERVICE_SECRET` do `./dxos telegram enable` ghi vào `roles.env` của web (`disable` xoá); web đọc biến môi trường trước, rồi tệp. Thiếu secret: `Chưa bật chẩn đoán qua Telegram.`, không lưu và không gọi gì.
+- **Cổng:** route `internal-web-disease` (`/api/internal/web/disease/*`, chỉ POST) chỉ có trên cổng nội bộ 9081, chỉ nhận `azp = dxos-web-service` kèm vai trò `web-service`, tối đa 30 lần mỗi phút mỗi token. Các route của người dùng (`workflow`, `disease`, `llm-chat`, `mcp`) từ chối token này.
+- **Nghe bản tin:** tin của công cụ `bulletin` có nút `Nghe`. Bấm thì web kiểm tra Piper, rồi bản tin mới nhất của HTX được đọc (tối đa 2.000 ký tự, bỏ dấu markdown) và rơle gửi tệp `ban-tin.wav` bằng `sendDocument`, chú thích `Bản tin <ngày>`. Telegram chỉ nhận ghi âm OGG/Opus, MP3 hoặc M4A và máy chưa có bộ mã hoá, nên âm thanh gửi dưới dạng tệp. Piper không chạy: `Chưa đọc được bản tin lúc này.`, không gửi gì.
+- **Chú thích ảnh:** khi không có phiên nào đang chờ ảnh, chú thích của ảnh được xử lý như tin nhắn chữ; trong bước nhận ảnh thì ảnh được dùng và chú thích bị bỏ qua.
+- **Ảnh mồ côi:** ảnh đã lưu trong phiên bị xoá khi thẻ bị huỷ, khi phiên bị thay (`/menu`, lệnh khác, `/huy`, `/stop`, nút menu) hoặc khi gặp phiên đã hết hạn; ảnh của hành động đã thực hiện được giữ. Hành động lỗi cũng xoá ảnh của nó.
+- **Nhật ký:** `GET /api/journal` trả danh sách rỗng cho nông dân chưa có nông hộ, không còn trả mọi nhật ký mà vai trò đọc được.
+
 ### 3.19 Hành động của mini-app (M9)
 
 | Quy tắc | Giá trị |

@@ -17,11 +17,10 @@ export const MENU_LABEL = {
 export type MenuKey = keyof typeof MENU_LABEL
 
 /**
- * The buttons of each role (contract C8), shown two per row. `disease` is left out until `disease.report` is wired:
- * the disease endpoint takes only a web session's token, which a Telegram update does not have.
+ * The buttons of each role (contract C8), shown two per row. Only a farmer reports a disease (`disease.report`).
  */
 export const MENU_BY_ROLE: Record<ChatRole, readonly MenuKey[]> = {
-  farmer: ['today', 'journal', 'ask'],
+  farmer: ['today', 'journal', 'disease', 'ask'],
   officer: ['today', 'pending', 'journal', 'ask'],
   manager: ['today', 'pending', 'ask'],
 }

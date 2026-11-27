@@ -21,8 +21,24 @@ AS_CODE_LB=$(psql_app "select parcel_code from parcels where id='pc_lb_1'")     
 AS_PARCEL_STATUS=$(psql_app "select status from parcels where id='$AS_PARCEL'")
 AS_ASSISTANT_PROVIDER=$(psql_app "select provider from platform.agent_settings where htx_code='TC' and agent='assistant'")
 
+# Issue #80 (chat media): throwaway stand-ins for the disease API and for Piper, on the compose network under the aliases the
+# web calls. The real services are stopped while a stub holds their alias and started again by assistant_cleanup.
+AS_NET="${COMPOSE_PROJECT_NAME:-docker}_agrimarket-net"
+AS_DISEASE_STUB="dxos-smoke-disease-stub"
+AS_TTS_STUB="dxos-smoke-tts-stub"
+AS_DISEASE_URL="http://127.0.0.1:8084"
+AS_DISEASE_WAS_UP=""
+AS_PIPER_WAS_UP=""
+AS_BULLETIN_ID=""
+
 # Restores what this smoke changed. It runs before the M4 cleanup (which unlinks the owner) and the LLM cleanup.
 assistant_cleanup() {
+  docker rm -f "$AS_DISEASE_STUB" "$AS_TTS_STUB" >/dev/null 2>&1 || true
+  if [ -n "$AS_DISEASE_WAS_UP" ]; then $COMPOSE start disease-api >/dev/null 2>&1 || true; $COMPOSE restart apisix >/dev/null 2>&1 || true; fi
+  if [ -n "$AS_PIPER_WAS_UP" ]; then $COMPOSE start piper >/dev/null 2>&1 || true; fi
+  if [ -n "$AS_BULLETIN_ID" ]; then psql_app "delete from bulletins where id='$AS_BULLETIN_ID'" >/dev/null 2>&1 || true; fi
+  psql_app "delete from notifications where title='Báo cáo sâu bệnh mới' and created_at >= '$AS_T0'" >/dev/null 2>&1 || true
+  psql_app "delete from disease_reports where parcel_id='$AS_PARCEL' and created_at >= '$AS_T0'" >/dev/null 2>&1 || true
   local rows="select id from journal_entries where (created_at >= '$AS_T0' and parcel_id='$AS_PARCEL') or id in ('je_smoke_asst_tc2','je_smoke_asst_lb')"
   local props="select id from platform.agent_proposals where subject_ids && array(${rows})"
   psql_app "delete from platform.telegram_outbox where proposal_id in ($props) or (chat_id in ($TG_FARMER, $TG_OWNER) and created_at >= '$AS_T0')" >/dev/null 2>&1 || true
@@ -63,8 +79,14 @@ tg_inject_py() {
   curl -sf -X POST "$STUB/control/updates" -H 'Content-Type: application/json' \
     -d "$(python3 -c "$code" "$TG_UPDATE_ID" "$@")" >/dev/null
 }
+TG_CAPTION_PY='
+import json, sys
+uid, sender, caption = int(sys.argv[1]), int(sys.argv[2]), sys.argv[3]
+sizes = [{"file_id": "smoke-photo-l", "file_unique_id": "smoke-l", "file_size": 4096, "width": 180, "height": 180}]
+print(json.dumps({"update_id": uid, "message": {"message_id": uid, "chat": {"id": sender, "type": "private"}, "from": {"id": sender}, "photo": sizes, "caption": caption}}, ensure_ascii=False))'
 tg_text() { tg_inject_py "$TG_TEXT_PY" "$1" "$2"; }  # <chat> <text>
 tg_photo() { tg_inject_py "$TG_PHOTO_PY" "$1"; }      # <chat>
+tg_photo_caption() { tg_inject_py "$TG_CAPTION_PY" "$1" "$2"; }  # <chat> <caption>
 
 # Messages the bot sent or edited to <chat> (the stub records every call), and how many contain <needle>.
 tg_total() {
@@ -238,3 +260,57 @@ n=$(tg_count "$TG_FARMER" "Nguồn: Thời tiết")
 tg_text "$TG_FARMER" "mai có nên đi hái không"
 tg_expect "$TG_FARMER" "Nguồn: Thời tiết" "$n" || fail "A7 weather answer was not sent to the farmer within 90 s"
 pass "A7 answers a free sentence with the weather tool (Nguồn: Thời tiết)"
+
+# ---- issue #80: a caption read as text, a disease photo in chat, and Nghe ------------------------------------------------------
+echo "[assistant: chat media]"
+as_clear_flow() { psql_app "delete from platform.telegram_conversations where telegram_user_id in ($TG_FARMER, $TG_OWNER) and proposal_id is null" >/dev/null; }
+
+# C5: a photo's caption is read as the message text when no flow waits for a photo.
+as_clear_flow
+n=$(tg_total "$TG_FARMER")
+tg_photo_caption "$TG_FARMER" "xem nhật ký"
+for _ in $(seq 1 30); do [ "$(tg_total "$TG_FARMER")" -gt "$n" ] && break; sleep 2; done
+assert_eq "$(python3 -c 'import sys; print("ok" if sys.argv[2] in sys.argv[1] else "bad")' "$(tg_last_text "$TG_FARMER")" "$AS_CODE_PARCEL")" "ok" \
+  "a photo caption 'xem nhật ký' is answered like the typed sentence (the farmer's journal)"
+
+# C3: the farmer's disease photo reaches the disease API stub through apisix:9081, with the web service token, and is answered.
+AS_DISEASE_WAS_UP="$($COMPOSE ps -q disease-api 2>/dev/null)"
+[ -z "$AS_DISEASE_WAS_UP" ] || $COMPOSE stop disease-api >/dev/null
+docker rm -f "$AS_DISEASE_STUB" >/dev/null 2>&1 || true
+docker run -d --name "$AS_DISEASE_STUB" --network "$AS_NET" --network-alias disease-api -p 127.0.0.1:8084:8000 \
+  -v "$PWD/platform/tests/stub_disease.py:/app/stub_disease.py:ro" -e DXOS_DISEASE_STUB_PORT=8000 \
+  python:3.12.15-slim-bookworm python -u /app/stub_disease.py >/dev/null
+for _ in $(seq 1 30); do curl -sf "$AS_DISEASE_URL/health" >/dev/null 2>&1 && break; sleep 1; done
+curl -sf -X POST "$AS_DISEASE_URL/control/reset" >/dev/null || fail "the disease stub does not answer on $AS_DISEASE_URL"
+# apisix resolved disease-api once and keeps that address; restart it so the stub's address is used.
+$COMPOSE restart apisix >/dev/null
+for _ in $(seq 1 30); do [ "$(curl -s -o /dev/null -w '%{http_code}' "$GATEWAY/api/ai/disease/health")" != 000 ] && break; sleep 2; done
+as_clear_flow
+tg_answer "$TG_FARMER" text "/benh" "Chọn thửa có cây bị bệnh:"
+tg_answer "$TG_FARMER" button "$AS_CODE_PARCEL" "Gửi ảnh lá chè bị bệnh"
+tg_answer "$TG_FARMER" photo "" "Gửi ảnh thửa $AS_CODE_PARCEL để chẩn đoán"
+tg_answer "$TG_FARMER" button "Xác nhận" "Cán bộ sẽ xác nhận kết quả này."
+assert_eq "$(tg_count "$TG_FARMER" "Phồng lá chè (91.0%)")" "1" "the farmer's disease photo is answered with the stub's label and confidence"
+assert_eq "$(curl -sf "$AS_DISEASE_URL/control/requests" | python3 -c 'import json, sys; r = json.load(sys.stdin)["requests"]; print(len(r), r[0]["bearer"], r[0]["multipart"], r[0]["jpeg"])')" "1 True True True" \
+  "the disease stub got one multipart JPEG with a bearer token, through the gateway's internal web route"
+assert_eq "$(psql_app "select count(*) from disease_reports where parcel_id='$AS_PARCEL' and created_at >= '$AS_T0' and ai_disease_name='Phồng lá chè'")" "1" "one disease report row for the parcel"
+
+# C4: Nghe on the bulletin. Without a voice service it answers the fallback line; with the Piper stub it sends ban-tin.wav.
+AS_BULLETIN_ID="$(psql_app "insert into bulletins (commodity, bulletin_vi, sources_json, model_used, is_latest, status, htx_code)
+  values ('Tea', E'Giá chè hôm nay ổn định.\\nTồn kho thấp.', '[]', 'smoke', true, 'published', 'TC') returning id" | head -n 1)"
+AS_PIPER_WAS_UP="$($COMPOSE ps -q piper 2>/dev/null)"
+[ -z "$AS_PIPER_WAS_UP" ] || $COMPOSE stop piper >/dev/null
+as_clear_flow
+tg_answer "$TG_OWNER" text "bản tin hôm nay" "Nguồn: Bản tin"
+tg_answer "$TG_OWNER" button "Nghe" "Chưa đọc được bản tin lúc này."
+assert_eq "$(stub_calls | python3 -c 'import json, sys; print(sum(1 for c in json.load(sys.stdin) if c["method"] == "sendDocument"))')" "0" "without a voice service Nghe sends no document"
+docker rm -f "$AS_TTS_STUB" >/dev/null 2>&1 || true
+docker run -d --name "$AS_TTS_STUB" --network "$AS_NET" --network-alias piper \
+  -v "$PWD/platform/tests/stub_tts.py:/app/stub_tts.py:ro" -e DXOS_TTS_STUB_PORT=10200 \
+  python:3.12.15-slim-bookworm python -u /app/stub_tts.py >/dev/null
+sleep 2
+tg_press "$TG_OWNER" "Nghe"
+wait_stub "any(x['method'] == 'sendDocument' and x['params'].get('chat_id') == $TG_OWNER and x['params'].get('caption', '').startswith('Bản tin ') and x['files'][0]['filename'] == 'ban-tin.wav' and x['files'][0]['size'] > 44 for x in c)" 45 \
+  && pass "with the voice stub Nghe sends the bulletin as the WAV document ban-tin.wav" \
+  || fail "Nghe did not send ban-tin.wav to the owner within 90 s"
+as_clear_flow

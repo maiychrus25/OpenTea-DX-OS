@@ -167,4 +167,10 @@ export class MinioDocumentAdapter implements DocumentStoragePort {
 
     await this.minioClient.putObject(this.bucketName, key, buffer, buffer.length, metaData)
   }
+
+  /** Removes one object; a key that is already gone is not an error (S3 answers success). */
+  async deleteDocument(key: string): Promise<void> {
+    await this.ensureBucketExists()
+    await this.minioClient.removeObject(this.bucketName, key)
+  }
 }

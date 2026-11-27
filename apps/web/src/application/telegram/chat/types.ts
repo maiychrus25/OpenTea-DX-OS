@@ -25,6 +25,8 @@ export interface ChatReply {
   source: string
   /** Open proposals the engine then sends to this chat with their approve and reject buttons (tool `pending`). */
   proposalIds?: string[]
+  /** The engine adds the Nghe button under this answer (tool `bulletin`). */
+  listen?: boolean
 }
 
 /** What A7 may fill in for a tool or an action; `name` equals the step slot for actions. */
@@ -139,6 +141,8 @@ export type FlowStep = ChoiceStep | TextStep | IntegerStep | PhotoStep
 export interface PhotoStore {
   put(key: string, bytes: Buffer, mimeType: 'image/jpeg' | 'image/png'): Promise<void>
   get(key: string): Promise<Buffer>
+  /** Removes a stored photo; used for photos whose card was cancelled or whose flow was dropped. */
+  delete(key: string): Promise<void>
 }
 
 export interface ChatActionDeps {

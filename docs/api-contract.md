@@ -936,7 +936,7 @@ Các route dưới đây không dành cho trình duyệt. Chúng dùng chung b�
 ### Cập nhật từ relay: `POST /api/internal/telegram/updates`
 
 Ngoài `message_id`, `chat`, `from`, `text`, tin nhắn có thể kèm:
-- `caption`: chú thích của ảnh (không dùng để định tuyến);
+- `caption`: chú thích của ảnh; được xử lý như tin nhắn chữ khi không có phiên nào đang chờ ảnh, bị bỏ qua trong bước nhận ảnh;
 - `photo`: `{ "mime_type": "image/jpeg", "data_base64": "...", "file_unique_id": "..." }`, ảnh lớn nhất không quá 5 MB;
 - `photo_error`: `too_large` hoặc `download_failed` khi có ảnh nhưng không chuyển tiếp được;
 - `location`: `{ "latitude": number, "longitude": number }`;
@@ -946,7 +946,7 @@ Ngoài `message_id`, `chat`, `from`, `text`, tin nhắn có thể kèm:
 
 ### Trả lời cho relay: `op`
 
-Mỗi trả lời là `{ op: 'send', chat_id, text, buttons? }` hoặc `{ op: 'edit', chat_id, edit_message_id, text, buttons? }`. `buttons` là mảng hàng, mỗi nút có `text` và `callback_data`. Một lần `edit` không có `buttons` sẽ xoá bàn phím.
+Mỗi trả lời là `{ op: 'send', chat_id, text, buttons?, audio? }` hoặc `{ op: 'edit', chat_id, edit_message_id, text, buttons? }`. `buttons` là mảng hàng, mỗi nút có `text` và `callback_data`. Một lần `edit` không có `buttons` sẽ xoá bàn phím. `audio: { kind: 'bulletin', id }` (chỉ có ở `send`) bảo rơle lấy tệp tại `GET /api/internal/telegram/media?bulletin=<id>` rồi gửi bằng `sendDocument` (`ban-tin.wav`, `text` làm chú thích); không lấy được thì rơle gửi `Chưa đọc được bản tin lúc này.`.
 
 ### Callback dữ liệu v2
 
@@ -1017,6 +1017,11 @@ Trưởng HTX nhờ AI làm app; A12 chọn cách rẻ nhất (app trong Kho, m�
 
 - `GET /api/internal/telegram/outbox`: mỗi mục có thể có `photos: [{ build_id, name }]` (tối đa 4).
 - `GET /api/internal/telegram/media?build=<uuid>&name=<n>` (token relay): một trong bốn ảnh PNG của bản xây; `400` cho tên khác, `404` khi không có.
+- `GET /api/internal/telegram/media?bulletin=<uuid>` (token relay): bản tin đã đăng đọc thành tiếng, `audio/wav` (Piper, tối đa 2.000 ký tự đã bỏ markdown); `400` cho mã không phải uuid, `404` khi không có bản tin hoặc bản tin rỗng, `503` khi Piper không chạy.
+
+### Gọi API chẩn đoán không có phiên (issue #80)
+
+`POST /api/internal/web/disease/predict?model=<tea|general>` (multipart `file`): route của cổng, chỉ trên cổng nội bộ 9081, chuyển tới `disease-api` như `/api/ai/disease/*`. Chỉ nhận token của client `dxos-web-service` (vai trò `web-service`, audience `dx-os-core`); token của người dùng, agent, rơle và app nhân sự bị từ chối, và các route của người dùng từ chối token này. Web dùng nó để chẩn đoán ảnh gửi qua Telegram (`disease.report`).
 
 ### Kho ứng dụng
 

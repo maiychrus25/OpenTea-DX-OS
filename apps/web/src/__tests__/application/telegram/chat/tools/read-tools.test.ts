@@ -182,7 +182,7 @@ describe('bulletin', () => {
     fakes.bulletin.mockResolvedValue({ bulletin_vi: 'Giá chè ổn định.\nTồn kho thấp.' })
     const reply = await tool('bulletin').run(user('officer'), {}, NOW)
     expect(fakes.bulletin).toHaveBeenCalledWith('Tea', 'TC')
-    expect(reply).toEqual({ lines: ['Giá chè ổn định.', 'Tồn kho thấp.'], source: 'Bản tin' })
+    expect(reply).toEqual({ lines: ['Giá chè ổn định.', 'Tồn kho thấp.'], source: 'Bản tin', listen: true })
   })
 
   it('answers the empty line when the cooperative has no bulletin', async () => {
@@ -190,6 +190,7 @@ describe('bulletin', () => {
     fakes.bulletin.mockRejectedValue(new NotFoundError('none'))
     const reply = await tool('bulletin').run(user('manager'), {}, NOW)
     expect(reply.lines).toEqual(['Chưa có dữ liệu.'])
+    expect(reply.listen).toBeUndefined()
   })
 })
 

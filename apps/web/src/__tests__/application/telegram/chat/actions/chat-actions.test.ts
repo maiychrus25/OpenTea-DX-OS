@@ -80,7 +80,7 @@ const officer: ChatUser = {
   chatId: 2002,
 }
 const manager: ChatUser = { ...officer, tenant: { ...officer.tenant, userId: 'manager-1', role: 'manager' }, telegramUserId: '3003', chatId: 3003 }
-const deps = { photos: { put: jest.fn(), get: jest.fn(async () => Buffer.from('jpeg')) } }
+const deps = { photos: { put: jest.fn(), get: jest.fn(async () => Buffer.from('jpeg')), delete: jest.fn() } }
 const NOW = new Date('2026-11-26T03:00:00.000Z')
 
 function action(name: string): ChatAction {
@@ -115,6 +115,7 @@ describe('CHAT_ACTIONS (contract C6)', () => {
       ['journal.create', ['farmer', 'officer']],
       ['journal.batch_approve', ['officer', 'manager']],
       ['harvest.approve', ['officer', 'manager']],
+      ['disease.report', ['farmer']],
     ])
   })
 

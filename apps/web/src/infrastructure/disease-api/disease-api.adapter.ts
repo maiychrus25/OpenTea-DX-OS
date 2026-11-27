@@ -7,15 +7,21 @@ import { CoreUnauthorizedError, CoreUnavailableError, ForbiddenError } from '@/d
 import { logger } from '@/lib/logger'
 
 export class DiseaseApiAdapter implements DiseaseDetectionPort {
-  /** The caller passes the user's core token (getCoreToken) so the adapter stays testable. */
-  constructor(private readonly token: string) {}
+  /**
+   * The caller passes the user's core token (getCoreToken) so the adapter stays testable. `basePath` is the gateway route:
+   * the user route by default, `/api/internal/web/disease` for the web's own service token (Telegram, no session).
+   */
+  constructor(
+    private readonly token: string,
+    private readonly basePath: string = '/api/ai/disease'
+  ) {}
 
   async predict(imageBlob: Blob, model: DiseaseModel): Promise<DiseaseDetectionResult> {
     const form = new FormData()
     form.append('file', imageBlob, 'diagnosis.jpg')
 
     try {
-      const response = await fetch(`${process.env.CORE_GATEWAY_URL}/api/ai/disease/predict?model=${model}`, {
+      const response = await fetch(`${process.env.CORE_GATEWAY_URL}${this.basePath}/predict?model=${model}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${this.token}` },
         body: form,
